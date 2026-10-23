@@ -115,20 +115,7 @@ symbol:
 void test("A root landmark that already has an openers key, even [], keeps it:", async (t) => {
   t.check(plan({ path: ROOT, text: OLD_SEED, landmark: { path: ROOT_LM, text: landmark("  openers: []\n") } }), {
     writes: {
-      "_content/briefing.briefing.card": `---
-type: briefing
-title: About this box
-purpose: What this box is for.
----
-## Reaching me
-
-Tell me, quietly, when something failed or you could not understand what I
-gave you. Do not tell me that routine work succeeded. A question for me is a
-dot unless it blocks something with a date. Things I asked to be told about
-are loud. Health problems stay on the dashboard unless they stop something I
-asked for. When I ask for a reminder or to be told when something happens,
-make sure it reaches me wherever I am.
-`,
+      [ROOT]: createBriefingTemplate(),
     },
     outcomes: [
       "stock",
@@ -192,13 +179,7 @@ navigation:
     - File it
 ---
 `,
-      "_content/lending/briefing.briefing.card": `---
-type: briefing
----
-{% purpose %}
-Cook.
-{% /purpose %}
-`,
+      "_content/lending/briefing.briefing.card": briefing(""),
     },
     outcomes: [
       "converted",
@@ -221,13 +202,7 @@ navigation:
 ---
 The stove is with Idris.
 `,
-      "_content/lending/briefing.briefing.card": `---
-type: briefing
----
-{% purpose %}
-Cook.
-{% /purpose %}
-`,
+      "_content/lending/briefing.briefing.card": briefing(""),
     },
     outcomes: [
       "converted",
@@ -244,13 +219,7 @@ void test("An equal list (after trimming) only leaves the briefing.", async (t) 
     landmark: { path: "_content/lending/Lending.landmark.card", text: landmark("  openers:\n    - Who has what?\n") } });
   t.check(r, {
     writes: {
-      "_content/lending/briefing.briefing.card": `---
-type: briefing
----
-{% purpose %}
-Cook.
-{% /purpose %}
-`,
+      "_content/lending/briefing.briefing.card": briefing(""),
     },
     outcomes: [
       "converted",
@@ -303,13 +272,7 @@ symbol:
   glyph: 📦
 ---
 `,
-      "_content/briefing.briefing.card": `---
-type: briefing
----
-{% purpose %}
-Cook.
-{% /purpose %}
-`,
+      "_content/briefing.briefing.card": briefing(""),
     },
     outcomes: [
       "converted",
@@ -341,13 +304,7 @@ void test("A non-root briefing whose directory has no landmark:", async (t) => {
 void test("An empty list has nothing to move, so it is simply removed, even with no land...", async (t) => {
   t.check(plan({ path: "_content/old/briefing.briefing.card", text: briefing("openers: []\n") }), {
     writes: {
-      "_content/old/briefing.briefing.card": `---
-type: briefing
----
-{% purpose %}
-Cook.
-{% /purpose %}
-`,
+      "_content/old/briefing.briefing.card": briefing(""),
     },
     outcomes: [
       "converted",
@@ -388,13 +345,7 @@ navigation:
     - "  "
 ---
 `,
-      "_content/lending/briefing.briefing.card": `---
-type: briefing
----
-{% purpose %}
-Cook.
-{% /purpose %}
-`,
+      "_content/lending/briefing.briefing.card": briefing(""),
     },
     outcomes: [
       "converted",
@@ -416,13 +367,7 @@ navigation:
     - ${"x".repeat(121)}
 ---
 `,
-      "_content/lending/briefing.briefing.card": `---
-type: briefing
----
-{% purpose %}
-Cook.
-{% /purpose %}
-`,
+      "_content/lending/briefing.briefing.card": briefing(""),
     },
     outcomes: [
       "converted",
@@ -450,13 +395,7 @@ symbol:
   glyph: 📦
 ---
 `,
-      "_content/briefing.briefing.card": `---
-type: briefing
----
-{% purpose %}
-Cook.
-{% /purpose %}
-`,
+      "_content/briefing.briefing.card": briefing(""),
     },
     outcomes: [
       "converted",
@@ -480,8 +419,14 @@ void test("(i) The migrator on an old box:", async (t) => {
   await box.write(ROOT, OLD_SEED);
   await box.write(ROOT_LM, OLD_ROOT_LANDMARK);
   await writeVersions(box.root, { [ROOT]: { sha256: sha(OLD_SEED), "installed-at": "2026-09-01T00:00:00.000Z", stock: OLD_SEED } });
-  const run = await runBriefingOpeners({ boxRoot: box.root, mode: "apply" });
-  t.check(run.code, 0);
+  t.check(await runBriefingOpeners({ boxRoot: box.root, mode: "apply" }), {
+    code: 0,
+    lines: [
+      "write _content/briefing.briefing.card",
+      "write _content/Box.landmark.card",
+      "briefing-openers: moved 0, stock 1, already 0, files 2.",
+    ],
+  });
   t.check(openersOf(await box.read(ROOT_LM)), ["Tell me about talking instead of typing."]);
   t.check(await box.read(ROOT), createBriefingTemplate());
   t.check((await readVersions(box.root))[ROOT]?.sha256, TEMPLATE_STOCK_HASHES["briefing-seed"].current);
@@ -502,8 +447,13 @@ void test("(ii) Template sync first:", async (t) => {
   await writeVersions(box.root, { [ROOT]: { sha256: sha(OLD_SEED), "installed-at": "2026-09-01T00:00:00.000Z", stock: OLD_SEED } });
   await installBriefing(box.root);
   t.check(await box.read(ROOT), createBriefingTemplate());
-  const run = await runBriefingOpeners({ boxRoot: box.root, mode: "apply" });
-  t.check(run.code, 0);
+  t.check(await runBriefingOpeners({ boxRoot: box.root, mode: "apply" }), {
+    code: 0,
+    lines: [
+      "write _content/Box.landmark.card",
+      "briefing-openers: moved 0, stock 1, already 0, files 1.",
+    ],
+  });
   t.check(openersOf(await box.read(ROOT_LM)), ["Tell me about talking instead of typing."]);
   t.check((await readVersions(box.root))[ROOT]?.sha256, TEMPLATE_STOCK_HASHES["briefing-seed"].current);
 });
@@ -535,8 +485,13 @@ void test("A landmark that would not load fails the box the same way:", async (t
   const LM = "_content/lending/Lending.landmark.card";
   await box.write(BR, briefing("openers:\n  - \"  \"\n"));
   await box.write(LM, landmark());
-  const run = await runBriefingOpeners({ boxRoot: box.root, mode: "apply" });
-  t.check(run.code, 1);
+  t.check(await runBriefingOpeners({ boxRoot: box.root, mode: "apply" }), {
+    code: 1,
+    lines: [
+      "failed (malformed): _content/lending/Lending.landmark.card: navigation.openers[0]: an opener must not be blank; resolve by hand",
+      "briefing-openers: 1 failure(s); nothing written.",
+    ],
+  });
   t.check([await box.read(BR), await box.read(LM)], [briefing("openers:\n  - \"  \"\n"), landmark()]);
 });
 

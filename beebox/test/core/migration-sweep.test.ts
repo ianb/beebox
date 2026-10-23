@@ -138,14 +138,14 @@ void test("The manifest entry and the changes it describes land in the same comm
     {
       subject: git(box, "log", "-1", "--format=%s"),
       trailer: git(box, "log", "-1", "--format=%(trailers:key=Created-By,valueonly)"),
-      manifestInCommit: git(box, "show", "--name-only", "--format=", "HEAD").includes(MANIFEST_PATH),
-      clean: git(box, "status", "--porcelain") === "",
+      files: git(box, "show", "--name-only", "--format=", "HEAD"),
+      status: git(box, "status", "--porcelain"),
     },
     {
     subject: "Apply migration: test-noop-migration",
     trailer: "migration-sweep",
-    manifestInCommit: true,
-    clean: true,
+    files: MANIFEST_PATH,
+    status: "",
   },
   );
 
@@ -448,18 +448,20 @@ void test("Partial conversion asks once and lets later migrations proceed", asyn
       return { status: "needs-human", reason: "Choose between divergent copies." };
     } }),
   });
-  t.check({ status: result.status, applied: expectStatus(result, "attention").applied.length, partial: expectStatus(result, "attention").applied[0]?.partial, agents, calls }, {
+  t.check({ status: result.status, applied: expectStatus(result, "attention").applied.map((m) => [m.name, m.partial]), agents, calls }, {
     status: "attention",
-    applied: 2,
-    partial: true,
+    applied: [
+      ["test-noop-migration", true],
+      ["test-later-noop-migration", false],
+    ],
     agents: 1,
     calls: 3,
   });
 
   const next = await sweepMigrations({ boxRoot: box.root });
-  t.check({ status: next.status, questions: expectStatus(next, "attention").questions.length }, {
+  t.check({ status: next.status, questions: expectStatus(next, "attention").questions }, {
     status: "attention",
-    questions: 1,
+    questions: ["_bookkeeping/questions/Migration_test-noop-migration-0.question.card"],
   });
 });
 
@@ -533,11 +535,11 @@ void test("The 2026-09-16 incident:", async (t) => {
   await box.commitAll("seed");
   const failed = await sweepMigrations({ boxRoot: box.root, runScript: async () => 1 });
   const record = await boxMaintenanceStatus(box.root);
-  t.check({ status: failed.status, phase: record?.phase, owner: record?.owner, ref: git(box, "for-each-ref", "--format=%(refname)", expectStatus(failed, "failed").recoveryRef) === expectStatus(failed, "failed").recoveryRef }, {
+  t.check({ status: failed.status, phase: record?.phase, owner: record?.owner, ref: git(box, "for-each-ref", "--format=%(refname)", expectStatus(failed, "failed").recoveryRef) }, {
     status: "failed",
     phase: "exclusive",
     owner: null,
-    ref: true,
+    ref: expectStatus(failed, "failed").recoveryRef,
   });
 
   const work = await acquireBoxWork(box.root, { reason: "chat run" });
@@ -608,8 +610,8 @@ void test("The new attempt snapshots current input and staging, but its output c
   await rm(hook);
   t.check((await sweepMigrations({ boxRoot: box.root, repair: true, runScript })).status, "applied");
 
-  t.check({ committed: git(box, "show", "HEAD:_content/Converted.doc.card").endsWith("Converted"), staged: git(box, "diff", "--cached", "--name-only"), unstaged: git(box, "diff", "--name-only"), pendingRef: git(box, "for-each-ref", "--format=%(refname)", `refs/bbx/migrations/${PROBE}/pending`) }, {
-    committed: true,
+  t.check({ committed: git(box, "show", "HEAD:_content/Converted.doc.card"), staged: git(box, "diff", "--cached", "--name-only"), unstaged: git(box, "diff", "--name-only"), pendingRef: git(box, "for-each-ref", "--format=%(refname)", `refs/bbx/migrations/${PROBE}/pending`) }, {
+    committed: converted.trim(),
     staged: "_content/unrelated.txt",
     unstaged: "",
     pendingRef: "",

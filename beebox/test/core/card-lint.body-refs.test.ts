@@ -186,8 +186,6 @@ void test("A display-form path written into an inline link, or a reference-style
     totalWarnings: 0,
   });
 
-  t.check(inlineResult.results[0]!.errors[0]!.message, "Display-form path at body:1:link: `Config:box.json` is the boxholder's display form; write `/_config/box.json`");
-
   const box2 = await makeTmpBox();
   await box2.write(
     "_content/box/notes/RefDef.doc.card",

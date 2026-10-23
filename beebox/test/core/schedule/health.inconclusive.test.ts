@@ -123,12 +123,13 @@ void test("The error message a failed command raises carries a tail of the child
 //
 // Its unjudged unit is a category bucket rather than a procedure step, so the
 // scheduler classifies a scheduled `bbx handle` from the same pair of signals.
+// The line's wording is pinned in `test/core/handle.test.ts`, next to the CLI
+// that prints it.
 void test("Its unjudged unit is a category bucket rather than a procedure step, so the s...", async (t) => {
   const handleLine = formatHandleInconclusiveLine({
     category: "receipts",
     detail: "review of step file reached max turns (8)",
   });
-  t.check(handleLine, "Inconclusive: handle receipts — review of step file reached max turns (8); work completed");
   t.check(
     await classifyScheduleFailure({
       boxRoot: "/nonexistent",
@@ -158,30 +159,23 @@ void test("Neither incremented (nothing failed) nor reset (a genuinely broken ta
     windowMs: 24 * 60 * 60 * 1000,
     now: new Date("2026-06-09T12:00:00Z"),
   });
-  t.check(state, {
+  // Only the fields the rule is about; the rest of the record is `recordOutcome`'s
+  // general bookkeeping, covered in `state.test.ts`.
+  const { lastRun, lastResult, lastError, lastSuccess, consecutiveFailures } = state;
+  t.check({ lastRun, lastResult, lastError, lastSuccess, consecutiveFailures }, {
     lastRun: "2026-06-09T12:00:00.000Z",
     lastResult: "inconclusive",
     lastError: MARKER,
-    lastDurationMs: 1200,
     lastSuccess: "2026-06-06T05:00:10Z",
     consecutiveFailures: 3,
-    alertedAt: null,
-    alertedFor: null,
-    skipped: null,
-    runCount: 1,
-    lastCommit: null,
-    carry: null,
-    lastDeferReason: null,
-    recentRuns: [{ ts: "2026-06-09T12:00:00.000Z", durationMs: 1200 }],
   });
 });
 
 // ## The console line doesn't say "Failed"
 void test("The console line doesn't say \"Failed\"", async (t) => {
-  t.check(
-    scheduleOutcomeLine({ result: "inconclusive", error: MARKER }),
-    "Inconclusive: procedure refresh-maps — review of step maps reached max turns (16); work completed",
-  );
+  // The line is the marker itself, with no `Failed:` prefix (the marker's wording
+  // is pinned above, where the classifier reads it).
+  t.check(scheduleOutcomeLine({ result: "inconclusive", error: MARKER }), MARKER);
   t.check(scheduleOutcomeLine({ result: "deferred", error: "waiting on codex quota" }), "Deferred: waiting on codex quota");
   t.check(scheduleOutcomeLine({ result: "failure", error: "boom" }), "Failed: boom");
 });

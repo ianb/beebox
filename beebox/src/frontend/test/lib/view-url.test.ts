@@ -7,7 +7,6 @@ import "@ianbicking/tap-check/tap";
 import {
   parseViewUrl,
   serializeViewUrl,
-  resolveRelativePath,
   resolveContentTarget,
   classifyMarkdownHref,
   isExternalUrl,
@@ -104,32 +103,12 @@ void test("serializeViewUrl is the round-trip inverse (without the view: prefix)
 
 // ## resolveRelativePath
 //
-// Resolves `href` values from a document at `basePath`, just like a filesystem:
-void test("Resolves href values from a document at basePath, just like a filesystem:", async (t) => {
-  t.check(resolveRelativePath("_content/docs/tax/2023/return-status.md", "1040.pdf"), "_content/docs/tax/2023/1040.pdf");
-
-  t.check(resolveRelativePath("_content/docs/tax/2023/return-status.md", "../2022/summary.md"), "_content/docs/tax/2022/summary.md");
-
-  t.check(resolveRelativePath("_content/docs/tax/2023/return-status.md", "./notes.md"), "_content/docs/tax/2023/notes.md");
-});
-
-// Leading `/` is stripped and treated as box-root-relative:
-void test("Leading / is stripped and treated as box-root-relative:", async (t) => {
-  t.check(resolveRelativePath("_content/docs/a.md", "/_content/other/file.md"), "_content/other/file.md");
-});
-
-// When `basePath` is missing, the relative path is already box-root-relative:
-void test("When basePath is missing, the relative path is already box-root-relative:", async (t) => {
-  t.check(resolveRelativePath(undefined, "_content/notes.md"), "_content/notes.md");
-});
-
-// The rules themselves live in `src/shared/ref-path/core.ts` (shared with the backend's
-// ref checking), including its fail-closed containment: a path that climbs above
+// A one-line wrapper over `resolveRefPath`; the path rules (relative, leading `/`,
+// trailing-slash directory base, no base) are proved in `test/shared/ref-path.test.ts`.
+// Its fail-closed containment is what the wrapper must pass through: a path that climbs above
 // the box root is `null`, never clamped back to the root. Callers degrade visibly
 // — a link renders as a broken marker, an image gets an empty (broken) src.
-void test("The rules themselves live in src/shared/ref-path/core.ts (shared with the bac...", async (t) => {
-  t.check(resolveRelativePath("_content/docs/a.md", "../../../etc/passwd"), null);
-
+void test("resolveRelativePath passes ref-path containment through: a climb above the box root is null", async (t) => {
   t.check(resolveContentTarget("_content/docs/report.md", "../../../etc/passwd?view=source"), null);
 });
 
@@ -157,22 +136,6 @@ void test("A leading / is box-root-absolute and ignores basePath — and ?view= 
     params: {},
     viewState: null,
   });
-});
-
-// `basePath` is treated like a containing *file* (its last segment is stripped). A
-// directory base must carry a trailing slash so the strip is a no-op and the
-// relative path resolves *inside* it, not its parent:
-void test("basePath is treated like a containing file (its last segment is stripped).", async (t) => {
-  t.check(
-    [
-      resolveContentTarget("_content/foo/x.md", "bar.card")?.path,
-      resolveContentTarget("_content/foo/", "bar.card")?.path,
-    ],
-    [
-    "_content/foo/bar.card",
-    "_content/foo/bar.card",
-  ],
-  );
 });
 
 // ### Chat messages pass no base

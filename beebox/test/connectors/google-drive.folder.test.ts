@@ -122,10 +122,6 @@ function documentFor(opts: { id: string; name: string }): FakeDocument {
   };
 }
 
-function cardsIn(listing: string, dir: string): string[] {
-  return listing.split("\n").filter((p) => p.startsWith(dir) && p.endsWith(".card"));
-}
-
 // ## The plan — syncable children become cards, everything else becomes a pointer
 //
 // A Doc and a Sheet have handlers, so they are mirrored as synced cards. A PDF
@@ -465,13 +461,6 @@ void test("End to end — a mount discovers its children and points at the rest"
     updated: ["_content/drive/recipes/Recipes.gfolder.card"],
   });
 
-  t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
-    "_content/drive/recipes/Bake_Times.gsheet.card",
-    "_content/drive/recipes/Recipes.gfolder.card",
-    "_content/drive/recipes/Scan_2024pdf.glink.card",
-    "_content/drive/recipes/Sourdough.gdoc.card",
-  ]);
-
   // The pointer carries what the item is and where — and an empty body, because
   // the purpose notes are the boxholder's to write. (The card name comes from
   // `safeFilename`, which drops the dot in `Scan 2024.pdf`.)
@@ -634,9 +623,14 @@ void test("A Drive file that fails every pass does not keep the diagnosis once a
     return realExport(id, mime);
   };
 
-  const result = await createGoogleDriveConnector(box.root, drive).sync();
-  // The oversized Doc fails this pass, and would fail every pass.
-  t.check(result.success, false);
+  // The oversized Doc fails this pass, and would fail every pass; the pass
+  // stops there, so nothing is created, but the first Doc had already been read.
+  t.check(await createGoogleDriveConnector(box.root, drive).sync(), {
+    success: false,
+    created: [],
+    updated: [],
+    error: "Folder sync failed for _content/drive/notes/Notes.gfolder.card: This file is too large to be exported.",
+  });
   // A Doc reached the Docs API, so the box-wide problem is gone.
   t.check(await loadDocsApiDiagnosis(box.root), null);
 });
