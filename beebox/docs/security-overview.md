@@ -106,8 +106,12 @@ same question. On a server or in the Docker image it can also install
 distro packages as root through one validating wrapper, which allows only
 additive installs from the distro sources and refuses packages that add
 services, root jobs, privilege grants or setuid files; the packages'
-install scripts still run as root. On fresh boxes, scheduled agent runs are
-off by default — nothing runs until you turn it on.
+install scripts still run as root. On fresh boxes, the connector syncs
+(email, calendar, Drive) and chat review are off by default, so no schedule
+pulls in outside content until you turn it on. Four maintenance schedules are
+on: map refresh, run cleanup, the weekly retrospective and the daily todo
+review. The last two run an agent over content already in the box, and only
+when a chat session has gone quiet or a todo needs review.
 
 ## Prompt injection — the risk we most want you to understand
 

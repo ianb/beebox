@@ -51,6 +51,10 @@ export interface ScriptState {
   lastSuccess: string | null;
   /** Failures since the last success; 0 after any success. */
   consecutiveFailures: number;
+  /** The last run failed in a way another run cannot fix (a reminder no
+   * channel could try: no device, no subscription), so a one-shot is not
+   * retried. Absent after any other outcome. */
+  lastFailureFinal?: true;
   /** Episode latch: when the current unhealthy episode was recorded
    * (`failing`/`overdue`/`invalid`, cleared on success), or when a
    * boxholder-requested schedule said it could not run (`skipped:<reason>`,
@@ -82,6 +86,7 @@ const ScriptStatePartialSchema = z
     lastDurationMs: z.number().nullable(),
     lastSuccess: z.string().nullable(),
     consecutiveFailures: z.number(),
+    lastFailureFinal: z.literal(true),
     alertedAt: z.string().nullable(),
     alertedFor: z.enum(ALERTED_FOR).nullable(),
     skipped: z.object({ reason: z.enum(TICK_SKIP_REASONS), since: z.string() }).nullable(),
@@ -133,6 +138,7 @@ export function normalizeScriptState(raw: ScriptStatePartial): ScriptState {
     lastCommit: raw.lastCommit ?? EMPTY_STATE.lastCommit,
     carry: raw.carry ?? EMPTY_STATE.carry,
     lastDeferReason: raw.lastDeferReason ?? EMPTY_STATE.lastDeferReason,
+    ...(raw.lastFailureFinal === true ? { lastFailureFinal: true } : {}),
     ...(raw.recentRuns !== undefined ? { recentRuns: raw.recentRuns } : {}),
   };
   if (raw.lastSuccess === undefined && state.lastResult === "success") {
@@ -221,6 +227,8 @@ export interface RecordOutcomeOptions {
   /** The defer marker's reason, for a `deferred` run that wrote one. */
   deferReason?: DeferReason | null | undefined;
   error: string | null;
+  /** A `failure` another run cannot fix: a one-shot is not retried. */
+  final?: boolean | undefined;
   durationMs: number;
   sleepAffected: boolean;
   windowMs: number;
@@ -239,6 +247,8 @@ export function recordOutcome(state: ScriptState, opts: RecordOutcomeOptions): v
   state.lastResult = result;
   state.lastDeferReason = result === "deferred" ? (opts.deferReason ?? null) : null;
   state.lastError = error;
+  if (result === "failure" && opts.final === true) state.lastFailureFinal = true;
+  else delete state.lastFailureFinal;
   state.lastDurationMs = durationMs;
   state.runCount++;
   state.skipped = null;

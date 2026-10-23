@@ -5,6 +5,8 @@
  *
  * - `Authorization: Bearer <scan-token>` — the uploader's dedicated credential,
  *   verified against the box's OWN scan-token store (`core/scan/tokens.ts`).
+ *   Any member may mint one; it is valid only while its creator can still
+ *   open the box (`canAccessBox`, checked on every request).
  *   The hub verifies the same bearer against the same on-disk store before
  *   proxying, and additionally refuses to proxy it anywhere but `/api/scan/…`;
  *   neither process trusts the other's verdict.
@@ -23,6 +25,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { resolveScanRequestAuth } from "../../../core/scan/tokens.js";
 import { getOwnerEmail, resolveRequestIdentity } from "../../auth.js";
+import { canAccessBox } from "../../box-access.js";
 
 /** Who a scan route is acting for — Track 2 records `tokenName` as provenance
  *  (`scan-upload/<tokenName>`); an owner-driven request has none. */
@@ -53,12 +56,22 @@ export function scanAuthOf(request: FastifyRequest): ScanAuth | undefined {
  */
 async function resolveScanAuth(request: FastifyRequest, opts: { boxRoot: string }): Promise<ScanAuth | null> {
   const scanToken = await resolveScanRequestAuth(opts.boxRoot, request.headers);
-  if (scanToken) return { source: "scan-token", tokenName: scanToken.name, email: null };
+  if (scanToken) {
+    // Any member may mint a scan token. The token is valid only while its
+    // creator can still open the box, so removing a member from
+    // `allowedEmails` also stops that member's uploaders. A null creator is the
+    // owner on an open-access box.
+    const creator = scanToken.createdBy;
+    if (creator !== null && !(await canAccessBox({ boxRoot: opts.boxRoot, email: creator, ownerEmail: getOwnerEmail() }))) {
+      return null;
+    }
+    return { source: "scan-token", tokenName: scanToken.name, email: null };
+  }
 
   const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
   // `source: "open"` is the test-only auth-off construction option, which the
-  // tRPC context also treats as owner. Everything else must BE the owner: box
-  // members with access are not enough for an ingest credential surface.
+  // tRPC context also treats as owner. Everything else must BE the owner: a
+  // member drives these routes through a scan token, not a browser session.
   if (identity.source === "open") return { source: "owner", tokenName: null, email: identity.email };
   const ownerEmail = getOwnerEmail();
   if (identity.email !== null && ownerEmail !== null && identity.email === ownerEmail) {

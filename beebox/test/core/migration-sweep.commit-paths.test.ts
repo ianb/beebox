@@ -51,10 +51,13 @@ void test("A leftover question with a machine path commits redacted with the mig
   await writeFile(hook, `${stockHook}\nif git diff --cached | grep -q '^+.*/home/beebox/'; then exit 1; fi\n`);
   await chmod(hook, 0o755);
 
+  // The apply commit carries the redacted card; the question is from a run
+  // before the apply, so the sweep then deletes it in a commit of its own.
   const result = await sweepMigrations({ boxRoot: box.root, repair: true, runScript: async () => 0 });
-  t.check({ status: result.status, committed: git(box, "show", `HEAD:${question}`).includes("failed in ~beebox/boxes/a"), dirty: git(box, "status", "--porcelain") }, {
-    status: "attention",
+  t.check({ status: result.status, committed: git(box, "show", `HEAD~1:${question}`).includes("failed in ~beebox/boxes/a"), closed: git(box, "show", "--format=", "--name-status", "HEAD"), dirty: git(box, "status", "--porcelain") }, {
+    status: "applied",
     committed: true,
+    closed: `D\t${question}`,
     dirty: "",
   });
 });

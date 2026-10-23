@@ -97,3 +97,5 @@ re-evaluated later.
 ## Audit 2026-10-22
 
 The false claim named above still stands. `beebox/docs/security-overview.md:110` says scheduled agent runs are off by default on fresh boxes. `beebox/src/core/box/structure/defaults.ts` still seeds several schedules with `enabled: true` (lines 379, 390, 410, 425). The docs fix is a small edit and needs no tool decision. The evaluation of coherence itself is not done.
+
+The security-doc claim is now corrected: `beebox/docs/security-overview.md` and `beebox/docs/security-report.md` name which schedules are seeded on and which are off.

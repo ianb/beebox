@@ -35,7 +35,7 @@ import { syncBoxGuidance } from "../../box/guidance-sync/core.js";
 import { guidanceSurfaceFor } from "../../box/guidance-surfaces.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../../install-template-file.js";
 import { installValidationHooks } from "../../install-validation-hooks.js";
-import { getBoxShape, type BoxShape } from "../../../lib/box-shape.js";
+import { boxCodePaths, getBoxShape, getBoxShapeIfPresent, type BoxShape } from "../../../lib/box-shape.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../../lib/git/core/operations.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "../shared.js";
@@ -166,7 +166,11 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
   // Config-level inputs
   await checkDir(getBoxDir(boxRoot, "config"), /\.(guide|personality)\.card$/);
   await checkDir(getBoxDir(boxRoot, "procedures"), /\.procedure\.card$/);
-  await checkDir(getBoxDir(boxRoot, "schemas"), /\.ts$/);
+
+  // Box-local schemas (`src/schemas/*.ts`, what `loadBoxSchemas` reads): each
+  // one feeds a card rule, a rule skill, and the agent guide.
+  const lookup = await getBoxShapeIfPresent(boxRoot);
+  if (lookup.found) await checkDir(boxCodePaths(lookup.shape).schemasDir, /\.ts$/);
 
   // Briefing cards (root + any subdirectory)
   await check(join(boxRoot, "_content", "briefing.briefing.card"));

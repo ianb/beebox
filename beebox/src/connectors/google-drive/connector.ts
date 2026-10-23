@@ -223,8 +223,9 @@ class GoogleDriveConnector implements Connector {
       folderCapped = deps.budget.capped;
     }
 
-    // A pass with failures or a capped folder may have missed Doc cards, so it
-    // can open the problem but cannot prove it is gone.
+    // One Doc that reached the Docs API clears the box-wide problem. With no
+    // Doc pulls, only a pass with no failures and no capped folder clears it:
+    // an incomplete pass may have missed the Docs that still fail.
     const now = getBoxTime(this.boxRoot);
     await recordDocsApiDiagnosis(this.boxRoot, (previous) =>
       nextDocsApiDiagnosis({ previous, outcomes: docsApiOutcomes, passComplete: failures.length === 0 && !folderCapped, now }),

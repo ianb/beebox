@@ -10,7 +10,8 @@
  *
  * A notification that reached nobody (every tried channel failed, or none
  * could be tried) throws, so the run records a failure the way `bbx notify`
- * exiting 1 inside a `runs:` pipeline would.
+ * exiting 1 inside a `runs:` pipeline would. When no channel was tried (no
+ * device, no subscription), the failure is final: a reminder does not retry it.
  */
 
 import { performance } from "node:perf_hooks";
@@ -30,9 +31,13 @@ import { appendRunHistory, historyEntry, readRunSummary, type RunSummary } from 
 import { errorMessage } from "../../shared/error-guards.js";
 
 class ScheduledNotificationUndeliveredError extends Error {
-  constructor(detail: string) {
+  /** True when no channel tried a send (every delivery skipped): another run cannot reach anyone either. */
+  readonly final: boolean;
+
+  constructor(detail: string, opts: { final: boolean }) {
     super(`Not delivered: ${detail}`);
     this.name = "ScheduledNotificationUndeliveredError";
+    this.final = opts.final;
   }
 }
 
@@ -77,7 +82,8 @@ async function runScheduleAction(args: RunActionArgs): Promise<ExecTiming> {
     const result = await notifyBoxholder(boxRoot, { intent });
     if (!notificationReached(result)) {
       const detail = result.deliveries.map((d) => `${d.channel} ${d.status}${d.detail === undefined ? "" : ` (${d.detail})`}`).join(", ");
-      throw new ScheduledNotificationUndeliveredError(detail || "no channel tried");
+      const final = !result.deliveries.some((d) => d.status === "failed");
+      throw new ScheduledNotificationUndeliveredError(detail || "no channel tried", { final });
     }
     return { durationMs: Math.round(performance.now() - started), sleepAffected: false };
   }
@@ -101,7 +107,7 @@ export function fallbackTiming(err: unknown): ExecTiming {
 
 export type RecordedRun = (
   | { result: "success"; durationMs: number }
-  | { result: ScheduleOutcomeResult; error: string; durationMs: number; deferReason?: DeferReason | undefined }
+  | { result: ScheduleOutcomeResult; error: string; durationMs: number; deferReason?: DeferReason | undefined; final?: boolean | undefined }
 ) & {
   /** What the run said about itself through `BBX_SUMMARY_FILE`, or null. */
   summary: RunSummary | null;
@@ -111,13 +117,17 @@ export type RecordedRun = (
  * Classify a failed action. A `notify:` send that failed is a `failure`: it
  * runs no agent, so an engine-wait record written during it (a chat's quota
  * episode) says nothing about it, and `deferred` would hide a send that did
- * not get through. A command goes through the engine-wait classifier.
+ * not get through. It is `final` when no channel was tried. A command goes
+ * through the engine-wait classifier.
  */
 export async function classifyActionFailure(
   parsed: ParsedScheduledScript,
   options: { boxRoot: string; runStartedAt: Date; error: unknown },
-): Promise<{ result: ScheduleOutcomeResult; error: string }> {
-  if (parsed.action.kind === "notify") return { result: "failure", error: errorMessage(options.error) };
+): Promise<{ result: ScheduleOutcomeResult; error: string; final?: boolean | undefined }> {
+  if (parsed.action.kind === "notify") {
+    const final = options.error instanceof ScheduledNotificationUndeliveredError && options.error.final;
+    return { result: "failure", error: errorMessage(options.error), final };
+  }
   return classifyScheduleFailure(options);
 }
 
@@ -130,7 +140,7 @@ export async function classifyActionFailure(
  */
 async function classifyRun(
   args: { parsed: ParsedScheduledScript; boxRoot: string; runStartedAt: Date; error: unknown; memory: RunMemory | null },
-): Promise<{ result: ScheduleOutcomeResult; error: string; deferReason?: DeferReason | undefined }> {
+): Promise<{ result: ScheduleOutcomeResult; error: string; deferReason?: DeferReason | undefined; final?: boolean | undefined }> {
   const { parsed, boxRoot, runStartedAt, error, memory } = args;
   if (memory !== null && error instanceof CommandFailedError && error.exitCode === CHECK_SKIP_CODE) {
     const deferReason = await readDeferMarker(memory.deferFilePath);
@@ -167,7 +177,8 @@ export async function runAndRecord(
     }
     const error = run.result === "success" ? null : run.error;
     const deferReason = run.result === "success" ? null : run.deferReason;
-    recordOutcome(state, { result: run.result, error, deferReason, durationMs: timing.durationMs, sleepAffected: timing.sleepAffected, windowMs, now });
+    const final = run.result === "success" ? false : run.final;
+    recordOutcome(state, { result: run.result, error, deferReason, final, durationMs: timing.durationMs, sleepAffected: timing.sleepAffected, windowMs, now });
     if (memory !== null) {
       await finishRunMemory(boxRoot, { memory, state, scriptName });
       run.summary = await readRunSummary(memory.summaryFilePath);

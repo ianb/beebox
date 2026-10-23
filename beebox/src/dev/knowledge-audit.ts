@@ -15,7 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
 import { loadTests, getTestsPath, KnowledgeAuditTranscriptError } from "./lib/test-runner/runner/run-test.js";
-import { runBoxAudits } from "./lib/box-audits.js";
+import { runBoxAudits } from "./lib/box-audits/core.js";
 import { assertStandaloneBox, assertCleanAuditBox, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
 import { resolveAuditBox } from "./lib/audit-box.js";
 import { generateReport } from "./lib/report.js";

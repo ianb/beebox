@@ -8,6 +8,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { symlink } from "node:fs/promises";
+import * as path from "node:path";
 import { pluginHealthChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/core.js";
 import { withDocId } from "../../../../../../../src/core/docs-gen/shared.js";
 import type { HealthCheck, PluginDefinition } from "../../../../../../../src/cards/plugin-definition.js";
@@ -258,5 +260,48 @@ void test("Each active plugin's healthChecks(boxRoot) runs with its rows renamed
       severity: "error",
       message: "The courseware plugin's health checks threw: concept map index unreadable",
     },
+  ]);
+});
+
+// ## An unreadable file does not stop the health run
+//
+// A dangling `*.exposition-plan.card` symlink is skipped, so every row still
+// reports (`stubs.test.ts` covers a dangling stub file). Any other throw in these checks becomes one failing
+// `plugin-checks` row, so `/api/health` and `bbx health` still answer.
+void test("A dangling card symlink leaves every row reporting", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write("content/Course.attach/.keep", "");
+  await symlink(path.join(box.root, "content/missing.card"), path.join(box.root, "content/Course.attach/Course.exposition-plan.card"));
+  const checks = await pluginHealthChecks(box.root);
+  // The card counts by its name; this row does not read it.
+  t.check(failing(checks), [
+    {
+      name: "plugin-type-unprovided",
+      severity: "error",
+      message: "1 card of type exposition-plan has no schema. The courseware plugin provides it: `bbx plugins list`, then its README.",
+    },
+  ]);
+  // The unreadable card reads as no rules.
+  t.check(
+    checks.find((c) => c.name === "legacy-exposition-rules"),
+    { name: "legacy-exposition-rules", ok: true, message: "No exposition-plan card carries a legacy `rules` field", severity: "warning" },
+  );
+});
+
+void test("A throw inside the plugin checks is one failing plugin-checks row", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const broken: PluginDefinition = {
+    get name(): string {
+      throw new Error("boom");
+    },
+    description: "Fixture whose name throws",
+    docs: "src/plugins/courseware/README.md",
+    schemas: undefined,
+  };
+  // The health run still returns rows.
+  t.check(await pluginHealthChecks(box.root, { plugins: [broken] }), [
+    { name: "plugin-checks", ok: false, message: "The plugin health checks threw: boom", severity: "error" },
   ]);
 });

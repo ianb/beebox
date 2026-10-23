@@ -24,13 +24,11 @@ import { invariant } from "../shared/invariant.js";
 /**
  * URL prefixes the box server itself claims at the root level (outside any
  * box's own `/<slug>` scope) — see `src/webapp/server-root/root-routes.ts`
- * (`/healthz`, `/api/...`), `src/webapp/routes/auth/register.ts` (`/auth/...`), and
- * `src/webapp/server-box-scope.ts` (`/webhook/<slug>/...`, a SEPARATE
- * top-level prefix from the box's own `/<slug>`). A box slug colliding with
- * any of these would make some of the box's own routes unreachable through
- * the hub (and `webhook` specifically would collide with every box's own
- * webhook prefix, not just the box named "webhook"), so they're reserved
- * fleet-wide.
+ * (`/healthz`, `/api/...`) and `src/webapp/routes/auth/register.ts` (`/auth/...`).
+ * A box slug colliding with any of these would make some of the box's own
+ * routes unreachable through the hub, so they're reserved fleet-wide.
+ * `webhook` was the prefix for external webhook callers; no route uses it
+ * now, and it stays reserved so a slug cannot claim it.
  */
 const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "healthz",
