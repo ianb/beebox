@@ -12,8 +12,7 @@
  * slot hasn't mounted.
  */
 
-import { useState } from "react";
-import { ChevronIcon } from "../landmarks/ChevronIcon";
+import { LandmarkGroupRows } from "../landmarks/LandmarkGroupRows";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { href } from "../../lib/routing";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
@@ -58,31 +57,11 @@ function HereLinkRow({ link, boxSlug }: { link: HereLink; boxSlug: string }) {
 }
 
 function HereGroupRows({ group, boxSlug }: { group: HereGroup; boxSlug: string }) {
-  const [open, setOpen] = useState(false);
-  const overflow = group.count - group.children.length;
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="w-full text-left px-3 py-2 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
-      >
-        <ChevronIcon open={open} className="shrink-0" />
-        <span className="truncate font-medium">{group.label}</span>
-        <span className="text-xs text-warm-700 shrink-0 ml-auto">{group.count}</span>
-      </button>
-      {open ? (
-        <div className="border-l border-warm-200 ml-5">
-          {group.children.map((link) => (
-            <HereLinkRow key={link.ref} link={link} boxSlug={boxSlug} />
-          ))}
-          {overflow > 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-700">+{overflow} more</div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+    <LandmarkGroupRows
+      group={group}
+      renderChild={(link) => <HereLinkRow link={link} boxSlug={boxSlug} />}
+    />
   );
 }
 

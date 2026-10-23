@@ -18,8 +18,7 @@
  * (docs/plans/box-screen.md, track 3).
  */
 
-import { useState } from "react";
-import { ChevronIcon } from "../../../landmarks/ChevronIcon";
+import { LandmarkGroupRows } from "../../../landmarks/LandmarkGroupRows";
 import { trpc } from "../../../../lib/trpc/client";
 import { useDropdownClose } from "../../../ui/Dropdown";
 import { MenuDivider } from "../../../ui/dropdown-menu-item";
@@ -90,7 +89,7 @@ function MenuLink({ link, onPanel }: { link: ResolvedLink; onPanel: (link: Resol
       type="button"
       role="menuitem"
       onClick={() => { close(); onPanel(link); }}
-      className="w-full text-left px-3 py-3.5 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
+      className="w-full text-left px-3 py-2 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
     >
       <span className="truncate">{link.label ?? link.title}</span>
       {!link.exists ? <span className="text-xs text-danger shrink-0">(missing)</span> : null}
@@ -99,31 +98,10 @@ function MenuLink({ link, onPanel }: { link: ResolvedLink; onPanel: (link: Resol
 }
 
 function MenuGroup({ group, onPanel }: { group: ResolvedGroup; onPanel: (link: ResolvedLink) => void }) {
-  const [open, setOpen] = useState(false);
-  const overflow = group.count - group.children.length;
-
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="w-full text-left px-3 py-3.5 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
-      >
-        <ChevronIcon open={open} className="shrink-0" />
-        <span className="truncate font-medium">{group.label}</span>
-        <span className="text-xs text-warm-700 shrink-0 ml-auto">{group.count}</span>
-      </button>
-      {open ? (
-        <div className="border-l border-warm-200 ml-5">
-          {group.children.map((link) => (
-            <MenuLink key={link.ref} link={link} onPanel={onPanel} />
-          ))}
-          {overflow > 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-700">+{overflow} more</div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+    <LandmarkGroupRows
+      group={group}
+      renderChild={(link) => <MenuLink link={link} onPanel={onPanel} />}
+    />
   );
 }
