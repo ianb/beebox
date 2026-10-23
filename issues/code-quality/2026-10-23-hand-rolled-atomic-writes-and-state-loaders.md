@@ -10,6 +10,11 @@ discovered-in: worktree-dup-sweep-backend — backend pass of the functional-dup
 
 ## Atomic write
 
+Status 2026-10-23: commit 530e63f89 moved the async writers listed below onto
+`writeFileAtomic`. Still open: the synchronous writers (they need a sync twin),
+`core/script-env/git-shim.ts` (forces mode 0755), and
+`workstreams-app/src/server/exhibits/app/api.ts` (hidden temp name).
+
 `writeFileAtomic` (`beebox/src/lib/atomic-write.ts:80`) writes a unique temp
 file, fsyncs it, renames it, fsyncs the directory, keeps the target's mode,
 and removes the temp file on failure. About 20 sites write temp-then-rename by

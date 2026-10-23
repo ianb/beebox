@@ -111,9 +111,9 @@ names the members and the canonical choice.
 Filed, because a merge changes output or needs a choice:
 [quota collection twice](2026-10-23-agent-quota-collection-exists-twice.md),
 [frontmatter split/parse/write](2026-10-23-frontmatter-read-and-write-have-many-implementations.md),
-[two card filename parsers](2026-10-23-two-card-filename-parsers.md),
+[two card filename parsers](../closed/code-quality/2026-10-23-two-card-filename-parsers.md),
 [atomic writes, JSON state loaders, strict exists](2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md),
-[inline path containment](2026-10-23-path-containment-checks-are-inlined.md),
+[inline path containment](../closed/code-quality/2026-10-23-path-containment-checks-are-inlined.md),
 [bin git, process, and argv helpers](2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md),
 [dates and durations](2026-10-23-date-and-duration-formatting-variants.md),
 [text helpers: truncate, slug, escape, coercion, sha256](2026-10-23-text-helpers-with-diverging-rules.md).
@@ -128,3 +128,11 @@ helper (kept apart from the move tool on purpose); `place-cards` `num` and
 `MissingBaseRefError` in `lint-changed`/`test-select`; the backoff formulas
 (each a different policy); debounce and coalesce timers (different shapes);
 `lockWithRetry` (returns false instead of throwing).
+
+Follow-up, same day: three filed groups merged after the first landing.
+Inline path containment (about 40 sites onto `isWithin`; fixes the `..name`
+and parent-directory edge cases) and the two card filename parsers (one
+grammar; a job card's type is now its schema type) are closed. The async
+hand-rolled atomic writes (13 writers) moved onto `writeFileAtomic`; that
+issue stays open for the sync writers, JSON state loaders, and strict
+existence probes.
