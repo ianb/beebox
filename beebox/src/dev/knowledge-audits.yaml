@@ -3933,6 +3933,7 @@ tests:
     correct_matches: ['@\s?`?WATERING\.md|@-?(?:import|include)']
     response_not_matches:
       - '(?:^|\n|[.:]\s+)(?:create|write|add|edit|make)\w*\s[^.\n]{0,40}CLAUDE\.md'
+      - '@WATERING\.md[^.\n]{0,60}\bin [^.\n]{0,30}CLAUDE\.md|CLAUDE\.md[^.\n]{0,40}@WATERING'
     tags: [agents-md, landmarks]
     notes: >
       Converted-box check: in a box that has run agents-md-2026-10 the editable
@@ -6493,6 +6494,7 @@ tests:
       Reaches for the courseware skill / understands the learner FIRST
       (a phenomenon-anchored, Piagetian probe) rather than writing a course cold.
     correct_contains_any: ["probe", "courseware"]
+    response_not_matches: ['no (?:learner )?probe|without (?:asking|probing)|skip (?:the )?probe']
     tags: [courseware, plugins]
     notes: >
       Building a course starts by understanding the learner, not by generating
@@ -6511,7 +6513,7 @@ tests:
       Says cycles are valid/intended (spirals), often via complements edges —
       NOT an error to fix.
     correct_matches: ['complements|spiral|intended|not an error|\bvalid\b']
-    response_not_matches: ['must be acyclic|is an error (?:to fix|you should fix)']
+    response_not_matches: ['must be acyclic|is an error (?:to fix|you should fix)|cycles? (?:are|is) not valid|cycles? (?:are|is) invalid']
     tags: [courseware, plugins]
     notes: >
       The graph is deliberately loose; a complements cycle is an honest spiral,
@@ -6528,6 +6530,7 @@ tests:
       material/README.md or loose prose.
     correct_contains: ["material/"]
     correct_contains_any: ["doc", "figure", "card"]
+    response_not_matches: ['(?:put|goes|write|add)\w*[^.\n]{0,40}material/README\.md']
     tags: [courseware, plugins]
     notes: >
       Material is proper presentational cards under material/, never a stray
