@@ -47,6 +47,7 @@ import {
 import { DEFAULT_VOICE, type TtsBackend } from "../../../shared/tts-backends.js";
 import type { ChatRoutesContext } from "./context.js";
 import { readSessionLogTail } from "../../../core/chat/session/log-tail.js";
+import { truncateTitle } from "../../../core/file-summary.js";
 
 /** Voice model names as a string set, for validating an untrusted `voice` param. */
 const VOICE_MODEL_SET = new Set<string>(VOICE_MODELS);
@@ -114,7 +115,7 @@ async function providerErrorMessage(response: Response): Promise<string | null> 
   // The message reaches the log and the browser, so anything shaped like a
   // provider key is masked first, in case a provider echoes one back.
   const redacted = message.replace(PROVIDER_KEY_PATTERN, "[redacted key]");
-  return redacted.length > MAX_PROVIDER_MESSAGE_CHARS ? `${redacted.slice(0, MAX_PROVIDER_MESSAGE_CHARS)}…` : redacted;
+  return truncateTitle(redacted, MAX_PROVIDER_MESSAGE_CHARS);
 }
 
 /**

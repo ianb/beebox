@@ -45,6 +45,7 @@ import { cspReportLogPath } from "../../webapp/routes/api-csp-report.js";
 import { resolveBoxRoot } from "../../lib/box-shape.js";
 import { digestEntries, entriesSince, newestTs, parseCspLog, type CspDigest, type CspEntry } from "./digest.js";
 import { errorMessage } from "../../shared/error-guards.js";
+import { escapeHtml } from "../../lib/escape-html.js";
 
 const execFileP = promisify(execFile);
 
@@ -215,21 +216,17 @@ function reportForSource(source: Source, state: RunnerState): SourceReport {
 
 // ── HTML report ───────────────────────────────────────────────────────────
 
-function esc(s: string): string {
-  return s.replace(/["&<>]/g, (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&quot;"));
-}
-
 function violationRows(report: SourceReport): string {
   return report.digest.violations
     .map((v) => {
       const newCount = report.newByKey.get(`${v.directive} ${v.blocked}`) ?? 0;
       const badge = newCount > 0 ? ` <span class="new">+${newCount} new</span>` : "";
       return `<tr${newCount > 0 ? ' class="row-new"' : ""}>
-        <td class="dir">${esc(v.directive)}</td>
-        <td class="org">${esc(v.blocked)}${badge}</td>
+        <td class="dir">${escapeHtml(v.directive)}</td>
+        <td class="org">${escapeHtml(v.blocked)}${badge}</td>
         <td class="num">${v.count}</td>
-        <td class="ts">${esc(v.firstSeen)}</td>
-        <td class="ts">${esc(v.lastSeen)}</td></tr>`;
+        <td class="ts">${escapeHtml(v.firstSeen)}</td>
+        <td class="ts">${escapeHtml(v.lastSeen)}</td></tr>`;
     })
     .join("\n");
 }
@@ -239,7 +236,7 @@ function scopeSection({ scope, reports, note }: { scope: Scope; reports: SourceR
   const dirty = reports.filter((r) => !r.digest.clean);
   let body: string;
   if (note !== null) {
-    body = `<p class="note">${esc(note)}</p>`;
+    body = `<p class="note">${escapeHtml(note)}</p>`;
   } else if (reports.length === 0) {
     body = "<p class=\"ok\">No CSP logs recorded yet.</p>";
   } else if (dirty.length === 0) {
@@ -247,7 +244,7 @@ function scopeSection({ scope, reports, note }: { scope: Scope; reports: SourceR
   } else {
     body = dirty
       .map(
-        (r) => `<h3>${esc(r.box)} <span class="count">(${r.digest.violations.length} distinct, ${r.digest.total} total)</span></h3>
+        (r) => `<h3>${escapeHtml(r.box)} <span class="count">(${r.digest.violations.length} distinct, ${r.digest.total} total)</span></h3>
       <table><thead><tr><th>Directive</th><th>Blocked origin</th><th>Count</th><th>First seen</th><th>Last seen</th></tr></thead>
       <tbody>${violationRows(r)}</tbody></table>`,
       )
@@ -297,7 +294,7 @@ function buildHtml(
   { local: SourceReport[]; prod: SourceReport[]; prodError: string | null; hardenReady: boolean; totalViolations: number; totalNew: number; generatedAt: string },
 ): string {
   const banner = bannerHtml({ hardenReady, totalViolations, totalNew, prodError });
-  const prodNote = prodError !== null ? `<div class="banner info">Prod: ${esc(prodError)} — showing local only.</div>` : "";
+  const prodNote = prodError !== null ? `<div class="banner info">Prod: ${escapeHtml(prodError)} — showing local only.</div>` : "";
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>CSP violation review</title>
 <style>
@@ -321,7 +318,7 @@ function buildHtml(
   .guidance li { margin: .35rem 0; }
 </style></head><body>
 <h1>CSP violation review</h1>
-<p class="sub">Generated ${esc(generatedAt)}</p>
+<p class="sub">Generated ${escapeHtml(generatedAt)}</p>
 ${banner}${prodNote}
 ${scopeSection({ scope: "local", reports: local, note: null })}
 ${scopeSection({ scope: "prod", reports: prod, note: prodError })}
