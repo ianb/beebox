@@ -2,6 +2,7 @@ import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent } from "r
 import { TextField } from "../ui/fields/field";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
+import { ModalCard } from "../ui/ModalCard";
 import { SearchResults, type SearchResult } from "./SearchResults";
 import { searchResultTarget } from "./target";
 import { trpc } from "../../lib/trpc/client";
@@ -41,18 +42,18 @@ export function QuickSearchOverlay() {
   const list = results.data?.results ?? [];
   const onInputKey = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (isComposing(event.nativeEvent)) return;
-    if (event.key === "Escape") close();
-    else if (event.key === "ArrowDown") { event.preventDefault(); setActive((value) => Math.min(value + 1, Math.max(0, list.length - 1))); }
+    if (event.key === "ArrowDown") { event.preventDefault(); setActive((value) => Math.min(value + 1, Math.max(0, list.length - 1))); }
     else if (event.key === "ArrowUp") { event.preventDefault(); setActive((value) => Math.max(0, value - 1)); }
     else if (event.key === "Enter") { void openResult(list[active]); }
   };
-  return <div className="fixed inset-0 z-50 bg-warm-900/30 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
-    <div className="mx-auto mt-[10vh] max-h-[80vh] max-w-xl overflow-hidden rounded-lg border border-warm-200 bg-white shadow-xl" role="dialog" aria-modal="true" aria-label="Quick search">
-      <div className="p-3"><TextField label="Quick search" hideLabel type="search" value={query} onChange={(value) => { setQuery(value); setActive(0); }} onKeyDown={onInputKey} placeholder="Search or go to a path…" autoFocus /></div>
-      {!query ? <Text tone="muted" className="px-3 pb-4">Type to search this box. Press Escape to close.</Text> : null}
-      {results.isLoading ? <Text tone="muted" className="px-3 pb-4">Searching…</Text> : null}
-      {results.error ? <ErrorText className="px-3 pb-4">Could not search: {results.error.message}</ErrorText> : null}
-      {results.data ? <div className="max-h-[65vh] overflow-y-auto"><SearchResults results={list} activeIndex={active} query={query} onOpen={(item) => { void openResult(item); }} /></div> : null}
-    </div>
-  </div>;
+  // Escape reaches the dialog's native cancel; the shell's top margin keeps the
+  // input still while results grow below it.
+  return <ModalCard open labelledBy="quick-search-title" initialFocus='input[type="search"]' onCancel={close} onBackdropClick={close} className="mt-[10vh] max-w-xl">
+    <h2 id="quick-search-title" className="sr-only">Quick search</h2>
+    <TextField label="Quick search" hideLabel type="search" value={query} onChange={(value) => { setQuery(value); setActive(0); }} onKeyDown={onInputKey} placeholder="Search or go to a path…" />
+    {!query ? <Text tone="muted" className="pt-3">Type to search this box. Press Escape to close.</Text> : null}
+    {results.isLoading ? <Text tone="muted" className="pt-3">Searching…</Text> : null}
+    {results.error ? <ErrorText className="pt-3">Could not search: {results.error.message}</ErrorText> : null}
+    {results.data ? <div className="-mx-5 -mb-5 mt-3 max-h-[65vh] overflow-y-auto"><SearchResults results={list} activeIndex={active} query={query} onOpen={(item) => { void openResult(item); }} /></div> : null}
+  </ModalCard>;
 }
