@@ -26,8 +26,8 @@
 [data-chrome-theme="phosphor"] .bbx-app-nav button:not(#bbx-nav-errors)::after{content:" ]";color:#3baa55;}
 [data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material){color:#82ed91;background:#03130a;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material{background:#03130a;}
-/* Chat material ink, read by text in the reply, pending and meta materials. */
-[data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-pending-material,.bbx-chat-meta-material){--bbx-ink:#82ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#b5ffc0;}
+/* Material ink, read by text in the reply, pending and meta materials and on the neutral file desk. */
+[data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-pending-material,.bbx-chat-meta-material,.bbx-interface-card-desk[data-card-content="neutral"]){--bbx-ink:#82ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#b5ffc0;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material::before{content:"┌─ INCOMING ─────────────────────────────────────────────";display:block;color:#51c468;font:11px/1 monospace;white-space:nowrap;overflow:hidden;margin:0 0 12px;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper{color:#a7ffb1;background:#071a0c;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper :is(.bbx-chat-user-token,.bbx-chat-user-attachment,.bbx-chat-user-attachment-badge){background:#ffffff1f;}
@@ -67,6 +67,8 @@
 }
 .bbx-card-surface[data-card-theme="phosphor"]{background:#041108;border:0;box-shadow:none;}
 .bbx-card-theme[data-card-theme="phosphor"] .bbx-card-heading{background:#061a0b;border:0;}
+/* The bracketed Properties button is wider than the default fold; the title, the line beside it, wraps clear of it. */
+.bbx-card-theme[data-card-theme="phosphor"] > .bbx-card-heading h2{margin-right:4rem;}
 .bbx-card-theme[data-card-theme="phosphor"] .bbx-card-heading h2{font:600 14px/1.4 "IBM Plex Mono","SFMono-Regular",Consolas,monospace;text-shadow:0 0 7px #55ed6c55;}
 .bbx-card-theme[data-card-theme="phosphor"] .bbx-card-heading h2::before{content:"./ ";color:#51c468;}
 .bbx-card-theme[data-card-theme="phosphor"]>.bbx-card-properties{display:flex;align-items:center;justify-content:center;width:auto;min-width:84px;height:30px;top:8px;right:8px;padding:4px 7px;background:#082311;border:0;box-shadow:none;}

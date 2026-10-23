@@ -24,6 +24,7 @@ import { useCompanionMaterial } from "../../../../hooks/useCompanionMaterial";
 import { PaneControls } from "../../../../components/chat/workspace/PaneControls";
 import { useMobileChatViewport } from "../../../../components/chat/everywhere/use-mobile-card-navigation";
 import { Pre } from "../../../../components/ui/Pre";
+import { MaterialContext } from "../../../../components/ui/material";
 
 function noop() { /* The specimen never opens, pins or closes a card. */ }
 
@@ -95,7 +96,7 @@ function CompanionDesk({ id, tabs, active, identities, content, children }: {
       <PaneControls pane="left" mobile={mobile} focused={false} pdfMenu={null} onAction={noop} />
     </div>
     <div role="tabpanel" id={workspacePanelId(active)} aria-hidden={false} data-card-content={content} className="bbx-interface-card-desk flex-1 min-h-0">
-      {children}
+      <MaterialContext.Provider value={content === "neutral"}>{children}</MaterialContext.Provider>
     </div>
   </div>;
 }
