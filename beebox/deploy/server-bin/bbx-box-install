@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Reconcile each package-layout box's node_modules with its manifest.
+#
+#   bbx-box-install <boxes root> <engine>
+#
+# A box's package.json declares react/react-dom/typescript (view compilation
+# needs a box-owned react; src/webapp/views/compiler/compile.ts) and the engine
+# as `"beebox": "link:.beebox/engine"`, a gitignored link this script points at
+# <engine> (bin/box-engine-link). Left uninstalled, every view degrades to a
+# "Failed to compile" stub with no visible error.
+#
+# A box is installed when it has no completed install on record, or when its
+# package.json or pnpm-lock.yaml is newer than that record. The record is
+# node_modules/.bbx-install-stamp, touched only after `pnpm install` exited 0
+# and the engine link verified. Comparing against a dependency's own files does
+# not work: a no-op `pnpm install` leaves them untouched, so a manifest a
+# migration rewrote once looked newer forever and every deploy reinstalled
+# every box (issues: per-box reinstall marker, 2026-10-22).
+#
+# One box's failure prints ERROR and the next box proceeds; the exit status is
+# 0 unless the arguments are wrong. Installs run as the beebox user, which owns
+# the box trees.
+set -euo pipefail
+
+if [[ $# -ne 2 ]]; then
+  echo "usage: bbx-box-install <boxes root> <engine>" >&2
+  exit 2
+fi
+boxes_root="$1"
+engine="$2"
+link_check="$engine/bin/box-engine-link"
+STAMP_NAME=".bbx-install-stamp"
+
+for box in "$boxes_root"/*/; do
+  box="${box%/}"
+  pj="$box/package.json"
+  [[ -f "$pj" ]] || continue   # a legacy-shape box has no manifest
+  name=$(basename "$box")
+
+  if ! sudo -u beebox -H bash -lc '"$0" link "$1" "$2"' "$link_check" "$box" "$engine"; then
+    echo "  ERROR $name: could not link .beebox/engine; skipping its install." >&2
+    continue
+  fi
+
+  stamp="$box/node_modules/$STAMP_NAME"
+  lock="$box/pnpm-lock.yaml"
+  reason=""
+  if [[ ! -e "$stamp" ]]; then
+    reason="no completed install on record"
+  elif [[ "$pj" -nt "$stamp" ]]; then
+    reason="package.json changed since the last install"
+  elif [[ "$lock" -nt "$stamp" ]]; then
+    reason="pnpm-lock.yaml changed since the last install"
+  elif ! "$link_check" verify "$box" 2>/dev/null; then
+    reason="the recorded install no longer verifies"
+  fi
+  # A box with nothing to do already verified above.
+  [[ -n "$reason" ]] || continue
+  echo "  $name: installing ($reason)..."
+  if ! sudo -u beebox -H bash -lc 'cd "$0" && pnpm install' "$box"; then
+    echo "  ERROR $name: pnpm install exited nonzero; check for real dependency errors above" \
+         "(a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else is not)." >&2
+    continue
+  fi
+  if ! "$link_check" verify "$box"; then
+    echo "  ERROR $name: the box has no usable engine after install." >&2
+    continue
+  fi
+  sudo -u beebox -H bash -lc 'touch "$0"' "$stamp"
+done
