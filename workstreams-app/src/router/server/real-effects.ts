@@ -15,6 +15,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
+import { createWriteStream } from "node:fs";
 import { execa } from "execa";
 import getPorts from "get-port";
 import { resolveBoxEntries, type ResolvedBoxEntry } from "../box-entry.js";
@@ -386,6 +387,7 @@ export function createRealEffects(): RouterEffects {
     pidStore,
     writeHubConfig: writeWorktreeHubConfig,
     getPort: () => getPorts(),
+    openLog: (file) => createWriteStream(file, { flags: "a" }),
     resolveWorktree,
     resolveBoxEntries,
     pathExists,

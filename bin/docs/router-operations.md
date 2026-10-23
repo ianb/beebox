@@ -122,8 +122,9 @@ serves, except boxes listed in main's `TEST_BOXES=` line (same entry syntax
 as `BOXES=`). Each of those gets its own store file under the router state
 directory (`secrets/main/<slug>.json`), passed to that box's hub child only,
 so a test box never shares an entry with the boxholder's real boxes. A new
-test box store starts empty. `TEST_BOXES=` needs the hub: the no-hub mode
-refuses to start with it.
+test box store starts empty. Each `TEST_BOXES=` entry must also be in
+`BOXES=`; an entry that is not fails the start. `TEST_BOXES=` needs the hub:
+the no-hub mode refuses to start with it.
 
 ## Activity and reloads
 

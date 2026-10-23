@@ -8,9 +8,9 @@
 // any await) lives here and has a pointing comment at the code implementing it.
 
 import type { WriteStream } from "node:fs";
-import { boxEntryToArg } from "../box-entry.js";
+import { boxEntryToArg, type ResolvedBoxEntry } from "../box-entry.js";
 import type { WorktreeHandle } from "../lifecycle.js";
-import { statusError, type SpawnedChild } from "../effects.js";
+import { statusError, type ResolvedWorktree, type SpawnedChild } from "../effects.js";
 import { onChildExit, testBoxSecretsFileFor, type CoreState } from "./worktree-teardown.js";
 import type { StartPlan, StartProgress } from "./worktree-start.js";
 import { resolveBackendEntryPath } from "./backend-entry.js";
@@ -77,27 +77,54 @@ function captureOutput(child: SpawnedChild, logStream: WriteStream): { read: () 
   return { read: () => buf };
 }
 
+/**
+ * Resolve the boxes one generation serves. Each of wt.boxes may be a legacy box
+ * dir, a v2 package root, or a v2 content dir (see box-entry.ts); resolve to
+ * {contentDir, slug} before handing off to the backend, which no longer guesses
+ * the slug itself.
+ *
+ * A test box (`TEST_BOXES=`) gets its own secret store so it never shares
+ * entries with the boxholder's real boxes. Only the hub can give one box a
+ * different store from its siblings, so the no-hub mode refuses instead. A test
+ * entry that names no served box also refuses: the boxholder meant that box to
+ * be isolated, and serving the list without it would hide the mistake.
+ *
+ * Runs before anything is spawned; `startWorktree` routes a throw from here to
+ * the same parked `failed` record as a spawn failure.
+ */
+export async function resolveGenerationBoxes(state: CoreState, wt: ResolvedWorktree): Promise<ResolvedBoxEntry[]> {
+  const { effects, config } = state;
+  const name = wt.name;
+  const testBoxes = await effects.resolveBoxEntries(wt.testBoxes);
+  if (config.devNoHub && testBoxes.length > 0) {
+    throw statusError(`${name}: TEST_BOXES needs the hub, which gives each test box its own secret store; the no-hub mode would put it on the real store`, 500);
+  }
+  const boxes = await effects.resolveBoxEntries(wt.boxes);
+  const servedDirs = new Set(boxes.map((b) => b.contentDir));
+  // resolveBoxEntries keeps input order, so index i is the entry as written.
+  const unserved = testBoxes.flatMap((b, i) => (servedDirs.has(b.contentDir) ? [] : [wt.testBoxes[i] ?? b.contentDir]));
+  if (unserved.length > 0) {
+    throw statusError(`${name}: TEST_BOXES lists ${unserved.map((e) => JSON.stringify(e)).join(", ")}, which BOXES does not serve`, 500);
+  }
+  const testDirs = new Set(testBoxes.map((b) => b.contentDir));
+  return boxes.map((b) =>
+    testDirs.has(b.contentDir) ? { ...b, secretsFile: testBoxSecretsFileFor(config.browseDir, { worktree: name, slug: b.slug }) } : b,
+  );
+}
+
 export async function spawnGeneration(
   state: CoreState,
-  { plan, handle, progress }: { plan: StartPlan; handle: WorktreeHandle; progress: StartProgress },
+  {
+    plan,
+    handle,
+    progress,
+    resolvedBoxes,
+  }: { plan: StartPlan; handle: WorktreeHandle; progress: StartProgress; resolvedBoxes: ResolvedBoxEntry[] },
 ): Promise<Generation> {
   const { effects, config, log } = state;
   const { wt, backendPort, frontendPort, childEnv, logStream } = plan;
   const name = wt.name;
 
-  // Each of wt.boxes may be a legacy box dir, a v2 package root, or a v2
-  // content dir (see box-entry.ts) — resolve to {contentDir, slug} before
-  // handing off to the backend, which no longer guesses the slug itself.
-  // A test box (`TEST_BOXES=`) gets its own secret store so it never shares
-  // entries with the boxholder's real boxes. Only the hub can give one box a
-  // different store from its siblings, so the no-hub mode refuses instead.
-  const testDirs = new Set((await effects.resolveBoxEntries(wt.testBoxes)).map((b) => b.contentDir));
-  if (config.devNoHub && testDirs.size > 0) {
-    throw statusError(`${name}: TEST_BOXES needs the hub, which gives each test box its own secret store; the no-hub mode would put it on the real store`, 500);
-  }
-  const resolvedBoxes = (await effects.resolveBoxEntries(wt.boxes)).map((b) =>
-    testDirs.has(b.contentDir) ? { ...b, secretsFile: testBoxSecretsFileFor(config.browseDir, { worktree: name, slug: b.slug }) } : b,
-  );
   // Resolved once per generation spawn (not inside the readiness-poll loop
   // below), so a fallback to a pre-rename path warns exactly once per spawn
   // attempt. See core/backend-entry.ts.
