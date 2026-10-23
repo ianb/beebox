@@ -77,10 +77,10 @@ export interface ChannelFlags {
 }
 
 /** Whether a send on each channel has what it needs: an injected service, fake mode, or the server's keys. */
-function channelsConfigured(services: NotifyServices): ChannelFlags {
+async function channelsConfigured(boxRoot: string, services: NotifyServices): Promise<ChannelFlags> {
   return {
-    apns: services.apns !== undefined || apnsConfigured(),
-    webPush: services.push !== undefined || webPushConfigured(),
+    apns: services.apns !== undefined || (await apnsConfigured(boxRoot)),
+    webPush: services.push !== undefined || (await webPushConfigured(boxRoot)),
   };
 }
 
@@ -97,7 +97,7 @@ export async function notifyChannelsDetail(
   const services = opts?.services ?? {};
   const detail = await audienceDetail(boxRoot);
   const audience = audienceFlags(detail);
-  const configured = channelsConfigured(services);
+  const configured = await channelsConfigured(boxRoot, services);
   const reach = {
     apns: audience.apns && configured.apns,
     webPush: audience["web-push"] && configured.webPush,
@@ -231,7 +231,7 @@ export async function planNotification(
   },
 ): Promise<NotifyPlan> {
   const audience = await audienceDetail(boxRoot);
-  const configured = opts.configured ?? channelsConfigured(opts.services ?? {});
+  const configured = opts.configured ?? (await channelsConfigured(boxRoot, opts.services ?? {}));
   const presence = opts.presence ?? (await livePresence(boxRoot, { now: opts.now ?? getBoxTime(boxRoot) }));
   const plan = restrict(channelsToTry({ intent: opts.intent, audience: audienceFlags(audience), presence, onScreen: opts.onScreen }), opts.channel);
   return { audience, configured, presence, plan };

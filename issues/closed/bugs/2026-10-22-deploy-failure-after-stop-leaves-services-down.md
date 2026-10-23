@@ -16,7 +16,7 @@ to restart them, otherwise it prints that activation failed before the restart
 and exits at once. The status probe reports a box it cannot query. A comment at
 `pnpm store prune` warns against assuming a warm cache, and
 `beebox/docs/server/deploying.md` now matches. The per-box reinstall marker was
-split into [its own issue](../../code-quality/2026-10-22-per-box-reinstall-marker.md).
+split into [its own issue](../code-quality/2026-10-22-per-box-reinstall-marker.md).
 
 The activation script that `deploy.sh` runs on the server stops the hub and
 the scheduler early (`beebox/deploy/deploy.sh:602`) and restarts them near the

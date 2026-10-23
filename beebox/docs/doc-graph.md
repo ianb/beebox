@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-23T12:55:34Z
-Total documents: 566
+Generated: 2026-10-23T13:33:45Z
+Total documents: 567
 
 ## Issues
 
@@ -473,6 +473,8 @@ Referenced by:
 - ../research/pai/information-layout.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/pai/prompts.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/pai/telos.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- ../research/test-value/git-churn.md:11 (mention) — Mechanical commits (85, listed in `mechanical.json`): any commit touching >50 test files, plus commits whose subject mat
+- ../research/test-value/reading-core.md:176 (mention) — - "The box namespace fence" 5 areas resolve (R1; 4 are R6 of one), 7 non-areas → null (R3; `src`, `node_modules`, `.git`
 
 References:
 - → docs/architecture/spirit.md (link)
@@ -743,7 +745,7 @@ Referenced by:
 - docs/server/boxes.md:32 (link) — see the root [`README.md`](../../README.md) for that path. This doc is about
 - docs/testing/knowledge-audits.md:73 (mention) — - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card
 - docs/user-stories/catalog/2026-08-21.md:2640 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus
-- src/core/agent-guide/guide.md:140 (mention) — `node_modules/beebox/box-docs/`; its `README.md` has one line per doc saying
+- src/core/agent-guide/guide.md:130 (mention) — `node_modules/beebox/box-docs/`; its `README.md` has one line per doc saying
 - ../.claude/skills/security-report/SKILL.md:274 (mention) — `beebox/README.md` keeps a short "What leaves your machine" section
 - ../dev/devprocess-talk/slides/index.md:3 (link) — Draft deck for the development-practice talk; one file per slide. Main slides are numbered, supporting slides carry a le
 - ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:17 (mention) — **Place chats are skipped.** A place chat writes to a different transcript directory (for example `…--content-inventory`
@@ -1048,6 +1050,7 @@ Title: "Box work from the dev repo" | 110 lines | current reference
 Referenced by:
 - AGENTS.md:48 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
 - docs/guides.md:35 (link) — | Box work: running against the test box, throwaway boxes, and production from the dev repo | [box-work](box-work.md) |
+- docs/implemented-plans/journey-simulated-notifications.md:49 (mention) — - **Hand check, 2026-10-23**, throwaway box made per `beebox/docs/box-work.md` ("Making a throwaway box"): `BBX_NOTIFY_F
 - docs/implemented-plans/remove-telegram.md:95 (mention) — - **Keep data, drop code** (`docs/box-work.md`, and the boxholder's standing
 - docs/testing.md:104 (link) — each lives and what not to touch: [box work](box-work.md).
 - docs/testing/knowledge-audits.md:140 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
@@ -1159,7 +1162,7 @@ Referenced by:
 - docs/server/health-checks.md:204 (link) — The connector activity record (see [connectors.md](../connectors.md#activity-record))
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:27 (mention) — - **Filesystem is state.** `beebox/docs/connectors.md:8`: *"External service → Connector.sync() → Writes/reads card file
 - docs/user-stories/catalog/2026-08-21.md:6008 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
-- src/core/agent-guide/guide.md:551 (mention) — procedure step resolves one by name at call time (`connectors.md`,
+- src/core/agent-guide/guide.md:545 (mention) — procedure step resolves one by name at call time (`connectors.md`,
 - test/user-stories/journeys/F-newcomer/reports/2026-10-22.md:71 (mention) — | 13 | Note 6: calendar: Google only, iCloud cannot connect; sign in and allow; changes only when asked; changes are kep
 - ../issues/closed/features/2026-04-27-gmail-sync-improvements.md:8 (mention) — **Closed:** Fully implemented: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the h
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:49 (mention) — Still open: the logger (no central module in `beebox/src/lib/`), `docs/reliability.md`, `docs/testing-practice.md`, `doc
@@ -2063,7 +2066,7 @@ Referenced by:
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
-- docs/testing/check.md:248 (link) — ([secrets](../secrets.md)): `setSecret` and `grantSecret`
+- docs/testing/check.md:268 (link) — ([secrets](../secrets.md)): `setSecret` and `grantSecret`
 - docs/testing/real-models.md:31 (link) — the secret ([secrets](../secrets.md)). Grants are keyed by box slug, so a
 - ../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md:21 (mention) — > `setHqService`/`setBackend`). See `beebox/docs/secrets.md#picking-a-service-the-box-cannot-reach-yet`.
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
@@ -2298,6 +2301,7 @@ Referenced by:
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:61 (mention) — - **Failing test before the fix** — `docs/testing.md` gestures at test-first for
 - ../issues/exploration/2026-09-30-evaluate-incident-investigation-skill.md:75 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../research/external-skills-harvest.md:292 (mention) — - [x] **X1 — reconcile bbx-plan's test posture with `docs/testing.md`. DONE →
+- ../research/test-value/reading-tooling.md:13 (mention) — Docs baseline (`beebox/docs/testing.md`, `beebox/docs/testing/check.md`): tests exist for (1) forcing decomposition, (2)
 
 References:
 - → docs/testing/check.md (link)
@@ -2391,7 +2395,7 @@ Referenced by:
 - docs/unimplemented-plans/design-vision-superseded.md:17 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
 - docs/user-stories/catalog/2026-06-26.md:1672 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including
 - docs/user-stories/catalog/2026-08-21.md:6008 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
-- src/core/agent-guide/guide.md:421 (mention) — both paths are in `node_modules/beebox/box-docs/triage.md`. What a capture
+- src/core/agent-guide/guide.md:415 (mention) — both paths are in `node_modules/beebox/box-docs/triage.md`. What a capture
 - ../issues/closed/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md:41 (mention) — `beebox/docs/triage.md` aligned with the corrected transport.
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:28 (mention) — (`docs/triage.md`).
 - ../issues/decisions/2026-08-01-scan-handler-move-into-place.md:9 (mention) — `docs/triage.md`, the handle stage needs a `procedure:` (inline or
@@ -2548,7 +2552,7 @@ Referenced by:
 - docs/implemented-plans/landmark-arrival.md:142 (mention) — `docs/box/landmark-curation.md`; one knowledge-audit entry). Schema
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:264 (mention) — (`docs/landmark-curation.md`, `docs/triage.md`) that don't exist in
 - docs/reports/knowledge-audit-rerun-2026-10-22.md:55 (mention) — | `landmarks-dont-create-quietly` | Asked for a landmark on a folder that did not exist, the agent created an empty fold
-- src/core/agent-guide/guide.md:397 (mention) — Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or
+- src/core/agent-guide/guide.md:391 (mention) — Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:12 (mention) — > Closed 2026-09-24: moved to `beebox/docs/box/landmark-curation.md` (with `read-when:`), so it ships as `node_modules/b
 - ../issues/features/2026-07-09-memory-gardener-consolidation-loop.md:32 (mention) — - **Landmark curation** (`beebox/docs/box/landmark-curation.md`) — curates the *navigation
 - ../research/openclaw-hermes/compare-skills-tools.md:59 (mention) — by `docs/landmark-curation.md`). None of these have a formal create/edit/patch/delete tool
@@ -2559,7 +2563,7 @@ Title: "Markdown in card bodies" | 121 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
-- src/core/agent-guide/guide.md:266 (mention) — `markdown.md` for body line breaks, HTML, footnotes. Each type's
+- src/core/agent-guide/guide.md:256 (mention) — `markdown.md` for body line breaks, HTML, footnotes. Each type's
 - ../issues/closed/bugs/2026-10-02-markdown-line-breaks-and-html-undefined-for-agents.md:11 (mention) — > Closed: implemented on branch worktree-markdown-expressiveness (merge commit in `git log`). Diverges from the proposal
 - ../issues/closed/docs-and-chores/2026-10-02-agent-guide-over-word-budget.md:18 (mention) — `docs/box/markdown.md`).
 
@@ -2578,7 +2582,7 @@ Title: "Prominence" | 50 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:575 (mention) — Indirect text moved verbatim to package docs (new `prominence.md`,
-- src/core/agent-guide/guide.md:263 (mention) — `bbx create` values and `bbx contains`; `prominence.md` before writing any
+- src/core/agent-guide/guide.md:253 (mention) — `bbx create` values and `bbx contains`; `prominence.md` before writing any
 
 #### docs/box/provenance.md
 
@@ -2587,7 +2591,7 @@ Title: "Quotes and provenance" | 175 lines | current reference
 Referenced by:
 - docs/box-guidance.md:148 (link) — [provenance](box/provenance.md) holds the `{% quote %}` and `{% source %}`
 - docs/implemented-plans/doc-structure-box-guidance.md:443 (mention) — one sentence each): PROVENANCE and DIRECT_QUOTES → `box-docs/provenance.md`;
-- src/core/agent-guide/guide.md:265 (mention) — `provenance.md` for `ref`/`href` fields and what a ref can reach;
+- src/core/agent-guide/guide.md:255 (mention) — `provenance.md` for `ref`/`href` fields and what a ref can reach;
 - ../issues/features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md:29 (mention) — body (`beebox/box-docs/provenance.md`); the chip jumps to the span by text
 - ../research/notebooklm/citations.md:42 (mention) — Bee Box has no retrieval step that produces citations. The agent searches (`bbx search` returns a card path plus a `#fra
 - ../research/notebooklm/comparison.md:19 (mention) — | Provenance over time | None for uploads and web pages; Drive sources re-sync | `version: sha256:` and `git:` on a sour
@@ -2649,29 +2653,29 @@ Referenced by:
 Title: "Speaking to the person" | 79 lines | current reference
 
 Referenced by:
-- src/core/agent-guide/guide.md:167 (mention) — on it themselves. Examples: `speaking-to-the-person.md` in the docs.
+- src/core/agent-guide/guide.md:157 (mention) — on it themselves. Examples: `speaking-to-the-person.md` in the docs.
 - ../issues/closed/features/2026-10-08-invisible-plumbing-reference-for-box-replies.md:69 (mention) — - The reference is a box doc, `beebox/docs/box/speaking-to-the-person.md`
 
 #### docs/box/todos.md
 
-Title: "Todos" | 95 lines | current reference
+Title: "Todos" | 105 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:150 (link) — [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
 - docs/glossary.md:87 (mention) — **now / later** — The two states of an open todo a person sees: *now* (past its `due`, past its `start`, or undated) and
 - docs/implemented-plans/doc-structure-box-guidance.md:444 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
 - docs/plans/gmail-admission-and-preparation.md:90 (mention) — - `beebox/docs/box/todos.md:39`: `by="agent" assigned="agent"` already represents
-- src/core/agent-guide/guide.md:345 (mention) — Mechanics: `node_modules/beebox/box-docs/todos.md`, before adding attributes,
+- src/core/agent-guide/guide.md:339 (mention) — Mechanics: `node_modules/beebox/box-docs/todos.md`, before adding attributes,
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md:89 (mention) — | 14 | Every todo shows a grey "user" tag | Product. The agent wrote `assigned="user"`, a value the todo docs do not def
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md:29 (mention) — - `9791d3a` added two todos: "Reply to Marisol about Sunday lunch" (`due` 2026-10-09) and "Check in on this list" (`due`
 - test/user-stories/journeys/F-newcomer/reports/2026-10-08.md:96 (mention) — | 21 | "starts Oct 17" chip; the person never said 17 | Product. The agent wrote `start="-2w"` (`1d8a151`) and did not s
 - test/user-stories/journeys/F-newcomer/reports/2026-10-22.md:102 (mention) — | 44 | Note 14: "what's due before the weekend" answered correctly; council on Monday 26 October; "the list stores only
 - test/user-stories/journeys/G-paperwork/reports/2026-10-22.md:104 (mention) — | 28 | Note 9: "1 now" is the ivy, undated, "which isn't what I'd call urgent". | P | An undated todo means "due now" (`
-- ../issues/bugs/2026-10-22-before-a-date-deadline-recorded-as-due-that-date.md:18 (mention) — `beebox/box-docs/todos.md` does not say what `due` means for "before <date>" wording. One line could say: `due` is the l
-- ../issues/bugs/2026-10-22-standing-care-hint-becomes-the-only-now-todo.md:10 (mention) — The boiler receipt in the G-paperwork walk had a handwritten line: "keep the ivy cut back!". The agent made it a todo wi
-- ../issues/bugs/2026-10-22-two-tiles-named-todos-on-the-box-page.md:18 (mention) — Options: say in `beebox/box-docs/todos.md` where a standalone todo goes and what to name its card; title the todo view d
 - ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:14 (mention) — `beebox/docs/box/todos.md`, `beebox/docs/cards/format.md`, and the todo tag
 - ../issues/closed/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:11 (mention) — Closed 2026-10-16 on worktree-plate-wording (8eaccd8ac, 3597a62e6): the human chose "later" as the one word. A todo befo
+- ../issues/closed/bugs/2026-10-22-before-a-date-deadline-recorded-as-due-that-date.md:11 (mention) — Resolved 2026-10-22 by the journey-walks-late-oct fix commit. Box-agent guidance (`docs/box/todos.md`): `due` is the las
+- ../issues/closed/bugs/2026-10-22-standing-care-hint-becomes-the-only-now-todo.md:13 (mention) — The boiler receipt in the G-paperwork walk had a handwritten line: "keep the ivy cut back!". The agent made it a todo wi
+- ../issues/closed/bugs/2026-10-22-two-tiles-named-todos-on-the-box-page.md:11 (mention) — Resolved 2026-10-22 by the journey-walks-late-oct fix commit. Box-agent guidance (`docs/box/todos.md`): where a standalo
 - ../issues/features/2026-10-08-cross-tool-todo-as-a-target-use-case.md:27 (mention) — (`beebox/docs/box/todos.md`); Gmail and Calendar already sync into cards and
 - ../research/imbue-studio/comparison.md:18 (mention) — | Integrations, cross-tool to-do | ~35 latchkey services by browser-captured credentials; per-app JSON stores; task-inbo
 
@@ -2682,7 +2686,7 @@ Title: "Triage instructions and replay" | 133 lines | current reference
 Referenced by:
 - docs/implemented-plans/jev-document-triage.md:405 (mention) — is on-demand `docs/box/triage-instructions.md`, with short discoverability pointers
 - docs/triage.md:105 (link) — Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
-- src/core/agent-guide/guide.md:426 (link) — Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
+- src/core/agent-guide/guide.md:420 (link) — Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:153 (link) — The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
 
 #### docs/box/tricks.md
@@ -2695,7 +2699,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:621 (mention) — | trick auto-commit and trailer | 6 | `tricks.md` | 5 |
 - docs/implemented-plans/box-agents-md.md:347 (mention) — (`docs/box-guidance.md`, `docs/box-layout.md`, `docs/box/tricks.md`), the
 - docs/implemented-plans/doc-structure-box-guidance.md:395 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
-- src/core/agent-guide/guide.md:550 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
+- src/core/agent-guide/guide.md:544 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
 - ../issues/closed/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md:160 (mention) — `beebox/docs/box/tricks.md`.
 - ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:14 (mention) — **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
 
@@ -2745,7 +2749,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-cards.md:61 (mention) — | `cards-as-markdown.md` | `cards/format.md` |
 - docs/implemented-plans/remove-cardworks-and-xml.md:426 (mention) — `docs/cards/format.md`, `docs/cards/schemas.md`.
 - docs/implemented-plans/todo-annotation.md:439 (mention) — `docs/cards/format.md` gains the tag reference; the issue file closes
-- docs/implemented-plans/todo-collection.md:535 (mention) — schema instructions, `docs/cards/format.md:80-88`, and the two audits that
+- docs/implemented-plans/todo-collection.md:541 (mention) — schema instructions, `docs/cards/format.md:80-88`, and the two audits that
 - docs/media.md:17 (link) — - Where a card's media lives and how a ref names it: [card format](cards/format.md#attachments).
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
 - docs/reports/stack-decisions-2026-09-04.md:23 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
@@ -2857,7 +2861,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-package.md:332 (mention) — `CLAUDE.md:39`/`docs/cards/schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:13 (mention) — > convention lives in `docs/cards/schemas.md`, the box-local schema guide
 - docs/implemented-plans/standard-card-fields.md:63 (mention) — reserved-name rule to `docs/cards/schemas.md`. That stops the worst filler
-- docs/implemented-plans/todo-collection.md:680 (mention) — `docs/cards/schemas.md`, the box's own schema-authoring guide
+- docs/implemented-plans/todo-collection.md:686 (mention) — `docs/cards/schemas.md`, the box's own schema-authoring guide
 - docs/user-stories/catalog/2026-06-26.md:778 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/cards/schemas.md`
 - docs/user-stories/catalog/2026-08-21.md:9053 (mention) — - **Agent-added card fields survive a connector rewrite** — The mechanism is real, unconditional on the rewrite paths, a
 - ../.claude/skills/bbx-guide-schemas/SKILL.md:9 (mention) — and file-by-file checklist live in `beebox/docs/cards/schemas.md`.
@@ -5114,6 +5118,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md:11 (mention) — `expose-dev-router` plan (`beebox/docs/implemented-plans/expose-dev-router.md`),
 - ../issues/closed/features/2026-07-21-expose-dev-checkout-over-tailscale.md:13 (mention) — (`beebox/docs/implemented-plans/expose-dev-router.md`): the shared
 - ../issues/features/2026-07-22-bbx-tailscale-dev-router-operational-polish.md:11 (mention) — The dev-router Tailscale exposure (`docs/implemented-plans/expose-dev-router.md`)
+- ../research/test-value/reading-tooling.md:396 (mention) — 1. W3 dominates and is usually honest: the plan-defined contract is cited by path (`docs/implemented-plans/tailscale-exp
 
 References:
 - → docs/implemented-plans/expose-dev-router.review.md (mention)
@@ -5533,6 +5538,22 @@ Referenced by:
 References:
 - → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
 - → code-style.md (mention)
+
+#### docs/implemented-plans/journey-simulated-notifications.md
+
+Title: "Simulated notifications for journey walkers" | 193 lines | shipped history | implemented
+
+Referenced by:
+- test/user-stories/journeys/README.md:170 (link) — ([plan](../../../docs/implemented-plans/journey-simulated-notifications.md)).
+- ../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md:12 (link) — **Closed:** implemented in 896833924, dc98daf35, b2c35ab48 (plan: [journey simulated notifications](../../../beebox/docs
+
+References:
+- → ../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md (frontmatter)
+- → ../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md (link)
+- → ../issues/closed/code-quality/2026-10-22-journey-browser-denies-notification-permission.md (link)
+- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
+- → test/user-stories/journeys/walker-prompt.md (mention)
+- → docs/box-work.md (mention)
 
 #### docs/implemented-plans/knowledge-audit-plugins.md
 
@@ -7230,6 +7251,7 @@ Referenced by:
 - ../research/installable-app/comparables.md:30 (mention) — `beebox/docs/implemented-plans/tailscale-expose-and-protect.md`.
 - ../research/installable-app/tailscale.md:4 (mention) — `beebox/docs/implemented-plans/tailscale-expose-and-protect.md` (prior art,
 - ../research/openclaw-hermes/README.md:101 (mention) — | 23 | **Tailscale identity as an app-login accelerator (OpenClaw's post-fix `tailscale` auth mode: Serve identity heade
+- ../research/test-value/reading-tooling.md:396 (mention) — 1. W3 dominates and is usually honest: the plan-defined contract is cited by path (`docs/implemented-plans/tailscale-exp
 
 References:
 - → docs/engineering-principles.md (mention)
@@ -7309,12 +7331,12 @@ References:
 
 #### docs/implemented-plans/todo-collection.md
 
-Title: "Todo collection — todos as a staged query, with summaries that belong to the card type" | 739 lines | shipped history | implemented
+Title: "Todo collection — todos as a staged query, with summaries that belong to the card type" | 745 lines | shipped history | implemented
 
 Referenced by:
 - docs/cards/format.md:106 (mention) — `docs/implemented-plans/todo-collection.md`.
 - test/user-stories/journeys/A-lending/reports/2026-10-22.md:91 (mention) — | 28 | Note 8, closing: the same items appear twice on the Todos screen. | P (reproduced) | `TodoViewCard` renders the d
-- ../issues/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md:23 (mention) — - The plan asks for both parts (`beebox/docs/implemented-plans/todo-collection.md`). The strip's comment assumes that fe
+- ../issues/closed/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md:26 (mention) — - The plan asks for both parts (`beebox/docs/implemented-plans/todo-collection.md`). The strip's comment assumes that fe
 - ../issues/docs-and-chores/2026-09-20-remove-bbx-todos-verb.md:11 (link) — The [todo collection plan](../../beebox/docs/implemented-plans/todo-collection.md) added
 - ../issues/features/2026-08-19-collection-views-are-badly-defined.md:467 (link) — [Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
 - ../issues/features/2026-08-30-todos-inline-things-to-think-about.md:42 (link) — [Todo collection](../../beebox/docs/implemented-plans/todo-collection.md)
@@ -8035,6 +8057,7 @@ Referenced by:
 - ../issues/closed/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md:9 (frontmatter) — design: ../../../beebox/docs/plans/change-based-test-selection.md
 - ../issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md:69 (link) — Related: [change-based test selection](../../beebox/docs/plans/change-based-test-selection.md)
 - ../issues/features/2026-10-16-test-select-says-why-each-test-was-selected.md:9 (frontmatter) — design: ../../beebox/docs/plans/change-based-test-selection.md
+- ../research/test-value/reading-tooling.md:396 (mention) — 1. W3 dominates and is usually honest: the plan-defined contract is cited by path (`docs/implemented-plans/tailscale-exp
 
 References:
 - → ../issues/closed/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md (frontmatter)
@@ -9842,7 +9865,7 @@ References:
 
 #### docs/testing/check.md
 
-Title: "Tests with `t.check`" | 313 lines | current reference
+Title: "Tests with `t.check`" | 333 lines | current reference
 
 Referenced by:
 - AGENTS.md:20 (link) — - Write tests as `.test.ts` files that use `t.check` ([reference](docs/testing/check.md)). The [testing guide](docs/test
@@ -9857,6 +9880,9 @@ Referenced by:
 - ../dev/devprocess-talk/inventory.md:373 (mention) — - **Where:** `agent-doctest/`, the `doctest` skill, and the doctests testing page (the skill and page were replaced by `
 - ../issues/closed/bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md:13 (mention) — Closed 2026-10-19 (flaky-tests): every recurring victim file is fixed, deleted, already fixed, or shown not test-caused
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:49 (mention) — Still open: the logger (no central module in `beebox/src/lib/`), `docs/reliability.md`, `docs/testing-practice.md`, `doc
+- ../research/test-value/reading-core.md:39 (mention) — - "`getServingEngineVersion` reads the running engine's own package.json" → `await realEngineVersion()` — R5 and tautolo
+- ../research/test-value/reading-tooling.md:13 (mention) — Docs baseline (`beebox/docs/testing.md`, `beebox/docs/testing/check.md`): tests exist for (1) forcing decomposition, (2)
+- ../research/test-value/reading-web.md:65 (mention) — Counts: W2 1, W3 1; R1 2 (one partly R6). Checks are stringified projections (`"200 | turn=string | ..."`) rather than w
 
 References:
 - → src/services/AGENTS.md (mention)
@@ -10351,7 +10377,7 @@ References:
 
 #### src/core/agent-guide/guide.md
 
-Title: "Bee Box Agent Guide" | 633 lines
+Title: "Bee Box Agent Guide" | 631 lines
 
 Referenced by:
 - docs/agent-guide.md:19 (mention) — - `guide.md` holds the text, written by hand as one document. Its header
@@ -10375,9 +10401,9 @@ Referenced by:
 - test/user-stories/journeys/G-paperwork/reports/2026-10-22.md:81 (mention) — | 5 | Note 2, Note 10, closing: "Admin → Host → Notifications" is jargon; "I do not know where that is." | P | The agent
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:44 (mention) — - **One line:** the always-loaded box agent guide is a hand-written `guide.md` backed by `ledger.yaml` — one row per rul
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:52 (mention) — Seen again in three walks, in two forms. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R
-- ../issues/bugs/2026-10-22-box-agent-records-search-summaries-as-sourced-facts.md:22 (mention) — The agent guide's PROVENANCE section (`beebox/src/core/agent-guide/guide.md`) covers `{% source href %}`. It does not sa
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:20 (mention) — The agent guide already forbids this. `beebox/src/core/agent-guide/guide.md:153-158`
 - ../issues/closed/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md:33 (mention) — (`beebox/src/core/agent-guide/guide.md:368`), but not as off limits to read.
+- ../issues/closed/bugs/2026-10-22-box-agent-records-search-summaries-as-sourced-facts.md:25 (mention) — The agent guide's PROVENANCE section (`beebox/src/core/agent-guide/guide.md`) covers `{% source href %}`. It does not sa
 - ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:60 (mention) — `{{instruction_file}}` at `src/core/agent-guide/guide.md:372`,
 - ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:26 (mention) — - the agent guide (`beebox/src/core/agent-guide/guide.md`), whose box-side
 - ../issues/features/2026-07-05-writing-skill.md:670 (mention) — The code pointers in this issue are stale. `THE_LAW_OF_QUOTING` and `laws.ts` no longer exist. The law of quoting is now
@@ -10552,7 +10578,7 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:203 (mention) — `src/services/AGENTS.md`): `sendNotification(subscription, payload)` →
 - docs/plans/asset-offbox-storage.md:257 (mention) — `src/services/AGENTS.md`.
 - docs/plans/scan-vision-claude.md:363 (mention) — `src/services/AGENTS.md` named-params + describe rules.
-- docs/testing/check.md:225 (mention) — in-memory fakes. The service layer is documented in `src/services/AGENTS.md`.
+- docs/testing/check.md:245 (mention) — in-memory fakes. The service layer is documented in `src/services/AGENTS.md`.
 - src/connectors/AGENTS.md:15 (mention) — See `src/services/AGENTS.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patt
 
 ### test/fixtures/theme-tour/
@@ -10815,7 +10841,7 @@ Referenced by:
 - test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md:168 (mention) — - **H5 — prepare's provisioning check failed on the warm worktree server.** Already known; a worktree cold start fixed i
 - test/user-stories/journeys/B-inventory/reports/2026-10-08.md:219 (mention) — | R10 | `after-action.md` says the browse key is not the box owner and that `prepare.ts` reports `captureBlind`. Both ar
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md:158 (mention) — - **Stale after-action guidance.** `after-action.md` step 3 says the browse
-- test/user-stories/journeys/README.md:84 (link) — Then read the walk and write it up — **[after-action.md](after-action.md)** is the
+- test/user-stories/journeys/README.md:86 (link) — Then read the walk and write it up — **[after-action.md](after-action.md)** is the
 - ../dev/devprocess-talk/chunks/after-action-verify.md:5 (mention) — source: beebox/test/user-stories/journeys/after-action.md (42a74680b); slide 01d
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:142 (mention) — - **Lives in:** `beebox/test/user-stories/journeys/after-action.md`, `collect.ts`; reports under `<journey>/reports/`; `
 - ../dev/devprocess-talk/slides/01d-after-action-rule.md:19 (mention) — Path: beebox/test/user-stories/journeys/after-action.md, commit 42a74680b. Reports now also get a cross-model review bef
@@ -10829,7 +10855,7 @@ References:
 
 #### test/user-stories/journeys/README.md
 
-Title: "Journeys" | 153 lines
+Title: "Journeys" | 174 lines
 
 Referenced by:
 - ../dev/journeys/overview.md:5 (link) — Sources: [the design plan](../../beebox/docs/plans/user-story-journeys.md), [the journeys README](../../beebox/test/user
@@ -10841,21 +10867,24 @@ References:
 - → test/plugins/courseware/journeys/D-chemistry/README.md (link)
 - → test/user-stories/journeys/walker-prompt.md (mention)
 - → test/user-stories/journeys/after-action.md (link)
+- → docs/implemented-plans/journey-simulated-notifications.md (link)
 - → test/user-stories/journeys/A-lending/reports/2026-08-25.md (link)
 
 #### test/user-stories/journeys/walker-prompt.md
 
-Title: "You are trying out an app" | 183 lines
+Title: "You are trying out an app" | 232 lines
 
 Referenced by:
+- docs/implemented-plans/journey-simulated-notifications.md:38 (mention) — - **Do not invent events** (`beebox/test/user-stories/journeys/walker-prompt.md`, "Do not invent events"). Moving time i
 - test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md:195 (mention) — them, and show an absolute path in the `walker-prompt.md` example. Fixed:
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md:135 (mention) — - **H4 — the walker invents off-screen events.** D1–D5. The walker prompt has no rule against it. D4 removed the Bram un
 - test/user-stories/journeys/I-deciding/reports/2026-10-22.md:150 (mention) — - **H1 — the situation leaves country, shops and household unstated, and the walker invents them silently.** The walker
-- test/user-stories/journeys/README.md:64 (mention) — places the assets, composes the prompt from `walker-prompt.md`, and snapshots the box
+- test/user-stories/journeys/README.md:66 (mention) — places the assets, composes the prompt from `walker-prompt.md`, and snapshots the box
 - ../dev/devprocess-talk/chunks/walker-props-prompt.md:5 (mention) — source: beebox/test/user-stories/journeys/walker-prompt.md (260955f1d); slide 01b
 - ../dev/journeys/overview.md:5 (link) — Sources: [the design plan](../../beebox/docs/plans/user-story-journeys.md), [the journeys README](../../beebox/test/user
 - ../dev/journeys/reports/sweep-walks.md:22 (mention) — | **One sentence of knowledge.** "That this is an AI-powered app for organising their life. That is the whole briefing"
-- ../issues/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:11 (mention) — Each item below changed what a walker recorded, and each is a line in `beebox/test/user-stories/journeys/walker-prompt.m
+- ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:14 (mention) — Each item below changed what a walker recorded, and each is a line in `beebox/test/user-stories/journeys/walker-prompt.m
+- ../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md:25 (mention) — - Advancing time is a walk event, so it belongs in the journey's situation text, not the walker's choice ("Do not invent
 
 ### test/user-stories/journeys/A-lending/reports/
 
@@ -10865,7 +10894,7 @@ Title: "A-lending, 2026-08-25" | 107 lines
 
 Referenced by:
 - test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md:11 (link) — The [original report](2026-08-25.md) and journey definition are now under
-- test/user-stories/journeys/README.md:151 (link) — served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
+- test/user-stories/journeys/README.md:172 (link) — served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
 - ../dev/journeys/reports/sweep-issues.md:102 (mention) — | `2026-08-23-auth-preflight-blocks-new-chats-when-claude-not-on-path` | BUG | 08-23 | 08-29 | 6 | impl. | `ba64fc852` (
 - ../dev/journeys/reports/sweep-walks.md:25 (mention) — | **No self-judged success.** "They do not judge their own success. `collect.ts` reads the box to see what actually land
 
@@ -11034,12 +11063,12 @@ Referenced by:
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:58 (link) — - [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 10): the first reply offered
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:42 (link) — Still present in six of seven walks: `userEmail` is in `session_context` of the box chat and of the chat-title session i
 - ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:52 (link) — The line under a card's title reads "1 now", "2 now", "4 now · 1 done". The [A-lending](../../beebox/test/user-stories/j
-- ../issues/bugs/2026-10-22-browse-clicks-a-ref-it-has-called-stale.md:15 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 37, H3), [H-handover]
-- ../issues/bugs/2026-10-22-fresh-box-root-question-ref-is-broken.md:25 (link) — Present in every walk box made from `bbx engine init`. [A-lending](../../beebox/test/user-stories/journeys/A-lending/rep
-- ../issues/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md:19 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (R1), [G-paperwork](../../
-- ../issues/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md:17 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 28), [G-paperwork](..
 - ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:65 (link) — - [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 34): "The Lending page su
-- ../issues/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:19 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md), [C-reconnecting](../../be
+- ../issues/closed/bugs/2026-10-22-browse-clicks-a-ref-it-has-called-stale.md:18 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 37, H3), [H-handov
+- ../issues/closed/bugs/2026-10-22-fresh-box-root-question-ref-is-broken.md:28 (link) — Present in every walk box made from `bbx engine init`. [A-lending](../../../beebox/test/user-stories/journeys/A-lending/
+- ../issues/closed/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md:22 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (R1), [G-paperwork](../
+- ../issues/closed/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md:20 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 28), [G-paperwork]
+- ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:22 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md), [C-reconnecting](../..
 - ../issues/features/2026-08-19-collection-views-are-badly-defined.md:554 (link) — - [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (rows 18, 23, 32): one prose `doc
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:103 (link) — - [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (rows 13-15): the agent said that
 
@@ -11048,15 +11077,15 @@ References:
 - → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 - → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
-- → ../issues/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md (link)
+- → ../issues/closed/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md (link)
 - → docs/implemented-plans/todo-collection.md (mention)
 - → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
 - → docs/landmarks.md (mention)
-- → ../issues/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md (link)
+- → ../issues/closed/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md (link)
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
-- → ../issues/bugs/2026-10-22-fresh-box-root-question-ref-is-broken.md (link)
-- → ../issues/bugs/2026-10-22-browse-clicks-a-ref-it-has-called-stale.md (link)
-- → ../issues/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md (link)
+- → ../issues/closed/bugs/2026-10-22-fresh-box-root-question-ref-is-broken.md (link)
+- → ../issues/closed/bugs/2026-10-22-browse-clicks-a-ref-it-has-called-stale.md (link)
+- → ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
 - → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
 - → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
@@ -11284,8 +11313,8 @@ Title: "B-inventory, 2026-10-22" | 182 lines
 Referenced by:
 - ../issues/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md:32 (link) — The same upstream error on a page with no canvas. In the [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwo
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:42 (link) — Still present in six of seven walks: `userEmail` is in `session_context` of the box chat and of the chat-title session i
-- ../issues/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md:15 (link) — Reports: [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (H1), [B-inventory](..
 - ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:66 (link) — - [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-22.md) (row 40): building two car
+- ../issues/closed/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md:18 (link) — Reports: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (H1), [B-inventory]
 - ../issues/code-quality/2026-09-20-fold-search-and-browse-summaries-onto-summarize.md:40 (link) — In [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-22.md) (rows 13, 14) the box agent
 - ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md:60 (link) — The 2026-10-09 fix put a summary line under the title and keeps type fields on the front when the body is empty. In the
 - ../issues/features/2026-08-19-collection-views-are-badly-defined.md:555 (link) — - [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-22.md) (rows 9, 30): without asking
@@ -11298,7 +11327,7 @@ References:
 - → ../issues/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
 - → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
-- → ../issues/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md (link)
+- → ../issues/closed/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md (link)
 - → ../issues/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md (link)
 - → test/user-stories/journeys/B-inventory/reports/2026-10-09.md (link)
 
@@ -11435,43 +11464,43 @@ Referenced by:
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:59 (link) — - [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (rows 9, 24), both form
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:42 (link) — Still present in six of seven walks: `userEmail` is in `session_context` of the box chat and of the chat-title session i
 - ../issues/bugs/2026-10-09-cards-refer-to-the-person-as-they.md:51 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (R4): the briefing body g
-- ../issues/bugs/2026-10-22-browse-scroll-selector-accepts-a-hidden-match.md:15 (link) — Report: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 18, H1).
-- ../issues/bugs/2026-10-22-remind-offset-example-is-fixed-to-central-time.md:14 (link) — Report: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (R5).
-- ../issues/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md:21 (link) — Reports: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (rows 20, 21), [
-- ../issues/bugs/2026-10-22-root-question-shown-twice-and-answered-silently.md:22 (link) — Reports: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 4; shot 01)
-- ../issues/bugs/2026-10-22-sent-record-drops-the-message-text.md:14 (link) — Report: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 17).
-- ../issues/bugs/2026-10-22-source-chip-shows-chat-file-name-and-usage-keyword.md:12 (link) — Report: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 16; shots 08
-- ../issues/bugs/2026-10-22-two-tiles-named-todos-on-the-box-page.md:14 (link) — Report: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 44).
-- ../issues/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md:16 (link) — Reports: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 2, H8), [H-
-- ../issues/code-quality/2026-10-22-journey-collect-timing-misses-completion.md:19 (link) — Reports: [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (H4), [F-newcomer](../..
-- ../issues/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:19 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md), [C-reconnecting](../../be
+- ../issues/closed/bugs/2026-10-22-browse-scroll-selector-accepts-a-hidden-match.md:18 (link) — Report: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 18, H1).
+- ../issues/closed/bugs/2026-10-22-remind-offset-example-is-fixed-to-central-time.md:17 (link) — Report: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (R5).
+- ../issues/closed/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md:24 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (rows 20, 21)
+- ../issues/closed/bugs/2026-10-22-root-question-shown-twice-and-answered-silently.md:25 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 4; shot
+- ../issues/closed/bugs/2026-10-22-sent-record-drops-the-message-text.md:17 (link) — Report: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 17).
+- ../issues/closed/bugs/2026-10-22-source-chip-shows-chat-file-name-and-usage-keyword.md:15 (link) — Report: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 16; shots
+- ../issues/closed/bugs/2026-10-22-two-tiles-named-todos-on-the-box-page.md:17 (link) — Report: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 44).
+- ../issues/closed/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md:19 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 2, H8),
+- ../issues/closed/code-quality/2026-10-22-journey-collect-timing-misses-completion.md:22 (link) — Reports: [I-deciding](../../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (H4), [F-newcomer](..
+- ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:22 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md), [C-reconnecting](../..
+- ../issues/closed/features/2026-10-22-person-tiles-show-names-only.md:15 (link) — Report: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (rows 36, 37).
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:104 (link) — - [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 41): the agent rep
 - ../issues/features/2026-09-27-ack-badge-design-review.md:68 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (R7): one `created` ack c
 - ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md:36 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (R6): the agent wrote all
 - ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:44 (link) — - [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 5): turn 1 took 92
-- ../issues/features/2026-10-22-person-tiles-show-names-only.md:12 (link) — Report: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (rows 36, 37).
 
 References:
-- → ../issues/bugs/2026-10-22-root-question-shown-twice-and-answered-silently.md (link)
+- → ../issues/closed/bugs/2026-10-22-root-question-shown-twice-and-answered-silently.md (link)
 - → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
 - → docs/chat/scroll.md (mention)
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (link)
-- → ../issues/bugs/2026-10-22-source-chip-shows-chat-file-name-and-usage-keyword.md (link)
-- → ../issues/bugs/2026-10-22-sent-record-drops-the-message-text.md (link)
-- → ../issues/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md (link)
-- → ../issues/features/2026-10-22-person-tiles-show-names-only.md (link)
+- → ../issues/closed/bugs/2026-10-22-source-chip-shows-chat-file-name-and-usage-keyword.md (link)
+- → ../issues/closed/bugs/2026-10-22-sent-record-drops-the-message-text.md (link)
+- → ../issues/closed/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md (link)
+- → ../issues/closed/features/2026-10-22-person-tiles-show-names-only.md (link)
 - → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
-- → ../issues/bugs/2026-10-22-two-tiles-named-todos-on-the-box-page.md (link)
+- → ../issues/closed/bugs/2026-10-22-two-tiles-named-todos-on-the-box-page.md (link)
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
 - → ../issues/bugs/2026-10-09-cards-refer-to-the-person-as-they.md (link)
-- → ../issues/bugs/2026-10-22-remind-offset-example-is-fixed-to-central-time.md (link)
+- → ../issues/closed/bugs/2026-10-22-remind-offset-example-is-fixed-to-central-time.md (link)
 - → ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md (link)
 - → ../issues/features/2026-09-27-ack-badge-design-review.md (link)
-- → ../issues/bugs/2026-10-22-browse-scroll-selector-accepts-a-hidden-match.md (link)
-- → ../issues/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md (link)
+- → ../issues/closed/bugs/2026-10-22-browse-scroll-selector-accepts-a-hidden-match.md (link)
+- → ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md (link)
 - → test/user-stories/journeys/walker-prompt.md (mention)
-- → ../issues/code-quality/2026-10-22-journey-collect-timing-misses-completion.md (link)
-- → ../issues/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md (link)
+- → ../issues/closed/code-quality/2026-10-22-journey-collect-timing-misses-completion.md (link)
+- → ../issues/closed/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md (link)
 
 ### test/user-stories/journeys/F-newcomer/reports/
 
@@ -11626,38 +11655,38 @@ Referenced by:
 - ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:46 (link) — Still present in [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 27). Settin
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:42 (link) — Still present in six of seven walks: `userEmail` is in `session_context` of the box chat and of the chat-title session i
 - ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md:34 (link) — - [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 34, H5): `/auth/me` return
-- ../issues/bugs/2026-10-22-browse-calls-a-tab-in-a-scrolled-strip-covered.md:15 (link) — Report: [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 47, H4).
-- ../issues/bugs/2026-10-22-dated-strip-card-name-wraps-under-next-item.md:12 (link) — Report: [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (R2).
-- ../issues/bugs/2026-10-22-place-pill-keeps-old-landmark-label-until-reload.md:12 (link) — Report: [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (R1).
-- ../issues/bugs/2026-10-22-root-question-shown-twice-and-answered-silently.md:22 (link) — Reports: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 4; shot 01)
-- ../issues/bugs/2026-10-22-settings-scan-uploader-shows-repo-build-commands.md:14 (link) — Report: [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (rows 26, 55).
-- ../issues/bugs/2026-10-22-todo-card-row-next-date-is-iso.md:14 (link) — Reports: [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (R3; shots 19-21), [G-pa
-- ../issues/code-quality/2026-10-22-journey-browser-denies-notification-permission.md:13 (link) — Report: [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 35, H1).
-- ../issues/code-quality/2026-10-22-journey-collect-timing-misses-completion.md:19 (link) — Reports: [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (H4), [F-newcomer](../..
+- ../issues/closed/bugs/2026-10-22-browse-calls-a-tab-in-a-scrolled-strip-covered.md:18 (link) — Report: [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 47, H4).
+- ../issues/closed/bugs/2026-10-22-dated-strip-card-name-wraps-under-next-item.md:15 (link) — Report: [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (R2).
+- ../issues/closed/bugs/2026-10-22-place-pill-keeps-old-landmark-label-until-reload.md:15 (link) — Report: [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (R1).
+- ../issues/closed/bugs/2026-10-22-root-question-shown-twice-and-answered-silently.md:25 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 4; shot
+- ../issues/closed/bugs/2026-10-22-settings-scan-uploader-shows-repo-build-commands.md:17 (link) — Report: [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (rows 26, 55).
+- ../issues/closed/bugs/2026-10-22-todo-card-row-next-date-is-iso.md:17 (link) — Reports: [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (R3; shots 19-21), [G
+- ../issues/closed/code-quality/2026-10-22-journey-browser-denies-notification-permission.md:16 (link) — Report: [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 35, H1).
+- ../issues/closed/code-quality/2026-10-22-journey-collect-timing-misses-completion.md:22 (link) — Reports: [I-deciding](../../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (H4), [F-newcomer](..
+- ../issues/closed/docs-and-chores/2026-10-22-box-docs-name-create-qr-for-the-show-qr-code-button.md:17 (link) — Reports: [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 39), [G-paperwor
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:69 (link) — - [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 48): six tabs by the end.
-- ../issues/docs-and-chores/2026-10-22-box-docs-name-create-qr-for-the-show-qr-code-button.md:14 (link) — Reports: [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 39), [G-paperwork](
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:105 (link) — - [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (rows 22, 36, 53): the main goa
 
 References:
-- → ../issues/bugs/2026-10-22-root-question-shown-twice-and-answered-silently.md (link)
+- → ../issues/closed/bugs/2026-10-22-root-question-shown-twice-and-answered-silently.md (link)
 - → docs/agent-guide.md (mention)
 - → docs/connectors.md (mention)
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (link)
 - → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
-- → ../issues/bugs/2026-10-22-settings-scan-uploader-shows-repo-build-commands.md (link)
+- → ../issues/closed/bugs/2026-10-22-settings-scan-uploader-shows-repo-build-commands.md (link)
 - → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (link)
-- → ../issues/docs-and-chores/2026-10-22-box-docs-name-create-qr-for-the-show-qr-code-button.md (link)
+- → ../issues/closed/docs-and-chores/2026-10-22-box-docs-name-create-qr-for-the-show-qr-code-button.md (link)
 - → docs/box/todos.md (mention)
 - → ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md (link)
-- → ../issues/bugs/2026-10-22-place-pill-keeps-old-landmark-label-until-reload.md (link)
-- → ../issues/bugs/2026-10-22-dated-strip-card-name-wraps-under-next-item.md (link)
-- → ../issues/bugs/2026-10-22-todo-card-row-next-date-is-iso.md (link)
+- → ../issues/closed/bugs/2026-10-22-place-pill-keeps-old-landmark-label-until-reload.md (link)
+- → ../issues/closed/bugs/2026-10-22-dated-strip-card-name-wraps-under-next-item.md (link)
+- → ../issues/closed/bugs/2026-10-22-todo-card-row-next-date-is-iso.md (link)
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
 - → test/user-stories/journeys/F-newcomer/reports/2026-10-09.md (link)
-- → ../issues/code-quality/2026-10-22-journey-browser-denies-notification-permission.md (link)
-- → ../issues/bugs/2026-10-22-browse-calls-a-tab-in-a-scrolled-strip-covered.md (link)
+- → ../issues/closed/code-quality/2026-10-22-journey-browser-denies-notification-permission.md (link)
+- → ../issues/closed/bugs/2026-10-22-browse-calls-a-tab-in-a-scrolled-strip-covered.md (link)
 - → ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md (link)
-- → ../issues/code-quality/2026-10-22-journey-collect-timing-misses-completion.md (link)
+- → ../issues/closed/code-quality/2026-10-22-journey-collect-timing-misses-completion.md (link)
 
 ### test/user-stories/journeys/G-paperwork/reports/
 
@@ -11670,38 +11699,38 @@ Referenced by:
 - ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:125 (link) — [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 8): after "Add files…" wit
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:62 (link) — - Did not recur in [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (rows 4, 34)
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:42 (link) — Still present in six of seven walks: `userEmail` is in `session_context` of the box chat and of the chat-title session i
-- ../issues/bugs/2026-10-22-before-a-date-deadline-recorded-as-due-that-date.md:14 (link) — Report: [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (R1).
-- ../issues/bugs/2026-10-22-box-page-to-do-count-omits-later-todos.md:20 (link) — Report: [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 26).
-- ../issues/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md:15 (link) — Reports: [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (H1), [B-inventory](..
-- ../issues/bugs/2026-10-22-chat-husk-card-left-uncommitted.md:14 (link) — Reports: [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (R3), [I-deciding](../
-- ../issues/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md:21 (link) — Reports: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (rows 20, 21), [
-- ../issues/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md:19 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (R1), [G-paperwork](../../
-- ../issues/bugs/2026-10-22-standing-care-hint-becomes-the-only-now-todo.md:16 (link) — Report: [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 28).
-- ../issues/bugs/2026-10-22-todo-card-row-next-date-is-iso.md:14 (link) — Reports: [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (R3; shots 19-21), [G-pa
-- ../issues/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md:17 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 28), [G-paperwork](..
+- ../issues/closed/bugs/2026-10-22-before-a-date-deadline-recorded-as-due-that-date.md:17 (link) — Report: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (R1).
+- ../issues/closed/bugs/2026-10-22-box-page-to-do-count-omits-later-todos.md:23 (link) — Report: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 26).
+- ../issues/closed/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md:18 (link) — Reports: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (H1), [B-inventory]
+- ../issues/closed/bugs/2026-10-22-chat-husk-card-left-uncommitted.md:17 (link) — Reports: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (R3), [I-deciding](
+- ../issues/closed/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md:24 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (rows 20, 21)
+- ../issues/closed/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md:22 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (R1), [G-paperwork](../
+- ../issues/closed/bugs/2026-10-22-standing-care-hint-becomes-the-only-now-todo.md:19 (link) — Report: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 28).
+- ../issues/closed/bugs/2026-10-22-todo-card-row-next-date-is-iso.md:17 (link) — Reports: [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (R3; shots 19-21), [G
+- ../issues/closed/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md:20 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 28), [G-paperwork]
+- ../issues/closed/docs-and-chores/2026-10-22-box-docs-name-create-qr-for-the-show-qr-code-button.md:17 (link) — Reports: [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 39), [G-paperwor
+- ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:22 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md), [C-reconnecting](../..
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:71 (link) — - [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 33) and H (row 6): a cou
-- ../issues/docs-and-chores/2026-10-22-box-docs-name-create-qr-for-the-show-qr-code-button.md:14 (link) — Reports: [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 39), [G-paperwork](
-- ../issues/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:19 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md), [C-reconnecting](../../be
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:106 (link) — - [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (rows 5, 34, 35), a new journ
 
 References:
-- → ../issues/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md (link)
+- → ../issues/closed/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md (link)
 - → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
 - → src/core/agent-guide/guide.md (mention)
 - → ../issues/bugs/2026-08-08-chat-composer-attach-ux.md (link)
-- → ../issues/bugs/2026-10-22-box-page-to-do-count-omits-later-todos.md (link)
-- → ../issues/bugs/2026-10-22-standing-care-hint-becomes-the-only-now-todo.md (link)
+- → ../issues/closed/bugs/2026-10-22-box-page-to-do-count-omits-later-todos.md (link)
+- → ../issues/closed/bugs/2026-10-22-standing-care-hint-becomes-the-only-now-todo.md (link)
 - → docs/box/todos.md (mention)
-- → ../issues/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md (link)
-- → ../issues/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md (link)
-- → ../issues/docs-and-chores/2026-10-22-box-docs-name-create-qr-for-the-show-qr-code-button.md (link)
-- → ../issues/bugs/2026-10-22-before-a-date-deadline-recorded-as-due-that-date.md (link)
-- → ../issues/bugs/2026-10-22-chat-husk-card-left-uncommitted.md (link)
+- → ../issues/closed/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md (link)
+- → ../issues/closed/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md (link)
+- → ../issues/closed/docs-and-chores/2026-10-22-box-docs-name-create-qr-for-the-show-qr-code-button.md (link)
+- → ../issues/closed/bugs/2026-10-22-before-a-date-deadline-recorded-as-due-that-date.md (link)
+- → ../issues/closed/bugs/2026-10-22-chat-husk-card-left-uncommitted.md (link)
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
-- → ../issues/bugs/2026-10-22-todo-card-row-next-date-is-iso.md (link)
-- → ../issues/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md (link)
+- → ../issues/closed/bugs/2026-10-22-todo-card-row-next-date-is-iso.md (link)
+- → ../issues/closed/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md (link)
 - → ../issues/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md (link)
-- → ../issues/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md (link)
+- → ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md (link)
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (link)
 
 ### test/user-stories/journeys/H-handover/reports/
@@ -11713,30 +11742,30 @@ Title: "H-handover, 2026-10-22" | 144 lines
 Referenced by:
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:61 (link) — - [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (row 34): asked to put a party
 - ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md:35 (link) — - [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (rows 32, 53; H5), a journey ab
-- ../issues/bugs/2026-10-22-browse-clicks-a-ref-it-has-called-stale.md:15 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 37, H3), [H-handover]
-- ../issues/bugs/2026-10-22-dated-strip-does-not-mark-overdue.md:15 (link) — Report: [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (rows 4, 5; shots 02, 03,
-- ../issues/bugs/2026-10-22-question-heading-is-its-filename.md:12 (link) — Reports: [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (row 24), [I-deciding](.
-- ../issues/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md:21 (link) — Reports: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (rows 20, 21), [
-- ../issues/bugs/2026-10-22-root-question-shows-template-proposal.md:13 (link) — Reports: [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (row 22; shot 09), [I-de
-- ../issues/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md:19 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (R1), [G-paperwork](../../
-- ../issues/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md:16 (link) — Reports: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 2, H8), [H-
+- ../issues/closed/bugs/2026-10-22-browse-clicks-a-ref-it-has-called-stale.md:18 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (row 37, H3), [H-handov
+- ../issues/closed/bugs/2026-10-22-dated-strip-does-not-mark-overdue.md:18 (link) — Report: [H-handover](../../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (rows 4, 5; shots 02,
+- ../issues/closed/bugs/2026-10-22-question-heading-is-its-filename.md:15 (link) — Reports: [H-handover](../../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (row 24), [I-deciding
+- ../issues/closed/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md:24 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (rows 20, 21)
+- ../issues/closed/bugs/2026-10-22-root-question-shows-template-proposal.md:16 (link) — Reports: [H-handover](../../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (row 22; shot 09), [I
+- ../issues/closed/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md:22 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (R1), [G-paperwork](../
+- ../issues/closed/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md:19 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 2, H8),
+- ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:22 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md), [C-reconnecting](../..
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:70 (link) — - [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (rows 9, 27): tabs piled up in
-- ../issues/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md:19 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md), [C-reconnecting](../../be
 - ../issues/features/2026-10-22-catch-up-for-someone-arriving-at-a-box-with-a-past.md:18 (link) — Report: [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (rows 29, 30).
 
 References:
-- → ../issues/bugs/2026-10-22-dated-strip-does-not-mark-overdue.md (link)
-- → ../issues/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md (link)
+- → ../issues/closed/bugs/2026-10-22-dated-strip-does-not-mark-overdue.md (link)
+- → ../issues/closed/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md (link)
 - → ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md (link)
-- → ../issues/bugs/2026-10-22-root-question-shows-template-proposal.md (link)
-- → ../issues/bugs/2026-10-22-question-heading-is-its-filename.md (link)
-- → ../issues/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md (link)
+- → ../issues/closed/bugs/2026-10-22-root-question-shows-template-proposal.md (link)
+- → ../issues/closed/bugs/2026-10-22-question-heading-is-its-filename.md (link)
+- → ../issues/closed/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md (link)
 - → ../issues/features/2026-10-22-catch-up-for-someone-arriving-at-a-box-with-a-past.md (link)
 - → ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md (link)
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (link)
-- → ../issues/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md (link)
-- → ../issues/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md (link)
-- → ../issues/bugs/2026-10-22-browse-clicks-a-ref-it-has-called-stale.md (link)
+- → ../issues/closed/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md (link)
+- → ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md (link)
+- → ../issues/closed/bugs/2026-10-22-browse-clicks-a-ref-it-has-called-stale.md (link)
 
 ### test/user-stories/journeys/I-deciding/reports/
 
@@ -11746,39 +11775,39 @@ Title: "I-deciding, 2026-10-22" | 163 lines
 
 Referenced by:
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:42 (link) — Still present in six of seven walks: `userEmail` is in `session_context` of the box chat and of the chat-title session i
-- ../issues/bugs/2026-10-22-bbx-validate-rejects-a-directory.md:14 (link) — Report: [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (R9).
-- ../issues/bugs/2026-10-22-box-agent-records-search-summaries-as-sourced-facts.md:18 (link) — Report: [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (rows 11, 39, 40; R5, R6,
-- ../issues/bugs/2026-10-22-chat-husk-card-left-uncommitted.md:14 (link) — Reports: [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (R3), [I-deciding](../
-- ../issues/bugs/2026-10-22-composer-placeholder-keeps-root-question-after-send.md:12 (link) — Report: [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (R11).
-- ../issues/bugs/2026-10-22-fresh-box-root-question-ref-is-broken.md:25 (link) — Present in every walk box made from `bbx engine init`. [A-lending](../../beebox/test/user-stories/journeys/A-lending/rep
-- ../issues/bugs/2026-10-22-question-heading-is-its-filename.md:12 (link) — Reports: [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (row 24), [I-deciding](.
-- ../issues/bugs/2026-10-22-root-question-left-pending-when-first-message-is-a-task.md:13 (link) — Report: [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (rows 29, 36).
-- ../issues/bugs/2026-10-22-root-question-shows-template-proposal.md:13 (link) — Reports: [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (row 22; shot 09), [I-de
-- ../issues/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md:19 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (R1), [G-paperwork](../../
-- ../issues/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md:16 (link) — Reports: [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 2, H8), [H-
-- ../issues/code-quality/2026-10-22-journey-collect-timing-misses-completion.md:19 (link) — Reports: [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (H4), [F-newcomer](../..
+- ../issues/closed/bugs/2026-10-22-bbx-validate-rejects-a-directory.md:17 (link) — Report: [I-deciding](../../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (R9).
+- ../issues/closed/bugs/2026-10-22-box-agent-records-search-summaries-as-sourced-facts.md:21 (link) — Report: [I-deciding](../../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (rows 11, 39, 40; R5,
+- ../issues/closed/bugs/2026-10-22-chat-husk-card-left-uncommitted.md:17 (link) — Reports: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (R3), [I-deciding](
+- ../issues/closed/bugs/2026-10-22-composer-placeholder-keeps-root-question-after-send.md:15 (link) — Report: [I-deciding](../../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (R11).
+- ../issues/closed/bugs/2026-10-22-fresh-box-root-question-ref-is-broken.md:28 (link) — Present in every walk box made from `bbx engine init`. [A-lending](../../../beebox/test/user-stories/journeys/A-lending/
+- ../issues/closed/bugs/2026-10-22-question-heading-is-its-filename.md:15 (link) — Reports: [H-handover](../../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (row 24), [I-deciding
+- ../issues/closed/bugs/2026-10-22-root-question-left-pending-when-first-message-is-a-task.md:16 (link) — Report: [I-deciding](../../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (rows 29, 36).
+- ../issues/closed/bugs/2026-10-22-root-question-shows-template-proposal.md:16 (link) — Reports: [H-handover](../../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (row 22; shot 09), [I
+- ../issues/closed/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md:22 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (R1), [G-paperwork](../
+- ../issues/closed/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md:19 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 2, H8),
+- ../issues/closed/code-quality/2026-10-22-journey-collect-timing-misses-completion.md:22 (link) — Reports: [I-deciding](../../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (H4), [F-newcomer](..
+- ../issues/closed/features/2026-10-22-decision-research-leaves-open-checks-in-prose.md:17 (link) — Report: [I-deciding](../../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (row 44, R17).
 - ../issues/features/2026-10-04-fetch-blocked-pages.md:105 (link) — A box agent case, not dev tooling: in [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22
 - ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:45 (link) — - [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (row 9): two web-research turns
 - ../issues/features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md:114 (link) — [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (R16): a web research task produc
-- ../issues/features/2026-10-22-decision-research-leaves-open-checks-in-prose.md:14 (link) — Report: [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (row 44, R17).
 
 References:
 - → docs/implemented-plans/front-door.md (mention)
-- → ../issues/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md (link)
+- → ../issues/closed/bugs/2026-10-22-seeded-briefing-titled-by-its-filename.md (link)
 - → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
-- → ../issues/bugs/2026-10-22-box-agent-records-search-summaries-as-sourced-facts.md (link)
+- → ../issues/closed/bugs/2026-10-22-box-agent-records-search-summaries-as-sourced-facts.md (link)
 - → ../issues/features/2026-10-04-fetch-blocked-pages.md (link)
-- → ../issues/bugs/2026-10-22-root-question-left-pending-when-first-message-is-a-task.md (link)
-- → ../issues/bugs/2026-10-22-root-question-shows-template-proposal.md (link)
-- → ../issues/bugs/2026-10-22-fresh-box-root-question-ref-is-broken.md (link)
-- → ../issues/bugs/2026-10-22-question-heading-is-its-filename.md (link)
-- → ../issues/features/2026-10-22-decision-research-leaves-open-checks-in-prose.md (link)
-- → ../issues/bugs/2026-10-22-bbx-validate-rejects-a-directory.md (link)
-- → ../issues/bugs/2026-10-22-chat-husk-card-left-uncommitted.md (link)
-- → ../issues/bugs/2026-10-22-composer-placeholder-keeps-root-question-after-send.md (link)
+- → ../issues/closed/bugs/2026-10-22-root-question-left-pending-when-first-message-is-a-task.md (link)
+- → ../issues/closed/bugs/2026-10-22-root-question-shows-template-proposal.md (link)
+- → ../issues/closed/bugs/2026-10-22-fresh-box-root-question-ref-is-broken.md (link)
+- → ../issues/closed/bugs/2026-10-22-question-heading-is-its-filename.md (link)
+- → ../issues/closed/features/2026-10-22-decision-research-leaves-open-checks-in-prose.md (link)
+- → ../issues/closed/bugs/2026-10-22-bbx-validate-rejects-a-directory.md (link)
+- → ../issues/closed/bugs/2026-10-22-chat-husk-card-left-uncommitted.md (link)
+- → ../issues/closed/bugs/2026-10-22-composer-placeholder-keeps-root-question-after-send.md (link)
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
 - → ../issues/features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md (link)
 - → test/user-stories/journeys/walker-prompt.md (mention)
-- → ../issues/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md (link)
-- → ../issues/code-quality/2026-10-22-journey-collect-timing-misses-completion.md (link)
+- → ../issues/closed/code-quality/2026-10-22-journey-boxes-look-like-test-runs.md (link)
+- → ../issues/closed/code-quality/2026-10-22-journey-collect-timing-misses-completion.md (link)
 

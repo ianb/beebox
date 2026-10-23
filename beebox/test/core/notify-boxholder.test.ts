@@ -337,6 +337,7 @@ web-push failed: no device received the push (sent 0, pruned 0, failed 1)`);
     { name: "notifications-undelivered", ok: true, message: "No notification failed to deliver in the last 24 hours", severity: "warning" },
     { name: "notifications-no-channel", ok: true, message: "Every notification in the last 24 hours had a channel to reach the boxholder", severity: "warning" },
     { name: "notification-log-writable", ok: true, message: "The notification log is writable", severity: "warning" },
+    { name: "notifications-fake", ok: true, message: "Notifications on this box send for real", severity: "warning" },
     { name: "jev-budget", ok: true, message: "No judgment deferred for the daily Jev budget in the last 24 hours", severity: "warning" },
   ]);
 });

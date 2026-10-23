@@ -127,11 +127,14 @@ execFileSync("git", ["-C", boxDir, "commit", "-q", "--amend", "--no-edit", ...(j
 // `agentBrowsing: "owner"` the browse key acts as the box owner and the walker
 // reaches capture, Settings, and every owner-gated procedure
 // (`docs/implemented-plans/agent-browsing-owner.md`). This is a disposable fixture setting;
-// a box a person actually uses must never have it.
+// a box a person actually uses must never have it. `fakeNotifications` sends
+// every notification to a fake channel, so the walker's phone (phone.ts) reads
+// what the box would have sent and nothing reaches a real device
+// (docs/implemented-plans/journey-simulated-notifications.md).
 const boxConfigPath = join(content, "_config", "box.json");
 const boxConfig: unknown = existsSync(boxConfigPath) ? JSON.parse(readFileSync(boxConfigPath, "utf8")) : {};
 if (!isRecord(boxConfig)) fail(`${boxConfigPath} is not a JSON object`);
-writeFileSync(boxConfigPath, `${JSON.stringify({ ...boxConfig, agentBrowsing: "owner" }, null, 2)}\n`);
+writeFileSync(boxConfigPath, `${JSON.stringify({ ...boxConfig, agentBrowsing: "owner", fakeNotifications: true }, null, 2)}\n`);
 
 if (typeof journey.box.setup === "string" && journey.box.setup.trim() !== "") {
   try {
@@ -155,7 +158,8 @@ const checks = await runHealthChecks(boxDir);
 writeFileSync(join(runDir, "health.json"), `${JSON.stringify(checks, null, 2)}\n`);
 const blockers = checks.filter((check) => !check.ok && check.severity === "error");
 if (blockers.length > 0) fail(`Fixture health failed: ${blockers.map((check) => check.message).join("; ")}`);
-for (const warning of checks.filter((check) => !check.ok)) console.log(`health warning: ${warning.message}`);
+// A walk box's notifications are fake on purpose (above), so that warning is expected.
+for (const warning of checks.filter((check) => !check.ok && check.name !== "notifications-fake")) console.log(`health warning: ${warning.message}`);
 
 // A box the router does not serve is a box nobody can walk. The worktree's own
 // .env lists what it serves; the router reads it when the worktree next starts.
@@ -199,6 +203,7 @@ const template = readFileSync(join(JOURNEYS, "walker-prompt.md"), "utf8")
   .replace("{{SHOTS}}", join(runDir, "shots"))
   .replace("{{NOTES}}", join(runDir, "notes.md"))
   .replace("{{SCRATCH}}", join(runDir, "tmp"))
+  .replaceAll("{{RUN_DIR}}", runDir)
   .replace("{{CLOSING}}", (journey.closing ?? "").trim());
 writeFileSync(join(runDir, "prompt.md"), template);
 

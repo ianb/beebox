@@ -1,4 +1,4 @@
-// # Fake mode: `BBX_NOTIFY_FAKE=1`
+// # Fake mode: `BBX_NOTIFY_FAKE=1`, or one box's `fakeNotifications`
 //
 // With `BBX_NOTIFY_FAKE=1` every channel sends through its fake service, and a
 // channel with nobody to reach gets a synthetic member, so a dev box exercises
@@ -20,6 +20,7 @@ import { invariant } from "../../../src/shared/invariant.js";
 import { pairFakePushDevice } from "../../../src/core/mobile/pairing.js";
 import { readRecent } from "../../../src/core/notification/log.js";
 import { writePresence } from "../../../src/core/notification/presence.js";
+import { notificationHealthChecks } from "../../../src/core/notification/health.js";
 
 const PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-notify-fake-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = PUSH_STORE_DIR;
@@ -97,6 +98,62 @@ void test("Fake mode fakes the audience and the services, not the decision:", as
   delete process.env.BBX_NOTIFY_FAKE;
   await t.checkText(await logged(box), `apns skipped: present
 web-push skipped: present`);
+});
+
+// ## One box can be fake without the variable
+//
+// `fakeNotifications: true` in `_config/box.json` fakes that box only: a journey
+// walk box built in a worktree whose other boxes send for real. A value other
+// than `true` still reads as fake, with a warning, so a box that tried to say
+// "fake" never sends for real. Box health names the setting while it is on.
+void test("One box can be fake without the variable", async (t) => {
+  const fake = await makeTmpBox({ git: true });
+  const real = await makeTmpBox({ git: true });
+  const typo = await makeTmpBox({ git: true });
+  t.teardown(async () => {
+    try {
+      await fake.cleanup();
+      await real.cleanup();
+      await typo.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const writeConfig = (box: TmpBox, config: object) =>
+    fs.writeFile(path.join(box.root, "_config", "box.json"), JSON.stringify(config));
+  await fs.mkdir(path.join(fake.root, "_config"), { recursive: true });
+  await fs.mkdir(path.join(typo.root, "_config"), { recursive: true });
+  await writeConfig(fake, { fakeNotifications: true });
+  await writeConfig(typo, { fakeNotifications: "yes" });
+  const warnings: string[] = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => { warnings.push(args.join(" ")); };
+  const reach = [await notifyChannels(fake.root), await notifyChannels(real.root), await notifyChannels(typo.root)];
+  console.warn = origWarn;
+  t.check(reach, [
+    { apns: true, webPush: true },
+    { apns: false, webPush: false },
+    { apns: true, webPush: true },
+  ]);
+  t.check(warnings.filter((w) => w.includes("fakeNotifications")).map((w) => w.replace(typo.root, "<box>")), [
+    '[notify] fakeNotifications in <box>/_config/box.json is "yes", not true; treating notifications as fake.',
+  ]);
+
+  await notifyBoxholder(fake.root, { intent: intent("loud"), now: NOW });
+  await t.checkText(await logged(fake), `apns sent: fake
+web-push sent: fake`);
+
+  const fakeCheck = async (box: TmpBox) =>
+    (await notificationHealthChecks(box.root, { now: NOW })).find((c) => c.name === "notifications-fake");
+  t.check([await fakeCheck(fake), await fakeCheck(real)], [
+    {
+      name: "notifications-fake",
+      ok: false,
+      message: "Notifications on this box are fake (BBX_NOTIFY_FAKE, or fakeNotifications in _config/box.json); nothing reaches a phone",
+      severity: "warning",
+    },
+    { name: "notifications-fake", ok: true, message: "Notifications on this box send for real", severity: "warning" },
+  ]);
 });
 
 // ## `BBX_PUSH_FAKE` still works for one release
