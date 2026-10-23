@@ -388,7 +388,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | Published-site browser policy | `pub-worker/src/headers.ts`, `pub-worker/src/shared-site.ts`, `pub-worker/src/site.ts` | accepted | Enforced CSP, same-origin CORP, no permissive CORS, `nosniff`, and `no-referrer` apply. New publications for one box share a hostname and browser origin; their JavaScript can access shared web storage and make same-origin requests to other publication paths, including a known secret PubId path. The boxholder explicitly accepts mutual trust among pages in that box. CORS and iframe isolation are not provided. Different boxes use different hosts. |
 | Atomic secret writes | `lib/atomic-write.ts` + per-store 0600 modes | ok | Exceptions tracked as the §2 connector-mode gap |
 | **Agent blast radius** | `agent/run.ts:70-97` | accepted | `permissionMode: "bypassPermissions"`, unconditional; **no tool allowlist**; cwd = box root. `additionalDirectories` is unguarded caller input forwarded to the SDK (`run.ts:50-51,85-87`) — current call sites pass only the box root, but containment is call-site convention, not an enforced bound. Hooks (card validator, git-mv nudge) advise, don't block. The agent can run arbitrary shell as the box user, plus root package installs through the §5 wrapper (distro-only, service-free). This is the product's design; containment direction: [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md) |
-| Schedules off by default | fresh boxes seed `enabled: false` (except map refresh/run cleanup) | mitigated | Nothing runs until the user turns it on — [schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md) |
+| Connector schedules off by default | `core/box/structure/defaults.ts`: fresh boxes seed the connector syncs and chat review `enabled: false`; map refresh, run cleanup, retrospective and todo review are seeded on | mitigated | No schedule pulls outside content until the user turns it on. Retrospective and todo review run an agent over content already in the box, and their prechecks skip when there is no quiet chat session or due todo — [schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md) |
 
 ## 5. Operational security
 
@@ -502,8 +502,9 @@ containment:
 
 - **Deployment model** — the audience is single-operator boxes; the
   blast radius is your own data, not other tenants'.
-- **Schedules off by default** — nothing auto-processes untrusted input
-  on a fresh box until the operator enables it ([schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md)).
+- **Connector schedules off by default** — no schedule pulls outside
+  content into a fresh box until the operator enables it; the seeded
+  retrospective and todo-review agents read only content already in the box ([schedules-off-by-default](../../issues/closed/features/2026-07-20-schedules-off-by-default.md)).
 - **Human-in-the-loop on the few gated actions** — the publish flip and
   credential-writing `bbx auth` refuse to proceed unattended.
 - **Ingest escaping is a display control, not an injection control** —

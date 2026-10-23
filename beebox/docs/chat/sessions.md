@@ -1,7 +1,7 @@
 # Chat sessions
 
 The backend session lifecycle: phases, the queue-and-drain contract, and the
-code both session classes share.
+run plumbing.
 
 ## What it is
 
@@ -68,22 +68,16 @@ move (a caller bug over internal state — not a degradable condition).
   `idle`, a `send()` returns `false`/rejects rather than racing a second run onto
   the session.
 
-## Shared code
+## Run plumbing
 
-The two classes share the SDK message-pump skeleton (`pumpChatRun` in
-`session/consume.ts`), the lifecycle union/transitions (`session/lifecycle.ts`),
-and the SDK-message adapter (`adaptSdkMessage` in `session/messages.ts`).
+`ChatSession` drives each SDK run through `pumpSessionRun`
+(`src/core/chat/session/run/consume.ts`). It wraps the `pumpChatRun` skeleton:
+iterate the run's messages, adapt each with `adaptBackendMessage`
+(`src/core/chat/session/messages.ts`), hand it to the session, report iterator
+errors, and tear down in a `finally`. The per-message body holds `result` until
+the transcript is flushed, records turn markers, and drains the queue.
 
-**The adapter is one shared function** (Track 6 convergence, 2026-07). Both
-sessions call the same `adaptSdkMessage`, so every SDK message type surfaces to
-both paths identically — there is no longer a thread-local fork that silently
-dropped types. The thread path's narrowing (it delivers only complete
-`<chat-response>` blocks over external chat) now lives as **explicit flow
-control** in `ChatThreadSession.handleMessage`: a `switch` over the message type
-where `stream_event` (partial deltas) and `task` (background-task lifecycle) are
-deliberate, commented, logged skips, and `assertNever` guards the union so a new
-SDK message type is a compile error rather than a silent drop.
-
-The two classes are **not** yet collapsed into one base class — see
-`issues/closed/code-quality/2026-07-06-chat-session-shared-core.md` (monorepo root) for why (the per-turn bodies
-genuinely diverge: durability + queue draining vs `<chat-response>` extraction).
+A second class, `ChatThreadSession`, served external chat threads. The Telegram
+removal (`da6d70df9`) deleted it; the
+[shared-core issue](../../../issues/closed/code-quality/2026-07-06-chat-session-shared-core.md)
+records the history.
