@@ -79,3 +79,19 @@ path first (`fileChangeAffectsPath` or `boxRelativePath`), and
 bug". The sweep left the compare unchanged; the comparison of all live-refresh
 copies is in [frontend-live-refresh-hooks-disagree](../code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md).
 Not reproduced.
+
+## Note 2026-10-23 (after the live-refresh unification)
+
+Reproduced twice on the `dup-sweep-frontend` worktree's test1 clone, before
+and after `useBrowseListLiveRefresh` moved onto `useLiveRefresh` with
+box-relative path comparison (plan
+`beebox/docs/plans/frontend-unify-formatters-refresh-storage.md`, track 5). A
+card written into `_content/projects/porch-rebuild/` while that directory
+was open in Browse did not appear within about 12 s. A reload showed it.
+
+The watcher's event path is box-relative with no prefix for the box root
+(`core/box/file-watcher.ts:419-423`), which matches `dirPath`, so the path
+comparison was not the cause. A second probe on an open card's body was
+inconclusive (the card was not the open pane). The next check is whether
+the `file-change` event reaches the browser at all: watch the
+`events.subscribe` frames, or log in `useBusSubscription`'s `onData`.
