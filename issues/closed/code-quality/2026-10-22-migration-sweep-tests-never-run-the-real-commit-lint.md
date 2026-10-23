@@ -6,7 +6,16 @@ labels: [migrations, tests]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-risky-merge-review — adversarial review of the merges since 2026-10-08
+resolution: implemented
 ---
+
+Closed in `worktree-risky-merge-review`:
+`beebox/test/core/migration-sweep.real-commit-lint.test.ts` installs the real
+hooks with `installValidationHooks` and `BBX_HOOK_BIN`, then runs the sweep
+over a card-rewriting migration: a card with a pre-existing absolute machine
+path fails with `commit-failed` naming the lint finding and leaves the manifest
+unrecorded; a clean card commits through the hook. The optional self-check of
+written cards by migrations was not done.
 
 `makeTmpBox` installs no git hooks. The sweep tests stand in for the box commit
 lint with a grep-based `pre-commit` hook, and the engine-link tests injected a
