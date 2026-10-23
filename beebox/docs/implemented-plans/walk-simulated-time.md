@@ -1,6 +1,6 @@
 ---
 title: "Simulated time for journey walk boxes"
-status: draft
+status: implemented
 workstream: journey-walks-late-oct
 issues: []
 ---

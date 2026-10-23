@@ -1,5 +1,5 @@
 /**
- * The `git` shim for walk fixtures (docs/plans/walk-simulated-time.md, Track 5).
+ * The `git` shim for walk fixtures (docs/implemented-plans/walk-simulated-time.md, Track 5).
  *
  * An agent's shell `git commit` would carry the real date. On a walk fixture
  * `buildEnv` puts `<box>/.beebox/bin` first on PATH; the `git` there sets

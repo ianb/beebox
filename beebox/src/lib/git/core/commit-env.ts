@@ -11,7 +11,7 @@ export function commitEnvironment(boxRoot: string): NodeJS.ProcessEnv {
   ]);
   const env = Object.fromEntries(Object.entries({ ...process.env, ...boxWorkEnvironment() })
     .filter(([key]) => !blocked.has(key.toLowerCase()) && !/^git_config_(key|value)_/i.test(key)));
-  // A walk fixture's commits carry box time (docs/plans/walk-simulated-time.md, Track 5).
+  // A walk fixture's commits carry box time (docs/implemented-plans/walk-simulated-time.md, Track 5).
   if (boxClockShiftMs(boxRoot) !== 0 && env.GIT_AUTHOR_DATE === undefined && env.GIT_COMMITTER_DATE === undefined) {
     const date = `${Math.floor(getBoxTime(boxRoot).getTime() / 1000)} +0000`;
     env.GIT_AUTHOR_DATE = date;

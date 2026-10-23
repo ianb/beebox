@@ -11,7 +11,7 @@
  *
  * The notifications already shown and an unfinished wait live in
  * `<run-dir>/phone.json`; every look is appended to `<run-dir>/phone.md`.
- * See docs/plans/walk-simulated-time.md (Track 7).
+ * See docs/implemented-plans/walk-simulated-time.md (Track 7).
  */
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

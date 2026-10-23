@@ -12,7 +12,7 @@
  * `phone.json`, and the next `phone.ts` call resumes it: completed occurrences
  * are skipped, and one that was started but not finished is reported and not
  * run again, because its command may already have written or committed.
- * See docs/plans/walk-simulated-time.md (Track 7).
+ * See docs/implemented-plans/walk-simulated-time.md (Track 7).
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";

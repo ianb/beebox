@@ -4,7 +4,7 @@
  * say "fake" never sends for real and never runs a real clock offset by
  * mistake. Read synchronously, cached by mtime, because the box clock
  * (`lib/time.ts`) is synchronous. `notifyFakeMode` and the clock offset share
- * this one rule (docs/plans/walk-simulated-time.md, Track 1).
+ * this one rule (docs/implemented-plans/walk-simulated-time.md, Track 1).
  */
 
 import * as fs from "node:fs";

@@ -3,7 +3,7 @@
 // A wait lives through an interval of simulated time: every scheduled occurrence
 // runs in time order, through fake channels, and then the box's clock moves to the
 // end. The phone shows each notification that reached the person once, as text.
-// See docs/plans/walk-simulated-time.md (Track 7).
+// See docs/implemented-plans/walk-simulated-time.md (Track 7).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

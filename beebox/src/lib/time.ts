@@ -6,7 +6,7 @@
  * 2. stubs.yaml in parent directory of boxRoot (for scenario boxes)
  * 3. Real Date.now(), plus the box clock offset when one applies: a journey
  *    walk fixture (lib/box-fixture.ts) with `.beebox/clock-offset.json`
- *    (docs/plans/walk-simulated-time.md, Track 1).
+ *    (docs/implemented-plans/walk-simulated-time.md, Track 1).
  */
 
 import * as fs from "node:fs";

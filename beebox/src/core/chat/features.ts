@@ -156,7 +156,7 @@ const READ_ONLY_ATTRS = new Set([
 
 /**
  * The `clock` attribute's value on a box whose clock is shifted from the host's
- * (a journey walk box; docs/plans/walk-simulated-time.md). It carries its own
+ * (a journey walk box; docs/implemented-plans/walk-simulated-time.md). It carries its own
  * instruction, so the always-loaded prompt needs none; probed with Haiku and
  * Sonnet, which used `local-time` and did not mention the host's date.
  */

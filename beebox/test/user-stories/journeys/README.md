@@ -171,7 +171,7 @@ the app's displayed dates read the later time, so a walker can come back. Real
 time still shows in a few places: session-list ages, which read file times,
 and how long since the last chat turn. A stopped wait resumes on the next
 `phone.ts` call. The run directory keeps `phone.md`
-([plan](../../../docs/plans/walk-simulated-time.md)).
+([plan](../../../docs/implemented-plans/walk-simulated-time.md)).
 In-process chat timers are a separate mechanism and can run while the box is
 served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
 one misfire, but did not verify its replacement scheduled reminder.

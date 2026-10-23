@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 /**
  * The box's clock as the person sees it. A walk fixture's box can sit days
- * ahead of the host (`docs/plans/walk-simulated-time.md`); the server reports
+ * ahead of the host (`docs/implemented-plans/walk-simulated-time.md`); the server reports
  * that gap and displayed dates add it. Timers, expiry checks, ids and ordering
  * keys keep `Date.now()`: only a date shown to the person reads `boxNow()`.
  * With no gap (every real box) `boxNow()` is `Date.now()`.

@@ -5,7 +5,7 @@
  * `.beebox/presence.json` current for every process that decides whether to
  * notify (`core/notification/presence.ts`). See docs/implemented-plans/notifications.md
  * (Track A, presence). `clock` also lives here: it is the tab's other
- * per-session report of the box's time (docs/plans/walk-simulated-time.md, Track 6).
+ * per-session report of the box's time (docs/implemented-plans/walk-simulated-time.md, Track 6).
  */
 
 import { z } from "zod";

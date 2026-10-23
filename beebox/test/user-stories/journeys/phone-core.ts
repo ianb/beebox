@@ -2,7 +2,7 @@
  * The walker's phone, as pure pieces: what a wait runs and in what order, how
  * long a wait is, which notification a tick produced, and how a notification reads on
  * the phone. `phone.ts` does the reading, ticking, and writing.
- * See docs/plans/walk-simulated-time.md (Track 7).
+ * See docs/implemented-plans/walk-simulated-time.md (Track 7).
  */
 import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
