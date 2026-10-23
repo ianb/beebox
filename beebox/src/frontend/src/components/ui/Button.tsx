@@ -15,9 +15,16 @@ export type ButtonSize = "sm" | "md" | "lg";
 
 interface FlashSpec {
   label: ReactNode;
+  /**
+   * Shown instead of `label` when `onClick` throws or its promise rejects.
+   * Without it a failure shows nothing (and is logged).
+   */
+  failLabel?: ReactNode;
   /** Milliseconds to display after the action completes. Default 2000. */
   duration?: number;
 }
+
+type FlashState = "idle" | "done" | "failed";
 
 type NativeButtonPassThrough = Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -39,7 +46,11 @@ interface CommonButtonProps extends NativeButtonPassThrough {
    * into the elapsed-seconds timer: `(secs) => \`Uploading… ${secs.toFixed(1)}s\``.
    */
   loadingLabel?: ReactNode | ((elapsedSeconds: number) => ReactNode);
-  /** Brief post-click feedback ("Copied!" etc.). Fires after `onClick` resolves. */
+  /**
+   * Brief post-click feedback ("Copied" etc.). Fires after `onClick` resolves,
+   * or with `failLabel` after it fails. The button becomes a polite live region
+   * so the swapped label is announced.
+   */
   flash?: FlashSpec;
   /** `true` stretches the button to fill its parent's width. */
   fullWidth?: boolean;
@@ -154,7 +165,7 @@ function renderContent({
   icon,
   children,
 }: {
-  flashing: boolean;
+  flashing: FlashState;
   flash: FlashSpec | undefined;
   loading: boolean;
   loadingLabel: ReactNode | ((s: number) => ReactNode) | undefined;
@@ -163,8 +174,8 @@ function renderContent({
   icon: ReactNode | undefined;
   children: ReactNode | undefined;
 }): ReactNode {
-  if (flashing && flash !== undefined) {
-    return <span>{flash.label}</span>;
+  if (flashing !== "idle" && flash !== undefined) {
+    return <span>{flashing === "failed" ? flash.failLabel : flash.label}</span>;
   }
   if (loading) {
     const resolved = typeof loadingLabel === "function" ? loadingLabel(elapsed) : loadingLabel;
@@ -195,16 +206,16 @@ function useElapsedSeconds(active: boolean): number {
   return elapsed;
 }
 
-function useFlashState(): { flashing: boolean; triggerFlash: (duration: number) => void } {
-  const [flashing, setFlashing] = useState(false);
+function useFlashState(): { flashing: FlashState; triggerFlash: (state: "done" | "failed", duration: number) => void } {
+  const [flashing, setFlashing] = useState<FlashState>("idle");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
   }, []);
-  const triggerFlash = (duration: number) => {
-    setFlashing(true);
+  const triggerFlash = (state: "done" | "failed", duration: number) => {
+    setFlashing(state);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setFlashing(false), duration);
+    timeoutRef.current = setTimeout(() => setFlashing("idle"), duration);
   };
   return { flashing, triggerFlash };
 }
@@ -239,30 +250,29 @@ export function Button(props: ButtonProps) {
   const isDisabled = disabled || loading;
 
   const handleClick = async (e: MouseEvent<HTMLButtonElement>) => {
-    if (isDisabled || flashing) return;
+    if (isDisabled || flashing !== "idle") return;
     if (onClick === undefined) return;
-    const result = onClick(e);
-    if (result instanceof Promise) {
-      setAsyncLoading(true);
-      try {
-        await result;
-      } catch (err) {
-        // Safety net for this shared primitive: a caller's onClick throwing
-        // uncaught would otherwise be an unhandled rejection inside this
-        // native DOM handler (which can't propagate it anywhere) --
-        // individual callers are expected to surface their own
-        // user-visible errors; this is the last-resort log if they don't.
-        // Return (after the finally resets loading) so a failed action
-        // never shows the success flash.
-        console.error("[Button] onClick handler threw:", err);
-        return;
-      } finally {
-        setAsyncLoading(false);
+    const duration = flash?.duration ?? 2000;
+    try {
+      // A synchronous throw counts as a failure, like a rejection.
+      const result = onClick(e);
+      if (result instanceof Promise) {
+        setAsyncLoading(true);
+        try {
+          await result;
+        } finally {
+          setAsyncLoading(false);
+        }
       }
+    } catch (err) {
+      // A caller that names a `failLabel` surfaces the failure itself. For the
+      // rest, this is the last-resort log: a handler failure inside a native
+      // DOM handler has nowhere else to go. A failure never shows the success flash.
+      if (flash?.failLabel !== undefined) triggerFlash("failed", duration);
+      else console.error("[Button] onClick handler threw:", err);
+      return;
     }
-    if (flash !== undefined) {
-      triggerFlash(flash.duration !== undefined ? flash.duration : 2000);
-    }
+    if (flash !== undefined) triggerFlash("done", duration);
   };
 
   const content = renderContent({
@@ -287,6 +297,7 @@ export function Button(props: ButtonProps) {
       disabled={isDisabled}
       aria-label={ariaLabel}
       aria-busy={loading || undefined}
+      aria-live={rest["aria-live"] ?? (flash !== undefined ? "polite" : undefined)}
       title={"title" in rest && rest.title !== undefined ? rest.title : titleFallback}
       className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className, material })}
       onClick={(e) => void handleClick(e)}
