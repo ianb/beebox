@@ -118,4 +118,4 @@ unmeasured.
 Server engines take the same list better. Whisper's `prompt` raised name
 recall on Earnings-21 from 67% to 79%, and voxtral's `context_bias` from 67%
 to 77% (single words only; see
-[voxtral context_bias rejects multi-word prompt](../bugs/2026-10-23-voxtral-context-bias-rejects-multi-word-prompt.md)).
+[voxtral context_bias rejects multi-word prompt](../closed/bugs/2026-10-23-voxtral-context-bias-rejects-multi-word-prompt.md)).
