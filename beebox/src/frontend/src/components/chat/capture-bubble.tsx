@@ -31,7 +31,7 @@
 import { useState } from "react";
 import type { PendingCaptureCounts } from "@core/capture/pending.js";
 import { ABANDONMENT_WINDOW_MS } from "@shared/capture-staleness";
-import { formatAgo, formatDuration } from "../../lib/relative-time";
+import { formatAgo, formatDuration } from "@shared/relative-time";
 import { useNow } from "../../lib/use-now";
 import { Button } from "../ui/Button";
 import { MaterialContext } from "../ui/material";

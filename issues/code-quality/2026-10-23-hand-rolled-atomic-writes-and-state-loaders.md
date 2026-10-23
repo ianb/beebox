@@ -8,6 +8,8 @@ discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
 ---
 
+Status 2026-10-23 (worktree-dup-sweep-backend): the strict existence probes now use `pathExistsStrict` (commit f1dd4cde9).
+
 ## Atomic write
 
 Status 2026-10-23: commits 530e63f89 (async) and 4cebfaf38 (sync, new

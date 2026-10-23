@@ -4,15 +4,14 @@
  * wrong, and, for an active plugin, which of its declared stubs the box has
  * written. Read by `bbx plugins list`, `bbx status`, and the skill mirror.
  */
-import { access } from "node:fs/promises";
 import { join } from "node:path";
 import { activePluginNames, type PluginConfigProblem } from "../box/config.js";
 import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../lib/box-shape.js";
-import { errnoCode } from "../../shared/error-guards.js";
 import { pluginByName, pluginNames } from "../../plugins.js";
 import type { PluginDefinition } from "../../cards/plugin-definition.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { assertNever, invariant } from "../../shared/invariant.js";
+import { pathExistsStrict } from "../../lib/file-exists.js";
 
 /** One stub an active plugin declares: a schema per default type, a view per view. */
 export interface PluginStub {
@@ -71,16 +70,6 @@ export function describeInvalidPluginEntries(invalid: readonly PluginConfigProbl
   });
 }
 
-async function exists(absPath: string): Promise<boolean> {
-  try {
-    await access(absPath);
-    return true;
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return false;
-    throw e;
-  }
-}
-
 /**
  * The stubs `plugin` declares, whether the box has each file, and whether each
  * takes effect (`docs/plugins.md`, Stubs). The schema check reads the EFFECTIVE
@@ -108,7 +97,7 @@ async function pluginStubs(boxRoot: string, plugin: PluginDefinition): Promise<P
   const schemaTypes = new Set((await createCardSchemaMap(boxRoot)).keys());
   const stubs: PluginStub[] = [];
   for (const { kind, name, absPath, path } of declared) {
-    const present = await exists(absPath);
+    const present = await pathExistsStrict(absPath, { followLinks: true });
     const effective = kind === "schema" ? schemaTypes.has(name) : present;
     stubs.push({ kind, name, path, present, effective });
   }

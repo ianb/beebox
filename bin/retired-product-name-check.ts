@@ -11,6 +11,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 import { isRecord } from "../beebox/src/shared/is-record.js";
+import { gitTopLevel } from "./lib/git.js";
 
 export const ENFORCEMENT_ENABLED = true;
 export const CHECKER_PATH = "bin/retired-product-name-check.ts";
@@ -321,7 +322,7 @@ function main(): void {
   if ([...args].some((arg) => !["--inventory", "--enforce"].includes(arg))) {
     throw new UsageError();
   }
-  const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const repoRoot = gitTopLevel();
   const findings = scanTrackedTree(repoRoot);
   if (args.has("--inventory")) {
     process.stdout.write(`${formatInventory(findings)}\n`);

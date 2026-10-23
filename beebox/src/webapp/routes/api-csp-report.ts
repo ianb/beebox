@@ -17,6 +17,7 @@ import { appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { isRecord } from "../../shared/is-record.js";
+import { truncateTitle } from "../../core/file-summary.js";
 
 const CSP_REPORT_LOG = "csp-reports.log";
 const MAX_LOG_FILE_BYTES = 200_000;
@@ -60,7 +61,7 @@ interface NormalizedReport {
 function str(value: unknown): string {
   if (typeof value !== "string" || value === "") return "-";
   // Truncate per-field so a single report can't write a giant log line.
-  return value.length > MAX_FIELD_CHARS ? value.slice(0, MAX_FIELD_CHARS) + "…" : value;
+  return truncateTitle(value, MAX_FIELD_CHARS);
 }
 
 function normalizeReports(body: unknown): NormalizedReport[] {

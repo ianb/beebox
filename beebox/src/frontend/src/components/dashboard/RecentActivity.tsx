@@ -13,7 +13,8 @@ import { Badge } from "../ui/Badge";
 import { StatusMessage } from "../ui/StatusMessage";
 import { phaseTone } from "../history/phase-tone";
 import { tickHadActivity } from "./ScheduleTicks";
-import { agoOnClock, formatDuration } from "../../lib/relative-time";
+import { agoOnClock } from "../../lib/relative-time";
+import { formatDuration } from "@shared/relative-time";
 import { useBoxNow } from "../../lib/box-clock";
 
 type LogEntry = RouterOutput["status"]["activity"]["entries"][number];

@@ -17,6 +17,7 @@ import type {
 import { describeServices } from "./deploy-status-lib.js";
 import type { DiskHealth } from "../beebox/src/hub/disk-health.js";
 import { assertNever } from "../beebox/src/shared/invariant.js";
+import { formatAgoMs } from "../beebox/src/shared/relative-time.js";
 
 const LABEL_WIDTH = 11;
 
@@ -32,12 +33,7 @@ export function ago(iso: string | null, now: Date): string {
   if (iso === null) return "";
   const ms = now.getTime() - Date.parse(iso);
   if (!Number.isFinite(ms)) return "";
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 1) return " (just now)";
-  if (minutes < 120) return ` (${String(minutes)}m ago)`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 48) return ` (${String(hours)}h ago)`;
-  return ` (${String(Math.round(hours / 24))}d ago)`;
+  return ` (${formatAgoMs(ms)})`;
 }
 
 /** "main is 3 ahead of prod", "even with prod", "2 ahead, 1 behind prod". */

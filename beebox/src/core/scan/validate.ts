@@ -25,6 +25,7 @@ import { execa } from "execa";
 import { fileTypeFromFile } from "file-type";
 import { PDF_EXTENSION, SUPPORTED_IMAGE_EXTENSIONS } from "../upload-helpers.js";
 import { errorMessage } from "../../shared/error-guards.js";
+import { truncateTitle } from "../file-summary.js";
 
 /** Accepted extension → the magic-byte MIME types that may back it. */
 const ACCEPTED_TYPES: Record<string, string[]> = {
@@ -82,7 +83,7 @@ export function qpdfAvailable(): Promise<boolean> {
 
 function condense(text: string): string {
   const flat = text.replaceAll(/\s+/gu, " ").trim();
-  return flat.length > REASON_DETAIL_LIMIT ? `${flat.slice(0, REASON_DETAIL_LIMIT)}…` : flat;
+  return truncateTitle(flat, REASON_DETAIL_LIMIT);
 }
 
 /**

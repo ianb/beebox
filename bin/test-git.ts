@@ -11,30 +11,13 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { git } from "./lib/git.js";
 import { existsSync } from "node:fs";
 import { parsePorcelainEntries } from "./test-ledger-lib.js";
 import { sha256Hex } from "../beebox/src/lib/content-hash.js";
 
-/**
- * Strips only the trailing newline, never leading whitespace: `git status
- * --porcelain` encodes status in the first two columns, and one of them is
- * routinely a space.
- */
-export const git = (args: string[], cwd?: string): string =>
-  execFileSync("git", args, { encoding: "utf-8", cwd, maxBuffer: 64 * 1024 * 1024 }).replace(
-    /\n$/,
-    "",
-  );
-
 const gitBytes = (args: string[], cwd?: string): Buffer =>
   execFileSync("git", args, { cwd, maxBuffer: 256 * 1024 * 1024 });
-
-export function gitCommonDir(cwd?: string): string {
-  return execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
-    encoding: "utf-8",
-    cwd,
-  }).trim();
-}
 
 /**
  * `--untracked-files=all` is load-bearing in both callers below.
@@ -48,12 +31,12 @@ export function gitCommonDir(cwd?: string): string {
  * and the flake derivation would compare across them.
  */
 export const porcelain = (cwd?: string): string =>
-  git(["status", "--porcelain", "-z", "--untracked-files=all"], cwd);
+  git(["status", "--porcelain", "-z", "--untracked-files=all"], { cwd, onError: "throw" });
 
 /** Changed paths versus a base ref (default `main`), plus anything uncommitted. */
 export function changedPaths(input?: { base?: string; cwd?: string }): string[] {
   const base = input?.base ?? "main";
-  const committed = git(["diff", "--name-only", `${base}...HEAD`], input?.cwd).split("\n");
+  const committed = git(["diff", "--name-only", `${base}...HEAD`], { cwd: input?.cwd, onError: "throw" }).split("\n");
   const dirty = parsePorcelainEntries(porcelain(input?.cwd)).map((entry) => entry.path);
   return [...new Set([...committed, ...dirty].filter((p) => p !== ""))].toSorted();
 }
@@ -74,7 +57,7 @@ export function changedPaths(input?: { base?: string; cwd?: string }): string[] 
  */
 export function treeHash(cwd?: string): string {
   const parts = [
-    `tree:${git(["rev-parse", "HEAD^{tree}"], cwd)}`,
+    `tree:${git(["rev-parse", "HEAD^{tree}"], { cwd, onError: "throw" })}`,
     `diff:${sha256Hex(gitBytes(["diff", "HEAD", "--binary"], cwd))}`,
     ...untrackedBlobs(cwd),
   ];
@@ -95,7 +78,7 @@ function untrackedBlobs(cwd?: string): string[] {
   for (let i = 0; i < paths.length; i += 200) {
     const chunk = paths.slice(i, i + 200);
     try {
-      const hashes = git(["hash-object", "--", ...chunk], cwd).split("\n");
+      const hashes = git(["hash-object", "--", ...chunk], { cwd, onError: "throw" }).split("\n");
       for (const [index, path] of chunk.entries()) blobs.push(`blob:${hashes[index] ?? "?"}:${path}`);
     } catch (_e) {
       // Absorbs a path that vanished between `git status` and `git hash-object`

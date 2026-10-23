@@ -109,12 +109,12 @@ names the members and the canonical choice.
 | `pidAlive` (4), `killGroup` (1), `bootTimeMs` (1) in `bin/` | merged onto `hub/child-process-utils.ts`, test added | 72 |
 
 Filed, because a merge changes output or needs a choice:
-[quota collection twice](2026-10-23-agent-quota-collection-exists-twice.md),
+[quota collection twice](../closed/code-quality/2026-10-23-agent-quota-collection-exists-twice.md),
 [frontmatter split/parse/write](2026-10-23-frontmatter-read-and-write-have-many-implementations.md),
-[two card filename parsers](2026-10-23-two-card-filename-parsers.md),
+[two card filename parsers](../closed/code-quality/2026-10-23-two-card-filename-parsers.md),
 [atomic writes, JSON state loaders, strict exists](2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md),
 [inline path containment](../closed/code-quality/2026-10-23-path-containment-checks-are-inlined.md),
-[bin git, process, and argv helpers](2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md),
+[bin git, process, and argv helpers](../closed/code-quality/2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md),
 [dates and durations](2026-10-23-date-and-duration-formatting-variants.md),
 [text helpers: truncate, slug, escape, coercion, sha256](2026-10-23-text-helpers-with-diverging-rules.md).
 

@@ -10,6 +10,7 @@
  */
 
 import * as path from "node:path";
+import { frontmatterFence } from "../../cards/frontmatter.js";
 
 // Basenames that are intentionally non-unique — one per directory — so they're
 // exempt from the uniqueness invariant AND excluded as basename-repair
@@ -234,7 +235,8 @@ export function repairFrontmatterPaths({
   fileExists: (repoRelPath: string) => boolean;
   basenameLookup: Map<string, string[]>;
 }): RepairResult {
-  if (!content.startsWith("---\n")) return { content, rewrites: [], unfixable: [] };
+  const fence = frontmatterFence(content);
+  if (fence === null) return { content, rewrites: [], unfixable: [] };
   const rewrites: LinkRewrite[] = [];
   const unfixable: UnfixableLink[] = [];
   const ctx: DecideContext = { fromDir: path.posix.dirname(fromRel), fileExists, basenameLookup, suffixMatches: undefined };
@@ -242,7 +244,7 @@ export function repairFrontmatterPaths({
   let issuesList = false;
   const lines = content.split("\n").map((line, index) => {
     if (!inFrontmatter) return line;
-    if (index > 0 && line === "---") {
+    if (index === fence.closingLine) {
       inFrontmatter = false;
       return line;
     }

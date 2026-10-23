@@ -124,7 +124,11 @@ function claudeLabel(key: string): string {
 }
 
 export function parseClaudeQuota(input: unknown, fetchedAt: string): Quota {
-  if (!isRecord(input) || !isRecord(input.rate_limits)) return {
+  if (!isRecord(input) || !("rate_limits" in input)) return {
+    provider: "claude", status: "unavailable", fetchedAt, windows: [],
+    message: "No Claude quota has been captured from an active session yet.",
+  };
+  if (!isRecord(input.rate_limits)) return {
     provider: "claude", status: "unavailable", fetchedAt, windows: [], message: "Claude quota data is unavailable.",
   };
   const windows = Object.entries(input.rate_limits).flatMap(([key, raw]) => {

@@ -134,7 +134,9 @@ export interface RouterCoreConfig {
   onStateChange?: () => void;
 }
 
-// --- error helpers (honestly typed; bin/ can't import beebox's guards) ---
+// --- error helpers (honestly typed). The router keeps its own small helpers
+// by choice so its process loads little of beebox; bin/ and the workstreams
+// server import beebox/src/shared/error-guards.ts instead. ---
 
 /** A message from an unknown thrown value, without an `as Error` cast. */
 export function errMessage(e: unknown): string {

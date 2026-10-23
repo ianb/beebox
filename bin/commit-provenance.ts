@@ -32,23 +32,15 @@
  * a body sentence beginning "Issue: ..." is prose, not a trailer.
  */
 
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { splitFrontmatter } from "../beebox/src/dev/doc-check/frontmatter.js";
 import { errnoCode, errorMessage } from "../beebox/src/shared/error-guards.js";
+import { git, gitTopLevel } from "./lib/git.js";
 
 /** Active plans only — implemented plans are finished and unimplemented ones are parked/superseded. */
 const PLANS_DIR = "beebox/docs/plans";
 const ISSUES_DIR = "issues";
-
-function git(args: string[], cwd: string): string {
-  return execFileSync("git", args, { cwd, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
-}
-
-function repoRoot(): string {
-  return git(["rev-parse", "--show-toplevel"], process.cwd()).trim();
-}
 
 /** `worktree-foo` -> `foo`; anything else (main, a detached HEAD's "HEAD") -> null. */
 export function workstreamFromBranch(branch: string): string | null {
@@ -86,13 +78,13 @@ function stampTrailers(root: string, params: { msgFile: string; trailers: Array<
   const args = ["interpret-trailers", "--in-place", "--if-exists", "replace"];
   for (const [key, value] of trailers) args.push("--trailer", `${key}=${value}`);
   args.push(msgFile);
-  git(args, root);
+  git(args, { cwd: root, onError: "throw" });
 }
 
 /** The current branch, or null when HEAD is detached (mid-rebase, bisect). */
 function currentBranch(root: string): string | null {
   try {
-    return git(["symbolic-ref", "--quiet", "--short", "HEAD"], root).trim();
+    return git(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root, onError: "throw" }).trim();
   } catch (_e) {
     /* ignore: detached HEAD — symbolic-ref exits 1, and no branch means no workstream */
     return null;
@@ -103,7 +95,7 @@ function prepare(msgFile: string, source: string): void {
   // A squash message concatenates already-stamped messages; stale inner
   // trailers in the body would mislead more than a missing one.
   if (source === "squash") return;
-  const root = repoRoot();
+  const root = gitTopLevel();
   const branch = currentBranch(root);
   if (branch === null) return;
   const workstream = workstreamFromBranch(branch);
@@ -237,8 +229,8 @@ export function checkIssueTrailers(parsed: string, issuesDir: string): IssueProb
 }
 
 function check(msgFile: string): void {
-  const root = repoRoot();
-  const parsed = git(["interpret-trailers", "--parse", msgFile], root);
+  const root = gitTopLevel();
+  const parsed = git(["interpret-trailers", "--parse", msgFile], { cwd: root, onError: "throw" });
   const miscased = miscasedKeys(parsed);
   if (miscased.length > 0) {
     console.error("commit-provenance: provenance trailer keys are case-sensitive — the queries look for the exact spelling:");
@@ -291,7 +283,7 @@ function query(params: { key: string; value: string; mainOnly: boolean }): void 
   args.push(mainOnly ? "main" : "--all");
   let out: string;
   try {
-    out = git(args, repoRoot());
+    out = git(args, { cwd: gitTopLevel(), onError: "throw" });
   } catch (e) {
     // A checkout with no `main` ref is the realistic failure; report it as one line.
     console.error(`commit-provenance: ${errorMessage(e).split("\n")[0]}`);
