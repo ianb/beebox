@@ -95,3 +95,10 @@ comparison was not the cause. A second probe on an open card's body was
 inconclusive (the card was not the open pane). The next check is whether
 the `file-change` event reaches the browser at all: watch the
 `events.subscribe` frames, or log in `useBusSubscription`'s `onData`.
+
+## Direction 2026-10-23
+
+The boxholder: "for seeing updates we might need an entirely new approach.
+The fs watcher is problematic, and I think it might need a redesign." Treat
+this bug as a symptom of the live-update mechanism, not a Browse defect; see
+also [box-watcher-ceiling-leaves-attach-scopes-unwatched](2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md).
