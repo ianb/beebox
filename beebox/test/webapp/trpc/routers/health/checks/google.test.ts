@@ -69,7 +69,7 @@ void test("Neither is a problem, and a permanent \"not connected\" line would be
   const live = await googleAuthHealthChecks(tmp, { now: NOW });
   await t.checkText(describe(live), "[{\"name\":\"google-auth\",\"ok\":true,\"severity\":\"warning\"}]");
 
-  t.check(live[0]?.message, str`Google authorization is live (last verified ${any(String)} ago)`);
+  t.check(live[0]?.message, str`Google authorization is live (last verified ${any(String)})`);
 
   // ## A dead grant is a warning naming the breakage, the impact, and the fix
   //
