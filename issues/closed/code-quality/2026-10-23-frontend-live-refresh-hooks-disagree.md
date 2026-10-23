@@ -1,14 +1,18 @@
 ---
 title: "About twenty frontend views wire their own live refresh, with different path matching and reconnect rules"
-workstream: unattached
+workstream: dup-sweep-frontend
 area: beebox
 labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-frontend — frontend pass of the functional-duplication sweep
+resolution: implemented
 ---
 
-Part of the [functional-duplication sweep](2026-10-22-functional-duplication-sweep.md).
+
+**Closed:** implemented by the dup-sweep-frontend branch (plan frontend-unify-formatters-refresh-storage; commits 65147fadb through 1bb95099e). Each commit message names the behavior changes. Wording was covered by unit/DOM tests, not checked in a browser.
+
+Part of the [functional-duplication sweep](../../code-quality/2026-10-22-functional-duplication-sweep.md).
 Views that refetch when a box file changes each subscribe to the bus and
 filter `file-change` events by hand. The sweep moved the shared "skip the
 first connect" idiom into `useBusSubscription`'s `onReconnect`. The rest
@@ -23,7 +27,7 @@ differs per caller, so merging it changes behavior.
   - A raw compare: `FigureView/view.tsx:95` (`fileChange.path === entryPath`) and
     `pages/browse/BrowsePage.tsx:53` (the parent of the raw event path against
     `dirPath`). `file-view-data.ts` names the raw compare as "the original refresh
-    bug". [browse-list-live-refresh-not-firing](../bugs/2026-07-31-browse-list-live-refresh-not-firing.md)
+    bug". [browse-list-live-refresh-not-firing](../../bugs/2026-07-31-browse-list-live-refresh-not-firing.md)
     may be this.
 - **Reconnect.** Six callers resync only on a reconnect. `useRefetchOnFileChange`
   and `BoxPresentationProvider` also refetch on the first connect, so they

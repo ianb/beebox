@@ -77,7 +77,7 @@ parent of the raw event path to `dirPath`. Sibling views normalize the event
 path first (`fileChangeAffectsPath` or `boxRelativePath`), and
 `components/file-view-data.ts` names the raw compare as "the original refresh
 bug". The sweep left the compare unchanged; the comparison of all live-refresh
-copies is in [frontend-live-refresh-hooks-disagree](../code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md).
+copies is in [frontend-live-refresh-hooks-disagree](../closed/code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md).
 Not reproduced.
 
 ## Note 2026-10-23 (after the live-refresh unification)
@@ -85,7 +85,7 @@ Not reproduced.
 Reproduced twice on the `dup-sweep-frontend` worktree's test1 clone, before
 and after `useBrowseListLiveRefresh` moved onto `useLiveRefresh` with
 box-relative path comparison (plan
-`beebox/docs/plans/frontend-unify-formatters-refresh-storage.md`, track 5). A
+`beebox/docs/implemented-plans/frontend-unify-formatters-refresh-storage.md`, track 5). A
 card written into `_content/projects/porch-rebuild/` while that directory
 was open in Browse did not appear within about 12 s. A reload showed it.
 

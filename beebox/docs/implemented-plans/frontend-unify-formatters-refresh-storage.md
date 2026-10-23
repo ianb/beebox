@@ -1,13 +1,13 @@
 ---
 title: "Unify frontend time, byte and card-name formatting, live refresh, and browser storage"
-status: active
+status: implemented
 workstream: dup-sweep-frontend
 issues:
-  - ../../../issues/code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md
-  - ../../../issues/code-quality/2026-10-23-frontend-time-and-duration-formatters.md
-  - ../../../issues/code-quality/2026-10-23-byte-size-formatters-disagree.md
-  - ../../../issues/code-quality/2026-10-23-card-display-name-helpers-disagree.md
-  - ../../../issues/code-quality/2026-10-23-browser-storage-keys-and-reads-inconsistent.md
+  - ../../../issues/closed/code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md
+  - ../../../issues/closed/code-quality/2026-10-23-frontend-time-and-duration-formatters.md
+  - ../../../issues/closed/code-quality/2026-10-23-byte-size-formatters-disagree.md
+  - ../../../issues/closed/code-quality/2026-10-23-card-display-name-helpers-disagree.md
+  - ../../../issues/closed/code-quality/2026-10-23-browser-storage-keys-and-reads-inconsistent.md
 ---
 # Unify frontend time, byte and card-name formatting, live refresh, and browser storage
 
