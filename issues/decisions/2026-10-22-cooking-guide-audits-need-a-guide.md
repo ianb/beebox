@@ -17,3 +17,5 @@ Decide one of:
 - Add a cooking guide card to the `test1` setup, so the audits test what they describe.
 - Retire both audits. `cooking-recipe-lookup` still covers recipe lookup.
 - Let a fixture add a guide card before docs generation, so an audit can stage its own guide.
+
+**2026-10-22:** The cooking pattern belongs in the recipe plugin, which `test1` already enables ([recipe plugin cooking guidance](../features/2026-10-22-recipe-plugin-ships-cooking-guidance.md)). Until that skill exists, the two audits have nothing to read.
