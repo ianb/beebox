@@ -32,10 +32,7 @@ import type { Socket } from "node:net";
 import fs from "node:fs";
 import path from "node:path";
 import { isRecord } from "../../shared/is-record.js";
-import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
-import fastifyCookie from "@fastify/cookie";
-import fastifyStatic from "@fastify/static";
-import httpProxy from "http-proxy-3";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Endpoint, EndpointProvider } from "../endpoints.js";
 import type { BoxRuntimeStatus } from "../box-status.js";
 import { registerBoxPicker } from "./box-picker.js";
@@ -248,6 +245,12 @@ function decideHubAuth({
   return { authorized: false, headersToSet: {} };
 }
 
+/** The hub's server packages, loaded when a hub starts: every `bbx` verb loads this module. */
+async function loadHubPackages() {
+  const [fastify, cookie, staticFiles, proxy] = await Promise.all([import("fastify"), import("@fastify/cookie"), import("@fastify/static"), import("http-proxy-3")]);
+  return { Fastify: fastify.default, fastifyCookie: cookie.default, fastifyStatic: staticFiles.default, httpProxy: proxy.default };
+}
+
 /**
  * Build the hub's Fastify app, register its own surface (health, login,
  * box picker), then hijack every other request into the endpoint proxy.
@@ -257,6 +260,7 @@ function decideHubAuth({
  */
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
   const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false } = options;
+  const { Fastify, fastifyCookie, fastifyStatic, httpProxy } = await loadHubPackages();
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
 

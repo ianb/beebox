@@ -22,7 +22,6 @@
 
 import * as path from "node:path";
 import { execa } from "execa";
-import { fileTypeFromFile } from "file-type";
 import { PDF_EXTENSION, SUPPORTED_IMAGE_EXTENSIONS } from "../upload-helpers.js";
 import { errorMessage } from "../../shared/error-guards.js";
 
@@ -140,6 +139,8 @@ export async function validateScanFile(opts: { filePath: string; filename: strin
     return { status: "rejected", reason: `${claimed} (accepted: ${ACCEPTED_EXTENSIONS.join(", ")})` };
   }
 
+  // file-type loads here rather than with every `bbx` verb (about 13 ms).
+  const { fileTypeFromFile } = await import("file-type");
   const sniffed = await fileTypeFromFile(opts.filePath);
   if (sniffed === undefined) {
     return {

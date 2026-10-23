@@ -12,8 +12,11 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { create, type AnySchema, type Orama } from "@orama/orama";
-import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
 import { errorMessage } from "../../../shared/error-guards.js";
+
+// The persistence plugin loads on first restore or persist: about 15 ms, and
+// every `bbx` verb loads this module.
+const loadPersistence = () => import("@orama/plugin-data-persistence/server");
 
 /** Left behind by the short-lived binary-format experiment (2026-07). */
 const LEGACY_INDEX_EXT = ".msp";
@@ -90,6 +93,7 @@ export function createIndexStore<TSchema extends AnySchema>(
       } catch (_e) {
         return null;
       }
+      const { restoreFromFile } = await loadPersistence();
       try {
         return await restoreFromFile<Orama<TSchema>>("json", storePath);
       } catch (e) {
@@ -101,6 +105,7 @@ export function createIndexStore<TSchema extends AnySchema>(
       const storePath = indexPath(boxRoot);
       await fs.mkdir(path.dirname(storePath), { recursive: true });
       const tmp = `${storePath}.tmp`;
+      const { persistToFile } = await loadPersistence();
       await persistToFile(db, "json", tmp);
       await fs.rename(tmp, storePath);
       await fs.rm(`${storePath.slice(0, -path.extname(storePath).length)}${LEGACY_INDEX_EXT}`, { force: true });
