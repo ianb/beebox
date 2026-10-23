@@ -346,6 +346,51 @@ void test("A stage rule and unsafe Message-IDs", async (t) => {
   t.check(unsafe, { queries: 0, unevaluatedThreadId: "unsafe-thread" });
 });
 
+// Gmail's own Message-IDs carry `=` and `/` (RFC 5322 atext). They were once
+// reported unevaluated, so label rules silently skipped ordinary mail. The
+// search quotes the id, and the rule still matches.
+void test("A Message-ID with = and / is still checked against the rule", async (t) => {
+  const gmail = oldMailGmail();
+  const fresh = addFreshMessage(gmail);
+  fresh.payload!.headers = fresh.payload!.headers!.map((header) =>
+    header.name === "Message-ID" ? { ...header, value: "<CAJx=Ab+c/D_e@mail.gmail.com>" } : header,
+  );
+  const queries: Array<string | undefined> = [];
+  const originalListMessages = gmail.listMessages.bind(gmail);
+  gmail.listMessages = async (opts) => {
+    queries.push(opts.q);
+    return originalListMessages(opts);
+  };
+  const result = await evaluateGmailRules({
+    service: gmail,
+    config: parseGmailConnectorConfig({
+      rules: [{ name: "watch-mail", query: "label:callback", action: { type: "stage" } }],
+    }),
+    state: { rules: { "watch-mail": { baselineAt: "2026-08-01T00:00:00.000Z" } } },
+    candidates: [fresh],
+    trackedThreadIds: new Set(),
+    labelMap: new Map([["Label_7", "callback"]]),
+    now: new Date("2026-08-05T13:00:00.000Z"),
+  });
+  t.check({ queries, rule: result.state.rules?.["watch-mail"] }, {
+    queries: ['(label:callback) rfc822msgid:"CAJx=Ab+c/D_e@mail.gmail.com"'],
+    rule: {
+      baselineAt: "2026-08-01T00:00:00.000Z",
+      pending: [{
+        messageId: "new",
+        threadId: "new-thread",
+        from: "sender@example.com",
+        subject: "New",
+        date: "2026-08-01T15:00:00.000Z",
+        snippet: "",
+        labels: ["callback"],
+        discoveredAt: "2026-08-05T13:00:00.000Z",
+      }],
+      additionalMatches: 0,
+    },
+  });
+});
+
 // ## History discovery is bounded and resumable
 //
 // A single oversized history record is consumed across sync checkpoints rather

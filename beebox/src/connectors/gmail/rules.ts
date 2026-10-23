@@ -66,7 +66,11 @@ function safeRfc822MessageId(message: GmailMessage): string | null {
   const header = rfc822MessageIdFor(message);
   if (header === undefined) return null;
   const messageId = header.replace(/^<|>$/g, "");
-  return /^[\dA-Za-z._%+-]+@[\dA-Za-z.-]+$/u.test(messageId)
+  // RFC 5322 dot-atom on both sides: Gmail's own ids carry `=` and `/`. The
+  // search quotes the id, and dot-atom excludes `"`, whitespace and parens, so
+  // it cannot leave the quotes. A domain literal (`[192.0.2.1]`) stays out:
+  // Gmail search does not find it in any spelling.
+  return /^[\w!#$%&'*+/=?^`{|}~.-]+@[\w!#$%&'*+/=?^`{|}~.-]+$/u.test(messageId)
     ? messageId
     : null;
 }
@@ -79,7 +83,7 @@ async function matchesRule(opts: {
   const messageId = safeRfc822MessageId(opts.message);
   if (messageId === null) return "unevaluated";
   const result = await opts.service.listMessages({
-    q: `(${opts.rule.query}) rfc822msgid:${messageId}`,
+    q: `(${opts.rule.query}) rfc822msgid:"${messageId}"`,
     maxResults: 1,
   });
   return result.messages.some((ref) => ref.id === opts.message.id) ? "match" : "no-match";
