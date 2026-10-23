@@ -15,15 +15,14 @@
  * resume semantics live one level up in `ChatSession`.
  */
 
-import {
-  query,
-  startup,
-  type Options,
-  type Query,
-  type SDKMessage,
-  type SDKUserMessage,
-  type WarmQuery,
+import type {
+  Options,
+  Query,
+  SDKMessage,
+  SDKUserMessage,
+  WarmQuery,
 } from "@anthropic-ai/claude-agent-sdk";
+import type * as AgentSdkModule from "@anthropic-ai/claude-agent-sdk";
 import { gitMvNudgeHook } from "../../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../../core/sdk-binary-path.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
@@ -75,6 +74,18 @@ function messageSessionId(msg: SDKMessage): string | null {
     return msg.session_id;
   }
   return null;
+}
+
+type AgentSdk = typeof AgentSdkModule;
+let agentSdk: AgentSdk | undefined;
+
+/**
+ * The Agent SDK, loaded by the first warm-up or chat start. Every `bbx` verb
+ * loads this module, and the SDK costs about 30 ms to import.
+ */
+async function loadAgentSdk(): Promise<AgentSdk> {
+  agentSdk ??= await import("@anthropic-ai/claude-agent-sdk");
+  return agentSdk;
 }
 
 /**
@@ -247,6 +258,7 @@ function createClaudeChatBackend(): ChatBackend {
     const pending = (async (): Promise<void> => {
       try {
         const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
+        const { startup } = await loadAgentSdk();
         const wq = await startup({ options: { ...queryOptions, abortController: controller } });
         if (warmEpoch !== epochAtStart) {
           // closeWarm() ran while we were warming — abandon this slot rather
@@ -270,7 +282,8 @@ function createClaudeChatBackend(): ChatBackend {
   }
 
   function buildRunFromQuery(params: {
-    q: Query;
+    /** A promise while the SDK is still loading (a cold start before any warm-up). */
+    q: Query | Promise<Query>;
     opts: ChatBackendStartOptions;
     inputQueue: ReturnType<typeof createAsyncIterableQueue<SDKUserMessage>>;
     messageQueue: ReturnType<typeof createAsyncIterableQueue<SDKMessage>>;
@@ -299,7 +312,7 @@ function createClaudeChatBackend(): ChatBackend {
       },
       async interrupt(): Promise<void> {
         if (run.closed) return;
-        await q.interrupt();
+        await (await q).interrupt();
       },
       async close(): Promise<void> {
         if (run.closed) return;
@@ -313,7 +326,7 @@ function createClaudeChatBackend(): ChatBackend {
     const pump = (async (): Promise<void> => {
       let sessionIdWritten = false;
       try {
-        for await (const msg of q) {
+        for await (const msg of await q) {
           // Publish the SDK-assigned session id to the per-subprocess file the
           // moment it first appears, so a mid-turn `bbx chat screenshot` in this
           // subprocess can target this exact conversation (new sessions only —
@@ -405,10 +418,8 @@ function createClaudeChatBackend(): ChatBackend {
       }
 
       const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
-      const q: Query = query({
-        prompt: inputQueue.iterable,
-        options: queryOptions,
-      });
+      const startQuery = ({ query }: AgentSdk): Query => query({ prompt: inputQueue.iterable, options: queryOptions });
+      const q = agentSdk === undefined ? loadAgentSdk().then(startQuery) : startQuery(agentSdk);
       return buildRunFromQuery({ q, opts, inputQueue, messageQueue, sessionIdFilePath });
     },
   };
