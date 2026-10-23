@@ -3,7 +3,8 @@ import { useDirectoryListing } from "../../../../directory-listing";
 import type { RouterOutput } from "../../../../lib/trpc/client";
 import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
 import { PropertyLink, PropertyProblem } from "./property-section";
-import { useRefetchOnFileChange } from "../../../../hooks/useRefetchOnFileChange";
+import { useLiveRefresh } from "../../../../hooks/useLiveRefresh";
+import { anyFileChange } from "../../../../lib/live-refresh";
 
 type Listing = RouterOutput["status"]["browse"];
 
@@ -29,7 +30,7 @@ export function attachmentEntries(scope: string, listing: Pick<Listing, "dirs" |
 export function CardAttachments({ path, onNavigate }: { path: string; onNavigate: (target: ViewTarget, hint?: NavigateHint) => void }) {
   const scope = attachDirFor(path);
   const query = useDirectoryListing(scope);
-  useRefetchOnFileChange(query.refetch);
+  useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const entries = query.data ? attachmentEntries(scope, query.data) : null;
   return <section className="mt-6" aria-label="Attachments" data-card-section="attachments">
     <h3 className="text-sm font-semibold mb-2">{entries !== null && entries.length > 0 ? `Attachments (${String(entries.length)})` : "Attachments"}</h3>

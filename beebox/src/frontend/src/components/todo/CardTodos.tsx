@@ -18,12 +18,11 @@
  * failure is logged, and the card's own load reports its own errors.
  */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { TODO_STATUSES } from "@shared/todo-model";
 import { trpc } from "../../lib/trpc/client";
-import { busEventData } from "../../lib/bus-events";
-import { fileChangeAffectsPath } from "../../lib/moved-card-recovery";
-import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { fileChangeAt } from "../../lib/live-refresh";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { CardTodosContext, indexPlateStates } from "./card-todos-context";
 import { TodoSummaryLine } from "./TodoSummaryLine";
 import { controlTargetSelector } from "./summary";
@@ -46,15 +45,9 @@ export function CardTodos({ path, children }: { path: string; children: ReactNod
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasOpenTarget, setHasOpenTarget] = useState(false);
 
-  useBusSubscription({
-    onEvent: useCallback(
-      (event: RealtimeEvent) => {
-        const change = busEventData(event, "file-change");
-        if (!change || !fileChangeAffectsPath(change, path)) return;
-        void utils.collections.query.invalidate(cardTodosInput(path));
-      },
-      [utils, path],
-    ),
+  useLiveRefresh({
+    when: fileChangeAt(path),
+    refresh: () => { void utils.collections.query.invalidate(cardTodosInput(path)); },
   });
 
   useEffect(() => {

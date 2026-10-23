@@ -22,7 +22,6 @@
  * twice on one page.
  */
 
-import { useCallback } from "react";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../lib/trpc/client";
 import { Card } from "./ui/Card";
@@ -34,7 +33,8 @@ import { Stack } from "./ui/Stack";
 import { InlineAction } from "./ui/InlineAction";
 import { bbxSource } from "../lib/source-tag";
 import { busEventData } from "../lib/bus-events";
-import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import type { RealtimeEvent } from "../hooks/useBusSubscription";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import { CardRow } from "./todo-view/CardRow/view";
 import { DatedList } from "./todo-view/DatedList";
 import {
@@ -185,15 +185,9 @@ export function TodoViewCard(props: RendererProps) {
 
   // A todo lives in an ordinary card, so any card edit can change this list.
   // The scope is a glob rather than one path, so every `.card` write counts.
-  useBusSubscription({
-    onEvent: useCallback(
-      (event: RealtimeEvent) => {
-        const change = busEventData(event, "file-change");
-        if (!change || !change.path.endsWith(".card")) return;
-        void utils.collections.query.invalidate();
-      },
-      [utils],
-    ),
+  useLiveRefresh({
+    when: (event: RealtimeEvent) => busEventData(event, "file-change")?.path.endsWith(".card") === true,
+    refresh: () => { void utils.collections.query.invalidate(); },
   });
 
   const change = (next: Partial<ViewOptions>): void => {

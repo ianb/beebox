@@ -5,7 +5,8 @@ import { useBoxNow } from "../../../../lib/box-clock";
 import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
 import { legacyHistoryState } from "../../../history/card-state";
 import { PropertyLink, PropertyProblem } from "./property-section";
-import { useRefetchOnFileChange } from "../../../../hooks/useRefetchOnFileChange";
+import { useLiveRefresh } from "../../../../hooks/useLiveRefresh";
+import { anyFileChange } from "../../../../lib/live-refresh";
 
 /**
  * The newest commit touching the card (history follows renames), and a link
@@ -14,7 +15,7 @@ import { useRefetchOnFileChange } from "../../../../hooks/useRefetchOnFileChange
  */
 export function CardLastChange({ path, onNavigate }: { path: string; onNavigate: (target: ViewTarget, hint?: NavigateHint) => void }) {
   const query = trpc.history.list.useQuery({ filter: { path }, count: 1 }, { staleTime: 10_000 });
-  useRefetchOnFileChange(query.refetch);
+  useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const now = useBoxNow(60_000);
   const commit = query.data?.commits.at(0);
   const line = commit === undefined ? null : lastChangeLine(commit, now === 0 ? null : now);

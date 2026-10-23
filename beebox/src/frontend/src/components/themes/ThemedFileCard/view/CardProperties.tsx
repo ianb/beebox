@@ -11,7 +11,8 @@ import { toDisplayPath } from "@shared/display-path";
 import { readCardSymbol } from "@shared/card-symbol";
 import { Prominence, effectiveLevel } from "@shared/prominence";
 import { PropertyLink, PropertyProblem } from "./property-section";
-import { useRefetchOnFileChange } from "../../../../hooks/useRefetchOnFileChange";
+import { useLiveRefresh } from "../../../../hooks/useLiveRefresh";
+import { anyFileChange } from "../../../../lib/live-refresh";
 
 /** "<level>" when the card declares one, "<level>, the type's default" when it does not; the raw value when the schema is unknown. */
 function prominenceText(value: unknown, schema: FileData["schema"]): string | null {
@@ -80,7 +81,7 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
 /** Mounted only while Properties is open: no box scan for every visible card. */
 export function CardMentions({ path, onNavigate }: { path: string; onNavigate: (target: ViewTarget, hint?: NavigateHint) => void }) {
   const query = trpc.card.inboundRefs.useQuery({ path }, { staleTime: 10_000 });
-  useRefetchOnFileChange(query.refetch);
+  useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const incomplete = (query.data?.errors ?? []).length > 0;
   return <section className="mt-6" aria-label="Mentions">
     <h3 className="text-sm font-semibold mb-2">Mentioned by</h3>
