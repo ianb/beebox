@@ -173,7 +173,9 @@ export async function runWait(box: string, opts: { record: WaitRecord; statePath
   const { record, statePath, shown } = opts;
   const from = new Date(record.from);
   const to = new Date(record.to);
-  let end = to;
+  // Ticks run a second past each due time, so the wait ends a second past its
+  // nominal end: never earlier than a tick, on a first run or a resume.
+  const end = new Date(to.getTime() + 1000);
   const interrupted = record.started.filter((k) => !record.done.includes(k));
   for (const k of interrupted) record.done.push(k);
   const { cards, unreadable } = await readScheduleCards(box);
@@ -190,8 +192,6 @@ export async function runWait(box: string, opts: { record: WaitRecord; statePath
       record.started.push(occurrenceKey(o));
       saveRecord(statePath, { shown, wait: record });
       await runOccurrence(box, { o, found });
-      // The wait ends no earlier than its last tick, so nothing it sent is stamped after the box's new now.
-      if (tickTime(o).getTime() > end.getTime()) end = tickTime(o);
       record.done.push(occurrenceKey(o));
       saveRecord(statePath, { shown, wait: record });
       if (o.kind !== "runs") continue;
