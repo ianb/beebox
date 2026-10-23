@@ -1,12 +1,15 @@
 ---
 title: "Gmail sync stalls forever on a message deleted after history named it, and no one is told"
 workstream: gmail-404-stuck
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: human
 discovered-in: production — boxholder noticed missing mail
-design: ../../beebox/docs/plans/connector-failing-reaches-people.md
+design: ../../../beebox/docs/implemented-plans/connector-failing-reaches-people.md
 ---
+
+Closed: fixed by 90e32bd0f (not-found skips) and 166661e30 (attachment skip); notices by 118d0ce40. Implemented as proposed.
 
 ## The defect
 
@@ -37,5 +40,6 @@ both.
 
 - [x] Skip not-found messages, threads and attachments; tests with the fake.
 - [x] Check Calendar and Drive for the same shape (neither has it).
-- [ ] A failing connector episode reaches the boxholder and the developer
-  (plan above).
+- [x] A failing connector episode reaches the boxholder (one `quiet` notice)
+  and the developer (`box-convergence` condition `prod-connector-activity`);
+  plan above.

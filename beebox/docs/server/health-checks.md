@@ -217,8 +217,11 @@ lets the box notice. `connectors/activity-verdict.ts` holds the rule:
 
 Each quiet or failing stretch is an **episode**, stored in the activity record.
 The scheduler daemon records each new episode once in its log, beside the
-task-health and Google-auth passes (`core/schedule/box-alerts.ts`); none of
-them sends a notification. The dashboard shows a `connector-activity:<name>` warning with a **This is expected**
+task-health and Google-auth passes (`core/schedule/box-alerts.ts`). A new
+**failing** episode also sends one `quiet` notification naming each failing
+connector and the day it began; it says to reconnect Google only when a Google
+connector is failing and the grant is missing or dead. A quiet episode sends
+nothing. The dashboard shows a `connector-activity:<name>` warning with a **This is expected**
 button until new items arrive, an ok sync ends the failing stretch, or the owner
 dismisses it. A dismissed episode stays dismissed; the next episode is new and
 alerts again. An open quiet episode does not end when its baseline ages out of
