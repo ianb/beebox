@@ -134,6 +134,7 @@ export async function openChatRun(opts: {
     // subprocess exists.
     const additions = await providerEnvAdditions({ boxRoot: opts.boxRoot, model: opts.model, purpose: "chat-start" });
     if (additions) startOptions.env = { ...startOptions.env, ...additions };
+    await opts.backend.load?.();
     return startBackendRun(opts.backend, startOptions);
   } catch (e) {
     log("start", `Run start failed, resetting session to idle: ${errorMessage(e)}`);

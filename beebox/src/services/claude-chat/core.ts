@@ -26,6 +26,7 @@ import type * as AgentSdkModule from "@anthropic-ai/claude-agent-sdk";
 import { gitMvNudgeHook } from "../../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../../core/sdk-binary-path.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
+import { invariant } from "../../shared/invariant.js";
 import { createAsyncIterableQueue } from "../claude-chat-queue.js";
 import {
   allocateSessionIdFilePath,
@@ -80,8 +81,9 @@ type AgentSdk = typeof AgentSdkModule;
 let agentSdk: AgentSdk | undefined;
 
 /**
- * The Agent SDK, loaded by the first warm-up or chat start. Every `bbx` verb
- * loads this module, and the SDK costs about 30 ms to import.
+ * The Agent SDK, loaded by the first warm-up or by `load()` before a chat
+ * starts. Every `bbx` verb loads this module, and the SDK costs about 30 ms to
+ * import.
  */
 async function loadAgentSdk(): Promise<AgentSdk> {
   agentSdk ??= await import("@anthropic-ai/claude-agent-sdk");
@@ -282,8 +284,7 @@ function createClaudeChatBackend(): ChatBackend {
   }
 
   function buildRunFromQuery(params: {
-    /** A promise while the SDK is still loading (a cold start before any warm-up). */
-    q: Query | Promise<Query>;
+    q: Query;
     opts: ChatBackendStartOptions;
     inputQueue: ReturnType<typeof createAsyncIterableQueue<SDKUserMessage>>;
     messageQueue: ReturnType<typeof createAsyncIterableQueue<SDKMessage>>;
@@ -312,7 +313,7 @@ function createClaudeChatBackend(): ChatBackend {
       },
       async interrupt(): Promise<void> {
         if (run.closed) return;
-        await (await q).interrupt();
+        await q.interrupt();
       },
       async close(): Promise<void> {
         if (run.closed) return;
@@ -326,7 +327,7 @@ function createClaudeChatBackend(): ChatBackend {
     const pump = (async (): Promise<void> => {
       let sessionIdWritten = false;
       try {
-        for await (const msg of await q) {
+        for await (const msg of q) {
           // Publish the SDK-assigned session id to the per-subprocess file the
           // moment it first appears, so a mid-turn `bbx chat screenshot` in this
           // subprocess can target this exact conversation (new sessions only —
@@ -358,6 +359,7 @@ function createClaudeChatBackend(): ChatBackend {
     async prewarm(opts: ChatBackendStartOptions): Promise<void> {
       await startWarming(opts);
     },
+    async load(): Promise<void> { await loadAgentSdk(); },
     closeWarmFor(sessionId: string): void {
       const slot = warmSlots.get(sessionId);
       if (slot === undefined) return;
@@ -418,8 +420,8 @@ function createClaudeChatBackend(): ChatBackend {
       }
 
       const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
-      const startQuery = ({ query }: AgentSdk): Query => query({ prompt: inputQueue.iterable, options: queryOptions });
-      const q = agentSdk === undefined ? loadAgentSdk().then(startQuery) : startQuery(agentSdk);
+      invariant(agentSdk !== undefined, "the chat backend's load() must finish before a cold start()");
+      const q: Query = agentSdk.query({ prompt: inputQueue.iterable, options: queryOptions });
       return buildRunFromQuery({ q, opts, inputQueue, messageQueue, sessionIdFilePath });
     },
   };
@@ -436,6 +438,7 @@ export function createChatBackend(): ChatBackend {
     prewarm: async (opts) => {
       if (opts.engine !== "codex") await claude.prewarm?.(opts);
     },
+    load: async () => { await claude.load?.(); },
     closeWarm: async () => { await claude.closeWarm?.(); },
     closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
     hasWarm: () => claude.hasWarm?.() ?? false,
