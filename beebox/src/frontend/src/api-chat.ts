@@ -1,3 +1,4 @@
+import { errorMessage } from "@shared/error-guards";
 import { startAwakeTimeout } from "@shared/awake-timeout.js";
 import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
 /**
@@ -408,7 +409,7 @@ export async function startChatTurn(params: {
       await new Promise((r) => setTimeout(r, 2000));
       response = await attempt();
     } else {
-      const reason = err instanceof Error ? err.message : String(err);
+      const reason = errorMessage(err);
       recordChatSendEvent(messageId, { event: "post-error", detail: { reasonKind: chatSendReasonKind(reason) } });
       throw err instanceof Error ? err : new RequestError(String(err));
     }

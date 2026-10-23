@@ -5,6 +5,7 @@
  * and subscribes to SSE for live updates.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
 import * as ReactDOM from "react-dom";
 import { useNavigate, useParams } from "@tanstack/react-router";
@@ -263,7 +264,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
       // would reset against the still-broken module and immediately re-throw.
       setReloadSeq((n) => n + 1);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     }
   }, [apiBase, slug]);
 
@@ -278,7 +279,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
       setCards(data.cards);
       setFiles(data.files);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiBase, slug, paramsString]);

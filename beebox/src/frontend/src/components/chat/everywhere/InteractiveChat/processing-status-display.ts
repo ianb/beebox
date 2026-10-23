@@ -1,5 +1,6 @@
 /** Display policy for the chat's "Thinking…" status strip. */
 
+import { errorMessage } from "@shared/error-guards";
 import { useEffect, useRef, useState } from "react";
 import { getChatStatus } from "../../../../api";
 import type { ChatEvent } from "../../../../machines/chat-types";
@@ -109,7 +110,7 @@ export function useProcessingStatusPoll(opts: {
           }
         })
         .catch((e: unknown) => {
-          console.warn(`[chatfsm] processing-status poll failed: ${e instanceof Error ? e.message : String(e)}`);
+          console.warn(`[chatfsm] processing-status poll failed: ${errorMessage(e)}`);
           if (!ignored) setConfirmation({ sessionId, value: "confirmed" });
         });
     };
@@ -158,7 +159,7 @@ export function useProcessingStatusPoll(opts: {
           }
         })
         .catch((e: unknown) => {
-          console.warn(`[chatfsm] stream watchdog poll failed: ${e instanceof Error ? e.message : String(e)}`);
+          console.warn(`[chatfsm] stream watchdog poll failed: ${errorMessage(e)}`);
         });
     };
     const pollId = setInterval(poll, 5000);
