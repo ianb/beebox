@@ -200,7 +200,11 @@ tests:
   new entries (`--filter <tag-or-id>`). A never-run audit is unverified in
   both directions: the agent may fail it, or the audit itself may be
   broken (bad `correct_contains`, wrong `should_read` path). Running is
-  part of authoring, not a follow-up.
+  part of authoring, not a follow-up. Before running, test each changed
+  response pattern by hand against a right answer and against one wrong
+  answer that `watch_for` rules out, including a correct negation of the
+  wrong action. A pattern widened only to pass a failing right answer often
+  also passes a wrong one.
 
 ### Prompt style effects
 
