@@ -38,27 +38,28 @@ export function runChecks(
   test: AuditTest,
   { behavior, newOrModifiedCards }: RunChecksContext,
 ): AutomatedChecks {
+  const text = test.final_reply === true ? behavior.replyText : behavior.responseText;
   const containsChecks = (test.correct_contains ?? []).map((expected) => ({
     expected,
-    found: behavior.responseText.toLowerCase().includes(expected.toLowerCase()),
+    found: text.toLowerCase().includes(expected.toLowerCase()),
   }));
   const matchesChecks = (test.correct_matches ?? []).map((pattern) => {
     // eslint-disable-next-line security/detect-non-literal-regexp -- authored in committed audit YAML
-    const match = new RegExp(pattern, "i").exec(behavior.responseText);
+    const match = new RegExp(pattern, "i").exec(text);
     return { pattern, found: match !== null, ...(match && { matched: match[0] }) };
   });
   const notContainsChecks = (test.response_not_contains ?? []).map((forbidden) => ({
     forbidden,
-    found: behavior.responseText.toLowerCase().includes(forbidden.toLowerCase()),
+    found: text.toLowerCase().includes(forbidden.toLowerCase()),
   }));
   const notMatchesChecks = (test.response_not_matches ?? []).map((pattern) => {
     // eslint-disable-next-line security/detect-non-literal-regexp -- authored in committed audit YAML
-    const match = new RegExp(pattern, "i").exec(behavior.responseText);
+    const match = new RegExp(pattern, "i").exec(text);
     return { pattern, found: match !== null, ...(match && { matched: match[0] }) };
   });
   let containsAnyCheck: AutomatedChecks["containsAnyCheck"];
   if (test.correct_contains_any) {
-    const lowerText = behavior.responseText.toLowerCase();
+    const lowerText = text.toLowerCase();
     const matched = test.correct_contains_any.find((opt) => lowerText.includes(opt.toLowerCase()));
     containsAnyCheck = { options: test.correct_contains_any, found: !!matched, matched: matched ?? undefined };
   }

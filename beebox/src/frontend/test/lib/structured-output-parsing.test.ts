@@ -105,6 +105,11 @@ void test("The agent sometimes writes the bare <no-response/> shorthand instead 
   t.check(isNoResponseOnly("<no-response/>"), true);
 });
 
+// A callout is content: a turn with a callout and a no-response ack is not empty.
+void test("A callout is content.", async (t) => {
+  t.check(isNoResponseOnly('<callout context="/loans/drill.card">Due Friday.</callout><ack kind="no-response"/>'), false);
+});
+
 // The paired form (`<no-response></no-response>`) normalizes the same way.
 void test("The paired form (<no-response></no-response>) normalizes the same way.", async (t) => {
   t.check(isNoResponseOnly("<no-response></no-response>"), true);

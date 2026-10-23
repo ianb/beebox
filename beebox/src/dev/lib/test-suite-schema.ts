@@ -31,7 +31,7 @@ export type AuditSurface = z.infer<typeof auditSurfaceSchema>;
 
 /** Fields that need a box, card files, Bash, or web tools — none exist in a dev audit. */
 const BOX_ONLY_FIELDS = [
-  "cards_contain", "cards_not_under", "bash_contains", "should_search", "context_dir", "fixture", "chat_mode", "plugins",
+  "cards_contain", "cards_not_under", "bash_contains", "should_search", "context_dir", "fixture", "chat_mode", "final_reply", "plugins",
 ] as const;
 
 const auditTestObjectSchema = z.object({
@@ -92,6 +92,12 @@ const auditTestObjectSchema = z.object({
    * too.
    */
   chat_mode: z.boolean().optional(),
+  /**
+   * Run the text checks on the text the chat shows: the reply after the last
+   * tool call, plus earlier text the chat keeps (`visibleReplyText`). Other
+   * text written before a later tool call folds into the activity row.
+   */
+  final_reply: z.boolean().optional(),
   /**
    * Plugins the box must have active for this audit. The runner activates
    * them before docs generation and resets the box after (`box-audits/plugins.ts`).

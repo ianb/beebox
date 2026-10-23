@@ -12,7 +12,6 @@ import { stripChatAppTags } from "@shared/chat-tags";
 import { SESSION_MEDIA_ROUTE } from "@shared/session-media";
 import { getApiBase } from "../../api-core";
 import { entrySelfNotes, type SelfNoteInfo } from "@shared/self-note";
-import { parseCallouts, stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
 // Re-exported so ChatMessages.tsx keeps importing the type from this module.
@@ -390,103 +389,6 @@ export function extractChatImages(
   }
   if (streamText) extractImagesFromMarkdown(streamText, { out: images, boxSlug });
   return images;
-}
-
-// --- Assistant part grouping ---
-
-// A discriminated union on `type`: text/thinking parts carry `text`, a tools
-// part carries `tools`. Each variant holds exactly the field its kind
-// populates, so a consumer that narrows on `type` sees only the fields that
-// exist — no optional-field guards or runtime `invariant`s needed.
-type AssistantPart =
-  | { type: "text"; text: string }
-  | { type: "update"; text: string }
-  | { type: "thinking"; text?: string }
-  | { type: "tools"; tools: SessionContentBlock[] };
-export interface TextGroup { kind: "text"; text: string }
-/** A progress update: a line the model wrote for the user before a tool call. */
-export interface UpdateGroup { kind: "update"; text: string }
-/** The non-text members of AssistantPart — what an activity group renders. */
-export type ActivityPart =
-  | { type: "thinking"; text?: string }
-  | { type: "tools"; tools: SessionContentBlock[] };
-export interface ActivityGroupData { kind: "activity"; parts: ActivityPart[] }
-
-// Narrows off the `type` discriminant: everything that isn't text or an
-// update is an ActivityPart (thinking or tools).
-function isActivityPart(part: AssistantPart): part is ActivityPart {
-  return part.type !== "text" && part.type !== "update";
-}
-
-/**
- * Group consecutive non-text parts (thinking, tools) into activity groups,
- * separated by text parts which render as normal markdown and by progress
- * updates which render as visible status lines. A progress update is written
- * for the user, and a model sometimes puts its whole answer there, so it must
- * not hide inside a collapsed activity group.
- */
-export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | UpdateGroup | ActivityGroupData> {
-  const flat: AssistantPart[] = [];
-  for (const entry of entries) {
-    for (const block of entry.content) {
-      if (block.type === "thinking" && block.progressUpdate === true && block.text?.trim()) {
-        flat.push({ type: "update", text: block.text.trim() });
-      } else if (block.type === "thinking" && block.text?.trim()) {
-        flat.push({ type: "thinking", text: block.text });
-      } else if (block.type === "text" && block.text?.trim()) {
-        flat.push({ type: "text", text: block.text });
-      } else if (block.type === "tool_use") {
-        // `.at(-1)`: see the note in `groupMessages` above.
-        const last = flat.at(-1);
-        if (last && last.type === "tools") {
-          last.tools.push(block);
-        } else {
-          flat.push({ type: "tools", tools: [block] });
-        }
-      }
-    }
-  }
-
-  const grouped: Array<TextGroup | UpdateGroup | ActivityGroupData> = [];
-  let activityBuf: ActivityPart[] = [];
-
-  function flushActivity() {
-    if (activityBuf.length > 0) {
-      grouped.push({ kind: "activity", parts: activityBuf });
-      activityBuf = [];
-    }
-  }
-
-  for (const part of flat) {
-    if (isActivityPart(part)) {
-      activityBuf.push(part);
-    } else {
-      flushActivity();
-      grouped.push({ kind: part.type, text: part.text });
-    }
-  }
-  flushActivity();
-
-  return grouped;
-}
-
-/** Whether an assistant group will produce visible message content. */
-export function hasRenderableAssistantContent(entries: SessionEntry[], debugView?: boolean): boolean {
-  return groupIntoParts(entries).some((part) => {
-    if (part.kind !== "text") return true;
-    if (debugView) return true;
-    return stripStructuredOutputTags(stripSpeechTags(part.text)).trim().length > 0
-      || parseCallouts(part.text).length > 0;
-  });
-}
-
-/**
- * Whether any entry carries a progress update. An update is written for the
- * user, so a turn that has one stays visible even when its only text is a
- * `no-response` ack.
- */
-export function hasProgressUpdate(entries: SessionEntry[]): boolean {
-  return entries.some((e) => e.content.some((b) => b.progressUpdate === true && Boolean(b.text?.trim())));
 }
 
 /** Number of `<speech>` chunks in a text fragment (for absolute index offsets). */
