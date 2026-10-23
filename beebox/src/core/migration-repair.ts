@@ -14,6 +14,7 @@ import { errnoCode } from "../shared/error-guards.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
 import { findAbsoluteMachinePaths, redactAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
+import type { ManifestEntry } from "./migrations.js";
 
 
 class MigrationRepairUnavailableError extends Error {
@@ -57,6 +58,26 @@ export async function migrationQuestions(boxRoot: string): Promise<string[]> {
     if (existing === null || "malformed" in existing || questionState(existing.fields) !== "answered") pending.push(file);
   }
   return pending;
+}
+
+/** The migration a `Migration_<name>-N.question.card` path asks about. */
+function questionMigration(file: string): string | undefined {
+  return /Migration_(.+)-\d+\.question\.card$/.exec(file)?.[1];
+}
+
+/**
+ * Pending questions the manifest has overtaken: the migration is recorded,
+ * and the question is not the one its partial apply recorded, so it is from a
+ * failed earlier run. Its answer would authorize a repair of a migration that
+ * has applied; the sweep deletes the card (git history keeps it).
+ */
+export async function supersededMigrationQuestions(boxRoot: string, manifest: readonly ManifestEntry[]): Promise<string[]> {
+  const pending = await migrationQuestions(boxRoot);
+  return pending.filter((file) => {
+    const name = questionMigration(file);
+    const entry = manifest.find((candidate) => candidate.name === name);
+    return entry !== undefined && entry.question !== file;
+  });
 }
 
 /**

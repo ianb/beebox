@@ -206,8 +206,12 @@ with the script's output. The runner then reruns the script. When the rerun
 exits 0, the migration is recorded as done. When the rerun still exits 2, the
 migration is recorded with a `Migration_<name>-N` question for the boxholder.
 The question carries the rerun's output, so the leftover is still on record,
-and later migrations continue. While an earlier question for that migration is
-still open, an exit 2 records nothing, and the next pass runs it again. A
+and later migrations continue; the manifest entry names it (`question`). While
+an earlier question for that migration is still open, an exit 2 records
+nothing, and the next pass runs it again. Any other pending question for a
+recorded migration is from a failed earlier run that the apply superseded: the
+sweep deletes the card and commits the deletion, so a stale question cannot
+keep the box in attention or authorize a repair of a migration that applied. A
 warning with exit 0 bypasses all of this. The migration is recorded as done, the warning reaches
 only a deploy log nobody reads, and the box stays broken.
 

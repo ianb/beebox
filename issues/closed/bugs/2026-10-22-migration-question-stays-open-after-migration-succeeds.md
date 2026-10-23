@@ -6,7 +6,19 @@ labels: [migrations]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-risky-merge-review — adversarial review of the merges since 2026-10-08
+resolution: implemented
 ---
+
+Fixed in `worktree-risky-merge-review`. A partial apply records its question
+in the manifest entry (`question`); any other pending `Migration_<name>-N`
+question for a recorded migration is superseded, and the sweep deletes it and
+commits the deletion (`closeSupersededQuestions` in
+`beebox/src/core/migration-sweep.ts`, test
+`beebox/test/core/migration-sweep.superseded-question.test.ts`). The
+production boxes' engine-link questions are closed by the first sweep after
+the deploy; no manual cleanup is needed. The second half under Related (a stale
+question hiding a later exit 2) stays as described: the rerun records nothing
+until the question is answered.
 
 When a migration fails with repair on, the bounded repair writes
 `Migration_<name>-<n>.question.card` (`beebox/src/core/migration-repair.ts:71-75`).
