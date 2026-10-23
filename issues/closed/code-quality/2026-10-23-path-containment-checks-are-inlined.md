@@ -6,7 +6,10 @@ labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
+resolution: implemented
 ---
+
+Closed 2026-10-23 by commit 44677f298 (worktree-dup-sweep-backend): about 40 sites now call `isWithin`. Left by choice: `core/box/file-watcher.ts` (at the 300-line limit), `google-drive/tracking.ts` (a named predicate that excludes the root), relative-path prefix tests in the file watcher and `commands/move/operations.ts`, `bin/test-graph.ts` repo-relative filters, and the dev router.
 
 `beebox/src/lib/box-containment.ts` has `containWithinBox` (box-relative path
 or null) and, after the duplication sweep, `isWithin` (a boolean). About 30

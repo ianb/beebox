@@ -22,6 +22,7 @@ import { execa } from "execa";
 import type { BrowsedDocument, DirectoryEntry, DocumentKind } from "../shared/documents.js";
 import { documentLifecycle, planStatusFromSource } from "../../../beebox/src/dev/doc-graph-data/document-lifecycle.js";
 import { emptyChanges, workstreamsForPath, type WorkstreamChanges } from "./workstream-changes.js";
+import { isWithin } from "../../../beebox/src/lib/box-containment.js";
 
 export class InvalidDocumentPathError extends Error {
   constructor(relPath: string) {
@@ -69,8 +70,7 @@ export function kindForPath(relPath: string): DocumentKind {
 }
 
 function assertContained(options: { root: string; target: string; relPath: string }): void {
-  const relative = path.relative(options.root, options.target);
-  if (relative.startsWith(`..${path.sep}`) || relative === ".." || path.isAbsolute(relative)) {
+  if (!isWithin(options.root, options.target)) {
     throw new InvalidDocumentPathError(options.relPath);
   }
 }

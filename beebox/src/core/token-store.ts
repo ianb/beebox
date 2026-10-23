@@ -34,6 +34,7 @@ import * as path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
 import { requestScopedLock, withFileLock, type LockProfile } from "../lib/file-lock.js";
 import { isRecord } from "../shared/is-record.js";
+import { writeFileAtomicSync } from "../lib/atomic-write.js";
 
 const LOCK_WAIT_MS = 5_000;
 
@@ -222,63 +223,10 @@ export class TokenStore<TRecord extends TokenRecord> {
     });
   }
 
-  /** Crash-safe replace: write a temp sibling (0600), fsync it, atomically
-   *  rename over the target, then fsync the directory — a kill mid-write leaves
-   *  either the old or the new complete file, never a truncated one. `writeSync`
-   *  is looped until the whole buffer lands (a single call may short-write), and
-   *  a failure cleans up the temp sibling rather than leaving litter. Call only
-   *  inside `withLock`. */
+  /** Crash-safe replace (`writeFileAtomicSync`), mode 0600. Call only inside
+   *  `withLock`. */
   private write(boxRoot: string, records: TRecord[]): void {
-    const file = this.storePath(boxRoot);
-    const dir = path.dirname(file);
-    fs.mkdirSync(dir, { recursive: true });
-    const tmp = `${file}.tmp-${process.pid}-${crypto.randomBytes(6).toString("hex")}`;
     const store = { [this.options.collectionKey]: records };
-    const payload = Buffer.from(JSON.stringify(store, null, 2) + "\n", "utf-8");
-    try {
-      const fd = fs.openSync(tmp, "wx", 0o600);
-      try {
-        let offset = 0;
-        while (offset < payload.length) {
-          offset += fs.writeSync(fd, payload, offset, payload.length - offset);
-        }
-        fs.fsyncSync(fd);
-      } finally {
-        fs.closeSync(fd);
-      }
-      fs.renameSync(tmp, file);
-    } catch (e) {
-      try {
-        fs.unlinkSync(tmp);
-      } catch (unlinkErr) {
-        if (errnoCode(unlinkErr) !== "ENOENT") {
-          console.warn(`[${this.options.purpose}] failed to clean up token-store temp file:`, unlinkErr);
-        }
-      }
-      throw e;
-    }
-    this.fsyncDir(dir);
-  }
-
-  /** fsync a directory so a rename's new dir entry is durable across a crash.
-   *  Platforms that can't fsync a directory (e.g. Windows) surface a benign
-   *  errno we swallow — the atomic rename is still the tear-safety guarantee. */
-  private fsyncDir(dir: string): void {
-    let dirFd: number | undefined;
-    try {
-      dirFd = fs.openSync(dir, "r");
-      fs.fsyncSync(dirFd);
-    } catch (e) {
-      const code = errnoCode(e);
-      // EISDIR/EPERM/EINVAL/ENOTSUP: this platform can't fsync a directory
-      // handle. The rename remains atomic; only cross-crash durability of the
-      // dir entry is weakened, which is acceptable on those platforms. Log
-      // anything else.
-      if (code !== "EISDIR" && code !== "EPERM" && code !== "EINVAL" && code !== "ENOTSUP") {
-        console.warn(`[${this.options.purpose}] failed to fsync token-store directory:`, e);
-      }
-    } finally {
-      if (dirFd !== undefined) fs.closeSync(dirFd);
-    }
+    writeFileAtomicSync(this.storePath(boxRoot), { content: JSON.stringify(store, null, 2) + "\n", mode: 0o600 });
   }
 }

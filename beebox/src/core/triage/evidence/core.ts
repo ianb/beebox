@@ -2,7 +2,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { createHash } from "node:crypto";
 import { execa } from "execa";
 import { z } from "zod";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
@@ -17,6 +16,8 @@ import { resolveScanVision } from "../../commands/scan-import/session.js";
 import { probePdf, extractPdfText } from "../../pdf/probe.js";
 import { compileInstructionSnapshot, type InstructionSnapshot } from "../snapshot.js";
 import { packEvidence, scanRepresentations } from "./packing.js";
+import { isWithin } from "../../../lib/box-containment.js";
+import { sha256Hex } from "../../../lib/content-hash.js";
 
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u);
 const statusSchema = z.enum(["ready", "partial", "unavailable"]);
@@ -44,7 +45,6 @@ export interface PrepareItemOptions {
   previousEvidence?: Evidence;
 }
 
-function sha256(bytes: Buffer): string { return createHash("sha256").update(bytes).digest("hex"); }
 function resolve(boxRoot: string, ref: string): string {
   const parsed = parseRef(ref);
   invariant(parsed.fragment === undefined && parsed.query === undefined, "Preparation needs a file ref, without query or fragment");
@@ -70,8 +70,7 @@ async function listScope(directory: string): Promise<string[]> {
 async function checkedRead({ boxRoot, file }: { boxRoot: string; file: string }): Promise<Buffer> {
   // Annex symlinks may point inside the repository; never follow an arbitrary external link.
   const real = await fs.realpath(file);
-  const relative = path.relative(await fs.realpath(boxRoot), real);
-  invariant(relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), `Evidence escapes box: ${file}`);
+  invariant(isWithin(await fs.realpath(boxRoot), real), `Evidence escapes box: ${file}`);
   return fs.readFile(real);
 }
 
@@ -80,10 +79,10 @@ export async function verifyEvidence(boxRoot: string, evidence: Evidence): Promi
   evidenceSchema.parse(evidence);
   for (const part of evidence.parts) {
     const bytes = await checkedRead({ boxRoot, file: resolve(boxRoot, part.ref) });
-    invariant(sha256(bytes) === part.digest, `stale-decision: changed evidence ${part.ref}; prepare again`);
+    invariant(sha256Hex(bytes) === part.digest, `stale-decision: changed evidence ${part.ref}; prepare again`);
   }
   const source = await checkedRead({ boxRoot, file: resolve(boxRoot, evidence.source.ref) });
-  invariant(sha256(source) === evidence.source.digest, "stale-decision: changed source; prepare again");
+  invariant(sha256Hex(source) === evidence.source.digest, "stale-decision: changed source; prepare again");
   if (evidence.source.attachmentRef !== null) {
     const files = await listScope(resolve(boxRoot, evidence.source.attachmentRef));
     const expected = evidence.parts.filter((part) => part.ref !== evidence.source.ref).map((part) => part.ref).toSorted();
@@ -117,7 +116,7 @@ async function prepareImage({ file, part }: { file: string; part: Part }, option
 
 function cachedPart(input: { ref: string; bytes: Buffer }, evidence: Evidence | undefined): Part | undefined {
   if (evidence?.recipe.adapterVersion !== 2) return undefined;
-  return evidence.parts.find((part) => part.ref === input.ref && part.digest === sha256(input.bytes) && part.status === "ready" && part.text !== "" && !["duplicate-text", "provenance-only"].includes(part.method));
+  return evidence.parts.find((part) => part.ref === input.ref && part.digest === sha256Hex(input.bytes) && part.status === "ready" && part.text !== "" && !["duplicate-text", "provenance-only"].includes(part.method));
 }
 
 async function preparePart(input: { file: string; bytes: Buffer }, options: PrepareItemOptions): Promise<Part> {
@@ -125,7 +124,7 @@ async function preparePart(input: { file: string; bytes: Buffer }, options: Prep
   const ref = `/${path.relative(options.boxRoot, file)}`;
   const cached = cachedPart({ ref, bytes }, options.previousEvidence);
   if (cached) return { ...cached, omissions: [...cached.omissions] };
-  const part: Part = { ref, digest: sha256(bytes), mediaType: "application/octet-stream", method: "unsupported", toolVersion: "1", status: "unavailable", text: "", omissions: [] };
+  const part: Part = { ref, digest: sha256Hex(bytes), mediaType: "application/octet-stream", method: "unsupported", toolVersion: "1", status: "unavailable", text: "", omissions: [] };
   const extension = path.extname(file).toLowerCase();
   try {
     if (extension === ".pdf") {
@@ -230,7 +229,7 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
     const representations = scanRepresentations(parts, manifestRefs);
     const method = deferredMethod({ file, ref, representations });
     const part: Part = method === undefined ? await preparePart({ file, bytes }, options)
-      : { ref, digest: sha256(bytes), mediaType: method === "provenance-only" ? "application/gzip" : method === "pdf-deferred" ? "application/pdf" : `image/${path.extname(file).slice(1)}`, method, toolVersion: "1", status: method === "provenance-only" ? "ready" : "unavailable", text: "", omissions: [] };
+      : { ref, digest: sha256Hex(bytes), mediaType: method === "provenance-only" ? "application/gzip" : method === "pdf-deferred" ? "application/pdf" : `image/${path.extname(file).slice(1)}`, method, toolVersion: "1", status: method === "provenance-only" ? "ready" : "unavailable", text: "", omissions: [] };
     await noteMissingAttachments(part, options.boxRoot);
     parts.push(part);
   }

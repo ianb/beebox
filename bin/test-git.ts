@@ -11,9 +11,9 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { parsePorcelainEntries } from "./test-ledger-lib.js";
+import { sha256Hex } from "../beebox/src/lib/content-hash.js";
 
 /**
  * Strips only the trailing newline, never leading whitespace: `git status
@@ -75,7 +75,7 @@ export function changedPaths(input?: { base?: string; cwd?: string }): string[] 
 export function treeHash(cwd?: string): string {
   const parts = [
     `tree:${git(["rev-parse", "HEAD^{tree}"], cwd)}`,
-    `diff:${sha256(gitBytes(["diff", "HEAD", "--binary"], cwd))}`,
+    `diff:${sha256Hex(gitBytes(["diff", "HEAD", "--binary"], cwd))}`,
     ...untrackedBlobs(cwd),
   ];
   return hashParts(parts);
@@ -107,11 +107,7 @@ function untrackedBlobs(cwd?: string): string[] {
   return blobs;
 }
 
-function sha256(data: Buffer | string): string {
-  return createHash("sha256").update(data).digest("hex");
-}
-
 /** Order-independent, so the caller never has to think about sort stability. */
 function hashParts(parts: string[]): string {
-  return `sha256:${sha256(parts.toSorted().join("\n")).slice(0, 16)}`;
+  return `sha256:${sha256Hex(parts.toSorted().join("\n")).slice(0, 16)}`;
 }

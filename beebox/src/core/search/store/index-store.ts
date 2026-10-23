@@ -14,6 +14,7 @@ import path from "node:path";
 import { create, type AnySchema, type Orama } from "@orama/orama";
 import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
 import { errorMessage } from "../../../shared/error-guards.js";
+import { writeFileAtomic } from "../../../lib/atomic-write.js";
 
 /** Left behind by the short-lived binary-format experiment (2026-07). */
 const LEGACY_INDEX_EXT = ".msp";
@@ -111,8 +112,5 @@ export function createIndexStore<TSchema extends AnySchema>(
 
 /** Write a JSON file atomically (write temp, rename). */
 export async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const tmp = `${filePath}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(value, null, 2) + "\n");
-  await fs.rename(tmp, filePath);
+  await writeFileAtomic(filePath, { content: JSON.stringify(value, null, 2) + "\n" });
 }

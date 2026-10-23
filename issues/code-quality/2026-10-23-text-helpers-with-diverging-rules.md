@@ -39,12 +39,8 @@ differ in output:
   (`beebox/src/connectors/google-drive/tracking.ts:234`,
   `beebox/src/core/search/extract/core.ts:273`,
   `beebox/src/plugins/courseware/view/concept-data.ts:55`, `bin/lib/transcripts.ts:28`).
-- **Full SHA-256 hex.** `contentHash` (`beebox/src/lib/content-hash.ts`)
-  truncates to 16 characters. About 10 named helpers and 25 inline calls
-  produce the full hex (`beebox/src/core/install-template-file.ts:189`,
-  `bin/test-git.ts:110`, `beebox/src/core/triage/decisions/apply.ts:168`,
-  `beebox/src/google/oauth-state.ts:63`). A shared `sha256Hex` would have
-  many callers, but it is a new helper, not a merge onto an existing one.
+- **Full SHA-256 hex.** Done 2026-10-23 (commit 1ffc6f23d): six local helpers
+  now call `sha256Hex` in `beebox/src/lib/content-hash.ts`.
 
 Each needs a per-group choice of the rule; for slugs, the result is a
 filename that already exists on disk.

@@ -20,11 +20,11 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "../../shared/error-guards.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { withFileLock } from "../../lib/file-lock.js";
 import { TodoLocatorSchema } from "../../shared/todo-locators.js";
 import { TodoSnapshotSchema } from "./review-snapshot.js";
+import { loadJsonStateOrFresh } from "../../lib/json-state.js";
 
 const SWEEP_STATE_PATH = ".beebox/todo-review-sweep.json";
 const SWEEP_LOCK_PATH = ".beebox/todo-review-sweep.lock";
@@ -126,28 +126,13 @@ export function recheckKeyParts(key: string): { path: string; text: string } | n
 }
 
 export async function loadSweepState(boxRoot: string): Promise<SweepState> {
-  let raw: string;
-  try {
-    raw = await fs.readFile(path.join(boxRoot, SWEEP_STATE_PATH), "utf-8");
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn("Could not read todo-review sweep state, treating as first run:", e);
-    }
-    return { lastSweepDateEpoch: null, review: null, rechecks: {} };
-  }
-  let json: unknown;
-  try {
-    json = JSON.parse(raw);
-  } catch (e) {
-    console.warn("todo-review sweep state is not JSON, treating as first run:", e);
-    return { lastSweepDateEpoch: null, review: null, rechecks: {} };
-  }
-  const parsed = SweepStateSchema.safeParse(json);
-  if (!parsed.success) {
-    console.warn(`todo-review sweep state has an unexpected shape, treating as first run: ${parsed.error.message}`);
-    return { lastSweepDateEpoch: null, review: null, rechecks: {} };
-  }
-  const data = parsed.data;
+  const data = await loadJsonStateOrFresh({
+    filePath: path.join(boxRoot, SWEEP_STATE_PATH),
+    name: SWEEP_STATE_PATH,
+    label: "todo-review sweep",
+    schema: SweepStateSchema,
+    fresh: (): z.infer<typeof SweepStateSchema> => ({}),
+  });
   return { lastSweepDateEpoch: data.lastSweepDateEpoch ?? null, review: data.review ?? null, rechecks: data.rechecks ?? {} };
 }
 

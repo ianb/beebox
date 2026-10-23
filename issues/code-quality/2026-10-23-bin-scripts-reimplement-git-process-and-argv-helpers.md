@@ -12,8 +12,8 @@ discovered-in: worktree-dup-sweep-backend — backend pass of the functional-dup
 `beebox/src/hub/child-process-utils.ts` has `killGroup`, `pidAlive`, and
 `waitForHttp`. Many scripts write their own versions with different failure
 contracts. The duplication sweep merged only the exact copies; these remain.
-The `flags` parsers in `bin/comments.ts:95` and `bin/lib/schedules-cli-context.ts:64`
-are one algorithm with different value-flag sets.
+The `flags` parsers in `bin/comments.ts` and `bin/lib/schedules-cli-context.ts`
+now share `bin/lib/value-flags.ts` (commit 52b3a72d5).
 
 ## Run git and return stdout
 

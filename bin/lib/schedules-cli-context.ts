@@ -14,6 +14,7 @@ import { schedulesStoreRoot } from "./schedules.js";
 import { bootTimeMs } from "./schedules-store.js";
 import { pidAlive } from "../../beebox/src/hub/child-process-utils.js";
 import { osascriptNotify, type RunnerDeps } from "./schedules-alerts.js";
+import { valueFlags } from "./value-flags.js";
 
 export interface Context {
   repoRoot: string;
@@ -60,19 +61,9 @@ export function runnerDeps(context: Context): RunnerDeps {
 
 const VALUE_FLAGS = new Set(["replay", "title", "message", "details", "body", "priority", "workstream", "run", "condition", "except"]);
 
-/** `--flag value`, values consumed unconditionally: a message of "-- no" is
- *  the author's words, not a flag (the bin/comments rule). */
+/** `--flag value` for this CLI's value flags (see `valueFlags`). */
 export function flags(args: string[]): Map<string, string> {
-  const found = new Map<string, string>();
-  for (let i = 0; i < args.length; i += 1) {
-    const arg = args[i];
-    if (arg === undefined || !arg.startsWith("--")) continue;
-    const name = arg.slice(2);
-    if (!VALUE_FLAGS.has(name)) continue;
-    found.set(name, args[i + 1] ?? "");
-    i += 1;
-  }
-  return found;
+  return valueFlags(args, VALUE_FLAGS);
 }
 
 /** Every value of a flag that may repeat (`--except a --except b`); `flags`

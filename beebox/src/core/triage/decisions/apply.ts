@@ -1,7 +1,6 @@
 /** Apply a recorded decision without repeating the classifier. */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { createHash } from "node:crypto";
 import { simpleGit } from "simple-git";
 import { withFileLock } from "../../../lib/file-lock.js";
 import { withCardLock } from "../../../lib/card-lock.js";
@@ -16,6 +15,7 @@ import { compileInstructionSnapshot } from "../snapshot.js";
 import { movePathPreservingAnnexSymlink } from "../../card-files/move-phase2.js";
 import { getTriageTodoDate, planTriageTodoAnnotation } from "../todo.js";
 import { decisionReceiptSchema, assertContained, receiptRef, receiptFingerprint, containedPath, readDecisionReceipt, saveDecisionReceipt, withDecisionReceiptLock, TriageReceiptError, type DecisionReceipt } from "./storage.js";
+import { sha256Hex } from "../../../lib/content-hash.js";
 
 async function exists(file: string): Promise<boolean> {
   // Keep lstat semantics instead of lib/file-exists: broken links count as present and EACCES must propagate.
@@ -52,7 +52,7 @@ async function validateBytes(boxRoot: string, receipt: DecisionReceipt): Promise
     if (oldPath !== newPath && oldExists && newExists) throw new TriageReceiptError({ detail: `Collision: both ${oldRef} and ${newRef} exist` });
     if (!oldExists && !newExists) throw new TriageReceiptError({ detail: `stale-decision: missing ${oldRef}; replay or repair the source` });
     const bytes = await fs.readFile(oldExists ? oldPath : newPath);
-    const actualDigest = hash(bytes);
+    const actualDigest = sha256Hex(bytes);
     if (!matchesRecordedDigest({ partRef: part.ref, digest: part.digest, receipt, actualDigest })) throw new TriageReceiptError({ detail: `stale-decision: changed ${part.ref}; replay before applying` });
   }
   for (const part of receipt.evidence.parts) {
@@ -67,7 +67,7 @@ async function validateBytes(boxRoot: string, receipt: DecisionReceipt): Promise
   const evidence = { ...receipt.evidence, source: { ...receipt.evidence.source, ref: sourceRef, attachmentRef }, parts: verifiedParts };
   if (receipt.application.todoAnnotation?.state === "pending") {
     const sourcePart = verifiedParts.find((part) => part.ref === sourceRef);
-    const sourceDigest = hash(await fs.readFile(containedPath(boxRoot, sourceRef)));
+    const sourceDigest = sha256Hex(await fs.readFile(containedPath(boxRoot, sourceRef)));
     if (sourcePart) sourcePart.digest = sourceDigest;
     evidence.source.digest = sourceDigest;
   }
@@ -165,7 +165,6 @@ function selectedTodo(receipt: DecisionReceipt): { destinationRef: string; quest
   if (answer === undefined) throw new TriageReceiptError({ detail: `Missing recorded todo answer for configured destination ${destinationRef}; make the evidence readable, then prepare and judge a new decision for the held item. Retrying this correction cannot supply the missing answer` });
   return { destinationRef: destination.ref, question: destination.todoQuestion, positive: answer > 0.5 };
 }
-function hash(content: Buffer | string): string { return createHash("sha256").update(content).digest("hex"); }
 async function applyTodoAnnotation(boxRoot: string, receipt: DecisionReceipt): Promise<void> {
   const selected = selectedTodo(receipt);
   if (!selected?.positive) return;
@@ -173,7 +172,7 @@ async function applyTodoAnnotation(boxRoot: string, receipt: DecisionReceipt): P
   let annotation = receipt.application.todoAnnotation;
   if (annotation?.state === "applied") return;
   const current = await fs.readFile(target);
-  const currentDigest = hash(current);
+  const currentDigest = sha256Hex(current);
   if (annotation?.state === "pending" && currentDigest === annotation.afterDigest) {
     annotation.state = "applied";
     await saveDecisionReceipt(boxRoot, receipt);
@@ -202,7 +201,7 @@ async function hasCommittedTodoAnnotation(boxRoot: string, receipt: DecisionRece
   for (const revision of found ? found.split("\n") : []) {
     try {
       const bytes = await git.binaryCatFile(["blob", `${revision}:${relative}`]);
-      if (hash(bytes) === annotation.afterDigest) return true;
+      if (sha256Hex(bytes) === annotation.afterDigest) return true;
     } catch (_error) { /* Older application commits may not contain the routed target yet. */ }
   }
   return false;
@@ -233,7 +232,7 @@ export async function applyDecision(opts: { boxRoot: string; decision: DecisionR
   const preview = typeof opts.decision === "string" ? await readDecisionReceipt(boxRoot, opts.decision) : decisionReceiptSchema.parse(opts.decision);
   const lockDir = path.join(boxRoot, ".beebox/locks");
   await fs.mkdir(lockDir, { recursive: true });
-  const key = createHash("sha256").update(JSON.stringify([preview.evidence.source.ref, preview.evidence.source.digest, preview.evidence.parts.map((p) => [p.ref, p.digest])])).digest("hex");
+  const key = sha256Hex(JSON.stringify([preview.evidence.source.ref, preview.evidence.source.digest, preview.evidence.parts.map((p) => [p.ref, p.digest])]));
   const target = containedPath(boxRoot, preview.application.to);
   return withFileLock({ lockPath: path.join(lockDir, `triage-${key}`), metadata: { decision: preview.id }, waitMs: 10_000 }, async () => {
     return withCardLock(target, async () => {
@@ -250,7 +249,7 @@ export async function applyDecision(opts: { boxRoot: string; decision: DecisionR
     if (storedReceipt && receipt.application.state === "applied" && receipt.application.todoAnnotation?.state === "applied") {
       if (await hasCommittedTodoAnnotation(boxRoot, receipt)) return receipt;
       const current = await fs.readFile(containedPath(boxRoot, receipt.application.to));
-      if (hash(current) !== receipt.application.todoAnnotation.afterDigest) throw new TriageReceiptError({ detail: "Todo annotation is recorded applied but its provenance commit is missing and the card has since changed" });
+      if (sha256Hex(current) !== receipt.application.todoAnnotation.afterDigest) throw new TriageReceiptError({ detail: "Todo annotation is recorded applied but its provenance commit is missing and the card has since changed" });
       await commitReceipt(boxRoot, receipt);
       return receipt;
     }

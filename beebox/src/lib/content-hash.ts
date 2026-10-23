@@ -7,5 +7,10 @@ import { createHash } from "node:crypto";
  * the names `contentHash` / `hashContent`.
  */
 export function contentHash(content: string): string {
-  return createHash("sha256").update(content).digest("hex").slice(0, 16);
+  return sha256Hex(content).slice(0, 16);
+}
+
+/** The full SHA-256 of `content` as 64 lowercase hex chars (a string is hashed as UTF-8). */
+export function sha256Hex(content: string | Uint8Array): string {
+  return createHash("sha256").update(content).digest("hex");
 }
