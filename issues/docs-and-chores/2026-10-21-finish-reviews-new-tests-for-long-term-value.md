@@ -1,6 +1,6 @@
 ---
 title: "Finish has no step that decides which of a branch's new tests to keep"
-workstream: unattached
+workstream: test-value-research
 needs: [design]
 area: testing
 labels: [tests, finish]
@@ -78,3 +78,19 @@ guards; a lax one is a rubber stamp. Because the step decides without a
 human, the criteria carry all the weight. A sample of real branches, with the
 boxholder's keep/remove call on each test, would calibrate them before the step
 goes live. The dedicated commit makes a wrong removal easy to find and revert.
+
+## Research (2026-10-23)
+
+[research/test-value/README.md](../../research/test-value/README.md) grounds
+the criteria in the suite's own history: 959 full runs and 1,401 selected
+runs from the ledger, every red-main and flake issue classified by cause, git
+history for all 1,332 test files, and 54 files read. Main findings: the
+hourly suite caught three product regressions in 54 days against nine stale
+snapshots of generated sets; most failures and most catches happen in
+selected runs during development; bug replays and boundary tables have the
+best comments and the clearest value; the weak and restating examples are
+about 6% and 4 to 11% of checks. The note proposes keep (K1 to K4), rewrite
+or merge (M1 to M4) and remove (X1 to X3) criteria, says which signals a
+script can produce and which need the author's knowledge, and applies them
+by hand to three recent landings. The snapshot-of-a-generated-set criterion
+(M1) is new; the earlier C3 and C5 are refuted.
