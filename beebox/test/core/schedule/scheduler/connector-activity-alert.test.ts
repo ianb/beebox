@@ -7,7 +7,7 @@
 // it. A quiet episode sends nothing (docs/implemented-plans/notifications.md,
 // Track E). A new failing episode sends one `quiet` notice: the connector has
 // stopped doing what it was connected for (boxholder decision 2026-10-22,
-// docs/plans/connector-failing-reaches-people.md). See
+// docs/implemented-plans/connector-failing-reaches-people.md). See
 // `connectors/activity-verdict.ts` for the rule and
 // `test/connector-activity.verdict.test.ts` for its cases.
 

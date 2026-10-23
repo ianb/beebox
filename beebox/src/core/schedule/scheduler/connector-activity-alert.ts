@@ -13,7 +13,7 @@
  * whose every sync fails has stopped bringing in what the boxholder connected
  * it for, which is the promotion rule's test ("health stays in the app unless
  * it blocks something asked for", docs/implemented-plans/notifications.md,
- * Track E; boxholder decision 2026-10-22, docs/plans/connector-failing-reaches-people.md).
+ * Track E; boxholder decision 2026-10-22, docs/implemented-plans/connector-failing-reaches-people.md).
  * A `quiet` episode is a statistical guess and stays on the dashboard. A
  * boxholder-requested schedule that needs the connector is promoted
  * separately (`promotion.ts`).

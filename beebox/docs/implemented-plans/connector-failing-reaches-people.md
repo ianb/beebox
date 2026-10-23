@@ -1,9 +1,9 @@
 ---
 title: "A connector that keeps failing reaches a person"
-status: draft
+status: implemented
 workstream: gmail-404-stuck
 issues:
-  - ../../../issues/bugs/2026-10-22-gmail-sync-stalls-on-deleted-message.md
+  - ../../../issues/closed/bugs/2026-10-22-gmail-sync-stalls-on-deleted-message.md
 ---
 # A connector that keeps failing reaches a person
 
