@@ -451,8 +451,8 @@ void test("Partial conversion asks once and lets later migrations proceed", asyn
   t.check({ status: result.status, applied: expectStatus(result, "attention").applied.map((m) => [m.name, m.partial]), agents, calls }, {
     status: "attention",
     applied: [
-      ["annex-config-2026-08", true],
-      ["search-interface-card", false],
+      ["test-noop-migration", true],
+      ["test-later-noop-migration", false],
     ],
     agents: 1,
     calls: 3,
@@ -461,7 +461,7 @@ void test("Partial conversion asks once and lets later migrations proceed", asyn
   const next = await sweepMigrations({ boxRoot: box.root });
   t.check({ status: next.status, questions: expectStatus(next, "attention").questions }, {
     status: "attention",
-    questions: ["_bookkeeping/questions/Migration_annex-config-2026-08-0.question.card"],
+    questions: ["_bookkeeping/questions/Migration_test-noop-migration-0.question.card"],
   });
 });
 
