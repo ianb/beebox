@@ -22,6 +22,8 @@ export const PersonSchema = cardSchema("person", {
     // No longer current; absent means current.
     archived: z.boolean().optional(),
     role: z.string().optional(),
+    // One person-facing line: where things stand with them now.
+    "where-things-stand": z.string().optional(),
     boxholder: z.boolean().optional(),
     email: z.string().optional(),
     phone: z.string().optional(),
@@ -46,6 +48,11 @@ name in the \`First_Last\` form ABOUT_CARDS describes, not a slug or alias.
   principals the box serves and acts on behalf of. A box can have several
   (a family, an ledger run by siblings); omit the field for everyone else
   (people merely referenced, connector correspondents).
+- \`where-things-stand:\` — one short line, written for the boxholder, on where things
+  stand with this person now: last contact and the next step (e.g.
+  "Replied Oct 20 · you owe her a date for lunch"). It shows on the
+  person's tile. Rewrite it whenever that changes; use dates, not
+  "tonight" or "yesterday". Omit it while there is nothing in progress.
 - \`email:\`, \`phone:\`, \`address:\` — contact details, each optional.
   One value apiece; put a second email, a fax, or any other channel in
   the body notes.
@@ -66,8 +73,12 @@ reference to a draft you removed.
   the person card if it doesn't exist.
 - When a person keeps coming up and you need a place to consolidate
   info about them.`,
-  // A person is listed and found under their name.
-  summarize: (card, base) => ({ ...base, title: card.name }),
+  // A person is listed and found under their name. The tile's line is
+  // where things stand with them, else their role.
+  summarize: (card, base) => {
+    const detail = [card["where-things-stand"], card.role].find((part) => part !== undefined && part.trim() !== "");
+    return { ...base, title: card.name, ...(detail === undefined ? {} : { detail }) };
+  },
 });
 
 export type PersonFields = InferCardFields<typeof PersonSchema>;
