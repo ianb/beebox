@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { useModalDialog } from "../../hooks/useModalDialog";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc/client";
 import { href, toSearch } from "../../lib/routing";
@@ -36,7 +37,6 @@ export function CardActions({ target, onTrashed, vertical }: {
   const refs = trpc.card.inboundRefs.useQuery({ path }, { enabled: confirming });
   const trash = trpc.card.trash.useMutation();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const priorFocusRef = useRef<HTMLElement | null>(null);
   const utils = trpc.useUtils();
 
   const openChat = async (mode: "recent" | "new") => {
@@ -58,17 +58,7 @@ export function CardActions({ target, onTrashed, vertical }: {
     }
   };
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!confirming || dialog === null) return;
-    priorFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog.showModal();
-    return () => {
-      if (dialog.open) dialog.close();
-      priorFocusRef.current?.focus();
-      priorFocusRef.current = null;
-    };
-  }, [confirming]);
+  useModalDialog({ dialog: dialogRef, open: confirming });
 
   const doTrash = async () => {
     try {

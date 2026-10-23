@@ -22,6 +22,8 @@
  *     mid-use).
  */
 
+import { errorMessage } from "@shared/error-guards";
+
 const STORAGE_KEY = "fakemic";
 /** How long the `end` script waits before ending the track. */
 const END_AFTER_MS = 1500;
@@ -39,7 +41,7 @@ function readScript(): string | null {
     try {
       window.localStorage.setItem(STORAGE_KEY, fromUrl);
     } catch (e) {
-      console.warn(`[fake-mic] couldn't persist ?fakemic to localStorage: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[fake-mic] couldn't persist ?fakemic to localStorage: ${errorMessage(e)}`);
     }
     return fromUrl;
   }
@@ -69,7 +71,7 @@ function fakeSilentStream(): MediaStream {
     closed = true;
     oscillator.stop();
     ctx.close().catch((e: unknown) => {
-      console.warn(`[fake-mic] AudioContext close failed: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[fake-mic] AudioContext close failed: ${errorMessage(e)}`);
     });
   };
   for (const track of destination.stream.getTracks()) {

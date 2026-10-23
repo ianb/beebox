@@ -19,6 +19,7 @@ import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
 import { Button } from "../../ui/Button";
 import { errorMessage } from "@shared/error-guards";
+import { detectPushSupport, type PushSupport } from "../../../lib/push-support";
 import { AdminSectionCard } from "../AdminSectionCard";
 import { RecentNotifications } from "./RecentNotifications";
 import { PhonePushDevices } from "./PhonePushDevices";
@@ -26,41 +27,8 @@ import { PhonePushDevices } from "./PhonePushDevices";
 const DESCRIPTION =
   "Get a push notification on this device when the box needs you — reminders, notes from the agent, health alerts, and questions waiting for an answer.";
 
-// iOS Safari's non-standard `navigator.standalone` (whether the page is
-// running as an installed Home-Screen app) isn't in the DOM lib types.
-declare global {
-  interface Navigator {
-    standalone?: boolean;
-  }
-}
-
-type Support =
-  | { kind: "supported" }
-  | { kind: "needs-install" } // iOS Safari, not yet a Home-Screen app
-  | { kind: "unsupported" };
-
-function detectSupport(): Support {
-  const hasPush =
-    typeof navigator !== "undefined" &&
-    "serviceWorker" in navigator &&
-    "PushManager" in window &&
-    "Notification" in window;
-  if (hasPush) return { kind: "supported" };
-
-  // iOS Safari (not installed) lacks Push until added to the Home Screen.
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const isIOS = /iPad|iPhone|iPod/.test(ua);
-  const standalone =
-    typeof window !== "undefined" &&
-    (window.matchMedia("(display-mode: standalone)").matches ||
-      window.navigator.standalone === true);
-  if (isIOS && !standalone) return { kind: "needs-install" };
-
-  return { kind: "unsupported" };
-}
-
 export function NotificationsSection() {
-  const [support, setSupport] = useState<Support | null>(null);
+  const [support, setSupport] = useState<PushSupport | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [endpoint, setEndpoint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -73,7 +41,7 @@ export function NotificationsSection() {
   const disableMutation = trpc.push.disable.useMutation();
 
   useEffect(() => {
-    const s = detectSupport();
+    const s = detectPushSupport();
     setSupport(s);
     if (s.kind !== "supported") return;
     setPermission(Notification.permission);

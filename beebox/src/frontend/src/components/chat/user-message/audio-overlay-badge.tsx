@@ -8,7 +8,8 @@
  * parsed from agent replies, which this data isn't.
  */
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { useDismiss } from "../../../hooks/useDismiss";
 import type { AudioOverlayEntry } from "../audio-overlay-store";
 import type { TranscriptionProvenance } from "../message-parsing";
 
@@ -140,23 +141,7 @@ function AudioOverlayBadge({ spec, open, onToggle, onClose }: {
 }) {
   const rootRef = useRef<HTMLSpanElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    function handlePointer(e: MouseEvent) {
-      if (rootRef.current !== null && e.target instanceof Node && !rootRef.current.contains(e.target)) {
-        onClose();
-      }
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open, onClose]);
+  useDismiss({ root: rootRef, open, onDismiss: onClose });
 
   return (
     <span ref={rootRef} className="relative inline-flex">

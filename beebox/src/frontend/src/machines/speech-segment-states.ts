@@ -4,6 +4,8 @@
  * the index-keyed maps, kept apart from the machine itself.
  */
 
+import { errorMessage } from "@shared/error-guards";
+
 export type SpeechSegmentState = "waiting" | "playing" | "failed";
 
 export function waitingStates(items: ReadonlyArray<{ index: number }>): Record<number, SpeechSegmentState> {
@@ -36,7 +38,7 @@ export function onlyFailures(
 
 /** The reason a segment failed, as the boxholder should read it. */
 export function failureReason(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return errorMessage(error);
 }
 
 export function hasFailures(states: Record<number, SpeechSegmentState>): boolean {

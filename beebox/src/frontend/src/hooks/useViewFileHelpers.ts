@@ -12,8 +12,7 @@
 
 import { useMemo } from "react";
 import { z } from "zod";
-import { apiTransformedImageUrl } from "../api-core";
-import { encodePathForUrl } from "../lib/view-url";
+import { apiRawFileUrl, apiTransformedImageUrl } from "../api-core";
 
 /**
  * File metadata from the views API; content is fetched on demand. The zod
@@ -110,7 +109,7 @@ export function useViewFileHelpers(apiBase: string): ViewFileHelpers {
 }
 
 function makeHelpers(apiBase: string): ViewFileHelpers {
-  const fileUrl = (filePath: string): string => `${apiBase}/files/${encodePathForUrl(filePath)}`;
+  const fileUrl = (filePath: string): string => apiRawFileUrl(apiBase, filePath);
   const imageUrl: ViewFileHelpers["imageUrl"] = (filePath, options) =>
     apiTransformedImageUrl({ apiBase, path: filePath, options });
 

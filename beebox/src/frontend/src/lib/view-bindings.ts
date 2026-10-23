@@ -110,7 +110,6 @@ export function useCardViewBinding(type: string | undefined): CardViewBinding | 
   // re-resolve on any view-source change, and on reconnect: file-change events
   // are transient and not replayed, so an edit during a dropped socket would
   // otherwise leave the binding stale (same resync the sibling views do).
-  const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const change = busEventData(event, "file-change");
@@ -118,11 +117,7 @@ export function useCardViewBinding(type: string | undefined): CardViewBinding | 
       invalidateBindings();
       load();
     }, [load]),
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
+    onReconnect: useCallback(() => {
       invalidateBindings();
       load();
     }, [load]),

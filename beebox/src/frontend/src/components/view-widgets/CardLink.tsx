@@ -20,6 +20,7 @@ import { useViewHost, refToTarget } from "../../lib/view-host";
 import { serializeViewUrl } from "../../lib/view-url";
 import { toDisplayPath } from "@shared/display-path";
 import { imageLinkSrc } from "../../lib/image-link";
+import { isPlainLeftClick } from "../../lib/plain-click";
 import { useOptionalLightbox } from "../LightboxProvider";
 
 export interface CardLinkProps {
@@ -81,7 +82,7 @@ export function CardLink({ cardRef, view, params, children }: CardLinkProps) {
       data-image-card={imageSrc === null ? undefined : target.path}
       onClick={(e) => {
         // Let modified clicks (new tab/window) and non-primary buttons behave natively.
-        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        if (!isPlainLeftClick(e)) return;
         e.preventDefault();
         if (imageSrc !== null && lightbox?.openFromElement(e.currentTarget, { openCard }) === true) return;
         openThis();

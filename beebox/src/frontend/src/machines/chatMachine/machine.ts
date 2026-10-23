@@ -8,6 +8,7 @@
  * Voice turn-taking coordination stays in the component layer.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { setup, assign, enqueueActions } from "xstate";
 import { invariant } from "@shared/invariant";
 import { boxNow } from "../../lib/box-clock";
@@ -369,7 +370,7 @@ export const chatMachine = setup({
           target: "idle",
           actions: [
             ({ event }) => logFsm("refresh-error", {
-              msg: event.error instanceof Error ? event.error.message : String(event.error),
+              msg: errorMessage(event.error),
             }),
             assign({
               streamText: "",
