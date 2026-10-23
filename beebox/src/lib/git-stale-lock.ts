@@ -68,6 +68,7 @@ import { resolveGitDir, withBoxGitLock } from "./git-lock.js";
 import { isRecord } from "../shared/is-record.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { setTimeout as delay } from "node:timers/promises";
+import { isWithin } from "./box-containment.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -238,7 +239,7 @@ async function isGitInRepo(pid: string, repoRoot: string): Promise<boolean> {
     // could be a git; not being able to place it is a reason to be careful.
     return true;
   }
-  return cwd === repoRoot || cwd.startsWith(`${repoRoot}${path.sep}`);
+  return isWithin(repoRoot, cwd);
 }
 
 /**

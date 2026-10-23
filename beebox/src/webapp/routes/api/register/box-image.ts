@@ -8,6 +8,7 @@ import { isRecord } from "../../../../shared/is-record.js";
 import { isInBoxNamespace } from "../../../../shared/ref-path/box-namespace.js";
 import { resolveAttachRef } from "../../../../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk, verifyBoxNamespaceOnDisk } from "../../../../lib/box-namespace-resolve.js";
+import { isWithin } from "../../../../lib/box-containment.js";
 
 const BOX_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".svg"]);
 
@@ -85,7 +86,7 @@ export async function resolveBoxImage(boxRoot: string, requestedPath: string): P
   // namespace can't be used to walk the fence either.
   const imageRoot = path.resolve(boxRoot);
   const imageRelativePath = path.relative(imageRoot, absolutePath).split(path.sep).join("/");
-  const imageContained = absolutePath === imageRoot || absolutePath.startsWith(imageRoot + path.sep);
+  const imageContained = isWithin(imageRoot, absolutePath);
   if (!imageContained || !isInBoxNamespace(imageRelativePath)) {
     throw new BoxImageError(403, { error: "Access denied" });
   }

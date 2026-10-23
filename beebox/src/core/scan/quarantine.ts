@@ -23,6 +23,7 @@ import { z } from "zod";
 import { boxTmpDir } from "../../lib/box-tmp.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { withCardLock } from "../../lib/card-lock.js";
+import { writeFileAtomic } from "../../lib/atomic-write.js";
 
 const QUARANTINE_DIR_NAME = "scan-quarantine";
 
@@ -95,15 +96,7 @@ function sidecarPath(boxRoot: string, sha256: string): string {
  *  archive/Trash copy is the backstop). */
 async function writeSidecar(boxRoot: string, entry: ScanQuarantineEntry): Promise<void> {
   const target = sidecarPath(boxRoot, entry.sha256);
-  const tmp = `${target}.tmp-${process.pid}-${crypto.randomUUID()}`;
-  const handle = await fs.open(tmp, "w");
-  try {
-    await handle.writeFile(`${JSON.stringify(entry, null, 2)}\n`);
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
-  await fs.rename(tmp, target);
+  await writeFileAtomic(target, { content: `${JSON.stringify(entry, null, 2)}\n`, createDir: false });
 }
 
 /** Record (or replace) a quarantine entry's sidecar. Replacement is the retry

@@ -5,7 +5,6 @@
  * the live reads in `agent-quotas-requests.ts`.
  */
 
-import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -24,6 +23,7 @@ import {
   requestClaudeUsage,
   requestCodexRateLimits,
 } from "./agent-quotas-requests.js";
+import { writeFileAtomic } from "../beebox/src/lib/atomic-write.js";
 
 interface ClaudeCache {
   attemptedAt: string | null;
@@ -105,18 +105,7 @@ async function writeClaudeCache(
   cachePath: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  await fs.mkdir(path.dirname(cachePath), { recursive: true });
-  const tempPath = `${cachePath}.${String(process.pid)}.${randomUUID()}.tmp`;
-  try {
-    await fs.writeFile(tempPath, `${JSON.stringify(payload)}\n`, {
-      flag: "wx",
-      mode: 0o600,
-    });
-    await fs.chmod(tempPath, 0o600);
-    await fs.rename(tempPath, cachePath);
-  } finally {
-    await fs.rm(tempPath, { force: true });
-  }
+  await writeFileAtomic(cachePath, { content: `${JSON.stringify(payload)}\n`, mode: 0o600 });
 }
 
 async function refreshClaudeQuota(

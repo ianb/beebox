@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -14,6 +13,7 @@ import {
 import { requestClaudeUsage, requestCodexRateLimits } from "./quota-requests.js";
 import { parseGlmQuota, type GlmQuotaResponse } from "./quota-glm.js";
 import { readGlmKey, requestGlmQuota } from "./quota-glm-request.js";
+import { writeFileAtomic } from "../../../../beebox/src/lib/atomic-write.js";
 
 const CODEX_CACHE_MS = 60_000;
 // The same minute-long cache as Codex: one plain HTTP call, and the panel is
@@ -66,15 +66,7 @@ async function readClaudeCache(cachePath: string): Promise<ClaudeCache> {
 }
 
 async function writeClaudeCache(cachePath: string, payload: Record<string, unknown>): Promise<void> {
-  await fs.mkdir(path.dirname(cachePath), { recursive: true });
-  const temporary = `${cachePath}.${String(process.pid)}.${randomUUID()}.tmp`;
-  try {
-    await fs.writeFile(temporary, `${JSON.stringify(payload)}\n`, { flag: "wx", mode: 0o600 });
-    await fs.chmod(temporary, 0o600);
-    await fs.rename(temporary, cachePath);
-  } finally {
-    await fs.rm(temporary, { force: true });
-  }
+  await writeFileAtomic(cachePath, { content: `${JSON.stringify(payload)}\n`, mode: 0o600 });
 }
 
 async function refreshClaude(options: {

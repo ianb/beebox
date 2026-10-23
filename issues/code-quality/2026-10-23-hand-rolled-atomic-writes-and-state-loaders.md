@@ -10,6 +10,12 @@ discovered-in: worktree-dup-sweep-backend — backend pass of the functional-dup
 
 ## Atomic write
 
+Status 2026-10-23: commits 530e63f89 (async) and 4cebfaf38 (sync, new
+`writeFileAtomicSync`) moved the writers listed below onto the shared helpers.
+Still open: `core/script-env/git-shim.ts` (forces mode 0755) and
+`workstreams-app/src/server/exhibits/app/api.ts` (hidden temp name).
+The list below is the inventory as filed.
+
 `writeFileAtomic` (`beebox/src/lib/atomic-write.ts:80`) writes a unique temp
 file, fsyncs it, renames it, fsyncs the directory, keeps the target's mode,
 and removes the temp file on failure. About 20 sites write temp-then-rename by
@@ -39,6 +45,11 @@ but the search index writes are hot, and the sync callers need a sync twin
 first.
 
 ## JSON state read with a default
+
+Status 2026-10-23: commit a796fa8dc merged the three identical
+"start fresh with a warning" loaders (chat review, retro, todo-review sweep)
+into `lib/json-state.ts` `loadJsonStateOrFresh`. The per-store policy choice
+is still open for the rest. The list below is the inventory as filed.
 
 No shared helper reads a JSON file and returns a default when it is missing.
 About 15 local loaders do it with three policies:

@@ -31,6 +31,7 @@ import { assertNever, invariant } from "../shared/invariant.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { modelTier, resolveProcedureModel, isProcedureModelName } from "../shared/agent-models.js";
 import { normalizeModelId } from "../shared/model-ids.js";
+import { isWithin } from "../lib/box-containment.js";
 
 /** Both models default here, not at a call site: a run that did not say what it
  *  tested is not comparable to last week's run, so the default is part of the
@@ -245,7 +246,7 @@ async function referenceProblems(
       // `assets/../persona.md` resolves inside the scenario but outside the
       // corpus; the operator is told `assets/` is everything it has, so a
       // reference that leaves it is a lie in the brief, not a missing file.
-      if (target !== assetsRoot && !target.startsWith(assetsRoot + path.sep)) {
+      if (!isWithin(assetsRoot, target)) {
         problems.push(`${item.id}: brief references ${ref}, which escapes assets/`);
         continue;
       }

@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { errnoCode } from "../../../../../shared/error-guards.js";
 import { encodeProjectDir } from "../../transcript-paths.js";
 import { parseSdkSessionId } from "../../id.js";
+import { isWithin } from "../../../../../lib/box-containment.js";
 
 export type SessionStorageState = "present" | "partial" | "absent";
 
@@ -66,11 +67,11 @@ export async function resolveSessionStorageTargets(args: { boxRoot: string; cont
   const sessionId = parseSdkSessionId(args.sessionId);
   const lexicalRoot = path.resolve(args.boxRoot);
   const lexicalCwd = path.resolve(lexicalRoot, args.contextDir ?? "");
-  if (lexicalCwd !== lexicalRoot && !lexicalCwd.startsWith(`${lexicalRoot}${path.sep}`)) {
+  if (!isWithin(lexicalRoot, lexicalCwd)) {
     throw new LexicallyUnsafeSessionContextError();
   }
   const [realRoot, realCwd] = await Promise.all([fs.realpath(lexicalRoot), fs.realpath(lexicalCwd)]);
-  if (realCwd !== realRoot && !realCwd.startsWith(`${realRoot}${path.sep}`)) {
+  if (!isWithin(realRoot, realCwd)) {
     throw new ResolvedUnsafeSessionContextError();
   }
   const projectDir = path.join(projectsRoot(), encodeProjectDir(realCwd));
