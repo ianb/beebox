@@ -59,7 +59,7 @@ export const googleAuthCommand = new Command("google-auth")
         return;
       }
 
-      const oauth2Client = createOAuth2Client({ clientId, clientSecret });
+      const oauth2Client = await createOAuth2Client({ clientId, clientSecret });
 
       const authUrl = oauth2Client.generateAuthUrl({
         access_type: "offline",
