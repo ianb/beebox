@@ -188,7 +188,7 @@ export function ChatInputArea({
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  narrationEnabled, includeControlIds, placeholder,
+  narrationEnabled, includeControlIds, placeholder, label,
 }: ComposerRowProps & {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   handleKeyDown: (e: React.KeyboardEvent) => void;
@@ -210,6 +210,8 @@ export function ChatInputArea({
   narrationEnabled: boolean;
   /** Omit authored addresses when rendered repeatedly in a development gallery. */
   includeControlIds?: boolean;
+  /** The landmark's name; a gallery showing several composers names each one. */
+  label?: string;
 }) {
   const hasControlIds = includeControlIds !== false;
   // The product composer only: the dev gallery renders many without control ids.
@@ -219,7 +221,7 @@ export function ChatInputArea({
   const input = useInputValue();
   const setInput = useInputStore().set;
   return (
-    <section aria-label="Compose message" className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
+    <section aria-label={label ?? "Compose message"} className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
       <div className="relative flex items-center gap-2">
         {/* Floats above the voice button at the bar's right edge — anchored
             here (not in the textarea rows) so it rides the record/stop

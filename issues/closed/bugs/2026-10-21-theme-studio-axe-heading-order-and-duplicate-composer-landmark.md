@@ -3,10 +3,13 @@ title: "Theme studio: axe heading-order and landmark-unique violations on its sp
 workstream: tour-check
 area: beebox
 labels: [a11y, tours]
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-tour-check — weekly tour check run 20261021-221418
 ---
+
+Resolved in the commit that moved this file. Both were studio-only: the chat card-back specimen skipped the `h3` "Appearance" heading the real properties face has, and each composer specimen now carries its own landmark name through a `label` prop. The tour reports 0 axe violations.
 
 The `theme-studio` tour reports two axe violations at both checkpoints
 (`draft-theme`, `card-material`) and both viewports, on

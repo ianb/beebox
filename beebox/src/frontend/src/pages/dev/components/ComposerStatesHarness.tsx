@@ -129,7 +129,7 @@ type Spec = ReturnType<typeof specFor>;
 
 function noop() {}
 
-export function ComposerSpecimen({ spec, includeControlIds, showHeader, material }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean }) {
+export function ComposerSpecimen({ spec, includeControlIds, showHeader, material, label }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean; label?: string }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Static store for the gallery: the value never changes (set is a no-op,
@@ -168,6 +168,7 @@ export function ComposerSpecimen({ spec, includeControlIds, showHeader, material
       captureEnabled
       narrationEnabled={spec.narrationEnabled}
       includeControlIds={includeControlIds}
+      label={label}
     />
   );
   const mobileRow = (
