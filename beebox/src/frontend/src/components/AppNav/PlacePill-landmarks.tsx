@@ -133,6 +133,7 @@ export function LandmarkList({
     const overlay = overlayRef.current;
     const stopOutsideClose = (event: MouseEvent) => event.stopPropagation();
     const trapTab = (event: KeyboardEvent) => {
+      if (isComposing(event)) return;
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
