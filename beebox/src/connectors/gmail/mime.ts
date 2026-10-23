@@ -6,6 +6,7 @@
  */
 
 import * as path from "node:path";
+import { NotFoundError } from "../../lib/errors.js";
 import type {
   GoogleGmailService,
   GmailMessage,
@@ -213,7 +214,9 @@ function isoDateFromInternal(internalDate: string | undefined): string {
 
 /**
  * Parse a Gmail API message into our flat FetchedMessage shape, downloading
- * attachment bytes via separate API calls.
+ * attachment bytes via separate API calls. Null when an attachment is not
+ * found: the message was deleted after its thread was fetched, and the
+ * thread's other messages still sync.
  */
 export async function parseGmailMessage(
   raw: GmailMessage,
@@ -232,7 +235,14 @@ export async function parseGmailMessage(
   const attachmentRefs = extractAttachmentRefs(raw.payload);
   const attachments: FetchedMessage["attachments"] = [];
   for (const ref of attachmentRefs) {
-    const att = await service.getAttachment(raw.id, ref.attachmentId);
+    let att;
+    try {
+      att = await service.getAttachment(raw.id, ref.attachmentId);
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) throw error;
+      console.warn(`Gmail: skipped message ${raw.id}; ${error.message}`);
+      return null;
+    }
     attachments.push({
       filename: ref.filename,
       contentType: ref.contentType,
