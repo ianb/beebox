@@ -1,6 +1,6 @@
 ---
 title: "A sweep for code that does the same job twice, in two passes: frontend and the rest"
-workstream: dup-sweep-frontend
+workstream: unattached
 area: beebox
 labels: [code-quality]
 filed-by: agent
