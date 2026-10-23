@@ -49,7 +49,7 @@ Related, same script:
   pnpm 10 it deletes every cached registry metadata file, so a migration that
   runs pnpm `--offline` always finds the cache empty on the server. That was
   the mechanism behind
-  [the engine-link failure](../closed/bugs/2026-10-22-engine-link-spec-migration-fails-on-production.md),
+  [the engine-link failure](2026-10-22-engine-link-spec-migration-fails-on-production.md),
   now fixed with `--prefer-offline`. A comment at the prune step would keep the
   next migration from assuming a warm cache.
 - The per-box reinstall check (`:742-746`) compares `package.json` against

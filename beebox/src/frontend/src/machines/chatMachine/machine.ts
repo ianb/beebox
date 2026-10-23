@@ -282,7 +282,7 @@ export const chatMachine = setup({
         },
         STREAM_TOOL: {
           actions: assign(({ context, event }) => ({
-            streamTools: [...context.streamTools, event.tool],
+            streamTools: [...context.streamTools, { ...event.tool, streamTextOffset: context.streamText.length }],
             streamNeedsSeparator: context.streamText.length > 0,
           })),
         },
