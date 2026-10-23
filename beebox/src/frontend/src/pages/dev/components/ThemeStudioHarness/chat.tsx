@@ -75,7 +75,7 @@ function ChatCard({ card, cardStock }: { card: string; cardStock: string }) {
     title="Welcome table" detail="Seed exchange · in chat" symbol={{ glyph: "🌱" }} boxSlug={undefined} mode="chat" initialSide="back"
     actions={<CardSurfaceActions mode="chat" path={WELCOME_PATH} />}
     properties={<><h2>Properties</h2><p>The back of a card shown in chat, with its appearance swatches.</p>
-      <ThemeSwatchPicker path={WELCOME_PATH} choice={{ name: card, stock: cardStock }} hasOverride /></>}>
+      <h3>Appearance</h3><ThemeSwatchPicker path={WELCOME_PATH} choice={{ name: card, stock: cardStock }} hasOverride /></>}>
     <div className="bbx-card-content"><Markdown prose="block" onNavigate={noop}>{"A card shown in the conversation: **by the door**, with name tags."}</Markdown></div>
   </CardThemeSurface>;
 }
@@ -99,7 +99,7 @@ export function StudioConversation({ card, cardStock }: { card: string; cardStoc
     </div>
     {/* Each state keeps the composer's ids, which theme rules key on, so the ids repeat. */}
     <div className="space-y-3">
-      {[RESTING, ...COMPOSER_STATES].map((spec, i) => <ComposerSpecimen key={i} spec={spec} includeControlIds showHeader={false} material />)}
+      {[RESTING, ...COMPOSER_STATES].map((spec, i) => <ComposerSpecimen key={i} spec={spec} includeControlIds showHeader={false} material label={`Compose message, state ${i + 1}`} />)}
     </div>
   </section>;
 }

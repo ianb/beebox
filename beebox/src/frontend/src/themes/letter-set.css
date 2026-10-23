@@ -76,7 +76,8 @@
   position: relative;
   z-index: 1;
 }
-.bbx-card-surface[data-card-theme="letter-set"] > .bbx-card-heading {
+/* The back keeps card-turn.css's taller top, which clears the "Back to card" label. */
+.bbx-card-surface[data-card-theme="letter-set"]:not([data-card-side="back"]) > .bbx-card-heading {
   padding-top: 1.6rem;
 }
 .bbx-card-surface[data-card-theme="letter-set"] > .bbx-card-heading :is(h1, h2) {

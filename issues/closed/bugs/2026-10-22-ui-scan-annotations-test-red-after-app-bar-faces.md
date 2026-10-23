@@ -1,12 +1,15 @@
 ---
 title: "`ui-scan.annotations.test.ts` is red on main since the app-bar faces moved the synthetic-click buttons"
-workstream: unattached
+workstream: theme-audit
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — full suite after the Agent SDK 0.3.304 bump
 labels: [test-failure]
+resolution: implemented
 ---
+
+Resolved in the commit that moved this file: the expected table names the app-bar faces, which now own the reveal buttons.
 
 `beebox/src/frontend/test/lib/ui-scan.annotations.test.ts` fails on current
 main with "check failed: 4 mismatches" in the test "reveal is the one action
