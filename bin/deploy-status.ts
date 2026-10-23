@@ -49,6 +49,7 @@ import {
 } from "./deploy-status-lib.js";
 import { renderText } from "./deploy-status-render.js";
 import { errnoCode } from "../beebox/src/shared/error-guards.js";
+import { pidAlive } from "../beebox/src/hub/child-process-utils.js";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -106,16 +107,6 @@ function readIfPresent(file: string): string | null {
 
 function lastNonEmptyLine(text: string | null): string | null {
   return text?.split("\n").findLast((entry) => entry.trim() !== "")?.trim() ?? null;
-}
-
-function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    // EPERM: the process exists but is not ours to signal — still alive.
-    return e instanceof Error && "code" in e && e.code === "EPERM";
-  }
 }
 
 function lockState(mainRoot: string): LockState {

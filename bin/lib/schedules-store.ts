@@ -424,14 +424,3 @@ export async function acquireLock(
 export async function releaseLock(root: string, name: string): Promise<void> {
   await fs.rm(lockDir(root, name), { recursive: true, force: true });
 }
-
-/** Does this PID exist? `kill(pid, 0)` is the question; EPERM means yes, it
- *  exists and belongs to somebody else. */
-export function isProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return errnoCode(e) === "EPERM";
-  }
-}
