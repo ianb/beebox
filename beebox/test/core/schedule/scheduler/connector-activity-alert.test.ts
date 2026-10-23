@@ -4,8 +4,11 @@
 // brings each connector's episode up to date (a connector that has gone quiet or
 // keeps failing) and records a new episode once, for the scheduler log. The
 // dashboard shows a warning until the condition clears or the owner dismisses
-// it. Nothing is sent: health never notifies on its own
-// (docs/implemented-plans/notifications.md, Track E). See `connectors/activity-verdict.ts` for the rule and
+// it. A quiet episode sends nothing (docs/implemented-plans/notifications.md,
+// Track E). A new failing episode sends one `quiet` notice: the connector has
+// stopped doing what it was connected for (boxholder decision 2026-10-22,
+// docs/plans/connector-failing-reaches-people.md). See
+// `connectors/activity-verdict.ts` for the rule and
 // `test/connector-activity.verdict.test.ts` for its cases.
 
 import { test } from "tap";
@@ -20,6 +23,28 @@ import { connectorActivityHealthChecks } from "../../../../src/webapp/trpc/route
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { SyncResult } from "../../../../src/connectors.js";
 import { invariant } from "../../../../src/shared/invariant.js";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
+
+// Hermetic: no central Google grant; every notification channel is fake.
+delete process.env.BBX_GOOGLE_TOKENS_FILE;
+process.env.BBX_NOTIFY_FAKE = "1";
+
+/** Each logged notification: loudness, title, target, and body. */
+async function sent(box: TmpBox) {
+  return (await readRecent(box.root, { days: 36500 }))
+    .map(({ intent }) => ({ loudness: intent.loudness, title: intent.title, target: intent.target, body: intent.body }));
+}
+
+/** A working Google grant: a stored refresh token, never found dead. */
+async function seedWorkingGrant(box: TmpBox) {
+  await box.seed("_config/connectors/google.secret.json", JSON.stringify({ refreshToken: "token" }));
+}
+
+/** One failed sync of `name` on `day`. */
+async function fail(boxRoot: string, { name, day }: { name: string; day: string }) {
+  const result: SyncResult = { success: true, created: [], updated: [], error: "Request failed with status code 404" };
+  await syncConnector({ name, inboxPaths: [], sync: async () => result }, { boxRoot, now: at(day) });
+}
 
 async function seedBox() {
   const box = await makeTmpBox({ git: true });
@@ -141,6 +166,64 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
       message: "gmail has failed every sync on its last 2 days of running, since 2026-09-19: invalid_grant",
       severity: "warning",
       actions: ["dismiss-connector-episode"],
+    },
+  ]);
+
+  // ## A failing episode notifies once
+  //
+  // The quiet episode above sent nothing. The failing one sends one `quiet`
+  // notice. No grant is stored in this box, so it says to reconnect Google:
+
+  const notice = {
+    loudness: "quiet" as const,
+    title: "Gmail has stopped syncing",
+    target: "admin:google-services",
+    body: `Gmail has failed every sync since 2026-09-19.
+New items may not be arriving. The error is on the dashboard.
+Reconnect Google in Admin, in the Google Services section.`,
+  };
+  t.check(await sent(box), [notice]);
+
+  // A later failing day is the same episode and sends nothing more:
+
+  const later = await runDays(box.root, { start: addDays(failing, 1), pattern: "E" });
+  t.check(await updateConnectorEpisodes(box.root, { now: at(later) }), null);
+  t.check(await sent(box), [notice]);
+});
+
+// ## A failure with a working grant does not say reconnect
+//
+// A connector can fail with Google access intact: a deleted message stalled
+// Gmail for two weeks, and reconnecting changed nothing. Two connectors that
+// begin failing on different days, found on one pass, share one notice, each
+// with its own start day:
+void test("A failure with a working grant does not say reconnect", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await seedBox();
+  await seedWorkingGrant(box);
+  await fail(box.root, { name: "gmail", day: "2026-10-08" });
+  await fail(box.root, { name: "gmail", day: "2026-10-09" });
+  await fail(box.root, { name: "gmail", day: "2026-10-10" });
+  await fail(box.root, { name: "google-drive", day: "2026-10-09" });
+  await fail(box.root, { name: "google-drive", day: "2026-10-10" });
+  t.check(await updateConnectorEpisodes(box.root, { now: at("2026-10-10") }), {
+    connectors: ["gmail", "google-drive"],
+  });
+
+  t.check(await sent(box), [
+    {
+      loudness: "quiet",
+      title: "Gmail and Google Drive have stopped syncing",
+      target: "dashboard",
+      body: `Gmail has failed every sync since 2026-10-08.
+Google Drive has failed every sync since 2026-10-09.
+New items may not be arriving. The error is on the dashboard.`,
     },
   ]);
 });

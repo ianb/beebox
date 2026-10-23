@@ -37,5 +37,6 @@ both.
 
 - [x] Skip not-found messages, threads and attachments; tests with the fake.
 - [x] Check Calendar and Drive for the same shape (neither has it).
-- [ ] A failing connector episode reaches the boxholder and the developer
-  (plan above).
+- [x] A failing connector episode reaches the boxholder (one `quiet` notice)
+  and the developer (`box-convergence` condition `prod-connector-activity`);
+  plan above.
