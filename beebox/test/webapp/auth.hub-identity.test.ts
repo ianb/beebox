@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { resolveRequestIdentity, verifyHubSecret, isHubMode, signSession, COOKIE_NAME, type IdentityRequest } from "../../src/webapp/auth.js";
+import { resolveRequestIdentity, verifyHubSecret, signSession, COOKIE_NAME, type IdentityRequest } from "../../src/webapp/auth.js";
 
 /** Minimal fake FastifyRequest: just enough of the shape resolveRequestIdentity/verifyHubSecret read. */
 function fakeRequest({ headers, cookies }: Partial<IdentityRequest>): IdentityRequest {
@@ -43,8 +43,6 @@ void test("Outside hub mode, headers are ignored entirely — the cookie is the 
     }
   });
   delete process.env.BBX_HUB_SECRET;
-  t.check(isHubMode(), false);
-
   const spoofed = fakeRequest({
     headers: { "x-bbx-authenticated-email": "attacker@evil.com", "x-bbx-hub-secret": "whatever" },
   });
@@ -65,8 +63,6 @@ void test("Outside hub mode, headers are ignored entirely — the cookie is the 
   // ## In hub mode, a request without the secret header is unauthenticated — no cookie fallback
 
   process.env.BBX_HUB_SECRET = "hub-secret-abc123";
-  t.check(isHubMode(), true);
-
   // Even carrying a perfectly valid session cookie AND a spoofed email header,
   // with no (or a wrong) secret, the request is treated as unauthenticated.
   // This is the core forgery-hole check: a hub-mode box must never fall back
@@ -82,8 +78,6 @@ void test("Outside hub mode, headers are ignored entirely — the cookie is the 
     headers: { "x-bbx-hub-secret": "not-the-secret", "x-bbx-authenticated-email": "someone@example.com" },
     cookies: { [COOKIE_NAME]: cookieValue },
   });
-  t.check(verifyHubSecret(wrongSecret), false);
-
   t.check(resolveRequestIdentity(wrongSecret, { openAccess: false }), {
     email: null,
     name: null,
@@ -95,8 +89,6 @@ void test("Outside hub mode, headers are ignored entirely — the cookie is the 
   const validHubRequest = fakeRequest({
     headers: { "x-bbx-hub-secret": "hub-secret-abc123", "x-bbx-authenticated-email": "person@example.com" },
   });
-  t.check(verifyHubSecret(validHubRequest), true);
-
   t.check(resolveRequestIdentity(validHubRequest, { openAccess: false }), {
     email: "person@example.com",
     name: "person@example.com",
@@ -131,32 +123,13 @@ void test("Outside hub mode, headers are ignored entirely — the cookie is the 
   });
 
   // ## No `BBX_HUB_SECRET` configured server-side means the secret header can never verify
+  //
+  // (Standalone `openAccess` resolution, outside hub mode, is pinned in
+  // `auth.required.test.ts`, the gate's own file.)
 
   delete process.env.BBX_HUB_SECRET;
   const noServerSecret = fakeRequest({
     headers: { "x-bbx-hub-secret": "anything", "x-bbx-authenticated-email": "someone@example.com" },
   });
   t.check(verifyHubSecret(noServerSecret), false);
-
-  // ## Standalone open access: a cookieless request resolves to `source: "open"`
-  //
-  // Outside hub mode, when the box was constructed with `openAccess: true` and the
-  // request carries no session cookie, the resolver returns `source: "open"` — the
-  // single place standalone openness is decided, so the openness-recomputing call
-  // sites can just read `identity.source`. With auth required (`openAccess: false`),
-  // the same cookieless request is `source: null` (unauthenticated).
-
-  delete process.env.BBX_HUB_SECRET;
-  const openStandalone = fakeRequest({});
-  t.check(resolveRequestIdentity(openStandalone, { openAccess: true }), {
-    email: null,
-    name: null,
-    source: "open",
-  });
-
-  t.check(resolveRequestIdentity(openStandalone, { openAccess: false }), {
-    email: null,
-    name: null,
-    source: null,
-  });
 });

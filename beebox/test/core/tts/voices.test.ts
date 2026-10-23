@@ -9,6 +9,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { resolveVoice } from "../../../src/core/tts/voices.js";
+import { VOICE_MODELS } from "../../../src/shared/voice-models.js";
 
 // ## A voice the backend serves is used as asked
 void test("A voice the backend serves is used as asked", async (t) => {
@@ -41,8 +42,7 @@ void test("Every VOICEMODELS name has a Gemini equivalent, chosen by ear rather 
 // the boxholder picked these, so nothing was lost and nothing is warned about.
 // The distinction is what keeps the warning meaningful for cases nobody chose.
 void test("mapped is deliberately its own outcome rather than a kind of substitution:", async (t) => {
-  const all = ["alloy","ash","ballad","cedar","coral","echo","fable","marin","onyx","nova","sage","shimmer","verse"];
-  const kinds = new Set(all.map((v) => resolveVoice({ backend: "gemini", requested: v }).kind));
+  const kinds = new Set(VOICE_MODELS.map((v) => resolveVoice({ backend: "gemini", requested: v }).kind));
   t.check([...kinds].join(","), "mapped");
 });
 

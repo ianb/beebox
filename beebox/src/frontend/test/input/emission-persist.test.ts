@@ -105,48 +105,11 @@ void test("The dev router serves every checkout from one origin at /<main|worktr
   savePersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1", draft: { ...draft, text: "from the worktree" }, updatedAt: 1001 });
   t.check(
     [
-      loadPersistedEmission(shared, { boxSlug: "test1", scope: "main/test1" }),
-      loadPersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1" }),
-    ], [
-    {
-      version: 1,
-      text: "from main",
-      images: [],
-      files: [
-        {
-          id: 1,
-          originalName: "report.pdf",
-          size: 100,
-          mimetype: "application/pdf",
-          state: {
-            status: "uploaded",
-            path: "_tmp/2026-07-04_report.pdf",
-          },
-        },
-      ],
-      selections: [],
-      updatedAt: 1000,
-    },
-    {
-      version: 1,
-      text: "from the worktree",
-      images: [],
-      files: [
-        {
-          id: 1,
-          originalName: "report.pdf",
-          size: 100,
-          mimetype: "application/pdf",
-          state: {
-            status: "uploaded",
-            path: "_tmp/2026-07-04_report.pdf",
-          },
-        },
-      ],
-      selections: [],
-      updatedAt: 1001,
-    },
-  ]);
+      loadPersistedEmission(shared, { boxSlug: "test1", scope: "main/test1" })?.text,
+      loadPersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1" })?.text,
+    ],
+    ["from main", "from the worktree"],
+  );
 
   // A legacy per-session draft carries the slug alone, so in a dev checkout it
   // cannot be attributed to one. Adoption there takes nothing — and, just as
@@ -222,28 +185,7 @@ void test("commitPersistedEmission is what the persistence hook runs on every st
 void test("Oversized images are dropped from persistence, not from memory", async (t) => {
   const big: PersistableDraft = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "x".repeat(PERSIST_BYTE_BUDGET), objectUrl: "blob:x", byteLength: PERSIST_BYTE_BUDGET, original: { status: "uploading", progress: 0 } }] };
   const { payload, imagesDropped } = serializePersistedEmission(big, { updatedAt: 1 });
-  t.check(imagesDropped, true);
-
-  const restored = parsePersistedEmission(payload);
-  t.check(restored, {
-    version: 1,
-    text: "half a thought [file1]",
-    images: [],
-    files: [
-      {
-        id: 1,
-        originalName: "report.pdf",
-        size: 100,
-        mimetype: "application/pdf",
-        state: {
-          status: "uploaded",
-          path: "_tmp/2026-07-04_report.pdf",
-        },
-      },
-    ],
-    selections: [],
-    updatedAt: 1,
-  });
+  t.check({ imagesDropped, restoredImages: parsePersistedEmission(payload)?.images }, { imagesDropped: true, restoredImages: [] });
 });
 
 // ## Corrupt or absent payloads read as empty, never throw
@@ -472,44 +414,12 @@ void test("The state itself rides through persistence with the image, so a lande
 // batches existed simply has none.
 void test("The draft's upload batch persists with it, so attachments added after a reloa...", async (t) => {
   const batched: PersistableDraft = { ...draft, uploadBatch: "m1abcd-x9y8z7w6" };
-  t.check(parsePersistedEmission(serializePersistedEmission(batched, { updatedAt: 1 }).payload), {
-    version: 1,
-    text: "half a thought [file1]",
-    uploadBatch: "m1abcd-x9y8z7w6",
-    images: [],
-    files: [
-      {
-        id: 1,
-        originalName: "report.pdf",
-        size: 100,
-        mimetype: "application/pdf",
-        state: {
-          status: "uploaded",
-          path: "_tmp/2026-07-04_report.pdf",
-        },
-      },
+  t.check(
+    [
+      parsePersistedEmission(serializePersistedEmission(batched, { updatedAt: 1 }).payload)?.uploadBatch,
+      // A null batch is left out of the payload, not written as null.
+      Object.keys(parsePersistedEmission(serializePersistedEmission({ ...draft, uploadBatch: null }, { updatedAt: 1 }).payload) ?? {}),
     ],
-    selections: [],
-    updatedAt: 1,
-  });
-
-  t.check(parsePersistedEmission(serializePersistedEmission({ ...draft, uploadBatch: null }, { updatedAt: 1 }).payload), {
-    version: 1,
-    text: "half a thought [file1]",
-    images: [],
-    files: [
-      {
-        id: 1,
-        originalName: "report.pdf",
-        size: 100,
-        mimetype: "application/pdf",
-        state: {
-          status: "uploaded",
-          path: "_tmp/2026-07-04_report.pdf",
-        },
-      },
-    ],
-    selections: [],
-    updatedAt: 1,
-  });
+    ["m1abcd-x9y8z7w6", ["version", "text", "images", "files", "selections", "updatedAt"]],
+  );
 });

@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { isoDate, str } from "@ianbicking/tap-check/check";
+import { isoDate, str, uuid } from "@ianbicking/tap-check/check";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, readdir, readFile, rm } from "node:fs/promises";
@@ -48,7 +48,7 @@ void test("line 19", async (t) => {
   await maintenance.beginChanges();
   await maintenance.release();
   const record = await boxMaintenanceStatus(box.root);
-  t.check(`${record?.phase} owner=${String(record?.owner)} since=${typeof record?.since}`, "exclusive owner=null since=string");
+  t.check(record, { id: uuid(), reason: "fixture", phase: "exclusive", since: isoDate(), owner: null, step: undefined });
 
   // Unfinished maintenance refuses nothing once its owner is gone.
   const reopened = await acquireBoxWork(box.root, { reason: "test" });
@@ -58,7 +58,7 @@ void test("line 19", async (t) => {
   // clears the record when it completes.
   const recovery = await acquireBoxMaintenance(box.root, { reason: "recover" });
   const retried = await boxMaintenanceStatus(box.root);
-  t.check(`${retried?.reason} owner=${retried?.owner?.reason} carried=${String(retried?.since === record?.since)}`, "recover owner=recover carried=true");
+  t.check({ reason: retried?.reason, owner: retried?.owner?.reason, since: retried?.since }, { reason: "recover", owner: "recover", since: record?.since });
 
   await t.checkThrows(async () => (await acquireBoxWork(box.root, { reason: "test" })), "BoxMaintenanceError");
 

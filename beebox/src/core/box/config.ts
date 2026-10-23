@@ -85,6 +85,13 @@ export interface BoxConfig {
    */
   agentBrowsing?: "owner";
   /**
+   * Every notification from this box goes to a fake channel and nothing
+   * reaches a phone. Set on journey walk boxes by their `prepare`; read by
+   * `notifyFakeMode` (`core/notification/fake-mode.ts`), and box health warns
+   * while it is set. A box a person actually uses must not set this.
+   */
+  fakeNotifications?: true;
+  /**
    * The in-repo plugins this box has activated, by registry name
    * (`src/plugins.ts`; `docs/plugins.md`). Missing means none. Read through
    * {@link activePluginNames}, which rejects entries that name no plugin.

@@ -162,9 +162,29 @@ await t.checkThrows(() => parseCard("no frontmatter"), "CardParseError: missing 
 - Do not compare `JSON.stringify(x)`; check `x`.
 - Do not check `a === b` against `true`; check `a` against `b`, or
   `t.check(a, is(b))` when `a` must be the same object as `b`.
-- Check one field only when that field is the whole contract.
+- Check one field only when that field is the whole contract. The weak
+  forms are projections on the left: `.success`, `.ok`, `.length`, `.code`,
+  `.status`, `.includes(...)`, `some(...)`, a join or template of fields. A
+  function whose return is a boolean or `null` is a whole value already.
 - Make the value deterministic before you reach for a pattern: pass a fixed
   clock, a fixed id, a fixed seed.
+- Pin the rows the claim names, not a generated set. A directory listing, a
+  package file list, an id table, rendered HTML, or a helper's whole output
+  pasted as the expected value fails on every intended change to the
+  scaffold and catches nothing: on `main` these were most of the red hours
+  and none of the regressions. Check the entry the test is about, or the
+  derived fact (the count of kinds, the one new name), and say in the
+  comment when the claim really is "exactly this set". When the whole value
+  would be such a set, a narrowed check is right; say so.
+- Do not mirror a constant into expected values. A test that lists every
+  row of a catalog or registry restates the source file and fails only when
+  the catalog is edited on purpose. Prove the rule on one row and reference
+  the exported constant for the rest.
+- Pin a library's message by our part of it. For a zod, Markdoc, or Node
+  error, check the prefix we add, the path, and the kind
+  (``str`...: ${any(String)}` ``); the library's own wording changes with its
+  version. Our own messages, the ones a person or an agent reads, are the
+  feature and are pinned whole.
 
 ## Time, load, and real processes
 

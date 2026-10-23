@@ -168,19 +168,9 @@ void test("A service that never captures confidence (or a segment nothing was fi
     buildVoiceSubmitEmission({
       priorInput: "", finalText: "voxtral said this", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
       words: null,
-    }), {
-    id: anyMessageId(),
-    origin: "voice",
-    text: "voxtral said this",
-    images: [],
-    files: [],
-    selections: [],
-    diarized: false,
-    words: undefined,
-    spokenStart: 0,
-    hqText: undefined,
-    hqService: undefined,
-  });
+    }).words,
+    undefined,
+  );
 });
 
 // Belt-and-braces: an array is present but no entry carries a numeric
@@ -190,19 +180,9 @@ void test("Belt-and-braces:", async (t) => {
     buildVoiceSubmitEmission({
       priorInput: "", finalText: "no scores here", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
       words: [{ word: "no" }, { word: "scores" }],
-    }), {
-    id: anyMessageId(),
-    origin: "voice",
-    text: "no scores here",
-    images: [],
-    files: [],
-    selections: [],
-    diarized: false,
-    words: undefined,
-    spokenStart: 0,
-    hqText: undefined,
-    hqService: undefined,
-  });
+    }).words,
+    undefined,
+  );
 });
 
 // A real Deepgram capture — even one where every word cleared the
@@ -212,15 +192,8 @@ void test("A real Deepgram capture — even one where every word cleared the thr
     buildVoiceSubmitEmission({
       priorInput: "", finalText: "all clear", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
       words: [{ word: "all", confidence: 0.99 }, { word: "clear", confidence: 0.98 }],
-    }), {
-    id: anyMessageId(),
-    origin: "voice",
-    text: "all clear",
-    images: [],
-    files: [],
-    selections: [],
-    diarized: false,
-    words: [
+    }).words,
+    [
       {
         word: "all",
         confidence: 0.99,
@@ -230,10 +203,7 @@ void test("A real Deepgram capture — even one where every word cleared the thr
         confidence: 0.98,
       },
     ],
-    spokenStart: 0,
-    hqText: undefined,
-    hqService: undefined,
-  });
+  );
 });
 
 // ## The HQ outcome replaces the spoken part of the frozen message
@@ -290,19 +260,9 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
       realtime,
       outcome: { kind: "hq", result: { text: "clean words, cleaned up and sent", diarized: false, service: "whisper", pieces: 1 } },
       keyword: sendKeywordOf(hqIntent),
-    }), {
-    id: anyMessageId(),
-    origin: "voice",
-    text: "frozen draft clean words, cleaned up and sent <send-message phrase=\"clean up and send\" heard=\"live\" />",
-    images: [],
-    files: [],
-    selections: [],
-    diarized: false,
-    words: undefined,
-    spokenStart: 13,
-    hqText: true,
-    hqService: "whisper",
-  });
+    }).text,
+    "frozen draft clean words, cleaned up and sent <send-message phrase=\"clean up and send\" heard=\"live\" />",
+  );
 
   // When the HQ text does contain a recognizable keyword, its own words become the
   // tag, unmarked:
@@ -312,19 +272,9 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
       realtime,
       outcome: { kind: "hq", result: { text: "clean words, send the message", diarized: false, service: "whisper", pieces: 1 } },
       keyword: sendKeywordOf(hqIntent),
-    }), {
-    id: anyMessageId(),
-    origin: "voice",
-    text: "frozen draft clean words, <send-message phrase=\"send the message\" />",
-    images: [],
-    files: [],
-    selections: [],
-    diarized: false,
-    words: undefined,
-    spokenStart: 13,
-    hqText: true,
-    hqService: "whisper",
-  });
+    }).text,
+    "frozen draft clean words, <send-message phrase=\"send the message\" />",
+  );
 
   // A different command in the HQ text never replaces the one that fired. Live
   // dictation heard "send checkpoint"; the HQ text reads "send message". The
@@ -336,19 +286,9 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
       realtime,
       outcome: { kind: "hq", result: { text: "part one, send message", diarized: false, service: "whisper", pieces: 1 } },
       keyword: sendKeywordOf(checkpointIntent),
-    }), {
-    id: anyMessageId(),
-    origin: "voice",
-    text: "frozen draft part one, send message <send-checkpoint-message phrase=\"send checkpoint\" heard=\"live\" />",
-    images: [],
-    files: [],
-    selections: [],
-    diarized: false,
-    words: undefined,
-    spokenStart: 13,
-    hqText: true,
-    hqService: "whisper",
-  });
+    }).text,
+    "frozen draft part one, send message <send-checkpoint-message phrase=\"send checkpoint\" heard=\"live\" />",
+  );
 
   // A blank HQ result is a fallback: it would otherwise erase the spoken words.
 
