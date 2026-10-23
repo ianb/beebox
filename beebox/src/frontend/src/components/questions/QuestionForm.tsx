@@ -35,7 +35,7 @@ interface QuestionFormProps {
 }
 
 /**
- * Shared preamble shown above every widget: title and prompt always fully
+ * Shared preamble shown above every widget: the prompt (as the heading) always fully
  * visible, supporting prose (memo, learning) height-capped with its own
  * scroll.
  *
@@ -51,11 +51,8 @@ function QuestionContext({ question }: { question: QuestionInfo }) {
   return (
     <>
       <Heading level={2} className="mb-2">
-        {question.name}
-      </Heading>
-      <Text as="p" className="mb-2">
         {question.prompt}
-      </Text>
+      </Heading>
       {hasMemo || hasLearning ? (
         <div className="max-h-[30vh] overflow-y-auto mb-4">
           {hasMemo ? (

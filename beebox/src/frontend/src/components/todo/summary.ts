@@ -51,19 +51,24 @@ export function summaryParts(reduction: SummaryReduction): SummaryPart[] | null 
 
 /**
  * The root place page's line (`docs/implemented-plans/front-door.md`, Track C): "3 to do ·
- * 1 overdue · 2 questions waiting", from the nav's own counts, so the page and
- * the nav badge agree. `null` when every count is zero. Questions show on
+ * 1 overdue · 5 later · 2 questions waiting", from the nav's own counts, so the page and
+ * the nav badge agree on "to do" (now); "later" is the todo page's own word. `null` when every count is zero. Questions show on
  * their own when nothing is to do. It does not use the word "plate" (decision,
  * 2026-10-19), and it does not call `summaryParts`: the nav counts carry no
  * `open`, `done`, or `parked`.
  */
 export function rootLineParts(counts: NavCounts): SummaryPart[] | null {
-  const { onPlateTodos, escalatedTodos, pendingQuestions } = counts;
+  const { onPlateTodos, escalatedTodos, laterTodos, pendingQuestions } = counts;
   const parts: SummaryPart[] = [];
   if (onPlateTodos > 0) {
     parts.push({ key: "open", count: onPlateTodos, text: `${String(onPlateTodos)} to do`, action: true });
     if (escalatedTodos > 0) parts.push({ key: "overdue", count: escalatedTodos, text: `${String(escalatedTodos)} overdue`, action: true });
   }
+  // Dated-for-later todos are not in the badge but are in the box: without them
+  // a box holding only future-dated todos shows no todo count, and a box with
+  // one todo now reads as if the rest were lost. It is the control only when
+  // "to do" is absent, as on a card's line.
+  if (laterTodos > 0) parts.push({ key: "later", count: laterTodos, text: `${String(laterTodos)} later`, action: onPlateTodos === 0 });
   if (pendingQuestions > 0) {
     const noun = pendingQuestions === 1 ? "question" : "questions";
     parts.push({ key: "questions", count: pendingQuestions, text: `${String(pendingQuestions)} ${noun} waiting`, action: true });

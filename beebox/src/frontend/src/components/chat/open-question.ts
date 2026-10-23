@@ -70,3 +70,14 @@ export function openQuestionLine(question: Pick<OpenQuestion, "prompt" | "inputT
 export function moreQuestionsLabel(more: number): string | null {
   return more <= 0 ? null : `and ${more} more`;
 }
+
+/**
+ * The composer's placeholder: the question's prompt while the chat is empty,
+ * where the question is the agent's opening line. Once a message is sent or a
+ * reply streams, the question is no longer being asked, and the composer
+ * reverts to its normal placeholder (undefined). `unstarted` alone does not
+ * say so: a tab stays unstarted while it holds its reservation receipt.
+ */
+export function composerPlaceholder({ openQuestion, messageCount, isStreaming }: { openQuestion: OpenQuestion | null; messageCount: number; isStreaming: boolean }): string | undefined {
+  return openQuestion !== null && messageCount === 0 && !isStreaming ? openQuestion.prompt : undefined;
+}

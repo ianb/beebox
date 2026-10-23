@@ -22,7 +22,7 @@ import type { AgentEngine } from "../../../../core/box/config.js";
 import { isChatModelAllowed, type AddedModel } from "../../../../shared/chat-models.js";
 import { openRouterKeyUsable } from "../../../../core/openrouter.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../../core/chat/session/delete/apply/core.js";
-import { setChatHuskStatus } from "../../../../core/chat/husk.js";
+import { commitChatHusk, setChatHuskStatus } from "../../../../core/chat/husk.js";
 import { sdkSessionIdSchema } from "../../../../core/chat/session/id.js";
 import { archiveChatSession } from "../../../../core/chat/session/archive.js";
 import { SessionDeletingError } from "../../../../core/chat/session/registry/core.js";
@@ -225,6 +225,11 @@ export const chatControlProcedures = {
       const huskPath = await setChatHuskStatus(ctx.boxRoot, { sessionId: input.sessionId, done: input.done });
       if (huskPath === null) {
         throw new TRPCError({ code: "NOT_FOUND", message: "This chat has no card to mark" });
+      }
+      try {
+        await commitChatHusk(ctx.boxRoot, huskPath);
+      } catch (e) {
+        console.warn(`chat-mark-done: could not commit ${huskPath}:`, e);
       }
       return { huskPath, done: input.done };
     } catch (error) {

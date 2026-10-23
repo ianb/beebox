@@ -117,6 +117,7 @@ void test("A root landmark that already has an openers key, even [], keeps it:",
     writes: {
       "_content/briefing.briefing.card": `---
 type: briefing
+title: About this box
 purpose: What this box is for.
 ---
 ## Reaching me

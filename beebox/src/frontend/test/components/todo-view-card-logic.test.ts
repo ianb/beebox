@@ -309,7 +309,7 @@ void test("later is open minus onPlate — the reduction carries no separate qui
   t.check(matchingItemCount(agentResult), 2);
 });
 
-// ## The dated strip
+// ## The dated todos
 //
 // Every open matching item that carries a date, across every row, in date order.
 // `due` wins over `start` because it is the harder of the two, and the strip

@@ -11956,6 +11956,45 @@ auditbox:
       peak: 31912
       added: 0
       turns: 2
+  todo-before-date-due-day-before:
+    - date: 2026-10-22T21:05:17.856Z
+      boxCommit: 76cf1ddd4abe304a75f86ac6cd477e86f789deb6
+      repoCommit: 798b6e39b02b944ea7e38fc5ba28ccb0b16fc3b7
+      initial: 32000
+      peak: 32000
+      added: 0
+      turns: 2
+    - date: 2026-10-22T21:05:42.627Z
+      boxCommit: 636dbf99f04569239f877e85374575cec033426f
+      repoCommit: 798b6e39b02b944ea7e38fc5ba28ccb0b16fc3b7
+      initial: 32000
+      peak: 34059
+      added: 2059
+      turns: 4
+  todo-standing-habit-not-a-todo:
+    - date: 2026-10-22T21:05:58.513Z
+      boxCommit: 636dbf99f04569239f877e85374575cec033426f
+      repoCommit: 798b6e39b02b944ea7e38fc5ba28ccb0b16fc3b7
+      initial: 32000
+      peak: 32000
+      added: 0
+      turns: 2
+  todo-offer-checks-after-research:
+    - date: 2026-10-22T21:06:11.652Z
+      boxCommit: 636dbf99f04569239f877e85374575cec033426f
+      repoCommit: 798b6e39b02b944ea7e38fc5ba28ccb0b16fc3b7
+      initial: 32025
+      peak: 32025
+      added: 0
+      turns: 2
+  provenance-search-summary-not-the-page:
+    - date: 2026-10-22T21:06:27.310Z
+      boxCommit: 636dbf99f04569239f877e85374575cec033426f
+      repoCommit: 798b6e39b02b944ea7e38fc5ba28ccb0b16fc3b7
+      initial: 32014
+      peak: 32014
+      added: 0
+      turns: 2
 box:
   publishing-positive-data-export:
     - date: 2026-10-06T18:44:05.743Z

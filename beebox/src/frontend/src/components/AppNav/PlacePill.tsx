@@ -41,7 +41,7 @@
  * to reconsider this split, not to quietly widen the payload.
  */
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { PlacePillFace } from "../app-bar-faces/PlacePillFace";
 import { trpc } from "../../lib/trpc/client";
@@ -49,6 +49,9 @@ import type { Place } from "../../lib/place-label";
 import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
 import { useLazyMenuOpen } from "../../hooks/useLazyMenuOpen";
 import { useIdlePrefetch } from "../../hooks/useIdlePrefetch";
+import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { busEventData } from "../../lib/bus-events";
+import { landmarkDirOfChange } from "./landmark-change";
 import { SwitchMenuBody, type SwitchLandmark } from "./PlacePill-panels";
 import { HereMenuBody } from "./PlacePill-here";
 import { AppBarHereSlot, useAppBarHereMenuClaimed } from "../app-bar-chrome";
@@ -78,6 +81,34 @@ export function PlacePill({
     { enabled: place.dir !== null },
   );
   const landmark = place.dir === null ? null : identityQuery.data?.identity ?? null;
+
+  // A renamed landmark (its `navigation.label`, symbol) must reach the face
+  // without a reload. Only the changed directory's identity is invalidated, so
+  // the bar pays nothing for edits elsewhere; other cached places refetch on
+  // their next visit. Same bus feed that refreshes an open card
+  // (`useCardIdentities` does this for the sidecar's tabs).
+  const resyncIdentity = useCallback(() => {
+    if (place.dir !== null) void utils.landmarks.identity.invalidate({ dir: place.dir });
+  }, [place.dir, utils]);
+  const connectedOnceRef = useRef(false);
+  useBusSubscription({
+    onEvent: useCallback((event: RealtimeEvent) => {
+      const fileChange = busEventData(event, "file-change");
+      if (!fileChange) return;
+      const dir = landmarkDirOfChange(fileChange.path);
+      if (dir === null) return;
+      void utils.landmarks.identity.invalidate({ dir });
+    }, [utils]),
+    // `file-change` events are transient and never replayed: a rename that
+    // landed while the socket was down is picked up when it reconnects.
+    onConnect: useCallback(() => {
+      if (!connectedOnceRef.current) {
+        connectedOnceRef.current = true;
+        return;
+      }
+      resyncIdentity();
+    }, [resyncIdentity]),
+  });
 
   // Open-path latches (see file header + `useLazyMenuOpen`'s doc comment):
   // the here menu's full link list (listed + derived + expand) and the

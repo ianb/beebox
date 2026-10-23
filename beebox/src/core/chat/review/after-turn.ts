@@ -65,16 +65,21 @@ export async function titleChatAfterTurn(
     });
   } catch (e) {
     // The nightly run (or this path for another turn) holds the journal; the
-    // next turn or the nightly run titles the chat instead.
-    if (e instanceof LockHeldError) return { kind: "skipped", reason: "busy" };
-    throw e;
+    // next turn or the nightly run titles the chat instead. The husk commit
+    // below still runs: it takes the box git lock, not the review lock, and
+    // the nightly run commits only the sessions it reviewed.
+    if (!(e instanceof LockHeldError)) throw e;
+    outcome = { kind: "skipped", reason: "busy" };
   }
   // A title model run appends its session to the tracked usage manifest and
-  // commits nothing else, so it commits that line itself. The husk's title
-  // stays uncommitted like the rest of an active chat's husk.
-  if (outcome.kind === "titled" || outcome.reason === "not-titled") {
+  // commits nothing else, so it commits that line itself, with the session's
+  // husk (new, or carrying the title just written). A chat below the title gate
+  // still has its new husk to commit; a scoped commit of unchanged paths is a
+  // no-op, so later turns of that chat commit nothing.
+  if (outcome.kind === "titled" || outcome.reason === "not-titled" || outcome.reason === "below-gate" || outcome.reason === "busy") {
     try {
-      await commitSessionManifest(boxRoot);
+      const husk = await findChatHuskEntry(boxRoot, args.sessionId);
+      await commitSessionManifest(boxRoot, husk === null ? [] : [husk.path]);
     } catch (e) {
       console.warn(`chat-review: could not commit the usage manifest after titling ${args.sessionId}:`, e);
     }
