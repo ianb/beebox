@@ -5,6 +5,7 @@
  * component body in a stable order) and owns its own state slice.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getChatHistory, getChatStatus, type SessionEntry } from "../../../../api";
 import { trpcClient } from "../../../../lib/trpc/client";
@@ -64,7 +65,7 @@ export function useChatSchedules(opts: {
         setActiveSchedules(data.schedules);
       })
       .catch((e: unknown) => {
-        console.warn(`[chatfsm] fetch-schedules failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`[chatfsm] fetch-schedules failed: ${errorMessage(e)}`);
       });
   }, []);
 
@@ -101,7 +102,7 @@ export function useChatSchedules(opts: {
     trpcClient.chat.cancelSchedule.mutate({ label })
       .then(() => fetchSchedules())
       .catch((e: unknown) => {
-        console.error(`[chatfsm] cancel-schedule "${label}" failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.error(`[chatfsm] cancel-schedule "${label}" failed: ${errorMessage(e)}`);
         toastError(`Failed to cancel the "${label}" schedule`, { cause: e });
       });
   }, [fetchSchedules]);
@@ -133,7 +134,7 @@ export function usePendingMessagePoll(opts: {
           // observability are different properties (policy rule 4) -- log
           // even though a dead backend would otherwise just look like a
           // frozen UI.
-          console.warn(`[chatfsm] pending-message poll failed: ${e instanceof Error ? e.message : String(e)}`);
+          console.warn(`[chatfsm] pending-message poll failed: ${errorMessage(e)}`);
         });
     };
     const id = setInterval(poll, 5000);
@@ -177,7 +178,7 @@ export function useChatStallRecovery(opts: {
           if (!status.busy) send({ type: "STREAM_RECOVER" });
         })
         .catch((e: unknown) => {
-          console.warn(`[chatfsm] stall-recovery status check failed: ${e instanceof Error ? e.message : String(e)}`);
+          console.warn(`[chatfsm] stall-recovery status check failed: ${errorMessage(e)}`);
         });
     };
     document.addEventListener("visibilitychange", onVisible);

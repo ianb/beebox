@@ -27,6 +27,7 @@
  * call, not part of this inventory.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { getApiBase } from "../../api";
 import { RequestError } from "../../lib/errors";
 import { withMobileAuth, mobileAuthHeaders } from "../../lib/mobile-auth";
@@ -235,10 +236,6 @@ export function classifyUploadFailure(error: unknown): UploadFailureVerdict {
   return "retry";
 }
 
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
   const { sessionId, kind, filename, blob, startedAt, source } = options;
   const { segmentId, segmentStartedAt, originalName, mimeType, signal, onProgress } = options;
@@ -280,8 +277,8 @@ export async function uploadCaptureFile(options: UploadFileOptions): Promise<voi
       // A deliberate abort is the caller's decision, not a transport failure —
       // retrying it would defeat the very cancel it came from.
       if (verdict === "abort") throw e;
-      if (verdict === "fatal") throw new RequestError(errorText(e));
-      lastFailure = errorText(e);
+      if (verdict === "fatal") throw new RequestError(errorMessage(e));
+      lastFailure = errorMessage(e);
       if (attempt < MAX_UPLOAD_RETRIES) continue;
       throw new CaptureUploadError({
         filename,

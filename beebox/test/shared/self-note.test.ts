@@ -13,3 +13,10 @@ void test("Escapes & \" < > (not ') and decodes back to the original", async (t)
   t.check(escapeXmlAttr(raw), "notes/a&amp;b &quot;q&quot; &lt;x&gt; it's");
   t.check(decodeXmlAttr(escapeXmlAttr(raw)), raw);
 });
+
+// `&amp;` decodes last, so an escaped entity such as `&amp;lt;` stays the
+// literal text `&lt;` instead of decoding twice.
+void test("decodes the predefined entities once", async (t) => {
+  t.check(decodeXmlAttr("&quot;a&quot; &lt;b&gt; c &amp; d"), "\"a\" <b> c & d");
+  t.check(decodeXmlAttr("&amp;lt;"), "&lt;");
+});

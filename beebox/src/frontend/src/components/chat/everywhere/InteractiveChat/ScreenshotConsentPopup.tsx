@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDismiss } from "../../../../hooks/useDismiss";
 import { Button } from "../../../ui/Button";
 import { Row } from "../../../ui/Row";
 import { Hint } from "../../../ui/Hint";
@@ -65,22 +66,7 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
     resolve(null);
   }, [request, resolve]);
 
-  useEffect(() => {
-    function handlePointer(e: MouseEvent) {
-      if (cardRef.current !== null && e.target instanceof Node && !cardRef.current.contains(e.target)) {
-        decline();
-      }
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") decline();
-    }
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [decline]);
+  useDismiss({ root: cardRef, open: true, onDismiss: decline });
 
   // Once Share is clicked we unmount the dialog IMMEDIATELY, before the capture
   // grabs its frame — otherwise getDisplayMedia photographs this very dialog

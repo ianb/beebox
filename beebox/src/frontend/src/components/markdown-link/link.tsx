@@ -21,6 +21,7 @@ import {
 import { withBase } from "../../api-core";
 import { isRecord } from "@shared/is-record";
 import { imageLinkSrc } from "../../lib/image-link";
+import { isPlainLeftClick } from "../../lib/plain-click";
 import type { OpenFromElementOptions } from "../LightboxProvider";
 
 export interface LinkContext {
@@ -118,7 +119,7 @@ export function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string;
             data-image-card={imageSrc === null ? undefined : target.path}
             onClick={(e) => {
               if (e.defaultPrevented) return;
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              if (!isPlainLeftClick(e)) return;
               e.preventDefault();
               if (imageSrc !== null && ctx.openImageLink?.(e.currentTarget, { openCard }) === true) return;
               ctx.onNavigate(target, label ? { label } : undefined);

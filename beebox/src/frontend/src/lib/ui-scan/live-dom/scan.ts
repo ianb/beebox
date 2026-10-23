@@ -22,6 +22,7 @@
  * `visibility.ts`, shared with the resolver so the two cannot disagree.
  */
 
+import { MAX_SCAN_ENTRIES } from "@shared/ui-scan/core";
 import { computeAccessibleName } from "./accessible-name.js";
 import { classifyElement } from "./roles.js";
 import { isControlAddress } from "../resolve.js";
@@ -31,9 +32,10 @@ import type { ControlAction, ControlEntry, ScanElement, ScanResult } from "../ty
 /**
  * Hard cap on reported entries. A page with more chrome than this produces a
  * truncated list, and the dump says so — the alternative is a payload that
- * quietly costs more context than the answer is worth.
+ * quietly costs more context than the answer is worth. The server refuses a
+ * longer list at the same number.
  */
-export const MAX_ENTRIES = 200;
+export const MAX_ENTRIES = MAX_SCAN_ENTRIES;
 
 /**
  * How much of the page one scan covers.

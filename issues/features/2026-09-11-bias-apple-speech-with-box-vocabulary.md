@@ -95,3 +95,27 @@ recognizer. That points at one box-level context source, served to every
 recognizer in the form it takes: terms and a description for Voxtral, terms
 only for Apple. Related:
 [move to Voxtral 3](2026-10-20-upgrade-transcription-to-voxtral-3.md).
+
+## 2026-10-23: measured — `SpeechTranscriber` ignores contextual strings
+
+The [Apple speech tuning research](../../research/apple-speech-tuning/README.md)
+answers "verify the API contract first". `SpeechAnalyzer.setContext` accepts
+an `AnalysisContext`, but `SpeechTranscriber` (the model the app uses, live and
+HQ) produced identical text with 0, 5, 88, or 672 contextual strings.
+Apple's forum answer says the same. Only `DictationTranscriber` and the
+legacy `SFSpeechRecognizer` honor contextual strings and custom language
+models (`SFCustomLanguageModelData`). Those are the older dictation model,
+which was 4–10 points worse in WER on real speech and much worse in noise.
+
+With the right list, the older model recovers names well on clean speech.
+With all 90 names of the synthetic set, `DictationTranscriber` name recall
+rose from 58% to 84%, and its WER (5.2%) beat `SpeechTranscriber`
+(6.8%). In noise it stayed far worse. So applying box vocabulary on the
+phone means a second recognizer pass whose name spellings are merged into the
+`SpeechTranscriber` text, not a setting on the current pass. That merge is
+unmeasured.
+
+Server engines take the same list better. Whisper's `prompt` raised name
+recall on Earnings-21 from 67% to 79%, and voxtral's `context_bias` from 67%
+to 77% (single words only; see
+[voxtral context_bias rejects multi-word prompt](../bugs/2026-10-23-voxtral-context-bias-rejects-multi-word-prompt.md)).

@@ -27,6 +27,7 @@
  * `File` handle died with the page, so it can be removed but not retried.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { uploadedPath } from "./emission-store";
 import type { EmissionDraft, ImageItem, FileItem, FileTransferState } from "./emission-store";
 import type { SelectionItem } from "../lib/selection/serialize";
@@ -80,7 +81,7 @@ export function emissionKey(input: { boxSlug: string | undefined; scope: string 
 }
 
 function warn(what: string, e: unknown): void {
-  console.warn(`[input-persist] ${what}: ${e instanceof Error ? e.message : String(e)}`);
+  console.warn(`[input-persist] ${what}: ${errorMessage(e)}`);
 }
 
 /**

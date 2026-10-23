@@ -12,6 +12,7 @@
  * strip with it (engineering principle 3).
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { isRecord } from "@shared/is-record";
 import { parseViewUrl, serializeViewUrl } from "../../../lib/view-url";
 import { EMPTY_SIDECAR, type SidecarState, type SidecarTab } from "../sidecar-tabs";
@@ -37,7 +38,7 @@ function sessionStore(): Storage | null {
     if (!("sessionStorage" in globalThis)) return null;
     return globalThis.sessionStorage;
   } catch (e) {
-    console.warn(`[sidecar-tabs] sessionStorage unavailable: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[sidecar-tabs] sessionStorage unavailable: ${errorMessage(e)}`);
     return null;
   }
 }
@@ -76,7 +77,7 @@ export function parseSidecarState(raw: string | null): SidecarState | null {
   try {
     value = JSON.parse(raw);
   } catch (e) {
-    console.warn(`[sidecar-tabs] discarding unparseable strip: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[sidecar-tabs] discarding unparseable strip: ${errorMessage(e)}`);
     return null;
   }
   if (!isRecord(value) || !Array.isArray(value["tabs"])) return null;
@@ -103,7 +104,7 @@ export function loadSidecarState(key: string): SidecarState | null {
   try {
     return parseSidecarState(store.getItem(key));
   } catch (e) {
-    console.warn(`[sidecar-tabs] could not read the stored strip: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[sidecar-tabs] could not read the stored strip: ${errorMessage(e)}`);
     return null;
   }
 }
@@ -119,7 +120,7 @@ export function saveSidecarState(key: string, state: SidecarState): void {
     if (state.tabs.length === 0) store.removeItem(key);
     else store.setItem(key, serializeSidecarState(state));
   } catch (e) {
-    console.warn(`[sidecar-tabs] could not persist the strip: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[sidecar-tabs] could not persist the strip: ${errorMessage(e)}`);
   }
 }
 
@@ -137,7 +138,7 @@ function moveSidecarState({ from, to }: { from: string; to: string }): void {
     store.setItem(to, raw);
     store.removeItem(from);
   } catch (e) {
-    console.warn(`[sidecar-tabs] could not move the stored strip: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[sidecar-tabs] could not move the stored strip: ${errorMessage(e)}`);
   }
 }
 

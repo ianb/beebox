@@ -9,6 +9,7 @@
  * error boundary is only a backstop for synchronous render throws).
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { isRecord } from "@shared/is-record";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getApiBase } from "../../api";
@@ -78,7 +79,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
       setMod(imported);
       setError(imported.figureError ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }

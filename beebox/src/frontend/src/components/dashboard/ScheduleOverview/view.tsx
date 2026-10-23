@@ -16,7 +16,7 @@ import { RunHistory } from "./RunHistory";
 import { RunStrip } from "./RunStrip";
 import { Badge } from "../../ui/Badge";
 import { TickList, quietTickCount } from "../ScheduleTicks";
-import { boxNow } from "../../../lib/box-clock";
+import { compactAgo } from "../../../lib/relative-time";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -26,19 +26,6 @@ interface ScheduleOverviewProps {
   recentTicks: SchedulerLogEntry[];
   loading?: boolean;
   error?: { message: string } | null;
-}
-
-/** `box` reads a stamp the box wrote on its own clock; a running script's start is elapsed time, so it stays real. */
-function timeAgo(dateStr: string, clock: "box" | "real"): string {
-  const elapsed = (clock === "box" ? boxNow() : Date.now()) - new Date(dateStr).getTime();
-  const seconds = Math.floor(elapsed / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 function formatDurationMs(ms: number): string {
@@ -154,7 +141,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
               title={showRuns ? "Hide recent runs" : "Show recent runs"}
               className="text-xs whitespace-nowrap"
             >
-              {timeAgo(s.lastRun, "box")} {showRuns ? "\u25BE" : "\u25B8"}
+              {compactAgo(s.lastRun, "box")} {showRuns ? "\u25BE" : "\u25B8"}
             </InlineAction>
           ) : "never"}
           <RunStrip runs={s.runStrip} />
@@ -215,7 +202,7 @@ function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
 }
 
 function RunningIndicator({ running }: { running: { startedAt: string; triggeredBy: string } }) {
-  const elapsed = timeAgo(running.startedAt, "real").replace(" ago", "");
+  const elapsed = compactAgo(running.startedAt, "real").replace(" ago", "");
   return (
     <span className="text-warning text-xs font-medium" title={`Triggered by ${running.triggeredBy}`}>
       <span className="inline-block w-2 h-2 rounded-full bg-warning animate-pulse mr-1 align-middle" />

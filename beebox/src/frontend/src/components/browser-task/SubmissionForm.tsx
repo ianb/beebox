@@ -13,6 +13,7 @@
  * which runs the same function the server will run at the boundary.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { getApiBase } from "../../api";
 import { withMobileAuth } from "../../lib/mobile-auth";
@@ -90,7 +91,7 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
       try {
         manifest = JSON.parse(text);
       } catch (e: unknown) {
-        if (!cancelled) setValidation({ ok: false, issues: [{ path: MANIFEST_FILE, message: `not valid JSON: ${e instanceof Error ? e.message : String(e)}` }] });
+        if (!cancelled) setValidation({ ok: false, issues: [{ path: MANIFEST_FILE, message: `not valid JSON: ${errorMessage(e)}` }] });
         return;
       }
       const result = await validate({ manifest, fileNames: files.filter((f) => f.name !== MANIFEST_FILE).map((f) => f.name) });

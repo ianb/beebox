@@ -69,3 +69,13 @@ no box data — but that is an auth-surface change and was left alone here.
 ## Audit 2026-10-22
 
 The service-worker part is fixed: the dev router now allows `/<w>/sw.js` without auth (`workstreams-app/src/router/server/auth.ts:206`, commit `60a9e188c`). The live-refresh hook is unchanged (`useBrowseListLiveRefresh`, `beebox/src/frontend/src/pages/browse/BrowsePage.tsx:45`). The report that it does not fire in a real browser is not yet reproduced or ruled out.
+
+## Note 2026-10-23 (functional-duplication sweep)
+
+The third candidate above has support. `useBrowseListLiveRefresh` compares the
+parent of the raw event path to `dirPath`. Sibling views normalize the event
+path first (`fileChangeAffectsPath` or `boxRelativePath`), and
+`components/file-view-data.ts` names the raw compare as "the original refresh
+bug". The sweep left the compare unchanged; the comparison of all live-refresh
+copies is in [frontend-live-refresh-hooks-disagree](../code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md).
+Not reproduced.

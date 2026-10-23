@@ -8,7 +8,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { formatElapsed, formatAgo } from "../../src/lib/relative-time.js";
+import { formatElapsed, formatAgo, compactAgo } from "../../src/lib/relative-time.js";
+import { setBoxClockShift } from "../../src/lib/box-clock.js";
 
 // ## The magnitude, without a preposition
 //
@@ -33,4 +34,27 @@ void test("formatAgo adds the preposition — and below 45 seconds says \"just n
   t.check([0, 10_000, 44_000].map(formatAgo).join(" / "), "just now / just now / just now");
 
   t.check([60_000, 3 * 60 * 60_000, 16 * 24 * 60 * 60_000].map(formatAgo).join(" / "), "1 min ago / 3 hr ago / 16 days ago");
+});
+
+// ## Compact stamps for dashboards
+//
+// `compactAgo` takes a timestamp (ISO string or epoch ms) and reads the clock
+// itself: `real` is the browser's, `box` adds the gap the server reported.
+void test("compactAgo picks the largest whole unit", async (t) => {
+  setBoxClockShift(0);
+  const ago = (ms: number): number => Date.now() - ms;
+  t.check(
+    [5_000, 90_000, 3 * 3_600_000 + 60_000, 2 * 86_400_000 + 60_000].map((ms) => compactAgo(ago(ms), "real")).join(" / "),
+    "5s ago / 1m ago / 3h ago / 2d ago",
+  );
+  t.check(compactAgo(new Date(ago(90_000)).toISOString(), "real"), "1m ago");
+});
+
+void test("compactAgo on the box clock counts from the box's now", async (t) => {
+  setBoxClockShift(86_400_000);
+  const stamp = new Date(Date.now()).toISOString();
+  const box = compactAgo(stamp, "box");
+  const real = compactAgo(stamp, "real");
+  setBoxClockShift(0);
+  t.check({ box, real }, { box: "1d ago", real: "0s ago" });
 });

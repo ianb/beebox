@@ -5,6 +5,7 @@
  * and subscribes to SSE for live updates.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
 import * as ReactDOM from "react-dom";
 import { useNavigate, useParams } from "@tanstack/react-router";
@@ -263,7 +264,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
       // would reset against the still-broken module and immediately re-throw.
       setReloadSeq((n) => n + 1);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     }
   }, [apiBase, slug]);
 
@@ -278,7 +279,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
       setCards(data.cards);
       setFiles(data.files);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiBase, slug, paramsString]);
@@ -304,7 +305,6 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
 
 
   // Subscribe to the box event stream for live updates
-  const connectedOnceRef = useRef(false);
   // Reconnect-driven resync goes through the coalescing/hidden-defer helper:
   // N mounted instances of this same view (one per bound card visible in
   // chat) all get onConnect in the same WS-reconnect tick, and a hidden tab
@@ -335,11 +335,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
     // Resync on a *re*connect: file-change events are transient and not replayed,
     // so a card edited while the socket was dropped would otherwise leave the
     // view stale. Skip the initial connect — the mount effect already loads.
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
+    onReconnect: useCallback(() => {
       triggerCardsResync();
     }, [triggerCardsResync]),
   });

@@ -1,3 +1,4 @@
+import { errorMessage } from "@shared/error-guards";
 import type { EmissionDispatch } from "../../conversation/use-bound-emission/hook";
 /**
  * Composer + session action handlers for InteractiveChat: building and
@@ -208,7 +209,7 @@ export function useChatActions(opts: ChatActionsOpts) {
       .catch((e: unknown) => {
         // User-initiated action (policy rule 5): the user clicked "load older"
         // and is waiting on it -- surface the failure, don't just log.
-        console.error(`[chat] load-older history fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.error(`[chat] load-older history fetch failed: ${errorMessage(e)}`);
         toastError("Failed to load earlier messages", { cause: e });
       })
       .finally(() => setLoadingOlder(false));

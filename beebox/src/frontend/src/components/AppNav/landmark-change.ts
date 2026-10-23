@@ -6,10 +6,10 @@
  */
 
 import { boxRelativePath } from "@shared/box-path";
+import { parentDir } from "../../lib/parent-dir";
 
 export function landmarkDirOfChange(changedPath: string): string | null {
   const relative = boxRelativePath(changedPath);
   if (!relative.endsWith(".landmark.card")) return null;
-  const slash = relative.lastIndexOf("/");
-  return slash === -1 ? "" : relative.slice(0, slash);
+  return parentDir(relative);
 }
