@@ -57,11 +57,17 @@ export interface NotifyRequest {
 export interface NotifyResult {
   id: string;
   deliveries: Delivery[];
+  /**
+   * The live event showed it in an open app: the bus event went out, someone
+   * was present, the loudness has a banner (`quiet` or `loud`; a `dot` is a
+   * badge only), and the send was not restricted to one channel.
+   */
+  shown: boolean;
 }
 
-/** Reached: a channel sent it, or the person is in the app, which shows it. */
+/** Reached: a channel sent it, or an open app showed it. */
 export function notificationReached(result: NotifyResult): boolean {
-  return result.deliveries.some((d) => d.status === "sent" || (d.status === "skipped" && d.detail === "present"));
+  return result.shown || result.deliveries.some((d) => d.status === "sent" || (d.status === "skipped" && d.detail === "present"));
 }
 
 /** A yes or no for each channel. */
@@ -118,7 +124,8 @@ function logSafely(write: () => void): void {
   }
 }
 
-function emitLive(boxRoot: string, opts: { intent: NotificationIntent; url: string }): void {
+/** Emit the live bus event for open apps; false when the bus refused it. */
+function emitLive(boxRoot: string, opts: { intent: NotificationIntent; url: string }): boolean {
   const { intent, url } = opts;
   try {
     const bus = createEventBus(boxRoot);
@@ -136,9 +143,11 @@ function emitLive(boxRoot: string, opts: { intent: NotificationIntent; url: stri
     } finally {
       bus.close();
     }
+    return true;
   } catch (e) {
     // The bus is the live signal only; the log and the channels still carry it.
     console.warn("[notify-boxholder] could not emit the notification bus event:", e);
+    return false;
   }
 }
 
@@ -236,9 +245,9 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
   const url = targetUrl(intent.target, { boxSlug: await boxSlug(boxRoot), notificationId: intent.id });
 
   logSafely(() => appendIntent(boxRoot, { intent, now }));
-  emitLive(boxRoot, { intent, url });
+  const emitted = emitLive(boxRoot, { intent, url });
 
-  const { audience, plan } = await planNotification(boxRoot, {
+  const { audience, plan, presence } = await planNotification(boxRoot, {
     intent,
     channel: request.channel,
     onScreen: request.onScreen,
@@ -254,5 +263,7 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
   for (const delivery of deliveries) {
     logSafely(() => appendDelivery(boxRoot, { notificationId: intent.id, delivery, now }));
   }
-  return { id: intent.id, deliveries };
+  // A send restricted to one channel is a test of that channel: the banner does not stand in for it.
+  const shown = emitted && request.channel === undefined && intent.loudness !== "dot" && presence.activeWeb > 0;
+  return { id: intent.id, deliveries, shown };
 }

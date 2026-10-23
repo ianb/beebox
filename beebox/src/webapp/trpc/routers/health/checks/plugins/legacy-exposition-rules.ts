@@ -13,6 +13,7 @@ import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import { parseFrontmatterObject } from "../../../../../../cards/frontmatter.js";
 import { listBoxCardFiles } from "../../../../../../core/list-cards.js";
+import { isErrnoException } from "../../../../../../shared/error-guards.js";
 import type { HealthCheck } from "../../router.js";
 
 const EXPOSITION_PLAN_SUFFIX = ".exposition-plan.card";
@@ -43,7 +44,15 @@ export async function legacyExpositionRulesChecks(boxRoot: string): Promise<Heal
 
 /** Unreadable or malformed frontmatter reads as no rules: validation reports that card. */
 async function hasLegacyRules(abs: string): Promise<boolean> {
-  const frontmatter = parseFrontmatterObject(await readFile(abs, "utf8"));
+  let content: string;
+  try {
+    content = await readFile(abs, "utf8");
+  } catch (e) {
+    // A dangling symlink, a card removed since the listing, or no permission.
+    if (!isErrnoException(e)) throw e;
+    return false;
+  }
+  const frontmatter = parseFrontmatterObject(content);
   const rules = frontmatter?.["rules"];
   return Array.isArray(rules) && rules.length > 0;
 }

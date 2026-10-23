@@ -304,17 +304,11 @@ void test("Identity headers: client-supplied ones are stripped, the hub's own ar
     xBbxHubAuth: "off",
   });
 
-  // A webhook path is proxied unauthenticated, carrying only the hub secret:
+  // `/webhook/<slug>/…` is not routed to the box: no box registers a webhook
+  // route, so the hub reads `webhook` as the slug and finds no such box.
 
   const webhook = await getJson(hub, { path: "/webhook/test1/incoming" });
-  t.check([webhook.status, webhook.body.headers], [
-    200,
-    {
-      xBbxAuthenticatedEmail: null,
-      xBbxHubSecret: "test-hub-secret-for-router-test",
-      xBbxHubAuth: null,
-    },
-  ]);
+  t.check(webhook.status, 404);
 
   // ## The browse key reaches hub-mode children through the trusted auth contract
   //

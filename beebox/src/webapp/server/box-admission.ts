@@ -24,7 +24,7 @@ function requestBoxes(request: FastifyRequest, boxes: BoxSpec[]): BoxSpec[] {
   // It must remain available so a boxholder can inspect a closed box.
   if (url.pathname.startsWith("/auth/")) return [];
   if (["GET", "HEAD", "OPTIONS"].includes(request.method) && typeof request.headers["x-bbx-box-work"] !== "string") return [];
-  const scoped = boxes.filter((candidate) => url.pathname.startsWith(`/${candidate.slug}/`) || url.pathname.startsWith(`/webhook/${candidate.slug}/`));
+  const scoped = boxes.filter((candidate) => url.pathname.startsWith(`/${candidate.slug}/`));
   return scoped.length > 0 ? scoped : boxes;
 }
 

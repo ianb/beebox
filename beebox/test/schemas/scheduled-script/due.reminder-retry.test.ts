@@ -37,11 +37,11 @@ function after(ms: number): Date {
 
 /** The state after `failures` failed sends, the last one at `at + lastRunMs`. */
 function failed(failures: number, lastRunMs: number) {
-  return { lastRun: after(lastRunMs).toISOString(), lastResult: "failure" as const, consecutiveFailures: failures };
+  return { lastRun: after(lastRunMs).toISOString(), lastResult: "failure" as const, consecutiveFailures: failures, lastFailureFinal: false };
 }
 
 void test("the first send is due at `at`, not before", async (t) => {
-  const fresh = { lastRun: null, lastResult: null, consecutiveFailures: 0 };
+  const fresh = { lastRun: null, lastResult: null, consecutiveFailures: 0, lastFailureFinal: false };
   t.check(
     [isDue(reminder, { ...fresh, now: after(-1) }), isDue(reminder, { ...fresh, now: after(0) })],
     [false, true],
@@ -86,11 +86,25 @@ void test("retries stop 24 hours after `at`", async (t) => {
 
 void test("a delivered reminder is not due again", async (t) => {
   t.check(
-    isDue(reminder, { lastRun: after(0).toISOString(), lastResult: "success", consecutiveFailures: 0, now: after(10 * MINUTE) }),
+    isDue(reminder, { lastRun: after(0).toISOString(), lastResult: "success", consecutiveFailures: 0, lastFailureFinal: false, now: after(10 * MINUTE) }),
     false,
   );
 });
 
 void test("a failed `runs:` one-shot is not due again", async (t) => {
   t.check(isDue(command, { ...failed(1, 0), now: after(10 * MINUTE) }), false);
+});
+
+void test("a final failure is not retried, unless the card moves `at` past it", async (t) => {
+  // The send at `at` reached no channel (no device, no subscription): final.
+  const finalFailure = { ...failed(1, 0), lastFailureFinal: true };
+  // The card edited to an hour later (a device may be registered since) is a new attempt:
+  const edited = { ...reminder, at: after(60 * MINUTE).toISOString() };
+  t.check(
+    [
+      isDue(reminder, { ...finalFailure, now: after(60 * MINUTE) }),
+      isDue(edited, { ...finalFailure, now: after(60 * MINUTE) }),
+    ],
+    [false, true],
+  );
 });
