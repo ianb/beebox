@@ -30,6 +30,7 @@
  * `docs/mobile-contract.md` §4.7 (V1 command + ack) and §4.8 (V2 + result).
  */
 
+import { isRecord } from "@shared/is-record";
 import type { AddSelectionInput } from "../../lib/selection/position";
 import { postNativeMessage, type NativeShellWindow } from "./native-post";
 import type { ControlAction } from "../../lib/ui-scan/types";
@@ -129,9 +130,6 @@ export function createNativePointAtControlCommand(
   return { version: 2, id, kind: "point-at-control", payload: target };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function nonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value : null;
