@@ -65,7 +65,7 @@ export async function expandInstructionIncludes(options: {
       if (isAbsolute(specifier)) throw new UnsafeAgentContextIncludeError(specifier);
       const included = resolve(dirname(path), specifier);
       const rel = relative(options.boxRoot, included);
-      if (rel.startsWith("..") || isAbsolute(rel)) throw new UnsafeAgentContextIncludeError(specifier);
+      if (!isWithin(options.boxRoot, included)) throw new UnsafeAgentContextIncludeError(specifier);
       if (seen.has(included)) continue;
       seen.add(included);
       // The lexical check above does not see symlinks; the real path must
