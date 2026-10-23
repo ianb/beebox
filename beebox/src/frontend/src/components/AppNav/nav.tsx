@@ -29,12 +29,11 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
  * alongside the navigation logic. The app-shell just imports <AppNav>.
  */
 
-import { useCallback } from "react";
 import { useParams, useRouterState } from "@tanstack/react-router";
 import { useCurrentUser, type CurrentUser } from "../../hooks/useCurrentUser";
 import { useBoxName } from "../../hooks/useBoxName";
-import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
-import { useDeferredResync } from "../../hooks/useDeferredResync";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { oneOf } from "../../lib/live-refresh";
 import { trpc } from "../../lib/trpc/client";
 import { Dropdown } from "../ui/Dropdown";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
@@ -109,28 +108,14 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   // otherwise fire one invalidate per event; coalesce to one per burst, and
   // skip it entirely while the tab is hidden — nothing on screen needs the
   // count refreshed until the bar is looked at again.
-  const triggerNavStatusResync = useDeferredResync(
-    useCallback(() => { void utils.status.navStatus.invalidate(); }, [utils]),
-  );
-  useBusSubscription({
-    onEvent: useCallback(
-      (event: RealtimeEvent) => {
-        // Todos live in cards and files; a question card's arrival is a
-        // card-created. The question lifecycle events are what the count
-        // cannot see from a file write alone — an answered/dismissed/expired
-        // question leaves the pending set without a new card appearing.
-        if (
-          event.event === "card-created" ||
-          event.event === "file-change" ||
-          event.event === "question-answered" ||
-          event.event === "question-dismissed" ||
-          event.event === "question-expired"
-        ) {
-          triggerNavStatusResync();
-        }
-      },
-      [triggerNavStatusResync],
-    ),
+  //
+  // Todos live in cards and files; a question card's arrival is a
+  // card-created. The question lifecycle events are what the count cannot see
+  // from a file write alone — an answered/dismissed/expired question leaves
+  // the pending set without a new card appearing.
+  useLiveRefresh({
+    when: oneOf("card-created", "file-change", "question-answered", "question-dismissed", "question-expired"),
+    refresh: () => { void utils.status.navStatus.invalidate(); },
   });
 
   const { boxName } = useBoxName();

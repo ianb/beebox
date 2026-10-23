@@ -2,7 +2,8 @@
  * Dashboard page — single scrollable overview of the box.
  */
 
-import { useBusSubscription } from "../hooks/useBusSubscription";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
+import { oneOf } from "../lib/live-refresh";
 import { useState } from "react";
 import { errorMessage } from "@shared/error-guards";
 import { trpc, trpcClient } from "../lib/trpc/client";
@@ -38,17 +39,9 @@ export function DashboardPage() {
     void utils.scheduler.invalidate();
   };
 
-  const { connected } = useBusSubscription({
-    onEvent: (event) => {
-      if (
-        event.event === "file-change" ||
-        event.event === "question-answered" ||
-        event.event === "card-created" ||
-        event.event === "wakeup-complete"
-      ) {
-        invalidateAll();
-      }
-    },
+  const { connected } = useLiveRefresh({
+    when: oneOf("file-change", "question-answered", "card-created"),
+    refresh: invalidateAll,
   });
 
   const status = statusQuery.data ?? null;

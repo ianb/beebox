@@ -408,3 +408,18 @@ void test("A step with nothing plain to add has no excerpt:", async (t) => {
   ],
   );
 });
+
+// ## Card paths with hyphens, dots and no name
+//
+// The title reads like the card's name everywhere else: `-` runs become spaces
+// too, a dotted name keeps its dots, and a positional card reads as its type.
+void test("Card titles read hyphens as spaces, keep dotted names, and name a positional card by its type", async (t) => {
+  t.check(
+    [
+      say("Read", { file_path: "_content/Lemon-Chicken.recipe.card" }),
+      say("Read", { file_path: "_content/Foo.v2.doc.card" }),
+      say("Read", { file_path: "_content/nav.card" }),
+    ],
+    ["Looked at Lemon Chicken", "Looked at Foo.v2", "Looked at nav"],
+  );
+});

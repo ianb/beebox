@@ -33,3 +33,20 @@ void test("usage words read plainly; unknown words pass through", async (t) => {
     ["your words", "paraphrased", "summarized", "inferred from her email"],
   );
 });
+
+void test("refLabel names the basename like a card title and keeps other files as written", async (t) => {
+  t.check(
+    [
+      refLabel("_content/people/dana.person.card"),
+      refLabel("_content/chat/Mar15.chat-thread.card#m12"),
+      refLabel("_content/Foo.v2.doc.card"),
+      refLabel("_content/x.report.job.card"),
+      refLabel("_content/a__b.doc.card"),
+      refLabel("files/my_file.pdf"),
+      refLabel("_content/nav.card"),
+      refLabel("_content/"),
+      refLabel(""),
+    ],
+    ["dana", "Mar15", "Foo.v2", "x", "a b", "my_file.pdf", "nav", "_content/", "(missing ref)"],
+  );
+});

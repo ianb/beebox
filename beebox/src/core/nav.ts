@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
-import { titleFromFilename } from "./file-summary.js";
+import { titleFromFilename } from "../shared/card-name.js";
 import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
 import { resolveRefPath } from "../shared/ref-path/core.js";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";

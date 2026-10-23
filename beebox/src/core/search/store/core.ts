@@ -43,8 +43,9 @@ export type { IndexPersisted } from "./index-store.js";
  * v3: standalone .md files index as kind "markdown".
  * v4: embedding vector field.
  * v5: no `created` field; titles come from the card summary (`cardTitle`).
+ * v6: filename titles use the shared card display name (`Foo.v2.doc.card` → "Foo.v2").
  */
-export const SEARCH_SCHEMA_VERSION = 5;
+export const SEARCH_SCHEMA_VERSION = 6;
 
 const searchOramaSchema = {
   path: "string",

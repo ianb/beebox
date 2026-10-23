@@ -24,7 +24,8 @@ import { Heading } from "./ui/Heading";
 import { Accordion } from "./ui/Accordion";
 import { ExternalLink } from "./ui/ExternalLink";
 import { bbxSource } from "../lib/source-tag";
-import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import type { RealtimeEvent } from "../hooks/useBusSubscription";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import { busEventData } from "../lib/bus-events";
 import { attachDirFor } from "@shared/attach-path";
 import { boxRelativePath } from "@shared/box-path";
@@ -73,13 +74,14 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 
   const cardRel = boxRelativePath(data.path);
   const attachRel = boxRelativePath(attachDirFor(data.path));
-  useBusSubscription({
-    onEvent: useCallback((event: RealtimeEvent) => {
+  useLiveRefresh({
+    when: (event: RealtimeEvent) => {
       const change = busEventData(event, "file-change");
-      if (!change) return;
+      if (!change) return false;
       const changed = boxRelativePath(change.path).replace(/\/$/, "");
-      if (changed === cardRel || changed === attachRel || changed.startsWith(`${attachRel}/`)) void reload();
-    }, [cardRel, attachRel, reload]),
+      return changed === cardRel || changed === attachRel || changed.startsWith(`${attachRel}/`);
+    },
+    refresh: () => { void reload(); },
   });
 
   const validate = useCallback(

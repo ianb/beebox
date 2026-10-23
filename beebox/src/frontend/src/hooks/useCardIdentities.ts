@@ -10,15 +10,15 @@
  *
  * So identity is read, not remembered: one batched `files.summarize` for the
  * paths on screen, invalidated when any of them changes on disk. The bus
- * subscription is the same one `FileView` uses; the difference is that this
+ * subscription matches paths the way `FileView`'s does; the difference is that this
  * hook watches a *set* of paths rather than one.
  */
 
 import { useCallback, useMemo } from "react";
 import { trpc } from "../lib/trpc/client";
-import { useBusSubscription, type RealtimeEvent } from "./useBusSubscription";
-import { busEventData } from "../lib/bus-events";
-import { boxRelativePath } from "@shared/box-path";
+import { useLiveRefresh } from "./useLiveRefresh";
+import type { RealtimeEvent } from "./useBusSubscription";
+import { fileChangeAt } from "../lib/live-refresh";
 import type { CardSymbolData } from "@shared/card-symbol";
 import type { ThemeChoice } from "@shared/card-theme/core";
 
@@ -39,23 +39,14 @@ export function useCardIdentities(paths: string[]): Map<string, CardIdentity> {
   const resync = useCallback(() => {
     void utils.files.summarize.invalidate({ paths: key });
   }, [key, utils]);
-  // Skip the very first connect: the query already ran on mount, so a resync
-  // there is a redundant fetch.
-  useBusSubscription({
-    onEvent: useCallback((event: RealtimeEvent) => {
-      const fileChange = busEventData(event, "file-change");
-      if (!fileChange) return;
-      const changed = boxRelativePath(fileChange.path);
-      if (!key.some((path) => boxRelativePath(path) === changed)) return;
-      resync();
-    }, [key, resync]),
-    // `file-change` events are transient and never replayed, so a retitle that
-    // landed while the socket was down would leave the tab saying the old thing
-    // — the very bug this hook exists to fix. Same belt as `FileView`'s.
-    onReconnect: useCallback(() => {
-      resync();
-    }, [resync]),
-  });
+  // A change to any listed path (or a rename of a directory holding one), and
+  // a reconnect: a retitle that landed while the socket was down would leave
+  // the tab saying the old thing, the bug this hook exists to fix.
+  const when = useMemo(() => {
+    const matchers = key.map(fileChangeAt);
+    return (event: RealtimeEvent) => matchers.some((matches) => matches(event));
+  }, [key]);
+  useLiveRefresh({ when, refresh: resync });
 
   return useMemo(() => {
     const out = new Map<string, CardIdentity>();

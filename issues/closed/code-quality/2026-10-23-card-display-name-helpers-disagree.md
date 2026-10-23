@@ -1,14 +1,18 @@
 ---
 title: "Card names shown in the frontend come from seven helpers, and some show the card type"
-workstream: unattached
+workstream: dup-sweep-frontend
 area: beebox
 labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-frontend — frontend pass of the functional-duplication sweep
+resolution: implemented
 ---
 
-Part of the [functional-duplication sweep](2026-10-22-functional-duplication-sweep.md).
+
+**Closed:** implemented by the dup-sweep-frontend branch (plan frontend-unify-formatters-refresh-storage; commits 65147fadb through 1bb95099e). Each commit message names the behavior changes. Wording was covered by unit/DOM tests, not checked in a browser.
+
+Part of the [functional-duplication sweep](../../code-quality/2026-10-22-functional-duplication-sweep.md).
 `lib/display-name.ts` exists so a card reads as \"Soup\", not \"Soup.recipe.card\".
 Other helpers turn a path into a name with different rules:
 

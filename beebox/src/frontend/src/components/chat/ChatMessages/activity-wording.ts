@@ -9,6 +9,7 @@ import type { SessionContentBlock } from "../../../api";
 import type { ActivityPart } from "../assistant-parts";
 import { type KnownToolName, isKnownTool } from "@shared/known-tools";
 import { attachDirOwnerBasename } from "@shared/attach-path";
+import { cardDisplayName } from "@shared/card-name";
 
 type Category = "look" | "search" | "webpage" | "change" | "step" | "handoff" | "hidden";
 
@@ -78,15 +79,6 @@ export function summarizeActivity(parts: ActivityPart[]): string {
   return segments.join(", ") || (hasNote ? "noted progress" : "working");
 }
 
-function cardTitle(path: string): string | null {
-  const base = path.split("/").pop() || "";
-  if (!base.endsWith(".card")) return null;
-  const withoutCard = base.slice(0, -".card".length);
-  const dot = withoutCard.lastIndexOf(".");
-  const name = dot > 0 ? withoutCard.slice(0, dot) : withoutCard;
-  return name.replace(/_/g, " ");
-}
-
 const SCHEMA_PATH = /(?:^|\/)schemas\/([^/]+)\.ts$/;
 
 function schemaName(path: string): string | null {
@@ -124,7 +116,7 @@ function documentName(base: string): string {
 
 /** The thing a file is to the person: a card title, or a content document's name. */
 function thingName(path: string): string | null {
-  const title = cardTitle(path);
+  const title = cardDisplayName(path);
   if (title) return title;
   const relative = contentRelative(path);
   if (!relative) return null;
@@ -156,7 +148,7 @@ interface FileVerbs {
 
 function describeFileTool({ verbs, input }: { verbs: FileVerbs; input: Record<string, unknown> }): string {
   const path = filePath(input);
-  const title = cardTitle(path);
+  const title = cardDisplayName(path);
   const more = extraPathCount(input);
   const suffix = more > 0 ? ` and ${more} more` : "";
   if (title) return `${verbs.card} ${title}${suffix}`;

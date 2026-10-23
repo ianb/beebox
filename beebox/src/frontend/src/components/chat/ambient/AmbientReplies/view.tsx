@@ -1,5 +1,5 @@
 /** Mount once above the box composer. Opening a card never selects its source chat. */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { trpc } from "../../../../lib/trpc/client";
 import { useBusSubscription } from "../../../../hooks/useBusSubscription";
 import { busEventData } from "../../../../lib/bus-events";
@@ -48,11 +48,14 @@ export function AmbientReplies(props: AmbientRepliesProps) {
       refresh(sessionId);
     },
   });
+  // Refresh on show. The listener is added once and calls the latest refreshAll.
+  const refreshAllRef = useRef(refreshAll);
+  useEffect(() => { refreshAllRef.current = refreshAll; });
   useEffect(() => {
-    function visible() { if (document.visibilityState === "visible") refreshAll(); }
+    function visible() { if (document.visibilityState === "visible") refreshAllRef.current(); }
     document.addEventListener("visibilitychange", visible);
     return () => document.removeEventListener("visibilitychange", visible);
-  });
+  }, []);
   return (
     <div role="region" className="max-h-72 overflow-y-auto" aria-label="Conversation activity">
       {sessions.filter((session) => session.sessionId === props.selectedSessionId || active.includes(session.sessionId)).map((session) => (

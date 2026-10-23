@@ -10,7 +10,8 @@ import type { RouterOutput } from "../../lib/trpc/client";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
 import { tickHadActivity } from "./ScheduleTicks";
-import { compactAgo } from "../../lib/relative-time";
+import { agoOnClock, formatDuration } from "../../lib/relative-time";
+import { useBoxNow } from "../../lib/box-clock";
 
 type LogEntry = RouterOutput["status"]["activity"]["entries"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -49,7 +50,7 @@ function CommitRow({ commit }: { commit: LogEntry }) {
         </div>
       </div>
       <span className="text-xs text-warm-700 whitespace-nowrap">
-        {compactAgo(commit.date, "box")}
+        {agoOnClock(commit.date, "box")}
       </span>
     </div>
   );
@@ -98,7 +99,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
                 {s.name}
                 {s.durationMs != null ? (
                   <span className="text-warm-700 ml-0.5">
-                    {s.durationMs < 1000 ? `${s.durationMs}ms` : `${(s.durationMs / 1000).toFixed(1)}s`}
+                    {formatDuration(s.durationMs)}
                   </span>
                 ) : null}
               </span>
@@ -107,7 +108,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
         </div>
       </div>
       <span className="text-xs text-warm-700 whitespace-nowrap">
-        {compactAgo(tick.ts, "real")}
+        {agoOnClock(tick.ts, "real")}
       </span>
     </div>
   );
@@ -115,6 +116,8 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
 
 export function RecentActivity({ commits, ticks, loading, error }: RecentActivityProps) {
   const { boxSlug } = useParams({ strict: false });
+  // Re-render each minute so the ages in the rows stay current.
+  useBoxNow(60_000);
   // Only include ticks that had activity — an unjudged run is activity.
   const activeTicks = ticks.filter(tickHadActivity);
 

@@ -20,21 +20,9 @@ import {
 import { bbxSource } from "../../../../lib/source-tag";
 import { useDropdownClose } from "../../../ui/Dropdown";
 import { Highlight } from "../../../search/SearchResults";
+import { agoOnClock } from "../../../../lib/relative-time";
+import { useNow } from "../../../../lib/use-now";
 import { sessionIdHint } from "./session-list-grouping";
-
-/**
- * Format a date string as relative time (e.g., "2h ago", "3d ago").
- */
-export function relativeTime(dateStr: string): string {
-  const ms = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(ms / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 /** A query short enough to act on (the debounce has settled on it). */
 const MIN_QUERY = 2;
@@ -120,6 +108,8 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
   onRetry: () => void;
 }) {
   const close = useDropdownClose();
+  // Re-render each minute so the hit ages stay current.
+  useNow(60_000);
   if (state.kind === "loading") {
     return <div className="px-3 py-2 text-sm text-warm-700">Searching…</div>;
   }
@@ -167,7 +157,7 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
             <div className="mt-0.5 text-xs text-warm-700 line-clamp-2">
               <Highlight text={hit.snippet} query={query} />
             </div>
-            <div className="mt-0.5 text-xs text-warm-400">{relativeTime(hit.created)}</div>
+            <div className="mt-0.5 text-xs text-warm-400">{agoOnClock(hit.created, "real")}</div>
           </Link>
         );
       })}

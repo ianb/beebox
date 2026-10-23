@@ -9,17 +9,18 @@ import { useState, type ReactNode } from "react";
 import { THEME_CATALOG } from "@shared/card-theme/core";
 import { defaultStockOf, pairedCard, type StudioCase } from "@shared/theme-studio-case";
 import { SCREENS } from "@shared/theme-screens";
+import { readStoredFlag, writeStoredFlag, type StoredFlag } from "../../../../lib/stored-flag";
 
 /** Theme names the studio's own CSS styles (`theme-studio-*.css`). */
 export const STUDIO_THEMES = ["draft", "undertow", "deck-study", "patina-study", "rose-trellis-study", "gold-thread-study"] as const;
 const OTHER = "\u0000other";
-const OPEN_KEY = "bbx-theme-studio-controls-open";
+const OPEN_FLAG: StoredFlag = { storage: () => localStorage, key: "bbx-theme-studio-controls-open" };
 
 function readOpen(): boolean {
-  try { return localStorage.getItem(OPEN_KEY) === "1"; } catch (_error) { return false; }
+  return readStoredFlag(OPEN_FLAG);
 }
 function writeOpen(open: boolean): void {
-  try { localStorage.setItem(OPEN_KEY, open ? "1" : "0"); } catch (_error) { /* storage may be disabled */ }
+  writeStoredFlag(OPEN_FLAG, open);
 }
 
 export interface StudioState extends StudioCase {

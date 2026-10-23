@@ -3,14 +3,14 @@ import { displayName } from "./display-name";
 import type { FileData } from "../file-type-registry";
 
 /**
- * `title:`, else a landmark's `navigation.label`, else a named entity's
+ * A non-blank `title:`, else a landmark's `navigation.label`, else a named entity's
  * `name:` (person, place), else the filename. A landmark is headed by its
  * place's name, the label the place pill and the "Go to" buttons show; the
  * same rule titles its summary (`schemas/landmark.ts`), so its tab agrees.
  */
 export function cardTitle(data: FileData): string {
   const fm = data.frontmatter;
-  if (typeof fm?.title === "string") return fm.title;
+  if (typeof fm?.title === "string" && fm.title.trim() !== "") return fm.title;
   const label = landmarkLabel(data);
   if (label !== null) return label;
   if (typeof fm?.name === "string") return fm.name;
