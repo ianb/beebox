@@ -96,8 +96,8 @@ void test("Direct accounting sees each physical file.", async (t) => {
       orphanDirectories: inventory.orphanAttachmentDirectories,
     },
     {
-      direct: { card: [2, 7], nestedCard: [2, 9], webp: [1, 6], markdown: [5, 2798], javascript: undefined },
-      grouped: { card: [1, 20], markdown: [5, 2798], orphan: [2, 4] },
+      direct: { card: [2, 7], nestedCard: [2, 9], webp: [1, 6], markdown: [5, 2811], javascript: undefined },
+      grouped: { card: [1, 20], markdown: [5, 2811], orphan: [2, 4] },
       ambiguous: [1, 11],
       linked: { grouped: [1, 20], ambiguous: [1, 11], card: [2, 7], nestedCard: [2, 9], attachment: [1, 6] },
       unlinked: [1, 4],

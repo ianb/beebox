@@ -91,6 +91,17 @@ void test("line 45", async (t) => {
   }) + "\n");
   t.check((await extractBehavior(linkedCwd, "linked-audit")).responseText, "Captured response");
 
+  // An agent may delete its own cwd; the transcript is still found by the
+  // physical path the runner resolved before the run.
+  const deletedCwd = join(await realpath(box.root), "deleted-cwd");
+  const deletedLog = getSessionLogPath(deletedCwd, "deleted-audit");
+  await mkdir(dirname(deletedLog), { recursive: true });
+  await writeFile(deletedLog, JSON.stringify({
+    type: "assistant", uuid: "deleted-response", timestamp: "2026-08-06T12:00:00Z",
+    message: { role: "assistant", content: [{ type: "text", text: "Response after rmdir" }] },
+  }) + "\n");
+  t.check((await extractBehavior(deletedCwd, "deleted-audit")).responseText, "Response after rmdir");
+
   await t.checkThrows(async () => (await extractBehavior(linkedCwd, "missing-audit")), "KnowledgeAuditTranscriptError: Claude knowledge-audit transcript is missing for session missing-audit: «*». No audit checks were evaluated.");
 
   const linkedPackage = box.path("node_modules/beebox");

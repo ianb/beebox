@@ -64,6 +64,8 @@ export interface AutomatedChecks {
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
   bashContainsChecks: Array<{ expected: string; found: boolean; matchedCommand?: string }>;
   shouldSearchCheck?: { where: SearchWhere; found: boolean; matched?: string | undefined } | undefined;
+  /** The agent stopped at its turn or budget limit; the audit fails on it. */
+  agentStopped?: string | undefined;
 }
 
 export interface TestResult {
@@ -183,7 +185,10 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
         onActivity: (activity) => codexActivity.push(activity),
       });
     const result = await agent.invoke(invokeOpts);
-    if (!result.success) throw new KnowledgeAuditAgentError(engine, result.error);
+    // A run that started and stopped at its limit still has a transcript to
+    // grade; only an invocation failure leaves nothing to audit.
+    const unauditable = !result.success && (result.invocationFailure === true || result.sessionId === "");
+    if (unauditable) throw new KnowledgeAuditAgentError(engine, result.error);
     const cardsAfter = test.cards_contain || test.cards_not_under ? await snapshotCardFiles(boxRoot) : new Map();
     // Claude Code stores session logs keyed by the SDK's cwd. Codex activity
     // comes from the validated live stream captured by its adapter above.
@@ -193,6 +198,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
       : await extractBehavior(logDir, result.sessionId);
     const newOrModifiedCards = findNewOrModifiedCards(cardsBefore, cardsAfter);
     const checks = runChecks(test, { behavior, newOrModifiedCards });
+    if (!result.success) checks.agentStopped = result.error;
     return { test, engine, sessionId: result.sessionId, behavior, checks };
   } finally {
     await removeFixtures(fixturePaths);
@@ -209,10 +215,14 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
  * Agent tool). Sub-agent tool calls count as the main agent's behavior for
  * audit purposes — otherwise every delegated Read would be invisible.
  * Sub-agent response text is NOT merged into responseText; only the main
- * agent's text reply is evaluated.
+ * agent's text reply is evaluated. The agent may delete its own cwd (a
+ * fixture directory); then `logDir` is used as given, so the caller passes the
+ * path it resolved before the run.
  */
 export async function extractBehavior(logDir: string, sessionId: string): Promise<AgentBehavior> {
-  const logPath = getSessionLogPath(await fs.realpath(logDir), sessionId);
+  const physicalDir = await fs.realpath(logDir)
+    .catch((error: unknown) => (errnoCode(error) === "ENOENT" ? logDir : Promise.reject(error)));
+  const logPath = getSessionLogPath(physicalDir, sessionId);
   const { entries, total } = await parseSessionLog({
     logPath,
     slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },

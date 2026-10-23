@@ -40,7 +40,7 @@ want it.
 
 [Implementation vocabulary leaks into the UI](2026-08-08-implementation-vocab-leaks-into-ui.md)
 (closed) did not cover this surface.
-[The chat agent narrates implementation steps](2026-10-08-chat-agent-narrates-implementation-steps.md)
+[The chat agent narrates implementation steps](../../bugs/2026-10-08-chat-agent-narrates-implementation-steps.md)
 is the text side of the same problem.
 
 ## Resolution (user-facing-language, 2026-10-09)

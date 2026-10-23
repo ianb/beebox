@@ -4,7 +4,8 @@
 // `scheduled-tasks` box check restates the task section for the dashboard, so
 // the CLI leaves it out and a failing task appears once. A task whose last run
 // found nothing to do reads `ok: <reason>`; one held back reads
-// `waiting: <reason>`.
+// `waiting: <reason>`. An inconclusive task says its work was done, so a reader
+// does not redo it.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -27,6 +28,7 @@ const health: BoxScheduleHealth = {
     task({ name: "sync-notes", status: "failing", consecutiveFailures: 3, lastSuccess: null, lastError: "Agent invocation failed: model retired" }),
     task({ name: "watch-trip", status: "ok", deferReason: "no-change", reason: "nothing to do" }),
     task({ name: "watch-quote", status: "waiting", deferReason: "budget", reason: "the box used its daily Jev budget" }),
+    task({ name: "nightly-digest", status: "inconclusive" }),
   ],
 };
 
@@ -40,6 +42,7 @@ void test("line 33", async (t) => {
       error: Agent invocation failed: model retired
   ✓ watch-trip             ok: nothing to do last success 1h ago
   ◷ watch-quote            waiting: the box used its daily Jev budget last success 1h ago
+  ? nightly-digest         inconclusive: work done, no verdict last success 1h ago
   scheduler: running (last tick 1m ago)
 «blankline»
 Box checks:
