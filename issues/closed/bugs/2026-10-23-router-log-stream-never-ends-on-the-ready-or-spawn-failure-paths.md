@@ -5,7 +5,10 @@ area: router
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-risky-merge-review — fixing the pre-spawn failure leak
+resolution: implemented
 ---
+
+Resolved: `spawnGeneration` (`workstreams-app/src/router/core/generation.ts`) ends the stream once both children's execa promises have settled, which happens after each process has exited and its stdio has closed. Every teardown path ends in both children exiting, so one place covers stop, idle, child death, failed start and superseded publication. Covered in `workstreams-app/test/router/core.log-stream.test.ts`.
 
 `prepareStart` (`workstreams-app/src/router/core/worktree-start.ts`) opens one
 append stream per start through `effects.openLog`. A start that fails before

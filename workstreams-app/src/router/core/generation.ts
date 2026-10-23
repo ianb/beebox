@@ -243,5 +243,15 @@ function spawnFrontend({ state, plan, handle, progress, name, fastify, fastifyOu
   watch(vite, "vite");
   watch(fastify, "fastify");
 
+  // The log stream belongs to this generation's children, which pipe into it
+  // with `end: false`. An execa promise settles once its process has exited AND
+  // its stdio has closed, so ending after both settle writes nothing after the
+  // last piped byte. Every teardown (stop, idle, child death, failed start,
+  // superseded publication) ends in both children exiting, so this one place
+  // closes the handle for all of them (issues: router log stream never ends).
+  void Promise.allSettled([vite, fastify]).then(() => {
+    if (!logStream.writableEnded) logStream.end(`=== generation ended ${new Date(effects.now()).toISOString()} ===\n`);
+  });
+
   return { vite, fastify, viteOutput, fastifyOutput, childDeath };
 }
