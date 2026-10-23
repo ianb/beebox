@@ -9,7 +9,10 @@ import type {
 import type { GmailTransientState } from "./state.js";
 
 export const GMAIL_HISTORY_REF_LIMIT = 500;
-const GMAIL_HISTORY_RECORD_LIMIT = 100;
+/** Gmail's maximum page size for `users.history.list`. */
+const GMAIL_HISTORY_RECORD_LIMIT = 500;
+/** Bounds one sync's history requests when pages repeat the same messages. */
+const GMAIL_HISTORY_PAGE_LIMIT = 20;
 
 export interface GmailChanges {
   refs: GmailMessageRef[];
@@ -49,44 +52,39 @@ export async function discoverGmailChanges(opts: {
     };
   }
 
-  const startHistoryId = opts.resume?.startHistoryId ?? opts.startHistoryId;
-  const pageToken = opts.resume?.pageToken;
-  const refOffset = opts.resume?.refOffset ?? 0;
+  const checkpoint = opts.startHistoryId;
+  const startHistoryId = opts.resume?.startHistoryId ?? checkpoint;
+  let pageToken = opts.resume?.pageToken;
+  let refOffset = opts.resume?.refOffset ?? 0;
+  // A message both added and labelled across pages is fetched once.
+  const refs = new Map<string, GmailMessageRef>();
+  const resumeAt = (offset: number): GmailChanges => ({
+    refs: [...refs.values()],
+    historyId: checkpoint,
+    historyResume: { startHistoryId, ...(pageToken === undefined ? {} : { pageToken }), refOffset: offset },
+    historyExpired: false,
+  });
   try {
-    const page = await opts.service.listHistory({
-      startHistoryId,
-      ...(pageToken === undefined ? {} : { pageToken }),
-      maxResults: GMAIL_HISTORY_RECORD_LIMIT,
-    });
-    const pageRefs = refsForPage(page.history);
-    const refs = pageRefs.slice(refOffset, refOffset + GMAIL_HISTORY_REF_LIMIT);
-    const nextOffset = refOffset + refs.length;
-    if (nextOffset < pageRefs.length) {
-      return {
-        refs,
-        historyId: opts.startHistoryId,
-        historyResume: {
-          startHistoryId,
-          ...(pageToken === undefined ? {} : { pageToken }),
-          refOffset: nextOffset,
-        },
-        historyExpired: false,
-      };
+    // A backlog drains in one sync up to the ref limit, whatever the box's sync cadence.
+    for (let pages = 0; pages < GMAIL_HISTORY_PAGE_LIMIT; pages++) {
+      const page = await opts.service.listHistory({
+        startHistoryId,
+        ...(pageToken === undefined ? {} : { pageToken }),
+        maxResults: GMAIL_HISTORY_RECORD_LIMIT,
+      });
+      const pageRefs = refsForPage(page.history);
+      const taken = pageRefs.slice(refOffset, refOffset + GMAIL_HISTORY_REF_LIMIT - refs.size);
+      for (const ref of taken) refs.set(ref.id, ref);
+      const nextOffset = refOffset + taken.length;
+      if (nextOffset < pageRefs.length) return resumeAt(nextOffset);
+      if (page.nextPageToken === undefined) {
+        return { refs: [...refs.values()], historyId: page.historyId, historyResume: undefined, historyExpired: false };
+      }
+      pageToken = page.nextPageToken;
+      refOffset = 0;
+      if (refs.size >= GMAIL_HISTORY_REF_LIMIT) break;
     }
-    if (page.nextPageToken !== undefined) {
-      return {
-        refs,
-        historyId: opts.startHistoryId,
-        historyResume: { startHistoryId, pageToken: page.nextPageToken, refOffset: 0 },
-        historyExpired: false,
-      };
-    }
-    return {
-      refs,
-      historyId: page.historyId,
-      historyResume: undefined,
-      historyExpired: false,
-    };
+    return resumeAt(0);
   } catch (error) {
     if (!(error instanceof NotFoundError)) throw error;
     const profile = await opts.service.getProfile();
