@@ -6,7 +6,7 @@ import { execa } from "execa";
 import { z } from "zod";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
-import { errorMessage, errnoCode } from "../../../shared/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { invariant } from "../../../shared/invariant.js";
 import { isCardFile, getBoxDir } from "../../../lib/paths/core.js";
 import { createDoclingService, checkExtractionBounds, type DoclingService } from "../../../services/docling/core.js";
@@ -18,6 +18,7 @@ import { compileInstructionSnapshot, type InstructionSnapshot } from "../snapsho
 import { packEvidence, scanRepresentations } from "./packing.js";
 import { isWithin } from "../../../lib/box-containment.js";
 import { sha256Hex } from "../../../lib/content-hash.js";
+import { pathExistsStrict } from "../../../lib/file-exists.js";
 
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u);
 const statusSchema = z.enum(["ready", "partial", "unavailable"]);
@@ -52,13 +53,8 @@ function resolve(boxRoot: string, ref: string): string {
   invariant(relative !== null, `Invalid evidence ref: ${ref}`);
   return path.join(boxRoot, relative);
 }
-async function exists(file: string): Promise<boolean> {
-  // Keep lstat semantics instead of lib/file-exists: broken links count as present and EACCES must propagate.
-  try { await fs.lstat(file); return true; }
-  catch (error) { if (errnoCode(error) === "ENOENT") return false; throw error; }
-}
 async function listScope(directory: string): Promise<string[]> {
-  if (!await exists(directory)) return [];
+  if (!await pathExistsStrict(directory, { followLinks: false })) return [];
   const result: string[] = [];
   for (const entry of (await fs.readdir(directory, { withFileTypes: true })).toSorted((a, b) => a.name.localeCompare(b.name))) {
     const file = path.join(directory, entry.name);
@@ -190,7 +186,7 @@ async function noteMissingAttachments(part: Part, boxRoot: string): Promise<void
   const refs = new Set(part.text.match(/\battach\/[^\s"'<>()[\]{}]+/gu));
   for (const ref of refs) {
     const relative = resolveRefPath({ fromPath: part.ref, ref: parseRef(ref).path, kind: "card" });
-    if (relative === null || !await exists(path.join(boxRoot, relative))) {
+    if (relative === null || !await pathExistsStrict(path.join(boxRoot, relative), { followLinks: false })) {
       part.omissions.push(`Missing referenced attachment: ${ref}`);
       if (part.status === "ready") part.status = "partial";
     }
@@ -205,7 +201,7 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
   if (attachmentPath !== null) {
     for (const upstream of [getBoxDir(options.boxRoot, "inbox"), getBoxDir(options.boxRoot, "inboxIntake")]) {
       const candidate = path.join(upstream, path.basename(attachmentPath));
-      invariant(candidate === attachmentPath || !await exists(candidate), `Stranded attachment scope: ${candidate}; repair before preparation`);
+      invariant(candidate === attachmentPath || !await pathExistsStrict(candidate, { followLinks: false }), `Stranded attachment scope: ${candidate}; repair before preparation`);
     }
   }
   const files = [sourcePath, ...attachmentPath === null ? [] : await listScope(attachmentPath)];

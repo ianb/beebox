@@ -15,9 +15,10 @@ import { BoxPathArgError, resolveCliTargetPath } from "../../../cli/lib/cli-targ
 import { getStatus, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
 import { NotFoundError } from "../../../lib/errors.js";
-import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { assertSafeTrashDestination } from "./namespace-guard.js";
 import { findInboundCardRefs, type InboundCardRef } from "../../find-inbound-card-refs.js";
+import { pathExistsStrict } from "../../../lib/file-exists.js";
 
 class NotACardFileError extends Error {
   readonly cardPath: string;
@@ -85,18 +86,6 @@ async function reportInboundRefs(
   return inboundRefs;
 }
 
-async function pathExists(target: string): Promise<boolean> {
-  // Deliberately stricter than lib/file-exists: an unreadable destination
-  // cannot safely be treated as absent before a destructive rename.
-  try {
-    await fs.access(target);
-    return true;
-  } catch (error) {
-    if (errnoCode(error) === "ENOENT") return false;
-    throw error;
-  }
-}
-
 /**
  * Trash a single card and its attachments. Returns info about what was moved.
  */
@@ -140,7 +129,7 @@ async function trashOne(
 
   // Check if destination already exists (add timestamp if so)
   let finalDestPath = destPath;
-  if (await pathExists(destPath)) {
+  if (await pathExistsStrict(destPath, { followLinks: true })) {
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
     const newName = `${parsed.name}_${timestamp}.${parsed.type}.card`;
     finalDestPath = path.join(trashDir, newName);
@@ -151,9 +140,9 @@ async function trashOne(
 
   const sourceAttachDir = attachDirFor(sourcePath);
   const destAttachDir = attachDirFor(finalDestPath);
-  const hasAttachments = await pathExists(sourceAttachDir);
+  const hasAttachments = await pathExistsStrict(sourceAttachDir, { followLinks: true });
   let finalAttachDest = destAttachDir;
-  if (hasAttachments && (await pathExists(destAttachDir))) {
+  if (hasAttachments && (await pathExistsStrict(destAttachDir, { followLinks: true }))) {
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
     finalAttachDest = `${destAttachDir}_${timestamp}`;
   }

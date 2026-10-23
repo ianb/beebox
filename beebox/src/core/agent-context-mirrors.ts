@@ -6,6 +6,7 @@ import { errnoCode } from "../shared/error-guards.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { AGENTS_MD, CLAUDE_MD } from "./agent-instruction-files.js";
 import { withDocId, withoutDocId } from "./docs-gen/shared.js";
+import { pathExistsStrict } from "../lib/file-exists.js";
 
 /**
  * The line an older engine wrote into a generated `AGENTS.md` file, before the
@@ -70,21 +71,11 @@ async function findClaudeDocs(root: string): Promise<ClaudeDocScan> {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) await visit(path);
       else if (entry.isFile() && entry.name === CLAUDE_MD) found.push(path);
-      else if (entry.isSymbolicLink() && entry.name === AGENTS_MD && !(await targetExists(path))) dangling.push(path);
+      else if (entry.isSymbolicLink() && entry.name === AGENTS_MD && !(await pathExistsStrict(path, { followLinks: true }))) dangling.push(path);
     }
   };
   await visit(root);
   return { claudeDocs: found, danglingMirrors: dangling };
-}
-
-async function targetExists(linkPath: string): Promise<boolean> {
-  try {
-    await stat(linkPath);
-    return true;
-  } catch (error) {
-    if (errnoCode(error) === "ENOENT") return false;
-    throw error;
-  }
 }
 
 /**
