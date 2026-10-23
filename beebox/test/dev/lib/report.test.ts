@@ -22,6 +22,7 @@ const res = (id: string, initialTokens: number | null): TestResult => ({
     bashCommands: [],
     bashRawCommands: [],
     responseText: "",
+    replyText: "",
     responseLength: 0,
     context: initialTokens === null ? null : { initialTokens, peakTokens: initialTokens, addedTokens: 0, turnCount: 1 },
   },

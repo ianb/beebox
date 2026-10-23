@@ -15,15 +15,10 @@ import type { AgentInvokeOptions } from "../../../../core/agent/types.js";
 import { createCodexAgent } from "../../../../core/agent/codex-agent.js";
 import type { CodexObservedActivity } from "../../../../core/agent/codex-run/core.js";
 import { loadAgentEngine, type AgentEngine } from "../../../../core/box/config.js";
-import { type KnownToolName, isKnownTool } from "../../../../shared/known-tools.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../../../core/chat/session/run/core.js";
 import { buildLandmarkBoxContext } from "../../../../core/chat/session/landmark-context.js";
 import { buildLandmarkSessionNote } from "../../../../core/chat/session/prompts.js";
-import {
-  MAX_SESSION_ENTRIES,
-  parseSessionLog,
-  type SessionContentBlock,
-} from "../../../../cli/lib/session.js";
+import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../../cli/lib/session.js";
 import { getSessionLogPath } from "../../../../core/chat/session/transcript-paths.js";
 import {
   readTurnUsage,
@@ -31,7 +26,7 @@ import {
   type ContextStats,
 } from "../../context-usage.js";
 import { codexBehaviorFromActivity } from "./codex-audit.js";
-import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-observation.js";
+import { type BehaviorAccumulator, categorizeToolUse } from "./tool-use-behavior.js";
 import { runChecks } from "../../audit-checks.js";
 import { generateAgentContextMirrors } from "../../../../core/agent-context-mirrors.js";
 import { AGENTS_MD, CLAUDE_MD } from "../../../../core/agent-instruction-files.js";
@@ -46,6 +41,8 @@ export interface AgentBehavior {
   /** Actual bash commands (not descriptions) for automated checks */
   bashRawCommands: string[];
   responseText: string;
+  /** The reply the chat shows: text after the last tool call (see `final_reply`). */
+  replyText: string;
   responseLength: number;
   /** Loaded-context size of this run (null if the session had no turns). */
   context: ContextStats | null;
@@ -234,6 +231,8 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
 
   const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [] };
   const responseChunks: string[] = [];
+  // Index into responseChunks where the text after the last tool call starts.
+  let replyStart = 0;
 
   for (const entry of entries) {
     if (entry.type === "assistant") {
@@ -243,6 +242,7 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
         }
         if (block.type === "tool_use") {
           categorizeToolUse(block, acc);
+          replyStart = responseChunks.length;
         }
       }
     }
@@ -278,6 +278,8 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
   }
 
   const responseText = responseChunks.join("\n").trim();
+  const replyChunks = responseChunks.slice(replyStart);
+  const replyText = (replyChunks.length > 0 ? replyChunks : responseChunks.slice(-1)).join("\n").trim();
 
   // Context-size accounting reads the same main session log (not subagent
   // logs — those are separate contexts; baseline/peak is about what the box
@@ -287,6 +289,7 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
   return {
     ...acc,
     responseText,
+    replyText,
     responseLength: responseText.split(/\s+/).length,
     context,
   };
@@ -300,52 +303,6 @@ function warnIfBehaviorReadTruncated(args: {
   console.warn(
     `[test-runner] Behavior extraction from ${logPath} has ${String(total)} entries; using the first ${String(entriesRead)}.`,
   );
-}
-
-interface BehaviorAccumulator {
-  filesRead: string[];
-  searches: Array<{ tool: string; summary: string }>;
-  bashCommands: string[];
-  bashRawCommands: string[];
-}
-
-interface ToolUseContext {
-  block: SessionContentBlock;
-  acc: BehaviorAccumulator;
-  summary: string;
-  name: string;
-}
-
-/** Per-tool behavior accumulators, keyed on the shared tool vocabulary. */
-const TOOL_USE_CATEGORIZERS: Partial<Record<KnownToolName, (ctx: ToolUseContext) => void>> = {
-  Read: ({ summary, acc }) => {
-    if (summary) acc.filesRead.push(summary);
-  },
-  Grep: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
-  Glob: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
-  // Web lookups count as searches under their own tool name, matching the
-  // Codex runner's provider searches (`codex-audit-behavior.ts`).
-  WebSearch: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
-  WebFetch: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
-  Bash: ({ block, summary, acc }) => {
-    if (summary) acc.bashCommands.push(summary);
-    if (block.input) {
-      const cmd = String(block.input.command ?? "");
-      if (cmd) {
-        acc.bashRawCommands.push(cmd);
-        if (shellCommandConsultsFiles(cmd)) acc.filesRead.push(cmd);
-        if (shellCommandSearches(cmd)) acc.searches.push({ tool: "Bash", summary: cmd });
-      }
-    }
-  },
-} satisfies Partial<Record<KnownToolName, (ctx: ToolUseContext) => void>>;
-
-function categorizeToolUse(block: SessionContentBlock, acc: BehaviorAccumulator): void {
-  const name = block.toolName ?? "";
-  const summary = block.inputSummary ?? "";
-  if (isKnownTool(name)) {
-    TOOL_USE_CATEGORIZERS[name]?.({ block, acc, summary, name });
-  }
 }
 
 /**

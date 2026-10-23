@@ -9,7 +9,7 @@ import { InlineAction } from "../../ui/InlineAction";
 import { useWorkspace } from "../workspace/WorkspaceProvider/provider";
 import { cardTarget } from "../workspace/use-open-beside/hook";
 import type { SessionContentBlock } from "../../../api";
-import type { ActivityPart } from "../message-parsing";
+import type { ActivityPart } from "../assistant-parts";
 import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail, summarizeActivity } from "./activity-wording";
 
 type ActivityParts = ActivityPart[];
@@ -125,6 +125,8 @@ function countToolCalls(parts: ActivityParts): number {
       case "tools":
         count += part.tools.length;
         break;
+      case "note":
+        break;
     }
   }
   return count;
@@ -150,6 +152,8 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
             );
           case "tools":
             return part.tools.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} excerptInline={excerptInline} />);
+          case "note":
+            return <p key={i} className="my-1 text-card-pen whitespace-pre-wrap">{part.text}</p>;
         }
       })}
     </>
@@ -157,16 +161,17 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
 }
 
 /**
- * Render a collapsible activity group (thinking + tool calls).
- * Single-item groups render the item directly without a wrapper.
+ * Render a collapsible activity group (thinking, tool calls, folded notes).
+ * A single step with no notes renders directly without a wrapper.
  */
 export function ActivityGroup({ parts }: { parts: ActivityParts }) {
   if (parts.length === 0) return null;
 
   const totalItems = countToolCalls(parts);
 
-  // Single item: render directly without the collapsible group wrapper
-  if (totalItems === 1) {
+  // Single step: render directly without the collapsible group wrapper. A
+  // note keeps the wrapper, so it stays folded.
+  if (totalItems === 1 && !parts.some((part) => part.type === "note")) {
     return (
       <div className="text-xs text-card-soft leading-tight my-1 ml-2 pl-2 border-l border-warm-300">
         <ActivityGroupInner parts={parts} excerptInline={false} />

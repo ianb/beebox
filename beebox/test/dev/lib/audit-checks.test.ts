@@ -21,7 +21,7 @@ const auditTest: AuditTest = {
 function behavior(responseText: string): AgentBehavior {
   return {
     filesRead: [], searches: [], bashCommands: [], bashRawCommands: [],
-    responseText, responseLength: responseText.split(/\s+/).length, context: null,
+    responseText, replyText: responseText, responseLength: responseText.split(/\s+/).length, context: null,
   };
 }
 
@@ -192,4 +192,18 @@ void test("A Bash read counts when the file is reached through cd dir; cat file 
     unsetVariable: false,
   },
   );
+});
+
+// `final_reply` runs the text checks on the reply the chat shows, not on text
+// that folded into the activity row before a later tool call.
+void test("final_reply checks only the reply.", async (t) => {
+  const narrated: AgentBehavior = { ...behavior("I'll build a card type.\nYou now have a Loans page."), replyText: "You now have a Loans page." };
+  const forbidden = (finalReply: boolean) => runChecks(
+    { id: "reply", prompt: "Track loans", expected_level: "knows_directly", watch_for: "outcome", response_not_contains: ["card type"], final_reply: finalReply },
+    { behavior: narrated, newOrModifiedCards: new Map() },
+  ).notContainsChecks;
+  t.check({ whole: forbidden(false), reply: forbidden(true) }, {
+    whole: [{ forbidden: "card type", found: true }],
+    reply: [{ forbidden: "card type", found: false }],
+  });
 });

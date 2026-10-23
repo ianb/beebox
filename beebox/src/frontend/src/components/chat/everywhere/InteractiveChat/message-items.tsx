@@ -14,7 +14,7 @@ import { isNoResponseOnly, parseAcks, parseCallouts, type AckIndication } from "
 import { hasAssistantSpeech } from "../../../../lib/audio/speech-parsing/parse";
 import type { SessionContentBlock, SessionEntry } from "../../../../api";
 import { buildStreamEntry } from "../../../../lib/stream-entry";
-import { hasProgressUpdate, hasRenderableAssistantContent } from "../../message-parsing";
+import { hasProgressUpdate, hasRenderableAssistantContent } from "../../assistant-parts";
 import type { ModelMarker } from "../../InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureVerbs } from "../../capture-bubble";
 import { invariant } from "@shared/invariant";

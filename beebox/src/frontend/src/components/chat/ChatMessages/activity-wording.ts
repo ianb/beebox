@@ -6,7 +6,7 @@
  */
 
 import type { SessionContentBlock } from "../../../api";
-import type { ActivityPart } from "../message-parsing";
+import type { ActivityPart } from "../assistant-parts";
 import { type KnownToolName, isKnownTool } from "@shared/known-tools";
 
 type Category = "look" | "search" | "webpage" | "change" | "step" | "handoff" | "hidden";
@@ -44,9 +44,10 @@ function toolCategory(name: string): Category {
   return isKnownTool(name) ? TOOL_CATEGORIES[name] : "step";
 }
 
-/** Summarize an activity group (thinking + tools) for the collapsed header. */
+/** Summarize an activity group (thinking, tools, notes) for the collapsed header. */
 export function summarizeActivity(parts: ActivityPart[]): string {
   let hasThinking = false;
+  let hasNote = false;
   const counts = new Map<Exclude<Category, "hidden">, number>();
   for (const part of parts) {
     switch (part.type) {
@@ -60,6 +61,9 @@ export function summarizeActivity(parts: ActivityPart[]): string {
           counts.set(category, (counts.get(category) || 0) + 1);
         }
         break;
+      case "note":
+        hasNote = true;
+        break;
     }
   }
 
@@ -69,7 +73,8 @@ export function summarizeActivity(parts: ActivityPart[]): string {
     const phrase = CATEGORY_PHRASES[category];
     segments.push(count === 1 ? phrase.one : phrase.many(count));
   }
-  return segments.join(", ") || "working";
+  // Notes are not counted as steps; they name a group only when it has nothing else.
+  return segments.join(", ") || (hasNote ? "noted progress" : "working");
 }
 
 function cardTitle(path: string): string | null {
