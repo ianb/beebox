@@ -38,7 +38,7 @@ export function RecoveredDictation(props: {
   // sends or discards promptly — so it needn't tick.
   const [age, setAge] = useState("just now");
   useEffect(() => {
-    setAge(formatAgo(Date.now() - draft.updatedAt));
+    setAge(formatAgo(draft.updatedAt, Date.now()));
   }, [draft.updatedAt]);
 
   return (

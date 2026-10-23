@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { formatDuration } from "../../../../lib/relative-time";
 import { applyTaskEvent, applyTaskLevel, type LiveTask, type LiveTaskEntry, type TaskEvent } from "./background-tasks";
 
 /**
@@ -29,14 +30,6 @@ export function useBackgroundTasks(): {
   return { tasks, onTaskEvent, onTaskLevel };
 }
 
-function formatElapsed(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}m${String(seconds).padStart(2, "0")}s`;
-}
-
 function TaskPill({ task }: { task: LiveTask }) {
   return (
     <div className="flex items-center gap-2 text-xs text-warm-700 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
@@ -46,7 +39,7 @@ function TaskPill({ task }: { task: LiveTask }) {
         <span className="text-warm-400 flex-shrink-0">· {task.lastToolName}</span>
       ) : null}
       {task.elapsedMs !== undefined ? (
-        <span className="text-warm-400 ml-auto flex-shrink-0 tabular-nums">{formatElapsed(task.elapsedMs)}</span>
+        <span className="text-warm-400 ml-auto flex-shrink-0 tabular-nums">{formatDuration(task.elapsedMs)}</span>
       ) : null}
     </div>
   );

@@ -13,6 +13,7 @@
  */
 
 import type { ResumableCaptureView } from "./useCaptureResume";
+import { friendlyDate } from "../../ui/FriendlyDate";
 
 function summarizeContents(counts: ResumableCaptureView["counts"]): string {
   const parts: string[] = [];
@@ -31,13 +32,12 @@ export function CaptureResumeDialog({ capture, busy, onResume, onSubmit, onDisca
   includeControlIds?: boolean;
 }) {
   const hasControlIds = includeControlIds !== false;
-  const started = new Date(capture.startedAt);
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 px-6" role="dialog" aria-modal="true" aria-label="Resume unfinished capture">
       <div className="w-full max-w-sm rounded-2xl bg-gray-900 border border-gray-700 p-6 text-white">
         <h2 className="text-lg font-semibold">Unfinished capture</h2>
         <p className="mt-2 text-sm text-gray-300">
-          A capture from {started.toLocaleString()} was never submitted — it still has {summarizeContents(capture.counts)}.
+          A capture from {friendlyDate(capture.startedAt)} was never submitted — it still has {summarizeContents(capture.counts)}.
           Pick up where you left off, submit it now, or throw it away.
         </p>
         <div className="mt-5 flex flex-col gap-2">

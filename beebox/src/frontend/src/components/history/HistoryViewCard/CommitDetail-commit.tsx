@@ -12,6 +12,7 @@ import {
 import { Markdown } from "../../Markdown/body";
 import type { HistoryCommit } from "../../../api";
 import { useViewNavigate } from "../../../hooks/useViewNavigate";
+import { friendlyDate } from "../../ui/FriendlyDate";
 
 function trailerValues(value: string | string[] | undefined): string[] {
   if (!value) return [];
@@ -106,7 +107,7 @@ export function CommitTab({
           {commit.hash.substring(0, 8)}
         </code>
         <span className="text-xs text-warm-700">
-          {new Date(commit.date).toLocaleString()}
+          {friendlyDate(commit.date)}
         </span>
         {phase ? <PhaseBadge phase={phase} /> : null}
       </div>
