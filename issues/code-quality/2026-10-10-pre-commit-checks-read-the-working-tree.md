@@ -30,3 +30,15 @@ flaky-tests/20261019T025021Z-implemented.md,
 turn-feedback/20261019T010859Z-implemented.md. Root `AGENTS.md` "Commit and
 land" now says the hooks read the whole working tree. Its priority may be
 stale now that it recurs.
+
+**2026-10-22 (retrospective 20261022-232146):** Four more sessions. The layout
+check threw ENOENT on a path-limited commit when a rename or deletion sat
+outside the committed set, and parallel workers' typecheck and layout-check
+runs failed on siblings' half-written files. One agent's commit message landed
+on another agent's files. Coding feedback:
+bug-burndown-4/20261020T125850Z-implemented.md,
+bug-burndown-4/20261020T201148Z-implemented.md,
+journey-walks-late-oct/20261022T211450Z-implemented.md,
+risky-merge-review/20261022T221012Z-implemented.md. Root `AGENTS.md` now says
+workers report check failures only in their own files and the committer
+reruns the checks.
