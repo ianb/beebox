@@ -1,0 +1,152 @@
+{
+ "[\n    null,\n    null,\n    null,\n    null,\n  ]": [
+  "beebox/src/frontend/test/components/chat.activity-wording.test.ts",
+  "beebox/src/frontend/test/components/chat/native-composer-command.test.ts",
+  "beebox/src/frontend/test/components/history/card-state.test.ts",
+  "beebox/test/cli/lib/session.self-note.test.ts",
+  "beebox/test/webapp/server-root/index-html.test.ts"
+ ],
+ "[\n    true,\n    true,\n    false,\n    false,\n    false,\n    false,\n    false,\n    false,\n  ]": [
+  "beebox/src/frontend/test/components/chat/VoiceChip/view.voice-chip-face.test.ts",
+  "beebox/test/shared/browser-task-batch.test.ts"
+ ],
+ "[\n    true,\n    false,\n    false,\n    false,\n  ]": [
+  "beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/model-drift.test.ts",
+  "beebox/src/frontend/test/lib/ui-scan/actions.test.ts",
+  "beebox/test/core/provider-env/openrouter-chat.test.ts"
+ ],
+ "[\n    true,\n    true,\n    true,\n    true,\n    false,\n  ]": [
+  "beebox/src/frontend/test/components/chat/workspace/WorkspaceCanvas.pdf-frame.test.ts",
+  "beebox/test/core/box/guidance-sync.test.ts"
+ ],
+ "[\n    true,\n    true,\n    false,\n    false,\n  ]": [
+  "beebox/src/frontend/test/hooks/use-image-recovery.image-recovery.test.ts",
+  "beebox/src/frontend/test/lib/view-url.test.ts"
+ ],
+ "{ fetches: 1, values: [\"value\", \"value\", \"value\"] }": [
+  "beebox/src/frontend/test/lib/fetch-coalescer.test.ts",
+  "beebox/src/frontend/test/lib/view-bindings.test.ts"
+ ],
+ "[\n    true,\n    true,\n    true,\n    false,\n  ]": [
+  "beebox/src/frontend/test/lib/inventory-card-state.interface-card-state.test.ts",
+  "beebox/test/core/agent-instruction-files.test.ts",
+  "beebox/test/core/validation-ignore.test.ts",
+  "beebox/test/schemas/pdf.test.ts"
+ ],
+ "{\n    kind: \"moved\",\n    path: \"_content/archive/New.doc.card\",\n  }": [
+  "beebox/src/frontend/test/lib/moved-card-recovery.test.ts",
+  "beebox/test/core/moved-card-forwarding.test.ts"
+ ],
+ "[\n    \"_content/foo/bar.card\",\n    \"_content/foo/bar.card\",\n  ]": [
+  "beebox/src/frontend/test/lib/view-url.test.ts",
+  "beebox/test/shared/ref-path.test.ts"
+ ],
+ "[\n    \"box.json \\\"plugins\\\" must be an array of plugin names; found \\\"courseware\\\"\",\n  ]": [
+  "beebox/test/cli/commands/plugins.test.ts",
+  "beebox/test/core/plugins/active.test.ts"
+ ],
+ "{ staged: [], modified: [], untracked: [], clean: true }": [
+  "beebox/test/cli/commands/upgrade.test.ts",
+  "beebox/test/core/box/structure.init.test.ts",
+  "beebox/test/field-test/run.lifecycle.test.ts",
+  "beebox/test/lib/git-lock.test.ts",
+  "beebox/test/lib/git.concurrent-commit.test.ts",
+  "beebox/test/lib/git.lock-recovery.test.ts",
+  "beebox/test/lib/git.test.ts"
+ ],
+ "{ success: true, created: [], updated: [], procedures: [] }": [
+  "beebox/test/connectors/gmail.pull.test.ts",
+  "beebox/test/connectors/gmail/drafts.test.ts",
+  "beebox/test/field-test/fake-gmail-gate.test.ts"
+ ],
+ "{ success: true, created: [], updated: [\"_content/drive/recipes/Recipes.gfolder.card\"] }": [
+  "beebox/test/connectors/google-drive.folder.sync-states.test.ts",
+  "beebox/test/connectors/google-drive.folder.test.ts"
+ ],
+ "[\n    \"_content/drive/.gitkeep\",\n    \"_content/drive/folder\",\n    \"_content/drive/folder/Folder.gfolder.card\",\n  ]": [
+  "beebox/test/connectors/google-drive.status-and-discovery.test.ts",
+  "beebox/test/connectors/google-drive.test.ts"
+ ],
+ "[\n    \"_content/drive/recipes/Budget_2026.gsheet.card\",\n    \"_content/drive/recipes/Scanpdf.glink.card\",\n  ]": [
+  "beebox/test/connectors/google-drive/mounts.test.ts",
+  "beebox/test/webapp/trpc/routers/drive.mounts.test.ts"
+ ],
+ "[\n    \"CronCreate\",\n    \"CronDelete\",\n    \"CronList\",\n    \"ScheduleWakeup\",\n    \"RemoteTrigger\",\n    \"PushNotification\",": [
+  "beebox/test/core/agent/invoke/run.box-context.test.ts",
+  "beebox/test/services/claude-chat.test.ts"
+ ],
+ "any(String).includes(\"**/tmp-capture/**/*.attach/**\")": [
+  "beebox/test/core/attachments-gitignore.test.ts",
+  "beebox/test/core/box.test.ts"
+ ],
+ "{\n    narration: \"on\",\n    prose: \"on\",\n  }": [
+  "beebox/test/core/chat/features.test.ts",
+  "beebox/test/core/chat/session/history.features-persistence.test.ts"
+ ],
+ "{\n    narration: \"on\",\n    prose: \"off\",\n  }": [
+  "beebox/test/core/chat/features.test.ts",
+  "beebox/test/core/landmark/features.seed.test.ts"
+ ],
+ "{ here: \"\", glob: \"**/*.card\", includeReferring: false, group: \"place\" }": [
+  "beebox/test/core/collection/run.test.ts",
+  "beebox/test/webapp/trpc/routers/collections.query.test.ts"
+ ],
+ "\"Inconclusive: handle receipts \u2014 review of step file reached max turns (8); work completed\"": [
+  "beebox/test/core/handle.test.ts",
+  "beebox/test/core/schedule/health.inconclusive.test.ts"
+ ],
+ "\"`Config:box.json` is the boxholder's display form; write `/_config/box.json`\"": [
+  "beebox/test/core/landmark/nearest.test.ts",
+  "beebox/test/shared/display-path.test.ts",
+  "beebox/test/webapp/trpc/routers.namespace-fence-traversal.test.ts"
+ ],
+ "{ status: 404, body: { error: \"unknown-request\" } }": [
+  "beebox/test/core/last-audio-pending.test.ts",
+  "beebox/test/core/pending-browser-request.screenshot.test.ts"
+ ],
+ "{\n    id: \"11111111-1111-4111-8111-111111111111\",\n    state: \"accepted\",\n  }": [
+  "beebox/test/core/quick-capture/acceptance.test.ts",
+  "beebox/test/mobile-contract/quick-capture.test.ts"
+ ],
+ "\"Inconclusive: procedure refresh-maps \u2014 review of step maps reached max turns (16); work completed\"": [
+  "beebox/test/core/schedule/health.inconclusive.test.ts",
+  "beebox/test/core/schedule/health.test.ts"
+ ],
+ "\"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\"": [
+  "beebox/test/core/upload-helpers.test.ts",
+  "scan-uploader/test/cli/hash.test.ts"
+ ],
+ "{\n    PATH: \"/repo/beebox/bin:/usr/bin\",\n    BBX_SERVER_URL: \"http://127.0.0.1:3210\",\n    BBX_AGENT_TOKEN: \"agent-token\"": [
+  "beebox/test/services/claude-chat.test.ts",
+  "beebox/test/services/codex-sdk-session.boundary.test.ts"
+ ],
+ "{\n    choice: {\n      name: \"plain\",\n      stock: \"neutral\",\n    },\n    origin: \"engine\",\n    problem: null,\n  }": [
+  "beebox/test/shared/card-theme.test.ts",
+  "beebox/test/webapp/trpc/routers/presentation.test.ts"
+ ],
+ "{\n    email: null,\n    name: null,\n    source: null,\n  }": [
+  "beebox/test/webapp/auth.hub-identity.test.ts",
+  "beebox/test/webapp/auth.required.test.ts",
+  "beebox/test/webapp/auth.ws.test.ts"
+ ],
+ "{\n    email: null,\n    name: null,\n    source: \"open\",\n  }": [
+  "beebox/test/webapp/auth.hub-identity.test.ts",
+  "beebox/test/webapp/auth.required.test.ts"
+ ],
+ "{\n    email: \"owner@example.com\",\n    name: \"Owner\",\n    source: \"cookie\",\n  }": [
+  "beebox/test/webapp/auth.session-gen.test.ts",
+  "beebox/test/webapp/auth.ws.test.ts"
+ ],
+ "{ email: null, name: null, source: null }": [
+  "beebox/test/webapp/auth.session-gen.test.ts",
+  "beebox/test/webapp/box-identity.test.ts"
+ ],
+ "{\n    status: 200,\n    contentType: \"text/html\",\n  }": [
+  "beebox/test/webapp/routes/auth/login-page.test.ts",
+  "beebox/test/webapp/server-root.spa-fallback.test.ts"
+ ],
+ "\"NOT_FOUND: This message is no longer stored.\"": [
+  "beebox/test/webapp/trpc/routers/quick-chat.submit.delivery.test.ts",
+  "beebox/test/webapp/trpc/routers/quick-chat.submit.test.ts"
+ ]
+}
