@@ -2,13 +2,13 @@ import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, authedProcedure } from "../procedures.js";
-import { splitCardContent, type CardSchema } from "../../../exports/cards.js";
+import { editableFrontmatterDocument, renderFrontmatterDocument, splitCardContent, type CardSchema } from "../../../exports/cards.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { summarize } from "../../../core/loader-registry.js";
 import { resolveCardPath } from "../card-path.js";
-import { Document, isMap, parse as parseYaml, parseDocument } from "yaml";
+import { parse as parseYaml } from "yaml";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { findInboundCardRefs } from "../../../core/find-inbound-card-refs.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash/command.js";
@@ -212,16 +212,13 @@ export const cardRouter = router({
         if (!split.hasFrontmatter) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Card has no frontmatter block" });
         }
-        const document = split.frontmatterText.trim() === ""
-          ? new Document({})
-          : parseDocument(split.frontmatterText);
-        if (document.errors.length > 0 || !isMap(document.contents)) {
+        const document = editableFrontmatterDocument(split.frontmatterText);
+        if (document === null) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Card frontmatter is not a valid YAML mapping" });
         }
         if (input.theme === null) document.delete("theme");
         else document.set("theme", input.theme);
-        const yaml = String(document);
-        const content = `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${split.body}`;
+        const content = renderFrontmatterDocument(document, split.body);
         await writeFileAtomic(fullPath, { content });
         try {
           const commit = await stageAndCommitPaths(ctx.boxRoot, {

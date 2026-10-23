@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import { isMap, isSeq, parseDocument } from "yaml";
 import { parseCardText } from "../card-io.js";
-import { splitCardContent } from "../../exports/cards.js";
+import { renderFrontmatterDocument, splitCardContent } from "../../exports/cards.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { getBoxTime } from "../../lib/time.js";
@@ -90,8 +90,7 @@ export async function planTriageTodoAnnotation(input: {
   if (existingTodos === undefined) document.set("todos", merged);
   else if (isSeq(existingTodos)) existingTodos.add(todo);
   else throw new TriageTodoTargetError({ file: input.file, detail: "todos must be a YAML sequence" });
-  const yaml = document.toString({ lineWidth: 0 });
-  const content = `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${split.body}`;
+  const content = renderFrontmatterDocument(document, split.body);
   const afterDigest = createHash("sha256").update(content).digest("hex");
   return { before, after: content, beforeDigest, afterDigest, todoId: todo.id, changed: true };
 }

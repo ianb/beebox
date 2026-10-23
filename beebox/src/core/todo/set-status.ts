@@ -27,7 +27,7 @@
 
 import type { Node } from "@markdoc/markdoc";
 import { isMap, isSeq, parseDocument } from "yaml";
-import { splitCardContent } from "../../exports/cards.js";
+import { renderFrontmatterDocument, splitCardContent } from "../../exports/cards.js";
 import { assignLocators } from "../../shared/todo-locators.js";
 import { invariant } from "../../shared/invariant.js";
 import { errorMessage } from "../../shared/error-guards.js";
@@ -100,8 +100,7 @@ function setFrontmatterAttribute(content: string, edit: AttributeEdit<{ kind: "f
   } else {
     doc.setIn(["todos", locator.index, name], value);
   }
-  const yaml = doc.toString({ lineWidth: 0 });
-  return `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${split.body}`;
+  return renderFrontmatterDocument(doc, split.body);
 }
 
 function setBodyAttribute(content: string, edit: AttributeEdit<{ kind: "body"; line: number; nth?: number }>): string {

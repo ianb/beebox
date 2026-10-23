@@ -8,7 +8,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { frontmatterFence, splitCardContent } from "../../src/cards/frontmatter.js";
+import { editableFrontmatterDocument, frontmatterFence, renderFrontmatterDocument, splitCardContent } from "../../src/cards/frontmatter.js";
 
 const split = (text: string) => {
   const { frontmatterText, body, lineOffset, hasFrontmatter } = splitCardContent(text);
@@ -44,3 +44,20 @@ void test("frontmatterFence gives the block's text and body offsets", async (t) 
   t.check(fence === null ? null : [text.slice(fence.textStart, fence.textEnd), text.slice(fence.bodyStart)], ["title: x", "body"]);
   t.check(frontmatterFence("no block"), null);
 });
+
+// ## Editing one key in place
+//
+// The web editors (card theme, landmark theme, browser task close) refuse a
+// block that does not parse or is not a mapping, treat an empty block as an
+// empty mapping, and write long values on one line.
+void test("editableFrontmatterDocument refuses non-mappings; renderFrontmatterDocument keeps the body", async (t) => {
+  t.check([editableFrontmatterDocument("- a\n- b"), editableFrontmatterDocument("a: [unclosed")], [null, null]);
+  const empty = editableFrontmatterDocument("");
+  empty?.set("closed", true);
+  t.check(empty === null ? null : renderFrontmatterDocument(empty, "body\n"), "---\nclosed: true\n---\nbody\n");
+  const long = "word ".repeat(30).trim();
+  const doc = editableFrontmatterDocument("# keep me\ntitle: x\n");
+  doc?.set("summary", long);
+  t.check(doc === null ? null : renderFrontmatterDocument(doc, ""), `---\n# keep me\ntitle: x\nsummary: ${long}\n---\n`);
+});
+

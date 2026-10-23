@@ -19,7 +19,7 @@
  * docs/implemented-plans/remove-cardworks-package.md.)
  */
 
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { Document, isMap, parse as parseYaml, parseDocument, stringify as stringifyYaml } from "yaml";
 import { isRecord } from "../shared/is-record.js";
 
 /**
@@ -143,3 +143,23 @@ export function parseFrontmatterObject(content: string): Record<string, unknown>
 export function renderFrontmatterBlock(fields: object, body?: string): string {
   return `---\n${stringifyYaml(fields, { lineWidth: 0 })}---\n${body ?? ""}`;
 }
+
+/**
+ * A frontmatter block as an editable YAML document, or null when it does not
+ * parse or is not a mapping. An empty block is an empty mapping. Editing the
+ * document keeps untouched keys' comments and quoting.
+ */
+export function editableFrontmatterDocument(frontmatterText: string): Document | null {
+  const document = frontmatterText.trim() === "" ? new Document({}) : parseDocument(frontmatterText);
+  return document.errors.length > 0 || !isMap(document.contents) ? null : document;
+}
+
+/**
+ * Card text from an edited frontmatter document and an unchanged body, with
+ * long values on one line like {@link renderFrontmatterBlock}.
+ */
+export function renderFrontmatterDocument(document: Document, body: string): string {
+  const yaml = document.toString({ lineWidth: 0 });
+  return `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${body}`;
+}
+
