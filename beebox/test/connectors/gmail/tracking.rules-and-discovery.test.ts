@@ -10,7 +10,7 @@ import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/c
 import type { GmailMessage } from "../../../src/services/google-gmail-types.js";
 import { parseGmailConnectorConfig } from "../../../src/connectors/gmail/config.js";
 import { withGmailTrackingLock } from "../../../src/connectors/gmail/track.js";
-import { evaluateGmailRules } from "../../../src/connectors/gmail/rules.js";
+import { evaluateGmailRules, recheckUnevaluated } from "../../../src/connectors/gmail/rules.js";
 import { parseGmailTransientState } from "../../../src/connectors/gmail/state.js";
 import {
   discoverGmailChanges,
@@ -346,6 +346,114 @@ void test("A stage rule and unsafe Message-IDs", async (t) => {
   t.check(unsafe, { queries: 0, unevaluatedThreadId: "unsafe-thread" });
 });
 
+// Gmail's own Message-IDs carry `=` and `/` (RFC 5322 atext). They were once
+// reported unevaluated, so label rules silently skipped ordinary mail. The
+// search quotes the id, and the rule still matches.
+void test("A Message-ID with = and / is still checked against the rule", async (t) => {
+  const gmail = oldMailGmail();
+  const fresh = addFreshMessage(gmail);
+  fresh.payload!.headers = fresh.payload!.headers!.map((header) =>
+    header.name === "Message-ID" ? { ...header, value: "<CAJx=Ab+c/D_e@mail.gmail.com>" } : header,
+  );
+  const queries: Array<string | undefined> = [];
+  const originalListMessages = gmail.listMessages.bind(gmail);
+  gmail.listMessages = async (opts) => {
+    queries.push(opts.q);
+    return originalListMessages(opts);
+  };
+  const result = await evaluateGmailRules({
+    service: gmail,
+    config: parseGmailConnectorConfig({
+      rules: [{ name: "watch-mail", query: "label:callback", action: { type: "stage" } }],
+    }),
+    state: { rules: { "watch-mail": { baselineAt: "2026-08-01T00:00:00.000Z" } } },
+    candidates: [fresh],
+    trackedThreadIds: new Set(),
+    labelMap: new Map([["Label_7", "callback"]]),
+    now: new Date("2026-08-05T13:00:00.000Z"),
+  });
+  t.check({ queries, rule: result.state.rules?.["watch-mail"] }, {
+    queries: ['(label:callback) rfc822msgid:"CAJx=Ab+c/D_e@mail.gmail.com"'],
+    rule: {
+      baselineAt: "2026-08-01T00:00:00.000Z",
+      pending: [{
+        messageId: "new",
+        threadId: "new-thread",
+        from: "sender@example.com",
+        subject: "New",
+        date: "2026-08-01T15:00:00.000Z",
+        snippet: "",
+        labels: ["callback"],
+        discoveredAt: "2026-08-05T13:00:00.000Z",
+      }],
+      additionalMatches: 0,
+    },
+  });
+});
+
+// Mail listed unevaluated under the old guard is re-checked once: a message
+// with an ordinary id now reaches the rule, one still unsafe goes back on the
+// list, and a deleted one is dropped. The marker stops a refetch every sync.
+void test("Unevaluated mail is re-checked once against its rule", async (t) => {
+  const gmail = oldMailGmail();
+  const fresh = addFreshMessage(gmail);
+  fresh.payload!.headers = fresh.payload!.headers!.map((header) =>
+    header.name === "Message-ID" ? { ...header, value: "<CAJx=Ab@mail.gmail.com>" } : header,
+  );
+  const literal = { ...gmailMessage({ id: "literal", threadId: "literal-thread", subject: "Literal", body: "" }), labelIds: ["Label_7"] };
+  literal.payload!.headers = literal.payload!.headers!.map((header) =>
+    header.name === "Message-ID" ? { ...header, value: "<a@[192.0.2.1]>" } : header,
+  );
+  gmail.addMessage(literal);
+  const entry = (messageId: string, threadId: string) => ({
+    messageId, threadId, from: "sender@example.com", subject: "", date: "2026-08-01T15:00:00.000Z",
+    snippet: "", labels: ["callback"], discoveredAt: "2026-08-02T00:00:00.000Z",
+  });
+  const fetched: string[] = [];
+  const originalGetMessage = gmail.getMessage.bind(gmail);
+  gmail.getMessage = async (id) => {
+    fetched.push(id);
+    return originalGetMessage(id);
+  };
+  const opts = {
+    service: gmail,
+    config: parseGmailConnectorConfig({
+      rules: [{ name: "watch-mail", query: "label:callback", action: { type: "stage" } }],
+    }),
+    trackedThreadIds: new Set<string>(),
+    labelMap: new Map([["Label_7", "callback"]]),
+    now: new Date("2026-08-05T13:00:00.000Z"),
+  };
+  const first = await recheckUnevaluated({
+    ...opts,
+    state: { rules: { "watch-mail": {
+      baselineAt: "2026-08-01T00:00:00.000Z",
+      unevaluated: [entry("new", "new-thread"), entry("literal", "literal-thread"), entry("deleted", "deleted-thread")],
+    } } },
+  });
+  t.check({ fetched, rule: first.state.rules?.["watch-mail"] }, {
+    fetched: ["new", "literal", "deleted"],
+    rule: {
+      baselineAt: "2026-08-01T00:00:00.000Z",
+      unevaluatedRecheckedAt: "2026-08-05T13:00:00.000Z",
+      pending: [{
+        messageId: "new", threadId: "new-thread", from: "sender@example.com", subject: "New",
+        date: "2026-08-01T15:00:00.000Z", snippet: "", labels: ["callback"], discoveredAt: "2026-08-05T13:00:00.000Z",
+      }],
+      additionalMatches: 0,
+      unevaluated: [{
+        messageId: "literal", threadId: "literal-thread", from: "sender@example.com", subject: "Literal",
+        date: "2026-08-01T15:00:00.000Z", snippet: "", labels: ["callback"], discoveredAt: "2026-08-05T13:00:00.000Z",
+      }],
+      additionalUnevaluated: 0,
+    },
+  });
+
+  fetched.length = 0;
+  const second = await recheckUnevaluated({ ...opts, state: first.state });
+  t.check({ fetched, state: second.state }, { fetched: [], state: first.state });
+});
+
 // ## History discovery is bounded and resumable
 //
 // A single oversized history record is consumed across sync checkpoints rather
@@ -369,7 +477,7 @@ void test("A single oversized history record is consumed across sync checkpoints
     historyId: "1",
     historyResume: { startHistoryId: "1", refOffset: 500 },
     historyExpired: false,
-    requestedMaxResults: 100,
+    requestedMaxResults: 500,
   });
 
   const secondPage = await discoverGmailChanges({
@@ -382,6 +490,56 @@ void test("A single oversized history record is consumed across sync checkpoints
     historyId: "2",
     historyResume: undefined,
     historyExpired: false,
+  });
+});
+
+// A backlog spanning several history pages drains in one sync until the ref
+// limit, then resumes at the next page. A box that syncs hourly would
+// otherwise take one sync per page (the 2026-10-22 Gmail stall's backlog).
+void test("History pages are read in one sync until the ref limit, then resume at the next page", async (t) => {
+  const gmail = createFakeGoogleGmail();
+  const pageSize = 200;
+  const pages = ["p0", "p1", "p2", "p3"].map((token, page) => ({
+    token,
+    history: [{
+      id: String(page + 2),
+      messagesAdded: Array.from({ length: pageSize }, (_, index) => ({
+        message: { id: `m${page}-${index}`, threadId: `t${page}-${index}` },
+      })),
+      // Labelled on a later page too: fetched once.
+      ...(page === 1 ? { labelsAdded: [{ message: { id: "m0-0", threadId: "t0-0" }, labelIds: ["Label_1"] }] } : {}),
+    }],
+  }));
+  const requested: Array<string | undefined> = [];
+  gmail.listHistory = async (opts) => {
+    requested.push(opts.pageToken);
+    const index = opts.pageToken === undefined ? 0 : pages.findIndex((page) => page.token === opts.pageToken);
+    const next = pages[index + 1];
+    return {
+      history: pages[index]!.history,
+      historyId: "9",
+      ...(next === undefined ? {} : { nextPageToken: next.token }),
+    };
+  };
+  const first = await discoverGmailChanges({ service: gmail, startHistoryId: "1" });
+  const ids = (page: number, [from, to]: [number, number]): string[] =>
+    Array.from({ length: to - from }, (_, index) => `m${page}-${from + index}`);
+  t.check({ ...first, refs: first.refs.map((ref) => ref.id), requested }, {
+    refs: [...ids(0, [0, 200]), ...ids(1, [0, 200]), ...ids(2, [0, 100])],
+    historyId: "1",
+    historyResume: { startHistoryId: "1", pageToken: "p2", refOffset: 100 },
+    historyExpired: false,
+    requested: [undefined, "p1", "p2"],
+  });
+
+  requested.length = 0;
+  const second = await discoverGmailChanges({ service: gmail, startHistoryId: first.historyId, resume: first.historyResume });
+  t.check({ ...second, refs: second.refs.map((ref) => ref.id), requested }, {
+    refs: [...ids(2, [100, 200]), ...ids(3, [0, 200])],
+    historyId: "9",
+    historyResume: undefined,
+    historyExpired: false,
+    requested: ["p2", "p3"],
   });
 });
 

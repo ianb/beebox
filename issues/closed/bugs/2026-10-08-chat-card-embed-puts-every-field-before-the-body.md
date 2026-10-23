@@ -28,7 +28,7 @@ puts every type field on the front (rationale in the file comment, lines
 
 Cap or collapse the field block in embeds, put the body first, or tell the
 agent that an embed shows the whole card so it links instead. Related:
-[structured card front hides its facts](../decisions/2026-10-08-structured-card-front-hides-its-facts.md)
+[structured card front hides its facts](../../decisions/2026-10-08-structured-card-front-hides-its-facts.md)
 (same face split, opposite complaint).
 
 Report: [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 56, shot 19).

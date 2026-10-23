@@ -61,3 +61,11 @@ Still relevant. [C-reconnecting](../../beebox/test/user-stories/journeys/C-recon
 ## Re-encounter 2026-10-09 (journey walks)
 
 Still relevant, per [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 29, 71). Row 29: the walker clicked Marta in the todo view and the whole list opened on the right with the chat gone; the click was on Marta, not the title, and the todo opens its card in the chat pane, so the walker misread it. Row 71: a reply arrived unseen while "Things to do" filled the chat pane, and the walker closed the pane to see it. The turn context says `transcript="hidden"` (12:40:44); no unseen-reply sign was found in `components/chat/everywhere/`. Not reproduced.
+
+## Re-encounter 2026-10-22 (journey walks)
+
+Three walks; the priority may be stale.
+
+- [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 48): six tabs by the end. Settings and Admin, opened once to find notifications, stayed open. The walker: "tabs pile up and I never asked for Settings/Admin to stay open." The Home tab scrolled out of the strip. The strip fix of 2026-10-16 held: no tab was squeezed to "×".
+- [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (rows 9, 27): tabs piled up in the left pane, two of them "Back fence"; "a bit confusing".
+- [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 33) and H (row 6): a count on the Box page ("1 to do", "4 overdue") opened Todos in the chat's pane, so the chat left the screen and the next reply arrived unseen. That mechanism is filed as [reply unseen while cards cover the chat](../closed/bugs/2026-10-22-reply-unseen-while-cards-cover-the-chat.md).

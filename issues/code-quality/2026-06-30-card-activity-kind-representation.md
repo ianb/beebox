@@ -38,3 +38,7 @@ convention). So the representation is worth a deliberate pass:
 ## Next-action check (2026-09-24)
 
 Reconfirmed 2026-09-24: still open, and more concrete. `renderActivityChildren` (`beebox/src/core/chat/card-activity.ts`, ~line 116) still puts every detail in element text. `scrolled` now reports a real scalar (`WorkspaceCanvas.tsx:51`, `reportActivity("scrolled", fraction.toFixed(1))`) through that free-text channel, so the mixed-shape case is live. The design pass is still needed.
+
+## Audit 2026-10-22
+
+Still open. Corrected pointers: `renderActivityChildren` is at `beebox/src/core/chat/card-activity.ts:123`. The `scrolled` reporter is now `beebox/src/frontend/src/components/chat/workspace/WorkspaceCanvas/view.tsx:54`. The prompt text lives under `beebox/src/core/chat/session/prompts.ts`.

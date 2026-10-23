@@ -90,16 +90,19 @@ function describe(failure: FixableFailure, docs: number): string {
  *
  * - A fixable failure on any pull opens (or continues) the problem. A
  *   disabled API is preferred over a missing scope: it is the one to fix first.
- * - Otherwise a complete pass whose every Doc pull reached the Docs API clears
- *   it. That includes a complete pass with no Doc pulls: no Docs are syncing,
- *   so none sync at reduced fidelity (the last Doc card was deleted).
- * - Otherwise — an incomplete pass, or any transient (`other`) failure among
- *   the pulls — some Doc went unchecked, and the previous value stands.
+ * - Otherwise one Doc pull that reached the Docs API clears it. The problem is
+ *   box-wide (the Cloud project or the OAuth grant), so one success proves it
+ *   is gone, also on a pass that a folder cap or an unrelated failure left
+ *   incomplete.
+ * - Otherwise a complete pass with no Doc pulls clears it: no Docs are
+ *   syncing, so none sync at reduced fidelity (the last Doc card was deleted).
+ * - Otherwise (only transient `other` failures, or an incomplete pass with no
+ *   Doc pulls) the previous value stands.
  */
 export function nextDocsApiDiagnosis(input: {
   previous: DocsApiDiagnosis | null;
   outcomes: readonly DocsApiOutcome[];
-  /** No sync failures and no folder cap: every Doc card the box tracks was pulled. */
+  /** No sync failures and no folder cap: every Doc card the box tracks was pulled. Used only when no Doc pull reached the Docs API. */
   passComplete: boolean;
   now: Date;
 }): DocsApiDiagnosis | null {
@@ -115,7 +118,8 @@ export function nextDocsApiDiagnosis(input: {
       since: previous?.since ?? now.toISOString(),
     };
   }
-  if (passComplete && outcomes.every((outcome) => outcome.ok)) return null;
+  if (outcomes.some((outcome) => outcome.ok)) return null;
+  if (passComplete && outcomes.length === 0) return null;
   return previous;
 }
 

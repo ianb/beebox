@@ -81,3 +81,7 @@ discoverable without a repo-specific convention.
   area rather than separately.
 - Point 5 is a convention, not a mechanism; enforcing it (vs. just
   documenting it) is an open question the doc doesn't currently answer.
+
+## Audit 2026-10-22
+
+Points 1 to 4 are already in the code (commit 67a0a383e). `prompt` is optional and `createBrowserTaskTemplate` emits a four-heading scaffold (`beebox/src/schemas/browser-task.ts:250-290`). `limit` is a frontmatter field (line 91) and the guidance says to compare `coverage` with it (line 221). The guidance asks for an optional `group` label (line 186) and requires a scope pass by a box-aware agent (line 223). Point 5 remains: the guidance names no directory for task cards. The developer can keep this issue for point 5 alone, or close it with a note.

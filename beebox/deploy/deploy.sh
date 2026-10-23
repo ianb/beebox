@@ -590,8 +590,16 @@ REMOTE
 # strand the page. PIPE is the one that matters there: when the laptop's ssh
 # drops, this script's output pipe closes and its next write raises SIGPIPE,
 # whose default action would skip the EXIT trap.
+#
+# The trap also restarts the services when the script exits non-zero between
+# the stop and the normal restart. SERVICES_STOPPED is 1 only in that span, so a
+# failure before the stop or after the restart never starts anything here. The
+# restart is guarded so a failure to start cannot replace the original exit
+# code, and it leaves a marker next to this script ("$0") so the controller
+# knows the services came back from the trap, not from a finished activation.
 cat >> "$REMOTE_SCRIPT" <<'WINDOW'
-trap 'rc=$?; /usr/local/sbin/bbx-deploy-window close "$rc" || echo "  WARNING: could not close the deploy window" >&2' EXIT
+SERVICES_STOPPED=0
+trap 'rc=$?; if [ "$SERVICES_STOPPED" = 1 ] && [ "$rc" -ne 0 ]; then echo "  Activation failed (exit $rc) after the services stopped; starting them again on the live tree as it stands..." >&2; if systemctl start beebox-hub beebox-scheduler; then : > "$0.services-restarted-by-trap"; else echo "  WARNING: could not restart beebox-hub/beebox-scheduler; production is down until a restart or a successful deploy" >&2; fi; fi; /usr/local/sbin/bbx-deploy-window close "$rc" || echo "  WARNING: could not close the deploy window" >&2' EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 141' PIPE
@@ -599,6 +607,9 @@ trap 'exit 143' TERM
 WINDOW
 queue_remote command /usr/local/sbin/bbx-deploy-window open "$STAGE_DIR/beebox/dist/deploy-page.html"
 queue_remote command /usr/local/sbin/bbx-deploy-window down
+# From here until the restart, the EXIT trap starts the services on a failure.
+# Set before the stop: a stop that fails halfway has already taken one down.
+printf 'SERVICES_STOPPED=1\n' >> "$REMOTE_SCRIPT"
 queue_remote command systemctl stop beebox-hub beebox-scheduler
 queue_remote command rsync "${RSYNC_OPTS[@]}" --exclude '.activate-deploy.sh' "$STAGE_DIR/" "$INSTALL_DIR/"
 queue_remote command chown -R beebox:beebox "$INSTALL_DIR"
@@ -707,60 +718,25 @@ queue_remote stdin bash -s <<'REMOTE'
   fi
 REMOTE
 
-# Reconcile each v2-shape (package-layout) box's own node_modules against its
-# package.json. `bbx engine init`/`box-packageify` scaffold a package.json declaring
-# react/react-dom/typescript direct deps (view-metadata compilation needs a
-# real, box-owned react — see src/webapp/views/compiler/compile.ts and
-# src/core/box/package.ts) but deliberately don't install them (Track F of
-# docs/implemented-plans/boxes-as-packages-v2.md has no real registry yet for
-# the `beebox` dependency itself). Left uninstalled, every view in the
-# box silently degrades to a "Failed to compile" stub with no bound card
-# type and no visible error — see the box-family incident this fixed.
-# Runs after every deploy (not just once) because a box's package.json can
-# change independently — an agent `pnpm add`s a view dependency, or a fresh
-# `box-packageify` runs — between deploys.
+# Reconcile each package-layout box's own node_modules against its manifest
+# (deploy/server-bin/bbx-box-install: what a box declares, why, and when it is
+# reinstalled). Runs after every deploy because a box's package.json changes
+# independently: an agent `pnpm add`s a view dependency, a migration rewrites
+# the manifest, a fresh `box-packageify` runs. The helper's bytes come from the
+# build checkout through stdin, as bbx-host-apt's do.
 queue_step "Reconciling box package installs..."
-queue_remote stdin bash -s <<'REMOTE'
-  set -e
-  for box in /home/beebox/boxes/*/; do
-    pj="$box/package.json"
-    [[ -f "$pj" ]] || continue   # shapeVersion 1 (legacy) boxes have none — skip
-    name=$(basename "$box")
-
-    # The box commits the portable `"beebox": "link:.beebox/engine"`; the
-    # gitignored `.beebox/engine` link holds this server's engine path, so no
-    # deploy writes a tracked file (docs/implemented-plans/portable-engine-dependency.md).
-    # A box not yet migrated still names /opt/beebox/beebox directly; the
-    # link is harmless there. A failed box prints ERROR and the deploy moves
-    # on to the next box, as the converge step does.
-    link_check=/opt/beebox/beebox/bin/box-engine-link
-    if ! sudo -u beebox -H bash -lc '"$0" link "$1" /opt/beebox/beebox' "$link_check" "$box"; then
-      echo "  ERROR $name: could not link .beebox/engine; skipping its install." >&2
-      continue
-    fi
-
-    marker="$box/node_modules/react"
-    # Reinstall too when the box shows no completed install: the engine-link
-    # migration changes the spec without reinstalling, so a node_modules/beebox
-    # that does not go through the link is stale.
-    if [[ ! -e "$marker" || "$pj" -nt "$marker" ]] || ! "$link_check" verify "$box" 2>/dev/null; then
-      echo "  $name: installing (package.json newer than last install, or never installed)..."
-      if ! sudo -u beebox -H bash -lc "cd '$box' && pnpm install"; then
-        echo "  $name: pnpm install exited nonzero — check for real dependency errors above" \
-             "(a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else isn't)"
-      fi
-    fi
-    if ! "$link_check" verify "$box"; then
-      echo "  ERROR $name: the box has no usable engine after install." >&2
-    fi
-  done
-REMOTE
+queue_remote stdin bash -s /home/beebox/boxes /opt/beebox/beebox \
+  < "$CHECKOUT/beebox/deploy/server-bin/bbx-box-install"
 
 # Deploy installs are what grow both caches. Prune only after the root workspace
 # and Bee Box-owned box installs have finished, so this cannot evict entries a
 # later install in the same deploy still needs. Start Bee Box-user cleanup in
 # its home so upward config discovery cannot reach /root/uv.toml; `-H`
 # separately gives HOME-based tools the Bee Box user's home.
+# pnpm 10's `store prune` also deletes every cached registry metadata file, so
+# after this step the server has no warm metadata cache. A migration that runs
+# pnpm on the server must not assume one: use `--prefer-offline`, never
+# `--offline`.
 queue_step "Pruning deploy package caches..."
 queue_remote stdin bash -s <<'CACHECLEAN'
 set -euo pipefail
@@ -930,6 +906,9 @@ REMOTE
 
   queue_step "Restarting services..."
   queue_remote command bash -c 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"'
+  # The restart succeeded (set -e would have exited above otherwise): the EXIT
+  # trap must not start the services a second time if a later check fails.
+  printf 'SERVICES_STOPPED=0\n' >> "$REMOTE_SCRIPT"
 
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
@@ -1143,6 +1122,8 @@ set -a
 source /home/beebox/.env
 set +a
 maintenance_rc=0
+trap_marker="$stage_dir/.activate-deploy.sh.services-restarted-by-trap"
+rm -f "$trap_marker"
 node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh" || maintenance_rc=$?
 # A box whose convergence failed stays closed for recovery. Repair it now
 # instead of waiting for the hourly box-convergence pass: the same bounded
@@ -1153,9 +1134,17 @@ node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://loc
 # held. No `--yield`: the box is closed, and the bounded drain covers work that
 # entered since. The deploy still reports its failure.
 if [[ $maintenance_rc -ne 0 ]]; then
+  # The repair needs a finished activation with the services up. If activation
+  # failed before the restart, the activation script's EXIT trap started the
+  # services on the live tree as it stands (marker), or they are still stopped. Either
+  # way the engine is half-activated: skip the repair and fail at once.
+  if [[ -e "$trap_marker" ]] || ! systemctl is-active -q beebox-hub || ! systemctl is-active -q beebox-scheduler; then
+    echo "Activation failed before the services restarted (exit $maintenance_rc); skipping the migration repair." >&2
+    exit "$maintenance_rc"
+  fi
   for box in /home/beebox/boxes/*/; do
     [[ -e "$box/.git" ]] || continue
-    status=$(sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; cd "$1" && timeout 60 node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$box" 2>/dev/null) || continue
+    status=$(sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; cd "$1" && timeout 60 node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$box" 2>/dev/null) || { echo "  $box: engine could not report migration status; skipping its repair check" >&2; continue; }
     [[ "$status" == *'"pending":[]'* ]] && continue
     echo "  $box: migration pending after a failed convergence; running bounded repair now..."
     sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd "$1" && timeout --kill-after=5s 1500s node node_modules/beebox/dist/cli.mjs engine migrate --sweep --repair --json' bbx-repair "$box" \

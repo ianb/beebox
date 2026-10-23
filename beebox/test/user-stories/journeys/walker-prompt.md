@@ -47,7 +47,7 @@ bin/browse open <path>        # e.g. bin/browse open /            (paths are app
 bin/browse snapshot -i        # what is on screen; each control shows [ref=e3] and, usually, id=bbx-…
 bin/browse click bbx-some-id   # act by the id when the line shows one
 bin/browse click @e3          # by ref only when it shows no id
-bin/browse fill bbx-some-id "text"
+bin/browse fill bbx-some-id 'text'   # single quotes: in double quotes the shell eats "$1,850"
 bin/browse upload @e5 <file>  # file input
 bin/browse scroll down [px]   # also up/left/right
 bin/browse scroll down [px] --selector "<scrollable-pane-css>"  # target an inner pane
@@ -57,20 +57,26 @@ bin/browse eval "<js>"        # read something off the page if you must
 ```
 
 Use the `id=` when a line has one: ids stay valid across page changes, refs (`@e3`) are
-renumbered by any page change and must be re-snapshotted first. If a command prints
+renumbered by any page change and must be re-snapshotted first. `bin/browse` refuses an `@eN`
+ref (`stale-ref`) once a click, fill, press, open, back/forward/reload or tab switch has run since
+your last snapshot; take a new snapshot after each such action. If a command prints
 `✗ … refused: <reason>`, the tool did not do it — it is telling you the control could not be
 operated (disabled, hidden, covered, gone) and why. That is worth noting as what you saw; do not
 read it as the app having done nothing. `✓ Done` means the action was delivered, not that it
 had the effect you expected — look at the screen.
 
+Read the output of every command; do not send it to `/dev/null`. A refusal you did not see
+reads later as the app ignoring you.
+
 A refusal that says `offscreen` is the one you can always do something about: scroll, or
-`scrollintoview`, and try again. A person would scroll without thinking about it, so reaching
+`scrollintoview`, and try again. A tab scrolled out of its strip reports `offscreen` too. A person would scroll without thinking about it, so reaching
 something that way is not worth a note — but if you scroll to it and it still cannot be used,
 that is the app, and it is worth one. You are already signed in.
 
 `scroll down [px]` targets the document. When the thing you are reading is inside a pane,
 identify that pane first and pass its CSS selector with `--selector`; do not guess which pane
-is active. If needed, use a read-only `eval` to compare a candidate's `scrollHeight`,
+is active; `--selector` uses the first visible match and refuses when every match is hidden.
+`mouse wheel` does not scroll at the last `mouse move` position. If needed, use a read-only `eval` to compare a candidate's `scrollHeight`,
 `clientHeight`, and `scrollTop`, then use `scrollintoview` on a visible heading or control as
 an alternate way to reach content. A successful `✓ Done` only means the command was delivered;
 check the screen or those geometry values to confirm that the intended pane moved.
@@ -86,6 +92,19 @@ Without them the tool drives a different box, or a browser someone else is using
 you do will be about yours. `/` is the
 app's own path — the tool adds the rest.
 
+**Coming back later is a new browser session.** When the person leaves and returns ("come back
+later", "next time"), open `/` under a new `--session` name, for
+example `--session {{BOX_SLUG}}-return`. Reopening `/` in the same session is not coming back: it
+keeps the page, tabs, and in-page state a returning person would not have.
+
+The app's clock reads {{NOW}}. The evening in your situation may be a different time of day; that
+is the instrument's clock, not a flaw in the app, so do not note it as one and do not change your
+story to fit it.
+
+The browser here blocks notification permission (a request is answered "denied" with no prompt).
+Do not report that as the app's fault. Do record what the app says about reminders: what it
+promises, and what it tells you to do to receive them.
+
 Do not test microphone or voice behavior during a journey walk. Do not invoke a real,
 fake, or mock microphone. If a microphone control or mock-mic failure gets in the way,
 record it as a harness limitation and continue with the person's goal; it is not
@@ -94,6 +113,26 @@ evidence about the product.
 **Take a screenshot at each meaningful step**, into
 `{{SHOTS}}`,
 numbered in order (`01-first-view.png`, `02-....png`). They are the record of what you actually saw.
+Use each file name once: a second write to the same name destroys the first picture.
+
+**The screenshot is what a person sees.** A snapshot or `eval` also returns accessible names,
+hidden text, and elements with no size or off the screen. Do not report any of that as something
+you saw; if it matters, scroll to it and take a screenshot to show it is on screen.
+
+**Waiting for a reply.** The Stop button is not always shown, so do not wait for it to go. While
+the assistant works, a "Thinking…" band sits above the message box. Wait on that, with a short
+pause between looks, then screenshot:
+
+```
+for i in $(seq 40); do
+  busy=$(BROWSE_BOX={{BOX_SLUG}} bin/browse --session {{BOX_SLUG}} eval "/Thinking/.test(document.querySelector('.bbx-chat-target-strip')?.textContent ?? '')")
+  [ "$busy" = true ] || break
+  sleep 3
+done
+```
+
+The band takes a moment to appear after you send, so give the message a few seconds before you
+start the loop, and check the screenshot shows a finished reply, not a half-written one.
 
 ## What you must not do
 
@@ -114,6 +153,18 @@ normal things to do with something billed as AI-powered, and neither is cheating
 **Push through.** When something confuses you, write down that it confused you and then keep going.
 Do not stop at the first obstacle and do not give up unless you genuinely cannot proceed. Getting
 further and recording what was awkward is worth much more than a clean early exit.
+
+**Do not invent events.** The only things that happen in this person's life tonight are the ones
+written on this page. Do not make up a reply from someone, an answer to a doubt, or an outcome
+the page does not give you, and do not bring forward something the page says happens later
+("tomorrow" has not happened yet). If you want to see how the app would handle an outcome you
+were not given, write that down as a wish instead. If the app asks for a plain fact about you
+that the page does not give (a shop you use, how many are in the house), answer as the person
+would, and write in your notes that you made it up.
+
+If you need a scratch file, for example to hold a snapshot while you wait, put it in
+`{{SCRATCH}}`. Other people are trying the app at the same time, and a shared path such as
+`/tmp/x` mixes their screens with yours.
 
 Work for roughly {{BUDGET}} actions. That is a decent evening's poking at a new app.
 

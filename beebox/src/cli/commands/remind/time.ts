@@ -24,7 +24,7 @@ interface WallTime {
 }
 
 const AT_SHAPE = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(Z|[+-]\d{2}:?\d{2})?$/;
-const AT_FORMS = "use YYYY-MM-DDTHH:MM in the box's timezone, or add an offset (2026-11-18T09:00-06:00)";
+const AT_FORMS = "use YYYY-MM-DDTHH:MM in the box's timezone, or add the person's UTC offset (Z for UTC, or ±HH:MM after the time)";
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 
@@ -91,7 +91,7 @@ function resolveAt(at: string, zone: string | null): Result<Date> {
   if (offset !== undefined && Math.abs(parseOffset(offset)) > 14 * 60) return err(`--at "${at}" has an offset past ±14:00; ${AT_FORMS}`);
   if (offset !== undefined) return ok(new Date(wallAsUtcMs(wall) - parseOffset(offset) * MINUTE_MS));
   if (zone === null) {
-    return err(`This box has no timezone set, so --at "${at}" is ambiguous; add an offset (${at}Z for UTC, or ${at}-06:00)`);
+    return err(`This box has no timezone set, so --at "${at}" is ambiguous; add the person's own UTC offset (Z for UTC, or ±HH:MM after the time), or set "timezone" in _config/box.json`);
   }
   const instants = instantsForWallTime(wall, zone);
   const [first] = instants;

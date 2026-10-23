@@ -7,7 +7,7 @@
 // **enabled**: unauthenticated HTML navigation redirects to `/auth/login`,
 // unauthenticated API/WS gets a bare 401, an authenticated cookie becomes an
 // `x-bbx-authenticated-email` header on the proxied request, and
-// `/healthz` + `/webhook/<slug>/*` stay outside the wall regardless.
+// `/healthz` stays outside the wall regardless.
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -125,7 +125,7 @@ void test("Unauthenticated HTML navigation redirects to `/auth/login`", async (t
   await loginAndProxy(t);
   await bogusCredentials(t);
   await discovery(t);
-  await healthzAndWebhooks(t);
+  await healthzAndWebhookPrefix(t);
   await revocation(t);
 });
 
@@ -300,7 +300,7 @@ async function discovery(t: Test) {
 
 }
 
-async function healthzAndWebhooks(t: Test) {
+async function healthzAndWebhookPrefix(t: Test) {
   // ## `/healthz` is outside the session/OAuth wall, but diag-key-gated
   //
   // `/healthz` never redirects to login the way a protected box path does (the
@@ -319,16 +319,17 @@ async function healthzAndWebhooks(t: Test) {
 
   delete process.env.BBX_DIAG_API_KEY;
 
-  // ## A webhook path proxies through with NO session required, and no email attached
+  // ## `/webhook/<slug>/…` has no anonymous passthrough
+  //
+  // No box registers a webhook route. An anonymous request there gets the same
+  // login redirect as any other protected path, so it cannot wake a box or
+  // learn whether a slug exists.
 
-  const webhookResponse = await fetch(`${hubBase}/webhook/test1/incoming`);
-  const webhookBody = BoxEcho.parse(await webhookResponse.json());
-  t.check(webhookResponse.status, 200);
-
-  t.check({ email: webhookBody.xBbxAuthenticatedEmail, secret: webhookBody.xBbxHubSecret }, {
-    email: null,
-    secret: "test-hub-secret-for-auth-test",
-  });
+  const webhookResponse = await fetch(`${hubBase}/webhook/test1/incoming`, { redirect: "manual" });
+  t.check(
+    { status: webhookResponse.status, location: webhookResponse.headers.get("location") },
+    { status: 302, location: "/auth/login?returnTo=%2Fwebhook%2Ftest1%2Fincoming" },
+  );
 
   // ## An unauthenticated WebSocket upgrade is rejected with a raw 401 (no cookie fallback either)
 
@@ -361,6 +362,10 @@ async function healthzAndWebhooks(t: Test) {
 
   const unauthedUpgrade = await rawUpgradeRequest({ port: portOf(hubServer), path: "/test1/ws" });
   t.check(unauthedUpgrade, "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+
+  // The webhook prefix gets no exception on the upgrade path either.
+  const webhookUpgrade = await rawUpgradeRequest({ port: portOf(hubServer), path: "/webhook/test1/ws" });
+  t.check(webhookUpgrade, "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
 
 }
 

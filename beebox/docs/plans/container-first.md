@@ -44,7 +44,7 @@ notes and update discovery stay open there),
 boxholder's paragraphs are his),
 [detect-server-update-prompt-client-reload](../../../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md)
 and
-[stale-web-bundle-detection](../../../issues/features/2026-08-12-stale-web-bundle-detection.md)
+[stale-web-bundle-detection](../../../issues/closed/features/2026-08-12-stale-web-bundle-detection.md)
 (a stamped engine version gives both a real identity to compare against; not
 built here). Searched the queue for `ghcr`, `published image`, `codex login`,
 `compose`, `bbx upgrade`, `version pin`: nothing else.

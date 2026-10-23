@@ -1,0 +1,108 @@
+# A journey is a person with a goal, not a script of steps. Everything here either
+# shapes the world the person arrives in, or is handed to them verbatim.
+#
+# People and places are from docs/example-names.md. The three papers are invented
+# for this journey (rendered from HTML; the insurer and the heating firm do not
+# exist), so they are committed.
+
+id: G-paperwork
+title: The pile of papers on the counter
+
+box:
+  base: empty
+  # The person starts from nothing in the box. Their material is paper, which is
+  # the seam this journey tests: A brought memories, B brought photos of objects,
+  # this brings documents whose dates and numbers carry obligations.
+  # The papers carry fixed November 2026 deadlines, so the journey refuses to
+  # prepare once "this week" can no longer fall before them.
+  setup: |
+    today=$(date +%F)
+    if [[ "$today" < 2026-10-15 || "$today" > 2026-11-01 ]]; then
+      echo "G-paperwork's papers are dated for late October 2026; re-date the assets and watch_for before walking." >&2
+      exit 1
+    fi
+
+assets:
+  - file: renewal-letter.pdf
+    described_as: the home insurance renewal letter, which came by email as a PDF
+  - file: IMG_2207.jpg
+    described_as: a photo you took of the receipt the heating engineer left after servicing the boiler
+  - file: IMG_2209.jpg
+    described_as: a photo of the school trip letter that came home in your child's book bag
+
+sittings: 1
+budget_actions: 60
+
+situation: |
+  There is a pile of papers on the kitchen counter that you keep moving to wipe
+  underneath. Some of it needs doing something by a date, some of it you only
+  need to be able to find again one day, and you can never tell which is which
+  without reading it all again.
+
+  Last year the insurance renewed itself at a higher price because you missed
+  the letter. You have also, more than once, turned the house upside down
+  looking for the receipt with the boiler's details on it.
+
+  What you want is to deal with the pile once: know what actually needs doing
+  and by when, get reminded before it is too late, and be able to put your hand
+  on a detail — a policy number, a date, what you paid — without finding the
+  paper. Then you want to throw most of the paper away.
+
+  You live at 14 Fennel Row with your partner Tomas and your two children,
+  Juni (who is in Year 4) and Wren.
+
+closing: |
+  Getting the papers in is not the finish line. Two things happen while you
+  are at it:
+
+  Tomas reads the school letter over your shoulder and says he can be a helper
+  on the trip day; he has already booked it off work. Juni has a nut allergy,
+  which goes on the slip.
+
+  Then the post arrives: a letter saying the car's registration is due for
+  renewal by 30 November, $96, which can be done online. You did not take a
+  photo of it; you just have the facts above.
+
+  Get both in. Then spend the rest of your time on what you would want to know:
+  ask what you need to do over the next two weeks, ask for something only a
+  paper would tell you (the policy number, what the boiler service cost, the
+  boiler's model), and decide whether you trust it enough to put the paper in the
+  recycling.
+
+# For the reader of the notes. Never shown to the walker.
+watch_for: |
+  Extraction accuracy is the test. Every number and date is on the page; a
+  wrong one recorded with confidence is the failure this person came to
+  escape. Check against the sources: renewal 14 November 2026, call-before
+  6 November, premium $748.90 (up from $612.40), policy HC-0937714-02; boiler
+  invoice $163.50 on 19 Sept 2026, next service Sept 2027 (handwritten), serial
+  VC30-118204, valve warranty 12 months; school trip Thursday 19 November,
+  slip and $12 by Friday 6 November, parent helpers wanted.
+
+  Two deadlines fall on the same day (Friday 6 November). Does the box find the
+  insurance one, which sits mid-paragraph and is easier to miss than the bold
+  renewal date? Does the answer to "this week" respect real dates, given that
+  today is in late October?
+
+  Actions versus reference. Some papers carry tasks (call the insurer if
+  switching, return the slip, pay $12, renew the car), others are reference
+  (boiler details, policy number). Watch whether tasks become todos with
+  dates, whether reference stays findable, and whether the two blur.
+
+  The handwritten note on the receipt. Is it read at all? It carries the next
+  service date and a maintenance hint.
+
+  The originals. The person wants to throw the paper away, so the box copy
+  must be the record: is the original file kept, linked from whatever was
+  extracted, and findable later?
+
+  Reminders. A reminder that is promised is not one that will fire; record
+  what landed in the box (a todo with a due date, a schedule) separately
+  from what the assistant said. One sitting cannot show delivery.
+
+  Sensitive detail. The letter carries a partial bank account number; note
+  whether the box repeats it anywhere it did not need to.
+
+  Changes in flight: Tomas as helper (does the "helpers wanted" item close or
+  get assigned?) and the allergy on the slip; the car renewal arriving as
+  plain facts with no document.

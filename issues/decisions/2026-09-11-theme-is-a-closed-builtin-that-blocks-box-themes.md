@@ -67,3 +67,7 @@ discovered by the next box that tries it:
 
 - `beebox/docs/implemented-plans/card-themes.md` — the theme system as shipped
   (paper, Post-it, plain, with agent-editable selection rules).
+
+## Audit 2026-10-22
+
+Two of the three parts are fixed. The closed catalog is gone: commit f859fbd7e (2026-09-11) makes theme names and stocks an open set; unknown values pass through (`beebox/src/shared/card-theme/core.ts:104-135`). The collision message is fixed: a box-local schema that declares `theme` (a global field in `beebox/src/cards/schema.ts:104`) now gets "is a global field every card already has; don't redeclare it" from `reservedFieldProblems` (`beebox/src/cards/reserved-fields.ts:62`, commit 985a25c05), reported by the `box-schema-fields` health check. Remaining: a typo'd theme name now passes silently. No box-supplied theme catalog exists to validate names against. That design question is still open.

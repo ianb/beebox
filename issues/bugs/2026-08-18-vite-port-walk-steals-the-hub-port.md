@@ -103,3 +103,7 @@ deprecation warnings and box-resolution errors for boxes that don't exist
 `EADDRINUSE` harder to find than it should have been, and the box-resolution
 errors are their own small cleanup: the router is configured with box paths
 that have no `.bbx-box` marker.
+
+## Audit 2026-10-22
+
+Pointers moved. Port allocation is now `workstreams-app/src/router/core/worktree-start.ts:65` (two parallel `getPort()` calls; the dashboard port is gone). `--strictPort` is at `workstreams-app/src/router/core/generation.ts:147`. Still open: the probe-to-bind window and the sequential ports. An automatic retry now exists (`f783135f1`), but `retryDecision` restarts only after a `waitForHttp` timeout. A child that exits with `EADDRINUSE` parks the worktree as `failed` on the first failure. The note about a stale router process no longer applies to a fresh router start.

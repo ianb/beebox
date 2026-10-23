@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { runChecks } from "../../../src/dev/lib/audit-checks.js";
+import { automatedChecksPassed, runChecks } from "../../../src/dev/lib/audit-checks.js";
 import { auditTestSchema } from "../../../src/dev/lib/test-suite-schema.js";
 import type { AgentBehavior, AuditTest } from "../../../src/dev/lib/test-runner/runner/run-test.js";
 
@@ -21,7 +21,7 @@ const auditTest: AuditTest = {
 function behavior(responseText: string): AgentBehavior {
   return {
     filesRead: [], searches: [], bashCommands: [], bashRawCommands: [],
-    responseText, responseLength: responseText.split(/\s+/).length, context: null,
+    responseText, replyText: responseText, responseLength: responseText.split(/\s+/).length, context: null,
   };
 }
 
@@ -126,6 +126,15 @@ void test("An audit without shouldsearch carries no search check, so it cannot f
   t.check(runChecks(auditTest, { behavior: behavior("answer"), newOrModifiedCards: new Map() }).shouldSearchCheck, undefined);
 });
 
+// An agent that stopped at its turn limit fails the audit even when its partial
+// answer passes every text check.
+void test("An agent that stopped at its turn limit fails the audit", async (t) => {
+  const checks = runChecks(auditTest, { behavior: behavior("Use box tmp/, not the host /tmp."), newOrModifiedCards: new Map() });
+  const passedBefore = automatedChecksPassed(checks);
+  checks.agentStopped = "Reached maximum number of turns (10)";
+  t.check({ passedBefore, passedAfter: automatedChecksPassed(checks) }, { passedBefore: true, passedAfter: false });
+});
+
 // ## `cards_not_under` refuses a card written under a forbidden prefix
 //
 // A card that landed under `_tmp/` fails the check even when the response never
@@ -183,4 +192,18 @@ void test("A Bash read counts when the file is reached through cd dir; cat file 
     unsetVariable: false,
   },
   );
+});
+
+// `final_reply` runs the text checks on the reply the chat shows, not on text
+// that folded into the activity row before a later tool call.
+void test("final_reply checks only the reply.", async (t) => {
+  const narrated: AgentBehavior = { ...behavior("I'll build a card type.\nYou now have a Loans page."), replyText: "You now have a Loans page." };
+  const forbidden = (finalReply: boolean) => runChecks(
+    { id: "reply", prompt: "Track loans", expected_level: "knows_directly", watch_for: "outcome", response_not_contains: ["card type"], final_reply: finalReply },
+    { behavior: narrated, newOrModifiedCards: new Map() },
+  ).notContainsChecks;
+  t.check({ whole: forbidden(false), reply: forbidden(true) }, {
+    whole: [{ forbidden: "card type", found: true }],
+    reply: [{ forbidden: "card type", found: false }],
+  });
 });

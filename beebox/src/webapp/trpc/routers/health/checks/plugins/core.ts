@@ -20,6 +20,8 @@
  * - `legacy-exposition-rules`: `legacy-exposition-rules.ts`.
  * - `<plugin>/...`: each active plugin's own `healthChecks`, prefixed; a throw
  *   is one failing `<plugin>/checks` row.
+ * - `plugin-checks` (error): any other throw in these checks is one failing
+ *   row, so the health run still answers.
  */
 
 import type { PluginDefinition } from "../../../../../../cards/plugin-definition.js";
@@ -42,6 +44,14 @@ export interface PluginHealthOptions {
 }
 
 export async function pluginHealthChecks(boxRoot: string, options?: PluginHealthOptions): Promise<HealthCheck[]> {
+  try {
+    return await allPluginChecks(boxRoot, options);
+  } catch (e) {
+    return [{ name: "plugin-checks", ok: false, message: `The plugin health checks threw: ${errorMessage(e)}`, severity: "error" }];
+  }
+}
+
+async function allPluginChecks(boxRoot: string, options?: PluginHealthOptions): Promise<HealthCheck[]> {
   const installed = options?.plugins ?? pluginRegistry.list;
   const installedNames = new Set(installed.map((p) => p.name));
   const { plugins: listing, problems } = await listPlugins(boxRoot);

@@ -30,7 +30,7 @@ appear.
 - **Todo**: a task noted in place, in whatever card the thought occurred,
   with a status and optional dates. Every todo view in the box is a live
   query over these marks, so a task written inside a project note shows up
-  on the plate without being copied anywhere.
+  on the Todos page without being copied anywhere.
 
 Around the marks the body is ordinary markdown plus a few extras: a backslash
 ends a line inside a paragraph, footnotes are numbered at the end, a table cell

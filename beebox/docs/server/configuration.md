@@ -207,6 +207,3 @@ allowed and is never listed. Login itself is terminated by
 the hub, which forwards the authenticated identity to each box over a
 trusted internal header — the box's own `allowedEmails` check runs
 regardless, so hub auth and per-box authorization are independent layers.
-
-Webhooks (`/webhook/<slug>/...`) are unauthenticated by design so external
-services can reach them.

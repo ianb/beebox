@@ -34,3 +34,7 @@ not catch the general case.
 
 Related: [over-centering on the box](../exploration/2026-09-23-agent-over-centers-general-questions-on-the-box.md)
 is the same failure from a question that needed no box research at all.
+
+## Audit 2026-10-22
+
+Still open. Pointers moved: the read checks are at `beebox/src/dev/lib/audit-checks.ts:79-90`. The report lists every file read at `beebox/src/dev/lib/report.ts:160`, and the run summary prints the count at `beebox/src/dev/knowledge-audit.ts:81`. No check or ratio separates helpful reads from wasted ones.

@@ -5,26 +5,59 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execa } from "execa";
 import { execChild } from "../../bin/lib/schedules-exec.js";
-import { reportPlan, resultDetail, RESULT_PREFIX, framedCommand, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
+import { connectorWarnings, reportPlan, resultDetail, RESULT_PREFIX, framedCommand, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 import { configuredBoxes, localTargets, registryPaths } from "./targets.js";
 
 const report = (value: unknown): string => RESULT_PREFIX + JSON.stringify(value);
 
 test("findings are one standing condition whatever boxes they name", () => {
-  const first = reportPlan({ findings: ["local /a: needs-procedure"], unreachableDetail: null, prodChecked: true });
-  const second = reportPlan({ findings: ["local /a: needs-procedure", "prod /b: needs-procedure"], unreachableDetail: null, prodChecked: true });
+  const first = reportPlan({ findings: ["local /a: needs-procedure"], unreachableDetail: null, prodChecked: true, connectorFindings: [], connectorCoverage: true });
+  const second = reportPlan({ findings: ["local /a: needs-procedure", "prod /b: needs-procedure"], unreachableDetail: null, prodChecked: true, connectorFindings: [], connectorCoverage: true });
   assert.deepEqual(first.alerts.map((alert) => alert.condition), ["unconverged"]);
   assert.deepEqual(second.alerts.map((alert) => alert.condition), ["unconverged"]);
   assert.equal(second.alerts[0]?.message, "- local /a: needs-procedure\n- prod /b: needs-procedure");
   assert.deepEqual(first.keep, ["unconverged"]);
 });
 test("a clean run resolves everything, but not when production went unchecked", () => {
-  assert.deepEqual(reportPlan({ findings: [], unreachableDetail: null, prodChecked: true }), { alerts: [], keep: [] });
-  const offline = reportPlan({ findings: [], unreachableDetail: null, prodChecked: false });
-  assert.deepEqual(offline, { alerts: [], keep: ["unconverged"] });
-  const longOffline = reportPlan({ findings: [], unreachableDetail: "Production unreachable for 25h: line", prodChecked: false });
+  assert.deepEqual(reportPlan({ findings: [], unreachableDetail: null, prodChecked: true, connectorFindings: [], connectorCoverage: true }), { alerts: [], keep: [] });
+  const offline = reportPlan({ findings: [], unreachableDetail: null, prodChecked: false, connectorFindings: [], connectorCoverage: false });
+  assert.deepEqual(offline, { alerts: [], keep: ["unconverged", "prod-connector-activity"] });
+  const longOffline = reportPlan({ findings: [], unreachableDetail: "Production unreachable for 25h: line", prodChecked: false, connectorFindings: [], connectorCoverage: false });
   assert.deepEqual(longOffline.alerts.map((alert) => alert.condition), ["prod-unreachable"]);
-  assert.deepEqual(longOffline.keep, ["prod-unreachable", "unconverged"]);
+  assert.deepEqual(longOffline.keep, ["prod-unreachable", "unconverged", "prod-connector-activity"]);
+});
+test("production connector warnings are one standing condition, resolved only by complete coverage", () => {
+  const warned = reportPlan({ findings: [], unreachableDetail: null, prodChecked: true,
+    connectorFindings: ["/boxes/a: gmail has failed every sync on its last 2 days of running, since 2026-10-09: 404"], connectorCoverage: true });
+  assert.deepEqual(warned, {
+    alerts: [{
+      condition: "prod-connector-activity",
+      title: "Production connectors: 1 warning",
+      message: "- /boxes/a: gmail has failed every sync on its last 2 days of running, since 2026-10-09: 404",
+    }],
+    keep: ["prod-connector-activity"],
+  });
+  assert.deepEqual(reportPlan({ findings: [], unreachableDetail: null, prodChecked: true, connectorFindings: [], connectorCoverage: true }),
+    { alerts: [], keep: [] });
+  // A failed inventory leaves production "checked" for convergence, but no
+  // health was read, so the connector condition stays open:
+  assert.deepEqual(reportPlan({ findings: ["Production coverage unavailable: boom"], unreachableDetail: null, prodChecked: true,
+    connectorFindings: [], connectorCoverage: false }).keep, ["unconverged", "prod-connector-activity"]);
+});
+test("connector warnings are read from health JSON whatever the exit code", () => {
+  const health = JSON.stringify({
+    tasks: [{ name: "overdue" }],
+    boxChecks: [
+      { name: "git", ok: true, message: "ok", severity: "info" },
+      { name: "connector-activity:gmail", ok: false, message: "gmail has failed every sync", severity: "warning" },
+      { name: "connector-activity", ok: false, message: "record invalid", severity: "warning" },
+      { name: "connector-activityx", ok: false, message: "not ours", severity: "warning" },
+    ],
+  }, null, 2);
+  assert.deepEqual(connectorWarnings(`noise\n${RESULT_PREFIX}debug line\n${health}\n`), ["gmail has failed every sync", "record invalid"]);
+  assert.equal(connectorWarnings("ssh: something failed"), null);
+  assert.equal(connectorWarnings(`${RESULT_PREFIX}\n`), null);
+  assert.equal(connectorWarnings(`${RESULT_PREFIX}{\n  "boxChecks": "no"\n}`), null);
 });
 test("JSON outcomes preserve questions and refuse unknown or failed coverage", () => {
   assert.equal(resultDetail(report({ status: "current" }), 0), null);

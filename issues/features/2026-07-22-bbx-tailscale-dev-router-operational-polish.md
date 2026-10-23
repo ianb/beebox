@@ -51,3 +51,7 @@ belongs IN the build loop, not only after the final merge — #1 and #2 became
 follow-up merges because the first live run happened post-merge. It needs the
 boxholder's hands + the real tailnet, so it can't be fully automated, but even a
 single "expose it once on my Mac" checkpoint mid-build would have caught both.
+
+## Audit 2026-10-22
+
+Item 1 is partly fixed. `stop` now scans every serve host for mappings to the target port, so a mapping from before a rename is found (`beebox/src/services/tailscale-setup/core.ts:307-313`, `:383`). It then removes each with `serve … off`, re-reads the serve config, and keeps the exposure record if a mapping remains (`:391-415`). It has no `serve reset` fallback. `status` does not compare the recorded `dnsName` with `Self.DNSName` (`beebox/src/services/tailscale-status/running.ts`). Item 2 is unchanged: the retry poll exists (`core.ts:104-130`), but nothing runs `tailscale cert` before `serve`. Item 3 is unchanged: discovery still refuses the dev router as an auto-target (`beebox/src/services/tailscale-discovery.ts:8`, `:71`). Item 4 is a process note.

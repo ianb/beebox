@@ -33,20 +33,22 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.302`, Codex `0.163.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.306`, Codex `0.163.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.304` (SDK), `2.1.304` (Claude Code), `0.163.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.309` (SDK), `2.1.309` (Claude Code), `0.164.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.302` on 2026-10-18
-  after its fork-subagent check. The 2026-10-17 landing (`0.3.301`, Codex
-  `0.163.0`) reached production on 2026-10-19 once the deploy breakage from the
-  ts7 merge was fixed. Next: `0.3.303` (settles 2026-10-20T21:15Z), `0.3.304`
-  (2026-10-21T19:48Z). Open:
+- **Current recommendation:** Agent SDK moved to `0.3.306` on 2026-10-23
+  (taking `0.3.305`); Codex stays at `0.163.0`. Production deploys recovered by
+  2026-10-23 after failing on the `engine-link-spec-2026-10` box migration
+  2026-10-21 to 10-22. The suite still has one SDK-unrelated failure:
+  `issues/bugs/2026-10-22-ui-scan-annotations-test-red-after-app-bar-faces.md`.
+  Next: `0.3.307` (settles 2026-10-23T20:46Z), `0.3.308` (2026-10-24T04:19Z),
+  `0.3.309` (2026-10-24T20:35Z), Codex `0.164.0` (2026-10-25T04:48Z). Open:
   `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
@@ -74,7 +76,72 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.304 / Claude Code 2.1.304 — pending (published 2026-10-19T19:48Z, ~8h at this turn)
+### Codex 0.164.0 — pending (published 2026-10-23T04:48Z, ~1h at this turn)
+
+- **Relevant to beebox's Codex chat:** resuming a session restores its saved
+  thread settings instead of global defaults, and finds compressed histories;
+  a failed compaction no longer leaves a partial summary in history; queued
+  prompts wait for pending permission selections (beebox runs
+  `approvalPolicy: "never"`).
+- macOS sandbox hardening (case-variant metadata paths, replaceable symlinks
+  to executables) — beebox runs `danger-full-access`. Credential masking for
+  remote Bash; enterprise MCP sign-in; `/presets`; inline `/model` arguments;
+  Bedrock setup wizard on by default. Disk-usage pruning of unused installs.
+- **Action:** Settled path; takeable 2026-10-25T04:48Z.
+- **Sources:** [rust-v0.164.0](https://github.com/openai/codex/releases/tag/rust-v0.164.0)
+
+### 0.3.309 / Claude Code 2.1.309 — pending (published 2026-10-22T20:35Z)
+
+- **HARNESS, security and isolation fixes:** sandboxed Bash no longer runs the
+  shell's startup files outside the sandbox before each command; sandboxed
+  commands can no longer modify the `--mcp-config` file; worktree-isolated
+  sessions now refuse some locale-prefixed and zsh arithmetic commands the
+  isolation guard missed; Bash permission checks now prompt for wrapped or
+  prefixed `cd … && git` compounds; an `Edit(path)` deny now blocks Bash
+  redirects in subshell commands; worktrees Claude Code creates ignore git
+  replace refs and no longer fetch objects on demand. The laptop already runs
+  2.1.309.
+- **Changed:** `sed -i` now gets the ordinary Bash prompt and runs as written
+  (no edit preview), and `/rewind` no longer restores it.
+- **RUNTIME:** a disabled MCP server is no longer reconnected by a later
+  permission prompt in SDK sessions; long tool output previews no longer cut
+  through an emoji and break `jq` on transcripts (beebox parses transcripts
+  with `JSON.parse` per line). 0.3.309: `extractFromBunfs()` extracts into a
+  per-user temp directory and re-extracts on byte mismatch; host
+  `managedSettings` keep `disableAllHooks` and related keys (beebox passes
+  none).
+- **Action:** Settled path; takeable 2026-10-24T20:35Z.
+- **Sources:** [SDK 0.3.309](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03309), [Claude Code 2.1.309](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21309)
+
+### 0.3.305 – 0.3.308 / Claude Code 2.1.305 – 2.1.308 — 0.3.305/0.3.306 APPLIED 2026-10-23, 0.3.307/0.3.308 pending (published 2026-10-20T19:29Z to 2026-10-22T04:19Z)
+
+0.3.306 and 0.3.308 are parity-only; 2.1.306 is cloud-only and 2.1.308 is
+unitemized.
+- **RUNTIME:** 2.1.307 makes `setModel()` wait up to 15 s (was 5 s) for the API
+  to confirm a model, so a slow confirmation no longer refuses the switch
+  (beebox chat switches models); forks launched together are each told which
+  launch is theirs (fork subagents are on by default since 0.3.302); HTTP MCP
+  tool calls are no longer sent twice when the connection closes mid-call;
+  unparseable tool calls are retried up to twice before the turn ends;
+  subagent transcripts no longer record placeholder token usage.
+- **SDK:** 0.3.305 stops a `setMcpServers` server being replaced by a
+  same-named server from user settings, and fixes `startup()` with
+  `initializeTimeoutMs: null` (beebox uses neither); `get_usage` gains
+  `recommendations`/`fix`. 0.3.307 adds `wakeup_source` / `scheduled_for` to
+  wakeup lifecycle frames.
+- **HARNESS:** 2.1.305 fixes new worktrees in a bare repository starting from
+  local HEAD instead of the default branch, unchanged subagent worktrees not
+  being cleaned up, and Workflow resume re-running completed agents; 2.1.307
+  fixes MCP servers staying failed in headless runs after the Mac sleeps while
+  they connect. 2.1.305 adds `sandbox.allowNestedUserNamespaces`, which weakens
+  the Linux sandbox's file protections when set; this repo does not set it.
+- **Action:** `0.3.305` and `0.3.306` applied 2026-10-23. Verified: typecheck,
+  steering probe (4/4) on bundled CLI 2.1.306, `pnpm -C beebox test` (12,502
+  pass, 1 fail, 2 skip; the known `ui-scan.annotations` failure). `0.3.307` and
+  `0.3.308` settle 2026-10-23T20:46Z and 2026-10-24T04:19Z.
+- **Sources:** [SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md), [Claude Code changelog](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md)
+
+### 0.3.304 / Claude Code 2.1.304 — APPLIED 2026-10-22 (published 2026-10-19T19:48Z)
 
 - **HARNESS, data-loss fix:** *"Fixed `claude --worktree` removing the worktree
   and its branch without asking at exit when HEAD was detached or on another
@@ -92,13 +159,13 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   60 s limit, and keeps only the newest `hook_progress` per hook (beebox calls
   `query()`, not `startup()`); `getContextUsage()` row ids; browser-SDK
   `suspendSseStream` / `resumeSseStream`.
-- **Action:** Settled path; takeable 2026-10-21T19:48Z.
+- **Action:** Applied 2026-10-22 with `0.3.303`. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.304, `pnpm -C beebox test` (12,413 pass, 1 fail, 2 skip; the failure is `ui-scan.annotations.test.ts`, which reads frontend source only and was red on main before this bump).
 - **Sources:** [SDK 0.3.304](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03304), [Claude Code 2.1.304](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21304)
 
-### 0.3.303 / Claude Code 2.1.303 — pending, unitemized (published 2026-10-18T21:15Z)
+### 0.3.303 / Claude Code 2.1.303 — APPLIED 2026-10-22 with 0.3.304, unitemized (published 2026-10-18T21:15Z)
 
 SDK parity-only; Claude Code 2.1.303 says only "Bug fixes and reliability
-improvements". Nothing to assess. Settled path; takeable 2026-10-20T21:15Z.
+improvements". Nothing to assess. Applied 2026-10-22 with `0.3.304`.
 
 ### 0.3.302 / Claude Code 2.1.302 — APPLIED 2026-10-18 (published 2026-10-16T16:47Z); fork check passed
 

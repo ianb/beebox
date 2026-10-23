@@ -225,3 +225,38 @@ Reconnect Google in Admin, in the Google Services section.`,
   await checkRequiredConnectors({ ...ctx, now: new Date("2026-09-22T16:00:00Z") });
   t.check((await loadScriptState(box.root, "watch")).alertedFor, null);
 });
+
+// ## A requirement name finds its connector's episode; a working grant gets no reconnect hint
+//
+// A card requires `calendar` (the requirement name, `src/requirements.ts`); the
+// activity record names the connector `google-calendar`. The grant is stored
+// and not found dead, so the notice does not send the person to reconnect
+// Google, which could not help:
+void test("A requirement name finds its connector's episode; a working grant gets no reconnect hint", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.seed("_config/box.json", JSON.stringify({ timezone: "UTC" }));
+  await box.seed("_config/connectors/google.secret.json", JSON.stringify({ refreshToken: "token" }));
+  box.commitAll("seed");
+  const fail = { name: "google-calendar", inboxPaths: [], sync: async () => ({ success: true, created: [], updated: [], error: "Request failed with status code 500" }) };
+  await syncConnector(fail, { boxRoot: box.root, now: new Date("2026-09-20T15:00:00Z") });
+  await syncConnector(fail, { boxRoot: box.root, now: new Date("2026-09-21T15:00:00Z") });
+
+  const parsed = parseScheduledScript({ type: "scheduled-script", cron: "0 * * * *", "requested-by": "boxholder", requires: { connectors: ["calendar"] }, runs: "true", enabled: true });
+  const state = await loadScriptState(box.root, "watch");
+  await checkRequiredConnectors({ boxRoot: box.root, scriptName: "watch", parsed, state, now: new Date("2026-09-21T16:00:00Z") });
+  t.check(await sent(box), [
+    {
+      loudness: "loud",
+      title: "Your watch could not run",
+      target: "dashboard",
+      body: "It depends on google-calendar. google-calendar has failed every sync on its last 2 days of running, since 2026-09-20: Request failed with status code 500",
+    },
+  ]);
+});

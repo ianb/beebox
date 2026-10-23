@@ -165,3 +165,7 @@ https://developers.openai.com/api/docs/guides/background ,
 https://cursor.com/help/ai-features/background-agents ,
 https://adk.dev/runtime/cancel/ ,
 https://code.claude.com/docs/en/agent-sdk/sessions.md
+
+## Audit 2026-10-22
+
+Still open: chat has no "idle with N tasks running" state. `showAgentWorking` is still one boolean. Pointers moved: `InteractiveChat.tsx` is now a directory. The poll is at `beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/shell.tsx:287` and the composer status at `.../InteractiveChat/view.tsx:319`. The background task strip changed in commit 27e697c16: its membership now follows the SDK `background_tasks_changed` event, and ambient watcher tasks no longer show. The strip logic is in `.../InteractiveChat/background-tasks.ts`.

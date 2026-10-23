@@ -38,7 +38,7 @@ raw, which reads like a client bug and tells the boxholder nothing actionable.
   restarting or unreachable, try again in a moment.
 - **Turn query retries back on.** See the section below — this is the primary
   fix, not a consideration.
-- **Related**: [stale web bundle detection](../../features/2026-08-12-stale-web-bundle-detection.md)
+- **Related**: [stale web bundle detection](../features/2026-08-12-stale-web-bundle-detection.md)
   — the other half of "the deploy moved under the open page."
 
 

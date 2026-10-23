@@ -15,15 +15,10 @@ import type { AgentInvokeOptions } from "../../../../core/agent/types.js";
 import { createCodexAgent } from "../../../../core/agent/codex-agent.js";
 import type { CodexObservedActivity } from "../../../../core/agent/codex-run/core.js";
 import { loadAgentEngine, type AgentEngine } from "../../../../core/box/config.js";
-import { type KnownToolName, isKnownTool } from "../../../../shared/known-tools.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../../../core/chat/session/run/core.js";
 import { buildLandmarkBoxContext } from "../../../../core/chat/session/landmark-context.js";
 import { buildLandmarkSessionNote } from "../../../../core/chat/session/prompts.js";
-import {
-  MAX_SESSION_ENTRIES,
-  parseSessionLog,
-  type SessionContentBlock,
-} from "../../../../cli/lib/session.js";
+import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../../cli/lib/session.js";
 import { getSessionLogPath } from "../../../../core/chat/session/transcript-paths.js";
 import {
   readTurnUsage,
@@ -31,7 +26,8 @@ import {
   type ContextStats,
 } from "../../context-usage.js";
 import { codexBehaviorFromActivity } from "./codex-audit.js";
-import { shellCommandConsultsFiles, shellCommandSearches } from "./shell-observation.js";
+import { type BehaviorAccumulator, categorizeToolUse } from "./tool-use-behavior.js";
+import { type ReplyBlock, visibleReplyText } from "./reply-text.js";
 import { runChecks } from "../../audit-checks.js";
 import { generateAgentContextMirrors } from "../../../../core/agent-context-mirrors.js";
 import { AGENTS_MD, CLAUDE_MD } from "../../../../core/agent-instruction-files.js";
@@ -46,6 +42,8 @@ export interface AgentBehavior {
   /** Actual bash commands (not descriptions) for automated checks */
   bashRawCommands: string[];
   responseText: string;
+  /** The text the chat shows after folding (see `final_reply`, `visibleReplyText`). */
+  replyText: string;
   responseLength: number;
   /** Loaded-context size of this run (null if the session had no turns). */
   context: ContextStats | null;
@@ -64,6 +62,8 @@ export interface AutomatedChecks {
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
   bashContainsChecks: Array<{ expected: string; found: boolean; matchedCommand?: string }>;
   shouldSearchCheck?: { where: SearchWhere; found: boolean; matched?: string | undefined } | undefined;
+  /** The agent stopped at its turn or budget limit; the audit fails on it. */
+  agentStopped?: string | undefined;
 }
 
 export interface TestResult {
@@ -183,7 +183,10 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
         onActivity: (activity) => codexActivity.push(activity),
       });
     const result = await agent.invoke(invokeOpts);
-    if (!result.success) throw new KnowledgeAuditAgentError(engine, result.error);
+    // A run that started and stopped at its limit still has a transcript to
+    // grade; only an invocation failure leaves nothing to audit.
+    const unauditable = !result.success && (result.invocationFailure === true || result.sessionId === "");
+    if (unauditable) throw new KnowledgeAuditAgentError(engine, result.error);
     const cardsAfter = test.cards_contain || test.cards_not_under ? await snapshotCardFiles(boxRoot) : new Map();
     // Claude Code stores session logs keyed by the SDK's cwd. Codex activity
     // comes from the validated live stream captured by its adapter above.
@@ -193,6 +196,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
       : await extractBehavior(logDir, result.sessionId);
     const newOrModifiedCards = findNewOrModifiedCards(cardsBefore, cardsAfter);
     const checks = runChecks(test, { behavior, newOrModifiedCards });
+    if (!result.success) checks.agentStopped = result.error;
     return { test, engine, sessionId: result.sessionId, behavior, checks };
   } finally {
     await removeFixtures(fixturePaths);
@@ -209,10 +213,14 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
  * Agent tool). Sub-agent tool calls count as the main agent's behavior for
  * audit purposes — otherwise every delegated Read would be invisible.
  * Sub-agent response text is NOT merged into responseText; only the main
- * agent's text reply is evaluated.
+ * agent's text reply is evaluated. The agent may delete its own cwd (a
+ * fixture directory); then `logDir` is used as given, so the caller passes the
+ * path it resolved before the run.
  */
 export async function extractBehavior(logDir: string, sessionId: string): Promise<AgentBehavior> {
-  const logPath = getSessionLogPath(await fs.realpath(logDir), sessionId);
+  const physicalDir = await fs.realpath(logDir)
+    .catch((error: unknown) => (errnoCode(error) === "ENOENT" ? logDir : Promise.reject(error)));
+  const logPath = getSessionLogPath(physicalDir, sessionId);
   const { entries, total } = await parseSessionLog({
     logPath,
     slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
@@ -224,15 +232,24 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
 
   const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [] };
   const responseChunks: string[] = [];
+  // Text blocks and progress updates in order; replyStart is where the blocks
+  // after the last tool call start.
+  const replyBlocks: ReplyBlock[] = [];
+  let replyStart = 0;
 
   for (const entry of entries) {
     if (entry.type === "assistant") {
       for (const block of entry.content) {
         if (block.type === "text" && block.text) {
           responseChunks.push(block.text);
+          replyBlocks.push({ text: block.text, update: false });
+        }
+        if (block.type === "thinking" && block.progressUpdate === true && block.text?.trim()) {
+          replyBlocks.push({ text: block.text, update: true });
         }
         if (block.type === "tool_use") {
           categorizeToolUse(block, acc);
+          replyStart = replyBlocks.length;
         }
       }
     }
@@ -268,6 +285,7 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
   }
 
   const responseText = responseChunks.join("\n").trim();
+  const replyText = visibleReplyText(replyBlocks, replyStart);
 
   // Context-size accounting reads the same main session log (not subagent
   // logs — those are separate contexts; baseline/peak is about what the box
@@ -277,6 +295,7 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
   return {
     ...acc,
     responseText,
+    replyText,
     responseLength: responseText.split(/\s+/).length,
     context,
   };
@@ -290,52 +309,6 @@ function warnIfBehaviorReadTruncated(args: {
   console.warn(
     `[test-runner] Behavior extraction from ${logPath} has ${String(total)} entries; using the first ${String(entriesRead)}.`,
   );
-}
-
-interface BehaviorAccumulator {
-  filesRead: string[];
-  searches: Array<{ tool: string; summary: string }>;
-  bashCommands: string[];
-  bashRawCommands: string[];
-}
-
-interface ToolUseContext {
-  block: SessionContentBlock;
-  acc: BehaviorAccumulator;
-  summary: string;
-  name: string;
-}
-
-/** Per-tool behavior accumulators, keyed on the shared tool vocabulary. */
-const TOOL_USE_CATEGORIZERS: Partial<Record<KnownToolName, (ctx: ToolUseContext) => void>> = {
-  Read: ({ summary, acc }) => {
-    if (summary) acc.filesRead.push(summary);
-  },
-  Grep: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
-  Glob: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
-  // Web lookups count as searches under their own tool name, matching the
-  // Codex runner's provider searches (`codex-audit-behavior.ts`).
-  WebSearch: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
-  WebFetch: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
-  Bash: ({ block, summary, acc }) => {
-    if (summary) acc.bashCommands.push(summary);
-    if (block.input) {
-      const cmd = String(block.input.command ?? "");
-      if (cmd) {
-        acc.bashRawCommands.push(cmd);
-        if (shellCommandConsultsFiles(cmd)) acc.filesRead.push(cmd);
-        if (shellCommandSearches(cmd)) acc.searches.push({ tool: "Bash", summary: cmd });
-      }
-    }
-  },
-} satisfies Partial<Record<KnownToolName, (ctx: ToolUseContext) => void>>;
-
-function categorizeToolUse(block: SessionContentBlock, acc: BehaviorAccumulator): void {
-  const name = block.toolName ?? "";
-  const summary = block.inputSummary ?? "";
-  if (isKnownTool(name)) {
-    TOOL_USE_CATEGORIZERS[name]?.({ block, acc, summary, name });
-  }
 }
 
 /**

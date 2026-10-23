@@ -31,3 +31,7 @@ On web, the record button shows which mode and state voice input is in. The nati
 Web posts `beeboxNarrationState {enabled}` ([mobile contract](../../beebox/docs/mobile-contract.md) §4.4). `ChatWebView.swift` parses it, `RootView.swift` stores it, and `NativeComposerView` receives it as `narrationEnabled`. Today it only picks live transcript vs HQ audio for a keyword send (`SpeechKeywords.swift`). So the fix is display-only; the bridge doesn't need to change.
 
 Whether the paused state has a native counterpart needs checking: the native `voiceTurn` and speech-playback state exist, but nothing drives the button's look from them. The fix should match the web states rather than invent new ones. This is a shared surface, so use the bbx-ios-overlap skill.
+
+## Audit 2026-10-22
+
+Still true: `NativeComposerView.swift` has no narration icon, paused state, or animation (`microphoneButton` at `:648`, `trailingControl` at `:599`). One pointer is stale. `NativeComposerView` no longer has a `narrationEnabled` input, and no Swift file besides `ChatWebView.swift` mentions narration. `ChatWebView.swift:617` receives `beeboxNarrationState` and calls `onNarrationStateChange`, but no caller passes a handler that stores it. The fix must also route the value from `ChatWebView` to the composer.

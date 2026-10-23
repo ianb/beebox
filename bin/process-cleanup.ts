@@ -263,6 +263,12 @@ function readLiveness(entry: unknown): AgentLiveness {
  * - `launching` — spare unconditionally while setup owns an active lease. A
  *               pre-agent shell cannot establish which daemon is current yet.
  *
+ * A daemon detaches and is reparented to pid 1. A process that still has
+ * another parent is a command in flight: `agent-browser.js <cmd>` and its
+ * native child, under a live `bin/browse`. Those are spared in every branch;
+ * killing one ended another session's slow `snapshot` with an empty exit 1
+ * (seven concurrent journey walks, 2026-10-22).
+ *
  * In every branch that reaps an UNVOUCHED process, `ageSec` gates it: a daemon
  * younger than MIN_ORPHAN_AGE_SEC has not had time to write its pidfile, so
  * "not vouched for" carries no information about it yet. That window is the
@@ -281,10 +287,11 @@ function readLiveness(entry: unknown): AgentLiveness {
  */
 export function classifyAgentBrowser(
   session: AgentState,
-  { vouched, ageSec }: { vouched: boolean; ageSec: number },
+  { vouched, ageSec, ppid }: { vouched: boolean; ageSec: number; ppid: number },
 ): { kill: boolean; reason: string } {
   if (session === "launching") return { kill: false, reason: "launch in progress" };
   if (session === "unknown") return { kill: false, reason: "session liveness unknown" };
+  if (ppid !== 1) return { kill: false, reason: `in-flight command (parent ${String(ppid)})` };
   if (!vouched && ageSec < MIN_ORPHAN_AGE_SEC) {
     return { kill: false, reason: `starting (${Math.round(ageSec)}s old, no pidfile yet)` };
   }
@@ -406,7 +413,7 @@ export async function reclaimOrphans(opts: {
     if (p.kind === "agent-browser") {
       const session = sessions.get(p.worktree)?.state ?? "unknown";
       const vouched = currentByWt.get(p.worktree)?.has(p.pid) ?? false;
-      ({ kill: doKill, reason: abReason } = classifyAgentBrowser(session, { vouched, ageSec: p.ageSec }));
+      ({ kill: doKill, reason: abReason } = classifyAgentBrowser(session, { vouched, ageSec: p.ageSec, ppid: p.ppid }));
     } else {
       doKill = opts.aggressive || p.ppid === 1;
     }
@@ -468,7 +475,7 @@ export async function reclaimWorktreeBrowsers(opts: {
   const killed: ProjectProc[] = [];
   const spared: ProjectProc[] = [];
   for (const p of procs) {
-    const { kill, reason } = classifyAgentBrowser("live", { vouched: vouchedPids.has(p.pid), ageSec: p.ageSec });
+    const { kill, reason } = classifyAgentBrowser("live", { vouched: vouchedPids.has(p.pid), ageSec: p.ageSec, ppid: p.ppid });
     if (!kill) {
       spared.push(p);
       continue;

@@ -99,3 +99,7 @@ Full survey and probes: [research/web-search-fetch](../../research/web-search-fe
 - The "no stealth or proxy" line above was an agent's judgment, not a
   boxholder decision. The survey lays out the facts and leaves it as an open
   decision ([the line](../../research/web-search-fetch/README.md#the-no-stealth-or-proxy-line)).
+
+## Re-encounter 2026-10-22 (journey walks)
+
+A box agent case, not dev tooling: in [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (row 13, R15) a shop's product page returned a "Pardon Our Interruption" bot page and a price-comparison site returned 403. The agent reported that it could not find that shop's prices, so one of the person's two shops was missing from the comparison. The priority may be stale.

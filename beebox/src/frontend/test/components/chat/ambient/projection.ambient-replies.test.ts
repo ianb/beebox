@@ -81,3 +81,26 @@ void test("A route may show the retained previous transcript while a new landmar
 
   t.check(canAcknowledgeAmbientReply(false, "ready"), false);
 });
+
+// The selected conversation gets an ambient panel while its transcript is off screen
+// (focus layout, cards in both panes), and none while the transcript shows.
+void test("The selected conversation gets an ambient panel only while its transcript is off screen.", async (t) => {
+  const { ambientPanelHidden } = await import("../../../../src/components/chat/ambient/projection.js");
+  const reply = { attention: true, busy: false, error: false };
+  t.check(ambientPanelHidden({ selected: true, transcriptVisible: false, ...reply }), false);
+  t.check(ambientPanelHidden({ selected: true, transcriptVisible: true, ...reply }), true);
+  // A running turn shows the panel too, so a send made while the transcript is hidden is acknowledged:
+  t.check(ambientPanelHidden({ selected: true, transcriptVisible: false, attention: false, busy: true, error: false }), false);
+  // Another conversation is unaffected by transcript visibility; with nothing to report it stays hidden:
+  t.check(ambientPanelHidden({ selected: false, transcriptVisible: true, ...reply }), false);
+  t.check(ambientPanelHidden({ selected: true, transcriptVisible: false, attention: false, busy: false, error: false }), true);
+});
+
+// A plain-text reply (no callout or ack) is previewed as its own persisted text,
+// so a selected chat with its transcript hidden shows what the agent said.
+void test("A plain-text reply is previewed as its own text.", async (t) => {
+  const ok = entry({ uuid: "a2", type: "assistant", text: "Ok." });
+  t.check(projectAmbientReply("chat", { entries: [question, ok], total: 2, running: false }).preview, "Ok.");
+  t.check(projectAmbientReply("chat", { entries: [question, ok], total: 2, running: true }).preview, "");
+  t.check(projectAmbientReply("chat", { entries: [question, answer], total: 2, running: false }).preview, "");
+});

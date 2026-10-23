@@ -125,6 +125,40 @@ function localIsoDate(date: Date): string {
   return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+/** The word before a due date: "overdue" once plate state says it is past, else "due". */
+export function dueWord(plateState: TodoPlateState | null): "overdue" | "due" {
+  return plateState === "escalated" ? "overdue" : "due";
+}
+
+/**
+ * The earliest date among a card's open todos and what kind it is, for the
+ * card row's badge: "due Nov 7", "overdue Oct 15", "starts Oct 24". It repeats
+ * the reduction's `next` rule (`core/todo/collection.ts`: the earliest `due` or
+ * resolved `start` of an open todo) but keeps which field won, which the
+ * reduction does not carry. A `due` wins a tie with a `start`, as in the
+ * dated strip. `null` when no open todo carries a date.
+ */
+export function nextDateOf(items: readonly {
+  status: TodoStatus;
+  due?: string | undefined;
+  start?: string | undefined;
+  plateState: TodoPlateState | null;
+}[]): { iso: string; word: "overdue" | "due" | "starts" | "since" } | null {
+  const candidates: { epoch: number; kind: "due" | "start"; plateState: TodoPlateState | null }[] = [];
+  for (const item of items) {
+    if (item.status !== "open") continue;
+    const due = item.due === undefined ? null : parseIsoDate(item.due);
+    if (due !== null) candidates.push({ epoch: due, kind: "due", plateState: item.plateState });
+    const start = item.start === undefined ? null : resolveStartEpoch(item.start, item.due);
+    if (start !== null) candidates.push({ epoch: start, kind: "start", plateState: item.plateState });
+  }
+  const [best] = candidates.toSorted((a, b) => a.epoch - b.epoch || (a.kind === b.kind ? 0 : a.kind === "due" ? -1 : 1));
+  if (best === undefined) return null;
+  const iso = new Date(best.epoch).toISOString().slice(0, 10);
+  if (best.kind === "due") return { iso, word: dueWord(best.plateState) };
+  return { iso, word: startPrefix({ plateState: best.plateState, startIso: iso }) === "since" ? "since" : "starts" };
+}
+
 /**
  * The date chips a todo shows. A `start` relative to `due` ("-3d") is shown as
  * the day it resolves to, after `startPrefix`: "later · Oct 23". An escalated todo's due chip reads

@@ -34,3 +34,7 @@ for list summaries. Both exclude box-local types.
   would then show `detail` and the type's `attrs`, which is a visible change.
 
 Decide per mechanism: move it onto the type, or record why it stays separate.
+
+## Re-encounter 2026-10-22 (journey walks): a user-facing consequence
+
+In [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-22.md) (rows 13, 14) the box agent wrote a box-local `storage` type whose items live in a frontmatter array. `bbx search "tweezers"` returned "No results" while the row existed, because `foldFields` (`beebox/src/core/search/extract/core.ts:216-265`) returns nothing for a type it does not name. The agent told the person: "the box's general search only finds a drawer by its short description, not by every item in it". The walker called this jargon and worrying ("will 'tweezers' be found later?"). The agent wrote a grep instruction into the schema to make up for it. A box-local type has no way to declare its searchable text, and `beebox/box-docs/schemas.md` does not say that its fields are not searched. This makes the schema hook option ("own hook on the schema (`searchText`?)") more pressing.

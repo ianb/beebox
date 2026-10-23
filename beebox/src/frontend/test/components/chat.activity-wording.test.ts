@@ -14,7 +14,7 @@ import {
   type Excerpt,
 } from "../../src/components/chat/ChatMessages/activity-wording.js";
 import type { SessionContentBlock } from "../../src/api-chat.js";
-import type { ActivityPart } from "../../src/components/chat/message-parsing.js";
+import type { ActivityPart } from "../../src/components/chat/assistant-parts.js";
 
 function tool(toolName: string, input: Record<string, unknown>): SessionContentBlock {
   return { type: "tool_use", toolName, input };
@@ -49,6 +49,12 @@ void test("Tools fall into groups, and TodoWrite is not counted.", async (t) => 
   t.check(summarizeActivity([tools(tool("WebSearch", {}), tool("WebSearch", {}), tool("WebFetch", {}), tool("WebFetch", {}), tool("Read", {}))]), "searched the web 2 times, read 2 web pages, checked something in your box");
 
   t.check(summarizeActivity([tools(tool("TodoWrite", {}), tool("TodoWrite", {}))]), "working");
+});
+
+// Folded notes are not steps: they name the row only when it holds nothing else.
+void test("Folded notes are not steps.", async (t) => {
+  t.check(summarizeActivity([{ type: "note", text: "Checking." }, tools(tool("Edit", {}))]), "made a change");
+  t.check(summarizeActivity([{ type: "note", text: "Checking." }]), "noted progress");
 });
 
 // ## Card paths

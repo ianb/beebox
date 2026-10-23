@@ -22,6 +22,11 @@ authority or confidence to decide itself.
   attention" list, and dismiss one you don't want to answer.
 - Reminds you (chases itself) when a question sits unanswered and the queue
   isn't draining.
+- Opens a new box with one question of its own, "What do you want to keep track
+  of here?" The empty first chat shows the newest waiting question as the
+  agent's opening line, with "Not now" beside it, and your reply is taken as
+  the answer: the agent records what the box is for and then offers a few things
+  it could do about that.
 
 **What it needs**
 

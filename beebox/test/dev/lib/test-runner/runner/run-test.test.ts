@@ -91,6 +91,34 @@ void test("line 45", async (t) => {
   }) + "\n");
   t.check((await extractBehavior(linkedCwd, "linked-audit")).responseText, "Captured response");
 
+  // An agent may delete its own cwd; the transcript is still found by the
+  // physical path the runner resolved before the run.
+  const deletedCwd = join(await realpath(box.root), "deleted-cwd");
+  const deletedLog = getSessionLogPath(deletedCwd, "deleted-audit");
+  await mkdir(dirname(deletedLog), { recursive: true });
+  await writeFile(deletedLog, JSON.stringify({
+    type: "assistant", uuid: "deleted-response", timestamp: "2026-08-06T12:00:00Z",
+    message: { role: "assistant", content: [{ type: "text", text: "Response after rmdir" }] },
+  }) + "\n");
+  t.check((await extractBehavior(deletedCwd, "deleted-audit")).responseText, "Response after rmdir");
+
+  // The reply is the text after the last tool call, as the chat shows it; text
+  // before a later tool call folds into the activity row (`final_reply`).
+  const replyLog = getSessionLogPath(deletedCwd, "reply-audit");
+  const line = (uuid: string, block: object) => JSON.stringify({
+    type: "assistant", uuid, timestamp: "2026-08-06T12:00:00Z", message: { role: "assistant", content: [block] },
+  });
+  await writeFile(replyLog, [
+    line("r1", { type: "text", text: "I'll build a card type." }),
+    line("r2", { type: "tool_use", id: "t1", name: "Bash", input: { command: "true" } }),
+    line("r3", { type: "text", text: "You now have a Loans page." }),
+  ].join("\n") + "\n");
+  const replyBehavior = await extractBehavior(deletedCwd, "reply-audit");
+  t.check(
+    { responseText: replyBehavior.responseText, replyText: replyBehavior.replyText },
+    { responseText: "I'll build a card type.\nYou now have a Loans page.", replyText: "You now have a Loans page." },
+  );
+
   await t.checkThrows(async () => (await extractBehavior(linkedCwd, "missing-audit")), "KnowledgeAuditTranscriptError: Claude knowledge-audit transcript is missing for session missing-audit: «*». No audit checks were evaluated.");
 
   const linkedPackage = box.path("node_modules/beebox");
@@ -120,7 +148,7 @@ void test("line 45", async (t) => {
   const photosAudit = (await loadTests("src/dev/knowledge-audits.yaml")).tests
     .find((audit) => audit.id === "iphone-photos-album-setup");
   const isForbiddenResponse = (response: string) => photosAudit !== undefined && runChecks(photosAudit, {
-    behavior: { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [], responseText: response, responseLength: response.length, context: null },
+    behavior: { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [], responseText: response, replyText: response, responseLength: response.length, context: null },
     newOrModifiedCards: new Map(),
   }).notMatchesChecks.some((check) => check.found);
   t.check(

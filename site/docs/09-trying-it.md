@@ -33,7 +33,10 @@ data, or your accounts. Four decisions are yours: run it or hack on it,
 where the box lives, your own agent login, and whether the box is exposed
 beyond loopback.
 
-**The first hour.** Start with the inputs that need no external account:
+**The first hour.** A new box opens on a chat that asks one question, "What do
+you want to keep track of here?" Answering it in your own words is how the box
+learns what it is for; "Not now" skips it, and the question stays pending until
+you answer or dismiss it. Then start with the inputs that need no external account:
 type into chat, record a voice memo, photograph things and talk about them.
 Scheduled processing is off on a fresh box, so nothing runs on its own until
 you turn it on. Connecting Google, which unlocks Gmail and Calendar, is the

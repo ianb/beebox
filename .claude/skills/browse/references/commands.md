@@ -6,15 +6,14 @@ bin/browse open /chats                          # → http://localhost:3210/<wt>
 bin/browse open /test1/chats                    # WRONG — doubles the box, lands elsewhere silently
 bin/browse open https://example.com             # bare URL passes through unchanged
 bin/browse back / forward / reload
+AGENT_BROWSER_INIT_SCRIPTS=/abs/stub.js bin/browse open /admin  # after close --all; stub fetch here, network route misses batched tRPC
 
 # Reading
 bin/browse snapshot -i                          # interactive elements only (preferred)
 bin/browse snapshot -i -u                       # include href URLs on links
 bin/browse snapshot -i -s "#main"               # scope to a CSS selector
-bin/browse snapshot -i --json                   # machine-readable
 bin/browse get text @e5
 bin/browse get url                              # current page URL
-bin/browse get title
 
 # Acting — a bbx- id, a @eN ref, or a CSS/XPath selector, in every target slot
 bin/browse click bbx-nav-profile
