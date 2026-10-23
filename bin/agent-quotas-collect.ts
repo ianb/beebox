@@ -15,8 +15,8 @@ import type {
   ClaudeUsageResult,
   CodexRateLimitResult,
 } from "./agent-quotas-parse.js";
+import { isRecord } from "../beebox/src/shared/is-record.js";
 import {
-  isRecord,
   parseClaudeQuota,
   parseCodexQuota,
 } from "./agent-quotas-parse.js";

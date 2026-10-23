@@ -25,6 +25,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { REPO_PATH_DIRS } from "../beebox/src/dev/doc-check/file-paths.js";
+import { isRecord } from "../beebox/src/shared/is-record.js";
 
 type Severity = "error" | "info";
 
@@ -50,10 +51,6 @@ interface ParsedDoc {
   /** 1-based line number of the first body line. */
   bodyStart: number;
   error?: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function parseDoc(text: string): ParsedDoc {

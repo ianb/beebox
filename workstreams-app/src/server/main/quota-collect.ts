@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 
 import type { Quota } from "../../shared/documents.js";
+import { isRecord } from "../../../../beebox/src/shared/is-record.js";
 import {
-  isRecord,
   parseClaudeQuota,
   parseCodexQuota,
   type ClaudeUsageResult,
