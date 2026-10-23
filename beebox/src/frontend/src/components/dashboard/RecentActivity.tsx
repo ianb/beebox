@@ -10,7 +10,7 @@ import type { RouterOutput } from "../../lib/trpc/client";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
 import { tickHadActivity } from "./ScheduleTicks";
-import { boxNow } from "../../lib/box-clock";
+import { compactAgo } from "../../lib/relative-time";
 
 type LogEntry = RouterOutput["status"]["activity"]["entries"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -25,19 +25,6 @@ interface RecentActivityProps {
 type ActivityItem =
   | { type: "commit"; ts: number; data: LogEntry }
   | { type: "tick"; ts: number; data: SchedulerLogEntry };
-
-/** `box` reads a stamp written on the box's clock (commit dates); scheduler tick stamps are the host's. */
-function timeAgo(ts: string | number, clock: "box" | "real"): string {
-  const elapsed = (clock === "box" ? boxNow() : Date.now()) - (typeof ts === "number" ? ts : new Date(ts).getTime());
-  const seconds = Math.floor(elapsed / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function CommitRow({ commit }: { commit: LogEntry }) {
   const { boxSlug } = useParams({ strict: false });
@@ -62,7 +49,7 @@ function CommitRow({ commit }: { commit: LogEntry }) {
         </div>
       </div>
       <span className="text-xs text-warm-700 whitespace-nowrap">
-        {timeAgo(commit.date, "box")}
+        {compactAgo(commit.date, "box")}
       </span>
     </div>
   );
@@ -120,7 +107,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
         </div>
       </div>
       <span className="text-xs text-warm-700 whitespace-nowrap">
-        {timeAgo(tick.ts, "real")}
+        {compactAgo(tick.ts, "real")}
       </span>
     </div>
   );
