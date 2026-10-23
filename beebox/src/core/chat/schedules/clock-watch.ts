@@ -13,6 +13,10 @@ export class ClockWatch {
 
   constructor(private readonly boxRoot: string, private readonly options: { intervalMs: number; hasTimers: () => boolean; onChange: () => void }) {}
 
+  isWatching(): boolean {
+    return this.listener !== null;
+  }
+
   /** Start watching when timers exist and nothing watches; stop when none remain. */
   sync(): void {
     const hasTimers = this.options.hasTimers();

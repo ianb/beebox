@@ -59,3 +59,18 @@ void test("a check-in armed before an offset fires once the offset passes it", a
   await eventually(() => fired.length === 1, { label: "the check-in fires after the offset" });
   t.check({ fired, active: manager.getActive() }, { fired: ["soon"], active: [] });
 });
+
+void test("the clock watcher runs only while a check-in is armed", async (t) => {
+  const box = await makeWalkBox();
+  const manager = new ChatScheduleManager(box.root, { onFire: () => {} });
+  t.teardown(async () => { manager.stopAll(); clearTimeCache(); await box.cleanup(); });
+  const idle = manager.isWatchingClock();
+  manager.addSchedule({ ...base, label: "rice", durationMs: 10 * 60_000 });
+  const armed = manager.isWatchingClock();
+  manager.cancelByLabel("rice");
+  const cancelled = manager.isWatchingClock();
+  manager.addSchedule({ ...base, label: "tea", durationMs: 10 * 60_000, sessionId: "s1" });
+  const rearmed = manager.isWatchingClock();
+  manager.pauseForMaintenance();
+  t.check({ idle, armed, cancelled, rearmed, paused: manager.isWatchingClock() }, { idle: false, armed: true, cancelled: false, rearmed: true, paused: false });
+});

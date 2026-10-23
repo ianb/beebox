@@ -218,7 +218,7 @@ export class ChatScheduleManager {
     // An entry saved before CHECK_IN_MAX_MS can exceed Node's timer limit:
     // wait out the limit, then arm again.
     const timer = delay > MAX_TIMEOUT_MS
-      ? setTimeout(() => { this.timers.delete(schedule.id); this.armTimer(schedule); }, MAX_TIMEOUT_MS)
+      ? setTimeout(() => { this.timers.delete(schedule.id); this.armTimer(schedule); this.clockWatch.sync(); }, MAX_TIMEOUT_MS)
       : setTimeout(() => { this.startFire(schedule); }, delay);
 
     // Don't keep process alive just for schedules
@@ -289,7 +289,13 @@ export class ChatScheduleManager {
     if (timer) {
       clearTimeout(timer);
       this.timers.delete(id);
+      this.clockWatch.sync();
     }
+  }
+
+  /** Whether the clock offset file is being polled (only while timers are armed on a walk fixture). */
+  isWatchingClock(): boolean {
+    return this.clockWatch.isWatching();
   }
 
   private rearmAll(): void {
@@ -300,6 +306,7 @@ export class ChatScheduleManager {
       // Preserve startup settling time, but make these timers cancellable too.
       const timer = setTimeout(() => {
         this.timers.delete(id);
+        this.clockWatch.sync();
         if (this.schedules.has(id)) this.startFire(schedule);
       }, 2000);
       timer.unref();

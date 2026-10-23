@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { commit, stageAll } from "../../src/lib/git/core/operations.js";
 import { buildScriptEnv } from "../../src/core/script-env/core.js";
-import { clearTimeCache } from "../../src/lib/time.js";
+import { clearTimeCache, getBoxTime } from "../../src/lib/time.js";
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 const IDENTITY = { GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@example.com", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@example.com" };
@@ -22,12 +22,16 @@ function git(box: TmpBox, ...args: string[]): string {
   return execFileSync("git", args, { cwd: box.root }).toString().trim();
 }
 
-async function makeFixture(options: { offsetMs?: number; walk: boolean }): Promise<TmpBox> {
+async function makeFixture(options: { offsetMs?: number; offsetText?: string; walk: boolean }): Promise<TmpBox> {
   const box = await makeTmpBox({ git: true });
   if (options.walk) await box.write("_config/box.json", JSON.stringify({ fakeNotifications: true }));
   if (options.offsetMs !== undefined) {
     await mkdir(join(box.root, ".beebox"), { recursive: true });
     await writeFile(join(box.root, ".beebox/clock-offset.json"), JSON.stringify({ offsetMs: options.offsetMs }));
+  }
+  if (options.offsetText !== undefined) {
+    await mkdir(join(box.root, ".beebox"), { recursive: true });
+    await writeFile(join(box.root, ".beebox/clock-offset.json"), options.offsetText);
   }
   await box.commitAll("fixture");
   clearTimeCache();
@@ -104,4 +108,26 @@ void test("A box that is not a walk fixture keeps real dates and gets no shim:",
     shell: dayOf(await shellCommit(box)),
     shimOnPath: (env.PATH ?? "").includes(join(box.root, ".beebox/bin")),
   }, { engine: today, shell: today, shimOnPath: false });
+});
+
+// A malformed offset file leaves the box and the shell on real time:
+void test("A malformed offset file leaves the box and the shell on real time:", async (t) => {
+  const box = await makeFixture({ walk: true, offsetText: '{"offsetMs":604800000,' });
+  t.teardown(() => box.cleanup());
+  const today = expectedDay({ ms: Date.now() });
+  t.check({ boxDay: getBoxTime(box.root).toISOString().slice(0, 10), shell: dayOf(await shellCommit(box)) }, {
+    boxDay: today.slice(0, 10),
+    shell: today,
+  });
+});
+
+// An offset in exponent form shifts the box and the shell alike:
+void test("An offset in exponent form shifts the box and the shell alike:", async (t) => {
+  const box = await makeFixture({ walk: true, offsetText: '{"offsetMs":6.048e8}' });
+  t.teardown(() => box.cleanup());
+  const when = Date.now() + WEEK_MS;
+  t.check({ boxDay: getBoxTime(box.root).toISOString().slice(0, 10), shell: dayOf(await shellCommit(box)) }, {
+    boxDay: expectedDay({ ms: when }).slice(0, 10),
+    shell: expectedDay({ ms: when }),
+  });
 });

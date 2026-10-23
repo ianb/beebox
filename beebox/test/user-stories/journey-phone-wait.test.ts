@@ -19,8 +19,9 @@ process.env.TZ = "UTC";
 //
 // A real box and real ticks across a two-day wait: a daily reminder fires each
 // day; a daily `runs:` card runs each day, and its first run creates a reminder
-// that fires later in the same wait; a one-shot `runs:` card that fails is
-// reported and the wait goes on. Afterwards the box clock is two days ahead.
+// that fires later in the same wait; a card that turns itself off runs once; one
+// that finds nothing to do is reported each time; a one-shot `runs:` card that
+// fails is reported and the wait goes on. Afterwards the box clock is two days ahead.
 // A wait cut off while a run was in progress is resumed without re-running it.
 void test("A wait lives through the interval in time order, and resumes after a stop", async (t) => {
   const box = await makeTmpBox({ git: true });
@@ -41,6 +42,12 @@ void test("A wait lives through the interval in time order, and resumes after a 
     "---\ncron: \"0 9 * * *\"\nnotify:\n  title: Water the plants\n  target: chat:new\n---\n");
   writeFileSync(join(schedules, "daily-note.scheduled-script.card"),
     `---\ncron: "0 10 * * *"\nruns: >\n  echo "ran $BBX_TIME" >> .beebox/ran.log &&\n  { [ -e _config/schedules/remind-made.scheduled-script.card ] || printf -- '---\\nat: ${later}\\nonce: true\\nnotify:\\n  title: Made by a run\\n  target: chat:new\\n---\\n' > _config/schedules/remind-made.scheduled-script.card; }\n---\n`);
+  // Turns itself off on its first run: the rest of the wait is planned again, so it runs once.
+  writeFileSync(join(schedules, "self-off.scheduled-script.card"),
+    "---\ncron: \"0 11 * * *\"\nruns: >\n  echo \"self-off $BBX_TIME\" >> .beebox/ran.log &&\n  sed -i.bak 's/^cron:/enabled: false\\ncron:/' _config/schedules/self-off.scheduled-script.card && rm -f _config/schedules/self-off.scheduled-script.card.bak\n---\n");
+  // Finds nothing to do each time: reported as held back, and the wait goes on.
+  writeFileSync(join(schedules, "nothing-new.scheduled-script.card"),
+    "---\ncron: \"0 12 * * *\"\nruns: echo '{\"reason\":\"no-change\"}' > \"$BBX_DEFER_FILE\"; exit 75\n---\n");
   writeFileSync(join(schedules, "broken-once.scheduled-script.card"),
     `---\nat: ${iso(Date.now() + 0.5 * day)}\nonce: true\nruns: exit 3\n---\n`);
   execFileSync("git", ["-C", box.root, "add", "-A"]);
@@ -58,13 +65,15 @@ void test("A wait lives through the interval in time order, and resumes after a 
   t.check({
     titles,
     failedLine: /^- broken-once@\S+: .+$/mu.exec(waited)?.[0].replace(/@\S+: .+$/u, "@<at>: <error>"),
+    deferred: [...waited.matchAll(/^- (nothing-new)@\S+: (.+)$/gmu)].map((m) => `${m[1] ?? ""}: ${m[2] ?? ""}`),
     runs: readFileSync(join(box.root, ".beebox", "ran.log"), "utf8").trim().split("\n").map((l) => l.replace(/\d{4}-\d\d-\d\dT/u, "<day>T")),
     offsetDays,
     stateKeys: Object.keys(z.record(z.string(), z.unknown()).parse(JSON.parse(readFileSync(join(runDir, "phone.json"), "utf8")))),
   }, {
     titles: ["Made by a run", "Water the plants", "Water the plants"],
     failedLine: "- broken-once@<at>: <error>",
-    runs: ["ran <day>T10:00:01.000Z", "ran <day>T10:00:01.000Z"],
+    deferred: ["nothing-new: no-change", "nothing-new: no-change"],
+    runs: ["ran <day>T10:00:01.000Z", "self-off <day>T11:00:01.000Z", "ran <day>T10:00:01.000Z"],
     offsetDays: 2,
     stateKeys: ["shown"],
   });

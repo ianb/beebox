@@ -8,8 +8,9 @@
  *
  * Box time in the shim: `BBX_TIME` when set (a wait's replay), parsed by the
  * node binary running the server (its absolute path is baked in; `date -d` and
- * `date -j -f` differ between GNU and macOS), else real seconds plus
- * `offsetMs` from `.beebox/clock-offset.json`, read with sed. Dates are set
+ * `date -j -f` differ between GNU and macOS), else real time plus
+ * a valid `offsetMs` from `.beebox/clock-offset.json`, read by the same node with
+ * the validation `storedClockOffsetMs` applies. Dates are set
  * only when the result is a minute or more from real time, matching
  * `boxClockShiftMs`. Variables already set in the environment win.
  */
@@ -29,6 +30,25 @@ function quote(value: string): string {
   return "'" + value.replaceAll("'", "'\\''") + "'";
 }
 
+/**
+ * Box time in whole seconds, or nothing: the same rule as `getBoxTime` in
+ * `lib/time.ts` (BBX_TIME, else now plus a valid offset file). A valid file is
+ * a JSON object with a nonnegative integer `offsetMs` and, if present, a string
+ * `setAt`. Must not contain a single quote.
+ */
+const NODE_BOX_SECONDS = `
+let t;
+if (process.env.BBX_TIME) t = Date.parse(process.env.BBX_TIME);
+else {
+  try {
+    const o = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf-8"));
+    const ok = o !== null && typeof o === "object" && !Array.isArray(o) && Number.isInteger(o.offsetMs) && o.offsetMs >= 0 && (o.setAt === undefined || typeof o.setAt === "string");
+    if (ok) t = Date.now() + o.offsetMs;
+  } catch (e) {}
+}
+if (Number.isFinite(t)) console.log(Math.floor(t / 1000));
+`;
+
 /** The shim script text for a real git at `realGit`. Exported for tests. */
 export function gitShimText(input: { realGit: string; nodePath: string; offsetFile: string }): string {
   const { realGit, nodePath, offsetFile } = input;
@@ -37,13 +57,7 @@ export function gitShimText(input: { realGit: string; nodePath: string; offsetFi
 real_git=${quote(realGit)}
 if [ -z "$GIT_AUTHOR_DATE$GIT_COMMITTER_DATE" ]; then
   now=$(date +%s)
-  secs=
-  if [ -n "$BBX_TIME" ]; then
-    secs=$(${quote(nodePath)} -e 'const t = Date.parse(process.env.BBX_TIME); if (!Number.isNaN(t)) console.log(Math.floor(t / 1000))' 2>/dev/null)
-  else
-    offset_ms=$(sed -n 's/.*"offsetMs": *\\([0-9]*\\).*/\\1/p' ${quote(offsetFile)} 2>/dev/null)
-    if [ -n "$offset_ms" ]; then secs=$((now + offset_ms / 1000)); fi
-  fi
+  secs=$(${quote(nodePath)} -e ${quote(NODE_BOX_SECONDS)} ${quote(offsetFile)} 2>/dev/null)
   if [ -n "$secs" ]; then
     diff=$((secs - now))
     if [ "$diff" -ge 60 ] || [ "$diff" -le -60 ]; then

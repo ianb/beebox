@@ -18,6 +18,25 @@ export function setBoxClockShift(next: number): void {
   for (const listener of listeners) listener();
 }
 
+let syncEpoch = 0;
+
+/**
+ * Start a sync for a newly current box: the previous box's gap is dropped at
+ * once, so a real box never shows a walk box's shift. Returns the ticket that
+ * the sync's reply must present to {@link applyBoxClockReply}.
+ */
+export function beginBoxClockSync(): number {
+  syncEpoch += 1;
+  setBoxClockShift(0);
+  return syncEpoch;
+}
+
+/** Apply a reported gap unless a later {@link beginBoxClockSync} superseded its ticket. */
+export function applyBoxClockReply({ epoch, reportedMs }: { epoch: number; reportedMs: number }): void {
+  if (epoch !== syncEpoch) return;
+  setBoxClockShift(reportedMs);
+}
+
 /** Epoch milliseconds on the box's clock, for dates shown to the person. */
 export function boxNow(): number {
   return Date.now() + shiftMs;

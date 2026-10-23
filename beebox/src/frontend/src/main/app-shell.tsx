@@ -115,9 +115,9 @@ function BoxValidationError() {
 export function ProductLayout() {
   const [showDebugLog, setShowDebugLog] = useState(false);
   usePresenceHeartbeat();
-  useBoxClockSync();
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
+  useBoxClockSync(boxSlug);
   const standalonePage = useStandalonePage();
   const handleToggleSourceView = sourceView.toggle;
   const handleCloseSourceView = sourceView.toggle;

@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { boxNow, setBoxClockShift } from "../../src/lib/box-clock.js";
+import { applyBoxClockReply, beginBoxClockSync, boxNow, setBoxClockShift } from "../../src/lib/box-clock.js";
 import { localIsoDate, startPrefix } from "../../src/components/todo/item-logic.js";
 
 const DAY_MS = 86_400_000;
@@ -38,4 +38,22 @@ void test("the todo start prefix reads the box date", async (t) => {
   const shifted = prefix();
   setBoxClockShift(0);
   t.check({ real, shifted }, { real: "later ·", shifted: "since" });
+});
+
+// ## Switching boxes drops the previous box's gap
+//
+// A window that moves from a walk box to a real box must not keep reading the
+// walk box's shift, and the walk box's late reply must not restore it.
+
+void test("a box change resets the gap and ignores the previous box's reply", async (t) => {
+  setBoxClockShift(0);
+  const walk = beginBoxClockSync();
+  applyBoxClockReply({ epoch: walk, reportedMs: 7 * DAY_MS });
+  const onWalk = Math.round((boxNow() - Date.now()) / DAY_MS);
+  const real = beginBoxClockSync();
+  const afterSwitch = Math.round((boxNow() - Date.now()) / DAY_MS);
+  applyBoxClockReply({ epoch: walk, reportedMs: 7 * DAY_MS });
+  const afterStaleReply = Math.round((boxNow() - Date.now()) / DAY_MS);
+  applyBoxClockReply({ epoch: real, reportedMs: 0 });
+  t.check({ onWalk, afterSwitch, afterStaleReply }, { onWalk: 7, afterSwitch: 0, afterStaleReply: 0 });
 });

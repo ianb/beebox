@@ -49,10 +49,22 @@ export interface WaitOutcome {
 }
 
 class WaitStepError extends Error {
-  constructor(message: string) {
+  /** The occurrence the box confirmed did not run: the wait forgets it started, so a resume runs it. */
+  readonly notRun: string | undefined;
+  constructor(message: string, opts?: { notRun?: string }) {
     super(message);
     this.name = "WaitStepError";
+    this.notRun = opts?.notRun;
   }
+}
+
+/** What a wait found along the way, reported before the notifications. */
+interface Findings {
+  unreadable: string[];
+  interrupted: string[];
+  failed: string[];
+  deferred: string[];
+  noRecord: string[];
 }
 
 async function readScheduleCards(box: string): Promise<{ cards: ScheduleCard[]; unreadable: string[] }> {
@@ -119,8 +131,9 @@ function drain(box: string, opts: { at: Date; failed: string[] }): void {
   if (!result.ok) opts.failed.push(`jobs at ${opts.at.toISOString()}: ${firstLine(result.output)}`);
 }
 
-async function runOccurrence(box: string, opts: { o: Occurrence; to: Date; failed: string[]; noRecord: string[] }): Promise<void> {
-  const { o, failed, noRecord } = opts;
+async function runOccurrence(box: string, opts: { o: Occurrence; to: Date; found: Findings }): Promise<void> {
+  const { o, found } = opts;
+  const { failed, noRecord } = found;
   // A second past the due time, but never past the wait's end: one stamped after
   // the box's new now would not have arrived yet.
   const at = new Date(Math.min(o.at.getTime() + 1000, opts.to.getTime()));
@@ -135,10 +148,16 @@ async function runOccurrence(box: string, opts: { o: Occurrence; to: Date; faile
   }
   const state = await loadScriptState(box, o.name);
   if (state.lastRun === null || Date.parse(state.lastRun) < o.at.getTime()) {
-    throw new WaitStepError(`${occurrenceKey(o)} did not run:\n${result.output.trim()}`);
+    throw new WaitStepError(`${occurrenceKey(o)} did not run:\n${result.output.trim()}`, { notRun: occurrenceKey(o) });
   }
   if (state.lastResult === "failure") failed.push(`${occurrenceKey(o)}: ${firstLine(state.lastError ?? "failed")}`);
+  // Often "nothing to do"; a real box records it the same way and runs the card again next time.
+  if (state.lastResult === "deferred") found.deferred.push(`${occurrenceKey(o)}: ${state.lastDeferReason ?? "deferred"}`);
   drain(box, { at, failed });
+}
+
+function refusal(refused: string[]): WaitStepError {
+  return new WaitStepError(`these come due too often for one wait:\n${refused.map((r) => `- ${r}`).join("\n")}`);
 }
 
 function saveRecord(statePath: string, opts: { shown: string[]; wait: WaitRecord | null }): void {
@@ -151,55 +170,59 @@ export async function runWait(box: string, opts: { record: WaitRecord; statePath
   const { record, statePath, shown } = opts;
   const from = new Date(record.from);
   const to = new Date(record.to);
-  const lines: string[] = [];
-  const failed: string[] = [];
-  const noRecord: string[] = [];
   const interrupted = record.started.filter((k) => !record.done.includes(k));
   for (const k of interrupted) record.done.push(k);
   const { cards, unreadable } = await readScheduleCards(box);
+  const found: Findings = { unreadable, interrupted, failed: [], deferred: [], noRecord: [] };
   const plan = planWait(cards, { from, to });
   if (plan.refused.length > 0 && record.started.length === 0) {
     return { finished: false, lines: ["The wait did not start; these come due too often for one wait:", ...plan.refused.map((r) => `- ${r}`)] };
   }
-  const queue = plan.queue.filter((o) => !record.done.includes(occurrenceKey(o)));
+  let queue = plan.queue.filter((o) => !record.done.includes(occurrenceKey(o)));
   saveRecord(statePath, { shown, wait: record });
   try {
+    if (plan.refused.length > 0) throw refusal(plan.refused);
     for (let o = queue.shift(); o !== undefined; o = queue.shift()) {
       record.started.push(occurrenceKey(o));
       saveRecord(statePath, { shown, wait: record });
-      await runOccurrence(box, { o, to, failed, noRecord });
+      await runOccurrence(box, { o, to, found });
       record.done.push(occurrenceKey(o));
       saveRecord(statePath, { shown, wait: record });
       if (o.kind !== "runs") continue;
-      // A run can create a schedule; one due later in this wait joins the queue.
-      const known = new Set([...record.done, ...queue.map(occurrenceKey)]);
-      const current = o;
-      const fresh = planWait((await readScheduleCards(box)).cards, { from: current.at, to }).queue
-        .filter((n) => !known.has(occurrenceKey(n)) && n.at.getTime() > current.at.getTime());
-      queue.push(...fresh);
-      queue.sort((a, b) => a.at.getTime() - b.at.getTime() || a.name.localeCompare(b.name));
+      // A run can create, edit, or remove schedules: the rest of the wait is planned
+      // again from the cards as they are now.
+      const replan = planWait((await readScheduleCards(box)).cards, { from: o.at, to });
+      if (replan.refused.length > 0) throw refusal(replan.refused);
+      queue = replan.queue.filter((n) => !record.done.includes(occurrenceKey(n)));
     }
     const wake = bbx(box, { args: ["engine", "wakeup", "--skip-push"], at: to });
-    if (!wake.ok) failed.push(`waking the box at ${to.toISOString()}: ${firstLine(wake.output)}`);
-    drain(box, { at: to, failed });
+    if (!wake.ok) found.failed.push(`waking the box at ${to.toISOString()}: ${firstLine(wake.output)}`);
+    drain(box, { at: to, failed: found.failed });
   } catch (e) {
     if (!(e instanceof WaitStepError)) throw e;
-    lines.push(`The wait stopped: ${e.message}`, "Fix the cause, then run phone.ts again (without --wait) to resume it.", "");
-    return { finished: false, lines: [...describe({ unreadable, interrupted, failed, noRecord }), ...lines] };
+    if (e.notRun !== undefined) {
+      record.started = record.started.filter((k) => k !== e.notRun);
+      saveRecord(statePath, { shown, wait: record });
+    }
+    return {
+      finished: false,
+      lines: [...describe(found), `The wait stopped: ${e.message}`, "Fix the cause, then run phone.ts again (without --wait) to resume it.", ""],
+    };
   }
   const offsetPath = clockOffsetPath(box);
   mkdirSync(dirname(offsetPath), { recursive: true });
   writeFileSync(offsetPath, `${JSON.stringify({ offsetMs: Math.max(0, to.getTime() - Date.now()), setAt: new Date().toISOString() })}\n`);
   saveRecord(statePath, { shown, wait: null });
-  return { finished: true, lines: describe({ unreadable, interrupted, failed, noRecord }) };
+  return { finished: true, lines: describe(found) };
 }
 
-function describe(found: { unreadable: string[]; interrupted: string[]; failed: string[]; noRecord: string[] }): string[] {
+function describe(found: Findings): string[] {
   const section = (title: string, items: string[]): string[] => (items.length === 0 ? [] : [title, ...items.map((i) => `- ${i}`), ""]);
   return [
     ...section("Could not read these schedules:", found.unreadable),
     ...section("Cut off by an earlier stop, and not run again:", found.interrupted),
     ...section("Ran and failed (the box records it, as it would any failed run):", found.failed),
+    ...section("Ran and held itself back (the box records why):", found.deferred),
     ...section("No record of these reaching the phone:", found.noRecord),
   ];
 }
