@@ -47,3 +47,28 @@ charged to each owner:
   unmeasured.
 
 Measure with `pnpm perf:cli-start --cpu-prof` and `pnpm perf:serve-start`.
+
+## Update (2026-10-23, later)
+
+Done in worktree-perf-easy-wins: server-only packages, the Agent SDK, react-dom,
+esbuild, file-type, chokidar and the orama persistence plugin load on first use,
+and two strings built at load no longer parse `ledger.yaml`. `bbx --version`
+went from about 454 to about 360 ms (interleaved runs, load 5–8).
+
+What remains per start, from a profile: Node module loading and compiling, zod
+schema construction spread across many modules (about 50 ms), the `yaml`
+package's own evaluation (about 9 ms), source maps (about 50 ms, kept on by
+decision), and execa (about 29 ms). execa stays static because
+`defaultSpawnChild` in `src/hub/supervisor/child-spawn.ts` is synchronous and
+its tests use the returned promise directly; `require()` of execa works from
+the bundle but not under tsx. The TypeScript native API (about 17 ms) is
+called synchronously.
+
+Lazy commands remain the main lever. A bundle that registers only `ls` runs
+`bbx ls` in 288 ms against 464 ms for the full CLI (same load). `ls` alone
+still pulls 22 packages through the card and schema graph.
+
+Source maps: about 50 ms per start (398 vs 349 ms). An alternative that keeps
+mapped stacks: start without `--enable-source-maps` and map a stack on demand
+with `node:module`'s `SourceMap` when the CLI reports an error. Needs a
+decision, since keeping source maps on is a recorded choice.
