@@ -7,6 +7,7 @@ import { getBoxShape } from "../lib/box-shape.js";
 import { AGENTS_MD, CLAUDE_MD } from "./agent-instruction-files.js";
 import { withDocId, withoutDocId } from "./docs-gen/shared.js";
 import { pathExistsStrict } from "../lib/file-exists.js";
+import { splitCardContent } from "../cards/frontmatter.js";
 
 /**
  * The line an older engine wrote into a generated `AGENTS.md` file, before the
@@ -194,7 +195,7 @@ function ruleSkill(ruleName: string, rule: string): string {
   const paths = [...frontmatter.matchAll(/^\s*-\s+["']?(.+?)["']?\s*$/gm)]
     .map((match) => match[1])
     .join(", ");
-  const body = unmarked.replace(/^---\n[\S\s]*?\n---\n+/, "");
+  const body = splitCardContent(unmarked).body.replace(/^\n+/, "");
   const selector = paths === "" ? "relevant box files" : paths;
   return withDocId({
     relativePath: `.agents/skills/beebox-rule-${ruleName}/SKILL.md`,

@@ -36,7 +36,46 @@ export interface SplitCardContent {
   hasFrontmatter: boolean;
 }
 
-const FRONTMATTER_BLOCK = /^---\r?\n([\S\s]*?)\r?\n---\r?\n/;
+/**
+ * The one frontmatter fence rule, shared by cards, repo docs and issues, and
+ * the dev tools that edit them line by line:
+ *
+ * - an optional byte-order mark, then `---` at column 0;
+ * - fence lines may carry trailing spaces or tabs, and end in LF or CRLF;
+ * - the closing `---` may end the file;
+ * - an empty block (`---` directly followed by `---`) is a block with no text;
+ * - `---x` or `----` is not a fence, so it stays inside the block.
+ */
+const FRONTMATTER_BLOCK = /^\uFEFF?---[\t ]*\r?\n(?:([\S\s]*?)\r?\n)?---[\t ]*(?:\r?\n|$)/;
+
+/**
+ * Where a text's frontmatter block sits, as character offsets: the block's
+ * text runs from `textStart` to `textEnd` (no fences, no final newline), and
+ * the body starts at `bodyStart`. Null when the text has no block. For tools
+ * that edit inside the block without reserializing it.
+ */
+export interface FrontmatterFence {
+  textStart: number;
+  textEnd: number;
+  bodyStart: number;
+  /** Index of the closing fence line in `content.split("\n")`; the block's
+   *  text lines are 1 up to (not including) it. */
+  closingLine: number;
+}
+
+export function frontmatterFence(content: string): FrontmatterFence | null {
+  const match = FRONTMATTER_BLOCK.exec(content);
+  if (!match) return null;
+  const opening = /^\uFEFF?---[\t ]*\r?\n/.exec(content);
+  const textStart = opening === null ? 0 : opening[0].length;
+  const text = match[1] ?? "";
+  return {
+    textStart,
+    textEnd: textStart + text.length,
+    bodyStart: match[0].length,
+    closingLine: match[1] === undefined ? 1 : 2 + (text.match(/\n/g)?.length ?? 0),
+  };
+}
 
 /**
  * Split a .card file's raw text into optional frontmatter and body.
@@ -44,8 +83,8 @@ const FRONTMATTER_BLOCK = /^---\r?\n([\S\s]*?)\r?\n---\r?\n/;
  * Only detects the block; does not parse the YAML inside it.
  */
 export function splitCardContent(content: string): SplitCardContent {
-  const match = FRONTMATTER_BLOCK.exec(content);
-  if (!match) {
+  const fence = frontmatterFence(content);
+  if (fence === null) {
     return {
       frontmatterText: "",
       body: content,
@@ -53,18 +92,15 @@ export function splitCardContent(content: string): SplitCardContent {
       hasFrontmatter: false,
     };
   }
-  const prefixLength = match[0].length;
-  const frontmatterText = match[1] === undefined ? "" : match[1];
-  const body = content.slice(prefixLength);
   let lineOffset = 0;
-  for (let i = 0; i < prefixLength; i++) {
+  for (let i = 0; i < fence.bodyStart; i++) {
     if (content.codePointAt(i) === 10) {
       lineOffset++;
     }
   }
   return {
-    frontmatterText,
-    body,
+    frontmatterText: content.slice(fence.textStart, fence.textEnd),
+    body: content.slice(fence.bodyStart),
     lineOffset,
     hasFrontmatter: true,
   };

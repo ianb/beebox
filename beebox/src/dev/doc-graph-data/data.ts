@@ -10,6 +10,7 @@ import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { documentLifecycle, planStatusFromSource, type DocumentLifecycle } from "./document-lifecycle.js";
 import { isWithin } from "../../lib/box-containment.js";
+import { frontmatterFence } from "../../cards/frontmatter.js";
 
 export const ROOT = PACKAGE_ROOT;
 
@@ -172,11 +173,12 @@ function extractFrontmatterReferences(params: {
   resolve: (ref: string) => [string, boolean];
 }): Reference[] {
   const { filePath, content, resolve } = params;
-  if (!content.startsWith("---\n")) return [];
+  const fence = frontmatterFence(content);
+  if (fence === null) return [];
   const refs: Reference[] = [];
   let issuesList = false;
   for (const [index, line] of content.split("\n").entries()) {
-    if (index > 0 && line === "---") break;
+    if (index === fence.closingLine) break;
     const scalar = /^(design|superseded-by):\s*(\S+\.md)$/.exec(line);
     if (/^issues:\s*$/.test(line)) issuesList = true;
     else if (/^\S/.test(line)) issuesList = false;

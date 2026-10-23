@@ -45,6 +45,7 @@ import { formatLinkDestination, htmlLinkPattern, inlineLinkPattern, linkTarget }
 import { rewriteFrontmatter, type RefTransform } from "./frontmatter-refs.js";
 import { invariant } from "../../shared/invariant.js";
 import { boxRelativeDoc } from "../../lib/box-containment.js";
+import { frontmatterFence } from "../../cards/frontmatter.js";
 
 /**
  * Decide where a resolved target moves to. Receives an absolute path; returns
@@ -232,11 +233,8 @@ function scanBodyText(line: string, wrap: RefTransform): string {
 
 /** The line index the body starts at — past the frontmatter block, or 0. */
 function bodyStartLine(lines: string[]): number {
-  if (lines[0] !== "---") return 0;
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i] === "---") return i + 1;
-  }
-  return 0;
+  const fence = frontmatterFence(lines.join("\n"));
+  return fence === null ? 0 : fence.closingLine + 1;
 }
 
 /**

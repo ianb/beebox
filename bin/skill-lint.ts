@@ -26,6 +26,7 @@ import { basename, join, relative, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { REPO_PATH_DIRS } from "../beebox/src/dev/doc-check/file-paths.js";
 import { isRecord } from "../beebox/src/shared/is-record.js";
+import { frontmatterFence } from "../beebox/src/cards/frontmatter.js";
 
 type Severity = "error" | "info";
 
@@ -58,7 +59,7 @@ function parseDoc(text: string): ParsedDoc {
   if (lines[0] !== "---") {
     return { frontmatter: undefined, body: text, bodyStart: 1, error: "file does not start with a --- frontmatter fence" };
   }
-  const close = lines.indexOf("---", 1);
+  const close = frontmatterFence(text)?.closingLine ?? -1;
   if (close === -1) {
     return { frontmatter: undefined, body: text, bodyStart: 1, error: "frontmatter has no closing --- fence" };
   }
