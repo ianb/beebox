@@ -72,6 +72,12 @@ void test("a member's phone is refused once the member is removed from the box",
   );
   // The owner can always open the box, so the owner's phone still passes.
   t.check(await statuses(ownerPhone), { bearer: 200, cookie: 200 });
+  // A refused cookie does not speak for the other credentials on the request:
+  // the owner's device token on the same request still authenticates it.
+  t.check(
+    (await ctx.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: { cookie: memberPhone.cookie, authorization: ownerPhone.bearer } })).statusCode,
+    200,
+  );
 
   // Adding the member back restores the phone: the device record was never removed.
   await setAllowedEmails(["tomas@example.com"]);

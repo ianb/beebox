@@ -121,8 +121,8 @@ export async function spawnGeneration(
     resolvedBoxes,
   }: { plan: StartPlan; handle: WorktreeHandle; progress: StartProgress; resolvedBoxes: ResolvedBoxEntry[] },
 ): Promise<Generation> {
-  const { effects, config, log } = state;
-  const { wt, backendPort, frontendPort, childEnv, logStream } = plan;
+  const { effects, config } = state;
+  const { wt, backendPort, childEnv, logStream } = plan;
   const name = wt.name;
 
   // Resolved once per generation spawn (not inside the readiness-poll loop
@@ -156,6 +156,22 @@ export async function spawnGeneration(
     /* handled via .on("exit") + failed-state UX */
   });
   const fastifyOutput = captureOutput(fastify, logStream);
+  try {
+    return spawnFrontend({ state, plan, handle, progress, name, fastify, fastifyOutput });
+  } catch (err) {
+    // Fastify is already running; a throw before its exit listener is wired
+    // would leave it ownerless once failBeforeSpawn parks the record.
+    effects.killGroup(fastify.pid);
+    throw err;
+  }
+}
+
+function spawnFrontend({ state, plan, handle, progress, name, fastify, fastifyOutput }: {
+  state: CoreState; plan: StartPlan; handle: WorktreeHandle; progress: StartProgress; name: string;
+  fastify: SpawnedChild; fastifyOutput: Generation["fastifyOutput"];
+}): Generation {
+  const { effects, log } = state;
+  const { wt, frontendPort, childEnv, logStream } = plan;
 
   // The frontend's own Vite (`wt.viteBin`), not the workspace root's hoisted
   // `node_modules/.bin/vite`: the root one is whatever major another package

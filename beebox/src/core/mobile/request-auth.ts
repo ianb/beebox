@@ -92,12 +92,14 @@ export async function resolveMobileRequestAuth(
   for (const value of cookies[MOBILE_COOKIE_NAME] ?? []) {
     const session = verifyMobileSession(boxRoot, value);
     if (session) {
-      return whilePairerHasAccess(boxRoot, {
+      const auth = await whilePairerHasAccess(boxRoot, {
         deviceId: session.deviceId,
         createdBy: session.createdBy,
         source: "cookie",
         expiresAt: session.exp,
       });
+      // A refused cookie does not speak for the other credentials on the request.
+      if (auth) return auth;
     }
   }
 

@@ -607,9 +607,10 @@ trap 'exit 143' TERM
 WINDOW
 queue_remote command /usr/local/sbin/bbx-deploy-window open "$STAGE_DIR/beebox/dist/deploy-page.html"
 queue_remote command /usr/local/sbin/bbx-deploy-window down
-queue_remote command systemctl stop beebox-hub beebox-scheduler
 # From here until the restart, the EXIT trap starts the services on a failure.
+# Set before the stop: a stop that fails halfway has already taken one down.
 printf 'SERVICES_STOPPED=1\n' >> "$REMOTE_SCRIPT"
+queue_remote command systemctl stop beebox-hub beebox-scheduler
 queue_remote command rsync "${RSYNC_OPTS[@]}" --exclude '.activate-deploy.sh' "$STAGE_DIR/" "$INSTALL_DIR/"
 queue_remote command chown -R beebox:beebox "$INSTALL_DIR"
 
