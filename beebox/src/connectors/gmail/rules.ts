@@ -1,5 +1,6 @@
 /** Evaluate Gmail query rules against bounded mailbox-change candidates. */
 
+import { NotFoundError } from "../../lib/errors.js";
 import type { GmailMessage, GoogleGmailService } from "../../services/google-gmail/core.js";
 import type { ConnectorProcedureTrigger } from "../../connector.js";
 import type { GmailConnectorConfig, GmailRule } from "./config.js";
@@ -66,7 +67,11 @@ function safeRfc822MessageId(message: GmailMessage): string | null {
   const header = rfc822MessageIdFor(message);
   if (header === undefined) return null;
   const messageId = header.replace(/^<|>$/g, "");
-  return /^[\dA-Za-z._%+-]+@[\dA-Za-z.-]+$/u.test(messageId)
+  // RFC 5322 dot-atom on both sides: Gmail's own ids carry `=` and `/`. The
+  // search quotes the id, and dot-atom excludes `"`, whitespace and parens, so
+  // it cannot leave the quotes. A domain literal (`[192.0.2.1]`) stays out:
+  // Gmail search does not find it in any spelling.
+  return /^[\w!#$%&'*+/=?^`{|}~.-]+@[\w!#$%&'*+/=?^`{|}~.-]+$/u.test(messageId)
     ? messageId
     : null;
 }
@@ -79,7 +84,7 @@ async function matchesRule(opts: {
   const messageId = safeRfc822MessageId(opts.message);
   if (messageId === null) return "unevaluated";
   const result = await opts.service.listMessages({
-    q: `(${opts.rule.query}) rfc822msgid:${messageId}`,
+    q: `(${opts.rule.query}) rfc822msgid:"${messageId}"`,
     maxResults: 1,
   });
   return result.messages.some((ref) => ref.id === opts.message.id) ? "match" : "no-match";
@@ -289,4 +294,38 @@ export async function evaluateGmailRules(opts: {
     }
   }
   return { state, trackRequests, procedures: [...procedures.values()] };
+}
+
+/**
+ * Re-check each rule's unevaluated messages once. Until 2026-10-23 the
+ * Message-ID guard rejected `=` and `/`, so ordinary mail was listed here and
+ * never checked. Messages still unsafe return to the list; the marker stops
+ * them being refetched every sync. A deleted message is dropped.
+ */
+export async function recheckUnevaluated(opts: Omit<Parameters<typeof evaluateGmailRules>[0], "candidates">): Promise<GmailRuleEvaluation> {
+  let state = opts.state;
+  const trackRequests: GmailAutomaticTrackRequest[] = [];
+  const procedures: ConnectorProcedureTrigger[] = [];
+  for (const rule of opts.config.rules) {
+    const { unevaluated = [], ...ruleState } = stateForRule(state, rule.name);
+    if (unevaluated.length === 0 || ruleState.unevaluatedRecheckedAt !== undefined) continue;
+    state = setRuleState({
+      state,
+      ruleName: rule.name,
+      ruleState: { ...ruleState, unevaluatedRecheckedAt: opts.now.toISOString() },
+    });
+    const candidates: GmailMessage[] = [];
+    for (const entry of unevaluated) {
+      try {
+        candidates.push(await opts.service.getMessage(entry.messageId));
+      } catch (error) {
+        if (!(error instanceof NotFoundError)) throw error;
+      }
+    }
+    const result = await evaluateGmailRules({ ...opts, config: { ...opts.config, rules: [rule] }, state, candidates });
+    state = result.state;
+    trackRequests.push(...result.trackRequests);
+    procedures.push(...result.procedures);
+  }
+  return { state, trackRequests, procedures };
 }

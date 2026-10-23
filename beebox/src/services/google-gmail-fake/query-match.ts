@@ -19,7 +19,7 @@ export function messageMatchesQuery(opts: {
 }): boolean {
   const { msg, query, labels } = opts;
   if (!query) return true;
-  const rfcMessageId = query.match(/rfc822msgid:<?([^\s)>]+)>?/i)?.[1];
+  const rfcMessageId = query.match(/rfc822msgid:"?<?([^\s")>]+)>?"?/i)?.[1];
   if (rfcMessageId !== undefined) {
     const header = msg.payload?.headers?.find(
       (candidate) => candidate.name.toLowerCase() === "message-id",
