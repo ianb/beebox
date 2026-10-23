@@ -7,7 +7,7 @@
  */
 
 import http from "node:http";
-import { errnoCode } from "../shared/error-guards.js";
+import { errnoCode, errorMessage } from "../shared/error-guards.js";
 
 
 /**
@@ -107,14 +107,6 @@ class HttpReadinessTimeoutError extends Error {
   }
 }
 
-/** Human-readable message for an error caught during a box launch: the
- *  readiness-timeout class already carries a descriptive message, everything
- *  else falls back to its `.message` or a string form. */
-export function describeError(e: unknown): string {
-  if (e instanceof HttpReadinessTimeoutError) return e.message;
-  return e instanceof Error ? e.message : String(e);
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -181,6 +173,6 @@ export function killAfterGrace(pid: number | undefined): void {
       killGroup(pid, "SIGKILL");
     })
     .catch((e: unknown) => {
-      console.warn(`[hub] escalation for box child ${String(pid)} failed: ${describeError(e)}`);
+      console.warn(`[hub] escalation for box child ${String(pid)} failed: ${errorMessage(e)}`);
     });
 }

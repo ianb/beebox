@@ -2,7 +2,8 @@
 import { acquireBoxMaintenance, type BoxMaintenance } from "../../lib/box-maintenance/admission.js";
 import { DEV_BUNDLE_RELOAD_REQUEST, DEV_BUNDLE_RELOAD_NOW, DEV_BUNDLE_RELOAD_ABORTED, DEV_BUNDLE_RELOAD_EXIT_CODE } from "../../lib/dev-bundle-reload.js";
 import { invariant } from "../../shared/invariant.js";
-import { BOX_KILL_GRACE_MS, describeError } from "../child-process-utils.js";
+import { BOX_KILL_GRACE_MS } from "../child-process-utils.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import type { ManagedBox } from "./core.js";
 
 interface ReloadOptions {
@@ -21,7 +22,7 @@ export function installReloadHandler(options: ReloadOptions & { generation: numb
   };
   box.child?.on("message", (message: unknown) => {
     if (typeof message !== "object" || message === null || !("type" in message) || message.type !== DEV_BUNDLE_RELOAD_REQUEST) return;
-    void request().catch((error: unknown) => { console.error(`[hub] reload cleanup failed: ${describeError(error)}`); });
+    void request().catch((error: unknown) => { console.error(`[hub] reload cleanup failed: ${errorMessage(error)}`); });
   });
 }
 
@@ -54,7 +55,7 @@ async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOp
     if (isReady()) await maintenance.complete();
     else throw new BoxReloadError({ reason: "not-ready" });
   } catch (error) {
-    box.lastError = describeError(error);
+    box.lastError = errorMessage(error);
     console.error(`[hub] ${box.slug} reload: ${box.lastError}`);
     if (changing) {
       if (box.restartTimer) clearTimeout(box.restartTimer);

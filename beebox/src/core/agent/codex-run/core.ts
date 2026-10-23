@@ -11,7 +11,8 @@ import { checkCodexAuth } from "../auth-preflight.js";
 import { expandInstructionIncludes } from "../../agent-context-includes.js";
 import { instructionFilePath } from "../../agent-instruction-files.js";
 import { validateHookPathsResult } from "../../../cli/validate-hook/command.js";
-import { codexRunErrorText, resultFromCodexTurn } from "./result.js";
+import { resultFromCodexTurn } from "./result.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { applyEngineUnavailability } from "../engine-unavailability-apply.js";
 import { recordCodexAgentUsage } from "./usage.js";
 import { codexUsageDelta, totalCodexSessionUsage } from "../../codex-usage.js";
@@ -160,7 +161,7 @@ export async function runCodexAgent(
         onOutput: options.onOutput,
       });
     } catch (error) {
-      options.onOutput?.(`${fmt.warn(`Could not record Codex token usage: ${codexRunErrorText(error)}`)}\n`);
+      options.onOutput?.(`${fmt.warn(`Could not record Codex token usage: ${errorMessage(error)}`)}\n`);
     }
     const validation = await validateHookPathsResult([...changedPaths]);
     if (validation.feedback !== null && !validation.hasErrors) {
@@ -197,7 +198,7 @@ export async function runCodexAgent(
       {
         success: false,
         output: "",
-        error: codexRunErrorText(error),
+        error: errorMessage(error),
         exitCode: -1,
         sessionId: observedSessionId,
         ...(!activity.seen && { invocationFailure: true }),

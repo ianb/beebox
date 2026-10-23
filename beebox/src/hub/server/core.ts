@@ -65,6 +65,7 @@ import { registerHealthRoutes } from "./health-routes.js";
 import { registerHubErrorHandler } from "./http-error.js";
 import { replyNoEndpoint } from "./box-unavailable.js";
 import type { DiskHealth } from "../disk-health.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 export interface HubHealth {
   /** `"unhealthy"` (HTTP 503) if any box is crash-looping/latched; else `"ok"`. */
@@ -430,7 +431,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     try {
       endpoint = boxSlug ? await resolveEndpoint(boxSlug, endpoints) : undefined;
     } catch (e) {
-      return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
+      return reply.status(502).send({ error: "bad_gateway", message: errorMessage(e) });
     }
     if (!endpoint) {
       return reply.status(400).send({ error: "unknown_box", message: `Unknown box in OAuth state: ${JSON.stringify(boxSlug)}` });
@@ -489,7 +490,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     try {
       endpoint = slug ? await resolveEndpoint(slug, endpoints) : undefined;
     } catch (e) {
-      return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
+      return reply.status(502).send({ error: "bad_gateway", message: errorMessage(e) });
     }
     // Pairing redemption passed the wall unauthenticated; it gets no owner detail.
     if (!endpoint) return replyNoEndpoint(reply, { slug, reqPath, method: request.method, accept: request.headers.accept, boxRoot: slug === null ? undefined : boxRootBySlug.get(slug), endpoints, detailed: perBoxAuthed || decision.authorized });
@@ -560,8 +561,4 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   });
 
   return server;
-}
-
-function describeHubError(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }

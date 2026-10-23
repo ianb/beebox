@@ -40,6 +40,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { errorMessage } from "../beebox/src/shared/error-guards.js";
 
 /** Thrown when the blocklist file is unparseable — surfaced as a fail-closed error. */
 export class BlocklistError extends Error {
@@ -57,11 +58,6 @@ class InvalidBlocklistRegexError extends BlocklistError {
     super(`invalid regex on line ${line}: ${detail.replace(/^Invalid regular expression: \/.*\/[a-z]*: /, "")}`);
     this.name = "InvalidBlocklistRegexError";
   }
-}
-
-/** The message of an unknown thrown value, without asserting it is an Error. */
-function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }
 
 /** Narrow a caught value to a Node syscall error, which carries a string `code`. */

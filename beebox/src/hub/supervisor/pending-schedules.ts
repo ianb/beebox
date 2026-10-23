@@ -14,7 +14,7 @@
  */
 
 import { loadChatSchedules } from "../../core/chat/schedules/core.js";
-import { describeError } from "../child-process-utils.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { requireBoxRoot } from "../../lib/box-shape.js";
 
 /**
@@ -39,7 +39,7 @@ export async function boxHasPendingSchedules({
     const boxRoot = await requireBoxRoot(entryPath);
     return loadChatSchedules({ boxRoot }).length > 0;
   } catch (e) {
-    console.warn(`[hub] chat-schedule check failed for "${slug}", treating as none: ${describeError(e)}`);
+    console.warn(`[hub] chat-schedule check failed for "${slug}", treating as none: ${errorMessage(e)}`);
     return false;
   }
 }
