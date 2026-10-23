@@ -51,6 +51,7 @@ import { errnoCode } from "../shared/error-guards.js";
 import { GUIDANCE_SURFACES, guidancePathPattern } from "./box/guidance-surfaces.js";
 import { existingSiblingPath, instructionSiblings, LEGACY_INSTRUCTION_PATTERNS, ledgerKey } from "./template-sibling-key.js";
 import { mergeWithoutConflict, parseCard } from "./template-merge.js";
+import { fileExists } from "../lib/file-exists.js";
 
 const VERSIONS_FILE = "_config/template-versions.json";
 /** Where a parked update is mirrored, box-relative. */
@@ -247,15 +248,6 @@ function applyBoxOwnedFields(
  */
 function mirrorRelPath(relPath: string): string {
   return relPath;
-}
-
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    return false;
-  }
 }
 
 /**
