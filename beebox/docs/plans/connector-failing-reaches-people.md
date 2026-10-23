@@ -100,8 +100,8 @@ episode is never notified again.
    `updateConnectorEpisodes` finds a new `failing` episode for `gmail`, stamps
    `notifiedAt` (it does this today), and now also calls `notifyBoxholder`
    with title "Gmail has stopped syncing", body "Gmail has failed every sync
-   since Oct 9, so nothing new has come in. The error is on the dashboard.",
-   loudness `quiet`, target dashboard, tag `connector-failing`.
+   since Oct 9, so new items may not be arriving. The error is on the
+   dashboard.", loudness `quiet`, target dashboard, no tag.
 3. Priya's phone shows it (APNs delivers on both production boxes today; the
    notification log shows `apns sent` on 2026-10-21).
 4. She opens the dashboard and sees the existing `connector-activity:gmail`
@@ -123,9 +123,9 @@ bug.
 
 | Track | Source | Tests |
 |---|---|---|
-| A — failing episode notifies the boxholder once | ~70 | ~120 |
-| B — production connector episodes reach `bin/schedules alert` | ~60 | ~60 |
-| **Total** | **~130** | **~180** |
+| A — failing episode notifies the boxholder once; grant-gated reconnect hint | ~90 | ~150 |
+| B — production connector episodes reach `bin/schedules alert` | ~90 | ~90 |
+| **Total** | **~180** | **~240** |
 
 Authored docs about 30 lines (reference docs that say connector health never
 notifies). No generated output. Well under the BIG CHANGE bar. What the fuller
@@ -144,8 +144,8 @@ step that cannot help.
   the import has stopped. That is the promotion rule's own test, applied to
   the connector rather than to a schedule that requires it. Quiet episodes,
   scheduled-task failures and a dead grant without a failing connector stay
-  dashboard-only. **This is the boxholder's ruling to revise; implementation
-  of Track A waits for their yes.**
+  dashboard-only. **Boxholder decision, 2026-10-22:** yes, one notice per
+  failing episode (asked with this plan's options; "Yes, once per episode").
 - **The connector-silence decision** (boxholder, 2026-09-18,
   `beebox/docs/implemented-plans/connector-silence.md:53-55`: *"One
   `notifyBoxholder` message per episode, plus a dashboard health warning"*).
@@ -214,21 +214,43 @@ No new nouns. Used as the code names them:
   now, services? })`, runs after the record update (outside the record lock),
   builds the intent, and calls `notifyBoxholder`. Title: "Gmail has stopped
   syncing" (one) or "Gmail and Calendar have stopped syncing" (several).
-  Body: "<names> <has/have> failed every sync since <since>, so nothing new has
-  come in. The error is on the dashboard." When any named connector is a
+  Body: one sentence per connector, each with its own `since` (connectors
+  found on one pass can start on different days, `verdict.ts:100`): "Gmail
+  has failed every sync since Oct 9." then "New items may not be arriving. The error is on the dashboard." (Not "nothing has come
+  in": a run can import and still error, `connector-activity/core.ts:145-146`.) When any named connector is a
   Google connector and `readGoogleAuthStatus` reports the grant needs
   reauthorization, append `RECONNECT_GOOGLE` and target `GOOGLE_TARGET`;
-  otherwise target `{ kind: "dashboard" }`. Tag `connector-failing`.
-  A send that throws is logged (`console.error`, as `promotion.ts:75` does) and
+  otherwise target `{ kind: "dashboard" }`. No tag: a tag is a collapse key
+  (`notification/intent.ts:37`), so one shared tag would let Calendar's notice
+  replace Gmail's; the episode latch already prevents repeats.
+  This is one delivery attempt, not a guarantee. A send that throws is logged (`console.error`, as `promotion.ts:75` does) and
   not retried; `notifiedAt` is already stamped, so a delivery failure never
   becomes a notice every pass ("Nothing retries forever",
   `notifications.md:127-131`).
-- **Vocabulary lock-ins.** Notification tag `connector-failing`.
+  The same grant check gates `checkRequiredConnectors` in `promotion.ts:153`,
+  which today appends `RECONNECT_GOOGLE` whenever a failing connector is a
+  Google one: a boxholder-requested schedule needing Gmail during this
+  incident would have told the person to reconnect, which could not help.
+  Extract one helper, `googleReconnectApplies(boxRoot, connectors)`, used by
+  both. Its Google set must hold both vocabularies: schedule requirement names
+  (`gmail`, `calendar`, `drive`, `google`, `src/requirements.ts:57-62`) and
+  connector names (`gmail`, `google-calendar`, `google-drive`,
+  `connectors/*/connector.ts`). Today's set (`promotion.ts:33`) has only the
+  first.
+  The same vocabulary split breaks `checkRequiredConnectors` itself: it
+  compares requirement names to activity connector names
+  (`required.includes(connector)`, `promotion.ts:137`), so a requested
+  schedule that requires `calendar` never sees a failing `google-calendar`
+  episode. Map requirement names to connector names there (`calendar` and
+  `google` to `google-calendar`, `drive` to `google-drive`).
+- **Vocabulary lock-ins.** None.
 - **First implementation chunk.** The function and its test, with a fake
   notify service: a new failing episode sends one intent; the next pass sends
   none; a quiet episode sends none; a dismissed episode sends none; two
   connectors on one pass send one intent naming both; the Google-grant case
-  targets Admin.
+  targets Admin; a failing Gmail with a working grant does not say reconnect,
+  in both the new notice and `checkRequiredConnectors`; a requested schedule
+  requiring `calendar` promotes on a failing `google-calendar` episode.
 
 ### Track B — production connector episodes reach the developer
 
@@ -240,17 +262,31 @@ No new nouns. Used as the code names them:
 - **Direction.** After the migration step for a production root, run
   `node <root>/node_modules/beebox/dist/cli.mjs health --json --box <root>`
   under the same SSH, env and timeout framing (`run.ts:47-55`). Parse
-  `boxChecks` with a zod schema; collect checks whose `name` starts with
-  `connector-activity:` as lines `<box>: <message>`. `reportPlan` gains a
+  `boxChecks` from stdout with a zod schema whatever the exit code: `bbx
+  health` prints its JSON and then sets exit 1 for unrelated failures
+  (`health.ts:181-189`). Collect checks whose `name` is `connector-activity`
+  (the damaged-record check) or starts with `connector-activity:`, as lines
+  `<box>: <message>`. Both `failing` and `quiet` are reported: a quiet
+  production connector is also a silent stall a developer may need to fix.
+  A dismissed episode has no check (`undismissedEpisodes`), so a boxholder's
+  dismissal also silences the developer condition; dismissal means "this is
+  expected", which holds for both. `reportPlan` gains a
   `connectorFindings` input and returns the new condition in `alerts` when it
-  is non-empty, and in `keep` when production was unreachable (an unreadable
-  box does not resolve a condition, matching the existing unreachable rule).
+  is non-empty. The condition is kept, not resolved, unless production
+  coverage was complete: the inventory (`prodTargets`) succeeded and every
+  production box's health read produced valid JSON. Today a failed inventory
+  leaves `unreachable` null (`run.ts:159-169`), so `prodChecked` alone would
+  let `resolve --except` close the condition on a run that read nothing; the
+  new input is an explicit `connectorCoverage: boolean`.
   A health command that fails or prints invalid JSON becomes a line in the same
   condition ("health unreadable: …"), never silence. Local boxes are not read:
   the developer's own boxes have the dashboard in front of them.
 - **Vocabulary lock-ins.** Condition `prod-connector-activity`.
-- **First implementation chunk.** `reportPlan` change and its unit test in
-  `convergence.test.ts`; then the SSH read.
+- **First implementation chunk.** `reportPlan` change and its unit tests in
+  `convergence.test.ts`: findings open the condition; no findings with
+  complete coverage resolve it; no findings with incomplete coverage (inventory
+  failed, or one box's health unreadable) keep it. Then the SSH read, with a
+  pure parser tested on exit-1 output that still carries valid JSON.
 
 ## Could this be simpler?
 
@@ -272,7 +308,7 @@ none
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| `notifyBoxholder` throws (log full, channel error) | planned (A) | log and continue; `notifiedAt` already stamped | clear: scheduler log line; dashboard warning remains |
+| `notifyBoxholder` throws, or no channel delivers | planned (A) | log and continue; `notifiedAt` already stamped | clear: scheduler log line; dashboard warning remains |
 | No channel has an audience | existing (`channels.ts`) | notification log records `skipped` | clear in the log; dashboard remains |
 | Grant status read throws | planned (A) | treat as "not known broken": dashboard target, no reconnect line | clear: notice still sent |
 | Several connectors in one pass | planned (A) | one intent names all | clear |
@@ -300,9 +336,12 @@ No critical gap.
 - Notifying for quiet episodes: a statistical guess; the 2026-09-18 decision
   prefers silence.
 - Notifying for failing scheduled tasks: the same ruling, and no incident.
-- A "same error every time" flag: the failing verdict already separates a
-  repeating failure from a transient one (any success breaks it); the gap was
-  delivery, not classification.
+- A "same error every time" flag. The failing verdict separates a stretch of
+  total failure from a transient error (any success on a day breaks it), but
+  it does not tell one repeating error from a run of different ones; it keeps
+  only each day's last error (`verdict.ts:95`). Deferred: the incident's gap
+  was delivery, and the dashboard and developer alert both carry the error
+  text.
 - A generic poisoned-item skip across connectors: each connector's per-item
   fetch differs. Gmail is fixed in this workstream; Calendar has no per-item
   fetch (events arrive inline from `events.list`) and Drive has no change
@@ -311,8 +350,7 @@ No critical gap.
 
 ## Open design questions
 
-- The ruling revision in *Stated preferences* is the boxholder's. Lean: yes,
-  for `failing` only.
+none. The ruling revision was decided by the boxholder on 2026-10-22.
 
 ## Knowledge audits
 
