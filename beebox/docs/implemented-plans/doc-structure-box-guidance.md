@@ -42,8 +42,8 @@ open),
 [template parks recurrence check](../../../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md)
 (Track 1 rewrites tracked guides, which is exactly the park-inducing event that
 issue watches for),
-[box docs reference node_modules](../../../issues/docs-and-chores/2026-07-07-box-docs-reference-node-modules.md)
-and [docs generated map](../../../issues/docs-and-chores/2026-05-21-docs-generated-map.md)
+[box docs reference node_modules](../../../issues/closed/docs-and-chores/2026-07-07-box-docs-reference-node-modules.md)
+and [docs generated map](../../../issues/closed/docs-and-chores/2026-05-21-docs-generated-map.md)
 (package docs already answer the first; the remaining `_content/docs/generated/`
 tree is box-compiled, not a copy, and is out of scope here).
 

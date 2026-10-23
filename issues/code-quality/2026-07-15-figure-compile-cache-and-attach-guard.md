@@ -41,3 +41,7 @@ on the branch):
 This commit resolves item 1: the route now requires the `.attach` directory to
 have a real sibling card with the same basename. Items 2 and 3 remain open and
 need a cache-eviction and dependency-freshness design.
+
+## Audit 2026-10-22
+
+Items 2 and 3 still hold. The compiler moved to `beebox/src/webapp/views/compiler/compile.ts`. The `cache` and `metaCache` maps are at lines 64-65. Entries leave only through the invalidate function near line 452. The cache key still uses the entry file mtime and size, with no `metafile` tracking of imports.

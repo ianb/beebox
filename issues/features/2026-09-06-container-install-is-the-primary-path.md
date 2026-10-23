@@ -39,3 +39,7 @@ What follows from it:
 
 Not this item: the update story (`../decisions/2026-07-20-release-discipline-and-update-story.md`),
 which the container path makes more pressing but which is its own decision.
+
+## Audit 2026-10-22
+
+Partly done. The root `README.md` no longer lists the from-source guide first. It points to an agent install prompt, and `beebox/docs/install/agent.md` (line 42) recommends the Docker path for users and the from-source path for contributors. Still open: `beebox/docs/install/docker.md` still builds the image locally (`docker compose build --pull`), and no published image exists. The plan `beebox/docs/plans/container-first.md` has `status: draft` and covers the published image.

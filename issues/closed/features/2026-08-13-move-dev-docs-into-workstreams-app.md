@@ -7,7 +7,10 @@ priority: important
 filed-by: agent
 discovered-by: Ian
 discovered-in: workstreams — resident application planning
+resolution: implemented
 ---
+
+> **Closed 2026-10-22 (issue audit):** Commit ed98b141f retired the router doc browser. `/<worktree>/dev/docs/` now 301s into the workstreams app general browser (`workstreams-app/src/router/server/docs.ts:10-13`, `workstreams-app/src/frontend/pages/BrowsePage.tsx`). The router keeps raw `dev/*.html` artifacts and the dev manifest.
 
 The first resident workstreams application should leave `/dev/docs/` in the
 router so app extraction does not also absorb Markdoc rendering, path

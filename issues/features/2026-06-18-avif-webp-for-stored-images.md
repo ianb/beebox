@@ -21,3 +21,7 @@ Where it pays off, in order:
 Browser decoding, renderer selection, and vision-provider support are separate boundaries. The WebP follow-up adds AVIF to loose-image preview; existing vision transport converts AVIF to JPEG where required. WebP can pass through that provider boundary directly.
 
 Open questions: keep-originals-and-derive vs convert-in-place per source (archival safety vs storage); where the server encoder lives (deploy already installs imagemagick but nothing uses it for this — `sharp` would be the clean dep); a size threshold so tiny images aren't re-encoded; lossless+high-effort encode cost on big intake batches (do it async/off the request path).
+
+## Audit 2026-10-22
+
+Small drift. `sharp` is now a dependency (`beebox/package.json:186`) and is used for server-side image work (for example `beebox/src/core/pdf/extract.ts`, `beebox/src/webapp/routes/api/register/images.ts`). The open question about where a server encoder lives is therefore answered. Bulk connector intake conversion is still not built.

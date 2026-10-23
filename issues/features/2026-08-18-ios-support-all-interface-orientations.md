@@ -92,3 +92,7 @@ has been used to defer things a simulator could have caught. Extending
 `capture-composer-fixtures` to emit landscape and Split View states across the
 existing thirteen fixture states is the concrete first step, and it turns "we
 think it works" into screenshots someone can look at.
+
+## Audit 2026-10-22
+
+The declaration half is fixed in commit `4927fc6f8`. `ios-app/BeeBox/Info.plist:32-44` now lists `UISupportedInterfaceOrientations` (portrait and both landscapes) and an iPad set with all four. The "no orientation keys" statement above is no longer true, and the Xcode warning should be gone. The layout and Split View work, and the simulator verification, remain open. `TARGETED_DEVICE_FAMILY` is still `"1,2"`.

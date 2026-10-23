@@ -45,3 +45,7 @@ This commit keeps the manual-pairing label and localhost URL defaults in debug
 builds only. It also consolidates `String.nilIfEmpty` into one module-wide
 extension. The legacy speech privacy, temporary WAV cleanup, strict concurrency,
 stale web comment, and simulator-warning items remain open.
+
+## Audit 2026-10-22
+
+Two items are now gone: the stale comment in `beebox/src/frontend/src/input/emission.ts` no longer exists. Still open: `requiresOnDeviceRecognition` is not set in `ios-app/BeeBox/Services/SpeechDictation.swift`; `SWIFT_VERSION = 5.0` remains in `ios-app/BeeBox.xcodeproj/project.pbxproj`; the 76x76@1x icon slot remains in `ios-app/BeeBox/Assets.xcassets/AppIcon.appiconset/Contents.json`. The temp WAV is now removed in the quick-chat send paths (`ios-app/BeeBox/Views/NativeComposerView.swift:851,894,1354`). Cancel, erase, and mic-off paths were not re-checked.

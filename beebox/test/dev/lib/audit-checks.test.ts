@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { runChecks } from "../../../src/dev/lib/audit-checks.js";
+import { automatedChecksPassed, runChecks } from "../../../src/dev/lib/audit-checks.js";
 import { auditTestSchema } from "../../../src/dev/lib/test-suite-schema.js";
 import type { AgentBehavior, AuditTest } from "../../../src/dev/lib/test-runner/runner/run-test.js";
 
@@ -124,6 +124,15 @@ void test("shouldsearch asks whether the agent looked something up.", async (t) 
 // An audit without `should_search` carries no search check, so it cannot fail one.
 void test("An audit without shouldsearch carries no search check, so it cannot fail one.", async (t) => {
   t.check(runChecks(auditTest, { behavior: behavior("answer"), newOrModifiedCards: new Map() }).shouldSearchCheck, undefined);
+});
+
+// An agent that stopped at its turn limit fails the audit even when its partial
+// answer passes every text check.
+void test("An agent that stopped at its turn limit fails the audit", async (t) => {
+  const checks = runChecks(auditTest, { behavior: behavior("Use box tmp/, not the host /tmp."), newOrModifiedCards: new Map() });
+  const passedBefore = automatedChecksPassed(checks);
+  checks.agentStopped = "Reached maximum number of turns (10)";
+  t.check({ passedBefore, passedAfter: automatedChecksPassed(checks) }, { passedBefore: true, passedAfter: false });
 });
 
 // ## `cards_not_under` refuses a card written under a forbidden prefix

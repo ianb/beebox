@@ -101,3 +101,7 @@ checking against the glossary (`beebox/docs/glossary.md`) — the codebase
 already uses *capture* (capture-session cards, the iOS capture mode) and
 *intake* for related-but-distinct concepts, and adding a third overlapping verb
 without deciding how it relates would be its own mess.
+
+## Audit 2026-10-22
+
+Still not built. One pointer moved: `extractDriveFileId` is now at `beebox/src/connectors/google-drive/types.ts:98` (used by `beebox/src/connectors/google-drive/mounts/core.ts:47`). `beebox/src/webapp/trpc/routers/clerk.ts` still calls `writeWebpageCard` for every URL (`:167`, `:195`) with no dispatch.

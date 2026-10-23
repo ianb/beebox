@@ -98,7 +98,7 @@ summarized above.
 
 ## Open dependencies
 
-- [manual-testing flag overuse](../../decisions/2026-07-29-manual-testing-flag-overuse.md)
+- [manual-testing flag overuse](../decisions/2026-07-29-manual-testing-flag-overuse.md)
   is unresolved — Ian has said the flag is over-applied. Don't design a flow that
   assumes _more_ manual-testing items until that's settled; tightening the
   criteria may shrink this problem more than tooling would.

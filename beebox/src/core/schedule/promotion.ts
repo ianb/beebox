@@ -17,6 +17,7 @@
 
 import { undismissedEpisodes } from "../../connector-activity/episodes.js";
 import { describeVerdict } from "../../connector-activity/verdict.js";
+import { readGoogleAuthStatus } from "../../google/auth-status.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import { assertNever } from "../../shared/invariant.js";
 import type { ParsedScheduledScript } from "../../schemas/scheduled-script/schema.js";
@@ -29,10 +30,39 @@ import { scheduleCardForTask } from "./parked-templates.js";
 import type { AlertedFor, SkipCause } from "./skip.js";
 import { saveScriptState, type ScriptState } from "./state.js";
 
-/** Connector names served by the box's Google grant (`connectors/requirements.ts`). */
-const GOOGLE_CONNECTORS = new Set(["gmail", "calendar", "drive", "google"]);
-const GOOGLE_TARGET: Target = { kind: "admin", section: "google-services" };
-const RECONNECT_GOOGLE = "Reconnect Google in Admin, in the Google Services section.";
+/**
+ * Names served by the box's Google grant, in both vocabularies: schedule
+ * requirement names (`src/requirements.ts`) and connector names, which the
+ * activity record uses (`connectors/<name>/connector.ts`).
+ */
+const GOOGLE_CONNECTORS = new Set(["gmail", "calendar", "drive", "google", "google-calendar", "google-drive"]);
+export const GOOGLE_TARGET: Target = { kind: "admin", section: "google-services" };
+export const RECONNECT_GOOGLE = "Reconnect Google in Admin, in the Google Services section.";
+
+/** Requirement names whose connector, and so whose activity record, is named differently. */
+const CONNECTOR_FOR_REQUIREMENT: Record<string, string> = {
+  calendar: "google-calendar",
+  google: "google-calendar",
+  drive: "google-drive",
+};
+
+/**
+ * Whether to tell the person to reconnect Google about these failing
+ * connectors: one is a Google connector and the grant is missing or dead. A
+ * connector can fail with a working grant (a 404 on one item stalled Gmail for
+ * two weeks), and then reconnecting cannot help. A status that cannot be read
+ * is not known to be broken.
+ */
+export async function googleReconnectApplies(boxRoot: string, connectors: readonly string[]): Promise<boolean> {
+  if (!connectors.some((c) => GOOGLE_CONNECTORS.has(c))) return false;
+  try {
+    const status = await readGoogleAuthStatus(boxRoot);
+    return !status.connected || status.needsReauthSince !== null;
+  } catch (e) {
+    console.warn(`[promotion] could not read the Google grant status: ${errorMessage(e)}`);
+    return false;
+  }
+}
 
 export interface PromotionContext {
   boxRoot: string;
@@ -129,7 +159,7 @@ export async function noteTickSkip(ctx: PromotionContext, cause: SkipCause): Pro
  * A damaged activity record is reported and changes nothing.
  */
 export async function checkRequiredConnectors(ctx: PromotionContext): Promise<void> {
-  const required = ctx.parsed.requires?.connectors ?? [];
+  const required = (ctx.parsed.requires?.connectors ?? []).map((name) => CONNECTOR_FOR_REQUIREMENT[name] ?? name);
   if (!requested(ctx) || required.length === 0) return;
   let failing;
   try {
@@ -151,7 +181,7 @@ export async function checkRequiredConnectors(ctx: PromotionContext): Promise<vo
     return;
   }
   if (latched) return;
-  const google = failing.some(({ connector }) => GOOGLE_CONNECTORS.has(connector));
+  const google = await googleReconnectApplies(ctx.boxRoot, failing.map(({ connector }) => connector));
   const lines = failing.map(({ connector, verdict }) => describeVerdict(connector, verdict) ?? `${connector} is failing.`);
   await promote(ctx, {
     latch: "skipped:connector-failing",

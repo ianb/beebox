@@ -62,3 +62,7 @@ shape to test rather than merely untested.
 
 The list is reproducible in about two seconds with the graph builder described in
 the origin issue.
+
+## Audit 2026-10-22
+
+The count is out of date. The claim "no component-render test tier" no longer holds: `beebox/src/frontend/test/components/` has 117 test files, 42 of which render components. Re-measure before using the 430-file figure.

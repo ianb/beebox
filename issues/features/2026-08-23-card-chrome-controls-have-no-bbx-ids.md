@@ -33,3 +33,7 @@ registry does not guarantee today.
 
 Related: the dev-harness duplicates in
 `bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md`.
+
+## Audit 2026-10-22
+
+Partly fixed. The two "chat about this card" items in the card actions menu now carry per-mount ids built from `useId` (`beebox/src/frontend/src/components/card-actions/CardActions.tsx:33`, `:93-94`), added in commit `2eb9189e5`. The rest of the list is still unaddressed: the trash confirm, `MissingCardState` actions, renderer toggle tabs, recipe scale buttons, `TabArrangementView` apply and undo, `ViewErrorBoundary` retry, and the comments toggle. `CardActions.tsx` is now under `components/card-actions/`; `FileView` is `components/FileView/view.tsx`.

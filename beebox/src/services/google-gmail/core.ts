@@ -96,6 +96,25 @@ export interface GoogleGmailService {
 
 // ─── Real implementation ─────────────────────────────────────────────────────
 
+/**
+ * Gmail answers 404 for a message, thread or attachment that was deleted after
+ * history named it. Report that as NotFoundError, as the fake does, so callers
+ * can tell "gone" from an auth, quota or server failure.
+ */
+async function notFoundAs<T>(
+  request: () => Promise<T>,
+  missing: { id: string; resource: string },
+): Promise<T> {
+  try {
+    return await request();
+  } catch (e) {
+    if (e instanceof HTTPError && e.response.status === 404) {
+      throw new NotFoundError(missing.id, missing.resource);
+    }
+    throw e;
+  }
+}
+
 export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailService {
   const api = ky.create({
     prefixUrl: "https://gmail.googleapis.com/gmail/v1",
@@ -133,31 +152,31 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
     },
 
     async getMessage(id) {
-      const data = await api
+      const data = await notFoundAs(() => api
         .get(`users/me/messages/${encodeURIComponent(id)}`, {
           searchParams: { format: "full" },
         })
-        .json<GmailMessage>();
+        .json<GmailMessage>(), { id, resource: "Message" });
       validateResponse(data, { schema: gmailMessageSchema, service: "gmail", operation: "getMessage" });
       return data;
     },
 
     async getThread(id) {
-      const data = await api
+      const data = await notFoundAs(() => api
         .get(`users/me/threads/${encodeURIComponent(id)}`, {
           searchParams: { format: "full" },
         })
-        .json<GmailThread>();
+        .json<GmailThread>(), { id, resource: "Thread" });
       validateResponse(data, { schema: gmailThreadSchema, service: "gmail", operation: "getThread" });
       return data;
     },
 
     async getAttachment(messageId, attachmentId) {
-      const data = await api
+      const data = await notFoundAs(() => api
         .get(
           `users/me/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,
         )
-        .json<GmailAttachmentData>();
+        .json<GmailAttachmentData>(), { id: `${messageId}:${attachmentId}`, resource: "Attachment" });
       validateResponse(data, { schema: gmailAttachmentDataSchema, service: "gmail", operation: "getAttachment" });
       return data;
     },
