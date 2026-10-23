@@ -13,32 +13,24 @@ import { chatTailSlice } from "../../../../machines/chatMachine/machine.js";
 import { toastError } from "../../../ui/toast-store";
 import type { ChatSchedule } from "@core/chat/schedules/core.js";
 import type { ChatEvent } from "../../../../machines/chat-types";
+import { readStoredFlag, writeStoredFlag, type StoredFlag } from "../../../../lib/stored-flag";
 
 interface ChatSendFn {
   (event: { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }): void;
 }
+
+const CHAT_MUTED: StoredFlag = { storage: () => (typeof window === "undefined" ? null : localStorage), key: "chat-muted" };
 
 /**
  * Mute toggle persisted to localStorage (key `chat-muted`). SSR-safe initial
  * read.
  */
 export function useChatMute() {
-  const [muted, setMuted] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return localStorage.getItem("chat-muted") === "1";
-    } catch (_e) {
-      return false;
-    }
-  });
+  const [muted, setMuted] = useState<boolean>(() => readStoredFlag(CHAT_MUTED));
   const handleToggleMute = useCallback(() => {
     setMuted((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem("chat-muted", next ? "1" : "0");
-      } catch (_e) {
-        // storage unavailable
-      }
+      writeStoredFlag(CHAT_MUTED, next);
       return next;
     });
   }, []);

@@ -20,3 +20,13 @@
 export function storageScopeFor(apiBase: string): string {
   return apiBase.replace(/^\//, "").replace(/\/api\/?$/, "");
 }
+
+/**
+ * The instance segment of a per-box browser-storage key. In production `scope`
+ * is empty and the box slug names the instance, so a key written before scoping
+ * stays byte-identical; behind the dev router the scope (`main/test1`) names it.
+ * A missing slug reads as "default".
+ */
+export function boxInstanceKey(opts: { boxSlug: string | undefined; scope: string }): string {
+  return opts.scope === "" ? opts.boxSlug ?? "default" : opts.scope;
+}

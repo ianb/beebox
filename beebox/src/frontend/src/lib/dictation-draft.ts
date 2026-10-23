@@ -21,6 +21,7 @@
 
 import { errorMessage } from "@shared/error-guards";
 import type { KeyValueStorage } from "../input/emission-persist";
+import { boxInstanceKey } from "./storage-scope";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx test
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
 import { isRecord } from "../../../shared/is-record.js";
@@ -47,8 +48,7 @@ export interface DictationDraft {
  * alone cannot tell two `test1`s apart.
  */
 export function draftKey(opts: { boxSlug: string | undefined; scope: string }): string {
-  const instance = opts.scope === "" ? opts.boxSlug ?? "default" : opts.scope;
-  return `${KEY_PREFIX}:${instance}:singleton`;
+  return `${KEY_PREFIX}:${boxInstanceKey(opts)}:singleton`;
 }
 
 /**

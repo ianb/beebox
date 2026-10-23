@@ -16,6 +16,8 @@
  */
 
 import { errorMessage } from "@shared/error-guards";
+import { getApiBase } from "../api-core";
+import { boxInstanceKey, storageScopeFor } from "./storage-scope";
 import { trpcClient } from "./trpc/client";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx test
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
@@ -59,9 +61,24 @@ function geoErrorMessage(err: GeolocationPositionError): string {
 
 const DISABLED: LocationShareState = { enabled: false, lastCapturedAt: null };
 
-/** localStorage key, scoped by box so two boxes in different tabs don't collide. */
+/** The storage scope of this page; empty in production and outside a browser. */
+function currentScope(): string {
+  return typeof window === "undefined" ? "" : storageScopeFor(getApiBase());
+}
+
+/**
+ * localStorage key, scoped by box instance so two boxes in different tabs, and
+ * two checkouts behind the dev router, don't collide. The scope is derived
+ * here so a read and a write can never use different keys; in production it is
+ * empty and the key is `bbx-location-share:<slug>`.
+ */
 export function locationShareKey(boxSlug: string | undefined): string {
-  return `${KEY_PREFIX}:${boxSlug ?? "default"}`;
+  return locationShareKeyFor({ boxSlug, scope: currentScope() });
+}
+
+/** {@link locationShareKey} for an explicit scope (`storageScopeFor(apiBase)`). */
+export function locationShareKeyFor(instance: { boxSlug: string | undefined; scope: string }): string {
+  return `${KEY_PREFIX}:${boxInstanceKey(instance)}`;
 }
 
 /**
@@ -98,7 +115,12 @@ export function shouldRefresh(state: LocationShareState, now: number): boolean {
 }
 
 export function loadLocationShareState(boxSlug: string | undefined): LocationShareState {
-  return parseLocationShareState(localStorage.getItem(locationShareKey(boxSlug)));
+  try {
+    return parseLocationShareState(localStorage.getItem(locationShareKey(boxSlug)));
+  } catch (e) {
+    console.warn(`[location-share] could not read sharing state: ${errorMessage(e)}`);
+    return DISABLED;
+  }
 }
 
 /**
