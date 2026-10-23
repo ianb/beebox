@@ -12,7 +12,7 @@ import { parse as parseYaml } from "yaml";
 import { splitCardContent } from "../exports/cards.js";
 import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
-import { titleFromFilename } from "./file-summary.js";
+import { titleFromFilename } from "../shared/card-name.js";
 import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
 import { resolveRefPath } from "../shared/ref-path/core.js";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";

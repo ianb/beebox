@@ -63,19 +63,6 @@ export interface LoaderInput {
 export type FileLoader<T> = (raw: LoaderInput) => FileSummary<T>;
 
 /**
- * Strip extensions and replace separators to produce a readable title from a path.
- * "Meeting_Notes.doc.card" → "Meeting Notes"
- * "photo-001.jpg" → "photo 001"
- */
-export function titleFromFilename(filePath: string): string {
-  const slash = filePath.lastIndexOf("/");
-  const base = slash === -1 ? filePath : filePath.slice(slash + 1);
-  const dot = base.indexOf(".");
-  const stem = dot === -1 ? base : base.slice(0, dot);
-  return stem.replaceAll("_", " ").replaceAll("-", " ");
-}
-
-/**
  * Truncate text to n characters, appending an ellipsis if trimmed.
  */
 export function truncateTitle(text: string, n: number): string {

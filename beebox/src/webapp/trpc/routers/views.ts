@@ -19,7 +19,7 @@ import { resolveContainedRef } from "../../../core/ref-exists.js";
 import { realpathContained } from "../../../lib/box-containment.js";
 import { typeFromFilename } from "../../../core/card-io.js";
 import { splitCardContent } from "../../../cards/frontmatter.js";
-import { titleFromFilename } from "../../../core/file-summary.js";
+import { titleFromFilename } from "../../../shared/card-name.js";
 
 export interface ResolvedRef {
   /** Box-relative path the ref resolved to. */

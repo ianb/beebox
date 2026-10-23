@@ -5,6 +5,7 @@
  */
 
 import { decodeXmlAttr } from "@shared/self-note";
+import { displayName } from "../../lib/display-name";
 import { snippet } from "../../lib/snippet";
 import { stripUserDisplayTags } from "./message-parsing";
 
@@ -20,9 +21,7 @@ function readAttr(attrs: string, re: RegExp): string {
 function docBasename(ref: string): string {
   // A selection quoted from the chat transcript has no ref.
   if (ref === "") return "chat";
-  const base = ref.split("/").pop();
-  if (base === undefined || base === "") return ref;
-  return base.endsWith(".card") ? base.slice(0, -5) : base;
+  return displayName(ref);
 }
 
 /** Pill shown in a sent user message for an attached document selection. */

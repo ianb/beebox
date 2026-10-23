@@ -41,7 +41,7 @@ import * as path from "node:path";
 import { renderFrontmatterBlock, splitCardContent } from "../../../cards/frontmatter.js";
 import { cardBasename } from "../../../shared/attach-path.js";
 import { isRecord } from "../../../shared/is-record.js";
-import { titleFromFilename, truncateTitle } from "../../../core/file-summary.js";
+import { truncateTitle } from "../../../core/file-summary.js";
 import { findRecordings, frontmatter, type Recording } from "./recordings.js";
 
 /** Global card fields (`src/cards/schema.ts` GLOBAL_CARD_FIELDS); kept as they are. */
@@ -121,6 +121,18 @@ export function recordingChannel(source: string | undefined): string {
   return source === undefined || source === "voice" || source === "apple-voice-recording" ? "microphone" : source;
 }
 
+/**
+ * Filename title as the migration first wrote it: the stem up to the first dot.
+ * Kept apart from the shared `titleFromFilename` so a retried run still matches
+ * the files an earlier run wrote byte for byte.
+ */
+function memoTitleFromFilename(filePath: string): string {
+  const base = filePath.slice(filePath.lastIndexOf("/") + 1);
+  const dot = base.indexOf(".");
+  const stem = dot === -1 ? base : base.slice(0, dot);
+  return stem.replaceAll("_", " ").replaceAll("-", " ");
+}
+
 /** Title and the body with a leading heading removed when that heading became the title. */
 function titleFor(args: { memoPath: string; fields: Record<string, unknown>; body: string; transcript: string | undefined }): { title: string; body: string } {
   const { fields, body } = args;
@@ -138,7 +150,7 @@ function titleFor(args: { memoPath: string; fields: Record<string, unknown>; bod
   }
   const line = firstParagraph(body) ?? (args.transcript === undefined ? null : firstParagraph(args.transcript));
   if (line !== null) return { title: truncateTitle(line, 80), body };
-  return { title: titleFromFilename(args.memoPath), body };
+  return { title: memoTitleFromFilename(args.memoPath), body };
 }
 
 function appendSection(body: string, section: string): string {
