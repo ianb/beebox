@@ -201,3 +201,7 @@ name-dense dictation (6.8% vs whisper 4.1%) and in noise (20.6% vs 14.5%).
 The recommended next step is to compare engines on the boxholder's own
 recordings with the research's local script, and to add the recording's level
 and input route to the `voice HQ on-device` log line.
+
+The boxholder accepted this result on 2026-10-23: no further tuning of
+Apple's recognizer is planned. The level-and-route logging and the
+own-recording comparison remain open options, not scheduled work.
