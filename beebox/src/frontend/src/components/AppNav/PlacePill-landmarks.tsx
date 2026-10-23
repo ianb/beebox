@@ -7,6 +7,7 @@ import { Button } from "../ui/Button";
 import { CardMark } from "../ui/CardMark";
 import { useIsomorphicLayoutEffect } from "../../hooks/use-isomorphic-layout-effect";
 import { isComposing } from "../../lib/ime";
+import { StatusMessage } from "../ui/StatusMessage";
 
 /** One landmark row's data — the subset of `chat.byLandmark` this menu reads. */
 export interface SwitchLandmark {
@@ -168,7 +169,7 @@ export function LandmarkList({
 
   if (landmarks === null) {
     if (failed) return <MenuItem id="bbx-switch-menu-landmarks-retry" onClick={onRetry} keepOpen danger>Couldn&rsquo;t load this menu — Retry</MenuItem>;
-    return <div className="px-3 py-2 text-warm-700">Loading…</div>;
+    return <StatusMessage variant="menu">Loading…</StatusMessage>;
   }
 
   const normalizedQuery = query.trim().toLocaleLowerCase();

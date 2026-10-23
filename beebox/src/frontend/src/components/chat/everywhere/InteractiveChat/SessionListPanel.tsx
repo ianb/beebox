@@ -49,6 +49,7 @@ import { layoutSessionList, sessionIdHint } from "./session-list-grouping";
 import { agoOnClock } from "../../../../lib/relative-time";
 import { useNow } from "../../../../lib/use-now";
 import { useChatSearch, ChatSearchRows } from "./session-search";
+import { StatusMessage } from "../../../ui/StatusMessage";
 
 type LoadState =
   | { kind: "loading" }
@@ -132,7 +133,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
   onToggleAll: () => void;
 }) {
   if (state.kind === "loading") {
-    return <div className="px-3 py-2 text-sm text-warm-700">Loading...</div>;
+    return <StatusMessage variant="menu">Loading...</StatusMessage>;
   }
   if (state.kind === "error") {
     return (
