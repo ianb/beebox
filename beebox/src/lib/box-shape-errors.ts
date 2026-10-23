@@ -4,6 +4,7 @@
  */
 
 import * as path from "node:path";
+import { errorMessage } from "../shared/error-guards.js";
 
 /**
  * What to tell someone holding a v2 box. There is no longer a command that
@@ -90,7 +91,7 @@ export class UnreadablePackageJsonError extends BoxShapeError {
     super(
       "Box at " + boxRoot + " has no " +
         "readable package.json. Expected " + options.packageJsonPath + " declaring a \"beebox\" " +
-        "dependency. (" + describeError(options.cause) + ")"
+        "dependency. (" + errorMessage(options.cause) + ")"
     );
     this.name = "UnreadablePackageJsonError";
   }
@@ -102,8 +103,4 @@ export class PackageJsonNotObjectError extends BoxShapeError {
     super("The box package.json is not a JSON object, so its \"beebox\" block cannot be written.");
     this.name = "PackageJsonNotObjectError";
   }
-}
-
-function describeError(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }

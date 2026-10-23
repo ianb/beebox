@@ -15,6 +15,9 @@ import { errorMessage } from "../../shared/error-guards.js";
 import { notificationLogPath, readRecent, type LoggedNotification } from "./log.js";
 import { jevBudgetHealthCheck } from "../judgment/budget.js";
 import { notifyFakeMode } from "./fake-mode.js";
+import { isWalkFixture } from "../../lib/box-fixture.js";
+import { storedClockOffsetMs } from "../../lib/time.js";
+import { formatDuration } from "../../shared/relative-time.js";
 
 /** Structurally a `HealthCheck` (`webapp/trpc/routers/health.ts`). */
 interface NotificationHealthCheck {
@@ -87,8 +90,8 @@ async function logWritableCheck(boxRoot: string): Promise<NotificationHealthChec
 }
 
 /** A box whose notifications are fake reaches nobody; a fixture says so, a person's box must not be one. */
-async function fakeModeCheck(boxRoot: string): Promise<NotificationHealthCheck> {
-  const fake = await notifyFakeMode(boxRoot);
+function fakeModeCheck(boxRoot: string): NotificationHealthCheck {
+  const fake = notifyFakeMode(boxRoot);
   return {
     name: "notifications-fake",
     ok: !fake,
@@ -99,12 +102,24 @@ async function fakeModeCheck(boxRoot: string): Promise<NotificationHealthCheck> 
   };
 }
 
+/** A walk fixture's clock may run ahead; any other box with an offset file ignores it, and says so. */
+function clockOffsetCheck(boxRoot: string): NotificationHealthCheck {
+  const offsetMs = storedClockOffsetMs(boxRoot);
+  const message = offsetMs === 0
+    ? "This box's clock is real time"
+    : isWalkFixture(boxRoot)
+      ? `This box's clock runs ${formatDuration(offsetMs)} ahead (.beebox/clock-offset.json)`
+      : `.beebox/clock-offset.json (${formatDuration(offsetMs)}) is ignored: this box is not a walk fixture`;
+  return { name: "box-clock-offset", ok: offsetMs === 0, message, severity: "warning" };
+}
+
 export async function notificationHealthChecks(
   boxRoot: string,
   opts: { now: Date },
 ): Promise<NotificationHealthCheck[]> {
   const writable = await logWritableCheck(boxRoot);
-  const fake = await fakeModeCheck(boxRoot);
+  const fake = fakeModeCheck(boxRoot);
+  const clock = clockOffsetCheck(boxRoot);
   const budget = await jevBudgetHealthCheck(boxRoot, opts);
   let recent: LoggedNotification[];
   try {
@@ -113,6 +128,7 @@ export async function notificationHealthChecks(
     return [
       writable,
       fake,
+      clock,
       budget,
       {
         name: "notification-log-readable",
@@ -122,5 +138,5 @@ export async function notificationHealthChecks(
       },
     ];
   }
-  return [undeliveredCheck(recent), noChannelCheck(recent), writable, fake, budget];
+  return [undeliveredCheck(recent), noChannelCheck(recent), writable, fake, clock, budget];
 }

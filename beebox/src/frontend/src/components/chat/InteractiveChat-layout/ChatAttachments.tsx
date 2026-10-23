@@ -13,8 +13,9 @@
  */
 
 import { Image } from "../../ui/Image";
+import { RemoveBubble } from "./RemoveBubble";
 import { useLightbox } from "../../LightboxProvider";
-import { formatBytes } from "../../../lib/format-bytes";
+import { humanBytes } from "@shared/human-bytes";
 import type { ImageItem, FileItem } from "../../../input/emission-store";
 
 /**
@@ -90,14 +91,13 @@ function ThumbTile({
   onClick: () => void;
   onRemove: () => void;
 }) {
-  const kb = Math.round(attachment.byteLength / 1024);
   return (
     <div className="relative group" data-bbx-source={`attachment-${attachment.id}`}>
       <button
         type="button"
         onClick={onClick}
         className="block rounded bg-warm-200 overflow-hidden hover:ring-2 hover:ring-accent focus:outline-none focus:ring-2 focus:ring-accent"
-        title={`image#${String(attachment.id)} · ${kb} KB · click to zoom`}
+        title={`image#${String(attachment.id)} · ${humanBytes(attachment.byteLength)} · click to zoom`}
       >
         <Image
           src={attachment.objectUrl}
@@ -109,16 +109,7 @@ function ThumbTile({
       <div className="absolute -top-1 left-0 text-[10px] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
         {attachment.id}
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center shadow hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-danger"
-        title="Remove attachment"
-      >
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      <RemoveBubble title="Remove attachment" onClick={onRemove} />
     </div>
   );
 }
@@ -172,7 +163,7 @@ function FileChip({
   onRetry: () => void;
 }) {
   const { state } = attachment;
-  const sizeLabel = formatBytes(attachment.size);
+  const sizeLabel = humanBytes(attachment.size);
   const statusLabel = state.status === "uploaded"
     ? sizeLabel
     : state.status === "failed" ? state.message : `${sizeLabel} · uploading…`;
@@ -227,16 +218,7 @@ function FileChip({
           </span>
         ) : null}
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center shadow hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-danger"
-        title="Remove attachment"
-      >
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      <RemoveBubble title="Remove attachment" onClick={onRemove} />
     </div>
   );
 }

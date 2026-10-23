@@ -31,6 +31,7 @@ import { resolveTtsService } from "../core/tts/resolve.js";
 import { collectAudio, createTtsService } from "../services/tts.js";
 import { invariant } from "../shared/invariant.js";
 import type { TtsBackend } from "../shared/tts-backends.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
 /** Segment lengths seen in real chat replies: one short line up to a paragraph. */
 const TEXTS: Record<string, string> = {
@@ -142,8 +143,6 @@ const median = (xs: number[]): number => {
   return s.length % 2 === 1 ? (s[m] ?? 0) : ((s[m - 1] ?? 0) + (s[m] ?? 0)) / 2;
 };
 const sec = (ms: number): string => (ms / 1000).toFixed(2);
-const sleep = (ms: number): Promise<void> => new Promise((r) => { setTimeout(r, ms); });
-
 async function main(): Promise<void> {
   const { values } = parseArgs({
     options: {

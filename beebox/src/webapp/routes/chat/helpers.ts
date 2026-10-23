@@ -224,14 +224,6 @@ export function buildSendInput(
   };
 }
 
-export function escapeXmlAttr(v: string): string {
-  return v
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
 /**
  * Resolve the chat sender for a request that carries mobile-device auth rather
  * than a `bbx_mobile` cookie. A paired device authenticates every native and

@@ -3,6 +3,8 @@
  */
 
 import { useState } from "react";
+import { useBoxNow } from "../../../lib/box-clock";
+import { useNow } from "../../../lib/use-now";
 import { trpc } from "../../../lib/trpc/client";
 import type { RouterOutput } from "../../../lib/trpc/client";
 import { bbxSource } from "../../../lib/source-tag";
@@ -16,6 +18,8 @@ import { RunHistory } from "./RunHistory";
 import { RunStrip } from "./RunStrip";
 import { Badge } from "../../ui/Badge";
 import { TickList, quietTickCount } from "../ScheduleTicks";
+import { agoOnClock } from "../../../lib/relative-time";
+import { formatDuration } from "@shared/relative-time";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -27,29 +31,12 @@ interface ScheduleOverviewProps {
   error?: { message: string } | null;
 }
 
-function timeAgo(dateStr: string): string {
-  const elapsed = Date.now() - new Date(dateStr).getTime();
-  const seconds = Math.floor(elapsed / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-function formatDurationMs(ms: number): string {
-  if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
-  return `${Math.round(ms / 60_000)}m`;
-}
-
 function BudgetIndicator({ budget }: { budget: { limitMs: number; windowMs: number; usedMs: number } }) {
   const exceeded = budget.usedMs >= budget.limitMs;
   const cls = exceeded ? "text-danger-dark font-medium" : "text-warm-700";
   return (
-    <span className={`ml-1 ${cls}`} title={`${formatDurationMs(budget.usedMs)} used of ${formatDurationMs(budget.limitMs)} budget in ${formatDurationMs(budget.windowMs)} window`}>
-      [{formatDurationMs(budget.usedMs)}/{formatDurationMs(budget.limitMs)}]
+    <span className={`ml-1 ${cls}`} title={`${formatDuration(budget.usedMs)} used of ${formatDuration(budget.limitMs)} budget in ${formatDuration(budget.windowMs)} window`}>
+      [{formatDuration(budget.usedMs)}/{formatDuration(budget.limitMs)}]
     </span>
   );
 }
@@ -132,6 +119,8 @@ function rawScheduleTitle(s: ScheduleInfo): string {
 
 function ScheduleRow({ s }: { s: ScheduleInfo }) {
   const [showRuns, setShowRuns] = useState(false);
+  // Re-render each minute so the "last run" age stays current.
+  useBoxNow(60_000);
 
   return (
     <>
@@ -152,7 +141,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
               title={showRuns ? "Hide recent runs" : "Show recent runs"}
               className="text-xs whitespace-nowrap"
             >
-              {timeAgo(s.lastRun)} {showRuns ? "\u25BE" : "\u25B8"}
+              {agoOnClock(s.lastRun, "box")} {showRuns ? "\u25BE" : "\u25B8"}
             </InlineAction>
           ) : "never"}
           <RunStrip runs={s.runStrip} />
@@ -213,11 +202,13 @@ function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
 }
 
 function RunningIndicator({ running }: { running: { startedAt: string; triggeredBy: string } }) {
-  const elapsed = timeAgo(running.startedAt).replace(" ago", "");
+  const now = useNow(5000);
+  const startedAt = Date.parse(running.startedAt);
+  const elapsed = now === 0 || Number.isNaN(startedAt) ? null : formatDuration(Math.max(0, now - startedAt));
   return (
     <span className="text-warning text-xs font-medium" title={`Triggered by ${running.triggeredBy}`}>
       <span className="inline-block w-2 h-2 rounded-full bg-warning animate-pulse mr-1 align-middle" />
-      running ({elapsed})
+      running{elapsed === null ? "" : ` (${elapsed})`}
     </span>
   );
 }

@@ -29,6 +29,7 @@ import { boxEngineUnavailability, engineWaitReason } from "./engine-wait.js";
 import { listParkedTemplateUpdates, parkedUpdatePath } from "../install-template-file.js";
 import { parkedUpdatesForTask } from "./parked-templates.js";
 import { getBoxDir } from "../../lib/paths/core.js";
+import { formatAgoMs, formatDuration } from "../../shared/relative-time.js";
 
 const HEARTBEAT_FILE = ".beebox/scheduler-heartbeat";
 const HEARTBEAT_STALE_MS = 5 * 60 * 1000;
@@ -165,19 +166,10 @@ export function describeParkedUpdates(task: TaskHealth): string | null {
   return `parked update: ${paths} — the fix may already be on disk`;
 }
 
-/** Short duration for summaries: 45m, 26h, 3d. */
-export function formatDurationShort(ms: number): string {
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 60) return `${Math.max(minutes, 1)}m`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 48) return `${hours}h`;
-  return `${Math.round(hours / 24)}d`;
-}
-
 export function describeUnhealthyTask(task: TaskHealth, now: Date): string {
   if (task.status === "invalid") return `${task.name}: card invalid`;
   if (task.status === "overdue") {
-    return `${task.name}: overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
+    return `${task.name}: overdue ${formatDuration(task.pendingMs ?? 0)}`;
   }
   if (task.status === "inconclusive") {
     // Says what is and isn't known, in that order — a reader who skims this
@@ -185,7 +177,7 @@ export function describeUnhealthyTask(task: TaskHealth, now: Date): string {
     return `${task.name}: review inconclusive (work completed, unjudged)`;
   }
   const since = task.lastSuccess
-    ? `last success ${formatDurationShort(now.getTime() - new Date(task.lastSuccess).getTime())} ago`
+    ? `last success ${formatAgoMs(now.getTime() - new Date(task.lastSuccess).getTime())}`
     : "never succeeded";
   return `${task.name}: failing ×${task.consecutiveFailures} (${since})`;
 }
@@ -204,7 +196,7 @@ export function summarizeScheduleHealth(health: BoxScheduleHealth, now: Date): s
   }
   if (health.scheduler.status === "stale") {
     parts.push(
-      `scheduler not running (last tick ${formatDurationShort(health.scheduler.ageMs ?? 0)} ago)`,
+      `scheduler not running (last tick ${formatAgoMs(health.scheduler.ageMs ?? 0)})`,
     );
   }
   // Inconclusive tasks speak here but never alert (selectAlertableTasks): a

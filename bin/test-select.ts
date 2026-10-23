@@ -25,7 +25,8 @@ import { readFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { estimateLines, estimateSeconds } from "./test-estimate.js";
-import { changedPaths, git, gitCommonDir, treeHash } from "./test-git.js";
+import { git, gitBranch, gitCommonDir } from "./lib/git.js";
+import { changedPaths, treeHash } from "./test-git.js";
 import { buildGraph, cliBundleInputs, REPO_ROOT } from "./test-graph.js";
 import { isAccounted } from "./test-graph-query.js";
 import { hashFileset, ledgerPaths, packageRelative, type LedgerRecord } from "./test-ledger-lib.js";
@@ -118,8 +119,8 @@ function recordEmptyRun(input: {
 }): void {
   const record: LedgerRecord = {
     ts: new Date().toISOString(),
-    commit: git(["rev-parse", "HEAD"]),
-    branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit: git(["rev-parse", "HEAD"], { onError: "throw" }),
+    branch: gitBranch(),
     treeHash: treeHash(),
     mode: "selected",
     exitCode: 0,

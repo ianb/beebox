@@ -22,6 +22,7 @@ import * as fs from "node:fs/promises";
 import { bundleView } from "../views/compiler/compile.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import { attachDirOwnerBasename, cardBasename, isAttachDirName } from "../../shared/attach-path.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -122,7 +123,7 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       // Re-run containment AND the figure-source guard on the REAL path: a
       // symlink's target must itself be an in-box `.ts`/`.tsx` in an attach
       // scope, or it is refused before any read/compile.
-      if (realResolved !== realRoot && !realResolved.startsWith(realRoot + path.sep)) {
+      if (!isWithin(realRoot, realResolved)) {
         return reply.status(400).send({ error: "Path outside box" });
       }
       const realExt = path.extname(realResolved);

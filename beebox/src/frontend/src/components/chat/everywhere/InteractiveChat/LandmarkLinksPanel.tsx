@@ -19,6 +19,7 @@
  */
 
 import { useState } from "react";
+import { ChevronIcon } from "../../../landmarks/ChevronIcon";
 import { trpc } from "../../../../lib/trpc/client";
 import { useDropdownClose } from "../../../ui/Dropdown";
 import { MenuDivider } from "../../../ui/dropdown-menu-item";
@@ -97,23 +98,6 @@ function MenuLink({ link, onPanel }: { link: ResolvedLink; onPanel: (link: Resol
   );
 }
 
-function GroupChevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M9 6l6 6-6 6" />
-    </svg>
-  );
-}
-
 function MenuGroup({ group, onPanel }: { group: ResolvedGroup; onPanel: (link: ResolvedLink) => void }) {
   const [open, setOpen] = useState(false);
   const overflow = group.count - group.children.length;
@@ -126,7 +110,7 @@ function MenuGroup({ group, onPanel }: { group: ResolvedGroup; onPanel: (link: R
         aria-expanded={open}
         className="w-full text-left px-3 py-3.5 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
       >
-        <GroupChevron open={open} />
+        <ChevronIcon open={open} className="shrink-0" />
         <span className="truncate font-medium">{group.label}</span>
         <span className="text-xs text-warm-700 shrink-0 ml-auto">{group.count}</span>
       </button>

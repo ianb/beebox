@@ -114,9 +114,11 @@ path a tap opens (`bin/browse open` takes it as is). One the app showed on scree
 because you had it open, says so. That is everything the box sent the person. Look whenever the person would glance at their phone.
 
 When your situation says time passes, and only then, add `--wait <duration>` (`2d`, `1w`). The
-phone moves on by that much and shows what arrived meanwhile. The wait is your last act: read
-the phone, open at most what a notification leads to, write it down, and stop. The app keeps its
-own clock, so after a wait do not report its date as wrong.
+box lives through that time: reminders and its own scheduled work happen at their hours, and
+afterwards the app, the assistant, and the phone all agree it is later. A long wait takes a few
+minutes. Read what arrived, then come back as the situation says: open `/` under a new
+`--session`, as below. If the phone says the wait stopped, write down what it said and run the
+phone again without `--wait`; it picks up where it stopped.
 
 Do not test microphone or voice behavior during a journey walk. Do not invoke a real,
 fake, or mock microphone. If a microphone control or mock-mic failure gets in the way,

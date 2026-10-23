@@ -23,6 +23,7 @@ import { codexSessionExists } from "../../../core/chat/session/codex-transcript/
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import * as path from "node:path";
+import { isWithin } from "../../../lib/box-containment.js";
 
 /**
  * Compose the list of `--grep` regexes that express the selected filter.
@@ -118,7 +119,7 @@ export const historyRouter = router({
         const candidate = normalizeHistoryPath(boxRelativePath(input.filter.path), ctx.boxRoot);
         const root = path.resolve(ctx.boxRoot);
         const resolved = path.resolve(root, candidate);
-        if (candidate.startsWith(":") || (resolved !== root && !resolved.startsWith(root + path.sep))) {
+        if (candidate.startsWith(":") || !isWithin(root, resolved)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid history path" });
         }
         historyPath = path.relative(root, resolved).split(path.sep).join("/");

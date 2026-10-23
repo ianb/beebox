@@ -19,12 +19,13 @@ import { randomUUID } from "node:crypto";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isCardFile } from "../../lib/paths/core.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 async function isAnnexObjectPath(target: string, sourcePath: string): Promise<boolean> {
   const resolved = path.resolve(target);
   for (let ancestor = path.dirname(sourcePath); ; ancestor = path.dirname(ancestor)) {
     const objects = path.join(ancestor, ".git", "annex", "objects");
-    if (resolved.startsWith(`${objects}${path.sep}`)) {
+    if (resolved !== objects && isWithin(objects, resolved)) {
       try {
         if ((await fs.stat(objects)).isDirectory()) return true;
       } catch (error) {

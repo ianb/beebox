@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-23T13:33:45Z
-Total documents: 567
+Generated: 2026-10-23T23:19:05Z
+Total documents: 570
 
 ## Issues
 
@@ -33,6 +33,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (211 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · shipped history · implemented
+- **docs/implemented-plans/dup-sweep-backend-remaining.md** — "Backend duplication sweep: the remaining groups" (392 lines) · shipped history · implemented
 - **docs/implemented-plans/exhibit-html-controls.md** — "Comment and reply controls on raw `index.html` exhibits" (250 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (723 lines) · shipped history · implemented
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (116 lines) · shipped history · implemented
@@ -186,6 +187,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.gap-analysis.md:6 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/docs-reorg.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doctest-usability.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/dup-sweep-backend-remaining.md:74 (mention) — - The root AGENTS.md rule for the sweep: no behavior change except named bug
 - docs/implemented-plans/exhibit-comments.md:77 (mention) — - `AGENTS.md` root, "Minimize invented concepts" (memory
 - docs/implemented-plans/exhibit-html-controls.md:44 (mention) — - AGENTS.md "no features beyond the task": the bar carries exactly the two
 - docs/implemented-plans/exhibits-rethink.md:90 (mention) — (about 90 lines) and gains the phrasing section (about 25); root `AGENTS.md`
@@ -195,6 +197,7 @@ Referenced by:
 - docs/implemented-plans/file-layout.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/first-run-openers.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/frontend-dom-harness.md:68 (mention) — - Monorepo rule on dependencies (`AGENTS.md`, *"Treat unsolicited tool output
+- docs/implemented-plans/frontend-unify-formatters-refresh-storage.md:59 (mention) — - Root `AGENTS.md`, "Implement and verify": reuse the platform mechanism
 - docs/implemented-plans/ios-audio-session-routing.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/ios-per-box-device-lock.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/knowledge-audit-plugins.md:43 (mention) — - Root `AGENTS.md`, knowledge-audit guidance: "When fixing failures, prefer
@@ -1294,6 +1297,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/doc-structure.md:60 (mention) — (`docs/engineering-principles.md`), and 8, *one way to do each thing*: this
 - docs/implemented-plans/drive-docs-api-health.md:52 (mention) — - `engineering-principles.md` §4, *"invisible degradation is not"* allowed: this is the reason for the work.
+- docs/implemented-plans/dup-sweep-backend-remaining.md:70 (mention) — - `beebox/docs/engineering-principles.md` §8 "One way to do each thing" is the
 - docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
 - docs/implemented-plans/exhibit-comments.md:66 (mention) — - `beebox/docs/engineering-principles.md` **8** (one way to do each thing):
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
@@ -1795,6 +1799,7 @@ Referenced by:
 - docs/implemented-plans/clerk-contract-and-import-boundary.md:115 (mention) — against `docs/module-map.md` and update that doc if it's silent on
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/file-layout.md:60 (mention) — - `docs/module-map.md`: the four shared-code directories and their dependency
+- docs/implemented-plans/walk-simulated-time.md:85 (mention) — - `src/lib/box-fixture.ts` (new, sync): `isWalkFixture(boxRoot)` reads `_config/box.json` and returns whether `fakeNotif
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:23 (mention) — added to `OUTSIDE_VITE_SHARED_RAW`. Pattern documented in `docs/module-map.md`.
 - ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:165 (mention) — - The layout rules become the current owner in `beebox/docs/module-map.md`,
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:141 (mention) — is a future boxholder question; `docs/module-map.md` now documents the
@@ -5042,6 +5047,21 @@ References:
 - → ../issues/closed/features/2026-06-26-drive-mounting-file-browsing-ui.md (frontmatter)
 - → docs/connectors/drive.md (mention)
 
+#### docs/implemented-plans/dup-sweep-backend-remaining.md **[ORPHAN]**
+
+Title: "Backend duplication sweep: the remaining groups" | 392 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/code-quality/2026-10-23-two-card-filename-parsers.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-agent-quota-collection-exists-twice.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md (frontmatter)
+- → ../issues/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md (link)
+- → ../issues/code-quality/2026-10-23-date-and-duration-formatting-variants.md (link)
+- → ../issues/code-quality/2026-10-23-text-helpers-with-diverging-rules.md (link)
+- → ../issues/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md (link)
+- → docs/engineering-principles.md (mention)
+- → AGENTS.md (mention)
+
 #### docs/implemented-plans/emission-model.md
 
 Title: "Emission model: durable acceptance, no sticky pending states" | 522 lines | shipped history | implemented
@@ -5315,6 +5335,22 @@ References:
 - → docs/testing.md (mention)
 - → AGENTS.md (mention)
 
+#### docs/implemented-plans/frontend-unify-formatters-refresh-storage.md
+
+Title: "Unify frontend time, byte and card-name formatting, live refresh, and browser storage" | 434 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/bugs/2026-07-31-browse-list-live-refresh-not-firing.md:88 (mention) — `beebox/docs/implemented-plans/frontend-unify-formatters-refresh-storage.md`, track 5). A
+
+References:
+- → ../issues/closed/code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-frontend-time-and-duration-formatters.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-byte-size-formatters-disagree.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-card-display-name-helpers-disagree.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-browser-storage-keys-and-reads-inconsistent.md (frontmatter)
+- → ../issues/bugs/2026-07-31-browse-list-live-refresh-not-firing.md (link)
+- → AGENTS.md (mention)
+
 #### docs/implemented-plans/gmail-explicit-action.md
 
 Title: "Gmail config: explicit action, no implicit tracking" | 165 lines | shipped history | implemented
@@ -5544,7 +5580,7 @@ References:
 Title: "Simulated notifications for journey walkers" | 193 lines | shipped history | implemented
 
 Referenced by:
-- test/user-stories/journeys/README.md:170 (link) — ([plan](../../../docs/implemented-plans/journey-simulated-notifications.md)).
+- docs/implemented-plans/walk-simulated-time.md:11 (link) — **Issues addressed:** none open. It extends [walker gets simulated notifications](../../../issues/closed/features/2026-1
 - ../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md:12 (link) — **Closed:** implemented in 896833924, dc98daf35, b2c35ab48 (plan: [journey simulated notifications](../../../beebox/docs
 
 References:
@@ -7543,6 +7579,20 @@ References:
 - → ../issues/closed/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md (frontmatter)
 - → docs/glossary.md (mention)
 - → docs/cards/migrations.md (mention)
+
+#### docs/implemented-plans/walk-simulated-time.md
+
+Title: "Simulated time for journey walk boxes" | 228 lines | shipped history | implemented
+
+Referenced by:
+- test/user-stories/journeys/README.md:174 (link) — ([plan](../../../docs/implemented-plans/walk-simulated-time.md)).
+
+References:
+- → ../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md (link)
+- → docs/implemented-plans/journey-simulated-notifications.md (link)
+- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
+- → ../issues/closed/bugs/2026-08-09-field-scenario-weekday-fiction-mismatch.md (link)
+- → docs/module-map.md (mention)
 
 #### docs/implemented-plans/web-push-notifications.md
 
@@ -10855,7 +10905,7 @@ References:
 
 #### test/user-stories/journeys/README.md
 
-Title: "Journeys" | 174 lines
+Title: "Journeys" | 178 lines
 
 Referenced by:
 - ../dev/journeys/overview.md:5 (link) — Sources: [the design plan](../../beebox/docs/plans/user-story-journeys.md), [the journeys README](../../beebox/test/user
@@ -10867,12 +10917,12 @@ References:
 - → test/plugins/courseware/journeys/D-chemistry/README.md (link)
 - → test/user-stories/journeys/walker-prompt.md (mention)
 - → test/user-stories/journeys/after-action.md (link)
-- → docs/implemented-plans/journey-simulated-notifications.md (link)
+- → docs/implemented-plans/walk-simulated-time.md (link)
 - → test/user-stories/journeys/A-lending/reports/2026-08-25.md (link)
 
 #### test/user-stories/journeys/walker-prompt.md
 
-Title: "You are trying out an app" | 232 lines
+Title: "You are trying out an app" | 234 lines
 
 Referenced by:
 - docs/implemented-plans/journey-simulated-notifications.md:38 (mention) — - **Do not invent events** (`beebox/test/user-stories/journeys/walker-prompt.md`, "Do not invent events"). Moving time i
@@ -10894,7 +10944,7 @@ Title: "A-lending, 2026-08-25" | 107 lines
 
 Referenced by:
 - test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md:11 (link) — The [original report](2026-08-25.md) and journey definition are now under
-- test/user-stories/journeys/README.md:172 (link) — served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
+- test/user-stories/journeys/README.md:176 (link) — served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
 - ../dev/journeys/reports/sweep-issues.md:102 (mention) — | `2026-08-23-auth-preflight-blocks-new-chats-when-claude-not-on-path` | BUG | 08-23 | 08-29 | 6 | impl. | `ba64fc852` (
 - ../dev/journeys/reports/sweep-walks.md:25 (mention) — | **No self-judged success.** "They do not judge their own success. `collect.ts` reads the box to see what actually land
 

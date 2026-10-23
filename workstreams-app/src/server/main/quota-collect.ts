@@ -1,11 +1,10 @@
-import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import type { Quota } from "../../shared/documents.js";
+import { isRecord } from "../../../../beebox/src/shared/is-record.js";
 import {
-  isRecord,
   parseClaudeQuota,
   parseCodexQuota,
   type ClaudeUsageResult,
@@ -14,6 +13,7 @@ import {
 import { requestClaudeUsage, requestCodexRateLimits } from "./quota-requests.js";
 import { parseGlmQuota, type GlmQuotaResponse } from "./quota-glm.js";
 import { readGlmKey, requestGlmQuota } from "./quota-glm-request.js";
+import { writeFileAtomic } from "../../../../beebox/src/lib/atomic-write.js";
 
 const CODEX_CACHE_MS = 60_000;
 // The same minute-long cache as Codex: one plain HTTP call, and the panel is
@@ -35,14 +35,19 @@ interface ClaudeCache {
   quota: Quota | null;
 }
 
+function requestCodexQuota(now: Date, request: () => Promise<CodexRateLimitResult>): Promise<Quota> {
+  const fetchedAt = now.toISOString();
+  return request().then((result) => parseCodexQuota(result, fetchedAt)).catch((error: unknown) => ({
+    provider: "codex" as const, status: "unavailable" as const, fetchedAt, windows: [],
+    message: error instanceof Error ? error.message : String(error),
+  }));
+}
+
+/** The live Codex read, shared through a process-wide cache and one in-flight request. */
 async function collectCodex(now: Date, request: () => Promise<CodexRateLimitResult>): Promise<Quota> {
   if (codexCache && codexCache.expiresAt > now.getTime()) return codexCache.value;
   if (codexPending) return codexPending;
-  const fetchedAt = now.toISOString();
-  codexPending = request().then((result) => parseCodexQuota(result, fetchedAt)).catch((error: unknown) => ({
-    provider: "codex" as const, status: "unavailable" as const, fetchedAt, windows: [],
-    message: error instanceof Error ? error.message : String(error),
-  })).then((value) => {
+  codexPending = requestCodexQuota(now, request).then((value) => {
     codexCache = { expiresAt: now.getTime() + CODEX_CACHE_MS, value };
     return value;
   }).finally(() => { codexPending = null; });
@@ -66,15 +71,7 @@ async function readClaudeCache(cachePath: string): Promise<ClaudeCache> {
 }
 
 async function writeClaudeCache(cachePath: string, payload: Record<string, unknown>): Promise<void> {
-  await fs.mkdir(path.dirname(cachePath), { recursive: true });
-  const temporary = `${cachePath}.${String(process.pid)}.${randomUUID()}.tmp`;
-  try {
-    await fs.writeFile(temporary, `${JSON.stringify(payload)}\n`, { flag: "wx", mode: 0o600 });
-    await fs.chmod(temporary, 0o600);
-    await fs.rename(temporary, cachePath);
-  } finally {
-    await fs.rm(temporary, { force: true });
-  }
+  await writeFileAtomic(cachePath, { content: `${JSON.stringify(payload)}\n`, mode: 0o600 });
 }
 
 async function refreshClaude(options: {
@@ -212,7 +209,10 @@ export async function collectAgentQuotas(options: CollectQuotasOptions): Promise
       cachePath: path.join(stateDir, "claude-rate-limits.json"), fetchedAt, now,
       request: options.claudeRequest ?? (() => requestClaudeUsage(15_000)),
     }),
-    collectCodex(now, options.codexRequest ?? (() => requestCodexRateLimits(5_000, "codex"))),
+    // An injected request (tests) is answered directly, never from the shared cache.
+    options.codexRequest
+      ? requestCodexQuota(now, options.codexRequest)
+      : collectCodex(now, () => requestCodexRateLimits(5_000, "codex")),
     collectGlm(now, glmRequest),
   ]);
   return glm === null ? [claude, codex] : [claude, codex, glm];

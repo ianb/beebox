@@ -10,6 +10,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { withFileLock } from "./file-lock.js";
+import { pathExistsStrict } from "./file-exists.js";
 
 /** Compatibility names live here so the rest of the runtime has no scattered
  * retired-vocabulary literals. These values are read-only migration inputs. */
@@ -52,16 +53,6 @@ async function removeIfEmptyDir(dirPath: string): Promise<boolean> {
   return true;
 }
 
-async function exists(filePath: string): Promise<boolean> {
-  try {
-    await fs.lstat(filePath);
-    return true;
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
-    throw error;
-  }
-}
-
 const MIGRATION_WAIT_MS = 15_000;
 
 /** Use a stable lock outside the paths being renamed, so acquisition never
@@ -85,8 +76,8 @@ async function withMigrationLock<T>(identity: string, fn: () => Promise<T>): Pro
 /** Move one legacy persisted path to its canonical path, or do nothing. */
 async function migratePersistedPath(oldPath: string, newPath: string): Promise<"migrated" | "unchanged"> {
   return withMigrationLock(newPath, async () => {
-    const oldExists = await exists(oldPath);
-    const newExists = await exists(newPath) && !(oldExists && await removeIfEmptyDir(newPath));
+    const oldExists = await pathExistsStrict(oldPath, { followLinks: false });
+    const newExists = await pathExistsStrict(newPath, { followLinks: false }) && !(oldExists && await removeIfEmptyDir(newPath));
     if (oldExists && newExists) throw new PersistedStateConflictError(oldPath, newPath);
     if (!oldExists) return "unchanged";
     await fs.mkdir(path.dirname(newPath), { recursive: true });
@@ -107,7 +98,7 @@ async function migratePersistedPath(oldPath: string, newPath: string): Promise<"
  */
 export async function migrateBoxState(boxRoot: string): Promise<"migrated" | "unchanged"> {
   const [oldStateExists, oldMarkerExists] = await Promise.all([
-    exists(path.join(boxRoot, LEGACY_BOX_STATE_DIR)), exists(path.join(boxRoot, LEGACY_BOX_MARKER)),
+    pathExistsStrict(path.join(boxRoot, LEGACY_BOX_STATE_DIR), { followLinks: false }), pathExistsStrict(path.join(boxRoot, LEGACY_BOX_MARKER), { followLinks: false }),
   ]);
   if (!oldStateExists && !oldMarkerExists) return "unchanged";
   return withMigrationLock(boxRoot, () => migrateBoxStateLocked(boxRoot));
@@ -119,9 +110,9 @@ async function migrateBoxStateLocked(boxRoot: string): Promise<"migrated" | "unc
   const oldMarker = path.join(boxRoot, LEGACY_BOX_MARKER);
   const newMarker = path.join(newState, "box.json");
   const [oldStateExists, oldMarkerExists, newMarkerExists] = await Promise.all([
-    exists(oldState), exists(oldMarker), exists(newMarker),
+    pathExistsStrict(oldState, { followLinks: false }), pathExistsStrict(oldMarker, { followLinks: false }), pathExistsStrict(newMarker, { followLinks: false }),
   ]);
-  const newStateExists = await exists(newState) && !(oldStateExists && await removeIfEmptyDir(newState));
+  const newStateExists = await pathExistsStrict(newState, { followLinks: false }) && !(oldStateExists && await removeIfEmptyDir(newState));
 
   // Never combine state from two generations. The only exception is a
   // partial migration we can identify unambiguously: the old state directory

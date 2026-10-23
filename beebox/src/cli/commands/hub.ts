@@ -32,10 +32,7 @@ import { loadEnv, hubEnvSchema } from "../../lib/env.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { maybeArmFirstRunSetup } from "../../webapp/setup-token.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
-
-function describeError(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
+import { errorMessage } from "../../shared/error-guards.js";
 
 /**
  * `bbx hub add-box <slug> <path>` — register a box with the hub's routing
@@ -143,7 +140,7 @@ export const hubCommand = new Command("hub")
         try {
           return { slug, boxRoot: await requireBoxRoot(entry.path) };
         } catch (e) {
-          console.error(`Could not resolve box root for "${slug}" (${entry.path}): ${describeError(e)}`);
+          console.error(`Could not resolve box root for "${slug}" (${entry.path}): ${errorMessage(e)}`);
           return undefined;
         }
       }),

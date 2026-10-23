@@ -8,7 +8,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync, writeSync } from "node:fs";
 import { constants } from "node:os";
 import { basename, join } from "node:path";
-import { gitCommonDir } from "./test-git.js";
+import { gitCommonDir } from "./lib/git.js";
+import { pidAlive } from "../beebox/src/hub/child-process-utils.js";
 
 class EmptyCommandError extends Error {
   constructor() {
@@ -114,7 +115,7 @@ export function registerRun(root: string): {
   for (const entry of readdirSync(dir)) {
     const pid = Number(basename(entry, ".json"));
     if (!Number.isInteger(pid) || pid === process.pid) continue;
-    if (!isAlive(pid)) {
+    if (!pidAlive(pid)) {
       rmSync(join(dir, entry), { force: true });
       continue;
     }
@@ -124,14 +125,4 @@ export function registerRun(root: string): {
   const mine = join(dir, `${String(process.pid)}.json`);
   writeFileSync(mine, JSON.stringify(basename(root)));
   return { others, release: () => rmSync(mine, { force: true }) };
-}
-
-function isAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    // EPERM: the pid exists under another user, so it is alive.
-    return e instanceof Error && "code" in e && e.code === "EPERM";
-  }
 }

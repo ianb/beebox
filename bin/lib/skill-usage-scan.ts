@@ -8,7 +8,8 @@ import * as path from "node:path";
 
 import { findMentions, type SkillCatalog } from "./skill-usage-catalog.ts";
 import type { BriefingVia, Source, UsageStats } from "./skill-usage-stats.ts";
-import { isRecord, str } from "./transcripts.ts";
+import { isRecord } from "../../beebox/src/shared/is-record.ts";
+import { str } from "./transcripts.ts";
 
 export interface ScanContext {
   catalog: SkillCatalog;

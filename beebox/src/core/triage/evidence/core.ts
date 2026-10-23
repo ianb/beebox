@@ -2,12 +2,11 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { createHash } from "node:crypto";
 import { execa } from "execa";
 import { z } from "zod";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
-import { errorMessage, errnoCode } from "../../../shared/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { invariant } from "../../../shared/invariant.js";
 import { isCardFile, getBoxDir } from "../../../lib/paths/core.js";
 import { createDoclingService, checkExtractionBounds, type DoclingService } from "../../../services/docling/core.js";
@@ -17,6 +16,9 @@ import { resolveScanVision } from "../../commands/scan-import/session.js";
 import { probePdf, extractPdfText } from "../../pdf/probe.js";
 import { compileInstructionSnapshot, type InstructionSnapshot } from "../snapshot.js";
 import { packEvidence, scanRepresentations } from "./packing.js";
+import { isWithin } from "../../../lib/box-containment.js";
+import { sha256Hex } from "../../../lib/content-hash.js";
+import { pathExistsStrict } from "../../../lib/file-exists.js";
 
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u);
 const statusSchema = z.enum(["ready", "partial", "unavailable"]);
@@ -44,7 +46,6 @@ export interface PrepareItemOptions {
   previousEvidence?: Evidence;
 }
 
-function sha256(bytes: Buffer): string { return createHash("sha256").update(bytes).digest("hex"); }
 function resolve(boxRoot: string, ref: string): string {
   const parsed = parseRef(ref);
   invariant(parsed.fragment === undefined && parsed.query === undefined, "Preparation needs a file ref, without query or fragment");
@@ -52,13 +53,8 @@ function resolve(boxRoot: string, ref: string): string {
   invariant(relative !== null, `Invalid evidence ref: ${ref}`);
   return path.join(boxRoot, relative);
 }
-async function exists(file: string): Promise<boolean> {
-  // Keep lstat semantics instead of lib/file-exists: broken links count as present and EACCES must propagate.
-  try { await fs.lstat(file); return true; }
-  catch (error) { if (errnoCode(error) === "ENOENT") return false; throw error; }
-}
 async function listScope(directory: string): Promise<string[]> {
-  if (!await exists(directory)) return [];
+  if (!await pathExistsStrict(directory, { followLinks: false })) return [];
   const result: string[] = [];
   for (const entry of (await fs.readdir(directory, { withFileTypes: true })).toSorted((a, b) => a.name.localeCompare(b.name))) {
     const file = path.join(directory, entry.name);
@@ -70,8 +66,7 @@ async function listScope(directory: string): Promise<string[]> {
 async function checkedRead({ boxRoot, file }: { boxRoot: string; file: string }): Promise<Buffer> {
   // Annex symlinks may point inside the repository; never follow an arbitrary external link.
   const real = await fs.realpath(file);
-  const relative = path.relative(await fs.realpath(boxRoot), real);
-  invariant(relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), `Evidence escapes box: ${file}`);
+  invariant(isWithin(await fs.realpath(boxRoot), real), `Evidence escapes box: ${file}`);
   return fs.readFile(real);
 }
 
@@ -80,10 +75,10 @@ export async function verifyEvidence(boxRoot: string, evidence: Evidence): Promi
   evidenceSchema.parse(evidence);
   for (const part of evidence.parts) {
     const bytes = await checkedRead({ boxRoot, file: resolve(boxRoot, part.ref) });
-    invariant(sha256(bytes) === part.digest, `stale-decision: changed evidence ${part.ref}; prepare again`);
+    invariant(sha256Hex(bytes) === part.digest, `stale-decision: changed evidence ${part.ref}; prepare again`);
   }
   const source = await checkedRead({ boxRoot, file: resolve(boxRoot, evidence.source.ref) });
-  invariant(sha256(source) === evidence.source.digest, "stale-decision: changed source; prepare again");
+  invariant(sha256Hex(source) === evidence.source.digest, "stale-decision: changed source; prepare again");
   if (evidence.source.attachmentRef !== null) {
     const files = await listScope(resolve(boxRoot, evidence.source.attachmentRef));
     const expected = evidence.parts.filter((part) => part.ref !== evidence.source.ref).map((part) => part.ref).toSorted();
@@ -117,7 +112,7 @@ async function prepareImage({ file, part }: { file: string; part: Part }, option
 
 function cachedPart(input: { ref: string; bytes: Buffer }, evidence: Evidence | undefined): Part | undefined {
   if (evidence?.recipe.adapterVersion !== 2) return undefined;
-  return evidence.parts.find((part) => part.ref === input.ref && part.digest === sha256(input.bytes) && part.status === "ready" && part.text !== "" && !["duplicate-text", "provenance-only"].includes(part.method));
+  return evidence.parts.find((part) => part.ref === input.ref && part.digest === sha256Hex(input.bytes) && part.status === "ready" && part.text !== "" && !["duplicate-text", "provenance-only"].includes(part.method));
 }
 
 async function preparePart(input: { file: string; bytes: Buffer }, options: PrepareItemOptions): Promise<Part> {
@@ -125,7 +120,7 @@ async function preparePart(input: { file: string; bytes: Buffer }, options: Prep
   const ref = `/${path.relative(options.boxRoot, file)}`;
   const cached = cachedPart({ ref, bytes }, options.previousEvidence);
   if (cached) return { ...cached, omissions: [...cached.omissions] };
-  const part: Part = { ref, digest: sha256(bytes), mediaType: "application/octet-stream", method: "unsupported", toolVersion: "1", status: "unavailable", text: "", omissions: [] };
+  const part: Part = { ref, digest: sha256Hex(bytes), mediaType: "application/octet-stream", method: "unsupported", toolVersion: "1", status: "unavailable", text: "", omissions: [] };
   const extension = path.extname(file).toLowerCase();
   try {
     if (extension === ".pdf") {
@@ -191,7 +186,7 @@ async function noteMissingAttachments(part: Part, boxRoot: string): Promise<void
   const refs = new Set(part.text.match(/\battach\/[^\s"'<>()[\]{}]+/gu));
   for (const ref of refs) {
     const relative = resolveRefPath({ fromPath: part.ref, ref: parseRef(ref).path, kind: "card" });
-    if (relative === null || !await exists(path.join(boxRoot, relative))) {
+    if (relative === null || !await pathExistsStrict(path.join(boxRoot, relative), { followLinks: false })) {
       part.omissions.push(`Missing referenced attachment: ${ref}`);
       if (part.status === "ready") part.status = "partial";
     }
@@ -206,7 +201,7 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
   if (attachmentPath !== null) {
     for (const upstream of [getBoxDir(options.boxRoot, "inbox"), getBoxDir(options.boxRoot, "inboxIntake")]) {
       const candidate = path.join(upstream, path.basename(attachmentPath));
-      invariant(candidate === attachmentPath || !await exists(candidate), `Stranded attachment scope: ${candidate}; repair before preparation`);
+      invariant(candidate === attachmentPath || !await pathExistsStrict(candidate, { followLinks: false }), `Stranded attachment scope: ${candidate}; repair before preparation`);
     }
   }
   const files = [sourcePath, ...attachmentPath === null ? [] : await listScope(attachmentPath)];
@@ -230,7 +225,7 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
     const representations = scanRepresentations(parts, manifestRefs);
     const method = deferredMethod({ file, ref, representations });
     const part: Part = method === undefined ? await preparePart({ file, bytes }, options)
-      : { ref, digest: sha256(bytes), mediaType: method === "provenance-only" ? "application/gzip" : method === "pdf-deferred" ? "application/pdf" : `image/${path.extname(file).slice(1)}`, method, toolVersion: "1", status: method === "provenance-only" ? "ready" : "unavailable", text: "", omissions: [] };
+      : { ref, digest: sha256Hex(bytes), mediaType: method === "provenance-only" ? "application/gzip" : method === "pdf-deferred" ? "application/pdf" : `image/${path.extname(file).slice(1)}`, method, toolVersion: "1", status: method === "provenance-only" ? "ready" : "unavailable", text: "", omissions: [] };
     await noteMissingAttachments(part, options.boxRoot);
     parts.push(part);
   }

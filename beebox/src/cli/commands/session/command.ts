@@ -43,6 +43,7 @@ import {
   validateCodexSessionMode,
 } from "../../lib/diagnostic-session.js";
 import type { AgentEngine } from "../../../core/box/config.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 /**
  * The box-relative directory the command was run from ("" when at the box
@@ -50,9 +51,9 @@ import type { AgentEngine } from "../../../core/box/config.js";
  * in a landmark subdirectory, and its sessions get ordering affinity.
  */
 function cwdContextDir(boxRoot: string): string {
-  const rel = path.relative(boxRoot, process.cwd());
-  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return "";
-  return rel;
+  const cwd = process.cwd();
+  if (!isWithin(boxRoot, cwd)) return "";
+  return path.relative(boxRoot, cwd);
 }
 
 function requestedSessionEngine(value: string | undefined): AgentEngine | undefined {

@@ -4,7 +4,8 @@
  * and an optional ref link.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useDismiss } from "../../hooks/useDismiss";
 import { getAckKind, type AckIndication } from "../../lib/structured-output-parsing";
 import { parseViewUrl } from "../../lib/view-url";
 import type { OnZoomView } from "./markdown-rendering";
@@ -46,23 +47,7 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
   const descriptor = getAckKind(ack.kind);
   const rootRef = useRef<HTMLSpanElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    function handlePointer(e: MouseEvent) {
-      if (rootRef.current !== null && e.target instanceof Node && !rootRef.current.contains(e.target)) {
-        onClose();
-      }
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open, onClose]);
+  useDismiss({ root: rootRef, open, onDismiss: onClose });
 
   if (!descriptor) return null;
   const label = ack.text ? `${descriptor.defaultPhrase} — ${ack.text}` : descriptor.defaultPhrase;

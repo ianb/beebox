@@ -11,6 +11,7 @@ import { realpathSync } from "node:fs";
 import os from "node:os";
 import { alignLines } from "../diff.js";
 import { matchExtractions } from "./match.js";
+import { escapeRegex } from "../wildcards.js";
 
 const DAY_MS = 86_400_000;
 
@@ -54,7 +55,7 @@ function replacements(): Replacement[] {
   const list: Replacement[] = [];
   // Temp paths: the root plus its first (usually random) segment; keep the tail.
   for (const root of tempRoots()) {
-    list.push([new RegExp(`(?<![\\w./-])${escape(root)}/[^\\s"'\`,;:)\\]}/]+`, "g"), () => "«*»"]);
+    list.push([new RegExp(`(?<![\\w./-])${escapeRegex(root)}/[^\\s"'\`,;:)\\]}/]+`, "g"), () => "«*»"]);
   }
   list.push(
     [/\b[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}\b/g, () => "«uuid»"],
@@ -66,7 +67,7 @@ function replacements(): Replacement[] {
   const pid = String(process.pid);
   if (pid.length >= 3) list.push([new RegExp(`\\b${pid}\\b`, "g"), () => "«int»"]);
   for (const host of hostnames()) {
-    list.push([new RegExp(`(?<![\\w.-])${escape(host)}(?![\\w-])`, "g"), () => "«*»"]);
+    list.push([new RegExp(`(?<![\\w.-])${escapeRegex(host)}(?![\\w-])`, "g"), () => "«*»"]);
   }
   return list;
 }
@@ -105,10 +106,6 @@ function nearbyDates(now: number): Set<string> {
 /** An epoch timestamp (seconds or milliseconds) within a day of now. */
 function isNearEpoch(n: number, now: number): boolean {
   return Math.abs(n - now) < DAY_MS || Math.abs(n * 1000 - now) < DAY_MS;
-}
-
-function escape(s: string): string {
-  return s.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
 }
 
 // ── Hints ────────────────────────────────────────────────────────────────────

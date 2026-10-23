@@ -17,6 +17,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
+import { loadJsonStateOrFresh } from "../../../lib/json-state.js";
 
 const STATE_FILE = ".beebox/chat-review/state.json";
 
@@ -121,31 +122,13 @@ export function sessionState(state: ReviewState, sessionId: string): ReviewSessi
  * revise, not append), but it is a real model call, not a no-op.
  */
 export async function loadReviewState(boxRoot: string): Promise<ReviewState> {
-  const filePath = path.join(boxRoot, STATE_FILE);
-  let text: string;
-  try {
-    text = await fs.readFile(filePath, "utf-8");
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`chat-review: could not read ${STATE_FILE}, starting fresh:`, e);
-    }
-    return emptyReviewState();
-  }
-
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch (e) {
-    console.warn(`chat-review: ${STATE_FILE} is not valid JSON, starting fresh:`, e);
-    return emptyReviewState();
-  }
-
-  const parsed = ReviewStateSchema.safeParse(raw);
-  if (!parsed.success) {
-    console.warn(`chat-review: ${STATE_FILE} did not match the expected shape, starting fresh`);
-    return emptyReviewState();
-  }
-  return parsed.data;
+  return loadJsonStateOrFresh({
+    filePath: path.join(boxRoot, STATE_FILE),
+    name: STATE_FILE,
+    label: "chat-review",
+    schema: ReviewStateSchema,
+    fresh: emptyReviewState,
+  });
 }
 
 /** Strict mutation read: missing is empty, but unreadable or malformed aborts deletion. */

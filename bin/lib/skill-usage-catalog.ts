@@ -9,9 +9,9 @@
  * directories under `~/.claude/skills/`, including the synced plugin bucket.
  */
 
-import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { git } from "./git.js";
 
 export type SkillCategory = "repo" | "retired" | "user" | "harness" | "other";
 export type MentionForm = "bare" | "slash" | "dollar" | "path";
@@ -39,15 +39,6 @@ function dirNames(dir: string): string[] {
     .map((e) => e.name);
 }
 
-function git(repoRoot: string, args: string[]): string {
-  try {
-    return execFileSync("git", ["-C", repoRoot, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-  } catch (error) {
-    if (error instanceof Error) return "";
-    throw error;
-  }
-}
-
 /** Old→new renames and plain deletions of `<rel>/<name>/SKILL.md` across history. */
 function skillHistory(repoRoot: string, rel: string): { renames: Map<string, string>; deleted: Set<string> } {
   const renames = new Map<string, string>();
@@ -58,7 +49,7 @@ function skillHistory(repoRoot: string, rel: string): { renames: Map<string, str
     const middle = p.slice(prefix.length, -"/SKILL.md".length);
     return middle && !middle.includes("/") ? middle : null;
   };
-  const log = git(repoRoot, ["log", "-M", "--diff-filter=RD", "--name-status", "--format=", "--", `${rel}/*/SKILL.md`]);
+  const log = git(["log", "-M", "--diff-filter=RD", "--name-status", "--format=", "--", `${rel}/*/SKILL.md`], { cwd: repoRoot, onError: "empty" });
   for (const line of log.split("\n")) {
     const [status, from, to] = line.split("\t");
     const oldName = from ? nameOf(from) : null;
@@ -72,13 +63,13 @@ function skillHistory(repoRoot: string, rel: string): { renames: Map<string, str
 
 export function loadCatalog(opts: { skillsDir: string; home: string }): SkillCatalog {
   const skillsDir = path.resolve(opts.skillsDir);
-  const repoRoot = git(skillsDir, ["rev-parse", "--show-toplevel"]).trim();
+  const repoRoot = git(["rev-parse", "--show-toplevel"], { cwd: skillsDir, onError: "empty" }).trim();
   const current = new Set(dirNames(skillsDir));
   const aliases = new Map<string, string>();
   const retired = new Set<string>();
   if (repoRoot) {
     const rel = path.relative(repoRoot, skillsDir);
-    for (const line of git(repoRoot, ["ls-tree", "--name-only", "HEAD", `${rel}/`]).split("\n")) {
+    for (const line of git(["ls-tree", "--name-only", "HEAD", `${rel}/`], { cwd: repoRoot, onError: "empty" }).split("\n")) {
       if (line) current.add(path.basename(line));
     }
     const { renames, deleted } = skillHistory(repoRoot, rel);

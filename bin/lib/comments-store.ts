@@ -50,6 +50,8 @@ import { InvalidCommentPathError } from "./comments-store-errors.js";
 // canonical lock for the project... Don't add a new lock surface elsewhere —
 // extend or wrap this instead."
 import { withFileLock as withCrossProcessLock } from "../../beebox/src/lib/file-lock.js";
+import { isWithin } from "../../beebox/src/lib/box-containment.js";
+import { writeFileAtomic } from "../../beebox/src/lib/atomic-write.js";
 
 /** Written when the store root is created; nothing writes to an unmarked directory. */
 export const STORE_MARKER = ".dev-comments";
@@ -190,7 +192,7 @@ export function commentsFilePath(storeRoot: string, subject: Subject): string {
   const key = subjectKey(subject);
   const resolved = path.resolve(root, key);
   const relative = path.relative(root, resolved);
-  if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+  if (relative === "" || !isWithin(root, resolved)) {
     throw new InvalidCommentPathError({ kind: "outside-store", relPath: key });
   }
   return resolved;
@@ -324,14 +326,6 @@ function withFileLock<T>(file: string, fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
-/** Replace a file's whole contents without a window where it is truncated. */
-async function writeFileAtomic(file: string, contents: string): Promise<void> {
-  await fs.mkdir(path.dirname(file), { recursive: true });
-  const temporary = `${file}.${process.pid}.${String(Math.floor(performance.now() * 1000))}.tmp`;
-  await fs.writeFile(temporary, contents, "utf8");
-  await fs.rename(temporary, file);
-}
-
 function serialize(comments: Comment[]): string {
   const file: CommentsFile = { version: STORE_VERSION, comments };
   return stringifyYaml(file, { lineWidth: 0 });
@@ -355,7 +349,7 @@ export async function appendComment(
     if (current.problem !== null) {
       throw new InvalidCommentPathError({ kind: "unreadable-append", problem: current.problem });
     }
-    await writeFileAtomic(file, serialize([...current.comments, parsedComment]));
+    await writeFileAtomic(file, { content: serialize([...current.comments, parsedComment]) });
   });
 }
 
@@ -385,7 +379,7 @@ export async function clearComments(
     const removed = current.comments.length - remaining.length;
     if (removed === 0) return 0;
     if (remaining.length === 0) await fs.rm(file, { force: true });
-    else await writeFileAtomic(file, serialize(remaining));
+    else await writeFileAtomic(file, { content: serialize(remaining) });
     return removed;
   });
 }

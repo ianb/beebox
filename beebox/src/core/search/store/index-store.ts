@@ -13,6 +13,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { create, type AnySchema, type Orama } from "@orama/orama";
 import { errorMessage } from "../../../shared/error-guards.js";
+import { writeFileAtomic } from "../../../lib/atomic-write.js";
 
 // The persistence plugin loads on first restore or persist: about 15 ms, and
 // every `bbx` verb loads this module.
@@ -116,8 +117,5 @@ export function createIndexStore<TSchema extends AnySchema>(
 
 /** Write a JSON file atomically (write temp, rename). */
 export async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const tmp = `${filePath}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(value, null, 2) + "\n");
-  await fs.rename(tmp, filePath);
+  await writeFileAtomic(filePath, { content: JSON.stringify(value, null, 2) + "\n" });
 }

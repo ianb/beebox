@@ -16,7 +16,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
 import { errnoCode } from "../../beebox/src/shared/error-guards.js";
@@ -40,6 +39,7 @@ import {
   type StoreState,
 } from "./schedules.js";
 import { InvalidAlertRecordError, InvalidStoreRecordError, UnmarkedStoreRootError } from "./schedules-errors.js";
+import { writeFileAtomic } from "../../beebox/src/lib/atomic-write.js";
 
 
 
@@ -82,14 +82,6 @@ export async function ensureScheduleDir(root: string, name: string): Promise<str
   return dir;
 }
 
-/** Temp sibling, then rename: a reader sees the old file or the new one. */
-async function writeAtomic(filePath: string, content: string): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const temp = `${filePath}.${randomBytes(6).toString("hex")}.tmp`;
-  await fs.writeFile(temp, content, "utf8");
-  await fs.rename(temp, filePath);
-}
-
 async function readJson<T>(filePath: string, schema: z.ZodType<T>): Promise<T | null> {
   let raw: string;
   try {
@@ -106,7 +98,7 @@ async function readJson<T>(filePath: string, schema: z.ZodType<T>): Promise<T | 
 }
 
 async function writeJson<T>(filePath: string, record: T): Promise<void> {
-  await writeAtomic(filePath, `${JSON.stringify(record, null, 2)}\n`);
+  await writeFileAtomic(filePath, { content: `${JSON.stringify(record, null, 2)}\n` });
 }
 
 // ─── Heartbeat (store root) ───────────────────────────────────────────────
@@ -423,15 +415,4 @@ export async function acquireLock(
 
 export async function releaseLock(root: string, name: string): Promise<void> {
   await fs.rm(lockDir(root, name), { recursive: true, force: true });
-}
-
-/** Does this PID exist? `kill(pid, 0)` is the question; EPERM means yes, it
- *  exists and belongs to somebody else. */
-export function isProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return errnoCode(e) === "EPERM";
-  }
 }

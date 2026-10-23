@@ -17,6 +17,7 @@ import { apiRawFileUrl, apiRawImageUrl, apiTransformedImageUrl, getApiBase } fro
 import { resolveRelativePath } from "../lib/view-url";
 import { isTransformablePhotoPath } from "../lib/image-transform-url";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
+import { friendlyDate } from "../components/ui/FriendlyDate";
 
 function strOf(v: unknown): string | null {
   return typeof v === "string" ? v : null;
@@ -172,7 +173,7 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
           <Text size="xs" tone="muted">{card.exif.camera}</Text>
         ) : null}
         {card.exif.date ? (
-          <Text size="xs" tone="muted">{new Date(card.exif.date).toLocaleString()}</Text>
+          <Text size="xs" tone="muted">{friendlyDate(card.exif.date)}</Text>
         ) : null}
       </Row>
 

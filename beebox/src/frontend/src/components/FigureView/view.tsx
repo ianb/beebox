@@ -9,13 +9,14 @@
  * error boundary is only a backstop for synchronous render throws).
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { isRecord } from "@shared/is-record";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getApiBase } from "../../api";
 import { resolveRelativePath } from "../../lib/view-url";
 import { useViewFileHelpers } from "../../hooks/useViewFileHelpers";
-import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
-import { busEventData } from "../../lib/bus-events";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { fileChangeAt } from "../../lib/live-refresh";
 import { coerceFigureParams, parseDeclaredParams } from "../../lib/figure-params";
 import { ViewErrorBoundary } from "../ViewErrorBoundary";
 import { Markdown } from "../Markdown/body";
@@ -78,7 +79,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
       setMod(imported);
       setError(imported.figureError ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -88,13 +89,8 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     void loadModule();
   }, [loadModule]);
 
-  // Live reload: recompile when the entry source changes on disk.
-  useBusSubscription({
-    onEvent: useCallback((event: RealtimeEvent) => {
-      const fileChange = busEventData(event, "file-change");
-      if (fileChange && fileChange.path === entryPath) void loadModule();
-    }, [entryPath, loadModule]),
-  });
+  // Live reload: recompile when the entry source changes on disk, or on a reconnect.
+  useLiveRefresh({ when: fileChangeAt(entryPath), refresh: () => { void loadModule(); } });
 
   const fileHelpers = useViewFileHelpers(apiBase);
   // Built inline (not memoized): FigureMount reads it via a ref and remounts on

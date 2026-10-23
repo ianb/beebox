@@ -5,7 +5,6 @@
  */
 
 import { readFileSync, existsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
 import {
   carefulCandidates,
   CAREFUL_THRESHOLD,
@@ -19,12 +18,7 @@ import {
 } from "./test-ledger-lib.js";
 import { readRecords } from "./test-ledger.js";
 import { readCarefulList } from "./test-tiers.js";
-
-function gitCommonDir(): string {
-  return execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
-    encoding: "utf-8",
-  }).trim();
-}
+import { gitCommonDir } from "./lib/git.js";
 
 function readFilesets(path: string): Record<string, string[]> {
   if (!existsSync(path)) return {};

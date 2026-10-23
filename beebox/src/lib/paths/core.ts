@@ -4,11 +4,13 @@
 
 import { withBoxWork } from "../box-maintenance/admission.js";
 import * as path from "node:path";
-import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
-import { invariant } from "../../shared/invariant.js";
 import { LEGACY_BOX_MARKER, LEGACY_BOX_STATE_DIR, migrateBoxState } from "../state-migration.js";
 import { probeBoxLevel } from "../box-identity.js";
+import { fileExists } from "../file-exists.js";
+import { isWithin } from "../box-containment.js";
+import { parseCardFileName } from "../../shared/card-name.js";
+import { cardBasename } from "../../shared/attach-path.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
@@ -49,16 +51,6 @@ export function boxLayoutEntry(boxDirsKey: keyof BoxDirs): BoxLayoutEntry {
     throw new UnknownBoxDirsKeyError(boxDirsKey);
   }
   return entry;
-}
-
-async function pathExists(candidate: string): Promise<boolean> {
-  try {
-    await fs.access(candidate);
-    return true;
-  } catch (_e) {
-    // Absent — the only meaningful outcome of access() here.
-    return false;
-  }
 }
 
 /**
@@ -106,7 +98,7 @@ export async function requireBoxRoot(startPath?: string): Promise<string> {
   // State directory names are persisted identity. Migrate before callers
   // construct any per-box path so a first `bbx` invocation cannot split state
   // between the retired and canonical directories.
-  if (await pathExists(path.join(root, LEGACY_BOX_STATE_DIR)) || await pathExists(path.join(root, LEGACY_BOX_MARKER))) {
+  if (await fileExists(path.join(root, LEGACY_BOX_STATE_DIR)) || await fileExists(path.join(root, LEGACY_BOX_MARKER))) {
     await withBoxWork({ boxRoot: root, reason: "state migration" }, () => migrateBoxState(root));
   }
   return root;
@@ -145,7 +137,7 @@ export function toRelativePath(boxRoot: string, absolutePath: string): string | 
   const resolved = path.resolve(absolutePath);
   const resolvedRoot = path.resolve(boxRoot);
 
-  if (!resolved.startsWith(resolvedRoot + path.sep) && resolved !== resolvedRoot) {
+  if (!isWithin(resolvedRoot, resolved)) {
     return null;
   }
 
@@ -153,32 +145,18 @@ export function toRelativePath(boxRoot: string, absolutePath: string): string | 
 }
 
 /**
- * Parse a card filename into its components: nominal `Name.type.card`, or
- * positional `type.card` ("the ‹type› of this directory") where the name
- * doubles as the type for display purposes.
- *
- * Legacy divergence from src/shared/card-name.ts (the canonical grammar):
- * job cards parse here as `{ name: "Foo.intake", type: "job" }` rather than
- * `{ name: "Foo", type: "intake-job" }`. Callers depend on the flat split;
- * unify when they're audited.
+ * A card filename's `name` (its attach stem, as the attach directory and the
+ * browse listing use it) and its schema `type`, or null when the filename is
+ * not card-shaped. The grammar is `parseCardFileName` (`shared/card-name.ts`);
+ * the name is `cardBasename` (`shared/attach-path.ts`): `Meeting.doc.card` →
+ * `Meeting`/`doc`, positional `nav.card` → `nav`/`nav`, job
+ * `Foo.intake.job.card` → `Foo.intake`/`intake-job`.
  *
  * @param filename - The card filename (e.g., "Meeting_Tomorrow.email-thread.card")
- * @returns Parsed components or null if not a valid card name
  */
 export function parseCardName(filename: string): { name: string; type: string } | null {
-  const match = filename.match(/^(.+)\.([^.]+)\.card$/);
-  if (match) {
-    const [, name, type] = match;
-    invariant(name !== undefined && type !== undefined, "regex capture groups missing on a successful match");
-    return { name, type };
-  }
-  const positional = filename.match(/^([^.]+)\.card$/);
-  if (positional) {
-    const [, name] = positional;
-    invariant(name !== undefined, "regex capture group missing on a successful match");
-    return { name, type: name };
-  }
-  return null;
+  const parsed = parseCardFileName(filename);
+  return parsed === null ? null : { name: cardBasename(filename), type: parsed.type };
 }
 
 /**

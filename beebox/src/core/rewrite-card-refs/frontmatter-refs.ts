@@ -12,6 +12,7 @@
  */
 
 import { invariant } from "../../shared/invariant.js";
+import { frontmatterFence } from "../../cards/frontmatter.js";
 
 /** A per-ref transform: given a raw ref token, return it unchanged or rewritten. */
 export type RefTransform = (rawRef: string) => string;
@@ -87,16 +88,10 @@ function blockScalarIndent(line: string): number {
  * `ref:`. Returns the text with that region rewritten.
  */
 export function rewriteFrontmatter(text: string, wrap: RefTransform): string {
-  if (!text.startsWith("---\n")) return text;
+  const fence = frontmatterFence(text);
+  if (fence === null) return text;
   const lines = text.split("\n");
-  let end = -1;
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i] === "---") {
-      end = i;
-      break;
-    }
-  }
-  if (end === -1) return text;
+  const end = fence.closingLine;
 
   const apply = (value: string): string => {
     const { token, comment } = splitTrailingComment(value);

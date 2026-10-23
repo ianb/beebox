@@ -40,6 +40,8 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { errnoCode, errorMessage } from "../beebox/src/shared/error-guards.js";
+import { gitCommonDir, gitTopLevel } from "./lib/git.js";
 
 /** Thrown when the blocklist file is unparseable — surfaced as a fail-closed error. */
 export class BlocklistError extends Error {
@@ -57,16 +59,6 @@ class InvalidBlocklistRegexError extends BlocklistError {
     super(`invalid regex on line ${line}: ${detail.replace(/^Invalid regular expression: \/.*\/[a-z]*: /, "")}`);
     this.name = "InvalidBlocklistRegexError";
   }
-}
-
-/** The message of an unknown thrown value, without asserting it is an Error. */
-function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
-/** Narrow a caught value to a Node syscall error, which carries a string `code`. */
-function isErrnoException(e: unknown): e is NodeJS.ErrnoException {
-  return e instanceof Error && "code" in e;
 }
 
 /** All [start, end) match spans of an entry within one line of text. */
@@ -276,11 +268,9 @@ export function findBlocked(added: AddedLine[], entries: Entry[]): Hit[] {
  * CLOSED in both.
  */
 function loadBlocklist(): { entries: Entry[]; blocklistPath: string; repoRoot: string } | null {
-  const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const repoRoot = gitTopLevel();
   const rel = process.env.BBX_COMMIT_BLOCKLIST ?? ".commit-blocklist";
-  const commonDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
-    encoding: "utf8",
-  }).trim();
+  const commonDir = gitCommonDir();
   const candidates = blocklistCandidates({ repoRoot, rel, commonDir });
 
   let text = "";
@@ -291,7 +281,7 @@ function loadBlocklist(): { entries: Entry[]; blocklistPath: string; repoRoot: s
       blocklistPath = candidate;
       break;
     } catch (e) {
-      if (isErrnoException(e) && e.code === "ENOENT") continue;
+      if (errnoCode(e) === "ENOENT") continue;
       console.error(`commit-blocklist-check: cannot read ${candidate}: ${errorMessage(e)}`);
       process.exit(1); // any other read failure => fail closed
     }

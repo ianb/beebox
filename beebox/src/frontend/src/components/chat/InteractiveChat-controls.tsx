@@ -10,6 +10,8 @@ import { useState, useEffect, useRef } from "react";
 
 import type { ChatSchedule } from "@core/chat/schedules/core.js";
 import type { SidecarTab } from "./sidecar-tabs";
+import { boxNow } from "../../lib/box-clock";
+import { formatDuration } from "@shared/relative-time";
 
 /**
  * Countdown pill showing time remaining for an active schedule.
@@ -20,7 +22,7 @@ export function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSc
 
   useEffect(() => {
     const update = () => {
-      const ms = new Date(schedule.firesAt).getTime() - Date.now();
+      const ms = new Date(schedule.firesAt).getTime() - boxNow();
       if (ms <= 0) {
         setRemaining("now");
         if (!firedRef.current) {
@@ -29,18 +31,7 @@ export function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSc
         }
         return;
       }
-      const totalSec = Math.ceil(ms / 1000);
-      if (totalSec >= 3600) {
-        const h = Math.floor(totalSec / 3600);
-        const m = Math.floor((totalSec % 3600) / 60);
-        setRemaining(m > 0 ? `${h}h ${m}m` : `${h}h`);
-      } else if (totalSec >= 60) {
-        const m = Math.floor(totalSec / 60);
-        const s = totalSec % 60;
-        setRemaining(s > 0 ? `${m}m ${s}s` : `${m}m`);
-      } else {
-        setRemaining(`${totalSec}s`);
-      }
+      setRemaining(formatDuration(Math.ceil(ms / 1000) * 1000));
     };
     update();
     const id = setInterval(update, 1000);

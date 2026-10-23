@@ -9,6 +9,7 @@
 const UNITS = ["KB", "MB", "GB", "TB"] as const;
 
 export function humanBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
   if (bytes < 1024) return `${String(bytes)} B`;
   let value = bytes / 1024;
   let i = 0;

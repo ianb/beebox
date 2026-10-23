@@ -6,6 +6,7 @@ import { ensurePackageDocs } from "../../../../core/docs-gen/package-docs/core.j
 import { PACKAGE_ROOT } from "../../../../lib/package-root.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import type { AuditTest } from "../../test-suite-schema.js";
+import { isWithin } from "../../../../lib/box-containment.js";
 
 class UnsafeAuditFixturePathError extends Error {
   constructor(params: { relPath: string; reason: "escapes the box" | "crosses a symbolic link" }) {
@@ -81,7 +82,7 @@ export async function assertFixturePathInBox(boxRoot: string, relPath: string): 
   const root = await fs.realpath(boxRoot);
   const absPath = path.resolve(root, relPath);
   const relative = path.relative(root, absPath);
-  if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+  if (relative === "" || !isWithin(root, absPath)) {
     throw new UnsafeAuditFixturePathError({ relPath, reason: "escapes the box" });
   }
 

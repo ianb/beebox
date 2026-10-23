@@ -15,7 +15,8 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import { trpc } from "../../lib/trpc/client";
-import { useBusSubscription } from "../../hooks/useBusSubscription";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { oneOf } from "../../lib/live-refresh";
 import { QuestionForm, type QuestionInfo } from "./QuestionForm";
 import { renderQuestionAnswer } from "./answer-display";
 import { bbxSource } from "../../lib/source-tag";
@@ -82,18 +83,9 @@ export function QuestionsList() {
 
   const questions = data?.items ?? [];
 
-  useBusSubscription({
-    onEvent: (event) => {
-      if (
-        event.event === "question-answered" ||
-        event.event === "question-dismissed" ||
-        event.event === "question-expired" ||
-        event.event === "card-created" ||
-        event.event === "file-change"
-      ) {
-        void utils.status.questions.invalidate();
-      }
-    },
+  useLiveRefresh({
+    when: oneOf("question-answered", "question-dismissed", "question-expired", "card-created", "file-change"),
+    refresh: () => { void utils.status.questions.invalidate(); },
   });
 
   const onAnswered = () => void utils.status.questions.invalidate();

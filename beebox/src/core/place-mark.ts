@@ -15,7 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Document, parseDocument } from "yaml";
-import { splitCardContent } from "../exports/cards.js";
+import { renderFrontmatterDocument, splitCardContent } from "../exports/cards.js";
 import { toRelativePath } from "../lib/paths/core.js";
 import { loadLocation, type StoredLocation } from "./location-store.js";
 import { locationAge } from "./location-format.js";
@@ -63,10 +63,7 @@ export function applyMark(
   const existingRadius = asNumber(doc.get("radius"));
   const hasCoords = existingLat !== null && existingLng !== null;
 
-  const reserialize = (): string => {
-    const fm = String(doc);
-    return `---\n${fm.endsWith("\n") ? fm : `${fm}\n`}---\n${split.body}`;
-  };
+  const reserialize = (): string => renderFrontmatterDocument(doc, split.body);
 
   if (!hasCoords) {
     const radius = Math.max(Math.round(fix.accuracy), MIN_PLACE_RADIUS_M);

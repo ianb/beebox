@@ -9,6 +9,7 @@
  * batches as review tables; and the scan history.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useCallback, useEffect, useState } from "react";
 import type { RendererProps } from "../file-type-registry";
 import { Markdown } from "./Markdown/body";
@@ -23,7 +24,8 @@ import { Heading } from "./ui/Heading";
 import { Accordion } from "./ui/Accordion";
 import { ExternalLink } from "./ui/ExternalLink";
 import { bbxSource } from "../lib/source-tag";
-import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import type { RealtimeEvent } from "../hooks/useBusSubscription";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import { busEventData } from "../lib/bus-events";
 import { attachDirFor } from "@shared/attach-path";
 import { boxRelativePath } from "@shared/box-path";
@@ -62,7 +64,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
       ]);
       setAttach({ schemaText, ...probeSchema(schemaText), inbox, processed, error: null, loadedAt: Date.now() });
     } catch (e: unknown) {
-      setAttach({ schemaText: null, schemaJson: null, schemaProblem: null, inbox: [], processed: [], error: e instanceof Error ? e.message : String(e), loadedAt: Date.now() });
+      setAttach({ schemaText: null, schemaJson: null, schemaProblem: null, inbox: [], processed: [], error: errorMessage(e), loadedAt: Date.now() });
     }
   }, [data.path]);
 
@@ -72,13 +74,14 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 
   const cardRel = boxRelativePath(data.path);
   const attachRel = boxRelativePath(attachDirFor(data.path));
-  useBusSubscription({
-    onEvent: useCallback((event: RealtimeEvent) => {
+  useLiveRefresh({
+    when: (event: RealtimeEvent) => {
       const change = busEventData(event, "file-change");
-      if (!change) return;
+      if (!change) return false;
       const changed = boxRelativePath(change.path).replace(/\/$/, "");
-      if (changed === cardRel || changed === attachRel || changed.startsWith(`${attachRel}/`)) void reload();
-    }, [cardRel, attachRel, reload]),
+      return changed === cardRel || changed === attachRel || changed.startsWith(`${attachRel}/`);
+    },
+    refresh: () => { void reload(); },
   });
 
   const validate = useCallback(
@@ -212,7 +215,7 @@ function probeSchema(schemaText: string | null): { schemaJson: unknown; schemaPr
   try {
     schemaJson = JSON.parse(schemaText);
   } catch (e: unknown) {
-    return { schemaJson: null, schemaProblem: `attach/schema.json is not valid JSON: ${e instanceof Error ? e.message : String(e)}` };
+    return { schemaJson: null, schemaProblem: `attach/schema.json is not valid JSON: ${errorMessage(e)}` };
   }
   const probe = validateBatch({ schemaJson, manifest: { coverage: { scanned: 0, stoppedAt: "", reason: "error" }, records: [] }, fileNames: [] });
   if (!probe.ok) {

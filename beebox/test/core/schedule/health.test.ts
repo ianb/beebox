@@ -19,9 +19,9 @@ import { normalizeScriptState } from "../../../src/core/schedule/state.js";
 import {
   summarizeScheduleHealth,
   selectAlertableTasks,
-  formatDurationShort,
 } from "../../../src/core/schedule/health-box.js";
 import type { SchedulerHeartbeat } from "../../../src/core/schedule/health-box.js";
+import { formatDuration } from "../../../src/shared/relative-time.js";
 
 const NOW = new Date("2026-06-09T12:00:00Z");
 
@@ -176,7 +176,8 @@ void test("(Cron expressions evaluate in server-local time, same as isDue — th
     lastSuccess: "2026-06-07T05:00:10Z",
     lastError: null,
   });
-  t.check(formatDurationShort(h.pendingMs ?? 0), "2d");
+  // The health summary reads an overdue span as a duration (54 hours).
+  t.check(formatDuration(h.pendingMs ?? 0), "2d 6h");
 });
 
 // But a task only a little past its occurrence is still within its allowance — an
@@ -289,7 +290,7 @@ void test("The summary speaks only when something is wrong, and folds overdue fi
 
   t.check(
     summarizeScheduleHealth({ tasks: [failing, overdue, ok], scheduler, engineWait: null }, NOW),
-    "demo: failing ×3 (last success 3d ago); demo: overdue 2d",
+    "demo: failing ×3 (last success 3d ago); demo: overdue 2d 6h",
   );
 
   t.check(

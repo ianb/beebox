@@ -8,7 +8,7 @@
  */
 
 import { fmt } from "../../../lib/format.js";
-import { buildTimezoneContext } from "../../box/config.js";
+import { buildAgentTimeContext } from "./simulated-clock.js";
 import { buildScriptEnv } from "../../script-env/core.js";
 import { gitMvNudgeHook } from "../../sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../../sdk-binary-path.js";
@@ -257,7 +257,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   const isResume = options.resumeSessionId !== undefined;
   // Sent on resume too: a resumed session must not depend on the SDK having
   // recorded the first run's append.
-  const tzContext = await buildTimezoneContext(boxRoot);
+  const tzContext = await buildAgentTimeContext(boxRoot);
 
   if (dryRun) {
     return {

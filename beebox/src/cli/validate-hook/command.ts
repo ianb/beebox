@@ -32,6 +32,7 @@ import { checkBoxRoot } from "../../lib/box-root-check.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
 import { isBoxRootVocabularyName } from "../../shared/box-root-vocabulary.js";
 import { recordHookWarning } from "./warning-cache.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 /**
  * The npm-namespace entries `bbx validate --hook` treats as "editing the
@@ -65,7 +66,7 @@ const NPM_NAMESPACE_ENTRIES = new Set(["package.json", "pnpm-lock.yaml", "packag
  */
 async function checkPackageSurfaceEdit(fp: string, boxRoot: string): Promise<HookValidationResult | null> {
   const rel = path.relative(boxRoot, fp);
-  if (rel === "" || rel.startsWith("..")) return null;
+  if (rel === "" || !isWithin(boxRoot, fp)) return null;
   const relativePath = rel.split(path.sep).join("/");
   const reserved = findReservedNestedSegment(relativePath);
   if (reserved !== null) {

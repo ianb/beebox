@@ -19,7 +19,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
-import { changedPaths, git } from "./test-git.js";
+import { git, gitBranch, gitTopLevel } from "./lib/git.js";
+import { changedPaths } from "./test-git.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
 import { mergeMain, type MergeResult } from "./finish-preflight-merge.js";
 import {
@@ -66,10 +67,6 @@ const SKIP_RULE =
   "only when code arrived outside those commits (any merge on the branch, or a straggler). " +
   "`--no-verify` leaves no git evidence and is not detectable.";
 
-function repoRoot(): string {
-  return git(["rev-parse", "--show-toplevel"]);
-}
-
 function hasScriptIn(root: string): (pkg: string, script: string) => boolean {
   const cache = new Map<string, Set<string>>();
   return (pkg, script) => {
@@ -112,16 +109,16 @@ function privateLeg(root: string): Sheet["privateLeg"] {
  * plus this run's merge when it fast-forwarded and left no merge commit.
  */
 function branchMerges(root: string, current: Sheet["merge"]): { sha: string; paths: string[] }[] {
-  const shas = git(["log", "--merges", "--first-parent", "--format=%H", "main..HEAD"], root)
+  const shas = git(["log", "--merges", "--first-parent", "--format=%H", "main..HEAD"], { cwd: root, onError: "throw" })
     .split("\n")
     .filter((sha) => sha !== "");
   const merges = shas.map((sha) => ({
     sha,
-    paths: git(["diff", "--name-only", `${sha}^1`, sha], root)
+    paths: git(["diff", "--name-only", `${sha}^1`, sha], { cwd: root, onError: "throw" })
       .split("\n")
       .filter((path) => path !== ""),
   }));
-  const head = git(["rev-parse", "HEAD"], root);
+  const head = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
   if (current.status === "merged" && !merges.some((merge) => merge.sha === head)) {
     merges.unshift({ sha: head, paths: current.broughtPaths });
   }
@@ -130,7 +127,7 @@ function branchMerges(root: string, current: Sheet["merge"]): { sha: string; pat
 
 /** Added+deleted lines vs main, total and restricted to non-doc, non-test files. */
 function diffSize(root: string): { lines: number; sourceLines: number } {
-  const numstat = git(["diff", "--numstat", "main...HEAD"], root);
+  const numstat = git(["diff", "--numstat", "main...HEAD"], { cwd: root, onError: "throw" });
   let lines = 0;
   let sourceLines = 0;
   for (const row of numstat.split("\n")) {
@@ -147,7 +144,7 @@ function diffSize(root: string): { lines: number; sourceLines: number } {
 function planDocs(root: string, workstream: string): string[] {
   const dir = join(root, "beebox/docs/plans");
   if (!existsSync(dir)) return [];
-  const listed = git(["ls-files", "beebox/docs/plans"], root).split("\n");
+  const listed = git(["ls-files", "beebox/docs/plans"], { cwd: root, onError: "throw" }).split("\n");
   return listed.filter((file) => {
     if (!file.endsWith(".md")) return false;
     const head = readFileSync(join(root, file), "utf-8").slice(0, 2000);
@@ -184,15 +181,15 @@ function selection(root: string, packages: string[]): Sheet["selectedTests"] {
 }
 
 export function buildSheet(input: { merge: boolean }): Sheet {
-  const root = repoRoot();
-  const branch = git(["rev-parse", "--abbrev-ref", "HEAD"], root);
+  const root = gitTopLevel();
+  const branch = gitBranch(root);
   const worktree = basename(root);
   if (branch === "main" || branch === "HEAD") {
     throw new NotAWorktreeBranchError(branch);
   }
   const workstream = branch.replace(/^worktree-/, "");
   const leg = privateLeg(root);
-  const stragglers = git(["status", "--porcelain"], root)
+  const stragglers = git(["status", "--porcelain"], { cwd: root, onError: "throw" })
     .split("\n")
     .filter((line) => line !== "")
     .map((line) => line.slice(3));
@@ -222,7 +219,7 @@ export function buildSheet(input: { merge: boolean }): Sheet {
     skipTypecheckLint: skip,
     selectorFailed: selectedTests?.failed === true,
   });
-  const messages = git(["log", "--format=%B%x00", "main..HEAD"], root).split("\0");
+  const messages = git(["log", "--format=%B%x00", "main..HEAD"], { cwd: root, onError: "throw" }).split("\0");
   const trailers = parseTrailers(messages);
   const plans = planDocs(root, workstream);
   const diff = diffSize(root);

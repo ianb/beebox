@@ -142,6 +142,7 @@ export interface DiscoveryResult {
 }
 
 export interface DiscoverOptions {
+  /** Real clock: compared with transcript mtimes, which are real. */
   now: Date;
   quiescenceMs: number;
   state: ReviewState;

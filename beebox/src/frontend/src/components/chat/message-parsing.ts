@@ -5,7 +5,8 @@
  */
 
 import type { LightboxImage } from "../ImageLightbox";
-import { isExternalUrl, resolveImageSrc } from "../../lib/view-url";
+import { resolveImageSrc } from "../../lib/view-url";
+import { isUrlRef } from "@shared/ref-path/core";
 import { bustImageSrc } from "../../lib/file-version";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "@shared/chat-tags";
@@ -348,7 +349,7 @@ function extractImagesFromMarkdown(
     const rawSrc = match[2];
     // `![…](…)` is the embed syntax: an image src belongs in the lightbox, but a
     // card/file embed (an in-box, non-image path) does not — skip it.
-    if (rawSrc && (isExternalUrl(rawSrc) || isImagePath(rawSrc))) {
+    if (rawSrc && (isUrlRef(rawSrc) || isImagePath(rawSrc))) {
       const src = bustImageSrc(resolveImageSrc(rawSrc, { boxSlug, basePath: undefined }));
       const trimmedAlt = alt.trim();
       out.push({

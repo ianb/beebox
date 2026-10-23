@@ -11,7 +11,9 @@ import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { symlink } from "node:fs/promises";
 import {
+  boxRelativeDoc,
   containWithinBox,
+  isWithin,
   resolveBoxRelativeRef,
   readContainedFile,
   realpathContained,
@@ -187,4 +189,29 @@ void test("A legitimate in-box file reads back — even though makeTmpBox lives 
   const missing = containWithinBox(box.root, box.path("_content/missing.card"));
   assert.ok(missing !== null);
   t.check(await realpathContained(box.root, missing), rel("_content/missing.card"));
+});
+
+// ## `boxRelativeDoc`: a document's box-relative `fromPath`
+//
+// Unlike `containWithinBox`, the box root itself is not a document, so it is
+// null too.
+void test("boxRelativeDoc gives the forward-slash path inside the box, else null", async (t) => {
+  t.check(boxRelativeDoc("/box", "/box/notes/a.doc.card"), "notes/a.doc.card");
+  t.check(boxRelativeDoc("/box", "/box/./notes/../a.doc.card"), "a.doc.card");
+  t.check(boxRelativeDoc("/box", "/box"), null);
+  t.check(boxRelativeDoc("/box", "/elsewhere/a.doc.card"), null);
+  t.check(boxRelativeDoc("/box", "/box-other/a.doc.card"), null);
+});
+
+// ## `isWithin`: is a path the parent or under it
+//
+// A name that starts with two dots is a child, not an escape; the copies this
+// replaced rejected `..notes`.
+void test("isWithin accepts the parent and its children, including a ..name child", async (t) => {
+  t.check(isWithin("/box", "/box"), true);
+  t.check(isWithin("/box", "/box/a/b"), true);
+  t.check(isWithin("/box", "/box/..notes"), true);
+  t.check(isWithin("/box", "/box/../x"), false);
+  t.check(isWithin("/box", "/"), false);
+  t.check(isWithin("/box", "/box-other"), false);
 });

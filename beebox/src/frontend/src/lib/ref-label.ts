@@ -3,30 +3,29 @@
  * display label and a navigable `ViewTarget`. Used by `{% source %}`
  * (`components/Source.tsx`) and `{% see-also %}` (`components/SeeAlso.tsx`)
  * — both carry the same ref-or-href-to-a-card shape and want the same
- * "basename, `_`/`-` → space, strip `.<type>.card`" label heuristic.
+ * "displayName of the basename" label.
  */
 
+import { displayName } from "./display-name";
 import { resolveRelativePath, type ViewTarget } from "./view-url";
 
 /**
  * Derive a short human label from a ref path:
- *   `/_content/inbox/Voice_2026-03-15.doc.card` → "Voice 2026-03-15"
+ *   `/_content/inbox/Voice_2026-03-15.doc.card` → "Voice 2026 03 15"
  *   `_content/people/dana.person.card`           → "dana"
  *   `_content/chat/Mar15.chat-thread.card#m12`   → "Mar15"
+ *   `files/my_file.pdf`                          → "my_file.pdf"
  *
- * Strips leading `/`, drops directory prefix, drops the `.<type>.card`
- * suffix, strips a trailing `#fragment`, then replaces `_`/`-` with spaces.
- * If anything goes empty along the way, falls back to the original ref so
- * the chip is never blank.
+ * Strips leading `/` and a trailing `#fragment`, then names the basename with
+ * `displayName`. If anything goes empty along the way, falls back to the
+ * original ref so the chip is never blank.
  */
 export function refLabel(ref: string): string {
   if (ref === "") return "(missing ref)";
   const noFrag = ref.split("#")[0] ?? ref;
   const noLead = noFrag.replace(/^\/+/, "");
-  const basename = noLead.includes("/") ? noLead.slice(noLead.lastIndexOf("/") + 1) : noLead;
-  const stripped = basename.replace(/\.[^.]+\.card$/, "");
-  const humanised = stripped.replace(/[_-]+/g, " ").trim();
-  return humanised === "" ? ref : humanised;
+  const label = displayName(noLead.slice(noLead.lastIndexOf("/") + 1)).trim();
+  return label === "" ? ref : label;
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

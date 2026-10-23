@@ -22,6 +22,7 @@ import { checkUrls, extractExternalUrls, isCheckableUrl, type UrlVerdict } from 
 import { errnoCode } from "../../../shared/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { acquireLock, LockHeldError, releaseLock, type LockHolder } from "../../../lib/file-lock.js";
+import { writeFileAtomic } from "../../../lib/atomic-write.js";
 
 const execFileP = promisify(execFile);
 
@@ -104,16 +105,13 @@ async function loadCache(boxRoot: string): Promise<UrlCheckCache> {
 
 async function saveCache(boxRoot: string, cache: UrlCheckCache): Promise<void> {
   const filePath = path.join(boxRoot, CACHE_REL);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
   const sortKeys = (rec: Record<string, unknown>): Record<string, unknown> => {
     const out: Record<string, unknown> = {};
     for (const key of Object.keys(rec).toSorted()) out[key] = rec[key];
     return out;
   };
   const ordered = { version: cache.version, broken: sortKeys(cache.broken), pending: sortKeys(cache.pending) };
-  const tmp = `${filePath}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(ordered, null, 2) + "\n");
-  await fs.rename(tmp, filePath);
+  await writeFileAtomic(filePath, { content: JSON.stringify(ordered, null, 2) + "\n" });
 }
 
 /** Run `git grep` for URLs at a ref / the index / the working tree. */

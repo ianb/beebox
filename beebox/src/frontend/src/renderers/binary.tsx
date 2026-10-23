@@ -7,7 +7,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRawFileUrl, getApiBase } from "../api";
 import { isBinaryPath } from "../lib/binary-files";
-import { formatBytes } from "../lib/format-bytes";
+import { humanBytes } from "@shared/human-bytes";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { ExternalLink } from "../components/ui/ExternalLink";
@@ -40,7 +40,7 @@ function BinaryRenderer({ data }: RendererProps) {
         </Text>
       ) : meta ? (
         <Stack gap="xs">
-          {meta.size === null ? null : <Text as="div" size="sm"><Text tone="subtle">Size:</Text> {formatBytes(meta.size)}</Text>}
+          {meta.size === null ? null : <Text as="div" size="sm"><Text tone="subtle">Size:</Text> {humanBytes(meta.size)}</Text>}
           {meta.contentType === null ? null : <Text as="div" size="sm"><Text tone="subtle">Type:</Text> {meta.contentType}</Text>}
         </Stack>
       ) : null}
