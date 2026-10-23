@@ -5,6 +5,7 @@ import { isUrlRef, parseRef, resolveRefPath } from "@shared/ref-path/core";
 import { validateViewState, type ViewState } from "@shared/view-state";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import type { ViewTarget } from "./view-url.js";
+import { parentDir } from "./parent-dir";
 
 export interface BrowseState {
   directory: string;
@@ -27,10 +28,6 @@ function canonicalPath(value: unknown): string | null {
   const ref = parseRef(value);
   if (ref.query !== undefined || ref.fragment !== undefined || isUrlRef(value)) return null;
   return resolveRefPath({ fromPath: undefined, ref: value, kind: "write-target" });
-}
-
-function browseParent(path: string): string {
-  return path.slice(0, Math.max(0, path.lastIndexOf("/")));
 }
 
 function parseDetail(value: unknown): ViewTarget | null {
@@ -70,7 +67,7 @@ export function parseBrowseState(input: { viewState?: ViewState | null; params?:
   if (directory === null) return { ok: false, error: `Invalid Browse directory: ${String(raw?.["directory"] ?? input.params?.["dir"] ?? BROWSE_DEFAULT_DIRECTORY)}` };
   if (raw?.["detail"] === undefined) return { ok: true, state: { directory } };
   const detail = parseDetail(raw["detail"]);
-  if (!detail || browseParent(detail.path) !== directory) return { ok: false, error: "Invalid Browse detail: expected a file target inside the current directory." };
+  if (!detail || parentDir(detail.path) !== directory) return { ok: false, error: "Invalid Browse detail: expected a file target inside the current directory." };
   return { ok: true, state: { directory, detail } };
 }
 
@@ -103,5 +100,5 @@ export async function legacyBrowseTarget(target: ViewTarget, {
   if (path === null) throw new BrowseLocationError(target.path, false);
   const kind = path === "" ? "directory" : await lookupKind(path);
   if (kind === "missing" && missingKind === "directory") throw new BrowseLocationError(path, true);
-  return browseCardTarget(kind === "directory" ? { directory: path } : { directory: browseParent(path), detail: { ...target, path } });
+  return browseCardTarget(kind === "directory" ? { directory: path } : { directory: parentDir(path), detail: { ...target, path } });
 }

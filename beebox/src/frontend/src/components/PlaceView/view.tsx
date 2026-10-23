@@ -45,6 +45,7 @@ import { rootLineParts } from "../todo/summary";
 import type { RendererProps } from "../../file-type-registry";
 import type { ViewState } from "@shared/view-state";
 import type { ViewTarget } from "../../lib/view-url";
+import { parentDir } from "../../lib/parent-dir";
 
 const TIER_HEADINGS: Record<PlaceTier, string> = {
   "entry-point": "Start here",
@@ -52,12 +53,6 @@ const TIER_HEADINGS: Record<PlaceTier, string> = {
   places: "Places inside",
   pinned: "Pinned",
 };
-
-/** The folder a card sits in, box-relative ("" at the box root). */
-function parentDir(cardPath: string): string {
-  const slash = cardPath.lastIndexOf("/");
-  return slash === -1 ? "" : cardPath.slice(0, slash);
-}
 
 function SectionHeading({ children }: { children: ReactNode }) {
   return <Text as="h3" size="xs" weight="medium" tone="muted" uppercase>{children}</Text>;

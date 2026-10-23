@@ -29,15 +29,10 @@ import { MetaItem } from "../ui/MetaItem";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
+import { parentDir } from "../../lib/parent-dir";
 
 /** `figure-NNN.webp` renders new pictures; existing `.avif` renders stay readable. */
 const FIGURE_RENDER_RE = /^figure-(\d{3,})\.(?:avif|webp)$/;
-
-/** The directory a box path lives in (`""` at the box root). */
-function dirOf(path: string): string {
-  const cut = path.lastIndexOf("/");
-  return cut === -1 ? "" : path.slice(0, cut);
-}
 
 /**
  * Page renders and figure renders sitting beside the JSON, keyed the way the
@@ -46,7 +41,7 @@ function dirOf(path: string): string {
  * holds and why it is only used when the file exists).
  */
 function useSiblingRenders(jsonPath: string, boxSlug: string | undefined) {
-  const { data } = trpc.status.browse.useQuery({ path: dirOf(jsonPath) });
+  const { data } = trpc.status.browse.useQuery({ path: parentDir(jsonPath) });
   const pages = new Map<number, string>();
   const figures = new Map<number, string>();
   for (const file of data?.files ?? []) {
