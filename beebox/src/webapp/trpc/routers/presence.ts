@@ -4,13 +4,14 @@
  * the tabs heard from in the last 90 seconds per box and keeps
  * `.beebox/presence.json` current for every process that decides whether to
  * notify (`core/notification/presence.ts`). See docs/implemented-plans/notifications.md
- * (Track A, presence).
+ * (Track A, presence). `clock` also lives here: it is the tab's other
+ * per-session report of the box's time (docs/plans/walk-simulated-time.md, Track 6).
  */
 
 import { z } from "zod";
 import { router, authedProcedure } from "../procedures.js";
 import { createPresenceRegistry } from "../../../core/notification/presence-registry/core.js";
-import { getBoxTime } from "../../../lib/time.js";
+import { boxClockShiftMs, getBoxTime } from "../../../lib/time.js";
 
 /** Often enough to write a drop to zero soon after the last tab's session expires. */
 const SWEEP_MS = 15_000;
@@ -24,4 +25,7 @@ export const presenceRouter = router({
       await presence.heartbeat(ctx.boxRoot, input.sessionId);
       return { ok: true };
     }),
+
+  /** Box time minus the host's, so the app shows dates on the box's clock; 0 on a real box. */
+  clock: authedProcedure.query(({ ctx }) => ({ shiftMs: boxClockShiftMs(ctx.boxRoot) })),
 });

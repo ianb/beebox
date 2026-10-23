@@ -10,6 +10,7 @@ import type { RouterOutput } from "../../lib/trpc/client";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
 import { tickHadActivity } from "./ScheduleTicks";
+import { boxNow } from "../../lib/box-clock";
 
 type LogEntry = RouterOutput["status"]["activity"]["entries"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -25,8 +26,9 @@ type ActivityItem =
   | { type: "commit"; ts: number; data: LogEntry }
   | { type: "tick"; ts: number; data: SchedulerLogEntry };
 
-function timeAgo(ts: string | number): string {
-  const elapsed = Date.now() - (typeof ts === "number" ? ts : new Date(ts).getTime());
+/** `box` reads a stamp written on the box's clock (commit dates); scheduler tick stamps are the host's. */
+function timeAgo(ts: string | number, clock: "box" | "real"): string {
+  const elapsed = (clock === "box" ? boxNow() : Date.now()) - (typeof ts === "number" ? ts : new Date(ts).getTime());
   const seconds = Math.floor(elapsed / 1000);
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
@@ -60,7 +62,7 @@ function CommitRow({ commit }: { commit: LogEntry }) {
         </div>
       </div>
       <span className="text-xs text-warm-700 whitespace-nowrap">
-        {timeAgo(commit.date)}
+        {timeAgo(commit.date, "box")}
       </span>
     </div>
   );
@@ -118,7 +120,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
         </div>
       </div>
       <span className="text-xs text-warm-700 whitespace-nowrap">
-        {timeAgo(tick.ts)}
+        {timeAgo(tick.ts, "real")}
       </span>
     </div>
   );

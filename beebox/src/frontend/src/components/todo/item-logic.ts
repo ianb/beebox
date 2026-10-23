@@ -14,6 +14,7 @@ import {
   type TodoPlateState,
   type TodoStatus,
 } from "@shared/todo-model";
+import { boxNow } from "../../lib/box-clock";
 
 /**
  * Status treatment for a todo's own words, the same in a card body, in
@@ -113,15 +114,16 @@ interface TodoDateChip {
 export function startPrefix({ plateState, startIso, todayIso }: {
   plateState: TodoPlateState | null;
   startIso: string | null;
-  /** Today's local ISO date; absent means the clock's. */
+  /** Today's local ISO date; absent means the box clock's. */
   todayIso?: string;
 }): "later ·" | "since" {
   if (plateState === "quiet") return "later ·";
   if (plateState === "on-plate" || plateState === "escalated") return "since";
-  return startIso === null || startIso > (todayIso ?? localIsoDate(new Date())) ? "later ·" : "since";
+  return startIso === null || startIso > (todayIso ?? localIsoDate(new Date(boxNow()))) ? "later ·" : "since";
 }
 
-function localIsoDate(date: Date): string {
+/** The local ISO date (`YYYY-MM-DD`) of `date`. */
+export function localIsoDate(date: Date): string {
   return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
