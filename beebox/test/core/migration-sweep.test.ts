@@ -256,14 +256,15 @@ void test("With a runner, the --repair pass applies procedure migrations itself.
     namesReceipt: true,
   });
 
+  // The apply supersedes the question written for the unfinished attempt: the
+  // sweep closes it, so the box is not left in attention for a decision nobody
+  // needs.
   const manual = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: false, runProcedure });
-  t.check({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes(PROCEDURE), open: expectStatus(manual, "attention").questions }, {
-    status: "attention",
+  t.check({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes(PROCEDURE), closed: git(box, "show", "--format=", "--name-status", "HEAD") }, {
+    status: "applied",
     runs: 3,
     recorded: true,
-    open: [
-      "_bookkeeping/questions/Migration_test-procedure-1.question.card",
-    ],
+    closed: "D\t_bookkeeping/questions/Migration_test-procedure-1.question.card",
   });
 });
 
