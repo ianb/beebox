@@ -15,6 +15,7 @@
 import { execFileSync } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs";
 import { join } from "node:path";
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
 
 export type Tier = "ordinary" | "careful";
 
@@ -114,11 +115,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/** The `code` of a caught filesystem error, when it carries one. */
-function errorCode(e: unknown): string | undefined {
-  return isRecord(e) && typeof e.code === "string" ? e.code : undefined;
-}
-
 /** Parses a lock file's contents; null when it is unreadable or the wrong shape. */
 export function parseLockRecord(raw: string): LockRecord | null {
   let parsed: unknown;
@@ -144,7 +140,7 @@ export function isProcessAlive(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (e) {
-    return errorCode(e) === "EPERM";
+    return errnoCode(e) === "EPERM";
   }
 }
 
@@ -184,7 +180,7 @@ function readLive(path: string, staleProbe: StaleProbe): LockRecord | null {
   try {
     raw = readFileSync(path, "utf-8");
   } catch (e) {
-    if (errorCode(e) === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw e;
   }
   const held = parseLockRecord(raw);
@@ -207,7 +203,7 @@ function claim(path: string, record: LockRecord): boolean {
   } catch (e) {
     // EEXIST is a concurrent claim winning the slot, not a failure: that is the
     // mutex working. Anything else is a real filesystem problem.
-    if (errorCode(e) === "EEXIST") return false;
+    if (errnoCode(e) === "EEXIST") return false;
     throw e;
   }
   try {

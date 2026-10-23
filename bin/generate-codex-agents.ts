@@ -24,12 +24,7 @@ import {
 import { basename, join } from "node:path";
 
 import { MODEL_ID } from "../beebox/src/shared/model-ids.js";
-
-function errnoCode(error: unknown): string | undefined {
-  return error instanceof Error && "code" in error && typeof error.code === "string"
-    ? error.code
-    : undefined;
-}
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
 
 function gitLsFiles(checkoutDir: string, pattern: string): string[] {
   return execFileSync("git", ["-C", checkoutDir, "ls-files", "--", pattern], {
