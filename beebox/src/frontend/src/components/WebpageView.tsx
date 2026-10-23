@@ -12,10 +12,8 @@
 import { useCallback, useRef } from "react";
 import { Markdown } from "./Markdown/body";
 import { Text } from "./ui/Text";
-import { FriendlyDate } from "./ui/FriendlyDate";
-import { apiRawFileUrl, getApiBase } from "../api";
+import { CapturedPageMeta, frozenSnapshotUrl } from "./CapturedPageMeta";
 import { type RendererProps } from "../file-type-registry";
-import { resolveRelativePath } from "../lib/view-url";
 import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/selection/quote-anchor";
 import { AttachedCommentary, type JumpToQuote } from "./AttachedCommentary";
 import { isRecord } from "@shared/is-record";
@@ -31,18 +29,7 @@ export function WebpageView({ data, onNavigate }: RendererProps) {
   const captured = capturedPage(frontmatter["sources"]);
   const frozen = frontmatter["frozen"];
   const sourceUrl = captured.href;
-  // `frozen` is a card ref stored as `{ ref: <path> }`; pull the path off it.
-  const frozenPath =
-    typeof frozen === "object" && frozen !== null && "ref" in frozen && typeof frozen.ref === "string"
-      ? frozen.ref
-      : null;
-  // A `frozen` ref that escapes the box root resolves to null and is treated as
-  // absent — no snapshot link, rather than a link to a clamped-to-root file.
-  // The broken ref itself is reported where refs are checked (`bbx validate`),
-  // not re-reported on every render here.
-  const frozenRelative =
-    frozenPath !== null && frozenPath !== "" ? resolveRelativePath(data.path, frozenPath) : null;
-  const frozenUrl = frozenRelative === null ? null : apiRawFileUrl(getApiBase(), frozenRelative);
+  const frozenUrl = frozenSnapshotUrl(data.path, frozen);
   const capturedAt = captured.retrieved;
 
   // A source chip jumps to its verbatim span in the page body (matched in-pane
@@ -71,28 +58,12 @@ export function WebpageView({ data, onNavigate }: RendererProps) {
     [frozenUrl],
   );
 
-  const meta =
-    sourceUrl !== null || frozenUrl !== null ? (
-      <Text as="div" size="sm" tone="subtle" className="mb-3">
-        {sourceUrl !== null ? (
-          <a href={sourceUrl} target="_blank" rel="noreferrer" className="underline">Original page</a>
-        ) : null}
-        {frozenUrl !== null ? (
-          <>
-            {sourceUrl !== null ? " · " : ""}
-            <a href={frozenUrl} target="_blank" rel="noreferrer" className="underline">Frozen snapshot ↗</a>
-          </>
-        ) : null}
-        {capturedAt !== null ? <> · captured <FriendlyDate iso={capturedAt} /></> : null}
-      </Text>
-    ) : null;
-
   return (
     <div className="p-4">
       {typeof title === "string" && title !== "" ? (
         <Text as="h1" size="lg" weight="semibold" className="mb-1">{title}</Text>
       ) : null}
-      {meta}
+      <CapturedPageMeta sourceUrl={sourceUrl} frozenUrl={frozenUrl} capturedAt={capturedAt} />
 
       {/* Commentary leads — the boxholder's remarks, with chips that jump down
           into the page body below. */}

@@ -4,15 +4,9 @@
  * this is the self-contained "send"/"user-selection" tag parsing + display.
  */
 
+import { decodeXmlAttr } from "@shared/self-note";
+import { snippet } from "../../lib/snippet";
 import { stripUserDisplayTags } from "./message-parsing";
-
-function decodeXml(value: string): string {
-  return value
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, "\"")
-    .replace(/&amp;/g, "&");
-}
 
 const REF_ATTR_RE = /\bref="([^"]*)"/i;
 const POSITION_ATTR_RE = /\bpos="([^"]*)"/i;
@@ -20,7 +14,7 @@ const PLACEMENT_ATTR_RE = /\bplacement="([^"]*)"/i;
 
 function readAttr(attrs: string, re: RegExp): string {
   const match = re.exec(attrs)?.[1];
-  return match !== undefined ? decodeXml(match) : "";
+  return match !== undefined ? decodeXmlAttr(match) : "";
 }
 
 function docBasename(ref: string): string {
@@ -29,11 +23,6 @@ function docBasename(ref: string): string {
   const base = ref.split("/").pop();
   if (base === undefined || base === "") return ref;
   return base.endsWith(".card") ? base.slice(0, -5) : base;
-}
-
-function snippet(value: string, max: number): string {
-  const collapsed = value.replace(/\s+/g, " ").trim();
-  return collapsed.length > max ? `${collapsed.slice(0, max)}…` : collapsed;
 }
 
 /** Pill shown in a sent user message for an attached document selection. */
@@ -92,12 +81,12 @@ export function UserMessageText({ text, attachedFileIds }: { text: string; attac
     if (sendPhrase !== undefined) {
       parts.push({ type: "send", phrase: sendPhrase.replace(/&quot;/g, '"').replace(/&amp;/g, "&") });
     } else if (unsureWord !== undefined) {
-      parts.push({ type: "unsure", word: decodeXml(unsureWord) });
+      parts.push({ type: "unsure", word: decodeXmlAttr(unsureWord) });
     } else {
       const attrs = selectionAttrs ?? "";
       parts.push({
         type: "selection",
-        text: decodeXml(selectionText ?? ""),
+        text: decodeXmlAttr(selectionText ?? ""),
         sourceRef: readAttr(attrs, REF_ATTR_RE),
         position: readAttr(attrs, POSITION_ATTR_RE),
         placement: readAttr(attrs, PLACEMENT_ATTR_RE),

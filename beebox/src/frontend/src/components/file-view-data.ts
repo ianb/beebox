@@ -8,7 +8,7 @@
  * away. See `lib/file-load-state.ts` for the decision itself.
  */
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc/client";
 import { ATTACH_SUFFIX } from "@shared/attach-path";
@@ -136,7 +136,6 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
   }, [isCard, fetchText, cardQuery, textQuery]);
   // Skip the very first connect — the queries already load on mount, so a resync
   // there is a redundant refetch (and FileView is mounted many-at-once in chat).
-  const connectedOnceRef = useRef(false);
   // Reconnect-driven resync is per-instance (one per mounted FileView, i.e.
   // per path), coalesced same-tick and deferred while the tab is hidden — a
   // chat with many embedded files all reconnecting at once shouldn't each
@@ -151,11 +150,7 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
       if (!fileChangeAffectsPath(fileChange, path)) return;
       resync();
     }, [path, resync]),
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
+    onReconnect: useCallback(() => {
       triggerResync();
     }, [triggerResync]),
   });

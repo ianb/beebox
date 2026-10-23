@@ -20,9 +20,8 @@
  */
 
 import { useEffect } from "react";
-
-/** In-box file URLs only: an external image that fails has no file to wait for. */
-const IN_BOX_MARKERS = ["/api/files/", "/api/image/", "/api/images/"] as const;
+import { isUrlRef } from "@shared/ref-path/core";
+import { API_IMAGE_MARKERS } from "../lib/file-version";
 
 /**
  * Probe schedule, in ms after the failure: quick at first (the file usually
@@ -34,8 +33,8 @@ const RECOVERY_DELAYS_MS: readonly number[] = [2000, 5000, 10000, 20000, 30000, 
 
 /** Whether a failed image URL is one this recovery applies to. */
 export function isRecoverableImageUrl(url: string): boolean {
-  if (/^(?:[a-z][\d+.a-z-]*:|\/\/)/iu.test(url)) return false; // has an authority: external
-  return IN_BOX_MARKERS.some((marker) => url.includes(marker));
+  if (isUrlRef(url)) return false; // has an authority: external
+  return API_IMAGE_MARKERS.some((marker) => url.includes(marker));
 }
 
 /**

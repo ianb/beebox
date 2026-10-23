@@ -19,7 +19,7 @@
 // Relative (not the `@shared` alias) so this lib resolves under the test
 // runner's Node resolution too — view-url is unit-tested outside the bundler.
 import { boxRelativePath } from "../../../shared/box-path.js";
-import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
+import { isUrlRef, parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import type { ControlAction } from "./ui-scan/types.js";
 import { assertViewState, validateViewState, type ViewState } from "@shared/view-state";
 
@@ -120,11 +120,6 @@ function parseViewState(value: string): ViewState | null {
   return null;
 }
 
-/** True for an absolute URL (any scheme) or a protocol-relative `//host` URL. */
-export function isExternalUrl(src: string): boolean {
-  return /^[a-z][\w+.-]*:/i.test(src) || src.startsWith("//");
-}
-
 /**
  * markdown-it's link normalization, made box-aware. markdown-it percent-encodes
  * every destination, so `[a](<Beach walk.md>)` would reach the in-box resolver
@@ -133,7 +128,7 @@ export function isExternalUrl(src: string): boolean {
  * `x y.md`, as in CommonMark); an external URL keeps markdown-it's `encode`.
  */
 export function normalizeMarkdownLink(url: string, encode: (url: string) => string): string {
-  if (isExternalUrl(url)) return encode(url);
+  if (isUrlRef(url)) return encode(url);
   // Only the path is decoded: the query and fragment stay as written, and
   // their readers (`URLSearchParams`) decode them once themselves.
   const cut = url.search(/[#?]/);
@@ -313,8 +308,7 @@ export function classifyMarkdownHref(
   if (href.startsWith(CONTROL_SCHEME)) return classifyControlHref(href);
   // Protocol-relative (`//host/x`) and any URL scheme (http:, mailto:, tel:,
   // data:, …) are external, not in-box paths.
-  if (href.startsWith("//")) return { kind: "external" };
-  if (/^[a-z][\w+.-]*:/i.test(href)) return { kind: "external" };
+  if (isUrlRef(href)) return { kind: "external" };
   // Anchors and empty hrefs are not navigations.
   if (href.startsWith("#") || href === "") return { kind: "external" };
   return { kind: "relative", path: href };
@@ -345,8 +339,7 @@ export function resolveImageSrc(
   { boxSlug, basePath }: { boxSlug: string | undefined; basePath: string | undefined },
 ): string {
   if (src === "") return src;
-  if (/^[a-z][\w+.-]*:/i.test(src)) return src;
-  if (src.startsWith("//")) return src;
+  if (isUrlRef(src)) return src;
 
   // Accept the legacy `/api/files/<path>` and `/api/image/<path>` forms as a
   // hint that the rest is already box-root-relative; both re-emit through the

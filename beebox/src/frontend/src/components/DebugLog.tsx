@@ -7,6 +7,7 @@
  * the server when the debug panel is active.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { trpcClient } from "../lib/trpc/client";
 import { describeArg } from "../lib/debug-log-format";
@@ -106,7 +107,7 @@ function patchConsole() {
   });
 
   window.addEventListener("unhandledrejection", (event) => {
-    const reason = event.reason instanceof Error ? event.reason.message : String(event.reason);
+    const reason = errorMessage(event.reason);
     const message = `Unhandled rejection: ${reason}`;
     logEntries.push({ level: "error", message, timestamp: Date.now() });
     if (logEntries.length > MAX_ENTRIES) logEntries.shift();

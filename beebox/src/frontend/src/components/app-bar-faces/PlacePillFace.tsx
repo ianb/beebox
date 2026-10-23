@@ -26,7 +26,7 @@ function FolderIcon() {
  * their `aria-haspopup` — and 12px is a word of the place label
  * (boxholder, 2026-09-20). It stays from `sm:` up, where the bar can afford it.
  */
-function CaretIcon() {
+export function CaretIcon() {
   return (
     <svg className="hidden sm:block w-3 h-3 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />

@@ -8,6 +8,7 @@
  * dispatcher.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -168,7 +169,7 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     // No popup and no state, so it is called directly rather than through a
     // controller — same shape as `fulfillLastAudioRequest` above.
     void fulfillUiScanRequest(uiScan, sessionId).catch((e) => {
-      console.warn(`[ui-scan] request handling failed: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[ui-scan] request handling failed: ${errorMessage(e)}`);
     });
     return;
   }

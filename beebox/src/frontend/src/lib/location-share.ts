@@ -15,6 +15,7 @@
  * only when called, so importing the module in Node stays safe.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { trpcClient } from "./trpc/client";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx test
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
@@ -74,7 +75,7 @@ export function parseLocationShareState(raw: string | null): LocationShareState 
   try {
     value = JSON.parse(raw);
   } catch (e) {
-    console.warn(`[location-share] discarding unparseable state: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[location-share] discarding unparseable state: ${errorMessage(e)}`);
     return DISABLED;
   }
   // Parse boundary: localStorage JSON arrives untyped; every field is validated.
@@ -111,7 +112,7 @@ export function saveLocationShareState(boxSlug: string | undefined, state: Locat
   try {
     localStorage.setItem(locationShareKey(boxSlug), serializeLocationShareState(state));
   } catch (e) {
-    console.warn(`[location-share] could not persist sharing state: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[location-share] could not persist sharing state: ${errorMessage(e)}`);
   }
 }
 
@@ -159,6 +160,6 @@ export async function refreshLocationIfStale(boxSlug: string | undefined): Promi
   try {
     await captureAndStore(boxSlug, Date.now());
   } catch (e) {
-    console.warn(`[location-share] background refresh failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[location-share] background refresh failed: ${errorMessage(e)}`);
   }
 }

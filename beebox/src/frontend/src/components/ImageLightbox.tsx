@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useModalDialog } from "../hooks/useModalDialog";
 import { createPortal } from "react-dom";
 import { CloseButton } from "./ui/CloseButton";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
@@ -116,19 +117,9 @@ export function ImageLightbox({ images, index, onIndexChange, onClose, onOpenCar
   // whose preventDefault also stops the dialog's own cancel.
   const dialogRef = useRef<HTMLDialogElement>(null);
   const hasCurrent = current !== undefined;
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!hasCurrent || dialog === null) return;
-    const priorFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog.showModal();
-    // showModal focuses the first control, the full-screen backdrop button,
-    // which rings the whole viewport; start on the visible close button.
-    dialog.querySelector<HTMLElement>("#bbx-lightbox-close")?.focus();
-    return () => {
-      if (dialog.open) dialog.close();
-      priorFocus?.focus();
-    };
-  }, [hasCurrent]);
+  // showModal focuses the first control, the full-screen backdrop button,
+  // which rings the whole viewport; start on the visible close button.
+  useModalDialog({ dialog: dialogRef, open: hasCurrent, initialFocus: "#bbx-lightbox-close" });
 
   if (!current) return null;
 

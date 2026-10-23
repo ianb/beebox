@@ -8,6 +8,7 @@
 import type { SessionContentBlock } from "../../../api";
 import type { ActivityPart } from "../assistant-parts";
 import { type KnownToolName, isKnownTool } from "@shared/known-tools";
+import { attachDirOwnerBasename } from "@shared/attach-path";
 
 type Category = "look" | "search" | "webpage" | "change" | "step" | "handoff" | "hidden";
 
@@ -141,8 +142,8 @@ function placeName(path: string): string | null {
   const folders = relative.split("/").slice(0, -1);
   const folder = folders.at(-1);
   if (!folder) return null;
-  const attach = /^(.*)\.attach$/.exec(folder);
-  if (attach?.[1]) return `in ${attach[1].replace(/_/g, " ")}`;
+  const owner = attachDirOwnerBasename(folder);
+  if (owner !== null) return `in ${owner.replace(/_/g, " ")}`;
   return `in ${folder.replace(/_/g, " ")}`;
 }
 

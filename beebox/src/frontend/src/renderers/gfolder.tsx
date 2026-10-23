@@ -31,6 +31,7 @@ import { Heading } from "../components/ui/Heading";
 import { DRIVE_CHILD_BADGES, driveChildState } from "../lib/drive-card-display";
 import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "../directory-listing";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
+import { parentDir } from "../lib/parent-dir";
 
 /** The frontmatter field, when it is a non-empty string. */
 function field(fm: Record<string, unknown>, key: string): string | null {
@@ -55,12 +56,6 @@ function problemSummary(frontmatter: Record<string, unknown>): string | null {
   if (notInFolder > 0) parts.push(`${String(notInFolder)} not in folder`);
   if (unknown > 0) parts.push(`${String(unknown)} unknown`);
   return parts.length === 0 ? null : parts.join(", ");
-}
-
-/** The box-relative directory a card sits in ("" at the box root). */
-function dirOf(cardPath: string): string {
-  const cut = cardPath.lastIndexOf("/");
-  return cut === -1 ? "" : cardPath.slice(0, cut);
 }
 
 /** The Drive state column for one child of the mirrored directory. */
@@ -90,7 +85,7 @@ function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<
         )}
       </Row>
       <Hint>
-        mirrors into {dirOf(path) === "" ? "the box root" : dirOf(path)}
+        mirrors into {parentDir(path) === "" ? "the box root" : parentDir(path)}
         {problemSummary(frontmatter) === null ? null : <>{" · "}{problemSummary(frontmatter)}</>}
         {lastSync === null ? null : <>{" · last sync "}<FriendlyDate iso={lastSync} /></>}
         {driveId === null ? null : <>{" · "}<Text size="xs" mono tone="muted">{driveId}</Text></>}
@@ -128,7 +123,7 @@ function SyncOutcome({ result }: {
 function GfolderView({ data, onNavigate }: RendererProps) {
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
-  const dirPath = dirOf(data.path);
+  const dirPath = parentDir(data.path);
   const listing = useDirectoryListing(dirPath);
   const syncMutation = trpc.drive.syncFolder.useMutation();
 

@@ -13,6 +13,7 @@
  */
 
 import { useState } from "react";
+import { ChevronIcon } from "../landmarks/ChevronIcon";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { href } from "../../lib/routing";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
@@ -56,23 +57,6 @@ function HereLinkRow({ link, boxSlug }: { link: HereLink; boxSlug: string }) {
   );
 }
 
-function GroupChevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M9 6l6 6-6 6" />
-    </svg>
-  );
-}
-
 function HereGroupRows({ group, boxSlug }: { group: HereGroup; boxSlug: string }) {
   const [open, setOpen] = useState(false);
   const overflow = group.count - group.children.length;
@@ -84,7 +68,7 @@ function HereGroupRows({ group, boxSlug }: { group: HereGroup; boxSlug: string }
         aria-expanded={open}
         className="w-full text-left px-3 py-2 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
       >
-        <GroupChevron open={open} />
+        <ChevronIcon open={open} className="shrink-0" />
         <span className="truncate font-medium">{group.label}</span>
         <span className="text-xs text-warm-700 shrink-0 ml-auto">{group.count}</span>
       </button>

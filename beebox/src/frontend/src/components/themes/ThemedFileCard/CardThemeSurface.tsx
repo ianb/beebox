@@ -7,6 +7,7 @@ import { CardMark } from "../../ui/CardMark";
 import { Text } from "../../ui/Text";
 import { CardContentsMenu } from "../../CardContents/CardContentsMenu";
 import { MaterialContext } from "../../ui/material";
+import { prefersReducedMotion } from "../../../lib/reduced-motion";
 
 export interface CardThemeSurfaceProps {
   theme: ResolvedCardTheme;
@@ -65,7 +66,7 @@ export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, 
   const flip = useCallback(() => {
     if (turn !== null) return;
     toggle.current?.focus();
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) setBack(!back);
+    if (prefersReducedMotion()) setBack(!back);
     else setTurn("out");
   }, [turn, back]);
   const showFront = useCallback(() => {

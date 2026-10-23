@@ -14,7 +14,8 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
-import { isExternalUrl, type ViewTarget } from "../../lib/view-url";
+import { type ViewTarget } from "../../lib/view-url";
+import { isUrlRef } from "@shared/ref-path/core";
 import { CardMark } from "../ui/CardMark";
 import { resolveContentTarget } from "../../lib/view-url";
 import { toDisplayPath } from "@shared/display-path";
@@ -278,7 +279,7 @@ function LinkTile({
   // and external URLs (handled separately below) pass through as-is.
   const refDisplay = link.ref.startsWith("/") ? toDisplayPath(link.ref) : link.ref;
 
-  if (isExternalUrl(link.ref)) {
+  if (isUrlRef(link.ref)) {
     return (
       <a href={link.ref} target="_blank" rel="noopener noreferrer" className="block">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">

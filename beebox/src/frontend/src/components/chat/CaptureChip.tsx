@@ -10,7 +10,7 @@ import { withBase } from "../../api";
 import type { CaptureChipModel } from "./capture-message";
 import { captureChipLabel } from "./capture-message";
 
-function CaptureBadge({ label }: { label: string }) {
+export function CaptureBadge({ label }: { label: string }) {
   return (
     <span className="bbx-chat-user-attachment-badge inline-flex items-center rounded-full bg-black/25 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
       {label}
