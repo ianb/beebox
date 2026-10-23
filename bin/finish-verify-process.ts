@@ -8,7 +8,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync, writeSync } from "node:fs";
 import { constants } from "node:os";
 import { basename, join } from "node:path";
-import { gitCommonDir } from "./test-git.js";
+import { gitCommonDir } from "./lib/git.js";
 import { pidAlive } from "../beebox/src/hub/child-process-utils.js";
 
 class EmptyCommandError extends Error {

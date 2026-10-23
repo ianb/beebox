@@ -9,7 +9,6 @@
  */
 
 import { appendFileSync, readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { basename, join } from "node:path";
 import { homedir } from "node:os";
 import { parseEnv } from "node:util";
@@ -45,6 +44,7 @@ import {
   type StepStats,
 } from "./smoke-lib.js";
 import { setTimeout as sleep } from "node:timers/promises";
+import { gitCommonDir } from "./lib/git.js";
 
 export const REPO_ROOT = join(import.meta.dirname, "..");
 
@@ -76,10 +76,6 @@ export function parseArgs(argv: readonly string[]): Options {
   };
 }
 
-export function git(args: string[]): string {
-  const result = spawnSync("git", args, { cwd: REPO_ROOT, encoding: "utf-8" });
-  return result.status === 0 ? (result.stdout ?? "").trim() : "";
-}
 
 /**
  * The reason this run was deliberately broken, if it was.
@@ -92,13 +88,6 @@ export function faultInjection(): string | null {
   return reason === undefined || reason.trim() === "" ? null : reason.trim();
 }
 
-function gitCommonDir(): string {
-  const common = git(["rev-parse", "--git-common-dir"]);
-  // A path relative to the checkout is what `--git-common-dir` returns in the
-  // main checkout (a bare `.git`); resolve it so every worktree appends to the
-  // same file rather than to one of its own.
-  return common.startsWith("/") ? common : join(REPO_ROOT, common);
-}
 
 /**
  * Append this run to the shared log.
@@ -109,7 +98,7 @@ function gitCommonDir(): string {
  */
 export function record(entry: SmokeRunRecord): void {
   try {
-    appendFileSync(smokeLogPath(gitCommonDir()), `${JSON.stringify(entry)}\n`);
+    appendFileSync(smokeLogPath(gitCommonDir(REPO_ROOT)), `${JSON.stringify(entry)}\n`);
   } catch (e) {
     process.stdout.write(
       `smoke: could not append to the run log (${e instanceof Error ? e.message : String(e)})\n`,
@@ -118,7 +107,7 @@ export function record(entry: SmokeRunRecord): void {
 }
 
 function logSummary(): SmokeSummary {
-  const texts = smokeLogReadPaths(gitCommonDir()).map((path) => {
+  const texts = smokeLogReadPaths(gitCommonDir(REPO_ROOT)).map((path) => {
     try {
       return readFileSync(path, "utf-8");
     } catch (_e) {

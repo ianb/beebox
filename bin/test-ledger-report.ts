@@ -18,7 +18,7 @@ import {
 } from "./test-ledger-lib.js";
 import { readRecords } from "./test-ledger.js";
 import { readCarefulList } from "./test-tiers.js";
-import { gitCommonDir } from "./test-git.js";
+import { gitCommonDir } from "./lib/git.js";
 
 function readFilesets(path: string): Record<string, string[]> {
   if (!existsSync(path)) return {};

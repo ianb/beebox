@@ -17,7 +17,7 @@ import * as path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { hostBlockers, readMemoryPressure, readPageoutRate } from "../../bin/host-pressure.js";
-import { gitCommonDir } from "../../bin/test-git.js";
+import { gitCommonDir } from "../../bin/lib/git.js";
 import { appendLedgerRecord, readRecords } from "../../bin/test-ledger.js";
 import { hashFileset, ledgerPaths } from "../../bin/test-ledger-lib.js";
 import { acquireFullRun, lockDir } from "../../bin/test-locks.js";

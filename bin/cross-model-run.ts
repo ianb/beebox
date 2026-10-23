@@ -28,6 +28,7 @@ import { spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
+import { gitOrNull } from "./lib/git.js";
 
 type Engine = "codex" | "claude";
 
@@ -71,9 +72,9 @@ function usageFail(message: string): never {
 }
 
 function gitRoot(from: string): string {
-  const result = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: from, encoding: "utf8" });
-  if (result.status !== 0) usageFail(`not inside a git checkout: ${from}`);
-  return result.stdout.trim();
+  const root = gitOrNull(["rev-parse", "--show-toplevel"], { cwd: from });
+  if (root === null) usageFail(`not inside a git checkout: ${from}`);
+  return root.trim();
 }
 
 function parseEngine(value: string | undefined): Engine {

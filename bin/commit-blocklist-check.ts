@@ -41,6 +41,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { errnoCode, errorMessage } from "../beebox/src/shared/error-guards.js";
+import { gitCommonDir, gitTopLevel } from "./lib/git.js";
 
 /** Thrown when the blocklist file is unparseable — surfaced as a fail-closed error. */
 export class BlocklistError extends Error {
@@ -267,11 +268,9 @@ export function findBlocked(added: AddedLine[], entries: Entry[]): Hit[] {
  * CLOSED in both.
  */
 function loadBlocklist(): { entries: Entry[]; blocklistPath: string; repoRoot: string } | null {
-  const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const repoRoot = gitTopLevel();
   const rel = process.env.BBX_COMMIT_BLOCKLIST ?? ".commit-blocklist";
-  const commonDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
-    encoding: "utf8",
-  }).trim();
+  const commonDir = gitCommonDir();
   const candidates = blocklistCandidates({ repoRoot, rel, commonDir });
 
   let text = "";

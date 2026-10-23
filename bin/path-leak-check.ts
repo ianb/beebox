@@ -20,6 +20,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { gitTopLevel } from "./lib/git.js";
 
 // Names that are NOT a personal-home leak. `~/...` needs no entry — it never
 // matches the pattern below. A real macOS/Linux username (`/Users/janedoe`,
@@ -81,7 +82,7 @@ function exitStatusOf(e: unknown): number | undefined {
 }
 
 function main(): void {
-  const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+  const repoRoot = gitTopLevel();
 
   // `-I` skips binary files; `-n` prefixes line numbers. A no-match `git grep`
   // exits 1, which execFileSync throws on — treat that as "clean".

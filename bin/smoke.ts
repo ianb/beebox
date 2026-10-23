@@ -59,8 +59,8 @@ import {
   contentListing,
   faultInjection,
   generationAge,
-  git,
   parseArgs,
+  REPO_ROOT,
   record,
   report,
   stepHistory,
@@ -72,6 +72,7 @@ import {
   type Options,
 } from "./smoke-harness.js";
 import { contentCardPath, isFreshGeneration } from "./smoke-probe.js";
+import { git } from "./lib/git.js";
 import { formatStepTime, type SmokeStepRecord } from "./smoke-lib.js";
 import {
   cardViewRendered,
@@ -324,8 +325,8 @@ export async function main(argv: string[]): Promise<number> {
   const finish = (verdict: "green" | "red", failure?: { step: string; message: string }): void => {
     record({
       ts: new Date().toISOString(),
-      commit: git(["rev-parse", "HEAD"]),
-      branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
+      commit: git(["rev-parse", "HEAD"], { cwd: REPO_ROOT, onError: "empty" }),
+      branch: git(["rev-parse", "--abbrev-ref", "HEAD"], { cwd: REPO_ROOT, onError: "empty" }),
       worktree,
       box: options.box,
       verdict,

@@ -1,6 +1,6 @@
 /** Isolated re-runs and ledger-backed flake classification. */
 import { readFileSync, existsSync } from "node:fs";
-import { gitCommonDir } from "../../bin/test-git.js";
+import { gitCommonDir } from "../../bin/lib/git.js";
 import { readRecords } from "../../bin/test-ledger.js";
 import { flakeShare, foldFilesets, ledgerPaths } from "../../bin/test-ledger-lib.js";
 import { runFileAlone, type Checkout } from "./checkout.js";
