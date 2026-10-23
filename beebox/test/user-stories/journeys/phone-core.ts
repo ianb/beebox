@@ -51,9 +51,10 @@ function cardOccurrences(card: ScheduleCard, opts: { from: Date; to: Date }): Da
   } else if (card.rrule !== undefined) {
     times.push(...rrulestr(card.rrule).between(from, to, true).filter((d) => d.getTime() > from.getTime()));
   } else if (card.at !== undefined) {
-    // A one-shot that still exists has not run (a run one is deleted), so an overdue one is due too.
+    // A one-shot that still exists has not run (a run one is deleted), so an overdue
+    // one is due too, at the wait's current point: time only moves forward.
     const at = new Date(card.at);
-    if (at.getTime() <= to.getTime()) times.push(at);
+    if (at.getTime() <= to.getTime()) times.push(at.getTime() < from.getTime() ? from : at);
   }
   return until === null ? times : times.filter((d) => d.getTime() <= until);
 }

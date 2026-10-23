@@ -28,7 +28,8 @@ const keys = (cards: ScheduleCard[], opts: { from: string; to: string }) => {
 // ## What a wait runs, and in what order
 //
 // Every occurrence in the wait, oldest first: a one-shot due by its end
-// (including one already overdue: it still exists, so it has not run), each
+// (including one already overdue: it still exists, so it has not run; it runs
+// at the wait's start, since time only moves forward), each
 // daily occurrence of a repeating card, a `runs:` card like a `notify:` one.
 // A disabled card is skipped, and one past its `until` stops there.
 void test("What a wait runs, and in what order", async (t) => {
@@ -42,7 +43,7 @@ void test("What a wait runs, and in what order", async (t) => {
     card("off", { at: "2026-10-25T09:00:00Z", enabled: false }),
   ], { from: "2026-10-23T12:00:00Z", to: "2026-10-26T12:00:00Z" }), {
     queue: [
-      "overdue@2026-10-20T09:00:00.000Z",
+      "overdue@2026-10-23T12:00:00.000Z",
       "review@2026-10-24T06:30:00.000Z",
       "daily@2026-10-24T09:00:00.000Z",
       "daily@2026-10-25T09:00:00.000Z",

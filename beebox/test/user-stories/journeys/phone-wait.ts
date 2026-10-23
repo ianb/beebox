@@ -131,12 +131,15 @@ function drain(box: string, opts: { at: Date; failed: string[] }): void {
   if (!result.ok) opts.failed.push(`jobs at ${opts.at.toISOString()}: ${firstLine(result.output)}`);
 }
 
-async function runOccurrence(box: string, opts: { o: Occurrence; to: Date; found: Findings }): Promise<void> {
+/** The box time a tick of `o` runs at: a second past the due time, as the scheduler sees it come due. */
+function tickTime(o: Occurrence): Date {
+  return new Date(o.at.getTime() + 1000);
+}
+
+async function runOccurrence(box: string, opts: { o: Occurrence; found: Findings }): Promise<void> {
   const { o, found } = opts;
   const { failed, noRecord } = found;
-  // A second past the due time, but never past the wait's end: one stamped after
-  // the box's new now would not have arrived yet.
-  const at = new Date(Math.min(o.at.getTime() + 1000, opts.to.getTime()));
+  const at = tickTime(o);
   const seen = new Set((await readRecent(box, { days: ALL_DAYS, now: at })).map((n) => n.intent.id));
   // `--force` for `runs:`: an open chat would otherwise defer it; liveness gates still apply.
   const result = bbx(box, { args: ["tick", "--script", o.name, ...(o.kind === "runs" ? ["--force"] : [])], at });
@@ -170,6 +173,7 @@ export async function runWait(box: string, opts: { record: WaitRecord; statePath
   const { record, statePath, shown } = opts;
   const from = new Date(record.from);
   const to = new Date(record.to);
+  let end = to;
   const interrupted = record.started.filter((k) => !record.done.includes(k));
   for (const k of interrupted) record.done.push(k);
   const { cards, unreadable } = await readScheduleCards(box);
@@ -185,7 +189,9 @@ export async function runWait(box: string, opts: { record: WaitRecord; statePath
     for (let o = queue.shift(); o !== undefined; o = queue.shift()) {
       record.started.push(occurrenceKey(o));
       saveRecord(statePath, { shown, wait: record });
-      await runOccurrence(box, { o, to, found });
+      await runOccurrence(box, { o, found });
+      // The wait ends no earlier than its last tick, so nothing it sent is stamped after the box's new now.
+      if (tickTime(o).getTime() > end.getTime()) end = tickTime(o);
       record.done.push(occurrenceKey(o));
       saveRecord(statePath, { shown, wait: record });
       if (o.kind !== "runs") continue;
@@ -195,9 +201,9 @@ export async function runWait(box: string, opts: { record: WaitRecord; statePath
       if (replan.refused.length > 0) throw refusal(replan.refused);
       queue = replan.queue.filter((n) => !record.done.includes(occurrenceKey(n)));
     }
-    const wake = bbx(box, { args: ["engine", "wakeup", "--skip-push"], at: to });
-    if (!wake.ok) found.failed.push(`waking the box at ${to.toISOString()}: ${firstLine(wake.output)}`);
-    drain(box, { at: to, failed: found.failed });
+    const wake = bbx(box, { args: ["engine", "wakeup", "--skip-push"], at: end });
+    if (!wake.ok) found.failed.push(`waking the box at ${end.toISOString()}: ${firstLine(wake.output)}`);
+    drain(box, { at: end, failed: found.failed });
   } catch (e) {
     if (!(e instanceof WaitStepError)) throw e;
     if (e.notRun !== undefined) {
@@ -211,7 +217,7 @@ export async function runWait(box: string, opts: { record: WaitRecord; statePath
   }
   const offsetPath = clockOffsetPath(box);
   mkdirSync(dirname(offsetPath), { recursive: true });
-  writeFileSync(offsetPath, `${JSON.stringify({ offsetMs: Math.max(0, to.getTime() - Date.now()), setAt: new Date().toISOString() })}\n`);
+  writeFileSync(offsetPath, `${JSON.stringify({ offsetMs: Math.max(0, end.getTime() - Date.now()), setAt: new Date().toISOString() })}\n`);
   saveRecord(statePath, { shown, wait: null });
   return { finished: true, lines: describe(found) };
 }
