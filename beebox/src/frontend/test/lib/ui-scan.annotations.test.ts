@@ -159,10 +159,10 @@ function tagsWhere(predicate: (tag: string) => boolean): { site: string; tag: st
 void test("reveal is the one action that dispatches a synthetic click, and the attribute...", async (t) => {
   const reveals = tagsWhere((tag) => tag.includes("data-bbx-reveal"));
   t.check(reveals.map((r) => r.site).toSorted(), [
-    "components/AppNav/nav.tsx:button",
+    "components/app-bar-faces/ProfileButtonFace.tsx:button",
+    "components/app-bar-faces/SessionChipFace.tsx:button",
+    "components/app-bar-faces/VoiceChipButtonFace.tsx:button",
     "components/chat/InteractiveChat-composer/view.tsx:button",
-    "components/chat/VoiceChip/view.tsx:button",
-    "components/chat/everywhere/InteractiveChat/SessionChip.tsx:button",
   ]);
 
   const DISCLOSURE = /aria-expanded|aria-haspopup|role="tab"|{\.{3}ariaProps}/;
