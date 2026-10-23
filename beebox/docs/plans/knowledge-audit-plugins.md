@@ -63,7 +63,7 @@ Chosen: one runner track and one audit track.
 - Plugin skill mirroring: `src/core/box/guidance-sync/skills/core.ts:144`
   builds skills from `activePlugins(boxRoot)`; `syncBoxGuidance` runs it.
   Verify in chunk 1 that `generateDocs` reaches it (the audit loop already
-  calls `generateDocs(boxRoot, { force: true })`, `src/dev/lib/box-audits.ts:34`).
+  calls `generateDocs(boxRoot, { force: true })`, `src/dev/lib/box-audits/core.ts`).
 - Reset: `runTest` records `headBefore` after setup and ends with
   `git reset --hard ${headBefore}` and `git clean -fd`
   (`src/dev/lib/test-runner/runner/run-test.ts`). Activation must happen, and
@@ -90,7 +90,7 @@ No other new nouns.
 - **What:** an audit entry may declare `plugins: [courseware]`.
 - **Why:** a fixture cannot activate a plugin, because fixtures are written
   after docs generation (`run-test.ts`, `writeFixtures` after `generateDocs`
-  in `box-audits.ts`).
+  in `box-audits/core.ts`).
 - **Direction:**
   - `test-suite-schema.ts`: `plugins: z.array(z.string()).optional()`, box-only
     (add to `BOX_ONLY_FIELDS`). Unknown names fail at load, checked against
@@ -108,7 +108,7 @@ No other new nouns.
     requested plugin active with every schema stub `effective`; otherwise the
     audit fails with the stub path. An already-active plugin is checked the
     same way, not assumed ready.
-  - `box-audits.ts`: `assertStandaloneBox` before any write. For an entry with
+  - `box-audits/core.ts`: `assertStandaloneBox` before any write. For an entry with
     `plugins`, record HEAD, activate, `generateDocs`, check readiness, then
     `runTest`; in a `finally` around all of it, `git reset --hard` to the
     recorded HEAD, `git clean -fd`, and `invalidateBoxSchemas` again.

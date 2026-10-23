@@ -3,9 +3,12 @@ title: "The recipe plugin should ship the cooking guidance the old cooking guide
 workstream: unattached
 area: beebox
 filed-by: agent
+resolution: wontfix
 discovered-by: Ian
 discovered-in: worktree-knowledge-audit-refresh — reviewing the failing cooking-guide audits, 2026-10-22
 ---
+
+> **Closed (2026-10-22):** the boxholder decided no cooking guidance should ship with the recipe plugin.
 
 The recipe card type is a plugin (`beebox/src/plugins/recipe/`): a card base, a scaling view, and a card template. How to cook *with* the person is not in the plugin. That guidance was a box guide card, a cooking guide: plan the meal, gather ingredients, pace the steps, and use two output channels. `test1` no longer has that card, and no box gets it by default.
 
