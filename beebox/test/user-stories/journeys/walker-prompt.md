@@ -101,9 +101,22 @@ The app's clock reads {{NOW}}. The evening in your situation may be a different 
 is the instrument's clock, not a flaw in the app, so do not note it as one and do not change your
 story to fit it.
 
-The browser here blocks notification permission (a request is answered "denied" with no prompt).
-Do not report that as the app's fault. Do record what the app says about reminders: what it
-promises, and what it tells you to do to receive them.
+**Your phone.** The browser here blocks notification permission (a request is answered
+"denied" with no prompt); do not report that as the app's fault. What the app sends you arrives
+on your phone instead, which you read with:
+
+```
+pnpm exec tsx beebox/test/user-stories/journeys/phone.ts {{RUN_DIR}}
+```
+
+It prints each notification once: when it came, whether it made a sound, what it said, and the
+path a tap opens (`bin/browse open` takes it as is). That is what the person's phone would show;
+nothing else reached them. Look whenever the person would glance at their phone.
+
+When your situation says time passes, and only then, add `--wait <duration>` (`2d`, `1w`). The
+phone moves on by that much and shows what arrived meanwhile. The wait is your last act: read
+the phone, open at most what a notification leads to, write it down, and stop. The app keeps its
+own clock, so after a wait do not report its date as wrong.
 
 Do not test microphone or voice behavior during a journey walk. Do not invoke a real,
 fake, or mock microphone. If a microphone control or mock-mic failure gets in the way,

@@ -47,6 +47,10 @@ const shots = existsSync(join(runDir, "shots"))
   : [];
 const notesPath = join(runDir, "notes.md");
 const notes = existsSync(notesPath) ? readFileSync(notesPath, "utf8") : "";
+// What reached the walker's phone (phone.ts): one "Tap opens:" line per notification.
+const phonePath = join(runDir, "phone.md");
+const phoneText = existsSync(phonePath) ? readFileSync(phonePath, "utf8") : "";
+const phoneNotifications = phoneText.split("\n").filter((line) => line.startsWith("Tap opens: ")).length;
 
 /**
  * Timing comes from the screenshot sidecars, never from the notes.
@@ -108,6 +112,7 @@ const after = {
   untracked,
   screenshots: shots.length,
   noteLines: notes === "" ? 0 : notes.split("\n").length,
+  phoneNotifications,
   spanMinutes: Number(spanMinutes.toFixed(1)),
   agentTimingSource: "Claude root-chat and place-chat transcripts, without engine agent runs (chat titles), joined to the box's .beebox/hub-child.log: hub send to first text, to the first non-interim text, and to Turn complete; excludes other engines",
   agentTurnDetail: timing.detail.map((t) => ({
@@ -145,6 +150,7 @@ console.log(`load        ${String(before.otherLiveRunsAtPrepare ?? "?")} other r
 if (turns.length === 0) console.log("agent timing unavailable: no Claude chat first-response intervals");
 console.log(`notes       ${after.noteLines} lines`);
 console.log(`screenshots ${shots.length}`);
+console.log(`phone       ${phoneText === "" ? "never looked at" : `${String(phoneNotifications)} notification(s) shown; see phone.md`}`);
 console.log("");
 if (commits.length === 0) {
   console.log("NOTHING WAS COMMITTED. If the notes claim otherwise, that is the finding.");

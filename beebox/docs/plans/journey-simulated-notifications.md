@@ -93,7 +93,7 @@ Existing names used unchanged: notification intent, delivery, `notify:` card, lo
      Tap opens: /chat?new=1&notification=neRnq1KiP
      ```
      Loudness reads `sound` (loud), `silent` (quiet), or `badge only` (dot). Times use the walker's local zone, like `{{NOW}}`. With nothing new: `Nothing new on your phone (walk clock: <time>).`
-  6. The tick's exit code and summary do not say whether one card fired: `bbx tick` exits 0 with errors (`cli/commands/tick.ts:166-173`), and a busy box defers the whole tick with no per-card line (`tick.ts:88-93`). So `phone.ts` checks the outcome: after each tick, the log must hold a new intent with `source: schedule:<name>` and a `sent` delivery. If it does not, the card goes under `The box held back:` with the tick's output. This also catches a log that could not be written, which `notifyBoxholder` reports but does not fail on (`notify-boxholder.ts:118-125`).
+  6. The tick's exit code and summary do not say whether one card fired: `bbx tick` exits 0 with errors (`cli/commands/tick.ts:166-173`), and a busy box defers the whole tick with no per-card line (`tick.ts:88-93`). So `phone.ts` checks the outcome: after each tick, the log must hold a new intent with `source: schedule:<name>` and a `sent` delivery. If it does not, the card goes under `No record of these reaching the phone:` with the tick's output, or, when the tick printed nothing, a line saying it did not run the card. The heading says only that no record exists: a send whose log write failed may still have gone to the fakes. This also catches a log that could not be written, which `notifyBoxholder` reports but does not fail on (`notify-boxholder.ts:118-125`).
 - **Pure helpers** (`phone-core.ts`, tested): `pendingReminders(cards, to)` (pending in `at` order, plus the not-simulated list), `parseWait("2d" | "36h" | "1w")`, `formatPhoneEntry(logged, { boxSlug, zone })`, `firedFor(logBefore, logAfter, name)`.
 - **First chunk.** The helpers and their tests, then the script.
 
@@ -133,10 +133,12 @@ None.
 | `phone.ts` run on a box without the field: real channels could send | New: env-builder test | Tick env forces `BBX_NOTIFY_FAKE=1` and strips channel keys | No real send possible |
 | A recurring `notify:` card falls in the wait | New: helper test | Listed under "Not simulated" | Clear |
 | A reminder fell due before the first `phone.ts` call and nothing fired it | New: helper test | Pending cards include overdue ones; it fires at its `at` | Clear |
-| A tick runs but logs nothing (busy box, log unwritable, error with exit 0) | New: script test | Outcome check against the log | Clear: "held back" with the tick's output |
-| The server's own scheduler fires the same card while `phone.ts` ticks it | Existing script lock (`core/schedule/state.ts:293` `acquireScriptLock`) | One run wins; a once card is deleted after it | Clear: the loser prints a skip, shown under "held back" |
+| A tick runs but logs nothing (busy box, log unwritable, error with exit 0) | New: script test | Outcome check against the log | Clear: "no record" with the tick's output |
+| The server's own scheduler fires the same card while `phone.ts` ticks it | Existing script lock (`core/schedule/state.ts:293` `acquireScriptLock`) | One run wins; a once card is deleted after it | Clear: the loser prints a skip, shown under "no record" |
 | The walk clock is behind real time (a reminder set for 10 minutes later during a long walk) | — | The server fires it in real time, in fake mode; `phone.ts` without `--wait` shows it | Clear |
 | `phone.json` is missing or corrupt | New: script test | Missing: start at real now. Corrupt: refuse with the path | Clear |
+| A walk box's `box.json` becomes unreadable, so the field reads as absent | — | Accepted risk: a walk box has no paired phone and no push subscription, so real channels have nobody to send to; reading a broken config as fake would silence a person's box instead | — |
+| A reminder card carries run state from an earlier failed send, so a replay at `at + 1 s` is not due | — | Shown under "no record" as not run; fake sends do not fail, so only a send from before the box was fake can leave such state | Clear |
 | The log rotates during a walk | Existing: `readAll` reads both files (`log.ts:170-182`) | Covered | — |
 | `notifyFakeMode` becomes async and a caller drops the `await` | Typecheck: `@typescript-eslint/no-floating-promises` and a `Promise` used as a boolean | Lint and type errors | Clear at build |
 
@@ -145,11 +147,11 @@ No critical gap.
 ## Agent-flow / user-flow edge cases
 
 - **Wrong field**: the box agent could set `fakeNotifications`. ADDRESSED: health warning; the field's doc says a person's box must not set it.
-- **Stale ref**: a reminder card deleted between listing and ticking. ADDRESSED: the tick reports "Script not found" and exits 1; shown under "held back".
+- **Stale ref**: a reminder card deleted between listing and ticking. ADDRESSED: the tick reports "Script not found" and exits 1; shown under "no record".
 - **Two agents on one card**: server scheduler and `phone.ts`. ADDRESSED: script lock (above).
 - **Hand-edit drift**: not applicable; a walker never edits the box by hand.
 - **Fabricated value**: the walker could invent a notification. ADDRESSED: the prompt says the phone shows only what `phone.ts` printed; `phone.md` is the record a report checks.
-- **Validation error UX**: "held back" quotes the tick's own output for the card.
+- **Validation error UX**: "no record" quotes the tick's own output for the card.
 - **Transition state**: `notifyFakeMode()` callers change in one commit; no data migration.
 
 ## NOT in scope
