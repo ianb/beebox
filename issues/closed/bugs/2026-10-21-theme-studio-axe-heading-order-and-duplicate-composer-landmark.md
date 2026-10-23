@@ -1,6 +1,6 @@
 ---
 title: "Theme studio: axe heading-order and landmark-unique violations on its specimens"
-workstream: tour-check
+workstream: theme-audit
 area: beebox
 labels: [a11y, tours]
 resolution: implemented

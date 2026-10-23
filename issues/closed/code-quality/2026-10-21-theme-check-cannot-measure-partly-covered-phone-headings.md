@@ -1,6 +1,6 @@
 ---
 title: "theme-check cannot measure phone card headings whose text is partly covered"
-workstream: unattached
+workstream: theme-audit
 area: beebox
 filed-by: agent
 discovered-by: agent

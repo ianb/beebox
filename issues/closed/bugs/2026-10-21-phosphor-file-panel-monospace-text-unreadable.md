@@ -1,6 +1,6 @@
 ---
 title: "Phosphor file panel: monospace text is unreadable (1.85:1) because the shared Pre component hard-codes text-warm-800"
-workstream: unattached
+workstream: theme-audit
 area: beebox
 filed-by: agent
 discovered-by: agent
