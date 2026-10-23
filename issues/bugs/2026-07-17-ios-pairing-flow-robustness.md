@@ -44,3 +44,7 @@ add an explicit confirmation step for externally-sourced pairing URLs with an ht
 persist pending tickets somewhere that survives a box restart or shrink the TTL well under the idle-stop
 window and communicate it in the UI; and surface redeem/pair failures to the user instead of a silent
 `false`.
+
+## Audit 2026-10-22
+
+The scheme half of the second weakness is fixed. `PairingTransport` (`apple-shared/Sources/BeeBoxShared/PairingTransport.swift:19-22`) refuses plain `http` to any host that is not loopback, `.local`, or a private, link-local, or Tailscale address, before redeem (`005299baf`). No "Add this box?" confirmation exists for an externally opened link. Pending tickets are still in the process-local `pendingPairings` map (`beebox/src/core/mobile/pairing.ts:66`), so the idle-stop race remains.

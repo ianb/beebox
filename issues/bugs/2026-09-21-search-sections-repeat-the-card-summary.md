@@ -33,3 +33,7 @@ actions 37 and 44, screenshots 20 and 25. Related:
 ## Re-encounter 2026-10-08 (journey walks)
 
 Seen in the [B2 walk](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 64): searching "tape" found the drawer and listed the tray twice, one entry per section, each showing the card's `contains` summary, which does not say "tape". The priority may be stale given the recurrence.
+
+## Audit 2026-10-22
+
+Still true. Line pointers moved. Each section document copies the card's `contains` through `base` (`beebox/src/core/search/extract/core.ts:133`, spread at `:148-152`). The excerpt still prefers a nonempty `contains` (`beebox/src/core/search/query/core.ts:215`). The text properties are at `query/core.ts:44`. The section-destination fix (`48dcb3f39`) changed navigation only.

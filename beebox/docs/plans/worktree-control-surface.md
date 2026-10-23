@@ -31,7 +31,7 @@ client of the same command. Behavior does not change. Who can call it does.
   same convergence Track B performs. The plan carries it.
 
 **Related, deliberately NOT addressed:**
-[manual-testing flag overuse](../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)
+[manual-testing flag overuse](../../../issues/closed/decisions/2026-07-29-manual-testing-flag-overuse.md)
 is open and unresolved. Nothing in this plan may assume more `manual-testing`
 items exist or design a flow that produces them. See NOT in scope.
 
@@ -579,7 +579,7 @@ shape.
 
 - **Anything that assumes more `needs: [manual-testing]` items.** The flag is
   under review as over-applied
-  ([2026-07-29-manual-testing-flag-overuse](../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)),
+  ([2026-07-29-manual-testing-flag-overuse](../../../issues/closed/decisions/2026-07-29-manual-testing-flag-overuse.md)),
   and the boxholder has said he does not want that much manual testing. A
   "verification queue" feature would prejudge that decision.
 - **A dashboard, a web UI, or any Track E client.** The seam is the deliverable;

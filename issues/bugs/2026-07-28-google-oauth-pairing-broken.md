@@ -204,3 +204,7 @@ deployments and should be normalized to match the connector path.
 - The box's `.beebox/client-debug.log` around the attempt.
 
 With the error signature this collapses to one of the suspects above quickly.
+
+## Audit 2026-10-22
+
+Code pointers moved: the login route is `beebox/src/webapp/routes/auth/google.ts` and the connector procedures are `beebox/src/webapp/trpc/routers/admin/google.ts`. The latent smells still hold. The login redirect URI at `auth/google.ts:42` still uses the raw `publicUrl` and skips `baseServerUrl()`. The connector at `admin/google.ts:73-86` still accepts a browser `origin` first; no caller passes one. `GOOGLE_SCOPES` (`beebox/src/google/auth.ts:21`) now uses the narrow calendar scopes, but `drive` and the Gmail scopes remain. The open decision (stay unverified) is unchanged.

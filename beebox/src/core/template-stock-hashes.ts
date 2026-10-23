@@ -25,10 +25,11 @@ export interface TemplateStockEntry {
 
 export const TEMPLATE_STOCK_HASHES = {
   "agent-feedback-guide": {
-    current: "7b70d5b4c06c7820224a5da90ec6d2f577b0761381f5828481575f980f939ef9",
+    current: "8a3db6756ef75f0756a4d508d8d02bb1009b3525257817bb7b9917141174c2f7",
     superseded: [
       "685ab3899807ab4d52705e67080832906d2ac4ce5da3c4ae1171b4c6b69fdc5f",
       "84e32a13b19db444378f23296b4ec5f4e96f5edcd51f233a2a18b9047cd95b2d",
+      "7b70d5b4c06c7820224a5da90ec6d2f577b0761381f5828481575f980f939ef9",
     ],
   },
   "briefing-seed": {

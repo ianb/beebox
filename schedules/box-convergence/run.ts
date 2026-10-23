@@ -6,7 +6,7 @@ import { execa } from "execa";
 import { z } from "zod";
 import { execChild } from "../../bin/lib/schedules-exec.js";
 import { localTargets, optionalText } from "./targets.js";
-import { framedCommand, reportPlan, resultDetail, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
+import { connectorWarnings, framedCommand, reportPlan, resultDetail, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 
 class ConvergenceScheduleError extends Error {
   constructor() {
@@ -22,6 +22,9 @@ const BOX_TIMEOUT_MS = 25 * 60_000; // ten-minute drain plus fifteen-minute exec
 const SSH_TIMEOUT_MS = 26 * 60_000;
 const deadline = Date.now() + 4 * 60 * 60_000 - 30_000;
 const findings: string[] = [];
+/** Quiet or failing connectors on production boxes, one line each. */
+const connectorFindings: string[] = [];
+const HEALTH_TIMEOUT_MS = 2 * 60_000;
 const env: NodeJS.ProcessEnv = { ...process.env, NODE_DISABLE_COMPILE_CACHE: "1" };
 delete env.NODE_COMPILE_CACHE;
 delete env.BBX_BOX_WORK; // A periodic pass is independent work, never a descendant.
@@ -99,6 +102,28 @@ process.stdout.write(JSON.stringify([...new Set(roots)]));`;
   return z.array(z.string().min(1)).parse(JSON.parse(result.stdout));
 }
 
+/**
+ * Read one production box's connector warnings from `bbx health --json` into
+ * `connectorFindings`. Returns whether the read produced health JSON: a box
+ * that could not be read keeps the condition open rather than resolving it.
+ */
+async function readConnectorHealth(root: string): Promise<boolean> {
+  // The convergence pass already reports an exhausted budget; unread health just keeps the condition.
+  if (deadline - Date.now() < HEALTH_TIMEOUT_MS) return false;
+  const command = ["node", path.join(root, "node_modules/beebox/dist/cli.mjs"), "health", "--json", "--box", root].map(shellQuote).join(" ");
+  const remote = `set -a; source /home/beebox/.env || exit; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd ${shellQuote(root)} || exit; timeout --kill-after=5s 100s bash -c ${shellQuote(framedCommand(command))}`;
+  const outcome = await execChild({ file: ssh, args: [`sudo -u beebox -H bash -lc ${shellQuote(remote)}`] }, {
+    cwd: REPO_ROOT, env, timeoutMs: HEALTH_TIMEOUT_MS, input: null, logFile: null,
+  });
+  const warnings = connectorWarnings(outcome.output);
+  if (warnings === null) {
+    connectorFindings.push(`${root}: health unreadable (exit ${String(outcome.exitCode)}${outcome.timedOut ? ", timed out" : ""}): ${outcome.output.slice(-300)}`);
+    return false;
+  }
+  connectorFindings.push(...warnings.map((warning) => `${root}: ${warning}`));
+  return true;
+}
+
 /** Offline is routine on a laptop: note it, and report it only once it has
  *  lasted a day. Returns that report, or null. */
 async function trackReachability(unreachable: string | null): Promise<string | null> {
@@ -123,8 +148,12 @@ async function trackReachability(unreachable: string | null): Promise<string | n
  *  was deduped into an empty log while every box was unusable. The alerts are
  *  standing conditions the store updates in place, so no repeat state lives
  *  here. */
-async function report(input: { unreachableDetail: string | null; prodChecked: boolean }): Promise<void> {
-  const plan = reportPlan({ findings, ...input });
+async function report(input: {
+  unreachableDetail: string | null;
+  prodChecked: boolean;
+  connectorCoverage: boolean;
+}): Promise<void> {
+  const plan = reportPlan({ findings, connectorFindings, ...input });
   const logged = plan.alerts.map((alert) => alert.message).join("\n");
   if (logged) process.stdout.write(`[box-convergence] ${dryRun ? "status only" : "report"}\n${logged}\n`);
   if (dryRun || !scheduled) return;
@@ -157,16 +186,26 @@ async function main(): Promise<void> {
     }
   } catch (error) { findings.push(`Local coverage unavailable: ${String(error)}`); }
   let unreachable: string | null = null;
+  // Complete only when the inventory and every box's health read succeeded.
+  let connectorCoverage = false;
   try {
+    connectorCoverage = true;
     for (const root of await prodTargets()) {
       try { unreachable = await inspectOrApply(root, "prod"); }
       catch (error) { findings.push(`prod ${root}: ${String(error)}`); }
       if (unreachable !== null) break;
+      try { if (!await readConnectorHealth(root)) connectorCoverage = false; }
+      catch (error) {
+        connectorCoverage = false;
+        connectorFindings.push(`${root}: health unreadable: ${String(error)}`);
+      }
     }
   } catch (error) {
+    connectorCoverage = false;
     if (error instanceof ProdUnreachableError) unreachable = error.line;
     else findings.push(`Production coverage unavailable: ${String(error)}`);
   }
-  await report({ unreachableDetail: await trackReachability(unreachable), prodChecked: unreachable === null });
+  if (unreachable !== null) connectorCoverage = false;
+  await report({ unreachableDetail: await trackReachability(unreachable), prodChecked: unreachable === null, connectorCoverage });
 }
 await main();

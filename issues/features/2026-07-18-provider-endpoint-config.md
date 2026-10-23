@@ -66,3 +66,7 @@ Design questions:
 [model-backend-pluggability](../closed/exploration/2026-07-18-model-backend-pluggability.md):
 verify the SDK's full loop (tools, images, streaming, caching) against one real
 non-Anthropic endpoint before designing the config surface.
+
+## Audit 2026-10-22
+
+Partly done. Beyond the OpenRouter slice above, a per-model provider seam now exists: `providerEnvAdditions` in `beebox/src/core/provider-env/core.ts` builds the child env for first-party, GLM (Z.ai endpoint), and owner-added OpenRouter models, and refuses instead of falling back. It is keyed by model, not by an install-time provider setting. API-billed Anthropic and self-hosted vLLM are still not covered. The `ANTHROPIC_API_KEY` strip remains at `beebox/src/cli/entry/bootstrap.ts:32`.

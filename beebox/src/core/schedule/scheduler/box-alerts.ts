@@ -1,7 +1,8 @@
 /**
- * The health passes the scheduler daemon runs after each box's tick. None of
- * them notifies: each condition is a health check on the dashboard
- * (docs/implemented-plans/notifications.md, Track E). They keep each condition's
+ * The health passes the scheduler daemon runs after each box's tick. Each
+ * condition is a health check on the dashboard
+ * (docs/implemented-plans/notifications.md, Track E); only a newly failing
+ * connector also notifies, once. They keep each condition's
  * once-per-episode latch, and the scheduler log records an episode when it
  * begins. Each one is isolated: a pass that throws is logged under its own
  * event and cannot suppress the others.
@@ -10,7 +11,8 @@
  * - `google-auth-alert`: refreshes the Google grant verdict about daily and
  *   records each breakage.
  * - `connector-activity-alert`: brings connector quiet/failing episodes up to
- *   date, which the dashboard check and dismissals read.
+ *   date, which the dashboard check and dismissals read, and sends one notice
+ *   per new failing episode.
  */
 
 import { errorMessage } from "../../../shared/error-guards.js";

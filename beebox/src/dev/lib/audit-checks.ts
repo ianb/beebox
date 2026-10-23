@@ -122,7 +122,8 @@ export function automatedChecksPassed(checks: AutomatedChecks): boolean {
     (checks.shouldReadAnyCheck?.wasRead ?? true) &&
     checks.shouldNotReadChecks.every((check) => !check.wasRead) &&
     checks.bashContainsChecks.every((check) => check.found) &&
-    (checks.shouldSearchCheck?.found ?? true);
+    (checks.shouldSearchCheck?.found ?? true) &&
+    checks.agentStopped === undefined;
 }
 
 const WEB_SEARCH_TOOLS = new Set(["WebSearch", "WebFetch"]);

@@ -27,3 +27,7 @@ run the following from `beebox/` and confirm the command exits 0:
 ```bash
 npx eslint src/scripts/user-stories/*.workflow.ts
 ```
+
+## Audit 2026-10-22
+
+The fix is now in a stable release. Pull request 12912 merged on 2026-09-22. `@typescript-eslint/eslint-plugin` 8.71.0 (published 2026-09-28) contains the merge commit, and 8.72.0 is `latest`. Both pass the seven-day `minimumReleaseAge` gate (`pnpm-workspace.yaml:52`). The repository still pins 8.59.4 (`pnpm-lock.yaml`) and `patches/@typescript-eslint+eslint-plugin+8.59.4.patch` still exists. Remaining work: bump the plugin, delete the patch file (applied by `patch-package` in the root `postinstall`), and run the `eslint` command above.

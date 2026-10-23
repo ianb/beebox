@@ -2,12 +2,15 @@
 title: "needs: [manual-testing] is being over-applied — recalibrate when agents add it"
 workstream: unknown
 area: process
-design: ../../beebox/docs/implemented-plans/workstreams.md
+design: ../../../beebox/docs/implemented-plans/workstreams.md
 filed-by: agent
 discovered-in: finish-skill-audit worktree — boxholder remark while reviewing /finish changes
 needs: [decision]
 priority: important
+resolution: implemented
 ---
+
+> **Closed 2026-10-22 (issue audit):** The criteria were tightened in 880f9d4d0: `issues/AGENTS.md` ("Manual-testing lifecycle") allows the flag only when an agent cannot do the verification, and only on a committed fix with a `## Manual testing` section. Commit 722933909 added the `verify-without-me` next action, which releases a gate the developer will not exercise. No bulk sweep of flagged items was done; 29 open issues carry the flag today.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

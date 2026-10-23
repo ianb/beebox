@@ -35,3 +35,7 @@ health line?); and where the update section lives in
 item 6) but is upstream of it — release discipline is needed even for
 git-pull distribution. Not a launch gate per the
 [posture](2026-07-20-soft-launch-posture.md), but close behind.
+
+## Audit 2026-10-22
+
+Partly done. Tags `v0.1.4` to `v0.1.6` exist (latest 2026-10-20), and `.github/workflows/image.yml` publishes the container image on a `v*` tag. `beebox/docs/install/docker.md` now has an "Updating" section (pull, rebuild, up) that says the container runs `bbx migrate --sweep` and `bbx docs refresh` on start, so an update does not leave the box on an old shape. Still open: no changelog or release notes, no statement whether the soft launch tracks `main` or tags, and no way for a running box or its operator to learn that an update exists (no doctor check, no dashboard line).

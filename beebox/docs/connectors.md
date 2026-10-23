@@ -69,8 +69,9 @@ part of the sync failed even if the rest succeeded (Gmail does this for a draft
 that fails to upload).
 
 `connectors/activity-verdict.ts` reads the record and decides whether a
-connector has gone quiet or keeps failing; the scheduler alerts once per
-episode and the dashboard shows a warning. See
+connector has gone quiet or keeps failing; the scheduler records each episode
+once, notifies the boxholder once for a failing one, and the dashboard shows a
+warning. See
 [health-checks.md](server/health-checks.md#connector-activity-a-connector-that-went-quiet-or-keeps-failing).
 
 ## Configuration

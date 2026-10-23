@@ -10,11 +10,11 @@ import "@ianbicking/tap-check/tap";
 import { any, containing, not } from "@ianbicking/tap-check/check";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { rm, writeFile, mkdir, chmod, access } from "node:fs/promises";
+import { rm, writeFile, mkdir, chmod, access, utimes } from "node:fs/promises";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { refreshGeneratedDocs } from "../../src/core/docs-refresh.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
-import { GENERATE_MARKER } from "../../src/core/docs-gen/generate/core.js";
+import { GENERATE_MARKER, generatedDocsAreCurrent } from "../../src/core/docs-gen/generate/core.js";
 import { withDocId } from "../../src/core/docs-gen/shared.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
@@ -152,6 +152,30 @@ void test("What the deploy step exists for:", async (t) => {
       status: "",
     },
   );
+});
+
+// ## A changed box-local schema makes the docs stale
+//
+// A box's own `src/schemas/*.ts` feeds its card rules and the agent guide, so
+// editing one has to invalidate the cache; otherwise the refresh answers
+// `current` and the rules keep describing the old fields.
+void test("A changed box-local schema makes the docs stale", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeCleanBox();
+  await refreshGeneratedDocs({ boxRoot: box.root });
+  const before = await generatedDocsAreCurrent(box.root);
+
+  await box.write("src/schemas/loan.ts", "export {};\n");
+  const later = new Date(Date.now() + 60_000);
+  await utimes(box.path("src/schemas/loan.ts"), later, later);
+
+  t.check({ before, after: await generatedDocsAreCurrent(box.root) }, { before: true, after: false });
 });
 
 // ## Dirty input remains outside the generated-output commit
