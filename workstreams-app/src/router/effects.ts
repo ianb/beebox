@@ -11,6 +11,7 @@
 
 import fs from "node:fs/promises";
 import { parseEnv } from "node:util";
+import type { WriteStream } from "node:fs";
 import type { Readable } from "node:stream";
 import type { ResolvedBoxEntry } from "./box-entry.js";
 import type { PidStore } from "./pidfile.js";
@@ -97,6 +98,9 @@ export interface RouterEffects {
   /** Write this worktree's single-slot `hub.json`, returning its path. */
   writeHubConfig(params: { name: string; backendPort: number; resolvedBoxes: ResolvedBoxEntry[] }): Promise<string>;
   getPort(): Promise<number>;
+  /** Open a worktree's log file for appending. An effect so a test can see
+   *  that every start path that opens one also ends it. */
+  openLog(file: string): WriteStream;
   resolveWorktree(name: string): Promise<ResolvedWorktree | null>;
   resolveBoxEntries(entries: string[]): Promise<ResolvedBoxEntry[]>;
   /** Whether a path exists on disk. Backs `resolveBackendEntryPath`'s

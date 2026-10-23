@@ -260,7 +260,12 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   };
 }
 
-/** A queued turn is a new root operation; preserve its input when admission closes. */
+/**
+ * A queued turn is a new root operation. Its input goes back to the front of
+ * the queue when the send is refused, when admission closes, or when the run
+ * start throws, so the next drain (a turn result, a run close, or the end of
+ * maintenance) can deliver it.
+ */
 export function drainSessionQueue(opts: {
   queue: ChatSendInput[];
   paused: boolean;
@@ -272,8 +277,9 @@ export function drainSessionQueue(opts: {
   void opts.send(combineQueuedInputs(queued)).then((sent) => {
     if (!sent) opts.queue.unshift(...queued);
   }).catch((error: unknown) => {
-    if (error instanceof BoxMaintenanceError) { opts.queue.unshift(...queued); return; }
-    log("drain", `Draining queued messages failed: ${errorMessage(error)}`);
+    opts.queue.unshift(...queued);
+    if (error instanceof BoxMaintenanceError) return;
+    log("drain", `Draining queued messages failed; ${queued.length} message(s) kept in the queue: ${errorMessage(error)}`);
     opts.onError(error instanceof Error ? error : new Error(String(error)));
   });
 }

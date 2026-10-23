@@ -14,6 +14,7 @@ import { errnoCode } from "../shared/error-guards.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
 import { findAbsoluteMachinePaths, redactAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
+import type { ManifestEntry } from "./migrations.js";
 
 
 class MigrationRepairUnavailableError extends Error {
@@ -32,20 +33,51 @@ async function migrationQuestionFiles(boxRoot: string): Promise<string[]> {
   return names.filter((entry) => entry.startsWith("Migration_") && entry.endsWith(".question.card")).map((name) => `${directory}/${name}`);
 }
 
+/**
+ * The card, null when it is absent, or `malformed` when a person or agent
+ * edited it into a shape QuestionSchema refuses. A malformed card is never an
+ * answer; callers report it as an open question so one bad card cannot stop
+ * every sweep.
+ */
 async function question(boxRoot: string, file: string) {
+  let content: string;
   try {
-    const content = await readFile(join(boxRoot, file), "utf8");
-    return { content, fields: cardFields(parseCardText(content, { source: file, schemas }), QuestionSchema) };
+    content = await readFile(join(boxRoot, file), "utf8");
   } catch (error) { if (errnoCode(error) === "ENOENT") return null; throw error; }
+  try {
+    return { content, fields: cardFields(parseCardText(content, { source: file, schemas }), QuestionSchema) };
+  } catch (error) {
+    return { malformed: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export async function migrationQuestions(boxRoot: string): Promise<string[]> {
   const pending: string[] = [];
   for (const file of await migrationQuestionFiles(boxRoot)) {
     const existing = await question(boxRoot, file);
-    if (existing === null || questionState(existing.fields) !== "answered") pending.push(file);
+    if (existing === null || "malformed" in existing || questionState(existing.fields) !== "answered") pending.push(file);
   }
   return pending;
+}
+
+/** The migration a `Migration_<name>-N.question.card` path asks about. */
+function questionMigration(file: string): string | undefined {
+  return /Migration_(.+)-\d+\.question\.card$/.exec(file)?.[1];
+}
+
+/**
+ * Pending questions the manifest has overtaken: the migration is recorded,
+ * and the question is not the one its partial apply recorded, so it is from a
+ * failed earlier run. Its answer would authorize a repair of a migration that
+ * has applied; the sweep deletes the card (git history keeps it).
+ */
+export async function supersededMigrationQuestions(boxRoot: string, manifest: readonly ManifestEntry[]): Promise<string[]> {
+  const pending = await migrationQuestions(boxRoot);
+  return pending.filter((file) => {
+    const name = questionMigration(file);
+    const entry = manifest.find((candidate) => candidate.name === name);
+    return entry !== undefined && entry.question !== file;
+  });
 }
 
 /**
@@ -58,7 +90,7 @@ export async function redactMigrationQuestions(boxRoot: string): Promise<string[
   const rewritten: string[] = [];
   for (const file of await migrationQuestions(boxRoot)) {
     const existing = await question(boxRoot, file);
-    if (existing === null || findAbsoluteMachinePaths(existing.content).length === 0) continue;
+    if (existing === null || "malformed" in existing || findAbsoluteMachinePaths(existing.content).length === 0) continue;
     const { content } = existing;
     const redacted = redactAbsoluteMachinePaths(content);
     cardFields(parseCardText(redacted, { source: file, schemas }), QuestionSchema);
@@ -92,7 +124,7 @@ interface BoundedAttempt {
  * never finished writes the next question instead of running again; a failed
  * attempt writes the next question. Only a finished attempt clears the receipt.
  */
-export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: number; question?: string | undefined; sessionId?: string | undefined }> {
+export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: number; question?: string | undefined; sessionId?: string | undefined; stale?: true | undefined }> {
   let attempt = 0;
   let answer = "";
   let file: string;
@@ -100,7 +132,8 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
     file = `${directory}/Migration_${opts.name}-${String(attempt)}.question.card`;
     const existing = await question(opts.boxRoot, file);
     if (!existing) break;
-    if (questionState(existing.fields) !== "answered") return { code: opts.code, question: file };
+    // `stale`: the question predates this run and does not carry its output.
+    if ("malformed" in existing || questionState(existing.fields) !== "answered") return { code: opts.code, question: file, stale: true };
     answer = `Previous answered question (${file}):\n${existing.content}`;
     attempt += 1;
   }
@@ -177,5 +210,21 @@ export function runProcedureMigration(opts: {
     boxRoot: opts.boxRoot, name: opts.name, recoveryRef: opts.recoveryRef, signal: opts.signal, code: 1, failure: "",
     directive: `Migration ${opts.name} is a procedure that an agent applies. Its last run failed; the output is in this question. Fix what blocked it, then answer: the answer authorizes the next scheduled pass to run the procedure once more.`,
     attempt: async () => ({ code: await opts.run(), reason: "The procedure exited nonzero; its output follows.", failure: opts.output() }),
+  });
+}
+
+/**
+ * A retired migration that failed: the box never applied it, and the migrator
+ * is in git history. No agent attempt can succeed, so the question goes to the
+ * boxholder at once; an answer authorizes the next pass to ask again.
+ */
+export function runRetiredMigration(opts: {
+  boxRoot: string; name: string; recoveryRef: string; signal?: AbortSignal | undefined;
+  code: number; failure: string;
+}): ReturnType<typeof runBoundedAttempt> {
+  return runBoundedAttempt({
+    ...opts,
+    directive: `Migration ${opts.name} was retired and this box never applied it. Restore its migrator from git history, run it by hand, and record it in the manifest; no agent attempt is made.`,
+    attempt: () => Promise.resolve({ code: opts.code, reason: "The migration is retired and needs a human; no agent repair was attempted.", failure: opts.failure }),
   });
 }

@@ -50,3 +50,8 @@ Example box slugs, each conveying a plausible purpose:
 ## Places
 For example locations: **Rivermouth, Greenhollow, Stonebridge, Ashfield,
 Porthaven, Larkspur Vale.**
+
+## Home paths
+A fixture that needs a home directory uses `/home/user/` or `/Users/me/`. The
+path-leak check (`bin/path-leak-check.ts`, `ALLOWED_NAMES`) rejects a roster
+name in a home path.

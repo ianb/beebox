@@ -66,13 +66,16 @@ void test("Only evidence clears it", async (t) => {
   t.check(next([ok, ok], true), null);
   // No Docs at all on a complete pass: the last Doc card is gone.
   t.check(next([], true), null);
-  // An incomplete pass (a failure or a folder cap) may have skipped a Doc that
-  // still fails, so even a successful pull there clears nothing.
-  t.check(next([ok], false), open);
+  // The problem is box-wide, so one Doc that reached the Docs API clears it,
+  // also on a pass that a folder cap or an unrelated failure left incomplete.
+  t.check(next([ok], false), null);
+  t.check(next([ok, transient], true), null);
+  // An incomplete pass with no Doc pulls may have skipped a Doc that still
+  // fails, so the warning stays.
   t.check(next([], false), open);
-  // A transient failure leaves that Doc unchecked, so nothing clears.
+  // A transient failure alone leaves that Doc unchecked, so nothing clears.
   t.check(next([transient], true), open);
-  t.check(next([ok, transient], true), open);
+  t.check(next([transient], false), open);
   t.check(nextDocsApiDiagnosis({ previous: null, outcomes: [transient], passComplete: true, now: NOW }), null);
 });
 

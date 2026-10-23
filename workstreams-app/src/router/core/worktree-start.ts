@@ -10,7 +10,7 @@
 // itself, which also owns the children's exit listeners and the readiness
 // budget. Read bin/docs/router-protocol.md before changing either file.
 
-import { createWriteStream, type WriteStream } from "node:fs";
+import type { WriteStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
@@ -26,7 +26,7 @@ import {
   readEnvFile,
   type ResolvedWorktree,
 } from "../effects.js";
-import { READY_BUDGET_MS, spawnGeneration, type Generation } from "./generation.js";
+import { READY_BUDGET_MS, resolveGenerationBoxes, spawnGeneration, type Generation } from "./generation.js";
 import {
   isolatedSecretsFileFor,
   killChildren,
@@ -59,8 +59,6 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
 
   await fs.mkdir(config.logDir, { recursive: true });
   const logFile = path.join(config.logDir, `${name}.log`);
-  const logStream = createWriteStream(logFile, { flags: "a" });
-  logStream.write(`\n=== router start ${new Date(effects.now()).toISOString()} ===\n`);
 
   const [frontendPort, backendPort] = await Promise.all([effects.getPort(), effects.getPort()]);
   const isolatedSecretsFile = isolatedSecretsFileFor(state.config.browseDir, name);
@@ -97,6 +95,12 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
   if (isolatedSecretsFile === undefined) delete childEnv.BBX_SECRETS_STORE_ISOLATED;
 
   log(`[${name}] frontend=${frontendPort} backend=${backendPort} base=${baseUrl}`);
+
+  // Opened last, after every await that can throw here: a throw above is
+  // dropped by ensureRunning as a non-start and retried on the next request,
+  // so it must not leave a stream behind. From here on, startWorktree owns it.
+  const logStream = effects.openLog(logFile);
+  logStream.write(`\n=== router start ${new Date(effects.now()).toISOString()} ===\n`);
 
   return {
     wt,
@@ -208,6 +212,42 @@ async function failStart(
   throw statusError(captured.message, 502);
 }
 
+/**
+ * The failure terminal for a start that never spawned a child: a box list that
+ * does not resolve, a missing backend entry, an unwritable hub config. Parks
+ * `failed` exactly as `failStart` does, so the failed-startup page, the retry
+ * endpoint, and `retryDecision` apply, rather than letting ensureRunning drop
+ * the handle and re-run the whole start on the next request. Ends the log
+ * stream, the only thing `prepareStart` opened. Always throws.
+ */
+async function failBeforeSpawn(
+  state: CoreState,
+  args: { handle: WorktreeHandle; plan: StartPlan; progress: StartProgress; err: unknown },
+): Promise<never> {
+  const { effects, worktrees, retryAttempts, log } = state;
+  const { handle, plan, progress, err } = args;
+  const name = handle.name;
+  const captured: CapturedError = {
+    message: errMessage(err),
+    phase: progress.failurePhase,
+    viteOutput: "",
+    fastifyOutput: "",
+    at: effects.now(),
+  };
+  log(`[${name}] startup failed in ${captured.phase}: ${captured.message}`);
+  plan.logStream.end(`=== startup failed in ${captured.phase}: ${captured.message} ===\n`);
+  // Invariant #5: only the current generation publishes. A superseded handle
+  // has no children to stop; it is already off the map.
+  if (worktrees.get(name) !== handle) {
+    log(`[${name}] startup failed but this generation was superseded — not publishing failure`);
+    throw statusError(captured.message, 502);
+  }
+  const attempts = retryAttempts.get(name) ?? 0;
+  const { retryAfter } = retryDecision({ phase: captured.phase, attempts, now: effects.now() });
+  transitionLifecycle(handle, { phase: "failed", lastError: captured, attempts, retryAfter });
+  throw statusError(captured.message, 502);
+}
+
 /** The success terminal: publish `ready` (or self-clean if superseded). */
 async function publishGeneration(
   state: CoreState,
@@ -273,13 +313,23 @@ async function publishGeneration(
 export async function startWorktree(state: CoreState, handle: WorktreeHandle): Promise<WorktreeHandle> {
   const { effects } = state;
   const plan = await prepareStart(state, handle);
-  // Taken BEFORE the spawn, so a source change that lands during startup
-  // reads as stale rather than being baked in as this generation's baseline.
-  const sourceToken = await effects.sourceToken(plan.wt.root);
   // Built BEFORE the spawn: the exit listeners attached inside spawnGeneration
   // record which phase they failed in, so `progress` has to exist first.
-  const progress: StartProgress = { failurePhase: "spawn" };
-  const generation = await spawnGeneration(state, { plan, handle, progress });
+  const progress: StartProgress = { failurePhase: "resolveBoxes" };
+  let sourceToken: string | null;
+  let generation: Generation;
+  // Everything between opening the log and spawning the children. A throw here
+  // has no children to kill but must still park, or each request re-runs it.
+  try {
+    const resolvedBoxes = await resolveGenerationBoxes(state, plan.wt);
+    progress.failurePhase = "spawn";
+    // Taken BEFORE the spawn, so a source change that lands during startup
+    // reads as stale rather than being baked in as this generation's baseline.
+    sourceToken = await effects.sourceToken(plan.wt.root);
+    generation = await spawnGeneration(state, { plan, handle, progress, resolvedBoxes });
+  } catch (err) {
+    return await failBeforeSpawn(state, { handle, plan, progress, err });
+  }
 
   try {
     await bringUpGeneration(state, { plan, generation, progress });

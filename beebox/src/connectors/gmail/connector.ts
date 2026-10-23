@@ -27,7 +27,7 @@ import { resolveFakeGmailService } from "../../field-test/fake-gmail-gate.js";
 import { getGoogleAuth } from "../../google/auth.js";
 import { serviceNotAllowed, serviceNotConfigured, skippedSync } from "../../google/sync-skipped.js";
 import { ok, err, type Result } from "../../shared/result.js";
-import { evaluateGmailRules } from "./rules.js";
+import { evaluateGmailRules, recheckUnevaluated } from "./rules.js";
 import { parseGmailTransientState, type GmailTransientState } from "./state.js";
 import {
   fetchGmailThreadMessages,
@@ -238,7 +238,7 @@ class GmailConnector implements Connector {
           service: work.service,
           refs: changes.refs,
         });
-    const evaluated = await evaluateGmailRules({
+    const fresh = await evaluateGmailRules({
       service: work.service,
       config: work.config,
       state,
@@ -247,6 +247,19 @@ class GmailConnector implements Connector {
       labelMap,
       now: getBoxTime(this.boxRoot),
     });
+    const rechecked = await recheckUnevaluated({
+      service: work.service,
+      config: work.config,
+      state: fresh.state,
+      trackedThreadIds,
+      labelMap,
+      now: getBoxTime(this.boxRoot),
+    });
+    const evaluated = {
+      state: rechecked.state,
+      trackRequests: [...fresh.trackRequests, ...rechecked.trackRequests],
+      procedures: [...new Map([...fresh.procedures, ...rechecked.procedures].map((p) => [p.procedureRef, p])).values()],
+    };
     const createThreadIds = new Set(evaluated.trackRequests.map((request) => request.threadId));
     const changedTrackedThreadIds = changes.refs
       .map((ref) => ref.threadId)

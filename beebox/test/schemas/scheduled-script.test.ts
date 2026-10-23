@@ -198,47 +198,47 @@ void test("A reminder carries notify: in place of runs:.", async (t) => {
 //
 // A cron script that has never run is due:
 void test("Determines if a scheduled script should run based on its schedule type (cron,...", async (t) => {
-  t.check(isDue(makeScript({ cron: "0 * * * *" }), { lastRun: null, lastResult: null, consecutiveFailures: 0, now: new Date("2026-02-21T10:30:00Z") }), true);
+  t.check(isDue(makeScript({ cron: "0 * * * *" }), { lastRun: null, lastResult: null, consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:30:00Z") }), true);
 });
 
 // A cron script is due when the last run was before the most recent scheduled time:
 void test("A cron script is due when the last run was before the most recent scheduled t...", async (t) => {
-  t.check(isDue(makeScript({ cron: "0 * * * *" }), { lastRun: "2026-02-21T09:05:00Z", lastResult: "success", consecutiveFailures: 0, now: new Date("2026-02-21T10:30:00Z") }), true);
+  t.check(isDue(makeScript({ cron: "0 * * * *" }), { lastRun: "2026-02-21T09:05:00Z", lastResult: "success", consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:30:00Z") }), true);
 });
 
 // Not due if we already ran after the most recent scheduled time:
 void test("Not due if we already ran after the most recent scheduled time:", async (t) => {
-  t.check(isDue(makeScript({ cron: "0 * * * *" }), { lastRun: "2026-02-21T10:05:00Z", lastResult: "success", consecutiveFailures: 0, now: new Date("2026-02-21T10:30:00Z") }), false);
+  t.check(isDue(makeScript({ cron: "0 * * * *" }), { lastRun: "2026-02-21T10:05:00Z", lastResult: "success", consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:30:00Z") }), false);
 });
 
 // An `at` script fires once when its time passes:
 void test("An at script fires once when its time passes:", async (t) => {
-  t.check(isDue(makeScript({ at: "2026-02-21T09:00:00Z" }), { lastRun: null, lastResult: null, consecutiveFailures: 0, now: new Date("2026-02-21T10:00:00Z") }), true);
+  t.check(isDue(makeScript({ at: "2026-02-21T09:00:00Z" }), { lastRun: null, lastResult: null, consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:00:00Z") }), true);
 
-  t.check(isDue(makeScript({ at: "2026-02-21T09:00:00Z" }), { lastRun: "2026-02-21T09:01:00Z", lastResult: "success", consecutiveFailures: 0, now: new Date("2026-02-21T10:00:00Z") }), false);
+  t.check(isDue(makeScript({ at: "2026-02-21T09:00:00Z" }), { lastRun: "2026-02-21T09:01:00Z", lastResult: "success", consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:00:00Z") }), false);
 
-  t.check(isDue(makeScript({ at: "2026-02-21T12:00:00Z" }), { lastRun: null, lastResult: null, consecutiveFailures: 0, now: new Date("2026-02-21T10:00:00Z") }), false);
+  t.check(isDue(makeScript({ at: "2026-02-21T12:00:00Z" }), { lastRun: null, lastResult: null, consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:00:00Z") }), false);
 });
 
 // Disabled and expired scripts are never due:
 void test("Disabled and expired scripts are never due:", async (t) => {
-  t.check(isDue(makeScript({ cron: "* * * * *", enabled: false }), { lastRun: null, lastResult: null, consecutiveFailures: 0, now: new Date("2026-02-21T10:00:00Z") }), false);
+  t.check(isDue(makeScript({ cron: "* * * * *", enabled: false }), { lastRun: null, lastResult: null, consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:00:00Z") }), false);
 
-  t.check(isDue(makeScript({ cron: "* * * * *", until: "2026-01-01T00:00:00Z" }), { lastRun: null, lastResult: null, consecutiveFailures: 0, now: new Date("2026-02-21T10:00:00Z") }), false);
+  t.check(isDue(makeScript({ cron: "* * * * *", until: "2026-01-01T00:00:00Z" }), { lastRun: null, lastResult: null, consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:00:00Z") }), false);
 });
 
 // The `not-before` attribute debounces — prevents running again too soon:
 void test("The not-before attribute debounces — prevents running again too soon:", async (t) => {
-  t.check(isDue(makeScript({ cron: "* * * * *", notBefore: "1h" }), { lastRun: "2026-02-21T09:30:00Z", lastResult: "success", consecutiveFailures: 0, now: new Date("2026-02-21T10:00:00Z") }), false);
+  t.check(isDue(makeScript({ cron: "* * * * *", notBefore: "1h" }), { lastRun: "2026-02-21T09:30:00Z", lastResult: "success", consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:00:00Z") }), false);
 
-  t.check(isDue(makeScript({ cron: "* * * * *", notBefore: "1h" }), { lastRun: "2026-02-21T08:30:00Z", lastResult: "success", consecutiveFailures: 0, now: new Date("2026-02-21T10:00:00Z") }), true);
+  t.check(isDue(makeScript({ cron: "* * * * *", notBefore: "1h" }), { lastRun: "2026-02-21T08:30:00Z", lastResult: "success", consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:00:00Z") }), true);
 });
 
 // A wakeup-only script (no cron/at/rrule) is due for tick if `onWakeup` is set:
 void test("A wakeup-only script (no cron/at/rrule) is due for tick if onWakeup is set:", async (t) => {
-  t.check(isDue(makeScript({ onWakeup: true }), { lastRun: null, lastResult: null, consecutiveFailures: 0, now: new Date("2026-02-21T10:00:00Z") }), true);
+  t.check(isDue(makeScript({ onWakeup: true }), { lastRun: null, lastResult: null, consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:00:00Z") }), true);
 
-  t.check(isDue(makeScript({ onWakeup: false }), { lastRun: null, lastResult: null, consecutiveFailures: 0, now: new Date("2026-02-21T10:00:00Z") }), false);
+  t.check(isDue(makeScript({ onWakeup: false }), { lastRun: null, lastResult: null, consecutiveFailures: 0, lastFailureFinal: false, now: new Date("2026-02-21T10:00:00Z") }), false);
 });
 
 // ## isDueForWakeup

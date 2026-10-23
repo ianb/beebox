@@ -9,6 +9,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { symlink } from "node:fs/promises";
+import * as path from "node:path";
 import { legacyExpositionRulesChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/legacy-exposition-rules.js";
 import { makeTmpBox } from "../../../../../../helpers/test-helpers.js";
 
@@ -58,6 +60,27 @@ void test("Quiet when nothing carries one", async (t) => {
       ok: true,
       severity: "warning",
       message: "No exposition-plan card carries a legacy `rules` field",
+    },
+  ]);
+});
+
+// ## An unreadable card reads as no rules
+//
+// A dangling symlink, or a card removed between the listing and the read,
+// cannot be read. The check skips it and still reports the other cards;
+// `bbx validate` reports the unreadable card.
+void test("An unreadable card reads as no rules", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write("content/Acids.attach/plan.exposition-plan.card", "---\nrules:\n  - Start from a kitchen example\n---\nPlan.\n");
+  await box.write("content/Course.attach/.keep", "");
+  await symlink(path.join(box.root, "content/missing.card"), path.join(box.root, "content/Course.attach/Course.exposition-plan.card"));
+  const checks = await legacyExpositionRulesChecks(box.root);
+  // Only the readable card with rules is named.
+  t.check(checks.map(({ ok, message }) => ({ ok, message })), [
+    {
+      ok: false,
+      message: "content/Acids.attach/plan.exposition-plan.card: `rules` is legacy; move them into the course directory's AGENTS.md (courseware README, Migration).",
     },
   ]);
 });

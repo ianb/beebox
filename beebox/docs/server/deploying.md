@@ -28,7 +28,10 @@ When convergence fails, the deploy then runs the same bounded repair the hourly
 `box-convergence` schedule runs (`bbx engine migrate --sweep --repair`, 25-minute
 limit) for each box that still has a pending migration, after the other boxes
 are serving again, and still reports the deploy as failed. A chained deploy waits
-for it. The hourly schedule retries anything the repair leaves. See
+for it. The repair runs only when the activation reached its restart and both
+services are up. A failure before the restart starts the services again on the live tree as it
+stands (new code, possibly old dependencies), skips the repair, and fails the
+deploy at once. The hourly schedule retries anything the repair leaves. See
 [migrations](../cards/migrations.md) for recovery, questions, and timeout limits.
 
 The shared drain accounts for gate-aware writers. The first rollout from older

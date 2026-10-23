@@ -137,7 +137,7 @@ void test("the same title twice gives two cards, and the second is due after the
   const content = await fs.readFile(path.join(box.root, "_config", "schedules", second), "utf-8");
   const parsed = parseScheduledScript(cardFields(parseCardText(content, { source: second, schemas: await createCardSchemaMap(box.root) }), ScheduledScriptSchema));
   const state = await loadScriptState(box.root, second.replace(".scheduled-script.card", ""));
-  t.check(isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, now: new Date("2026-10-18T16:00:01Z") }), true);
+  t.check(isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, lastFailureFinal: state.lastFailureFinal === true, now: new Date("2026-10-18T16:00:01Z") }), true);
 });
 
 void test("a past time and an unreachable box are refused and write nothing", async (t) => {

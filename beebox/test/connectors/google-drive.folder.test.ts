@@ -502,12 +502,13 @@ last-sync: «stamped»
   t.check(again, { success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] });
 });
 
-// ## Docs API diagnosis — folder discovery counts, and a capped pass proves nothing
+// ## Docs API diagnosis — folder discovery counts, and a capped pass clears only on evidence
 //
 // A Doc that folder discovery creates is pulled through the folder pass, not
-// the card loop; its Docs API outcome must still reach the diagnosis. And a
-// pass that hit a folder cap left part of the tree unscanned, so finding no
-// Docs there cannot clear an open problem.
+// the card loop; its Docs API outcome must still reach the diagnosis. A pass
+// that hit a folder cap left part of the tree unscanned, so finding no Docs
+// there cannot clear an open problem. The problem is box-wide, so one Doc that
+// reaches the Docs API clears it on any pass, complete or not.
 
 async function scopeInsufficientError(): Promise<unknown> {
   const body = JSON.stringify({
@@ -555,27 +556,87 @@ void test("A Doc found by a newly mounted folder opens the diagnosis on that fir
   });
 });
 
-void test("A pass that hit the folder depth cap keeps an open diagnosis, though it found no Docs", async (t) => {
+const openDiagnosis: DocsApiDiagnosis = {
+  kind: "service-disabled",
+  message: "1 Google Doc is syncing without revision tracking or lossy-content details: disabled",
+  link: "https://enable",
+  docs: 1,
+  since: "2026-10-20T12:00:00.000Z",
+};
+
+/** folder-0 … folder-9, each inside the last: the mirror stops at the 8-level cap. */
+function tooDeepFolders(): DriveFile[] {
+  return Array.from({ length: MAX_FOLDER_DEPTH + 2 }, (_, i) =>
+    driveFile({ id: `folder-${String(i)}`, name: `Level ${String(i)}`, mimeType: FOLDER_MIME, ...(i === 0 ? {} : { parent: `folder-${String(i - 1)}` }) }),
+  );
+}
+
+void test("A pass that hit the folder depth cap keeps an open diagnosis when it found no Docs", async (t) => {
   const box = await makeTmpBox({ git: true });
   t.teardown(() => box.cleanup());
   await initBox(box.root);
   await box.seed("_content/drive/deep/Deep.gfolder.card", createGfolderTemplate({ driveId: "folder-0" }));
   box.commitAll("mount a deep folder");
-  // folder-0 … folder-9, each inside the last: the mirror stops at the 8-level cap.
-  const files = Array.from({ length: MAX_FOLDER_DEPTH + 2 }, (_, i) =>
-    driveFile({ id: `folder-${String(i)}`, name: `Level ${String(i)}`, mimeType: FOLDER_MIME, ...(i === 0 ? {} : { parent: `folder-${String(i - 1)}` }) }),
-  );
-  const open: DocsApiDiagnosis = {
-    kind: "service-disabled",
-    message: "1 Google Doc is syncing without revision tracking or lossy-content details: disabled",
-    link: "https://enable",
-    docs: 1,
-    since: "2026-10-20T12:00:00.000Z",
-  };
-  await recordDocsApiDiagnosis(box.root, () => open);
+  await recordDocsApiDiagnosis(box.root, () => openDiagnosis);
 
-  const result = await createGoogleDriveConnector(box.root, createFakeGoogleDrive({ files })).sync();
-  // The cap is a note, not a failure: the sync succeeds.
+  const result = await createGoogleDriveConnector(box.root, createFakeGoogleDrive({ files: tooDeepFolders() })).sync();
+  // The cap is a note, not a failure.
   t.check(result.success, true);
-  t.check(await loadDocsApiDiagnosis(box.root), open);
+  // The unscanned levels may hold Docs that still fail.
+  t.check(await loadDocsApiDiagnosis(box.root), openDiagnosis);
+});
+
+void test("A pass that hit the folder depth cap clears the diagnosis when a Doc reached the Docs API", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await initBox(box.root);
+  await box.seed("_content/drive/notes/Notes.gfolder.card", createGfolderTemplate({ driveId: "notes" }));
+  await box.seed("_content/drive/deep/Deep.gfolder.card", createGfolderTemplate({ driveId: "folder-0" }));
+  box.commitAll("mount a Docs folder and a deep folder");
+  await recordDocsApiDiagnosis(box.root, () => openDiagnosis);
+  const drive = createFakeGoogleDrive({
+    files: [
+      driveFile({ id: "notes", name: "Notes", mimeType: FOLDER_MIME }),
+      driveFile({ id: "doc-1", name: "Plan", mimeType: DOC_MIME, parent: "notes" }),
+      ...tooDeepFolders(),
+    ],
+    documents: new Map([["doc-1", documentFor({ id: "doc-1", name: "Plan" })]]),
+  });
+
+  const result = await createGoogleDriveConnector(box.root, drive).sync();
+  // The cap is a note, not a failure.
+  t.check(result.success, true);
+  // The Doc reached the Docs API, so the box-wide problem is gone.
+  t.check(await loadDocsApiDiagnosis(box.root), null);
+});
+
+void test("A Drive file that fails every pass does not keep the diagnosis once a Doc reached the Docs API", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await initBox(box.root);
+  await box.seed("_content/drive/notes/Notes.gfolder.card", createGfolderTemplate({ driveId: "notes" }));
+  box.commitAll("mount the Notes folder");
+  await recordDocsApiDiagnosis(box.root, () => openDiagnosis);
+  const drive = createFakeGoogleDrive({
+    files: [
+      driveFile({ id: "notes", name: "Notes", mimeType: FOLDER_MIME }),
+      driveFile({ id: "doc-1", name: "Plan", mimeType: DOC_MIME, parent: "notes" }),
+      driveFile({ id: "doc-big", name: "Huge", mimeType: DOC_MIME, parent: "notes" }),
+    ],
+    documents: new Map([
+      ["doc-1", documentFor({ id: "doc-1", name: "Plan" })],
+      ["doc-big", documentFor({ id: "doc-big", name: "Huge" })],
+    ]),
+  });
+  const realExport = drive.exportFile.bind(drive);
+  drive.exportFile = async (id, mime) => {
+    if (id === "doc-big") throw new Error("This file is too large to be exported.");
+    return realExport(id, mime);
+  };
+
+  const result = await createGoogleDriveConnector(box.root, drive).sync();
+  // The oversized Doc fails this pass, and would fail every pass.
+  t.check(result.success, false);
+  // A Doc reached the Docs API, so the box-wide problem is gone.
+  t.check(await loadDocsApiDiagnosis(box.root), null);
 });
