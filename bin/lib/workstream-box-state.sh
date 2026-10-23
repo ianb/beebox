@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 # Read-only test1 clone state for workstream listing and cull eligibility.
 
+# The commit message prefix that identifies the setup commit; it has no ref.
+WORKSTREAM_SETUP_COMMIT_GREP='^Worktree setup: link the beebox engine to worktree '
+
+# Succeeds when everything on the clone's keep tip is already in the source
+# box's main, ignoring the clone's worktree-setup commit (bin/lib/worktree-create.sh
+# step 6), which never reaches the source. Each other commit must be an ancestor
+# of main or patch-equivalent to a commit on it (git cherry), so a keep that
+# holds only the setup commit counts as merged. Read-only: the clone reads the
+# source's objects through an alternate object directory instead of fetching.
+# The setup commit is found by message prefix.
+workstream_keep_merged() {
+  local clone="$1" source="$2" keep_sha="$3" main_sha setup_sha objects pending
+  [ -n "$keep_sha" ] || return 1
+  main_sha=$(git -C "$source" rev-parse --verify -q refs/heads/main) || return 1
+  objects=$(git -C "$source" rev-parse --path-format=absolute --git-path objects) || return 1
+  setup_sha=$(git -C "$clone" log --format=%H -n 1 --grep="$WORKSTREAM_SETUP_COMMIT_GREP" "$keep_sha" 2>/dev/null || true)
+  pending=$(cd "$clone" && GIT_ALTERNATE_OBJECT_DIRECTORIES="$objects" git cherry "$main_sha" "$keep_sha" 2>/dev/null) || return 1
+  ! printf '%s\n' "$pending" | awk -v setup="$setup_sha" '$1 == "+" && $2 != setup { found = 1 } END { exit(found ? 0 : 1) }'
+}
+
 workstream_box_state() {
   local clone="$1" source="$2" test_setup=false keep_unmerged=false pristine=null
   local main_sha="" setup_sha="" keep_sha=""
@@ -14,7 +34,7 @@ workstream_box_state() {
     fi
     if git -C "$clone" show-ref --verify --quiet refs/heads/keep; then
       keep_sha=$(git -C "$clone" rev-parse refs/heads/keep 2>/dev/null || true)
-      if [ -z "$keep_sha" ] || ! git -C "$source" merge-base --is-ancestor "$keep_sha" main 2>/dev/null; then
+      if ! workstream_keep_merged "$clone" "$source" "$keep_sha"; then
         keep_unmerged=true
       fi
     fi
@@ -30,7 +50,7 @@ workstream_cull_pin_reason() {
   if git -C "$clone" show-ref --verify --quiet refs/heads/keep 2>/dev/null; then
     local keep_sha
     keep_sha=$(git -C "$clone" rev-parse refs/heads/keep 2>/dev/null || true)
-    if [ -z "$keep_sha" ] || ! git -C "$WT_BOX_SRC" merge-base --is-ancestor "$keep_sha" main 2>/dev/null; then
+    if ! workstream_keep_merged "$clone" "$WT_BOX_SRC" "$keep_sha"; then
       echo keep-unmerged
       return 0
     fi
@@ -65,27 +85,27 @@ workstream_preserve_keep() {
   WORKSTREAM_PRESERVED_BOX_REF=""
   git -C "$clone" show-ref --verify --quiet refs/heads/keep 2>/dev/null || return 0
   keep_sha=$(git -C "$clone" rev-parse refs/heads/keep 2>/dev/null || true)
-  if [ -n "$keep_sha" ] && git -C "$WT_BOX_SRC" merge-base --is-ancestor "$keep_sha" main 2>/dev/null; then
+  if workstream_keep_merged "$clone" "$WT_BOX_SRC" "$keep_sha"; then
     return 0
   fi
   WORKSTREAM_PRESERVED_BOX_REF="keep/$name-$(date -u +%Y-%m-%d)"
   # Worktree creation committed the clone's engine link ("Worktree setup: …",
-  # bin/lib/worktree-create.sh step 6). It points at this worktree, so it must
-  # not reach the source box: push keep replayed without it. A replay that
-  # conflicts refuses, which keeps the clone for a human.
+  # bin/lib/worktree-create.sh step 6). It points at this worktree, so push
+  # keep replayed without it. A box agent's later `pnpm add` edits the same
+  # package.json and lockfile, so the replay can conflict. Then push keep
+  # unrebased, setup commit included: that commit adds only a gitignored link
+  # and a lockfile.
   local setup_sha preserved="refs/heads/keep" scratch
-  setup_sha=$(git -C "$clone" log --format=%H -n 1 --grep='^Worktree setup: link the beebox engine to worktree ' refs/heads/keep 2>/dev/null || true)
+  setup_sha=$(git -C "$clone" log --format=%H -n 1 --grep="$WORKSTREAM_SETUP_COMMIT_GREP" refs/heads/keep 2>/dev/null || true)
   if [ -n "$setup_sha" ]; then
     scratch=$(mktemp -d) || return 1
-    if ! { git -C "$clone" worktree add -q --detach "$scratch/keep" refs/heads/keep \
+    if { git -C "$clone" worktree add -q --detach "$scratch/keep" refs/heads/keep \
         && git -C "$scratch/keep" rebase -q --onto "$setup_sha^" "$setup_sha"; } >/dev/null 2>&1; then
+      preserved=$(git -C "$scratch/keep" rev-parse HEAD)
+    else
       git -C "$scratch/keep" rebase --abort >/dev/null 2>&1 || true
-      git -C "$clone" worktree remove --force "$scratch/keep" >/dev/null 2>&1 || true
-      rm -rf "$scratch"
-      echo "[workstream] cannot drop the worktree setup commit from $name's keep branch; preserve it by hand" >&2
-      return 1
+      echo "[workstream] $name's keep branch carries the worktree setup commit (it adds only a gitignored engine link and a lockfile); pushing it unrebased" >&2
     fi
-    preserved=$(git -C "$scratch/keep" rev-parse HEAD)
     if ! git -C "$clone" worktree remove --force "$scratch/keep" >/dev/null 2>&1; then
       echo "[workstream] could not remove the temporary worktree $scratch/keep from $name's clone" >&2
       return 1

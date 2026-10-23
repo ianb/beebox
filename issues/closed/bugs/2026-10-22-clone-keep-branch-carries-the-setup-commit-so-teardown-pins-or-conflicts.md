@@ -4,8 +4,11 @@ workstream: unattached
 area: router
 filed-by: agent
 discovered-by: agent
+resolution: implemented
 discovered-in: worktree-risky-merge-review — adversarial review of the merges since 2026-10-08
 ---
+
+Resolved. A throwaway clone pair reproduced both effects: a keep holding only the setup commit read as `keepUnmerged` with a `keep-unmerged` pin, and `workstream_preserve_keep` refused removal after a later lockfile edit. `workstream_keep_merged` in `bin/lib/workstream-box-state.sh` now tests the keep tip with the setup commit (found by its message prefix) ignored: every other commit must be an ancestor of source `main` or patch-equivalent to a commit on it (`git cherry`). When the rebase that drops the setup commit conflicts, preservation aborts it, prints a note, and pushes keep unrebased. Tests in `bin/test/lib/workstream-box-state.test.ts` cover both.
 
 `bin/lib/worktree-create.sh` step 6 commits "Worktree setup: link the beebox
 engine…" in the box clone (commits 64729ef7d and 3494775c6). Every `keep`
