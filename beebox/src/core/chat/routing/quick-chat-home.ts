@@ -59,7 +59,7 @@ export async function quickChatHome(boxRoot: string): Promise<QuickChatHome> {
   const [open, recentlySent, recentChats, nav] = await Promise.all([
     listOpenQuickChatRecords(boxRoot),
     listRecentlySentQuickChatRecords(boxRoot, { now, limit: RECENTLY_SENT_LIMIT }),
-    boxScreenRecentChats(boxRoot, now),
+    boxScreenRecentChats(boxRoot, Date.now()), // session mtimes are real
     resolveNav(boxRoot),
   ]);
   return {

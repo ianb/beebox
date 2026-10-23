@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-23T13:33:45Z
-Total documents: 567
+Generated: 2026-10-23T17:31:39Z
+Total documents: 568
 
 ## Issues
 
@@ -1795,6 +1795,7 @@ Referenced by:
 - docs/implemented-plans/clerk-contract-and-import-boundary.md:115 (mention) — against `docs/module-map.md` and update that doc if it's silent on
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/file-layout.md:60 (mention) — - `docs/module-map.md`: the four shared-code directories and their dependency
+- docs/implemented-plans/walk-simulated-time.md:85 (mention) — - `src/lib/box-fixture.ts` (new, sync): `isWalkFixture(boxRoot)` reads `_config/box.json` and returns whether `fakeNotif
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:23 (mention) — added to `OUTSIDE_VITE_SHARED_RAW`. Pattern documented in `docs/module-map.md`.
 - ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:165 (mention) — - The layout rules become the current owner in `beebox/docs/module-map.md`,
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:141 (mention) — is a future boxholder question; `docs/module-map.md` now documents the
@@ -5544,7 +5545,7 @@ References:
 Title: "Simulated notifications for journey walkers" | 193 lines | shipped history | implemented
 
 Referenced by:
-- test/user-stories/journeys/README.md:170 (link) — ([plan](../../../docs/implemented-plans/journey-simulated-notifications.md)).
+- docs/implemented-plans/walk-simulated-time.md:11 (link) — **Issues addressed:** none open. It extends [walker gets simulated notifications](../../../issues/closed/features/2026-1
 - ../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md:12 (link) — **Closed:** implemented in 896833924, dc98daf35, b2c35ab48 (plan: [journey simulated notifications](../../../beebox/docs
 
 References:
@@ -7543,6 +7544,20 @@ References:
 - → ../issues/closed/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md (frontmatter)
 - → docs/glossary.md (mention)
 - → docs/cards/migrations.md (mention)
+
+#### docs/implemented-plans/walk-simulated-time.md
+
+Title: "Simulated time for journey walk boxes" | 228 lines | shipped history | implemented
+
+Referenced by:
+- test/user-stories/journeys/README.md:174 (link) — ([plan](../../../docs/implemented-plans/walk-simulated-time.md)).
+
+References:
+- → ../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md (link)
+- → docs/implemented-plans/journey-simulated-notifications.md (link)
+- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
+- → ../issues/closed/bugs/2026-08-09-field-scenario-weekday-fiction-mismatch.md (link)
+- → docs/module-map.md (mention)
 
 #### docs/implemented-plans/web-push-notifications.md
 
@@ -10855,7 +10870,7 @@ References:
 
 #### test/user-stories/journeys/README.md
 
-Title: "Journeys" | 174 lines
+Title: "Journeys" | 178 lines
 
 Referenced by:
 - ../dev/journeys/overview.md:5 (link) — Sources: [the design plan](../../beebox/docs/plans/user-story-journeys.md), [the journeys README](../../beebox/test/user
@@ -10867,12 +10882,12 @@ References:
 - → test/plugins/courseware/journeys/D-chemistry/README.md (link)
 - → test/user-stories/journeys/walker-prompt.md (mention)
 - → test/user-stories/journeys/after-action.md (link)
-- → docs/implemented-plans/journey-simulated-notifications.md (link)
+- → docs/implemented-plans/walk-simulated-time.md (link)
 - → test/user-stories/journeys/A-lending/reports/2026-08-25.md (link)
 
 #### test/user-stories/journeys/walker-prompt.md
 
-Title: "You are trying out an app" | 232 lines
+Title: "You are trying out an app" | 234 lines
 
 Referenced by:
 - docs/implemented-plans/journey-simulated-notifications.md:38 (mention) — - **Do not invent events** (`beebox/test/user-stories/journeys/walker-prompt.md`, "Do not invent events"). Moving time i
@@ -10894,7 +10909,7 @@ Title: "A-lending, 2026-08-25" | 107 lines
 
 Referenced by:
 - test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md:11 (link) — The [original report](2026-08-25.md) and journey definition are now under
-- test/user-stories/journeys/README.md:172 (link) — served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
+- test/user-stories/journeys/README.md:176 (link) — served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
 - ../dev/journeys/reports/sweep-issues.md:102 (mention) — | `2026-08-23-auth-preflight-blocks-new-chats-when-claude-not-on-path` | BUG | 08-23 | 08-29 | 6 | impl. | `ba64fc852` (
 - ../dev/journeys/reports/sweep-walks.md:25 (mention) — | **No self-judged success.** "They do not judge their own success. `collect.ts` reads the box to see what actually land
 

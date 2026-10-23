@@ -25,6 +25,7 @@ import { Button } from "../ui/Button";
 import { Text } from "../ui/Text";
 import { checkboxName, dateChips, recheckChip, todoTextClass } from "./item-logic";
 import { runTick, tickInput, TodoActionsContext, type TodoAddress } from "./actions";
+import { boxNow } from "../../lib/box-clock";
 
 interface TodoItemProps {
   status: TodoStatus;
@@ -135,7 +136,7 @@ function Trailing({ controls }: { controls: Controls }) {
 
 function Chips({ props }: { props: TodoItemProps }) {
   const { due, start, plateState, assigned, status, layout } = props;
-  const format = { nowYear: new Date().getFullYear(), locale: undefined };
+  const format = { nowYear: new Date(boxNow()).getFullYear(), locale: undefined };
   const dates = dateChips({ due, start, plateState }, format);
   const recheck = layout === "line" ? recheckChip({ status, recheck: props.recheck }, format) : null;
   if (dates.length === 0 && recheck === null && (assigned === undefined || assigned === "")) return null;

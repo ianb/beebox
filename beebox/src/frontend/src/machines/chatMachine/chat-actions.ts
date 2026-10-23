@@ -12,6 +12,7 @@ import type { OutputFrom } from "xstate";
 import { queueMessageToBackend, rollupStreamToEntry, type fetchHistoryActor } from "./chat-actors";
 import { toastError } from "../../components/ui/toast-store";
 import { MAX_RETAINED_MESSAGES, type ChatContext, type ChatEvent } from "../chat-types";
+import { boxNow } from "../../lib/box-clock";
 import { observeChatSendHistory } from "../../lib/chat-send-diagnostics";
 import type { ChatSendContext } from "@core/chat/card-activity.js";
 
@@ -49,7 +50,7 @@ function buildPendingEntry(event: SendEvent, knownMessages: SessionEntry[]): Pen
   return {
     uuid: event.messageId,
     type: "user",
-    timestamp: new Date().toISOString(),
+    timestamp: new Date(boxNow()).toISOString(),
     content: buildOptimisticContent(event.message, event.images),
     pending: true,
     reconcileKnownUuids: knownMessages.map((message) => message.uuid),

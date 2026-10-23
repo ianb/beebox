@@ -14,10 +14,10 @@
  */
 
 import type { AttentionSnapshot } from "../shared/chat-composer-binding.js";
-import { getBoxTime } from "../lib/time.js";
+import { boxClockShiftMs, getBoxTime } from "../lib/time.js";
 import { loadBoxTimezone } from "./box/config.js";
 import { getMostActiveSavedAt } from "./chat/session/history.js";
-import { composeChatAppSnapshot, type FeatureMap } from "./chat/features.js";
+import { SIMULATED_CLOCK_NOTE, composeChatAppSnapshot, type FeatureMap } from "./chat/features.js";
 import type { ChatChannel } from "../shared/chat-channel.js";
 import {
   loadScheduleHealth,
@@ -127,6 +127,7 @@ function plural(n: number, unit: string): string {
 /** Snapshot attribute values computed per send. */
 interface SnapshotContext {
   localTime: string;
+  clock?: typeof SIMULATED_CLOCK_NOTE;
   lastActivity?: string;
   health?: string;
   todos?: string;
@@ -253,6 +254,7 @@ export async function buildSnapshotContext(
 ): Promise<SnapshotContext> {
   const timezone = await loadBoxTimezone(boxRoot);
   const out: SnapshotContext = { localTime: formatLocalTime(now, { timezone }) };
+  if (boxClockShiftMs(boxRoot) !== 0) out.clock = SIMULATED_CLOCK_NOTE;
 
   if (healthGate !== undefined || sessionStart) {
     try {

@@ -161,13 +161,17 @@ Preparation creates and serves a disposable box; it does not register or drive
 scheduler ticks. A valid enabled schedule is not evidence that a reminder will
 arrive. A run making that claim must observe the trigger and its delivery.
 
-The walker's phone (`phone.ts`) observes both for one-shot `notify:` reminders.
-A walk box has `fakeNotifications: true`, so every notification goes to a fake
-channel and is logged. `phone.ts <run-dir> --wait 1w` moves the walk's clock on,
-ticks each reminder due by then at its own time, and prints what arrived; the
-run directory keeps `phone.md`. Repeating reminders and `runs:` schedules are
-not driven, and the box keeps real time, so a wait ends the walk
-([plan](../../../docs/implemented-plans/journey-simulated-notifications.md)).
+The walker's phone (`phone.ts`) observes both. A walk box has
+`fakeNotifications: true`, so every notification goes to a fake channel and is
+logged. `phone.ts <run-dir> --wait 1w` lives through the week: every scheduled
+occurrence (reminders, repeating reminders, `runs:` work such as the todo
+review) runs at its own time, in order, and then the box's clock moves a week
+ahead (`.beebox/clock-offset.json`). The server, the agent, commit dates, and
+the app's displayed dates read the later time, so a walker can come back. Real
+time still shows in a few places: session-list ages, which read file times,
+and how long since the last chat turn. A stopped wait resumes on the next
+`phone.ts` call. The run directory keeps `phone.md`
+([plan](../../../docs/implemented-plans/walk-simulated-time.md)).
 In-process chat timers are a separate mechanism and can run while the box is
 served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
 one misfire, but did not verify its replacement scheduled reminder.

@@ -1,48 +1,86 @@
 /**
- * The walker's phone, as pure pieces: which reminders a wait fires, how long a
- * wait is, which notification a tick produced, and how a notification reads on
+ * The walker's phone, as pure pieces: what a wait runs and in what order, how
+ * long a wait is, which notification a tick produced, and how a notification reads on
  * the phone. `phone.ts` does the reading, ticking, and writing.
- * See docs/implemented-plans/journey-simulated-notifications.md.
+ * See docs/implemented-plans/walk-simulated-time.md (Track 7).
  */
+import { CronExpressionParser } from "cron-parser";
+import rrulePkg from "rrule";
 import type { LoggedNotification } from "../../../src/core/notification/log.ts";
 import { parseTarget, targetUrl } from "../../../src/core/notification/target.ts";
 
+const { rrulestr } = rrulePkg;
+
 /** One schedule card, as much of it as a wait needs. */
-export interface ReminderCard {
+export interface ScheduleCard {
   name: string;
-  notify: boolean;
+  /** `notify:` sends a notification; `runs:` runs a command (often an agent). */
+  kind: "notify" | "runs";
   enabled: boolean;
   at: string | undefined;
-  /** It has `cron` or `rrule`: it repeats, and a wait does not simulate it. */
-  recurring: boolean;
+  cron: string | undefined;
+  rrule: string | undefined;
+  until: string | undefined;
 }
 
-export interface PendingReminders {
-  /** One-shot `notify:` cards due at or before the wait's end, in `at` order. */
-  pending: Array<{ name: string; at: Date }>;
-  /** Repeating `notify:` cards, which the phone names but does not fire. */
-  notSimulated: string[];
+/** One time a card comes due during a wait. */
+export interface Occurrence {
+  name: string;
+  kind: ScheduleCard["kind"];
+  at: Date;
 }
 
-/**
- * A one-shot card that still exists has not fired (a fired one is deleted), so
- * every one due by `to` is pending, including one already overdue.
- */
-export function pendingReminders(cards: readonly ReminderCard[], to: Date): PendingReminders {
-  const pending: PendingReminders["pending"] = [];
-  const notSimulated: string[] = [];
+/** `<card>@<iso>`: how the wait record names an occurrence. */
+export function occurrenceKey(o: Occurrence): string {
+  return `${o.name}@${o.at.toISOString()}`;
+}
+
+/** A `notify:` card sends nothing slow; a `runs:` card may run an agent each time. */
+const MAX_PER_CARD = { notify: 50, runs: 8 } as const;
+
+function cardOccurrences(card: ScheduleCard, opts: { from: Date; to: Date }): Date[] {
+  const { from, to } = opts;
+  const until = card.until === undefined ? null : new Date(card.until).getTime();
+  const times: Date[] = [];
+  if (card.cron !== undefined) {
+    const interval = CronExpressionParser.parse(card.cron, { currentDate: from });
+    for (let next = interval.next().toDate(); next.getTime() <= to.getTime(); next = interval.next().toDate()) {
+      times.push(next);
+      if (times.length > MAX_PER_CARD[card.kind]) break;
+    }
+  } else if (card.rrule !== undefined) {
+    times.push(...rrulestr(card.rrule).between(from, to, true).filter((d) => d.getTime() > from.getTime()));
+  } else if (card.at !== undefined) {
+    // A one-shot that still exists has not run (a run one is deleted), so an overdue
+    // one is due too, at the wait's current point: time only moves forward.
+    const at = new Date(card.at);
+    if (at.getTime() <= to.getTime()) times.push(at.getTime() < from.getTime() ? from : at);
+  }
+  return until === null ? times : times.filter((d) => d.getTime() <= until);
+}
+
+export interface WaitPlan {
+  /** Every occurrence in `(from, to]`, plus overdue one-shots, oldest first. */
+  queue: Occurrence[];
+  /** Cards that come due more often than a wait runs them: the wait refuses. */
+  refused: string[];
+}
+
+/** What a wait from `from` to `to` runs, in time order. */
+export function planWait(cards: readonly ScheduleCard[], opts: { from: Date; to: Date }): WaitPlan {
+  const queue: Occurrence[] = [];
+  const refused: string[] = [];
   for (const card of cards) {
-    if (!card.notify || !card.enabled) continue;
-    if (card.recurring) {
-      notSimulated.push(card.name);
+    if (!card.enabled) continue;
+    const times = cardOccurrences(card, opts);
+    if (times.length > MAX_PER_CARD[card.kind]) {
+      refused.push(`${card.name} (more than ${String(MAX_PER_CARD[card.kind])} times; wait less at once)`);
       continue;
     }
-    if (card.at === undefined) continue;
-    const at = new Date(card.at);
-    if (at.getTime() <= to.getTime()) pending.push({ name: card.name, at });
+    queue.push(...times.map((at) => ({ name: card.name, kind: card.kind, at })));
   }
-  pending.sort((a, b) => a.at.getTime() - b.at.getTime() || a.name.localeCompare(b.name));
-  return { pending, notSimulated: notSimulated.toSorted() };
+  queue.sort((a, b) => a.at.getTime() - b.at.getTime() || a.name.localeCompare(b.name));
+  return { queue, refused: refused.toSorted() };
 }
 
 const UNIT_MS = { h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000, w: 7 * 24 * 60 * 60 * 1000 } as const;

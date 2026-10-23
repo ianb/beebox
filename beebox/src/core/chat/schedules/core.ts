@@ -14,35 +14,14 @@ import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { z } from "zod";
+import { getBoxTime } from "../../../lib/time.js";
+import { type ChatSchedule, loadChatSchedules, log, SCHEDULES_FILE } from "./store.js";
+import { ClockWatch } from "./clock-watch.js";
 import { CHECK_IN_MAX_MS, CheckInNotSavedError, CheckInTooLongError, MAX_TIMEOUT_MS, ScheduleForDeletingSessionError } from "./check-in.js";
 
 export { parseCancelScheduleTags, parseScheduleTags } from "./tags.js";
+export { loadChatSchedules, type ChatSchedule } from "./store.js";
 export { CHECK_IN_MAX_MS, CheckInNotSavedError, CheckInTooLongError, ScheduleForDeletingSessionError } from "./check-in.js";
-
-// Zod schema per entry, mirroring location-store.ts's pattern (Track D.6):
-// the persisted shape is validated on load, an unparseable `firesAt` never
-// reaches a `new Date(...).getTime()` call (which would silently produce
-// `NaN` and fire the timer immediately — the bug this schema closes), and a
-// corrupt entry is skipped with a named warning rather than crashing the
-// whole load or silently vanishing.
-const chatScheduleSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  alarm: z.boolean(),
-  announce: z.string().nullable(),
-  content: z.string(),
-  createdAt: z.string().datetime(),
-  firesAt: z.string().datetime(),
-  // Id of the chat session whose turn created this schedule, so the fire can
-  // land back in the originating conversation. Optional: entries persisted
-  // before this field existed lack it and stay valid (they fall back to the
-  // most-active session when they fire). Also loaded hub-side via
-  // `loadChatSchedules` — purely additive, so no hub change is needed.
-  sessionId: z.string().optional(),
-});
-
-export type ChatSchedule = z.infer<typeof chatScheduleSchema>;
 
 const liveManagers = new Set<ChatScheduleManager>();
 export function pauseBoxChatSchedules(boxRoot: string): void { for (const manager of liveManagers) if (manager.boxRoot === boxRoot) manager.pauseForMaintenance(); }
@@ -54,77 +33,14 @@ export interface DetachedSchedulesReceipt {
   schedules: ChatSchedule[];
 }
 
-/** Best-effort label for a schedule entry that failed validation, for the skip warning. */
-function describeEntry(entry: unknown, index: number): string {
-  if (typeof entry === "object" && entry !== null && "label" in entry && typeof entry.label === "string") {
-    return entry.label;
-  }
-  return `entry #${index}`;
-}
-
 interface ScheduleCallbackParams {
   schedule: ChatSchedule;
 }
 
 type ScheduleCallback = (params: ScheduleCallbackParams) => void | Promise<void>;
 
-const SCHEDULES_FILE = ".beebox/chat-schedules.json";
-
-function log(...args: unknown[]): void {
-  console.log("[ChatSchedules]", ...args);
-}
-
-/**
- * Load and validate the persisted chat schedules for a box, WITHOUT
- * constructing a manager or arming any timers. This is the single source of
- * truth for "what schedules does this box have on disk" — the
- * `ChatScheduleManager` re-arms exactly these entries on serve boot, and the
- * hub supervisor (`src/hub/supervisor/pending-schedules.ts`) checks exactly these entries
- * to decide whether a lazy box must stay running. Sharing the loader means the
- * hub's notion of "pending" can never drift from what serve would re-arm.
- *
- * Semantics mirror serve's tolerance for a bad file: a missing/unreadable/
- * malformed file yields no schedules (serve would boot with none), and an
- * individual invalid entry is skipped with a named warning rather than
- * crashing the load. Returns ALL surviving entries, including overdue-unfired
- * ones — an overdue schedule still needs the box up to fire.
- */
-export function loadChatSchedules({ boxRoot, schedulesFile }: { boxRoot: string; schedulesFile?: string | undefined }): ChatSchedule[] {
-  const filePath = path.join(boxRoot, schedulesFile || SCHEDULES_FILE);
-  if (!fs.existsSync(filePath)) return [];
-
-  let raw: string;
-  try {
-    raw = fs.readFileSync(filePath, "utf-8");
-  } catch (e) {
-    log(`Failed to read schedules file, starting with no schedules: ${e}`);
-    return [];
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (e) {
-    log(`Malformed chat-schedules.json (not JSON), starting with no schedules: ${e}`);
-    return [];
-  }
-  if (!Array.isArray(parsed)) {
-    log("Malformed chat-schedules.json (expected an array), starting with no schedules");
-    return [];
-  }
-
-  const schedules: ChatSchedule[] = [];
-  for (const [index, entry] of parsed.entries()) {
-    const result = chatScheduleSchema.safeParse(entry);
-    if (!result.success) {
-      const issues = result.error.issues.map((issue) => issue.message).join("; ");
-      log(`Skipping invalid schedule (${describeEntry(entry, index)}): ${issues}`);
-      continue;
-    }
-    schedules.push(result.data);
-  }
-  return schedules;
-}
+/** How often a walk fixture's clock offset file is polled while timers are armed. */
+const CLOCK_WATCH_INTERVAL_MS = 5000;
 
 export class ChatScheduleManager {
   readonly boxRoot: string;
@@ -137,9 +53,11 @@ export class ChatScheduleManager {
   private readonly blockedSessionIds = new Set<string>();
   private readonly generations = new Map<string, number>();
   private readonly inFlight = new Map<string, Promise<void>>();
+  private readonly clockWatch: ClockWatch;
 
-  constructor(boxRoot: string, { onFire, schedulesFile }: { onFire: ScheduleCallback; schedulesFile?: string | undefined }) {
+  constructor(boxRoot: string, { onFire, schedulesFile, clockWatchIntervalMs }: { onFire: ScheduleCallback; schedulesFile?: string | undefined; clockWatchIntervalMs?: number | undefined }) {
     this.boxRoot = boxRoot;
+    this.clockWatch = new ClockWatch(boxRoot, { intervalMs: clockWatchIntervalMs ?? CLOCK_WATCH_INTERVAL_MS, hasTimers: () => this.timers.size > 0, onChange: () => { this.rearmForClockChange(); } });
     this.schedulesFile = schedulesFile || SCHEDULES_FILE;
     this.onFire = onFire;
     this.loadFromDisk();
@@ -162,7 +80,7 @@ export class ChatScheduleManager {
     if (opts.durationMs > CHECK_IN_MAX_MS) throw new CheckInTooLongError(opts.durationMs);
     liveManagers.add(this);
     const id = `sch_${Date.now()}_${this.idCounter++}`;
-    const now = new Date();
+    const now = getBoxTime(this.boxRoot);
     const firesAt = new Date(now.getTime() + opts.durationMs);
 
     const schedule: ChatSchedule = {
@@ -242,7 +160,7 @@ export class ChatScheduleManager {
   }
 
   getActive(): ChatSchedule[] {
-    const now = Date.now();
+    const now = getBoxTime(this.boxRoot).getTime();
     return [...this.schedules.values()].filter((s) => new Date(s.firesAt).getTime() > now);
   }
 
@@ -269,7 +187,7 @@ export class ChatScheduleManager {
     const active = this.getActive();
     if (active.length === 0) return null;
 
-    const now = Date.now();
+    const now = getBoxTime(this.boxRoot).getTime();
     const lines = active.map((s) => {
       const remainMs = new Date(s.firesAt).getTime() - now;
       const remainMin = Math.max(1, Math.round(remainMs / 60000));
@@ -285,11 +203,12 @@ export class ChatScheduleManager {
     for (const id of this.timers.keys()) {
       this.clearTimer(id);
     }
+    this.clockWatch.sync();
   }
 
   private armTimer(schedule: ChatSchedule): void {
     if (this.maintenancePaused || this.timers.has(schedule.id) || this.inFlight.has(schedule.id)) return;
-    const delay = new Date(schedule.firesAt).getTime() - Date.now();
+    const delay = new Date(schedule.firesAt).getTime() - getBoxTime(this.boxRoot).getTime();
     if (delay <= 0) {
       // Already past — fire immediately
       this.startFire(schedule);
@@ -299,13 +218,24 @@ export class ChatScheduleManager {
     // An entry saved before CHECK_IN_MAX_MS can exceed Node's timer limit:
     // wait out the limit, then arm again.
     const timer = delay > MAX_TIMEOUT_MS
-      ? setTimeout(() => { this.timers.delete(schedule.id); this.armTimer(schedule); }, MAX_TIMEOUT_MS)
+      ? setTimeout(() => { this.timers.delete(schedule.id); this.armTimer(schedule); this.clockWatch.sync(); }, MAX_TIMEOUT_MS)
       : setTimeout(() => { this.startFire(schedule); }, delay);
 
     // Don't keep process alive just for schedules
     timer.unref();
 
     this.timers.set(schedule.id, timer);
+    this.clockWatch.sync();
+  }
+
+  /** The offset file changed: re-arm every timer against the new box time. */
+  private rearmForClockChange(): void {
+    if (this.maintenancePaused) return;
+    log("Box clock offset changed; re-arming timers");
+    for (const timer of this.timers.values()) clearTimeout(timer);
+    this.timers.clear();
+    for (const schedule of this.schedules.values()) this.armTimer(schedule);
+    this.clockWatch.sync();
   }
 
   private startFire(schedule: ChatSchedule): void {
@@ -328,6 +258,7 @@ export class ChatScheduleManager {
     try { await work.run(async () => {
     log(`Firing schedule "${schedule.label}"`);
     this.timers.delete(schedule.id);
+    this.clockWatch.sync();
     const generation = (this.generations.get(schedule.id) ?? 0) + 1;
     this.generations.set(schedule.id, generation);
     try {
@@ -358,22 +289,30 @@ export class ChatScheduleManager {
     if (timer) {
       clearTimeout(timer);
       this.timers.delete(id);
+      this.clockWatch.sync();
     }
+  }
+
+  /** Whether the clock offset file is being polled (only while timers are armed on a walk fixture). */
+  isWatchingClock(): boolean {
+    return this.clockWatch.isWatching();
   }
 
   private rearmAll(): void {
     if (this.maintenancePaused) return;
-    const now = Date.now();
+    const now = getBoxTime(this.boxRoot).getTime();
     for (const [id, schedule] of this.schedules) {
       if (new Date(schedule.firesAt).getTime() > now) { this.armTimer(schedule); continue; }
       // Preserve startup settling time, but make these timers cancellable too.
       const timer = setTimeout(() => {
         this.timers.delete(id);
+        this.clockWatch.sync();
         if (this.schedules.has(id)) this.startFire(schedule);
       }, 2000);
       timer.unref();
       this.timers.set(id, timer);
     }
+    this.clockWatch.sync();
   }
 
   private loadFromDisk(): void {

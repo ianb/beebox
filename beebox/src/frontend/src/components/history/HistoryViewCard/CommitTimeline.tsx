@@ -14,6 +14,7 @@ import {
 import { type HistoryCommit } from "../../../api";
 import { bbxSource } from "../../../lib/source-tag";
 import { Badge, type BadgeTone } from "../../ui/Badge";
+import { boxNow } from "../../../lib/box-clock";
 
 interface CommitTimelineProps {
   commits: HistoryCommit[];
@@ -50,8 +51,7 @@ function PhaseBadge({ phase }: { phase: string }) {
  */
 function relativeTime(dateStr: string): string {
   const date = new Date(dateStr);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
+  const diff = boxNow() - date.getTime();
 
   const minutes = Math.floor(diff / 60000);
   if (minutes < 1) return "just now";

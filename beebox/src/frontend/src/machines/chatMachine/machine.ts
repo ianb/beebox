@@ -10,6 +10,7 @@
 
 import { setup, assign, enqueueActions } from "xstate";
 import { invariant } from "@shared/invariant";
+import { boxNow } from "../../lib/box-clock";
 import { buildOptimisticContent, holdInjectedMessage, mergeAcceptedIntoPending } from "./chat-shared";
 import { initialChatContext } from "./chat-machine-context";
 import {
@@ -198,7 +199,7 @@ export const chatMachine = setup({
               const entry = {
                 uuid: event.messageId,
                 type: "user" as const,
-                timestamp: new Date().toISOString(),
+                timestamp: new Date(boxNow()).toISOString(),
                 content: buildOptimisticContent(event.message, event.images),
                 reconcileKnownUuids: context.messages.map((message) => message.uuid),
               };

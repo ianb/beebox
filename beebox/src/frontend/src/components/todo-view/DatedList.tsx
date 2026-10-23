@@ -21,14 +21,15 @@ import { InlineAction } from "../ui/InlineAction";
 import { href } from "../../lib/routing";
 import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hook";
 import type { DatedTodo } from "../todo-view-card-logic";
-import { dueWord, startPrefix } from "../todo/item-logic";
+import { dueWord, localIsoDate, startPrefix } from "../todo/item-logic";
+import { boxNow } from "../../lib/box-clock";
 
 function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | undefined }) {
   const cardHref = boxSlug === undefined ? undefined : href(`/${boxSlug}/browse/${dated.cardPath}`);
   // In a workspace pane the card opens in the other pane (`docs/implemented-plans/todos-ui.md`, Track 5).
   const openBeside = useOpenBeside();
   const name = <Text material size="xs" tone="muted">{dated.cardTitle}</Text>;
-  const word = dated.kind === "due" ? dueWord(dated.item.plateState) : startPrefix({ plateState: dated.item.plateState, startIso: dated.date });
+  const word = dated.kind === "due" ? dueWord(dated.item.plateState) : startPrefix({ plateState: dated.item.plateState, startIso: dated.date, todayIso: localIsoDate(new Date(boxNow())) });
   const title = word === "overdue" ? "Overdue" : word === "due" ? "Due" : word === "since" ? "Started on this day" : "Starts on this day";
   // Overdue is the warning; a deadline not yet reached reads like the card
   // rows' plain "due" chip, and a start like their start chip.

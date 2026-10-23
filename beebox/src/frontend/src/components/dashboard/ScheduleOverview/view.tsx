@@ -16,6 +16,7 @@ import { RunHistory } from "./RunHistory";
 import { RunStrip } from "./RunStrip";
 import { Badge } from "../../ui/Badge";
 import { TickList, quietTickCount } from "../ScheduleTicks";
+import { boxNow } from "../../../lib/box-clock";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -27,8 +28,9 @@ interface ScheduleOverviewProps {
   error?: { message: string } | null;
 }
 
-function timeAgo(dateStr: string): string {
-  const elapsed = Date.now() - new Date(dateStr).getTime();
+/** `box` reads a stamp the box wrote on its own clock; a running script's start is elapsed time, so it stays real. */
+function timeAgo(dateStr: string, clock: "box" | "real"): string {
+  const elapsed = (clock === "box" ? boxNow() : Date.now()) - new Date(dateStr).getTime();
   const seconds = Math.floor(elapsed / 1000);
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
@@ -152,7 +154,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
               title={showRuns ? "Hide recent runs" : "Show recent runs"}
               className="text-xs whitespace-nowrap"
             >
-              {timeAgo(s.lastRun)} {showRuns ? "\u25BE" : "\u25B8"}
+              {timeAgo(s.lastRun, "box")} {showRuns ? "\u25BE" : "\u25B8"}
             </InlineAction>
           ) : "never"}
           <RunStrip runs={s.runStrip} />
@@ -213,7 +215,7 @@ function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
 }
 
 function RunningIndicator({ running }: { running: { startedAt: string; triggeredBy: string } }) {
-  const elapsed = timeAgo(running.startedAt).replace(" ago", "");
+  const elapsed = timeAgo(running.startedAt, "real").replace(" ago", "");
   return (
     <span className="text-warning text-xs font-medium" title={`Triggered by ${running.triggeredBy}`}>
       <span className="inline-block w-2 h-2 rounded-full bg-warning animate-pulse mr-1 align-middle" />

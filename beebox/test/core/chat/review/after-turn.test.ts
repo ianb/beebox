@@ -67,7 +67,9 @@ async function seed(box: TmpBox, { sessionId, entries }: { sessionId: string; en
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
   // The transcript is newer than the review's quiescence window would allow.
-  await utimes(logPath, NOW, NOW);
+  // File times are real, and the quiescence check reads the real clock.
+  const justNow = new Date();
+  await utimes(logPath, justNow, justNow);
   return huskPath;
 }
 
@@ -276,7 +278,7 @@ void test("The nightly run calls the same title pass, so a chat it titles append
   const box = await freshBox();
   const talk = "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4);
   await seed(box, { sessionId: A, entries: [user("n1", talk), agent("n2", REPLY), user("n3", talk), agent("n4", REPLY)] });
-  const quiet = new Date(NOW.getTime() - 5 * 60 * 60 * 1000);
+  const quiet = new Date(Date.now() - 5 * 60 * 60 * 1000);
   await utimes(getSessionLogPath(box.root, A), quiet, quiet);
   // A husk with no transcript (so the run does not review it), edited by someone else, stays out of the commit.
   const otherHusk = `_content/chat/web/2026-07-28_${B}.chat.card`;
@@ -385,14 +387,14 @@ void test("A session deferred mid-run keeps its husk out of the run's commit.", 
   const entries = [user("n1", talk), agent("n2", REPLY), user("n3", talk), agent("n4", REPLY)];
   const huskA = await seed(box, { sessionId: A, entries });
   const huskB = await seed(box, { sessionId: B, entries });
-  const quiet = new Date(NOW.getTime() - 5 * 60 * 60 * 1000);
+  const quiet = new Date(Date.now() - 5 * 60 * 60 * 1000);
   for (const id of [A, B]) await utimes(getSessionLogPath(box.root, id), quiet, quiet);
   const reviewer = {
     async review() { throw new Error("unused"); },
     async title(args: TitleArgs) {
       // Whichever session is titled first, the other becomes active again.
       const other = args.sessionId === A ? B : A;
-      await utimes(getSessionLogPath(box.root, other), NOW, NOW);
+      await utimes(getSessionLogPath(box.root, other), new Date(), new Date());
       return { title: "Saturday birthday dinner for eight" };
     },
   };

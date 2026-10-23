@@ -8,12 +8,13 @@
 
 import { applySelections, type SelectionItem } from "../../lib/selection/serialize";
 import type { FinalWord } from "../../machines/transcription-events";
+import { boxNow } from "../../lib/box-clock";
 
 /**
- * Format the current local time as HH:MM for the typed/speech tag.
+ * Format the box's current local time as HH:MM for the typed/speech tag.
  */
 export function localTime(): string {
-  const now = new Date();
+  const now = new Date(boxNow());
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 

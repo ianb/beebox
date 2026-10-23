@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from "react";
 
 import type { ChatSchedule } from "@core/chat/schedules/core.js";
 import type { SidecarTab } from "./sidecar-tabs";
+import { boxNow } from "../../lib/box-clock";
 
 /**
  * Countdown pill showing time remaining for an active schedule.
@@ -20,7 +21,7 @@ export function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSc
 
   useEffect(() => {
     const update = () => {
-      const ms = new Date(schedule.firesAt).getTime() - Date.now();
+      const ms = new Date(schedule.firesAt).getTime() - boxNow();
       if (ms <= 0) {
         setRemaining("now");
         if (!firedRef.current) {

@@ -1,8 +1,9 @@
 // # The walker's phone
 //
-// A wait fires each one-shot `notify:` reminder due by its end, at the reminder's
-// own time, through fake channels; the phone shows each notification that reached
-// the person once, as text. See docs/implemented-plans/journey-simulated-notifications.md.
+// A wait lives through an interval of simulated time: every scheduled occurrence
+// runs in time order, through fake channels, and then the box's clock moves to the
+// end. The phone shows each notification that reached the person once, as text.
+// See docs/implemented-plans/walk-simulated-time.md (Track 7).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -12,31 +13,72 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { LoggedNotification } from "../../src/core/notification/log.ts";
 import { makeTmpBox } from "../helpers/test-helpers.ts";
-import { firedFor, formatPhoneEntry, parseWait, pendingReminders, type ReminderCard } from "./journeys/phone-core.ts";
+import { firedFor, formatPhoneEntry, occurrenceKey, parseWait, planWait, type ScheduleCard } from "./journeys/phone-core.ts";
 
-const card = (name: string, fields: Partial<ReminderCard>): ReminderCard =>
-  ({ name, notify: true, enabled: true, at: undefined, recurring: false, ...fields });
+// Cron occurrences are in the process's zone, as the scheduler's are; the test pins it.
+process.env.TZ = "UTC";
 
-// ## Which reminders a wait fires
+const card = (name: string, fields: Partial<ScheduleCard>): ScheduleCard =>
+  ({ name, kind: "notify", enabled: true, at: undefined, cron: undefined, rrule: undefined, until: undefined, ...fields });
+const keys = (cards: ScheduleCard[], opts: { from: string; to: string }) => {
+  const plan = planWait(cards, { from: new Date(opts.from), to: new Date(opts.to) });
+  return { queue: plan.queue.map(occurrenceKey), refused: plan.refused };
+};
+
+// ## What a wait runs, and in what order
 //
-// Every one-shot due by the end of the wait, oldest first, including one already
-// overdue (it still exists, so it has not fired). A repeating reminder is named,
-// not fired; a disabled card, a `runs:` card, and one due later are left alone.
-void test("Which reminders a wait fires", async (t) => {
-  const to = new Date("2026-10-30T12:00:00Z");
-  t.check(pendingReminders([
-    card("later", { at: "2026-10-30T12:00:01Z" }),
-    card("edge", { at: "2026-10-30T12:00:00Z" }),
+// Every occurrence in the wait, oldest first: a one-shot due by its end
+// (including one already overdue: it still exists, so it has not run; it runs
+// at the wait's start, since time only moves forward), each
+// daily occurrence of a repeating card, a `runs:` card like a `notify:` one.
+// A disabled card is skipped, and one past its `until` stops there.
+void test("What a wait runs, and in what order", async (t) => {
+  t.check(keys([
+    card("later", { at: "2026-10-26T12:00:01Z" }),
+    card("edge", { at: "2026-10-26T12:00:00Z" }),
     card("overdue", { at: "2026-10-20T09:00:00Z" }),
-    card("weekly", { recurring: true }),
+    card("daily", { cron: "0 9 * * *" }),
+    card("review", { kind: "runs", cron: "30 6 * * *", until: "2026-10-25T00:00:00Z" }),
+    card("weekly", { rrule: "FREQ=WEEKLY;BYDAY=MO;DTSTART=20261005T080000Z" }),
     card("off", { at: "2026-10-25T09:00:00Z", enabled: false }),
-    card("digest", { at: "2026-10-25T09:00:00Z", notify: false }),
-  ], to), {
-    pending: [
-      { name: "overdue", at: new Date("2026-10-20T09:00:00Z") },
-      { name: "edge", at: new Date("2026-10-30T12:00:00Z") },
+  ], { from: "2026-10-23T12:00:00Z", to: "2026-10-26T12:00:00Z" }), {
+    queue: [
+      "overdue@2026-10-23T12:00:00.000Z",
+      "review@2026-10-24T06:30:00.000Z",
+      "daily@2026-10-24T09:00:00.000Z",
+      "daily@2026-10-25T09:00:00.000Z",
+      "weekly@2026-10-26T08:00:00.000Z",
+      "daily@2026-10-26T09:00:00.000Z",
+      "edge@2026-10-26T12:00:00.000Z",
     ],
-    notSimulated: ["weekly"],
+    refused: [],
+  });
+});
+
+// ## A wait refuses a card that comes due too often
+//
+// A `runs:` card may run an agent each time, so a wait runs one at most eight
+// times (a week of a daily card); a `notify:` card at most fifty. Over that,
+// the wait refuses before running anything and names the card.
+void test("A wait refuses a card that comes due too often", async (t) => {
+  t.check(keys([
+    card("hourly-run", { kind: "runs", cron: "0 * * * *" }),
+    card("daily-run", { kind: "runs", cron: "0 6 * * *" }),
+    card("quarter-hour", { cron: "*/15 * * * *" }),
+  ], { from: "2026-10-23T12:00:00Z", to: "2026-10-30T12:00:00Z" }), {
+    queue: [
+      "daily-run@2026-10-24T06:00:00.000Z",
+      "daily-run@2026-10-25T06:00:00.000Z",
+      "daily-run@2026-10-26T06:00:00.000Z",
+      "daily-run@2026-10-27T06:00:00.000Z",
+      "daily-run@2026-10-28T06:00:00.000Z",
+      "daily-run@2026-10-29T06:00:00.000Z",
+      "daily-run@2026-10-30T06:00:00.000Z",
+    ],
+    refused: [
+      "hourly-run (more than 8 times; wait less at once)",
+      "quarter-hour (more than 50 times; wait less at once)",
+    ],
   });
 });
 
@@ -100,8 +142,9 @@ void test("How a notification reads on the phone", async (t) => {
 
 // ## A wait fires a reminder and the phone shows it once
 //
-// A real box and a real `bbx tick`: a reminder due in two days, a three-day wait.
-// The tick runs with fake channels forced, so it needs no box setting.
+// A real box and a real `bbx tick`: a reminder due in two days and a two-day wait,
+// so it falls due at the wait's very end and must still arrive by then.
+// The box is a walk fixture (`fakeNotifications`), so the wait can move its clock.
 void test("A wait fires a reminder and the phone shows it once", async (t) => {
   const box = await makeTmpBox({ git: true });
   const runDir = mkdtempSync(join(tmpdir(), "bbx-phone-run-"));
@@ -111,6 +154,7 @@ void test("A wait fires a reminder and the phone shows it once", async (t) => {
   });
   const at = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().replace(/\.\d+Z$/u, "Z");
   mkdirSync(join(box.root, "_config", "schedules"), { recursive: true });
+  writeFileSync(join(box.root, "_config", "box.json"), JSON.stringify({ fakeNotifications: true }));
   writeFileSync(join(box.root, "_config", "schedules", "remind-renew-abc123.scheduled-script.card"),
     `---\nat: ${at}\nonce: true\nrequested-by: boxholder\nnotify:\n  title: Renew the home insurance\n  body: Price goes up on Nov 7.\n  target: chat:new\n---\n`);
   writeFileSync(join(runDir, "before.json"), JSON.stringify({ box: box.root, url: "http://localhost:3210/wt/g-paperwork-3/" }));
@@ -124,7 +168,7 @@ void test("A wait fires a reminder and the phone shows it once", async (t) => {
     .replace(/notification=[\w-]+/gu, "notification=<id>")
     .replace(/\w+day, \w+ \d+ at \d+:\d+ [AP]M/gu, "<clock>")
     .trim();
-  const waited = phone("--wait", "3d");
+  const waited = phone("--wait", "2d");
   const again = phone();
   t.check({
     waited: normalize(waited),
@@ -133,9 +177,9 @@ void test("A wait fires a reminder and the phone shows it once", async (t) => {
     state: normalize(readFileSync(join(runDir, "phone.json"), "utf8")).replace(/"[\w-]{6,}"/gu, '"<id>"').replace(/"now": "[^"]+"/u, '"now": "<walk clock>"'),
   }, {
     waited: `Your phone, <clock>: 1 new\n\n${expectedWhen(at)}\nRenew the home insurance\nPrice goes up on Nov 7.\nTap opens: /chat?new=1&notification=<id>`,
-    again: "Nothing new on your phone (walk clock: <clock>).",
+    again: "Nothing new on your phone (it is <clock>).",
     cardLeft: false,
-    state: '{\n  "now": "<walk clock>",\n  "shown": [\n    "<id>"\n  ]\n}',
+    state: '{\n  "shown": [\n    "<id>"\n  ]\n}',
   });
 });
 
@@ -145,4 +189,3 @@ function expectedWhen(at: string): string {
   });
   return `${when} — sound`;
 }
-

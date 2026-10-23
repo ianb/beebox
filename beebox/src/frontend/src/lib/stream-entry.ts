@@ -17,6 +17,7 @@
  */
 
 import type { SessionEntry, SessionContentBlock } from "../api";
+import { boxNow } from "./box-clock";
 
 export function buildStreamEntry(opts: { uuid: string; streamText: string; streamTools: SessionContentBlock[] }): SessionEntry {
   const { uuid, streamText, streamTools } = opts;
@@ -35,7 +36,7 @@ export function buildStreamEntry(opts: { uuid: string; streamText: string; strea
   return {
     uuid,
     type: "assistant",
-    timestamp: new Date().toISOString(),
+    timestamp: new Date(boxNow()).toISOString(),
     content,
   };
 }

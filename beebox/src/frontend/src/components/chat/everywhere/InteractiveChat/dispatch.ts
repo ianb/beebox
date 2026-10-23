@@ -26,6 +26,7 @@ import { localTime, formatTimePassed, joinTranscript, type VoiceSegmentMeta } fr
 import type { ChatEvent } from "../../../../machines/chat-types";
 import type { CardSendFields } from "../../InteractiveChat-card-hooks";
 import type { ViewTarget } from "../../../../lib/view-url";
+import { boxNow } from "../../../../lib/box-clock";
 import { clearOpenedNotification, getOpenedNotification } from "../../../notifications/opened-notification-store";
 
 export function useEmissionDispatch(opts: {
@@ -62,7 +63,7 @@ export function useEmissionDispatch(opts: {
     let timePassed: string | null = null;
     const last = messages.at(-1);
     if (last !== undefined) {
-      timePassed = formatTimePassed(Date.now() - new Date(last.timestamp).getTime());
+      timePassed = formatTimePassed(boxNow() - new Date(last.timestamp).getTime());
     }
     const notificationOpened = getOpenedNotification() ?? undefined;
     return {

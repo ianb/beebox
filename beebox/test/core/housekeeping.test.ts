@@ -90,3 +90,20 @@ void test("line 33", async (t) => {
 Removed: _tmp/chat/stale-batch-01/
 Removed: _tmp/old-flat.pdf`);
 });
+
+// A walk fixture box a week ahead ages files by their real mtimes: nothing
+// young is removed because the box clock is later.
+void test("A walk fixture box with a clock offset ages _tmp files on the real clock", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(async () => {
+    await box.cleanup();
+  });
+  await box.write("_config/box.json", JSON.stringify({ timezone: "UTC", fakeNotifications: true }));
+  await box.write(".beebox/clock-offset.json", JSON.stringify({ offsetMs: 14 * DAY, setAt: "2026-10-23T00:00:00Z" }));
+  const tmp = path.join(box.root, "_tmp");
+  await writeAged(path.join(tmp, "old-flat.pdf"), 9);
+  await writeAged(path.join(tmp, "fresh-flat.pdf"), 1);
+
+  t.check(await cleanupOldTmpUploads(box.root), 1);
+  t.check([await exists(path.join(tmp, "old-flat.pdf")), await exists(path.join(tmp, "fresh-flat.pdf"))], [false, true]);
+});

@@ -1,7 +1,7 @@
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { trpc } from "../../../../lib/trpc/client";
 import { lastChangeLine } from "../../../../lib/last-change-line";
-import { useNow } from "../../../../lib/use-now";
+import { useBoxNow } from "../../../../lib/box-clock";
 import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
 import { legacyHistoryState } from "../../../history/card-state";
 import { PropertyLink, PropertyProblem } from "./property-section";
@@ -15,7 +15,7 @@ import { useRefetchOnFileChange } from "../../../../hooks/useRefetchOnFileChange
 export function CardLastChange({ path, onNavigate }: { path: string; onNavigate: (target: ViewTarget, hint?: NavigateHint) => void }) {
   const query = trpc.history.list.useQuery({ filter: { path }, count: 1 }, { staleTime: 10_000 });
   useRefetchOnFileChange(query.refetch);
-  const now = useNow(60_000);
+  const now = useBoxNow(60_000);
   const commit = query.data?.commits.at(0);
   const line = commit === undefined ? null : lastChangeLine(commit, now === 0 ? null : now);
   const history: ViewTarget = { path: SYSTEM_CARD_PATHS.history, viewer: null, params: {}, viewState: legacyHistoryState({ path }) };

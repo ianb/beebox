@@ -14,6 +14,7 @@ import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { loadLedgerEntries } from "../../../src/core/retro/scan/ledger.js";
 import { runRetroScan } from "../../../src/core/retro/scan/core.js";
+import { getBoxTime } from "../../../src/lib/time.js";
 import { loadRetroState } from "../../../src/core/retro/state.js";
 import type { RetroObserver } from "../../../src/core/retro/observer.js";
 import type { SessionObservation } from "../../../src/core/retro/observations.js";
@@ -210,4 +211,43 @@ _Pending integration._`);
     observerFailures: 0,
     reportPath: null,
   });
+});
+
+// ## A simulated clock does not change which sessions are quiet
+//
+// Transcript mtimes are real. A walk fixture box running a week ahead still
+// defers a session touched five minutes ago and observes one quiet for hours.
+void test("A walk fixture box a week ahead still defers a session touched five minutes ago.", async (t) => {
+  const savedTime = process.env["BBX_TIME"];
+  delete process.env["BBX_TIME"];
+  t.teardown(() => {
+    delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
+    if (savedTime !== undefined) process.env["BBX_TIME"] = savedTime;
+  });
+
+  async function outcome(offset: boolean): Promise<{ observed: number; settled: string[] }> {
+    const box = await makeTmpBox();
+    try {
+      process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
+      await box.write("_config/box.json", JSON.stringify({ timezone: "UTC", fakeNotifications: true }));
+      if (offset) await box.write(".beebox/clock-offset.json", JSON.stringify({ offsetMs: 604800000, setAt: "2026-10-23T00:00:00Z" }));
+      for (const [sessionId, age] of [["quiet", 5 * HOUR], ["live", 5 * 60 * 1000]] as const) {
+        const logPath = getSessionLogPath(box.root, sessionId);
+        await mkdir(dirname(logPath), { recursive: true });
+        await writeFile(logPath, JSON.stringify(typedEntry("Hello there", "2026-06-09T07:00:00Z")) + "\n");
+        const when = new Date(Date.now() - age);
+        await utimes(logPath, when, when);
+      }
+      const summary = await runRetroScan(box.root, { observer: fakeObserver({}), maxSessions: 20, now: getBoxTime(box.root) });
+      const state = await loadRetroState(box.root);
+      return { observed: summary.observed, settled: Object.keys(state.sessions) };
+    } finally {
+      await box.cleanup();
+    }
+  }
+
+  const plain = await outcome(false);
+  const shifted = await outcome(true);
+  t.check(plain, { observed: 1, settled: ["quiet"] });
+  t.check(shifted, plain);
 });
