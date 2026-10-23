@@ -4,7 +4,8 @@
 // browser push subscription, every channel skips as `no-audience`: no channel
 // was tried. Retrying cannot change that, so the run records one failure and
 // the reminder is not due again. (A send that a channel tried and failed does
-// retry: see test/core/schedule/run-action.reminder-retry.test.ts.)
+// retry: see test/core/schedule/run-action.reminder-retry.test.ts.) When the
+// app is open, the live banner shows the reminder, and the run is a success.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -39,8 +40,6 @@ void test("a loud reminder with no audience fails once and is not sent again", a
   const ran: string[] = [];
   for (const iso of times) {
     process.env.BBX_TIME = iso;
-    // The web app is open: the live banner shows it, but no push channel has anyone to send to.
-    await writePresence(box.root, { activeWeb: 1, now: new Date(iso) });
     ran.push((await runTick(box.root, { quiet: true })).scripts.map((x) => `${x.name} ${x.status}`).join(", "));
   }
   // Only the first tick sends, and the failed send is `error`. The later
@@ -58,5 +57,27 @@ void test("a loud reminder with no audience fails once and is not sent again", a
     },
   );
   // One notification intent logged, so one live banner:
+  t.check((await readRecent(box.root, { days: 36500 })).map((x) => x.intent.title), ["Call back"]);
+});
+
+void test("a loud reminder with no audience reaches a person with the app open", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(async () => {
+    delete process.env.BBX_TIME;
+    await box.cleanup();
+  });
+  await box.write("_config/schedules/remind-call.scheduled-script.card", REMINDER);
+  box.commitAll("add");
+  const ran: string[] = [];
+  for (const iso of ["2026-10-22T08:31:00Z", "2026-10-22T08:32:30Z"]) {
+    process.env.BBX_TIME = iso;
+    // The web app is open: the live banner shows it, though no push channel has anyone to send to.
+    await writePresence(box.root, { activeWeb: 1, now: new Date(iso) });
+    ran.push((await runTick(box.root, { quiet: true })).scripts.map((x) => `${x.name} ${x.status}`).join(", "));
+  }
+  // The send ran once; a delivered one-shot's card is removed, so the next tick has nothing to list.
+  t.check(ran, ["remind-call ran", ""]);
+  const state = await loadScriptState(box.root, "remind-call");
+  t.check({ result: state.lastResult, failures: state.consecutiveFailures, final: state.lastFailureFinal }, { result: "success", failures: 0, final: undefined });
   t.check((await readRecent(box.root, { days: 36500 })).map((x) => x.intent.title), ["Call back"]);
 });

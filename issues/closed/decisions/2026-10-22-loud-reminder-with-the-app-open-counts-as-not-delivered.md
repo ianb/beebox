@@ -3,11 +3,17 @@ title: "A loud reminder shown as an in-app banner still records as not delivered
 workstream: unattached
 area: beebox
 labels: [notifications, scheduler]
-needs: [decision]
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-risky-merge-review — adversarial review of the merges since 2026-10-08
 ---
+
+Decided yes, and implemented in `worktree-risky-merge-review`: a send reached
+the person when a channel sent it or an open app showed it (`shown` on the
+notify result: someone present and a loudness with a banner). A `loud`
+reminder on a box with no device records `success` while the app is open and
+one final `failure` otherwise.
 
 A `bbx remind` card is `requested-by: boxholder`, so it sends `loud`. On a box
 with no APNs device and no web-push subscription, both channels skip as

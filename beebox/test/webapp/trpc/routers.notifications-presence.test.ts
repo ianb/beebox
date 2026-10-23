@@ -192,6 +192,7 @@ void test("send and channels: the box's agent or its owner, on the server's serv
           { channel: "apns", status: "sent" },
           { channel: "web-push", status: "sent" },
         ],
+        shown: true,
       },
       apns: [
         {
@@ -251,7 +252,7 @@ void test("send and channels: the box's agent or its owner, on the server's serv
     intent: { title: "Only the phone", body: "", target: "dashboard", loudness: "loud", source: "bbx notify" },
     channel: "apns",
   });
-  t.check(one, { id: any(String), deliveries: [{ channel: "apns", status: "sent" }] });
+  t.check(one, { id: any(String), deliveries: [{ channel: "apns", status: "sent" }], shown: true });
 
   // The signed-in owner may send too. A member who is not the owner, a paired
   // device acting for nobody, and an open-access request are refused: reaching the
@@ -265,6 +266,7 @@ void test("send and channels: the box's agent or its owner, on the server's serv
       { channel: "apns", status: "sent" },
       { channel: "web-push", status: "sent" },
     ],
+    shown: true,
   });
 
   t.check(

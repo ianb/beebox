@@ -31,7 +31,7 @@ const reminder: ParsedScheduledScript = {
 async function sendThenDue(t: Test, deliveries: Delivery[]) {
   const box = await makeTmpBox({ git: true });
   t.teardown(() => box.cleanup());
-  const sent: NotifyResult = { id: "n1", deliveries };
+  const sent: NotifyResult = { id: "n1", deliveries, shown: false };
   const { runAndRecord } = await t.mockImport<typeof RunAction>(
     "../../../src/core/schedule/run-action.ts",
     { "../../../src/core/notify-boxholder.ts": { ...notify, notifyBoxholder: async () => sent } },

@@ -57,11 +57,16 @@ export interface NotifyRequest {
 export interface NotifyResult {
   id: string;
   deliveries: Delivery[];
+  /**
+   * The live event showed it in an open app: someone was present and the
+   * loudness has a banner (`quiet` or `loud`; a `dot` is a badge only).
+   */
+  shown: boolean;
 }
 
-/** Reached: a channel sent it, or the person is in the app, which shows it. */
+/** Reached: a channel sent it, or an open app showed it. */
 export function notificationReached(result: NotifyResult): boolean {
-  return result.deliveries.some((d) => d.status === "sent" || (d.status === "skipped" && d.detail === "present"));
+  return result.shown || result.deliveries.some((d) => d.status === "sent" || (d.status === "skipped" && d.detail === "present"));
 }
 
 /** A yes or no for each channel. */
@@ -238,7 +243,7 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
   logSafely(() => appendIntent(boxRoot, { intent, now }));
   emitLive(boxRoot, { intent, url });
 
-  const { audience, plan } = await planNotification(boxRoot, {
+  const { audience, plan, presence } = await planNotification(boxRoot, {
     intent,
     channel: request.channel,
     onScreen: request.onScreen,
@@ -254,5 +259,5 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
   for (const delivery of deliveries) {
     logSafely(() => appendDelivery(boxRoot, { notificationId: intent.id, delivery, now }));
   }
-  return { id: intent.id, deliveries };
+  return { id: intent.id, deliveries, shown: intent.loudness !== "dot" && presence.activeWeb > 0 };
 }
