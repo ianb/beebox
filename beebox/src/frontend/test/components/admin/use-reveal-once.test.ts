@@ -77,3 +77,23 @@ void test("the value shows after Show, and hides on Hide, on page hide, and on u
     resetOnUnmount: true,
   });
 });
+
+// A shown value hides itself after 30 seconds and clears the mutation result:
+void test("the value expires after 30 seconds", async (t) => {
+  setVisibility("visible");
+  setWebdriver(false);
+  resets = 0;
+  const armed: { ms: number; fire: () => void }[] = [];
+  const realSetTimeout = Object.getOwnPropertyDescriptor(window, "setTimeout");
+  Object.defineProperty(window, "setTimeout", { configurable: true, writable: true, value: (fire: () => void, ms?: number) => {
+    armed.push({ ms: ms ?? 0, fire });
+    return armed.length;
+  } });
+  t.teardown(() => { if (realSetTimeout) Object.defineProperty(window, "setTimeout", realSetTimeout); });
+  const view = await mount(h(Probe));
+  t.teardown(() => view.unmount());
+  await click(view, "show");
+  const before = shown(view);
+  await view.act(() => { armed.find((timer) => timer.ms === 30_000)?.fire(); });
+  t.check({ before, after: shown(view), resets }, { before: "s3cret", after: "(hidden)", resets: 1 });
+});

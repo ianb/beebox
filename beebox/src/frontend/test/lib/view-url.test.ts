@@ -183,6 +183,12 @@ void test("Splits an href into the cases the Markdown renderer cares about.", as
     path: "notes.md",
   });
 
+  // An underscore cannot appear in a URL scheme, so this colon-bearing name is a box path:
+  t.check(classifyMarkdownHref("my_notes:draft.md"), {
+    kind: "relative",
+    path: "my_notes:draft.md",
+  });
+
   t.check(classifyMarkdownHref("/_content/a.card?view=ledger"), {
     kind: "relative",
     path: "/_content/a.card?view=ledger",
