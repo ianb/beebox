@@ -55,7 +55,9 @@ async function main(): Promise<void> {
   if (!Number.isInteger(runs) || runs < 1) fail(`--runs must be a positive integer, not ${values.runs}`);
   const box = path.resolve(values.box ?? (await ensurePerfBox(false)) ?? fail("no worktree test box clone to copy; pass --box <path>"));
   // bin/bbx rebuilds a stale bundle, so the timed runs measure current source.
-  const refresh = spawnSync(bbxBin(), ["--version"], { cwd: box, stdio: ["ignore", "ignore", "pipe"] });
+  // BBX_CLI_PREBUILT would make it skip that check.
+  const { BBX_CLI_PREBUILT: _prebuilt, ...refreshEnv } = process.env;
+  const refresh = spawnSync(bbxBin(), ["--version"], { cwd: box, env: refreshEnv, stdio: ["ignore", "ignore", "pipe"] });
   if (refresh.status !== 0) fail(`bin/bbx --version exited ${refresh.status ?? refresh.signal}:\n${refresh.stderr.toString()}`);
   runOnce({ box, verb }); // warm the compile cache and the OS file cache
   const times: number[] = [];
