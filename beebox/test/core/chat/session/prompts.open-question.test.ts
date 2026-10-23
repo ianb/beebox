@@ -11,10 +11,11 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { CHAT_SYSTEM_PROMPT } from "../../../../src/core/chat/session/prompts.js";
+import { chatSystemPrompt } from "../../../../src/core/chat/session/prompts.js";
 
 void test("The chat prompt explains open-question and the answer order", async (t) => {
-  const section = CHAT_SYSTEM_PROMPT.slice(CHAT_SYSTEM_PROMPT.indexOf("## An open question in this chat"), CHAT_SYSTEM_PROMPT.indexOf("## Commits"));
+  const prompt = chatSystemPrompt();
+  const section = prompt.slice(prompt.indexOf("## An open question in this chat"), prompt.indexOf("## Commits"));
   const sentence = (re: RegExp) => re.exec(section)?.[0] ?? null;
   t.check({
     command: sentence(/`bbx answer <path> --via chat "<their words>"`/),

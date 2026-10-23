@@ -83,7 +83,7 @@ The `<schedule-fired>` message sent to the agent is a user-type message wrapped 
 | `src/core/chat/schedules/core.ts` | `ChatScheduleManager`, `parseScheduleTags()`, `parseCancelScheduleTags()`, schedule persistence |
 | `src/core/chat/schedules/check-in.ts` | `CHECK_IN_MAX_MS` and the errors `addSchedule` throws |
 | `src/webapp/trpc/routers/chat/check-in-procedures.ts` | `addCheckIn`, `cancelCheckIn` (used by `bbx remind --here`) |
-| `src/core/chat/session/prompts.ts` | `CHAT_SYSTEM_PROMPT` ("Coming back later" teaches `bbx remind`) |
+| `src/core/chat/session/prompts.ts` | `chatSystemPrompt()` ("Coming back later" teaches `bbx remind`) |
 | `src/webapp/routes/chat/register.ts` | Server-side: legacy tag parsing on turn-text (stamps the originating `sessionId`, self-notes a rejection), wires the schedule manager into `webapp/chat-runtime.ts` |
 | `src/webapp/routes/chat/schedule-fire.ts` | `fireChatSchedule` — checks the originating session, then injects the fired check-in or drops it |
 | `src/webapp/trpc/routers/chat/control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |

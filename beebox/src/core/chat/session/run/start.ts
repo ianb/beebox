@@ -18,7 +18,7 @@ import { buildScriptEnv } from "../../../script-env/core.js";
 import { composeSendSnapshot, type HealthGate } from "../../../session-context.js";
 import { renderActivityChildren } from "../../card-activity.js";
 import {
-  CHAT_SYSTEM_PROMPT,
+  chatSystemPrompt,
   NARRATION_OVERLAY,
   buildLandmarkSessionNote,
 } from "../prompts.js";
@@ -61,7 +61,7 @@ interface StartContext {
 /**
  * Resolve the system prompt for a new run. Uses the options override
  * if provided; otherwise falls back to the main-chat default
- * (CHAT_SYSTEM_PROMPT + tzContext + NARRATION_OVERLAY).
+ * (chatSystemPrompt() + tzContext + NARRATION_OVERLAY).
  *
  * NARRATION_OVERLAY is always included — its rules are gated in the
  * prose on what the agent reads in the per-turn <chat-app> snapshot,
@@ -72,7 +72,7 @@ async function resolveSystemPrompt(ctx: StartContext): Promise<string> {
     return ctx.options.systemPrompt(ctx.boxRoot);
   }
   const tzContext = await buildTimezoneContext(ctx.boxRoot);
-  return CHAT_SYSTEM_PROMPT + tzContext + NARRATION_OVERLAY;
+  return chatSystemPrompt() + tzContext + NARRATION_OVERLAY;
 }
 
 /**
