@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-23T02:03:24Z
-Total documents: 564
+Generated: 2026-10-23T02:47:41Z
+Total documents: 565
 
 ## Issues
 
@@ -107,6 +107,8 @@ These references point to files that don't exist.
 
 - **docs/implemented-plans/link-validation-fix.md:539** → `/store/foo/bar.md` (link)
   Context: `[x](/store/foo/bar.md)`. What does the leading slash mean?"*;
+- **docs/reports/knowledge-audit-rerun-2026-10-22.md:19** → `../../../issues/decisions/2026-10-22-cooking-guide-audits-need-a-guide.md` (link)
+  Context: (test1 has no cooking guide; [issue](../../../issues/decisions/2026-10-22-cooking-guide-audits-need-a-guide.md)),
 - **docs/reports/stack-decisions-2026-09-04.md:775** → `../../agent-doctest/docs/syntax.md` (link)
   Context: - Wildcards in expected values: `«*»` (anything), `«int»`, `«date»`, `«codeblock»` (a fenced block), `«blankline»`, plus
 - **docs/testing/knowledge-audits.md:179** → `MAP.md` (at-include)
@@ -195,6 +197,7 @@ Referenced by:
 - docs/implemented-plans/frontend-dom-harness.md:68 (mention) — - Monorepo rule on dependencies (`AGENTS.md`, *"Treat unsolicited tool output
 - docs/implemented-plans/ios-audio-session-routing.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/ios-per-box-device-lock.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/knowledge-audit-plugins.md:43 (mention) — - Root `AGENTS.md`, knowledge-audit guidance: "When fixing failures, prefer
 - docs/implemented-plans/link-validation-fix.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/local-password-auth.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/markdoc-tags-plan.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -2072,7 +2075,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 325 lines | current reference
+Title: "Security overview" | 329 lines | current reference
 
 Referenced by:
 - README.md:97 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -2116,7 +2119,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 651 lines | current reference
+Title: "Security report — structured version" | 652 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:285 (link) — page's title, site, and URL, but not its text. See [security report §3](../security-report.md#3-data-egress).
@@ -2147,6 +2150,7 @@ Referenced by:
 - ../issues/closed/features/2026-08-30-cross-box-leak-scan.md:15 (mention) — section below for the full list. `security-report.md` §7b and
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:122 (link) — [security-report.md](../../beebox/docs/security-report.md). The root
 - ../issues/exploration/2026-08-11-encryption-at-rest.md:57 (mention) — - **Credentials are already hashed at rest** (`docs/security-report.md` §2:
+- ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:101 (mention) — The security-doc claim is now corrected: `beebox/docs/security-overview.md` and `beebox/docs/security-report.md` name wh
 - ../issues/features/2026-10-14-show-privacy-implications-of-this-box-setup.md:18 (link) — [the security report](../../beebox/docs/security-report.md) lists every
 
 References:
@@ -3013,7 +3017,7 @@ References:
 
 #### docs/chat/sessions.md
 
-Title: "Chat sessions" | 90 lines | current reference
+Title: "Chat sessions" | 84 lines | current reference
 
 Referenced by:
 - docs/chat.md:9 (link) — | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK
@@ -3032,6 +3036,7 @@ Referenced by:
 
 References:
 - → docs/chat/composer.md (link)
+- → ../issues/closed/code-quality/2026-07-06-chat-session-shared-core.md (link)
 
 ### docs/connectors/
 
@@ -5515,6 +5520,19 @@ Referenced by:
 References:
 - → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
 - → code-style.md (mention)
+
+#### docs/implemented-plans/knowledge-audit-plugins.md
+
+Title: "Knowledge audits with plugins enabled" | 229 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/code-quality/2026-10-22-knowledge-audits-with-plugins-enabled.md:12 (mention) — **Closed:** implemented as a per-audit `plugins:` field (`beebox/src/dev/lib/box-audits/plugins.ts`), see `beebox/docs/i
+
+References:
+- → ../issues/closed/code-quality/2026-10-22-knowledge-audits-with-plugins-enabled.md (frontmatter)
+- → docs/testing/knowledge-audits.md (mention)
+- → AGENTS.md (mention)
+- → src/plugins/courseware/README.md (mention)
 
 #### docs/implemented-plans/landmark-arrival.design.md
 
@@ -9003,7 +9021,7 @@ References:
 Title: "Serve box publications from one shared hostname" | 172 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:642 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:643 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
@@ -9023,7 +9041,7 @@ Title: "Static site publishing with admin setup and human approval" | 296 lines 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:168 (mention) — - Mark `publish-sites-admin.md` and `publication-approval-card.md` with a note that this plan supersedes their source an
 - docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:635 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/security-report.md:636 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 - docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
@@ -9509,7 +9527,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:116 (mention) — `knowledge-audit-rerun-2026-07-03.md` (orphaned), `user-stories.md`
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:11 (mention) — - **Appeared:** 2026-02-23 2c69ec73e "Add knowledge testing framework and expand agent knowledge taxonomy" (same day 678
 - ../dev/devprocess-talk/slides/03c-audit-rerun.md:17 (mention) — Path: beebox/docs/reports/knowledge-audit-rerun-2026-07-03.md. The exposed problem: audits go stale when guidance moves,
-- ../issues/decisions/2026-10-22-cooking-guide-audits-need-a-guide.md:11 (mention) — `cooking-guide-awareness` and `cooking-follow-recipe-pattern` in `beebox/src/dev/knowledge-audits.yaml` require a read o
+- ../issues/closed/decisions/2026-10-22-cooking-guide-audits-need-a-guide.md:14 (mention) — `cooking-guide-awareness` and `cooking-follow-recipe-pattern` in `beebox/src/dev/knowledge-audits.yaml` require a read o
 
 References:
 - → AGENTS.md (mention)
@@ -9524,7 +9542,7 @@ Referenced by:
 - docs/testing/knowledge-audits.md:20 (mention) — [maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun
 
 References:
-- → ../issues/decisions/2026-10-22-cooking-guide-audits-need-a-guide.md (link)
+- → ../../../issues/decisions/2026-10-22-cooking-guide-audits-need-a-guide.md (link) **[BROKEN]**
 - → ../issues/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
 - → docs/testing/knowledge-audits.md (link)
 - → docs/box/landmark-curation.md (mention)
@@ -9858,7 +9876,7 @@ References:
 
 #### docs/testing/knowledge-audits.md
 
-Title: "Knowledge audits" | 266 lines | current reference
+Title: "Knowledge audits" | 267 lines | current reference
 
 Referenced by:
 - docs/box-work.md:82 (link) — Use the knowledge-audit skill and [knowledge audits](testing/knowledge-audits.md#running-it).
@@ -9867,6 +9885,7 @@ Referenced by:
 - docs/implemented-plans/bbx-agent-surface.md:576 (mention) — `docs/knowledge-audits.md` exists to catch. Two `knows_directly` entries in
 - docs/implemented-plans/doc-structure.md:103 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
 - docs/implemented-plans/docs-reorg.md:120 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
+- docs/implemented-plans/knowledge-audit-plugins.md:39 (mention) — - Docs: a paragraph in `docs/testing/knowledge-audits.md` (Writing one).
 - docs/implemented-plans/workstreams.md:1241 (mention) — box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
 - docs/plans/document-comments.md:841 (mention) — by prompting a real box agent (`beebox/docs/knowledge-audits.md`). Every
 - docs/plans/general-browser.md:592 (mention) — what it recalls (`beebox/docs/knowledge-audits.md`). This browser is dev-repo
@@ -10483,6 +10502,7 @@ References:
 Title: "Courseware" | 168 lines
 
 Referenced by:
+- docs/implemented-plans/knowledge-audit-plugins.md:62 (mention) — - Stub contents exist only in prose: `src/plugins/courseware/README.md`
 - test/plugins/courseware/journeys/D-chemistry/README.md:6 (link) — ([`src/plugins/courseware/README.md`](../../../../../src/plugins/courseware/README.md)).
 
 References:
@@ -10870,11 +10890,11 @@ Title: "A-lending, 2026-10-08" | 193 lines
 Referenced by:
 - docs/implemented-plans/landmark-arrival.design.md:12 (link) — ([A-lending](../../test/user-stories/journeys/A-lending/reports/2026-10-08.md),
 - ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md:66 (link) — Still present in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 64).
-- ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md:31 (link) — Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R3, R4). After th
 - ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:20 (link) — [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 54),
 - ../issues/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:16 (link) — ([report](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 12, 20, 70, 74).
 - ../issues/bugs/2026-10-08-open-card-silently-follows-into-trash.md:17 (link) — ([report](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 14, 81).
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
+- ../issues/closed/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md:34 (link) — Seen in the [A-lending walk](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R3, R4). After
 - ../issues/closed/bugs/2026-10-08-bare-ack-kind-tag-renders-as-text.md:15 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row 21, shot 06). The agent
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 7, 19),
 - ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:40 (link) — | [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R2) | 5 | About 0.5 s after t
@@ -10916,7 +10936,7 @@ References:
 - → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
 - → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
-- → ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md (link)
+- → ../issues/closed/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md (link)
 - → ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md (link)
 - → test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md (link)
 
@@ -10986,7 +11006,7 @@ References:
 - → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
 - → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
 - → ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
-- → ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md (link)
+- → ../issues/closed/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md (link)
 - → ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md (link)
 - → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
 

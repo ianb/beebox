@@ -1,18 +1,20 @@
 ---
 title: "Knowledge audits with plugins enabled"
-status: draft
+status: implemented
 workstream: knowledge-audit-refresh
 issues:
-  - ../../../issues/code-quality/2026-10-22-knowledge-audits-with-plugins-enabled.md
+  - ../../../issues/closed/code-quality/2026-10-22-knowledge-audits-with-plugins-enabled.md
 ---
 # Knowledge audits with plugins enabled
+
+**Implemented.** Deviations: `courseware-build-a-course` does not require a skill read (both runs answered from the skill listing and passed); `box-audits.ts` became `box-audits/` (`core.ts`, `plugins.ts`) for the layout check; the cooking-guide audits were retired in the same work.
 
 A knowledge audit can name plugins that the box under test must have active.
 The runner activates them before it regenerates the box's guidance and
 removes them after the audit. The courseware audits move to that mechanism,
 and the ones that test the wrong thing are rewritten or cut.
 
-**Issues addressed:** `issues/code-quality/2026-10-22-knowledge-audits-with-plugins-enabled.md`.
+**Issues addressed:** `issues/closed/code-quality/2026-10-22-knowledge-audits-with-plugins-enabled.md`.
 Searched the queue for "plugin" and "knowledge audit": the closed runner bugs
 (`2026-09-28-knowledge-audit-later-tests-lose-generated-guidance`,
 `2026-09-28-knowledge-audit-resets-preexisting-box-edits`) shape the reset
