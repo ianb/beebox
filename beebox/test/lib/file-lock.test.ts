@@ -588,3 +588,28 @@ void test("The blocking wrapper accepts the same profiled target as the lower-le
   t.check(result, "wrapper");
   t.check(await inspectLock(requestScopedLock(path)), null);
 });
+
+// ## withFileLock gives up after `waitMs`
+//
+// Callers with a store-specific "stayed locked" error pass `timeoutError`; the
+// others get the holder's `LockHeldError`. `fn` never runs on a timeout.
+void test("withFileLock gives up after waitMs with timeoutError, or the holder's LockHeldError", async (t) => {
+  t.teardown(async () => {
+    try {
+      await releaseLock(path);
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const path = join(box.root, "busy.lock");
+  await acquireLock(path, { who: "holder" });
+  let ran = false;
+  const run = (timeoutError?: () => Error) =>
+    withFileLock({ lockPath: path, metadata: { who: "waiter" }, waitMs: 150, ...(timeoutError ? { timeoutError } : {}) }, () => { ran = true; })
+      .then(() => null, (e: unknown) => e);
+  t.check(await run(() => new Error("store stayed locked")), { name: "Error", message: "store stayed locked" });
+  t.check(await run(), heldError(process.pid, { who: "holder" }));
+  t.check(ran, false);
+});

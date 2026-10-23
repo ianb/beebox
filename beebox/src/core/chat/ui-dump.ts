@@ -18,6 +18,7 @@
 
 import type { UiScanEntry, UiScanPayload } from "../../shared/ui-scan/core.js";
 import { assertNever } from "../../shared/invariant.js";
+import { plural } from "../../shared/plural.js";
 
 /** Column the `(no address)` marker is padded out to, so the addressless read as a column. */
 const NO_ADDRESS_COLUMN = 56;
@@ -51,11 +52,6 @@ function coverageLine(payload: UiScanPayload): string {
     default:
       assertNever(payload.coverage);
   }
-}
-
-/** `1 control` / `3 controls` — a count the agent reads as a sentence. */
-function plural(count: number, noun: string): string {
-  return count === 1 ? `${count} ${noun}` : `${count} ${noun}s`;
 }
 
 /** The counted omissions, one line each, printed only when non-zero. */

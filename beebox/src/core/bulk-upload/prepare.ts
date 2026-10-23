@@ -30,6 +30,7 @@ import {
   isBulkSession,
   type StagingSession,
 } from "../capture/staging-store/core.js";
+import { fileExists } from "../../lib/file-exists.js";
 
 /** The staging session named for bulk preparation is not a `kind: "bulk"` session. */
 class NotABulkSessionError extends Error {
@@ -359,13 +360,4 @@ function latestUploadedAt(session: StagingSession): string | null {
     (latest, f) => (latest === null || f.uploadedAt > latest ? f.uploadedAt : latest),
     null,
   );
-}
-
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    return false;
-  }
 }

@@ -12,7 +12,8 @@ import type {
   ClaudeUsageResult,
   CodexRateLimitResult,
 } from "./agent-quotas-parse.js";
-import { codexRateLimitResult, isRecord } from "./agent-quotas-parse.js";
+import { isRecord } from "../beebox/src/shared/is-record.js";
+import { codexRateLimitResult } from "./agent-quotas-parse.js";
 
 /** The installed Agent SDK predates the experimental usage control request. */
 class SdkUsageUnsupportedError extends Error {

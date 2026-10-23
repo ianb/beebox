@@ -12,6 +12,7 @@
 
 import * as fsSync from "node:fs";
 import { spawn } from "node:child_process";
+import { killGroup } from "../../beebox/src/hub/child-process-utils.js";
 
 /** Grace between SIGTERM and SIGKILL for a child that overran its timeout. */
 const KILL_GRACE_MS = 5000;
@@ -177,24 +178,4 @@ export async function execChild(command: { file: string; args: string[] }, optio
   });
   if (interrupted) process.exit(interrupted === "SIGTERM" ? 143 : 130);
   return { exitCode: timedOut ? null : exitCode, timedOut, output: tail.text(), logTruncated };
-}
-
-/**
- * Signal the child's whole process GROUP (`kill(-pgid)`), which is the child's
- * own pid because it was spawned detached. A group that is already gone, or a
- * child that never spawned, is not an error — the kill is best effort by
- * definition, and the exit code below is the report.
- */
-function killGroup(pid: number | undefined, signal: NodeJS.Signals): void {
-  if (pid === undefined) return;
-  try {
-    process.kill(-pid, signal);
-  } catch (_groupError) {
-    /* ignore: no such process group — fall back to the pid itself */
-    try {
-      process.kill(pid, signal);
-    } catch (_pidError) {
-      // Already gone.
-    }
-  }
 }

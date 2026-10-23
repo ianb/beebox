@@ -7,6 +7,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
+import { setTimeout as wait } from "node:timers/promises";
 
 const execFileAsync = promisify(execFile);
 const root = path.resolve(import.meta.dirname, "../.."), worktree = path.basename(root);
@@ -16,7 +17,6 @@ const boxRoot = process.env.BBX_SCROLL_TEST_BOX_ROOT
   ?? path.resolve(root, "../../box-worktrees", worktree, boxName, "content");
 const output = path.resolve(process.argv[2] ?? path.join(root, "scratch/web-scroll-deeper", `repro-${Date.now()}`));
 const sessionName = "delayed-images";
-const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 type Geometry = z.infer<typeof geometrySchema>;
 interface ArmResult {

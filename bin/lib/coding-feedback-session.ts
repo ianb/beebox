@@ -15,8 +15,9 @@ import * as path from "node:path";
 
 import { SessionNotFoundError, TranscriptNotFoundError } from "./coding-feedback-errors.ts";
 import type { Engine, SessionAttachment } from "./coding-feedback.ts";
+import { isRecord } from "../../beebox/src/shared/is-record.ts";
 import {
-  claudeProjectDirs, claudeProjectName, codexDayDirs, codexSessionMeta, inRepo, isRecord, str,
+  claudeProjectDirs, claudeProjectName, codexDayDirs, codexSessionMeta, inRepo, str,
 } from "./transcripts.ts";
 
 const SESSION_ENV: Record<Engine, string> = { claude: "CLAUDE_CODE_SESSION_ID", codex: "CODEX_THREAD_ID" };

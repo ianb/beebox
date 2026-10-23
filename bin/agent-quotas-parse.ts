@@ -6,6 +6,7 @@
  */
 
 import type { SDKControlGetUsageResponse } from "@anthropic-ai/claude-agent-sdk";
+import { isRecord } from "../beebox/src/shared/is-record.js";
 
 export interface QuotaWindow {
   label: string;
@@ -54,10 +55,6 @@ const CLAUDE_DURATIONS: Record<string, number> = {
   seven_day_opus: 7 * 24 * 60,
   seven_day_sonnet: 7 * 24 * 60,
 };
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Any non-null object, arrays included — the exact shape the Claude parser's

@@ -10,6 +10,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { extname, join, relative } from "node:path";
+import { isRecord } from "../beebox/src/shared/is-record.js";
 
 export const ENFORCEMENT_ENABLED = true;
 export const CHECKER_PATH = "bin/retired-product-name-check.ts";
@@ -150,10 +151,6 @@ export function findPathMatches(path: string): Finding[] {
     occurrenceClass: match.occurrenceClass,
     match: match.match,
   }));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isOccurrenceClass(value: unknown): value is OccurrenceClass {

@@ -1,4 +1,5 @@
 import type { Quota } from "../../shared/documents.js";
+import { isRecord } from "../../../../beebox/src/shared/is-record.js";
 
 export interface ClaudeUsageResult {
   rate_limits: unknown;
@@ -18,10 +19,6 @@ export interface CodexSnapshot {
 export interface CodexRateLimitResult {
   rateLimits?: CodexSnapshot | null;
   rateLimitsByLimitId?: Record<string, CodexSnapshot> | null;
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function finiteNumber(value: unknown): number | null {

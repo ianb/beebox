@@ -40,6 +40,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { errnoCode, errorMessage } from "../beebox/src/shared/error-guards.js";
 
 /** Thrown when the blocklist file is unparseable — surfaced as a fail-closed error. */
 export class BlocklistError extends Error {
@@ -57,16 +58,6 @@ class InvalidBlocklistRegexError extends BlocklistError {
     super(`invalid regex on line ${line}: ${detail.replace(/^Invalid regular expression: \/.*\/[a-z]*: /, "")}`);
     this.name = "InvalidBlocklistRegexError";
   }
-}
-
-/** The message of an unknown thrown value, without asserting it is an Error. */
-function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
-/** Narrow a caught value to a Node syscall error, which carries a string `code`. */
-function isErrnoException(e: unknown): e is NodeJS.ErrnoException {
-  return e instanceof Error && "code" in e;
 }
 
 /** All [start, end) match spans of an entry within one line of text. */
@@ -291,7 +282,7 @@ function loadBlocklist(): { entries: Entry[]; blocklistPath: string; repoRoot: s
       blocklistPath = candidate;
       break;
     } catch (e) {
-      if (isErrnoException(e) && e.code === "ENOENT") continue;
+      if (errnoCode(e) === "ENOENT") continue;
       console.error(`commit-blocklist-check: cannot read ${candidate}: ${errorMessage(e)}`);
       process.exit(1); // any other read failure => fail closed
     }

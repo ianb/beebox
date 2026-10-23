@@ -20,6 +20,7 @@ import * as os from "node:os";
 import { z } from "zod";
 import { requireBoxRoot } from "../lib/box-shape.js";
 import { invariant } from "../shared/invariant.js";
+import { errorMessage } from "../shared/error-guards.js";
 
 /**
  * URL prefixes the box server itself claims at the root level (outside any
@@ -189,7 +190,7 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
     raw = await fs.readFile(configPath, "utf-8");
   } catch (e) {
     throw new HubConfigError(
-      `Cannot read hub config at ${configPath}: ` + describeError(e)
+      `Cannot read hub config at ${configPath}: ` + errorMessage(e)
     );
   }
 
@@ -198,7 +199,7 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
     json = JSON.parse(raw);
   } catch (e) {
     throw new HubConfigError(
-      `Hub config at ${configPath} is not valid JSON: ` + describeError(e)
+      `Hub config at ${configPath} is not valid JSON: ` + errorMessage(e)
     );
   }
 
@@ -289,8 +290,4 @@ export async function parseHubConfig(json: unknown, configPath: string): Promise
     idleMs: result.data.idleMs ?? DEFAULT_IDLE_MS,
     keepRecent,
   };
-}
-
-function describeError(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }

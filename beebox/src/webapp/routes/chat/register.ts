@@ -34,7 +34,7 @@ import type { EventBus } from "../../../core/event-bus/core.js";
 import type { TtsService } from "../../../services/tts.js";
 import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../../core/chat/schedules/core.js";
 import { fireChatSchedule } from "./schedule-fire.js";
-import { escapeXmlAttr } from "./helpers.js";
+import { escapeXmlAttr } from "../../../shared/self-note.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { notifyTurnCallouts } from "../../../core/chat/callout-tags.js";
 import { registerChatUploadRoutes } from "./uploads.js";

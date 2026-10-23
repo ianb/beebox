@@ -8,15 +8,13 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../exports/cards.js";
 import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
 import { titleFromFilename } from "./file-summary.js";
 import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
 import { resolveRefPath } from "../shared/ref-path/core.js";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";
-import { isRecord } from "./card-io.js";
+import { readCardTitle } from "./frontmatter-field.js";
 
 export const NAV_CARD_PATH = "nav.card";
 
@@ -39,28 +37,6 @@ export type NavResolution =
    * health check; the entries still render.
    */
   | { status: "ok"; entries: NavEntryResolved[]; problems: string[] };
-
-/**
- * Read a card's frontmatter `title` for a ref entry's default label,
- * falling back to the filename-derived title. Any read/parse failure just
- * means "no title" — existence is reported separately.
- */
-async function readCardTitle(absPath: string): Promise<string | null> {
-  try {
-    const content = await fs.readFile(absPath, "utf-8");
-    const split = splitCardContent(content);
-    if (!split.hasFrontmatter) return null;
-    const fm: unknown = parseYaml(split.frontmatterText);
-    if (isRecord(fm)) {
-      const title = fm["title"];
-      if (typeof title === "string" && title.trim() !== "") return title.trim();
-    }
-    return null;
-  } catch (_e) {
-    // Unreadable target — the exists check reports it; no title to offer.
-    return null;
-  }
-}
 
 export async function resolveNav(boxRoot: string): Promise<NavResolution> {
   let content: string;

@@ -1,9 +1,5 @@
 import type { AgentResult, AgentResultBase } from "../types.js";
 
-export function codexRunErrorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function resultFromCodexTurn(options: {
   threadId: string;
   output: string;

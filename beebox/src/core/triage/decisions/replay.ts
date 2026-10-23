@@ -15,15 +15,12 @@ import { judgeItem, type TriageJudgment } from "../judge.js";
 import type { InstructionSnapshot } from "../snapshot.js";
 import type { JevService } from "../../../services/jev.js";
 import { readDecisionReceipt, containedPath, TriageReceiptError, type DecisionReceipt } from "./storage.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 interface ReplayResult {
   id: string; repetition: number; historical: TriageJudgment; model: string; modelDrift: boolean;
   assertions: DecisionReceipt["outcomes"]; preparationChanged?: boolean; outcomeChanged?: boolean; todoOutcomeChanged?: boolean; probabilityDeltas?: Record<string, number>;
   status: "evaluated" | "unavailable"; original?: TriageJudgment; candidate?: TriageJudgment; error?: string;
-}
-function isWithin(directory: string, file: string): boolean {
-  const relative = path.relative(directory, file);
-  return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 async function readLocalAnnexObject(opts: { annexRoot: string; objectPath: string; ref: string }): Promise<Buffer> {
   const { annexRoot, objectPath, ref } = opts;

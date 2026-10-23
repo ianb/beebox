@@ -48,6 +48,8 @@ import {
   type Section,
 } from "./deploy-status-lib.js";
 import { renderText } from "./deploy-status-render.js";
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
+import { pidAlive } from "../beebox/src/hub/child-process-utils.js";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -92,33 +94,19 @@ function mainCheckout(): string | null {
   return common === null ? null : path.dirname(common);
 }
 
-function isEnoent(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
-}
-
 // A deploy can take or drop the lock between any two reads; a vanished file
 // reads as absent.
 function readIfPresent(file: string): string | null {
   try {
     return readFileSync(file, "utf8");
   } catch (error) {
-    if (isEnoent(error)) return null;
+    if (errnoCode(error) === "ENOENT") return null;
     throw error;
   }
 }
 
 function lastNonEmptyLine(text: string | null): string | null {
   return text?.split("\n").findLast((entry) => entry.trim() !== "")?.trim() ?? null;
-}
-
-function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    // EPERM: the process exists but is not ours to signal — still alive.
-    return e instanceof Error && "code" in e && e.code === "EPERM";
-  }
 }
 
 function lockState(mainRoot: string): LockState {
@@ -138,7 +126,7 @@ function lockState(mainRoot: string): LockState {
   try {
     since = statSync(lockDir).mtime.toISOString();
   } catch (error) {
-    if (!isEnoent(error)) throw error;
+    if (errnoCode(error) !== "ENOENT") throw error;
     return { state: "free", requestedSha: lastNonEmptyLine(readIfPresent(path.join(mainRoot, ".deploy-requested"))) };
   }
   return { state: "held", pid, alive: true, since, logTail };

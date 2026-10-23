@@ -12,14 +12,9 @@
 
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
+import { isWithin } from "../../../lib/box-containment.js";
 
 const SOURCE_EXTENSIONS = [".tsx", ".ts"];
-
-/** Whether `child` is `root` or inside it. */
-function isWithin(root: string, child: string): boolean {
-  const rel = path.relative(root, child);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-}
 
 async function isFile(p: string): Promise<boolean> {
   const st = await fs.stat(p).catch(() => null);

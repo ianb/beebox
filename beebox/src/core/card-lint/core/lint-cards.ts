@@ -54,8 +54,8 @@ import { isAttachRef } from "../../../shared/attach-path.js";
 import { parseRef, formatRefSuffix, isUrlRef } from "../../../shared/ref-path/core.js";
 import { lintBodyMarkdoc, lintFrontmatterTodoAssigned } from "../../body-markdoc-lint.js";
 import { brokenRefReason, resolveRefExists } from "../../ref-exists.js";
+import { boxRelativeDoc } from "../../../lib/box-containment.js";
 import {
-  boxRelativeDoc,
   canonicalIssueMessage,
   cardRefProbe,
   planCanonicalRef,

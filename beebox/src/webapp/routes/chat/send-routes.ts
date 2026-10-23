@@ -25,11 +25,11 @@ import {
   whatsChangedBodySchema,
   resolveChannel,
   extractCardFields,
-  escapeXmlAttr,
   resolveMobileSender,
   validateImages,
   warnOnUnnormalizedImageOrientation,
 } from "./helpers.js";
+import { escapeXmlAttr } from "../../../shared/self-note.js";
 
 function validateInboundImages(images: SendBody["images"]): { error: string; status: number } | null {
   if (images === undefined || images.length === 0) return null;

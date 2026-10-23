@@ -17,7 +17,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 
-function gitLsFiles(checkoutDir: string, ...patterns: string[]): string[] {
+export function gitLsFiles(checkoutDir: string, ...patterns: string[]): string[] {
   const out = execFileSync(
     "git",
     ["-C", checkoutDir, "ls-files", "--", ...patterns],

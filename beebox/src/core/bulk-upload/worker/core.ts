@@ -40,6 +40,7 @@ import { bulkBatchHasNothingToReport } from "../batch-format.js";
 import { buildUploadWrapper, resolveBulkDeliveryTarget } from "./deliver.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { fileExists } from "../../../lib/file-exists.js";
 
 export interface PrepareBulkDeps {
   boxRoot: string;
@@ -231,16 +232,6 @@ async function finishBulkDelivery(opts: {
   await markUploadBatchDelivered({ boxRoot, cardRelPath, batchSlug });
   await setStagingState({ boxRoot, id, state: "delivered" });
   await cleanupStagingSession({ boxRoot, id });
-}
-
-/** True when a file exists at `absPath`. */
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    return false;
-  }
 }
 
 /** Set `delivered: true` on the committed batch card under the card lock, then
