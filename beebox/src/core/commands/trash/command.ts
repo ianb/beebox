@@ -13,7 +13,7 @@ import { parseCommandArgs, type CommandContext, type CommandDefinition, type Com
 import { getBoxDir, isCardFile, parseCardName } from "../../../lib/paths/core.js";
 import { BoxPathArgError, resolveCliTargetPath } from "../../../cli/lib/cli-target-path.js";
 import { getStatus, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
-import { attachDirFor } from "../../../shared/attach-path.js";
+import { attachDirFor, cardBasename } from "../../../shared/attach-path.js";
 import { NotFoundError } from "../../../lib/errors.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { assertSafeTrashDestination } from "./namespace-guard.js";
@@ -131,8 +131,7 @@ async function trashOne(
   let finalDestPath = destPath;
   if (await pathExistsStrict(destPath, { followLinks: true })) {
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
-    const newName = `${parsed.name}_${timestamp}.${parsed.type}.card`;
-    finalDestPath = path.join(trashDir, newName);
+    finalDestPath = path.join(trashDir, withCollisionStamp(basename, timestamp));
   }
 
   // Ensure trash directory exists
@@ -366,3 +365,17 @@ export const trashCommand: CommandDefinition = {
 };
 
 export { executeTrash };
+
+/**
+ * The trash name for a card whose name is taken: `_<stamp>` after the attach
+ * stem, the rest of the filename kept, so a job card keeps its `.job.card`
+ * ending and its attach directory stays `<stem>_<stamp>.attach`. A
+ * positional card (`doc.card`) becomes `doc_<stamp>.doc.card`, keeping its
+ * type, since `doc_<stamp>.card` would be a different positional type.
+ */
+export function withCollisionStamp(fileName: string, stamp: string): string {
+  const stem = cardBasename(fileName);
+  const rest = fileName.slice(stem.length);
+  return rest === ".card" ? `${stem}_${stamp}.${stem}.card` : `${stem}_${stamp}${rest}`;
+}
+
