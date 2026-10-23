@@ -438,7 +438,9 @@ export function createChatBackend(): ChatBackend {
     prewarm: async (opts) => {
       if (opts.engine !== "codex") await claude.prewarm?.(opts);
     },
-    load: async () => { await claude.load?.(); },
+    load: async (engine) => {
+      if (engine !== "codex") await claude.load?.(engine);
+    },
     closeWarm: async () => { await claude.closeWarm?.(); },
     closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
     hasWarm: () => claude.hasWarm?.() ?? false,
