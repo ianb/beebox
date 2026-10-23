@@ -104,3 +104,83 @@ Each ledger row is file, lines, checks, flags, code, whether the flag was
 right, action, confidence, and a one-sentence reason. The revised criteria
 and the measured accuracy of each mechanical flag are in README sections 4
 and 5 of the research note.
+
+## Design (2026-10-23): a light review, drawn from the research
+
+What the research supports, and so what the step does and does not do:
+
+- The in-scope set per branch is small (one test on two of the three
+  branches sampled; 24 files on the largest), and reading cost measured at
+  about one minute per file. The step is a short read in the developing
+  session, not a second review track.
+- The value of a new test is paid during development; what it costs on
+  `main` is almost entirely the stale snapshot of a generated set (M1) and
+  the flaky timer. Those two are what the step must catch. Removal yield is
+  about 4% of checks and is mostly catalogs restated as expected values
+  (X1); the rest is rewriting lossy projections to whole values (M4).
+- The mechanical flags are right about files and wrong about checks, so
+  the script lists and the session judges; the script never decides.
+- X2 and X3 did not occur in 1,338 checks; the step does not look for them.
+
+### Procedure
+
+Step 0 of `/finish`, in the developing session, before the finish agent is
+dispatched. Skipped, and said so, when the diff against `main` adds or
+changes no test file.
+
+1. Run `bin/test-review` (task 1). It prints every in-scope unit from
+   `git diff main...HEAD`: added test files, added `test()` blocks in
+   existing files, and `t.check` calls whose expected value changed. Each
+   line carries its flags and the file's ledger time if it has one.
+2. Give each unit one code, using what the session knows about why the
+   test was written: K1 bug replay, K2 boundary, K3 contract, K4 branch
+   guard, OK plain guard; M1 generated set, M2 pinned wording that is a
+   choice, M3 second proof, M4 lossy projection; X1 restates code or a
+   catalog. The codes and their one-line definitions are in
+   `research/test-value/README.md` section 4 and its revisions.
+3. Edit M and X units: narrow the snapshot to the rows the claim needs,
+   pin wording only where it is the feature, delete the copy outside the
+   claim's home, rewrite a projection to the whole value, delete the
+   restated row. Leave a unit alone when unsure and code it OK with a
+   note. A K1 unit the session did not watch fail is coded K1? and the
+   note says so.
+4. Commit the edits as one commit, `Tests: review before finish`, whose
+   body lists every unit, kept ones included, one line each:
+   `<path>#<test title or line> — <code> <action>: <reason>`. A branch with
+   no edits still gets the commit if it added tests, so `git log` answers
+   "was this test reviewed".
+5. Dispatch the finish agent as now. The commit is a test change since any
+   earlier tested revision, so step 3 of the agent reruns the named files;
+   Track O sees the branch with the edits applied.
+
+### Tasks
+
+1. `bin/test-review.ts` (with a tap test): enumerate in-scope units from
+   the diff and flag them. Port the parts of
+   `research/test-value/scripts/enumerate.py` the application pass found
+   useful and drop the rest: flag a lossy left-hand projection
+   (`.success`, `.ok`, `.pass`, `.length`, `.code`, `.status`,
+   `.includes(`, `.matches(`, `some(`, a `join` or template of fields);
+   an expected literal that also appears in `src/` as a constant or an
+   exported list (restated catalog); an expected literal identical to one
+   in another test file, with the file named; a real timer, `Date.now()`
+   without a fixed clock, or a `Promise.race` against a delay; the file's
+   median ledger seconds. Do not flag length or zod vocabulary; both were
+   wrong four times in five.
+2. `.claude/skills/finish/SKILL.md`: add step 0 as written above, before
+   the dispatch, and drop the pinned-model sentence per the 2026-10-21
+   decision. Keep it to the five numbered lines plus the skip rule.
+3. `.claude/agents/finish.md`: step 3 names the review commit as a test
+   change since the tested revision; step 8 adds one report line, `tests
+   reviewed: n kept, n rewritten, n removed`, or `no tests added`.
+4. Calibration: for the first five finishes that run the step, the
+   boxholder reads the review commit and marks any disposition they would
+   reverse in a dated note here. Adjust the codes or the flags from that,
+   then close this issue.
+
+Not in this design: running new tests against `main`'s source to prove a
+K1 claim fails first (strongest signal, but a second test run per finish;
+revisit if K1? notes pile up), and the recurring suite-wide sweep, which
+stays with
+[2026-10-08-remove-tests-that-never-earn-their-keep](../code-quality/2026-10-08-remove-tests-that-never-earn-their-keep.md)
+and should rank whole files by flag density rather than list checks.
