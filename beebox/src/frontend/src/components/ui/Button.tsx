@@ -209,10 +209,18 @@ function useElapsedSeconds(active: boolean): number {
 function useFlashState(): { flashing: FlashState; triggerFlash: (state: "done" | "failed", duration: number) => void } {
   const [flashing, setFlashing] = useState<FlashState>("idle");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+  // A click's promise can settle after the button unmounts; it must not then
+  // start a timer or set state.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+    };
   }, []);
   const triggerFlash = (state: "done" | "failed", duration: number) => {
+    if (!mountedRef.current) return;
     setFlashing(state);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setFlashing("idle"), duration);

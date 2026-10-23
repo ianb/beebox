@@ -214,6 +214,9 @@ function SelectedPanel({ selected, onCopy }: { selected: SelectedSource; onCopy:
       <div className="px-3 py-2 bg-violet-50 border-b border-violet-100 flex items-center justify-between">
         <span className="text-xs font-semibold text-violet-700">Source</span>
         <Button
+          // A new selection gets a fresh button: a "Copied" flash belongs to
+          // the source that was copied, not the next one.
+          key={`${selected.source}\n${selected.item ?? ""}`}
           id="bbx-source-view-copy"
           data-bbx-does="copies the selected element's source reference to the clipboard"
           size="sm"
