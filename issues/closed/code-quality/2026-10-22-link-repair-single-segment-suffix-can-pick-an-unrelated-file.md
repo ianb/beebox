@@ -4,8 +4,11 @@ workstream: unattached
 area: docs
 filed-by: agent
 discovered-by: agent
+resolution: implemented
 discovered-in: worktree-risky-merge-review — adversarial review of the merges since 2026-10-08
 ---
+
+Resolved: `redepthCandidates` now rejects a link whose path has one segment and no `../` hop, so `./foo.json` is reported as `no-basename-match` instead of being rewritten to an unrelated ancestor file. Two-segment suffixes (`sub/foo.json`) and `../foo.json` still repair. Covered in `beebox/test/dev/doc-check/link-repair.test.ts`.
 
 `beebox/src/dev/doc-check/link-repair.ts` (`redepthCandidates` and the
 `suffixMatches` branch of `decideLink`) repairs a link whose target is gone by
