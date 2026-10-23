@@ -6,7 +6,7 @@
 //     <box-root> <manifest.jsonl> <out-dir> <service>[:vocab-key] …
 // <service> is an HQ service name (whisper, whisper-llm, voxtral). With a
 // vocabulary key, the list goes in as the engine's prompt: Whisper's `prompt`,
-// Voxtral's `context_bias` (single words; see promptFor).
+// Voxtral's `context_bias` (which the box splits into single words).
 
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -35,18 +35,6 @@ function upload(item: Item): Buffer {
   return fs.readFileSync(file);
 }
 
-/**
- * Voxtral's comma-separated `context_bias` rejects an entry with whitespace
- * (400, measured 2026-10-23), so multi-word terms go in as their words.
- */
-function promptFor(service: string, terms: string[]): string {
-  if (!service.startsWith("voxtral")) {
-    return terms.join(", ");
-  }
-  const words = terms.flatMap((t) => t.split(/\s+/)).map((w) => w.replace(/[,]/g, "")).filter((w) => w.length > 1);
-  return [...new Set(words)].join(",");
-}
-
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
@@ -73,7 +61,7 @@ async function runSpec(spec: string): Promise<void> {
   async function worker(): Promise<void> {
     for (let i = next++; i < items.length; i = next++) {
       const item = items[i] as Item;
-      const prompt = key ? promptFor(service, item.vocab?.[key] ?? []) : undefined;
+      const prompt = key ? (item.vocab?.[key] ?? []).join(", ") : undefined;
       const start = Date.now();
       let record: Record<string, unknown>;
       try {

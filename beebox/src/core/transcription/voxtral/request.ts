@@ -65,6 +65,23 @@ function granularityFor(
 }
 
 /**
+ * Turn a free-text prompt (a term list or a whole earlier transcript) into
+ * the `context_bias` value `voxtral-mini-latest` accepts: a comma-separated
+ * list of single words. The API rejects the whole request with a 400 when
+ * any entry holds whitespace or a comma (measured 2026-10-23); an entry of
+ * 2,000 words was accepted, so no cap is applied. Words keep inner
+ * punctuation ("D'Ambrosia", "re-image") and lose leading or trailing
+ * punctuation; repeats are dropped, first spelling kept.
+ */
+export function voxtralContextBias(prompt: string): string {
+  const words = prompt
+    .split(/[\s,]+/)
+    .map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .filter((word) => word !== "");
+  return [...new Set(words)].join(",");
+}
+
+/**
  * Build the multipart/form-data body for a Voxtral transcription request
  * and the boundary string used in its Content-Type header.
  */
@@ -97,9 +114,10 @@ export function buildVoxtralRequestBody(
     parts.push({ kind: "field", field: { name: "diarize", value: "true" } });
   }
 
-  // Add context_bias if prompt provided (Voxtral's equivalent of Whisper's prompt)
-  if (prompt) {
-    parts.push({ kind: "field", field: { name: "context_bias", value: prompt } });
+  // context_bias is Voxtral's equivalent of Whisper's prompt, in its own shape.
+  const contextBias = prompt ? voxtralContextBias(prompt) : "";
+  if (contextBias) {
+    parts.push({ kind: "field", field: { name: "context_bias", value: contextBias } });
   }
 
   return buildMultipartForm(parts);

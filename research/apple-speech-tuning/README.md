@@ -394,7 +394,7 @@ on:
 The box's voxtral `context_bias` fails with 400 for any term that contains a
 space. The re-transcription preaction sends a card's whole existing text as
 that field. Filed as
-[voxtral-context-bias-rejects-multi-word-prompt](../../issues/bugs/2026-10-23-voxtral-context-bias-rejects-multi-word-prompt.md).
+[voxtral-context-bias-rejects-multi-word-prompt](../../issues/closed/bugs/2026-10-23-voxtral-context-bias-rejects-multi-word-prompt.md).
 
 ## Dispositions
 
