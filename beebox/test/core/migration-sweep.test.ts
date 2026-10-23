@@ -18,13 +18,14 @@ import type { TmpBox } from "../helpers/test-helpers.js";
 import { createFakeAgent } from "./fake-agent.js";
 import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance/admission.js";
 import { forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
+import { NOOP_MIGRATION, NOOP_MIGRATION_AFTER, registerNoopMigration } from "./noop-migration.js";
 import { sweepMigrations, type SweepResult } from "../../src/core/migration-sweep.js";
 
-// Every registered migration is retired and runs the shared no-op, so a pending
-// one is a clean no-op on any box: the sweep's own bookkeeping is what gets
-// tested, not a migrator's side effects. Pinned to one name; the registry is
-// append-only, so it persists.
-const PROBE = "annex-config-2026-08";
+// A test-only script migration that does nothing, so the sweep's own
+// bookkeeping is what gets tested, not a migrator's side effects. (A retired
+// entry exits 1 on a box that never applied it.)
+registerNoopMigration();
+const PROBE = NOOP_MIGRATION;
 
 // No procedure-kind migration is registered any more, so the procedure tests
 // append a test-only entry to this process's copy of the registry. The
@@ -110,8 +111,8 @@ void test("The common case — this runs against every box on every deploy, so t
 // a box can never claim a migration whose effects are not in its history. The
 // commit carries the `Created-By` trailer the box's other automated writers use.
 //
-// `annex-config-2026-08` is the migration under test here (see the setup note):
-// it runs the retired no-op, which proves the sweep's own bookkeeping without
+// `test-noop-migration` is the migration under test here (see the setup note):
+// it runs a no-op migrator, which proves the sweep's own bookkeeping without
 // depending on a migrator's side effects.
 void test("The manifest entry and the changes it describes land in the same commit, so a...", async (t) => {
   t.teardown(async () => {
@@ -129,7 +130,7 @@ void test("The manifest entry and the changes it describes land in the same comm
   t.check({ status: result.status, applied: expectStatus(result, "applied").applied.map((m) => m.name) }, {
     status: "applied",
     applied: [
-      "annex-config-2026-08",
+      "test-noop-migration",
     ],
   });
 
@@ -141,7 +142,7 @@ void test("The manifest entry and the changes it describes land in the same comm
       clean: git(box, "status", "--porcelain") === "",
     },
     {
-    subject: "Apply migration: annex-config-2026-08",
+    subject: "Apply migration: test-noop-migration",
     trailer: "migration-sweep",
     manifestInCommit: true,
     clean: true,
@@ -182,7 +183,7 @@ void test("An unattended sweep has no procedure runner.", async (t) => {
     {
     status: "needs-procedure",
     applied: [
-      "annex-config-2026-08",
+      "test-noop-migration",
     ],
     phase: null,
   },
@@ -429,14 +430,14 @@ void test("Partial conversion asks once and lets later migrations proceed", asyn
   const box = await makeTmpBox({ git: true });
   // Keep this pinned to a script migration: procedure migrations are intentionally
   // not handled by the unattended sweep.
-  const later = "search-interface-card";
+  const later = NOOP_MIGRATION_AFTER;
   await seedManifest(box, { pending: [PROBE, later] });
   await box.commitAll("seed");
   let agents = 0;
   let calls = 0;
   const result = await sweepMigrations({
     boxRoot: box.root, repair: true,
-    // Every entry runs the same tombstone script, so tell PROBE's runs apart by
+    // Every entry runs the same no-op script, so tell PROBE's runs apart by
     // the manifest: PROBE is the one running while it is still unrecorded.
     runScript: async ({ boxRoot }) => {
       calls += 1;
