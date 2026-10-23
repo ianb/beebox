@@ -79,3 +79,33 @@ about 13 minutes at 6 jobs. 190 source files are imported by 300 or more
 tests, so an edit to one of them selects about half of the suite for
 `test:changed` (about 9.5 minutes). See the change-based-test-selection
 plan, "Revision 2026-10-12 — broad selections".
+
+## Update (2026-10-23): tsx cache listing, and the floor by layer
+
+`pnpm perf:test-floor` (new, worktree-perf-easy-wins) times one test process
+layer by layer, with the node arguments from `.taprc`.
+
+- **tsx cache listing (fixed, a38dbc807).** tsx 4.23.1 listed its shared
+  transform cache (`$TMPDIR/tsx-<uid>`) at the start of every process. The
+  directory held about 166,000 entries (1.3 GB, about 33,000 new a day across
+  worktrees), so each tsx process spent about 470 ms there. tsx 4.23.15 probes
+  by file name. Same cache, medians of 7: the floor file
+  (`test/core/external/url-check/fetch.test.ts`) went from 970 to 300 ms;
+  `test/webapp/server-root.healthz-engine-version.test.ts` from 3.70 to 2.83 s.
+  At about 0.47 s × 1,016 files the saving is about 480 file-seconds of the
+  4,654 s aggregate (about 10%), before counting child CLI processes.
+- **React Compiler hook (fixed, 721a78d8e).** The hook imported Babel and
+  esbuild in every process; they now load on the first cache miss. The preload
+  went from 170 to 100 ms.
+
+The floor after both, load average about 17: `node` 29 ms, tsx 59 ms, all
+`.taprc` preloads 313 ms, a one-assertion tap test 322 ms. What remains:
+
+- tap's own import (through `@ianbicking/tap-check/tap`, which loads
+  `@tapjs/core`): about 120 ms. Every tap test needs it.
+- The React Compiler hook's loader thread: about 50 ms. `module.register`
+  runs hooks on a separate thread, and every module load then crosses to it.
+  Node 24's in-thread `module.registerHooks` would remove the thread, but
+  needs synchronous transforms (Babel `transformSync`, esbuild
+  `transformSync`). Not measured.
+- The cold template box (`makeTestServer`), unchanged from the 2026-08 figures.
