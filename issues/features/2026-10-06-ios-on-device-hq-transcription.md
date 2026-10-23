@@ -1,6 +1,6 @@
 ---
 title: "iOS HQ dictation: use Apple's on-device SpeechTranscriber on the recording instead of server transcription, when available"
-workstream: ios-on-device-hq
+workstream: apple-stt-tuning
 area: ios
 priority: important
 labels: [voice, ios]
@@ -187,3 +187,17 @@ diarized, with HQ dictation on:
 8. **Older iOS** (if a device is available). Expected: `skipped
    reason=os-too-old`, and behavior is the same as before this change.
 
+
+## 2026-10-23: tuning Apple's recognizer
+
+[Apple speech tuning research](../../research/apple-speech-tuning/README.md)
+tested every option the iOS 26.5 Speech SDK offers, on real spontaneous
+speech (Earnings-21 calls, AMI meetings) and on synthetic dictation. The
+shipped `.transcription` preset was best or tied for best everywhere. No
+preset, option, locale, transcriber, preprocessing step, or on-device
+Foundation Model pass improved it. On real spontaneous speech it equalled
+voxtral (12.5% vs 12.6% and 13.2% vs 13.3% WER). Apple was behind on clean,
+name-dense dictation (6.8% vs whisper 4.1%) and in noise (20.6% vs 14.5%).
+The recommended next step is to compare engines on the boxholder's own
+recordings with the research's local script, and to add the recording's level
+and input route to the `voice HQ on-device` log line.
