@@ -9,7 +9,8 @@
  * bundled CLI (`dist/cli.mjs`): every command module and the npm packages they
  * import at top level. `--version` does no work, so its time is the load
  * cost. The run uses the bundle the way `bin/bbx` does (compile cache, source
- * maps) but skips the wrapper's staleness check. See
+ * maps) but skips the wrapper's staleness check; one untimed run through
+ * `bin/bbx` first rebuilds the bundle when source is newer. See
  * `docs/development/performance.md`.
  */
 import { spawnSync } from "node:child_process";
@@ -20,7 +21,7 @@ import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { summarizeProfile } from "../serve-start/cpu-profile.js";
-import { ensurePerfBox, perfResultsDir } from "../local-hub.js";
+import { bbxBin, ensurePerfBox, perfResultsDir } from "../local-hub.js";
 import { median } from "../report.js";
 
 const bundle = path.join(PACKAGE_ROOT, "dist", "cli.mjs");
@@ -50,10 +51,15 @@ async function main(): Promise<void> {
     allowPositionals: true,
   });
   const verb = positionals.length > 0 ? positionals : ["--version"];
+  const runs = Number(values.runs);
+  if (!Number.isInteger(runs) || runs < 1) fail(`--runs must be a positive integer, not ${values.runs}`);
   const box = path.resolve(values.box ?? (await ensurePerfBox(false)) ?? fail("no worktree test box clone to copy; pass --box <path>"));
+  // bin/bbx rebuilds a stale bundle, so the timed runs measure current source.
+  const refresh = spawnSync(bbxBin(), ["--version"], { cwd: box, stdio: ["ignore", "ignore", "pipe"] });
+  if (refresh.status !== 0) fail(`bin/bbx --version exited ${refresh.status ?? refresh.signal}:\n${refresh.stderr.toString()}`);
   runOnce({ box, verb }); // warm the compile cache and the OS file cache
   const times: number[] = [];
-  for (let i = 0; i < Number(values.runs); i++) times.push(runOnce({ box, verb }));
+  for (let i = 0; i < runs; i++) times.push(runOnce({ box, verb }));
   console.log(`bbx ${verb.join(" ")} in ${box} (${times.length} runs, load average ${os.loadavg()[0]?.toFixed(1)})`);
   console.log(`  median ${median(times)} ms, min ${Math.min(...times)}, max ${Math.max(...times)}`);
   if (values["cpu-prof"] !== true) return;

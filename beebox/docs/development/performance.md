@@ -205,9 +205,10 @@ pnpm perf:test-floor                                     # 7 interleaved runs of
 pnpm perf:test-floor --file test/webapp/<some>.test.ts   # also one real file, same preloads
 ```
 
-It times four cumulative layers: `node`, then tsx with one `.ts` file, then
-all `.taprc` preloads, then a one-assertion tap test. The increase from one row
-to the next is that layer's cost. The node arguments come from `.taprc`.
+It times four cumulative layers, each a whole process from start to exit:
+`node`, then tsx with one `.ts` file, then all `.taprc` preloads (which import
+tap), then a one-assertion tap test. The increase from one row to the next is
+that layer's cost. The node arguments come from `.taprc`.
 
 It also prints the size of tsx's transform cache (`$TMPDIR/tsx-<uid>`). tsx
 before 4.23.15 listed that whole directory at the start of every process. At
@@ -229,7 +230,8 @@ pnpm perf:cli-start --cpu-prof         # plus a profile of one run, by source ow
 
 `--version` does no work, so its time is the load cost. The run uses the
 bundle as `bin/bbx` does (compile cache, source maps) without the wrapper's
-staleness check, which adds about 40 ms in a dev checkout. The profile summary
+staleness check, which adds about 40 ms in a dev checkout. One untimed run
+through `bin/bbx` first rebuilds a stale bundle. The profile summary
 is the one `perf:serve-start` prints: an npm package near the top that the
 verb does not use is a candidate for a dynamic `import()` at its use site.
 

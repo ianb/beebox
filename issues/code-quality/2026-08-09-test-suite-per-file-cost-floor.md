@@ -92,8 +92,11 @@ layer by layer, with the node arguments from `.taprc`.
   by file name. Same cache, medians of 7: the floor file
   (`test/core/external/url-check/fetch.test.ts`) went from 970 to 300 ms;
   `test/webapp/server-root.healthz-engine-version.test.ts` from 3.70 to 2.83 s.
-  At about 0.47 s × 1,016 files the saving is about 480 file-seconds of the
-  4,654 s aggregate (about 10%), before counting child CLI processes.
+  Both runs hit the cache. On a run where every file hits it, about
+  0.47 s × 1,016 files is about 480 file-seconds of the 4,654 s aggregate
+  (about 10%), before counting child CLI processes. A process that writes a
+  new entry still pays the expiry walk below, so a run after an edit saves
+  less; that case is unmeasured.
 - **React Compiler hook (fixed, 721a78d8e).** The hook imported Babel and
   esbuild in every process; they now load on the first cache miss. The preload
   went from 170 to 100 ms.

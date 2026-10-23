@@ -1,14 +1,16 @@
 /**
- * `pnpm perf:test-floor` — what one test process costs before its first
- * assertion, layer by layer.
+ * `pnpm perf:test-floor` — what one test process costs to start and exit,
+ * layer by layer.
  *
  *   pnpm perf:test-floor                 # 7 runs of each layer
  *   pnpm perf:test-floor --file <path>   # also time one real test file with the same preloads
  *
  * Every test file is its own Node process, and each pays Node boot, the tsx
- * loader, the `.taprc` preloads, and tap's own import. The layers are timed
- * cumulatively, so each row's increase over the one above is that layer's
- * cost. The node arguments come from `.taprc`, so the probe follows it.
+ * loader, and the `.taprc` preloads, which import tap (through
+ * `@ianbicking/tap-check/tap`). Each row is a whole process, start to exit.
+ * The layers are cumulative, so each row's increase over the one above is
+ * that layer's cost; the last row adds a tap test body and tap's end-of-run
+ * work. The node arguments come from `.taprc`, so the probe follows it.
  *
  * The tsx row also reports the size of tsx's shared transform cache. tsx
  * before 4.23.15 listed that whole directory at startup, about 470 ms per
@@ -58,6 +60,7 @@ async function countEntries(dir: string): Promise<number | undefined> {
 async function main(): Promise<void> {
   const { values } = parseArgs({ options: { runs: { type: "string", default: "7" }, file: { type: "string" } } });
   const runs = Number(values.runs);
+  if (!Number.isInteger(runs) || runs < 1) fail(`--runs must be a positive integer, not ${values.runs}`);
   const taprc = taprcSchema.parse(parseYaml(await fs.readFile(path.join(PACKAGE_ROOT, ".taprc"), "utf-8")));
   const preloads = taprc["node-arg"];
   const tsxIndex = preloads.indexOf("--import=tsx");
@@ -75,7 +78,7 @@ async function main(): Promise<void> {
     { name: "node", args: ["-e", "0"] },
     { name: "+ tsx (one .ts file)", args: [...preloads.slice(0, tsxIndex + 1), empty] },
     { name: "+ .taprc preloads", args: [...preloads, empty] },
-    { name: "+ tap, one assertion", args: [...preloads, floor] },
+    { name: "+ one-assertion tap test", args: [...preloads, floor] },
   ];
   if (values.file !== undefined) layers.push({ name: path.relative(PACKAGE_ROOT, path.resolve(values.file)), args: [...preloads, path.resolve(values.file)] });
 
