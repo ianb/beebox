@@ -6,6 +6,7 @@ import { SearchResults, type SearchResult } from "./SearchResults";
 import { searchResultTarget } from "./target";
 import { trpc } from "../../lib/trpc/client";
 import { useWorkspace } from "../chat/workspace/WorkspaceProvider/provider";
+import { isComposing } from "../../lib/ime";
 
 export function QuickSearchOverlay() {
   const workspace = useWorkspace();
@@ -39,6 +40,7 @@ export function QuickSearchOverlay() {
   };
   const list = results.data?.results ?? [];
   const onInputKey = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (isComposing(event.nativeEvent)) return;
     if (event.key === "Escape") close();
     else if (event.key === "ArrowDown") { event.preventDefault(); setActive((value) => Math.min(value + 1, Math.max(0, list.length - 1))); }
     else if (event.key === "ArrowUp") { event.preventDefault(); setActive((value) => Math.max(0, value - 1)); }

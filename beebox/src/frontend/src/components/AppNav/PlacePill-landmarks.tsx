@@ -6,6 +6,7 @@ import { TextField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { CardMark } from "../ui/CardMark";
 import { useIsomorphicLayoutEffect } from "../../hooks/use-isomorphic-layout-effect";
+import { isComposing } from "../../lib/ime";
 
 /** One landmark row's data — the subset of `chat.byLandmark` this menu reads. */
 export interface SwitchLandmark {
@@ -39,6 +40,7 @@ function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>, {
   mobileViewport: boolean;
   onCancelSearch: () => void;
 }) {
+  if (isComposing(event.nativeEvent)) return;
   if (event.key === "ArrowDown") {
     event.preventDefault();
     const first = document.getElementById("bbx-switch-menu-landmark-first");
