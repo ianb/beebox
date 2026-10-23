@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useModalDialog } from "../../hooks/useModalDialog";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
@@ -23,7 +24,6 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
   const mutation = trpc.chat.deleteSession.useMutation();
   const pendingRef = useRef(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const priorFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -33,17 +33,9 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
   }, [mutation.isPending]);
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!open || dialog === null) return;
-    setResult(null);
-    priorFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog.showModal();
-    return () => {
-      if (dialog.open) dialog.close();
-      priorFocusRef.current?.focus();
-      priorFocusRef.current = null;
-    };
+    if (open) setResult(null);
   }, [open]);
+  useModalDialog({ dialog: dialogRef, open });
 
   if (!open) return null;
   const target = label ?? `Chat ${sessionId.slice(0, 8)}`;
