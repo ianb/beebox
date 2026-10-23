@@ -4,6 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { isGoogleServiceAllowed } from "../../core/box/config.js";
 import { truncateTitle } from "../../core/file-summary.js";
+import { NotFoundError } from "../../lib/errors.js";
 import { errorMessage, errnoCode } from "../../shared/error-guards.js";
 import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { BOX_DIRS, getBoxDir } from "../../lib/paths/core.js";
@@ -85,6 +86,24 @@ function resetRuleBaselines(state: GmailTransientState): GmailTransientState {
   };
 }
 
+/**
+ * Fetch one item named by history, or null when Gmail no longer has it.
+ *
+ * History keeps naming a message after it is deleted. Failing the sync on it
+ * would leave `historyId` where it was, so every later sync replays the same
+ * history and fails again: the connector stops for good. Any other error still
+ * fails the sync and keeps the cursor.
+ */
+async function fetchUnlessDeleted<T>(fetch: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fetch();
+  } catch (error) {
+    if (!(error instanceof NotFoundError)) throw error;
+    console.warn(`Gmail: skipped ${error.message}; it was deleted after history named it`);
+    return null;
+  }
+}
+
 async function fetchCandidates(opts: {
   service: GoogleGmailService;
   refs: Array<{ id: string; threadId: string }>;
@@ -92,7 +111,8 @@ async function fetchCandidates(opts: {
   const messages: GmailMessage[] = [];
   const refsById = new Map(opts.refs.map((ref) => [ref.id, ref]));
   for (const ref of refsById.values()) {
-    messages.push(await opts.service.getMessage(ref.id));
+    const message = await fetchUnlessDeleted(() => opts.service.getMessage(ref.id));
+    if (message !== null) messages.push(message);
   }
   return messages;
 }
@@ -113,11 +133,14 @@ async function refreshThreadSnapshots(opts: {
 }): Promise<WriteThreadsResult> {
   const result: WriteThreadsResult = { created: [], updated: [], notes: [], seenMessageIds: [] };
   for (const threadId of new Set(opts.threadIds)) {
-    const messages = await fetchGmailThreadMessages({
+    // A thread deleted in Gmail keeps its card: deleting the card is how a
+    // person untracks, and the box keeps what it already has.
+    const messages = await fetchUnlessDeleted(() => fetchGmailThreadMessages({
       service: opts.service,
       threadId,
       labelMap: opts.labelMap,
-    });
+    }));
+    if (messages === null) continue;
     appendWriteResult(result, await writeThreadCards({
       boxRoot: opts.boxRoot,
       messages,
