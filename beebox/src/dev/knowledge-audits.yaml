@@ -8828,3 +8828,69 @@ tests:
       - '(?:offer|ask|suggest|propose)'
       - '(?:not|n.t|without|before)[\s\S]{0,40}(?:build|creat|mak)|(?:ask|talk|find out)[\s\S]{0,60}(?:not|before|then)[\s\S]{0,40}(?:build|creat|mak)'
     tags: [front-door, landmark]
+
+  # === Journey-walk guidance (2026-10-22) ===
+  #
+  # Guards ledger rows todos.not-habits-offer-checks and provenance.open-before-citing,
+  # and the due-date wording in docs/box/todos.md.
+  - id: todo-before-date-due-day-before
+    prompt: >
+      An insurance letter says "please call us before 7 November 2026". You
+      are about to write the todo for that call. What `due` do you give it,
+      and how do you tell the person the deadline? Explain only; you may read
+      the box docs, but change nothing.
+    expected_level: knows_about
+    should_read_any: ["box-docs/todos.md"]
+    watch_for: >
+      Gives due 2026-11-06 (the day before), and tells the person the letter
+      says "before 7 November" rather than "by 7 November". FAILS on
+      due 2026-11-07.
+    correct_contains_any: ["2026-11-06", "6 November", "6 Nov", "November 6"]
+    response_not_matches:
+      - 'due[^.\n]{0,20}2026-11-07'
+    tags: [todos, behavioral]
+
+  - id: todo-standing-habit-not-a-todo
+    prompt: >
+      A boiler receipt has a handwritten line: "keep the ivy cut back!". You
+      are recording the receipt. Do you make a todo for the ivy line? Say
+      what you do with it. Explain only; do not use tools or change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Keeps the line as text on the record and makes no todo, because it has
+      no deadline. FAILS on creating an undated todo.
+    correct_matches:
+      - '(?:no|not|n.t|without)[\s\S]{0,60}todo|todo[\s\S]{0,60}(?:no|not|n.t)'
+    tags: [todos, behavioral]
+
+  - id: todo-offer-checks-after-research
+    prompt: >
+      You just finished comparing washing machines for the person, who wants
+      to decide by 5 November. Four checks are still open: measure the gap,
+      ask about spin noise, confirm Saturday delivery, confirm the delivery
+      fee. What do you do about those checks in your reply? Explain only; do
+      not use tools or change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Offers to make the checks todos due before 5 November (as an offer,
+      not already done). FAILS on silently creating them or leaving them
+      only in prose with no offer.
+    correct_matches:
+      - '(?:offer|ask|want me|would you like|shall I|should I|can (?:I|make))[\s\S]{0,200}todo|todo[\s\S]{0,200}(?:want me|would you like|shall I|offer)'
+    tags: [todos, behavioral]
+
+  - id: provenance-search-summary-not-the-page
+    prompt: >
+      A web search returned a summary saying "Model X is $574, free removal
+      included; this promotion may have ended". You tried to fetch that page
+      and got only a category list. How do you record the $574 and the
+      removal claim on the person's shortlist card? Explain only; do not use
+      tools or change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Records both as unconfirmed and says so (in the card and to the
+      person); does not present them as sourced facts or cite the page as
+      if read. FAILS on stating the price or free removal as confirmed.
+    correct_matches:
+      - '(?:unconfirmed|not confirmed|unverified|could not (?:confirm|verify)|couldn.t (?:confirm|verify)|not verified)'
+    tags: [provenance, behavioral]

@@ -22,13 +22,17 @@ void test("The chat prompt explains open-question and the answer order", async (
     noJob: sentence(/a chat answer writes no follow-up job/),
     narration: sentence(/Never answer a card from a `narration="on"` message/),
     unrelated: sentence(/If it is about something else, reply to it and leave the card pending/),
-    answered: sentence(/if the card is already answered, ignore the attribute/),
+    answered: sentence(/If the card is already answered, ignore the attribute/),
+    rootTask: sentence(/on the root question \(`what-to-keep-track-of`\): there a concrete task counts as the answer/),
+    saySo: sentence(/When you answer, say so in one line, naming the question/),
   }, {
     command: '`bbx answer <path> --via chat "<their words>"`',
     order: "answering is the last step",
     noJob: "a chat answer writes no follow-up job",
     narration: 'Never answer a card from a `narration="on"` message',
     unrelated: "If it is about something else, reply to it and leave the card pending",
-    answered: "if the card is already answered, ignore the attribute",
+    answered: "If the card is already answered, ignore the attribute",
+    rootTask: "on the root question (`what-to-keep-track-of`): there a concrete task counts as the answer",
+    saySo: "When you answer, say so in one line, naming the question",
   });
 });

@@ -94,10 +94,12 @@ async function gatherBoxholderTodos(boxRoot: string): Promise<CollectedTodo[]> {
   return todos.filter(isBoxholderTodo);
 }
 
-/** The two counts the nav badge needs: on-plate now, and how many of those are past due. */
+/** The counts the nav needs: on-plate now, how many of those are past due, and how many wait for a start date. */
 export interface PlateTodoCounts {
   onPlate: number;
   escalated: number;
+  /** Open todos waiting for a `start` (plate state `quiet`) — the todo page's "later". */
+  later: number;
 }
 
 /**
@@ -109,15 +111,18 @@ export async function countPlateTodos(boxRoot: string): Promise<PlateTodoCounts>
   const todos = await gatherBoxholderTodos(boxRoot);
   let onPlate = 0;
   let escalated = 0;
+  let later = 0;
   for (const t of todos) {
     if (t.plateState === "escalated") {
       onPlate++;
       escalated++;
     } else if (t.plateState === "on-plate") {
       onPlate++;
+    } else if (t.plateState === "quiet") {
+      later++;
     }
   }
-  return { onPlate, escalated };
+  return { onPlate, escalated, later };
 }
 
 /**

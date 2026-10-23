@@ -490,14 +490,20 @@ line read `runCollection`.
 - **The list** (`TodoViewCard.tsx`, rewritten, split to stay under 300 lines):
   - A **dated strip** first: open items with a `due` or `start`, in date order,
     each with its card title. It is empty in a box with no dates, and then it
-    does not render.
+    does not render. *(Changed 2026-10-22: the strip became a "By date" tab
+    beside "By place" and "By status", and the strip above the list is gone.
+    It listed each dated todo twice when most todos had dates; see
+    `issues/bugs/2026-10-22-todo-page-lists-each-dated-todo-twice.md`. The
+    default tab stays "By place". "By date" shows the open dated todos only and
+    says "No todos with a date." when there are none. The Box page's "N overdue"
+    opens the list on "By date", where the oldest deadlines come first.)*
   - Then one block per row: the card as a `FileEntry` header (polymorphic
     through the type's summary and list component, with the fallback), the
     card's reduction ("5 of 7", next date), then sections as subheads with
     their reductions, then items nested under their parents, each with its
     annotation. A row with `via: "reference"` says so.
   - Done and dropped items are hidden and counted, with a control to show them.
-  - A control switches `group` between place and plate. It is view state, not a
+  - A control switches `group` between place and plate (and, since 2026-10-22, date). It is view state, not a
     card field.
   - The `todo-view` schema does not change. An omitted `glob` still means the
     card's own subtree (`todo-view.ts:37-41`), and now also includes referring

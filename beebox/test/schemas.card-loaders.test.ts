@@ -118,3 +118,27 @@ void test("An inventory record's summary line says where it is and how many, joi
   ],
   );
 });
+
+// ## Person — name as title, where things stand (else role) as the summary line
+//
+// A person's tile line is where things stand with them (`where-things-stand`); without one
+// it falls back to their `role`. A blank one does not hide the role.
+void test("A person's summary line is where things stand, else their role", async (t) => {
+  const { PersonSchema } = await import("../src/schemas/person.js");
+
+  const people = new Map<string, CardSchema>([["person", PersonSchema]]);
+  const person = (fields: Record<string, unknown>) =>
+    summarize({ path: "people/Marisol_Vega.person.card", type: "person", fields: { type: "person", name: "Marisol Vega", body: "", ...fields } }, people);
+  t.check(
+    [
+      person({ "where-things-stand": "Replied Oct 20 · you owe her a lunch date", role: "College friend" }),
+      person({ "where-things-stand": " ", role: "College friend" }),
+      person({}),
+    ].map((s) => [s.title, s.detail ?? null]),
+    [
+      ["Marisol Vega", "Replied Oct 20 · you owe her a lunch date"],
+      ["Marisol Vega", "College friend"],
+      ["Marisol Vega", null],
+    ],
+  );
+});

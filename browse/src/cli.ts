@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 
 import { AgentBrowserError, getUrl, run, runPassthrough } from "agent-browser-typed";
 import { reclaimWorktreeBrowsers } from "../../bin/process-cleanup.js";
-import { annotatedSnapshot, checkedAction, getWithTarget } from "./act.js";
+import { annotatedSnapshot, checkedAction, getWithTarget, noteAction } from "./act.js";
+import { scrollWithSelector } from "./scroll-target.js";
 import { TARGET_COMMANDS } from "./controls.js";
 import { runEnhancedScreenshot } from "./screenshot.js";
 import { openClerkPopup, waitTimeoutMs } from "./clerk-popup.js";
@@ -48,6 +49,13 @@ function readyTimeoutMs(): number {
 // and `screenshot` wait BEFORE reading so they capture the settled state.
 const WAIT_AFTER = new Set(["open"]);
 const WAIT_BEFORE = new Set(["snapshot", "screenshot"]);
+
+// Commands that can change the page under a snapshot's refs. After one runs, a
+// `@eN` ref is refused until the next snapshot (`noteAction`).
+const PAGE_CHANGING = new Set([
+  "click", "dblclick", "fill", "type", "press", "select", "check", "uncheck", "upload", "drag", "keyboard",
+  "open", "goto", "navigate", "back", "forward", "reload", "tab",
+]);
 
 /**
  * Wait for the app's React Query activity to settle — but only when the page
@@ -175,6 +183,7 @@ async function main(): Promise<number> {
     const passArgs = url === undefined ? ["open"] : ["open", url, ...rest.slice(1)];
     const code = await runPassthrough(passArgs);
     if (code === 0 && !skipWait && WAIT_AFTER.has(sub)) await waitForReady(ctx);
+    if (code === 0) await noteAction(sub);
     return code;
   }
 
@@ -212,14 +221,22 @@ async function main(): Promise<number> {
   }
 
   if (TARGET_COMMANDS.has(sub)) {
-    return checkedAction({ sub, args: args.slice(1), ctx });
+    const code = await checkedAction({ sub, args: args.slice(1), ctx });
+    if (code === 0 && PAGE_CHANGING.has(sub)) await noteAction(sub);
+    return code;
+  }
+
+  if (sub === "scroll") {
+    return scrollWithSelector(args.slice(1));
   }
 
   if (sub === "get") {
     return getWithTarget(args.slice(1));
   }
 
-  return runPassthrough(args);
+  const code = await runPassthrough(args);
+  if (code === 0 && PAGE_CHANGING.has(sub)) await noteAction(sub);
+  return code;
 }
 
 export const SCREENSHOT_USAGE = `usage: browse screenshot [--full|-f] [--annotate] [--slug <name>] [path]

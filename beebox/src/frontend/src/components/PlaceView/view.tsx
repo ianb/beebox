@@ -43,6 +43,7 @@ import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hoo
 import { CountsLine } from "../todo/TodoSummaryLine";
 import { rootLineParts } from "../todo/summary";
 import type { RendererProps } from "../../file-type-registry";
+import type { ViewState } from "@shared/view-state";
 import type { ViewTarget } from "../../lib/view-url";
 
 const TIER_HEADINGS: Record<PlaceTier, string> = {
@@ -97,16 +98,19 @@ function RootCounts({ counts, onRetry }: { counts: NavCounts | "unavailable"; on
   }
   const parts = rootLineParts(counts);
   if (parts === null) return null;
-  const open = (path: string, title: string) => (openBeside === null ? null : { onClick: () => openBeside(cardTarget(path)), title });
+  const open = (path: string, { title, viewState }: { title: string; viewState: ViewState | null }) =>
+    (openBeside === null ? null : { onClick: () => openBeside({ ...cardTarget(path), viewState }), title });
   return (
     <div data-place-section="counts">
       <Text as="p" size="sm" tone="subtle">
         <CountsLine
           parts={parts}
           actions={{
-            open: open(PLATE_CARD_PATH, "Open your todo list"),
-            overdue: open(PLATE_CARD_PATH, "Open your todo list"),
-            questions: open(SYSTEM_CARD_PATHS.questions, "Open the questions waiting for you"),
+            open: open(PLATE_CARD_PATH, { title: "Open your todo list", viewState: null }),
+            // Date order puts the oldest deadlines, the overdue ones, first.
+            overdue: open(PLATE_CARD_PATH, { title: "Open your todo list by date", viewState: { group: "date" } }),
+            later: open(PLATE_CARD_PATH, { title: "Open your todo list", viewState: null }),
+            questions: open(SYSTEM_CARD_PATHS.questions, { title: "Open the questions waiting for you", viewState: null }),
           }}
         />
       </Text>

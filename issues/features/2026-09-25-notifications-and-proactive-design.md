@@ -98,7 +98,7 @@ The gaps repeat; the manual-testing items (real APNs delivery, tap-to-target, ba
 
 ## Re-encounter 2026-10-22 (journey walks)
 
-The gaps repeat in four walks; none exercises the manual-testing items above (real APNs delivery, tap-to-target, badge clearing on a physical iPhone), since the walk boxes have no channel and the walk browser denies notification permission ([filed](../code-quality/2026-10-22-journey-browser-denies-notification-permission.md)). Manual-testing stays.
+The gaps repeat in four walks; none exercises the manual-testing items above (real APNs delivery, tap-to-target, badge clearing on a physical iPhone), since the walk boxes have no channel and the walk browser denies notification permission ([filed](../closed/code-quality/2026-10-22-journey-browser-denies-notification-permission.md)). Manual-testing stays.
 
 - [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (rows 13-15): the agent said that no channel exists and made a dated todo as a fallback (on 2026-10-09 it made none). It named "Admin, on the Host tab, under Notifications" and dropped the first step the box docs give, the profile menu. The walker: "I don't know what 'Admin' or 'Host tab' is." Its main reservation: "The reminders gap is the thing that stops it replacing my memory: I'd have to open it myself."
 - [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (row 41): the agent repeated "Admin → Host → Notifications" from the `bbx remind` refusal text (`beebox/src/cli/commands/remind/reminder.ts:91`). The walker: "'Admin -> Host' means nothing to me." It asked for a dated todo instead, which met the need.

@@ -10,11 +10,12 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { loadavg } from "node:os";
 import { join } from "node:path";
 
 import { readJson } from "../../../src/scripts/user-stories/json-io.ts";
-import { agentTiming } from "./agent-time.ts";
-import { JOURNEY_WORK as WORK } from "./provisioning.ts";
+import { agentTiming, type TurnDetail } from "./agent-time.ts";
+import { JOURNEY_WORK as WORK, liveRuns } from "./provisioning.ts";
 
 const runId = process.argv[2];
 if (runId === undefined) {
@@ -28,7 +29,7 @@ if (!existsSync(join(runDir, "before.json"))) {
   process.exit(1);
 }
 
-interface Before { journey: string, startedIso: string, box: string, url: string, headBefore: string }
+interface Before { journey: string, startedIso: string, box: string, url: string, headBefore: string, otherLiveRunsAtPrepare?: number, loadAvg1mAtPrepare?: number }
 const before = readJson<Before>(join(runDir, "before.json"));
 
 function git(args: string[]): string {
@@ -89,8 +90,18 @@ const timing = agentTiming(before.box);
 const turns = timing.turns;
 const agentSeconds = timing.totalSeconds;
 
+/** "12s", or "n/a" when the turn never got there. */
+const fmt = (n: number | null): string => (n === null ? "n/a" : `${String(Math.round(n))}s`);
+function turnLine(i: number, t: TurnDetail): string {
+  const first = t.firstTextSeconds === null ? "no text yet" : `first text ${fmt(t.firstTextSeconds)}${t.firstTextInterim ? " (interim)" : ""}`;
+  const send = t.startSource === "hub" ? `send+${fmt(t.sendLagSeconds)} to transcript` : "no hub send matched; from transcript";
+  return `  turn ${String(i + 1).padStart(2)}  ${first}, answer ${fmt(t.answerSeconds)}, complete ${fmt(t.completeSeconds)}  [${send}]`;
+}
+
 const after = {
   ...before,
+  otherLiveRunsAtCollect: liveRuns({ work: WORK, now: Date.now() }).filter((name) => name !== runId).length,
+  loadAvg1mAtCollect: Number(loadavg()[0]?.toFixed(2)),
   finishedIso: new Date().toISOString(),
   headAfter,
   commits,
@@ -98,7 +109,12 @@ const after = {
   screenshots: shots.length,
   noteLines: notes === "" ? 0 : notes.split("\n").length,
   spanMinutes: Number(spanMinutes.toFixed(1)),
-  agentTimingSource: "Claude root-chat and place-chat transcripts, without engine agent runs (chat titles): user message to first assistant text; excludes other engines and full completion",
+  agentTimingSource: "Claude root-chat and place-chat transcripts, without engine agent runs (chat titles), joined to the box's .beebox/hub-child.log: hub send to first text, to the first non-interim text, and to Turn complete; excludes other engines",
+  agentTurnDetail: timing.detail.map((t) => ({
+    ...t,
+    openedAt: new Date(t.openedAt).toISOString(),
+    startedAt: new Date(t.startedAt).toISOString(),
+  })),
   agentTimingAvailable: turns.length > 0,
   agentTurns: turns.length,
   agentMinutes: Number((agentSeconds / 60).toFixed(1)),
@@ -119,8 +135,13 @@ if (waits.length > 0) {
 }
 if (turns.length > 0) {
   console.log(`agent       ${turns.length} turns, ${(agentSeconds / 60).toFixed(1)} min total, median ${after.agentMedianSeconds}s, slowest ${after.agentSlowestSeconds}s`);
-  console.log("            (Claude root- and place-chat first-text timing; excludes other engines, full completion)");
+  console.log("            (user message to first text, any text; excludes other engines)");
 }
+if (timing.detail.length > 0) {
+  console.log("turns       from the hub's send (interim = a progress line, not the answer):");
+  for (const [i, t] of timing.detail.entries()) console.log(turnLine(i, t));
+}
+console.log(`load        ${String(before.otherLiveRunsAtPrepare ?? "?")} other run(s) live when prepared, ${String(after.otherLiveRunsAtCollect)} at collect; 1-min load ${String(before.loadAvg1mAtPrepare ?? "?")} then ${String(after.loadAvg1mAtCollect)}`);
 if (turns.length === 0) console.log("agent timing unavailable: no Claude chat first-response intervals");
 console.log(`notes       ${after.noteLines} lines`);
 console.log(`screenshots ${shots.length}`);
