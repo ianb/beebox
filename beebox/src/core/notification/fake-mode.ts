@@ -12,7 +12,7 @@
  * alias for one release, with a warning.
  */
 
-import { loadBoxConfig } from "../box/config.js";
+import { fakeNotificationsValue } from "../../lib/box-fixture.js";
 
 // TODO(env-migration): a harness flag, read lazily like BBX_STRICT_FETCH (lib/env.ts).
 let warnedLegacy = false;
@@ -35,9 +35,9 @@ function processFakeMode(): boolean {
  * value other than `true` reads as on: a box that tried to say "fake" must
  * not send for real.
  */
-export async function notifyFakeMode(boxRoot: string): Promise<boolean> {
+export function notifyFakeMode(boxRoot: string): boolean {
   if (processFakeMode()) return true;
-  const value: unknown = (await loadBoxConfig(boxRoot)).fakeNotifications;
+  const value = fakeNotificationsValue(boxRoot);
   if (value === undefined) return false;
   if (value !== true && !warnedValue.has(boxRoot)) {
     warnedValue.add(boxRoot);

@@ -29,7 +29,7 @@ export interface AudienceDetail {
 }
 
 export async function audienceDetail(boxRoot: string): Promise<AudienceDetail> {
-  const fake = await notifyFakeMode(boxRoot);
+  const fake = notifyFakeMode(boxRoot);
   const devices = devicePushRegistrations(boxRoot);
   const endpoints = (await endpointsForBox(await boxSlug(boxRoot))).length;
   if (!fake) return { apnsDevices: devices, webPushEndpoints: endpoints, fake };

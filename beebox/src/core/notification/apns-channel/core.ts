@@ -41,8 +41,8 @@ export function apnsConfigFromEnv(): ApnsConfig | null {
 }
 
 /** Whether a send without an injected service can go out: the keys are set, or fake mode is on. */
-export async function apnsConfigured(boxRoot: string): Promise<boolean> {
-  return (await notifyFakeMode(boxRoot)) || apnsConfigFromEnv() !== null;
+export function apnsConfigured(boxRoot: string): boolean {
+  return notifyFakeMode(boxRoot) || apnsConfigFromEnv() !== null;
 }
 
 type Outcome = { kind: "sent" } | { kind: "pruned"; reason: string } | { kind: "failed"; error: string };
@@ -102,7 +102,7 @@ export async function sendApns(opts: {
   apns?: ApnsService | undefined;
 }): Promise<Delivery> {
   const { boxRoot, intent, devices } = opts;
-  const fake = await notifyFakeMode(boxRoot);
+  const fake = notifyFakeMode(boxRoot);
   const config = apnsConfigFromEnv();
   let service: ApnsService;
   let owned = false;

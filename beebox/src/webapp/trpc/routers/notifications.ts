@@ -68,7 +68,7 @@ export const notificationsRouter = router({
     .query(async ({ ctx, input }): Promise<LoggedNotification | null> => getIntent(ctx.boxRoot, input.id)),
 
   /** Whether this server can send APNs pushes (its key is set, or fake mode is on). */
-  apnsStatus: authedProcedure.query(async ({ ctx }): Promise<{ configured: boolean }> => ({ configured: await apnsConfigured(ctx.boxRoot) })),
+  apnsStatus: authedProcedure.query(({ ctx }): { configured: boolean } => ({ configured: apnsConfigured(ctx.boxRoot) })),
 
   /** Send one notification from this process, which holds the channel keys: `bbx notify`. */
   send: notifySenderProcedure.input(sendInput).mutation(async ({ ctx, input }): Promise<NotifyResult> => {
