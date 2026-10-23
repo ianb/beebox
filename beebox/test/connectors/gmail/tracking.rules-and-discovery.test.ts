@@ -10,7 +10,7 @@ import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/c
 import type { GmailMessage } from "../../../src/services/google-gmail-types.js";
 import { parseGmailConnectorConfig } from "../../../src/connectors/gmail/config.js";
 import { withGmailTrackingLock } from "../../../src/connectors/gmail/track.js";
-import { evaluateGmailRules } from "../../../src/connectors/gmail/rules.js";
+import { evaluateGmailRules, recheckUnevaluated } from "../../../src/connectors/gmail/rules.js";
 import { parseGmailTransientState } from "../../../src/connectors/gmail/state.js";
 import {
   discoverGmailChanges,
@@ -389,6 +389,69 @@ void test("A Message-ID with = and / is still checked against the rule", async (
       additionalMatches: 0,
     },
   });
+});
+
+// Mail listed unevaluated under the old guard is re-checked once: a message
+// with an ordinary id now reaches the rule, one still unsafe goes back on the
+// list, and a deleted one is dropped. The marker stops a refetch every sync.
+void test("Unevaluated mail is re-checked once against its rule", async (t) => {
+  const gmail = oldMailGmail();
+  const fresh = addFreshMessage(gmail);
+  fresh.payload!.headers = fresh.payload!.headers!.map((header) =>
+    header.name === "Message-ID" ? { ...header, value: "<CAJx=Ab@mail.gmail.com>" } : header,
+  );
+  const literal = { ...gmailMessage({ id: "literal", threadId: "literal-thread", subject: "Literal", body: "" }), labelIds: ["Label_7"] };
+  literal.payload!.headers = literal.payload!.headers!.map((header) =>
+    header.name === "Message-ID" ? { ...header, value: "<a@[192.0.2.1]>" } : header,
+  );
+  gmail.addMessage(literal);
+  const entry = (messageId: string, threadId: string) => ({
+    messageId, threadId, from: "sender@example.com", subject: "", date: "2026-08-01T15:00:00.000Z",
+    snippet: "", labels: ["callback"], discoveredAt: "2026-08-02T00:00:00.000Z",
+  });
+  const fetched: string[] = [];
+  const originalGetMessage = gmail.getMessage.bind(gmail);
+  gmail.getMessage = async (id) => {
+    fetched.push(id);
+    return originalGetMessage(id);
+  };
+  const opts = {
+    service: gmail,
+    config: parseGmailConnectorConfig({
+      rules: [{ name: "watch-mail", query: "label:callback", action: { type: "stage" } }],
+    }),
+    trackedThreadIds: new Set<string>(),
+    labelMap: new Map([["Label_7", "callback"]]),
+    now: new Date("2026-08-05T13:00:00.000Z"),
+  };
+  const first = await recheckUnevaluated({
+    ...opts,
+    state: { rules: { "watch-mail": {
+      baselineAt: "2026-08-01T00:00:00.000Z",
+      unevaluated: [entry("new", "new-thread"), entry("literal", "literal-thread"), entry("deleted", "deleted-thread")],
+    } } },
+  });
+  t.check({ fetched, rule: first.state.rules?.["watch-mail"] }, {
+    fetched: ["new", "literal", "deleted"],
+    rule: {
+      baselineAt: "2026-08-01T00:00:00.000Z",
+      unevaluatedRecheckedAt: "2026-08-05T13:00:00.000Z",
+      pending: [{
+        messageId: "new", threadId: "new-thread", from: "sender@example.com", subject: "New",
+        date: "2026-08-01T15:00:00.000Z", snippet: "", labels: ["callback"], discoveredAt: "2026-08-05T13:00:00.000Z",
+      }],
+      additionalMatches: 0,
+      unevaluated: [{
+        messageId: "literal", threadId: "literal-thread", from: "sender@example.com", subject: "Literal",
+        date: "2026-08-01T15:00:00.000Z", snippet: "", labels: ["callback"], discoveredAt: "2026-08-05T13:00:00.000Z",
+      }],
+      additionalUnevaluated: 0,
+    },
+  });
+
+  fetched.length = 0;
+  const second = await recheckUnevaluated({ ...opts, state: first.state });
+  t.check({ fetched, state: second.state }, { fetched: [], state: first.state });
 });
 
 // ## History discovery is bounded and resumable

@@ -1,5 +1,6 @@
 /** Evaluate Gmail query rules against bounded mailbox-change candidates. */
 
+import { NotFoundError } from "../../lib/errors.js";
 import type { GmailMessage, GoogleGmailService } from "../../services/google-gmail/core.js";
 import type { ConnectorProcedureTrigger } from "../../connector.js";
 import type { GmailConnectorConfig, GmailRule } from "./config.js";
@@ -293,4 +294,38 @@ export async function evaluateGmailRules(opts: {
     }
   }
   return { state, trackRequests, procedures: [...procedures.values()] };
+}
+
+/**
+ * Re-check each rule's unevaluated messages once. Until 2026-10-23 the
+ * Message-ID guard rejected `=` and `/`, so ordinary mail was listed here and
+ * never checked. Messages still unsafe return to the list; the marker stops
+ * them being refetched every sync. A deleted message is dropped.
+ */
+export async function recheckUnevaluated(opts: Omit<Parameters<typeof evaluateGmailRules>[0], "candidates">): Promise<GmailRuleEvaluation> {
+  let state = opts.state;
+  const trackRequests: GmailAutomaticTrackRequest[] = [];
+  const procedures: ConnectorProcedureTrigger[] = [];
+  for (const rule of opts.config.rules) {
+    const { unevaluated = [], ...ruleState } = stateForRule(state, rule.name);
+    if (unevaluated.length === 0 || ruleState.unevaluatedRecheckedAt !== undefined) continue;
+    state = setRuleState({
+      state,
+      ruleName: rule.name,
+      ruleState: { ...ruleState, unevaluatedRecheckedAt: opts.now.toISOString() },
+    });
+    const candidates: GmailMessage[] = [];
+    for (const entry of unevaluated) {
+      try {
+        candidates.push(await opts.service.getMessage(entry.messageId));
+      } catch (error) {
+        if (!(error instanceof NotFoundError)) throw error;
+      }
+    }
+    const result = await evaluateGmailRules({ ...opts, config: { ...opts.config, rules: [rule] }, state, candidates });
+    state = result.state;
+    trackRequests.push(...result.trackRequests);
+    procedures.push(...result.procedures);
+  }
+  return { state, trackRequests, procedures };
 }
