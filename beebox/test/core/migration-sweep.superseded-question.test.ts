@@ -12,7 +12,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any } from "@ianbicking/tap-check/check";
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { chmod, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
@@ -97,4 +97,20 @@ void test("a partial apply's question is recorded in the manifest and kept", asy
   // The question carries the rerun's leftovers and its answer authorizes their repair: it stays.
   const next = await sweepMigrations({ boxRoot: box.root });
   t.check(await state(box, next), { status: "attention", questions: [QUESTION], card: true, dirty: "", head: `Apply migration: ${LATER}` });
+});
+
+void test("a refused deletion commit puts the card back", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await seedManifest(box, { pending: [] });
+  await box.write(QUESTION, createTextQuestionTemplate({ memo: `Migration ${PROBE} needs attention`, askedAt: "2026-10-20T10:00:00.000Z", prompt: `Migration: ${PROBE}\nfailed`, directive: "Inspect the manifest." }));
+  await box.commitAll("seed");
+  const hook = join(git(box, "rev-parse", "--absolute-git-dir"), "hooks/pre-commit");
+  await writeFile(hook, "#!/bin/sh\nexit 1\n");
+  await chmod(hook, 0o755);
+
+  // The sweep reports the refusal, and the card is back as committed, so the
+  // next pass sees the question again instead of a current box.
+  await t.checkThrows(() => sweepMigrations({ boxRoot: box.root }), "CommitDidNotLandError");
+  t.check({ questions: await migrationQuestions(box.root), card: await exists(box, QUESTION), dirty: git(box, "status", "--porcelain"), head: git(box, "log", "-1", "--format=%s") }, { questions: [QUESTION], card: true, dirty: "", head: "seed" });
 });

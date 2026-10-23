@@ -194,6 +194,10 @@ void test("A loud send with no audience reached a person with the app open", asy
     { loud: { shown: true, reached: true, deliveries: ["no-audience", "no-audience"] }, dot: { shown: false, reached: false } },
   );
 
+  // `bbx notify --channel apns` tests that channel: the banner does not stand in for it.
+  const only = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, channel: "apns" });
+  t.check({ shown: only.shown, reached: notificationReached(only) }, { shown: false, reached: false });
+
   // Nobody present: the same `loud` send reached nobody.
   await writePresence(box.root, { activeWeb: 0, now: NOW });
   const alone = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW });

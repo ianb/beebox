@@ -58,8 +58,9 @@ export interface NotifyResult {
   id: string;
   deliveries: Delivery[];
   /**
-   * The live event showed it in an open app: someone was present and the
-   * loudness has a banner (`quiet` or `loud`; a `dot` is a badge only).
+   * The live event showed it in an open app: the bus event went out, someone
+   * was present, the loudness has a banner (`quiet` or `loud`; a `dot` is a
+   * badge only), and the send was not restricted to one channel.
    */
   shown: boolean;
 }
@@ -123,7 +124,8 @@ function logSafely(write: () => void): void {
   }
 }
 
-function emitLive(boxRoot: string, opts: { intent: NotificationIntent; url: string }): void {
+/** Emit the live bus event for open apps; false when the bus refused it. */
+function emitLive(boxRoot: string, opts: { intent: NotificationIntent; url: string }): boolean {
   const { intent, url } = opts;
   try {
     const bus = createEventBus(boxRoot);
@@ -141,9 +143,11 @@ function emitLive(boxRoot: string, opts: { intent: NotificationIntent; url: stri
     } finally {
       bus.close();
     }
+    return true;
   } catch (e) {
     // The bus is the live signal only; the log and the channels still carry it.
     console.warn("[notify-boxholder] could not emit the notification bus event:", e);
+    return false;
   }
 }
 
@@ -241,7 +245,7 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
   const url = targetUrl(intent.target, { boxSlug: await boxSlug(boxRoot), notificationId: intent.id });
 
   logSafely(() => appendIntent(boxRoot, { intent, now }));
-  emitLive(boxRoot, { intent, url });
+  const emitted = emitLive(boxRoot, { intent, url });
 
   const { audience, plan, presence } = await planNotification(boxRoot, {
     intent,
@@ -259,5 +263,7 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
   for (const delivery of deliveries) {
     logSafely(() => appendDelivery(boxRoot, { notificationId: intent.id, delivery, now }));
   }
-  return { id: intent.id, deliveries, shown: intent.loudness !== "dot" && presence.activeWeb > 0 };
+  // A send restricted to one channel is a test of that channel: the banner does not stand in for it.
+  const shown = emitted && request.channel === undefined && intent.loudness !== "dot" && presence.activeWeb > 0;
+  return { id: intent.id, deliveries, shown };
 }

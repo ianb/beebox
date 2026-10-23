@@ -1,11 +1,14 @@
+import { execFile } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { startAwakeTimeout } from "../shared/awake-timeout.js";
 import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
 import { repairMigration, runProcedureMigration, finishMigrationRepair, migrationQuestions, redactMigrationQuestions, supersededMigrationQuestions } from "./migration-repair.js";
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
 import { stageAndCommitPaths } from "../lib/git/core/operations.js";
+import { withBoxGitLock } from "../lib/git-lock.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
 import { acquireBoxMaintenance, boxWorkHolders, peekBoxWork, type BoxMaintenance } from "../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError, type WorkHolder } from "../lib/box-maintenance-error.js";
@@ -196,7 +199,15 @@ async function closeSupersededQuestions(opts: SweepOptions, owner: Owner): Promi
   if (!(await owner.held())) return;
   await owner.step("closing superseded questions");
   for (const file of superseded) await rm(join(boxRoot, file));
-  await stageAndCommitPaths(boxRoot, { paths: superseded, message: "Migration questions superseded by the applied migration", trailers: { "Created-By": "migration-sweep" } });
+  try {
+    await stageAndCommitPaths(boxRoot, { paths: superseded, message: "Migration questions superseded by the applied migration", trailers: { "Created-By": "migration-sweep" } });
+  } catch (error) {
+    // A refused commit must not leave the cards missing: the next pass would see no question and report the box current.
+    await withBoxGitLock(boxRoot, async () => {
+      await promisify(execFile)("git", ["checkout", "--quiet", "HEAD", "--", ...superseded], { cwd: boxRoot });
+    });
+    throw error;
+  }
 }
 
 async function applyMigration(opts: SweepOptions, { migration, applied, owner }: { migration: Migration; applied: SweptMigration[]; owner: Owner }): Promise<SweepResult | null> {
