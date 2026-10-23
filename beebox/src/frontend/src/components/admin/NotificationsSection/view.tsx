@@ -15,8 +15,8 @@ import { trpc } from "../../../lib/trpc/client";
 import { Stack } from "../../ui/Stack";
 import { Row } from "../../ui/Row";
 import { Text } from "../../ui/Text";
-import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
+import { Notice } from "../../ui/Notice";
 import { Button } from "../../ui/Button";
 import { errorMessage } from "@shared/error-guards";
 import { detectPushSupport, type PushSupport } from "../../../lib/push-support";
@@ -135,9 +135,7 @@ export function NotificationsSection() {
         )}
 
         {error ? (
-          <div className="p-3 bg-danger-50 border border-danger-100 rounded">
-            <ErrorText>{error}</ErrorText>
-          </div>
+          <Notice tone="error">{error}</Notice>
         ) : null}
 
         <PhonePushDevices />

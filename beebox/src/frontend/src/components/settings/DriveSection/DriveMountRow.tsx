@@ -27,6 +27,7 @@ import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
 import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
+import { Notice } from "../../ui/Notice";
 import { bbxSource } from "../../../lib/source-tag";
 import { controlAddress } from "@shared/ui-scan/control-address";
 
@@ -208,9 +209,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
       </Row>
 
       {error === null ? null : (
-        <div className="p-2 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
-          {error}
-        </div>
+        <Notice tone="warning">{error}</Notice>
       )}
     </Stack>
   );
