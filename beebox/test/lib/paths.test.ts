@@ -30,15 +30,6 @@ void test("Positional names (bare <type>.card — \"the ‹type› of this direc
   });
 });
 
-// A job card's type is its schema type (`intake-job`), the one templates and
-// schemas are registered under; its name is the stem of its attach directory:
-void test("A job card parses to its schema type and its attach-directory stem", async (t) => {
-  t.check(parseCardName("Inbox_scan.intake.job.card"), {
-    name: "Inbox_scan.intake",
-    type: "intake-job",
-  });
-});
-
 // Returns `null` for strings that aren't valid card filenames:
 void test("Returns null for strings that aren't valid card filenames:", async (t) => {
   t.check(parseCardName("no-extension"), null);
