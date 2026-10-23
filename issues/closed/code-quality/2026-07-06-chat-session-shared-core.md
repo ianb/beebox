@@ -5,7 +5,10 @@ needs: [design, decision]
 area: beebox
 filed-by: agent
 discovered-in: worktree-architectural-review — while doing Track J.1 (chat-session lifecycle union)
+resolution: superseded
 ---
+
+> **Closed 2026-10-22 (issue audit):** Commit da6d70df9 (Telegram removal) deleted `ChatThreadSession`. Only `ChatSession` remains (`beebox/src/core/chat/session/run/core.ts:53`), so there are no two classes to collapse. `beebox/docs/chat/sessions.md:82` still names the removed class.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

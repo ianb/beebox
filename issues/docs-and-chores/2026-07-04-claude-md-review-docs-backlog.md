@@ -43,3 +43,7 @@ folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, a
 - **State the "typed everywhere" principle in one place.** Currently only
   inferable from a dozen scattered conventions (tRPC end-to-end types, Zod at
   the boundary, no `as` casts to dodge the type checker).
+
+## Audit 2026-10-22
+
+Still open: the logger (no central module in `beebox/src/lib/`), `docs/reliability.md`, `docs/testing-practice.md`, `docs/state-machines.md`, the decision-tree doc, and per-directory `AGENTS.md` files for `src/cli/`, `src/webapp/` and `src/frontend/`. Partly covered: `beebox/docs/connectors.md:115` has "Writing a new connector", and `beebox/docs/engineering-principles.md:109` states when to use XState. The "doctest tier" wording in the testing-practice item is stale; tests are now `.test.ts` files (`beebox/docs/testing/check.md`).

@@ -91,3 +91,7 @@ produced that shape. The same document states the real convention correctly
 further down (`{YYYY-MM-DD}_{shortId}.ics`), so the Overview section is stale
 against its own detail section. Fix that whether or not the filename change
 above happens.
+
+## Audit 2026-10-22
+
+Still true. `eventFilename` is now at `beebox/src/connectors/google-calendar/ics.ts:327-333` and still returns `{date}_{shortId}.ics`. `beebox/docs/connectors/calendar.md:13-18` still claims "human-readable slugged filenames" with `Weekly_team_standup.ics`; line 49 and line 101 repeat the slug claim. Only Google is supported. The docs correction is a small edit that needs no decision.

@@ -69,3 +69,7 @@ someone's worktree.
 **Decision (2026-08-26): every code-related merge to main runs a smoke test**
 — `2026-08-26-merge-time-smoke-tier`, unparked. It would have caught 3, 4
 and 7 within the hour.
+
+## Audit 2026-10-22
+
+Done since filing: the merge-time smoke tier decision is closed (`issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md`). The Codex item switch now has a `default` branch that skips and warns (`beebox/src/services/codex-tool-activity.ts:240`). Incidents 4, 8 and 11 have closed issues. Not verified and still open: the hourly-run self-test and known-red carry-forward (improvement 1), selection-miss edges from the ledger (improvement 3), and the UI keep-the-streamed-bubble fix (improvement 4).

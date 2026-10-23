@@ -60,3 +60,7 @@ Secondary observation from the same sitting: reloads of the error page itself
 degraded from instant to 60s+ over the run, and `bin/browse screenshot` began
 hanging past 180s — consistent with the daemon-wedge family already parked in
 `watch/`.
+
+## Audit 2026-10-22
+
+The page moved: `bin/router.ts` and `router-failed-page.ts` are now `workstreams-app/src/router/server/failed-page.ts`. The Retry button (line 91) and the index link (line 93) are unchanged since the 2026-09-21 assessment.

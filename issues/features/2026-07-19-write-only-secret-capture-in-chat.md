@@ -95,3 +95,7 @@ Relatedly, this is the honest answer to a recurring need the connectors already
 have (Telegram bot token, webhook secret, per-connector `*.secret.json`) — a
 chat-native, transcript-safe way to populate `config/connectors/*.secret.json`
 instead of hand-editing files or pasting into chat.
+
+## Audit 2026-10-22
+
+Partly done. The secret-custody plan shipped the store and an admin Secrets section (`beebox/src/frontend/src/components/admin/SecretsSection/`; plan: `beebox/docs/implemented-plans/secret-custody.md`). The chat widget is not built: a search of `beebox/src` finds no `secret-request` tag, no mention in `beebox/src/core/chat/session/prompts.ts`, and no chat component for it. The plan lists this issue and describes the widget as the conversational entry point, so only the widget remains.

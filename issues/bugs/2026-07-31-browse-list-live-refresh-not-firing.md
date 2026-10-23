@@ -65,3 +65,7 @@ received when fetching the script ('/<worktree>/sw.js')
 even for an otherwise-authenticated browser. It surfaces as a permanent "1
 error" badge in the dev UI. Probably wants adding to that allowlist — it serves
 no box data — but that is an auth-surface change and was left alone here.
+
+## Audit 2026-10-22
+
+The service-worker part is fixed: the dev router now allows `/<w>/sw.js` without auth (`workstreams-app/src/router/server/auth.ts:206`, commit `60a9e188c`). The live-refresh hook is unchanged (`useBrowseListLiveRefresh`, `beebox/src/frontend/src/pages/browse/BrowsePage.tsx:45`). The report that it does not fire in a real browser is not yet reproduced or ruled out.

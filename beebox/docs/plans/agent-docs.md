@@ -74,7 +74,7 @@ Design constraints, from the boxholder's framing (2026-09-12):
 - Deploy: Cloudflare Pages Git integration builds `main` with
   `pnpm install --frozen-lockfile && pnpm --dir site build --base /`, output
   `site/dist`. `beebox.run` is the canonical host
-  ([go-live issue](../../../issues/docs-and-chores/2026-07-21-pages-site-go-live.md)).
+  ([go-live issue](../../../issues/closed/docs-and-chores/2026-07-21-pages-site-go-live.md)).
   So the site build has the whole monorepo and its dependencies available.
 
 ## Who is asking (personas, proposed 2026-09-12)

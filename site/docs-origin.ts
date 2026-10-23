@@ -5,7 +5,7 @@
 
 /**
  * The canonical host once the Cloudflare Pages build goes live at base "/".
- * See issues/docs-and-chores/2026-07-21-pages-site-go-live.md.
+ * See issues/closed/docs-and-chores/2026-07-21-pages-site-go-live.md.
  */
 export const CANONICAL_ORIGIN = "https://beebox.run";
 

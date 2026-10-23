@@ -52,6 +52,6 @@ can require a new app even when `ios-app/` changes little.
   show nothing, or at most one gentle "this app does not report its version"
   note.
 
-Related, the reverse direction: [stale web bundle detection](2026-08-12-stale-web-bundle-detection.md)
+Related, the reverse direction: [stale web bundle detection](../closed/features/2026-08-12-stale-web-bundle-detection.md)
 (the web client noticing a newer deployed web bundle). This is a shared web
 and iOS surface; use the bbx-ios-overlap skill.

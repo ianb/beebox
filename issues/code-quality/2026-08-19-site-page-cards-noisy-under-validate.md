@@ -48,3 +48,7 @@ not two, since `agent-prompt` joined the vocabulary.
 Suggest routing to `public-site` (or whoever lands the site vocabulary) rather
 than picking it off the queue, and doing the schema-declared-tags half
 deliberately.
+
+## Audit 2026-10-22
+
+Half of the second warning now has a mechanism. A schema can declare its body tags (`markdocTags`, `beebox/src/cards/schema.ts:254`, commit `eebb195b6`, 2026-10-10), and `beebox/src/core/body-markdoc-lint.ts` accepts them. Not verified: whether the site vocabulary declares its tags this way. The `aside.ref` collision with the ref walker is unchanged.

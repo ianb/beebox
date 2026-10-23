@@ -22,3 +22,7 @@ when relevant changes land on `main`, using WXT development mode for the loaded
 copy, and showing a source revision or stronger build identity in the popup.
 Chrome may still require an explicit extension reload after generated files
 change, so build freshness and runtime freshness need separate signals.
+
+## Audit 2026-10-22
+
+Part of the first option already exists: `beebox-clerk/build/auto-build.sh` rebuilds `dist/chrome-mv3/` when clerk sources land on `main` (commit `4d7b6088d`, run by `.husky/post-commit` and `.husky/post-merge`). It does not cover edits made in a worktree. The popup still shows no source revision or build identity.

@@ -90,3 +90,7 @@ existing event opaque fixes almost nothing on an established box.
 - `beebox/docs/connectors/calendar.md` needs updating either way. Its Overview already
   claims "human-readable slugged filenames" and shows examples the code has
   never produced, which is how this was found.
+
+## Audit 2026-10-22
+
+Still open: `eventFilename` still returns `{date}_{shortId}.ics`. Pointers moved: the function is at `beebox/src/connectors/google-calendar/ics.ts:328-335`, and its one caller is still `beebox/src/connectors/google-calendar/sync.ts:209`.

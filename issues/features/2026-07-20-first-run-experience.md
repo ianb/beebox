@@ -161,3 +161,7 @@ chat rather than the dashboard. Related:
 [today-view](2026-05-11-today-view.md). The dashboard's ops-heaviness
 for *established* boxes is a real but separate tension — the
 boxholder's "the dashboard is crap" covers both.
+
+## Audit 2026-10-22
+
+Drift in the openers slice. Openers now live on landmarks, not on the bound directory's briefing card (`beebox/src/schemas/landmark.ts:120-128`; commits `35ce15e2f` and `6973f0767` retired the root onboarding openers). The rest of the scope (menu of flows, onboarding landmark, dashboard first-run state) is still undone.

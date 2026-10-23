@@ -25,3 +25,7 @@ Combine well with the search feature above: search results that include a backli
 **Show the version each backlink pins.** Refs carry a version (`@1.0.0`), and the design stance is that those versions should be preserved — a ref captures what the linker meant *at link time*, not whatever the target looks like now. So the backlinks panel should visually distinguish refs to the current version from refs to older versions, and clicking through to an old-version ref should display the historical card content (from git) rather than silently substituting current. See the addressability section below — same principle.
 
 Not urgent for the same reason as search — the agent navigates by path conventions and the user navigates via chat. Becomes important once humans start browsing cards directly, or once we want the agent to do graph-aware reasoning ("clean up cards with no incoming refs older than 90 days").
+
+## Audit 2026-10-22
+
+The code pointer is stale. `findIncomingRefs` and `findOutgoingRefs` no longer exist in the repo (there is no `cardworks/` directory). Ref extraction now lives in `beebox/src/cards/extract-refs.ts` and `beebox/src/core/canonicalize-refs.ts`. A search of `beebox/src` finds no incoming-refs query, no `bbx refs` command, and no "Referenced by" panel. The surface is still unbuilt. Re-check the real data source before designing.

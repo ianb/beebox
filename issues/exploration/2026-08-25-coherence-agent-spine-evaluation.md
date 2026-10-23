@@ -93,3 +93,7 @@ Related: [proving-it-works](../closed/exploration/2026-08-14-proving-it-works-de
 the other outside tool in the queue, and the same shape of question: adopt,
 borrow the idea, or neither. Record the call either way so the link is not
 re-evaluated later.
+
+## Audit 2026-10-22
+
+The false claim named above still stands. `beebox/docs/security-overview.md:110` says scheduled agent runs are off by default on fresh boxes. `beebox/src/core/box/structure/defaults.ts` still seeds several schedules with `enabled: true` (lines 379, 390, 410, 425). The docs fix is a small edit and needs no tool decision. The evaluation of coherence itself is not done.

@@ -6,11 +6,14 @@ filed-by: agent
 discovered-in: worktree-github-pages-site — building the site while the repo was private
 labels: [soft-launch]
 priority: important
+resolution: implemented
 ---
 
+> **Closed 2026-10-22 (issue audit):** The site is live: `https://beebox.run` and `/llms.txt` return 200, and the home page has no placeholder text. `README.md:16-29` links the site (dcdd13cad).
+
 The front-door site (principles:
-[public-site](../features/2026-07-20-public-site.md); plan:
-[plan doc](../../beebox/docs/plans/public-site.md)) builds and deploys through
+[public-site](../../features/2026-07-20-public-site.md); plan:
+[plan doc](../../../beebox/docs/plans/public-site.md)) builds and deploys through
 Cloudflare Pages' Git integration. Cloudflare builds each `main` push; the
 checks-only GitHub workflow is not the deploy mechanism.
 
