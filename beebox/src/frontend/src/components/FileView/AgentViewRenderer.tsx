@@ -305,7 +305,6 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
 
 
   // Subscribe to the box event stream for live updates
-  const connectedOnceRef = useRef(false);
   // Reconnect-driven resync goes through the coalescing/hidden-defer helper:
   // N mounted instances of this same view (one per bound card visible in
   // chat) all get onConnect in the same WS-reconnect tick, and a hidden tab
@@ -336,11 +335,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
     // Resync on a *re*connect: file-change events are transient and not replayed,
     // so a card edited while the socket was dropped would otherwise leave the
     // view stale. Skip the initial connect — the mount effect already loads.
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
+    onReconnect: useCallback(() => {
       triggerCardsResync();
     }, [triggerCardsResync]),
   });

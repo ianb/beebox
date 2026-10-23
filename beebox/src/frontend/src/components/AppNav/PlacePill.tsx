@@ -41,7 +41,7 @@
  * to reconsider this split, not to quietly widen the payload.
  */
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { PlacePillFace } from "../app-bar-faces/PlacePillFace";
 import { trpc } from "../../lib/trpc/client";
@@ -90,7 +90,6 @@ export function PlacePill({
   const resyncIdentity = useCallback(() => {
     if (place.dir !== null) void utils.landmarks.identity.invalidate({ dir: place.dir });
   }, [place.dir, utils]);
-  const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const fileChange = busEventData(event, "file-change");
@@ -101,11 +100,7 @@ export function PlacePill({
     }, [utils]),
     // `file-change` events are transient and never replayed: a rename that
     // landed while the socket was down is picked up when it reconnects.
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
+    onReconnect: useCallback(() => {
       resyncIdentity();
     }, [resyncIdentity]),
   });

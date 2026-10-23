@@ -4,7 +4,7 @@
  * Full-width directory listing for the canonical Browse card.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { apiRawFileUrl, getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
@@ -20,6 +20,7 @@ import { ErrorText } from "../../components/ui/ErrorText";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody/view";
 import { RequestError } from "../../lib/errors";
 import { BROWSE_DEFAULT_DIRECTORY, browseDirectoryLabel, type BrowseMissingKind, type BrowseState } from "../../lib/browse-card-state";
+import { parentDir } from "../../lib/parent-dir";
 
 interface BrowseBodyProps {
   state: BrowseState;
@@ -44,21 +45,16 @@ interface ContextMenuState {
  */
 function useBrowseListLiveRefresh(dirPath: string): void {
   const utils = trpc.useUtils();
-  const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const data = busEventData(event, "file-change");
       if (!data) return;
       const changed = data.path;
-      const parent = changed.includes("/") ? changed.slice(0, changed.lastIndexOf("/")) : "";
+      const parent = parentDir(changed);
       if (parent !== dirPath) return;
       void utils.status.browse.invalidate({ path: dirPath });
     }, [dirPath, utils]),
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
+    onReconnect: useCallback(() => {
       void utils.status.browse.invalidate({ path: dirPath });
     }, [dirPath, utils]),
   });

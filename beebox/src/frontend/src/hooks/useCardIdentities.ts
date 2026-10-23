@@ -14,7 +14,7 @@
  * hook watches a *set* of paths rather than one.
  */
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { trpc } from "../lib/trpc/client";
 import { useBusSubscription, type RealtimeEvent } from "./useBusSubscription";
 import { busEventData } from "../lib/bus-events";
@@ -41,7 +41,6 @@ export function useCardIdentities(paths: string[]): Map<string, CardIdentity> {
   }, [key, utils]);
   // Skip the very first connect: the query already ran on mount, so a resync
   // there is a redundant fetch.
-  const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const fileChange = busEventData(event, "file-change");
@@ -53,11 +52,7 @@ export function useCardIdentities(paths: string[]): Map<string, CardIdentity> {
     // `file-change` events are transient and never replayed, so a retitle that
     // landed while the socket was down would leave the tab saying the old thing
     // — the very bug this hook exists to fix. Same belt as `FileView`'s.
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
+    onReconnect: useCallback(() => {
       resync();
     }, [resync]),
   });
