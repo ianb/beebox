@@ -1,7 +1,7 @@
 import { hierarchy, treemap } from "d3";
 import { useState, type MouseEvent } from "react";
 import type { RouterOutput } from "../../../../lib/trpc/client";
-import { formatBytes } from "../../../../lib/format-bytes";
+import { humanBytes } from "@shared/human-bytes";
 
 type Summary = RouterOutput["inventory"]["summary"]["direct"][number];
 interface TreemapDatum {
@@ -42,7 +42,7 @@ export function InventoryTreemap({ items, metric }: { items: Summary[]; metric: 
               style={{ left: `${String(leaf.x0)}%`, top: `${String(leaf.y0 / 0.64)}%`, width: `${String(width)}%`, height: `${String(height / 0.64)}%` }}
               onMouseMove={(event) => setHoverForEvent({ event, item, setHover })}
             >
-              {showLabel ? <><span className="block truncate text-xs font-semibold">{item.type}</span><span className="block truncate text-xs opacity-90">{metric === "count" ? item.count.toLocaleString() : formatBytes(item.bytes)}</span></> : null}
+              {showLabel ? <><span className="block truncate text-xs font-semibold">{item.type}</span><span className="block truncate text-xs opacity-90">{metric === "count" ? item.count.toLocaleString() : humanBytes(item.bytes)}</span></> : null}
             </div>
           );
         })}
@@ -52,7 +52,7 @@ export function InventoryTreemap({ items, metric }: { items: Summary[]; metric: 
             style={{ left: hover.x, top: hover.y }}
           >
             <span className="block font-semibold">{hover.item.type}</span>
-            <span className="block">{hover.item.count.toLocaleString()} files · {formatBytes(hover.item.bytes)}</span>
+            <span className="block">{hover.item.count.toLocaleString()} files · {humanBytes(hover.item.bytes)}</span>
           </div>
         )}
       </div>
