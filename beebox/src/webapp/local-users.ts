@@ -36,6 +36,7 @@ import {
   OwnerExistsError,
   UserExistsError,
 } from "./local-users-errors.js";
+import { setTimeout as delay } from "node:timers/promises";
 
 // --- schema -----------------------------------------------------------------
 
@@ -162,10 +163,6 @@ function writeAuthFile(file: AuthFile): void {
 
 const LOCK_RETRIES = 50;
 const LOCK_RETRY_MS = 100;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Run a read-modify-write of the auth file under the cross-process lock,

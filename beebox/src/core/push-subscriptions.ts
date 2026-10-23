@@ -22,6 +22,7 @@ import { BBX_STATE_DIR } from "../lib/state-dir.js";
 import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 import type { StoredPushSubscription, PushSubscriptionKeys } from "../services/push.js";
 import { errnoCode } from "../shared/error-guards.js";
+import { setTimeout as delay } from "node:timers/promises";
 
 interface SubscriptionRecord {
   keys: PushSubscriptionKeys;
@@ -116,10 +117,6 @@ async function saveStore(store: SubscriptionStore): Promise<void> {
 
 const LOCK_RETRIES = 50;
 const LOCK_RETRY_MS = 100;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Run a read-modify-write under the cross-process lock, retrying briefly while

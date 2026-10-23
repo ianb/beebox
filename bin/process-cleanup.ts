@@ -53,6 +53,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { execa } from "execa";
 import { cwdOf, etimeToSeconds, psRows, type PsRow } from "./process-table.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
 // `etimeToSeconds` is re-exported because it is part of this module's tested
 // surface (bin/test/process-cleanup.liveness.test.ts).
@@ -353,10 +354,6 @@ function signal(pid: number, sig: NodeJS.Signals): void {
       // ESRCH again — the process exited on its own in the meantime.
     }
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
 }
 
 /**

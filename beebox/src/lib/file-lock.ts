@@ -156,6 +156,7 @@ import * as path from "node:path";
 import * as lockfile from "proper-lockfile";
 import { errnoCode } from "../shared/error-guards.js";
 import { isRecord } from "../shared/is-record.js";
+import { setTimeout as delay } from "node:timers/promises";
 // The guard path deliberately does NOT end in the caller's `.lock` suffix, so
 // `scanLocks`'s suffix match enumerates only sidecar files, never guards.
 import { lockGuardPath } from "../shared/lock-guard.js";
@@ -448,10 +449,6 @@ export async function releaseLock(target: LockTarget): Promise<void> {
 
 /** Poll interval while waiting for a contended lock. */
 const LOCK_RETRY_MS = 100;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Run `fn` while holding `lockPath`, retrying the acquire for up to `waitMs`

@@ -67,6 +67,7 @@ import { promisify } from "node:util";
 import { resolveGitDir, withBoxGitLock } from "./git-lock.js";
 import { isRecord } from "../shared/is-record.js";
 import { errorMessage } from "../shared/error-guards.js";
+import { setTimeout as delay } from "node:timers/promises";
 
 const execFileAsync = promisify(execFile);
 
@@ -395,8 +396,4 @@ export function formatAge(ageMs: number | null): string {
   const hours = Math.round(ageMs / 3_600_000);
   if (hours < 48) return `${String(hours)}h`;
   return `${String(Math.round(ageMs / 86_400_000))}d`;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -34,6 +34,7 @@ import * as path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
 import { acquireLock, releaseLock, requestScopedLock, LockHeldError, type LockProfile } from "../lib/file-lock.js";
 import { isRecord } from "../shared/is-record.js";
+import { setTimeout as delay } from "node:timers/promises";
 
 const LOCK_RETRIES = 50;
 const LOCK_RETRY_MS = 100;
@@ -95,10 +96,6 @@ export function nowIso(): string {
 function timingSafeStringEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

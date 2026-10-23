@@ -17,6 +17,7 @@ import { getBoxDir } from "./lib/paths/core.js";
 
 import { withCardLock } from "./lib/card-lock.js";
 import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "./lib/file-lock.js";
+import { setTimeout as delay } from "node:timers/promises";
 
 /**
  * Build the transient state file path for a connector.
@@ -100,10 +101,6 @@ async function saveTransientState(opts: SaveOptions): Promise<void> {
 
 const LOCK_RETRIES = 50;
 const LOCK_RETRY_MS = 100;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Thrown when a transient-state file stays cross-process-locked past the retry

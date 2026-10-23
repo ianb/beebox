@@ -8,6 +8,7 @@
 
 import http from "node:http";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
 
 /**
@@ -105,10 +106,6 @@ class HttpReadinessTimeoutError extends Error {
     super(`${label} did not respond to HTTP GET ${reqPath} within ${timeoutMs}ms`);
     this.name = "HttpReadinessTimeoutError";
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** Signal a process group (falls back to the bare pid if it isn't a group leader). */

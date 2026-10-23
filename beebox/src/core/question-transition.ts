@@ -34,13 +34,10 @@ import {
   type QuestionState,
 } from "../schemas/question.js";
 import type { CommandContext, CommandResult } from "./command-runner.js";
+import { setTimeout as delay } from "node:timers/promises";
 
 const LOCK_RETRIES = 50;
 const LOCK_RETRY_MS = 100;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Thrown when the cross-process question lock stays held past the retry budget.
