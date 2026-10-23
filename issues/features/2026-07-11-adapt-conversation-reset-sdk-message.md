@@ -35,3 +35,7 @@ from the existing `type: "system"` subtypes. Per the SDK's own doc comment:
 `new_conversation_id` today. Worth designing: does our chat UI have an analogous
 "fresh transcript" moment it should hook this to (e.g. `/clear`-equivalent,
 plan-mode exit), or is it purely an SDK-internal concern we can keep ignoring?
+
+## Audit 2026-10-22
+
+Still true. The line pointer moved: the `conversation_reset` case that returns null is now at `beebox/src/core/chat/session/messages.ts:282-288`.

@@ -35,3 +35,7 @@ today. No `--fix`: closing is a `/finish` or `bbx-issue-actions` judgment.
 Not a separate lint (developer, 2026-08-25). `doc-check` already parses every
 issue's frontmatter; add: `needs: [manual-testing]` ⇒ a `## Manual testing`
 section exists; under `closed/` ⇔ `resolution:` present.
+
+## Audit 2026-10-22
+
+Item 3 is done. `doc-check` requires a `## Manual testing` section when `needs` includes `manual-testing`, requires a valid `resolution:` under `closed/`, and rejects `resolution:` on open issues (`beebox/src/dev/doc-check/frontmatter.ts:111-115`). Items 1 and 2 remain: no `Resolves:` trailer exists and `bin/issues` has no `orphans` command.

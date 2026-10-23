@@ -92,3 +92,7 @@ Same family of defect (allocation not actually reserving), different mechanism.
 Killed the orphaned generation and restarted the box's `bbx serve` child; it
 respawned on a fresh port bound to both families and served normally. That is a
 one-off repair, not a fix — nothing stops the collision recurring.
+
+## Audit 2026-10-22
+
+Fixed in part: the mobile bootstrap no longer fails silently. It logs each transient failure and the final give-up, retries up to a bound, and answers 503 with the detail (`workstreams-app/src/router/server/proxy.ts:255-267`, `d253bd902`). Still open: the probe checks one address family (`workstreams-app/src/router/server/real-effects.ts:388` calls `get-port` with no host), the hub does not verify the identity of the process it proxies to, and the orphan-survival question is unanswered.

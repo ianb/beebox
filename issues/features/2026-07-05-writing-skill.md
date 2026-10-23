@@ -664,3 +664,7 @@ but anecdotal — false-positive prone.
 - [Orwell — Politics and the English Language](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/) — the six rules
 - [Every — How to make AI write less like AI](https://every.to/p/how-to-make-ai-write-less-like-ai) — practical de-AI edits
 - [conorbronsdon/avoid-ai-writing](https://github.com/conorbronsdon/avoid-ai-writing) — an existing agent skill auditing these patterns
+
+## Audit 2026-10-22
+
+The code pointers in this issue are stale. `THE_LAW_OF_QUOTING` and `laws.ts` no longer exist. The law of quoting is now prose in `beebox/src/core/agent-guide/guide.md:39-55`, and the `{% quote %}` examples are at `:75-91`. There is no `quotes.ts`. No writing or assembly skill has shipped, so the proposal itself is unchanged.

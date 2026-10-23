@@ -85,3 +85,7 @@ is the orientation half; this item is the depth behind it.
 > to track, dictation, connecting accounts, plans, agent abilities,
 > landmarks, the browser extension, Gmail/Calendar. Next is turning the doc's
 > offers into testable user stories; this issue stays open for that.
+
+## Audit 2026-10-22
+
+The 2026-09-05 survey is out of date for the public site. `site/docs/` now has operator-facing pages: `05-a-day-with-the-box.md`, `13-making-it-yours.md`, `06-what-it-can-do.md`, and a `uses/` directory of scenario pages. The version-pinned delivery decision is also met in part: engine reference docs ship in the package (`beebox/box-docs/`). Still missing: an operator troubleshooting or FAQ page and a "review what the box did" page (items 4 and 5 of the list above). Check the `uses/` pages before writing item 1 or 2.

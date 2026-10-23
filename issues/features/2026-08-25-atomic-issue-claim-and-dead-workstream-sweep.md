@@ -36,3 +36,7 @@ workstream, resets them to `unattached`, and sets `next-action: reconfirm` —
 a dead owner is evidence the issue's state is unknown, and `reconfirm` puts
 it in the developer's normal pass. (Alternatives considered: report only;
 reset without the tag.)
+
+## Audit 2026-10-22
+
+Both problems remain. The pointer drifted: the in-worktree claim now runs at `bin/lib/launch-session.sh:88` and `:152`, not line 52. No code commits the stamp to `main` first, and `bin/workstreams sweep` does not report issues owned by dead workstreams.

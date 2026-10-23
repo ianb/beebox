@@ -69,6 +69,11 @@ export interface FakeGoogleGmailService extends GoogleGmailService {
    * advances like a real mutation.
    */
   removeLabelsFromMessage(change: { id: string; labelIds: string[] }): void;
+  /**
+   * Delete a message from the mailbox. Its history records stay, as Gmail's
+   * do: a later listHistory still names it, and getMessage() is not found.
+   */
+  deleteMessage(id: string): void;
   /** Invalidate all stored checkpoints — listHistory will throw NotFoundError. */
   expireHistory(): void;
 }
@@ -122,6 +127,13 @@ export function createFakeGoogleGmail(
       msg.labelIds = (msg.labelIds ?? []).filter((id) => !remove.has(id));
       // No labelsRemoved record is modeled; advance the checkpoint anyway so a
       // following sync sees a moved historyId like a real mutation.
+      historyId += 1;
+    },
+
+    deleteMessage(id) {
+      const index = fake.messages.findIndex((m) => m.id === id);
+      if (index === -1) throw new NotFoundError(id, "Message");
+      fake.messages.splice(index, 1);
       historyId += 1;
     },
 

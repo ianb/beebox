@@ -42,3 +42,7 @@ Related: the box-content linting track in
 [../features/2026-07-24-box-content-card-linting.md](../features/2026-07-24-box-content-card-linting.md)
 and the dev-repo hooks in
 [../code-quality/2026-07-24-security-precommit-hooks.md](../code-quality/2026-07-24-security-precommit-hooks.md).
+
+## Audit 2026-10-22
+
+Some boundary rules now exist as ESLint `no-restricted-imports` blocks in `beebox/eslint.config.ts`: plugin import patterns (lines 262-290, from commit 06f886eba) and the list-entry rule that bars value imports from backend trees (line 198). The core-abstract-over-adapters rule and the magic-literal ban are still undefined. The design question (which boundary keeps being violated) is still open.

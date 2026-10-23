@@ -3,7 +3,10 @@ title: "box docs reference node modules"
 workstream: unknown
 area: beebox
 needs: [design]
+resolution: implemented
 ---
+
+> **Closed 2026-10-22 (issue audit):** Commit a5b19c033 moved the engine reference docs into the package. Boxes read them at `node_modules/beebox/box-docs/<doc>.md` (`beebox/docs/box-guidance.md:55`); box-specific docs stay in `_content/docs/generated/`. Plan: `beebox/docs/implemented-plans/box-docs-in-package.md`.
 
 Now that beebox is a **library** (v2 boxes are packages that depend on it —
 `beebox/{cards,schema,view-widgets}` public specifiers, resolved through

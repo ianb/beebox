@@ -141,3 +141,7 @@ before the move.
 > there; the deploy sweep converged all six boxes through it today. The
 > hostname (section 5), OAuth redirects (6), and everything after remain open;
 > the boxholder's own links still use the previous hostname.
+
+## Audit 2026-10-22
+
+`https://beebox.run` serves the public site (HTTP 200, `llms.txt` and the `.md` twins reachable), so the DNS, certificate and Cloudflare Pages items in section 5 are probably done. The checkboxes are not updated. The `beebox` package is not on npm (`npm view beebox` returns 404), so section 4 is open. The remaining sections need the developer's accounts and cannot be verified from the repository.

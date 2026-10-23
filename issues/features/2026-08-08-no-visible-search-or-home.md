@@ -82,3 +82,7 @@ find it — same outcome). Overlaps
 [first-run-experience](2026-07-20-first-run-experience.md) (the empty box
 explains nothing) but is distinct: this is about the *return* visit — finding
 your things once you have things.
+
+## Audit 2026-10-22
+
+The search half shipped in commit `aec22079d` ("Add Search as a canonical interface card with Cmd-K quick search"). `SYSTEM_CARD_PATHS.search` is `_config/interface/search.card` (`beebox/src/shared/system-card-paths.ts:13`). A `search` tRPC router reads the engine (`beebox/src/webapp/trpc/routers/search.ts`). The home-surface half is still open: no decision names one of dashboard, inventory, or landmarks as home.

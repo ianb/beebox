@@ -19,3 +19,7 @@ Open questions:
 - Are four bands the right count? Three (fact / likely / hunch) might be enough.
 - How is band assignment surfaced — inline tag, separate field, structural placement (different files)?
 - Demotion path: does evidence-against move a "likely" to "suspected," or straight out? Probably depends on the kind of evidence.
+
+## Audit 2026-10-22
+
+Partly built, not universal. Beliefs in the personality and guide cards carry a five-level `confidence` enum: confirmed, high, medium, low, hypothesis (`beebox/src/guide-fields.ts:14`). The retrospective sets levels by recurrence (`beebox/docs/implemented-plans/box-retrospectives.md:214-226`), with `medium` as the ceiling for inferred beliefs. The shared rubric (evidence, licensed behavior, demotion) is not written, and other uses (cache staleness, user-model dimensions) do not use these bands.

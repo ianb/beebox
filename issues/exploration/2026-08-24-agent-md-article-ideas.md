@@ -70,3 +70,7 @@ Read it, and decide on the two novel items. The reload-when-degraded idea is the
 interesting one, because it is operational rather than stylistic and we have no
 answer to the problem it names. Record the call here either way — "read, nothing
 to take" is a real outcome and stops the link being re-evaluated later.
+
+## Audit 2026-10-22
+
+The size limits are now at `beebox/code-style.md:113`, not `code-style.md:112`. Enums instead of booleans is still absent from `beebox/code-style.md` and from the lint preset. No rule or line was added since the developer's call.

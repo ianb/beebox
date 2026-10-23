@@ -35,3 +35,7 @@ just currently unaddressed.
 > converges on every ship, and `hetzner/` the half that runs once. The fix
 > direction in this issue still stands.
 
+
+## Audit 2026-10-22
+
+Partly fixed. `beebox/deploy/deploy.sh` now installs the repo-owned nginx site on every deploy (lines 572-584, commit `8d0ae8ebd`, 2026-09-18). It also reinstalls the systemd drop-ins (lines 863-887). Still open: it does not regenerate the units themselves or other `beebox/deploy/hetzner/setup-server.sh` output (see the comment at `deploy.sh:865`).

@@ -14,3 +14,7 @@ Design notes:
 - **Aging.** Hunches go stale fast — most suspicions about state ("seems stressed this week") shouldn't survive past a couple weeks. Trait-shaped hunches ("seems uncomfortable discussing finances") last longer. Per-hunch TTL, not a global one.
 - **Promotion to fact.** When a hunch is confirmed it should become a normal note on the relevant person/topic card, not a permanent resident of the hunches file.
 - **Connection to user-model dimensions** (see [User-model dimensions](2026-05-19-user-model-dimensions.md) entry above) — hunches along the same axes the agent watches for are the raw material; over time, repeated hunches in the same direction become facts.
+
+## Audit 2026-10-22
+
+Partly covered. Personality and guide beliefs can hold `confidence: hypothesis` with a `basis` and provenance (`beebox/src/guide-fields.ts:14`; `beebox/docs/implemented-plans/box-retrospectives.md:219`). Still missing: a refutation or confirmation trigger per hunch, per-hunch aging, and a home for state-shaped suspicions that fit no personality or guide entry.

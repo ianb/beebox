@@ -57,3 +57,7 @@ concrete gaps that fell into this hole:
 This is a general robustness point applying to any `browser-task` run whose
 prompt asks for something the executor cannot fully deliver, not specific to
 this one page or box.
+
+## Audit 2026-10-22
+
+Partly addressed by guidance, not by schema. The task guidance in `beebox/src/schemas/browser-task.ts` now tells authors to make `permalink` nullable with a required note (line 175) and to ask for an `image-url` instead of an attachment the executor may not manage (line 206). `coverage` has an optional free-text `notes` for what the executor could not do (line 219). There is still no typed field that separates "tried and failed", "none found", and "not attempted".
