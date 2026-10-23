@@ -1,4 +1,5 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
+import { useNow } from "./use-now";
 
 /**
  * The box's clock as the person sees it. A walk fixture's box can sit days
@@ -57,11 +58,6 @@ function getShift(): number {
  */
 export function useBoxNow(periodMs: number): number {
   const shift = useSyncExternalStore(subscribe, getShift, getShift);
-  const [real, setReal] = useState(0);
-  useEffect(() => {
-    setReal(Date.now());
-    const timer = setInterval(() => setReal(Date.now()), periodMs);
-    return () => clearInterval(timer);
-  }, [periodMs]);
+  const real = useNow(periodMs);
   return real === 0 ? 0 : real + shift;
 }
