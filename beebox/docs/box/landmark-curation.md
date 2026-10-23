@@ -35,6 +35,8 @@ When you notice the recurrence pattern — the user has asked about this place e
 
 The user decides. You do not quietly create landmarks. The point of a landmark is that the user has consciously claimed a spot in their box; an agent-conjured landmark defeats that.
 
+When the user asks for one, the request settles whether, not where or what. Before you write it, confirm the directory, the label, and the symbol in one short question. If the directory they name does not exist, ask where it is; do not create an empty one to hold the landmark.
+
 ## When to suggest removing one
 
 A landmark that no longer matches the user's life is clutter. If a landmark hasn't been mentioned, opened, or referenced in a long time, and the directory behind it has gone quiet, raise the question of retiring it. Same posture as creation — the agent observes, the user decides.
