@@ -27,7 +27,7 @@ import {
 } from "../../context-usage.js";
 import { codexBehaviorFromActivity } from "./codex-audit.js";
 import { type BehaviorAccumulator, categorizeToolUse } from "./tool-use-behavior.js";
-import { visibleReplyText } from "./reply-text.js";
+import { type ReplyBlock, visibleReplyText } from "./reply-text.js";
 import { runChecks } from "../../audit-checks.js";
 import { generateAgentContextMirrors } from "../../../../core/agent-context-mirrors.js";
 import { AGENTS_MD, CLAUDE_MD } from "../../../../core/agent-instruction-files.js";
@@ -232,7 +232,9 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
 
   const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [] };
   const responseChunks: string[] = [];
-  // Index into responseChunks where the text after the last tool call starts.
+  // Text blocks and progress updates in order; replyStart is where the blocks
+  // after the last tool call start.
+  const replyBlocks: ReplyBlock[] = [];
   let replyStart = 0;
 
   for (const entry of entries) {
@@ -240,10 +242,14 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
       for (const block of entry.content) {
         if (block.type === "text" && block.text) {
           responseChunks.push(block.text);
+          replyBlocks.push({ text: block.text, update: false });
+        }
+        if (block.type === "thinking" && block.progressUpdate === true && block.text?.trim()) {
+          replyBlocks.push({ text: block.text, update: true });
         }
         if (block.type === "tool_use") {
           categorizeToolUse(block, acc);
-          replyStart = responseChunks.length;
+          replyStart = replyBlocks.length;
         }
       }
     }
@@ -279,7 +285,7 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
   }
 
   const responseText = responseChunks.join("\n").trim();
-  const replyText = visibleReplyText(responseChunks, replyStart);
+  const replyText = visibleReplyText(replyBlocks, replyStart);
 
   // Context-size accounting reads the same main session log (not subagent
   // logs — those are separate contexts; baseline/peak is about what the box

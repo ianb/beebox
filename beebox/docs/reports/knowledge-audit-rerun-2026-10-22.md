@@ -19,6 +19,9 @@ Still failing: `cooking-guide-awareness` and `cooking-follow-recipe-pattern`
 (test1 has no cooking guide; [issue](../../../issues/decisions/2026-10-22-cooking-guide-audits-need-a-guide.md)),
 and `speak-outcome-not-mechanics` (2 of 5 runs pass after the fix;
 [reopened issue](../../../issues/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md)).
+Follow-up, 2026-10-23: the chat now folds lines written between steps into
+the activity row ([plan](../plans/chat-progress-fold.md)), and the audit grades
+the text the chat shows (`final_reply`); 3 of 4 runs pass.
 
 ## What the failures were
 
