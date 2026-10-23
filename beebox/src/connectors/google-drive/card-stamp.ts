@@ -9,8 +9,8 @@
  */
 
 import * as fs from "node:fs/promises";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../../exports/cards.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { createGlinkTemplate, type GlinkOriginType } from "../../schemas/glink.js";
 import { createGfolderTemplate } from "../../schemas/gfolder.js";
@@ -40,7 +40,7 @@ function driveMap(parts: CardParts): Record<string, unknown> {
 }
 
 async function writeCardParts(cardPath: string, parts: CardParts): Promise<void> {
-  await fs.writeFile(cardPath, `---\n${stringifyYaml(parts.fields)}---\n${parts.body}`);
+  await fs.writeFile(cardPath, renderFrontmatterBlock(parts.fields, parts.body));
 }
 
 /** The outcome the folder card reports after a sync pass. */
