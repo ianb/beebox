@@ -141,7 +141,7 @@ function bbxCommandsNotify(): string[] {
     "  first adds the app to the Home Screen and opens it from there. If the browser blocks",
     "  notifications for the site, the section says so instead; the person allows them in the",
     "  browser's site settings and reloads.",
-    "- The Bee Box iPhone app: the profile menu, then Settings, Companion Apps, and \"Create QR\". The",
+    "- The Bee Box iPhone app: the profile menu, then Settings, Companion Apps, and \"Show QR Code (iPhone)\". The",
     "  person scans the code with the phone. The app registers for notifications when it opens, if",
     "  the person allowed notifications for it in iOS.",
     "",

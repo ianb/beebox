@@ -4,12 +4,15 @@
  * its line budget.
  */
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { formatLintResults } from "../../../exports/cards.js";
 import { formatMarkdownResults } from "../../validate-markdown.js";
 import { formatAttachLintErrors } from "../../../lib/attach-lint.js";
 import { formatProminenceLintWarnings } from "../../../core/lint-prominence/core.js";
 import { formatCanonicalReport, type CanonicalBuckets } from "./canonical.js";
 import { getStatus } from "../../../lib/git/core/operations.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import type { ValidationResults } from "./command.js";
 
 /**
@@ -99,4 +102,21 @@ export function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacyS
     reservedSegmentErrors.length +
     presentationErrors.length + legacyInstructionErrors.length + systemCardErrors.length
   );
+}
+
+/**
+ * The post-commit hook's background URL check (`bbx validate --urls`) writes
+ * its report to `.beebox/url-check.log`, where nothing else reads it. Show
+ * its broken links on the next validate so the agent that cited them sees it.
+ */
+export async function printLastUrlCheck(boxRoot: string): Promise<void> {
+  let text: string;
+  try {
+    text = await readFile(path.join(boxRoot, ".beebox", "url-check.log"), "utf8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return;
+    throw e;
+  }
+  if (!/^broken\b/m.test(text)) return;
+  console.log(`\nThe URL check of the last commit found broken links (.beebox/url-check.log):\n${text.trimEnd()}`);
 }

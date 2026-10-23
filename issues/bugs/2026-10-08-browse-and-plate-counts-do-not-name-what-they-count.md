@@ -53,4 +53,4 @@ The line under a card's title reads "1 now", "2 now", "4 now · 1 done". The [A-
 
 The 2026-10-16 fix wrote "N on your plate" on the card line. `8bd8399d1` (2026-10-20, "the word 'plate' leaves everything a person or the agent reads") made "now" and "later" the state pair, and on the card line "now" is now the only word (`summaryParts`, `beebox/src/frontend/src/components/todo/summary.ts:44`). The same count has a noun in two other places: the root page says "N to do" (`rootLineParts`, same file) and the badge says "N todos now" (`beebox/src/frontend/src/components/app-bar-faces/AttentionBadgesFace.tsx:92-94`). A fix such as "1 todo now · 1 done" keeps the 2026-10-20 decision on "plate".
 
-A related count on a new surface is filed separately: [the Box page count omits later todos](2026-10-22-box-page-to-do-count-omits-later-todos.md).
+A related count on a new surface is filed separately: [the Box page count omits later todos](../closed/bugs/2026-10-22-box-page-to-do-count-omits-later-todos.md).

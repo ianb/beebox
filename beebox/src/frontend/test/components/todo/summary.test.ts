@@ -114,11 +114,11 @@ void test("A directory's browse page shows the same line for every card under it
 // waiting". It never says "plate". `rootLineParts` builds it; `CountsLine`
 // draws it, with the todo count and the questions count as controls that open
 // their surfaces beside the chat.
-function rootLine(counts: { onPlateTodos?: number; escalatedTodos?: number; pendingQuestions?: number }) {
-  const parts = rootLineParts({ onPlateTodos: 0, escalatedTodos: 0, pendingQuestions: 0, ...counts });
+function rootLine(counts: { onPlateTodos?: number; escalatedTodos?: number; laterTodos?: number; pendingQuestions?: number }) {
+  const parts = rootLineParts({ onPlateTodos: 0, escalatedTodos: 0, laterTodos: 0, pendingQuestions: 0, ...counts });
   if (parts === null) return null;
   const action = { onClick: noop, title: "Open" };
-  return text(renderToStaticMarkup(React.createElement(CountsLine, { parts, actions: { open: action, overdue: action, questions: action } })));
+  return text(renderToStaticMarkup(React.createElement(CountsLine, { parts, actions: { open: action, overdue: action, later: action, questions: action } })));
 }
 
 // Nothing to do and nothing asked: no line at all.
@@ -146,4 +146,22 @@ void test("Questions only: the line does not vanish when nothing is to do.", asy
 // Both:
 void test("Both:", async (t) => {
   t.check(rootLine({ onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 }), "[3 to do] · [1 overdue] · [2 questions waiting]");
+});
+
+// Todos dated for later are named, so the Box page does not say "1 to do" when
+// five more start later. The badge keeps counting only what is due now, so
+// "to do" still agrees with it. With nothing to do now, "later" is the control.
+void test("Todos dated for later are named after the ones due now.", async (t) => {
+  t.check(
+    [
+      rootLine({ onPlateTodos: 1, laterTodos: 5 }),
+      rootLine({ onPlateTodos: 3, escalatedTodos: 1, laterTodos: 2, pendingQuestions: 1 }),
+      rootLine({ laterTodos: 4 }),
+    ],
+    [
+      "[1 to do] · 5 later",
+      "[3 to do] · [1 overdue] · 2 later · [1 question waiting]",
+      "[4 later]",
+    ],
+  );
 });

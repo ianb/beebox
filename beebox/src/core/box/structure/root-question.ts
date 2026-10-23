@@ -12,12 +12,17 @@ import * as path from "node:path";
 import { getBoxDir } from "../../../lib/paths/core.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { createTextQuestionTemplate } from "../../../schemas/question.js";
+import { ROOT_QUESTION_PATH } from "../root-question-path.js";
 
 /** What the box asks first. The chat shows it verbatim and uses it as the composer's placeholder. */
 const ROOT_QUESTION_PROMPT = "What do you want to keep track of here?";
 
-/** Box-relative path of the seeded card. A fixed name: the seed runs once, on a box with no questions. */
-export const ROOT_QUESTION_PATH = "_bookkeeping/questions/what-to-keep-track-of.question.card";
+/** The briefing the answer is recorded in: root-relative, so it resolves from the card's own directory. */
+const ROOT_QUESTION_REF = "/_content/briefing.briefing.card";
+
+/** The belief the answer tests. Reads as a belief on the Questions page, where the person sees it. */
+const ROOT_QUESTION_PROPOSAL = "The box does not know yet what it is for.";
+
 
 /**
  * Write the root question on a box that has no question cards yet. Returns the
@@ -40,7 +45,7 @@ export async function installRootQuestion(boxRoot: string): Promise<string | nul
     prompt: ROOT_QUESTION_PROMPT,
     memo: "I'd like to know what this box is for before I suggest anything.",
     askedAt: getBoxTimeISO(boxRoot),
-    learning: { sink: "briefing", ref: "_content/briefing.briefing.card", proposal: "This box is for <what the person said>." },
+    learning: { sink: "briefing", ref: ROOT_QUESTION_REF, proposal: ROOT_QUESTION_PROPOSAL },
     directive: "Write the purpose into the briefing card in the person's words. Write two or three sentences on the Box page (the root landmark's body, _content/Box.landmark.card) in their words. Replace the stock openers on that landmark with openers for what they said, or remove them. Then reflect back what they said in a sentence and offer two or three things the box could do for that, in their words; nothing about what the box can do before this.",
   });
   await fs.writeFile(path.join(boxRoot, ROOT_QUESTION_PATH), content, { flag: "wx" });

@@ -28,7 +28,7 @@
  */
 
 import { isValidElement, type ReactNode } from "react";
-import { externalLabel, refLabel, refToViewTarget } from "../../lib/ref-label";
+import { chatRefLabel, chatUsageWords, externalLabel, refLabel, refToViewTarget } from "../../lib/ref-label";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 
 export interface SourceLinkContext {
@@ -64,10 +64,14 @@ function CitationChip({
   quoteText: string;
   linkCtx: SourceLinkContext;
 }): ReactNode {
-  const label = refLabel(sourceRef);
-  const title = usage === undefined || usage === ""
-    ? `Source: ${sourceRef}`
-    : `${usage} — ${sourceRef}`;
+  const chat = chatRefLabel(sourceRef);
+  const label = chat?.label ?? refLabel(sourceRef);
+  const hasUsage = usage !== undefined && usage !== "";
+  // A chat's file name is an id, not a name, so its chip says "chat, <date>"
+  // and the usage word moves to the tooltip in plain words.
+  const title = chat !== null
+    ? `${hasUsage ? `${chatUsageWords(usage)}, from ` : "From "}a chat on ${chat.isoDate}`
+    : hasUsage ? `${usage} — ${sourceRef}` : `Source: ${sourceRef}`;
   const target = refToViewTarget(sourceRef, linkCtx.basePath);
   // A ref that escapes the box root points at no in-box document. Render the
   // citation as an inert, visibly-broken marker rather than a chip that opens
@@ -100,7 +104,7 @@ function CitationChip({
       title={title}
       className="bbx-theme-link not-italic cursor-pointer text-xs ml-1"
     >
-      [→ {label}{usage !== undefined && usage !== "" ? <span className="italic">{`: ${usage}`}</span> : null}]
+      [→ {label}{chat === null && hasUsage ? <span className="italic">{`: ${usage}`}</span> : null}]
     </button>
   );
 }

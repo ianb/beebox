@@ -718,54 +718,15 @@ queue_remote stdin bash -s <<'REMOTE'
   fi
 REMOTE
 
-# Reconcile each v2-shape (package-layout) box's own node_modules against its
-# package.json. `bbx engine init`/`box-packageify` scaffold a package.json declaring
-# react/react-dom/typescript direct deps (view-metadata compilation needs a
-# real, box-owned react — see src/webapp/views/compiler/compile.ts and
-# src/core/box/package.ts) but deliberately don't install them (Track F of
-# docs/implemented-plans/boxes-as-packages-v2.md has no real registry yet for
-# the `beebox` dependency itself). Left uninstalled, every view in the
-# box silently degrades to a "Failed to compile" stub with no bound card
-# type and no visible error — see the box-family incident this fixed.
-# Runs after every deploy (not just once) because a box's package.json can
-# change independently — an agent `pnpm add`s a view dependency, or a fresh
-# `box-packageify` runs — between deploys.
+# Reconcile each package-layout box's own node_modules against its manifest
+# (deploy/server-bin/bbx-box-install: what a box declares, why, and when it is
+# reinstalled). Runs after every deploy because a box's package.json changes
+# independently: an agent `pnpm add`s a view dependency, a migration rewrites
+# the manifest, a fresh `box-packageify` runs. The helper's bytes come from the
+# build checkout through stdin, as bbx-host-apt's do.
 queue_step "Reconciling box package installs..."
-queue_remote stdin bash -s <<'REMOTE'
-  set -e
-  for box in /home/beebox/boxes/*/; do
-    pj="$box/package.json"
-    [[ -f "$pj" ]] || continue   # shapeVersion 1 (legacy) boxes have none — skip
-    name=$(basename "$box")
-
-    # The box commits the portable `"beebox": "link:.beebox/engine"`; the
-    # gitignored `.beebox/engine` link holds this server's engine path, so no
-    # deploy writes a tracked file (docs/implemented-plans/portable-engine-dependency.md).
-    # A box not yet migrated still names /opt/beebox/beebox directly; the
-    # link is harmless there. A failed box prints ERROR and the deploy moves
-    # on to the next box, as the converge step does.
-    link_check=/opt/beebox/beebox/bin/box-engine-link
-    if ! sudo -u beebox -H bash -lc '"$0" link "$1" /opt/beebox/beebox' "$link_check" "$box"; then
-      echo "  ERROR $name: could not link .beebox/engine; skipping its install." >&2
-      continue
-    fi
-
-    marker="$box/node_modules/react"
-    # Reinstall too when the box shows no completed install: the engine-link
-    # migration changes the spec without reinstalling, so a node_modules/beebox
-    # that does not go through the link is stale.
-    if [[ ! -e "$marker" || "$pj" -nt "$marker" ]] || ! "$link_check" verify "$box" 2>/dev/null; then
-      echo "  $name: installing (package.json newer than last install, or never installed)..."
-      if ! sudo -u beebox -H bash -lc "cd '$box' && pnpm install"; then
-        echo "  $name: pnpm install exited nonzero — check for real dependency errors above" \
-             "(a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else isn't)"
-      fi
-    fi
-    if ! "$link_check" verify "$box"; then
-      echo "  ERROR $name: the box has no usable engine after install." >&2
-    fi
-  done
-REMOTE
+queue_remote stdin bash -s /home/beebox/boxes /opt/beebox/beebox \
+  < "$CHECKOUT/beebox/deploy/server-bin/bbx-box-install"
 
 # Deploy installs are what grow both caches. Prune only after the root workspace
 # and Bee Box-owned box installs have finished, so this cannot evict entries a

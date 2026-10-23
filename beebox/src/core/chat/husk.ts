@@ -24,6 +24,7 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { readCodexSessionUpdatedAt } from "./session/codex-transcript/core.js";
 import { loadSessionHistory } from "./session/load-history.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import {
   CHAT_HUSK_DIR,
   findChatHuskEntry,
@@ -144,6 +145,19 @@ export async function setChatHuskStatus(boxRoot: string, opts: { sessionId: stri
     await writeFileAtomic(absPath, { content: renderFrontmatterBlock(fields, split.body) });
   });
   return husk.path;
+}
+
+/**
+ * Commit a husk on its own. Used after a status change the boxholder made,
+ * which no title or review run follows; the husk would otherwise stay untracked
+ * until a broad `git add`. A no-op when the husk is unchanged.
+ */
+export async function commitChatHusk(boxRoot: string, huskPath: string): Promise<void> {
+  await stageAndCommitPaths(boxRoot, {
+    paths: [huskPath],
+    message: "Chat: update chat card",
+    trailers: { "Commit-Source": "chat-husk" },
+  });
 }
 
 /**

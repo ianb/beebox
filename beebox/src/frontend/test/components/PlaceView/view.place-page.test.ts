@@ -300,9 +300,9 @@ void test("On the root place the page shows the count line after the summary", a
     ...(rootCounts === undefined ? {} : { rootCounts }),
     onRetryCounts: () => {},
   }, { ...startedLending, contextDir: "" });
-  const counted = await rootPage({ onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 });
+  const counted = await rootPage({ onPlateTodos: 3, escalatedTodos: 1, laterTodos: 0, pendingQuestions: 2 });
   const failed = await rootPage("unavailable");
-  const zero = await rootPage({ onPlateTodos: 0, escalatedTodos: 0, pendingQuestions: 0 });
+  const zero = await rootPage({ onPlateTodos: 0, escalatedTodos: 0, laterTodos: 0, pendingQuestions: 0 });
   t.check(
     ({
       sections: sections(counted),
