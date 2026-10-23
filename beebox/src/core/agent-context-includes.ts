@@ -3,6 +3,7 @@
 import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
+import { isWithin } from "../lib/box-containment.js";
 
 const INCLUDE_PATTERN = /^@(.+\.md)\s*$/gm;
 
@@ -32,11 +33,6 @@ async function realpathIfPresent(path: string): Promise<string | null> {
     if (errnoCode(error) === "ENOENT") return null;
     throw error;
   }
-}
-
-function isInside(root: string, path: string): boolean {
-  const rel = relative(root, path);
-  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
 /**
@@ -76,7 +72,7 @@ export async function expandInstructionIncludes(options: {
       // stay inside the box (or its engine package) too.
       const real = await realpathIfPresent(included);
       if (real === null) continue;
-      if (!realRoots.some((root) => isInside(root, real))) throw new UnsafeAgentContextIncludeError(specifier);
+      if (!realRoots.some((root) => isWithin(root, real))) throw new UnsafeAgentContextIncludeError(specifier);
       // Read the path that was checked, so a swapped link cannot redirect the read.
       const includedContent = await readIfPresent(real);
       if (includedContent === null) continue;

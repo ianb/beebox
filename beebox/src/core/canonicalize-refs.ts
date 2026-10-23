@@ -37,8 +37,8 @@
  */
 
 import { promises as fs } from "node:fs";
+import { boxRelativeDoc } from "../lib/box-containment.js";
 import {
-  boxRelativeDoc,
   cardRefProbe,
   dossierLinkProbe,
   planCanonicalRef,

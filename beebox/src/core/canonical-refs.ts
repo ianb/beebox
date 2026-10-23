@@ -39,6 +39,7 @@ import { resolveRefExists } from "./ref-exists.js";
 import { extractViewRefs } from "./views/refs.js";
 import { fileExists } from "../lib/file-exists.js";
 import { assertNever } from "../shared/invariant.js";
+import { boxRelativeDoc } from "../lib/box-containment.js";
 
 /**
  * The verdict on one ref:
@@ -191,16 +192,6 @@ export function canonicalIssueMessage(
     default:
       return assertNever(plan);
   }
-}
-
-/**
- * The referring document's path as the shared algebra wants its `fromPath`:
- * box-relative, forward slashes. `null` when the document lies outside the box.
- */
-export function boxRelativeDoc(boxRoot: string, absPath: string): string | null {
-  const rel = path.relative(path.resolve(boxRoot), path.resolve(absPath));
-  if (rel === "" || rel === ".." || rel.startsWith(".." + path.sep)) return null;
-  return rel.split(path.sep).join("/");
 }
 
 /**
