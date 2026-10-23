@@ -23,6 +23,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../shared/error-guards.js";
+import { writeFileAtomicSync } from "../lib/atomic-write.js";
 import { requestScopedLock, withFileLock } from "../lib/file-lock.js";
 import { currentScryptParams, deriveKey, dummyVerify, hashPassword, type StoredScrypt } from "./local-users-scrypt.js";
 import {
@@ -139,23 +140,9 @@ function serialize(file: AuthFile): string {
   return `${JSON.stringify(file, null, 2)}\n`;
 }
 
-function writeAndSync(opts: { path: string; flags: string; data: string }): void {
-  const fd = fs.openSync(opts.path, opts.flags, 0o600);
-  try {
-    fs.writeSync(fd, opts.data);
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
-  }
-}
-
-/** Crash-safe replace: write a temp sibling, fsync, atomically rename over the target. */
+/** Crash-safe replace (`writeFileAtomicSync`), mode 0600. */
 function writeAuthFile(file: AuthFile): void {
-  const target = authFilePath();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  const tmp = `${target}.tmp-${process.pid}-${crypto.randomBytes(6).toString("hex")}`;
-  writeAndSync({ path: tmp, flags: "w", data: serialize(file) });
-  fs.renameSync(tmp, target);
+  writeFileAtomicSync(authFilePath(), { content: serialize(file), mode: 0o600 });
 }
 
 // --- cross-process lock -----------------------------------------------------

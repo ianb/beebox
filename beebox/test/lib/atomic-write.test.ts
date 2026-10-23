@@ -12,7 +12,7 @@ import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { writeFileAtomic } from "../../src/lib/atomic-write.js";
+import { writeFileAtomic, writeFileAtomicSync } from "../../src/lib/atomic-write.js";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "atomic-write-"));
 const target = path.join(dir, "store.json");
@@ -72,4 +72,17 @@ void test("The mode is exact under a restrictive umask", async (t) => {
   const cache = path.join(dir, "cache.json");
   await writeFileAtomic(cache, { content: "{}\n", mode: 0o600 });
   t.check(fs.statSync(cache).mode & 0o777, 0o600);
+});
+
+// ## The sync twin follows the same rules
+//
+// Sync stores (token stores, the auth file, the Tailscale exposure file) get
+// the same replace, the same exact mode, and the same mode preservation.
+void test("writeFileAtomicSync replaces, sets an explicit mode, and keeps an existing one", async (t) => {
+  const store = path.join(dir, "sync-store.json");
+  writeFileAtomicSync(store, { content: '{"v":1}\n', mode: 0o600 });
+  writeFileAtomicSync(store, { content: '{"v":2}\n' });
+  t.check(fs.readFileSync(store, "utf-8"), '{"v":2}\n');
+  t.check(fs.statSync(store).mode & 0o777, 0o600);
+  t.check(fs.readdirSync(dir).filter((name) => name.startsWith("sync-store")), ["sync-store.json"]);
 });
