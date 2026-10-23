@@ -35,6 +35,7 @@ import { getOrCreateAgentToken } from "../agent/token.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { pickBoxSubprocessEnv } from "./allowlist.js";
 import type { SpawnProfile } from "../../lib/spawn-profile.js";
+import { pathWithGitShim } from "./git-shim.js";
 import { readServeEndpoint } from "../serve-endpoint.js";
 
 // Path to Bee Box's own bin/ so subprocesses can find `bbx`.
@@ -169,6 +170,9 @@ async function buildEnv(
       }
     }
   }
+
+  // Walk fixtures: a `git` shim first on PATH stamps shell commits with box time.
+  env.PATH = await pathWithGitShim({ boxRoot, searchPath: env.PATH });
 
   return env;
 }
