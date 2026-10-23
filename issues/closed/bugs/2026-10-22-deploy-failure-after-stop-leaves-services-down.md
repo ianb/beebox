@@ -6,7 +6,17 @@ labels: [deploy]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-risky-merge-review — adversarial review of the merges since 2026-10-08
+resolution: implemented
 ---
+
+Resolved: the activation script's EXIT trap now starts the services again when
+the script exits non-zero between the stop and the restart. The CONTROL block
+runs the repair loop only when both services are up and the trap did not have
+to restart them, otherwise it prints that activation failed before the restart
+and exits at once. The status probe reports a box it cannot query. A comment at
+`pnpm store prune` warns against assuming a warm cache, and
+`beebox/docs/server/deploying.md` now matches. The per-box reinstall marker was
+split into [its own issue](../../code-quality/2026-10-22-per-box-reinstall-marker.md).
 
 The activation script that `deploy.sh` runs on the server stops the hub and
 the scheduler early (`beebox/deploy/deploy.sh:602`) and restarts them near the

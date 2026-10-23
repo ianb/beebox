@@ -11,7 +11,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, capture, uuid } from "@ianbicking/tap-check/check";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -43,6 +43,10 @@ void test("Pair a device whose createdBy is the owner, then resolve a request th
     }
   });
   const box = await makeTmpBox();
+  // Rosa is the local owner; Tomas is a member. A paired phone works only
+  // while its pairer can open the box.
+  await mkdir(join(box.root, "_config"), { recursive: true });
+  await writeFile(join(box.root, "_config", "box.json"), JSON.stringify({ allowedEmails: ["tomas@example.com"] }));
   await createFirstUser({ email: "rosa@example.com", password: "correct-horse", name: "Rosa Okafor" });
 
   const ticket = createMobilePairingTicket(box.root, { createdBy: "rosa@example.com" });

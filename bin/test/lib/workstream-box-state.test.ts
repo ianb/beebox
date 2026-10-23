@@ -322,6 +322,88 @@ void test("Preservation drops the worktree setup commit from the preserved ref",
   });
 });
 
+// Build a source box and a clone whose `main` carries the setup commit, as
+// bin/lib/worktree-create.sh step 6 leaves it, with `keep` checked out.
+async function setupClonePair(prefix: string): Promise<{ root: string; source: string; clone: string; env: NodeJS.ProcessEnv }> {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
+  const source = path.join(root, "source");
+  const clone = path.join(root, "boxes", "seam", "test1");
+  await fs.mkdir(source);
+  git(source, ["init", "-q", "-b", "main"]);
+  git(source, ["config", "user.email", "test@example.com"]);
+  git(source, ["config", "user.name", "Test"]);
+  await fs.writeFile(path.join(source, "package.json"), "source link\n");
+  await fs.writeFile(path.join(source, "pnpm-lock.yaml"), "lock base\n");
+  await fs.writeFile(path.join(source, "state"), "base\n");
+  git(source, ["add", "."]);
+  git(source, ["commit", "-qm", "base"]);
+  await fs.mkdir(path.dirname(clone), { recursive: true });
+  git(root, ["clone", "-q", source, clone]);
+  git(clone, ["config", "user.email", "test@example.com"]);
+  git(clone, ["config", "user.name", "Test"]);
+  await fs.writeFile(path.join(clone, "package.json"), "worktree link\n");
+  await fs.writeFile(path.join(clone, "pnpm-lock.yaml"), "lock setup\n");
+  git(clone, ["commit", "-qam", "Worktree setup: link the beebox engine to worktree seam"]);
+  git(clone, ["checkout", "-qb", "keep"]);
+  return {
+    root, source, clone,
+    env: { ...process.env, WT_BOX_ROOT: path.join(root, "boxes"), WT_BOX_SRC: source },
+  };
+}
+
+function runLib(env: NodeJS.ProcessEnv, script: string): ReturnType<typeof spawnSync> {
+  return spawnSync("bash", ["-c", `. bin/lib/workstream-box-state.sh; ${script}`], { cwd: repoRoot, env, encoding: "utf8" });
+}
+
+// The setup commit never reaches the source box, so it must not make `keep`
+// look unmerged: a keep holding only that commit, or real work already merged
+// into source main (here as a separate commit with the same patch, not by ancestry), is
+// not pinned and not preserved.
+void test("A keep with only the setup commit, or already-merged work, is not unmerged", async (t) => {
+  const { root, source, clone, env } = await setupClonePair("keep-setup-merged-");
+  t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
+  const state = () => String(runLib(env, `workstream_box_state ${clone} ${source} | grep -o '"keepUnmerged": *[a-z]*' | tr -d ' '`).stdout).trim();
+  const pin = () => runLib(env, "workstream_cull_pin_reason seam");
+  const preserve = () => String(runLib(env, 'workstream_preserve_keep seam || exit; printf "%s" "$WORKSTREAM_PRESERVED_BOX_REF"').stdout);
+  const before = { setupOnly: state(), pin: pin().status, preserved: preserve() };
+
+  await fs.writeFile(path.join(clone, "state"), "kept\n");
+  git(clone, ["commit", "-qam", "real work"]);
+  const unmerged = { state: state(), pin: String(pin().stdout).trim() };
+  await fs.writeFile(path.join(source, "state"), "kept\n");
+  git(source, ["commit", "-qam", "real work (merged by patch)"]);
+  const merged = { state: state(), pin: pin().status, preserved: preserve() };
+  t.check({ before, unmerged, merged }, {
+    before: { setupOnly: '"keepUnmerged":false', pin: 1, preserved: "" },
+    unmerged: { state: '"keepUnmerged":true', pin: "keep-unmerged" },
+    merged: { state: '"keepUnmerged":false', pin: 1, preserved: "" },
+  });
+});
+
+// A box agent's later `pnpm add` edits the files the setup commit touched, so
+// dropping the setup commit conflicts. Preservation then pushes keep unrebased,
+// setup commit included, instead of refusing removal.
+void test("Preservation pushes keep with the setup commit when dropping it conflicts", async (t) => {
+  const { root, source, clone, env } = await setupClonePair("keep-setup-conflict-");
+  t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
+  await fs.writeFile(path.join(clone, "package.json"), "worktree link plus dep\n");
+  await fs.writeFile(path.join(clone, "pnpm-lock.yaml"), "lock setup plus dep\n");
+  git(clone, ["commit", "-qam", "pnpm add dep"]);
+  const result = runLib(env, 'workstream_preserve_keep seam || exit; printf "%s" "$WORKSTREAM_PRESERVED_BOX_REF"');
+  const ref = String(result.stdout);
+  t.check({
+    status: result.status,
+    stderr: String(result.stderr).includes("carries the worktree setup commit"),
+    subjects: execFileSync("git", ["log", "--format=%s", ref], { cwd: source, encoding: "utf8" }),
+    cloneWorktrees: execFileSync("git", ["worktree", "list", "--porcelain"], { cwd: clone, encoding: "utf8" }).split("\n").filter((line) => line.startsWith("worktree ")),
+  }, {
+    status: 0,
+    stderr: true,
+    subjects: "pnpm add dep\nWorktree setup: link the beebox engine to worktree seam\nbase\n",
+    cloneWorktrees: [`worktree ${await fs.realpath(clone)}`],
+  });
+});
+
 // Recreation fetches the preserved ref, checks out clone `main`, and resets its
 // content to that ref.
 void test("Recreation fetches the preserved ref, checks out clone main, and resets its c...", async (t) => {

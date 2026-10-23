@@ -160,6 +160,9 @@ test("resolveWorktreeAsset: a per-box mobile token reaches the worktree's dev as
   const boxB = await fs.mkdtemp(path.join(os.tmpdir(), "router-asset-b-"));
   try {
     const deps = createRouterAuthDeps(fakeConfig({ main: [entry("boxa", boxA), entry("boxb", boxB)] }));
+    // The device's pairer must still be a member of its box (core/mobile/request-auth.ts).
+    await fs.mkdir(path.join(boxA, "_config"), { recursive: true });
+    await fs.writeFile(path.join(boxA, "_config", "box.json"), JSON.stringify({ allowedEmails: ["u@example.com"] }));
     // A bbx_mobile for boxA (any box in the worktree) reaches the dev assets.
     assert.equal(await deps.resolveWorktreeAsset(mobileCookie(boxA), "main"), true);
     // The owner session reaches them too (the owner's own dev SPA).

@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 import { startAwakeTimeout } from "../shared/awake-timeout.js";
 import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
-import { repairMigration, runProcedureMigration, finishMigrationRepair, migrationQuestions, redactMigrationQuestions, supersededMigrationQuestions } from "./migration-repair.js";
+import { repairMigration, runProcedureMigration, runRetiredMigration, finishMigrationRepair, migrationQuestions, redactMigrationQuestions, supersededMigrationQuestions } from "./migration-repair.js";
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
 import { stageAndCommitPaths } from "../lib/git/core/operations.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
@@ -15,7 +15,7 @@ import { BoxMaintenanceError, type WorkHolder } from "../lib/box-maintenance-err
 import { getBoxTimeISO } from "../lib/time.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { invariant } from "../shared/invariant.js";
-import { MANIFEST_PATH, isProcedureMigration, type Migration } from "./migrations.js";
+import { MANIFEST_PATH, isProcedureMigration, isRetiredMigration, type Migration } from "./migrations.js";
 import {
   appendManifestEntry,
   computePending,
@@ -234,7 +234,7 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
   const run = async (): Promise<number> => {
     opts.signal?.throwIfAborted();
     await verifyManifest();
-    return (opts.runScript ?? runMigrationScript)({ script: isProcedureMigration(migration) ? "" : migration.script, boxRoot,
+    return (opts.runScript ?? runMigrationScript)({ script: isProcedureMigration(migration) ? "" : migration.script, name: migration.name, boxRoot,
       signal: opts.signal, diagnosticsToStderr: opts.json, onOutput: (text) => { failure = (failure + text).slice(-32000); } });
   };
   let repaired: Awaited<ReturnType<typeof repairMigration>> | undefined;
@@ -260,7 +260,12 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
     } else {
       code = await run();
     }
-    if (code !== 0 && opts.repair && !isProcedureMigration(migration)) {
+    if (code !== 0 && opts.repair && isRetiredMigration(migration)) {
+      // A human restores the migrator; the agent never runs.
+      await step("asking");
+      repaired = await runRetiredMigration({ signal: opts.signal, boxRoot, name: migration.name, recoveryRef: recovery.ref, code, failure });
+      code = repaired.code;
+    } else if (code !== 0 && opts.repair && !isProcedureMigration(migration)) {
       await step("repairing");
       repaired = await repairMigration({ signal: opts.signal, agent: opts.repairAgent, boxRoot, name: migration.name, recoveryRef: recovery.ref, failure, code, retry: run });
       code = repaired.code;
