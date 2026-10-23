@@ -109,3 +109,10 @@ The floor after both, load average about 17: `node` 29 ms, tsx 59 ms, all
   needs synchronous transforms (Babel `transformSync`, esbuild
   `transformSync`). Not measured.
 - The cold template box (`makeTestServer`), unchanged from the 2026-08 figures.
+- tsx's cache expiry walk. tsx 4.23.15 still walks its whole cache directory
+  to expire entries older than about 8 days, in the background of any process
+  that writes a new cache entry. At 174,744 entries the walk costs about
+  355 ms of main-thread CPU. After an edit, each test process that transforms
+  the changed file pays it. Pruning entries older than one or two days every
+  day (the `disk-hygiene` schedule prunes weekly) would cut the walk to about
+  a quarter; not done, because it changes that schedule's cadence.
