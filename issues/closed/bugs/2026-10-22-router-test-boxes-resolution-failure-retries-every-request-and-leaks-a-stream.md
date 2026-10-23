@@ -5,7 +5,19 @@ area: router
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-risky-merge-review — adversarial review of the merges since 2026-10-08
+resolution: implemented
 ---
+
+> **Closed 2026-10-22 — a pre-spawn failure now parks as `failed`.** Box
+> resolution moved out of `spawnGeneration` into `resolveGenerationBoxes`, and
+> `startWorktree` wraps everything between opening the log and spawning the
+> children in a try/catch that calls the new `failBeforeSpawn`: it ends the log
+> stream and parks the record with phase `resolveBoxes` (or `spawn`), so the
+> failed-startup page and the retry endpoint apply and a second request does not
+> re-run the start. `prepareStart` now opens the log stream last, through a new
+> `openLog` effect. A `TEST_BOXES` entry that `BOXES` does not serve now fails
+> the start with a message naming the entry. Tests:
+> `workstreams-app/test/router/core.pre-spawn-failure.test.ts`.
 
 `spawnGeneration` (`workstreams-app/src/router/core/generation.ts`, the
 `TEST_BOXES` block from commit 9e24c0fc5) calls `resolveBoxEntries` for the test

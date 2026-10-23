@@ -110,7 +110,11 @@ type LinkDecision =
 // above the suffix must be one of the source directory's ancestors. A file
 // with the same suffix in another package is a different file.
 function redepthCandidates(pathPart: string, ctx: DecideContext): readonly string[] | undefined {
-  const suffix = path.posix.normalize(pathPart).replace(/^(?:\.\.\/)+/, "");
+  // A bare single-segment link (`./foo.json`) is too weak a suffix: it needs a
+  // second path segment or a `../` hop in the original link to count.
+  const normalized = path.posix.normalize(pathPart);
+  const suffix = normalized.replace(/^(?:\.\.\/)+/, "");
+  if (suffix === normalized && !suffix.includes("/")) return undefined;
   const fromDir = `${ctx.fromDir}/`;
   return ctx.suffixMatches?.(suffix).filter((c) => fromDir.startsWith(c.slice(0, c.length - suffix.length)));
 }

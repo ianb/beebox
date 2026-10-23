@@ -3,11 +3,13 @@ title: "The retired-migration tombstone exits 0, so a box that never applied a r
 workstream: unattached
 area: beebox
 labels: [migrations]
-needs: [decision]
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-risky-merge-review — adversarial review of the merges since 2026-10-08
 ---
+
+Decided: yes. `retired.ts` now exits 1 with a message naming the migration (passed as `BBX_MIGRATION_NAME`), the retirement commit, and the "Retired migrations" doc section. The sweep treats an entry that points at the tombstone (`isRetiredMigration`) as needing a human: with repair on it writes the question card without invoking the agent. `beebox/docs/cards/migrations.md` describes it. The text below is the original filing.
 
 Commit 81c647230 retired every migration registered before 2026-10-08 and
 pointed each entry at `beebox/src/scripts/migrate/retired.ts`, which exits 0
