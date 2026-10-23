@@ -34,3 +34,7 @@ which is why this is a decision rather than a one-line flag flip.
 The option ships in 0.3.246, which is ahead of the current pin — nothing can be
 implemented until the pin reaches it. See the 0.3.246 entry in the
 [SDK ledger](../../schedules/sdk-update/agent-sdk-notes.md).
+
+## Audit 2026-10-22
+
+The pin no longer blocks this. The SDK pin reached 0.3.246 on 2026-08-27 (see `schedules/sdk-update/agent-sdk-notes.md`) and is now 0.3.304 (`beebox/package.json:139`). No code uses `perTaskStopAffordance`. The chat stop path is `interrupt()` in `beebox/src/core/chat/session/run/core.ts:381`. `beebox/src/services/claude-chat.ts` no longer exists. The decision is still open.

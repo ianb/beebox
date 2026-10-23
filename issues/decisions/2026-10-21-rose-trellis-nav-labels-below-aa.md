@@ -22,3 +22,7 @@ was reverted (`Revert "Proposed: Rose Trellis nav bar darker at its warm end"`).
 
 Open: accept the miss permanently (and exempt it with a reason in the check),
 or revisit the look later.
+
+## Audit 2026-10-22
+
+Pointer drift. The bar gradient is no longer in `chrome.css`. The stop `#933b58d9` is at `beebox/src/frontend/src/themes/textiles.css:150`. The revert is commit d9dcceee6. The decision is still open.

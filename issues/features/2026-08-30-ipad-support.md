@@ -50,3 +50,7 @@ its checklist: chat (compose, voice, attach) in both orientations; a document
 open alongside chat at full, split-screen, and Slide Over widths; capture
 overlay; pairing; share extension from Safari; hardware-keyboard behavior in
 the composer. Only the boxholder clears this.
+
+## Audit 2026-10-22
+
+The orientation declaration landed in commit `4927fc6f8` (`ios-app/BeeBox/Info.plist:32-44`), so the Xcode warning named above no longer applies. Layout design and real-device testing remain open.

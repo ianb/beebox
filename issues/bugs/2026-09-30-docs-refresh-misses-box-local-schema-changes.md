@@ -37,3 +37,7 @@ after `ensureAgentContext`
 ([commit-ordering issue](../closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md)).
 The staleness marker still ignores box-local schema source, so this issue
 stays open.
+
+## Audit 2026-10-22
+
+Still true. The cause is now located. `newestInputMtime` (`beebox/src/core/docs-gen/generate/core.ts:137`) watches `getBoxDir(boxRoot, "schemas")` at `:169`. That key is the legacy `_config/schemas` directory (`beebox/src/lib/paths/box-layout-spec.ts:285-292`). Box-local schemas live in `src/schemas/`, which the mtime scan never reads. A one-line fix is to add `src/schemas/*.ts` to the scan.

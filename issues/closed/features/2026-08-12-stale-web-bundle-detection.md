@@ -8,7 +8,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: streaming-scroll worktree session — iOS scroll field probe
 priority: normal
+resolution: superseded
 ---
+
+> **Closed 2026-10-22 (issue audit):** [Detect a server update and prompt the client to reload](../../features/2026-08-03-detect-server-update-prompt-client-reload.md) asks for the same version handshake and reload prompt, iOS webview included. Its audit note now carries the points this issue added.
 
 The iOS app's WKWebView (and any long-lived pinned tab) keeps running whatever
 JS bundle it loaded last, possibly for days. After the streaming-scroll fix

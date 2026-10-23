@@ -4,7 +4,7 @@ status: implemented
 workstream: workstreams
 issues:
   - ../../../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md
-  - ../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md
+  - ../../../issues/closed/decisions/2026-07-29-manual-testing-flag-overuse.md
 ---
 
 # The /workstreams/ app and disposable sessions
@@ -29,7 +29,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
 - [plans need frontmatter and issue mapping](../../../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md)
   — Track E.
 - Related, advanced but not closed:
-  [manual-testing flag overuse](../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)
+  [manual-testing flag overuse](../../../issues/closed/decisions/2026-07-29-manual-testing-flag-overuse.md)
   stays open; nothing here assumes more `manual-testing` items (see NOT in
   scope). The
   [events.db two-engine bug](../../../issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md)
@@ -858,7 +858,7 @@ reading whole issues plus remembering which tab held the work. Each step has
 a home now: the queue is a facet, the instructions are prose _somewhere_ in
 the body, and "make adjustments" is the resume motion — but nothing connects
 them. **This structures the existing queue; it adds no new producers of the
-flag** — the [overuse decision](../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)
+flag** — the [overuse decision](../../../issues/closed/decisions/2026-07-29-manual-testing-flag-overuse.md)
 stays open and untouched, and tightening its criteria would make this view
 shorter, which is fine.
 

@@ -16,3 +16,7 @@ Use cases:
 - "what links to this?" — backlinks query, surfaced inline
 
 The cheap-model choice keeps latency in the keyboard-shortcut tier and cost negligible enough to leave it always-on. It resolves the "is this a command palette or a chat?" tension by collapsing it: a Cmd-K palette where the input is natural language and the affordances are navigation + Q&A about what you're looking at.
+
+## Audit 2026-10-22
+
+Cmd-K now exists, but as a search overlay, not a chat. `beebox/src/frontend/src/components/search/QuickSearchOverlay.tsx` binds Cmd-K (Ctrl-K off Mac) to a text search that opens a card at the matching section (commit `48dcb3f39`). The document-scoped, fast-model Q&A described here is not built.

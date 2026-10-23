@@ -3,7 +3,10 @@ title: "docs generated map"
 workstream: unknown
 needs: [design]
 area: beebox
+resolution: superseded
 ---
+
+> **Closed 2026-10-22 (issue audit):** Commit a5b19c033 moved the box-invariant engine docs out of each box into the installed package at `node_modules/beebox/box-docs/`, with a generated `README.md` index (`indexDoc` in `beebox/src/core/docs-gen/package-docs/core.ts`). `_content/docs/generated/` now holds only box-specific compiled docs, so the identical per-box tree this issue wanted to index no longer exists.
 
 The per-box `docs/generated/` tree is fully templated from this repo by `bbx init` / `generateDocs` — every box gets the same contents. The recursive box-side MAP generator hides this subtree (it's not box-specific information), so agents working in a box currently have no index of what's in `docs/generated/`.
 

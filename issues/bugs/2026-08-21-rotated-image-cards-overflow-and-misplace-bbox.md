@@ -71,3 +71,7 @@ The recheck is adversarial by design: it will not mark the story accurate just b
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
 [the pipeline README](../../beebox/docs/user-stories/README.md).
+
+## Audit 2026-10-22
+
+Still true. Pointers moved: the padding is `wrapOrthogonal` at `beebox/src/frontend/src/components/ui/Image.tsx:200-202` (`padding: "15% 0"`). The rotation string reaches `BboxOverlay` at `beebox/src/frontend/src/renderers/image.tsx:130-137`. `BboxOverlay.tsx` still applies the transform about its own centre.

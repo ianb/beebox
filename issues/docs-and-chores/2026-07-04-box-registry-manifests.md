@@ -52,3 +52,7 @@ Remaining work is documentation: each manifest's doc names the other and says
 which command writes it (`beebox/docs/scheduler.md`,
 `beebox/docs/server/boxes.md`, the hub docs). A `bbx boxes add --hub`
 convenience is optional and not part of this decision.
+
+## Audit 2026-10-22
+
+The decision is recorded and the cross-docs are mostly done. `beebox/docs/scheduler.md:64` says the manifest only feeds the scheduler and names `hub.json`. `beebox/docs/server/boxes.md:186-192` lists both manifests and the command that writes each (`bbx hub add-box`, `bbx boxes add`). Still missing: `beebox/src/hub/AGENTS.md` does not name `boxes.json`. The optional `bbx boxes add --hub` convenience does not exist.

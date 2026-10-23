@@ -33,3 +33,7 @@ Options, smallest first:
    and failure is `important`.
 
 Related: [deploy reads an ssh failure as a signal](../closed/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md).
+
+## Audit 2026-10-22
+
+Still open. Line pointers moved: `notify()` is at `beebox/deploy/deploy.sh:57`, the failure calls are at lines 119-127, and the success call is at line 1184. `notify()` still calls `BBX_DEPLOY_NOTIFY` directly. The deploy now also writes a record per deploy to `beebox/deploy/.deploy-logs/deploys.jsonl`, but alerts and the digest do not read it.
