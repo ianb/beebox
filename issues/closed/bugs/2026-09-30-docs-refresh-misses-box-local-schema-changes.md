@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-card-fields-review — applying box-local field renames on production boxes
 priority: normal
+resolution: implemented
 ---
+
+> **Closed 2026-10-22 (issue audit):** Commit 55147cd9a makes `newestInputMtime` (`beebox/src/core/docs-gen/generate/core.ts`) scan the box schemas dir from the box shape (`src/schemas/`) instead of the legacy `_config/schemas`. A new case in `beebox/test/core/docs-refresh.test.ts` shows a changed box-local schema now makes the docs stale; it fails on the old code.
 
 After a box's `src/schemas/*.ts` changed and was committed, `bbx docs refresh
 --json` answered `{"status":"current"}` and left `.claude/rules/card-<type>.md`
@@ -28,13 +31,13 @@ add case for `bbx init`; this is the change case for `bbx docs refresh`.
 
 ## Re-encounter 2026-10-08 (journey walks)
 
-Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R3, R4). After the agent added a `loan` type and a `lending-list` type, `.claude/rules/card-loan.md` lacked a later field (`expected-back`) and no rule existed for `lending-list`. Part of this was the agent skipping `bbx engine init .`, which `beebox/box-docs/schemas.md:253-262` instructs. Separately, `.agents/skills/beebox-rule-card-loan/` was left untracked: `syncTemplatesFromSource` commits at `beebox/src/core/docs-gen/generate/core.ts:241`, and the `.agents` mirrors are written later by `ensureAgentContext` (`:411`), which nothing commits. The priority may be stale given the recurrence.
+Seen in the [A-lending walk](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R3, R4). After the agent added a `loan` type and a `lending-list` type, `.claude/rules/card-loan.md` lacked a later field (`expected-back`) and no rule existed for `lending-list`. Part of this was the agent skipping `bbx engine init .`, which `beebox/box-docs/schemas.md:253-262` instructs. Separately, `.agents/skills/beebox-rule-card-loan/` was left untracked: `syncTemplatesFromSource` commits at `beebox/src/core/docs-gen/generate/core.ts:241`, and the `.agents` mirrors are written later by `ensureAgentContext` (`:411`), which nothing commits. The priority may be stale given the recurrence.
 
 ## Update 2026-10-08
 
 The untracked `.agents/skills/` mirror is fixed: `generateDocs` now commits
 after `ensureAgentContext`
-([commit-ordering issue](../closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md)).
+([commit-ordering issue](2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md)).
 The staleness marker still ignores box-local schema source, so this issue
 stays open.
 

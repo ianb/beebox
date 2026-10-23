@@ -16,7 +16,7 @@ most of it. Each copy drifts, and a fix lands in one copy only.
 Known instances already filed:
 [fold search and browse summaries onto summarize](2026-09-20-fold-search-and-browse-summaries-onto-summarize.md),
 [one way to log everywhere](2026-07-04-logging-consolidation.md),
-[chat session shared core](2026-07-06-chat-session-shared-core.md).
+[chat session shared core](../closed/code-quality/2026-07-06-chat-session-shared-core.md).
 The [what-can-we-remove sweep](2026-09-14-what-can-we-remove-sweep.md) is a
 neighbor: it removes code with no purpose. This sweep merges code with one
 purpose and two implementations.
