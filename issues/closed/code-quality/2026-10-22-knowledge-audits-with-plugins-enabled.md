@@ -1,12 +1,15 @@
 ---
 title: "Knowledge audits cannot run with a plugin enabled, and several courseware audits test the wrong thing"
-workstream: unattached
+workstream: knowledge-audit-refresh
+resolution: implemented
 area: beebox
 labels: [harness]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-knowledge-audit-refresh — full knowledge-audit rerun, 2026-10-22
 ---
+
+**Closed:** implemented as a per-audit `plugins:` field (`beebox/src/dev/lib/box-audits/plugins.ts`), see `beebox/docs/implemented-plans/knowledge-audit-plugins.md`. Divergence: the build-a-course audit does not require a skill read.
 
 `test1` activates only the recipe plugin. Courseware is off, so its 13 audits (tag `courseware` in `beebox/src/dev/knowledge-audits.yaml`) ran on 2026-10-22 against a box that has no course types and no courseware skill. Agents answered from the plugin's source under `node_modules/beebox/src/plugins/courseware/`. Several checks were loosened so that answers without the plugin pass (see the `Refresh (2026-10-22, Claude)` comments).
 
