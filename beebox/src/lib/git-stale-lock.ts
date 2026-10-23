@@ -69,6 +69,7 @@ import { isRecord } from "../shared/is-record.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { isWithin } from "./box-containment.js";
+import { formatDuration } from "../shared/relative-time.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -391,10 +392,5 @@ export async function sweepStaleIndexLock(dir: string): Promise<void> {
 
 /** Human-readable age for log and health-check text. */
 export function formatAge(ageMs: number | null): string {
-  if (ageMs === null) return "unknown age";
-  const minutes = Math.round(ageMs / 60_000);
-  if (minutes < 90) return `${String(minutes)}m`;
-  const hours = Math.round(ageMs / 3_600_000);
-  if (hours < 48) return `${String(hours)}h`;
-  return `${String(Math.round(ageMs / 86_400_000))}d`;
+  return ageMs === null ? "unknown age" : formatDuration(ageMs);
 }

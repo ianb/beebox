@@ -23,7 +23,7 @@ import { Stack } from "../../../ui/Stack";
 import { Button } from "../../../ui/Button";
 import { bbxSource } from "../../../../lib/source-tag";
 import { type DictationDraft } from "../../../../lib/dictation-draft";
-import { formatAgo } from "../../../../lib/relative-time";
+import { formatAgo } from "@shared/relative-time";
 
 export function RecoveredDictation(props: {
   draft: DictationDraft;

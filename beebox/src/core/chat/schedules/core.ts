@@ -18,6 +18,7 @@ import { getBoxTime } from "../../../lib/time.js";
 import { type ChatSchedule, loadChatSchedules, log, SCHEDULES_FILE } from "./store.js";
 import { ClockWatch } from "./clock-watch.js";
 import { CHECK_IN_MAX_MS, CheckInNotSavedError, CheckInTooLongError, MAX_TIMEOUT_MS, ScheduleForDeletingSessionError } from "./check-in.js";
+import { formatDuration } from "../../../shared/relative-time.js";
 
 export { parseCancelScheduleTags, parseScheduleTags } from "./tags.js";
 export { loadChatSchedules, type ChatSchedule } from "./store.js";
@@ -190,8 +191,8 @@ export class ChatScheduleManager {
     const now = getBoxTime(this.boxRoot).getTime();
     const lines = active.map((s) => {
       const remainMs = new Date(s.firesAt).getTime() - now;
-      const remainMin = Math.max(1, Math.round(remainMs / 60000));
-      const timeStr = remainMin >= 60 ? `${Math.floor(remainMin / 60)}h${remainMin % 60 > 0 ? `${remainMin % 60}m` : ""}` : `${remainMin}m`;
+      // Whole minutes, at least one: a check-in that is due but still active reads "fires in 1m".
+      const timeStr = formatDuration(Math.max(1, Math.round(remainMs / 60_000)) * 60_000);
       return `- "${s.label}" fires in ${timeStr}${s.alarm ? " (alarm)" : ""}`;
     });
 

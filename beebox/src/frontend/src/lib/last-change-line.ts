@@ -1,4 +1,4 @@
-import { formatAgo } from "./relative-time";
+import { formatAgo } from "@shared/relative-time";
 
 /**
  * The Properties "Changed" line for a card's newest commit: "3 days ago ·

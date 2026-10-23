@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { formatDuration } from "../../../../lib/relative-time";
+import { formatDuration } from "@shared/relative-time";
 import { applyTaskEvent, applyTaskLevel, type LiveTask, type LiveTaskEntry, type TaskEvent } from "./background-tasks";
 
 /**

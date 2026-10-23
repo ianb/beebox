@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import type { ChatSchedule } from "@core/chat/schedules/core.js";
 import type { SidecarTab } from "./sidecar-tabs";
 import { boxNow } from "../../lib/box-clock";
-import { formatDuration } from "../../lib/relative-time";
+import { formatDuration } from "@shared/relative-time";
 
 /**
  * Countdown pill showing time remaining for an active schedule.
