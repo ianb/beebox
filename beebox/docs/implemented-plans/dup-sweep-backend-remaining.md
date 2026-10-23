@@ -1,6 +1,6 @@
 ---
 title: "Backend duplication sweep: the remaining groups"
-status: draft
+status: implemented
 workstream: dup-sweep-backend
 issues:
   - ../../../issues/closed/code-quality/2026-10-23-two-card-filename-parsers.md

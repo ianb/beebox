@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-23T20:37:47Z
-Total documents: 569
+Generated: 2026-10-23T23:19:05Z
+Total documents: 570
 
 ## Issues
 
@@ -33,6 +33,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (211 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · shipped history · implemented
+- **docs/implemented-plans/dup-sweep-backend-remaining.md** — "Backend duplication sweep: the remaining groups" (392 lines) · shipped history · implemented
 - **docs/implemented-plans/exhibit-html-controls.md** — "Comment and reply controls on raw `index.html` exhibits" (250 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (723 lines) · shipped history · implemented
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (116 lines) · shipped history · implemented
@@ -186,6 +187,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.gap-analysis.md:6 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/docs-reorg.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doctest-usability.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/dup-sweep-backend-remaining.md:74 (mention) — - The root AGENTS.md rule for the sweep: no behavior change except named bug
 - docs/implemented-plans/exhibit-comments.md:77 (mention) — - `AGENTS.md` root, "Minimize invented concepts" (memory
 - docs/implemented-plans/exhibit-html-controls.md:44 (mention) — - AGENTS.md "no features beyond the task": the bar carries exactly the two
 - docs/implemented-plans/exhibits-rethink.md:90 (mention) — (about 90 lines) and gains the phrasing section (about 25); root `AGENTS.md`
@@ -1295,6 +1297,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/doc-structure.md:60 (mention) — (`docs/engineering-principles.md`), and 8, *one way to do each thing*: this
 - docs/implemented-plans/drive-docs-api-health.md:52 (mention) — - `engineering-principles.md` §4, *"invisible degradation is not"* allowed: this is the reason for the work.
+- docs/implemented-plans/dup-sweep-backend-remaining.md:70 (mention) — - `beebox/docs/engineering-principles.md` §8 "One way to do each thing" is the
 - docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
 - docs/implemented-plans/exhibit-comments.md:66 (mention) — - `beebox/docs/engineering-principles.md` **8** (one way to do each thing):
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
@@ -5043,6 +5046,21 @@ References:
 - → ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md (frontmatter)
 - → ../issues/closed/features/2026-06-26-drive-mounting-file-browsing-ui.md (frontmatter)
 - → docs/connectors/drive.md (mention)
+
+#### docs/implemented-plans/dup-sweep-backend-remaining.md **[ORPHAN]**
+
+Title: "Backend duplication sweep: the remaining groups" | 392 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/code-quality/2026-10-23-two-card-filename-parsers.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-agent-quota-collection-exists-twice.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md (frontmatter)
+- → ../issues/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md (link)
+- → ../issues/code-quality/2026-10-23-date-and-duration-formatting-variants.md (link)
+- → ../issues/code-quality/2026-10-23-text-helpers-with-diverging-rules.md (link)
+- → ../issues/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md (link)
+- → docs/engineering-principles.md (mention)
+- → AGENTS.md (mention)
 
 #### docs/implemented-plans/emission-model.md
 
