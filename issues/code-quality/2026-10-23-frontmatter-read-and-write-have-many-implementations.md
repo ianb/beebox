@@ -8,6 +8,8 @@ discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
 ---
 
+Status 2026-10-23 (worktree-dup-sweep-backend): the fence rule (commit 4e6d1dc59), the writers (57b5c6069) and the single-key editors (d339480a6) are done. Still open: the five title-from-markdown extractors listed under "Title from markdown", and the hand-inlined split-parse-guard readers listed under "Parse to a record".
+
 `beebox/src/cards/frontmatter.ts` has the shared helpers:
 `splitCardContent`, `parseFrontmatterObject`, and `renderFrontmatterBlock`.
 Many modules do the same jobs locally, and the local copies differ in ways a

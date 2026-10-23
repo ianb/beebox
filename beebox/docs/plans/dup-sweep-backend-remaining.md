@@ -3,15 +3,24 @@ title: "Backend duplication sweep: the remaining groups"
 status: draft
 workstream: dup-sweep-backend
 issues:
-  - ../../../issues/code-quality/2026-10-23-two-card-filename-parsers.md
-  - ../../../issues/code-quality/2026-10-23-agent-quota-collection-exists-twice.md
-  - ../../../issues/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md
-  - ../../../issues/code-quality/2026-10-23-date-and-duration-formatting-variants.md
-  - ../../../issues/code-quality/2026-10-23-text-helpers-with-diverging-rules.md
-  - ../../../issues/code-quality/2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md
-  - ../../../issues/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md
+  - ../../../issues/closed/code-quality/2026-10-23-two-card-filename-parsers.md
+  - ../../../issues/closed/code-quality/2026-10-23-agent-quota-collection-exists-twice.md
+  - ../../../issues/closed/code-quality/2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md
 ---
 # Backend duplication sweep: the remaining groups
+
+**Outcome (2026-10-23):** all ten tracks are implemented. Three issues are
+closed. Four stay open for parts outside this plan's tracks:
+[frontmatter](../../../issues/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md) (title extraction, inlined readers),
+[dates](../../../issues/code-quality/2026-10-23-date-and-duration-formatting-variants.md) (box-local day, duration parsers),
+[text helpers](../../../issues/code-quality/2026-10-23-text-helpers-with-diverging-rules.md) (slugs, coercion),
+[atomic writes](../../../issues/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md) (git-shim, exhibits writer, loader policies).
+Deviations, each explained in its commit: track 4 adds `formatAgoMs`
+instead of a `dateAfterDays` option; track 3's editors share
+`editableFrontmatterDocument` and `renderFrontmatterDocument` instead of
+`setFrontmatterFields`; track 3's writer step found 7 hand-built generators,
+not 28 (the rest already used `renderFrontmatterBlock`); track 10 found and
+fixed the cause (an `fs.watchFile` baseline race) instead of filing it.
 
 The backend pass of the functional-duplication sweep merged the groups that had
 no behavior change. This plan finishes the groups that needed a decision. The

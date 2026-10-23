@@ -8,6 +8,8 @@ discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
 ---
 
+Status 2026-10-23 (worktree-dup-sweep-backend): HTML escape and truncation are done (commit eb26250f3), and so is SHA-256. Still open: slugs and string coercion.
+
 The duplication sweep merged the exact copies of `plural`, the XML attribute
 escape, and tap-check's regex escape. These groups remain because the copies
 differ in output:

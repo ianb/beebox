@@ -6,7 +6,10 @@ labels: [code-quality, cards]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
+resolution: implemented
 ---
+
+Closed 2026-10-23 by commit 02ea8b508 (worktree-dup-sweep-backend, plan `dup-sweep-backend-remaining`): `parseCardName` returns `cardBasename` and the schema type; job cards read as their schema type (boxholder decision), and the trash command keeps a card's filename ending through `withCollisionStamp`.
 
 `parseCardFileName` (`beebox/src/shared/card-name.ts:27`) is the tested card
 filename grammar. `parseCardName` (`beebox/src/lib/paths/core.ts:158`) is an
@@ -26,7 +29,7 @@ for an audit before unifying. The sweep did not do that audit: each caller
 needs a check of what it does with a job card's type and a positional card's
 name (for example, whether the browse listing shows the type as the name).
 
-Related: [card filename dotted segments](../decisions/2026-09-05-disallow-dots-in-card-names.md).
+Related: [card filename dotted segments](../../decisions/2026-09-05-disallow-dots-in-card-names.md).
 
 ## Attempt and revert (2026-10-23)
 
