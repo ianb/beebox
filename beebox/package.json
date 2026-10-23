@@ -89,6 +89,8 @@
     "perf:load": "tsx src/dev/perf/load/cli.ts",
     "perf:serve-start": "tsx src/dev/perf/serve-start/cli.ts",
     "perf:compare": "tsx src/dev/perf/compare-cli.ts",
+    "perf:test-floor": "tsx src/dev/perf/test-floor/cli.ts",
+    "perf:cli-start": "tsx src/dev/perf/cli-start/cli.ts",
     "csp-digest": "tsx src/dev/csp-report/digest.ts",
     "csp-report": "tsx src/dev/csp-report/report.ts",
     "prompt-report": "tsx src/dev/prompt-report.ts",

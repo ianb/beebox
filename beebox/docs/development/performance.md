@@ -1,8 +1,10 @@
-# Measuring page-load performance
+# Measuring performance
 
-How to measure how fast a box page loads, find where the time goes, and show
-that a change made it faster. The tools live in `src/dev/perf/` and the
-frontend's bundle analyzer; this page is their manual.
+How to measure how fast a box page loads and how fast a process starts, find
+where the time goes, and show that a change made it faster. The tools live in
+`src/dev/perf/` and the frontend's bundle analyzer; this page is their manual.
+Page loads come first; [process start](#process-start-tests-and-the-cli)
+covers test processes and `bbx` verbs.
 
 ## What a first load spans
 
@@ -183,6 +185,53 @@ session. Throttling is emulated by Chrome: it shapes bandwidth and latency per
 request but does not model TCP slow start or packet loss. The CPU slowdown is
 relative to the machine that runs it. Treat absolute numbers as a model; the
 before-and-after difference is the result.
+
+## Process start: tests and the CLI
+
+Two costs are paid once per process, and many processes run:
+
+- **A test file's floor.** Every test file is its own Node process. Before its
+  first assertion it pays Node boot, the tsx loader, the `.taprc` preloads,
+  and tap's own import. A full run has more than 1,000 files, and many tests
+  spawn further CLI processes.
+- **A `bbx` verb.** Box agents run `bbx` verbs many times per turn. Each run
+  loads the whole bundled CLI (`dist/cli.mjs`): every command module and each
+  npm package those modules import at their top.
+
+### `pnpm perf:test-floor` — what one test process costs
+
+```bash
+pnpm perf:test-floor                                     # 7 interleaved runs of each layer
+pnpm perf:test-floor --file test/webapp/<some>.test.ts   # also one real file, same preloads
+```
+
+It times four cumulative layers: `node`, then tsx with one `.ts` file, then
+all `.taprc` preloads, then a one-assertion tap test. The increase from one row
+to the next is that layer's cost. The node arguments come from `.taprc`.
+
+It also prints the size of tsx's transform cache (`$TMPDIR/tsx-<uid>`). tsx
+before 4.23.15 listed that whole directory at the start of every process. At
+166,000 entries that cost about 470 ms per process and tripled the floor. A
+tsx row much slower than about 60 ms points at the loader or its cache.
+
+Measured 2026-10-23 (load average about 17): `node` 29 ms, tsx 59 ms, all
+preloads 313 ms, tap test 322 ms. Of the preloads, tap itself (through
+`@ianbicking/tap-check/tap`) costs about 120 ms and the React Compiler hook's
+loader thread about 50 ms.
+
+### `pnpm perf:cli-start` — what a `bbx` verb costs
+
+```bash
+pnpm perf:cli-start                    # bbx --version in the worktree test1 clone, 7 runs
+pnpm perf:cli-start -- ls _config      # another verb
+pnpm perf:cli-start --cpu-prof         # plus a profile of one run, by source owner
+```
+
+`--version` does no work, so its time is the load cost. The run uses the
+bundle as `bin/bbx` does (compile cache, source maps) without the wrapper's
+staleness check, which adds about 40 ms in a dev checkout. The profile summary
+is the one `perf:serve-start` prints: an npm package near the top that the
+verb does not use is a candidate for a dynamic `import()` at its use site.
 
 ## Checking against production
 
