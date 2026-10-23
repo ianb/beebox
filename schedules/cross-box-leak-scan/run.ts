@@ -127,6 +127,16 @@ async function checkProbeTest(): Promise<string[]> {
 }
 
 /**
+ * The identity a finding keeps from week to week: a `static` line minus its
+ * line number. Without this, an unrelated edit above an adjudicated finding
+ * shifts its `file:line` and the same finding comes back as "new" (this
+ * happened to `status.ts`'s `browse` field four weeks running).
+ */
+export function findingKey(line: string): string {
+  return line.replace(/^(static\s+\S+?):\d+(?=\s)/, "$1");
+}
+
+/**
  * What the FIRST run (no prior baseline) should report. A diff against last
  * week is meaningless when there is no "last week" — sending only an `fyi`
  * alert either way would let real findings present at first deployment
@@ -218,8 +228,8 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const known = new Set(previous);
-  const added = current.filter((line) => !known.has(line));
+  const known = new Set(previous.map(findingKey));
+  const added = current.filter((line) => !known.has(findingKey(line)));
   await recordBaseline();
 
   if (DRY_RUN || added.length > 0) printReport();
