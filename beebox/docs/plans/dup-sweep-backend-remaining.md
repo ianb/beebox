@@ -131,8 +131,10 @@ No other nouns.
   built by a local `withCollisionStamp(basename, stamp)`: insert `_<stamp>`
   after the attach stem (`cardBasename`) and keep the rest
   (`Foo.intake.job.card` → `Foo.intake_<stamp>.job.card`, attach directory
-  `Foo.intake_<stamp>.attach`, the same as today). A positional card keeps
-  today's form (`doc.card` → `doc_<stamp>.doc.card`). Browse
+  `Foo.intake_<stamp>.attach`, the same as today). A positional card is a
+  special case, not the general rule: stamping after its stem would give
+  `doc_<stamp>.card`, a different positional type, so it keeps today's form
+  (`doc.card` → `doc_<stamp>.doc.card`). Browse
   prominence for job cards follows the schema (`background`), by decision.
 - **Vocabulary lock-ins:** none.
 - **First chunk:** the trash helper with its test, then the `parseCardName`
@@ -187,7 +189,8 @@ No other nouns.
   - Editor: `setFrontmatterFields(content, edits)` in `card-fields/field-edits.ts`
     (split, `applyFieldEdits`, re-fence). It throws a typed
     `FrontmatterNotEditableError` when there is no fence, the YAML has errors,
-    or the root is not a mapping; `applyFieldEdits` (`field-edits.ts:98`)
+    or the root is a non-empty non-mapping; an empty block reads as an empty
+    mapping, as `webapp/trpc/routers/card.ts:215` accepts today; `applyFieldEdits` (`field-edits.ts:98`)
     checks none of these today. Domain checks stay at the call site before the
     edit: `todo/set-status.ts:86` (missing or out-of-range `todos[i]`), the
     web routers' mapping checks (`webapp/trpc/routers/card.ts:215`). The six
