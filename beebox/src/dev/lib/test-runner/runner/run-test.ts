@@ -27,6 +27,7 @@ import {
 } from "../../context-usage.js";
 import { codexBehaviorFromActivity } from "./codex-audit.js";
 import { type BehaviorAccumulator, categorizeToolUse } from "./tool-use-behavior.js";
+import { visibleReplyText } from "./reply-text.js";
 import { runChecks } from "../../audit-checks.js";
 import { generateAgentContextMirrors } from "../../../../core/agent-context-mirrors.js";
 import { AGENTS_MD, CLAUDE_MD } from "../../../../core/agent-instruction-files.js";
@@ -41,7 +42,7 @@ export interface AgentBehavior {
   /** Actual bash commands (not descriptions) for automated checks */
   bashRawCommands: string[];
   responseText: string;
-  /** The reply the chat shows: text after the last tool call (see `final_reply`). */
+  /** The text the chat shows after folding (see `final_reply`, `visibleReplyText`). */
   replyText: string;
   responseLength: number;
   /** Loaded-context size of this run (null if the session had no turns). */
@@ -278,8 +279,7 @@ export async function extractBehavior(logDir: string, sessionId: string): Promis
   }
 
   const responseText = responseChunks.join("\n").trim();
-  const replyChunks = responseChunks.slice(replyStart);
-  const replyText = (replyChunks.length > 0 ? replyChunks : responseChunks.slice(-1)).join("\n").trim();
+  const replyText = visibleReplyText(responseChunks, replyStart);
 
   // Context-size accounting reads the same main session log (not subagent
   // logs — those are separate contexts; baseline/peak is about what the box

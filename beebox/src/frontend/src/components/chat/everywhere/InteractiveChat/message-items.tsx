@@ -180,9 +180,11 @@ export function buildTailItems(opts: TailItemsInput): DataItem[] {
     // GroupItem/AssistantMessage path as the finalized turn, keyed by liveTurnId
     // so finalize is an in-place update (no remount/flash). chunkOnParagraphs
     // trims to the last safe boundary so half-typed structured tags don't leak.
+    // Text written before a tool call is complete, so it is never trimmed.
+    const done = Math.max(0, ...streamTools.map((tool) => tool.streamTextOffset ?? 0));
     const entry = buildStreamEntry({
       uuid: `live-${liveTurnId ?? "tail"}`,
-      streamText: chunkOnParagraphs(streamText),
+      streamText: streamText.slice(0, done) + chunkOnParagraphs(streamText.slice(done)),
       streamTools,
     });
     if (hasAssistantSurface([entry], { debugView, proseEnabled })) {

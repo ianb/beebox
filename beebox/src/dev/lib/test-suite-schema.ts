@@ -93,9 +93,9 @@ const auditTestObjectSchema = z.object({
    */
   chat_mode: z.boolean().optional(),
   /**
-   * Run the text checks on the reply the chat shows: the text after the last
-   * tool call, or the last text when none follows it. Text written before a
-   * later tool call folds into the chat's activity row (`groupIntoParts`).
+   * Run the text checks on the text the chat shows: the reply after the last
+   * tool call, plus earlier text the chat keeps (`visibleReplyText`). Other
+   * text written before a later tool call folds into the activity row.
    */
   final_reply: z.boolean().optional(),
   /**

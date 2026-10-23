@@ -10,6 +10,7 @@ import { useWorkspace } from "../workspace/WorkspaceProvider/provider";
 import { cardTarget } from "../workspace/use-open-beside/hook";
 import type { SessionContentBlock } from "../../../api";
 import type { ActivityPart } from "../assistant-parts";
+import { MarkdownContent } from "../markdown-rendering";
 import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail, summarizeActivity } from "./activity-wording";
 
 type ActivityParts = ActivityPart[];
@@ -153,7 +154,7 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
           case "tools":
             return part.tools.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} excerptInline={excerptInline} />);
           case "note":
-            return <p key={i} className="my-1 text-card-pen whitespace-pre-wrap">{part.text}</p>;
+            return <div key={i} className="my-1 text-card-pen"><MarkdownContent text={part.text} /></div>;
         }
       })}
     </>

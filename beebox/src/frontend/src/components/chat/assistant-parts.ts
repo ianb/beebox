@@ -104,8 +104,8 @@ export function groupIntoParts(entries: SessionEntry[], opts?: { fold: boolean }
         flushActivity();
         grouped.push({ kind: "text", text: part.text, proseHidden: true });
       }
-      const note = part.type === "update" ? part.text : stripStructuredOutputTags(stripSpeechTags(part.text)).trim();
-      if (note) activityBuf.push({ type: "note", text: note });
+      // A note keeps its markdown; the renderer strips the tags.
+      if (part.type === "update" || stripStructuredOutputTags(stripSpeechTags(part.text)).trim()) activityBuf.push({ type: "note", text: part.text });
     } else {
       flushActivity();
       grouped.push({ kind: part.type, text: part.text });

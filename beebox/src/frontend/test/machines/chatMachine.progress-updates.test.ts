@@ -24,7 +24,7 @@ import { parseSessionLog, type SessionLogSlice } from "../../../cli/lib/session.
 import { writesProgressUpdates } from "../../../shared/model-ids.js";
 import { handleTurnMessage } from "../../src/machines/chatMachine/chat-actors.js";
 import { groupIntoParts, hasProgressUpdate } from "../../src/components/chat/assistant-parts.js";
-import { buildStreamEntry } from "../../src/lib/stream-entry.js";
+import { buildTailItems } from "../../src/components/chat/everywhere/InteractiveChat/message-items.js";
 import type { ChatMessage, ChatMessageContent } from "../../../core/chat/session/messages.js";
 import type { ChatEvent } from "../../src/machines/chat-types.js";
 import type { SessionContentBlock, SessionEntry } from "../../src/api-chat.js";
@@ -94,8 +94,9 @@ async function historyOf(lines: string[]): Promise<SessionEntry[]> {
 }
 
 // Drive the live handler with one assistant frame per block and build the
-// provisional entry the chat renders during the turn. The sink records each
-// tool's text offset as the chat machine's STREAM_TOOL handler does.
+// provisional entry the chat renders during the turn, through the message
+// list's tail. The sink records each tool's text offset as the chat machine's
+// STREAM_TOOL handler does.
 function liveOf(model: string, blocks: ChatMessageContent[]): SessionEntry[] {
   const state = { sawTextPartial: false };
   let streamText = "";
@@ -108,7 +109,11 @@ function liveOf(model: string, blocks: ChatMessageContent[]): SessionEntry[] {
     const msg: ChatMessage = { type: "assistant", session_id: "s", message: { role: "assistant", model, content: [block] } };
     handleTurnMessage(msg, { sessionInput: "s", sendBack: sink, terminal: sink, state });
   }
-  return [buildStreamEntry({ uuid: "live", streamText, streamTools })];
+  const [item] = buildTailItems({
+    groupCount: 0, streamingShown: true, streamText, streamTools, liveTurnId: "t",
+    pendingHq: [], captureBubbles: [], debugView: false, proseEnabled: true,
+  });
+  return item?.kind === "group" ? item.group.entries : [];
 }
 
 // ## Which models write progress updates
@@ -185,11 +190,19 @@ void test("Text before a later tool call folds with the updates.", async (t) => 
 // The live turn gets the same groups as the reloaded history. An update rides
 // the stream's tool list, and each tool records where the streamed text stood,
 // so text written before a tool call keeps its place. Mid-turn, the newest line
-// is the visible status line. An older model's reasoning is not surfaced live.
+// is the visible status line. Streaming text waits for a paragraph break or a
+// following tool call before it shows. An older model's reasoning is not
+// surfaced live.
 void test("The live turn gets the same groups as the reloaded history.", async (t) => {
   const opening = text("I'll check DNS first.");
   const blocks = [opening, bash("t0"), reasoning, update("Checking DNS."), bash("t1"), reasoning, update("Writing the plan."), bash("t2"), text("All set.")];
+  // "All set." has no paragraph break yet, so the last update still shows.
   t.check(describe(liveOf("claude-fable-5-1", blocks)), [
+    "activity: note(I'll check DNS first.), tools(1), note(Checking DNS.), tools(1)",
+    "update: Writing the plan.",
+    "activity: tools(1)",
+  ]);
+  t.check(describe(liveOf("claude-fable-5-1", [...blocks, text("\n\n")])), [
     "activity: note(I'll check DNS first.), tools(1), note(Checking DNS.), tools(1), note(Writing the plan.), tools(1)",
     "text: All set.",
   ]);
@@ -198,10 +211,16 @@ void test("The live turn gets the same groups as the reloaded history.", async (
     "update: Checking DNS.",
     "activity: tools(1)",
   ]);
-  t.check(describe(liveOf("claude-fable-5-1", blocks.slice(0, 1))), ["text: I'll check DNS first."]);
+  // Text still streaming with no paragraph break waits; once a tool call
+  // follows it, it is complete and shows.
+  t.check(describe(liveOf("claude-fable-5-1", blocks.slice(0, 1))), []);
+  t.check(describe(liveOf("claude-fable-5-1", blocks.slice(0, 2))), [
+    "text: I'll check DNS first.",
+    "activity: tools(1)",
+  ]);
   t.check(describe(liveOf("claude-sonnet-4-6", blocks)), [
-    "activity: note(I'll check DNS first.), tools(3)",
-    "text: All set.",
+    "text: I'll check DNS first.",
+    "activity: tools(3)",
   ]);
 });
 
@@ -209,7 +228,7 @@ void test("The live turn gets the same groups as the reloaded history.", async (
 //
 // A callout is meant to reach the person, so a folded text's callouts still
 // render in place. Text with a `<speech>` tag is read aloud, so it stays as
-// written.
+// written. A note keeps its raw text; the renderer strips the tags.
 void test("A folded text keeps its callouts; spoken text does not fold.", async (t) => {
   const callout = '<callout context="/loans/drill.card">Your drill is due back Friday.</callout>';
   t.check(
@@ -224,7 +243,7 @@ void test("A folded text keeps its callouts; spoken text does not fold.", async 
     ])),
     [
       `callouts only: Checking the loans. ${callout}`,
-      "activity: note(Checking the loans.), tools(1)",
+      `activity: note(Checking the loans. ${callout}), tools(1)`,
       "text: <speech>One moment.</speech>",
       "activity: tools(1)",
       "text: Done.",

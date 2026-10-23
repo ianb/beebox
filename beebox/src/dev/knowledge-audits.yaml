@@ -4939,6 +4939,9 @@ tests:
   # Changed (2026-10-22): the chat now folds text written before a later tool
   # call into the activity row, so the text checks grade the reply
   # (`final_reply`). The prompt's bookkeeping rule is back to its earlier text.
+  # Status (2026-10-23, Claude): 3/4 pass with final_reply. The failing run's
+  # reply was clean, but its created-ack text said "its own loan card type";
+  # the chat shows ack text as a badge, so the check stands.
   - id: speak-outcome-not-mechanics
     chat_mode: true
     final_reply: true
