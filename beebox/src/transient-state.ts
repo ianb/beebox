@@ -16,8 +16,7 @@ import { errnoCode } from "./shared/error-guards.js";
 import { getBoxDir } from "./lib/paths/core.js";
 
 import { withCardLock } from "./lib/card-lock.js";
-import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "./lib/file-lock.js";
-import { setTimeout as delay } from "node:timers/promises";
+import { requestScopedLock, withFileLock } from "./lib/file-lock.js";
 
 /**
  * Build the transient state file path for a connector.
@@ -99,8 +98,7 @@ async function saveTransientState(opts: SaveOptions): Promise<void> {
   });
 }
 
-const LOCK_RETRIES = 50;
-const LOCK_RETRY_MS = 100;
+const LOCK_WAIT_MS = 5_000;
 
 /**
  * Thrown when a transient-state file stays cross-process-locked past the retry
@@ -175,27 +173,20 @@ export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T
     // defensively, but keep this explicit for the OUTER lock's own reasoning.)
     await fs.mkdir(path.dirname(lockPath), { recursive: true });
 
-    for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-      try {
-        await acquireLock(lock, { purpose: "transient-state", connectorName });
-      } catch (e) {
-        if (e instanceof LockHeldError) {
-          // Held by ANOTHER process (a same-process holder is impossible here —
-          // withCardLock already serialized us). Wait and retry.
-          await delay(LOCK_RETRY_MS);
-          continue;
-        }
-        throw e;
-      }
-      try {
+    // A holder here is ANOTHER process: withCardLock already serialized us.
+    return withFileLock(
+      {
+        lockPath: lock,
+        metadata: { purpose: "transient-state", connectorName },
+        waitMs: LOCK_WAIT_MS,
+        timeoutError: () => new TransientStateLockError(lockPath),
+      },
+      async () => {
         const state = await loadTransientState({ boxRoot, connectorName, defaultValue });
         const updated = await update(state);
         await saveTransientState({ boxRoot, connectorName, data: updated });
         return updated;
-      } finally {
-        await releaseLock(lock);
-      }
-    }
-    throw new TransientStateLockError(lockPath);
+      },
+    );
   });
 }

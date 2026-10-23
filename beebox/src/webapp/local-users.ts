@@ -23,7 +23,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../shared/error-guards.js";
-import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
+import { requestScopedLock, withFileLock } from "../lib/file-lock.js";
 import { currentScryptParams, deriveKey, dummyVerify, hashPassword, type StoredScrypt } from "./local-users-scrypt.js";
 import {
   AuthFileCorruptError,
@@ -36,7 +36,6 @@ import {
   OwnerExistsError,
   UserExistsError,
 } from "./local-users-errors.js";
-import { setTimeout as delay } from "node:timers/promises";
 
 // --- schema -----------------------------------------------------------------
 
@@ -161,8 +160,7 @@ function writeAuthFile(file: AuthFile): void {
 
 // --- cross-process lock -----------------------------------------------------
 
-const LOCK_RETRIES = 50;
-const LOCK_RETRY_MS = 100;
+const LOCK_WAIT_MS = 5_000;
 
 /**
  * Run a read-modify-write of the auth file under the cross-process lock,
@@ -173,25 +171,16 @@ async function withAuthFileLock<T>(fn: (file: AuthFile | null) => Promise<T> | T
   const lockPath = `${authFilePath()}.lock`;
   // Request-scoped: a short critical section whose callers fail fast (~5 s
   // retry budget), so a crashed holder must clear in seconds, not minutes.
-  const lock = requestScopedLock(lockPath);
   fs.mkdirSync(path.dirname(lockPath), { recursive: true });
-  for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-    try {
-      await acquireLock(lock, { purpose: "local-users" });
-    } catch (e) {
-      if (e instanceof LockHeldError) {
-        await delay(LOCK_RETRY_MS);
-        continue;
-      }
-      throw e;
-    }
-    try {
-      return await fn(loadAuthFile());
-    } finally {
-      await releaseLock(lock);
-    }
-  }
-  throw new AuthFileLockError(lockPath);
+  return withFileLock(
+    {
+      lockPath: requestScopedLock(lockPath),
+      metadata: { purpose: "local-users" },
+      waitMs: LOCK_WAIT_MS,
+      timeoutError: () => new AuthFileLockError(lockPath),
+    },
+    () => fn(loadAuthFile()),
+  );
 }
 
 // --- public API -------------------------------------------------------------

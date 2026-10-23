@@ -32,12 +32,10 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
-import { acquireLock, releaseLock, requestScopedLock, LockHeldError, type LockProfile } from "../lib/file-lock.js";
+import { requestScopedLock, withFileLock, type LockProfile } from "../lib/file-lock.js";
 import { isRecord } from "../shared/is-record.js";
-import { setTimeout as delay } from "node:timers/promises";
 
-const LOCK_RETRIES = 50;
-const LOCK_RETRY_MS = 100;
+const LOCK_WAIT_MS = 5_000;
 
 /** The fields every stored credential carries, whatever else it adds. */
 export interface TokenRecord {
@@ -161,24 +159,18 @@ export class TokenStore<TRecord extends TokenRecord> {
     const lockPath = `${this.storePath(boxRoot)}.lock`;
     const lock = this.options.lockProfile === "request" ? requestScopedLock(lockPath) : lockPath;
     fs.mkdirSync(path.dirname(lockPath), { recursive: true });
-    for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-      try {
-        await acquireLock(lock, { purpose: this.options.purpose });
-      } catch (e) {
-        if (e instanceof LockHeldError) {
-          await delay(LOCK_RETRY_MS);
-          continue;
-        }
-        throw e;
-      }
-      try {
+    return withFileLock(
+      {
+        lockPath: lock,
+        metadata: { purpose: this.options.purpose },
+        waitMs: LOCK_WAIT_MS,
+        timeoutError: () => this.options.lockError({ lockPath }),
+      },
+      () => {
         const records = this.read(boxRoot);
         return fn({ records, save: () => this.write(boxRoot, records) });
-      } finally {
-        await releaseLock(lock);
-      }
-    }
-    throw this.options.lockError({ lockPath });
+      },
+    );
   }
 
   /** Append a freshly-minted record under the lock. */

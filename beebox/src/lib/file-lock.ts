@@ -452,24 +452,25 @@ const LOCK_RETRY_MS = 100;
 
 /**
  * Run `fn` while holding `lockPath`, retrying the acquire for up to `waitMs`
- * before giving up with the contending holder's `LockHeldError`.
+ * before giving up with the contending holder's `LockHeldError`, or with
+ * `timeoutError()` when the caller has its own error for "store stayed locked".
  *
  * This is the shape most read-modify-write callers want: `acquireLock` alone is
  * non-blocking, so every such caller was otherwise re-implementing the same
  * retry loop. The lock is always released, including when `fn` throws.
  */
 export async function withFileLock<T>(
-  opts: { lockPath: LockTarget; metadata: Record<string, unknown>; waitMs: number },
-  fn: () => Promise<T>,
+  opts: { lockPath: LockTarget; metadata: Record<string, unknown>; waitMs: number; timeoutError?: () => Error },
+  fn: () => Promise<T> | T,
 ): Promise<T> {
-  const { lockPath, metadata, waitMs } = opts;
+  const { lockPath, metadata, waitMs, timeoutError } = opts;
   const deadline = Date.now() + waitMs;
   for (;;) {
     try {
       await acquireLock(lockPath, metadata);
     } catch (e) {
       if (!(e instanceof LockHeldError)) throw e;
-      if (Date.now() >= deadline) throw e;
+      if (Date.now() >= deadline) throw timeoutError ? timeoutError() : e;
       await delay(LOCK_RETRY_MS);
       continue;
     }

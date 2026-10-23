@@ -23,7 +23,7 @@ import * as fs from "node:fs/promises";
 import { stageAndCommitPaths, unstageFiles } from "../lib/git/core/operations.js";
 import { toRelativePath, isCardFile } from "../lib/paths/core.js";
 import { withCardLock } from "../lib/card-lock.js";
-import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+import { withFileLock } from "../lib/file-lock.js";
 import { cardFields, parseCardText } from "./card-io.js";
 import { errorMessage, errnoCode } from "../shared/error-guards.js";
 import { createCardSchemaMap } from "../schemas.js";
@@ -34,10 +34,8 @@ import {
   type QuestionState,
 } from "../schemas/question.js";
 import type { CommandContext, CommandResult } from "./command-runner.js";
-import { setTimeout as delay } from "node:timers/promises";
 
-const LOCK_RETRIES = 50;
-const LOCK_RETRY_MS = 100;
+const LOCK_WAIT_MS = 5_000;
 
 /**
  * Thrown when the cross-process question lock stays held past the retry budget.
@@ -287,18 +285,15 @@ export async function withQuestionTransition(
   // review, 2026-08-01.)
   await fs.mkdir(path.dirname(lockPath), { recursive: true });
 
-  for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-    try {
-      await acquireLock(lockPath, { purpose: "question-transition", card: questionRef });
-    } catch (e) {
-      if (e instanceof LockHeldError) {
-        await delay(LOCK_RETRY_MS);
-        continue;
-      }
-      throw e;
-    }
-    try {
-      return await withCardLock(fullPath, async (): Promise<TransitionResult> => {
+  return withFileLock(
+    {
+      lockPath,
+      metadata: { purpose: "question-transition", card: questionRef },
+      waitMs: LOCK_WAIT_MS,
+      timeoutError: () => new QuestionLockError(lockPath),
+    },
+    () =>
+      withCardLock(fullPath, async (): Promise<TransitionResult> => {
         const loaded = await loadForTransition({
           fullPath,
           questionRef,
@@ -314,10 +309,6 @@ export async function withQuestionTransition(
         if (!applied.ok) return applied;
 
         return { ok: true, fields: loaded.fields, committedPaths: applied.committedPaths };
-      });
-    } finally {
-      await releaseLock(lockPath);
-    }
-  }
-  throw new QuestionLockError(lockPath);
+      }),
+  );
 }
