@@ -59,9 +59,11 @@ void test("How long a wait is", async (t) => {
   ]);
 });
 
-const logged = (fields: { id: string; source: string; loudness: "dot" | "quiet" | "loud"; target: string; body: string; sent: boolean }): LoggedNotification => ({
+const logged = (fields: { id: string; source: string; loudness: "dot" | "quiet" | "loud"; target: string; body: string; sent: boolean | "present" }): LoggedNotification => ({
   intent: { kind: "intent", at: "2026-10-26T12:48:49.000Z", id: fields.id, title: "Renew the home insurance", body: fields.body, target: fields.target, loudness: fields.loudness, source: fields.source },
-  deliveries: [{ kind: "delivery", at: "2026-10-26T12:48:49.000Z", notificationId: fields.id, channel: "web-push", status: fields.sent ? "sent" : "failed", detail: "fake" }],
+  deliveries: [fields.sent === "present"
+    ? { kind: "delivery", at: "2026-10-26T12:48:49.000Z", notificationId: fields.id, channel: "web-push", status: "skipped", detail: "present" }
+    : { kind: "delivery", at: "2026-10-26T12:48:49.000Z", notificationId: fields.id, channel: "web-push", status: fields.sent ? "sent" : "failed", detail: "fake" }],
 });
 
 // ## Which notification a tick sent
@@ -81,15 +83,18 @@ void test("Which notification a tick sent", async (t) => {
 // ## How a notification reads on the phone
 //
 // Time, how it announced itself, title, body when there is one, and the path a
-// tap opens without the box prefix (`bin/browse` adds it).
+// tap opens without the box prefix (`bin/browse` adds it). One held back because
+// the app was open is still listed: the app showed it as a banner.
 void test("How a notification reads on the phone", async (t) => {
   const opts = { boxSlug: "g-paperwork-3", timeZone: "UTC" };
   t.check([
     formatPhoneEntry(logged({ id: "n1", source: "x", loudness: "loud", target: "chat:new", body: "Price goes up on Nov 7.", sent: true }), opts),
     formatPhoneEntry(logged({ id: "n2", source: "x", loudness: "dot", target: "card:_content/home/insurance.doc.card", body: " ", sent: true }), opts),
+    formatPhoneEntry(logged({ id: "n3", source: "x", loudness: "quiet", target: "dashboard", body: "", sent: "present" }), opts),
   ], [
     "Mon, Oct 26, 12:48 PM — sound\nRenew the home insurance\nPrice goes up on Nov 7.\nTap opens: /chat?new=1&notification=n1",
     "Mon, Oct 26, 12:48 PM — badge only\nRenew the home insurance\nTap opens: /browse/_content/home/insurance.doc.card",
+    "Mon, Oct 26, 12:48 PM — shown in the app, which was open; not sent to the phone\nRenew the home insurance\nTap opens: /",
   ]);
 });
 

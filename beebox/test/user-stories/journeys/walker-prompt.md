@@ -110,8 +110,8 @@ pnpm exec tsx beebox/test/user-stories/journeys/phone.ts {{RUN_DIR}}
 ```
 
 It prints each notification once: when it came, whether it made a sound, what it said, and the
-path a tap opens (`bin/browse open` takes it as is). That is what the person's phone would show;
-nothing else reached them. Look whenever the person would glance at their phone.
+path a tap opens (`bin/browse open` takes it as is). One the app showed on screen instead,
+because you had it open, says so. That is everything the box sent the person. Look whenever the person would glance at their phone.
 
 When your situation says time passes, and only then, add `--wait <duration>` (`2d`, `1w`). The
 phone moves on by that much and shows what arrived meanwhile. The wait is your last act: read

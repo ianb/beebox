@@ -59,9 +59,18 @@ export function parseWait(text: string): number {
   return ms;
 }
 
-/** A notification reached the person when a channel sent it. */
-export function reachedPerson(n: LoggedNotification): boolean {
+function sentToPhone(n: LoggedNotification): boolean {
   return n.deliveries.some((d) => d.status === "sent");
+}
+
+/** Held back because the person had the app open: the app showed it as a banner instead. */
+function shownInApp(n: LoggedNotification): boolean {
+  return n.deliveries.some((d) => d.status === "skipped" && d.detail === "present");
+}
+
+/** A notification reached the person when a channel sent it, or the open app showed it. */
+export function reachedPerson(n: LoggedNotification): boolean {
+  return sentToPhone(n) || shownInApp(n);
 }
 
 /** The notification a tick of `name` sent, if it sent one. */
@@ -90,7 +99,7 @@ export function formatPhoneEntry(n: LoggedNotification, opts: { boxSlug: string;
     weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: opts.timeZone,
   });
   return [
-    `${when} — ${LOUDNESS_WORD[n.intent.loudness]}`,
+    sentToPhone(n) ? `${when} — ${LOUDNESS_WORD[n.intent.loudness]}` : `${when} — shown in the app, which was open; not sent to the phone`,
     n.intent.title,
     ...(n.intent.body.trim() === "" ? [] : [n.intent.body]),
     `Tap opens: ${tapPath(n, opts.boxSlug)}`,

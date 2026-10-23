@@ -57,7 +57,7 @@ No design decision depends on an external premise.
 
 - **Fake notifications (box setting)**: `fakeNotifications: true` in `_config/box.json`. When set, this box's notifications go only to fakes. It is not the process-wide `BBX_NOTIFY_FAKE`, which still works and still fakes every box in the process. Either one turns fake mode on.
 - **Walk clock**: the simulated "now" for one walk, stored in `<run-dir>/phone.json` as `{ "now": <ISO>, "shown": [<notification id>…] }`. Before any wait it is the real time. It is not the box's clock: the box server and its agent keep the real time, which is why a wait ends the walk.
-- **Phone**: what `phone.ts` prints and appends to `<run-dir>/phone.md`: the notifications that reached the person and that the walker has not been shown yet. A notification reached the person when its intent has at least one delivery with status `sent`.
+- **Phone**: what `phone.ts` prints and appends to `<run-dir>/phone.md`: the notifications that reached the person and that the walker has not been shown yet. A notification reached the person when its intent has a delivery with status `sent`, or one `skipped` with detail `present` (the app was open and showed it as a banner); the phone labels the second kind.
 - **Waiting** (`--wait <duration>`): moving the walk clock forward and firing, in `at` order, each pending one-shot `notify:` card whose `at` is at or before the new walk clock. A one-shot card that still exists has not fired (a fired one is deleted), so an overdue reminder is fired too.
 
 Existing names used unchanged: notification intent, delivery, `notify:` card, loudness (`dot`, `quiet`, `loud`), target.
@@ -137,7 +137,7 @@ None.
 | The server's own scheduler fires the same card while `phone.ts` ticks it | Existing script lock (`core/schedule/state.ts:293` `acquireScriptLock`) | One run wins; a once card is deleted after it | Clear: the loser prints a skip, shown under "no record" |
 | The walk clock is behind real time (a reminder set for 10 minutes later during a long walk) | — | The server fires it in real time, in fake mode; `phone.ts` without `--wait` shows it | Clear |
 | `phone.json` is missing or corrupt | New: script test | Missing: start at real now. Corrupt: refuse with the path | Clear |
-| A walk box's `box.json` becomes unreadable, so the field reads as absent | — | Accepted risk: a walk box has no paired phone and no push subscription, so real channels have nobody to send to; reading a broken config as fake would silence a person's box instead | — |
+| A walk box's `box.json` becomes unreadable, so the field reads as absent | — | Accepted risk (raised again in the diff review, kept): a walk box has no paired phone and no push subscription, so real channels have nobody to send to; reading a broken config as fake would silence a person's box instead | — |
 | A reminder card carries run state from an earlier failed send, so a replay at `at + 1 s` is not due | — | Shown under "no record" as not run; fake sends do not fail, so only a send from before the box was fake can leave such state | Clear |
 | The log rotates during a walk | Existing: `readAll` reads both files (`log.ts:170-182`) | Covered | — |
 | `notifyFakeMode` becomes async and a caller drops the `await` | Typecheck: `@typescript-eslint/no-floating-promises` and a `Promise` used as a boolean | Lint and type errors | Clear at build |
