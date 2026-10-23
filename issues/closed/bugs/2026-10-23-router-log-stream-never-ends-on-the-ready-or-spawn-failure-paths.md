@@ -20,7 +20,7 @@ Each start of a worktree therefore leaves one open file handle for the life of
 the router process.
 
 Found while closing
-[the pre-spawn leak](../closed/bugs/2026-10-22-router-test-boxes-resolution-failure-retries-every-request-and-leaks-a-stream.md).
+[the pre-spawn leak](2026-10-22-router-test-boxes-resolution-failure-retries-every-request-and-leaks-a-stream.md).
 Unproven by a run; the test harness's `openLog` fake now records opened and
 ended streams, so a test that starts and stops a worktree twice and counts
 unended streams would show it. Fix sketch: end the stream in the teardown that

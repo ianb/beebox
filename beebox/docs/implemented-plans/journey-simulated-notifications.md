@@ -1,15 +1,15 @@
 ---
 title: "Simulated notifications for journey walkers"
-status: draft
+status: implemented
 workstream: journey-walks-late-oct
 issues:
-  - ../../../issues/features/2026-10-22-journey-walker-gets-simulated-notifications.md
+  - ../../../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md
 ---
 # Simulated notifications for journey walkers
 
 A journey walker cannot see a reminder reach the person: the walk browser denies notification permission, and a walk lasts minutes while a reminder is due days later. This plan gives each walk box fake notification delivery and gives the walker a "phone" command that moves the walk's own clock forward, fires the box's due reminders at the simulated times, and prints what arrived as text. The wait is the walk's last act: the walker reads the phone and may open where a notification leads, and the walk ends there.
 
-**Issues addressed:** [walker gets simulated notifications](../../../issues/features/2026-10-22-journey-walker-gets-simulated-notifications.md). Related, closed: [the journey browser denies notification permission](../../../issues/closed/code-quality/2026-10-22-journey-browser-denies-notification-permission.md) (the walker-prompt line it added is replaced here). Related, open and not addressed: [notifications and proactive design](../../../issues/features/2026-09-25-notifications-and-proactive-design.md). `bin/issues search --all "walker notification"` found no duplicate.
+**Issues addressed:** [walker gets simulated notifications](../../../issues/closed/features/2026-10-22-journey-walker-gets-simulated-notifications.md). Related, closed: [the journey browser denies notification permission](../../../issues/closed/code-quality/2026-10-22-journey-browser-denies-notification-permission.md) (the walker-prompt line it added is replaced here). Related, open and not addressed: [notifications and proactive design](../../../issues/features/2026-09-25-notifications-and-proactive-design.md). `bin/issues search --all "walker notification"` found no duplicate.
 
 ## Design
 

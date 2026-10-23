@@ -167,7 +167,7 @@ channel and is logged. `phone.ts <run-dir> --wait 1w` moves the walk's clock on,
 ticks each reminder due by then at its own time, and prints what arrived; the
 run directory keeps `phone.md`. Repeating reminders and `runs:` schedules are
 not driven, and the box keeps real time, so a wait ends the walk
-([plan](../../../docs/plans/journey-simulated-notifications.md)).
+([plan](../../../docs/implemented-plans/journey-simulated-notifications.md)).
 In-process chat timers are a separate mechanism and can run while the box is
 served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
 one misfire, but did not verify its replacement scheduled reminder.

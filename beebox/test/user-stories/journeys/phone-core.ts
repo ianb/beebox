@@ -2,7 +2,7 @@
  * The walker's phone, as pure pieces: which reminders a wait fires, how long a
  * wait is, which notification a tick produced, and how a notification reads on
  * the phone. `phone.ts` does the reading, ticking, and writing.
- * See docs/plans/journey-simulated-notifications.md.
+ * See docs/implemented-plans/journey-simulated-notifications.md.
  */
 import type { LoggedNotification } from "../../../src/core/notification/log.ts";
 import { parseTarget, targetUrl } from "../../../src/core/notification/target.ts";

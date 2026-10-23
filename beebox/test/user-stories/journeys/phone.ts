@@ -12,7 +12,7 @@
  *
  * The walk clock and the notifications already shown live in
  * `<run-dir>/phone.json`; every look is appended to `<run-dir>/phone.md`.
- * See docs/plans/journey-simulated-notifications.md.
+ * See docs/implemented-plans/journey-simulated-notifications.md.
  */
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";

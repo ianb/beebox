@@ -130,7 +130,7 @@ execFileSync("git", ["-C", boxDir, "commit", "-q", "--amend", "--no-edit", ...(j
 // a box a person actually uses must never have it. `fakeNotifications` sends
 // every notification to a fake channel, so the walker's phone (phone.ts) reads
 // what the box would have sent and nothing reaches a real device
-// (docs/plans/journey-simulated-notifications.md).
+// (docs/implemented-plans/journey-simulated-notifications.md).
 const boxConfigPath = join(content, "_config", "box.json");
 const boxConfig: unknown = existsSync(boxConfigPath) ? JSON.parse(readFileSync(boxConfigPath, "utf8")) : {};
 if (!isRecord(boxConfig)) fail(`${boxConfigPath} is not a JSON object`);

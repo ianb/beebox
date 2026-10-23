@@ -2,7 +2,7 @@
 //
 // A wait fires each one-shot `notify:` reminder due by its end, at the reminder's
 // own time, through fake channels; the phone shows each notification that reached
-// the person once, as text. See docs/plans/journey-simulated-notifications.md.
+// the person once, as text. See docs/implemented-plans/journey-simulated-notifications.md.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
