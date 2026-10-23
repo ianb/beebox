@@ -8,7 +8,6 @@
 import * as fs from "node:fs/promises";
 import type { Stats } from "node:fs";
 import * as path from "node:path";
-import { getBoxTime } from "../lib/time.js";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import { boxTmpDir, chatUploadBatchesDir } from "../lib/box-tmp.js";
 
@@ -30,7 +29,7 @@ export async function cleanupOldTmpUploads(
   onLog?: (msg: string) => void,
 ): Promise<number> {
   const EXPIRY_DAYS = 7;
-  const now = getBoxTime(boxRoot).getTime();
+  const now = Date.now(); // file times are real, so age them on the real clock
   const expiryMs = EXPIRY_DAYS * 24 * 60 * 60 * 1000;
   const tmpDir = boxTmpDir(boxRoot);
   const isStale = (mtimeMs: number) => now - mtimeMs > expiryMs;

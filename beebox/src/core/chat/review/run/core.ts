@@ -137,7 +137,8 @@ async function reviewOne(
     summary.missingTranscripts += 1;
     return false;
   }
-  if (options.now.getTime() - mtime.getTime() < QUIESCENCE_MS) {
+  // File times are real, so compare with the real clock, not box time.
+  if (Date.now() - mtime.getTime() < QUIESCENCE_MS) {
     summary.deferredActive += 1;
     return false;
   }
@@ -188,7 +189,7 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
     fn: async () => {
       const state = await loadReviewState(boxRoot);
       const discovery = await discoverSessions(boxRoot, {
-        now: options.now,
+        now: new Date(), // real clock: compared with transcript mtimes
         quiescenceMs: QUIESCENCE_MS,
         state,
       });

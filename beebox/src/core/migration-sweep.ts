@@ -12,7 +12,7 @@ import { withBoxGitLock } from "../lib/git-lock.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
 import { acquireBoxMaintenance, boxWorkHolders, peekBoxWork, type BoxMaintenance } from "../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError, type WorkHolder } from "../lib/box-maintenance-error.js";
-import { getBoxTimeISO } from "../lib/time.js";
+import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { invariant } from "../shared/invariant.js";
 import { MANIFEST_PATH, isProcedureMigration, isRetiredMigration, type Migration } from "./migrations.js";
@@ -138,7 +138,7 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
       signal.throwIfAborted();
       if (outcome.status !== "current") {
         await maintenance.step("checking pending questions");
-        await checkPendingQuestionsAndNotify(opts.boxRoot, { now: new Date() });
+        await checkPendingQuestionsAndNotify(opts.boxRoot, { now: getBoxTime(opts.boxRoot) });
       }
       signal.throwIfAborted();
       return outcome;

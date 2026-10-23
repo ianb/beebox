@@ -280,7 +280,7 @@ export async function handleCreateAfterSuccess(
     }
 
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
-    await fs.writeFile(fullPath, template.generate(parseResult.data));
+    await fs.writeFile(fullPath, template.generate(parseResult.data, { now: getBoxTime(boxRoot) }));
     console.log(`  Chain: created ${chain.path} (from ${scriptName})`);
   }
 }

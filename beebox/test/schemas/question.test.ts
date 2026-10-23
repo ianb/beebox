@@ -19,6 +19,8 @@ import {
   createConfirmQuestionTemplate,
 } from "../../src/schemas/question.js";
 import { getTemplate } from "../../src/templates-registry.js";
+import { getBoxTime } from "../../src/lib/time.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const ASKED_AT = "2026-07-10T09:00:00-07:00";
 
@@ -52,7 +54,7 @@ function issues(overrides: Record<string, unknown>): string {
 function renderTemplate(name: string, rawArgs: unknown) {
   const def = getTemplate(name);
   if (def === undefined) throw new Error(`no template ${name}`);
-  return def.generate(def.argsSchema.parse(rawArgs));
+  return def.generate(def.argsSchema.parse(rawArgs), { now: new Date(ASKED_AT) });
 }
 
 // ## `input` refinement: select requires at least two options
@@ -282,4 +284,24 @@ void test("Strict arg validation — a malformed expires-after and a learning wi
   await t.checkThrows(async () => (renderTemplate("question-confirm", { memo: "m", prompt: "p", "expires-after": "7 days" })), "ZodError");
 
   await t.checkThrows(async () => (renderTemplate("question-text", { memo: "m", prompt: "p", learning: { sink: "guide" } })), "ZodError");
+});
+
+// ## A walk fixture box with a clock offset stamps `asked-at` on the box clock
+void test("A walk fixture box with a clock offset stamps asked-at on the box clock", async (t) => {
+  const savedTime = process.env["BBX_TIME"];
+  delete process.env["BBX_TIME"];
+  const box = await makeTmpBox();
+  t.teardown(async () => {
+    if (savedTime !== undefined) process.env["BBX_TIME"] = savedTime;
+    await box.cleanup();
+  });
+  await box.write("_config/box.json", JSON.stringify({ timezone: "UTC", fakeNotifications: true }));
+  await box.write(".beebox/clock-offset.json", JSON.stringify({ offsetMs: 604800000, setAt: "2026-10-23T00:00:00Z" }));
+
+  const def = getTemplate("question-confirm");
+  if (def === undefined) throw new Error("no template question-confirm");
+  const content = def.generate(def.argsSchema.parse({ memo: "m", prompt: "p" }), { now: getBoxTime(box.root) });
+  const askedAt = /asked-at: (\S+)/.exec(content)?.[1] ?? "";
+  // A week ahead of real time, to the nearest hour.
+  t.check(Math.round((Date.parse(askedAt) - Date.now()) / 3_600_000), 168);
 });

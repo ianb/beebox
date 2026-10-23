@@ -10,6 +10,11 @@
  */
 import { type z, type ZodObject, type ZodRawShape } from "zod";
 
+/** Context the creator passes to `generate`; `now` is the box clock. */
+export interface TemplateContext {
+  now: Date;
+}
+
 /**
  * Template definition with typed arguments.
  */
@@ -21,7 +26,7 @@ export interface TemplateDefinition<T extends ZodRawShape = ZodRawShape> {
   /** Zod schema for arguments */
   argsSchema: ZodObject<T>;
   /** Function to generate card content */
-  generate: (args: z.infer<ZodObject<T>>) => string;
+  generate: (args: z.infer<ZodObject<T>>, ctx: TemplateContext) => string;
   /**
    * Optional starter files written into the new card's attach scope. Each
    * `relPath` is relative to `<basename>.attach/` (e.g. "sketch.ts"). Used by
