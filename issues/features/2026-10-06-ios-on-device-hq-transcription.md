@@ -1,6 +1,6 @@
 ---
 title: "iOS HQ dictation: use Apple's on-device SpeechTranscriber on the recording instead of server transcription, when available"
-workstream: apple-stt-tuning
+workstream: ios-on-device-hq
 area: ios
 priority: important
 labels: [voice, ios]
