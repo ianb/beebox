@@ -16,26 +16,24 @@ const question = entry({ uuid: "u1", type: "user", text: "Compare these" });
 const answer = entry({ uuid: "a1", type: "assistant", text: '<callout context="Comparison">See [report](view:report.doc.card)</callout>' });
 
 void test("line 17", async (t) => {
-  const full = projectAmbientReply("kitchen", { entries: [question, answer], total: 2, running: false });
-  t.check([full.identity, full.complete, full.callouts.length], [
-    "kitchen:a1",
-    true,
-    1,
-  ]);
+  t.check(projectAmbientReply("kitchen", { entries: [question, answer], total: 2, running: false }), {
+    identity: "kitchen:a1",
+    complete: true,
+    earlier: false,
+    callouts: [{ context: "Comparison", body: "See [report](view:report.doc.card)" }],
+    acks: [],
+  });
 
-  t.check(projectAmbientReply("kitchen", { entries: [question, answer], total: 2, running: true }).complete, false);
+  // The same transcript while the run is still going is not a reply yet:
+  t.check(projectAmbientReply("kitchen", { entries: [question, answer], total: 2, running: true }), { identity: null, complete: false, earlier: false, callouts: [], acks: [] });
 
-  const suffix = projectAmbientReply("kitchen", { entries: [answer], total: 20, running: false });
-  t.check([suffix.complete, suffix.identity, suffix.callouts.length, suffix.earlier], [
-    true,
-    null,
-    0,
-    true,
-  ]);
+  // A bounded tail that cut the question: complete, but no identity and no callouts.
+  t.check(projectAmbientReply("kitchen", { entries: [answer], total: 20, running: false }), { identity: null, complete: true, earlier: true, callouts: [], acks: [] });
 
-  t.check(projectAmbientReply("kitchen", { entries: [question, entry({ uuid: "", type: "assistant", text: "Legacy answer" })], total: 2, running: false }).identity, null);
+  // A legacy assistant entry with no uuid has nothing stable to name:
+  t.check(projectAmbientReply("kitchen", { entries: [question, entry({ uuid: "", type: "assistant", text: "Legacy answer" })], total: 2, running: false }), { identity: null, complete: true, earlier: true, callouts: [], acks: [] });
 
-  t.check(projectAmbientReply("kitchen", { entries: [question], total: 1, running: false }).complete, false);
+  t.check(projectAmbientReply("kitchen", { entries: [question], total: 1, running: false }), { identity: null, complete: false, earlier: false, callouts: [], acks: [] });
 });
 
 // Old history establishes a baseline. A new reply needs attention; another new
@@ -43,17 +41,18 @@ void test("line 17", async (t) => {
 // the current identity, and another session cannot share that identity.
 void test("Old history establishes a baseline.", async (t) => {
   const baseline = observeAmbientReply(EMPTY_ATTENTION, "kitchen:a1");
-  t.check(baseline.attention, false);
+  t.check(baseline, { initialized: true, lastCompletion: null, lastReply: "kitchen:a1", attention: false, dismissedReply: null });
 
   const changed = observeAmbientReply(baseline, "kitchen:a2");
-  t.check(changed.attention, true);
+  t.check(changed, { initialized: true, lastCompletion: null, lastReply: "kitchen:a2", attention: true, dismissedReply: null });
 
-  t.check(observeAmbientReply(changed, null).attention, true);
+  // A refresh with no reply keeps the last reply and its attention:
+  t.check(observeAmbientReply(changed, null), { initialized: true, lastCompletion: null, lastReply: "kitchen:a2", attention: true, dismissedReply: null });
 
   const dismissed = { ...changed, attention: false, dismissedReply: changed.lastReply };
-  t.check(observeAmbientReply(dismissed, "kitchen:a2").attention, false);
+  t.check(observeAmbientReply(dismissed, "kitchen:a2"), { initialized: true, lastCompletion: null, lastReply: "kitchen:a2", attention: false, dismissedReply: "kitchen:a2" });
 
-  t.check(observeAmbientReply(dismissed, "kitchen:a3").attention, true);
+  t.check(observeAmbientReply(dismissed, "kitchen:a3"), { initialized: true, lastCompletion: null, lastReply: "kitchen:a3", attention: true, dismissedReply: "kitchen:a2" });
 
   t.check(projectAmbientReply("garden", { entries: [question, answer], total: 2, running: false }).identity, "garden:a1");
 });
@@ -63,10 +62,12 @@ void test("Old history establishes a baseline.", async (t) => {
 void test("Replayed completion events never revive dismissed notices, including empty ou...", async (t) => {
   const { recordAmbientCompletion } = await import("../../../../src/components/chat/ambient/projection.js");
   const completed = recordAmbientCompletion(EMPTY_ATTENTION, "completion-one");
-  const acknowledged = { ...completed, attention: false };
-  t.check(recordAmbientCompletion(acknowledged, "completion-one").attention, false);
+  t.check(completed, { initialized: false, lastCompletion: "completion-one", lastReply: null, attention: true, dismissedReply: null });
 
-  t.check(recordAmbientCompletion(acknowledged, "completion-two").attention, true);
+  const acknowledged = { ...completed, attention: false };
+  t.check(recordAmbientCompletion(acknowledged, "completion-one"), acknowledged);
+
+  t.check(recordAmbientCompletion(acknowledged, "completion-two"), { initialized: false, lastCompletion: "completion-two", lastReply: null, attention: true, dismissedReply: null });
 });
 
 // A route may show the retained previous transcript while a new landmark resolves.

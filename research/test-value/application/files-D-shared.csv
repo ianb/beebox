@@ -1,0 +1,9 @@
+file,minutes,checks_before,checks_after,lines_before,lines_after,test_result,obstacle
+beebox/src/frontend/test/lib/view-url.test.ts,2,54,47,441,404,pass,"Read ref-path.test.ts and the wrapper source to tell wrapper rules from core rules."
+beebox/test/core/chat/features.test.ts,1,25,17,263,227,pass,-
+beebox/test/core/schedule/health.inconclusive.test.ts,1,13,12,214,208,pass,-
+beebox/test/services/claude-chat.test.ts,2,9,9,165,165,pass,"Traced both callers to box-session-settings.ts to find the home; the deletion landed in the sibling run.box-context.test.ts."
+beebox/test/webapp/auth.hub-identity.test.ts,1,15,9,163,136,pass,-
+beebox/test/webapp/auth.required.test.ts,1,22,22,274,274,pass,"tap took 50s for this file with the three other auth files in one run."
+beebox/test/webapp/auth.session-gen.test.ts,1,14,14,204,204,pass,-
+beebox/test/webapp/auth.ws.test.ts,1,2,2,96,96,pass,-

@@ -71,14 +71,15 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   const badConfig = await writeConfig(box.root, { boxes: {}, extraKey: true });
   const err = await loadRejected(badConfig);
   t.check(err, instanceOf(HubConfigError));
-  t.check(err.message, `Hub config at ${badConfig} is invalid:\n  - (root): Unrecognized key: "extraKey"`);
+  // The text after the path is zod's; the check keeps our prefix, the path, and the key it names.
+  t.check(err.message, str`Hub config at ${badConfig} is invalid:\n  - (root): ${any(String).includes('"extraKey"')}`);
 
   // ## An unknown key inside a box entry is rejected
 
   const badEntry = await writeConfig(box.root, { boxes: { test1: { path: "./boxes/test1", port: 1234 } } });
   const badEntryErr = await loadRejected(badEntry);
   t.check(badEntryErr, instanceOf(HubConfigError));
-  t.check(badEntryErr.message, `Hub config at ${badEntry} is invalid:\n  - boxes.test1: Unrecognized key: "port"`);
+  t.check(badEntryErr.message, str`Hub config at ${badEntry} is invalid:\n  - boxes.test1: ${any(String).includes('"port"')}`);
 
   // ## A reserved slug is rejected
   //
@@ -101,7 +102,7 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   const badSlug = await writeConfig(box.root, { boxes: { "Test-1": { path: "./boxes/test1" } } });
   const badSlugErr = await loadRejected(badSlug);
   t.check(badSlugErr, instanceOf(HubConfigError));
-  t.check(badSlugErr.message, `Hub config at ${badSlug} is invalid:\n  - boxes.Test-1: Invalid key in record`);
+  t.check(badSlugErr.message, str`Hub config at ${badSlug} is invalid:\n  - boxes.Test-1: ${any(String)}`);
 
   // ## Two slugs claiming the same resolved box path is rejected
   //
@@ -170,9 +171,7 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
     keepRecent: 0,
   });
 
-  t.check(await fs.access(legacyState).then(() => true), true);
-
-  t.check(await fs.access(path.join(box.root, "boxes/legacy/content/.beebox")).then(() => false, () => true), true);
+  t.check(await fs.readdir(path.join(box.root, "boxes/legacy/content")), [path.basename(legacyState)]);
 
   // A box path that doesn't resolve at all (no `.beebox/box.json` anywhere) still loads
   // successfully -- canonicalization failures don't block config load, only the
@@ -202,7 +201,8 @@ void test("Missing config file, invalid JSON", async (t) => {
   });
   const missing = await loadRejected("/nonexistent/hub.json");
   t.check(missing, instanceOf(HubConfigError));
-  t.check(missing.message, "Cannot read hub config at /nonexistent/hub.json: ENOENT: no such file or directory, open '/nonexistent/hub.json'");
+  // The cause text after the path is Node's; ENOENT is the part the message must carry.
+  t.check(missing.message, str`Cannot read hub config at /nonexistent/hub.json: ${any(String).startsWith("ENOENT")}`);
 
   const box2 = await makeTmpBox();
   const notJson = path.join(box2.root, "hub.json");
@@ -300,5 +300,5 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
   });
   const keepNegPathErr = await loadRejected(keepNegPath);
   t.check(keepNegPathErr, instanceOf(HubConfigError));
-  t.check(keepNegPathErr.message, `Hub config at ${keepNegPath} is invalid:\n  - keepRecent: Too small: expected number to be >=0`);
+  t.check(keepNegPathErr.message, str`Hub config at ${keepNegPath} is invalid:\n  - keepRecent: ${any(String)}`);
 });

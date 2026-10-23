@@ -1,0 +1,9 @@
+file,minutes,checks_before,checks_after,lines_before,lines_after,test_result,obstacle
+beebox/test/publish/prepare.test.ts,3,62,61,655,654,pass,-
+beebox/test/cli/commands/validate/pre-commit.system-cards.test.ts,1,23,23,160,160,pass,-
+tap-check/test/tap-check/text/compare.test.ts,2,78,76,390,386,pass,ran compareText once to get the caret-less diff for line 147
+beebox/test/shared/todo-model.test.ts,1,45,45,249,249,pass,-
+beebox/test/webapp/auth-capabilities.test.ts,1,17,17,279,279,pass,-
+beebox/test/hub/config.test.ts,1,29,28,304,304,pass,-
+beebox/test/webapp/trpc/routers.namespace-fence-traversal.test.ts,1,35,35,380,380,pass,-
+beebox/test/cards/date-entry.test.ts,1,7,7,96,96,pass,-

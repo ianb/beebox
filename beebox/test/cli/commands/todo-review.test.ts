@@ -91,8 +91,9 @@ async function checkCode(root: string): Promise<number> {
   return (await run(root, ["check"])).code;
 }
 
-async function pendingJobs(root: string): Promise<number> {
-  return (await findJobCards(path.join(root, "_bookkeeping/jobs"), { typeFilter: "todo-review" })).length;
+/** The todo-review job cards waiting for the reactor, by file name. */
+async function pendingJobs(root: string): Promise<string[]> {
+  return (await findJobCards(path.join(root, "_bookkeeping/jobs"), { typeFilter: "todo-review" })).map((job) => job.file);
 }
 
 /** An edit to the card, committed: the review agent's, or the boxholder's. */
@@ -213,7 +214,7 @@ escalated:
     card: Porch
 «codeblock»`);
 
-  t.check(await pendingJobs(box.root), 0);
+  t.check(await pendingJobs(box.root), []);
 
   // ## A fresh undated agent todo is on the next precheck
 
@@ -278,7 +279,7 @@ escalated:
   t.check((await run(box.root, ["verify"])).out[1], "- store/Porch.doc.card:4 \"Order lumber\": the review may change only recheck on the boxholder's todos (changed: created)");
 
   await edit(box.root, { from: '{% todo created="2026-09-02" ', to: "{% todo " });
-  t.check((await run(box.root, ["verify"])).code, 0);
+  t.check(await run(box.root, ["verify"]), { code: 0, out: ["Every todo review item is settled"] });
 });
 
 // ## The agent's own todo may change status, or be reworded
@@ -318,13 +319,19 @@ void test("The stirring baseline moves only when verify passes.", async (t) => {
   });
   const stir = await boxWith('{% todo start="2026-09-24" due="2026-10-30" %}Book the painter{% /todo %}', "2026-09-25");
   await run(stir.root, ["check"]);
-  t.check((await run(stir.root, ["verify"])).code, 1);
+  t.check(await run(stir.root, ["verify"]), {
+    code: 1,
+    out: [
+      "1 todo review item(s) are not settled:",
+      "- store/Porch.doc.card:4 \"Book the painter\": still open with no recheck date",
+    ],
+  });
 
   setTime("2026-09-26T12:00:00.000Z");
   t.check((await run(stir.root, ["check"])).out.join("\n"), any(String).includes("stirring:"));
 
   await edit(stir.root, { from: 'due="2026-10-30" %}', to: 'due="2026-10-30" recheck="2026-09-27" %}' });
-  t.check((await run(stir.root, ["verify"])).code, 0);
+  t.check(await run(stir.root, ["verify"]), { code: 0, out: ["Every todo review item is settled"] });
 
   setTime("2026-09-28T12:00:00.000Z");
   t.check(await checkCode(stir.root), 75);
@@ -422,7 +429,7 @@ void test("A todo-review job card queued by the old wakeup hook still validates 
     ],
   });
 
-  t.check(await pendingJobs(legacy.root), 1);
+  t.check(await pendingJobs(legacy.root), ["2026-09-20T06-30.todo-review.job.card"]);
 });
 
 // ## A retired todo that is edited is back in review; a hand-set `never` holds
@@ -523,14 +530,12 @@ title: Porch
   setTime("2026-11-30T12:00:00.000Z");
   t.check(await checkCode(tired.root), 75);
 
-  const health = await unreviewedTodosCheck(tired.root);
-  t.check([health.name, health.ok, health.severity], [
-    "todos-unreviewed",
-    false,
-    "warning",
-  ]);
-
-  t.check(health.message, "1 open todo is no longer reviewed: store/Porch.doc.card:4 \"Fix the gate\". Remove recheck=\"never\" or edit one to put it back in review.");
+  t.check(await unreviewedTodosCheck(tired.root), {
+    name: "todos-unreviewed",
+    ok: false,
+    message: "1 open todo is no longer reviewed: store/Porch.doc.card:4 \"Fix the gate\". Remove recheck=\"never\" or edit one to put it back in review.",
+    severity: "warning",
+  });
 
   // ## `check` prunes the recheck history of todos that are gone
   //
@@ -616,7 +621,7 @@ void test("The sweep moved to the procedure.", async (t) => {
   });
   const woken = await boxWith('{% todo due="2026-09-01" %}Order lumber{% /todo %}', "2026-09-25");
   await quietly(() => runHousekeeping(woken.root));
-  t.check(await pendingJobs(woken.root), 0);
+  t.check(await pendingJobs(woken.root), []);
 });
 
 // ## Every box gets the procedure and its daily schedule, enabled

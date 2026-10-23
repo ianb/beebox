@@ -106,7 +106,7 @@ void test("Minted tokens are short-lived, hashed, canonical, and mode 0600", asy
     },
   });
 
-  t.check((await consumeAuthInvite({ token: minted.token, now: now + 3 })).status, "invalid-or-gone");
+  t.check(await consumeAuthInvite({ token: minted.token, now: now + 3 }), { status: "invalid-or-gone" });
 });
 
 // ## Expired and malformed capabilities are indistinguishable
@@ -123,9 +123,9 @@ void test("Expired and malformed capabilities are indistinguishable", async (t) 
   process.env.BBX_AUTH_FILE = join(dir2, "auth.json");
   const minted2 = await mintAuthInvite({ boxRoot: "/boxes/a", createdBy: "o@example.com", now: 1_000 });
 
-  t.check((await inspectAuthInvite({ token: minted2.token, now: 1_000 + 15 * 60 * 1_000 })).status, "invalid-or-gone");
+  t.check(await inspectAuthInvite({ token: minted2.token, now: 1_000 + 15 * 60 * 1_000 }), { status: "invalid-or-gone" });
 
-  t.check((await inspectAuthInvite({ token: "not-a-token", now: 1_001 })).status, "invalid-or-gone");
+  t.check(await inspectAuthInvite({ token: "not-a-token", now: 1_001 }), { status: "invalid-or-gone" });
 });
 
 // ## Corruption and symlinks fail closed

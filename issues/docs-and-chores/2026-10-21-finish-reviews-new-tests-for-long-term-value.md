@@ -94,3 +94,13 @@ or merge (M1 to M4) and remove (X1 to X3) criteria, says which signals a
 script can produce and which need the author's knowledge, and applies them
 by hand to three recent landings. The snapshot-of-a-generated-set criterion
 (M1) is new; the earlier C3 and C5 are refuted.
+
+## Application (2026-10-23)
+
+The criteria were applied to 60 existing files with a per-disposition
+ledger, the shape the one-commit disposition record in this issue asks
+for: [research/test-value/application/](../../research/test-value/application/README.md).
+Each ledger row is file, lines, checks, flags, code, whether the flag was
+right, action, confidence, and a one-sentence reason. The revised criteria
+and the measured accuracy of each mechanical flag are in README sections 4
+and 5 of the research note.

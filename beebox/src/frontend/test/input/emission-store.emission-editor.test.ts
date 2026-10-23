@@ -123,75 +123,12 @@ void test("Images: pendingImages accounting, addImage decrements, floor at 0", a
     uploadBatch: null,
   });
 
-  t.check(store.get(), {
-    text: "check [image#1] and [image#2] out",
-    images: [
-      {
-        id: 1,
-        mimeType: "image/png",
-        dataBase64: "aGk=",
-        objectUrl: "blob:1",
-        byteLength: 100,
-        original: {
-          status: "uploading",
-          progress: 0,
-        },
-      },
-      {
-        id: 2,
-        mimeType: "image/png",
-        dataBase64: "aGk=",
-        objectUrl: "blob:2",
-        byteLength: 100,
-        original: {
-          status: "uploading",
-          progress: 0,
-        },
-      },
-    ],
-    pendingImages: 0,
-    files: [],
-    selections: [],
-    uploadBatch: null,
-  });
-
   // A failed encode (no `addImage` call — nothing to add) is the caller's job to
   // decrement directly; the editor still floors at 0 rather than going negative
   // on an unmatched decrement:
 
   store.editor.bumpPendingImages(-5);
-  t.check(store.get(), {
-    text: "check [image#1] and [image#2] out",
-    images: [
-      {
-        id: 1,
-        mimeType: "image/png",
-        dataBase64: "aGk=",
-        objectUrl: "blob:1",
-        byteLength: 100,
-        original: {
-          status: "uploading",
-          progress: 0,
-        },
-      },
-      {
-        id: 2,
-        mimeType: "image/png",
-        dataBase64: "aGk=",
-        objectUrl: "blob:2",
-        byteLength: 100,
-        original: {
-          status: "uploading",
-          progress: 0,
-        },
-      },
-    ],
-    pendingImages: 0,
-    files: [],
-    selections: [],
-    uploadBatch: null,
-  });
-
+  t.check(store.get().pendingImages, 0);
 });
 
 // ## removeImage strips the token — including the bounding whitespace
@@ -207,27 +144,6 @@ void test("removeImage strips only the matching id's token", async (t) => {
   store.editor.addImage({ id: id2, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:2", byteLength: 100, original: { status: "uploading", progress: 0 } });
 
   store.editor.removeImage(id1);
-  t.check(store.get(), {
-    text: "check and [image#2] out",
-    images: [
-      {
-        id: 2,
-        mimeType: "image/png",
-        dataBase64: "aGk=",
-        objectUrl: "blob:2",
-        byteLength: 100,
-        original: {
-          status: "uploading",
-          progress: 0,
-        },
-      },
-    ],
-    pendingImages: 0,
-    files: [],
-    selections: [],
-    uploadBatch: null,
-  });
-
   t.check(store.get(), {
     text: "check and [image#2] out",
     images: [
@@ -285,15 +201,6 @@ void test("Files: same token-strip shape, independent id sequence", async (t) =>
     selections: [],
     uploadBatch: null,
   });
-
-  t.check(store.get(), {
-    text: "see please",
-    images: [],
-    pendingImages: 0,
-    files: [],
-    selections: [],
-    uploadBatch: null,
-  });
 });
 
 // ## Selections: same token-strip shape
@@ -319,15 +226,6 @@ void test("Selections: same token-strip shape", async (t) => {
   });
 
   store.editor.removeSelection(sid);
-  t.check(store.get(), {
-    text: "compare with the doc",
-    images: [],
-    pendingImages: 0,
-    files: [],
-    selections: [],
-    uploadBatch: null,
-  });
-
   t.check(store.get(), {
     text: "compare with the doc",
     images: [],
@@ -513,26 +411,12 @@ void test("The inline copy is what the agent sees; the original goes up beside i
   });
 
   store.editor.setImageOriginal({ id, state: { status: "uploaded", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" } });
-  t.check(store.get(), {
-    text: "",
-    images: [
-      {
-        id: 1,
-        mimeType: "image/jpeg",
-        dataBase64: "x",
-        objectUrl: "blob:o",
-        byteLength: 1,
-        original: {
-          status: "uploaded",
-          path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg",
-        },
-      },
-    ],
-    pendingImages: 0,
-    files: [],
-    selections: [],
-    uploadBatch: null,
-  });
+  t.check(store.get().images.map((image) => image.original), [
+    {
+      status: "uploaded",
+      path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg",
+    },
+  ]);
 
   store.editor.removeImage(id);
   store.editor.setImageOriginal({ id, state: { status: "failed", message: "late" } });
@@ -577,30 +461,13 @@ void test("The emission projection carries the path only once the original lande
 // send, too late to name the directory.
 void test("Every attachment of one message uploads into the same tmp/chat/<batch>/ direc...", async (t) => {
   const store = createEmissionStore();
-  t.check(store.get(), {
-    text: "",
-    images: [],
-    pendingImages: 0,
-    files: [],
-    selections: [],
-    uploadBatch: null,
-  });
-
   const first = store.editor.uploadBatch();
   t.check(first, any(String).matches(/^[\w-]{8,64}$/));
   t.check(store.editor.uploadBatch(), first);
   t.check(store.get().uploadBatch, first);
 
   store.editor.reset("attachments");
-  t.check(store.get(), {
-    text: "",
-    images: [],
-    pendingImages: 0,
-    files: [],
-    selections: [],
-    uploadBatch: null,
-  });
-
+  t.check(store.get().uploadBatch, null);
   t.check(store.editor.uploadBatch(), not(first));
 
   // A restored draft brings its batch back so later uploads join it.

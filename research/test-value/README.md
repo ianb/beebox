@@ -322,6 +322,44 @@ mostly stale snapshots. The decision for a new test rests on K1 to K4 and
 M1 to M4, all of which can be read from the test, its comment, the code
 under test, and the author's answer to "did it fail first".
 
+### Revisions after application (2026-10-23)
+
+[application/README.md](application/README.md) applied these criteria to
+60 files (1,338 checks): 83% kept, 8% rewritten, 3% narrowed, 1% merged,
+4% removed. The control tranche of unflagged files had the same 4%
+removal rate, so the suite-wide removal is about 500 checks, and the
+earlier 800 to 1,700 estimate was high. The criteria change as follows.
+
+- **M4.** The weak form is a lossy projection on the left of the check
+  (`.success`, `.ok`, `.pass`, `.length`, `.code`, `.status`, `.includes`,
+  `.matches`, `some(...)`, a `join` or template of fields), not a boolean
+  or null on the right: two thirds of the right-hand flags were functions
+  whose return is the boolean. A rewrite that would make the whole value
+  a generated set (18 paths, a long brief) stays narrowed and says so.
+- **M1.** Length is not the signal. The forms found: a helper's output
+  pinned as a literal, an exported constant hand-copied, and one whole
+  object repeated across checks for one claim.
+- **M2.** Whether the text is ours or a library's decides the edit, and
+  the zod vocabulary does not tell: 44 of 50 flagged strings were our
+  own messages, a TAP diff the package exists to produce, or an enum
+  value. Grepping a fragment of the literal in `src/` separates the four
+  real zod messages from most of ours but fails on templated messages, so
+  it raises precision from 10% to about 30%, no more.
+- **M3.** Add in-file duplicates (consecutive identical checks, the same
+  route proved twice in one test, one list at two layers of one file).
+  Add the exception that agreement between two layers can be the claim.
+  Byte-identical literals across files were fixture coincidences in 8 of
+  12 cases; the real duplicates had different literals for the same
+  function and inputs.
+- **X1.** Add the volume form: a catalog or registry mirrored row by row
+  into expected values (`THEME_CATALOG`, `FEATURE_LIST`). It supplied 28
+  of the 39 X1 checks and is the one removal that scales.
+- **Negative timing claims** ("has not finished after 100 ms") have no
+  whole value and no disposition; they are flake risk and stay as K with
+  a note.
+- **X2 and X3** did not occur in 1,338 checks. The 10-08 sweep took them;
+  they are not worth a signal in the recurring sweep.
+
 ## 5. Mechanical versus judgment
 
 A script can produce, per in-scope example:
@@ -350,6 +388,14 @@ A script can produce, per in-scope example:
   clock; a spawned child; a listening server. The 12% hardening edits all
   trace to these.
 - Cost: the ledger's per-file duration for the file, if it ran before.
+
+The application pass measured these flags: right about files, wrong about
+checks. Per flagged check, M4 was right or partly right 35% of the time,
+M1 21%, M2 24%, M3 19%; per file, flagged files yielded edits at 9% to 24%
+of checks against 6% in unflagged files. The sweep should rank files by
+flag density and hand a reader the whole file, with the per-check flags as
+a reading aid. Details and the better signals per flag are in
+[application/README.md](application/README.md).
 
 Judgment is needed for:
 
