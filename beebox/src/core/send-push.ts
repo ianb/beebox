@@ -64,8 +64,8 @@ function vapidKeys(): { publicKey: string; privateKey: string } | null {
  * or fake mode (`BBX_NOTIFY_FAKE=1`) routes it through the fake. Otherwise `sendPush` throws
  * {@link VapidNotConfiguredError}.
  */
-export function webPushConfigured(): boolean {
-  return notifyFakeMode() || vapidKeys() !== null;
+export async function webPushConfigured(boxRoot: string): Promise<boolean> {
+  return (await notifyFakeMode(boxRoot)) || vapidKeys() !== null;
 }
 
 function realPushFromEnv(): PushService {
@@ -105,7 +105,7 @@ export async function sendPush(
   // behind the dev router. A leading slash would skip that prefix and 404 in
   // dev only.
   const payload: PushPayload = { icon: `${boxSlug}/icon-192.png`, ...opts.payload };
-  const forceFake = notifyFakeMode();
+  const forceFake = await notifyFakeMode(boxRoot);
   const push = opts.push ?? (forceFake ? createFakePush() : realPushFromEnv());
 
   let endpoints = await endpointsForBox(boxSlug);

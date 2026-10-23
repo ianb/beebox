@@ -17,8 +17,8 @@ import { apnsConfigFromEnv } from "../../core/notification/apns-channel/core.js"
 import { notifyFakeMode } from "../../core/notification/fake-mode.js";
 
 /** Why this box must not get a fake device, or null when it may. */
-function refusal(boxRoot: string): string | null {
-  if (apnsConfigFromEnv() !== null && !notifyFakeMode()) {
+async function refusal(boxRoot: string): Promise<string | null> {
+  if (apnsConfigFromEnv() !== null && !(await notifyFakeMode(boxRoot))) {
     return "APNs keys are configured (BBX_APNS_*), so a push to a fake device would go to Apple. Run with BBX_NOTIFY_FAKE=1, or on a box without the keys.";
   }
   const production = devicePushRegistrations(boxRoot).find((d) => d.environment === "production");
@@ -35,7 +35,7 @@ export async function runRegisterFakePush(boxRoot: string, opts: { label: string
     console.error("Error: a label is required");
     return 2;
   }
-  const refused = refusal(boxRoot);
+  const refused = await refusal(boxRoot);
   if (refused !== null) {
     console.error(`Refused: ${refused}`);
     return 1;
