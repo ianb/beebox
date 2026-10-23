@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { type SelectionItem } from "../../../lib/selection/serialize";
+import { RemoveBubble } from "./RemoveBubble";
 
 function docName(ref: string | null): string {
   if (ref === null) return "Chat";
@@ -60,16 +61,7 @@ function SelectionPill({
         <span className="font-mono text-[10px] bg-warm-800 text-white px-1 rounded flex-shrink-0">{`selection#${String(selection.id)}`}</span>
         <span className="text-xs text-warm-700 truncate">“{snippet(selection.text)}”</span>
       </button>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white flex items-center justify-center shadow hover:bg-danger-dark focus:outline-none focus:ring-2 focus:ring-danger"
-        title="Remove selection"
-      >
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      <RemoveBubble title="Remove selection" onClick={onRemove} />
       {open ? (
         <div className="absolute bottom-full mb-1 left-0 z-50 w-72 p-2 rounded-lg border border-warm-300 bg-white shadow-lg">
           <div className="text-xs font-medium text-warm-800 truncate" title={selection.ref ?? undefined}>{docName(selection.ref)}</div>
