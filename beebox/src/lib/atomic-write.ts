@@ -44,8 +44,9 @@ async function fsyncDir(dir: string): Promise<void> {
 }
 
 export interface AtomicWriteOptions {
-  /** Exact bytes the file should hold afterwards (including any trailing newline). */
-  content: string;
+  /** Exact bytes the file should hold afterwards (including any trailing
+   *  newline); a string is written as UTF-8. */
+  content: string | Uint8Array;
   /** Mode for the temp file, inherited by the target through the rename.
    *  Omit to preserve an existing target's mode (platform default for a new
    *  file); pass 0o600 for anything credential-bearing. */
@@ -85,7 +86,7 @@ export async function writeFileAtomic(filePath: string, opts: AtomicWriteOptions
   try {
     const handle = await fs.open(tmp, "wx", await effectiveMode(filePath, mode));
     try {
-      await handle.writeFile(content, "utf-8");
+      await handle.writeFile(content);
       await handle.sync();
     } finally {
       await handle.close();

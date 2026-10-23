@@ -15,6 +15,7 @@ import { errnoCode, errorMessage } from "../../shared/error-guards.js";
 import { MEMORY_ENV, truncateUtf8 } from "./memory.js";
 import { stateDir, type ScriptState } from "./state.js";
 import { DEFER_REASONS } from "./defer-reason.js";
+import { writeFileAtomic } from "../../lib/atomic-write.js";
 
 /** `normal`: the run went as usual. `attention`: the boxholder should look at it. */
 export const RUN_PRIORITIES = ["normal", "attention"] as const;
@@ -188,11 +189,8 @@ export async function appendRunHistory(
     if (entry.summary === undefined && last.summary !== undefined) entry = { ...entry, summary: last.summary };
   }
   const kept = [...history, entry].slice(-RUN_HISTORY_LIMIT);
-  await fs.mkdir(stateDir(boxRoot), { recursive: true });
   const file = historyFile(boxRoot, scriptName);
-  const tmp = `${file}.${String(process.pid)}.tmp`;
-  await fs.writeFile(tmp, kept.map((e) => JSON.stringify(e)).join("\n") + "\n");
-  await fs.rename(tmp, file);
+  await writeFileAtomic(file, { content: kept.map((e) => JSON.stringify(e)).join("\n") + "\n" });
 }
 
 /**

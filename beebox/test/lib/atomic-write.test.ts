@@ -51,3 +51,13 @@ void test("A brand-new file gets the platform default (not a stat failure)", asy
   await writeFileAtomic(fresh, { content: "x\n" });
   t.check(fs.existsSync(fresh), true);
 });
+
+// ## Bytes are written as given
+//
+// The image cache stores encoded images, so `content` may be bytes as well as
+// text.
+void test("Bytes are written as given", async (t) => {
+  const bytesTarget = path.join(dir, "image.bin");
+  await writeFileAtomic(bytesTarget, { content: Uint8Array.from([0, 255, 10, 128]) });
+  t.check([...fs.readFileSync(bytesTarget)], [0, 255, 10, 128]);
+});
