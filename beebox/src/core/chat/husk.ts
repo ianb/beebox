@@ -30,10 +30,10 @@ import {
   findChatHuskEntry,
   groupHusksBySession,
   listChatHusks,
-  parseHuskFrontmatter,
   shortId,
   type ChatHuskEntry,
 } from "./husk-read.js";
+import { parseFrontmatterObject } from "../../cards/frontmatter.js";
 
 /** Keep husk titles bookmark-sized, not transcript-sized. */
 const TITLE_MAX_LEN = 80;
@@ -136,7 +136,7 @@ export async function setChatHuskStatus(boxRoot: string, opts: { sessionId: stri
   await withCardLock(absPath, async () => {
     const content = await fs.readFile(absPath, "utf-8");
     const split = splitCardContent(content);
-    const fields = parseHuskFrontmatter(content);
+    const fields = parseFrontmatterObject(content);
     // Unreadable frontmatter: the lists already warned about it; a rewrite
     // would be guessing at what the file meant.
     if (!split.hasFrontmatter || fields === null) return;
@@ -198,7 +198,7 @@ async function stampHuskProvenance(absPath: string, args: { engine: AgentEngine;
   return withCardLock(absPath, async () => {
     const content = await fs.readFile(absPath, "utf-8");
     const split = splitCardContent(content);
-    const fields = parseHuskFrontmatter(content);
+    const fields = parseFrontmatterObject(content);
     // Unreadable frontmatter: `listChatHusks` already warned about it, and a
     // rewrite would be guessing at what the file meant.
     if (!split.hasFrontmatter || fields === null) return false;
