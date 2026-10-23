@@ -18,7 +18,7 @@ import { useMemo, type ReactNode } from "react";
 // Relative (not `@shared/…`): this file is also the dist/view-widgets node
 // bundle entry, built with `packages: "external"`, which would leave the
 // aliased specifier unresolved at runtime. Relative paths bundle inline.
-import { cardTypeFromName } from "../../../shared/card-name";
+import { cardTypeFromName, titleFromFilename } from "../../../shared/card-name";
 import { ViewHostProvider, type ViewHost, type ResolvedRef } from "../lib/view-host";
 import { BoxSlugProvider } from "../lib/box-slug";
 import { LightboxProvider } from "../components/LightboxProvider";
@@ -29,14 +29,9 @@ import { Text } from "../components/ui/Text";
 
 export { CardLink, CardRef, ViewMarkdown as Markdown };
 
-/** Filename-derived title (mirrors core/file-summary titleFromFilename — kept
- *  local so the node bundle doesn't pull in backend-only modules). */
+/** Filename-derived title; a `?query` suffix on the ref is ignored. */
 function filenameTitle(ref: string): string {
-  const noQuery = ref.split("?")[0] ?? ref;
-  const base = noQuery.split("/").pop() ?? noQuery;
-  const dot = base.indexOf(".");
-  const stem = dot === -1 ? base : base.slice(0, dot);
-  return stem.replaceAll("_", " ").replaceAll("-", " ");
+  return titleFromFilename(ref.split("?")[0] ?? ref);
 }
 
 /** Card type from a card ref (nominal or positional naming), or "". */

@@ -7,8 +7,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { apiRawFileUrl, getApiBase } from "../../api";
-import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import type { RealtimeEvent } from "../../hooks/useBusSubscription";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { busEventData } from "../../lib/bus-events";
+import { boxRelativePath } from "@shared/box-path";
 import { isRecord } from "@shared/is-record";
 import { type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
@@ -40,23 +42,17 @@ interface ContextMenuState {
  * `dirPath` changes (a card's title/status edit, or an add/remove), and resync
  * on a *re*connect since transient file-change events aren't replayed. Without
  * this the sidebar stayed stale until a full reload — only the open detail
- * panel (FileView) self-updated. The initial connect is skipped (the query
- * already loads on mount).
+ * panel (FileView) self-updated. Both paths compare box-relative.
  */
 function useBrowseListLiveRefresh(dirPath: string): void {
   const utils = trpc.useUtils();
-  useBusSubscription({
-    onEvent: useCallback((event: RealtimeEvent) => {
-      const data = busEventData(event, "file-change");
-      if (!data) return;
-      const changed = data.path;
-      const parent = parentDir(changed);
-      if (parent !== dirPath) return;
-      void utils.status.browse.invalidate({ path: dirPath });
-    }, [dirPath, utils]),
-    onReconnect: useCallback(() => {
-      void utils.status.browse.invalidate({ path: dirPath });
-    }, [dirPath, utils]),
+  const dir = boxRelativePath(dirPath).replace(/\/$/, "");
+  useLiveRefresh({
+    when: (event: RealtimeEvent) => {
+      const change = busEventData(event, "file-change");
+      return change !== null && parentDir(boxRelativePath(change.path).replace(/\/$/, "")) === dir;
+    },
+    refresh: () => { void utils.status.browse.invalidate({ path: dirPath }); },
   });
 }
 

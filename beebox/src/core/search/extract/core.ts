@@ -19,7 +19,8 @@
 import type { LoadedCard, FrontmatterLoadedCard } from "../../card-io.js";
 import { isRecord } from "../../card-io.js";
 import { resolveAttachRef } from "../../../shared/attach-path.js";
-import { titleFromFilename, truncateTitle } from "../../file-summary.js";
+import { truncateTitle } from "../../file-summary.js";
+import { titleFromFilename } from "../../../shared/card-name.js";
 import { cardTitle } from "../../loader-registry.js";
 import { splitMarkdownSections } from "../../../shared/markdown-sections.js";
 import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";

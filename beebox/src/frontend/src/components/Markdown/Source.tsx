@@ -30,6 +30,7 @@
 import { isValidElement, type ReactNode } from "react";
 import { chatRefLabel, chatUsageWords, externalLabel, refLabel, refToViewTarget } from "../../lib/ref-label";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import { friendlyDate } from "../ui/FriendlyDate";
 
 export interface SourceLinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -174,9 +175,7 @@ function formatRetrieved(retrieved: string | undefined): string | null {
   if (retrieved === undefined || retrieved === "") return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(retrieved);
   if (!match) return retrieved;
-  const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  if (Number.isNaN(parsed.getTime())) return retrieved;
-  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return friendlyDate(match[0], "date");
 }
 
 interface SourceProps {

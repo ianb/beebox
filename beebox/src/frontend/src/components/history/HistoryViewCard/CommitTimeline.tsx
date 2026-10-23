@@ -14,7 +14,8 @@ import {
 import { type HistoryCommit } from "../../../api";
 import { bbxSource } from "../../../lib/source-tag";
 import { Badge, type BadgeTone } from "../../ui/Badge";
-import { boxNow } from "../../../lib/box-clock";
+import { useBoxNow } from "../../../lib/box-clock";
+import { agoOnClock } from "../../../lib/relative-time";
 
 interface CommitTimelineProps {
   commits: HistoryCommit[];
@@ -44,26 +45,6 @@ const PHASE_TONE: Record<string, BadgeTone> = {
 
 function PhaseBadge({ phase }: { phase: string }) {
   return <Badge tone={PHASE_TONE[phase] ?? "neutral"} size="sm">{phase}</Badge>;
-}
-
-/**
- * Relative time display.
- */
-function relativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const diff = boxNow() - date.getTime();
-
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-
-  return date.toLocaleDateString();
 }
 
 /**
@@ -163,7 +144,7 @@ function CommitRow({
   const ariaLabel = [
     `Commit ${commit.hash.substring(0, 7)}`,
     commit.subject,
-    relativeTime(commit.date),
+    agoOnClock(commit.date, "box"),
     phase ? `phase ${phase}` : null,
     ...triggers.map((trigger) => `triggered by ${triggerLabel(trigger)}`),
     step === undefined ? null : `step ${step}`,
@@ -184,7 +165,7 @@ function CommitRow({
           {commit.hash.substring(0, 7)}
         </code>
         <span className="text-[10px] text-warm-700">
-          {relativeTime(commit.date)}
+          {agoOnClock(commit.date, "box")}
         </span>
         {phase ? <PhaseBadge phase={phase} /> : null}
         {duration ? <span className="text-[10px] text-warm-700 font-mono">{duration}</span> : null}
@@ -218,6 +199,8 @@ export function CommitTimeline({
   activeSession,
   idPrefix,
 }: CommitTimelineProps) {
+  // Re-render each minute so the commit ages stay current.
+  useBoxNow(60_000);
   const groups = groupBySession(commits);
 
   // Build a map of commit hash -> previous commit date (earlier in time).

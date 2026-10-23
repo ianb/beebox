@@ -36,7 +36,8 @@ import { LandmarkGroup, LandmarkLinks, LandmarkSymbol } from "../landmarks/Landm
 import { ChatOpeners } from "../openers/ChatOpeners";
 import { Markdown } from "../Markdown/body";
 import { bbxSource } from "../../lib/source-tag";
-import { useRefetchOnFileChange } from "../../hooks/useRefetchOnFileChange";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { anyFileChange } from "../../lib/live-refresh";
 import { placeSections, type PlacePayload, type PlaceTier } from "./sections";
 import { PlaceChatContext, startSomething } from "../openers/place-chat";
 import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hook";
@@ -206,8 +207,10 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
 
 export function PlaceView({ data, onNavigate, mode }: RendererProps) {
   const cardPath = data.path.replace(/^\//, "");
-  const query = trpc.landmarks.forDir.useQuery({ dir: parentDir(cardPath), expandsAsGroups: true });
-  useRefetchOnFileChange(query.refetch);
+  // Mounted only while shown, so a change made while closed was never seen:
+  // fetch on every open rather than trust the cache.
+  const query = trpc.landmarks.forDir.useQuery({ dir: parentDir(cardPath), expandsAsGroups: true }, { refetchOnMount: "always" });
+  useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const boxSlug = useBoxSlug();
   const openLandmarkChat = useOpenLandmarkChat(boxSlug ?? "");
   const landmark = query.data?.landmark;

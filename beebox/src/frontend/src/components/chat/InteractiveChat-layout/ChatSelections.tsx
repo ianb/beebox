@@ -12,13 +12,12 @@
 import { useState } from "react";
 import { type SelectionItem } from "../../../lib/selection/serialize";
 import { RemoveBubble } from "./RemoveBubble";
+import { displayName } from "../../../lib/display-name";
 import { snippet } from "../../../lib/snippet";
 
 function docName(ref: string | null): string {
   if (ref === null) return "Chat";
-  const base = ref.split("/").pop();
-  if (base === undefined || base === "") return ref;
-  return base.endsWith(".card") ? base.slice(0, -5) : base;
+  return displayName(ref);
 }
 
 export function SelectionPanel({

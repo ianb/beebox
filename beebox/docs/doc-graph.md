@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-23T17:31:39Z
-Total documents: 568
+Generated: 2026-10-23T20:37:47Z
+Total documents: 569
 
 ## Issues
 
@@ -195,6 +195,7 @@ Referenced by:
 - docs/implemented-plans/file-layout.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/first-run-openers.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/frontend-dom-harness.md:68 (mention) — - Monorepo rule on dependencies (`AGENTS.md`, *"Treat unsolicited tool output
+- docs/implemented-plans/frontend-unify-formatters-refresh-storage.md:59 (mention) — - Root `AGENTS.md`, "Implement and verify": reuse the platform mechanism
 - docs/implemented-plans/ios-audio-session-routing.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/ios-per-box-device-lock.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/knowledge-audit-plugins.md:43 (mention) — - Root `AGENTS.md`, knowledge-audit guidance: "When fixing failures, prefer
@@ -5314,6 +5315,22 @@ References:
 - → ../issues/closed/code-quality/2026-10-10-frontend-has-no-dom-effect-test-harness.md (frontmatter)
 - → ../issues/closed/code-quality/2026-10-08-chat-message-list-rerenders-per-token.md (frontmatter)
 - → docs/testing.md (mention)
+- → AGENTS.md (mention)
+
+#### docs/implemented-plans/frontend-unify-formatters-refresh-storage.md
+
+Title: "Unify frontend time, byte and card-name formatting, live refresh, and browser storage" | 434 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/bugs/2026-07-31-browse-list-live-refresh-not-firing.md:88 (mention) — `beebox/docs/implemented-plans/frontend-unify-formatters-refresh-storage.md`, track 5). A
+
+References:
+- → ../issues/closed/code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-frontend-time-and-duration-formatters.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-byte-size-formatters-disagree.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-card-display-name-helpers-disagree.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-browser-storage-keys-and-reads-inconsistent.md (frontmatter)
+- → ../issues/bugs/2026-07-31-browse-list-live-refresh-not-firing.md (link)
 - → AGENTS.md (mention)
 
 #### docs/implemented-plans/gmail-explicit-action.md

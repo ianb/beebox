@@ -31,7 +31,7 @@
 import { useState } from "react";
 import type { PendingCaptureCounts } from "@core/capture/pending.js";
 import { ABANDONMENT_WINDOW_MS } from "@shared/capture-staleness";
-import { formatAgo, formatElapsed } from "../../lib/relative-time";
+import { formatAgo, formatDuration } from "../../lib/relative-time";
 import { useNow } from "../../lib/use-now";
 import { Button } from "../ui/Button";
 import { MaterialContext } from "../ui/material";
@@ -118,16 +118,17 @@ function workingStep(model: CaptureBubbleModel): string {
 }
 
 /** The caption under the bubble. Live status wins over the coarser query state. */
-export function captureBubbleCaption(model: CaptureBubbleModel, ageMs: number | null): string {
+export function captureBubbleCaption(model: CaptureBubbleModel, nowMs: number): string {
+  const ageMs = captureBubbleAgeMs(model, nowMs);
   if (model.actionError !== undefined) return model.actionError;
   if (model.resolution === "delivered") return "delivered";
   if (model.resolution === "discarded") return "discarded";
   if (captureBubbleFailed(model)) {
-    return ageMs === null ? "failed" : `failed ${formatAgo(ageMs)}`;
+    return ageMs === null ? "failed" : `failed ${formatAgo(nowMs - ageMs, nowMs)}`;
   }
   const step = workingStep(model);
   if (ageMs === null || ageMs < WORKING_PATIENCE_MS) return `${step}…`;
-  return `still ${step} — ${formatElapsed(ageMs)}`;
+  return `still ${step} — ${formatDuration(ageMs)}`;
 }
 
 /** The bubble body: a compact tally of the captured media. */
@@ -239,7 +240,7 @@ export function CaptureBubbleView(props: {
             <CameraIcon />
             <span>{summary}</span>
           </div>
-          <CaptureCaption caption={captureBubbleCaption(model, ageMs)} phase={phase} />
+          <CaptureCaption caption={captureBubbleCaption(model, now)} phase={phase} />
           {failed ? (
             <FailedActions
               summary={summary}

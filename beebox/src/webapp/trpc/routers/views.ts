@@ -16,7 +16,7 @@ import { listViews } from "../../views/compiler/compile.js";
 import { resolveContainedRef } from "../../../core/ref-exists.js";
 import { realpathContained } from "../../../lib/box-containment.js";
 import { typeFromFilename } from "../../../core/card-io.js";
-import { titleFromFilename } from "../../../core/file-summary.js";
+import { titleFromFilename } from "../../../shared/card-name.js";
 import { readCardTitle } from "../../../core/frontmatter-field.js";
 
 export interface ResolvedRef {
