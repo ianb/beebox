@@ -12,17 +12,13 @@
 import { useState } from "react";
 import { type SelectionItem } from "../../../lib/selection/serialize";
 import { RemoveBubble } from "./RemoveBubble";
+import { snippet } from "../../../lib/snippet";
 
 function docName(ref: string | null): string {
   if (ref === null) return "Chat";
   const base = ref.split("/").pop();
   if (base === undefined || base === "") return ref;
   return base.endsWith(".card") ? base.slice(0, -5) : base;
-}
-
-function snippet(text: string): string {
-  const collapsed = text.replace(/\s+/g, " ").trim();
-  return collapsed.length > 32 ? `${collapsed.slice(0, 32)}…` : collapsed;
 }
 
 export function SelectionPanel({
@@ -59,7 +55,7 @@ function SelectionPill({
         title="Click to view the selected text"
       >
         <span className="font-mono text-[10px] bg-warm-800 text-white px-1 rounded flex-shrink-0">{`selection#${String(selection.id)}`}</span>
-        <span className="text-xs text-warm-700 truncate">“{snippet(selection.text)}”</span>
+        <span className="text-xs text-warm-700 truncate">“{snippet(selection.text, 32)}”</span>
       </button>
       <RemoveBubble title="Remove selection" onClick={onRemove} />
       {open ? (

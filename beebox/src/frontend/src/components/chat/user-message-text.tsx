@@ -5,6 +5,7 @@
  */
 
 import { decodeXmlAttr } from "@shared/self-note";
+import { snippet } from "../../lib/snippet";
 import { stripUserDisplayTags } from "./message-parsing";
 
 const REF_ATTR_RE = /\bref="([^"]*)"/i;
@@ -22,11 +23,6 @@ function docBasename(ref: string): string {
   const base = ref.split("/").pop();
   if (base === undefined || base === "") return ref;
   return base.endsWith(".card") ? base.slice(0, -5) : base;
-}
-
-function snippet(value: string, max: number): string {
-  const collapsed = value.replace(/\s+/g, " ").trim();
-  return collapsed.length > max ? `${collapsed.slice(0, max)}…` : collapsed;
 }
 
 /** Pill shown in a sent user message for an attached document selection. */
