@@ -31,28 +31,35 @@ import { parse } from "./yaml-package.js";
  * stays linear on long frontmatter (an earlier pattern took seconds on a 77 KB
  * card).
  *
- * - an anchor (`&a`), so aliases expand under `yaml`'s limit
- * - a tag (`!foo`, `!!binary`)
+ * - an anchor (`&a`), so aliases expand under `yaml`'s limit, a tag (`!foo`,
+ *   `!!binary`, a bare `!`), or an explicit key (`?`), where a node can
+ *   start: at a line's indentation, after `-`, `?`, `:` or `,`, or after a
+ *   `[` or `{` that is itself where a node can start. Mid-value they are text
+ *   to both parsers (`a && b`, `a != b`, `if [ ! -f x ]`).
+ * - a tab in a line's indentation, or a comment straight after a quote or a
+ *   closing bracket (`"a"#`, `]#`): `yaml` rejects both, js-yaml accepts some
+ * - a flow collection with no value inside a flow mapping (`{k: a, []}`)
  * - a directive (`%YAML 1.1` switches `yaml` to the 1.1 schema), or a line
  *   starting `---` or `...`, which js-yaml takes as a document marker even in
  *   a key (`---x: v`)
  * - a bare carriage return, which `yaml` rejects
  * - a signed `0x`/`0o`/`0b`, a signed zero, or a signed leading-dot float
- *   (`-0x1`, `-0`, `+.5`), and an unsigned `0b` literal
+ *   (`-0x1`, `-0`, `+.5`), and an unsigned `0b` literal (`0b1`; js-yaml
+ *   reads `0b1c` as a string, as `yaml` does)
  * - a number that may overflow to `Infinity`, which js-yaml reads as a
  *   string: a three-digit exponent (`1e999`), or 300 digits
  * - a null key (`~:`, `null:`) or an empty key in a flow collection
  *   (`{: a}`), which `yaml` reads as `""`; js-yaml rejects an empty block key,
  *   so that one reaches `yaml` through the catch
- * - a collection as a key (`[a]: b`, `{a: 1}: b`, `{[1, 2]: v}`): a closing
- *   bracket followed by a key's colon, or an explicit `? ` key
+ * - a collection as a key (`[a]: b`, `{a: 1}: b`, `{[1, 2]: v}`, `[[a]:]`):
+ *   a closing bracket followed by a colon, or an explicit `? ` key
  */
 const YAML_ONLY = [
-  /(?:^|[\s,:[{-])[!&]\S|^%|^(?:-{3}|\.{3})|\r(?!\n)/m,
-  /(?:^|[\s,:[{])(?:[+-](?:0(?:[box]|(?=[\s,\]}]|$))|\.\d)|0b)/m,
+  /(?:^[\t ]*|[,:?-][\t ]*|(?:^[\t ]*|[,:?[{-][\t ]*)[[{][\t ]*)[!&?]|^%|^(?:-{3}|\.{3})|\r(?!\n)|^ *\t|["'\]}]#|[,{][\t ]*[[{]/m,
+  /(?:^|[\s,:[{])(?:[+-](?:0(?:[box]|(?=[\s,\]}]|$))|\.\d)|0b[01_])/m,
   /(?:^|[\s,:[{])[+-]?(?:\d+(?:\.\d*)?|\.\d+)[Ee][+-]?\d{3,}(?=[\s,:\]}]|$)|(?<![\dA-Fa-f])(?:\d{300}|0x[\dA-Fa-f]{250})/m,
   /^[\t ]*(?:-[\t ]+)?(?:~|null|Null|NULL)[\t ]*:|[,[{](?![,[{])[\t ]*(?:~|null|Null|NULL)[\t ]*:|[,[{](?![,[{])[\t ]*:/m,
-  /[\]}](?![\]}])[\t ]*:(?:[\t ]|$)|^[\t ]*(?:-[\t ]+)?\?(?:[\t ]|$)/m,
+  /[\]}](?![\]}])[\t ]*:|^[\t ]*(?:-[\t ]+)?\?(?:[\t ]|$)/m,
 ];
 
 /**

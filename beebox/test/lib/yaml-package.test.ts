@@ -18,7 +18,8 @@ const src = join(import.meta.dirname, "../../src");
 
 // A fresh process (the test runner may load `yaml` itself) builds the schema
 // registry, parses a card, and reports whether `yaml` is in the module cache;
-// then it writes YAML, which loads it.
+// then it writes YAML, which loads it. The card's shell command (`&&`, `[ !`)
+// is plain text, so it stays on js-yaml (`read-yaml.ts`).
 void test("Reading a card does not load yaml; writing YAML does", async (t) => {
   const box = await makeTmpBox();
   t.teardown(() => box.cleanup());
@@ -30,11 +31,11 @@ void test("Reading a card does not load yaml; writing YAML does", async (t) => {
     const cache = createRequire(import.meta.url).cache;
     const yamlLoaded = () => Object.keys(cache).some((key) => key.includes("/node_modules/yaml/"));
     const ctx = await buildLoadContext(process.argv[1]);
-    const card = parseCardText("---\\ntitle: Hello\\n---\\nBody\\n", { source: "Hello.doc.card", schemas: ctx.cardSchemas });
+    const card = parseCardText("---\\ntitle: Hello\\nsummary: test -f x && [ ! -d y ]\\n---\\nBody\\n", { source: "Hello.doc.card", schemas: ctx.cardSchemas });
     const afterRead = yamlLoaded();
     const written = stringify(card.frontmatter);
     console.log(JSON.stringify({ afterRead, written, afterWrite: yamlLoaded() }));
   `;
   const child = await exec(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script, box.root], { timeout: 30_000 });
-  t.check(JSON.parse(child.stdout), { afterRead: false, written: "title: Hello\n", afterWrite: true });
+  t.check(JSON.parse(child.stdout), { afterRead: false, written: "title: Hello\nsummary: test -f x && [ ! -d y ]\n", afterWrite: true });
 });

@@ -29,8 +29,10 @@ void test("Dates, yes/no and merge keys read as the YAML 1.2 core schema does", 
 // Inputs js-yaml alone reads differently: signed hex and leading-dot numbers,
 // `0b` literals, null keys, collection keys, an unknown tag (js-yaml throws),
 // a `%YAML 1.1` directive, keys that collide only as strings (js-yaml
-// throws), numbers that overflow (js-yaml keeps the text), and a key starting
-// `---` (js-yaml takes it as a document marker). Each gives `yaml`'s value.
+// throws), numbers that overflow (js-yaml keeps the text), a key starting
+// `---` (js-yaml takes it as a document marker), a bare `!` tag, a flow
+// collection with no value in a flow mapping, and a collection key in a flow
+// list. Each gives `yaml`'s value.
 void test("Inputs js-yaml reads differently give yaml's value", async (t) => {
   const inputs = [
     "a: -.5\nb: +0x1F\nc: 0b101\nd: -0",
@@ -44,6 +46,9 @@ void test("Inputs js-yaml reads differently give yaml's value", async (t) => {
     "1: a\n\"1\": b",
     `a: 1e999\nb: ${"9".repeat(400)}`,
     "---x: v",
+    "a: !",
+    "{k: a, []}",
+    "k: [[a]:]",
   ];
   t.check(
     inputs.map((text) => parseYaml(text)),
@@ -59,13 +64,17 @@ void test("Inputs js-yaml reads differently give yaml's value", async (t) => {
       { "1": "b" },
       { a: Infinity, b: Infinity },
       { "---x": "v" },
+      { a: "" },
+      { k: "a", "[]": null },
+      { k: [{ "[ a ]": null }] },
     ],
   );
 });
 
 // Malformed text throws `yaml`'s error, so messages keep `yaml`'s wording.
-// js-yaml accepts the last two: a flow collection continued below its key's
-// indentation, and a bare carriage return.
+// js-yaml accepts the others: a flow collection continued below its key's
+// indentation, a bare carriage return, and a comment straight after a closing
+// bracket.
 void test("Malformed YAML throws the yaml package's error", async (t) => {
   t.checkThrows(
     () => parseYaml("a: [1, 2"),
@@ -78,6 +87,10 @@ void test("Malformed YAML throws the yaml package's error", async (t) => {
   t.checkThrows(
     () => parseYaml("a: 1\rb: 2"),
     "YAMLParseError: Nested mappings are not allowed in compact mappings at line 1, column 4:\n\na: 1\rb: 2\n   ^\n",
+  );
+  t.checkThrows(
+    () => parseYaml("k: [a]#c"),
+    "YAMLParseError: Comments must be separated from other tokens by white space characters at line 1, column 7:\n\nk: [a]#c\n      ^^\n",
   );
 });
 
