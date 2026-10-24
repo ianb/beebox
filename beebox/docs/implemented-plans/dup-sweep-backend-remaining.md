@@ -10,8 +10,10 @@ issues:
 # Backend duplication sweep: the remaining groups
 
 **Outcome (2026-10-23):** all ten tracks are implemented. Three issues are
-closed. Four stay open for parts outside this plan's tracks:
-[frontmatter](../../../issues/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md) (title extraction, inlined readers),
+closed. The
+[frontmatter](../../../issues/closed/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md)
+issue closed after this plan (title extraction, inlined readers). Three stay
+open for parts outside this plan's tracks:
 [dates](../../../issues/code-quality/2026-10-23-date-and-duration-formatting-variants.md) (box-local day, duration parsers),
 [text helpers](../../../issues/code-quality/2026-10-23-text-helpers-with-diverging-rules.md) (slugs, coercion),
 [atomic writes](../../../issues/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md) (git-shim, exhibits writer, loader policies).
