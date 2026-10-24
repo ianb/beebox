@@ -15,6 +15,8 @@ import path from "node:path";
 
 import type { IssueEntry } from "./issue-search-model.js";
 import { sha256Hex } from "../../../../beebox/src/lib/content-hash.js";
+import { markdownTitle } from "../../../../beebox/src/shared/leading-title-heading.js";
+import { parseFrontmatterObject, splitCardContent } from "../../../../beebox/src/cards/frontmatter.js";
 
 /** Documents come from two corpora: the issue queue, and (opt-in) design docs. */
 export type IndexKind = "issue" | "doc";
@@ -101,7 +103,9 @@ export function issueDocument(entry: IssueEntry): IndexDocument {
 
 function docDocument(options: { relPath: string; source: string }): IndexDocument {
   const { relPath, source } = options;
-  const title = /^#\s+(?<heading>.+)$/mu.exec(source)?.groups?.["heading"]?.trim()
+  const declared = parseFrontmatterObject(source)?.["title"];
+  const title = (typeof declared === "string" && declared.trim() !== "" ? declared.trim() : null)
+    ?? markdownTitle(splitCardContent(source).body)
     ?? path.basename(relPath, ".md");
   const embedText = embedTextFor({ title, labels: [], area: "", body: source });
   return withHashes({

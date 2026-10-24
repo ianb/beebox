@@ -53,8 +53,11 @@ async function shellCommit(box: TmpBox): Promise<string> {
   return git(box, "log", "-1", "--format=%aI|%cI");
 }
 
+// The UTC day of each `%aI|%cI` stamp. A shimmed commit is stamped in UTC and
+// an ordinary one in local time, so the stamp's own date part would differ
+// from the UTC day in the evening west of UTC.
 function dayOf(stamps: string): string {
-  return stamps.split("|").map((s) => s.slice(0, 10)).join("|");
+  return stamps.split("|").map((s) => new Date(s).toISOString().slice(0, 10)).join("|");
 }
 
 function expectedDay(options: { ms: number }): string {
