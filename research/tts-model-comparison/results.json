@@ -10,7 +10,8 @@
       "route": "OpenAI direct",
       "voice": "marin",
       "listPrice": "$12 per million audio tokens plus $0.60 per million text tokens",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "Rendered through the box's own speech service (beebox/src/services/tts.ts), so the takes are what the box sends."
     },
     {
       "id": "gpt-4o-mini-tts-2025-12-15",
@@ -32,7 +33,8 @@
       "route": "OpenAI direct",
       "voice": "nova",
       "listPrice": "$30 per million characters",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "Takes no instructions."
     },
     {
       "id": "gemini-3.1-flash-tts",
@@ -43,7 +45,8 @@
       "route": "OpenRouter",
       "voice": "Zephyr",
       "listPrice": "not recorded; OpenRouter billed each request",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "OpenRouter's instructions field has no effect on 3.1 (the prompt token count does not change), so direction goes in front of the text."
     },
     {
       "id": "gemini-3.8-flash-tts-direct",
@@ -65,7 +68,8 @@
       "route": "Google AI Studio",
       "voice": "Zephyr",
       "listPrice": "$0.50 per million text tokens plus $6 per million audio tokens; rises on 2027-01-01",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "Rendered through the box's own speech service (beebox/src/services/tts.ts), so the takes are what the box sends."
     },
     {
       "id": "gemini-3.1-flash-tts-preview-direct",
@@ -76,7 +80,8 @@
       "route": "Google AI Studio",
       "voice": "Zephyr",
       "listPrice": "$1 per million text tokens plus $20 per million audio tokens",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "Google's API answers 400 to a speech_metadata style for 3.1 (\"Speech metadata is not supported for this model\"), so direction goes in front of the text."
     },
     {
       "id": "mai-voice-2",
@@ -88,7 +93,7 @@
       "voice": "en-US-Harper:MAI-Voice-2",
       "listPrice": "not recorded; OpenRouter billed each request",
       "rendered": "2026-10-24",
-      "note": "Azure's native SSML (<lang>, <phoneme>, <prosody>, <break>, mid-text style changes) is not reachable through OpenRouter and was not tested."
+      "note": "Direction is one style from a fixed list. OpenRouter accepted angry, sad, excited, hopeful, shouting, whispering, relieved, embarrassed, confused, determined, happy, neutral and joyful for this voice; none fits sarcasm, reluctance, or a patient teacher, so only the anger clip is directed. Azure's native SSML (<lang>, <phoneme>, <prosody>, <break>, mid-text style changes) is not reachable through OpenRouter and was not tested."
     },
     {
       "id": "mai-voice-2-flash",
@@ -100,7 +105,7 @@
       "voice": "en-US-Harper:MAI-Voice-2",
       "listPrice": "not recorded; OpenRouter billed each request",
       "rendered": "2026-10-24",
-      "note": "Azure's native SSML (<lang>, <phoneme>, <prosody>, <break>, mid-text style changes) is not reachable through OpenRouter and was not tested."
+      "note": "Direction is one style from a fixed list. OpenRouter accepted angry, sad, excited, hopeful, shouting, whispering, relieved, embarrassed, confused, determined, happy, neutral and joyful for this voice; none fits sarcasm, reluctance, or a patient teacher, so only the anger clip is directed. Azure's native SSML (<lang>, <phoneme>, <prosody>, <break>, mid-text style changes) is not reachable through OpenRouter and was not tested."
     },
     {
       "id": "fish-s2.1-pro",
@@ -111,7 +116,8 @@
       "route": "OpenRouter",
       "voice": "Hannah (Fish official, 9a9cf477…)",
       "listPrice": "not recorded; OpenRouter billed each request",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "Directed takes carry free-form bracket tags in the text and turn text normalization off (normalize=false); plain takes use the default."
     },
     {
       "id": "minimax-2.8-turbo",
@@ -122,7 +128,8 @@
       "route": "OpenRouter",
       "voice": "English_expressive_narrator",
       "listPrice": "not recorded; OpenRouter billed each request",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "The emotion is a provider option passed through OpenRouter. OpenRouter accepts any value there, so it is not confirmed that the emotion reaches MiniMax."
     },
     {
       "id": "eleven_v3",
@@ -144,7 +151,8 @@
       "route": "ElevenLabs direct",
       "voice": "Chris",
       "listPrice": "$0.05 per 1,000 characters",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "Takes no direction: a probe with a bracket tag read the tag aloud (\"Sarcastic.\")."
     },
     {
       "id": "sonic-3.6",
@@ -155,7 +163,8 @@
       "route": "Cartesia direct",
       "voice": "Tessa",
       "listPrice": "about 1 credit per character; the Startup plan is $49 for 1.25 million credits",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "Cartesia answers 200 to any emotion value, also one it does not know; the values used here are from its documented list."
     },
     {
       "id": "sonic-turbo",
@@ -166,7 +175,8 @@
       "route": "Cartesia direct",
       "voice": "Tessa",
       "listPrice": "about 1 credit per character; the Startup plan is $49 for 1.25 million credits",
-      "rendered": "2026-10-24"
+      "rendered": "2026-10-24",
+      "note": "Cartesia answers 200 to any emotion value, also one it does not know; the values used here are from its documented list."
     },
     {
       "id": "aura-2-thalia-en",
@@ -7628,8 +7638,8 @@
     }
   },
   "costBasis": {
-    "gpt-4o-mini-tts-2025-03-20": "$12/1M audio tokens (~$0.015/min of speech) + $0.60/1M text tokens — developers.openai.com/api/docs/pricing",
-    "gpt-4o-mini-tts-2025-12-15": "$12/1M audio tokens (~$0.015/min of speech) + $0.60/1M text tokens — developers.openai.com/api/docs/pricing",
+    "gpt-4o-mini-tts-2025-03-20": "$12/1M audio tokens (~$0.015/min of speech) + $0.60/1M text tokens — developers.openai.com/api/docs/pricing Characters counted include the instructions.",
+    "gpt-4o-mini-tts-2025-12-15": "$12/1M audio tokens (~$0.015/min of speech) + $0.60/1M text tokens — developers.openai.com/api/docs/pricing Characters counted include the instructions.",
     "tts-1-hd": "$30/1M characters — developers.openai.com/api/docs/pricing",
     "eleven_v3": "1 credit/character; Creator plan $22 for 220k characters — elevenlabs.io/pricing/api",
     "eleven_flash_v2_5": "half-credit/character on the API; $0.05/1k characters — elevenlabs.io/pricing/api",
@@ -7638,7 +7648,7 @@
     "aura-2-thalia-en": "$0.030/1k characters, pay-as-you-go — deepgram.com/pricing",
     "flux-hannah-en": "$0.045/1k characters, pay-as-you-go — deepgram.com/pricing",
     "(OpenRouter models)": "Billed amount from OpenRouter's generation endpoint, per render.",
-    "(Gemini direct)": "Token counts returned by the API, priced at $0.50/1M text + $9/1M audio (3.8 Flash), $6/1M audio (3.8 Flash-Lite), $1/1M text + $20/1M audio (3.1) — ai.google.dev/gemini-api/docs/pricing. The 3.8 rates rise on 2027-01-01.",
+    "(Gemini direct)": "Gemini 3.8 Flash and 3.1 on Google's API: token counts the API returned, priced at $0.50/1M text + $9/1M audio (3.8 Flash), $1/1M text + $20/1M audio (3.1). Gemini 3.8 Flash-Lite through the box service reports no tokens: 32 audio tokens per second of speech and 4 characters per text token, at $0.50/1M text + $6/1M audio — ai.google.dev/gemini-api/docs/pricing. The 3.8 rates rise on 2027-01-01.",
     "voxtral-mini-tts-3": "$13/1M characters (input length including tags, counted here) — mistral.ai/news/voxtral-3/"
   }
 }
