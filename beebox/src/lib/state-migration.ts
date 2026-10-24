@@ -56,10 +56,16 @@ async function removeIfEmptyDir(dirPath: string): Promise<boolean> {
 const MIGRATION_WAIT_MS = 15_000;
 
 /** Use a stable lock outside the paths being renamed, so acquisition never
- * creates one side of the state pair and concurrent processes serialize. */
+ * creates one side of the state pair and concurrent processes serialize. The
+ * directory is per user: a unit host runs `bbx` as root (the deploy), the hub
+ * user and every box user with one shared /tmp, and a directory one of them
+ * made is EACCES for the next (the hub crash-looped on the per-box-units VM,
+ * 2026-10-24). State is per user too, so a per-user lock serializes the same
+ * processes the shared one did. */
 export function migrationLockPath(identity: string): string {
   const digest = createHash("sha256").update(path.resolve(identity)).digest("hex").slice(0, 32);
-  return path.join(os.tmpdir(), "bbx-state-migration-locks", `${digest}.lock`);
+  const user = process.getuid === undefined ? os.userInfo().username : String(process.getuid());
+  return path.join(os.tmpdir(), `bbx-state-migration-locks-${user}`, `${digest}.lock`);
 }
 
 async function withMigrationLock<T>(identity: string, fn: () => Promise<T>): Promise<T> {

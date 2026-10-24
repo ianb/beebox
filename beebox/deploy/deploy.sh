@@ -919,7 +919,12 @@ for unit in "${units[@]}"; do
 done
 # A fresh host has never enabled the hub; an existing one is a no-op.
 systemctl enable beebox-hub.service >/dev/null 2>&1 || true
-if id beebox-sched >/dev/null 2>&1; then systemctl enable beebox-scheduler.service >/dev/null 2>&1 || true; fi
+if id beebox-sched >/dev/null 2>&1; then
+  # cloud-init makes a system user without a home; the unit's WorkingDirectory
+  # and the scheduler's manifest (~/.config/beebox/boxes.json) live there.
+  install -d -o beebox-sched -g beebox-sched -m 0750 /var/lib/beebox-sched
+  systemctl enable beebox-scheduler.service >/dev/null 2>&1 || true
+fi
 for unit in beebox-box@.service beebox-pass@.service; do
   dir="/etc/systemd/system/$unit.d"
   mkdir -p "$dir"

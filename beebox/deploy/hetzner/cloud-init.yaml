@@ -73,6 +73,7 @@ write_files:
       d /var/cache/beebox/hf 2755 root beebox-boxes -
       d /var/log/beebox    0755 root   root         -
       d /etc/beebox        2775 root   beebox-boxes -
+      d /var/lib/beebox-sched 0750 beebox-sched beebox-sched -
   # Environment every box unit loads (EnvironmentFile=). The hub rewrites it
   # from /home/beebox/.env on each start with the child env allowlist
   # (src/hub/box-env-file.ts), 0640 beebox:beebox-boxes; this is the first
