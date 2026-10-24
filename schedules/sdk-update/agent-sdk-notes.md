@@ -33,22 +33,20 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.306`, Codex `0.163.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.308`, Codex `0.163.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.309` (SDK), `2.1.309` (Claude Code), `0.164.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.310` (SDK), `2.1.310` (Claude Code), `0.164.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.306` on 2026-10-23
-  (taking `0.3.305`); Codex stays at `0.163.0`. Production deploys recovered by
-  2026-10-23 after failing on the `engine-link-spec-2026-10` box migration
-  2026-10-21 to 10-22. The suite still has one SDK-unrelated failure:
-  `issues/bugs/2026-10-22-ui-scan-annotations-test-red-after-app-bar-faces.md`.
-  Next: `0.3.307` (settles 2026-10-23T20:46Z), `0.3.308` (2026-10-24T04:19Z),
-  `0.3.309` (2026-10-24T20:35Z), Codex `0.164.0` (2026-10-25T04:48Z). Open:
+- **Current recommendation:** Agent SDK moved to `0.3.308` on 2026-10-24
+  (taking `0.3.307`); Codex stays at `0.163.0`. The suite is green again (the
+  `ui-scan.annotations` failure was fixed on main). Next: `0.3.309` (settles
+  2026-10-24T20:35Z), Codex `0.164.0` (2026-10-25T04:48Z), `0.3.310`
+  (2026-10-25T21:21Z). Open:
   `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
@@ -75,6 +73,17 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.310 / Claude Code 2.1.310 — pending (published 2026-10-23T21:21Z)
+
+SDK parity-only. 2.1.310, for this repo: lower memory in SDK and `-p` sessions
+during compaction with a very large transcript (beebox chat sessions run long);
+compaction after "Prompt is too long" no longer keeps too much dense text such
+as base64, so the next request does not fail again; an MCP tool call that times
+out on an unanswered elicitation tells Claude not to repeat it. HARNESS:
+background cleanup no longer deletes recent files when `cleanupPeriodDays` is
+very large; read prompts show where a symlink leads.
+- **Action:** Settled path; takeable 2026-10-25T21:21Z.
 
 ### Codex 0.164.0 — pending (published 2026-10-23T04:48Z, ~1h at this turn)
 
@@ -113,7 +122,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - **Action:** Settled path; takeable 2026-10-24T20:35Z.
 - **Sources:** [SDK 0.3.309](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03309), [Claude Code 2.1.309](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21309)
 
-### 0.3.305 – 0.3.308 / Claude Code 2.1.305 – 2.1.308 — 0.3.305/0.3.306 APPLIED 2026-10-23, 0.3.307/0.3.308 pending (published 2026-10-20T19:29Z to 2026-10-22T04:19Z)
+### 0.3.305 – 0.3.308 / Claude Code 2.1.305 – 2.1.308 — APPLIED 2026-10-23 (0.3.305/0.3.306) and 2026-10-24 (0.3.307/0.3.308) (published 2026-10-20T19:29Z to 2026-10-22T04:19Z)
 
 0.3.306 and 0.3.308 are parity-only; 2.1.306 is cloud-only and 2.1.308 is
 unitemized.
@@ -138,7 +147,8 @@ unitemized.
 - **Action:** `0.3.305` and `0.3.306` applied 2026-10-23. Verified: typecheck,
   steering probe (4/4) on bundled CLI 2.1.306, `pnpm -C beebox test` (12,502
   pass, 1 fail, 2 skip; the known `ui-scan.annotations` failure). `0.3.307` and
-  `0.3.308` settle 2026-10-23T20:46Z and 2026-10-24T04:19Z.
+  `0.3.308` applied 2026-10-24: typecheck, steering probe (4/4) on bundled CLI
+  2.1.308, `pnpm -C beebox test` (12,785 pass, 2 skip).
 - **Sources:** [SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md), [Claude Code changelog](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md)
 
 ### 0.3.304 / Claude Code 2.1.304 — APPLIED 2026-10-22 (published 2026-10-19T19:48Z)
