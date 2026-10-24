@@ -79,3 +79,14 @@ void test("The three states are distinct:", async (t) => {
   await seedSchedule(box.root, null);
   t.check(await checkDriveScheduleState(box.root), "enabled");
 });
+
+// ## A card whose frontmatter does not parse cannot run, so it reads as off
+void test("A check-drive card with broken YAML reads as disabled", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const dir = join(box.root, "_config/schedules");
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "check-drive.scheduled-script.card"), "---\ncron: [unclosed\n---\n");
+  t.check(await checkDriveScheduleState(box.root), "disabled");
+});
+

@@ -16,9 +16,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../../../../exports/cards.js";
-import { isRecord } from "../../../card-io.js";
+import { readCardFrontmatter } from "../../../card-io.js";
 import { withCardLock } from "../../../../lib/card-lock.js";
 import { contentHash } from "../../../../lib/content-hash.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
@@ -81,10 +79,9 @@ export interface WriteResult {
 /** Read the fields chat review cares about off a husk card. */
 export async function readHuskFields(boxRoot: string, relPath: string): Promise<HuskFields> {
   const content = await fs.readFile(path.join(boxRoot, relPath), "utf8");
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return { title: null, account: null, reviewSpan: null, firstMessage: null };
-  const parsed: unknown = parseYaml(split.frontmatterText) ?? {};
-  if (!isRecord(parsed)) return { title: null, account: null, reviewSpan: null, firstMessage: null };
+  // A missing or unparseable block reads as no fields.
+  const parsed = readCardFrontmatter(content);
+  if (parsed === null) return { title: null, account: null, reviewSpan: null, firstMessage: null };
   const str = (key: string): string | null => {
     const value = parsed[key];
     return typeof value === "string" && value !== "" ? value : null;

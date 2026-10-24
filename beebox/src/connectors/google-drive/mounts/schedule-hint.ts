@@ -16,11 +16,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../../../exports/cards.js";
-import { isRecord } from "../../../shared/is-record.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
+import { readCardFrontmatter } from "../../../core/card-io.js";
 
 /** The seeded hourly Drive sync, by the name its card and `--script` use. */
 const CHECK_DRIVE_SCHEDULE = "check-drive";
@@ -48,12 +46,13 @@ export async function checkDriveScheduleState(boxRoot: string): Promise<CheckDri
     if (errnoCode(e) === "ENOENT") return "absent";
     throw e;
   }
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return "disabled";
-  const fields: unknown = parseYaml(split.frontmatterText);
+  // No usable frontmatter (missing, or YAML that does not parse to a mapping)
+  // means the scheduler cannot run the card either.
+  const fields = readCardFrontmatter(content);
+  if (fields === null) return "disabled";
   // `enabled` is optional and defaults to true (`schemas/scheduled-script.tsx`),
   // so only an explicit `false` is off.
-  if (isRecord(fields) && fields["enabled"] === false) return "disabled";
+  if (fields["enabled"] === false) return "disabled";
   return "enabled";
 }
 
