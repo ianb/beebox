@@ -19,8 +19,8 @@ import { LEGACY_CONFIG_DIR, LEGACY_STATE_DIR, BBX_CONFIG_DIR, BBX_STATE_DIR } fr
 import { buildProgram } from "./program.js";
 import { rewriteLegacyHandoff, legacyHandoffNotice } from "./legacy-argv.js";
 import { loadCommands } from "./load-commands.js";
-import { selectVerb } from "./select-verb.js";
-import { VERB_COMMANDS } from "../commands.js";
+import { selectVerb, surfaceKeys } from "./select-verb.js";
+import { SURFACE } from "./surface-data.js";
 
 // Validate the environment before any command runs (Track D.8). The CLI
 // schema is permissive (every field optional) — this only rejects a genuinely
@@ -36,7 +36,7 @@ const handoff = rewriteLegacyHandoff(process.argv);
 if (handoff.rewrote !== null) console.error(legacyHandoffNotice(handoff.rewrote));
 
 // Load only the command this run names (select-verb.ts).
-const selection = selectVerb(handoff.argv.slice(2), new Set(VERB_COMMANDS.keys()));
+const selection = selectVerb(handoff.argv.slice(2), surfaceKeys(SURFACE));
 const program = buildProgram(await loadCommands(selection));
 
 const releaseAdmission = installBoxAdmission(program);

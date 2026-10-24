@@ -7,9 +7,11 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { selectVerb, verbRegistryKey } from "../../../src/cli/entry/select-verb.js";
+import { selectVerb, surfaceKeys, verbRegistryKey } from "../../../src/cli/entry/select-verb.js";
+import { SURFACE } from "../../../src/cli/entry/surface-data.js";
 
-const keys = new Set(["ls", "agentContext", "serve", "scheduler", "remind"]);
+// `scheduler` is a split family, on both surfaces; `serve` is engine only.
+const surfaces = { agent: new Set(["ls", "agentContext", "scheduler", "remind"]), engine: new Set(["serve", "scheduler"]) };
 
 // A verb's key is its name in camelCase, the form layout rule 4 gives a
 // hyphenated module file.
@@ -35,8 +37,11 @@ void test("Each argv selects one verb, every command, or none", async (t) => {
     ["--box", "/x", "ls"],
     ["lss"],
     ["engine", "nonesuch"],
+    ["serve"],
+    ["engine", "ls"],
+    ["engine", "scheduler", "start"],
   ];
-  t.check(cases.map((args) => [args.join(" "), selectVerb(args, keys)]), [
+  t.check(cases.map((args) => [args.join(" "), selectVerb(args, surfaces)]), [
     ["ls _content", { kind: "verb", key: "ls" }],
     ["agent-context --json", { kind: "verb", key: "agentContext" }],
     ["remind --help", { kind: "verb", key: "remind" }],
@@ -52,5 +57,20 @@ void test("Each argv selects one verb, every command, or none", async (t) => {
     ["--box /x ls", { kind: "all" }],
     ["lss", { kind: "all" }],
     ["engine nonesuch", { kind: "all" }],
+    ["serve", { kind: "all" }],
+    ["engine ls", { kind: "all" }],
+    ["engine scheduler start", { kind: "verb", key: "scheduler" }],
+  ]);
+});
+
+// With the real surface table: `pub` is an agent verb only, and `serve` an
+// engine verb only. A verb on the wrong surface loads everything, so Commander
+// reports the unknown command (exit 1) as the full program always has.
+void test("The real surface table puts each verb on its own surface", async (t) => {
+  const real = surfaceKeys(SURFACE);
+  t.check([selectVerb(["engine", "pub", "status"], real), selectVerb(["pub", "status"], real), selectVerb(["serve"], real)], [
+    { kind: "all" },
+    { kind: "verb", key: "pub" },
+    { kind: "all" },
   ]);
 });
