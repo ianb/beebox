@@ -23,8 +23,8 @@ import { readCardFrontmatter } from "../../../core/card-io.js";
 /** The seeded hourly Drive sync, by the name its card and `--script` use. */
 const CHECK_DRIVE_SCHEDULE = "check-drive";
 
-/** What the box has: the schedule on, off, or never seeded. */
-export type CheckDriveState = "enabled" | "disabled" | "absent";
+/** What the box has: the schedule on, off, unreadable, or never seeded. */
+export type CheckDriveState = "enabled" | "disabled" | "invalid" | "absent";
 
 /**
  * Read the schedule card's own `enabled` field.
@@ -46,10 +46,10 @@ export async function checkDriveScheduleState(boxRoot: string): Promise<CheckDri
     if (errnoCode(e) === "ENOENT") return "absent";
     throw e;
   }
-  // No usable frontmatter (missing, or YAML that does not parse to a mapping)
-  // means the scheduler cannot run the card either.
+  // No usable frontmatter (missing, or YAML that does not parse to a mapping):
+  // the scheduler records a parse error and skips the card.
   const fields = readCardFrontmatter(content);
-  if (fields === null) return "disabled";
+  if (fields === null) return "invalid";
   // `enabled` is optional and defaults to true (`schemas/scheduled-script.tsx`),
   // so only an explicit `false` is off.
   if (fields["enabled"] === false) return "disabled";
@@ -62,7 +62,16 @@ export async function checkDriveScheduleState(boxRoot: string): Promise<CheckDri
  * mount is not the place to explain that.
  */
 export async function checkDriveScheduleHint(boxRoot: string): Promise<string | null> {
-  if ((await checkDriveScheduleState(boxRoot)) !== "disabled") return null;
+  const state = await checkDriveScheduleState(boxRoot);
+  if (state === "invalid") {
+    return (
+      "Hourly Drive sync (check-drive) does not run: its schedule card's frontmatter " +
+      "does not parse, so the scheduler skips it. Ask the boxholder to fix it under " +
+      "Schedules in box settings. Either way, `bbx force-wakeup --connector " +
+      "google-drive` syncs it now."
+    );
+  }
+  if (state !== "disabled") return null;
   return (
     "Hourly Drive sync (check-drive) is off, so this mount only updates when " +
     "something asks it to. Ask the boxholder whether to turn it on — they enable " +
