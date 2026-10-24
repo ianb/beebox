@@ -275,7 +275,7 @@ The server runs `claude update` nightly via `claude-update.timer` → `claude-up
 ```bash
 deploy/prod-ssh 'bash -s' <<'EOF'
   echo "=== wrapper log (last 40 lines) ==="
-  tail -n 40 /home/beebox/claude-update.log
+  tail -n 40 /var/log/beebox/claude-update.log
   echo
   echo "=== timer ==="
   systemctl list-timers claude-update.timer --no-pager
@@ -316,6 +316,6 @@ If the check is unhealthy, try these in order:
 
 1. **Force a run:** `ssh root@<ip> systemctl start claude-update.service` — then re-inspect the wrapper log and `journalctl -u claude-update.service -n 50`.
 2. **Look for auth failure:** Claude Code credentials can expire if the user logged out locally (see `server-operations.md` → "Claude Code credentials"). If `claude update` itself is failing, re-transfer credentials from macOS keychain.
-3. **Look for a moved/missing wrapper:** `ls -la /opt/beebox/beebox/deploy/claude-update.sh` — should be executable and owned so the beebox user can read+execute. `setup-server.sh` handles this but a bad deploy could leave it wrong.
+3. **Look for a moved/missing wrapper:** `ls -la /opt/beebox/beebox/deploy/claude-update.sh` — should be executable and owned so root can execute it. `deploy.sh` handles this but a bad deploy could leave it wrong.
 4. **Look for a disabled timer:** `systemctl is-enabled claude-update.timer` — should be `enabled`. If someone disabled it, `systemctl enable --now claude-update.timer`.
-5. **Check disk space** on `/home/beebox` — a full disk would prevent the log from being written, which would silently mask failures.
+5. **Check disk space** on `/var/log/beebox` — a full disk would prevent the log from being written, which would silently mask failures.

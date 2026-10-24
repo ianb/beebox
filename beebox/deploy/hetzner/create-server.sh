@@ -9,6 +9,10 @@
 # operator's rsync pipeline needs a host that looks like this, and is useful to
 # read if you are building your own.
 #
+# Provisioning is two steps: cloud-init.yaml (passed as user data; packages,
+# toolchain, users) and then provision.sh (root steps cloud-init cannot
+# express). deploy/deploy.sh owns everything repo-shaped after that.
+#
 # The constants below (server name, domain, zone, region) are that operator's.
 # Edit them before running, or don't run this at all.
 set -euo pipefail
@@ -75,7 +79,8 @@ hcloud server create \
   --type "$SERVER_TYPE" \
   --image "$IMAGE" \
   --location "$LOCATION" \
-  --ssh-key "$SSH_KEY_NAME"
+  --ssh-key "$SSH_KEY_NAME" \
+  --user-data-from-file "$SCRIPT_DIR/cloud-init.yaml"
 
 SERVER_IP=$(hcloud server ip "$SERVER_NAME")
 # Seed the opt-in deploy config, which is what makes this checkout one that
@@ -145,13 +150,16 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
-# ── Upload and run setup script ─────────────────────────────────────
-echo "Uploading scripts..."
-scp -o StrictHostKeyChecking=no "$SCRIPT_DIR/setup-server.sh" "root@$SERVER_IP:/root/"
-ssh -o StrictHostKeyChecking=no "root@$SERVER_IP" "chmod +x /root/setup-server.sh"
+# ── Wait for cloud-init ─────────────────────────────────────────────
+echo "Waiting for cloud-init to finish (packages and toolchain; a few minutes)..."
+ssh -o StrictHostKeyChecking=no "root@$SERVER_IP" "cloud-init status --wait"
 
-echo "Running setup on server (this will take a few minutes)..."
-ssh -A -o StrictHostKeyChecking=no "root@$SERVER_IP" "chmod +x /root/setup-server.sh && /root/setup-server.sh"
+# ── Upload and run provision.sh ─────────────────────────────────────
+echo "Uploading provision.sh..."
+scp -o StrictHostKeyChecking=no "$SCRIPT_DIR/provision.sh" "root@$SERVER_IP:/root/"
+
+echo "Running provision.sh on the server..."
+ssh -o StrictHostKeyChecking=no "root@$SERVER_IP" "chmod +x /root/provision.sh && /root/provision.sh"
 
 # ── Done ────────────────────────────────────────────────────────────
 echo ""
@@ -165,6 +173,8 @@ echo "  DNS:  https://$CF_DOMAIN (proxied via Cloudflare)"
 fi
 echo ""
 echo "  Next steps:"
-echo "    1. Edit /root/.env on the server with your API keys"
-echo "    2. Restart services: systemctl restart beebox-serve beebox-scheduler"
+echo "    1. Edit /home/beebox/.env on the server (PUBLIC_URL, optional keys)"
+echo "    2. From a checkout whose deploy/target.env names this server,"
+echo "       run deploy/deploy.sh (installs the tree, units, sudoers, nginx site)"
+echo "    3. Run deploy/add-box.sh to create the first box"
 echo "════════════════════════════════════════════════════"

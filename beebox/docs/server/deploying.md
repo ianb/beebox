@@ -82,6 +82,23 @@ The hook records its requested SHA synchronously before launching through
 process group. That ordered hook request stays authoritative: a late-starting
 older child cannot overwrite newer intent.
 
+## A unit host
+
+On a host migrated to one user and one unit per box
+([per-box units](../plans/per-box-units.md)), the deploy also: stops every
+`beebox-box@*` socket and service with the hub and scheduler, so a request
+during the window cannot wake a box onto a half-copied tree; installs the
+versioned units (`deploy/systemd/beebox-box@.socket`, `beebox-box@.service`,
+`beebox-pass@.service`) and the `box-sandbox.conf` drop-in both templates
+include; installs `bbx-box-run` and its one sudoers line for `beebox-sched`;
+converges each box as its own user with the units' `/etc/beebox/box.env`;
+runs `bbx host sync` for each box as root, installing the distro packages the
+box recorded since the last deploy (a sandboxed box cannot install, it records);
+reconciles each box's `node_modules` as its owner; and starts the sockets again
+after the services. The one-time migration is
+`deploy/server-bin/migrate-to-box-users.sh`, run by hand as root after a
+snapshot with the services stopped; `--dry-run` prints every step.
+
 ## The maintenance boundary
 
 Migration, deployment, and supervised development reload use the same per-box

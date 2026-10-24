@@ -18,6 +18,11 @@ deployment (`box.example.com`) rather than something every hub needs.
   scaffolds a new one from scratch.
 - **`hub.json`** is the routing table a `bbx hub` process reads: a map of URL
   slug → box path, plus optional `port`/`host`/`lazy`/`idleMs`/`keepRecent`.
+  On a unit host every entry also names its `socket`
+  (`/run/beebox/<slug>.sock`): systemd starts the box on its first connection
+  and the hub only routes, so the three idle settings are refused there
+  (`src/hub/AGENTS.md`, "A unit host"). `bbx engine hub add-box --socket`
+  writes such an entry.
   See `src/hub/config.ts` for the schema. The hub does **not** hot-reload
   this file — adding or removing a box entry needs a hub restart (SIGHUP
   only reloads the crash-loop latch, not the box list). With `lazy: true`,
@@ -131,7 +136,12 @@ The rest of this section documents one operator's concrete setup — adapt the
 paths and service names for your own hub host, not copy them verbatim.
 
 - Boxes live at `/home/beebox/boxes/<name>/`, one per directory, each its
-  own git repo.
+  own git repo; on a unit host at `/var/lib/beebox/<name>/box/`, each owned
+  by its own user `bbx-<name>` ([provisioning](provisioning.md#per-box-layout-arrives-with-the-migration)).
+  `add-box.sh` detects the layout on the server and, on a unit host, creates
+  the user, copies the box's share of the secret store into the box user's
+  own store (`bbx engine secrets export-box`) and enables the box's socket
+  unit; a box name is then capped at 28 characters (the user name's limit).
 - `hub.json` lives at `/home/beebox/.config/beebox/hub.json`.
 - The hub runs as a systemd unit (`beebox-hub` in examples above).
 - On that deployment the whole of this document is one command:

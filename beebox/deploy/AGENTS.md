@@ -15,8 +15,9 @@ Key files:
   the new slug. Preflight-validates the slug before it clones; `--dry-run`
   prints the plan without touching anything.
 - `hetzner/` — example provisioners for the one server shape `deploy.sh` ships
-  to: `create-server.sh` (Hetzner VPS + Cloudflare DNS) and `setup-server.sh`
-  (Ubuntu packages, `beebox` user, units, nginx). Neither runs on deploy.
+  to: `create-server.sh` (Hetzner VPS + Cloudflare DNS), `cloud-init.yaml`
+  (Ubuntu packages, toolchain, users) and `provision.sh` (the root steps after
+  cloud-init). None runs on deploy; `deploy.sh` installs units, sudoers and nginx.
 - `target.env` — the deploy target: which server, which paths, how to notify
   (gitignored, per-operator). Its PRESENCE is what makes a checkout one that
   deploys — without it the commit hooks skip silently and deploy.sh refuses.

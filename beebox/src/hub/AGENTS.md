@@ -61,6 +61,30 @@ alarm is unacceptable. `evaluateIdle` checks the box's on-disk
 the file empties. `startAll` also pre-starts every schedule-holding box at
 boot, independent of `keepRecent`, so schedules fire on time after a restart.
 
+## A unit host: the hub only routes
+
+When every `hub.json` entry names a `socket` (`isUnitHostConfig`), systemd owns
+the box processes (`deploy/systemd/beebox-box@.*`, docs/plans/per-box-units.md)
+and `bbx engine hub` builds a `SocketProvider` (`socket-provider.ts`) instead of
+the `Supervisor`. It polls `systemctl list-units beebox-box@*` every two seconds
+into a map; `get()` answers from the map (a WebSocket reconnect never wakes a
+box), `ensureRunning()` connects to the socket, which starts the unit, and waits
+for readiness; a failed unit's last journal line rides the 503. `lazy`, `idleMs`
+and `keepRecent` are config errors there: the engine exits itself when idle
+(`bbx engine serve --idle-exit`, in the unit).
+
+The hub runs as `beebox`, in no box group, and reads one file per box:
+`<box>/.beebox/hub-meta.json` (`core/hub-meta.ts`), behind the process-wide
+switch `enableHubMetaReads()`. It carries `allowedEmails`, a pending-schedule
+flag and SHA-256 hashes of the agent, mobile and scan tokens; `canAccessBox`
+and the gates in `server/box-credentials.ts` consult it, so a junk bearer is
+refused without waking a box. The one credential the hub cannot verify from
+metadata is the mobile session cookie (signed with a per-box secret): a
+cookie-shaped request is passed to the box, which verifies it. One hub secret
+per box per boot lives in `/run/beebox/<slug>.hub-secret` (`secrets.ts`), read
+by the unit as a systemd credential; `/etc/beebox/box.env` is rewritten at each
+start from the child env allowlist (`box-env-file.ts`).
+
 ## SIGHUP only clears the crash-loop latch
 
 SIGHUP (`Supervisor.reloadUnhealthy()`) gives any box that's exhausted its

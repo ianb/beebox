@@ -235,3 +235,18 @@ export async function endpointsForBox(boxSlug: string): Promise<StoredPushSubscr
   }
   return result;
 }
+
+/**
+ * The store a box user's own `BBX_PUSH_STORE_DIR` should hold: every endpoint
+ * opted into `boxSlug`, each opted into that box alone. The unit-host migration
+ * writes it into the box user's home (per-box-units.subplan.md); endpoints the
+ * box shares with its siblings are split, one copy per box. Read-only.
+ */
+export async function exportBoxSubscriptions(boxSlug: string): Promise<SubscriptionStore> {
+  const store = await loadStore();
+  const share: SubscriptionStore = {};
+  for (const [endpoint, record] of Object.entries(store)) {
+    if (record.boxes.includes(boxSlug)) share[endpoint] = { ...record, boxes: [boxSlug] };
+  }
+  return share;
+}

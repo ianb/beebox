@@ -1,0 +1,89 @@
+#!/bin/bash -p
+#
+# bbx-box-run — the one root code path the scheduler user may call.
+#
+#   sudo /usr/local/sbin/bbx-box-run <slug> scheduler-pass
+#
+# Starts `beebox-pass@<slug>.service` and waits for it to finish: one
+# scheduler pass over one box, run by systemd as that box's user inside the box
+# sandbox (deploy/systemd/beebox-pass@.service, box-sandbox.conf). Nothing
+# else: no other unit, no other operation, no argument reaches systemd that
+# this script did not build. The slug must name an existing `bbx-<slug>` user.
+# Sudoers: `beebox-sched ALL=(root) NOPASSWD: /usr/local/sbin/bbx-box-run`.
+#
+# Built like bbx-host-apt: plain bash, root-owned, re-exec under a clean
+# environment, one JSON log line per call. Exit codes: 0 pass finished ·
+# 1 the pass unit failed · 2 refused · 64 usage.
+#
+# Change this file → run deploy/server-bin/box-units.smoke.sh on a throwaway host.
+# Plan: docs/plans/per-box-units.md, Track C.
+
+readonly SELF=/usr/local/sbin/bbx-box-run
+readonly CLEAN_PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+env_is_clean() {
+  local name
+  for name in $(compgen -e); do
+    case "$name" in
+      PATH) [[ "$PATH" == "$CLEAN_PATH" ]] || return 1 ;;
+      LANG) [[ "$LANG" == C.UTF-8 ]] || return 1 ;;
+      BBX_BOX_RUN_CALLER | PWD | OLDPWD | SHLVL | _) ;;
+      *) return 1 ;;
+    esac
+  done
+}
+if ! env_is_clean; then
+  exec /usr/bin/env -i PATH="$CLEAN_PATH" LANG=C.UTF-8 \
+    BBX_BOX_RUN_CALLER="${SUDO_USER:-unknown}" /bin/bash --noprofile --norc -p "$SELF" "$@"
+fi
+
+set -euf -o pipefail
+IFS=$' \t\n'
+umask 022
+cd /
+
+die() { echo "bbx-box-run: $1" >&2; exit "${2:-1}"; }
+
+[[ "$EUID" -eq 0 ]] || die "must run as root (through sudo)"
+
+caller="${BBX_BOX_RUN_CALLER:-unknown}"
+[[ "$caller" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || caller=invalid
+
+readonly LOG=/var/log/beebox/box-run.log
+install -d -o root -g root -m 0755 /var/log/beebox
+slug=""
+op=""
+log() {
+  local outcome="$1" reason="$2"
+  printf '{"time":"%s","caller":"%s","slug":"%s","op":"%s","outcome":"%s","reason":"%s"}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$caller" "$slug" "$op" "$outcome" "${reason//\"/\'}" >> "$LOG"
+}
+usage_error() { log usage "$1"; die "$1" 64; }
+refuse() { log refused "$1"; die "refused: $1" 2; }
+
+readonly USAGE="usage: bbx-box-run <slug> scheduler-pass"
+[[ $# -eq 2 ]] || usage_error "$USAGE"
+[[ "$1" =~ ^[a-z0-9][a-z0-9-]{0,27}$ ]] || usage_error "not a box slug (not logged)"
+slug="$1"
+case "$2" in
+  scheduler-pass) op="$2" ;;
+  *) usage_error "$USAGE" ;;
+esac
+
+# The slug names a box user: the unit would fail anyway, but refusing here
+# keeps a probe for user names out of systemd's hands and in this log.
+getent passwd "bbx-$slug" > /dev/null || refuse "no box user bbx-$slug"
+[[ -d "/var/lib/beebox/$slug/box" ]] || refuse "no box at /var/lib/beebox/$slug/box"
+
+# Only this caller: sudoers already says so; this is the record of it.
+[[ "$caller" == beebox-sched || "$caller" == root ]] || refuse "caller $caller is not the scheduler user"
+
+if systemctl start --wait "beebox-pass@$slug.service"; then
+  log ok ""
+  exit 0
+fi
+rc=$?
+log error "pass unit exited $rc"
+# The pass unit's own journal has the reason; name it for the daemon's log.
+journalctl -u "beebox-pass@$slug.service" -n 5 --no-pager -o cat >&2 || true
+exit 1

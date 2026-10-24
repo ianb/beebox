@@ -133,7 +133,7 @@ fi
 
 # Fetch the pinned Docling's model weights once, in the background, so the
 # first scanned PDF does not spend minutes downloading them inside its 10-minute
-# budget (deploy/hetzner/setup-server.sh does the same at provisioning). They
+# budget (deploy/hetzner/provision.sh does the same at provisioning). They
 # land in the persistent home volume; the marker records the version fetched.
 DOCLING_VERSION="$(cat /app/docling-version)"
 DOCLING_MARKER="$HOME/.cache/beebox/docling-models-$DOCLING_VERSION"

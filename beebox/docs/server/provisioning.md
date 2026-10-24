@@ -1,6 +1,6 @@
 # Server provisioning
 
-Creating and setting up the host: what it needs, the two provisioners, what ends up where, the systemd units, DNS and HTTPS.
+Creating and setting up the host: what it needs, the provisioners, what ends up where, the systemd units, DNS and HTTPS.
 
 ## What it is
 
@@ -21,7 +21,7 @@ nothing, and every script below refuses with the setup steps. The example
 deployment described throughout (`box.example.com`, `/opt/beebox`,
 `/home/beebox`, the unit names) is that one operator's; most of it is
 configurable in `target.env`, and the rest is what
-`hetzner/setup-server.sh` happens to build.
+`hetzner/cloud-init.yaml` and `hetzner/provision.sh` happen to build.
 
 ## Prerequisites
 
@@ -69,21 +69,22 @@ What it does:
 3. Creates a cpx21 (3 vCPU, 4GB RAM) in Ashburn
 4. Updates Cloudflare DNS for `box.example.com` (if token provided)
 5. Sets Cloudflare SSL to Flexible
-6. Uploads and runs `hetzner/setup-server.sh` on the server
+6. Passes `hetzner/cloud-init.yaml` as user data, waits for cloud-init to finish, then uploads and runs `hetzner/provision.sh`
 
-## Setting up the host (`hetzner/setup-server.sh`)
+Then run `deploy/deploy.sh` from a checkout whose `target.env` names the server, and `deploy/add-box.sh` for each box.
 
-Installs everything on Ubuntu 24.04:
-- System packages (git, Node.js 24, nginx)
-- Clones and builds: beebox
-- Symlinks `bbx` CLI to `/usr/local/bin/`
-- Installs Claude Code CLI (native installer — auto-updates in background)
-- Creates systemd services for the box server and scheduler
-- Installs the nginx site file `nginx/beebox.conf` (port 80 → the hub)
+## Setting up the host (`hetzner/cloud-init.yaml`, `hetzner/provision.sh`)
 
-**This script does not run on deploy.** `deploy.sh` never invokes it, so a
-change to the systemd units here reaches a live server only on a re-provision
-or by hand. The nginx site file is the exception: it lives in
+`cloud-init.yaml` is `#cloud-config` user data. On first boot of Ubuntu 24.04 it installs:
+- System packages (git, nginx, poppler, pandoc, ImageMagick, qpdf, ffmpeg, ...)
+- Node.js 24 with pnpm (corepack), uv, fclones
+- Claude Code (native installer, copied to `/usr/local/bin/claude`)
+- Users `beebox` (hub) and `beebox-sched` (scheduler), group `beebox-boxes`
+- The tmpfiles rules for `/run/beebox`, `/var/lib/beebox`, `/var/cache/beebox`, `/var/log/beebox` and `/etc/beebox`, and `/etc/beebox/box.env`
+
+`provision.sh` runs once as root after cloud-init finishes and before the first deploy: GitHub host keys, git identity, the `/home/beebox/.env` skeleton, Claude Code transcript retention, the nightly `claude-update` timer, and the Docling model pre-fetch into `/var/cache/beebox/hf` (skipped, with a message, until the first deploy provides the tree; pass the checkout path as `$1`). `setup-server.sh` is a retired stub that exits 1.
+
+**Neither runs on deploy.** `deploy.sh` owns everything repo-shaped: the tree under `/opt/beebox`, the hub, scheduler and box units, sudoers, the helpers, and the nginx site. The nginx site file lives in
 `nginx/beebox.conf`, and every deploy runs `server-bin/bbx-nginx-site`, which
 makes it the only enabled site, runs `nginx -t` whether or not anything
 changed, and reloads nginx when it did. A configuration that fails the test is
@@ -125,11 +126,22 @@ A box agent installs a distro package with `bbx host install <pkg> --why ...`.
 The command records the need in the box's `_config/host-packages.json`, then
 runs `bbx-host-apt` through sudo. The wrapper installs only additive,
 service-free packages from the distro sources. `deploy.sh` installs the
-wrapper and the sudoers entry on every deploy, so `setup-server.sh` needs no
+wrapper and the sudoers entry on every deploy, so the provisioners need no
 copy. After a server rebuild, `bbx host sync` in each box reinstalls what the
 box recorded. Policy and threat model: `server-bin/bbx-host-apt` and
 `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 `server-bin/bbx-host-apt.smoke.sh`.
+
+### Per-box layout (arrives with the migration)
+
+The layout below is the current one. The migration in
+[the per-box units plan](../plans/per-box-units.md) replaces it with one
+account and one set of units per box:
+
+- Boxes live at `/var/lib/beebox/<slug>/box`, owned by `bbx-<slug>`.
+- The hub runs as `beebox`; the scheduler runs as `beebox-sched`.
+- Units: `beebox-box@<slug>.socket` and `.service` (the box engine, socket
+  activated), `beebox-pass@<slug>.service` (a scheduler pass for one box).
 
 ## Systemd units
 
@@ -173,7 +185,7 @@ in `deploy/systemd/` into both `beebox-hub.service.d/` and
 `beebox-scheduler.service.d/`, and `daemon-reload`s only when something
 changed, immediately before the restart. The drop-in directory is the seam that
 lets a deploy own a unit SETTING without owning the unit itself, which matters
-because a deploy never re-runs `setup-server.sh`. Anything a future deploy must guarantee about the units belongs here as
+because a deploy never re-runs the provisioners. Anything a future deploy must guarantee about the units belongs here as
 another `.conf`, not as a by-hand step someone repeats and then forgets.
 
 Verify with `systemctl show beebox-hub -p KillMode -p TimeoutStopUSec`.
@@ -192,7 +204,7 @@ and package managers can interpret it independently.
 
 **`BBX_CLI_PREBUILT`:** `bin/bbx` skips its dev-mode staleness rebuild check
 when this env var is set, so a unit never pays or risks a tsx rebuild at boot.
-The units `setup-server.sh` generates do not set it; this is unverified end to
+The units the deploy installs do not set it; this is unverified end to
 end.
 
 ## DNS and HTTPS

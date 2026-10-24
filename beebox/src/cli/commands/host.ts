@@ -60,8 +60,22 @@ function unsupportedMessage(names: readonly string[]): string {
   ].join("\n");
 }
 
+/**
+ * On a unit host (docs/plans/per-box-units.md) a box runs read-only and
+ * without sudo, so it records and the next deploy installs: `deploy.sh` runs
+ * `bbx host sync` for every box as root. The unit's env file says so
+ * (`BBX_UNIT_HOST`, src/hub/box-env-file.ts).
+ */
+function onUnitHost(): boolean {
+  return process.env.BBX_UNIT_HOST === "1";
+}
+
 /** Checks the host can install; prints why not. */
 async function installBlocker(system: HostSystem, names: readonly string[]): Promise<number | null> {
+  if (onUnitHost()) {
+    console.log(`${names.join(" ")} is recorded; this host installs recorded packages at the next deploy. Nothing more to do here.`);
+    return HOST_EXIT.ok;
+  }
   if (!(await system.supportsInstalls())) {
     console.error(unsupportedMessage(names));
     return HOST_EXIT.unsupported;

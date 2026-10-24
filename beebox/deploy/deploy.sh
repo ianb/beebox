@@ -599,7 +599,7 @@ REMOTE
 # knows the services came back from the trap, not from a finished activation.
 cat >> "$REMOTE_SCRIPT" <<'WINDOW'
 SERVICES_STOPPED=0
-trap 'rc=$?; if [ "$SERVICES_STOPPED" = 1 ] && [ "$rc" -ne 0 ]; then echo "  Activation failed (exit $rc) after the services stopped; starting them again on the live tree as it stands..." >&2; if systemctl start beebox-hub beebox-scheduler; then : > "$0.services-restarted-by-trap"; else echo "  WARNING: could not restart beebox-hub/beebox-scheduler; production is down until a restart or a successful deploy" >&2; fi; fi; /usr/local/sbin/bbx-deploy-window close "$rc" || echo "  WARNING: could not close the deploy window" >&2' EXIT
+trap 'rc=$?; if [ "$SERVICES_STOPPED" = 1 ] && [ "$rc" -ne 0 ]; then echo "  Activation failed (exit $rc) after the services stopped; starting them again on the live tree as it stands..." >&2; if systemctl start beebox-hub beebox-scheduler && { socks=$(systemctl list-units "beebox-box@*.socket" --all --plain --no-legend 2>/dev/null | awk "{print \$1}"); [ -z "$socks" ] || systemctl start $socks; }; then : > "$0.services-restarted-by-trap"; else echo "  WARNING: could not restart beebox-hub/beebox-scheduler; production is down until a restart or a successful deploy" >&2; fi; fi; /usr/local/sbin/bbx-deploy-window close "$rc" || echo "  WARNING: could not close the deploy window" >&2' EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 141' PIPE
@@ -611,6 +611,12 @@ queue_remote command /usr/local/sbin/bbx-deploy-window down
 # Set before the stop: a stop that fails halfway has already taken one down.
 printf 'SERVICES_STOPPED=1\n' >> "$REMOTE_SCRIPT"
 queue_remote command systemctl stop beebox-hub beebox-scheduler
+# On a unit host (docs/plans/per-box-units.md) every box is a socket unit. The
+# sockets stop too, so a request arriving during the window cannot wake a box
+# onto a half-copied tree; they start again after the units are reinstalled.
+# A host without units has no such unit and the glob matches nothing.
+# shellcheck disable=SC2016 # the remote bash expands these, by design
+queue_remote command bash -c 'units=$(systemctl list-units "beebox-box@*" --all --plain --no-legend 2>/dev/null | awk "{print \$1}"); [ -z "$units" ] || systemctl stop $units'
 queue_remote command rsync "${RSYNC_OPTS[@]}" --exclude '.activate-deploy.sh' "$STAGE_DIR/" "$INSTALL_DIR/"
 queue_remote command chown -R beebox:beebox "$INSTALL_DIR"
 
@@ -727,6 +733,9 @@ REMOTE
 queue_step "Reconciling box package installs..."
 queue_remote stdin bash -s /home/beebox/boxes /opt/beebox/beebox \
   < "$CHECKOUT/beebox/deploy/server-bin/bbx-box-install"
+# The unit-host layout, /var/lib/beebox/<slug>/box, each as its own user.
+queue_remote stdin bash -s /var/lib/beebox /opt/beebox/beebox \
+  < "$CHECKOUT/beebox/deploy/server-bin/bbx-box-install"
 
 # Deploy installs are what grow both caches. Prune only after the root workspace
 # and Bee Box-owned box installs have finished, so this cannot evict entries a
@@ -810,11 +819,22 @@ queue_remote command ln -sf "$INSTALL_DIR/beebox/bin/cb" /usr/local/bin/cb
 # goes live; a bad entry fails the deploy rather than breaking sudo.
 queue_remote stdin install -o root -g root -m 0755 /dev/stdin /usr/local/sbin/bbx-host-apt \
   < "$CHECKOUT/beebox/deploy/server-bin/bbx-host-apt"
+# The scheduler's one root path on a unit host, `bbx-box-run <slug>
+# scheduler-pass` (docs/plans/per-box-units.md, Track C), installed the same way.
+queue_remote stdin install -o root -g root -m 0755 /dev/stdin /usr/local/sbin/bbx-box-run \
+  < "$CHECKOUT/beebox/deploy/server-bin/bbx-box-run"
 queue_remote stdin bash -s <<'SUDOERS'
   set -euo pipefail
   tmp=$(mktemp)
   trap 'rm -f "$tmp"' EXIT
-  echo 'beebox ALL=(root) NOPASSWD: /usr/local/sbin/bbx-host-apt' > "$tmp"
+  # On a unit host boxes run read-only without sudo: the hub user keeps no
+  # grant, and the deploy runs `bbx host sync` as root below. Elsewhere the
+  # box user keeps its install grant.
+  if id beebox-sched >/dev/null 2>&1; then
+    echo 'beebox-sched ALL=(root) NOPASSWD: /usr/local/sbin/bbx-box-run' > "$tmp"
+  else
+    echo 'beebox ALL=(root) NOPASSWD: /usr/local/sbin/bbx-host-apt' > "$tmp"
+  fi
   # Absolute path: this runs after `source /home/beebox/.env` (deploy.sh's
   # CONTROL block), whose PATH=/home/beebox/.local/bin:/usr/local/bin:/usr/bin:/bin
   # omits /usr/sbin, so a bare `visudo` fails with "command not found".
@@ -826,33 +846,81 @@ SUDOERS
 if [[ "$SKIP_RESTART" != true ]]; then
   queue_step "Converging boxes under maintenance..."
   queue_remote stdin bash -s <<'REMOTE'
-    for boxdir in /home/beebox/boxes/*/; do
-      [[ -e "$boxdir/.git" ]] || continue
+    # Two layouts, one loop (docs/plans/per-box-units.md): a unit host keeps
+    # each box at /var/lib/beebox/<slug>/box owned by bbx-<slug>, and the
+    # converge runs as that user with the units' env; a host without units
+    # keeps /home/beebox/boxes/<slug> owned by beebox.
+    converge() { # converge <user> <envfile> <boxdir>
+      local user="$1" envfile="$2" boxdir="$3"
       # sudo normally drops this environment. Pass only the explicit fleet
       # permits into the trusted nested migration command; no repair agents run.
-      sudo -u beebox -H env BBX_MAINTENANCE_PERMITS="$BBX_MAINTENANCE_PERMITS" bash -lc \
-        'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 600 bbx engine migrate --sweep --within-maintenance --prepare --json' \
-        bbx-sweep "$boxdir" || echo "  $boxdir: convergence incomplete; the box reopens when maintenance releases it, with the record in its health check" >&2
+      sudo -u "$user" -H env BBX_MAINTENANCE_PERMITS="$BBX_MAINTENANCE_PERMITS" bash -lc \
+        'set -a; source "$1" 2>/dev/null; set +a; cd "$2" && timeout 600 bbx engine migrate --sweep --within-maintenance --prepare --json' \
+        bbx-sweep "$envfile" "$boxdir" || echo "  $boxdir: convergence incomplete; the box reopens when maintenance releases it, with the record in its health check" >&2
+    }
+    for home in /var/lib/beebox/*/; do
+      [[ -e "$home/box/.git" ]] || continue
+      slug=$(basename "$home")
+      converge "bbx-$slug" /etc/beebox/box.env "$home/box"
+      # The packages a box asked for since the last deploy (bbx host install
+      # records; a sandboxed box cannot install). As root, straight to the
+      # wrapper; one refusal does not block the others.
+      env BBX_UNIT_HOST= bash -c 'cd "$1" && timeout 900 bbx host sync --box "$1"' bbx-host-sync "$home/box" \
+        || echo "  $home/box: some recorded host packages did not install; see the lines above" >&2
+    done
+    for boxdir in /home/beebox/boxes/*/; do
+      [[ -e "$boxdir/.git" ]] || continue
+      converge beebox /home/beebox/.env "$boxdir"
     done
 REMOTE
 
   # Reconfirm the systemd drop-ins before restarting.
   #
-  # The units themselves are NOT regenerated by this script (setup-server.sh
-  # owns them, and it still emits the pre-hub shape — see deploy/README.md's
-  # "Known gap"), so a setting the running code depends on would otherwise have
-  # to be installed by hand once and then silently drift. The drop-in directory
-  # is the seam that lets a deploy own such a setting without owning the unit:
-  # anything in deploy/systemd/ is reinstalled on every deploy, and the file
-  # itself documents what it is for.
+  # The hub and scheduler units were written by the old provisioner and are
+  # not regenerated here; their drop-ins are, so a setting the running code
+  # depends on cannot drift. The per-box units are whole files this deploy
+  # installs (below). Anything in deploy/systemd/ is reinstalled on every
+  # deploy, and each file documents what it is for.
   #
   # daemon-reload only when something actually changed, so an unchanged deploy
   # stays quiet. The restart below then picks up whatever was reloaded.
-  queue_step "Reconfirming systemd drop-ins..."
+  queue_step "Reconfirming systemd units and drop-ins..."
   queue_remote stdin bash -s "$INSTALL_DIR" <<'REMOTE'
 set -euo pipefail
 install_dir="$1"
 changed=0
+# The per-box units (docs/plans/per-box-units.md, Track C) are versioned
+# files, installed whole: a template socket and service, the pass service, and
+# the sandbox drop-in both templates include. They are installed on every host
+# so the migration script finds them; a host without box users never enables
+# a socket, so they lie idle there.
+# The hub unit is the same on every host; the scheduler unit here runs as the
+# scheduler user and is installed only once that user exists (the migration
+# creates it), so a host that has not migrated keeps its old unit.
+units=(beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-hub.service)
+if id beebox-sched >/dev/null 2>&1; then units+=(beebox-scheduler.service); fi
+for unit in "${units[@]}"; do
+  src="$install_dir/beebox/deploy/systemd/$unit"
+  dest="/etc/systemd/system/$unit"
+  if ! cmp -s "$src" "$dest"; then
+    install -o root -g root -m 0644 "$src" "$dest"
+    echo "  installed $unit"
+    changed=1
+  fi
+done
+# A fresh host has never enabled the hub; an existing one is a no-op.
+systemctl enable beebox-hub.service >/dev/null 2>&1 || true
+if id beebox-sched >/dev/null 2>&1; then systemctl enable beebox-scheduler.service >/dev/null 2>&1 || true; fi
+for unit in beebox-box@.service beebox-pass@.service; do
+  dir="/etc/systemd/system/$unit.d"
+  mkdir -p "$dir"
+  dest="$dir/box-sandbox.conf"
+  if ! cmp -s "$install_dir/beebox/deploy/systemd/box-sandbox.conf" "$dest"; then
+    install -o root -g root -m 0644 "$install_dir/beebox/deploy/systemd/box-sandbox.conf" "$dest"
+    echo "  $unit: installed box-sandbox.conf"
+    changed=1
+  fi
+done
 # `all/` goes to every unit; `<unit>/` only to that one. The per-unit split
 # exists because ExecStart overrides are necessarily unit-specific — the hub and
 # the scheduler run different commands — and the old flat layout copied every
@@ -905,7 +973,8 @@ fi
 REMOTE
 
   queue_step "Restarting services..."
-  queue_remote command bash -c 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"'
+  # shellcheck disable=SC2016 # the remote bash expands these, by design
+  queue_remote command bash -c 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"; socks=$(systemctl list-units "beebox-box@*.socket" --all --plain --no-legend 2>/dev/null | awk "{print \$1}"); [ -z "$socks" ] || { systemctl start $socks && echo "Box sockets started"; }'
   # The restart succeeded (set -e would have exited above otherwise): the EXIT
   # trap must not start the services a second time if a later check fails.
   printf 'SERVICES_STOPPED=0\n' >> "$REMOTE_SCRIPT"
@@ -924,7 +993,7 @@ REMOTE
   #      module ABI mismatch) makes this 503. Parsed with node (jq isn't on the
   #      server); the box slug + error land in the log on failure.
   # Verify the runtime tools the box shells out to are actually installed.
-  # These are declared in setup-server.sh, but a box provisioned before a tool
+  # These are declared in hetzner/cloud-init.yaml, but a box provisioned before a tool
   # was added silently 503s the upload/processing path that needs it (qpdf → PDF
   # scan uploads; poppler pdfinfo/pdftoppm → PDF intake; pandoc → doc convert;
   # imagemagick convert → image ops; openpyxl/xlsx2csv → spreadsheet reads;
@@ -942,8 +1011,8 @@ REMOTE
     python3 -c "import openpyxl" >/dev/null 2>&1 || missing="$missing python3-openpyxl"
     if [ -n "$missing" ]; then
       echo "  FAILED: required runtime tools missing on the server:$missing"
-      echo "  Fix: re-run deploy/setup-server.sh on the server (or apt-get install the"
-      echo "  missing packages), then redeploy. See setup-server.sh for the package list."
+      echo "  Fix: apt-get install the missing packages on the server (the list is in"
+      echo "  deploy/hetzner/cloud-init.yaml), then redeploy."
       exit 1
     fi
     codex_check_home=$(mktemp -d)
@@ -1115,7 +1184,7 @@ if ! "$stage_dir/node_modules/.bin/tsc" --version >/dev/null; then
   exit 1
 fi
 boxes=()
-for box in /home/beebox/boxes/*/; do
+for box in /home/beebox/boxes/*/ /var/lib/beebox/*/box/; do
   [[ -e "$box/.git" ]] && boxes+=(--box "$box")
 done
 set -a
@@ -1142,12 +1211,16 @@ if [[ $maintenance_rc -ne 0 ]]; then
     echo "Activation failed before the services restarted (exit $maintenance_rc); skipping the migration repair." >&2
     exit "$maintenance_rc"
   fi
-  for box in /home/beebox/boxes/*/; do
+  for box in /home/beebox/boxes/*/ /var/lib/beebox/*/box/; do
     [[ -e "$box/.git" ]] || continue
-    status=$(sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; cd "$1" && timeout 60 node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$box" 2>/dev/null) || { echo "  $box: engine could not report migration status; skipping its repair check" >&2; continue; }
+    # The box's owner runs its repair: bbx-<slug> on a unit host, beebox otherwise.
+    owner=$(stat -c %U "$box")
+    envfile=/home/beebox/.env
+    [[ "$owner" == bbx-* ]] && envfile=/etc/beebox/box.env
+    status=$(sudo -u "$owner" -H bash -lc 'set -a; source "$1"; set +a; cd "$2" && timeout 60 node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$envfile" "$box" 2>/dev/null) || { echo "  $box: engine could not report migration status; skipping its repair check" >&2; continue; }
     [[ "$status" == *'"pending":[]'* ]] && continue
     echo "  $box: migration pending after a failed convergence; running bounded repair now..."
-    sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd "$1" && timeout --kill-after=5s 1500s node node_modules/beebox/dist/cli.mjs engine migrate --sweep --repair --json' bbx-repair "$box" \
+    sudo -u "$owner" -H bash -lc 'set -a; source "$1"; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd "$2" && timeout --kill-after=5s 1500s node node_modules/beebox/dist/cli.mjs engine migrate --sweep --repair --json' bbx-repair "$envfile" "$box" \
       || echo "  $box: repair did not converge; the hourly box-convergence pass retries" >&2
   done
 fi

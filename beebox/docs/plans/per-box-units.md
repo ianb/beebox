@@ -631,6 +631,25 @@ through the wrapper; a one-time migration moves the six boxes.
 daemon calls it in process; with the wrapper present it spawns through
 `sudo`), because it is the only engine code in this track.
 
+**Implementation notes (2026-10-24).** The pass is
+`src/core/schedule/scheduler/pass.ts`, re-exported through the scheduler's
+`core.ts`; the wrapper selector and runner are `box-run.ts` beside it. The
+scheduler user's manifest stays at `~/.config/beebox/boxes.json` under
+`/var/lib/beebox-sched` (the subplan says why). Two engine verbs exist for the
+split: `bbx engine secrets export-box <slug>` (a box's share of the master
+store, values included, verified by grant names in both scripts) and `bbx
+engine boxes export-push <slug>`. `deploy.sh` detects a unit host by the
+presence of `/var/lib/beebox/*/box` and runs both layouts' loops;
+`add-box.sh` detects it on the server (`/var/lib/beebox` plus the
+`beebox-sched` user) and caps a box name at 28 characters, the user name's
+limit. The migration script is `deploy/server-bin/migrate-to-box-users.sh`
+with `--dry-run`; it also gives the scheduler unit a `user.conf` drop-in
+(`User=beebox-sched`, `EnvironmentFile=/etc/beebox/box.env`) and copies each
+box's deploy key and ssh alias into the box user's home so pushes keep
+working. `bbx host install` under a unit (`BBX_UNIT_HOST=1` from
+`box.env`, allowlisted into agent shells) records and exits 0 with the
+"next deploy installs it" line.
+
 ### Track F: cloud-init provisioning
 
 **What.** `deploy/hetzner/cloud-init.yaml`, a `#cloud-config` that creates
@@ -646,6 +665,18 @@ becomes that `provision.sh`, trimmed to what runs after packages, and
 **First chunk.** The cloud-config with packages, group and users only, run
 on a throwaway VM (the same VM the subplan's probe uses), then destroyed;
 the run log is the verification.
+
+**Implementation notes (2026-10-24).** `cloud-init.yaml` installs the
+packages, Node 24, uv (system-wide, `/usr/local/bin`), fclones and Claude
+Code (the native binary copied to `/usr/local/bin/claude`, since a per-user
+install under `/root` or `/home` is hidden from units by `ProtectHome=`),
+creates `beebox` (in `beebox-boxes`), `beebox-sched` and the group, and the
+tmpfiles rules and a first `/etc/beebox/box.env`. `provision.sh` does the
+remaining root steps (host keys, git identity, the hub `.env` skeleton,
+Claude retention, the nightly updater, now as root, re-copying the binary;
+the Docling pre-fetch into `HF_HOME=/var/cache/beebox/hf`). The old
+`setup-server.sh` is a stub that exits 1. The deploy installs every unit and
+sudoers file, which is what closes the drift issue. Not yet run on a VM.
 
 ## Could this be simpler?
 
@@ -860,6 +891,18 @@ install` and `bbx tick` behave as before from inside a box.
    user-data; a fresh VM provisioned end to end and destroyed.
 10. Production migration, by hand, after a snapshot, with the boxholder
     present.
+
+## Implementation status (2026-10-24)
+
+Built and committed on the branch, with change-selected tests passing: Track
+A (both chunks), Track C's files and the engine half of chunk 2, Track D,
+Track E's engine and scripts, Track F's files, and the host audit extension.
+Not yet run anywhere real: the Docker-free smoke (`box-units.smoke.sh`), the
+cloud-init, `provision.sh`, the migration rehearsal, and the probe; all need
+the throwaway VM (step 1 of the order below, which needs the boxholder's
+yes to create a server). Open for the boxholder: question 7 (the mobile
+cookie at the hub). Track B's probe rows in the subplan are still marked
+Probe.
 
 ## Rollout shape
 
