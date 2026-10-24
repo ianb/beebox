@@ -77,8 +77,9 @@ Not a BIG CHANGE.
 - `research/tts-model-comparison/candidates.ts`: working request shapes for
   OpenAI direct, OpenRouter (six models, including Gemini 3.1's PCM-only
   answer), ElevenLabs, Cartesia, Deepgram v1 and v2, and the `envKey`
-  reader for `~/src/beebox/beebox/.env`. Move these into `render.ts`;
-  candidates.ts then imports them.
+  reader for `~/src/beebox/beebox/.env`. Copy the shapes into the new
+  adapters; candidates.ts stays as it is (an exploration tool, and
+  importing `render.ts` would run its CLI, `render.ts:197`).
 - `beebox/src/services/tts.ts:385` `createTtsService`: the box's own OpenAI
   and Gemini 3.8 Flash-Lite calls. The two shipped models render through it,
   so their takes are what the box sends.
@@ -138,11 +139,18 @@ Voxtral's 34 emotions and 5 paces
 - **Direction:** `clipSchema` gains `code: string` and
   `variants: Variant[]`. `Variant = { id, label, text?, direction?,
   formatting?: string[] }`. `text` replaces the clip text for that variant.
+  A variant with no `direction` is a **text variant**: every model reads it.
+  `Direction = { prose, tagged?, cartesia?: { emotion, speed?, volume? },
+  azure?, minimax?, grok?, voxtral? }`. The fixed values are zod enums of
+  the documented or probed lists (Track 2 table), so a typo fails
+  `loadResults()` instead of reaching Cartesia or MiniMax, which accept
+  anything. The exact texts and directions are in the appendix.
   `formatting` lists words that mean Markdown was read aloud ("dash",
   "bullet", "asterisk", "underscore"); `transcriptCheck` reports them like
   direction words. `renderSchema.variant` becomes a string checked against
   the clip's variant ids in `loadResults()`.
-  The clips and variants, from the README's "Choosing the next texts":
+  The clips and variants, from the README's "Choosing the next texts"
+  (exact texts and directions: appendix):
 
   | Code | Clip | Variants |
   |---|---|---|
@@ -169,9 +177,11 @@ Voxtral's 34 emotions and 5 paces
   `render.ts --model <id>` renders any of the nineteen models.
 - **Why:** only Voxtral renders today (`render.ts:95`).
 - **Direction:** `Provider` keeps its shape, with `directed` replaced by a
-  function `channel(direction) → { channel, input?, options? } | undefined`;
-  `undefined` means the model has no channel for that direction and the
-  variant is not rendered. Families and channels:
+  pure function `request(variant, clip) → { channel, url, body } |
+  undefined`. A text variant always gets a request. A directed variant gets
+  `undefined` when the model has no channel for that direction; render.ts
+  then records a row with `channel: "none available"` and no file, so the
+  run's matrix is complete either way. Families and channels:
 
   Verified against the live APIs on 2026-10-24 (probe scripts and fetched
   docs in the session scratchpad; findings summarized here):
@@ -210,10 +220,15 @@ Voxtral's 34 emotions and 5 paces
   found in Fish's public catalog and accepted by OpenRouter).
 - **Vocabulary lock-ins:** model ids stay as they are in results.json, so
   the page's model list and file names stay recognizable.
-- **First implementation chunk:** move candidates.ts's request functions into
-  render.ts with the channel function for each family; `--dry-run` lists
-  every take with its channel for all nineteen models. No requests are sent
-  in this chunk.
+- **First implementation chunk:** the request function for each family, with
+  `render.test.ts` checking one built request per family (direction in the
+  intended field: OpenAI `instructions`, Gemini 3.8 `speech_metadata.style`,
+  Gemini 3.1 prefix in the text, Cartesia `generation_config.emotion`,
+  OpenRouter `provider.options.azure|minimax`, tags in the text for
+  ElevenLabs v3, Fish, Grok, Voxtral; a text variant unchanged on a model
+  with no channel). `--dry-run` lists every take with its channel for all
+  nineteen models. No requests are sent in this chunk. The CLI entry moves
+  behind an `import.meta` main check so the test can import the module.
 
 ### Track 3. Page generation
 
@@ -229,7 +244,12 @@ Voxtral's 34 emotions and 5 paces
   then the reference and player. A variant a model has no channel for shows
   one line: "No channel for this direction." The pacing representative
   logic (`representative()`, `takesNote()`) goes: every variant has one take.
-  The page drops the old run's audio; `publish.ts --prune` deletes it.
+  Before it transcodes, prunes, or writes the card, publish.ts checks the
+  run is complete: every model × clip × variant has a row, and every row
+  with a file has its source audio. It fails with the list of gaps. A
+  `--fresh` flag empties `site/assets/tts-comparison/` and transcodes every
+  take from source, so no WebM from the old run can stand in for a new take
+  of the same name; this run uses it. The page drops the old run's audio.
 - **Vocabulary lock-ins:** the `ref` attribute on `{% audio %}`.
 - **First implementation chunk:** the `ref` attribute with its tests in
   `site/evaluation-tags.test.ts` (valid ref renders the label and id; an
@@ -240,9 +260,12 @@ Voxtral's 34 emotions and 5 paces
 - **What:** rewrite `page-template.md` for the new texts, and record the run.
 - **Why:** the prose describes the old seven texts and pacing takes.
 - **Direction:** the "How it was tested" list describes the nine clips.
-  A new paragraph states the finding behind clip R: Gemini 3.8 carried every
-  wording of the reluctant direction tried in round 2, gpt-4o-mini-tts none
-  (the takes stay in the round-2 exhibit, not on the page). The README's
+  A new paragraph states the finding behind clip R, with its evidence named:
+  in the round-2 listening test (2026-10-24, the boxholder listening), Gemini
+  3.8 Flash-Lite carried all four wordings of the reluctant direction, and
+  gpt-4o-mini-tts carried none of them well. Those takes stay in the round-2
+  exhibit, not on the page. The full run's R takes are then heard on the
+  page beside the statement. The README's
   Runs table gains the new run; the September run is noted as replaced, with
   the commit that last held its results.
 - **First implementation chunk:** the template rewrite after the full
@@ -258,7 +281,8 @@ false. Second, the next model to compare would need the page hand-edited
 again, and the first plan's purpose was a repeatable pipeline
 (`beebox/docs/implemented-plans/tts-comparison-page.md`).
 
-Considered and cut: repeats per take (no clip tests take-to-take variation
+Considered and cut: moving candidates.ts onto the new adapters (no use for
+this run); repeats per take (no clip tests take-to-take variation
 now that pacing is gone); a markup variant separate from directed (the new
 set has none; the old one existed for anger and exhaustion); automated
 delivery scoring.
@@ -277,6 +301,9 @@ none
 | Gemini rate limit (429) mid-run | No | Backoff, then the model's run fails whole | Clear: render.ts names the failed takes |
 | One take of a model fails | No | The model's results stay unchanged (`render.ts:179-181`) | Clear |
 | A variant id in renders matches no clip variant | Track 1 adds a check | `loadResults()` throws | Clear |
+| An adapter puts direction in the wrong request field | `render.test.ts`, one request per family | — | Clear in the test |
+| A model's rows are missing when publish runs | Track 3 completeness check | publish.ts lists the gaps and writes nothing | Clear |
+| An old WebM stands in for a new take of the same name | — | `--fresh` transcodes every take from source | Clear |
 | A take's reference collides with another | Track 3 check | publish.ts throws on a duplicate reference | Clear |
 | A Cartesia emotion typo is accepted silently | Track 1 enum | Schema rejects an undocumented value | Clear |
 | The MiniMax emotion option never reaches MiniMax | No | No (OpenRouter accepts any value) | Silent; the page says "sent, not confirmed" |
@@ -331,8 +358,11 @@ public page.
   bad values.
 - `loadResults()` validation: every render names a known model, clip, and
   variant; file names match the take.
+- `render.test.ts`: one built request per provider family, so a direction
+  in the wrong field fails a test.
 - `render.ts --dry-run`: lists every planned take and channel without
   sending requests; run it before a full run.
+- publish.ts's completeness check: a run with a gap does not publish.
 - The site build's link check fails on a missing audio file
   (`site/build.ts`, from the first plan).
 
@@ -353,3 +383,72 @@ every model renders; `publish.ts --prune` regenerates the page; the site
 build and site tests pass; the boxholder has listened to the page from a
 local build. Landing and pushing publish it, and need the boxholder's yes.
 No data migration: results.json is replaced, and the old run stays in git.
+
+## Appendix: the clips
+
+Texts and directions as rendered. `tagged` is used by ElevenLabs v3, Fish,
+and Gemini 3.1 (after the prose as a prefix: `<prose>: "<tagged>"`, the old
+run's form). A form left out means that family has no channel for the
+variant.
+
+**S · Sarcasm.** Text: "Thanks for updating the spreadsheet. I can tell you
+put a lot of care into it." Directed: prose "Dry, cutting sarcasm. The
+speaker is annoyed and means the opposite of every word. Lean on 'a lot of
+care'"; tagged "[sarcastically] Thanks for updating the spreadsheet. [dryly]
+I can tell you put a lot of care into it."; Cartesia `sarcastic`; Voxtral
+"[emotion=sarcastic]…".
+
+**A · Anger held in check.** Text: "I asked for the report on Monday. It's
+Thursday. I'm going to need it by the end of today." Directed: prose
+"Barely contained fury: quiet, clipped, every word deliberate. Do not
+shout"; tagged "[quietly furious] I asked for the report on Monday.
+[coldly] It's Thursday. [through gritted teeth] I'm going to need it by the
+end of today."; Cartesia `angry`, speed 0.85, volume 0.8; MAI `angry`;
+MiniMax `angry`; Grok "<slow>I asked for the report on Monday.</slow>
+[pause] <soft>It's Thursday.</soft> [pause] <slow>I'm going to need it by
+the end of today.</slow>"; Voxtral "[emotion=tense][pace=slow]I asked for
+the report on Monday. [emotion=critical]It's Thursday. [emotion=tense]I'm
+going to need it by the end of today." (the old run's forms).
+
+**R · Staying late.** Text: "Sure, I can stay late tonight." Directed: prose
+"Agreeing, but tired and a little put-upon: you'll do it, and you'd rather
+not."; tagged "[sighs] [reluctantly] Sure, I can stay late tonight.";
+Cartesia `resigned`; MiniMax `sad`; Grok "[sigh] <slow>Sure, I can stay late
+tonight.</slow>"; Voxtral "[emotion=resigned]Sure, I can stay late
+tonight."
+
+**L · A list.** Text (one text variant, Markdown):
+"Before you leave, pack:\n\n- the charger\n- the blue folder with the
+lease\n- two forms of ID, one with a photo\n- the spare key for the side
+door". Formatting words: dash, hyphen, minus, bullet.
+
+**C · Code-switching on look-alike words.** Text: 'When I asked about the
+train, she said "son las once," so we'd missed it. My uncle just shrugged:
+"also gut."' Pronunciation: son lahs OHN-seh ("it's eleven o'clock"); AHL-zo
+goot ("well, fine"). Directed: prose "Speak in natural American English, but
+say the quoted Spanish and German phrases in those languages."; tagged
+'When I asked about the train, she said [in Spanish] "son las once," so
+we'd missed it. My uncle just shrugged: [in German] "also gut."'
+
+**D · Dialog.** Text: '"Did you lock the door?" she asked.\n\n"I think
+so."\n\n"You think so?" He was already reaching for his keys.' Directed:
+prose "Read it like an audiobook narrator: give the quoted lines a little
+life, and leave a short pause between lines of dialog."; tagged and Grok
+the text with "[pause]" between the three lines.
+
+**E · Worked math.** Text: "If x is three, then two x plus one is seven, not
+eight: you double first, then add the one." Text variant `then-italic`:
+"… you double first, _then_ add the one." Formatting words: underscore.
+
+**W · Water boiling.** Text: "Water boils at 100 °C at sea level, but at
+3,000 m (about twice the height of Denver) it boils at about 90, which is
+why pasta takes longer up there." Directed: prose "Explain it like a patient
+teacher, so the contrast between sea level and altitude is clear."; tagged
+"[patiently] " before the text; Cartesia `calm`; MiniMax `calm`; Voxtral
+"[emotion=calm]" before the text.
+
+**X · Word stress.** Text: "I didn't say she stole the money." Directed
+`she`: prose "Stress the word 'she'; it carries the meaning of the
+sentence." Directed `money`: the same with 'money'. Prose channels only.
+Text variant `she-italic`: "I didn't say *she* stole the money."
+Formatting words: asterisk, star.
