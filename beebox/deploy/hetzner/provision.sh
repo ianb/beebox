@@ -87,13 +87,15 @@ fi
 
 # ── Hub routing table ───────────────────────────────────────────────
 # The hub refuses to start without its config, and a fresh host has no box
-# yet (add-box.sh adds the first). An empty table lets the first deploy's
-# health check pass; `bbx engine hub add-box` edits this file in place.
+# yet (add-box.sh adds the first). An empty table on the port nginx proxies to
+# (deploy/nginx/beebox.conf, and deploy.sh's health check: 3210; the engine's
+# own default is 4310) lets the first deploy's health check pass; `bbx engine
+# hub add-box` edits this file in place.
 HUB_CONFIG="$BBX_HOME/.config/beebox/hub.json"
 if [[ ! -f "$HUB_CONFIG" ]]; then
   echo "Creating an empty $HUB_CONFIG..."
   install -d -o "$BBX_USER" -g "$BBX_USER" -m 0700 "$BBX_HOME/.config" "$BBX_HOME/.config/beebox"
-  printf '{ "boxes": {} }\n' > "$HUB_CONFIG"
+  printf '{ "port": 3210, "host": "127.0.0.1", "boxes": {} }\n' > "$HUB_CONFIG"
   chown "$BBX_USER:$BBX_USER" "$HUB_CONFIG"
   chmod 0644 "$HUB_CONFIG"
 else
