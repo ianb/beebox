@@ -824,11 +824,12 @@ kept here as the record.
    bearers it can now check by hash from `hub-meta.json`. The third, the
    `bbx_mobile` cookie, is signed with a per-box secret
    (`.beebox/mobile-session.secret`) that the box must not publish, so a hub
-   outside the box cannot verify it. What is built: a request carrying a
-   cookie of the right shape is passed to the box, which verifies it (a bad
-   cookie gets the box's 401). The one cost: a cookie-shaped request can
-   wake a sleeping box unverified, the same class of wake the hash check
-   closes for bearers. Options for the boxholder: (a) accept, as built; (b)
+   outside the box cannot verify it. What is built: any request carrying a
+   `bbx_mobile` cookie, whatever its value, is passed to the box, which
+   verifies it (a bad cookie gets the box's 401). The one cost: a request
+   with `Cookie: bbx_mobile=x` wakes a sleeping box unverified, the same
+   class of wake the hash check closes for bearers (review round 3 confirmed
+   the wording: no shape is checked, only the cookie's presence). Options for the boxholder: (a) accept, as built; (b)
    sign mobile cookies with a key derived from the per-box hub secret
    (HKDF), which the hub holds for that box and no sibling knows, so the hub
    verifies cookies too: about 40 engine lines, cookies re-minted after a

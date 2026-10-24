@@ -12,9 +12,9 @@
  *
  * The mobile COOKIE is the one credential the hub cannot verify from metadata:
  * it is signed with a per-box secret the box must not publish. On a unit
- * host a request carrying a cookie of the right shape is passed through to the
- * box, which verifies it; this is the one credential that can wake a box
- * unverified (docs/plans/per-box-units.md, open question 7).
+ * host any request carrying a `bbx_mobile` cookie, whatever its value, is
+ * passed through to the box, which verifies it; this is the one credential
+ * that can wake a box unverified (docs/plans/per-box-units.md, question 7).
  */
 
 import type http from "node:http";
@@ -34,8 +34,8 @@ function cookieHeader(headers: GateHeaders): string | undefined {
 
 /**
  * Does the request carry a credential of the box's mobile devices? On a unit
- * host a bearer is verified by hash; a cookie-shaped request passes to the box
- * for verification (module doc). For the proxy gate only: the box answers.
+ * host a bearer is verified by hash; a request with a `bbx_mobile` cookie
+ * passes to the box for verification (module doc). For the proxy gate only.
  */
 export async function mobileAuthed(boxRoot: string, headers: GateHeaders): Promise<boolean> {
   if (!hubMetaReadsEnabled()) return verifyMobileRequest(boxRoot, headers);
