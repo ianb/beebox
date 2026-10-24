@@ -113,7 +113,7 @@ void test("an empty group says None yet", async (t) => {
   t.check(text(view.container), "Empty0None yet");
 });
 
-/** The text-colour classes on the open group's header, count, an external member's title and URL line, and a missing member's label. */
+/** The text-colour classes on the open group's header, count, an external member's title and URL line, a missing member's label, and the "+N more" action. */
 function inkClasses(container: Element) {
   const colour = (el: Element | null) => (el?.getAttribute("class") ?? "").split(" ").filter((c) => c.startsWith("text-") && !/^text-(xs|sm|left)$/.test(c));
   return {
@@ -122,11 +122,12 @@ function inkClasses(container: Element) {
     title: colour(container.querySelector('a[target="_blank"] div')),
     path: colour(container.querySelector('a[target="_blank"] div:last-child')),
     missing: colour([...container.querySelectorAll("span")].find((el) => el.textContent === "Missing") ?? null),
+    more: colour([...container.querySelectorAll("button")].find((el) => el.textContent === "+2 more") ?? null),
   };
 }
 
 void test("rows on a material take the card's ink; in a white panel they keep app ink", async (t) => {
-  const onCard = await render(h(MaterialContext.Provider, { value: true }, h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true })));
+  const onCard = await render(h(MaterialContext.Provider, { value: true }, h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true, onMore: () => { /* never clicked here */ } })));
   t.teardown(() => onCard.unmount());
   t.check(inkClasses(onCard.container), {
     header: ["text-card-ink"],
@@ -134,8 +135,9 @@ void test("rows on a material take the card's ink; in a white panel they keep ap
     title: ["text-card-ink"],
     path: ["text-card-soft"],
     missing: ["text-card-ink"],
+    more: ["text-card-soft"],
   });
-  const inPanel = await render(h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true }));
+  const inPanel = await render(h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true, onMore: () => { /* never clicked here */ } }));
   t.teardown(() => inPanel.unmount());
   t.check(inkClasses(inPanel.container), {
     header: ["text-warm-800"],
@@ -143,5 +145,6 @@ void test("rows on a material take the card's ink; in a white panel they keep ap
     title: ["text-warm-900"],
     path: ["text-warm-700"],
     missing: ["text-danger"],
+    more: ["text-warm-700"],
   });
 });

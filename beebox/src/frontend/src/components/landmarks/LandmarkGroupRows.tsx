@@ -52,6 +52,7 @@ export function LandmarkGroupRows<Link extends { ref: string }>({
   const [open, setOpen] = useState(defaultOpen === true);
   const overflow = group.count - group.children.length;
   const { head, soft, hover, rule } = useLandmarkRowInk();
+  const onMaterial = useMaterial(undefined);
   return (
     <div className={className}>
       <button
@@ -75,7 +76,7 @@ export function LandmarkGroupRows<Link extends { ref: string }>({
           {overflow > 0 ? (
             <div className={`px-3 py-2 text-xs ${soft}`}>
               {onMore === undefined ? `+${overflow} more` : (
-                <InlineAction intent="subtle" onClick={onMore}>{`+${overflow} more`}</InlineAction>
+                <InlineAction intent="subtle" material={onMaterial} onClick={onMore}>{`+${overflow} more`}</InlineAction>
               )}
             </div>
           ) : null}
