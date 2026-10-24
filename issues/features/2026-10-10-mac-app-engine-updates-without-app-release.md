@@ -1,6 +1,6 @@
 ---
 title: "Mac app: update the beebox engine image without a new app release"
-workstream: unknown
+workstream: mac-app-updates
 area: mac-app
 labels: [installable-app, updates]
 filed-by: agent
