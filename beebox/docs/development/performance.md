@@ -250,8 +250,8 @@ js-yaml, 3–4× faster than the `yaml` package on box cards, and hands `yaml`
 any text the two could read differently, so values and errors stay `yaml`'s
 (`docs/plans/yaml-read-parser.md`). Writes and comment-preserving edits stay
 on `yaml`. On the test1 clone (2026-10-24, CPU time, median of 11, during a
-full test run) the switch saved about 120 ms of `bbx validate` (950–980 →
-830–860 ms) and 20–40 ms each of `bbx todos` and `bbx status`, over two
+full test run) the switch saved 90–120 ms of `bbx validate` (920–980 →
+830–860 ms) and 20–40 ms each of `bbx todos` and `bbx status`, over three
 sessions. Use CPU time (`/usr/bin/time -p`,
 user + sys) when the machine is loaded: wall time at load 30 or more varies
 by more than these differences.
@@ -268,8 +268,8 @@ file under the directories, values and errors both, and times each parser
 over all of them. It prints differing paths, never content, and exits 1 on a
 difference. Run it after upgrading js-yaml or `yaml`, or after editing the
 fallback pattern in `read-yaml.ts`. On 2026-10-24: test1 clone, 400 inputs,
-`yaml` 27 ms, `parseYaml` 6 ms; all local boxes and this repo, 17,764 inputs,
-1,684 ms against 554 ms; no differences.
+`yaml` 24 ms, `parseYaml` 8 ms; all local boxes and this repo, 17,764 inputs,
+1,550 ms against 950 ms; no differences.
 
 ## Checking against production
 

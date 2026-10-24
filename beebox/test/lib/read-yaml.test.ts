@@ -28,8 +28,9 @@ void test("Dates, yes/no and merge keys read as the YAML 1.2 core schema does", 
 
 // Inputs js-yaml alone reads differently: signed hex and leading-dot numbers,
 // `0b` literals, null keys, collection keys, an unknown tag (js-yaml throws),
-// a `%YAML 1.1` directive, and keys that collide only as strings (js-yaml
-// throws). Each gives `yaml`'s value.
+// a `%YAML 1.1` directive, keys that collide only as strings (js-yaml
+// throws), numbers that overflow (js-yaml keeps the text), and a key starting
+// `---` (js-yaml takes it as a document marker). Each gives `yaml`'s value.
 void test("Inputs js-yaml reads differently give yaml's value", async (t) => {
   const inputs = [
     "a: -.5\nb: +0x1F\nc: 0b101\nd: -0",
@@ -41,6 +42,8 @@ void test("Inputs js-yaml reads differently give yaml's value", async (t) => {
     "a: !foo bar",
     "%YAML 1.1\n---\na: yes",
     "1: a\n\"1\": b",
+    `a: 1e999\nb: ${"9".repeat(400)}`,
+    "---x: v",
   ];
   t.check(
     inputs.map((text) => parseYaml(text)),
@@ -54,15 +57,27 @@ void test("Inputs js-yaml reads differently give yaml's value", async (t) => {
       { a: "bar" },
       { a: true },
       { "1": "b" },
+      { a: Infinity, b: Infinity },
+      { "---x": "v" },
     ],
   );
 });
 
 // Malformed text throws `yaml`'s error, so messages keep `yaml`'s wording.
+// js-yaml accepts the last two: a flow collection continued below its key's
+// indentation, and a bare carriage return.
 void test("Malformed YAML throws the yaml package's error", async (t) => {
   t.checkThrows(
     () => parseYaml("a: [1, 2"),
     "YAMLParseError: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 9:\n\na: [1, 2\n        ^\n",
+  );
+  t.checkThrows(
+    () => parseYaml("a: [1,\n2]"),
+    "YAMLParseError: Flow sequence in block collection must be sufficiently indented and end with a ] at line 2, column 1:\n\na: [1,\n2]\n^\n",
+  );
+  t.checkThrows(
+    () => parseYaml("a: 1\rb: 2"),
+    "YAMLParseError: Nested mappings are not allowed in compact mappings at line 1, column 4:\n\na: 1\rb: 2\n   ^\n",
   );
 });
 

@@ -52,12 +52,13 @@ The boxholder chose read-only parsing on js-yaml, with writes and edits on
 `yaml`. Implemented in workstream perf-easy-wins
 (`beebox/docs/plans/yaml-read-parser.md`): 37 read sites use
 `src/lib/read-yaml.ts`, which parses with js-yaml and hands `yaml` any text
-the two could read differently (anchors, tags, signed and `0b` numbers, null
-and collection keys, anything js-yaml rejects), so values, errors, and
-`yaml`'s alias limit are unchanged. `field-edits.ts` and the public
+the two could read differently (anchors, tags, document markers, signed,
+`0b`, and overflowing numbers, null and collection keys, multi-line flow
+collections, anything js-yaml rejects), so values, errors, and `yaml`'s alias
+limit are unchanged. `field-edits.ts` and the public
 `beebox/schema` export stay on `yaml`. `pnpm perf:yaml-read` compares the two
 on a box: 17,764 inputs across the local boxes and the repo, no differences,
-1,684 ms against 554 ms. CPU time on test1: `bbx validate` about 120 ms
-less (950–980 → 830–860 ms), `bbx todos` and `bbx status` 20–40 ms less. `yaml` is still
+1,550 ms against 950 ms (test1 alone: 24 against 8 ms). CPU time on test1: `bbx validate` 90–120 ms
+less (920–980 → 830–860 ms), `bbx todos` and `bbx status` 20–40 ms less. `yaml` is still
 imported on card reads, because `src/cards/frontmatter.ts` also holds the
 write helpers.

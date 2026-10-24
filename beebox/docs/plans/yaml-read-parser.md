@@ -104,15 +104,19 @@ use.
   /** YAML text as plain values, as `yaml` reads it. Empty text is null. */
   export function parseYaml(text: string): unknown;
   ```
-  If the text matches `YAML_ONLY`, a pattern for every construct js-yaml
-  reads differently (below), it calls `yaml`'s `parse`. Otherwise it calls
+  If the text matches `YAML_ONLY`, patterns for the constructs js-yaml
+  reads differently (below), or has a line that opens more flow brackets
+  than it closes, it calls `yaml`'s `parse`. Otherwise it calls
   `load(text, { schema: CORE_SCHEMA })` and maps `undefined` (an empty or
   comment-only document) to `null`. If js-yaml throws, it calls `yaml`'s
   `parse`, which returns its own value (an unknown tag, keys that collide only
   in js-yaml) or throws its own error. `YAML_ONLY` matches anchors and tags,
-  a `%` directive, signed `0x`/`0o`/`0b`/zero and signed leading-dot numbers,
-  unsigned `0b`, null and empty keys, and collection or explicit `?` keys.
-  Each repetition in it starts after a fixed character, so the test is linear.
+  a `%` directive, a line starting `---` or `...`, a bare carriage return,
+  signed `0x`/`0o`/`0b`/zero and signed leading-dot numbers, unsigned `0b`,
+  numbers that may overflow (a three-digit exponent, 300 digits), null and
+  empty keys, and collection or explicit `?` keys. Each repetition in it
+  starts at most once per run of the characters it repeats over, so the test
+  is linear.
 - **Vocabulary lock-ins:** `src/lib/read-yaml.ts` is where read-only parsing
   lives. `yaml` imports remain for `stringify`, `parseDocument`,
   `Document`, node helpers, `YAMLParseError`, an edit planned from parsed
@@ -139,25 +143,39 @@ none
 Checks (2026-10-24), each comparing `parseYaml` with `yaml.parse` on value,
 error name, and error message:
 
-- Corpus: every `.card`/`.md` frontmatter block and `.yaml` file in the
-  developer's local boxes (test1, other test and demo boxes, and backups) and
-  this repo, 17,857 inputs: no differences. 156 take the fallback by pattern.
-  One box directory was unreadable from the worktree and is not in the count.
-  Time over the corpus: `yaml` 1,700 ms, `parseYaml` 560 ms; on the test1
-  clone alone, 28 ms against 7 ms.
-- Fuzz: every scalar of up to 3 characters over a 24-character alphabet of
-  number, null, and key characters, as a mapping value, sequence item, flow
-  item, flow value, and key, plus the edge cases in the test: 72,148 inputs,
-  no differences.
+- Corpus (`pnpm perf:yaml-read`): every `.card`/`.md` frontmatter block and
+  `.yaml` file in the developer's local boxes (test1, other test and demo
+  boxes, and backups) and this repo, 17,764 inputs: no differences. About 200
+  take the fallback. One box directory was unreadable from the worktree and
+  is not in the count. Time over the corpus: `yaml` 1,550 ms, `parseYaml`
+  950 ms (large non-card YAML files with signed numbers or multi-line flow
+  collections take the fallback); on the test1 clone, 24 ms against 8 ms.
+- Scalar fuzz: every string of up to 3 characters over 24 number, null, and
+  key characters, and up to 5 over 10 number characters, as a mapping value,
+  sequence item, flow item, flow value, and key, plus the edge cases in the
+  test: 627,713 inputs, no differences.
+- Structural fuzz: 500,000 random documents of 1–5 lines mixing indentation,
+  tabs, flow collections across lines, block scalars, comments, quotes, and
+  `\n`/`\r\n`/`\r` line ends; about 78,600 took the js-yaml path. No
+  differences.
+- Review rounds found what the first two checks missed: overflow to
+  `Infinity`, under-indented multi-line flow collections, bare carriage
+  returns (round 2), and the fuzz then found `---x` keys. Each is now in the
+  test.
+- Scaling: lines of 8K–64K repeated brackets, spaces, digits, and dashes each
+  parse in under 20 ms.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | A construct js-yaml reads differently that `YAML_ONLY` misses | read-yaml test pins each known one; corpus and fuzz checks above | none beyond the pattern | Silent: a differing value |
-| `YAML_ONLY` backtracks on long text (a first version took 3.7 s on a 77 KB card) | no (a timing assertion would be flaky) | the pattern's bounded repetitions | Clear: a slow command |
+| `YAML_ONLY` backtracks on long text (a first version took 3.7 s on a 77 KB card; round 2 found 600 ms on a 32K-space line) | no (a timing assertion would be flaky); scaling probe above | each repetition starts once per run | Clear: a slow command |
 | Nested aliases expand without limit | read-yaml test | anchors match `YAML_ONLY`, so `yaml`'s limit applies | Clear: `yaml`'s error |
 
-No critical gap. The first row is the residual risk of the design: it needs a
-YAML construct outside the fuzzed scalars and the known list, in a box.
+No critical gap. The first row is the residual risk of the design: a YAML
+construct outside the fuzzed shapes and the known list, in a box. Known
+instance: a flow collection continued on the next line where a quoted `]` or
+`}` balances the line's opener (`a: ["]",` then an under-indented line) is
+accepted where `yaml` rejects it; it needs malformed text.
 
 ## Agent-flow / user-flow edge cases
 
