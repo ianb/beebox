@@ -188,8 +188,9 @@ Skip: infrastructural.
 ## What will hold this after it ships
 
 The host audit (`schedules/cross-box-leak-scan/host-audit.ts`) asserts the
-table: each box home 0750 and owned by its user and group, no box user in
-another box's group, `/etc/beebox/box.env` free of secrets, the hub secret
+table: each box home 0751 and owned by its user and group, with `box/` and
+`box/.beebox/` 0751 and everything else 0700, no box user in another box's
+group, `/etc/beebox/box.env` free of secrets, the hub secret
 file 0640 `beebox:beebox-boxes`, the shared cache group as specified, and
 each box's secret store matching the master's grants for it. The Docker smoke in the parent's Track C checks the cross-user
 read refusal.

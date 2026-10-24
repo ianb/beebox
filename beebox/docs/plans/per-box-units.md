@@ -284,7 +284,10 @@ ceiling, and one provisioner that `deploy.sh` keeps current.
   separation: the scheduler runs as its own user (next noun).
 - **Scheduler user**: `beebox-sched`, running the scheduler daemon, the
   only account with a sudo grant to `bbx-box-run`. New.
-- **Hub metadata file**: `<box root>/.beebox/hub-meta.json`, 0644, written
+- **Hub metadata file**: `<box root>/.beebox/hub-meta.json`, 0644, with
+  the box root and `.beebox/` kept 0751 by the engine when it writes the
+  file (the home is 0751 too), so the hub can reach it by path without
+  listing anything; the engine's other `.beebox/` files stay 0600. Written
   by the engine whenever its inputs change: `allowedEmails` (from
   `_config/box.json`), whether `chat-schedules.json` holds a pending
   schedule, and SHA-256 hashes of the box's agent token, mobile device
@@ -662,7 +665,7 @@ one row per shared file, with its probe chunk first.
 | Box unit fails to start (bad env file, migration parked the entrypoint) | Track C smoke | systemd `Restart=on-failure`, start limit; hub 503 with the unit's state and last journal line | clear |
 | Socket accepts, service hangs before listening on the fd | no | Track D readiness timeout 30 s then 503 "box/<slug> did not answer" | clear |
 | Idle exit while a WebSocket chat is open | Track A test (open WS keeps alive) | the ledger counts open sockets | clear |
-| Idle exit while a long GET is in flight | Track A test (in-flight request keeps alive, drain waits) | the ledger counts every request; the drain bounds the wait | clear |
+| Idle exit while a long GET is in flight | Track A test (in-flight request keeps alive, drain waits) | the ledger counts every request; the drain waits for it, with no deadline | clear |
 | Idle exit with a pending chat schedule | Track A test | keep rule (reuses the hub's loader) | clear |
 | Idle exit races a connection: listener closed, systemd queues it, the next instance serves it | Track A test (connect during drain) | socket activation semantics | clear, a slow response |
 | Reboot with pending chat schedules | Track D test (provider wakes schedule holders at start) | Track D start-up wake | clear |
@@ -779,8 +782,12 @@ install` and `bbx tick` behave as before from inside a box.
   issue asks for lives here, since it needs two users.
 - **Production drift** by `schedules/cross-box-leak-scan`'s host audit,
   extended to assert each box home is owned by its `bbx-<slug>` user and
-  mode 0750, that no `bbx-*` user can read another's home, and that
-  `/run/beebox/hub-secret.env` is 0640 `beebox:beebox-boxes`.
+  mode 0751 with `box/` and `box/.beebox/` 0751 and every other entry
+  0700, that `hub-meta.json` is the only world-readable file under
+  `.beebox/`, that no `bbx-*` user can read another's home contents, and
+  that `/run/beebox/hub-secret.env` is 0640 `beebox:beebox-boxes`. A
+  hub-user read of each box's `hub-meta.json` is part of the audit, so a
+  mode drift that would blind the hub is reported.
 - No new test tier; the Docker smoke is an existing one.
 
 ## Implementation order
