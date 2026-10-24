@@ -24,6 +24,7 @@ import { scanBundle, type LeakKind } from "../../../../publish/leak-scan.js";
 import { setDerivedContains } from "../../../search/contains-update.js";
 import type { ReviewOutput, TitleOutput } from "../reviewer.js";
 import type { TitleOwner } from "../state.js";
+import { nonEmptyString } from "../../../../shared/optional-string.js";
 
 /**
  * What rejects a generated string.
@@ -82,10 +83,7 @@ export async function readHuskFields(boxRoot: string, relPath: string): Promise<
   // A missing or unparseable block reads as no fields.
   const parsed = readCardFrontmatter(content);
   if (parsed === null) return { title: null, account: null, reviewSpan: null, firstMessage: null };
-  const str = (key: string): string | null => {
-    const value = parsed[key];
-    return typeof value === "string" && value !== "" ? value : null;
-  };
+  const str = (key: string): string | null => nonEmptyString(parsed[key]);
   return {
     title: str("title"),
     account: str("contains-evidence"),

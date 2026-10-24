@@ -36,6 +36,7 @@ import { TaskStatus } from "./browser-task/TaskStatus";
 import { BatchList } from "./browser-task/BatchList";
 import { RunsTable } from "./browser-task/RunsTable";
 import { INBOX_DIR, PROCESSED_DIR, fetchBoxText, loadBatches, schemaPath, type BatchSummary } from "./browser-task/data";
+import { stringOrNull } from "@shared/optional-string";
 
 interface AttachState {
   schemaText: string | null;
@@ -173,7 +174,7 @@ interface TaskFields {
 
 /** Narrow the card's frontmatter to what the view shows; a malformed value reads as absent. */
 function readTaskFields(fm: Record<string, unknown>): TaskFields {
-  const str = (key: string): string | null => (typeof fm[key] === "string" ? fm[key] : null);
+  const str = (key: string): string | null => stringOrNull(fm[key]);
   const subject = fm["subject"];
   const start = fm["start"];
   return {

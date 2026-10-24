@@ -26,6 +26,7 @@ import { splitMarkdownSections } from "../../../shared/markdown-sections.js";
 import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
 import { markdownTitle } from "../../../shared/leading-title-heading.js";
 import { parseFrontmatterObject, splitCardContent } from "../../../cards/frontmatter.js";
+import { nonBlankString } from "../../../shared/optional-string.js";
 
 /** One Orama document. `fragment` is "" for the card's own document. */
 export interface SearchDoc {
@@ -275,7 +276,7 @@ function isRefObject(value: unknown): value is { ref: string } {
 }
 
 function str(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+  return nonBlankString(value) ?? undefined;
 }
 
 function strArray(value: unknown): string[] {

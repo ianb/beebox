@@ -41,6 +41,7 @@ import type { TodoItem, TodoLocator } from "../collect-types.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { invariant } from "../../../shared/invariant.js";
 import { flattenNodes, resolveTodoRefs, type FlattenResult } from "../../../shared/todo-text.js";
+import { stringOrNull } from "../../../shared/optional-string.js";
 
 // Markdoc ships dual CJS/ESM but its `exports` field is null, so Node ESM
 // imports resolve to the CJS bundle — which only exposes a default export.
@@ -293,5 +294,5 @@ function lineFor(lines: number[]): string {
 }
 
 function stringAttr(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
+  return stringOrNull(value) ?? undefined;
 }

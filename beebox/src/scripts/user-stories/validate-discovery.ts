@@ -16,6 +16,7 @@ import { errorMessage } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
 
 import { DISCOVERY_WORK } from "./work-dir.js";
+import { nonBlankString } from "../../shared/optional-string.js";
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const BASE = DISCOVERY_WORK;
@@ -70,9 +71,7 @@ const stories: Story[] = [];
 const seenIds = new Map<string, string>();
 
 function stringField(record: Record<string, unknown>, key: string): string | undefined {
-  const value = record[key];
-  if (typeof value !== "string" || value.trim() === "") return undefined;
-  return value;
+  return nonBlankString(record[key]) ?? undefined;
 }
 
 const REQUIRED_FIELDS = ["id", "title", "story", "group", "audience", "evidence"];
