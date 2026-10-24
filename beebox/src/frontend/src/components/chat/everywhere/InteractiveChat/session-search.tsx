@@ -23,6 +23,7 @@ import { Highlight } from "../../../search/SearchResults";
 import { agoOnClock } from "../../../../lib/relative-time";
 import { useNow } from "../../../../lib/use-now";
 import { sessionIdHint } from "./session-list-grouping";
+import { StatusMessage } from "../../../ui/StatusMessage";
 
 /** A query short enough to act on (the debounce has settled on it). */
 const MIN_QUERY = 2;
@@ -111,7 +112,7 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
   // Re-render each minute so the hit ages stay current.
   useNow(60_000);
   if (state.kind === "loading") {
-    return <div className="px-3 py-2 text-sm text-warm-700">Searching…</div>;
+    return <StatusMessage variant="menu">Searching…</StatusMessage>;
   }
   if (state.kind === "error") {
     return (

@@ -3,6 +3,8 @@
  */
 
 import { getApiBase } from "../../../api";
+import { isImageFileName } from "../../../lib/binary-files";
+import { Badge } from "../../ui/Badge";
 import { ExternalLink } from "../../ui/ExternalLink";
 import { Image } from "../../ui/Image";
 import { Pre } from "../../ui/Pre";
@@ -12,12 +14,15 @@ import { buildHistoryBlobUrl } from "./history-blob-url";
 
 // --- Binary file rendering ---
 
-const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".svg"];
 const AUDIO_EXTS = [".webm", ".m4a", ".mp3", ".wav", ".ogg"];
 
 function getFileExt(filePath: string): string {
   const dot = filePath.lastIndexOf(".");
   return dot !== -1 ? filePath.substring(dot).toLowerCase() : "";
+}
+
+function baseName(filePath: string): string {
+  return filePath.slice(filePath.lastIndexOf("/") + 1);
 }
 
 function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
@@ -27,7 +32,7 @@ function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
   const blobHash = file.meta.includes("deleted") ? `${hash}^` : hash;
   const blobUrl = buildHistoryBlobUrl({ apiBase: getApiBase(), hash: blobHash, filePath: file.path });
 
-  if (IMAGE_EXTS.includes(ext)) {
+  if (isImageFileName(baseName(file.path))) {
     return (
       <div className="px-3 py-2">
         <Image src={blobUrl} lightboxSrc={blobUrl} alt={file.path} size="md" lightbox />
@@ -67,7 +72,7 @@ export function DiffTab({ files, hash }: { files: DiffFile[]; hash: string }) {
           <div className="px-3 py-1.5 bg-warm-50 flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono font-medium text-warm-700">{file.path}</span>
             {file.meta.filter((m) => m !== "new file" && m !== "deleted" && m !== "moved").map((m, mi) => (
-              <span key={mi} className="text-[10px] px-1.5 py-0.5 rounded bg-warning-100 text-warning-dark">{m}</span>
+              <Badge key={mi} tone="warning" size="sm">{m}</Badge>
             ))}
           </div>
           {file.binary ? (

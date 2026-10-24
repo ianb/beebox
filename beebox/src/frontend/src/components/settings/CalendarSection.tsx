@@ -10,6 +10,7 @@ import { Row } from "../ui/Row";
 import { Card } from "../ui/Card";
 import { Heading } from "../ui/Heading";
 import { Text } from "../ui/Text";
+import { Notice } from "../ui/Notice";
 import { GoogleConnectLink } from "./GoogleConnectLink";
 
 type AvailableCalendar = RouterOutput["calendar"]["available"][number];
@@ -77,9 +78,7 @@ export function CalendarSection() {
     return (
       <Card material padding="lg" border="none" shadow>
         <Heading level={2} className="mb-4">Google Calendar</Heading>
-        <div className="p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
-          {error}
-        </div>
+        <Notice tone="warning">{error}</Notice>
         <GoogleConnectLink id="bbx-settings-calendar-connect-google" />
       </Card>
     );

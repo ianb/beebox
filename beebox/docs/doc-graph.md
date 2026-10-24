@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-24T00:23:20Z
-Total documents: 570
+Generated: 2026-10-24T01:04:39Z
+Total documents: 571
 
 ## Issues
 
@@ -198,6 +198,7 @@ Referenced by:
 - docs/implemented-plans/first-run-openers.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/frontend-dom-harness.md:68 (mention) — - Monorepo rule on dependencies (`AGENTS.md`, *"Treat unsolicited tool output
 - docs/implemented-plans/frontend-unify-formatters-refresh-storage.md:59 (mention) — - Root `AGENTS.md`, "Implement and verify": reuse the platform mechanism
+- docs/implemented-plans/frontend-visual-near-duplicates.md:61 (mention) — - Root `AGENTS.md`: reuse the existing primitive before inventing one. A, C, E,
 - docs/implemented-plans/ios-audio-session-routing.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/ios-per-box-device-lock.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/knowledge-audit-plugins.md:43 (mention) — - Root `AGENTS.md`, knowledge-audit guidance: "When fixing failures, prefer
@@ -3416,12 +3417,13 @@ References:
 
 #### docs/development/performance.md
 
-Title: "Measuring page-load performance" | 203 lines | current reference
+Title: "Measuring performance" | 261 lines | current reference
 
 Referenced by:
-- docs/development.md:42 (link) — | [Performance](development/performance.md) | Measuring page loads and box starts: the perf hub, the browser harness, th
+- docs/development.md:42 (link) — | [Performance](development/performance.md) | Measuring page loads, box starts, test-process and `bbx` start costs: the
 - src/dev/AGENTS.md:17 (mention) — | `perf/` | Page-load and box-start measurement: `pnpm perf:hub` (local production-shaped hub + edge stand-in), `perf:lo
 - ../issues/bugs/2026-10-07-box-first-load-is-slow.md:77 (mention) — Measurement tooling and procedure: `beebox/docs/development/performance.md`.
+- ../issues/bugs/2026-10-22-perf-load-hangs-silently-on-a-wedged-browse-daemon.md:40 (mention) — `beebox/docs/development/performance.md`.
 
 #### docs/development/technologies.md
 
@@ -5349,6 +5351,19 @@ References:
 - → ../issues/closed/code-quality/2026-10-23-card-display-name-helpers-disagree.md (frontmatter)
 - → ../issues/closed/code-quality/2026-10-23-browser-storage-keys-and-reads-inconsistent.md (frontmatter)
 - → ../issues/bugs/2026-07-31-browse-list-live-refresh-not-firing.md (link)
+- → AGENTS.md (mention)
+
+#### docs/implemented-plans/frontend-visual-near-duplicates.md
+
+Title: "Merge the frontend's visual near-duplicates onto shared primitives" | 302 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/code-quality/2026-10-23-frontend-visual-near-duplicates.md:12 (link) — Closed by the plan [frontend-visual-near-duplicates](../../../beebox/docs/implemented-plans/frontend-visual-near-duplica
+- ../issues/code-quality/2026-10-23-frontend-smaller-near-duplicates.md:11 (link) — Partly addressed by [the near-duplicates plan](../../beebox/docs/implemented-plans/frontend-visual-near-duplicates.md) (
+
+References:
+- → ../issues/closed/code-quality/2026-10-23-frontend-visual-near-duplicates.md (frontmatter)
+- → ../issues/code-quality/2026-10-23-frontend-smaller-near-duplicates.md (frontmatter)
 - → AGENTS.md (mention)
 
 #### docs/implemented-plans/gmail-explicit-action.md

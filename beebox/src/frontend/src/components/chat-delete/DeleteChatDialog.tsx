@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useModalDialog } from "../../hooks/useModalDialog";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
+import { ModalCard } from "../ui/ModalCard";
 import { ArchiveChatSection } from "./ArchiveChatSection";
 
 type DeleteResult = RouterOutput["chat"]["deleteSession"];
@@ -22,20 +22,10 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
   const utils = trpc.useUtils();
   const conversation = useBoxConversation();
   const mutation = trpc.chat.deleteSession.useMutation();
-  const pendingRef = useRef(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-  useEffect(() => {
-    pendingRef.current = mutation.isPending;
-  }, [mutation.isPending]);
 
   useEffect(() => {
     if (open) setResult(null);
   }, [open]);
-  useModalDialog({ dialog: dialogRef, open });
 
   if (!open) return null;
   const target = label ?? `Chat ${sessionId.slice(0, 8)}`;
@@ -69,13 +59,13 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
   };
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-labelledby="delete-chat-title"
-      className="m-auto max-h-[calc(100%-3rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg bg-white p-5 shadow-xl backdrop:bg-black/60"
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!pendingRef.current) onCloseRef.current();
+    <ModalCard
+      open
+      labelledBy="delete-chat-title"
+      initialFocus="#bbx-chat-delete-cancel"
+      onCancel={() => {
+        // Escape is ignored while the delete is in flight.
+        if (!mutation.isPending) onClose();
       }}
     >
         <h2 id="delete-chat-title" className="text-lg font-semibold text-warm-900">
@@ -127,14 +117,14 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
         ) : null}
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button id="bbx-chat-delete-cancel" autoFocus intent="secondary" onClick={onClose} disabled={mutation.isPending}>
+          <Button id="bbx-chat-delete-cancel" intent="secondary" onClick={onClose} disabled={mutation.isPending}>
             Cancel
           </Button>
           <Button id="bbx-chat-delete-confirm" intent="destructive" onClick={remove} loading={mutation.isPending} loadingLabel="Deleting…">
             {cleanup ? "Retry cleanup" : "Delete permanently"}
           </Button>
         </div>
-    </dialog>
+    </ModalCard>
   );
 }
 

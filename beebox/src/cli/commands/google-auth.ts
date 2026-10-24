@@ -11,8 +11,6 @@
  */
 
 import { Command } from "commander";
-import Fastify from "fastify";
-import open from "open";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { isRecord } from "../../shared/is-record.js";
 import {
@@ -59,7 +57,7 @@ export const googleAuthCommand = new Command("google-auth")
         return;
       }
 
-      const oauth2Client = createOAuth2Client({ clientId, clientSecret });
+      const oauth2Client = await createOAuth2Client({ clientId, clientSecret });
 
       const authUrl = oauth2Client.generateAuthUrl({
         access_type: "offline",
@@ -94,7 +92,9 @@ export const googleAuthCommand = new Command("google-auth")
           <p>Check the terminal for details.</p>
         </div></body></html>`;
 
-      // Start ephemeral server to receive the callback
+      // Start ephemeral server to receive the callback. Its packages load
+      // here, not with the CLI, which every `bbx` verb loads.
+      const [{ default: Fastify }, { default: open }] = await Promise.all([import("fastify"), import("open")]);
       const server = Fastify();
 
       const result = await new Promise<{ success: boolean; error?: string }>(

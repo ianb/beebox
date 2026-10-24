@@ -14,6 +14,7 @@ import * as path from "node:path";
 import { parseArgs } from "node:util";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { CdpConnection } from "./cdp.js";
 import { PERF_DIAG_KEY, makeBoxCold, perfResultsDir, perfSessionCookie, readDaemonPid, readPerfHubConfig } from "../local-hub.js";
 import { NETWORK_PROFILES, measurePageLoad, type PageLoadOptions } from "./page-load.js";
@@ -65,8 +66,14 @@ async function readServerStart(hubPort: number): Promise<ServerStart> {
 
 function cdpUrl(explicit: string | undefined): string {
   if (explicit !== undefined) return explicit;
-  // The browse skill's browser (bin/browse); starts its daemon when needed.
-  const out = execFileSync(path.join(REPO_ROOT, "bin", "browse"), ["get", "cdp-url"], { encoding: "utf-8" });
+  // The browse skill's browser (bin/browse); starts its daemon when needed. A
+  // wedged daemon blocks this call indefinitely, so it is bounded.
+  let out: string;
+  try {
+    out = execFileSync(path.join(REPO_ROOT, "bin", "browse"), ["get", "cdp-url"], { encoding: "utf-8", timeout: 60_000 });
+  } catch (e) {
+    fail(`bin/browse get cdp-url failed or took over 60 s (${errorMessage(e)}); the browse daemon may be wedged. Pass --cdp <ws-url> from a separate Chrome (docs/development/performance.md).`);
+  }
   const url = out.trim().split("\n").findLast((l) => l.startsWith("ws://"));
   return url ?? fail(`could not read a CDP URL from bin/browse: ${out}`);
 }
@@ -94,6 +101,13 @@ const OPTIONS = {
   verbose: { type: "boolean" },
   cdp: { type: "string" },
 } as const;
+
+let finished = false;
+// A browser that stops answering CDP leaves only pending promises, which do
+// not keep Node alive: without this the process exits 0 mid-run, silently.
+process.on("beforeExit", () => {
+  if (!finished) fail("perf:load: the event loop drained before the runs finished; the browser stopped answering CDP. Retry with --cdp <ws-url> from a separate Chrome (docs/development/performance.md).");
+});
 
 async function main(): Promise<void> {
   const { values } = parseArgs({ options: OPTIONS });
@@ -135,6 +149,7 @@ async function main(): Promise<void> {
   const representative = medianRun(records);
   if (values.verbose === true && representative) console.log(`\nmedian run waterfall (ms from navigation):\n${formatWaterfall(representative)}`);
   console.log(`\nresults: ${out}`);
+  finished = true;
 }
 
 main().catch((e: unknown) => {

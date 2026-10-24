@@ -9,6 +9,9 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import type { RouterOutput } from "../../lib/trpc/client";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
+import { Badge } from "../ui/Badge";
+import { StatusMessage } from "../ui/StatusMessage";
+import { phaseTone } from "../history/phase-tone";
 import { tickHadActivity } from "./ScheduleTicks";
 import { agoOnClock } from "../../lib/relative-time";
 import { formatDuration } from "@shared/relative-time";
@@ -44,9 +47,7 @@ function CommitRow({ commit }: { commit: LogEntry }) {
             {commit.hash.substring(0, 7)}
           </span>
           {phase ? (
-            <span className="text-xs bg-warm-100 text-warm-700 px-1.5 py-0.5 rounded">
-              {phase}
-            </span>
+            <Badge tone={phaseTone(phase)} size="sm">{phase}</Badge>
           ) : null}
         </div>
       </div>
@@ -85,9 +86,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
     <div className="py-2 flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-sm text-warm-700">
-          <span className="text-xs bg-info-50 text-primary px-1.5 py-0.5 rounded mr-1">
-            tick
-          </span>
+          <Badge tone="info" size="sm" className="mr-1">tick</Badge>
           {scripts.map((s, si) => {
             const style = scriptStatusStyle(s.status);
             return (
@@ -150,7 +149,7 @@ export function RecentActivity({ commits, ticks, loading, error }: RecentActivit
       </div>
 
       {loading ? (
-        <p className="text-sm text-warm-700 animate-pulse">Loading...</p>
+        <StatusMessage>Loading...</StatusMessage>
       ) : error ? (
         <p className="text-sm text-danger-dark">Failed to load: {error.message}</p>
       ) : display.length === 0 ? (

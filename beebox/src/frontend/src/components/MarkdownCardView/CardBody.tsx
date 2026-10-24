@@ -19,6 +19,7 @@ import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../../lib/sel
 import type { FileData } from "../../file-type-registry";
 import type { ReactNode } from "react";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import { StatusMessage } from "../ui/StatusMessage";
 
 /**
  * Subtle "Direct quotes from: …" subtitle when the doc body contains one
@@ -118,7 +119,7 @@ export function CardBody({
           </Markdown>
         </div>
       ) : hideEmptyBody ? null : (
-        <div className="text-sm text-warm-700 italic">No body content</div>
+        <StatusMessage className="p-4">No body content</StatusMessage>
       )}
     </>
   );

@@ -13,7 +13,9 @@ import {
 } from "@shared/commit-trailers";
 import { type HistoryCommit } from "../../../api";
 import { bbxSource } from "../../../lib/source-tag";
-import { Badge, type BadgeTone } from "../../ui/Badge";
+import { Badge } from "../../ui/Badge";
+import { StatusMessage } from "../../ui/StatusMessage";
+import { phaseTone } from "../phase-tone";
 import { useBoxNow } from "../../../lib/box-clock";
 import { agoOnClock } from "../../../lib/relative-time";
 
@@ -31,20 +33,8 @@ interface CommitTimelineProps {
   idPrefix: string;
 }
 
-const PHASE_TONE: Record<string, BadgeTone> = {
-  intake: "info",
-  transcribe: "info",
-  "describe-images": "info",
-  summarize: "warning",
-  "plan-extraction": "warning",
-  assemble: "warning",
-  extract: "warning",
-  archive: "success",
-  refresh: "info",
-};
-
 function PhaseBadge({ phase }: { phase: string }) {
-  return <Badge tone={PHASE_TONE[phase] ?? "neutral"} size="sm">{phase}</Badge>;
+  return <Badge tone={phaseTone(phase)} size="sm">{phase}</Badge>;
 }
 
 /**
@@ -87,32 +77,32 @@ function formatDuration(fromDate: string, toDate: string): string | null {
 }
 
 /**
- * Colored pill badges: "add N", "del N", "+X-Y in N" for modified files.
+ * Tone badges: "add N", "del N", "+X-Y in N" for modified files.
  */
 function FileStatBadges({ stat }: { stat: { added: number; modified: number; deleted: number; renamed: number; insertions: number; deletions: number } }) {
   return (
     <>
       {stat.added > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success-100 text-success-dark font-medium">
+        <Badge tone="success" size="sm">
           add {stat.added}
-        </span>
+        </Badge>
       ) : null}
       {stat.modified > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning-100 text-warning-dark font-medium">
+        <Badge tone="warning" size="sm">
           {stat.insertions > 0 || stat.deletions > 0
             ? `+${stat.insertions}-${stat.deletions} in ${stat.modified}`
             : `mod ${stat.modified}`}
-        </span>
+        </Badge>
       ) : null}
       {stat.renamed > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+        <Badge tone="info" size="sm">
           mv {stat.renamed}
-        </span>
+        </Badge>
       ) : null}
       {stat.deleted > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-danger-100 text-danger-dark font-medium">
+        <Badge tone="danger" size="sm">
           del {stat.deleted}
-        </span>
+        </Badge>
       ) : null}
     </>
   );
@@ -267,7 +257,7 @@ export function CommitTimeline({
         ));
       })}
 
-      {loading ? <div className="p-3 text-sm text-warm-700 text-center">Loading...</div> : null}
+      {loading ? <StatusMessage>Loading...</StatusMessage> : null}
 
       {hasMore && !loading ? <button
           id={`${idPrefix}-load-more`}

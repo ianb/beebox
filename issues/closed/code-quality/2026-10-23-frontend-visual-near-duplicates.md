@@ -1,6 +1,7 @@
 ---
 title: "Repeated frontend markup that needs a missing ui primitive or a visual decision"
-workstream: unattached
+workstream: dup-sweep-frontend
+resolution: implemented
 area: beebox
 labels: [code-quality]
 filed-by: agent
@@ -8,7 +9,9 @@ discovered-by: agent
 discovered-in: worktree-dup-sweep-frontend — frontend pass of the functional-duplication sweep
 ---
 
-Part of the [functional-duplication sweep](2026-10-22-functional-duplication-sweep.md).
+Closed by the plan [frontend-visual-near-duplicates](../../../beebox/docs/implemented-plans/frontend-visual-near-duplicates.md), commits 8c2371aea through 6f3b0f124.
+
+Part of the [functional-duplication sweep](../../code-quality/2026-10-22-functional-duplication-sweep.md).
 The sweep merged markup that rendered identically. These groups render
 differently today, so a merge changes how something looks or what a screen
 reader hears.

@@ -36,6 +36,7 @@ import { useNow } from "../../lib/use-now";
 import { Button } from "../ui/Button";
 import { MaterialContext } from "../ui/material";
 import { QUEUED_EDGE } from "./user-message/view";
+import { summarizeCaptureContents } from "./capture-message";
 
 /** Live refinement from a `capture-status` bus event (more granular than the query state). */
 export type CaptureLiveStatus = "preparing" | "transcribing" | "delivered" | "failed";
@@ -131,15 +132,6 @@ export function captureBubbleCaption(model: CaptureBubbleModel, nowMs: number): 
   return `still ${step} — ${formatDuration(ageMs)}`;
 }
 
-/** The bubble body: a compact tally of the captured media. */
-export function captureMediaSummary(counts: PendingCaptureCounts): string {
-  const parts: string[] = [];
-  if (counts.photos > 0) parts.push(`${String(counts.photos)} photo${counts.photos === 1 ? "" : "s"}`);
-  if (counts.audioSegments > 0) parts.push(`${String(counts.audioSegments)} clip${counts.audioSegments === 1 ? "" : "s"}`);
-  if (counts.files > 0) parts.push(`${String(counts.files)} file${counts.files === 1 ? "" : "s"}`);
-  return parts.length > 0 ? parts.join(", ") : "capture";
-}
-
 function CameraIcon() {
   return (
     <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
@@ -228,7 +220,7 @@ export function CaptureBubbleView(props: {
   const ageMs = captureBubbleAgeMs(model, now);
   const phase = captureBubblePhase(model, ageMs);
   const failed = phase === "failed-fresh" || phase === "failed-aged";
-  const summary = captureMediaSummary(model.counts);
+  const summary = summarizeCaptureContents(model.counts);
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
       <MaterialContext.Provider value>

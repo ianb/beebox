@@ -6,7 +6,7 @@
  * - Share's onClick calls captureTabScreenshot() DIRECTLY (via `shareViaPopup`,
  *   whose first statement is the capture) so getDisplayMedia keeps the click's
  *   user activation.
- * - Decline — and Escape / click-away — post `{declined:true}`.
+ * - Decline — and Escape / click-away — post `{declined:true}`, at most once.
  * - The popup auto-dismisses at `expiresAt` and posts nothing (the server times
  *   out honestly).
  * - One request at a time: the parent renders this for the FIFO head only.
@@ -15,8 +15,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDismiss } from "../../../../hooks/useDismiss";
 import { Button } from "../../../ui/Button";
+import { ModalCard } from "../../../ui/ModalCard";
 import { Row } from "../../../ui/Row";
 import { Hint } from "../../../ui/Hint";
 import { Heading } from "../../../ui/Heading";
@@ -32,7 +32,6 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
   /** Called once — with an indicator on a successful share, or null on decline/dismiss/timeout. */
   onResolved: (indicator: ScreenshotIndicator | null) => void;
 }) {
-  const cardRef = useRef<HTMLDivElement>(null);
   // Guard against a double-resolve: Share can race the auto-dismiss timer or an
   // Escape. Whoever fires first wins; later calls are dropped.
   const resolvedRef = useRef(false);
@@ -60,13 +59,14 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
     return () => clearTimeout(timer);
   }, [request.expiresAt, resolve]);
 
-  // Escape / click-away are a Decline: post declined, then resolve.
+  // Escape / click-away are a Decline: post declined, then resolve. The guard
+  // comes first, so a second dismissal (Escape after a click-away, or after
+  // the deadline) posts nothing.
   const decline = useCallback(() => {
+    if (resolvedRef.current) return;
     void declineViaPopup(request);
     resolve(null);
   }, [request, resolve]);
-
-  useDismiss({ root: cardRef, open: true, onDismiss: decline });
 
   // Once Share is clicked we unmount the dialog IMMEDIATELY, before the capture
   // grabs its frame — otherwise getDisplayMedia photographs this very dialog
@@ -87,29 +87,22 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
   if (sharing) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Screenshot request"
-    >
-      <div ref={cardRef} className="w-full max-w-sm rounded-2xl bg-warm-50 border border-warm-200 p-6 shadow-lg">
-        <Heading level={2}>
-          The agent wants to see this screen
-        </Heading>
-        <Hint className="mt-2">
-          Sharing sends a one-time screenshot of what you see now to the agent. You pick exactly what to
-          share in the next browser dialog.
-        </Hint>
-        <Row gap="sm" justify="end" className="mt-5">
-          <Button id="bbx-screenshot-consent-decline" intent="secondary" onClick={decline}>
-            Decline
-          </Button>
-          <Button id="bbx-screenshot-consent-share" intent="primary" onClick={share} loadingLabel="Sharing…">
-            Share screenshot
-          </Button>
-        </Row>
-      </div>
-    </div>
+    <ModalCard open labelledBy="bbx-screenshot-consent-title" onCancel={decline} onBackdropClick={decline}>
+      <Heading level={2} id="bbx-screenshot-consent-title">
+        The agent wants to see this screen
+      </Heading>
+      <Hint className="mt-2">
+        Sharing sends a one-time screenshot of what you see now to the agent. You pick exactly what to
+        share in the next browser dialog.
+      </Hint>
+      <Row gap="sm" justify="end" className="mt-5">
+        <Button id="bbx-screenshot-consent-decline" intent="secondary" onClick={decline}>
+          Decline
+        </Button>
+        <Button id="bbx-screenshot-consent-share" intent="primary" onClick={share} loadingLabel="Sharing…">
+          Share screenshot
+        </Button>
+      </Row>
+    </ModalCard>
   );
 }

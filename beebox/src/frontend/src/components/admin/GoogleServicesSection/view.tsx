@@ -15,6 +15,7 @@ import { adminArrivalKey, shouldAcknowledgeAdminArrival, shouldConsumeAdminArriv
 import { useCardVisible } from "../../chat/everywhere/card-context/context";
 import { CheckboxField } from "../../ui/fields/field";
 import { Button } from "../../ui/Button";
+import { Notice } from "../../ui/Notice";
 import { ExternalLink } from "../../ui/ExternalLink";
 import { useGoogleServices } from "./useGoogleServices";
 import { AdminSectionCard } from "../AdminSectionCard";
@@ -97,13 +98,13 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
       {status && status.hasTokens ? (
         <>
           {status.needsReauthSince ? (
-            <div className="mb-4 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
+            <Notice tone="error" className="mb-4">
               <span className="font-medium">Needs re-authorization</span>
               <p>
                 Google rejected the stored authorization — it expired or was revoked. Calendar,
                 Gmail and Drive sync are paused until you re-authorize.
               </p>
-            </div>
+            </Notice>
           ) : (
             <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm">
               <span className="font-medium text-success-dark">Connected</span>
@@ -125,14 +126,14 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
               ))}
             </div>
             {status.driveDocsApi !== null ? (
-              <div id="bbx-admin-google-drive-docs-api" className="mt-2 p-3 bg-warning-50 border border-warning-light rounded text-sm text-warning-dark space-y-1">
+              <Notice tone="warning" id="bbx-admin-google-drive-docs-api" className="mt-2 space-y-1">
                 <p>{status.driveDocsApi.message}</p>
                 {status.driveDocsApi.link !== null ? (
                   <ExternalLink id="bbx-admin-google-drive-enable-docs-api" href={status.driveDocsApi.link}>
                     Enable the Docs API
                   </ExternalLink>
                 ) : null}
-              </div>
+              </Notice>
             ) : null}
           </div>
 
@@ -170,9 +171,7 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
       )}
 
       {error ? (
-        <div className="mt-3 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
-          {error}
-        </div>
+        <Notice tone="error" className="mt-3">{error}</Notice>
       ) : null}
     </AdminSectionCard>
   );
@@ -180,6 +179,6 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
 
 function ArrivalNotice({ arrival }: { arrival: AdminArrivalState }) {
   if (arrival.google === "connected") return <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm text-success-dark">{arrival.message || "Google services connected successfully."}</div>;
-  if (arrival.google === "error") return <div className="mb-4 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">{arrival.message || "Authorization failed"}</div>;
+  if (arrival.google === "error") return <Notice tone="error" className="mb-4">{arrival.message || "Authorization failed"}</Notice>;
   return null;
 }

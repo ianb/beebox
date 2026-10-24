@@ -15,7 +15,7 @@ import type { AgentInvokeOptions } from "../../../../core/agent/types.js";
 import { createCodexAgent } from "../../../../core/agent/codex-agent.js";
 import type { CodexObservedActivity } from "../../../../core/agent/codex-run/core.js";
 import { loadAgentEngine, type AgentEngine } from "../../../../core/box/config.js";
-import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../../../core/chat/session/run/core.js";
+import { chatSystemPrompt, NARRATION_OVERLAY } from "../../../../core/chat/session/run/core.js";
 import { buildLandmarkBoxContext } from "../../../../core/chat/session/landmark-context.js";
 import { buildLandmarkSessionNote } from "../../../../core/chat/session/prompts.js";
 import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../../cli/lib/session.js";
@@ -153,7 +153,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     // landmark audit (context_dir) also carries the box context and landmark
     // note a Claude landmark chat gets (chat/session/run/start.ts).
     const basePrompt = test.chat_mode
-      ? `${CHAT_SYSTEM_PROMPT}${NARRATION_OVERLAY}\n\nWORKING DIRECTORY: ${boxRoot}`
+      ? `${chatSystemPrompt()}${NARRATION_OVERLAY}\n\nWORKING DIRECTORY: ${boxRoot}`
       : `WORKING DIRECTORY: ${boxRoot}`;
     const systemPrompt = test.context_dir && engine === "claude"
       ? basePrompt + await buildLandmarkBoxContext(boxRoot) + buildLandmarkSessionNote(test.context_dir)

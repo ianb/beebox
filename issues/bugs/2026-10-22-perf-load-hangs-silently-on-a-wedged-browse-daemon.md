@@ -28,3 +28,13 @@ WebSocket URL with `--cdp`. All runs then completed.
 Directions: give the `bin/browse get cdp-url` call a timeout, and fail when
 the event loop drains before the runs finish (a `beforeExit` check), so a
 stuck browser is reported as an error.
+
+## Update (2026-10-23, worktree-perf-easy-wins)
+
+`perf:load` now bounds the `bin/browse get cdp-url` call at 60 s and fails with
+a message when the event loop drains before the runs finish. That covers both
+causes above. A third form was seen the same day: `bin/browse get cdp-url`
+answered in under a second, but the run then hung for more than 200 s with no
+output and no exit, so something kept the event loop alive. Not diagnosed. A
+separate headless Chrome with `--cdp` worked at once; the command is now in
+`beebox/docs/development/performance.md`.

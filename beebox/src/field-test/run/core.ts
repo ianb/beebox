@@ -254,8 +254,11 @@ export async function runFieldScenario(options: RunFieldScenarioOptions): Promis
     });
     await writeFileAtomic(path.join(runDir, "operator-system-prompt.md"), { content: systemPrompt });
 
+    const operatorBackend = options.backend ?? createChatBackend();
+    // The operator session starts a Claude run (no engine set).
+    await operatorBackend.load?.(undefined);
     const op = startOperatorSession({
-      backend: options.backend ?? createChatBackend(),
+      backend: operatorBackend,
       systemPrompt,
       cwd: runDir,
       model: scenario.models.operator,
