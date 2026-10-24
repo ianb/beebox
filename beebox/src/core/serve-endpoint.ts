@@ -6,12 +6,16 @@ import { z } from "zod";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 
 const ENDPOINT_FILE = "serve-endpoint.json";
-const endpointSchema = z.strictObject({ pid: z.number().int().positive(), publicUrl: z.string().url() });
+const endpointSchema = z.strictObject({
+  pid: z.number().int().positive(),
+  /** Absent when the server has no reachable URL to publish (a socket with no
+   *  `BBX_PUBLIC_URL`): subprocesses then get no `BBX_SERVER_URL`. */
+  publicUrl: z.string().url().optional(),
+  /** The Unix socket the server listens on, when it does (`bbx engine serve --socket`). */
+  socket: z.string().min(1).optional(),
+});
 
-export interface ServeEndpoint {
-  pid: number;
-  publicUrl: string;
-}
+export type ServeEndpoint = z.infer<typeof endpointSchema>;
 
 export function serveEndpointPath(boxRoot: string): string {
   return path.join(boxRoot, ".beebox", ENDPOINT_FILE);

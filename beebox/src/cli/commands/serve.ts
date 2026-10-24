@@ -14,7 +14,7 @@
  * manifest (`hub.json`).
  */
 
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server/app.js";
@@ -111,13 +111,20 @@ export const serveCommand = new Command("serve")
   .argument("[dirs...]", "Box directories to serve (default: current directory)")
   .option("-p, --port <port>", "Port to listen on", String(DEFAULT_PORT))
   .option("-h, --host <host>", "Host to bind to", "localhost")
+  .addOption(
+    new Option(
+      "--socket <path>",
+      "Listen on this Unix socket instead of a port. Under systemd socket activation " +
+        "(LISTEN_FDS) the passed socket is adopted and this names its path.",
+    ).conflicts(["port", "dev"]),
+  )
   .option("-d, --dev", "Run in development mode with auto-reload")
   .option(
     "--slug <slug>",
     "URL slug to serve the box under (default: the box root's own basename). " +
       "Only valid with a single box directory — this is how `bbx hub` names a box's process."
   )
-  .action(async (dirs: string[], options: { port: string; host: string; dev?: boolean; slug?: string }) => {
+  .action(async (dirs: string[], options: { port: string; host: string; dev?: boolean; slug?: string; socket?: string }) => {
     // `cli/index.ts` validates only the deliberately permissive CLI schema.
     // Serving has a narrower boundary, including the strict dev-surface flag.
     const envConfig = loadEnv(serverEnvSchema);
@@ -182,6 +189,7 @@ export const serveCommand = new Command("serve")
     await startServer({
       port,
       host: options.host,
+      socket: options.socket,
       boxes,
       prewarmChat: true,
       devSurfaces: devSurfacesEnabled(envConfig),

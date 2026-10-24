@@ -24,6 +24,13 @@ export interface BoxSpec {
 export interface ServerOptions {
   port?: number | undefined;
   host?: string | undefined;
+  /**
+   * Listen on this Unix socket instead of `host:port` (`bbx engine serve
+   * --socket`). When systemd passed a listening socket (`LISTEN_FDS`), that
+   * descriptor is adopted and this is the path it was bound to, kept for logs
+   * and the endpoint file. See `server/listen-target.ts`.
+   */
+  socket?: string | undefined;
   boxes?: BoxSpec[] | undefined;
   /** @deprecated Use boxes instead */
   boxRoot?: string | undefined;

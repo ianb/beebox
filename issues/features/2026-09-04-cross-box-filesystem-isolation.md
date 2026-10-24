@@ -1,6 +1,6 @@
 ---
 title: "Cross-box filesystem isolation: a box process should not be able to read a sibling box"
-workstream: unattached
+workstream: box-isolation
 area: beebox
 priority: important
 labels: [security]
