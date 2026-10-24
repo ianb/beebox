@@ -49,6 +49,8 @@ users:
     shell: /bin/bash
     lock_passwd: true
     no_user_group: false
+    # For the shared cache's group on /etc/beebox/box.env; no box group.
+    groups: [beebox-boxes]
   - name: beebox-sched
     gecos: Bee Box scheduler
     system: true
@@ -70,14 +72,15 @@ write_files:
       d /var/cache/beebox/uv 2775 root beebox-boxes -
       d /var/cache/beebox/hf 2755 root beebox-boxes -
       d /var/log/beebox    0755 root   root         -
-      d /etc/beebox        0755 root   root         -
-  # Non-secret environment every box unit loads (EnvironmentFile=). The hub
-  # regenerates it from /home/beebox/.env on each start with the child env
-  # allowlist (src/hub/supervisor/child-env.ts); this is the first version so
-  # a box can start before the hub ever ran.
+      d /etc/beebox        2775 root   beebox-boxes -
+  # Environment every box unit loads (EnvironmentFile=). The hub rewrites it
+  # from /home/beebox/.env on each start with the child env allowlist
+  # (src/hub/box-env-file.ts), 0640 beebox:beebox-boxes; this is the first
+  # version so a box can start before the hub ever ran.
   - path: /etc/beebox/box.env
     permissions: "0644"
     content: |
+      BBX_UNIT_HOST=1
       PATH=/usr/local/bin:/usr/bin:/bin
       UV_CACHE_DIR=/var/cache/beebox/uv
       HF_HOME=/var/cache/beebox/hf

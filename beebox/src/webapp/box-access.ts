@@ -9,6 +9,7 @@
  */
 
 import { loadBoxConfig } from "../core/box/config.js";
+import { hubMetaReadsEnabled, readHubMeta } from "../core/hub-meta.js";
 import { canonicalizeEmail } from "./local-users.js";
 import { normalizeAllowedEmails } from "./box-config-write.js";
 
@@ -29,9 +30,10 @@ export async function canAccessBox({
 }): Promise<boolean> {
   const canonicalEmail = canonicalizeEmail(email);
   if (ownerEmail && canonicalEmail === canonicalizeEmail(ownerEmail)) return true;
-  const config = await loadBoxConfig(boxRoot);
-  const allowedEmails = normalizeAllowedEmails(config.allowedEmails ?? []);
-  return allowedEmails.includes(canonicalEmail);
+  // A unit host's hub reads the list the box published for it, the same list
+  // as `_config/box.json` holds (`core/hub-meta.ts`); no metadata, no access.
+  const listed = hubMetaReadsEnabled() ? readHubMeta(boxRoot)?.allowedEmails ?? [] : (await loadBoxConfig(boxRoot)).allowedEmails ?? [];
+  return normalizeAllowedEmails(listed).includes(canonicalEmail);
 }
 
 /**

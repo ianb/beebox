@@ -14,7 +14,7 @@
  */
 
 import type http from "node:http";
-import { resolveScanRequestAuth } from "../../core/scan/tokens.js";
+import { scanAuthed } from "./box-credentials.js";
 
 /**
  * The two paths the contract defines, and nothing else — not the `/api/scan/`
@@ -67,5 +67,5 @@ export async function hasScanAuth(opts: {
 }): Promise<boolean> {
   if (!isScanPath(opts.reqPath, opts.slug)) return false;
   if (opts.boxRoot === undefined) return false;
-  return (await resolveScanRequestAuth(opts.boxRoot, opts.headers)) !== null;
+  return scanAuthed(opts.boxRoot, opts.headers);
 }

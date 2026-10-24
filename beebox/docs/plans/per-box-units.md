@@ -525,7 +525,7 @@ box on a WebSocket reconnect, which `core.ts:546-556` exists to prevent.
 **Direction.** `src/hub/endpoints.ts`: `Endpoint` gains `socketPath?:
 string`; `src/hub/server/core.ts` passes `{ host: "localhost", port: 0,
 socketPath }` as the proxy target when present. New
-`src/hub/supervisor/socket-provider.ts`: one poll every 2 s of `systemctl
+`src/hub/socket-provider.ts`: one poll every 2 s of `systemctl
 list-units 'beebox-box@*' --output=json` (one process for all boxes,
 unprivileged, read-only), kept in a map with the last readiness result;
 for a unit the poll sees as `failed`, the same cycle fetches its last
@@ -559,6 +559,20 @@ the provider's state names mirror systemd's (`active`, `inactive`,
 `activating`, `failed`); `hub-meta.json` with fields `allowedEmails`,
 `pendingSchedules`, `tokenHashes: { agent, mobile: [], scan: [] }`,
 `writtenAt`.
+
+**Implementation notes (2026-10-24).** The hub reads boxes through their
+metadata behind one process-wide switch, `enableHubMetaReads()` in
+`core/hub-meta.ts`, flipped by `bbx engine hub` on a unit host before it
+serves; `canAccessBox` and the three bearer gates
+(`hub/server/box-credentials.ts`) consult it, so the dev router's spawning hub
+and the tests keep direct reads. The writer hooks are the two token stores'
+save, the agent token mint, `mutateConfig`, the chat schedule manager's save,
+`bbx engine init`, and `bbx engine serve` at start; the file is rewritten
+only when something but the timestamp changed, so a `lastUsedAt` stamp costs
+no write. `hub-meta.ts` counts the schedule file's entries itself rather than
+importing the schedules loader, which imports it back. `/etc/beebox/box.env`
+is written by the hub user into a `2775 root:beebox-boxes` directory (the hub
+joins the cache group, no box group) and is `0640`.
 
 **First chunk.** `socketPath` on `Endpoint` and the proxy target, with
 `test/hub/` routing HTTP and a WebSocket through a Unix socket stand-in
@@ -774,6 +788,22 @@ kept here as the record.
 5. **Package installs from a box.** Decision: no new privileged path. A
    box records the package; the next deploy installs it with `bbx host
    sync` as root.
+7. **The mobile session cookie at the hub** (open, found in implementation
+   2026-10-24). The hub verifies three mobile credentials today; two are
+   bearers it can now check by hash from `hub-meta.json`. The third, the
+   `bbx_mobile` cookie, is signed with a per-box secret
+   (`.beebox/mobile-session.secret`) that the box must not publish, so a hub
+   outside the box cannot verify it. What is built: a request carrying a
+   cookie of the right shape is passed to the box, which verifies it (a bad
+   cookie gets the box's 401). The one cost: a cookie-shaped request can
+   wake a sleeping box unverified, the same class of wake the hash check
+   closes for bearers. Options for the boxholder: (a) accept, as built; (b)
+   sign mobile cookies with a key derived from the per-box hub secret
+   (HKDF), which the hub holds for that box and no sibling knows, so the hub
+   verifies cookies too: about 40 engine lines, cookies re-minted after a
+   reboot from the device bearer the app holds anyway; (c) Ed25519-signed
+   cookies with the public key in `hub-meta.json`: no shared material, a
+   larger change to `core/mobile/session.ts`. Lean: (b); (a) is the interim.
 6. **Agent logins per box** (open, settled by the subplan's probe). One
    `claude auth login` and `codex login` per box user, repeated on expiry,
    or a copied credentials file that may break on token rotation. No

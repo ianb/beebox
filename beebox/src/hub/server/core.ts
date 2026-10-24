@@ -33,7 +33,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isRecord } from "../../shared/is-record.js";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import type { Endpoint, EndpointProvider } from "../endpoints.js";
+import { proxyTarget, type Endpoint, type EndpointProvider } from "../endpoints.js";
 import type { BoxRuntimeStatus } from "../box-status.js";
 import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../../webapp/routes/auth/register.js";
@@ -43,9 +43,8 @@ import { listAccessibleBoxes, describeBoxes, type BoxListing } from "../../webap
 import { canAccessBox } from "../../webapp/box-access.js";
 import { HASHED_ASSET_STATIC_OPTIONS } from "../../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../../webapp/base-prefix.js";
-import { verifyMobileRequest } from "../../core/mobile/request-auth.js";
 import { hasScanAuth } from "./scan-gate.js";
-import { verifyAgentBearer } from "../../core/agent/token.js";
+import { agentAuthed, mobileAuthed as boxMobileAuthed } from "./box-credentials.js";
 import { verifyBrowseKey } from "../../core/browse-key.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -72,10 +71,11 @@ export interface HubServerOptions {
   endpoints: EndpointProvider;
   getHealth: () => HubHealth;
   getDiskHealth?: () => DiskHealth;
-  /** Per-boot secret (see `cli/commands/hub.ts`), shared with every
-   *  supervised child's env -- the gate a box uses to trust the identity
-   *  headers this module injects. See `src/webapp/auth.ts`'s `isHubMode`. */
-  hubSecret: string;
+  /** Per-boot secret (see `cli/commands/hub.ts`) -- the gate a box uses to
+   *  trust the identity headers this module injects (`src/webapp/auth.ts`'s
+   *  `isHubMode`). One string shared by every spawned child, or, on a unit
+   *  host, a function giving each slug its own (`hub/secrets.ts`). */
+  hubSecret: string | ((slug: string | null) => string);
   /** Slug -> resolved box root, for the login surface's `/auth/me`
    *  accessible-boxes list and the box picker (D3). */
   boxes: BoxSpec[];
@@ -126,11 +126,11 @@ function parseSlug(reqPath: string): string | null {
  */
 async function hasMobileAuth(opts: { boxRoot: string | undefined; headers: http.IncomingHttpHeaders }): Promise<boolean> {
   if (opts.boxRoot === undefined) return false;
-  return verifyMobileRequest(opts.boxRoot, opts.headers);
+  return boxMobileAuthed(opts.boxRoot, opts.headers);
 }
 
 async function listMobileAuthorizedBoxes(opts: { boxes: BoxSpec[]; headers: http.IncomingHttpHeaders }): Promise<BoxListing[]> {
-  const checked = await Promise.all(opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })));
+  const checked = await Promise.all(opts.boxes.map(async (box) => ({ box, ok: await boxMobileAuthed(box.boxRoot, opts.headers) })));
   return describeBoxes(checked.filter((c) => c.ok).map(({ box }) => box));
 }
 
@@ -267,6 +267,7 @@ async function loadHubPackages() {
  */
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
   const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false, frontendPath } = options;
+  const secretFor = typeof hubSecret === "string" ? (): string => hubSecret : hubSecret;
   const { Fastify, fastifyCookie, fastifyStatic, httpProxy } = await loadHubPackages();
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
@@ -406,7 +407,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     // first: an unauthenticated request redirects to login regardless of slug,
     // so it neither wakes a box nor reveals whether the slug is configured.
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: verifyBrowseKey(request.headers), hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: verifyBrowseKey(request.headers), hubSecret: secretFor(boxSlug || null), openAccess });
     if (!decision.authorized) {
       return loginRedirect(request, reply);
     }
@@ -450,7 +451,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     }
 
     reply.hijack();
-    proxy.web(request.raw, reply.raw, { target: endpoint.origin });
+    proxy.web(request.raw, reply.raw, { target: proxyTarget(endpoint) });
   });
 
   // Everything else: gate on identity, then proxy to the box's own Fastify
@@ -469,10 +470,10 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     // The box's own agent token (`core/agent/token.ts`), verified against that
     // box: a `bbx` command pointed at the hub URL instead of the child's port.
     const agentBoxRoot = slug === null ? undefined : boxRootBySlug.get(slug);
-    const perBoxAuthed = mobileAuthed || scanAuthed || (agentBoxRoot !== undefined && verifyAgentBearer(agentBoxRoot, request.headers.authorization));
+    const perBoxAuthed = mobileAuthed || scanAuthed || (agentBoxRoot !== undefined && agentAuthed(agentBoxRoot, request.headers.authorization));
 
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(request.headers), hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(request.headers), hubSecret: secretFor(slug), openAccess });
     if (!isMobilePairingRedeem && !perBoxAuthed && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
@@ -510,7 +511,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     if (!endpoint) return replyNoEndpoint(reply, { slug, reqPath, method: request.method, accept: request.headers.accept, boxRoot: slug === null ? undefined : boxRootBySlug.get(slug), endpoints, detailed: perBoxAuthed || decision.authorized });
 
     reply.hijack();
-    proxy.web(request.raw, reply.raw, { target: endpoint.origin });
+    proxy.web(request.raw, reply.raw, { target: proxyTarget(endpoint) });
   });
 
   await app.ready();
@@ -529,7 +530,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
 
     stripHubHeaders(req.headers);
-    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(req.headers), hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(req.headers), hubSecret: secretFor(slug), openAccess });
     if (!mobileAuthed && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
@@ -555,7 +556,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       socket.destroy();
       return;
     }
-    proxy.ws(req, socket, head, { target: endpoint.origin }, () => {
+    proxy.ws(req, socket, head, { target: proxyTarget(endpoint) }, () => {
       // This callback fires only from http-proxy's error path (see
       // ws-incoming.js's onOutgoingError) -- never on success -- so an
       // invocation always means the upgrade failed.

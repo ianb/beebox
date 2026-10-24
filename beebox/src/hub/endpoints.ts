@@ -15,8 +15,23 @@
 /** Where a box's traffic goes right now. */
 export interface Endpoint {
   slug: string;
-  /** e.g. `http://127.0.0.1:54213` — no trailing slash. */
+  /** e.g. `http://127.0.0.1:54213` — no trailing slash. With `socketPath`
+   *  set, a placeholder (`http://localhost`) that names no port: the proxy
+   *  and the readiness probe connect to the socket instead. */
   origin: string;
+  /** The Unix socket a systemd-owned box listens on (`/run/beebox/<slug>.sock`). */
+  socketPath?: string;
+}
+
+/**
+ * The target http-proxy-3 connects to for an endpoint. Its `setupOutgoing`
+ * copies `socketPath` from the target beside `host` and `port`, and its type
+ * wants both of the latter, so a socket endpoint passes a placeholder pair
+ * (verified against the pinned version, docs/plans/per-box-units.md).
+ */
+export function proxyTarget(endpoint: Endpoint): string | { host: string; port: number; socketPath: string } {
+  if (endpoint.socketPath === undefined) return endpoint.origin;
+  return { host: "localhost", port: 0, socketPath: endpoint.socketPath };
 }
 
 /**

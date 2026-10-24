@@ -55,6 +55,11 @@ const boxEntrySchema = z.strictObject({
    *  real boxes; the child gets it as `BBX_SECRETS_FILE`, marked isolated.
    *  Absent: the hub's own store. */
   secretsFile: z.string().min(1).optional(),
+  /** The Unix socket this box's unit listens on (`/run/beebox/<slug>.sock`).
+   *  Present on a unit host (docs/plans/per-box-units.md), where the hub
+   *  routes to systemd-owned sockets and spawns nothing; absent on a hub that
+   *  spawns children itself. All entries of one hub agree. */
+  socket: z.string().min(1).optional(),
 });
 
 const hubConfigFileSchema = z.strictObject({
@@ -123,6 +128,15 @@ export interface HubConfig {
    *  (falls back to 0). Only meaningful when `lazy` is true — a positive
    *  value with `lazy: false` is rejected at load. */
   keepRecent: number;
+}
+
+/**
+ * True when every entry names a `socket`: systemd owns the box processes and
+ * the hub only routes (`socket-provider.ts`). The loader has already
+ * refused a mix and the hub's own idle rules, so one entry decides.
+ */
+export function isUnitHostConfig(config: Pick<HubConfig, "boxes">): boolean {
+  return Object.values(config.boxes).some((entry) => entry.socket !== undefined);
 }
 
 export class HubConfigError extends Error {
@@ -244,7 +258,11 @@ export async function parseHubConfig(json: unknown, configPath: string): Promise
       );
     }
     const resolvedPath = path.resolve(configDir, entry.path);
-    boxes[slug] = { path: resolvedPath, ...(entry.secretsFile !== undefined && { secretsFile: path.resolve(configDir, entry.secretsFile) }) };
+    boxes[slug] = {
+      path: resolvedPath,
+      ...(entry.secretsFile !== undefined && { secretsFile: path.resolve(configDir, entry.secretsFile) }),
+      ...(entry.socket !== undefined && { socket: entry.socket }),
+    };
     const canonicalKey = await canonicalBoxKey(resolvedPath);
     const existing = canonicalToEntries.get(canonicalKey) ?? [];
     existing.push({ slug, resolvedPath });
@@ -268,6 +286,31 @@ export async function parseHubConfig(json: unknown, configPath: string): Promise
         "slug, which would start two engine processes against one box's on-disk state " +
         `(two engines on one events.db is corrupting, not just wasteful):\n${detail}`
     );
+  }
+
+  // Socket entries are all or nothing: a hub serves either spawned children
+  // or systemd units, never a mix, so a half-migrated hub.json fails to load
+  // rather than serving two kinds of box (per-box-units.md, "Partial
+  // migration"). On a unit host the hub's own idle rules have no process to
+  // apply to; naming one is a mistake worth stopping on.
+  const withSocket = Object.entries(boxes).filter(([, entry]) => entry.socket !== undefined).map(([slug]) => slug);
+  const unitHost = withSocket.length > 0;
+  if (unitHost && withSocket.length !== Object.keys(boxes).length) {
+    const without = Object.keys(boxes).filter((slug) => !withSocket.includes(slug));
+    throw new HubConfigError(
+      `Hub config at ${configPath}: some boxes name a socket and some do not (without: ${without.join(", ")}). ` +
+        "A hub routes either to systemd socket units or to children it spawns, never both; give every box a socket or none.",
+    );
+  }
+  if (unitHost) {
+    const owned = (["lazy", "idleMs", "keepRecent"] as const).filter((key) => result.data[key] !== undefined);
+    if (owned.length > 0) {
+      throw new HubConfigError(
+        `Hub config at ${configPath}: ${owned.join(", ")} cannot be set when boxes name sockets. ` +
+          "systemd starts a box on its first connection and the engine exits itself when idle " +
+          "(bbx engine serve --idle-exit, set in the unit); the hub has no process to stop.",
+      );
+    }
   }
 
   const lazy = result.data.lazy ?? false;

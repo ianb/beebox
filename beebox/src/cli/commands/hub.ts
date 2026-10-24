@@ -11,8 +11,10 @@ import { Command } from "commander";
 import * as crypto from "node:crypto";
 import type * as http from "node:http";
 import {
+  type HubConfig,
   loadHubConfig,
   defaultHubConfigPath,
+  isUnitHostConfig,
   HubConfigError,
   DEFAULT_HUB_PORT,
   DEFAULT_HUB_HOST,
@@ -24,6 +26,12 @@ import {
   HubConfigEditError,
 } from "../../hub/config-edit.js";
 import { Supervisor } from "../../hub/supervisor/core.js";
+import { SocketProvider } from "../../hub/socket-provider.js";
+import { HUB_SECRETS_DIR, loadOrMintHubSecrets } from "../../hub/secrets.js";
+import { BOX_ENV_FILE, writeBoxEnvFile } from "../../hub/box-env-file.js";
+import { enableHubMetaReads } from "../../core/hub-meta.js";
+import type { EndpointProvider } from "../../hub/endpoints.js";
+import type { BoxRuntimeStatus } from "../../hub/box-status.js";
 import { requireBoxRoot } from "../../lib/box-shape.js";
 import { createHubServer, type HubHealth } from "../../hub/server/core.js";
 import { hubVerdict } from "../../hub/health.js";
@@ -48,6 +56,7 @@ function registerAddBoxSubcommand(parent: Command): void {
     .argument("<slug>", "URL prefix the box is served under")
     .argument("<path>", "Path to the box root")
     .option("-c, --config <path>", "Path to hub.json (default: ~/.config/beebox/hub.json)")
+    .option("--socket", "A unit host: route to /run/beebox/<slug>.sock instead of spawning (docs/plans/per-box-units.md)")
     .option("--dry-run", "Validate and print what would change, without writing");
 
   // Options come from `.opts()` rather than the action's third parameter:
@@ -63,12 +72,12 @@ function registerAddBoxSubcommand(parent: Command): void {
   // CLI behavior, and the command prints the config path it acted on either
   // way, so the operator sees which file was edited.
   addBox.action(async (slug: string, boxPath: string) => {
-    const options = addBox.opts<{ config?: string; dryRun?: boolean }>();
+    const options = addBox.opts<{ config?: string; dryRun?: boolean; socket?: boolean }>();
     const parentOptions = parent.opts<{ config?: string }>();
     const configPath = options.config ?? parentOptions.config ?? defaultHubConfigPath();
     let plan;
     try {
-      plan = await planAddBoxToHubConfig({ configPath, slug, boxPath });
+      plan = await planAddBoxToHubConfig({ configPath, slug, boxPath, ...(options.socket === true && { socket: `/run/beebox/${slug}.sock` }) });
     } catch (e) {
       if (e instanceof HubConfigEditError || e instanceof HubConfigError) {
         console.error(e.message);
@@ -84,6 +93,8 @@ function registerAddBoxSubcommand(parent: Command): void {
       }
       return;
     }
+    // On a unit host the hub has no write access to the box's config
+    // directory (it is not that box's user); the file lives in the hub's own home.
 
     await applyAddBoxPlan(plan);
     console.log(describeAddBoxPlan(plan));
@@ -120,13 +131,8 @@ export const hubCommand = new Command("hub")
     const port = config.port ?? DEFAULT_HUB_PORT;
     const host = config.host ?? DEFAULT_HUB_HOST;
 
-    // Fresh per boot -- never persisted, never logged. The only channels
-    // that see it are each child's env (Supervisor) and the hub's own
-    // header-injection logic (createHubServer). See auth.ts's isHubMode.
-    const hubSecret = crypto.randomBytes(32).toString("hex");
-
-    const supervisor = new Supervisor({ config, hubSecret });
-    await supervisor.startAll();
+    const unitHost = isUnitHostConfig(config);
+    const { endpoints, hubSecret, stopEndpoints } = unitHost ? await startUnitHost(config) : await startSpawning(config);
 
     // Best-effort: this list only feeds the hub's own login surface
     // (/auth/me's accessible-boxes list) and the box picker (D3), so a
@@ -134,9 +140,12 @@ export const hubCommand = new Command("hub")
     // supervisor already handles that box's own resolution failure
     // gracefully (it's reported "unhealthy" via getStatuses()/healthz), and
     // this list is separately best-effort so a box that never came up is
-    // simply omitted from what login/the picker can name.
+    // simply omitted from what login/the picker can name. On a unit host the
+    // hub cannot read inside a box root at all (0751, contents 0700), so the
+    // entry's path is the box root by contract (deploy/add-box.sh).
     const boxEntries = await Promise.all(
       Object.entries(config.boxes).map(async ([slug, entry]): Promise<BoxSpec | undefined> => {
+        if (unitHost) return { slug, boxRoot: entry.path };
         try {
           return { slug, boxRoot: await requireBoxRoot(entry.path) };
         } catch (e) {
@@ -148,7 +157,7 @@ export const hubCommand = new Command("hub")
     const boxes: BoxSpec[] = boxEntries.filter((box): box is BoxSpec => box !== undefined);
 
     const getHealth = (): HubHealth => {
-      const statuses = supervisor.getStatuses();
+      const statuses = endpoints.getStatuses();
       return { status: hubVerdict(statuses), boxes: statuses };
     };
     // The hub's own base URL -- see hub-server.ts's `baseUrl` doc comment for
@@ -163,7 +172,7 @@ export const hubCommand = new Command("hub")
     maybeArmFirstRunSetup({ publicUrl: getPublicUrl(baseUrl), openAccess: false });
 
     const server = await createHubServer({
-      endpoints: supervisor,
+      endpoints,
       getHealth,
       getDiskHealth: getRootDiskHealth,
       hubSecret,
@@ -177,14 +186,15 @@ export const hubCommand = new Command("hub")
       shuttingDown = true;
       console.log(`\nReceived ${signal}, shutting down hub...`);
       await closeServer(server);
-      await supervisor.stopAll();
+      await stopEndpoints();
       process.exit(0);
     };
     process.on("SIGINT", () => void shutdown("SIGINT"));
     process.on("SIGTERM", () => void shutdown("SIGTERM"));
     // SIGHUP is "config reload" for the crash-loop latch (see Supervisor.reloadUnhealthy) —
     // it does NOT re-read hub.json; adding/removing boxes still needs a full restart.
-    process.on("SIGHUP", () => supervisor.reloadUnhealthy());
+    // On a unit host systemd owns the retry budget (`systemctl reset-failed`).
+    process.on("SIGHUP", () => { if (endpoints instanceof Supervisor) endpoints.reloadUnhealthy(); });
 
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -195,6 +205,47 @@ export const hubCommand = new Command("hub")
       console.log(`  ${slug}: http://${host}:${port}/${slug}/`);
     }
   });
+
+/** What the hub routes to, how boxes learn the hub's identity, and how to let go at shutdown. */
+interface HubEndpoints {
+  endpoints: EndpointProvider & { getStatuses(): BoxRuntimeStatus[] };
+  hubSecret: string | ((slug: string | null) => string);
+  stopEndpoints: () => Promise<void>;
+}
+
+/** A hub that spawns its own `bbx engine serve` children: the dev router and a host without units. */
+async function startSpawning(config: HubConfig): Promise<HubEndpoints> {
+  // Fresh per boot -- never persisted, never logged. The only channels
+  // that see it are each child's env (Supervisor) and the hub's own
+  // header-injection logic (createHubServer). See auth.ts's isHubMode.
+  const hubSecret = crypto.randomBytes(32).toString("hex");
+  const supervisor = new Supervisor({ config, hubSecret });
+  await supervisor.startAll();
+  return { endpoints: supervisor, hubSecret, stopEndpoints: () => supervisor.stopAll() };
+}
+
+/**
+ * A unit host (docs/plans/per-box-units.md): systemd owns every box process.
+ * The hub reads boxes only through their published metadata, holds one secret
+ * per box per boot, writes the env file the units load, and routes to sockets.
+ */
+async function startUnitHost(config: HubConfig): Promise<HubEndpoints> {
+  enableHubMetaReads();
+  const secrets = loadOrMintHubSecrets(Object.keys(config.boxes), HUB_SECRETS_DIR);
+  try {
+    writeBoxEnvFile(BOX_ENV_FILE, process.env);
+  } catch (e) {
+    // The units keep the previous file; a box starts with the env the last hub wrote.
+    console.warn(`[hub] could not write ${BOX_ENV_FILE}; box units keep the previous one: ${errorMessage(e)}`);
+  }
+  const provider = new SocketProvider({ config });
+  await provider.start();
+  return {
+    endpoints: provider,
+    hubSecret: (slug) => (slug === null ? "" : secrets.get(slug) ?? ""),
+    stopEndpoints: async () => { provider.stop(); },
+  };
+}
 
 /**
  * Stop the HTTP server without waiting on connections that will never end.
