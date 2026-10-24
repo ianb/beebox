@@ -2941,7 +2941,7 @@ tests:
   # === Chat Structured-Output Tags (chat-app, ack, callout) ===
   #
   # Verify the chat-mode agent has direct knowledge of the structured
-  # output tags from CHAT_SYSTEM_PROMPT — no doc-reading needed for the
+  # output tags from the chat system prompt — no doc-reading needed for the
   # basics. All tests in this section run with `chat_mode: true` so the
   # audit harness loads the chat system prompt the same way a real chat
   # session would.
@@ -6816,7 +6816,7 @@ tests:
   # A `<capture doc="...">` chat message delivers a user-recorded batch of
   # photos/voice as real user input pointing at a capture-session card
   # (Track 6 of docs/implemented-plans/capture-mode.md). Chat-only concept — the tag is
-  # documented in CHAT_SYSTEM_PROMPT (prompts.ts), not the agent guide — so
+  # documented in the chat system prompt (prompts.ts), not the agent guide — so
   # every entry below needs chat_mode: true.
   #
   # Status (2026-07-10): all 3 pass on test1 (capture-mode breakpoint run).
@@ -6909,7 +6909,7 @@ tests:
   #
   # docs/implemented-plans/bulk-file-upload.md Track 4. An `<upload doc="..." files="N"
   # bytes="..." failed="M">` chat message is the bulk sibling of `<capture>` —
-  # documented alongside it in CHAT_SYSTEM_PROMPT (prompts.ts), so this entry
+  # documented alongside it in the chat system prompt (prompts.ts), so this entry
   # needs chat_mode: true. The filing duties (including the "ask before filing
   # an unintroduced batch" rule, boxholder decision 2026-07-27) live in the
   # upload-batch schema's instructions (src/schemas/upload-batch.tsx), surfaced

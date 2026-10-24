@@ -28,9 +28,7 @@ import * as path from "node:path";
 import { boxSlug as resolveBoxSlug } from "../../../lib/box-slug.js";
 import { promises as fs } from "node:fs";
 import { spawn } from "node:child_process";
-import * as esbuild from "esbuild";
 import { createElement, type ComponentType } from "react";
-import { renderToString } from "react-dom/server";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { compileView, listViews, resolveViewsDir } from "../../../webapp/views/compiler/compile.js";
 import { writeNodeViewModule, boxPackageHost } from "../../../webapp/views/node-view-runtime.js";
@@ -189,6 +187,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
       // dist/view-widgets bundle the view's widgets do (view.ts self-references
       // the package's exports map), so the ViewHostContext identity matches.
       const { NodeViewHostProvider } = await import("beebox/view-widgets");
+      const { renderToString } = await import("react-dom/server");
       html = renderToString(
         createElement(NodeViewHostProvider, { boxSlug, children: createElement(viewMod.default, props) }),
       );
@@ -391,7 +390,7 @@ const viewTestCommand = new Command("test")
       } finally {
         // Tear down esbuild's service child deterministically — nothing
         // long-lived survives this command.
-        await esbuild.stop();
+        await (await import("esbuild")).stop();
       }
     }
   );

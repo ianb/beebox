@@ -8,7 +8,6 @@
  * duplicated here.
  */
 
-import getPorts from "get-port";
 import { acquireBoxStartup } from "../../lib/box-maintenance/admission.js";
 import { buildChildEnv } from "./child-env.js";
 import * as path from "node:path";
@@ -82,6 +81,7 @@ export async function spawnBoxChild(args: {
   finally { await startup.release(); }
   const shape = await getBoxShape(boxRoot);
   const bbxBinary = await resolveBbxBinary(shape);
+  const { default: getPorts } = await import("get-port");
   const port = await getPorts();
   const env = buildChildEnv({
     sourceEnv: process.env,

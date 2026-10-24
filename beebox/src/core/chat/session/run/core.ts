@@ -18,7 +18,7 @@ import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
 import { loadSessionHistory, type SessionHistoryResult, type SessionLogSlice } from "../load-history.js";
 import { createCoinedRunState, type CoinedRunState } from "./coined-run.js";
 import { createChatBackend, type ChatBackend, type ChatBackendRun, type ChatBackendStartOptions } from "../../../../services/claude-chat/core.js";
-import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../prompts.js";
+import { chatSystemPrompt, NARRATION_OVERLAY } from "../prompts.js";
 import {
   accumulateAssistantText, buildContentBlocks, warnErroredTurn,
   type ChatImage, type ChatMessage, type ChatMessageContent, type ChatSendInput, type TaskEvent,
@@ -42,7 +42,7 @@ import type { ChatSessionOptions } from "../options.js";
 import { createHealthGate } from "../../../session-context.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
-export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY, buildContentBlocks };
+export { chatSystemPrompt, NARRATION_OVERLAY, buildContentBlocks };
 export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEvent };
 export type { ChatSessionOptions };
 

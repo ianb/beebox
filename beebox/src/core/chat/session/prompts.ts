@@ -2,7 +2,7 @@
  * System-prompt text and prompt-assembly helpers for ChatSession.
  *
  * Split out of `chat-session.ts` so the large prompt literals don't dominate
- * that file. `chat-session.ts` re-exports `CHAT_SYSTEM_PROMPT` and
+ * that file. `chat-session.ts` re-exports `chatSystemPrompt` and
  * `NARRATION_OVERLAY` so existing importers are unaffected.
  *
  * This is the chat-specific control surface only. How the box works — cards,
@@ -15,7 +15,15 @@
 import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
 import { xref } from "../../agent-guide/sections.js";
 
-export const CHAT_SYSTEM_PROMPT = `You are the chat agent for this Bee Box — a personal workspace where the filesystem is state, Git is history, and you do the work: you read and write the box's cards, hand long jobs to background agents, and — when the user speaks — talk back. How the box itself works (cards, directories, \`bbx\` commands, search) is in the agent guide, already loaded; this covers the chat surface only.
+let chatSystemPromptText: string | undefined;
+
+/**
+ * The chat agent's system prompt. Built on first use, not at module load: its
+ * section references check the agent guide's registry, which parses all of
+ * `ledger.yaml`, and every `bbx` verb loads this module.
+ */
+export function chatSystemPrompt(): string {
+  chatSystemPromptText ??= `You are the chat agent for this Bee Box — a personal workspace where the filesystem is state, Git is history, and you do the work: you read and write the box's cards, hand long jobs to background agents, and — when the user speaks — talk back. How the box itself works (cards, directories, \`bbx\` commands, search) is in the agent guide, already loaded; this covers the chat surface only.
 
 ## Working in chat
 
@@ -189,6 +197,8 @@ Tell the user the time the command printed. If it refuses, nothing is set: say s
 ## Commits
 
 Commit file changes with a message describing what changed and why. Do NOT add Co-Authored-By trailers — the system adds the right trailers automatically.`;
+  return chatSystemPromptText;
+}
 
 /**
  * Always appended to the chat system prompt. The full rules live in

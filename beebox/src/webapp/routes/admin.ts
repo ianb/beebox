@@ -90,7 +90,7 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
     const baseUrl = baseServerUrl(publicUrl);
     const redirectUri = `${baseUrl}/auth/google-services/callback`;
     console.log("[google-oauth] Exchanging code, redirectUri:", redirectUri);
-    const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
+    const oauth2Client = await createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
 
     try {
       const { tokens } = await oauth2Client.getToken(code);

@@ -65,12 +65,23 @@ export async function runPreCommitChecks(
   boxRoot: string,
   { colors }: { colors: boolean }
 ): Promise<PreCommitOutcome> {
-  const ignore = await loadValidationIgnore(boxRoot);
-  const cards = (await listStagedCards(boxRoot)).filter((p) => !ignore.isIgnored(p) && !isSystemCardType(typeFromFilename(p) ?? ""));
-  const mdFiles = (await listStagedMarkdown(boxRoot)).filter((p) => !ignore.isIgnored(p));
+  // The reads below are independent, and most are git processes; started
+  // together they overlap instead of queueing (the hook runs on every commit).
+  const [ignore, stagedCards, stagedMarkdown, systemCardErrors, unlisted, shape, strays, reservedSegmentErrors, removals] = await Promise.all([
+    loadValidationIgnore(boxRoot),
+    listStagedCards(boxRoot),
+    listStagedMarkdown(boxRoot),
+    checkStagedSystemCards(boxRoot),
+    findStagedUnlistedBinaries(boxRoot),
+    getBoxShape(boxRoot),
+    checkBoxRoot(boxRoot),
+    checkReservedSegmentErrors(boxRoot),
+    listStagedRelPaths(boxRoot, { diffFilter: "DR" }),
+  ]);
+  const cards = stagedCards.filter((p) => !ignore.isIgnored(p) && !isSystemCardType(typeFromFilename(p) ?? ""));
+  const mdFiles = stagedMarkdown.filter((p) => !ignore.isIgnored(p));
 
   const sections: string[] = [];
-  const systemCardErrors = await checkStagedSystemCards(boxRoot);
   let errorCount = systemCardErrors.length;
   if (systemCardErrors.length > 0) sections.push(systemCardErrors.join("\n"));
 
@@ -96,7 +107,6 @@ export async function runPreCommitChecks(
     if (output) sections.push(output);
   }
 
-  const unlisted = await findStagedUnlistedBinaries(boxRoot);
   if (unlisted.length > 0) {
     errorCount += unlisted.length;
     sections.push(describeStagedUnlistedBinaries(unlisted));
@@ -106,7 +116,6 @@ export async function runPreCommitChecks(
   // other validate scope (see `checkLegacySchemaPath` in `validate.ts`) — the
   // hook is the surface most likely to catch it before anything else loads the
   // box. One readdir; negligible on the commit path.
-  const shape = await getBoxShape(boxRoot);
   const legacySchemaFiles = await findLegacySchemaFiles(shape);
   if (legacySchemaFiles.length > 0) {
     errorCount += legacySchemaFiles.length;
@@ -117,7 +126,6 @@ export async function runPreCommitChecks(
   // recreated-two-root shape the test1 incident documents) blocks the
   // commit here, not just warns in `bbx status` — this is the check meant
   // to catch it AT commit time. One readdir; negligible on the commit path.
-  const strays = await checkBoxRoot(boxRoot);
   if (strays.length > 0) {
     errorCount += strays.length;
     sections.push(strays.map((s) => `Box root: ${s.message}`).join("\n"));
@@ -126,13 +134,11 @@ export async function runPreCommitChecks(
   // Below-root reserved area names block the commit too — the pre-commit
   // walk is the declared net for out-of-band writes (a plain `mkdir` from an
   // agent shell) that the CLI/HTTP guards never saw.
-  const reservedSegmentErrors = await checkReservedSegmentErrors(boxRoot);
   if (reservedSegmentErrors.length > 0) {
     errorCount += reservedSegmentErrors.length;
     sections.push(reservedSegmentErrors.join("\n"));
   }
 
-  const removals = await listStagedRelPaths(boxRoot, { diffFilter: "DR" });
   const linkWarnings = removals.length > 0 ? await boxWideLinkWarnings(boxRoot) : null;
 
   return { report: sections.join("\n\n"), linkWarnings, errorCount };

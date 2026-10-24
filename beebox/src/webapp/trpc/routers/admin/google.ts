@@ -84,7 +84,7 @@ export const googleAdminProcedures = {
       const publicUrl =
         input.origin || (await resolveBoxPublicUrl(ctx.boxRoot, { fallback: "http://localhost:3210" })) || "http://localhost:3210";
       const redirectUri = `${baseServerUrl(publicUrl)}/auth/google-services/callback`;
-      const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
+      const oauth2Client = await createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
       // Mint a one-time nonce (behind this owner wall) that the callback must
       // present back — the callback is reachable outside the auth wall, so the
       // nonce is what proves an owner initiated the grant. The returnPath rides
