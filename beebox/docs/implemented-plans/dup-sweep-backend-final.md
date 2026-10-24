@@ -1,16 +1,26 @@
 ---
 title: "Backend duplication sweep: dates, text helpers, atomic writes and loaders"
-status: draft
+status: implemented
 workstream: dup-sweep-backend
 issues:
-  - ../../../issues/code-quality/2026-10-23-date-and-duration-formatting-variants.md
-  - ../../../issues/code-quality/2026-10-23-text-helpers-with-diverging-rules.md
-  - ../../../issues/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md
+  - ../../../issues/closed/code-quality/2026-10-23-date-and-duration-formatting-variants.md
+  - ../../../issues/closed/code-quality/2026-10-23-text-helpers-with-diverging-rules.md
+  - ../../../issues/closed/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md
 ---
 # Backend duplication sweep: dates, text helpers, atomic writes and loaders
 
+**Outcome (2026-10-23):** all six tracks are implemented as planned, in
+commits fa89bc30a, 5c6bdf7c0, 70c0e300a (tracks 3 and 4), 9d55880b9 and
+1c9a90f49, and the three issues are closed. Deviations: the schedules parser
+is `parseScheduleDuration` (it parses `cadence` and the other duration
+field, so `parseCadence` was too narrow); the courseware and recipe plugin
+views keep their local string guards, because their headers restrict what a
+plugin may import; the calendar init rule also stopped naming `bbx calendar
+upcoming`, which the parser rejects. Cross-model diff review (codex gpt-6-sol)
+found no material issues.
+
 This plan finishes the three duplication issues that the earlier sweep plan
-([dup-sweep-backend-remaining](../implemented-plans/dup-sweep-backend-remaining.md))
+([dup-sweep-backend-remaining](dup-sweep-backend-remaining.md))
 left open. Each track moves copies that already behave the same onto one
 helper. Where the copies behave differently, the plan keeps each rule and
 records why, so the issue can close with a decision instead of an open list.
