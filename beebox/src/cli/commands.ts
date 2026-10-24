@@ -29,8 +29,8 @@ import { answerCommand } from "./commands/answer.js";
 import { dismissCommand } from "./commands/dismiss.js";
 import { wakeupCommand } from "./commands/wakeup/command.js";
 import { forceWakeupCommand } from "./commands/force-wakeup.js";
-import { trashCommand } from "./commands/trash.js";
-import { moveCommand } from "./commands/move.js";
+import { rmCommand } from "./commands/rm.js";
+import { mvCommand } from "./commands/mv.js";
 import { relinkCommand } from "./commands/relink.js";
 import { migrateViewLinksCommand } from "./commands/migrate-view-links.js";
 import { migrateFieldsCommand } from "./commands/migrate-fields.js";
@@ -102,8 +102,8 @@ const ALL: readonly Command[] = [
   dismissCommand,
   wakeupCommand,
   forceWakeupCommand,
-  trashCommand,
-  moveCommand,
+  rmCommand,
+  mvCommand,
   relinkCommand,
   migrateViewLinksCommand,
   migrateFieldsCommand,
