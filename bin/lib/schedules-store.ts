@@ -40,6 +40,7 @@ import {
 } from "./schedules.js";
 import { InvalidAlertRecordError, InvalidStoreRecordError, UnmarkedStoreRootError } from "./schedules-errors.js";
 import { writeFileAtomic } from "../../beebox/src/lib/atomic-write.js";
+import { readJsonIfPresent } from "../../beebox/src/lib/json-state.js";
 
 
 
@@ -83,14 +84,9 @@ export async function ensureScheduleDir(root: string, name: string): Promise<str
 }
 
 async function readJson<T>(filePath: string, schema: z.ZodType<T>): Promise<T | null> {
-  let raw: string;
-  try {
-    raw = await fs.readFile(filePath, "utf8");
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return null;
-    throw e;
-  }
-  const parsed = schema.safeParse(JSON.parse(raw));
+  const raw = await readJsonIfPresent(filePath, z.unknown());
+  if (raw === undefined) return null;
+  const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     throw new InvalidStoreRecordError(filePath, parsed.error.issues.map((i) => i.message).join("; "));
   }

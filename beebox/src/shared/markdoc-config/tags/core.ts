@@ -64,6 +64,8 @@ import { stampedLocator } from "../../todo-locators.js";
 import { flattenNodes } from "../../todo-text.js";
 import { unknownTag } from "./unknown-tag.js";
 import { footnoteTags, imageNode, makeHtmlTag } from "./html-schema.js";
+import { stringOrNull } from "../../optional-string.js";
+import { asciiSlug } from "../../ascii-slug.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
 // module under Node's ESM loader (used by the test runner); the frontend
@@ -80,7 +82,7 @@ const { Tag, nodes: baseNodes } = Markdoc;
  * caller substitutes a fallback.
  */
 function slugifyHeading(text: string): string {
-  return text.toLowerCase().replace(/[^\da-z]+/g, "-").replace(/^-+|-+$/g, "");
+  return asciiSlug(text);
 }
 
 /** Concatenated plain text of a heading node's inline children (text + inline code). */
@@ -211,7 +213,7 @@ const task: Schema = {
 
 /** Narrow a raw Markdoc attribute value to `string | undefined` (never `""`-vs-absent ambiguity beyond what Markdoc itself gives us). */
 function stringAttr(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
+  return stringOrNull(value) ?? undefined;
 }
 
 const todo: Schema = {

@@ -6,7 +6,10 @@ labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
+resolution: implemented
 ---
+
+Closed 2026-10-23 (worktree-dup-sweep-backend), plan `beebox/docs/implemented-plans/dup-sweep-backend-final.md`. Atomic writes: the git shim and the exhibits data route now use `writeFileAtomic` (commit 9d55880b9); the shim no longer shares a temp name between concurrent calls. Left by decision: the two Orama index persists write their temp through a library call (the search index persists under the refresh lock; the issue index already uses unique temp names), `lib/file-lock.ts` sidecar writes (an fsync would slow every lock), and the multi-file issues mutation. Loaders: `readJsonIfPresent` in `lib/json-state.ts` replaces five strict copies (commit 1c9a90f49). Every store keeps its policy. Strict: the stores a person or a write depends on (box config, local users, transient state, schedules store, quick capture, quick chat, install-validation settings). Lenient: caches, cursors, and short-lived claims (csp-report, turn marker, issue-index manifest, oauth state, hub state, retro registries, maintenance step). One lenient store has a cost beyond repeated work: `webapp/routes/chat/send-dedup.ts` loads an unreadable claims file as empty, so a restart with a damaged file can let a duplicate send through. That is an existing risk, not changed here.
 
 Status 2026-10-23 (worktree-dup-sweep-backend): the strict existence probes now use `pathExistsStrict` (commit f1dd4cde9).
 

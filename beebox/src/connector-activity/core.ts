@@ -15,7 +15,7 @@
  */
 
 import { z } from "zod";
-import { loadBoxTimezone } from "../core/box/config.js";
+import { boxLocalDay } from "../core/box/local-day.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { getBoxTime } from "../lib/time.js";
 import type { Connector, SyncResult } from "../connectors.js";
@@ -111,12 +111,6 @@ export async function updateConnectorActivity(
     update: (raw) => update(parseActivityFile(boxRoot, raw)),
   });
   return parseActivityFile(boxRoot, updated);
-}
-
-/** The box-local calendar day `now` falls on, as `YYYY-MM-DD`. */
-export async function boxLocalDay(boxRoot: string, now: Date): Promise<string> {
-  const timeZone = (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
 /** `day` shifted by `delta` calendar days. Day keys are plain dates, so UTC arithmetic is exact. */

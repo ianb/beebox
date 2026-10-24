@@ -34,6 +34,7 @@ import { isRecord } from "@shared/is-record";
 import type { AddSelectionInput } from "../../lib/selection/position";
 import { postNativeMessage, type NativeShellWindow } from "./native-post";
 import type { ControlAction } from "../../lib/ui-scan/types";
+import { nonBlankString } from "@shared/optional-string";
 
 /** Command kinds the envelope carries. V1 has only `add-selection`. */
 export type NativeComposerCommandKind = "add-selection" | "scan-controls" | "point-at-control";
@@ -130,11 +131,6 @@ export function createNativePointAtControlCommand(
   return { version: 2, id, kind: "point-at-control", payload: target };
 }
 
-
-function nonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() !== "" ? value : null;
-}
-
 /**
  * `{ref,text,position}` — the V1 and V2 selection payload. `text`/`position`
  * are required strings; `ref` is a string or null (chat-transcript text).
@@ -156,7 +152,7 @@ function selectionFrom(value: unknown): AddSelectionInput | null {
  */
 export function nativeComposerCommandFromDetail(detail: unknown): NativeComposerCommand | null {
   if (!isRecord(detail)) return null;
-  const id = nonEmptyString(detail.id);
+  const id = nonBlankString(detail.id);
   if (id === null) return null;
   if (detail.version === 1) {
     if (detail.kind !== "add-selection") return null;
@@ -186,17 +182,17 @@ export function nativeComposerCommandAcknowledgementFromDetail(
   detail: unknown,
 ): NativeComposerCommandAcknowledgement | null {
   if (!isRecord(detail) || detail.version !== 1) return null;
-  const id = nonEmptyString(detail.id);
+  const id = nonBlankString(detail.id);
   if (id === null || typeof detail.accepted !== "boolean") return null;
   if (detail.accepted) return { version: 1, id, accepted: true };
-  const reason = nonEmptyString(detail.reason);
+  const reason = nonBlankString(detail.reason);
   return reason === null ? null : { version: 1, id, accepted: false, reason };
 }
 
 /** `{id,action}` with a known action — the `point-at-control` payload. */
 function pointTargetFrom(value: unknown): NativePointTarget | null {
   if (!isRecord(value)) return null;
-  const id = nonEmptyString(value.id);
+  const id = nonBlankString(value.id);
   if (id === null) return null;
   const action = controlActionFrom(value.action);
   return action === null ? null : { id, action };
@@ -216,15 +212,15 @@ function controlActionFrom(value: unknown): ControlAction | null {
 /** One registry entry, strictly parsed. A malformed entry voids the whole result. */
 function nativeControlEntryFrom(value: unknown): NativeControlEntry | null {
   if (!isRecord(value)) return null;
-  const id = nonEmptyString(value.id);
-  const label = nonEmptyString(value.label);
-  const container = nonEmptyString(value.container);
+  const id = nonBlankString(value.id);
+  const label = nonBlankString(value.label);
+  const container = nonBlankString(value.container);
   if (id === null || label === null || container === null) return null;
   if (value.role !== "button" && value.role !== "textbox") return null;
   if (typeof value.disabled !== "boolean") return null;
   // Swift's `JSONEncoder` omits a nil optional rather than writing null, so
   // absent and null both mean "no description".
-  const does = value.does === undefined || value.does === null ? null : nonEmptyString(value.does);
+  const does = value.does === undefined || value.does === null ? null : nonBlankString(value.does);
   if (value.does !== undefined && value.does !== null && does === null) return null;
   // An older build omits `actions` altogether; that build can enumerate a
   // control but cannot act on one, so absent reads as "none", never as "point".
@@ -249,12 +245,12 @@ function controlActionsFrom(value: unknown): ControlAction[] | null {
 /** Parse a native→web command result. Never throws; returns null for anything unrecognised. */
 export function nativeCommandResultFromDetail(detail: unknown): NativeCommandResult | null {
   if (!isRecord(detail) || detail.version !== 2) return null;
-  const id = nonEmptyString(detail.id);
+  const id = nonBlankString(detail.id);
   if (id === null) return null;
   const kind = detail.kind;
   if (kind !== "add-selection" && kind !== "scan-controls" && kind !== "point-at-control") return null;
   if (detail.ok === false) {
-    const reason = nonEmptyString(detail.reason);
+    const reason = nonBlankString(detail.reason);
     return reason === null ? null : { version: 2, id, kind, ok: false, reason };
   }
   if (detail.ok !== true) return null;

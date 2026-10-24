@@ -79,3 +79,17 @@ void test("The three states are distinct:", async (t) => {
   await seedSchedule(box.root, null);
   t.check(await checkDriveScheduleState(box.root), "enabled");
 });
+
+// ## A card whose frontmatter does not parse is skipped, and the hint says why
+void test("A check-drive card with broken YAML reads as invalid, not as switched off", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const dir = join(box.root, "_config/schedules");
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "check-drive.scheduled-script.card"), "---\ncron: [unclosed\n---\n");
+  t.check({ state: await checkDriveScheduleState(box.root), hint: await checkDriveScheduleHint(box.root) }, {
+    state: "invalid",
+    hint: "Hourly Drive sync (check-drive) does not run: its schedule card's frontmatter does not parse, so the scheduler skips it. Ask the boxholder to fix it under Schedules in box settings. Either way, `bbx force-wakeup --connector google-drive` syncs it now.",
+  });
+});
+

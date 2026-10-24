@@ -14,6 +14,7 @@ import * as path from "node:path";
 import { execa } from "execa";
 
 import { errnoCode } from "../../beebox/src/shared/error-guards.js";
+import { asciiSlug } from "../../beebox/src/shared/ascii-slug.js";
 import type { Alert } from "./schedules.js";
 import { readAllAlerts, writeAlert } from "./schedules-store.js";
 import { FILE_AFTER_MS, FILING_RETRY_MS } from "./schedules-alert-lifecycle.js";
@@ -30,7 +31,7 @@ export function standingToFile(alerts: readonly Alert[], nowMs: number): Alert[]
 }
 
 function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "").slice(0, 60);
+  return asciiSlug(text).slice(0, 60);
 }
 
 /** The issue file for one standing condition, relative to the private-issues

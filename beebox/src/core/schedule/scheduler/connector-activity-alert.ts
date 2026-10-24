@@ -19,7 +19,8 @@
  * separately (`promotion.ts`).
  */
 
-import { boxLocalDay, updateConnectorActivity } from "../../../connector-activity/core.js";
+import { boxLocalDay } from "../../box/local-day.js";
+import { updateConnectorActivity } from "../../../connector-activity/core.js";
 import { evaluateConnectors, withEpisodes, type ConnectorEpisodeState } from "../../../connector-activity/verdict.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { notifyBoxholder, type NotifyServices } from "../../notify-boxholder.js";

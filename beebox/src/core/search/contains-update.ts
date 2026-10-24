@@ -9,11 +9,10 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
-import { parseYaml } from "../../lib/read-yaml.js";
 import { getSearchableTypes } from "../../schemas.js";
 import { buildLoadContext } from "../load-context.js";
 import { cardTypeFromPath } from "./walk.js";
-import { isRecord } from "../card-io.js";
+import { readCardFrontmatter } from "../card-io.js";
 import {
   computeBasisForCardPath,
   loadContainsState,
@@ -67,7 +66,7 @@ class NoFrontmatterError extends ContainsUpdateError {
 
 class MalformedFrontmatterError extends ContainsUpdateError {
   constructor(relPath: string) {
-    super(`${relPath}'s frontmatter is not a YAML mapping`);
+    super(`${relPath}'s frontmatter does not parse as a YAML mapping`);
     this.name = "MalformedFrontmatterError";
   }
 }
@@ -128,11 +127,10 @@ export async function setDerivedContains(
   if (!split.hasFrontmatter) {
     throw new NoFrontmatterError(relPath);
   }
-  const parsedFrontmatter: unknown = parseYaml(split.frontmatterText) ?? {};
-  if (!isRecord(parsedFrontmatter)) {
+  const fields = readCardFrontmatter(content);
+  if (fields === null) {
     throw new MalformedFrontmatterError(relPath);
   }
-  const fields = parsedFrontmatter;
   const containsChanged = contains !== undefined && fields["contains"] !== contains;
   const evidenceChanged = evidence !== undefined && fields["contains-evidence"] !== evidence;
   const extras = Object.entries(alsoSet ?? {});

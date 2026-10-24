@@ -44,7 +44,7 @@ import {
   parseTimespan,
 } from "../../connectors/google-calendar/utils.js";
 import { vtimezoneBlock } from "../../connectors/google-calendar/ics.js";
-import { loadBoxTimezone } from "../../core/box/config.js";
+import { boxTimeZoneOrHost } from "../../core/box/config.js";
 
 /** The Calendar client for an in-process run; the two gates throw as one refusal. */
 export async function localCalendarService(boxRoot: string): Promise<GoogleCalendarService> {
@@ -67,7 +67,7 @@ function endOfDay(date: Date): Date {
 
 export const calendarCommand = new Command("calendar")
   .description("View calendar events (default: next 7 days)")
-  .argument("[timespan]", 'Time range: "today", "3d", "2w", "1m" (default: 7d)')
+  .argument("[timespan]", 'Time range: "today", "3d" (days), "2w" (weeks), "1m" (months) (default: 7d)')
   .action(async (timespan?: string) => {
     const boxRoot = await requireBoxRoot();
     const calDir = getBoxDir(boxRoot, "calendar");
@@ -107,8 +107,7 @@ calendarCommand
   .description("Print this box's VTIMEZONE block (paste into an .ics event)")
   .action(async (): Promise<void> => {
     const boxRoot = await requireBoxRoot();
-    const timezone =
-      (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const timezone = await boxTimeZoneOrHost(boxRoot);
     console.log(vtimezoneBlock(timezone).trim());
   });
 

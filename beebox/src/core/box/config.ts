@@ -194,6 +194,11 @@ export async function loadBoxTimezone(boxRoot: string): Promise<string | null> {
   return timezone;
 }
 
+/** The box timezone, or the host's when the box sets none (or an invalid one). */
+export async function boxTimeZoneOrHost(boxRoot: string): Promise<string> {
+  return (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
 /** Load the selected native harness. Existing boxes default to Claude. */
 export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
   const config = await loadBoxConfig(boxRoot);

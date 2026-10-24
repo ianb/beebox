@@ -1,6 +1,7 @@
 // The static card graph: identities, canonical attachment parents and authored routes.
 import { classifyHref, resolveInternalHref } from "./links.js";
 import type { PageFrontmatter } from "./render.js";
+import { asciiSlug } from "../beebox/src/shared/ascii-slug.js";
 
 export interface SitePage {
   id: string;
@@ -22,8 +23,7 @@ export function headingIds(html: string): string {
   return html.replace(/<h([1-6])([^>]*)>([\S\s]*?)<\/h\1>/g, (_match, ...parts: string[]) => {
     const [level = "2", attrs = "", body = ""] = parts;
     const existing = /\bid="([^"]+)"/.exec(attrs)?.[1];
-    const stem = existing ?? (body.replace(/<[^>]*>/g, "").replace(/&[^;]+;/g, " ").toLowerCase()
-      .replace(/[^\da-z]+/g, "-").replace(/^-|-$/g, "") || "section");
+    const stem = existing ?? (asciiSlug(body.replace(/<[^>]*>/g, "").replace(/&[^;]+;/g, " ")) || "section");
     let id = stem;
     let suffix = 2;
     while (used.has(id)) id = `${stem}-${suffix++}`;

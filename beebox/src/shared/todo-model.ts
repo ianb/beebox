@@ -17,6 +17,7 @@
 
 import { z } from "zod";
 import { assertNever, invariant } from "./invariant.js";
+import { localDay } from "./local-day.js";
 
 /**
  * The conventional `assigned`/`by` value meaning the agent rather than the
@@ -373,9 +374,9 @@ export interface TodoPlateContext {
 
 /**
  * The box-local calendar date (UTC-midnight epoch of that date) `now`
- * falls on when read in `timeZone`. `Intl.DateTimeFormat`'s `"en-CA"`
- * locale formats as `YYYY-MM-DD` directly, avoiding hand-rolled
- * offset arithmetic (which DST transitions would make wrong).
+ * falls on when read in `timeZone`. `localDay` reads the date through
+ * `Intl.DateTimeFormat`, avoiding hand-rolled offset arithmetic (which DST
+ * transitions would make wrong).
  *
  * Exported for callers that need to compare a wall-clock instant against
  * `start`/`due`-shaped calendar epochs on the same basis this module
@@ -385,13 +386,7 @@ export interface TodoPlateContext {
  * `start` dated earlier that same box-local day).
  */
 export function boxLocalDateEpoch(now: Date, timeZone: string): number {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const formatted = formatter.format(now);
+  const formatted = localDay(now, timeZone);
   const epoch = parseIsoDate(formatted);
   invariant(epoch !== null, `box-local date formatting produced an unparseable date: "${formatted}"`);
   return epoch;

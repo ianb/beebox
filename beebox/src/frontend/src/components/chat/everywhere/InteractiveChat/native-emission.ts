@@ -10,6 +10,7 @@ import {
 import { isRecord } from "../../../../../../shared/is-record.js";
 import type { ChatImageAttachment } from "../../../../api-chat";
 import type { SelectionItem } from "../../../../lib/selection/serialize";
+import { nonBlankString } from "../../../../../../shared/optional-string.js";
 
 export interface NativeEmissionV2 {
   version: 2;
@@ -60,7 +61,7 @@ export function parseNativeEmissionDetail(detail: unknown): NativeEmissionParseR
 }
 
 function parseV2(candidate: Record<string, unknown>): NativeEmissionParseResult {
-  const id = nonEmptyString(candidate.id);
+  const id = nonBlankString(candidate.id);
   if (id === null) return reject(candidate, "Invalid native emission V2: id must be a non-empty string");
   if (candidate.origin !== "typed" && candidate.origin !== "voice") {
     return reject(candidate, "Invalid native emission V2: origin must be typed or voice");
@@ -123,16 +124,13 @@ function parseLegacy(candidate: Record<string, unknown>): Emission | null {
 }
 
 function reject(candidate: Record<string, unknown>, reason: string): NativeEmissionParseResult {
-  return { ok: false, emissionId: nonEmptyString(candidate.id), reason };
-}
-
-function nonEmptyString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() !== "" ? value : null;
+  return { ok: false, emissionId: nonBlankString(candidate.id), reason };
 }
 
 function withNativeId(emission: Emission, value: unknown): Emission {
-  if (typeof value !== "string" || value.trim() === "") return emission;
-  return { ...emission, id: value };
+  const id = nonBlankString(value);
+  if (id === null) return emission;
+  return { ...emission, id };
 }
 
 function parseLegacyNativeImages(value: unknown): ChatImageAttachment[] {

@@ -31,6 +31,7 @@ import {
 } from "../../../core/landmark/browse-prominence.js";
 import type { EffectiveLevel } from "../../../shared/prominence.js";
 import type { CardSchema } from "../../../cards/schema.js";
+import { stringOrNull } from "../../../shared/optional-string.js";
 
 /** A question card's answerable/archive-relevant fields, layered onto its listing entry. */
 export interface QuestionInfo extends QuestionCardInfo {
@@ -170,10 +171,7 @@ async function buildBrowseCard(
     // Card failed to parse — still list it (as unknown) so the UI shows it.
     return { relativePath, name: parsed.name, type: parsed.type, hasAttachments, prominence };
   }
-  const str = (key: string): string | undefined => {
-    const value = fm[key];
-    return typeof value === "string" ? value : undefined;
-  };
+  const str = (key: string): string | undefined => stringOrNull(fm[key]) ?? undefined;
   return {
     relativePath,
     name: parsed.name,

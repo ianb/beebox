@@ -12,6 +12,7 @@
  */
 
 import { isRecord } from "@shared/is-record";
+import { nonBlankString } from "@shared/optional-string";
 
 /** Card type of an extracted pdf. */
 export const EXTRACTED_CARD_TYPE = "pdf";
@@ -119,10 +120,6 @@ export interface ExtractedDocumentFields {
   description: string | null;
 }
 
-function str(value: unknown): string | null {
-  return typeof value === "string" && value.trim() !== "" ? value : null;
-}
-
 function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -136,17 +133,17 @@ export function readExtractedFields(
   const metadata = isRecord(fm["metadata"]) ? fm["metadata"] : {};
   const docling = isRecord(fm["docling"]) ? fm["docling"] : {};
   return {
-    format: str(fm["format"]),
-    originalRef: str(filename["ref"]),
-    doclingRef: str(docling["ref"]),
-    originalName: str(filename["original-name"]),
-    acquired: str(via["at"]),
-    channel: str(via["channel"]),
-    title: str(metadata["title"]),
-    author: str(metadata["author"]),
+    format: nonBlankString(fm["format"]),
+    originalRef: nonBlankString(filename["ref"]),
+    doclingRef: nonBlankString(docling["ref"]),
+    originalName: nonBlankString(filename["original-name"]),
+    acquired: nonBlankString(via["at"]),
+    channel: nonBlankString(via["channel"]),
+    title: nonBlankString(metadata["title"]),
+    author: nonBlankString(metadata["author"]),
     pages: num(metadata["pages"]),
-    error: str(fm["error"]),
+    error: nonBlankString(fm["error"]),
     unusable: fm["unusable"] === true,
-    description: str(fm["description"]),
+    description: nonBlankString(fm["description"]),
   };
 }

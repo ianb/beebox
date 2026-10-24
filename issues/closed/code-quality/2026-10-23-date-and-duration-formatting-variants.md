@@ -6,7 +6,10 @@ labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
+resolution: implemented
 ---
+
+Closed 2026-10-23 (worktree-dup-sweep-backend), plan `beebox/docs/implemented-plans/dup-sweep-backend-final.md`. Box-local day: `localDay` (`beebox/src/shared/local-day.ts`), `boxTimeZoneOrHost` (`core/box/config.ts`) and `boxLocalDay(boxRoot, now?)` (`core/box/local-day.ts`) replace the four functions and the six fallback copies; each caller keeps its clock (commit fa89bc30a). Durations: the schedules parser is now `parseScheduleDuration`, so no two parsers share a name. `parseTimespan` keeps `m` as months, and `bbx calendar` help, its error, and the agent guide now say so (commit 5c6bdf7c0). The three grammars stay separate on purpose: `schedule.yaml` takes whole hours, days and weeks, and `bbx calendar` takes days, weeks and months.
 
 Status 2026-10-23 (worktree-dup-sweep-backend): elapsed-time text now uses `beebox/src/shared/relative-time.ts` (commit 1e737840d). Still open: the box-local day implementations and the duration parsers below.
 

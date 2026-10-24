@@ -19,6 +19,7 @@ import * as fs from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../shared/error-guards.js";
+import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { isWalkFixture } from "../../lib/box-fixture.js";
 import { clockOffsetPath } from "../../lib/time.js";
 
@@ -103,11 +104,7 @@ export async function pathWithGitShim(input: { boxRoot: string; searchPath: stri
     throw e;
   });
   if (current !== text) {
-    await fs.mkdir(dir, { recursive: true });
-    const tmp = `${file}.${process.pid}.tmp`;
-    await fs.writeFile(tmp, text, { mode: 0o755 });
-    await fs.chmod(tmp, 0o755);
-    await fs.rename(tmp, file);
+    await writeFileAtomic(file, { content: text, mode: 0o755 });
   }
   return searchPath.split(":").some((p) => path.resolve(p) === dir) ? searchPath : `${dir}:${searchPath}`;
 }

@@ -110,13 +110,13 @@ names the members and the canonical choice.
 
 Filed, because a merge changes output or needs a choice:
 [quota collection twice](../closed/code-quality/2026-10-23-agent-quota-collection-exists-twice.md),
-[frontmatter split/parse/write](2026-10-23-frontmatter-read-and-write-have-many-implementations.md),
+[frontmatter split/parse/write](../closed/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md),
 [two card filename parsers](../closed/code-quality/2026-10-23-two-card-filename-parsers.md),
-[atomic writes, JSON state loaders, strict exists](2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md),
+[atomic writes, JSON state loaders, strict exists](../closed/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md),
 [inline path containment](../closed/code-quality/2026-10-23-path-containment-checks-are-inlined.md),
 [bin git, process, and argv helpers](../closed/code-quality/2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md),
-[dates and durations](2026-10-23-date-and-duration-formatting-variants.md),
-[text helpers: truncate, slug, escape, coercion, sha256](2026-10-23-text-helpers-with-diverging-rules.md).
+[dates and durations](../closed/code-quality/2026-10-23-date-and-duration-formatting-variants.md),
+[text helpers: truncate, slug, escape, coercion, sha256](../closed/code-quality/2026-10-23-text-helpers-with-diverging-rules.md).
 
 Judged not duplication, or not worth a merge: the dev router's own error,
 `sleep`, `killGroup`, and `pidAlive` copies (the router keeps itself
@@ -136,3 +136,8 @@ hand-rolled atomic writers moved onto `writeFileAtomic`; that issue stays open
 for the sync writers, JSON state loaders, and strict existence probes. A merge
 of the two card filename parsers was reverted after review found callers that
 need the raw type segment; that issue stays open with the findings.
+
+Status 2026-10-23: every issue the backend pass filed is now closed. The last
+three (dates, text helpers, atomic writes and loaders) closed with
+`beebox/docs/implemented-plans/dup-sweep-backend-final.md`. The backend pass
+is done; this issue stays open for the frontend pass.

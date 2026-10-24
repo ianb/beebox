@@ -504,7 +504,7 @@ rows:
     audits: []
     mechanics: the reactor prompt (src/core/reactor/prompts.ts) and each job type's card rule
   - id: commands.calendar
-    rule: "`bbx calendar [timespan]` lists upcoming events (default 7d; also today, 3d, 2w, 1m)."
+    rule: "`bbx calendar [timespan]` lists upcoming events (default 7d; also today, 3d, 2w, 1m, where m is months)."
     handle: COMMANDS
     bin: core
     reason: Binned indirect first (the calendar skill and bbx-commands.md carry it), but with the line gone the calendar-upcoming-events audit read the .ics files by hand instead, so the line is back. "What's on my calendar" is an everyday ask that does not look like calendar work until the agent is in it.
