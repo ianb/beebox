@@ -593,18 +593,22 @@ none
 
 ## Open design questions
 
+None open. The boxholder settled the questions below on 2026-10-24 by
+accepting each lean ("I'll trust you on those"); they are kept here as the
+record of what was decided and why.
+
 1. **Tag names.** Today one `vX.Y.Z` tag names the engine image and the app
    release. After this plan an engine tag must not imply an app release.
    Options: (a) keep `v*` for the engine, tag the app `mac-vX.Y.Z` and point
    `release.sh` at that; the appcast feed follows GitHub's latest Release,
    which only `release.sh` creates, so engine-only tags leave the feed alone
    (`release.sh:13-16`); (b) keep `v*` for the app and add `engine-vX.Y.Z` for
-   images, changing `image.yml:14` and the compose docs. Lean: (a). The
+   images, changing `image.yml:14` and the compose docs. Decision: (a). The
    engine tag is what compose and NAS users already see, and the app version
    numbering can continue from 0.1.6 as `mac-v0.2.0`.
 2. **Cadence of the channel.** Boxholder input 2026-10-24: production
    deploys continuously without marking releases, and a daily publish
-   after the full suite passes would be acceptable. Lean: no engine tags.
+   after the full suite passes would be acceptable. Decision: no engine tags.
    The hourly full suite on `main` fires `gh workflow run image.yml --ref
    <green sha>` once a day after a pass; `image.yml` publishes `latest`
    from that ref, stamped `<last tag>-main.<yyyymmdd>.<short sha>` (a
@@ -618,20 +622,20 @@ none
    asking, plus a Preferences button; never while the box runs. The
    alternatives are a one-time "Update the box now?" question at the first
    start that would swap, or a daily check with a "Restart Box to Update"
-   menu item. Lean: swap at start without asking; a stopped box has no work
+   menu item. Decision: swap at start without asking; a stopped box has no work
    to lose, rollback covers a bad image, and a question at every engine tag
    is the paperwork spirit.md argues against.
 4. **A box with uncommitted edits when an update is ready.** The plan
    defers the update and starts the current engine (Track C step 1), so a
    rollback can never discard the person's edits. The alternative is to
-   update anyway and refuse the automatic reset on failure. Lean: defer; a
+   update anyway and refuse the automatic reset on failure. Decision: defer; a
    box that stays dirty for days shows the waiting line in Preferences.
 7. **The forgotten `MIN_APP_VERSION` bump.** The Critical gap accepts it as
    a documented risk with a release-time check that only catches a value
    above the app being released. The alternative is a check that fails a
    tag when the shell-contract files changed since the last bump (a hash
    of the `create` block in `BoxRuntime.swift` and of `entrypoint.sh`
-   recorded beside `MIN_APP_VERSION`). Lean: accept the risk now; both
+   recorded beside `MIN_APP_VERSION`). Decision: accept the risk now; both
    sides are edited by the same person, and the plan's own review (codex
    gpt-6-sol) asks for this to be an explicit decision rather than a
    silent acceptance.
@@ -639,11 +643,11 @@ none
    update inside the VM, so desktop users run the Claude Code that the
    latest engine tag was built with. With tags about twice a week that is
    up to four days behind production's nightly `claude update`. Is that
-   acceptable? Lean: yes for now. If not, the options are tagging more
+   acceptable? Decision: yes for now. If not, the options are tagging more
    often (a scheduled tag) or a persistent Claude install outside the image
    root, each its own decision.
 6. **`MIN_APP_VERSION` initial value.** `0.1.6` (the current app) is safe
-   because 0.1.6 already runs the current image shape. Lean: `0.1.6`.
+   because 0.1.6 already runs the current image shape. Decision: `0.1.6`.
 
 ## Knowledge audits
 
