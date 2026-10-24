@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-23T23:19:05Z
+Generated: 2026-10-24T00:23:20Z
 Total documents: 570
 
 ## Issues
@@ -20,7 +20,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/card-self-refs.md** — "Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary" (367 lines) · shipped history · implemented
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (163 lines) · shipped history · implemented
 - **docs/implemented-plans/codex-diagnostic-parity.md** — "Provider-aware agent diagnostics" (168 lines) · shipped history · implemented
-- **docs/implemented-plans/codex-sdk-backend.review.md** — "Plan Engineering Review — Codex SDK backend" (162 lines) · implementation review
+- **docs/implemented-plans/codex-sdk-backend.review.md** — "Plan engineering review — Codex SDK backend" (162 lines) · implementation review
 - **docs/implemented-plans/companion-pane-card-activity.md** — "Companion-pane card activity awareness for chat" (372 lines) · shipped history · implemented
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (351 lines) · shipped history · implemented
 - **docs/implemented-plans/deck-theme.md** — "Deck system and card theme" (186 lines) · shipped history · implemented
@@ -34,7 +34,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · shipped history · implemented
 - **docs/implemented-plans/dup-sweep-backend-remaining.md** — "Backend duplication sweep: the remaining groups" (392 lines) · shipped history · implemented
-- **docs/implemented-plans/exhibit-html-controls.md** — "Comment and reply controls on raw `index.html` exhibits" (250 lines) · shipped history · implemented
+- **docs/implemented-plans/exhibit-html-controls.md** — "Comment and reply controls on raw index.html exhibits" (250 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (723 lines) · shipped history · implemented
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (116 lines) · shipped history · implemented
 - **docs/implemented-plans/file-layout.check.subplan.md** — "Layout check: the script that enforces the file-layout rules" (184 lines) · shipped history · implemented
@@ -49,9 +49,9 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/normalize-chat-links.md** — "Normalize chat/card links" (707 lines) · shipped history · implemented
 - **docs/implemented-plans/on-demand-image-thumbnails.md** — "On-demand image thumbnails" (254 lines) · shipped history · implemented
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (343 lines) · shipped history · implemented
-- **docs/implemented-plans/place-shows-cards.review.md** — "Plan review — place-shows-cards" (64 lines) · implementation review
+- **docs/implemented-plans/place-shows-cards.review.md** — "A place shows the person's cards: plan review" (64 lines) · implementation review
 - **docs/implemented-plans/plugins-slice-2.review.md** — "Plan Engineering Review — plugins slice 2" (109 lines) · implementation review
-- **docs/implemented-plans/plugins-slice-3.review.md** — "Plan review — plugins slice 3" (70 lines) · implementation review
+- **docs/implemented-plans/plugins-slice-3.review.md** — "Plugins slice 3: plan review record" (70 lines) · implementation review
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (449 lines) · shipped history · implemented
 - **docs/implemented-plans/purge-agent-doctest.md** — "Purge agent-doctest: rename the check library, drop doctest leftovers" (253 lines) · shipped history · implemented
 - **docs/implemented-plans/readable-card-fields.md** — "Readable card fields" (276 lines) · shipped history · implemented
@@ -60,7 +60,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/remove-box-shape-v1.final-review.md** — "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (55 lines) · shipped history · implemented
 - **docs/implemented-plans/remove-cardworks-deletion.md** — "Remove cardworks — final deletion phase" (630 lines) · shipped history · implemented
 - **docs/implemented-plans/remove-open-mode.md** — "Remove the unauthenticated-mode operator path" (117 lines) · shipped history · implemented
-- **docs/implemented-plans/remove-telegram.review.md** — "Plan review — remove Telegram" (79 lines) · implementation review
+- **docs/implemented-plans/remove-telegram.review.md** — "Remove Telegram: plan review record" (79 lines) · implementation review
 - **docs/implemented-plans/resilient-voice-recording.review.md** — "Cross-model review — resilient-voice-recording (round 1)" (139 lines) · implementation review
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (412 lines) · shipped history · implemented
 - **docs/implemented-plans/retire-type-specific-core-tags.review.md** — "Plan Engineering Review — retire-type-specific-core-tags" (66 lines) · implementation review
@@ -3552,7 +3552,7 @@ References:
 
 #### docs/implemented-plans/agent-guide-spec.md
 
-Title: "The agent guide is built from a spec" | 694 lines | shipped history | implemented
+Title: "The agent guide is built from a spec: a YAML ledger, stable placemarkers, annotated source, and a size budget" | 694 lines | shipped history | implemented
 
 Referenced by:
 - docs/plans/prompt-surface-cleanup-evaluation.md:652 (link) — **Superseded** by [the agent guide spec](../implemented-plans/agent-guide-spec.md) for
@@ -4461,7 +4461,7 @@ References:
 
 #### docs/implemented-plans/codex-sdk-backend.review.md **[ORPHAN]**
 
-Title: "Plan Engineering Review — Codex SDK backend" | 162 lines | implementation review
+Title: "Plan engineering review — Codex SDK backend" | 162 lines | implementation review
 
 References:
 - → ../issues/closed/code-quality/2026-08-15-replace-raw-codex-app-server-with-sdk.md (frontmatter)
@@ -4494,7 +4494,7 @@ References:
 
 #### docs/implemented-plans/commit-provenance-trailers.md
 
-Title: "Commit provenance trailers" | 364 lines | shipped history | implemented
+Title: "Commit provenance trailers: Workstream / Plan / Issue" | 364 lines | shipped history | implemented
 
 Referenced by:
 - ../bin/docs/commit-guards.md:47 (mention) — Background: `beebox/docs/implemented-plans/commit-provenance-trailers.md`.
@@ -4616,7 +4616,7 @@ No references in or out.
 
 #### docs/implemented-plans/deferred-recoverable-agent-failures.md
 
-Title: "Deferred-recoverable agent failures" | 437 lines | shipped history | implemented
+Title: "Deferred-recoverable agent failures: engine unavailability as a first-class condition" | 437 lines | shipped history | implemented
 
 Referenced by:
 - docs/scheduler.md:37 (mention) — `docs/implemented-plans/deferred-recoverable-agent-failures.md`.
@@ -4875,7 +4875,7 @@ References:
 
 #### docs/implemented-plans/doc-structure.md
 
-Title: "Documentation structured like code" | 651 lines | shipped history | implemented
+Title: "Documentation structured like code: one home per fact, names as the search path" | 651 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/doc-structure-chat.md:13 (link) — that the [testing pilot](../implemented-plans/doc-structure.md) established.
@@ -5002,7 +5002,7 @@ References:
 
 #### docs/implemented-plans/doctest-usability.md
 
-Title: "Doctest usability" | 855 lines | shipped history | implemented
+Title: "Doctest usability: errors that teach, comparisons that show values, a runner that names what hung" | 855 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/retire-doctest.md:111 (mention) — - `beebox/docs/implemented-plans/doctest-usability.md:95-97`: *"The doctest
@@ -5106,7 +5106,7 @@ References:
 
 #### docs/implemented-plans/exhibit-html-controls.md **[ORPHAN]**
 
-Title: "Comment and reply controls on raw `index.html` exhibits" | 250 lines | shipped history | implemented
+Title: "Comment and reply controls on raw index.html exhibits" | 250 lines | shipped history | implemented
 
 References:
 - → docs/implemented-plans/exhibit-comments.md (mention)
@@ -6069,7 +6069,7 @@ References:
 
 #### docs/implemented-plans/place-shows-cards.review.md **[ORPHAN]**
 
-Title: "Plan review — place-shows-cards" | 64 lines | implementation review
+Title: "A place shows the person's cards: plan review" | 64 lines | implementation review
 
 References:
 - → docs/implemented-plans/place-shows-cards.md (link)
@@ -6079,7 +6079,7 @@ References:
 
 #### docs/implemented-plans/plugins-design-notes.md
 
-Title: "Plugins — design notes" | 219 lines | shipped history | implemented
+Title: "Plugins — design notes: a typed library the box extends through stubs" | 219 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/plugins-slice-3.md:114 (mention) — medium"* (`docs/implemented-plans/plugins-design-notes.md:193-197`) names
@@ -6144,7 +6144,7 @@ References:
 
 #### docs/implemented-plans/plugins-slice-3.review.md **[ORPHAN]**
 
-Title: "Plan review — plugins slice 3" | 70 lines | implementation review
+Title: "Plugins slice 3: plan review record" | 70 lines | implementation review
 
 References:
 - → docs/connectors.md (mention)
@@ -6262,7 +6262,7 @@ References:
 
 #### docs/implemented-plans/prompt-calibration-bodies.subplan.md
 
-Title: "Skill bodies and operational guidance" | 388 lines | shipped history | implemented
+Title: "Skill bodies and operational guidance: assessment and restructuring proposal" | 388 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/prompt-calibration.md:214 (link) — The separately approved [skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) covers the later b
@@ -6630,7 +6630,7 @@ References:
 
 #### docs/implemented-plans/remove-telegram.review.md **[ORPHAN]**
 
-Title: "Plan review — remove Telegram" | 79 lines | implementation review
+Title: "Remove Telegram: plan review record" | 79 lines | implementation review
 
 References:
 - → docs/plans/source-available-release.md (mention)
@@ -7000,7 +7000,7 @@ References:
 
 #### docs/implemented-plans/scheduled-workstreams.md
 
-Title: "Scheduled workstreams" | 734 lines | shipped history | implemented
+Title: "Scheduled workstreams: one scheduler, a run script as the head, alerts as durable records" | 734 lines | shipped history | implemented
 
 Referenced by:
 - docs/development/maintenance.md:38 (mention) — <name> --dry-run`. Design: `docs/implemented-plans/scheduled-workstreams.md`.
@@ -7041,7 +7041,7 @@ References:
 
 #### docs/implemented-plans/secret-custody.md
 
-Title: "Secret custody" | 803 lines | shipped history | implemented
+Title: "Secret custody: a hub-owned store with per-box grants, access levels, and audit" | 803 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/agent-browsing-owner.md:144 (mention) — one test box's opt-in must not unlock it (`docs/plans/secret-custody.md`).
@@ -7086,7 +7086,7 @@ References:
 
 #### docs/implemented-plans/secret-entry-guidance.md
 
-Title: "Secret entry that explains itself" | 543 lines | shipped history | implemented
+Title: "Secret entry that explains itself: guided names, grant on add, and a paste that activates" | 543 lines | shipped history | implemented
 
 Referenced by:
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:19 (mention) — > `beebox/docs/implemented-plans/secret-entry-guidance.md`.
@@ -7237,7 +7237,7 @@ References:
 
 #### docs/implemented-plans/standard-card-fields.md
 
-Title: "Standard card fields" | 635 lines | shipped history | implemented
+Title: "Standard card fields: ban status and created, reserve source, group source metadata" | 635 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/chat-titles.md:80 (mention) — - **Standard card fields (`docs/implemented-plans/standard-card-fields.md`).**
@@ -7564,7 +7564,7 @@ References:
 
 #### docs/implemented-plans/vocab-glossary-sweep.md
 
-Title: "Vocabulary sweep: glossary, UI copy, record quantity/measurements" | 353 lines | shipped history | implemented
+Title: "Vocabulary sweep: glossary with a user-facing register, UI copy, record quantity/measurements" | 353 lines | shipped history | implemented
 
 Referenced by:
 - docs/glossary.md:22 (mention) — 2026-09-02 (`docs/implemented-plans/vocab-glossary-sweep.md`).
@@ -7667,7 +7667,7 @@ References:
 
 #### docs/implemented-plans/workstream-exhibits.md
 
-Title: "Workstream exhibits" | 759 lines | shipped history | implemented
+Title: "Workstream exhibits: a persistent presentation medium with asks" | 759 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/exhibits-rethink.md:105 (link) — - **The original design** ([workstream-exhibits](../implemented-plans/workstream-exhibits.md),
@@ -8333,7 +8333,7 @@ References:
 
 #### docs/plans/collections-design-notes.md
 
-Title: "Collections — queries over cards, with todos as the worked example" | 220 lines | proposal | draft
+Title: "Collections — design notes: queries over cards, with todos as the worked example" | 220 lines | proposal | draft
 
 Referenced by:
 - docs/implemented-plans/todo-collection.md:18 (link) — [design notes](../plans/collections-design-notes.md). This plan does not repeat them.
@@ -8383,7 +8383,7 @@ References:
 
 #### docs/plans/container-first.md
 
-Title: "Container-first install" | 910 lines | proposal | draft
+Title: "Container-first install: a published image, a self-updating deployment directory, and a box that converges on start" | 910 lines | proposal | draft
 
 Referenced by:
 - docs/implemented-plans/doc-structure-install-server.md:20 (link) — [installation story](../plans/installation-story.md) and [container-first](../plans/container-first.md)
@@ -8434,7 +8434,7 @@ References:
 
 #### docs/plans/document-comments.md
 
-Title: "Document comments" | 947 lines | proposal | active
+Title: "Document comments: a communication medium in the workstreams app" | 947 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/exhibit-comments.md:55 (mention) — about (the plan's job to be done in `document-comments.md`), and it can be
@@ -8481,7 +8481,7 @@ References:
 
 #### docs/plans/general-browser.md
 
-Title: "One browser" | 657 lines | proposal | active
+Title: "One browser: artifacts, docs, code, plans, and exhibits in one place" | 657 lines | proposal | active
 
 Referenced by:
 - docs/plans/document-comments.md:334 (mention) — - The document viewer route, which is **defined by `general-browser.md`**, not
@@ -9350,7 +9350,7 @@ References:
 
 #### docs/plans/user-story-journeys.md
 
-Title: "User-story journeys" | 299 lines | proposal | draft
+Title: "User-story journeys — a simulated person trying to get something done" | 299 lines | proposal | draft
 
 Referenced by:
 - docs/implemented-plans/front-door.md:1190 (mention) — - The journey walks (`docs/plans/user-story-journeys.md`) are the tour; they
@@ -10258,7 +10258,7 @@ References:
 
 #### docs/unimplemented-plans/session-end-sweep-detachment-superseded.md
 
-Title: "Detach global sweep from SessionEnd teardown" | 77 lines | past proposal | superseded
+Title: "Detach global sweep from SessionEnd teardown (superseded)" | 77 lines | past proposal | superseded
 
 Referenced by:
 - docs/unimplemented-plans/README.md:23 (mention) — | `session-end-sweep-detachment-superseded.md` | Superseded by `../implemented-plans/dev-loop-lifecycle.md` (2026-08-24)

@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { blankLeadingTitleHeading, leadingTitleHeading } from "../../src/shared/leading-title-heading.js";
+import { blankLeadingTitleHeading, leadingTitleHeading, markdownTitle } from "../../src/shared/leading-title-heading.js";
 
 void test("line 11", async (t) => {
   t.check(leadingTitleHeading("# Trip Report\n\nWe drove down on Friday.", "Trip Report"), {
@@ -45,3 +45,15 @@ We drove down.`);
   t.check(blankLeadingTitleHeading("## Trip Report\nWe drove down.", "Trip Report"), `## Trip Report
 We drove down.`);
 });
+
+// ## A markdown file's title
+//
+// The first `#` heading outside fenced code: a shell comment in a code block
+// is not a title, `##` is not a title, and closing hashes are dropped.
+void test("markdownTitle takes the first H1 outside fenced code", async (t) => {
+  t.check(markdownTitle("```bash\n# install deps\nnpm i\n```\n\n# Setup notes #\n"), "Setup notes");
+  t.check(markdownTitle("~~~~\n# not this\n~~~\n# still code\n~~~~\n# Real\n"), "Real");
+  t.check(markdownTitle("## Notes only\n\ntext\n"), null);
+  t.check(markdownTitle("#hashtag\n#\n# \n#  Spaced  \n"), "Spaced");
+});
+

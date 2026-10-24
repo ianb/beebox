@@ -42,3 +42,30 @@ export function blankLeadingTitleHeading(body: string, title: string): string {
   lines[found.line - 1] = "";
   return lines.join("\n");
 }
+
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+
+/**
+ * A markdown body's title: the text of its first ATX H1 (`# text`, closing
+ * `#`s dropped) outside fenced code, or null. A `# comment` inside a
+ * ```` ``` ```` block is code, not a heading. Callers check a frontmatter
+ * `title:` first and fall back to a filename of their own.
+ */
+export function markdownTitle(body: string): string | null {
+  let fence: string | null = null;
+  for (const raw of body.split("\n")) {
+    const line = raw.replace(/\r$/, "");
+    const marker = FENCE.exec(line)?.[1];
+    if (marker !== undefined) {
+      if (fence === null) fence = marker;
+      else if (marker[0] === fence[0] && marker.length >= fence.length && line.trim() === marker) fence = null;
+      continue;
+    }
+    if (fence !== null) continue;
+    const match = ATX_H1.exec(line);
+    if (match === null) continue;
+    const text = (match[1] ?? "").trim().replace(CLOSING_HASHES, "").trim();
+    if (text !== "") return text;
+  }
+  return null;
+}
