@@ -26,7 +26,7 @@
  */
 
 import type { Node } from "@markdoc/markdoc";
-import { isMap, isSeq, parseDocument } from "yaml";
+import { isMap, isSeq, parseDocument } from "../../lib/yaml-package.js";
 import { renderFrontmatterDocument, splitCardContent } from "../../exports/cards.js";
 import { assignLocators } from "../../shared/todo-locators.js";
 import { invariant } from "../../shared/invariant.js";

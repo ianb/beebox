@@ -6,7 +6,7 @@
  * Processed by the reactor agent, which triages each item.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, cardRef, type InferCardFields } from "../exports/cards.js";
 

@@ -158,7 +158,9 @@ void test("The box clock offset", async (t) => {
   write(fixture.root, { rel: "_config/box.json", value: { fakeNotifications: true } });
   write(fixture.root, { rel: ".beebox/clock-offset.json", value: { offsetMs: week, setAt: "2026-10-23T00:00:00Z" } });
   write(plain.root, { rel: ".beebox/clock-offset.json", value: { offsetMs: week } });
-  const ahead = (root: string) => Math.round((getBoxTime(root).getTime() - Date.now()) / 60_000);
+  // `+ 0` turns -0 into 0: with no offset, `Date.now()` can run a millisecond
+  // after `getBoxTime`, and `Math.round` of that tiny negative is -0.
+  const ahead = (root: string) => Math.round((getBoxTime(root).getTime() - Date.now()) / 60_000) + 0;
   const warnings: string[] = [];
   const origWarn = console.warn;
   console.warn = (...args) => { warnings.push(args.map(String).join(" ")); };
