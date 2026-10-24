@@ -2,7 +2,7 @@
 //
 // `src/lib/yaml-package.ts` requires `yaml` only when one of its functions is
 // called, so a verb that only reads cards does not pay for loading it
-// (`docs/plans/yaml-lazy-load.md`). One static `import … from "yaml"` on the
+// (`docs/implemented-plans/yaml-lazy-load.md`). One static `import … from "yaml"` on the
 // card read path or in a schema module would load it at start again; this
 // test catches that.
 

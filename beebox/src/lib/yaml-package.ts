@@ -8,7 +8,7 @@
  * `src/scripts/migrate/` imports `yaml`'s functions from here instead. The
  * exports keep `yaml`'s names and types; type-only imports of `yaml` are
  * erased and stay as they are. `test/lib/yaml-package.test.ts` checks that a
- * card read does not load it (`docs/plans/yaml-lazy-load.md`).
+ * card read does not load it (`docs/implemented-plans/yaml-lazy-load.md`).
  */
 
 import { createRequire } from "node:module";

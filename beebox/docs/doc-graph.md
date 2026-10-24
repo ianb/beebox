@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-24T15:04:50Z
-Total documents: 575
+Generated: 2026-10-24T16:56:05Z
+Total documents: 576
 
 ## Issues
 
@@ -71,6 +71,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/implemented-plans/tts-comparison-page.md** — "Publish the TTS model comparison on beebox.run" (268 lines) · shipped history · implemented
+- **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (156 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (161 lines) · proposal · partial
@@ -3420,11 +3421,12 @@ References:
 
 #### docs/development/performance.md
 
-Title: "Measuring performance" | 290 lines | current reference
+Title: "Measuring performance" | 301 lines | current reference
 
 Referenced by:
 - docs/development.md:42 (link) — | [Performance](development/performance.md) | Measuring page loads, box starts, test-process and `bbx` start costs: the
 - docs/implemented-plans/lazy-cli-commands.md:59 (mention) — lines in `docs/development/performance.md` and the CLI docs. Not a BIG
+- docs/implemented-plans/yaml-lazy-load.md:62 (mention) — `docs/development/performance.md`, about 10 lines.
 - docs/implemented-plans/yaml-read-parser.md:49 (mention) — 200 changed source and test lines. Docs: `docs/development/performance.md`,
 - src/dev/AGENTS.md:17 (mention) — | `perf/` | Page-load and box-start measurement: `pnpm perf:hub` (local production-shaped hub + edge stand-in), `perf:lo
 - ../issues/bugs/2026-10-07-box-first-load-is-slow.md:77 (mention) — Measurement tooling and procedure: `beebox/docs/development/performance.md`.
@@ -7809,12 +7811,21 @@ References:
 - → README.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
 
+#### docs/implemented-plans/yaml-lazy-load.md **[ORPHAN]**
+
+Title: "Load yaml only when needed; parse each card once in bbx validate" | 290 lines | shipped history | implemented
+
+References:
+- → docs/implemented-plans/yaml-read-parser.md (link)
+- → docs/development/performance.md (mention)
+
 #### docs/implemented-plans/yaml-read-parser.md
 
 Title: "Read YAML with js-yaml; keep yaml for writes and edits" | 230 lines | shipped history | implemented
 
 Referenced by:
 - docs/development/performance.md:251 (mention) — (`docs/implemented-plans/yaml-read-parser.md`). Writes and comment-preserving edits stay
+- docs/implemented-plans/yaml-lazy-load.md:9 (link) — Two follow-ups to [yaml-read-parser](../implemented-plans/yaml-read-parser.md),
 - ../issues/closed/code-quality/2026-10-23-card-frontmatter-parse-with-js-yaml.md:12 (mention) — Closed: implemented by `src/lib/read-yaml.ts` (plan `beebox/docs/implemented-plans/yaml-read-parser.md`, commits 0635ef4
 
 References:

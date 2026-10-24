@@ -1,6 +1,6 @@
 ---
 title: "Load yaml only when needed; parse each card once in bbx validate"
-status: draft
+status: implemented
 workstream: perf-easy-wins
 issues: []
 ---
