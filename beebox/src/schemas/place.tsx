@@ -12,7 +12,7 @@
  * are not hand-typed; `bbx location mark` writes them from the device fix.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 import { namedEntityFields } from "../named-entity-fields.js";

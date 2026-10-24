@@ -16,7 +16,7 @@
  * "still has files to place."
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { parseYaml } from "../lib/read-yaml.js";
 import { z } from "zod";
 import { body, cardSchema, splitCardContent, type CardSchema } from "../exports/cards.js";

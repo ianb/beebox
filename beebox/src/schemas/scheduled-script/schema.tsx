@@ -8,7 +8,7 @@
  * The filename stem is the identity (e.g., check-email.scheduled-script.card).
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../../exports/cards.js";
 import { parseDuration, parseBudget } from "../../scheduled-script-duration.js";

@@ -183,11 +183,12 @@ async function collectStagedResults({ boxRoot, ctx, resolved, ignore }: CollectA
 /** Validate every card, markdown file, view, and attach layout in the box. */
 async function collectAllResults({ boxRoot, ctx, ignore, canonical }: CollectArgs): Promise<CollectedResults> {
   const cardPaths = (await listBoxCardFiles(boxRoot)).filter((p) => !isTrashedCard(p) && !ignore.isIgnored(p));
-  const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx, canonical });
+  const frontmatterByPath = new Map<string, Record<string, unknown>>();
+  const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx, canonical, frontmatterByPath });
   const mdFiles = (await listBoxMarkdownFiles(boxRoot)).filter((p) => !ignore.isIgnored(p));
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
-  const prominenceWarnings = await lintProminenceBudget(boxRoot, ctx);
+  const prominenceWarnings = await lintProminenceBudget(boxRoot, { ctx, frontmatterByPath });
   const instructionFileWarnings = await lintAllInstructionFiles(boxRoot);
   const viewPaths = await listBoxViewFiles(boxRoot);
   const viewWarnings = await collectViewRefWarnings(viewPaths, boxRoot);
