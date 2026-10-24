@@ -377,12 +377,17 @@ set -euo pipefail
 # the hub can reach the one file the box publishes, in the shared-cache group.
 if [[ -n "$UNIT_HOST" ]]; then
   if ! id "$BOX_OWNER" >/dev/null 2>&1; then
-    uid=""
-    for candidate in \$(seq 2000 2999); do
-      if ! getent passwd "\$candidate" >/dev/null && ! getent group "\$candidate" >/dev/null; then uid="\$candidate"; break; fi
-    done
-    [[ -n "\$uid" ]] || { echo "no free UID in 2000-2999"; exit 1; }
-    groupadd -g "\$uid" "$BOX_OWNER"
+    # A run that failed between groupadd and useradd left the group: reuse its id.
+    if getent group "$BOX_OWNER" >/dev/null; then
+      uid=\$(getent group "$BOX_OWNER" | cut -d: -f3)
+    else
+      uid=""
+      for candidate in \$(seq 2000 2999); do
+        if ! getent passwd "\$candidate" >/dev/null && ! getent group "\$candidate" >/dev/null; then uid="\$candidate"; break; fi
+      done
+      [[ -n "\$uid" ]] || { echo "no free UID in 2000-2999"; exit 1; }
+      groupadd -g "\$uid" "$BOX_OWNER"
+    fi
     useradd -u "\$uid" -g "$BOX_OWNER" -G beebox-boxes -d "$BOX_HOME" -M -s /bin/bash "$BOX_OWNER"
     echo "Created user $BOX_OWNER (uid \$uid)."
   fi
