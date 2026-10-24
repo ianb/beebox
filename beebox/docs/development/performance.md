@@ -248,7 +248,7 @@ Verbs that read many cards spend much of their time parsing frontmatter.
 Reads go through `parseYaml` (`src/lib/read-yaml.ts`), which parses with
 js-yaml, 3–4× faster than the `yaml` package on box cards, and hands `yaml`
 any text the two could read differently, so values and errors stay `yaml`'s
-(`docs/plans/yaml-read-parser.md`). Writes and comment-preserving edits stay
+(`docs/implemented-plans/yaml-read-parser.md`). Writes and comment-preserving edits stay
 on `yaml`. On the test1 clone (2026-10-24, CPU time, median of 11, during a
 full test run) the switch saved 90–120 ms of `bbx validate` (920–980 →
 830–860 ms) and 20–40 ms each of `bbx todos` and `bbx status`, over three

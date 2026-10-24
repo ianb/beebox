@@ -3,7 +3,7 @@
  * `dist/`, and which old chunks a build may delete.
  *
  * `dist/cli.mjs` imports `dist/cli-<name>-<hash>.mjs` chunks
- * (`docs/plans/lazy-cli-commands.md`, Track 4). Chunk names carry a content
+ * (`docs/implemented-plans/lazy-cli-commands.md`, Track 4). Chunk names carry a content
  * hash, so a rebuild writes new files beside the old ones. A running dev
  * process may still import an old chunk until it reloads, so a chunk is
  * deleted only when none of the last few builds wrote it and it is over an

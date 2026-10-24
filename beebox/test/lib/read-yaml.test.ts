@@ -3,7 +3,7 @@
 // `parseYaml` (`src/lib/read-yaml.ts`) parses with js-yaml for speed and
 // hands text to the `yaml` package wherever the two could disagree, so every
 // value and error is `yaml`'s. Each case below is one js-yaml alone reads
-// differently (`docs/plans/yaml-read-parser.md`, Failure modes).
+// differently (`docs/implemented-plans/yaml-read-parser.md`, Failure modes).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -1,9 +1,9 @@
 ---
 title: "Read YAML with js-yaml; keep yaml for writes and edits"
-status: draft
+status: implemented
 workstream: perf-easy-wins
 issues:
-  - ../../../issues/code-quality/2026-10-23-card-frontmatter-parse-with-js-yaml.md
+  - ../../../issues/closed/code-quality/2026-10-23-card-frontmatter-parse-with-js-yaml.md
 ---
 # Read YAML with js-yaml; keep yaml for writes and edits
 

@@ -3,7 +3,7 @@
  * it, but faster.
  *
  * js-yaml is 4–7× faster than `yaml` on box cards
- * (`docs/plans/yaml-read-parser.md`), so it parses first. Where the two could
+ * (`docs/implemented-plans/yaml-read-parser.md`), so it parses first. Where the two could
  * read the same text differently, `yaml` parses instead, so every result and
  * every error is `yaml`'s:
  *

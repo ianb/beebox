@@ -1,9 +1,9 @@
 ---
 title: "Lazy CLI commands: load only the verb a bbx invocation runs"
-status: draft
+status: implemented
 workstream: perf-easy-wins
 issues:
-  - ../../../issues/code-quality/2026-10-23-bbx-verb-loads-the-whole-cli.md
+  - ../../../issues/closed/code-quality/2026-10-23-bbx-verb-loads-the-whole-cli.md
 ---
 # Lazy CLI commands: load only the verb a bbx invocation runs
 
