@@ -8,6 +8,7 @@
 
 import TextareaAutosize from "react-textarea-autosize";
 import { Dropdown } from "../../ui/Dropdown";
+import { CloseButton } from "../../ui/CloseButton";
 import { MenuItem } from "../../ui/dropdown-menu-item";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
@@ -116,18 +117,13 @@ function DesktopComposerRow({
       />
       {isTranscribing ? (
         <>
-          <button
-            type="button"
+          <CloseButton
             id={includeControlIds ? "bbx-composer-dictation-cancel" : undefined}
             onClick={handleCancelTranscription}
-            className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
-            aria-label="Cancel dictation (Esc)"
-            title="Cancel dictation (Esc)"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            label="Cancel dictation (Esc)"
+            ink
+            className="flex-shrink-0"
+          />
           <button
             id={includeControlIds ? "bbx-composer-dictation-edit" : undefined}
             onClick={() => {

@@ -1,4 +1,4 @@
-// The dictation cancel control is a named button on both composer rows.
+// The dictation cancel control is a named close button on both composer rows.
 // It carries its address only when the composer is the product one; a dev
 // gallery copy renders without ids.
 import { createElement as h, createRef, type ReactElement } from "react";

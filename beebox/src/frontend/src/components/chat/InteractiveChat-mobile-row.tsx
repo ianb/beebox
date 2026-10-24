@@ -6,6 +6,7 @@
 
 import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
+import { CloseButton } from "../ui/CloseButton";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
@@ -59,18 +60,13 @@ export function MobileTextareaRow({
       />
       {isTranscribing ? (
         <>
-          <button
-            type="button"
+          <CloseButton
             id={hasControlIds ? "bbx-composer-dictation-cancel-mobile" : undefined}
             onClick={handleCancelTranscription}
-            className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
-            aria-label="Cancel dictation (Esc)"
-            title="Cancel dictation (Esc)"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            label="Cancel dictation (Esc)"
+            ink
+            className="flex-shrink-0"
+          />
           <button
             id={hasControlIds ? "bbx-composer-dictation-edit-mobile" : undefined}
             onClick={() => {

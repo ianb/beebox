@@ -30,6 +30,13 @@ void test("the plain variant is a gray round button named Close", async (t) => {
   t.check(button.classes, containing(["w-9", "bg-transparent"]));
 });
 
+// On the composer the × follows the theme's ink instead of the app grey.
+void test("ink takes the surrounding text colour", async (t) => {
+  const button = await buttonOf({ ink: true });
+  t.check(button.classes, containing(["text-current", "bg-transparent"]));
+  t.check(button.classes.filter((name) => name.startsWith("text-warm") || name.startsWith("hover:bg-warm")), []);
+});
+
 void test("the bubble variant is a 20 px red circle with the caller's name, id and position", async (t) => {
   const button = await buttonOf({ variant: "bubble", label: "Remove attachment", id: "bbx-x", className: "absolute -top-2 -right-2" });
   t.check(button.name, "Remove attachment");
