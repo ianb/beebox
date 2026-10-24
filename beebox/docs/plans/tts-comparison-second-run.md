@@ -197,7 +197,7 @@ Voxtral's 34 emotions and 5 paces
   | MAI-Voice-2, 2 Flash via OpenRouter | `provider.options.azure.style` | A `angry` only; no accepted style fits S, R, W, D, C, X |
   | MiniMax 2.8 Turbo via OpenRouter | `provider.options.minimax.emotion` | A `angry`, R `sad`, W `calm` |
   | Grok via OpenRouter | `[pause]` events and `<slow>`/`<soft>` spans | A, R, D, with a `grok` form |
-  | Voxtral TTS 3 | inline `[emotion=…]` `[pace=…]` | S `sarcastic`, A `tense`/`critical` + slow, R `resigned`, W `calm`, D pace only |
+  | Voxtral TTS 3 | inline `[emotion=…]` `[pace=…]` | S `sarcastic`, A `tense`/`critical` + slow, R `resigned`, W `calm` |
   | tts-1-hd, ElevenLabs Flash v2.5, Deepgram Aura-2, Flux | none | plain and text variants only. Flash v2.5 reads tags aloud (probe: "Sarcastic. …") |
 
   Two channels cannot be confirmed from a response. Cartesia accepts any
@@ -245,8 +245,9 @@ Voxtral's 34 emotions and 5 paces
   one line: "No channel for this direction." The pacing representative
   logic (`representative()`, `takesNote()`) goes: every variant has one take.
   Before it transcodes, prunes, or writes the card, publish.ts checks the
-  run is complete: every model × clip × variant has a row, and every row
-  with a file has its source audio. It fails with the list of gaps. A
+  run is complete: every model × clip × variant has exactly one row; a row
+  without a file is valid only when its channel is "none available"; and
+  every row with a file has its source audio. It fails with the list of gaps. A
   `--fresh` flag empties `site/assets/tts-comparison/` and transcodes every
   take from source, so no WebM from the old run can stand in for a new take
   of the same name; this run uses it. The page drops the old run's audio.
@@ -372,23 +373,24 @@ public page.
 2. Track 1: schema, clips, transcript formatting words.
 3. Track 2: adapters and `--dry-run` for all nineteen models; then a live
    render one model at a time.
-4. Track 3: publish.ts for the new data; prune the old audio.
+4. Track 3: publish.ts for the new data; `--fresh` replaces the old audio.
 5. Track 4: prose and README, checked against the takes.
 6. Cross-model diff review; the boxholder listens before landing.
 
 ## Rollout shape
 
 Done when: `render.ts --dry-run` lists every take for nineteen models;
-every model renders; `publish.ts --prune` regenerates the page; the site
+every model renders; `publish.ts --fresh` regenerates the page; the site
 build and site tests pass; the boxholder has listened to the page from a
 local build. Landing and pushing publish it, and need the boxholder's yes.
 No data migration: results.json is replaced, and the old run stays in git.
 
 ## Appendix: the clips
 
-Texts and directions as rendered. `tagged` is used by ElevenLabs v3, Fish,
-and Gemini 3.1 (after the prose as a prefix: `<prose>: "<tagged>"`, the old
-run's form). A form left out means that family has no channel for the
+Texts and directions as rendered. `tagged` is used by ElevenLabs v3 and Fish.
+Gemini 3.1 gets the prose as a prefix: `<prose>: "<tagged or text>"`, the
+old run's form; for a variant with no `tagged` form (X) the plain text
+follows the prefix. A form left out means that family has no channel for the
 variant.
 
 **S · Sarcasm.** Text: "Thanks for updating the spreadsheet. I can tell you
