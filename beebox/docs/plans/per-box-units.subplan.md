@@ -58,7 +58,7 @@ with the box and need nothing.
 | State | Path today | Read by a box process? | Where it goes |
 |---|---|---|---|
 | Session secret | `~/.bbx-session-secret` or `BBX_SESSION_SECRET` (`src/webapp/auth.ts:37-56`) | No by env (`src/hub/AGENTS.md`); file readable today | **Hub only.** Stays in `/home/beebox`, hidden by `ProtectHome=yes`. |
-| Hub ↔ child trust | `BBX_HUB_SECRET`, minted per hub boot (`src/lib/env.ts:155`, `hub.ts:123`) | Yes, env | **Shared per boot**: `/run/beebox/hub-secret.env`, 0640 `beebox:beebox-boxes`, written by the first hub start of the boot and read back by later hub starts (parent Track C and Open design question 4). |
+| Hub ↔ child trust | `BBX_HUB_SECRET`, minted per hub boot (`src/lib/env.ts:155`, `hub.ts:123`) | Yes, env | **Per box, per boot**: `/run/beebox/<slug>.secret.env`, 0640 `beebox:bbx-<slug>`, written by the first hub start of the boot and read back by later hub starts (parent Track C; decision 4). |
 | Local accounts | `~/.bbx-auth.json` or `BBX_AUTH_FILE` (`src/webapp/local-users.ts:86-87`) | `BBX_AUTH_FILE` is in the child allowlist (`child-env.ts:62`): children read it | **Probe.** Find what a hub-mode child reads from it (ACL by email? invite records tagged `boxRoot`, `auth-capabilities.ts:21`). Lean: the hub resolves identity and passes it in the trusted header already; the per-box ACL is `allowedEmails`, which the box publishes to the hub in `.beebox/hub-meta.json` (parent Track D); invites become a per-box file under the box home that the box writes itself, holding no hash. If the probe shows a child needs the user list itself, a hub-owned read-only copy without password hashes placed in `/etc/beebox/`. The hub never joins a box group and never calls the wrapper. |
 | Owner email | `BBX_OWNER_EMAIL` env (`src/webapp/auth.ts:346-348`) | Yes, env | Host-wide env file `/home/beebox/.env.box` (not a secret). |
 | Secret store | `~/.config/beebox/secrets.json` or `BBX_SECRETS_FILE` (`src/core/secrets/store.ts:152-178`), grants keyed inside; a missing store reads as empty (`:220`) | Yes; children read the one store | **Per-box store** `/var/lib/beebox/<slug>/.config/beebox/secrets.json` holding that box's grants, made by `bbx engine secrets copy-grants` (used by `add-box.sh:411-422` today) at migration and add-box. Because a missing store reads as empty, the migration verifies each copy against the master (grant names and secret ids per box) and fails on a mismatch; `copy-grants` gains `--verify`. Granting stays an operator action on the hub user's master store, then a copy. |
@@ -75,7 +75,7 @@ with the box and need nothing.
 | Scheduler and hub manifests | `~/.config/beebox/{boxes,hub,hub-state}.json` | No | **Hub only.** Not confidential (`security-report.md`, "Box paths and slugs in shared config"). |
 | Tailscale exposure | `~/.config/beebox/tailscale-exposure.json` | No | **Hub only.** |
 | `/tmp/claude-<uid>` | per UID | Yes | **Per box** by construction (distinct UIDs, `PrivateTmp=`). |
-| Host packages record | `<box>/_config/host-packages.json` | Yes | Per box already; the install leaves the unit through the apt spool (parent Track C), since `sudo` cannot work under the unit's read-only view and `NoNewPrivileges=yes`. |
+| Host packages record | `<box>/_config/host-packages.json` | Yes | Per box already; on a unit host the box only records, and the next deploy installs with `bbx host sync` as root (parent Track C; decision 5). |
 
 ## Prior art (external)
 
@@ -90,8 +90,8 @@ the probe measures rather than researches.
 - **Shared directory**: a path under `/var/cache/beebox`, group
   `beebox-boxes`, readable (and for uv writable) by every box user.
 - **Host-wide env file**: `/etc/beebox/box.env`, world-readable, holding
-  the non-secret part of the child allowlist; the hub secret is a separate
-  file `/run/beebox/hub-secret.env`, group `beebox-boxes` (parent Track C).
+  the non-secret part of the child allowlist; the hub secret is one file per
+  box, `/run/beebox/<slug>.secret.env`, group `bbx-<slug>` (parent Track C).
 - **Derived per-box paths**: `BBX_SECRETS_FILE`, `CLAUDE_CONFIG_DIR`,
   `CODEX_HOME`, `BBX_PUSH_STORE_DIR` resolve from the box user's home, so
   no per-box generated env file exists.
@@ -190,8 +190,8 @@ Skip: infrastructural.
 The host audit (`schedules/cross-box-leak-scan/host-audit.ts`) asserts the
 table: each box home 0751 and owned by its user and group, with `box/` and
 `box/.beebox/` 0751 and everything else 0700, no box user in another box's
-group, `/etc/beebox/box.env` free of secrets, the hub secret
-file 0640 `beebox:beebox-boxes`, the shared cache group as specified, and
+group, `/etc/beebox/box.env` free of secrets, each box's hub
+secret file 0640 `beebox:bbx-<slug>`, the shared cache group as specified, and
 each box's secret store matching the master's grants for it. The Docker smoke in the parent's Track C checks the cross-user
 read refusal.
 
