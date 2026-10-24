@@ -47,7 +47,7 @@ import type { RendererProps } from "../../file-type-registry";
 import type { ViewState } from "@shared/view-state";
 import type { ViewTarget } from "../../lib/view-url";
 import { parentDir } from "../../lib/parent-dir";
-import { MaterialContext } from "../ui/material";
+import { MaterialContext, useMaterial } from "../ui/material";
 
 const TIER_HEADINGS: Record<PlaceTier, string> = {
   "entry-point": "Start here",
@@ -66,11 +66,12 @@ function SectionHeading({ children }: { children: ReactNode }) {
  * types, so the folder may still hold files (docs/implemented-plans/front-door.md, Track E).
  */
 function EmptyPlace({ folder, label, onNavigate }: { folder: string; label: string; onNavigate: (target: ViewTarget) => void }) {
+  const material = useMaterial(undefined);
   return (
     <div className="flex flex-col gap-1" data-place-section="empty">
       <Text as="p">Nothing to show here yet. Tell me about something in the chat and I&apos;ll keep it here.</Text>
       <Text as="p" size="sm" tone="subtle">
-        <InlineAction intent="subtle" onClick={() => onNavigate(browseCardTarget({ directory: folder }))}>{`Open ${label} in Browse`}</InlineAction>
+        <InlineAction intent="subtle" material={material} onClick={() => onNavigate(browseCardTarget({ directory: folder }))}>{`Open ${label} in Browse`}</InlineAction>
       </Text>
     </div>
   );
@@ -83,12 +84,13 @@ function EmptyPlace({ folder, label, onNavigate }: { folder: string; label: stri
  */
 function RootCounts({ counts, onRetry }: { counts: NavCounts | "unavailable"; onRetry: (() => void) | undefined }) {
   const openBeside = useOpenBeside();
+  const material = useMaterial(undefined);
   if (counts === "unavailable") {
     return (
       <div data-place-section="counts">
         <Text as="p" size="sm" tone="subtle">
           {"Counts unavailable. "}
-          {onRetry === undefined ? null : <InlineAction intent="subtle" onClick={onRetry}>Retry</InlineAction>}
+          {onRetry === undefined ? null : <InlineAction intent="subtle" material={material} onClick={onRetry}>Retry</InlineAction>}
         </Text>
       </div>
     );
@@ -102,6 +104,7 @@ function RootCounts({ counts, onRetry }: { counts: NavCounts | "unavailable"; on
       <Text as="p" size="sm" tone="subtle">
         <CountsLine
           parts={parts}
+          material={material}
           actions={{
             open: open(PLATE_CARD_PATH, { title: "Open your todo list", viewState: null }),
             // Date order puts the oldest deadlines, the overdue ones, first.
@@ -189,8 +192,7 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
           </div>
         ) : (
           <div key={`group:${section.group.alsoHere === true ? "also-here" : "expand"}:${section.group.label}`} data-place-section="group">
-            {/* The rows sit on the card itself, so they take its ink. */}
-            <MaterialContext.Provider value><LandmarkGroup
+            <LandmarkGroup
               group={section.group}
               boxSlug={boxSlug}
               onNavigate={onNavigate}
@@ -198,7 +200,7 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
               hidePath
               // "Also here" lists the folder's cards, so its overflow opens the folder.
               {...(section.group.alsoHere === true ? { onMore: () => onNavigate(browseCardTarget({ directory: folder })) } : {})}
-            /></MaterialContext.Provider>
+            />
           </div>
         ),
       )}
@@ -247,5 +249,6 @@ export function PlaceView({ data, onNavigate, mode }: RendererProps) {
       />
     );
   }
-  return <div className="bbx-card-content">{content}</div>;
+  // The page draws on the card itself (or, embedded, on the enclosing card), so its text takes the card's ink.
+  return <div className="bbx-card-content"><MaterialContext.Provider value>{content}</MaterialContext.Provider></div>;
 }
