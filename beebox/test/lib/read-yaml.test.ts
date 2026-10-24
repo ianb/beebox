@@ -1,21 +1,22 @@
 // # Read-only YAML parsing
 //
-// `parseYaml` (`src/lib/read-yaml.ts`) reads YAML with js-yaml's core schema;
-// writes and edits stay on the `yaml` package. These cases pin where it agrees
-// with `yaml`'s defaults and the hand-typed inputs where it does not
-// (`docs/plans/yaml-read-parser.md`, Failure modes).
+// `parseYaml` (`src/lib/read-yaml.ts`) parses with js-yaml for speed and
+// hands text to the `yaml` package wherever the two could disagree, so every
+// value and error is `yaml`'s. Each case below is one js-yaml alone reads
+// differently (`docs/plans/yaml-read-parser.md`, Failure modes).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { isYamlSyntaxError, parseYaml } from "../../src/lib/read-yaml.js";
+import { parseYaml } from "../../src/lib/read-yaml.js";
 
-// Empty and comment-only text is null, as `yaml` returns, so callers that turn
-// an empty frontmatter block into `{}` keep working.
+// Empty and comment-only text is null, as `yaml` returns (js-yaml returns
+// undefined), so callers that turn an empty frontmatter block into `{}` work.
 void test("Empty or comment-only text is null", async (t) => {
   t.check([parseYaml(""), parseYaml("# only a comment\n")], [null, null]);
 });
 
-// The core schema: dates stay strings, `yes` is a string, `<<` is an ordinary key.
+// The YAML 1.2 core schema: dates stay strings, `yes` is a string, `<<` is an
+// ordinary key.
 void test("Dates, yes/no and merge keys read as the YAML 1.2 core schema does", async (t) => {
   t.check(parseYaml("due: 2026-01-01\nok: yes\nb: &x {c: 1}\nd:\n  <<: *x\n"), {
     due: "2026-01-01",
@@ -25,26 +26,50 @@ void test("Dates, yes/no and merge keys read as the YAML 1.2 core schema does", 
   });
 });
 
-// Differences from `yaml` on hand-typed values: a signed float with no digit
-// before the point stays a string, and a binary literal is a number.
-void test("Signed leading-dot floats stay strings; 0b literals are numbers", async (t) => {
-  t.check(parseYaml("a: -.5\nb: .5\nc: 0b101\n"), { a: "-.5", b: 0.5, c: 5 });
+// Inputs js-yaml alone reads differently: signed hex and leading-dot numbers,
+// `0b` literals, null keys, collection keys, an unknown tag (js-yaml throws),
+// a `%YAML 1.1` directive, and keys that collide only as strings (js-yaml
+// throws). Each gives `yaml`'s value.
+void test("Inputs js-yaml reads differently give yaml's value", async (t) => {
+  const inputs = [
+    "a: -.5\nb: +0x1F\nc: 0b101\nd: -0",
+    "~: a",
+    "null: b",
+    "{: a}",
+    "[a]: b",
+    "? [1, 2]\n: v",
+    "a: !foo bar",
+    "%YAML 1.1\n---\na: yes",
+    "1: a\n\"1\": b",
+  ];
+  t.check(
+    inputs.map((text) => parseYaml(text)),
+    [
+      { a: -0.5, b: "+0x1F", c: "0b101", d: -0 },
+      { "": "a" },
+      { "": "b" },
+      { "": "a" },
+      { "[ a ]": "b" },
+      { "[ 1, 2 ]": "v" },
+      { a: "bar" },
+      { a: true },
+      { "1": "b" },
+    ],
+  );
 });
 
-// Malformed text, a duplicate key and an unknown tag are syntax errors
-// (`yaml` only warns on an unknown tag); other errors are not.
-void test("Malformed YAML, duplicate keys and unknown tags are syntax errors", async (t) => {
-  const thrown = (text: string): unknown => {
-    try {
-      parseYaml(text);
-    } catch (error) {
-      return error;
-    }
-    return undefined;
-  };
-  t.check(
-    [thrown("a: [1, 2"), thrown("a: 1\na: 2"), thrown("a: !foo bar"), thrown("a: *nope")].map(isYamlSyntaxError),
-    [true, true, true, true],
+// Malformed text throws `yaml`'s error, so messages keep `yaml`'s wording.
+void test("Malformed YAML throws the yaml package's error", async (t) => {
+  t.checkThrows(
+    () => parseYaml("a: [1, 2"),
+    "YAMLParseError: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 9:\n\na: [1, 2\n        ^\n",
   );
-  t.check(isYamlSyntaxError(new Error("other")), false);
+});
+
+// Nested aliases that would expand to millions of values hit `yaml`'s alias
+// limit instead of expanding: js-yaml has no limit.
+void test("Alias expansion keeps yaml's limit", async (t) => {
+  const levels = ["l0: &l0 [x, x, x, x, x, x, x, x, x, x]"];
+  for (let i = 1; i < 12; i++) levels.push(`l${i}: &l${i} [${Array.from({ length: 10 }, () => `*l${i - 1}`).join(", ")}]`);
+  t.checkThrows(() => parseYaml(levels.join("\n")), "ReferenceError: Excessive alias count indicates a resource exhaustion attack");
 });

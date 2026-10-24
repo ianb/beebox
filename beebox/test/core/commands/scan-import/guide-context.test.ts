@@ -146,11 +146,11 @@ void test("Each parse stage names itself:", async (t) => {
 
   await writeGuide(root, "---\nversion: [unclosed\n---\n");
   await t.checkThrows(() => resolveScanGuideContext(root), [
-      "ScanGuideParseError: _config/scan.guide.card has invalid YAML: unexpected end of the stream within a flow collection (2:1)",
+      "ScanGuideParseError: _config/scan.guide.card has invalid YAML: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 19:",
       "",
-      " 1 | version: [unclosed",
-      " 2 | ",
-      "-----^ — fix the card (bbx validate _config/scan.guide.card)",
+      "version: [unclosed",
+      "                  ^",
+      " — fix the card (bbx validate _config/scan.guide.card)",
     ].join("\n"));
 
   await writeGuide(root, "---\ntriage-rules: 5\n---\n");
