@@ -846,6 +846,18 @@ kept here as the record.
    Options: (a) accept the bare listing; (b) add `identity: { name, symbol }`
    to `hub-meta.json` (not secret, two more fields, the engine already
    rewrites the file on every input change). Lean: (b), after the probe.
+9. **Fleet secret management from a box's Admin page** (open, found in
+   review round 2, 2026-10-24). The secrets tRPC router
+   (`src/webapp/trpc/routers/secrets.ts`) takes a target box slug and writes
+   the store the serving process reads. On a unit host that is the box's own
+   store, so granting from box A's Admin page to box B reports success and
+   changes nothing B can read; the machine-wide view the page shows is A's
+   store. Options: (a) on a unit host, make the surface box-scoped: refuse a
+   slug other than the serving box, and say that grants to other boxes are
+   made on the hub user's master store and re-exported (`bbx engine secrets
+   export-box`); (b) a hub-owned secrets surface that writes the master and
+   re-exports to every box (a new subsystem). Lean: (a) now, (b) if the
+   operator's grant workflow turns out to need a page.
 6. **Agent logins per box** (open, settled by the subplan's probe). One
    `claude auth login` and `codex login` per box user, repeated on expiry,
    or a copied credentials file that may break on token rotation. No

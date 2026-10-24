@@ -525,8 +525,13 @@ fi
 # untouched. Both commands are idempotent and print what they did.
 su - $BBX_USER -c "bbx engine hub add-box '$BOX_NAME' '$BOX_PATH' $SOCKET_FLAG"
 if [[ -n "$UNIT_HOST" ]]; then
-  # The scheduler runs as its own user on a unit host; its manifest is under that home.
-  su -s /bin/bash beebox-sched -c "bbx engine boxes add '\$CONTENT_DIR'"
+  # The scheduler runs as its own user on a unit host and its manifest lives
+  # under that home, but that user cannot read the box (0751 root, private
+  # contents), and 'bbx engine boxes add' validates the box before writing. So
+  # root writes the manifest into the scheduler user's home and hands it over
+  # (cross-model review round 2, codex gpt-6-sol, 2026-10-24).
+  HOME=/var/lib/beebox-sched bbx engine boxes add "\$CONTENT_DIR"
+  chown -R beebox-sched:beebox-sched /var/lib/beebox-sched/.config
 else
   su - $BBX_USER -c "bbx engine boxes add '\$CONTENT_DIR'"
 fi

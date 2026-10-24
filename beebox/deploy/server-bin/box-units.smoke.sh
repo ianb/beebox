@@ -83,6 +83,24 @@ check "the engine runs as bbx-$A" -- bash -c "[[ \$(ps -o user= -p \$(systemctl 
 check_not "a sibling box user cannot connect" -- runuser -u "bbx-$B" -- curl -s --max-time 5 --unix-socket "/run/beebox/$A.sock" http://box/api/build-info
 check "$B is still inactive (not woken)" -- bash -c "[[ \$(systemctl is-active beebox-box@$B.service) == inactive ]]"
 
+echo "== the hub secret reaches the engine as a credential"
+# The engine turned $CREDENTIALS_DIRECTORY/hub-secret into BBX_HUB_SECRET
+# (src/lib/systemd-credentials.ts); root reads the live process env to compare.
+main_pid=$(systemctl show -p MainPID --value "beebox-box@$A.service")
+check "BBX_HUB_SECRET equals /run/beebox/$A.hub-secret" -- bash -c "[[ \$(tr '\0' '\n' < /proc/$main_pid/environ | sed -n 's/^BBX_HUB_SECRET=//p') == \$(cat /run/beebox/$A.hub-secret) ]]"
+check_not "the sibling's secret is not in $A's environment" -- bash -c "tr '\0' '\n' < /proc/$main_pid/environ | grep -qF \"\$(cat /run/beebox/$B.hub-secret)\""
+
+echo "== the scheduler's one root path"
+if [[ -e /usr/local/sbin/bbx-box-run ]] && id beebox-sched >/dev/null 2>&1; then
+  check "a pass runs for $A through bbx-box-run" -- runuser -u beebox-sched -- sudo -n /usr/local/sbin/bbx-box-run "$A" scheduler-pass
+  check "the pass wrote the box's scheduler log" -- test -s "/var/lib/beebox/$A/box/.beebox/scheduler.jsonl"
+  check_not "an unknown slug is refused" -- runuser -u beebox-sched -- sudo -n /usr/local/sbin/bbx-box-run no-such-box scheduler-pass
+  check_not "an operation outside the set is refused" -- runuser -u beebox-sched -- sudo -n /usr/local/sbin/bbx-box-run "$A" shell
+  check_not "the hub user may not call it" -- runuser -u beebox -- sudo -n /usr/local/sbin/bbx-box-run "$A" scheduler-pass
+else
+  echo "SKIP bbx-box-run: wrapper or beebox-sched user absent (deploy installs them)"
+fi
+
 echo "== the view from inside $A's unit"
 # The same sandbox the unit runs with, applied to a one-off command as the box user.
 props=()
