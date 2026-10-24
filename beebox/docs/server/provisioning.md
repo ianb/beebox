@@ -108,7 +108,7 @@ Services run as the **`beebox` user** (User/Group in systemd unit files), not ro
 /home/beebox/.env         # Environment variables (API keys)
 /home/beebox/.claude/.credentials.json  # Claude Code OAuth credentials (beebox:beebox, 0600)
 /home/beebox/.local/bin/claude  # Claude Code (native install, auto-updates)
-/usr/local/bin/bbx           # CLI symlink
+/usr/local/bin/bbx           # CLI symlink (deploy installs it)
 /usr/local/bin/codex         # Workspace-pinned Codex CLI symlink
 /usr/local/sbin/bbx-host-apt # Root wrapper for box package installs (deploy installs it)
 /etc/sudoers.d/beebox-host-apt  # Lets the beebox user run only that wrapper

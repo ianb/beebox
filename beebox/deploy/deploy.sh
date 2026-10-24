@@ -813,6 +813,12 @@ HISTEOF
 # INSTALL_DIR is the locally configured remote deployment path.
 # shellcheck disable=SC2029
 queue_remote command ln -sf "$INSTALL_DIR/beebox/bin/cb" /usr/local/bin/cb
+# Every unit's ExecStart is /usr/local/bin/bbx, the installed engine's CLI. The
+# old provisioner made that link once; a host from hetzner/cloud-init.yaml and
+# provision.sh has none until its first deploy, so the deploy owns it (found on
+# the per-box-units VM, 2026-10-24: hub and scheduler crash-looped on 203/EXEC).
+# shellcheck disable=SC2029
+queue_remote command ln -sfn "$INSTALL_DIR/beebox/bin/bbx" /usr/local/bin/bbx
 
 # Box package installs: the root wrapper and the one sudoers entry that lets the
 # box user run it (docs/plans/box-host-packages.md). The wrapper's bytes come
