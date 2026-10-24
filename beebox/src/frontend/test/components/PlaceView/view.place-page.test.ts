@@ -17,6 +17,7 @@ import { PlacePage } from "../../../src/components/PlaceView/view.js";
 import type { PlacePayload } from "../../../src/components/PlaceView/sections.js";
 import { PlaceChatContext, type PlaceChat } from "../../../src/components/openers/place-chat.js";
 import { BoxSlugProvider } from "../../../src/lib/box-slug.js";
+import { MaterialContext } from "../../../src/components/ui/material.js";
 
 globalThis.React = React;
 
@@ -37,10 +38,11 @@ function payload(overrides?: Partial<PlacePayload>): PlacePayload {
   };
 }
 
-/** Render the page (the Lending place unless `cardPath` says otherwise) inside a router, a query client that never answers, and (optionally) a chat. */
-async function render(props: Omit<React.ComponentProps<typeof PlacePage>, "cardPath" | "onNavigate" | "onGoToPlace"> & { cardPath?: string }, chat?: PlaceChat | null) {
+/** Render the page (the Lending place unless `cardPath` says otherwise) inside a router, a query client that never answers, (optionally) a chat, and (optionally) on a card's material, as `PlaceView` puts it. */
+async function render({ material, ...props }: Omit<React.ComponentProps<typeof PlacePage>, "cardPath" | "onNavigate" | "onGoToPlace"> & { cardPath?: string; material?: boolean }, chat?: PlaceChat | null) {
   const page = React.createElement(PlacePage, { cardPath: "_content/lending/Lending.landmark.card", onNavigate: () => {}, onGoToPlace: () => {}, ...props });
-  const withChat = React.createElement(PlaceChatContext.Provider, { value: chat ?? null }, page);
+  const onMaterial = React.createElement(MaterialContext.Provider, { value: material === true }, page);
+  const withChat = React.createElement(PlaceChatContext.Provider, { value: chat ?? null }, onMaterial);
   const element = React.createElement(BoxSlugProvider, { boxSlug: "test1", children: withChat });
   const root = createRootRoute({ staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
@@ -300,9 +302,9 @@ void test("On the root place the page shows the count line after the summary", a
     ...(rootCounts === undefined ? {} : { rootCounts }),
     onRetryCounts: () => {},
   }, { ...startedLending, contextDir: "" });
-  const counted = await rootPage({ onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 });
+  const counted = await rootPage({ onPlateTodos: 3, escalatedTodos: 1, laterTodos: 0, pendingQuestions: 2 });
   const failed = await rootPage("unavailable");
-  const zero = await rootPage({ onPlateTodos: 0, escalatedTodos: 0, pendingQuestions: 0 });
+  const zero = await rootPage({ onPlateTodos: 0, escalatedTodos: 0, laterTodos: 0, pendingQuestions: 0 });
   t.check(
     ({
       sections: sections(counted),
@@ -317,4 +319,28 @@ void test("On the root place the page shows the count line after the summary", a
       zero: null,
     },
   );
+});
+
+// ## On a card, the page takes the card's ink
+//
+// The place page draws on the landmark card itself, so its quiet text and
+// links use the card's colours (`card-soft`), not the app grey that is dark
+// on dark under Gilt or Tempest. Off a material they keep the app grey.
+/** The colour classes on the element whose text is exactly `label`. */
+function colourOf(html: string, label: string) {
+  const tag = [...html.matchAll(/<(?:button|p)[^>]*class="([^"]*)"[^>]*>([^<]*)(?=<)/g)].find((m) => m[2] === label);
+  return (tag?.[1] ?? "").split(" ").filter((c) => /^(hover:)?text-(warm|card)-/.test(c));
+}
+
+void test("on a card's material the empty-place line and the counts retry take card ink", async (t) => {
+  const onCard = await render({ payload: payload({ openers: [] }), rootCounts: "unavailable", onRetryCounts: () => {}, material: true }, startedLending);
+  t.check({ browse: colourOf(onCard, "Open Lending in Browse"), retry: colourOf(onCard, "Retry") }, {
+    browse: ["text-card-soft", "hover:text-card-ink"],
+    retry: ["text-card-soft", "hover:text-card-ink"],
+  });
+  const offCard = await render({ payload: payload({ openers: [] }), rootCounts: "unavailable", onRetryCounts: () => {} }, startedLending);
+  t.check({ browse: colourOf(offCard, "Open Lending in Browse"), retry: colourOf(offCard, "Retry") }, {
+    browse: ["text-warm-700", "hover:text-warm-900"],
+    retry: ["text-warm-700", "hover:text-warm-900"],
+  });
 });

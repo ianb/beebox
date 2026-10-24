@@ -9,6 +9,7 @@ import { trpc } from "../../../lib/trpc/client";
 import { bbxSource } from "../../../lib/source-tag";
 import { SessionLog } from "./SessionLog";
 import { MobileBackButton } from "../../ui/MobileBackButton";
+import { StatusMessage } from "../../ui/StatusMessage";
 import { parseDiff } from "./CommitDetail-diff";
 import { stripTrailers, trailerString } from "@shared/commit-trailers";
 import { CommitTab } from "./CommitDetail-commit";
@@ -37,7 +38,7 @@ function SessionSection({ sessionId, idPrefix }: { sessionId: string; idPrefix: 
       <button
         id={`${idPrefix}-session-log-toggle`}
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-4 py-2 text-xs text-warm-500 hover:text-warm-700 text-left"
+        className="w-full px-4 py-2 text-xs text-warm-700 hover:text-warm-900 text-left"
       >
         {expanded ? "▾" : "▸"} Session log
       </button>
@@ -51,7 +52,7 @@ function SessionSection({ sessionId, idPrefix }: { sessionId: string; idPrefix: 
 function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
     <div className="px-4 py-1.5 bg-warm-50 border-b border-warm-200">
-      <span className="text-xs font-medium text-warm-600">{label}</span>
+      <span className="text-xs font-medium text-warm-700">{label}</span>
       <span className="text-xs text-warm-400 ml-1">({count})</span>
     </div>
   );
@@ -109,7 +110,7 @@ export function CommitDetail({
 
       {/* Files */}
       {diffLoading ? (
-        <div className="text-sm text-warm-500 italic p-4">Loading diff...</div>
+        <StatusMessage>Loading diff...</StatusMessage>
       ) : null}
 
       {newFiles.length > 0 ? (

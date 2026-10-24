@@ -1,15 +1,13 @@
 /**
  * Per-box route registration for the web app server.
  *
- * Each box is mounted under its slug prefix (main routes + tRPC + static)
- * and its webhooks are mounted under /webhook/<slug> outside the auth wall.
+ * Each box is mounted under its slug prefix (main routes + tRPC + static).
  * Split out of server.ts to keep that file under its line budget.
  */
 
 import { secretsStoreIsIsolated } from "../core/secrets/store.js";
 import type { FastifyInstance } from "fastify";
-import fastifyStatic from "@fastify/static";
-import { fastifyTRPCPlugin, type CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
+import type { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
 import { registerApiRoutes } from "./routes/api/register/core.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
@@ -188,6 +186,8 @@ interface BoxScopeDeps {
  */
 async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
   const { box, eventBus, options, frontendPath, frontendExists } = deps;
+  // Loaded here rather than at module load: every `bbx` verb loads this module.
+  const [{ default: fastifyStatic }, { fastifyTRPCPlugin }] = await Promise.all([import("@fastify/static"), import("@trpc/server/adapters/fastify")]);
 
   if (!instance.openAccess || isHubMode()) {
     addBoxAuthHook(instance, box);

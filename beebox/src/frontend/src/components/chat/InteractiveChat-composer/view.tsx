@@ -8,6 +8,7 @@
 
 import TextareaAutosize from "react-textarea-autosize";
 import { Dropdown } from "../../ui/Dropdown";
+import { CloseButton } from "../../ui/CloseButton";
 import { MenuItem } from "../../ui/dropdown-menu-item";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
@@ -116,16 +117,13 @@ function DesktopComposerRow({
       />
       {isTranscribing ? (
         <>
-          <button
+          <CloseButton
             id={includeControlIds ? "bbx-composer-dictation-cancel" : undefined}
             onClick={handleCancelTranscription}
-            className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
-            title="Cancel (Esc)"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            label="Cancel dictation (Esc)"
+            ink
+            className="flex-shrink-0"
+          />
           <button
             id={includeControlIds ? "bbx-composer-dictation-edit" : undefined}
             onClick={() => {
@@ -188,7 +186,7 @@ export function ChatInputArea({
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  narrationEnabled, includeControlIds, placeholder,
+  narrationEnabled, includeControlIds, placeholder, label,
 }: ComposerRowProps & {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   handleKeyDown: (e: React.KeyboardEvent) => void;
@@ -210,6 +208,8 @@ export function ChatInputArea({
   narrationEnabled: boolean;
   /** Omit authored addresses when rendered repeatedly in a development gallery. */
   includeControlIds?: boolean;
+  /** The landmark's name; a gallery showing several composers names each one. */
+  label?: string;
 }) {
   const hasControlIds = includeControlIds !== false;
   // The product composer only: the dev gallery renders many without control ids.
@@ -219,7 +219,7 @@ export function ChatInputArea({
   const input = useInputValue();
   const setInput = useInputStore().set;
   return (
-    <section aria-label="Compose message" className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
+    <section aria-label={label ?? "Compose message"} className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
       <div className="relative flex items-center gap-2">
         {/* Floats above the voice button at the bar's right edge — anchored
             here (not in the textarea rows) so it rides the record/stop

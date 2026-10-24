@@ -49,7 +49,7 @@ and the raw JSON there is no middle level.
 - **Paths.** The earlier fix removed file paths on purpose. A title or
   display name from the card or document may be enough; a raw path such as
   `_content/...` should stay out of the line (see the `_content/` concern in
-  [printable cards](../../features/2026-10-01-printable-cards.md)).
+  [printable cards](2026-10-01-printable-cards.md)).
 
 ## Related
 

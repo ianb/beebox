@@ -44,6 +44,8 @@ import { formatRefSuffix, isExternalRef, parseRef, resolveRefPath } from "../../
 import { formatLinkDestination, htmlLinkPattern, inlineLinkPattern, linkTarget } from "../body-refs.js";
 import { rewriteFrontmatter, type RefTransform } from "./frontmatter-refs.js";
 import { invariant } from "../../shared/invariant.js";
+import { boxRelativeDoc } from "../../lib/box-containment.js";
+import { frontmatterFence } from "../../cards/frontmatter.js";
 
 /**
  * Decide where a resolved target moves to. Receives an absolute path; returns
@@ -68,7 +70,7 @@ function resolveRefToAbs(params: {
 }): string | null {
   const { boxRoot, cardAbsPath, pathPart } = params;
   if (isExternalRef(pathPart)) return null;
-  const fromPath = params.fromPath ?? boxRelativeFrom(boxRoot, cardAbsPath);
+  const fromPath = params.fromPath ?? boxRelativeDoc(boxRoot, cardAbsPath);
   if (fromPath === null) {
     console.warn(`rewrite-card-refs: ${cardAbsPath} is outside ${boxRoot}; leaving its refs unchanged`);
     return null;
@@ -80,16 +82,6 @@ function resolveRefToAbs(params: {
   const resolved = resolveRefPath({ fromPath, ref: pathPart, kind: "card" });
   if (resolved === null) return null;
   return path.resolve(boxRoot, resolved);
-}
-
-/**
- * The referring card's path as the shared algebra wants it: box-relative,
- * forward slashes. `null` when the card lies outside the box.
- */
-function boxRelativeFrom(boxRoot: string, cardAbsPath: string): string | null {
-  const rel = path.relative(path.resolve(boxRoot), path.resolve(cardAbsPath));
-  if (rel === "" || rel === ".." || rel.startsWith(".." + path.sep)) return null;
-  return rel.split(path.sep).join("/");
 }
 
 /**
@@ -241,11 +233,8 @@ function scanBodyText(line: string, wrap: RefTransform): string {
 
 /** The line index the body starts at — past the frontmatter block, or 0. */
 function bodyStartLine(lines: string[]): number {
-  if (lines[0] !== "---") return 0;
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i] === "---") return i + 1;
-  }
-  return 0;
+  const fence = frontmatterFence(lines.join("\n"));
+  return fence === null ? 0 : fence.closingLine + 1;
 }
 
 /**

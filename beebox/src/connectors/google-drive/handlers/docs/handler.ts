@@ -43,7 +43,7 @@ import type { GdocLossyType } from "../../../../schemas/gdoc.js";
 import { preserveAgentFields } from "../../../../preserve-agent-fields.js";
 import { reconcileCommentsSidecar } from "../../comments-sidecar.js";
 import { stripsUpstreamTrailingWhitespace } from "./whitespace.js";
-import { DocsApiUnavailableError, diagnoseDocsApiFailure } from "./api-failure.js";
+import { DocsApiUnavailableError, diagnoseDocsApiFailure, type DocsApiOutcome } from "./api-failure.js";
 
 const DOC_MIME = "application/vnd.google-apps.document";
 const MARKDOWN_MIME = "text/markdown";
@@ -160,24 +160,25 @@ function lossyToTemplateItems(
 
 /**
  * Call `getDocument`, but degrade gracefully when the Docs API refuses (a
- * missing scope, the API disabled on the Cloud project, an outage). Returns
+ * missing scope, the API disabled on the Cloud project, an outage). `doc` is
  * null on failure so the caller can keep pulling with reduced fidelity (no
  * revisionId for conflict detection, lossy detection limited to comment
- * count). The warning names the diagnosed cause.
+ * count). The warning names the diagnosed cause; `outcome` carries it to the
+ * connector, which turns a pass's outcomes into the box's Docs API diagnosis.
  */
 async function tryGetDocument(
   service: GoogleDriveService,
   opts: { fileId: string; fileName: string },
-): Promise<DocumentStructure | null> {
+): Promise<{ doc: DocumentStructure | null; outcome: DocsApiOutcome }> {
   try {
-    return await service.getDocument(opts.fileId);
+    return { doc: await service.getDocument(opts.fileId), outcome: { ok: true } };
   } catch (e) {
     const failure = await diagnoseDocsApiFailure(e);
     console.warn(
       `[google-drive] Could not fetch Docs API metadata for ${opts.fileName} ` +
         `(syncing without revision tracking or lossy details): ${failure.message}`,
     );
-    return null;
+    return { doc: null, outcome: { ok: false, failure } };
   }
 }
 
@@ -227,7 +228,7 @@ const docsHandler: DriveTypeHandler = {
     // `documents.readonly` scope; if it's missing we still want pull to
     // succeed with reduced fidelity (no revisionId, no lossy details
     // beyond the comment count).
-    const [doc, comments, markdown] = await Promise.all([
+    const [{ doc, outcome }, comments, markdown] = await Promise.all([
       tryGetDocument(service, { fileId: file.id, fileName: file.name }),
       service.listComments(file.id),
       service.exportFile(file.id, MARKDOWN_MIME),
@@ -335,7 +336,7 @@ const docsHandler: DriveTypeHandler = {
       changed = true;
     }
 
-    return { written, changed };
+    return { written, changed, docsApi: outcome };
   },
 
   async push(opts): Promise<PushResult> {
@@ -393,7 +394,8 @@ const docsHandler: DriveTypeHandler = {
     // both pull-time and push-time). modifiedTime always works.
     const rawStoredRevision = state.extra["headRevisionId"];
     const storedRevision = typeof rawStoredRevision === "string" ? rawStoredRevision : undefined;
-    const doc = await tryGetDocument(service, { fileId: file.id, fileName: file.name });
+    // Only the pull that follows reports the Docs API outcome; this read is the conflict check's.
+    const { doc } = await tryGetDocument(service, { fileId: file.id, fileName: file.name });
     const remoteDiverged =
       file.modifiedTime !== state.lastModified ||
       (storedRevision !== undefined && doc !== null && doc.revisionId !== storedRevision);

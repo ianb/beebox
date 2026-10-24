@@ -174,7 +174,10 @@ void test("The same tripwire fires for a stray directly at the root — the edit
 // alone would stay silent:
 void test("Editing package.json (or a lockfile, tsconfig.json, nodemodules/) always gets...", async (t) => {
   const cleanBox = await makeTmpBox();
-  await writeFile(`${cleanBox.root}/package.json`, "{}");
+  // An edit that keeps the box a box: the beebox dependency is what identifies
+  // it (`isBoxRoot`), so the edit adds a dependency beside it.
+  const pkg = JSON.parse(await cleanBox.read("package.json"));
+  await writeFile(`${cleanBox.root}/package.json`, JSON.stringify({ ...pkg, dependencies: { ...pkg.dependencies, lodash: "4.17.21" } }));
   const cleanEdit = await validateHookPathsResult([`${cleanBox.root}/package.json`]);
   await cleanBox.cleanup();
   t.check(cleanEdit, {

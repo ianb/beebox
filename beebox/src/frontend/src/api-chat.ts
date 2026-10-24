@@ -1,3 +1,4 @@
+import { errorMessage } from "@shared/error-guards";
 import { startAwakeTimeout } from "@shared/awake-timeout.js";
 import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
 /**
@@ -27,6 +28,7 @@ import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
 import { z } from "zod";
 import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
+import { newMessageId } from "./components/chat/InteractiveChat-helpers";
 import { trpcClient } from "./lib/trpc/client";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ChatSendContext } from "@core/chat/card-activity.js";
@@ -60,6 +62,11 @@ export interface SessionContentBlock {
   imageRef?: string;
   /** For thinking blocks: the text is a progress update written for the user. */
   progressUpdate?: true;
+  /**
+   * Live stream only: the length of `streamText` when this block arrived, so
+   * `buildStreamEntry` can put text written before a tool call ahead of it.
+   */
+  streamTextOffset?: number;
 }
 
 /**
@@ -346,7 +353,7 @@ export async function startChatTurn(params: {
 } & ChatSendContext): Promise<ChatTurnStart> {
   const { session, message, images, contextDir, seedFeatures, engine, model, openCard, openQuestion, cardActivity, cardState } = params;
   const apiBase = getApiBase();
-  const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const messageId = params.messageId ?? newMessageId();
 
   let attemptNumber = 0;
   const attempt = async (): Promise<Response> => {
@@ -403,7 +410,7 @@ export async function startChatTurn(params: {
       await new Promise((r) => setTimeout(r, 2000));
       response = await attempt();
     } else {
-      const reason = err instanceof Error ? err.message : String(err);
+      const reason = errorMessage(err);
       recordChatSendEvent(messageId, { event: "post-error", detail: { reasonKind: chatSendReasonKind(reason) } });
       throw err instanceof Error ? err : new RequestError(String(err));
     }

@@ -19,6 +19,7 @@ import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../../lib/sel
 import type { FileData } from "../../file-type-registry";
 import type { ReactNode } from "react";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import { StatusMessage } from "../ui/StatusMessage";
 
 /**
  * Subtle "Direct quotes from: …" subtitle when the doc body contains one
@@ -37,7 +38,7 @@ function QuoteSpeakersLine({
 }): ReactNode {
   if (speakers.length === 0) return null;
   return (
-    <div className="text-xs text-warm-500 mb-3 bbx-quote-speakers">
+    <div className="text-xs text-warm-700 mb-3 bbx-quote-speakers">
       <span className="font-medium">Direct quotes from:</span>{" "}
       {speakers.map((speaker, i) => {
         const display = speakerDisplay(speaker);
@@ -94,7 +95,7 @@ export function CardBody({
   const { boxSlug } = useParams({ strict: false });
   // Inline figure embeds: `![](view:…figure.card)` renders the figure in place.
   const components = useMemo(
-    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
+    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined, openImageLink: undefined }),
     [onNavigate, data.path, boxSlug],
   );
 
@@ -108,6 +109,7 @@ export function CardBody({
         <div data-card-section="body">
           <Markdown
             prose="block"
+            outline
             onNavigate={onNavigate}
             basePath={data.path}
             components={components}
@@ -117,7 +119,7 @@ export function CardBody({
           </Markdown>
         </div>
       ) : hideEmptyBody ? null : (
-        <div className="text-sm text-warm-500 italic">No body content</div>
+        <StatusMessage className="p-4">No body content</StatusMessage>
       )}
     </>
   );

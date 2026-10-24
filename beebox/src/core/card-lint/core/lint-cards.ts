@@ -44,8 +44,7 @@ import {
   type LintSummary,
   type LintIssue,
 } from "../../../exports/cards.js";
-import { parse as parseYaml } from "yaml";
-import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "../../card-io.js";
+import { parseCardText, typeFromFilename, type LoadCardContext } from "../../card-io.js";
 import { symbolIssues } from "./symbol.js";
 import { bodyTitleWarnings } from "./body-title.js";
 import { extractBodyLinks, extractBodyRefs } from "../../body-refs.js";
@@ -54,8 +53,8 @@ import { isAttachRef } from "../../../shared/attach-path.js";
 import { parseRef, formatRefSuffix, isUrlRef } from "../../../shared/ref-path/core.js";
 import { lintBodyMarkdoc, lintFrontmatterTodoAssigned } from "../../body-markdoc-lint.js";
 import { brokenRefReason, resolveRefExists } from "../../ref-exists.js";
+import { boxRelativeDoc } from "../../../lib/box-containment.js";
 import {
-  boxRelativeDoc,
   canonicalIssueMessage,
   cardRefProbe,
   planCanonicalRef,
@@ -83,6 +82,12 @@ export interface LintDispatchOptions {
    * by default would bury the broken-ref signal (`canonical-refs.ts`).
    */
   canonical?: boolean;
+  /**
+   * Filled with each parsed card's frontmatter as written, keyed by path, so
+   * a later whole-box pass (`lintProminenceBudget`) reuses it instead of
+   * reading and parsing every card again.
+   */
+  frontmatterByPath?: Map<string, Record<string, unknown>>;
 }
 
 /**
@@ -179,6 +184,7 @@ async function lintFrontmatterCard(input: {
   } catch (e) {
     return errorResult(path, errorMessage(e));
   }
+  options.frontmatterByPath?.set(path, parsed.frontmatter);
   // Broken refs are surfaced as WARNINGS, not errors. Refs commonly go
   // stale via legitimate operations (the referent got moved, archived,
   // trashed, or hand-deleted), and treating each one as a hard error
@@ -267,7 +273,7 @@ async function lintFrontmatterCard(input: {
   // per-type path fields below.
   warnings.push(...(await lintCardSymbolSrc({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   warnings.push(...symbolFindings.filter((issue) => issue.severity === "warning"));
-  warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
+  warnings.push(...unknownKeyWarnings({ frontmatter: parsed.frontmatter, schema: parsed.schema }));
   // Universal Markdoc body validation (docs/implemented-plans/todo-annotation.md, Track 1
   // chunk 2): every card with a markdown body gets Markdoc parse+validate,
   // warning-first — except a schema that already runs its own (commentary),
@@ -378,19 +384,8 @@ async function canonicalWarnings(input: {
  * body field, which lives in the file body, not frontmatter), the injected
  * global fields, and `type`.
  */
-function unknownKeyWarnings(input: { content: string; schema: CardSchema }): LintIssue[] {
-  const { content, schema } = input;
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return [];
-  let fm: unknown;
-  try {
-    fm = parseYaml(split.frontmatterText);
-  } catch (_e) {
-    // Malformed YAML is a separate, error-level failure already surfaced by
-    // parseCardText (which threw → errorResult); nothing to add here.
-    return [];
-  }
-  if (!isRecord(fm)) return [];
+function unknownKeyWarnings(input: { frontmatter: Record<string, unknown>; schema: CardSchema }): LintIssue[] {
+  const { frontmatter: fm, schema } = input;
   const allowed = new Set<string>(["type", ...schema.globalFieldNames, ...Object.keys(schema.fields)]);
   if (schema.bodyFieldName !== null) allowed.delete(schema.bodyFieldName);
   const warnings: LintIssue[] = [];

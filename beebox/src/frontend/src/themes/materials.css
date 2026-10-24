@@ -18,6 +18,10 @@
   --bbx-blockquote-sheet-display: none;
   --bbx-slip-angle: -0.25deg;
   --bbx-slip-grain: initial;
+  /* The slip's light catch; dark papers set fainter ones. Reset here so a
+     light card nested in a dark one gets its own. */
+  --bbx-slip-light: #ffffff35;
+  --bbx-slip-edge-light: #ffffffcc;
   --bbx-sheet-radius: 8px;
   --bbx-slip-overhang: 0px;
   --bbx-quote-shadow: none;

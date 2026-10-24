@@ -13,11 +13,10 @@
  * identity header attached (`x-bbx-authenticated-email` or, when hub-wide
  * auth is off, `x-bbx-hub-auth: off`) alongside `x-bbx-hub-secret` -- see
  * `src/webapp/auth.ts`'s `resolveRequestIdentity` for the child side of
- * this contract. `/healthz`, the hub's own `/auth/login|callback|logout|me`
- * (registered by `registerAuthSurface` below, not proxied), and
- * `/webhook/<slug>/*` are the paths NOT behind this auth wall (health
- * checks, login itself, and external webhook callers that have never gone
- * through Cloudflare Access either). `/auth/google-services/callback` is
+ * this contract. `/healthz` and the hub's own `/auth/login|callback|logout|me`
+ * (registered by `registerAuthSurface` below, not proxied) are the paths NOT
+ * behind this auth wall (health checks and login itself).
+ * `/auth/google-services/callback` is
  * NOT in that list even though it shares the `/auth/` prefix -- it's a
  * per-box connector callback, proxied to a child like any other request and
  * gated the same way (see its dedicated route below).
@@ -33,10 +32,7 @@ import type { Socket } from "node:net";
 import fs from "node:fs";
 import path from "node:path";
 import { isRecord } from "../../shared/is-record.js";
-import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
-import fastifyCookie from "@fastify/cookie";
-import fastifyStatic from "@fastify/static";
-import httpProxy from "http-proxy-3";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Endpoint, EndpointProvider } from "../endpoints.js";
 import type { BoxRuntimeStatus } from "../box-status.js";
 import { registerBoxPicker } from "./box-picker.js";
@@ -99,6 +95,13 @@ export interface HubServerOptions {
    * `x-bbx-hub-auth: off` to its children.
    */
   openAccess?: boolean | undefined;
+  /**
+   * The built frontend to serve. Defaults to `src/frontend/dist`, a gitignored
+   * build artifact; a test points this at `test/fixtures/frontend-dist` so the
+   * box picker and static mounts do not depend on what the checkout has built
+   * (as `frontendPath` does for the box server, `server-types.ts`).
+   */
+  frontendPath?: string | undefined;
 }
 
 /** First path segment, e.g. `/test1/browse/x` -> `test1`. Mirrors the dev
@@ -109,24 +112,6 @@ function parseSlug(reqPath: string): string | null {
   const slug = m[1];
   invariant(slug !== undefined, "regex match must populate its required capture group");
   return slug;
-}
-
-/** `/webhook/<slug>/...` -> `<slug>`. A SEPARATE top-level prefix from a
- *  box's own `/<slug>` scope -- see `RESERVED_SLUGS`'s doc comment. */
-function parseWebhookSlug(reqPath: string): string | null {
-  const m = /^\/webhook\/([^#/?]+)(?:[#/?]|$)/.exec(reqPath);
-  if (!m) return null;
-  const slug = m[1];
-  invariant(slug !== undefined, "regex match must populate its required capture group");
-  return slug;
-}
-
-function isWebhookPath(reqPath: string): boolean {
-  return reqPath.startsWith("/webhook/");
-}
-
-function slugForPath(reqPath: string): string | null {
-  return isWebhookPath(reqPath) ? parseWebhookSlug(reqPath) : parseSlug(reqPath);
 }
 
 /**
@@ -225,24 +210,14 @@ interface HubAuthDecision {
 function decideHubAuth({
   cookieHeader,
   browseAuthed,
-  isWebhook,
   hubSecret,
   openAccess,
 }: {
   cookieHeader: string | undefined;
   browseAuthed: boolean;
-  isWebhook: boolean;
   hubSecret: string;
   openAccess: boolean;
 }): HubAuthDecision {
-  // Webhooks are outside the auth wall today (external callers never went
-  // through Cloudflare Access either) -- proxy through with just the hub
-  // secret, no identity, so the child still knows this is genuine hub
-  // traffic and its webhook routes stay outside ITS auth wall as they
-  // already are.
-  if (isWebhook) {
-    return { authorized: true, headersToSet: { [HUB_SECRET_HEADER]: hubSecret } };
-  }
   // The hub advertises `x-bbx-hub-auth: off` to its children ONLY when the hub
   // was constructed with `openAccess: true` — i.e. hub-wide open mode. No CLI
   // path sets it (test seam only); Google configuration never decided this.
@@ -277,6 +252,12 @@ function decideHubAuth({
   return { authorized: false, headersToSet: {} };
 }
 
+/** The hub's server packages, loaded when a hub starts: every `bbx` verb loads this module. */
+async function loadHubPackages() {
+  const [fastify, cookie, staticFiles, proxy] = await Promise.all([import("fastify"), import("@fastify/cookie"), import("@fastify/static"), import("http-proxy-3")]);
+  return { Fastify: fastify.default, fastifyCookie: cookie.default, fastifyStatic: staticFiles.default, httpProxy: proxy.default };
+}
+
 /**
  * Build the hub's Fastify app, register its own surface (health, login,
  * box picker), then hijack every other request into the endpoint proxy.
@@ -285,7 +266,8 @@ function decideHubAuth({
  * `.on("upgrade")`) `cli/commands/hub.ts` and the tests already use.
  */
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
-  const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false } = options;
+  const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false, frontendPath } = options;
+  const { Fastify, fastifyCookie, fastifyStatic, httpProxy } = await loadHubPackages();
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
 
@@ -302,7 +284,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // pipe the raw request stream to the child. The built-in parsers must go
   // first: Fastify's own application/json and text/plain parsers take
   // precedence over a catch-all "*", and they drain the stream, which left
-  // every JSON webhook POST hanging behind the hub.
+  // every proxied JSON POST hanging behind the hub.
   app.removeAllContentTypeParsers();
   // eslint-disable-next-line max-params -- Fastify's addContentTypeParser callback signature is (request, payload, done)
   app.addContentTypeParser("*", (_request, _payload, done) => {
@@ -320,7 +302,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
 
   // The box picker at "/" — serves the SPA's styled box-selection page (with a
   // minimal server-rendered fallback when the bundle isn't built).
-  const frontendDist = path.join(PACKAGE_ROOT, "src/frontend/dist");
+  const frontendDist = frontendPath ?? path.join(PACKAGE_ROOT, "src/frontend/dist");
   registerBoxPicker(app, { boxes, frontendDist });
 
   // The frontend's box switcher calls /api/boxes on whatever server it's
@@ -424,7 +406,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     // first: an unauthenticated request redirects to login regardless of slug,
     // so it neither wakes a box nor reveals whether the slug is configured.
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: verifyBrowseKey(request.headers), isWebhook: false, hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: verifyBrowseKey(request.headers), hubSecret, openAccess });
     if (!decision.authorized) {
       return loginRedirect(request, reply);
     }
@@ -459,7 +441,9 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     try {
       endpoint = boxSlug ? await resolveEndpoint(boxSlug, endpoints) : undefined;
     } catch (e) {
-      return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
+      // A client-facing body (pairing redemption reaches it unauthenticated):
+      // an Error's message only, never the fields of some other thrown value.
+      return reply.status(502).send({ error: "bad_gateway", message: e instanceof Error ? e.message : String(e) });
     }
     if (!endpoint) {
       return reply.status(400).send({ error: "unknown_box", message: `Unknown box in OAuth state: ${JSON.stringify(boxSlug)}` });
@@ -473,9 +457,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // instance unchanged (no prefix stripping -- see module doc).
   app.all("/*", async (request, reply) => {
     const reqPath = request.url.split("?")[0] ?? "/";
-    const isWebhook = isWebhookPath(reqPath);
     const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
-    const slug = slugForPath(reqPath);
+    const slug = parseSlug(reqPath);
     const mobileAuthed = slug !== null
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
     // A scan-upload bearer authorizes ONLY `/<slug>/api/scan/…` (see
@@ -489,7 +472,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const perBoxAuthed = mobileAuthed || scanAuthed || (agentBoxRoot !== undefined && verifyAgentBearer(agentBoxRoot, request.headers.authorization));
 
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(request.headers), isWebhook, hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(request.headers), hubSecret, openAccess });
     if (!isMobilePairingRedeem && !perBoxAuthed && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
@@ -519,7 +502,9 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     try {
       endpoint = slug ? await resolveEndpoint(slug, endpoints) : undefined;
     } catch (e) {
-      return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
+      // A client-facing body (pairing redemption reaches it unauthenticated):
+      // an Error's message only, never the fields of some other thrown value.
+      return reply.status(502).send({ error: "bad_gateway", message: e instanceof Error ? e.message : String(e) });
     }
     // Pairing redemption passed the wall unauthenticated; it gets no owner detail.
     if (!endpoint) return replyNoEndpoint(reply, { slug, reqPath, method: request.method, accept: request.headers.accept, boxRoot: slug === null ? undefined : boxRootBySlug.get(slug), endpoints, detailed: perBoxAuthed || decision.authorized });
@@ -539,13 +524,12 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // eslint-disable-next-line max-params -- Node's http "upgrade" event signature is (req, socket, head)
   const handleUpgrade = async (req: http.IncomingMessage, socket: Socket, head: Buffer): Promise<void> => {
     const reqPath = req.url ?? "/";
-    const isWebhook = isWebhookPath(reqPath);
-    const slug = slugForPath(reqPath);
+    const slug = parseSlug(reqPath);
     const mobileAuthed = slug !== null
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
 
     stripHubHeaders(req.headers);
-    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(req.headers), isWebhook, hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(req.headers), hubSecret, openAccess });
     if (!mobileAuthed && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
@@ -591,8 +575,4 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   });
 
   return server;
-}
-
-function describeHubError(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }

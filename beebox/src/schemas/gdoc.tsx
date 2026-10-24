@@ -19,7 +19,7 @@
  * would otherwise reach for a plain `.md` file.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../exports/cards.js";
 
@@ -123,6 +123,10 @@ features were found — it says nothing about the structure the export
 does carry, such as nested lists and checkboxes, which markdown holds
 only in whitespace and indentation. Never read an empty \`lossy:\` as
 permission to edit or reformat.
+
+A card without \`drive.revision\` may have synced while the Docs API was
+unavailable; then \`lossy:\` was not checked at all. Run \`bbx health\`
+before relying on an empty \`lossy:\`.
 
 ## Moving docs
 Moving the card moves its attach scope (and the \`.md\` inside)

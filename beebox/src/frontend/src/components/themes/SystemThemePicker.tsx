@@ -72,7 +72,7 @@ const STOCK_LABELS: Record<string, string> = {
   blue: "Blue",
 };
 
-function SystemThemeSwatches({ busy, choice, disabled, idPrefix, onSelect }: {
+export function SystemThemeSwatches({ busy, choice, disabled, idPrefix, onSelect }: {
   busy: boolean;
   choice: ResolvedThemeChoice;
   disabled: boolean;
@@ -155,7 +155,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
 }
 
 export function BoxSystemThemePicker({ boxKey }: { boxKey: string }) {
-  return <Card as="section" shadow aria-label="System theme"><Stack gap="sm">
+  return <Card as="section" shadow material aria-label="System theme"><Stack gap="sm">
     <Heading level={2}>System theme</Heading>
     <Hint>Choose the toolbar and workspace surface for this box.</Hint>
     <PickerBody input={{ scope: "box", boxKey }} />

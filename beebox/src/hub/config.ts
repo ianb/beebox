@@ -20,17 +20,16 @@ import * as os from "node:os";
 import { z } from "zod";
 import { requireBoxRoot } from "../lib/box-shape.js";
 import { invariant } from "../shared/invariant.js";
+import { errorMessage } from "../shared/error-guards.js";
 
 /**
  * URL prefixes the box server itself claims at the root level (outside any
  * box's own `/<slug>` scope) — see `src/webapp/server-root/root-routes.ts`
- * (`/healthz`, `/api/...`), `src/webapp/routes/auth/register.ts` (`/auth/...`), and
- * `src/webapp/server-box-scope.ts` (`/webhook/<slug>/...`, a SEPARATE
- * top-level prefix from the box's own `/<slug>`). A box slug colliding with
- * any of these would make some of the box's own routes unreachable through
- * the hub (and `webhook` specifically would collide with every box's own
- * webhook prefix, not just the box named "webhook"), so they're reserved
- * fleet-wide.
+ * (`/healthz`, `/api/...`) and `src/webapp/routes/auth/register.ts` (`/auth/...`).
+ * A box slug colliding with any of these would make some of the box's own
+ * routes unreachable through the hub, so they're reserved fleet-wide.
+ * `webhook` was the prefix for external webhook callers; no route uses it
+ * now, and it stays reserved so a slug cannot claim it.
  */
 const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "healthz",
@@ -146,8 +145,8 @@ export function defaultHubConfigPath(): string {
  * (e.g. a symlink) compare as different strings and both pass the check,
  * letting two `bbx serve` processes start against one box's `events.db`.
  *
- * Resolution failures (e.g. a misconfigured entry with no `.beebox/box.json`
- * anywhere) do NOT throw here -- `loadHubConfig` stays a load-time
+ * Resolution failures (e.g. a misconfigured entry that is not a box
+ * at all) do NOT throw here -- `loadHubConfig` stays a load-time
  * validator that a single bad entry shouldn't take down; a box that can't
  * resolve is reported "unhealthy" once the supervisor actually tries to
  * launch it (see `cli/commands/hub.ts`'s best-effort `boxEntries` handling).
@@ -191,7 +190,7 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
     raw = await fs.readFile(configPath, "utf-8");
   } catch (e) {
     throw new HubConfigError(
-      `Cannot read hub config at ${configPath}: ` + describeError(e)
+      `Cannot read hub config at ${configPath}: ` + errorMessage(e)
     );
   }
 
@@ -200,7 +199,7 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
     json = JSON.parse(raw);
   } catch (e) {
     throw new HubConfigError(
-      `Hub config at ${configPath} is not valid JSON: ` + describeError(e)
+      `Hub config at ${configPath} is not valid JSON: ` + errorMessage(e)
     );
   }
 
@@ -291,8 +290,4 @@ export async function parseHubConfig(json: unknown, configPath: string): Promise
     idleMs: result.data.idleMs ?? DEFAULT_IDLE_MS,
     keepRecent,
   };
-}
-
-function describeError(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }

@@ -4,6 +4,7 @@
  * sibling so the component file stays small and rule-clean.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useState, useEffect, useCallback } from "react";
 import { trpc, trpcClient } from "../../../lib/trpc/client";
 import { getQueryKey } from "@trpc/react-query";
@@ -20,6 +21,12 @@ export interface GoogleStatus {
   needsReauthSince: string | null;
   scopes: string[];
   enabledServices: Record<string, boolean>;
+  /**
+   * Drive is syncing Google Docs without the Docs API, for a reason the
+   * boxholder can fix (`link` is where), or null. Shown under the Drive toggle
+   * until the API answers again or Drive stops syncing.
+   */
+  driveDocsApi: { message: string; link: string | null } | null;
 }
 
 export interface GoogleServicesState {
@@ -33,10 +40,6 @@ export interface GoogleServicesState {
   handleDisconnect: () => Promise<void>;
   handleServiceToggle: (service: string, enabled: boolean) => Promise<void>;
   refreshStatus: () => Promise<GoogleStatus | null>;
-}
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export function useGoogleServices(): GoogleServicesState {

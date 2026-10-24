@@ -67,7 +67,7 @@ export function makeSeeAlsoComponent(linkCtx: SeeAlsoLinkContext): (props: SeeAl
           type="button"
           onClick={() => linkCtx.onNavigate(target, { label })}
           title={title}
-          className={`${MARKER_CLASS} cursor-pointer hover:text-warm-600`}
+          className={`${MARKER_CLASS} cursor-pointer hover:text-warm-700`}
         >
           [see also: {label}]
         </button>

@@ -8,8 +8,9 @@
  * migrations a box thinks it has applied.
  *
  * Every box had applied every entry below as of 2026-10-08, so each one now
- * runs the shared no-op `src/scripts/migrate/retired.ts`; the migrators that
- * did the work are in git history. A retired entry keeps its name and position.
+ * runs the shared tombstone `src/scripts/migrate/retired.ts` (a box that never
+ * applied the entry gets exit 1); the migrators that did the work are in git
+ * history. A retired entry keeps its name and position.
  *
  * Adding an entry here? File the legacy-removal issue too — whatever code now
  * exists only to tolerate the pre-migration shape should be named, with
@@ -53,6 +54,15 @@ export function isProcedureMigration(m: Migration): m is ProcedureMigration {
 }
 
 const RETIRED = "src/scripts/migrate/retired.ts";
+
+/**
+ * A retired entry runs the tombstone, which exits 1: only a box that never
+ * applied the migration reaches it, and an agent cannot repair that. The sweep
+ * asks a human instead of starting a repair attempt.
+ */
+export function isRetiredMigration(m: Migration): boolean {
+  return !isProcedureMigration(m) && m.script === RETIRED;
+}
 
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "attachments", script: RETIRED },
@@ -142,6 +152,29 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // nothing written) on a field it does not map or an ambiguous recording.
   // Legacy support to remove: issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md.
   { name: "retire-memo-2026-10", script: "src/scripts/migrate/retire-memo/run.ts" },
+  // Replaces a machine-local `link:` beebox dependency (deploy's
+  // link:/opt/beebox/beebox, a laptop checkout path, a worktree override) with
+  // the portable "link:.beebox/engine" and points the gitignored .beebox/engine
+  // at the old target. Leaves a pinned engine (file: tarball, semver range, a
+  // link into the box) alone. Refreshes a tracked lockfile offline; a failed
+  // refresh restores both files and exits 1, so it stays pending. It runs
+  // before box-shape-record so that migration's package.json commit does not
+  // carry the machine path again.
+  // Plan: docs/implemented-plans/portable-engine-dependency.md.
+  { name: "engine-link-spec-2026-10", script: "src/scripts/migrate/engine-link-spec/run.ts" },
+  // Copies shapeVersion and created from the gitignored .beebox/box.json into a
+  // "beebox" block in the box's tracked package.json, so a clone of the box is
+  // a box. Leaves the marker on disk (and tracked where it was) so an older
+  // engine still opens the box after a rollback. Fails closed (exit 1, nothing
+  // written) on a marker without both fields. Legacy support to remove:
+  // issues/deferred/2026-10-20-drop-box-marker-fallback.md.
+  { name: "box-shape-record-2026-10", script: "src/scripts/migrate/box-shape-record/run.ts" },
+  // Repairs the seeded root question card: `learning.ref` gains its leading `/`
+  // (the bare form fails `bbx validate`), and a still-pending card's template
+  // proposal "This box is for <what the person said>." becomes a belief
+  // sentence. Touches only lines that match the stock text; an answered,
+  // dismissed, or expired card keeps its proposal.
+  { name: "root-question-2026-10", script: "src/scripts/migrate/root-question/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
@@ -149,4 +182,10 @@ export const MANIFEST_PATH = "_config/migrations.jsonl";
 export interface ManifestEntry {
   readonly name: string;
   readonly "applied-at": string;
+  /**
+   * The question a partial apply (exit 2 after repair) left for the
+   * boxholder. Any other pending `Migration_<name>-N` question for a recorded
+   * migration is from a failed earlier run, superseded by the apply.
+   */
+  readonly question?: string | undefined;
 }

@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useModalDialog } from "../hooks/useModalDialog";
 import { createPortal } from "react-dom";
 import { CloseButton } from "./ui/CloseButton";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
@@ -36,6 +37,8 @@ export interface LightboxImage {
   src: string;
   alt: string;
   caption?: string;
+  /** Box path of the image card this image came from, when the marker named one. */
+  cardPath?: string | undefined;
 }
 
 interface ImageLightboxProps {
@@ -43,9 +46,11 @@ interface ImageLightboxProps {
   index: number;
   onIndexChange: (index: number) => void;
   onClose: () => void;
+  /** Given, an image with a `cardPath` gets an "Open card" control. */
+  onOpenCard?: ((cardPath: string) => void) | undefined;
 }
 
-export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLightboxProps) {
+export function ImageLightbox({ images, index, onIndexChange, onClose, onOpenCard }: ImageLightboxProps) {
   const total = images.length;
   const safeIndex = total === 0 ? 0 : ((index % total) + total) % total;
   // images can be empty; the frontend tsconfig lacks noUncheckedIndexedAccess,
@@ -112,19 +117,9 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   // whose preventDefault also stops the dialog's own cancel.
   const dialogRef = useRef<HTMLDialogElement>(null);
   const hasCurrent = current !== undefined;
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!hasCurrent || dialog === null) return;
-    const priorFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog.showModal();
-    // showModal focuses the first control, the full-screen backdrop button,
-    // which rings the whole viewport; start on the visible close button.
-    dialog.querySelector<HTMLElement>("#bbx-lightbox-close")?.focus();
-    return () => {
-      if (dialog.open) dialog.close();
-      priorFocus?.focus();
-    };
-  }, [hasCurrent]);
+  // showModal focuses the first control, the full-screen backdrop button,
+  // which rings the whole viewport; start on the visible close button.
+  useModalDialog({ dialog: dialogRef, open: hasCurrent, initialFocus: "#bbx-lightbox-close" });
 
   if (!current) return null;
 
@@ -228,6 +223,9 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
               {safeIndex + 1} / {total}
             </span>
           ) : null}
+          {onOpenCard !== undefined && current.cardPath !== undefined ? (
+            <OpenCardButton cardPath={current.cardPath} onOpenCard={onOpenCard} onClose={onClose} />
+          ) : null}
           <ExternalIconLink id="bbx-lightbox-full-size" href={current.src} label="Open full size in new tab" onDark size="sm" />
           <CloseButton id="bbx-lightbox-close" onClick={onClose} onDark size="sm" />
         </div>
@@ -238,6 +236,25 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
     </div>
     </dialog>,
     document.body
+  );
+}
+
+/** Closes the lightbox and opens the image's card where the clicked link would have. */
+function OpenCardButton({ cardPath, onOpenCard, onClose }: { cardPath: string; onOpenCard: (cardPath: string) => void; onClose: () => void }) {
+  function handleClick() {
+    onClose();
+    onOpenCard(cardPath);
+  }
+  return (
+    <button
+      id="bbx-lightbox-open-card"
+      type="button"
+      className="text-xs text-white bg-black/40 hover:bg-black/60 rounded px-2 py-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+      title={`Open the card ${cardPath}`}
+      onClick={handleClick}
+    >
+      Open card
+    </button>
   );
 }
 

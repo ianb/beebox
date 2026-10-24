@@ -7,18 +7,17 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { boxSlug, boxSlugFromShape } from "../../src/lib/box-slug.js";
 import { getBoxShape } from "../../src/lib/box-shape.js";
+import { writeBoxFiles } from "../helpers/test-helpers.js";
 
 /** A minimal shapeVersion-3 box named `name` under `parent`. */
 async function makeBox(parent: string, name: string): Promise<string> {
   const boxRoot = join(parent, name);
-  await mkdir(join(boxRoot, ".beebox"), { recursive: true });
-  await writeFile(join(boxRoot, "package.json"), JSON.stringify({ name, dependencies: { beebox: "*" } }));
-  await writeFile(join(boxRoot, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+  await writeBoxFiles(boxRoot, { name });
   return boxRoot;
 }
 

@@ -1,7 +1,6 @@
 /** Apply a recorded decision without repeating the classifier. */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { createHash } from "node:crypto";
 import { simpleGit } from "simple-git";
 import { withFileLock } from "../../../lib/file-lock.js";
 import { withCardLock } from "../../../lib/card-lock.js";
@@ -14,16 +13,12 @@ import { createSelectQuestionTemplate } from "../../../schemas/question.js";
 import { verifyEvidence, type Evidence } from "../evidence/core.js";
 import { compileInstructionSnapshot } from "../snapshot.js";
 import { movePathPreservingAnnexSymlink } from "../../card-files/move-phase2.js";
-import { getTriageTodoDate, planTriageTodoAnnotation } from "../todo.js";
+import { boxLocalDay } from "../../box/local-day.js";
+import { planTriageTodoAnnotation } from "../todo.js";
 import { decisionReceiptSchema, assertContained, receiptRef, receiptFingerprint, containedPath, readDecisionReceipt, saveDecisionReceipt, withDecisionReceiptLock, TriageReceiptError, type DecisionReceipt } from "./storage.js";
+import { sha256Hex } from "../../../lib/content-hash.js";
+import { pathExistsStrict } from "../../../lib/file-exists.js";
 
-async function exists(file: string): Promise<boolean> {
-  // Keep lstat semantics instead of lib/file-exists: broken links count as present and EACCES must propagate.
-  try { await fs.lstat(file); return true; } catch (error) {
-    if (errnoCode(error) !== "ENOENT") throw error;
-    return false; // Missing old paths are expected after a successful rename.
-  }
-}
 function movedRef(ref: string, receipt: DecisionReceipt): string {
   const { from, to } = receipt.application;
   if (ref === receipt.evidence.source.ref) return to;
@@ -47,27 +42,27 @@ async function validateBytes(boxRoot: string, receipt: DecisionReceipt): Promise
     const newRef = movedRef(part.ref, receipt);
     const oldPath = containedPath(boxRoot, oldRef);
     const newPath = containedPath(boxRoot, newRef);
-    const oldExists = await exists(oldPath);
-    const newExists = oldPath === newPath ? oldExists : await exists(newPath);
+    const oldExists = await pathExistsStrict(oldPath, { followLinks: false });
+    const newExists = oldPath === newPath ? oldExists : await pathExistsStrict(newPath, { followLinks: false });
     if (oldPath !== newPath && oldExists && newExists) throw new TriageReceiptError({ detail: `Collision: both ${oldRef} and ${newRef} exist` });
     if (!oldExists && !newExists) throw new TriageReceiptError({ detail: `stale-decision: missing ${oldRef}; replay or repair the source` });
     const bytes = await fs.readFile(oldExists ? oldPath : newPath);
-    const actualDigest = hash(bytes);
+    const actualDigest = sha256Hex(bytes);
     if (!matchesRecordedDigest({ partRef: part.ref, digest: part.digest, receipt, actualDigest })) throw new TriageReceiptError({ detail: `stale-decision: changed ${part.ref}; replay before applying` });
   }
   for (const part of receipt.evidence.parts) {
     const target = movedRef(part.ref, receipt);
     const originalAttach = receipt.evidence.source.attachmentRef;
     const prior = part.ref === receipt.evidence.source.ref ? receipt.application.from : originalAttach ? part.ref.replace(`${originalAttach}/`, `${attachDirFor(receipt.application.from)}/`) : part.ref;
-    const ref = await exists(containedPath(boxRoot, target)) ? target : prior;
+    const ref = await pathExistsStrict(containedPath(boxRoot, target), { followLinks: false }) ? target : prior;
     verifiedParts.push({ ...part, ref });
   }
-  const sourceRef = await exists(containedPath(boxRoot, receipt.application.to)) ? receipt.application.to : receipt.application.from;
-  const attachmentRef = receipt.evidence.source.attachmentRef === null ? null : await exists(containedPath(boxRoot, attachDirFor(receipt.application.to))) ? attachDirFor(receipt.application.to) : attachDirFor(receipt.application.from);
+  const sourceRef = await pathExistsStrict(containedPath(boxRoot, receipt.application.to), { followLinks: false }) ? receipt.application.to : receipt.application.from;
+  const attachmentRef = receipt.evidence.source.attachmentRef === null ? null : await pathExistsStrict(containedPath(boxRoot, attachDirFor(receipt.application.to)), { followLinks: false }) ? attachDirFor(receipt.application.to) : attachDirFor(receipt.application.from);
   const evidence = { ...receipt.evidence, source: { ...receipt.evidence.source, ref: sourceRef, attachmentRef }, parts: verifiedParts };
   if (receipt.application.todoAnnotation?.state === "pending") {
     const sourcePart = verifiedParts.find((part) => part.ref === sourceRef);
-    const sourceDigest = hash(await fs.readFile(containedPath(boxRoot, sourceRef)));
+    const sourceDigest = sha256Hex(await fs.readFile(containedPath(boxRoot, sourceRef)));
     if (sourcePart) sourcePart.digest = sourceDigest;
     evidence.source.digest = sourceDigest;
   }
@@ -79,11 +74,11 @@ async function repairMovedAnnexPaths(opts: { boxRoot: string; receipt: DecisionR
   const { from, to } = receipt.application;
   const source = containedPath(boxRoot, from);
   const destination = containedPath(boxRoot, to);
-  if (!await exists(source) && await exists(destination)) await movePathPreservingAnnexSymlink(source, destination);
+  if (!await pathExistsStrict(source, { followLinks: false }) && await pathExistsStrict(destination, { followLinks: false })) await movePathPreservingAnnexSymlink(source, destination);
   if (!receipt.evidence.source.attachmentRef) return;
   const oldAttach = containedPath(boxRoot, attachDirFor(from));
   const newAttach = containedPath(boxRoot, attachDirFor(to));
-  if (!await exists(oldAttach) && await exists(newAttach)) await movePathPreservingAnnexSymlink(oldAttach, newAttach);
+  if (!await pathExistsStrict(oldAttach, { followLinks: false }) && await pathExistsStrict(newAttach, { followLinks: false })) await movePathPreservingAnnexSymlink(oldAttach, newAttach);
 }
 function todoTrailers(receipt: DecisionReceipt): Record<string, string> {
   const destinationRef = receipt.resolution?.destinationRef ?? receipt.judgment.destinationRef;
@@ -112,7 +107,7 @@ function trailers(receipt: DecisionReceipt): Record<string, string> {
 async function writeQuestion(boxRoot: string, receipt: DecisionReceipt): Promise<void> {
   if (!receipt.application.questionRef) return;
   const file = containedPath(boxRoot, receipt.application.questionRef);
-  if (await exists(file)) return;
+  if (await pathExistsStrict(file, { followLinks: false })) return;
   const content = createSelectQuestionTemplate({
     memo: `${receipt.judgment.outcome === "no-match" ? "No destination fit this item." : "The destination is unclear."}\n\n${receipt.judgment.reason.text}\n\nHeld at: ${receipt.application.to}`,
     prompt: `Where does ${path.basename(receipt.application.to)} belong?`,
@@ -133,7 +128,7 @@ async function commitReceipt(boxRoot: string, receipt: DecisionReceipt): Promise
   const relativePaths: string[] = [];
   for (const ref of paths) {
     const rel = path.relative(boxRoot, containedPath(boxRoot, ref));
-    if (await exists(containedPath(boxRoot, ref)) || (await git.raw(["ls-files", "--", rel])).trim()) relativePaths.push(rel);
+    if (await pathExistsStrict(containedPath(boxRoot, ref), { followLinks: false }) || (await git.raw(["ls-files", "--", rel])).trim()) relativePaths.push(rel);
   }
   const expected = trailers(receipt);
   const options = { message: `Triage ${path.basename(from)}`, paths: relativePaths, trailers: expected };
@@ -165,7 +160,6 @@ function selectedTodo(receipt: DecisionReceipt): { destinationRef: string; quest
   if (answer === undefined) throw new TriageReceiptError({ detail: `Missing recorded todo answer for configured destination ${destinationRef}; make the evidence readable, then prepare and judge a new decision for the held item. Retrying this correction cannot supply the missing answer` });
   return { destinationRef: destination.ref, question: destination.todoQuestion, positive: answer > 0.5 };
 }
-function hash(content: Buffer | string): string { return createHash("sha256").update(content).digest("hex"); }
 async function applyTodoAnnotation(boxRoot: string, receipt: DecisionReceipt): Promise<void> {
   const selected = selectedTodo(receipt);
   if (!selected?.positive) return;
@@ -173,13 +167,13 @@ async function applyTodoAnnotation(boxRoot: string, receipt: DecisionReceipt): P
   let annotation = receipt.application.todoAnnotation;
   if (annotation?.state === "applied") return;
   const current = await fs.readFile(target);
-  const currentDigest = hash(current);
+  const currentDigest = sha256Hex(current);
   if (annotation?.state === "pending" && currentDigest === annotation.afterDigest) {
     annotation.state = "applied";
     await saveDecisionReceipt(boxRoot, receipt);
     return;
   }
-  const created = annotation?.created ?? await getTriageTodoDate(boxRoot);
+  const created = annotation?.created ?? await boxLocalDay(boxRoot);
   const plan = await planTriageTodoAnnotation({ file: target, boxRoot, destinationRef: selected.destinationRef, question: selected.question, created });
   if (!annotation) {
     annotation = { state: "pending", todoId: plan.todoId, beforeDigest: plan.beforeDigest, afterDigest: plan.afterDigest, created };
@@ -202,7 +196,7 @@ async function hasCommittedTodoAnnotation(boxRoot: string, receipt: DecisionRece
   for (const revision of found ? found.split("\n") : []) {
     try {
       const bytes = await git.binaryCatFile(["blob", `${revision}:${relative}`]);
-      if (hash(bytes) === annotation.afterDigest) return true;
+      if (sha256Hex(bytes) === annotation.afterDigest) return true;
     } catch (_error) { /* Older application commits may not contain the routed target yet. */ }
   }
   return false;
@@ -225,15 +219,15 @@ async function validateApplication(boxRoot: string, { receipt, storedReceipt }: 
   validateApplicationTarget(receipt);
   if (receipt.instructions.trial) throw new TriageReceiptError({ detail: "Trial overlays cannot be applied; update canonical instructions and judge again" });
   await validateInstructionState({ boxRoot, receipt, storedReceipt });
-  if (!storedReceipt && !await exists(containedPath(boxRoot, receipt.application.from))) throw new TriageReceiptError({ detail: "stale-decision: first application requires the original source" });
-  if (!storedReceipt && receipt.evidence.parts.length > 1 && !await exists(containedPath(boxRoot, attachDirFor(receipt.application.from)))) throw new TriageReceiptError({ detail: "stale-decision: original attachment scope is missing" });
+  if (!storedReceipt && !await pathExistsStrict(containedPath(boxRoot, receipt.application.from), { followLinks: false })) throw new TriageReceiptError({ detail: "stale-decision: first application requires the original source" });
+  if (!storedReceipt && receipt.evidence.parts.length > 1 && !await pathExistsStrict(containedPath(boxRoot, attachDirFor(receipt.application.from)), { followLinks: false })) throw new TriageReceiptError({ detail: "stale-decision: original attachment scope is missing" });
 }
 export async function applyDecision(opts: { boxRoot: string; decision: DecisionReceipt | string }): Promise<DecisionReceipt> {
   const { boxRoot } = opts;
   const preview = typeof opts.decision === "string" ? await readDecisionReceipt(boxRoot, opts.decision) : decisionReceiptSchema.parse(opts.decision);
   const lockDir = path.join(boxRoot, ".beebox/locks");
   await fs.mkdir(lockDir, { recursive: true });
-  const key = createHash("sha256").update(JSON.stringify([preview.evidence.source.ref, preview.evidence.source.digest, preview.evidence.parts.map((p) => [p.ref, p.digest])])).digest("hex");
+  const key = sha256Hex(JSON.stringify([preview.evidence.source.ref, preview.evidence.source.digest, preview.evidence.parts.map((p) => [p.ref, p.digest])]));
   const target = containedPath(boxRoot, preview.application.to);
   return withFileLock({ lockPath: path.join(lockDir, `triage-${key}`), metadata: { decision: preview.id }, waitMs: 10_000 }, async () => {
     return withCardLock(target, async () => {
@@ -250,7 +244,7 @@ export async function applyDecision(opts: { boxRoot: string; decision: DecisionR
     if (storedReceipt && receipt.application.state === "applied" && receipt.application.todoAnnotation?.state === "applied") {
       if (await hasCommittedTodoAnnotation(boxRoot, receipt)) return receipt;
       const current = await fs.readFile(containedPath(boxRoot, receipt.application.to));
-      if (hash(current) !== receipt.application.todoAnnotation.afterDigest) throw new TriageReceiptError({ detail: "Todo annotation is recorded applied but its provenance commit is missing and the card has since changed" });
+      if (sha256Hex(current) !== receipt.application.todoAnnotation.afterDigest) throw new TriageReceiptError({ detail: "Todo annotation is recorded applied but its provenance commit is missing and the card has since changed" });
       await commitReceipt(boxRoot, receipt);
       return receipt;
     }
@@ -259,16 +253,16 @@ export async function applyDecision(opts: { boxRoot: string; decision: DecisionR
     await validateBytes(boxRoot, receipt);
     const from = containedPath(boxRoot, receipt.application.from);
     const to = containedPath(boxRoot, receipt.application.to);
-    if (receipt.evidence.source.attachmentRef && from !== to && await exists(attachDirFor(from)) && await exists(attachDirFor(to))) throw new TriageReceiptError({ detail: "Attachment destination collision" });
+    if (receipt.evidence.source.attachmentRef && from !== to && await pathExistsStrict(attachDirFor(from), { followLinks: false }) && await pathExistsStrict(attachDirFor(to), { followLinks: false })) throw new TriageReceiptError({ detail: "Attachment destination collision" });
     await saveDecisionReceipt(boxRoot, receipt);
     try {
       const todo = selectedTodo(receipt);
       if (todo?.positive && !receipt.application.todoAnnotation) {
-        const preflightFile = await exists(from) ? from : to;
-        await planTriageTodoAnnotation({ file: preflightFile, boxRoot, destinationRef: todo.destinationRef, question: todo.question, created: await getTriageTodoDate(boxRoot) });
+        const preflightFile = await pathExistsStrict(from, { followLinks: false }) ? from : to;
+        await planTriageTodoAnnotation({ file: preflightFile, boxRoot, destinationRef: todo.destinationRef, question: todo.question, created: await boxLocalDay(boxRoot) });
       }
-      if (await exists(from)) await movePathPreservingAnnexSymlink(from, to);
-      if (receipt.evidence.source.attachmentRef && (await exists(attachDirFor(from)) || await exists(attachDirFor(to)))) await movePathPreservingAnnexSymlink(attachDirFor(from), attachDirFor(to));
+      if (await pathExistsStrict(from, { followLinks: false })) await movePathPreservingAnnexSymlink(from, to);
+      if (receipt.evidence.source.attachmentRef && (await pathExistsStrict(attachDirFor(from), { followLinks: false }) || await pathExistsStrict(attachDirFor(to), { followLinks: false }))) await movePathPreservingAnnexSymlink(attachDirFor(from), attachDirFor(to));
       await writeQuestion(boxRoot, receipt);
       await fs.rm(`${from}.probable.txt`, { force: true });
       receipt.application.state = "applied";

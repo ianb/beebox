@@ -11,7 +11,8 @@ import { Image } from "../ui/Image";
 import { VideoEmbed } from "../ui/VideoEmbed";
 import { detectVideoEmbed } from "../../lib/video-url";
 import { FileView } from "../FileView/view";
-import { externalImageProxyUrl, isExternalUrl, resolveContentTarget, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
+import { externalImageProxyUrl, resolveContentTarget, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
+import { isUrlRef } from "@shared/ref-path/core";
 import { useBustedImageSrc } from "../../lib/file-version";
 import { transformedResolvedImageUrl } from "../../lib/image-transform-url";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
@@ -149,7 +150,7 @@ function makeChatMarkdownComponents(
     }
     if (!src) return <ChatInlineImage src="" alt={alt || ""} />;
     // Box-root base (`undefined`), like every other path in a chat message.
-    const target = isExternalUrl(src) || isImagePath(src) ? null : resolveContentTarget(undefined, src);
+    const target = isUrlRef(src) || isImagePath(src) ? null : resolveContentTarget(undefined, src);
     if (target !== null) {
       // Frameless embed (no chat header/border): the renderer owns its
       // appearance and the caption, so an embedded image card reads like a

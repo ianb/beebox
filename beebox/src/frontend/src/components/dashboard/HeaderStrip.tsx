@@ -19,7 +19,7 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
   const sections: Array<{ label: string; files: string[]; color: string }> = [];
   if (staged.length > 0) sections.push({ label: "Staged", files: staged, color: "text-success-dark" });
   if (modified.length > 0) sections.push({ label: "Modified", files: modified, color: "text-warning-dark" });
-  if (untracked.length > 0) sections.push({ label: "Untracked", files: untracked, color: "text-warm-600" });
+  if (untracked.length > 0) sections.push({ label: "Untracked", files: untracked, color: "text-warm-700" });
 
   return (
     <div className="fixed left-[10vw] top-24 w-[80vw] bg-white border rounded-lg shadow-lg z-10 p-3 text-xs">

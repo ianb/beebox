@@ -28,3 +28,8 @@ The secret store in the walk was isolated, so the shared-store guard (`server-bo
 Related: [browse cannot authenticate dev pages](../closed/bugs/2026-07-31-browse-cannot-authenticate-dev-pages.md) (closed; the earlier browse-auth work).
 
 Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 42, 55, 81; harness note H3).
+
+## Re-encounter 2026-10-22 (journey walks)
+
+- [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 34, H5): `/auth/me` returns 401 from the browse key on a box with `agentBrowsing: "owner"`.
+- [H-handover](../../beebox/test/user-stories/journeys/H-handover/reports/2026-10-22.md) (rows 32, 53; H5), a journey about a second person using someone else's box. The browse key is not a signed-in user, so `injectUserAttr` (`beebox/src/webapp/routes/chat/helpers.ts:261-266`) adds no `user` attribute and the agent cannot know who typed. It wrote "If Priya already knows" to Priya until she said who she was. The walk therefore cannot test whether updates record who acted. A journey that needs a second identity needs browse to sign in as a second local user.

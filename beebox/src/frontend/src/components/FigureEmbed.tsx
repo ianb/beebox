@@ -13,7 +13,8 @@
  */
 
 import type { ComponentType } from "react";
-import { isExternalUrl, resolveContentTarget } from "../lib/view-url";
+import { resolveContentTarget } from "../lib/view-url";
+import { isUrlRef } from "@shared/ref-path/core";
 import { isImagePath } from "./chat/message-parsing";
 import { FileView } from "./FileView/view";
 import { makeImg, type MarkdownComponentOverrides } from "./Markdown/body";
@@ -41,7 +42,7 @@ export function makeEmbedComponents(ctx: LinkContext): MarkdownComponentOverride
     // through to `DefaultImg`, whose `resolveImageSrc` yields an empty src —
     // a visibly broken image instead of a silently substituted card.
     const target =
-      typeof src === "string" && src !== "" && !isExternalUrl(src) && !isImagePath(src)
+      typeof src === "string" && src !== "" && !isUrlRef(src) && !isImagePath(src)
         ? resolveContentTarget(ctx.basePath, src)
         : null;
     if (target !== null) {

@@ -21,6 +21,7 @@ import { readFile } from "node:fs/promises";
 import * as ignoreModule from "ignore";
 import type { Ignore, Options } from "ignore";
 import { errnoCode } from "../shared/error-guards.js";
+import { isWithin } from "../lib/box-containment.js";
 
 // `ignore` is a legacy CJS package (no `type`/`exports` in package.json) whose
 // ESM-style `.d.ts` declares a merged function+namespace default export. Under
@@ -62,7 +63,7 @@ export async function loadValidationIgnore(boxRoot: string): Promise<ValidationI
       const rel = path.isAbsolute(filePath) ? path.relative(boxRoot, filePath) : filePath;
       // `ignore` rejects "" and paths escaping the root; those are never
       // box-relative content, so treat them as not-ignored rather than throw.
-      if (rel === "" || rel.startsWith("..")) return false;
+      if (rel === "" || !isWithin(boxRoot, path.resolve(boxRoot, rel))) return false;
       return matcher.ignores(rel);
     },
   };

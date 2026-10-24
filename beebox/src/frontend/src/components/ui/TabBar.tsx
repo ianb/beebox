@@ -38,7 +38,7 @@ export interface TabBarProps<V extends string> {
 const UNDERLINE_STATE: Record<"disabled" | "active" | "idle", string> = {
   disabled: "border-transparent text-warm-400 cursor-not-allowed",
   active: "border-primary text-primary font-medium",
-  idle: "border-transparent text-warm-600 hover:text-warm-800 hover:border-warm-300 cursor-pointer",
+  idle: "border-transparent text-warm-700 hover:text-warm-900 hover:border-warm-300 cursor-pointer",
 };
 
 const MATERIAL_UNDERLINE_STATE: Record<"disabled" | "active" | "idle", string> = {
@@ -104,7 +104,7 @@ export function TabBar<V extends string>({ value, onChange, tabs, label, idPrefi
           >
             {tab.label}
             {tab.count !== undefined ? (
-              <span className={cn("ml-1 text-xs", material === true ? (active ? "text-card-pen" : "text-card-soft") : active ? (pills ? "text-white/80" : "text-primary") : "text-warm-500")}>
+              <span className={cn("ml-1 text-xs", material === true ? (active ? "text-card-pen" : "text-card-soft") : active ? (pills ? "text-white/80" : "text-primary") : "text-warm-700")}>
                 ({tab.count})
               </span>
             ) : null}

@@ -1,13 +1,14 @@
 /**
  * Realtime + session-lifecycle effects for InteractiveChat: subscribes to the
  * global event stream over the shared WebSocket (schedule-fired, chat-history,
- * chat-complete,
- * chat-user-message, chat-features-changed, chat-session-assigned), syncs the
- * URL once a session id is assigned, and loads the voice config on mount.
+ * chat-complete, chat-user-message, chat-features-changed, and the secondary
+ * events in `handleSecondaryEvent`), syncs the URL once the chat machine
+ * learns its session id, and loads the voice config on mount.
  * Bundled into one hook so the component body isn't dominated by the event
  * dispatcher.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -168,7 +169,7 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     // No popup and no state, so it is called directly rather than through a
     // controller — same shape as `fulfillLastAudioRequest` above.
     void fulfillUiScanRequest(uiScan, sessionId).catch((e) => {
-      console.warn(`[ui-scan] request handling failed: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[ui-scan] request handling failed: ${errorMessage(e)}`);
     });
     return;
   }
@@ -238,7 +239,7 @@ export function useChatWs(opts: {
   }, [send, sessionId, ensureReservation]));
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
-  // chat-history, chat-complete, chat-user-message, chat-session-assigned.
+  // chat-history, chat-complete, chat-user-message, and the secondary events.
   // Events tagged with a sessionId are filtered to this view's session only.
   useBusSubscription({
     onConnect: useCallback(() => {
@@ -307,12 +308,13 @@ export function useChatWs(opts: {
     }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent, onTaskLevel, onCaptureStatus, onScreenshotRequest, audioOverlayStore]),
   });
 
-  // Update the URL when the machine learns the assigned session id. Fires for
-  // both signal paths — the in-stream `system/init` (first frame of every
-  // turn, dispatched from chatMachine's streamActor) and the side-channel
-  // `chat-session-assigned` event — so a backend restart that loses one
-  // can't strand the chat on `?session=new`. `replace: true` so reload lands
-  // on the right session.
+  // Update the URL when the machine learns the assigned session id. It learns
+  // it two ways: the in-stream `system/init` (first frame of every turn,
+  // dispatched from chatMachine's streamActor as SESSION_ASSIGNED), or, when
+  // the live view dropped before that frame, a refresh that looks the accepted
+  // turn up (`events.turnSession`). The `chat-session-assigned` bus event does
+  // not reach the machine. `replace: true` so reload lands on the right
+  // session.
   useEffect(() => {
     if (opts.shellManaged === true) return;
     if (sessionInput !== "new") return;

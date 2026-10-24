@@ -12,6 +12,7 @@ import type { GoogleDriveService } from "../../services/google-drive/core.js";
 import { getHandlerForMimeType } from "./handlers.js";
 import type { DriveTransientState } from "./state.js";
 import type { SyncPaths } from "./folder-types.js";
+import type { DocsApiOutcome } from "./handlers/docs/api-failure.js";
 
 export async function syncDriveFile(opts: {
   driveId: string;
@@ -19,8 +20,10 @@ export async function syncDriveFile(opts: {
   boxRoot: string;
   service: GoogleDriveService;
   state: DriveTransientState;
+  /** This pass's Docs API outcomes; the pull's is appended (see `docs-api-status.ts`). */
+  docsApiOutcomes: DocsApiOutcome[];
 }): Promise<SyncPaths> {
-  const { driveId, cardPath, boxRoot, service, state } = opts;
+  const { driveId, cardPath, boxRoot, service, state, docsApiOutcomes } = opts;
 
   const file = await service.getFile(driveId);
   const handler = getHandlerForMimeType(file.mimeType);
@@ -42,6 +45,7 @@ export async function syncDriveFile(opts: {
   const pullResult = await handler.pull({
     file, localDir, cardPath, boxRoot, service, state: fileState,
   });
+  if (pullResult.docsApi !== undefined) docsApiOutcomes.push(pullResult.docsApi);
 
   return {
     created: isNew && pullResult.changed ? pullResult.written : [],

@@ -1,0 +1,13 @@
+file,minutes,checks_before,checks_after,lines_before,lines_after,test_result,obstacle
+beebox/src/frontend/test/lib/audio/speech-parsing/parse.test.ts,1,28,28,543,543,pass,-
+beebox/src/frontend/test/lib/ui-scan/live-dom/scan.test.ts,1,20,20,608,608,pass,-
+beebox/test/scripts/migrate/briefing-openers.test.ts,2,35,35,568,524,pass,"Ran once to get the apply-mode lines for three run.code checks."
+beebox/test/shared/browser-task-batch.test.ts,1,16,16,323,323,pass,-
+beebox/test/core/card-lint.body-refs.test.ts,1,16,15,523,521,pass,-
+scan-uploader/test/cli/run-target.test.ts,1,19,19,354,354,pass,-
+beebox/test/shared/card-theme.test.ts,2,48,26,662,512,pass,"Read catalog.ts to confirm the per-theme rows restate data; ran once for four M4 rewrites."
+beebox/src/frontend/test/input/emission-persist.test.ts,2,26,24,515,425,pass,"The batchless payload has no uploadBatch key, so a ?.uploadBatch narrowing read the same as a null parse; used the key list."
+beebox/src/frontend/test/input/emission-store.emission-editor.test.ts,2,48,43,656,523,pass,"A block appeared three times (two consecutive duplicates plus the floor case); the first edit script aborted on that count."
+beebox/src/frontend/test/input/voice-intent.test.ts,2,24,24,447,387,pass,"The edit script aborted before this file and was re-run; the first pass of tap was against the unedited file."
+beebox/test/core/card-lint.markdoc-and-husks.test.ts,1,16,16,637,637,pass,-
+beebox/test/connectors/google-drive.folder.test.ts,3,30,29,642,636,pass,"The M4 rewrite of result.success produced an 18-path generated listing in two tests; reverted those two, kept the third."

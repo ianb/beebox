@@ -21,7 +21,7 @@
  * daily recycle — not worth watching the whole `config/` tree for.
  */
 
-import { watch, type FSWatcher } from "chokidar";
+import type { FSWatcher } from "chokidar";
 import { invalidateBoxSchemas } from "../schemas.js";
 import { getBoxShape, boxCodePaths } from "../lib/box-shape.js";
 
@@ -36,6 +36,8 @@ export async function ensureSchemaWatcher(boxRoot: string): Promise<void> {
 
   const shape = await getBoxShape(boxRoot);
   const schemasDir = boxCodePaths(shape).schemasDir;
+  // Loaded here rather than at module load: every `bbx` verb loads this module.
+  const { watch } = await import("chokidar");
   if (watchers.has(boxRoot)) return; // re-check: an await above allows a concurrent caller to win the race.
   const watcher = watch(schemasDir, {
     // Never the thing that keeps a process alive: a serving process has its

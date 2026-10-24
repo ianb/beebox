@@ -64,8 +64,35 @@ export function unreachableDetail(since: number, opts: { now: number; line: stri
   return elapsed < UNREACHABLE_REPORT_MS ? null : `Production unreachable for ${String(Math.round(elapsed / 3_600_000))}h: ${opts.line}`;
 }
 
+const healthSchema = z.object({
+  boxChecks: z.array(z.object({ name: z.string(), message: z.string() })),
+});
+const CONNECTOR_CHECK = /^connector-activity(?::|$)/u;
+
+/**
+ * The connector warnings in one production box's framed `bbx health --json`
+ * output: every `connector-activity:<name>` check (a connector quiet or failing,
+ * not dismissed) and the bare `connector-activity` check (a damaged record).
+ * The exit code is not consulted: health prints its JSON and then exits 1 for
+ * unrelated failures. Null when there is no JSON to read.
+ */
+export function connectorWarnings(output: string): string[] | null {
+  const start = output.indexOf(RESULT_PREFIX);
+  if (start === -1) return null;
+  const framed = output.slice(start + RESULT_PREFIX.length);
+  const open = framed.search(/^\{$/mu);
+  if (open === -1) return null;
+  let json: unknown;
+  // Invalid JSON is an unreadable box; the caller reports it with the output.
+  try { json = JSON.parse(framed.slice(open)); }
+  catch (_error) { return null; }
+  const parsed = healthSchema.safeParse(json);
+  if (!parsed.success) return null;
+  return parsed.data.boxChecks.filter((check) => CONNECTOR_CHECK.test(check.name)).map((check) => check.message);
+}
+
 export interface ConvergenceAlert {
-  condition: "unconverged" | "prod-unreachable";
+  condition: "unconverged" | "prod-unreachable" | "prod-connector-activity";
   title: string;
   message: string;
 }
@@ -80,11 +107,18 @@ export interface ConvergenceAlert {
  * `keep` is every condition that stays open; the run resolves the rest. A run
  * that could not reach production has not checked the prod boxes, so it keeps
  * `unconverged` open even when every local box is clean.
+ *
+ * `prod-connector-activity` carries production connectors that are quiet or
+ * failing (`connectorFindings`). It resolves only on a run that read every
+ * production box's health (`connectorCoverage`): a failed inventory, an
+ * unreachable server or one unreadable box keeps it open.
  */
 export function reportPlan(input: {
   findings: readonly string[];
   unreachableDetail: string | null;
   prodChecked: boolean;
+  connectorFindings: readonly string[];
+  connectorCoverage: boolean;
 }): { alerts: ConvergenceAlert[]; keep: string[] } {
   const alerts: ConvergenceAlert[] = [];
   if (input.findings.length > 0) {
@@ -97,8 +131,17 @@ export function reportPlan(input: {
   if (input.unreachableDetail !== null) {
     alerts.push({ condition: "prod-unreachable", title: "Box convergence: production unreachable", message: input.unreachableDetail });
   }
-  const keep = alerts.map((alert) => alert.condition);
+  if (input.connectorFindings.length > 0) {
+    const count = input.connectorFindings.length;
+    alerts.push({
+      condition: "prod-connector-activity",
+      title: `Production connectors: ${String(count)} warning${count === 1 ? "" : "s"}`,
+      message: input.connectorFindings.map((finding) => `- ${finding}`).join("\n"),
+    });
+  }
+  const keep: string[] = alerts.map((alert) => alert.condition);
   if (!input.prodChecked && !keep.includes("unconverged")) keep.push("unconverged");
+  if (!input.connectorCoverage && !keep.includes("prod-connector-activity")) keep.push("prod-connector-activity");
   return { alerts, keep };
 }
 

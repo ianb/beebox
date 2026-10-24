@@ -26,6 +26,9 @@ import {
 import { UserEntryContent, originalDisplayText } from "./user-entry-content";
 import { isOtherChatUser } from "./chat-message-sender";
 
+/** A message not yet sent: a dashed edge inside the bubble, in its own ink. */
+export const QUEUED_EDGE = "outline-dashed outline-1 outline-current -outline-offset-4";
+
 /**
  * Map a settled task's status to its dot color and an optional label. The SDK's
  * terminal statuses are `completed | failed | stopped | killed` ("error" is
@@ -45,7 +48,7 @@ function taskStatusStyle(status: string): { color: string; label: string | null 
     case "paused":
       return { color: "text-info", label: status };
     default:
-      return { color: "text-warm-600", label: null };
+      return { color: "text-warm-700", label: null };
   }
 }
 
@@ -81,7 +84,7 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
       <div className="flex justify-center">
         <button
           onClick={handleExpand}
-          className="text-xs text-warm-500 hover:text-warm-700 bg-warm-50 rounded-full px-3 py-1 flex items-center gap-1.5"
+          className="text-xs text-warm-700 hover:text-warm-900 bg-warm-50 rounded-full px-3 py-1 flex items-center gap-1.5"
         >
           <span className={statusColor}>&#x25CF;</span>
           {statusLabel ? <span className={`font-medium ${statusColor}`}>{statusLabel}:</span> : null}
@@ -92,11 +95,11 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
       {expanded ? (
         <div className="mx-4 mt-2 bg-warm-50 border border-warm-200 rounded-lg p-3 text-xs">
           {loadingOutput ? (
-            <div className="text-warm-500 italic">Loading output...</div>
+            <div className="text-warm-700 italic">Loading output...</div>
           ) : output ? (
             <Pre size="xs" scroll="md">{output}</Pre>
           ) : (
-            <div className="text-warm-500 italic">No output file</div>
+            <div className="text-warm-700 italic">No output file</div>
           )}
         </div>
       ) : null}
@@ -167,11 +170,13 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
   // label; a late HQ result stays on the box, reachable only through
   // `bbx chat retranscribe`.
   const hqStatus = isLiveTranscriptMessage(firstEntry)
-    ? <div role="status" className="bbx-chat-user-status text-xs text-white/70 mt-1 italic">Live text — HQ transcript unavailable</div>
+    ? <div role="status" className="bbx-chat-user-status text-xs mt-1 italic">Live text — HQ transcript unavailable</div>
     : null;
 
   const isPending = entries.every((e) => e.pending === true);
-  const pendingClass = isPending ? " opacity-60" : "";
+  // Queued is drawn as a dashed edge in the bubble's own ink, with the
+  // "queued" line inside: fading the bubble would fade its text below AA.
+  const pendingClass = isPending ? ` ${QUEUED_EDGE}` : "";
   const pendingTitle = isPending ? "Queued — sends when the current reply finishes" : undefined;
 
   if (isOtherUser) {
@@ -185,7 +190,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
     // bubble's `bg-info`).
     return (
       <div className="pr-12 sm:pr-24 py-1">
-        <div className="bbx-chat-meta-material text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
+        <div className="bbx-chat-meta-material text-xs text-card-soft ml-3 sm:ml-6 mb-0.5">{senderName}</div>
         <div className="relative ml-3 sm:ml-6 w-fit">
           <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
             <AudioOverlayBadgeCluster overlay={audioOverlay} originalText={originalDisplayText(firstEntry)} />
@@ -253,6 +258,6 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
 
 function PendingIndicator() {
   return (
-    <div className="bbx-chat-user-status text-xs text-white/70 mt-1 italic">queued — waiting</div>
+    <div className="bbx-chat-user-status text-xs mt-1 italic">queued — waiting</div>
   );
 }

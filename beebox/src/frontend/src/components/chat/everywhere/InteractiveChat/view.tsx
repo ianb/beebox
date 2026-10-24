@@ -11,7 +11,7 @@ import { WorkspaceCanvas } from "../../workspace/WorkspaceCanvas/view";
 import { MessageList } from "./messages";
 import {
   ChatView, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
-} from "../../InteractiveChat-layout/view";
+} from "../../InteractiveChat-layout/view/ChatComposerSection";
 import { ChatBarChrome } from "./ChatBarChrome";
 import { TargetStrip } from "../../TargetStrip";
 import { chatTargetStatus } from "../../../../input/targets/chat-target";
@@ -26,6 +26,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../../../lib/routing";
 import type { ChatAgentEngine } from "@shared/chat-models.js";
 import { ChatRenderProfiler } from "./ChatRenderProfiler";
+import { composerPlaceholder } from "../../open-question";
 import { AgentGate } from "../../../agents/AgentReadiness";
 import { PlaceChatContext, type PlaceChat } from "../../../openers/place-chat";
 import { useWorkspace } from "../../workspace/WorkspaceProvider/provider";
@@ -195,6 +196,7 @@ function ComposerRegion(props: ChatBodyProps) {
   const { selections: selectionItems, removeSelection } = selections;
   const { handleSend, handleKeyDown, handlePaste, handleDrop } = actions;
   const targetBusy = chatTargetStatus({ isStreaming, processBusy }).state === "busy";
+  const placeholder = composerPlaceholder({ openQuestion: props.openQuestion, messageCount: props.messages.length, isStreaming });
   return (
     <ChatRenderProfiler id="composer">
       <ChatComposerSection
@@ -218,7 +220,7 @@ function ComposerRegion(props: ChatBodyProps) {
       inputArea={
         <ChatInputArea
           hideMobile={typingMode}
-          placeholder={props.openQuestion?.prompt}
+          placeholder={placeholder}
           textareaRef={textareaRef}
           isTranscribing={isTranscribing}
           transcription={transcription}
@@ -246,7 +248,7 @@ function ComposerRegion(props: ChatBodyProps) {
       }
       mobileRow={
         <MobileTextareaRow
-          placeholder={props.openQuestion?.prompt}
+          placeholder={placeholder}
           isTranscribing={isTranscribing}
           transcription={transcription}
           targetBusy={targetBusy}

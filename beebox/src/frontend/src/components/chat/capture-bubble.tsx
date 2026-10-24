@@ -31,9 +31,12 @@
 import { useState } from "react";
 import type { PendingCaptureCounts } from "@core/capture/pending.js";
 import { ABANDONMENT_WINDOW_MS } from "@shared/capture-staleness";
-import { formatAgo, formatElapsed } from "../../lib/relative-time";
+import { formatAgo, formatDuration } from "@shared/relative-time";
 import { useNow } from "../../lib/use-now";
 import { Button } from "../ui/Button";
+import { MaterialContext } from "../ui/material";
+import { QUEUED_EDGE } from "./user-message/view";
+import { summarizeCaptureContents } from "./capture-message";
 
 /** Live refinement from a `capture-status` bus event (more granular than the query state). */
 export type CaptureLiveStatus = "preparing" | "transcribing" | "delivered" | "failed";
@@ -116,25 +119,17 @@ function workingStep(model: CaptureBubbleModel): string {
 }
 
 /** The caption under the bubble. Live status wins over the coarser query state. */
-export function captureBubbleCaption(model: CaptureBubbleModel, ageMs: number | null): string {
+export function captureBubbleCaption(model: CaptureBubbleModel, nowMs: number): string {
+  const ageMs = captureBubbleAgeMs(model, nowMs);
   if (model.actionError !== undefined) return model.actionError;
   if (model.resolution === "delivered") return "delivered";
   if (model.resolution === "discarded") return "discarded";
   if (captureBubbleFailed(model)) {
-    return ageMs === null ? "failed" : `failed ${formatAgo(ageMs)}`;
+    return ageMs === null ? "failed" : `failed ${formatAgo(nowMs - ageMs, nowMs)}`;
   }
   const step = workingStep(model);
   if (ageMs === null || ageMs < WORKING_PATIENCE_MS) return `${step}…`;
-  return `still ${step} — ${formatElapsed(ageMs)}`;
-}
-
-/** The bubble body: a compact tally of the captured media. */
-export function captureMediaSummary(counts: PendingCaptureCounts): string {
-  const parts: string[] = [];
-  if (counts.photos > 0) parts.push(`${String(counts.photos)} photo${counts.photos === 1 ? "" : "s"}`);
-  if (counts.audioSegments > 0) parts.push(`${String(counts.audioSegments)} clip${counts.audioSegments === 1 ? "" : "s"}`);
-  if (counts.files > 0) parts.push(`${String(counts.files)} file${counts.files === 1 ? "" : "s"}`);
-  return parts.length > 0 ? parts.join(", ") : "capture";
+  return `still ${step} — ${formatDuration(ageMs)}`;
 }
 
 function CameraIcon() {
@@ -155,7 +150,7 @@ const PHASE_DOT: Record<CaptureBubblePhase, string> = {
 };
 
 const PHASE_TEXT: Record<CaptureBubblePhase, string> = {
-  working: "text-warm-500",
+  working: "text-card-soft",
   resolved: "text-success-dark",
   "failed-fresh": "text-danger-dark",
   "failed-aged": "text-danger-dark",
@@ -190,7 +185,7 @@ function FailedActions(props: {
   if (confirming) {
     return (
       <div className="flex flex-col items-end gap-1">
-        <div className="text-xs text-warm-600 pr-2">Discard {props.summary}? They never reached the chat.</div>
+        <div className="text-xs text-card-soft pr-2">Discard {props.summary}? They never reached the chat.</div>
         <div className="flex gap-1.5">
           <Button size="sm" intent="destructive" onClick={props.onDiscard} loadingLabel="discarding…">Discard</Button>
           <Button size="sm" intent="ghost" onClick={() => setConfirming(false)}>Keep</Button>
@@ -225,27 +220,29 @@ export function CaptureBubbleView(props: {
   const ageMs = captureBubbleAgeMs(model, now);
   const phase = captureBubblePhase(model, ageMs);
   const failed = phase === "failed-fresh" || phase === "failed-aged";
-  const summary = captureMediaSummary(model.counts);
+  const summary = summarizeCaptureContents(model.counts);
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
-      <div className="bbx-chat-pending-material flex flex-col items-end gap-1">
-        <div
-          className={`flex items-center gap-1.5 text-sm rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words ${phase === "resolved" ? "opacity-90" : "opacity-60"}`}
-          title={failed ? "Capture delivery failed" : "Capture is being prepared…"}
-        >
-          <CameraIcon />
-          <span>{summary}</span>
+      <MaterialContext.Provider value>
+        <div className="bbx-chat-pending-material flex flex-col items-end gap-1">
+          <div
+            className={`flex items-center gap-1.5 text-sm rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words ${phase === "resolved" ? "" : QUEUED_EDGE}`}
+            title={failed ? "Capture delivery failed" : "Capture is being prepared…"}
+          >
+            <CameraIcon />
+            <span>{summary}</span>
+          </div>
+          <CaptureCaption caption={captureBubbleCaption(model, now)} phase={phase} />
+          {failed ? (
+            <FailedActions
+              summary={summary}
+              aged={phase === "failed-aged"}
+              onRetry={() => onRetry(model.id)}
+              onDiscard={() => onDiscard(model.id)}
+            />
+          ) : null}
         </div>
-        <CaptureCaption caption={captureBubbleCaption(model, ageMs)} phase={phase} />
-        {failed ? (
-          <FailedActions
-            summary={summary}
-            aged={phase === "failed-aged"}
-            onRetry={() => onRetry(model.id)}
-            onDiscard={() => onDiscard(model.id)}
-          />
-        ) : null}
-      </div>
+      </MaterialContext.Provider>
     </div>
   );
 }

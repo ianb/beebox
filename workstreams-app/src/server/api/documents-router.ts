@@ -21,11 +21,7 @@ import {
 } from "../../shared/documents.js";
 import { DocumentNotFoundError, InvalidDocumentPathError, UnknownWorkstreamError } from "../document-read.js";
 import { procedure, router } from "./trpc.js";
-
-/** Node's errno on a caught `unknown`, without an `as` cast at the boundary. */
-function errnoCode(e: unknown): string | undefined {
-  return e instanceof Error && "code" in e && typeof e.code === "string" ? e.code : undefined;
-}
+import { errnoCode } from "../../../../beebox/src/shared/error-guards.js";
 
 /** A workstream name is one safe segment — never a path. */
 const workstreamName = z.string().regex(/^[a-zA-Z0-9_-]+$/u);

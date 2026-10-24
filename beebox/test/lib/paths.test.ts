@@ -30,6 +30,15 @@ void test("Positional names (bare <type>.card — \"the ‹type› of this direc
   });
 });
 
+// A job card's type is its schema type (`intake-job`), the one templates and
+// schemas are registered under; its name is its attach stem:
+void test("A job card parses to its schema type and its attach stem", async (t) => {
+  t.check(parseCardName("Inbox_scan.intake.job.card"), {
+    name: "Inbox_scan.intake",
+    type: "intake-job",
+  });
+});
+
 // Returns `null` for strings that aren't valid card filenames:
 void test("Returns null for strings that aren't valid card filenames:", async (t) => {
   t.check(parseCardName("no-extension"), null);
@@ -96,4 +105,20 @@ void test("A directory with NO marker anywhere above it still returns null — o
   await writeFile(join(noVersionRoot, ".beebox", "box.json"), JSON.stringify({}));
   await t.checkThrows(() => findBoxRoot(noVersionRoot), "PreV3ShapeError");
   t.check(await findBoxRoot(noVersionRoot).catch((e: unknown) => e), instanceOf(PreV3ShapeError));
+});
+
+// ## `findBoxRoot` from inside a v2 `content/` directory
+//
+// A v2 package root keeps its operational tree under `content/` (with
+// `content/config/`), so a command run from inside it walks up to the package
+// root. There the v2 probe refuses it with the same error `getBoxShape` gives,
+// instead of reporting a box with no recorded version.
+void test("findBoxRoot from inside a v2 content/ dir names the v2 package root", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const v2Root = join(box.root, "_tmp", "v2-package");
+  await mkdir(join(v2Root, "content", "config", "procedures"), { recursive: true });
+  await writeFile(join(v2Root, "package.json"), JSON.stringify({ dependencies: { beebox: "*" } }));
+  const error = await findBoxRoot(join(v2Root, "content", "config", "procedures")).catch((e: unknown) => e);
+  t.check(error instanceof Error ? error.name : error, "V2PackageRootError");
 });

@@ -9,7 +9,8 @@ import { InlineAction } from "../../ui/InlineAction";
 import { useWorkspace } from "../workspace/WorkspaceProvider/provider";
 import { cardTarget } from "../workspace/use-open-beside/hook";
 import type { SessionContentBlock } from "../../../api";
-import type { ActivityPart } from "../message-parsing";
+import type { ActivityPart } from "../assistant-parts";
+import { MarkdownContent } from "../markdown-rendering";
 import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail, summarizeActivity } from "./activity-wording";
 
 type ActivityParts = ActivityPart[];
@@ -21,14 +22,14 @@ function RawToolDetail({ block }: { block: SessionContentBlock }) {
   return (
     <>
       {input ? (
-        <div className="bbx-scroll-fade-bottom mt-1 mb-1 ml-3 max-h-40 overflow-auto rounded bg-warm-50 p-3">
+        <div className="bbx-scroll-fade-bottom mt-1 mb-1 ml-3 max-h-40 overflow-auto rounded bg-warm-50 p-3 bbx-chat-plate">
           <JsonView value={input} />
         </div>
       ) : null}
       {result ? (
         <>
-          <div className="text-[10px] uppercase tracking-wider text-warm-500 ml-3 mt-1">result</div>
-          <Pre size="xs" boxed scroll="sm" className="bbx-scroll-fade-bottom mt-0.5 mb-1 ml-3">
+          <div className="text-[10px] uppercase tracking-wider text-card-soft ml-3 mt-1">result</div>
+          <Pre size="xs" boxed scroll="sm" className="bbx-chat-plate bbx-scroll-fade-bottom mt-0.5 mb-1 ml-3">
             {result}
           </Pre>
         </>
@@ -43,16 +44,16 @@ function ExcerptView({ excerpt }: { excerpt: Excerpt }) {
     case "change":
       return (
         <span className="block mb-1 ml-3 space-y-0.5 whitespace-pre-wrap break-words">
-          {excerpt.before ? <span className="block text-warm-500 line-through">{excerpt.before}</span> : null}
-          {excerpt.after ? <span className="block text-warm-800">{excerpt.after}</span> : null}
-          {excerpt.everywhere ? <span className="block text-warm-500 italic">(every place it appeared)</span> : null}
+          {excerpt.before ? <span className="block text-card-soft line-through">{excerpt.before}</span> : null}
+          {excerpt.after ? <span className="block text-card-ink">{excerpt.after}</span> : null}
+          {excerpt.everywhere ? <span className="block text-card-soft italic">(every place it appeared)</span> : null}
         </span>
       );
     case "text":
       return (
         <span className="block mb-1 ml-3">
-          <span className="text-warm-500">{excerpt.label}: </span>
-          <span className="text-warm-800 whitespace-pre-wrap break-words">{excerpt.text}</span>
+          <span className="text-card-soft">{excerpt.label}: </span>
+          <span className="text-card-ink whitespace-pre-wrap break-words">{excerpt.text}</span>
         </span>
       );
   }
@@ -72,6 +73,7 @@ function ToolSentence({ description, opens }: { description: string; opens: Tool
       {description.slice(0, at)}
       <InlineAction
         intent="subtle"
+        material
         title={`Open ${opens.name}`}
         onClick={(event) => {
           // Inside the line's <summary>: open the file without toggling the line.
@@ -99,12 +101,12 @@ function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; exce
 
   return (
     <details className="group/tool">
-      <summary className="cursor-pointer list-none hover:text-warm-700 py-0.5">
+      <summary className="cursor-pointer list-none hover:text-card-soft py-0.5">
         <span className="flex flex-wrap items-center gap-x-1">
-          <span className="text-warm-500 group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
+          <span className="text-card-soft group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
           <ToolSentence description={description} opens={opens} />
-          {place ? <span className="text-warm-500">· {place}</span> : null}
-          {failed ? <span className="text-warm-500">· didn’t go through</span> : null}
+          {place ? <span className="text-card-soft">· {place}</span> : null}
+          {failed ? <span className="text-card-soft">· didn’t go through</span> : null}
         </span>
         {excerpt && excerptInline ? <ExcerptView excerpt={excerpt} /> : null}
       </summary>
@@ -124,6 +126,8 @@ function countToolCalls(parts: ActivityParts): number {
       case "tools":
         count += part.tools.length;
         break;
+      case "note":
+        break;
     }
   }
   return count;
@@ -138,17 +142,19 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
             if (!part.text?.trim()) return null;
             return (
               <details key={i} className="group/think">
-                <summary className="cursor-pointer list-none flex items-center gap-1 text-primary hover:text-primary-dark py-0.5">
-                  <span className="text-warm-500 group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
+                <summary className="cursor-pointer list-none flex items-center gap-1 text-card-pen hover:text-card-ink py-0.5">
+                  <span className="text-card-soft group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
                   <span>thought it over</span>
                 </summary>
-                <div className="mt-0.5 mb-1 ml-3 text-xs text-warm-600 italic whitespace-pre-wrap">
+                <div className="mt-0.5 mb-1 ml-3 text-xs text-card-soft italic whitespace-pre-wrap">
                   {part.text}
                 </div>
               </details>
             );
           case "tools":
             return part.tools.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} excerptInline={excerptInline} />);
+          case "note":
+            return <div key={i} className="my-1 text-card-pen"><MarkdownContent text={part.text} /></div>;
         }
       })}
     </>
@@ -156,18 +162,19 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
 }
 
 /**
- * Render a collapsible activity group (thinking + tool calls).
- * Single-item groups render the item directly without a wrapper.
+ * Render a collapsible activity group (thinking, tool calls, folded notes).
+ * A single step with no notes renders directly without a wrapper.
  */
 export function ActivityGroup({ parts }: { parts: ActivityParts }) {
   if (parts.length === 0) return null;
 
   const totalItems = countToolCalls(parts);
 
-  // Single item: render directly without the collapsible group wrapper
-  if (totalItems === 1) {
+  // Single step: render directly without the collapsible group wrapper. A
+  // note keeps the wrapper, so it stays folded.
+  if (totalItems === 1 && !parts.some((part) => part.type === "note")) {
     return (
-      <div className="text-xs text-warm-600 leading-tight my-1 ml-2 pl-2 border-l border-warm-300">
+      <div className="text-xs text-card-soft leading-tight my-1 ml-2 pl-2 border-l border-warm-300">
         <ActivityGroupInner parts={parts} excerptInline={false} />
       </div>
     );
@@ -177,11 +184,11 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
 
   return (
     <details className="group my-1 ml-2 pl-2 border-l border-warm-300">
-      <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-warm-600 hover:text-warm-700">
-        <span className="text-warm-500 group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
+      <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-card-soft hover:text-card-ink">
+        <span className="text-card-soft group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
         <span>{summary}</span>
       </summary>
-      <div className="mt-1 text-xs text-warm-600 leading-tight ml-1">
+      <div className="mt-1 text-xs text-card-soft leading-tight ml-1">
         <ActivityGroupInner parts={parts} excerptInline />
       </div>
     </details>

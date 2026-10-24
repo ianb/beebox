@@ -1,7 +1,7 @@
 /** Outcome labels need a cited human answer, never confidence or silence. */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../../lib/read-yaml.js";
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { splitCardContent } from "../../../exports/cards.js";

@@ -16,7 +16,7 @@ const declarationSchema = z.array(
 
 export type TrickSecretDeclaration = z.infer<typeof declarationSchema>[number];
 
-export class TrickSecretError extends Error {
+class TrickSecretError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "TrickSecretError";

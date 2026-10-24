@@ -34,8 +34,7 @@
 
 import { readFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { splitCardContent, type LintContext, type LintIssue } from "../../exports/cards.js";
-import { parseYaml } from "../../exports/schema.js";
+import { parseFrontmatterObject, type LintContext, type LintIssue } from "../../exports/cards.js";
 import { conceptMapShapeWarnings } from "./concept-map.js";
 
 interface LintInput {
@@ -223,16 +222,8 @@ async function readCardYaml(absPath: string): Promise<Record<string, unknown> | 
     /* ignore: a missing or unreadable card is the generic broken-ref walk's to report */
     return null;
   }
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return null;
-  let fm: unknown;
-  try {
-    fm = parseYaml(split.frontmatterText);
-  } catch (_e) {
-    /* ignore: malformed frontmatter is reported when that card itself is linted */
-    return null;
-  }
-  return isRecord(fm) ? fm : null;
+  // Malformed frontmatter reads as null; it is reported when that card itself is linted.
+  return parseFrontmatterObject(content);
 }
 
 /** Plain string-keyed object guard (the engine's `isRecord` is not on the public surface). */

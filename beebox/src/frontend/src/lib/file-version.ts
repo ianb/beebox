@@ -25,7 +25,8 @@ import { useCallback, useSyncExternalStore } from "react";
 const versions = new Map<string, string>();
 const pathListeners = new Map<string, Set<() => void>>();
 
-const API_IMAGE_MARKERS = ["/api/files/", "/api/image/", "/api/images/"] as const;
+/** Path fragments that mark a URL as an in-box file served by this API. */
+export const API_IMAGE_MARKERS = ["/api/files/", "/api/image/", "/api/images/"] as const;
 
 /**
  * Record a new version token for a path and notify subscribers. Call this

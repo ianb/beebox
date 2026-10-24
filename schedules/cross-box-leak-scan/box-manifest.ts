@@ -35,12 +35,13 @@ export interface BoxRoot {
   root: string;
 }
 
-/** A v2 package root's box lives at `<path>/content`; a v1 (or already-a-box)
- *  root has `.beebox/box.json` directly under it. Mirrors
- *  `beebox/src/core/box/package.ts`'s `.beebox/box.json` convention. */
+/** A one-root box has `_config/` directly under it (the structural half of
+ *  `beebox/src/lib/box-identity.ts`'s `isBoxRoot`); otherwise this is a v2
+ *  package root, whose box lives at `<path>/content`. The gitignored
+ *  `.beebox/box.json` marker is not a signal: a migrated box keeps its shape
+ *  in `package.json`, and a clone has no marker at all. */
 async function resolveBoxRoot(rawPath: string): Promise<string> {
-  const directBoxJson = path.join(rawPath, ".beebox", "box.json");
-  if (await exists(directBoxJson)) return rawPath;
+  if (await exists(path.join(rawPath, "_config"))) return rawPath;
   return path.join(rawPath, "content");
 }
 

@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { findAbsoluteMachinePaths } from "../../src/lib/absolute-path-check.js";
+import { findAbsoluteMachinePaths, redactAbsoluteMachinePaths } from "../../src/lib/absolute-path-check.js";
 
 // A real home path is flagged, macOS and Linux forms alike:
 void test("A real home path is flagged, macOS and Linux forms alike:", async (t) => {
@@ -88,4 +88,16 @@ void test("Compact structured text doesn't let an earlier URL hide a later machi
     "/Users/beebox/",
   ],
   );
+});
+
+// Redaction writes each flagged home prefix as `~<name>/`, which the guard
+// accepts, and leaves placeholders and URLs as they are. A migration question
+// quotes host output this way:
+void test("Redaction rewrites flagged home prefixes and nothing else", async (t) => {
+  const text = "mirror /home/beebox/.cache/pnpm/x.json; see /Users/me/a and https://college.example/home/admissions/";
+  const redacted = redactAbsoluteMachinePaths(text);
+  t.check({ redacted, leaks: findAbsoluteMachinePaths(redacted) }, {
+    redacted: "mirror ~beebox/.cache/pnpm/x.json; see /Users/me/a and https://college.example/home/admissions/",
+    leaks: [],
+  });
 });

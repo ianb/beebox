@@ -216,14 +216,39 @@ lets the box notice. `connectors/activity-verdict.ts` holds the rule:
   the boxholder to ignore the dashboard.
 
 Each quiet or failing stretch is an **episode**, stored in the activity record.
-The scheduler daemon sends one iPhone app and Web Push message per episode, beside the
-task-health and Google-auth alerts (`core/schedule/box-alerts.ts`). The
-dashboard shows a `connector-activity:<name>` warning with a **This is expected**
+The scheduler daemon records each new episode once in its log, beside the
+task-health and Google-auth passes (`core/schedule/box-alerts.ts`). A new
+**failing** episode also sends one `quiet` notification naming each failing
+connector and the day it began; it says to reconnect Google only when a Google
+connector is failing and the grant is missing or dead. A quiet episode sends
+nothing. The dashboard shows a `connector-activity:<name>` warning with a **This is expected**
 button until new items arrive, an ok sync ends the failing stretch, or the owner
 dismisses it. A dismissed episode stays dismissed; the next episode is new and
 alerts again. An open quiet episode does not end when its baseline ages out of
 the record. A record that fails its schema shows as a `connector-activity`
 warning and is never reset, which would discard dismissals.
+
+## google-docs-api (Drive syncing Google Docs without the Docs API)
+
+When a Doc pull's `getDocument` fails for a reason the boxholder can fix — the
+Docs API disabled on the Cloud project (403 `SERVICE_DISABLED`, with the enable
+link) or a grant without `documents.readonly` — the Doc still syncs, without
+revision tracking or the `lossy:` check. The Drive connector folds each pass's
+outcomes into one diagnosis in `_bookkeeping/connectors/google-docs-api.state.json`
+(`connectors/google-drive/docs-api-status.ts`): a fixable failure opens it; a
+complete pass whose every Doc pull reached the API (or that found no Doc cards)
+clears it; a pass with failures, a folder cap, or any transient failure leaves
+it as it was. On-demand syncs (`bbx drive mount`, `bbx drive add`, Settings "Sync now")
+do not write it; the next connector pass does.
+
+The check is one `google-docs-api` warning with the fix. There is no dismissal:
+it lasts until the API answers or Drive stops syncing. Every reader hides it at
+once when Drive is disabled for the box or Google is disconnected. While the
+grant needs reauthorizing, Drive is paused and the warning stays, worded as its
+last sync. The same diagnosis is the Drive line in the Google settings
+section, and on the first send of each chat session it rides in the `<chat-app
+health>` attribute so the agent mentions it. A file that fails its schema shows
+as the warning's text and is never reset.
 
 ## gmail-drafts (drafts the connector stopped retrying)
 

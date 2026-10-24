@@ -19,7 +19,7 @@ discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 > `git -C ~/src/box-worktrees/<name>/test1 add -A && git -C ~/src/box-worktrees/<name>/test1 commit -m "Worktree setup"`
 > (check `git status` first for edits of your own). The `.beebox/box.json` trap
 > for hand-made copies stays with the
-> [marker issue](../../bugs/2026-10-20-box-marker-in-gitignored-state-dir.md).
+> [marker issue](2026-10-20-box-marker-in-gitignored-state-dir.md).
 >
 > Teardown's `keep` preservation replays the branch without the setup commit,
 > so the clone's engine link never reaches `test1`; a replay that conflicts

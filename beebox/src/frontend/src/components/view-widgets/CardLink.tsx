@@ -7,6 +7,10 @@
  * page) via the view host's `openCard`. Appearance stays light so it sits inside
  * author prose. The label falls back to the target's title, then the raw ref.
  *
+ * A link to an image card shows the image in the lightbox, the same as a
+ * Markdown link to one (`lib/image-link.ts`); the lightbox's "Open card" opens
+ * the card through `openCard`.
+ *
  * The card reference prop is `cardRef`, not `ref` — React reserves `ref` on
  * function components, so a `ref` prop never reaches us.
  */
@@ -15,6 +19,9 @@ import type { ReactNode } from "react";
 import { useViewHost, refToTarget } from "../../lib/view-host";
 import { serializeViewUrl } from "../../lib/view-url";
 import { toDisplayPath } from "@shared/display-path";
+import { imageLinkSrc } from "../../lib/image-link";
+import { isPlainLeftClick } from "../../lib/plain-click";
+import { useOptionalLightbox } from "../LightboxProvider";
 
 export interface CardLinkProps {
   /** Box-relative card path (box-absolute `/…`, relative, or `attach/…`). */
@@ -29,6 +36,7 @@ export interface CardLinkProps {
 
 export function CardLink({ cardRef, view, params, children }: CardLinkProps) {
   const host = useViewHost();
+  const lightbox = useOptionalLightbox();
   const resolved = host.useResolvedRef(cardRef);
   // Only a box-rooted ref (leading `/`) has a display form; attach/relative
   // refs pass through unchanged (display-path.ts is canonical-path-only).
@@ -51,19 +59,33 @@ export function CardLink({ cardRef, view, params, children }: CardLinkProps) {
     );
   }
   const href = `/${host.boxSlug}/views/${serializeViewUrl(target)}`;
+  const imageSrc = lightbox === null || view !== undefined || target.viewer !== null ? null : imageLinkSrc(host.boxSlug, target.path);
+  const openThis = () => {
+    host.openCard(cardRef, {
+      label: typeof label === "string" ? label : undefined,
+      viewer: view ?? null,
+      params,
+    });
+  };
+  // The lightbox steps through every image in the document; "Open card" on
+  // another one opens that card by its box path.
+  const openCard = (cardPath: string) => {
+    if (cardPath === target.path) openThis();
+    else host.openCard(`/${cardPath}`, { label: cardPath });
+  };
 
   return (
     <a
       href={href}
+      data-image-src={imageSrc ?? undefined}
+      data-image-alt={imageSrc === null || typeof label !== "string" ? undefined : label}
+      data-image-card={imageSrc === null ? undefined : target.path}
       onClick={(e) => {
         // Let modified clicks (new tab/window) and non-primary buttons behave natively.
-        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        if (!isPlainLeftClick(e)) return;
         e.preventDefault();
-        host.openCard(cardRef, {
-          label: typeof label === "string" ? label : undefined,
-          viewer: view ?? null,
-          params,
-        });
+        if (imageSrc !== null && lightbox?.openFromElement(e.currentTarget, { openCard }) === true) return;
+        openThis();
       }}
       className="bbx-theme-link"
     >

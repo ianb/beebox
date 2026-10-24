@@ -196,6 +196,13 @@ truthiness). So `user` is that person and `isOwner` is true only when that perso
 A session identity on the same request still wins; the device credential fills in when there is
 no session.
 
+The device is valid only while that person can still open the box (`canAccessBox`, checked in
+`resolveMobileRequestAuth` on every request, for the bearer and the cookie alike). When the owner
+removes a member from `allowedEmails`, that member's phones get the same 401 an unknown device
+gets, at once and with no revoke step; the device record stays, so adding the member back
+restores the phone. A device with `createdBy: null` is not affected. A refused cookie does not refuse the
+request: a valid device token on the same request still authenticates it. Changed 2026-10-22.
+
 Changed 2026-09-12. Previously a pure mobile request set `authed: true` but left `user: null` and
 `isOwner: false`, so native chat sends attributed to nobody and a paired phone could never be its
 owner — nor correctly fail to be, when a non-owner paired it.

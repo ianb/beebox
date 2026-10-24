@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
+import { MaterialContext } from "./material";
 
 export type CardPadding = "none" | "sm" | "md" | "lg";
 export type CardBackground = "white" | "warm" | "info" | "transparent";
@@ -20,7 +21,7 @@ export interface CardProps {
   shadow?: boolean;
   /** Dim to indicate inactive/archived content. Default false. */
   muted?: boolean;
-  /** Take background and border from the enclosing card's material (`white` becomes the raised sheet, `warm` the tint). */
+  /** Take background and border from the enclosing card's material (`white` becomes the raised sheet, `warm` the tint). Text primitives inside follow it (`useMaterial`). */
   material?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
@@ -41,10 +42,11 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
   lg: "p-6",
 };
 
+/** An app surface brings its own ink: inside a dark card theme it would otherwise inherit light ink. */
 const BACKGROUND_CLASSES: Record<CardBackground, string> = {
-  white: "bg-white",
-  warm: "bg-warm-50",
-  info: "bg-info-50",
+  white: "bg-white text-warm-900",
+  warm: "bg-warm-50 text-warm-900",
+  info: "bg-info-50 text-warm-900",
   transparent: "",
 };
 
@@ -105,5 +107,7 @@ export function Card({
     muted ? "opacity-60" : "",
     className,
   );
-  return <Tag id={id} className={classes} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} aria-busy={ariaBusy}>{children}</Tag>;
+  return <Tag id={id} className={classes} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} aria-busy={ariaBusy}>
+    <MaterialContext.Provider value={material === true}>{children}</MaterialContext.Provider>
+  </Tag>;
 }

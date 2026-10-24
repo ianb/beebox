@@ -45,20 +45,12 @@ import { AttachedComments } from "../AttachedComments";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { MetaItem } from "../ui/MetaItem";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { FriendlyDate } from "../ui/FriendlyDate";
 import { Button } from "../ui/Button";
-
-function MetaItem({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <Text size="xs" tone="muted">
-      <span className="uppercase tracking-wide">{label}</span>{" "}
-      <span className="text-warm-700">{children}</span>
-    </Text>
-  );
-}
 
 function DocumentHeader({ fields, fallbackName }: { fields: ExtractedDocumentFields; fallbackName: string }) {
   const { title, author, pages, format, acquired, channel, description, originalName } = fields;
@@ -185,7 +177,7 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
   });
 
   const components = useMemo(
-    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
+    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined, openImageLink: undefined }),
     [onNavigate, data.path, boxSlug],
   );
 

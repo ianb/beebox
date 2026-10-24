@@ -90,7 +90,7 @@ function RootPanel({
       <MenuItem id="bbx-here-recent-files" onClick={onOpenRecentFiles} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Recent files</span>
-          <span className="text-warm-500">›</span>
+          <span className="text-warm-600">›</span>
         </span>
       </MenuItem>
       <LandmarkLinksPanel contextDir={dir} onPanel={onLandmarkPanel} />
@@ -110,7 +110,7 @@ function RecentFilesSubPanel({
   return (
     <>
       <MenuItem id="bbx-here-recent-files-back" onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Recent files</span>
+        <span className="text-warm-700">‹ Recent files</span>
       </MenuItem>
       <MenuDivider />
       <RecentFilesPanel entries={messages} onPanel={onFilePanel} />

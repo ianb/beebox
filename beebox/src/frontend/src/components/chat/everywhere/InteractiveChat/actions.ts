@@ -1,3 +1,4 @@
+import { errorMessage } from "@shared/error-guards";
 import type { EmissionDispatch } from "../../conversation/use-bound-emission/hook";
 /**
  * Composer + session action handlers for InteractiveChat: building and
@@ -22,6 +23,7 @@ import type { InputStore } from "../../input-store";
 import type { EmissionStore } from "../../../../input/emission-store";
 import { MAX_RETAINED_MESSAGES, type ChatEvent } from "../../../../machines/chat-types";
 import { openerSendDecision, type OpenerSendOutcome } from "../../../openers/opener-send";
+import { isComposing } from "../../../../lib/ime";
 
 interface ChatActionsOpts {
   captureEmissionDispatch: () => EmissionDispatch;
@@ -208,7 +210,7 @@ export function useChatActions(opts: ChatActionsOpts) {
       .catch((e: unknown) => {
         // User-initiated action (policy rule 5): the user clicked "load older"
         // and is waiting on it -- surface the failure, don't just log.
-        console.error(`[chat] load-older history fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.error(`[chat] load-older history fetch failed: ${errorMessage(e)}`);
         toastError("Failed to load earlier messages", { cause: e });
       })
       .finally(() => setLoadingOlder(false));
@@ -219,7 +221,7 @@ export function useChatActions(opts: ChatActionsOpts) {
       if (isTranscribing) {
         return;
       }
-      if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === "Enter" && !e.shiftKey && !isComposing(e.nativeEvent)) {
         e.preventDefault();
         handleSend();
       }

@@ -18,7 +18,7 @@ import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
 import { loadSessionHistory, type SessionHistoryResult, type SessionLogSlice } from "../load-history.js";
 import { createCoinedRunState, type CoinedRunState } from "./coined-run.js";
 import { createChatBackend, type ChatBackend, type ChatBackendRun, type ChatBackendStartOptions } from "../../../../services/claude-chat/core.js";
-import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../prompts.js";
+import { chatSystemPrompt, NARRATION_OVERLAY } from "../prompts.js";
 import {
   accumulateAssistantText, buildContentBlocks, warnErroredTurn,
   type ChatImage, type ChatMessage, type ChatMessageContent, type ChatSendInput, type TaskEvent,
@@ -42,7 +42,7 @@ import type { ChatSessionOptions } from "../options.js";
 import { createHealthGate } from "../../../session-context.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
-export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY, buildContentBlocks };
+export { chatSystemPrompt, NARRATION_OVERLAY, buildContentBlocks };
 export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEvent };
 export type { ChatSessionOptions };
 
@@ -58,7 +58,7 @@ export class ChatSession extends EventEmitter {
   private turnText = "";
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
-  private messageQueue: ChatSendInput[] = []; private preparingTurn = false;
+  private messageQueue: ChatSendInput[] = []; private preparingTurn = false; private draining = false; // `draining`: a queued drain's send is in flight
   private readonly opening = new Set<Promise<unknown>>(); // sends opening a turn; see `whenStarted`
   private maintenancePaused = false;
   private readonly options: ChatSessionOptions;
@@ -214,11 +214,13 @@ export class ChatSession extends EventEmitter {
    * turn result or a run close, neither of which will now happen) and let a
    * later send overtake it, so history and delivery order would disagree.
    * Draining retries once; if that start fails too, `drainQueue`'s own handler
-   * reports it on the session rather than silently dropping the text.
+   * puts the input back in the queue for the next drain and reports the error.
    */
   private abandonStart(): void {
     this.transition({ phase: "idle" });
-    this.drainQueue();
+    // A failed drain does not drain again: with two queued messages and a
+    // start that keeps failing, the two would alternate without end.
+    if (!this.draining) this.drainQueue();
   }
 
   private consumeMessages(run: ChatBackendRun): Promise<void> {
@@ -296,8 +298,9 @@ export class ChatSession extends EventEmitter {
    */
   private drainQueue(): void {
     drainSessionQueue({ queue: this.messageQueue, paused: this.maintenancePaused,
-      send: (input) => this.send(input, { independent: true }),
-      onError: (error) => { this.emit("error", error); } });
+      send: async (input) => { this.draining = true; try { return await this.send(input, { independent: true }); } finally { this.draining = false; } },
+      // A queued drain often has no "error" listener, and an unheard "error" throws (see start-refusal.ts); the drain has already logged it.
+      onError: (error) => { if (this.listenerCount("error") > 0) this.emit("error", error); } });
   }
 
   /**

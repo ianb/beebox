@@ -68,7 +68,7 @@ export function ChatHuskView({ data }: RendererProps) {
         ) : null}
         {account !== null ? (
           <details>
-            <summary className="cursor-pointer text-sm text-warm-600">What came of this conversation</summary>
+            <summary className="cursor-pointer text-sm text-warm-700">What came of this conversation</summary>
             <Text as="div" size="sm" tone="subtle">
               <pre className="whitespace-pre-wrap font-sans mt-2">{account}</pre>
             </Text>

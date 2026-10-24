@@ -24,8 +24,10 @@ budget:
   # it already measured 5692 / 10785 (drift from merges since 2026-10-07);
   # +51 / +95 for SPEAKING's invisible-plumbing passage and the chat prompt's
   # silent machinery work (user-facing-language workstream).
+  # Raised 2026-10-20 (+48) to the post-merge measurement: the chat prompt's
+  # `google-drive:` health line (Docs-API-unavailable notice, drive-docs-api-health).
   guide_words: 5743
-  always_loaded_words: 10880
+  always_loaded_words: 10928
   uncited_words_per_section: 60
 
 lint:
@@ -491,7 +493,7 @@ rows:
     rule: "`bbx health` is the agent's to run; `inconclusive` means the check reached no verdict, not that the work failed, so the work is not redone."
     handle: COMMANDS
     bin: indirect
-    reason: Needed only when reading scheduled-task health. The guide keeps a one-line pointer so the command is not mistaken for an operator verb; the inconclusive rule moved.
+    reason: Needed when reading scheduled-task or box health. The guide keeps a one-line pointer so the command is not mistaken for an operator verb; the inconclusive rule moved.
     audits: [health-inconclusive-meaning]
     mechanics: box-docs/bbx-commands.md
   - id: commands.finish
@@ -502,7 +504,7 @@ rows:
     audits: []
     mechanics: the reactor prompt (src/core/reactor/prompts.ts) and each job type's card rule
   - id: commands.calendar
-    rule: "`bbx calendar [timespan]` lists upcoming events (default 7d; also today, 3d, 2w, 1m)."
+    rule: "`bbx calendar [timespan]` lists upcoming events (default 7d; also today, 3d, 2w, 1m, where m is months)."
     handle: COMMANDS
     bin: core
     reason: Binned indirect first (the calendar skill and bbx-commands.md carry it), but with the line gone the calendar-upcoming-events audit read the .ics files by hand instead, so the line is back. "What's on my calendar" is an everyday ask that does not look like calendar work until the agent is in it.
@@ -865,6 +867,12 @@ rows:
     bin: core
     reason: The two tools look interchangeable on any turn that ends with something unresolved, and the easy slip (a todo for a decision) hides the decision from the boxholder.
     audits: [todo-annotation-vs-question, todo-application-question-not-todo]
+  - id: todos.not-habits-offer-checks
+    rule: A deadline-free habit or care tip stays text on its record, not a todo; offer (don't create) todos for the checks research leaves before a dated decision.
+    handle: TODOS
+    bin: core
+    reason: The agent decides whether something is a todo before it reads the todos doc; a deadline-free habit became the only "now" item, and open checks stayed in prose.
+    audits: [todo-standing-habit-not-a-todo, todo-offer-checks-after-research]
   - id: todos.capture-in-context
     rule: Capture a todo inline in the card where the intention came up, wrapping its text; a todo list is a plain `.doc.card` of `{% todo %}` items.
     handle: TODOS
@@ -1109,6 +1117,12 @@ rows:
     bin: core
     reason: THE_LAW_OF_QUOTING requires the tags on every turn that records the user or derives from a card, and the basic form of each is shorter than a pointer to it.
     audits: [source-tag-syntax, source-vs-quote-composition, quote-third-party-from]
+  - id: provenance.open-before-citing
+    rule: Open a page before citing it; a figure seen only in a search summary or on a failed fetch is recorded as unconfirmed, and said so.
+    handle: PROVENANCE
+    bin: core
+    reason: A research turn records facts and cites pages before any doc is read; the 2026-10-22 I-deciding walk recorded summary claims as sourced facts.
+    audits: [provenance-search-summary-not-the-page]
   - id: provenance.no-bracket-form
     rule: Never write the `[→ …]` form seen in compiled context; it is rendered output, not syntax.
     handle: PROVENANCE

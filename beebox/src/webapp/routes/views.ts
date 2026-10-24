@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { bundleView, getViewMeta, buildErrorModule, resolveViewsDir } from "../views/compiler/compile.js";
 import { boxPackageHost } from "../views/node-view-runtime.js";
 import { loadViewCards } from "../../core/views/cards.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 interface RegisterViewRoutesOptions {
   server: FastifyInstance;
@@ -29,7 +30,7 @@ function resolveViewPath(viewsDir: string, slug: string): string | null {
   const resolvedViewsDir = path.resolve(viewsDir);
   const viewPath = path.resolve(resolvedViewsDir, `${slug}.tsx`);
   if (viewPath !== path.join(resolvedViewsDir, `${slug}.tsx`)) return null;
-  if (!viewPath.startsWith(resolvedViewsDir + path.sep)) return null;
+  if (!isWithin(resolvedViewsDir, viewPath)) return null;
   return viewPath;
 }
 

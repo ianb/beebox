@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
+import { useMaterial } from "./material";
 
 export type ButtonIntent =
   | "primary"
@@ -14,9 +15,16 @@ export type ButtonSize = "sm" | "md" | "lg";
 
 interface FlashSpec {
   label: ReactNode;
+  /**
+   * Shown instead of `label` when `onClick` throws or its promise rejects.
+   * Without it a failure shows nothing (and is logged).
+   */
+  failLabel?: ReactNode;
   /** Milliseconds to display after the action completes. Default 2000. */
   duration?: number;
 }
+
+type FlashState = "idle" | "done" | "failed";
 
 type NativeButtonPassThrough = Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -38,7 +46,11 @@ interface CommonButtonProps extends NativeButtonPassThrough {
    * into the elapsed-seconds timer: `(secs) => \`Uploading… ${secs.toFixed(1)}s\``.
    */
   loadingLabel?: ReactNode | ((elapsedSeconds: number) => ReactNode);
-  /** Brief post-click feedback ("Copied!" etc.). Fires after `onClick` resolves. */
+  /**
+   * Brief post-click feedback ("Copied" etc.). Fires after `onClick` resolves,
+   * or with `failLabel` after it fails. The button becomes a polite live region
+   * so the swapped label is announced.
+   */
   flash?: FlashSpec;
   /** `true` stretches the button to fill its parent's width. */
   fullWidth?: boolean;
@@ -73,6 +85,9 @@ const INTENT_CLASSES: Record<ButtonIntent, string> = {
   ghost: "bg-transparent text-warm-700 hover:bg-warm-100",
 };
 
+/** A ghost button paints nothing, so on a card's material it takes the material's ink. */
+const MATERIAL_GHOST = "bg-transparent text-card-ink hover:bg-card-tint";
+
 const RECT_SIZE: Record<ButtonSize, string> = {
   sm: "px-2.5 py-1 text-sm gap-1",
   md: "px-4 py-2 text-base gap-1.5",
@@ -101,9 +116,10 @@ interface ClassBuildOpts {
   iconOnly: boolean;
   fullWidth: boolean;
   extra: string | undefined;
+  material: boolean;
 }
 
-function buildClasses({ intent, shape, size, iconOnly, fullWidth, extra }: ClassBuildOpts): string {
+function buildClasses({ intent, shape, size, iconOnly, fullWidth, extra, material }: ClassBuildOpts): string {
   const shapeClass = shape === "circle" ? "rounded-full" : "rounded";
   const sizeClass =
     shape === "circle"
@@ -112,7 +128,8 @@ function buildClasses({ intent, shape, size, iconOnly, fullWidth, extra }: Class
         ? ICON_ONLY_RECT_SIZE[size]
         : RECT_SIZE[size];
   const widthClass = fullWidth && shape === "rect" ? "w-full" : "";
-  return cn(BASE_CLASSES, INTENT_CLASSES[intent], shapeClass, sizeClass, widthClass, extra);
+  const intentClass = intent === "ghost" && material ? MATERIAL_GHOST : INTENT_CLASSES[intent];
+  return cn(BASE_CLASSES, intentClass, shapeClass, sizeClass, widthClass, extra);
 }
 
 // ---------- spinner ----------
@@ -148,7 +165,7 @@ function renderContent({
   icon,
   children,
 }: {
-  flashing: boolean;
+  flashing: FlashState;
   flash: FlashSpec | undefined;
   loading: boolean;
   loadingLabel: ReactNode | ((s: number) => ReactNode) | undefined;
@@ -157,8 +174,8 @@ function renderContent({
   icon: ReactNode | undefined;
   children: ReactNode | undefined;
 }): ReactNode {
-  if (flashing && flash !== undefined) {
-    return <span>{flash.label}</span>;
+  if (flashing !== "idle" && flash !== undefined) {
+    return <span>{flashing === "failed" ? flash.failLabel : flash.label}</span>;
   }
   if (loading) {
     const resolved = typeof loadingLabel === "function" ? loadingLabel(elapsed) : loadingLabel;
@@ -189,16 +206,24 @@ function useElapsedSeconds(active: boolean): number {
   return elapsed;
 }
 
-function useFlashState(): { flashing: boolean; triggerFlash: (duration: number) => void } {
-  const [flashing, setFlashing] = useState(false);
+function useFlashState(): { flashing: FlashState; triggerFlash: (state: "done" | "failed", duration: number) => void } {
+  const [flashing, setFlashing] = useState<FlashState>("idle");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+  // A click's promise can settle after the button unmounts; it must not then
+  // start a timer or set state.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+    };
   }, []);
-  const triggerFlash = (duration: number) => {
-    setFlashing(true);
+  const triggerFlash = (state: "done" | "failed", duration: number) => {
+    if (!mountedRef.current) return;
+    setFlashing(state);
     if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setFlashing(false), duration);
+    timeoutRef.current = setTimeout(() => setFlashing("idle"), duration);
   };
   return { flashing, triggerFlash };
 }
@@ -233,30 +258,29 @@ export function Button(props: ButtonProps) {
   const isDisabled = disabled || loading;
 
   const handleClick = async (e: MouseEvent<HTMLButtonElement>) => {
-    if (isDisabled || flashing) return;
+    if (isDisabled || flashing !== "idle") return;
     if (onClick === undefined) return;
-    const result = onClick(e);
-    if (result instanceof Promise) {
-      setAsyncLoading(true);
-      try {
-        await result;
-      } catch (err) {
-        // Safety net for this shared primitive: a caller's onClick throwing
-        // uncaught would otherwise be an unhandled rejection inside this
-        // native DOM handler (which can't propagate it anywhere) --
-        // individual callers are expected to surface their own
-        // user-visible errors; this is the last-resort log if they don't.
-        // Return (after the finally resets loading) so a failed action
-        // never shows the success flash.
-        console.error("[Button] onClick handler threw:", err);
-        return;
-      } finally {
-        setAsyncLoading(false);
+    const duration = flash?.duration ?? 2000;
+    try {
+      // A synchronous throw counts as a failure, like a rejection.
+      const result = onClick(e);
+      if (result instanceof Promise) {
+        setAsyncLoading(true);
+        try {
+          await result;
+        } finally {
+          setAsyncLoading(false);
+        }
       }
+    } catch (err) {
+      // A caller that names a `failLabel` surfaces the failure itself. For the
+      // rest, this is the last-resort log: a handler failure inside a native
+      // DOM handler has nowhere else to go. A failure never shows the success flash.
+      if (flash?.failLabel !== undefined) triggerFlash("failed", duration);
+      else console.error("[Button] onClick handler threw:", err);
+      return;
     }
-    if (flash !== undefined) {
-      triggerFlash(flash.duration !== undefined ? flash.duration : 2000);
-    }
+    if (flash !== undefined) triggerFlash("done", duration);
   };
 
   const content = renderContent({
@@ -270,6 +294,7 @@ export function Button(props: ButtonProps) {
     children,
   });
 
+  const material = useMaterial(undefined);
   const ariaLabel = label !== undefined ? label : undefined;
   const titleFallback = iconOnly && label !== undefined ? label : undefined;
 
@@ -280,8 +305,9 @@ export function Button(props: ButtonProps) {
       disabled={isDisabled}
       aria-label={ariaLabel}
       aria-busy={loading || undefined}
+      aria-live={rest["aria-live"] ?? (flash !== undefined ? "polite" : undefined)}
       title={"title" in rest && rest.title !== undefined ? rest.title : titleFallback}
-      className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className })}
+      className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className, material })}
       onClick={(e) => void handleClick(e)}
     >
       {content}

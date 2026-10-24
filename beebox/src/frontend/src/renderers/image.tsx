@@ -17,10 +17,8 @@ import { apiRawFileUrl, apiRawImageUrl, apiTransformedImageUrl, getApiBase } fro
 import { resolveRelativePath } from "../lib/view-url";
 import { isTransformablePhotoPath } from "../lib/image-transform-url";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
-
-function strOf(v: unknown): string | null {
-  return typeof v === "string" ? v : null;
-}
+import { friendlyDate } from "../components/ui/FriendlyDate";
+import { stringOrNull } from "@shared/optional-string";
 
 const RAW_IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|bmp|svg|ico)$/i;
 
@@ -36,7 +34,7 @@ interface ParsedImageCard {
 }
 
 function parseImageCard(fm: Record<string, unknown>): ParsedImageCard {
-  const filenameRef = isRecord(fm.filename) ? strOf(fm.filename.ref) : null;
+  const filenameRef = isRecord(fm.filename) ? stringOrNull(fm.filename.ref) : null;
   const bbox = isRecord(fm["subject-bbox"]) ? fm["subject-bbox"] : null;
 
   const exif: Record<string, string> = {};
@@ -49,20 +47,20 @@ function parseImageCard(fm: Record<string, unknown>): ParsedImageCard {
   const textBlocks = Array.isArray(fm.text)
     ? fm.text.flatMap((b) =>
         isRecord(b) && typeof b.content === "string"
-          ? [{ surface: strOf(b.surface) ?? "unknown", text: b.content }]
+          ? [{ surface: stringOrNull(b.surface) ?? "unknown", text: b.content }]
           : [],
       )
     : [];
 
-  const rawRotation = parseInt(strOf(fm.rotation) ?? "0", 10);
+  const rawRotation = parseInt(stringOrNull(fm.rotation) ?? "0", 10);
   const rotation: Rotation =
     rawRotation === 90 || rawRotation === 180 || rawRotation === 270 ? rawRotation : 0;
 
-  const num = (v: unknown): number => parseInt(strOf(v) ?? "", 10);
+  const num = (v: unknown): number => parseInt(stringOrNull(v) ?? "", 10);
 
   return {
     filename: filenameRef,
-    description: strOf(fm.description),
+    description: stringOrNull(fm.description),
     rotation,
     subjectBbox: bbox
       ? { y1: num(bbox.y1), x1: num(bbox.x1), y2: num(bbox.y2), x2: num(bbox.x2) }
@@ -172,7 +170,7 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
           <Text size="xs" tone="muted">{card.exif.camera}</Text>
         ) : null}
         {card.exif.date ? (
-          <Text size="xs" tone="muted">{new Date(card.exif.date).toLocaleString()}</Text>
+          <Text size="xs" tone="muted">{friendlyDate(card.exif.date)}</Text>
         ) : null}
       </Row>
 

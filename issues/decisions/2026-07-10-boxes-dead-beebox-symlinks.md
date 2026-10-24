@@ -68,3 +68,7 @@ repair remains a human `ln -sfn` guided by the health message.
 ## Decision (2026-10-06)
 
 Fix it: engine init and health repair a dead `node_modules/beebox` link automatically. To be done in a small (Codex Luna) session after the current batch of work lands.
+
+## Audit 2026-10-22
+
+The 2026-10-06 decision (repair a dead link automatically) is not implemented. Detection still ships: the health check `engine-link` in `beebox/src/webapp/trpc/routers/health/checks/engine.ts` still tells the operator to run `ln -sfn`. The link model changed in the portable engine dependency work (commits f9de5b6cc, a36a9c51f; plan `beebox/docs/implemented-plans/portable-engine-dependency.md`). A box that declares `link:.beebox/engine` now gets a gitignored per-machine symlink `.beebox/engine`, written by `ensureEngineLink` (`beebox/src/core/box/engine-link.ts:68`). That function replaces a missing or dead link, but only `scaffoldPackageRoot` calls it (`beebox/src/core/box/package.ts:250`, reached from `bbx init`) and the engine-link migration. Ordinary `bbx` runs and the health check do not call it. To finish the decision, call `ensurePortableEngineLink` from engine startup and from a health repair action. The old `node_modules/beebox` symlink pointing at an absolute `PACKAGE_ROOT` still applies to boxes that have not migrated.

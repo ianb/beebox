@@ -14,6 +14,7 @@ import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { runTodoQuery } from "../../../../src/core/todo/query.js";
+import { ROOT_QUESTION_PATH } from "../../../../src/core/box/root-question-path.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 /** Every todo in the box, whatever its status or `assigned` — the collection runner, box-wide. */
@@ -59,6 +60,7 @@ void test("The questions directory doesn't exist yet in a fresh box — a missin
       pendingQuestions: 0,
       onPlateTodos: 0,
       escalatedTodos: 0,
+      laterTodos: 0,
     },
   });
 });
@@ -91,18 +93,34 @@ void test("Answered and dismissed questions are resolved; they don't belong on t
   // nav and the dashboard can't disagree.
 
   await box.write("_bookkeeping/questions/Broken.question.card", "---\ninput: not-a-mapping\n---\n");
-  // `status.status` reads box metadata, so give the marker its full contents.
-  await box.write(".beebox/box.json", JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" }));
 
   const navCount = (await caller(box).navStatus()).counts.pendingQuestions;
   const dashboardCount = (await caller(box).status()).counts.pendingQuestions;
   t.check(`${navCount} == ${dashboardCount}`, "3 == 3");
 
+  // ## The root question is not counted while the chat is empty
+  //
+  // The empty chat shows the root question as its opening line, so the nav
+  // badge and the Box page leave it out while it is pending and the box has no
+  // chat. The Questions page still lists it. Once the person has a chat (a
+  // husk exists) and the question is still pending, it counts again.
+
+  await box.write(ROOT_QUESTION_PATH, question(""));
+  t.check((await caller(box).navStatus()).counts.pendingQuestions, 3);
+
+  await box.write("_content/chat/web/2026-10-22_aaaaaaaa.chat.card", "---\nsession: aaaaaaaa-1111-4111-8111-111111111111\n---\n");
+  t.check((await caller(box).navStatus()).counts.pendingQuestions, 4);
+
+  // Answered, it drops out again.
+  await box.write(ROOT_QUESTION_PATH, question("answer:\n  text: Bees\nanswered-at: 2026-01-02T00:00:00Z\n"));
+  t.check((await caller(box).navStatus()).counts.pendingQuestions, 3);
+
   // ## Todos on the plate are counted; done and future ones are not
   //
   // `onPlateTodos` is `escalated` (past due) plus `on-plate` (started, or undated) —
   // the same derivation `bbx todos` uses, reached through the shared collector. A
-  // `done` todo and one that hasn't started yet are both off the plate.
+  // `done` todo and one that hasn't started yet are both off the plate; the
+  // not-yet-started one is counted as `laterTodos`, the todo page's "later".
 
   await box.write(
     "_content/notes/Plans.doc.card",
@@ -124,6 +142,7 @@ Body.
     pendingQuestions: 3,
     onPlateTodos: 1,
     escalatedTodos: 0,
+    laterTodos: 1,
   });
 
   // ## The count agrees with the full collector

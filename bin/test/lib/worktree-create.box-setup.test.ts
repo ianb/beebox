@@ -40,20 +40,32 @@ void test("a fresh clone's setup changes are committed; a reused clone's edits a
     await fs.copyFile(path.join(repoRoot, "bin/lib", file), path.join(mono, "bin/lib", file));
   }
   await writeExecutable(path.join(mono, "beebox/bin/bbx"), '#!/bin/sh\nprintf \'{"hooks":"worktree"}\\n\' > "$3/.claude/settings.json"\n');
+  // The engine package and the real engine-link check the box is linked with.
+  await fs.writeFile(path.join(mono, "beebox/package.json"), '{"name":"beebox"}\n');
+  await fs.copyFile(path.join(repoRoot, "beebox/bin/box-engine-link"), path.join(mono, "beebox/bin/box-engine-link"));
   git(root, "init", "-q", "-b", "main", mono);
   git(mono, "-c", "user.email=t@example.com", "-c", "user.name=T", "add", ".");
   git(mono, "-c", "user.email=t@example.com", "-c", "user.name=T", "commit", "-qm", "fixture");
 
   // A package-layout source box that depends on beebox.
   await fs.mkdir(path.join(boxSrc, ".claude"), { recursive: true });
-  await fs.writeFile(path.join(boxSrc, "package.json"), '{"dependencies":{"beebox":"^1.0.0"}}\n');
+  await fs.writeFile(path.join(boxSrc, "package.json"), '{"dependencies":{"beebox":"link:.beebox/engine"}}\n');
+  await fs.writeFile(path.join(boxSrc, ".gitignore"), "node_modules/\n.beebox/\n");
   await fs.writeFile(path.join(boxSrc, ".claude/settings.json"), '{"hooks":"source"}\n');
   git(root, "init", "-q", "-b", "main", boxSrc);
   git(boxSrc, "-c", "user.email=t@example.com", "-c", "user.name=T", "add", ".");
   git(boxSrc, "-c", "user.email=t@example.com", "-c", "user.name=T", "commit", "-qm", "box");
 
-  // `pnpm install` in the box writes a lockfile; elsewhere it does nothing.
-  await writeExecutable(path.join(binDir, "pnpm"), '#!/bin/sh\ncase "$PWD" in *box-worktrees*) echo "lockfileVersion: 9" > pnpm-lock.yaml ;; esac\n');
+  // `pnpm install` in the box writes a lockfile and links the engine as pnpm
+  // does for `link:.beebox/engine`; elsewhere it does nothing.
+  await writeExecutable(path.join(binDir, "pnpm"), [
+    "#!/bin/sh",
+    'case "$PWD" in *box-worktrees*)',
+    '  echo "lockfileVersion: 9" > pnpm-lock.yaml',
+    "  mkdir -p node_modules/.bin && ln -sfn ../.beebox/engine node_modules/beebox && ln -sfn ../beebox/bin/bbx node_modules/.bin/bbx ;;",
+    "esac",
+    "",
+  ].join("\n"));
 
   const env = {
     ...process.env,
@@ -76,7 +88,8 @@ void test("a fresh clone's setup changes are committed; a reused clone's edits a
   t.check({ status: git(clone, "status", "--porcelain"), commits, committed }, {
     status: "",
     commits: "Worktree setup: link the beebox engine to worktree wt\nbox",
-    committed: ".claude/settings.json\npackage.json\npnpm-lock.yaml",
+    // The source box already had the portable spec, so package.json is unchanged.
+    committed: ".claude/settings.json\npnpm-lock.yaml",
   });
 
   // Creating again reuses the clone and leaves a developer's edit uncommitted:

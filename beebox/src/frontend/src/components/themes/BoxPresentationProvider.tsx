@@ -1,19 +1,31 @@
-import { createContext, useContext, useEffect, useRef, useMemo, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useCallback, type ReactNode } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
-import { useBusSubscription } from "../../hooks/useBusSubscription";
-import { isRecord } from "@shared/is-record";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import type { RealtimeEvent } from "../../hooks/useBusSubscription";
+import { busEventData } from "../../lib/bus-events";
+import { boxRelativePath } from "@shared/box-path";
 import { useLocation, useParams } from "@tanstack/react-router";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 
 import { useDoodlebitMotion } from "./useDoodlebitMotion";
 
+export type PresentationData = RouterOutput["presentation"]["get"];
+
 interface PresentationState {
-  data: RouterOutput["presentation"]["get"] | undefined;
+  data: PresentationData | undefined;
   error: string | null;
   retry: () => void;
 }
 
 const PresentationContext = createContext<PresentationState | null>(null);
+
+/** Box config, a schema, or a landmark card: the inputs of the presentation. */
+function presentationChange(event: RealtimeEvent): boolean {
+  const change = busEventData(event, "file-change");
+  if (change === null) return false;
+  const path = boxRelativePath(change.path);
+  return path === "_config/box.json" || path.startsWith("src/schemas/") || path.endsWith(".landmark.card");
+}
 
 /** System appearance follows the workspace's place, never its inspected card. */
 export function BoxPresentationProvider({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
@@ -28,20 +40,9 @@ export function BoxPresentationProvider({ boxSlug, children }: { boxSlug: string
   const query = trpc.presentation.get.useQuery({ boxKey: boxSlug, contextDir }, {
     enabled: placeReady, staleTime: Infinity, placeholderData: (previous) => previous,
   });
-  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refetch = query.refetch;
   const retry = useCallback(() => { if (placeReady) void refetch(); }, [placeReady, refetch]);
-  useEffect(() => () => { if (pending.current !== null) clearTimeout(pending.current); }, []);
-  useBusSubscription({
-    onConnect: retry,
-    onEvent: ({ event, data }) => {
-      if (event !== "file-change" || !isRecord(data) || typeof data.path !== "string") return;
-      const path = data.path.replace(/^\//, "");
-      if (path !== "_config/box.json" && !path.startsWith("src/schemas/") && !path.endsWith(".landmark.card")) return;
-      if (pending.current !== null) return;
-      pending.current = setTimeout(() => { pending.current = null; retry(); }, 150);
-    },
-  });
+  useLiveRefresh({ when: presentationChange, refresh: retry, burstMs: 150 });
   const state = useMemo(() => ({ data: query.data, error: query.error?.message ?? null, retry }), [query.data, query.error, retry]);
   const chrome = query.data?.chrome;
   const surface = useDoodlebitMotion(chrome?.choice.name === "doodlebit");
@@ -52,6 +53,12 @@ export function BoxPresentationProvider({ boxSlug, children }: { boxSlug: string
       </div>
     </PresentationContext.Provider>
   );
+}
+
+/** A fixed presentation, without the box query, for the theme studio's specimens. */
+export function PresentationSnapshot({ data, error, children }: { data: PresentationData; error: string | null; children: ReactNode }) {
+  const state = useMemo(() => ({ data, error, retry: () => {} }), [data, error]);
+  return <PresentationContext.Provider value={state}>{children}</PresentationContext.Provider>;
 }
 
 export function useBoxPresentation(): PresentationState | null { return useContext(PresentationContext); }

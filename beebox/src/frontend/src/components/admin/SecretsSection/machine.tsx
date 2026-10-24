@@ -23,6 +23,7 @@ import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
 import { SecretUsesBlock } from "./uses";
 import { RevealSecretValue } from "./RevealSecretValue";
+import { friendlyDate } from "../../ui/FriendlyDate";
 
 type MachineView = RouterOutput["secrets"]["machineView"];
 type MachineSecret = MachineView["secrets"][number];
@@ -38,7 +39,7 @@ function lastUsedSummary(secret: MachineSecret): string {
   if (entries.length === 0) return "never used";
   const latest = entries.toSorted((a, b) => b[1].localeCompare(a[1]))[0];
   if (latest === undefined) return "never used";
-  return `last used ${new Date(latest[1]).toLocaleString()} by ${latest[0]}`;
+  return `last used ${friendlyDate(latest[1])} by ${latest[0]}`;
 }
 
 function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () => void }) {

@@ -24,13 +24,13 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../../../lib/trpc/client";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { cardTarget } from "../../workspace/use-open-beside/hook";
-import { pickOpenQuestion, type OpenQuestion } from "./open-question";
+import { pickOpenQuestion, type OpenQuestion } from "../../open-question";
 import { useBusSubscription } from "../../../../hooks/useBusSubscription";
 
 import { useEmissionDispatch } from "./dispatch";
 import { useEmissionPersistence } from "../../../../hooks/useEmissionPersistence";
 import { useRecoveryWidgets } from "./recovery";
-import { useChatMute, useChatSchedules, usePendingMessagePoll, useChatStallRecovery } from "./hooks";
+import { useChatMute, useChatSchedules, usePendingMessagePoll } from "./hooks";
 import { useChatModelFeatures } from "./use-chat-model";
 import { useProcessingStatusPoll } from "./processing-status-display";
 import { useCompanionCard } from "../../InteractiveChat-card-hooks";
@@ -285,7 +285,6 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const schedules = useChatSchedules({ messages, loaded: !snapshot.matches("loading"), isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.filter((entry) => entry.pending === true).length, sessionId, send });
   const showAgentWorking = useProcessingStatusPoll({ processBusy: Boolean(processBusy), snapshot, sessionId, send });
-  useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
 
   // The one user-send funnel: every send site builds an Emission and lands
   // in dispatchEmission (docs/implemented-plans/input-extraction.md chunk 1); assembly

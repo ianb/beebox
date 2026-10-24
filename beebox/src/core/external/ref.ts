@@ -14,6 +14,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { isWithin } from "../../lib/box-containment.js";
 
 /** Base for every external-ref resolution failure; carries the offending value. */
 export class ExternalRefError extends Error {
@@ -62,7 +63,7 @@ function relUnderRoot(real: string, roots: string[]): string | null {
     const rel = path.relative(root, real);
     // `path.relative` (not `startsWith`): `/foo` does not "contain" `/foobar`.
     // In-bounds iff the rel path stays inside the root.
-    if (rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel)) return rel;
+    if (rel !== "" && isWithin(root, real)) return rel;
   }
   return null;
 }

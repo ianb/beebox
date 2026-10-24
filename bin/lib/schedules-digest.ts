@@ -14,6 +14,7 @@ import type { Alert } from "./schedules.js";
 import { readAllAlerts, readDigestState, writeAlert, writeDigestState } from "./schedules-store.js";
 import { ALERTS_PAGE_URL, type RunnerDeps } from "./schedules-alerts.js";
 import { closeAlert, FILING_RETRY_MS } from "./schedules-alert-lifecycle.js";
+import { plural } from "../../beebox/src/shared/plural.js";
 
 /** Local hour of the day the digest becomes due. A laptop asleep then sends it
  *  at the first tick after waking. */
@@ -34,10 +35,6 @@ export interface DigestPlan {
   listed: Alert[];
   /** fyi alerts an earlier digest listed: closed now. */
   closing: Alert[];
-}
-
-function plural(count: number, noun: string): string {
-  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 /**

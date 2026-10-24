@@ -53,7 +53,7 @@ function renameRecords(records: NameStatusRecord[]): RenameRecord[] {
 }
 
 /** Parse `git --name-status -z` into every record, or null when malformed. */
-export function parseGitNameStatus(raw: string): NameStatusRecord[] | null {
+function parseGitNameStatus(raw: string): NameStatusRecord[] | null {
   const fields = raw.split("\0");
   if (fields.at(-1) === "") fields.pop();
   const records: NameStatusRecord[] = [];

@@ -6,7 +6,7 @@ The on-disk shape of a beebox. This is the canonical reference for beebox develo
 
 ## What a box is
 
-A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working tree is the entire state of the system — there is no separate database. Boxes live outside this repo (typically `~/src/boxes/<name>/`) so agents operating inside a box don't inherit this repo's AGENTS.md.
+A box is a directory whose tracked `package.json` declares the `beebox` dependency, with `_config/` beside it (`isBoxRoot` in `src/lib/box-identity.ts`), so a `git clone` of a box is a box. It's a git repository (`bbx init` initialises one), and the working tree is the entire state of the system — there is no separate database. Boxes live outside this repo (typically `~/src/boxes/<name>/`) so agents operating inside a box don't inherit this repo's AGENTS.md.
 
 A box has **one root**, and everything about the box lives under it:
 the npm package (`package.json`, `src/`, `node_modules/` — which is also where the
@@ -42,8 +42,16 @@ ignores `_tmp/` unanchored). `_config/_template-updates/` is exempt as a
 subtree — it mirrors box-relative destination paths. Other underscore names
 below the root (`_unsure`, say) are ordinary names, not reserved.
 
-`.beebox/box.json`'s `shapeVersion` field is `3`, the only shape this engine
-understands (`getBoxShape`/`boxCodePaths` in `src/lib/box-shape.ts`). A box
+The box records its shape in the same `package.json`, as
+`"beebox": { "shapeVersion": 3, "created": "<ISO date>" }`. `shapeVersion` 3 is
+the only shape this engine understands (`getBoxShape`/`boxCodePaths` in
+`src/lib/box-shape.ts`); a newer one is refused with "requires a newer beebox".
+`created` is the box's birth date, shown on the dashboard. `bbx init` writes the
+block, and the `box-shape-record-2026-10` migration copied it from the older
+gitignored marker `.beebox/box.json`. Until
+`issues/deferred/2026-10-20-drop-box-marker-fallback.md` lands, the engine
+still reads that marker when the block is absent and still writes one on a
+fresh init, so an older engine can open the box. A box
 created before this layout landed (shapeVersion 2, retired) had two roots — a
 package root and a nested `content/` operational root — and is the reason
 this layout exists: `getBoxShape` on a v2 box throws rather than silently
@@ -52,9 +60,23 @@ v2→v3 migration was deleted on 2026-09-14 once the v2 population reached zero,
 so a v2 box can only come from an old backup and cannot be opened. See
 `docs/implemented-plans/one-root-box-layout.md` for that history.
 
-`getBoxShape` recognizes a box when `<root>/.beebox/box.json`
-declares `shapeVersion: 3` and `<root>/package.json` declares a `beebox`
-dependency.
+The `beebox` dependency is `"link:.beebox/engine"`, the same value on every
+machine. `.beebox/engine` is a gitignored symlink to the engine this machine
+runs the box with: `bbx init` points it at the running engine, deploy at
+`/opt/beebox/beebox`, worktree setup at the worktree's `beebox/`, and the
+docker entrypoint at `/app/node_modules/beebox`. Each install path runs
+`bin/box-engine-link` to make the link before `pnpm install` and to check
+`node_modules/beebox` after. A clone needs the link before its first install
+(`ln -sfn <engine checkout>/beebox .beebox/engine`); without it `pnpm install`
+succeeds with no usable engine, and the `engine-link` health check names the
+repair. The `engine-link-spec-2026-10` migration converted the older
+machine-local `link:` specs; a pinned engine (a `file:` tarball) is left as
+it is. See `docs/implemented-plans/portable-engine-dependency.md`.
+
+`getBoxShape` recognizes a box when `<root>/package.json` declares a `beebox`
+dependency beside `<root>/_config/` and records `shapeVersion: 3` (or, during
+the transition, `<root>/.beebox/box.json` does). A box with neither record is
+refused with `MissingShapeRecordError`, which names the recovery.
 
 The agent-configuration entries (`AGENTS.md`, `.claude/`,
 `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
@@ -62,7 +84,7 @@ says which the engine writes, which the box owns, and when each is refreshed.
 
 ```
 <box-root>/                        THE box root — one root, closed vocabulary
-├── package.json                   { "dependencies": { "beebox": "^x.y.z" } }, private
+├── package.json                   { "dependencies": { "beebox": "link:.beebox/engine" } }, private
 ├── pnpm-lock.yaml, tsconfig.json  npm namespace
 ├── node_modules/                  gitignored; beebox resolves here
 ├── .git/                          git repository
@@ -70,7 +92,7 @@ says which the engine writes, which the box owns, and when each is refreshed.
 ├── .claude/                       agent configuration (rules, skills, memory symlink, settings)
 ├── .agents/                       Codex-facing mirror of .claude/skills/
 ├── .codex/                        Codex-facing hook config (mirrors .claude/settings.json)
-├── .beebox/                       runtime: box.json marker, dbs, logs, agent guide
+├── .beebox/                       runtime: dbs, logs, agent guide (and the transitional box.json marker)
 ├── src/
 │   ├── schemas/                    box-local card-type definitions
 │   ├── views/                      custom view definitions
@@ -141,7 +163,8 @@ completion signal, and `tmp-upload/` must not accumulate either. Plan:
 
 | File | Purpose |
 |------|---------|
-| `.beebox/box.json` | JSON marker. Presence identifies the directory as a box. Contains version, `shapeVersion`, and creation timestamp. |
+| `.beebox/engine` | Gitignored symlink to this machine's engine; the `beebox` dependency links through it (see above). |
+| `.beebox/box.json` | Transitional, gitignored shape marker (`shapeVersion`, `created`). Read only when `package.json` has no `beebox` block; see above. |
 | `.bbx-reactor.lock` | Reactor lock. JSON with `pid` and `startedAt`. Removed on clean exit. |
 | `.bbx-serve.pid` | Web-server PID file when `bbx serve` is running. |
 | `.beebox/serve-endpoint.json` | Machine-owned live server URL and PID, replaced after each successful bind; removed on clean shutdown and possibly stale after a crash. |
@@ -226,7 +249,7 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 
 | Path | What it is |
 |------|------------|
-| `box.json` | The shapeVersion marker (see above). |
+| `box.json` | The transitional shape marker (see above). |
 | `agent-guide.md` | Agent-facing overview, regenerated by `generateDocs()` (`bbx init`, chat start, `bbx wakeup`, `bbx docs refresh`). The in-box equivalent of the repo's root AGENTS.md plus this layout doc. Source: `src/core/agent-guide/`. |
 | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
 | `docs-generated-at` | Timestamp of last `generateDocs()` run. |

@@ -35,7 +35,6 @@ void test("One expired-age question and one fresh: only the fresh one is announc
     }
   });
   const box = await makeTmpBox({ git: true });
-  await box.seed(".beebox/box.json", JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: NOW.toISOString() }));
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: { endpoint: "https://push.example/f1", keys: { p256dh: "p", auth: "a" } }, now: NOW });
   await box.write("_bookkeeping/questions/Old.question.card", question("Still want the old thing?", new Date(NOW.getTime() - DEFAULT_EXPIRE_AFTER_MS - 60_000)));
   await box.write("_bookkeeping/questions/Fresh.question.card", question("Which day works?", NOW));

@@ -22,7 +22,7 @@ import http from "node:http";
 import net from "node:net";
 import crypto from "node:crypto";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -33,6 +33,7 @@ import type { BoxSpec } from "../../src/webapp/server-types.js";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { TEST_FRONTEND_PATH } from "../helpers/test-server.js";
 import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
@@ -145,6 +146,7 @@ async function startHub(
     boxes: options?.boxes ?? [{ slug: "test1", boxRoot: defaultBoxRoot }],
     baseUrl: "http://127.0.0.1",
     openAccess: options?.openAccess ?? true,
+    frontendPath: TEST_FRONTEND_PATH,
   });
   server.on("connection", (socket) => sockets.push(socket));
   await listen(server);
@@ -239,10 +241,11 @@ root.teardown(async () => {
 // ## Routing: unknown slug, root page, unchanged proxying
 //
 // An unconfigured slug 404s without touching any endpoint. `/` routes to the
-// hub's box-picker handler, which serves the SPA when the frontend bundle is built
-// and a minimal box list otherwise — either way a 200 with an HTML body (the
-// picker-content behavior itself is covered in `test/hub/server/box-picker.test.ts`; this just
-// asserts the routing):
+// hub's box-picker handler, which serves the built frontend's document. Every
+// hub here serves the tracked stand-in build (`test/fixtures/frontend-dist`),
+// so the result does not depend on whether the checkout has built the
+// frontend. (The picker's content, including the unbuilt fallback list, is
+// covered in `test/hub/server/box-picker.test.ts`; this asserts the routing.)
 void test("An unconfigured slug 404s without touching any endpoint.", async (t) => {
   t.teardown(async () => {
     try {
@@ -262,7 +265,7 @@ void test("An unconfigured slug 404s without touching any endpoint.", async (t) 
   const rootResponse = await fetch(`${hub.base}/`);
   t.check(rootResponse.status, 200);
 
-  t.checkText(await rootResponse.text(), "<!DOCTYPE html>\n<html>\n<head>\n  <title>Bee Box Hub</title>\n  <meta charset=\"utf-8\">\n  <style>\n    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }\n    h1 { color: #333; }\n    ul { padding-left: 1.25rem; }\n    li { margin: 0.25rem 0; }\n  </style>\n</head>\n<body>\n  <h1>Boxes</h1>\n  <ul>\n    <li><a href=\"/test1/\">test1</a></li>\n  </ul>\n</body>\n</html>");
+  t.check(await rootResponse.text(), await readFile(join(TEST_FRONTEND_PATH, "index.html"), "utf8"));
 
   // ## A request under a configured slug is proxied unchanged (no prefix stripping)
   //
@@ -304,17 +307,11 @@ void test("Identity headers: client-supplied ones are stripped, the hub's own ar
     xBbxHubAuth: "off",
   });
 
-  // A webhook path is proxied unauthenticated, carrying only the hub secret:
+  // `/webhook/<slug>/…` is not routed to the box: no box registers a webhook
+  // route, so the hub reads `webhook` as the slug and finds no such box.
 
   const webhook = await getJson(hub, { path: "/webhook/test1/incoming" });
-  t.check([webhook.status, webhook.body.headers], [
-    200,
-    {
-      xBbxAuthenticatedEmail: null,
-      xBbxHubSecret: "test-hub-secret-for-router-test",
-      xBbxHubAuth: null,
-    },
-  ]);
+  t.check(webhook.status, 404);
 
   // ## The browse key reaches hub-mode children through the trusted auth contract
   //

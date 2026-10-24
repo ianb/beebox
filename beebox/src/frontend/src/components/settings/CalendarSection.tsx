@@ -7,6 +7,10 @@ import { useEffect, useState } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { CheckboxField, NumberField } from "../ui/fields/field";
 import { Row } from "../ui/Row";
+import { Card } from "../ui/Card";
+import { Heading } from "../ui/Heading";
+import { Text } from "../ui/Text";
+import { Notice } from "../ui/Notice";
 import { GoogleConnectLink } from "./GoogleConnectLink";
 
 type AvailableCalendar = RouterOutput["calendar"]["available"][number];
@@ -72,51 +76,43 @@ export function CalendarSection() {
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-warm-800 mb-4">
-          Google Calendar
-        </h2>
-        <div className="p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
-          {error}
-        </div>
+      <Card material padding="lg" border="none" shadow>
+        <Heading level={2} className="mb-4">Google Calendar</Heading>
+        <Notice tone="warning">{error}</Notice>
         <GoogleConnectLink id="bbx-settings-calendar-connect-google" />
-      </div>
+      </Card>
     );
   }
 
   if (!calendars) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-warm-800 mb-4">
-          Google Calendar
-        </h2>
-        <p className="text-sm text-warm-600">Loading calendars...</p>
-      </div>
+      <Card material padding="lg" border="none" shadow>
+        <Heading level={2} className="mb-4">Google Calendar</Heading>
+        <Text as="p" size="sm" tone="muted">Loading calendars...</Text>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">
-        Google Calendar
-      </h2>
-      <p className="text-sm text-warm-700 mb-4">
+    <Card material padding="lg" border="none" shadow>
+      <Heading level={2} className="mb-2">Google Calendar</Heading>
+      <Text as="p" size="sm" tone="emphasis" className="mb-4">
         Choose which calendars to sync. Events are pulled as .ics files during{" "}
-        <code className="text-xs bg-warm-100 px-1 rounded">bbx wakeup</code>.
-      </p>
+        <code className="text-xs bg-warm-100 text-warm-900 px-1 rounded">bbx wakeup</code>.
+      </Text>
 
       <div className="space-y-1">
         {calendars.map((cal) => (
-          <div key={cal.id} className="flex items-center gap-3 px-3 py-2 rounded hover:bg-warm-50">
+          <div key={cal.id} className="flex items-center gap-3 px-3 py-2 rounded hover:bg-card-tint">
             <CheckboxField
               label={
                 <>
                   {cal.summary}
                   {cal.primary ? (
-                    <span className="ml-1 text-xs text-warm-500">(primary)</span>
+                    <Text size="xs" tone="muted" className="ml-1">(primary)</Text>
                   ) : null}
                   {cal.accessRole !== "owner" ? (
-                    <span className="ml-1 text-xs text-warm-500">({cal.accessRole})</span>
+                    <Text size="xs" tone="muted" className="ml-1">({cal.accessRole})</Text>
                   ) : null}
                 </>
               }
@@ -136,10 +132,10 @@ export function CalendarSection() {
         ))}
       </div>
 
-      <h3 className="text-sm font-semibold text-warm-800 mt-6 mb-1">Sync window</h3>
-      <p className="text-sm text-warm-700 mb-3">
+      <Heading level={3} className="mt-6 mb-1">Sync window</Heading>
+      <Text as="p" size="sm" tone="emphasis" className="mb-3">
         How many days of events to pull, relative to today.
-      </p>
+      </Text>
       <Row gap="md">
         <NumberField
           label="Days back"
@@ -160,6 +156,6 @@ export function CalendarSection() {
           className="w-32"
         />
       </Row>
-    </div>
+    </Card>
   );
 }

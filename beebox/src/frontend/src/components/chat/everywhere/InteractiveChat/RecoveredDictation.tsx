@@ -23,7 +23,7 @@ import { Stack } from "../../../ui/Stack";
 import { Button } from "../../../ui/Button";
 import { bbxSource } from "../../../../lib/source-tag";
 import { type DictationDraft } from "../../../../lib/dictation-draft";
-import { formatAgo } from "../../../../lib/relative-time";
+import { formatAgo } from "@shared/relative-time";
 
 export function RecoveredDictation(props: {
   draft: DictationDraft;
@@ -38,7 +38,7 @@ export function RecoveredDictation(props: {
   // sends or discards promptly — so it needn't tick.
   const [age, setAge] = useState("just now");
   useEffect(() => {
-    setAge(formatAgo(Date.now() - draft.updatedAt));
+    setAge(formatAgo(draft.updatedAt, Date.now()));
   }, [draft.updatedAt]);
 
   return (

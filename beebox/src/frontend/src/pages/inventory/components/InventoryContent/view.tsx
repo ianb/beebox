@@ -1,6 +1,6 @@
 import type { RouterOutput } from "../../../../lib/trpc/client";
 import type { InventoryCardState } from "../../../../lib/inventory-card-state";
-import { formatBytes } from "../../../../lib/format-bytes";
+import { humanBytes } from "@shared/human-bytes";
 import { Card } from "../../../../components/ui/Card";
 import { Row } from "../../../../components/ui/Row";
 import { Stack } from "../../../../components/ui/Stack";
@@ -11,6 +11,7 @@ import { Hint } from "../../../../components/ui/Hint";
 import { Heading } from "../../../../components/ui/Heading";
 import { InventoryTable } from "./InventoryTable";
 import { InventoryTreemap } from "./InventoryTreemap";
+import { friendlyDate } from "../../../../components/ui/FriendlyDate";
 
 type Inventory = RouterOutput["inventory"]["summary"];
 type Projection = InventoryCardState["projection"];
@@ -58,8 +59,8 @@ function RepositorySummary({ data }: { data: Inventory }) {
       <Stack gap="md">
         <Heading level={2}>Git storage</Heading>
         <Row gap="lg" wrap>
-          <InventoryStatistic value={formatBytes(repository.checkoutDiskBytes)} label="repository footprint" />
-          <InventoryStatistic value={formatBytes(repository.gitDiskBytes)} label="of that, Git storage" />
+          <InventoryStatistic value={humanBytes(repository.checkoutDiskBytes)} label="repository footprint" />
+          <InventoryStatistic value={humanBytes(repository.gitDiskBytes)} label="of that, Git storage" />
           <InventoryStatistic value={repository.annexed ? repository.annexQueryAvailable ? `${annexedPercent}%` : "Unavailable" : "Not enabled"} label="logical content annexed" />
         </Row>
         {repository.complete ? null : <ErrorText>Repository footprint is a lower bound because some paths could not be read.</ErrorText>}
@@ -84,7 +85,7 @@ function StorageTable({ storage }: { storage: Inventory["repository"]["storage"]
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
-        <thead><tr className="border-b border-warm-300 text-left text-warm-600"><th className="py-2 pr-3 font-medium">Storage</th>{columns.map((column) => <th key={column.label} className="py-2 px-3 text-right font-medium">{column.label}</th>)}</tr></thead>
+        <thead><tr className="border-b border-warm-300 text-left text-warm-700"><th className="py-2 pr-3 font-medium">Storage</th>{columns.map((column) => <th key={column.label} className="py-2 px-3 text-right font-medium">{column.label}</th>)}</tr></thead>
         <tbody>
           <StorageRow label="Annexed" columns={columns.map((column) => column.value.annexed)} />
           <StorageRow label="Regular Git" columns={columns.map((column) => column.value.regular)} />
@@ -99,7 +100,7 @@ function StorageRow({ label, columns }: { label: string; columns: Array<{ files:
   return (
     <tr className="border-b border-warm-200">
       <td className="py-2 pr-3 font-medium">{label}</td>
-      {columns.map((column, index) => <td key={index} className="py-2 px-3 text-right tabular-nums">{formatBytes(column.bytes)} <span className="text-warm-500">· {column.files.toLocaleString()}</span></td>)}
+      {columns.map((column, index) => <td key={index} className="py-2 px-3 text-right tabular-nums">{humanBytes(column.bytes)} <span className="text-warm-700">· {column.files.toLocaleString()}</span></td>)}
     </tr>
   );
 }
@@ -122,7 +123,7 @@ function InventorySummary({ data, linkStatus }: { data: Inventory; linkStatus: L
         <Text as="div" size="xs" tone="muted" uppercase>{linkStatus === "all" ? "Whole box" : "Whole-box totals"}</Text>
         <Row gap="lg" wrap>
           <InventoryStatistic value={data.totals.files.toLocaleString()} label="physical files" />
-          <InventoryStatistic value={formatBytes(data.totals.bytes)} label="content size" />
+          <InventoryStatistic value={humanBytes(data.totals.bytes)} label="content size" />
           <InventoryStatistic value={data.totals.groupedItems.toLocaleString()} label="grouped items" />
         </Row>
       </Stack>
@@ -183,7 +184,7 @@ function InventoryRules({ data }: { data: Inventory }) {
         <Text as="p" size="sm"><Text weight="semibold">Direct:</Text> every regular file and symlink counts separately by card type or final extension. Symlink sizes follow their targets when available; dangling links use the link size.</Text>
         <Text as="p" size="sm"><Text weight="semibold">Linked:</Text> a card has at least one detected incoming reference from another card, authored Markdown file, or box view, using the same recognized ref forms as <Text mono>bbx mv</Text>. References to its attachments count; self-references do not. Tooling/generated Markdown and temporary cards are not referrers. Loose files and orphan attachment directories appear only under All.</Text>
         <Text as="p" size="sm">Orphaned <Text mono>.attach/</Text> directories with no owning card appear as their own grouped row. Found: {data.orphanAttachmentDirectories.toLocaleString()}.</Text>
-        <Text as="p" size="sm">Excluded from both views: {data.excludedDirectories.join(", ")}. Directories themselves are not counted. Last scanned {new Date(data.scannedAt).toLocaleString()}.</Text>
+        <Text as="p" size="sm">Excluded from both views: {data.excludedDirectories.join(", ")}. Directories themselves are not counted. Last scanned {friendlyDate(data.scannedAt)}.</Text>
       </Stack>
     </Card>
   );

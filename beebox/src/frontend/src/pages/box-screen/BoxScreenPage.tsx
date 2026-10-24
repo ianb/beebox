@@ -49,7 +49,12 @@ function storageKey(boxSlug: string): string | null {
 }
 
 function readStored(key: string | null): BoxScreenState {
-  return restoreBoxScreen(parseStoredBoxScreen(key === null ? null : localStorage.getItem(key)));
+  let raw: string | null = null;
+  if (key !== null) {
+    try { raw = localStorage.getItem(key); }
+    catch (error) { console.warn("[box-screen] could not read the new-thought draft", error); }
+  }
+  return restoreBoxScreen(parseStoredBoxScreen(raw));
 }
 
 function writeStored(key: string | null, stored: StoredBoxScreen): void {

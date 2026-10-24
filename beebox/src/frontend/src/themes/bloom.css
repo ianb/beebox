@@ -25,12 +25,11 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: url("./bloom-cutouts.svg") center / 100% 100% no-repeat;
+  background: url("./bloom-cutouts.svg") center / cover no-repeat;
 }
 .bbx-box-presentation[data-chrome-theme="bloom"] :is(
   .bbx-conversation-desk, .bbx-companion-desk[data-active-card],
-  .bbx-interface-card-desk[data-card-content="card"],
-  .bbx-interface-browse-panel[data-card-content="card"]
+  .bbx-interface-card-desk[data-card-content="card"]
 ) {
   background: transparent;
 }
@@ -55,21 +54,13 @@
 }
 .bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav :is(
   .bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
-  #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat
+  #bbx-nav-todo, #bbx-nav-questions
 ) {
   background-color: #e4daef;
   color: #344957;
   border-color: #9c91b1;
   border-radius: 5px;
   box-shadow: 2px 2px 0 #fff4df;
-}
-.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav :is(
-  .bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile
-) :is(.text-white, .text-white\/70, .text-white\/80) {
-  color: #344957;
-}
-.bbx-box-presentation[data-chrome-theme="bloom"] #bbx-nav-voice .bg-white\/90 {
-  background-color: #344957;
 }
 .bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav button:active {
   box-shadow: none;
@@ -91,7 +82,7 @@
   border-top: 0;
 }
 /* ChatComposerSection mobile typing/transcribing subpanel. */
-.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r {
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material > .bbx-composer-mobile-row {
   background: #fffdf5;
 }
 .bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material textarea {
@@ -104,7 +95,7 @@
 /* Only the idle mic has bg-primary; recording and paused states keep their
    danger/pulsing colors from InteractiveChat-voice-button. */
 .bbx-box-presentation[data-chrome-theme="bloom"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
-.bbx-box-presentation[data-chrome-theme="bloom"] #bbx-composer-mic.bg-primary {
+.bbx-box-presentation[data-chrome-theme="bloom"] #bbx-composer-mic[data-mic="idle"] {
   background-color: #a7d6dc;
   color: #284b58;
   border: 1px solid #739da7;
@@ -151,7 +142,7 @@
   border: 1px solid #9bbbc6;
   border-radius: 16px;
 }
-.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-callout > .text-accent-dark {
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-callout > .bbx-chat-callout-context {
   color: #344957;
 }
 /* This material resets on every card, including a card on another system. */
@@ -217,10 +208,11 @@
   border-color: #c5bda7;
   box-shadow: 2px 2px 0 #b8d9df;
 }
-.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-meta-material {
+.bbx-box-presentation[data-chrome-theme="bloom"] :is(.bbx-chat-meta-material, .bbx-chat-empty-label) {
   color: #344957;
   background: #fffdf5;
 }
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-empty-label { padding: 6px 10px; }
 @media print {
   .bbx-card-theme[data-card-theme="bloom"] :is(.bbx-blockquote, .bbx-quote-block) {
     background: transparent;

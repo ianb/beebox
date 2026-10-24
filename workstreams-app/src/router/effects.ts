@@ -11,6 +11,7 @@
 
 import fs from "node:fs/promises";
 import { parseEnv } from "node:util";
+import type { WriteStream } from "node:fs";
 import type { Readable } from "node:stream";
 import type { ResolvedBoxEntry } from "./box-entry.js";
 import type { PidStore } from "./pidfile.js";
@@ -97,6 +98,9 @@ export interface RouterEffects {
   /** Write this worktree's single-slot `hub.json`, returning its path. */
   writeHubConfig(params: { name: string; backendPort: number; resolvedBoxes: ResolvedBoxEntry[] }): Promise<string>;
   getPort(): Promise<number>;
+  /** Open a worktree's log file for appending. An effect so a test can see
+   *  that every start path that opens one also ends it. */
+  openLog(file: string): WriteStream;
   resolveWorktree(name: string): Promise<ResolvedWorktree | null>;
   resolveBoxEntries(entries: string[]): Promise<ResolvedBoxEntry[]>;
   /** Whether a path exists on disk. Backs `resolveBackendEntryPath`'s
@@ -130,7 +134,9 @@ export interface RouterCoreConfig {
   onStateChange?: () => void;
 }
 
-// --- error helpers (honestly typed; bin/ can't import beebox's guards) ---
+// --- error helpers (honestly typed). The router keeps its own small helpers
+// by choice so its process loads little of beebox; bin/ and the workstreams
+// server import beebox/src/shared/error-guards.ts instead. ---
 
 /** A message from an unknown thrown value, without an `as Error` cast. */
 export function errMessage(e: unknown): string {

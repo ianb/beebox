@@ -6,7 +6,8 @@
  * chip that can be dismissed to drop the session filter.
  */
 
-import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
+import { useState, useRef, useCallback, useMemo, type ReactNode } from "react";
+import { useDismiss } from "../../hooks/useDismiss";
 import {
   TRIGGER_KINDS,
   TRIGGER_KIND_LABELS,
@@ -111,7 +112,7 @@ export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: History
             id={`${idPrefix}-clear`}
             type="button"
             onClick={clearAll}
-            className="text-[11px] text-warm-500 hover:text-warm-700 underline ml-auto"
+            className="text-[11px] text-warm-700 hover:text-warm-900 underline ml-auto"
           >
             Clear
           </button>
@@ -167,23 +168,8 @@ function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    function handlePointer(e: MouseEvent) {
-      if (rootRef.current !== null && e.target instanceof Node && !rootRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss({ root: rootRef, open, onDismiss: close });
 
   const hasSelection = selected.length > 0;
   const firstLabel = options.find((o) => o.value === selected[0])?.label ?? selected[0];
@@ -217,12 +203,12 @@ function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle
       {open ? (
         <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 w-60 max-h-72 overflow-auto">
           {options.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-500 italic">No values</div>
+            <div className="px-3 py-2 text-xs text-warm-700 italic">No values</div>
           ) : (
             sections.map((section) => (
               <div key={section.heading ?? ""}>
                 {section.heading === null ? null : (
-                  <div className="px-3 pt-1.5 pb-0.5 text-[10px] uppercase tracking-wide text-warm-500">
+                  <div className="px-3 pt-1.5 pb-0.5 text-[10px] uppercase tracking-wide text-warm-700">
                     {section.heading}
                   </div>
                 )}
@@ -261,7 +247,7 @@ function ToggleChip({ id, label, checked, onChange }: ToggleChipProps) {
   return (
     <span className="inline-flex items-center gap-1.5">
       <Toggle id={id} checked={checked} onChange={onChange} label={label} />
-      <span className={cn("text-xs", checked ? "text-warm-800 font-medium" : "text-warm-600")}>
+      <span className={cn("text-xs", checked ? "text-warm-800 font-medium" : "text-warm-700")}>
         {label}
       </span>
     </span>

@@ -48,7 +48,7 @@ function TableItem({ rows, caption }: { rows: DoclingTableCell[][]; caption: str
     // Wide tables scroll inside their own box rather than widening the page.
     <div className="overflow-x-auto">
       <table className="border-collapse">
-        {caption === null ? null : <caption className="text-left text-sm text-warm-600 pb-1">{caption}</caption>}
+        {caption === null ? null : <caption className="text-left text-sm text-warm-700 pb-1">{caption}</caption>}
         <tbody>
           {rows.map((cells, rowIndex) => (
             // Row/cell order IS the identity here: docling gives cells offsets, not ids.

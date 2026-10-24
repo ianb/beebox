@@ -17,7 +17,7 @@ The harness lives in `src/dev/`:
 
 **When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior. Run them after touching AGENTS.md, box AGENTS.md, schemas, prompts, or anything
 that changes what an agent should know; the periodic cadence is in
-[maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.md`.
+[maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-10-22.md`.
 
 ## How it works
 
@@ -94,6 +94,19 @@ tests, so it refuses a box with uncommitted changes. A worktree's test1 clone
 usually has such changes from ordinary dev use (an engine install sync, for
 example). Copy it to a scratch directory, commit there, and audit the copy.
 
+The runner has no box server and no notification channel, and a worktree
+clone's `node_modules/beebox` links to the engine outside the box. Three kinds
+of audit fail for those reasons alone:
+
+- A fixture `AGENTS.md` that imports a package doc (`@node_modules/beebox/box-docs/…`)
+  loads nothing, because Claude Code does not follow an import out of the box.
+  Run those audits on a copy whose `node_modules/beebox` is a real directory
+  holding a copy of `box-docs/`.
+- `bbx remind` refuses without a channel that can reach the person; set
+  `BBX_NOTIFY_FAKE=1` ([notifications](../notifications.md)).
+- `bbx drive` commands need the server (`BBX_SERVER_URL`), so drive audits
+  check the agent's choice, not the command's result.
+
 By default the runner uses the box's configured engine. `--engine` overrides
 that choice for the audit only, so the same definitions can be exercised
 against Claude and Codex without editing `_config/box.json`. Reports include the
@@ -165,7 +178,9 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `surface` — `box` (default) or `dev`; see Dev-guidance audits.
 - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `additionalDirectories`, mirroring how a chat session bound to a landmark is spawned. Use to audit that the subdirectory's `AGENTS.md` (and its `@MAP.md` import) actually load into the agent's context at session start.
 - `fixture` — map of box-relative path → file content, written before the test and removed afterward. Used to stage an `AGENTS.md` (or any other file) without checking it into the box. Combined with `context_dir`, this lets a single audit set up its own landmark-style scratch directory.
-- `chat_mode` — when true, the agent runs with `CHAT_SYSTEM_PROMPT` instead of the default working-directory prompt. Use for tests that audit chat-mode knowledge — the agent in a chat session sees the chat prompt's tag descriptions (`<speech>`, `<chat-app>`, `<ack>`, `<callout>`, `<schedule>`, etc.), so a non-chat-mode audit can't legitimately expect direct knowledge of those. If the test prompt declares `narration="on"` via a `<chat-app>` snapshot, `NARRATION_OVERLAY` is also appended — mirroring what `ChatSession.resolveSystemPrompt` does when narration is enabled on the session.
+- `plugins` — plugin names the box must have active for this audit. Before docs generation the runner adds them to `_config/box.json` and writes each missing schema stub; after the audit it resets the box. A fixture cannot do this, because fixtures are written after docs generation. View stubs are not written, so a plugin's card docs and skill load but its views do not render. Mechanics: `src/dev/lib/box-audits/plugins.ts`.
+- `final_reply` — when true, the text checks run on the text the chat shows: the reply after the last tool call, earlier text with `<speech>`, a folded text's callouts, and the last earlier line (text or progress update) when the reply is only acks. The chat folds other text written before a later tool call into the activity row. Use it for audits about how the reply reads.
+- `chat_mode` — when true, the agent runs with `chatSystemPrompt()` instead of the default working-directory prompt. Use for tests that audit chat-mode knowledge — the agent in a chat session sees the chat prompt's tag descriptions (`<speech>`, `<chat-app>`, `<ack>`, `<callout>`, `<schedule>`, etc.), so a non-chat-mode audit can't legitimately expect direct knowledge of those. If the test prompt declares `narration="on"` via a `<chat-app>` snapshot, `NARRATION_OVERLAY` is also appended — mirroring what `ChatSession.resolveSystemPrompt` does when narration is enabled on the session.
 - `response_not_contains` — list of substrings that must NOT appear in the agent's response. Useful for testing prompt overrides: e.g. the narration overlay tells the agent not to emit `<speech>` even when the user spoke; the audit can assert this directly.
 
 Example:
@@ -186,7 +201,11 @@ tests:
   new entries (`--filter <tag-or-id>`). A never-run audit is unverified in
   both directions: the agent may fail it, or the audit itself may be
   broken (bad `correct_contains`, wrong `should_read` path). Running is
-  part of authoring, not a follow-up.
+  part of authoring, not a follow-up. Before running, test each changed
+  response pattern by hand against a right answer and against one wrong
+  answer that `watch_for` rules out, including a correct negation of the
+  wrong action. A pattern widened only to pass a failing right answer often
+  also passes a wrong one.
 
 ### Prompt style effects
 

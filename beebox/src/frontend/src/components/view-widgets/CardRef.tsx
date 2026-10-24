@@ -61,7 +61,7 @@ export function CardRef({ cardRef, view, params, children }: CardRefProps) {
           type="button"
           onClick={() => setExpanded((x) => !x)}
           aria-expanded={expanded}
-          className="shrink-0 text-sm text-warm-600 hover:text-warm-800"
+          className="shrink-0 text-sm text-warm-700 hover:text-warm-900"
         >
           {expanded ? "Collapse" : "Expand"}
         </button>

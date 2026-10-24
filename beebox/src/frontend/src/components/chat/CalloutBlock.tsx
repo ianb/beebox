@@ -37,7 +37,7 @@ export function CalloutBlock({
         className,
       )}
     >
-      <div className="text-xs font-medium text-accent-dark mb-1">
+      <div className="bbx-chat-callout-context text-xs font-medium text-accent-700 mb-1">
         {callout.context}
       </div>
       <div className="prose prose-sm max-w-none">

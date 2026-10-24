@@ -15,7 +15,7 @@
  */
 
 import {
-  CHAT_SYSTEM_PROMPT,
+  chatSystemPrompt,
   NARRATION_OVERLAY,
   buildLandmarkSessionNote,
 } from "../../../core/chat/session/prompts.js";
@@ -116,7 +116,7 @@ export async function assembleContext(
 
 class NotABoxError extends Error {
   constructor(path: string) {
-    super(`No box found at ${path} (no .beebox/box.json marker at or below it)`);
+    super(`No box found at ${path} (no package.json declaring beebox beside _config/ at or above it)`);
     this.name = "NotABoxError";
   }
 }
@@ -141,7 +141,7 @@ async function systemPromptLayers(
   if (situation === "chat") {
     // Composed exactly as start.ts does: prompt + tz + overlay, then the
     // landmark session note (when scoped to a landmark directory) appended last.
-    let text = CHAT_SYSTEM_PROMPT + tzContext + NARRATION_OVERLAY;
+    let text = chatSystemPrompt() + tzContext + NARRATION_OVERLAY;
     if (options.landmarkDir !== undefined) {
       text += buildLandmarkSessionNote(options.landmarkDir);
     }

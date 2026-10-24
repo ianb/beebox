@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
 import { withBase } from "../../../../api";
 import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../../../../lib/view-url";
+import { isPlainLeftClick } from "../../../../lib/plain-click";
 import { Button } from "../../../ui/Button";
 
 /** A link with a real href that opens its target through `onNavigate` on a plain click. */
@@ -14,7 +15,7 @@ export function PropertyLink({ target, hint, onNavigate, children }: {
   const { boxSlug } = useParams({ strict: false });
   return <a className="bbx-theme-link" href={withBase(`/${boxSlug}/views/${serializeViewUrl(target)}`)}
     onClick={(e) => {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      if (!isPlainLeftClick(e)) return;
       e.preventDefault(); onNavigate(target, hint);
     }}>{children}</a>;
 }

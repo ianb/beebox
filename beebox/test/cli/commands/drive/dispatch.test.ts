@@ -331,7 +331,7 @@ void test("a Docs API refusal the boxholder can fix is the boxholder's", async (
   const refuse = (kind: "service-disabled" | "other") =>
     dispatchDrive<never>({
       local: async () => {
-        throw new DocsApiUnavailableError({ fileName: "Notes", failure: { kind, message: "it said no" } });
+        throw new DocsApiUnavailableError({ fileName: "Notes", failure: { kind, message: "it said no", link: null } });
       },
       remote: async () => {
         throw new Error("unreachable: the tooling profile runs in-process");

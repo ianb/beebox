@@ -9,10 +9,9 @@
  */
 
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, memo } from "react";
-import { ChatOpeners } from "../../../openers/ChatOpeners";
+import { EmptyChat } from "../../EmptyChat";
+import type { OpenQuestion } from "../../open-question";
 import type { OpenerSendOutcome } from "../../../openers/opener-send";
-import { InlineAction } from "../../../ui/InlineAction";
-import { moreQuestionsLabel, openQuestionLine, type OpenQuestion } from "./open-question";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
@@ -34,6 +33,7 @@ import { useCaptureAnchor } from "./use-capture-anchor";
 import type { CaptureBubbleModel, CaptureVerbs } from "../../capture-bubble";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
+import { LoadOlderHeader } from "../../LoadOlderHeader";
 
 interface LiveTurnState { turnId: string | null; uuid: string | null }
 
@@ -93,25 +93,6 @@ function lastAssistantGroupIndexIn(data: DataItem[]): number {
   return -1;
 }
 
-function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
-  hasOlder: boolean;
-  loadingOlder: boolean;
-  onLoadOlder: () => void;
-}) {
-  if (!hasOlder) return null;
-  return (
-    <div className="text-center py-2">
-      <button
-        id="bbx-chat-load-older"
-        onClick={onLoadOlder}
-        disabled={loadingOlder}
-        className="bbx-chat-meta-material text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
-      >
-        {loadingOlder ? "Loading..." : "Show earlier messages"}
-      </button>
-    </div>
-  );
-}
 
 /**
  * Floating "jump to latest" affordance. Visible whenever the view is away from
@@ -140,57 +121,6 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
         <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent ring-2 ring-warm-50" />
       ) : null}
     </button>
-  );
-}
-
-/**
- * The question the empty root chat asks, as the agent's opening line
- * (docs/implemented-plans/front-door.md, Track A): the prompt (a select question lists its
- * options in the sentence, "All the choices" when it has more than fit), the
- * card's memo under it in the quiet style, then "and N more" to the Questions
- * page and a quiet "Not now". Clicking the line
- * puts the cursor in the composer, whose placeholder is the prompt. Text for
- * every input type: the person answers by typing or speaking.
- */
-function OpenQuestionLine({ question, onFocusComposer, onNotNow, onOpenQuestions }: {
-  question: OpenQuestion;
-  onFocusComposer: () => void;
-  onNotNow: (path: string) => void;
-  onOpenQuestions: () => void;
-}) {
-  const more = moreQuestionsLabel(question.more);
-  return (
-    <div className="flex flex-col items-center gap-1 max-w-md text-center" data-testid="chat-open-question">
-      <button type="button" className="text-left text-warm-900 text-lg leading-snug" onClick={onFocusComposer} data-question-path={question.path}>
-        {openQuestionLine(question)}
-      </button>
-      {question.memo === null ? null : <p className="text-warm-600 text-sm">{question.memo}</p>}
-      <p className="text-warm-500 text-sm">
-        {question.optionsBeyond > 0 ? <><InlineAction intent="subtle" onClick={onOpenQuestions}>All the choices</InlineAction>{" · "}</> : null}
-        {more === null ? null : <><InlineAction intent="subtle" onClick={onOpenQuestions}>{more}</InlineAction>{" · "}</>}
-        <InlineAction intent="subtle" onClick={() => onNotNow(question.path)}>Not now</InlineAction>
-      </p>
-    </div>
-  );
-}
-
-/** An empty chat: the question the root chat asks when one is pending, the openers, then the plain empty-state line. */
-function EmptyChat({ openers, onSendOpener, openQuestion, onFocusComposer, onQuestionNotNow, onOpenQuestions }: {
-  openers: string[];
-  onSendOpener: (text: string) => OpenerSendOutcome;
-  openQuestion: OpenQuestion | null;
-  onFocusComposer: () => void;
-  onQuestionNotNow: (path: string) => void;
-  onOpenQuestions: () => void;
-}) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
-      {openQuestion === null ? null : (
-        <OpenQuestionLine question={openQuestion} onFocusComposer={onFocusComposer} onNotNow={onQuestionNotNow} onOpenQuestions={onOpenQuestions} />
-      )}
-      <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
-      <div className="bbx-chat-empty-label text-warm-500 text-sm">Start a conversation.</div>
-    </div>
   );
 }
 

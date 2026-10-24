@@ -1,9 +1,13 @@
-import { section } from "../../core/agent-guide/sections.js";
-
 /**
  * The `instructions` prose for scheduled-script cards (agent-facing prompt
  * surface). Split out of scheduled-script.tsx to keep that file under the
  * line limit.
+ *
+ * The section handle below is written out rather than checked with
+ * `section()`: this string is built when the schema registry loads, in every
+ * `bbx` verb, and `section()` parses all of `ledger.yaml`. The registry lists
+ * this file as a referrer of the handle, so the referrer test in
+ * `test/core/agent-guide/ledger-schema.test.ts` fails if the name goes stale.
  */
 
 export const SCHEDULED_SCRIPT_INSTRUCTIONS = `# Scheduled Script Cards
@@ -80,7 +84,7 @@ runs: >
   && bbx notify --loudness loud --target chat:new "The contractor's quote is in"
 \`\`\`
 
-\`--cat --all\` gives the judge every matching card whenever anything changed. When the notification needs wording from what was found, \`runs:\` is \`bbx procedure run <name>\` and an agent step writes it; the ${section("REACHING_THE_BOXHOLDER")} section of the agent guide has that example, and the judgment card instructions say how to write the judgment.
+\`--cat --all\` gives the judge every matching card whenever anything changed. When the notification needs wording from what was found, \`runs:\` is \`bbx procedure run <name>\` and an agent step writes it; the REACHING_THE_BOXHOLDER section of the agent guide has that example, and the judgment card instructions say how to write the judgment. For newly matching Gmail, a rule in \`_config/connectors/gmail.json\` can request the procedure after each sync instead (\`card-email-thread.md\`).
 
 ## Testing a schedule
 - \`bbx notify --dry-run\` prints what a notification would do (the audience per channel, the presence reading, the channels tried) and sends nothing; with no \`--target\` it previews \`chat:new\`.

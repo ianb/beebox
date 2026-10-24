@@ -1,8 +1,10 @@
-# Measuring page-load performance
+# Measuring performance
 
-How to measure how fast a box page loads, find where the time goes, and show
-that a change made it faster. The tools live in `src/dev/perf/` and the
-frontend's bundle analyzer; this page is their manual.
+How to measure how fast a box page loads and how fast a process starts, find
+where the time goes, and show that a change made it faster. The tools live in
+`src/dev/perf/` and the frontend's bundle analyzer; this page is their manual.
+Page loads come first; [process start](#process-start-tests-and-the-cli)
+covers test processes and `bbx` verbs.
 
 ## What a first load spans
 
@@ -105,7 +107,14 @@ pnpm perf:load --target prod --box <slug>   # production, through the real CDN
 ```
 
 Each run opens a new isolated browser context through CDP (the `bin/browse`
-browser, or `--cdp <ws-url>`). A new context has an empty HTTP cache and no
+browser, or `--cdp <ws-url>`). When the `bin/browse` browser stops answering,
+start a separate one and pass its URL:
+
+```bash
+"$HOME/.agent-browser/browsers/chrome-<version>/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
+  --headless=new --remote-debugging-port=9447 --user-data-dir=<scratch dir> about:blank &
+pnpm perf:load --cdp "$(curl -s http://127.0.0.1:9447/json/version | jq -r .webSocketDebuggerUrl)"
+``` A new context has an empty HTTP cache and no
 cookies. The run sets the session cookie, applies the network profile (`none`,
 `4g`, `slow4g`) and the CPU slowdown (`--cpu`, default 4), and loads the page.
 It waits for a mark (`--until`, default `bbx:history`) and then for one second
@@ -183,6 +192,95 @@ session. Throttling is emulated by Chrome: it shapes bandwidth and latency per
 request but does not model TCP slow start or packet loss. The CPU slowdown is
 relative to the machine that runs it. Treat absolute numbers as a model; the
 before-and-after difference is the result.
+
+## Process start: tests and the CLI
+
+Two costs are paid once per process, and many processes run:
+
+- **A test file's floor.** Every test file is its own Node process. Before its
+  first assertion it pays Node boot, the tsx loader, the `.taprc` preloads,
+  and tap's own import. A full run has more than 1,000 files, and many tests
+  spawn further CLI processes.
+- **A `bbx` verb.** Box agents run `bbx` verbs many times per turn. Each run
+  loads `dist/cli.mjs` and the code-split chunks of the one command it names
+  (`src/cli/commands.ts`), with each npm package those modules import at their
+  top. Help and an unknown verb load every command.
+
+### `pnpm perf:test-floor` — what one test process costs
+
+```bash
+pnpm perf:test-floor                                     # 7 interleaved runs of each layer
+pnpm perf:test-floor --file test/webapp/<some>.test.ts   # also one real file, same preloads
+```
+
+It times four cumulative layers, each a whole process from start to exit:
+`node`, then tsx with one `.ts` file, then all `.taprc` preloads (which import
+tap), then a one-assertion tap test. The increase from one row to the next is
+that layer's cost. The node arguments come from `.taprc`.
+
+It also prints the size of tsx's transform cache (`$TMPDIR/tsx-<uid>`). tsx
+before 4.23.15 listed that whole directory at the start of every process. At
+166,000 entries that cost about 470 ms per process and tripled the floor. A
+tsx row much slower than about 60 ms points at the loader or its cache.
+
+Measured 2026-10-23 (load average about 17): `node` 29 ms, tsx 59 ms, all
+preloads 313 ms, tap test 322 ms. Of the preloads, tap itself (through
+`@ianbicking/tap-check/tap`) costs about 120 ms and the React Compiler hook's
+loader thread about 50 ms.
+
+### `pnpm perf:cli-start` — what a `bbx` verb costs
+
+```bash
+pnpm perf:cli-start                    # bbx --version in the worktree test1 clone, 7 runs
+pnpm perf:cli-start -- ls _config      # another verb
+pnpm perf:cli-start --cpu-prof         # plus a profile of one run, by source owner
+```
+
+`--version` loads no command, so its time is the CLI's fixed floor; a verb
+adds its own command's chunks. The run uses the
+bundle as `bin/bbx` does (compile cache, source maps) without the wrapper's
+staleness check, which adds about 40 ms in a dev checkout. One untimed run
+through `bin/bbx` first rebuilds a stale bundle. The profile summary
+is the one `perf:serve-start` prints: an npm package near the top that the
+verb does not use is a candidate for a dynamic `import()` at its use site.
+
+Verbs that read many cards spend much of their time parsing frontmatter.
+Reads go through `parseYaml` (`src/lib/read-yaml.ts`), which parses with
+js-yaml, 3–4× faster than the `yaml` package on box cards, and hands `yaml`
+any text the two could read differently, so values and errors stay `yaml`'s
+(`docs/implemented-plans/yaml-read-parser.md`). Writes and comment-preserving edits stay
+on `yaml`. On the test1 clone (2026-10-24, CPU time, median of 11, during a
+full test run) the switch saved 90–120 ms of `bbx validate` (920–980 →
+830–860 ms) and 20–40 ms each of `bbx todos` and `bbx status`, over three
+sessions. Use CPU time (`/usr/bin/time -p`,
+user + sys) when the machine is loaded: wall time at load 30 or more varies
+by more than these differences.
+
+### `pnpm perf:yaml-read` — check and time the read parser
+
+```bash
+pnpm perf:yaml-read                        # the worktree test1 clone
+pnpm perf:yaml-read -- <dir> [<dir> ...]   # other boxes or source trees
+```
+
+It compares `parseYaml` with `yaml.parse` on every frontmatter block and YAML
+file under the directories, values and errors both, and times each parser
+over all of them. It prints differing paths, never content, and exits 1 on a
+difference. Run it after upgrading js-yaml or `yaml`, or after editing the
+fallback pattern in `read-yaml.ts`. On 2026-10-24: test1 clone, 400 inputs,
+`yaml` 24 ms, `parseYaml` 8 ms; all local boxes and this repo, 17,764 inputs,
+1,550 ms against 950 ms; no differences.
+
+A verb that only reads cards does not load `yaml` at all
+(`src/lib/yaml-package.ts` requires it on first use, about 12 ms). One card
+that takes the fallback loads it, so after a pattern change also check which
+verbs still load it: an `--import` hook that prints, at exit, whether any key
+of `createRequire(import.meta.url).cache` contains `/node_modules/yaml/`. An
+ESM load hook does not see it, because it is loaded with `require`. On
+2026-10-24 (test1 clone, CPU median of 15, load about 30): `status` 310 →
+300 ms, `validate --pre-commit` 380 → 370 ms, `validate` 820 → 740 ms with
+each card parsed once; `todos` unchanged, since one card it reads has a line
+that leaves a bracket open and takes the fallback.
 
 ## Checking against production
 

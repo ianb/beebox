@@ -26,7 +26,7 @@ export type { SwitchLandmark } from "./PlacePill-landmarks";
 
 function SectionHeader({ children }: { children: ReactNode }) {
   return (
-    <div className="px-3 pt-2 pb-1 text-xs uppercase tracking-wide text-warm-500">{children}</div>
+    <div className="px-3 pt-2 pb-1 text-xs uppercase tracking-wide text-warm-700">{children}</div>
   );
 }
 

@@ -211,7 +211,9 @@ chmod -R o+rX "$INSTALL_DIR"
 echo "Creating test box at $BOX_DIR..."
 su - "$BBX_USER" -c "mkdir -p '$BOX_DIR'"
 cd "$BOX_DIR"
-if [[ ! -f .beebox/box.json ]]; then
+# Initialized means a committed box: a failed init leaves no commit, so a rerun
+# initializes again. (Git runs as the box user, who owns the repository.)
+if ! su - "$BBX_USER" -c "git -C '$BOX_DIR' rev-parse -q --verify HEAD >/dev/null 2>&1" || [[ ! -d _config || ! -f package.json ]]; then
   su - "$BBX_USER" -c "cd '$BOX_DIR' && git init && bbx engine init . && git add -A && git commit -m 'Initial box setup'"
 fi
 

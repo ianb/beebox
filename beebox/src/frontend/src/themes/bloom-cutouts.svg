@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
   <path fill="#abdbe3" stroke="#fff4df" stroke-width="5" d="M-35 0H350C400 25 390 75 340 75H220C175 75 190 115 235 115H310C365 115 365 165 310 165H90C20 165 80 220 5 230Z"/>
   <path fill="#f9cbd6" stroke="#fff4df" stroke-width="5" d="M850 -30C945 -70 1070 20 1030 100L955 215C925 260 865 215 890 175L920 125C935 100 905 75 885 105L845 160C815 205 765 160 795 115Z"/>
   <path fill="#b9dfd1" stroke="#fff4df" stroke-width="5" d="M0 530L160 405Q195 385 215 420L260 490Q275 520 240 540L110 630H0Z"/>

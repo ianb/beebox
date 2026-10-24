@@ -19,10 +19,14 @@
 import type { LoadedCard, FrontmatterLoadedCard } from "../../card-io.js";
 import { isRecord } from "../../card-io.js";
 import { resolveAttachRef } from "../../../shared/attach-path.js";
-import { titleFromFilename, truncateTitle } from "../../file-summary.js";
+import { truncateTitle } from "../../file-summary.js";
+import { titleFromFilename } from "../../../shared/card-name.js";
 import { cardTitle } from "../../loader-registry.js";
 import { splitMarkdownSections } from "../../../shared/markdown-sections.js";
 import { BOX_PACKAGE_DOCS } from "../../docs-gen/shared.js";
+import { markdownTitle } from "../../../shared/leading-title-heading.js";
+import { parseFrontmatterObject, splitCardContent } from "../../../cards/frontmatter.js";
+import { nonBlankString } from "../../../shared/optional-string.js";
 
 /** One Orama document. `fragment` is "" for the card's own document. */
 export interface SearchDoc {
@@ -170,9 +174,10 @@ export function extractMarkdownFileDocs(input: {
   contentHash: string;
 }): SearchDoc[] {
   const { path, content, contentHash } = input;
-  const heading = content.match(/^#{1,6}\s+(.+)$/m);
+  const declared = parseFrontmatterObject(content)?.["title"];
+  const heading = markdownTitle(splitCardContent(content).body);
   const title = truncateTitle(
-    firstNonEmpty([heading?.[1], titleFromFilename(path)]).replace(/\s+/g, " ").trim(),
+    firstNonEmpty([typeof declared === "string" ? declared : undefined, heading ?? undefined, titleFromFilename(path)]).replace(/\s+/g, " ").trim(),
     TITLE_MAX
   );
   const kind = isEngineDocPath(path) ? ENGINE_DOC_KIND : MARKDOWN_KIND;
@@ -271,7 +276,7 @@ function isRefObject(value: unknown): value is { ref: string } {
 }
 
 function str(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+  return nonBlankString(value) ?? undefined;
 }
 
 function strArray(value: unknown): string[] {

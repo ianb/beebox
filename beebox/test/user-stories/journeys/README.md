@@ -30,6 +30,8 @@ The yaml holds the world and the words:
 |---|---|
 | `box.base` | `empty` initializes a fresh box using the current engine; base paths are refused (use `box.setup`) |
 | `box.setup` | optional shell run with `$BOX` = the single box root; user files belong under `$BOX/_content`, before the person arrives |
+| `box.label` | optional name of the root landmark, as the person would have named it; default "My box" (not the run slug, which reads as a test run) |
+| `box.init_date` | optional local date-time (`2026-08-24T19:30:00`) for the init commit; set it when `box.setup` backdates commits, so `git log` is in order |
 | `assets` | files plus a plain description of what each one is to them |
 | `situation` | handed over verbatim — their life, their reason, no product words |
 | `closing` | what to spend the back half of the budget on |
@@ -44,6 +46,11 @@ Use it rather than reaching for a richer `base`: a journey should meet *this per
 box, and a base box full of someone else's life reads as confusing rather than
 realistic. That was observed, not assumed — the first pilot opened mid-sentence inside
 a stranger's course and spent its first ten seconds there.
+
+A journey whose material carries fixed dates goes stale silently: a deadline
+in the past turns the story into a different one. Its `box.setup` refuses to run
+outside the window it was written for (G-paperwork and H-handover do this), and
+a situation without material says "in about four weeks", not a month name.
 
 Each box also gets a **fresh git history** rather than inheriting the base's. History is
 a feature of this product; the first thing in theirs should be their own arrival. It
@@ -71,7 +78,8 @@ pnpm exec tsx beebox/test/user-stories/journeys/collect.ts B-inventory-<date>
 ```
 
 Runs land in `user-stories-work/journeys/<id>-<date>/` at the monorepo root (gitignored): the
-prompt as given, the notes, screenshots, and before/after snapshots of the box. It sits outside
+prompt as given, the `journey.yaml` it was built from, the notes, screenshots, and before/after
+snapshots of the box (`before.json` also names the harness commit). It sits outside
 `beebox/` because a box's `node_modules/beebox` links to this checkout's `beebox/`, and the box
 agent must not find the walker's notes.
 
@@ -99,11 +107,22 @@ unattended or overnight run), `bin/browse screenshot` hangs on
 with no screenshots (the retired chemistry journey, 2026-10-09). Hold the display awake for the
 whole run before starting walkers.
 
-Timing reads the Claude transcripts of the box's root chat and place chats and
-measures from a user message to the first assistant text, not completion. Sessions
-in the box's usage manifest (chat-title and other engine agent runs) are not chat
-turns and are skipped. Missing timing is unavailable, not zero
-waiting; Codex waits must be reported separately from observed browser evidence.
+Timing joins the Claude transcripts of the box's root chat and place chats to the
+box's `.beebox/hub-child.log`. Per turn, `collect.ts` reports seconds from the hub's
+"Sending message" to the first text, to the first text that is not interim, and to
+"Turn complete". Interim means a progress line: the turn called a tool after it, or
+it followed the silent-turn reminder and more text came later. Without a hub match
+the turn starts at the transcript's user message. Sessions in the box's usage
+manifest (chat-title and other engine agent runs) are not chat turns and are skipped.
+`before.json` records how many other journey runs were live (prepared, not collected,
+under 12 hours old) and the 1-minute load average; `after.json` records both again.
+Walks that share a server slow each other, so compare timings only at similar load.
+Missing timing is unavailable, not zero waiting; Codex waits must be reported
+separately from observed browser evidence.
+
+The prompt gives the walker the machine's local date and time. A journey whose closing
+needs a real clock days or weeks ahead cannot get it; word the closing around
+"the next two weeks" instead of acting from a later date.
 
 ## Assets
 
@@ -141,6 +160,18 @@ a journey is never half-provisioned by a missing file.
 Preparation creates and serves a disposable box; it does not register or drive
 scheduler ticks. A valid enabled schedule is not evidence that a reminder will
 arrive. A run making that claim must observe the trigger and its delivery.
+
+The walker's phone (`phone.ts`) observes both. A walk box has
+`fakeNotifications: true`, so every notification goes to a fake channel and is
+logged. `phone.ts <run-dir> --wait 1w` lives through the week: every scheduled
+occurrence (reminders, repeating reminders, `runs:` work such as the todo
+review) runs at its own time, in order, and then the box's clock moves a week
+ahead (`.beebox/clock-offset.json`). The server, the agent, commit dates, and
+the app's displayed dates read the later time, so a walker can come back. Real
+time still shows in a few places: session-list ages, which read file times,
+and how long since the last chat turn. A stopped wait resumes on the next
+`phone.ts` call. The run directory keeps `phone.md`
+([plan](../../../docs/implemented-plans/walk-simulated-time.md)).
 In-process chat timers are a separate mechanism and can run while the box is
 served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
 one misfire, but did not verify its replacement scheduled reminder.

@@ -18,13 +18,12 @@ import type { ReactNode } from "react";
 import { Dropdown, useDropdownClose } from "../ui/Dropdown";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import type { SpeechSegment } from "../../lib/audio/speech-parsing/parse";
+import { snippet } from "../../lib/snippet";
 
 const MAX_LABEL_CHARS = 50;
 
 function chunkLabel(segment: SpeechSegment): string {
-  const text = segment.displayText.trim().replace(/\s+/g, " ");
-  if (text.length <= MAX_LABEL_CHARS) return text;
-  return `${text.slice(0, MAX_LABEL_CHARS)}…`;
+  return snippet(segment.displayText, MAX_LABEL_CHARS);
 }
 
 function SpeakerGlyph({ playing }: { playing: boolean }) {
@@ -38,7 +37,7 @@ function SpeakerGlyph({ playing }: { playing: boolean }) {
       strokeLinejoin="round"
       aria-hidden="true"
       className={`inline-block w-4 h-4 align-text-bottom ${
-        playing ? "text-primary animate-pulse" : "text-primary opacity-40"
+        playing ? "text-card-pen animate-pulse" : "text-card-pen opacity-40"
       }`}
     >
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />

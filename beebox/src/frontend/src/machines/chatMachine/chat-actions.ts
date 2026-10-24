@@ -8,9 +8,11 @@
 
 import { interruptChat, type PendingSessionEntry, type SessionEntry } from "../../api";
 import { buildOptimisticContent, entryText, reconcilePending } from "./chat-shared";
-import { queueMessageToBackend } from "./chat-actors";
+import type { OutputFrom } from "xstate";
+import { queueMessageToBackend, rollupStreamToEntry, type fetchHistoryActor } from "./chat-actors";
 import { toastError } from "../../components/ui/toast-store";
 import { MAX_RETAINED_MESSAGES, type ChatContext, type ChatEvent } from "../chat-types";
+import { boxNow } from "../../lib/box-clock";
 import { observeChatSendHistory } from "../../lib/chat-send-diagnostics";
 import type { ChatSendContext } from "@core/chat/card-activity.js";
 
@@ -48,7 +50,7 @@ function buildPendingEntry(event: SendEvent, knownMessages: SessionEntry[]): Pen
   return {
     uuid: event.messageId,
     type: "user",
-    timestamp: new Date().toISOString(),
+    timestamp: new Date(boxNow()).toISOString(),
     content: buildOptimisticContent(event.message, event.images),
     pending: true,
     reconcileKnownUuids: knownMessages.map((message) => message.uuid),
@@ -143,8 +145,21 @@ export function applyStreamError(
   };
 }
 
+/**
+ * A chat that started as "new" learned its session id (SESSION_ASSIGNED, or a
+ * refresh that looked the accepted turn up). Lock sends and history fetches
+ * onto the real id, and drop the in-memory landmark binding: the backend has
+ * persisted it to chat-session-history by now. (Pending seedFeatures are inert
+ * from here: sessionInput is the real id, so they are never re-sent.)
+ */
+export function adoptSession(
+  sessionId: string,
+): Pick<ChatContext, "sessionInput" | "sessionId" | "contextDir" | "newChatTurnId"> {
+  return { sessionInput: sessionId, sessionId, contextDir: undefined, newChatTurnId: undefined };
+}
+
 /** Shown when a turn's live view dropped and the box went idle with no reply. */
-export const NO_REPLY_ERROR = "The box stopped before it answered. Send your message again.";
+const NO_REPLY_ERROR = "The box stopped before it answered. Send your message again.";
 
 /**
  * Settle a dropped live view (`replyLost`) against refreshed history. The
@@ -154,14 +169,16 @@ export const NO_REPLY_ERROR = "The box stopped before it answered. Send your mes
  * with no reply: the turn really failed, so it becomes an error.
  */
 // Reply first: busy is session-wide, so a queued next turn must not hold a
-// warning for a reply already in history.
-export function settleLostReply(
+// warning for a reply already in history. A held REFRESH (`refreshAgain`) means
+// the reply may have landed after this read (history and status are read
+// concurrently), so no error yet: the extra fetch decides.
+function settleLostReply(
   { context, messages, busy }: { context: ChatContext; messages: SessionEntry[]; busy: boolean },
 ): Partial<Pick<ChatContext, "replyLost" | "error">> {
   if (!context.replyLost) return {};
   const last = messages.at(-1);
   if (last?.type === "assistant" && entryText(last).length > 0) return { replyLost: false };
-  return busy ? {} : { replyLost: false, error: NO_REPLY_ERROR };
+  return busy || context.refreshAgain ? {} : { replyLost: false, error: NO_REPLY_ERROR };
 }
 
 /** A legacy STREAM_BUSY rejects the active send before it can be persisted. */
@@ -234,5 +251,49 @@ export function promoteLastToPending(
     pendingMessages: alreadyTracked
       ? context.pendingMessages.map((entry) => entry.uuid === active.uuid ? promoted : entry)
       : [...context.pendingMessages, promoted],
+  };
+}
+
+/**
+ * `refreshing`'s onDone: swap fetched history in. A still-"new" chat with no
+ * id has no history, so the streamed reply is rolled up in place instead.
+ */
+export function applyRefreshedHistory(
+  { context, output }: { context: ChatContext; output: OutputFrom<typeof fetchHistoryActor> },
+): Partial<ChatContext> {
+  // A "new" chat whose id came from the accepted turn's lookup
+  // (fetchHistory) adopts it, as SESSION_ASSIGNED would, and
+  // reconciles below like any other session.
+  const adopted = context.sessionInput === "new" ? output.sessionId : null;
+  // Still "new" with no id: fetchHistory returned empty. Roll up
+  // whatever streamed for this turn into a synthetic assistant entry
+  // so the completed response stays visible until a later refresh
+  // or a remount loads the authoritative copy.
+  if (context.sessionInput === "new" && adopted === null) {
+    const synthetic = rollupStreamToEntry(context.streamText, context.streamTools);
+    const messages = synthetic ? [...context.messages, synthetic] : context.messages;
+    return {
+      // No history to check: nothing streamed stays a warning until remount.
+      ...(synthetic ? settleLostReply({ context, messages, busy: false }) : {}),
+      messages,
+      streamText: "",
+      streamTools: [],
+    };
+  }
+  const reconciled = reconcilePendingWithDiagnostics({
+    serverMessages: output.entries,
+    pendingMessages: context.pendingMessages,
+  });
+  return {
+    ...(adopted !== null ? adoptSession(adopted) : {}),
+    ...settleLostReply({ context, messages: reconciled.messages, busy: output.busy }),
+    messages: reconciled.messages,
+    pendingMessages: reconciled.pendingMessages,
+    sessionId: output.sessionId,
+    totalEntries: output.total,
+    processRunning: output.running,
+    processBusy: output.busy,
+    streamText: "",
+    streamTools: [],
   };
 }

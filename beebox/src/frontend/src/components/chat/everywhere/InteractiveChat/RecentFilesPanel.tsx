@@ -15,6 +15,7 @@ import type { FileSummary } from "@core/file-summary";
 import { FileEntry } from "../../../ui/FileEntry";
 import { DirectoryIcon } from "../../../../file-types/icons";
 import { useDropdownClose } from "../../../ui/Dropdown";
+import { StatusMessage } from "../../../ui/StatusMessage";
 
 interface RecentFilesPanelProps {
   entries: SessionEntry[];
@@ -33,10 +34,10 @@ export function RecentFilesPanel({ entries, onPanel }: RecentFilesPanelProps) {
 
   if (files.length === 0) {
     return (
-      <div className="px-3 py-4 text-warm-500 italic flex items-center gap-2">
+      <StatusMessage variant="menu" className="flex items-center gap-2">
         <DirectoryIcon size={16} />
         {isLoading ? "Loading…" : "No recent files yet"}
-      </div>
+      </StatusMessage>
     );
   }
   return (

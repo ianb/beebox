@@ -28,8 +28,9 @@
  */
 
 import { isValidElement, type ReactNode } from "react";
-import { externalLabel, refLabel, refToViewTarget } from "../../lib/ref-label";
+import { chatRefLabel, chatUsageWords, externalLabel, refLabel, refToViewTarget } from "../../lib/ref-label";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import { friendlyDate } from "../ui/FriendlyDate";
 
 export interface SourceLinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -64,10 +65,14 @@ function CitationChip({
   quoteText: string;
   linkCtx: SourceLinkContext;
 }): ReactNode {
-  const label = refLabel(sourceRef);
-  const title = usage === undefined || usage === ""
-    ? `Source: ${sourceRef}`
-    : `${usage} — ${sourceRef}`;
+  const chat = chatRefLabel(sourceRef);
+  const label = chat?.label ?? refLabel(sourceRef);
+  const hasUsage = usage !== undefined && usage !== "";
+  // A chat's file name is an id, not a name, so its chip says "chat, <date>"
+  // and the usage word moves to the tooltip in plain words.
+  const title = chat !== null
+    ? `${hasUsage ? `${chatUsageWords(usage)}, from ` : "From "}a chat on ${chat.isoDate}`
+    : hasUsage ? `${usage} — ${sourceRef}` : `Source: ${sourceRef}`;
   const target = refToViewTarget(sourceRef, linkCtx.basePath);
   // A ref that escapes the box root points at no in-box document. Render the
   // citation as an inert, visibly-broken marker rather than a chip that opens
@@ -100,7 +105,7 @@ function CitationChip({
       title={title}
       className="bbx-theme-link not-italic cursor-pointer text-xs ml-1"
     >
-      [→ {label}{usage !== undefined && usage !== "" ? <span className="italic">{`: ${usage}`}</span> : null}]
+      [→ {label}{chat === null && hasUsage ? <span className="italic">{`: ${usage}`}</span> : null}]
     </button>
   );
 }
@@ -154,7 +159,7 @@ function ExternalChip({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="not-italic text-warm-500 hover:text-warm-700 text-xs ml-1 no-underline hover:underline underline-offset-2"
+      className="not-italic text-warm-700 hover:text-warm-900 text-xs ml-1 no-underline hover:underline underline-offset-2"
       title={title}
     >
       [↗ {externalLabel(href)}
@@ -170,9 +175,7 @@ function formatRetrieved(retrieved: string | undefined): string | null {
   if (retrieved === undefined || retrieved === "") return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(retrieved);
   if (!match) return retrieved;
-  const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  if (Number.isNaN(parsed.getTime())) return retrieved;
-  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return friendlyDate(match[0], "date");
 }
 
 interface SourceProps {
@@ -222,7 +225,7 @@ export function makeSourceComponents(linkCtx: SourceLinkContext): {
         <div className="text-warm-800 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
           {props.children}
         </div>
-        <figcaption className="text-xs text-warm-500 mt-1">
+        <figcaption className="text-xs text-warm-700 mt-1">
           <Citation {...props} />
         </figcaption>
       </figure>

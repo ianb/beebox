@@ -43,7 +43,7 @@ export function OpenInPanelButton({ onClick, label, size, className }: OpenInPan
       title={label}
       className={cn(
         SIZE_CLASSES[size],
-        "bg-transparent hover:bg-warm-200 text-warm-500 hover:text-warm-700",
+        "bg-transparent hover:bg-warm-200 text-warm-600 hover:text-warm-700",
         "rounded-full inline-flex items-center justify-center flex-shrink-0 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         className,
       )}

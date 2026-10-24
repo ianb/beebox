@@ -604,6 +604,8 @@ void test("These routes are registered in a sibling scope outside the box's gene
   });
   resetScanRateLimits();
   delete process.env.BBX_HUB_SECRET;
+  // The scan gate checks that a token's creator can still open the box, so the box needs a known owner.
+  process.env.BBX_OWNER_EMAIL = "owner@example.com";
   const ctx = await makeScanTestServer({ openAccess: false });
   const png = await pngBytes();
   const token = await createScanToken(ctx.boxRoot, { name: "laptop-scansnap", createdBy: "owner@example.com" });

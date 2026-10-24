@@ -12,6 +12,7 @@ import { useEffect } from "react";
 import { TextareaField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
+import { isComposing } from "../../lib/ime";
 
 const INPUT_ID = "bbx-box-screen-input";
 
@@ -44,7 +45,7 @@ export function NewThoughtInput({ draft, onChange, onSend, sending, status }: {
             disabled={sending}
             onChange={onChange}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              if (event.key === "Enter" && !event.shiftKey && !isComposing(event.nativeEvent)) {
                 event.preventDefault();
                 event.currentTarget.form?.requestSubmit();
               }
@@ -54,7 +55,7 @@ export function NewThoughtInput({ draft, onChange, onSend, sending, status }: {
             {sending ? "Sending…" : "Send"}
           </Button>
         </Row>
-        <p role="status" className="text-sm text-warm-500 empty:hidden">{status}</p>
+        <p role="status" className="text-sm text-warm-700 empty:hidden">{status}</p>
       </div>
     </form>
   );

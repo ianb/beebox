@@ -18,10 +18,10 @@ import { Badge } from "../../../../components/ui/Badge";
 import { Accordion } from "../../../../components/ui/Accordion";
 import { Text } from "../../../../components/ui/Text";
 import type { RouterOutput } from "../../../../lib/trpc/client";
-import { apiRawFileUrl, getApiBase } from "../../../../api";
+import { apiRawFileUrl, apiRawImageUrl, getApiBase } from "../../../../api";
+import { isImageFileName } from "../../../../lib/binary-files";
 import { attachDirFor } from "@shared/attach-path";
 import { areaDisplayLabel } from "@shared/display-path";
-import { encodePathForUrl } from "../../../../lib/view-url";
 import { foldListing, type FoldEntry } from "@shared/browse-fold";
 import type { BrowseListingMode } from "./hook";
 import { BROWSE_DEFAULT_DIRECTORY, type BrowseMissingKind } from "../../../../lib/browse-card-state";
@@ -32,12 +32,8 @@ type BrowseCardData = BrowseData["cards"][number];
 type BrowseFileData = BrowseData["files"][number];
 type Entry = FoldEntry<BrowseCardData, BrowseDirData, BrowseFileData>;
 
-const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".bmp", ".svg", ".ico"]);
-
 function imageDataAttrs(relativePath: string, name: string): Record<string, string> | null {
-  const dot = relativePath.lastIndexOf(".");
-  if (dot <= 0) return null;
-  if (!IMAGE_EXTS.has(relativePath.slice(dot).toLowerCase())) return null;
+  if (!isImageFileName(name)) return null;
   return {
     "data-image-src": apiRawFileUrl(getApiBase(), relativePath),
     "data-image-alt": name,
@@ -106,7 +102,7 @@ function CardRow({
         onClick={() => onNavigate(card.relativePath, "file")}
         {...bbxSource("card", card.relativePath)}
         {...(card.type === "image" ? {
-          "data-image-src": `${getApiBase()}/image/${encodePathForUrl(card.relativePath)}`,
+          "data-image-src": apiRawImageUrl(getApiBase(), card.relativePath),
           "data-image-alt": card.name,
         } : {})}
         aria-label={`${card.name === card.type ? card.name : `${card.name}, ${card.type}`} card${card.conflict === true ? ", conflict" : ""}`}
@@ -117,7 +113,7 @@ function CardRow({
             <div className="font-medium text-warm-900 text-sm truncate">{card.name}</div>
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className="text-xs text-warm-500">{card.type}</span>
+            <span className="text-xs text-warm-700">{card.type}</span>
             {card.conflict === true ? <Badge tone="danger" size="sm">conflict</Badge> : null}
           </div>
         </div>
@@ -235,14 +231,14 @@ export function BrowseSidebarList({
   mode,
 }: BrowseSidebarListProps) {
   if (loading) {
-    return <div className="p-4 text-warm-600 text-sm">Loading...</div>;
+    return <div className="p-4 text-warm-700 text-sm">Loading...</div>;
   }
 
   const cards = data.cards.filter((card) => card.relativePath !== omitCardPath);
   const wholeBox = dirPath === BROWSE_DEFAULT_DIRECTORY ? <WholeBoxRow onNavigate={onNavigate} /> : null;
   if (data.dirs.length === 0 && cards.length === 0 && data.files.length === 0) {
     return <div>
-      <div className="p-4 text-warm-600 text-sm text-center">Empty directory</div>
+      <div className="p-4 text-warm-700 text-sm text-center">Empty directory</div>
       {wholeBox}
     </div>;
   }

@@ -26,7 +26,7 @@
 import { useRef } from "react";
 import { ChatInputArea, type TranscriptionHandle } from "../../../components/chat/InteractiveChat-composer/view";
 import { MobileTextareaRow } from "../../../components/chat/InteractiveChat-mobile-row";
-import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout/view";
+import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout/view/ChatComposerSection";
 import { VoiceChipFace } from "../../../components/chat/VoiceChip/view";
 import { TargetStrip } from "../../../components/chat/TargetStrip";
 import { chatTargetStatus } from "../../../input/targets/chat-target";
@@ -129,7 +129,7 @@ type Spec = ReturnType<typeof specFor>;
 
 function noop() {}
 
-export function ComposerSpecimen({ spec, includeControlIds, showHeader, material }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean }) {
+export function ComposerSpecimen({ spec, includeControlIds, showHeader, material, label }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean; label?: string }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Static store for the gallery: the value never changes (set is a no-op,
@@ -168,6 +168,7 @@ export function ComposerSpecimen({ spec, includeControlIds, showHeader, material
       captureEnabled
       narrationEnabled={spec.narrationEnabled}
       includeControlIds={includeControlIds}
+      label={label}
     />
   );
   const mobileRow = (
@@ -239,7 +240,7 @@ export function ComposerStatesHarness() {
 
   if (selected) {
     const c = realizable.find((x) => comboKey(x) === selected);
-    if (!c) return <div className="p-6 font-mono text-sm text-warm-600">Unknown state: {selected}</div>;
+    if (!c) return <div className="p-6 font-mono text-sm text-warm-700">Unknown state: {selected}</div>;
     return (
       <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 py-4">
         <ComposerSpecimen spec={specFor(c)} includeControlIds />
@@ -257,7 +258,7 @@ export function ComposerStatesHarness() {
       </div>
       {realizable.map((c) => (
         <div key={comboKey(c)} data-state={comboKey(c)} className="mb-8">
-          <div className="max-w-5xl mx-auto px-4 pb-1 text-xs font-mono text-warm-500">
+          <div className="max-w-5xl mx-auto px-4 pb-1 text-xs font-mono text-warm-700">
             {comboKey(c)} — {comboLabel(c)}
           </div>
           <ComposerSpecimen spec={specFor(c)} includeControlIds={false} />
@@ -265,10 +266,10 @@ export function ComposerStatesHarness() {
       ))}
       <div className="max-w-5xl mx-auto px-4 pt-4 mt-4 border-t border-warm-300">
         <div className="text-sm font-semibold text-warm-700 mb-2">Impossible combinations (filtered)</div>
-        <ul className="text-xs text-warm-600 space-y-1">
+        <ul className="text-xs text-warm-700 space-y-1">
           {impossible.map((c) => (
             <li key={comboKey(c)}>
-              <span className="font-mono text-warm-500">{comboLabel(c)}</span> — {impossibleReason(c)}
+              <span className="font-mono text-warm-700">{comboLabel(c)}</span> — {impossibleReason(c)}
             </li>
           ))}
         </ul>

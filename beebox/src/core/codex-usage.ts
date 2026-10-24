@@ -8,7 +8,7 @@ import { BOX_DIRS } from "../lib/paths/core.js";
 import { codexHomeDir, readCodexRolloutModel } from "../services/codex-rollout-model.js";
 
 /** The ledger's model when neither the rollout nor the request names one. */
-export const CODEX_UNKNOWN_MODEL = "codex-default";
+const CODEX_UNKNOWN_MODEL = "codex-default";
 
 export const CODEX_USAGE_REL_PATH = `${BOX_DIRS.usage}/codex-turns.jsonl`;
 

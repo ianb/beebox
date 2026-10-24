@@ -36,7 +36,7 @@ import {
 /**
  * A one-root (shapeVersion 3) box fixture: `<root>/package.json` (declaring
  * beebox), `<root>/node_modules/beebox` symlinked to the real engine
- * package root, and `<root>/.beebox/box.json` marking the box root. Schema
+ * package root, and `<root>/_config/` beside it marking the box root. Schema
  * files go under `<root>/src/schemas/`. `root` and `boxRoot` are the same
  * directory — both returned so examples read naturally.
  */
@@ -44,12 +44,11 @@ async function makeV3Box() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-v3box-"));
   await fs.writeFile(
     path.join(root, "package.json"),
-    JSON.stringify({ name: "my-box", private: true, type: "module", dependencies: { "beebox": "0.1.0" } }),
+    JSON.stringify({ name: "my-box", private: true, type: "module", dependencies: { "beebox": "0.1.0" }, beebox: { shapeVersion: 3, created: "2026-01-01T00:00:00.000Z" } }),
   );
   await fs.mkdir(path.join(root, "node_modules"), { recursive: true });
   await fs.symlink(PACKAGE_ROOT, path.join(root, "node_modules", "beebox"), "dir");
-  await fs.mkdir(path.join(root, ".beebox"), { recursive: true });
-  await fs.writeFile(path.join(root, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+  await fs.mkdir(path.join(root, "_config"), { recursive: true });
   return { root, boxRoot: root };
 }
 

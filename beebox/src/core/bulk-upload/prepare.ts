@@ -30,6 +30,8 @@ import {
   isBulkSession,
   type StagingSession,
 } from "../capture/staging-store/core.js";
+import { fileExists } from "../../lib/file-exists.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 /** The staging session named for bulk preparation is not a `kind: "bulk"` session. */
 class NotABulkSessionError extends Error {
@@ -52,12 +54,11 @@ class BulkBatchPathError extends Error {
  * box root. `contextDir` is server-derived (never client-supplied) since the
  * traversal fix, but a poisoned on-disk session manifest is still untrusted
  * input — a batch dir that escapes is a broken invariant, not a fallback case.
- * Mirrors the containment idiom in `webapp/routes/chat-uploads.ts`.
  */
 function assertBatchDirContained(opts: { boxRoot: string; batchRelDir: string }): void {
   const boxResolved = path.resolve(opts.boxRoot);
   const resolved = path.resolve(path.join(opts.boxRoot, opts.batchRelDir));
-  if (resolved !== boxResolved && !resolved.startsWith(boxResolved + path.sep)) {
+  if (!isWithin(boxResolved, resolved)) {
     throw new BulkBatchPathError(opts.batchRelDir);
   }
 }
@@ -359,13 +360,4 @@ function latestUploadedAt(session: StagingSession): string | null {
     (latest, f) => (latest === null || f.uploadedAt > latest ? f.uploadedAt : latest),
     null,
   );
-}
-
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    return false;
-  }
 }

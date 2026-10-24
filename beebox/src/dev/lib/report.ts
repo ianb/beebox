@@ -233,6 +233,7 @@ function formatCardChecks(checks: Checks): string[] {
 
 function formatCheckLines(checks: Checks): string[] {
   const checkLines = formatPositiveTextChecks(checks);
+  if (checks.agentStopped !== undefined) checkLines.unshift(`- \u2717 Agent finished: ${checks.agentStopped}`);
   for (const c of checks.notContainsChecks) {
     // Forbidden: pass when *not* found, fail when found.
     checkLines.push(`- ${c.found ? "\u2717" : "\u2713"} Response does NOT contain "${c.forbidden}"`);

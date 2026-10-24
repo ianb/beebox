@@ -57,7 +57,7 @@ void test("Build an index over one card and snapshot the manifest that describes
   const staleManifest = await readFile(searchManifestPath(box.root), "utf8");
   // The feedback AGENTS.md entry is scaffolding; the Dentist entry is the contract.
   t.check(await loadManifest(box.root), {
-    schemaVersion: 5,
+    schemaVersion: 7,
     files: {
       "_config/feedback/AGENTS.md": anything(),
       "_content/inbox/Dentist.doc.card": {
@@ -155,4 +155,26 @@ void test("saveManifest cannot be called without an IndexPersisted receipt, and 
   // `saveManifest` for its own box.
 
   t.check(await saveManifest(boxA.root, { manifest: emptyManifest(), indexProof: indexUnchanged(boxA.root) }), undefined);
+});
+
+// ## A manifest from an older schema version rebuilds from scratch
+//
+// Titles are stored in the index, so a change to how titles are derived bumps the
+// version; an index written at the previous version must not be trusted.
+void test("A manifest from an older schema version rebuilds from scratch", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  await box.write("_content/inbox/Foo.v2.doc.card", DOC("Body text."));
+  await openSearchIndex(box.root);
+  const current = await loadManifest(box.root);
+  t.check(Object.keys(current.files).filter((path) => path.endsWith("Foo.v2.doc.card")), ["_content/inbox/Foo.v2.doc.card"]);
+
+  await writeFile(searchManifestPath(box.root), JSON.stringify({ ...current, schemaVersion: 5 }));
+  t.check((await loadManifest(box.root)).files, {});
 });

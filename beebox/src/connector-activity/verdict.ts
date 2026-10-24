@@ -28,6 +28,7 @@
 
 import { assertNever } from "../shared/invariant.js";
 import { addDays, type ActivityFile, type ConnectorDay, type ConnectorEpisode } from "./core.js";
+import { plural } from "../shared/plural.js";
 
 const BASELINE_DAYS = 28;
 const MIN_HISTORY_DAYS = 21;
@@ -137,10 +138,6 @@ export function nextEpisode(previous: ConnectorEpisode | null, verdict: Connecto
   if (verdict.kind === "healthy" || verdict.kind === "unwatched") return null;
   if (previous !== null && previous.kind === verdict.kind && previous.since === verdict.since) return previous;
   return { kind: verdict.kind, since: verdict.since, notifiedAt: null, dismissedAt: null };
-}
-
-function plural(n: number, word: string): string {
-  return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
 /** One line for the boxholder, used by the dashboard check and the schedule promotion. */

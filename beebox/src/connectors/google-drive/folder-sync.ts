@@ -163,6 +163,7 @@ export async function syncFolderCard(
   // tree really is unmirrored, so the card says so until it isn't.
   const caps = plan.refusals.filter((refusal) => refusal.reason !== "cycle");
   const capError = caps.length > 0 ? caps.map((refusal) => refusal.message).join("; ") : null;
+  if (caps.length > 0) deps.budget.capped = true;
   await stampOutcome(
     {
       mount,

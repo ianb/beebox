@@ -42,6 +42,9 @@ enum Paths {
     static let logs = support.appending(path: "logs", directoryHint: .isDirectory)
     static let appLog = logs.appending(path: "app.log")
     static let timings = support.appending(path: "timings.json")
+    /// An engine update in progress: written before the image references
+    /// change, deleted when the new engine serves (BoxRuntime+Engine).
+    static let updateRecord = support.appending(path: "update.json")
     /// Host ends of each box's vsock relay (see PortForwarder). Unix socket
     /// paths are limited to 104 bytes, so the names stay short.
     static let run = support.appending(path: "run", directoryHint: .isDirectory)
@@ -105,14 +108,24 @@ enum BundleConfig {
         string("CFBundleShortVersionString") ?? "dev"
     }
 
-    /// The beebox image this build of the app runs. The app and the image are
-    /// released together, so the tag is the app's version. `BEEBOX_IMAGE`
-    /// overrides it.
-    static var image: String {
-        if let override = ProcessInfo.processInfo.environment["BEEBOX_IMAGE"] {
-            return override
-        }
-        return string("BeeBoxImage") ?? "ghcr.io/ianb/beebox:latest"
+    /// The engine image repository the app follows, and the channel tag it
+    /// resolves at each start (`BEEBOX_IMAGE_CHANNEL`, default `latest`).
+    static let channelRepository = "ghcr.io/ianb/beebox"
+    static var channel: String {
+        ProcessInfo.processInfo.environment["BEEBOX_IMAGE_CHANNEL"] ?? "latest"
+    }
+    static var channelReference: String { "\(channelRepository):\(channel)" }
+
+    /// `BEEBOX_IMAGE`: a fixed image reference for development, pulled as is
+    /// and never checked against the channel.
+    static var imageOverride: String? {
+        ProcessInfo.processInfo.environment["BEEBOX_IMAGE"]
+    }
+
+    /// The oldest engine image this build can run (`BeeBoxMinimumEngineVersion`,
+    /// written by scripts/build-app.sh). An image below it is left alone.
+    static var minimumEngineVersion: String {
+        string("BeeBoxMinimumEngineVersion") ?? "0.0.0"
     }
 
     /// The init image for the VM, matching the pinned Containerization package.

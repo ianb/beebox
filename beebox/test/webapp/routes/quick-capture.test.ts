@@ -162,6 +162,8 @@ void test("Missing file and undeclared/extra bytes refuse the entire composite."
 // human delete leaves a permanent Gone receipt that stale transfer cannot undo.
 void test("Owner identity is enforced equally for HTTP replay and tRPC read/write.", async (t) => {
   const ctx=await makeTestServer({openAccess:false});
+  // A paired phone works only while its pairer can open the box.
+  await ctx.seed("_config/box.json",JSON.stringify({allowedEmails:["a@example.test","b@example.test"]}));
   const a=await mobile(ctx,"a@example.test");
   const b=await mobile(ctx,"b@example.test");
   t.check(await ownedUpload(ctx,{value:declaration,headers:a}), {

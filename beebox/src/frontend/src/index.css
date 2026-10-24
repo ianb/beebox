@@ -60,6 +60,12 @@ body {
   margin-bottom: 0;
 }
 
+/* Include lines of an instruction file (Markdown/IncludeFile.tsx): a run of
+   rows set off from the document that follows them. */
+.bbx-include-file:not(:has(+ .bbx-include-file)):not(:last-child) {
+  margin-bottom: 1.25em;
+}
+
 /* Markdown footnotes (`[^1]`) and raw-HTML extras; the elements come from
    src/shared/markdoc-config/html-schema.ts. */
 .footnotes {

@@ -1,5 +1,5 @@
 import type { useWorkspace } from "../../workspace/WorkspaceProvider/provider";
-import type { OpenQuestion } from "./open-question";
+import type { OpenQuestion } from "../../open-question";
 /**
  * The props interface shared by `InteractiveChatBody` and its region
  * sub-components in `InteractiveChat-view.tsx` — pulled into its own module

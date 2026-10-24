@@ -44,13 +44,14 @@
 import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
-import { createHash } from "node:crypto";
 import { z } from "zod";
 import { renderFrontmatterBlock } from "../exports/cards.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { GUIDANCE_SURFACES, guidancePathPattern } from "./box/guidance-surfaces.js";
 import { existingSiblingPath, instructionSiblings, LEGACY_INSTRUCTION_PATTERNS, ledgerKey } from "./template-sibling-key.js";
 import { mergeWithoutConflict, parseCard } from "./template-merge.js";
+import { fileExists } from "../lib/file-exists.js";
+import { sha256Hex } from "../lib/content-hash.js";
 
 const VERSIONS_FILE = "_config/template-versions.json";
 /** Where a parked update is mirrored, box-relative. */
@@ -186,10 +187,6 @@ export interface InstallResult {
   writtenAt?: string;
 }
 
-export function sha256(s: string): string {
-  return createHash("sha256").update(s).digest("hex");
-}
-
 function serializeCard(fm: Record<string, unknown>, body: string): string {
   return renderFrontmatterBlock(fm, body);
 }
@@ -247,15 +244,6 @@ function applyBoxOwnedFields(
  */
 function mirrorRelPath(relPath: string): string {
   return relPath;
-}
-
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    return false;
-  }
 }
 
 /**
@@ -357,7 +345,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     if (errnoCode(e) !== "ENOENT") throw e;
   }
 
-  const templateHash = sha256(canonicalize(templateContent));
+  const templateHash = sha256Hex(canonicalize(templateContent));
 
   if (localContent === null) {
     await fs.writeFile(targetAbs, templateContent);
@@ -368,7 +356,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     return { outcome: "fresh", writtenAt: relPath };
   }
 
-  const localHash = sha256(canonicalize(localContent));
+  const localHash = sha256Hex(canonicalize(localContent));
 
   // Local is already what we'd write — no-op (avoids dirtying the working
   // tree on every install with no semantic change).
@@ -430,7 +418,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
   const parkedContent = applyBoxOwnedFields({ upstream: templateContent, box: localContent }, boxOwnedFields);
   await fs.writeFile(updateAbs, parkedContent);
   const base = versions[key]?.stock;
-  if (base !== undefined && sha256(canonicalize(base)) === lastInstalledHash) {
+  if (base !== undefined && sha256Hex(canonicalize(base)) === lastInstalledHash) {
     const merged = await mergeWithoutConflict({ local: targetAbs, base, upstream: parkedContent, card: relPath.endsWith(".card") });
     if (merged !== null) {
       await fs.writeFile(targetAbs, merged);

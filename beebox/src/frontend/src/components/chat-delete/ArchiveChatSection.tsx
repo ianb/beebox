@@ -15,6 +15,7 @@
 
 import { trpc } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
+import { Notice } from "../ui/Notice";
 
 export function ArchiveChatSection({ sessionId, huskPath, busy, onArchived }: {
   sessionId: string;
@@ -45,13 +46,11 @@ export function ArchiveChatSection({ sessionId, huskPath, busy, onArchived }: {
       <h3 className="font-semibold text-warm-900">Archive instead</h3>
       <p className="mt-1">
         {dead
-          ? "Moves this chat’s card to _content/chat/archive/; nothing is deleted."
+          ? "Moves this chat’s card to the chat archive (chat/archive); nothing is deleted."
           : "This conversation can still be opened, so there is nothing to archive yet."}
       </p>
       {mutation.error ? (
-        <p className="mt-2 rounded border border-danger-light bg-danger-50 p-2 text-danger-dark" role="alert">
-          {mutation.error.message}
-        </p>
+        <Notice tone="error" className="mt-2">{mutation.error.message}</Notice>
       ) : null}
       <Button
         id="bbx-chat-archive"

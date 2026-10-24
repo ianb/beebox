@@ -126,7 +126,8 @@ Exit 2 means per-card partial conversion. A repair-enabled pass can commit the
 successful output together with an unresolved question and continue later
 migrations. Without repair, that migration remains pending and later entries
 wait. Outstanding questions remain attention items even when the registry has
-no pending names. This `attention` result exits zero because the box is ready
+no pending names. A question card edited into an invalid shape counts as
+outstanding, never as an answer. This `attention` result exits zero because the box is ready
 to serve; JSON status and the text warning still identify the questions. Do not
 replay a recorded old migration after later migrations;
 repair the remaining cards against their current schema. A durable
@@ -205,8 +206,13 @@ with the script's output. The runner then reruns the script. When the rerun
 exits 0, the migration is recorded as done. When the rerun still exits 2, the
 migration is recorded with a `Migration_<name>-N` question for the boxholder.
 The question carries the rerun's output, so the leftover is still on record,
-and later migrations continue. A warning with exit 0
-bypasses all of this. The migration is recorded as done, the warning reaches
+and later migrations continue; the manifest entry names it (`question`). While
+an earlier question for that migration is still open, an exit 2 records
+nothing, and the next pass runs it again. Any other pending question for a
+recorded migration is from a failed earlier run that the apply superseded: the
+sweep deletes the card and commits the deletion, so a stale question cannot
+keep the box in attention or authorize a repair of a migration that applied. A
+warning with exit 0 bypasses all of this. The migration is recorded as done, the warning reaches
 only a deploy log nobody reads, and the box stays broken.
 
 **Exit 0 means nothing is left, not that the script continued.** A check that
@@ -351,12 +357,12 @@ works end-to-end.
 ## Retired migrations
 
 Every migration registered on 2026-10-08 had been applied by every box, so each
-entry now runs the shared no-op `src/scripts/migrate/retired.ts`. The entries
+entry now runs the shared tombstone `src/scripts/migrate/retired.ts`. The entries
 keep their names and order because the manifest is append-only. The migrators
 themselves, their tests, and the two migration procedure templates are in git
 history; the early rollout is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
 
-A box outside the fleet (a restored backup, an archived or soft-launch box) that has not applied a retired migration needs that migrator restored from git history and run by hand. This includes `one-root`: `getBoxShape` refuses a shapeVersion 2 box, and the v2 bootstrap path in `bbx migrate` is deleted.
+On a box that applied the entry the manifest already records it and the tombstone never runs. On a box that has not (a restored backup, an archived or soft-launch box) the tombstone exits 1 with a message naming the migration, the retirement commit (`81c647230`), and this section; it writes nothing, so the manifest never records a migration the box did not run. The sweep treats a retired entry (`isRetiredMigration` in `src/core/migrations.ts`: the entry points at the tombstone) as needing a human: with repair on it writes the `Migration_<name>-N` question card without invoking the agent, and stops with status `failed` like any hard failure. Restore that migrator from git history, run it by hand, and record it in the manifest; the next pass then closes the question. This includes `one-root`: `getBoxShape` refuses a shapeVersion 2 box, and the v2 bootstrap path in `bbx migrate` is deleted.
 
 #### `briefing-openers-2026-10` (move — briefing `openers` to the landmark)
 

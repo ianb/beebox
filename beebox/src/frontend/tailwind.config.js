@@ -9,6 +9,8 @@ const palette = {
     DEFAULT: "#E8A838",
     light: "#F0C56E",
     dark: "#C98A20",
+    // Gold as text on light paper (5:1 on gold-50); `dark` is for fills.
+    700: "#8A6417",
     50: "#FDF6E8",
     100: "#FBE9C5",
   },
@@ -26,14 +28,16 @@ const palette = {
     100: "#F2DDE1",
   },
   plum: {
-    DEFAULT: "#9B6BA6",
+    // White text on it meets 4.5:1 (the other person's bubble); #9B6BA6 was 4.16.
+    DEFAULT: "#9562A1",
     light: "#B88DC0",
     dark: "#7B4F8A",
     50: "#F3ECF5",
     100: "#E4D6E9",
   },
   iris: {
-    DEFAULT: "#7B6FB0",
+    // White text on it meets 4.5:1 (the user bubble); #7B6FB0 was 4.43.
+    DEFAULT: "#776BAC",
     light: "#9B92C8",
     dark: "#5E5490",
     50: "#EEEDF5",
@@ -103,10 +107,11 @@ export default {
         // alias) — warm-50..900 is self-documenting as a shade scale.
         warm: palette.warm,
 
-        // ─── Card material ─────────────────────────────────────────
-        // Inside a themed card these follow the card theme's material
-        // (themes/materials.css); elsewhere they fall back to the app
-        // palette. CSS variables, so no opacity modifiers (`/50`).
+        // ─── Material ──────────────────────────────────────────────
+        // These read the nearest material: a themed card's
+        // (themes/materials.css) or a chat material's (reply, pending and
+        // meta roots, set by the system theme). Elsewhere they fall back to
+        // the app palette. CSS variables, so no opacity modifiers (`/50`).
         card: {
           paper: "var(--bbx-paper, #FFFFFF)",
           sheet: "var(--bbx-sheet, #FFFFFF)",

@@ -71,7 +71,14 @@ interface ScanState {
  */
 export async function lintProminenceBudget(
   boxRoot: string,
-  ctx: LoadCardContext
+  {
+    ctx,
+    frontmatterByPath,
+  }: {
+    ctx: LoadCardContext;
+    /** Frontmatter already parsed by the card lint (`LintDispatchOptions`); other cards are read here. */
+    frontmatterByPath?: ReadonlyMap<string, Record<string, unknown>> | undefined;
+  }
 ): Promise<ProminenceLintWarning[]> {
   const state: ScanState = {
     boxRoot,
@@ -79,7 +86,7 @@ export async function lintProminenceBudget(
     basenamesByDir: new Map(),
     warnings: [],
   };
-  await readCardRecords(state, ctx);
+  await readCardRecords(state, { ctx, frontmatterByPath });
 
   const byDir = new Map<string, CardRecord[]>();
   const backgroundLandmarksByDir = new Map<string, CardRecord>();
@@ -247,7 +254,10 @@ function isOwnedAttachScope(relPath: string, basenamesByDir: Map<string, Set<str
   return basenames !== undefined && basenames.has(owner.toLowerCase());
 }
 
-async function readCardRecords(state: ScanState, ctx: LoadCardContext): Promise<void> {
+async function readCardRecords(
+  state: ScanState,
+  { ctx, frontmatterByPath }: { ctx: LoadCardContext; frontmatterByPath: ReadonlyMap<string, Record<string, unknown>> | undefined }
+): Promise<void> {
   const absPaths = await listBoxCardFiles(state.boxRoot);
   for (const absPath of absPaths) {
     const relPath = path.relative(state.boxRoot, absPath);
@@ -258,7 +268,7 @@ async function readCardRecords(state: ScanState, ctx: LoadCardContext): Promise<
     if (type === undefined) continue;
     const schema = ctx.cardSchemas.get(type);
     if (schema === undefined) continue;
-    const fm = await loadCardFrontmatter(absPath);
+    const fm = frontmatterByPath?.get(absPath) ?? (await loadCardFrontmatter(absPath));
     const declaredRaw = fm?.["prominence"];
     const declared = typeof declaredRaw === "string" ? declaredRaw : undefined;
     const declaredLevel = isProminenceLevel(declared) ? declared : undefined;

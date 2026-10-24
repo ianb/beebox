@@ -2,6 +2,7 @@
 
 import { execFileSync } from "node:child_process";
 import { planLifecycleProblems } from "../beebox/src/dev/doc-check/frontmatter.ts";
+import { git } from "./lib/git.js";
 
 interface Options {
   repo: string;
@@ -52,10 +53,6 @@ function parseArgs(argv: string[]): Options {
   return { repo, source };
 }
 
-function git(repo: string, args: string[]): string {
-  return execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" });
-}
-
 function batchBlobs(repo: string, objects: string[]): string[] {
   if (objects.length === 0) return [];
   const output = execFileSync("git", ["-C", repo, "cat-file", "--batch"], {
@@ -92,7 +89,7 @@ export function lifecycleProblems(options: Options): string[] {
   const listArgs = source.kind === "index"
     ? ["ls-files", "-z", "beebox/docs/plans/*.md", "beebox/docs/implemented-plans/*.md", "beebox/docs/unimplemented-plans/*.md"]
     : ["ls-tree", "-r", "-z", "--name-only", source.ref, "--", "beebox/docs/plans", "beebox/docs/implemented-plans", "beebox/docs/unimplemented-plans"];
-  const paths = git(repo, listArgs).split("\0").filter((value) => value.endsWith(".md"));
+  const paths = git(listArgs, { cwd: repo, onError: "throw" }).split("\0").filter((value) => value.endsWith(".md"));
   const objects = paths.map((rel) => source.kind === "index" ? `:${rel}` : `${source.ref}:${rel}`);
   const sources = batchBlobs(repo, objects);
   return paths.flatMap((rel, index) => planLifecycleProblems({ rel, source: sources[index] ?? "" }));

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
+import { useMaterial } from "./material";
 
 export type TextSize = "xs" | "sm" | "base" | "lg" | "xl" | "2xl";
 export type TextTone = "default" | "muted" | "subtle" | "emphasis" | "strong" | "danger";
@@ -30,14 +31,14 @@ export interface TextProps {
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
   title?: string;
-  /** Take the colour from the enclosing card's material (`card-ink`/`card-soft`) instead of the app palette. */
+  /** Take the colour from the enclosing card's material (`card-ink`/`card-soft`) instead of the app palette. Defaults to the nearest Card's. */
   material?: boolean;
 }
 
 const TONE_CLASSES: Record<TextTone, string> = {
   default: "text-warm-900",
-  muted: "text-warm-500",
-  subtle: "text-warm-600",
+  muted: "text-warm-700",
+  subtle: "text-warm-700",
   emphasis: "text-warm-700",
   strong: "text-warm-900",
   danger: "text-danger-dark",
@@ -88,6 +89,7 @@ export function Text({
   title,
   material,
 }: TextProps) {
+  material = useMaterial(material);
   tone = tone ?? "default";
   size = size ?? "base";
   weight = weight ?? "normal";

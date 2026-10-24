@@ -20,6 +20,9 @@ import {
 } from "../../lib/view-url";
 import { withBase } from "../../api-core";
 import { isRecord } from "@shared/is-record";
+import { imageLinkSrc } from "../../lib/image-link";
+import { isPlainLeftClick } from "../../lib/plain-click";
+import type { OpenFromElementOptions } from "../LightboxProvider";
 
 export interface LinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -31,6 +34,11 @@ export interface LinkContext {
    * found and scrolled to the span, false to fall back to navigation.
    */
   onJumpToQuote: ((quoteText: string) => Promise<boolean>) | undefined;
+  /**
+   * Opens a link to an image card in the lightbox (`useLightbox().openFromElement`).
+   * False when nothing opened; the link then navigates as any other.
+   */
+  openImageLink: ((element: HTMLElement, options: OpenFromElementOptions) => boolean) | undefined;
 }
 
 function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
@@ -93,16 +101,27 @@ export function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string;
           return <BrokenLink title={`Link escapes the box root: ${href}`}>{children}</BrokenLink>;
         }
         const resolvedHref = viewHref(ctx.boxSlug, target);
+        const label = flattenText(children).trim();
+        // A link to an image card shows the image; a link that asks for a
+        // particular view (`?view=`) still opens that view.
+        const imageSrc = ctx.openImageLink === undefined || target.viewer !== null ? null : imageLinkSrc(ctx.boxSlug ?? "", target.path);
+        const openCard = (cardPath: string) => {
+          const opened = cardPath === target.path ? target : resolveContentTarget(undefined, cardPath);
+          if (opened !== null) ctx.onNavigate(opened, { label: cardPath === target.path && label ? label : cardPath });
+        };
         return (
           <a
             className="bbx-theme-link"
             href={resolvedHref}
             title={title}
+            data-image-src={imageSrc ?? undefined}
+            data-image-alt={imageSrc === null ? undefined : label}
+            data-image-card={imageSrc === null ? undefined : target.path}
             onClick={(e) => {
               if (e.defaultPrevented) return;
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+              if (!isPlainLeftClick(e)) return;
               e.preventDefault();
-              const label = flattenText(children).trim();
+              if (imageSrc !== null && ctx.openImageLink?.(e.currentTarget, { openCard }) === true) return;
               ctx.onNavigate(target, label ? { label } : undefined);
             }}
           >

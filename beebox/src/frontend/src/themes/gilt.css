@@ -13,7 +13,7 @@
   --bbx-focus-ring: #f4d389;
 }
 .bbx-box-presentation[data-chrome-theme="gilt"] {
-  background: url("./gilt-panorama.webp") center top / 100% auto repeat-y, #9d742f;
+  background: url("./gilt-panorama.webp") center top / cover no-repeat, #9d742f;
 }
 [data-chrome-theme="gilt"] .bbx-app-nav {
   background: linear-gradient(90deg, #172f39e8, #3c3c32c9 65%, #4f302dd9), var(--gilt-art) center 24% / cover;
@@ -21,9 +21,9 @@
   color: #fff0c9;
   padding-block: 8px;
 }
-[data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat, #bbx-studio-nav-chat, #bbx-studio-nav-notes, #bbx-studio-nav-more) {
+[data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile) {
   background-color: #d9bd7f;
-  background-image: var(--gilt-leaf);
+  background-image: linear-gradient(#f3e2b8cc, #e9d6a6cc), var(--gilt-art);
   background-size: auto, 480px auto;
   background-position: center, 45% 52%;
   color: #1b3037;
@@ -57,7 +57,7 @@
   --tw-prose-links: var(--gilt-accent);
   color: var(--gilt-ink);
 }
-[data-chrome-theme="gilt"] .bbx-chat-callout > .text-accent-dark {
+[data-chrome-theme="gilt"] .bbx-chat-callout > .bbx-chat-callout-context {
   color: var(--gilt-soft);
 }
 [data-chrome-theme="gilt"] .bbx-composer-material > section {
@@ -72,7 +72,7 @@
 [data-chrome-theme="gilt"] .bbx-composer-material textarea::placeholder {
   color: var(--gilt-soft);
 }
-[data-chrome-theme="gilt"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+[data-chrome-theme="gilt"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background-color: #d9bd7f;
   background-image: var(--gilt-leaf);
   background-size: auto, 460px auto;
@@ -90,6 +90,8 @@
   border-radius: 5px;
 }
 .bbx-card-theme[data-card-theme="gilt"] {
+  --bbx-slip-light: #ffffff0c;
+  --bbx-slip-edge-light: #ffffff26;
   --bbx-paper: var(--gilt-paper);
   --bbx-ink: var(--gilt-ink);
   --bbx-ink-soft: var(--gilt-soft);
@@ -122,19 +124,13 @@
   outline: 2px solid #f5d88e;
   outline-offset: 3px;
 }
-@media (max-width: 639px) {
-  .bbx-box-presentation[data-chrome-theme="gilt"] {
-    background-size: 620px auto;
-    background-position: center top;
-  }
-}
 
 /* The heading is a worn gilded strip, with dark lettering over the leaf. */
 .bbx-card-theme[data-card-theme="gilt"] .bbx-card-heading {
   background-color: #e3ca90;
-  background-image: var(--gilt-leaf);
+  background-image: linear-gradient(#f3e2b8d9, #e9d6a6d9), var(--gilt-art);
   background-position: center, 55% 55%;
-  background-size: auto, 850px auto;
+  background-size: auto, max(850px, 100%) auto;
   color: #192c34;
   --bbx-ink: #192c34;
   --bbx-ink-soft: #304047;
@@ -142,8 +138,8 @@
 }
 
 @media (hover: hover) {
-  [data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat, #bbx-studio-nav-chat, #bbx-studio-nav-notes, #bbx-studio-nav-more):hover {
-    --gilt-leaf: linear-gradient(#f4d87599, #e7be5899), var(--gilt-art);
+  [data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile):hover {
+    background-image: linear-gradient(#f7ebc9cc, #efdfb4cc), var(--gilt-art);
     border-color: #dec990;
     border-bottom-color: #8a693c;
   }

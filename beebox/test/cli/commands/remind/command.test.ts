@@ -25,6 +25,7 @@ import { isDue } from "../../../../src/schemas/scheduled-script/due.js";
 import { loadScriptState, saveScriptState } from "../../../../src/core/schedule/state.js";
 import { ok } from "../../../../src/shared/result.js";
 import { buildProgram } from "../../../../src/cli/entry/program.js";
+import { loadCommands } from "../../../../src/cli/entry/load-commands.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 
 process.env.TZ = "Asia/Tokyo";
@@ -137,7 +138,7 @@ void test("the same title twice gives two cards, and the second is due after the
   const content = await fs.readFile(path.join(box.root, "_config", "schedules", second), "utf-8");
   const parsed = parseScheduledScript(cardFields(parseCardText(content, { source: second, schemas: await createCardSchemaMap(box.root) }), ScheduledScriptSchema));
   const state = await loadScriptState(box.root, second.replace(".scheduled-script.card", ""));
-  t.check(isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, now: new Date("2026-10-18T16:00:01Z") }), true);
+  t.check(isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, lastFailureFinal: state.lastFailureFinal === true, now: new Date("2026-10-18T16:00:01Z") }), true);
 });
 
 void test("a past time and an unreachable box are refused and write nothing", async (t) => {
@@ -276,7 +277,7 @@ void test("cancel removes only this chat's check-in, by label", async (t) => {
 // The surface table's smoke run for `remind` is `--help`; the verb is registered
 // at the top level, with `cancel` as its one subcommand.
 void test("bbx remind is on the agent surface with its help", async (t) => {
-  const remind = buildProgram().commands.find((c) => c.name() === "remind");
+  const remind = buildProgram(await loadCommands({ kind: "verb", key: "remind" })).commands.find((c) => c.name() === "remind");
   t.check([remind?.usage(), remind?.commands.map((c) => c.name()), remind?.options.map((o) => o.long)], [
     "[options] [command] [text...]",
     ["cancel"],

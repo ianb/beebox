@@ -22,13 +22,13 @@ import { getBoxTime } from "../../lib/time.js";
 import { assertNever } from "../../shared/invariant.js";
 import {
   loadScheduleHealth,
-  formatDurationShort,
   describeParkedUpdates,
   type BoxScheduleHealth,
 } from "../../core/schedule/health-box.js";
 import { conciseScheduleError, type TaskHealth } from "../../core/schedule/health.js";
 import { loadRunningScripts, type ScriptLock } from "../../core/schedule/state.js";
 import { runHealthChecks, type HealthCheck } from "../../webapp/trpc/routers/health/router.js";
+import { formatAgoMs, formatDuration } from "../../shared/relative-time.js";
 
 const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   ok: "✓",
@@ -57,7 +57,7 @@ function describeStatus(task: TaskHealth): string {
     case "failing":
       return `failing ×${task.consecutiveFailures}`;
     case "overdue":
-      return `overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
+      return `overdue ${formatDuration(task.pendingMs ?? 0)}`;
     case "waiting":
       // The reason is the status here ("waiting: Jev did not answer"), so the
       // detail column leaves it out.
@@ -66,6 +66,8 @@ function describeStatus(task: TaskHealth): string {
       // A run that found nothing to do says so ("ok: nothing to do").
       return task.reason === undefined ? "ok" : `ok: ${task.reason}`;
     case "inconclusive":
+      // Read where the agent meets it: the work ran, so it is not redone.
+      return "inconclusive: work done, no verdict";
     case "blocked":
     case "invalid":
     case "disabled":
@@ -77,10 +79,10 @@ function describeStatus(task: TaskHealth): string {
 
 function describeRuns(task: TaskHealth, now: Date): string {
   if (!task.lastRun) return "never run";
-  const attempt = `last attempt ${formatDurationShort(now.getTime() - new Date(task.lastRun).getTime())} ago`;
+  const attempt = `last attempt ${formatAgoMs(now.getTime() - new Date(task.lastRun).getTime())}`;
   if (task.lastSuccess === task.lastRun) return attempt.replace("attempt", "success");
   const success = task.lastSuccess
-    ? `last success ${formatDurationShort(now.getTime() - new Date(task.lastSuccess).getTime())} ago`
+    ? `last success ${formatAgoMs(now.getTime() - new Date(task.lastSuccess).getTime())}`
     : "never succeeded";
   return `${attempt}, ${success}`;
 }
@@ -96,7 +98,7 @@ function pushTaskLines(
   for (const task of tasks) {
     const lock = running.get(task.name);
     const detail = [
-      ...(lock ? [`running (PID ${lock.pid}, since ${formatDurationShort(now.getTime() - new Date(lock.startedAt).getTime())} ago)`] : []),
+      ...(lock ? [`running (PID ${lock.pid}, since ${formatAgoMs(now.getTime() - new Date(lock.startedAt).getTime())})`] : []),
       describeRuns(task, now),
       ...(task.reason && task.status !== "waiting" && task.status !== "ok" ? [task.reason] : []),
     ].join("; ");
@@ -128,9 +130,9 @@ function pushTaskLines(
   }
   const { scheduler } = health;
   if (scheduler.status === "running") {
-    lines.push(`  scheduler: running (last tick ${formatDurationShort(scheduler.ageMs ?? 0)} ago)`);
+    lines.push(`  scheduler: running (last tick ${formatAgoMs(scheduler.ageMs ?? 0)})`);
   } else if (scheduler.status === "stale") {
-    lines.push(`  scheduler: NOT RUNNING (last tick ${formatDurationShort(scheduler.ageMs ?? 0)} ago)`);
+    lines.push(`  scheduler: NOT RUNNING (last tick ${formatAgoMs(scheduler.ageMs ?? 0)})`);
   } else {
     lines.push("  scheduler: never seen on this box (overdue is expected if nothing runs bbx tick)");
   }

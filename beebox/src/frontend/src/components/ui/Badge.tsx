@@ -16,7 +16,7 @@ export interface BadgeProps {
 }
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
-  neutral: "bg-warm-100 text-warm-500",
+  neutral: "bg-warm-100 text-warm-700",
   info: "bg-info-50 text-info-dark",
   success: "bg-success-100 text-success-dark",
   warning: "bg-accent-100 text-accent-dark",

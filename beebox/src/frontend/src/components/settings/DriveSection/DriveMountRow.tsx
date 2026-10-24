@@ -14,6 +14,7 @@
  * renders like the rest of the page and can say what unmounting actually does.
  */
 
+import { toDisplayPath } from "@shared/display-path";
 import { useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { trpc, type RouterOutput } from "../../../lib/trpc/client";
@@ -26,6 +27,7 @@ import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
 import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
+import { Notice } from "../../ui/Notice";
 import { bbxSource } from "../../../lib/source-tag";
 import { controlAddress } from "@shared/ui-scan/control-address";
 
@@ -151,18 +153,18 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
   return (
     <Stack
       gap="xs"
-      className="px-3 py-3 rounded bg-warm-50"
+      className="px-3 py-3 rounded bg-card-tint"
       {...bbxSource("card", mount.cardPath)}
     >
       <Row gap="sm" align="center" wrap>
-        <Text weight="semibold">{mount.name ?? mount.cardPath}</Text>
+        <Text weight="semibold">{mount.name ?? toDisplayPath(mount.cardPath)}</Text>
         {mount.error !== null ? <Badge tone="danger">error</Badge> : null}
         {mount.error === null && mount.lastSync !== null ? <Badge tone="success">synced</Badge> : null}
         {mount.error === null && mount.lastSync === null ? <Badge tone="neutral">never synced</Badge> : null}
       </Row>
 
       <Hint>
-        mirrors into {mount.dir === "" ? "the box root" : mount.dir} · {childSummary(mount.children)}
+        mirrors into {mount.dir === "" ? "the box root" : toDisplayPath(mount.dir)} · {childSummary(mount.children)}
         {problemSummary(mount.problems) === null ? null : <>{" · "}{problemSummary(mount.problems)}</>}
         {mount.lastSync === null ? null : (
           <>
@@ -207,9 +209,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
       </Row>
 
       {error === null ? null : (
-        <div className="p-2 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
-          {error}
-        </div>
+        <Notice tone="warning">{error}</Notice>
       )}
     </Stack>
   );

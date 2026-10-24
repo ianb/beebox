@@ -19,11 +19,19 @@ function git(cwd: string, args: string[]): void {
 }
 
 // Worktree setup recognizes boxes that still carry the pre-rename engine package
-// name and migrates the dependency while installing the worktree-local override.
-void test("Worktree setup recognizes boxes that still carry the pre-rename engine packag...", async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "box-engine-repoint-"));
+// name and migrates the dependency. The tracked dependency becomes the portable
+// `link:.beebox/engine`, the engine override goes, and the gitignored
+// `.beebox/engine` link holds the worktree's engine path.
+void test("Worktree setup links the worktree engine and commits only the portable spec", async (t) => {
+  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "box-engine-repoint-")));
   t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
-  const packageJson = path.join(root, "package.json");
+  const box = path.join(root, "box");
+  const worktree = path.join(root, "new-worktree");
+  await fs.mkdir(path.join(worktree, "beebox/bin"), { recursive: true });
+  await fs.writeFile(path.join(worktree, "beebox/package.json"), JSON.stringify({ name: "beebox" }));
+  await fs.copyFile(path.join(repoRoot, "beebox/bin/box-engine-link"), path.join(worktree, "beebox/bin/box-engine-link"));
+  await fs.mkdir(box);
+  const packageJson = path.join(box, "package.json");
   await fs.writeFile(packageJson, JSON.stringify({
     dependencies: { "callback-box": "^0.1.0", react: "^18.3.1" },
     pnpm: { overrides: { "callback-box": "link:/old/engine" } },
@@ -33,25 +41,54 @@ void test("Worktree setup recognizes boxes that still carry the pre-rename engin
     'wt_create_repoint_box_engine "$PACKAGE_JSON" "$WORKTREE"',
   ].join("; ")], {
     cwd: repoRoot,
-    env: { ...process.env, PACKAGE_JSON: packageJson, WORKTREE: "/tmp/new-worktree" },
+    env: { ...process.env, PACKAGE_JSON: packageJson, WORKTREE: worktree },
   });
-  const migrated = JSON.parse(await fs.readFile(packageJson, "utf8"));
   t.check(
     {
-      beebox: migrated.dependencies.beebox,
-      retiredDependency: migrated.dependencies["callback-box"] ?? null,
-      react: migrated.dependencies.react,
-      override: migrated.pnpm.overrides.beebox,
-      oldOverride: migrated.pnpm.overrides["callback-box"] ?? null,
+      packageJson: JSON.parse(await fs.readFile(packageJson, "utf8")),
+      link: await fs.readlink(path.join(box, ".beebox/engine")),
     },
     {
-    beebox: "link:/tmp/new-worktree/beebox",
-    retiredDependency: null,
-    react: "^18.3.1",
-    override: "link:/tmp/new-worktree/beebox",
-    oldOverride: null,
-  },
+      packageJson: { dependencies: { react: "^18.3.1", beebox: "link:.beebox/engine" } },
+      link: path.join(worktree, "beebox"),
+    },
   );
+});
+
+// A cloned box with a pinned engine (a `file:` tarball, a semver range, a link
+// into the box) keeps it: worktree setup replaces only a machine-local link
+// outside the box, and warns that the clone will not run the worktree engine.
+void test("Worktree setup leaves a pinned engine in place and says so", async (t) => {
+  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "box-engine-pinned-")));
+  t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
+  const worktree = path.join(root, "wt");
+  await fs.mkdir(path.join(worktree, "beebox/bin"), { recursive: true });
+  await fs.writeFile(path.join(worktree, "beebox/package.json"), JSON.stringify({ name: "beebox" }));
+  await fs.copyFile(path.join(repoRoot, "beebox/bin/box-engine-link"), path.join(worktree, "beebox/bin/box-engine-link"));
+  const results: Record<string, { stderr: string; packageJson: string; link: string }> = {};
+  for (const [name, spec] of [["tarball", "file:/app/beebox.tgz"], ["range", "^1.0.0"], ["inBox", "link:./vendor/beebox"]] as const) {
+    const box = path.join(root, name);
+    await fs.mkdir(box);
+    const text = JSON.stringify({ dependencies: { beebox: spec } });
+    await fs.writeFile(path.join(box, "package.json"), text);
+    const run = spawnSync("bash", ["-c", '. bin/lib/worktree-create.sh; wt_create_repoint_box_engine "$PACKAGE_JSON" "$WORKTREE"'], {
+      cwd: repoRoot,
+      env: { ...process.env, PACKAGE_JSON: path.join(box, "package.json"), WORKTREE: worktree },
+      encoding: "utf8",
+    });
+    results[name] = {
+      stderr: run.stderr.trim(),
+      packageJson: (await fs.readFile(path.join(box, "package.json"), "utf8")) === text ? "unchanged" : "rewritten",
+      link: await fs.lstat(path.join(box, ".beebox/engine")).then(() => "present", () => "absent"),
+    };
+  }
+  const warning = (name: string, spec: string): string =>
+    `[worktree-create] WARNING: ${path.join(root, name)} keeps its pinned engine (${spec}); it will not run this worktree's engine`;
+  t.check(results, {
+    tarball: { stderr: warning("tarball", "file:/app/beebox.tgz"), packageJson: "unchanged", link: "absent" },
+    range: { stderr: warning("range", "^1.0.0"), packageJson: "unchanged", link: "absent" },
+    inBox: { stderr: warning("inBox", "link:./vendor/beebox"), packageJson: "unchanged", link: "absent" },
+  });
 });
 
 // An existing clone with the tracked pre-rename box marker is made recognizable
@@ -281,6 +318,88 @@ void test("Preservation drops the worktree setup commit from the preserved ref",
     packageJson: "source link\n",
     state: "kept\n",
     // The replay's temporary worktree is gone.
+    cloneWorktrees: [`worktree ${await fs.realpath(clone)}`],
+  });
+});
+
+// Build a source box and a clone whose `main` carries the setup commit, as
+// bin/lib/worktree-create.sh step 6 leaves it, with `keep` checked out.
+async function setupClonePair(prefix: string): Promise<{ root: string; source: string; clone: string; env: NodeJS.ProcessEnv }> {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
+  const source = path.join(root, "source");
+  const clone = path.join(root, "boxes", "seam", "test1");
+  await fs.mkdir(source);
+  git(source, ["init", "-q", "-b", "main"]);
+  git(source, ["config", "user.email", "test@example.com"]);
+  git(source, ["config", "user.name", "Test"]);
+  await fs.writeFile(path.join(source, "package.json"), "source link\n");
+  await fs.writeFile(path.join(source, "pnpm-lock.yaml"), "lock base\n");
+  await fs.writeFile(path.join(source, "state"), "base\n");
+  git(source, ["add", "."]);
+  git(source, ["commit", "-qm", "base"]);
+  await fs.mkdir(path.dirname(clone), { recursive: true });
+  git(root, ["clone", "-q", source, clone]);
+  git(clone, ["config", "user.email", "test@example.com"]);
+  git(clone, ["config", "user.name", "Test"]);
+  await fs.writeFile(path.join(clone, "package.json"), "worktree link\n");
+  await fs.writeFile(path.join(clone, "pnpm-lock.yaml"), "lock setup\n");
+  git(clone, ["commit", "-qam", "Worktree setup: link the beebox engine to worktree seam"]);
+  git(clone, ["checkout", "-qb", "keep"]);
+  return {
+    root, source, clone,
+    env: { ...process.env, WT_BOX_ROOT: path.join(root, "boxes"), WT_BOX_SRC: source },
+  };
+}
+
+function runLib(env: NodeJS.ProcessEnv, script: string): ReturnType<typeof spawnSync> {
+  return spawnSync("bash", ["-c", `. bin/lib/workstream-box-state.sh; ${script}`], { cwd: repoRoot, env, encoding: "utf8" });
+}
+
+// The setup commit never reaches the source box, so it must not make `keep`
+// look unmerged: a keep holding only that commit, or real work already merged
+// into source main (here as a separate commit with the same patch, not by ancestry), is
+// not pinned and not preserved.
+void test("A keep with only the setup commit, or already-merged work, is not unmerged", async (t) => {
+  const { root, source, clone, env } = await setupClonePair("keep-setup-merged-");
+  t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
+  const state = () => String(runLib(env, `workstream_box_state ${clone} ${source} | grep -o '"keepUnmerged": *[a-z]*' | tr -d ' '`).stdout).trim();
+  const pin = () => runLib(env, "workstream_cull_pin_reason seam");
+  const preserve = () => String(runLib(env, 'workstream_preserve_keep seam || exit; printf "%s" "$WORKSTREAM_PRESERVED_BOX_REF"').stdout);
+  const before = { setupOnly: state(), pin: pin().status, preserved: preserve() };
+
+  await fs.writeFile(path.join(clone, "state"), "kept\n");
+  git(clone, ["commit", "-qam", "real work"]);
+  const unmerged = { state: state(), pin: String(pin().stdout).trim() };
+  await fs.writeFile(path.join(source, "state"), "kept\n");
+  git(source, ["commit", "-qam", "real work (merged by patch)"]);
+  const merged = { state: state(), pin: pin().status, preserved: preserve() };
+  t.check({ before, unmerged, merged }, {
+    before: { setupOnly: '"keepUnmerged":false', pin: 1, preserved: "" },
+    unmerged: { state: '"keepUnmerged":true', pin: "keep-unmerged" },
+    merged: { state: '"keepUnmerged":false', pin: 1, preserved: "" },
+  });
+});
+
+// A box agent's later `pnpm add` edits the files the setup commit touched, so
+// dropping the setup commit conflicts. Preservation then pushes keep unrebased,
+// setup commit included, instead of refusing removal.
+void test("Preservation pushes keep with the setup commit when dropping it conflicts", async (t) => {
+  const { root, source, clone, env } = await setupClonePair("keep-setup-conflict-");
+  t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
+  await fs.writeFile(path.join(clone, "package.json"), "worktree link plus dep\n");
+  await fs.writeFile(path.join(clone, "pnpm-lock.yaml"), "lock setup plus dep\n");
+  git(clone, ["commit", "-qam", "pnpm add dep"]);
+  const result = runLib(env, 'workstream_preserve_keep seam || exit; printf "%s" "$WORKSTREAM_PRESERVED_BOX_REF"');
+  const ref = String(result.stdout);
+  t.check({
+    status: result.status,
+    stderr: String(result.stderr).includes("carries the worktree setup commit"),
+    subjects: execFileSync("git", ["log", "--format=%s", ref], { cwd: source, encoding: "utf8" }),
+    cloneWorktrees: execFileSync("git", ["worktree", "list", "--porcelain"], { cwd: clone, encoding: "utf8" }).split("\n").filter((line) => line.startsWith("worktree ")),
+  }, {
+    status: 0,
+    stderr: true,
+    subjects: "pnpm add dep\nWorktree setup: link the beebox engine to worktree seam\nbase\n",
     cloneWorktrees: [`worktree ${await fs.realpath(clone)}`],
   });
 });

@@ -51,7 +51,7 @@ void test("Chat images use maximum dimensions without a forced frame", async (t)
 void test("Caption wrappers fit the image instead of filling the transcript width", async (t) => {
   await t.checkText(
     render("chat", "A caption"),
-    `<figure class="inline-flex flex-col items-center">${BUTTON}<img src="/test/api/files/example.png" alt="Example" class="max-w-full max-h-[70vh] rounded m-0" data-image-src="/test/api/files/example.png" data-image-alt="Example" data-image-caption="A caption"/></button><figcaption class="mt-1 max-w-full text-xs text-warm-600 italic text-center">A caption</figcaption></figure>`,
+    `<figure class="inline-flex flex-col items-center">${BUTTON}<img src="/test/api/files/example.png" alt="Example" class="max-w-full max-h-[70vh] rounded m-0" data-image-src="/test/api/files/example.png" data-image-alt="Example" data-image-caption="A caption"/></button><figcaption class="mt-1 max-w-full text-xs text-warm-700 italic text-center">A caption</figcaption></figure>`,
   );
 });
 

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
     <defs>
       <linearGradient id="ribbon-rust" x1="0" y1="0" x2="1" y2=".7"><stop stop-color="#8b290b"/><stop offset=".36" stop-color="#c7470a"/><stop offset=".7" stop-color="#e06014"/><stop offset="1" stop-color="#a63109"/></linearGradient>
       <linearGradient id="ribbon-gold" x1=".25" y1="0" x2=".7" y2="1"><stop stop-color="#b87a08"/><stop offset=".4" stop-color="#f4ae20"/><stop offset=".72" stop-color="#e89513"/><stop offset="1" stop-color="#ffce65"/></linearGradient>

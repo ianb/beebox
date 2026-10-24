@@ -70,7 +70,7 @@ function EngineSection(props: ModelPanelProps & { engine: ChatAgentEngine }) {
   const addedModels = useAddedModels();
   const heading = (
     <div role="none" className="px-3 pt-2 pb-1 flex justify-between gap-2">
-      <span className="text-xs uppercase tracking-wide text-warm-500">{ENGINE_NAMES[engine]}</span>
+      <span className="text-xs uppercase tracking-wide text-warm-700">{ENGINE_NAMES[engine]}</span>
       {engine === boxEngine ? <span className="text-xs text-warm-400">default</span> : null}
     </div>
   );
@@ -113,7 +113,7 @@ function EngineSection(props: ModelPanelProps & { engine: ChatAgentEngine }) {
               >
                 <span className="flex justify-between gap-2 w-full">
                   <span>{isOwn && selectedModel === model ? "✓ " : "  "}{opt.label}</span>
-                  {pinned ? <span className="text-warm-500 text-xs self-center">default</span> : null}
+                  {pinned ? <span className="text-warm-700 text-xs self-center">default</span> : null}
                 </span>
               </MenuItem>
             </div>
@@ -148,7 +148,7 @@ export function ModelPanel(props: ModelPanelProps) {
   return (
     <>
       <MenuItem id="bbx-session-model-back" onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Model</span>
+        <span className="text-warm-700">‹ Model</span>
       </MenuItem>
       <MenuDivider />
       <MenuItem onClick={() => props.onSelectModel(null)}>
@@ -159,7 +159,7 @@ export function ModelPanel(props: ModelPanelProps) {
         <>
           <MenuDivider />
           <MenuItem id="bbx-session-model-unpin" onClick={() => { props.onPinModel(null); }} keepOpen>
-            <span className="text-warm-500">Clear the box default</span>
+            <span className="text-warm-700">Clear the box default</span>
           </MenuItem>
         </>
       ) : null}

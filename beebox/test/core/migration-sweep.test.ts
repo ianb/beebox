@@ -18,13 +18,14 @@ import type { TmpBox } from "../helpers/test-helpers.js";
 import { createFakeAgent } from "./fake-agent.js";
 import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance/admission.js";
 import { forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
+import { NOOP_MIGRATION, NOOP_MIGRATION_AFTER, registerNoopMigration } from "./noop-migration.js";
 import { sweepMigrations, type SweepResult } from "../../src/core/migration-sweep.js";
 
-// Every registered migration is retired and runs the shared no-op, so a pending
-// one is a clean no-op on any box: the sweep's own bookkeeping is what gets
-// tested, not a migrator's side effects. Pinned to one name; the registry is
-// append-only, so it persists.
-const PROBE = "annex-config-2026-08";
+// A test-only script migration that does nothing, so the sweep's own
+// bookkeeping is what gets tested, not a migrator's side effects. (A retired
+// entry exits 1 on a box that never applied it.)
+registerNoopMigration();
+const PROBE = NOOP_MIGRATION;
 
 // No procedure-kind migration is registered any more, so the procedure tests
 // append a test-only entry to this process's copy of the registry. The
@@ -110,8 +111,8 @@ void test("The common case — this runs against every box on every deploy, so t
 // a box can never claim a migration whose effects are not in its history. The
 // commit carries the `Created-By` trailer the box's other automated writers use.
 //
-// `annex-config-2026-08` is the migration under test here (see the setup note):
-// it runs the retired no-op, which proves the sweep's own bookkeeping without
+// `test-noop-migration` is the migration under test here (see the setup note):
+// it runs a no-op migrator, which proves the sweep's own bookkeeping without
 // depending on a migrator's side effects.
 void test("The manifest entry and the changes it describes land in the same commit, so a...", async (t) => {
   t.teardown(async () => {
@@ -129,7 +130,7 @@ void test("The manifest entry and the changes it describes land in the same comm
   t.check({ status: result.status, applied: expectStatus(result, "applied").applied.map((m) => m.name) }, {
     status: "applied",
     applied: [
-      "annex-config-2026-08",
+      "test-noop-migration",
     ],
   });
 
@@ -137,14 +138,14 @@ void test("The manifest entry and the changes it describes land in the same comm
     {
       subject: git(box, "log", "-1", "--format=%s"),
       trailer: git(box, "log", "-1", "--format=%(trailers:key=Created-By,valueonly)"),
-      manifestInCommit: git(box, "show", "--name-only", "--format=", "HEAD").includes(MANIFEST_PATH),
-      clean: git(box, "status", "--porcelain") === "",
+      files: git(box, "show", "--name-only", "--format=", "HEAD"),
+      status: git(box, "status", "--porcelain"),
     },
     {
-    subject: "Apply migration: annex-config-2026-08",
+    subject: "Apply migration: test-noop-migration",
     trailer: "migration-sweep",
-    manifestInCommit: true,
-    clean: true,
+    files: MANIFEST_PATH,
+    status: "",
   },
   );
 
@@ -182,7 +183,7 @@ void test("An unattended sweep has no procedure runner.", async (t) => {
     {
     status: "needs-procedure",
     applied: [
-      "annex-config-2026-08",
+      "test-noop-migration",
     ],
     phase: null,
   },
@@ -256,14 +257,15 @@ void test("With a runner, the --repair pass applies procedure migrations itself.
     namesReceipt: true,
   });
 
+  // The apply supersedes the question written for the unfinished attempt: the
+  // sweep closes it, so the box is not left in attention for a decision nobody
+  // needs.
   const manual = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: false, runProcedure });
-  t.check({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes(PROCEDURE), open: expectStatus(manual, "attention").questions }, {
-    status: "attention",
+  t.check({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes(PROCEDURE), closed: git(box, "show", "--format=", "--name-status", "HEAD") }, {
+    status: "applied",
     runs: 3,
     recorded: true,
-    open: [
-      "_bookkeeping/questions/Migration_test-procedure-1.question.card",
-    ],
+    closed: "D\t_bookkeeping/questions/Migration_test-procedure-1.question.card",
   });
 });
 
@@ -428,14 +430,14 @@ void test("Partial conversion asks once and lets later migrations proceed", asyn
   const box = await makeTmpBox({ git: true });
   // Keep this pinned to a script migration: procedure migrations are intentionally
   // not handled by the unattended sweep.
-  const later = "search-interface-card";
+  const later = NOOP_MIGRATION_AFTER;
   await seedManifest(box, { pending: [PROBE, later] });
   await box.commitAll("seed");
   let agents = 0;
   let calls = 0;
   const result = await sweepMigrations({
     boxRoot: box.root, repair: true,
-    // Every entry runs the same tombstone script, so tell PROBE's runs apart by
+    // Every entry runs the same no-op script, so tell PROBE's runs apart by
     // the manifest: PROBE is the one running while it is still unrecorded.
     runScript: async ({ boxRoot }) => {
       calls += 1;
@@ -446,18 +448,20 @@ void test("Partial conversion asks once and lets later migrations proceed", asyn
       return { status: "needs-human", reason: "Choose between divergent copies." };
     } }),
   });
-  t.check({ status: result.status, applied: expectStatus(result, "attention").applied.length, partial: expectStatus(result, "attention").applied[0]?.partial, agents, calls }, {
+  t.check({ status: result.status, applied: expectStatus(result, "attention").applied.map((m) => [m.name, m.partial]), agents, calls }, {
     status: "attention",
-    applied: 2,
-    partial: true,
+    applied: [
+      ["test-noop-migration", true],
+      ["test-later-noop-migration", false],
+    ],
     agents: 1,
     calls: 3,
   });
 
   const next = await sweepMigrations({ boxRoot: box.root });
-  t.check({ status: next.status, questions: expectStatus(next, "attention").questions.length }, {
+  t.check({ status: next.status, questions: expectStatus(next, "attention").questions }, {
     status: "attention",
-    questions: 1,
+    questions: ["_bookkeeping/questions/Migration_test-noop-migration-0.question.card"],
   });
 });
 
@@ -531,11 +535,11 @@ void test("The 2026-09-16 incident:", async (t) => {
   await box.commitAll("seed");
   const failed = await sweepMigrations({ boxRoot: box.root, runScript: async () => 1 });
   const record = await boxMaintenanceStatus(box.root);
-  t.check({ status: failed.status, phase: record?.phase, owner: record?.owner, ref: git(box, "for-each-ref", "--format=%(refname)", expectStatus(failed, "failed").recoveryRef) === expectStatus(failed, "failed").recoveryRef }, {
+  t.check({ status: failed.status, phase: record?.phase, owner: record?.owner, ref: git(box, "for-each-ref", "--format=%(refname)", expectStatus(failed, "failed").recoveryRef) }, {
     status: "failed",
     phase: "exclusive",
     owner: null,
-    ref: true,
+    ref: expectStatus(failed, "failed").recoveryRef,
   });
 
   const work = await acquireBoxWork(box.root, { reason: "chat run" });
@@ -606,8 +610,8 @@ void test("The new attempt snapshots current input and staging, but its output c
   await rm(hook);
   t.check((await sweepMigrations({ boxRoot: box.root, repair: true, runScript })).status, "applied");
 
-  t.check({ committed: git(box, "show", "HEAD:_content/Converted.doc.card").endsWith("Converted"), staged: git(box, "diff", "--cached", "--name-only"), unstaged: git(box, "diff", "--name-only"), pendingRef: git(box, "for-each-ref", "--format=%(refname)", `refs/bbx/migrations/${PROBE}/pending`) }, {
-    committed: true,
+  t.check({ committed: git(box, "show", "HEAD:_content/Converted.doc.card"), staged: git(box, "diff", "--cached", "--name-only"), unstaged: git(box, "diff", "--name-only"), pendingRef: git(box, "for-each-ref", "--format=%(refname)", `refs/bbx/migrations/${PROBE}/pending`) }, {
+    committed: converted.trim(),
     staged: "_content/unrelated.txt",
     unstaged: "",
     pendingRef: "",

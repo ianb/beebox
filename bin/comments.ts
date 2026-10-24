@@ -43,6 +43,7 @@ import {
   type Comment,
   type StoreEntry,
 } from "./lib/comments-store.js";
+import { valueFlags } from "./lib/value-flags.js";
 
 const USAGE = `usage: bin/comments <command>
 
@@ -82,32 +83,11 @@ function renderEntry(entry: StoreEntry): string {
   return [head, ...problem, ...byNewest(entry.comments).map(renderComment)].join("\n");
 }
 
-/**
- * Flags that take a value, which they consume UNCONDITIONALLY.
- *
- * A parser that skips a value beginning with `--` cannot carry the boxholder's
- * own words: a comment body of "-- actually, no" would arrive empty. These
- * values are user text, so the flag name is the only thing that decides.
- */
+/** Flags that take a value; see `valueFlags` for why the value is always consumed. */
 const VALUE_FLAGS = new Set(["body", "origin", "workstream", "worktree", "quoted", "section", "fragment", "id"]);
 
-/** Read `--flag value` pairs without pulling in an argument parser. */
 function flags(args: string[]): Map<string, string> {
-  const found = new Map<string, string>();
-  for (let i = 0; i < args.length; i += 1) {
-    const arg = args[i];
-    if (arg === undefined || !arg.startsWith("--")) continue;
-    const name = arg.slice(2);
-    if (!VALUE_FLAGS.has(name)) continue;
-    const next = args[i + 1];
-    if (next === undefined) {
-      found.set(name, "");
-      continue;
-    }
-    found.set(name, next);
-    i += 1;
-  }
-  return found;
+  return valueFlags(args, VALUE_FLAGS);
 }
 
 function wantsJson(args: string[]): boolean {

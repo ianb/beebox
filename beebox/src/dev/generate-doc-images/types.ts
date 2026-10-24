@@ -7,7 +7,7 @@ import path from "node:path";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { NotFoundError } from "../../lib/errors.js";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
 
 export type PromptPart =
   | { type: "text"; text: string }

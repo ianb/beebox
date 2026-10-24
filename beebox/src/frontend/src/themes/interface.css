@@ -1,29 +1,12 @@
 /* Shared framing for cards where the surrounding interface is part of the
-   reading surface: browse detail, sidecar panels, and their tabs. */
-.bbx-interface-card-desk[data-card-content="card"],
-.bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
+   reading surface: sidecar panels and their tabs. */
+.bbx-interface-card-desk[data-card-content="card"] {
   background: var(--bbx-desk-pattern, none), var(--bbx-desk-background, #e4e0d9);
   padding: 20px;
 }
 
-.bbx-interface-card-desk[data-card-content="card"] > .bbx-card-surface,
-.bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk > .bbx-card-surface {
+.bbx-interface-card-desk[data-card-content="card"] > .bbx-card-surface {
   min-height: 0;
-}
-
-.bbx-interface-browse-panel[data-card-content="card"] {
-  border-radius: 12px;
-  background: var(--bbx-desk-pattern, none), var(--bbx-desk-background, #e4e0d9);
-}
-
-.bbx-interface-browse-panel > .bbx-interface-card-desk {
-  border-radius: 0 0 12px 12px;
-}
-
-.bbx-interface-card-toolbar {
-  border-radius: 12px 12px 0 0;
-  border-bottom: 1px solid #d2ccc2;
-  background: #f5f2ec;
 }
 
 .bbx-interface-tabstrip > [role="none"] {
@@ -97,15 +80,13 @@
 }
 
 @media (max-width: 640px) {
-  .bbx-interface-card-desk[data-card-content="card"],
-  .bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
+  .bbx-interface-card-desk[data-card-content="card"] {
     padding: 12px;
   }
 }
 
 @media print {
-  .bbx-interface-card-desk[data-card-content="card"],
-  .bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
+  .bbx-interface-card-desk[data-card-content="card"] {
     padding: 0;
     background: transparent;
   }

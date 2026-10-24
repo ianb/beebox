@@ -33,10 +33,18 @@ RUN corepack enable
 WORKDIR /src
 COPY . .
 
+# The engine's version: the image workflow passes the tag (1.2.3) or a
+# pre-release stamp for a build from main (1.2.4-main.20261024.abc1234).
+# Written into beebox/package.json before the pack, so `bbx status`, /healthz
+# and the Mac app's engine line report this build, not the checked-in
+# placeholder. A local build keeps the placeholder.
+ARG BEEBOX_VERSION=0.0.0-dev
+
 # Frozen install of the whole workspace (the lockfile is committed), then the
 # release build. `pnpm pack` respects beebox's `files` allowlist; the
 # resulting dist-release/*.tgz is the only artifact the runtime stage needs.
 RUN pnpm install --frozen-lockfile \
+  && if [ "$BEEBOX_VERSION" != "0.0.0-dev" ]; then (cd beebox && npm pkg set version="$BEEBOX_VERSION"); fi \
   && pnpm --dir beebox release \
   && cp beebox/dist-release/*.tgz /beebox.tgz \
   && sed -n 's/^export const DOCLING_VERSION = "\([^"]*\)";$/\1/p' beebox/src/services/docling/version.ts > /docling-version \
@@ -53,6 +61,24 @@ FROM node:24-bookworm-slim
 # BBX_GIT_NAME / BBX_GIT_EMAIL at runtime if they are set.
 ARG BBX_GIT_NAME="Bee Box"
 ARG BBX_GIT_EMAIL="beebox@box.example.com"
+
+# What the Mac app (mac-app/) reads before it downloads this image.
+#
+# MIN_APP_VERSION is the oldest Bee Box Desktop that can run this image. Bump
+# it BY HAND whenever the contract between the app and the image changes:
+# the mounts (/data/box, /app/claude-config, /home/node), the server port
+# (3210), the entrypoint's argument form, environment the app sets
+# (BBX_CLAUDE_PROJECTS_DIR), or the in-VM relay (`node` on PATH, the socket
+# the app creates). The app side of that contract is the `create` block in
+# mac-app/Sources/BeeBoxMac/BoxRuntime.swift. The value only ever goes up: an
+# app older than it keeps its current image and shows that it needs updating.
+# The release check in mac-app/scripts/release.sh refuses an app release below
+# this value.
+ARG BEEBOX_VERSION=0.0.0-dev
+ARG MIN_APP_VERSION=0.1.6
+LABEL org.opencontainers.image.version=$BEEBOX_VERSION \
+      org.opencontainers.image.source=https://github.com/ianb/beebox \
+      run.beebox.min-app-version=$MIN_APP_VERSION
 
 # System binaries the agent is promised as "always available on the box host"
 # (src/core/agent-guide/chat.ts): pandoc, imagemagick (magick), poppler-utils
@@ -151,13 +177,9 @@ ENV DISABLE_AUTOUPDATER=1
 # Docling's PyTorch: the CPU build. A container has no GPU, and the default
 # CUDA build makes the uv cache 5.9 GB instead of 1.4 GB.
 ENV UV_TORCH_BACKEND=cpu
-# Pin the box's beebox dependency to the baked-in tarball. `bbx init`
-# only defaults to `link:<checkout>` for a SOURCE checkout; an installed
-# engine (under node_modules, as here) would fall back to a bare `^version`
-# range that 404s (src/core/box/package.ts defaultBeeBoxSpec), so the
-# box-local `pnpm install` must be told to use the tarball — same as
-# src/scripts/smoke-external-box.ts does.
-ENV BBX_INIT_BEEBOX_SPEC=file:/app/beebox.tgz
+# A box's beebox dependency is the portable `link:.beebox/engine`; the
+# entrypoint points that gitignored link at /app/node_modules/beebox on every
+# start. Boxes made before this keep their `file:/app/beebox.tgz` pin.
 
 USER node
 WORKDIR /app

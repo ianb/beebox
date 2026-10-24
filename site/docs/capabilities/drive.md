@@ -39,7 +39,11 @@ remote changed first and reports a conflict rather than overwriting silently.
 There is no picker for not-yet-mounted Drive folders in the setup UI; you
 paste the Drive URL yourself. A synced Doc's markdown export can lose
 formatting Google Docs supports and none of Bee Box's format does; the box
-tells you when that happens rather than hiding it.
+tells you when that happens rather than hiding it. One cause is that the Google
+Docs service is not switched on for your Google project, so Docs still sync but
+without revision tracking or the check for lost formatting; the box then shows a health warning, a line under Google
+services in Settings, and the agent mentions it once when a chat starts, until a
+sync reaches the Docs service again.
 
 **Go deeper**
 

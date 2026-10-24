@@ -23,7 +23,7 @@ import { getBoxShape } from "../../../../lib/box-shape.js";
 import { isRecord } from "../../../../shared/is-record.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
 import { engineHealthChecks } from "./checks/engine.js";
-import { googleAuthHealthChecks } from "./checks/google.js";
+import { googleAuthHealthChecks, googleDocsApiHealthChecks } from "./checks/google.js";
 import { getBoxTime } from "../../../../lib/time.js";
 import { getHealthSnapshot } from "./checks/snapshot.js";
 import { checkSchedulerHeartbeat, loadScheduleHealth, type BoxScheduleHealth } from "../../../../core/schedule/health-box.js";
@@ -341,6 +341,7 @@ export async function runHealthChecks(
   checks.push(await claudeAuthCheck(options?.claudeCli));
 
   checks.push(...(await googleAuthHealthChecks(boxRoot, { now: getBoxTime(boxRoot) })));
+  checks.push(...(await googleDocsApiHealthChecks(boxRoot)));
 
   checks.push(...(await engineHealthChecks(boxRoot)));
 

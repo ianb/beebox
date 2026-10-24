@@ -16,7 +16,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { errnoCode } from "../../../shared/error-guards.js";
-import { containWithinBox } from "../../../lib/box-containment.js";
+import { containWithinBox, isWithin } from "../../../lib/box-containment.js";
 
 /**
  * Encode a cwd into Claude Code's `~/.claude/projects/<dir>` key. Claude
@@ -129,7 +129,7 @@ class NotATempCwdError extends Error {
 export async function removeTempCwdTranscripts(tempCwd: string): Promise<void> {
   const cwd = cliCwd(tempCwd);
   const temp = cliCwd(os.tmpdir());
-  if (!cwd.startsWith(`${temp}${path.sep}`)) throw new NotATempCwdError(tempCwd, temp);
+  if (cwd === temp || !isWithin(temp, cwd)) throw new NotATempCwdError(tempCwd, temp);
   const encoded = encodeProjectDir(cwd);
   const root = claudeProjectsRoot();
   let names: string[];
@@ -203,7 +203,7 @@ export function isTaskOutputPathForBox({
   const root = cliCwd(boxRoot);
   const landmarks = contextDirs
     .map((contextDir) => cliCwd(containedSessionCwd(boxRoot, contextDir)))
-    .filter((cwd) => cwd.startsWith(`${root}${path.sep}`));
+    .filter((cwd) => cwd !== root && isWithin(root, cwd));
   return [root, ...landmarks].some((cwd) => encodeProjectDir(cwd) === encodedCwd);
 }
 

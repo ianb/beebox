@@ -1,6 +1,7 @@
 import { cn } from "../../lib/cn";
 
 export type CloseButtonSize = "sm" | "md";
+export type CloseButtonVariant = "plain" | "bubble";
 
 export interface CloseButtonProps {
   onClick: () => void;
@@ -10,11 +11,22 @@ export interface CloseButtonProps {
   label?: string;
   size?: CloseButtonSize;
   /**
+   * `plain` (default) is a round ghost button. `bubble` is a 20 px red circle
+   * with a white ×, for the corner of an attachment chip; position it with
+   * `className` and ignore `size` and `onDark`.
+   */
+  variant?: CloseButtonVariant;
+  /**
    * When true, renders a white-pill variant that stays visible on dark backgrounds
    * (image/video overlays, dark-colored bars). Use on any backdrop where a ghost
    * icon would be hard to see.
    */
   onDark?: boolean;
+  /**
+   * When true, the × takes the surrounding text colour, for a bar each system
+   * theme inks itself (the chat composer). Ignored with `onDark`.
+   */
+  ink?: boolean;
   disabled?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
@@ -34,14 +46,36 @@ function XIcon({ size }: { size: CloseButtonSize }) {
   );
 }
 
-export function CloseButton({ onClick, id, label, size, onDark, disabled, className }: CloseButtonProps) {
+export function CloseButton({ onClick, id, label, size, variant, onDark, ink, disabled, className }: CloseButtonProps) {
   label = label ?? "Close";
+  if (variant === "bubble") {
+    return (
+      <button
+        type="button"
+        id={id}
+        onClick={onClick}
+        disabled={disabled ?? false}
+        aria-label={label}
+        title={label}
+        className={cn(
+          "w-5 h-5 rounded-full bg-danger text-white inline-flex items-center justify-center shadow hover:bg-danger-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50 disabled:cursor-not-allowed",
+          className,
+        )}
+      >
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    );
+  }
   size = size ?? "md";
   onDark = onDark ?? false;
   disabled = disabled ?? false;
   const colorClass = onDark
     ? "bg-white/90 hover:bg-white text-warm-700 shadow"
-    : "bg-transparent hover:bg-warm-100 text-warm-500 hover:text-warm-700";
+    : ink === true
+      ? "bg-transparent text-current opacity-75 hover:opacity-100"
+      : "bg-transparent hover:bg-warm-100 text-warm-600 hover:text-warm-700";
   return (
     <button
       type="button"

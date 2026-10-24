@@ -16,6 +16,25 @@ import { loadBoxConfig } from "../../../../core/box/config.js";
 import { baseServerUrl } from "../../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../../lib/public-url.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
+import { readDocsApiDiagnosis, renderDocsApiProblem } from "../../../../connectors/google-drive/docs-api-status.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
+
+/**
+ * The open Docs API problem for the settings Drive line, or null. The page
+ * renders `link` as its own control, so a message that ends with the link
+ * drops it there and the URL shows once. A damaged status file must not break
+ * the settings page; the `google-docs-api` health check already reports it.
+ */
+async function driveDocsApi(boxRoot: string): Promise<{ message: string; link: string | null } | null> {
+  try {
+    const diagnosis = await readDocsApiDiagnosis(boxRoot);
+    if (diagnosis === null) return null;
+    return { message: renderDocsApiProblem(diagnosis, { linkShownSeparately: true }), link: diagnosis.link };
+  } catch (e) {
+    console.error(`[admin] could not read the Google Docs API status for ${boxRoot}: ${errorMessage(e)}`);
+    return null;
+  }
+}
 
 export const googleAdminProcedures = {
   googleStatus: ownerProcedure.query(async ({ ctx }) => {
@@ -28,6 +47,7 @@ export const googleAdminProcedures = {
         needsReauthSince: null,
         scopes: GOOGLE_SCOPES,
         enabledServices,
+        driveDocsApi: null,
       };
     }
     const tokens = await loadGoogleTokens(ctx.boxRoot);
@@ -44,6 +64,8 @@ export const googleAdminProcedures = {
       needsReauthSince: tokens?.needsReauthSince ?? null,
       scopes: GOOGLE_SCOPES,
       enabledServices,
+      // Drive is syncing Google Docs without the Docs API; see connectors/google-drive/docs-api-status.ts.
+      driveDocsApi: await driveDocsApi(ctx.boxRoot),
     };
   }),
 
@@ -62,7 +84,7 @@ export const googleAdminProcedures = {
       const publicUrl =
         input.origin || (await resolveBoxPublicUrl(ctx.boxRoot, { fallback: "http://localhost:3210" })) || "http://localhost:3210";
       const redirectUri = `${baseServerUrl(publicUrl)}/auth/google-services/callback`;
-      const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
+      const oauth2Client = await createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
       // Mint a one-time nonce (behind this owner wall) that the callback must
       // present back — the callback is reachable outside the auth wall, so the
       // nonce is what proves an owner initiated the grant. The returnPath rides

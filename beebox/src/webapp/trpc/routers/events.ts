@@ -9,7 +9,7 @@
  * are not resumable, matching the prior SSE behavior.
  *
  * `turnStream` is the resumable per-turn agent output stream (see
- * chat-turn-buffer).
+ * chat-turn-buffer); `turnSession` reports the session id a turn runs under.
  */
 
 import { z } from "zod";
@@ -21,6 +21,7 @@ import { ensureBoxWatcher } from "../../../core/box/file-watcher.js";
 import { resolveViewsDir } from "../../views/compiler/compile.js";
 import { getTurnBuffer } from "../../../core/chat/turn-buffer.js";
 import { router, publicProcedure } from "../procedures.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 /**
  * The bus payload type map, surfaced at the `@backend` boundary for the
@@ -66,7 +67,7 @@ export const eventsRouter = router({
       let additionalRoots: Array<{ path: string; eventPathPrefix: string }> = [];
       try {
         const { viewsDir } = await resolveViewsDir(opts.ctx.boxRoot);
-        const viewsOutsideBoxRoot = path.relative(opts.ctx.boxRoot, viewsDir).startsWith(`..${path.sep}`);
+        const viewsOutsideBoxRoot = !isWithin(opts.ctx.boxRoot, viewsDir);
         if (viewsOutsideBoxRoot) {
           additionalRoots = [{ path: path.dirname(viewsDir), eventPathPrefix: "src" }];
         }
@@ -176,4 +177,12 @@ export const eventsRouter = router({
         await buffer.waitForChange(signal, version);
       }
     }),
+  // The session id an accepted turn runs under, once its `system/init` frame
+  // arrived; null before then and for an unknown/GC'd turn. A new chat whose
+  // turn stream dropped before init uses this to learn its id.
+  turnSession: publicProcedure
+    .input(z.object({ turnId: z.string().min(1) }))
+    .query(({ input }): { sessionId: string | null } => ({
+      sessionId: getTurnBuffer(input.turnId)?.sessionId ?? null,
+    })),
 });

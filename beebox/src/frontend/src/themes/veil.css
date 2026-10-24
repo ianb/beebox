@@ -7,7 +7,7 @@
 }
 [data-chrome-theme="veil"] .bbx-app-nav {
   color: #eaf4d9;
-  background: linear-gradient(100deg, #164b39e8, #155c4bd9 53%, #284a3dd9), url("./veil-pigment.webp") center 65% / 1200px auto;
+  background: linear-gradient(100deg, #164b39e8, #155c4bd9 53%, #284a3dd9), url("./veil-pigment.webp") center 65% / max(1200px, 100%) auto;
   border-bottom: 2px solid #c4d264;
   box-shadow: 0 3px 0 #283e3a44;
   padding-block: 7px;
@@ -19,21 +19,16 @@
   border-radius: 24px 18px 25px 15px;
   box-shadow: 2px 2px 0 #123e35;
 }
-[data-chrome-theme="veil"] .bbx-app-nav button[aria-pressed="true"]:not(#bbx-nav-errors) {
-  color: #253d31;
-  background: #cfde79;
-  border-color: #d8e9a2;
-}
 [data-chrome-theme="veil"] :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-composer-material) {
   color: #263f37;
-  background: linear-gradient(110deg, #eef3deed, #e8f2e9f7 58%, #e0efe7ed), url("./veil-pigment.webp") center / 1600px auto;
+  background: linear-gradient(110deg, #eef3deed, #e8f2e9f7 58%, #e0efe7ed), url("./veil-pigment.webp") center / auto max(1067px, 100%);
   border: 1px solid #728f77;
   border-radius: 22px 12px 25px 14px;
   box-shadow: 3px 4px 0 #50765c55, 0 8px 24px #164b3926;
 }
 [data-chrome-theme="veil"] .bbx-chat-user-paper {
   color: #55213b;
-  background: linear-gradient(115deg, #f1bdd4f2, #e5b2cce8), url("./veil-pigment.webp") 10% 45% / 1200px auto;
+  background: linear-gradient(115deg, #f1bdd4f2, #e5b2cce8), url("./veil-pigment.webp") 10% 45% / auto max(800px, 100%);
   border: 1px solid #a55879;
   border-radius: 24px 24px 7px 24px;
   box-shadow: 3px 4px 0 #643e5540;
@@ -48,11 +43,11 @@
   --tw-prose-pre-code: #eaf4d9;
   color: #263f37;
 }
-[data-chrome-theme="veil"] .bbx-chat-callout > .text-accent-dark { color: #49674c; }
+[data-chrome-theme="veil"] .bbx-chat-callout > .bbx-chat-callout-context { color: #49674c; }
 [data-chrome-theme="veil"] .bbx-composer-material > section { background: transparent; border: 0; }
 [data-chrome-theme="veil"] .bbx-composer-material textarea { color: #263f37; background: #edf3e4; border-color: #91a78a; }
-[data-chrome-theme="veil"] .bbx-composer-material textarea::placeholder { color: #5d7461; }
-[data-chrome-theme="veil"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+[data-chrome-theme="veil"] .bbx-composer-material textarea::placeholder { color: #5c725f; }
+[data-chrome-theme="veil"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   color: #edfaf1;
   background: linear-gradient(125deg, #287b75, #225e62);
   border: 1px solid #214c4d;
@@ -69,7 +64,7 @@
 .bbx-card-theme[data-card-theme="veil"] {
   --bbx-paper: #eff1dc;
   --bbx-ink: #2c4436;
-  --bbx-ink-soft: #647257;
+  --bbx-ink-soft: #4d5843;
   --bbx-pen: #8e2b55;
   --bbx-edge: #8a9b73;
   --bbx-underlay: #bdcd9b;
@@ -92,11 +87,11 @@
   --bbx-counter: #a1406b;
 }
 .bbx-card-surface[data-card-theme="veil"] {
-  background: linear-gradient(120deg, #f1f2def2, #ecf1def7 65%, #dce9d7ed), url("./veil-pigment.webp") 75% 30% / 1500px auto;
+  background: linear-gradient(120deg, #f1f2def2, #ecf1def7 65%, #dce9d7ed), url("./veil-pigment.webp") 75% 30% / auto max(1000px, 100%);
   box-shadow: 3px 5px 0 #51674755, 0 12px 24px #1d48352b;
 }
 .bbx-card-theme[data-card-theme="veil"] .bbx-card-heading {
-  background: linear-gradient(115deg, #e1e7afe8, #c8dfbde8 58%, #bcd8c9ed), url("./veil-pigment.webp") 45% 48% / 1000px auto;
+  background: linear-gradient(115deg, #e1e7afe8, #c8dfbde8 58%, #bcd8c9ed), url("./veil-pigment.webp") 45% 48% / max(1000px, 100%) auto;
   border-bottom: 1px solid #91a17c;
 }
 .bbx-card-surface[data-card-theme="veil"] > .bbx-card-properties {
@@ -108,8 +103,8 @@
 [data-chrome-theme="veil"] .bbx-app-nav button:focus-visible { outline-color: #e9efb3; }
 @media (hover: hover) {
   [data-chrome-theme="veil"] .bbx-app-nav button:hover:not(#bbx-nav-errors) { background: #3c7158; }
-  [data-chrome-theme="veil"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled:hover { background: #287b75; }
+  [data-chrome-theme="veil"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled:hover { background: #287b75; }
 }
 @media (max-width: 639px) {
-  .bbx-box-presentation[data-chrome-theme="veil"] { background-size: auto 1100px; background-position: 58% top; }
+  .bbx-box-presentation[data-chrome-theme="veil"] { background-size: auto max(1100px, 100%); background-position: 58% top; }
 }

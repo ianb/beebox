@@ -25,7 +25,7 @@ export interface TextLinkProps {
 
 const TONE_CLASSES: Record<TextLinkTone, string> = {
   default: "text-primary hover:text-primary-dark",
-  subtle: "text-warm-600 hover:text-warm-900",
+  subtle: "text-warm-700 hover:text-warm-900",
 };
 
 const MATERIAL_TONE_CLASSES: Record<TextLinkTone, string> = {

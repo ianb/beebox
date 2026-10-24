@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Build "Bee Box Desktop.app": the release binary, Sparkle.framework, the app icon, the bundled Linux
-# kernel, and an Info.plist that pins the beebox image to the app's version.
+# kernel, and an Info.plist with the app's version and the oldest engine image it runs.
 #
 # Environment:
-#   VERSION          app version and beebox image tag (default 0.0.0-dev)
+#   VERSION          app version (default 0.0.0-dev); the engine image is
+#                    not pinned to it: the app follows the image channel
+#                    (ghcr.io/ianb/beebox:latest, see Sources/BeeBoxMac/ImageSource.swift)
 #   BUILD_NUMBER     CFBundleVersion (default: commit count)
 #   BUNDLE_ID        default run.beebox.mac
-#   BEEBOX_IMAGE     image reference (default ghcr.io/ianb/beebox:$VERSION)
+#   MIN_ENGINE_VERSION  the oldest engine image this app can run (default
+#                    below); bump it by hand when the app drops support for
+#                    an older image's contract (mounts, port, relay, env)
 #   SIGN_IDENTITY    codesign identity; "-" (ad-hoc, the default) until the
 #                    Developer ID certificate exists
 #   SPARKLE_PUBLIC_KEY  the update-signing key's public half (default: the
@@ -19,7 +23,7 @@ cd "$(dirname "$0")/.."
 VERSION="${VERSION:-0.0.0-dev}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD)}"
 BUNDLE_ID="${BUNDLE_ID:-run.beebox.mac}"
-IMAGE="${BEEBOX_IMAGE:-ghcr.io/ianb/beebox:$VERSION}"
+MIN_ENGINE_VERSION="${MIN_ENGINE_VERSION:-0.1.6}"
 IDENTITY="${SIGN_IDENTITY:--}"
 # A development build carries no update key: Sparkle would otherwise "update"
 # it to the latest release (any release is newer than 0.0.0-dev).
@@ -64,7 +68,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 	<key>LSArchitecturePriority</key><array><string>arm64</string></array>
 	<key>LSUIElement</key><true/>
 	<key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
-	<key>BeeBoxImage</key><string>${IMAGE}</string>
+	<key>BeeBoxMinimumEngineVersion</key><string>${MIN_ENGINE_VERSION}</string>
 	<key>SUFeedURL</key><string>${FEED_URL}</string>
 	<key>SUPublicEDKey</key><string>${SPARKLE_PUBLIC_KEY}</string>
 	<key>SUEnableAutomaticChecks</key><true/>
@@ -104,4 +108,4 @@ sign "$FW/Updater.app"
 sign "$APP/Contents/Frameworks/Sparkle.framework"
 sign --entitlements BeeBoxMac.entitlements "$APP"
 codesign --verify --strict --deep "$APP"
-echo "Built $PWD/$APP ($VERSION, image $IMAGE, signed by ${IDENTITY/#-/ad hoc})"
+echo "Built $PWD/$APP ($VERSION, engine >= $MIN_ENGINE_VERSION, signed by ${IDENTITY/#-/ad hoc})"

@@ -31,6 +31,15 @@ if [[ -n "${BBX_GIT_EMAIL:-}" ]]; then
   git config --global user.email "$BBX_GIT_EMAIL"
 fi
 
+# The box commits `"beebox": "link:.beebox/engine"`; the gitignored link holds
+# this image's engine path. Point it here on every start, before any command
+# (`docker compose run … pnpm add`, the install below) can run pnpm in the box.
+# A fresh `bbx engine init` makes its own link. A failure stops the container.
+ENGINE=/app/node_modules/beebox
+if [[ -f "$BOX_ROOT/package.json" ]]; then
+  "$ENGINE/bin/box-engine-link" link "$BOX_ROOT" "$ENGINE"
+fi
+
 # Any arguments → run them as-is (bbx engine init, claude auth login, a shell, …).
 if [[ $# -gt 0 ]]; then
   exec "$@"
@@ -38,12 +47,12 @@ fi
 
 # ── No arguments: readiness check, then serve ────────────────────────────
 #
-# A box is ready only when all three hold. Checking just the marker would
-# accept a partial init (bbx engine init writes the marker early but commits at the
+# A box is ready only when all three hold. Checking just _config/ would
+# accept a partial init (bbx engine init creates it early but commits at the
 # end — a crash between the two leaves a box that looks initialized but has no
 # HEAD commit).
 ready=1
-[[ -f "$BOX_ROOT/.beebox/box.json" ]] || ready=0
+[[ -d "$BOX_ROOT/_config" ]] || ready=0
 [[ -f "$BOX_ROOT/package.json" ]] || ready=0
 git -C "$BOX_ROOT" rev-parse HEAD >/dev/null 2>&1 || ready=0
 
@@ -72,10 +81,17 @@ if [[ "${BBX_SKIP_CONVERGE:-}" != "1" ]]; then
 set -euo pipefail
 BOX_ROOT="$1"
 # A v2 box is a package: it needs its own `pnpm install` before serving so
-# schemas/views resolve (mirrors src/scripts/smoke-external-box.ts). Only on first
-# run — a populated node_modules means it is already installed.
-if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
-  echo "beebox: first run — installing box dependencies (this is a one-time step)..." >&2
+# schemas/views resolve (mirrors src/scripts/smoke-external-box.ts). It runs
+# unless the box shows a completed install (box-engine-link verify: every
+# declared dependency present, .bin/bbx, and node_modules/beebox through the
+# engine link for the portable spec). A fresh `bbx engine init` leaves only
+# node_modules/beebox, and a migration that changes the spec does not
+# reinstall; both get a real install here.
+box_install() {
+  if /app/node_modules/beebox/bin/box-engine-link verify "$BOX_ROOT" 2>/dev/null; then
+    return 0
+  fi
+  echo "beebox: installing box dependencies..." >&2
   # --allow-build approves the box's native/generated deps (better-sqlite3 et
   # al.) to run their install scripts. pnpm 10 blocks them by default, and
   # non-interactively a blocked build is a hard error — the box package.json's
@@ -87,10 +103,13 @@ if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
       --allow-build=@google/genai \
       --allow-build=protobufjs \
       --allow-build=@googleworkspace/cli )
-fi
+  /app/node_modules/beebox/bin/box-engine-link verify "$BOX_ROOT"
+}
+box_install
 
 cd "$BOX_ROOT"
 timeout 600 bbx engine migrate --apply --repair --within-maintenance --prepare --json
+box_install
 CONVERGE
   then
     cat >&2 <<'RECOVERY'

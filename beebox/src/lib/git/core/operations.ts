@@ -24,7 +24,6 @@
  * need one.
  */
 
-import { boxWorkEnvironment } from "../../box-maintenance/admission.js";
 import { simpleGit, CleanOptions } from "simple-git";
 
 import {
@@ -38,6 +37,7 @@ import {
   LOG_FORMAT,
 } from "../internal.js";
 import { withBoxGitLock } from "../../git-lock.js";
+import { commitEnvironment } from "./commit-env.js";
 import { inspectIndexLock, recoverStaleIndexLock } from "../../git-stale-lock.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { errorMessage } from "../../../shared/error-guards.js";
@@ -263,9 +263,22 @@ async function stagedPaths(boxRoot: string, paths: string[]): Promise<string[]> 
  * @param paths - Paths to inspect (relative to boxRoot)
  */
 export async function pathsHaveChanges(boxRoot: string, paths: string[]): Promise<boolean> {
-  if (paths.length === 0) return false;
-  const output = await simpleGit(boxRoot).raw(["status", "--short", "--", ...paths]);
-  return output.trim().length > 0;
+  return (await changedFiles(boxRoot, paths)).length > 0;
+}
+
+/**
+ * The files under `paths` that differ from HEAD, staged or not, or are
+ * untracked. A path already deleted and committed is absent: `git add` refuses
+ * it ("pathspec did not match any files").
+ */
+async function changedFiles(boxRoot: string, paths: string[]): Promise<string[]> {
+  if (paths.length === 0) return [];
+  const git = simpleGit(boxRoot);
+  // Porcelain paths are relative to the repository root, not to boxRoot.
+  const prefix = (await git.raw(["rev-parse", "--show-prefix"])).trim();
+  // `-z` entries are `XY <path>`; `--no-renames` keeps each to one path.
+  const output = await git.raw(["status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all", "--", ...paths]);
+  return output.split("\0").filter((entry) => entry !== "").map((entry) => entry.slice(3 + prefix.length));
 }
 
 /**
@@ -289,25 +302,13 @@ export async function stageAll(boxRoot: string): Promise<void> {
  * @param options - Commit options
  * @returns The commit hash
  */
-/** Preserve hooks/tooling while excluding the override keys blocked by simple-git's parseEnv policy. */
-function commitEnvironment(): NodeJS.ProcessEnv {
-  const blocked = new Set([
-    "editor", "visual", "git_askpass", "git_config_global", "git_config_system",
-    "git_config_count", "git_config", "git_editor", "git_exec_path", "git_external_diff",
-    "git_pager", "git_proxy_command", "git_template_dir", "git_sequence_editor",
-    "git_ssh", "git_ssh_command", "pager", "prefix", "ssh_askpass",
-  ]);
-  return Object.fromEntries(Object.entries({ ...process.env, ...boxWorkEnvironment() })
-    .filter(([key]) => !blocked.has(key.toLowerCase()) && !/^git_config_(key|value)_/i.test(key)));
-}
-
 export async function commit(
   boxRoot: string,
   options: GitCommitOptions
 ): Promise<string> {
   const message = buildCommitMessage(options);
 
-  const git = simpleGit(boxRoot).env(commitEnvironment());
+  const git = simpleGit(boxRoot).env(commitEnvironment(boxRoot));
   const commitArgs = options.amend ? ["--amend"] : [];
   if (options.noVerify) commitArgs.push("--no-verify");
   return commitAndReadHead(boxRoot, () => git.commit(message, commitArgs));
@@ -331,7 +332,7 @@ export async function commitPaths(
   }
 
   const message = buildCommitMessage(options);
-  const git = simpleGit(boxRoot).env(commitEnvironment());
+  const git = simpleGit(boxRoot).env(commitEnvironment(boxRoot));
   const commitArgs = ["commit", "-m", message];
   if (options.amend) {
     commitArgs.push("--amend");
@@ -353,7 +354,7 @@ export async function commitPaths(
  *
  *   - Fast path: if none of `paths` currently show changes, a sweep already
  *     committed them — nothing to do, return `null`.
- *   - Residual race: if the sweep commits between our `pathsHaveChanges` check
+ *   - Residual race: if the sweep commits between our `changedFiles` check
  *     and our `commitPaths`, git reports "nothing to commit"
  *     (`isNothingToCommitError`) — the paths landed anyway, so that is success,
  *     also `null`.
@@ -363,6 +364,10 @@ export async function commitPaths(
  * capture staging media), `git add` stages nothing from it and a commit
  * pathspec naming it would fail with "pathspec did not match any file(s) known
  * to git" (the 2026-08-03 box-family capture wedge).
+ *
+ * Only changed files stage: a requested path deleted in an earlier commit
+ * would make `git add` fail (a migration's paths span every commit since its
+ * first attempt; 2026-10-22, three production boxes).
  *
  * Returns the new commit hash, or `null` when there was nothing to commit.
  */
@@ -374,10 +379,11 @@ export async function stageAndCommitPaths(
   return withBoxGitLock(boxRoot, async () => {
     // Fast path: the box's auto-sweep may already have committed these paths (an
     // empty path list also lands here — nothing to stage or commit).
-    if (!(await pathsHaveChanges(boxRoot, paths))) return null;
-    await stageFiles(boxRoot, paths);
-    if (options.excludeOversized === true) await unstageOversizedBlobs(boxRoot, paths);
-    const staged = await stagedPaths(boxRoot, paths);
+    const changed = await changedFiles(boxRoot, paths);
+    if (changed.length === 0) return null;
+    await stageFiles(boxRoot, changed);
+    if (options.excludeOversized === true) await unstageOversizedBlobs(boxRoot, changed);
+    const staged = await stagedPaths(boxRoot, changed);
     if (staged.length === 0) return null;
     try {
       return await commitPaths(boxRoot, { ...options, paths: staged });

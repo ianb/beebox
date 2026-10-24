@@ -8,6 +8,7 @@ import { isRecord } from "../../shared/is-record.js";
 import { BOX_DIRS, getBoxDir } from "../../lib/paths/core.js";
 import { invariant } from "../../shared/invariant.js";
 import { getAllDriveHandlers } from "./handlers.js";
+import { nonEmptyString } from "../../shared/optional-string.js";
 
 const DRIVE_CARD_IGNORE = [
   "node_modules/**",
@@ -231,10 +232,6 @@ function xmlSummary(content: string): DriveCardSummary {
   };
 }
 
-function optionalString(value: unknown): string | null {
-  return typeof value === "string" && value !== "" ? value : null;
-}
-
 /**
  * Read a Drive card's health fields without the schema machinery.
  *
@@ -251,7 +248,7 @@ export function driveCardSummary(content: string): DriveCardSummary {
   if (Array.isArray(sheets)) {
     for (const sheet of sheets) {
       if (!isRecord(sheet)) continue;
-      const title = optionalString(sheet["title"]);
+      const title = nonEmptyString(sheet["title"]);
       if (title !== null) tabs.push(title);
     }
   }
@@ -261,7 +258,7 @@ export function driveCardSummary(content: string): DriveCardSummary {
   if (Array.isArray(lossyField)) {
     for (const item of lossyField) {
       if (!isRecord(item)) continue;
-      const type = optionalString(item["type"]);
+      const type = nonEmptyString(item["type"]);
       const count = item["count"];
       if (type === null || typeof count !== "number") continue;
       lossy.push({ type, count });
@@ -272,11 +269,11 @@ export function driveCardSummary(content: string): DriveCardSummary {
   return {
     // Every Drive card type carries the Drive name as `title`. A synced file
     // carries Drive's last-modified time; a folder mount, when it last synced.
-    title: optionalString(fields["title"]),
-    driveModified: isRecord(drive) ? optionalString(drive["modified"]) : null,
-    lastSync: optionalString(fields["last-sync"]),
+    title: nonEmptyString(fields["title"]),
+    driveModified: isRecord(drive) ? nonEmptyString(drive["modified"]) : null,
+    lastSync: nonEmptyString(fields["last-sync"]),
     conflict: fields["conflict"] === true,
-    error: optionalString(fields["error"]),
+    error: nonEmptyString(fields["error"]),
     tabs,
     lossy,
   };

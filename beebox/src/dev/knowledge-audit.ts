@@ -15,7 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
 import { loadTests, getTestsPath, KnowledgeAuditTranscriptError } from "./lib/test-runner/runner/run-test.js";
-import { runBoxAudits } from "./lib/box-audits.js";
+import { runBoxAudits } from "./lib/box-audits/core.js";
 import { assertStandaloneBox, assertCleanAuditBox, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
 import { resolveAuditBox } from "./lib/audit-box.js";
 import { generateReport } from "./lib/report.js";
@@ -200,7 +200,7 @@ program
     const engine = options.engine;
 
     // `--box` names a path at or below the box's one root; resolve to that
-    // root (where `.beebox/box.json`, cards, and AGENTS.md live) so
+    // root (where `package.json`, cards, and AGENTS.md live) so
     // docs generation and runTest target the box itself, and derive a stable ledger
     // identity. See resolveAuditBox. assertStandaloneBox verifies the git
     // repo is that same root.

@@ -28,11 +28,6 @@
   border: 1px solid #6376b0;
   border-radius: 5px 3px 5px 3px;
 }
-[data-chrome-theme="tempest"] .bbx-app-nav button[aria-pressed="true"]:not(#bbx-nav-errors) {
-  background: #b2e0ed;
-  color: #101d40;
-  border-color: #d0daff;
-}
 [data-chrome-theme="tempest"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material) {
   color: var(--tempest-ink);
   background: linear-gradient(135deg,#102c40a8,#06172bb5 75%);
@@ -56,10 +51,11 @@
   --tw-prose-links: #bacdff;
   color: var(--tempest-ink);
 }
-[data-chrome-theme="tempest"] .bbx-chat-callout > .text-accent-dark { color: #b8c6e7; }
+[data-chrome-theme="tempest"] .bbx-chat-callout > .bbx-chat-callout-context { color: #b8c6e7; }
 [data-chrome-theme="tempest"] .bbx-composer-material > section { background: transparent; border: 0; }
 [data-chrome-theme="tempest"] .bbx-composer-material { backdrop-filter: none; }
 [data-chrome-theme="tempest"] .bbx-composer-material textarea { background: transparent; color: #e0eef4; }
+[data-chrome-theme="tempest"] .bbx-composer-material textarea::placeholder { color: #a4bac8; }
 [data-chrome-theme="tempest"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic):enabled {
   color: #0c193b;
   background: #a8d4e5;
@@ -74,6 +70,8 @@
   border-radius: 12px;
 }
 .bbx-card-theme[data-card-theme="tempest"] {
+  --bbx-slip-light: #ffffff0c;
+  --bbx-slip-edge-light: #ffffff26;
   --bbx-paper: #0b1b2b;
   --bbx-ink: #e0eef4;
   --bbx-ink-soft: #a4bac8;
@@ -103,11 +101,6 @@
 
 }
 .bbx-card-theme[data-card-theme="tempest"] .bbx-card-heading { background: transparent; border-bottom: 0; }
-.bbx-card-theme[data-card-theme="tempest"] .bbx-themed-action {
-  color: #0b1b2b;
-  background: #a8d4e5;
-  border-radius: 12px 5px 12px 5px;
-}
 [data-chrome-theme="tempest"] :is(button,textarea,input):focus-visible:not(.bbx-card-theme *) {
   outline: 2px solid #d4dfff;
   outline-offset: 3px;
@@ -118,7 +111,7 @@
 }
 @media (max-width:639px) {
   .bbx-box-presentation[data-chrome-theme="tempest"] {
-    background-size: auto 1100px;
+    background-size: auto max(1100px, 100%);
     background-position: 25% top;
     background-repeat: no-repeat;
 

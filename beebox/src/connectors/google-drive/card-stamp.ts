@@ -9,13 +9,13 @@
  */
 
 import * as fs from "node:fs/promises";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../../exports/cards.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { createGlinkTemplate, type GlinkOriginType } from "../../schemas/glink.js";
 import { createGfolderTemplate } from "../../schemas/gfolder.js";
 import type { DriveFile } from "../../services/google-drive/core.js";
 import type { FolderProblemCounts } from "./folder-types.js";
+import { readCardFrontmatter } from "../../core/card-io.js";
 
 /** Existing frontmatter as a mutable bag, plus the body to write back. */
 interface CardParts {
@@ -23,11 +23,21 @@ interface CardParts {
   body: string;
 }
 
+/** A Drive card whose frontmatter cannot be read back; stamping it would replace its fields. */
+export class UnreadableDriveCardError extends Error {
+  constructor(readonly cardPath: string) {
+    super(`${cardPath}: frontmatter does not parse as a YAML mapping; fix it before Drive can update this card`);
+    this.name = "UnreadableDriveCardError";
+  }
+}
+
 async function readCardParts(cardPath: string): Promise<CardParts> {
   const content = await fs.readFile(cardPath, "utf-8");
   const split = splitCardContent(content);
-  const parsed: unknown = split.frontmatterText === "" ? {} : parseYaml(split.frontmatterText);
-  return { fields: isRecord(parsed) ? { ...parsed } : {}, body: split.body };
+  if (!split.hasFrontmatter) return { fields: {}, body: split.body };
+  const fields = readCardFrontmatter(content);
+  if (fields === null) throw new UnreadableDriveCardError(cardPath);
+  return { fields: { ...fields }, body: split.body };
 }
 
 /**
@@ -40,7 +50,7 @@ function driveMap(parts: CardParts): Record<string, unknown> {
 }
 
 async function writeCardParts(cardPath: string, parts: CardParts): Promise<void> {
-  await fs.writeFile(cardPath, `---\n${stringifyYaml(parts.fields)}---\n${parts.body}`);
+  await fs.writeFile(cardPath, renderFrontmatterBlock(parts.fields, parts.body));
 }
 
 /** The outcome the folder card reports after a sync pass. */

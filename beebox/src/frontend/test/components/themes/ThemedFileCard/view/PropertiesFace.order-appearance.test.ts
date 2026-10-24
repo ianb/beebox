@@ -108,7 +108,7 @@ void test("A doc with contains and a type field shows every section; the heading
 // preferred view" button and, under it, a button that copies the card's whole
 // original text (the boxholder asked for it beside "Original text", 2026-10-13):
 void test("The view chooser comes last but for the actions menu.", async (t) => {
-  t.check(textOf(doc.slice(doc.lastIndexOf("<section"))), "View Doc Original text Use preferred view Copy original text Card actions");
+  t.check(textOf(doc.slice(doc.lastIndexOf("<section"))), "View Doc Original text Use preferred view Copy original text Print Card actions");
 });
 
 // ## Appearance
@@ -143,7 +143,7 @@ void test("An image card also offers the image itself; a doc does not:", async (
   }, { canEdit: false });
   t.check([textOf(doc).includes("Copy image"), textOf(photo.slice(photo.lastIndexOf("<section")))], [
     false,
-    "View Image Original text Use preferred view Copy original text Copy image Card actions",
+    "View Image Original text Use preferred view Copy original text Copy image Print Card actions",
   ]);
 
   // A box-authored theme has no catalog swatch; the card's own choice is still

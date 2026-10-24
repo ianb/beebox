@@ -1,0 +1,1333 @@
+path,created,create_hash,create_mechanical,cocreated_with_code,create_nsrc,create_nfiles,create_ntest,create_touches_subject,later_touches_subject,later_small_code_and_test,create_mentions_fix,bridged_from_doctest,later_commits_all,later_mechanical,later_nonmech,later_code_and_test,later_test_only,age_days,lines,later_nonmech_hashes
+beebox-clerk/test/domain/box-identity.test.ts,2026-06-11,16ead04a6,,Y,8,11,3,Y,0,0,,,2,2,0,0,0,133,74,
+beebox-clerk/test/domain/box-url.test.ts,2026-08-02,f06d16d22,,Y,8,10,1,Y,0,0,,,2,2,0,0,0,81,14,
+beebox-clerk/test/domain/capture-messages.test.ts,2026-10-15,3e5b949ad,,Y,15,22,7,Y,0,0,Y,,0,0,0,0,0,7,40,
+beebox-clerk/test/domain/commentary.test.ts,2026-06-13,afd0d2fa2,,Y,2,3,1,Y,3,0,,,5,2,3,3,0,131,118,3e5b949ad 6019d442c 9b64b1ebc
+beebox-clerk/test/domain/config.test.ts,2026-06-11,16ead04a6,,Y,8,11,3,Y,2,1,,,4,2,2,2,0,133,102,5348e3043 9b64b1ebc
+beebox-clerk/test/domain/messages.test.ts,2026-10-15,3e5b949ad,,Y,15,22,7,Y,0,0,Y,,0,0,0,0,0,7,25,
+beebox-clerk/test/domain/relay-auth.test.ts,2026-07-11,0bcc1e4a3,,Y,6,9,2,Y,0,1,,,3,2,1,1,0,103,107,2feab7a6c
+beebox-clerk/test/domain/relay-messages.test.ts,2026-07-11,0bcc1e4a3,,Y,6,9,2,Y,1,0,,,3,2,1,1,0,103,119,52b596820
+beebox-clerk/test/domain/send.test.ts,2026-10-15,3e5b949ad,,Y,15,22,7,Y,0,0,Y,,0,0,0,0,0,7,84,
+beebox-clerk/test/domain/tab-arrangement.test.ts,2026-08-05,52b596820,,Y,24,33,7,Y,1,0,,,3,2,1,1,0,78,115,352d1ab7e
+beebox-clerk/test/platform/capture-page.test.ts,2026-10-15,3e5b949ad,,Y,15,22,7,Y,0,0,Y,,0,0,0,0,0,7,90,
+beebox-clerk/test/platform/clerk-api.test.ts,2026-07-12,27720149d,,Y,8,12,3,Y,3,0,,,5,2,3,3,0,102,285,3e5b949ad 6019d442c 52b596820
+beebox-clerk/test/platform/config-storage.test.ts,2026-06-11,16ead04a6,,Y,8,11,3,Y,0,0,,,2,2,0,0,0,133,54,
+beebox-clerk/test/platform/send-actions.test.ts,2026-10-15,3e5b949ad,,Y,15,22,7,Y,1,0,Y,,1,0,1,1,0,7,158,d7d7670ae
+beebox-clerk/test/platform/tab-arrangement-executor.test.ts,2026-08-05,52b596820,,Y,24,33,7,Y,0,0,,,2,2,0,0,0,78,78,
+beebox-clerk/test/platform/tab-arrangement-executor.verifier.test.ts,2026-08-10,352d1ab7e,,Y,7,10,3,Y,0,0,,,2,2,0,0,0,73,61,
+beebox-clerk/test/platform/tab-transfer-actions.test.ts,2026-08-06,4b579067f,,Y,3,4,1,Y,1,1,,,3,2,1,1,0,77,64,74ba402ef
+beebox/pub-worker/test/access.test.ts,2026-07-15,553345f3b,,Y,4,8,2,Y,1,0,,,4,2,2,2,0,99,248,bec8749e3 31cfbc157
+beebox/pub-worker/test/shared-site.test.ts,2026-09-26,7ab333586,,Y,10,14,4,Y,3,1,,,4,1,3,3,0,26,207,bec8749e3 e6d6d09e5 b8ecc5c9b
+beebox/pub-worker/test/site.test.ts,2026-09-24,28ec4fd00,,Y,52,72,12,Y,2,0,,,3,1,2,2,0,28,228,bec8749e3 e6d6d09e5
+beebox/pub-worker/test/worker.test.ts,2026-07-15,22374fb53,,Y,14,17,1,,1,0,,,5,2,3,3,0,99,165,bec8749e3 0597b59f1 553345f3b
+beebox/src/frontend/test/api.frontend-api.test.ts,2026-05-26,f1e455c47,,Y,2,3,1,Y,0,0,,Y,8,8,0,0,0,149,41,
+beebox/src/frontend/test/components/admin/CloudflarePublishConnectionsSection/OrphanPublications.orphan-publications.test.ts,2026-10-06,0e755f663,,Y,125,175,41,Y,0,0,,,6,4,2,2,0,16,55,ab71d9b3c b1a25d301
+beebox/src/frontend/test/components/admin/CloudflarePublishConnectionsSection/SharedPublicationHost.shared-publication-host.test.ts,2026-09-26,7ab333586,,Y,10,14,4,Y,1,1,,Y,6,4,2,2,0,26,25,ab71d9b3c 462df78b6
+beebox/src/frontend/test/components/admin/CloudflarePublishConnectionsSection/view.cloudflare-publish-save-feedback.test.ts,2026-09-24,6babf53c2,,Y,1,2,1,,0,0,,,6,6,0,0,0,28,51,
+beebox/src/frontend/test/components/app-bar-chrome.place-owners.test.ts,2026-10-16,4a31d999d,,Y,2,13,1,,0,0,Y,Y,5,4,1,1,0,6,49,48dcb3f39
+beebox/src/frontend/test/components/app-bar-faces/AppNavFace.test.ts,2026-10-21,ca433f7d8,,Y,6,9,3,Y,0,0,,,0,0,0,0,0,1,29,
+beebox/src/frontend/test/components/app-bar-faces/PlacePillFace.test.ts,2026-10-21,d81bb34ab,,Y,3,5,2,,1,0,Y,,1,0,1,1,0,1,49,e11d5b6e7
+beebox/src/frontend/test/components/app-bar-faces/ProfileButtonFace.test.ts,2026-10-21,ca433f7d8,,Y,6,9,3,Y,0,0,,,0,0,0,0,0,1,37,
+beebox/src/frontend/test/components/app-bar-faces/SessionChipFace.test.ts,2026-10-21,d81bb34ab,,Y,3,5,2,,1,0,Y,,1,0,1,1,0,1,39,e11d5b6e7
+beebox/src/frontend/test/components/app-bar-faces/VoiceChipButtonFace.test.ts,2026-10-21,ca433f7d8,,Y,6,9,3,Y,0,0,,,0,0,0,0,0,1,32,
+beebox/src/frontend/test/components/AppNav/BoxPageMenuItems.test.ts,2026-10-07,81687ca2c,,Y,4,6,2,Y,0,0,,Y,4,4,0,0,0,15,51,
+beebox/src/frontend/test/components/AppNav/PlacePill.menus.test.ts,2026-10-06,9819c60c5,,Y,12,16,4,Y,0,1,,Y,7,4,3,3,0,16,96,b54df33a3 917676083 d10c436ef
+beebox/src/frontend/test/components/CardContents/CardContentsMenu.read-outline.test.ts,2026-10-20,b4a65301c,,Y,7,9,2,Y,0,0,,,0,0,0,0,0,2,24,
+beebox/src/frontend/test/components/CardContents/outline.test.ts,2026-10-20,b4a65301c,,Y,7,9,2,Y,0,0,,,0,0,0,0,0,2,28,
+beebox/src/frontend/test/components/chat.activity-wording.test.ts,2026-10-09,83c3e962b,,Y,9,18,2,,0,5,,Y,10,4,6,6,0,13,404,472e79b88 252c0d10a 72226e395 5d357ffa2 89da05fee e18934929
+beebox/src/frontend/test/components/chat.audio-overlay.test.ts,2026-08-15,69e429450,,Y,11,14,3,,0,0,Y,Y,11,8,3,3,0,68,154,796876cc2 50e05c522 f3728d28a
+beebox/src/frontend/test/components/chat.emission-assemble.test.ts,2026-07-04,5bcd23406,,Y,10,11,1,,0,3,,Y,28,8,20,20,0,110,732,036c93ec0 29f41024e c73bf0051 a95eb7759 e2783db87 bc762c042 d020cfe43 c78c73891 80862caf1 48548cb39 f3ff02704 ba239724c ea2e8cc80 b64370704 ff47ff2fa 6c16a4992 937a4ddba 308abba31 7ad114960 d0f8743e9
+beebox/src/frontend/test/components/chat/ambient/projection.ambient-replies.test.ts,2026-09-07,1a74113ae,,Y,84,111,13,Y,0,0,,Y,4,4,0,0,0,45,83,
+beebox/src/frontend/test/components/chat/ambient/selected-transcript.test.ts,2026-10-07,c46147a23,,Y,3,5,1,Y,0,0,,Y,4,4,0,0,0,15,45,
+beebox/src/frontend/test/components/chat/capture-bubble.capture-bubble-states.test.ts,2026-08-21,858cf592d,,Y,19,24,5,Y,1,0,,Y,7,6,1,1,0,62,130,0edd66351
+beebox/src/frontend/test/components/chat/capture-message.test.ts,2026-07-10,fc7e34267,,Y,26,29,2,Y,2,0,,Y,11,9,2,2,0,104,123,ab43e7876 34cf71d3a
+beebox/src/frontend/test/components/chat/chat-scroll/scroll-reconcile.chat-scroll-reconcile.test.ts,2026-07-21,162329389,,Y,2,5,1,Y,5,3,Y,Y,11,5,6,6,0,93,100,3f06e3deb ee3a07157 2afbb645c 904c6d143 9d3bac6a0 293c59abf
+beebox/src/frontend/test/components/chat/composer-caret.test.ts,2026-09-13,7fc0bbdf7,,Y,3,5,1,Y,0,0,Y,Y,4,4,0,0,0,39,51,
+beebox/src/frontend/test/components/chat/conversation.send-binding.test.ts,2026-09-07,1a74113ae,,Y,84,111,13,,0,0,,Y,6,6,0,0,0,45,151,
+beebox/src/frontend/test/components/chat/conversation/card-activity-store.test.ts,2026-09-07,1a74113ae,,Y,84,111,13,Y,0,0,,Y,5,5,0,0,0,45,75,
+beebox/src/frontend/test/components/chat/conversation/controller-pool.conversation-controller-pool.test.ts,2026-09-07,1a74113ae,,Y,84,111,13,Y,2,0,,Y,8,6,2,2,0,45,598,fec38aa5a f9159af51
+beebox/src/frontend/test/components/chat/conversation/use-bound-emission/awaiting-hq.test.ts,2026-09-10,5973b4eea,,Y,5,6,1,Y,1,0,,Y,8,6,2,2,0,42,95,a95eb7759 d020cfe43
+beebox/src/frontend/test/components/chat/conversation/use-bound-emission/pending-sends.test.ts,2026-09-07,1a74113ae,,Y,84,111,13,Y,6,1,,Y,14,7,7,7,0,45,305,a95eb7759 1f284170a bc762c042 fec38aa5a d020cfe43 c78c73891 f9159af51
+beebox/src/frontend/test/components/chat/conversation/use-conversation-machine.conversation-start-target.test.ts,2026-09-15,659463c41,,Y,1,3,1,Y,0,0,Y,Y,7,6,1,1,0,37,69,90bf65d57
+beebox/src/frontend/test/components/chat/everywhere/card-context/selection-context-store.card-conversation-context.test.ts,2026-09-07,1a74113ae,,Y,84,111,13,,1,0,,Y,8,6,2,2,0,45,47,43f948450 d6056b354
+beebox/src/frontend/test/components/chat/everywhere/conversation-context.conversation-storage.test.ts,2026-09-08,f9159af51,,Y,14,18,3,Y,0,0,,Y,7,6,1,1,0,44,54,fec38aa5a
+beebox/src/frontend/test/components/chat/everywhere/conversation-intent.test.ts,2026-09-07,1a74113ae,,Y,84,111,13,Y,2,1,,Y,6,4,2,2,0,45,97,98bc0aacb 53c21bba0
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat.chat-machine-refresh-cause.test.ts,2026-08-23,e5435c988,,Y,5,8,2,Y,0,1,Y,Y,9,7,2,2,0,60,122,8e7b5de94 04fa0fd10
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat.native-location-bridge.test.ts,2026-07-22,0f0eef5e2,,Y,9,18,3,,0,0,Y,Y,7,7,0,0,0,92,82,
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat.native-narration-bridge.test.ts,2026-07-23,b59740827,,Y,11,17,2,Y,1,0,Y,Y,8,5,3,3,0,91,53,64f16e7e6 43e5e66fd e97078efe
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat.native-speech-playback-bridge.test.ts,2026-07-27,f65422ce2,,Y,11,15,1,Y,1,0,,Y,6,5,1,1,0,87,54,4192df2b2
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/background-tasks.task-events.test.ts,2026-06-02,a09a60cc0,,Y,9,10,1,Y,1,0,Y,Y,12,10,2,2,0,142,166,27e697c16 71c59352d
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/capture-anchor.test.ts,2026-10-16,e2d468d33,,Y,20,25,3,Y,4,4,,Y,7,3,4,4,0,6,90,08f52c6b3 a37d1532e a6221d49f b50848d86
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/context-chip-label.test.ts,2026-08-01,ee871edfc,,Y,8,9,1,Y,1,0,Y,Y,8,7,1,1,0,82,45,d4a799b27
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/messages.open-question.test.ts,2026-10-20,6bfcaa16b,,Y,34,49,10,Y,3,0,,,3,0,3,3,0,2,112,62f651054 b54df33a3 d40a210da
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/messages.streaming-renders.test.ts,2026-10-16,25ff24d22,,Y,2,4,1,Y,5,1,,Y,10,4,6,6,0,6,146,d40a210da 6bfcaa16b 5b4f34771 917676083 48dcb3f39 8fa3b47ab
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/model-drift.test.ts,2026-08-25,bcff5a16f,,Y,4,5,1,Y,2,2,Y,Y,11,6,5,5,0,58,105,90bf65d57 3b293308e d8f8c81ba b9cf10125 48b593d6c
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/native-control-scan.test.ts,2026-08-23,38fb54574,,Y,14,29,4,Y,2,1,,Y,7,5,2,2,0,60,383,509d94797 d65ea9d32
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission-redelivery.test.ts,2026-08-19,92536727c,,Y,3,5,2,Y,0,0,Y,Y,5,5,0,0,0,64,96,
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.test.ts,2026-07-17,e577200a7,,Y,3,67,1,,6,3,,,33,10,23,23,0,97,528,af5133035 adbde2ced a95eb7759 7e63a85b3 0f0468053 43e5e66fd 30db7945c f695d5d98 edd7e3321 bc762c042 bae3a4977 1a74113ae 509d94797 38fb54574 3e59323ca a909f310a 62ac30ff1 a42ed06f8 b59740827 0f0eef5e2 1bc32dbc2 00a4be086 29ae09e36
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.native-emission-bridge.test.ts,2026-07-07,348de275b,,Y,8,9,1,Y,4,0,,Y,10,6,4,4,0,107,155,bc762c042 e97078efe 00a4be086 fb55b19c4
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/processing-status-display.test.ts,2026-08-06,988b2014d,,Y,4,6,1,Y,3,0,Y,Y,9,6,3,3,0,77,77,6d172a0d3 e5435c988 94047493f
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/reconnect-refresh-gate.test.ts,2026-08-04,add0c3393,,Y,8,10,2,Y,1,0,Y,Y,8,7,1,1,0,79,175,546310cb9
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/recovery.test.ts,2026-08-05,efbf701ae,,Y,1,3,1,,0,0,,Y,6,6,0,0,0,78,44,
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/screenshot-request-logic.screenshot-request.test.ts,2026-07-11,a8321d16a,,Y,8,9,1,Y,1,1,,Y,8,7,1,1,0,103,157,162b42bf8
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/session-list-grouping.test.ts,2026-07-31,db017f816,,Y,8,11,3,Y,4,2,,Y,12,8,4,4,0,83,133,f596057a2 45ade80ac 84a5dc64f ea4ae2835
+beebox/src/frontend/test/components/chat/everywhere/reservation-receipts.test.ts,2026-09-08,565779238,,Y,6,9,2,Y,0,0,,Y,4,4,0,0,0,44,55,
+beebox/src/frontend/test/components/chat/everywhere/reservation-recovery.test.ts,2026-09-08,a0d3df8f6,,Y,7,11,3,Y,0,0,,Y,4,4,0,0,0,44,72,
+beebox/src/frontend/test/components/chat/everywhere/resolve-conversation.test.ts,2026-09-08,8aa7749aa,,Y,6,8,1,Y,6,3,,Y,12,5,7,6,1,44,399,215928723 f478af863 7741a7dee 89b922caf a3d3a5beb a0d3df8f6 565779238
+beebox/src/frontend/test/components/chat/InteractiveChat-attachments/file-routing.test.ts,2026-08-22,966dd572e,,Y,16,23,2,Y,1,0,,Y,7,6,1,1,0,61,228,af42d07ec
+beebox/src/frontend/test/components/chat/InteractiveChat-helpers.speech-message.test.ts,2026-05-31,a9e8b7f51,,Y,3,4,1,Y,0,0,,Y,9,8,1,1,0,144,36,d886028e6
+beebox/src/frontend/test/components/chat/message-parsing.empty-assistant.test.ts,2026-10-08,8a85a33ff,,Y,3,6,2,Y,0,0,,Y,5,5,0,0,0,14,87,
+beebox/src/frontend/test/components/chat/message-parsing.test.ts,2026-08-09,d2a6d40b6,,Y,12,17,1,Y,3,0,Y,Y,9,6,3,3,0,74,82,d5ba5ed9c 48548cb39 73834513e
+beebox/src/frontend/test/components/chat/native-composer-command.test.ts,2026-07-19,1bc32dbc2,,Y,13,22,2,Y,2,0,,Y,8,6,2,2,0,95,225,509d94797 38fb54574
+beebox/src/frontend/test/components/chat/native-last-audio-request.native-last-audio-relay.test.ts,2026-08-19,af8eff2e2,,,0,2,1,,0,0,,Y,6,6,0,0,0,64,77,
+beebox/src/frontend/test/components/chat/native-post.test.ts,2026-07-17,c8e54e62e,,Y,4,6,1,Y,1,0,,Y,6,5,1,1,0,97,93,0f0eef5e2
+beebox/src/frontend/test/components/chat/open-question.test.ts,2026-10-20,6bfcaa16b,,Y,34,49,10,Y,3,0,,,3,0,3,3,0,2,70,62f651054 b54df33a3 d40a210da
+beebox/src/frontend/test/components/chat/screenshot-capture.test.ts,2026-07-11,4e4c2c520,,Y,6,7,1,Y,1,1,,Y,8,7,1,1,0,103,87,4288d34a6
+beebox/src/frontend/test/components/chat/sidecar-tabs.test.ts,2026-09-05,9f8f81d09,,Y,7,9,2,Y,0,0,,Y,5,5,0,0,0,47,172,
+beebox/src/frontend/test/components/chat/SpeechChunk.speech-progress-indicators.test.ts,2026-07-28,34649ebf0,,Y,14,17,3,Y,1,0,Y,Y,7,6,1,1,0,86,48,d1335d0b9
+beebox/src/frontend/test/components/chat/user-message-text.test.ts,2026-08-15,4a03cdc7d,,Y,3,5,2,Y,1,1,,Y,10,7,3,2,1,68,77,b52a24d84 d83140308 ff47ff2fa
+beebox/src/frontend/test/components/chat/user-message.user-message-audio-overlay.test.ts,2026-08-15,69e429450,,Y,11,14,3,Y,4,0,Y,Y,17,8,9,9,0,68,253,2d0332476 f54b0dd2e ab71d9b3c a95eb7759 2d4af1a4b 80862caf1 796876cc2 50e05c522 f3728d28a
+beebox/src/frontend/test/components/chat/user-message/chat-message-sender.test.ts,2026-08-14,07ab74dfb,,Y,6,7,1,Y,1,0,,Y,6,5,1,1,0,69,23,06b520af6
+beebox/src/frontend/test/components/chat/user-message/upload-message.test.ts,2026-07-31,ade0b65c7,,Y,4,6,1,Y,1,0,Y,Y,9,8,1,1,0,83,103,ab43e7876
+beebox/src/frontend/test/components/chat/VoiceChip/panels.voice-chip-capability-reason.test.ts,2026-09-10,3b51e8f3c,,Y,4,6,1,,0,0,,Y,4,4,0,0,0,42,33,
+beebox/src/frontend/test/components/chat/VoiceChip/view.voice-chip-face.test.ts,2026-08-01,364848472,,Y,11,12,1,,2,4,,Y,17,8,9,9,0,82,140,2d0332476 a95eb7759 114c6b367 23333c33e c97f04dd9 886365901 599e8445a dbca23d7a a75c4cbaf
+beebox/src/frontend/test/components/chat/workspace.workspace-pane-storage.test.ts,2026-09-08,98bc0aacb,,Y,57,83,6,,0,1,,Y,9,5,4,4,0,44,332,3c13ab379 38060aed0 fec38aa5a bb306140c
+beebox/src/frontend/test/components/chat/workspace.workspace-panes.test.ts,2026-09-08,98bc0aacb,,Y,57,83,6,,0,1,,Y,10,6,4,4,0,44,486,55ea1ec5a 5886726d9 5d24ec4c1 0adddf91f
+beebox/src/frontend/test/components/chat/workspace/history.workspace-pane-navigation.test.ts,2026-09-08,98bc0aacb,,Y,57,83,6,,1,1,,Y,10,7,3,3,0,44,257,43f948450 4ffacb515 d6056b354
+beebox/src/frontend/test/components/chat/workspace/sidecar-tabs-storage.test.ts,2026-09-05,9f8f81d09,,Y,7,9,2,Y,2,0,,Y,9,7,2,2,0,47,178,1a74113ae 88033b967
+beebox/src/frontend/test/components/chat/workspace/SidecarTabStrip/tab-identity.test.ts,2026-09-05,82021b696,,Y,8,9,1,Y,1,0,Y,Y,7,6,1,1,0,47,89,bdb6a49cd
+beebox/src/frontend/test/components/chat/workspace/state-reducer.fragment.test.ts,2026-10-17,48dcb3f39,,Y,13,27,10,Y,0,0,,,1,0,1,0,1,5,21,f65b45d18
+beebox/src/frontend/test/components/chat/workspace/use-open-beside/open-beside.test.ts,2026-09-25,336dbb1c2,,Y,16,20,2,Y,0,0,,Y,6,6,0,0,0,27,63,
+beebox/src/frontend/test/components/chat/workspace/WorkspaceCanvas.pdf-frame.test.ts,2026-08-23,9b2d0daed,,Y,14,16,2,,1,0,,Y,12,10,2,2,0,60,105,ab71d9b3c bca953c9a
+beebox/src/frontend/test/components/chat/workspace/WorkspaceCanvas.turn-edits.test.ts,2026-10-18,d2d305976,,Y,4,5,1,,0,0,,,0,0,0,0,0,4,31,
+beebox/src/frontend/test/components/chat/workspace/WorkspaceProvider/arrival.test.ts,2026-10-08,38060aed0,,Y,5,7,2,Y,2,1,,Y,5,3,2,2,0,14,99,3c13ab379 c649de773
+beebox/src/frontend/test/components/history/card-state.test.ts,2026-09-10,2a6c82854,,Y,20,24,2,,0,1,,Y,9,6,3,3,0,42,218,7ba8be1b1 55eb699f4 43f948450
+beebox/src/frontend/test/components/history/HistoryViewCard/CommitDetail-diff.commit-detail-diff-pointers.test.ts,2026-08-02,cc391bfb3,,Y,4,6,2,Y,0,0,,Y,6,5,1,0,1,81,57,82a25ae8f
+beebox/src/frontend/test/components/history/HistoryViewCard/CommitDetail-diff.history-blob-paths.test.ts,2026-08-04,4edbe94a6,,Y,3,5,2,Y,0,0,Y,Y,5,5,0,0,0,79,37,
+beebox/src/frontend/test/components/history/HistoryViewCard/history-blob-url.paths.test.ts,2026-08-04,4edbe94a6,,Y,3,5,2,Y,0,0,Y,Y,8,7,1,1,0,79,34,b208f1709
+beebox/src/frontend/test/components/landmarks/LandmarksList.gloss.test.ts,2026-10-19,917676083,,Y,23,44,18,Y,0,0,,,1,0,1,1,0,3,52,b54df33a3
+beebox/src/frontend/test/components/Markdown/body.fence-copy.test.ts,2026-10-17,e84154b1a,,Y,1,2,1,Y,0,0,,,3,1,2,2,0,5,45,5d64af3f9 48dcb3f39
+beebox/src/frontend/test/components/Markdown/body.image-card-links.test.ts,2026-10-20,215c267b1,,Y,10,13,3,Y,0,0,,,0,0,0,0,0,2,71,
+beebox/src/frontend/test/components/Markdown/body.include-lines.test.ts,2026-10-20,215c267b1,,Y,10,13,3,Y,0,0,,,1,0,1,1,0,2,30,ab71d9b3c
+beebox/src/frontend/test/components/Markdown/body.scoped-tags.test.ts,2026-10-10,42a6db154,,Y,8,9,1,Y,0,0,,Y,7,4,3,2,1,12,64,ab71d9b3c 4c6537199 97b1470d6
+beebox/src/frontend/test/components/Markdown/Quote.quote.test.ts,2026-09-08,33a55a7ab,,Y,53,88,10,Y,0,0,,Y,4,4,0,0,0,44,51,
+beebox/src/frontend/test/components/Markdown/Todo.locators-render.test.ts,2026-09-25,3c139ab94,,Y,15,20,4,Y,1,0,,Y,9,7,2,2,0,27,129,76891c08a 5c9ca51b6
+beebox/src/frontend/test/components/MarkdownCardView.markdown-card-view.test.ts,2026-09-04,98bdb1ae9,,Y,18,39,21,,1,1,,Y,18,8,10,10,0,48,265,020365f76 6a3b0037a 6c3b49d44 3a0a1907a ba30f7fbc c720332b2 31cebfecd 5cf62c6e6 fd3ef5612 3c139ab94
+beebox/src/frontend/test/components/openers/ChatOpeners.chat-openers.test.ts,2026-08-23,9ce149356,,Y,12,19,4,Y,3,0,,Y,11,8,3,3,0,60,132,a5422af59 48aa1faac f478af863
+beebox/src/frontend/test/components/openers/opener-send.test.ts,2026-10-08,f478af863,,Y,9,12,3,Y,1,0,,Y,4,3,1,1,0,14,56,48aa1faac
+beebox/src/frontend/test/components/openers/place-chat.start-something.test.ts,2026-10-08,48aa1faac,,Y,18,24,6,Y,2,0,,Y,5,3,2,2,0,14,96,a5422af59 3c13ab379
+beebox/src/frontend/test/components/PdfCardView.pdf-card.test.ts,2026-08-23,9b2d0daed,,Y,14,16,2,,3,0,,Y,16,8,8,8,0,60,268,ab71d9b3c e6d36da69 02a3e12ff 904acaa4d 8e3a98c0a 279e024c1 14ad12943 337ceb131
+beebox/src/frontend/test/components/PersonView.person-view.test.ts,2026-10-06,5d060dc37,,Y,5,6,1,,0,1,,Y,6,4,2,2,0,16,176,6a3b0037a 4481c0246
+beebox/src/frontend/test/components/PlaceView/sections.test.ts,2026-10-08,48aa1faac,,Y,18,24,6,Y,2,0,,Y,9,4,5,5,0,14,112,917676083 a3955d139 ba55420ba 3c13ab379 c61611c6c
+beebox/src/frontend/test/components/PlaceView/view.place-page.test.ts,2026-10-08,48aa1faac,,Y,18,24,6,Y,11,2,,Y,19,7,12,11,1,14,320,b54df33a3 5b4f34771 917676083 6c3b49d44 281ef2aa2 c65e7540f a3955d139 ba55420ba b7b5fdb96 a5422af59 3c13ab379 ee3d62b42
+beebox/src/frontend/test/components/PlaceView/view.root-counts.test.ts,2026-10-19,917676083,,Y,23,44,18,Y,2,0,,,2,0,2,2,0,3,125,b54df33a3 5b4f34771
+beebox/src/frontend/test/components/publications/PublicationApprovalView.publication-approval-errors.test.ts,2026-09-26,7f05e7908,,Y,1,2,1,Y,1,0,,Y,6,5,1,1,0,26,30,0e755f663
+beebox/src/frontend/test/components/publications/PublicationReviewCard.publication-review-card.test.ts,2026-09-26,37698e5e0,,Y,5,6,1,Y,6,5,,Y,14,6,8,8,0,26,200,2b71d931b 149877f4a 0e755f663 bd1748033 22dcb30e7 f30774f44 47cfefb4b 62df72394
+beebox/src/frontend/test/components/search/target.test.ts,2026-10-17,48dcb3f39,,Y,13,27,10,Y,0,0,,,1,0,1,0,1,5,26,f65b45d18
+beebox/src/frontend/test/components/settings/DriveSection.drive-unmount-control.test.ts,2026-08-26,615392823,,Y,3,4,1,Y,0,1,,Y,10,8,2,2,0,57,90,2c1500bfd 3f65d7d5d
+beebox/src/frontend/test/components/themes/ThemedFileCard/view.card-title.test.ts,2026-10-06,4481c0246,,Y,2,4,2,Y,3,0,,Y,8,5,3,3,0,16,33,6a3b0037a c65e7540f 2eb9f4c4f
+beebox/src/frontend/test/components/themes/ThemedFileCard/view/CardPrintFooter.print-footer.test.ts,2026-10-20,3f6539e56,,Y,4,5,1,Y,0,0,,,0,0,0,0,0,2,32,
+beebox/src/frontend/test/components/themes/ThemedFileCard/view/CardProperties.attachments-last-change.test.ts,2026-10-06,0422ef718,,Y,6,8,2,Y,1,0,,Y,8,6,2,2,0,16,138,917676083 c69cd3b04
+beebox/src/frontend/test/components/themes/ThemedFileCard/view/CardProperties.contains-fields.test.ts,2026-10-06,5cf62c6e6,,Y,4,9,5,Y,6,1,,Y,17,7,10,9,1,16,176,ab71d9b3c 4a662e3c9 c69cd3b04 6a3b0037a 6c3b49d44 546588ced ba30f7fbc 3c13ab379 48aa1faac 31cebfecd
+beebox/src/frontend/test/components/themes/ThemedFileCard/view/PropertiesFace.order-appearance.test.ts,2026-10-06,dad058f86,,Y,6,9,1,Y,5,5,,Y,14,5,9,8,1,16,199,4a662e3c9 c69cd3b04 e8c2c7cd7 ba30f7fbc a28b29b07 a6e46970d b38c090d5 f6aef21cd c941d6366
+beebox/src/frontend/test/components/themes/useDoodlebitMotion.pointer-behavior.test.ts,2026-10-16,b9f7752c7,,Y,10,19,3,Y,2,2,,Y,6,3,3,3,0,6,92,48dcb3f39 c8ededa6b 8da555acb
+beebox/src/frontend/test/components/todo-view-card-logic.test.ts,2026-07-29,9e2fe1827,,Y,12,18,6,Y,6,3,Y,Y,13,7,6,6,0,85,404,3fc28df14 f218786d3 89730a3c8 52b609299 72e9dd86b b5189abad
+beebox/src/frontend/test/components/todo/actions.test.ts,2026-09-25,5c9ca51b6,,Y,17,22,4,,0,0,,Y,7,7,0,0,0,27,194,
+beebox/src/frontend/test/components/todo/summary.test.ts,2026-09-25,3c139ab94,,Y,15,20,4,,7,1,,Y,16,8,8,8,0,27,149,b54df33a3 8bd8399d1 df6f86540 917676083 61de22bd4 3597a62e6 8eaccd8ac 336dbb1c2
+beebox/src/frontend/test/components/todo/TodoItem.todo-item.test.ts,2026-09-25,3c139ab94,,Y,15,20,4,Y,5,3,,Y,16,8,8,8,0,27,212,ab71d9b3c 243d903db 954feba5e 3597a62e6 8eaccd8ac e89e63cf4 cdb3b6d79 5c9ca51b6
+beebox/src/frontend/test/components/ui/FriendlyDate.test.ts,2026-08-09,458599e8d,,Y,2,5,2,Y,0,0,Y,Y,7,7,0,0,0,74,30,
+beebox/src/frontend/test/components/ui/Stack.stack-and-roles.test.ts,2026-09-18,76a019b0e,,Y,4,7,1,,1,0,,Y,8,6,2,2,0,34,63,ab71d9b3c cd57a8411
+beebox/src/frontend/test/components/ui/toast-store.test.ts,2026-07-09,c5c1fe730,,Y,7,8,1,Y,1,0,,Y,8,7,1,1,0,105,179,94c5f9137
+beebox/src/frontend/test/hooks/use-image-recovery.image-recovery.test.ts,2026-09-07,b1508f7e5,,Y,2,4,1,Y,0,0,Y,Y,5,5,0,0,0,45,113,
+beebox/src/frontend/test/hooks/useFragmentJump.test.ts,2026-10-17,48dcb3f39,,Y,13,27,10,Y,1,0,,,2,0,2,1,1,5,135,f65b45d18 1cb1d347e
+beebox/src/frontend/test/hooks/useVersionedFileUrl.versioned-file-url.test.ts,2026-09-18,868268398,,Y,4,5,1,Y,0,0,Y,Y,4,4,0,0,0,34,17,
+beebox/src/frontend/test/input/emission-persist.test.ts,2026-07-04,2d45fab54,,Y,12,14,2,Y,7,1,,Y,16,9,7,7,0,110,515,613a77d35 1feb9f989 bc762c042 fec38aa5a d1556e750 af42d07ec 2dc867be3
+beebox/src/frontend/test/input/emission-store.emission-editor.test.ts,2026-07-04,cb67c43c6,,Y,7,9,2,Y,5,0,,Y,15,10,5,5,0,110,656,e2d468d33 613a77d35 bc762c042 48548cb39 e8e62b2de
+beebox/src/frontend/test/input/retention.test.ts,2026-07-04,d0f8743e9,,Y,11,15,3,Y,0,1,,Y,6,5,1,1,0,110,91,6d6116986
+beebox/src/frontend/test/input/targets/chat-target.test.ts,2026-07-04,2d45fab54,,Y,12,14,2,Y,6,2,,Y,17,10,7,7,0,110,286,0f0468053 613a77d35 1feb9f989 bc762c042 33e13a328 211238590 28b428565
+beebox/src/frontend/test/input/targets/receipts.test.ts,2026-07-04,cb67c43c6,,Y,7,9,2,Y,4,2,,Y,11,7,4,4,0,110,83,a6cfdadb5 e097c36a4 08aa2d4fd 28b428565
+beebox/src/frontend/test/input/voice-intent.test.ts,2026-07-04,d0f8743e9,,Y,11,15,3,Y,12,1,,Y,21,8,13,13,0,110,447,6a63213bc a95eb7759 d020cfe43 c65a87091 e7db387d8 80862caf1 455a1e14b f3ff02704 ba239724c 937a4ddba 308abba31 62ac30ff1 7ad114960
+beebox/src/frontend/test/lib/audio/context.audio-playback-errors.test.ts,2026-07-28,34649ebf0,,Y,14,17,3,Y,2,0,Y,Y,10,8,2,2,0,86,87,3bac0d66c b39545a4f
+beebox/src/frontend/test/lib/audio/hq-wait.test.ts,2026-09-10,c65a87091,,Y,19,23,4,Y,1,0,,Y,7,6,1,1,0,42,284,d020cfe43
+beebox/src/frontend/test/lib/audio/recorder.chunked-recorder.test.ts,2026-07-10,77ac45954,,Y,16,19,3,Y,0,0,,Y,7,7,0,0,0,104,77,
+beebox/src/frontend/test/lib/audio/speech-keywords.test.ts,2026-03-03,fde311f9a,,Y,1,22,17,,14,10,,Y,25,8,17,17,0,233,206,adbde2ced 036c93ec0 c73bf0051 a95eb7759 7e63a85b3 0f0468053 62ac30ff1 643df36b0 53caa28ed 8b2453957 5f1d6e782 5bace61ab 8c5dc6463 a85ec2eb5 f220fcc7d 15c68693e 61f94eb8f
+beebox/src/frontend/test/lib/audio/speech-parsing/parse.test.ts,2026-03-03,fde311f9a,,Y,1,22,17,,2,5,,Y,19,9,10,10,0,233,543,68809db17 0067d309e d02737eaa 643df36b0 34099e2a6 2a1bd3ff4 943ce30f2 10b2dec12 b42fbe4f6 3020dbd08
+beebox/src/frontend/test/lib/audio/speech-parsing/parseTags.parse-tags.test.ts,2026-03-03,fde311f9a,,Y,1,22,17,,1,1,,Y,11,9,2,2,0,233,176,9cd2fe8b2 10b2dec12
+beebox/src/frontend/test/lib/audio/tts-client/cache.audio-cache.test.ts,2026-05-30,66d176c0c,,Y,17,21,1,,0,0,,Y,10,9,1,1,0,145,81,643df36b0
+beebox/src/frontend/test/lib/audio/tts-client/playable.tts-container-routing.test.ts,2026-09-15,8d3e38457,,Y,2,3,1,Y,1,1,Y,Y,6,5,1,1,0,37,39,392c3eb34
+beebox/src/frontend/test/lib/audio/tts-client/stream-playback.append-chunk.test.ts,2026-10-05,70fe47f69,,Y,9,15,5,Y,1,0,,Y,5,4,1,1,0,17,37,68809db17
+beebox/src/frontend/test/lib/audio/tts-client/tts-errors.tts-request-error.test.ts,2026-10-05,d1335d0b9,,Y,9,13,4,Y,0,0,,Y,3,3,0,0,0,17,30,
+beebox/src/frontend/test/lib/audio/voice-send-sequencer.test.ts,2026-09-10,c65a87091,,Y,19,23,4,Y,0,0,,Y,4,4,0,0,0,42,47,
+beebox/src/frontend/test/lib/audio/voice-stager.test.ts,2026-09-10,e7db387d8,,Y,20,25,5,Y,1,0,,Y,7,6,1,1,0,42,129,1837ae7f3
+beebox/src/frontend/test/lib/audio/voice-staging-queue-core.test.ts,2026-09-10,980514622,,Y,9,12,3,Y,1,0,,Y,8,6,2,2,0,42,176,dc231150e a0130fe3c
+beebox/src/frontend/test/lib/audio/voice-staging-queue/queue.test.ts,2026-09-10,980514622,,Y,9,12,3,,0,0,,Y,10,8,2,2,0,42,216,1837ae7f3 a0130fe3c
+beebox/src/frontend/test/lib/audio/voice-staging-queue/voice-staging-transport.capture-finalize-voice-contract.test.ts,2026-09-10,1837ae7f3,,Y,11,21,10,Y,0,0,Y,Y,6,5,1,1,0,42,75,64f16e7e6
+beebox/src/frontend/test/lib/browse-card-state.test.ts,2026-09-09,d6056b354,,Y,48,70,13,Y,6,0,,Y,14,6,8,6,2,43,187,b54df33a3 917676083 167b30a8e e118b011b fd3ef5612 1cd9a1902 6bc6d3f2f 5d24ec4c1
+beebox/src/frontend/test/lib/card-field-faces.test.ts,2026-10-06,31cebfecd,,Y,13,17,4,Y,2,0,,Y,5,3,2,2,0,16,202,6c3b49d44 ba30f7fbc
+beebox/src/frontend/test/lib/card-title.test.ts,2026-10-06,4481c0246,,Y,2,4,2,,1,0,,Y,6,3,3,3,0,16,33,6a3b0037a c65e7540f 2eb9f4c4f
+beebox/src/frontend/test/lib/chat-channel.test.ts,2026-08-23,5fe7b6997,,Y,10,14,3,Y,0,0,,Y,5,5,0,0,0,60,38,
+beebox/src/frontend/test/lib/chat-send-diagnostics.test.ts,2026-08-11,fba60a3f0,,Y,10,12,1,Y,0,0,,Y,7,7,0,0,0,72,165,
+beebox/src/frontend/test/lib/debug-log-format.test.ts,2026-08-23,9ddf2474e,,Y,2,3,1,Y,0,0,Y,Y,5,5,0,0,0,60,51,
+beebox/src/frontend/test/lib/deferred-resync.test.ts,2026-08-04,add0c3393,,Y,8,10,2,Y,1,0,Y,Y,7,6,1,1,0,79,184,546310cb9
+beebox/src/frontend/test/lib/dictation-draft.test.ts,2026-06-01,6410857d3,,Y,7,8,1,Y,4,1,,Y,13,9,4,4,0,143,142,fec38aa5a 858cf592d db3ab626b e8e62b2de
+beebox/src/frontend/test/lib/docling-match.test.ts,2026-08-24,279e024c1,,Y,13,17,3,Y,1,0,,Y,7,6,1,1,0,59,169,e79208155
+beebox/src/frontend/test/lib/docling/parse.docling.test.ts,2026-08-24,279e024c1,,Y,13,17,3,,0,0,,Y,7,7,0,0,0,59,237,
+beebox/src/frontend/test/lib/document-title.test.ts,2026-08-25,f5d5ab01a,,Y,8,10,1,Y,0,0,,Y,6,6,0,0,0,58,60,
+beebox/src/frontend/test/lib/drive-card-display.drive-child-state.test.ts,2026-08-26,e9a58799a,,,0,2,2,,1,0,,Y,9,8,1,1,0,57,77,3acec8cdb
+beebox/src/frontend/test/lib/drive-card-display.drive-mime-label.test.ts,2026-08-26,e9a58799a,,,0,2,2,,0,0,,Y,6,6,0,0,0,57,53,
+beebox/src/frontend/test/lib/fetch-coalescer.test.ts,2026-08-04,546310cb9,,Y,11,17,6,Y,0,0,Y,Y,6,6,0,0,0,79,154,
+beebox/src/frontend/test/lib/figure-params.test.ts,2026-06-23,4211119eb,,Y,6,7,1,Y,1,0,,Y,8,7,1,1,0,121,113,75e983e84
+beebox/src/frontend/test/lib/file-load-state.test.ts,2026-09-05,0f375fe32,,Y,4,5,1,Y,2,0,Y,Y,9,7,2,2,0,47,105,b49c2cae7 88033b967
+beebox/src/frontend/test/lib/file-readable.test.ts,2026-10-16,e2d468d33,,Y,20,25,3,Y,0,0,,Y,3,3,0,0,0,6,32,
+beebox/src/frontend/test/lib/file-version.test.ts,2026-06-01,8d5ce3422,,Y,4,5,1,Y,0,0,Y,Y,8,8,0,0,0,143,60,
+beebox/src/frontend/test/lib/image-paste.test.ts,2026-08-23,5c1a97dc3,,Y,2,4,1,Y,1,1,Y,Y,6,5,1,1,0,60,59,3dfc912d5
+beebox/src/frontend/test/lib/image-transform-url.test.ts,2026-09-03,3ab2bb1c2,,Y,18,24,5,Y,1,0,,Y,7,5,2,2,0,49,62,641e7a48a bf99e3950
+beebox/src/frontend/test/lib/include-lines.test.ts,2026-10-20,215c267b1,,Y,10,13,3,Y,1,1,,,1,0,1,1,0,2,43,867059691
+beebox/src/frontend/test/lib/inventory-card-state.interface-card-state.test.ts,2026-09-10,8c793909d,,Y,21,26,3,Y,0,1,,Y,10,6,4,4,0,42,140,c69cd3b04 71d07a348 38a546f7e 10a492c13
+beebox/src/frontend/test/lib/landmark-filter.test.ts,2026-10-06,9819c60c5,,Y,12,16,4,Y,0,0,,Y,5,5,0,0,0,16,69,
+beebox/src/frontend/test/lib/last-change-line.test.ts,2026-10-06,0422ef718,,Y,6,8,2,Y,0,0,,Y,3,3,0,0,0,16,46,
+beebox/src/frontend/test/lib/lightbox-gesture-controller/lightbox-gesture-reducer.test.ts,2026-07-20,c326d4a52,,Y,8,10,2,Y,2,0,Y,Y,7,5,2,2,0,94,218,84137f51e 299297e5d
+beebox/src/frontend/test/lib/lightbox-gesture-math.test.ts,2026-07-20,c326d4a52,,Y,8,10,2,Y,3,0,Y,Y,9,6,3,3,0,94,337,aa8d93303 84137f51e 299297e5d
+beebox/src/frontend/test/lib/location-share.test.ts,2026-06-29,c177393ff,,Y,16,21,4,Y,0,0,Y,Y,5,5,0,0,0,115,60,
+beebox/src/frontend/test/lib/maintenance-retry.test.ts,2026-09-15,65af4d7a6,,Y,10,15,5,Y,0,0,,Y,4,4,0,0,0,37,33,
+beebox/src/frontend/test/lib/moved-card-recovery.test.ts,2026-09-10,0adddf91f,,Y,17,23,4,Y,0,0,,Y,6,6,0,0,0,42,83,
+beebox/src/frontend/test/lib/off-machine-origin.test.ts,2026-10-20,1c95cdd02,,Y,12,15,2,Y,2,2,,,2,0,2,2,0,2,28,86a2b0c17 867059691
+beebox/src/frontend/test/lib/patmatch/keyword-pattern.patmatch.test.ts,2026-03-03,fde311f9a,,Y,1,22,17,,0,1,,Y,11,9,2,2,0,233,120,643df36b0 f5b95640b
+beebox/src/frontend/test/lib/persist-scheduler.test.ts,2026-08-18,2dc867be3,,Y,4,6,2,Y,0,0,Y,Y,7,7,0,0,0,65,137,
+beebox/src/frontend/test/lib/place-label.test.ts,2026-08-02,f477285b4,,Y,7,8,1,Y,4,1,,Y,11,7,4,4,0,81,131,308016fc0 542675d50 ce3f4d076 6d172a0d3
+beebox/src/frontend/test/lib/place-stack.test.ts,2026-10-08,b10225461,,Y,2,5,1,Y,1,1,,Y,4,3,1,1,0,14,60,f466f6a0f
+beebox/src/frontend/test/lib/print-card.test.ts,2026-10-20,1c95cdd02,,Y,12,15,2,Y,1,0,,,1,0,1,1,0,2,34,9b76ff4b9
+beebox/src/frontend/test/lib/readable-fields.test.ts,2026-10-11,382bd0e8d,,Y,1,2,1,Y,2,1,,Y,5,3,2,2,0,11,107,cf0c5ff7f 020365f76
+beebox/src/frontend/test/lib/relative-time.test.ts,2026-08-21,858cf592d,,Y,19,24,5,Y,0,0,,Y,5,5,0,0,0,62,36,
+beebox/src/frontend/test/lib/renderer-display-label.test.ts,2026-09-02,6d172a0d3,,Y,26,33,7,Y,0,0,,Y,6,6,0,0,0,50,43,
+beebox/src/frontend/test/lib/selection/position.selection-position.test.ts,2026-05-31,8d5649323,,Y,5,7,1,,1,0,Y,Y,10,8,2,2,0,144,76,bae3a4977 643df36b0
+beebox/src/frontend/test/lib/selection/serialize.selection-serialize.test.ts,2026-05-31,a78d0200d,,Y,8,10,1,,1,1,,Y,14,9,5,5,0,144,146,bae3a4977 643df36b0 d886028e6 55c5597e1 81b4c1a88
+beebox/src/frontend/test/lib/stream-entry.test.ts,2026-06-21,52b78e82a,,,0,2,1,,0,0,,Y,7,6,1,0,1,123,45,45b25a435
+beebox/src/frontend/test/lib/structured-output-parsing.test.ts,2026-05-13,60e4f383c,,Y,5,6,1,Y,6,6,,Y,17,9,8,7,1,162,282,08b032f45 8aa2b2663 051786534 c93d5ff49 7c7114a8a 4c1556ff0 10b2dec12 b07a256cb
+beebox/src/frontend/test/lib/system-card-navigation.test.ts,2026-09-09,d6056b354,,Y,48,70,13,Y,3,0,,Y,10,7,3,3,0,43,263,8c793909d b899d0b16 2eb9189e5
+beebox/src/frontend/test/lib/theme-studio-search.test.ts,2026-10-16,c69cd3b04,,Y,20,51,7,Y,0,0,,Y,3,3,0,0,0,6,28,
+beebox/src/frontend/test/lib/trpc/transient.trpc-transient.test.ts,2026-09-10,b49c2cae7,,Y,5,8,2,Y,3,1,Y,Y,9,6,3,3,0,42,330,dc231150e 980514622 e16eed581
+beebox/src/frontend/test/lib/ui-scan.annotations.test.ts,2026-08-23,e5cb535be,,Y,10,11,1,,0,0,,Y,15,10,5,3,2,60,286,19e261eb9 48141a1d8 a7a951679 ed2787dcc 2fc153770
+beebox/src/frontend/test/lib/ui-scan/actions.test.ts,2026-08-23,178207e67,,Y,9,11,2,Y,0,0,,Y,6,6,0,0,0,60,111,
+beebox/src/frontend/test/lib/ui-scan/live-dom/accessible-name.test.ts,2026-08-23,2cb1f8a2d,,Y,8,11,2,Y,1,0,,Y,8,7,1,1,0,60,169,0bb8f3acb
+beebox/src/frontend/test/lib/ui-scan/live-dom/scan.test.ts,2026-08-23,2cb1f8a2d,,Y,8,11,2,Y,4,0,,Y,16,10,6,6,0,60,608,7cf0ab071 2c1500bfd 6d172a0d3 2fc153770 b1f32080a 0bb8f3acb
+beebox/src/frontend/test/lib/upload-queue.test.ts,2026-07-29,ac4e12b92,,Y,10,12,2,Y,1,0,Y,Y,7,6,1,1,0,85,172,64a080433
+beebox/src/frontend/test/lib/video-url.test.ts,2026-06-30,ddf38a02a,,Y,3,4,1,Y,1,1,,Y,7,6,1,1,0,114,109,43559e3a0
+beebox/src/frontend/test/lib/view-bindings.test.ts,2026-08-04,546310cb9,,Y,11,17,6,Y,0,0,Y,Y,6,6,0,0,0,79,70,
+beebox/src/frontend/test/lib/view-source-path.test.ts,2026-09-01,00d6ade2b,,Y,5,8,2,Y,0,0,Y,Y,4,4,0,0,0,51,25,
+beebox/src/frontend/test/lib/view-url.fragment.test.ts,2026-10-17,48dcb3f39,,Y,13,27,10,Y,0,0,,,1,0,1,0,1,5,62,f65b45d18
+beebox/src/frontend/test/lib/view-url.test.ts,2026-04-19,8c0212990,,Y,22,23,1,Y,12,6,,Y,28,13,15,14,1,186,440,92399fcd8 3d7907b48 98bdb1ae9 38ab73ff8 364967613 53953ca60 178207e67 ea4bd901a 087cc66aa e0a788a73 30ede0b1c c7ea85b8a a37ae21aa d075fe8bd 13faee5c4
+beebox/src/frontend/test/machines/chatMachine.chat-actor-receipts.test.ts,2026-08-15,1e3bf4345,,Y,3,4,1,,0,1,Y,Y,7,5,2,2,0,68,101,1a74113ae 7656cb7c7
+beebox/src/frontend/test/machines/chatMachine.chat-machine-prepend-cap.test.ts,2026-08-25,238b5b049,,Y,13,25,6,Y,0,0,Y,Y,6,6,0,0,0,58,58,
+beebox/src/frontend/test/machines/chatMachine.progress-updates.test.ts,2026-09-25,ed3d5ecd4,,Y,12,14,1,,0,1,,Y,7,6,1,1,0,27,192,8a85a33ff
+beebox/src/frontend/test/machines/chatMachine.reconcile-pending.test.ts,2026-05-10,a22fc38f2,,Y,3,7,2,,2,2,Y,Y,13,8,5,5,0,165,264,32909d15f ec4cf0057 8e7b5de94 7e352e558 4ceb0de65
+beebox/src/frontend/test/machines/chatMachine.turn-message-stream.test.ts,2026-07-02,900fb19d9,,Y,1,2,1,,0,0,Y,Y,8,7,1,1,0,112,73,71c59352d
+beebox/src/frontend/test/machines/chatMachine/chat-shared.accepted-baseline.test.ts,2026-08-26,0b82b876d,,Y,2,3,1,,0,0,Y,Y,9,8,1,1,0,57,154,bc762c042
+beebox/src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.test.ts,2026-07-29,2e6cf60a7,,Y,2,5,1,,0,0,Y,Y,12,9,3,3,0,85,265,8e7b5de94 94047493f 4ceb0de65
+beebox/src/frontend/test/machines/chatMachine/machine.chat-machine-loading-send.test.ts,2026-08-19,92536727c,,Y,3,5,2,,0,0,Y,Y,7,6,1,1,0,64,94,8e7b5de94
+beebox/src/frontend/test/machines/chatMachine/machine.reply-lost-new-chat.test.ts,2026-10-20,f8a37022e,,Y,7,10,3,Y,0,0,Y,,0,0,0,0,0,2,97,
+beebox/src/frontend/test/machines/chatMachine/machine.reply-lost.test.ts,2026-10-17,d820b66ab,,Y,11,14,2,Y,1,3,,Y,6,3,3,3,0,5,203,73bef8b7a 93187d95f 029c31769
+beebox/src/frontend/test/machines/composerMachine.composer-machine.test.ts,2026-06-02,79536a12a,,Y,1,3,1,Y,6,2,,Y,16,8,8,7,1,142,312,fefb9305f 4215e5fbc 3f06e3deb c65a87091 3e59323ca 1d880e91d fbca62c86 8673346ff
+beebox/src/frontend/test/machines/realtime-transcription-live/transcription-connections.transcription-connections-words.test.ts,2026-08-15,0e32f7d69,,Y,6,9,2,Y,0,0,,Y,7,7,0,0,0,68,95,
+beebox/src/frontend/test/machines/realtime-transcription-live/transcription-merge.test.ts,2026-08-15,0e32f7d69,,Y,6,9,2,Y,1,0,,Y,6,5,1,1,0,68,125,937a4ddba
+beebox/src/frontend/test/machines/realtime-transcription-live/transcription-segment-text.live-gap.test.ts,2026-10-10,c73bf0051,,Y,10,15,3,Y,3,2,,Y,6,3,3,3,0,12,165,dab2e6d9a 036c93ec0 29f41024e
+beebox/src/frontend/test/machines/realtimeTranscriptionMachine.realtime-transcription-machine.test.ts,2026-09-10,e7db387d8,,Y,20,25,5,Y,4,1,,Y,12,6,6,5,1,42,415,fefb9305f 5cad1ba41 4215e5fbc d820b66ab 0f0468053 1837ae7f3
+beebox/src/frontend/test/machines/realtimeTranscriptionMachine.transcription-machine.test.ts,2026-09-12,d6e0df9c9,,Y,1,4,1,,0,0,Y,Y,7,7,0,0,0,40,141,
+beebox/src/frontend/test/machines/speechPlaybackMachine.speech-playback-machine.test.ts,2026-07-28,34649ebf0,,Y,14,17,3,Y,1,0,Y,Y,8,7,1,1,0,86,111,d1335d0b9
+beebox/src/frontend/test/machines/transcription-events.transcription-state.test.ts,2026-09-10,e7db387d8,,Y,20,25,5,Y,0,0,,Y,7,5,2,2,0,42,66,0f0468053 c78c73891
+beebox/src/frontend/test/pages/box-screen/route.no-chat.test.ts,2026-10-06,542675d50,,Y,13,16,3,Y,0,1,,Y,6,4,2,1,1,16,107,5911ce5e5 81687ca2c
+beebox/src/frontend/test/pages/box-screen/state.test.ts,2026-10-06,542675d50,,Y,13,16,3,Y,2,1,,Y,8,6,2,2,0,16,455,60e6c7103 a994c88d1
+beebox/src/frontend/test/pages/browse/components/BrowseSidebarBody/BrowseLandmarkHeader.browse-landmark-header.test.ts,2026-09-04,b51f0675a,Y,Y,265,527,252,,1,1,Y,Y,10,6,4,4,0,48,114,5b4f34771 917676083 7964059a9 ce3f4d076
+beebox/src/frontend/test/pages/browse/components/BrowseSidebarBody/BrowseSidebarList.browse-listing-mode.test.ts,2026-09-06,7964059a9,,Y,3,5,2,Y,3,0,,Y,9,6,3,3,0,46,134,b54df33a3 917676083 7209474cc
+beebox/src/frontend/test/pages/capture.capture-upload-retry.test.ts,2026-07-29,ac4e12b92,,Y,10,12,2,,0,0,Y,Y,8,7,1,1,0,85,68,d477aa248
+beebox/src/frontend/test/pages/capture/retry-feedback.capture-retry-feedback.test.ts,2026-08-21,858cf592d,,Y,19,24,5,Y,0,0,,Y,7,7,0,0,0,62,73,
+beebox/src/frontend/test/renderers.system-card-renderers.test.ts,2026-09-10,b899d0b16,,Y,10,13,2,,0,0,,,8,6,2,2,0,42,51,8c793909d 2a6c82854
+beebox/src/frontend/test/renderers/image.test.ts,2026-08-27,04fcea3aa,,Y,1,3,1,,1,1,,Y,9,6,3,3,0,56,75,ab71d9b3c 24db184f9 3ab2bb1c2
+beebox/src/frontend/test/schemas/image-list-entry.test.ts,2026-10-09,82bc0d47f,,Y,3,5,1,,0,0,,Y,4,3,1,1,0,13,47,8bd8399d1
+beebox/test/bin/cb-tombstone.test.ts,2026-09-05,b2edf31a5,,Y,4,8,1,,0,0,,Y,4,4,0,0,0,47,70,
+beebox/test/cards/date-entry.test.ts,2026-09-29,a6300958c,,Y,6,12,2,Y,1,0,,Y,4,3,1,1,0,23,96,49d94b16e
+beebox/test/cards/extend-schema.test.ts,2026-10-10,06f886eba,,Y,51,75,16,Y,1,0,,Y,8,6,2,2,0,12,325,eebb195b6 c6e26e5f9
+beebox/test/cards/ref-fields.test.ts,2026-07-06,5fede69ef,,Y,9,10,1,Y,1,1,,Y,10,9,1,1,0,108,246,06299df3f
+beebox/test/cards/reserved-fields.test.ts,2026-09-28,985a25c05,,Y,44,56,8,Y,2,1,,Y,17,5,12,12,0,24,119,49d94b16e 5b0477ff7 a850fc365 c95de7fd9 2e477780c e6d36da69 7485e83c8 3acec8cdb 89730a3c8 02a3e12ff 09e7fde23 9ac89cb27
+beebox/test/cards/schema.todos.test.ts,2026-07-28,4f156b141,,Y,2,3,1,Y,0,0,,Y,9,7,2,2,0,86,199,cdb3b6d79 8331820f9
+beebox/test/cli/commands/agent-context.test.ts,2026-08-14,fa65538cc,,Y,12,15,3,,1,0,,Y,8,6,2,2,0,69,47,b03b66055 37c6ae663
+beebox/test/cli/commands/auth.test.ts,2026-07-19,07e050f83,,Y,3,4,1,Y,1,1,,Y,9,7,2,1,1,95,179,8d3feaf96 6d1fd93a3
+beebox/test/cli/commands/boxes.list.test.ts,2026-10-20,1c5e90e8a,,Y,6,21,12,Y,0,0,Y,,0,0,0,0,0,2,42,
+beebox/test/cli/commands/changes.test.ts,2026-09-26,c21e6534f,,Y,14,17,3,Y,1,0,,Y,9,6,3,3,0,26,222,a850fc365 0a93ccd61 68456e29e
+beebox/test/cli/commands/chat/audio-report.test.ts,2026-08-15,427de3176,,Y,7,9,2,,0,0,,Y,7,6,1,1,0,68,199,796876cc2
+beebox/test/cli/commands/drive/dispatch.test.ts,2026-09-14,0ffcb8f5a,,,0,2,2,,1,1,Y,Y,16,9,7,7,0,38,356,7b255426b 560c946aa 0e755f663 5b0477ff7 967c8c745 9cedde113 24777a7ce
+beebox/test/cli/commands/finalize.test.ts,2026-09-26,68456e29e,,Y,15,26,9,Y,0,0,Y,Y,8,6,2,2,0,26,67,c634cdd67 7485e83c8
+beebox/test/cli/commands/force-wakeup.test.ts,2026-09-14,933e2f9ea,,Y,1,3,2,Y,0,0,,Y,9,9,0,0,0,38,322,
+beebox/test/cli/commands/health.test.ts,2026-09-26,a6b756b03,,Y,3,5,2,Y,2,0,,,7,5,2,2,0,26,59,1a775b7f9 2d2293cc2
+beebox/test/cli/commands/hub.shutdown.test.ts,2026-09-12,82fef0f1a,,Y,1,4,1,Y,0,0,Y,Y,5,5,0,0,0,40,59,
+beebox/test/cli/commands/init.nested-repo.test.ts,2026-10-05,1385ee411,,Y,3,5,1,Y,1,0,,Y,5,4,1,1,0,17,71,0e755f663
+beebox/test/cli/commands/init.output.test.ts,2026-09-05,c7336dffb,,Y,2,4,1,Y,3,1,,Y,15,7,8,5,3,47,115,e3ffeb729 cac903acf d817052f8 cd0efcc74 6576ff980 710825b31 81891969a 7dbb79f33
+beebox/test/cli/commands/judge/command.test.ts,2026-09-26,40ee8b60e,,Y,14,17,3,,0,0,Y,Y,16,9,7,7,0,26,395,fd0aa5254 a850fc365 0a93ccd61 68456e29e 72505600e e499d12f6 23901e166
+beebox/test/cli/commands/maintenance.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,1,0,,Y,8,6,2,2,0,38,110,cb574a8c2 7bd19c63f
+beebox/test/cli/commands/migrate.attention.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,0,0,,,7,7,0,0,0,38,110,
+beebox/test/cli/commands/migrate.mark-applied.test.ts,2026-07-03,b4c0e2cae,,Y,1,3,1,Y,0,0,,Y,6,6,0,0,0,111,106,
+beebox/test/cli/commands/notify/command.test.ts,2026-09-26,b13e746ad,,Y,7,10,3,,1,0,,Y,16,11,5,5,0,26,411,9ceffa0c9 68456e29e 48f07c989 f695d5d98 38a546f7e
+beebox/test/cli/commands/pairing.test.ts,2026-09-26,f695d5d98,,Y,22,41,9,Y,0,0,,Y,6,6,0,0,0,26,101,
+beebox/test/cli/commands/plugins.test.ts,2026-10-10,7bc295ad2,,Y,26,59,16,Y,2,0,,Y,7,5,2,2,0,12,108,8bb68497b 69e607892
+beebox/test/cli/commands/pub/managed.test.ts,2026-09-24,28ec4fd00,,Y,52,72,12,,5,3,,Y,20,8,12,12,0,28,214,e57b68c90 456eb3f11 149877f4a 0e755f663 bec8749e3 ddb9a5741 b8ecc5c9b 462df78b6 7ab333586 4f73a1afb 0136dfb34 4640a63f2
+beebox/test/cli/commands/query.test.ts,2026-09-20,78a1a9cb2,,Y,6,8,2,Y,1,1,,Y,11,8,3,3,0,32,205,8bd8399d1 8eaccd8ac dc3c63e3c
+beebox/test/cli/commands/refresh-maps.test.ts,2026-09-18,fa5e8d4c1,,Y,3,6,3,Y,0,0,,Y,5,5,0,0,0,34,48,
+beebox/test/cli/commands/remind/command.test.ts,2026-10-18,d7e55e8a4,,Y,14,19,5,Y,0,0,,,1,0,1,1,0,4,285,c67892950
+beebox/test/cli/commands/remind/time.test.ts,2026-10-18,d7e55e8a4,,Y,14,19,5,Y,1,1,,,1,0,1,1,0,4,88,1094327b5
+beebox/test/cli/commands/secrets/command.test.ts,2026-08-17,4942d9be4,,Y,10,16,4,,0,0,,Y,13,9,4,4,0,66,454,6a0f44e11 726a6ff89 4a6f5c468 aabafb668
+beebox/test/cli/commands/serve.dev-args.test.ts,2026-07-04,403af752d,,Y,7,10,3,Y,2,0,Y,Y,11,8,3,3,0,110,91,53af3b9b1 6e389a02f c1cfbb8ef
+beebox/test/cli/commands/session/modes.huge-guard.test.ts,2026-08-01,9d9c55266,,Y,2,3,1,,0,0,,Y,7,6,1,1,0,82,66,c06eb3950
+beebox/test/cli/commands/session/modes.since-one-session.test.ts,2026-10-06,3af917740,,Y,2,4,1,Y,0,0,,,4,4,0,0,0,16,98,
+beebox/test/cli/commands/tick.create-after-success.test.ts,2026-07-30,d1fb9b3d7,,Y,1,2,1,,0,0,,Y,10,10,0,0,0,84,103,
+beebox/test/cli/commands/tick.defer.test.ts,2026-09-26,23901e166,,Y,11,15,4,Y,0,1,,Y,13,9,4,4,0,26,240,2d2293cc2 0a93ccd61 a6b756b03 e499d12f6
+beebox/test/cli/commands/tick.engine-wait.test.ts,2026-08-18,a751cc0f3,,Y,10,13,3,,1,0,,Y,8,7,1,1,0,65,155,3dfe5bdac
+beebox/test/cli/commands/tick.force.test.ts,2026-06-09,9e18b69d7,,Y,2,3,1,Y,2,1,,Y,12,9,3,3,0,135,112,3dfe5bdac a751cc0f3 60249bf06
+beebox/test/cli/commands/tick.notify.test.ts,2026-09-26,b9e0143cb,,Y,17,21,4,Y,0,1,,Y,10,7,3,3,0,26,189,c67892950 0a93ccd61 a75bf0adc
+beebox/test/cli/commands/tick.reminder-delivery.test.ts,2026-10-18,1e580f3c4,,Y,6,11,4,Y,0,0,,,0,0,0,0,0,4,124,
+beebox/test/cli/commands/tick.reminder-no-audience.test.ts,2026-10-22,c67892950,,Y,5,11,6,,0,0,Y,,1,0,1,1,0,0,83,7f9321a49
+beebox/test/cli/commands/todo-review.test.ts,2026-09-25,cac903acf,,Y,16,22,5,Y,1,1,,Y,17,12,5,5,0,27,662,2e7bf35df 2e477780c dbb4c9171 2f7db8663 7b1247708
+beebox/test/cli/commands/todos.test.ts,2026-07-28,6d6845d4e,,Y,7,9,2,Y,4,0,,Y,16,12,4,4,0,86,146,8bd8399d1 8eaccd8ac 78a1a9cb2 66c58ccfb
+beebox/test/cli/commands/triage.test.ts,2026-09-28,5844a1024,,Y,33,49,9,Y,0,0,,Y,4,4,0,0,0,24,142,
+beebox/test/cli/commands/trick.test.ts,2026-07-03,2c3b2535a,,Y,12,17,4,Y,4,2,Y,Y,14,8,6,5,1,111,334,5c68d2489 8bd70069e 22de08e73 7c03376d9 6e389a02f c1cfbb8ef
+beebox/test/cli/commands/upgrade.test.ts,2026-07-04,50e0b40d9,,Y,12,16,4,Y,8,1,Y,Y,22,11,11,10,1,110,414,1c5e90e8a cb574a8c2 69e607892 7bc295ad2 0e755f663 7bd19c63f 969d97fa5 7c03376d9 6e389a02f 915217fdf 74771f702
+beebox/test/cli/commands/validate/box-checks.test.ts,2026-09-04,98bdb1ae9,,Y,18,39,21,,0,1,,Y,12,7,5,4,1,48,120,1acb1cd9a 33a55a7ab d89ad3101 36d4e453a 2cecb539e
+beebox/test/cli/commands/validate/pre-commit.system-cards.test.ts,2026-09-09,d6056b354,,Y,48,70,13,,0,0,,Y,10,7,3,3,0,43,160,10be758ad aec22079d bdb8798d9
+beebox/test/cli/commands/validate/pre-commit.test.ts,2026-08-19,dfbdf2008,,Y,19,30,4,,0,1,,Y,12,10,2,2,0,64,166,b208f1709 d70d406b5
+beebox/test/cli/commands/view/command.check.test.ts,2026-06-21,c7b7ca28b,,Y,1,2,1,,0,1,,Y,19,13,6,6,0,123,132,969d97fa5 7b400b6cf b8c8c756c f32c4a25f d590ed90e c1cfbb8ef
+beebox/test/cli/commands/view/command.test-command.test.ts,2026-06-20,9af99e06d,,Y,6,7,1,,0,1,,Y,19,12,7,6,1,124,354,6d0ec43f7 c97282bf0 969d97fa5 fbc55f537 364967613 c1cfbb8ef 41e9d1a58
+beebox/test/cli/commands/view/typecheck.test.ts,2026-06-21,0b79f8107,,Y,4,6,1,,0,1,,,13,11,2,2,0,123,101,c1cfbb8ef 0b8b0c221
+beebox/test/cli/commands/wakeup/command.test.ts,2026-03-03,c48fa2760,,Y,4,6,1,,1,5,,Y,28,14,14,14,0,233,347,660868a49 6179edded 2e477780c cd78d1dc7 a4523216f 91c4c9bbc 7f9940938 df429b123 01a0d8ddd 05ca9ba1f d213710ca 33bb72dc6 b9ff55a40 9d496c871
+beebox/test/cli/commands/wakeup/connectors.test.ts,2026-08-23,54f1e6569,,Y,11,29,3,,0,3,,Y,11,7,4,3,1,60,296,1e93ef8cf 933e2f9ea efa6aa14e c5aa23e53
+beebox/test/cli/commands/wakeup/cycle-lock.test.ts,2026-09-14,255f0a022,,Y,6,8,2,,0,1,,Y,8,7,1,1,0,38,103,cf8e1eba3
+beebox/test/cli/commands/wakeup/steps.test.ts,2026-06-09,8b5311e3e,,Y,9,10,1,,1,2,,Y,20,14,6,6,0,135,179,1a775b7f9 2e477780c e4e0b9fe9 4fa29d5d6 4296d8ee3 34425926b
+beebox/test/cli/entry.surface.test.ts,2026-09-16,13ab4dbb6,,Y,6,11,3,,0,0,,Y,8,7,1,1,0,36,128,81c647230
+beebox/test/cli/entry/legacy-argv.test.ts,2026-09-16,7d3cd8016,,Y,2,3,1,Y,0,0,Y,Y,5,5,0,0,0,36,68,
+beebox/test/cli/lib/box-admission.exemptions.test.ts,2026-09-16,52e459f9a,,Y,1,2,1,Y,0,0,Y,Y,5,5,0,0,0,36,76,
+beebox/test/cli/lib/cli-target-path.guard.test.ts,2026-09-05,e038ef730,,Y,29,41,11,Y,0,0,Y,Y,12,9,3,3,0,47,66,5cf62c6e6 fd3ef5612 aa548e223
+beebox/test/cli/lib/cli-target-path.test.ts,2026-09-05,e038ef730,,Y,29,41,11,Y,1,0,Y,Y,5,4,1,1,0,47,87,36d4e453a
+beebox/test/cli/lib/credentialed-verb.test.ts,2026-09-14,b3a0ab6d6,,Y,13,14,1,,1,0,,Y,8,7,1,1,0,38,310,f02f9b150
+beebox/test/cli/lib/diagnostic-session.test.ts,2026-08-14,c06eb3950,,Y,5,9,3,Y,0,0,,Y,6,5,1,1,0,69,89,aeec841d1
+beebox/test/cli/lib/session-lines.test.ts,2026-08-25,25120681c,,Y,4,8,1,Y,1,0,,Y,8,6,2,2,0,58,176,36b161fe5 8e3a98c0a
+beebox/test/cli/lib/session-media-extract.test.ts,2026-08-25,3d02cb54a,,Y,13,19,3,Y,1,0,Y,Y,10,9,1,1,0,58,220,6e01cbc1e
+beebox/test/cli/lib/session-real-user.test.ts,2026-10-09,d5ba5ed9c,,Y,29,38,5,Y,0,0,,Y,4,4,0,0,0,13,24,
+beebox/test/cli/lib/session-retention.test.ts,2026-08-01,ac0d7d652,,Y,27,37,5,Y,1,1,Y,Y,13,8,5,1,4,82,302,14b6ea5ec c8662893c 46496b763 50961ada5 9c578c78f
+beebox/test/cli/lib/session-snippet.test.ts,2026-08-08,3d403ba61,,Y,12,14,2,Y,0,0,,Y,6,6,0,0,0,75,158,
+beebox/test/cli/lib/session-text.snippet.test.ts,2026-08-26,641fcd52d,,Y,1,2,1,Y,3,1,Y,Y,8,5,3,3,0,57,37,d5ba5ed9c 792c54158 1feb9f989
+beebox/test/cli/lib/session.chat-routes.test.ts,2026-03-03,5375b6ba7,,,0,3,2,,3,1,,Y,17,12,5,5,0,233,378,bb68a237f 6e01cbc1e ac0d7d652 a1c2e10bd 4e6aae12e
+beebox/test/cli/lib/session.multi-root.test.ts,2026-07-12,a1c2e10bd,,Y,13,20,7,Y,1,1,Y,Y,13,9,4,3,1,102,285,bb68a237f 188f3c493 bb10d29d0 a2f087cdb
+beebox/test/cli/lib/session.oversize-lines.test.ts,2026-08-04,17ff1f486,,Y,3,9,2,Y,4,4,Y,Y,20,10,10,7,3,79,419,14b6ea5ec 40d79f608 50961ada5 6e01cbc1e 3d02cb54a 95401e15d c14058bca 5d547279f 546310cb9 636161052
+beebox/test/cli/lib/session.self-note.test.ts,2026-04-17,005c4e5a2,,Y,24,26,2,Y,3,1,,Y,16,12,4,4,0,188,261,ac0d7d652 8bc595561 cd7762230 8a6d9a531
+beebox/test/cli/lib/trick-secrets.test.ts,2026-09-16,22de08e73,,Y,9,17,3,Y,0,0,,Y,6,6,0,0,0,36,68,
+beebox/test/cli/validate-hook/command.input.test.ts,2026-08-13,26c6b5856,,Y,13,15,2,,3,1,,Y,16,8,8,8,0,70,211,1c5e90e8a c6040b476 fdbbb96ff b03b66055 b208f1709 98bdb1ae9 a1794623e fa65538cc
+beebox/test/cli/validate-markdown.test.ts,2026-06-27,5004bb7e5,,Y,2,3,1,Y,2,1,,Y,12,9,3,3,0,117,144,d882fe0df 50f04d290 648939e8b
+beebox/test/cli/wakeup-outcome.test.ts,2026-09-05,3cbeddb5c,,Y,4,5,1,Y,3,1,Y,Y,9,6,3,3,0,47,214,cf8e1eba3 255f0a022 2d6f11ed9
+beebox/test/connector-activity.test.ts,2026-09-19,8ffe95ec9,,Y,5,6,1,,0,0,,Y,7,7,0,0,0,33,177,
+beebox/test/connector-activity.verdict.test.ts,2026-09-19,bc939ed3d,,Y,12,17,2,,0,0,,Y,7,7,0,0,0,33,159,
+beebox/test/connectors/gmail.pull.test.ts,2026-06-09,895b5d551,,Y,3,7,2,Y,6,2,,Y,19,11,8,8,0,135,569,166661e30 f67341a59 96fec6cfc f441ef169 30f1e6e3d ba3bf4367 a4523216f 0ba9b39b3
+beebox/test/connectors/gmail/drafts.test.ts,2026-04-28,3cff9b5ad,,Y,5,7,2,,0,3,,Y,23,13,10,10,0,177,376,a850fc365 bb45c7827 ae4d53ae2 cd78d1dc7 96fec6cfc f441ef169 a4523216f d682f76ba 685d899cf 5289b8880
+beebox/test/connectors/gmail/tracking.rules-and-discovery.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,1,Y,,6,5,1,1,0,4,546,402c0a00f
+beebox/test/connectors/gmail/tracking.test.ts,2026-08-05,ba3bf4367,,Y,29,37,4,,2,1,,Y,20,9,11,11,0,78,411,81c647230 c9a1fc3a2 bda54b66c a850fc365 8e3a98c0a 15174fc53 4297e7666 01c03821c 96fec6cfc f441ef169 30f1e6e3d
+beebox/test/connectors/google-calendar.push-failures.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,4,4,0,0,0,4,404,
+beebox/test/connectors/google-calendar.stranded-edits.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,4,4,0,0,0,4,637,
+beebox/test/connectors/google-calendar.test.ts,2026-05-26,183e64423,,Y,6,9,1,Y,8,4,Y,Y,28,14,14,14,0,149,580,8c37125c9 a52859d97 be08c6cdf d0b4a7fab aa540efab ae0eb6c7b 54f1e6569 c1cfbb8ef 5dcd611e1 a4523216f 7a648fbf3 7b5ad9ebc 1ed538c78 a184af664
+beebox/test/connectors/google-calendar/decide.test.ts,2026-07-06,b8e4d5639,,Y,3,4,1,,0,0,,Y,6,6,0,0,0,108,70,
+beebox/test/connectors/google-calendar/event-index.test.ts,2026-08-25,a52859d97,,Y,9,14,2,,0,0,Y,Y,9,9,0,0,0,58,408,
+beebox/test/connectors/google-calendar/state.test.ts,2026-07-09,a6b4453eb,,Y,3,5,2,,0,0,Y,Y,6,6,0,0,0,105,57,
+beebox/test/connectors/google-calendar/utils.test.ts,2026-03-03,fde311f9a,,Y,1,22,17,,0,0,,Y,9,9,0,0,0,233,191,
+beebox/test/connectors/google-drive.folder.sync-states.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,5,5,0,0,0,4,562,
+beebox/test/connectors/google-drive.folder.test.ts,2026-08-26,6e76948f2,,Y,8,10,2,Y,1,1,,Y,18,11,7,7,0,57,642,ef4951d50 82a47ce55 7b255426b 5b0477ff7 3acec8cdb f063ca45a 57e40f270
+beebox/test/connectors/google-drive.status-and-discovery.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,5,5,0,0,0,4,464,
+beebox/test/connectors/google-drive.test.ts,2026-03-30,cbb57a10c,,Y,20,27,4,Y,9,1,,Y,30,14,16,16,0,206,487,5b0477ff7 3acec8cdb f35b5bdd8 3f7156d98 6e76948f2 cc522ad08 cdca5658c 54f1e6569 a4523216f 16876d21f 764a2311d 0d54624a1 9b8e7b8a8 081e3816f ed15356a4 bed09ab04
+beebox/test/connectors/google-drive/docs-api-status.test.ts,2026-10-20,7b255426b,,Y,10,15,5,Y,3,1,Y,,3,0,3,3,0,2,132,ef4951d50 ef95483d0 82a47ce55
+beebox/test/connectors/google-drive/handlers/docs.test.ts,2026-04-26,cf9415133,,Y,5,6,1,,0,1,,Y,31,13,18,18,0,179,693,7b255426b 34a4c9e47 560c946aa 81c647230 c9a1fc3a2 bda54b66c 5b0477ff7 3acec8cdb 5438d6053 cc522ad08 a4523216f 764a2311d 367f0db8d 10b2dec12 c25d19285 0d54624a1 9b8e7b8a8 96c512cbc
+beebox/test/connectors/google-drive/handlers/docs/api-failure.test.ts,2026-10-20,560c946aa,,Y,5,10,4,Y,2,0,Y,,2,0,2,2,0,2,100,82a47ce55 7b255426b
+beebox/test/connectors/google-drive/handlers/docs/whitespace.test.ts,2026-09-15,5438d6053,,Y,6,10,3,,0,0,Y,Y,4,4,0,0,0,37,44,
+beebox/test/connectors/google-drive/handlers/sheets/sheet-data.test.ts,2026-03-30,ed15356a4,,Y,9,13,2,,0,0,,Y,7,7,0,0,0,206,96,
+beebox/test/connectors/google-drive/lock.test.ts,2026-08-26,7be24e6c7,,Y,5,6,1,,0,0,,Y,8,8,0,0,0,57,139,
+beebox/test/connectors/google-drive/mounts.test.ts,2026-08-26,3f7156d98,,Y,6,9,2,,0,0,,Y,17,11,6,6,0,57,782,5b0477ff7 3acec8cdb f35b5bdd8 0d86b2a6c f063ca45a 91a9a3dc2
+beebox/test/connectors/google-drive/mounts/schedule-hint.test.ts,2026-09-14,b98891055,,Y,5,6,1,,0,0,,Y,6,6,0,0,0,38,81,
+beebox/test/connectors/google-drive/state.test.ts,2026-07-09,5dcd611e1,,Y,8,10,2,,0,0,Y,Y,8,7,1,1,0,105,132,57e40f270
+beebox/test/connectors/google-drive/types.test.ts,2026-03-30,cbb57a10c,,Y,20,27,4,,0,0,,Y,8,8,0,0,0,206,46,
+beebox/test/core/agent-context-mirrors.test.ts,2026-08-13,26c6b5856,,Y,13,15,2,Y,4,1,,Y,12,7,5,5,0,70,103,1c5e90e8a b2ae1028f a89a7c0be 71409c50e fa65538cc
+beebox/test/core/agent-guide/guide/box-shape.test.ts,2026-07-03,2c3b2535a,,Y,12,17,4,Y,7,2,Y,Y,18,9,9,9,0,111,49,b03b66055 6890805b5 e38a04ea6 94545e091 d7d3a19d3 45322542c 056947e62 0ca58f444 cf754e992
+beebox/test/core/agent-guide/guide/cards.test.ts,2026-06-19,be31210cf,,Y,3,4,1,Y,7,2,Y,Y,23,13,10,10,0,125,134,2e8a0ca3b c23a0861a b03b66055 b59d0d48c e38a04ea6 a5b19c033 b208f1709 710813a02 8de00ef7a f2cf3ff4c
+beebox/test/core/agent-guide/guide/reaching.test.ts,2026-09-26,63ab2f153,,Y,7,8,1,Y,0,0,Y,Y,9,7,2,2,0,26,37,fd0aa5254 b03b66055
+beebox/test/core/agent-guide/ledger-schema.test.ts,2026-09-26,94545e091,,Y,22,29,2,Y,0,0,,Y,10,7,3,2,1,26,140,b03b66055 6cd8fb1f6 5d1bbbf36
+beebox/test/core/agent-guide/lint.test.ts,2026-09-26,e38a04ea6,,Y,29,39,5,Y,0,1,,Y,11,8,3,2,1,26,208,b03b66055 5d1bbbf36 5ebcddda6
+beebox/test/core/agent-instruction-files.test.ts,2026-10-09,b03b66055,,Y,36,74,19,Y,0,0,,Y,4,3,1,1,0,13,144,4d13fe624
+beebox/test/core/agent/auth-preflight.test.ts,2026-07-12,61d66d80b,,Y,6,7,1,Y,5,3,,Y,13,8,5,5,0,102,224,59fe6cfd7 263a52a9a 96767cd4b fb1b39721 25f239491
+beebox/test/core/agent/codex-agent.prompt-only.test.ts,2026-10-19,9142d719c,,Y,4,7,1,Y,0,0,Y,,0,0,0,0,0,3,104,
+beebox/test/core/agent/engine-availability-store.test.ts,2026-08-18,bb7d8d1e8,,Y,8,12,3,Y,1,0,,Y,7,5,2,1,1,65,80,40d79f608 3dfe5bdac
+beebox/test/core/agent/engine-unavailability-apply.test.ts,2026-08-18,bb7d8d1e8,,Y,8,12,3,Y,1,0,,Y,7,6,1,1,0,65,88,3dfe5bdac
+beebox/test/core/agent/engine-unavailability.test.ts,2026-08-18,bb7d8d1e8,,Y,8,12,3,Y,0,0,,Y,6,6,0,0,0,65,150,
+beebox/test/core/agent/ensure-codex-plugin.test.ts,2026-08-26,fa84ef82d,,Y,3,4,1,Y,3,2,Y,Y,7,4,3,3,0,57,214,878b7e0df a89a7c0be 78d48f1c7
+beebox/test/core/agent/invoke.test.ts,2026-08-13,6ce2cf56c,,Y,5,7,1,,0,0,,Y,9,8,1,1,0,70,59,b10769dea
+beebox/test/core/agent/invoke/run.box-context.test.ts,2026-08-26,2c8c356e2,,Y,7,9,2,Y,1,1,,Y,13,10,3,3,0,57,90,b03b66055 767baab73 9b9b0fb16
+beebox/test/core/agent/invoke/run.environment.test.ts,2026-09-28,5844a1024,,Y,33,49,9,Y,0,0,,Y,6,6,0,0,0,24,86,
+beebox/test/core/agent/invoke/run.session.test.ts,2026-07-04,95e8208af,,Y,3,7,2,,1,0,Y,Y,9,8,1,1,0,110,60,2bcdcf554
+beebox/test/core/agent/model-carry.test.ts,2026-10-18,5aed4c0ca,Y,Y,29,1616,1525,,1,0,Y,,3,2,1,1,0,4,32,0a361cb7c
+beebox/test/core/agent/token.test.ts,2026-06-12,adfa7ee06,,Y,4,5,1,,2,0,Y,Y,17,10,7,7,0,132,123,3752e79e4 50e05c522 69e429450 8499cc52f 6f2d03152 9435d1ae2 2bcdcf554
+beebox/test/core/annex/doctor.test.ts,2026-07-30,63f51f4fc,,Y,6,7,1,Y,6,3,Y,Y,17,10,7,7,0,84,530,cd650c6ca 9c3dd3e8b 0c47000ef 7084030e2 cf5eb4741 e64f6e73d 3ca4274e4
+beebox/test/core/annex/info-attributes.test.ts,2026-08-04,cf5eb4741,,Y,7,12,3,Y,1,0,Y,Y,9,8,1,1,0,79,88,899656690
+beebox/test/core/annex/is-annex-box.test.ts,2026-08-01,eb40539db,,Y,8,13,3,Y,0,0,Y,Y,4,4,0,0,0,82,110,
+beebox/test/core/annex/new-box.at-init.test.ts,2026-09-14,21b137dd2,,Y,3,4,1,,0,0,,Y,6,4,2,2,0,38,185,48509f15c 9c3dd3e8b
+beebox/test/core/annex/staged-unlisted.test.ts,2026-08-19,dfbdf2008,,Y,19,30,4,Y,0,0,,Y,8,7,1,1,0,64,127,9c3dd3e8b
+beebox/test/core/annex/unlisted-binaries.test.ts,2026-07-30,4fe82fb6e,,Y,4,7,3,Y,2,0,,Y,8,5,3,3,0,84,147,e57b68c90 0e755f663 3ca4274e4
+beebox/test/core/attachments-gitignore.test.ts,2026-07-30,4fe82fb6e,,Y,4,7,3,Y,4,2,,Y,13,9,4,4,0,84,232,cd650c6ca c47fd2be1 b94a282f1 3ca4274e4
+beebox/test/core/body-refs.test.ts,2026-05-30,7a0914e60,,Y,2,4,2,,5,0,,Y,15,8,7,7,0,145,263,dd3b75232 76891c08a ae44c6ba9 43e5111f3 17f5944f7 0872288b6 d42ab7f6b
+beebox/test/core/box-growth/health.test.ts,2026-08-05,ef7809e21,,Y,9,15,3,Y,6,3,,Y,21,9,12,11,1,78,548,c634cdd67 ff50dcb0e 8f4019e61 03e8b7e59 db57ccf95 b69b048c8 784fc68e4 e084243eb fb2bd955c c9509046a 420c3bd20 e634f15e5
+beebox/test/core/box-inventory.test.ts,2026-08-12,3aab94c33,,Y,12,13,1,Y,2,4,,Y,36,9,27,20,7,71,166,1a775b7f9 6f27de3d8 b03b66055 936612249 456eb3f11 28931bf04 0b9322a3f dea2a38ad 8433c3007 e3f3bccc1 28ec4fd00 453400e0d 827a6902e c6ec94f00 2f5c50466 54804ee95 b69b048c8 3b3df966a bdb8798d9 d6056b354 a5b19c033 b208f1709 6515e93ad 98bdb1ae9 d7d3a19d3 81fed0521 bd7683e0c
+beebox/test/core/box.test.ts,2026-03-03,fde311f9a,,Y,1,22,17,,2,0,,Y,35,12,23,18,5,233,184,c634cdd67 713eccbcc 6f27de3d8 4763bc392 cd650c6ca d6056b354 6515e93ad d7d3a19d3 a7731cf99 dbaba15e8 1793d1ef5 c1cfbb8ef a4523216f cf754e992 d4ab16aac 2c3b2535a b68999e1a e765221ee 9d0d36db3 cbb57a10c aa83f67fd 51f0c5f17 bba15a36c
+beebox/test/core/box/backup-status.test.ts,2026-09-04,142e76168,,Y,5,6,1,Y,1,1,Y,Y,4,3,1,1,0,48,193,4bf0178f8
+beebox/test/core/box/boxes-config.test.ts,2026-07-05,f030a96b8,,Y,1,2,1,Y,1,0,Y,Y,8,7,1,1,0,109,76,a4523216f
+beebox/test/core/box/config.test.ts,2026-07-29,9e2fe1827,,Y,12,18,6,Y,1,0,Y,Y,8,7,1,1,0,85,41,b5189abad
+beebox/test/core/box/engine-link.test.ts,2026-10-20,f9de5b6cc,,Y,4,9,4,Y,1,1,Y,,3,0,3,3,0,2,133,5760fbca7 bbdb1f575 fd874a7a3
+beebox/test/core/box/file-watcher.test.ts,2026-08-02,9b2aa44da,,Y,10,14,3,Y,11,7,Y,Y,31,11,20,13,7,81,684,21d12d818 0c0877d70 d2dbb8402 d4588a758 936612249 50961ada5 cc1cf847b db57ccf95 41f5c4448 6515e93ad 00d6ade2b f44a0bd9c 5803c8701 b89ad9c55 651fee540 7bc483880 19fdd325c 90ededb88 eded70866 054cc4f42
+beebox/test/core/box/guidance-sync.agents-md.test.ts,2026-10-09,b03b66055,,Y,36,74,19,,0,0,,Y,7,4,3,3,0,13,164,06f886eba 4d13fe624 fdbbb96ff
+beebox/test/core/box/guidance-sync.test.ts,2026-09-26,f745215bb,,Y,3,4,1,,2,1,,Y,18,9,9,8,1,26,448,7bc295ad2 fdbbb96ff b03b66055 456eb3f11 0e755f663 a3b7aa701 8572c248c 2b3c6d521 e3ffeb729
+beebox/test/core/box/guidance-sync/skills/core.test.ts,2026-10-10,7bc295ad2,,Y,26,59,16,Y,0,0,,Y,5,5,0,0,0,12,193,
+beebox/test/core/box/icon.test.ts,2026-08-26,dcc95bd6a,,Y,6,8,2,,0,0,Y,Y,10,8,2,2,0,57,70,e4bb10484 17f5944f7
+beebox/test/core/box/package.clone.test.ts,2026-10-20,c634cdd67,,Y,7,19,11,,1,0,Y,,1,0,1,1,0,2,115,f9de5b6cc
+beebox/test/core/box/structure.init-v2.test.ts,2026-07-03,ed4b96bcf,,Y,11,13,1,,0,4,Y,Y,40,13,27,27,0,111,358,f9de5b6cc cbf8bb991 7bc295ad2 0e755f663 bb0f68985 28931bf04 cac903acf 13ab4dbb6 643e37821 43982168a 2cecb539e d7d3a19d3 9ce149356 dfbdf2008 d5b552b5c 0d2fbfb80 692fd58da 0ca58f444 6e389a02f c1cfbb8ef a4523216f cf754e992 915217fdf 7b9646c98 70ec1dba0 415f948b5 572e2e87d
+beebox/test/core/box/structure.init.test.ts,2026-03-15,96d99e767,,Y,2,3,1,,0,4,,Y,36,10,26,22,4,221,153,81c647230 0e755f663 cac903acf 4763bc392 d817052f8 2f5c50466 54804ee95 643e37821 81891969a d6056b354 d7d3a19d3 70d85e9ed 0cb20cecd 9ba0f53d0 c1cfbb8ef 445bca047 a4523216f 915217fdf 57fede359 964273781 69c157e73 05ca9ba1f fd7323de7 33bb72dc6 c084beab6 58b6200cb
+beebox/test/core/box/structure.memory-symlink.test.ts,2026-08-25,f46116a98,,Y,2,4,1,,0,2,Y,Y,10,7,3,3,0,58,101,648547961 ea97188e3 f93fb1009
+beebox/test/core/box/structure/defaults.guides.test.ts,2026-09-29,89730a3c8,,Y,36,58,18,Y,1,0,,Y,6,5,1,1,0,23,102,2e477780c
+beebox/test/core/box/structure/defaults.landmark.test.ts,2026-06-26,8333e98d0,,Y,2,3,1,,9,2,Y,Y,21,8,13,13,0,118,143,b54df33a3 6bfcaa16b 5b4f34771 917676083 41576248c 58bb25f79 e4bb10484 0e755f663 d7d3a19d3 0430d1d8a a4523216f 915217fdf 760d14e5c
+beebox/test/core/box/structure/defaults.source-fields.test.ts,2026-09-29,2e477780c,,Y,41,73,23,Y,0,0,,Y,6,3,3,3,0,23,78,81c647230 c9a1fc3a2 bda54b66c
+beebox/test/core/box/structure/defaults.todo-view.test.ts,2026-07-28,b5aa63783,,Y,14,18,4,Y,3,0,,Y,11,8,3,3,0,86,76,8bd8399d1 d7d3a19d3 8331820f9
+beebox/test/core/box/structure/root-question.test.ts,2026-10-20,6bfcaa16b,,Y,34,49,10,Y,2,0,,,2,0,2,2,0,2,64,b54df33a3 d40a210da
+beebox/test/core/browse-key.test.ts,2026-07-31,f4806beb3,,Y,8,18,1,Y,1,1,,Y,6,4,2,1,1,83,141,8f3608b87 aed8e5613
+beebox/test/core/bulk-upload/prepare.annex.test.ts,2026-08-18,960c47003,,Y,3,11,4,Y,3,2,Y,,11,8,3,3,0,65,120,cd650c6ca b3d3d8c87 7dd1f51d3
+beebox/test/core/bulk-upload/prepare.test.ts,2026-07-27,7f80061e3,,Y,4,6,1,Y,9,3,,Y,23,12,11,11,0,87,663,899656690 ff50dcb0e 02a3e12ff cd650c6ca 9c3dd3e8b b3d3d8c87 7dd1f51d3 960c47003 e4515e6c9 189639a3d 9204dc22d
+beebox/test/core/bulk-upload/sweep.test.ts,2026-07-27,3928126b5,,Y,6,7,1,Y,6,3,,Y,19,11,8,7,1,87,364,899656690 02a3e12ff c4dc829df a53e65f15 e2e0fae14 96cb88579 0eda72620 d0899ada7
+beebox/test/core/bulk-upload/worker.test.ts,2026-07-27,e96dbe05e,,Y,9,15,3,Y,2,2,,Y,13,7,6,6,0,87,416,899656690 ff50dcb0e 02a3e12ff 38ccd8838 b3b53f10e d0899ada7
+beebox/test/core/bulk-upload/worker/deliver.test.ts,2026-07-27,e96dbe05e,,Y,9,15,3,Y,2,0,,Y,9,7,2,2,0,87,164,ab43e7876 9204dc22d
+beebox/test/core/canonical-refs.test.ts,2026-07-30,2c52f610b,,Y,10,13,2,Y,3,2,Y,Y,17,11,6,6,0,84,482,0e755f663 67bd7a3ad 2cecb539e 98bdb1ae9 3595fad6e 21e270f99
+beebox/test/core/capture/failure-notice.test.ts,2026-09-26,52cb00fc0,,Y,7,10,3,Y,0,0,,Y,8,7,1,1,0,26,110,0a93ccd61
+beebox/test/core/capture/prepare.test.ts,2026-07-09,9a7b6ce78,,Y,11,15,4,Y,7,2,,Y,27,12,15,13,2,105,628,cc59568ff 40d79f608 0c0877d70 fd0aa5254 ff50dcb0e f706fc3e8 13f8efbb8 02a3e12ff 52cb00fc0 8d1ae0fbb 38ccd8838 6e9860f30 3eaf44307 34cf71d3a 1f3f5c01f
+beebox/test/core/capture/prepare/audio-concat.test.ts,2026-07-09,817e997f6,,Y,10,13,3,Y,0,0,,Y,9,8,1,1,0,105,59,1f3f5c01f
+beebox/test/core/capture/prepare/deliver.message.test.ts,2026-07-09,9a7b6ce78,,Y,11,15,4,Y,2,1,,Y,13,9,4,4,0,105,154,2952eb805 969d97fa5 38ccd8838 1f3f5c01f
+beebox/test/core/capture/prepare/deliver.reserved.test.ts,2026-08-20,6cd237c86,,,0,4,1,,0,0,,Y,9,9,0,0,0,63,111,
+beebox/test/core/capture/prepare/deliver.test.ts,2026-07-09,9a7b6ce78,,Y,11,15,4,Y,0,0,,Y,5,5,0,0,0,105,62,
+beebox/test/core/capture/prepare/write-cards.audio-format.test.ts,2026-07-17,3eaf44307,,Y,11,16,5,Y,0,0,,Y,5,5,0,0,0,97,56,
+beebox/test/core/capture/resume.test.ts,2026-09-10,1b084ccb3,,Y,6,9,3,,1,1,,Y,10,7,3,3,0,42,164,2cbcec5fb 1837ae7f3 3769455b2
+beebox/test/core/capture/staging-store.test.ts,2026-07-09,817e997f6,,Y,10,13,3,Y,8,3,,Y,18,10,8,8,0,105,507,189639a3d 64a080433 d0899ada7 689420231 0ef4d69c9 3eaf44307 34cf71d3a 1f3f5c01f
+beebox/test/core/capture/sweep.test.ts,2026-07-10,77ac45954,,Y,16,19,3,Y,2,0,,Y,12,9,3,3,0,104,266,ff50dcb0e 1b084ccb3 34cf71d3a
+beebox/test/core/card-fields/map.test.ts,2026-09-29,c9a1fc3a2,,Y,14,26,10,Y,1,1,,Y,6,5,1,1,0,23,209,660868a49
+beebox/test/core/card-files/move-phase2.test.ts,2026-09-28,5844a1024,,Y,33,49,9,Y,0,0,,Y,6,6,0,0,0,24,103,
+beebox/test/core/card-io.test.ts,2026-05-22,b2fd640db,,Y,1,2,1,Y,7,4,,Y,28,14,14,14,0,153,241,6c3b49d44 546588ced 2e477780c 9ac89cb27 b25ebeb8b 7b5ad9ebc c1ed4d353 ddcd6b7f5 f3573ea9d a57cdddd7 94b3592be df429b123 c25d19285 ae0bf23b9
+beebox/test/core/card-lint.body-refs.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,5,5,0,0,0,4,523,
+beebox/test/core/card-lint.markdoc-and-husks.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,5,5,0,0,0,4,637,
+beebox/test/core/card-lint.test.ts,2026-05-22,0e1269d8a,,Y,2,3,1,Y,28,23,,Y,60,15,45,44,1,153,391,9dc52599b eebb195b6 06f886eba e4bb10484 0e755f663 e6d36da69 89730a3c8 16dbdc236 c89c07681 7e3ff1152 fb27e8976 e038ef730 98bdb1ae9 266cb9342 dad5e5941 d9a713149 1b5a187df e2fb7f7e8 52bcd3987 9e2fe1827 149bf2e3f ac26639f0 8374d5902 d42ab7f6b c1ed4d353 3fd5e4c9e a7b9e3459 d48cc53da 3690cf805 6fc7ddd28 bd878a052 0f502e9a5 ce4ceb505 9fbb4cd1b 8f6a6a822 ed92e412f f3573ea9d ebf651a99 e7f2ac5b0 3c20943b6 bf0eebca2 a6ccdd4ad c25d19285 991059b3e 58a93fece
+beebox/test/core/card-lint/core/body-title.test.ts,2026-10-06,c720332b2,,Y,8,11,3,Y,0,0,,Y,5,5,0,0,0,16,45,
+beebox/test/core/card-lint/core/plugin-lint.test.ts,2026-10-10,69e607892,,Y,14,24,6,Y,0,0,Y,Y,5,5,0,0,0,12,53,
+beebox/test/core/card-lint/core/symbol.test.ts,2026-09-05,8671ede8b,,Y,6,12,3,Y,1,0,,Y,6,5,1,1,0,47,89,0e755f663
+beebox/test/core/card-lint/publication-duplicates.test.ts,2026-10-06,d402d9355,,Y,8,13,5,Y,1,0,,Y,5,4,1,1,0,16,33,0e755f663
+beebox/test/core/cards/accept-submission.test.ts,2026-09-12,5188429af,,Y,3,5,2,Y,1,0,,Y,10,7,3,3,0,40,307,c95de7fd9 89730a3c8 d91bcc726
+beebox/test/core/chat-search/extract.test.ts,2026-09-28,711244238,,Y,10,12,2,Y,0,0,,Y,6,6,0,0,0,24,196,
+beebox/test/core/chat-search/refresh.test.ts,2026-09-28,711244238,,Y,10,12,2,Y,1,1,,Y,7,6,1,1,0,24,285,9850b94eb
+beebox/test/core/chat/callout-tags.test.ts,2026-09-26,52cb00fc0,,Y,7,10,3,Y,1,0,,Y,9,6,3,2,1,26,236,1e93ef8cf 0a93ccd61 72505600e
+beebox/test/core/chat/card-activity.test.ts,2026-06-14,e7c46753c,,Y,8,10,2,,1,1,,Y,14,10,4,4,0,130,143,71c59352d 896360a4f 4da63b20b fcc648179
+beebox/test/core/chat/features.attention-context.test.ts,2026-09-07,1a74113ae,,Y,84,111,13,Y,1,0,,Y,8,6,2,2,0,45,103,b54df33a3 6bfcaa16b
+beebox/test/core/chat/features.test.ts,2026-05-13,140f40435,,Y,6,8,2,,5,1,,Y,25,11,14,13,1,162,262,a95eb7759 50eba8c66 4860a29ea ba239724c 5fe7b6997 71c59352d 6af01c69a fdda44f66 4da63b20b fcc648179 e7c46753c e87d748e1 ec7eef968 10b2dec12
+beebox/test/core/chat/husk-transcript.test.ts,2026-08-26,ea0fb88eb,,Y,2,3,1,Y,0,0,Y,Y,8,8,0,0,0,57,45,
+beebox/test/core/chat/husk.test.ts,2026-07-02,a1185dc80,,Y,8,11,1,,10,7,Y,Y,22,8,14,12,2,112,330,40d79f608 8a5a27c32 c3864277a 82d2f66c1 44eadfb11 a4c2ca44a a4f1c5cd5 2ee5a8722 065b92384 1377b0c97 b7ca3a64d a1c2e10bd 71c59352d e4e3c42bc
+beebox/test/core/chat/review/after-turn.test.ts,2026-10-08,bc3916180,,Y,7,18,3,Y,3,2,,Y,9,6,3,3,0,14,449,535434368 93104acfe d8b15ad61
+beebox/test/core/chat/review/discovery.test.ts,2026-08-01,4c1166159,,Y,3,6,2,Y,6,1,Y,Y,15,9,6,6,0,82,363,bc3916180 1966abf81 b6fcc5057 c76f7eff3 238b5b049 167cede34
+beebox/test/core/chat/review/freshness.test.ts,2026-10-02,b6fcc5057,,Y,9,14,3,Y,1,0,,Y,10,9,1,1,0,20,270,1966abf81
+beebox/test/core/chat/review/reviewer.test.ts,2026-10-09,2d957b623,,Y,4,11,1,Y,0,0,,Y,6,6,0,0,0,13,102,
+beebox/test/core/chat/review/run.failures.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,6,6,0,0,0,4,486,
+beebox/test/core/chat/review/run.test.ts,2026-07-28,9ba0f53d0,,Y,23,34,8,Y,4,4,Y,Y,18,10,8,8,0,86,328,f2c314fc1 b6fcc5057 d9a713149 238b5b049 167cede34 4c1166159 7a5f88258 80b22d1d7
+beebox/test/core/chat/review/run.windows-and-passes.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,5,5,0,0,0,4,438,
+beebox/test/core/chat/review/span.test.ts,2026-07-28,9ba0f53d0,,Y,23,34,8,Y,3,0,Y,Y,10,7,3,3,0,86,213,238b5b049 167cede34 80b22d1d7
+beebox/test/core/chat/review/state.test.ts,2026-07-28,9ba0f53d0,,Y,23,34,8,Y,2,0,Y,Y,10,8,2,2,0,86,206,3df351e5d 80b22d1d7
+beebox/test/core/chat/routing/policy.test.ts,2026-10-06,d45b33711,,Y,4,6,2,Y,3,2,,Y,7,4,3,3,0,16,220,87d1bcced 20dd89b6e cd5dbf9ca
+beebox/test/core/chat/routing/quick-chat-record.test.ts,2026-10-06,d45b33711,,Y,4,6,2,Y,1,0,,Y,6,5,1,1,0,16,286,20dd89b6e
+beebox/test/core/chat/routing/quick-chat-submit/catalog.test.ts,2026-09-21,e04dbc65f,,Y,16,29,3,Y,4,0,,Y,9,5,4,4,0,31,201,fdef22dfe 01e79603f 006e035d7 cd8294f66
+beebox/test/core/chat/schedules.check-in-cap.test.ts,2026-10-18,5aa703c02,,Y,4,5,1,,0,0,,,1,0,1,1,0,4,63,d7e55e8a4
+beebox/test/core/chat/schedules.maintenance.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,0,0,,Y,8,7,1,1,0,38,42,cb574a8c2
+beebox/test/core/chat/schedules.test.ts,2026-03-08,29bc9140d,,Y,4,6,1,,4,2,,Y,16,11,5,5,0,228,237,969d97fa5 3df351e5d f54f44d23 71c59352d a631d0afc
+beebox/test/core/chat/session/archive.test.ts,2026-08-26,9b62b1fed,,Y,4,5,1,Y,3,1,,Y,13,10,3,3,0,57,192,266cb9342 c84099e81 c3864277a
+beebox/test/core/chat/session/availability.test.ts,2026-08-26,56171a5cd,,Y,7,9,2,Y,3,0,,Y,14,10,4,4,0,57,206,969d97fa5 3c220e44f 6f95cfc1d 266cb9342
+beebox/test/core/chat/session/codex-transcript/core.test.ts,2026-08-13,9ecd4deb6,,Y,2,3,1,,1,6,,Y,20,8,12,12,0,70,313,5bb8300bb 6673cd5fc 16a331666 9b7ef4982 d59ebff79 5def202db f3dadf561 b10769dea 720c37a1d f6888f0fc c06eb3950 247bc1062
+beebox/test/core/chat/session/delete.test.ts,2026-08-07,3df351e5d,,Y,35,45,8,Y,0,0,,Y,10,9,1,1,0,76,308,97b2752a0
+beebox/test/core/chat/session/deliver-user-message.test.ts,2026-10-12,2cbcec5fb,,Y,2,4,2,Y,0,0,Y,Y,5,5,0,0,0,10,61,
+beebox/test/core/chat/session/engine.start-choice.test.ts,2026-08-25,79dac0af3,,Y,11,13,1,Y,4,3,Y,Y,16,8,8,6,2,58,205,6f95cfc1d b9cf10125 5def202db 67f7d5517 78e1af9ea 6ae8c8535 1c34d0867 fd088ecd5
+beebox/test/core/chat/session/history.features-persistence.test.ts,2026-05-13,140f40435,,Y,6,8,2,,2,2,,Y,18,12,6,5,1,162,269,a95eb7759 f1ba1944e 41339f244 3c220e44f bb10d29d0 71c59352d
+beebox/test/core/chat/session/history.test.ts,2026-05-05,b628d89f3,,Y,2,4,2,,7,0,Y,Y,19,11,8,7,1,170,435,c3864277a 074ad9c68 238b5b049 d2c84a865 3df351e5d a1c2e10bd 71c59352d 2f8c61368
+beebox/test/core/chat/session/id-file.test.ts,2026-07-11,e9e954768,,Y,13,19,3,,0,0,Y,Y,7,7,0,0,0,103,141,
+beebox/test/core/chat/session/landmark-context.test.ts,2026-10-10,171211abc,,Y,7,9,2,Y,1,2,,Y,7,5,2,2,0,12,82,0a07958fd 98ebdca57
+beebox/test/core/chat/session/list/core.codex-metadata-unavailable.test.ts,2026-08-26,245f60abc,,,0,1,1,,0,0,Y,Y,8,8,0,0,0,57,72,
+beebox/test/core/chat/session/list/core.codex-repair-record.test.ts,2026-10-05,6673cd5fc,,Y,18,23,4,Y,0,0,,Y,7,7,0,0,0,17,92,
+beebox/test/core/chat/session/list/core.dead-husks.test.ts,2026-08-26,eeeffbd21,,Y,1,2,1,,1,0,,Y,10,8,2,2,0,57,97,8a5a27c32 266cb9342
+beebox/test/core/chat/session/list/label.test.ts,2026-08-20,fa3938d0a,,Y,3,4,1,,1,1,,Y,11,9,2,2,0,63,159,8a5a27c32 d3a00fab4
+beebox/test/core/chat/session/load-history.test.ts,2026-08-04,17ff1f486,,Y,3,9,2,Y,2,0,Y,Y,11,8,3,2,1,79,301,e3b3e814f 6f95cfc1d 546310cb9
+beebox/test/core/chat/session/model.test.ts,2026-08-25,f6908a435,,Y,10,13,3,Y,0,0,,Y,15,10,5,5,0,58,52,aee78a88f 81c647230 90bf65d57 8b5527da6 b9cf10125
+beebox/test/core/chat/session/origin.test.ts,2026-08-26,c444c471d,,Y,7,8,1,Y,2,1,,Y,8,6,2,2,0,57,106,266cb9342 ec2fb3688
+beebox/test/core/chat/session/prompts.open-question.test.ts,2026-10-20,6bfcaa16b,,Y,34,49,10,Y,1,0,,,2,0,2,2,0,2,34,b54df33a3 d40a210da
+beebox/test/core/chat/session/registry.test.ts,2026-07-06,7a648fbf3,,Y,1,4,3,,7,5,Y,Y,24,12,12,12,0,108,468,68809db17 0619c0341 7bd295861 a95eb7759 d8f88e44e 969d97fa5 8b6366bdd 5def202db 73035308c 3df351e5d 5671d260d 71c59352d
+beebox/test/core/chat/session/reserve.test.ts,2026-08-20,3cd5c0fb3,,Y,13,15,1,Y,2,0,,Y,13,10,3,3,0,63,310,969d97fa5 074ad9c68 bb11e145e
+beebox/test/core/chat/session/run.client-composed.test.ts,2026-09-29,aedbbdbb4,,Y,12,14,2,Y,0,0,,Y,6,5,1,1,0,23,79,da6d70df9
+beebox/test/core/chat/session/run.maintenance.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,0,0,,Y,10,8,2,2,0,38,66,cb574a8c2 7bd19c63f
+beebox/test/core/chat/session/run.start-failure.test.ts,2026-08-02,9b2aa44da,,Y,10,14,3,,1,0,Y,Y,8,7,1,1,0,81,97,969d97fa5
+beebox/test/core/chat/session/run.task-level.test.ts,2026-10-19,27e697c16,,Y,9,13,3,,0,0,Y,,0,0,0,0,0,3,51,
+beebox/test/core/chat/session/run.test.ts,2026-03-03,5375b6ba7,,,0,3,2,,1,0,,Y,16,10,6,6,0,233,345,bc762c042 48548cb39 167cede34 ac0d7d652 71c59352d 4e6aae12e
+beebox/test/core/chat/session/run.transcript-sync.test.ts,2026-06-09,efc17fb45,,Y,3,4,1,,1,1,Y,Y,17,13,4,4,0,135,179,bb68a237f 969d97fa5 a1c2e10bd 71c59352d
+beebox/test/core/chat/session/run.with-spawner.test.ts,2026-04-19,6deac8479,,Y,18,31,9,,1,1,,Y,19,13,6,5,1,186,297,969d97fa5 71c59352d 78e5a5da7 030df8beb 946fb3a6f ab3db71c5
+beebox/test/core/chat/session/run/lifecycle.test.ts,2026-07-06,bba09bbd0,,Y,5,9,1,,3,1,,Y,11,6,5,5,0,108,70,cf8123bd9 c23a0861a da6d70df9 71c59352d 861cc2647
+beebox/test/core/chat/session/run/start-refusal.test.ts,2026-10-15,3f73b0b5a,,Y,8,13,2,Y,0,0,Y,Y,6,6,0,0,0,7,75,
+beebox/test/core/chat/session/transcript-paths.remove-temp.test.ts,2026-10-19,71d9181f7,,Y,4,12,4,Y,0,0,,,0,0,0,0,0,3,46,
+beebox/test/core/chat/session/transcript-paths.test.ts,2026-09-04,188f3c493,,Y,17,34,8,Y,1,0,,Y,5,4,1,1,0,48,74,71d9181f7
+beebox/test/core/chat/transcript-render.test.ts,2026-07-28,9ba0f53d0,,Y,23,34,8,Y,1,2,Y,Y,9,7,2,2,0,86,163,4a03cdc7d dfaf9fd01
+beebox/test/core/chat/turn-buffer.test.ts,2026-06-09,6863a5023,,Y,4,5,1,,3,1,Y,Y,11,8,3,3,0,135,132,f8a37022e 5147906d2 71c59352d
+beebox/test/core/chat/ui-dump.test.ts,2026-08-23,0bb8f3acb,,Y,12,17,5,Y,3,0,Y,Y,13,9,4,4,0,60,273,6d172a0d3 509d94797 38fb54574 f6d5aa498
+beebox/test/core/chat/whats-changed.test.ts,2026-06-14,7a5c3def5,,Y,7,8,1,,1,0,,Y,14,11,3,3,0,130,110,c1cfbb8ef 71c59352d 915217fdf
+beebox/test/core/codex-usage.model.test.ts,2026-10-19,bffa93184,,Y,5,8,2,Y,0,0,Y,,0,0,0,0,0,3,70,
+beebox/test/core/codex-usage.test.ts,2026-08-14,9dbfa2c41,,Y,7,8,1,Y,1,0,,Y,7,6,1,1,0,69,103,b10769dea
+beebox/test/core/collection/run.test.ts,2026-09-20,87021d88d,,Y,8,10,1,Y,3,2,,Y,14,7,7,7,0,32,455,8bd8399d1 8eaccd8ac f706fc3e8 52b609299 72e9dd86b dc3c63e3c 96d6fe709
+beebox/test/core/command-runner.args-validation.test.ts,2026-07-10,205402454,,Y,3,4,1,,1,0,,Y,10,9,1,1,0,104,84,aa548e223
+beebox/test/core/commands/answer.test.ts,2026-07-10,78dcdfbc0,,Y,7,9,2,Y,4,1,,Y,17,10,7,6,1,104,375,b54df33a3 6bfcaa16b 7485e83c8 b69b048c8 c1cfbb8ef 5dd2a2fef 21bf482c9
+beebox/test/core/commands/connector-sync.test.ts,2026-08-05,30f1e6e3d,,Y,11,16,3,Y,1,0,Y,Y,9,8,1,1,0,78,74,aa548e223
+beebox/test/core/commands/dismiss.test.ts,2026-07-10,78dcdfbc0,,Y,7,9,2,Y,2,0,,Y,10,8,2,2,0,104,75,7485e83c8 21bf482c9
+beebox/test/core/commands/intake/run.test.ts,2026-05-19,a245996d9,,Y,6,7,1,,1,0,,Y,16,12,4,4,0,156,206,5844a1024 6af01c69a 05ca9ba1f 66b8a08af
+beebox/test/core/commands/move/command.test.ts,2026-05-30,7a0914e60,,Y,2,4,2,,0,6,,Y,31,15,16,16,0,145,727,bc11677e2 1e391373f d4594625a 357652325 e038ef730 98bdb1ae9 21e270f99 2c52f610b 3ce2ec12b 509e38525 d42ab7f6b 8c7e44fae a184af664 a901a279f c8aaa6d77 5c39d71f2
+beebox/test/core/commands/scan-import/cards.test.ts,2026-08-01,46283d1e2,,Y,1,2,1,,0,0,,Y,10,10,0,0,0,82,145,
+beebox/test/core/commands/scan-import/command.photo-flow.test.ts,2026-08-01,f2b5dc78e,,Y,5,7,2,,0,1,,Y,12,9,3,3,0,82,181,02a3e12ff 9c3dd3e8b 0499b2475
+beebox/test/core/commands/scan-import/guide-context.test.ts,2026-08-01,ca33f79b2,,Y,5,6,1,,0,0,,Y,9,8,1,0,1,82,160,40d79f608
+beebox/test/core/commands/scan-import/helpers.test.ts,2026-04-28,ec7b74eea,,Y,9,11,2,,0,1,,Y,14,11,3,3,0,177,401,904acaa4d 0499b2475 f2b5dc78e
+beebox/test/core/commands/scan-import/pdf.route.test.ts,2026-09-05,01d934919,,Y,2,3,1,,0,0,,Y,10,8,2,2,0,47,122,9c3dd3e8b e09cd6d23
+beebox/test/core/commands/scan-import/session-discard.test.ts,2026-09-28,f9ca86681,,Y,4,6,2,Y,2,2,,Y,7,5,2,2,0,24,192,21694a17c 5bce0d0f2
+beebox/test/core/commands/trash/command.test.ts,2026-07-06,41550e326,,Y,3,4,1,,1,0,Y,Y,15,10,5,5,0,108,180,97b2752a0 e038ef730 b0a210182 98bdb1ae9 7c37e0a39
+beebox/test/core/connector-owned-markdown.test.ts,2026-09-15,5438d6053,,Y,6,10,3,Y,0,0,Y,Y,6,6,0,0,0,37,114,
+beebox/test/core/deepgram-key.test.ts,2026-08-17,af5fd87ce,,Y,30,41,8,Y,2,0,,Y,9,7,2,2,0,66,112,7d8494901 6a0f44e11
+beebox/test/core/describe-images/gemini.images.test.ts,2026-09-28,7c2c299cc,,Y,14,23,6,Y,0,0,Y,Y,4,4,0,0,0,24,72,
+beebox/test/core/describe-images/helpers.json-boundary.test.ts,2026-07-06,5aa6cc54a,,Y,6,7,1,,0,0,,Y,6,6,0,0,0,108,45,
+beebox/test/core/describe-images/helpers.test.ts,2026-03-22,150b98b98,,Y,18,22,1,,0,0,,Y,11,8,3,2,1,214,30,445bca047 75885ca34 90c956452
+beebox/test/core/docs-gen/compile.scan-procedures.test.ts,2026-06-19,66d8d4c7d,,Y,1,2,1,,1,0,Y,Y,10,9,1,1,0,125,81,f24eab1c2
+beebox/test/core/docs-gen/generate.test.ts,2026-07-04,74771f702,,Y,3,5,2,,0,2,Y,Y,23,13,10,9,1,110,174,7bc295ad2 fb4be402b 698551e0d 606642fb0 57e9fe02f 0e755f663 7c03376d9 6e389a02f f24eab1c2 915217fdf
+beebox/test/core/docs-gen/package-docs.pointers.test.ts,2026-09-26,8433c3007,,Y,6,10,2,,0,1,,Y,10,5,5,5,0,26,65,7bc295ad2 7ab23b850 e38a04ea6 8572c248c 28931bf04
+beebox/test/core/docs-gen/package-docs.test.ts,2026-09-05,a5b19c033,,Y,41,62,6,Y,3,1,,Y,15,11,4,4,0,47,167,e3ffeb729 346f5b4c6 d8785ba69 c64462998
+beebox/test/core/docs-refresh.test.ts,2026-08-24,fe34d0494,,Y,11,16,1,Y,3,1,Y,Y,16,10,6,6,0,59,234,55147cd9a cb574a8c2 7bc295ad2 65af4d7a6 969d97fa5 b208f1709
+beebox/test/core/engine-version.test.ts,2026-07-04,50e0b40d9,,Y,12,16,4,Y,0,0,Y,Y,9,8,1,1,0,110,90,a249e56a5
+beebox/test/core/event-bus.test.ts,2026-07-09,ae564c2f6,,Y,2,3,1,Y,8,1,,Y,28,11,17,14,3,105,314,144367fdd 27e697c16 40d79f608 0c0877d70 1e93ef8cf bc3916180 712d973d7 3769455b2 8e7b5de94 0bb8f3acb 796876cc2 427de3176 6d4cd8bf2 ca400ed9a 73e04bae9 b619b5991 63693cbad
+beebox/test/core/external/ref.test.ts,2026-06-04,e094b21cb,,Y,1,2,1,,1,0,,Y,9,8,1,1,0,140,96,11b8b27d6
+beebox/test/core/external/url-check.test.ts,2026-06-28,889159bd5,,Y,4,9,3,,1,1,,Y,8,6,2,2,0,116,144,f67c4e799 11b8b27d6
+beebox/test/core/external/url-check/fetch.test.ts,2026-06-28,889159bd5,,Y,4,9,3,,0,0,,Y,7,5,2,2,0,116,59,11b8b27d6 c7ea85b8a
+beebox/test/core/extfile-sync.test.ts,2026-06-18,014b19a7f,,Y,7,8,1,Y,0,0,,Y,11,10,1,1,0,126,97,1130a7fed
+beebox/test/core/find-inbound-card-refs.test.ts,2026-09-08,33a55a7ab,,Y,53,88,10,Y,0,0,,Y,5,5,0,0,0,44,33,
+beebox/test/core/finish-job.test.ts,2026-07-01,38a131d2f,,Y,4,6,2,Y,0,0,Y,Y,9,8,1,1,0,113,61,2e477780c
+beebox/test/core/folder-instructions.test.ts,2026-10-09,b03b66055,,Y,36,74,19,Y,1,0,,Y,5,4,1,1,0,13,70,fb4be402b
+beebox/test/core/geo.test.ts,2026-06-29,e765221ee,,Y,13,21,6,Y,0,0,Y,Y,6,6,0,0,0,115,48,
+beebox/test/core/glm-key.test.ts,2026-09-15,fe3142614,,Y,4,6,2,Y,0,0,,Y,5,5,0,0,0,37,34,
+beebox/test/core/handle.test.ts,2026-05-20,5e375f3c0,,Y,6,7,1,Y,5,1,,Y,20,13,7,7,0,155,262,3e73d10f5 9727dc7b8 8d1ae0fbb 1b5a187df 6af01c69a a184af664 fc33a9620
+beebox/test/core/host-packages.test.ts,2026-09-17,23f0ee436,,Y,7,8,1,Y,0,0,,Y,7,7,0,0,0,35,285,
+beebox/test/core/housekeeping.test.ts,2026-09-16,613a77d35,,Y,16,23,5,Y,1,1,,Y,6,5,1,1,0,36,92,792c54158
+beebox/test/core/install-template-file.resolution.test.ts,2026-10-06,71ea815b3,,Y,13,18,4,Y,0,0,,Y,6,5,1,1,0,16,212,1c5e90e8a
+beebox/test/core/install-template-file.sibling-key.test.ts,2026-10-09,b03b66055,,Y,36,74,19,Y,0,0,,Y,4,3,1,1,0,13,213,4d13fe624
+beebox/test/core/install-template-file.test.ts,2026-05-25,fd7323de7,,Y,2,4,2,Y,7,4,,Y,19,10,9,9,0,150,371,68809db17 d7d3a19d3 70d85e9ed 3cd632f04 50e0b40d9 80bfcc62d 08dce3986 13f1dcbc7 a36ceb2e5
+beebox/test/core/install-validation-hooks.test.ts,2026-05-25,5ce89caa4,,Y,1,2,1,Y,10,5,,Y,25,12,13,11,2,150,388,61bf60267 bb0f68985 b69b048c8 a1c303d42 00dbfaf1b 71409c50e dfbdf2008 3412b23ea 92a92e040 4f7fafd28 6e389a02f 50f04d290 889159bd5
+beebox/test/core/instruction-file-lint.test.ts,2026-06-17,c4146342b,,,0,1,1,,1,0,,Y,10,8,2,2,0,127,78,c6040b476 b03b66055
+beebox/test/core/judgment/budget.test.ts,2026-09-26,40ee8b60e,,Y,14,17,3,Y,0,0,Y,Y,8,7,1,1,0,26,91,0a93ccd61
+beebox/test/core/landmark/box-identity.test.ts,2026-08-25,0430d1d8a,,Y,8,13,3,Y,4,0,,Y,12,6,6,6,0,58,107,e4bb10484 a706e09a9 17f5944f7 98bdb1ae9 30294ee3e 38778aa36
+beebox/test/core/landmark/card-cache.test.ts,2026-08-08,3d403ba61,,Y,12,14,2,Y,1,0,,Y,8,6,2,2,0,75,165,a3336a13c 9019fa382
+beebox/test/core/landmark/features.seed.test.ts,2026-05-16,0e40d1aa0,,Y,6,7,1,Y,7,0,,Y,19,10,9,9,0,159,157,a95eb7759 e4bb10484 17f5944f7 188f3c493 50eba8c66 6af01c69a fc33a9620 4881722d9 25e332668
+beebox/test/core/landmark/nearest.test.ts,2026-06-17,92a0a40bc,,Y,5,7,1,Y,1,0,,Y,10,9,1,1,0,127,97,e038ef730
+beebox/test/core/landmark/prominence-index.test.ts,2026-09-06,e73fe6b29,,Y,2,3,1,Y,4,0,,Y,10,6,4,4,0,46,283,5ed54f6f8 28a33b23e 7209474cc 1f6401498
+beebox/test/core/landmark/resolve.derived.test.ts,2026-09-06,a3336a13c,,Y,12,16,4,Y,0,2,,Y,13,7,6,6,0,46,240,c65e7540f c61611c6c 3a172949c 76e02ffc8 2569eaed0 7209474cc
+beebox/test/core/landmark/resolve.schema.test.ts,2026-05-04,ee3bf65b9,,Y,13,16,1,Y,8,3,,Y,32,15,17,16,1,171,332,c65e7540f e4bb10484 1acb1cd9a 98bc0aacb d64d435d3 bdb6a49cd d59ebff79 98bdb1ae9 1b5a187df 509e38525 f0372d0fc fc33a9620 e82755491 4881722d9 25e332668 97f2cc376 95aa620e9
+beebox/test/core/last-audio-pending.test.ts,2026-06-11,1d1ec11d7,,Y,10,11,1,Y,4,3,,Y,23,11,12,10,2,133,662,40d79f608 0c0877d70 a0eb972de 1837ae7f3 a4ca862de a02277695 f3728d28a 6d4cd8bf2 ea2e8cc80 e9e954768 ce10e355a e3715114e
+beebox/test/core/legacy-instruction-lint.test.ts,2026-10-09,b03b66055,,Y,36,74,19,Y,0,0,,Y,4,4,0,0,0,13,54,
+beebox/test/core/link-repair.test.ts,2026-06-27,89ded2bf3,,Y,5,6,1,Y,0,0,Y,Y,7,7,0,0,0,117,126,
+beebox/test/core/lint-prominence.test.ts,2026-09-06,4f54561f4,,Y,3,4,1,Y,3,0,,Y,12,9,3,3,0,46,199,1f6401498 13c3179da a3336a13c
+beebox/test/core/list-cards.test.ts,2026-10-06,936612249,,Y,5,11,4,Y,0,0,,Y,4,4,0,0,0,16,30,
+beebox/test/core/load-context.schemas.test.ts,2026-06-13,a57cdddd7,,Y,26,31,5,Y,1,3,,Y,22,13,9,9,0,131,278,d776c3511 504c2ba94 6e389a02f c1cfbb8ef a4523216f df17b3c92 5f72d297a ddcd6b7f5 45726d2c4
+beebox/test/core/loader-registry.test.ts,2026-04-17,69ee0f352,,Y,16,18,2,Y,7,3,,Y,18,9,9,8,1,188,319,2eb9f4c4f 8aaed6282 7ed948048 9317f216e 1acb1cd9a 999c1ecf0 da4584e40 36a29ffe3 ddcd6b7f5
+beebox/test/core/location-format.test.ts,2026-06-29,c177393ff,,Y,16,21,4,Y,1,0,Y,Y,7,6,1,1,0,115,42,e765221ee
+beebox/test/core/location-store.test.ts,2026-06-29,c177393ff,,Y,16,21,4,Y,0,0,Y,Y,7,7,0,0,0,115,57,
+beebox/test/core/maps/finalize.test.ts,2026-05-04,c084beab6,,Y,7,11,3,Y,5,2,,Y,19,12,7,7,0,171,365,fdbbb96ff 0e755f663 a8a67c3d7 fa5e8d4c1 e3e06583d dbe1ebed3 915217fdf
+beebox/test/core/maps/finalize/verify.test.ts,2026-09-18,fa5e8d4c1,,Y,3,6,3,Y,0,0,,Y,6,6,0,0,0,34,82,
+beebox/test/core/maps/orphans.test.ts,2026-09-19,f3301826d,,Y,4,6,1,Y,2,0,,Y,13,9,4,4,0,33,189,c6040b476 fdbbb96ff b03b66055 0e755f663
+beebox/test/core/maps/precheck.test.ts,2026-05-04,c084beab6,,Y,7,11,3,Y,11,7,,Y,30,14,16,14,2,171,590,0e755f663 4763bc392 a8a67c3d7 d228c12c8 b69b048c8 d6056b354 6515e93ad e3e06583d dbe1ebed3 915217fdf 4386055d3 9b8e7b8a8 e3cc6de2f bfbf79f77 c18b3f86f 0a5a801fa
+beebox/test/core/markdoc/emit/core.test.ts,2026-07-10,21e11b397,,Y,2,4,2,,2,0,,Y,13,9,4,4,0,104,162,5d8f9eb9d 76891c08a 73834513e 84096db0b
+beebox/test/core/markdown-lint-rules.test.ts,2026-06-27,87cfb0562,,Y,1,2,1,Y,5,2,Y,Y,12,6,6,6,0,117,196,3d7907b48 bc11677e2 e038ef730 98bdb1ae9 509e38525 03a7814a1
+beebox/test/core/migration-recovery.annex-stat.test.ts,2026-10-16,8c0cd10a6,,Y,1,3,1,Y,1,1,,Y,5,4,1,1,0,6,101,138553b33
+beebox/test/core/migration-recovery.question-answer.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,0,0,,Y,11,8,3,3,0,38,118,cb574a8c2 dac6357f6 7bd19c63f
+beebox/test/core/migration-recovery.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,0,0,,Y,6,6,0,0,0,38,100,
+beebox/test/core/migration-repair.malformed-question.test.ts,2026-10-22,f95b165b6,,Y,1,3,1,Y,1,1,,,1,0,1,1,0,0,74,130469082
+beebox/test/core/migration-repair.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,1,0,,Y,7,6,1,1,0,38,150,8f636585a
+beebox/test/core/migration-run.canonical-interface-cards.test.ts,2026-09-09,d6056b354,,Y,48,70,13,Y,2,0,,Y,13,8,5,5,0,43,185,c634cdd67 b03b66055 81c647230 aec22079d bdb8798d9
+beebox/test/core/migration-sweep.commit-paths.test.ts,2026-10-22,d5b0b3e7a,,Y,1,4,2,,1,0,Y,,1,0,1,1,0,0,93,dc1fc6440
+beebox/test/core/migration-sweep.real-commit-lint.test.ts,2026-10-22,6e476ba95,,,0,2,1,,0,0,,,0,0,0,0,0,0,81,
+beebox/test/core/migration-sweep.superseded-question.test.ts,2026-10-22,dc1fc6440,,Y,4,8,2,Y,1,1,,,1,0,1,1,0,0,116,bdefae53e
+beebox/test/core/migration-sweep.test.ts,2026-08-19,eec37ff7a,,Y,7,13,1,Y,11,5,,Y,26,9,17,16,1,64,616,9b8f512d8 d5b0b3e7a 8f636585a cb574a8c2 81c647230 7485e83c8 e343ba14f b02ad194f dac6357f6 ea8e67884 22de08e73 c97fea1ad a78a172a3 65af4d7a6 969d97fa5 9c3dd3e8b d1e39ac95
+beebox/test/core/migrations.shipped-procedure-templates.test.ts,2026-09-16,652517495,,,0,2,1,,0,0,Y,Y,5,5,0,0,0,36,59,
+beebox/test/core/migrations.test.ts,2026-08-18,a859e628b,,Y,2,4,1,Y,1,0,,Y,9,8,1,1,0,65,62,81c647230
+beebox/test/core/migrations.timeout.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,,1,0,,Y,11,6,5,2,3,38,178,cb574a8c2 259de745d 0ab21456e 8907e3cb5 7bd19c63f
+beebox/test/core/migrations/one-root-mapping.test.ts,2026-09-04,6515e93ad,,Y,24,40,13,Y,4,1,Y,Y,9,5,4,4,0,48,365,6673cd5fc 009e00eec 43e5111f3 919d192e7
+beebox/test/core/mistral-key.test.ts,2026-08-17,4942d9be4,,Y,10,16,4,Y,2,0,,Y,9,7,2,2,0,66,72,7d8494901 6a0f44e11
+beebox/test/core/mobile/pairing.device-visibility.test.ts,2026-09-12,4ec460edf,,Y,3,8,3,Y,0,0,Y,Y,4,4,0,0,0,40,54,
+beebox/test/core/mobile/pairing.store-concurrency.test.ts,2026-07-21,0174717de,,Y,12,22,6,Y,1,1,Y,Y,10,8,2,1,1,93,188,40d79f608 096e696e6
+beebox/test/core/mobile/session.test.ts,2026-10-17,cdee745d3,,Y,18,28,8,,0,0,,,2,2,0,0,0,5,111,
+beebox/test/core/model-capabilities.test.ts,2026-09-10,4f88150b2,,Y,26,40,8,Y,3,0,,Y,9,5,4,3,1,42,173,a533ab8e8 fe0f5bb0d 31fdb09fa 931e2db64
+beebox/test/core/model-policy.chat-models.test.ts,2026-08-14,d882fe0df,,Y,18,22,3,,7,8,,Y,26,9,17,17,0,69,362,9504c10c0 90bf65d57 651a87137 fe3142614 5fb1a4e49 8b5527da6 28abfeb3d d8f8c81ba ea7c5aab6 b9cf10125 2c8c356e2 83002bdcf e87a4308a b731a23ed 27d7aeb99 06b520af6 f938952da
+beebox/test/core/moved-card-forwarding.pairing.test.ts,2026-10-17,fd9013d3a,,Y,1,2,1,Y,1,0,,,2,1,1,1,0,5,52,1cb1d347e
+beebox/test/core/moved-card-forwarding.test.ts,2026-09-10,0adddf91f,,Y,17,23,4,Y,3,1,,Y,10,6,4,3,1,42,376,59c7682f9 1cd9a1902 6bc6d3f2f 43a6d467d
+beebox/test/core/nav.test.ts,2026-07-02,6e83f2bca,,Y,9,10,1,Y,4,1,,Y,14,9,5,5,0,112,225,ac8e12c58 eaa86c79b 3154cde14 f4a5c6653 6a5935508
+beebox/test/core/notification/apns-channel.test.ts,2026-09-26,f695d5d98,,Y,22,41,9,Y,1,0,,Y,9,7,2,1,1,26,232,1e93ef8cf 30db7945c
+beebox/test/core/notification/apns-channel/payload.test.ts,2026-09-26,f695d5d98,,Y,22,41,9,,0,0,,Y,7,6,1,1,0,26,58,30db7945c
+beebox/test/core/notification/channels.test.ts,2026-09-26,712d973d7,,Y,21,28,7,Y,1,0,,Y,6,4,2,1,1,26,84,1e93ef8cf 72505600e
+beebox/test/core/notification/fake-mode.test.ts,2026-09-26,f695d5d98,,Y,22,41,9,Y,0,0,,Y,7,6,1,0,1,26,125,1e93ef8cf
+beebox/test/core/notification/log.test.ts,2026-09-26,712d973d7,,Y,21,28,7,Y,1,0,,Y,9,7,2,1,1,26,201,1e93ef8cf 38a546f7e
+beebox/test/core/notification/presence-registry.test.ts,2026-09-26,38a546f7e,,Y,17,26,9,Y,0,0,Y,Y,7,7,0,0,0,26,62,
+beebox/test/core/notification/presence-registry/tracker.test.ts,2026-09-26,b13e746ad,,Y,7,10,3,,0,0,,Y,5,5,0,0,0,26,68,
+beebox/test/core/notification/target.test.ts,2026-09-26,712d973d7,,Y,21,28,7,Y,2,1,,Y,6,4,2,2,0,26,61,38a546f7e 7edf291e7
+beebox/test/core/notify-boxholder.test.ts,2026-06-29,e58f8cfaf,,Y,5,9,3,Y,8,2,,Y,20,11,9,9,0,115,370,bdefae53e 7f9321a49 9ceffa0c9 84e42872d f695d5d98 38a546f7e 2c66e5410 712d973d7 b7cdd765e
+beebox/test/core/openrouter-catalog.test.ts,2026-09-19,811daebf0,,Y,8,14,2,Y,0,0,,Y,4,4,0,0,0,33,130,
+beebox/test/core/openrouter.route.test.ts,2026-09-06,704c43ce5,,Y,22,29,3,Y,0,0,,Y,6,6,0,0,0,46,112,
+beebox/test/core/pdf/extract.integration.test.ts,2026-08-01,cc8445e45,,Y,17,25,5,,1,0,,Y,15,8,7,5,2,82,135,a63151636 f706fc3e8 904acaa4d e09cd6d23 e222deaf0 337ceb131 1ee6d1ab7
+beebox/test/core/pdf/extract.test.ts,2026-08-01,cc8445e45,,Y,17,25,5,,2,0,,Y,25,15,10,10,0,82,624,2e477780c e6d36da69 02a3e12ff 904acaa4d 9c3dd3e8b e09cd6d23 337ceb131 1ee6d1ab7 eb40539db 0b113c67b
+beebox/test/core/pdf/probe.test.ts,2026-08-01,cc8445e45,,Y,17,25,5,,0,0,,Y,9,7,2,2,0,82,110,c4da26781 337ceb131
+beebox/test/core/pdf/probe.text-layer-quality.test.ts,2026-09-06,e09cd6d23,,Y,5,9,4,,0,0,,Y,5,5,0,0,0,46,74,
+beebox/test/core/pending-browser-request.screenshot.test.ts,2026-07-11,ca400ed9a,,Y,7,10,3,Y,1,1,,Y,14,11,3,3,0,103,360,0c0877d70 6a15ede62 e9e954768
+beebox/test/core/pending-browser-request.test.ts,2026-07-11,671f54e4f,,Y,5,6,1,Y,1,0,,Y,8,6,2,1,1,103,136,40d79f608 ca400ed9a
+beebox/test/core/place-cards.test.ts,2026-06-29,e765221ee,,Y,13,21,6,Y,2,1,Y,Y,9,7,2,2,0,115,88,89730a3c8 09d670b38
+beebox/test/core/place-mark.test.ts,2026-06-29,e765221ee,,Y,13,21,6,Y,1,1,Y,Y,10,8,2,2,0,115,214,89730a3c8 09d670b38
+beebox/test/core/plugins/active.test.ts,2026-10-10,7bc295ad2,,Y,26,59,16,Y,0,0,,Y,6,5,1,1,0,12,113,8bb68497b
+beebox/test/core/plugins/coverage.test.ts,2026-10-10,7bc295ad2,,Y,26,59,16,Y,2,0,,Y,6,4,2,2,0,12,205,c6e26e5f9 69e607892
+beebox/test/core/procedure/engine-types.run-outcome.test.ts,2026-09-29,3acec8cdb,,Y,28,47,16,Y,0,0,,Y,4,4,0,0,0,23,87,
+beebox/test/core/procedure/engine-validate-model.test.ts,2026-06-27,cc929eca3,,Y,1,3,1,Y,2,0,,Y,12,10,2,2,0,117,228,8d1ae0fbb 0cb20cecd
+beebox/test/core/procedure/engine.agent.test.ts,2026-03-03,5de4d4d69,,Y,12,19,4,Y,3,1,,Y,20,13,7,7,0,233,524,0485ca16b 90bf65d57 6515e93ad 0cb20cecd 281a86388 816817120 5c39d71f2
+beebox/test/core/procedure/engine.instruction-validation.test.ts,2026-06-27,d94458d25,,Y,6,7,1,,3,0,Y,Y,13,9,4,4,0,117,362,3acec8cdb 6515e93ad 8d1ae0fbb 281a86388
+beebox/test/core/procedure/engine.review-retry.test.ts,2026-06-27,47e17e2e6,,Y,3,4,1,,3,0,,Y,13,9,4,4,0,117,462,0a361cb7c 6515e93ad 8d1ae0fbb 281a86388
+beebox/test/core/procedure/engine.test.ts,2026-03-03,d8c101383,,Y,2,8,3,Y,10,1,,Y,28,12,16,16,0,233,554,0e755f663 3acec8cdb 68456e29e e499d12f6 6515e93ad 9727dc7b8 915217fdf 281a86388 a5d5a731e c1906f74e 5c39d71f2 48f434577 964273781 4881722d9 5de4d4d69 d1229f84f
+beebox/test/core/procedure/engine.unavailable.test.ts,2026-08-18,a67fd8d1e,,Y,4,6,1,Y,1,0,,Y,10,9,1,1,0,65,116,6515e93ad
+beebox/test/core/procedure/gc.test.ts,2026-06-12,964273781,,Y,14,20,3,Y,7,1,Y,Y,18,11,7,7,0,132,191,0e755f663 3acec8cdb 6515e93ad 915217fdf 281a86388 e942ca0c3 48f434577
+beebox/test/core/provider-env/openrouter-chat.test.ts,2026-09-19,651a87137,,Y,27,32,4,Y,0,1,,Y,16,10,6,6,0,33,409,9504c10c0 f30440746 776043cb5 90bf65d57 04971a529 cf6380478
+beebox/test/core/push-subscriptions.test.ts,2026-07-05,78e3e8d8e,,Y,1,2,1,Y,0,0,Y,Y,7,7,0,0,0,109,73,
+beebox/test/core/question-aging.test.ts,2026-07-10,589337342,,,0,1,1,,4,0,,Y,17,10,7,6,1,104,317,c634cdd67 1e93ef8cf 7485e83c8 3dfe5bdac 712d973d7 b7cdd765e 6e389a02f
+beebox/test/core/question-alert.test.ts,2026-06-29,e58f8cfaf,,Y,5,9,3,Y,3,0,,Y,15,8,7,6,1,115,125,c634cdd67 1e93ef8cf 7485e83c8 3dfe5bdac 712d973d7 b7cdd765e 6e389a02f
+beebox/test/core/quick-capture/acceptance.test.ts,2026-10-12,4570196b1,,Y,41,69,5,Y,0,1,,Y,9,6,3,3,0,10,220,2d73f9581 3f73b0b5a b152d3cd5
+beebox/test/core/quick-capture/filing.test.ts,2026-10-17,fa73c9c10,,Y,6,8,1,Y,3,2,,Y,7,4,3,3,0,5,301,ccd024658 854813bbc 4f2f92802
+beebox/test/core/quick-capture/worker.context.test.ts,2026-10-12,4570196b1,,Y,41,69,5,Y,1,0,,Y,8,6,2,2,0,10,343,2d73f9581 6f27de3d8
+beebox/test/core/quick-capture/worker.dispatch.test.ts,2026-10-12,4570196b1,,Y,41,69,5,Y,1,0,,Y,7,6,1,1,0,10,185,2d73f9581
+beebox/test/core/reactor.test.ts,2026-03-03,f5c4c9f80,,Y,9,14,4,Y,3,2,Y,Y,32,13,19,18,1,233,388,8bd8399d1 da6d70df9 2e477780c ba3454fb3 2cecb539e 3752e79e4 4fa29d5d6 9f6890149 7f9940938 059a1ba9a 9d67c5adb 4c7f3b9aa 3155cc0b1 df429b123 05ca9ba1f b9ff55a40 58b6200cb 9d496c871 5de4d4d69
+beebox/test/core/reactor/engine.integration.test.ts,2026-03-03,5de4d4d69,,Y,12,19,4,Y,4,2,,Y,24,12,12,12,0,233,296,da6d70df9 2e477780c aa82b5ea1 7cf6a9c53 95e8208af 38a131d2f 3155cc0b1 5c39d71f2 daf636c59 cc606656c b9ff55a40 9d496c871
+beebox/test/core/reactor/engine/batch-jobs.model-policy.test.ts,2026-08-25,29d5bf56f,,Y,3,4,1,Y,1,0,,Y,11,9,2,2,0,58,79,90bf65d57 48b593d6c
+beebox/test/core/reactor/engine/cycle.test.ts,2026-07-06,7a648fbf3,,Y,1,4,3,,2,0,Y,Y,18,14,4,4,0,108,330,2e477780c 4296d8ee3 8331820f9 9e2fe1827
+beebox/test/core/retro/discovery.test.ts,2026-06-09,a6ef7ce43,,Y,9,11,1,Y,2,2,Y,Y,18,11,7,6,1,135,246,1e93ef8cf 449a696dd 1c679dbba 9ba0f53d0 a1c2e10bd b624adc10 8c52bd1e7
+beebox/test/core/retro/scan.test.ts,2026-06-09,8c52bd1e7,,Y,6,8,2,Y,0,0,,Y,12,11,1,1,0,135,213,a1c2e10bd
+beebox/test/core/retro/scan/ledger.test.ts,2026-08-25,238b5b049,,Y,13,25,6,Y,0,0,Y,Y,8,8,0,0,0,58,64,
+beebox/test/core/scan/promote-debounce.test.ts,2026-08-01,0b113c67b,,Y,19,26,5,Y,1,2,,Y,13,8,5,4,1,82,163,cb574a8c2 4514e75c1 f9ca86681 8e3a98c0a 380395bfb
+beebox/test/core/scan/promote.test.ts,2026-08-01,0b113c67b,,Y,19,26,5,Y,3,0,,Y,16,9,7,7,0,82,689,2e477780c 7485e83c8 aa548e223 cd650c6ca 9c3dd3e8b 111d5dfb9 dbaba15e8
+beebox/test/core/scan/promote/wakeup.retry.test.ts,2026-09-05,111d5dfb9,,Y,5,7,2,,1,0,Y,Y,8,7,1,1,0,47,162,2d6f11ed9
+beebox/test/core/scan/quarantine.test.ts,2026-08-01,90227935f,,Y,12,15,2,Y,0,0,,Y,8,8,0,0,0,82,134,
+beebox/test/core/scan/tokens.test.ts,2026-08-01,873b37e16,,Y,8,12,4,Y,2,0,,Y,8,6,2,2,0,82,265,09ad3d4e7 0be8edb5b
+beebox/test/core/schedule/describe.test.ts,2026-08-10,18e3e3917,,Y,6,8,1,Y,1,1,,Y,7,6,1,1,0,73,75,b1cc87728
+beebox/test/core/schedule/health.inconclusive.test.ts,2026-08-24,8d1ae0fbb,,Y,48,66,9,Y,0,0,,Y,8,7,1,1,0,59,213,9727dc7b8
+beebox/test/core/schedule/health.reminder.test.ts,2026-10-18,1e580f3c4,,Y,6,11,4,Y,0,0,,,0,0,0,0,0,4,67,
+beebox/test/core/schedule/health.test.ts,2026-06-09,4f971ad02,,Y,3,4,1,,5,1,,Y,18,12,6,5,1,135,431,40d79f608 8d1ae0fbb 0cb20cecd a751cc0f3 adaf65802 fe766c4ba
+beebox/test/core/schedule/memory.test.ts,2026-09-26,c21e6534f,,Y,14,17,3,Y,3,0,,Y,14,10,4,4,0,26,250,f8f1865ef 0a93ccd61 68456e29e 23901e166
+beebox/test/core/schedule/promotion.test.ts,2026-09-26,3dfe5bdac,,Y,21,31,10,Y,2,0,,Y,12,9,3,3,0,26,262,118d0ce40 0a93ccd61 68456e29e
+beebox/test/core/schedule/run-action.reminder-retry.test.ts,2026-10-22,c67892950,,Y,5,11,6,Y,0,0,Y,,1,0,1,1,0,0,72,7f9321a49
+beebox/test/core/schedule/scheduler.test.ts,2026-03-03,d1b27eb53,,,0,3,2,,1,0,,Y,12,9,3,3,0,233,46,1c5e90e8a fe766c4ba 9d496c871
+beebox/test/core/schedule/scheduler/connector-activity-alert.test.ts,2026-09-19,bc939ed3d,,Y,12,17,2,Y,4,1,,Y,16,11,5,5,0,33,250,ffbc608f1 118d0ce40 0a93ccd61 3dfe5bdac 38a546f7e
+beebox/test/core/schedule/scheduler/google-auth-alert.test.ts,2026-07-28,7fbeb2871,,Y,21,29,3,Y,2,0,Y,Y,13,10,3,3,0,86,67,0a93ccd61 3dfe5bdac 38a546f7e
+beebox/test/core/schedule/scheduler/health-alert.test.ts,2026-06-09,78efe076b,,Y,4,5,1,,4,0,,Y,20,12,8,8,0,135,165,0a93ccd61 68456e29e 72505600e 3dfe5bdac 38a546f7e 0cb20cecd fe766c4ba e58f8cfaf
+beebox/test/core/schedule/state.test.ts,2026-03-03,fde311f9a,,Y,1,22,17,,3,3,,Y,21,12,9,8,1,233,419,3acec8cdb c21e6534f 6515e93ad fe766c4ba 48f434577 f6c1c9d29 c80e5a754 96253c94d d1b27eb53
+beebox/test/core/schedule/summary.test.ts,2026-10-07,f8f1865ef,,Y,25,28,2,Y,2,0,,Y,9,7,2,2,0,15,282,2d2293cc2 0d1338d8f
+beebox/test/core/script-env.test.ts,2026-04-17,005c4e5a2,,Y,24,26,2,Y,7,3,,Y,21,13,8,8,0,188,351,f02f9b150 292cef7d5 7d8494901 53af3b9b1 ea16d5776 6e6226d88 1a1ecb49e 8a6d9a531
+beebox/test/core/sdk-hooks.git-mv-nudge.test.ts,2026-06-27,a19989830,,Y,3,4,1,Y,0,0,Y,Y,8,8,0,0,0,117,51,
+beebox/test/core/sdk-hooks.third-person.test.ts,2026-10-09,83c3e962b,,Y,9,18,2,Y,0,0,,Y,8,6,2,2,0,13,83,1c5e90e8a e18934929
+beebox/test/core/search/contains-state.test.ts,2026-06-09,c415d80ad,,Y,3,4,1,Y,1,0,,Y,18,13,5,5,0,135,127,e6d36da69 02a3e12ff c9f00170c a57cdddd7 ed377ceff
+beebox/test/core/search/contains-update.evidence.test.ts,2026-07-28,9ba0f53d0,,Y,23,34,8,Y,0,1,Y,Y,16,10,6,5,1,86,198,b1155a493 0e755f663 33a55a7ab a6b145b40 8671ede8b f88ab7b52
+beebox/test/core/search/extract/core.test.ts,2026-06-09,4cdb81bc9,,Y,2,3,1,,5,1,,Y,23,12,11,11,0,135,231,48dcb3f39 fd0aa5254 5b0477ff7 a850fc365 e6d36da69 02a3e12ff 985a25c05 16876d21f ddcd6b7f5 a57cdddd7 4b4ce48bf
+beebox/test/core/search/query.hybrid.test.ts,2026-07-09,d8f87ae8d,,Y,3,4,1,Y,2,1,,Y,13,10,3,3,0,105,285,1a775b7f9 7d8494901 f0c36bfb2
+beebox/test/core/search/refresh.crash-safety.test.ts,2026-07-06,71777af78,,Y,4,5,1,Y,1,1,Y,Y,12,10,2,2,0,108,158,e4e0b9fe9 861cc2647
+beebox/test/core/search/refresh.embeddings.test.ts,2026-07-09,4edddaede,,Y,2,3,1,Y,1,1,,Y,12,10,2,2,0,105,172,e4e0b9fe9 654123c28
+beebox/test/core/search/refresh.index.test.ts,2026-06-09,613e79aa8,,Y,6,7,1,Y,2,0,,Y,19,13,6,6,0,135,167,5b0477ff7 e4e0b9fe9 1990c4732 b208f1709 7abad15f5 d0111e452
+beebox/test/core/secrets/access-log.test.ts,2026-08-17,af5fd87ce,,Y,30,41,8,Y,3,1,,Y,11,8,3,3,0,66,103,7e3c1f3f9 9726dad44 7d8494901
+beebox/test/core/secrets/cloudflare-publish.hostnames.test.ts,2026-09-25,b4e97f062,,Y,12,17,3,Y,1,0,,Y,5,4,1,1,0,27,50,22945e70c
+beebox/test/core/secrets/guide-registry.test.ts,2026-09-10,4f88150b2,,Y,26,40,8,Y,0,0,,Y,6,5,1,0,1,42,68,1e93ef8cf
+beebox/test/core/secrets/lifecycle.keys.test.ts,2026-08-17,af5fd87ce,,Y,30,41,8,Y,2,0,,Y,11,8,3,3,0,66,116,7d8494901 6a0f44e11 4a6f5c468
+beebox/test/core/secrets/migrate.test.ts,2026-08-17,824e20516,,Y,13,19,3,Y,3,1,,Y,13,8,5,4,1,66,254,1e93ef8cf 7d8494901 d7d3a19d3 4a6f5c468 90d3cb22a
+beebox/test/core/secrets/probe-registry.test.ts,2026-08-17,7e536a38e,,Y,16,21,3,Y,2,0,,Y,10,7,3,2,1,66,169,1e93ef8cf 7d8494901 859144f94
+beebox/test/core/secrets/resolve.guarded-store.test.ts,2026-10-22,d64d630be,,Y,3,4,1,Y,0,0,,,0,0,0,0,0,0,67,
+beebox/test/core/secrets/resolve.test.ts,2026-08-17,4942d9be4,,Y,10,16,4,Y,3,0,,Y,10,7,3,3,0,66,259,7d8494901 6a0f44e11 4a6f5c468
+beebox/test/core/secrets/store.real-store-guard.test.ts,2026-10-18,345d354f9,,Y,2,3,1,Y,0,0,,,1,1,0,0,0,4,43,
+beebox/test/core/secrets/store.test.ts,2026-08-17,4942d9be4,,Y,10,16,4,Y,3,0,,Y,12,7,5,4,1,66,242,1e93ef8cf 7d8494901 726a6ff89 4a6f5c468 aabafb668
+beebox/test/core/secrets/uses.test.ts,2026-08-19,726a6ff89,,Y,14,19,4,Y,1,0,,Y,9,7,2,1,1,64,156,1e93ef8cf bec8749e3
+beebox/test/core/send-push.test.ts,2026-06-29,dfc41b8b0,,Y,9,12,1,Y,1,0,,Y,8,7,1,1,0,115,87,b7cdd765e
+beebox/test/core/session-context.test.ts,2026-06-09,e87d748e1,,Y,9,12,2,Y,8,3,,Y,22,11,11,11,0,135,264,ef95483d0 9d05c1ba0 8bd8399d1 ba3454fb3 a150a2bb7 9f6890149 fea1242f3 90c32fd02 fcc648179 495acedd5 3aecb4c05
+beebox/test/core/template-stock-hashes.test.ts,2026-07-03,13f1dcbc7,,Y,7,9,2,Y,0,0,,Y,8,7,1,1,0,111,77,a4523216f
+beebox/test/core/todo/ambient-summary.test.ts,2026-07-28,9f6890149,,Y,17,21,4,Y,3,0,,Y,11,8,3,3,0,86,63,8bd8399d1 ba3454fb3 8331820f9
+beebox/test/core/todo/count.test.ts,2026-09-17,7da5cdd67,,Y,6,7,1,Y,3,0,,Y,11,8,3,3,0,35,222,6e72c543f 52b609299 bd70f2890
+beebox/test/core/todo/extract.test.ts,2026-09-20,66c58ccfb,,Y,10,13,2,Y,0,2,,Y,10,8,2,2,0,32,382,72e9dd86b 4810503b6
+beebox/test/core/todo/query.test.ts,2026-07-28,6d6845d4e,,Y,7,9,2,,1,2,,Y,19,13,6,6,0,86,348,6e72c543f bd70f2890 796247252 458599e8d 8331820f9 9e2fe1827
+beebox/test/core/todo/review-sweep.test.ts,2026-07-28,9f6890149,,Y,17,21,4,Y,7,0,,Y,17,10,7,7,0,86,171,2e7bf35df dbb4c9171 7b1247708 cac903acf ba3454fb3 8331820f9 9e2fe1827
+beebox/test/core/todo/set-status.test.ts,2026-09-25,6e3fabc43,,Y,4,6,2,Y,1,0,,Y,9,8,1,1,0,27,226,cdb3b6d79
+beebox/test/core/transcription/dispatch.config.test.ts,2026-05-13,0fdfa4403,,Y,7,8,1,,0,0,,Y,12,11,1,1,0,162,81,82fa99697
+beebox/test/core/transcription/dispatch.whisper-key.test.ts,2026-08-17,aabafb668,,Y,8,15,5,,0,0,,Y,10,8,2,2,0,66,89,7d8494901 6a0f44e11
+beebox/test/core/transcription/dispatch/deepgram.test.ts,2026-08-15,92a990095,,Y,3,4,1,Y,0,0,,Y,9,9,0,0,0,68,57,
+beebox/test/core/transcription/dispatch/openrouter.test.ts,2026-09-06,704c43ce5,,Y,22,29,3,Y,2,0,,Y,8,6,2,2,0,46,176,eecbfc2b7 c8fe0c2a2
+beebox/test/core/transcription/upstream-body.test.ts,2026-09-12,35f2c5030,,Y,5,6,1,Y,0,0,,Y,5,5,0,0,0,40,38,
+beebox/test/core/transcription/voxtral.test.ts,2026-05-15,8a4777c57,,Y,1,2,1,,1,2,Y,Y,11,7,4,4,0,160,108,2d7aed744 82fa99697 9ec043f0e a1ea82642
+beebox/test/core/triage.test.ts,2026-05-20,5ef069d4c,,Y,8,9,1,Y,2,3,,Y,20,12,8,8,0,155,292,e4bb10484 2d6fb0a95 2d7aed744 4481cc226 6af01c69a a184af664 fc33a9620 03b3407d6
+beebox/test/core/triage/allowance.test.ts,2026-09-28,5844a1024,,Y,33,49,9,Y,0,0,,Y,5,5,0,0,0,24,109,
+beebox/test/core/triage/auto/core.test.ts,2026-09-28,5844a1024,,Y,33,49,9,Y,1,0,,Y,7,5,2,2,0,24,196,e4bb10484 7c2c299cc
+beebox/test/core/triage/decisions.provenance.test.ts,2026-09-28,5844a1024,,Y,33,49,9,Y,0,0,,Y,10,7,3,3,0,24,461,e4bb10484 7485e83c8 7c2c299cc
+beebox/test/core/triage/decisions.todo-replay.test.ts,2026-09-29,2e7bf35df,,Y,16,29,6,,0,0,,Y,7,7,0,0,0,23,101,
+beebox/test/core/triage/decisions.todo.test.ts,2026-09-29,2e7bf35df,,Y,16,29,6,,0,0,,Y,6,6,0,0,0,23,292,
+beebox/test/core/triage/evidence.test.ts,2026-09-28,5844a1024,,Y,33,49,9,Y,0,1,,Y,9,6,3,3,0,24,448,904acaa4d 25b1b97ed 7c2c299cc
+beebox/test/core/triage/judge.todo-question.test.ts,2026-09-29,2e7bf35df,,Y,16,29,6,Y,0,0,,Y,8,8,0,0,0,23,116,
+beebox/test/core/triage/snapshot.test.ts,2026-09-28,5844a1024,,Y,33,49,9,Y,1,0,,Y,9,6,3,3,0,24,260,e4bb10484 2e477780c 7c2c299cc
+beebox/test/core/tts/config.test.ts,2026-09-06,457974d24,,Y,16,24,6,Y,0,0,Y,Y,5,5,0,0,0,46,95,
+beebox/test/core/tts/interaction-stream.test.ts,2026-10-04,931e2db64,,Y,10,18,6,Y,2,0,,Y,6,4,2,2,0,18,110,dcca0f8c7 70fe47f69
+beebox/test/core/tts/mp3-encoder.test.ts,2026-10-05,794204cae,,Y,2,3,1,Y,0,0,,Y,4,4,0,0,0,17,104,
+beebox/test/core/tts/resolve.test.ts,2026-10-04,931e2db64,,Y,10,18,6,Y,1,0,,Y,6,5,1,1,0,18,66,31fdb09fa
+beebox/test/core/tts/style.test.ts,2026-09-06,457974d24,,Y,16,24,6,Y,2,0,Y,Y,6,4,2,2,0,46,42,31fdb09fa 931e2db64
+beebox/test/core/tts/voices.test.ts,2026-09-06,2fafdcbb3,,Y,4,6,1,Y,2,2,Y,Y,7,5,2,2,0,46,81,7923b073a 731c957e6
+beebox/test/core/upload-helpers.test.ts,2026-04-28,ec7b74eea,,Y,9,11,2,Y,4,0,,Y,16,12,4,4,0,177,241,904acaa4d 0b113c67b 379ec0d1f be0fa33f8
+beebox/test/core/validation-ignore.test.ts,2026-07-03,50f04d290,,Y,9,12,3,Y,1,0,Y,Y,8,6,2,1,1,111,85,d471a07f2 d7d3a19d3
+beebox/test/core/views/cards.test.ts,2026-06-20,82158ac89,,Y,2,4,1,,3,1,,Y,16,12,4,3,1,124,161,6b553966e 0d86b2a6c e96a47648 fefd8201d
+beebox/test/core/views/link-migration.test.ts,2026-07-01,be519bf66,,Y,4,5,1,,1,0,,Y,7,6,1,1,0,113,49,e96a47648
+beebox/test/core/views/markdown-check.test.ts,2026-09-25,fdd4a2d4d,,Y,3,5,2,Y,1,0,,Y,9,7,2,2,0,27,206,209e46686 b37fdbf22
+beebox/test/core/views/refs.test.ts,2026-06-29,079e04ad2,,Y,5,6,1,,2,0,,Y,15,10,5,5,0,115,140,52a21dd35 6e389a02f c1cfbb8ef e96a47648 572e2e87d
+beebox/test/core/voice-recording/classify.test.ts,2026-09-10,e10ebb86b,,Y,8,13,5,Y,0,0,,Y,4,4,0,0,0,42,57,
+beebox/test/core/voice-recording/hq-job.test.ts,2026-09-10,3769455b2,,Y,14,19,5,Y,1,1,,Y,10,7,3,3,0,42,328,0c0877d70 1837ae7f3 14b3e9554
+beebox/test/core/voice-recording/hq-job/pieces.test.ts,2026-09-10,e10ebb86b,,Y,8,13,5,Y,0,0,,Y,6,6,0,0,0,42,73,
+beebox/test/core/voice-recording/sweep.test.ts,2026-09-10,3769455b2,,Y,14,19,5,Y,3,1,,Y,11,6,5,5,0,42,203,1837ae7f3 c185a3e4b d020cfe43 61fccb24a 2eaf6fc17
+beebox/test/core/voice-recording/voice-staging/state.test.ts,2026-09-10,e10ebb86b,,Y,8,13,5,Y,4,1,,Y,9,5,4,4,0,42,184,d020cfe43 1d62e2b5a 61fccb24a 2eaf6fc17
+beebox/test/deploy/codex-runtime.test.ts,2026-08-31,fb1b39721,,Y,13,17,3,,0,0,Y,Y,6,4,2,2,0,52,45,c4da26781 96767cd4b
+beebox/test/deploy/nginx-deploy-page.test.ts,2026-09-18,a94ba467b,,Y,8,15,4,,0,2,,Y,5,3,2,2,0,34,115,8d0ae8ebd 6f6473084
+beebox/test/deploy/nginx-site.test.ts,2026-09-18,8d0ae8ebd,,Y,1,5,2,,0,1,Y,Y,7,4,3,1,2,34,245,ea97188e3 a145d9e9a 221c55164
+beebox/test/deploy/outcome.test.ts,2026-09-18,a94ba467b,,Y,8,15,4,,0,0,,Y,5,5,0,0,0,34,42,
+beebox/test/deploy/page.test.ts,2026-09-18,a94ba467b,,Y,8,15,4,,0,3,,Y,9,6,3,3,0,34,132,0cf9af822 85a92dda6 f40fb5fb6
+beebox/test/deploy/window.test.ts,2026-09-18,a94ba467b,,Y,8,15,4,,0,0,,Y,5,5,0,0,0,34,193,
+beebox/test/dev/csp-report/digest.test.ts,2026-06-30,93fc76d69,,Y,8,14,3,,0,0,,Y,8,7,1,1,0,114,127,d84cf7957
+beebox/test/dev/doc-check/file-paths.test.ts,2026-10-07,6657f44d1,,Y,13,82,6,Y,1,0,Y,Y,8,7,1,1,0,15,206,bb294509e
+beebox/test/dev/doc-check/frontmatter.test.ts,2026-08-09,b66aed4f3,,Y,5,613,2,,0,0,,Y,11,7,4,4,0,74,181,12d776dd2 cde25c645 08bd77b11 d29a16815
+beebox/test/dev/doc-check/link-repair.test.ts,2026-07-21,4430b7cc6,,Y,2,5,1,,2,1,Y,Y,13,9,4,4,0,93,166,d7481130e bb294509e cde25c645 b66aed4f3
+beebox/test/dev/doc-check/private-link.test.ts,2026-08-01,1f9a650cb,,Y,5,16,1,,0,1,,Y,10,8,2,2,0,82,137,71b7a22bf 39e31e913
+beebox/test/dev/doc-check/site-reference-links.test.ts,2026-10-12,96e5b2944,,Y,3,7,3,Y,0,0,,Y,3,3,0,0,0,10,77,
+beebox/test/dev/doc-graph-data.test.ts,2026-09-12,c8c728285,,Y,1,4,1,Y,0,1,,Y,6,5,1,1,0,40,60,157f87fc4
+beebox/test/dev/doc-graph-data/document-lifecycle.file-index.test.ts,2026-08-22,4e57452ab,,Y,11,13,1,,1,0,,Y,8,6,2,2,0,61,172,30a41c6c4 12d776dd2
+beebox/test/dev/layout/check/rules/names.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,Y,2,0,,Y,8,6,2,2,0,25,214,06f886eba 220e8b188
+beebox/test/dev/layout/check/rules/plugin-imports.test.ts,2026-10-10,06f886eba,,Y,51,75,16,Y,1,0,,Y,5,4,1,1,0,12,104,c6e26e5f9
+beebox/test/dev/layout/check/rules/sets/rule.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,,2,2,,Y,13,8,5,5,0,25,443,06f886eba 96fe628c8 207d5a758 3742b314c 0ffe31e0d
+beebox/test/dev/layout/check/rules/tests.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,Y,1,0,,Y,8,7,1,1,0,25,209,220e8b188
+beebox/test/dev/layout/check/rules/typescript-imports.test.ts,2026-10-17,0bbd1ab6b,,Y,3,5,2,Y,1,0,,Y,5,4,1,1,0,5,54,69872232e
+beebox/test/dev/layout/check/rules/units.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,Y,3,2,,Y,10,7,3,3,0,25,363,d6004e7a8 207d5a758 220e8b188
+beebox/test/dev/layout/move/apply.pipeline.test.ts,2026-09-27,3742b314c,,Y,27,39,10,Y,0,1,,,7,5,2,2,0,25,119,e04c7f1b4 4990088bc
+beebox/test/dev/layout/move/git-renames.pipeline.test.ts,2026-09-27,94e7ea97b,,Y,2,3,1,Y,0,0,,Y,5,5,0,0,0,25,125,
+beebox/test/dev/layout/move/list.test.ts,2026-09-27,3742b314c,,Y,27,39,10,Y,0,0,,Y,3,3,0,0,0,25,28,
+beebox/test/dev/layout/move/mention-annotate.pipeline.test.ts,2026-09-27,eb409f31a,,Y,4,5,1,Y,1,1,,Y,7,6,1,1,0,25,232,9750de328
+beebox/test/dev/layout/move/mention-apply.test.ts,2026-09-27,dc64dd637,,Y,9,14,5,Y,0,0,,Y,7,7,0,0,0,25,90,
+beebox/test/dev/layout/move/mention-directories.test.ts,2026-09-27,dc64dd637,,Y,9,14,5,Y,0,0,,Y,5,5,0,0,0,25,59,
+beebox/test/dev/layout/move/mention-forms.test.ts,2026-09-27,dc64dd637,,Y,9,14,5,Y,0,0,,Y,5,5,0,0,0,25,113,
+beebox/test/dev/layout/move/mention-relative.test.ts,2026-09-27,dc64dd637,,Y,9,14,5,Y,0,0,,Y,3,3,0,0,0,25,57,
+beebox/test/dev/layout/move/mention-rewrite.pipeline.test.ts,2026-09-27,dc64dd637,,Y,9,14,5,Y,0,0,,Y,5,5,0,0,0,25,161,
+beebox/test/dev/layout/move/specifier.test.ts,2026-09-27,3742b314c,,Y,27,39,10,Y,0,0,,Y,4,4,0,0,0,25,86,
+beebox/test/dev/layout/move/ts-edit.test.ts,2026-09-27,3742b314c,,Y,27,39,10,Y,0,0,,Y,4,4,0,0,0,25,39,
+beebox/test/dev/layout/move/validate.test.ts,2026-09-27,3742b314c,,Y,27,39,10,Y,0,0,,Y,3,3,0,0,0,25,123,
+beebox/test/dev/layout/scan/imports.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,Y,0,0,,Y,4,4,0,0,0,25,155,
+beebox/test/dev/layout/scan/package/files.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,Y,2,0,,Y,8,6,2,2,0,25,112,4990088bc 3742b314c
+beebox/test/dev/layout/scan/package/registries.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,Y,4,0,,Y,9,5,4,4,0,25,230,220e8b188 4990088bc 3742b314c 0ffe31e0d
+beebox/test/dev/layout/scan/package/scan.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,,2,0,,Y,9,5,4,3,1,25,130,220e8b188 4990088bc 3742b314c 8a8446a50
+beebox/test/dev/layout/scan/package/surfaces.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,Y,4,1,,Y,11,7,4,4,0,25,200,06f886eba 7d2fb0b82 220e8b188 4990088bc
+beebox/test/dev/layout/scan/resolve.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,Y,0,0,,Y,4,4,0,0,0,25,103,
+beebox/test/dev/lib/audit-box.test.ts,2026-07-21,0cbb2526a,,Y,2,7,1,Y,0,0,Y,Y,6,6,0,0,0,93,43,
+beebox/test/dev/lib/audit-checks.test.ts,2026-08-14,62a6bec6b,,Y,10,13,2,Y,6,1,Y,Y,13,5,8,8,0,69,195,1a775b7f9 569d24357 6cd8fb1f6 e352d5553 eef862615 a5b19c033 b208f1709 b10769dea
+beebox/test/dev/lib/box-audits/core.test.ts,2026-10-22,ba9f3d5ae,,Y,5,9,3,Y,0,0,,,0,0,0,0,0,0,138,
+beebox/test/dev/lib/box-audits/plugins.test.ts,2026-10-22,ba9f3d5ae,,Y,5,9,3,Y,0,0,,,0,0,0,0,0,0,57,
+beebox/test/dev/lib/box-guard.test.ts,2026-06-15,0d43c1229,,Y,3,4,1,Y,2,0,Y,Y,15,8,7,6,1,129,166,3b784c975 fdbbb96ff 6cd8fb1f6 cf575dae4 d7d3a19d3 7c03376d9 563f64644
+beebox/test/dev/lib/context-history.test.ts,2026-06-20,83cb94f63,,Y,5,9,2,Y,1,1,,Y,9,8,1,1,0,124,159,c5aa23e53
+beebox/test/dev/lib/context-usage.test.ts,2026-06-20,83cb94f63,,Y,5,9,2,Y,0,0,,Y,7,7,0,0,0,124,62,
+beebox/test/dev/lib/prompt-viewer-data/duplication.test.ts,2026-07-12,9145f23f2,,Y,11,17,1,Y,1,0,,Y,8,7,1,1,0,102,90,dae77a80c
+beebox/test/dev/lib/report.test.ts,2026-06-27,6a645b057,,Y,3,5,1,Y,0,0,,Y,6,6,0,0,0,117,80,
+beebox/test/dev/lib/session-report.test.ts,2026-08-05,78391d6b3,,Y,5,6,1,Y,0,0,Y,Y,7,7,0,0,0,78,104,
+beebox/test/dev/lib/test-runner/dev-session.test.ts,2026-10-07,6cd8fb1f6,,Y,12,47,6,Y,1,0,Y,Y,5,4,1,1,0,15,101,9c464c073
+beebox/test/dev/lib/test-runner/runner/codex-audit.test.ts,2026-08-14,6abcef647,,Y,8,10,1,,2,0,,Y,12,6,6,6,0,69,61,fdbbb96ff 6cd8fb1f6 a5b19c033 b208f1709 b10769dea 62a6bec6b
+beebox/test/dev/lib/test-runner/runner/run-test.test.ts,2026-08-06,dfaf9fd01,,Y,2,4,2,,3,2,,Y,14,8,6,6,0,77,182,1a775b7f9 02f30bb1c 8a75acc36 6cd8fb1f6 d4ef23c70 dc4878f6d
+beebox/test/exports.test.ts,2026-07-03,4d38df28d,,Y,8,10,2,,0,0,,Y,8,7,1,1,0,111,63,c97282bf0
+beebox/test/field-test/fake-gmail-gate.test.ts,2026-08-08,f441ef169,,Y,12,19,5,Y,0,0,Y,Y,12,11,1,0,1,75,162,710825b31
+beebox/test/field-test/report.test.ts,2026-08-08,5743499aa,,Y,4,8,2,Y,1,0,Y,Y,6,4,2,1,1,75,317,50cd22482 9a3ae3f7f
+beebox/test/field-test/run.lifecycle.test.ts,2026-08-08,add069a6e,,Y,3,4,1,,1,1,,Y,11,7,4,3,1,75,117,0e755f663 9a3ae3f7f 8abc62e1e 1bf733cbf
+beebox/test/field-test/run.test.ts,2026-08-08,8abc62e1e,,Y,15,18,3,Y,2,2,,Y,13,7,6,4,2,75,476,61bf60267 6f5197c9c 50cd22482 9d87ed873 9a3ae3f7f 5743499aa
+beebox/test/field-test/run/operator.test.ts,2026-08-08,ec7365081,,Y,6,7,1,Y,0,1,Y,Y,9,6,3,1,2,75,373,40d79f608 9a3ae3f7f db5b44001
+beebox/test/field-test/scenario.test.ts,2026-08-08,809e30c3f,,Y,3,6,1,Y,3,0,,Y,11,6,5,4,1,75,367,90bf65d57 b731a23ed 50cd22482 9a3ae3f7f b94f447d2
+beebox/test/google/api-error.test.ts,2026-10-20,560c946aa,,Y,5,10,4,Y,0,0,Y,,0,0,0,0,0,2,100,
+beebox/test/google/auth-gap.test.ts,2026-09-14,7e8553a0d,,Y,8,9,1,,0,0,Y,Y,5,5,0,0,0,38,81,
+beebox/test/google/auth-status.test.ts,2026-07-28,7fbeb2871,,Y,21,29,3,,0,0,Y,Y,9,7,2,2,0,86,194,7d8494901 167cede34
+beebox/test/google/oauth-state.test.ts,2026-07-20,9d4568a0e,,Y,4,10,2,,0,0,Y,Y,7,7,0,0,0,94,78,
+beebox/test/google/sync-skipped.test.ts,2026-09-14,e6fb4e759,,Y,10,12,2,Y,0,0,,Y,7,7,0,0,0,38,88,
+beebox/test/hub.e2e.test.ts,2026-07-04,df558b9b5,,Y,10,13,3,Y,3,0,Y,Y,27,11,16,8,8,110,304,bc5a7db03 bb0f68985 d09451cd6 fe5666a1b 0e37ecba0 3b3ba0df5 ab59e4ebe d8791dbdd 6d3c70730 8499cc52f 3975bac66 6f2d03152 12a49a95c 692fd58da a4523216f a62bf4f29
+beebox/test/hub/config-edit.test.ts,2026-08-17,ca029c919,,Y,5,11,1,,0,1,,Y,11,10,1,1,0,66,261,03c3f4022
+beebox/test/hub/config.test.ts,2026-07-04,df558b9b5,,Y,10,13,3,,0,1,Y,Y,15,10,5,5,0,110,304,d7d3a19d3 ffd5b9183 747de4079 4ecdc9764 965af8bd7
+beebox/test/hub/disk-health.test.ts,2026-08-28,a00697322,,Y,6,10,3,Y,0,0,,,2,2,0,0,0,55,12,
+beebox/test/hub/health.test.ts,2026-07-19,12a49a95c,,Y,6,17,4,,1,0,,Y,9,8,1,1,0,95,84,0d095f50d
+beebox/test/hub/server.auth.test.ts,2026-07-04,37cdf8a5a,,Y,10,15,5,Y,0,3,,Y,25,11,14,12,2,110,397,387c41c9b 73872adc5 a706e09a9 e7d46f255 294ac8115 0174717de cfc8deaa3 44da6cef8 12a49a95c 56a573361 0d90e1006 f292f9fd3 ae36e3c27 fdc14f4d9
+beebox/test/hub/server.router.test.ts,2026-07-04,df558b9b5,,Y,10,13,3,,5,11,Y,Y,43,13,30,25,5,110,883,387c41c9b 4af9bfad2 cb574a8c2 1469c3484 525dc5204 58fda1597 85a92dda6 45465fae4 95bd4d0c6 0d095f50d 3e7586095 97486819f dac6357f6 da9ff23cd a706e09a9 e7d46f255 e4014a523 8499cc52f 1528c7613 fe613eff7 6f2d03152 217c005aa 12a49a95c f9534b3da dfc5dcd2b a35180b1a 4ecdc9764 a4ce9d085 403af752d 37cdf8a5a
+beebox/test/hub/server.scan-token.test.ts,2026-08-01,873b37e16,,Y,8,12,4,,0,0,,Y,10,9,1,1,0,82,188,eb40539db
+beebox/test/hub/server/box-picker.test.ts,2026-07-04,37cdf8a5a,,Y,10,15,5,Y,3,1,,Y,13,9,4,3,1,110,157,8499cc52f 6f2d03152 f9534b3da dfc5dcd2b
+beebox/test/hub/server/health-routes.test.ts,2026-08-28,a00697322,,Y,6,10,3,,0,0,,,2,2,0,0,0,55,55,
+beebox/test/hub/server/http-error.test.ts,2026-08-06,02fd9237c,,Y,8,12,3,,0,0,,Y,5,5,0,0,0,77,36,
+beebox/test/hub/supervisor.maintenance.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,0,0,,Y,10,7,3,2,1,38,128,cb574a8c2 e58f6b879 7bd19c63f
+beebox/test/hub/supervisor.test.ts,2026-07-04,965af8bd7,,Y,6,9,3,Y,9,3,Y,Y,30,10,20,18,2,110,769,ea97188e3 5e1ff6bdf cb574a8c2 b7783f446 358292348 7bd19c63f 969d97fa5 7d8494901 3b3ba0df5 1833b0b94 bec43535b 53af3b9b1 d3646e96f 095083b39 1710de70c 96225d7b7 747de4079 4ecdc9764 d4ab16aac 403af752d
+beebox/test/hub/supervisor/child-output-log.test.ts,2026-07-07,e6b00ab08,,Y,5,7,2,Y,0,0,Y,Y,7,6,1,0,1,107,52,1694cc239
+beebox/test/hub/supervisor/child-spawn.secrets-file.test.ts,2026-10-18,9e24c0fc5,,Y,8,12,2,Y,0,0,,,2,2,0,0,0,4,45,
+beebox/test/hub/supervisor/child-spawn.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,0,0,,Y,5,5,0,0,0,38,79,
+beebox/test/job-cards/intake-utils.test.ts,2026-03-03,c06abc116,Y,Y,1,19,13,,8,1,,Y,21,12,9,9,0,233,191,2e477780c 985a25c05 0b113c67b dbb63b57c df429b123 01a0d8ddd c25d19285 d213710ca d29be33de
+beebox/test/lib/absolute-path-check.test.ts,2026-09-04,98bdb1ae9,,Y,18,39,21,Y,5,1,,Y,8,3,5,5,0,48,103,8f636585a 5cf62c6e6 fd3ef5612 eec34f4e1 2cecb539e
+beebox/test/lib/annex-pointer.test.ts,2026-07-30,8922385c9,,Y,1,2,1,Y,1,0,,Y,5,4,1,1,0,84,107,3ca4274e4
+beebox/test/lib/asset-content.test.ts,2026-07-30,e8507288b,,Y,6,8,2,Y,0,0,Y,Y,6,6,0,0,0,84,73,
+beebox/test/lib/asset-extensions.largefiles.test.ts,2026-08-18,960c47003,,Y,3,11,4,Y,0,0,Y,Y,6,6,0,0,0,65,80,
+beebox/test/lib/asset-extensions.test.ts,2026-07-30,e5c83af14,,Y,1,2,1,,6,2,,Y,13,7,6,6,0,84,197,899656690 960c47003 5aed3eef3 cf5eb4741 ccdef9f83 4fe82fb6e
+beebox/test/lib/atomic-write.test.ts,2026-08-01,c6fe0ae41,,Y,1,2,1,Y,0,0,Y,Y,4,4,0,0,0,82,53,
+beebox/test/lib/attach-lint.test.ts,2026-07-04,b25ebeb8b,,Y,38,51,2,Y,0,0,Y,Y,9,8,1,1,0,110,78,1c679dbba
+beebox/test/lib/box-containment.test.ts,2026-07-05,fda8728c2,,Y,2,3,1,Y,1,0,,Y,12,10,2,2,0,109,190,52bcd3987 41cbd6f9a
+beebox/test/lib/box-identity.test.ts,2026-10-20,713eccbcc,,Y,6,10,3,Y,2,0,Y,,2,0,2,2,0,2,209,5760fbca7 1c5e90e8a
+beebox/test/lib/box-maintenance.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,5,4,,Y,13,5,8,8,0,38,412,c51a3a219 409039813 cb574a8c2 1469c3484 97486819f dac6357f6 c97fea1ad 7bd19c63f
+beebox/test/lib/box-namespace-resolve.test.ts,2026-09-04,b208f1709,,Y,55,80,14,Y,5,0,Y,Y,11,6,5,5,0,48,331,36d4e453a 2cecb539e e038ef730 43e5111f3 17f5944f7
+beebox/test/lib/box-reserved-segments.test.ts,2026-09-05,36d4e453a,,Y,9,14,4,Y,0,0,,Y,4,4,0,0,0,47,51,
+beebox/test/lib/box-root-check.test.ts,2026-09-04,98bdb1ae9,,Y,18,39,21,Y,2,1,,Y,8,6,2,2,0,48,138,d8233fd4c 2cecb539e
+beebox/test/lib/box-shape.test.ts,2026-07-03,4d38df28d,,Y,8,10,2,Y,7,0,,Y,19,10,9,9,0,111,202,c634cdd67 8237442f6 2cecb539e d7d3a19d3 a249e56a5 6e389a02f c1cfbb8ef cf754e992 20309b79f
+beebox/test/lib/box-slug.test.ts,2026-10-17,cdee745d3,,Y,18,28,8,,0,0,,,2,1,1,1,0,5,42,1c5e90e8a
+beebox/test/lib/box-tmp.test.ts,2026-07-24,2b5e32399,,Y,6,7,1,Y,1,0,Y,Y,9,8,1,1,0,90,33,ab59e4ebe
+beebox/test/lib/card-lock.test.ts,2026-07-05,5a462cf16,,Y,12,13,1,Y,0,0,,Y,5,5,0,0,0,109,173,
+beebox/test/lib/csp.test.ts,2026-06-30,93fc76d69,,Y,8,14,3,Y,0,0,,Y,5,5,0,0,0,114,105,
+beebox/test/lib/dev-bundle-reload.test.ts,2026-08-15,095083b39,,Y,9,15,3,Y,1,0,,Y,5,4,1,1,0,68,49,969d97fa5
+beebox/test/lib/env.test.ts,2026-07-06,7d0316b62,,Y,11,12,1,Y,3,0,Y,Y,10,6,4,3,1,108,148,5d24ec4c1 53af3b9b1 d0ebc7ff0 1710de70c
+beebox/test/lib/exec-with-timeout.test.ts,2026-06-09,f5b54c8b7,,Y,7,9,2,Y,1,0,Y,Y,11,8,3,2,1,135,107,dec1a12a4 8e3a98c0a adc26a7d0
+beebox/test/lib/file-lock.test.ts,2026-04-30,cc606656c,,Y,7,10,2,Y,4,1,,Y,15,11,4,4,0,175,590,ef7809e21 080e1376c 7cf6a9c53 b179b77bb
+beebox/test/lib/format.test.ts,2026-03-03,fde311f9a,,Y,1,22,17,,2,0,,Y,9,7,2,2,0,233,34,68456e29e c28a6fbdf
+beebox/test/lib/git-lock.test.ts,2026-08-18,fe1dd15f6,,Y,1,2,1,Y,0,0,Y,Y,11,10,1,1,0,65,218,0e755f663
+beebox/test/lib/git-stale-lock.test.ts,2026-08-24,c5a4bf463,,Y,12,17,1,Y,0,0,,Y,11,9,2,1,1,59,296,d62933815 0e755f663
+beebox/test/lib/git.commit-hook-rejection.test.ts,2026-08-19,d1e39ac95,,Y,9,13,3,Y,0,0,Y,Y,12,11,1,1,0,64,70,0e755f663
+beebox/test/lib/git.concurrent-commit.test.ts,2026-08-18,de33ed568,,Y,1,3,1,Y,0,0,Y,Y,10,9,1,1,0,65,175,0e755f663
+beebox/test/lib/git.history-path.test.ts,2026-08-10,7c37e0a39,,Y,17,20,3,Y,0,0,,Y,8,7,1,1,0,73,28,0e755f663
+beebox/test/lib/git.lock-recovery.test.ts,2026-08-18,adaf65802,,Y,3,6,2,Y,0,0,Y,Y,10,9,1,1,0,65,100,0e755f663
+beebox/test/lib/git.test.ts,2026-03-03,126acf0ff,,Y,1,4,2,,7,5,Y,Y,23,12,11,10,1,233,502,0e755f663 eec34f4e1 b69b048c8 d1e39ac95 7c37e0a39 9163e5b8d c1cfbb8ef c1e65a22f 915217fdf 1c0496dc3 64f595917
+beebox/test/lib/git.trigger-facets.test.ts,2026-09-13,55eb699f4,,Y,15,18,3,Y,0,0,,Y,7,6,1,1,0,39,109,0e755f663
+beebox/test/lib/hash-stream-to-file.test.ts,2026-10-02,406ff8b2c,,Y,1,4,1,Y,0,0,,Y,4,4,0,0,0,20,75,
+beebox/test/lib/jsonl-lines.test.ts,2026-10-01,36b161fe5,,Y,11,13,2,Y,0,0,Y,Y,4,4,0,0,0,21,54,
+beebox/test/lib/mimetype.test.ts,2026-07-02,8bc595561,,Y,8,10,2,Y,1,1,,Y,7,6,1,1,0,112,33,adf469414
+beebox/test/lib/multipart.test.ts,2026-07-06,f8137c4bf,,Y,3,4,1,Y,0,0,,Y,5,5,0,0,0,108,63,
+beebox/test/lib/paths.test.ts,2026-03-03,257c2be03,,Y,1,5,3,,4,0,,Y,16,11,5,5,0,233,115,713eccbcc b208f1709 d7d3a19d3 cf754e992 7b5ad9ebc
+beebox/test/lib/paths/box-layout-spec.test.ts,2026-07-03,2c3b2535a,,Y,12,17,4,Y,6,0,Y,Y,20,12,8,8,0,111,92,456eb3f11 8e3a98c0a e38a04ea6 28ec4fd00 a5b19c033 b208f1709 d7d3a19d3 cf754e992
+beebox/test/lib/prompt-fence.test.ts,2026-07-06,3db4f0c54,,Y,1,2,1,Y,0,0,,Y,6,6,0,0,0,108,66,
+beebox/test/lib/safe-filename.test.ts,2026-03-03,5f8d91c88,,Y,2,8,5,,1,0,Y,Y,10,8,2,2,0,233,39,da6d70df9 7a66f0c22
+beebox/test/lib/state-migration.test.ts,2026-08-30,dab834811,Y,Y,2061,4188,733,Y,2,0,,Y,6,4,2,2,0,53,96,8542e3275 76c2fae1a
+beebox/test/lib/time.test.ts,2026-03-03,f4b4900b4,,Y,1,3,1,,1,0,,Y,11,10,1,1,0,233,135,c28a6fbdf
+beebox/test/lib/twemoji.test.ts,2026-08-26,30294ee3e,,Y,9,14,3,Y,1,0,,Y,6,5,1,1,0,57,79,dcc95bd6a
+beebox/test/lib/typescript/syntax.test.ts,2026-10-17,cc6bf733b,,Y,1,2,1,,0,1,,Y,6,5,1,1,0,5,86,0bbd1ab6b
+beebox/test/manual/box-growth-partial-timeout.test.ts,2026-08-06,e084243eb,,Y,2,6,2,,0,0,,Y,6,6,0,0,0,77,54,
+beebox/test/manual/chat-queue-real.test.ts,2026-05-10,a22fc38f2,,Y,3,7,2,,0,0,Y,Y,12,10,2,2,0,165,88,71c59352d ced87b55b
+beebox/test/manual/field-test-inject-email.test.ts,2026-08-08,8abc62e1e,,Y,15,18,3,,0,3,,Y,15,9,6,4,2,75,180,71d9181f7 1b13cc5ed e3a1378dc 1e7595c2e 6e0a74a0e 9a3ae3f7f
+beebox/test/mobile-contract/quick-capture.test.ts,2026-10-12,4570196b1,,Y,41,69,5,Y,0,0,,Y,4,4,0,0,0,10,53,
+beebox/test/plugins.test.ts,2026-10-10,06f886eba,,Y,51,75,16,Y,1,1,,Y,9,5,4,3,1,12,122,be784ec2d 97b1470d6 b609226db c6e26e5f9
+beebox/test/plugins/courseware/lint.test.ts,2026-10-10,06f886eba,,Y,51,75,16,Y,0,0,,Y,6,5,1,1,0,12,170,7bc295ad2
+beebox/test/plugins/courseware/plugin.setup.test.ts,2026-10-10,06f886eba,,Y,51,75,16,Y,0,1,,Y,8,6,2,2,0,12,174,97b1470d6 b609226db
+beebox/test/plugins/courseware/plugin.types.test.ts,2026-10-10,69e607892,,Y,14,24,6,,0,0,Y,Y,5,5,0,0,0,12,136,
+beebox/test/plugins/courseware/view.test.ts,2026-10-10,06f886eba,,Y,51,75,16,Y,0,0,,Y,8,8,0,0,0,12,152,
+beebox/test/plugins/recipe/plugin.setup.test.ts,2026-10-10,8bb68497b,,Y,11,18,6,Y,0,1,,Y,7,5,2,2,0,12,113,97b1470d6 b609226db
+beebox/test/plugins/recipe/view.test.ts,2026-10-10,5d8f9eb9d,,Y,16,18,2,Y,0,0,,Y,8,7,1,1,0,12,124,97b1470d6
+beebox/test/preserve-agent-fields.test.ts,2026-06-09,367f0db8d,,Y,6,8,2,Y,0,0,,Y,10,10,0,0,0,135,54,
+beebox/test/publications/managed-publications.test.ts,2026-09-24,28ec4fd00,,Y,52,72,12,Y,3,0,,Y,15,8,7,7,0,28,670,149877f4a 0e755f663 d402d9355 ddb9a5741 22945e70c b4e97f062 4640a63f2
+beebox/test/publish/leak-scan.test.ts,2026-07-15,150550f5c,,Y,7,10,2,Y,1,0,,Y,7,6,1,1,0,99,121,bec8749e3
+beebox/test/publish/manifest.test.ts,2026-07-15,59c262e69,,Y,1,2,1,Y,2,0,,Y,9,7,2,2,0,99,34,456eb3f11 bec8749e3
+beebox/test/publish/prepare.test.ts,2026-09-24,28ec4fd00,,Y,52,72,12,Y,1,5,,Y,17,8,9,9,0,28,655,f3a51a0d7 2bdb2e03b afc00fec7 e57b68c90 0e755f663 bec8749e3 058ab8a32 407ea84bf db822652d
+beebox/test/publish/publication-definition.test.ts,2026-09-24,28ec4fd00,,Y,52,72,12,Y,2,0,,Y,10,8,2,2,0,28,137,0e755f663 d402d9355
+beebox/test/requirements.test.ts,2026-08-17,7e536a38e,,Y,16,21,3,Y,5,1,,Y,16,10,6,5,1,66,142,9726dad44 1e93ef8cf e6fb4e759 38058de4e 7d8494901 859144f94
+beebox/test/scenarios/cross-box-probe.test.ts,2026-09-04,188f3c493,,Y,17,34,8,,0,0,,Y,15,10,5,4,1,48,366,f93fb1009 58bb25f79 96d6fe709 38902ba84 2cecb539e
+beebox/test/scenarios/two-box-fixture.test.ts,2026-09-04,188f3c493,,Y,17,34,8,,0,0,,Y,4,4,0,0,0,48,76,
+beebox/test/schemas.briefing-compile.test.ts,2026-07-03,0872288b6,,Y,5,7,2,,0,0,,Y,15,9,6,6,0,111,138,5b4f34771 917676083 fd0aa5254 6973f0767 58bb25f79 9ce149356
+beebox/test/schemas.card-loaders.test.ts,2026-04-17,69ee0f352,,Y,16,18,2,,0,0,,Y,20,11,9,9,0,188,120,c65e7540f e6d36da69 02a3e12ff 9317f216e 36a29ffe3 1130a7fed f07da5a47 62881ab11 90c956452
+beebox/test/schemas.native-resolution.test.ts,2026-07-03,20309b79f,,Y,15,20,5,,0,0,,Y,15,8,7,7,0,111,171,1c5e90e8a 2cecb539e d7d3a19d3 6e389a02f c1cfbb8ef cf754e992 7b9646c98
+beebox/test/schemas.personality-boxholder.test.ts,2026-07-02,810f3a635,,Y,10,11,1,,0,0,Y,Y,10,7,3,3,0,112,85,2e477780c 89730a3c8 b6fdd738e
+beebox/test/schemas.test.ts,2026-03-03,5f8d91c88,,Y,2,8,5,,2,10,Y,Y,49,15,34,34,0,233,226,8bb68497b 06f886eba c95de7fd9 2e477780c 7485e83c8 89730a3c8 985a25c05 d776c3511 2277054ff 75e983e84 67a0066a6 413ac1c80 8374d5902 dbb63b57c a184af664 4c7f3b9aa 26292ba5a 12d688b27 897887a09 dc4764a60 1136162a4 a2fe5d651 503224586 c9f00170c ebf651a99 c25d19285 03b3407d6 d213710ca 33bb72dc6 f07da5a47 4881722d9 58b6200cb d29be33de f0e5d5e62
+beebox/test/schemas.view-card.test.ts,2026-07-02,88e1e758d,,Y,12,14,1,,0,1,,Y,8,6,2,2,0,112,72,cba5f2f5a 9ce0ee6c3
+beebox/test/schemas/browser-task.test.ts,2026-09-12,efe488abc,,Y,7,10,2,Y,6,1,,Y,15,7,8,8,0,40,181,c95de7fd9 89730a3c8 d776c3511 504c2ba94 6f258d97a 67a0a383e 65a906092 d91bcc726
+beebox/test/schemas/judgment.test.ts,2026-09-26,40ee8b60e,,Y,14,17,3,Y,0,0,Y,Y,8,7,1,1,0,26,87,0a93ccd61
+beebox/test/schemas/pdf.test.ts,2026-08-01,cc8445e45,,Y,17,25,5,,3,0,,Y,12,9,3,3,0,82,119,e6d36da69 02a3e12ff 337ceb131
+beebox/test/schemas/place.test.ts,2026-06-29,e765221ee,,Y,13,21,6,Y,1,0,Y,Y,8,7,1,1,0,115,69,89730a3c8
+beebox/test/schemas/publication.test.ts,2026-10-06,d402d9355,,Y,8,13,5,Y,0,0,,Y,3,3,0,0,0,16,89,
+beebox/test/schemas/question-followup-job.test.ts,2026-07-10,413ac1c80,,Y,6,9,3,Y,2,0,,Y,11,8,3,3,0,104,76,2e477780c 985a25c05 29863299a
+beebox/test/schemas/question.test.ts,2026-07-10,413ac1c80,,Y,6,9,3,Y,2,1,,Y,17,10,7,4,3,104,356,7485e83c8 d776c3511 504c2ba94 29863299a 991c2609e 98c6228f1 be2d29cf6
+beebox/test/schemas/record.test.ts,2026-09-12,7e3ff1152,,Y,3,5,2,Y,1,0,Y,Y,6,4,2,2,0,40,73,c95de7fd9 8e3a98c0a
+beebox/test/schemas/scheduled-script.test.ts,2026-03-03,5f8d91c88,,Y,2,8,5,,5,1,Y,Y,18,9,9,9,0,233,356,c67892950 1e580f3c4 2e477780c b9e0143cb 73ea4a6b6 f5b54c8b7 c25d19285 461a0bb39 fde311f9a
+beebox/test/schemas/scheduled-script/due.reminder-retry.test.ts,2026-10-18,1e580f3c4,,Y,6,11,4,Y,2,1,,,2,0,2,2,0,4,110,0b9d59133 c67892950
+beebox/test/schemas/tab-arrangement.test.ts,2026-08-05,52b596820,,Y,24,33,7,Y,3,0,,,5,2,3,3,0,78,58,c95de7fd9 89730a3c8 352d1ab7e
+beebox/test/schemas/todo-review-job.test.ts,2026-09-20,ba3454fb3,,Y,4,9,5,Y,3,0,,Y,8,5,3,3,0,32,89,2e7bf35df 2e477780c 7b1247708
+beebox/test/schemas/todo-view.test.ts,2026-07-28,b5aa63783,,Y,14,18,4,Y,4,1,,Y,14,8,6,6,0,86,64,8bd8399d1 89730a3c8 d776c3511 504c2ba94 b5189abad 8331820f9
+beebox/test/scripts/build-cli/build/plugins.test.ts,2026-10-10,06f886eba,,Y,51,75,16,Y,0,0,,Y,4,4,0,0,0,12,174,
+beebox/test/scripts/install-theme-tour.test.ts,2026-09-08,33a55a7ab,,Y,53,88,10,Y,0,0,,Y,5,5,0,0,0,44,52,
+beebox/test/scripts/migrate/agents-md.integration.test.ts,2026-10-09,fdbbb96ff,,Y,12,24,10,,0,0,,Y,7,5,2,2,0,13,348,06f886eba 4d13fe624
+beebox/test/scripts/migrate/agents-md.test.ts,2026-10-09,fdbbb96ff,,Y,12,24,10,,0,0,,Y,6,4,2,2,0,13,197,414053e27 4d13fe624
+beebox/test/scripts/migrate/body-tags.test.ts,2026-10-10,619d3582c,,Y,4,6,1,,0,1,,Y,7,5,2,2,0,12,411,eae0ff350 414053e27
+beebox/test/scripts/migrate/box-shape-record.test.ts,2026-10-20,01e21405e,,Y,3,5,1,,0,0,Y,,1,0,1,1,0,2,124,5760fbca7
+beebox/test/scripts/migrate/briefing-openers.test.ts,2026-10-08,a7a78d7ec,,Y,3,5,1,,0,2,,Y,10,5,5,5,0,14,568,6bfcaa16b 546588ced e18934929 3c13ab379 ecb96a0ae
+beebox/test/scripts/migrate/engine-link-spec.test.ts,2026-10-20,9911399c4,,Y,3,4,1,,0,1,Y,,4,0,4,4,0,2,323,8f636585a 5760fbca7 bbdb1f575 fd874a7a3
+beebox/test/scripts/migrate/retire-memo.test.ts,2026-10-16,025ec7285,,Y,5,8,1,,0,1,,Y,8,5,3,3,0,6,386,60aba4c1b fd6057706 8342621cf
+beebox/test/scripts/release.manifest.test.ts,2026-07-04,415f948b5,,Y,6,10,2,Y,1,1,,Y,16,8,8,4,4,110,111,5926c40c2 ae0f69ee3 fcaf01345 7d8494901 bdb6a49cd aac1a0d28 bb10d29d0 7b9646c98
+beebox/test/scripts/sdk-steering-probe/verdict.test.ts,2026-10-18,6dc3c89f4,,Y,3,8,1,Y,0,0,,,0,0,0,0,0,4,41,
+beebox/test/services/apns.test.ts,2026-09-26,f695d5d98,,Y,22,41,9,Y,1,0,,Y,8,7,1,1,0,26,37,23901e166
+beebox/test/services/claude-chat-content.test.ts,2026-07-12,e3013c170,,Y,7,9,2,Y,0,0,Y,Y,4,4,0,0,0,102,106,
+beebox/test/services/claude-chat.test.ts,2026-04-19,6deac8479,,Y,18,31,9,Y,3,3,,Y,18,10,8,8,0,186,164,171211abc b03b66055 767baab73 9b9b0fb16 f30440746 158573eec 5671d260d 946fb3a6f
+beebox/test/services/claude-chat/codex-chat.failure-reporting.test.ts,2026-08-24,8d1ae0fbb,,Y,48,66,9,Y,0,0,,Y,7,7,0,0,0,59,138,
+beebox/test/services/cloudflare-provisioning/domains.test.ts,2026-09-25,b4e97f062,,Y,12,17,3,,0,2,,Y,8,5,3,3,0,27,106,bef498266 800c78b24 22945e70c
+beebox/test/services/cloudflare-publish-token-verifier.test.ts,2026-09-24,28ec4fd00,,Y,52,72,12,Y,1,1,,Y,5,4,1,1,0,28,100,1e837e9ef
+beebox/test/services/codex-cli.test.ts,2026-08-31,fb1b39721,,Y,13,17,3,Y,3,1,Y,Y,9,5,4,3,1,52,92,920b6f083 c5b01aaf9 263a52a9a 96767cd4b
+beebox/test/services/codex-rollout-model.test.ts,2026-10-19,bffa93184,,Y,5,8,2,Y,1,1,Y,,1,0,1,1,0,3,117,511beb2db
+beebox/test/services/codex-sdk-session.boundary.test.ts,2026-08-15,b10769dea,,Y,19,29,7,Y,0,0,,Y,8,6,2,2,0,68,85,6673cd5fc 0cb20cecd
+beebox/test/services/codex-sdk-session/core.telemetry.test.ts,2026-10-06,fc6a0c5a7,,Y,7,9,2,Y,1,0,,Y,6,5,1,1,0,16,117,09f3ef3e2
+beebox/test/services/codex-sdk-session/sandbox.test.ts,2026-08-14,f6888f0fc,,Y,9,18,4,,0,0,Y,Y,8,6,2,2,0,69,35,b10769dea 06b520af6
+beebox/test/services/connector-response.test.ts,2026-07-06,e864abfd4,,Y,9,10,1,Y,1,0,,Y,8,6,2,2,0,108,59,9ceffa0c9 5c93f7a99
+beebox/test/services/google-drive/schemas.test.ts,2026-07-09,c8b2603ec,,Y,2,3,1,,0,1,,Y,7,5,2,2,0,105,164,cc522ad08 a6b4453eb
+beebox/test/services/google-gmail.not-found.test.ts,2026-10-22,f67341a59,,Y,3,5,2,,0,0,,,0,0,0,0,0,0,37,
+beebox/test/services/jev.test.ts,2026-09-21,e04dbc65f,,Y,16,29,3,Y,2,0,,Y,10,7,3,3,0,31,204,fdef22dfe b9e0143cb cd8294f66
+beebox/test/services/managed-publication-runtime/worker-deployer.test.ts,2026-09-24,28ec4fd00,,Y,52,72,12,,0,0,,Y,5,5,0,0,0,28,81,
+beebox/test/services/openai-embeddings.test.ts,2026-07-09,6aac481aa,,Y,4,6,1,Y,1,1,,Y,13,11,2,2,0,105,80,7d8494901 dd763c382
+beebox/test/services/scan-vision-claude.avif.test.ts,2026-09-28,7c2c299cc,,Y,14,23,6,Y,0,0,Y,Y,5,4,1,0,1,24,97,7f5bb8ab6
+beebox/test/services/scan-vision-claude.integration.test.ts,2026-08-01,43b00bd21,,Y,2,9,2,Y,0,0,Y,Y,6,6,0,0,0,82,78,
+beebox/test/services/scan-vision-claude.test.ts,2026-08-01,9832207d4,,Y,1,2,1,Y,1,0,,Y,7,6,1,1,0,82,218,43b00bd21
+beebox/test/services/scan-vision.test.ts,2026-08-01,6e4a0e99c,,Y,2,3,1,Y,3,0,,Y,10,7,3,3,0,82,50,704c43ce5 7d8494901 af5fd87ce
+beebox/test/services/tailscale-discovery.test.ts,2026-07-21,900ee8e86,,Y,9,14,3,Y,0,0,,Y,7,6,1,1,0,93,160,0e0f226f8
+beebox/test/services/tailscale-setup.test.ts,2026-07-20,30249b2fd,,Y,5,7,2,Y,7,3,,Y,14,7,7,7,0,94,660,9e2f7c1bd c83a0fb7d 0e0f226f8 900ee8e86 8993b0365 2963ed125 6d65a82a3
+beebox/test/services/tailscale.test.ts,2026-07-20,ff8b247cb,,Y,5,6,1,Y,5,1,,Y,15,9,6,5,1,94,561,f732a6dcb 0e0f226f8 900ee8e86 8993b0365 6d65a82a3 6233fa8b5
+beebox/test/services/tts.test.ts,2026-09-06,457974d24,,Y,16,24,6,Y,4,0,Y,Y,12,8,4,4,0,46,221,70fe47f69 d1335d0b9 31fdb09fa 931e2db64
+beebox/test/shared/agent-models.test.ts,2026-08-23,0cb20cecd,,Y,30,42,7,Y,2,1,Y,Y,10,6,4,4,0,60,121,90bf65d57 5fb1a4e49 d8f8c81ba b9cf10125
+beebox/test/shared/also-here.test.ts,2026-10-11,ba55420ba,,Y,7,12,4,Y,1,0,,Y,5,4,1,1,0,11,61,6c3b49d44
+beebox/test/shared/attach-path.test.ts,2026-05-13,da9e662d1,,Y,1,2,1,Y,2,0,,Y,10,8,2,2,0,162,167,936612249 9cf6eeb0a
+beebox/test/shared/backoff.test.ts,2026-09-10,e10ebb86b,,Y,8,13,5,Y,0,0,,Y,5,5,0,0,0,42,33,
+beebox/test/shared/box-identity-asset-routes.public-assets.test.ts,2026-08-30,17a2827b5,,Y,3,4,1,,1,0,Y,Y,7,6,1,1,0,53,108,228830414
+beebox/test/shared/box-path.test.ts,2026-06-26,cf9ae5b9d,,Y,7,8,1,Y,0,0,Y,Y,7,7,0,0,0,118,39,
+beebox/test/shared/browse-fold.test.ts,2026-09-06,94e2e6b9b,,Y,1,2,1,Y,3,0,,Y,6,3,3,3,0,46,189,b54df33a3 917676083 7209474cc
+beebox/test/shared/browser-task-batch.test.ts,2026-09-12,efe488abc,,Y,7,10,2,Y,2,0,,Y,7,5,2,2,0,40,323,67a0a383e d91bcc726
+beebox/test/shared/browser-task-state.test.ts,2026-09-12,6f258d97a,,Y,14,19,3,Y,1,0,,Y,4,3,1,1,0,40,86,89730a3c8
+beebox/test/shared/card-name.test.ts,2026-07-02,7b5ad9ebc,,Y,6,10,4,Y,0,0,Y,Y,6,6,0,0,0,112,58,
+beebox/test/shared/card-symbol.test.ts,2026-09-05,8671ede8b,,Y,6,12,3,,1,1,,Y,10,6,4,4,0,47,93,33a55a7ab a6b145b40 bdb6a49cd 6f2b08729
+beebox/test/shared/card-theme.test.ts,2026-09-08,33a55a7ab,,Y,53,88,10,Y,1,1,,Y,20,8,12,12,0,44,662,604695038 b9f7752c7 a2e694ed7 fe059b7fb c69cd3b04 f63b8278c a6e46970d 8599b8f97 b4a99e020 a07650418 0e755f663 f859fbd7e
+beebox/test/shared/commit-trailers.test.ts,2026-09-13,55eb699f4,,Y,15,18,3,Y,0,0,,Y,3,3,0,0,0,39,128,
+beebox/test/shared/composer-tokens.test.ts,2026-08-25,48548cb39,,Y,21,31,6,Y,1,0,,Y,6,5,1,1,0,58,86,bc762c042
+beebox/test/shared/delivered-user-message.test.ts,2026-08-06,ab43e7876,,Y,7,12,4,Y,0,0,,Y,6,6,0,0,0,77,180,
+beebox/test/shared/display-path.test.ts,2026-09-05,ce3f4d076,,Y,15,19,4,Y,2,0,,Y,6,4,2,2,0,47,166,2cecb539e e038ef730
+beebox/test/shared/error-guards.test.ts,2026-07-10,f79873dd2,,Y,11,12,1,Y,2,0,,Y,11,9,2,2,0,104,117,8e3a98c0a d997d21a2
+beebox/test/shared/filename.test.ts,2026-04-19,7a66f0c22,,Y,5,7,2,Y,1,0,Y,Y,9,8,1,1,0,186,66,f074dd50a
+beebox/test/shared/image-orientation.test.ts,2026-07-21,be8dda2cd,,Y,4,11,2,Y,0,0,Y,Y,6,6,0,0,0,93,110,
+beebox/test/shared/invariant.test.ts,2026-07-06,e3b82c801,,Y,1,2,1,Y,2,1,,Y,10,8,2,2,0,108,76,8e3a98c0a 21e11b397
+beebox/test/shared/is-record.test.ts,2026-07-10,37c71d27a,,Y,9,10,1,Y,1,0,,Y,7,6,1,1,0,104,25,8e3a98c0a
+beebox/test/shared/leading-title-heading.test.ts,2026-10-06,c720332b2,,Y,8,11,3,Y,0,0,,Y,3,3,0,0,0,16,47,
+beebox/test/shared/markdoc-config.footnotes.test.ts,2026-10-02,76891c08a,,Y,39,65,13,,0,0,,Y,3,3,0,0,0,20,34,
+beebox/test/shared/markdoc-config.headings.test.ts,2026-05-31,96c3ea2a2,,Y,2,3,1,Y,0,0,Y,Y,8,7,1,1,0,144,47,76891c08a
+beebox/test/shared/markdoc-config.html.test.ts,2026-10-02,76891c08a,,Y,39,65,13,,0,0,,Y,4,3,1,1,0,20,155,dd3b75232
+beebox/test/shared/markdoc-config.ingest.test.ts,2026-10-02,76891c08a,,Y,39,65,13,,0,1,,Y,5,4,1,1,0,20,83,861c3856f
+beebox/test/shared/markdoc-config.quote.test.ts,2026-09-08,33a55a7ab,,Y,53,88,10,Y,0,0,,Y,5,4,1,1,0,44,89,76891c08a
+beebox/test/shared/markdoc-config.redacted.test.ts,2026-06-02,8b39c85ff,,Y,3,5,1,Y,0,0,,Y,8,7,1,1,0,142,34,76891c08a
+beebox/test/shared/markdoc-config.source.test.ts,2026-06-04,d886028e6,,Y,5,9,3,Y,4,1,,Y,13,8,5,5,0,140,95,76891c08a eb79220e1 3cfb35367 d42ab7f6b ebf651a99
+beebox/test/shared/markdoc-config.task.test.ts,2026-10-17,f3a51a0d7,,Y,1,4,2,,0,0,Y,Y,3,3,0,0,0,5,34,
+beebox/test/shared/markdoc-config.todo.test.ts,2026-07-28,01307f987,,Y,7,9,2,Y,1,1,,Y,12,7,5,5,0,86,175,366215713 aed8d7408 76891c08a cdb3b6d79 8331820f9
+beebox/test/shared/markdown-sections.test.ts,2026-10-17,48dcb3f39,,Y,13,27,10,Y,1,0,,,2,0,2,1,1,5,68,f65b45d18 1cb1d347e
+beebox/test/shared/model-ids.test.ts,2026-07-25,922fa9940,,Y,3,4,1,Y,4,0,,Y,11,7,4,4,0,89,67,8d32fa8f4 aee78a88f 90bf65d57 b9cf10125
+beebox/test/shared/named-views.test.ts,2026-07-02,239466d12,,Y,5,6,1,Y,0,0,,Y,5,5,0,0,0,112,102,
+beebox/test/shared/natural-sort.test.ts,2026-08-02,53d6a917f,,Y,3,4,1,Y,1,0,Y,Y,5,4,1,1,0,81,33,8e3a98c0a
+beebox/test/shared/prominence.test.ts,2026-09-06,d64d435d3,,Y,3,7,2,Y,0,0,,Y,11,8,3,2,1,46,67,da6d70df9 63c78ab81 33a55a7ab
+beebox/test/shared/publication-url.test.ts,2026-09-25,4f73a1afb,,Y,6,8,2,Y,1,0,,Y,6,5,1,1,0,27,49,7ab333586
+beebox/test/shared/ref-path.test.ts,2026-07-30,52bcd3987,,Y,2,7,3,Y,2,0,,Y,11,9,2,2,0,84,227,98bdb1ae9 21e270f99
+beebox/test/shared/registry.test.ts,2026-09-27,228b71fb2,,Y,17,31,11,Y,2,0,,Y,6,4,2,2,0,25,92,220e8b188 0ffe31e0d
+beebox/test/shared/result.test.ts,2026-07-06,e1cbcc349,,Y,1,2,1,Y,1,0,,Y,8,6,2,1,1,108,59,8e3a98c0a 42ae69a52
+beebox/test/shared/secret-name-suggest.test.ts,2026-09-10,4f88150b2,,Y,26,40,8,Y,0,0,,Y,6,5,1,0,1,42,71,1e93ef8cf
+beebox/test/shared/system-card-paths.test.ts,2026-09-09,d6056b354,,Y,48,70,13,Y,2,0,,Y,6,4,2,2,0,43,44,aec22079d bdb8798d9
+beebox/test/shared/todo-locators.test.ts,2026-09-25,6e3fabc43,,Y,4,6,2,Y,0,0,,Y,5,4,1,1,0,27,93,76891c08a
+beebox/test/shared/todo-model.test.ts,2026-07-28,01307f987,,Y,7,9,2,Y,2,0,,Y,10,8,2,2,0,86,249,cdb3b6d79 8331820f9
+beebox/test/shared/ui-scan/control-address.test.ts,2026-09-21,2c1500bfd,,Y,10,15,3,Y,0,0,,Y,5,5,0,0,0,31,103,
+beebox/test/shared/wav.test.ts,2026-09-10,e10ebb86b,,Y,8,13,5,Y,0,0,,Y,5,5,0,0,0,42,26,
+beebox/test/tours/backdrop.test.ts,2026-10-21,bd2571c39,,Y,8,16,1,,0,0,Y,,2,0,2,1,1,1,69,1ec548a9d 6fed83af5
+beebox/test/tours/contrast.test.ts,2026-10-20,d0e368e87,,Y,2,14,1,,0,0,,,2,0,2,0,2,2,118,068af048a 0a604b751
+beebox/test/tours/rules.test.ts,2026-10-21,0a604b751,,,0,10,2,,0,0,,,1,0,1,1,0,1,100,2d0332476
+beebox/test/transient-state.test.ts,2026-07-09,c1e65a22f,,Y,3,5,2,Y,1,0,Y,Y,13,11,2,1,1,105,236,1e93ef8cf 167cede34
+beebox/test/user-stories/journey-provisioning.test.ts,2026-09-20,2014c37b6,,Y,7,18,1,,0,0,,Y,5,4,1,0,1,32,67,027bb6473
+beebox/test/webapp/auth-capabilities.test.ts,2026-08-06,a5ffe5291,,Y,1,3,1,,1,0,,Y,7,5,2,2,0,77,279,68c5e5374 604080ed1
+beebox/test/webapp/auth.hub-identity.test.ts,2026-07-04,37cdf8a5a,,Y,10,15,5,Y,4,0,,Y,11,7,4,4,0,110,162,49eb22a75 8499cc52f a2e568cbd 6f2d03152
+beebox/test/webapp/auth.hub-mode.test.ts,2026-07-04,37cdf8a5a,,Y,10,15,5,Y,3,0,,Y,11,8,3,3,0,110,124,49eb22a75 8499cc52f 6f2d03152
+beebox/test/webapp/auth.required.test.ts,2026-07-19,6f2d03152,,Y,12,22,9,Y,4,0,,Y,21,11,10,9,1,95,273,7ca59a1f2 c2917a6c6 38902ba84 4ec460edf 5c955fc85 4f88150b2 7d8494901 2af357ca0 8499cc52f 30249b2fd
+beebox/test/webapp/auth.session-gen.test.ts,2026-07-19,a2e568cbd,,Y,9,12,3,Y,3,0,,Y,12,9,3,3,0,95,203,49eb22a75 8499cc52f 44da6cef8
+beebox/test/webapp/auth.ws.test.ts,2026-07-19,a2e568cbd,,Y,9,12,3,Y,1,0,,Y,7,6,1,1,0,95,95,8499cc52f
+beebox/test/webapp/base-prefix.login-redirect.test.ts,2026-07-21,8698f41ca,,Y,6,8,2,Y,0,0,,Y,10,10,0,0,0,93,194,
+beebox/test/webapp/base-server-url.test.ts,2026-07-21,0cf853c67,,Y,1,2,1,Y,0,0,Y,Y,5,5,0,0,0,93,56,
+beebox/test/webapp/box-config-write.test.ts,2026-08-06,604080ed1,,Y,2,8,4,,0,0,,Y,7,7,0,0,0,77,46,
+beebox/test/webapp/box-identity.test.ts,2026-08-26,2af357ca0,,Y,11,19,3,Y,0,0,,Y,9,9,0,0,0,57,188,
+beebox/test/webapp/chat-runtime.reservation-restart.test.ts,2026-09-08,a0d3df8f6,,Y,7,11,3,,0,0,,Y,11,10,1,1,0,44,110,6f95cfc1d
+beebox/test/webapp/local-users.test.ts,2026-07-19,037c39855,,Y,2,3,1,Y,2,0,,Y,8,6,2,2,0,95,329,5bdad22da 68c5e5374
+beebox/test/webapp/mobile-cookie.test.ts,2026-07-19,56a573361,,Y,15,28,4,Y,0,0,Y,Y,12,10,2,1,1,95,254,40d79f608 0174717de
+beebox/test/webapp/routes/actions.test.ts,2026-03-03,fde311f9a,,Y,1,22,17,,1,0,,Y,15,13,2,2,0,233,75,b619b5991 03b3407d6
+beebox/test/webapp/routes/api-csp-report.bounds.test.ts,2026-07-20,4c94dfdd2,,Y,1,6,1,Y,1,1,,Y,9,8,1,1,0,94,108,874912731
+beebox/test/webapp/routes/api.test.ts,2026-03-03,c06abc116,Y,Y,1,19,13,,9,6,,Y,29,12,17,15,2,233,223,02ce2b596 cd650c6ca 98bdb1ae9 e4014a523 939a0d2b7 898699ab6 a52aa9a6d 36a29ffe3 0f502e9a5 91cd9e9e5 cc1b99821 03b3407d6 33bb72dc6 c3ae3f494 c897ea3c4 5103acbcd 126acf0ff
+beebox/test/webapp/routes/api/proxy-image.test.ts,2026-06-17,63df408ec,,Y,3,5,2,Y,0,0,Y,Y,8,8,0,0,0,127,89,
+beebox/test/webapp/routes/api/register/adapters.test.ts,2026-06-12,9e090b270,,Y,8,9,1,,1,0,,Y,14,10,4,3,1,132,75,fcc757df1 d8faa1608 7d8494901 af5fd87ce
+beebox/test/webapp/routes/api/register/external.test.ts,2026-06-04,8bba65145,,Y,2,3,1,,1,1,,Y,14,11,3,3,0,140,146,fcc757df1 53af3b9b1 f2c2813e0
+beebox/test/webapp/routes/api/register/files-write.test.ts,2026-06-12,d1050f0fa,,Y,12,13,1,,2,0,,Y,19,14,5,5,0,132,156,0e755f663 fcc757df1 98bdb1ae9 c1cfbb8ef 915217fdf
+beebox/test/webapp/routes/api/register/files.annex-absent.test.ts,2026-07-30,e8507288b,,Y,6,8,2,,1,0,Y,Y,8,6,2,2,0,84,74,fcc757df1 98bdb1ae9
+beebox/test/webapp/routes/api/register/files.serving-hardening.test.ts,2026-07-06,6a675956a,,Y,1,2,1,,1,0,Y,Y,16,10,6,6,0,108,146,fcc757df1 a6b145b40 98bdb1ae9 14ad12943 e165f1f6c b6d81ab2b
+beebox/test/webapp/routes/api/register/image-transform-cache.test.ts,2026-09-03,3ab2bb1c2,,Y,18,24,5,Y,2,1,,Y,6,4,2,2,0,49,93,fcc757df1 24c9cb024
+beebox/test/webapp/routes/api/register/image-transform-options.test.ts,2026-09-03,3ab2bb1c2,,Y,18,24,5,Y,2,1,,Y,9,6,3,3,0,49,94,fcc757df1 24c9cb024 bf99e3950
+beebox/test/webapp/routes/api/register/images.test.ts,2026-09-03,3ab2bb1c2,,Y,18,24,5,,1,2,,Y,12,7,5,5,0,49,167,fcc757df1 d372196e9 24c9cb024 641e7a48a bf99e3950
+beebox/test/webapp/routes/api/register/session-media.test.ts,2026-08-25,3d02cb54a,,Y,13,19,3,Y,1,0,Y,Y,9,8,1,1,0,58,111,fcc757df1
+beebox/test/webapp/routes/auth.invite-accept.test.ts,2026-08-06,a9d4a9f5a,,Y,8,10,2,Y,1,0,,Y,14,9,5,5,0,77,371,5bdad22da 68c5e5374 604080ed1 02fd9237c 1710de70c
+beebox/test/webapp/routes/auth.password-login.test.ts,2026-07-19,b561377d2,,Y,6,9,3,Y,4,2,,Y,15,10,5,5,0,95,326,5bdad22da 696daf845 92c0a631a 8499cc52f 652d041a1
+beebox/test/webapp/routes/auth.public-url-fallback.test.ts,2026-07-04,965af8bd7,,Y,6,9,3,Y,1,0,Y,Y,9,8,1,1,0,110,65,b561377d2
+beebox/test/webapp/routes/auth/google.oauth-callback.test.ts,2026-07-20,9d4568a0e,,Y,4,10,2,,0,1,Y,Y,10,9,1,1,0,94,125,1528c7613
+beebox/test/webapp/routes/auth/login-page.test.ts,2026-07-22,92c0a631a,,Y,4,8,3,Y,1,0,,Y,10,8,2,2,0,92,106,6d09eec25 10be758ad
+beebox/test/webapp/routes/auth/login-throttle.test.ts,2026-07-19,b561377d2,,Y,6,9,3,Y,1,0,,Y,7,6,1,1,0,95,159,44da6cef8
+beebox/test/webapp/routes/auth/password-change.test.ts,2026-08-06,c012f7099,,Y,9,10,1,,0,0,,Y,7,7,0,0,0,77,120,
+beebox/test/webapp/routes/auth/password-reset.test.ts,2026-08-07,68c5e5374,,Y,13,24,5,,0,0,,Y,9,9,0,0,0,76,237,
+beebox/test/webapp/routes/box-identity-assets.png-checksums.test.ts,2026-10-08,216eb16e6,,,0,8,1,,0,0,,Y,4,4,0,0,0,14,74,
+beebox/test/webapp/routes/box-identity-assets.test.ts,2026-08-26,e7d46f255,,Y,14,17,3,Y,0,0,,Y,7,7,0,0,0,57,44,
+beebox/test/webapp/routes/bulk-upload.test.ts,2026-07-27,0720093a8,,Y,5,7,1,Y,5,2,,Y,21,11,10,8,2,87,662,1b1c1e050 848d6bfb6 e038ef730 adc26a7d0 189639a3d 9204dc22d 0e3c01eeb b75c718ec ffa86c5a2 e96dbe05e
+beebox/test/webapp/routes/bulk-upload/stream-gate.test.ts,2026-07-27,c92211240,,Y,2,4,1,,0,0,,Y,5,5,0,0,0,87,89,
+beebox/test/webapp/routes/capture.test.ts,2026-07-09,817e997f6,,Y,10,13,3,Y,8,1,,Y,25,11,14,14,0,105,488,f706fc3e8 1837ae7f3 61fccb24a 3319f2af8 3769455b2 1b084ccb3 858cf592d 8499cc52f 0174717de 6f2d03152 9d6e2cf88 3eaf44307 34cf71d3a 9a7b6ce78
+beebox/test/webapp/routes/capture.voice.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,4,4,0,0,0,4,481,
+beebox/test/webapp/routes/card-submission.test.ts,2026-09-12,5188429af,,Y,3,5,2,Y,1,0,,Y,10,8,2,2,0,40,176,c95de7fd9 d91bcc726
+beebox/test/webapp/routes/chat.default-route.test.ts,2026-07-10,7c370bd0a,,Y,6,8,1,Y,1,1,,Y,8,7,1,1,0,104,54,ef7d7fc02
+beebox/test/webapp/routes/chat.landmark-summaries.test.ts,2026-06-19,b358e82fb,,Y,1,2,1,Y,5,2,Y,Y,18,9,9,9,0,125,148,e4bb10484 a3336a13c a706e09a9 98bdb1ae9 55860f8b7 ac8e12c58 7d30c11d0 db017f816 0b74138f2
+beebox/test/webapp/routes/chat.send-fast-ack.test.ts,2026-08-18,31a796bb9,,Y,3,6,3,,0,0,,Y,13,9,4,2,2,65,144,0c0877d70 9099b2965 bec43535b bff2d7982
+beebox/test/webapp/routes/chat/audio-routes.transcribe.test.ts,2026-09-10,4f88150b2,,Y,26,40,8,,0,0,,Y,6,6,0,0,0,42,56,
+beebox/test/webapp/routes/chat/helpers.image-orientation.test.ts,2026-07-21,be8dda2cd,,Y,4,11,2,,0,0,Y,Y,7,7,0,0,0,93,55,
+beebox/test/webapp/routes/chat/helpers.mobile-sender.test.ts,2026-07-21,8ed69b833,,Y,2,6,1,,0,0,Y,Y,11,8,3,2,1,93,104,40d79f608 20dd89b6e 0174717de
+beebox/test/webapp/routes/chat/schedule-fire.test.ts,2026-07-11,f54f44d23,,Y,3,6,2,,2,0,,Y,16,11,5,5,0,103,168,d7e55e8a4 aedbbdbb4 04971a529 969d97fa5 3df351e5d
+beebox/test/webapp/routes/chat/send-dedup.durable-claim.test.ts,2026-08-18,aa0538424,,Y,3,4,1,,0,1,Y,Y,16,11,5,3,2,65,287,0c0877d70 1bc9f1200 fcc8f6f82 bff2d7982 31a796bb9
+beebox/test/webapp/routes/chat/send-routes.validation.test.ts,2026-07-06,a597074d9,,Y,2,3,1,,0,0,,Y,13,8,5,5,0,108,148,1a74113ae 5fe7b6997 571bb83f7 3df351e5d e3013c170
+beebox/test/webapp/routes/chat/send-run.queued-drain-start-failure.test.ts,2026-10-22,2a4a47490,,Y,2,3,1,,0,0,,,0,0,0,0,0,0,121,
+beebox/test/webapp/routes/chat/send-run.refused-start.test.ts,2026-10-15,f5a495b75,,Y,3,4,1,Y,0,0,,Y,9,7,2,1,1,7,94,0c0877d70 df8e5a4fc
+beebox/test/webapp/routes/chat/send-run.start-failure.test.ts,2026-08-02,9b2aa44da,,Y,10,14,3,,1,1,Y,Y,14,9,5,4,1,81,152,0c0877d70 1bc9f1200 bec43535b bff2d7982 31a796bb9
+beebox/test/webapp/routes/chat/send-run.wedge-guards.test.ts,2026-08-18,0d82bae23,,Y,3,5,1,,1,0,Y,Y,13,9,4,2,2,65,219,0c0877d70 1bc9f1200 97e8f9d78 bff2d7982
+beebox/test/webapp/routes/chat/send-target.exact-committed.test.ts,2026-09-07,1a74113ae,,Y,84,111,13,,0,0,,Y,8,7,1,1,0,45,50,969d97fa5
+beebox/test/webapp/routes/chat/tts-mock.test.ts,2026-08-23,53af3b9b1,,Y,17,33,9,Y,0,5,Y,Y,16,8,8,8,0,60,326,dcca0f8c7 70fe47f69 3e61eea66 1c8aab865 a230660e1 55baea94f ae023b540 457974d24
+beebox/test/webapp/routes/chat/ui-routes.test.ts,2026-08-23,0bb8f3acb,,Y,12,17,5,,0,0,Y,Y,13,11,2,2,0,60,309,0c0877d70 f6d5aa498
+beebox/test/webapp/routes/chat/uploads.test.ts,2026-09-16,bc762c042,,Y,24,40,11,,0,1,,Y,8,6,2,2,0,36,145,792c54158 613a77d35
+beebox/test/webapp/routes/chat/user-message-sender.busy-rejection.test.ts,2026-10-14,1bc9f1200,,Y,3,8,4,Y,0,0,,Y,7,5,2,1,1,8,120,0c0877d70 d167f893d
+beebox/test/webapp/routes/chat/user-message-sender.shared-claims.test.ts,2026-10-06,03a20ce56,,Y,10,13,1,Y,0,2,,Y,10,7,3,3,0,16,126,0c0877d70 97a4f9356 788617ecf
+beebox/test/webapp/routes/commands.ls-format.test.ts,2026-06-19,d3ceec165,,Y,4,5,1,,1,0,,Y,13,12,1,1,0,125,93,aa548e223
+beebox/test/webapp/routes/commands.streaming.test.ts,2026-03-03,98e2bd6d0,,Y,4,7,2,Y,1,0,,Y,15,13,2,2,0,233,135,aa548e223 a4523216f
+beebox/test/webapp/routes/commands.task-output.test.ts,2026-09-04,188f3c493,,Y,17,34,8,,0,0,,Y,9,7,2,2,0,48,177,71d9181f7 f93fb1009
+beebox/test/webapp/routes/figure.test.ts,2026-06-23,0ffe7cb8b,,Y,3,4,1,Y,5,3,,Y,17,12,5,5,0,121,357,398548df0 a314cd1a6 eb2d72aa9 75e983e84 91698978d
+beebox/test/webapp/routes/pairing.device-scope.test.ts,2026-09-12,4ec460edf,,Y,3,8,3,Y,1,1,Y,Y,9,8,1,1,0,40,113,b6f4fd043
+beebox/test/webapp/routes/pairing.push-token.test.ts,2026-09-26,f695d5d98,,Y,22,41,9,Y,0,0,,Y,6,6,0,0,0,26,129,
+beebox/test/webapp/routes/pairing.test.ts,2026-07-07,4d7c6e9e5,,Y,1,2,1,Y,2,1,,,6,3,3,3,0,107,45,ca5a80739 294ac8115 15982fc83
+beebox/test/webapp/routes/quick-capture.test.ts,2026-10-12,4570196b1,,Y,41,69,5,Y,2,1,,Y,8,6,2,2,0,10,388,2d73f9581 7afa5bb9f
+beebox/test/webapp/routes/scan-upload.test.ts,2026-08-01,90227935f,,Y,12,15,2,Y,2,1,,Y,17,10,7,7,0,82,728,5e11dba88 cf575dae4 904acaa4d cd650c6ca 0be8edb5b dbaba15e8 cc8445e45
+beebox/test/webapp/routes/scan-upload/scan-auth.test.ts,2026-08-01,873b37e16,,Y,8,12,4,Y,1,1,,Y,9,8,1,1,0,82,250,5e11dba88
+beebox/test/webapp/routes/secrets.resolve.test.ts,2026-08-17,aabafb668,,Y,8,15,5,Y,2,0,,Y,10,8,2,2,0,66,202,7d8494901 4a6f5c468
+beebox/test/webapp/routes/views.test.ts,2026-03-19,41b7cd3bb,,Y,11,14,2,Y,6,5,,Y,19,12,7,7,0,217,182,c1cfbb8ef 0f197690f 3527c9d96 caef79b76 ddcd6b7f5 7112386d8 e64032ad0
+beebox/test/webapp/server-root.csp-headers.test.ts,2026-06-30,93fc76d69,,Y,8,14,3,Y,0,0,,Y,8,6,2,2,0,114,113,53af3b9b1 d84cf7957
+beebox/test/webapp/server-root.extension-cors.test.ts,2026-07-02,1db566110,,Y,3,5,1,Y,0,0,Y,Y,6,6,0,0,0,112,72,
+beebox/test/webapp/server-root.healthz-engine-version.test.ts,2026-07-04,50e0b40d9,,Y,12,16,4,Y,0,0,Y,Y,9,8,1,1,0,110,38,692fd58da
+beebox/test/webapp/server-root.healthz-schema-failures.test.ts,2026-10-17,cdee745d3,,Y,18,28,8,,0,0,,,2,2,0,0,0,5,59,
+beebox/test/webapp/server-root.spa-fallback.test.ts,2026-07-07,b2db5a852,,Y,6,7,1,Y,2,1,Y,Y,13,8,5,4,1,107,153,fece54440 294ac8115 0174717de 56a573361 f9534b3da
+beebox/test/webapp/server-root/index-html.test.ts,2026-08-25,0430d1d8a,,Y,8,13,3,Y,3,0,,Y,10,7,3,3,0,58,132,a706e09a9 30294ee3e 38778aa36
+beebox/test/webapp/server.batch-url-length.test.ts,2026-09-26,dc231150e,,Y,4,7,3,Y,0,0,,Y,6,6,0,0,0,26,36,
+beebox/test/webapp/server.frozen-serve.test.ts,2026-10-17,b098f5f40,,Y,10,16,3,,0,0,,,4,3,1,0,1,5,37,61bf60267
+beebox/test/webapp/server/box-admission.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,Y,4,1,,Y,11,7,4,4,0,38,115,cb574a8c2 8828406ce 65af4d7a6 7bd19c63f
+beebox/test/webapp/setup-token.first-run-owner.test.ts,2026-08-04,a7731cf99,,Y,4,7,2,Y,1,0,Y,Y,9,8,1,1,0,79,71,5bdad22da
+beebox/test/webapp/static-cache.test.ts,2026-08-01,f95eecc15,,Y,3,4,1,Y,1,1,,Y,8,7,1,1,0,82,109,e5f1c12ac
+beebox/test/webapp/trpc/procedures.error-shape.test.ts,2026-08-23,53af3b9b1,,Y,17,33,9,,0,0,Y,Y,10,7,3,3,0,60,195,6bc6d3f2f 5d24ec4c1 0adddf91f
+beebox/test/webapp/trpc/procedures.test.ts,2026-07-02,aee3d6452,,Y,5,6,1,,0,0,,Y,12,8,4,4,0,112,87,7d8494901 824e20516 8499cc52f 6f2d03152
+beebox/test/webapp/trpc/routers.connector-config.test.ts,2026-07-11,d39fa527a,,,0,3,3,,0,0,,Y,20,12,8,6,2,103,260,0e755f663 8e3a98c0a 710825b31 3ee18d56f 31c73ed04 01c03821c 96fec6cfc c1cfbb8ef
+beebox/test/webapp/trpc/routers.namespace-fence-traversal.test.ts,2026-09-04,b208f1709,,Y,55,80,14,,0,1,Y,Y,17,9,8,7,1,48,380,3acec8cdb 7f5bb8ab6 8e3a98c0a a6b145b40 2cecb539e e038ef730 f5132a2d7 17f5944f7
+beebox/test/webapp/trpc/routers.notifications-presence.test.ts,2026-09-26,b13e746ad,,Y,7,10,3,,0,0,,Y,13,9,4,3,1,26,288,9b8f512d8 7f9321a49 9ceffa0c9 48f07c989
+beebox/test/webapp/trpc/routers/actions.test.ts,2026-07-10,b619b5991,,Y,4,7,3,Y,1,0,,Y,14,11,3,3,0,104,212,7485e83c8 aa548e223 21bf482c9
+beebox/test/webapp/trpc/routers/admin.box-config.test.ts,2026-07-02,fe6a91a82,,Y,1,2,1,Y,9,3,,Y,24,10,14,14,0,112,410,8d32fa8f4 fc6a0c5a7 f30440746 90bf65d57 969d97fa5 31b8f5613 5bdad22da 72906a15c ce526a6c3 68c5e5374 604080ed1 02fd9237c a9d4a9f5a 49eb22a75
+beebox/test/webapp/trpc/routers/admin.claude-login-code.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,,0,0,,Y,7,7,0,0,0,38,80,
+beebox/test/webapp/trpc/routers/admin.codex-login.test.ts,2026-08-31,c5b01aaf9,,Y,7,11,2,Y,0,0,,Y,9,8,1,1,0,52,68,969d97fa5
+beebox/test/webapp/trpc/routers/admin.google-status.test.ts,2026-10-20,dd1f00377,,Y,3,4,1,,0,0,Y,,3,0,3,3,0,2,67,5760fbca7 ef95483d0 82a47ce55
+beebox/test/webapp/trpc/routers/admin.openrouter.test.ts,2026-09-19,811daebf0,,Y,8,14,2,Y,0,0,,Y,9,8,1,1,0,33,182,0485ca16b
+beebox/test/webapp/trpc/routers/agents.readiness.test.ts,2026-09-30,4aa6af3a6,,Y,12,13,1,Y,0,1,,Y,8,6,2,2,0,22,245,5227d4a91 82ab02e1b
+beebox/test/webapp/trpc/routers/browser-task.test.ts,2026-09-12,65a906092,,Y,5,8,2,Y,3,0,,Y,12,9,3,3,0,40,129,c95de7fd9 89730a3c8 6f258d97a
+beebox/test/webapp/trpc/routers/capture.pending-sessions.test.ts,2026-07-10,fc7e34267,,Y,26,29,2,Y,1,0,,Y,13,11,2,2,0,104,99,0edd66351 34cf71d3a
+beebox/test/webapp/trpc/routers/capture.resumable-sessions.test.ts,2026-07-10,77ac45954,,Y,16,19,3,Y,2,0,,Y,14,11,3,3,0,104,126,2af357ca0 3eaf44307 34cf71d3a
+beebox/test/webapp/trpc/routers/card.get-body-offset.test.ts,2026-09-25,38ea371ff,,Y,4,6,2,Y,0,0,,Y,8,8,0,0,0,27,85,
+beebox/test/webapp/trpc/routers/card.get-schema.test.ts,2026-10-06,31cebfecd,,Y,13,17,4,Y,1,0,,Y,9,7,2,2,0,16,71,6c3b49d44 c65e7540f
+beebox/test/webapp/trpc/routers/chat.bootstrap.test.ts,2026-08-01,87f62970e,,Y,9,11,2,Y,5,1,,Y,30,14,16,15,1,82,312,7741a7dee 90bf65d57 651a87137 c16040bcd 8b5527da6 56171a5cd 80996fa9d f6908a435 8e7b5de94 d882fe0df 3df351e5d d4a799b27 ac8e12c58 7d30c11d0 ac0d7d652 6ba17fd6d
+beebox/test/webapp/trpc/routers/chat.by-landmark.test.ts,2026-08-02,7d30c11d0,,Y,5,8,3,Y,2,1,,Y,13,10,3,3,0,81,280,e4bb10484 1e13e202c 39f8b8d9f
+beebox/test/webapp/trpc/routers/chat.mark-done.test.ts,2026-10-02,45ade80ac,,Y,13,16,2,Y,0,0,,Y,7,6,1,1,0,20,159,1966abf81
+beebox/test/webapp/trpc/routers/chat.model-policy.test.ts,2026-08-25,f6908a435,,Y,10,13,3,Y,0,1,,Y,21,11,10,9,1,58,142,8d32fa8f4 aee78a88f 90bf65d57 cf6380478 651a87137 c16040bcd 8b5527da6 3c220e44f 80996fa9d b731a23ed
+beebox/test/webapp/trpc/routers/chat.place-menu.test.ts,2026-08-08,701a006a5,,Y,6,8,1,Y,1,0,,Y,12,10,2,2,0,75,204,e4bb10484 a706e09a9
+beebox/test/webapp/trpc/routers/chat.reload-loses-in-flight.test.ts,2026-08-25,5029a6a60,,,0,2,1,,0,0,Y,Y,14,11,3,1,2,58,195,40d79f608 ee9672b66 8e7b5de94
+beebox/test/webapp/trpc/routers/chat.reserved-features.test.ts,2026-09-20,cd108611e,,Y,4,6,1,,0,0,Y,Y,12,9,3,2,1,32,123,aee78a88f ee9672b66 a95eb7759
+beebox/test/webapp/trpc/routers/chat.sessions-label.test.ts,2026-07-28,9ba0f53d0,,Y,23,34,8,Y,2,0,Y,Y,13,10,3,3,0,86,165,e4bb10484 8a5a27c32 db017f816
+beebox/test/webapp/trpc/routers/chat/check-in-procedures.test.ts,2026-10-18,d7e55e8a4,,Y,14,19,5,Y,1,1,,,1,0,1,1,0,4,92,1094327b5
+beebox/test/webapp/trpc/routers/clerk.send.test.ts,2026-10-15,6f27de3d8,,Y,17,25,4,Y,2,0,,Y,10,8,2,2,0,7,385,bbe2e1a9c d7d7670ae
+beebox/test/webapp/trpc/routers/clerk.test.ts,2026-07-02,d713d3753,,Y,5,8,2,Y,4,1,,Y,16,10,6,6,0,112,249,e4bb10484 660868a49 6019d442c 89730a3c8 52b596820 27720149d
+beebox/test/webapp/trpc/routers/cloudflare-publish-connections.test.ts,2026-09-24,28ec4fd00,,Y,52,72,12,Y,1,0,,Y,9,8,1,1,0,28,243,11381c3fb
+beebox/test/webapp/trpc/routers/collections.query.test.ts,2026-09-20,96d6fe709,,Y,6,10,4,Y,1,1,,Y,13,10,3,3,0,32,389,8bd8399d1 38ea371ff 52b609299
+beebox/test/webapp/trpc/routers/debug-log.submit.test.ts,2026-08-03,da964f15e,,Y,3,6,1,,0,0,,Y,12,9,3,2,1,80,311,2007c5554 99a51eb1f a42ed06f8
+beebox/test/webapp/trpc/routers/drive.mounts.test.ts,2026-08-26,3ee18d56f,,Y,8,10,2,Y,3,0,Y,Y,20,14,6,5,1,57,489,0e755f663 3acec8cdb 7cc51e79a 967c8c745 0ffcb8f5a f063ca45a
+beebox/test/webapp/trpc/routers/events.turn-session.test.ts,2026-10-20,f8a37022e,,Y,7,10,3,Y,0,0,Y,,0,0,0,0,0,2,25,
+beebox/test/webapp/trpc/routers/files/kind.test.ts,2026-09-09,d6056b354,,Y,48,70,13,,0,0,,Y,7,7,0,0,0,43,48,
+beebox/test/webapp/trpc/routers/health/checks/claude-auth.test.ts,2026-07-12,23dd98174,,Y,1,4,2,,0,1,Y,Y,11,8,3,3,0,102,86,969d97fa5 6d172a0d3 25f239491
+beebox/test/webapp/trpc/routers/health/checks/engine.test.ts,2026-07-10,d91a904b4,,Y,2,4,1,,3,0,,Y,18,10,8,8,0,104,205,fd874a7a3 f9de5b6cc 1c5e90e8a 985a25c05 d7d3a19d3 a89a7c0be 6e389a02f c1cfbb8ef
+beebox/test/webapp/trpc/routers/health/checks/google.docs-api.test.ts,2026-10-20,4664d075f,,Y,2,3,1,Y,2,0,Y,,3,0,3,3,0,2,66,5760fbca7 ef95483d0 82a47ce55
+beebox/test/webapp/trpc/routers/health/checks/google.test.ts,2026-07-28,7fbeb2871,,Y,21,29,3,,0,0,Y,Y,8,7,1,1,0,86,94,7d8494901
+beebox/test/webapp/trpc/routers/health/checks/model-routes.gemini-speech.test.ts,2026-10-04,31fdb09fa,,Y,8,16,6,Y,0,0,Y,Y,5,5,0,0,0,18,72,
+beebox/test/webapp/trpc/routers/health/checks/plugins/core.test.ts,2026-10-10,7bc295ad2,,Y,26,59,16,Y,2,1,,Y,8,6,2,2,0,12,307,c97131c78 69e607892
+beebox/test/webapp/trpc/routers/health/checks/plugins/legacy-exposition-rules.test.ts,2026-10-10,7bc295ad2,,Y,26,59,16,Y,1,1,,Y,5,4,1,1,0,12,86,c97131c78
+beebox/test/webapp/trpc/routers/health/checks/plugins/stubs.test.ts,2026-10-10,7bc295ad2,,Y,26,59,16,Y,1,1,,Y,6,5,1,1,0,12,119,c97131c78
+beebox/test/webapp/trpc/routers/health/checks/scan-uploaders.test.ts,2026-09-14,0be8edb5b,,Y,7,13,3,,0,0,,Y,9,7,2,1,1,38,243,1e93ef8cf 09ad3d4e7
+beebox/test/webapp/trpc/routers/health/checks/snapshot.test.ts,2026-08-01,880a5696f,,Y,2,5,1,,0,1,,Y,7,6,1,1,0,82,218,f0f413558
+beebox/test/webapp/trpc/routers/health/checks/stale.stalled-jobs.test.ts,2026-08-18,4296d8ee3,,Y,9,13,3,,0,0,Y,Y,13,11,2,1,1,65,88,2e477780c a6d646468
+beebox/test/webapp/trpc/routers/health/checks/templates.updates.test.ts,2026-08-24,8d1ae0fbb,,Y,48,66,9,,0,0,,Y,10,8,2,2,0,59,197,71ea815b3 9727dc7b8
+beebox/test/webapp/trpc/routers/health/checks/writability.git-writable.test.ts,2026-07-04,b8c4c338d,,Y,6,8,2,,0,1,,Y,14,8,6,5,1,110,80,b69b048c8 f6888f0fc 23dd98174 6e389a02f c1cfbb8ef 7b9646c98
+beebox/test/webapp/trpc/routers/health/procedures.box-growth.test.ts,2026-08-05,ef7809e21,,Y,9,15,3,,0,0,,Y,11,9,2,2,0,78,95,db57ccf95 420c3bd20
+beebox/test/webapp/trpc/routers/history.blob-annex.test.ts,2026-08-02,cc391bfb3,,Y,4,6,2,Y,1,0,,Y,9,8,1,1,0,81,102,b208f1709
+beebox/test/webapp/trpc/routers/history.path-forms.test.ts,2026-08-22,94cb06ff9,,Y,2,3,1,Y,0,0,Y,Y,6,6,0,0,0,61,53,
+beebox/test/webapp/trpc/routers/landmarks.identity.test.ts,2026-09-06,de5ce329f,,Y,6,7,1,,0,0,,Y,11,8,3,3,0,46,93,8bb68497b e4bb10484 7209474cc
+beebox/test/webapp/trpc/routers/landmarks.list.test.ts,2026-08-02,ea4ae2835,,Y,12,14,2,Y,5,0,,Y,23,11,12,11,1,81,309,5b4f34771 917676083 5ed54f6f8 a95eb7759 e4bb10484 969d97fa5 a706e09a9 ae44c6ba9 43e5111f3 17f5944f7 d4a799b27 731e12fcd
+beebox/test/webapp/trpc/routers/landmarks.openers.test.ts,2026-10-08,58bb25f79,,Y,12,17,5,,0,0,,Y,10,7,3,3,0,14,116,5b4f34771 917676083 3c13ab379
+beebox/test/webapp/trpc/routers/landmarks.place.test.ts,2026-10-08,3a172949c,,Y,5,7,2,,0,2,,Y,16,7,9,9,0,14,505,b54df33a3 917676083 6c3b49d44 41576248c 546588ced c65e7540f a3955d139 ba55420ba 3c13ab379
+beebox/test/webapp/trpc/routers/location.capture.test.ts,2026-06-29,c177393ff,,Y,16,21,4,Y,0,0,Y,Y,10,8,2,2,0,115,59,969d97fa5 0ee5b6e85
+beebox/test/webapp/trpc/routers/presentation.test.ts,2026-09-08,33a55a7ab,,Y,53,88,10,Y,2,4,,Y,25,9,16,14,2,44,473,9cc843dfb 48f248bfd b9f7752c7 a2e694ed7 6934bb63c fe059b7fb c69cd3b04 f63b8278c 8599b8f97 b4a99e020 a07650418 f6aef21cd c73644b3d 1bbd1dad0 fbd9e1ddb 98bc0aacb
+beebox/test/webapp/trpc/routers/push.subscribe.test.ts,2026-06-29,6112c5bcd,,Y,5,7,1,Y,0,0,,Y,10,9,1,1,0,115,64,969d97fa5
+beebox/test/webapp/trpc/routers/quick-chat.contract-fixtures.test.ts,2026-10-06,1ae16e22d,,Y,1,16,1,Y,1,0,,Y,7,5,2,2,0,16,283,f27482124 d5ba5ed9c
+beebox/test/webapp/trpc/routers/quick-chat.submit.delivery.test.ts,2026-10-18,8b0dbf0a1,Y,Y,13,90,68,,0,0,Y,,5,5,0,0,0,4,627,
+beebox/test/webapp/trpc/routers/quick-chat.submit.test.ts,2026-10-06,788617ecf,,Y,4,6,2,Y,5,0,,Y,12,7,5,5,0,16,389,776be17ac d5ba5ed9c a95eb7759 20dd89b6e cb8e69dd3
+beebox/test/webapp/trpc/routers/quick-chat.test.ts,2026-09-21,e04dbc65f,,Y,16,29,3,Y,2,0,,Y,12,9,3,3,0,31,51,fdef22dfe b9e0143cb 006e035d7
+beebox/test/webapp/trpc/routers/scan-tokens.test.ts,2026-08-01,873b37e16,,Y,8,12,4,Y,1,0,,Y,11,9,2,2,0,82,94,7ca59a1f2 969d97fa5
+beebox/test/webapp/trpc/routers/scheduler.test.ts,2026-07-11,d39fa527a,,,0,3,3,,0,0,,Y,12,11,1,1,0,103,227,0e755f663
+beebox/test/webapp/trpc/routers/secrets.test.ts,2026-08-17,7e536a38e,,Y,16,21,3,Y,5,0,,Y,17,10,7,6,1,66,477,1e93ef8cf 11381c3fb 969d97fa5 4f88150b2 7d8494901 726a6ff89 824e20516
+beebox/test/webapp/trpc/routers/share.test.ts,2026-08-07,571bb83f7,,Y,18,28,2,Y,0,0,,Y,16,10,6,6,0,76,147,e4bb10484 10be758ad 81c647230 c9a1fc3a2 bda54b66c c95de7fd9
+beebox/test/webapp/trpc/routers/status.browse.test.ts,2026-09-06,a6b145b40,,Y,3,8,5,Y,4,0,Y,Y,16,9,7,7,0,46,169,b54df33a3 917676083 6c3b49d44 28a33b23e 8bb68497b 3acec8cdb 7209474cc
+beebox/test/webapp/trpc/routers/status.nav.test.ts,2026-08-01,87f62970e,,Y,9,11,2,Y,4,0,,Y,15,10,5,5,0,82,182,c634cdd67 7485e83c8 52b609299 bd70f2890 6ba17fd6d
+beebox/test/webapp/trpc/routers/status.onplate.test.ts,2026-07-28,b5aa63783,,Y,14,18,4,Y,2,0,,Y,12,10,2,2,0,86,61,c634cdd67 8331820f9
+beebox/test/webapp/trpc/routers/status.questions.test.ts,2026-07-10,e7118c3a5,,Y,4,5,1,Y,3,0,Y,Y,14,9,5,5,0,104,88,c634cdd67 6bfcaa16b 7485e83c8 d7d3a19d3 6e389a02f
+beebox/test/webapp/trpc/routers/todos.set-status.test.ts,2026-09-25,5c9ca51b6,,Y,17,22,4,Y,1,1,,Y,10,9,1,1,0,27,274,c3127b7b6
+beebox/test/webapp/trpc/routers/transcription.owner.test.ts,2026-08-17,aabafb668,,Y,8,15,5,Y,0,0,,Y,12,10,2,1,1,66,61,969d97fa5 1fc3944f5
+beebox/test/webapp/trpc/routers/voice-recording.test.ts,2026-09-10,2eaf6fc17,,Y,15,20,4,Y,2,0,Y,Y,12,8,4,4,0,42,219,969d97fa5 1837ae7f3 d020cfe43 61fccb24a
+beebox/test/webapp/trpc/routers/voice.capabilities.test.ts,2026-09-10,4f88150b2,,Y,26,40,8,Y,0,0,,Y,10,7,3,3,0,42,88,31fdb09fa 931e2db64 969d97fa5
+beebox/test/webapp/views/compiler.lint-hooks.test.ts,2026-06-20,cef82a4a6,,Y,4,5,1,Y,1,3,,Y,22,14,8,8,0,124,291,c6040b476 fdbbb96ff 209e46686 fdd4a2d4d 8ee48c4b6 af84e377a 969d97fa5 cf754e992
+beebox/test/webapp/views/compiler.plugin-view.test.ts,2026-10-10,06f886eba,,Y,51,75,16,,0,0,,Y,5,5,0,0,0,12,206,
+beebox/test/webapp/views/compiler.test.ts,2026-03-19,41b7cd3bb,,Y,11,14,2,Y,5,3,,Y,21,14,7,7,0,217,299,c33bb4996 6e389a02f 20309b79f 5aef95f07 862cc4c55 a3dd91eb2 a3f77f6b1
+beebox/test/webapp/views/compiler.v2.test.ts,2026-07-03,20309b79f,,Y,15,20,5,Y,0,1,,Y,14,10,4,4,0,111,253,1c5e90e8a 94744add4 969d97fa5 d7d3a19d3
+bin/apple-test.test.ts,2026-10-17,889ed628e,,Y,3,6,2,Y,0,0,,,0,0,0,0,0,5,121,
+bin/base-prefix-injection.test.ts,2026-07-21,8698f41ca,,Y,6,8,2,,0,0,,,1,1,0,0,0,93,44,
+bin/browse-auth.test.ts,2026-08-09,22a2f247f,,Y,2,8,1,,0,0,Y,,1,1,0,0,0,74,49,
+bin/codex-skill-links.test.ts,2026-10-07,6657f44d1,,Y,13,82,6,Y,1,0,Y,,2,1,1,1,0,15,160,08048e078
+bin/commit-blocklist-check.test.ts,2026-07-05,f6344efb3,,Y,2,8,1,Y,2,2,,,3,1,2,2,0,109,124,2c215955d 41c5f80e6
+bin/commit-provenance.test.ts,2026-08-24,e00c5dcca,,Y,2,5,1,Y,4,2,,,7,3,4,4,0,59,340,cde25c645 c931b8efa 488b9851a c1c41a4dd
+bin/deferred-issues.test.ts,2026-08-31,cde25c645,,Y,11,22,5,Y,0,0,,,0,0,0,0,0,52,108,
+bin/deploy-lock.test.ts,2026-08-28,34128a1d2,,Y,1,2,1,,0,1,Y,,6,1,5,3,2,55,212,a17aed812 c4da26781 609b3c872 291d9c285 509923010
+bin/deploy-status.test.ts,2026-10-07,6657f44d1,,Y,13,82,6,Y,1,0,Y,,2,1,1,1,0,15,184,08048e078
+bin/deploy-target.test.ts,2026-09-04,609b3c872,,Y,12,37,6,Y,1,0,Y,,5,0,5,1,4,48,256,aeb1f3b6c 758e6720d 72097ee5c a17aed812 7f3ac3271
+bin/deployed-paths.test.ts,2026-08-26,1e8cfe8c4,,Y,6,16,3,Y,2,2,Y,,4,2,2,2,0,57,118,9f4f238af 8e014ffb5
+bin/doctor-deploy.test.ts,2026-09-04,609b3c872,,Y,12,37,6,,0,0,Y,,0,0,0,0,0,48,86,
+bin/doctor.test.ts,2026-07-12,438fb29ff,,Y,2,3,1,Y,5,3,,,7,1,6,6,0,102,341,1a78b1f90 609b3c872 c931b8efa a00697322 f4640fd79 982bbd172
+bin/finish-preflight-apple.test.ts,2026-10-17,889ed628e,,Y,3,6,2,,0,1,,,1,0,1,1,0,5,81,53fa3bda9
+bin/finish-preflight.test.ts,2026-08-25,803ff20fa,,Y,3,9,2,Y,4,5,,,17,6,11,11,0,58,314,736ee80da 43cde61a1 8e014ffb5 72333c559 c5e6fae15 3b3ba0df5 1e8cfe8c4 67aef3700 fe4a55696 6e565471b ea2358b2a
+bin/finish-verify.test.ts,2026-08-25,803ff20fa,,Y,3,9,2,Y,3,3,,,6,2,4,4,0,58,206,886b5be33 7d7435081 2cfaa4855 ea2358b2a
+bin/generate-codex-mirrors.test.ts,2026-08-04,a9dcb4029,,Y,4,12,1,,0,3,,,8,1,7,7,0,79,163,6657f44d1 90bf65d57 98523aef7 0d65810d0 c931b8efa 884da291d 145e0c8d1
+bin/host-pressure.test.ts,2026-09-11,b47af3add,,Y,5,8,2,Y,2,1,Y,,2,0,2,2,0,41,75,a4c549513 374284c3a
+bin/issues.test.ts,2026-08-24,9da2ae439,,Y,5,12,1,Y,4,0,Y,,8,4,4,4,0,59,333,27339ea11 c931b8efa c343423bd 9c3f90070
+bin/lint-changed.test.ts,2026-08-25,6e565471b,,Y,9,18,4,Y,3,2,,,11,5,6,5,1,58,130,b23f8231a 3f129d355 3b3ba0df5 c931b8efa 837f1328f 67aef3700
+bin/lint-script-coverage.test.ts,2026-08-13,3a561ddbe,,Y,2,6,1,,0,1,,,6,1,5,5,0,70,35,3f129d355 c931b8efa fe4a55696 6e565471b 5c9886526
+bin/manual-tests-check.test.ts,2026-08-24,00bbd508d,,Y,5,9,1,,0,1,,,5,4,1,1,0,59,184,c5df24f52
+bin/mobile-contract-check.test.ts,2026-10-17,3b74e7239,,Y,1,3,1,Y,0,0,Y,,0,0,0,0,0,5,74,
+bin/path-leak-check.test.ts,2026-07-05,6a4fa15a0,,Y,2,9,1,Y,2,0,,,4,2,2,2,0,109,72,5cf62c6e6 fd3ef5612
+bin/retired-product-name-check.test.ts,2026-08-30,dab834811,Y,Y,2061,4188,733,Y,0,0,,,0,0,0,0,0,53,157,
+bin/scheduled-workstreams-registry.test.ts,2026-08-24,d8d314054,,Y,4,6,1,,0,2,,,7,3,4,4,0,59,345,3b3ba0df5 c931b8efa 3ffc8885d 961d7b0a1
+bin/schedules-agent-command.test.ts,2026-08-28,c931b8efa,,Y,94,133,34,,0,0,Y,,2,0,2,2,0,55,121,a8f45b4b8 90bf65d57
+bin/schedules-cli.test.ts,2026-08-28,c931b8efa,,Y,94,133,34,,0,0,Y,,3,1,2,2,0,55,174,f680b798e 3e001d4e5
+bin/schedules-hardening.test.ts,2026-08-28,c931b8efa,,Y,94,133,34,,0,0,Y,,4,0,4,3,1,55,349,a8f45b4b8 8e3a98c0a 516305e61 adc26a7d0
+bin/schedules-launch.test.ts,2026-08-28,c931b8efa,,Y,94,133,34,,0,1,Y,,3,1,2,2,0,55,282,16a6327cc f680b798e
+bin/schedules-lint.test.ts,2026-08-24,703f3a8bb,,Y,3,7,1,Y,3,1,,,8,3,5,5,0,59,350,3e001d4e5 c931b8efa ab59e4ebe 1b92a9088 de5a2cf60
+bin/schedules.test.ts,2026-08-24,cfabf04e4,,Y,4,6,1,Y,5,6,,,14,2,12,10,2,59,302,3e001d4e5 c931b8efa 6cb4ee73d 5252c36c2 bbb24192c 3953e3f63 23ead90ce 91f047188 e4134adbb 1b92a9088 c6f39ab72 024e2f01d
+bin/skill-lint.test.ts,2026-10-07,6657f44d1,,Y,13,82,6,Y,0,0,Y,,2,2,0,0,0,15,188,
+bin/smoke-lib.test.ts,2026-08-26,1e8cfe8c4,,Y,6,16,3,Y,8,6,Y,,8,0,8,8,0,57,127,6b6330ca6 c931b8efa 1a5d273c8 9c4b22418 5c9f7a9e1 da727f178 934be1385 92c74000e
+bin/smoke-probe.test.ts,2026-08-28,c931b8efa,,Y,94,133,34,Y,3,1,Y,,5,2,3,3,0,55,171,0b0826c75 33d9a87f8 3b3ba0df5
+bin/smoke-snapshot.test.ts,2026-08-28,c931b8efa,,Y,94,133,34,Y,10,9,Y,,11,1,10,10,0,55,290,0b0826c75 08ec1272c f07d484f0 2e1f861c3 c0e264e7b 0630d5b95 2d1d676e9 9212aebb7 a67f479a5 c4e662593
+bin/snapshot-clerk-contract.test.ts,2026-07-12,27720149d,,Y,8,12,3,Y,1,0,,,1,0,1,1,0,102,46,52b596820
+bin/test-estimate.test.ts,2026-10-12,9c60a2220,,Y,3,11,2,Y,0,0,,,1,1,0,0,0,10,129,
+bin/test-full-run-lock.test.ts,2026-10-06,374284c3a,,Y,7,11,4,,0,0,,,1,1,0,0,0,16,86,
+bin/test-git.test.ts,2026-08-25,088046895,,Y,6,8,2,Y,0,0,Y,,1,1,0,0,0,58,83,
+bin/test-graph-cache.test.ts,2026-08-28,c931b8efa,,Y,94,133,34,Y,0,0,Y,,1,1,0,0,0,55,189,
+bin/test-graph.test.ts,2026-08-09,4f8ad1a26,,Y,4,6,1,Y,5,2,Y,,9,3,6,5,1,74,183,c931b8efa 6385d1a6d e627d02f5 d057167fb 33694b9e2 d74af7a14
+bin/test-ledger-tap.test.ts,2026-10-06,bf5cda987,,Y,4,7,3,,0,0,,,1,1,0,0,0,16,39,
+bin/test-ledger.test.ts,2026-08-09,d74af7a14,,Y,4,7,2,Y,7,3,Y,,8,1,7,7,0,74,392,a1e8d3955 c931b8efa 6e565471b ea2358b2a 80954db6a 40411eb35 33694b9e2
+bin/test-locks.test.ts,2026-08-25,40411eb35,,Y,3,5,2,Y,1,0,,,3,2,1,1,0,58,259,c931b8efa
+bin/test-select-bin.test.ts,2026-10-06,01f482e9d,,Y,3,5,2,,0,0,,,1,1,0,0,0,16,79,
+bin/test-select.test.ts,2026-08-25,088046895,,Y,6,8,2,Y,5,1,Y,,10,4,6,6,0,58,275,bf5cda987 b4f7cfad9 3b3ba0df5 c931b8efa e627d02f5 80954db6a
+bin/test-tiers.test.ts,2026-08-25,80954db6a,,Y,8,13,3,Y,5,3,,,9,3,6,6,0,58,319,9c60a2220 74ba49f72 118dec404 ee543f403 e627d02f5 ea2358b2a
+bin/test/agent-quotas.test.ts,2026-08-10,db2ed9364,,Y,4,20,13,Y,0,0,,Y,5,5,0,0,0,73,420,
+bin/test/assign-issue-workstream.test.ts,2026-08-11,5f6a34f46,,Y,4,18,3,Y,0,0,,Y,5,5,0,0,0,72,28,
+bin/test/claude-quota-cleanup.test.ts,2026-08-10,db2ed9364,,Y,4,20,13,,0,0,,Y,6,6,0,0,0,73,61,
+bin/test/coding-feedback.test.ts,2026-10-07,b8fc4b1aa,,Y,9,17,2,Y,1,0,Y,Y,7,5,2,2,0,15,362,3cf3c3965 2c4909c4b
+bin/test/comments-exhibit.test.ts,2026-10-10,9e5b53d0f,,Y,6,8,2,,0,1,,Y,6,4,2,2,0,12,142,31012d844 01b30ed2c
+bin/test/comments-mount.test.ts,2026-08-22,c47f855fa,,Y,3,6,1,,0,1,,Y,8,6,2,2,0,61,180,a89a7c0be 604d0445e
+bin/test/commit-blocklist-check.test.ts,2026-08-30,6853e6050,,Y,2,5,2,Y,0,0,,Y,4,4,0,0,0,53,45,
+bin/test/confirm-tested.test.ts,2026-08-10,db2ed9364,,Y,4,20,13,,0,0,,Y,5,5,0,0,0,73,144,
+bin/test/dev-apps-typecheck.test.ts,2026-08-17,437063041,,Y,2,7,1,,0,0,,Y,6,5,1,1,0,66,100,1505137ab
+bin/test/doc-lifecycle-check.test.ts,2026-09-13,12d776dd2,,Y,18,62,4,Y,0,0,,Y,6,5,1,0,1,39,165,c38237791
+bin/test/exhibits.cli.test.ts,2026-08-15,10ad95b6a,,,0,5,1,,0,0,,Y,12,6,6,2,4,68,551,ace824fd2 30247fe48 2c4909c4b a89a7c0be 5559a681b 59ec7e840
+bin/test/finish-preflight-lib.test.ts,2026-10-20,f0bb77280,,Y,2,4,2,Y,2,0,,,2,0,2,2,0,2,58,e11d5b6e7 24eeb843a
+bin/test/finish-preflight-merge.test.ts,2026-10-12,1f73d08a7,,Y,3,5,1,Y,1,0,,Y,5,4,1,1,0,10,163,65b69f397
+bin/test/finish-preflight.test.ts,2026-10-12,43cde61a1,,Y,2,5,2,Y,1,1,,Y,5,3,2,2,0,10,146,96e5b2944 736ee80da
+bin/test/finish-verify.test.ts,2026-10-12,f7383cb04,,Y,2,3,1,Y,4,1,,Y,9,4,5,4,1,10,214,f0bb77280 8275545a3 65b69f397 56bcd063a 96e5b2944
+bin/test/lib/auto-sweep-detach.test.ts,2026-08-24,03c107933,,Y,9,20,4,,0,0,Y,Y,12,7,5,3,2,59,235,9f04ae4af d29b9aa38 adc26a7d0 a89a7c0be 5e2e4e288
+bin/test/lib/briefing-sigils.test.ts,2026-10-07,6657f44d1,,Y,13,82,6,Y,0,0,Y,Y,3,3,0,0,0,15,125,
+bin/test/lib/comments-store.test.ts,2026-08-22,31545f15f,,Y,4,8,1,Y,3,1,Y,Y,10,7,3,3,0,61,434,9e5b53d0f 40a109ff6 604d0445e
+bin/test/lib/exhibits-store.test.ts,2026-08-15,8ee290bfd,,Y,4,7,1,Y,1,0,,Y,8,6,2,2,0,68,147,34e2c42c5 a89a7c0be
+bin/test/lib/launch-session.test.ts,2026-08-09,c7f37aa5b,,Y,1,3,1,Y,11,2,,Y,22,9,13,12,1,74,475,90bf65d57 0d65810d0 2ccdcf4cc 784fc68e4 37e728554 a5e2be403 a0a84452c f6888f0fc bf0bc5d01 300079f92 5f6a34f46 4a6dff9bb dc55704d3
+bin/test/lib/schedules-alerts.conditions.test.ts,2026-09-18,f680b798e,,Y,9,12,3,Y,0,0,,Y,5,5,0,0,0,34,215,
+bin/test/lib/schedules-alerts.digest.test.ts,2026-09-18,7c46d0967,,Y,10,12,1,,1,1,,Y,5,4,1,1,0,34,254,5500b15de
+bin/test/lib/schedules-branch.test.ts,2026-10-06,a8f45b4b8,,Y,8,16,3,Y,0,0,,Y,3,3,0,0,0,16,266,
+bin/test/lib/session-registry.test.ts,2026-08-09,2d88a7f23,,Y,1,4,1,Y,4,1,,Y,10,6,4,4,0,74,146,a5e2be403 a0a84452c 96e490a10 dc55704d3
+bin/test/lib/session-start-registry.test.ts,2026-08-09,5de7f4720,,Y,4,5,1,Y,0,0,,Y,6,6,0,0,0,74,64,
+bin/test/lib/tap-root-guard.test.ts,2026-09-29,777c06f9f,,Y,8,12,3,Y,0,0,Y,Y,4,4,0,0,0,23,27,
+bin/test/lib/terminal-tabs.test.ts,2026-08-09,2f452e9df,,Y,1,4,1,Y,0,0,,Y,5,5,0,0,0,74,27,
+bin/test/lib/workstream-box-state.test.ts,2026-08-10,db2ed9364,,Y,4,20,13,,1,3,,Y,10,5,5,5,0,73,364,fd874a7a3 a36a9c51f 64729ef7d 4fb7f982c 8a6132c73
+bin/test/lib/workstream-cull.test.ts,2026-08-09,32fb3962e,,Y,1,2,1,,0,1,,Y,12,7,5,4,1,74,246,a5e2be403 ed5349151 464752d5b 4a6dff9bb 264a724f3
+bin/test/lib/workstream-resume.test.ts,2026-08-09,dc55704d3,,Y,3,8,3,Y,3,1,,Y,10,6,4,4,0,74,258,e415959a0 37e728554 a5e2be403 a0a84452c
+bin/test/lib/worktree-create.box-setup.test.ts,2026-10-20,45f9cebd8,,Y,1,4,1,Y,1,0,Y,,1,0,1,1,0,2,103,a36a9c51f
+bin/test/lib/worktree-create.concurrency.test.ts,2026-08-24,4dcf3b55e,,Y,4,12,1,Y,0,0,Y,,7,6,1,0,1,59,425,f60d989dc
+bin/test/post-merge-install.test.ts,2026-08-10,db2ed9364,,Y,4,20,13,,0,0,,Y,5,5,0,0,0,73,152,
+bin/test/private-issues.orphans.test.ts,2026-08-14,464752d5b,,Y,1,4,2,,0,0,,,8,6,2,1,1,69,68,784fc68e4 ed5349151
+bin/test/process-cleanup.liveness.test.ts,2026-08-18,92b1a8560,,Y,1,5,1,Y,7,4,Y,Y,14,6,8,8,0,65,335,21e9872db 13a3e13f5 721990da6 784fc68e4 c931b8efa 03c107933 a5e2be403 81a29daea
+bin/test/smoke-lib.merge.test.ts,2026-10-19,f216ca184,,Y,3,6,2,Y,0,0,Y,,0,0,0,0,0,3,101,
+bin/test/smoke-lib.test.ts,2026-10-12,56bcd063a,,Y,4,7,2,Y,0,0,,Y,3,3,0,0,0,10,28,
+bin/test/smoke-lib.trim.test.ts,2026-10-19,6b6330ca6,,Y,1,4,2,Y,0,0,Y,,0,0,0,0,0,3,59,
+bin/test/workstreams.archive.test.ts,2026-08-10,db2ed9364,,Y,4,20,13,,0,0,,Y,5,5,0,0,0,73,90,
+bin/test/workstreams.list.test.ts,2026-08-09,96e490a10,,Y,2,5,2,,2,0,,Y,13,6,7,3,4,74,193,8237442f6 3ce51589a 359cb3c16 d14e1fda0 a5e2be403 a0a84452c 92f882407
+browse/packages/agent-browser-typed/test/runner.test.ts,2026-09-27,ad6ec4f7e,Y,Y,19,34,13,,0,0,Y,Y,3,3,0,0,0,25,26,
+browse/test/clerk-popup.test.ts,2026-10-15,a11052696,,Y,4,9,1,Y,1,0,,Y,5,3,2,2,0,7,40,354d1d265 d7d7670ae
+browse/test/cli.screenshot-args.test.ts,2026-10-08,4f922e9ca,,Y,1,2,1,Y,0,0,,Y,4,3,1,1,0,14,47,354d1d265
+browse/test/controls.point-check.test.ts,2026-10-08,0cd2d2388,,Y,3,7,1,Y,0,2,,Y,6,3,3,3,0,14,235,7f096e79e 354d1d265 daa0f0cf8
+browse/test/controls.test.ts,2026-08-23,2fc153770,,Y,95,105,3,Y,3,2,,Y,9,5,4,4,0,60,140,5866397ff c796cc666 6d172a0d3 c3ef3de38
+browse/test/worktree.test.ts,2026-08-18,ae48f5513,,Y,4,8,1,Y,1,1,Y,Y,6,5,1,1,0,65,86,01f18b8e0
+canvas-loop/test/browser/mount.failure-paths.test.ts,2026-07-15,4b240ef49,,Y,3,6,2,Y,0,0,Y,,1,1,0,0,0,99,75,
+canvas-loop/test/browser/mount.test.ts,2026-07-14,91698978d,,Y,20,27,5,Y,3,1,,,4,1,3,3,0,100,221,e77404574 4b240ef49 75e983e84
+canvas-loop/test/eslint/plugin.test.ts,2026-07-14,1b8285e9e,,Y,16,23,3,,0,0,,,4,1,3,3,0,100,78,5e2e4e288 e4df7c98a 95f031010
+canvas-loop/test/exports/core.test.ts,2026-07-14,e4df7c98a,,Y,57,88,11,,0,0,,,2,1,1,1,0,100,69,91698978d
+canvas-loop/test/headless.determinism.test.ts,2026-07-14,4723b305d,,Y,20,28,5,,0,0,,,3,1,2,2,0,100,41,e4df7c98a 95f031010
+canvas-loop/test/headless.tea-determinism.test.ts,2026-07-14,1b8285e9e,,Y,16,23,3,,0,0,,,4,1,3,3,0,100,72,e77404574 e4df7c98a 95f031010
+canvas-loop/test/headless/events.test.ts,2026-07-14,4723b305d,,Y,20,28,5,Y,3,0,,,4,1,3,3,0,100,126,e77404574 e4df7c98a 95f031010
+canvas-loop/test/headless/guards.test.ts,2026-07-14,4723b305d,,Y,20,28,5,Y,1,0,,,3,1,2,2,0,100,44,e4df7c98a 95f031010
+canvas-loop/test/headless/runtime.dedup.test.ts,2026-07-14,4723b305d,,Y,20,28,5,Y,2,0,,,3,1,2,2,0,100,33,e4df7c98a 95f031010
+canvas-loop/test/headless/runtime.snapshot.test.ts,2026-07-14,e4df7c98a,,Y,57,88,11,Y,0,0,,,2,1,1,1,0,100,95,91698978d
+canvas-loop/test/headless/sketch.logtag.test.ts,2026-07-14,4723b305d,,Y,20,28,5,Y,2,0,,,3,1,2,2,0,100,24,e4df7c98a 95f031010
+canvas-loop/test/headless/sketch.primitives.test.ts,2026-07-14,366b207d1,,Y,7,10,1,Y,3,0,,,4,1,3,3,0,100,173,e77404574 e4df7c98a 95f031010
+canvas-loop/test/headless/tea-events.test.ts,2026-07-14,1b8285e9e,,Y,16,23,3,Y,2,0,,,3,1,2,2,0,100,62,e4df7c98a 95f031010
+canvas-loop/test/headless/tea-runtime.test.ts,2026-07-14,1b8285e9e,,Y,16,23,3,Y,5,0,,,6,1,5,5,0,100,155,e77404574 75e983e84 91698978d e4df7c98a 95f031010
+canvas-loop/test/react/SketchFigure.hardening.test.ts,2026-07-15,75e983e84,,Y,19,28,6,Y,0,0,Y,,1,1,0,0,0,99,225,
+feedback-review/collect.test.ts,2026-09-21,aeec841d1,,Y,12,19,3,Y,1,0,,,2,1,1,1,0,31,104,e4bb10484
+personal-vibe-check/rules/test/restrict-component-classes.test.ts,2026-08-25,ab4738447,,Y,12,18,1,Y,0,0,Y,,0,0,0,0,0,58,392,
+scan-uploader/test/build-stamp.test.ts,2026-09-14,e8f1fbdd3,,Y,11,16,3,Y,0,0,,Y,3,3,0,0,0,38,49,
+scan-uploader/test/cli/config-path.test.ts,2026-08-02,a3dda1036,,Y,4,7,2,Y,0,0,,Y,5,5,0,0,0,81,140,
+scan-uploader/test/cli/config.test.ts,2026-08-01,39fb9bfa6,,Y,20,31,6,Y,1,0,,Y,8,6,2,2,0,82,136,354d1d265 13921368d
+scan-uploader/test/cli/configure.test.ts,2026-08-01,c020b304c,,Y,9,11,1,Y,1,2,,Y,10,7,3,3,0,82,488,13921368d e35451304 fc75246a0
+scan-uploader/test/cli/contract-version.test.ts,2026-09-14,e8f1fbdd3,,Y,11,16,3,Y,0,0,,Y,4,4,0,0,0,38,87,
+scan-uploader/test/cli/disposition.test.ts,2026-08-01,39fb9bfa6,,Y,20,31,6,Y,0,0,,Y,4,4,0,0,0,82,117,
+scan-uploader/test/cli/hash.test.ts,2026-08-01,39fb9bfa6,,Y,20,31,6,Y,0,0,,Y,4,4,0,0,0,82,46,
+scan-uploader/test/cli/notify.test.ts,2026-09-14,19a5c4187,,Y,6,10,3,Y,1,0,,Y,6,4,2,2,0,38,173,354d1d265 13921368d
+scan-uploader/test/cli/photos-export.test.ts,2026-09-24,13921368d,,Y,10,16,5,Y,0,0,,Y,5,4,1,1,0,28,67,dc4878f6d
+scan-uploader/test/cli/run-target.test.ts,2026-08-01,39fb9bfa6,,Y,20,31,6,Y,2,0,,Y,8,5,3,2,1,82,354,09ad3d4e7 19a5c4187 f4aaba046
+scan-uploader/test/cli/schedule.test.ts,2026-08-02,d0411cb6b,,Y,7,9,1,Y,3,1,,Y,11,6,5,5,0,81,699,354d1d265 13921368d 5504cff5b b2b3b0af2 a3dda1036
+scan-uploader/test/cli/settle.identity.test.ts,2026-08-01,39fb9bfa6,,Y,20,31,6,Y,0,0,,Y,5,5,0,0,0,82,67,
+scan-uploader/test/cli/settle.retry.test.ts,2026-09-05,5504cff5b,,Y,2,4,2,,0,0,,Y,9,5,4,4,0,47,213,354d1d265 09ad3d4e7 19a5c4187 56a495119
+scan-uploader/test/cli/wire-client.test.ts,2026-08-01,39fb9bfa6,,Y,20,31,6,Y,2,1,,Y,9,6,3,3,0,82,254,354d1d265 e8f1fbdd3 e35451304
+schedules/box-convergence/convergence.test.ts,2026-09-14,969d97fa5,,Y,64,124,49,,0,1,,,5,0,5,5,0,38,174,118d0ce40 b4e980ca6 dac6357f6 eaa9703bf 65af4d7a6
+schedules/cross-box-leak-scan/cross-box-leak-scan.test.ts,2026-09-04,188f3c493,,Y,17,34,8,,0,1,,,1,0,1,1,0,48,199,7c95a7cb6
+schedules/cross-box-leak-scan/host-audit.test.ts,2026-09-04,188f3c493,,Y,17,34,8,Y,0,0,,,3,1,2,2,0,48,283,b5019ff09 609b3c872
+schedules/full-suite/alerts.test.ts,2026-09-05,aee94d12c,,Y,3,5,2,Y,1,1,Y,,2,1,1,1,0,47,73,fcaf01345
+schedules/full-suite/attribution.test.ts,2026-08-27,65cad1b48,,Y,5,8,3,Y,3,1,Y,,4,1,3,3,0,56,68,01f482e9d bf5cda987 2a7e19379
+schedules/full-suite/host.test.ts,2026-10-06,374284c3a,,Y,7,11,4,,0,2,,,2,0,2,2,0,16,32,a4c549513 cc76c1242
+schedules/full-suite/run.test.ts,2026-08-25,b88d84861,,Y,8,10,1,Y,6,4,,,10,2,8,8,0,58,389,cc76c1242 374284c3a b47af3add aee94d12c 3a8179040 65cad1b48 6f5197c9c ea2358b2a
+schedules/full-suite/state.test.ts,2026-08-27,65cad1b48,,Y,5,8,3,Y,2,0,Y,,2,0,2,2,0,56,89,b4e980ca6 2a7e19379
+schedules/full-suite/trust.test.ts,2026-09-02,2a7e19379,,Y,7,18,3,Y,2,1,Y,,3,1,2,2,0,50,197,b4e980ca6 e4b8e5547
+schedules/full-suite/typecheck.test.ts,2026-10-16,41c44d438,,Y,7,11,2,,0,0,,,1,1,0,0,0,6,24,
+schedules/retrospective/lib.test.ts,2026-10-07,3cf3c3965,,Y,6,12,2,Y,1,1,,,2,1,1,1,0,15,95,10e7c1466
+schedules/smoke-review/run.test.ts,2026-08-26,a5e8e624c,,Y,4,8,1,Y,3,2,Y,,3,0,3,3,0,57,115,f216ca184 da727f178 488b9851a
+schedules/supplemental-lint/lib.test.ts,2026-09-12,e4fd6bb0e,,Y,3,4,1,Y,1,1,Y,,1,0,1,1,0,40,71,bc791b801
+site/agent-prompt.test.ts,2026-09-10,3777331df,,Y,19,35,4,Y,0,0,,,1,0,1,1,0,42,31,2ea7c5998
+site/asides.test.ts,2026-08-20,8712e79be,,Y,9,18,4,Y,1,1,,,1,0,1,1,0,63,101,d3d3f98c0
+site/box-export.test.ts,2026-09-11,9c8fa6efb,,Y,4,8,1,Y,0,0,,,1,0,1,1,0,41,173,2017df474
+site/build.test.ts,2026-07-21,179e2ff1a,,Y,8,10,1,Y,2,2,,,6,1,5,5,0,93,158,09feb705e 929f48232 d3d3f98c0 8712e79be b78b0db3b
+site/day-theme.test.ts,2026-10-09,3be36ae95,,Y,9,19,2,Y,3,2,,,3,0,3,3,0,13,112,ac754f05d 6f9e57dbf f63b8278c
+site/docs-authored.test.ts,2026-09-12,6d4abe3a1,,Y,13,70,6,Y,1,0,,,1,0,1,1,0,40,87,2a4dd7eeb
+site/docs-compared.test.ts,2026-09-12,6d4abe3a1,,Y,13,70,6,Y,0,0,,,0,0,0,0,0,40,31,
+site/docs-html.test.ts,2026-09-12,77aa6205e,,Y,6,14,3,Y,1,2,,,2,0,2,2,0,40,174,6a075a9a0 d455bcfc3
+site/docs-index.test.ts,2026-09-12,6d4abe3a1,,Y,13,70,6,Y,4,1,,,4,0,4,4,0,40,209,6f1278fe3 77aa6205e cc317c0fc 2a4dd7eeb
+site/docs-links.test.ts,2026-09-12,6d4abe3a1,,Y,13,70,6,Y,1,0,,,3,0,3,2,1,40,226,72097ee5c fb6a9e18a cc317c0fc
+site/docs-manifest.test.ts,2026-09-12,6d4abe3a1,,Y,13,70,6,Y,2,0,,,4,1,3,2,1,40,78,ed04bee00 2a4dd7eeb 731dbc1df
+site/docs-origin.test.ts,2026-09-12,cc317c0fc,,Y,8,24,4,Y,0,0,,,0,0,0,0,0,40,13,
+site/docs-scrub.test.ts,2026-09-12,6d4abe3a1,,Y,13,70,6,Y,2,1,,,3,1,2,2,0,40,94,b22ed4697 f9fc47bb0
+site/docs-static.test.ts,2026-09-12,cc317c0fc,,Y,8,24,4,Y,1,0,,,1,0,1,1,0,40,34,77aa6205e
+site/evaluation-tags.test.ts,2026-10-09,98c9f3091,,Y,4,7,1,Y,3,2,,,3,0,3,3,0,13,57,2017df474 b6e86ea87 9b9b6fb13
+site/fisheye.test.ts,2026-08-16,1c3f06301,,Y,4,7,1,Y,6,4,,,6,0,6,6,0,67,103,3777331df 8712e79be 0a64114f6 c7a961ba4 05a14f505 8af3a39eb
+site/menu-icons.test.ts,2026-10-09,53b24f1b7,,Y,3,5,2,Y,0,0,,,0,0,0,0,0,13,11,
+site/nuggets.test.ts,2026-08-15,10fd4c977,,Y,4,7,1,Y,1,2,,,2,0,2,2,0,68,265,68cb7398c 8af3a39eb
+site/page-publication.test.ts,2026-09-10,3777331df,,Y,19,35,4,Y,0,0,,,1,0,1,1,0,42,28,09feb705e
+site/story/coverage.test.ts,2026-07-22,ce0da6c8e,,Y,3,6,1,Y,0,0,,,0,0,0,0,0,92,80,
+site/story/ingest.test.ts,2026-07-22,a4ebc0943,,Y,3,6,1,Y,1,1,,,2,1,1,1,0,92,95,0c484a029
+site/story/span-locate.test.ts,2026-07-24,0c484a029,,Y,3,5,2,Y,0,0,Y,,0,0,0,0,0,90,62,
+site/threads.test.ts,2026-10-09,987169be8,,Y,3,5,2,Y,0,0,,,0,0,0,0,0,13,8,
+site/workspace.test.ts,2026-09-10,3777331df,,Y,19,35,4,Y,5,3,,,5,0,5,5,0,42,93,26d05b149 3be36ae95 53b24f1b7 987169be8 09feb705e
+tap-check/test/check/compare/report.test.ts,2026-10-17,cdee745d3,,Y,18,28,8,Y,0,3,,,11,4,7,7,0,5,486,a621432ee c2917a6c6 35039148f ae426627a 9a461e54b 805f1e0f5 3678f3afd
+tap-check/test/check/expected.types.test.ts,2026-10-17,cdee745d3,,Y,18,28,8,Y,1,0,,,3,2,1,1,0,5,91,3678f3afd
+tap-check/test/lint/plugin.test.ts,2026-10-17,b098f5f40,,Y,10,16,3,Y,1,2,,,5,2,3,3,0,5,66,0b94b1b28 5d64af3f9 32f2096dd
+tap-check/test/observe/command.test.ts,2026-10-17,b098f5f40,,Y,10,16,3,Y,0,0,,,1,1,0,0,0,5,44,
+tap-check/test/observe/eventually.test.ts,2026-10-18,805f1e0f5,,Y,5,13,2,Y,0,0,Y,,3,2,1,1,0,4,21,c2917a6c6
+tap-check/test/tap-check/tap.test.ts,2026-10-18,ae426627a,,Y,3,5,2,Y,0,0,Y,,1,1,0,0,0,4,27,
+tap-check/test/tap-check/text/compare.test.ts,2026-03-09,0734551db,,Y,6,17,4,,2,1,Y,,10,3,7,7,0,227,390,a621432ee c2917a6c6 8a93e3ea7 cdee745d3 777c06f9f 46a02a09f cc2562f49
+workstreams-app/test/frontend/components/CodeBlock.highlighting.test.ts,2026-08-25,e54d1e6ca,,Y,9,11,2,Y,1,0,Y,Y,7,6,1,1,0,58,70,3b3ba0df5
+workstreams-app/test/frontend/components/IssuesPane.deep-link.test.ts,2026-08-24,eeb64f841,,Y,4,6,2,Y,1,1,Y,Y,6,5,1,1,0,59,61,1075d1cab
+workstreams-app/test/frontend/components/IssuesPane.sort.test.ts,2026-08-24,be8d558fd,,Y,5,10,3,Y,0,1,Y,Y,5,4,1,1,0,59,41,2c92a4406
+workstreams-app/test/frontend/components/IssuesPane/IssueControls.actions.test.ts,2026-08-24,be8d558fd,,Y,5,10,3,Y,1,1,Y,Y,5,4,1,1,0,59,47,455b4eb16
+workstreams-app/test/frontend/components/Markdown.test.ts,2026-08-13,c0a85bc91,,Y,8,9,1,Y,0,0,,Y,4,4,0,0,0,70,35,
+workstreams-app/test/frontend/components/WorkstreamActions.archive.test.ts,2026-09-12,00be3d5de,,Y,1,4,2,Y,0,0,,Y,6,5,1,1,0,40,107,92af4b79b
+workstreams-app/test/frontend/components/WorkstreamActions.launching.test.ts,2026-08-24,a5e2be403,,Y,8,21,8,,3,4,Y,Y,11,6,5,5,0,59,111,92af4b79b 00be3d5de 4e2aa56bd a61663f29 3b990a6eb
+workstreams-app/test/frontend/exhibits/boot.comment-requests.test.ts,2026-10-10,357e7438d,,Y,5,7,2,,0,0,,Y,5,3,2,2,0,12,94,deb0a6d24 31012d844
+workstreams-app/test/frontend/exhibits/boot.container.test.ts,2026-08-15,5f641c1ad,,Y,9,12,2,,0,1,Y,Y,10,5,5,5,0,68,188,deb0a6d24 706d447dc 357e7438d a9fae524e 267f92168
+workstreams-app/test/frontend/exhibits/boot.controls-scope.test.ts,2026-10-10,deb0a6d24,,Y,8,13,3,,0,0,Y,Y,3,3,0,0,0,12,39,
+workstreams-app/test/frontend/lib/issue-category-nav.test.ts,2026-08-14,56fc922df,,Y,4,5,1,Y,0,0,,Y,4,4,0,0,0,69,34,
+workstreams-app/test/frontend/lib/page-identity.test.ts,2026-10-05,d0d34d25f,,Y,14,16,1,Y,0,0,,Y,3,3,0,0,0,17,59,
+workstreams-app/test/frontend/lib/selection-anchor.test.ts,2026-08-22,1349f8722,,Y,14,17,2,Y,1,0,Y,Y,5,4,1,1,0,61,117,40a109ff6
+workstreams-app/test/frontend/main/router.test.ts,2026-08-13,a3a9eb56b,,Y,1,3,1,Y,0,0,Y,Y,5,4,1,0,1,70,28,43e7f7f8d
+workstreams-app/test/frontend/pages.landing.test.ts,2026-08-24,eeb64f841,,Y,4,6,2,,0,1,Y,Y,9,7,2,2,0,59,116,e54d1e6ca 813387ddd
+workstreams-app/test/frontend/pages/IssuesPage.unsaved-changes.test.ts,2026-08-24,be8d558fd,,Y,5,10,3,Y,0,0,Y,Y,4,4,0,0,0,59,38,
+workstreams-app/test/frontend/pages/WorkstreamsPage.scheduled.test.ts,2026-08-24,185471c2b,,Y,5,6,1,Y,3,2,,Y,13,6,7,7,0,59,459,2a7440551 f3847c8fd b4e980ca6 cdd3a710b 92af4b79b 3e001d4e5 a61663f29
+workstreams-app/test/router/box-entry.test.ts,2026-07-04,b8c4c338d,,Y,6,8,2,Y,4,2,,,6,1,5,5,0,110,152,b5019ff09 dcaed25b1 3b3ba0df5 ffd5b9183 c931b8efa
+workstreams-app/test/router/core.retry.test.ts,2026-09-15,f783135f1,,Y,7,11,3,,0,1,,,3,1,2,2,0,37,208,18288c758 118dec404
+workstreams-app/test/router/core.startup-death.test.ts,2026-09-15,6d8889cc6,,Y,2,4,1,,0,0,Y,,1,1,0,0,0,37,143,
+workstreams-app/test/router/core.teardown.test.ts,2026-08-28,c931b8efa,,Y,94,133,34,,0,0,Y,,4,1,3,3,0,55,323,18288c758 adc26a7d0 3b3ba0df5
+workstreams-app/test/router/core.test.ts,2026-07-11,2660c732d,,Y,1,3,2,,1,5,Y,,15,2,13,13,0,103,196,9e24c0fc5 bd0f6d5e4 5c955fc85 4f88150b2 3b3ba0df5 c931b8efa 03c107933 53af3b9b1 8092c4d30 8993b0365 d6b8417a4 d3fa974c4 f18dd6f2f
+workstreams-app/test/router/core/backend-entry.test.ts,2026-09-27,c4d8feea7,,Y,4,7,1,Y,0,0,,,0,0,0,0,0,25,92,
+workstreams-app/test/router/lifecycle.test.ts,2026-07-11,2660c732d,,Y,1,3,2,,1,0,Y,,5,1,4,4,0,103,153,18288c758 f783135f1 3b3ba0df5 03c107933
+workstreams-app/test/router/server/auth-deps.test.ts,2026-07-21,bb35c63c2,,Y,2,4,1,,0,1,,,12,5,7,7,0,93,219,3b3ba0df5 c931b8efa 5b8084106 8612e0adf e9b7af421 dd3cc9ee6 ec3a0369f
+workstreams-app/test/router/server/auth.classify.test.ts,2026-08-28,c931b8efa,,Y,94,133,34,,2,0,Y,,5,2,3,3,0,55,169,18288c758 e458ace17 3b3ba0df5
+workstreams-app/test/router/server/auth.earcons.test.ts,2026-10-05,e458ace17,,Y,3,9,2,Y,0,0,Y,,0,0,0,0,0,17,34,
+workstreams-app/test/router/server/auth.guard-header.test.ts,2026-07-21,0e0f226f8,,Y,8,12,4,,1,1,,,8,2,6,6,0,93,100,18288c758 e58b84508 3b3ba0df5 c931b8efa e471b85f9 e9b7af421
+workstreams-app/test/router/server/auth.static-assets.test.ts,2026-10-05,228830414,,Y,4,11,2,Y,0,0,Y,,0,0,0,0,0,17,95,
+workstreams-app/test/router/server/auth.test.ts,2026-07-21,8d2549f73,,Y,2,3,1,,0,5,,,13,2,11,11,0,93,386,3b3ba0df5 c931b8efa 5b8084106 76eb9e28b 8612e0adf 66107a9af 60a9e188c 23add7461 652735198 e9b7af421 ec3a0369f
+workstreams-app/test/router/server/config.main-defaults.test.ts,2026-08-30,6853e6050,,Y,2,5,2,,0,0,,Y,5,4,1,1,0,53,15,3b3ba0df5
+workstreams-app/test/router/server/config.test.ts,2026-08-30,c15f42b0b,,Y,2,3,1,,0,0,,,2,1,1,1,0,53,26,3b3ba0df5
+workstreams-app/test/router/server/cookie.test.ts,2026-07-21,ec3a0369f,,Y,4,7,3,,0,1,,,5,2,3,3,0,93,73,3b3ba0df5 74ebdb5dc e9b7af421
+workstreams-app/test/router/server/deny-log.test.ts,2026-09-15,e58b84508,,Y,6,10,3,,0,0,Y,,1,1,0,0,0,37,87,
+workstreams-app/test/router/server/docs.test.ts,2026-07-24,4f7c88a68,,Y,2,4,1,,0,4,,,13,2,11,11,0,90,160,007a21cfd 3b3ba0df5 c931b8efa 76eb9e28b 30400a662 fabbb2608 d1048ad4e d29a16815 71b7a22bf c20bdc8b8 64596ab44
+workstreams-app/test/router/server/failed-page.test.ts,2026-09-15,4f6550d4c,,Y,3,5,1,,0,0,,,1,1,0,0,0,37,144,
+workstreams-app/test/router/server/log-file.test.ts,2026-09-15,a6e27e6f0,,Y,3,5,1,,0,0,Y,,2,1,1,1,0,37,158,e58b84508
+workstreams-app/test/router/server/mobile-bootstrap.test.ts,2026-07-27,fadc6958c,,Y,2,4,1,,0,1,Y,,6,3,3,3,0,87,192,3e7586095 d253bd902 3b3ba0df5
+workstreams-app/test/router/server/pages.index-discovery.test.ts,2026-09-10,54e67377b,,Y,3,4,1,,0,0,Y,,2,1,1,1,0,42,83,f783135f1
+workstreams-app/test/router/server/site.test.ts,2026-07-21,70aea9238,,Y,2,3,1,,0,1,,,5,1,4,3,1,93,255,08345c5bf 3b3ba0df5 c931b8efa 0ebd8b0dc
+workstreams-app/test/router/server/workstreams-app-supervisor.test.ts,2026-08-13,d2e6818c7,,Y,3,4,1,Y,6,3,,Y,17,7,10,9,1,70,446,33d9a87f8 3b3ba0df5 c52413d8d c931b8efa 8612e0adf c48638134 368971057 7fdaeb104 45e4a897d 0ec49757a
+workstreams-app/test/scenarios/workstreams-app-retry.test.ts,2026-08-14,4dd3567df,,Y,2,3,1,,0,0,Y,,5,1,4,4,0,69,97,3b3ba0df5 c931b8efa 5b8084106 8612e0adf
+workstreams-app/test/server/document-read.test.ts,2026-08-22,f4d1f9b44,,Y,10,12,1,Y,1,0,Y,Y,6,5,1,1,0,61,224,12d776dd2
+workstreams-app/test/server/exhibits.api.test.ts,2026-08-15,3fd5b8939,,Y,2,3,1,,1,1,,Y,10,5,5,5,0,68,723,13df79e76 2a7440551 a9fae524e 267f92168 c48638134
+workstreams-app/test/server/main.services.test.ts,2026-08-13,c82509f96,,Y,17,20,3,Y,0,0,,Y,9,5,4,4,0,70,590,27339ea11 cde25c645 fe1a9762c 8c2320152
+workstreams-app/test/server/main/app.boundary.test.ts,2026-08-13,21d0cd1c1,,Y,12,15,1,Y,1,1,,Y,15,6,9,9,0,70,411,3b40e87b7 267f92168 92af4b79b 3b990a6eb a5e2be403 a0a84452c 5a83ffe2a 45e4a897d c82509f96
+workstreams-app/test/server/main/exhibits-inventory-service.test.ts,2026-08-15,e75a97bfd,,Y,13,14,1,,1,1,,Y,12,5,7,7,0,68,601,13df79e76 2a7440551 a9fae524e 267f92168 b8fc4b1aa 5f641c1ad c48638134
+workstreams-app/test/server/main/issue-domain.unknown-keys.test.ts,2026-08-24,1588e62a8,,Y,1,14,1,Y,1,0,,Y,7,6,1,1,0,59,90,27339ea11
+workstreams-app/test/server/main/issue-next-actions.test.ts,2026-10-05,27339ea11,,Y,18,35,4,Y,0,0,,Y,3,3,0,0,0,17,114,
+workstreams-app/test/server/main/issue-related-service.test.ts,2026-08-24,c343423bd,,Y,19,22,2,Y,0,0,,Y,9,8,1,1,0,59,232,267f92168
+workstreams-app/test/server/main/quota-glm.test.ts,2026-09-14,fb0e21501,,Y,8,10,1,Y,0,0,,Y,5,5,0,0,0,38,121,
+workstreams-app/test/server/main/quotas-service.test.ts,2026-08-13,c82509f96,,Y,17,20,3,Y,0,2,,Y,6,4,2,2,0,70,214,b086bc97c 32b623e91
+workstreams-app/test/server/main/recency.test.ts,2026-08-22,31bf12b13,,Y,10,12,1,Y,0,0,,Y,5,5,0,0,0,61,177,
+workstreams-app/test/server/main/transcribe-openai.test.ts,2026-08-22,1349f8722,,Y,14,17,2,Y,0,0,Y,Y,6,6,0,0,0,61,110,
+workstreams-app/test/server/workstream-changes.test.ts,2026-08-22,c260f58fe,,Y,8,10,1,Y,0,0,,Y,4,4,0,0,0,61,170,
+workstreams-app/test/shared/issue-provenance.test.ts,2026-09-13,d40e8e892,,Y,5,6,1,Y,0,0,,Y,4,4,0,0,0,39,81,

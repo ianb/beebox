@@ -13,10 +13,11 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { initBox, isValidBox } from "./structure/core.js";
+import { ENGINE_LINK, ENGINE_LINK_SPEC, ensureEngineLink } from "./engine-link.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { fileExists } from "../../lib/file-exists.js";
 
 const EnginePackageJsonSchema = z.object({
-  version: z.string().optional(),
   dependencies: z.record(z.string(), z.string()).optional(),
   devDependencies: z.record(z.string(), z.string()).optional(),
 });
@@ -38,25 +39,6 @@ export class BoxPackageConflictError extends Error {
   }
 }
 
-/**
- * The dependency spec `bbx engine init` writes for `beebox` itself when
- * `BBX_INIT_BBX_BOX_SPEC` doesn't override it (release/install tools
- * pin a tarball via that env var — e.g. the smoke tests' `file:<tarball>`).
- *
- * When the running engine is a source checkout (not installed under some
- * `node_modules/`, as a tarball install or `pnpm dlx` cache would be),
- * default to `link:<checkout>` so the box's own `pnpm install` — required
- * for a v2 box to resolve react/typescript for real — actually works.
- * A bare `^<version>` range is unresolvable (beebox isn't on npm)
- * and aborts the box's entire install with a registry 404, taking every
- * other dependency down with it. For an installed engine the bare range
- * remains the fallback: `link:` into a disposable dlx cache would be
- * worse, and those flows set `BBX_INIT_BBX_BOX_SPEC` explicitly.
- */
-function defaultBeeBoxSpec(engineVersion: string): string {
-  const installed = PACKAGE_ROOT.split(path.sep).includes("node_modules");
-  return installed ? `^${engineVersion}` : `link:${PACKAGE_ROOT}`;
-}
 
 /**
  * Dependencies whose install scripts a box's `pnpm install` must be allowed
@@ -77,14 +59,15 @@ export const BOX_BUILT_DEPENDENCIES = [
 
 export interface BoxTarget {
   mode: BoxInitMode;
-  /** The box root — the ONE root; `.beebox/box.json`, `_content/`,
-   * `_config/`, `package.json`/`node_modules`/`src/` all live here (or will). */
+  /** The box root — the ONE root; `package.json` (with its `beebox` shape
+   * block), `_content/`, `_config/`, `node_modules`/`src/` all live here (or will). */
   boxRoot: string;
 }
 
 /**
- * Decide what `bbx engine init <path>` is looking at: an existing box (marker at
- * the target itself) or nothing yet.
+ * Decide what `bbx engine init <path>` is looking at: an existing box
+ * (`isValidBox`: a beebox package.json beside `_config/`, so a clone counts)
+ * or nothing yet.
  */
 export async function detectBoxTarget(targetPath: string): Promise<BoxTarget> {
   const resolvedRoot = path.resolve(targetPath);
@@ -113,8 +96,6 @@ function boxTypescriptRange(spec: string | undefined): string {
 }
 
 interface EngineVersions {
-  /** The engine's own package version, to pin the scaffolded `beebox` dependency. */
-  engine: string;
   /**
    * `typescript`'s version range: the TypeScript 7 version the engine runs
    * (its `@typescript/native` alias). A box has no typescript-eslint, so it
@@ -133,8 +114,7 @@ interface EngineVersions {
 }
 
 /**
- * Read the versions the scaffolded box's `package.json` pins: the running
- * engine's own version (for the `beebox` dependency), plus
+ * Read the versions the scaffolded box's `package.json` pins:
  * `typescript`/`@types/node`/`@types/react` at the exact ranges this engine
  * itself develops against (for the box's `devDependencies`, so `tsc` in the
  * box behaves the same as `tsc` in the engine). `@types/react` lives in the
@@ -152,7 +132,6 @@ async function readEngineVersions(): Promise<EngineVersions> {
   const engine = EnginePackageJsonSchema.parse(JSON.parse(rawEngine));
   const frontend = FrontendPackageJsonSchema.parse(JSON.parse(rawFrontend));
   return {
-    engine: engine.version ?? "0.0.0",
     typescript: boxTypescriptRange(engine.dependencies?.["@typescript/native"]),
     typesNode: engine.devDependencies?.["@types/node"] ?? "^22.0.0",
     typesReact: frontend.devDependencies?.["@types/react"] ?? "^18.3.0",
@@ -168,14 +147,11 @@ async function readEngineVersions(): Promise<EngineVersions> {
  * plain overwrite, but it's only ever called for a genuinely fresh init (see
  * `detectBoxTarget`) — an existing box root is never touched by `bbx engine init`.
  *
- * Deliberately does NOT run `pnpm install` — the `beebox` dependency
- * isn't resolvable through a real registry/tarball channel yet (Track F).
- * Instead, when `node_modules/` is absent, it symlinks
- * `node_modules/beebox` straight at the running engine's own
- * `PACKAGE_ROOT` — the same trick the fixture tests and `bbx view test`
- * use — so the box is loadable (`getBoxShape`'s dependency check, native
- * schema/view resolution) before a real install ever happens. Track F's real
- * install replaces this symlink with an actual dependency.
+ * Deliberately does NOT run `pnpm install`. Instead it points the engine
+ * link (`.beebox/engine`, `./engine-link.ts`) at the running engine's
+ * `PACKAGE_ROOT` and, when `node_modules/` is absent, links
+ * `node_modules/beebox` to it the way `pnpm install` would, so the box is
+ * loadable (native schema/view resolution) before a real install happens.
  *
  * `detectBoxTarget` only checks whether `targetPath` is a *box* — a plain
  * non-empty directory (an existing project, a directory with an unrelated
@@ -187,8 +163,8 @@ async function readEngineVersions(): Promise<EngineVersions> {
  * (`./index.js`, run right after on the same root) owns both, since they
  * cover the operational half too (the AGENTS.md `@`-includes, the merged
  * ignore rules).
- * @param options.symlinkBeeBox - Whether to symlink
- *   `node_modules/beebox` at the running engine's `PACKAGE_ROOT`.
+ * @param options.symlinkBeeBox - Whether to make the engine link and
+ *   `node_modules/beebox`.
  *   Production `bbx engine init` wants it (native schema/view resolution); cheap
  *   fixtures that only read/write cards don't, and skip it. Defaults to true.
  * @throws BoxPackageConflictError if `boxRoot` already has a `package.json`
@@ -201,7 +177,7 @@ export async function scaffoldPackageRoot(
   await fs.mkdir(boxRoot, { recursive: true });
 
   const packageJsonPath = path.join(boxRoot, "package.json");
-  if (await pathExists(packageJsonPath)) {
+  if (await fileExists(packageJsonPath)) {
     throw new BoxPackageConflictError(
       `Cannot initialize a beebox package at ${boxRoot}: it already has a ` +
         "package.json. Fresh `bbx engine init` scaffolds a new coding-session package there and " +
@@ -211,7 +187,10 @@ export async function scaffoldPackageRoot(
   }
 
   const versions = await readEngineVersions();
-  const beeBoxSpec = process.env.BBX_INIT_BEEBOX_SPEC ?? defaultBeeBoxSpec(versions.engine);
+  // The portable spec resolves through the gitignored engine link, so the
+  // tracked value is the same on every machine. `BBX_INIT_BEEBOX_SPEC` pins
+  // something else, such as the release smoke tests' `file:<tarball>`.
+  const beeBoxSpec = process.env.BBX_INIT_BEEBOX_SPEC ?? ENGINE_LINK_SPEC;
   const packageJson = {
     name: path.basename(boxRoot),
     private: true,
@@ -269,10 +248,13 @@ export async function scaffoldPackageRoot(
   await fs.mkdir(path.join(boxRoot, "src"), { recursive: true });
 
   if (symlinkBeeBox) {
+    if (beeBoxSpec === ENGINE_LINK_SPEC) await ensureEngineLink(boxRoot, PACKAGE_ROOT);
     const nodeModulesDir = path.join(boxRoot, "node_modules");
-    if (!(await pathExists(nodeModulesDir))) {
+    if (!(await fileExists(nodeModulesDir))) {
       await fs.mkdir(nodeModulesDir, { recursive: true });
-      await fs.symlink(PACKAGE_ROOT, path.join(nodeModulesDir, "beebox"), "dir");
+      // The same relative link `pnpm install` makes for the portable spec.
+      const target = beeBoxSpec === ENGINE_LINK_SPEC ? path.join("..", ENGINE_LINK) : PACKAGE_ROOT;
+      await fs.symlink(target, path.join(nodeModulesDir, "beebox"), "dir");
     }
   }
 }
@@ -280,7 +262,7 @@ export async function scaffoldPackageRoot(
 /** A scaffolded shapeVersion-3 box: one root. */
 export interface ScaffoldedBox {
   /** The box root — where `package.json`/`node_modules`/`src/`,
-   * `.beebox/box.json`, and every `_`-prefixed operational area live. */
+   * and every `_`-prefixed operational area live. */
   boxRoot: string;
 }
 
@@ -311,18 +293,6 @@ export async function scaffoldBoxRoot(
   return { boxRoot };
 }
 
-/** Whether `filePath` exists, tolerating (only) the not-found case. */
-async function pathExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch (_e) {
-    // ENOENT is the expected "doesn't exist yet" case — the error carries no
-    // other actionable info.
-    return false;
-  }
-}
-
 /**
  * Write `content` to `filePath` only if nothing is there yet. Used for the
  * package scaffold files that a directory might already have its own
@@ -330,6 +300,6 @@ async function pathExists(filePath: string): Promise<boolean> {
  * conflict, this is fine to leave in place.
  */
 async function writeFileIfAbsent(filePath: string, content: string): Promise<void> {
-  if (await pathExists(filePath)) return;
+  if (await fileExists(filePath)) return;
   await fs.writeFile(filePath, content);
 }

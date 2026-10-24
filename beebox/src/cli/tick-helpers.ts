@@ -80,7 +80,7 @@ export function effectiveBusyBlockers(
 /** Blockers that a `notify:` card does not wait for: an active chat. A
  * reminder runs no agent and no shell, so it cannot race the chat's writes
  * (the housekeeping commit re-checks for chats itself, see handlePostSuccess). */
-export function isChatBlocker(blocker: string): boolean {
+function isChatBlocker(blocker: string): boolean {
   return blocker.startsWith("chat:");
 }
 
@@ -156,7 +156,7 @@ export async function evaluateSkip(ctx: SkipContext): Promise<SkipDecision | nul
 
   if (options.force) {
     if (!parsed.enabled) return say("disabled (enabled: false)");
-  } else if (!isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, now })) {
+  } else if (!isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, lastFailureFinal: state.lastFailureFinal === true, now })) {
     return { line: "" };
   }
 

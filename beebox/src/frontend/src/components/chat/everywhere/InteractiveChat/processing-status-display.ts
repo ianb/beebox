@@ -1,5 +1,6 @@
 /** Display policy for the chat's "Thinking…" status strip. */
 
+import { errorMessage } from "@shared/error-guards";
 import { useEffect, useRef, useState } from "react";
 import { getChatStatus } from "../../../../api";
 import type { ChatEvent } from "../../../../machines/chat-types";
@@ -109,7 +110,7 @@ export function useProcessingStatusPoll(opts: {
           }
         })
         .catch((e: unknown) => {
-          console.warn(`[chatfsm] processing-status poll failed: ${e instanceof Error ? e.message : String(e)}`);
+          console.warn(`[chatfsm] processing-status poll failed: ${errorMessage(e)}`);
           if (!ignored) setConfirmation({ sessionId, value: "confirmed" });
         });
     };
@@ -158,13 +159,21 @@ export function useProcessingStatusPoll(opts: {
           }
         })
         .catch((e: unknown) => {
-          console.warn(`[chatfsm] stream watchdog poll failed: ${e instanceof Error ? e.message : String(e)}`);
+          console.warn(`[chatfsm] stream watchdog poll failed: ${errorMessage(e)}`);
         });
     };
     const pollId = setInterval(poll, 5000);
+    // A backgrounded tab throttles the interval, and its stream may have
+    // dropped while hidden: poll at once on return. The answer counts toward
+    // the same idle threshold, under the same frozen id.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       ignored = true;
       clearInterval(pollId);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [isStreamingState, sessionId, send]);
   const value = confirmation?.sessionId === sessionId ? confirmation.value : "unconfirmed";

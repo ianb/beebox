@@ -41,8 +41,8 @@
   padding-block: 4px;
   font: 600 13px/1.2 system-ui, sans-serif;
 }
-[data-chrome-theme="doodlebit"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill),
-[data-chrome-theme="doodlebit"] :is(#bbx-composer-add, #bbx-composer-capture, #bbx-composer-keyboard, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary),
+[data-chrome-theme="doodlebit"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill),
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-add, #bbx-composer-capture, #bbx-composer-keyboard, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]),
 .bbx-card-theme[data-card-theme="doodlebit"] > .bbx-card-properties {
   background: #fff;
   color: #202020;
@@ -51,7 +51,7 @@
   box-shadow: 2px 2px 0 #202020;
   position: relative;
 }
-[data-chrome-theme="doodlebit"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled { background: #b9ef38; }
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled { background: #b9ef38; }
 [data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-composer-material, .bbx-chat-user-paper),
 .bbx-card-surface[data-card-theme="doodlebit"] {
   background: #fff;
@@ -81,7 +81,7 @@
   --tw-prose-links: #5c42b5;
   color: #202020;
 }
-[data-chrome-theme="doodlebit"] .bbx-chat-callout > .text-accent-dark { color: #555; }
+[data-chrome-theme="doodlebit"] .bbx-chat-callout > .bbx-chat-callout-context { color: #555; }
 [data-chrome-theme="doodlebit"] .bbx-composer-material > section { background: transparent; border: 0; }
 [data-chrome-theme="doodlebit"] .bbx-composer-material textarea { color: #202020; background: #fff; }
 .bbx-card-theme[data-card-theme="doodlebit"] {

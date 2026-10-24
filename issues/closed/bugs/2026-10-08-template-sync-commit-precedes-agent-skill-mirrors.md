@@ -55,6 +55,6 @@ list above.
 
 ## Related
 
-[`bbx docs refresh` reports current after a box-local schema changes](../../bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md)
+[`bbx docs refresh` reports current after a box-local schema changes](2026-09-30-docs-refresh-misses-box-local-schema-changes.md)
 notes the same uncommitted regenerated files and a staleness-marker problem.
 This issue is only the commit ordering.

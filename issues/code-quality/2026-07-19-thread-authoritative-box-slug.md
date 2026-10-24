@@ -34,3 +34,7 @@ contexts that have no running server (CLI commands, `bbx view`, background sweep
 The awkward part is ordering: the registry is populated in `startServer`, so
 anything running before/outside that still needs the fallback, which means two
 sources of truth unless the fallback is clearly scoped.
+
+## Audit 2026-10-22
+
+Partly overtaken. The Telegram connector is gone, and `question-aging` and the chat session pool no longer derive the slug from disk. Delivery paths that still derive it: `beebox/src/core/send-push.ts:97`, `beebox/src/core/notify-boxholder.ts:236`, and the files `beebox/src/core/notification/audience.ts` and `beebox/src/core/notification/apns-channel/core.ts`. The runtime registry is in `beebox/src/core/script-env/core.ts`.

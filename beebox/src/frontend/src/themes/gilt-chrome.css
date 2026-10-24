@@ -8,23 +8,20 @@
   --bbx-chat-user-paper: #622b2b;
   --bbx-chat-user-ink: #fff0d8;
 }
-[data-chrome-theme="gilt"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"], .bbx-interface-browse-panel[data-card-content="card"]),
+[data-chrome-theme="gilt"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]),
 [data-chrome-theme="gilt"] .bbx-interface-tabstrip > [role="none"]::before,
 [data-chrome-theme="gilt"] .bbx-interface-tabstrip > [role="none"]::after,
 [data-chrome-theme="gilt"] .bbx-app-nav > div { background: transparent; }
 [data-chrome-theme="gilt"] .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
 [data-chrome-theme="gilt"] .bbx-app-nav :is(button, a):focus-visible { outline: 2px solid #f6ecd3; outline-offset: 2px; }
-[data-chrome-theme="gilt"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #1b3037; }
-[data-chrome-theme="gilt"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r { background: #173f50; color: #f6ecd3; }
+[data-chrome-theme="gilt"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #1b3037; }
+[data-chrome-theme="gilt"] .bbx-composer-material > .bbx-composer-mobile-row { background: #173f50; color: #f6ecd3; }
 [data-chrome-theme="gilt"] .bbx-chat-user-paper { --bbx-selection: #fff0d8; --bbx-selection-ink: #622b2b; }
 [data-chrome-theme="gilt"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: #fff0d8; }
 [data-chrome-theme="gilt"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #ffffff18; color: #fff0d8; }
 [data-chrome-theme="gilt"] .bbx-chat-user-attachment:hover { background: #ffffff30; }
 [data-chrome-theme="gilt"] .bbx-chat-user-unsure { text-decoration-color: #e5c77e; }
 [data-chrome-theme="gilt"] .bbx-chat-reply-material {
-  --bbx-ink: #f6ecd3;
-  --bbx-ink-soft: #c3cbbf;
-  --bbx-pen: #e5c77e;
   --bbx-edge: #667d79;
 }
 [data-chrome-theme="gilt"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
@@ -42,7 +39,7 @@
 }
 [data-chrome-theme="gilt"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #c3cbbf; background: #173f50; border-radius: 8px; }
 [data-chrome-theme="gilt"] :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-[data-chrome-theme="gilt"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) { color: #c3cbbf; }
+[data-chrome-theme="gilt"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #f6ecd3; --bbx-ink-soft: #c3cbbf; --bbx-pen: #e5c77e; }
 [data-chrome-theme="gilt"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: #f6ecd3; }
 [data-chrome-theme="gilt"] #bbx-chat-load-older { background: #173f50; color: #e5c77e; border-radius: 8px; }
 [data-chrome-theme="gilt"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }
@@ -57,11 +54,8 @@
 .bbx-system-theme-preview[data-chrome-theme="gilt"] .bbx-system-theme-toolbar { background: #173f50; border-bottom: 2px solid #a68b4e; }
 .bbx-system-theme-preview[data-chrome-theme="gilt"] .bbx-system-theme-toolbar i { background: #f6ecd3; }
 .bbx-system-theme-preview[data-chrome-theme="gilt"] .bbx-system-theme-desk > span { background: #173f50; border-color: #667d79; border-radius: 6px; box-shadow: 0 3px 6px #3b858530; }
-/* Dark content uses native dark controls, while neutral settings stay readable. */
+/* Dark content uses native dark controls. */
 .bbx-card-theme[data-card-theme="gilt"], [data-chrome-theme="gilt"] .bbx-composer-material { color-scheme: dark; }
-.bbx-card-theme[data-card-theme="gilt"] .bbx-system-theme-button { color: #1b3037; }
-.bbx-card-theme[data-card-theme="gilt"] .bbx-landmark-system-theme .bbx-system-theme-button { color: #f6ecd3; }
-[data-chrome-theme="gilt"] .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) { color: #302f2d; }
 @media print {
   .bbx-card-theme[data-card-theme="gilt"] .bbx-card-heading { background: transparent; color: #000; --bbx-ink: #000; --bbx-ink-soft: #333; }
   .bbx-card-theme[data-card-theme="gilt"] { color-scheme: light; --gilt-paper: #fff; --gilt-ink: #000; --gilt-soft: #333; --gilt-accent: #000; --gilt-sheet: #fff; --bbx-code-paper: #fff; --bbx-code-ink: #000; }

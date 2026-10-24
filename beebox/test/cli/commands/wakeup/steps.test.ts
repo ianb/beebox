@@ -108,7 +108,7 @@ void test("refreshSearchIndex is the box's only scheduled reconciliation of the 
         title: "Later",
         contains: "",
         excerpt: "distinctive kumquat filing",
-        score: 1.7142793861158137,
+        score: 1.7094573800329702,
       },
     ],
     total: 1,

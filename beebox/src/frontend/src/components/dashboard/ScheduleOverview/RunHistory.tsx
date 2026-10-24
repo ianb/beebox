@@ -38,7 +38,7 @@ const TRIGGER_LABEL: Record<string, string> = {
 };
 
 function Label({ children }: { children: string }) {
-  return <span className="text-[10px] uppercase tracking-wide text-warm-500">{children}</span>;
+  return <span className="text-[10px] uppercase tracking-wide text-warm-700">{children}</span>;
 }
 
 /** Why a run without a summary ended as it did; failures keep their full output one click away. */
@@ -50,7 +50,7 @@ function RunReason({ run }: { run: RunEntry }) {
       <Label>Reason</Label> {reason}
       {run.result === "failure" && run.error.trim() !== reason ? (
         <details className="mt-1">
-          <summary className="cursor-pointer text-warm-600">Full output</summary>
+          <summary className="cursor-pointer text-warm-700">Full output</summary>
           <Pre size="xs" error boxed scroll="sm" className="mt-1">{run.error}</Pre>
         </details>
       ) : null}
@@ -67,7 +67,7 @@ function RunSummaryBlock({ summary }: { summary: NonNullable<RunEntry["summary"]
       {summary.body ? <Markdown prose="block" onNavigate={onNavigate}>{summary.body}</Markdown> : null}
       {summary.notes ? (
         <details className="mt-1 text-xs text-warm-700">
-          <summary className="cursor-pointer text-warm-600">Notes</summary>
+          <summary className="cursor-pointer text-warm-700">Notes</summary>
           <Markdown prose="block" onNavigate={onNavigate}>{summary.notes}</Markdown>
         </details>
       ) : null}
@@ -80,7 +80,7 @@ function RunItem({ run }: { run: RunEntry }) {
   const ended = outcome(run);
   return (
     <li className="py-2">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-warm-600">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-warm-700">
         <Badge tone={ended.tone} size="sm">{ended.label}</Badge>
         <FriendlyDate iso={run.ts} />
         <span>&middot; {TRIGGER_LABEL[run.triggeredBy] ?? run.triggeredBy}</span>
@@ -94,9 +94,9 @@ function RunItem({ run }: { run: RunEntry }) {
 
 function RunList({ name }: { name: string }) {
   const query = trpc.scheduler.runs.useQuery({ name });
-  if (query.isPending) return <p className="text-xs text-warm-500 animate-pulse">Loading runs...</p>;
+  if (query.isPending) return <p className="text-xs text-warm-700 animate-pulse">Loading runs...</p>;
   if (query.error) return <p className="text-xs text-danger-dark">Could not load runs: {query.error.message}</p>;
-  if (query.data.runs.length === 0) return <p className="text-xs text-warm-500">No runs recorded on this machine yet.</p>;
+  if (query.data.runs.length === 0) return <p className="text-xs text-warm-700">No runs recorded on this machine yet.</p>;
   return (
     <ul className="divide-y divide-warm-200" aria-label={`Recent runs of ${name}`}>
       {query.data.runs.map((run) => <RunItem key={run.ts} run={run} />)}

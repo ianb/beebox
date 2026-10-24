@@ -19,6 +19,11 @@ import {
   formatLocalTime,
 } from "../../src/core/session-context.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { recordDocsApiDiagnosis } from "../../src/connectors/google-drive/docs-api-status.js";
+import { markGoogleAuthDead, saveGoogleTokens } from "../../src/google/token-store.js";
+import * as os from "node:os";
+import * as path from "node:path";
+import { mkdtemp } from "node:fs/promises";
 
 // The invalid-timezone example exercises the warn-and-fall-back path;
 // silence the documented console.warn so it doesn't pollute test output.
@@ -167,6 +172,71 @@ void test("admitHealth keeps the health reminder from becoming chatter.", async 
   t.check(admitHealth("check-calendar: overdue", { gate, now: t0 + 11 * 24 * 60 * 60 * 1000 }), true);
 
   t.check(admitHealth(null, { gate, now: t0 + 12 * 24 * 60 * 60 * 1000 }), false);
+});
+
+// ## An open Drive problem is introduced once, at chat start
+//
+// Boxholder decision (2026-10-20): while Drive syncs Google Docs without the
+// Docs API, the agent hears of it on the first send of each chat session, so
+// it can mention it unasked. It rides apart from the schedule-health gate, so
+// a schedule change mid-session neither repeats nor delays it.
+void test("An open Drive problem rides on the first send only, whatever schedule health does", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(async () => {
+    delete process.env.BBX_GOOGLE_TOKENS_FILE;
+    await box.cleanup();
+  });
+  process.env.BBX_GOOGLE_TOKENS_FILE = path.join(await mkdtemp(path.join(os.tmpdir(), "session-docs-api-")), "google-tokens.json");
+  await box.write("_config/box.json", JSON.stringify({ timezone: "UTC", googleServices: { drive: true } }));
+  await saveGoogleTokens({ refreshToken: "rt-1", accessToken: "at-1" });
+  const sendNow = new Date("2026-06-09T10:00:00Z");
+  const driveLine = "google-drive: Google Docs are syncing without the Docs API (no revision tracking or lossy check); `bbx health` has the fix";
+
+  // No problem: no line.
+  t.check((await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true, healthGate: createHealthGate() })).health, undefined);
+
+  await recordDocsApiDiagnosis(box.root, () => ({
+    kind: "service-disabled",
+    message: "1 Google Doc is syncing without revision tracking or lossy-content details: disabled",
+    link: null,
+    docs: 1,
+    since: "2026-06-09T09:00:00.000Z",
+  }));
+  const gate = createHealthGate();
+  t.check((await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true, healthGate: gate })).health, driveLine);
+  t.check((await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false, healthGate: gate })).health, undefined);
+
+  // A scheduled task starts failing mid-session. The gate has shown nothing
+  // yet, so it admits that line at once; the Drive line does not come back.
+  await box.write("_config/schedules/sync-notes.scheduled-script.card", `---
+cron: "0 * * * *"
+runs: bbx wakeup --connector notes
+---
+`);
+  await box.write("_config/schedules/.state/sync-notes.json", JSON.stringify({
+    lastRun: "2026-06-09T09:00:00Z",
+    lastResult: "failure",
+    lastError: "ENETUNREACH",
+    lastSuccess: "2026-06-07T09:00:00Z",
+    consecutiveFailures: 4,
+    runCount: 50,
+  }));
+  const later = [];
+  for (let i = 0; i < 10; i++) later.push((await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false, healthGate: gate })).health);
+  t.check(later, ["sync-notes: failing ×4 (last success 2d ago)", undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined]);
+
+  // A new session with both open carries both, schedule first.
+  t.check(
+    (await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true, healthGate: createHealthGate() })).health,
+    `sync-notes: failing ×4 (last success 2d ago); ${driveLine}`,
+  );
+
+  // Paused for reauthorization: the line speaks of the last sync.
+  await markGoogleAuthDead({ reason: "invalid_grant" });
+  t.check(
+    (await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true, healthGate: createHealthGate() })).health,
+    "sync-notes: failing ×4 (last success 2d ago); google-drive: paused until Google is re-authorized; at its last sync, Google Docs synced without the Docs API (no revision tracking or lossy check); `bbx health` has the fix",
+  );
 });
 
 // ## composeSendSnapshot stamps BOX time, not wall time

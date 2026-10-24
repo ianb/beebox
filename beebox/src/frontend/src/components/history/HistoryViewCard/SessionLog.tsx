@@ -34,11 +34,11 @@ function ContentBlock({ block }: { block: SessionContentBlock }) {
             &#9654;
           </span>
           <span className="font-semibold text-primary">{block.toolName}</span>
-          <span className="text-warm-600 truncate max-w-[500px]">
+          <span className="text-warm-700 truncate max-w-[500px]">
             {block.inputSummary}
           </span>
         </button>
-        {expanded && block.inputSummary ? <div className="ml-6 mt-1 text-xs font-mono text-warm-600 bg-warm-50 rounded p-2 whitespace-pre-wrap max-h-40 overflow-auto">
+        {expanded && block.inputSummary ? <div className="ml-6 mt-1 text-xs font-mono text-warm-700 bg-warm-50 rounded p-2 whitespace-pre-wrap max-h-40 overflow-auto">
             {block.inputSummary}
           </div> : null}
       </div>
@@ -52,7 +52,7 @@ function ContentBlock({ block }: { block: SessionContentBlock }) {
       return null;
     }
     return (
-      <div className="ml-6 text-xs font-mono text-warm-600 bg-warm-50 rounded p-2 whitespace-pre-wrap max-h-60 overflow-auto">
+      <div className="ml-6 text-xs font-mono text-warm-700 bg-warm-50 rounded p-2 whitespace-pre-wrap max-h-60 overflow-auto">
         {block.resultSummary}
       </div>
     );
@@ -78,10 +78,10 @@ function EntryView({ entry }: { entry: { uuid: string; type: string; timestamp: 
   return (
     <div className={`px-3 py-2 ${isUser ? "bg-info-50 border-l-2 border-primary-light" : ""}`}>
       <div className="flex items-center gap-2 mb-1">
-        <span className={`text-xs font-medium ${isUser ? "text-primary" : "text-warm-600"}`}>
+        <span className={`text-xs font-medium ${isUser ? "text-primary" : "text-warm-700"}`}>
           {isUser ? "User" : "Assistant"}
         </span>
-        <span className="text-xs text-warm-500">
+        <span className="text-xs text-warm-700">
           {new Date(entry.timestamp).toLocaleTimeString()}
         </span>
       </div>
@@ -116,7 +116,7 @@ export function SessionLog({ sessionId, idPrefix }: SessionLogProps) {
 
   if (!found) {
     return (
-      <div className="text-sm text-warm-500 italic p-3">
+      <div className="text-sm text-warm-700 italic p-3">
         Session log not found for {sessionId.substring(0, 8)}...
       </div>
     );
@@ -124,7 +124,7 @@ export function SessionLog({ sessionId, idPrefix }: SessionLogProps) {
 
   return (
     <div>
-      <div className="text-xs text-warm-600 px-3 py-1 bg-warm-50 border-b">
+      <div className="text-xs text-warm-700 px-3 py-1 bg-warm-50 border-b">
         {total} messages in session {sessionId.substring(0, 8)}...
       </div>
       <div className="divide-y divide-warm-200">
@@ -132,7 +132,7 @@ export function SessionLog({ sessionId, idPrefix }: SessionLogProps) {
           <EntryView key={entry.uuid} entry={entry} />
         ))}
       </div>
-      {loading ? <div className="p-3 text-sm text-warm-500">Loading...</div> : null}
+      {loading ? <div className="p-3 text-sm text-warm-700">Loading...</div> : null}
       {hasNextPage && !loading ? <button
           id={`${idPrefix}-session-log-load-more`}
           // fetchNextPage's failure surfaces via the query's own error state.

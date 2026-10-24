@@ -72,6 +72,7 @@ import {
   commandMigrateAlerts,
   commandResolve,
 } from "./lib/schedules-cli-report.js";
+import { formatAgoMs } from "../beebox/src/shared/relative-time.js";
 
 /** `run <name>` naming a schedule the loader refuses. */
 class UnrunnableScheduleError extends Error {
@@ -137,9 +138,7 @@ interface ListRow {
 
 function agoText(fromIso: string | null, nowMs: number): string {
   if (fromIso === null) return "never";
-  const elapsed = nowMs - Date.parse(fromIso);
-  if (elapsed < 60000) return "just now";
-  return `${formatDuration(Math.round(elapsed / 3600000) * 3600000)} ago`;
+  return formatAgoMs(nowMs - Date.parse(fromIso));
 }
 
 async function commandList(context: Context, args: string[]): Promise<number> {

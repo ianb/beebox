@@ -26,7 +26,13 @@ box. Capture is how content from your phone or browser gets into the box.
   default" box, so browsing another box does not change where a private thought
   lands. The phone confirms "Saved on your phone", which means kept locally, not
   yet delivered; offline captures stay visible and upload when the box is
-  reachable, and you can add context to a saved item later.
+  reachable, and you can add context to a saved item later. A shared item with
+  no words at all is not left unread: about two minutes after the last one of a
+  burst, the box's agent gives each a title and a description and files it under
+  the place that fits, or leaves it in the box's captures folder when none does.
+  It only files; it does not act on what the item says, and it never deletes.
+  If words arrive within the wait, they are taken as the request and the item is
+  not filed on its own.
 - Receives the box's notifications as iPhone push: a tap opens the chat, card,
   or question the notification is about, on the box that sent it. See
   [notifications.md](notifications.md).

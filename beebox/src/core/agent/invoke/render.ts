@@ -12,20 +12,16 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { fmt } from "../../../lib/format.js";
 import { isRecord } from "../../card-io.js";
-
-function truncate(s: string, max: number): string {
-  if (s.length <= max) return s;
-  return s.slice(0, max - 1) + "…";
-}
+import { truncateTitle } from "../../file-summary.js";
 
 function summarizeToolInput(input: unknown): string {
   if (!isRecord(input)) return "";
   // Surface common fields concisely.
   for (const key of ["command", "file_path", "path", "pattern", "url"]) {
     const v = input[key];
-    if (typeof v === "string") return truncate(v, 120);
+    if (typeof v === "string") return truncateTitle(v, 120);
   }
-  return truncate(JSON.stringify(input), 120);
+  return truncateTitle(JSON.stringify(input), 120);
 }
 
 function extractToolResultText(content: unknown): string {
@@ -69,7 +65,7 @@ function renderUserMessage(msg: Extract<SDKMessage, { type: "user" }>): string {
     for (const block of content) {
       if (block.type === "tool_result") {
         const text = extractToolResultText(block.content);
-        const summary = text ? truncate(text.replace(/\s+/g, " "), 200) : "(no content)";
+        const summary = text ? truncateTitle(text.replace(/\s+/g, " "), 200) : "(no content)";
         const errMark = block.is_error ? fmt.fail(" [error]") : "";
         lines.push(fmt.dim(`  ↳ ${summary}${errMark}\n`));
       }

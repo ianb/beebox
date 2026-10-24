@@ -57,7 +57,7 @@ void test("Heading renders a real heading; the level decides the look", async (t
 // The caller's padding replaces the default `p-8` (`cn` merges with
 // `tailwind-merge`, and the caller wins).
 void test("The caller's padding replaces the default p-8 (cn merges with tailwind-merge,...", async (t) => {
-  t.check(html(h(StatusMessage, { children: "Loading…" })), "<div role=\"status\" class=\"p-8 text-warm-600\">Loading…</div>");
+  t.check(html(h(StatusMessage, { children: "Loading…" })), "<div role=\"status\" class=\"p-8 text-warm-700\">Loading…</div>");
 
-  t.check(html(h(StatusMessage, { className: "p-4", children: "Loading…" })), "<div role=\"status\" class=\"text-warm-600 p-4\">Loading…</div>");
+  t.check(html(h(StatusMessage, { className: "p-4", children: "Loading…" })), "<div role=\"status\" class=\"text-warm-700 p-4\">Loading…</div>");
 });

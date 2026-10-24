@@ -16,7 +16,9 @@ import { trpc } from "../../../lib/trpc/client";
 import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
 import { Hint } from "../../ui/Hint";
+import { Notice } from "../../ui/Notice";
 import { Heading } from "../../ui/Heading";
+import { Card } from "../../ui/Card";
 import { GoogleConnectLink } from "../GoogleConnectLink";
 import { DriveMountRow } from "./DriveMountRow";
 import { AddPointerForm, MountFolderForm } from "./DriveMountForms";
@@ -24,10 +26,10 @@ import { DriveScheduleLine } from "./DriveScheduleLine";
 
 function DriveShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">Google Drive</h2>
+    <Card material padding="lg" border="none" shadow>
+      <Heading level={2} className="mb-2">Google Drive</Heading>
       {children}
-    </div>
+    </Card>
   );
 }
 
@@ -39,9 +41,7 @@ export function DriveSection() {
   if (error !== null) {
     return (
       <DriveShell>
-        <div className="p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
-          {error}
-        </div>
+        <Notice tone="warning">{error}</Notice>
         {/* Distinct id from the not-connected branch below: ids are authored
             once (ui-scan annotations test counts source literals), even
             when the branches are mutually exclusive at runtime. */}

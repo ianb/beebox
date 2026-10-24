@@ -15,10 +15,9 @@ import * as fs from "node:fs/promises";
 import * as net from "node:net";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
-import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
-import { summarizeProfile } from "./cpu-profile.js";
+import { cliBundleSourceMaps, summarizeProfile } from "./cpu-profile.js";
 import { PERF_DIAG_KEY, bbxBin, ensurePerfBox, perfHubEnv, perfResultsDir } from "../local-hub.js";
 import { median } from "../report.js";
 
@@ -113,8 +112,7 @@ async function main(): Promise<void> {
   console.log(`bbx engine serve ${box} (${runs.length} cold starts)\n${phaseTable(runs)}`);
   const lastProfile = runs.findLast((r) => r.profile !== undefined)?.profile;
   if (lastProfile === undefined) return;
-  const bundle = path.join(PACKAGE_ROOT, "dist", "cli.mjs");
-  const summary = await summarizeProfile(lastProfile, { [pathToFileURL(bundle).href]: `${bundle}.map` });
+  const summary = await summarizeProfile(lastProfile, await cliBundleSourceMaps(path.join(PACKAGE_ROOT, "dist")));
   console.log(`\nCPU self time of the last start (${summary.totalMs} ms sampled, ${lastProfile}):`);
   console.log(`  ${"self".padStart(10)}${"attributed".padStart(12)}  owner (attributed: node-internal and native time charged to its caller)`);
   for (const o of summary.attributed.slice(0, 30)) {

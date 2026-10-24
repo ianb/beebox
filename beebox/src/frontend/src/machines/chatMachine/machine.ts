@@ -8,8 +8,10 @@
  * Voice turn-taking coordination stays in the component layer.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { setup, assign, enqueueActions } from "xstate";
 import { invariant } from "@shared/invariant";
+import { boxNow } from "../../lib/box-clock";
 import { buildOptimisticContent, holdInjectedMessage, mergeAcceptedIntoPending } from "./chat-shared";
 import { initialChatContext } from "./chat-machine-context";
 import {
@@ -23,7 +25,6 @@ import {
   fetchInitialActor,
   fetchHistoryActor,
   streamActor,
-  rollupStreamToEntry,
 } from "./chat-actors";
 import {
   appendQueuedSend,
@@ -35,8 +36,8 @@ import {
   promoteLastToPending,
   applyStreamError,
   untrackLastSend,
-  clearInterrupt, settleLostReply, markTurnRefresh, sendInterrupt,
-  reconcilePendingWithDiagnostics,
+  clearInterrupt, markTurnRefresh, sendInterrupt,
+  reconcilePendingWithDiagnostics, adoptSession, applyRefreshedHistory,
 } from "./chat-actions";
 
 export { chatTailSlice };
@@ -122,19 +123,14 @@ export const chatMachine = setup({
         : {}),
     },
     // Global handler: backend assigned an id to a session that started as
-    // "new". Lock subsequent sends and history fetches onto the real id so
-    // we don't accidentally start another fresh session, and so refreshing
-    // mid-stream uses the correct sessionInput rather than the "new" branch.
-    SESSION_ASSIGNED: {
-      actions: assign(({ event }) => ({
-        sessionInput: event.sessionId,
-        sessionId: event.sessionId,
-        // Drop the in-memory binding now that the backend has persisted
-        // it to chat-session-history; future resumes look it up there.
-        // (Pending seedFeatures, if any, are now inert: sessionInput is the
-        // real id so they're never re-sent, and toggles go through the server.)
-        contextDir: undefined,
-      })),
+    // "new" (the turn stream's `system/init`). Adopt it so we don't
+    // accidentally start another fresh session, and so refreshing mid-stream
+    // uses the real id rather than the "new" branch.
+    SESSION_ASSIGNED: { actions: assign(({ event }) => adoptSession(event.sessionId)) },
+    // Global handler: a "new" chat's send was accepted as this turn. Held so
+    // a refresh can look up the session id if init never reached us.
+    TURN_ACCEPTED: {
+      actions: assign(({ context, event }) => context.sessionInput === "new" ? { newChatTurnId: event.turnId } : {}),
     },
   },
   states: {
@@ -189,6 +185,12 @@ export const chatMachine = setup({
         msgs: context.messages.length,
         pending: context.pendingMessages.length,
       }),
+      // A REFRESH held during a lost-reply refresh (see `refreshing`): fetch
+      // once more if the warning is still up, else just drop the flag.
+      always: [
+        { guard: ({ context }) => context.refreshAgain && context.replyLost, target: "refreshing", actions: assign({ refreshAgain: false, refreshCause: "resync" as const }) },
+        { guard: ({ context }) => context.refreshAgain, actions: assign({ refreshAgain: false }) },
+      ],
       on: {
         SEND: {
           target: "streaming",
@@ -198,7 +200,7 @@ export const chatMachine = setup({
               const entry = {
                 uuid: event.messageId,
                 type: "user" as const,
-                timestamp: new Date().toISOString(),
+                timestamp: new Date(boxNow()).toISOString(),
                 content: buildOptimisticContent(event.message, event.images),
                 reconcileKnownUuids: context.messages.map((message) => message.uuid),
               };
@@ -282,7 +284,7 @@ export const chatMachine = setup({
         },
         STREAM_TOOL: {
           actions: assign(({ context, event }) => ({
-            streamTools: [...context.streamTools, event.tool],
+            streamTools: [...context.streamTools, { ...event.tool, streamTextOffset: context.streamText.length }],
             streamNeedsSeparator: context.streamText.length > 0,
           })),
         },
@@ -348,53 +350,27 @@ export const chatMachine = setup({
         // (core/chat/session/transcript-sync.ts) holds `result`/`done` until
         // the turn is durable, and onDone swaps messages in + clears streamText
         // atomically. See src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.test.ts.
-        REFRESH: { actions: () => logFsm("refresh-ignored-refreshing") },
+        // Exception: while a dropped reply is unsettled, the in-flight read may
+        // predate the reply, and this `chat-complete` is the last signal that
+        // it landed. Hold it (not restart the fetch); `idle` fetches once more.
+        REFRESH: [
+          { guard: ({ context }) => context.replyLost, actions: [() => logFsm("refresh-held-refreshing"), assign({ refreshAgain: true })] },
+          { actions: () => logFsm("refresh-ignored-refreshing") },
+        ],
         SEND: { actions: { type: "queueSend", params: { from: "refreshing" } } },
       },
       invoke: {
         src: "fetchHistory",
-        input: ({ context }) => ({ sessionInput: context.sessionInput }),
+        input: ({ context }) => ({ sessionInput: context.sessionInput, turnId: context.newChatTurnId }),
         onDone: {
           target: "idle",
-          actions: assign(({ context, event }) => {
-            // "new" session: server has no id yet, so fetchHistory returned
-            // empty. Roll up whatever streamed for this turn into a synthetic
-            // assistant entry so the completed response stays visible — the
-            // chat-session-assigned SSE / URL navigation eventually loads
-            // the authoritative copy and replaces this on remount.
-            if (context.sessionInput === "new") {
-              const synthetic = rollupStreamToEntry(context.streamText, context.streamTools);
-              const messages = synthetic ? [...context.messages, synthetic] : context.messages;
-              return {
-                // No history to check: nothing streamed stays a warning until remount.
-                ...(synthetic ? settleLostReply({ context, messages, busy: false }) : {}),
-                messages,
-                streamText: "",
-                streamTools: [],
-              };
-            }
-            const reconciled = reconcilePendingWithDiagnostics({
-              serverMessages: event.output.entries,
-              pendingMessages: context.pendingMessages,
-            });
-            return {
-              ...settleLostReply({ context, messages: reconciled.messages, busy: event.output.busy }),
-              messages: reconciled.messages,
-              pendingMessages: reconciled.pendingMessages,
-              sessionId: event.output.sessionId,
-              totalEntries: event.output.total,
-              processRunning: event.output.running,
-              processBusy: event.output.busy,
-              streamText: "",
-              streamTools: [],
-            };
-          }),
+          actions: assign(({ context, event }) => applyRefreshedHistory({ context, output: event.output })),
         },
         onError: {
           target: "idle",
           actions: [
             ({ event }) => logFsm("refresh-error", {
-              msg: event.error instanceof Error ? event.error.message : String(event.error),
+              msg: errorMessage(event.error),
             }),
             assign({
               streamText: "",

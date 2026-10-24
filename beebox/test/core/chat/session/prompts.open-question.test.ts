@@ -11,10 +11,11 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { CHAT_SYSTEM_PROMPT } from "../../../../src/core/chat/session/prompts.js";
+import { chatSystemPrompt } from "../../../../src/core/chat/session/prompts.js";
 
 void test("The chat prompt explains open-question and the answer order", async (t) => {
-  const section = CHAT_SYSTEM_PROMPT.slice(CHAT_SYSTEM_PROMPT.indexOf("## An open question in this chat"), CHAT_SYSTEM_PROMPT.indexOf("## Commits"));
+  const prompt = chatSystemPrompt();
+  const section = prompt.slice(prompt.indexOf("## An open question in this chat"), prompt.indexOf("## Commits"));
   const sentence = (re: RegExp) => re.exec(section)?.[0] ?? null;
   t.check({
     command: sentence(/`bbx answer <path> --via chat "<their words>"`/),
@@ -22,13 +23,17 @@ void test("The chat prompt explains open-question and the answer order", async (
     noJob: sentence(/a chat answer writes no follow-up job/),
     narration: sentence(/Never answer a card from a `narration="on"` message/),
     unrelated: sentence(/If it is about something else, reply to it and leave the card pending/),
-    answered: sentence(/if the card is already answered, ignore the attribute/),
+    answered: sentence(/If the card is already answered, ignore the attribute/),
+    rootTask: sentence(/on the root question \(`what-to-keep-track-of`\): there a concrete task counts as the answer/),
+    saySo: sentence(/When you answer, say so in one line, naming the question/),
   }, {
     command: '`bbx answer <path> --via chat "<their words>"`',
     order: "answering is the last step",
     noJob: "a chat answer writes no follow-up job",
     narration: 'Never answer a card from a `narration="on"` message',
     unrelated: "If it is about something else, reply to it and leave the card pending",
-    answered: "if the card is already answered, ignore the attribute",
+    answered: "If the card is already answered, ignore the attribute",
+    rootTask: "on the root question (`what-to-keep-track-of`): there a concrete task counts as the answer",
+    saySo: "When you answer, say so in one line, naming the question",
   });
 });

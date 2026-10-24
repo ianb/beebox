@@ -162,7 +162,7 @@ interface IsIgnoredOptions {
 /**
  * Should this entry be excluded from walking and listing?
  *
- * Always-true cases: dotfiles (we never index `.gitignore`, `.beebox/box.json`, etc.)
+ * Always-true cases: dotfiles (we never index `.gitignore`, `.beebox/`, etc.)
  * and meta files (the MAP.md, either instruction filename, and the state file
  * we generate ourselves).
  * Then any matching ignore pattern.

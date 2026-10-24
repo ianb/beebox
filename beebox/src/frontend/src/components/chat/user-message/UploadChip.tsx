@@ -10,12 +10,14 @@
  */
 
 import { useParams } from "@tanstack/react-router";
+import { encodePathForUrl } from "../../../lib/view-url";
 import { withBase } from "../../../api";
 import type { UploadChipModel } from "./upload-message";
+import { CaptureBadge } from "../CaptureChip";
 
 export function UploadChip({ model }: { model: UploadChipModel }) {
   const { boxSlug } = useParams({ strict: false });
-  const href = withBase(`/${boxSlug ?? ""}/browse/${model.doc}`);
+  const href = withBase(`/${boxSlug ?? ""}/browse/${encodePathForUrl(model.doc)}`);
   const fileLabel = `${String(model.files)} file${model.files === 1 ? "" : "s"}`;
   const sizeLabel = model.bytes === "" ? "" : ` · ${model.bytes}`;
   return (
@@ -23,7 +25,7 @@ export function UploadChip({ model }: { model: UploadChipModel }) {
       {model.note !== "" ? (
         <div className="text-sm whitespace-pre-wrap mb-1.5">{model.note}</div>
       ) : null}
-      <a href={href} className="bbx-chat-user-attachment block rounded-lg bg-white/10 px-3 py-2 hover:bg-white/20">
+      <a href={href} className="bbx-chat-user-attachment block rounded-lg bg-black/15 px-3 py-2 hover:bg-black/25">
         <div className="flex items-center gap-1.5 text-sm font-medium">
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
@@ -33,9 +35,7 @@ export function UploadChip({ model }: { model: UploadChipModel }) {
         {model.summary !== "" ? <div className="bbx-chat-user-attachment-summary mt-0.5 text-xs text-white/85">{model.summary}</div> : null}
         {model.failed > 0 ? (
           <div className="mt-1">
-            <span className="bbx-chat-user-attachment-badge inline-flex items-center rounded-full bg-white/25 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-              {model.failed} failed
-            </span>
+            <CaptureBadge label={`${String(model.failed)} failed`} />
           </div>
         ) : null}
       </a>

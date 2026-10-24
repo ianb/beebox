@@ -17,7 +17,7 @@ function literalTextOf(node: ts.Node): string | null {
   return null;
 }
 
-export function specifierLiteralsOf(sourceFile: ts.SourceFile): SpecifierLiteral[] {
+function specifierLiteralsOf(sourceFile: ts.SourceFile): SpecifierLiteral[] {
   const literals: SpecifierLiteral[] = [];
   function record(node: ts.Node): void {
     literals.push({ start: node.getStart(sourceFile), end: node.getEnd(), text: literalTextOf(node) ?? "" });

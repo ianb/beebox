@@ -2,9 +2,8 @@
  * The SDK message-pump skeleton for ChatSession: iterate a run's messages, adapt each, hand it to the
  * session, surface iterator errors as an "error" signal, and run a teardown
  * step in a `finally` when the run ends. The per-message and teardown bodies
- * differ between the two sessions (durability, queue draining, chat-response
- * extraction), so those stay as callbacks — this owns only the try/catch/finally
- * scaffolding, which was duplicated verbatim.
+ * (durability, queue draining) stay as callbacks; this owns only the
+ * try/catch/finally scaffolding.
  */
 
 import type { ChatBackendRun } from "../../../../services/claude-chat/core.js";

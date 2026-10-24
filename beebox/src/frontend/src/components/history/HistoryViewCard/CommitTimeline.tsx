@@ -13,7 +13,11 @@ import {
 } from "@shared/commit-trailers";
 import { type HistoryCommit } from "../../../api";
 import { bbxSource } from "../../../lib/source-tag";
-import { Badge, type BadgeTone } from "../../ui/Badge";
+import { Badge } from "../../ui/Badge";
+import { StatusMessage } from "../../ui/StatusMessage";
+import { phaseTone } from "../phase-tone";
+import { useBoxNow } from "../../../lib/box-clock";
+import { agoOnClock } from "../../../lib/relative-time";
 
 interface CommitTimelineProps {
   commits: HistoryCommit[];
@@ -29,41 +33,8 @@ interface CommitTimelineProps {
   idPrefix: string;
 }
 
-const PHASE_TONE: Record<string, BadgeTone> = {
-  intake: "info",
-  transcribe: "info",
-  "describe-images": "info",
-  summarize: "warning",
-  "plan-extraction": "warning",
-  assemble: "warning",
-  extract: "warning",
-  archive: "success",
-  refresh: "info",
-};
-
 function PhaseBadge({ phase }: { phase: string }) {
-  return <Badge tone={PHASE_TONE[phase] ?? "neutral"} size="sm">{phase}</Badge>;
-}
-
-/**
- * Relative time display.
- */
-function relativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-
-  return date.toLocaleDateString();
+  return <Badge tone={phaseTone(phase)} size="sm">{phase}</Badge>;
 }
 
 /**
@@ -106,32 +77,32 @@ function formatDuration(fromDate: string, toDate: string): string | null {
 }
 
 /**
- * Colored pill badges: "add N", "del N", "+X-Y in N" for modified files.
+ * Tone badges: "add N", "del N", "+X-Y in N" for modified files.
  */
 function FileStatBadges({ stat }: { stat: { added: number; modified: number; deleted: number; renamed: number; insertions: number; deletions: number } }) {
   return (
     <>
       {stat.added > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success-100 text-success-dark font-medium">
+        <Badge tone="success" size="sm">
           add {stat.added}
-        </span>
+        </Badge>
       ) : null}
       {stat.modified > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning-100 text-warning-dark font-medium">
+        <Badge tone="warning" size="sm">
           {stat.insertions > 0 || stat.deletions > 0
             ? `+${stat.insertions}-${stat.deletions} in ${stat.modified}`
             : `mod ${stat.modified}`}
-        </span>
+        </Badge>
       ) : null}
       {stat.renamed > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+        <Badge tone="info" size="sm">
           mv {stat.renamed}
-        </span>
+        </Badge>
       ) : null}
       {stat.deleted > 0 ? (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-danger-100 text-danger-dark font-medium">
+        <Badge tone="danger" size="sm">
           del {stat.deleted}
-        </span>
+        </Badge>
       ) : null}
     </>
   );
@@ -163,7 +134,7 @@ function CommitRow({
   const ariaLabel = [
     `Commit ${commit.hash.substring(0, 7)}`,
     commit.subject,
-    relativeTime(commit.date),
+    agoOnClock(commit.date, "box"),
     phase ? `phase ${phase}` : null,
     ...triggers.map((trigger) => `triggered by ${triggerLabel(trigger)}`),
     step === undefined ? null : `step ${step}`,
@@ -180,14 +151,14 @@ function CommitRow({
       }`}
     >
       <div className="flex items-center gap-1.5 mb-0.5">
-        <code className="text-[10px] text-warm-500">
+        <code className="text-[10px] text-warm-700">
           {commit.hash.substring(0, 7)}
         </code>
-        <span className="text-[10px] text-warm-500">
-          {relativeTime(commit.date)}
+        <span className="text-[10px] text-warm-700">
+          {agoOnClock(commit.date, "box")}
         </span>
         {phase ? <PhaseBadge phase={phase} /> : null}
-        {duration ? <span className="text-[10px] text-warm-500 font-mono">{duration}</span> : null}
+        {duration ? <span className="text-[10px] text-warm-700 font-mono">{duration}</span> : null}
       </div>
       <div className="text-sm text-warm-800 truncate">
         {commit.subject}
@@ -195,12 +166,12 @@ function CommitRow({
       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
         {commit.fileStat ? <FileStatBadges stat={commit.fileStat} /> : null}
         {triggers.map((trigger) => (
-          <span key={trigger.id} className="text-[10px] text-warm-500">
+          <span key={trigger.id} className="text-[10px] text-warm-700">
             {triggerLabel(trigger)}
           </span>
         ))}
         {step === undefined ? null : (
-          <span className="text-[10px] text-warm-500">step {step}</span>
+          <span className="text-[10px] text-warm-700">step {step}</span>
         )}
       </div>
     </button>
@@ -218,6 +189,8 @@ export function CommitTimeline({
   activeSession,
   idPrefix,
 }: CommitTimelineProps) {
+  // Re-render each minute so the commit ages stay current.
+  useBoxNow(60_000);
   const groups = groupBySession(commits);
 
   // Build a map of commit hash -> previous commit date (earlier in time).
@@ -284,7 +257,7 @@ export function CommitTimeline({
         ));
       })}
 
-      {loading ? <div className="p-3 text-sm text-warm-500 text-center">Loading...</div> : null}
+      {loading ? <StatusMessage>Loading...</StatusMessage> : null}
 
       {hasMore && !loading ? <button
           id={`${idPrefix}-load-more`}
@@ -295,7 +268,7 @@ export function CommitTimeline({
         </button> : null}
 
       {!loading && commits.length === 0 && (
-        <div className="p-4 text-sm text-warm-500 text-center">
+        <div className="p-4 text-sm text-warm-700 text-center">
           No commits found
         </div>
       )}

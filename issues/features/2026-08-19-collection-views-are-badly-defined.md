@@ -546,3 +546,12 @@ Checked as a possible duplicate: it is not. Neighbours are adjacent, not the sam
 ## Re-encounter 2026-10-08 (journey walks)
 
 The missing primitive came up again in three walks. [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 83): the walker wanted one front door that shows the list; the agent invented a card type and a view to make one (commit `80ee539`), and the landmark card itself shows only its config (row 29). [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 88) and [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 48): the biggest wish of both walks was one plain page listing all containers ("the menu item Inventory just opens the index. One thing, one name."). Decision needed (B2 R4): both inventory walks put counts as prose on `doc` cards and made no `record` cards. Whether a doc per container is the intended shape, or items should be `record` cards with `quantity`, has not been decided. The earlier mechanism (a type search that finds the Storage `inventory` card) was not seen in B2, but the outcome was the same.
+
+## Re-encounter 2026-10-22 (journey walks)
+
+Two walks of journeys that this issue names produced new data shapes again.
+
+- [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (rows 18, 23, 32): one prose `doc` card with sections and no type. The facts are on the front, but the walker said "it's a prose page, not a table, so 'who has what' is read-through, not scannable", and asked for a checkable "returned" state per item and an "unsure" mark visible at a glance. The good table appeared only in chat. On 2026-10-09 the agent built a `loan` type and the facts went behind Properties.
+- [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-22.md) (rows 9, 30): without asking or telling the person, the agent wrote a box-local `storage` type (one card per container, items in a frontmatter array), then a `stock-list` type and a view that reads every `*.storage.card` through a `dependencies` glob and shows one alphabetical list with a "Do I have…?" filter. The walker: "This is the thing I wanted." On 2026-10-09 it used `record` cards. The view shows that the glob-over-cards primitive works when an agent builds it by hand.
+
+Each run of a journey produces a different shape, and each loses something the person asked for.

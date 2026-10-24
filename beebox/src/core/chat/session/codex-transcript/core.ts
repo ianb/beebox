@@ -12,6 +12,7 @@ import * as fs from "node:fs";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { realpathThreadCwd, retiredV2ContentCwds } from "./v2-cwd.js";
 import { writeFileAtomic } from "../../../../lib/atomic-write.js";
+import { isWithin } from "../../../../lib/box-containment.js";
 
 const threadReadSchema = z.object({
   thread: z.looseObject({
@@ -141,8 +142,7 @@ class CodexSessionOutsideBoxError extends Error {
 /** `thread/read` accepts any known ID, so enforce the box boundary ourselves. */
 export function assertCodexThreadCwd(boxRoot: string, threadCwd: string): void {
   const realBoxRoot = fs.realpathSync(boxRoot);
-  const relative = path.relative(realBoxRoot, realpathThreadCwd(boxRoot, threadCwd));
-  if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) return;
+  if (isWithin(realBoxRoot, realpathThreadCwd(boxRoot, threadCwd))) return;
   throw new CodexSessionOutsideBoxError();
 }
 

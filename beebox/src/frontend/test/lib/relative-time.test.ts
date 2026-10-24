@@ -1,36 +1,34 @@
-// # Elapsed-time labels
+// # Ago on a named clock
 //
-// Two surfaces have to say how old something is: a recovered dictation draft
-// ("captured 3 min ago") and a stuck capture chip in chat, whose whole defect was
-// that it looked identical whether it failed ten seconds or three weeks ago. Both
-// take elapsed milliseconds, so the caller owns the clock and these stay
-// deterministic.
+// `agoOnClock` says how old a timestamp is on the box or browser clock. The
+// formatting itself is tested in `beebox/test/shared/relative-time.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { formatElapsed, formatAgo } from "../../src/lib/relative-time.js";
+import { agoOnClock } from "../../src/lib/relative-time.js";
+import { setBoxClockShift } from "../../src/lib/box-clock.js";
 
-// ## The magnitude, without a preposition
+const MIN = 60 * 1000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
+
+// ## A timestamp on a named clock
 //
-// `formatElapsed` is what a caption embeds mid-sentence ("still preparing —
-// 3 min"). It never returns "0 min": a duration being displayed at all is at
-// least a moment long, and "0 min" reads as a bug.
-void test("formatElapsed is what a caption embeds mid-sentence (\"still preparing — 3 min\").", async (t) => {
-  t.check([0, 10_000, 60_000, 3 * 60_000].map(formatElapsed).join(" / "), "1 min / 1 min / 1 min / 3 min");
+// `real` is the browser's clock, `box` adds the gap the server reported. A
+// string that does not parse comes back as written.
+void test("agoOnClock reads the named clock", async (t) => {
+  setBoxClockShift(0);
+  const real = Date.now();
+  t.check(agoOnClock(real - 5 * MIN, "real"), "5m ago");
+  t.check(agoOnClock(new Date(real - 3 * HOUR - MIN).toISOString(), "real"), "3h ago");
+  setBoxClockShift(DAY);
+  const stamp = new Date(real).toISOString();
+  const box = agoOnClock(stamp, "box");
+  const onReal = agoOnClock(stamp, "real");
+  setBoxClockShift(0);
+  t.check({ box, onReal }, { box: "1d ago", onReal: "just now" });
 });
 
-// Hours and days, with singular/plural days:
-void test("Hours and days, with singular/plural days:", async (t) => {
-  t.check([60 * 60_000, 3 * 60 * 60_000, 24 * 60 * 60_000, 48 * 60 * 60_000].map(formatElapsed).join(" / "), "1 hr / 3 hr / 1 day / 2 days");
-});
-
-// ## "ago", with a quiet zone for the recent past
-//
-// `formatAgo` adds the preposition — and below 45 seconds says "just now"
-// instead, because a freshly-failed capture reporting "1 min ago" is precision
-// the clock hasn't earned yet:
-void test("formatAgo adds the preposition — and below 45 seconds says \"just now\" instead...", async (t) => {
-  t.check([0, 10_000, 44_000].map(formatAgo).join(" / "), "just now / just now / just now");
-
-  t.check([60_000, 3 * 60 * 60_000, 16 * 24 * 60 * 60_000].map(formatAgo).join(" / "), "1 min ago / 3 hr ago / 16 days ago");
+void test("agoOnClock returns an unparseable string as written", async (t) => {
+  t.check(agoOnClock("not a date", "real"), "not a date");
 });

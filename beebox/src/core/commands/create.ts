@@ -24,6 +24,7 @@ import {
 import { loadCardFromText } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";
+import { getBoxTime } from "../../lib/time.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import { retiredTypeHint } from "../../cards/retired-types.js";
 
@@ -135,7 +136,7 @@ async function executeCreate(
   await fs.mkdir(path.dirname(fullPath), { recursive: true });
 
   // Generate content from template
-  const content = template.generate(parseResult.data);
+  const content = template.generate(parseResult.data, { now: getBoxTime(ctx.boxRoot) });
 
   // Validate the generated content in memory before writing. Use the
   // card-io dispatcher so frontmatter (Phase 2) cards are validated

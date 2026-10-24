@@ -24,6 +24,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode, errorMessage } from "../../shared/error-guards.js";
+import { writeFileAtomic } from "../../lib/atomic-write.js";
 
 const STATE_VERSION = 1;
 /** At most one persisted write per this interval — recency is a coarse hint,
@@ -132,11 +133,8 @@ export class HubState {
       lastActivity: Object.fromEntries(this.lastActivityBySlug),
     };
     try {
-      // Temp-file + rename so a reader (or a crash mid-write) never sees a
-      // half-written JSON file. rename() is atomic within the directory.
-      const tmpPath = `${this.statePath}.tmp`;
-      await fs.writeFile(tmpPath, JSON.stringify(payload, null, 2));
-      await fs.rename(tmpPath, this.statePath);
+      // A reader (or a crash mid-write) never sees a half-written JSON file.
+      await writeFileAtomic(this.statePath, { content: JSON.stringify(payload, null, 2), createDir: false });
     } catch (e) {
       // Best-effort: recency is a warm-start hint, not correctness-critical, so
       // a failed write must not crash the hub. Warn once so a persistently

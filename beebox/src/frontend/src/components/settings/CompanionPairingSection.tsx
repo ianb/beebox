@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import qrcode from "qrcode-generator";
+import { qrSvg } from "../../lib/qr-svg";
 import { getApiBase } from "../../api";
 import { useBoxName } from "../../hooks/useBoxName";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
@@ -40,13 +40,6 @@ function pairingDeepLink(token: string, boxName: string): string {
     pairingToken: token,
   });
   return `beebox://pair?${params.toString()}`;
-}
-
-function qrSvg(value: string): string {
-  const qr = qrcode(0, "M");
-  qr.addData(value);
-  qr.make();
-  return qr.createSvgTag({ cellSize: 5, margin: 3 });
 }
 
 /** The list is scoped to what the caller may reach, so the heading says which
@@ -147,7 +140,7 @@ export function CompanionPairingSection() {
   };
 
   return (
-    <Card as="section" aria-label="Companion app pairing" shadow>
+    <Card as="section" aria-label="Companion app pairing" shadow material>
       <Stack gap="md">
         <Stack gap="xs">
           <Heading level={2}>
@@ -183,7 +176,7 @@ export function CompanionPairingSection() {
             <div
               className="w-fit rounded border border-warm-200 bg-white p-3"
               aria-label="iOS pairing QR code"
-              dangerouslySetInnerHTML={{ __html: qrSvg(ticket.deepLink) }}
+              dangerouslySetInnerHTML={{ __html: qrSvg(ticket.deepLink, 5) }}
             />
             <Text size="xs" tone="muted">Expires {formatDate(ticket.expiresAt)}</Text>
             <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800">

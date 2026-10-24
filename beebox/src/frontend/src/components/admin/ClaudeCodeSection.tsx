@@ -8,6 +8,7 @@ import { useMachine } from "@xstate/react";
 import { claudeAuthMachine } from "../../machines/claudeAuthMachine.js";
 import { ExternalLink } from "../ui/ExternalLink";
 import { Button } from "../ui/Button";
+import { Notice } from "../ui/Notice";
 import { AdminSectionCard } from "./AdminSectionCard";
 import { useRefreshAgentReadinessOnLogin } from "../../hooks/useAgentReadiness";
 
@@ -29,7 +30,7 @@ export function ClaudeCodeSection() {
   if (isLoading) {
     return (
       <AdminSectionCard id="claude-code" description={DESCRIPTION} busy>
-        <p className="text-sm text-warm-600">Checking status...</p>
+        <p className="text-sm text-warm-700">Checking status...</p>
       </AdminSectionCard>
     );
   }
@@ -50,7 +51,7 @@ export function ClaudeCodeSection() {
         <div className="mb-4 p-3 bg-warm-50 border border-warm-300 rounded text-sm text-warm-700">
           Not authenticated
           {status?.error ? (
-            <span className="text-warm-500 ml-2">({status.error})</span>
+            <span className="text-warm-700 ml-2">({status.error})</span>
           ) : null}
         </div>
       )}
@@ -86,9 +87,7 @@ export function ClaudeCodeSection() {
       ) : null}
 
       {error ? (
-        <div className="mb-4 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
-          {error}
-        </div>
+        <Notice tone="error" className="mb-4">{error}</Notice>
       ) : null}
 
       <div className="flex gap-3">

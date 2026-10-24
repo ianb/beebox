@@ -3,14 +3,13 @@
  * Vite build does, so a test renders with the memoization a browser runs.
  * `.taprc` registers it for every test process; it touches only frontend
  * modules. Output is cached by content hash, because compiling the chat tree
- * costs seconds per process.
+ * costs seconds per process. Babel and esbuild load on the first cache miss:
+ * importing them costs about 100 ms, and most test processes never compile.
  */
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { createRequire, type LoadFnOutput, type LoadHook } from "node:module";
 import { fileURLToPath } from "node:url";
-import { transformAsync } from "@babel/core";
-import { transform } from "esbuild";
 
 const BEEBOX_SRC = fileURLToPath(new URL("../../../", import.meta.url));
 const FRONTEND_SRC = `${BEEBOX_SRC}frontend/src/`;
@@ -59,6 +58,7 @@ function compiles(path: string): boolean {
 }
 
 async function compile(path: string, source: string): Promise<string> {
+  const [{ transformAsync }, { transform }] = await Promise.all([import("@babel/core"), import("esbuild")]);
   const compiled = await transformAsync(source, {
     filename: path,
     babelrc: false,

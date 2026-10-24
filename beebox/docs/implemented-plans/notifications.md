@@ -481,6 +481,10 @@ per delivery are git history that is all plumbing (boxholder decision).
   that clears on foreground is the cheaper error, and the boxholder
   accepted the clearing rule. Channels not tried get a `skipped` delivery
   with `present` or `no-audience`.
+  A send reached the person when a channel sent it or an open app showed
+  it (`shown`: someone present and a loudness with a banner), so a `loud`
+  send on a box with no device is a success while the app is open and a
+  failure otherwise (`notificationReached`).
 - `src/core/notify-boxholder.ts`: `notifyBoxholder(boxRoot, intent, {
   services?, now? })` appends the intent, emits the bus event, calls each
   chosen channel's `send` once in process, and appends each delivery. No

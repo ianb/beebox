@@ -24,12 +24,12 @@ export interface AudienceDetail {
   /** Phones to push to: never printed or logged with their tokens. */
   apnsDevices: DevicePushRegistration[];
   webPushEndpoints: number;
-  /** `BBX_NOTIFY_FAKE=1`: every channel sends through its fake. */
+  /** Fake mode (`notifyFakeMode`): every channel sends through its fake. */
   fake: boolean;
 }
 
 export async function audienceDetail(boxRoot: string): Promise<AudienceDetail> {
-  const fake = notifyFakeMode();
+  const fake = notifyFakeMode(boxRoot);
   const devices = devicePushRegistrations(boxRoot);
   const endpoints = (await endpointsForBox(await boxSlug(boxRoot))).length;
   if (!fake) return { apnsDevices: devices, webPushEndpoints: endpoints, fake };

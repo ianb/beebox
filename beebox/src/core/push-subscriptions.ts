@@ -19,7 +19,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { BBX_STATE_DIR } from "../lib/state-dir.js";
-import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
+import { requestScopedLock, withFileLock } from "../lib/file-lock.js";
 import type { StoredPushSubscription, PushSubscriptionKeys } from "../services/push.js";
 import { errnoCode } from "../shared/error-guards.js";
 
@@ -114,12 +114,7 @@ async function saveStore(store: SubscriptionStore): Promise<void> {
   await writeFileAtomic(storePath(), { content: `${JSON.stringify(store, null, 2)}\n` });
 }
 
-const LOCK_RETRIES = 50;
-const LOCK_RETRY_MS = 100;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const LOCK_WAIT_MS = 5_000;
 
 /**
  * Run a read-modify-write under the cross-process lock, retrying briefly while
@@ -131,26 +126,15 @@ async function withStoreLock<T>(fn: (store: SubscriptionStore) => Promise<T> | T
   const lockPath = `${storePath()}.lock`;
   // Request-scoped: a short critical section whose callers fail fast (~5 s
   // retry budget), so a crashed holder must clear in seconds, not minutes.
-  const lock = requestScopedLock(lockPath);
-  for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-    try {
-      await acquireLock(lock, { purpose: "push-subscriptions" });
-    } catch (e) {
-      if (e instanceof LockHeldError) {
-        await delay(LOCK_RETRY_MS);
-        continue;
-      }
-      throw e;
-    }
-    try {
-      const store = await loadStore();
-      const result = await fn(store);
-      return result;
-    } finally {
-      await releaseLock(lock);
-    }
-  }
-  throw new PushStoreLockError(lockPath);
+  return withFileLock(
+    {
+      lockPath: requestScopedLock(lockPath),
+      metadata: { purpose: "push-subscriptions" },
+      waitMs: LOCK_WAIT_MS,
+      timeoutError: () => new PushStoreLockError(lockPath),
+    },
+    async () => fn(await loadStore()),
+  );
 }
 
 /** Thrown when the subscription store stays locked past the retry budget. */

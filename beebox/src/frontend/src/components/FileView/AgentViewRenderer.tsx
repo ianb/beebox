@@ -5,13 +5,14 @@
  * and subscribes to SSE for live updates.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
 import * as ReactDOM from "react-dom";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../../api";
 import type { ActivityKind } from "@core/chat/card-activity.js";
-import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
-import { useDeferredResync } from "../../hooks/useDeferredResync";
+import type { RealtimeEvent } from "../../hooks/useBusSubscription";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { ViewErrorBoundary } from "../ViewErrorBoundary";
 import { Pre } from "../ui/Pre";
 import { useViewFileHelpers, type ViewFile, type ViewFileHelpers } from "../../hooks/useViewFileHelpers";
@@ -201,8 +202,8 @@ interface CardsPayload {
  * `slug`+`qs` must never share a key; an SPA navigation that swaps boxes
  * while box A's request is still in flight must not hand box B's renderer
  * A's cards). Every bound card visible in a chat mounts its own
- * `AgentViewRenderer`, each with its own `useBusSubscription` — on a WS
- * reconnect, every instance's `onConnect` fires in the same tick, and
+ * `AgentViewRenderer`, each with its own bus subscription — on a WS
+ * reconnect, every instance resyncs in the same tick, and
  * without this, each issued its own bare `fetch` (56 identical
  * `/api/views/:slug/cards` GETs in one second, observed on prod).
  *
@@ -263,7 +264,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
       // would reset against the still-broken module and immediately re-throw.
       setReloadSeq((n) => n + 1);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     }
   }, [apiBase, slug]);
 
@@ -278,7 +279,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
       setCards(data.cards);
       setFiles(data.files);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiBase, slug, paramsString]);
@@ -303,46 +304,32 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
   }, [loadModule, loadCards]);
 
 
-  // Subscribe to the box event stream for live updates
-  const connectedOnceRef = useRef(false);
-  // Reconnect-driven resync goes through the coalescing/hidden-defer helper:
-  // N mounted instances of this same view (one per bound card visible in
-  // chat) all get onConnect in the same WS-reconnect tick, and a hidden tab
-  // shouldn't fetch at all until it's looked at again.
-  const triggerCardsResync = useDeferredResync(useCallback(() => { void loadCards({ refetch: true }); }, [loadCards]));
-  useBusSubscription({
-    onEvent: useCallback((event: RealtimeEvent) => {
-      const fileChange = busEventData(event, "file-change");
-      if (fileChange) {
-        const changedPath = fileChange.path;
-        // View source changed — reload module
-        if (viewSlugFromSourcePath(changedPath) === slug) {
-          void loadModule();
-        }
-        // Card changed — reload data. Non-card files reload too when they
-        // sit under a dependency glob's static prefix (e.g. an attach-scope
-        // .jsonl the view renders). `refetch: true`: this event IS the "the
-        // data just changed" signal, so a fetch already in flight must not
-        // be trusted to already reflect it.
-        const depPrefixes = (mod?.dependencies ?? [])
-          .map((d) => d.split("*")[0] ?? "")
-          .filter((prefix) => prefix !== "");
-        if (changedPath.endsWith(".card") || depPrefixes.some((prefix) => changedPath.startsWith(prefix))) {
-          void loadCards({ refetch: true });
-        }
-      }
-    }, [slug, loadModule, loadCards, mod]),
-    // Resync on a *re*connect: file-change events are transient and not replayed,
-    // so a card edited while the socket was dropped would otherwise leave the
-    // view stale. Skip the initial connect — the mount effect already loads.
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
-      triggerCardsResync();
-    }, [triggerCardsResync]),
-  });
+  // Live updates from the box event stream. Cards reload through
+  // `useLiveRefresh`: N mounted instances of this view (one per bound card
+  // visible in chat) coalesce, a hidden tab waits until shown, and a reconnect
+  // resyncs (file-change events are not replayed). `refetch: true`: the event
+  // IS the "the data just changed" signal, so a fetch already in flight must
+  // not be trusted to already reflect it.
+  //
+  // A change to the view's own source reloads the module at once, from the
+  // same subscription: `when` sees every event, and a module reload is not a
+  // card refresh.
+  const refreshCards = useCallback(() => { void loadCards({ refetch: true }); }, [loadCards]);
+  const cardsChanged = useCallback((event: RealtimeEvent) => {
+    const fileChange = busEventData(event, "file-change");
+    if (!fileChange) return false;
+    const changedPath = fileChange.path;
+    if (viewSlugFromSourcePath(changedPath) === slug) {
+      void loadModule();
+    }
+    // Non-card files count when they sit under a dependency glob's static
+    // prefix (e.g. an attach-scope .jsonl the view renders).
+    const depPrefixes = (mod?.dependencies ?? [])
+      .map((d) => d.split("*")[0] ?? "")
+      .filter((prefix) => prefix !== "");
+    return changedPath.endsWith(".card") || depPrefixes.some((prefix) => changedPath.startsWith(prefix));
+  }, [slug, loadModule, mod]);
+  useLiveRefresh({ when: cardsChanged, refresh: refreshCards });
 
   const fileHelpers = useViewFileHelpers(apiBase);
   const report = useCallback((kind: ActivityKind, detail?: string) => { reportActivity?.(kind, detail); }, [reportActivity]);

@@ -28,17 +28,12 @@
   border-bottom: 2px solid #c6d8bc;
   box-shadow: 0 3px 0 #77b6b51f;
 }
-[data-chrome-theme="goldfish"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill) {
+[data-chrome-theme="goldfish"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill) {
   color: #f2f5eb;
-  background: #397280;
+  background: #30656f;
   border: 1px solid #8ebfbe;
   border-radius: 18px 18px 14px 14px;
   box-shadow: 0 2px #518d8b24;
-}
-[data-chrome-theme="goldfish"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill)[aria-pressed="true"] {
-  color: #fff8ee;
-  background: #626aab;
-  border-color: #aeb6df;
 }
 [data-chrome-theme="goldfish"] :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-composer-material) {
   color: #294d4b;
@@ -61,7 +56,7 @@
   --tw-prose-links: #27686c;
   color: #294d4b;
 }
-[data-chrome-theme="goldfish"] .bbx-chat-callout > .text-accent-dark {
+[data-chrome-theme="goldfish"] .bbx-chat-callout > .bbx-chat-callout-context {
   color: #566b58;
 }
 [data-chrome-theme="goldfish"] .bbx-composer-material > section {
@@ -73,8 +68,8 @@
   background: #f6f8ed;
   border-color: #93bfaf;
 }
-[data-chrome-theme="goldfish"] .bbx-composer-material textarea::placeholder { color: #61796b; }
-[data-chrome-theme="goldfish"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+[data-chrome-theme="goldfish"] .bbx-composer-material textarea::placeholder { color: #5e7568; }
+[data-chrome-theme="goldfish"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   color: #fff8ee;
   background: #626aab;
   border: 1px solid #4f578e;
@@ -89,7 +84,7 @@
 .bbx-card-theme[data-card-theme="goldfish"] {
   --bbx-paper: #f6f8ed;
   --bbx-ink: #294d4b;
-  --bbx-ink-soft: #617364;
+  --bbx-ink-soft: #56675a;
   --bbx-pen: #27686c;
   --bbx-edge: #93bfaf;
   --bbx-underlay: #b1d8c6;
@@ -119,7 +114,7 @@
   outline-offset: 3px;
 }
 @media (hover: hover) {
-  [data-chrome-theme="goldfish"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill):hover { box-shadow: 0 3px 0 #518d8b45; }
+  [data-chrome-theme="goldfish"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill):hover { box-shadow: 0 3px 0 #518d8b45; }
 }
 @media (max-width: 639px) {
   .bbx-box-presentation[data-chrome-theme="goldfish"]:not(.bbx-system-theme-preview)::before {
@@ -135,7 +130,7 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-  background: linear-gradient(110deg, #174e65e8, #247d83d9 58%, #525e97e3), url("./goldfish-underwater.webp") center 12% / 1300px auto;
+  background: linear-gradient(110deg, #174e65e8, #247d83d9 58%, #525e97e3), url("./goldfish-underwater.webp") center 12% / max(1300px, 100%) auto;
 }
 [data-chrome-theme="goldfish"] .bbx-app-nav::before {
   content: "";

@@ -69,7 +69,7 @@ void test("Neither is a problem, and a permanent \"not connected\" line would be
   const live = await googleAuthHealthChecks(tmp, { now: NOW });
   await t.checkText(describe(live), "[{\"name\":\"google-auth\",\"ok\":true,\"severity\":\"warning\"}]");
 
-  t.check(live[0]?.message, str`Google authorization is live (last verified ${any(String)} ago)`);
+  t.check(live[0]?.message, str`Google authorization is live (last verified ${any(String)})`);
 
   // ## A dead grant is a warning naming the breakage, the impact, and the fix
   //
@@ -81,7 +81,7 @@ void test("Neither is a problem, and a permanent \"not connected\" line would be
   const dead = await googleAuthHealthChecks(tmp, { now: NOW });
   await t.checkText(describe(dead), "[{\"name\":\"google-auth\",\"ok\":false,\"severity\":\"warning\"}]");
 
-  t.check(dead[0]?.message, str`Google authorization expired or was revoked ${any(String)} ago (Token has been expired or revoked.) — Gmail, Calendar and Drive sync are paused. Reconnect at /${any(String)}/admin?reconnect=google`);
+  t.check(dead[0]?.message, str`Google authorization expired or was revoked ${any(String)} (Token has been expired or revoked.) — Gmail, Calendar and Drive sync are paused. Reconnect at /${any(String)}/admin?reconnect=google`);
 
   // The link points at the admin page's Google Services section rather than a
   // one-click reconnect: `googleSetup` is owner-gated and mints a one-time nonce, so

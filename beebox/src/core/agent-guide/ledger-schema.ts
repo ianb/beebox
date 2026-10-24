@@ -7,7 +7,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 

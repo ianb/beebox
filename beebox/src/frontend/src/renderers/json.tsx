@@ -11,7 +11,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRawFileUrl, getApiBase } from "../api";
-import { formatBytes } from "../lib/format-bytes";
+import { humanBytes } from "@shared/human-bytes";
 import { Stack } from "../components/ui/Stack";
 import { Row } from "../components/ui/Row";
 import { Text } from "../components/ui/Text";
@@ -43,7 +43,7 @@ function LargeFilePrompt({ path, url, size, contentType, onLoad }: LargeFileProm
       <Text as="div" size="lg" weight="bold">{basename}</Text>
       <Text as="div" tone="subtle" size="sm" mono breakAll>{path}</Text>
       <Stack gap="xs">
-        {size === null ? null : <Text as="div" size="sm"><Text tone="subtle">Size:</Text> {formatBytes(size)}</Text>}
+        {size === null ? null : <Text as="div" size="sm"><Text tone="subtle">Size:</Text> {humanBytes(size)}</Text>}
         {contentType === null ? null : <Text as="div" size="sm"><Text tone="subtle">Type:</Text> {contentType}</Text>}
       </Stack>
       <Text as="div" tone="subtle" size="sm">
@@ -51,7 +51,7 @@ function LargeFilePrompt({ path, url, size, contentType, onLoad }: LargeFileProm
       </Text>
       <Row gap="sm">
         <Button intent="primary" size="sm" onClick={onLoad}>
-          {size === null ? "Load JSON" : `Load JSON (${formatBytes(size)})`}
+          {size === null ? "Load JSON" : `Load JSON (${humanBytes(size)})`}
         </Button>
         <ExternalLink href={url} variant="button" download={basename}>Download</ExternalLink>
       </Row>
@@ -147,7 +147,7 @@ function JsonRenderer({ data }: RendererProps) {
   return (
     <div className="p-4">
       <Row justify="between" align="center" gap="sm" className="mb-2">
-        <Text size="xs" tone="subtle">{size === null ? null : formatBytes(size)}</Text>
+        <Text size="xs" tone="subtle">{size === null ? null : humanBytes(size)}</Text>
         <ExternalLink href={url} download={basename}>Download</ExternalLink>
       </Row>
       <Pre>{parsed.pretty}</Pre>

@@ -15,7 +15,7 @@ import { touchesDeployedPath } from "./deployed-paths.js";
 
 /** One thing finish-verify runs, with everything it needs to run it. */
 export interface VerificationCommand {
-  kind: "tests" | "typecheck" | "lint" | "smoke" | "site" | "apple";
+  kind: "tests" | "typecheck" | "lint" | "smoke" | "site" | "apple" | "theme";
   /** What the agent would type; also the display name in finish-verify output. */
   command: string;
   /** Repo-root-relative directory to run in. */
@@ -160,6 +160,33 @@ export function touchesSiteInput(paths: string[]): boolean {
   return paths.some((path) => path.startsWith("site/") || isDocPath(path));
 }
 
+/**
+ * Theme styles, the primitives and palette that pick ink and surfaces, the
+ * studio that stages them, the theme catalog, and the contrast checker: what
+ * `bin/theme-check --all` measures or runs.
+ */
+export function touchesThemeSurface(paths: string[]): boolean {
+  const prefixes = [
+    "beebox/src/frontend/src/themes/",
+    "beebox/src/frontend/src/components/themes/",
+    // The primitives that choose ink and surface, and the palette.
+    "beebox/src/frontend/src/components/ui/",
+    "beebox/src/frontend/tailwind.config.js",
+    "beebox/src/frontend/src/pages/dev/theme-studio",
+    "beebox/src/frontend/src/pages/dev/ThemeStudioPage.tsx",
+    "beebox/src/frontend/src/pages/dev/components/ThemeStudio",
+    "beebox/src/shared/card-theme/",
+    "beebox/src/shared/theme-screens.ts",
+    "beebox/src/shared/theme-studio-case.ts",
+    "beebox/test/tours/theme-check.ts",
+    "beebox/test/tours/tour-lib/contrast",
+    "beebox/test/tours/tour-lib/backdrop",
+    "beebox/test/tours/tour-lib/rules",
+    "bin/theme-check",
+  ];
+  return paths.some((path) => prefixes.some((prefix) => path.startsWith(prefix)));
+}
+
 /** Any non-test, non-doc source in the diff — what Track O and lint exist for. */
 export function hasCodeChange(paths: string[]): boolean {
   return paths.some((path) => !isDocPath(path) && !isTestPath(path));
@@ -253,7 +280,7 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
     // excuses them; typecheck and lint additionally skip on the
     // nothing-changed-since-verified rule.
     const behavioural =
-      command.kind === "tests" || command.kind === "smoke" || command.kind === "apple";
+      command.kind === "tests" || command.kind === "smoke" || command.kind === "apple" || command.kind === "theme";
     const skip = docsOnly ? "docs-only diff" : undefined;
     const reason = behavioural ? skip : skipTypeLint;
     commands.push(reason === undefined ? command : { ...command, skip: reason });
@@ -316,6 +343,12 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
   // ios-app/ changes nothing a running box would show.
   if (touchesDeployedPath(input.paths)) {
     add({ kind: "smoke", command: "bin/smoke", cwd: ".", argv: ["bin/smoke"] });
+  }
+
+  // Every catalog theme in the studio, measured for contrast. Needs the dev
+  // router, like the tours it shares its audit with.
+  if (touchesThemeSurface(input.paths)) {
+    add({ kind: "theme", command: "bin/theme-check --all", cwd: ".", argv: ["bin/theme-check", "--all"] });
   }
 
   // The public site's canonical build: what Cloudflare runs on every push of

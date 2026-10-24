@@ -160,3 +160,49 @@ as in the third window.
 
 No bug filed in this window is traced to an unwalked landing. The hourly
 full-suite run caught no regressions on `main`.
+
+## Evidence, fifth window (2026-10-21 review)
+
+Window 2026-10-14T20:56Z to 2026-10-21T21:04Z. The counting rule is the same
+as in the third window.
+
+- 144 landings; 75 code landings. The rule finds 50 walked and 25 not walked.
+- **The rule miscounts five of those 25.** The history of `main` from about
+  2026-10-08 18:00 CDT to 2026-10-15 was rewritten. The backup refs
+  `refs/backup/devprocess-talk-before-purge` and
+  `refs/backup/devprocess-talk-before-squash` remain. 59 runs in
+  `beebox-smoke-log.jsonl` (2026-10-08 to 2026-10-15) name commits that no
+  longer exist. Five 2026-10-15 merges each have a green walk on their branch
+  1 to 2 minutes before the merge, on a commit that the rewrite replaced:
+  `e3764b15d` (busy-send-rejection), `02292aa44` (activity-detail),
+  `6f5ee4d56` and `15daff865` (clerk-quick-send), and `7288c7906`
+  (background-provider). With these five counted, 55 of 75 were walked (73%,
+  down from 76%).
+- The rewrite also breaks earlier evidence in this issue. `22c4338fe`,
+  `d6a3edf05` and `c046d627f` (fourth window) and the fourth review's own
+  landing, `22dd0d318`, no longer resolve. Find them by subject and date.
+- **Largest unwalked landing:** `b28d11ae2` (`worktree-front-door`,
+  2026-10-20), 16 commits and 103 deployed files, 46 of them in
+  `beebox/src/frontend`. The log has no run on that branch.
+- `worktree-ts7` twice with no walk: `36458a6ea` (47 files, including
+  `beebox/deploy/deploy.sh`, `beebox/package.json` and `beebox/src/cli`) and
+  `79b8665ed` (`beebox/src/scripts`).
+- `worktree-theme-polish` again: `df255a11a` (2026-10-16 16:26 CDT, 11 files
+  in `beebox/src/frontend` and `shared`) has no walk. The branch's next walks
+  ran 6 hours later, on later commits.
+- Schedule merges with no walk: `worktree-sdk-update` 4 times (`35578dec6`,
+  `ec6be61c5`, `b389236f9`, `40b5f43ef`), `worktree-knip-sweep` once
+  (`e93bbb83c`, 20 files across `cli`, `core`, `dev`, `frontend`), and
+  `worktree-supplemental-lint` once (`9e722842b`, `beebox/src/webapp`).
+- Direct commits on `main` with no walk: 8, up from 5. Three change frontend
+  source: `f63b8278c` (remove nine themes, 20 files), `adbde2ced` (voice
+  send phrase) and `d83140308` (chat send-tag pill). The others are
+  `9e24c0fc5` and `345d354f9` (secret store, `beebox/src/hub` and `core`),
+  `159fd6e36` (`deploy.sh`), `6f9e57dbf` (`beebox/src/shared`) and
+  `939881165` (test helpers only).
+- `worktree-doctest-typecheck` merges `d90468723` and `46aa2f6d8` have no walk
+  on their own commits, but the branch has seven green walks on 2026-10-18.
+  `46aa2f6d8` changes only test files.
+
+No bug filed in this window is traced to an unwalked landing. The hourly
+full-suite run caught no regressions on `main`.

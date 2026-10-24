@@ -10,6 +10,10 @@
  *     opens at the index matching the clicked element. Used by the
  *     <Image lightbox> primitive so any image marked with these data
  *     attributes becomes part of one navigation set.
+ *
+ * A marker may also carry `data-image-card`, the box path of the image card it
+ * shows. A link to an image card opens here instead of the card page, and
+ * passes `openCard` so the lightbox can still offer "Open card".
  */
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
@@ -23,11 +27,18 @@ const ImageLightbox = lazyOverlay(() => import("./ImageLightbox"), (m) => m.Imag
 interface LightboxState {
   images: LightboxImage[];
   index: number;
+  openCard: ((cardPath: string) => void) | undefined;
+}
+
+export interface OpenFromElementOptions {
+  /** Opens the card an image came from; the lightbox shows "Open card" when given. */
+  openCard?: (cardPath: string) => void;
 }
 
 interface LightboxContextValue {
   openList: (images: LightboxImage[], index: number) => void;
-  openFromElement: (element: HTMLElement) => void;
+  /** False when `element` carries no `data-image-src` the document collects; nothing opened. */
+  openFromElement: (element: HTMLElement, options?: OpenFromElementOptions) => boolean;
   close: () => void;
 }
 
@@ -49,10 +60,22 @@ class LightboxContextError extends Error {
  * canonical ordering, while any individual marker the bulk list missed
  * still shows up at its document position.
  */
-function collectImages(): LightboxImage[] {
+export function collectImages(root: ParentNode): LightboxImage[] {
   const merged: LightboxImage[] = [];
-  const seen = new Set<string>();
-  const nodes = document.querySelectorAll<HTMLElement>("[data-image-src], [data-image-list]");
+  const bySrc = new Map<string, LightboxImage>();
+  // The first marker for a `src` keeps its place; a later one with the same
+  // `src` can still say which card it came from (an embed, or chat's bulk
+  // list, usually precedes the link that names the card).
+  const add = (image: LightboxImage) => {
+    const kept = bySrc.get(image.src);
+    if (kept === undefined) {
+      bySrc.set(image.src, image);
+      merged.push(image);
+    } else if (kept.cardPath === undefined && image.cardPath !== undefined) {
+      kept.cardPath = image.cardPath;
+    }
+  };
+  const nodes = root.querySelectorAll<HTMLElement>("[data-image-src], [data-image-list]");
   for (const node of nodes) {
     if (node.hasAttribute("data-image-list")) {
       const raw = node.textContent;
@@ -67,19 +90,16 @@ function collectImages(): LightboxImage[] {
       if (!Array.isArray(parsed)) continue;
       for (const entry of parsed) {
         const image = coerceLightboxImage(entry);
-        if (image && !seen.has(image.src)) {
-          seen.add(image.src);
-          merged.push(image);
-        }
+        if (image) add(image);
       }
     } else {
       const src = node.dataset.imageSrc;
-      if (!src || seen.has(src)) continue;
-      seen.add(src);
-      merged.push({
+      if (!src) continue;
+      add({
         src,
         alt: node.dataset.imageAlt || "",
         caption: node.dataset.imageCaption,
+        cardPath: node.dataset.imageCard || undefined,
       });
     }
   }
@@ -93,6 +113,7 @@ function coerceLightboxImage(value: unknown): LightboxImage | null {
     src: value.src,
     alt: typeof value.alt === "string" ? value.alt : "",
     caption: typeof value.caption === "string" ? value.caption : undefined,
+    cardPath: typeof value.cardPath === "string" && value.cardPath !== "" ? value.cardPath : undefined,
   };
 }
 
@@ -103,19 +124,21 @@ export function LightboxProvider({ children }: { children: ReactNode }) {
 
   const openList = useCallback((images: LightboxImage[], index: number) => {
     if (images.length === 0) return;
-    setState({ images, index });
+    setState({ images, index, openCard: undefined });
   }, []);
 
-  const openFromElement = useCallback((element: HTMLElement) => {
+  const openFromElement = useCallback((element: HTMLElement, options?: OpenFromElementOptions) => {
     const clickedSrc = element.dataset.imageSrc;
-    const merged = collectImages();
-    if (merged.length === 0) return;
+    const merged = collectImages(document);
     const index = clickedSrc === undefined
       ? -1
       : merged.findIndex((img) => img.src === clickedSrc);
-    if (index === -1) return;
-    setState({ images: merged, index });
+    if (index === -1) return false;
+    setState({ images: merged, index, openCard: options?.openCard });
+    return true;
   }, []);
+
+  const handleOpenCard = state?.openCard;
 
   const value = useMemo<LightboxContextValue>(
     () => ({ openList, openFromElement, close }),
@@ -131,10 +154,16 @@ export function LightboxProvider({ children }: { children: ReactNode }) {
           index={state.index}
           onIndexChange={(index) => setState((s) => (s ? { ...s, index } : s))}
           onClose={close}
+          onOpenCard={handleOpenCard}
         />
       ) : null}
     </LightboxContext.Provider>
   );
+}
+
+/** The lightbox when a provider is mounted; `null` for Markdown rendered outside the app shell (tests, server render). */
+export function useOptionalLightbox(): LightboxContextValue | null {
+  return useContext(LightboxContext);
 }
 
 export function useLightbox(): LightboxContextValue {

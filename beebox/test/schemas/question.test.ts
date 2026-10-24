@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { isoDate, str } from "@ianbicking/tap-check/check";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import {
   QuestionSchema,
   questionState,
@@ -19,6 +19,8 @@ import {
   createConfirmQuestionTemplate,
 } from "../../src/schemas/question.js";
 import { getTemplate } from "../../src/templates-registry.js";
+import { getBoxTime } from "../../src/lib/time.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const ASKED_AT = "2026-07-10T09:00:00-07:00";
 
@@ -29,6 +31,16 @@ function baseFields(overrides?: Record<string, unknown>): Record<string, unknown
     input: { type: "text" },
     ...overrides,
   };
+}
+
+/**
+ * The parse outcome of `baseFields(overrides)`: `valid`, or each issue as
+ * `path: message`. Where the message is zod's own wording, a check pins only
+ * the path, since that wording changes between zod releases.
+ */
+function issues(overrides: Record<string, unknown>): string {
+  const parsed = QuestionSchema.frontmatterSchema.safeParse(baseFields(overrides));
+  return parsed.success ? "valid" : parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
 }
 
 // ## Registered templates expose the answer contract (directive / learning / expires-after)
@@ -42,47 +54,25 @@ function baseFields(overrides?: Record<string, unknown>): Record<string, unknown
 function renderTemplate(name: string, rawArgs: unknown) {
   const def = getTemplate(name);
   if (def === undefined) throw new Error(`no template ${name}`);
-  return def.generate(def.argsSchema.parse(rawArgs));
+  return def.generate(def.argsSchema.parse(rawArgs), { now: new Date(ASKED_AT) });
 }
 
 // ## `input` refinement: select requires at least two options
 void test("`input` refinement: select requires at least two options", async (t) => {
-  t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ input: { type: "select" } })).success, false);
+  t.check(issues({ input: { type: "select" } }), "input.options: select questions require at least two options");
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({ input: { type: "select", options: [{ id: "a", label: "A" }] } })
-    ).success,
-    false,
-  );
+  t.check(issues({ input: { type: "select", options: [{ id: "a", label: "A" }] } }), "input.options: select questions require at least two options");
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({
-        input: { type: "select", options: [{ id: "a", label: "A" }, { id: "b", label: "B" }] },
-      })
-    ).success,
-    true,
-  );
+  t.check(issues({ input: { type: "select", options: [{ id: "a", label: "A" }, { id: "b", label: "B" }] } }), "valid");
 });
 
 // ## `input` refinement: confirm and text must not carry options
 void test("`input` refinement: confirm and text must not carry options", async (t) => {
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({ input: { type: "confirm", options: [{ id: "yes", label: "Yes" }] } })
-    ).success,
-    false,
-  );
+  t.check(issues({ input: { type: "confirm", options: [{ id: "yes", label: "Yes" }] } }), "input.options: confirm questions must not carry options");
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({ input: { type: "text", options: [{ id: "a", label: "A" }] } })
-    ).success,
-    false,
-  );
+  t.check(issues({ input: { type: "text", options: [{ id: "a", label: "A" }] } }), "input.options: text questions must not carry options");
 
-  t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ input: { type: "confirm" } })).success, true);
+  t.check(issues({ input: { type: "confirm" } }), "valid");
 });
 
 // ## State: read from which lifecycle timestamp the card carries
@@ -103,62 +93,39 @@ void test("questionState is the one place a question's state is derived.", async
 
 // ## `answered-by` is gone — an unknown key is stripped, not rejected
 void test("`answered-by` is gone — an unknown key is stripped, not rejected", async (t) => {
-  const parsedWithAnsweredBy = QuestionSchema.frontmatterSchema.safeParse(
-    baseFields({ "answered-by": "triage-agent" })
-  );
-  t.check(parsedWithAnsweredBy.success, true);
-
-  t.check(parsedWithAnsweredBy.data, { type: "question", prompt: "What color?", input: { type: "text" } });
+  t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ "answered-by": "triage-agent" })).data, { type: "question", prompt: "What color?", input: { type: "text" } });
 });
 
 // ## `learning`: sink/ref/proposal — proposal is required, sink is the retro vocabulary minus `question`
 void test("`learning`: sink/ref/proposal — proposal is required, sink is the retro vocabulary minus `question`", async (t) => {
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({ learning: { sink: "guide", proposal: "Receipts go in finance/." } })
-    ).success,
-    true,
-  );
+  t.check(issues({ learning: { sink: "guide", proposal: "Receipts go in finance/." } }), "valid");
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({
-        learning: { sink: "briefing", ref: "briefing.briefing.card", proposal: "Boxholder is in Pacific time." },
-      })
-    ).success,
-    true,
-  );
+  t.check(issues({ learning: { sink: "briefing", ref: "briefing.briefing.card", proposal: "Boxholder is in Pacific time." } }), "valid");
 
-  t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ learning: { sink: "guide" } })).success, false);
+  t.check(issues({ learning: { sink: "guide" } }), str`learning.proposal: ${any(String)}`);
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({ learning: { sink: "question", proposal: "x" } })
-    ).success,
-    false,
-  );
+  t.check(issues({ learning: { sink: "question", proposal: "x" } }), str`learning.sink: ${any(String)}`);
 });
 
 // ## `expires-after`: ISO-8601 duration format
 //
 // Our duration pattern accepts day and time parts and refuses the bare designators:
 void test("Our duration pattern accepts day and time parts and refuses the bare designat...", async (t) => {
-  const expiresAfter = (value: string) => QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expires-after": value })).success;
-  t.check(Object.fromEntries(["P30D", "PT12H", "P1DT12H", "30d", "P", "PT"].map((value) => [value, expiresAfter(value)])), {
-    P30D: true,
-    PT12H: true,
-    P1DT12H: true,
-    "30d": false,
-    P: false,
-    PT: false,
+  t.check(Object.fromEntries(["P30D", "PT12H", "P1DT12H", "30d", "P", "PT"].map((value) => [value, issues({ "expires-after": value })])), {
+    P30D: "valid",
+    PT12H: "valid",
+    P1DT12H: "valid",
+    "30d": "expires-after: must be an ISO-8601 duration, e.g. P30D or PT12H",
+    P: "expires-after: must be an ISO-8601 duration, e.g. P30D or PT12H",
+    PT: "expires-after: must be an ISO-8601 duration, e.g. P30D or PT12H",
   });
 });
 
 // ## `asked-at`: ISO datetime with offset
 void test("`asked-at`: ISO datetime with offset", async (t) => {
-  t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ "asked-at": ASKED_AT })).success, true);
+  t.check(issues({ "asked-at": ASKED_AT }), "valid");
 
-  t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ "asked-at": "2026-07-10" })).success, false);
+  t.check(issues({ "asked-at": "2026-07-10" }), str`asked-at: ${any(String)}`);
 });
 
 // ## Select template: sets `asked-at`, carries `learning`
@@ -219,32 +186,11 @@ expires-after: P7D
 // Answer resolution matches typed answers against option labels with
 // `toLowerCase()`, so two options differing only in case would be ambiguous:
 void test("Answer resolution matches typed answers against option labels with toLowerCas...", async (t) => {
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({
-        input: { type: "select", options: [{ id: "a", label: "A" }, { id: "a", label: "B" }] },
-      })
-    ).success,
-    false,
-  );
+  t.check(issues({ input: { type: "select", options: [{ id: "a", label: "A" }, { id: "a", label: "B" }] } }), "input.options.1.id: duplicate option id \"a\"");
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({
-        input: { type: "select", options: [{ id: "a", label: "Yes" }, { id: "b", label: "yes" }] },
-      })
-    ).success,
-    false,
-  );
+  t.check(issues({ input: { type: "select", options: [{ id: "a", label: "Yes" }, { id: "b", label: "yes" }] } }), "input.options.1.label: duplicate option label \"yes\" (labels must be unique case-insensitively)");
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({
-        input: { type: "select", options: [{ id: "a", label: "Yes" }, { id: "b", label: "No" }] },
-      })
-    ).success,
-    true,
-  );
+  t.check(issues({ input: { type: "select", options: [{ id: "a", label: "Yes" }, { id: "b", label: "No" }] } }), "valid");
 });
 
 // ## Lifecycle coherence: at most one timestamp, and an answer only with `answered-at`
@@ -253,32 +199,17 @@ void test("Answer resolution matches typed answers against option labels with to
 // `answered-at`; a card carries at most one of `answered-at`, `dismissed-at`,
 // `expired-at`.
 void test("answered-at requires answer; answer and answered-via require answered-at; a c...", async (t) => {
-  t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ "answered-at": ASKED_AT })).success, false);
+  t.check(issues({ "answered-at": ASKED_AT }), "answer: \"answered-at\" requires \"answer\"");
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({ answer: { text: "Blue" }, "answered-at": ASKED_AT, "answered-via": "web" })
-    ).success,
-    true,
-  );
+  t.check(issues({ answer: { text: "Blue" }, "answered-at": ASKED_AT, "answered-via": "web" }), "valid");
 
-  t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ answer: { text: "x" } })).success, false);
+  t.check(issues({ answer: { text: "x" } }), "answer: \"answer\" requires \"answered-at\"");
 
-  t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ "answered-via": "cli" })).success, false);
+  t.check(issues({ "answered-via": "cli" }), "answered-via: \"answered-via\" requires \"answered-at\"");
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({ answer: { text: "Blue" }, "answered-at": ASKED_AT, "dismissed-at": ASKED_AT })
-    ).success,
-    false,
-  );
+  t.check(issues({ answer: { text: "Blue" }, "answered-at": ASKED_AT, "dismissed-at": ASKED_AT }), "dismissed-at: \"dismissed-at\" must not appear with \"answered-at\"");
 
-  t.check(
-    QuestionSchema.frontmatterSchema.safeParse(
-      baseFields({ "dismissed-at": ASKED_AT, "expired-at": ASKED_AT })
-    ).error?.issues.map((issue) => issue.message),
-    ["\"expired-at\" must not appear with \"dismissed-at\""],
-  );
+  t.check(issues({ "dismissed-at": ASKED_AT, "expired-at": ASKED_AT }), "expired-at: \"expired-at\" must not appear with \"dismissed-at\"");
 });
 
 // ## Confirm template: no options, `asked-at` still set
@@ -353,4 +284,24 @@ void test("Strict arg validation — a malformed expires-after and a learning wi
   await t.checkThrows(async () => (renderTemplate("question-confirm", { memo: "m", prompt: "p", "expires-after": "7 days" })), "ZodError");
 
   await t.checkThrows(async () => (renderTemplate("question-text", { memo: "m", prompt: "p", learning: { sink: "guide" } })), "ZodError");
+});
+
+// ## A walk fixture box with a clock offset stamps `asked-at` on the box clock
+void test("A walk fixture box with a clock offset stamps asked-at on the box clock", async (t) => {
+  const savedTime = process.env["BBX_TIME"];
+  delete process.env["BBX_TIME"];
+  const box = await makeTmpBox();
+  t.teardown(async () => {
+    if (savedTime !== undefined) process.env["BBX_TIME"] = savedTime;
+    await box.cleanup();
+  });
+  await box.write("_config/box.json", JSON.stringify({ timezone: "UTC", fakeNotifications: true }));
+  await box.write(".beebox/clock-offset.json", JSON.stringify({ offsetMs: 604800000, setAt: "2026-10-23T00:00:00Z" }));
+
+  const def = getTemplate("question-confirm");
+  if (def === undefined) throw new Error("no template question-confirm");
+  const content = def.generate(def.argsSchema.parse({ memo: "m", prompt: "p" }), { now: getBoxTime(box.root) });
+  const askedAt = /asked-at: (\S+)/.exec(content)?.[1] ?? "";
+  // A week ahead of real time, to the nearest hour.
+  t.check(Math.round((Date.parse(askedAt) - Date.now()) / 3_600_000), 168);
 });

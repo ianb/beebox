@@ -16,9 +16,9 @@
  *    (`issues/closed/bugs/2026-09-16-drive-doc-round-trip-destroyed-by-lint-driven-whitespace-edit.md`).
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { attachDirOwnerBasename } from "../shared/attach-path.js";
+import { fileExists } from "../lib/file-exists.js";
 
 /**
  * The only markdown a connector both writes and pushes is a gdoc's body,
@@ -30,16 +30,6 @@ import { attachDirOwnerBasename } from "../shared/attach-path.js";
  */
 function connectorOwnedFilenames(owner: string): string[] {
   return [`${owner}.md`, `${owner}.remote.md`];
-}
-
-async function exists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    // Absence is the ordinary answer here, not a failure.
-    return false;
-  }
 }
 
 /**
@@ -58,7 +48,7 @@ export async function isConnectorOwnedMarkdown(absPath: string): Promise<boolean
   const owner = attachDirOwnerBasename(path.basename(attachDir));
   if (owner === null) return false;
   if (!connectorOwnedFilenames(owner).includes(filename)) return false;
-  return exists(path.join(path.dirname(attachDir), `${owner}.gdoc.card`));
+  return fileExists(path.join(path.dirname(attachDir), `${owner}.gdoc.card`));
 }
 
 /**

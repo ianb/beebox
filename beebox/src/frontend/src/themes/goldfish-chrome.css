@@ -8,30 +8,27 @@
   --bbx-chat-user-paper: #c0e3de;
   --bbx-chat-user-ink: #214b54;
 }
-[data-chrome-theme="goldfish"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"], .bbx-interface-browse-panel[data-card-content="card"]),
+[data-chrome-theme="goldfish"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]),
 [data-chrome-theme="goldfish"] .bbx-interface-tabstrip > [role="none"]::before,
 [data-chrome-theme="goldfish"] .bbx-interface-tabstrip > [role="none"]::after,
 [data-chrome-theme="goldfish"] .bbx-app-nav > div { background: transparent; }
 [data-chrome-theme="goldfish"] .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
 [data-chrome-theme="goldfish"] .bbx-app-nav :is(button, a):focus-visible { outline: 2px solid #eff8ed; outline-offset: 2px; }
-[data-chrome-theme="goldfish"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #f2f5eb; }
-[data-chrome-theme="goldfish"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r { background: #f6f8ed; color: #294d4b; }
+[data-chrome-theme="goldfish"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #f2f5eb; }
+[data-chrome-theme="goldfish"] .bbx-composer-material > .bbx-composer-mobile-row { background: #f6f8ed; color: #294d4b; }
 [data-chrome-theme="goldfish"] .bbx-chat-user-paper { --bbx-selection: #214b54; --bbx-selection-ink: #f6f8ed; }
 [data-chrome-theme="goldfish"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: #214b54; }
 [data-chrome-theme="goldfish"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #ffffff45; color: #214b54; }
 [data-chrome-theme="goldfish"] .bbx-chat-user-attachment:hover { background: #ffffff80; }
 [data-chrome-theme="goldfish"] .bbx-chat-user-unsure { text-decoration-color: #27686c; }
 [data-chrome-theme="goldfish"] .bbx-chat-reply-material {
-  --bbx-ink: #294d4b;
-  --bbx-ink-soft: #617364;
-  --bbx-pen: #27686c;
   --bbx-edge: #93bfaf;
 }
 [data-chrome-theme="goldfish"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
   --tw-prose-quotes: #294d4b;
   --tw-prose-code: #294d4b;
-  --tw-prose-counters: #617364;
-  --tw-prose-captions: #617364;
+  --tw-prose-counters: #56675a;
+  --tw-prose-captions: #56675a;
   --tw-prose-bullets: #626aab;
   --tw-prose-quote-borders: #93bfaf;
   --tw-prose-hr: #93bfaf;
@@ -40,13 +37,13 @@
   --tw-prose-pre-bg: #d5e9dd;
   --tw-prose-pre-code: #294d4b;
 }
-[data-chrome-theme="goldfish"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #617364; background: #f6f8ed; border-radius: 8px; }
+[data-chrome-theme="goldfish"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #56675a; background: #f6f8ed; border-radius: 8px; }
 [data-chrome-theme="goldfish"] :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-[data-chrome-theme="goldfish"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) { color: #617364; }
+[data-chrome-theme="goldfish"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #294d4b; --bbx-ink-soft: #56675a; --bbx-pen: #27686c; }
 [data-chrome-theme="goldfish"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: #294d4b; }
 [data-chrome-theme="goldfish"] #bbx-chat-load-older { background: #f6f8ed; color: #27686c; border-radius: 8px; }
 [data-chrome-theme="goldfish"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }
-[data-chrome-theme="goldfish"] #bbx-chat-load-older:disabled { color: #617364; opacity: .6; }
+[data-chrome-theme="goldfish"] #bbx-chat-load-older:disabled { color: #56675a; opacity: .6; }
 [data-chrome-theme="goldfish"] [aria-label="Pane controls"] button { background: #255c70; color: #eff8ed; border: 1px solid #93bfaf; border-radius: 8px; }
 [data-chrome-theme="goldfish"] [aria-label="Pane controls"] button:hover { background: #626aab; }
 .bbx-card-theme[data-card-theme="goldfish"] { --bbx-font: ui-sans-serif, system-ui, sans-serif; --bbx-quote-edge: 3px; }

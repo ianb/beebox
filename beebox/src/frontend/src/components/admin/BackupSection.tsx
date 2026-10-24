@@ -12,27 +12,17 @@
  * what it reports.
  */
 
+import { humanBytes } from "@shared/human-bytes";
 import { trpc } from "../../lib/trpc/client";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION =
   "Where copies of this box exist besides this machine. Its history and its attachments travel separately, so they are reported separately.";
 
-/** Bytes as a short human string. Binary units, matching git's own `-H` output. */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / 1024 ** exponent;
-  // One decimal below 10 (9.4 GB reads better than 9 GB); none above, where
-  // the extra digit is noise.
-  return `${value < 10 ? value.toFixed(1) : Math.round(value).toString()} ${units[exponent]}`;
-}
-
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-3 text-sm py-1">
-      <span className="text-warm-600 w-32 shrink-0">{label}</span>
+      <span className="text-warm-700 w-32 shrink-0">{label}</span>
       <span className="text-warm-800 min-w-0 break-words">{children}</span>
     </div>
   );
@@ -44,7 +34,7 @@ export function BackupSection() {
 
   return (
     <AdminSectionCard id="backup" description={DESCRIPTION} busy={query.isLoading}>
-      {query.isLoading ? <p className="text-sm text-warm-600">Checking…</p> : null}
+      {query.isLoading ? <p className="text-sm text-warm-700">Checking…</p> : null}
 
       {query.error != null ? (
         <p className="text-sm text-danger">Could not read backup status: {query.error.message}</p>
@@ -65,14 +55,14 @@ export function BackupSection() {
               <>
                 <span className="font-mono text-xs">{status.remote.url}</span>
                 {status.upstream.state === "none" ? (
-                  <span className="text-warm-600"> · no tracking branch</span>
+                  <span className="text-warm-700"> · no tracking branch</span>
                 ) : status.upstream.state === "stale" ? (
                   // Configured but its remote-tracking ref is gone — a deleted
                   // remote branch or a clone that has never fetched. Saying "no
                   // tracking branch" here would hide a state worth acting on.
                   <span className="text-warning"> · upstream configured but never fetched</span>
                 ) : status.upstream.ahead === 0 ? (
-                  <span className="text-warm-600"> · in sync</span>
+                  <span className="text-warm-700"> · in sync</span>
                 ) : (
                   <span className="text-warning">
                     {" "}
@@ -88,19 +78,19 @@ export function BackupSection() {
             )}
           </Row>
 
-          <Row label="Repository">{formatBytes(status.repoBytes)}</Row>
+          <Row label="Repository">{humanBytes(status.repoBytes)}</Row>
 
           <Row label="Attachments">
             {status.annex === null
               ? "not tracked by git-annex"
-              : `${status.annex.fileCount} file${status.annex.fileCount === 1 ? "" : "s"} · ${formatBytes(status.annex.bytes)}`}
+              : `${status.annex.fileCount} file${status.annex.fileCount === 1 ? "" : "s"} · ${humanBytes(status.annex.bytes)}`}
           </Row>
 
           {status.assetRisk !== null ? (
             <div className="mt-3 text-sm text-warning-dark bg-warning-50 rounded p-3">
               <p className="font-semibold mb-1">
                 {status.assetRisk.fileCount} file
-                {status.assetRisk.fileCount === 1 ? "" : "s"} ({formatBytes(status.assetRisk.bytes)}) exist only on
+                {status.assetRisk.fileCount === 1 ? "" : "s"} ({humanBytes(status.assetRisk.bytes)}) exist only on
                 this machine.
               </p>
               {status.assetRisk.reason === "no-annex-remote" ? (

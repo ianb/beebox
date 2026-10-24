@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc/client";
 import { href, toSearch } from "../../lib/routing";
@@ -6,6 +6,7 @@ import { cardChatSearch } from "../../lib/system-card-navigation";
 import type { ViewTarget } from "../../lib/view-url";
 import { explicitConversationHistoryState } from "../chat/workspace/history";
 import { Button } from "../ui/Button";
+import { ModalCard } from "../ui/ModalCard";
 import { Dropdown, type DropdownVertical } from "../ui/Dropdown";
 import { MenuItem } from "../ui/dropdown-menu-item";
 import { Text } from "../ui/Text";
@@ -35,8 +36,6 @@ export function CardActions({ target, onTrashed, vertical }: {
   const [chatError, setChatError] = useState<string | null>(null);
   const refs = trpc.card.inboundRefs.useQuery({ path }, { enabled: confirming });
   const trash = trpc.card.trash.useMutation();
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const priorFocusRef = useRef<HTMLElement | null>(null);
   const utils = trpc.useUtils();
 
   const openChat = async (mode: "recent" | "new") => {
@@ -57,18 +56,6 @@ export function CardActions({ target, onTrashed, vertical }: {
       setChatError(error instanceof Error ? error.message : "Could not open chat");
     }
   };
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!confirming || dialog === null) return;
-    priorFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog.showModal();
-    return () => {
-      if (dialog.open) dialog.close();
-      priorFocusRef.current?.focus();
-      priorFocusRef.current = null;
-    };
-  }, [confirming]);
 
   const doTrash = async () => {
     try {
@@ -96,34 +83,32 @@ export function CardActions({ target, onTrashed, vertical }: {
         <MenuItem danger onClick={() => setConfirming(true)}>Move to Trash…</MenuItem>
       </Dropdown>
       {chatError !== null ? <Text as="span" size="xs" tone="danger">{chatError}</Text> : null}
-      {confirming ? (
-        <dialog
-          ref={dialogRef}
-          aria-labelledby="trash-card-title"
-          className="m-auto max-h-[calc(100%-3rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg bg-white p-5 shadow-xl backdrop:bg-black/60"
-          onCancel={(event) => { event.preventDefault(); if (!trash.isPending) setConfirming(false); }}
-        >
-          <h2 id="trash-card-title" className="text-lg font-semibold text-warm-900">Move this card to Trash?</h2>
-          <Text as="p" size="sm" tone="subtle" className="mt-2">The card remains recoverable from box Trash and git history.</Text>
-          {refs.isLoading ? <Hint className="mt-4">Checking links…</Hint> : null}
-          {refs.error ? <ErrorText className="mt-4">Could not check links: {refs.error.message}</ErrorText> : null}
-          {refs.data?.errors.length ? <ErrorText className="mt-4">Some files could not be checked. The list of links may be incomplete.</ErrorText> : null}
-          {referrers.length > 0 ? (
-            <section className="mt-4">
-              <Heading level={3}>{referrers.length} file{referrers.length === 1 ? "" : "s"} link to this card</Heading>
-              <Text as="p" size="sm" tone="subtle" className="mt-1">Those links will stop working. They are not changed automatically.</Text>
-              <ul className="mt-2 list-disc pl-5 text-sm text-warm-700">
-                {referrers.map((referrer) => <li key={referrer.path}>{referrer.path} ({referrer.refs})</li>)}
-              </ul>
-            </section>
-          ) : null}
-          {trash.error ? <ErrorText className="mt-4">{trash.error.message}</ErrorText> : null}
-          <div className="mt-5 flex justify-end gap-2">
-            <Button intent="secondary" onClick={() => setConfirming(false)} disabled={trash.isPending}>Cancel</Button>
-            <Button intent="destructive" onClick={doTrash} loading={trash.isPending} disabled={refs.isLoading || refs.isError} loadingLabel="Moving…">Move to Trash</Button>
-          </div>
-        </dialog>
-      ) : null}
+      <ModalCard
+        open={confirming}
+        labelledBy="trash-card-title"
+        // Escape is ignored while the move is in flight.
+        onCancel={() => { if (!trash.isPending) setConfirming(false); }}
+      >
+        <h2 id="trash-card-title" className="text-lg font-semibold text-warm-900">Move this card to Trash?</h2>
+        <Text as="p" size="sm" tone="subtle" className="mt-2">The card remains recoverable from box Trash and git history.</Text>
+        {refs.isLoading ? <Hint className="mt-4">Checking links…</Hint> : null}
+        {refs.error ? <ErrorText className="mt-4">Could not check links: {refs.error.message}</ErrorText> : null}
+        {refs.data?.errors.length ? <ErrorText className="mt-4">Some files could not be checked. The list of links may be incomplete.</ErrorText> : null}
+        {referrers.length > 0 ? (
+          <section className="mt-4">
+            <Heading level={3}>{referrers.length} file{referrers.length === 1 ? "" : "s"} link to this card</Heading>
+            <Text as="p" size="sm" tone="subtle" className="mt-1">Those links will stop working. They are not changed automatically.</Text>
+            <ul className="mt-2 list-disc pl-5 text-sm text-warm-700">
+              {referrers.map((referrer) => <li key={referrer.path}>{referrer.path} ({referrer.refs})</li>)}
+            </ul>
+          </section>
+        ) : null}
+        {trash.error ? <ErrorText className="mt-4">{trash.error.message}</ErrorText> : null}
+        <div className="mt-5 flex justify-end gap-2">
+          <Button intent="secondary" onClick={() => setConfirming(false)} disabled={trash.isPending}>Cancel</Button>
+          <Button intent="destructive" onClick={doTrash} loading={trash.isPending} disabled={refs.isLoading || refs.isError} loadingLabel="Moving…">Move to Trash</Button>
+        </div>
+      </ModalCard>
     </>
   );
 }

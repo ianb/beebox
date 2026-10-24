@@ -42,7 +42,7 @@ export function GmailLabelList({
               <button
                 onClick={() => onRemove(label)}
                 disabled={busy}
-                className="text-warm-500 hover:text-danger-dark text-xs px-2"
+                className="text-warm-700 hover:text-danger-dark text-xs px-2"
               >
                 remove
               </button>
@@ -50,7 +50,7 @@ export function GmailLabelList({
           ))}
         </div>
       ) : (
-        <div className="mb-2 p-3 bg-warm-50 border border-warm-200 rounded text-sm text-warm-600">
+        <div className="mb-2 p-3 bg-warm-50 border border-warm-200 rounded text-sm text-warm-700">
           No labels configured.
         </div>
       )}

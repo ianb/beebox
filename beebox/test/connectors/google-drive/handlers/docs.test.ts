@@ -17,6 +17,8 @@ import {
 import { createGoogleDriveConnector } from "../../../../src/connectors/google-drive/connector.js";
 import { docsHandler } from "../../../../src/connectors/google-drive/handlers/docs/handler.js";
 import { createGdocTemplate } from "../../../../src/schemas/gdoc.js";
+import { loadDocsApiDiagnosis } from "../../../../src/connectors/google-drive/docs-api-status.js";
+import { any } from "@ianbicking/tap-check/check";
 
 // Several assertions exercise conflict/error paths that log to console.
 // Silence so they don't pollute test output.
@@ -600,4 +602,92 @@ conflict: true
   t.check(drive.contentUpdateLog, [
     { fileId: "doc-w", mimeType: "text/markdown", content: "- [ ] Parent  \n      - [x] Child  \n" },
   ]);
+});
+
+// ## Docs API diagnosis — a disabled Docs API is recorded, and clears when it answers again
+
+const ENABLE_LINK = "https://console.developers.google.com/apis/api/docs.googleapis.com/overview?project=123456";
+
+/** The ky error Google's 403 SERVICE_DISABLED answer produces. */
+async function serviceDisabledError(): Promise<unknown> {
+  const body = JSON.stringify({
+    error: {
+      code: 403,
+      message: "Google Docs API has not been used in project 123456 before or it is disabled.",
+      status: "PERMISSION_DENIED",
+      details: [{
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        reason: "SERVICE_DISABLED",
+        metadata: { consumer: "projects/123456", activationUrl: ENABLE_LINK },
+      }],
+    },
+  });
+  try {
+    await ky.get("https://docs.googleapis.com/v1/documents/x", { retry: 0, fetch: async () => new Response(body, { status: 403 }) });
+  } catch (e) {
+    return e;
+  }
+  throw new Error("expected the request to fail");
+}
+
+const DISABLED_MESSAGE =
+  "1 Google Doc is syncing without revision tracking or lossy-content details: " +
+  "the Google Docs API is disabled for the Google Cloud project the box's Google sign-in uses, " +
+  "and reauthorizing will not fix that. Enable the API in Cloud Console, wait a few minutes, " +
+  `and try again: ${ENABLE_LINK}`;
+
+void test("A disabled Docs API is stored as the box's diagnosis; the next sync that reaches it clears it", async (t) => {
+  const { box, drive, connector } = await docBox({ id: "doc-d", name: "Disabled", stem: "Disabled", doc: { markdown: "Body.\n" } });
+  const realGetDocument = drive.getDocument.bind(drive);
+  const disabled = await serviceDisabledError();
+  drive.getDocument = async () => { throw disabled; };
+
+  // The sync itself still succeeds at reduced fidelity.
+  t.check((await connector.sync()).success, true);
+  t.check(await loadDocsApiDiagnosis(box.root), {
+    kind: "service-disabled",
+    message: DISABLED_MESSAGE,
+    link: ENABLE_LINK,
+    docs: 1,
+    since: any(String),
+  });
+
+  // A locally edited Doc pushes (the push's own Docs API read is only its
+  // conflict check) and the pull after it keeps the diagnosis open.
+  await box.seed("_content/drive/Disabled.attach/Disabled.md", "Edited.\n");
+  box.commitAll("local edit");
+  await connector.sync();
+  t.check(drive.contentUpdateLog, [{ fileId: "doc-d", mimeType: "text/markdown", content: "Edited.\n" }]);
+  t.check((await loadDocsApiDiagnosis(box.root))?.docs, 1);
+
+  drive.getDocument = realGetDocument;
+  await connector.sync();
+  t.check(await loadDocsApiDiagnosis(box.root), null);
+});
+
+void test("A transient Docs API failure neither opens nor clears the diagnosis", async (t) => {
+  const { box, drive, connector } = await docBox({ id: "doc-t", name: "Transient", stem: "Transient", doc: { markdown: "Body.\n" } });
+  drive.getDocument = async () => { throw new Error("socket hang up"); };
+  await connector.sync();
+  t.check(await loadDocsApiDiagnosis(box.root), null);
+
+  const disabled = await serviceDisabledError();
+  drive.getDocument = async () => { throw disabled; };
+  await connector.sync();
+  drive.getDocument = async () => { throw new Error("socket hang up"); };
+  await connector.sync();
+  t.check((await loadDocsApiDiagnosis(box.root))?.kind, "service-disabled");
+});
+
+void test("Deleting the last Doc card clears the diagnosis on the next complete pass", async (t) => {
+  const { box, drive, connector } = await docBox({ id: "doc-l", name: "Last", stem: "Last", doc: { markdown: "Body.\n" } });
+  const disabled = await serviceDisabledError();
+  drive.getDocument = async () => { throw disabled; };
+  await connector.sync();
+  t.check((await loadDocsApiDiagnosis(box.root))?.docs, 1);
+
+  execSync("git rm -rq _content/drive/Last.gdoc.card _content/drive/Last.attach", { cwd: box.root });
+  box.commitAll("delete the doc");
+  await connector.sync();
+  t.check(await loadDocsApiDiagnosis(box.root), null);
 });

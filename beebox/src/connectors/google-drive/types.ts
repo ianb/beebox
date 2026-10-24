@@ -13,6 +13,7 @@
  */
 
 import type { GoogleDriveService, DriveFile } from "../../services/google-drive/core.js";
+import type { DocsApiOutcome } from "./handlers/docs/api-failure.js";
 import { invariant } from "../../shared/invariant.js";
 
 // ─── Handler interface ──────────────────────────────────────────────────────
@@ -31,6 +32,8 @@ export interface PullResult {
   written: string[];
   /** Whether anything actually changed */
   changed: boolean;
+  /** What the Docs API said on this pull; only the Google Docs handler sets it. */
+  docsApi?: DocsApiOutcome;
 }
 
 export interface PushResult {

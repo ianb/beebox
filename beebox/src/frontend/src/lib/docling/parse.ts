@@ -22,6 +22,7 @@
 
 import { isRecord } from "@shared/is-record";
 import { readTableRows } from "./table";
+import { nonBlankString } from "@shared/optional-string";
 
 /**
  * Cap on the decompressed JSON we will hold in memory. A DoclingDocument for a
@@ -169,10 +170,6 @@ export async function gunzipToText(bytes: ArrayBuffer): Promise<string> {
 
 /* ---------- narrowing helpers ---------- */
 
-function str(value: unknown): string | null {
-  return typeof value === "string" && value.trim() !== "" ? value : null;
-}
-
 function int(value: unknown): number | null {
   return typeof value === "number" && Number.isInteger(value) ? value : null;
 }
@@ -189,7 +186,7 @@ function provPage(item: Record<string, unknown>): number | null {
 
 /** Resolve `{ "$ref": "#/texts/3" }` into `{ array: "texts", index: 3 }`. */
 function parseRef(value: unknown): { array: string; index: number } | null {
-  const raw = isRecord(value) ? str(value["$ref"]) : str(value);
+  const raw = isRecord(value) ? nonBlankString(value["$ref"]) : nonBlankString(value);
   if (raw === null) return null;
   const match = /^#\/([A-Za-z_]+)\/(\d+)$/u.exec(raw);
   if (match === null) return null;
@@ -240,19 +237,19 @@ class DocumentReader {
       if (ref === null || ref.array !== "texts") continue;
       const target = this.texts[ref.index];
       if (!isRecord(target)) continue;
-      const text = str(target["text"]);
+      const text = nonBlankString(target["text"]);
       if (text !== null) return text;
     }
     return null;
   }
 
   text(raw: Record<string, unknown>, ref: string): DoclingTextItem | null {
-    const text = str(raw["text"]) ?? str(raw["orig"]);
+    const text = nonBlankString(raw["text"]) ?? nonBlankString(raw["orig"]);
     if (text === null) return null;
     return {
       kind: "text",
       ref,
-      label: str(raw["label"]) ?? "text",
+      label: nonBlankString(raw["label"]) ?? "text",
       text,
       page: provPage(raw),
       level: int(raw["level"]),
@@ -265,7 +262,7 @@ class DocumentReader {
     return {
       kind: "table",
       ref,
-      label: str(raw["label"]) ?? "table",
+      label: nonBlankString(raw["label"]) ?? "table",
       page: provPage(raw),
       caption: this.caption(raw["captions"]),
       rows: rows === "too-large" ? [] : rows,
@@ -276,7 +273,7 @@ class DocumentReader {
     return {
       kind: "picture",
       ref: `#/pictures/${String(index)}`,
-      label: str(raw["label"]) ?? "picture",
+      label: nonBlankString(raw["label"]) ?? "picture",
       page: provPage(raw),
       caption: this.caption(raw["captions"]),
       index,
@@ -382,11 +379,11 @@ export function readDoclingDocument(value: unknown): DoclingDocumentSummary {
   const referenced = reader.items.flatMap((item) => (item.page === null ? [] : [item.page]));
 
   return {
-    schemaName: str(doc["schema_name"]),
-    version: str(doc["version"]),
-    name: str(doc["name"]),
-    originFilename: str(origin["filename"]),
-    originMimetype: str(origin["mimetype"]),
+    schemaName: nonBlankString(doc["schema_name"]),
+    version: nonBlankString(doc["version"]),
+    name: nonBlankString(doc["name"]),
+    originFilename: nonBlankString(origin["filename"]),
+    originMimetype: nonBlankString(origin["mimetype"]),
     pageNumbers: [...new Set([...declared, ...referenced])].toSorted((a, b) => a - b),
     items: reader.items,
     unrecognized: reader.unrecognized,

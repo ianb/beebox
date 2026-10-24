@@ -4,6 +4,7 @@ import { useSpeechRestoreSlot } from "../workspace/TranscriptFloatingControls";
  */
 
 import { useMemo } from "react";
+import { MaterialContext } from "../../ui/material";
 import { Pre } from "../../ui/Pre";
 import type { SessionEntry } from "../../../api";
 import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../../../lib/audio/speech-parsing/parse";
@@ -13,7 +14,8 @@ import { splitCalloutParts, type CalloutPart } from "../../../lib/structured-out
 import { CalloutBlock } from "../CalloutBlock";
 import { ActivityGroup } from "./activity-rendering";
 import { MarkdownContent, type OnZoomView } from "../markdown-rendering";
-import { countSpeech, groupIntoParts, type SelfNoteInfo } from "../message-parsing";
+import { countSpeech, type SelfNoteInfo } from "../message-parsing";
+import { groupIntoParts } from "../assistant-parts";
 import type { SpeechSegmentState } from "../../../machines/speech-segment-states";
 
 export interface ReplaySpeechOptions {
@@ -149,7 +151,7 @@ export function AssistantMessage({
   /** When false, untagged prose hides; only callouts and acks render. Default true. */
   proseEnabled?: boolean;
 }) {
-  const grouped = groupIntoParts(entries);
+  const grouped = groupIntoParts(entries, { fold: debugView !== true });
   const allText = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   ).join("\n");
@@ -179,60 +181,62 @@ export function AssistantMessage({
   }, [grouped]);
 
   return (
-    <div className="bbx-chat-reply-material px-3 sm:px-6 py-2">
-      {/* Zero-height sticky bar pinned to the top-right of the message. It
-          takes no vertical space (h-0, so prose doesn't shift) and sticks
-          within this message's bounds as the list scrolls: the speaker icon
-          stays visible while a tall message is read, then releases when the
-          message's bottom scrolls past. Lives OUTSIDE the overflow-hidden
-          content wrapper below — a sticky child of an overflow:hidden box
-          would stick within that short non-scrolling box, not the message
-          list. pointer-events-none keeps the empty bar from blocking text
-          selection; the icon itself re-enables pointer events. */}
-      {!debugView && hasSpeech ? (
-        <div className="sticky top-2 z-10 h-0 flex justify-end items-start pointer-events-none" style={{ paddingRight: restoreSlot ? "3rem" : undefined }}>
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <SpeechMenu
-                segments={segments}
-                playing={isPlaying}
-                anyPlaying={anySpeechPlaying === true}
-                canSkip={speechCanSkip === true}
-                onStop={() => onStopSpeech?.()}
-                onSkip={() => onSkipSpeech?.()}
-                onReplay={(fromIndex) => onReplaySpeech?.({ messageId, segments, fromIndex })}
-              />
+    <MaterialContext.Provider value>
+      <div className="bbx-chat-reply-material px-3 sm:px-6 py-2">
+        {/* Zero-height sticky bar pinned to the top-right of the message. It
+            takes no vertical space (h-0, so prose doesn't shift) and sticks
+            within this message's bounds as the list scrolls: the speaker icon
+            stays visible while a tall message is read, then releases when the
+            message's bottom scrolls past. Lives OUTSIDE the overflow-hidden
+            content wrapper below — a sticky child of an overflow:hidden box
+            would stick within that short non-scrolling box, not the message
+            list. pointer-events-none keeps the empty bar from blocking text
+            selection; the icon itself re-enables pointer events. */}
+        {!debugView && hasSpeech ? (
+          <div className="sticky top-2 z-10 h-0 flex justify-end items-start pointer-events-none" style={{ paddingRight: restoreSlot ? "3rem" : undefined }}>
+            <div className="flex items-center gap-2 pointer-events-auto">
+              <SpeechMenu
+                  segments={segments}
+                  playing={isPlaying}
+                  anyPlaying={anySpeechPlaying === true}
+                  canSkip={speechCanSkip === true}
+                  onStop={() => onStopSpeech?.()}
+                  onSkip={() => onSkipSpeech?.()}
+                  onReplay={(fromIndex) => onReplaySpeech?.({ messageId, segments, fromIndex })}
+                />
+            </div>
           </div>
-        </div>
-      ) : null}
-      {/* min-w-0 overflow-hidden clips wide/unbreakable content (long code,
-          tables, URLs) so it can't stretch the message width. Kept here as a
-          sibling of the sticky bar, not an ancestor, so it doesn't capture the
-          icon's sticky positioning. */}
-      <div className="min-w-0 overflow-hidden">
-        {grouped.map((group, i) =>
-          group.kind === "text" ? (
-            debugView ? (
-              showProse ? <Pre key={i} size="xs" boxed>{group.text}</Pre> : null
+        ) : null}
+        {/* min-w-0 overflow-hidden clips wide/unbreakable content (long code,
+            tables, URLs) so it can't stretch the message width. Kept here as a
+            sibling of the sticky bar, not an ancestor, so it doesn't capture the
+            icon's sticky positioning. */}
+        <div className="min-w-0 overflow-hidden">
+          {grouped.map((group, i) =>
+            group.kind === "text" ? (
+              debugView ? (
+                showProse ? <Pre key={i} size="xs" boxed className="bbx-chat-plate">{group.text}</Pre> : null
+              ) : (
+                <AssistantTextGroup
+                  key={i}
+                  text={group.text}
+                  indexOffset={groupSpeechOffsets[i] ?? 0}
+                  showProse={showProse ? group.proseHidden !== true : false}
+                  activeIndex={activeIndex}
+                  segmentStates={segmentStates}
+                  segmentFailures={segmentFailures}
+                  onZoomView={onZoomView}
+                />
+              )
+            ) : !showProse ? null : group.kind === "update" ? (
+              <p key={i} className="my-1 text-sm text-card-soft whitespace-pre-wrap">{group.text}</p>
             ) : (
-              <AssistantTextGroup
-                key={i}
-                text={group.text}
-                indexOffset={groupSpeechOffsets[i] ?? 0}
-                showProse={showProse}
-                activeIndex={activeIndex}
-                segmentStates={segmentStates}
-                segmentFailures={segmentFailures}
-                onZoomView={onZoomView}
-              />
+              <ActivityGroup key={i} parts={group.parts} />
             )
-          ) : !showProse ? null : group.kind === "update" ? (
-            <p key={i} className="my-1 text-sm text-warm-600 whitespace-pre-wrap">{group.text}</p>
-          ) : (
-            <ActivityGroup key={i} parts={group.parts} />
-          )
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </MaterialContext.Provider>
   );
 }
 
@@ -247,12 +251,12 @@ export function CompactionMessage({ entries }: { entries: SessionEntry[] }) {
 
   return (
     <div className="flex justify-center py-2">
-      <details className="bbx-chat-meta-material text-xs text-warm-500 max-w-[80%]">
-        <summary className="cursor-pointer text-center hover:text-warm-600">
+      <details className="bbx-chat-meta-material text-xs text-card-soft max-w-[80%]">
+        <summary className="cursor-pointer text-center hover:text-card-ink">
           Context compacted
         </summary>
         {text && text !== "Conversation compacted" ? (
-          <div className="mt-2 text-left bg-warm-50 rounded p-3 text-warm-600 whitespace-pre-wrap max-h-60 overflow-auto">
+          <div className="bbx-chat-plate mt-2 text-left bg-warm-50 rounded p-3 text-warm-700 whitespace-pre-wrap max-h-60 overflow-auto">
             {text}
           </div>
         ) : null}
@@ -267,7 +271,7 @@ export function CompactionMessage({ entries }: { entries: SessionEntry[] }) {
 export function InterruptedMessage() {
   return (
     <div className="flex justify-center py-2">
-      <span className="bbx-chat-meta-material text-xs text-warm-500">Request interrupted</span>
+      <span className="bbx-chat-meta-material text-xs text-card-soft">Request interrupted</span>
     </div>
   );
 }
@@ -280,17 +284,17 @@ export function SelfNoteMessage({ note }: { note: SelfNoteInfo }) {
   const commitShort = note.commit ? note.commit.substring(0, 7) : null;
   return (
     <div className="py-2 px-3 sm:px-6">
-      <div className="bbx-chat-meta-material mx-auto max-w-2xl border-l-2 border-warm-300 bg-warm-50/60 rounded-r px-3 py-2 text-sm text-warm-700">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-warm-500 mb-1">
+      <div className="bbx-chat-meta-material mx-auto max-w-2xl border-l-2 border-warm-300 bg-warm-50/60 rounded-r px-3 py-2 text-sm text-card-soft">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-card-soft mb-1">
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M9 12h6M9 16h6M9 8h6M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3-7 3z" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span>self-note</span>
           {note.ref ? (
-            <span className="normal-case tracking-normal text-warm-500 truncate">· {note.ref}</span>
+            <span className="normal-case tracking-normal text-card-soft truncate">· {note.ref}</span>
           ) : null}
           {commitShort ? (
-            <span className="normal-case tracking-normal text-warm-500 font-mono">· {commitShort}</span>
+            <span className="normal-case tracking-normal text-card-soft font-mono">· {commitShort}</span>
           ) : null}
         </div>
         <div className="whitespace-pre-wrap break-words">{note.body}</div>

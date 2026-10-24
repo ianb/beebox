@@ -14,7 +14,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, loadavg } from "node:os";
 import { basename, join, resolve } from "node:path";
 
 import { parse } from "yaml";
@@ -22,7 +22,7 @@ import { parse } from "yaml";
 import { errorMessage } from "../../../../src/shared/error-guards.ts";
 import { isRecord } from "../../../../src/shared/is-record.ts";
 import { runHealthChecks } from "../../../../src/webapp/trpc/routers/health/router.ts";
-import { JOURNEY_WORK as WORK, assertPreviousRunsReported, allocateRun } from "../provisioning.ts";
+import { JOURNEY_WORK as WORK, assertPreviousRunsReported, allocateRun, liveRuns } from "../provisioning.ts";
 
 const JOURNEYS = resolve(import.meta.dirname, "..");
 const MONO_ROOT = resolve(JOURNEYS, "../../../..");
@@ -33,7 +33,17 @@ interface Asset { file: string, described_as: string }
 interface Journey {
   id: string
   title: string
-  box: { base: string, setup?: string | null }
+  box: {
+    base: string
+    setup?: string | null
+    /** The root landmark's name as a person would have given it; "My box" when absent. */
+    label?: string
+    /**
+     * Local date-time for the init commit ("2026-08-24T19:30:00") when box.setup backdates
+     * its own commits, so `git log` reads in order. Absent: the init commit is dated now.
+     */
+    init_date?: string
+  }
   assets?: Asset[]
   sittings?: number
   budget_actions?: number
@@ -83,6 +93,7 @@ if (journey.box.base !== "empty") fail("Only base: empty is supported; use box.s
 const { runDir, boxDir, boxSlug } = allocateRun({ work: WORK, boxes: BOXES_ROOT, id: journey.id });
 mkdirSync(join(runDir, "shots"), { recursive: true });
 mkdirSync(join(runDir, "assets"), { recursive: true });
+mkdirSync(join(runDir, "tmp"), { recursive: true });
 
 // Canonical init creates the package, current one-root layout, annex, templates,
 // validation hooks and initial history. Never clone another person's runtime state.
@@ -94,15 +105,36 @@ execFileSync(join(MONO_ROOT, "beebox", "bin", "bbx"), ["engine", "init", boxDir]
 });
 const content = boxDir;
 
+// `engine init` names the root landmark for the run slug ("c-reconnecting-2026-10-22"),
+// which a walker reads as a code or a date. Give it the name a person would. The init
+// commit is amended so the label is in the box's first commit, and dated before a setup's
+// backdated commits when the journey says so.
+const rootLandmarkPath = join(content, "_content", "Box.landmark.card");
+const rootLandmark = readFileSync(rootLandmarkPath, "utf8");
+if (!/^ {2}label: .*$/mu.test(rootLandmark)) fail(`${rootLandmarkPath} has no navigation label to rename`);
+writeFileSync(rootLandmarkPath, rootLandmark.replace(/^ {2}label: .*$/mu, `  label: ${JSON.stringify(journey.box.label ?? "My box")}`));
+const amendEnv = journey.box.init_date === undefined
+  ? process.env
+  : { ...process.env, GIT_AUTHOR_DATE: journey.box.init_date, GIT_COMMITTER_DATE: journey.box.init_date };
+execFileSync("git", ["-C", boxDir, "add", "_content/Box.landmark.card"], { stdio: "inherit" });
+execFileSync("git", ["-C", boxDir, "commit", "-q", "--amend", "--no-edit", ...(journey.box.init_date === undefined ? [] : ["--date", journey.box.init_date])], {
+  env: { ...amendEnv, GIT_AUTHOR_NAME: "Journey Box", GIT_AUTHOR_EMAIL: "journey@example.com",
+    GIT_COMMITTER_NAME: "Journey Box", GIT_COMMITTER_EMAIL: "journey@example.com" },
+  stdio: "inherit",
+});
+
 // A journey box is built for an agent-driven browser, so it says so: with
 // `agentBrowsing: "owner"` the browse key acts as the box owner and the walker
 // reaches capture, Settings, and every owner-gated procedure
 // (`docs/implemented-plans/agent-browsing-owner.md`). This is a disposable fixture setting;
-// a box a person actually uses must never have it.
+// a box a person actually uses must never have it. `fakeNotifications` sends
+// every notification to a fake channel, so the walker's phone (phone.ts) reads
+// what the box would have sent and nothing reaches a real device
+// (docs/implemented-plans/journey-simulated-notifications.md).
 const boxConfigPath = join(content, "_config", "box.json");
 const boxConfig: unknown = existsSync(boxConfigPath) ? JSON.parse(readFileSync(boxConfigPath, "utf8")) : {};
 if (!isRecord(boxConfig)) fail(`${boxConfigPath} is not a JSON object`);
-writeFileSync(boxConfigPath, `${JSON.stringify({ ...boxConfig, agentBrowsing: "owner" }, null, 2)}\n`);
+writeFileSync(boxConfigPath, `${JSON.stringify({ ...boxConfig, agentBrowsing: "owner", fakeNotifications: true }, null, 2)}\n`);
 
 if (typeof journey.box.setup === "string" && journey.box.setup.trim() !== "") {
   try {
@@ -126,7 +158,8 @@ const checks = await runHealthChecks(boxDir);
 writeFileSync(join(runDir, "health.json"), `${JSON.stringify(checks, null, 2)}\n`);
 const blockers = checks.filter((check) => !check.ok && check.severity === "error");
 if (blockers.length > 0) fail(`Fixture health failed: ${blockers.map((check) => check.message).join("; ")}`);
-for (const warning of checks.filter((check) => !check.ok)) console.log(`health warning: ${warning.message}`);
+// A walk box's notifications are fake on purpose (above), so that warning is expected.
+for (const warning of checks.filter((check) => !check.ok && check.name !== "notifications-fake")) console.log(`health warning: ${warning.message}`);
 
 // A box the router does not serve is a box nobody can walk. The worktree's own
 // .env lists what it serves; the router reads it when the worktree next starts.
@@ -162,10 +195,15 @@ const template = readFileSync(join(JOURNEYS, "walker-prompt.md"), "utf8")
   .replace("{{SITUATION}}", journey.situation.trim())
   .replace("{{ASSETS}}", assetLines)
   .replace("{{BUDGET}}", String(journey.budget_actions ?? 60))
+  .replace("{{NOW}}", new Date().toLocaleString("en-US", {
+    weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+  }))
   .replaceAll("{{BOX_SLUG}}", boxSlug)
   .replaceAll("{{BOX_CONTENT}}", content)
   .replace("{{SHOTS}}", join(runDir, "shots"))
   .replace("{{NOTES}}", join(runDir, "notes.md"))
+  .replace("{{SCRATCH}}", join(runDir, "tmp"))
+  .replaceAll("{{RUN_DIR}}", runDir)
   .replace("{{CLOSING}}", (journey.closing ?? "").trim());
 writeFileSync(join(runDir, "prompt.md"), template);
 
@@ -183,7 +221,16 @@ writeFileSync(join(runDir, "before.json"), `${JSON.stringify({
   box: boxDir,
   url: `http://localhost:3210/${WORKTREE}/${boxSlug}/`,
   headBefore: head,
+  // Walks sharing one server slow each other; timings are comparable only at the same load.
+  otherLiveRunsAtPrepare: liveRuns({ work: WORK, now: Date.now() }).length,
+  loadAvg1mAtPrepare: Number(loadavg()[0]?.toFixed(2)),
+  harnessCommit: execFileSync("git", ["-C", MONO_ROOT, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+  // The whole journeys tree: the walker prompt and prepare itself shape the run too.
+  harnessDirty: execFileSync("git", ["-C", MONO_ROOT, "status", "--porcelain", "--", JOURNEYS], { encoding: "utf8" }).trim() !== "",
 }, null, 2)}\n`);
+// The spec as it was when this box was built: a journey edited after the walk
+// would otherwise be read against a box it did not make.
+cpSync(specPath, join(runDir, "journey.yaml"));
 
 // Boxes accumulate, one per run, and nothing prunes them — a past walk's box holds
 // the commits that walk produced, and deciding they are worth less than the disk is

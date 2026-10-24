@@ -13,7 +13,6 @@
  * path and needs no variable.
  */
 
-import { execFileSync } from "node:child_process";
 import {
   mkdirSync,
   readFileSync,
@@ -24,20 +23,9 @@ import {
 import { basename, join } from "node:path";
 
 import { MODEL_ID } from "../beebox/src/shared/model-ids.js";
-
-function errnoCode(error: unknown): string | undefined {
-  return error instanceof Error && "code" in error && typeof error.code === "string"
-    ? error.code
-    : undefined;
-}
-
-function gitLsFiles(checkoutDir: string, pattern: string): string[] {
-  return execFileSync("git", ["-C", checkoutDir, "ls-files", "--", pattern], {
-    encoding: "utf8",
-  })
-    .split("\n")
-    .filter((line) => line !== "");
-}
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
+import { gitLsFiles } from "./lib/codex-skill-links.js";
+import { splitCardContent } from "../beebox/src/cards/frontmatter.js";
 
 // Claude subagent `model:` aliases → the Codex model that fills the same role.
 // An unmapped, missing, or `inherit` model fails generation: a Codex agent
@@ -84,10 +72,11 @@ class MalformedAgentFileError extends Error {
 // is copied verbatim into a TOML literal string (no escapes, so backslashes in
 // shell snippets survive).
 export function buildCodexAgentToml(agentPath: string, md: string): string {
-  const match = /^---\n([\S\s]*?)\n---\n\n?([\S\s]*)$/.exec(md);
-  if (match === null)
+  const split = splitCardContent(md);
+  if (!split.hasFrontmatter)
     throw new MalformedAgentFileError(agentPath, "missing frontmatter");
-  const [, frontmatter = "", body = ""] = match;
+  const frontmatter = split.frontmatterText;
+  const body = split.body.replace(/^\n/, "");
   const fields = new Map(
     frontmatter
       .split("\n")

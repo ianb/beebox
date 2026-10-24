@@ -7,10 +7,12 @@ import { cardTitle } from "../../../../lib/card-title";
 import { withoutHeaderName } from "../../../../lib/readable-fields";
 import { CardMark } from "../../../ui/CardMark";
 import { isRecord } from "@shared/is-record";
+import { toDisplayPath } from "@shared/display-path";
 import { readCardSymbol } from "@shared/card-symbol";
 import { Prominence, effectiveLevel } from "@shared/prominence";
 import { PropertyLink, PropertyProblem } from "./property-section";
-import { useRefetchOnFileChange } from "../../../../hooks/useRefetchOnFileChange";
+import { useLiveRefresh } from "../../../../hooks/useLiveRefresh";
+import { anyFileChange } from "../../../../lib/live-refresh";
 
 /** "<level>" when the card declares one, "<level>, the type's default" when it does not; the raw value when the schema is unknown. */
 function prominenceText(value: unknown, schema: FileData["schema"]): string | null {
@@ -52,7 +54,7 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
   const hasFoundBy = typeof contains === "string" || prominence !== null || symbolSource !== null || typeof evidence === "string";
   return <>
     <dl className="mt-4">
-      <dt>Filed at</dt><dd>{data.path}</dd>
+      <dt>Filed at</dt><dd>{toDisplayPath(data.path)}</dd>
       <dt>Card type</dt><dd>{data.type}</dd>
     </dl>
     {hasFoundBy ? <div className="mt-6" data-card-section="found-by">
@@ -78,8 +80,10 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
 
 /** Mounted only while Properties is open: no box scan for every visible card. */
 export function CardMentions({ path, onNavigate }: { path: string; onNavigate: (target: ViewTarget, hint?: NavigateHint) => void }) {
-  const query = trpc.card.inboundRefs.useQuery({ path }, { staleTime: 10_000 });
-  useRefetchOnFileChange(query.refetch);
+  // Mounted only while shown, so a change made while closed was never seen:
+  // fetch on every open rather than trust the cache.
+  const query = trpc.card.inboundRefs.useQuery({ path }, { staleTime: 10_000, refetchOnMount: "always" });
+  useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const incomplete = (query.data?.errors ?? []).length > 0;
   return <section className="mt-6" aria-label="Mentions">
     <h3 className="text-sm font-semibold mb-2">Mentioned by</h3>

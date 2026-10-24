@@ -33,14 +33,6 @@
   opacity: .48;
 }
 
-.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper .bbx-chat-user-token,
-.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper .bbx-chat-user-attachment,
-.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper .bbx-chat-user-attachment-badge {
-  background-color: rgb(255 255 255 / 13%);
-}
-.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper .bbx-chat-user-attachment:hover {
-  background-color: rgb(255 255 255 / 20%);
-}
 .bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper :is(
   .bbx-chat-user-status, .bbx-chat-user-attachment-summary
 ) { color: color-mix(in srgb, var(--bbx-chat-user-ink) 85%, transparent); }

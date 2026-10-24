@@ -181,7 +181,7 @@ function ScriptedBubble() {
       </div>
       <CaptureBubbleView model={model} now={HARNESS_NOW} onRetry={announce("retry")} onDiscard={announce("discard")} />
       {status === "delivered" ? (
-        <div className="mt-2 text-xs text-warm-500 italic">
+        <div className="mt-2 text-xs text-warm-700 italic">
           the resolved face is held for {String(RESOLVED_HOLD_MS / 1000)}s in place, then the row leaves and the
           delivered chip stands in history
         </div>
@@ -226,7 +226,7 @@ function RetryBanners() {
     <div className="space-y-3">
       {RETRY_FACES.map((feedback) => (
         <div key={feedback.phase}>
-          <div className="text-xs font-mono text-warm-500">{feedback.phase}</div>
+          <div className="text-xs font-mono text-warm-700">{feedback.phase}</div>
           <div className="bg-gray-900 text-white rounded-lg overflow-hidden">
             <CaptureControls
               includeControlIds={false}
@@ -260,7 +260,7 @@ function OverlayDemo() {
   const api = useMemo(() => makeFakeApi({ log: appendLog }), [appendLog]);
   return (
     <div className="border border-warm-300 rounded-lg p-4 bg-warm-50">
-      <p className="text-xs text-warm-600 mb-2">
+      <p className="text-xs text-warm-700 mb-2">
         Uploads are serialized, so with a slow transport you can add several files
         from the paperclip and watch them go one at a time with a live percentage.
         Press Done mid-flight for the &ldquo;waiting for N uploads / Skip them&rdquo; path.
@@ -282,7 +282,7 @@ function OverlayDemo() {
       <button onClick={() => setOpen(true)} className="px-3 py-1.5 rounded bg-primary text-white text-sm hover:bg-primary-dark">
         Open capture overlay
       </button>
-      <pre className="mt-2 text-xs text-warm-600 whitespace-pre-wrap">{log.join("\n") || "(fake capture-api calls appear here)"}</pre>
+      <pre className="mt-2 text-xs text-warm-700 whitespace-pre-wrap">{log.join("\n") || "(fake capture-api calls appear here)"}</pre>
       {open ? (
         <CaptureApiProvider value={api}>
           <CaptureOverlay targetSessionId="dev-chat" onExit={() => setOpen(false)} />
@@ -301,7 +301,7 @@ export function CaptureModeHarness() {
           <div className="space-y-3 bg-gradient-to-b from-warm-50 to-warm-100 border border-warm-300 rounded-lg p-4">
             {BUBBLE_STATES.map(({ label, model }) => (
               <div key={label}>
-                <div className="text-xs font-mono text-warm-500">{label}</div>
+                <div className="text-xs font-mono text-warm-700">{label}</div>
                 <CaptureBubbleView model={model} now={HARNESS_NOW} onRetry={announce("retry")} onDiscard={announce("discard")} />
               </div>
             ))}
@@ -333,7 +333,7 @@ export function CaptureModeHarness() {
             })}
           </div>
           <div className="mt-3 bg-gradient-to-b from-warm-50 to-warm-100 border border-warm-300 rounded-lg p-4">
-            <div className="mb-2 text-xs font-mono text-warm-500">
+            <div className="mb-2 text-xs font-mono text-warm-700">
               snapshot + text + capture + upload + text
             </div>
             <UserMessage entries={[MIXED_DELIVERED_ENTRY]} />

@@ -10,6 +10,7 @@
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { splitCardContent } from "../../beebox/src/cards/frontmatter.js";
 
 export const CHECKPOINTS = ["plan-reviewed", "implemented", "review-adjudicated", "landed"] as const;
 export type Checkpoint = (typeof CHECKPOINTS)[number];
@@ -98,18 +99,18 @@ export function formatEntry(meta: EntryMeta, body: string): string {
 export type ParsedEntry = { ok: true; meta: EntryMeta; body: string } | { ok: false; problem: string };
 
 export function parseEntry(text: string): ParsedEntry {
-  const match = /^---\n([\s\S]*?)\n---\n\n?([\s\S]*)$/u.exec(text);
-  if (!match) return { ok: false, problem: "no YAML frontmatter" };
+  const split = splitCardContent(text);
+  if (!split.hasFrontmatter) return { ok: false, problem: "no YAML frontmatter" };
   let raw: unknown;
   try {
-    raw = parseYaml(match[1] ?? "");
+    raw = parseYaml(split.frontmatterText);
   } catch (error) {
     if (error instanceof Error) return { ok: false, problem: `frontmatter is not YAML: ${error.message}` };
     throw error;
   }
   const meta = entryMetaSchema.safeParse(raw);
   if (!meta.success) return { ok: false, problem: meta.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
-  return { ok: true, meta: meta.data, body: match[2] ?? "" };
+  return { ok: true, meta: meta.data, body: split.body.replace(/^\n/, "") };
 }
 
 export interface ListedEntry {

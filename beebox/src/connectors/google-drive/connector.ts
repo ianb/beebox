@@ -36,6 +36,9 @@ import { syncFolderCard } from "./folder-sync.js";
 import { createFolderSyncDeps } from "./sync-deps.js";
 import { assertNever } from "../../shared/invariant.js";
 import { withDriveMirrorLock } from "./lock.js";
+import { getBoxTime } from "../../lib/time.js";
+import { nextDocsApiDiagnosis, recordDocsApiDiagnosis } from "./docs-api-status.js";
+import type { DocsApiOutcome } from "./handlers/docs/api-failure.js";
 
 // Ensure handlers are registered
 
@@ -85,6 +88,8 @@ class GoogleDriveConnector implements Connector {
     if (!this.injectedService) {
       const allowed = await isGoogleServiceAllowed(this.boxRoot, "drive");
       if (!allowed) {
+        // Nothing syncs, so nothing syncs at reduced fidelity.
+        await recordDocsApiDiagnosis(this.boxRoot, () => null);
         return skippedSync(serviceNotAllowed("drive"));
       }
     }
@@ -95,6 +100,7 @@ class GoogleDriveConnector implements Connector {
       // sync that failed: nothing was attempted, and reporting it as an error
       // made Drive the odd one out among the Google connectors. Callers that
       // must not say "up to date" read `skipped`.
+      await recordDocsApiDiagnosis(this.boxRoot, () => null);
       return skippedSync(await serviceNotConfigured(this.boxRoot));
     }
 
@@ -111,6 +117,9 @@ class GoogleDriveConnector implements Connector {
     // wakeup counts a connector error only from `error`, never from `success`,
     // so a failure that never lands here is a silent failure.
     const failures: string[] = [];
+    // Every Doc pull's Docs API outcome on this pass, from both the card loop
+    // and folder discovery; folded into the box's diagnosis at the end.
+    const docsApiOutcomes: DocsApiOutcome[] = [];
 
     // 1. Convert any legacy `folders` config into mount cards FIRST, so a
     //    converted mount is scanned and mirrored on this same pass.
@@ -146,6 +155,7 @@ class GoogleDriveConnector implements Connector {
     //    descends into subfolders itself, and the whole pass shares one
     //    cycle guard and recursion budget.
     const folderCards: TrackedDriveCard[] = [];
+    let folderCapped = false;
     for (const card of tracking.liveCards) {
       try {
         switch (card.kind) {
@@ -156,6 +166,7 @@ class GoogleDriveConnector implements Connector {
               boxRoot: this.boxRoot,
               service,
               state,
+              docsApiOutcomes,
             });
             created.push(...result.created);
             updated.push(...result.updated);
@@ -191,7 +202,7 @@ class GoogleDriveConnector implements Connector {
         `Unreadable Drive card(s), folder discovery skipped: ${tracking.unreadable.join(", ")}`,
       );
     } else {
-      const deps = createFolderSyncDeps({ boxRoot: this.boxRoot, service, state, tracking });
+      const deps = createFolderSyncDeps({ boxRoot: this.boxRoot, service, state, tracking, docsApiOutcomes });
       for (const card of folderCards) {
         try {
           const folder = await syncFolderCard(
@@ -209,7 +220,16 @@ class GoogleDriveConnector implements Connector {
           failures.push(`Folder sync failed for ${card.relPath}: ${errorMessage(err)}`);
         }
       }
+      folderCapped = deps.budget.capped;
     }
+
+    // One Doc that reached the Docs API clears the box-wide problem. With no
+    // Doc pulls, only a pass with no failures and no capped folder clears it:
+    // an incomplete pass may have missed the Docs that still fail.
+    const now = getBoxTime(this.boxRoot);
+    await recordDocsApiDiagnosis(this.boxRoot, (previous) =>
+      nextDocsApiDiagnosis({ previous, outcomes: docsApiOutcomes, passComplete: failures.length === 0 && !folderCapped, now }),
+    );
 
     // Save state via a serialized delta merge (not a whole-sync lock): the CLI
     // `bbx drive add` writes the same file from another process, so we merge the

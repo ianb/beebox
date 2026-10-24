@@ -1,6 +1,6 @@
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme/core";
 import { themeOriginLabel } from "../../../../themes/registry";
-import { useState, type ReactNode } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import type { FileData, FileRenderer } from "../../../../file-type-registry";
 import { rendererDisplayLabel } from "../../../../lib/renderer-display-label";
 import { Button } from "../../../ui/Button";
@@ -11,12 +11,14 @@ import { CardFacts, CardMentions } from "./CardProperties";
 import { CardAttachments } from "./CardAttachments";
 import { CardLastChange } from "./CardLastChange";
 import { Text } from "../../../ui/Text";
-import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
+import { ThemeSwatchPicker } from "../ThemeSwatchPicker";
 import { LandmarkSystemThemePicker } from "../../SystemThemePicker";
 import { isCardPath } from "../../../file-view-data";
 import { isRecord } from "@shared/is-record";
 import { resolveRelativePath } from "../../../../lib/view-url";
 import { copyFileText, copyImageFile } from "../../../../lib/copy-file-to-clipboard";
+import { printCard } from "../../../../lib/print-card";
+import { CheckboxField } from "../../../ui/fields/field";
 
 export interface ThemedFileCardPropertiesProps {
   data: FileData;
@@ -29,6 +31,8 @@ export interface ThemedFileCardPropertiesProps {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   /** The actions menu, last on the face; `null` for a file with none. */
   actions: ReactNode;
+  /** A phone could reach this page's address, so Print can offer a QR code (`lib/off-machine-origin.ts`). */
+  qrReachable?: boolean;
 }
 
 /**
@@ -38,6 +42,7 @@ export interface ThemedFileCardPropertiesProps {
 export function ThemedFileCardProperties(props: ThemedFileCardPropertiesProps) {
   const { data, theme, boxSlug, onNavigate, actions } = props;
   const isCard = isCardPath(data.path);
+  // MaterialContext comes from the back of the card (CardThemeSurface).
   return <>
     <h2>Properties</h2>
     {isCard ? <>
@@ -78,7 +83,7 @@ function Appearance({ data, theme, isCard, boxSlug }: {
 }
 
 /** Choosing a view turns the card over so the person sees what they chose. */
-function ViewChooser({ data, renderers, active, hasExplicitView, onSelect }: ThemedFileCardPropertiesProps) {
+function ViewChooser({ data, renderers, active, hasExplicitView, onSelect, qrReachable }: ThemedFileCardPropertiesProps) {
   const showFront = useShowCardFront();
   const first = renderers.at(0);
   function choose(name: string | null) {
@@ -98,24 +103,14 @@ function ViewChooser({ data, renderers, active, hasExplicitView, onSelect }: The
         >{rendererDisplayLabel({ registeredName: renderer.name, filePath: data.path, hasTypeSpecificRenderer: first?.name !== "Card" })}</Button>)}
       </div>
       {first ? <div className="mt-2"><Button size="sm" intent="ghost" disabled={!hasExplicitView} onClick={() => choose(null)}>Use preferred view</Button></div> : null}
-      <CopyContents data={data} />
+      <CopyContents data={data} qrReachable={qrReachable === true} />
     </section>
   );
 }
 
-type CopyState = "idle" | "copied" | "failed";
-
 /** One copy button; says "Copied" or "Copy failed" for two seconds after a click. */
 function CopyButton({ label, copy }: { label: string; copy: () => Promise<void> }) {
-  const [state, setState] = useState<CopyState>("idle");
-  function handleClick() {
-    copy().then(() => setState("copied"), () => setState("failed")).finally(() => {
-      setTimeout(() => setState("idle"), 2000);
-    });
-  }
-  return <Button size="sm" intent="ghost" onClick={handleClick} aria-live="polite">
-    {state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : label}
-  </Button>;
+  return <Button size="sm" intent="ghost" onClick={copy} flash={{ label: "Copied", failLabel: "Copy failed" }}>{label}</Button>;
 }
 
 /** The image file an image card points at, resolved against the card's path. */
@@ -125,11 +120,21 @@ function imageCardFile(data: FileData): string | null {
   return typeof ref === "string" ? resolveRelativePath(data.path, ref) : null;
 }
 
-/** Copy the file's whole original text, and for an image card the image too. */
-function CopyContents({ data }: { data: FileData }) {
+/** Copy the file's whole original text, and for an image card the image too; or print the card. */
+function CopyContents({ data, qrReachable }: { data: FileData; qrReachable: boolean }) {
   const image = imageCardFile(data);
-  return <div className="mt-2 flex flex-wrap gap-2">
+  // A QR code is opt-in, and offered only when a phone could reach this
+  // address (never for localhost).
+  const [qr, setQr] = useState(false);
+  /** Prints the card's front alone, from whichever card this Properties face belongs to. */
+  function handlePrint(event: MouseEvent<HTMLButtonElement>) {
+    const card = event.currentTarget.closest<HTMLElement>(".bbx-card-surface");
+    if (card !== null) printCard(card, { qr: qrReachable && qr });
+  }
+  return <div className="mt-2 flex flex-wrap items-center gap-2">
     <CopyButton label="Copy original text" copy={() => copyFileText(data.path)} />
     {image === null ? null : <CopyButton label="Copy image" copy={() => copyImageFile(image)} />}
+    <Button size="sm" intent="ghost" onClick={handlePrint}>Print</Button>
+    {qrReachable ? <CheckboxField label="Add QR code" checked={qr} onChange={setQr} /> : null}
   </div>;
 }

@@ -15,6 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxShape } from "../../../../../lib/box-shape.js";
 import { getInstalledEngineVersion } from "../../../../../core/engine-version.js";
+import { ENGINE_LINK, ENGINE_LINK_SPEC, engineRealPath, readBeeBoxSpec } from "../../../../../core/box/engine-link.js";
 import { loadBoxSchemas } from "../../../../../schemas.js";
 import { listSchemaLoadFailures } from "../../../../../schema-load-status.js";
 import { reservedFieldProblems } from "../../../../../cards/reserved-fields.js";
@@ -22,6 +23,17 @@ import type { CardSchema } from "../../../../../cards/schema.js";
 import type { HealthCheck } from "../router.js";
 
 const MAX_FAILURES_SHOWN = 3;
+
+/** The symlink's target, or null when `linkPath` is not a symlink. */
+async function readLinkOrNull(linkPath: string): Promise<string | null> {
+  try {
+    return await fs.readlink(linkPath);
+  } catch (_e) {
+    // Not a symlink: a real installed directory (fine) or missing entirely
+    // (the version read distinguishes).
+    return null;
+  }
+}
 
 /**
  * `engine-link`: the box's `node_modules/beebox` must resolve to a readable
@@ -36,23 +48,29 @@ export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]
   const shape = await getBoxShape(boxRoot);
 
   {
-    const linkPath = path.join(shape.boxRoot, "node_modules", "beebox");
-    let target: string | null = null;
-    try {
-      target = await fs.readlink(linkPath);
-    } catch (_e) {
-      // Not a symlink: a real installed directory (fine) or missing
-      // entirely (the version read below distinguishes).
+    let linkPath = path.join(shape.boxRoot, "node_modules", "beebox");
+    let target = await readLinkOrNull(linkPath);
+    // The portable spec links through `.beebox/engine`; that link holds the
+    // machine's engine path, so it is the one to report and repair. A box on
+    // the portable spec needs it even while node_modules/beebox still points
+    // at an older engine directly: the next install goes through the link.
+    const engineLink = path.join(shape.boxRoot, ENGINE_LINK);
+    const portable = (await readBeeBoxSpec(shape.boxRoot)) === ENGINE_LINK_SPEC;
+    if (portable || (target !== null && path.resolve(path.dirname(linkPath), target) === engineLink)) {
+      linkPath = engineLink;
+      target = await readLinkOrNull(engineLink);
     }
-    const installed = await getInstalledEngineVersion(boxRoot);
+    const installed = portable && (await engineRealPath(engineLink)) === null ? null : await getInstalledEngineVersion(boxRoot);
     if (installed === null) {
       checks.push({
         name: "engine-link",
         ok: false,
         message:
           target !== null
-            ? `node_modules/beebox is a dead symlink (→ ${target}) — box-local schemas and templates will not load. Repoint it: ln -sfn <engine-checkout>/beebox ${linkPath}`
-            : `node_modules/beebox is missing or unreadable at ${linkPath} — box-local schemas and templates will not load. Run pnpm install, or symlink an engine checkout there.`,
+            ? `${path.relative(shape.boxRoot, linkPath)} is a dead symlink (→ ${target}) — box-local schemas and templates will not load. Repoint it: ln -sfn <engine-checkout>/beebox ${linkPath}`
+            : linkPath === engineLink
+              ? `the engine link ${linkPath} is missing — box-local schemas and templates will not load. Create it: ln -sfn <engine-checkout>/beebox ${linkPath}`
+              : `node_modules/beebox is missing or unreadable at ${linkPath} — box-local schemas and templates will not load. Run pnpm install, or symlink an engine checkout there.`,
         severity: "error",
       });
     } else {
@@ -68,7 +86,7 @@ export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]
         name: "engine-link",
         ok: !worktreePinned,
         message: worktreePinned
-          ? `node_modules/beebox points into a worktree (→ ${target}) — it will go dead when that worktree is removed. Repoint at the main checkout.`
+          ? `${path.relative(shape.boxRoot, linkPath)} points into a worktree (→ ${target}) — it will go dead when that worktree is removed. Repoint at the main checkout.`
           : `engine dependency resolves (beebox ${installed})`,
         severity: "warning",
       });

@@ -8,12 +8,13 @@
 
 import { applySelections, type SelectionItem } from "../../lib/selection/serialize";
 import type { FinalWord } from "../../machines/transcription-events";
+import { boxNow } from "../../lib/box-clock";
 
 /**
- * Format the current local time as HH:MM for the typed/speech tag.
+ * Format the box's current local time as HH:MM for the typed/speech tag.
  */
 export function localTime(): string {
-  const now = new Date();
+  const now = new Date(boxNow());
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
@@ -106,7 +107,7 @@ export function composerTextareaClasses({ mobile, isTranscribing }: { mobile: bo
   const stateClass = isTranscribing
     ? "bg-white text-warm-800 border-primary/40 shadow-[0_0_0_1px_rgba(56,149,211,0.08)]"
     : "bg-white border-warm-400";
-  return `flex-1 resize-none rounded-lg px-3 py-2 ${sizeClass} ${stateClass} focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-warm-500`;
+  return `flex-1 resize-none rounded-lg px-3 py-2 ${sizeClass} ${stateClass} focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-warm-700`;
 }
 
 /**

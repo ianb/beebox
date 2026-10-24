@@ -11,7 +11,7 @@ function MarkdownRenderer({ data, onNavigate, mode }: RendererProps) {
   if (data.content === undefined) {
     return <StatusMessage className="p-4">No content</StatusMessage>;
   }
-  const content = <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{data.content}</Markdown>;
+  const content = <Markdown prose="block" outline={mode !== "embed"} onNavigate={onNavigate} basePath={data.path}>{data.content}</Markdown>;
   if (mode !== "embed") return <CardThemeContent>{content}</CardThemeContent>;
   return <div className="p-4">{content}</div>;
 }

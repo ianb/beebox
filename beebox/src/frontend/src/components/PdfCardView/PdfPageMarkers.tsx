@@ -45,7 +45,7 @@ export function PdfPageMarkers({ markers, activePage, onSelect }: PdfPageMarkers
           className={`absolute left-0 pointer-events-auto rounded px-1 py-0.5 border transition-colors ${
             page === activePage
               ? "border-accent bg-accent-50 text-accent-dark"
-              : "border-transparent text-warm-400 hover:border-warm-300 hover:text-warm-600"
+              : "border-transparent text-warm-400 hover:border-warm-300 hover:text-warm-700"
           }`}
         >
           <Text size="xs" mono>p.&nbsp;{page}</Text>

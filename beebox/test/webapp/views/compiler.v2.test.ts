@@ -1,7 +1,7 @@
 // # Views compiler: v3 (one-root, package-shaped) boxes
 //
-// A v3 box has one root — `.beebox/box.json` (declaring `shapeVersion: 3`) sits
-// alongside a real `node_modules/beebox` dependency. Its views live at
+// A v3 box has one root — `package.json` (recording `shapeVersion: 3`) and
+// `_config/` sit alongside a real `node_modules/beebox` dependency. Its views live at
 // `boxRoot/src/views`. `listViews`/`compileView` resolve that directory from
 // the box's shape (`getBoxShape`/`boxCodePaths`), reading a view's metadata by
 // compiling it for the node target and importing the real module (in a
@@ -32,14 +32,13 @@ async function makeV3Box() {
   execFileSync("git", ["init", "--quiet", root]);
   await writeFile(
     join(root, "package.json"),
-    JSON.stringify({ name: "my-box", private: true, dependencies: { "beebox": "0.1.0" } }),
+    JSON.stringify({ name: "my-box", private: true, dependencies: { "beebox": "0.1.0" }, beebox: { shapeVersion: 3, created: "2026-01-01T00:00:00.000Z" } }),
   );
   await mkdir(join(root, "node_modules"), { recursive: true });
   await symlink(PACKAGE_ROOT, join(root, "node_modules", "beebox"), "dir");
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
   await symlink(join(reactNodeModules, "react"), join(root, "node_modules", "react"), "dir");
-  await mkdir(join(root, ".beebox"), { recursive: true });
-  await writeFile(join(root, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+  await mkdir(join(root, "_config"), { recursive: true });
   await mkdir(join(root, "src", "views"), { recursive: true });
   return {
     root,

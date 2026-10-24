@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { frontmatterFence } from "../beebox/src/cards/frontmatter.js";
 
 /** The issue file does not open with a `---` YAML frontmatter block. */
 class MissingFrontmatterError extends Error {
@@ -29,9 +30,9 @@ export function assignIssueWorkstream(
   source: string,
   workstream: string,
 ): string {
-  const end = source.indexOf("\n---", 4);
-  if (!source.startsWith("---\n") || end === -1)
-    throw new MissingFrontmatterError();
+  const fence = frontmatterFence(source);
+  if (fence === null) throw new MissingFrontmatterError();
+  const end = fence.textEnd;
   const frontmatter = source.slice(0, end);
   if (!/^workstream:[^\n]*$/m.test(frontmatter))
     throw new MissingWorkstreamFieldError();

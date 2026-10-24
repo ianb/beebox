@@ -25,7 +25,7 @@ export type DirtySnapshot = ReadonlyMap<string, string>;
  *
  * @param boxRoot - Repository root, or a directory below it as in a v2 box
  */
-export async function listDirtyPaths(boxRoot: string): Promise<string[]> {
+async function listDirtyPaths(boxRoot: string): Promise<string[]> {
   const git = simpleGit(boxRoot);
   // Porcelain paths are repo-root-relative whatever the cwd; strip the prefix
   // to return them in boxRoot's frame, which `stageAndCommitPaths` expects.

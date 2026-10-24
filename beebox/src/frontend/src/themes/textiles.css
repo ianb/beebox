@@ -51,7 +51,7 @@
   border-bottom: 2px solid var(--textile-edge);
   padding-block: 7px;
 }
-:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill) {
+:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill) {
   background: transparent;
   color: var(--textile-bar-ink);
   border: 1px solid color-mix(in srgb, var(--textile-bar-ink) 45%, transparent);
@@ -78,7 +78,7 @@
   --tw-prose-links: var(--textile-accent);
   color: var(--textile-ink);
 }
-:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-callout > .text-accent-dark {
+:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-callout > .bbx-chat-callout-context {
   color: var(--textile-soft);
 }
 :is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-composer-material > section {
@@ -93,7 +93,7 @@
 :is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-composer-material textarea::placeholder {
   color: var(--textile-soft);
 }
-:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: var(--textile-accent);
   color: var(--textile-accent-ink);
 }
@@ -140,7 +140,7 @@
 }
 @media (max-width: 639px) {
   .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) {
-    background-size: auto 1000px;
+    background-size: auto max(1000px, 100%);
     background-position: center top;
   }
 }
@@ -151,17 +151,17 @@
     var(--textile-art) center 36% / cover;
   border-bottom: 3px solid #c8ba79;
 }
-[data-chrome-theme="rose-trellis"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill) {
+[data-chrome-theme="rose-trellis"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill) {
   border-radius: 24px 7px 24px 7px;
   border-color: #f2ccad99;
   box-shadow: 2px 3px 0 #53203855;
 }
-[data-chrome-theme="rose-trellis"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-back-to-chat) { padding-inline: 18px; }
+[data-chrome-theme="rose-trellis"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice) { padding-inline: 18px; }
 [data-chrome-theme="rose-trellis"] :is(#bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic, #bbx-composer-capture, #bbx-composer-keyboard) {
   border-radius: 27px 9px 27px 9px;
   box-shadow: 2px 3px 0 #b37f6a55;
 }
-[data-chrome-theme="rose-trellis"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+[data-chrome-theme="rose-trellis"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: linear-gradient(135deg, #762c4d, #b84e65 65%, #c37962);
 }
 
@@ -171,15 +171,15 @@
     var(--textile-art) center 60% / cover;
   border-bottom: 1px solid #63768a;
 }
-[data-chrome-theme="gold-thread"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill) {
+[data-chrome-theme="gold-thread"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill) {
   border-radius: 8px;
   border: 1px solid #6b7f96;
   background: #172c43;
   color: #ede7d9;
   box-shadow: none;
 }
-[data-chrome-theme="gold-thread"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-back-to-chat) { padding-inline: 14px; }
-[data-chrome-theme="gold-thread"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+[data-chrome-theme="gold-thread"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice) { padding-inline: 14px; }
+[data-chrome-theme="gold-thread"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: #486787;
   color: #fff5df;
   border: 1px solid #859bb1;

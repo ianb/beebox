@@ -49,3 +49,13 @@ export async function loadCardFrontmatter(absPath: string): Promise<Record<strin
   }
   return readCardFrontmatter(content);
 }
+
+/**
+ * A card file's own non-empty `title:`, trimmed, or null when the file is
+ * unreadable, has no usable frontmatter, or declares no title. Callers fall
+ * back to a filename-derived label.
+ */
+export async function readCardTitle(absPath: string): Promise<string | null> {
+  const title = (await loadCardFrontmatter(absPath))?.["title"];
+  return typeof title === "string" && title.trim() !== "" ? title.trim() : null;
+}

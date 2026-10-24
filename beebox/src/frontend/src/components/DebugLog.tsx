@@ -7,10 +7,12 @@
  * the server when the debug panel is active.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { trpcClient } from "../lib/trpc/client";
 import { describeArg } from "../lib/debug-log-format";
 import { CloseButton } from "./ui/CloseButton";
+import { readStoredFlag, writeStoredFlag, type StoredFlag } from "../lib/stored-flag";
 
 interface LogEntry {
   level: "log" | "warn" | "error" | "info";
@@ -106,7 +108,7 @@ function patchConsole() {
   });
 
   window.addEventListener("unhandledrejection", (event) => {
-    const reason = event.reason instanceof Error ? event.reason.message : String(event.reason);
+    const reason = errorMessage(event.reason);
     const message = `Unhandled rejection: ${reason}`;
     logEntries.push({ level: "error", message, timestamp: Date.now() });
     if (logEntries.length > MAX_ENTRIES) logEntries.shift();
@@ -157,22 +159,14 @@ export function clearErrorCount() {
  * `localStorage` access can throw (private browsing, blocked site data), so
  * both sides fail closed to "not opened" rather than crash the nav.
  */
-const DEBUG_LOG_OPENED_KEY = "bbx-debug-log-opened";
+const DEBUG_LOG_OPENED: StoredFlag = { storage: () => localStorage, key: "bbx-debug-log-opened" };
 
 export function hasDebugLogBeenOpened(): boolean {
-  try {
-    return localStorage.getItem(DEBUG_LOG_OPENED_KEY) !== null;
-  } catch (_e) {
-    return false;
-  }
+  return readStoredFlag(DEBUG_LOG_OPENED);
 }
 
 function markDebugLogOpened() {
-  try {
-    localStorage.setItem(DEBUG_LOG_OPENED_KEY, "1");
-  } catch (_e) {
-    /* ignore: private-browsing/blocked storage — the gate just stays closed next time */
-  }
+  writeStoredFlag(DEBUG_LOG_OPENED, true);
 }
 
 function useLogEntries(): LogEntry[] {
@@ -232,7 +226,7 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
           placeholder="Filter..."
           className="flex-1 px-2 py-0.5 rounded border border-warm-300 text-xs"
         />
-        <button id="bbx-debug-log-clear" onClick={clearLog} className="text-warm-500 hover:text-warm-700">Clear</button>
+        <button id="bbx-debug-log-clear" onClick={clearLog} className="text-warm-700 hover:text-warm-900">Clear</button>
         <CloseButton id="bbx-debug-log-close" onClick={onClose} size="sm" />
       </div>
       <div ref={scrollRef} className="flex-1 overflow-auto px-3 py-1 font-mono text-[11px] leading-tight">

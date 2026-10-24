@@ -100,7 +100,7 @@ export function captureTurn(chatSession: ChatSession, { turnId, releasePin }: { 
 }
 
 /** A send admitted after its watchdog already answered the request as refused. */
-export class SendAbandonedError extends Error {
+class SendAbandonedError extends Error {
   constructor() {
     super("Send abandoned before the session took the turn");
     this.name = "SendAbandonedError";

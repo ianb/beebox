@@ -1,5 +1,5 @@
 import { useId, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
-import { FieldShell, inputClasses } from "./shell";
+import { FieldShell, inputClasses, useFieldInk } from "./shell";
 
 export { RadioGroup } from "./radio";
 export type { RadioOption, RadioGroupProps } from "./radio";
@@ -208,9 +208,10 @@ export function CheckboxField({
   const autoId = useId();
   const fieldId = id !== undefined ? id : autoId;
   const hasError = error !== undefined;
+  const ink = useFieldInk();
   const labelClass = disabled === true
-    ? "flex items-center gap-2 text-sm text-warm-700 opacity-50"
-    : "flex items-center gap-2 text-sm text-warm-700 cursor-pointer";
+    ? `flex items-center gap-2 text-sm ${ink.label} opacity-50`
+    : `flex items-center gap-2 text-sm ${ink.label} cursor-pointer`;
   return (
     <div className={className}>
       <label htmlFor={fieldId} className={labelClass}>
@@ -233,7 +234,7 @@ export function CheckboxField({
       {error !== undefined ? (
         <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
       ) : helper !== undefined ? (
-        <div className="text-xs text-warm-500 mt-1">{helper}</div>
+        <div className={`text-xs ${ink.helper} mt-1`}>{helper}</div>
       ) : null}
     </div>
   );

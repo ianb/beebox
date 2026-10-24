@@ -4,6 +4,7 @@
  */
 
 import * as path from "node:path";
+import { errorMessage } from "../shared/error-guards.js";
 
 /**
  * What to tell someone holding a v2 box. There is no longer a command that
@@ -64,10 +65,23 @@ export class NewerShapeRequiredError extends BoxShapeError {
 export class NotABoxError extends BoxShapeError {
   constructor(resolvedRoot: string) {
     super(
-      resolvedRoot + " is not a Bee Box: no .beebox/box.json marker there or at its " +
-        "content/ subdirectory."
+      resolvedRoot + " is not a Bee Box: a box has a package.json declaring the \"beebox\" " +
+        "dependency and a _config/ directory beside it."
     );
     this.name = "NotABoxError";
+  }
+}
+
+/** A box by identity whose shape version is recorded nowhere: no `package.json` block, no marker. */
+export class MissingShapeRecordError extends BoxShapeError {
+  constructor(boxRoot: string) {
+    super(
+      "Box at " + boxRoot + " has no recorded shape version: its package.json has no " +
+        "\"beebox\": { \"shapeVersion\": 3, \"created\": \"<ISO date>\" } block and there is no " +
+        ".beebox/box.json. If this is a clone of an older box, run `bbx engine migrate` in the " +
+        "box it was cloned from, commit, and pull; or copy that box's .beebox/box.json here."
+    );
+    this.name = "MissingShapeRecordError";
   }
 }
 
@@ -75,26 +89,18 @@ export class NotABoxError extends BoxShapeError {
 export class UnreadablePackageJsonError extends BoxShapeError {
   constructor(boxRoot: string, options: { packageJsonPath: string; cause: unknown }) {
     super(
-      "Box at " + boxRoot + " declares shapeVersion 3+ (one-root layout), but it has no " +
+      "Box at " + boxRoot + " has no " +
         "readable package.json. Expected " + options.packageJsonPath + " declaring a \"beebox\" " +
-        "dependency. (" + describeError(options.cause) + ")"
+        "dependency. (" + errorMessage(options.cause) + ")"
     );
     this.name = "UnreadablePackageJsonError";
   }
 }
 
-/** The box's `package.json` doesn't declare a `beebox` dependency. */
-export class MissingBeeBoxDependencyError extends BoxShapeError {
-  constructor(boxRoot: string, packageJsonPath: string) {
-    super(
-      "Box at " + boxRoot + " declares shapeVersion 3+ (one-root layout), but " +
-        packageJsonPath + " doesn't declare a \"beebox\" dependency (checked dependencies " +
-        "and devDependencies)."
-    );
-    this.name = "MissingBeeBoxDependencyError";
+/** A box `package.json` that parses but is not a JSON object, so no block can be set in it. */
+export class PackageJsonNotObjectError extends BoxShapeError {
+  constructor() {
+    super("The box package.json is not a JSON object, so its \"beebox\" block cannot be written.");
+    this.name = "PackageJsonNotObjectError";
   }
-}
-
-function describeError(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }

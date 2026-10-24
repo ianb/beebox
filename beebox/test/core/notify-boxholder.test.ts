@@ -15,7 +15,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
-import { notifyBoxholder, notifyChannels, type NotificationInput } from "../../src/core/notify-boxholder.js";
+import { notificationReached, notifyBoxholder, notifyChannels, type NotificationInput } from "../../src/core/notify-boxholder.js";
 import type { Loudness } from "../../src/core/notification/intent.js";
 import { eventSchemas } from "../../src/core/event-bus/schemas.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
@@ -171,6 +171,39 @@ web-push skipped: present`);
   t.check(await failing(box), "all ok");
 });
 
+// ## `loud` with no audience while someone is present: the open app showed it
+//
+// A `loud` send tries every channel with an audience, so presence skips nothing
+// and a box with no device has every channel `no-audience`. The live event
+// still showed the banner, so the send reached the person (`shown`). A `dot`
+// has no banner: it is not shown, and not reached.
+void test("A loud send with no audience reached a person with the app open", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await writePresence(box.root, { activeWeb: 1, now: new Date(NOW.getTime() - 30_000) });
+  const loud = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW });
+  const dot = await notifyBoxholder(box.root, { intent: intent("dot"), now: NOW });
+  t.check(
+    { loud: { shown: loud.shown, reached: notificationReached(loud), deliveries: loud.deliveries.map((d) => d.detail) }, dot: { shown: dot.shown, reached: notificationReached(dot) } },
+    { loud: { shown: true, reached: true, deliveries: ["no-audience", "no-audience"] }, dot: { shown: false, reached: false } },
+  );
+
+  // `bbx notify --channel apns` tests that channel: the banner does not stand in for it.
+  const only = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, channel: "apns" });
+  t.check({ shown: only.shown, reached: notificationReached(only) }, { shown: false, reached: false });
+
+  // Nobody present: the same `loud` send reached nobody.
+  await writePresence(box.root, { activeWeb: 0, now: NOW });
+  const alone = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW });
+  t.check({ shown: alone.shown, reached: notificationReached(alone) }, { shown: false, reached: false });
+});
+
 // ## `quiet` with no audience and nobody present: a visible gap
 //
 // Nothing can reach the person. Each channel is logged as `no-audience` and the
@@ -304,6 +337,8 @@ web-push failed: no device received the push (sent 0, pruned 0, failed 1)`);
     { name: "notifications-undelivered", ok: true, message: "No notification failed to deliver in the last 24 hours", severity: "warning" },
     { name: "notifications-no-channel", ok: true, message: "Every notification in the last 24 hours had a channel to reach the boxholder", severity: "warning" },
     { name: "notification-log-writable", ok: true, message: "The notification log is writable", severity: "warning" },
+    { name: "notifications-fake", ok: true, message: "Notifications on this box send for real", severity: "warning" },
+    { name: "box-clock-offset", ok: true, message: "This box's clock is real time", severity: "warning" },
     { name: "jev-budget", ok: true, message: "No judgment deferred for the daily Jev budget in the last 24 hours", severity: "warning" },
   ]);
 });

@@ -10,6 +10,7 @@
  */
 
 import * as path from "node:path";
+import { frontmatterFence } from "../../cards/frontmatter.js";
 
 // Basenames that are intentionally non-unique — one per directory — so they're
 // exempt from the uniqueness invariant AND excluded as basename-repair
@@ -110,7 +111,11 @@ type LinkDecision =
 // above the suffix must be one of the source directory's ancestors. A file
 // with the same suffix in another package is a different file.
 function redepthCandidates(pathPart: string, ctx: DecideContext): readonly string[] | undefined {
-  const suffix = path.posix.normalize(pathPart).replace(/^(?:\.\.\/)+/, "");
+  // A bare single-segment link (`./foo.json`) is too weak a suffix: it needs a
+  // second path segment or a `../` hop in the original link to count.
+  const normalized = path.posix.normalize(pathPart);
+  const suffix = normalized.replace(/^(?:\.\.\/)+/, "");
+  if (suffix === normalized && !suffix.includes("/")) return undefined;
   const fromDir = `${ctx.fromDir}/`;
   return ctx.suffixMatches?.(suffix).filter((c) => fromDir.startsWith(c.slice(0, c.length - suffix.length)));
 }
@@ -230,7 +235,8 @@ export function repairFrontmatterPaths({
   fileExists: (repoRelPath: string) => boolean;
   basenameLookup: Map<string, string[]>;
 }): RepairResult {
-  if (!content.startsWith("---\n")) return { content, rewrites: [], unfixable: [] };
+  const fence = frontmatterFence(content);
+  if (fence === null) return { content, rewrites: [], unfixable: [] };
   const rewrites: LinkRewrite[] = [];
   const unfixable: UnfixableLink[] = [];
   const ctx: DecideContext = { fromDir: path.posix.dirname(fromRel), fileExists, basenameLookup, suffixMatches: undefined };
@@ -238,7 +244,7 @@ export function repairFrontmatterPaths({
   let issuesList = false;
   const lines = content.split("\n").map((line, index) => {
     if (!inFrontmatter) return line;
-    if (index > 0 && line === "---") {
+    if (index === fence.closingLine) {
       inFrontmatter = false;
       return line;
     }

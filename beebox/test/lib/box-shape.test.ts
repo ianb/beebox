@@ -1,6 +1,7 @@
 // # bbx box shape: the v3 one-root predicate
 //
-// `getBoxShape` reads a box's `.beebox/box.json` marker and resolves its shape.
+// `getBoxShape` reads a box's recorded shape (the `package.json` `beebox` block,
+// else the `.beebox/box.json` marker) and resolves it.
 // shapeVersion 3 (the one-root layout — `docs/implemented-plans/one-root-box-layout.md`)
 // has ONE root: `package.json`, `src/`, and every underscore-prefixed
 // operational area (`_content/`, `_config/`, …) all live at the same directory
@@ -10,8 +11,9 @@
 // `bbx migrate`.
 //
 // `makeTmpBox` builds a real shape-3 box (`box.root`). The sections below use it
-// directly; the error cases overwrite `box.root`'s `.beebox/box.json` marker
-// by hand, or fabricate a v2-shaped fixture, to construct the rejected inputs.
+// directly; the error cases replace its `package.json` block with a hand-written
+// `.beebox/box.json` marker (the fallback read, `useMarkerOnly`), or fabricate a
+// v2-shaped fixture, to construct the rejected inputs.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -20,7 +22,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { getBoxShape, getBoxShapeIfPresent, resolveBoxRoot, requireBoxRoot, BoxShapeError } from "../../src/lib/box-shape.js";
-import { makeTmpBox } from "../helpers/test-helpers.js";
+import { makeTmpBox, useMarkerOnly } from "../helpers/test-helpers.js";
 
 /** What `getBoxShape(root)` rejects with: "BoxShapeError mentioning [phrases]" when every phrase is in the message. */
 const rejection = async (boxRoot: string, phrases: string[]) => {
@@ -46,10 +48,10 @@ const makeV2PackageRoot = async () => {
   return dir;
 };
 
-/** A throwaway box whose marker holds `marker`, a string written verbatim. */
+/** A throwaway box that records its shape only in a marker holding `marker`, written verbatim (the fallback read). */
 const boxWithMarker = async (marker: string) => {
   const box = await makeTmpBox();
-  await box.write(".beebox/box.json", marker);
+  await useMarkerOnly(box.root, marker);
   return box;
 };
 

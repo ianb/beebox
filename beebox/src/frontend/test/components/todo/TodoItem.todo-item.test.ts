@@ -11,7 +11,7 @@ import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoItem } from "../../../src/components/todo/TodoItem.js";
-import { dateChips, hiddenInReading, recheckChip, startPrefix } from "../../../src/components/todo/item-logic.js";
+import { dateChips, dueWord, hiddenInReading, nextDateOf, recheckChip, startPrefix } from "../../../src/components/todo/item-logic.js";
 
 globalThis.React = React;
 
@@ -145,7 +145,7 @@ void test("Rendered, the escalated chip takes the warning tone and keeps the mac
   const escalated = render({ status: "open", due: "2026-09-15", plateState: "escalated" });
   t.checkText(escalated, "<span data-todo-status=\"open\" data-todo-plate-state=\"escalated\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-accent-100 text-accent-dark text-[10px] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">overdue · Sep 15</time></span></span>");
 
-  t.checkText(render({ status: "open", due: "2026-09-15", plateState: "on-plate" }), "<span data-todo-status=\"open\" data-todo-plate-state=\"on-plate\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-500 text-[10px] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">due Sep 15</time></span></span>");
+  t.checkText(render({ status: "open", due: "2026-09-15", plateState: "on-plate" }), "<span data-todo-status=\"open\" data-todo-plate-state=\"on-plate\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-700 text-[10px] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">due Sep 15</time></span></span>");
 });
 
 // ## `recheck`: a quiet chip in the list only
@@ -176,7 +176,7 @@ void test("recheck is the todo-review's bookkeeping (docs/plans/todos-ui.md, Tra
 void test("The reading view (a card body, inline/block) never shows it; the list line does:", async (t) => {
   t.checkText(render({ status: "open", recheck: "2026-10-15", layout: "inline" }), "<span data-todo-status=\"open\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span></span>");
 
-  t.checkText(render({ status: "open", recheck: "2026-10-15", layout: "line" }), "<span data-todo-status=\"open\" class=\"group flex items-start gap-1.5 text-sm\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mt-0.5 shrink-0\"/><span class=\"min-w-0 flex-1\"><span class=\"text-card-ink\">Call the roofer</span><span class=\"ml-1.5 align-middle\" title=\"When the daily todo review looks at this again\"><span class=\"text-warm-500 text-xs\"><time dateTime=\"2026-10-15\">agent checks again Oct 15</time></span></span></span></span>");
+  t.checkText(render({ status: "open", recheck: "2026-10-15", layout: "line" }), "<span data-todo-status=\"open\" class=\"group flex items-start gap-1.5 text-sm\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mt-0.5 shrink-0\"/><span class=\"min-w-0 flex-1\"><span class=\"text-card-ink\">Call the roofer</span><span class=\"ml-1.5 align-middle\" title=\"When the daily todo review looks at this again\"><span class=\"text-warm-700 text-xs\"><time dateTime=\"2026-10-15\">agent checks again Oct 15</time></span></span></span></span>");
 });
 
 // ## Agent follow-ups
@@ -188,7 +188,7 @@ void test("An open agent todo reads in the quiet (parked) treatment with an \"ag
   const agentOpen = render({ status: "open", assigned: "agent" });
   t.check(summary(agentOpen), "unchecked | disabled | Open | text-card-soft");
 
-  t.checkText(agentOpen, "<span data-todo-status=\"open\" data-todo-assigned=\"agent\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-soft\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-500 text-[10px] px-1.5 py-0.5 ml-1 align-middle\" title=\"Assigned\">agent</span></span>");
+  t.checkText(agentOpen, "<span data-todo-status=\"open\" data-todo-assigned=\"agent\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-soft\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-700 text-[10px] px-1.5 py-0.5 ml-1 align-middle\" title=\"Assigned\">agent</span></span>");
 
   t.check(
     [
@@ -209,4 +209,34 @@ void test("A list ancestor kept only as context for a matching child is muted an
   const context = render({ status: "open", due: "2026-09-15", layout: "line", muted: true });
   t.check(summary(context), "unchecked | disabled | Open | text-card-soft");
   t.checkText(context, "<span data-todo-status=\"open\" class=\"group flex items-start gap-1.5 text-sm\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mt-0.5 shrink-0\"/><span class=\"min-w-0 flex-1\"><span class=\"text-card-soft\">Call the roofer</span></span></span>");
+});
+
+// ## A card row's next date says which date it is
+//
+// The earliest date among a card's open todos, with the word the dated strip
+// would use for it. A due date wins a tie with a start; finished and parked
+// todos do not count.
+void test("A card row's next date names the kind of the earliest date.", async (t) => {
+  const open = (extra: { due?: string; start?: string; plateState?: "quiet" | "on-plate" | "escalated" }) =>
+    ({ status: "open" as const, plateState: "quiet" as const, ...extra });
+  t.check(
+    [
+      nextDateOf([]),
+      nextDateOf([open({}), open({ start: "2026-10-24" }), open({ due: "2026-11-07" })]),
+      nextDateOf([open({ due: "2026-10-15", plateState: "escalated" }), open({ start: "2026-10-24" })]),
+      nextDateOf([open({ start: "2026-10-24" }), open({ due: "2026-10-24" })]),
+      nextDateOf([open({ start: "2026-10-01", plateState: "on-plate" })]),
+      nextDateOf([{ status: "done", due: "2026-01-01", plateState: null }, { status: "parked", start: "2026-01-02", plateState: null }]),
+      [dueWord(null), dueWord("quiet"), dueWord("escalated")],
+    ],
+    [
+      null,
+      { iso: "2026-10-24", word: "starts" },
+      { iso: "2026-10-15", word: "overdue" },
+      { iso: "2026-10-24", word: "due" },
+      { iso: "2026-10-01", word: "since" },
+      null,
+      ["due", "due", "overdue"],
+    ],
+  );
 });

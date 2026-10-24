@@ -141,10 +141,12 @@ Each run writes `test/tours/.artifacts/<tour>/<runId>/` (gitignored):
   violation counts.
 - `<checkpoint>.<viewport>.png` — screenshot.
 - `<checkpoint>.<viewport>.ax.txt` — full accessibility-tree snapshot.
-- `<checkpoint>.<viewport>.axe.json` — axe violations (color-contrast
-  is suppressed at run time pending
-  `issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md`; edit
-  `tour-lib/axe.ts` `SUPPRESS_RULES` to re-enable).
+- `<checkpoint>.<viewport>.axe.json` — axe violations. axe's
+  color-contrast rule is off: it skips text over images and gradients.
+- `<checkpoint>.<viewport>.contrast.json` — the pixel contrast and
+  material audit (`tour-lib/contrast.ts`, also behind `bin/theme-check`).
+  Misses become one ❌ finding per checkpoint. Theme artwork that repeats or
+  stops short at the viewport (`tour-lib/backdrop.ts`) becomes another.
 
 A capture-time degradation (page-readiness timeout, axe crash) is
 recorded as a ⚠️ finding rather than silently producing a

@@ -38,7 +38,7 @@ export function ExternalIconLink({ href, label, size, id, onDark, className }: E
   onDark = onDark ?? false;
   const colorClass = onDark
     ? "bg-white/90 hover:bg-white text-warm-700 shadow"
-    : "bg-transparent hover:bg-warm-200 text-warm-500 hover:text-warm-700";
+    : "bg-transparent hover:bg-warm-200 text-warm-600 hover:text-warm-700";
   return (
     <a
       id={id}

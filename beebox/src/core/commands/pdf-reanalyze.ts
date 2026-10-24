@@ -19,14 +19,14 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
 import {
   parseCommandArgs,
   type CommandContext,
   type CommandDefinition,
   type CommandResult,
 } from "../command-types.js";
-import { splitCardContent } from "../../exports/cards.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 import { isRecord } from "../../shared/is-record.js";
 import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
@@ -172,7 +172,7 @@ export async function runPdfReanalyze(
     ctx.writeLine(`Extraction failed — ${extraction.error}`);
   }
 
-  await fs.writeFile(cardAbsPath, `---\n${stringifyYaml(fields)}---\n${body}`);
+  await fs.writeFile(cardAbsPath, renderFrontmatterBlock(fields, body));
   await stageAndCommitPaths(ctx.boxRoot, {
     paths,
     message: `Pdf reanalyze: ${cardBasename}`,

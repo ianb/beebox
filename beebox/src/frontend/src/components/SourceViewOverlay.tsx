@@ -6,6 +6,8 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Badge } from "./ui/Badge";
+import { Button } from "./ui/Button";
 import { CloseButton } from "./ui/CloseButton";
 
 interface SelectedSource {
@@ -71,7 +73,6 @@ export function SourceViewOverlay({ active, onClose }: SourceViewOverlayProps) {
 function SourceViewOverlayInner({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState<SelectedSource | null>(null);
   const [hovered, setHovered] = useState<Element | null>(null);
-  const [copied, setCopied] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   // Inject/remove the highlight stylesheet
@@ -120,7 +121,6 @@ function SourceViewOverlayInner({ onClose }: { onClose: () => void }) {
         const source = sourceEl.getAttribute("data-bbx-source") || "";
         const item = sourceEl.getAttribute("data-bbx-source-item");
         setSelected({ source, item, rect: sourceEl.getBoundingClientRect() });
-        setCopied(false);
       } else {
         clearSelectedClass();
         setSelected(null);
@@ -164,15 +164,10 @@ function SourceViewOverlayInner({ onClose }: { onClose: () => void }) {
     return () => document.removeEventListener("keydown", handleKey);
   }, [selected, onClose]);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = useCallback(async (): Promise<void> => {
     if (!selected) return;
     const text = selected.item ? `${selected.source} — ${selected.item}` : selected.source;
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      // Fallback not needed — clipboard API works in secure contexts
-    });
+    await navigator.clipboard.writeText(text);
   }, [selected]);
 
   return (
@@ -184,7 +179,7 @@ function SourceViewOverlayInner({ onClose }: { onClose: () => void }) {
       ) : null}
 
       {selected ? (
-        <SelectedPanel selected={selected} copied={copied} onCopy={handleCopy} />
+        <SelectedPanel selected={selected} onCopy={handleCopy} />
       ) : null}
     </div>
   );
@@ -208,7 +203,7 @@ function ModeBar({ onClose }: { onClose: () => void }) {
 /**
  * Bottom panel showing details of the selected source element.
  */
-function SelectedPanel({ selected, copied, onCopy }: { selected: SelectedSource; copied: boolean; onCopy: () => void }) {
+function SelectedPanel({ selected, onCopy }: { selected: SelectedSource; onCopy: () => Promise<void> }) {
   const pairs = selected.source.split(" ").map((pair) => {
     const colonIdx = pair.indexOf(":");
     return { type: pair.substring(0, colonIdx), id: pair.substring(colonIdx + 1) };
@@ -218,14 +213,19 @@ function SelectedPanel({ selected, copied, onCopy }: { selected: SelectedSource;
     <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-[9999] bg-white rounded-lg shadow-xl border border-warm-200 overflow-hidden">
       <div className="px-3 py-2 bg-violet-50 border-b border-violet-100 flex items-center justify-between">
         <span className="text-xs font-semibold text-violet-700">Source</span>
-        <button
+        <Button
+          // A new selection gets a fresh button: a "Copied" flash belongs to
+          // the source that was copied, not the next one.
+          key={`${selected.source}\n${selected.item ?? ""}`}
           id="bbx-source-view-copy"
           data-bbx-does="copies the selected element's source reference to the clipboard"
+          size="sm"
+          intent="ghost"
           onClick={onCopy}
-          className="text-xs text-violet-600 hover:text-violet-800 font-medium"
+          flash={{ label: "Copied", failLabel: "Copy failed" }}
         >
-          {copied ? "Copied!" : "Copy"}
-        </button>
+          Copy
+        </Button>
       </div>
       <div className="px-3 py-2 space-y-1">
         {pairs.map((pair, i) => (
@@ -233,7 +233,7 @@ function SelectedPanel({ selected, copied, onCopy }: { selected: SelectedSource;
         ))}
         {selected.item ? (
           <div className="pt-1 border-t border-warm-100">
-            <span className="text-xs text-warm-500">Item: </span>
+            <span className="text-xs text-warm-700">Item: </span>
             <span className="text-sm text-warm-700">{selected.item}</span>
           </div>
         ) : null}
@@ -245,9 +245,9 @@ function SelectedPanel({ selected, copied, onCopy }: { selected: SelectedSource;
 function SourcePair({ type, id }: { type: string; id: string }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="text-[10px] font-mono bg-violet-100 text-violet-700 px-1 py-0.5 rounded flex-shrink-0">
+      <Badge size="sm" tone="accent" className="flex-shrink-0">
         {type}
-      </span>
+      </Badge>
       <span className="text-sm text-warm-800 font-mono break-all">{id}</span>
     </div>
   );

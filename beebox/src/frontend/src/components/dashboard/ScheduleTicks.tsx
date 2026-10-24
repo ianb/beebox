@@ -34,7 +34,7 @@ function TickResult({ result }: { result: TickResultData }) {
   const parts = [
     result.ran > 0 ? <span key="ran" className="text-success">{result.ran} ran</span> : null,
     result.inconclusive > 0 ? (
-      <span key="inconclusive" className="text-warm-600" title="Work ran; the check reached no verdict">
+      <span key="inconclusive" className="text-warm-700" title="Work ran; the check reached no verdict">
         ? {result.inconclusive} inconclusive
       </span>
     ) : null,
@@ -50,7 +50,7 @@ function TickResult({ result }: { result: TickResultData }) {
 function TickEntry({ tick }: { tick: SchedulerLogEntry }) {
   const active = tickHadActivity(tick);
   return (
-    <div className={`flex items-center gap-2 ${active ? "text-warm-700" : "text-warm-500"}`}>
+    <div className={`flex items-center gap-2 ${active ? "text-warm-900" : "text-warm-700"}`}>
       <span className="font-mono">{new Date(tick.ts).toLocaleTimeString()}</span>
       {tick.result ? <TickResult result={tick.result} /> : null}
       {tick.error ? <span className="text-danger-dark">{tick.error}</span> : null}

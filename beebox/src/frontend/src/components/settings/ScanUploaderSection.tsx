@@ -71,30 +71,6 @@ function UploaderRow({ uploader }: { uploader: UploaderToken }) {
   );
 }
 
-function InstallInstructions() {
-  return (
-    <details>
-      <summary className="cursor-pointer text-sm font-medium text-warm-700 hover:text-warm-900">
-        First-time setup on a new machine
-      </summary>
-      <Stack gap="xs" className="mt-2">
-        <Hint>
-          On the machine connected to the scanner, one time:
-        </Hint>
-        <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800 whitespace-pre">
-          {"git clone <repo>\n" + "pnpm install --filter scan-uploader...  # from the repo root"}
-        </code>
-        <Hint>
-          Then mint a token below and run the configure command it shows (from the repo root —
-          bin/scan-uploader runs the CLI straight from source, so a checkout always stays current).
-          No checkout on that machine? Build once elsewhere (pnpm --filter scan-uploader build),
-          copy the resulting scan-uploader/dist/scan-uploader.mjs, and run it there with plain node.
-        </Hint>
-      </Stack>
-    </details>
-  );
-}
-
 export function ScanUploaderSection() {
   const listQuery = trpc.scanTokens.list.useQuery();
   const utils = trpc.useUtils();
@@ -130,14 +106,14 @@ export function ScanUploaderSection() {
   };
 
   return (
-    <Card as="section" aria-label="Scan uploaders" shadow>
+    <Card as="section" aria-label="Scan uploaders" shadow material>
       <Stack gap="md">
         <Stack gap="xs">
           <Heading level={2}>
             Scan uploaders
           </Heading>
           <Hint>
-            Mint a token for a machine running the scan uploader, then paste it into `configure`.
+            Connect a computer that runs the scan uploader: mint a token here, then run the setup command it shows on that computer.
           </Hint>
         </Stack>
 
@@ -175,7 +151,7 @@ export function ScanUploaderSection() {
             <Hint>
               This token is shown once — copy it now. It won't be shown again.
             </Hint>
-            <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800">
+            <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-900">
               {minted.token}
             </code>
             <Row gap="sm" wrap>
@@ -191,7 +167,7 @@ export function ScanUploaderSection() {
             ) : null}
             <Stack gap="xs">
               <Hint>Paste-ready setup command:</Hint>
-              <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800 whitespace-pre">
+              <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-900 whitespace-pre">
                 {configureCommand(minted.name)}
               </code>
               <Hint>then paste the token when prompted</Hint>
@@ -216,7 +192,6 @@ export function ScanUploaderSection() {
           )}
         </Stack>
 
-        <InstallInstructions />
       </Stack>
     </Card>
   );

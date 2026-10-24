@@ -6,6 +6,8 @@ import { TextField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { CardMark } from "../ui/CardMark";
 import { useIsomorphicLayoutEffect } from "../../hooks/use-isomorphic-layout-effect";
+import { isComposing } from "../../lib/ime";
+import { StatusMessage } from "../ui/StatusMessage";
 
 /** One landmark row's data — the subset of `chat.byLandmark` this menu reads. */
 export interface SwitchLandmark {
@@ -21,7 +23,7 @@ export interface SwitchLandmark {
 
 function FreshCount({ count }: { count: number }) {
   if (count === 0) return null;
-  return <span className="ml-auto shrink-0 text-xs text-warm-500 tabular-nums">{count}</span>;
+  return <span className="ml-auto shrink-0 text-xs text-warm-700 tabular-nums">{count}</span>;
 }
 
 function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>, {
@@ -39,6 +41,7 @@ function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>, {
   mobileViewport: boolean;
   onCancelSearch: () => void;
 }) {
+  if (isComposing(event.nativeEvent)) return;
   if (event.key === "ArrowDown") {
     event.preventDefault();
     const first = document.getElementById("bbx-switch-menu-landmark-first");
@@ -131,6 +134,7 @@ export function LandmarkList({
     const overlay = overlayRef.current;
     const stopOutsideClose = (event: MouseEvent) => event.stopPropagation();
     const trapTab = (event: KeyboardEvent) => {
+      if (isComposing(event)) return;
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
@@ -165,7 +169,7 @@ export function LandmarkList({
 
   if (landmarks === null) {
     if (failed) return <MenuItem id="bbx-switch-menu-landmarks-retry" onClick={onRetry} keepOpen danger>Couldn&rsquo;t load this menu — Retry</MenuItem>;
-    return <div className="px-3 py-2 text-warm-500">Loading…</div>;
+    return <StatusMessage variant="menu">Loading…</StatusMessage>;
   }
 
   const normalizedQuery = query.trim().toLocaleLowerCase();

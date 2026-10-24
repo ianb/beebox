@@ -212,7 +212,8 @@ async function send(boxRoot: string, opts: { route: NotifyRoute; run: NotifyRun 
       intent: { title, body, target: t, loudness, tag: run.options.tag, source: run.source },
       channel,
     });
-    const line = `${result.id}: ${result.deliveries.map(describe).join(", ") || "no channel tried"}`;
+    const parts = [...result.deliveries.map(describe), ...(result.shown ? ["shown in the open app"] : [])];
+    const line = `${result.id}: ${parts.join(", ") || "no channel tried"}`;
     if (notificationReached(result)) {
       console.log(line);
     } else {

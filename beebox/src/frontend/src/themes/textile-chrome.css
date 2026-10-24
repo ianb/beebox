@@ -7,7 +7,7 @@
   --bbx-bar-edge: var(--textile-edge);
   --bbx-chat-user-ink: var(--textile-user-ink);
 }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"], .bbx-interface-browse-panel[data-card-content="card"]) { background: transparent; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]) { background: transparent; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-interface-tabstrip > [role="none"]::before,
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-interface-tabstrip > [role="none"]::after { background: transparent; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
@@ -16,8 +16,8 @@
   outline: 2px solid var(--textile-bar-ink);
   outline-offset: 2px;
 }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: var(--textile-bar-ink); }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r {
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: var(--textile-bar-ink); }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-composer-material > .bbx-composer-mobile-row {
   background: var(--textile-paper);
   color: var(--textile-ink);
 }
@@ -30,13 +30,11 @@
   background: #ffffff18;
   color: var(--textile-user-ink);
 }
+.bbx-box-presentation[data-chrome-theme="gold-thread"] .bbx-chat-user-paper .bbx-chat-user-attachment-badge { background: #00000040; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-attachment:hover { background: #ffffff30; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-unsure { text-decoration-color: var(--textile-user-ink); }
 /* Nested cards supply their own material tokens. */
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-reply-material {
-  --bbx-ink: var(--textile-ink);
-  --bbx-ink-soft: var(--textile-soft);
-  --bbx-pen: var(--textile-accent);
   --bbx-edge: var(--textile-edge);
 }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
@@ -58,9 +56,8 @@
   border-radius: 8px;
 }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) { color: var(--textile-soft); }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: var(--textile-ink); --bbx-ink-soft: var(--textile-soft); --bbx-pen: var(--textile-accent); }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: var(--textile-ink); }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) { color: #302f2d; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) #bbx-chat-load-older {
   background: var(--textile-paper);
   color: var(--textile-accent);
@@ -78,9 +75,6 @@
 .bbx-card-theme[data-card-theme="gold-thread"],
 [data-chrome-theme="gold-thread"] .bbx-composer-material { color-scheme: dark; }
 .bbx-card-theme:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]) { --bbx-font: ui-sans-serif, system-ui, sans-serif; --bbx-quote-edge: 2px; }
-/* Box settings sit on pale paper, landmark settings inherit the card surface. */
-.bbx-card-theme[data-card-theme="gold-thread"] .bbx-system-theme-button { color: #202c3b; }
-.bbx-card-theme[data-card-theme="gold-thread"] .bbx-landmark-system-theme .bbx-system-theme-button { color: #f1e9d7; }
 .bbx-interface-tab:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]) {
   background-color: var(--textile-sheet);
   border-top-color: var(--textile-edge);

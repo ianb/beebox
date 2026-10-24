@@ -17,13 +17,13 @@ import { invalidateBoxSchemas } from "../../../../../../src/schemas.js";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 
 // Hand-scaffold a v3 (one-root) shape inside a tmp box: package.json
-// declaring a beebox dependency and the marker, both at the same root.
+// declaring a beebox dependency and recording the shape, beside `_config/`.
 async function scaffoldV3(box: Awaited<ReturnType<typeof makeTmpBox>>): Promise<string> {
   await box.write(
     "pkg/package.json",
-    JSON.stringify({ name: "tmp-box", private: true, dependencies: { "beebox": "^0.1.0" } }),
+    JSON.stringify({ name: "tmp-box", private: true, dependencies: { "beebox": "^0.1.0" }, beebox: { shapeVersion: 3, created: "2026-01-01T00:00:00.000Z" } }),
   );
-  await box.write("pkg/.beebox/box.json", JSON.stringify({ shapeVersion: 3 }));
+  await box.write("pkg/_config/.gitkeep", "");
   return box.path("pkg");
 }
 
@@ -138,4 +138,68 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   });
 
   t.check(boxSchemaFieldsCheck([shelf]).ok, true);
+});
+
+// ## Through the engine link
+//
+// A box on the portable spec has `node_modules/beebox → ../.beebox/engine`,
+// and `.beebox/engine` holds this machine's engine path. The check reports and
+// repairs that link: a missing link, a dead one, and one pinned to a worktree.
+void test("engine-link reports the .beebox/engine link a portable box resolves through", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const boxRoot = await scaffoldV3(box);
+  const engineLink = box.path("pkg/.beebox/engine");
+  await mkdir(box.path("pkg/node_modules"), { recursive: true });
+  await mkdir(box.path("pkg/.beebox"), { recursive: true });
+  await symlink("../.beebox/engine", box.path("pkg/node_modules/beebox"));
+  const message = async (): Promise<string | undefined> => byName(await engineHealthChecks(boxRoot), "engine-link")?.message;
+
+  const missing = await message();
+  await symlink(box.path("gone/beebox"), engineLink);
+  const dead = await message();
+  await box.write("beebox-worktrees/feature/beebox/package.json", JSON.stringify({ name: "beebox", version: "0.1.0" }));
+  await unlink(engineLink);
+  await symlink(box.path("beebox-worktrees/feature/beebox"), engineLink);
+  const pinned = await message();
+  t.check({ missing, dead, pinned }, {
+    missing: `the engine link ${engineLink} is missing — box-local schemas and templates will not load. Create it: ln -sfn <engine-checkout>/beebox ${engineLink}`,
+    dead: `.beebox/engine is a dead symlink (→ ${box.path("gone/beebox")}) — box-local schemas and templates will not load. Repoint it: ln -sfn <engine-checkout>/beebox ${engineLink}`,
+    pinned: `.beebox/engine points into a worktree (→ ${box.path("beebox-worktrees/feature/beebox")}) — it will go dead when that worktree is removed. Repoint at the main checkout.`,
+  });
+});
+
+// ## A portable box needs its engine link even while the old install works
+//
+// After the engine-link migration, `node_modules/beebox` can still point
+// straight at the old engine until the next install. That install goes
+// through `.beebox/engine`, so a portable box without a usable link is an
+// error now, not after the install.
+void test("engine-link checks .beebox/engine for a portable box whose install still points elsewhere", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write(
+    "pkg/package.json",
+    JSON.stringify({ name: "tmp-box", private: true, dependencies: { beebox: "link:.beebox/engine" }, beebox: { shapeVersion: 3, created: "2026-01-01T00:00:00.000Z" } }),
+  );
+  await box.write("pkg/_config/.gitkeep", "");
+  await box.write("engines/main/beebox/package.json", JSON.stringify({ name: "beebox", version: "9.9.9" }));
+  await mkdir(box.path("pkg/node_modules"), { recursive: true });
+  await symlink(box.path("engines/main/beebox"), box.path("pkg/node_modules/beebox"));
+  const boxRoot = box.path("pkg");
+  const engineLink = box.path("pkg/.beebox/engine");
+
+  const missing = byName(await engineHealthChecks(boxRoot), "engine-link");
+  await mkdir(box.path("pkg/.beebox"), { recursive: true });
+  await symlink(box.path("engines/main/beebox"), engineLink);
+  const linked = byName(await engineHealthChecks(boxRoot), "engine-link");
+  t.check({ missing, linked }, {
+    missing: {
+      name: "engine-link",
+      ok: false,
+      message: `the engine link ${engineLink} is missing — box-local schemas and templates will not load. Create it: ln -sfn <engine-checkout>/beebox ${engineLink}`,
+      severity: "error",
+    },
+    linked: { name: "engine-link", ok: true, message: "engine dependency resolves (beebox 9.9.9)", severity: "warning" },
+  });
 });

@@ -9,11 +9,10 @@
 import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { Document, isMap, parseDocument } from "yaml";
 import { router, ownerProcedure, publicProcedure } from "../procedures.js";
 import { listBrowserTasks } from "../../../core/browser-task/list.js";
 import { getBoxTime } from "../../../lib/time.js";
-import { splitCardContent } from "../../../exports/cards.js";
+import { editableFrontmatterDocument, renderFrontmatterDocument, splitCardContent } from "../../../exports/cards.js";
 import { typeFromFilename } from "../../../core/card-io.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
 import { withCardLock } from "../../../lib/card-lock.js";
@@ -47,15 +46,14 @@ export const browserTaskRouter = router({
         }
         const split = splitCardContent(raw);
         if (!split.hasFrontmatter) throw new TRPCError({ code: "BAD_REQUEST", message: "Card has no frontmatter block" });
-        const document = split.frontmatterText.trim() === "" ? new Document({}) : parseDocument(split.frontmatterText);
-        if (document.errors.length > 0 || !isMap(document.contents)) {
+        const document = editableFrontmatterDocument(split.frontmatterText);
+        if (document === null) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Card frontmatter is not a valid YAML mapping" });
         }
         // Absent means open, so reopening removes the field.
         if (input.closed) document.set("closed", true);
         else document.delete("closed");
-        const yaml = String(document);
-        await writeFileAtomic(ns.resolved, { content: `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${split.body}` });
+        await writeFileAtomic(ns.resolved, { content: renderFrontmatterDocument(document, split.body) });
         try {
           const commit = await stageAndCommitPaths(ctx.boxRoot, {
             paths: [ns.relativePath],

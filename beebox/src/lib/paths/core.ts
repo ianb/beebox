@@ -4,12 +4,13 @@
 
 import { withBoxWork } from "../box-maintenance/admission.js";
 import * as path from "node:path";
-import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
-import { invariant } from "../../shared/invariant.js";
 import { LEGACY_BOX_MARKER, LEGACY_BOX_STATE_DIR, migrateBoxState } from "../state-migration.js";
-import { PreV3ShapeError } from "../box-shape-errors.js";
-import { isRecord } from "../../shared/is-record.js";
+import { probeBoxLevel } from "../box-identity.js";
+import { fileExists } from "../file-exists.js";
+import { isWithin } from "../box-containment.js";
+import { parseCardFileName } from "../../shared/card-name.js";
+import { cardBasename } from "../../shared/attach-path.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
@@ -52,87 +53,27 @@ export function boxLayoutEntry(boxDirsKey: keyof BoxDirs): BoxLayoutEntry {
   return entry;
 }
 
-/** Marker file indicating a valid Bee Box root */
-/** Canonical marker lives in the persisted state directory. */
-export const BOX_MARKER = ".beebox/box.json";
-/** Marker name accepted only as an input to the one-shot state migration. */
-
-async function pathExists(candidate: string): Promise<boolean> {
-  try {
-    await fs.access(candidate);
-    return true;
-  } catch (_e) {
-    // Absent — the only meaningful outcome of access() here.
-    return false;
-  }
-}
-
-/**
- * Best-effort read of a box marker's `shapeVersion` field. Tolerates a
- * missing, empty, or malformed marker as `undefined` (the same "predates the
- * one-root layout" bucket `PreV3ShapeError` reports for an absent field) —
- * this is a walk-time discovery check, not the strict marker parse `getBoxShape`
- * does; a genuinely corrupt marker still surfaces loudly there.
- */
-async function markerShapeVersion(markerPath: string): Promise<number | undefined> {
-  let raw: string;
-  try {
-    raw = await fs.readFile(markerPath, "utf-8");
-  } catch (_e) {
-    return undefined;
-  }
-  if (raw.trim() === "") return undefined;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (isRecord(parsed) && typeof parsed["shapeVersion"] === "number") {
-      return parsed["shapeVersion"];
-    }
-    return undefined;
-  } catch (_e) {
-    return undefined;
-  }
-}
-
-/** The lowest shapeVersion `findBoxRoot` accepts without throwing — mirrors `box-shape.ts`'s `MIN_KNOWN_SHAPE_VERSION`. */
-const MIN_ACCEPTED_SHAPE_VERSION = 3;
-
 /**
  * Find the Bee Box root by searching upward from the given path. A box has
- * ONE root (shapeVersion 3): the marker check at each level is the whole
- * algorithm. A v2 box (marker one level down, at `<dir>/content/`) is no
- * longer resolved here — `getBoxShape`'s migration-pointing error is what
- * surfaces that case, not a silent downward resolve.
+ * ONE root (shapeVersion 3); each level is checked by `probeBoxLevel`
+ * (`box-identity.ts`): a `package.json` declaring `beebox` beside `_config/`,
+ * the fallback marker, or the retired-name marker.
  *
- * A marker found here that declares `shapeVersion` below 3 (or omits it)
- * throws the same migration-pointing error `getBoxShape` would — this is
- * ordinary CLI path discovery, not a fully tolerant probe, so a v2 box's
- * marker must not be handed back as if it were a valid v3 root: a caller that
- * then read `_content/` or `_config/` under it would find nothing there and
- * report false success (the original bug — `bbx tick` inside a v2 `content/`
- * dir silently found zero jobs). Nothing tolerates a v2 marker any more: the
- * bootstrap probe that did was deleted with the conversion, so throwing is now
- * the only outcome.
+ * A box-like level whose shape this build cannot open throws instead of being
+ * returned — a v2 package root, a marker below shapeVersion 3, a box with no
+ * recorded version. Handing back such a root would let a caller read
+ * `_content/` or `_config/` under it, find nothing, and report false success
+ * (the original bug: `bbx tick` inside a v2 `content/` dir found zero jobs).
  *
  * @param startPath - Directory to start searching from
- * @returns The box root path, or null if no marker exists anywhere above it
- * @throws PreV3ShapeError if the marker found declares a pre-v3 (or absent) shapeVersion
+ * @returns The box root path, or null if nothing box-like exists anywhere above it
+ * @throws BoxShapeError for a box-like level this build cannot open
  */
 export async function findBoxRoot(startPath: string): Promise<string | null> {
   let current = path.resolve(startPath);
 
   for (;;) {
-    const primaryMarker = path.join(current, BOX_MARKER);
-    const legacyMarker = path.join(current, LEGACY_BOX_MARKER);
-    const hasPrimary = await pathExists(primaryMarker);
-    const hasLegacy = !hasPrimary && (await pathExists(legacyMarker));
-    if (hasPrimary || hasLegacy) {
-      const shapeVersion = await markerShapeVersion(hasPrimary ? primaryMarker : legacyMarker);
-      if (shapeVersion === undefined || shapeVersion < MIN_ACCEPTED_SHAPE_VERSION) {
-        throw new PreV3ShapeError(current, shapeVersion);
-      }
-      return current;
-    }
-
+    if (await probeBoxLevel(current)) return current;
     const parent = path.dirname(current);
     if (parent === current) {
       // Reached filesystem root
@@ -157,7 +98,7 @@ export async function requireBoxRoot(startPath?: string): Promise<string> {
   // State directory names are persisted identity. Migrate before callers
   // construct any per-box path so a first `bbx` invocation cannot split state
   // between the retired and canonical directories.
-  if (await pathExists(path.join(root, LEGACY_BOX_STATE_DIR)) || await pathExists(path.join(root, LEGACY_BOX_MARKER))) {
+  if (await fileExists(path.join(root, LEGACY_BOX_STATE_DIR)) || await fileExists(path.join(root, LEGACY_BOX_MARKER))) {
     await withBoxWork({ boxRoot: root, reason: "state migration" }, () => migrateBoxState(root));
   }
   return root;
@@ -196,7 +137,7 @@ export function toRelativePath(boxRoot: string, absolutePath: string): string | 
   const resolved = path.resolve(absolutePath);
   const resolvedRoot = path.resolve(boxRoot);
 
-  if (!resolved.startsWith(resolvedRoot + path.sep) && resolved !== resolvedRoot) {
+  if (!isWithin(resolvedRoot, resolved)) {
     return null;
   }
 
@@ -204,43 +145,18 @@ export function toRelativePath(boxRoot: string, absolutePath: string): string | 
 }
 
 /**
- * Parse a card filename into its components: nominal `Name.type.card`, or
- * positional `type.card` ("the ‹type› of this directory") where the name
- * doubles as the type for display purposes.
- *
- * Legacy divergence from src/shared/card-name.ts (the canonical grammar):
- * job cards parse here as `{ name: "Foo.intake", type: "job" }` rather than
- * `{ name: "Foo", type: "intake-job" }`. Callers depend on the flat split;
- * unify when they're audited.
+ * A card filename's `name` (its attach stem, as the attach directory and the
+ * browse listing use it) and its schema `type`, or null when the filename is
+ * not card-shaped. The grammar is `parseCardFileName` (`shared/card-name.ts`);
+ * the name is `cardBasename` (`shared/attach-path.ts`): `Meeting.doc.card` →
+ * `Meeting`/`doc`, positional `nav.card` → `nav`/`nav`, job
+ * `Foo.intake.job.card` → `Foo.intake`/`intake-job`.
  *
  * @param filename - The card filename (e.g., "Meeting_Tomorrow.email-thread.card")
- * @returns Parsed components or null if not a valid card name
  */
 export function parseCardName(filename: string): { name: string; type: string } | null {
-  const match = filename.match(/^(.+)\.([^.]+)\.card$/);
-  if (match) {
-    const [, name, type] = match;
-    invariant(name !== undefined && type !== undefined, "regex capture groups missing on a successful match");
-    return { name, type };
-  }
-  const positional = filename.match(/^([^.]+)\.card$/);
-  if (positional) {
-    const [, name] = positional;
-    invariant(name !== undefined, "regex capture group missing on a successful match");
-    return { name, type: name };
-  }
-  return null;
-}
-
-/**
- * Build a card filename from components.
- *
- * @param name - The card name (e.g., "Meeting_Tomorrow")
- * @param type - The card type (e.g., "email-thread")
- * @returns The card filename (e.g., "Meeting_Tomorrow.email-thread.card")
- */
-export function buildCardName(name: string, type: string): string {
-  return `${name}.${type}.card`;
+  const parsed = parseCardFileName(filename);
+  return parsed === null ? null : { name: cardBasename(filename), type: parsed.type };
 }
 
 /**

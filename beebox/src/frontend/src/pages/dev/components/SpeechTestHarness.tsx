@@ -112,7 +112,7 @@ export function SpeechTestHarness() {
   return (
     <div className="p-6 flex flex-col gap-4 max-w-2xl">
       <h1 className="text-xl font-bold text-warm-900">Speech menu test harness</h1>
-      <p className="text-sm text-warm-600">
+      <p className="text-sm text-warm-700">
         Mocked slow TTS (500ms delay, 80ms/chunk). Use the speaker menu to Stop,
         Fast-forward, Replay, and Replay-from. Events are recorded on
         <code className="px-1">window.__speechTestLog</code>.

@@ -57,7 +57,7 @@ export function textSlug(text: string, maxLength: number): string {
 }
 
 /** `_config/schedules/remind-<slug>-<suffix>.scheduled-script.card`. */
-export function reminderCardPath(title: string, suffix: string): string {
+function reminderCardPath(title: string, suffix: string): string {
   const slug = textSlug(title, MAX_SLUG_LENGTH);
   return `${SCHEDULES_DIR}/remind-${slug === "" ? "" : `${slug}-`}${suffix}.scheduled-script.card`;
 }
@@ -70,7 +70,7 @@ function randomSuffix(): string {
  * The loudness the scheduler sends at: the card's own, else `loud`, because
  * the card says `requested-by: boxholder` (`core/schedule/run-action.ts`).
  */
-export function effectiveLoudness(loudness: Loudness | undefined): Loudness {
+function effectiveLoudness(loudness: Loudness | undefined): Loudness {
   return loudness ?? "loud";
 }
 
@@ -79,7 +79,7 @@ export function effectiveLoudness(loudness: Loudness | undefined): Loudness {
  * nobody: who is in the app when the reminder fires is unknown now, and a
  * `quiet` send held back for a present person still reaches them.
  */
-export function reachableAt(loudness: Loudness, reach: ChannelFlags): boolean {
+function reachableAt(loudness: Loudness, reach: ChannelFlags): boolean {
   const audience = { apns: reach.apns, "web-push": reach.webPush };
   return channelsToTry({ intent: { loudness }, audience, presence: { activeWeb: 0 } }).channels.length > 0;
 }

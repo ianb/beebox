@@ -108,3 +108,7 @@ provenance primitive would make step 4 one command.
   start.
 - Size: a frozen page can be megabytes; the annex handles binaries, but a
   guideline on when a copy is too big belongs in the same section.
+
+## Re-encounter 2026-10-22 (journey walks)
+
+[I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (R16): a web research task produced no `{% source %}` tags and no `retrieved=` dates, only a link list at the end of the notes. One cited URL returned 404 within minutes, and the product page of the recommended model no longer resolves. A kept copy would have held the evidence for the recommended price. The agent also recorded search-tool summaries as facts from pages it did not open: [filed](../closed/bugs/2026-10-22-box-agent-records-search-summaries-as-sourced-facts.md).

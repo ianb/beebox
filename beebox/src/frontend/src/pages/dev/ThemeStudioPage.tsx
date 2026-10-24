@@ -1,4 +1,4 @@
-import { ThemeStudioHarness } from "./components/ThemeStudioHarness";
+import { ThemeStudioHarness } from "./components/ThemeStudioHarness/view";
 import "./theme-studio-draft.css";
 import "./theme-studio-studies.css";
 import "./theme-studio-textiles.css";

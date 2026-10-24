@@ -414,3 +414,156 @@ void test("Only an explicit rule selection may create a card.", async (t) => {
 
   t.check(await findTrackedGmailThreads(box.root), new Map());
 });
+
+// ## A message deleted after history named it does not stop sync
+//
+// Gmail history keeps naming a message after it is deleted, and fetching it is
+// not found. Sync skips it, handles the rest of the window, and advances the
+// cursor. A failure here used to keep `historyId` in place, so every later sync
+// replayed the same history and failed the same way.
+void test("A message deleted after history named it does not stop sync", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await initBox(box.root);
+  await box.seed("_config/connectors/gmail.json", JSON.stringify({
+    rules: [{ name: "agent-label", query: "label:callback", action: { type: "track" } }],
+  }));
+  box.commitAll("initialize box");
+  const gmail = createFakeGoogleGmail({
+    labels: [{ id: "Label_7", name: "callback", type: "user" }],
+  });
+  const connector = createGmailConnector(box.root, gmail);
+  await connector.sync();
+  gmail.addMessage(message({ id: "deleted", subject: "Deleted", labelIds: ["Label_7"] }));
+  gmail.addMessage(message({ id: "kept", subject: "Kept", labelIds: ["Label_7"] }));
+  gmail.deleteMessage("deleted");
+  const result = await connector.sync();
+  t.check(result, {
+    success: true,
+    created: [
+      "_content/inbox/email/thread-Kept-t-kept.attach/msg-001.email-message.card",
+      "_content/inbox/email/thread-Kept-t-kept.attach/msg-001.attach/msg-001.body.txt",
+      "_content/inbox/email/thread-Kept-t-kept.email-thread.card",
+    ],
+    updated: [],
+    procedures: [],
+  });
+
+  t.check(await transientState(box.root), {
+    historyId: "4",
+    rules: {
+      "agent-label": {
+        baselineAt: isoDate(),
+        baselineMatches: 0,
+        automaticTrackingEvents: [isoDate()],
+      },
+    },
+  });
+});
+
+// ## A tracked thread deleted in Gmail keeps its card
+//
+// Deleting the card is how a person untracks a thread; Gmail deleting the
+// thread is not. Sync skips the thread, leaves the card as it was, and
+// advances the cursor.
+void test("A tracked thread deleted in Gmail keeps its card", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await initBox(box.root);
+  await box.seed("_config/connectors/gmail.json", "{}\n");
+  box.commitAll("initialize box");
+  const gmail = createFakeGoogleGmail({
+    labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
+    messages: [message({ id: "m1", threadId: "tracked", subject: "Working thread" })],
+  });
+  await trackGmailThread({
+    boxRoot: box.root,
+    service: gmail,
+    threadId: "tracked",
+    trackedBy: "explicit-command",
+  });
+  const connector = createGmailConnector(box.root, gmail);
+  await connector.sync();
+  gmail.addMessage(message({ id: "m2", threadId: "tracked", subject: "Working thread" }));
+  gmail.deleteMessage("m1");
+  gmail.deleteMessage("m2");
+  t.check(await connector.sync(), { success: true, created: [], updated: [], procedures: [] });
+
+  t.check(await transientState(box.root), { historyId: "4" });
+  t.check(await findTrackedGmailThreads(box.root), new Map([
+    ["tracked", {
+      threadId: "tracked",
+      absPath: join(box.root, "_content/inbox/email/thread-Working_thread-tracked.email-thread.card"),
+      relPath: "_content/inbox/email/thread-Working_thread-tracked.email-thread.card",
+    }],
+  ]));
+});
+
+// ## A missing attachment skips only its message
+//
+// An older message in a tracked thread is deleted after the thread is fetched,
+// so its attachment is not found. The thread's new reply still syncs; skipping
+// the whole thread would advance the cursor past the reply.
+void test("A missing attachment skips only its message", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await initBox(box.root);
+  await box.seed("_config/connectors/gmail.json", "{}\n");
+  box.commitAll("initialize box");
+  const gmail = createFakeGoogleGmail({
+    labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
+    messages: [message({ id: "m1", threadId: "tracked", subject: "Working thread" })],
+  });
+  await trackGmailThread({
+    boxRoot: box.root,
+    service: gmail,
+    threadId: "tracked",
+    trackedBy: "explicit-command",
+  });
+  const connector = createGmailConnector(box.root, gmail);
+  await connector.sync();
+  const withAttachment = message({ id: "m2", threadId: "tracked", subject: "Working thread" });
+  withAttachment.payload = {
+    mimeType: "multipart/mixed",
+    headers: withAttachment.payload?.headers ?? [],
+    parts: [
+      { partId: "0", mimeType: "text/plain", body: { data: Buffer.from("Body m2").toString("base64url") } },
+      { partId: "1", mimeType: "application/pdf", filename: "gone.pdf", body: { attachmentId: "att-gone", size: 10 } },
+    ],
+  };
+  gmail.addMessage(withAttachment);
+  gmail.addMessage(message({ id: "m3", threadId: "tracked", subject: "Working thread" }));
+  const result = await connector.sync();
+  t.check(result, {
+    success: true,
+    created: [
+      "_content/inbox/email/thread-Working_thread-tracked.attach/msg-002.email-message.card",
+      "_content/inbox/email/thread-Working_thread-tracked.attach/msg-002.attach/msg-002.body.txt",
+    ],
+    updated: ["_content/inbox/email/thread-Working_thread-tracked.email-thread.card"],
+    procedures: [],
+  });
+  t.check(
+    await readFile(join(box.root, "_content/inbox/email/thread-Working_thread-tracked.attach/msg-002.attach/msg-002.body.txt"), "utf-8"),
+    "Body m3",
+  );
+  t.check(await transientState(box.root), { historyId: "3" });
+});

@@ -39,6 +39,7 @@ import { BoxSlugProvider } from "../lib/box-slug";
 import { QuickSearchOverlay } from "../components/search/QuickSearchOverlay";
 import { NotificationBanner } from "../components/notifications/NotificationBanner";
 import { usePresenceHeartbeat } from "../hooks/usePresenceHeartbeat";
+import { useBoxClockSync } from "../hooks/useBoxClockSync";
 import { AgentReadinessGuard } from "../components/agents/AgentReadiness";
 import { useFirstLoadMark } from "../lib/first-load-marks";
 import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
@@ -116,6 +117,7 @@ export function ProductLayout() {
   usePresenceHeartbeat();
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
+  useBoxClockSync(boxSlug);
   const standalonePage = useStandalonePage();
   const handleToggleSourceView = sourceView.toggle;
   const handleCloseSourceView = sourceView.toggle;

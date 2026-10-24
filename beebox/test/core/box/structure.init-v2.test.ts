@@ -208,13 +208,14 @@ void test("Fresh init produces the v3 one-root layout", async (t) => {
     "zod",
   ]);
 
-  // The `beebox` spec defaults to `link:<engine checkout>` when the
-  // running engine is a source checkout (this test run) — a bare `^<version>`
-  // range is unresolvable off-registry and would abort the box's own
-  // `pnpm install` with a 404. Install tools that pin a tarball override via
-  // `BBX_INIT_BBX_BOX_SPEC` (see `scaffoldPackageRoot`):
+  // The `beebox` spec is the portable `link:.beebox/engine`, the same on
+  // every machine; `.beebox/engine` is the gitignored link to the running
+  // engine (`src/core/box/engine-link.ts`). Install tools that pin a tarball
+  // override via `BBX_INIT_BEEBOX_SPEC` (see `scaffoldPackageRoot`):
 
-  t.check(pkg.dependencies["beebox"], `link:${PACKAGE_ROOT}`);
+  t.check(pkg.dependencies["beebox"], "link:.beebox/engine");
+
+  t.check(await fs.readlink(path.join(boxRoot, ".beebox/engine")), PACKAGE_ROOT);
 
   // `devDependencies` carries `typescript`/`@types/node`/`@types/react` — the
   // box's own `pnpm exec tsc` needs these to typecheck `src/` without a
@@ -234,17 +235,17 @@ void test("Fresh init produces the v3 one-root layout", async (t) => {
 
   t.check(pkg.devDependencies.typescript, "7.0.2");
 
-  // `node_modules/beebox` is a symlink straight at the running engine
-  // (Track F's real install replaces it) — `pnpm install` was NOT run:
+  // `node_modules/beebox` links through the engine link, as `pnpm install`
+  // would make it — `pnpm install` was NOT run:
   //
-  // No real install happened (no pnpm store dir), but the symlink target — the
-  // engine's own `PACKAGE_ROOT` — is real:
+  // No real install happened (no pnpm store dir), but the link resolves to the
+  // engine's own `PACKAGE_ROOT`:
 
-  const link = await fs.readlink(path.join(boxRoot, "node_modules", "beebox"));
+  t.check(await fs.readlink(path.join(boxRoot, "node_modules", "beebox")), "../.beebox/engine");
 
   t.check(await exists(path.join(boxRoot, "node_modules", ".pnpm")), false);
 
-  t.check(await exists(link), true);
+  t.check(await fs.realpath(path.join(boxRoot, "node_modules", "beebox")), await fs.realpath(PACKAGE_ROOT));
 
   // The generated `connector-calendar` rule's `paths:` glob is `_content/calendar/…` — the underscore area, not the legacy `store/`:
 

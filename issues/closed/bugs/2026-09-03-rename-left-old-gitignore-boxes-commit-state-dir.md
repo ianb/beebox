@@ -16,7 +16,7 @@ discovered-in: main session — a `git reset --hard` on a local box reverted its
 > `.migrations.jsonl` residue was removed 2026-09-13. The marker change decided
 > on 2026-09-13 is not implemented: `BOX_MARKER` is still `.beebox/box.json`.
 > It moved to
-> [its own issue](../../bugs/2026-10-20-box-marker-in-gitignored-state-dir.md),
+> [its own issue](2026-10-20-box-marker-in-gitignored-state-dir.md),
 > which carries the decision and current pointers. Rotating the secrets that
 > one box committed to its history, and whether to rewrite that history, is
 > the boxholder's call; no progress note records either.

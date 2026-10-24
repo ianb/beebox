@@ -5,6 +5,7 @@
  * `docs/implemented-plans/model-engine-policy.md`).
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useState, useEffect, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
 import {
   getChatStatus,
@@ -71,7 +72,7 @@ export function useChatModelFeatures(opts: {
         setChatFeatures(features);
       })
       .catch((error: unknown) => {
-        console.warn(`[chatfsm] get new-chat features failed: ${error instanceof Error ? error.message : String(error)}`);
+        console.warn(`[chatfsm] get new-chat features failed: ${errorMessage(error)}`);
       });
     return () => { current = false; };
   }, [sessionId, contextDir, send]);
@@ -110,7 +111,7 @@ export function useChatModelFeatures(opts: {
         applyStatus(status);
       })
       .catch((e: unknown) => {
-        console.warn(`[chatfsm] get-status (model) failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`[chatfsm] get-status (model) failed: ${errorMessage(e)}`);
       });
     return () => { current = false; };
   }, [sessionId, applyStatus]);
@@ -123,7 +124,7 @@ export function useChatModelFeatures(opts: {
     getChatFeatures({ sessionId })
       .then((res) => { if (current) setChatFeatures(res.features); })
       .catch((e: unknown) => {
-        console.warn(`[chatfsm] get-features failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`[chatfsm] get-features failed: ${errorMessage(e)}`);
       });
     return () => { current = false; };
   }, [sessionId]);
@@ -157,7 +158,7 @@ export function useChatModelFeatures(opts: {
           setModelInForce(res.model ?? boxDefault);
         })
         .catch((e: unknown) => {
-          const msg = e instanceof Error ? e.message : String(e);
+          const msg = errorMessage(e);
           console.warn(`[chatfsm] set-model error: ${msg}`);
           toastError("Failed to switch model", { cause: e });
           setModelMarkers((markers) => markers.filter((m) => m.id !== markerId));
@@ -185,7 +186,7 @@ export function useChatModelFeatures(opts: {
         await refreshModelStatus();
       })
       .catch((e: unknown) => {
-        console.warn(`[chatfsm] set-default-model failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`[chatfsm] set-default-model failed: ${errorMessage(e)}`);
         toastError("Failed to set the box default model", { cause: e });
         // No event corrects a rejected write, so re-read rather than leaving
         // the optimistic value standing.
@@ -195,7 +196,7 @@ export function useChatModelFeatures(opts: {
 
   const handleOpenModelPanel = useCallback(() => {
     void refreshModelStatus().catch((e: unknown) => {
-      console.warn(`[chatfsm] model-status refresh failed: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[chatfsm] model-status refresh failed: ${errorMessage(e)}`);
     });
   }, [refreshModelStatus]);
 
@@ -281,7 +282,7 @@ function useChatFeatureToggles(opts: {
         setChatFeatures(res.features);
       })
       .catch((e: unknown) => {
-        console.warn(`[chatfsm] set-feature narration failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`[chatfsm] set-feature narration failed: ${errorMessage(e)}`);
         toastError("Failed to update narration mode", { cause: e });
         if (narrationRequestIdRef.current !== requestId) return;
         // No SSE correction follows a rejected write, so the optimistic flip

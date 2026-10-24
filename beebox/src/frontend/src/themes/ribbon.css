@@ -23,13 +23,12 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: url("./ribbon-flow.svg") center / 100% 100% no-repeat,
+  background: url("./ribbon-flow.svg") center / cover no-repeat,
     linear-gradient(125deg, #efd7a5, #fff0c9 60%, #f6e4b9);
 }
 .bbx-box-presentation[data-chrome-theme="ribbon"] :is(
   .bbx-conversation-desk, .bbx-companion-desk[data-active-card],
-  .bbx-interface-card-desk[data-card-content="card"],
-  .bbx-interface-browse-panel[data-card-content="card"]
+  .bbx-interface-card-desk[data-card-content="card"]
 ) { background: transparent; }
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-interface-tabstrip > [role="none"]::before,
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-interface-tabstrip > [role="none"]::after {
@@ -45,7 +44,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-app-nav :is(
   .bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
-  #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat
+  #bbx-nav-todo, #bbx-nav-questions
 ) {
   background-color: #285446;
   color: #fff3d9;
@@ -71,7 +70,7 @@
   background: transparent;
   border-top: 0;
 }
-.bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r,
+.bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-composer-material > .bbx-composer-mobile-row,
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-composer-material textarea {
   background: #fff6df;
   color: #173f35;
@@ -79,7 +78,7 @@
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-composer-material textarea::placeholder { color: #686045; }
 /* Enabled sends and the idle mic only; preserve recording and disabled cues. */
 .bbx-box-presentation[data-chrome-theme="ribbon"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
-.bbx-box-presentation[data-chrome-theme="ribbon"] #bbx-composer-mic.bg-primary {
+.bbx-box-presentation[data-chrome-theme="ribbon"] #bbx-composer-mic[data-mic="idle"] {
   background-color: #173f35;
   color: #fff6df;
   border: 2px solid #b74411;
@@ -92,7 +91,7 @@
   color: #173f35;
 }
 .bbx-box-presentation[data-chrome-theme="ribbon"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled:hover,
-.bbx-box-presentation[data-chrome-theme="ribbon"] #bbx-composer-mic.bg-primary:hover {
+.bbx-box-presentation[data-chrome-theme="ribbon"] #bbx-composer-mic[data-mic="idle"]:hover {
   background-color: #285e4b;
 }
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-chat-user-paper {
@@ -118,9 +117,6 @@
 /* Material variables reach Markdown; an explicit nested card resets them.
    Darker links preserve contrast at the approved 79% cream opacity. */
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-chat-reply-material {
-  --bbx-ink: #173f35;
-  --bbx-ink-soft: #514a34;
-  --bbx-pen: #84300b;
   --bbx-edge: #a48c60;
   background: #fff6dfc9;
   color: var(--bbx-ink);
@@ -158,7 +154,7 @@
   border: 1px solid #a48c60;
   border-radius: 15px;
 }
-.bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-chat-callout > .text-accent-dark { color: #173f35; }
+.bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-chat-callout > .bbx-chat-callout-context { color: #173f35; }
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-chat-meta-material {
   color: #514a34;
   background: #fff6df;
@@ -169,10 +165,11 @@
   border-radius: 12px;
   padding: 6px 10px;
 }
-/* Activity/progress and pending captions use fixed utility colors, not prose
-   tokens. Leave error/success colors and explicit nested cards independent. */
-.bbx-box-presentation[data-chrome-theme="ribbon"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600):not(button):not(.bbx-card-theme *) {
-  color: #514a34;
+/* Chat material ink, read by text in the reply, pending and meta materials. */
+.bbx-box-presentation[data-chrome-theme="ribbon"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
+  --bbx-ink: #173f35;
+  --bbx-ink-soft: #514a34;
+  --bbx-pen: #84300b;
 }
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) {
   color: #173f35;

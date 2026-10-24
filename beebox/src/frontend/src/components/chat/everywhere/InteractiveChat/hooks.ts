@@ -5,39 +5,31 @@
  * component body in a stable order) and owns its own state slice.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { getChatHistory, getChatStatus, type SessionEntry } from "../../../../api";
+import { errorMessage } from "@shared/error-guards";
+import { useState, useEffect, useCallback } from "react";
+import { getChatHistory, type SessionEntry } from "../../../../api";
 import { trpcClient } from "../../../../lib/trpc/client";
 import { chatTailSlice } from "../../../../machines/chatMachine/machine.js";
 import { toastError } from "../../../ui/toast-store";
 import type { ChatSchedule } from "@core/chat/schedules/core.js";
-import type { ChatEvent } from "../../../../machines/chat-types";
+import { readStoredFlag, writeStoredFlag, type StoredFlag } from "../../../../lib/stored-flag";
 
 interface ChatSendFn {
   (event: { type: "SET_MESSAGES"; messages: SessionEntry[]; sessionId: string | null }): void;
 }
+
+const CHAT_MUTED: StoredFlag = { storage: () => (typeof window === "undefined" ? null : localStorage), key: "chat-muted" };
 
 /**
  * Mute toggle persisted to localStorage (key `chat-muted`). SSR-safe initial
  * read.
  */
 export function useChatMute() {
-  const [muted, setMuted] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return localStorage.getItem("chat-muted") === "1";
-    } catch (_e) {
-      return false;
-    }
-  });
+  const [muted, setMuted] = useState<boolean>(() => readStoredFlag(CHAT_MUTED));
   const handleToggleMute = useCallback(() => {
     setMuted((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem("chat-muted", next ? "1" : "0");
-      } catch (_e) {
-        // storage unavailable
-      }
+      writeStoredFlag(CHAT_MUTED, next);
       return next;
     });
   }, []);
@@ -64,7 +56,7 @@ export function useChatSchedules(opts: {
         setActiveSchedules(data.schedules);
       })
       .catch((e: unknown) => {
-        console.warn(`[chatfsm] fetch-schedules failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`[chatfsm] fetch-schedules failed: ${errorMessage(e)}`);
       });
   }, []);
 
@@ -101,7 +93,7 @@ export function useChatSchedules(opts: {
     trpcClient.chat.cancelSchedule.mutate({ label })
       .then(() => fetchSchedules())
       .catch((e: unknown) => {
-        console.error(`[chatfsm] cancel-schedule "${label}" failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.error(`[chatfsm] cancel-schedule "${label}" failed: ${errorMessage(e)}`);
         toastError(`Failed to cancel the "${label}" schedule`, { cause: e });
       });
   }, [fetchSchedules]);
@@ -133,54 +125,10 @@ export function usePendingMessagePoll(opts: {
           // observability are different properties (policy rule 4) -- log
           // even though a dead backend would otherwise just look like a
           // frozen UI.
-          console.warn(`[chatfsm] pending-message poll failed: ${e instanceof Error ? e.message : String(e)}`);
+          console.warn(`[chatfsm] pending-message poll failed: ${errorMessage(e)}`);
         });
     };
     const id = setInterval(poll, 5000);
     return () => clearInterval(id);
   }, [pendingCount, send, sessionId]);
-}
-
-/**
- * Recover a stalled stream when the tab is brought back to the foreground.
- *
- * The per-turn POST stream can have its connection dropped while the tab is
- * backgrounded and never deliver a terminal event, wedging the machine in
- * `streaming` — where REFRESH (the normal chat-complete recovery) is
- * deliberately ignored. useProcessingStatusPoll is also gated off during
- * streaming, so nothing pulls the finished reply until a manual reload.
- *
- * On return to visible, if we're still in `streaming`, ask the server whether
- * the turn actually finished; if so, dispatch STREAM_RECOVER (a silent
- * STREAM_FAILED — sent only once the server confirms done, so no STREAM_RESULT
- * is left to race) to fall through to a history refresh.
- */
-export function useChatStallRecovery(opts: {
-  /** snapshot.matches("streaming") — not "refreshing", which self-resolves. */
-  isStreamingState: boolean;
-  sessionId: string | null;
-  send: (event: ChatEvent) => void;
-}) {
-  const { isStreamingState, sessionId, send } = opts;
-  // Read latest state at event time; the listener mounts once (send is stable).
-  const stateRef = useRef({ isStreamingState, sessionId });
-  useEffect(() => {
-    stateRef.current = { isStreamingState, sessionId };
-  });
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState !== "visible") return;
-      const current = stateRef.current;
-      if (!current.isStreamingState || !current.sessionId) return;
-      getChatStatus({ sessionId: current.sessionId })
-        .then((status) => {
-          if (!status.busy) send({ type: "STREAM_RECOVER" });
-        })
-        .catch((e: unknown) => {
-          console.warn(`[chatfsm] stall-recovery status check failed: ${e instanceof Error ? e.message : String(e)}`);
-        });
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [send]);
 }

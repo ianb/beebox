@@ -20,7 +20,6 @@ function contextFor(box: TmpBox) {
   return statusRouter.createCaller(ctx);
 }
 
-const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
 
 function doc(body: string) {
   return `---\ntitle: Notes\n---\n${body}`;
@@ -38,7 +37,6 @@ void test("Escalated + on-plate count; quiet and done are excluded", async (t) =
     }
   });
   const box = await makeTmpBox({ git: true });
-  await box.seed(".beebox/box.json", MARKER);
   await box.write(
     "_content/a.doc.card",
     doc(

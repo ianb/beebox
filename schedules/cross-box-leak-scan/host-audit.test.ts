@@ -31,9 +31,11 @@ after(async () => {
   for (const dir of tempDirs) await fs.rm(dir, { recursive: true, force: true });
 });
 
+/** A one-root box as a clone or a migrated box has it: `_config/` and a
+ *  `package.json`, no `.beebox/box.json` marker. */
 async function makeBox(root: string): Promise<void> {
-  await fs.mkdir(path.join(root, ".beebox"), { recursive: true });
-  await fs.writeFile(path.join(root, ".beebox", "box.json"), "{}", "utf8");
+  await fs.mkdir(path.join(root, "_config"), { recursive: true });
+  await fs.writeFile(path.join(root, "package.json"), JSON.stringify({ dependencies: { beebox: "*" } }), "utf8");
 }
 
 test("checkModes: flags a group/other-readable secret file, not a private one", async () => {
@@ -185,11 +187,10 @@ test("loadBoxRoots: unions hub.json (resolving a v2 package root to its content 
   await fs.mkdir(configDir, { recursive: true });
 
   const hubBoxPackageRoot = path.join(home, "hub-box");
-  await fs.mkdir(hubBoxPackageRoot, { recursive: true }); // v2 package root, no .beebox at top
-  await makeBox(path.join(hubBoxPackageRoot, "content"));
+  await fs.mkdir(path.join(hubBoxPackageRoot, "content", "config"), { recursive: true }); // v2 package root, no _config/ at top
 
   const manifestBoxRoot = path.join(home, "manifest-box");
-  await makeBox(manifestBoxRoot); // v1: .beebox/box.json directly under it
+  await makeBox(manifestBoxRoot); // one root: _config/ directly under it, no marker
 
   await fs.writeFile(
     path.join(configDir, "hub.json"),

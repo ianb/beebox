@@ -22,20 +22,23 @@ export interface OpenAction {
 /** What each part's control does, by part key; a part with no entry (or `null`) is plain text. */
 export type CountsActions = Partial<Record<SummaryPart["key"], OpenAction | null>>;
 
-/** The counts joined by " · "; a part is a control when it is marked `action` and `actions` has its key. */
-export function CountsLine({ parts, actions }: { parts: readonly SummaryPart[]; actions: CountsActions }): ReactNode {
+/**
+ * The counts joined by " · "; a part is a control when it is marked `action` and `actions` has its key.
+ * `material` gives the controls the enclosing card's ink (the place page).
+ */
+export function CountsLine({ parts, actions, material }: { parts: readonly SummaryPart[]; actions: CountsActions; material?: boolean }): ReactNode {
   return parts.map((part, i) => (
     <Fragment key={part.key}>
       {i > 0 ? " · " : null}
-      <CountPart text={part.text} action={part.action ? actions[part.key] : undefined} />
+      <CountPart text={part.text} action={part.action ? actions[part.key] : undefined} material={material} />
     </Fragment>
   ));
 }
 
-function CountPart({ text, action }: { text: string; action: OpenAction | null | undefined }): ReactNode {
+function CountPart({ text, action, material }: { text: string; action: OpenAction | null | undefined; material: boolean | undefined }): ReactNode {
   if (action === undefined || action === null) return <span>{text}</span>;
   const handleClick = action.onClick;
-  return <InlineAction intent="subtle" onClick={handleClick} title={action.title}>{text}</InlineAction>;
+  return <InlineAction intent="subtle" material={material} onClick={handleClick} title={action.title}>{text}</InlineAction>;
 }
 
 export function TodoSummaryLine({ reduction, openAction }: {
@@ -46,7 +49,7 @@ export function TodoSummaryLine({ reduction, openAction }: {
   if (parts === null) return null;
   return (
     <p
-      className="px-[var(--bbx-content-padding,1rem)] pt-2 text-xs text-warm-500 print:hidden"
+      className="px-[var(--bbx-content-padding,1rem)] pt-2 text-xs text-warm-700 print:hidden"
       data-card-section="todo-summary"
     >
       {/* The control is whichever of "now" and "later" `summaryParts` marks. */}

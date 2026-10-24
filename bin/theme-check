@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Theme studio screenshots with sub-AA text outlined. Source:
+# beebox/test/tours/theme-check.ts. Same worktree detection as bin/tour.
+#
+# Usage:
+#   bin/theme-check                                  # draft system + draft card
+#   bin/theme-check --system deck --system-stock panels
+#   bin/theme-check --system plain --card post-it --card-stock rose
+#   bin/theme-check --all                            # every catalog theme; exit 1 on a miss
+
+set -euo pipefail
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+TSX="$REPO_DIR/node_modules/.bin/tsx"
+if [[ ! -x "$TSX" ]]; then
+  echo "theme-check: tsx not found. Run 'pnpm install' at the monorepo root." >&2
+  exit 1
+fi
+if [[ "$PWD" == *"/beebox-worktrees/"* ]]; then
+  worktree="${PWD#*/beebox-worktrees/}"
+  export BROWSE_WORKTREE="${worktree%%/*}"
+fi
+exec "$TSX" "$REPO_DIR/beebox/test/tours/theme-check.ts" "$@"

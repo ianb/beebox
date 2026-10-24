@@ -3,7 +3,7 @@
 // The three interface-card cohorts are named after migrations
 // (`canonical-interface-cards`, `remaining-interface-cards`,
 // `search-interface-card`). Those migrations are retired, so their entries run
-// the shared no-op; `seedSystemCards` still installs each cohort for `bbx init`.
+// the tombstone, which these sweeps replace with an injected exit-0 runner; `seedSystemCards` still installs each cohort for `bbx init`.
 // The runner keeps one rule for these names: it refuses to record a cohort in the
 // manifest while that cohort's cards are missing or invalid.
 
@@ -13,7 +13,7 @@ import { containing, isoDate } from "@ianbicking/tap-check/check";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
+import { makeTmpBox, useMarkerOnly, type TmpBox } from "../helpers/test-helpers.js";
 import { appendManifestEntry, writeManifest } from "../../src/core/migration-run.js";
 import { readManifest } from "../../src/core/migration-manifest.js";
 import { markMigrationApplied } from "../../src/cli/commands/migrate.js";
@@ -50,7 +50,7 @@ void test("A partial bootstrap keeps notes and installs the rest.", async (t) =>
 
   await pendingManifest(box);
   await box.commitAll("cards seeded, cohorts pending");
-  t.check((await sweepMigrations({ boxRoot: box.root })).status, "applied");
+  t.check((await sweepMigrations({ boxRoot: box.root, runScript: async () => 0 })).status, "applied");
 
   t.check(await readManifest(box.root), containing([{ name: SYSTEM_CARD_MIGRATION, "applied-at": isoDate() }]));
 
@@ -72,7 +72,7 @@ void test("A noncanonical copy fails the manifest gate at commit time:", async (
   await pendingManifest(conflict);
   await conflict.write("_content/Copy.dashboard.card", "---\ntitle: Wrong location\n---\n");
   await conflict.commitAll("conflict");
-  t.check((await sweepMigrations({ boxRoot: conflict.root })).status, "commit-failed");
+  t.check((await sweepMigrations({ boxRoot: conflict.root, runScript: async () => 0 })).status, "commit-failed");
 
   t.check((await readManifest(conflict.root))?.filter((entry) => entry.name === SYSTEM_CARD_MIGRATION), []);
 
@@ -166,7 +166,7 @@ void test("Fresh initialization verifies cards before marking its completion.", 
     }
   });
   const fresh = await makeTmpBox();
-  await rm(fresh.path(".beebox/box.json"));
+  await useMarkerOnly(fresh.root, null);
   await rm(fresh.path(MANIFEST_PATH));
   await fresh.write(SYSTEM_CARD_PATHS.settings, "---\ntype: doc\n---\nKeep this conflict.\n");
   await t.checkThrows(async () => (await initBox(fresh.root)), "SystemCardInvariantError");

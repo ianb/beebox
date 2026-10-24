@@ -16,7 +16,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
-import { fileTypeFromFile } from "file-type";
 import { withCardLock } from "../../lib/card-lock.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
@@ -28,6 +27,7 @@ import { createCardSchemaMap } from "../../schemas.js";
 import { parseCardText } from "../card-io.js";
 import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent, type SubmissionIssue } from "../../exports/cards.js";
 import { assertAnnexBox } from "../annex/assert-annex-box.js";
+import { pathExistsStrict } from "../../lib/file-exists.js";
 
 export interface AcceptSubmissionInput {
   boxRoot: string;
@@ -66,16 +66,6 @@ async function readIfPresent(filePath: string): Promise<string | undefined> {
     return await fs.readFile(filePath, "utf8");
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return undefined;
-    throw e;
-  }
-}
-
-async function pathExists(target: string): Promise<boolean> {
-  try {
-    await fs.stat(target);
-    return true;
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return false;
     throw e;
   }
 }
@@ -148,6 +138,8 @@ export async function acceptSubmission(input: AcceptSubmissionInput): Promise<Ac
     }
 
     const files: Array<{ name: string; size: number; mimetype: string }> = [];
+    // file-type loads here rather than with every `bbx` verb (about 13 ms).
+    const { fileTypeFromFile } = await import("file-type");
     for (const name of fileNames) {
       const filePath = path.join(tempDir, name);
       const stat = await fs.stat(filePath);
@@ -161,10 +153,10 @@ export async function acceptSubmission(input: AcceptSubmissionInput): Promise<Ac
     const timestamp = now();
     let batch = allocateBatchId(timestamp);
     let targetDir = path.join(inboxDir, batch);
-    if (await pathExists(targetDir)) {
+    if (await pathExistsStrict(targetDir, { followLinks: true })) {
       batch = allocateBatchId(timestamp);
       targetDir = path.join(inboxDir, batch);
-      if (await pathExists(targetDir)) {
+      if (await pathExistsStrict(targetDir, { followLinks: true })) {
         throw new SubmissionBatchAllocationError(inboxDir);
       }
     }

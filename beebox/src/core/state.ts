@@ -12,13 +12,13 @@ import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../lib/git/
 import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";
 import type { LoadCardContext } from "./card-io.js";
-import { getBoxMetadata } from "./box/structure/core.js";
+import { readShapeRecord } from "../lib/box-identity.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { questionState, type QuestionState } from "../schemas/question.js";
 
 class InvalidBoxError extends Error {
-  constructor() {
-    super("Invalid Bee Box: missing marker file");
+  constructor(boxRoot: string) {
+    super(`Invalid Bee Box at ${boxRoot}: its shape record has no "created" date`);
     this.name = "InvalidBoxError";
   }
 }
@@ -46,7 +46,6 @@ interface ScannedCard {
 
 export interface SystemState {
   boxRoot: string;
-  boxVersion: string;
   created: string;
   git: GitStatus;
   inbox: CardInfo[];
@@ -131,10 +130,11 @@ async function scanCards(params: ScanCardsParams): Promise<ScannedCard[]> {
  */
 export async function getSystemState(boxRoot?: string): Promise<SystemState> {
   const root = boxRoot ?? await requireBoxRoot();
-  const metadata = await getBoxMetadata(root);
-
-  if (!metadata) {
-    throw new InvalidBoxError();
+  // A box's birth date lives in its shape record (the package.json `beebox`
+  // block, or the fallback marker). A marker without one is a broken box.
+  const { created } = await readShapeRecord(root);
+  if (created === undefined) {
+    throw new InvalidBoxError(root);
   }
 
   const ctx = await buildLoadContext(root);
@@ -147,8 +147,7 @@ export async function getSystemState(boxRoot?: string): Promise<SystemState> {
 
   return {
     boxRoot: root,
-    boxVersion: metadata.version,
-    created: metadata.created,
+    created,
     git,
     inbox: inbox.map((card) => card.info),
     questions: questions.map((card): QuestionCardInfo => ({
