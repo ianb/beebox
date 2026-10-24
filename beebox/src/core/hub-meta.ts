@@ -186,6 +186,9 @@ export function writeHubMeta(boxRoot: string, now: () => Date): boolean {
   fs.chmodSync(beeboxDir, HUB_TRAVERSABLE_MODE);
   if (current !== undefined && sameExceptTimestamp(current, next)) return false;
   writeFileAtomicSync(hubMetaPath(boxRoot), { content: `${JSON.stringify(next, null, 2)}\n`, mode: 0o644 });
+  // The unit's UMask=0077 masks the mode above to 0600 (found on the VM,
+  // 2026-10-24: the hub could not read a fresh box's file); set it outright.
+  fs.chmodSync(hubMetaPath(boxRoot), 0o644);
   return true;
 }
 

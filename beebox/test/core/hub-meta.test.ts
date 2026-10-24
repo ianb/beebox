@@ -25,8 +25,11 @@ const sha256 = (value: string): string => crypto.createHash("sha256").update(val
 const fixedNow = () => new Date("2026-10-24T12:00:00.000Z");
 
 void test("every input change rewrites the file, with hashes and no secret", async (t) => {
+  // The box unit runs with UMask=0077 (deploy/systemd/box-sandbox.conf): the
+  // modes below must hold under it, since the hub reads the file from outside.
+  const previousUmask = process.umask(0o077);
   const box = await makeTmpBox({ git: true });
-  t.teardown(() => box.cleanup());
+  t.teardown(async () => { process.umask(previousUmask); await box.cleanup(); });
 
   // `bbx engine init` (which makeTmpBox runs) already published the file: no
   // token yet, so nothing to hash, and nobody allowed beyond the owner.

@@ -84,10 +84,15 @@ check_not "a sibling box user cannot connect" -- runuser -u "bbx-$B" -- curl -s 
 check "$B is still inactive (not woken)" -- bash -c "[[ \$(systemctl is-active beebox-box@$B.service) == inactive ]]"
 
 echo "== the hub secret reaches the engine as a credential"
-# The engine turned $CREDENTIALS_DIRECTORY/hub-secret into BBX_HUB_SECRET
-# (src/lib/systemd-credentials.ts); root reads the live process env to compare.
+# systemd copies the hub's file into the unit's credentials directory, which the
+# engine turns into BBX_HUB_SECRET at start (src/lib/systemd-credentials.ts; its
+# test covers the adoption). /proc/<pid>/environ shows the exec-time environment,
+# so the credential must not appear there, and neither may the sibling's secret.
 main_pid=$(systemctl show -p MainPID --value "beebox-box@$A.service")
-check "BBX_HUB_SECRET equals /run/beebox/$A.hub-secret" -- bash -c "[[ \$(tr '\0' '\n' < /proc/$main_pid/environ | sed -n 's/^BBX_HUB_SECRET=//p') == \$(cat /run/beebox/$A.hub-secret) ]]"
+cred_dir=$(cat "/proc/$main_pid/environ" | tr '\0' '\n' | sed -n 's/^CREDENTIALS_DIRECTORY=//p')
+check "the unit has a credentials directory" -- test -n "$cred_dir"
+check "hub-secret credential equals /run/beebox/$A.hub-secret" -- bash -c "[[ \$(cat '$cred_dir/hub-secret') == \$(cat /run/beebox/$A.hub-secret) ]]"
+check_not "the secret is not in the exec-time environment" -- bash -c "tr '\0' '\n' < /proc/$main_pid/environ | grep -qF \"\$(cat /run/beebox/$A.hub-secret)\""
 check_not "the sibling's secret is not in $A's environment" -- bash -c "tr '\0' '\n' < /proc/$main_pid/environ | grep -qF \"\$(cat /run/beebox/$B.hub-secret)\""
 
 echo "== the scheduler's one root path"

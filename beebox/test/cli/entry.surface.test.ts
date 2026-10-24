@@ -112,7 +112,7 @@ void test("scheduler, pub, and secrets each have a read half an agent uses and a
 void test("The agent's scheduler offers the reads; the operator's offers the daemon life...", async (t) => {
   t.check(subNames(program.commands.find((c) => c.name() === "scheduler")), ["log", "status"]);
 
-  t.check(subNames(engineParent?.commands.find((c) => c.name() === "scheduler")), ["install", "start", "uninstall"]);
+  t.check(subNames(engineParent?.commands.find((c) => c.name() === "scheduler")), ["install", "pass", "start", "uninstall"]);
 });
 
 // ## Every eviction gives a reason, and every agent verb a smoke decision
