@@ -261,9 +261,12 @@ ceiling, and one provisioner that `deploy.sh` keeps current.
   `/var/lib/beebox/<slug>`, owning exactly one box. Identified by the slug.
   Exists as a spec only (`box-user-account-spec.md`); adopted, with the
   home moved out of `/home` so `ProtectHome=yes` can stay on.
-- **Box home**: `/var/lib/beebox/<slug>`, mode 0750, group `bbx-<slug>`.
-  Holds the box root and the box user's own config and caches
-  (`.claude`, `.codex`, `.config/beebox`, `.local/share/beebox`).
+- **Box home**: `/var/lib/beebox/<slug>`, mode 0751, group `bbx-<slug>`:
+  traversable by path, not listable, so the hub can read the one file the
+  box publishes for it and nothing it does not know the name of. Inside a
+  box unit the sibling homes do not exist at all (Track C's view). Holds
+  the box root and the box user's own config and caches (`.claude`,
+  `.codex`, `.config/beebox`, `.local/share/beebox`), all 0700.
 - **Box root**: `/var/lib/beebox/<slug>/box`, the one-root box
   (`docs/box-layout.md`). Today `/home/beebox/boxes/<slug>`; moved by Track
   E's migration. The hub's `hub.json` entry keeps `path` pointing here.
@@ -275,17 +278,29 @@ ceiling, and one provisioner that `deploy.sh` keeps current.
   no sibling box, can connect. The endpoint the hub routes to. New.
 - **Endpoint**: `src/hub/endpoints.ts:19` today an origin URL; gains
   `socketPath`. Existing noun, extended.
-- **Hub user**: `beebox`, running the hub and the scheduler as today. It
-  owns nothing inside a box home after migration and is a member of no
-  box group; it reads a box's non-secret files through their world-read
-  bits only (Track D).
+- **Hub user**: `beebox`, running the hub. It owns nothing inside a box
+  home after migration, is a member of no box group, holds no sudo grant,
+  and reads exactly one file per box, the hub metadata file. New
+  separation: the scheduler runs as its own user (next noun).
+- **Scheduler user**: `beebox-sched`, running the scheduler daemon, the
+  only account with a sudo grant to `bbx-box-run`. New.
+- **Hub metadata file**: `<box root>/.beebox/hub-meta.json`, 0644, written
+  by the engine whenever its inputs change: `allowedEmails` (from
+  `_config/box.json`), whether `chat-schedules.json` holds a pending
+  schedule, and SHA-256 hashes of the box's agent token, mobile device
+  tokens and scan tokens. No secret in it; the hub verifies a presented
+  bearer by hashing it. New. Replaces the hub's reads of the box's 0600
+  files.
 - **Hub secret**: `BBX_HUB_SECRET`, today minted per hub start
   (`hub.ts:123`); becomes `/run/beebox/hub-secret`, written once per host
   boot by the first hub start, read by later hub starts and by every box
   unit. Same noun, new home.
-- **`bbx-box-run`**: the one root code path that runs a fixed set of `bbx`
-  commands as a box user (`runuser -u bbx-<slug> -- bbx ...`), sudo-allowed
-  for the hub user and used only by the scheduler. New.
+- **`bbx-box-run`**: the one root code path that starts a box's scheduler
+  pass unit (`systemctl start --wait beebox-pass@<slug>`), sudo-allowed
+  for the scheduler user only. New.
+- **Pass unit**: `beebox-pass@<slug>.service`, a oneshot template with the
+  box unit's sandbox block, running `bbx engine scheduler pass` as the box
+  user inside the same filesystem view. New.
 - **Apt spool**: `/run/beebox/apt/<slug>/`, where a box leaves a package
   request and finds the result; a root `.path` unit runs `bbx-host-apt` on
   it. New. Replaces the box's own `sudo`.
@@ -323,10 +338,13 @@ transcription proxy, the chat registry's live runs
 so both import it). The idle decision is a pure function of (last activity,
 in-flight count, open sockets, live runs, pending schedules, now). On idle:
 stop accepting (close the listening server so systemd's socket queues new
-connections), wait for in-flight to reach zero with a 60 s bound, then the
-existing clean shutdown (`app.ts:362`), exit code 0 so `Restart=on-failure`
-does not restart it. A connection that arrives during the drain is held by
-systemd's listening socket and served by the next instance.
+connections), wait for in-flight to reach zero with no bound (a request
+accepted before the listener closed is never cut; the engine's own request
+timeouts bound it), then the existing clean shutdown (`app.ts:362`), exit
+code 0 so `Restart=on-failure` does not restart it. A connection that
+arrives after the listener closed is held by systemd's listening socket and
+served by the next instance. `TimeoutStopSec` applies only to a stop the
+deploy asks for.
 
 **Vocabulary lock-ins.** Flags `--socket`, `--idle-exit`; env `LISTEN_FDS`
 honored; the serve-endpoint file (`src/core/serve-endpoint.ts`) records
@@ -386,9 +404,14 @@ NoNewPrivileges=yes
 MemoryMax=1G
 ```
 
+The sandbox block (from `ProtectSystem=` to `MemoryMax=`) lives in
+`deploy/systemd/box-sandbox.conf` and is included by the box unit and the
+pass unit, so every box process runs in the same view.
 `TemporaryFileSystem=/var/lib/beebox:ro` with `BindPaths=/var/lib/beebox/%i`
-shows the box only its own home among the boxes; sibling homes are 0750 as
-well, so the bind is the view and the mode is the wall. `ProtectHome=yes`
+shows the box only its own home among the boxes: a sibling's home does not
+exist in the view, whatever its mode. Outside any unit the homes are 0751
+with 0700 contents, so a path can be traversed to a world-readable file
+(the hub metadata file) and nothing else. `ProtectHome=yes`
 hides `/home/beebox` and every human home. `NoNewPrivileges=yes` is on
 because the box no longer runs `sudo`: a read-only filesystem view would
 make `bbx-host-apt` fail inside the unit's namespace whatever its
@@ -406,29 +429,50 @@ from the box home in the subplan's chunk 2, so the unit needs no per-box
 generated file. `MemoryMax=1G` is a first value to be measured against the
 chat-history OOM record (`docs/implemented-plans/chat-history-oom-mobile-lock.md:10`).
 
-`deploy/server-bin/bbx-box-run`: `bbx-box-run <slug> <operation>` →
-`runuser -u bbx-<slug> -- /usr/local/bin/bbx <fixed args>` where
-`<operation>` is one of `scheduler-pass` (`engine scheduler pass
-/var/lib/beebox/<slug>/box`) and nothing else; the slug is validated
-against the `bbx-` users and the box home's existence; the environment is
-cleared and `/etc/beebox/box.env` loaded; the caller is logged. Sudoers:
-`beebox ALL=(root) NOPASSWD: /usr/local/sbin/bbx-box-run`. Root (the
-deploy) calls `runuser` directly. The hub never calls it.
+```ini
+# deploy/systemd/beebox-pass@.service
+[Service]
+Type=oneshot
+User=bbx-%i
+Group=bbx-%i
+WorkingDirectory=/var/lib/beebox/%i/box
+EnvironmentFile=/etc/beebox/box.env
+ExecStart=/usr/local/bin/bbx engine scheduler pass /var/lib/beebox/%i/box
+.include box-sandbox.conf
+```
+
+`deploy/server-bin/bbx-box-run`: `bbx-box-run <slug> scheduler-pass` →
+`systemctl start --wait beebox-pass@<slug>.service`, and no other
+operation; the slug is validated against the `bbx-` users; the caller is
+logged. Sudoers: `beebox-sched ALL=(root) NOPASSWD: /usr/local/sbin/bbx-box-run`.
+The hub user has no sudoers entry at all; the scheduler daemon runs as
+`beebox-sched` (Track E). Root (the deploy) runs its per-box converge
+through the same pass unit's sandbox with `systemd-run --uid bbx-<slug>
+-p ... bbx engine migrate ...`, or directly as root when the sandbox is in
+the way of a migration repair, which the deploy already does today for
+everything.
 
 Apt spool: `bbx host install` (`src/cli/commands/host.ts`) on a unit host
-writes `/run/beebox/apt/<slug>/<id>.request` (`{ box, packages }`) and
-waits for `<id>.result`. `deploy/systemd/beebox-host-apt@.path`
-(`DirectoryNotEmpty=/run/beebox/apt/%i`) starts
-`beebox-host-apt@.service`, root, which runs the existing
-`bbx-host-apt install --box %i -- <packages>` per request and writes the
-result with its exit code and stderr. The wrapper's policy is unchanged;
+writes `{ box, packages }` to a temporary name under
+`/run/beebox/apt/<slug>/in/` and renames it to `<id>.request` (one atomic
+appearance), then waits for `/run/beebox/apt/<slug>/out/<id>.result`.
+`deploy/systemd/beebox-host-apt@.path` (`DirectoryNotEmpty=/run/beebox/apt/%i/in`)
+starts `beebox-host-apt@.service`, root, which moves each request out of
+`in/` before running the existing `bbx-host-apt install --box %i --
+<packages>` and writes the result (exit code, stderr) to `out/`. `in/` is
+`bbx-<slug>:root` 0730 (the box writes, root reads, the box cannot list
+others' requests); `out/` is `root:bbx-<slug>` 0750; a result older than
+an hour is removed by the service. Two requests in a row and an
+uncollected result are smoke cases. The wrapper's policy is unchanged;
 only the way a request reaches it changes. `src/core/host-packages-system.ts`
 gains the spool client beside the `sudo` client, selected by the presence
-of `/run/beebox/apt/<slug>`.
+of `/run/beebox/apt/<slug>/in`.
 
-**Vocabulary lock-ins.** Unit names, the socket path, `/etc/beebox/box.env`,
-`/run/beebox/hub-secret.env`, group `beebox-boxes`, `bbx-box-run
-<slug> scheduler-pass`, the spool directory and file names.
+**Vocabulary lock-ins.** Unit names (`beebox-box@`, `beebox-pass@`,
+`beebox-host-apt@`), `box-sandbox.conf`, the socket path,
+`/etc/beebox/box.env`, `/run/beebox/hub-secret.env`, group `beebox-boxes`,
+user `beebox-sched`, `bbx-box-run <slug> scheduler-pass`, the spool `in/`
+and `out/` names, `.beebox/hub-meta.json`.
 
 **First chunk.** The two box unit files and a smoke test under Docker that
 boots systemd, installs the units for two fixture boxes with two users,
@@ -441,48 +485,65 @@ the view and unreadable by path.
 **What.** A `hub.json` box entry gains `socket: "/run/beebox/<slug>.sock"`;
 a socket-backed `EndpointProvider` whose synchronous `get()` reflects
 polled unit state, whose `ensureRunning` connects (which starts the unit)
-and waits for readiness, and whose `unavailable()` quotes the unit's state;
-the hub's bearer gates become pass-through for a box the child verifies.
+and waits for readiness, and whose `unavailable()` quotes a cached unit
+state; the hub's bearer gates and its box listing read the box's hub
+metadata file instead of the box's secret files.
 
-**Why.** Three hub reads need a box's 0600 files today (`core.ts:462-466`,
-`token.ts:55`); a hub outside the box's group cannot read them, and putting
-the hub in every box group would make it a reader of every box, which the
-plan is removing. The child already verifies the same bearers on its own
-routes. A `get()` that connected would wake a sleeping box on a WebSocket
-reconnect, which `core.ts:546-556` exists to prevent.
+**Why.** The hub reads a box's 0600 files today (`core.ts:462-466`,
+`token.ts:55`) and its mobile `/api/boxes` listing verifies a device
+credential against every box (`core.ts:132`); a hub outside the box's
+group cannot read those, and putting the hub in every box group would make
+it a reader of every box, which the plan is removing. Passing bearers
+through to the child was considered and rejected (review round 2): a junk
+bearer would wake a sleeping box and the listing cannot be passed through.
+Hashes in a file the box publishes let the hub keep its gate and its
+listing without a secret. A `get()` that connected would wake a sleeping
+box on a WebSocket reconnect, which `core.ts:546-556` exists to prevent.
 
 **Direction.** `src/hub/endpoints.ts`: `Endpoint` gains `socketPath?:
 string`; `src/hub/server/core.ts` passes `{ host: "localhost", port: 0,
 socketPath }` as the proxy target when present. New
-`src/hub/supervisor/socket-provider.ts`: a poll every 2 s of `systemctl
-show -p ActiveState,SubState beebox-box@<slug>` for every socket entry
-(unprivileged, read-only), kept in a map with the last readiness result;
-`get` returns the endpoint only when the map says active and ready;
-`ensureRunning` (HTTP only, as today) connects to the socket, waits for
-`/api/build-info` (or `/healthz` with the diag key) over it with the 30 s
-bound, then marks ready; `unavailable` returns the map's last state and
-the journal's last line from `journalctl -u beebox-box@<slug> -n 1`
-(unprivileged with the `systemd-journal` group). At hub start the provider
-wakes, with one GET, every box whose `chat-schedules.json` is non-empty,
-so pending check-ins re-arm after a reboot; that file is world-readable
-box state (the probe confirms its mode). The bearer gates: for a slug with
-a `socket` entry, a request carrying an agent, mobile or scan bearer is
-proxied with the bearer intact and no hub verdict, and the child's own wall
-answers 401 or serves; the session-cookie wall and `canAccessBox` stay in
-the hub, reading `_config/box.json` through its world-read bit (the probe
-confirms). A hub with any `socket` entry refuses `lazy`, `idleMs` and
+`src/hub/supervisor/socket-provider.ts`: one poll every 2 s of `systemctl
+list-units 'beebox-box@*' --output=json` (one process for all boxes,
+unprivileged, read-only), kept in a map with the last readiness result;
+for a unit the poll sees as `failed`, the same cycle fetches its last
+journal line once (`journalctl -u ... -n 1`, the hub user in
+`systemd-journal`) into the cache, so `unavailable()` stays synchronous and
+never runs a command on the request path. `get` returns the endpoint only
+when the map says active and ready; at provider start every unit already
+active is readiness-checked once over its socket (an active unit is not
+woken by that), so a hub-only restart does not refuse WebSockets to a
+running box. `ensureRunning` (HTTP only, as today) connects to the socket,
+waits for `/api/build-info` (or `/healthz` with the diag key) over it with
+the 30 s bound, then marks ready. At hub start the provider wakes, with one
+GET, every box whose hub metadata says it holds a pending schedule, so
+check-ins re-arm after a reboot. The hub's gates read
+`<box root>/.beebox/hub-meta.json` (Ontology): `hasMobileAuth`,
+`hasScanAuth` and the agent-bearer check compare SHA-256 of the presented
+bearer with the file's hashes, `canAccessBox` and the mobile `/api/boxes`
+listing read `allowedEmails` and the hashes from it; the engine writes the
+file on `bbx engine init`, on every token mint or revoke
+(`src/core/token-store.ts`, `src/core/agent/token.ts`,
+`src/core/mobile/pairing.ts`), on `_config/box.json` change, and when
+`chat-schedules.json` changes (a mirror of what the hub reads today, with
+hashes in place of secrets). The hub reads the file at each gate with a
+one-second mtime cache. The session-cookie wall stays in the hub as today. A hub with any `socket` entry refuses `lazy`, `idleMs` and
 `keepRecent` as config errors: the unit host owns those. The spawning
 supervisor stays for entries without `socket` (the dev router and
 `test/hub/`).
 
 **Vocabulary lock-ins.** `socket` on a `hub.json` entry; `Endpoint.socketPath`;
 the provider's state names mirror systemd's (`active`, `inactive`,
-`activating`, `failed`).
+`activating`, `failed`); `hub-meta.json` with fields `allowedEmails`,
+`pendingSchedules`, `tokenHashes: { agent, mobile: [], scan: [] }`,
+`writtenAt`.
 
 **First chunk.** `socketPath` on `Endpoint` and the proxy target, with
 `test/hub/` routing HTTP and a WebSocket through a Unix socket stand-in
 server on the pinned http-proxy-3, and a 503 with the `unavailable` text
-for a failed stand-in.
+for a failed stand-in. Second chunk: the hub metadata writer in the engine
+with its test (every input change rewrites the file; no secret in it), then
+the hub's readers.
 
 ### Track E: deploy, add-box, the scheduler pass, and the host migration
 
@@ -500,9 +561,10 @@ through the wrapper; a one-time migration moves the six boxes.
   slug from `hub.json`, install units, the spool units and sudoers, write
   `/etc/beebox/box.env`, `systemctl start 'beebox-box@*.socket'`, restart
   hub and scheduler.
-- `add-box.sh`: `groupadd beebox-boxes` once; `useradd --system --uid
-  <next free in 2000–2999> -g bbx-<slug> -G beebox-boxes -d
-  /var/lib/beebox/<slug> -m -s /bin/bash bbx-<slug>`; `chmod 0750`; clone
+- `add-box.sh`: `groupadd beebox-boxes` and `useradd --system beebox-sched`
+  once; `useradd --system --uid <next free in 2000–2999> -g bbx-<slug> -G
+  beebox-boxes -d /var/lib/beebox/<slug> -m -s /bin/bash bbx-<slug>`;
+  `chmod 0751` the home; clone
   and `bbx engine init` as that user with `runuser`; `bbx engine secrets
   copy-grants` into the box's own store and verify the copy (subplan);
   `hub add-box <slug> <path> --socket`; `systemctl enable --now
@@ -511,7 +573,10 @@ through the wrapper; a one-time migration moves the six boxes.
   (admission, dirty check, heartbeat, growth, tick, box log) becomes
   `bbx engine scheduler pass <boxRoot>`, run in process on a dev machine
   and through `sudo bbx-box-run <slug> scheduler-pass` on a unit host
-  (selected by the wrapper's presence). The daemon keeps fleet concerns
+  (selected by the wrapper's presence), which runs it inside the pass unit
+  as the box user. The daemon's unit `beebox-scheduler.service` gets
+  `User=beebox-sched`, a system user with no box group and the one sudoers
+  line; its manifest moves to `/etc/beebox/boxes.json`. The daemon keeps fleet concerns
   (the interval, the dev-bundle restart, load gating). Each box's log and
   heartbeat land under the box home; the aggregated
   `scheduler-stderr.log` goes away, which closes the host audit's
@@ -519,7 +584,7 @@ through the wrapper; a one-time migration moves the six boxes.
 - Migration `deploy/server-bin/migrate-to-box-users.sh`, run once by hand
   after a Hetzner snapshot: for each `hub.json` slug create the group and
   user, `mv /home/beebox/boxes/<slug> /var/lib/beebox/<slug>/box`, `chown
-  -R`, `chmod 0750` the home, split the shared state per the subplan and
+  -R`, `chmod 0751` the home and 0700 its dot-directories, split the shared state per the subplan and
   verify each copy, rewrite `hub.json` paths and add `socket`, rewrite
   `boxes.json`, enable the sockets. Idempotent per slug: a slug whose home
   exists and whose old path is gone is skipped. The snapshot is the
@@ -558,11 +623,14 @@ needing sudo on the request path (a cold start is a request), and on two
 idle rules in two processes with the one in the proxy knowing less. Socket
 activation makes the hub a pure router; that is what Track A buys.
 
-**The hub in every box group** instead of moving bearer checks to the
-child: 40 fewer lines in the hub. It fails on the hub becoming a reader of
+**The hub in every box group** instead of the hub metadata file: no new
+file, 80 fewer engine lines. It fails on the hub becoming a reader of
 every box's secret files, and on 0600 files (the agent token) staying
-unreadable anyway. The child's walls exist; the hub's gates were a
-pre-filter.
+unreadable anyway. **Bearer pass-through to the child** instead of hashes:
+no hashes, but a junk bearer wakes a sleeping box and the mobile listing
+across boxes has nothing to read (review round 2). The metadata file is
+the smallest thing that keeps the hub's gates and listing without a
+secret.
 
 **Keep `sudo bbx-host-apt` from inside the box** and drop `ProtectSystem`:
 no spool. It fails on the whole point of `ProtectSystem=strict` (an agent
@@ -600,12 +668,18 @@ one row per shared file, with its probe chunk first.
 | Reboot with pending chat schedules | Track D test (provider wakes schedule holders at start) | Track D start-up wake | clear |
 | Hub-only restart: units keep the hub secret from the previous hub | Track C smoke (restart hub, request still proxied) | the secret lives in `/run/beebox/hub-secret.env`, read back by the new hub | clear |
 | WebSocket reconnect to a sleeping box | `test/hub/` WS path with an `inactive` map entry | `get()` returns undefined from the polled map; 503 as today | clear |
+| Hub-only restart, WebSocket to a running box | Track D test (active unit seeded ready at provider start) | the start-up readiness pass | clear |
+| Hub metadata file stale (the engine failed to rewrite it after a token mint) | Track D writer test | the bearer is refused at the hub with "unknown credential for box"; the box's own wall would have accepted it; the hub logs the hash miss per box | clear, needs a person if persistent |
+| Hub metadata file tampered by the box (the box owns it) | no | a box can only widen or narrow access to itself; `allowedEmails` in it is the same list the box owns in `_config/box.json` today | accepted, same trust as today |
+| Junk bearer against a sleeping box | Track D test | refused at the hub by hash; the box is not woken | clear |
 | Poll says active, unit exits before the WS upgrade reaches it | no | the upgrade fails, the client reconnects, the next `get()` sees inactive | clear |
 | `MemoryMax` reached: the box is OOM-killed alone | no | `Restart=on-failure`; the journal records the kill; hub 503 meanwhile | clear |
 | Deploy window: a request arrives while units are stopped | existing deploy page via nginx `@hub_unreachable` | sockets stopped too, so nothing wakes onto a half-copied tree | clear |
 | `bbx-box-run` given a slug with no user, or an operation not in the set | Track C smoke | refuses, exit 2 | clear |
 | Scheduler pass as the wrong user (wrapper missing on a host that has box users) | Track E test | the pass fails on the box root with EACCES; the daemon logs per box | clear |
 | Apt request with no root service listening (path unit disabled) | Track C smoke | `bbx host install` times out after 10 minutes and says the spool was not served | clear |
+| Two apt requests in a row; an uncollected result | Track C smoke | the service drains `in/` per start; `out/` is pruned after an hour; the path unit watches `in/` only | clear |
+| Scheduler pass needs sudo and the daemon runs as the wrong user | Track E test on the daemon's user check | `bbx-box-run` logs and refuses a caller other than `beebox-sched` (sudoers already does) | clear |
 | Migration script interrupted mid-move | no | run after a snapshot; idempotent per slug | clear, needs a person |
 | A grant missing after the secret-store split | migration verification (subplan) | the migration compares source grants with each copy and fails on a mismatch | clear |
 | A shared file the probe did not catch (read only on a rare path) | subplan probe + the host audit | EACCES at the call site; §4 says log and degrade | **silent if the caller swallows** |
@@ -646,9 +720,9 @@ one row per shared file, with its probe chunk first.
 - **A sandbox inside a box for tricks** (`2026-09-16-sandboxed-trick-helpers`).
 - **Allowed-directories for the agent** (`2026-07-20`).
 - **Encryption of dormant boxes** (`2026-08-11`).
-- **Rate-limiting anonymous wakes.** A request with a junk bearer can wake
-  a box through the pass-through gate; the host sits behind Cloudflare and
-  nginx, and a wake is one process start. Revisit if it is observed.
+- **Rate-limiting anonymous wakes.** With the hub verifying bearers by
+  hash, an unauthenticated request never wakes a box; a valid session
+  cookie or bearer does, as today.
 - **The dev router and the Mac app.** Both keep one-process or one-VM
   models; the spawning supervisor survives for them.
 - **NixOS or any host OS change.** Discussed and set aside 2026-10-24.
@@ -657,14 +731,14 @@ one row per shared file, with its probe chunk first.
 
 ## Open design questions
 
-1. **Where bearer verification lives.** The plan moves agent, mobile and
-   scan bearer checks for socket-backed boxes into the child and leaves the
-   hub reading only world-readable box files, so the hub holds no box
-   secret and no group membership. The alternative puts the hub in every
-   box group and has the engine write those three files 0640, keeping the
-   hub as a pre-filter. Lean: the child; the hub stays a router, and the
-   cost is that an unauthenticated bearer can wake a box (NOT in scope
-   notes the rate-limit option).
+1. **The hub's view of a box: one published file.** The plan has the
+   engine publish `.beebox/hub-meta.json` (ACL, pending-schedule flag,
+   token hashes) and the hub read only that, holding no box secret and no
+   group membership. The alternative puts the hub in every box group and
+   has the engine write its secret files 0640. Lean: the file; it is the
+   privilege boundary written down, and the host audit can check that the
+   hub reads nothing else. The trust point: the box writes it, so a box
+   can mis-state its own ACL, which it can already do in `_config/box.json`.
 2. **`keepRecent`.** The unit host drops it: an idle box exits and the
    socket wakes it in a few seconds. Keeping it means the hub poking a box
    to stay alive, or a longer `--idle-exit` for chosen boxes. Lean: drop;
