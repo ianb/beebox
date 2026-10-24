@@ -34,10 +34,11 @@ export interface LandmarkGroupRowsProps<Link extends { ref: string }> {
  * Row colours: app ink in a menu or white panel, the card's ink when the
  * rows sit on a material (the place page, on the card itself).
  */
-export function useLandmarkRowInk(): { head: string; ink: string; soft: string; hover: string; rule: string } {
+export function useLandmarkRowInk(): { head: string; ink: string; soft: string; alert: string; hover: string; rule: string } {
+  // App red is too faint on a dark card; there the word itself carries it.
   return useMaterial(undefined)
-    ? { head: "text-card-ink", ink: "text-card-ink", soft: "text-card-soft", hover: "hover:bg-card-tint", rule: "border-card-rule" }
-    : { head: "text-warm-800", ink: "text-warm-900", soft: "text-warm-700", hover: "hover:bg-warm-100", rule: "border-warm-200" };
+    ? { head: "text-card-ink", ink: "text-card-ink", soft: "text-card-soft", alert: "text-card-ink", hover: "hover:bg-card-tint", rule: "border-card-rule" }
+    : { head: "text-warm-800", ink: "text-warm-900", soft: "text-warm-700", alert: "text-danger", hover: "hover:bg-warm-100", rule: "border-warm-200" };
 }
 
 export function LandmarkGroupRows<Link extends { ref: string }>({

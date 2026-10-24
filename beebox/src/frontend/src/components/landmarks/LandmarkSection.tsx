@@ -314,7 +314,7 @@ function LinkRow({
 }) {
   const display = link.label !== null && link.label.length > 0 ? link.label : link.title;
   const refDisplay = link.ref.startsWith("/") ? toDisplayPath(link.ref) : link.ref;
-  const { ink, soft, hover } = useLandmarkRowInk();
+  const { ink, soft, alert, hover } = useLandmarkRowInk();
   const rowClasses = `block w-full text-left px-3 py-2 ${hover}`;
 
   if (isUrlRef(link.ref)) {
@@ -331,7 +331,7 @@ function LinkRow({
       <div className={`flex items-center gap-2 px-3 py-2 ${soft}`}>
         {/* Struck through: the row stays so the place does not silently shrink. */}
         <s className="min-w-0 truncate font-medium">{display}</s>
-        <span className="ml-auto shrink-0 text-xs text-danger">Missing</span>
+        <span className={`ml-auto shrink-0 text-xs ${alert}`}>Missing</span>
       </div>
     );
   }

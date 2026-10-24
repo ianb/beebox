@@ -113,7 +113,7 @@ void test("an empty group says None yet", async (t) => {
   t.check(text(view.container), "Empty0None yet");
 });
 
-/** The text-colour classes on the open group's header, member title, detail-free path line and count. */
+/** The text-colour classes on the open group's header, count, an external member's title and URL line, and a missing member's label. */
 function inkClasses(container: Element) {
   const colour = (el: Element | null) => (el?.getAttribute("class") ?? "").split(" ").filter((c) => c.startsWith("text-") && !/^text-(xs|sm|left)$/.test(c));
   return {
@@ -121,6 +121,7 @@ function inkClasses(container: Element) {
     count: colour(container.querySelector("button[aria-expanded] span:last-child")),
     title: colour(container.querySelector('a[target="_blank"] div')),
     path: colour(container.querySelector('a[target="_blank"] div:last-child')),
+    missing: colour([...container.querySelectorAll("span")].find((el) => el.textContent === "Missing") ?? null),
   };
 }
 
@@ -132,6 +133,7 @@ void test("rows on a material take the card's ink; in a white panel they keep ap
     count: ["text-card-soft"],
     title: ["text-card-ink"],
     path: ["text-card-soft"],
+    missing: ["text-card-ink"],
   });
   const inPanel = await render(h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true }));
   t.teardown(() => inPanel.unmount());
@@ -140,5 +142,6 @@ void test("rows on a material take the card's ink; in a white panel they keep ap
     count: ["text-warm-700"],
     title: ["text-warm-900"],
     path: ["text-warm-700"],
+    missing: ["text-danger"],
   });
 });
