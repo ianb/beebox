@@ -602,13 +602,18 @@ none
    images, changing `image.yml:14` and the compose docs. Lean: (a). The
    engine tag is what compose and NAS users already see, and the app version
    numbering can continue from 0.1.6 as `mac-v0.2.0`.
-2. **Cadence of engine tags.** Production deploys every `main` commit; the
-   desktop channel moves only when a `v*` tag is pushed. Options: a tag by
-   hand when the boxholder wants desktops to move (what happens today, roughly
-   twice a week); or a scheduled tag (the hourly full suite on `main` could
-   tag after a green run). Lean: by hand for now, since every tag is also a
-   10-minute image build and a 1 GB download for each desktop; revisit when a
-   second desktop user exists.
+2. **Cadence of the channel.** Boxholder input 2026-10-24: production
+   deploys continuously without marking releases, and a daily publish
+   after the full suite passes would be acceptable. Lean: no engine tags.
+   The hourly full suite on `main` fires `gh workflow run image.yml --ref
+   <green sha>` once a day after a pass; `image.yml` publishes `latest`
+   from that ref, stamped `<last tag>-main.<yyyymmdd>.<short sha>` (a
+   pre-release that sorts between tags, so comparisons hold). `v*` tags
+   then serve app releases only, or `mac-v*` per question 1. Consequences:
+   a bad `main` reaches desktops within a day, so the rollback window
+   matters more than with hand-picked tags; Claude Code lag becomes about
+   a day, which answers question 5. The alternative is tags by hand, about
+   twice a week today.
 3. **When an update applies.** The plan: at every box start, without
    asking, plus a Preferences button; never while the box runs. The
    alternatives are a one-time "Update the box now?" question at the first
