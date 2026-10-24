@@ -26,7 +26,7 @@ export function asIcalTime(value: unknown): ICAL.Time | null {
 
 class InvalidTimespanError extends Error {
   constructor(input: string) {
-    super(`Invalid timespan: "${input}". Use e.g. "7d", "2w", "1m".`);
+    super(`Invalid timespan: "${input}". Use days, weeks or months, e.g. "7d", "2w", "1m".`);
     this.name = "InvalidTimespanError";
   }
 }
