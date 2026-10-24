@@ -34,7 +34,7 @@ WORKDIR /src
 COPY . .
 
 # The engine's version: the image workflow passes the tag (1.2.3) or a
-# pre-release stamp for a build from main (1.2.3-main.20261024.abc1234).
+# pre-release stamp for a build from main (1.2.4-main.20261024.abc1234).
 # Written into beebox/package.json before the pack, so `bbx status`, /healthz
 # and the Mac app's engine line report this build, not the checked-in
 # placeholder. A local build keeps the placeholder.

@@ -23,7 +23,7 @@ cd "$(dirname "$0")/.."
 VERSION="${VERSION:-0.0.0-dev}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(git rev-list --count HEAD)}"
 BUNDLE_ID="${BUNDLE_ID:-run.beebox.mac}"
-MIN_ENGINE_VERSION="${MIN_ENGINE_VERSION:-0.1.7}"
+MIN_ENGINE_VERSION="${MIN_ENGINE_VERSION:-0.1.6}"
 IDENTITY="${SIGN_IDENTITY:--}"
 # A development build carries no update key: Sparkle would otherwise "update"
 # it to the latest release (any release is newer than 0.0.0-dev).

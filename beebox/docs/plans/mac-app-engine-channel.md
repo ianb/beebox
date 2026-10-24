@@ -611,8 +611,9 @@ record of what was decided and why.
    after the full suite passes would be acceptable. Decision: no engine tags.
    The hourly full suite on `main` fires `gh workflow run image.yml --ref
    <green sha>` once a day after a pass; `image.yml` publishes `latest`
-   from that ref, stamped `<last tag>-main.<yyyymmdd>.<short sha>` (a
-   pre-release that sorts between tags, so comparisons hold). `v*` tags
+   from that ref, stamped `<next patch>-main.<yyyymmdd>.<short sha>` (a
+   pre-release of the next version: above the last tag, below the next, so
+   comparisons hold). `v*` tags
    then serve app releases only, or `mac-v*` per question 1. Consequences:
    a bad `main` reaches desktops within a day, so the rollback window
    matters more than with hand-picked tags; Claude Code lag becomes about

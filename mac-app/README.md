@@ -24,7 +24,8 @@ default. With it off the app downloads nothing. Design:
 - `../apple-shared/` (`BeeBoxShared`): code shared with the iOS app: the
   pairing link, redeem, the http host policy, the Keychain store.
 - Tests: `swift test --disable-swift-testing` here, or `bin/apple-test` from
-  the monorepo root. `LiveScanSweepTests` runs only with
+  the monorepo root. A fresh checkout needs `scripts/fetch-sparkle.sh` first
+  (the Sparkle binary target is empty until then). `LiveScanSweepTests` runs only with
   `BEEBOX_LIVE_SCAN_URL` and `BEEBOX_LIVE_SCAN_TOKEN` set, against a test box.
 
 Requires macOS 26 on Apple silicon. An older macOS refuses to open the app
@@ -223,8 +224,9 @@ Each app release (the Swift shell; the engine needs none):
    pre-releases).
 
 Engine releases: the full-suite schedule dispatches the image workflow once
-a day after a green run on `main`, which publishes `:latest` stamped
-`<last tag>-main.<date>.<sha>`. A `v*` tag still publishes `:X.Y.Z` and
+a day after a green run on `main`, which publishes `:latest` stamped as a
+pre-release of the next patch version (`0.1.7-main.<date>.<sha>` after
+`v0.1.6`). A `v*` tag still publishes `:X.Y.Z` and
 `:latest`. A manual run of the workflow with channel `edge` publishes a
 trial image that `BEEBOX_IMAGE_CHANNEL=edge` follows.
 
