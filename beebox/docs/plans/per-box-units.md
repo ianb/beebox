@@ -107,7 +107,7 @@ ceiling, and one provisioner that `deploy.sh` keeps current.
   trust shape and a boxholder decision (Open design question 1).
 - `bbx-host-apt`'s posture (`deploy/server-bin/bbx-host-apt:1-19`): one
   root code path, plain bash, the whole privilege boundary in one file.
-  `bbx-box-run` and the apt spool copy it; neither widens what root does.
+  `bbx-box-run` copies it and does not widen what root does.
 - Memory on `beebox/deploy/deploy.sh:673-675`: "The install competes for RAM
   with every running box's `bbx engine serve` + claude-agent-sdk subprocess
   on this single small server, and the kernel OOM-kills it (exit 137)."
@@ -171,7 +171,8 @@ ceiling, and one provisioner that `deploy.sh` keeps current.
   `deploy.sh:805-823`; smoke test `bbx-host-apt.smoke.sh` under Docker;
   invoked from a box by `sudo` in `src/core/host-packages-system.ts:66-89`).
   `bbx-box-run` is built the same way. The sudo call from inside a box
-  cannot survive a read-only filesystem view (Track C's spool replaces it).
+  cannot survive a read-only filesystem view (Track C records the package
+  instead; the deploy installs it).
 - **The scheduler.** `bbx engine scheduler start`, one process for every
   box, reloads `~/.config/beebox/boxes.json` each cycle
   (`src/core/schedule/scheduler/core.ts:182`) and for each box, in process,
@@ -236,9 +237,6 @@ ceiling, and one provisioner that `deploy.sh` keeps current.
   recycles UIDs and warns against persistent files, and a box is
   persistent files. `RootDirectory=` is evaluated and deferred (NOT in
   scope): it needs the whole toolchain inside the tree.
-- **systemd path units**, adopted for the apt spool: a `.path` unit with
-  `DirectoryNotEmpty=` starts a service when a directory gains a file
-  (<https://www.freedesktop.org/software/systemd/man/latest/systemd.path.html>).
 - **http-proxy-3 target with a Unix socket**, adopted: `setupOutgoing`
   copies `socketPath` from the target along with `host` and `port`
   (<https://github.com/sagemathinc/http-proxy-3/blob/main/lib/http-proxy/common.ts>,
