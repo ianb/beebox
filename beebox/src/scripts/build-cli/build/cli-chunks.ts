@@ -15,10 +15,10 @@ import { z } from "zod";
 
 /**
  * `cli-<name>-<hash>.mjs` and its map, as esbuild names a chunk (`chunkNames`
- * in bundle.ts; the hash is eight base-32 characters). Not `cli.mjs` itself,
+ * in bundle.ts; the hash is eight base-32 characters, A-Z and 2-7). Not `cli.mjs` itself,
  * and not any other `cli-*.mjs` a person leaves in `dist/`.
  */
-export const CLI_CHUNK_PATTERN = /^cli-[\w-]+-[\dA-Z]{8}\.mjs(?:\.map)?$/;
+export const CLI_CHUNK_PATTERN = /^cli-[\w-]+-[2-7A-Z]{8}\.mjs(?:\.map)?$/;
 
 /** Builds whose chunks are kept regardless of age. */
 const KEPT_BUILDS = 3;

@@ -15,10 +15,10 @@ import { join } from "node:path";
 import { prunableChunks, recordBuild, stagingOrder } from "../../../../src/scripts/build-cli/build/cli-chunks.js";
 
 void test("Staged files move maps first and cli.mjs last", async (t) => {
-  t.check(stagingOrder(["cli.mjs", "cli-ls-AB12CD34.mjs", "cli.mjs.map", "exports/cards.js", "cli-ls-AB12CD34.mjs.map"]), [
+  t.check(stagingOrder(["cli.mjs", "cli-ls-AB23CD45.mjs", "cli.mjs.map", "exports/cards.js", "cli-ls-AB23CD45.mjs.map"]), [
     "cli.mjs.map",
-    "cli-ls-AB12CD34.mjs.map",
-    "cli-ls-AB12CD34.mjs",
+    "cli-ls-AB23CD45.mjs.map",
+    "cli-ls-AB23CD45.mjs",
     "exports/cards.js",
     "cli.mjs",
   ]);
@@ -31,16 +31,17 @@ const now = 10 * HOUR;
 // hour old survive.
 void test("A chunk is pruned only when no kept build wrote it and it is over an hour old", async (t) => {
   const files = [
-    { name: "cli-ls-OLD1OLD1.mjs", mtimeMs: now - 2 * HOUR },
-    { name: "cli-ls-OLD1OLD1.mjs.map", mtimeMs: now - 2 * HOUR },
+    { name: "cli-ls-OLD2OLD2.mjs", mtimeMs: now - 2 * HOUR },
+    { name: "cli-ls-OLD2OLD2.mjs.map", mtimeMs: now - 2 * HOUR },
     { name: "cli-ls-KEPTKEPT.mjs", mtimeMs: now - 5 * HOUR },
-    { name: "cli-ls-NEW1NEW1.mjs", mtimeMs: now - 10 * 60 * 1000 },
+    { name: "cli-ls-NEW2NEW2.mjs", mtimeMs: now - 10 * 60 * 1000 },
     { name: "cli.mjs", mtimeMs: now - 5 * HOUR },
     { name: "pub-worker.js", mtimeMs: now - 5 * HOUR },
     // Not esbuild's chunk shape: a file someone left in dist/ is never pruned.
     { name: "cli-helper.mjs", mtimeMs: now - 5 * HOUR },
+    { name: "cli-helper-00000000.mjs", mtimeMs: now - 5 * HOUR },
   ];
-  t.check(prunableChunks({ files, keptBuilds: [["cli-ls-KEPTKEPT.mjs"]], now }), ["cli-ls-OLD1OLD1.mjs", "cli-ls-OLD1OLD1.mjs.map"]);
+  t.check(prunableChunks({ files, keptBuilds: [["cli-ls-KEPTKEPT.mjs"]], now }), ["cli-ls-OLD2OLD2.mjs", "cli-ls-OLD2OLD2.mjs.map"]);
 });
 
 // The manifest keeps the newest three builds, and a missing or torn manifest
