@@ -5,7 +5,8 @@
  * expected".
  */
 
-import { boxLocalDay, loadConnectorActivity, updateConnectorActivity } from "./core.js";
+import { boxLocalDay } from "../core/box/local-day.js";
+import { loadConnectorActivity, updateConnectorActivity } from "./core.js";
 import { evaluateConnectors, withEpisodes, type ConnectorEpisodeState } from "./verdict.js";
 
 /** The connector has no quiet or failing episode to dismiss (it cleared, or never started). */

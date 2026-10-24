@@ -36,7 +36,7 @@ import { mapInBatches } from "../../lib/map-batched.js";
 import { isBoxholderTodo } from "../../shared/todo-model.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { getBoxTime } from "../../lib/time.js";
-import { loadBoxTimezone } from "../box/config.js";
+import { boxTimeZoneOrHost } from "../box/config.js";
 import { listScopedCardPaths } from "../collection/card-scope.js";
 import { extractCardTodos, mayHaveTodo } from "./extract/core.js";
 import { deriveTodo } from "./derive.js";
@@ -50,7 +50,7 @@ async function buildTodoScanContext(boxRoot: string): Promise<{ ctx: LoadCardCon
     ctx: { cardSchemas: await createCardSchemaMap(boxRoot) },
     plateCtx: {
       now: getBoxTime(boxRoot),
-      timeZone: (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZone: await boxTimeZoneOrHost(boxRoot),
     },
   };
 }

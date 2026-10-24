@@ -6,23 +6,10 @@ import { parseCardText } from "../card-io.js";
 import { renderFrontmatterDocument, splitCardContent } from "../../exports/cards.js";
 import { createCardSchemaMap } from "../../schemas.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { getBoxTime } from "../../lib/time.js";
-import { loadBoxTimezone } from "../box/config.js";
 import { invariant } from "../../shared/invariant.js";
 import { TodoEntrySchema, TodosFieldSchema, type TodoEntry } from "../../shared/todo-model.js";
 
 const TODO_TEXT = "Review this item and follow up as needed";
-
-export async function getTriageTodoDate(boxRoot: string): Promise<string> {
-  const timeZone = await loadBoxTimezone(boxRoot) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(getBoxTime(boxRoot));
-  const part = (type: string): string => {
-    const value = parts.find((candidate) => candidate.type === type)?.value;
-    invariant(value !== undefined, `Missing ${type} in localized todo date`);
-    return value;
-  };
-  return `${part("year")}-${part("month")}-${part("day")}`;
-}
 
 interface TriageTodoQuestion {
   destinationRef: string;
