@@ -83,6 +83,32 @@ const CANDIDATES: Candidate[] = [
     ],
   },
   {
+    id: "M1x",
+    title: "Staying late, other wordings of the direction",
+    directableOnly: true,
+    listenFor: "Whether any wording gets the reluctance across where M1-directed did not: a mood word, a description of the sound, a scene, or OpenAI's own Tone/Pacing format.",
+    variants: [
+      {
+        id: "sound",
+        label: "Describes the sound",
+        text: "Sure, I can stay late tonight.",
+        instructions: "A small sigh before 'Sure'. Flat and a little slow, with the pitch falling at the end. Reluctant, not angry.",
+      },
+      {
+        id: "scene",
+        label: "Describes the scene",
+        text: "Sure, I can stay late tonight.",
+        instructions: "You have already worked a long day and had plans tonight. Your manager has just asked you to stay. You say yes because you feel you have to, and it shows.",
+      },
+      {
+        id: "fields",
+        label: "Tone/Pacing fields",
+        text: "Sure, I can stay late tonight.",
+        instructions: "Tone: reluctant, weary, resigned.\nEmotion: disappointment held back out of politeness.\nPacing: a slow start, a short pause after 'Sure', then even.\nDelivery: an audible exhale before speaking.",
+      },
+    ],
+  },
+  {
     id: "M2",
     title: "A mood with a twist: test results",
     directableOnly: true,
