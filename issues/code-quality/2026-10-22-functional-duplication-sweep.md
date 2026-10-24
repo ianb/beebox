@@ -110,7 +110,7 @@ names the members and the canonical choice.
 
 Filed, because a merge changes output or needs a choice:
 [quota collection twice](../closed/code-quality/2026-10-23-agent-quota-collection-exists-twice.md),
-[frontmatter split/parse/write](2026-10-23-frontmatter-read-and-write-have-many-implementations.md),
+[frontmatter split/parse/write](../closed/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md),
 [two card filename parsers](../closed/code-quality/2026-10-23-two-card-filename-parsers.md),
 [atomic writes, JSON state loaders, strict exists](2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md),
 [inline path containment](../closed/code-quality/2026-10-23-path-containment-checks-are-inlined.md),
