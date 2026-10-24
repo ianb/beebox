@@ -19,7 +19,8 @@
  * docs/implemented-plans/remove-cardworks-package.md.)
  */
 
-import { Document, isMap, parse as parseYaml, parseDocument, stringify as stringifyYaml } from "yaml";
+import { Document, isMap, parseDocument, stringify as stringifyYaml } from "yaml";
+import { parseYaml } from "../lib/read-yaml.js";
 import { isRecord } from "../shared/is-record.js";
 
 /**

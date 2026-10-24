@@ -117,11 +117,7 @@ void test("The very first refresh over a box whose sole indexable file fails to 
   await box.write("store/notes/Broken.doc.card", "---\ntitle: [unclosed\n---\nbroken body\n");
   const opened = await openSearchIndex(box.root);
   t.check(opened.warnings, [
-    `store/notes/Broken.doc.card: skipped (invalid YAML frontmatter: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 17:
-
-title: [unclosed
-                ^
-)`,
+    "store/notes/Broken.doc.card: skipped (invalid YAML frontmatter: unexpected end of the stream within a flow collection (2:1)\n\n 1 | title: [unclosed\n 2 | \n-----^)",
   ]);
 
   // A valid card added later indexes fine on top of the recorded skip.

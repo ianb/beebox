@@ -9,7 +9,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
 import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { createGlinkTemplate, type GlinkOriginType } from "../../schemas/glink.js";

@@ -8,7 +8,7 @@ import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { summarize } from "../../../core/loader-registry.js";
 import { resolveCardPath } from "../card-path.js";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../../lib/read-yaml.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { findInboundCardRefs } from "../../../core/find-inbound-card-refs.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash/command.js";

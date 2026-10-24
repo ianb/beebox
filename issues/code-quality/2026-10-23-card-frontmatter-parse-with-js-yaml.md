@@ -1,7 +1,7 @@
 ---
 title: "Card frontmatter parsing: js-yaml is 4-7x faster than yaml on box cards"
 workstream: unattached
-needs: [decision]
+needs: []
 area: beebox
 labels: [performance]
 filed-by: agent
@@ -45,3 +45,15 @@ one codebase is the cost. What else changes:
 
 Smaller step without a decision: parse once per card in `bbx validate`
 (reuse the mapping `parseCardText` already built in `unknownKeyWarnings`).
+
+## Decision and result (2026-10-24)
+
+The boxholder chose read-only parsing on js-yaml, with writes and edits on
+`yaml`. Implemented in workstream perf-easy-wins
+(`beebox/docs/plans/yaml-read-parser.md`): 37 read sites use
+`src/lib/read-yaml.ts`. `field-edits.ts` and the public `beebox/schema`
+export stay on `yaml`. A corpus check of 17,854 frontmatter blocks and YAML
+files across the local boxes and the repo found no value differences. CPU
+time on test1: `bbx validate` 950 → 830 ms, `bbx todos` 400 → 360 ms,
+`bbx status` 360 → 320 ms. `yaml` is still imported on card reads, because
+`src/cards/frontmatter.ts` also holds the write helpers.

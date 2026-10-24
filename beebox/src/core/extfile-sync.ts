@@ -11,7 +11,7 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { renderFrontmatterBlock, splitCardContent } from "../exports/cards.js";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../lib/read-yaml.js";
 import { resolveExternalRef, buildExternalStamp, ExternalRefError } from "./external/ref.js";
 import { rootsForBox } from "./external/roots.js";
 import { errorMessage } from "../shared/error-guards.js";

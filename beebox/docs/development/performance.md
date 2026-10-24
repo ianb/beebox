@@ -244,6 +244,15 @@ through `bin/bbx` first rebuilds a stale bundle. The profile summary
 is the one `perf:serve-start` prints: an npm package near the top that the
 verb does not use is a candidate for a dynamic `import()` at its use site.
 
+Verbs that read many cards spend much of their time parsing frontmatter.
+Reads parse with js-yaml through `src/lib/read-yaml.ts`, which is 4–7× faster
+than the `yaml` package on box cards; writes and comment-preserving edits stay
+on `yaml` (`docs/plans/yaml-read-parser.md`). On the test1 clone (2026-10-24,
+CPU time, median of 11, during a full test run) the switch saved 120 ms of
+`bbx validate` (950 → 830 ms) and 40 ms each of `bbx todos` and `bbx status`.
+Use CPU time (`/usr/bin/time -p`, user + sys) when the machine is loaded:
+wall time at load 30 or more varies by more than these differences.
+
 ## Checking against production
 
 The local setup is a model, so check it against production:

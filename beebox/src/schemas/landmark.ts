@@ -28,7 +28,7 @@
  */
 
 import { body, splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../exports/cards.js";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../lib/read-yaml.js";
 import { z } from "zod";
 import { CardSymbol } from "../shared/card-symbol.js";
 import { Prominence } from "../shared/prominence.js";

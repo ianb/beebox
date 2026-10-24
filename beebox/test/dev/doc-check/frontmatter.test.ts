@@ -82,7 +82,7 @@ title: Historical review
     check("beebox/docs/plans/malformed.md", `---
 title: [
 ---`),
-    ["beebox/docs/plans/malformed.md: invalid YAML frontmatter: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 9:\n\ntitle: [\n        ^\n"],
+    ["beebox/docs/plans/malformed.md: invalid YAML frontmatter: unexpected end of the stream within a flow collection (2:1)\n\n 1 | title: [\n 2 | \n-----^"],
   );
 });
 

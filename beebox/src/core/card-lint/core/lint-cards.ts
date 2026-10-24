@@ -44,7 +44,7 @@ import {
   type LintSummary,
   type LintIssue,
 } from "../../../exports/cards.js";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../../lib/read-yaml.js";
 import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "../../card-io.js";
 import { symbolIssues } from "./symbol.js";
 import { bodyTitleWarnings } from "./body-title.js";

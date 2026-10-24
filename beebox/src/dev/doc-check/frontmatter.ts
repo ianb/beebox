@@ -1,5 +1,5 @@
 import path from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
 import { isRecord } from "../../shared/is-record.js";
 import { frontmatterFence } from "../../cards/frontmatter.js";
 

@@ -91,11 +91,7 @@ void test("Build: searchable cards index, operational kinds don't", async (t) =>
   await box.write("_content/notes/Broken.doc.card", "---\ntitle: [unclosed\n---\nbroken body\n");
   const withBad = await openSearchIndex(box.root);
   t.check(withBad.warnings, [
-    `_content/notes/Broken.doc.card: skipped (invalid YAML frontmatter: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 17:
-
-title: [unclosed
-                ^
-)`,
+    "_content/notes/Broken.doc.card: skipped (invalid YAML frontmatter: unexpected end of the stream within a flow collection (2:1)\n\n 1 | title: [unclosed\n 2 | \n-----^)",
   ]);
 
   t.check(await find(withBad.db, "tomatoes"), "_content/notes/Garden.doc.card");

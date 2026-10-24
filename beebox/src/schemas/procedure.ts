@@ -9,7 +9,7 @@
  */
 
 import { splitCardContent, cardSchema, type CardSchema } from "../exports/cards.js";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../lib/read-yaml.js";
 import { z } from "zod";
 import { PROCEDURE_MODEL_NAMES } from "../shared/agent-models.js";
 

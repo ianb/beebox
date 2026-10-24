@@ -7,7 +7,7 @@
  * the raw card text.
  */
 
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
 import { splitCardContent } from "../../exports/cards.js";
 import {
   GuideObject,

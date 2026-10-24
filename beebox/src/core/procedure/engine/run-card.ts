@@ -10,7 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import { renderFrontmatterBlock, splitCardContent } from "../../../exports/cards.js";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../../lib/read-yaml.js";
 import { invariant } from "../../../shared/invariant.js";
 import {
   canReopenRun,

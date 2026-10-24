@@ -11,7 +11,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "./read-yaml.js";
 import { z } from "zod";
 import { errnoCode } from "../shared/error-guards.js";
 import { isWalkFixture } from "./box-fixture.js";

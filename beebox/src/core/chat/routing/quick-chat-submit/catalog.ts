@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml, YAMLParseError } from "yaml";
+import { parseYaml, isYamlSyntaxError } from "../../../../lib/read-yaml.js";
 import { z } from "zod";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import type { SessionEntry } from "../../../../cli/lib/session-entry.js";
@@ -47,7 +47,7 @@ export async function loadRoutingRubric(boxRoot: string): Promise<RoutingRubric>
   }
   try { return RubricSchema.parse(parseYaml(content)); }
   catch (error) {
-    if (error instanceof YAMLParseError || error instanceof z.ZodError) {
+    if (isYamlSyntaxError(error) || error instanceof z.ZodError) {
       throw new RoutingCatalogError({ reason: "rubric" });
     }
     throw error;
