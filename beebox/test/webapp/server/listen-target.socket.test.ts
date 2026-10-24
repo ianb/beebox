@@ -6,7 +6,9 @@
 // sets at exec), and must answer `/api/build-info` through that socket without
 // binding anything of its own. The second gets `--socket` with no passed
 // descriptor and creates the socket itself. Both publish the socket in the
-// endpoint file and, with no `BBX_PUBLIC_URL`, no URL.
+// endpoint file and, with no `BBX_PUBLIC_URL`, no URL. Two more processes
+// show the idle exit: a box with nothing to do exits 0 after its window, and
+// a pending chat schedule holds it (`src/webapp/server/idle-exit.ts`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -16,7 +18,7 @@ import http from "node:http";
 import net from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mkdtemp, readFile, rename, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { serveEndpointPath } from "../../../src/core/serve-endpoint.js";
 import { isRecord } from "../../../src/shared/is-record.js";
@@ -148,4 +150,48 @@ void test("--socket with no passed descriptor creates the socket", async (t) => 
     publicUrl: "http://hub.example.test/fixture",
     socket: socketPath,
   });
+});
+
+function spawnChild(args: { boxRoot: string; socketPath: string; idleExitMs: number }): ChildProcess {
+  const child = spawn(process.execPath, ["--import", "tsx", CHILD, args.boxRoot, args.socketPath, String(args.idleExitMs)], {
+    cwd: join(import.meta.dirname, "../.."),
+    stdio: ["ignore", "pipe", "pipe"],
+    env: childEnv({ BBX_PUBLIC_URL: "", PUBLIC_URL: "" }),
+  });
+  child.stdout?.resume();
+  child.stderr?.resume();
+  return child;
+}
+
+void test("a box with nothing to do exits 0 after its idle window", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  const socketPath = join(await shortSocketDir(), "box.sock");
+  const child = spawnChild({ boxRoot: box.root, socketPath, idleExitMs: 1_000 });
+  t.teardown(async () => {
+    await stopChild(child);
+    await box.cleanup();
+  });
+  t.check((await waitReady(socketPath)).status, 200);
+  // A clean exit, not a crash: Restart=on-failure must leave the unit down.
+  await eventually(() => child.exitCode !== null, { label: "the idle exit", timeoutMs: 30_000, intervalMs: 100 });
+  t.check({ code: child.exitCode, signal: child.signalCode }, { code: 0, signal: null });
+});
+
+void test("a pending chat schedule keeps an otherwise idle box up", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  await mkdir(box.path(".beebox"), { recursive: true });
+  await writeFile(box.path(".beebox/chat-schedules.json"), JSON.stringify([{
+    id: "sch_1", label: "rice timer", alarm: true, announce: "check the rice", content: "Ask about the rice",
+    createdAt: "2026-07-11T10:00:00.000Z", firesAt: "2099-01-01T00:00:00.000Z",
+  }]));
+  const socketPath = join(await shortSocketDir(), "box.sock");
+  const child = spawnChild({ boxRoot: box.root, socketPath, idleExitMs: 500 });
+  t.teardown(async () => {
+    await stopChild(child);
+    await box.cleanup();
+  });
+  t.check((await waitReady(socketPath)).status, 200);
+  // Several idle windows later it is still serving.
+  await new Promise((resolve) => setTimeout(resolve, 2_500));
+  t.check({ exitCode: child.exitCode, answers: (await getJson(socketPath, "/api/build-info")).status }, { exitCode: null, answers: 200 });
 });

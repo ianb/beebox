@@ -12,6 +12,12 @@ import { invariant } from "../../src/shared/invariant.js";
 
 const boxRoot = process.argv[2];
 const socket = process.argv[3];
-invariant(boxRoot && socket, "Fixture needs a box root and a socket path");
+const idleExit = process.argv[4];
+invariant(boxRoot && socket, "Fixture needs a box root and a socket path, and optionally an idle-exit in ms");
 if (process.env.LISTEN_FDS !== undefined) process.env.LISTEN_PID = String(process.pid);
-await startServer({ boxes: [{ boxRoot, slug: "fixture" }], socket, prewarmChat: false });
+await startServer({
+  boxes: [{ boxRoot, slug: "fixture" }],
+  socket,
+  prewarmChat: false,
+  ...(idleExit !== undefined && { idleExitMs: Number(idleExit) }),
+});

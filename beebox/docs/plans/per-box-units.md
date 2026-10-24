@@ -360,6 +360,15 @@ publishes no URL and says so once at startup. On TCP nothing changes.
 under a parent that passes a listening Unix socket as fd 3 and fetches
 `/api/build-info` through it. No idle logic yet.
 
+**Implementation notes (2026-10-24).** The ledger counts on Node's raw
+`request` and `upgrade` events (`src/webapp/server/idle-exit.ts`), not
+Fastify hooks: a hook cannot be added once the instance listens, and the
+raw events sit beside Fastify's and @fastify/websocket's own listeners. The
+idle check runs every 15 s or every `--idle-exit` ms, whichever is shorter.
+The hub secret reaches a unit as a systemd credential and becomes
+`BBX_HUB_SECRET` in `bbx engine serve` before the env is validated
+(`src/lib/systemd-credentials.ts`; Track C says why a credential).
+
 ### Track B: identity, the shared state split
 
 See [the subplan](per-box-units.subplan.md). Its first chunk is a probe on

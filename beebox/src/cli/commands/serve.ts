@@ -14,7 +14,7 @@
  * manifest (`hub.json`).
  */
 
-import { Command, Option } from "commander";
+import { Command, InvalidArgumentError, Option } from "commander";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server/app.js";
@@ -23,6 +23,7 @@ import { boxSlug } from "../../lib/box-slug.js";
 import { findBoxRoot } from "../../lib/paths/core.js";
 import { requireBoxRoot, BoxShapeError } from "../../lib/box-shape.js";
 import { loadEnv, serverEnvSchema } from "../../lib/env.js";
+import { adoptSystemdCredentials } from "../../lib/systemd-credentials.js";
 
 /**
  * `<slug>=<boxRoot>` argv encoding `server-main.ts` expects. Exported so
@@ -106,6 +107,14 @@ export async function resolveBoxes(dirs: string[], slugOverride: string | undefi
   return resolved;
 }
 
+/** `--idle-exit` wants a positive integer of milliseconds; commander prints this as the usage error. */
+class IdleExitArgumentError extends InvalidArgumentError {
+  constructor() {
+    super("--idle-exit takes a positive integer of milliseconds");
+    this.name = "IdleExitArgumentError";
+  }
+}
+
 export const serveCommand = new Command("serve")
   .description("Start the webapp server")
   .argument("[dirs...]", "Box directories to serve (default: current directory)")
@@ -118,13 +127,28 @@ export const serveCommand = new Command("serve")
         "(LISTEN_FDS) the passed socket is adopted and this names its path.",
     ).conflicts(["port", "dev"]),
   )
+  .addOption(
+    new Option(
+      "--idle-exit <ms>",
+      "Exit after this many milliseconds with no request, open socket, chat run or pending chat schedule " +
+        "(a socket-activated box; the socket unit starts it again).",
+    ).argParser((value: string) => {
+      const ms = Number(value);
+      if (!Number.isInteger(ms) || ms <= 0) throw new IdleExitArgumentError();
+      return ms;
+    }).conflicts(["dev"]),
+  )
   .option("-d, --dev", "Run in development mode with auto-reload")
   .option(
     "--slug <slug>",
     "URL slug to serve the box under (default: the box root's own basename). " +
       "Only valid with a single box directory — this is how `bbx hub` names a box's process."
   )
-  .action(async (dirs: string[], options: { port: string; host: string; dev?: boolean; slug?: string; socket?: string }) => {
+  .action(async (dirs: string[], options: { port: string; host: string; dev?: boolean; slug?: string; socket?: string; idleExit?: number }) => {
+    // Under a box unit the hub secret arrives as a systemd credential, not an
+    // env var (deploy/systemd/beebox-box@.service); it becomes BBX_HUB_SECRET
+    // before the env is validated and before `isHubMode()` is ever asked.
+    adoptSystemdCredentials(process.env);
     // `cli/index.ts` validates only the deliberately permissive CLI schema.
     // Serving has a narrower boundary, including the strict dev-surface flag.
     const envConfig = loadEnv(serverEnvSchema);
@@ -190,6 +214,7 @@ export const serveCommand = new Command("serve")
       port,
       host: options.host,
       socket: options.socket,
+      idleExitMs: options.idleExit,
       boxes,
       prewarmChat: true,
       devSurfaces: devSurfacesEnabled(envConfig),
