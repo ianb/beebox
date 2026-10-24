@@ -8,6 +8,7 @@
 
 import { Fragment, useState, type ReactNode } from "react";
 import { InlineAction } from "../ui/InlineAction";
+import { useMaterial } from "../ui/material";
 import { ChevronIcon } from "./ChevronIcon";
 
 export interface LandmarkGroupRowsProps<Link extends { ref: string }> {
@@ -29,6 +30,17 @@ export interface LandmarkGroupRowsProps<Link extends { ref: string }> {
   className?: string;
 }
 
+/**
+ * Row colours: app ink in a menu or white panel, the card's ink when the
+ * rows sit on a material (the place page, on the card itself).
+ */
+export function useLandmarkRowInk(): { head: string; ink: string; soft: string; alert: string; hover: string; rule: string } {
+  // App red is too faint on a dark card; there the word itself carries it.
+  return useMaterial(undefined)
+    ? { head: "text-card-ink", ink: "text-card-ink", soft: "text-card-soft", alert: "text-card-ink", hover: "hover:bg-card-tint", rule: "border-card-rule" }
+    : { head: "text-warm-800", ink: "text-warm-900", soft: "text-warm-700", alert: "text-danger", hover: "hover:bg-warm-100", rule: "border-warm-200" };
+}
+
 export function LandmarkGroupRows<Link extends { ref: string }>({
   group,
   renderChild,
@@ -39,30 +51,32 @@ export function LandmarkGroupRows<Link extends { ref: string }>({
 }: LandmarkGroupRowsProps<Link>) {
   const [open, setOpen] = useState(defaultOpen === true);
   const overflow = group.count - group.children.length;
+  const { head, soft, hover, rule } = useLandmarkRowInk();
+  const onMaterial = useMaterial(undefined);
   return (
     <div className={className}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="w-full text-left px-3 py-2 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
+        className={`w-full text-left px-3 py-2 ${hover} flex items-center gap-2 ${head}`}
       >
         <ChevronIcon open={open} className="shrink-0" />
         <span className="truncate font-medium">{group.label}</span>
-        <span className="text-xs text-warm-700 shrink-0 ml-auto">{group.count}</span>
+        <span className={`text-xs ${soft} shrink-0 ml-auto`}>{group.count}</span>
       </button>
       {open ? (
-        <div className="border-l border-warm-200 ml-5">
+        <div className={`border-l ${rule} ml-5`}>
           {group.count === 0 && emptyText !== undefined ? (
-            <div className="px-3 py-2 text-warm-700">{emptyText}</div>
+            <div className={`px-3 py-2 ${soft}`}>{emptyText}</div>
           ) : null}
           {group.children.map((link) => (
             <Fragment key={link.ref}>{renderChild(link)}</Fragment>
           ))}
           {overflow > 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-700">
+            <div className={`px-3 py-2 text-xs ${soft}`}>
               {onMore === undefined ? `+${overflow} more` : (
-                <InlineAction intent="subtle" onClick={onMore}>{`+${overflow} more`}</InlineAction>
+                <InlineAction intent="subtle" material={onMaterial} onClick={onMore}>{`+${overflow} more`}</InlineAction>
               )}
             </div>
           ) : null}
