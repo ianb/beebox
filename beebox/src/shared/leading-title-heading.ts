@@ -56,7 +56,10 @@ export function markdownTitle(body: string): string | null {
   for (const raw of body.split("\n")) {
     const line = raw.replace(/\r$/, "");
     const marker = FENCE.exec(line)?.[1];
-    if (marker !== undefined) {
+    // A backtick fence's info string may not contain a backtick (CommonMark);
+    // such a line is ordinary text.
+    const isFence = marker !== undefined && !(fence === null && marker.startsWith("`") && line.slice(line.indexOf(marker) + marker.length).includes("`"));
+    if (marker !== undefined && isFence) {
       if (fence === null) fence = marker;
       else if (marker[0] === fence[0] && marker.length >= fence.length && line.trim() === marker) fence = null;
       continue;

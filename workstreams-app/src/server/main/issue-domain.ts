@@ -151,7 +151,7 @@ export function parseIssueFile(options: {
     closed,
     slug,
     frontmatter: {
-      title: scalar(data.title) ?? markdownTitle(body) ?? slug,
+      title: (scalar(data.title)?.trim() || null) ?? markdownTitle(body) ?? slug,
       workstream: scalar(data.workstream) ?? "unknown",
       needs: list(data.needs), labels: list(data.labels), priority,
       ...Object.fromEntries(Object.entries(optional).filter((entry) => entry[1] !== undefined)),

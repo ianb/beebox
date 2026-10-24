@@ -55,5 +55,6 @@ void test("markdownTitle takes the first H1 outside fenced code", async (t) => {
   t.check(markdownTitle("~~~~\n# not this\n~~~\n# still code\n~~~~\n# Real\n"), "Real");
   t.check(markdownTitle("## Notes only\n\ntext\n"), null);
   t.check(markdownTitle("#hashtag\n#\n# \n#  Spaced  \n"), "Spaced");
+  t.check(markdownTitle("``` aa ```\n# Actual\n"), "Actual");
 });
 
