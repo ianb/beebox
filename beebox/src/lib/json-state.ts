@@ -3,6 +3,22 @@ import type { z } from "zod";
 import { errnoCode } from "../shared/error-guards.js";
 
 /**
+ * Read a JSON file that may not exist yet. A missing file gives `undefined`;
+ * an unreadable file, invalid JSON, or a shape that fails `schema` throws, so a
+ * damaged file is never mistaken for an absent one.
+ */
+export async function readJsonIfPresent<T>(filePath: string, schema: z.ZodType<T>): Promise<T | undefined> {
+  let text: string;
+  try {
+    text = await fs.readFile(filePath, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return undefined;
+    throw e;
+  }
+  return schema.parse(JSON.parse(text));
+}
+
+/**
  * Read a JSON state file whose loss only costs repeated work. A missing file,
  * an unreadable one, invalid JSON, and a wrong shape all give `fresh()`; every
  * case but a missing file warns, prefixed with `label`. `name` is how the
