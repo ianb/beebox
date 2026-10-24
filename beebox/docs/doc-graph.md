@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-24T18:04:10Z
-Total documents: 576
+Generated: 2026-10-24T20:13:17Z
+Total documents: 577
 
 ## Issues
 
@@ -70,7 +70,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
-- **docs/implemented-plans/tts-comparison-page.md** — "Publish the TTS model comparison on beebox.run" (268 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (156 lines) · plan review
@@ -7571,13 +7570,26 @@ Title: "Plan Engineering Review — triage todo question" | 109 lines | implemen
 
 No references in or out.
 
-#### docs/implemented-plans/tts-comparison-page.md **[ORPHAN]**
+#### docs/implemented-plans/tts-comparison-page.md
 
 Title: "Publish the TTS model comparison on beebox.run" | 268 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/tts-comparison-second-run.md:283 (mention) — (`beebox/docs/implemented-plans/tts-comparison-page.md`).
 
 References:
 - → AGENTS.md (mention)
 - → docs/plans/tts-backend-selection.md (mention)
+
+#### docs/implemented-plans/tts-comparison-second-run.md
+
+Title: "TTS comparison, second run: new texts, every model rendered by script" | 457 lines | shipped history | implemented
+
+Referenced by:
+- ../research/tts-model-comparison/README.md:70 (link) — The 2026-10-24 run renders these texts on every model; the plan is [tts-comparison-second-run](../../beebox/docs/impleme
+
+References:
+- → docs/implemented-plans/tts-comparison-page.md (mention)
 
 #### docs/implemented-plans/tts-streamed-playback.md
 
