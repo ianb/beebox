@@ -14,6 +14,7 @@ import { registerGoogleServicesCallback } from "../routes/admin.js";
 import { isHubMode } from "../auth.js";
 import { maybeArmFirstRunSetup } from "../setup-token.js";
 import { removeServeEndpoint } from "../../core/serve-endpoint.js";
+import { refreshHubMeta } from "../../core/hub-meta.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { sweepStaleIndexLock } from "../../lib/git-stale-lock.js";
@@ -323,9 +324,9 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // one moment we know no write of ours is in flight — the same habit the dev
   // router has of reclaiming orphaned state on start. Best-effort and never
   // fatal: a box that cannot commit should still serve reads.
-  for (const box of boxes) {
-    await sweepStaleIndexLock(box.boxRoot);
-  }
+  // Also publish the file the hub reads instead of this box's own
+  // (`core/hub-meta.ts`): a hand edit while the box slept is out before the first request.
+  for (const box of boxes) { await sweepStaleIndexLock(box.boxRoot); refreshHubMeta(box.boxRoot); }
   markStartupPhase("box-checks");
 
   let server: FastifyInstance;
