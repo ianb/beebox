@@ -5,6 +5,8 @@
 // shows each link's detail and path, opens external links in a new tab, marks
 // a missing link without linking it, navigates in the pane when asked, turns
 // "+N more" into an action only with `onMore`, and says "None yet" when empty.
+// On a material (the place page, on a themed card) the rows take the card's
+// ink; in a white panel they keep app ink.
 
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
@@ -13,6 +15,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { LandmarkGroup, type ResolvedGroup } from "../../../src/components/landmarks/LandmarkSection.js";
+import { MaterialContext } from "../../../src/components/ui/material.js";
 import type { ViewTarget } from "../../../src/lib/view-url.js";
 
 const group: ResolvedGroup = {
@@ -108,4 +111,34 @@ void test("an empty group says None yet", async (t) => {
   const view = await render(h(LandmarkGroup, { group: { label: "Empty", count: 0, children: [] }, boxSlug: "test1", defaultOpen: true }));
   t.teardown(() => view.unmount());
   t.check(text(view.container), "Empty0None yet");
+});
+
+/** The text-colour classes on the open group's header, member title, detail-free path line and count. */
+function inkClasses(container: Element) {
+  const colour = (el: Element | null) => (el?.getAttribute("class") ?? "").split(" ").filter((c) => c.startsWith("text-") && !/^text-(xs|sm|left)$/.test(c));
+  return {
+    header: colour(container.querySelector("button[aria-expanded]")),
+    count: colour(container.querySelector("button[aria-expanded] span:last-child")),
+    title: colour(container.querySelector('a[target="_blank"] div')),
+    path: colour(container.querySelector('a[target="_blank"] div:last-child')),
+  };
+}
+
+void test("rows on a material take the card's ink; in a white panel they keep app ink", async (t) => {
+  const onCard = await render(h(MaterialContext.Provider, { value: true }, h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true })));
+  t.teardown(() => onCard.unmount());
+  t.check(inkClasses(onCard.container), {
+    header: ["text-card-ink"],
+    count: ["text-card-soft"],
+    title: ["text-card-ink"],
+    path: ["text-card-soft"],
+  });
+  const inPanel = await render(h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true }));
+  t.teardown(() => inPanel.unmount());
+  t.check(inkClasses(inPanel.container), {
+    header: ["text-warm-800"],
+    count: ["text-warm-700"],
+    title: ["text-warm-900"],
+    path: ["text-warm-700"],
+  });
 });

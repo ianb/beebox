@@ -25,7 +25,7 @@ import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
 import { ChevronIcon } from "./ChevronIcon";
-import { LandmarkGroupRows } from "./LandmarkGroupRows";
+import { LandmarkGroupRows, useLandmarkRowInk } from "./LandmarkGroupRows";
 import { LandmarkSessions } from "./LandmarkSessions";
 import type { CardSymbolData } from "@shared/card-symbol";
 
@@ -300,8 +300,6 @@ function LinkTile({
   );
 }
 
-const ROW_CLASSES = "block w-full text-left px-3 py-2 hover:bg-warm-100";
-
 /** A group member as a menu-style row: the same four cases as `LinkTile`, in the `LandmarkGroupRows` look. */
 function LinkRow({
   link,
@@ -316,19 +314,21 @@ function LinkRow({
 }) {
   const display = link.label !== null && link.label.length > 0 ? link.label : link.title;
   const refDisplay = link.ref.startsWith("/") ? toDisplayPath(link.ref) : link.ref;
+  const { ink, soft, hover } = useLandmarkRowInk();
+  const rowClasses = `block w-full text-left px-3 py-2 ${hover}`;
 
   if (isUrlRef(link.ref)) {
     return (
-      <a href={link.ref} target="_blank" rel="noopener noreferrer" className={ROW_CLASSES}>
-        <div className="font-medium text-warm-900 truncate">{display}</div>
-        <div className="text-xs text-warm-700 truncate">{link.ref}</div>
+      <a href={link.ref} target="_blank" rel="noopener noreferrer" className={rowClasses}>
+        <div className={`font-medium ${ink} truncate`}>{display}</div>
+        <div className={`text-xs ${soft} truncate`}>{link.ref}</div>
       </a>
     );
   }
 
   if (!link.exists) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 text-warm-700">
+      <div className={`flex items-center gap-2 px-3 py-2 ${soft}`}>
         {/* Struck through: the row stays so the place does not silently shrink. */}
         <s className="min-w-0 truncate font-medium">{display}</s>
         <span className="ml-auto shrink-0 text-xs text-danger">Missing</span>
@@ -338,14 +338,14 @@ function LinkRow({
 
   const body = (
     <>
-      <div className="font-medium text-warm-900 truncate">{display}</div>
+      <div className={`font-medium ${ink} truncate`}>{display}</div>
       <TileDetail detail={link.detail} />
-      {hidePath === true ? null : <div className="text-xs text-warm-700 truncate">{refDisplay}</div>}
+      {hidePath === true ? null : <div className={`text-xs ${soft} truncate`}>{refDisplay}</div>}
     </>
   );
   const target = resolveContentTarget(undefined, link.ref);
   if (onNavigate !== undefined && target !== null) {
-    return <button type="button" onClick={() => onNavigate(target)} className={ROW_CLASSES}>{body}</button>;
+    return <button type="button" onClick={() => onNavigate(target)} className={rowClasses}>{body}</button>;
   }
-  return <Link to={href(`/${boxSlug}/views/${link.ref}`)} className={ROW_CLASSES}>{body}</Link>;
+  return <Link to={href(`/${boxSlug}/views/${link.ref}`)} className={rowClasses}>{body}</Link>;
 }

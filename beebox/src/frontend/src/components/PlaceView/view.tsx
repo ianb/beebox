@@ -47,6 +47,7 @@ import type { RendererProps } from "../../file-type-registry";
 import type { ViewState } from "@shared/view-state";
 import type { ViewTarget } from "../../lib/view-url";
 import { parentDir } from "../../lib/parent-dir";
+import { MaterialContext } from "../ui/material";
 
 const TIER_HEADINGS: Record<PlaceTier, string> = {
   "entry-point": "Start here",
@@ -188,7 +189,8 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
           </div>
         ) : (
           <div key={`group:${section.group.alsoHere === true ? "also-here" : "expand"}:${section.group.label}`} data-place-section="group">
-            <LandmarkGroup
+            {/* The rows sit on the card itself, so they take its ink. */}
+            <MaterialContext.Provider value><LandmarkGroup
               group={section.group}
               boxSlug={boxSlug}
               onNavigate={onNavigate}
@@ -196,7 +198,7 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
               hidePath
               // "Also here" lists the folder's cards, so its overflow opens the folder.
               {...(section.group.alsoHere === true ? { onMore: () => onNavigate(browseCardTarget({ directory: folder })) } : {})}
-            />
+            /></MaterialContext.Provider>
           </div>
         ),
       )}
