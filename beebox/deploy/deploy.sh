@@ -1091,6 +1091,12 @@ TOOLCHECK
       -H "Authorization: Bearer $KEY" \
       http://localhost:3210/healthz/canary 2>/dev/null || echo "000")
     cstatus=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync("/tmp/canary.out","utf8")).status)' 2>/dev/null || echo "unparseable")
+    # A host with no box yet (freshly provisioned; add-box.sh adds the first)
+    # has nothing to cold-start: the hub says so, and only then is that a pass.
+    if [ "$cstatus" = "no-boxes" ] && ! ls -d /home/beebox/boxes/*/ /var/lib/beebox/*/box/ >/dev/null 2>&1; then
+      echo "  Box canary skipped: no box on this host yet"
+      cstatus=ok; ccode=200
+    fi
     if [ "$ccode" != "200" ] || [ "$cstatus" != "ok" ]; then
       echo "  Box canary FAILED (code: $ccode, status: $cstatus) — a box could not start and serve:"
       [ -f /tmp/canary.out ] && cat /tmp/canary.out
