@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import { glob } from "glob";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../lib/read-yaml.js";
 import { nearestDirFromDirs } from "./landmark/nearest.js";
 import { normalizeLandmarkDir } from "./landmark/root-dir.js";
 import { resolveChromeTheme, validateSystemThemeChoice, type PresentationConfigResult, type ResolvedChromeTheme, type ThemeChoice } from "../shared/card-theme/core.js";

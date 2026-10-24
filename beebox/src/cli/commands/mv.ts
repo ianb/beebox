@@ -10,7 +10,7 @@ import { runCommand, createCliContext } from "../../core/command-runner.js";
 import { invariant } from "../../shared/invariant.js";
 import { errorMessage } from "../../shared/error-guards.js";
 
-export const moveCommand = new Command("mv")
+export const mvCommand = new Command("mv")
   .description("Move/rename one or more cards and update all references")
   .argument("<paths...>", "Source path(s) followed by destination (like mv)")
   .option("--commit", "Commit the change")

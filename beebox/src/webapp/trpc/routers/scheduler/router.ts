@@ -5,7 +5,7 @@ import { createReadStream } from "node:fs";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../../procedures.js";
 import { boxLogFile } from "../../../../core/schedule/scheduler/core.js";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../../../lib/read-yaml.js";
 import { renderFrontmatterBlock, splitCardContent } from "../../../../exports/cards.js";
 import {
   parseScheduledScript,

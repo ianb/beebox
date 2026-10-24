@@ -1,12 +1,15 @@
 ---
 title: "Card frontmatter parsing: js-yaml is 4-7x faster than yaml on box cards"
-workstream: unattached
-needs: [decision]
+workstream: perf-easy-wins
+needs: []
 area: beebox
 labels: [performance]
 filed-by: agent
 discovered-in: worktree-perf-easy-wins — profiling bbx todos and bbx validate
+resolution: implemented
 ---
+
+Closed: implemented by `src/lib/read-yaml.ts` (plan `beebox/docs/implemented-plans/yaml-read-parser.md`, commits 0635ef461, 8e461de93, 65a3fe3d9). Read-only parses use js-yaml with a fallback to `yaml` wherever the two could disagree; writes and edits stay on `yaml`. The gain is parse time only, since `yaml` still loads for the write helpers.
 
 Every card read parses its YAML frontmatter with the `yaml` package
 (`parseFrontmatterMapping` in `src/core/card-io.ts`). In a CPU profile of
@@ -45,3 +48,20 @@ one codebase is the cost. What else changes:
 
 Smaller step without a decision: parse once per card in `bbx validate`
 (reuse the mapping `parseCardText` already built in `unknownKeyWarnings`).
+
+## Decision and result (2026-10-24)
+
+The boxholder chose read-only parsing on js-yaml, with writes and edits on
+`yaml`. Implemented in workstream perf-easy-wins
+(`beebox/docs/implemented-plans/yaml-read-parser.md`): 37 read sites use
+`src/lib/read-yaml.ts`, which parses with js-yaml and hands `yaml` any text
+the two could read differently (anchors, tags, document markers, signed,
+`0b`, and overflowing numbers, null and collection keys, multi-line flow
+collections, anything js-yaml rejects), so values, errors, and `yaml`'s alias
+limit are unchanged. `field-edits.ts` and the public
+`beebox/schema` export stay on `yaml`. `pnpm perf:yaml-read` compares the two
+on a box: 17,764 inputs across the local boxes and the repo, no differences,
+1,550 ms against 950 ms (test1 alone: 24 against 8 ms). CPU time on test1: `bbx validate` 90–120 ms
+less (920–980 → 830–860 ms), `bbx todos` and `bbx status` 20–40 ms less. `yaml` is still
+imported on card reads, because `src/cards/frontmatter.ts` also holds the
+write helpers.

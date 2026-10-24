@@ -21,7 +21,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../../lib/read-yaml.js";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { median } from "../report.js";

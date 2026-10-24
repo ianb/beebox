@@ -1,12 +1,15 @@
 ---
 title: "Every bbx verb loads the whole CLI: about 490 ms before the verb runs"
-workstream: unattached
+workstream: perf-easy-wins
 needs: [design]
 area: beebox
 labels: [performance]
 filed-by: agent
 discovered-in: worktree-perf-easy-wins — measuring process start costs
+resolution: implemented
 ---
+
+Closed: implemented by the lazy-command split (plan `beebox/docs/implemented-plans/lazy-cli-commands.md`, commits 49378f3b3 through a7c0d5b9d on worktree-perf-easy-wins). `bbx --version` went from 350 to 92 ms; the Agent SDK and source-map options were handled or decided separately, as the plan notes.
 
 `bbx --version` does no work, but it takes about 490 ms (median of 7,
 `pnpm perf:cli-start`, load average about 26). Box agents run `bbx` verbs
@@ -72,3 +75,15 @@ Source maps: about 50 ms per start (398 vs 349 ms). An alternative that keeps
 mapped stacks: start without `--enable-source-maps` and map a stack on demand
 with `node:module`'s `SourceMap` when the CLI reports an error. Needs a
 decision, since keeping source maps on is a recorded choice.
+
+## Update (2026-10-23, lazy commands)
+
+Done by `beebox/docs/implemented-plans/lazy-cli-commands.md` (worktree-perf-easy-wins): the
+verb registry is a record of loaders, a run loads only the command its argv
+names, and the bundle is code-split. Against a bundle built from `main`
+(interleaved, 11 runs, load 10–18): `bbx --version` 350 → 92 ms, `bbx status`
+436 → 245, `bbx validate --pre-commit` 493 → 288, `bbx todos` 489 → 282,
+`bbx search` 503 → 402, `bbx ls` 359 → 290.
+
+Still open from the list above: zod schema construction and `yaml` in the
+shared card graph that most verbs load, source maps (a decision), and execa.

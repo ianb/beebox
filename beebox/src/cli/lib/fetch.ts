@@ -13,7 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
 import { parseDuration } from "../../schemas/scheduled-script/schema.js";
 import { invariant } from "../../shared/invariant.js";
 

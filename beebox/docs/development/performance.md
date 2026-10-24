@@ -202,8 +202,9 @@ Two costs are paid once per process, and many processes run:
   and tap's own import. A full run has more than 1,000 files, and many tests
   spawn further CLI processes.
 - **A `bbx` verb.** Box agents run `bbx` verbs many times per turn. Each run
-  loads the whole bundled CLI (`dist/cli.mjs`): every command module and each
-  npm package those modules import at their top.
+  loads `dist/cli.mjs` and the code-split chunks of the one command it names
+  (`src/cli/commands.ts`), with each npm package those modules import at their
+  top. Help and an unknown verb load every command.
 
 ### `pnpm perf:test-floor` — what one test process costs
 
@@ -235,12 +236,40 @@ pnpm perf:cli-start -- ls _config      # another verb
 pnpm perf:cli-start --cpu-prof         # plus a profile of one run, by source owner
 ```
 
-`--version` does no work, so its time is the load cost. The run uses the
+`--version` loads no command, so its time is the CLI's fixed floor; a verb
+adds its own command's chunks. The run uses the
 bundle as `bin/bbx` does (compile cache, source maps) without the wrapper's
 staleness check, which adds about 40 ms in a dev checkout. One untimed run
 through `bin/bbx` first rebuilds a stale bundle. The profile summary
 is the one `perf:serve-start` prints: an npm package near the top that the
 verb does not use is a candidate for a dynamic `import()` at its use site.
+
+Verbs that read many cards spend much of their time parsing frontmatter.
+Reads go through `parseYaml` (`src/lib/read-yaml.ts`), which parses with
+js-yaml, 3–4× faster than the `yaml` package on box cards, and hands `yaml`
+any text the two could read differently, so values and errors stay `yaml`'s
+(`docs/implemented-plans/yaml-read-parser.md`). Writes and comment-preserving edits stay
+on `yaml`. On the test1 clone (2026-10-24, CPU time, median of 11, during a
+full test run) the switch saved 90–120 ms of `bbx validate` (920–980 →
+830–860 ms) and 20–40 ms each of `bbx todos` and `bbx status`, over three
+sessions. Use CPU time (`/usr/bin/time -p`,
+user + sys) when the machine is loaded: wall time at load 30 or more varies
+by more than these differences.
+
+### `pnpm perf:yaml-read` — check and time the read parser
+
+```bash
+pnpm perf:yaml-read                        # the worktree test1 clone
+pnpm perf:yaml-read -- <dir> [<dir> ...]   # other boxes or source trees
+```
+
+It compares `parseYaml` with `yaml.parse` on every frontmatter block and YAML
+file under the directories, values and errors both, and times each parser
+over all of them. It prints differing paths, never content, and exits 1 on a
+difference. Run it after upgrading js-yaml or `yaml`, or after editing the
+fallback pattern in `read-yaml.ts`. On 2026-10-24: test1 clone, 400 inputs,
+`yaml` 24 ms, `parseYaml` 8 ms; all local boxes and this repo, 17,764 inputs,
+1,550 ms against 950 ms; no differences.
 
 ## Checking against production
 

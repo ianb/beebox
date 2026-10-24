@@ -18,22 +18,14 @@
 import { Command } from "commander";
 import { SURFACE, type SurfaceEntry } from "./surface-data.js";
 import { invariant } from "../../shared/invariant.js";
-import { VERB_COMMANDS } from "../commands.js";
+import type { LoadedCommands } from "./load-commands.js";
 
 /** The one-line summary `bbx --help` gives the engine namespace. */
 const ENGINE_DESCRIPTION =
   "Operator and engine commands — not the box agent's surface (bbx engine --help)";
 
-/** The `Command` registered for `name`, or a hard failure naming the gap. */
-function verbCommand(name: string): Command {
-  const command = VERB_COMMANDS.get(name);
-  invariant(command !== undefined, `surface table names "${name}", which no module registers`);
-  return command;
-}
-
 /** A parent holding only `names`, taken off the family's assembled command. */
-function splitParent(entry: SurfaceEntry, names: readonly string[]): Command {
-  const family = verbCommand(entry.name);
+function splitParent({ entry, family, names }: { entry: SurfaceEntry; family: Command; names: readonly string[] }): Command {
   const parent = new Command(entry.name).description(family.description());
 
   for (const name of names) {
@@ -45,18 +37,27 @@ function splitParent(entry: SurfaceEntry, names: readonly string[]): Command {
 }
 
 /** The `Command` one table entry contributes. */
-function commandFor(entry: SurfaceEntry): Command {
-  if (entry.subcommands !== undefined) return splitParent(entry, entry.subcommands);
-  return verbCommand(entry.name);
+function commandFor(entry: SurfaceEntry, command: Command): Command {
+  if (entry.subcommands !== undefined) return splitParent({ entry, family: command, names: entry.subcommands });
+  return command;
 }
 
-/** Register every classified verb onto `program`. */
-export function buildSurface(program: Command): void {
+/**
+ * Register each loaded, classified verb onto `program`. With every command
+ * loaded, a table entry with no command is a hard failure naming the gap; a
+ * run that loaded one verb registers only the entries for that verb.
+ */
+export function buildSurface(program: Command, commands: LoadedCommands): void {
   const engine = new Command("engine").description(ENGINE_DESCRIPTION);
 
   for (const entry of SURFACE) {
+    const command = commands.byVerb.get(entry.name);
+    if (command === undefined) {
+      invariant(!commands.complete, `surface table names "${entry.name}", which no module registers`);
+      continue;
+    }
     const target = entry.audience === "agent" ? program : engine;
-    target.addCommand(commandFor(entry));
+    target.addCommand(commandFor(entry, command));
   }
 
   program.addCommand(engine);

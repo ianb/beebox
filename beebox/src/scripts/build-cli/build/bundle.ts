@@ -1,6 +1,8 @@
-// Bundles the CLI (src/cli/entry/run.ts) into a single dist/cli.mjs for fast
-// cold starts — collapsing our ~hundreds of source modules into one file
-// removes the per-module ESM loader-hook overhead that dominates tsx startup.
+// Bundles the CLI (src/cli/entry/run.ts) into dist/cli.mjs and its code-split
+// dist/cli-<name>-<hash>.mjs chunks for fast cold starts — collapsing our
+// ~hundreds of source modules into a few files removes the per-module ESM
+// loader-hook overhead that dominates tsx startup, and splitting lets a run
+// load only the command it names (src/cli/commands.ts).
 //
 // node_modules are externalized (`packages: "external"`): native addons like
 // better-sqlite3 can't be bundled, and loading deps from disk keeps their own
@@ -20,7 +22,8 @@
 import { build } from "esbuild";
 import { buildPublicationWorker } from "./pub-worker.mjs";
 import { buildPluginBundles } from "./plugins.ts";
-import { copyFile, mkdir, readdir, rename, rm } from "node:fs/promises";
+import { CLI_CHUNK_PATTERN, prunableChunks, recordBuild, stagingOrder } from "./cli-chunks.ts";
+import { copyFile, mkdir, readdir, rename, rm, stat, unlink } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
 const root = join(import.meta.dirname, "..", "..", "..", "..");
@@ -29,10 +32,17 @@ const tmpDir = join(distDir, `.build-${process.pid}`);
 
 const t = process.hrtime.bigint();
 await build({
-  entryPoints: [join(root, "src/cli/entry/run.ts")],
+  entryPoints: { cli: join(root, "src/cli/entry/run.ts") },
   // Every output is built under tmpDir with its dist/ path and basename, so the emitted
   // //# sourceMappingURL (relative, e.g. "cli.mjs.map") stays correct in dist/.
-  outfile: join(tmpDir, "cli.mjs"),
+  outdir: tmpDir,
+  outExtension: { ".js": ".mjs" },
+  // Code-split: each command module the registry loads with import() becomes
+  // its own chunk, and the npm packages only it imports load only with it
+  // (src/cli/commands.ts). Chunks sit beside cli.mjs, so code that resolves
+  // paths from import.meta.url sees the same directory depth.
+  splitting: true,
+  chunkNames: "cli-[name]-[hash]",
   bundle: true,
   platform: "node",
   format: "esm",
@@ -141,15 +151,33 @@ await buildPublicationWorker(join(tmpDir, "pub-worker.js"));
 
 // Move every staged file into dist/, maps first, so a file never references a
 // not-yet-present map. rename() is atomic within the same filesystem.
-const staged = (await readdir(tmpDir, { recursive: true, withFileTypes: true }))
-  .filter((entry) => entry.isFile())
-  .map((entry) => relative(tmpDir, join(entry.parentPath, entry.name)))
-  .toSorted((a, b) => Number(b.endsWith(".map")) - Number(a.endsWith(".map")));
+// cli.mjs moves last, so it never names a chunk that is not yet in place.
+const staged = stagingOrder(
+  (await readdir(tmpDir, { recursive: true, withFileTypes: true }))
+    .filter((entry) => entry.isFile())
+    .map((entry) => relative(tmpDir, join(entry.parentPath, entry.name))),
+);
 for (const relPath of staged) {
   await mkdir(dirname(join(distDir, relPath)), { recursive: true });
   await rename(join(tmpDir, relPath), join(distDir, relPath));
 }
 await rm(tmpDir, { recursive: true, force: true });
+
+// Old chunks: each rebuild writes new hashed names, so prune what the last
+// few builds did not write once it is an hour old (cli-chunks.ts).
+const keptBuilds = await recordBuild(
+  join(distDir, ".cli-builds.json"),
+  staged.filter((relPath) => CLI_CHUNK_PATTERN.test(relPath)),
+);
+const distFiles = await Promise.all(
+  (await readdir(distDir)).filter((name) => CLI_CHUNK_PATTERN.test(name)).map(async (name) => ({ name, mtimeMs: (await stat(join(distDir, name))).mtimeMs })),
+);
+for (const name of prunableChunks({ files: distFiles, keptBuilds, now: Date.now() })) {
+  await unlink(join(distDir, name)).catch((e: unknown) => {
+    // Another build pruned it first; nothing else can be wrong with an old chunk.
+    if (!(e instanceof Error && "code" in e && e.code === "ENOENT")) throw e;
+  });
+}
 
 const ms = Number(process.hrtime.bigint() - t) / 1e6;
 process.stderr.write(`built dist/cli.mjs in ${ms | 0}ms\n`);

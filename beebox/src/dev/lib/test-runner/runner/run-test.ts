@@ -6,7 +6,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import YAML from "yaml";
+import { parseYaml } from "../../../../lib/read-yaml.js";
 import { assertStandaloneBox, assertCleanAuditBox } from "../../box-guard.js";
 import { testSuiteSchema, type AuditTest, type SearchWhere, type TestSuite } from "../../test-suite-schema.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
@@ -93,7 +93,7 @@ export class KnowledgeAuditTranscriptError extends Error {
  */
 export async function loadTests(yamlPath: string): Promise<TestSuite> {
   const content = await fs.readFile(yamlPath, "utf-8");
-  return testSuiteSchema.parse(YAML.parse(content));
+  return testSuiteSchema.parse(parseYaml(content));
 }
 
 /**

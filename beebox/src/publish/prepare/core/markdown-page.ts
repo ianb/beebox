@@ -15,7 +15,7 @@
  */
 
 import Markdoc from "@markdoc/markdoc";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../../lib/read-yaml.js";
 import type { Config, Node, RenderableTreeNode, RenderableTreeNodes } from "@markdoc/markdoc";
 
 import { markdocConfig, makeHeadingNode } from "../../../shared/markdoc-config/tags/core.js";

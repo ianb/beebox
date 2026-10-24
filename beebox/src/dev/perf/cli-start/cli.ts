@@ -5,10 +5,10 @@
  *   pnpm perf:cli-start -- ls _config         # another verb (arguments after --)
  *   pnpm perf:cli-start --cpu-prof            # plus a CPU profile of the last run, summarized by source owner
  *
- * Box agents run `bbx` verbs many times per turn, and each run loads the whole
- * bundled CLI (`dist/cli.mjs`): every command module and the npm packages they
- * import at top level. `--version` does no work, so its time is the load
- * cost. The run uses the bundle the way `bin/bbx` does (compile cache, source
+ * Box agents run `bbx` verbs many times per turn. Each run loads `dist/cli.mjs`
+ * and the code-split chunks of the command it names, with the npm packages
+ * those import at top level. `--version` loads no command, so its time is the
+ * CLI's fixed floor; a verb adds its own command's load. The run uses the bundle the way `bin/bbx` does (compile cache, source
  * maps) but skips the wrapper's staleness check; one untimed run through
  * `bin/bbx` first rebuilds the bundle when source is newer. See
  * `docs/development/performance.md`.
@@ -18,9 +18,8 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
-import { pathToFileURL } from "node:url";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
-import { summarizeProfile } from "../serve-start/cpu-profile.js";
+import { cliBundleSourceMaps, summarizeProfile } from "../serve-start/cpu-profile.js";
 import { bbxBin, ensurePerfBox, perfResultsDir } from "../local-hub.js";
 import { median } from "../report.js";
 
@@ -71,7 +70,7 @@ async function main(): Promise<void> {
   runOnce({ box, verb, nodeFlags: ["--cpu-prof", `--cpu-prof-dir=${profileDir}`] });
   const profile = (await fs.readdir(profileDir)).find((f) => f.endsWith(".cpuprofile"));
   if (profile === undefined) fail(`no CPU profile written to ${profileDir}`);
-  const summary = await summarizeProfile(path.join(profileDir, profile), { [pathToFileURL(bundle).href]: `${bundle}.map` });
+  const summary = await summarizeProfile(path.join(profileDir, profile), await cliBundleSourceMaps(path.dirname(bundle)));
   console.log(`\nCPU time by owner (${summary.totalMs} ms sampled, ${path.join(profileDir, profile)}):`);
   console.log(`  ${"self".padStart(10)}${"attributed".padStart(12)}  owner (attributed: node-internal and native time charged to its caller)`);
   for (const o of summary.attributed.slice(0, 30)) {

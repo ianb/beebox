@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml, YAMLParseError } from "yaml";
+import { YAMLParseError } from "yaml";
+import { parseYaml } from "../../../../lib/read-yaml.js";
 import { z } from "zod";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import type { SessionEntry } from "../../../../cli/lib/session-entry.js";

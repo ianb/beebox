@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-24T01:06:21Z
-Total documents: 571
+Generated: 2026-10-24T15:04:50Z
+Total documents: 575
 
 ## Issues
 
@@ -33,7 +33,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (211 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · shipped history · implemented
-- **docs/implemented-plans/dup-sweep-backend-remaining.md** — "Backend duplication sweep: the remaining groups" (392 lines) · shipped history · implemented
 - **docs/implemented-plans/exhibit-html-controls.md** — "Comment and reply controls on raw index.html exhibits" (250 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (723 lines) · shipped history · implemented
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (116 lines) · shipped history · implemented
@@ -97,6 +96,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -187,7 +187,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.gap-analysis.md:6 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/docs-reorg.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doctest-usability.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
-- docs/implemented-plans/dup-sweep-backend-remaining.md:74 (mention) — - The root AGENTS.md rule for the sweep: no behavior change except named bug
+- docs/implemented-plans/dup-sweep-backend-remaining.md:76 (mention) — - The root AGENTS.md rule for the sweep: no behavior change except named bug
 - docs/implemented-plans/exhibit-comments.md:77 (mention) — - `AGENTS.md` root, "Minimize invented concepts" (memory
 - docs/implemented-plans/exhibit-html-controls.md:44 (mention) — - AGENTS.md "no features beyond the task": the bar carries exactly the two
 - docs/implemented-plans/exhibits-rethink.md:90 (mention) — (about 90 lines) and gains the phrasing section (about 25); root `AGENTS.md`
@@ -606,6 +606,7 @@ Referenced by:
 - docs/implemented-plans/webpage-card-and-commentary.md:54 (mention) — - `beebox/code-style.md` — no optional chaining, no default params,
 - docs/implemented-plans/websocket-chat-transport.md:81 (mention) — - `beebox/code-style.md:` no `any`, no default params, max 2 positional
 - docs/implemented-plans/workstream-launch-liveness.md:36 (mention) — - `beebox/code-style.md:30` says, *"Never silently ignore errors"*. A
+- docs/implemented-plans/yaml-read-parser.md:58 (mention) — - **Never resilient to the impossible** (`code-style.md`). The fallback to
 - docs/plans/agent-docs.md:398 (mention) — (`beebox/AGENTS.md`, `code-style.md`, `frontend.md`), which are the most
 - docs/plans/agent-points-at-ui.md:66 (mention) — - `beebox/code-style.md` — no default parameters, max two positional
 - docs/plans/android-companion-app.md:35 (mention) — - `code-style.md`: the box side of Track 0 (TypeScript) follows the usual
@@ -1298,7 +1299,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/doc-structure.md:60 (mention) — (`docs/engineering-principles.md`), and 8, *one way to do each thing*: this
 - docs/implemented-plans/drive-docs-api-health.md:52 (mention) — - `engineering-principles.md` §4, *"invisible degradation is not"* allowed: this is the reason for the work.
-- docs/implemented-plans/dup-sweep-backend-remaining.md:70 (mention) — - `beebox/docs/engineering-principles.md` §8 "One way to do each thing" is the
+- docs/implemented-plans/dup-sweep-backend-remaining.md:72 (mention) — - `beebox/docs/engineering-principles.md` §8 "One way to do each thing" is the
 - docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
 - docs/implemented-plans/exhibit-comments.md:66 (mention) — - `beebox/docs/engineering-principles.md` **8** (one way to do each thing):
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
@@ -1799,6 +1800,7 @@ Referenced by:
 - docs/implemented-plans/box-root-paths.md:176 (mention) — hand-roll `path.resolve`/string-splitting on a ref"), `docs/module-map.md`
 - docs/implemented-plans/clerk-contract-and-import-boundary.md:115 (mention) — against `docs/module-map.md` and update that doc if it's silent on
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
+- docs/implemented-plans/dup-sweep-backend-final.md:64 (mention) — - `beebox/docs/module-map.md:8-14`: `src/shared/` imports nothing else in the
 - docs/implemented-plans/file-layout.md:60 (mention) — - `docs/module-map.md`: the four shared-code directories and their dependency
 - docs/implemented-plans/walk-simulated-time.md:85 (mention) — - `src/lib/box-fixture.ts` (new, sync): `isWalkFixture(boxRoot)` reads `_config/box.json` and returns whether `fakeNotif
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:23 (mention) — added to `OUTSIDE_VITE_SHARED_RAW`. Pattern documented in `docs/module-map.md`.
@@ -3062,6 +3064,7 @@ Referenced by:
 - docs/design/README.md:34 (link) — [`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:45 (link) — calendar, a prime early integration, is [`../connectors/calendar.md`](../connectors/calendar.md).
 - docs/implemented-plans/doc-structure-connectors.md:49 (mention) — | calendar.md "Config and state" | state in `_config/connectors/google-calendar-state.json`; tokens in `_config/connecto
+- docs/implemented-plans/dup-sweep-backend-final.md:183 (mention) — and the same unit names go in `docs/connectors/calendar.md:84`,
 - docs/implemented-plans/mvp-implementation-guide.md:695 (mention) — calendar.md          # Rules for calendar operations
 - docs/implemented-plans/user-story-audit-followups.md:37 (mention) — `docs/connectors/calendar.md` updated ([46]).
 - docs/plans/agent-docs.md:374 (mention) — `calendar.md`.
@@ -3417,13 +3420,18 @@ References:
 
 #### docs/development/performance.md
 
-Title: "Measuring performance" | 261 lines | current reference
+Title: "Measuring performance" | 290 lines | current reference
 
 Referenced by:
 - docs/development.md:42 (link) — | [Performance](development/performance.md) | Measuring page loads, box starts, test-process and `bbx` start costs: the
+- docs/implemented-plans/lazy-cli-commands.md:59 (mention) — lines in `docs/development/performance.md` and the CLI docs. Not a BIG
+- docs/implemented-plans/yaml-read-parser.md:49 (mention) — 200 changed source and test lines. Docs: `docs/development/performance.md`,
 - src/dev/AGENTS.md:17 (mention) — | `perf/` | Page-load and box-start measurement: `pnpm perf:hub` (local production-shaped hub + edge stand-in), `perf:lo
 - ../issues/bugs/2026-10-07-box-first-load-is-slow.md:77 (mention) — Measurement tooling and procedure: `beebox/docs/development/performance.md`.
 - ../issues/bugs/2026-10-22-perf-load-hangs-silently-on-a-wedged-browse-daemon.md:40 (mention) — `beebox/docs/development/performance.md`.
+
+References:
+- → docs/implemented-plans/yaml-read-parser.md (mention)
 
 #### docs/development/technologies.md
 
@@ -5049,18 +5057,44 @@ References:
 - → ../issues/closed/features/2026-06-26-drive-mounting-file-browsing-ui.md (frontmatter)
 - → docs/connectors/drive.md (mention)
 
-#### docs/implemented-plans/dup-sweep-backend-remaining.md **[ORPHAN]**
+#### docs/implemented-plans/dup-sweep-backend-final.md
 
-Title: "Backend duplication sweep: the remaining groups" | 392 lines | shipped history | implemented
+Title: "Backend duplication sweep: dates, text helpers, atomic writes and loaders" | 382 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/dup-sweep-backend-remaining.md:16 (link) — three closed with [dup-sweep-backend-final](dup-sweep-backend-final.md):
+- ../issues/closed/code-quality/2026-10-23-date-and-duration-formatting-variants.md:12 (mention) — Closed 2026-10-23 (worktree-dup-sweep-backend), plan `beebox/docs/implemented-plans/dup-sweep-backend-final.md`. Box-loc
+- ../issues/closed/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md:12 (mention) — Closed 2026-10-23 (worktree-dup-sweep-backend), plan `beebox/docs/implemented-plans/dup-sweep-backend-final.md`. Atomic
+- ../issues/closed/code-quality/2026-10-23-text-helpers-with-diverging-rules.md:12 (mention) — Closed 2026-10-23 (worktree-dup-sweep-backend), plan `beebox/docs/implemented-plans/dup-sweep-backend-final.md`, commit
+- ../issues/code-quality/2026-10-22-functional-duplication-sweep.md:142 (mention) — `beebox/docs/implemented-plans/dup-sweep-backend-final.md`. The backend pass
+
+References:
+- → ../issues/closed/code-quality/2026-10-23-date-and-duration-formatting-variants.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-text-helpers-with-diverging-rules.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md (frontmatter)
+- → docs/implemented-plans/dup-sweep-backend-remaining.md (link)
+- → ../issues/bugs/2026-09-02-apostrophes-lost-in-slugs-and-titles.md (link)
+- → ../issues/code-quality/2026-10-22-functional-duplication-sweep.md (link)
+- → docs/module-map.md (mention)
+- → docs/connectors/calendar.md (mention)
+- → src/core/agent-guide/guide.md (mention)
+
+#### docs/implemented-plans/dup-sweep-backend-remaining.md
+
+Title: "Backend duplication sweep: the remaining groups" | 394 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/dup-sweep-backend-final.md:23 (link) — ([dup-sweep-backend-remaining](dup-sweep-backend-remaining.md))
 
 References:
 - → ../issues/closed/code-quality/2026-10-23-two-card-filename-parsers.md (frontmatter)
 - → ../issues/closed/code-quality/2026-10-23-agent-quota-collection-exists-twice.md (frontmatter)
 - → ../issues/closed/code-quality/2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md (frontmatter)
-- → ../issues/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md (link)
-- → ../issues/code-quality/2026-10-23-date-and-duration-formatting-variants.md (link)
-- → ../issues/code-quality/2026-10-23-text-helpers-with-diverging-rules.md (link)
-- → ../issues/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md (link)
+- → ../issues/closed/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md (link)
+- → docs/implemented-plans/dup-sweep-backend-final.md (link)
+- → ../issues/closed/code-quality/2026-10-23-date-and-duration-formatting-variants.md (link)
+- → ../issues/closed/code-quality/2026-10-23-text-helpers-with-diverging-rules.md (link)
+- → ../issues/closed/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md (link)
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
 
@@ -5215,6 +5249,7 @@ Referenced by:
 - code-style.md:112 (link) — - **File naming: PascalCase for a single-React-component file, kebab-case otherwise.** A file whose primary export is on
 - docs/implemented-plans/file-layout.check.subplan.md:13 (link) — Step 3 of [the file-layout plan](file-layout.md): a repo script that reads
 - docs/implemented-plans/file-layout.moves.subplan.md:10 (link) — Step 4 of [the file-layout plan](file-layout.md): move and rename files,
+- docs/implemented-plans/lazy-cli-commands.md:69 (mention) — - `docs/implemented-plans/file-layout.md`, rule 4: a set directory is
 - ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:14 (mention) — four requested steps shipped: `beebox/docs/implemented-plans/file-layout.md`
 - ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:119 (link) — [the file-layout plan](../../../beebox/docs/implemented-plans/file-layout.md): five
 - ../issues/closed/code-quality/2026-10-16-layout-check-unit-message-omits-the-small-fixes.md:12 (mention) — **Closed 2026-10-17:** fixed on the bug-burndown branch ("Layout check's unit message names the smaller fixes and its ru
@@ -5674,6 +5709,19 @@ References:
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/doc-graph.md (mention)
+
+#### docs/implemented-plans/lazy-cli-commands.md
+
+Title: "Lazy CLI commands: load only the verb a bbx invocation runs" | 242 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/code-quality/2026-10-23-bbx-verb-loads-the-whole-cli.md:12 (mention) — Closed: implemented by the lazy-command split (plan `beebox/docs/implemented-plans/lazy-cli-commands.md`, commits 49378f
+
+References:
+- → ../issues/closed/code-quality/2026-10-23-bbx-verb-loads-the-whole-cli.md (frontmatter)
+- → docs/plans/commit-performance.md (mention)
+- → docs/development/performance.md (mention)
+- → docs/implemented-plans/file-layout.md (mention)
 
 #### docs/implemented-plans/lightbox-mobile-gestures.md
 
@@ -7761,6 +7809,19 @@ References:
 - → README.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
 
+#### docs/implemented-plans/yaml-read-parser.md
+
+Title: "Read YAML with js-yaml; keep yaml for writes and edits" | 230 lines | shipped history | implemented
+
+Referenced by:
+- docs/development/performance.md:251 (mention) — (`docs/implemented-plans/yaml-read-parser.md`). Writes and comment-preserving edits stay
+- ../issues/closed/code-quality/2026-10-23-card-frontmatter-parse-with-js-yaml.md:12 (mention) — Closed: implemented by `src/lib/read-yaml.ts` (plan `beebox/docs/implemented-plans/yaml-read-parser.md`, commits 0635ef4
+
+References:
+- → ../issues/closed/code-quality/2026-10-23-card-frontmatter-parse-with-js-yaml.md (frontmatter)
+- → docs/development/performance.md (mention)
+- → code-style.md (mention)
+
 ### docs/install/
 
 #### docs/install/agent.md
@@ -8368,6 +8429,7 @@ Title: "Commit performance: make box commits fast" | 148 lines | proposal | acti
 
 Referenced by:
 - docs/cards/validation.md:39 (mention) — paid the CLI startup cost — see `docs/plans/commit-performance.md`):
+- docs/implemented-plans/lazy-cli-commands.md:20 (mention) — whose plan (`docs/plans/commit-performance.md`, "Phase 2") names this exact
 - ../dev/devprocess-talk/reports/sweep-quality.md:140 (mention) — - **New bottleneck exposed:** Commit-time cost of multiple CLI calls; validation.md: "That one invocation is the whole c
 - ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md:4 (frontmatter) — design: ../../../beebox/docs/plans/commit-performance.md
 - ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md:20 (link) — > [the plan doc](../../../beebox/docs/plans/commit-performance.md),
@@ -10453,6 +10515,7 @@ Referenced by:
 - docs/implemented-plans/box-agents-md.md:157 (mention) — - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
 - docs/implemented-plans/chat-progress-fold.md:166 (mention) — - The agent guide's line on command descriptions (`guide.md`, SPEAKING) stays.
 - docs/implemented-plans/drive-docs-api-health.md:114 (mention) — - `guide.md:448` becomes *"`bbx health` — scheduled-task and box health, including connector problems; yours to run."* (
+- docs/implemented-plans/dup-sweep-backend-final.md:184 (mention) — `core/agent-guide/guide.md:437` and `core/agent-guide/ledger.yaml:507`.
 - docs/implemented-plans/front-door.md:94 (mention) — | "Landmarks page" with no on-screen path (B row 25) | The page exists; the only route is the place menu's "Find a landm
 - docs/implemented-plans/place-shows-cards.md:184 (mention) — when the agent edits a landmark (`src/core/agent-guide/guide.md:393`).
 - docs/implemented-plans/place-shows-cards.review.md:12 (link) — 1. **The agent has no reliable trigger to maintain the body.** Track C says the agent updates it whenever it changes wha
@@ -10545,6 +10608,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 21 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 

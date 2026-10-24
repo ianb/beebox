@@ -9,7 +9,7 @@ import { requireBoxRoot } from "../../lib/paths/core.js";
 import { runCommand, createCliContext } from "../../core/command-runner.js";
 import { errorMessage } from "../../shared/error-guards.js";
 
-export const trashCommand = new Command("rm")
+export const rmCommand = new Command("rm")
   .description("Move one or more cards to the trash")
   .argument("<paths...>", "Paths to the cards to trash")
   .option("--reason <reason>", "Reason for trashing")

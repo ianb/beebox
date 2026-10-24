@@ -3,10 +3,20 @@ title: "Full-suite red: test/lib/git.box-clock.test.ts"
 workstream: perf-easy-wins
 area: beebox
 priority: important
+resolution: superseded
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-perf-easy-wins — the hourly full-suite run on main
 ---
+
+**Closed 2026-10-23 (superseded by f1e4f1ad3).** The failure was the test's
+date boundary, not this landing: `test/lib/git.box-clock.test.ts` compared
+the date part of a local `%aI` stamp with a UTC day, so it failed once the
+clock passed 00:00 UTC (19:00 CDT), whichever commit was checked out. The
+bisect ran after that point and blamed the landing it happened to test.
+`f1e4f1ad3` ("Test: git box-clock compares commit days in UTC") fixed the
+test on `main`. Checked 2026-10-24 at 01:43 UTC: the test failed on this
+branch before merging `main` and passed (6 of 6) after.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `07bb777e`. Bisecting the landings since the last tested

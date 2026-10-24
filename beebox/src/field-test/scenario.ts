@@ -23,7 +23,7 @@
 
 import * as path from "node:path";
 import { readFile } from "node:fs/promises";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../lib/read-yaml.js";
 import { z } from "zod";
 import { fileExists } from "../lib/file-exists.js";
 import { errorMessage } from "../shared/error-guards.js";
