@@ -136,6 +136,12 @@ first use"; its exports keep `yaml`'s names.
   to parse).
 - **Why:** 568 of 839 parses in `bbx validate` on test1 are repeats; the
   prominence pass also re-reads 272 files.
+- **Not covered:** the prominence lint's redundant-link pass
+  (`src/core/lint-prominence/core.ts:119`) reads landmark cards through its
+  own caches (`src/core/landmark/card-cache.ts:83`,
+  `src/core/landmark/prominence-cache.ts:77`): 8 parses on test1. "Once per
+  card" in this plan means the two whole-box passes; the parse count is
+  measured again after the track (plan review, 2026-10-24).
 - **Direction:** `collectAllResults` creates the map, passes it to both.
   Other `lintCardsDispatch` callers pass nothing and behave as before.
 - **First chunk:** the whole track.
@@ -171,9 +177,11 @@ first use"; its exports keep `yaml`'s names.
   ```
   Every value import of `yaml` in `src/` outside `src/dev/` and
   `src/scripts/migrate/` moves to it; type imports stay
-  (`import type … from "yaml"` is erased). `src/exports/schema.ts`
-  re-exports `parse as parseYaml, stringify as stringifyYaml` from it, so the
-  public signatures keep `yaml`'s overloads.
+  (`import type … from "yaml"` is erased). `parse` and `stringify` declare
+  `yaml`'s two overloads each (`node_modules/yaml/dist/public-api.d.ts:35`)
+  and `src/exports/schema.ts` re-exports them as `parseYaml` and
+  `stringifyYaml`; a type-level assignment to `typeof Yaml.parse` and
+  `typeof Yaml.stringify` in the test fails typecheck if they drift.
 - **Why:** the 12 ms load on every verb.
 - **Vocabulary lock-in:** value imports of `yaml` live in `yaml-package.ts`
   (plus dev tools and migrations, which no verb loads).
@@ -208,6 +216,10 @@ none
 ## Agent-flow / user-flow edge cases
 
 Not affected: values, errors, warnings, and on-disk shapes are unchanged.
+One known exception predates this plan and stays: a malformed multi-line
+flow collection whose quoted `]` balances the opener is accepted where `yaml`
+rejects it (yaml-read-parser, Failure modes). Track B does not touch that
+path.
 
 ## NOT in scope
 
@@ -240,11 +252,14 @@ and `stringifyYaml` with the same signatures.
 
 ## Implementation order
 
-1. Track A, commit.
-2. Track B with the corpus and fuzz reruns, commit.
-3. Track C, commit.
-4. Measure `status`, `todos`, `validate`, `validate --pre-commit` against the
-   branch before step 1; record in `docs/development/performance.md`.
+1. Track A, commit; recount parses in `bbx validate`.
+2. Track C, commit.
+3. Measure `status`, `todos`, `validate`, `validate --pre-commit` against the
+   branch before step 1.
+4. Track B with the corpus and fuzz reruns, commit, and measure again; keep it
+   only if a verb gains (plan review: it is the one track that can change a
+   value).
+5. Record the results in `docs/development/performance.md`.
 
 ## Rollout shape
 
