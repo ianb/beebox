@@ -3,7 +3,7 @@
  *
  * `.github/workflows/image.yml` builds ghcr.io/ianb/beebox from a commit and
  * publishes it as `:latest`, which the Mac app follows (see
- * beebox/docs/plans/mac-app-engine-channel.md). A green full-suite run is the
+ * beebox/docs/implemented-plans/mac-app-engine-channel.md). A green full-suite run is the
  * only gate; this module throttles it to one dispatch per UTC day and records
  * the commit it sent so a quiet day costs nothing.
  */

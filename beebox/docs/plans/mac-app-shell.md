@@ -31,7 +31,7 @@ a simulator.
   note gets written.
 - Related, not addressed: [an unreachable box shows a blank screen](../../../issues/bugs/2026-09-12-ios-unreachable-box-shows-a-blank-screen.md)
   (the Mac has no web view this round, so the overlay does not apply),
-  [engine updates without an app release](../../../issues/features/2026-10-10-mac-app-engine-updates-without-app-release.md),
+  [engine updates without an app release](../../../issues/closed/features/2026-10-10-mac-app-engine-updates-without-app-release.md),
   [device tokens have no expiry](../../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md)
   (a Mac adds one more long-lived device token; no change in kind).
 

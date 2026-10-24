@@ -1,9 +1,9 @@
 ---
 title: "Mac app: engine image channel, independent of app releases"
-status: draft
+status: implemented
 workstream: mac-app-updates
 issues:
-  - ../../../issues/features/2026-10-10-mac-app-engine-updates-without-app-release.md
+  - ../../../issues/closed/features/2026-10-10-mac-app-engine-updates-without-app-release.md
 ---
 # Mac app: engine image channel, independent of app releases
 
@@ -15,7 +15,7 @@ window, while Sparkle keeps updating the Swift shell only when the shell
 changes.
 
 **Issues addressed:**
-[engine updates without an app release](../../../issues/features/2026-10-10-mac-app-engine-updates-without-app-release.md).
+[engine updates without an app release](../../../issues/closed/features/2026-10-10-mac-app-engine-updates-without-app-release.md).
 Related, not resolved here:
 [release discipline and update story](../../../issues/decisions/2026-07-20-release-discipline-and-update-story.md)
 (this plan settles the cadence question for the desktop channel only);

@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-24T16:56:05Z
+Generated: 2026-10-24T18:04:10Z
 Total documents: 576
 
 ## Issues
@@ -97,7 +97,6 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -1314,6 +1313,7 @@ Referenced by:
 - docs/implemented-plans/jev-document-triage.md:55 (link) — [Engineering principles](../engineering-principles.md), especially principles 1 (typed
 - docs/implemented-plans/landmark-arrival.md:166 (mention) — - **Principle 8, one way to do each thing** (`docs/engineering-principles.md`).
 - docs/implemented-plans/local-password-auth.md:21 (mention) — - `docs/engineering-principles.md` — principally:
+- docs/implemented-plans/mac-app-engine-channel.md:143 (mention) — - `beebox/docs/engineering-principles.md` §4 (resilient and never silent) and
 - docs/implemented-plans/mobile-parity-sync.md:22 (mention) — - `docs/engineering-principles.md` **#4 resilient and never silent** — drift
 - docs/implemented-plans/mobile-token-handshake.md:21 (mention) — - **`docs/engineering-principles.md` #3 (validate at boundaries)** — the cookie is untrusted
 - docs/implemented-plans/model-engine-policy.md:71 (mention) — - `docs/engineering-principles.md:12` **1. Types are structure** — the
@@ -1999,6 +1999,7 @@ Title: "Scan Upload Wire Contract" | 272 lines | current reference
 Referenced by:
 - docs/guides.md:53 (link) — | Scan upload wire contract | [scan-upload-contract](scan-upload-contract.md) |
 - docs/implemented-plans/annex-at-init.md:222 (mention) — `docs/scan-upload-contract.md:71-78`). Track 2 is making the CLI agree with two
+- docs/implemented-plans/mac-app-engine-channel.md:153 (mention) — `SCAN_CONTRACT_VERSION` (`beebox/docs/scan-upload-contract.md`; the Mac
 - docs/implemented-plans/scan-uploader-pairing.md:54 (mention) — (`docs/scan-upload-contract.md`); the installation-story plan's
 - docs/implemented-plans/scan-uploader-version-drift.md:42 (mention) — Docs reported separately: `docs/scan-upload-contract.md` (the version's
 - docs/implemented-plans/scanner-ingest.md:280 (mention) — `docs/scan-upload-contract.md`, the single coordination point named in
@@ -2505,6 +2506,7 @@ Referenced by:
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/implemented-plans/docs-reorg.md:335 (mention) — `docs/design/` (8 topic files + README acknowledging spirit.md),
 - docs/implemented-plans/live-gap-marker.md:56 (mention) — (`docs/architecture/spirit.md:79`) by sending a known hole as unsure.
+- docs/implemented-plans/mac-app-engine-channel.md:632 (mention) — is the paperwork spirit.md argues against.
 - docs/implemented-plans/questions-end-to-end.md:376 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
 - docs/plans/ios-app-intent-capture.md:46 (mention) — - **Serves:** `architecture/spirit.md`, “The best stuff comes from the people”: “The box's job is to collect, preserve,
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
@@ -5788,6 +5790,25 @@ Title: "Cross-model review — local-password-auth (Codex, 2026-07-19)" | 81 lin
 References:
 - → docs/implemented-plans/local-password-auth.md (mention)
 
+#### docs/implemented-plans/mac-app-engine-channel.md
+
+Title: "Mac app: engine image channel, independent of app releases" | 736 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/features/2026-10-10-mac-app-engine-updates-without-app-release.md:12 (link) — **Closed (implemented).** Resolved by the engine image channel work on branch `worktree-mac-app-updates` (commits 2fb158
+
+References:
+- → ../issues/closed/features/2026-10-10-mac-app-engine-updates-without-app-release.md (frontmatter)
+- → ../issues/closed/features/2026-10-10-mac-app-engine-updates-without-app-release.md (link)
+- → ../issues/decisions/2026-07-20-release-discipline-and-update-story.md (link)
+- → ../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md (link)
+- → ../issues/features/2026-07-19-installation-remaining-work.md (link)
+- → docs/install/docker.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/scan-upload-contract.md (mention)
+- → docs/plans/mac-app-shell.md (mention)
+- → docs/architecture/spirit.md (mention)
+
 #### docs/implemented-plans/markdoc-format-investigation.md
 
 Title: "Markdoc.format Investigation" | 453 lines | shipped history | implemented
@@ -7889,6 +7910,7 @@ Referenced by:
 - docker/README.md:5 (link) — [`../docs/install/docker.md`](../docs/install/docker.md); this file is a map
 - docs/implemented-plans/doc-structure-install-server.md:77 (mention) — | `docker-install.md` | `install/docker.md` |
 - docs/implemented-plans/local-password-auth.md:536 (mention) — **What.** `docs/install/developer.md` + `docs/install/docker.md` +
+- docs/implemented-plans/mac-app-engine-channel.md:134 (mention) — Authored docs (README sections, docker.md note): about 60 lines, separate.
 - docs/implemented-plans/remove-open-mode.md:50 (mention) — - Docs mentioning the opt-out: `docs/install/docker.md`,
 - docs/implemented-plans/tailscale-expose-and-protect.md:68 (mention) — - **The documented-but-untested path.** `beebox/docs/install/docker.md:119`
 - docs/install.md:9 (link) — | Docker | Running a box, locally or on a VPS, without touching the source. The image bakes in every host dependency. |
@@ -8961,6 +8983,7 @@ References:
 Title: "Bee Box for Mac as a shell around a box" | 665 lines | proposal | active
 
 Referenced by:
+- docs/implemented-plans/mac-app-engine-channel.md:154 (mention) — client sends it as `x-scan-contract`, `mac-app-shell.md:388-389`). This plan
 - docs/plans/mac-app-shell.design.md:9 (link) — **Parent plan:** [mac-app-shell.md](mac-app-shell.md), Tracks D–G.
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:10 (link) — **2026-10-17 note (partly resolved):** iOS pairing now goes through the shared `apple-shared` package: one redeem per ti
 - ../issues/code-quality/2026-10-17-ios-bridge-message-routing-untested.md:8 (mention) — discovered-in: worktree-app-shell — iOS testing review for beebox/docs/plans/mac-app-shell.md
@@ -8973,7 +8996,7 @@ References:
 - → ../issues/features/2026-10-07-mac-companion-app.md (link)
 - → ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md (link)
 - → ../issues/bugs/2026-09-12-ios-unreachable-box-shows-a-blank-screen.md (link)
-- → ../issues/features/2026-10-10-mac-app-engine-updates-without-app-release.md (link)
+- → ../issues/closed/features/2026-10-10-mac-app-engine-updates-without-app-release.md (link)
 - → ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md (link)
 - → docs/plans/mac-app-shell.design.md (link)
 - → docs/mobile-contract.md (mention)
@@ -10619,14 +10642,6 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
-
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 21 lines
-
-No references in or out.
 
 ### src/frontend/public/earcons/
 

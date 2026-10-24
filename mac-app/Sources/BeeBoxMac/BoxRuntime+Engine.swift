@@ -13,7 +13,7 @@ struct EngineStatus: Equatable {
 
 /// Engine updates at a start: the record written before the image
 /// references change, the promotion, the success test, and the rollback.
-/// See beebox/docs/plans/mac-app-engine-channel.md, Track C.
+/// See beebox/docs/implemented-plans/mac-app-engine-channel.md, Track C.
 ///
 /// Every look at the box's git state and the reset run inside the VM, on the
 /// engine image, through the entrypoint's "any arguments → exec them" path.

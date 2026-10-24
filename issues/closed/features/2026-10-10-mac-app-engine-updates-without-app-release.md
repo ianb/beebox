@@ -5,8 +5,11 @@ area: mac-app
 labels: [installable-app, updates]
 filed-by: agent
 discovered-by: Ian
+resolution: implemented
 discovered-in: main session — boxholder asking how often the installable app must update and whether it can self-update its internals
 ---
+
+**Closed (implemented).** Resolved by the engine image channel work on branch `worktree-mac-app-updates` (commits 2fb158452 through 09069edcb; plan: [mac-app-engine-channel](../../../beebox/docs/implemented-plans/mac-app-engine-channel.md)). The engine update and rollback paths were not exercised end to end before landing; the first labeled image needs a workflow dispatch.
 
 The Mac app (`mac-app/`) is a thin launcher. It bundles the Linux kernel and
 Sparkle. On first launch it pulls `ghcr.io/ianb/beebox:<app version>`, and that
@@ -47,6 +50,6 @@ production server updates it with `deploy/claude-update.sh`. The app has no
 equivalent. Find out whether Claude Code updates itself inside the VM, and
 whether an engine-image channel is enough to keep it current.
 
-Related: [Mac companion app](2026-10-07-mac-companion-app.md),
-[detect a server update](2026-08-03-detect-server-update-prompt-client-reload.md),
-[web warns when the iOS app is out of date](2026-10-08-web-warns-when-ios-app-is-out-of-date.md).
+Related: [Mac companion app](../../features/2026-10-07-mac-companion-app.md),
+[detect a server update](../../features/2026-08-03-detect-server-update-prompt-client-reload.md),
+[web warns when the iOS app is out of date](../../features/2026-10-08-web-warns-when-ios-app-is-out-of-date.md).
