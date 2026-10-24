@@ -202,8 +202,9 @@ Two costs are paid once per process, and many processes run:
   and tap's own import. A full run has more than 1,000 files, and many tests
   spawn further CLI processes.
 - **A `bbx` verb.** Box agents run `bbx` verbs many times per turn. Each run
-  loads the whole bundled CLI (`dist/cli.mjs`): every command module and each
-  npm package those modules import at their top.
+  loads `dist/cli.mjs` and the code-split chunks of the one command it names
+  (`src/cli/commands.ts`), with each npm package those modules import at their
+  top. Help and an unknown verb load every command.
 
 ### `pnpm perf:test-floor` — what one test process costs
 
@@ -235,7 +236,8 @@ pnpm perf:cli-start -- ls _config      # another verb
 pnpm perf:cli-start --cpu-prof         # plus a profile of one run, by source owner
 ```
 
-`--version` does no work, so its time is the load cost. The run uses the
+`--version` loads no command, so its time is the CLI's fixed floor; a verb
+adds its own command's chunks. The run uses the
 bundle as `bin/bbx` does (compile cache, source maps) without the wrapper's
 staleness check, which adds about 40 ms in a dev checkout. One untimed run
 through `bin/bbx` first rebuilds a stale bundle. The profile summary

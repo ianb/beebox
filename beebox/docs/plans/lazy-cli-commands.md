@@ -7,7 +7,7 @@ issues:
 ---
 # Lazy CLI commands: load only the verb a bbx invocation runs
 
-Every `bbx` invocation loads all 72 command modules and everything they
+Every `bbx` invocation loads all 71 command modules and everything they
 import, then runs one of them. This plan makes the CLI load only the command
 module the invocation names, and builds the bundle with code splitting so the
 other modules and their npm packages are never read.
@@ -61,7 +61,7 @@ CHANGE.
 
 What the fuller approach (splitting every command into a definition module and
 an action module, so `bbx --help` is also fast) would buy: a fast `--help`.
-It touches all 72 command modules. Not chosen: `--help` is rare next to
+It touches all 71 command modules. Not chosen: `--help` is rare next to
 verbs, and agents read `box-docs/` for the command reference.
 
 ## Stated preferences this plan trades against
@@ -118,7 +118,7 @@ verbs, and agents read `box-docs/` for the command reference.
 ### Track 1 — Rename `trash.ts` and `move.ts`
 
 - **What:** `src/cli/commands/trash.ts` → `rm.ts`, `move.ts` → `mv.ts`; exports `rmCommand`, `mvCommand`.
-- **Why:** the record form keys members by file name, and these two are the only command files whose verb differs (`trash` → `rm`, `move` → `mv`; checked over all 72 imports in `src/cli/commands.ts`).
+- **Why:** the record form keys members by file name, and these two are the only command files whose verb differs (`trash` → `rm`, `move` → `mv`; checked over all 71 imports in `src/cli/commands.ts`).
 - **Direction:** `git mv`, update `src/cli/commands.ts:32-33`, the only importer.
 - **Vocabulary lock-ins:** command file name equals verb name.
 - **First chunk:** the rename alone; behavior unchanged.
@@ -163,7 +163,7 @@ npm package loading (about 100 ms of the startup) stays. The cross-check in
 
 A cruder version: special-case the hot verbs (`validate`, `ls`, `search`) with
 a hand-written fast path. It needs a second list of verbs and leaves every
-other verb slow; the registry change costs the same and covers all 72.
+other verb slow; the registry change costs the same and covers all 71.
 
 What the plan does not build: a resident `bbx` process, a per-command
 definition/action split, or a faster `--help`.
@@ -180,7 +180,7 @@ none
 | A verb's file exists but no loader lists it | Existing: layout rule 4, with Track 2 | Layout check fails the commit | Clear |
 | `selectVerb` picks the wrong verb for an argv (an option before the verb, a legacy name, a hyphenated verb) | New: `select-verb.test.ts` table | Unknown token → `all` | Clear (slower, still correct) |
 | A partial program is assembled wrong (a split family's agent and engine halves, an `engine` verb) | New: partial-assembly cases in the surface test | `buildSurface` registers each loaded SURFACE entry | Clear |
-| A dev process imports a chunk after a rebuild pruned it | New: bundle test for the prune rule (last three builds, one hour) | Prune spares the last three builds' chunks and anything under an hour old | Clear (module-not-found), dev only; accepted risk, see Track 4 |
+| A dev process imports a chunk after a rebuild pruned it | New: `cli-chunks.test.ts` for the prune rule (last three builds, one hour) | Prune spares the last three builds' chunks and anything under an hour old | Clear (module-not-found), dev only; accepted risk, see Track 4 |
 | `cli.mjs` is renamed before its chunks exist; a concurrent `bbx` fails | New: bundle rename-order test | Chunks renamed first | Clear |
 | A command reads a sibling command through the program tree | Grep: `location.ts:23` and `drive/command.ts:63` read their own subcommands only; `box-admission.ts:26` walks parents only | Not needed | — |
 | Code in a chunk resolves a path from `import.meta.url` at a different depth | Covered by keeping chunks flat in `dist/` | Same directory as today | — |
@@ -201,7 +201,7 @@ No critical gap: every new path either has a test or fails loudly.
 ## NOT in scope
 
 - `bbx --help` speed: it still loads every command. Rare next to verbs.
-- Splitting command modules into definition and action: 72 files of churn for help speed only.
+- Splitting command modules into definition and action: 71 files of churn for help speed only.
 - Shrinking the shared graph that every verb still loads (card schemas, zod schema construction, `yaml`): the next lever after this; separate work. `bbx ls` alone still pulls 22 npm packages.
 - The js-yaml decision (`issues/code-quality/2026-10-23-card-frontmatter-parse-with-js-yaml.md`): waiting on the boxholder.
 - Splitting the other bundles (`dist/exports/*`, `dist/view-widgets/`): they are not on the per-verb path.
@@ -220,7 +220,7 @@ None: purely infrastructural. No agent-facing concept changes; verbs, options, a
 - `test/cli/entry/select-verb.test.ts`: the argv → selection table (pure function, unit tier).
 - `test/cli/entry.surface.test.ts`: extended to load all loaders and check `camelCase(name())` equals each key; plus partial-assembly cases: a hyphenated verb (`agent-context`), an `engine` verb (`serve`), each split family (`scheduler`, `pub`, `secrets`) selected alone shows the same agent and engine subcommands as the full program, a legacy-rewritten argv, and an unknown verb (full program).
 - `test/dev/layout/scan/package/registries.test.ts`: the loader member form.
-- A bundle test (under `test/scripts/build-cli/`) that builds into a temp directory and runs `cli.mjs --version` and one verb from it; rename order and prune covered there.
+- `test/scripts/build-cli/build/cli-chunks.test.ts`: the staging order (maps first, `cli.mjs` last) and the prune rule, as pure functions in `src/scripts/build-cli/build/cli-chunks.ts`. The split build itself is exercised by every test that runs `bbx` (the suite's `pretest` builds `dist/`), by `bin/smoke`, and by `pnpm release && pnpm smoke` for the packed tarball. (Implementation note: the plan first proposed building into a temp `dist`; `bundle.ts` builds only into the package's `dist/`, and the existing runs above already cover it.)
 - `pnpm perf:cli-start` (added this workstream) reports per-verb time, so a regression is measurable.
 
 ## Implementation order
@@ -228,13 +228,13 @@ None: purely infrastructural. No agent-facing concept changes; verbs, options, a
 1. Track 1: rename `trash.ts` → `rm.ts`, `move.ts` → `mv.ts`. Commit.
 2. Track 2: scanner loader member + test. Commit.
 3. Track 3: `select-verb.ts` + test; lazy registry; program and surface assembly; `run.ts`; test call sites. Commit (single-file bundle still; behavior identical, small evaluation saving).
-4. Track 4: split bundle output, rename order, prune, bundle test. Commit with before/after `perf:cli-start` numbers.
+4. Track 4: split bundle output, rename order, prune, `cli-chunks.test.ts`. Commit with before/after numbers.
 5. Docs: `docs/development/performance.md` (process start section) and the CLI layout note in `src/cli/` docs if one names the registry shape.
 
 ## Rollout shape
 
 Done when: `select-verb.test.ts`, the extended surface test, the scanner test,
-and the bundle test pass; `pnpm test:changed`, typecheck, lint, and
+and `cli-chunks.test.ts` pass; `pnpm test:changed`, typecheck, lint, and
 layout-check pass; `bin/smoke` passes; `pnpm release && pnpm smoke` passes (`pnpm smoke` picks the newest tarball in `dist-release/`, `src/scripts/smoke-external-box.ts:116-134`, so it must be rebuilt first); and `pnpm perf:cli-start` shows
 `bbx ls`, `bbx validate --pre-commit`, and `bbx todos` within 15% of the
 single-command probe figures above. No data migration. Production picks it up
