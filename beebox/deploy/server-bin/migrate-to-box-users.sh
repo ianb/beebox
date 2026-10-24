@@ -128,7 +128,7 @@ for entry in "${ENTRIES[@]}"; do
   fi
   if ! getent group "bbx-$slug" >/dev/null; then run groupadd -g "$(next_uid)" "bbx-$slug"; fi
   if ! id "bbx-$slug" >/dev/null 2>&1; then
-    run useradd --system -u "$(getent group "bbx-$slug" | cut -d: -f3)" -g "bbx-$slug" -G beebox-boxes -d "$home" -M -s /bin/bash "bbx-$slug"
+    run useradd -K CREATE_MAIL_SPOOL=no -u "$(getent group "bbx-$slug" | cut -d: -f3)" -g "bbx-$slug" -G beebox-boxes -d "$home" -M -s /bin/bash "bbx-$slug"
   fi
   run install -d -o "bbx-$slug" -g "bbx-$slug" -m 0751 "$home"
   if [[ -e "$old_path" && "$old_path" != "$new_path" ]]; then

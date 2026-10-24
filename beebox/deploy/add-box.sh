@@ -383,7 +383,7 @@ if [[ -n "$UNIT_HOST" ]]; then
     done
     [[ -n "\$uid" ]] || { echo "no free UID in 2000-2999"; exit 1; }
     groupadd -g "\$uid" "$BOX_OWNER"
-    useradd --system -u "\$uid" -g "$BOX_OWNER" -G beebox-boxes -d "$BOX_HOME" -M -s /bin/bash "$BOX_OWNER"
+    useradd -K CREATE_MAIL_SPOOL=no -u "\$uid" -g "$BOX_OWNER" -G beebox-boxes -d "$BOX_HOME" -M -s /bin/bash "$BOX_OWNER"
     echo "Created user $BOX_OWNER (uid \$uid)."
   fi
   install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0751 "$BOX_HOME"
