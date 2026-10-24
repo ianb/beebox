@@ -55,6 +55,25 @@ export async function writeKnownRed(files: readonly string[]): Promise<void> {
   await writeJson("known-red.json", nextKnownRed(files));
 }
 
+// ─── image publish ────────────────────────────────────────────────────────
+
+/** The last commit sent to the image workflow (publish.ts), or null before the first. */
+export async function readImagePublish(): Promise<{ commit: string; dispatchedAt: string } | null> {
+  const parsed = await readJson("image-publish.json");
+  if (parsed === null) return null;
+  if (
+    typeof parsed !== "object" || !("commit" in parsed) || !("dispatchedAt" in parsed) ||
+    typeof parsed.commit !== "string" || typeof parsed.dispatchedAt !== "string"
+  ) {
+    refuse("image-publish.json is not {commit, dispatchedAt}");
+  }
+  return { commit: parsed.commit, dispatchedAt: parsed.dispatchedAt };
+}
+
+export async function writeImagePublish(state: { commit: string; dispatchedAt: string }): Promise<void> {
+  await writeJson("image-publish.json", state);
+}
+
 // ─── pending verdicts ─────────────────────────────────────────────────────
 
 /**
