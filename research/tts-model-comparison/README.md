@@ -59,3 +59,7 @@ Round 1 (2026-10-24), boxholder's verdicts:
 - Dialog, plain and with a generic direction about pauses: good.
 - Word stress ("I didn't say she stole the money"): keep directed stress on "she" and on "money", plus one Markdown *italic* version.
 - The wistful twist was too subtle to hear. The worked explanation's wrong answer must be eight (the order-of-operations mistake), and its directed version showed nothing.
+
+Round 2 (2026-10-24), so far:
+
+- Staying late (M1) replaces the wistful twist, with its first wording ("Agreeing, but tired and a little put-upon: you'll do it, and you'd rather not."). Gemini 3.8 Flash-Lite carried every wording of the direction; gpt-4o-mini-tts carried none of them well. That difference is a finding for the page. The short mood wording also suits models that take direction inline in the text.
