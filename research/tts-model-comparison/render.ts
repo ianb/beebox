@@ -485,6 +485,19 @@ async function transcribe(audio: Buffer, extension: string): Promise<string> {
   return json.text;
 }
 
+/** Transcribe, trying again after a dropped connection: three tries, 5 s apart. */
+async function transcribeWithRetry(audio: Buffer, extension: string): Promise<string> {
+  for (let tries = 1; ; tries += 1) {
+    try {
+      return await transcribe(audio, extension);
+    } catch (error) {
+      if (tries === 3) throw error;
+      console.warn(`transcription failed (${failure(error)}); trying again`);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+}
+
 /** Seconds of audio in any format ffmpeg reads, from its decoded length. */
 function seconds(audio: Buffer): number {
   const pcm = execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-i", "pipe:0", "-f", "s16le", "-ac", "1", "-ar", "16000", "pipe:1"], { input: audio, maxBuffer: 256 * 1024 * 1024 });
@@ -548,7 +561,12 @@ async function renderJob(model: Model, adapter: Adapter, job: Job): Promise<{ re
   const totalMs = Math.round(performance.now() - started);
   const audioSec = seconds(sent.audio);
   if (audioSec < 0.3) return { render: { ...render, status: 200, error: "too little audio", totalMs } };
-  const transcript = await transcribe(sent.audio, adapter.extension);
+  let transcript: string;
+  try {
+    transcript = await transcribeWithRetry(sent.audio, adapter.extension);
+  } catch (error) {
+    return { render: { ...render, status: 200, error: `transcription: ${failure(error)}`, totalMs } };
+  }
   const cost = await adapter.cost(built, { seconds: audioSec, ...(sent.usage === undefined ? {} : { usage: sent.usage }), ...(sent.generationId === undefined ? {} : { generationId: sent.generationId }) });
   const check = transcriptCheck({ text: variantText(job.clip, job.variant), transcript, ...(built.sent === undefined ? {} : { sent: built.sent }), ...(job.variant.formatting === undefined ? {} : { formatting: job.variant.formatting }) });
   return {
