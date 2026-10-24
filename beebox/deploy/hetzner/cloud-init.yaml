@@ -1,0 +1,117 @@
+#cloud-config
+# The host a Bee Box server runs on: ONE EXAMPLE PROVISIONER, NOT THE INSTALL
+# PATH (the supported install is docs/install/docker.md). create-server.sh
+# passes this to `hcloud server create --user-data-from-file`; the Hetzner
+# console accepts it as well (32 KiB limit). It is the versioned record of
+# what a fresh host gets before the first deploy, replacing the parts of
+# setup-server.sh that never re-ran.
+#
+# This file does what cloud-config expresses natively: packages, groups and
+# users, a few files, the toolchain installers. Everything that needs the
+# repository (units, sudoers, helpers, the beebox install itself) is
+# deploy.sh's job and runs on the first deploy; provision.sh covers the few
+# root steps in between. Re-running is not a thing: a host is created once.
+#
+# Users and groups (docs/plans/per-box-units.md, "Ontology"):
+#   beebox        runs the hub; owns /home/beebox and the deployed tree's files.
+#   beebox-sched  runs the scheduler daemon; the only account sudo lets run
+#                 /usr/local/sbin/bbx-box-run.
+#   beebox-boxes  the group every box user joins, for the shared caches.
+#   bbx-<slug>    one per box, created by add-box.sh, never here.
+package_update: true
+package_upgrade: false
+packages:
+  # deploy/hetzner/setup-server.sh's list. qpdf validates scan uploads; without
+  # it the scan routes refuse PDFs (src/core/scan/validate.ts).
+  - git
+  - git-lfs
+  - git-annex
+  - curl
+  - nginx
+  - build-essential
+  - ca-certificates
+  - gnupg
+  - poppler-utils
+  - pandoc
+  - imagemagick
+  - python3-openpyxl
+  - xlsx2csv
+  - qpdf
+  - ffmpeg
+  - rsync
+
+groups:
+  - beebox-boxes
+
+users:
+  - name: beebox
+    gecos: Bee Box hub
+    shell: /bin/bash
+    lock_passwd: true
+    no_user_group: false
+  - name: beebox-sched
+    gecos: Bee Box scheduler
+    system: true
+    shell: /usr/sbin/nologin
+    lock_passwd: true
+    homedir: /var/lib/beebox-sched
+
+write_files:
+  # Runtime and cache directories the units expect. /run/beebox holds the box
+  # sockets (made by the socket units) and the per-box hub secrets (written by
+  # the hub user, read by systemd for LoadCredential=), so the hub user must be
+  # able to create files there.
+  - path: /etc/tmpfiles.d/beebox.conf
+    permissions: "0644"
+    content: |
+      d /run/beebox        0775 root   beebox       -
+      d /var/lib/beebox    0755 root   root         -
+      d /var/cache/beebox  0755 root   root         -
+      d /var/cache/beebox/uv 2775 root beebox-boxes -
+      d /var/cache/beebox/hf 2755 root beebox-boxes -
+      d /var/log/beebox    0755 root   root         -
+      d /etc/beebox        0755 root   root         -
+  # Non-secret environment every box unit loads (EnvironmentFile=). The hub
+  # regenerates it from /home/beebox/.env on each start with the child env
+  # allowlist (src/hub/supervisor/child-env.ts); this is the first version so
+  # a box can start before the hub ever ran.
+  - path: /etc/beebox/box.env
+    permissions: "0644"
+    content: |
+      PATH=/usr/local/bin:/usr/bin:/bin
+      UV_CACHE_DIR=/var/cache/beebox/uv
+      HF_HOME=/var/cache/beebox/hf
+      UV_TORCH_BACKEND=cpu
+  # Private key material for GitHub pushes lives per box; the host only needs
+  # GitHub's host key so the first clone does not prompt.
+  - path: /etc/ssh/ssh_known_hosts
+    append: true
+    content: |
+      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+
+runcmd:
+  - systemd-tmpfiles --create /etc/tmpfiles.d/beebox.conf
+  # Node 24 from NodeSource, plus pnpm through corepack.
+  - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nodejs
+  - corepack enable pnpm
+  # uv, system-wide: every box user runs `uvx docling` with the shared cache.
+  - curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh
+  # fclones, the duplicate-file finder a box agent may reach for. Pinned.
+  - curl -fsSL -o /tmp/fclones.deb https://github.com/pkolaczk/fclones/releases/download/v0.35.0/fclones_0.35.0-1_amd64.deb
+  - dpkg -i /tmp/fclones.deb
+  - rm -f /tmp/fclones.deb
+  # ImageMagick 6 ships `convert`; scripts written for IM7 call `magick`.
+  - ln -sf /usr/bin/convert /usr/local/bin/magick
+  # Claude Code, one binary for every user: the native installer puts a
+  # versioned binary under the invoking user's home, which ProtectHome= hides
+  # from box units, so the binary is copied to /usr/local/bin. Each box user
+  # logs in with it into its own CLAUDE_CONFIG_DIR. The nightly updater
+  # re-copies it (deploy/claude-update.sh).
+  - curl -fsSL https://claude.ai/install.sh | bash
+  - install -m 0755 "$(readlink -f /root/.local/bin/claude)" /usr/local/bin/claude
+  - git config --system user.email "beebox@box.example.com"
+  - git config --system user.name "Bee Box"
+  - mkdir -p /opt/beebox && chown beebox:beebox /opt/beebox
+  - rm -f /etc/nginx/sites-enabled/default
+  - touch /var/lib/cloud/instance/beebox-provisioned
