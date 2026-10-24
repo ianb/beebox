@@ -18,6 +18,12 @@ restarts services, and checks readiness. Ordinary requests do not acquire the
 controller's maintenance permissions. `deploy-info.json` records the shipped
 commit; final deployment success is written only after the checks finish.
 
+The controller runs as root and holds no gate file itself: it groups the boxes
+by owner and starts one holder (`bbx engine maintenance hold`) per owner, as
+that owner, which closes and later reopens its boxes. On the old layout that
+is one holder as `beebox`; on a unit host it is one per box user. A host with
+no box runs the activation alone.
+
 Per-box convergence invokes `bbx migrate --sweep --within-maintenance --json`
 under the existing controller. That single operation handles deterministic
 migrations and generated guidance with snapshots and changed-path commits.

@@ -650,6 +650,22 @@ working. `bbx host install` under a unit (`BBX_UNIT_HOST=1` from
 `box.env`, allowlisted into agent shells) records and exits 0 with the
 "next deploy installs it" line.
 
+**Found on the VM (2026-10-24).** The first deploy against a freshly
+provisioned host failed in the maintenance controller
+(`src/cli/commands/maintenance`): it refused a host with no box, and its
+identity model, one `seteuid` to "the" box owner for the whole fleet, refused a
+fleet whose boxes have different owners, which every unit host has. The plan's
+"per-user ownership does not change it" was wrong for the controller. The
+controller now groups boxes by owner and spawns one holder per owner
+(`hold.ts`, `bbx engine maintenance hold <roots>`) as that owner, with a
+newline-JSON protocol on its stdio: the holder closes, drains, snapshots and
+reports permits; the controller runs the activation as root with every
+permit, verifies each box (phase `ready` and the hub canary, reading the hub's
+config at `--hub-config`, which `deploy.sh` passes), and names the boxes each
+holder completes. EOF on the holder's stdin releases its boxes, so a dead
+controller cannot leave a box held. A host with no box runs the activation
+alone. The spawning layout runs one holder as `beebox`, the same protocol.
+
 ### Track F: cloud-init provisioning
 
 **What.** `deploy/hetzner/cloud-init.yaml`, a `#cloud-config` that creates

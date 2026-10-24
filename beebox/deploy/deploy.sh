@@ -1193,7 +1193,7 @@ set +a
 maintenance_rc=0
 trap_marker="$stage_dir/.activate-deploy.sh.services-restarted-by-trap"
 rm -f "$trap_marker"
-node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh" || maintenance_rc=$?
+node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 --hub-config /home/beebox/.config/beebox/hub.json "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh" || maintenance_rc=$?
 # A box whose convergence failed stays closed for recovery. Repair it now
 # instead of waiting for the hourly box-convergence pass: the same bounded
 # `--sweep --repair` and 25-minute limit that pass uses, run only for boxes that
