@@ -85,6 +85,21 @@ else
   echo "$ENV_FILE already exists, not overwriting"
 fi
 
+# ── Hub routing table ───────────────────────────────────────────────
+# The hub refuses to start without its config, and a fresh host has no box
+# yet (add-box.sh adds the first). An empty table lets the first deploy's
+# health check pass; `bbx engine hub add-box` edits this file in place.
+HUB_CONFIG="$BBX_HOME/.config/beebox/hub.json"
+if [[ ! -f "$HUB_CONFIG" ]]; then
+  echo "Creating an empty $HUB_CONFIG..."
+  install -d -o "$BBX_USER" -g "$BBX_USER" -m 0700 "$BBX_HOME/.config" "$BBX_HOME/.config/beebox"
+  printf '{ "boxes": {} }\n' > "$HUB_CONFIG"
+  chown "$BBX_USER:$BBX_USER" "$HUB_CONFIG"
+  chmod 0644 "$HUB_CONFIG"
+else
+  echo "$HUB_CONFIG already exists, not overwriting"
+fi
+
 # ── Claude Code transcript retention ────────────────────────────────
 # Claude Code prunes ~/.claude/projects/**/*.jsonl on a timer whose default is
 # 30 days. Transcripts are the raw material the nightly chat review mines into
