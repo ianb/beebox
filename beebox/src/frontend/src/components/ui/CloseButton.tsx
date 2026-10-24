@@ -22,6 +22,11 @@ export interface CloseButtonProps {
    * icon would be hard to see.
    */
   onDark?: boolean;
+  /**
+   * When true, the × takes the surrounding text colour, for a bar each system
+   * theme inks itself (the chat composer). Ignored with `onDark`.
+   */
+  ink?: boolean;
   disabled?: boolean;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
@@ -41,7 +46,7 @@ function XIcon({ size }: { size: CloseButtonSize }) {
   );
 }
 
-export function CloseButton({ onClick, id, label, size, variant, onDark, disabled, className }: CloseButtonProps) {
+export function CloseButton({ onClick, id, label, size, variant, onDark, ink, disabled, className }: CloseButtonProps) {
   label = label ?? "Close";
   if (variant === "bubble") {
     return (
@@ -68,7 +73,9 @@ export function CloseButton({ onClick, id, label, size, variant, onDark, disable
   disabled = disabled ?? false;
   const colorClass = onDark
     ? "bg-white/90 hover:bg-white text-warm-700 shadow"
-    : "bg-transparent hover:bg-warm-100 text-warm-600 hover:text-warm-700";
+    : ink === true
+      ? "bg-transparent text-current opacity-75 hover:opacity-100"
+      : "bg-transparent hover:bg-warm-100 text-warm-600 hover:text-warm-700";
   return (
     <button
       type="button"

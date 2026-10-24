@@ -64,6 +64,7 @@ export function MobileTextareaRow({
             id={hasControlIds ? "bbx-composer-dictation-cancel-mobile" : undefined}
             onClick={handleCancelTranscription}
             label="Cancel dictation (Esc)"
+            ink
             className="flex-shrink-0"
           />
           <button

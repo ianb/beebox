@@ -58,6 +58,8 @@
 [data-chrome-theme="phosphor"] #bbx-composer-dictation-edit::after{content:"[EDIT]";}
 [data-chrome-theme="phosphor"] #bbx-composer-dictation-cancel-mobile::after{content:"[CANCEL]";}
 [data-chrome-theme="phosphor"] #bbx-composer-dictation-edit-mobile::after{content:"[EDIT]";}
+/* The cancel is a round icon button elsewhere; here it sizes to its label. */
+[data-chrome-theme="phosphor"] :is(#bbx-composer-dictation-cancel,#bbx-composer-dictation-cancel-mobile){width:auto;height:auto;opacity:1;}
 [data-chrome-theme="phosphor"] #bbx-composer-mic::after{content:"[REC]";}
 [data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic,#bbx-composer-dictation-cancel,#bbx-composer-dictation-edit,#bbx-composer-dictation-cancel-mobile,#bbx-composer-dictation-edit-mobile):enabled{color:#a7ffb1;background:#092313;}
 [data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile):disabled{color:#3f7a4a;background:transparent;}

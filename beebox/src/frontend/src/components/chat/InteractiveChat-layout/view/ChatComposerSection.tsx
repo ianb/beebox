@@ -198,6 +198,8 @@ export function ChatComposerSection(props: ComposerSectionProps) {
                 onClick={() => { setTypingMode(false); setTypingLocked(false); }}
                 label="Close keyboard"
                 size="sm"
+                // A pill like its lock sibling: the pair floats over the theme's desk.
+                onDark
               />
             </div>
           ) : null}

@@ -121,6 +121,7 @@ function DesktopComposerRow({
             id={includeControlIds ? "bbx-composer-dictation-cancel" : undefined}
             onClick={handleCancelTranscription}
             label="Cancel dictation (Esc)"
+            ink
             className="flex-shrink-0"
           />
           <button
