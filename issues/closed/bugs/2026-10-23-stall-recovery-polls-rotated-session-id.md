@@ -1,12 +1,15 @@
 ---
 title: "Returning to a tab mid-turn can end a healthy resumed turn early"
-workstream: unattached
+workstream: dup-sweep-frontend
+resolution: implemented
 area: beebox
 labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-frontend — frontend pass of the functional-duplication sweep
 ---
+
+Closed by 1182b1d0e: stall recovery is folded into the stream watchdog in `processing-status-display.ts`, and `useChatStallRecovery` is deleted, so only one hook asks about the session.
 
 Two hooks ask the server whether a streaming chat turn has finished. They
 disagree on which session ID to ask about.
@@ -29,5 +32,5 @@ Not reproduced. The fix is probably to share the watchdog's frozen ID (and
 possibly its idle threshold) with the stall check. That changes recovery
 timing, so it was not done in the sweep.
 
-Related: [new-session-dead-socket-status-never-recovers](2026-08-09-new-session-dead-socket-status-never-recovers.md)
+Related: [new-session-dead-socket-status-never-recovers](../../bugs/2026-08-09-new-session-dead-socket-status-never-recovers.md)
 is the opposite failure (no recovery).

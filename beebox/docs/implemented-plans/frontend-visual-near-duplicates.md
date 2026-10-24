@@ -1,9 +1,9 @@
 ---
 title: "Merge the frontend's visual near-duplicates onto shared primitives"
-status: active
+status: implemented
 workstream: dup-sweep-frontend
 issues:
-  - ../../../issues/code-quality/2026-10-23-frontend-visual-near-duplicates.md
+  - ../../../issues/closed/code-quality/2026-10-23-frontend-visual-near-duplicates.md
   - ../../../issues/code-quality/2026-10-23-frontend-smaller-near-duplicates.md
 ---
 # Merge the frontend's visual near-duplicates onto shared primitives

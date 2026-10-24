@@ -62,14 +62,14 @@ header, useBoxNow on useNow, sessionStorage JSON, snippet, parentDir,
 skip-first-connect (onReconnect), push support, plain left click, dashboard
 time-ago, secret reveal, raw file and image URLs.
 
-Filed: [stall-recovery-polls-rotated-session-id](../bugs/2026-10-23-stall-recovery-polls-rotated-session-id.md),
-[chat-composer-enter-sends-during-ime-composition](../bugs/2026-10-23-chat-composer-enter-sends-during-ime-composition.md),
+Filed: [stall-recovery-polls-rotated-session-id](../closed/bugs/2026-10-23-stall-recovery-polls-rotated-session-id.md),
+[chat-composer-enter-sends-during-ime-composition](../closed/bugs/2026-10-23-chat-composer-enter-sends-during-ime-composition.md),
 [frontend-live-refresh-hooks-disagree](../closed/code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md),
 [frontend-time-and-duration-formatters](../closed/code-quality/2026-10-23-frontend-time-and-duration-formatters.md),
 [byte-size-formatters-disagree](../closed/code-quality/2026-10-23-byte-size-formatters-disagree.md),
 [card-display-name-helpers-disagree](../closed/code-quality/2026-10-23-card-display-name-helpers-disagree.md),
 [browser-storage-keys-and-reads-inconsistent](../closed/code-quality/2026-10-23-browser-storage-keys-and-reads-inconsistent.md),
-[frontend-visual-near-duplicates](2026-10-23-frontend-visual-near-duplicates.md),
+[frontend-visual-near-duplicates](../closed/code-quality/2026-10-23-frontend-visual-near-duplicates.md),
 [frontend-smaller-near-duplicates](2026-10-23-frontend-smaller-near-duplicates.md),
 and a note on [browse-list-live-refresh-not-firing](../bugs/2026-07-31-browse-list-live-refresh-not-firing.md).
 
