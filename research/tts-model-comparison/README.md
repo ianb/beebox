@@ -45,3 +45,17 @@ pnpm --dir site build
 Only Voxtral has an adapter. To render another model, add a `Provider` to `PROVIDERS` in `render.ts`: its model record, its directed variants per clip, and `synthesize()`. `render.ts` writes nothing unless every request succeeds. When the takes the page plays change, `publish.ts` lists the `.webm` files it no longer plays and stops; rerun it with `--prune` to delete them.
 
 Then read the new rows on the page, update the prose in `page-template.md` if a statement changed (the shipped default, channels, untried controls), add a row to the Runs table above, and commit. Landing on `main` and pushing publishes the page.
+
+## Choosing the next texts
+
+[candidates.ts](candidates.ts) renders draft texts on the reachable models and writes a listening page, so texts are chosen before a full run. Keys for ElevenLabs, Cartesia, and Deepgram come from the main checkout's `beebox/.env`.
+
+Round 1 (2026-10-24), boxholder's verdicts:
+
+- Keep sarcasm (the spreadsheet) and anger held in check.
+- Drop single German words, exhaustion (adds little over anger), and the Lucía name test (the accent does not change it).
+- Pacing becomes a list: one sentence, as Markdown bullets, and numbered. The box tries to keep Markdown out of speech, but the test should give it Markdown.
+- Code-switching on look-alike words ("son las once", "also gut") is good.
+- Dialog, plain and with a generic direction about pauses: good.
+- Word stress ("I didn't say she stole the money"): keep directed stress on "she" and on "money", plus one Markdown *italic* version.
+- The wistful twist was too subtle to hear. The worked explanation's wrong answer must be eight (the order-of-operations mistake), and its directed version showed nothing.
