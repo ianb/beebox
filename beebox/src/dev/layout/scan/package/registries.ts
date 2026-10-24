@@ -97,22 +97,54 @@ function propertyOf(object: ts.ObjectLiteralExpression, name: string): ts.Expres
   return null;
 }
 
-function importSourcesOf(imports: ImportEdge[]): Map<string, string | null> {
-  const sources = new Map<string, string | null>();
-  for (const edge of imports) {
-    for (const name of edge.names) if (!sources.has(name)) sources.set(name, edge.target);
-  }
-  return sources;
+interface ImportSources {
+  /** Resolved target of each name a static import binds. */
+  byName: Map<string, string | null>;
+  /** Resolved target of each dynamic `import("...")` specifier. */
+  bySpecifier: Map<string, string | null>;
 }
 
+function importSourcesOf(imports: ImportEdge[]): ImportSources {
+  const byName = new Map<string, string | null>();
+  const bySpecifier = new Map<string, string | null>();
+  for (const edge of imports) {
+    for (const name of edge.names) if (!byName.has(name)) byName.set(name, edge.target);
+    if (edge.dynamic && !bySpecifier.has(edge.specifier)) bySpecifier.set(edge.specifier, edge.target);
+  }
+  return { byName, bySpecifier };
+}
+
+/** The one string-literal `import("<specifier>")` inside a loader function, else null. */
+function loaderSpecifier(element: ts.Expression): string | null {
+  if (!ts.isArrowFunction(element)) return null;
+  const specifiers: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      const arg = node.arguments[0];
+      if (arg !== undefined && ts.isStringLiteral(arg)) specifiers.push(arg.text);
+    }
+    node.forEachChild(visit);
+  };
+  visit(element.body);
+  return specifiers.length === 1 ? (specifiers[0] ?? null) : null;
+}
+
+/**
+ * A member is an identifier bound to an import, or a loader (an arrow
+ * function whose body holds one `import("...")`). Either way its source is the
+ * resolved target of that import edge.
+ */
 function memberOf(params: {
   element: ts.Expression;
   sourceFile: ts.SourceFile;
-  importSources: Map<string, string | null>;
+  importSources: ImportSources;
   key: string | null;
 }): RegistryMember {
   const expression = params.element.getText(params.sourceFile);
-  const bound = ts.isIdentifier(params.element) ? params.importSources.get(params.element.text) : undefined;
+  const specifier = loaderSpecifier(params.element);
+  const bound = ts.isIdentifier(params.element)
+    ? params.importSources.byName.get(params.element.text)
+    : specifier === null ? undefined : params.importSources.bySpecifier.get(specifier);
   return { expression, source: bound === undefined ? null : bound, key: params.key };
 }
 
@@ -151,7 +183,7 @@ interface MembersResult {
 function readMembers(params: {
   expression: ts.Expression;
   sourceFile: ts.SourceFile;
-  importSources: Map<string, string | null>;
+  importSources: ImportSources;
 }): MembersResult | null {
   if (ts.isArrayLiteralExpression(params.expression)) {
     const members = params.expression.elements.map((element) =>
