@@ -14,7 +14,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { Document, parseDocument } from "yaml";
+import type { Document } from "yaml";
+import { createDocument, parseDocument } from "../lib/yaml-package.js";
 import { renderFrontmatterDocument, splitCardContent } from "../exports/cards.js";
 import { toRelativePath } from "../lib/paths/core.js";
 import { loadLocation, type StoredLocation } from "./location-store.js";
@@ -54,7 +55,7 @@ export function applyMark(
   // Mutate the YAML Document node tree, not a plain JS round-trip: this leaves
   // every untouched key — including comments, anchors, and the original scalar
   // spelling — exactly as written, only rewriting lat/lng/radius.
-  const doc: Document = split.frontmatterText.trim() === "" ? new Document({}) : parseDocument(split.frontmatterText);
+  const doc: Document = split.frontmatterText.trim() === "" ? createDocument({}) : parseDocument(split.frontmatterText);
 
   const nameValue = doc.get("name");
   const name = typeof nameValue === "string" ? nameValue : "(unnamed place)";

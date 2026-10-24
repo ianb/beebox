@@ -1,7 +1,7 @@
 /** Deterministic construction and merging for triage follow-up todos. */
 import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
-import { isMap, isSeq, parseDocument } from "yaml";
+import { isMap, isSeq, parseDocument } from "../../lib/yaml-package.js";
 import { parseCardText } from "../card-io.js";
 import { renderFrontmatterDocument, splitCardContent } from "../../exports/cards.js";
 import { createCardSchemaMap } from "../../schemas.js";

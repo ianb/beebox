@@ -271,6 +271,17 @@ fallback pattern in `read-yaml.ts`. On 2026-10-24: test1 clone, 400 inputs,
 `yaml` 24 ms, `parseYaml` 8 ms; all local boxes and this repo, 17,764 inputs,
 1,550 ms against 950 ms; no differences.
 
+A verb that only reads cards does not load `yaml` at all
+(`src/lib/yaml-package.ts` requires it on first use, about 12 ms). One card
+that takes the fallback loads it, so after a pattern change also check which
+verbs still load it: an `--import` hook that prints, at exit, whether any key
+of `createRequire(import.meta.url).cache` contains `/node_modules/yaml/`. An
+ESM load hook does not see it, because it is loaded with `require`. On
+2026-10-24 (test1 clone, CPU median of 15, load about 30): `status` 310 →
+300 ms, `validate --pre-commit` 380 → 370 ms, `validate` 820 → 740 ms with
+each card parsed once; `todos` unchanged, since one card it reads has a line
+that leaves a bracket open and takes the fallback.
+
 ## Checking against production
 
 The local setup is a model, so check it against production:

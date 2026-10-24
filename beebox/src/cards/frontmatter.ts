@@ -19,7 +19,8 @@
  * docs/implemented-plans/remove-cardworks-package.md.)
  */
 
-import { Document, isMap, parseDocument, stringify as stringifyYaml } from "yaml";
+import type { Document } from "yaml";
+import { createDocument, isMap, parseDocument, stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { parseYaml } from "../lib/read-yaml.js";
 import { isRecord } from "../shared/is-record.js";
 
@@ -151,7 +152,7 @@ export function renderFrontmatterBlock(fields: object, body?: string): string {
  * document keeps untouched keys' comments and quoting.
  */
 export function editableFrontmatterDocument(frontmatterText: string): Document | null {
-  const document = frontmatterText.trim() === "" ? new Document({}) : parseDocument(frontmatterText);
+  const document = frontmatterText.trim() === "" ? createDocument({}) : parseDocument(frontmatterText);
   return document.errors.length > 0 || !isMap(document.contents) ? null : document;
 }
 

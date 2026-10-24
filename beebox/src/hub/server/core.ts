@@ -95,6 +95,13 @@ export interface HubServerOptions {
    * `x-bbx-hub-auth: off` to its children.
    */
   openAccess?: boolean | undefined;
+  /**
+   * The built frontend to serve. Defaults to `src/frontend/dist`, a gitignored
+   * build artifact; a test points this at `test/fixtures/frontend-dist` so the
+   * box picker and static mounts do not depend on what the checkout has built
+   * (as `frontendPath` does for the box server, `server-types.ts`).
+   */
+  frontendPath?: string | undefined;
 }
 
 /** First path segment, e.g. `/test1/browse/x` -> `test1`. Mirrors the dev
@@ -259,7 +266,7 @@ async function loadHubPackages() {
  * `.on("upgrade")`) `cli/commands/hub.ts` and the tests already use.
  */
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
-  const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false } = options;
+  const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false, frontendPath } = options;
   const { Fastify, fastifyCookie, fastifyStatic, httpProxy } = await loadHubPackages();
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
@@ -295,7 +302,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
 
   // The box picker at "/" — serves the SPA's styled box-selection page (with a
   // minimal server-rendered fallback when the bundle isn't built).
-  const frontendDist = path.join(PACKAGE_ROOT, "src/frontend/dist");
+  const frontendDist = frontendPath ?? path.join(PACKAGE_ROOT, "src/frontend/dist");
   registerBoxPicker(app, { boxes, frontendDist });
 
   // The frontend's box switcher calls /api/boxes on whatever server it's

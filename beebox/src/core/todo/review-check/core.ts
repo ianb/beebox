@@ -21,7 +21,7 @@
  * recheck history is pruned of cards that are gone and todos whose words are.
  */
 
-import { stringify } from "yaml";
+import { stringify } from "../../../lib/yaml-package.js";
 import { TODO_REVIEW_INSTRUCTIONS } from "../../../schemas/todo-review-job.js";
 import { formatTodoLocation } from "../collect-types.js";
 import { loadSweepState, saveSweepState, withSweepLock, type ReviewItem } from "../review-state.js";

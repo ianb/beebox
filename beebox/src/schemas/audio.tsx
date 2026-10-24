@@ -12,7 +12,7 @@
  * `audio-001.attach/audio-001.timing.json`.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../exports/cards.js";
 import { MediaViaSchema, type MediaVia } from "../cards/media-via.js";
