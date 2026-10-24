@@ -1,13 +1,13 @@
 /** Shared admission for box writers and exclusive lifecycle operations. */
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
-import { readFile, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { acquireLock, inspectLock, LockHeldError, releaseLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "../file-lock.js";
 import { resolveGitDir } from "../git-lock.js";
 import { writeFileAtomic } from "../atomic-write.js";
-import { errnoCode } from "../../shared/error-guards.js";
+import { readJsonIfPresent } from "../json-state.js";
 import { invariant } from "../../shared/invariant.js";
 import { BoxMaintenanceError, type WorkHolder } from "../box-maintenance-error.js";
 import { clearMaintenanceStep, readMaintenanceStep, writeMaintenanceStep, type MaintenanceStep } from "./step.js";
@@ -94,8 +94,7 @@ function leasePath(permit: Permit): string {
   return permit.maintenance ? join(permit.directory, "owner.lock") : join(permit.directory, "work", `${permit.id}.lock`);
 }
 async function readPhase(directory: string): Promise<Phase | null> {
-  try { return phaseSchema.parse(JSON.parse(await readFile(join(directory, "phase.json"), "utf8"))); }
-  catch (error) { if (errnoCode(error) === "ENOENT") return null; throw error; }
+  return (await readJsonIfPresent(join(directory, "phase.json"), phaseSchema)) ?? null;
 }
 function ownerHolder(holder: LockHolder): WorkHolder {
   const reason = typeof holder.metadata.reason === "string" ? holder.metadata.reason : "maintenance";

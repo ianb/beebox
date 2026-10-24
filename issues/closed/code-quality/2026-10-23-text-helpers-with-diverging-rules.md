@@ -6,7 +6,10 @@ labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
+resolution: implemented
 ---
+
+Closed 2026-10-23 (worktree-dup-sweep-backend), plan `beebox/docs/implemented-plans/dup-sweep-backend-final.md`, commit 70c0e300a. Optional strings: `beebox/src/shared/optional-string.ts` has one function per rule (`stringOrNull`, `nonEmptyString`, `nonBlankString`), and each site kept its own rule. The courseware and recipe plugin views keep local guards because their headers restrict plugin imports. Slugs: `beebox/src/shared/ascii-slug.ts` `asciiSlug` replaces the five identical copies. These stay separate by decision, because their output differs and is stored or compared: `scripts/user-stories/stable-id.ts` (word-boundary cap; ids persisted in issue frontmatter), `cli/commands/remind/reminder.ts` `textSlug` (NFKD, word-boundary cap; names existing cards), `dev/prompt-report.ts` (GitHub anchor rule), and the three `sanitizeFilename` functions and `\w`-class stems (each keeps `_` or case; stored names depend on each).
 
 Status 2026-10-23 (worktree-dup-sweep-backend): HTML escape and truncation are done (commit eb26250f3), and so is SHA-256. Still open: slugs and string coercion.
 
@@ -30,7 +33,7 @@ differ in output:
   functions named `sanitizeFilename` give different results
   (`beebox/src/shared/filename.ts:44`, `beebox/src/core/bulk-upload/batch-format.ts:16`,
   `beebox/src/webapp/routes/chat/uploads.ts:45`). See also
-  [apostrophes lost in slugs](../bugs/2026-09-02-apostrophes-lost-in-slugs-and-titles.md).
+  [apostrophes lost in slugs](../../bugs/2026-09-02-apostrophes-lost-in-slugs-and-titles.md).
 - **HTML escape.** `escapeHtml` (`beebox/src/lib/escape-html.ts`) escapes five
   characters. Copies escape four or three: `workstreams-app/src/server/exhibits/app/pages.ts:27`
   (no `'`), `beebox/src/dev/csp-report/report.ts:221`, `beebox/src/shared/favicon.ts:22`,

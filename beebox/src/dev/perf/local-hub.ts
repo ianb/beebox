@@ -20,6 +20,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
+import { readJsonIfPresent } from "../../lib/json-state.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 const PERF_SESSION_SECRET = "beebox-perf-local-session-secret";
@@ -84,12 +85,7 @@ export const perfHubPaths = {
 };
 
 export async function readPerfHubConfig(): Promise<PerfHubConfig | undefined> {
-  try {
-    return perfHubConfigSchema.parse(JSON.parse(await fs.readFile(perfHubPaths.config(), "utf-8")));
-  } catch (e) {
-    if (e instanceof Error && "code" in e && e.code === "ENOENT") return undefined;
-    throw e;
-  }
+  return readJsonIfPresent(perfHubPaths.config(), perfHubConfigSchema);
 }
 
 export async function writePerfHubConfig(config: PerfHubConfig): Promise<void> {

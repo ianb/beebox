@@ -17,6 +17,7 @@ import { type RendererProps } from "../file-type-registry";
 import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/selection/quote-anchor";
 import { AttachedCommentary, type JumpToQuote } from "./AttachedCommentary";
 import { isRecord } from "@shared/is-record";
+import { nonEmptyString } from "@shared/optional-string";
 
 export function WebpageView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
@@ -84,6 +85,5 @@ export function WebpageView({ data, onNavigate }: RendererProps) {
 function capturedPage(sources: unknown): { href: string | null; retrieved: string | null } {
   const entry: unknown = Array.isArray(sources) ? sources[0] : undefined;
   if (!isRecord(entry)) return { href: null, retrieved: null };
-  const nonEmpty = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null);
-  return { href: nonEmpty(entry["href"]), retrieved: nonEmpty(entry["retrieved"]) };
+  return { href: nonEmptyString(entry["href"]), retrieved: nonEmptyString(entry["retrieved"]) };
 }

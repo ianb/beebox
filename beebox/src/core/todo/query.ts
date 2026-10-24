@@ -10,7 +10,7 @@
  */
 
 import { getBoxTime } from "../../lib/time.js";
-import { loadBoxTimezone } from "../box/config.js";
+import { boxTimeZoneOrHost } from "../box/config.js";
 import { runCollection } from "../collection/run/core.js";
 import { todoCollection, type DerivedTodo, type TodoParams, type TodoReduction } from "./collection.js";
 import type { CollectionQuery, CollectionResult, DeriveContext } from "../collection/types.js";
@@ -26,7 +26,7 @@ export type TodoQueryResult = CollectionResult<DerivedTodo, TodoReduction>;
 async function buildTodoDeriveContext(boxRoot: string, since: number | null): Promise<DeriveContext> {
   return {
     now: getBoxTime(boxRoot),
-    timeZone: (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timeZone: await boxTimeZoneOrHost(boxRoot),
     since,
   };
 }

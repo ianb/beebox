@@ -61,7 +61,7 @@ Custom properties track the source calendar:
 
 ## Querying
 
-Use \`bbx calendar today\`, \`bbx calendar upcoming\`, or \`bbx calendar <timespan>\` (e.g. \`bbx calendar 2w\`) to query events from the CLI. These read from the local .ics files — no API calls needed.`,
+Use \`bbx calendar\` (the next 7 days), \`bbx calendar today\`, or \`bbx calendar <timespan>\` (e.g. \`bbx calendar 2w\`; \`d\` days, \`w\` weeks, \`m\` months) to query events from the CLI. These read from the local .ics files — no API calls needed.`,
   },
 ];
 

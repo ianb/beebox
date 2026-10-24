@@ -54,10 +54,10 @@ import {
   type TodoResult,
 } from "./todo-view-card-logic";
 import type { RendererProps } from "../file-type-registry";
+import { stringOrNull } from "@shared/optional-string";
 
 function stringField(fm: Record<string, unknown>, key: string): string | undefined {
-  const value = fm[key];
-  return typeof value === "string" ? value : undefined;
+  return stringOrNull(fm[key]) ?? undefined;
 }
 
 function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChange }: {

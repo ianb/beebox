@@ -13,13 +13,11 @@
  * Pure functions, no I/O.
  */
 
+import { asciiSlug } from "../../../shared/ascii-slug.js";
+
 /** Kebab-case a string: drop parentheticals, lowercase, non-alnum runs → `-`. */
 function kebab(text: string): string {
-  return text
-    .replace(/\([^)]*\)/g, " ")
-    .toLowerCase()
-    .replace(/[^\da-z]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return asciiSlug(text.replace(/\([^)]*\)/g, " "));
 }
 
 /** Name for a static inventory entry, derived from its title. */

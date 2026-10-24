@@ -66,7 +66,7 @@ export function bbxCommandsConnectors(): string[] {
     "## bbx calendar",
     "",
     "```bash",
-    "bbx calendar [timespan]      # Upcoming events: today, 3d, 2w, 1m (default 7d)",
+    "bbx calendar [timespan]      # Upcoming events: today, 3d, 2w, 1m (m = months; default 7d)",
     "bbx calendar calendars       # Every calendar the grant sees, and which sync",
     "bbx calendar add <id>        # Start syncing one",
     "bbx calendar remove <id>     # Stop syncing one",

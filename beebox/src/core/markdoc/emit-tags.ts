@@ -20,6 +20,7 @@
  */
 
 import type { Node } from "@markdoc/markdoc";
+import { stringOrNull } from "../../shared/optional-string.js";
 
 /** Recursively emit a node's children — supplied by the core walker. */
 export type EmitChildren = (node: Node, out: string[]) => void;
@@ -52,7 +53,7 @@ export function displayFromRef(ref: string): string {
 
 /** Read a string attribute, defaulting to "". */
 function str(attrs: Record<string, unknown>, key: string): string {
-  return typeof attrs[key] === "string" ? attrs[key] : "";
+  return stringOrNull(attrs[key]) ?? "";
 }
 
 /** Collect a node's children into trimmed text. */

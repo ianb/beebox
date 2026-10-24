@@ -13,7 +13,8 @@ import { createSelectQuestionTemplate } from "../../../schemas/question.js";
 import { verifyEvidence, type Evidence } from "../evidence/core.js";
 import { compileInstructionSnapshot } from "../snapshot.js";
 import { movePathPreservingAnnexSymlink } from "../../card-files/move-phase2.js";
-import { getTriageTodoDate, planTriageTodoAnnotation } from "../todo.js";
+import { boxLocalDay } from "../../box/local-day.js";
+import { planTriageTodoAnnotation } from "../todo.js";
 import { decisionReceiptSchema, assertContained, receiptRef, receiptFingerprint, containedPath, readDecisionReceipt, saveDecisionReceipt, withDecisionReceiptLock, TriageReceiptError, type DecisionReceipt } from "./storage.js";
 import { sha256Hex } from "../../../lib/content-hash.js";
 import { pathExistsStrict } from "../../../lib/file-exists.js";
@@ -172,7 +173,7 @@ async function applyTodoAnnotation(boxRoot: string, receipt: DecisionReceipt): P
     await saveDecisionReceipt(boxRoot, receipt);
     return;
   }
-  const created = annotation?.created ?? await getTriageTodoDate(boxRoot);
+  const created = annotation?.created ?? await boxLocalDay(boxRoot);
   const plan = await planTriageTodoAnnotation({ file: target, boxRoot, destinationRef: selected.destinationRef, question: selected.question, created });
   if (!annotation) {
     annotation = { state: "pending", todoId: plan.todoId, beforeDigest: plan.beforeDigest, afterDigest: plan.afterDigest, created };
@@ -258,7 +259,7 @@ export async function applyDecision(opts: { boxRoot: string; decision: DecisionR
       const todo = selectedTodo(receipt);
       if (todo?.positive && !receipt.application.todoAnnotation) {
         const preflightFile = await pathExistsStrict(from, { followLinks: false }) ? from : to;
-        await planTriageTodoAnnotation({ file: preflightFile, boxRoot, destinationRef: todo.destinationRef, question: todo.question, created: await getTriageTodoDate(boxRoot) });
+        await planTriageTodoAnnotation({ file: preflightFile, boxRoot, destinationRef: todo.destinationRef, question: todo.question, created: await boxLocalDay(boxRoot) });
       }
       if (await pathExistsStrict(from, { followLinks: false })) await movePathPreservingAnnexSymlink(from, to);
       if (receipt.evidence.source.attachmentRef && (await pathExistsStrict(attachDirFor(from), { followLinks: false }) || await pathExistsStrict(attachDirFor(to), { followLinks: false }))) await movePathPreservingAnnexSymlink(attachDirFor(from), attachDirFor(to));

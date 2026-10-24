@@ -18,7 +18,8 @@ import { createSelectQuestionTemplate } from "../../../schemas/question.js";
 import type { TriageCategory } from "../instructions.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { withCardLock } from "../../../lib/card-lock.js";
-import { annotateTriageCard, getTriageTodoDate } from "../todo.js";
+import { boxLocalDay } from "../../box/local-day.js";
+import { annotateTriageCard } from "../todo.js";
 
 class TriageDestinationConflictError extends Error {
   readonly file: string;
@@ -214,7 +215,7 @@ export async function applyTriage(opts: ApplyOptions): Promise<TriageApplication
       const { todoQuestion, landmarkRef } = category;
       if (!landmarkRef) throw new TriageLegacyTodoError({ detail: `configured destination ${category.name} has no landmark ref` });
       await withCardLock(source, async () => {
-        await annotateTriageCard({ file: source, boxRoot: opts.boxRoot, destinationRef: landmarkRef, question: todoQuestion, created: await getTriageTodoDate(opts.boxRoot) });
+        await annotateTriageCard({ file: source, boxRoot: opts.boxRoot, destinationRef: landmarkRef, question: todoQuestion, created: await boxLocalDay(opts.boxRoot) });
         await moveItem(decision.file, { srcDir: stagedDir, dstDir });
       });
     } else {

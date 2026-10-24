@@ -81,7 +81,7 @@ bbx calendar
 
 | Command | What it does |
 |---|---|
-| `bbx calendar [timespan]` | Show events in a window. `timespan` is `today`, `Nd`, `Nw`, `Nm` (default `7d`). |
+| `bbx calendar [timespan]` | Show events in a window. `timespan` is `today`, `Nd` (days), `Nw` (weeks), or `Nm` (months of 30 days); the default is `7d`. There is no minutes unit. |
 | `bbx calendar calendars` | List available Google calendars; mark which are syncing; show event count from state. |
 | `bbx calendar add <id>` | Add a calendar to the sync set. |
 | `bbx calendar remove <id>` | Remove a calendar from the sync set. |

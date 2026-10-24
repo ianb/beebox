@@ -434,8 +434,8 @@ The everyday `bbx` commands beyond card operations (`bbx create` / `bbx mv` /
   each connector created, updated, or skipped and why. Whenever the boxholder
   asks "did it sync?", it is the only way to get that answer now rather than
   at the next scheduled cycle.
-- `bbx calendar [timespan]` — upcoming calendar events (default 7d; also
-  `today`, `3d`, `2w`, `1m`).
+- `bbx calendar [timespan]` — upcoming events (default 7d; also
+  `today`, `3d`, `2w`, `1m` months).
 - `bbx session` — read a past session's transcript (chats, wakeups, job runs).
 - `bbx chat self-note "<body>"` — from a scheduled run, leave the boxholder a
   record in the live chat session; chat knows not to answer it.
