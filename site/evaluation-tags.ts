@@ -49,10 +49,21 @@ export const evaluationTags = {
     selfClosing: true,
     // Site files only: the page makes no external requests. The build
     // rewrites the path against the base and fails if the file is missing.
-    attributes: { src: { type: String, required: true, matches: /^\/assets\/(?:[\w-]+\/)*[\w-]+(?:\.[\w-]+)*\.webm$/ } },
+    attributes: {
+      src: { type: String, required: true, matches: /^\/assets\/(?:[\w-]+\/)*[\w-]+(?:\.[\w-]+)*\.webm$/ },
+      // A take's reference: shown before the player and used as its id, so a link can name one take.
+      ref: { type: String, matches: /^[\dA-Za-z-]+$/ },
+    },
     transform(node: Node, config: Config): RenderableTreeNode {
-      const src = String(node.transformAttributes(config)["src"] ?? "");
-      return new Tag("audio", { controls: "", preload: "none", src }, []);
+      const attrs = node.transformAttributes(config);
+      const src = String(attrs["src"] ?? "");
+      const ref = attrs["ref"];
+      if (ref === undefined) return new Tag("audio", { controls: "", preload: "none", src }, []);
+      const id = String(ref);
+      return new Tag("span", { class: "take-player" }, [
+        new Tag("span", { class: "take-ref" }, [id]),
+        new Tag("audio", { id, controls: "", preload: "none", src, "aria-label": id }, []),
+      ]);
     },
   },
   sample: {
