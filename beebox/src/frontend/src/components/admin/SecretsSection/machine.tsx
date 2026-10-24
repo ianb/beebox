@@ -42,7 +42,7 @@ function lastUsedSummary(secret: MachineSecret): string {
   return `last used ${friendlyDate(latest[1])} by ${latest[0]}`;
 }
 
-function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () => void }) {
+function MachineRow({ secret, refresh, removable }: { secret: MachineSecret; refresh: () => void; removable: boolean }) {
   // Removal is machine-wide and unrecoverable — the value is gone and every
   // box's grant for it goes stale — so it takes two deliberate clicks.
   const [confirming, setConfirming] = useState(false);
@@ -70,7 +70,7 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
           {lastUsedSummary(secret)}
           {secret.declaredBy === undefined ? "" : ` · declared by ${secret.declaredBy}`}
         </Text>
-        <Row gap="sm" wrap align="center">
+        {removable ? <Row gap="sm" wrap align="center">
           {confirming ? (
             <>
               <Text size="sm" tone="danger">
@@ -89,7 +89,7 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
           ) : (
             <Button intent="destructive" onClick={() => setConfirming(true)}>Remove from machine</Button>
           )}
-        </Row>
+        </Row> : null}
         {remove.error ? <div role="alert"><ErrorText>{remove.error.message}</ErrorText></div> : null}
       </Stack>
     </Accordion>
@@ -99,16 +99,23 @@ function MachineRow({ secret, refresh }: { secret: MachineSecret; refresh: () =>
 export function MachineSecretsView({ machine, refresh }: { machine: MachineView; refresh: () => void }) {
   return (
     <Stack gap="md">
-      <Hint>
-        Every secret on this machine, and which boxes hold a grant. Removing one leaves any grant naming it
-        as a stale grant on that box, which its own view then reports.
-      </Hint>
+      {machine.scope === "box" ? (
+        <Hint>
+          On this host each box holds its own copy of the secret store, so this view is this box&apos;s copy.
+          Grants to other boxes, and removals, are made on the host and exported to each box.
+        </Hint>
+      ) : (
+        <Hint>
+          Every secret on this machine, and which boxes hold a grant. Removing one leaves any grant naming it
+          as a stale grant on that box, which its own view then reports.
+        </Hint>
+      )}
       {machine.secrets.length === 0 ? (
         <Hint>The machine store is empty.</Hint>
       ) : (
         <Stack gap="sm">
           {machine.secrets.map((secret) => (
-            <MachineRow key={secret.name} secret={secret} refresh={refresh} />
+            <MachineRow key={secret.name} secret={secret} refresh={refresh} removable={machine.scope === "machine"} />
           ))}
         </Stack>
       )}

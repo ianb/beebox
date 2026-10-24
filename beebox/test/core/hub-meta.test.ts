@@ -3,8 +3,10 @@
 // `.beebox/hub-meta.json` mirrors what the hub used to read from a box's own
 // files, with hashes in place of secrets (`src/core/hub-meta.ts`). Every writer
 // of an input rewrites it: the agent token, a mobile pairing, a scan token, a
-// revoke, `allowedEmails`, a chat schedule. Nothing in it is a secret, and the
-// hub reads it through a one-second cache that follows the file's mtime.
+// revoke, `allowedEmails`, a chat schedule, and the box's display identity
+// (republished by the box's own identity read, since an agent edits the
+// landmark card). Nothing in it is a secret, and the hub reads it through a
+// one-second cache that follows the file's mtime.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -17,6 +19,7 @@ import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { createScanToken, revokeScanToken } from "../../src/core/scan/tokens.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
 import { grantBoxAccess } from "../../src/webapp/box-config-write.js";
+import { readBoxIdentity } from "../../src/core/landmark/box-identity.js";
 
 const sha256 = (value: string): string => crypto.createHash("sha256").update(value).digest("hex");
 const fixedNow = () => new Date("2026-10-24T12:00:00.000Z");
@@ -31,6 +34,7 @@ void test("every input change rewrites the file, with hashes and no secret", asy
     allowedEmails: [],
     pendingSchedules: false,
     tokenHashes: { agent: null, mobile: [], scan: [] },
+    identity: { name: null, symbol: null },
     writtenAt: isoDate(),
   });
   // The hub reaches the file by path: the root and .beebox/ are traversable, not listable; the file is world-readable.
@@ -55,8 +59,15 @@ void test("every input change rewrites the file, with hashes and no secret", asy
     allowedEmails: ["friend@example.com"],
     pendingSchedules: false,
     tokenHashes: { agent: sha256(agentToken), mobile: [sha256(device?.deviceToken ?? "")], scan: [sha256(scan.token)] },
+    identity: { name: null, symbol: null },
     writtenAt: isoDate(),
   });
+
+  // The box names itself in its root landmark; the box's own identity read
+  // (every page load) notices and republishes, so the hub's picker follows.
+  await writeFile(box.path("_content/Box.landmark.card"), "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Kitchen\n---\n");
+  await readBoxIdentity({ boxRoot: box.root, slug: "kitchen" });
+  t.check(JSON.parse(await readFile(hubMetaPath(box.root), "utf8")).identity, { name: "Kitchen", symbol: { glyph: "🍳" } });
   // No plaintext credential reaches the file.
   t.check([agentToken, scan.token, device?.deviceToken ?? "missing"].filter((secret) => content.includes(secret)), []);
 
@@ -81,7 +92,7 @@ void test("the hub's read follows the file's mtime through a one-second cache, a
   t.teardown(() => box.cleanup());
   let clock = 1_000_000;
   const now = () => clock;
-  const published = { allowedEmails: [], pendingSchedules: false, tokenHashes: { agent: null, mobile: [], scan: [] }, writtenAt: isoDate() };
+  const published = { allowedEmails: [], pendingSchedules: false, tokenHashes: { agent: null, mobile: [], scan: [] }, identity: { name: null, symbol: null }, writtenAt: isoDate() };
 
   t.check(readHubMeta(box.root, now), published);
   await writeFile(hubMetaPath(box.root), "{ not json");

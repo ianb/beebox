@@ -4,16 +4,20 @@
  * On a unit host the hub runs as its own user, outside every box's group, and
  * reads nothing a box owns except this file: who may open the box
  * (`allowedEmails`, as `_config/box.json` states them), whether a chat
- * schedule is pending (so the hub wakes the box after a reboot), and the
+ * schedule is pending (so the hub wakes the box after a reboot), the
  * SHA-256 hashes of the box's agent, mobile-device and scan tokens, so the hub
- * can refuse a junk bearer without waking the box or reading a secret. No
- * secret is in it. The box owns it, so a box can only widen or narrow access
- * to itself, which it can already do in `_config/box.json`.
+ * can refuse a junk bearer without waking the box or reading a secret, and
+ * the box's display identity (its root landmark's name and symbol) for the
+ * hub's box picker (plan question 8). No secret is in it. The box owns it, so
+ * a box can only widen or narrow access to itself, which it can already do in
+ * `_config/box.json`, and can only misname itself.
  *
  * Written by the engine whenever an input changes: every writer of those
  * files calls `refreshHubMeta`, and `bbx engine serve`, `bbx engine init`
  * and the scheduler pass refresh it too, so a hand edit is caught within a
- * minute on a host that schedules. Modes: the file is 0644, and the box root
+ * minute on a host that schedules. The landmark card has no single writer (an
+ * agent edits it), so the box's own identity read (`landmark/box-identity.ts`,
+ * on every page load) republishes when the identity it finds has changed. Modes: the file is 0644, and the box root
  * and `.beebox/` are made 0751 (traversable, not listable) so the hub reaches
  * the file by path and nothing else under them. The rewrite is skipped when
  * nothing but the timestamp would change.
@@ -28,6 +32,8 @@ import { z } from "zod";
 import { writeFileAtomicSync } from "../lib/atomic-write.js";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import { isRecord } from "../shared/is-record.js";
+import { CardSymbol } from "../shared/card-symbol.js";
+import { readPublishedIdentity } from "./landmark/identity-sync.js";
 import { AGENT_TOKEN_RELATIVE_PATH, MOBILE_DEVICES_FILE, SCAN_TOKENS_FILE, type TokenFile } from "./token-files.js";
 
 export const HUB_META_RELATIVE_PATH = ".beebox/hub-meta.json";
@@ -51,6 +57,8 @@ const hubMetaSchema = z.strictObject({
     mobile: z.array(z.string()),
     scan: z.array(z.string()),
   }),
+  /** The root landmark's name (null: use the slug) and symbol, for the hub's picker. */
+  identity: z.strictObject({ name: z.string().nullable(), symbol: CardSymbol.nullable() }),
   writtenAt: z.string(),
 });
 
@@ -137,6 +145,7 @@ export function computeHubMeta(boxRoot: string, now: () => Date): HubMeta {
       mobile: readTokenHashes(boxRoot, MOBILE_DEVICES_FILE),
       scan: readTokenHashes(boxRoot, SCAN_TOKENS_FILE),
     },
+    identity: readPublishedIdentity(boxRoot),
     writtenAt: now().toISOString(),
   };
 }

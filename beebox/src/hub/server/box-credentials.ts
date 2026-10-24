@@ -10,18 +10,18 @@
  * (`cli/commands/hub.ts` flips it on a unit host). A hub that spawns its own
  * children keeps the direct reads these functions always did.
  *
- * The mobile COOKIE is the one credential the hub cannot verify from metadata:
- * it is signed with a per-box secret the box must not publish. On a unit
- * host any request carrying a `bbx_mobile` cookie, whatever its value, is
- * passed through to the box, which verifies it; this is the one credential
- * that can wake a box unverified (docs/plans/per-box-units.md, question 7).
+ * The mobile COOKIE is signed with a key the box does not publish. On a unit
+ * host that key is derived from the box's hub secret (`core/mobile/session.ts`,
+ * `deriveMobileSessionKey`), which the hub minted for that box, so the hub
+ * verifies a cookie the same way the box does and a junk cookie wakes nothing
+ * (docs/plans/per-box-units.md, question 7, decided 2026-10-24).
  */
 
 import type http from "node:http";
 import { bearerMatchesHashes, hubMetaReadsEnabled, readHubMeta } from "../../core/hub-meta.js";
 import { verifyAgentBearer } from "../../core/agent/token.js";
 import { verifyMobileRequest } from "../../core/mobile/request-auth.js";
-import { MOBILE_COOKIE_NAME } from "../../core/mobile/session.js";
+import { deriveMobileSessionKey, MOBILE_COOKIE_NAME, verifyMobileSessionWithKey } from "../../core/mobile/session.js";
 import { resolveScanRequestAuth } from "../../core/scan/tokens.js";
 import { parseCookieHeaderAll } from "../../lib/cookies.js";
 
@@ -34,13 +34,17 @@ function cookieHeader(headers: GateHeaders): string | undefined {
 
 /**
  * Does the request carry a credential of the box's mobile devices? On a unit
- * host a bearer is verified by hash; a request with a `bbx_mobile` cookie
- * passes to the box for verification (module doc). For the proxy gate only.
+ * host a bearer is verified by hash and a `bbx_mobile` cookie by the key
+ * derived from the box's hub secret (module doc). Every cookie value is tried,
+ * as the box does: a sibling box's script can plant one beside the real one.
+ * For the proxy gate only.
  */
-export async function mobileAuthed(boxRoot: string, headers: GateHeaders): Promise<boolean> {
-  if (!hubMetaReadsEnabled()) return verifyMobileRequest(boxRoot, headers);
-  if (await mobileBearerAuthed(boxRoot, headers)) return true;
-  return (parseCookieHeaderAll(cookieHeader(headers))[MOBILE_COOKIE_NAME] ?? []).length > 0;
+export async function mobileAuthed(box: { boxRoot: string; hubSecret: string }, headers: GateHeaders): Promise<boolean> {
+  if (!hubMetaReadsEnabled()) return verifyMobileRequest(box.boxRoot, headers);
+  if (await mobileBearerAuthed(box.boxRoot, headers)) return true;
+  if (box.hubSecret.length === 0) return false;
+  const key = deriveMobileSessionKey(box.hubSecret);
+  return (parseCookieHeaderAll(cookieHeader(headers))[MOBILE_COOKIE_NAME] ?? []).some((value) => verifyMobileSessionWithKey(key, value) !== null);
 }
 
 /**

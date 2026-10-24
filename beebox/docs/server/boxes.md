@@ -122,6 +122,12 @@ from its admin page.
 Without a granted key the affected connector emits a health warning but the box
 still runs; `bbx secrets status` names exactly which grant is missing.
 
+On a unit host each box reads its own copy of the store, exported from the
+master with `bbx engine secrets export-box <box>` (`add-box.sh` and the
+migration do this). Grant on the master as `beebox`, then re-export that box;
+a box's Admin page reaches only its own copy there and refuses a grant to
+another box with that instruction.
+
 Legacy `_config/connectors/*.secret.json` API-key files no longer work as a
 fallback; the machine secret store is the only source a connector reads a key
 from. The one exception is Google OAuth tokens, where a per-box

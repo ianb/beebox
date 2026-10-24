@@ -124,9 +124,9 @@ function parseSlug(reqPath: string): string | null {
  * `docs/mobile-contract.md`). Verifying here is affordable because the cookie
  * path is pure HMAC with no filesystem access.
  */
-async function hasMobileAuth(opts: { boxRoot: string | undefined; headers: http.IncomingHttpHeaders }): Promise<boolean> {
+async function hasMobileAuth(opts: { boxRoot: string | undefined; hubSecret: string; headers: http.IncomingHttpHeaders }): Promise<boolean> {
   if (opts.boxRoot === undefined) return false;
-  return boxMobileAuthed(opts.boxRoot, opts.headers);
+  return boxMobileAuthed({ boxRoot: opts.boxRoot, hubSecret: opts.hubSecret }, opts.headers);
 }
 
 async function listMobileAuthorizedBoxes(opts: { boxes: BoxSpec[]; headers: http.IncomingHttpHeaders }): Promise<BoxListing[]> {
@@ -462,7 +462,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
     const slug = parseSlug(reqPath);
     const mobileAuthed = slug !== null
-      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
+      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), hubSecret: secretFor(slug), headers: request.headers });
     // A scan-upload bearer authorizes ONLY `/<slug>/api/scan/…` (see
     // ./scan-gate.ts); on any other path this is false and the request falls
     // through to the wall below, which 401s it.
@@ -528,7 +528,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const reqPath = req.url ?? "/";
     const slug = parseSlug(reqPath);
     const mobileAuthed = slug !== null
-      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
+      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), hubSecret: secretFor(slug), headers: req.headers });
 
     stripHubHeaders(req.headers);
     const decision = decideHubAuth({ cookieHeader: req.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(req.headers), hubSecret: secretFor(slug), openAccess });

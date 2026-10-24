@@ -815,8 +815,8 @@ one row per shared file, with its probe chunk first.
 
 ## Open design questions
 
-One open; the rest were settled by the boxholder on 2026-10-24 and are
-kept here as the record.
+One open (6, settled by the probe); the rest were settled by the boxholder on
+2026-10-24 and are kept here as the record.
 
 1. **The hub's view of a box: one published file.** Decision: the engine
    publishes `.beebox/hub-meta.json` and the hub reads only that, holding
@@ -835,8 +835,15 @@ kept here as the record.
 5. **Package installs from a box.** Decision: no new privileged path. A
    box records the package; the next deploy installs it with `bbx host
    sync` as root.
-7. **The mobile session cookie at the hub** (open, found in implementation
-   2026-10-24). The hub verifies three mobile credentials today; two are
+7. **The mobile session cookie at the hub** (found in implementation
+   2026-10-24; decided 2026-10-24: option (b), the boxholder judged an
+   unverified wake too easy a denial of service). Built: on a unit host the
+   cookie key is HKDF-SHA256 over the box's hub secret
+   (`core/mobile/session.ts`, `deriveMobileSessionKey`); the box derives it
+   from its credential, the hub from the secret it minted for that box, and
+   no secret file is written there. A reboot mints a new secret and the device
+   re-mints its cookie from the bearer it holds. The spawning layout keeps the
+   per-box file. The original text: The hub verifies three mobile credentials today; two are
    bearers it can now check by hash from `hub-meta.json`. The third, the
    `bbx_mobile` cookie, is signed with a per-box secret
    (`.beebox/mobile-session.secret`) that the box must not publish, so a hub
@@ -856,15 +863,25 @@ kept here as the record.
    reach the hub's own `/api/boxes` listing, where a made-up cookie would
    list every slug; the listing now accepts only bearers the hub verified
    by hash, and a cookie-only mobile client lists from its box.
-8. **Box display identity in the hub listing** (open, found in review
-   2026-10-24). The hub's box picker and `/api/boxes` read each box's name
+8. **Box display identity in the hub listing** (found in review 2026-10-24;
+   decided 2026-10-24: option (b)). Built: `hub-meta.json` carries
+   `identity: { name, symbol }` from the root landmark
+   (`core/landmark/identity-sync.ts`); the hub's `describeBoxes` reads it on a
+   unit host; the box's own identity read republishes the file when the
+   identity changes, since a landmark card has no single writer. The
+   original text: The hub's box picker and `/api/boxes` read each box's name
    and symbol from `_content` (`core/landmark/box-identity.ts`), which a
    unit host makes private; the picker then shows bare slugs with no symbol.
    Options: (a) accept the bare listing; (b) add `identity: { name, symbol }`
    to `hub-meta.json` (not secret, two more fields, the engine already
    rewrites the file on every input change). Lean: (b), after the probe.
-9. **Fleet secret management from a box's Admin page** (open, found in
-   review round 2, 2026-10-24). The secrets tRPC router
+9. **Fleet secret management from a box's Admin page** (found in review
+   round 2, 2026-10-24; decided 2026-10-24: option (a), with the boxholder
+   noting cross-box admin may change shape later). Built: on a unit host the
+   secrets router refuses a slug other than the serving box and a machine-wide
+   removal, naming the operator's `grant`/`export-box` commands, and
+   `machineView.scope` is `"box"` so the Machine-wide tab says what it shows
+   and hides removal. The original text: The secrets tRPC router
    (`src/webapp/trpc/routers/secrets.ts`) takes a target box slug and writes
    the store the serving process reads. On a unit host that is the box's own
    store, so granting from box A's Admin page to box B reports success and
@@ -940,9 +957,8 @@ Track E's engine and scripts, Track F's files, and the host audit extension.
 Not yet run anywhere real: the Docker-free smoke (`box-units.smoke.sh`), the
 cloud-init, `provision.sh`, the migration rehearsal, and the probe; all need
 the throwaway VM (step 1 of the order below, which needs the boxholder's
-yes to create a server). Open for the boxholder: question 7 (the mobile
-cookie at the hub). Track B's probe rows in the subplan are still marked
-Probe.
+yes to create a server). Questions 7, 8 and 9 were decided and built the same
+day. Track B's probe rows in the subplan are still marked Probe.
 
 ## Rollout shape
 

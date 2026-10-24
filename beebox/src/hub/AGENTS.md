@@ -76,14 +76,16 @@ and `keepRecent` are config errors there: the engine exits itself when idle
 The hub runs as `beebox`, in no box group, and reads one file per box:
 `<box>/.beebox/hub-meta.json` (`core/hub-meta.ts`), behind the process-wide
 switch `enableHubMetaReads()`. It carries `allowedEmails`, a pending-schedule
-flag and SHA-256 hashes of the agent, mobile and scan tokens; `canAccessBox`
-and the gates in `server/box-credentials.ts` consult it, so a junk bearer is
-refused without waking a box. The one credential the hub cannot verify from
-metadata is the mobile session cookie (signed with a per-box secret): a
-cookie-shaped request is passed to the box, which verifies it. One hub secret
-per box per boot lives in `/run/beebox/<slug>.hub-secret` (`secrets.ts`), read
-by the unit as a systemd credential; `/etc/beebox/box.env` is rewritten at each
-start from the child env allowlist (`box-env-file.ts`).
+flag, SHA-256 hashes of the agent, mobile and scan tokens, and the box's
+display identity (name and symbol, for the picker); `canAccessBox`, the gates
+in `server/box-credentials.ts` and `describeBoxes` consult it, so a junk
+bearer is refused without waking a box. The mobile session cookie is verified
+too: on a unit host its key derives from the box's hub secret
+(`core/mobile/session.ts`, `deriveMobileSessionKey`), which the hub holds for
+that box. One hub secret per box per boot lives in
+`/run/beebox/<slug>.hub-secret` (`secrets.ts`), read by the unit as a systemd
+credential; `/etc/beebox/box.env` is rewritten at each start from the child
+env allowlist (`box-env-file.ts`).
 
 ## SIGHUP only clears the crash-loop latch
 

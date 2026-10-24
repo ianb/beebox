@@ -610,7 +610,10 @@ queue_remote command /usr/local/sbin/bbx-deploy-window down
 # From here until the restart, the EXIT trap starts the services on a failure.
 # Set before the stop: a stop that fails halfway has already taken one down.
 printf 'SERVICES_STOPPED=1\n' >> "$REMOTE_SCRIPT"
-queue_remote command systemctl stop beebox-hub beebox-scheduler
+# A freshly provisioned host has neither unit yet (this activation installs
+# them), so stop only the units that exist; a stop that fails is still fatal.
+# shellcheck disable=SC2016 # the remote bash expands these, by design
+queue_remote command bash -c 'for u in beebox-hub beebox-scheduler; do [ -e "/etc/systemd/system/$u.service" ] && systemctl stop "$u"; done; :'
 # On a unit host (docs/plans/per-box-units.md) every box is a socket unit. The
 # sockets stop too, so a request arriving during the window cannot wake a box
 # onto a half-copied tree; they start again after the units are reinstalled.
