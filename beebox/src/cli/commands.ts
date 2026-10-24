@@ -1,169 +1,102 @@
 /**
- * Every `Command` the CLI registers, addressable by the verb a person types.
+ * Every command the CLI registers, as a loader keyed by the verb a person types.
  *
- * Keyed at runtime off each command's own `name()` rather than by a hand-written
- * name → export mapping, which would be a second place for a verb's name to
- * live and a second place to get it wrong. `entry/surface-build.ts` fails
- * loudly when the surface table names a verb that is absent here, and
- * `test/cli/entry.surface.test.ts` fails when a verb here is absent from
- * the table — so a new command cannot be registered without being
- * classified.
+ * A key is the command module's file or directory name in camelCase, and every
+ * module is named for its verb, so a key is `verbRegistryKey(verb)`
+ * (`entry/select-verb.ts`): the verb's name lives in its file name and its
+ * `Command`, and `test/cli/entry.surface.test.ts` loads every member and checks
+ * the two agree. `entry/surface-build.ts` fails loudly when the surface table
+ * names a verb that is absent here, and the surface test fails when a verb
+ * here is absent from the table — so a new command cannot be registered
+ * without being classified.
+ *
+ * A `bbx` run loads only the verb it names (`entry/load-commands.ts`). The
+ * bundle is code-split, so the other command modules, and the npm packages
+ * only they import, are never read.
  */
 
 import type { Command } from "commander";
 import { defineRegistry } from "../shared/registry.js";
-import { maintenanceCommand } from "./commands/maintenance.js";
-import { initCommand } from "./commands/init.js";
-import { migrateCommand } from "./commands/migrate.js";
-import { docsCommand } from "./commands/docs.js";
-import { upgradeCommand } from "./commands/upgrade.js";
-import { statusCommand } from "./commands/status.js";
-import { pluginsCommand } from "./commands/plugins.js";
-import { templateCommand } from "./commands/template.js";
-import { validateCommand } from "./commands/validate/command.js";
-import { agentContextCommand } from "./commands/agent-context.js";
-import { createCommand } from "./commands/create.js";
-import { serveCommand } from "./commands/serve.js";
-import { hubCommand } from "./commands/hub.js";
-import { answerCommand } from "./commands/answer.js";
-import { dismissCommand } from "./commands/dismiss.js";
-import { wakeupCommand } from "./commands/wakeup/command.js";
-import { forceWakeupCommand } from "./commands/force-wakeup.js";
-import { rmCommand } from "./commands/rm.js";
-import { mvCommand } from "./commands/mv.js";
-import { relinkCommand } from "./commands/relink.js";
-import { migrateViewLinksCommand } from "./commands/migrate-view-links.js";
-import { migrateFieldsCommand } from "./commands/migrate-fields.js";
-import { procedureCommand } from "./commands/procedure.js";
-import { authCommand } from "./commands/auth.js";
-import { secretsCommand } from "./commands/secrets/command.js";
-import { googleAuthCommand } from "./commands/google-auth.js";
-import { calendarCommand } from "./commands/calendar.js";
-import { finishCommand } from "./commands/finish.js";
-import { reactorCommand } from "./commands/reactor.js";
-import { fieldTestCommand } from "./commands/field-test.js";
-import { tickCommand } from "./commands/tick.js";
-import { scheduledCommand } from "./commands/scheduled.js";
-import { healthCommand } from "./commands/health.js";
-import { hostCommand } from "./commands/host.js";
-import { doctorCommand } from "./commands/doctor.js";
-import { activityCommand } from "./commands/activity.js";
-import { trickCommand } from "./commands/trick.js";
-import { finalizeCommand } from "./commands/finalize.js";
-import { sessionCommand } from "./commands/session/command.js";
-import { schedulerCommand } from "./commands/scheduler/command.js";
-import { scanImportCommand } from "./commands/scan-import.js";
-import { pdfCommand } from "./commands/pdf.js";
-import { uploadCommand } from "./commands/upload.js";
-import { attachmentsCommand } from "./commands/attachments.js";
-import { lsCommand } from "./commands/ls.js";
-import { searchCommand } from "./commands/search.js";
-import { containsCommand } from "./commands/contains.js";
-import { pubCommand } from "./commands/pub/command.js";
-import { viewCommand } from "./commands/view/command.js";
-import { usageCommand } from "./commands/usage.js";
-import { driveCommand } from "./commands/drive/command.js";
-import { chatCommand } from "./commands/chat/command.js";
-import { refreshMapsCommand } from "./commands/refresh-maps.js";
-import { retroCommand } from "./commands/retro.js";
-import { boxesCommand } from "./commands/boxes.js";
-import { intakeCommand } from "./commands/intake.js";
-import { triageCommand } from "./commands/triage/command.js";
-import { handleCommand } from "./commands/handle.js";
-import { extfileCommand } from "./commands/extfile.js";
-import { locationCommand } from "./commands/location.js";
-import { tailscaleCommand } from "./commands/tailscale.js";
-import { todosCommand } from "./commands/todos.js";
-import { notifyCommand } from "./commands/notify/command.js";
-import { remindCommand } from "./commands/remind/command.js";
-import { changesCommand } from "./commands/changes.js";
-import { runSummaryCommand } from "./commands/run-summary.js";
-import { judgeCommand } from "./commands/judge/command.js";
-import { pairingCommand } from "./commands/pairing.js";
-import { todoReviewCommand } from "./commands/todo-review.js";
-import { queryCommand } from "./commands/query.js";
-import { connectorCommand } from "./commands/connector.js";
 
-/** Registration order is irrelevant — the surface table decides placement. */
-const ALL: readonly Command[] = [
-  maintenanceCommand,
-  initCommand,
-  migrateCommand,
-  docsCommand,
-  upgradeCommand,
-  statusCommand,
-  templateCommand,
-  validateCommand,
-  agentContextCommand,
-  createCommand,
-  serveCommand,
-  hubCommand,
-  answerCommand,
-  dismissCommand,
-  wakeupCommand,
-  forceWakeupCommand,
-  rmCommand,
-  mvCommand,
-  relinkCommand,
-  migrateViewLinksCommand,
-  migrateFieldsCommand,
-  procedureCommand,
-  authCommand,
-  secretsCommand,
-  googleAuthCommand,
-  calendarCommand,
-  finishCommand,
-  reactorCommand,
-  fieldTestCommand,
-  tickCommand,
-  scheduledCommand,
-  healthCommand,
-  hostCommand,
-  doctorCommand,
-  activityCommand,
-  trickCommand,
-  finalizeCommand,
-  sessionCommand,
-  schedulerCommand,
-  scanImportCommand,
-  pdfCommand,
-  uploadCommand,
-  attachmentsCommand,
-  lsCommand,
-  searchCommand,
-  containsCommand,
-  pubCommand,
-  viewCommand,
-  usageCommand,
-  driveCommand,
-  chatCommand,
-  refreshMapsCommand,
-  retroCommand,
-  boxesCommand,
-  intakeCommand,
-  triageCommand,
-  handleCommand,
-  extfileCommand,
-  locationCommand,
-  tailscaleCommand,
-  todosCommand,
-  notifyCommand,
-  remindCommand,
-  changesCommand,
-  runSummaryCommand,
-  judgeCommand,
-  pairingCommand,
-  todoReviewCommand,
-  queryCommand,
-  connectorCommand,
-  pluginsCommand,
-];
+/** Imports one command module and returns its command. */
+export type CommandLoader = () => Promise<Command>;
 
-/** Verb name (`bbx <name>`) to its command. */
-export const VERB_COMMANDS = defineRegistry<Command>({
+/** Registry key to the loader of that verb's command. */
+export const VERB_COMMANDS = defineRegistry<CommandLoader>({
   directory: "./commands",
   entry: "command",
-  key: (command) => command.name(),
   ordered: false,
-  members: ALL,
+  members: {
+    activity: async () => (await import("./commands/activity.js")).activityCommand,
+    agentContext: async () => (await import("./commands/agent-context.js")).agentContextCommand,
+    answer: async () => (await import("./commands/answer.js")).answerCommand,
+    attachments: async () => (await import("./commands/attachments.js")).attachmentsCommand,
+    auth: async () => (await import("./commands/auth.js")).authCommand,
+    boxes: async () => (await import("./commands/boxes.js")).boxesCommand,
+    calendar: async () => (await import("./commands/calendar.js")).calendarCommand,
+    changes: async () => (await import("./commands/changes.js")).changesCommand,
+    chat: async () => (await import("./commands/chat/command.js")).chatCommand,
+    connector: async () => (await import("./commands/connector.js")).connectorCommand,
+    contains: async () => (await import("./commands/contains.js")).containsCommand,
+    create: async () => (await import("./commands/create.js")).createCommand,
+    dismiss: async () => (await import("./commands/dismiss.js")).dismissCommand,
+    docs: async () => (await import("./commands/docs.js")).docsCommand,
+    doctor: async () => (await import("./commands/doctor.js")).doctorCommand,
+    drive: async () => (await import("./commands/drive/command.js")).driveCommand,
+    extfile: async () => (await import("./commands/extfile.js")).extfileCommand,
+    fieldTest: async () => (await import("./commands/field-test.js")).fieldTestCommand,
+    finalize: async () => (await import("./commands/finalize.js")).finalizeCommand,
+    finish: async () => (await import("./commands/finish.js")).finishCommand,
+    forceWakeup: async () => (await import("./commands/force-wakeup.js")).forceWakeupCommand,
+    googleAuth: async () => (await import("./commands/google-auth.js")).googleAuthCommand,
+    handle: async () => (await import("./commands/handle.js")).handleCommand,
+    health: async () => (await import("./commands/health.js")).healthCommand,
+    host: async () => (await import("./commands/host.js")).hostCommand,
+    hub: async () => (await import("./commands/hub.js")).hubCommand,
+    init: async () => (await import("./commands/init.js")).initCommand,
+    intake: async () => (await import("./commands/intake.js")).intakeCommand,
+    judge: async () => (await import("./commands/judge/command.js")).judgeCommand,
+    location: async () => (await import("./commands/location.js")).locationCommand,
+    ls: async () => (await import("./commands/ls.js")).lsCommand,
+    maintenance: async () => (await import("./commands/maintenance.js")).maintenanceCommand,
+    migrate: async () => (await import("./commands/migrate.js")).migrateCommand,
+    migrateFields: async () => (await import("./commands/migrate-fields.js")).migrateFieldsCommand,
+    migrateViewLinks: async () => (await import("./commands/migrate-view-links.js")).migrateViewLinksCommand,
+    mv: async () => (await import("./commands/mv.js")).mvCommand,
+    notify: async () => (await import("./commands/notify/command.js")).notifyCommand,
+    pairing: async () => (await import("./commands/pairing.js")).pairingCommand,
+    pdf: async () => (await import("./commands/pdf.js")).pdfCommand,
+    plugins: async () => (await import("./commands/plugins.js")).pluginsCommand,
+    procedure: async () => (await import("./commands/procedure.js")).procedureCommand,
+    pub: async () => (await import("./commands/pub/command.js")).pubCommand,
+    query: async () => (await import("./commands/query.js")).queryCommand,
+    reactor: async () => (await import("./commands/reactor.js")).reactorCommand,
+    refreshMaps: async () => (await import("./commands/refresh-maps.js")).refreshMapsCommand,
+    relink: async () => (await import("./commands/relink.js")).relinkCommand,
+    remind: async () => (await import("./commands/remind/command.js")).remindCommand,
+    retro: async () => (await import("./commands/retro.js")).retroCommand,
+    rm: async () => (await import("./commands/rm.js")).rmCommand,
+    runSummary: async () => (await import("./commands/run-summary.js")).runSummaryCommand,
+    scanImport: async () => (await import("./commands/scan-import.js")).scanImportCommand,
+    scheduled: async () => (await import("./commands/scheduled.js")).scheduledCommand,
+    scheduler: async () => (await import("./commands/scheduler/command.js")).schedulerCommand,
+    search: async () => (await import("./commands/search.js")).searchCommand,
+    secrets: async () => (await import("./commands/secrets/command.js")).secretsCommand,
+    serve: async () => (await import("./commands/serve.js")).serveCommand,
+    session: async () => (await import("./commands/session/command.js")).sessionCommand,
+    status: async () => (await import("./commands/status.js")).statusCommand,
+    tailscale: async () => (await import("./commands/tailscale.js")).tailscaleCommand,
+    template: async () => (await import("./commands/template.js")).templateCommand,
+    tick: async () => (await import("./commands/tick.js")).tickCommand,
+    todoReview: async () => (await import("./commands/todo-review.js")).todoReviewCommand,
+    todos: async () => (await import("./commands/todos.js")).todosCommand,
+    triage: async () => (await import("./commands/triage/command.js")).triageCommand,
+    trick: async () => (await import("./commands/trick.js")).trickCommand,
+    upgrade: async () => (await import("./commands/upgrade.js")).upgradeCommand,
+    upload: async () => (await import("./commands/upload.js")).uploadCommand,
+    usage: async () => (await import("./commands/usage.js")).usageCommand,
+    validate: async () => (await import("./commands/validate/command.js")).validateCommand,
+    view: async () => (await import("./commands/view/command.js")).viewCommand,
+    wakeup: async () => (await import("./commands/wakeup/command.js")).wakeupCommand,
+  },
 });

@@ -10,12 +10,15 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import type { Command } from "commander";
 import { buildProgram } from "../../src/cli/entry/program.js";
+import { loadCommands } from "../../src/cli/entry/load-commands.js";
+import { verbRegistryKey } from "../../src/cli/entry/select-verb.js";
 import { SURFACE } from "../../src/cli/entry/surface-data.js";
 import { VERB_COMMANDS } from "../../src/cli/commands.js";
 import { bbxCommandsScheduling } from "../../src/core/docs-gen/package-docs/bbx-commands-scheduling.js";
 import { bbxCommandsConnectors } from "../../src/core/docs-gen/package-docs/bbx-commands-connectors.js";
 
-const program = buildProgram();
+const loaded = await loadCommands({ kind: "all" });
+const program = buildProgram(loaded);
 const subNames = (command: Command | undefined) =>
   (command?.commands ?? []).map((c) => c.name()).filter((n) => n !== "help").toSorted();
 
@@ -24,7 +27,7 @@ const engineParent = program.commands.find((c) => c.name() === "engine");
 const engineVerbs = subNames(engineParent);
 
 const classified = new Set(SURFACE.map((e) => e.name));
-const registered = new Set(VERB_COMMANDS.keys());
+const registered = new Set(loaded.byVerb.keys());
 const unclassified = [...registered].filter((name) => !classified.has(name));
 const unregistered = [...classified].filter((name) => !registered.has(name));
 
@@ -66,6 +69,15 @@ void test("buildSurface registers only what the table names, so an unclassified 
   t.check(unclassified, []);
 
   t.check(unregistered, []);
+});
+
+// ## Each loader is keyed by its verb
+//
+// The registry keys loaders by module file name (layout rule 4), and a run
+// finds a verb's loader by `verbRegistryKey(verb)`. So every module must be
+// named for the verb its command declares.
+void test("Every registry key is its loaded command's verb in camelCase", async (t) => {
+  t.check([...loaded.byVerb.keys()].map(verbRegistryKey).toSorted(), VERB_COMMANDS.keys().toSorted());
 });
 
 // ## The two surfaces partition the verbs
