@@ -1,11 +1,15 @@
 ---
 title: "server.router.test.ts fails in a checkout that has built the frontend"
-workstream: unattached
+workstream: perf-easy-wins
 area: beebox
 labels: [tests]
 filed-by: agent
 discovered-in: worktree-perf-easy-wins — test:changed after a bundle analysis build
+resolution: implemented
 ---
+
+Closed: `createHubServer` takes `frontendPath` (default `src/frontend/dist`), and `server.router.test.ts` passes the tracked `test/fixtures/frontend-dist`, as `makeTestServer` does for the box server. The file passes 40/40 with and without a local build (2026-10-24).
+
 
 `test/hub/server.router.test.ts`, subtest "An unconfigured slug 404s without
 touching any endpoint", expects the hub's own box list page at `/`. When
