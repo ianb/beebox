@@ -78,6 +78,9 @@ public enum EngineUpdate {
         /// automatic check leaves it alone; a check the person asked for
         /// tries it again.
         case knownFailure(digest: String)
+        /// The channel names an engine older than the one in use. Box
+        /// migrations are one-way, so the app never moves backwards.
+        case downgrade(to: String)
     }
 
     /// - Parameters:
@@ -108,6 +111,9 @@ public enum EngineUpdate {
         if let app = EngineVersion(appVersion), app < minApp { return .needsNewerApp(min: minApp.description) }
         if let minEngine = EngineVersion(minEngineVersion), remoteVersion < minEngine {
             return .imageTooOld(min: minEngine.description)
+        }
+        if let currentVersion = current?.version.flatMap(EngineVersion.init), remoteVersion < currentVersion {
+            return .downgrade(to: remoteVersion.description)
         }
         if let failed, failed == remote.digest, !byRequest { return .knownFailure(digest: failed) }
         return .update(to: remote)
@@ -146,16 +152,16 @@ public struct UpdateRecord: Codable, Equatable, Sendable {
 
     /// - Parameters:
     ///   - currentDigest: the digest `beebox:current` names now, or nil when absent.
-    ///   - previousExists: whether `beebox:previous` exists.
+    ///   - previousDigest: the digest `beebox:previous` names now, or nil when absent.
     ///   - boxHead: the box's HEAD now.
     ///   - boxClean: whether `git status --porcelain` is empty now.
-    public func recovery(currentDigest: String?, previousExists: Bool, boxHead: String, boxClean: Bool) -> Recovery {
+    public func recovery(currentDigest: String?, previousDigest storedPrevious: String?, boxHead: String, boxClean: Bool) -> Recovery {
         if currentDigest == previousDigest { return .discardRecord }
         guard currentDigest == candidateDigest else {
             return .stop(reason: "the image store names \(currentDigest ?? "no image") as current; the update record expected \(previousDigest) or \(candidateDigest)")
         }
-        guard previousExists else {
-            return .stop(reason: "the previous image \(previousDigest) is no longer in the store")
+        guard storedPrevious == previousDigest else {
+            return .stop(reason: "the previous image is \(storedPrevious ?? "missing"); the update record expected \(previousDigest)")
         }
         return .rollBack(resetBox: boxHead != self.boxHead || !boxClean)
     }

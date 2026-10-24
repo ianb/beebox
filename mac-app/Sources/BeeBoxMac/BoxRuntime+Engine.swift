@@ -79,15 +79,14 @@ extension BoxRuntime {
         }
         do {
             phase = .working("The new engine did not start; going back…")
+            // The box first, on the image that is about to come back: a reset
+            // that fails leaves the record and the references as they are,
+            // and the next start settles them.
+            let previous = try await manager.imageStore.get(reference: ImageSource.previous)
+            try await resetBoxIfMoved(&manager, record: record, image: previous, log: log)
             try await source.rollBack()
-            let restored = try await manager.imageStore.get(reference: ImageSource.current)
-            let state = try await boxGitState(&manager, image: restored, log: log)
-            if state.head != record.boxHead || !state.clean {
-                appLog("resetting the box to \(record.boxHead) (HEAD \(state.head), clean \(state.clean))")
-                try await runOnce(&manager, image: restored, log: log, arguments: ["git", "-C", "/data/box", "reset", "--hard", record.boxHead])
-            }
             try removeUpdateRecord()
-            let version = await source.info(restored).version ?? "the previous engine"
+            let version = await source.info(previous).version ?? "the previous engine"
             engine.note = "The update to engine \(engine.version ?? "?") failed; back on \(version). See \(Paths.appLog.path)"
             engine.version = version
             self.manager = manager
@@ -105,24 +104,26 @@ extension BoxRuntime {
     func recoverUnfinishedUpdate(_ manager: inout ContainerManager, source: ImageSource, log: LogWriter) async throws {
         guard let record = readUpdateRecord() else { return }
         let currentDigest = await source.currentDigest()
-        let previousExists = await source.previousExists()
+        let previousDigest = await source.previousDigest()
+        // The box's state is read on the previous image, the one known to
+        // start here; the candidate may be the reason the update failed.
         var state = (head: record.boxHead, clean: true)
-        if currentDigest == record.candidateDigest, previousExists, boxIsInitialized(),
-           let current = try? await manager.imageStore.get(reference: ImageSource.current) {
-            state = try await boxGitState(&manager, image: current, log: log)
+        if currentDigest == record.candidateDigest, previousDigest == record.previousDigest, boxIsInitialized(),
+           let previous = try? await manager.imageStore.get(reference: ImageSource.previous) {
+            state = try await boxGitState(&manager, image: previous, log: log)
         }
-        switch record.recovery(currentDigest: currentDigest, previousExists: previousExists, boxHead: state.head, boxClean: state.clean) {
+        switch record.recovery(currentDigest: currentDigest, previousDigest: previousDigest, boxHead: state.head, boxClean: state.clean) {
         case .discardRecord:
             appLog("an earlier update stopped before changing images; forgetting its record")
             try removeUpdateRecord()
         case .rollBack(let resetBox):
             appLog("an earlier update to \(record.candidateDigest.prefix(19)) never finished; rolling back (reset \(resetBox))")
             phase = .working("Finishing an interrupted engine update…")
-            try await source.rollBack()
             if resetBox {
-                let restored = try await manager.imageStore.get(reference: ImageSource.current)
-                try await runOnce(&manager, image: restored, log: log, arguments: ["git", "-C", "/data/box", "reset", "--hard", record.boxHead])
+                let previous = try await manager.imageStore.get(reference: ImageSource.previous)
+                try await runOnce(&manager, image: previous, log: log, arguments: ["git", "-C", "/data/box", "reset", "--hard", record.boxHead])
             }
+            try await source.rollBack()
             try removeUpdateRecord()
             engine.note = "An interrupted engine update was undone. See \(Paths.appLog.path)"
         case .stop(let reason):
@@ -140,6 +141,17 @@ extension BoxRuntime {
             status.note = ImageSource.explain(decision)
         }
         engine = status
+    }
+
+    /// Reset the box to the record's commit when HEAD moved or the tree is
+    /// dirty (the sweep committed, or a failed migration left files). Runs on
+    /// `image`, which must be one that starts.
+    private func resetBoxIfMoved(_ manager: inout ContainerManager, record: UpdateRecord, image: Containerization.Image, log: LogWriter) async throws {
+        guard boxIsInitialized() else { return }
+        let state = try await boxGitState(&manager, image: image, log: log)
+        guard state.head != record.boxHead || !state.clean else { return }
+        appLog("resetting the box to \(record.boxHead) (HEAD \(state.head), clean \(state.clean))")
+        try await runOnce(&manager, image: image, log: log, arguments: ["git", "-C", "/data/box", "reset", "--hard", record.boxHead])
     }
 
     // MARK: Box git state, read inside the VM

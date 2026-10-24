@@ -191,6 +191,9 @@ final class BoxRuntime: ObservableObject {
                 network: try VmnetNetwork()
             )
             try BundleConfig.vminit.write(to: Paths.initfsSource, atomically: true, encoding: .utf8)
+            // Held from here so a failure at any later step can roll an
+            // update back (BoxRuntime+Engine) and stop() can clean up.
+            self.manager = manager
             let source = ImageSource(store: manager.imageStore) { [weak self] line in
                 await MainActor.run { self?.phase = .working(line) }
             }
@@ -200,7 +203,7 @@ final class BoxRuntime: ObservableObject {
             // An update left unfinished by an earlier start is settled before
             // anything else runs on the box.
             try await recoverUnfinishedUpdate(&manager, source: source, log: log)
-            let selection = try await source.select(byRequest: checkByRequest)
+            let selection = try await source.select(byRequest: checkByRequest, offline: afterRollback)
             try proceed()
             var image = selection.image
             if let candidate = selection.candidate {

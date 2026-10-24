@@ -1,8 +1,8 @@
 name: beebox image
 
 # Publishes the beebox container image to GitHub's registry as
-# ghcr.io/<owner>/beebox. A version tag (v1.2.3) publishes :1.2.3 and
-# :latest. A manual run publishes the chosen channel tag (:latest by default,
+# ghcr.io/<owner>/beebox. A version tag (v1.2.3) publishes :1.2.3 only.
+# A manual run publishes the chosen channel tag (:latest by default,
 # :edge for a trial) from the chosen commit, stamped as a pre-release of the
 # next patch version (1.2.4-main.20261024.abc1234 after tag v1.2.3); the
 # full-suite schedule dispatches one such run a day after a green run on
@@ -140,7 +140,9 @@ jobs:
         run: |
           version="${{ needs.version.outputs.version }}"
           if [[ "$GITHUB_REF" == refs/tags/v* && -z "${{ inputs.ref }}" ]]; then
-            tags=(-t "$IMAGE:$version" -t "$IMAGE:latest")
+            # :latest is reserved for the gated path (a green main run), so a
+            # slow tag build can never overwrite a newer daily image.
+            tags=(-t "$IMAGE:$version")
           else
             tags=(-t "$IMAGE:${{ inputs.channel || 'latest' }}")
           fi

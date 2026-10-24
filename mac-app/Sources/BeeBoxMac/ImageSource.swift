@@ -40,9 +40,12 @@ struct ImageSource {
         let checkFailure: String?
     }
 
-    /// - Parameter byRequest: the person pressed the check button; a known
-    ///   failed digest is tried again.
-    func select(byRequest: Bool) async throws -> Selection {
+    /// - Parameters:
+    ///   - byRequest: the person pressed the check button; a known failed
+    ///     digest is tried again.
+    ///   - offline: start on `beebox:current` without asking the channel (the
+    ///     restart after a rollback must not begin another update).
+    func select(byRequest: Bool, offline: Bool = false) async throws -> Selection {
         if let layout = Paths.imageLayout {
             let image = try await fromLayout(layout)
             return Selection(image: image, candidate: nil, decision: nil, checkFailure: nil)
@@ -53,6 +56,10 @@ struct ImageSource {
         }
         try await adoptTagPinnedImage()
         let current = try? await store.get(reference: Self.current)
+        if offline {
+            guard let current else { throw RuntimeError("no Bee Box image is downloaded") }
+            return Selection(image: current, candidate: nil, decision: nil, checkFailure: nil)
+        }
         let remote: EngineImageInfo
         do {
             remote = try await remoteInfo()
@@ -83,7 +90,22 @@ struct ImageSource {
             }
             return Selection(image: current, candidate: nil, decision: decision, checkFailure: nil)
         }
-        let pulled = try await pull(digest: target.digest, version: target.version)
+        let pulled: Containerization.Image
+        do {
+            pulled = try await pull(digest: target.digest, version: target.version)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // A download that fails (network, disk) must not stop a box that
+            // has an engine; the next start tries again.
+            guard let current else { throw error }
+            appLog("engine download failed; staying on \(Self.describe(current)): \(error)")
+            return Selection(image: current, candidate: nil, decision: decision, checkFailure: String(describing: error))
+        }
+        guard pulled.digest == target.digest else {
+            try? await store.delete(reference: pulled.reference, performCleanup: true)
+            throw RuntimeError("the registry served \(pulled.digest) for \(target.digest); not using it")
+        }
         guard let current else {
             // First download: nothing to roll back to, so it is current at once.
             let image = try await store.tag(existing: pulled.reference, new: Self.current)
@@ -106,8 +128,15 @@ struct ImageSource {
         appLog("engine promoted \(Self.describe(candidate))")
     }
 
+    /// The digest `beebox:previous` names, or nil when there is none.
+    func previousDigest() async -> String? {
+        (try? await store.get(reference: Self.previous))?.digest
+    }
+
     /// The current image failed to start: keep it as `beebox:failed` and put
-    /// the previous one back.
+    /// the previous one back. Any reset of the box happens before this, on
+    /// the previous image, so a failed reset leaves the record and the
+    /// references for the next start to settle.
     func rollBack() async throws {
         try? await store.delete(reference: Self.failed)
         _ = try await store.tag(existing: Self.current, new: Self.failed)
@@ -119,10 +148,6 @@ struct ImageSource {
     /// The digest `beebox:current` names, or nil when there is none.
     func currentDigest() async -> String? {
         (try? await store.get(reference: Self.current))?.digest
-    }
-
-    func previousExists() async -> Bool {
-        (try? await store.get(reference: Self.previous)) != nil
     }
 
     /// The labels of a stored image, read from its config.
@@ -230,6 +255,7 @@ struct ImageSource {
         case .imageTooOld(let min): "this Bee Box Desktop needs engine \(min) or newer; the channel offers an older one"
         case .unlabeled: "the channel's image carries no version labels, so it cannot be checked"
         case .knownFailure: "the channel still offers the engine that failed to start here; Check for Engine Updates tries it again"
+        case .downgrade(let to): "the channel offers engine \(to), older than the one in use; the box never moves back"
         }
     }
 

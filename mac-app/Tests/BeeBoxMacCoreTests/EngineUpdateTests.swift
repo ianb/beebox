@@ -74,6 +74,14 @@ final class EngineUpdateTests: XCTestCase {
         XCTAssertEqual(decide(current: current, remote: newer, minEngineVersion: "0.1.8"), .imageTooOld(min: "0.1.8"))
     }
 
+    func testAnOlderChannelImageIsNeverApplied() {
+        let older = EngineImageInfo(digest: "sha256:eee", version: "0.1.5", minAppVersion: "0.1.5")
+        XCTAssertEqual(decide(current: current, remote: older, minEngineVersion: "0.1.0"), .downgrade(to: "0.1.5"))
+        XCTAssertEqual(decide(current: current, remote: older, minEngineVersion: "0.1.0", byRequest: true), .downgrade(to: "0.1.5"), "not even by request")
+        let dailyAfterTag = EngineImageInfo(digest: "sha256:fff", version: "0.1.7-main.20261025.abc1234", minAppVersion: "0.1.6")
+        XCTAssertEqual(decide(current: current, remote: dailyAfterTag), .update(to: dailyAfterTag), "a daily build after the tag is newer")
+    }
+
     func testAFailedDigestIsRetriedOnlyByRequest() {
         XCTAssertEqual(decide(current: current, failed: newer.digest, remote: newer), .knownFailure(digest: newer.digest))
         XCTAssertEqual(decide(current: current, failed: newer.digest, remote: newer, byRequest: true), .update(to: newer))
@@ -85,21 +93,24 @@ final class EngineUpdateTests: XCTestCase {
     private let record = UpdateRecord(previousDigest: "sha256:aaa", candidateDigest: "sha256:bbb", boxHead: "head0", startedAt: Date())
 
     func testQuitBeforeRetagDiscardsTheRecord() {
-        XCTAssertEqual(record.recovery(currentDigest: "sha256:aaa", previousExists: false, boxHead: "head0", boxClean: true), .discardRecord)
+        XCTAssertEqual(record.recovery(currentDigest: "sha256:aaa", previousDigest: nil, boxHead: "head0", boxClean: true), .discardRecord)
     }
 
     func testQuitDuringTheStartRollsBack() {
-        XCTAssertEqual(record.recovery(currentDigest: "sha256:bbb", previousExists: true, boxHead: "head0", boxClean: true), .rollBack(resetBox: false))
-        XCTAssertEqual(record.recovery(currentDigest: "sha256:bbb", previousExists: true, boxHead: "head1", boxClean: true), .rollBack(resetBox: true), "the sweep committed")
-        XCTAssertEqual(record.recovery(currentDigest: "sha256:bbb", previousExists: true, boxHead: "head0", boxClean: false), .rollBack(resetBox: true), "a failed migration left files")
+        XCTAssertEqual(record.recovery(currentDigest: "sha256:bbb", previousDigest: "sha256:aaa", boxHead: "head0", boxClean: true), .rollBack(resetBox: false))
+        XCTAssertEqual(record.recovery(currentDigest: "sha256:bbb", previousDigest: "sha256:aaa", boxHead: "head1", boxClean: true), .rollBack(resetBox: true), "the sweep committed")
+        XCTAssertEqual(record.recovery(currentDigest: "sha256:bbb", previousDigest: "sha256:aaa", boxHead: "head0", boxClean: false), .rollBack(resetBox: true), "a failed migration left files")
     }
 
     func testAStoreThatDisagreesWithTheRecordStops() {
-        guard case .stop = record.recovery(currentDigest: "sha256:zzz", previousExists: true, boxHead: "head0", boxClean: true) else {
-            return XCTFail("a third digest must stop")
+        guard case .stop = record.recovery(currentDigest: "sha256:zzz", previousDigest: "sha256:aaa", boxHead: "head0", boxClean: true) else {
+            return XCTFail("a third digest as current must stop")
         }
-        guard case .stop = record.recovery(currentDigest: "sha256:bbb", previousExists: false, boxHead: "head0", boxClean: true) else {
+        guard case .stop = record.recovery(currentDigest: "sha256:bbb", previousDigest: nil, boxHead: "head0", boxClean: true) else {
             return XCTFail("a missing previous image must stop")
+        }
+        guard case .stop = record.recovery(currentDigest: "sha256:bbb", previousDigest: "sha256:zzz", boxHead: "head0", boxClean: true) else {
+            return XCTFail("a previous image that is not the recorded one must stop")
         }
     }
 

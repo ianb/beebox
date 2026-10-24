@@ -39,7 +39,7 @@ failure message in the menu.
 |---|---|
 | Linux kernel | Bundled: Kata Containers 3.32.0's `vmlinux-6.18.35-197-debug` (the kernel Apple's `container` recommends), fetched and SHA-256-checked by `scripts/fetch-kernel.sh` |
 | Init filesystem | Pulled on first launch: `ghcr.io/apple/containerization/vminit:0.48.0` |
-| beebox image | Follows the channel `ghcr.io/ianb/beebox:latest` (`BEEBOX_IMAGE_CHANNEL` picks another tag), published by `.github/workflows/image.yml` once a day from a green `main` run and on `v*` tags. Each box start asks the registry which digest the tag names, reads the image's labels, and downloads it by digest when it is newer and compatible. See "Engine updates" below |
+| beebox image | Follows the channel `ghcr.io/ianb/beebox:latest` (`BEEBOX_IMAGE_CHANNEL` picks another tag), published by `.github/workflows/image.yml` once a day from a green `main` run (a `v*` tag publishes its own version tag only). Each box start asks the registry which digest the tag names, reads the image's labels, and downloads it by digest when it is newer and compatible. See "Engine updates" below |
 | Updates | Sparkle 2.10.0 (`scripts/fetch-sparkle.sh`), feed at the latest GitHub Release's `appcast.xml`, for the Swift shell only. Release builds carry the signing key; `*-dev` builds do not and never update themselves |
 
 ## Engine updates
@@ -226,8 +226,8 @@ Each app release (the Swift shell; the engine needs none):
 Engine releases: the full-suite schedule dispatches the image workflow once
 a day after a green run on `main`, which publishes `:latest` stamped as a
 pre-release of the next patch version (`0.1.7-main.<date>.<sha>` after
-`v0.1.6`). A `v*` tag still publishes `:X.Y.Z` and
-`:latest`. A manual run of the workflow with channel `edge` publishes a
+`v0.1.6`). A `v*` tag publishes `:X.Y.Z` only; `:latest` moves only on the
+gated path. A manual run of the workflow with channel `edge` publishes a
 trial image that `BEEBOX_IMAGE_CHANNEL=edge` follows.
 
 Apple's first notarizations for a new team can take hours; later ones take

@@ -330,7 +330,10 @@ and pulls by digest.
   EngineImageInfo, appVersion: String, minEngineVersion: String, byRequest:
   Bool) -> Decision` with cases `.upToDate`, `.update(to:)`,
   `.needsNewerApp(min:)`, `.imageTooOld(min:)`, `.unlabeled`,
-  `.knownFailure(digest:)`. `failed` is the digest of `beebox:failed`; an
+  `.knownFailure(digest:)`, `.downgrade(to:)`. A first download (no current
+  image) takes what the channel names even without labels, as the
+  tag-pinned app did; the check protects an image in use. The box never
+  moves to an older engine version, by request or not (diff review). `failed` is the digest of `beebox:failed`; an
   automatic check never chooses it again while `latest` still names it, and a
   check the person asked for (`byRequest`) does. Version comparison is numeric semver on the three dotted
   fields with an optional pre-release suffix, the same grammar as the tags;
@@ -613,8 +616,9 @@ record of what was decided and why.
    <green sha>` once a day after a pass; `image.yml` publishes `latest`
    from that ref, stamped `<next patch>-main.<yyyymmdd>.<short sha>` (a
    pre-release of the next version: above the last tag, below the next, so
-   comparisons hold). `v*` tags
-   then serve app releases only, or `mac-v*` per question 1. Consequences:
+   comparisons hold). A `v*` tag publishes its own version tag only, so a
+   slow tag build can never overwrite a newer daily image on `latest`
+   (diff review, codex gpt-6-sol). App releases are `mac-v*` per question 1. Consequences:
    a bad `main` reaches desktops within a day, so the rollback window
    matters more than with hand-picked tags; Claude Code lag becomes about
    a day, which answers question 5. The alternative is tags by hand, about

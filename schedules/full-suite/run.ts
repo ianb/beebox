@@ -275,8 +275,9 @@ async function main(): Promise<void> {
       // Green is a verdict: every condition this schedule raised has cleared
       // (a held typecheck alert excepted).
       await resolveAll();
-      // And the engine image channel moves, once a day (publish.ts).
-      if (!DRY_RUN) await publishImageIfDue(batch.pinned);
+      // And the engine image channel moves, once a day (publish.ts), from a
+      // commit that both tests and typecheck accept.
+      if (!DRY_RUN && typecheck.ok) await publishImageIfDue(batch.pinned);
       await done();
       return;
     }
