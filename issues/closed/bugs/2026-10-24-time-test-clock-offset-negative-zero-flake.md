@@ -1,11 +1,15 @@
 ---
 title: "time.test.ts \"The box clock offset\" fails with -0 under load"
-workstream: unattached
+workstream: perf-easy-wins
 area: beebox
 labels: [tests]
 filed-by: agent
 discovered-in: worktree-perf-easy-wins — test:changed at load average 15
+resolution: implemented
 ---
+
+Closed: the test's `ahead` helper adds `+ 0`, which turns `-0` into `0` (2026-10-24).
+
 
 `test/lib/time.test.ts`, subtest "The box clock offset", computes minutes
 ahead as `Math.round((getBoxTime(root).getTime() - Date.now()) / 60_000)`.
