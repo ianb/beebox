@@ -21,6 +21,6 @@ checks pass (verified 2026-10-23).
 `pnpm build:frontend`, and the perf hub instructions all create it, so the
 result of this test depends on what the checkout has built. The box server had
 the same problem with the SPA fallback
-([closed issue](../closed/bugs/2026-08-25-spa-fallback-doctests-fail-on-main.md)).
+([closed issue](./2026-08-25-spa-fallback-doctests-fail-on-main.md)).
 The fix there was to stop gating on the build artifact in the test harness;
 the hub needs the same.

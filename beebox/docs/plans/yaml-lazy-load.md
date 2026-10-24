@@ -146,7 +146,11 @@ first use"; its exports keep `yaml`'s names.
   Other `lintCardsDispatch` callers pass nothing and behave as before.
 - **First chunk:** the whole track.
 - **Result:** `parseYaml` calls in `bbx validate` on test1: 839 → 295 for
-  271 distinct texts; the remaining repeats are the landmark caches above.
+  271 distinct texts. The 24 repeats left (about 1 ms) are the landmark
+  caches above, and a card that fails schema validation is parsed again by
+  the prominence lint, since the card lint keeps no frontmatter for it.
+  Covering those would thread the map through the landmark caches; not done
+  (diff review, 2026-10-24).
   `validate --json` output on test1 is unchanged (compared sorted).
 
 ### Track B: narrow the fallback patterns
