@@ -36,9 +36,9 @@ menu-bar menu and one section in Preferences → Box on this Mac.
 - When Priya opens her Mac in the morning and the app has found a newer
   engine overnight, I want the box to come up on the new engine without a
   question, so I can keep using it and never think about versions.
-- When Tomas is mid-conversation with the box and an update arrives, I want
-  the app to stay quiet and update at the next start, so I can finish what I
-  am doing.
+- When Tomas is mid-conversation with the box, I want nothing to change
+  under me, so I can finish what I am doing. An update waits for the next
+  start.
 - When Priya reads about a fix on the beebox site, I want a button that
   checks and updates now, so I can get the fix without waiting a day.
 - When an update fails to start, I want the box to come back on the engine
@@ -53,9 +53,10 @@ menu-bar menu and one section in Preferences → Box on this Mac.
 | Situation | Act, show, or quiet | Surface and card | Attention |
 |---|---|---|---|
 | App launch, box not yet running, newer image known | Act: start on the new image | Menu status line "Box on this Mac: Updating to engine 0.1.8…" | Background; the status line already shows starts |
-| Box running, newer image found by the daily check | Download in the background; show, do not act | Menu item "Restart Box to Update (engine 0.1.8)" | Waits to be found, like Sparkle's gentle reminder (`Updates.swift:4-7`) |
+| Box running | Quiet: no check, no download | none | none |
 | Person presses "Check for Engine Updates…" | Act: check now, then as above | Preferences → Box on this Mac | Interrupts, by request |
-| New image fails to serve | Act: roll back to the previous image and restart | Menu status line "Box on this Mac: Running (engine 0.1.7; the 0.1.8 update failed, see app.log)" | Waits to be found; the box works |
+| New image fails to serve, box was clean before the update | Act: roll back to the previous image and restart | Menu status line "Box on this Mac: Running (engine 0.1.7; the 0.1.8 update failed, see app.log)" | Waits to be found; the box works |
+| Newer image known, box has uncommitted edits | Quiet: defer, start the current engine | Preferences line "Engine 0.1.8 is waiting: the box has uncommitted edits" | Waits to be found |
 | Image needs a newer app | Show, do not download | Menu item "Update to Bee Box Desktop X.Y.Z…" (Sparkle's existing item) with a Preferences caption "The current engine needs Bee Box Desktop X.Y.Z" | Waits to be found |
 
 ### Spirit
@@ -83,8 +84,13 @@ plan; see Open design questions.
   item offers the app update, the box keeps the current image.
 - The new image fails to serve: the app restores the previous image and
   starts it; the status line names both versions and points at app.log. The
-  failed image stays on disk as `beebox:failed` until the next successful
-  update, so the boxholder can inspect it.
+  failed image stays on disk as `beebox:failed` until the channel moves, and
+  the app does not try that digest again on its own; "Check for Engine
+  Updates…" tries it again by request.
+- The box has uncommitted edits when an update is ready: the app starts
+  the current engine and says in Preferences that the update is waiting,
+  so nothing of the person's is ever reset. The next start after the edits
+  are committed applies it.
 - Nothing newer: "Check for Engine Updates…" shows "Engine 0.1.7 is current
   (checked just now)" under the button.
 
@@ -94,13 +100,14 @@ Priya quits the app at night. At 7:40 the next morning she opens it. The app
 starts the box: it asks GHCR for the digest behind `latest`
 (one HEAD request), reads that image's config labels, sees engine 0.1.8 with a
 minimum app of 0.1.6 (she has 0.1.7), and pulls it by digest. The menu says
-"Downloading engine 0.1.8… 300 of 1009 MB". The app tags the old image
-`beebox:previous` and the new one `beebox:current`, records the box's git HEAD,
-and starts the container. The entrypoint runs the migrations and serves. The
+"Downloading engine 0.1.8… 300 of 1009 MB". The app checks that the
+box's working tree is clean, writes `update.json` with the box's git HEAD and
+both digests, tags the old image `beebox:previous` and the new one
+`beebox:current`, and starts the container. The entrypoint runs the migrations and serves. The
 menu says "Box on this Mac: Running". Preferences shows "Engine 0.1.8, updated
-today". Had the server not answered, the app would have swapped the tags back,
-reset the box to the recorded HEAD if a migration commit had landed, and started
-again on 0.1.7.
+today". Had `/api/build-info` not answered 200 within the start window, the app
+would have swapped the tags back, reset the box to the recorded HEAD if a
+migration commit had landed, and started again on 0.1.7.
 
 ## Smallest fix and budget
 
@@ -119,10 +126,10 @@ already exists").
 | Track | Source lines | Test lines |
 |---|---|---|
 | A. Image labels and version stamp (Dockerfile, image.yml) | 30 | 0 (verified by pulling the published image) |
-| B. Channel resolution and compatibility (Swift, BeeBoxMacCore + ImageSource) | 220 | 150 |
-| C. Swap and rollback window (BoxRuntime) | 140 | 40 (pure decision function) |
-| D. Menu, Preferences, release scripts, docs | 110 | 0 |
-| Total | 500 | 190 |
+| B. Channel resolution and compatibility (Swift, BeeBoxMacCore + ImageSource) | 180 | 150 |
+| C. Swap and rollback window (BoxRuntime) | 150 | 50 (pure decision functions) |
+| D. Preferences, release scripts, docs | 80 | 0 |
+| Total | 440 | 200 |
 
 Authored docs (README sections, docker.md note): about 60 lines, separate.
 Not a BIG CHANGE. The fuller design buys: the two-way compatibility check
@@ -287,7 +294,12 @@ LABEL org.opencontainers.image.version=$BEEBOX_VERSION \
 In the build stage, before `pnpm --dir beebox release`, set the version:
 `pnpm --dir beebox exec npm pkg set version=$BEEBOX_VERSION` (guarded so a dev
 build keeps `0.0.0-dev`). `image.yml` passes `build-args:
-BEEBOX_VERSION=${version}` for a `v*` tag and `edge` otherwise. `MIN_APP_VERSION`
+BEEBOX_VERSION=${version}` for a `v*` tag; a manual run passes
+`<latest engine tag>-edge.<short sha>` (`git describe --tags --abbrev=0
+--match 'v[0-9]*'`, `v` stripped, so an app tag is never picked), a valid
+pre-release that sorts below the tag it names and above the one before it
+(`0.1.6-edge.abc1234` < `0.1.6`, > `0.1.5`), so an `edge` image passes the
+same version grammar as a release. `MIN_APP_VERSION`
 is edited by hand in the Dockerfile when the shell contract changes (ports,
 mounts, environment, relay socket: `BoxRuntime.swift:36-45,287-323`), the same
 way `SCAN_CONTRACT_VERSION` is bumped by hand.
@@ -314,10 +326,13 @@ and pulls by digest.
 
 - `BeeBoxMacCore/EngineUpdate.swift`: `struct EngineImageInfo { digest,
   version: String?, minAppVersion: String? }` and a pure function
-  `EngineUpdate.decide(current: EngineImageInfo?, remote: EngineImageInfo,
-  appVersion: String, minEngineVersion: String) -> Decision` with cases
-  `.upToDate`, `.update(to:)`, `.needsNewerApp(min:)`, `.imageTooOld(min:)`,
-  `.unlabeled`. Version comparison is numeric semver on the three dotted
+  `EngineUpdate.decide(current: EngineImageInfo?, failed: String?, remote:
+  EngineImageInfo, appVersion: String, minEngineVersion: String, byRequest:
+  Bool) -> Decision` with cases `.upToDate`, `.update(to:)`,
+  `.needsNewerApp(min:)`, `.imageTooOld(min:)`, `.unlabeled`,
+  `.knownFailure(digest:)`. `failed` is the digest of `beebox:failed`; an
+  automatic check never chooses it again while `latest` still names it, and a
+  check the person asked for (`byRequest`) does. Version comparison is numeric semver on the three dotted
   fields with an optional pre-release suffix, the same grammar as the tags;
   anything else is `.unlabeled`. No AppKit, no VM, so it is testable with
   `swift test`.
@@ -325,12 +340,15 @@ and pulls by digest.
   `resolve(name:tag:)` → fetch the index, the arm64 manifest, the config →
   labels. Returns `EngineImageInfo`. One HEAD plus three small GETs.
 - `ImageSource.image()` becomes: if `beebox:current` exists and no update is
-  decided, return it. Otherwise pull `ghcr.io/ianb/beebox@sha256:<digest>`,
-  then `tag(existing: "beebox:current", new: "beebox:previous")` (deleting
-  the old previous first) and `tag(existing: <digest ref>, new:
-  "beebox:current")`. The digest reference is deleted after tagging so the
-  store holds at most current, previous, and failed. `removeOtherBeeboxImages`
-  keeps those three names and `beebox:dev`.
+  decided, return it with `candidate: nil`. Otherwise pull
+  `ghcr.io/ianb/beebox@sha256:<digest>` and return the current image plus the
+  pulled one as `candidate`. `ImageSource` never changes `beebox:current`;
+  `BoxRuntime` does, after it has written the update record (Track C), by
+  `tag(existing: "beebox:current", new: "beebox:previous")` (deleting the
+  old previous first) and `tag(existing: <digest ref>, new:
+  "beebox:current")`, then deleting the digest reference. The store holds at
+  most current, previous, failed, and dev; `removeOtherBeeboxImages` keeps
+  those names.
 - First launch of an app built by this plan on a Mac that holds
   `ghcr.io/ianb/beebox:0.1.6`: the stored tag-named image is adopted as
   `beebox:current` before the check, so no re-download.
@@ -338,14 +356,17 @@ and pulls by digest.
   `BundleConfig.minimumEngineVersion` from Info.plist. `BEEBOX_IMAGE` set:
   the check is skipped and that reference is pulled as today (development).
   `BEEBOX_IMAGE_LAYOUT` is unchanged.
-- Checking cadence: at box start, and once a day while the app runs (a Task
-  that sleeps 86400 s, like Sparkle's default). A daily check that finds an
-  update pulls it in the background, swaps nothing, and publishes
-  `pendingUpdate: String?` for the menu. The swap happens only in `run()`.
+- Checking cadence: at every box start (app launch with hosting on, Start
+  Box, and the Preferences button). A running box is never checked; see
+  "Could this be simpler?" and NOT in scope for the background check that
+  was considered.
 
 **Vocabulary lock-ins.** `beebox:current`, `beebox:previous`,
 `beebox:failed`, `BEEBOX_IMAGE_CHANNEL`, `BeeBoxMinimumEngineVersion`,
-`EngineUpdate.Decision`.
+`EngineUpdate.Decision`. `run.beebox.min-app-version` is monotonic: a later
+image never declares a lower value, so "image X needs app ≥ Y" plus the
+app's own `BeeBoxMinimumEngineVersion` describe the supported pairs
+without a range on either side.
 
 **First chunk.** `EngineUpdate` with its tests (version grammar, each
 decision case, the unlabeled image). No open question inside it.
@@ -365,30 +386,52 @@ does not know, and `computePending` ignores them
 (`migration-run.ts:97-100`), so the old engine would serve a box in a newer
 shape without a word. Rollback must revert the box too.
 
-**Direction.** In `run()`, after `source.image()` returns with `fetched ==
-true` and a `beebox:previous` exists:
+**Direction.** In `run()`, when `source.image()` returns a `candidate`
+whose digest differs from `beebox:current` (not "was downloaded": a digest
+pulled earlier by request and not yet applied still opens the window):
 
-1. Record `update.json` in `Paths.support`: `{ previousDigest, currentDigest,
-   boxHead, startedAt }` where `boxHead` is `git -C <box> rev-parse HEAD` run
-   on the host (the box folder is a plain git repository, `Paths.swift:7`).
-2. Start as today. On `.running`, delete `update.json`.
-3. On any failure before `.running` (exit, needs recovery, relay exit,
-   timeout) while `update.json` exists: tag `beebox:current` as
-   `beebox:failed`, tag `beebox:previous` as `beebox:current`, then if the
-   box's HEAD moved since `boxHead`, run once on the restored image
-   `git -C /data/box reset --hard <boxHead>` through `runOnce` (`BoxRuntime.swift:325-336`)
-   with the same mounts, and start again. The second start carries no
-   `update.json`, so a second failure ends in `.failed` as today, with the
-   text naming both engine versions.
-4. A start found with a stale `update.json` (the app quit mid-update) treats
-   it as a failure of that update and performs step 3 before starting.
+1. Read the box on the host (the box folder is a plain git repository,
+   `Paths.swift:7`): `boxHead` from `git rev-parse HEAD` and whether `git
+   status --porcelain` is empty. A dirty tree defers the update: the app
+   logs "engine update to X deferred: the box has uncommitted edits",
+   Preferences shows the same line, and the start continues on
+   `beebox:current` with the candidate kept in the store for the next start.
+   A clean tree: write `update.json` in `Paths.support`: `{ previousDigest,
+   candidateDigest, boxHead, startedAt }`. The record exists before any
+   reference changes.
+2. Retag (previous ← current, current ← candidate). Start as today.
+3. The window closes when `GET /api/build-info` on the local port answers
+   200 with JSON (`root-routes.ts:247-250`; it exists only when the beebox
+   server itself answers, unlike the `< 500` test in `waitForServer`,
+   `BoxRuntime.swift:364-366`). Then delete `update.json`.
+4. On any failure before that (exit, needs recovery, relay exit, timeout)
+   while `update.json` exists: tag `beebox:current` as `beebox:failed`, tag
+   `beebox:previous` as `beebox:current`. Then, if HEAD moved (the sweep
+   committed, `migration-sweep.ts:298-303`) or the tree is no longer clean
+   (a failed migration left files), run once on the restored image
+   `git -C /data/box reset --hard <boxHead>` through `runOnce`
+   (`BoxRuntime.swift:325-336`) with the same mounts. Start again. The
+   second start carries no `update.json`, so a second failure ends in
+   `.failed` as today, naming both engine versions.
+5. A start found with an `update.json` (the app quit mid-update, at any
+   point after step 1) compares the record with the store: `beebox:current`
+   still at `previousDigest` means the quit came before the retag, so the
+   record is deleted and the start proceeds as a fresh update attempt;
+   `beebox:current` at `candidateDigest` means the quit came during the
+   start, so step 4 runs before starting. Any other state (a missing
+   previous, a third digest) ends in `.failed` naming the record. The
+   record is written first, so there is no state where references changed
+   without a record.
 
-The reset is safe inside the window because nothing served between the
-record and the failure, so the only new commits are the migration sweep's
-own (`migration-sweep.ts:203,243` and the per-migration commit). Untracked and
-ignored files (`node_modules`, `.beebox/engine`) are untouched by `reset
---hard`; the entrypoint relinks the engine on every start
-(`entrypoint.sh:34-41`). After `.running`, there is no automatic rollback: a
+The reset is safe because the update only begins on a clean tree: a
+migration commit "may contain earlier edits" (`migration-sweep.ts:301`) and
+`reset --hard` also discards uncommitted tracked edits, and both are ruled
+out by the deferral in step 1. Nothing served between the record and the
+failure, so every new commit and every dirty file is the sweep's own. Untracked and ignored files (`node_modules`, `.beebox/engine`)
+are untouched; the entrypoint relinks the engine on every start
+(`entrypoint.sh:34-41`). The mounted home and Claude config
+(`BoxRuntime.swift:304-305`) are not versioned and are not rolled back; the
+engine treats them as machine state, not box data (`Paths.swift:33-38`). After `.running`, there is no automatic rollback: a
 later problem is fixed forward by the next image, as production does
 (`deploy.sh` has no data rollback; `deploy.sh:36` records the ref so an
 operator can redeploy an older code ref).
@@ -402,16 +445,15 @@ newer engine; the box-shape citation above makes the reset necessary, and
 the run shows what the old engine does without it (serve the newer shape or
 park).
 
-### Track D: menu, Preferences, release scripts, docs
+### Track D: Preferences, release scripts, docs
 
-**What.** Two menu lines, a Preferences section, `release.sh` and
-`build-app.sh` decoupled from the image tag, README and docker.md text.
+**What.** A Preferences section, `release.sh` and `build-app.sh` decoupled
+from the image tag, README and docker.md text. The menu changes only in its
+status text (the existing status line shows the download and the update
+step).
 
 **Direction.**
 
-- Menu (`BeeBoxMacApp.swift:186-202`): when `runtime.pendingUpdate` is set and
-  the box is running, "Restart Box to Update (engine X)…" which calls `stop()`
-  then `start()`. The status line already shows the download and start steps.
 - Preferences → Box on this Mac (`PreferencesWindow.swift:403-421`): a line
   "Engine X.Y.Z (checked <relative time>)", a "Check for Engine Updates…"
   button, and the caption for `.needsNewerApp`. The existing "Check for
@@ -447,16 +489,19 @@ reset is 15 more and a second chunk. The spike's observation makes the plain
 swap insufficient in exactly the case rollback exists for, so the reset stays,
 gated on the test-box confirmation in Track C.
 
-**No daily check while running.** Checking only at start is simpler and
-covers Priya's morning. It fails Tomas's "box runs for a week" case, where
-the download would land on the start he makes for other reasons and add
-minutes to it. The daily background pull is one Task and reuses the start's
-pull; it stays.
+**A daily check while the box runs.** Considered: a Task that checks once
+a day, pulls in the background, and offers "Restart Box to Update" in the
+menu. It would save the download time on a later start for a box that runs
+for days. It adds a running-state menu item, a pending-update state, and a
+second path into the rollback window. Cut: the first round (codex
+gpt-6-sol) named it as scope beyond the requirement, and a start-time check
+with an explicit button covers every situation in Design. Add it after a
+demonstrated need.
 
 **Dropped as over-build:** a manifest file or appcast for the engine (the
 registry tag is the manifest); an opt-out preference (see Open design
 questions); keeping more than one previous image; a Codex or Claude Code
-updater inside the VM (see NOT in scope).
+updater inside the VM (see NOT in scope); the daily check above.
 
 ## Subplans
 
@@ -466,17 +511,21 @@ none
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Registry unreachable at the daily check | no | Track B: log, keep current, retry next day | clear in app.log, quiet in UI (by design) |
+| Registry unreachable at a start with a stored image | Track B test (decision with no remote) | Track B: log, start on current | clear in app.log and the Preferences "checked" line |
 | Registry unreachable at a start with no stored image | yes (existing error text, `ImageSource.swift:38-40`) | existing | clear |
-| `latest` resolves but the image has no labels (an image from before Track A) | Track B test: `.unlabeled` | Track B: treat as needs-newer-app? No: treat as incompatible and keep current; log | clear (Preferences caption) |
+| `latest` resolves but the image has no labels (an image from before Track A) | Track B test: `.unlabeled` | Track B: keep current; log | clear (Preferences caption) |
+| `latest` still names a digest that failed here | Track B test: `.knownFailure` | Track B: no automatic retry; by request only | clear (Preferences caption) |
+| New image answers HTTP but not as the beebox server | no | Track C step 3: the window closes only on `/api/build-info` 200 | clear |
+| App quits between writing `update.json` and retagging | Track C test on the pure recovery function | step 5: record first, so recovery sees it | clear |
 | Image needs a newer app | Track B test | Track B: no download; menu shows Sparkle's item if available | clear |
 | App needs a newer image than `latest` (engine tag not yet cut) | Track B test | Track B: keep current, Preferences caption | clear |
 | Download interrupted (quit, sleep) | no | `ImageStore.pull` cancels its ingest session (`ImageStore.swift:255-257`); `beebox:current` untouched | clear: next start retries |
 | New image exits before serving | existing detection (`BoxRuntime.swift:368-370`) | Track C step 3 | clear |
 | New image parks in "convergence needs recovery" | existing detection (`:371-373`) | Track C step 3 with reset | clear |
-| Migration committed, then serve failed; old engine on new-shape box | no | Track C reset to pre-update HEAD | clear |
+| Migration committed, then serve failed; old engine on new-shape box, tree was clean | no | Track C reset to pre-update HEAD | clear |
+| Tree had uncommitted edits before the update | Track C test (pure: dirty → defer) | Track C step 1: defer, start current | clear (Preferences line) |
 | Reset fails (git error inside the VM) | no | Track C: stop, `.failed` names both engines and the HEAD to restore by hand | clear |
-| App quits mid-update (stale `update.json`) | Track C test on the pure decision | Track C step 4 | clear |
+| App quits mid-update (stale `update.json`) | Track C test on the pure decision | Track C step 5 | clear |
 | Both current and previous fail | existing `.failed` path | ends in `.failed` as today | clear |
 | Disk full during pull (two images on disk) | no | pull throws; existing error text | clear but generic; the text should mention the second copy |
 | Person presses "Restart Box to Update" with a browser tab open | no | existing stop waits for WebSocket close (`BoxRuntime.swift:78-84`); the tab needs a reload (the 2026-08-03 issue) | silent for the tab; documented |
@@ -485,11 +534,13 @@ none
 > **Critical gap:** a Dockerfile change to ports, mounts, environment, or the
 > relay socket without a `MIN_APP_VERSION` bump. Mitigation in this plan: a
 > comment block at the `ARG` naming every file that defines the contract
-> (`BoxRuntime.swift` create block, `entrypoint.sh`), and a line in
-> `mac-app/README.md`. Accepted as a documented risk: the contract has
-> changed twice since the spike (relay socket, mounts), both by the same
-> person, and an enforcement check would need the Dockerfile to know Swift
-> constants. Filed as a follow-up candidate, not built.
+> (`BoxRuntime.swift` create block, `entrypoint.sh`), the monotonic rule
+> (Track B), and a release check in `release.sh` that the Dockerfile's
+> `MIN_APP_VERSION` is not above the app version being released (catches a
+> bump that outran the shell, not a forgotten one). Accepted as a documented
+> risk: the contract has changed twice since the spike (relay socket,
+> mounts), both by the same person, and a forgotten bump is a review-time
+> fact the Dockerfile cannot know. Filed as a follow-up candidate, not built.
 
 ## Agent-flow / user-flow edge cases
 
@@ -524,6 +575,9 @@ none
   it only ever changes with an engine release. Nothing to do.
 - **Sparkle changes.** Already on for release builds; the key, feed, and
   `release.sh` publish path stay. Only the tag check changes (Track D).
+- **A daily check while the box runs.** Cut in "Could this be simpler?";
+  the start-time check plus the Preferences button cover the Design
+  situations.
 - **An engine opt-out or "ask first" setting.** Every other install follows
   the image at the operator's pull; the desktop follows at start. Filed as an
   Open design question, not built.
@@ -555,13 +609,35 @@ none
    tag after a green run). Lean: by hand for now, since every tag is also a
    10-minute image build and a 1 GB download for each desktop; revisit when a
    second desktop user exists.
-3. **Automatic swap at start versus ask first.** The plan swaps at start
-   without asking (Trust section). The alternative is a one-time "Update the
-   box now?" question at the first start that would swap. Lean: swap without
-   asking; a stopped box has no work to lose, rollback covers a bad image,
-   and a question at every engine tag is the paperwork spirit.md argues
-   against.
-4. **`MIN_APP_VERSION` initial value.** `0.1.6` (the current app) is safe
+3. **When an update applies.** The plan: at every box start, without
+   asking, plus a Preferences button; never while the box runs. The
+   alternatives are a one-time "Update the box now?" question at the first
+   start that would swap, or a daily check with a "Restart Box to Update"
+   menu item. Lean: swap at start without asking; a stopped box has no work
+   to lose, rollback covers a bad image, and a question at every engine tag
+   is the paperwork spirit.md argues against.
+4. **A box with uncommitted edits when an update is ready.** The plan
+   defers the update and starts the current engine (Track C step 1), so a
+   rollback can never discard the person's edits. The alternative is to
+   update anyway and refuse the automatic reset on failure. Lean: defer; a
+   box that stays dirty for days shows the waiting line in Preferences.
+7. **The forgotten `MIN_APP_VERSION` bump.** The Critical gap accepts it as
+   a documented risk with a release-time check that only catches a value
+   above the app being released. The alternative is a check that fails a
+   tag when the shell-contract files changed since the last bump (a hash
+   of the `create` block in `BoxRuntime.swift` and of `entrypoint.sh`
+   recorded beside `MIN_APP_VERSION`). Lean: accept the risk now; both
+   sides are edited by the same person, and the plan's own review (codex
+   gpt-6-sol) asks for this to be an explicit decision rather than a
+   silent acceptance.
+5. **Claude Code lag.** Claude Code is baked into each image and cannot
+   update inside the VM, so desktop users run the Claude Code that the
+   latest engine tag was built with. With tags about twice a week that is
+   up to four days behind production's nightly `claude update`. Is that
+   acceptable? Lean: yes for now. If not, the options are tagging more
+   often (a scheduled tag) or a persistent Claude install outside the image
+   root, each its own decision.
+6. **`MIN_APP_VERSION` initial value.** `0.1.6` (the current app) is safe
    because 0.1.6 already runs the current image shape. Lean: `0.1.6`.
 
 ## Knowledge audits
@@ -575,9 +651,12 @@ is unchanged.
 - **Decision logic** is a pure function in `BeeBoxMacCore`
   (`EngineUpdate.decide`), reached by `swift test` in `mac-app/Tests/BeeBoxMacCoreTests`,
   the tier that already holds `BoxStore` and `HostingPreference`. Cases: each
-  decision outcome, version grammar edge cases (`0.1.10` > `0.1.9`,
-  `0.2.0-dev`), stale `update.json` handling (also pure: a function from the
-  file's fields and the current digests to an action).
+  decision outcome including `.knownFailure` by and not by request, version
+  grammar edge cases (`0.1.10` > `0.1.9`, `0.1.6-edge.abc1234` < `0.1.6`),
+  the recovery action from an `update.json` (pure: a function from the
+  file's fields, the store's current and previous digests, and the box's
+  HEAD and cleanliness to one of start, reset-then-start, discard-record,
+  or stop-with-message), and the dirty-tree deferral.
 - **Store operations** (tag, delete, adopt) are not unit-tested; they are
   Containerization calls and the start path exercises them. A manual tour
   entry in `mac-app/README.md` ("Run during development") describes the
@@ -602,9 +681,8 @@ is unchanged.
 5. Track C, chunk 2: the git reset, verified by a test-box run (the current
    `edge` or a local build against a box migrated by a newer engine, under
    `BEEBOX_STATE_DIR` and `BEEBOX_BOXES_DIR` in the worktree's `scratch/`).
-6. Track B, chunk 3: the daily background check and pull, `pendingUpdate`.
-7. Track D: menu and Preferences, `release.sh` tag change (after question 1),
-   README and docker.md.
+6. Track D: Preferences, `release.sh` tag and `MIN_APP_VERSION` checks
+   (after question 1), README and docker.md.
 
 Each chunk is a commit. The plan ships together, when the boxholder says so.
 
@@ -624,11 +702,17 @@ dev bundle id (`mac-app/README.md`, "Run during development"):
 3. `BEEBOX_IMAGE_CHANNEL=edge` with an `edge` image built from this branch
    (manual `image.yml` run is the boxholder's action; otherwise a local
    build loaded through `BEEBOX_IMAGE_LAYOUT` and a hand-tagged store entry):
-   the labels read, the version shows in Preferences.
+   the labels read, the pre-release version shows in Preferences.
 4. A deliberately broken image (an `edge` built with `MIN_APP_VERSION`
    above the app's version): no download, caption shown.
 5. A failed start: an image whose entrypoint exits; the app swaps back and
-   serves on the previous image; `app.log` names both.
+   serves on the previous image; `app.log` names both. Then the same image
+   again: no automatic retry; the button retries it.
+6. An update ready while the box has an uncommitted edit: the app starts the
+   current engine and Preferences shows the waiting line; committing the
+   edit and restarting applies the update.
+7. Quit the app during the download and during the start: the next launch
+   recovers from `update.json` and ends on the previous image.
 
 **Migration approach.** No box data shape changes. The app's image store
 gains three names; an older app build reading the same store ignores them
