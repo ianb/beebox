@@ -183,6 +183,46 @@ Facts behind a few cells:
 - Shipped verified client: Google only; other providers' verification is
   lighter and would be separate shipped clients.
 
+## What OpenClaw and Hermes do (checked 2026-10-24)
+
+Both are BYO, like beebox, and neither ships a shared or verified Google
+client.
+
+- **OpenClaw.** Core has no Google tools. The bundled skill drives `gog`
+  (gogcli, now under the openclaw GitHub org): own Cloud project, enabled
+  APIs, External consent screen, a Desktop-type client, refresh token in the
+  OS keyring. A community plugin does the same with one flow for six
+  services. Composio publishes an OpenClaw plugin that points at Composio's
+  hosted MCP; OpenClaw's docs never mention it. Maintainers closed a request
+  for native Gmail as "a better fit for ClawHub.com than OpenClaw core."
+  Only gog's quickstart warns about the seven-day Testing expiry and tells
+  users to publish to Production and accept the warning and the 100-user
+  cap. Issues on weekly reauthorization, keyring failures under services,
+  and auth in scheduled runs are open; a third party sells a managed
+  alternative.
+- **Hermes Agent.** A bundled Google Workspace skill, also BYO Desktop
+  client, headless: the redirect goes to `localhost:1`, the browser fails,
+  and the user pastes the broken URL back. The skill triages mail-only users
+  to an app password (the `himalaya` skill or the email gateway adapter,
+  "you must use an App Password") and keeps OAuth for Calendar, Drive,
+  Sheets, Docs. MCP OAuth supports dynamic client registration, but the
+  docs note Google rejects it, so Google MCP servers still need a
+  customer-owned client. On 2026-10-14 Nous launched hosted "connectors"
+  through its tool gateway with Gmail named and a connect link per app: a
+  first-party broker with the vendor as custodian; catalog and terms are
+  undocumented. Google's own hosted Gmail MCP cannot be authorized through
+  Hermes today (device flow refused for Gmail scopes).
+
+Takeaway: the self-hosted camp has not solved it. The two moves beebox lacks
+are Hermes's app-password route for mail-only users and Hermes's own hosted
+broker. Sources: `docs.openclaw.ai/plugins/plugin-inventory`,
+`github.com/openclaw/gogcli/blob/main/docs/quickstart.md`,
+`composio.dev/toolkits/gmail/framework/openclaw`,
+`hermes-agent.nousresearch.com/docs/user-guide/skills/bundled/productivity/productivity-google-workspace`,
+`hermes-agent.nousresearch.com/docs/user-guide/features/mcp`,
+`hermes-agent.nousresearch.com/docs/user-guide/features/tool-search`,
+`hermes-agent.nousresearch.com/docs/user-guide/messaging/email`.
+
 ## Dispositions
 
 - **Reject Nango, Arcade, Paragon, Truto, and the auth-only brokers** for
