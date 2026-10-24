@@ -49,9 +49,10 @@ final class EngineUpdateTests: XCTestCase {
         XCTAssertEqual(decide(current: nil, remote: newer), .update(to: newer), "first download")
     }
 
-    func testImageWithoutLabelsIsNeverChosen() {
+    func testImageWithoutLabelsIsNeverChosenOverAnImageInUse() {
         let old = EngineImageInfo(digest: "sha256:ccc", version: nil, minAppVersion: nil)
         XCTAssertEqual(decide(current: current, remote: old), .unlabeled)
+        XCTAssertEqual(decide(current: nil, remote: old), .update(to: old), "a new install takes what the channel names")
         let halfLabeled = EngineImageInfo(digest: "sha256:ccc", version: "0.1.7", minAppVersion: nil)
         XCTAssertEqual(decide(current: current, remote: halfLabeled), .unlabeled)
         let garbage = EngineImageInfo(digest: "sha256:ccc", version: "edge", minAppVersion: "0.1.6")

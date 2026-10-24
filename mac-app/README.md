@@ -38,8 +38,40 @@ failure message in the menu.
 |---|---|
 | Linux kernel | Bundled: Kata Containers 3.32.0's `vmlinux-6.18.35-197-debug` (the kernel Apple's `container` recommends), fetched and SHA-256-checked by `scripts/fetch-kernel.sh` |
 | Init filesystem | Pulled on first launch: `ghcr.io/apple/containerization/vminit:0.48.0` |
-| beebox image | Pulled on first launch: `ghcr.io/ianb/beebox:<app version>`, published by `.github/workflows/image.yml` on a `v*` tag. A newer app version pulls its own tag and removes the old image |
-| Updates | Sparkle 2.10.0 (`scripts/fetch-sparkle.sh`), feed at the latest GitHub Release's `appcast.xml`. Off until the bundle carries `SUPublicEDKey` |
+| beebox image | Follows the channel `ghcr.io/ianb/beebox:latest` (`BEEBOX_IMAGE_CHANNEL` picks another tag), published by `.github/workflows/image.yml` once a day from a green `main` run and on `v*` tags. Each box start asks the registry which digest the tag names, reads the image's labels, and downloads it by digest when it is newer and compatible. See "Engine updates" below |
+| Updates | Sparkle 2.10.0 (`scripts/fetch-sparkle.sh`), feed at the latest GitHub Release's `appcast.xml`, for the Swift shell only. Release builds carry the signing key; `*-dev` builds do not and never update themselves |
+
+## Engine updates
+
+The app and the engine image release separately. The image carries two
+labels (`beebox/docker/Dockerfile`): `org.opencontainers.image.version`, the
+engine version, and `run.beebox.min-app-version`, the oldest app that can
+run it. The app carries `BeeBoxMinimumEngineVersion` (`MIN_ENGINE_VERSION`
+in `build-app.sh`), the oldest image it can run. Both values only go up, and
+both are bumped by hand when the contract between them changes: the mounts,
+the server port, the entrypoint's argument form, the environment the app
+sets, or the in-VM relay (the `create` block in `Sources/BeeBoxMac/BoxRuntime.swift`
+on one side, `beebox/docker/entrypoint.sh` and the Dockerfile on the other).
+An image that needs a newer app is left alone and Preferences says so;
+Sparkle offers the app update.
+
+At every box start (`Sources/BeeBoxMac/ImageSource.swift`) the app resolves
+the channel tag to a digest, reads the labels from the registry, and decides
+(`BeeBoxMacCore/EngineUpdate.swift`): up to date, update, needs a newer app,
+image too old, unlabeled, or a known failure. An update is downloaded by
+digest. Then (`BoxRuntime+Engine.swift`) the box's git state is read inside
+the VM; a box with uncommitted edits defers the update. On a clean box the
+app writes `update.json` beside its logs, re-tags the images (`beebox:current`,
+`beebox:previous`), and starts. The update finishes when `/api/build-info`
+answers. If the start fails first, the previous image comes back as current,
+the failed one stays as `beebox:failed` (not retried until the channel moves,
+or "Check for Engine Updates…" asks), the box is reset to its pre-update
+commit when the migration sweep had committed, and the box starts again.
+After the update finishes there is no automatic rollback; a later problem is
+fixed forward by the next image, as on the server.
+
+A running box is never stopped for an update. "Check for Engine Updates…"
+(Preferences → Box on this Mac) stops it, checks, and starts it.
 
 ## Build
 
@@ -50,10 +82,9 @@ scripts/build-app.sh      # → "build/Bee Box Desktop.app" (ad hoc signed)
 scripts/make-dmg.sh       # → build/BeeBoxDesktop-<version>.dmg
 ```
 
-`build-app.sh` reads `VERSION` (also the image tag), `SIGN_IDENTITY`
-(a Developer ID Application identity; ad hoc by default),
-`SPARKLE_PUBLIC_KEY`, `BUNDLE_ID` (default `run.beebox.mac`), and
-`BEEBOX_IMAGE`. `make-dmg.sh` signs the DMG with a real `SIGN_IDENTITY`, and
+`build-app.sh` reads `VERSION`, `SIGN_IDENTITY` (a Developer ID Application
+identity; ad hoc by default), `SPARKLE_PUBLIC_KEY`, `BUNDLE_ID` (default
+`run.beebox.mac`), and `MIN_ENGINE_VERSION`. `make-dmg.sh` signs the DMG with a real `SIGN_IDENTITY`, and
 notarizes and staples it when `NOTARY_PROFILE` names an
 `xcrun notarytool store-credentials` profile. Downloads are cached in
 `~/Library/Caches/beebox-mac-build`.
@@ -124,7 +155,8 @@ open -n "build/Bee Box Desktop.app" \
 | Variable | Effect |
 |---|---|
 | `BEEBOX_IMAGE_LAYOUT` | Load the image from a local OCI layout (`container image save`, then untar) instead of pulling |
-| `BEEBOX_IMAGE` | Pull a different image reference |
+| `BEEBOX_IMAGE` | Pull one fixed image reference instead of following the channel |
+| `BEEBOX_IMAGE_CHANNEL` | Follow another tag of `ghcr.io/ianb/beebox` (for example `edge`, a manual run of the image workflow) |
 | `BEEBOX_STATE_DIR`, `BEEBOX_BOXES_DIR`, `BEEBOX_PORT` | A second, throwaway instance |
 | `BEEBOX_BOX` | Which box to run (folder name and URL slug; default `box`) |
 | `BEEBOX_VM_MEMORY_MB` | VM size (default: a quarter of RAM, 2–4 GiB) |
@@ -135,7 +167,8 @@ Where things live:
 ```
 ~/BeeBox/<name>/                            one folder per box (default: box)
 ~/Library/Application Support/Bee Box/      shared by every box
-    runtime/        images, VM disks, init filesystem (must not move)
+    runtime/        images (beebox:current, :previous, :failed), VM disks, init filesystem (must not move)
+    update.json     an engine update in progress (see "Engine updates")
     home/           accounts, session key, secrets, Codex login, caches
     claude-config/  Claude login
     logs/           app.log, box-<name>.log
@@ -179,15 +212,21 @@ One-time setup on the maintainer's Mac (done 2026-10-07):
   `fetch-sparkle.sh`). Its public half is the default in `build-app.sh`; the
   private half stays in the keychain, with a backup kept outside it.
 
-Each release:
+Each app release (the Swift shell; the engine needs none):
 
-1. Tag `vX.Y.Z` and push the tag. The image workflow publishes
-   `ghcr.io/ianb/beebox:X.Y.Z` (multi-arch, public).
-2. `scripts/release.sh X.Y.Z` checks the tag and image, builds and signs the
-   app with the Developer ID, notarizes and staples the DMG, writes
-   `appcast.xml` signed with the Sparkle key, and publishes all three to the
-   GitHub Release, marked latest (the feed URL follows GitHub's latest
-   release, which skips pre-releases).
+1. Tag `mac-vX.Y.Z` and push the tag.
+2. `scripts/release.sh X.Y.Z` checks the tag and that `X.Y.Z` is not below
+   the Dockerfile's `MIN_APP_VERSION`, builds and signs the app with the
+   Developer ID, notarizes and staples the DMG, writes `appcast.xml` signed
+   with the Sparkle key, and publishes all three to the GitHub Release,
+   marked latest (the feed URL follows GitHub's latest release, which skips
+   pre-releases).
+
+Engine releases: the full-suite schedule dispatches the image workflow once
+a day after a green run on `main`, which publishes `:latest` stamped
+`<last tag>-main.<date>.<sha>`. A `v*` tag still publishes `:X.Y.Z` and
+`:latest`. A manual run of the workflow with channel `edge` publishes a
+trial image that `BEEBOX_IMAGE_CHANNEL=edge` follows.
 
 Apple's first notarizations for a new team can take hours; later ones take
 minutes.

@@ -98,7 +98,12 @@ public enum EngineUpdate {
         if let current, current.digest == remote.digest { return .upToDate }
         guard let remoteVersion = remote.version.flatMap(EngineVersion.init),
               let minApp = remote.minAppVersion.flatMap(EngineVersion.init)
-        else { return .unlabeled }
+        else {
+            // Nothing downloaded yet: take what the channel names, labels or
+            // not, as the tag-pinned app did. The check protects an image in
+            // use; it cannot leave a new install with no image at all.
+            return current == nil ? .update(to: remote) : .unlabeled
+        }
         // A development build ("dev") runs anything; it is never released.
         if let app = EngineVersion(appVersion), app < minApp { return .needsNewerApp(min: minApp.description) }
         if let minEngine = EngineVersion(minEngineVersion), remoteVersion < minEngine {

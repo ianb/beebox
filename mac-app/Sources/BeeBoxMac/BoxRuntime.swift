@@ -1,3 +1,4 @@
+import BeeBoxMacCore
 import Containerization
 import ContainerizationExtras
 import Foundation
@@ -20,11 +21,15 @@ final class BoxRuntime: ObservableObject {
         let startedAt: Date
     }
 
-    @Published private(set) var phase: Phase = .stopped
+    /// Set here and by BoxRuntime+Engine (the update steps and rollback).
+    @Published var phase: Phase = .stopped
     @Published private(set) var memorySummary = ""
     @Published private(set) var progress: Progress?
     /// The last completed start or stop and how long it took.
     @Published private(set) var lastCompleted: (operation: TimedOperation, seconds: TimeInterval)?
+    /// The engine image in use and what the last channel check said
+    /// (written by BoxRuntime+Engine).
+    @Published var engine = EngineStatus()
     /// Ticks once a second while an operation is in progress, so the menu's
     /// elapsed time moves.
     @Published private(set) var now = Date()
@@ -44,9 +49,9 @@ final class BoxRuntime: ObservableObject {
         return 3280
     }()
 
-    private var manager: ContainerManager?
+    var manager: ContainerManager?
     private var container: LinuxContainer?
-    private var log: LogWriter?
+    var log: LogWriter?
     private var statsTask: Task<Void, Never>?
     private var forwarder: PortForwarder?
     /// Set when the current container's main process exits.
@@ -65,14 +70,31 @@ final class BoxRuntime: ObservableObject {
     var isWanted: () -> Bool = { true }
     private var startTask: Task<Void, Never>?
 
-    func start() {
+    /// - Parameter checkByRequest: the person asked for an engine check; an
+    ///   image that failed here before is tried again.
+    func start(checkByRequest: Bool = false) {
         guard phase == .stopped || isFailed else { return }
-        startTask = Task { await run() }
+        startTask = Task { await run(checkByRequest: checkByRequest) }
+    }
+
+    /// "Check for Engine Updates…": a running box stops first, since the
+    /// image can only change at a start.
+    func checkForEngineUpdate() {
+        Task {
+            if isRunning || progress != nil { await stop() }
+            start(checkByRequest: true)
+        }
     }
 
     func stop() async {
         startTask?.cancel()
         startTask = nil
+        await teardown()
+    }
+
+    /// Stop the container and release the forwarder, without cancelling the
+    /// start task that may be calling this (a rollback restarts in place).
+    private func teardown() async {
         statsTask?.cancel()
         statsTask = nil
         // The forwarder stays up until the server has exited: the server's
@@ -147,7 +169,7 @@ final class BoxRuntime: ObservableObject {
         return false
     }
 
-    private func run() async {
+    private func run(checkByRequest: Bool, afterRollback: Bool = false) async {
         do {
             let started = Date()
             begin(.start)
@@ -173,13 +195,22 @@ final class BoxRuntime: ObservableObject {
                 await MainActor.run { self?.phase = .working(line) }
             }
             try proceed()
-            let (image, _) = try await source.image()
-            try proceed()
-            // Only creating the box makes a first start; an app update's image
-            // download is slow too, but it is still an ordinary start.
-            if !boxIsInitialized() { progress?.operation = .firstStart }
             let log = try LogWriter(url: Paths.log)
             self.log = log
+            // An update left unfinished by an earlier start is settled before
+            // anything else runs on the box.
+            try await recoverUnfinishedUpdate(&manager, source: source, log: log)
+            let selection = try await source.select(byRequest: checkByRequest)
+            try proceed()
+            var image = selection.image
+            if let candidate = selection.candidate {
+                image = try await beginUpdate(&manager, source: source, from: image, to: candidate, log: log) ?? image
+            }
+            await noteEngine(source: source, image: image, selection: selection)
+            try proceed()
+            // Only creating the box makes a first start; an engine download is
+            // slow too, but it is still an ordinary start.
+            if !boxIsInitialized() { progress?.operation = .firstStart }
 
             if !boxIsInitialized() {
                 phase = .working("Creating your box…")
@@ -223,6 +254,7 @@ final class BoxRuntime: ObservableObject {
             let base = URL(string: "http://localhost:\(Self.localPort)/")!
             phase = .working("Waiting for the server…")
             try await waitForServer(base)
+            try await finishUpdate(base)
             appLog("ready in \(String(format: "%.1f", Date().timeIntervalSince(started)))s at \(base)")
             phase = .running(base.appending(path: "box/"))
             finish(succeeded: true)
@@ -238,6 +270,12 @@ final class BoxRuntime: ObservableObject {
         } catch {
             appLog("start failed: \(error)")
             finish(succeeded: false)
+            if !afterRollback, let rolledBack = await rollBackUpdate(after: error) {
+                appLog("engine update failed; restarting on \(rolledBack)")
+                await teardown()
+                await run(checkByRequest: false, afterRollback: true)
+                return
+            }
             phase = .failed(String(describing: error))
         }
     }
@@ -270,7 +308,7 @@ final class BoxRuntime: ObservableObject {
         }
     }
 
-    private func boxIsInitialized() -> Bool {
+    func boxIsInitialized() -> Bool {
         FileManager.default.fileExists(atPath: Paths.box.appending(path: ".beebox/box.json").path)
     }
 
@@ -284,11 +322,12 @@ final class BoxRuntime: ObservableObject {
         return min(max(quarter, 2.gib()), 4.gib())
     }
 
-    private func create(
+    func create(
         _ manager: inout ContainerManager,
         image: Image,
         log: LogWriter,
-        arguments: [String]?
+        arguments: [String]?,
+        stdout: (any Writer)? = nil
     ) async throws -> LinuxContainer {
         let memory = Self.boxMemory
         return try await manager.create(
@@ -314,7 +353,7 @@ final class BoxRuntime: ObservableObject {
                 // Claude writes transcripts under CLAUDE_CONFIG_DIR, not ~/.claude.
                 "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
             ]
-            config.process.stdout = log
+            config.process.stdout = stdout ?? log
             config.process.stderr = log
             if let arguments {
                 config.process.arguments = ["/app/entrypoint.sh"] + arguments
@@ -322,7 +361,7 @@ final class BoxRuntime: ObservableObject {
         }
     }
 
-    private func runOnce(_ manager: inout ContainerManager, image: Image, log: LogWriter, arguments: [String]) async throws {
+    func runOnce(_ manager: inout ContainerManager, image: Image, log: LogWriter, arguments: [String]) async throws {
         try? manager.delete(Self.containerID)
         let container = try await create(&manager, image: image, log: log, arguments: arguments)
         try await container.create()
