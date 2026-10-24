@@ -65,3 +65,4 @@ Round 2 (2026-10-24), so far:
 - Staying late (M1) replaces the wistful twist, with its first wording ("Agreeing, but tired and a little put-upon: you'll do it, and you'd rather not."). Gemini 3.8 Flash-Lite carried every wording of the direction; gpt-4o-mini-tts carried none of them well. That difference is a finding for the page. The short mood wording also suits models that take direction inline in the text.
 - The list (L) is tested only as Markdown bullets; the in-sentence and numbered versions are dropped.
 - Test results (M2) is dropped. The other wordings of the staying-late direction (M1x) stay out of the run; they are the evidence behind the finding above.
+- Both explanations stay: the worked math (E, plain and Markdown _then_) and the water-boiling one (W, plain and directed).
