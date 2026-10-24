@@ -24,8 +24,8 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
-import { InlineAction } from "../ui/InlineAction";
 import { ChevronIcon } from "./ChevronIcon";
+import { LandmarkGroupRows } from "./LandmarkGroupRows";
 import { LandmarkSessions } from "./LandmarkSessions";
 import type { CardSymbolData } from "@shared/card-symbol";
 
@@ -189,7 +189,6 @@ export function LandmarkGroup({
   group,
   boxSlug,
   onNavigate,
-  compact,
   defaultOpen,
   hidePath,
   onMore,
@@ -197,7 +196,6 @@ export function LandmarkGroup({
   group: ResolvedGroup;
   boxSlug: string;
   onNavigate?: (target: ViewTarget) => void;
-  compact?: boolean;
   /** Title only, no file path under it (the place page). */
   hidePath?: boolean;
   /** Start expanded (the place page); menus and the Landmarks page start collapsed. */
@@ -205,37 +203,15 @@ export function LandmarkGroup({
   /** Makes the "+N more" count an action (the place page opens the folder in Browse); plain text without it. */
   onMore?: () => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen === true);
-  const overflow = group.count - group.children.length;
-
   return (
-    <Stack gap="xs">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex items-center gap-2 px-2 py-1 -mx-2 rounded text-left hover:bg-warm-100"
-      >
-        <ChevronIcon open={open} />
-        <Text as="span" size="sm" weight="medium">{group.label}</Text>
-        <Text as="span" size="xs" tone="muted">{group.count}</Text>
-      </button>
-      {open ? (
-        <div className={`ml-6 grid grid-cols-1 gap-2 ${compact === true ? "" : "sm:grid-cols-2"}`}>
-          {group.count === 0 ? <Text as="div" size="sm" tone="muted">None yet</Text> : null}
-          {group.children.map((link) => (
-            <LinkTile key={link.ref} link={link} boxSlug={boxSlug} onNavigate={onNavigate} hidePath={hidePath} />
-          ))}
-          {overflow > 0 ? (
-            <Text as="div" size="xs" tone="muted" className="self-center">
-              {onMore === undefined ? `+${overflow} more` : (
-                <InlineAction intent="subtle" onClick={onMore}>{`+${overflow} more`}</InlineAction>
-              )}
-            </Text>
-          ) : null}
-        </div>
-      ) : null}
-    </Stack>
+    <LandmarkGroupRows
+      group={group}
+      className="text-sm"
+      emptyText="None yet"
+      renderChild={(link) => <LinkRow link={link} boxSlug={boxSlug} onNavigate={onNavigate} hidePath={hidePath} />}
+      {...(defaultOpen === undefined ? {} : { defaultOpen })}
+      {...(onMore === undefined ? {} : { onMore })}
+    />
   );
 }
 
@@ -322,4 +298,54 @@ function LinkTile({
       </Card>
     </Link>
   );
+}
+
+const ROW_CLASSES = "block w-full text-left px-3 py-2 hover:bg-warm-100";
+
+/** A group member as a menu-style row: the same four cases as `LinkTile`, in the `LandmarkGroupRows` look. */
+function LinkRow({
+  link,
+  boxSlug,
+  onNavigate,
+  hidePath,
+}: {
+  link: ResolvedLink;
+  boxSlug: string;
+  onNavigate?: (target: ViewTarget) => void;
+  hidePath?: boolean;
+}) {
+  const display = link.label !== null && link.label.length > 0 ? link.label : link.title;
+  const refDisplay = link.ref.startsWith("/") ? toDisplayPath(link.ref) : link.ref;
+
+  if (isUrlRef(link.ref)) {
+    return (
+      <a href={link.ref} target="_blank" rel="noopener noreferrer" className={ROW_CLASSES}>
+        <div className="font-medium text-warm-900 truncate">{display}</div>
+        <div className="text-xs text-warm-700 truncate">{link.ref}</div>
+      </a>
+    );
+  }
+
+  if (!link.exists) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 text-warm-700">
+        {/* Struck through: the row stays so the place does not silently shrink. */}
+        <s className="min-w-0 truncate font-medium">{display}</s>
+        <span className="ml-auto shrink-0 text-xs text-danger">Missing</span>
+      </div>
+    );
+  }
+
+  const body = (
+    <>
+      <div className="font-medium text-warm-900 truncate">{display}</div>
+      <TileDetail detail={link.detail} />
+      {hidePath === true ? null : <div className="text-xs text-warm-700 truncate">{refDisplay}</div>}
+    </>
+  );
+  const target = resolveContentTarget(undefined, link.ref);
+  if (onNavigate !== undefined && target !== null) {
+    return <button type="button" onClick={() => onNavigate(target)} className={ROW_CLASSES}>{body}</button>;
+  }
+  return <Link to={href(`/${boxSlug}/views/${link.ref}`)} className={ROW_CLASSES}>{body}</Link>;
 }

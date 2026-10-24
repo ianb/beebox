@@ -192,7 +192,6 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
               group={section.group}
               boxSlug={boxSlug}
               onNavigate={onNavigate}
-              compact
               defaultOpen
               hidePath
               // "Also here" lists the folder's cards, so its overflow opens the folder.

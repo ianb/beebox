@@ -64,7 +64,7 @@ conversation ends, the check-in ends).
 
 ### Frontend display
 
-- `SchedulePill` components (in `InteractiveChat-layout/view.tsx`/`InteractiveChat-controls.tsx`) show active schedules with live countdown
+- `SchedulePill` components (in `InteractiveChat-layout/view/ChatComposerSection.tsx`/`InteractiveChat-controls.tsx`) show active schedules with live countdown
 - Schedules are fetched via the `chat.schedules` tRPC query on mount and after each turn
 - User can cancel schedules via the × button on each pill, which calls the `chat.cancelSchedule` tRPC mutation
 
@@ -87,7 +87,7 @@ The `<schedule-fired>` message sent to the agent is a user-type message wrapped 
 | `src/webapp/routes/chat/register.ts` | Server-side: legacy tag parsing on turn-text (stamps the originating `sessionId`, self-notes a rejection), wires the schedule manager into `webapp/chat-runtime.ts` |
 | `src/webapp/routes/chat/schedule-fire.ts` | `fireChatSchedule` — checks the originating session, then injects the fired check-in or drops it |
 | `src/webapp/trpc/routers/chat/control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
-| `src/frontend/src/components/chat/InteractiveChat-layout/view.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
+| `src/frontend/src/components/chat/InteractiveChat-layout/view/ChatComposerSection.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
 | `src/frontend/src/components/chat/everywhere/InteractiveChat/ws.ts` | Subscribes to the box event stream (`schedule-fired`, `chat-history`) over the shared WebSocket |
 | `src/frontend/src/components/chat/message-parsing.ts` | `stripUserDisplayTags()`, hidden schedule-fired messages |
 

@@ -163,9 +163,17 @@ export function useProcessingStatusPoll(opts: {
         });
     };
     const pollId = setInterval(poll, 5000);
+    // A backgrounded tab throttles the interval, and its stream may have
+    // dropped while hidden: poll at once on return. The answer counts toward
+    // the same idle threshold, under the same frozen id.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       ignored = true;
       clearInterval(pollId);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [isStreamingState, sessionId, send]);
   const value = confirmation?.sessionId === sessionId ? confirmation.value : "unconfirmed";

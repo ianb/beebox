@@ -21,7 +21,9 @@ import { coerceFigureParams, parseDeclaredParams } from "../../lib/figure-params
 import { ViewErrorBoundary } from "../ViewErrorBoundary";
 import { Markdown } from "../Markdown/body";
 import { Pre } from "../ui/Pre";
+import { Notice } from "../ui/Notice";
 import type { RendererProps } from "../../file-type-registry";
+import { StatusMessage } from "../ui/StatusMessage";
 import {
   FigureMount,
   type FigureContext,
@@ -110,7 +112,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     return <FigureError message={error} />;
   }
   if (loading || mod === null) {
-    return <div className="p-4 text-warm-700">Loading figure…</div>;
+    return <StatusMessage className="p-4">Loading figure…</StatusMessage>;
   }
   const sketch = mod.default;
   if (typeof sketch !== "function") {
@@ -153,9 +155,9 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
 
 function FigureError({ message }: { message: string }) {
   return (
-    <div className="border border-danger-light bg-danger-50 rounded-lg p-4">
+    <Notice tone="error">
       <h3 className="text-danger-dark font-medium mb-2">Figure error</h3>
       <Pre size="sm" error>{message}</Pre>
-    </div>
+    </Notice>
   );
 }

@@ -8,6 +8,8 @@ discovered-by: agent
 discovered-in: worktree-dup-sweep-frontend — frontend pass of the functional-duplication sweep
 ---
 
+Partly addressed by [the near-duplicates plan](../../beebox/docs/implemented-plans/frontend-visual-near-duplicates.md) (IME guard, stall-recovery fold, filename image check, copy flash). Still open: upload XHR pair, breakpoints, tab intervals, retry backoff, external links.
+
 Part of the [functional-duplication sweep](2026-10-22-functional-duplication-sweep.md).
 Each group is two or more implementations of one job that differ in a way a
 person could notice.

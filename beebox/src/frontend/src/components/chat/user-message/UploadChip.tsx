@@ -10,13 +10,14 @@
  */
 
 import { useParams } from "@tanstack/react-router";
+import { encodePathForUrl } from "../../../lib/view-url";
 import { withBase } from "../../../api";
 import type { UploadChipModel } from "./upload-message";
 import { CaptureBadge } from "../CaptureChip";
 
 export function UploadChip({ model }: { model: UploadChipModel }) {
   const { boxSlug } = useParams({ strict: false });
-  const href = withBase(`/${boxSlug ?? ""}/browse/${model.doc}`);
+  const href = withBase(`/${boxSlug ?? ""}/browse/${encodePathForUrl(model.doc)}`);
   const fileLabel = `${String(model.files)} file${model.files === 1 ? "" : "s"}`;
   const sizeLabel = model.bytes === "" ? "" : ` · ${model.bytes}`;
   return (

@@ -8,6 +8,7 @@ import { useMachine } from "@xstate/react";
 import { claudeAuthMachine } from "../../machines/claudeAuthMachine.js";
 import { ExternalLink } from "../ui/ExternalLink";
 import { Button } from "../ui/Button";
+import { Notice } from "../ui/Notice";
 import { AdminSectionCard } from "./AdminSectionCard";
 import { useRefreshAgentReadinessOnLogin } from "../../hooks/useAgentReadiness";
 
@@ -86,9 +87,7 @@ export function ClaudeCodeSection() {
       ) : null}
 
       {error ? (
-        <div className="mb-4 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
-          {error}
-        </div>
+        <Notice tone="error" className="mb-4">{error}</Notice>
       ) : null}
 
       <div className="flex gap-3">

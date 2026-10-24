@@ -13,12 +13,13 @@
 import { useEffect, useRef, type ReactNode, type SyntheticEvent } from "react";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { SelectionPanel } from "./ChatSelections";
-import { type SelectionItem } from "../../../lib/selection/serialize";
-import { getTTSClient } from "../../../lib/audio/tts-client/client";
-import { alarm } from "../../../lib/audio/earcons";
-import { SchedulePill } from "../InteractiveChat-controls";
-import { ChatInputArea } from "../InteractiveChat-composer/view";
-import { MobileTextareaRow } from "../InteractiveChat-mobile-row";
+import { type SelectionItem } from "../../../../lib/selection/serialize";
+import { getTTSClient } from "../../../../lib/audio/tts-client/client";
+import { alarm } from "../../../../lib/audio/earcons";
+import { SchedulePill } from "../../InteractiveChat-controls";
+import { ChatInputArea } from "../../InteractiveChat-composer/view";
+import { MobileTextareaRow } from "../../InteractiveChat-mobile-row";
+import { CloseButton } from "../../../ui/CloseButton";
 import type { ChatSchedule } from "@core/chat/schedules/core.js";
 
 export type { AttachmentItem, FileAttachmentItem };
@@ -192,16 +193,12 @@ export function ChatComposerSection(props: ComposerSectionProps) {
                   </svg>
                 )}
               </button>
-              <button
+              <CloseButton
                 id={includeControlIds ? "bbx-composer-keyboard-close" : undefined}
                 onClick={() => { setTypingMode(false); setTypingLocked(false); }}
-                className="p-1.5 rounded-full bg-warm-100/90 text-warm-600 hover:bg-warm-300 shadow-sm backdrop-blur-sm"
-                title="Close keyboard"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                label="Close keyboard"
+                size="sm"
+              />
             </div>
           ) : null}
           {mobileRow}

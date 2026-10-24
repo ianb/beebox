@@ -23,6 +23,7 @@ import type { InputStore } from "../../input-store";
 import type { EmissionStore } from "../../../../input/emission-store";
 import { MAX_RETAINED_MESSAGES, type ChatEvent } from "../../../../machines/chat-types";
 import { openerSendDecision, type OpenerSendOutcome } from "../../../openers/opener-send";
+import { isComposing } from "../../../../lib/ime";
 
 interface ChatActionsOpts {
   captureEmissionDispatch: () => EmissionDispatch;
@@ -220,7 +221,7 @@ export function useChatActions(opts: ChatActionsOpts) {
       if (isTranscribing) {
         return;
       }
-      if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === "Enter" && !e.shiftKey && !isComposing(e.nativeEvent)) {
         e.preventDefault();
         handleSend();
       }

@@ -13,27 +13,16 @@ import { Markdown } from "../../Markdown/body";
 import type { HistoryCommit } from "../../../api";
 import { useViewNavigate } from "../../../hooks/useViewNavigate";
 import { friendlyDate } from "../../ui/FriendlyDate";
+import { Badge } from "../../ui/Badge";
+import { phaseTone } from "../phase-tone";
 
 function trailerValues(value: string | string[] | undefined): string[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
 }
 
-/**
- * Phase badge with color coding.
- */
 function PhaseBadge({ phase }: { phase: string }) {
-  const colors: Record<string, string> = {
-    triage: "bg-info-100 text-primary",
-    analyze: "bg-warning-100 text-warning-dark",
-    brief: "bg-success-100 text-success-dark",
-  };
-
-  return (
-    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${colors[phase] || "bg-warm-100 text-warm-700"}`}>
-      {phase}
-    </span>
-  );
+  return <Badge tone={phaseTone(phase)} size="sm">{phase}</Badge>;
 }
 
 interface TrailerChipProps {

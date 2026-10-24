@@ -44,13 +44,39 @@ export function parseCaptureWrapper(text: string): CaptureChipModel | null {
 }
 
 /**
+ * What a capture holds: counts of photos, recordings and files, or, for the
+ * delivered chip, the photos and the total recording length ("0:00" is none).
+ */
+export type CaptureContents =
+  | { photos: number; audioSegments: number; files: number }
+  | { photos: number; recordingLength: string };
+
+function counted(count: number, noun: string): string {
+  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * The one wording for a capture's contents, used by the pending bubble, the
+ * resume dialog and the delivered chip: "2 photos, 1 recording, 3 files", in
+ * that order; "nothing yet" when empty. A recording length reads "4:10 audio"
+ * in the recordings' place.
+ */
+export function summarizeCaptureContents(contents: CaptureContents): string {
+  const parts: string[] = [];
+  if (contents.photos > 0) parts.push(counted(contents.photos, "photo"));
+  if ("recordingLength" in contents) {
+    if (contents.recordingLength !== "0:00") parts.push(`${contents.recordingLength} audio`);
+  } else {
+    if (contents.audioSegments > 0) parts.push(counted(contents.audioSegments, "recording"));
+    if (contents.files > 0) parts.push(counted(contents.files, "file"));
+  }
+  return parts.length > 0 ? parts.join(", ") : "nothing yet";
+}
+
+/**
  * The chip's one-line label, e.g. "Capture — 3 photos, 4:10 audio". Pure so it
  * tests; the chip component adds the icon and the summary line around it.
  */
 export function captureChipLabel(model: CaptureChipModel): string {
-  const parts: string[] = [];
-  if (model.images > 0) parts.push(`${String(model.images)} photo${model.images === 1 ? "" : "s"}`);
-  if (model.audio !== "0:00") parts.push(`${model.audio} audio`);
-  if (parts.length === 0) parts.push("capture");
-  return `Capture — ${parts.join(", ")}`;
+  return `Capture — ${summarizeCaptureContents({ photos: model.images, recordingLength: model.audio })}`;
 }

@@ -1,12 +1,15 @@
 ---
 title: "Enter in the chat composer sends while an input method is still composing"
-workstream: unattached
+workstream: dup-sweep-frontend
+resolution: implemented
 area: beebox
 labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-frontend — frontend pass of the functional-duplication sweep
 ---
+
+Closed by b69a7645f and a2d65591f: `lib/ime.ts` `isComposing` guards the composer, NewThoughtInput, QuickSearchOverlay and the PlacePill landmark inputs; the overlay Escape handler also checks it. Not tested with a real IME in a browser.
 
 The chat composer sends on Enter without Shift
 (`InteractiveChat/actions.ts:222`). It does not check

@@ -16,8 +16,8 @@ import {
   captureBubblePhase,
   captureBubbleCaption,
   captureBubbleAgeMs,
-  captureMediaSummary,
 } from "../../../src/components/chat/capture-bubble.js";
+import { summarizeCaptureContents } from "../../../src/components/chat/capture-message.js";
 
 const NOW = Date.parse("2026-08-21T12:00:00Z");
 const agesAgo = (ms: number) => new Date(NOW - ms).toISOString();
@@ -122,9 +122,5 @@ void test("A retry or discard that came back with an error takes over the captio
 // Discard deletes staged media that reached no other surface, so the confirmation
 // has to say what it is deleting:
 void test("Discard deletes staged media that reached no other surface, so the confirmati...", async (t) => {
-  t.check(captureMediaSummary(COUNTS), "2 photos, 3 clips, 1 file");
-
-  t.check(captureMediaSummary({ photos: 7, files: 0, audioSegments: 1 }), "7 photos, 1 clip");
-
-  t.check(captureMediaSummary({ photos: 0, files: 0, audioSegments: 0 }), "capture");
+  t.check(summarizeCaptureContents(COUNTS), "2 photos, 3 recordings, 1 file");
 });

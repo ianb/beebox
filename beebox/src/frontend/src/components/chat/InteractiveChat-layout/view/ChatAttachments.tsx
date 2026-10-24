@@ -12,11 +12,11 @@
  * the composer references via `[fileN]` tokens.
  */
 
-import { Image } from "../../ui/Image";
-import { RemoveBubble } from "./RemoveBubble";
-import { useLightbox } from "../../LightboxProvider";
+import { Image } from "../../../ui/Image";
+import { CloseButton } from "../../../ui/CloseButton";
+import { useLightbox } from "../../../LightboxProvider";
 import { humanBytes } from "@shared/human-bytes";
-import type { ImageItem, FileItem } from "../../../input/emission-store";
+import type { ImageItem, FileItem } from "../../../../input/emission-store";
 
 /**
  * UI-side attachment record (pairs ChatImageAttachment payload with preview
@@ -109,7 +109,7 @@ function ThumbTile({
       <div className="absolute -top-1 left-0 text-[10px] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
         {attachment.id}
       </div>
-      <RemoveBubble title="Remove attachment" onClick={onRemove} />
+      <CloseButton variant="bubble" label="Remove attachment" onClick={onRemove} className="absolute -top-2 -right-2" />
     </div>
   );
 }
@@ -218,7 +218,7 @@ function FileChip({
           </span>
         ) : null}
       </div>
-      <RemoveBubble title="Remove attachment" onClick={onRemove} />
+      <CloseButton variant="bubble" label="Remove attachment" onClick={onRemove} className="absolute -top-2 -right-2" />
     </div>
   );
 }
