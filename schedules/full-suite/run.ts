@@ -31,6 +31,7 @@ import { createCheckout, failingFiles, removeCheckout, runTier, type Checkout, t
 import { REPO_ROOT, git, refuse } from "./repo.js";
 import { readPending, writeKnownRed, writePending } from "./state.js";
 import { currentDurations, deferRed, handleRed } from "./red.js";
+import { publishImageIfDue } from "./publish.js";
 
 const DRY_RUN = process.env["SCHEDULE_DRY_RUN"] === "1";
 
@@ -274,6 +275,9 @@ async function main(): Promise<void> {
       // Green is a verdict: every condition this schedule raised has cleared
       // (a held typecheck alert excepted).
       await resolveAll();
+      // And the engine image channel moves, once a day (publish.ts), from a
+      // commit that both tests and typecheck accept.
+      if (!DRY_RUN && typecheck.ok) await publishImageIfDue(batch.pinned);
       await done();
       return;
     }

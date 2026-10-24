@@ -3,22 +3,26 @@
 #
 # Usage: [NOTES_FILE=notes.md] scripts/release.sh X.Y.Z
 #
+# An app release is for the Swift shell only. The engine image moves on its
+# own channel (ghcr.io/ianb/beebox:latest, published by the image workflow
+# from main), and the app follows it without a release here.
+#
 # Expects, on the maintainer's Mac:
-#   - the tag vX.Y.Z pushed, and the image workflow finished
-#     (ghcr.io/ianb/beebox:X.Y.Z must be pullable: the app pins it);
+#   - the tag mac-vX.Y.Z pushed;
 #   - a "Developer ID Application" identity in the keychain;
 #   - the `beebox-notary` notarytool profile;
 #   - the Sparkle private key in the keychain (generate_keys --account beebox).
 #
-# Publishes BeeBoxDesktop-X.Y.Z.dmg, its .sha256, and appcast.xml to the vX.Y.Z
-# GitHub Release, marked latest: the app's feed URL is
+# Publishes BeeBoxDesktop-X.Y.Z.dmg, its .sha256, and appcast.xml to the
+# mac-vX.Y.Z GitHub Release, marked latest: the app's feed URL is
 # releases/latest/download/appcast.xml, and GitHub's "latest" skips
-# pre-releases.
+# pre-releases. Engine images make no GitHub Release, so they never move the
+# feed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION="${1:?usage: release.sh X.Y.Z}"
-TAG="v$VERSION"
+TAG="mac-v$VERSION"
 REPO=ianb/beebox
 CACHE="${BEEBOX_BUILD_CACHE:-$HOME/Library/Caches/beebox-mac-build}"
 SPARKLE_BIN="$CACHE/sparkle-2.10.0/bin"
@@ -26,11 +30,14 @@ SPARKLE_BIN="$CACHE/sparkle-2.10.0/bin"
 git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null \
   || { echo "release: tag $TAG is not on origin; push it first" >&2; exit 1; }
 
-token="$(curl -fsS "https://ghcr.io/token?scope=repository:$REPO:pull" | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')"
-curl -fsS -o /dev/null -H "Authorization: Bearer $token" \
-  -H 'Accept: application/vnd.oci.image.index.v1+json' \
-  "https://ghcr.io/v2/$REPO/manifests/$VERSION" \
-  || { echo "release: ghcr.io/$REPO:$VERSION is not published (or not public); wait for the image workflow" >&2; exit 1; }
+# The image declares the oldest app that can run it (MIN_APP_VERSION in the
+# Dockerfile). Releasing an app below that would ship a shell the channel's
+# next image refuses; the Dockerfile and this release must move together.
+min_app="$(sed -n 's/^ARG MIN_APP_VERSION=\(.*\)$/\1/p' ../beebox/docker/Dockerfile)"
+[[ -n "$min_app" ]] || { echo "release: no MIN_APP_VERSION in beebox/docker/Dockerfile" >&2; exit 1; }
+if [[ "$(printf '%s\n%s\n' "$min_app" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]]; then
+  echo "release: app $VERSION is below the image's MIN_APP_VERSION $min_app" >&2; exit 1
+fi
 
 IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1)}"
 [[ -n "$IDENTITY" ]] || { echo "release: no Developer ID Application identity in the keychain" >&2; exit 1; }

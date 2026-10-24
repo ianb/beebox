@@ -407,6 +407,13 @@ struct LocalBoxTab: View {
                         if !runtime.memorySummary.isEmpty {
                             Text(runtime.memorySummary).font(.caption).foregroundStyle(.secondary)
                         }
+                        if let version = runtime.engine.version {
+                            Text("Engine \(version)\(runtime.engine.checkedAt.map { " · checked \($0.formatted(.relative(presentation: .named)))" } ?? "")")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        if let note = runtime.engine.note {
+                            Text(note).font(.caption).foregroundStyle(.secondary)
+                        }
                         HStack {
                             if case .running(let url) = runtime.phase {
                                 Button("Open in Browser") { NSWorkspace.shared.open(url) }
@@ -419,6 +426,12 @@ struct LocalBoxTab: View {
                             }
                             Spacer()
                             Button("Show Box Files") { NSWorkspace.shared.open(Paths.box) }
+                        }
+                        HStack {
+                            Button("Check for Engine Updates…") { runtime.checkForEngineUpdate() }
+                                .disabled(runtime.progress != nil)
+                            Text("Looks for a newer engine and restarts the box on it. The box also checks at every start.")
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                     }
                     Section {
@@ -476,7 +489,7 @@ struct GeneralTab: View {
                     HStack {
                         Text("Bee Box Desktop \(BundleConfig.version)")
                         Spacer()
-                        Button("Check for Updates…") { updates.checkForUpdates() }
+                        Button("Check for App Updates…") { updates.checkForUpdates() }
                             .disabled(!updates.enabled)
                     }
                     if !updates.enabled {
