@@ -150,6 +150,17 @@ for entry in "${ENTRIES[@]}"; do
   run bash -c "sudo -u beebox -H bash -lc 'set -a; source $HUB_ENV 2>/dev/null; set +a; $BBX engine boxes export-push $slug' > '$home/.local/share/beebox/push-subscriptions.json.tmp'"
   run bash -c "chown bbx-$slug:bbx-$slug '$home/.local/share/beebox/push-subscriptions.json.tmp' && chmod 0600 '$home/.local/share/beebox/push-subscriptions.json.tmp' && mv '$home/.local/share/beebox/push-subscriptions.json.tmp' '$home/.local/share/beebox/push-subscriptions.json'"
   copy_grants "$slug" "$home"
+  # Google tokens: the hub's centralized file (BBX_GOOGLE_TOKENS_FILE in .env)
+  # is hidden from a box unit, and box.env does not name it. Each box gets a
+  # copy at the per-box location the token store reads when the env var is
+  # unset (src/google/token-store.ts), so connectors keep authenticating; the
+  # probe decides whether boxes should instead authorize separately
+  # (per-box-units.subplan.md, Google token row).
+  google_tokens=$(grep -E '^BBX_GOOGLE_TOKENS_FILE=' "$HUB_ENV" 2>/dev/null | cut -d= -f2- || true)
+  if [[ -n "$google_tokens" && -f "$google_tokens" ]]; then
+    run install -d -o "bbx-$slug" -g "bbx-$slug" -m 0700 "$new_path/_config/connectors"
+    run install -o "bbx-$slug" -g "bbx-$slug" -m 0600 "$google_tokens" "$new_path/_config/connectors/google.secret.json"
+  fi
   # The box's push credential: its deploy key and ssh alias (deploy/add-box.sh).
   key="$BBX_HOME/.ssh/id_ed25519_box_${slug//-/_}"
   if [[ -f "$key" ]]; then

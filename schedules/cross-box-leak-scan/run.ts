@@ -39,8 +39,8 @@ import { runStaticSweep } from "./static-sweep.js";
 
 const SCHEDULE_DIR = import.meta.dirname;
 const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
-/** The audit and its only local import — everything the prod leg needs. */
-const PROD_AUDIT_FILES = ["host-audit.ts", "box-manifest.ts"] as const;
+/** The audit and its local imports — everything the prod leg needs. */
+const PROD_AUDIT_FILES = ["host-audit.ts", "host-audit-users.ts", "box-manifest.ts"] as const;
 const SCHEDULES_CLI = path.join(REPO_ROOT, "bin", "schedules");
 const DRY_RUN = process.env["SCHEDULE_DRY_RUN"] === "1";
 const PROBE_TEST = path.join(REPO_ROOT, "beebox", "test", "scenarios", "cross-box-probe.test.ts");

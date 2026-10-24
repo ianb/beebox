@@ -81,8 +81,9 @@ getent passwd "bbx-$slug" > /dev/null || refuse "no box user bbx-$slug"
 if systemctl start --wait "beebox-pass@$slug.service"; then
   log ok ""
   exit 0
+else
+  rc=$?
 fi
-rc=$?
 log error "pass unit exited $rc"
 # The pass unit's own journal has the reason; name it for the daemon's log.
 journalctl -u "beebox-pass@$slug.service" -n 5 --no-pager -o cat >&2 || true

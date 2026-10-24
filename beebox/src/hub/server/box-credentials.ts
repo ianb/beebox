@@ -32,14 +32,27 @@ function cookieHeader(headers: GateHeaders): string | undefined {
   return typeof headers.cookie === "string" ? headers.cookie : undefined;
 }
 
-/** Does the request carry a credential of the box's mobile devices? */
+/**
+ * Does the request carry a credential of the box's mobile devices? On a unit
+ * host a bearer is verified by hash; a cookie-shaped request passes to the box
+ * for verification (module doc). For the proxy gate only: the box answers.
+ */
 export async function mobileAuthed(boxRoot: string, headers: GateHeaders): Promise<boolean> {
   if (!hubMetaReadsEnabled()) return verifyMobileRequest(boxRoot, headers);
-  const meta = readHubMeta(boxRoot);
-  if (meta === undefined) return false;
-  if (bearerMatchesHashes(headers.authorization, meta.tokenHashes.mobile)) return true;
-  // A cookie-shaped request passes to the box for verification (module doc).
+  if (await mobileBearerAuthed(boxRoot, headers)) return true;
   return (parseCookieHeaderAll(cookieHeader(headers))[MOBILE_COOKIE_NAME] ?? []).length > 0;
+}
+
+/**
+ * The same question for a hub-owned answer (the `/api/boxes` listing): only a
+ * credential the hub itself verified counts, so a made-up cookie cannot list
+ * every box's slug on a unit host (cross-model review, codex gpt-6-sol,
+ * 2026-10-24). A cookie-only mobile client gets its listing from the box.
+ */
+export async function mobileBearerAuthed(boxRoot: string, headers: GateHeaders): Promise<boolean> {
+  if (!hubMetaReadsEnabled()) return verifyMobileRequest(boxRoot, headers);
+  const meta = readHubMeta(boxRoot);
+  return meta !== undefined && bearerMatchesHashes(headers.authorization, meta.tokenHashes.mobile);
 }
 
 /** Does the request carry one of the box's scan-upload tokens? The caller has checked the path. */

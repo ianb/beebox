@@ -44,7 +44,7 @@ import { canAccessBox } from "../../webapp/box-access.js";
 import { HASHED_ASSET_STATIC_OPTIONS } from "../../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../../webapp/base-prefix.js";
 import { hasScanAuth } from "./scan-gate.js";
-import { agentAuthed, mobileAuthed as boxMobileAuthed } from "./box-credentials.js";
+import { agentAuthed, mobileAuthed as boxMobileAuthed, mobileBearerAuthed } from "./box-credentials.js";
 import { verifyBrowseKey } from "../../core/browse-key.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -130,7 +130,8 @@ async function hasMobileAuth(opts: { boxRoot: string | undefined; headers: http.
 }
 
 async function listMobileAuthorizedBoxes(opts: { boxes: BoxSpec[]; headers: http.IncomingHttpHeaders }): Promise<BoxListing[]> {
-  const checked = await Promise.all(opts.boxes.map(async (box) => ({ box, ok: await boxMobileAuthed(box.boxRoot, opts.headers) })));
+  // Verified credentials only: this listing is the hub's own answer, not proxied.
+  const checked = await Promise.all(opts.boxes.map(async (box) => ({ box, ok: await mobileBearerAuthed(box.boxRoot, opts.headers) })));
   return describeBoxes(checked.filter((c) => c.ok).map(({ box }) => box));
 }
 

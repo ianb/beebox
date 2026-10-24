@@ -835,6 +835,17 @@ kept here as the record.
    reboot from the device bearer the app holds anyway; (c) Ed25519-signed
    cookies with the public key in `hub-meta.json`: no shared material, a
    larger change to `core/mobile/session.ts`. Lean: (b); (a) is the interim.
+   Review finding (codex gpt-6-sol, 2026-10-24): the pass-through must not
+   reach the hub's own `/api/boxes` listing, where a made-up cookie would
+   list every slug; the listing now accepts only bearers the hub verified
+   by hash, and a cookie-only mobile client lists from its box.
+8. **Box display identity in the hub listing** (open, found in review
+   2026-10-24). The hub's box picker and `/api/boxes` read each box's name
+   and symbol from `_content` (`core/landmark/box-identity.ts`), which a
+   unit host makes private; the picker then shows bare slugs with no symbol.
+   Options: (a) accept the bare listing; (b) add `identity: { name, symbol }`
+   to `hub-meta.json` (not secret, two more fields, the engine already
+   rewrites the file on every input change). Lean: (b), after the probe.
 6. **Agent logins per box** (open, settled by the subplan's probe). One
    `claude auth login` and `codex login` per box user, repeated on expiry,
    or a copied credentials file that may break on token rotation. No

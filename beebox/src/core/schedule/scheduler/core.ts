@@ -16,7 +16,7 @@ import { errorMessage } from "../../../shared/error-guards.js";
 import { DEV_BUNDLE_RELOAD_EXIT_CODE, devBundleWasReplaced } from "../../../lib/dev-bundle-reload.js";
 import { writeBoxLog } from "./box-log.js";
 import { runSchedulerPass } from "./pass.js";
-import { boxRunWrapperPresent, runPassThroughWrapper, slugForBoxRoot } from "./box-run.js";
+import { boxRunWrapperPresent, runPassThroughWrapper, unitSlugForBoxRoot } from "./box-run.js";
 
 // The per-box log moved to `./box-log.ts` and the pass itself to `./pass.ts`;
 // re-exported so the CLI (`cli/commands/scheduler`) keeps one import.
@@ -132,11 +132,13 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
       if (isStopping()) break;
       // Each pass, including heartbeat, growth and credential housekeeping,
       // gets fresh admission. No daemon-wide permit survives into a later tick.
-      // On a unit host the pass runs as the box's user inside its sandbox,
-      // through the one root path the scheduler user may call; elsewhere in
-      // process (docs/plans/per-box-units.md, Track E).
-      currentPass = throughWrapper
-        ? runPassThroughWrapper(slugForBoxRoot(boxPath)).catch((error: unknown) => {
+      // A box in the unit-host layout, on a host with the wrapper, runs its
+      // pass as its own user inside its sandbox through the one root path the
+      // scheduler user may call; any other box runs in process
+      // (docs/plans/per-box-units.md, Track E).
+      const unitSlug = throughWrapper ? unitSlugForBoxRoot(boxPath) : undefined;
+      currentPass = unitSlug !== undefined
+        ? runPassThroughWrapper(unitSlug).catch((error: unknown) => {
           console.error(`[${new Date().toISOString()}] ${boxPath}: pass failed: ${errorMessage(error)}`);
         })
         : runSchedulerPass(boxPath).then(() => { /* the pass logs its own outcome in the box */ });

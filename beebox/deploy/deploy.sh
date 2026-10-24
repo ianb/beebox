@@ -974,7 +974,7 @@ REMOTE
 
   queue_step "Restarting services..."
   # shellcheck disable=SC2016 # the remote bash expands these, by design
-  queue_remote command bash -c 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"; socks=$(systemctl list-units "beebox-box@*.socket" --all --plain --no-legend 2>/dev/null | awk "{print \$1}"); [ -z "$socks" ] || { systemctl start $socks && echo "Box sockets started"; }'
+  queue_remote command bash -c 'systemctl restart beebox-hub beebox-scheduler || exit 1; echo "Services restarted"; socks=$(systemctl list-units "beebox-box@*.socket" --all --plain --no-legend 2>/dev/null | awk "{print \$1}"); [ -z "$socks" ] || { systemctl start $socks && echo "Box sockets started"; }'
   # The restart succeeded (set -e would have exited above otherwise): the EXIT
   # trap must not start the services a second time if a later check fails.
   printf 'SERVICES_STOPPED=0\n' >> "$REMOTE_SCRIPT"

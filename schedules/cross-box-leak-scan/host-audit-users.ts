@@ -71,11 +71,19 @@ async function lstatOrNull(target: string): Promise<Stats | null> {
   }
 }
 
-async function entryNames(dir: string): Promise<string[]> {
+/**
+ * A directory's entries, or the reason they could not be listed. The box
+ * homes are 0751, so an audit run as a user other than root or the box's
+ * owner cannot list them; that is reported, never read as "nothing to check"
+ * (cross-model review, codex gpt-6-sol, 2026-10-24).
+ */
+async function entryNames(dir: string): Promise<{ names: string[]; unreadable?: string }> {
   try {
-    return await fs.readdir(dir);
-  } catch (_e) {
-    return [];
+    return { names: await fs.readdir(dir) };
+  } catch (e) {
+    const code = e instanceof Error && "code" in e ? String(e.code) : "error";
+    if (code === "ENOENT") return { names: [] };
+    return { names: [], unreadable: `cannot list (${code}); run the audit as root on a unit host` };
   }
 }
 
@@ -113,7 +121,9 @@ async function checkDirLayout(dir: string, owner: { slug: string; ids: IdTable }
 /** Direct entries of `dir` (other than `skip`) must be owner-only. */
 async function checkPrivateEntries(dir: string, skip: string): Promise<HostFinding[]> {
   const findings: HostFinding[] = [];
-  for (const name of await entryNames(dir)) {
+  const listing = await entryNames(dir);
+  if (listing.unreadable !== undefined) return [{ path: dir, message: listing.unreadable }];
+  for (const name of listing.names) {
     if (name === skip) continue;
     const full = path.join(dir, name);
     const stat = await lstatOrNull(full);
@@ -130,7 +140,12 @@ async function checkPrivateEntries(dir: string, skip: string): Promise<HostFindi
 async function checkBeeboxDir(dir: string): Promise<HostFinding[]> {
   const findings: HostFinding[] = [];
   const walk = async (current: string): Promise<void> => {
-    for (const name of await entryNames(current)) {
+    const listing = await entryNames(current);
+    if (listing.unreadable !== undefined) {
+      findings.push({ path: current, message: listing.unreadable });
+      return;
+    }
+    for (const name of listing.names) {
       const full = path.join(current, name);
       const stat = await lstatOrNull(full);
       if (stat === null || stat.isSymbolicLink()) continue;
@@ -191,7 +206,10 @@ export async function checkBoxUserLayout(boxes: BoxRoot[], options?: UnitAuditOp
   return findings;
 }
 
-const ALLOWED_SECRET_NAMES = /^(?:BBX_VAPID_PUBLIC_KEY|BBX_VAPID_PRIVATE_KEY|BBX_APNS_KEY_\w+)$/u;
+// The keys the plan accepts reaching every box: the host's push identities,
+// and the shared read-only diagnostic bearer the child env allowlist passes
+// (beebox/src/hub/supervisor/child-env.ts).
+const ALLOWED_SECRET_NAMES = /^(?:BBX_VAPID_PUBLIC_KEY|BBX_VAPID_PRIVATE_KEY|BBX_APNS_KEY_\w+|BBX_DIAG_API_KEY)$/u;
 const FORBIDDEN_NAME = /^(?:BBX_SESSION_SECRET|BBX_HUB_SECRET|\w*_SECRET|\w*_KEY)$/u;
 
 /** `box.env` is read by every box's service; it must not carry hub or session secrets. */
