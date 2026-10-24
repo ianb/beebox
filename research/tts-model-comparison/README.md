@@ -67,4 +67,4 @@ Round 2 (2026-10-24):
 - Test results (M2) is dropped. The other wordings of the staying-late direction (M1x) stay out of the run; they are the evidence behind the finding above.
 - Both explanations stay: the worked math (E, plain and Markdown _then_) and the water-boiling one (W, plain and directed).
 
-The 2026-10-24 run renders these texts on every model; the plan is [tts-comparison-second-run](../../beebox/docs/plans/tts-comparison-second-run.md).
+The 2026-10-24 run renders these texts on every model; the plan is [tts-comparison-second-run](../../beebox/docs/implemented-plans/tts-comparison-second-run.md).

@@ -1,6 +1,6 @@
 ---
 title: "TTS comparison, second run: new texts, every model rendered by script"
-status: draft
+status: implemented
 workstream: tts-comparison-page
 issues: []
 ---
