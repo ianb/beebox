@@ -145,6 +145,9 @@ first use"; its exports keep `yaml`'s names.
 - **Direction:** `collectAllResults` creates the map, passes it to both.
   Other `lintCardsDispatch` callers pass nothing and behave as before.
 - **First chunk:** the whole track.
+- **Result:** `parseYaml` calls in `bbx validate` on test1: 839 → 295 for
+  271 distinct texts; the remaining repeats are the landmark caches above.
+  `validate --json` output on test1 is unchanged (compared sorted).
 
 ### Track B: narrow the fallback patterns
 
@@ -158,6 +161,16 @@ first use"; its exports keep `yaml`'s names.
   cases of `&`/`!` mid-scalar, at every node start, and after a continuation
   line's indentation.
 - **First chunk:** the whole track.
+- **Result:** the new fuzz (`&`, `!`, `?`, `0b` and flow and quote
+  characters in 14 shapes, 3.4M inputs) found differences the old pattern
+  also missed: a bare `!` tag, a comment straight after a quote or bracket,
+  tab indentation, a flow collection without a value in a flow mapping, and a
+  collection key in a flow list. Each now takes the fallback. `[`/`{` count
+  as a node start only where they can open a flow collection, so
+  `if [ ! -f x ]` stays on js-yaml. After the change: the new fuzz, the
+  scalar fuzz (627,713), two structural fuzz runs (500,000 each), and the
+  corpus (17,964 inputs) report no differences. test1 cards taking the
+  fallback: 7 → 3.
 
 ### Track C: load `yaml` on first use
 
@@ -175,14 +188,19 @@ first use"; its exports keep `yaml`'s names.
   export function isScalar(node: unknown): node is Yaml.Scalar;
   export function isYamlParseError(error: unknown): error is Yaml.YAMLParseError;
   ```
+  As built, the functions are `yaml`'s own (`typeof Yaml.parse` and so on)
+  wrapped by one forwarding helper, so they keep `yaml`'s overloads and
+  generics without redeclaring them; the cast lives in that helper.
   Every value import of `yaml` in `src/` outside `src/dev/` and
   `src/scripts/migrate/` moves to it; type imports stay
-  (`import type … from "yaml"` is erased). `parse` and `stringify` declare
-  `yaml`'s two overloads each (`node_modules/yaml/dist/public-api.d.ts:35`)
-  and `src/exports/schema.ts` re-exports them as `parseYaml` and
-  `stringifyYaml`; a type-level assignment to `typeof Yaml.parse` and
-  `typeof Yaml.stringify` in the test fails typecheck if they drift.
+  (`import type … from "yaml"` is erased). `src/exports/schema.ts`
+  re-exports `parse` and `stringify` as `parseYaml` and `stringifyYaml`, with
+  `yaml`'s two overloads each (`node_modules/yaml/dist/public-api.d.ts:35`),
+  since their types are `typeof Yaml.parse` and `typeof Yaml.stringify`.
 - **Why:** the 12 ms load on every verb.
+- **Result:** on test1, `status`, `search` and `validate --pre-commit` no
+  longer load `yaml`; `todos` and `validate` read a card that takes the
+  fallback, so they still do.
 - **Vocabulary lock-in:** value imports of `yaml` live in `yaml-package.ts`
   (plus dev tools and migrations, which no verb loads).
 - **First chunk:** the module, the swaps, and the test.
