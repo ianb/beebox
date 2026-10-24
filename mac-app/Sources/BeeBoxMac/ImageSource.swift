@@ -104,7 +104,10 @@ struct ImageSource {
         }
         guard pulled.digest == target.digest else {
             try? await store.delete(reference: pulled.reference, performCleanup: true)
-            throw RuntimeError("the registry served \(pulled.digest) for \(target.digest); not using it")
+            let mismatch = RuntimeError("the registry served \(pulled.digest) for \(target.digest); not using it")
+            guard let current else { throw mismatch }
+            appLog("engine download mismatch; staying on \(Self.describe(current)): \(mismatch)")
+            return Selection(image: current, candidate: nil, decision: decision, checkFailure: mismatch.description)
         }
         guard let current else {
             // First download: nothing to roll back to, so it is current at once.

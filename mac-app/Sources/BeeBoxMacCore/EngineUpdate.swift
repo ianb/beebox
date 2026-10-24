@@ -128,8 +128,10 @@ public struct UpdateRecord: Codable, Equatable, Sendable {
     public var previousDigest: String
     /// The image the update moved to.
     public var candidateDigest: String
-    /// The box's git HEAD before the update began; the tree was clean.
+    /// The box's git HEAD before the update began (the tree was clean), or
+    /// `noBox` when the update ran before the box was created.
     public var boxHead: String
+    public static let noBox = "none"
     public var startedAt: Date
 
     public init(previousDigest: String, candidateDigest: String, boxHead: String, startedAt: Date) {

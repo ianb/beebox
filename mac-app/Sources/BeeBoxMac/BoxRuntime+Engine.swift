@@ -33,19 +33,20 @@ extension BoxRuntime {
     ) async throws -> Containerization.Image? {
         let target = await source.info(candidate)
         let label = target.version ?? String(candidate.digest.prefix(19))
-        guard boxIsInitialized() else {
-            // No box yet: nothing to roll back, the candidate is simply current.
-            try await source.promote(candidate)
-            return try await manager.imageStore.get(reference: ImageSource.current)
+        // No box yet: nothing to reset, but the working image still comes
+        // back if the candidate cannot create one.
+        var head = UpdateRecord.noBox
+        if boxIsInitialized() {
+            phase = .working("Checking the box before updating to engine \(label)…")
+            let state = try await boxGitState(&manager, image: current, log: log)
+            guard state.clean else {
+                appLog("engine update to \(label) deferred: the box has uncommitted edits")
+                engine.note = "Engine \(label) is waiting: the box has uncommitted edits. It applies at the first start after they are committed."
+                return nil
+            }
+            head = state.head
         }
-        phase = .working("Checking the box before updating to engine \(label)…")
-        let state = try await boxGitState(&manager, image: current, log: log)
-        guard state.clean else {
-            appLog("engine update to \(label) deferred: the box has uncommitted edits")
-            engine.note = "Engine \(label) is waiting: the box has uncommitted edits. It applies at the first start after they are committed."
-            return nil
-        }
-        let record = UpdateRecord(previousDigest: current.digest, candidateDigest: candidate.digest, boxHead: state.head, startedAt: Date())
+        let record = UpdateRecord(previousDigest: current.digest, candidateDigest: candidate.digest, boxHead: head, startedAt: Date())
         try writeUpdateRecord(record)
         phase = .working("Updating to engine \(label)…")
         try await source.promote(candidate)
@@ -108,7 +109,7 @@ extension BoxRuntime {
         // The box's state is read on the previous image, the one known to
         // start here; the candidate may be the reason the update failed.
         var state = (head: record.boxHead, clean: true)
-        if currentDigest == record.candidateDigest, previousDigest == record.previousDigest, boxIsInitialized(),
+        if currentDigest == record.candidateDigest, previousDigest == record.previousDigest, boxIsInitialized(), record.boxHead != UpdateRecord.noBox,
            let previous = try? await manager.imageStore.get(reference: ImageSource.previous) {
             state = try await boxGitState(&manager, image: previous, log: log)
         }
@@ -147,7 +148,9 @@ extension BoxRuntime {
     /// dirty (the sweep committed, or a failed migration left files). Runs on
     /// `image`, which must be one that starts.
     private func resetBoxIfMoved(_ manager: inout ContainerManager, record: UpdateRecord, image: Containerization.Image, log: LogWriter) async throws {
-        guard boxIsInitialized() else { return }
+        // A box the failed engine was creating is not reset: `bbx engine init`
+        // on the restored engine starts over from the readiness check.
+        guard boxIsInitialized(), record.boxHead != UpdateRecord.noBox else { return }
         let state = try await boxGitState(&manager, image: image, log: log)
         guard state.head != record.boxHead || !state.clean else { return }
         appLog("resetting the box to \(record.boxHead) (HEAD \(state.head), clean \(state.clean))")

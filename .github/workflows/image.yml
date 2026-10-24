@@ -24,7 +24,7 @@ on:
         required: false
         default: ""
       channel:
-        description: "Tag to publish"
+        description: "Tag to publish. latest is what every desktop follows: dispatch it only from a green main (the full-suite schedule does); edge is for a trial"
         required: true
         default: latest
         type: choice
