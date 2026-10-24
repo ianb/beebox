@@ -53,12 +53,12 @@ player, and a link to `#R-directed-gemini38lite` opens the page at that take.
 
 ## The models
 
-- {% model name="gpt-4o-mini-tts (2025-03-20)" vendor="openai" /%} `gpt-4o-mini-tts-2025-03-20`, OpenAI direct, voice marin. Rendered 2026-10-24. List price: $12 per million audio tokens plus $0.60 per million text tokens; about 2.1¢ per minute of speech in this run, at list price. Rendered through the box's own speech service (beebox/src/services/tts.ts), so the takes are what the box sends.
-- {% model name="gpt-4o-mini-tts (2025-12-15)" vendor="openai" /%} `gpt-4o-mini-tts-2025-12-15`, OpenAI direct, voice marin. Rendered 2026-10-24. List price: $12 per million audio tokens plus $0.60 per million text tokens; about 1.9¢ per minute of speech in this run, at list price.
+- {% model name="gpt-4o-mini-tts (2025-03-20)" vendor="openai" /%} `gpt-4o-mini-tts-2025-03-20`, OpenAI direct, voice marin. Rendered 2026-10-24. List price: $12 per million audio tokens plus $0.60 per million text tokens; about 1.5¢ per minute of speech in this run, at list price. Rendered through the box's own speech service (beebox/src/services/tts.ts), so the takes are what the box sends.
+- {% model name="gpt-4o-mini-tts (2025-12-15)" vendor="openai" /%} `gpt-4o-mini-tts-2025-12-15`, OpenAI direct, voice marin. Rendered 2026-10-24. List price: $12 per million audio tokens plus $0.60 per million text tokens; about 1.5¢ per minute of speech in this run, at list price.
 - {% model name="tts-1-hd" vendor="openai" /%} `tts-1-hd`, OpenAI direct, voice nova. Rendered 2026-10-24. List price: $30 per million characters; about 2.9¢ per minute of speech in this run, at list price. Takes no instructions.
 - {% model name="Gemini 3.1 Flash TTS via OpenRouter" vendor="google" /%} `gemini-3.1-flash-tts-preview`, OpenRouter, voice Zephyr. Rendered 2026-10-24. List price: not recorded; OpenRouter billed each request; about 4.3¢ per minute of speech in this run, as billed by OpenRouter. OpenRouter's instructions field has no effect on 3.1 (the prompt token count does not change), so direction goes in front of the text.
 - {% model name="Gemini 3.8 Flash TTS" vendor="google" /%} `gemini-3.8-flash-tts`, Google AI Studio, voice Zephyr. Rendered 2026-10-24. List price: $0.50 per million text tokens plus $9 per million audio tokens; rises on 2027-01-01; about 1.4¢ per minute of speech in this run, at list price.
-- {% model name="Gemini 3.8 Flash-Lite TTS" vendor="google" /%} `gemini-3.8-flash-lite-tts`, Google AI Studio, voice Zephyr. Rendered 2026-10-24. List price: $0.50 per million text tokens plus $6 per million audio tokens; rises on 2027-01-01; about 1.2¢ per minute of speech in this run, at list price. Rendered through the box's own speech service (beebox/src/services/tts.ts), so the takes are what the box sends.
+- {% model name="Gemini 3.8 Flash-Lite TTS" vendor="google" /%} `gemini-3.8-flash-lite-tts`, Google AI Studio, voice Zephyr. Rendered 2026-10-24. List price: $0.50 per million text tokens plus $6 per million audio tokens; rises on 2027-01-01; about 0.9¢ per minute of speech in this run, at list price. Rendered through the box's own speech service (beebox/src/services/tts.ts), so the takes are what the box sends.
 - {% model name="Gemini 3.1 Flash TTS" vendor="google" /%} `gemini-3.1-flash-tts-preview`, Google AI Studio, voice Zephyr. Rendered 2026-10-24. List price: $1 per million text tokens plus $20 per million audio tokens; about 3.0¢ per minute of speech in this run, at list price. Google's API answers 400 to a speech_metadata style for 3.1 ("Speech metadata is not supported for this model"), so direction goes in front of the text.
 - {% model name="MAI-Voice-2" vendor="microsoft" /%} `microsoft/mai-voice-2`, OpenRouter, voice en-US-Harper:MAI-Voice-2. Rendered 2026-10-24. List price: not recorded; OpenRouter billed each request; about 1.8¢ per minute of speech in this run, as billed by OpenRouter. Direction is one style from a fixed list. OpenRouter accepted angry, sad, excited, hopeful, shouting, whispering, relieved, embarrassed, confused, determined, happy, neutral and joyful for this voice; none fits sarcasm, reluctance, or a patient teacher, so only the anger clip is directed. Azure's native SSML (<lang>, <phoneme>, <prosody>, <break>, mid-text style changes) is not reachable through OpenRouter and was not tested.
 - {% model name="MAI-Voice-2 Flash" vendor="microsoft" /%} `microsoft/mai-voice-2-flash`, OpenRouter, voice en-US-Harper:MAI-Voice-2. Rendered 2026-10-24. List price: not recorded; OpenRouter billed each request; about 1.2¢ per minute of speech in this run, as billed by OpenRouter. Direction is one style from a fixed list. OpenRouter accepted angry, sad, excited, hopeful, shouting, whispering, relieved, embarrassed, confused, determined, happy, neutral and joyful for this voice; none fits sarcasm, reluctance, or a patient teacher, so only the anger clip is directed. Azure's native SSML (<lang>, <phoneme>, <prosody>, <break>, mid-text style changes) is not reachable through OpenRouter and was not tested.
@@ -78,10 +78,11 @@ different voice of the same model can sound quite different, so a take shows
 the model with that voice, not the model at its best. Cost per minute comes
 from every take on this page. For models reached through OpenRouter, it is
 the amount OpenRouter billed. For the others, it is the list price applied
-to what was sent: characters, or for Gemini 3.8 Flash and 3.1 on Google's
-API, the token counts the API returned. The box service does not report
-tokens, so the Gemini 3.8 Flash-Lite cost is estimated from the length of the
-speech.
+to what was sent and returned: characters for most; minutes of speech for
+gpt-4o-mini-tts, which OpenAI prices by audio tokens; and for Gemini 3.8
+Flash and 3.1 on Google's API, the token counts the API returned. The box
+service does not report tokens, so the Gemini 3.8 Flash-Lite cost uses the
+25 audio tokens per second that Gemini 3.8 reported.
 
 ## How it was tested
 

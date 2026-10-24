@@ -48,10 +48,11 @@ different voice of the same model can sound quite different, so a take shows
 the model with that voice, not the model at its best. Cost per minute comes
 from every take on this page. For models reached through OpenRouter, it is
 the amount OpenRouter billed. For the others, it is the list price applied
-to what was sent: characters, or for Gemini 3.8 Flash and 3.1 on Google's
-API, the token counts the API returned. The box service does not report
-tokens, so the Gemini 3.8 Flash-Lite cost is estimated from the length of the
-speech.
+to what was sent and returned: characters for most; minutes of speech for
+gpt-4o-mini-tts, which OpenAI prices by audio tokens; and for Gemini 3.8
+Flash and 3.1 on Google's API, the token counts the API returned. The box
+service does not report tokens, so the Gemini 3.8 Flash-Lite cost uses the
+25 audio tokens per second that Gemini 3.8 reported.
 
 ## How it was tested
 

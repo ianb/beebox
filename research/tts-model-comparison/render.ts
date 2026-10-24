@@ -169,6 +169,13 @@ const round = (n: number, places: number): number => Math.round(n * 10 ** places
 /** List price × characters sent. */
 const perChars = (usdPer1kChars: number): Adapter["cost"] => async (built) => ({ usd: round((built.chars / 1000) * usdPer1kChars, 6), estimated: true });
 
+/**
+ * gpt-4o-mini-tts list price: $12 per million audio tokens, which OpenAI
+ * states as about $0.015 per minute of speech, plus $0.60 per million text
+ * tokens (about 4 characters each) for the input and instructions.
+ */
+const gpt4oMiniTtsCost: Adapter["cost"] = async (built, take) => ({ usd: round((take.seconds / 60) * 0.015 + ((built.chars / 4) * 0.6) / 1e6, 7), estimated: true });
+
 // ─── Adapters ──────────────────────────────────────────────────────────────
 
 /** The box's own service (beebox/src/services/tts.ts), so a take is what the box sends. "" is no direction. */
@@ -196,7 +203,7 @@ function boxService(backend: "openai" | "gemini", cost: Adapter["cost"]): Adapte
 }
 
 /** OpenAI's speech endpoint for a model the box does not ship. */
-function openAi(apiModel: string, voice: string, instructions: boolean, usdPer1kChars: number): Adapter {
+function openAi(apiModel: string, voice: string, instructions: boolean, cost: Adapter["cost"]): Adapter {
   return {
     lane: "openai",
     extension: "mp3",
@@ -207,7 +214,7 @@ function openAi(apiModel: string, voice: string, instructions: boolean, usdPer1k
         chars: input.length + String(extra["instructions"] ?? "").length,
       })),
     send: (built) => audioPost(built.url, { headers: { Authorization: `Bearer ${secret("openai-thinking")}` }, body: built.body }),
-    cost: perChars(usdPer1kChars),
+    cost,
   };
 }
 
@@ -217,11 +224,15 @@ interface GeminiRates {
   audio: number;
 }
 
-/** Gemini audio is 32 tokens per second; text about 4 characters per token. For takes with no reported usage. */
+/**
+ * Gemini 3.8 audio is 25 tokens per second (every direct 3.8 Flash take in
+ * results.json, and three direct Flash-Lite requests on 2026-10-24); text is
+ * about 4 characters per token. For takes with no reported usage.
+ */
 function geminiCost(rates: GeminiRates): Adapter["cost"] {
   return async (built, take) => {
     const text = take.usage?.["textInTokens"] ?? built.chars / 4;
-    const audio = take.usage?.["audioOutTokens"] ?? take.seconds * 32;
+    const audio = take.usage?.["audioOutTokens"] ?? take.seconds * 25;
     return { usd: round((text * rates.text + audio * rates.audio) / 1e6, 7), estimated: true };
   };
 }
@@ -420,9 +431,9 @@ const GEMINI_31_PREFIX = (clip: Clip, variant: Variant): Form => (d) => {
 
 /** Every model in results.json, by id. */
 export const ADAPTERS: Record<string, Adapter> = {
-  "gpt-4o-mini-tts-2025-03-20": boxService("openai", perChars(0.0167)),
-  "gpt-4o-mini-tts-2025-12-15": openAi("gpt-4o-mini-tts-2025-12-15", "marin", true, 0.0167),
-  "tts-1-hd": openAi("tts-1-hd", "nova", false, 0.03),
+  "gpt-4o-mini-tts-2025-03-20": boxService("openai", gpt4oMiniTtsCost),
+  "gpt-4o-mini-tts-2025-12-15": openAi("gpt-4o-mini-tts-2025-12-15", "marin", true, gpt4oMiniTtsCost),
+  "tts-1-hd": openAi("tts-1-hd", "nova", false, perChars(0.03)),
   "gemini-3.1-flash-tts": openRouter({ apiModel: "google/gemini-3.1-flash-tts-preview", voice: "Zephyr", format: "pcm", form: GEMINI_31_PREFIX }),
   "gemini-3.8-flash-tts-direct": geminiDirect("gemini-3.8-flash-tts", "metadata", { text: 0.5, audio: 9 }),
   "gemini-3.8-flash-lite-tts-direct": boxService("gemini", geminiCost({ text: 0.5, audio: 6 })),

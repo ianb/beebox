@@ -38,21 +38,29 @@ import {
   type Variant,
   variantText,
 } from "./lib.ts";
+import { adapterFor } from "./render.ts";
 
 /** Mono Opus at 32 kbit/s: clean speech at about 4 KB per second. */
 const OPUS_ARGS = ["-vn", "-ac", "1", "-c:a", "libopus", "-b:a", "32k", "-map_metadata", "-1", "-fflags", "+bitexact", "-flags:a", "+bitexact"];
 
-/** Every gap that keeps the run from publishing, or none. */
+/**
+ * Every gap that keeps the run from publishing, or none. Each model × clip ×
+ * variant needs one row: a take with its source audio where the model's
+ * adapter builds a request, and a "none available" row only where it does not.
+ */
 function gaps(results: Results): string[] {
   const rows = new Map(results.renders.map((r) => [takeKey(r), r]));
   const out: string[] = [];
   for (const model of results.models) {
+    const adapter = adapterFor(model.id);
     for (const clip of results.clips) {
       for (const variant of clip.variants) {
         const key = takeKey({ model: model.id, clip: clip.id, variant: variant.id });
         const r = rows.get(key);
+        const planned = adapter.request(variant, clip) !== undefined;
         if (r === undefined) out.push(`${key}: no row`);
-        else if (r.file === undefined && r.channel !== NO_CHANNEL) out.push(`${key}: no file (${r.error ?? `status ${r.status ?? "none"}`})`);
+        else if (!planned && (r.channel !== NO_CHANNEL || r.file !== undefined)) out.push(`${key}: the adapter has no channel, but the row is not "${NO_CHANNEL}"`);
+        else if (planned && r.file === undefined) out.push(`${key}: no file (${r.channel === NO_CHANNEL ? "marked no channel, but the adapter has one" : (r.error ?? `status ${r.status ?? "none"}`)})`);
         else if (r.file !== undefined && !existsSync(join(audioDir(), r.file))) out.push(`${key}: ${r.file} is not in ${audioDir()}`);
       }
     }
@@ -89,7 +97,10 @@ function cents(usd: number): string {
 
 /** Cost per minute of speech over the model's takes, billed or at list price. */
 function costPerMinute(renders: readonly Render[]): string | undefined {
-  const priced = renders.filter((r) => r.file !== undefined && r.costUsd !== undefined && r.audioSec !== undefined);
+  const taken = renders.filter((r) => r.file !== undefined);
+  // A take with no cost (a failed OpenRouter lookup) would skew the figure; show none.
+  if (taken.some((r) => r.costUsd === undefined || r.audioSec === undefined)) return undefined;
+  const priced = taken;
   const usd = priced.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
   const sec = priced.reduce((sum, r) => sum + (r.audioSec ?? 0), 0);
   if (sec === 0) return undefined;
