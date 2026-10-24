@@ -73,10 +73,14 @@ async function checkState(input: {
   for (const required of input.required) {
     if (!input.paths.includes(required)) errors.push(`Required system card missing from ${input.context}: ${required}. Restore it from Git.`);
   }
-  for (const relativePath of input.paths) {
+  const checked = input.paths.filter((relativePath) => {
     const type = typeFromFilename(relativePath);
-    if (type === undefined || !isSystemCardType(type) || !input.validateTypes.has(type)) continue;
-    const content = await input.read(relativePath);
+    return type !== undefined && isSystemCardType(type) && input.validateTypes.has(type);
+  });
+  // Read together: on the commit path each read is a `git show` process.
+  const contents = await Promise.all(checked.map(async (relativePath) => input.read(relativePath)));
+  for (const [i, relativePath] of checked.entries()) {
+    const content = contents[i] ?? null;
     if (content === null) { errors.push(`System card disappeared during validation: ${relativePath}`); continue; }
     const error = contentError(relativePath, content);
     if (error !== null) errors.push(error);
@@ -102,11 +106,18 @@ async function checkWorkingState(input: { boxRoot: string; required: Set<string>
 /** The index and HEAD alone decide enrollment and presence; working files cannot mask deletions. */
 export async function checkStagedSystemCards(boxRoot: string): Promise<string[]> {
   const git = simpleGit(boxRoot);
-  const paths = (await git.raw(["ls-files", "-z"])).split("\0").filter((file) => file !== "" && !isTrashedCard(file));
-  const hasHead = await git.raw(["rev-parse", "--verify", "HEAD"]).then(() => true, () => false);
-  const headPaths = hasHead ? (await git.raw(["ls-tree", "-r", "--name-only", "-z", "HEAD"])).split("\0").filter(Boolean) : [];
-  const indexManifest = paths.includes(MANIFEST_PATH) ? await git.show([`:${MANIFEST_PATH}`]) : null;
-  const headManifest = headPaths.includes(MANIFEST_PATH) ? await git.show([`HEAD:${MANIFEST_PATH}`]) : null;
+  const [indexListing, headPaths] = await Promise.all([
+    git.raw(["ls-files", "-z"]),
+    git.raw(["rev-parse", "--verify", "HEAD"]).then(
+      async () => (await git.raw(["ls-tree", "-r", "--name-only", "-z", "HEAD"])).split("\0").filter(Boolean),
+      (): string[] => [],
+    ),
+  ]);
+  const paths = indexListing.split("\0").filter((file) => file !== "" && !isTrashedCard(file));
+  const [indexManifest, headManifest] = await Promise.all([
+    paths.includes(MANIFEST_PATH) ? git.show([`:${MANIFEST_PATH}`]) : null,
+    headPaths.includes(MANIFEST_PATH) ? git.show([`HEAD:${MANIFEST_PATH}`]) : null,
+  ]);
   const enrolled = new Set([...enrolledMigrations(indexManifest), ...enrolledMigrations(headManifest)]);
   const required = new Set([...enrolled].flatMap(cohortPaths));
   for (const file of Object.values(SYSTEM_CARD_PATHS)) if (headPaths.includes(file)) required.add(file);

@@ -8,7 +8,6 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { OAuth2Client } from "google-auth-library";
 import { isRecord } from "../../../shared/is-record.js";
 import { signSession, COOKIE_NAME, SESSION_MAX_AGE_MS } from "../../auth.js";
 import { readBasePrefix } from "../../base-prefix.js";
@@ -41,6 +40,7 @@ export async function registerAuthRoutes(
   const publicUrl = getPublicUrl(options.publicUrlFallback ?? "http://localhost:3210");
   const redirectUri = `${publicUrl}/auth/callback`;
 
+  const { OAuth2Client } = await import("google-auth-library");
   const oauth2Client = new OAuth2Client(clientId, clientSecret, redirectUri);
 
   server.get<{ Querystring: { returnTo?: string } }>(

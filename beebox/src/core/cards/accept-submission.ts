@@ -16,7 +16,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
-import { fileTypeFromFile } from "file-type";
 import { withCardLock } from "../../lib/card-lock.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
@@ -139,6 +138,8 @@ export async function acceptSubmission(input: AcceptSubmissionInput): Promise<Ac
     }
 
     const files: Array<{ name: string; size: number; mimetype: string }> = [];
+    // file-type loads here rather than with every `bbx` verb (about 13 ms).
+    const { fileTypeFromFile } = await import("file-type");
     for (const name of fileNames) {
       const filePath = path.join(tempDir, name);
       const stat = await fs.stat(filePath);

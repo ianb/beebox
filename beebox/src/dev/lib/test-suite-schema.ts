@@ -85,7 +85,7 @@ const auditTestObjectSchema = z.object({
    */
   fixture: z.record(z.string(), z.string()).optional(),
   /**
-   * Run the agent with `CHAT_SYSTEM_PROMPT` instead of the default
+   * Run the agent with `chatSystemPrompt()` instead of the default
    * working-directory prompt. Use for tests that audit chat-mode knowledge
    * (e.g. the `<chat-app>`, `<ack>`, `<callout>` tags) — the agent in a chat
    * session sees these via the chat prompt, so the audit has to load them

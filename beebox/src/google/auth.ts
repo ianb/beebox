@@ -7,7 +7,7 @@
  * machine secret store (see `getBoxGoogleClientCreds`).
  */
 
-import { OAuth2Client } from "google-auth-library";
+import type { OAuth2Client } from "google-auth-library";
 import { resolveSecret, secretIsResolvable } from "../core/secrets/resolve.js";
 import {
   loadGoogleTokens,
@@ -16,6 +16,13 @@ import {
 } from "./token-store.js";
 
 const DEFAULT_REDIRECT_URI = "http://localhost:8976/oauth/callback";
+
+// Loaded when a client is built: the library costs about 20 ms to import, and
+// most processes that reach this module never talk to Google.
+async function newOAuth2Client(...args: ConstructorParameters<typeof OAuth2Client>): Promise<OAuth2Client> {
+  const { OAuth2Client } = await import("google-auth-library");
+  return new OAuth2Client(...args);
+}
 
 /** All scopes we request during auth */
 export const GOOGLE_SCOPES = [
@@ -124,7 +131,7 @@ export async function getGoogleAuth(
   const tokens = await loadGoogleTokens(boxRoot);
   if (!tokens || !tokens.refreshToken) return null;
 
-  const client = new OAuth2Client(
+  const client = await newOAuth2Client(
     creds.clientId,
     creds.clientSecret,
     DEFAULT_REDIRECT_URI,
@@ -166,8 +173,8 @@ export async function getGoogleAuth(
 /**
  * Create a new OAuth2Client for the auth flow (before we have tokens).
  */
-export function createOAuth2Client(
+export async function createOAuth2Client(
   { clientId, clientSecret, redirectUri }: { clientId: string; clientSecret: string; redirectUri?: string },
-): OAuth2Client {
-  return new OAuth2Client(clientId, clientSecret, redirectUri || DEFAULT_REDIRECT_URI);
+): Promise<OAuth2Client> {
+  return newOAuth2Client(clientId, clientSecret, redirectUri || DEFAULT_REDIRECT_URI);
 }

@@ -4,11 +4,7 @@
  * Supports serving multiple boxes, each at its own URL prefix (slug).
  */
 
-import Fastify, { type FastifyInstance, type FastifyError } from "fastify";
-import fastifyStatic from "@fastify/static";
-import fastifyMultipart from "@fastify/multipart";
-import fastifyWebsocket from "@fastify/websocket";
-import fastifyCookie from "@fastify/cookie";
+import type { FastifyInstance, FastifyError } from "fastify";
 import { registerBoxAdmission, boxRequestsAreIdle } from "./box-admission.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
@@ -91,6 +87,15 @@ export function assertOpenAccessNotListening(options: InternalServerOptions): vo
  */
 export async function createServer(options?: InternalServerOptions, startup?: ReadonlyMap<string, BoxWork>): Promise<FastifyInstance> {
   options = options ?? {};
+  // The server's packages load here, not at module load: every `bbx` verb
+  // loads this module, and only `serve` builds a server (about 60 ms).
+  const [{ default: Fastify }, { default: fastifyStatic }, { default: fastifyMultipart }, { default: fastifyWebsocket }, { default: fastifyCookie }] = await Promise.all([
+    import("fastify"),
+    import("@fastify/static"),
+    import("@fastify/multipart"),
+    import("@fastify/websocket"),
+    import("@fastify/cookie"),
+  ]);
   const boxes = await resolveBoxes(options);
 
   const server = Fastify({

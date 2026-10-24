@@ -13,9 +13,12 @@
  * silently shortened.
  */
 
-const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+// Built on first use: constructing a segmenter loads ICU data, about 9 ms,
+// and every `bbx` verb loads this module.
+let segmenter: Intl.Segmenter | undefined;
 
 export function countGraphemes(value: string): number {
+  segmenter ??= new Intl.Segmenter(undefined, { granularity: "grapheme" });
   let count = 0;
   for (const _segment of segmenter.segment(value)) count++;
   return count;

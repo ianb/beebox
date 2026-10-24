@@ -15,18 +15,18 @@
  * resume semantics live one level up in `ChatSession`.
  */
 
-import {
-  query,
-  startup,
-  type Options,
-  type Query,
-  type SDKMessage,
-  type SDKUserMessage,
-  type WarmQuery,
+import type {
+  Options,
+  Query,
+  SDKMessage,
+  SDKUserMessage,
+  WarmQuery,
 } from "@anthropic-ai/claude-agent-sdk";
+import type * as AgentSdkModule from "@anthropic-ai/claude-agent-sdk";
 import { gitMvNudgeHook } from "../../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../../core/sdk-binary-path.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
+import { invariant } from "../../shared/invariant.js";
 import { createAsyncIterableQueue } from "../claude-chat-queue.js";
 import {
   allocateSessionIdFilePath,
@@ -75,6 +75,19 @@ function messageSessionId(msg: SDKMessage): string | null {
     return msg.session_id;
   }
   return null;
+}
+
+type AgentSdk = typeof AgentSdkModule;
+let agentSdk: AgentSdk | undefined;
+
+/**
+ * The Agent SDK, loaded by the first warm-up or by `load()` before a chat
+ * starts. Every `bbx` verb loads this module, and the SDK costs about 30 ms to
+ * import.
+ */
+async function loadAgentSdk(): Promise<AgentSdk> {
+  agentSdk ??= await import("@anthropic-ai/claude-agent-sdk");
+  return agentSdk;
 }
 
 /**
@@ -247,6 +260,7 @@ function createClaudeChatBackend(): ChatBackend {
     const pending = (async (): Promise<void> => {
       try {
         const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
+        const { startup } = await loadAgentSdk();
         const wq = await startup({ options: { ...queryOptions, abortController: controller } });
         if (warmEpoch !== epochAtStart) {
           // closeWarm() ran while we were warming — abandon this slot rather
@@ -345,6 +359,7 @@ function createClaudeChatBackend(): ChatBackend {
     async prewarm(opts: ChatBackendStartOptions): Promise<void> {
       await startWarming(opts);
     },
+    async load(): Promise<void> { await loadAgentSdk(); },
     closeWarmFor(sessionId: string): void {
       const slot = warmSlots.get(sessionId);
       if (slot === undefined) return;
@@ -405,10 +420,8 @@ function createClaudeChatBackend(): ChatBackend {
       }
 
       const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
-      const q: Query = query({
-        prompt: inputQueue.iterable,
-        options: queryOptions,
-      });
+      invariant(agentSdk !== undefined, "the chat backend's load() must finish before a cold start()");
+      const q: Query = agentSdk.query({ prompt: inputQueue.iterable, options: queryOptions });
       return buildRunFromQuery({ q, opts, inputQueue, messageQueue, sessionIdFilePath });
     },
   };
@@ -424,6 +437,9 @@ export function createChatBackend(): ChatBackend {
     start: (opts) => opts.engine === "codex" ? codex.start(opts) : claude.start(opts),
     prewarm: async (opts) => {
       if (opts.engine !== "codex") await claude.prewarm?.(opts);
+    },
+    load: async (engine) => {
+      if (engine !== "codex") await claude.load?.(engine);
     },
     closeWarm: async () => { await claude.closeWarm?.(); },
     closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
