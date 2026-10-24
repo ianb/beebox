@@ -15,7 +15,7 @@
  */
 
 import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { body, cardSchema, type CardSchema, type LintIssue } from "../exports/cards.js";
 import { markdocConfig } from "../shared/markdoc-config/tags/core.js";

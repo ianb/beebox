@@ -5,7 +5,7 @@
  * card, either from a known domain seed or a generic fallback.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../../lib/yaml-package.js";
 
 /**
  * Domain-specific seed configurations for initial guides.

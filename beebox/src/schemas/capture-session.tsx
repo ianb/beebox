@@ -15,7 +15,7 @@
  * cards; see `instructions` below.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { parseYaml } from "../lib/read-yaml.js";
 import { z } from "zod";
 import { splitCardContent, body, cardSchema, type CardSchema } from "../exports/cards.js";

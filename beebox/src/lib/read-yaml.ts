@@ -21,7 +21,7 @@
  */
 
 import { CORE_SCHEMA, load } from "js-yaml";
-import { parse } from "yaml";
+import { parse } from "./yaml-package.js";
 
 /**
  * Text that js-yaml reads differently from `yaml`'s YAML 1.2 core schema, or

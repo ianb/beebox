@@ -14,7 +14,7 @@
  * prefix.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, type InferCardFields, type SummaryAttrs } from "../../exports/cards.js";
 import { truncateTitle } from "../../core/file-summary.js";
