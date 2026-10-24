@@ -8,7 +8,7 @@ discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
 ---
 
-Status 2026-10-23 (worktree-dup-sweep-backend): the fence rule (commit 4e6d1dc59), the writers (57b5c6069) and the single-key editors (d339480a6) are done. Still open: the five title-from-markdown extractors listed under "Title from markdown", and the hand-inlined split-parse-guard readers listed under "Parse to a record".
+Status 2026-10-23 (worktree-dup-sweep-backend): the fence rule (commit 4e6d1dc59), the writers (57b5c6069) and the single-key editors (d339480a6) are done. Titles from markdown are done too (commit 1900af810; the publish path keeps its Markdoc title). Two inline readers moved onto `parseFrontmatterObject` (commit 2faca3be3). Still open, as a decision: seven inline readers throw an uncaught YAML error on a malformed card (`core/template-merge.ts`, `core/extfile-sync.ts`, `connectors/google-drive/mounts/schedule-hint.ts`, `connectors/google-drive/card-stamp.ts`, `core/chat/review/run/husk-write.ts`, `core/search/contains-update.ts`, `connectors/gmail/drafts/draft-card.ts`), and no shared helper throws. Either each moves to a null-returning helper (one bad card no longer aborts the sync or command around it) or a throwing helper joins `cards/frontmatter.ts`.
 
 `beebox/src/cards/frontmatter.ts` has the shared helpers:
 `splitCardContent`, `parseFrontmatterObject`, and `renderFrontmatterBlock`.

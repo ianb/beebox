@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { resolveIssuePath } from "./issue-path.js";
 import { frontmatterFence } from "../../../../beebox/src/cards/frontmatter.js";
+import { markdownTitle } from "../../../../beebox/src/shared/leading-title-heading.js";
 
 export const ISSUE_CATEGORIES = [
   "bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch",
@@ -150,7 +151,7 @@ export function parseIssueFile(options: {
     closed,
     slug,
     frontmatter: {
-      title: scalar(data.title) ?? /^#\s+(.+)$/mu.exec(body)?.[1]?.trim() ?? slug,
+      title: (scalar(data.title)?.trim() || null) ?? markdownTitle(body) ?? slug,
       workstream: scalar(data.workstream) ?? "unknown",
       needs: list(data.needs), labels: list(data.labels), priority,
       ...Object.fromEntries(Object.entries(optional).filter((entry) => entry[1] !== undefined)),

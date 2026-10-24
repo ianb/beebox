@@ -10,7 +10,8 @@ import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { documentLifecycle, planStatusFromSource, type DocumentLifecycle } from "./document-lifecycle.js";
 import { isWithin } from "../../lib/box-containment.js";
-import { frontmatterFence } from "../../cards/frontmatter.js";
+import { frontmatterFence, parseFrontmatterObject, splitCardContent } from "../../cards/frontmatter.js";
+import { markdownTitle } from "../../shared/leading-title-heading.js";
 
 export const ROOT = PACKAGE_ROOT;
 
@@ -143,8 +144,9 @@ export function resolveExternalRef(ref: string, ctx: ExternalResolveContext): [s
 }
 
 function extractTitle(content: string): string {
-  const match = content.match(/^#\s+(.+)/m);
-  return match && match[1] ? match[1].trim() : "(no title)";
+  const declared = parseFrontmatterObject(content)?.["title"];
+  if (typeof declared === "string" && declared.trim() !== "") return declared.trim();
+  return markdownTitle(splitCardContent(content).body) ?? "(no title)";
 }
 
 function buildBasenameLookup(files: string[]): Map<string, string[]> {
