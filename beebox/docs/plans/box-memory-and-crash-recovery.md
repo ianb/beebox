@@ -231,6 +231,9 @@ dependency), which track 1 does not. Track 3 is the second request.
   - Every `sampleMs` (60 s): append a sample line. When `samples.jsonl` passes
     1 MiB, rename it to `samples.1.jsonl` (replacing the old one). That is about
     3 days of history at about 250 bytes a line, and at most 2 MiB on disk.
+  - Measured (chunk 3): with the profiler on, three 320 MB index restores ran
+    within the noise of runs without it. A profile taken at a 1.2 GB heap was
+    115 KB and took 120 to 330 ms, with no RSS increase.
   - Keep the newest 6 `.heapprofile` files per dir and at most 64 MiB in
     total; delete the oldest at write time. Chunk 3 measures a real profile's
     size and the peak RSS cost of taking one at a 2 GB heap; if that cost is
@@ -251,11 +254,28 @@ dependency), which track 1 does not. Track 3 is the second request.
   to 3940 MB, so the memory was retained, not transient garbage. Activity:
   about 6 voice chat turns from iOS, TTS playback, and a voice-recording sweep
   that deleted 46 recordings. No web search ran.
+- **Investigation result (2026-10-25): cause not found.** The decode on the
+  stack takes Node's copying path, used only for strings under about 1M
+  characters, so the last read was a small file. That rules out the large
+  index files; the read was the last allocation, not the retainer. The heap
+  filled at about 15:19, during the fifth turn: phone log lines stamped 15:19:02
+  arrived at 15:19:36, and the voice sweep due at 15:18:57 logged at 15:19:54.
+  The TTS EPIPE and the aborted fetch came after the stall, so they are
+  effects. The same build ran 16 turns from 09:22 to 09:58 that day without an
+  OOM. Measured against the box, read-only, and all bounded (retained after GC):
+  chat history (+2 MB), chat lists (+8 MB), box home (+9 MB, 348 MB peak per
+  call), landmark scan (+9 MB), after-turn title check (~0), transcript-tail
+  poll (+8 MB), sweep reads (0). The merges since 2026-10-22 add no unbounded
+  cache. What differed in the 15:08 session: the phone's web view reloaded
+  after six hours in the background, the first sweep that deleted anything
+  (46 recordings), and a longer message. The probe (Track 3) is what will
+  name it next time.
 - **Separate risk found**: the box's card search index is 320 MB, and
   `openSearchIndex` restores it whole on every web search query
   (`src/core/search/refresh/core.ts:94,121`). One restore, measured standalone
   on this box: 464 MB retained heap, 1.4 GB peak RSS, 2.2 s. Concurrent queries
-  stack. Not this crash's cause (no search ran). Filed as its own issue.
+  stack. Not this crash's cause (no search ran). Recorded as a re-encounter on
+  `issues/decisions/2026-07-10-orama-vector-index-restore-cost.md`.
 - **Direction**: a cause that is a separate bug is filed with the issues skill,
   and the boxholder decides whether it is fixed here.
 
@@ -323,7 +343,8 @@ No critical gap: every silent row is accepted above with its reason.
   wake a failed unit. Track 1 removes this incident's cause there. Changing
   the start limit is a boxholder decision (Open design questions); the unit
   path is not yet live in production.
-- Fixing the 320 MB search-index restore: filed as its own issue.
+- Fixing the 320 MB search-index restore: an open decision issue already
+  covers it; this work added a re-encounter note.
 
 ## Open design questions
 
