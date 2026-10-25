@@ -876,11 +876,6 @@ if [[ "$SKIP_RESTART" != true ]]; then
       [[ -e "$home/box/.git" ]] || continue
       slug=$(basename "$home")
       converge "bbx-$slug" /etc/beebox/box.env "$home/box"
-      # The packages a box asked for since the last deploy (bbx host install
-      # records; a sandboxed box cannot install). As root, straight to the
-      # wrapper; one refusal does not block the others.
-      env BBX_UNIT_HOST= bash -c 'cd "$1" && timeout 900 bbx host sync --box "$1"' bbx-host-sync "$home/box" \
-        || echo "  $home/box: some recorded host packages did not install; see the lines above" >&2
     done
     for boxdir in /home/beebox/boxes/*/; do
       [[ -e "$boxdir/.git" ]] || continue
@@ -1220,6 +1215,18 @@ maintenance_rc=0
 trap_marker="$stage_dir/.activate-deploy.sh.services-restarted-by-trap"
 rm -f "$trap_marker"
 node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 --hub-config /home/beebox/.config/beebox/hub.json "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh" || maintenance_rc=$?
+# The distro packages each box recorded since the last deploy (bbx host
+# install records on a unit host; a sandboxed box cannot install). After the
+# controller has reopened the boxes: `bbx host sync` takes ordinary box
+# admission, which a closed box refuses (it did, silently, on every deploy to
+# the probe VM, 2026-10-24). As root, straight to the wrapper; one refusal
+# does not block the others, and apt touches no box state.
+for box in /var/lib/beebox/*/box/; do
+  [[ -e "$box/.git" ]] || continue
+  box="${box%/}"
+  env BBX_UNIT_HOST= bash -c 'cd "$1" && timeout 900 bbx host sync --box "$1"' bbx-host-sync "$box" \
+    || echo "  $box: some recorded host packages did not install; see the lines above" >&2
+done
 # A box whose convergence failed stays closed for recovery. Repair it now
 # instead of waiting for the hourly box-convergence pass: the same bounded
 # `--sweep --repair` and 25-minute limit that pass uses, run only for boxes that
