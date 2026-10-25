@@ -1029,6 +1029,20 @@ anything (`add-box.sh` names the repository safe for its one rerun pull). The
 boxes were left with ownerless phase records, which refuse nothing; the next
 completed deploy clears them.
 
+**Second throwaway VM (2026-10-25, evening), from the landed `main`.**
+cloud-init, `provision.sh`, one deploy on the box-less host, `add-box.sh` for
+one box, the units smoke (every check), a scheduler pass through
+`bbx-box-run`, nginx serving the box behind the login redirect, and a real
+agent turn: the box's `refresh-maps` procedure, run as the box user with the
+long-lived token from the box's own secret store, wrote and committed four
+files. Production's hub store holds the token, granted to all six boxes;
+`bbx health` on a production box reports "signed in with the box's long-lived
+token". Two pre-existing findings filed: the diagnostic bearer no longer
+reaches a box's `health.check` (also on production), and the Docker install's
+token env variable never reaches the agent. The VM also showed that a grant
+is keyed by the box's own package name, which `add-box.sh` on a real box
+matches to the hub slug; production's six do.
+
 ## Rollout shape
 
 **Tests first.** Each engine codepath names its test before it is written
