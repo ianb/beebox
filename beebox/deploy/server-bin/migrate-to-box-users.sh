@@ -138,11 +138,14 @@ for entry in "${ENTRIES[@]}"; do
   fi
   run chown -R "bbx-$slug:bbx-$slug" "$home"
   # Modes the hub relies on: traversable root and .beebox, everything else private.
-  run bash -c "find '$home' -mindepth 1 -maxdepth 1 ! -name box -exec chmod go-rwx {} +"
+  # `! -type l`: chmod follows a symlink named on its command line, and
+  # .beebox/engine points at the installed engine (the probe VM's /opt/beebox
+  # went 0700 this way, 2026-10-24).
+  run bash -c "find '$home' -mindepth 1 -maxdepth 1 ! -name box ! -type l -exec chmod go-rwx {} +"
   run chmod 0751 "$new_path"
-  run bash -c "find '$new_path' -mindepth 1 -maxdepth 1 ! -name .beebox -exec chmod -R go-rwx {} +"
+  run bash -c "find '$new_path' -mindepth 1 -maxdepth 1 ! -name .beebox ! -type l -exec chmod -R go-rwx {} +"
   run install -d -o "bbx-$slug" -g "bbx-$slug" -m 0751 "$new_path/.beebox"
-  run bash -c "find '$new_path/.beebox' -mindepth 1 ! -name hub-meta.json -exec chmod go-rwx {} +"
+  run bash -c "find '$new_path/.beebox' -mindepth 1 ! -name hub-meta.json ! -type l -exec chmod go-rwx {} +"
   # The box user's own config and caches, all private.
   for d in .claude .codex .config .local .cache .ssh; do
     run install -d -o "bbx-$slug" -g "bbx-$slug" -m 0700 "$home/$d"
