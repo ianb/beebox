@@ -260,8 +260,8 @@ evidence model.
   `asked-at`, then path) as the agent's opening line: the `prompt`, the
   `memo` under it, "and N more" to the Questions page, and a quiet "Not now"
   (`actions.dismiss`). Text for every input type: a `select` question lists
-  its options in the sentence, and the person answers by typing or speaking;
-  the composer's placeholder is the prompt. A card that fails to parse is
+  its options in the sentence, and the person answers by typing or speaking.
+  A card that fails to parse is
   never shown there but counts toward N. The send carries the card's path
   as `openQuestion`, which the agent sees as the `open-question` snapshot
   attribute on every message while the card is pending; the agent does the

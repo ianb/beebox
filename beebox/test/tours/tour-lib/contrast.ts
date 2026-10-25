@@ -40,7 +40,10 @@ export type ContrastFailure =
   /** Text in a card on an undeclared surface on the other side of light/dark from the paper. */
   | { kind: "surface"; run: number; selector: string; text: string; theme: string; bg: string; paper: string; ratio: number; required: number };
 
-/** WCAG AA. Large text is 24px, or 18.66px bold. */
+/**
+ * WCAG AA. Large text is 24px, or 18.66px bold. A placeholder gets the large
+ * ratio: it must read as lighter than typed text (boxholder, 2026-10-25).
+ */
 const NORMAL = 4.5;
 const LARGE = 3;
 /**
@@ -148,7 +151,7 @@ export function scoreRuns(image: RawImage, page: Pick<PageRuns, "width" | "runs"
     const sorted = samples.toSorted((a, b) => a.ratio - b.ratio);
     const at = sorted[Math.min(samples.length - 1, Math.floor(samples.length * PERCENTILE))];
     if (at === undefined) continue;
-    const required = run.large ? LARGE : NORMAL;
+    const required = run.large || run.placeholder ? LARGE : NORMAL;
     if (at.ratio < required) {
       failures.push({ kind: "text", run: run.id, selector: run.selector, text: run.text, fg: hex(run.fg), bg: hex(at.bg), ratio: round(at.ratio), required });
       continue;

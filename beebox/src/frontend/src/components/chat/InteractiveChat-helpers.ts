@@ -107,7 +107,7 @@ export function composerTextareaClasses({ mobile, isTranscribing }: { mobile: bo
   const stateClass = isTranscribing
     ? "bg-white text-warm-800 border-primary/40 shadow-[0_0_0_1px_rgba(56,149,211,0.08)]"
     : "bg-white border-warm-400";
-  return `flex-1 resize-none rounded-lg px-3 py-2 ${sizeClass} ${stateClass} focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-warm-700`;
+  return `flex-1 resize-none rounded-lg px-3 py-2 ${sizeClass} ${stateClass} focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-warm-600`;
 }
 
 /**

@@ -21,6 +21,8 @@ export interface TextRun {
    */
   group: { opacity: number; bg: [number, number, number] } | null;
   large: boolean;
+  /** An empty field's placeholder, which is held to the large-text ratio. */
+  placeholder: boolean;
   /**
    * Index into `materials` of the themed card this text sits in, or -1.
    * Controls draw their own surfaces by design, so they get -1 too.
@@ -245,7 +247,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   const byElement = new Map();
   const linesOf = new Map();
   const unmeasurable = new Set();
-  const add = (el, { text, color, boxes }) => {
+  const add = (el, { text, color, boxes, placeholder = false }) => {
     const cs = getComputedStyle(el);
     if (cs.visibility !== "visible" || !el.checkVisibility() || el.closest(":disabled, [aria-disabled='true'], [inert], .bbx-contrast-overlay") !== null) return;
     const own = el.getBoundingClientRect();
@@ -293,6 +295,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
         fg: [raw[0], raw[1], raw[2], raw[3] * below],
         group,
         large: size >= 24 || Number(cs.fontWeight) >= 700 && size >= 18.66,
+        placeholder,
         material: card === null ? -1 : materialOf.get(card) ?? -1,
         rects: []
       };
@@ -319,7 +322,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     const px = (p) => Number.parseFloat(cs.getPropertyValue(p));
     const l = px("border-left-width") + px("padding-left");
     const t = px("border-top-width") + px("padding-top");
-    add(input, { text: showing, color, boxes: [new DOMRect(box.left + l, box.top + t, box.width - l - px("border-right-width") - px("padding-right"), box.height - t - px("border-bottom-width") - px("padding-bottom"))] });
+    add(input, { text: showing, color, placeholder: input.value === "", boxes: [new DOMRect(box.left + l, box.top + t, box.width - l - px("border-right-width") - px("padding-right"), box.height - t - px("border-bottom-width") - px("padding-bottom"))] });
   }
   hitAll.remove();
   const style = document.createElement("style");
