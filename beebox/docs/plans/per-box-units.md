@@ -578,7 +578,7 @@ save, the agent token mint, `mutateConfig`, the chat schedule manager's save,
 only when something but the timestamp changed, so a `lastUsedAt` stamp costs
 no write. `hub-meta.ts` counts the schedule file's entries itself rather than
 importing the schedules loader, which imports it back. `/etc/beebox/box.env`
-is written by the hub user into a `2755 beebox:beebox-boxes` directory it owns (review round 4 closed the group-writable `2775`: a box user could have replaced the file its siblings load; the hub
+is written by the hub user into a `2755 beebox:beebox-boxes` directory it owns (review round 4 closed the group-writable `2775`: a box user could have replaced the file its siblings load; the deploy reasserts the owner and mode every run, so a host provisioned under the old rule is repaired; the hub
 joins the cache group, no box group) and is `0640`.
 
 **First chunk.** `socketPath` on `Endpoint` and the proxy target, with

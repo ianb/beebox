@@ -925,6 +925,13 @@ if id beebox-sched >/dev/null 2>&1; then
   install -d -o beebox-sched -g beebox-sched -m 0750 /var/lib/beebox-sched
   systemctl enable beebox-scheduler.service >/dev/null 2>&1 || true
 fi
+# The units' environment directory: the hub owns and writes it, box users read
+# it through the group and may not replace it. Reasserted every deploy so a
+# host provisioned under the earlier group-writable rule is repaired (review
+# round 5, codex gpt-6-sol, 2026-10-24).
+if [[ -d /etc/beebox ]] && getent group beebox-boxes >/dev/null; then
+  install -d -o beebox -g beebox-boxes -m 2755 /etc/beebox
+fi
 for unit in beebox-box@.service beebox-pass@.service; do
   dir="/etc/systemd/system/$unit.d"
   mkdir -p "$dir"
