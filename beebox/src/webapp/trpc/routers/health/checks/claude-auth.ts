@@ -28,7 +28,9 @@ export async function claudeAuthCheck(boxRoot: string, injected?: ClaudeCliServi
       name: "claude-credentials",
       ok: true,
       // `oauth_token`: the box's long-lived token (`core/claude-oauth-token.ts`), not a login file.
-      message: authStatus["authMethod"] === "oauth_token" ? "Claude Code is signed in with the box's long-lived token" : "Claude Code is logged in",
+      message: authStatus["authMethod"] === "oauth_token"
+        ? "Claude Code is signed in with the box's long-lived token (its validity is not checked here; a run reports an expired one)"
+        : "Claude Code is logged in",
       severity: "error",
     };
   }
@@ -47,7 +49,7 @@ export async function claudeAuthCheck(boxRoot: string, injected?: ClaudeCliServi
     ok: false,
     message:
       "The assistant engine (Claude Code) isn't signed in on this server — chat and " +
-      "background processing (reactor, procedures) will not work. Run `claude auth login` on this machine",
+      "background processing (reactor, procedures) will not work. Run `claude auth login` on this machine, or grant the `claude-oauth-token` secret to this box",
     severity: "error",
   };
 }

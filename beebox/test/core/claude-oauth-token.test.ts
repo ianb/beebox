@@ -59,6 +59,9 @@ void test("With the grant, the token joins the first-party env", async (t) => {
     DISABLE_ERROR_REPORTING: "1",
   });
 
+  // The Codex engine is not the Claude CLI: no additions at all, so the token never reaches a Codex subprocess.
+  t.check(await providerEnvAdditions({ boxRoot: box.root, model: null, engine: "codex", purpose: "test" }), null);
+
   // A GLM run authenticates with its own key against Z.ai; the Claude token stays out.
   t.check(Object.keys((await providerEnvAdditions({ boxRoot: box.root, model: glm, purpose: "test" })) ?? {}).toSorted(), [
     "ANTHROPIC_AUTH_TOKEN",
@@ -87,6 +90,16 @@ void test("The status probe runs with the box's token", async (t) => {
   const pick = (status: Record<string, unknown>) => ({ loggedIn: status["loggedIn"], authMethod: status["authMethod"] });
 
   t.check(pick(await createClaudeCliService({ boxRoot: box.root }).authStatus()), { loggedIn: false, authMethod: "none" });
+
+  // An ambient token in the server's own env never reaches an agent run, so the probe ignores it too.
+  const ambient = process.env.CLAUDE_CODE_OAUTH_TOKEN;
+  process.env.CLAUDE_CODE_OAUTH_TOKEN = "sk-ant-oat01-ambient-token-the-run-will-never-see-0";
+  try {
+    t.check(pick(await createClaudeCliService({ boxRoot: box.root }).authStatus()), { loggedIn: false, authMethod: "none" });
+  } finally {
+    if (ambient === undefined) delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
+    else process.env.CLAUDE_CODE_OAUTH_TOKEN = ambient;
+  }
 
   await grantToken(box.root);
   t.check(pick(await createClaudeCliService({ boxRoot: box.root }).authStatus()), { loggedIn: true, authMethod: "oauth_token" });

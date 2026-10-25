@@ -57,7 +57,11 @@ export function createClaudeCliService(options?: { boxRoot?: string | undefined 
   const boxRoot = options?.boxRoot;
   return {
     async authStatus() {
-      const env = { ...process.env, ...(boxRoot === undefined ? {} : await claudeOauthTokenEnv(boxRoot, { purpose: "auth-status", observe: false })) };
+      // An ambient token in this process's env never reaches an agent run (the
+      // script-env allowlist), so the probe must not answer for it either.
+      const env: NodeJS.ProcessEnv = { ...process.env };
+      delete env.CLAUDE_CODE_OAUTH_TOKEN;
+      if (boxRoot !== undefined) Object.assign(env, await claudeOauthTokenEnv(boxRoot, { purpose: "auth-status", observe: false }));
       return new Promise<Record<string, unknown>>((resolve) => {
         execFile("claude", ["auth", "status"], { timeout: 10000, env }, (err, stdout) => {
           const output = stdout || "";

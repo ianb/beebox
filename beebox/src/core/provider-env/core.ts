@@ -9,7 +9,7 @@
  */
 
 import { assertNever } from "../../shared/invariant.js";
-import { isThirdPartyModel, providerOf } from "../../shared/agent-models.js";
+import { isThirdPartyModel, providerOf, type AgentEngine } from "../../shared/agent-models.js";
 import { loadClaudeCodeTelemetry } from "../box/config.js";
 import { glmEnvAdditions, resolveGlmKeyOrThrow } from "../glm-key.js";
 import { claudeOauthTokenEnv } from "../claude-oauth-token.js";
@@ -25,11 +25,18 @@ export async function providerEnvAdditions(params: {
   boxRoot: string;
   /** The resolved model — null/undefined means the harness default, first-party. */
   model: string | null | undefined;
+  /**
+   * The engine that will run: the Codex engine is not the Claude CLI, so it
+   * gets no first-party additions (the Claude token in particular; review
+   * round 6, codex gpt-6-sol, 2026-10-25). Omitted means Claude.
+   */
+  engine?: AgentEngine | undefined;
   /** Access-log label for the key resolution. */
   purpose: string;
   env?: Record<string, string | undefined>;
 }): Promise<Record<string, string> | null> {
   const { boxRoot, model, purpose } = params;
+  if (params.engine === "codex") return null;
   const additions = model === null || model === undefined
     ? await firstPartyAdditions(boxRoot, purpose)
     : await additionsFor({ boxRoot, model, purpose });

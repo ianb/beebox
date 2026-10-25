@@ -31,7 +31,7 @@ export { redactCodexCliDetail as redactCodexAuthDetail } from "../../services/co
 
 /** The single actionable message shown when Claude Code has no active login. */
 const CLAUDE_NOT_LOGGED_IN_MESSAGE =
-  "Claude Code is not logged in — run `claude auth login` on this machine";
+  "Claude Code is not logged in — run `claude auth login` on this machine, or grant the `claude-oauth-token` secret to this box";
 
 /** Thrown by {@link checkClaudeAuth} when the CLI reports no active login. */
 export class ClaudeAuthError extends Error {

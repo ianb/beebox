@@ -58,7 +58,9 @@ done
 for tool in claude uv; do
   [[ -x "/usr/local/bin/$tool" ]] || { echo "no /usr/local/bin/$tool: box units see only /usr/local/bin (cloud-init.yaml installs both there); install it first" >&2; exit 1; }
 done
-git config --system user.email >/dev/null || { echo "no system git identity: git config --system user.email/user.name (cloud-init.yaml sets them)" >&2; exit 1; }
+for key in user.email user.name; do
+  git config --system "$key" >/dev/null || { echo "no system git $key: set it with git config --system user.email/user.name (cloud-init.yaml sets both)" >&2; exit 1; }
+done
 for svc in beebox-hub beebox-scheduler; do
   if systemctl is-active --quiet "$svc"; then
     echo "$svc is running; stop both services first (systemctl stop beebox-hub beebox-scheduler)" >&2

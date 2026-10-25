@@ -132,7 +132,7 @@ export async function openChatRun(opts: {
     // Third-party-provider runs (GLM, added OpenRouter models) carry their
     // endpoint and key in the child env; a refusal happens here, before the
     // subprocess exists.
-    const additions = await providerEnvAdditions({ boxRoot: opts.boxRoot, model: opts.model, purpose: "chat-start" });
+    const additions = await providerEnvAdditions({ boxRoot: opts.boxRoot, model: opts.model, engine: startOptions.engine, purpose: "chat-start" });
     if (additions) startOptions.env = { ...startOptions.env, ...additions };
     await opts.backend.load?.(startOptions.engine);
     return startBackendRun(opts.backend, startOptions);
