@@ -120,6 +120,12 @@ for entry in "${ENTRIES[@]}"; do
   new_path="$home/box"
   say "$slug"
   if [[ ${#slug} -gt 28 ]]; then echo "  slug longer than 28 characters cannot be a user name; stop" >&2; exit 1; fi
+  # Root reads each box's Git state (the deploy's maintenance controller) and
+  # git refuses another user's repository unless it is listed; add-box.sh does
+  # the same for a box it makes. Before the migrated check, so a rerun repairs it.
+  if ! git config --global --get-all safe.directory 2>/dev/null | grep -qxF "$new_path"; then
+    run git config --global --add safe.directory "$new_path"
+  fi
   # Already migrated: hub.json names the new path and the socket (a box
   # add-box.sh created on the unit host, or an earlier run of this script).
   if [[ -n "$socket" && -d "$new_path" && ( "$old_path" == "$new_path" || ! -e "$old_path" ) ]]; then
