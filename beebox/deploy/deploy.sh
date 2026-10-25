@@ -538,10 +538,11 @@ rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "$SSH_TARGET:$STAG
 step "Fixing ownership..."
 # INSTALL_DIR must expand locally before the remote command runs.
 # shellcheck disable=SC2029
-# The engine's reference docs are read by every box user on a unit host; a
-# build checkout from before 2026-10-24 holds them in a 0700 directory that
-# `ensurePackageDocs` keeps (its fingerprint is current), so open them here.
-ssh "$SSH_TARGET" "chown -R beebox:beebox $STAGE_DIR && chmod -R a+rX $STAGE_DIR/beebox/box-docs"
+# The install tree is code every box user reads: rsync -a carried the laptop's
+# directory modes, and a 0700 directory (the build checkout's box-docs/, once
+# the checkout root itself) locked a box user out of `bbx` on the probe VM
+# (2026-10-24). Open the whole staged tree to read and traverse.
+ssh "$SSH_TARGET" "chown -R beebox:beebox $STAGE_DIR && chmod -R a+rX $STAGE_DIR"
 
 if [[ "$SKIP_RESTART" == true ]]; then
   echo "Deploy staged at $STAGE_DIR; --skip-restart leaves the running installation unchanged."

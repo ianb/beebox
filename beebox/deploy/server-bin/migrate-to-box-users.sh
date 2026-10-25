@@ -120,7 +120,9 @@ for entry in "${ENTRIES[@]}"; do
   new_path="$home/box"
   say "$slug"
   if [[ ${#slug} -gt 28 ]]; then echo "  slug longer than 28 characters cannot be a user name; stop" >&2; exit 1; fi
-  if [[ -d "$new_path" && ! -e "$old_path" && -n "$socket" ]]; then
+  # Already migrated: hub.json names the new path and the socket (a box
+  # add-box.sh created on the unit host, or an earlier run of this script).
+  if [[ -n "$socket" && -d "$new_path" && ( "$old_path" == "$new_path" || ! -e "$old_path" ) ]]; then
     echo "  already migrated"; continue
   fi
   if [[ -d "$new_path" && -e "$old_path" && "$old_path" != "$new_path" ]]; then
