@@ -55,14 +55,34 @@ async function groupByOwner(roots: readonly string[]): Promise<OwnerGroup[]> {
   return [...groups.values()];
 }
 
-/** The home directory of `uid`, from the passwd database; the controller's own when unknown. */
-function homeOf(uid: number): string | undefined {
+/** The passwd entry of `uid` (name and home); the controller's own identity when unknown. */
+function accountOf(uid: number): { name: string | undefined; home: string | undefined } {
   try {
-    const entry = execFileSync("getent", ["passwd", String(uid)], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-    return entry.split(":")[5] || process.env.HOME;
+    const fields = execFileSync("getent", ["passwd", String(uid)], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).split(":");
+    return { name: fields[0] || process.env.USER, home: fields[5] || process.env.HOME };
   } catch (_e) {
-    return process.env.HOME;
+    return { name: process.env.USER, home: process.env.HOME };
   }
+}
+
+/**
+ * The holder's environment: the few names a process needs to run git and
+ * node as that user, and nothing of the controller's own. On the server the
+ * controller runs with the hub's `.env` in its environment (the session
+ * secret among it), and a holder runs as a box user whose box could read
+ * `/proc/<holder>/environ` (cross-model review round 4, codex gpt-6-sol,
+ * 2026-10-24). An allowlist, not a denylist, so a new hub variable cannot
+ * leak by default.
+ */
+function holderEnv(account: { name: string | undefined; home: string | undefined }): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const name of ["PATH", "LANG", "LC_ALL", "TZ", "TMPDIR"]) {
+    const value = process.env[name];
+    if (value !== undefined) env[name] = value;
+  }
+  if (account.home !== undefined) env.HOME = account.home;
+  if (account.name !== undefined) { env.USER = account.name; env.LOGNAME = account.name; }
+  return env;
 }
 
 interface Holder { child: ChildProcess; roots: string[]; permits: Promise<Record<string, string>>; exit: Promise<number> }
@@ -70,9 +90,10 @@ interface Holder { child: ChildProcess; roots: string[]; permits: Promise<Record
 function startHolder(group: OwnerGroup, opts: { cli: readonly string[]; asRoot: boolean }): Holder {
   const [command, ...prefix] = opts.cli;
   invariant(command, "Maintenance needs a CLI to start a holder with");
-  const identity = opts.asRoot && group.uid !== 0 ? { uid: group.uid, gid: group.gid, env: { ...process.env, HOME: homeOf(group.uid) } } : {};
+  const asOwner = opts.asRoot && group.uid !== 0;
+  const account = asOwner ? accountOf(group.uid) : { name: process.env.USER, home: process.env.HOME };
   const child = spawn(command, [...prefix, "engine", "maintenance", "hold", ...group.roots], {
-    stdio: ["pipe", "pipe", "inherit"], ...identity,
+    stdio: ["pipe", "pipe", "inherit"], env: holderEnv(account), ...(asOwner ? { uid: group.uid, gid: group.gid } : {}),
   });
   const exit = new Promise<number>((resolve, reject) => {
     child.once("error", reject);

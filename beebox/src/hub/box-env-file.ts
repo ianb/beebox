@@ -53,9 +53,10 @@ export function renderBoxEnvFile(sourceEnv: NodeJS.ProcessEnv): string {
 }
 
 /**
- * Write the file for the units. `/etc/beebox` is `2775 root:beebox-boxes`
- * (cloud-init), so the hub user may write there and the file takes the cache
- * group; 0640 keeps it from users outside the fleet.
+ * Write the file for the units. `/etc/beebox` is `2755 beebox:beebox-boxes`
+ * (cloud-init): the hub user owns and writes it, the file takes the cache
+ * group, and a box user can read but not replace it; 0640 keeps it from
+ * users outside the fleet.
  */
 export function writeBoxEnvFile(filePath: string, sourceEnv: NodeJS.ProcessEnv): void {
   const tmp = `${filePath}.tmp`;

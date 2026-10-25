@@ -62,9 +62,12 @@ getent group beebox-boxes >/dev/null || run groupadd beebox-boxes
 if ! id beebox-sched >/dev/null 2>&1; then
   run useradd --system --user-group -d "$SCHED_HOME" -m -s /usr/sbin/nologin beebox-sched
 fi
-# The hub joins the cache group (for /etc/beebox/box.env), never a box group.
+# The hub joins the cache group, never a box group. It owns /etc/beebox (it
+# writes box.env there); box users only read it through the group. Not
+# group-writable: a box could otherwise replace the file its siblings load
+# (cross-model review round 4, codex gpt-6-sol, 2026-10-24).
 run usermod -a -G beebox-boxes beebox
-run install -d -o root -g beebox-boxes -m 2775 /etc/beebox
+run install -d -o beebox -g beebox-boxes -m 2755 /etc/beebox
 run install -d -o root -g beebox -m 0775 /run/beebox
 run install -d -o root -g root -m 0755 "$BOXES_DIR" /var/cache/beebox
 run install -d -o root -g beebox-boxes -m 2775 /var/cache/beebox/uv
@@ -100,6 +103,17 @@ MASTER_STORE=$(sudo -u beebox -H bash -lc "set -a; source $HUB_ENV 2>/dev/null; 
 copy_grants() { # copy_grants <slug> <home>
   local slug="$1" home="$2"
   local store="$home/.config/beebox/secrets.json"
+  # A resumed run must not drop what the box saved on its own Admin page since
+  # (per-box-units.md question 10): stop and name the entries the master lacks.
+  if [[ -f "$store" ]]; then
+    local extra
+    # shellcheck disable=SC2016
+    extra=$(node -e 'const f=require("fs");const load=(p)=>f.existsSync(p)?JSON.parse(f.readFileSync(p,"utf8")):{secrets:{},grants:{}};const [m,c,slug]=process.argv.slice(1);const M=load(m),C=load(c);const extra=[...Object.keys(C.secrets??{}).filter((n)=>!(n in (M.secrets??{}))),...Object.keys(C.grants?.[slug]??{}).filter((n)=>!(n in (M.grants?.[slug]??{}))).map((n)=>"grant:"+n)];process.stdout.write(extra.join(" "))' "$MASTER_STORE" "$store" "$slug")
+    if [[ -n "$extra" ]]; then
+      echo "  $slug: its store holds entries the master does not ($extra); re-exporting would drop them. Add them to the master and rerun." >&2
+      exit 1
+    fi
+  fi
   run install -d -o "bbx-$slug" -g "bbx-$slug" -m 0700 "$home/.config" "$home/.config/beebox"
   run bash -c "sudo -u beebox -H bash -lc 'set -a; source $HUB_ENV 2>/dev/null; set +a; $BBX engine secrets export-box $slug --agent-confirmed' > '$store.tmp'"
   run install -o "bbx-$slug" -g "bbx-$slug" -m 0600 "$store.tmp" "$store"

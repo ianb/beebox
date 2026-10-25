@@ -102,7 +102,8 @@ export function MachineSecretsView({ machine, refresh }: { machine: MachineView;
       {machine.scope === "box" ? (
         <Hint>
           On this host each box holds its own copy of the secret store, so this view is this box&apos;s copy.
-          Grants to other boxes, and removals, are made on the host and exported to each box.
+          Grants to other boxes, and removals, are made on the host and exported to each box; a key saved
+          here lives only in this copy until the operator adds it to the host&apos;s store.
         </Hint>
       ) : (
         <Hint>

@@ -578,7 +578,7 @@ save, the agent token mint, `mutateConfig`, the chat schedule manager's save,
 only when something but the timestamp changed, so a `lastUsedAt` stamp costs
 no write. `hub-meta.ts` counts the schedule file's entries itself rather than
 importing the schedules loader, which imports it back. `/etc/beebox/box.env`
-is written by the hub user into a `2775 root:beebox-boxes` directory (the hub
+is written by the hub user into a `2755 beebox:beebox-boxes` directory it owns (review round 4 closed the group-writable `2775`: a box user could have replaced the file its siblings load; the hub
 joins the cache group, no box group) and is `0640`.
 
 **First chunk.** `socketPath` on `Endpoint` and the proxy target, with
@@ -899,6 +899,35 @@ One open (6, settled by the probe); the rest were settled by the boxholder on
    export-box`); (b) a hub-owned secrets surface that writes the master and
    re-exports to every box (a new subsystem). Lean: (a) now, (b) if the
    operator's grant workflow turns out to need a page.
+10. **Admin-page secret writes on a unit host** (open, found in review
+   round 4, codex gpt-6-sol, 2026-10-24). A box's Admin page saving a key
+   for itself writes the box's own copy of the store; the master never
+   learns of it, and the next `export-box` (a re-run of `add-box.sh`, a
+   resumed migration) would replace the copy and drop the key. Built as the
+   interim: both scripts stop before overwriting a copy that holds entries
+   the master lacks and name them, and the page says a key saved there lives
+   in this copy until the operator adds it to the host's store. Options: (a)
+   keep that (operator adds Admin-entered keys to the master by hand); (b)
+   `export-box --merge`, keeping box-only entries on re-export (a second
+   source of truth); (c) a hub-owned write path from the page to the master
+   (a new subsystem, the same one question 9's option (b) would need). Lean:
+   (a) until the boxholder's cross-box admin shape is decided.
+11. **Shared writable caches and sibling tampering** (open, found in
+   implementation 2026-10-24 while fixing the probe's cache findings). The
+   uv cache (`/var/cache/beebox/uv`) and the Docling model cache
+   (`/var/cache/beebox/hf`) are group-writable by every box user, which the
+   probe showed they must be for a shared cache to work at all. A box could
+   therefore edit an unpacked package in `uv/archive-v0/` that a sibling's
+   `uvx docling` then executes, or replace a model blob a sibling loads. That
+   is a cross-box path the issue set out to close, for one tool. Options: (a)
+   per-box caches under each box home (`UV_CACHE_DIR` and `HF_HOME` unset;
+   about 1.5 GB per box, which the plan's "What already exists" traded
+   away); (b) root-populated, read-only caches: the provisioner and deploy
+   run the exact `uvx --from docling==<pinned> --with ...` the engine runs,
+   plus one real conversion to pull the lazily fetched models, and boxes
+   never write (a new Docling version then needs a deploy, which pins it
+   anyway); (c) accept, as built. Lean: (b); (a) if a box ever needs a
+   package the deploy did not prefetch.
 6. **Agent logins per box** (open, settled by the subplan's probe). One
    `claude auth login` and `codex login` per box user, repeated on expiry,
    or a copied credentials file that may break on token rotation. No

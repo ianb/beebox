@@ -493,14 +493,25 @@ if [[ -n "$UNIT_HOST" ]]; then
   # this copies the result (per-box-units.subplan.md).
   store="$BOX_HOME/.config/beebox/secrets.json"
   install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0700 "$BOX_HOME/.config/beebox"
+  master_store=\$(grep -E '^BBX_SECRETS_FILE=' $BBX_HOME/.env 2>/dev/null | cut -d= -f2- || true)
+  master_store="\${master_store:-$BBX_HOME/.config/beebox/secrets.json}"
+  # A re-run must not silently drop what the box saved on its own Admin page
+  # (a value or grant the master never received; per-box-units.md question
+  # 10): stop and name them, so the operator adds them to the master first.
+  if [[ -f "\$store" ]]; then
+    extra=\$(node -e 'const f=require("fs");const load=(p)=>f.existsSync(p)?JSON.parse(f.readFileSync(p,"utf8")):{secrets:{},grants:{}};const [m,c,slug]=process.argv.slice(1);const M=load(m),C=load(c);const extra=[...Object.keys(C.secrets??{}).filter((n)=>!(n in (M.secrets??{}))),...Object.keys(C.grants?.[slug]??{}).filter((n)=>!(n in (M.grants?.[slug]??{}))).map((n)=>"grant:"+n)];process.stdout.write(extra.join(" "))' "\$master_store" "\$store" "$BOX_NAME")
+    if [[ -n "\$extra" ]]; then
+      echo "Secrets: the box's own store holds entries the master does not (\$extra); re-exporting would drop them."
+      echo "  Add them to the master as $BBX_USER (bbx engine secrets set / grant $BOX_NAME) and re-run."
+      exit 1
+    fi
+  fi
   su - $BBX_USER -c "bbx engine secrets export-box '$BOX_NAME' --agent-confirmed" > "\$store.tmp"
   install -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0600 "\$store.tmp" "\$store"
   rm -f "\$store.tmp"
   # Verify against the master file itself (root reads both): the copy's grant
   # names for this box equal the master's. A missing store reads as empty, so
   # a copy that lost a grant is exactly what this catches.
-  master_store=\$(grep -E '^BBX_SECRETS_FILE=' $BBX_HOME/.env 2>/dev/null | cut -d= -f2- || true)
-  master_store="\${master_store:-$BBX_HOME/.config/beebox/secrets.json}"
   names() { node -e 'const f=require("fs");const s=f.existsSync(process.argv[1])?JSON.parse(f.readFileSync(process.argv[1],"utf8")):{grants:{}};process.stdout.write(Object.keys(s.grants[process.argv[2]]??{}).sort().join(","))' "\$1" "$BOX_NAME"; }
   master=\$(names "\$master_store"); copy=\$(names "\$store")
   if [[ "\$master" != "\$copy" ]]; then
