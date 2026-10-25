@@ -16,6 +16,8 @@
 Description=Bee Box %i
 Requires=beebox-box@%i.socket
 After=network.target beebox-box@%i.socket
+# The box's home may be a separately mounted volume (production: /var/lib/beebox).
+RequiresMountsFor=/var/lib/beebox/%i
 StartLimitIntervalSec=300
 StartLimitBurst=5
 

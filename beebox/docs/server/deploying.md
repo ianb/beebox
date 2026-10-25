@@ -103,7 +103,12 @@ box recorded since the last deploy (a sandboxed box cannot install, it records);
 reconciles each box's `node_modules` as its owner; and starts the sockets again
 after the services. The one-time migration is
 `deploy/server-bin/migrate-to-box-users.sh`, run by hand as root after a
-snapshot with the services stopped; `--dry-run` prints every step. A host
+snapshot with the services stopped; `--dry-run` prints every step. Boxes that
+live on a separate volume (production's did, at the old path) need that volume
+mounted at `/var/lib/beebox` before the run, since a move across filesystems
+is a copy; the script refuses otherwise. A Hetzner snapshot covers the
+server's own disk and not a volume, so the volume's boxes are backed up only
+by a copy taken elsewhere ([box backups](boxes.md)). A host
 provisioned before `cloud-init.yaml` needs what that file gives a fresh one
 first: `claude` and `uv` in `/usr/local/bin` (a box unit cannot see
 `/home/beebox/.local/bin`), a system git identity, and the `claude-update`
