@@ -74,7 +74,10 @@ class CodexCliUnavailableError extends CodexReadinessError {
 // logout promptly. This cache only exists to keep run-path probes cheap.
 const POSITIVE_TTL_MS = 10 * 60 * 1000;
 
-let cachedOkAt: number | null = null;
+// Keyed by box root: a process that runs several boxes (the scheduler daemon
+// on a single-user host) must not let one box's token answer for another
+// (review round 7, codex gpt-6-sol, 2026-10-25). No box root is its own key.
+const cachedOkAt = new Map<string, number>();
 let cachedCodexOkAt: number | null = null;
 
 /**
@@ -103,7 +106,7 @@ export interface CheckClaudeAuthOptions {
 
 /** Clear the positive-result cache. Tests only. */
 export function resetClaudeAuthCache(): void {
-  cachedOkAt = null;
+  cachedOkAt.clear();
 }
 
 export function resetCodexAuthCache(): void {
@@ -145,12 +148,14 @@ export async function checkCodexAuth(options?: {
 export async function checkClaudeAuth(options?: CheckClaudeAuthOptions): Promise<void> {
   const now = options?.now ?? Date.now;
   const at = now();
-  if (cachedOkAt !== null && at - cachedOkAt < POSITIVE_TTL_MS) return;
+  const cacheKey = options?.boxRoot ?? "";
+  const okAt = cachedOkAt.get(cacheKey);
+  if (okAt !== undefined && at - okAt < POSITIVE_TTL_MS) return;
 
   const claudeCli = options?.claudeCli ?? createClaudeCliService({ boxRoot: options?.boxRoot });
   const status = await probeAuth(claudeCli);
   if (status["loggedIn"] === true) {
-    cachedOkAt = at;
+    cachedOkAt.set(cacheKey, at);
     return;
   }
   if (status[AUTH_PROBE_INCONCLUSIVE] === true) {
