@@ -49,6 +49,7 @@ import { markStartupPhase } from "../../lib/startup-timing.js";
 import { listenOn, resolveListenTarget } from "./listen-target.js";
 import { listenBaseUrl, publishServeEndpoints } from "./serve-publish.js";
 import { installIdleExit } from "./idle-exit.js";
+import { startServeMemoryProbe } from "./memory-probe.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "../server-types.js";
@@ -350,12 +351,13 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   }
 
   let maintenanceCheck: ReturnType<typeof setInterval> | undefined;
+  const memoryProbe = startServeMemoryProbe(boxes.map((box) => box.boxRoot));
 
   // Shutdown handler — force-close all connections immediately so
   // --watch restarts don't hang on open WebSocket sockets.
   const shutdown = async (signal: string, exitCode?: number) => {
     console.log(`\nReceived ${signal}, shutting down...`);
-    clearInterval(maintenanceCheck);
+    clearInterval(maintenanceCheck); await (await memoryProbe).stop();
     for (const pf of pidFiles) {
       await fs.promises.unlink(pf).catch(() => {});
     }

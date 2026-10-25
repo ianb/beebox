@@ -101,6 +101,27 @@ su - bbx-<box> -c "set -a; . /etc/beebox/box.env; set +a; cd /var/lib/beebox/<bo
 > (This produced a bogus "two boxes have missing connectors" health report on
 > 2026-07-14 — the connectors were healthy; the bare invocation was the bug.)
 
+**Memory probe.** Every `bbx engine serve` process records its memory in
+each served box's `.beebox/memory/` (`src/webapp/server/memory-probe.ts`):
+
+- `samples.jsonl`: one line a minute with RSS, used and total heap, the heap
+  limit, `external` and `arrayBuffers` memory, and the count of live handles
+  (all in MB). It rotates to `samples.1.jsonl` at 1 MiB, about three days.
+- `<time>-pid<pid>-<pct>.heapprofile`: the V8 sampling heap profile, written
+  the first time in a process the heap passes 50%, 70%, or 85% of its limit.
+  The server log gets one `[memory] heap passed …` line naming the file. Open
+  it in Chrome DevTools (Memory tab, Load) and read the bottom-up view: it
+  shows the allocation stacks of the live JavaScript heap. The newest six
+  profiles, at most 64 MiB, are kept.
+
+After an OOM, read the last samples (how fast the heap climbed, and whether
+`external` or RSS outside the heap grew instead) and the newest profile. A
+hub child's crash output is in the box's `.beebox/hub-child.log`; a failed
+restart's error is the box's `lastError` in the hub's `/healthz`. For a full
+heap snapshot at the moment of an OOM, start the process with
+`NODE_OPTIONS=--heapsnapshot-near-heap-limit=1` and a `--diagnostic-dir` with
+free disk about twice the heap size; it is off by default for that cost.
+
 **Live memory inspection.** `kill -USR1 <node-pid>` opens the inspector on
 `127.0.0.1:9229` without a restart. A heap snapshot forces a full GC and needs
 free disk about the size of the heap, so check `df` first. Never send `SIGUSR2`
