@@ -3,6 +3,7 @@
   --textile-paper: #fff7e9;
   --textile-ink: #542939;
   --textile-soft: #785563;
+  --textile-placeholder: #9c8187;
   --textile-edge: #c9aa91;
   --textile-accent: #973c59;
   --textile-accent-ink: #fff6e9;
@@ -23,6 +24,7 @@
   --textile-paper: #182a3e;
   --textile-ink: #f1e9d7;
   --textile-soft: #c4bda9;
+  --textile-placeholder: #757978;
   --textile-edge: #4c6279;
   --textile-accent: #c9c09f;
   --textile-accent-ink: #202c3b;
@@ -91,7 +93,7 @@
   border-color: var(--textile-edge);
 }
 :is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-composer-material textarea::placeholder {
-  color: var(--textile-soft);
+  color: var(--textile-placeholder);
 }
 :is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: var(--textile-accent);

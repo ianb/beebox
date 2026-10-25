@@ -75,7 +75,7 @@
   background: #fff6df;
   color: #173f35;
 }
-.bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-composer-material textarea::placeholder { color: #686045; }
+.bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-composer-material textarea::placeholder { color: #8f876d; }
 /* Enabled sends and the idle mic only; preserve recording and disabled cues. */
 .bbx-box-presentation[data-chrome-theme="ribbon"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
 .bbx-box-presentation[data-chrome-theme="ribbon"] #bbx-composer-mic[data-mic="idle"] {
