@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { acquireLock, inspectLock, LockHeldError, releaseLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "../file-lock.js";
+import { acquireLock, inspectLock, LockHeldError, releaseLock, requestScopedLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "../file-lock.js";
 import { resolveGitDir } from "../git-lock.js";
 import { writeFileAtomic } from "../atomic-write.js";
 import { readJsonIfPresent } from "../json-state.js";
@@ -126,9 +126,14 @@ export interface BoxWork {
   release(): Promise<void>;
 }
 
-/** Serialize lease publication with the drain's zero-reader observation. */
+/**
+ * Serialize lease publication with the drain's zero-reader observation. Every
+ * section under it is a few file operations, so it takes the request profile:
+ * a holder killed inside one (a box child's OOM) must not refuse startup and
+ * every admitted write for the default profile's five minutes.
+ */
 function withAdmission<T>(directory: string, fn: () => Promise<T>): Promise<T> {
-  return withFileLock({ lockPath: join(directory, "admission.lock"), metadata: {}, waitMs: 10_000 }, fn);
+  return withFileLock({ lockPath: requestScopedLock(join(directory, "admission.lock")), metadata: {}, waitMs: 10_000 }, fn);
 }
 
 /** Retain before checking phase: closure cannot miss a writer that saw open. */

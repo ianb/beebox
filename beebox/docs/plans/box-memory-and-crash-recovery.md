@@ -32,11 +32,11 @@ window. That fixes the incident as reported.
 Chosen design, three tracks:
 
 1. Admission lock on the request profile: about 5 source lines, 40 test lines.
-2. Supervisor keeps retrying an unhealthy box on a slow timer: about 30 source
-   lines, 60 test lines.
+2. Supervisor keeps retrying an unhealthy box on a slow timer: about 45 source
+   lines, 110 test lines.
 3. Memory probe in the serve process: about 170 source lines, 120 test lines.
 
-Docs: about 30 lines in `docs/server/operations.md`. Total about 450 lines.
+Docs: about 30 lines in `docs/server/operations.md`. Total about 520 lines.
 
 What the fuller design buys: track 2 covers every other cause of a transient
 startup failure (another default-profile lock, a full disk that clears, a slow
@@ -94,7 +94,7 @@ dependency), which track 1 does not. Track 3 is the second request.
 ## Prior art (external)
 
 - V8 sampling heap profiler via the inspector `HeapProfiler.startSampling` /
-  `getSamplingProfile`: https://chromedevtools.github.io/devtools-protocol/v8/HeapProfiler/
+  `getSamplingProfile`: https://chromedevtools.github.io/devtools-protocol/tot/HeapProfiler/ and https://nodejs.org/api/inspector.html
   Adopted as the mechanism (a platform API, not a copied project; no
   ACKNOWLEDGEMENTS entry).
 - Datadog's always-on Node heap profiler uses the same sampler at a 512 KiB
@@ -129,10 +129,13 @@ dependency), which track 1 does not. Track 3 is the second request.
 - **Why**: a holder killed inside the section leaves a guard directory that
   blocks every admission for up to 5 min. On 2026-10-25 every restart in that
   window failed, and the supervisor's budget (about 15 s of backoff plus 10 s
-  waits) ran out first. "pid -1" means the sidecar was absent, so the OOM came
-  between the guard `mkdir` and the sidecar rename (`file-lock.ts:369-377`). An
-  orphaned `admission.lock.*.tmp` from 2026-10-04 in the same box shows that
-  window was hit once before.
+  waits) ran out first. "pid -1" means the sidecar was absent or unreadable
+  (`readHolder`, `file-lock.ts:327`); a kill between the guard `mkdir` and the
+  sidecar rename (`file-lock.ts:369-377`) is one way to get there. An orphaned
+  `admission.lock.*.tmp` from 2026-10-04 in the same box shows that window was
+  hit once before. The stale guard also refuses every admitted box write from
+  any process (CLI writes by box agents included) for the same 5 min, not only
+  startup.
 - **Direction**: the three critical sections are file operations only:
   `acquireBoxWork` (`admission.ts:148-195`: lease `acquireLock`, `inspectLock`,
   `readPhase`), `drain` (`admission.ts:328`: `scanLocks` of `work/`), and
@@ -145,8 +148,15 @@ dependency), which track 1 does not. Track 3 is the second request.
 - **Trade**: a live holder paused more than 15 s inside the section (a laptop
   sleep) can be stolen from. The lock serializes lease publication against a
   drain's empty-directory check (`admission.ts:128-129`). A steal can let a
-  drain miss one writer that is mid-publication. `onCompromised` logs it.
-  Maintenance runs on the Linux deploy path, where this pause does not occur.
+  drain miss one writer that is mid-publication. `onCompromised` logs it after
+  the fact; it does not restore exclusion. Two things must coincide: a stall of
+  more than 15 s inside a millisecond section (a laptop sleep, or a GC thrash
+  just before an OOM), and a maintenance drain on that box at that moment.
+  Maintenance runs from deploys on the Linux host, where sleep does not occur.
+  Accepted as a documented risk; the alternative (Codex review) is to keep the
+  default profile and let Track 2's slow retry outlast it, which means a
+  5-minute outage per crash, and on the prod unit path (no Track 2) a box that
+  stays failed.
 - **First chunk**: the one-line change, plus a test: a guard directory with no
   sidecar and an mtime 20 s old does not block `acquireBoxStartup`; one with a
   fresh mtime still blocks (`LockHeldError` after the wait). The existing
@@ -178,13 +188,23 @@ dependency), which track 1 does not. Track 3 is the second request.
   - `reloadUnhealthy`: clear `restartTimer` before launching, so a SIGHUP and a
     pending slow retry cannot both spawn.
   - `SupervisorOptions.unhealthyRetryMs` for tests, as with `baseBackoffMs`.
+  - A maintenance refusal (`BoxMaintenanceError`, `core.ts:444-450`) on a
+    resident (non-lazy) hub sets `stopped`, and nothing relaunches it. On a
+    resident hub, arm the same slow timer without counting a failure. A lazy
+    hub keeps today's behavior: the next request starts it.
+  - `stopAll` during an in-flight launch: `launch` re-checks
+    `box.status === "stopped"` after `spawnBoxChild` and after readiness, and
+    kills the child it made instead of marking it running.
   - Lazy mode: `ensureRunning` on an `unhealthy` box still returns `undefined`
     (`core.ts:245-251`); the timer does the retry. A request does not trigger
     an early retry, so a phone that retries does not cause a restart storm.
 - **First chunk**: the change plus a supervisor test: spawn fails 5 times, the
   status is `unhealthy`, then spawn succeeds and the box reaches `running`
   after the injected retry delay with no `reloadUnhealthy` call. Second test:
-  `reloadUnhealthy` with a pending slow timer spawns once.
+  `reloadUnhealthy` with a pending slow timer spawns once. Third: `stopAll`
+  while a delayed spawn is in flight leaves no running child. Fourth: a
+  resident hub whose launch is refused by maintenance relaunches on the slow
+  timer once the refusal ends.
 
 ### Track 3: memory probe
 
@@ -192,6 +212,12 @@ dependency), which track 1 does not. Track 3 is the second request.
   served box's `.beebox/memory/`, stopped on server close.
 - **Why**: two prior prod OOMs needed a temporary instrumentation patch to
   diagnose. This one left only a native stack.
+- **Coverage**: the profile attributes growth of the serve process's
+  JavaScript heap to allocation stacks. RSS, `external`, and `arrayBuffers`
+  are sampled, so native or buffer growth shows in the series, but the probe
+  names no cause for it. Subprocesses (Claude Code, ffmpeg) are not measured;
+  on the unit host they share the cgroup's `MemoryMax=2G`
+  (`deploy/systemd/box-sandbox.conf:34`).
 - **Direction**:
   - `startMemoryProbe({ dirs, now?, read?, sampleMs?, checkMs? }): () => Promise<void>`.
   - At start: connect `inspector.Session`, run `HeapProfiler.startSampling({ samplingInterval: 512 * 1024 })`.
@@ -205,8 +231,10 @@ dependency), which track 1 does not. Track 3 is the second request.
   - Every `sampleMs` (60 s): append a sample line. When `samples.jsonl` passes
     1 MiB, rename it to `samples.1.jsonl` (replacing the old one). That is about
     3 days of history at about 250 bytes a line, and at most 2 MiB on disk.
-  - Keep the newest 6 `.heapprofile` files per dir; delete older ones at write
-    time.
+  - Keep the newest 6 `.heapprofile` files per dir and at most 64 MiB in
+    total; delete the oldest at write time. Chunk 3 measures a real profile's
+    size and the peak RSS cost of taking one at a 2 GB heap; if that cost is
+    not small against the cgroup headroom, the 85% threshold is dropped.
   - Write errors log once per process and never throw into the server.
   - Timers are unref'd; all work is skipped while a previous write is still
     pending.
@@ -215,8 +243,8 @@ dependency), which track 1 does not. Track 3 is the second request.
 
 ### Track 4: the OOM's cause
 
-- **What**: identify what grew to 3.9 GB live in 11 minutes. Investigation in
-  progress; findings are added here before implementation ends.
+- **What**: best effort to identify what grew to 3.9 GB live in 11 minutes.
+  Findings are reported; they do not gate this plan's completion.
 - **Known so far**: the last allocation was an `fs.promises` read decoded as
   UTF-8 into a two-byte string (native stack `FSReqPromise::Resolve` →
   `StringSlice<UTF8>` → `NewFromTwoByte`). The last Mark-Compact went from 4006
@@ -236,7 +264,7 @@ dependency), which track 1 does not. Track 3 is the second request.
 The simplest version is track 1 alone. It fixes the reported incident. It fails
 when a different startup lock, or anything else that clears with time, outlasts
 five fast retries: the box then latches again and needs a human, which the
-boxholder ruled out. Track 2 is about 30 lines and covers that whole class.
+boxholder ruled out. Track 2 is about 45 lines and covers that whole class.
 
 A simpler probe would log `process.memoryUsage()` every minute to stderr. That
 puts routine output where failures go, and it tells you that the heap grew but
@@ -253,6 +281,8 @@ none
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Admission holder paused > 15 s gets stolen from; drain misses a mid-publication writer | No (accepted trade, Track 1) | `onCompromised` logs | Clear (stderr) |
+| `stopAll` during an in-flight launch leaves a child running | Track 2 test | Re-check `stopped` after spawn and readiness | — |
+| Maintenance refusal on a resident hub leaves the box stopped for good | Track 2 test | Slow timer, no failure counted | — |
 | A slow retry and a SIGHUP spawn two children | Track 2 test | Clear the timer in `reloadUnhealthy` | — |
 | A box that can never start (ABI break) retries forever | Track 2 test (it re-arms) | One spawn every 5 min; warn once on entry | Clear (status + one warn) |
 | `getSamplingProfile` + `JSON.stringify` near the limit causes the OOM itself | No | Highest threshold is 85%: about 600 MB free at a 4 GB limit, about 280 MB at prod's ~1.9 GB | Clear: the crash log shows it |
@@ -287,12 +317,20 @@ No critical gap: every silent row is accepted above with its reason.
   error.
 - Growth-rate alerts (MB per minute): fixed thresholds of the heap limit
   answer "is this dangerous"; the sample history answers "how fast".
-- The prod unit host's systemd restart policy (`socket-provider.ts`): Track 1
-  helps there; its restart limits are a separate review.
+- The prod unit host's systemd restart policy: `beebox-box@.service:19-20`
+  (`StartLimitIntervalSec=300`, `StartLimitBurst=5`) leaves a unit failed until
+  a deploy or `systemctl reset-failed`, and `socket-provider.ts:198` does not
+  wake a failed unit. Track 1 removes this incident's cause there. Changing
+  the start limit is a boxholder decision (Open design questions); the unit
+  path is not yet live in production.
 - Fixing the 320 MB search-index restore: filed as its own issue.
 
 ## Open design questions
 
+- Prod unit path: should a failed `beebox-box@` unit also retry without a
+  human (for example a periodic `reset-failed` from the hub, or systemd's
+  `RestartSteps`/`RestartMaxDelaySec`, which need systemd 254 or newer)? Lean:
+  yes, as a follow-up in the box-isolation work, since that path is not live.
 - `UNHEALTHY_RETRY_MS = 5 min` versus 1 min. Lean: 5 min. It matches the
   default stale window, and Track 1 already handles the fast case.
 
@@ -318,7 +356,7 @@ None: purely infrastructural. No box-agent concept changes.
    profile, then serve wiring and an overhead microbenchmark. Commit.
 4. Docs: `docs/server/operations.md` memory section (where the probe writes,
    how to open a `.heapprofile`, the `NODE_OPTIONS` opt-in). Commit.
-5. Track 4 findings folded in; separate bugs filed.
+5. Track 4 findings reported; separate bugs filed. Not a completion gate.
 6. Verify end to end on the worktree's test box clone: the probe writes
    samples; a forced crash inside `withAdmission` recovers without SIGHUP.
 
