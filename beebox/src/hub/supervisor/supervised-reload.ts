@@ -8,6 +8,8 @@ import type { ManagedBox } from "./core.js";
 
 interface ReloadOptions {
   box: ManagedBox; launch: () => Promise<void>; isStopped: () => boolean; isReady: () => boolean;
+  /** Arm the supervisor's slow retry; a failed reload must not need a human. */
+  retryLater: () => void;
 }
 
 export function installReloadHandler(options: ReloadOptions & { generation: number }): void {
@@ -26,10 +28,11 @@ export function installReloadHandler(options: ReloadOptions & { generation: numb
   });
 }
 
-async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOptions): Promise<void> {
+async function reloadSupervisedBox({ box, launch, isStopped, isReady, retryLater }: ReloadOptions): Promise<void> {
   const child = box.child;
   if (!child) return;
   let changing = false;
+  let failedChanging = false;
   let maintenance: BoxMaintenance | undefined;
   try {
     maintenance = await acquireBoxMaintenance(box.entry.path, { reason: "development reload" });
@@ -57,7 +60,12 @@ async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOp
   } catch (error) {
     box.lastError = errorMessage(error);
     console.error(`[hub] ${box.slug} reload: ${box.lastError}`);
-    if (changing) {
+    if (changing && isStopped()) {
+      // The hub is stopping: leave the box stopped and schedule nothing.
+      await maintenance?.beginChanges();
+    } else if (changing) {
+      // A retry now would be refused by this owner's closure; retry once it is released.
+      failedChanging = true;
       if (box.restartTimer) clearTimeout(box.restartTimer);
       box.status = "unhealthy";
       box.consecutiveFailures += 1;
@@ -66,7 +74,8 @@ async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOp
       child.send({ type: DEV_BUNDLE_RELOAD_ABORTED }, () => {});
     }
   } finally {
-    await maintenance?.release();
+    try { await maintenance?.release(); }
+    finally { if (failedChanging && !isStopped()) retryLater(); }
   }
 }
 
