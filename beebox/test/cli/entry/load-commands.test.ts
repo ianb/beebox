@@ -42,7 +42,7 @@ void test("A split family loaded alone keeps both halves", async (t) => {
   const engine = program.commands.find((c) => c.name() === "engine");
   t.check(
     [names(program.commands.find((c) => c.name() === "scheduler")), names(engine?.commands.find((c) => c.name() === "scheduler"))],
-    [["log", "status"], ["install", "start", "uninstall"]],
+    [["log", "status"], ["install", "pass", "start", "uninstall"]],
   );
 });
 
