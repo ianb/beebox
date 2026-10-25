@@ -214,11 +214,17 @@ async function appendSample({ dir, line, maxBytes }: { dir: string; line: string
 /** Keep the newest profiles, by name (an ISO time prefix), within the count and byte caps; the newest always stays. */
 async function pruneProfiles(dir: string): Promise<void> {
   const names = (await fs.readdir(dir)).filter((name) => name.endsWith(".heapprofile")).toSorted().toReversed();
+  let kept = 0;
   let total = 0;
-  for (const [index, name] of names.entries()) {
+  for (const name of names) {
     const file = path.join(dir, name);
-    total += (await fs.stat(file)).size;
-    if (index > 0 && (index >= PROFILES_KEPT || total > PROFILES_MAX_BYTES)) await fs.rm(file, { force: true });
+    const size = (await fs.stat(file)).size;
+    if (kept > 0 && (kept >= PROFILES_KEPT || total + size > PROFILES_MAX_BYTES)) {
+      await fs.rm(file, { force: true });
+      continue;
+    }
+    kept += 1;
+    total += size;
   }
 }
 

@@ -60,7 +60,10 @@ async function reloadSupervisedBox({ box, launch, isStopped, isReady, retryLater
   } catch (error) {
     box.lastError = errorMessage(error);
     console.error(`[hub] ${box.slug} reload: ${box.lastError}`);
-    if (changing) {
+    if (changing && isStopped()) {
+      // The hub is stopping: leave the box stopped and schedule nothing.
+      await maintenance?.beginChanges();
+    } else if (changing) {
       // A retry now would be refused by this owner's closure; retry once it is released.
       failedChanging = true;
       if (box.restartTimer) clearTimeout(box.restartTimer);
@@ -71,8 +74,8 @@ async function reloadSupervisedBox({ box, launch, isStopped, isReady, retryLater
       child.send({ type: DEV_BUNDLE_RELOAD_ABORTED }, () => {});
     }
   } finally {
-    await maintenance?.release();
-    if (failedChanging && !isStopped()) retryLater();
+    try { await maintenance?.release(); }
+    finally { if (failedChanging && !isStopped()) retryLater(); }
   }
 }
 

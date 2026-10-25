@@ -1,6 +1,6 @@
 ---
 title: "Box child memory probes and crash recovery"
-status: draft
+status: active
 workstream: box-memory-and-crash-recovery
 issues: []
 ---
@@ -387,3 +387,10 @@ Done when the Track 1–3 tests pass, the change-selected tests and
 `pnpm typecheck` / `pnpm layout-check` pass, and the test box clone shows a
 child killed while holding the admission lock returning to `running` with no
 human action. No data migration: `.beebox/memory/` is new disposable state.
+
+Verified 2026-10-25 on the worktree's test box clone under a resident hub: the
+first sample appeared at startup (142 MB heap of a 4288 MB limit). A fresh
+admission guard with no holder file was created and the child was SIGKILLed;
+the hub's restart reclaimed the guard and the new child was serving 17 s
+later, with no human action. The change-selected suite (618 files, 7391
+tests) passed before the round 1 review fixes; their suites passed after.
