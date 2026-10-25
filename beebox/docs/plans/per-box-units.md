@@ -956,16 +956,38 @@ install` and `bbx tick` behave as before from inside a box.
 10. Production migration, by hand, after a snapshot, with the boxholder
     present.
 
-## Implementation status (2026-10-24)
+## Implementation status (2026-10-24, evening)
 
-Built and committed on the branch, with change-selected tests passing: Track
-A (both chunks), Track C's files and the engine half of chunk 2, Track D,
-Track E's engine and scripts, Track F's files, and the host audit extension.
-Not yet run anywhere real: the Docker-free smoke (`box-units.smoke.sh`), the
-cloud-init, `provision.sh`, the migration rehearsal, and the probe; all need
-the throwaway VM (step 1 of the order below, which needs the boxholder's
-yes to create a server). Questions 7, 8 and 9 were decided and built the same
-day. Track B's probe rows in the subplan are still marked Probe.
+Built, committed and run on a throwaway Hetzner VM: every track, the smoke
+(31/31), `cloud-init.yaml` + `provision.sh` from a blank server, `add-box.sh`
+for two boxes, `migrate-to-box-users.sh` for a third (dry run, run, resume,
+no-op rerun), thirteen `deploy.sh` runs as the fixes landed, the probe
+(subplan chunk 1, its rows settled or handed to the boxholder). Questions 7,
+8 and 9 were decided and built the same day. Open for the boxholder: the
+agent login per box (subplan question 1) and the Google token (subplan
+question 2), both decided at the production migration, which is step 10 and
+has not run. The fixes the VM forced are listed under Track E's "Found on the
+VM" and the following paragraph.
+
+**Found on the VM, second pass.** A fresh host had no `/usr/local/bin/bbx`
+(the old provisioner's link; the deploy makes it now), no scheduler home
+(cloud-init's system user; tmpfiles and the deploy create it), no `hub.json`
+(the provisioner writes an empty table on port 3210), and a canary that
+failed with no box (it passes on a box-less host). `systemctl stop` of a unit
+that does not exist yet failed the activation (only existing units are
+stopped). Root's deploy had made a shared `/tmp` lock directory the hub user
+could not write (per-user directories now). The engine's reference docs were
+in a 0700 directory (`mkdtemp`), so a box user's `bbx engine init` died on the
+fingerprint (opened; an unreadable fingerprint reads as "unwritable"). The
+new `scheduler pass`, `secrets export-box` subcommands were not in the CLI
+surface table and so unknown to the bundle. `hub-meta.json` came out 0600
+under the unit's umask (set outright). The unit umask moved from 0077 to
+0007 and the Docling model cache became writable (Track C). The migration's
+`chmod` followed the box's engine link and made the install 0700 (skips
+links; the deploy also opens the staged tree every run) and treated an
+add-box-made box as unmigrated; its scheduler manifest is now derived from
+the migrated `hub.json`. `useradd --system` with a UID above 999 only warned.
+The deploy's VAPID append lacked a trailing newline.
 
 ## Rollout shape
 
