@@ -399,15 +399,12 @@ if [[ -n "$UNIT_HOST" ]]; then
 fi
 
 # Clone/pull as root (su drops the SSH agent socket, breaking agent
-# forwarding), then chown to the box's owner.
-# Mark as safe.directory so root can operate on the owner's repos (the deploy's
-# maintenance controller reads each box's Git state as root). Once: a rerun
-# used to append a duplicate entry every time.
-git config --global --get-all safe.directory | grep -qxF "$BOX_PATH" || git config --global --add safe.directory "$BOX_PATH"
-
+# forwarding), then chown to the box's owner. The pull names the owner's
+# repository safe for this one command; root keeps no standing safe.directory
+# grant for a box (the deploy's controller no longer runs git in a box).
 if [[ -d "$BOX_PATH" ]]; then
   echo "Box already exists at $BOX_PATH, pulling latest..."
-  cd "$BOX_PATH" && git pull --ff-only
+  git -c "safe.directory=$BOX_PATH" -C "$BOX_PATH" pull --ff-only
 else
   echo "Cloning $REPO to $BOX_PATH..."
   mkdir -p "$(dirname "$BOX_PATH")"

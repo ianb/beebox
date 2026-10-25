@@ -113,3 +113,30 @@ void test("line 37", async (t) => {
     "two",
   ]);
 });
+
+// # The controller runs no git command in a box
+//
+// On the server the controller is root and git refuses a repository another
+// user owns, so the production deploy of 2026-10-25 failed every box's
+// verification. The controller reads the directory the holder's permit names.
+// Here the controller's own git is broken by a bogus GIT_DIR; the holder gets
+// an allowlisted environment without it, and the command script unsets it.
+void test("line 124", async (t) => {
+  const previousGitDir = process.env.GIT_DIR;
+  const box = await makeTmpBox({ git: true });
+  t.teardown(async () => {
+    if (previousGitDir === undefined) delete process.env.GIT_DIR;
+    else process.env.GIT_DIR = previousGitDir;
+    await box.cleanup();
+  });
+  await box.write("input.txt", "draft");
+  box.commitAll("initial");
+  const cli = [process.execPath, "--import", "tsx", join(import.meta.dirname, "../../../src/cli/entry/run.ts")];
+  process.env.GIT_DIR = join(box.root, "no-such-git-dir");
+  t.check(
+    await runMaintenance([box.root], { command: process.execPath, cli, args: ["--import", "tsx", "--input-type=module", "-e", `delete process.env.GIT_DIR;\n${readyScript}`] }),
+    0,
+  );
+  delete process.env.GIT_DIR;
+  t.check(await boxMaintenanceStatus(box.root), null);
+});

@@ -216,11 +216,16 @@ export function boxWorkEnvironment(): Record<string, string> {
   return permit ? { BBX_BOX_WORK: JSON.stringify(permit) } : inherited ? { BBX_BOX_WORK: inherited } : {};
 }
 
-export async function boxMaintenanceStatus(boxRoot: string): Promise<MaintenanceStatus | null> {
-  const directory = await directoryFor(boxRoot);
+export async function boxMaintenanceStatus(boxRoot: string): Promise<MaintenanceStatus | null> { return maintenanceStatusIn(await directoryFor(boxRoot)); }
+
+/** The status in a directory a permit names, for a reader that must not ask git (root: git refuses another user's repository). */
+export async function maintenanceStatusIn(directory: string): Promise<MaintenanceStatus | null> {
   const phase = await readPhase(directory);
   return phase && { ...phase, owner: await ownerOf(directory), step: await readMaintenanceStep(directory, phase.id) };
 }
+
+/** The maintenance directory an encoded permit (`BBX_BOX_WORK`, a holder's report) refers to. */
+export function permitDirectory(encoded: string): string { return permitSchema.parse(JSON.parse(encoded)).directory; }
 
 export interface BoxMaintenance extends BoxWork {
   /** Whether this owner still holds the box; false once its lock was lost or reclaimed. */

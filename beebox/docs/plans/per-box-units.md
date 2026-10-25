@@ -1018,6 +1018,17 @@ add-box-made box as unmigrated; its scheduler manifest is now derived from
 the migrated `hub.json`. `useradd --system` with a UID above 999 only warned.
 The deploy's VAPID append lacked a trailing newline.
 
+**Found on production (2026-10-25).** The first deploy after the merge, on the
+old layout, restarted the services and then failed every box's verification:
+the controller is root and asked git for each box's directory, and git refuses
+a repository another user owns ("dubious ownership"). The VM had passed because
+`add-box.sh` and the migration granted root a `safe.directory` per box. The
+controller now reads the phase from the directory the holder's permit names
+and runs no git command in a box; the two scripts no longer grant root
+anything (`add-box.sh` names the repository safe for its one rerun pull). The
+boxes were left with ownerless phase records, which refuse nothing; the next
+completed deploy clears them.
+
 ## Rollout shape
 
 **Tests first.** Each engine codepath names its test before it is written
