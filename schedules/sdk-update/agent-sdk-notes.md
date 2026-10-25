@@ -33,7 +33,7 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.308`, Codex `0.163.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.309`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
@@ -42,11 +42,11 @@ Codex entries here are labeled as such; they carry their own pin.
   the root copy and `bin/` tooling still imports it.
 - **Latest reviewed upstream version:** `0.3.310` (SDK), `2.1.310` (Claude Code), `0.164.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.308` on 2026-10-24
-  (taking `0.3.307`); Codex stays at `0.163.0`. The suite is green again (the
-  `ui-scan.annotations` failure was fixed on main). Next: `0.3.309` (settles
-  2026-10-24T20:35Z), Codex `0.164.0` (2026-10-25T04:48Z), `0.3.310`
-  (2026-10-25T21:21Z). Open:
+- **Current recommendation:** Both families moved on 2026-10-25 — Agent SDK
+  to `0.3.309`, Codex to `0.164.0`. The suite has 7 failures in one
+  SDK-unrelated file:
+  `issues/bugs/2026-10-25-box-install-test-red-after-per-box-users.md`. Next:
+  `0.3.310` (settles 2026-10-25T21:21Z). Open:
   `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
@@ -85,7 +85,7 @@ background cleanup no longer deletes recent files when `cleanupPeriodDays` is
 very large; read prompts show where a symlink leads.
 - **Action:** Settled path; takeable 2026-10-25T21:21Z.
 
-### Codex 0.164.0 — pending (published 2026-10-23T04:48Z, ~1h at this turn)
+### Codex 0.164.0 — APPLIED 2026-10-25 (published 2026-10-23T04:48Z)
 
 - **Relevant to beebox's Codex chat:** resuming a session restores its saved
   thread settings instead of global defaults, and finds compressed histories;
@@ -96,10 +96,10 @@ very large; read prompts show where a symlink leads.
   to executables) — beebox runs `danger-full-access`. Credential masking for
   remote Bash; enterprise MCP sign-in; `/presets`; inline `/model` arguments;
   Bedrock setup wizard on by default. Disk-usage pruning of unused installs.
-- **Action:** Settled path; takeable 2026-10-25T04:48Z.
+- **Action:** Applied 2026-10-25; the deploy gate passed on `codex-cli 0.164.0`.
 - **Sources:** [rust-v0.164.0](https://github.com/openai/codex/releases/tag/rust-v0.164.0)
 
-### 0.3.309 / Claude Code 2.1.309 — pending (published 2026-10-22T20:35Z)
+### 0.3.309 / Claude Code 2.1.309 — APPLIED 2026-10-25 (published 2026-10-22T20:35Z)
 
 - **HARNESS, security and isolation fixes:** sandboxed Bash no longer runs the
   shell's startup files outside the sandbox before each command; sandboxed
@@ -119,7 +119,7 @@ very large; read prompts show where a symlink leads.
   per-user temp directory and re-extracts on byte mismatch; host
   `managedSettings` keep `disableAllHooks` and related keys (beebox passes
   none).
-- **Action:** Settled path; takeable 2026-10-24T20:35Z.
+- **Action:** Applied 2026-10-25. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.309, `pnpm -C beebox test` (12,906 pass, 7 fail, 2 skip; all 7 in `test/deploy/box-install.test.ts`, which builds its own fixtures and was red on main after `b3bef5f26`).
 - **Sources:** [SDK 0.3.309](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03309), [Claude Code 2.1.309](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21309)
 
 ### 0.3.305 – 0.3.308 / Claude Code 2.1.305 – 2.1.308 — APPLIED 2026-10-23 (0.3.305/0.3.306) and 2026-10-24 (0.3.307/0.3.308) (published 2026-10-20T19:29Z to 2026-10-22T04:19Z)
