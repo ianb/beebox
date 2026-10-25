@@ -94,6 +94,19 @@ mapfile -t ENTRIES < <(node -e '
   for (const [slug, entry] of Object.entries(cfg.boxes)) process.stdout.write(`${slug}\t${entry.path}\t${entry.socket ?? ""}\n`);
 ' "$HUB_CONFIG")
 [[ ${#ENTRIES[@]} -gt 0 ]] || { echo "hub.json names no boxes" >&2; exit 1; }
+# Every box must already sit on the filesystem that holds $BOXES_DIR: `mv`
+# across filesystems is a copy, which on production (2026-10-25) filled the
+# root disk with 25G and emptied the volume the boxes had lived on. A volume
+# that holds the boxes is mounted at $BOXES_DIR first (fstab), and the old
+# paths then sit inside it.
+for entry in "${ENTRIES[@]}"; do
+  IFS=$'\t' read -r slug old_path _ <<< "$entry"
+  [[ -d "$old_path" ]] || continue
+  if [[ "$(stat -c %d "$old_path")" != "$(stat -c %d "$BOXES_DIR")" ]]; then
+    echo "$slug: $old_path is on a different filesystem from $BOXES_DIR; a move would copy. Mount that filesystem (a Hetzner volume, say) at $BOXES_DIR first, then run again" >&2
+    exit 1
+  fi
+done
 
 next_uid() {
   local uid

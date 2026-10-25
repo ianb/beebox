@@ -6,6 +6,7 @@
 # shared with beebox-box@.service.
 [Unit]
 Description=Bee Box %i scheduler pass
+RequiresMountsFor=/var/lib/beebox/%i
 
 [Service]
 Type=oneshot
