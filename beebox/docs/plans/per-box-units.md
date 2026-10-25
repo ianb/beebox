@@ -4,7 +4,7 @@ status: draft
 workstream: box-isolation
 issues:
   - ../../../issues/features/2026-09-04-cross-box-filesystem-isolation.md
-  - ../../../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md
+  - ../../../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md
 ---
 # One systemd unit and one OS user per box, and a cloud-init host
 
@@ -19,7 +19,7 @@ that never re-runs.
 **Issues addressed:**
 [cross-box filesystem isolation](../../../issues/features/2026-09-04-cross-box-filesystem-isolation.md)
 (resolved by Tracks B and C);
-[setup-server.sh is not re-run by deploy](../../../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md)
+[setup-server.sh is not re-run by deploy](../../../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md)
 (resolved by Track F: units and the provisioner become versioned files
 `deploy.sh` installs). Related, not resolved:
 [agent containment: allowed directories](../../../issues/features/2026-07-20-agent-containment-allowed-directories.md)

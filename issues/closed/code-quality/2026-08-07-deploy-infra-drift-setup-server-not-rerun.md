@@ -1,11 +1,14 @@
 ---
 title: "Infra config drift: setup-server.sh is not re-run by deploy.sh"
-workstream: security-report
+workstream: box-isolation
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report
 priority: backlog
 ---
+
+**Closed:** resolved by the box-isolation branch (per-box-units, `beebox/docs/plans/per-box-units.md`). `deploy/deploy.sh` now owns every unit, link and directory the old provisioner wrote once; `deploy/setup-server.sh` is a tombstone and `deploy/hetzner/cloud-init.yaml` plus `provision.sh` replace it. Production still runs the old layout until the boxholder migrates it (plan step 10).
 
 `deploy/deploy.sh` ships code but does not re-run
 `deploy/setup-server.sh`, which owns the nginx and systemd configuration
@@ -16,7 +19,7 @@ relevant config change can silently fail to deploy while the code change
 around it succeeds.
 
 This surfaced adjacently to
-[cloudflare-flexible-ssl-origin-plaintext](../bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md):
+[cloudflare-flexible-ssl-origin-plaintext](../../bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md):
 the fix for that (an nginx TLS listener) is exactly the kind of infra
 change this gap would strand.
 
