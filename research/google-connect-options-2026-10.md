@@ -223,6 +223,52 @@ broker. Sources: `docs.openclaw.ai/plugins/plugin-inventory`,
 `hermes-agent.nousresearch.com/docs/user-guide/features/tool-search`,
 `hermes-agent.nousresearch.com/docs/user-guide/messaging/email`.
 
+## Google's hosted Workspace MCP servers (checked 2026-10-25, live probes)
+
+Google hosts remote MCP servers for Gmail, Calendar, Drive, Docs, Sheets,
+Slides, Chat, and People (`<product>mcp.googleapis.com/mcp/v1`), Developer
+Preview since 2026-04. They do not remove the Cloud Console:
+
+- The client brings its own Cloud project, enables the product API and a
+  separate MCP API per product, configures its own consent screen, and
+  registers a Web-type OAuth client with the new "Use this client for an
+  AI-powered agent" flag. The consent screen shows the client's name.
+- `accounts.google.com` advertises no dynamic client registration and no
+  client metadata documents (probe of
+  `/.well-known/oauth-authorization-server`), so an unregistered client
+  cannot connect.
+- Scopes are the same restricted ones. Google: the agent flag "does not
+  grant additional scopes or privileges" and agentic clients "remain
+  subject to standard Google OAuth 2.0 security requirements," including
+  "OAuth app verification." Interstitial, 100-user cap, 7-day Testing
+  expiry, and CASA are unchanged.
+- Device flow is refused for Gmail scopes, so a headless box cannot use it.
+- Preview terms forbid "public applications" and granting access to users
+  "outside my domain or company"; enrollment needs a Workspace account;
+  consumer `@gmail.com` eligibility is not stated.
+- Capability is below the REST API: Gmail has 23 tools with no send, no
+  attachment download, no history or push, bodies as a model-oriented
+  rendering rather than MIME; Drive has no delete, move, share, or changes
+  feed. From 2026-11-11 servers reject clients not marked agentic. Charges
+  above standard thresholds are announced for later in 2026.
+- Client gotchas (Hermes #137289, confirmed by probe): issuer trailing-slash
+  mismatch between resource and authorization-server metadata; anonymous
+  `initialize` and `tools/list` succeed and the 401 arrives only on
+  `tools/call`; the SDK default requests every supported scope including
+  `https://mail.google.com/`; refresh tokens need `access_type=offline`;
+  all servers under one client share one grant.
+
+Disposition: reject for this problem. It is Google's path for Gemini,
+Antigravity, and Claude, each of which registered and verified its own
+client. Sources: `developers.google.com/workspace/guides/configure-mcp-servers`,
+`developers.google.com/workspace/gmail/api/guides/configure-mcp-server`,
+`support.google.com/cloud/answer/15549257`,
+`developers.google.com/workspace/preview`,
+`developers.google.com/workspace/tools-safety`,
+`developers.google.com/identity/protocols/oauth2/limited-input-device`,
+`github.com/NousResearch/hermes-agent/issues/137289`,
+`github.com/xbill9/workspace-mcp-claude`.
+
 ## Dispositions
 
 - **Reject Nango, Arcade, Paragon, Truto, and the auth-only brokers** for
