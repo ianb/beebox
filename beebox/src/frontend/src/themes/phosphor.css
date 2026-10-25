@@ -40,7 +40,7 @@
 [data-chrome-theme="phosphor"] .bbx-composer-material>div.bg-gradient-to-r{background:transparent;}
 [data-chrome-theme="phosphor"] .bbx-composer-material>section{background:transparent;border:0;}
 [data-chrome-theme="phosphor"] .bbx-composer-material textarea{color:#a7ffb1;background:#020b05;border:0!important;box-shadow:none!important;outline:0;font-family:inherit;font-size:13px;line-height:1.5;}
-[data-chrome-theme="phosphor"] .bbx-composer-material textarea::placeholder{color:#4ba75e;}
+[data-chrome-theme="phosphor"] .bbx-composer-material textarea::placeholder{color:#316f3e;}
 [data-chrome-theme="phosphor"] :is(#bbx-composer-add,#bbx-composer-capture,#bbx-composer-keyboard,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic,#bbx-composer-dictation-cancel,#bbx-composer-dictation-edit,#bbx-composer-dictation-cancel-mobile,#bbx-composer-dictation-edit-mobile){
   position:relative;min-width:0;padding:8px 4px;color:#78ed8a;background:transparent;border:0;box-shadow:none;font:600 11px/1 monospace;letter-spacing:-.04em;white-space:nowrap;
 }

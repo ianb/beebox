@@ -68,7 +68,7 @@
   background: #f6f8ed;
   border-color: #93bfaf;
 }
-[data-chrome-theme="goldfish"] .bbx-composer-material textarea::placeholder { color: #5e7568; }
+[data-chrome-theme="goldfish"] .bbx-composer-material textarea::placeholder { color: #798c7f; }
 [data-chrome-theme="goldfish"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   color: #fff8ee;
   background: #626aab;

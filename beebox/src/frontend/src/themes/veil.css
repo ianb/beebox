@@ -46,7 +46,7 @@
 [data-chrome-theme="veil"] .bbx-chat-callout > .bbx-chat-callout-context { color: #49674c; }
 [data-chrome-theme="veil"] .bbx-composer-material > section { background: transparent; border: 0; }
 [data-chrome-theme="veil"] .bbx-composer-material textarea { color: #263f37; background: #edf3e4; border-color: #91a78a; }
-[data-chrome-theme="veil"] .bbx-composer-material textarea::placeholder { color: #5c725f; }
+[data-chrome-theme="veil"] .bbx-composer-material textarea::placeholder { color: #768977; }
 [data-chrome-theme="veil"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   color: #edfaf1;
   background: linear-gradient(125deg, #287b75, #225e62);

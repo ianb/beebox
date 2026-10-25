@@ -22,7 +22,7 @@ function image({ left, right, split }: { left: Rgb; right?: Rgb; split?: number 
 }
 
 function run(over: Partial<TextRun>): TextRun {
-  return { id: 0, selector: "p", text: "Sample", fg: [0, 0, 0, 1], group: null, large: false, material: -1, rects: [{ x: 0, y: 0, w: 100, h: 10 }], ...over };
+  return { id: 0, selector: "p", text: "Sample", fg: [0, 0, 0, 1], group: null, large: false, placeholder: false, material: -1, rects: [{ x: 0, y: 0, w: 100, h: 10 }], ...over };
 }
 
 function page(runs: TextRun[], materials?: Material[]): { width: number; runs: TextRun[]; materials: Material[] } {
@@ -39,11 +39,12 @@ void test("contrast ratio matches WCAG's reference points", (t) => {
   t.end();
 });
 
-void test("normal text needs 4.5:1 and large text 3:1", (t) => {
+void test("normal text needs 4.5:1; large text and a placeholder 3:1", (t) => {
   const grey: TextRun["fg"] = [0x90, 0x90, 0x90, 1];
   const white = image({ left: [255, 255, 255] });
   t.check(scoreRuns(white, page([run({ fg: grey })])).map((f) => [f.kind, f.ratio]), [["text", 3.19]]);
   t.check(scoreRuns(white, page([run({ fg: grey, large: true })])), []);
+  t.check(scoreRuns(white, page([run({ fg: grey, placeholder: true })])), []);
   t.end();
 });
 

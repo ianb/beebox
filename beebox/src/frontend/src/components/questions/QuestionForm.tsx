@@ -24,6 +24,7 @@ import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Heading } from "../ui/Heading";
+import { QuestionMemo } from "./QuestionMemo";
 import type { RouterOutput } from "../../lib/trpc/client";
 
 export type QuestionInfo = RouterOutput["status"]["questions"]["items"][number];
@@ -56,8 +57,8 @@ function QuestionContext({ question }: { question: QuestionInfo }) {
       {hasMemo || hasLearning ? (
         <div className="max-h-[30vh] overflow-y-auto mb-4">
           {hasMemo ? (
-            <Text as="p" tone="subtle" size="sm" className="mb-2">
-              {question.memo}
+            <Text as="div" tone="subtle" size="sm" className="mb-2">
+              <QuestionMemo memo={question.memo ?? ""} path={question.relativePath} />
             </Text>
           ) : null}
           {hasLearning ? (

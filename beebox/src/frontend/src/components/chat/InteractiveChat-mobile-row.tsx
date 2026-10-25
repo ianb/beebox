@@ -22,7 +22,7 @@ export function MobileTextareaRow({
   isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend,
-  onPaste, onDrop, includeControlIds, placeholder,
+  onPaste, onDrop, includeControlIds,
 }: ComposerRowProps & {
   /** Omit authored addresses when rendered repeatedly in a development gallery. */
   includeControlIds?: boolean;
@@ -52,7 +52,7 @@ export function MobileTextareaRow({
         onDrop={onDrop}
         readOnly={isTranscribing}
         enterKeyHint="enter"
-        placeholder={isTranscribing ? "Listening..." : placeholder ?? "Type a message..."}
+        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: true, isTranscribing })}
         minRows={2}
         maxRows={8}

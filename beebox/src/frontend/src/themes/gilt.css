@@ -70,7 +70,7 @@
   border-color: var(--gilt-edge);
 }
 [data-chrome-theme="gilt"] .bbx-composer-material textarea::placeholder {
-  color: var(--gilt-soft);
+  color: #7a8f90;
 }
 [data-chrome-theme="gilt"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background-color: #d9bd7f;

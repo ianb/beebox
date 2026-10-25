@@ -55,7 +55,7 @@
 [data-chrome-theme="tempest"] .bbx-composer-material > section { background: transparent; border: 0; }
 [data-chrome-theme="tempest"] .bbx-composer-material { backdrop-filter: none; }
 [data-chrome-theme="tempest"] .bbx-composer-material textarea { background: transparent; color: #e0eef4; }
-[data-chrome-theme="tempest"] .bbx-composer-material textarea::placeholder { color: #a4bac8; }
+[data-chrome-theme="tempest"] .bbx-composer-material textarea::placeholder { color: #8199b4; }
 [data-chrome-theme="tempest"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic):enabled {
   color: #0c193b;
   background: #a8d4e5;
