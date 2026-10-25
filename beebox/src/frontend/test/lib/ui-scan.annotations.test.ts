@@ -51,7 +51,7 @@ const SOURCES = await frontendSources(FRONTEND_SRC);
 
 /** The ids the plan's Track 4 table names in its web column, in table order. */
 function planWebIds(plan: string): string[] {
-  const rows = plan.split("\n").filter((line) => /^\| `bbx-/.test(line));
+  const rows = plan.split("\n").filter((line) => line.startsWith("| `bbx-"));
   return rows.flatMap((row) => {
     const cells = row.split("|").slice(1);
     // A cell that opens with an em dash is "no counterpart on this platform",

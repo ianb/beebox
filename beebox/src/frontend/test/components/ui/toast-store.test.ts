@@ -30,6 +30,7 @@ function makeFakeSchedule() {
       timers.set(key, bbx);
       return () => timers.delete(key);
     },
+    // oxlint-disable-next-line unicorn/no-useless-spread -- snapshot: a fired expiry may re-arm, and Map iteration would fire the new entry in the same pass
     fireAll: () => { for (const bbx of [...timers.values()]) bbx(); },
     pending: () => timers.size,
   };

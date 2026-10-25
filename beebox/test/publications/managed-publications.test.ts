@@ -53,7 +53,7 @@ const runtime: ManagedPublicationRuntime = {
   now: () => new Date(Date.UTC(2026, 8, 24, 0, 0)),
   newHostHandle: () => "bbx-test-host",
   getBinding: async () => binding,
-  reserveBinding: async (input) => (binding = { ...(binding ?? {}), ...input, accountId: "0123456789abcdef0123456789abcdef", createdAt: input.createdAt }),
+  reserveBinding: async (input) => (binding = { ...binding, ...input, accountId: "0123456789abcdef0123456789abcdef", createdAt: input.createdAt }),
   listBindings: async () => binding === null ? [] : [{ ...binding, pubId }],
   getBoxHost: async () => boxHost,
   listConnections: async () => connectionRows,
