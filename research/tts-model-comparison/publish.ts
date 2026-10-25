@@ -1,18 +1,19 @@
 /**
- * Publish the comparison to the site: transcode every take to Opus in
- * site/assets/tts-comparison/, then write the page card from
- * page-template.md and results.json.
+ * Publish the comparison to the site: check the run is complete, transcode
+ * every take to Opus in site/assets/tts-comparison/, then write the page card
+ * from page-template.md and results.json.
  *
- * The page plays one take per model, clip, and variant: for a clip read
- * several times, the take closest to the median length. Only those takes are
- * published; the rest stay in results.json and the original audio.
+ *   node --import tsx research/tts-model-comparison/publish.ts [--fresh | --prune]
  *
- *   node --import tsx research/tts-model-comparison/publish.ts [--prune]
+ * The run is complete when every model × clip × variant has one row, a row
+ * without a file is one the model had no channel for, and every file is in
+ * audioDir(). An incomplete run fails with the list of gaps and changes
+ * nothing.
  *
- * A take whose .webm is already newer than its source is not transcoded
- * again, and one whose source is missing keeps its .webm, so the page can be
- * regenerated on a machine without the original audio. --prune deletes .webm
- * files the page does not play; without it they are listed and the run fails.
+ * --fresh empties site/assets/tts-comparison/ and transcodes every take from
+ * its source, so no file from an earlier run stands in for a new take.
+ * Without it, a take whose .webm is newer than its source is kept, and .webm
+ * files no take names are listed and the run fails; --prune deletes them.
  */
 
 import { execFileSync } from "node:child_process";
@@ -25,38 +26,49 @@ import {
   type Clip,
   loadResults,
   type Model,
+  NO_CHANNEL,
   publishedName,
+  reference,
   type Render,
   REPO_ROOT,
   type Results,
   SITE_AUDIO_DIR,
+  takeKey,
   TEMPLATE_PATH,
-  VARIANTS,
+  type Variant,
+  variantText,
 } from "./lib.ts";
+import { adapterFor } from "./render.ts";
 
 /** Mono Opus at 32 kbit/s: clean speech at about 4 KB per second. */
 const OPUS_ARGS = ["-vn", "-ac", "1", "-c:a", "libopus", "-b:a", "32k", "-map_metadata", "-1", "-fflags", "+bitexact", "-flags:a", "+bitexact"];
 
-/** Of several takes, the successful one closest to the median length. */
-function representative(takes: readonly Render[]): Render | undefined {
-  const done = takes.filter((r) => r.file !== undefined).toSorted((a, b) => (a.audioSec ?? 0) - (b.audioSec ?? 0) || a.repeat - b.repeat);
-  return done[Math.floor((done.length - 1) / 2)];
-}
-
-/** The takes the page plays, by group of model, clip, and variant. */
-function shown(results: Results): Render[] {
-  const groups = new Map<string, Render[]>();
-  for (const r of results.renders) {
-    const key = `${r.model}__${r.clip}__${r.variant}`;
-    groups.set(key, [...(groups.get(key) ?? []), r]);
+/**
+ * Every gap that keeps the run from publishing, or none. Each model × clip ×
+ * variant needs one row: a take with its source audio where the model's
+ * adapter builds a request, and a "none available" row only where it does not.
+ */
+function gaps(results: Results): string[] {
+  const rows = new Map(results.renders.map((r) => [takeKey(r), r]));
+  const out: string[] = [];
+  for (const model of results.models) {
+    const adapter = adapterFor(model.id);
+    for (const clip of results.clips) {
+      for (const variant of clip.variants) {
+        const key = takeKey({ model: model.id, clip: clip.id, variant: variant.id });
+        const r = rows.get(key);
+        const planned = adapter.request(variant, clip) !== undefined;
+        if (r === undefined) out.push(`${key}: no row`);
+        else if (!planned && (r.channel !== NO_CHANNEL || r.file !== undefined)) out.push(`${key}: the adapter has no channel, but the row is not "${NO_CHANNEL}"`);
+        else if (planned && r.file === undefined) out.push(`${key}: no file (${r.channel === NO_CHANNEL ? "marked no channel, but the adapter has one" : (r.error ?? `status ${r.status ?? "none"}`)})`);
+        else if (r.file !== undefined && !existsSync(join(audioDir(), r.file))) out.push(`${key}: ${r.file} is not in ${audioDir()}`);
+      }
+    }
   }
-  return [...groups.values()].flatMap((takes) => {
-    const take = representative(takes);
-    return take === undefined ? [] : [take];
-  });
+  return out;
 }
 
-function transcode(takes: readonly Render[]): { made: number; kept: number } {
+function transcode(takes: readonly Render[], fresh: boolean): { made: number; kept: number } {
   mkdirSync(SITE_AUDIO_DIR, { recursive: true });
   let made = 0;
   let kept = 0;
@@ -64,12 +76,10 @@ function transcode(takes: readonly Render[]): { made: number; kept: number } {
     if (r.file === undefined) continue;
     const source = join(audioDir(), r.file);
     const target = join(SITE_AUDIO_DIR, publishedName(r.file));
-    const sourceExists = existsSync(source);
-    if (existsSync(target) && (!sourceExists || statSync(target).mtimeMs >= statSync(source).mtimeMs)) {
+    if (!fresh && existsSync(target) && statSync(target).mtimeMs >= statSync(source).mtimeMs) {
       kept += 1;
       continue;
     }
-    if (!sourceExists) throw new Error(`neither ${source} nor ${relative(REPO_ROOT, target)} exists; set TTS_AUDIO_DIR`);
     execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", source, ...OPUS_ARGS, target]);
     made += 1;
   }
@@ -85,9 +95,12 @@ function cents(usd: number): string {
   return `${(usd * 100).toFixed(1)}¢`;
 }
 
-/** Cost per minute of speech over the model's successful takes, billed or at list price. */
+/** Cost per minute of speech over the model's takes, billed or at list price. */
 function costPerMinute(renders: readonly Render[]): string | undefined {
-  const priced = renders.filter((r) => r.file !== undefined && r.costUsd !== undefined && r.audioSec !== undefined);
+  const taken = renders.filter((r) => r.file !== undefined);
+  // A take with no cost (a failed OpenRouter lookup) would skew the figure; show none.
+  if (taken.some((r) => r.costUsd === undefined || r.audioSec === undefined)) return undefined;
+  const priced = taken;
   const usd = priced.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
   const sec = priced.reduce((sum, r) => sum + (r.audioSec ?? 0), 0);
   if (sec === 0) return undefined;
@@ -113,15 +126,14 @@ function modelsSection(results: Results): string {
     .join("\n");
 }
 
-function failure(r: Render): string {
-  if (r.error?.startsWith("TimeoutError") === true) return "timed out";
-  return r.error ?? `status ${r.status}`;
-}
+const quoteWords = (words: readonly string[]): string => words.map((w) => `“${w}”`).join(", ");
 
-/** Direction the transcript shows was read aloud, or nothing. */
-function leak(r: Render): string {
-  if (!r.leakedWords?.length) return "";
-  return ` **Read direction aloud:** ${r.leakedWords.map((w) => `“${w}”`).join(", ")}.`;
+/** What the transcript shows was read aloud: direction or Markdown. */
+function readAloud(r: Render): string {
+  const parts: string[] = [];
+  if (r.leakedWords?.length) parts.push(`**Read direction aloud:** ${quoteWords(r.leakedWords)}.`);
+  if (r.formattingWords?.length) parts.push(`**Read Markdown aloud:** ${quoteWords(r.formattingWords)}.`);
+  return parts.join(" ");
 }
 
 /** Backslash-escape text so Markdoc shows it literally. */
@@ -129,89 +141,98 @@ function literal(text: string): string {
   return text.replace(/[\\`*_[\]{}<>#|]/g, "\\$&");
 }
 
-/** The sent request fields as a blockquote, one field per line. */
+/** The sent request fields as a blockquote, one field per line; line breaks in a field shown as ↵. */
 function sentQuote(sent: string): string {
   return sent
     .split(" | ")
     .map((field) => {
-      const colon = field.indexOf(": ");
-      return colon === -1 ? `> ${literal(field)}` : `> **${literal(field.slice(0, colon))}:** ${literal(field.slice(colon + 2))}`;
+      const flat = field.replace(/\n+/g, " ↵ ");
+      const colon = flat.indexOf(": ");
+      return colon === -1 ? `> ${literal(flat)}` : `> **${literal(flat.slice(0, colon))}:** ${literal(flat.slice(colon + 2))}`;
     })
     .join("\n>\n");
 }
 
-function player(r: Render): string {
-  return r.file === undefined ? "" : `{% audio src="/assets/tts-comparison/${publishedName(r.file)}" /%}`;
+interface Context {
+  models: Map<string, Model>;
+  clips: Map<string, Clip>;
 }
 
-const VARIANT_LABEL = { plain: "Plain", directed: "Directed", markup: "Markup" } as const;
-
-/** How several takes of one text varied, and which one plays. */
-function takesNote(takes: readonly Render[]): string {
-  const done = takes.filter((r) => r.file !== undefined);
-  const failed = takes.filter((r) => r.file === undefined);
-  const parts: string[] = [];
-  if (done.length > 1) {
-    const secs = done.map((r) => r.audioSec ?? 0);
-    parts.push(`Middle-length take of ${done.length}; they ran ${Math.min(...secs).toFixed(1)}–${Math.max(...secs).toFixed(1)} s.`);
-  }
-  if (failed.length > 0) parts.push(`${failed.length} of ${takes.length} takes failed (${[...new Set(failed.map(failure))].join("; ")}).`);
-  return parts.join(" ");
+function refOf(r: Render, ctx: Context): string {
+  const model = ctx.models.get(r.model);
+  const clip = ctx.clips.get(r.clip);
+  if (model === undefined || clip === undefined) throw new Error(`render ${takeKey(r)} has no model or clip`);
+  return reference({ clip, variant: r.variant, model });
 }
 
-/** One take, or why there is none. */
-function take(takes: readonly Render[]): { note: string; render?: Render } {
-  const r = representative(takes);
-  if (r === undefined) return { note: `The request failed (${[...new Set(takes.map(failure))].join("; ")}).` };
-  const note = [takes.length > 1 ? takesNote(takes) : "", leak(r).trim()].filter(Boolean).join(" ");
-  return { note, render: r };
+function player(r: Render, ctx: Context): string {
+  return r.file === undefined ? "" : `{% audio src="/assets/tts-comparison/${publishedName(r.file)}" ref="${refOf(r, ctx)}" /%}`;
 }
 
-/** One list item: a model's takes of one clip. */
-function modelTakes(model: Model, renders: readonly Render[]): string {
+/** One list item: a model's takes of one clip, a block per variant. */
+function modelTakes(model: Model, clip: Clip, renders: readonly Render[], ctx: Context): string {
   const blocks: string[] = [];
-  for (const variant of VARIANTS) {
-    const takes = renders.filter((r) => r.variant === variant);
-    if (takes.length === 0) continue;
-    const { note, render } = take(takes);
+  for (const variant of clip.variants) {
+    const r = renders.find((x) => x.variant === variant.id);
+    if (r === undefined) throw new Error(`no row for ${model.id} ${clip.id} ${variant.id}`);
     const lead = blocks.length === 0 ? `${pill(model)} ` : "";
-    const channel = variant === "plain" ? "" : `, ${takes[0]?.channel ?? ""}`;
-    blocks.push(`${lead}${variant === "plain" ? "**Plain.**" : `**${VARIANT_LABEL[variant]}**${channel}.`}${note === "" ? "" : ` ${note}`}`);
-    const sent = (render ?? takes[0])?.sent;
-    if (sent !== undefined) blocks.push(sentQuote(sent));
-    if (render !== undefined) blocks.push(player(render));
+    if (r.channel === NO_CHANNEL) {
+      blocks.push(`${lead}**${literal(variant.label)}.** No channel for this direction.`);
+      continue;
+    }
+    const channel = variant.direction === undefined ? "" : `, ${r.channel}`;
+    const note = readAloud(r);
+    blocks.push(`${lead}**${literal(variant.label)}**${channel}.${note === "" ? "" : ` ${note}`}`);
+    if (r.sent !== undefined) blocks.push(sentQuote(r.sent));
+    blocks.push(player(r, ctx));
   }
   return `- ${indent(blocks.filter((b) => b !== "").join("\n\n"))}`;
 }
 
-function clipSection(results: Results, clip: Clip): string {
-  const number = clip.id.split("-")[0] ?? clip.id;
-  const spec = [`**Text:** ${clip.text}`, `**Listen for:** ${clip.listenFor}`];
-  if (clip.pronounce !== undefined) spec.push(`**Roughly how it sounds:** ${clip.pronounce}`);
-  spec.push(clip.direction === undefined ? "**Direction:** none; every model read it plain." : `**Direction, as prose:** ${clip.direction.prose}.`);
-  const lines = [`### ${clip.title}`, "", `{% sample title="Clip ${number} · ${clip.title}" %}`, spec.join("\n\n"), "{% /sample %}", ""];
+/** A text as the model got it: inline when it is one plain line, else a code block that keeps its Markdown and line breaks. */
+function shownText(label: string, text: string): string {
+  if (!text.includes("\n") && !/[*_]/.test(text)) return `**${label}:** ${literal(text)}`;
+  if (!text.includes("\n")) return `**${label}:** \`${text}\``;
+  return `**${label}:**\n\n\`\`\`text\n${text}\n\`\`\``;
+}
+
+function variantSpec(clip: Clip, variant: Variant): string[] {
+  const out: string[] = [];
+  if (variant.text !== undefined) out.push(shownText(literal(variant.label), variantText(clip, variant)));
+  if (variant.direction !== undefined) out.push(`**${literal(variant.label)}, as prose:** ${literal(variant.direction.prose)}`);
+  return out;
+}
+
+function clipHeading(clip: Clip): string {
+  return `${clip.code} · ${clip.title}`;
+}
+
+function clipSection(results: Results, clip: Clip, ctx: Context): string {
+  const spec = [shownText("Text", clip.text), `**Listen for:** ${literal(clip.listenFor)}`];
+  if (clip.pronounce !== undefined) spec.push(`**Roughly how it sounds:** ${literal(clip.pronounce)}`);
+  spec.push(...clip.variants.flatMap((v) => variantSpec(clip, v)));
+  if (clip.variants.every((v) => v.direction === undefined)) spec.push("**Direction:** none; every model read it without direction.");
+  const lines = [`### ${clipHeading(clip)}`, "", `{% sample title="Clip ${clipHeading(clip)}" %}`, spec.join("\n\n"), "{% /sample %}", ""];
   for (const model of results.models) {
-    const renders = results.renders.filter((r) => r.model === model.id && r.clip === clip.id);
-    if (renders.length > 0) lines.push(modelTakes(model, renders), "");
+    lines.push(modelTakes(model, clip, results.renders.filter((r) => r.model === model.id && r.clip === clip.id), ctx), "");
   }
   return lines.join("\n").trimEnd();
 }
 
-/** Every take in which the transcript shows direction read aloud. */
-function leaksSection(results: Results): string {
-  const leaked = results.renders.filter((r) => r.leakedWords?.length);
-  const models = new Map(results.models.map((m) => [m.id, m]));
-  const clips = new Map(results.clips.map((c) => [c.id, c]));
-  return leaked
+/** Every take whose transcript shows direction or Markdown read aloud, linked to its player. */
+function leaksSection(results: Results, ctx: Context): string {
+  const items = results.renders
+    .filter((r) => readAloud(r) !== "")
     .map((r) => {
-      const model = models.get(r.model);
-      const clip = clips.get(r.clip);
-      if (model === undefined || clip === undefined) throw new Error(`render of ${r.model} ${r.clip} has no model or clip`);
-      const head = `${pill(model)} [${clip.title}](#${slug(clip.title)}), **${VARIANT_LABEL[r.variant]}**, ${r.channel}.${leak(r)}`;
-      const blocks = [head, ...(r.sent === undefined ? [] : [sentQuote(r.sent)]), player(r)].filter((b) => b !== "");
-      return `- ${indent(blocks.join("\n\n"))}`;
-    })
-    .join("\n");
+      const model = ctx.models.get(r.model);
+      const clip = ctx.clips.get(r.clip);
+      const variant = clip?.variants.find((v) => v.id === r.variant);
+      if (model === undefined || clip === undefined || variant === undefined) throw new Error(`render ${takeKey(r)} has no model, clip, or variant`);
+      const ref = refOf(r, ctx);
+      const channel = variant.direction === undefined ? "" : `, ${r.channel}`;
+      return `- ${pill(model)} [${clipHeading(clip)}](#${slug(clipHeading(clip))}), **${literal(variant.label)}**${channel}. ${readAloud(r)} Take [${ref}](#${ref}).`;
+    });
+  return items.length === 0 ? "No take in this run." : items.join("\n");
 }
 
 /** The id site/workspace-model.ts headingIds() gives a heading. */
@@ -243,11 +264,20 @@ function fillTemplate(template: string, sections: Record<string, string>): strin
 }
 
 function main(): void {
-  const { values } = parseArgs({ options: { prune: { type: "boolean", default: false } } });
+  const { values } = parseArgs({ options: { prune: { type: "boolean", default: false }, fresh: { type: "boolean", default: false } } });
   const results = loadResults();
-  const takes = shown(results);
-  const { made, kept } = transcode(takes);
-  const extra = orphans(takes);
+  const missing = gaps(results);
+  if (missing.length > 0) throw new Error(`the run is incomplete; nothing written:\n  ${missing.join("\n  ")}`);
+  const ctx: Context = { models: new Map(results.models.map((m) => [m.id, m])), clips: new Map(results.clips.map((c) => [c.id, c])) };
+  const refs = results.renders.filter((r) => r.file !== undefined).map((r) => refOf(r, ctx));
+  const duplicate = refs.find((ref, n) => refs.indexOf(ref) !== n);
+  if (duplicate !== undefined) throw new Error(`two takes share the reference ${duplicate}`);
+  if (values.fresh) {
+    mkdirSync(SITE_AUDIO_DIR, { recursive: true });
+    for (const f of readdirSync(SITE_AUDIO_DIR)) unlinkSync(join(SITE_AUDIO_DIR, f));
+  }
+  const { made, kept } = transcode(results.renders, values.fresh);
+  const extra = orphans(results.renders);
   if (extra.length > 0 && !values.prune) {
     throw new Error(`files no render names (rerun with --prune to delete):\n  ${extra.join("\n  ")}`);
   }
@@ -255,8 +285,8 @@ function main(): void {
   const template = readFileSync(TEMPLATE_PATH, "utf8");
   const sections = {
     models: modelsSection(results),
-    leaks: leaksSection(results),
-    clips: results.clips.map((c) => clipSection(results, c)).join("\n\n"),
+    leaks: leaksSection(results, ctx),
+    clips: results.clips.map((c) => clipSection(results, c, ctx)).join("\n\n"),
   };
   // The contents list is made from the headings of the filled page.
   const headings = fillTemplate(template, { ...sections, contents: "" });

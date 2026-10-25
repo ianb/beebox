@@ -28,7 +28,7 @@ type CreateAgentOptions = Parameters<typeof createAgent>[0];
 type FakeAct = Parameters<typeof createFakeAgent>[0]["act"];
 
 const intakeJob = (description: string, opts?: { priority?: "normal" | "low" }) =>
-  createIntakeJobTemplate({ description, items: [], ...(opts ?? {}) });
+  createIntakeJobTemplate({ description, items: [], ...opts });
 
 // Base cycle params: fast fakes for the subprocess/doc stages (same rationale
 // as test/core/reactor/engine.integration.test.ts), no filters, sync off.
