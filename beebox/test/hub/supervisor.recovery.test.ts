@@ -97,6 +97,28 @@ void test("A hub stopped during a launch leaves no child running", async (t) => 
   });
 });
 
+// ## A launch that fails after the hub stopped schedules nothing
+void test("A launch that fails after the hub stopped schedules nothing", async (t) => {
+  const { supervisor } = await residentSupervisor(t, {
+    pidBase: 985000,
+    checkReady() {
+      void supervisor.stopAll();
+      return Promise.reject(new Error("simulated readiness timeout"));
+    },
+  });
+  await supervisor.startAll();
+  t.check(supervisor.getStatuses()[0], {
+    slug: "fixture",
+    status: "stopped",
+    pid: undefined,
+    port: undefined,
+    restarts: 0,
+    consecutiveFailures: 0,
+    lastError: undefined,
+    lastStart: undefined,
+  });
+});
+
 // ## A resident box refused by maintenance starts once maintenance ends
 //
 // A refusal is not a crash, so it uses none of the failure budget. A lazy hub

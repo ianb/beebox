@@ -213,6 +213,7 @@ void test("A development reload exit restarts cleanly without consuming crash bu
     hubSecret: "test-hub-secret",
     spawnChild: reloadSpawnChild,
     checkReady: () => rejectReloadReady ? Promise.reject(new Error("replacement failed")) : Promise.resolve(),
+    unhealthyRetryMs: 20,
   });
   await reloadSupervisor.startAll();
   const acceptedReloadWork = await acquireBoxWork(reloadFixture.root, { reason: "test" });
@@ -263,6 +264,11 @@ void test("A development reload exit restarts cleanly without consuming crash bu
 
   const afterFailedReload = await acquireBoxWork(reloadFixture.root, { reason: "test" });
   await afterFailedReload.release();
+
+  // A failed reload is retried on the slow timer once its owner lock is
+  // released, so the box comes back without a SIGHUP.
+  rejectReloadReady = false;
+  await eventually(() => reloadSupervisor.getStatuses()[0]?.status === "running", { label: "box restarted after a failed reload", timeoutMs: 30_000 });
 });
 
 // ## Stopping after the reload acknowledgment leaves a stopped box open

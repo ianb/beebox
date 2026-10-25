@@ -433,15 +433,14 @@ export class Supervisor implements EndpointProvider {
       box.child = child;
       box.port = port;
 
-      installReloadHandler({ box, generation, launch: () => this.launch(box), isStopped: () => this.boxes.get(box.slug)?.status === "stopped", isReady: () => this.get(box.slug) !== undefined });
+      installReloadHandler({ box, generation, launch: () => this.launch(box), isStopped: () => this.boxes.get(box.slug)?.status === "stopped", isReady: () => this.get(box.slug) !== undefined, retryLater: () => { this.scheduleLaunch(box, this.retryTiming.unhealthyMs); } });
 
       child.on("exit", (code, signal) => {
         this.onChildExit({ box, generation, code, signal });
       });
 
       await this.checkReady({ port, label: `box/${box.slug}` });
-      if (box.generation !== generation) return; // superseded mid-startup
-      if (this.wasStopped(box)) return; // stopAll() killed this child while it started
+      if (box.generation !== generation || this.wasStopped(box)) return; // superseded, or stopAll() killed it mid-startup
       box.status = "running";
       box.consecutiveFailures = 0;
       box.lastError = undefined;
@@ -454,6 +453,7 @@ export class Supervisor implements EndpointProvider {
       if (this.config.lazy) this.armIdleTimer(box);
     } catch (e) {
       if (box.generation !== generation) return; // superseded mid-startup
+      if (this.wasStopped(box)) { box.child = undefined; box.port = undefined; return; } // stopAll() killed it; schedule nothing
       const message = errorMessage(e);
       box.lastError = message;
       if (e instanceof BoxMaintenanceError) {

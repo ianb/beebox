@@ -137,12 +137,17 @@ export function startMemoryProbe(options: MemoryProbeOptions): MemoryProbe {
     if (!profiler) return undefined;
     const body = await profiler.profile();
     const name = `${new Date(at).toISOString().replaceAll(":", "-")}-pid${String(process.pid)}-${String(pct)}.heapprofile`;
+    // One unwritable box must not cost the others their profile.
+    let written: string | undefined;
     for (const dir of dirs) {
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(path.join(dir, name), body);
-      await pruneProfiles(dir);
+      try {
+        await fs.mkdir(dir, { recursive: true });
+        await fs.writeFile(path.join(dir, name), body);
+        await pruneProfiles(dir);
+        written ??= path.join(dir, name);
+      } catch (error) { reportFailure(error); }
     }
-    return dirs[0] === undefined ? undefined : path.join(dirs[0], name);
+    return written;
   };
 
   const check = async (): Promise<void> => {

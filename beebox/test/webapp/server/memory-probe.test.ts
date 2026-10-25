@@ -106,6 +106,28 @@ void test("Without a profiler the warning still fires and samples continue", asy
   });
 });
 
+// ## One unwritable box still leaves the profile in the others
+void test("One unwritable box still leaves the profile in the others", async (t) => {
+  const blocked = await probeDir(t);
+  await writeFile(blocked, "a file where the directory belongs");
+  const open = await probeDir(t);
+  const warnings: string[] = [];
+  const probe = startMemoryProbe({
+    dirs: [blocked, open], profiler: fakeProfiler, read: () => reading(550),
+    now: () => Date.parse("2026-10-25T15:00:00.000Z"), warn: (message) => warnings.push(message), checkMs: 3_600_000,
+  });
+  t.teardown(() => probe.stop());
+  await probe.tick();
+  const profile = `2026-10-25T15-00-00.000Z-pid${String(process.pid)}-50.heapprofile`;
+  t.check({ files: (await readdir(open)).toSorted(), warnings }, {
+    files: [profile, "samples.jsonl"],
+    warnings: [
+      `[memory] probe failed; later failures are not logged: Error: EEXIST: file already exists, mkdir '${blocked}'`,
+      `[memory] heap passed 50% of its limit (550 of 1000 MB, rss 650 MB); profile: ${join(open, profile)}`,
+    ],
+  });
+});
+
 // ## Samples rotate, and old profiles are pruned to the newest six
 void test("Samples rotate, and old profiles are pruned to the newest six", async (t) => {
   const dir = await probeDir(t);
