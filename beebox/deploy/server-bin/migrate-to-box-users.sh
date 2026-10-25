@@ -52,6 +52,15 @@ for unit in beebox-box@.socket beebox-box@.service beebox-pass@.service; do
   [[ -e "/etc/systemd/system/$unit" ]] || { echo "unit $unit is not installed; deploy first" >&2; exit 1; }
 done
 [[ -x "$BBX" ]] || { echo "no $BBX" >&2; exit 1; }
+# A host provisioned before cloud-init (hetzner/cloud-init.yaml) kept its tools
+# under /home/beebox, which ProtectHome= hides from a box unit; a box user also
+# commits with no identity of its own. Found on production, 2026-10-25.
+for tool in claude uv; do
+  [[ -x "/usr/local/bin/$tool" ]] || { echo "no /usr/local/bin/$tool: box units see only /usr/local/bin (cloud-init.yaml installs both there); install it first" >&2; exit 1; }
+done
+for key in user.email user.name; do
+  git config --system "$key" >/dev/null || { echo "no system git $key: set it with git config --system user.email/user.name (cloud-init.yaml sets both)" >&2; exit 1; }
+done
 for svc in beebox-hub beebox-scheduler; do
   if systemctl is-active --quiet "$svc"; then
     echo "$svc is running; stop both services first (systemctl stop beebox-hub beebox-scheduler)" >&2
@@ -164,6 +173,12 @@ for entry in "${ENTRIES[@]}"; do
   for d in .claude .codex .config .local .cache .ssh; do
     run install -d -o "bbx-$slug" -g "bbx-$slug" -m 0700 "$home/$d"
   done
+  # Transcript retention, as hetzner/provision.sh sets it for the hub user: the
+  # nightly chat review mines transcripts, and Claude Code prunes them at 30
+  # days by default. Agent logins are not copied; see the subplan's question 1.
+  if [[ ! -f "$home/.claude/settings.json" ]]; then
+    run bash -c "printf '{\n  \"cleanupPeriodDays\": 60\n}\n' > '$home/.claude/settings.json' && chown bbx-$slug:bbx-$slug '$home/.claude/settings.json' && chmod 0600 '$home/.claude/settings.json'"
+  fi
   # Push subscriptions for this box; the store is split by the engine's own verb.
   run install -d -o "bbx-$slug" -g "bbx-$slug" -m 0700 "$home/.local/share" "$home/.local/share/beebox"
   run bash -c "sudo -u beebox -H bash -lc 'set -a; source $HUB_ENV 2>/dev/null; set +a; $BBX engine boxes export-push $slug' > '$home/.local/share/beebox/push-subscriptions.json.tmp'"

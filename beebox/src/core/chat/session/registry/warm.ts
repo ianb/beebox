@@ -58,7 +58,7 @@ async function probeStartOptions(opts: {
   });
   // A third-party prewarm bakes the provider env in at spawn — the warm
   // subprocess never re-resolves it at send time.
-  const additions = await providerEnvAdditions({ boxRoot: opts.boxRoot, model: resolved.model, purpose: "chat-prewarm" });
+  const additions = await providerEnvAdditions({ boxRoot: opts.boxRoot, model: resolved.model, engine: start.engine ?? "claude", purpose: "chat-prewarm" });
   const model = resolved.model ?? undefined;
   if (additions === null) return model === undefined ? start : { ...start, model };
   return { ...start, model, env: { ...start.env, ...additions } };

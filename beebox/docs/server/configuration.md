@@ -131,9 +131,24 @@ Claude Code stores OAuth credentials differently per platform:
 - **macOS**: Keychain entry, service `Claude Code-credentials`.
 - **Linux (server)**: File at `~/.claude/.credentials.json` containing `{ "claudeAiOauth": { "accessToken": "...", "refreshToken": "...", "expiresAt": ... } }`. File-mode `0600`, owner `beebox:beebox`.
 
+### The long-lived token (one Linux user per box)
+
+A host that runs each box as its own user (`docs/plans/per-box-units.md`) signs
+the boxes in with one long-lived token instead of a login file per user: a
+copied `.credentials.json` dies at its first refresh, because the refresh token
+rotates and the other copies are revoked (measured 2026-10-25). On a laptop
+with a browser, `claude setup-token` prints a token good for about a year;
+store it under `claude-oauth-token` and grant it to every box
+(`bbx secrets set claude-oauth-token`, `bbx secrets grant <slug>
+claude-oauth-token`, or Admin → Secrets). The server puts it in the agent's
+environment as `CLAUDE_CODE_OAUTH_TOKEN` for first-party runs and in the
+`claude auth status` probes, which then report `authMethod: "oauth_token"`
+(`src/core/claude-oauth-token.ts`). When it expires, mint a new one and set
+it again; nothing else changes.
+
 ### Transferring the Claude login
 
-`claude auth login` receives its OAuth callback on a localhost HTTP server, which a laptop browser cannot reach on the server, so it never completes there; the Admin page's "Sign in" button spawns the same flow and does not work in production either. Transfer credentials from a local macOS login to the server instead:
+On a single-user host, `claude auth login` receives its OAuth callback on a localhost HTTP server, which a laptop browser cannot reach on the server, so it never completes there; the Admin page's "Sign in" button spawns the same flow and does not work in production either. Transfer credentials from a local macOS login to the server instead:
 
 ```bash
 # On macOS (where you've logged in Claude Code locally):

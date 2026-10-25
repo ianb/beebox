@@ -12,7 +12,7 @@ import { authedProcedure, ownerProcedure, router } from "../procedures.js";
 
 function readinessServices(ctx: TrpcContext): ReadinessServices {
   return {
-    claudeCli: ctx.services.claudeCli ?? createClaudeCliService(),
+    claudeCli: ctx.services.claudeCli ?? createClaudeCliService({ boxRoot: ctx.boxRoot }),
     codexCli: ctx.services.codexCli ?? createCodexCliService(),
   };
 }

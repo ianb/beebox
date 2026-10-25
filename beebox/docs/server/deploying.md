@@ -103,7 +103,16 @@ box recorded since the last deploy (a sandboxed box cannot install, it records);
 reconciles each box's `node_modules` as its owner; and starts the sockets again
 after the services. The one-time migration is
 `deploy/server-bin/migrate-to-box-users.sh`, run by hand as root after a
-snapshot with the services stopped; `--dry-run` prints every step.
+snapshot with the services stopped; `--dry-run` prints every step. A host
+provisioned before `cloud-init.yaml` needs what that file gives a fresh one
+first: `claude` and `uv` in `/usr/local/bin` (a box unit cannot see
+`/home/beebox/.local/bin`), a system git identity, and the `claude-update`
+unit running as root; the script refuses until the first two are there. After
+the run a deploy writes the scheduler's sudoers entry. Box users have no login
+file: before the run, store a `claude setup-token` token under
+`claude-oauth-token` and grant it to every box, so the migration's secret
+export carries it into each box's store ([configuration](configuration.md),
+"The long-lived token").
 
 ## The maintenance boundary
 
