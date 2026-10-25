@@ -56,7 +56,7 @@ function at(line: number): TodoRowItem["locator"] {
 }
 
 function reduction(extra?: Partial<TodoReduction>): TodoReduction {
-  return { open: 0, done: 0, dropped: 0, parked: 0, onPlate: 0, escalated: 0, next: null, ...(extra ?? {}) };
+  return { open: 0, done: 0, dropped: 0, parked: 0, onPlate: 0, escalated: 0, next: null, ...extra };
 }
 
 /** Nested `text > child, child` for a forest. */
