@@ -1228,10 +1228,18 @@ node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://loc
 # admission, which a closed box refuses (it did, silently, on every deploy to
 # the probe VM, 2026-10-24). As root, straight to the wrapper; one refusal
 # does not block the others, and apt touches no box state.
+#
+# Admission resolves the box's Git directory with `git rev-parse`, and root
+# holds no `safe.directory` for a box (the box user owns it; git refuses the
+# "dubious ownership" otherwise, and admission then reports "requires a Git
+# repository", as it did on every production box 2026-10-25). The allowance
+# is scoped to this one command through git's environment, never written to
+# root's config.
 for box in /var/lib/beebox/*/box/; do
   [[ -e "$box/.git" ]] || continue
   box="${box%/}"
-  env BBX_UNIT_HOST= bash -c 'cd "$1" && timeout 900 bbx host sync --box "$1"' bbx-host-sync "$box" \
+  env BBX_UNIT_HOST= GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$box" \
+    bash -c 'cd "$1" && timeout 900 bbx host sync --box "$1"' bbx-host-sync "$box" \
     || echo "  $box: some recorded host packages did not install; see the lines above" >&2
 done
 # A box whose convergence failed stays closed for recovery. Repair it now
