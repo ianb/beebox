@@ -18,7 +18,7 @@ answers 503 with the unit's last journal line.
 
 The resident hub supervisor now retries an `unhealthy` box every 5 minutes
 (`UNHEALTHY_RETRY_MS` in `beebox/src/hub/supervisor/crash-backoff.ts`,
-[plan](../../beebox/docs/plans/box-memory-and-crash-recovery.md)). The unit
+[plan](../../beebox/docs/implemented-plans/box-memory-and-crash-recovery.md)). The unit
 path has no equivalent. The cause of the incident that prompted that work, a
 stale admission lock that held for 5 minutes, is fixed on both paths. Any
 other repeated start failure still latches a unit.

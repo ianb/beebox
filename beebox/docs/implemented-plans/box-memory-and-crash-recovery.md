@@ -1,6 +1,6 @@
 ---
 title: "Box child memory probes and crash recovery"
-status: active
+status: implemented
 workstream: box-memory-and-crash-recovery
 issues: []
 ---

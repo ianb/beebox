@@ -88,6 +88,7 @@ export async function startHeapProfiler(): Promise<HeapProfiler | null> {
       return JSON.stringify(profile);
     },
     async stop() {
+      // Shutdown path: the inspector session may already be gone; nothing to recover.
       await session.post("HeapProfiler.stopSampling").catch(() => {});
       session.disconnect();
     },
