@@ -26,7 +26,8 @@ import { errorMessage } from "../../shared/error-guards.js";
 import { buildChildEnv } from "./child-env.js";
 import { forwardChildOutput } from "./child-output-log.js";
 import { boxHasPendingSchedules } from "./pending-schedules.js";
-import { MAX_CONSECUTIVE_FAILURES, BASE_BACKOFF_MS, backoffDelayMs } from "./crash-backoff.js";
+// prettier-ignore
+import { MAX_CONSECUTIVE_FAILURES, BASE_BACKOFF_MS, UNHEALTHY_RETRY_MS, retryAfterClosure, retryAfterFailure, unhealthyWarning, type RetryTiming } from "./crash-backoff.js";
 // prettier-ignore
 import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, spawnBoxChild } from "./child-spawn.js";
 import { runtimeStatus, type BoxRunStatus, type BoxRuntimeStatus, type LaunchTiming } from "../box-status.js";
@@ -37,6 +38,7 @@ import { runtimeStatus, type BoxRunStatus, type BoxRuntimeStatus, type LaunchTim
 // don't need to change their import path. Box-path resolution is
 // `requireBoxRoot` (`../lib/box-shape.js`) — the one resolver.
 export { buildChildEnv };
+export type { ChildProc };
 
 export interface ManagedBox {
   slug: string;
@@ -105,13 +107,15 @@ export interface SupervisorOptions {
    * doesn't care about.
    */
   baseBackoffMs?: number;
+  /** Retry interval for an unhealthy box, defaulting to {@link UNHEALTHY_RETRY_MS}. */
+  unhealthyRetryMs?: number;
 }
 
 /**
  * Owns one child process per configured box: spawns it, waits for
- * `/healthz` to answer, restarts it with backoff on unexpected exit (up to
- * `MAX_CONSECUTIVE_FAILURES`), and tears every child down cleanly on
- * `stopAll()`.
+ * `/healthz` to answer, restarts it with backoff on unexpected exit (fast up
+ * to `MAX_CONSECUTIVE_FAILURES`, then every `UNHEALTHY_RETRY_MS`), and tears
+ * every child down cleanly on `stopAll()`.
  */
 export class Supervisor implements EndpointProvider {
   private readonly boxes = new Map<string, ManagedBox>();
@@ -120,7 +124,7 @@ export class Supervisor implements EndpointProvider {
   private readonly spawnChild: SpawnChildFn;
   private readonly checkReady: CheckReadyFn;
   private readonly now: () => number;
-  private readonly baseBackoffMs: number;
+  private readonly retryTiming: RetryTiming;
   private readonly hubState: HubState;
 
   constructor(options: SupervisorOptions) {
@@ -129,7 +133,7 @@ export class Supervisor implements EndpointProvider {
     this.spawnChild = options.spawnChild ?? defaultSpawnChild;
     this.checkReady = options.checkReady ?? defaultCheckReady;
     this.now = options.now ?? Date.now;
-    this.baseBackoffMs = options.baseBackoffMs ?? BASE_BACKOFF_MS;
+    this.retryTiming = { baseMs: options.baseBackoffMs ?? BASE_BACKOFF_MS, unhealthyMs: options.unhealthyRetryMs ?? UNHEALTHY_RETRY_MS };
     this.hubState = new HubState({ configPath: options.config.configPath, now: this.now });
     for (const [slug, entry] of Object.entries(options.config.boxes)) {
       this.boxes.set(slug, {
@@ -374,9 +378,9 @@ export class Supervisor implements EndpointProvider {
   }
 
   /** SIGHUP handling: give any crash-looped ("unhealthy") box a fresh
-   *  restart budget and try again. Does not re-read `hub.json` -- adding
-   *  or removing boxes still requires a hub restart; this only clears the
-   *  "stop retrying" latch the plan calls for. */
+   *  restart budget and try now instead of at its next slow retry. Does not
+   *  re-read `hub.json` -- adding or removing boxes still requires a hub
+   *  restart. */
   reloadUnhealthy(): void {
     for (const box of this.boxes.values()) {
       if (box.status !== "unhealthy") continue;
@@ -404,6 +408,10 @@ export class Supervisor implements EndpointProvider {
   }
 
   private async launch(box: ManagedBox): Promise<void> {
+    // Whatever launches now supersedes a pending retry, which would otherwise
+    // spawn a second child for this slot.
+    if (box.restartTimer) clearTimeout(box.restartTimer);
+    box.restartTimer = undefined;
     box.status = "starting";
     const generation = ++box.generation;
     const launchStart = performance.now();
@@ -418,6 +426,8 @@ export class Supervisor implements EndpointProvider {
       // as an unhandledRejection and crashes the hub. Same fix router.ts
       // applies to its vite/fastify children.
       child.catch(() => { /* handled via onExit below */ });
+      // stopAll() ran while this launch was spawning: it never saw this child.
+      if (this.wasStopped(box)) { killAfterGrace(child.pid); return; }
       forwardChildOutput({ child, logFile: path.join(boxRoot, ".beebox", "hub-child.log") });
 
       box.child = child;
@@ -431,6 +441,7 @@ export class Supervisor implements EndpointProvider {
 
       await this.checkReady({ port, label: `box/${box.slug}` });
       if (box.generation !== generation) return; // superseded mid-startup
+      if (this.wasStopped(box)) return; // stopAll() killed this child while it started
       box.status = "running";
       box.consecutiveFailures = 0;
       box.lastError = undefined;
@@ -449,7 +460,11 @@ export class Supervisor implements EndpointProvider {
         box.status = "stopped";
         box.child = undefined;
         box.port = undefined;
-        return; // Admission closure is not a crashing generation.
+        // Admission closure is not a crashing generation. A lazy hub starts
+        // the box on its next request; a resident hub has no request to wait
+        // for, so it retries when the closure expects to reopen.
+        if (!this.config.lazy) this.scheduleLaunch(box, retryAfterClosure(e.retryAfterMs, this.retryTiming));
+        return;
       }
       box.consecutiveFailures += 1;
       if (box.child) {
@@ -496,14 +511,21 @@ export class Supervisor implements EndpointProvider {
   }
 
   private markFailedOrScheduleRestart(box: ManagedBox): void {
-    if (box.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-      box.status = "unhealthy";
-      return;
-    }
-    box.status = "starting";
     box.restarts += 1;
-    const delay = backoffDelayMs(box.consecutiveFailures, this.baseBackoffMs);
-    box.restartTimer = setTimeout(() => void this.launch(box), delay);
+    const next = retryAfterFailure(box.consecutiveFailures, this.retryTiming);
+    if (box.consecutiveFailures === MAX_CONSECUTIVE_FAILURES) console.warn(unhealthyWarning(box, this.retryTiming));
+    box.status = next.unhealthy ? "unhealthy" : "starting";
+    this.scheduleLaunch(box, next.delayMs);
+  }
+
+  private scheduleLaunch(box: ManagedBox, delayMs: number): void {
+    if (box.restartTimer) clearTimeout(box.restartTimer);
+    box.restartTimer = setTimeout(() => void this.launch(box), delayMs);
     box.restartTimer.unref();
+  }
+
+  /** A fresh read of `box.status`, so TS does not carry a narrowing across an `await`. */
+  private wasStopped(box: ManagedBox): boolean {
+    return box.status === "stopped";
   }
 }
