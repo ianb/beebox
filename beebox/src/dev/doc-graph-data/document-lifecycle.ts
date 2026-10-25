@@ -1,21 +1,11 @@
-/** @public Imported by `workstreams-app/src/shared/documents.ts`, outside this package. */
+/** @public Imported by `workstreams-app/src/server/`, outside this package. */
 /**
  * Classify documentation by its monorepo-relative location. These labels
  * describe a document's role; they do not claim every sentence was reverified.
  */
 
 import { frontmatterFence } from "../../cards/frontmatter.js";
-
-export const DOCUMENT_ROLES = [
-  "reference",
-  "proposal",
-  "shipped-history",
-  "past-proposal",
-  "report",
-  "design-rationale",
-] as const;
-
-export type DocumentRole = (typeof DOCUMENT_ROLES)[number];
+import type { DocumentRole } from "./document-roles.js";
 
 export interface DocumentLifecycle {
   role: DocumentRole;
