@@ -196,16 +196,20 @@ run node -e '
 ' "$HUB_CONFIG" "${HUB_JSON_EDITS[@]}"
 say "boxes.json for the scheduler user"
 run install -d -o beebox-sched -g beebox-sched -m 0700 "$SCHED_HOME/.config" "$SCHED_HOME/.config/beebox"
+# The scheduler's manifest is derived from the migrated hub.json, every run:
+# each slug's new path, plus any old entry whose path still exists (a box the
+# hub does not route). A rerun that migrates nothing must not rewrite the
+# manifest from the old file again (the rehearsal did, 2026-10-24).
 # shellcheck disable=SC2016
 run node -e '
   const fs = require("fs");
-  const [oldFile, newFile, ...edits] = process.argv.slice(1);
+  const [hubFile, oldFile, newFile] = process.argv.slice(1);
+  const hub = JSON.parse(fs.readFileSync(hubFile, "utf8"));
   const old = fs.existsSync(oldFile) ? JSON.parse(fs.readFileSync(oldFile, "utf8")) : { boxes: [] };
-  const moved = new Map(edits.map((e) => { const [slug, path] = e.split("="); return [slug, path]; }));
-  const boxes = old.boxes.map((p) => moved.get(require("path").basename(p)) ?? p);
-  for (const path of moved.values()) if (!boxes.includes(path)) boxes.push(path);
+  const boxes = Object.values(hub.boxes).map((entry) => entry.path);
+  for (const path of old.boxes) if (!boxes.includes(path) && fs.existsSync(path)) boxes.push(path);
   fs.writeFileSync(newFile, JSON.stringify({ ...old, boxes }, null, 2) + "\n");
-' "$OLD_BOXES_JSON" "$NEW_BOXES_JSON" "${HUB_JSON_EDITS[@]}"
+' "$HUB_CONFIG" "$OLD_BOXES_JSON" "$NEW_BOXES_JSON"
 run chown beebox-sched:beebox-sched "$NEW_BOXES_JSON"
 
 say "scheduler unit runs as beebox-sched (the versioned unit the deploy keeps current)"
