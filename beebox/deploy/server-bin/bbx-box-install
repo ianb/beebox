@@ -18,9 +18,11 @@
 # every box (issues: per-box reinstall marker, 2026-10-22).
 #
 # One box's failure prints ERROR and the next box proceeds; the exit status is
-# 0 unless the arguments are wrong. Installs and verification run as the beebox
-# user, which owns the box trees and is the account that must be able to run
-# the result; root passes every permission check.
+# 0 unless the arguments are wrong. Installs and verification run as the box's
+# owner (beebox for /home/beebox/boxes/<slug>, bbx-<slug> for
+# /var/lib/beebox/<slug>/box on a unit host), the account that must be able to
+# run the result; root passes every permission check. The boxes root is
+# searched one and two levels down, so both layouts work with one call each.
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
@@ -30,16 +32,17 @@ fi
 boxes_root="$1"
 engine="$2"
 link_check="$engine/bin/box-engine-link"
-verify_as_beebox() { sudo -u beebox -H bash -lc '"$0" verify "$1"' "$link_check" "$1"; }
+verify_as_owner() { sudo -u "$owner" -H bash -lc '"$0" verify "$1"' "$link_check" "$1"; }
 STAMP_NAME=".bbx-install-stamp"
 
-for box in "$boxes_root"/*/; do
+for box in "$boxes_root"/*/ "$boxes_root"/*/box/; do
   box="${box%/}"
   pj="$box/package.json"
   [[ -f "$pj" ]] || continue   # a legacy-shape box has no manifest
-  name=$(basename "$box")
+  name="${box#"$boxes_root"/}"
+  owner=$(stat -c %U "$box")
 
-  if ! sudo -u beebox -H bash -lc '"$0" link "$1" "$2"' "$link_check" "$box" "$engine"; then
+  if ! sudo -u "$owner" -H bash -lc '"$0" link "$1" "$2"' "$link_check" "$box" "$engine"; then
     echo "  ERROR $name: could not link .beebox/engine; skipping its install." >&2
     continue
   fi
@@ -53,7 +56,7 @@ for box in "$boxes_root"/*/; do
     reason="package.json changed since the last install"
   elif [[ "$lock" -nt "$stamp" ]]; then
     reason="pnpm-lock.yaml changed since the last install"
-  elif ! verify_as_beebox "$box" 2>/dev/null; then
+  elif ! verify_as_owner "$box" 2>/dev/null; then
     reason="the recorded install no longer verifies"
   fi
   # A box with nothing to do already verified above.
@@ -62,14 +65,14 @@ for box in "$boxes_root"/*/; do
   # CI=true: without it pnpm aborts with no TTY when it decides node_modules
   # must be recreated (after a Node major upgrade, for one), and the box would
   # fail the same way on every deploy. The update banner is noise in a log.
-  if ! sudo -u beebox -H bash -lc 'cd "$0" && CI=true npm_config_update_notifier=false pnpm install' "$box"; then
+  if ! sudo -u "$owner" -H bash -lc 'cd "$0" && CI=true npm_config_update_notifier=false pnpm install' "$box"; then
     echo "  ERROR $name: pnpm install exited nonzero; check for real dependency errors above" \
          "(a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else is not)." >&2
     continue
   fi
-  if ! verify_as_beebox "$box"; then
+  if ! verify_as_owner "$box"; then
     echo "  ERROR $name: the box has no usable engine after install." >&2
     continue
   fi
-  sudo -u beebox -H bash -lc 'touch "$0"' "$stamp"
+  sudo -u "$owner" -H bash -lc 'touch "$0"' "$stamp"
 done

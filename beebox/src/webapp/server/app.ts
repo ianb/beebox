@@ -13,8 +13,8 @@ import { registerAuthSurface } from "../routes/auth/register.js";
 import { registerGoogleServicesCallback } from "../routes/admin.js";
 import { isHubMode } from "../auth.js";
 import { maybeArmFirstRunSetup } from "../setup-token.js";
-import { registerBoxPublicUrl } from "../../core/script-env/core.js";
-import { removeServeEndpoint, writeServeEndpoint } from "../../core/serve-endpoint.js";
+import { removeServeEndpoint } from "../../core/serve-endpoint.js";
+import { refreshHubMeta } from "../../core/hub-meta.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { sweepStaleIndexLock } from "../../lib/git-stale-lock.js";
@@ -46,6 +46,9 @@ import { getChatRuntime } from "../chat-runtime.js";
 import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance/admission.js";
 import { TRPC_MAX_URL_LENGTH } from "../../shared/trpc-url-limit.js";
 import { markStartupPhase } from "../../lib/startup-timing.js";
+import { listenOn, resolveListenTarget } from "./listen-target.js";
+import { listenBaseUrl, publishServeEndpoints } from "./serve-publish.js";
+import { installIdleExit } from "./idle-exit.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "../server-types.js";
@@ -277,15 +280,24 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // server or writes a pid file.
   assertOpenAccessNotListening(options);
   markStartupPhase("cli-loaded");
-  const port = options.port ?? DEFAULT_PORT;
-  const host = options.host ?? "localhost";
+  // Decided before any side effect: a misconfigured unit (a passed socket with
+  // no path, or two of them) must fail here, not after the previous server
+  // was killed. Reads and clears `LISTEN_FDS` from this process's env.
+  const target = resolveListenTarget({
+    port: options.port ?? DEFAULT_PORT,
+    host: options.host ?? "localhost",
+    socket: options.socket,
+    env: process.env,
+    pid: process.pid,
+  });
+  const baseUrl = listenBaseUrl(target);
 
   // First-run setup: with auth required and zero local users, arm a one-time
   // setup token and print its claim link. No-op once a user exists. Auth is
   // always on here (open access can't reach this path — guarded above), so
   // `openAccess: false`. (At listen time — never at createServer, so injected
   // test servers stay quiet.)
-  maybeArmFirstRunSetup({ publicUrl: getPublicUrl(`http://${host}:${port}`), openAccess: false });
+  maybeArmFirstRunSetup({ publicUrl: getPublicUrl(baseUrl ?? "http://localhost"), openAccess: false });
 
   const boxes = await resolveBoxes(options);
   // An older engine must refuse a box a newer engine wrote before it takes the
@@ -312,9 +324,9 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // one moment we know no write of ours is in flight — the same habit the dev
   // router has of reclaiming orphaned state on start. Best-effort and never
   // fatal: a box that cannot commit should still serve reads.
-  for (const box of boxes) {
-    await sweepStaleIndexLock(box.boxRoot);
-  }
+  // Also publish the file the hub reads instead of this box's own
+  // (`core/hub-meta.ts`): a hand edit while the box slept is out before the first request.
+  for (const box of boxes) { await sweepStaleIndexLock(box.boxRoot); refreshHubMeta(box.boxRoot); }
   markStartupPhase("box-checks");
 
   let server: FastifyInstance;
@@ -388,19 +400,11 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   try {
     // Publish HTTP readiness only after startup has relinquished its work.
     for (const lease of startup.values()) await lease.release();
-    await withoutBoxWork(() => server.listen({ port, host }));
+    await withoutBoxWork(() => listenOn(server, target));
     markStartupPhase("listening");
-    // Register live public URLs for each served box so subprocess spawns
-    // pick up BBX_BOX_NAME / BBX_SERVER_URL via buildScriptEnv without
-    // requiring publicUrl to be set in _config/box.json.
-    for (const box of boxes) {
-      const publicUrl = `http://${host}:${port}/${box.slug}`;
-      await writeServeEndpoint(box.boxRoot, { pid: process.pid, publicUrl });
-      registerBoxPublicUrl(box.boxRoot, publicUrl);
-    }
-    console.log(`Server running at http://${host}:${port}`);
-    for (const box of boxes) {
-      console.log(`  ${box.slug}: http://${host}:${port}/${box.slug}/`);
+    await publishServeEndpoints({ boxes, target, baseUrl });
+    if (options.idleExitMs !== undefined) {
+      installIdleExit({ server, boxes, idleMs: options.idleExitMs, onIdle: () => fireShutdown("idle") });
     }
 
     // The same poll quiesces chat for CLI maintenance and supervised reload.

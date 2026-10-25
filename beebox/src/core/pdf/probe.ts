@@ -3,7 +3,7 @@
  * the textless branch feeds to the photo flow.
  *
  * Both shell out to poppler (`pdftotext`, `pdfinfo`, `pdftoppm`), which the
- * deploy already installs (`deploy/setup-server.sh`, `poppler-utils`) and
+ * deploy already installs (`deploy/hetzner/cloud-init.yaml`, `poppler-utils`) and
  * which is an order of magnitude cheaper than starting Docling just to ask a
  * yes/no question. Decisions D8 (detection method + threshold) and D9 (page
  * renderer for the textless branch) in

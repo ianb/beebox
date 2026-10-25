@@ -18,7 +18,7 @@ nothing, and every script below refuses with the setup steps.
 | File | What it is |
 |---|---|
 | `deploy.sh` | Deploy a commit: build in the persistent detached checkout, stage on the server, activate under the maintenance controller, converge boxes, health-check. [Deploying](../docs/server/deploying.md). |
-| `hetzner/create-server.sh`, `hetzner/setup-server.sh` | Example provisioners for the one host shape `deploy.sh` ships to. Neither runs on deploy. [Provisioning](../docs/server/provisioning.md). |
+| `hetzner/create-server.sh`, `hetzner/cloud-init.yaml`, `hetzner/provision.sh` | Example provisioners for the one host shape `deploy.sh` ships to: create the VPS, cloud-init installs packages and users, `provision.sh` does the remaining root steps. None runs on deploy. (`hetzner/setup-server.sh` is a retired stub.) [Provisioning](../docs/server/provisioning.md). |
 | `add-box.sh` | Add a box to the live server in one command. [Boxes](../docs/server/boxes.md). |
 | `prod-ssh`, `prod-curl`, `prod-browse` | Reach the production server and the authenticated app as the owner. [Operations](../docs/server/operations.md). |
 | `deploy-target.sh`, `target.env.example` | Load the deploy target; the template for it. |

@@ -21,6 +21,13 @@
  * what it asked for and is still waiting on, which grants went stale — and
  * `machineView` is the whole store, reachable from any box's admin page since
  * there is no separate hub UI to put it in.
+ *
+ * On a unit host (docs/plans/per-box-units.md, question 9) the process reads
+ * the box's OWN copy of the store, exported from the operator's master, so a
+ * grant to another box made here would report success and change nothing
+ * that box reads. There the surface is box-scoped: a procedure naming another
+ * box, or removing a name machine-wide, is refused with the operator's
+ * command instead, and `machineView.scope` says so to the page.
  */
 
 import { TRPCError } from "@trpc/server";
@@ -44,6 +51,7 @@ import { loadSecretStore, secretAccessLevelSchema } from "../../../core/secrets/
 import { appendOwnerSecretRead } from "../../../core/secrets/access-log.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { boxSlug } from "../../../lib/box-slug.js";
+import { onUnitHost } from "../../../lib/unit-host.js";
 import { authenticatedOwnerProcedure, router } from "../procedures.js";
 
 /**
@@ -68,6 +76,22 @@ async function lifecycle<T>(operation: () => Promise<T>): Promise<T> {
     }
     throw e;
   }
+}
+
+/**
+ * On a unit host, refuse a write that names another box: this process holds
+ * only this box's copy of the store (module doc). `box` is the slug the
+ * request names; the serving box's own slug always passes.
+ */
+async function assertReachableBox(boxRoot: string, box: string): Promise<void> {
+  if (!onUnitHost()) return;
+  const slug = await boxSlug(boxRoot);
+  if (box === slug) return;
+  throw new TRPCError({
+    code: "BAD_REQUEST",
+    message: `On this host each box holds its own copy of the secret store, so this page reaches only "${slug}". `
+      + `Grant to "${box}" on the host instead: bbx engine secrets grant ${box} <name>, then bbx engine secrets export-box ${box}.`,
+  });
 }
 
 /** One row of the machine-wide table — metadata only, never a value. */
@@ -122,7 +146,9 @@ export const secretsRouter = router({
     const secrets = (await listSecrets()).map(machineRow);
     const store = await loadSecretStore();
     const boxes = store.ok ? Object.keys(store.value.grants).toSorted() : [];
-    return { thisBox: slug, boxes, secrets };
+    /** `box`: this is the box's own copy of the store (unit host), not the machine's. */
+    const scope: "machine" | "box" = onUnitHost() ? "box" : "machine";
+    return { thisBox: slug, boxes, secrets, scope };
   }),
 
   /** Explicit, audited owner read. Values enter the page only after this call. */
@@ -185,6 +211,7 @@ export const secretsRouter = router({
     )
     .mutation(
       async ({
+        ctx,
         input,
       }): Promise<{
         warnings: string[];
@@ -200,6 +227,7 @@ export const secretsRouter = router({
           // One locked write for both, so there is no moment in which the value
           // exists ungranted — `setAndGrantSecret` rather than set-then-grant.
           const { box, access } = input.grant;
+          await assertReachableBox(ctx.boxRoot, box);
           await lifecycle(() => setAndGrantSecret({ ...common, slug: box, access }));
         }
         const verified = await probeSecret({ name: input.name });
@@ -210,7 +238,8 @@ export const secretsRouter = router({
   /** Grant a name to a box, or raise/lower an existing grant's access level. */
   grant: authenticatedOwnerProcedure
     .input(z.object({ box: z.string().min(1), name: secretNameSchema, access: secretAccessLevelSchema }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await assertReachableBox(ctx.boxRoot, input.box);
       await lifecycle(() => grantSecret({ slug: input.box, name: input.name, access: input.access }));
       return { success: true };
     }),
@@ -223,7 +252,8 @@ export const secretsRouter = router({
    */
   setAccess: authenticatedOwnerProcedure
     .input(z.object({ box: z.string().min(1), name: secretNameSchema, access: secretAccessLevelSchema }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await assertReachableBox(ctx.boxRoot, input.box);
       const store = await loadSecretStore();
       if (!store.ok) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: `The secret store could not be read: ${store.error}` });
@@ -240,14 +270,23 @@ export const secretsRouter = router({
 
   revoke: authenticatedOwnerProcedure
     .input(z.object({ box: z.string().min(1), name: secretNameSchema }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await assertReachableBox(ctx.boxRoot, input.box);
       await lifecycle(() => revokeSecret({ slug: input.box, name: input.name }));
       return { success: true };
     }),
 
   /** Drop an entry machine-wide. Grants naming it survive as dangling grants,
-   *  which every view reports as such — a removal the boxholder can see. */
+   *  which every view reports as such — a removal the boxholder can see. On a
+   *  unit host there is no machine-wide write from a box: refused (module doc). */
   remove: authenticatedOwnerProcedure.input(z.object({ name: secretNameSchema })).mutation(async ({ input }) => {
+    if (onUnitHost()) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `On this host each box holds its own copy of the secret store; removing "${input.name}" here would only drop this box's copy until the next export. `
+          + `Remove it on the host instead: bbx engine secrets remove ${input.name}, then re-export each box's store.`,
+      });
+    }
     await lifecycle(() => removeSecret(input.name));
     return { success: true };
   }),

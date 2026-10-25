@@ -100,7 +100,7 @@ RUN apt-get update \
        sudo systemd dbus procps \
   && rm -rf /var/lib/apt/lists/* \
   # Debian ships ImageMagick 6 (`convert`); the agent contract and our scripts
-  # call `magick` (IM7). Symlink so both names work (same as setup-server.sh).
+  # call `magick` (IM7). Symlink so both names work (same as cloud-init.yaml).
   && if ! command -v magick >/dev/null 2>&1 && command -v convert >/dev/null 2>&1; then \
        ln -sf "$(command -v convert)" /usr/local/bin/magick; \
      fi
@@ -110,7 +110,7 @@ RUN apt-get update \
 # the persistent home volume (see the entrypoint's first-start prefetch).
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh
 
-# fclones (duplicate-file finder, same promise as setup-server.sh). Upstream
+# fclones (duplicate-file finder, same promise as cloud-init.yaml). Upstream
 # ships an amd64 .deb only; on other architectures the image simply lacks it.
 ARG FCLONES_VERSION=0.35.0
 RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
@@ -131,7 +131,7 @@ RUN mkdir -p /opt/corepack /opt/claude && chown node:node /opt/corepack /opt/cla
 # home). The base image's `node` user is UID 1000 — reuse it. It owns /app
 # (the engine) and /data (the box volume).
 # A system-path `bbx` (resolvable even in a login shell) — same as
-# deploy/setup-server.sh. The target is populated by the engine install below;
+# deploy/deploy.sh. The target is populated by the engine install below;
 # a dangling symlink until then is fine. claude-config/ is Claude's relocated
 # state dir (see CLAUDE_CONFIG_DIR below); pre-created and node-owned so the
 # named volume mounted there inherits the right ownership.

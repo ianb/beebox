@@ -22,7 +22,7 @@
 
 import { basename, join } from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
-import { mkdtemp, readdir, readFile, rename, rm, rmdir, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readdir, readFile, rename, rm, rmdir, writeFile } from "node:fs/promises";
 import { parseFrontmatterObject, splitCardContent } from "../../../cards/frontmatter.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { contentHash } from "../../../lib/content-hash.js";
@@ -236,6 +236,12 @@ async function ensurePackageDocsUncontended(packageRoot: string): Promise<Ensure
     tmp = await mkdtemp(join(packageRoot, `.${PACKAGE_DOCS_DIR_NAME}-`));
     for (const d of docs) await writeFile(join(tmp, d.filename), d.content);
     await writeFile(join(tmp, FINGERPRINT_FILE), `${want}\n`);
+    // Readable by every user: `mkdtemp` makes a 0700 directory, and on a unit
+    // host (docs/plans/per-box-units.md) the deploy's build is read by each
+    // box user, whose `bbx engine init` otherwise cannot open the fingerprint
+    // (found on the VM, 2026-10-24). The writer's umask may be 077 too.
+    await chmod(tmp, 0o755);
+    for (const name of [...docs.map((d) => d.filename), FINGERPRINT_FILE]) await chmod(join(tmp, name), 0o644);
     await swapIn({ tmp, dir, packageRoot });
     return { status: "written", dir };
   } catch (e) {
@@ -291,11 +297,12 @@ export async function replaceDirContents({ from, to }: { from: string; to: strin
   await rmdir(from);
 }
 
+/** The fingerprint on disk; null when absent, or unreadable by this user (the write then says `unwritable`). */
 async function storedFingerprint(dir: string): Promise<string | null> {
   try {
     return (await readFile(join(dir, FINGERPRINT_FILE), "utf-8")).trim();
   } catch (e) {
-    if (errnoCode(e) === "ENOENT" || errnoCode(e) === "ENOTDIR") return null;
+    if (errnoCode(e) === "ENOENT" || errnoCode(e) === "ENOTDIR" || isPermissionError(e)) return null;
     throw e;
   }
 }

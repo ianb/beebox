@@ -6,36 +6,25 @@
  */
 
 import { withBoxWork } from "../../../lib/box-maintenance/admission.js";
-import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { isBoxRoot } from "../../../lib/box-identity.js";
-import { runTick, type TickResult } from "../../../cli/commands/tick.js";
-import { getStatus, isRepo } from "../../../lib/git/core/operations.js";
 import { drainBoxGitLocks, GIT_DRAIN_MS } from "../../../lib/git-lock.js";
-import { touchSchedulerHeartbeat } from "../health-box.js";
-import { measureBoxGrowthIfDue } from "../../box-growth/health.js";
-import { runBoxAlerts } from "./box-alerts.js";
 import {
   loadBoxesConfig,
   type BoxesConfig,
 } from "../../box/boxes-config.js";
-import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { DEV_BUNDLE_RELOAD_EXIT_CODE, devBundleWasReplaced } from "../../../lib/dev-bundle-reload.js";
+import { writeBoxLog } from "./box-log.js";
+import { runSchedulerPass } from "./pass.js";
+import { boxRunWrapperPresent, runPassThroughWrapper, unitSlugForBoxRoot } from "./box-run.js";
+
+// The per-box log moved to `./box-log.ts` and the pass itself to `./pass.ts`;
+// re-exported so the CLI (`cli/commands/scheduler`) keeps one import.
+export { boxLogFile, type LogEntry } from "./box-log.js";
+export { runSchedulerPass } from "./pass.js";
 
 /** @deprecated — use `BoxesConfig` from `./boxes-config.js`. */
 export type SchedulerConfig = BoxesConfig;
-
-/** Per-box log filename inside .beebox/ */
-const SCHEDULER_LOG_FILENAME = "scheduler.jsonl";
-const MAX_LOG_BYTES = 1_000_000; // 1MB
-
-/**
- * Get the log file path for a specific box.
- */
-export function boxLogFile(boxRoot: string): string {
-  return path.join(boxRoot, ".beebox", SCHEDULER_LOG_FILENAME);
-}
 
 /** @deprecated — call `loadBoxesConfig` from `./boxes-config.js` directly. */
 export async function loadSchedulerConfig(): Promise<SchedulerConfig> {
@@ -60,55 +49,6 @@ export async function boxEntryProblem(boxPath: string): Promise<string | null> {
     return (await isBoxRoot(boxPath)) ? null : "not a box: needs package.json declaring beebox and _config/";
   } catch (e) {
     return errorMessage(e);
-  }
-}
-
-// -- JSONL logging with rotation --
-
-export interface LogEntry {
-  ts: string;
-  event: string;
-  box?: string;
-  result?: {
-    ran: number;
-    skipped: number;
-    errors: number;
-    /** Runs whose work completed but whose check reached no verdict. */
-    inconclusive: number;
-    scripts: TickResult["scripts"];
-  };
-  error?: string;
-  [key: string]: unknown;
-}
-
-/**
- * Write a log entry to a box's .beebox/scheduler.jsonl.
- */
-async function writeBoxLog(boxRoot: string, entry: LogEntry): Promise<void> {
-  const logPath = boxLogFile(boxRoot);
-  await fs.mkdir(path.dirname(logPath), { recursive: true });
-  const line = JSON.stringify(entry) + "\n";
-  await fs.appendFile(logPath, line);
-  await rotateLogIfNeeded(logPath);
-}
-
-async function rotateLogIfNeeded(logPath: string): Promise<void> {
-  try {
-    const stat = await fs.stat(logPath);
-    if (stat.size <= MAX_LOG_BYTES) return;
-
-    // Keep the last ~half of the file
-    const content = await fs.readFile(logPath, "utf-8");
-    const keepFrom = content.indexOf("\n", Math.floor(content.length / 2));
-    if (keepFrom === -1) return;
-    await fs.writeFile(logPath, content.slice(keepFrom + 1));
-  } catch (e) {
-    // Log rotation is best-effort: the file may not exist yet, or a concurrent
-    // write may be in flight. Skipping rotation just lets the log grow a bit;
-    // it does not affect scheduler operation.
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`rotateLogIfNeeded: could not rotate ${logPath}:`, e);
-    }
   }
 }
 
@@ -177,7 +117,8 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
   process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
   process.on("SIGINT", () => { void shutdown("SIGINT"); });
 
-  console.log(`Scheduler started (interval: ${interval / 1000}s, pid: ${process.pid})`);
+  const throughWrapper = await boxRunWrapperPresent();
+  console.log(`Scheduler started (interval: ${interval / 1000}s, pid: ${process.pid}${throughWrapper ? ", passes through bbx-box-run" : ""})`);
 
   while (!isStopping()) {
     const config = await loadSchedulerConfig();
@@ -189,99 +130,20 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
 
     for (const boxPath of config.boxes) {
       if (isStopping()) break;
+      // Each pass, including heartbeat, growth and credential housekeeping,
+      // gets fresh admission. No daemon-wide permit survives into a later tick.
+      // A box in the unit-host layout, on a host with the wrapper, runs its
+      // pass as its own user inside its sandbox through the one root path the
+      // scheduler user may call; any other box runs in process
+      // (docs/plans/per-box-units.md, Track E).
+      const unitSlug = throughWrapper ? unitSlugForBoxRoot(boxPath) : undefined;
+      currentPass = unitSlug !== undefined
+        ? runPassThroughWrapper(unitSlug).catch((error: unknown) => {
+          console.error(`[${new Date().toISOString()}] ${boxPath}: pass failed: ${errorMessage(error)}`);
+        })
+        : runSchedulerPass(boxPath).then(() => { /* the pass logs its own outcome in the box */ });
       try {
-        // Each pass, including heartbeat, growth and credential housekeeping,
-        // gets fresh admission. No daemon-wide permit survives into a later tick.
-        currentPass = withBoxWork({ boxRoot: boxPath, reason: "scheduler pass" }, async () => {
-          try {
-            if (!(await isBox(boxPath))) {
-              console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (needs package.json declaring beebox and _config/)`);
-              return;
-            }
-
-            // Check for uncommitted changes before running tick
-            if (await isRepo(boxPath)) {
-              const status = await getStatus(boxPath);
-              if (!status.clean) {
-                const counts = [];
-                if (status.staged.length > 0) counts.push(`${status.staged.length} staged`);
-                if (status.modified.length > 0) counts.push(`${status.modified.length} modified`);
-                if (status.untracked.length > 0) counts.push(`${status.untracked.length} untracked`);
-                await writeBoxLog(boxPath, {
-                  ts: new Date().toISOString(),
-                  event: "dirty-repo",
-                  box: boxPath,
-                  warning: `Uncommitted changes: ${counts.join(", ")}`,
-                  files: [...status.staged, ...status.modified, ...status.untracked].slice(0, 20),
-                });
-              }
-            }
-
-            // Heartbeat before the tick: even a tick that throws proves the
-            // daemon is alive (schedule-health reads this file).
-            await touchSchedulerHeartbeat(boxPath);
-
-            // Measure growth independently of the tick. A sick or unusually large
-            // box is exactly when this probe may fail, and that must not prevent
-            // scheduled work from getting its turn.
-            try {
-              const growth = await measureBoxGrowthIfDue(boxPath, { now: new Date() });
-              if (growth.status === "failed") {
-                await writeBoxLog(boxPath, {
-                  ts: new Date().toISOString(),
-                  event: "box-growth-scan",
-                  box: boxPath,
-                  error: growth.error,
-                });
-              } else if (growth.status === "measured" && growth.notice !== null) {
-                await writeBoxLog(boxPath, {
-                  ts: new Date().toISOString(),
-                  event: "box-growth-scan",
-                  box: boxPath,
-                  warning: growth.notice,
-                });
-              }
-            } catch (err) {
-              try {
-                await writeBoxLog(boxPath, {
-                  ts: new Date().toISOString(),
-                  event: "box-growth-scan",
-                  box: boxPath,
-                  error: errorMessage(err),
-                });
-              } catch (logError) {
-                console.error(`[${new Date().toISOString()}] ${boxPath}: could not record box growth failure`, logError);
-              }
-            }
-
-            const result = await runTick(boxPath, { quiet: true });
-            await writeBoxLog(boxPath, {
-              ts: new Date().toISOString(),
-              event: "tick",
-              box: boxPath,
-              result: {
-                ran: result.ranCount,
-                skipped: result.skipCount,
-                errors: result.errorCount,
-                inconclusive: result.inconclusiveCount,
-                scripts: result.scripts,
-              },
-            });
-          } catch (err) {
-            await writeBoxLog(boxPath, {
-              ts: new Date().toISOString(),
-              event: "tick",
-              box: boxPath,
-              error: errorMessage(err),
-            });
-          }
-
-          await runBoxAlerts(boxPath, (entry) => writeBoxLog(boxPath, { ...entry, box: boxPath }));
-        });
         await currentPass;
-      } catch (error) {
-        if (!(error instanceof BoxMaintenanceError)) throw error;
-        // Maintenance is an ordinary deferred tick, not a box failure.
       } finally {
         currentPass = undefined;
       }

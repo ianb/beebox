@@ -1,10 +1,10 @@
 import * as crypto from "node:crypto";
 import { z } from "zod";
 import { TokenStore, hashToken, nowIso, randomToken } from "../token-store.js";
+import { MOBILE_DEVICES_FILE } from "../token-files.js";
 import { isRecord } from "../../shared/is-record.js";
 import { APNS_ENVIRONMENTS, type ApnsEnvironment } from "../../services/apns.js";
 
-const MOBILE_DEVICES_RELATIVE_PATH = ".beebox/mobile-devices.secret.json";
 const PAIRING_TOKEN_BYTES = 32;
 const DEVICE_TOKEN_BYTES = 32;
 const DEFAULT_PAIRING_TTL_MS = 10 * 60 * 1000;
@@ -95,8 +95,8 @@ class MobileDeviceStoreLockError extends Error {
  * a scan token. See `core/scan/tokens.ts`.
  */
 const deviceStore = new TokenStore<MobileDevice>({
-  relativePath: MOBILE_DEVICES_RELATIVE_PATH,
-  collectionKey: "devices",
+  relativePath: MOBILE_DEVICES_FILE.relativePath,
+  collectionKey: MOBILE_DEVICES_FILE.collectionKey,
   purpose: "mobile-devices",
   // Request-scoped: a short critical section whose callers fail fast (~5 s
   // retry budget), so a crashed holder must clear in seconds, not minutes

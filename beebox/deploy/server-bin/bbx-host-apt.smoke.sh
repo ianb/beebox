@@ -6,7 +6,7 @@
 #
 #   deploy/server-bin/bbx-host-apt.smoke.sh [ubuntu|debian]...   (default: both)
 #
-# ubuntu = ubuntu:24.04 with the setup-server.sh package list (production).
+# ubuntu = ubuntu:24.04 with the cloud-init.yaml package list (production).
 # debian = debian:bookworm-slim with the docker/Dockerfile runtime list.
 # Needs Docker and network access; not part of the per-commit suite. Run it
 # whenever bbx-host-apt changes.
@@ -21,7 +21,7 @@ build_image() {
   case "$flavor" in
     ubuntu)
       base=ubuntu:24.04
-      # deploy/hetzner/setup-server.sh:33, plus what a real server already has.
+      # deploy/hetzner/cloud-init.yaml, plus what a real server already has.
       packages="systemd dbus sudo git git-lfs git-annex curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick python3-openpyxl xlsx2csv qpdf ffmpeg dpkg-dev"
       ;;
     debian)

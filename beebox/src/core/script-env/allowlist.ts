@@ -90,6 +90,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "PUBLIC_URL", // src/lib/public-url.ts and this file's publicUrl fallback.
   "BBX_PUBLIC_URL", // src/lib/public-url.ts -- preferred over PUBLIC_URL when set.
   "BBX_OWNER_EMAIL", // src/webapp/auth.ts getOwnerEmail() -- fleet owner identity, not a secret.
+  "BBX_UNIT_HOST", // cli/commands/host.ts -- on a unit host a box records a package and the deploy installs it (hub/box-env-file.ts).
   "BBX_AUTH_FILE", // src/webapp/local-users.ts -- credential-store PATH, not a credential; withholding it would point a test subprocess at the real global auth file.
   "BBX_BOX_ROOT", // src/core/box/templates.ts -- the trick template's own box-root handle.
   "BBX_HOOK_BIN", // src/core/install-validation-hooks.ts -- explicit hook-binary path override.

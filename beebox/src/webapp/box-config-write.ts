@@ -3,6 +3,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { writeFileAtomic } from "../lib/atomic-write.js";
+import { refreshHubMeta } from "../core/hub-meta.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
@@ -70,6 +71,8 @@ export async function mutateConfig(options: {
         options.mutate(config);
         await writeFileAtomic(configPath, { content: `${JSON.stringify(config, null, 2)}\n` });
         clearBoxConfigCache(options.boxRoot);
+        // `allowedEmails` is what the hub gates on from the box's published metadata.
+        refreshHubMeta(options.boxRoot);
         let commitError: Error | null = null;
         try {
           await stageAndCommitPaths(options.boxRoot, {

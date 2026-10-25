@@ -17,6 +17,7 @@ import * as path from "node:path";
 import { getBoxTime } from "../../../lib/time.js";
 import { type ChatSchedule, loadChatSchedules, log, SCHEDULES_FILE } from "./store.js";
 import { ClockWatch } from "./clock-watch.js";
+import { refreshHubMeta } from "../../hub-meta.js";
 import { CHECK_IN_MAX_MS, CheckInNotSavedError, CheckInTooLongError, MAX_TIMEOUT_MS, ScheduleForDeletingSessionError } from "./check-in.js";
 import { formatDuration } from "../../../shared/relative-time.js";
 
@@ -329,6 +330,9 @@ export class ChatScheduleManager {
     const filePath = path.join(this.boxRoot, this.schedulesFile);
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, JSON.stringify([...this.schedules.values()], null, 2));
+    // Whether a schedule is pending decides if the hub wakes this box after a
+    // reboot and if the engine may exit when idle (`core/hub-meta.ts`).
+    refreshHubMeta(this.boxRoot);
   }
 
   private saveToDisk(): void {

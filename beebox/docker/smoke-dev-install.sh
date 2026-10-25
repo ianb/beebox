@@ -87,7 +87,7 @@ step "apt prerequisites (doc: pandoc imagemagick poppler-utils git-lfs)" \
 
 # Debian's `imagemagick` is IM6, which ships `convert` but not `magick` (IM7).
 # The agent's external-tools contract and `pnpm run doctor` both look for
-# `magick`, so alias it — the same shim the Docker image and setup-server.sh
+# `magick`, so alias it — the same shim the Docker image and cloud-init.yaml
 # apply. Documented in developer-install.md's Debian note.
 step "magick shim (Debian IM6 ships convert, doctor/agent want magick)" \
   bash -c 'command -v magick >/dev/null 2>&1 || ln -sf "$(command -v convert)" /usr/local/bin/magick'

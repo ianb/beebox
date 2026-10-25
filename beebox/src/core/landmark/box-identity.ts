@@ -29,7 +29,9 @@
  */
 
 import * as fs from "node:fs/promises";
+import { refreshHubMeta } from "../hub-meta.js";
 import { readLandmarkCard } from "./card-cache.js";
+import { nameFromLabel } from "./identity-sync.js";
 import { readLandmarkSymbol } from "./symbol.js";
 import { LANDMARK_CONTENT_DIR, landmarkRelPath } from "./root-dir.js";
 import type { CardSymbolData } from "../../shared/card-symbol.js";
@@ -49,18 +51,10 @@ import type { CardSymbolData } from "../../shared/card-symbol.js";
 const discovered = new Map<string, { dirMtimeNs: bigint; cardRelPath: string | null }>();
 
 /**
- * The label every root landmark used to be scaffolded with, before the
- * scaffold learned to name the box (`core/box/defaults.ts`).
- *
- * Boxes created before that carry it, and it is not a name -- it is the word
- * "Box" on every box in the fleet, which in a tab strip is worse than the slug
- * it replaced. So it reads as "unset" and the slug wins. A box that renames
- * itself takes effect immediately; a box that genuinely wants to be called
- * "Box" is the one case this gets wrong, and it gets the slug instead.
- *
- * Delete this when no box in the field still carries the stock label.
+ * The identity last seen per box root, so a change republishes the hub
+ * metadata (`core/hub-meta.ts`) once, from the read every page load makes.
  */
-const STOCK_LABEL = "Box";
+const published = new Map<string, string>();
 
 /** A box's display identity: what to call it, and what mark to show for it. */
 export interface BoxIdentity {
@@ -81,14 +75,22 @@ export interface BoxIdentity {
  * Every failure — an unreadable content root, no landmark card, a card that
  * doesn't parse — degrades to the slug with no symbol. A box that cannot say
  * its own name is still a box you must be able to open, so this never throws.
+ *
+ * On a unit host the hub shows what the box published instead
+ * (`webapp/server-root/root-routes.ts`, `describeBoxes`), so a renamed box
+ * republishes here when the read notices the change.
  */
-export async function readBoxIdentity({
-  boxRoot,
-  slug,
-}: {
-  boxRoot: string;
-  slug: string;
-}): Promise<BoxIdentity> {
+export async function readBoxIdentity(box: { boxRoot: string; slug: string }): Promise<BoxIdentity> {
+  const identity = await readLandmarkIdentity(box);
+  const seen = JSON.stringify({ name: identity.name === box.slug ? null : identity.name, symbol: identity.symbol });
+  if (published.get(box.boxRoot) !== seen) {
+    published.set(box.boxRoot, seen);
+    refreshHubMeta(box.boxRoot);
+  }
+  return identity;
+}
+
+async function readLandmarkIdentity({ boxRoot, slug }: { boxRoot: string; slug: string }): Promise<BoxIdentity> {
   const bare: BoxIdentity = { slug, name: slug, symbol: null };
 
   // Box-relative (e.g. `_content/Box.landmark.card`), not a bare filename —
@@ -112,13 +114,7 @@ export async function readBoxIdentity({
   }
   if (fields === null) return bare;
 
-  const label = fields.navigation?.label?.trim();
-  const symbol = readLandmarkSymbol(fields, { landmarkPath: cardRelPath });
-  return {
-    slug,
-    name: label !== undefined && label !== "" && label !== STOCK_LABEL ? label : slug,
-    symbol,
-  };
+  return { slug, name: nameFromLabel(fields.navigation?.label) ?? slug, symbol: readLandmarkSymbol(fields, { landmarkPath: cardRelPath }) };
 }
 
 /**

@@ -18,8 +18,8 @@
 
 import { z } from "zod";
 import { TokenStore, hashToken, nowIso, randomToken } from "../token-store.js";
+import { SCAN_TOKENS_FILE } from "../token-files.js";
 
-const SCAN_TOKENS_RELATIVE_PATH = ".beebox/scan-tokens.secret.json";
 const SCAN_TOKEN_BYTES = 32;
 
 /**
@@ -88,8 +88,8 @@ class InvalidScanTokenNameError extends Error {
 }
 
 const scanTokenStore = new TokenStore<ScanToken>({
-  relativePath: SCAN_TOKENS_RELATIVE_PATH,
-  collectionKey: "tokens",
+  relativePath: SCAN_TOKENS_FILE.relativePath,
+  collectionKey: SCAN_TOKENS_FILE.collectionKey,
   purpose: "scan-tokens",
   // Same rationale as the mobile device store (core/mobile/pairing.ts): every
   // mutation runs inside an HTTP request's ~5 s retry budget.
