@@ -58,7 +58,7 @@ make_box() { # make_box <slug>
   fi
   chmod 0751 "$home"
   # The box: made as the box user with the unit's umask, so nothing in it is readable by path.
-  runuser -u "bbx-$slug" -- bash -c "umask 077 && cd '$home' && bbx engine init box >/dev/null"
+  runuser -u "bbx-$slug" -- bash -c "umask 007 && cd '$home' && bbx engine init box >/dev/null"
   chmod 0751 "$home/box"
   echo "marker-$slug" > "$home/box/marker.txt"
   chown "bbx-$slug:bbx-$slug" "$home/box/marker.txt"

@@ -68,7 +68,7 @@ run install -d -o root -g beebox-boxes -m 2775 /etc/beebox
 run install -d -o root -g beebox -m 0775 /run/beebox
 run install -d -o root -g root -m 0755 "$BOXES_DIR" /var/cache/beebox
 run install -d -o root -g beebox-boxes -m 2775 /var/cache/beebox/uv
-run install -d -o root -g beebox-boxes -m 2755 /var/cache/beebox/hf
+run install -d -o root -g beebox-boxes -m 2775 /var/cache/beebox/hf
 if [[ ! -f /etc/beebox/box.env ]]; then
   say "writing a first /etc/beebox/box.env (the hub rewrites it at each start)"
   run bash -c "printf 'BBX_UNIT_HOST=1\nPATH=/usr/local/bin:/usr/bin:/bin\nUV_CACHE_DIR=/var/cache/beebox/uv\nHF_HOME=/var/cache/beebox/hf\n' > /etc/beebox/box.env && chmod 0640 /etc/beebox/box.env && chgrp beebox-boxes /etc/beebox/box.env"

@@ -428,7 +428,7 @@ chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
 # its own. It does bring the box git-annex configuration up to spec, which is
 # the point of running it here.
 echo "Running bbx engine init to update box structure..."
-if ! su - $BOX_OWNER -c "umask 077; cd '$BOX_PATH' && BBX_UNIT_HOST=${UNIT_HOST:+1} bbx engine init ." 2>&1; then
+if ! su - $BOX_OWNER -c "umask 007; cd '$BOX_PATH' && BBX_UNIT_HOST=${UNIT_HOST:+1} bbx engine init ." 2>&1; then
   echo "bbx engine init FAILED for $BOX_PATH — stopping before the box is registered."
   echo "The repo is cloned; fix the box and re-run this script."
   exit 1

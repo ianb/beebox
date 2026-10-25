@@ -196,11 +196,13 @@ else
     exit 1
   fi
   echo "Pre-fetching Docling $DOCLING_VERSION models (layout + tableformer)..."
-  HF_HOME=/var/cache/beebox/hf UV_CACHE_DIR=/var/cache/beebox/uv UV_TORCH_BACKEND=cpu \
-    uvx --from "docling==$DOCLING_VERSION" docling-tools models download layout tableformer
-  # tmpfiles set the directory modes; root wrote the files into them.
+  (umask 002 && HF_HOME=/var/cache/beebox/hf UV_CACHE_DIR=/var/cache/beebox/uv UV_TORCH_BACKEND=cpu \
+    uvx --from "docling==$DOCLING_VERSION" docling-tools models download layout tableformer)
+  # tmpfiles set the directory modes; root wrote the files into them. Both
+  # caches stay group-writable: every box user (group beebox-boxes) adds to
+  # them, and Docling fetches a model this prefetch did not name on first use.
   chgrp -R beebox-boxes /var/cache/beebox/hf /var/cache/beebox/uv
-  chmod -R g+rX,o+rX /var/cache/beebox/hf
+  chmod -R g+rwX,o+rX /var/cache/beebox/hf /var/cache/beebox/uv
 fi
 
 echo "=== Provision done ==="

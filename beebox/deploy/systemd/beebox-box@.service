@@ -27,10 +27,11 @@ WorkingDirectory=/var/lib/beebox/%i/box
 EnvironmentFile=/etc/beebox/box.env
 LoadCredential=hub-secret:/run/beebox/%i.hub-secret
 ExecStart=/usr/local/bin/bbx engine serve /var/lib/beebox/%i/box --slug %i --socket /run/beebox/%i.sock --idle-exit 1800000
-# SIGTERM to the engine only; it drains its own git writes and its agent
-# subprocesses (deploy/systemd/all/git-drain.conf says why), and systemd's
-# cgroup kill is the backstop after TimeoutStopSec.
-KillMode=mixed
+# SIGTERM to every process in the cgroup: the engine drains its own writes,
+# and a Claude Code or Docling subprocess goes down with it. With
+# KillMode=mixed a subprocess still running when the engine exited was left
+# behind ("remains running after unit stopped", probe VM 2026-10-24).
+KillMode=control-group
 TimeoutStopSec=90
 Restart=on-failure
 RestartSec=5

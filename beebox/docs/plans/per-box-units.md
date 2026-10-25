@@ -453,10 +453,17 @@ it does not belong to; a credential needs no group. The hub keeps one secret
 per slug in memory and injects the matching one when it proxies to that box. The box-specific env (`BBX_SECRETS_FILE`, `CLAUDE_CONFIG_DIR`,
 `CODEX_HOME`, the push store) is not an env file: the paths are derived
 from the box home in the subplan's chunk 2, so the unit needs no per-box
-generated file. `UMask=0077` (implementation addition): every file a box writes is its own,
+generated file. `UMask=0007` (implementation addition; first 0077): every file a box writes is its own,
 so a file at the top of a 0751 box root (`package.json`, `AGENTS.md`) is not
 readable by path from a sibling; the engine sets the three hub-readable
-modes by hand. `MemoryHigh=1G` throttles and logs; `MemoryMax=2G` kills. The limits cover
+modes by hand. The group bit stays open because a box's own group has one
+member, while what a box writes into the shared uv and Docling caches takes
+the cache's setgid group and must stay usable by its siblings: under 0077 the
+probe VM's second box could not open the first box's cache entries. The
+Docling model cache is writable for the same reason (Docling fetches a model
+the prefetch did not name), and the box unit kills its whole cgroup on stop
+(`KillMode=control-group`): with `mixed`, a Claude Code subprocess alive when
+the engine exited was left running. `MemoryHigh=1G` throttles and logs; `MemoryMax=2G` kills. The limits cover
 every process in the unit's cgroup: the engine, the Claude Code
 subprocess, and `uvx docling` during a scan. Values are a first guess
 against the chat-history OOM record
