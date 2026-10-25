@@ -311,6 +311,17 @@ none
 | `.beebox/memory/` fills disk | Track 3 rotation test | 2 MiB samples + 6 profiles | — |
 | A leak climbs past all thresholds within 10 s | No | Accepted: the samples show the climb; the 50% profile usually came earlier | Silent between checks |
 
+Accepted after review (pre-existing, not changed here):
+
+- During a development-bundle reload, `onChildExit` ignores every exit while
+  `reloadPromise` is set (`src/hub/supervisor/core.ts`), including the
+  replacement's. A replacement that dies between readiness and
+  `maintenance.complete()` (up to the admission wait, 10 s, under contention)
+  can be left marked running. Development path only.
+- A child spawned while `stopAll()` runs is signaled but not awaited, so it can
+  outlive the hub briefly; its orphan check (`src/webapp/server/app.ts`, every
+  2 s) shuts it down.
+
 No critical gap: every silent row is accepted above with its reason.
 
 ## Agent-flow / user-flow edge cases
