@@ -17,18 +17,32 @@
 
 import * as path from "node:path";
 import { getBoxShapeIfPresent, type BoxShape } from "./box-shape.js";
+import { onUnitHost } from "./unit-host.js";
+
+/**
+ * The slug a root's path names. On a unit host every box lives at
+ * `<home>/box` (`docs/plans/per-box-units.md`: `/var/lib/beebox/<slug>/box`),
+ * so the directory's own name is `box` for all of them and the slug is its
+ * parent's. Found on production the day of the migration (2026-10-25): every
+ * box resolved its grants under the name `box` and found none.
+ */
+export function slugOfBoxRoot(boxRoot: string): string {
+  const base = path.basename(boxRoot);
+  if (base === "box" && onUnitHost()) return path.basename(path.dirname(boxRoot));
+  return base;
+}
 
 /** The slug of a box whose shape is already resolved. */
 export function boxSlugFromShape(shape: BoxShape): string {
-  return path.basename(shape.boxRoot);
+  return slugOfBoxRoot(shape.boxRoot);
 }
 
 /**
  * The slug of the box rooted at `boxRoot`. A marker-less directory (the
  * documented plain-directory serve mode) has no shape — fall back to its own
- * basename.
+ * path's name.
  */
 export async function boxSlug(boxRoot: string): Promise<string> {
   const lookup = await getBoxShapeIfPresent(boxRoot);
-  return lookup.found ? boxSlugFromShape(lookup.shape) : path.basename(boxRoot);
+  return lookup.found ? boxSlugFromShape(lookup.shape) : slugOfBoxRoot(boxRoot);
 }

@@ -40,3 +40,28 @@ void test("boxSlug", async (t) => {
   await mkdir(plain);
   await t.check(boxSlug(plain), "just-a-dir");
 });
+
+// ## On a unit host the box's directory is always `box`, so the slug is its parent's
+//
+// docs/plans/per-box-units.md: `/var/lib/beebox/<slug>/box`, one home per box.
+// Found on production at the migration: every box asked for its grants as "box".
+// Off a unit host a directory named `box` is a box named "box", as before.
+void test("On a unit host the slug is the parent of a directory named box", async (t) => {
+  const parent = await mkdtemp(join(tmpdir(), "bbx-box-slug-unit-"));
+  const previous = process.env.BBX_UNIT_HOST;
+  t.teardown(async () => {
+    if (previous === undefined) delete process.env.BBX_UNIT_HOST;
+    else process.env.BBX_UNIT_HOST = previous;
+    await rm(parent, { recursive: true, force: true });
+  });
+  await mkdir(join(parent, "gamma"));
+  const gamma = await makeBox(join(parent, "gamma"), "box");
+  const plain = join(parent, "delta", "box");
+  await mkdir(plain, { recursive: true });
+
+  delete process.env.BBX_UNIT_HOST;
+  t.check([await boxSlug(gamma), await boxSlug(plain)], ["box", "box"]);
+
+  process.env.BBX_UNIT_HOST = "1";
+  t.check([await boxSlug(gamma), boxSlugFromShape(await getBoxShape(gamma)), await boxSlug(plain)], ["gamma", "gamma", "delta"]);
+});
