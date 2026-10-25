@@ -199,7 +199,17 @@ none
    cost was not measured; the migration copies nothing into `~/.claude`,
    and each box's first chat turn after migration needs its login. A
    scheduler pass on a box without one runs its non-agent scripts and logs
-   the agent procedures as failed (seen on the VM).
+   the agent procedures as failed (seen on the VM). **Decided 2026-10-25,
+   built:** neither. Measured on production: the refresh token rotates, so
+   the second of two copies fails ("OAuth session expired and could not be
+   refreshed") and wipes itself, and a symlink to one shared file becomes a
+   private copy at the first refresh (Claude Code replaces the file). The
+   boxholder did not want a login per box. One `claude setup-token` token,
+   stored under `claude-oauth-token` and granted to every box, reaches the
+   agent's env as `CLAUDE_CODE_OAUTH_TOKEN` and the status probes
+   (`src/core/claude-oauth-token.ts`); `claude auth status` reports it as
+   `authMethod: "oauth_token"`. Codex is still open: its login likely rotates
+   the same way; an API key (`OPENAI_API_KEY`) or a login per box.
 2. **Google tokens**: one token file for every box today, or already per
    box? Not settled on the VM (no Google credential there); the migration
    copies the hub's file to every box, which keeps today's behavior.

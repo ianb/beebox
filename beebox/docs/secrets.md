@@ -75,6 +75,7 @@ one in this table; see "Google client credentials" below.
 | `gemini` | `core/gemini-key.ts` (audio questions, scan-import vision) | — | `GEMINI_KEY`, then `SKE_GEMINI_API_KEY` |
 | `google-oauth-client-id` / `google-oauth-client-secret` | `connectors/google-auth.ts` `getBoxGoogleClientCreds` | — | — |
 | `anthropic`, `replicate` | `/api/adapters/<name>` | `<name>.secret.json` | — |
+| `claude-oauth-token` | `core/claude-oauth-token.ts` (the Claude agent's sign-in on first-party runs, and the `claude auth status` probes; from `claude setup-token`) | — | `CLAUDE_CODE_OAUTH_TOKEN`, set by the server in the agent's env, never inherited |
 | `openrouter` | `core/openrouter.ts` (the fallback route for embeddings, audio questions, Whisper HQ transcription, and the opt-in Gemini scan backend; the *only* route for the `mai` HQ services and the `gemini` TTS backend), `/api/adapters/openrouter` | — | — (new since custody; store-only from the start) |
 
 **One deliberate reuse outside this table.** The dev repo's document-comment

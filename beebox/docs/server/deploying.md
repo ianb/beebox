@@ -108,8 +108,11 @@ provisioned before `cloud-init.yaml` needs what that file gives a fresh one
 first: `claude` and `uv` in `/usr/local/bin` (a box unit cannot see
 `/home/beebox/.local/bin`), a system git identity, and the `claude-update`
 unit running as root; the script refuses until the first two are there. After
-the run, each box user logs in to its agent (`sudo -u bbx-<slug> -H claude auth
-login`) and a deploy writes the scheduler's sudoers entry.
+the run a deploy writes the scheduler's sudoers entry. Box users have no login
+file: before the run, store a `claude setup-token` token under
+`claude-oauth-token` and grant it to every box, so the migration's secret
+export carries it into each box's store ([configuration](configuration.md),
+"The long-lived token").
 
 ## The maintenance boundary
 

@@ -6,6 +6,7 @@
  */
 
 import { spawn, execFile } from "node:child_process";
+import { claudeOauthTokenEnv } from "../core/claude-oauth-token.js";
 import { invariant } from "../shared/invariant.js";
 import { errnoCode } from "../shared/error-guards.js";
 
@@ -47,12 +48,18 @@ export interface ClaudeCliService {
  */
 let activeLogin: { process: ReturnType<typeof spawn>; authUrl: string | null } | null = null;
 
-export function createClaudeCliService(): ClaudeCliService {
-
+/**
+ * `boxRoot`: the box whose long-lived token, when it has one, the status probe
+ * runs with (`core/claude-oauth-token.ts`), so the probe answers for the
+ * credential the box's runs use. Without it the probe sees only the login file.
+ */
+export function createClaudeCliService(options?: { boxRoot?: string | undefined }): ClaudeCliService {
+  const boxRoot = options?.boxRoot;
   return {
     async authStatus() {
+      const env = { ...process.env, ...(boxRoot === undefined ? {} : await claudeOauthTokenEnv(boxRoot, { purpose: "auth-status", observe: false })) };
       return new Promise<Record<string, unknown>>((resolve) => {
-        execFile("claude", ["auth", "status"], { timeout: 10000 }, (err, stdout) => {
+        execFile("claude", ["auth", "status"], { timeout: 10000, env }, (err, stdout) => {
           const output = stdout || "";
           try {
             resolve(JSON.parse(output));

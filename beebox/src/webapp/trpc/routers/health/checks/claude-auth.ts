@@ -20,14 +20,15 @@ import type { HealthCheck } from "../router.js";
  * and naming the wrong remedy sends someone to re-authenticate for a problem
  * they do not have.
  */
-export async function claudeAuthCheck(injected?: ClaudeCliService): Promise<HealthCheck> {
-  const claudeCli = injected ?? createClaudeCliService();
+export async function claudeAuthCheck(boxRoot: string, injected?: ClaudeCliService): Promise<HealthCheck> {
+  const claudeCli = injected ?? createClaudeCliService({ boxRoot });
   const authStatus = await claudeCli.authStatus();
   if (authStatus["loggedIn"] === true) {
     return {
       name: "claude-credentials",
       ok: true,
-      message: "Claude Code is logged in",
+      // `oauth_token`: the box's long-lived token (`core/claude-oauth-token.ts`), not a login file.
+      message: authStatus["authMethod"] === "oauth_token" ? "Claude Code is signed in with the box's long-lived token" : "Claude Code is logged in",
       severity: "error",
     };
   }

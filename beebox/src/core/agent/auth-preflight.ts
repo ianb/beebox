@@ -95,6 +95,8 @@ export interface CheckClaudeAuthOptions {
    * `createClaudeCliService()` is constructed. Tests inject a fake.
    */
   claudeCli?: ClaudeCliService | undefined;
+  /** The box whose long-lived token, when granted, the probe runs with (`core/claude-oauth-token.ts`). */
+  boxRoot?: string | undefined;
   /** Injectable clock (ms). Defaults to `Date.now`; tests override for TTL. */
   now?: (() => number) | undefined;
 }
@@ -145,7 +147,7 @@ export async function checkClaudeAuth(options?: CheckClaudeAuthOptions): Promise
   const at = now();
   if (cachedOkAt !== null && at - cachedOkAt < POSITIVE_TTL_MS) return;
 
-  const claudeCli = options?.claudeCli ?? createClaudeCliService();
+  const claudeCli = options?.claudeCli ?? createClaudeCliService({ boxRoot: options?.boxRoot });
   const status = await probeAuth(claudeCli);
   if (status["loggedIn"] === true) {
     cachedOkAt = at;
@@ -225,7 +227,7 @@ export async function preflightChatBackend(params: {
   }
   if (params.backend.requiresClaudeAuth !== true) return true;
   try {
-    await checkClaudeAuth({ claudeCli: params.claudeCli });
+    await checkClaudeAuth({ claudeCli: params.claudeCli, boxRoot: params.boxRoot });
     return true;
   } catch (e) {
     if (e instanceof ClaudeAuthError) return refuse(params.session, e);

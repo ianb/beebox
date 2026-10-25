@@ -14,7 +14,7 @@ import { rememberClaudeStatus, rememberCodexStatus, resetAgentReadinessCache } f
 
 export const agentAuthAdminProcedures = {
   claudeStatus: ownerProcedure.query(async ({ ctx }) => {
-    const claude = ctx.services.claudeCli ?? createClaudeCliService();
+    const claude = ctx.services.claudeCli ?? createClaudeCliService({ boxRoot: ctx.boxRoot });
     const status = await claude.authStatus();
     rememberClaudeStatus(status);
     return status;
