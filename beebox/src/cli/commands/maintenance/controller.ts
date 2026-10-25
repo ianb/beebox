@@ -8,16 +8,18 @@
  * (`hold.ts`) spawned as that owner: root never writes a gate file, and a box
  * user never runs the activation. The controller collects the holders'
  * permits into `BBX_MAINTENANCE_PERMITS` for the activation command, runs it
- * with its own privilege, verifies each box (phase `ready`, and the hub canary
- * when `verifyHub` is set), and tells each holder which of its boxes to
- * complete. A host with no box at all just runs the command.
+ * with its own privilege, verifies each box (phase `ready` read from the
+ * directory its permit names, and the hub canary when `verifyHub` is set),
+ * and tells each holder which of its boxes to complete. A host with no box at
+ * all just runs the command. The controller runs no git command in a box: git
+ * refuses a repository owned by another user, and root owns none of them.
  */
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { realpath, stat } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { z } from "zod";
 import { defaultHubConfigPath, loadHubConfig } from "../../../hub/config.js";
-import { boxMaintenanceStatus } from "../../../lib/box-maintenance/admission.js";
+import { maintenanceStatusIn, permitDirectory } from "../../../lib/box-maintenance/admission.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { invariant } from "../../../shared/invariant.js";
 import { holderReportSchema, holderVerdictSchema } from "./hold.js";
@@ -146,7 +148,11 @@ export async function runMaintenance(roots: string[], invocation: MaintenanceInv
     const verified: string[] = [];
     for (const root of boxes) {
       try {
-        const ready = (await boxMaintenanceStatus(root))?.phase === "ready";
+        // The holder named the box's maintenance directory in its permit; root reads
+        // it there and never runs git in a box it does not own (git refuses that).
+        const permit = permits[root];
+        invariant(permit !== undefined, `No holder permit for ${root}`);
+        const ready = (await maintenanceStatusIn(permitDirectory(permit)))?.phase === "ready";
         if (ready && (invocation.verifyHub ? await verifyHubBox(root, { origin: invocation.verifyHub, hubConfig: invocation.hubConfig }) : code === 0)) verified.push(root);
         else { console.error(`Box not verified; it reopens with unfinished maintenance: ${root}`); code = 1; }
       } catch (error) {
