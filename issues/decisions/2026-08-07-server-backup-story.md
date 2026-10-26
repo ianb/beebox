@@ -1,5 +1,5 @@
 ---
-title: "No automated backup story for server box data"
+title: "Box data has no easy backup, on the server or any other install"
 workstream: security-report
 area: beebox
 filed-by: agent
@@ -26,3 +26,42 @@ until decided.
 ## Audit 2026-10-22
 
 Partly addressed, no backup story decided. Admin now has a read-only Backup section (commit 142e76168, `beebox/src/frontend/src/components/admin/BackupSection.tsx`, status in `beebox/src/core/box/backup-status.ts`) that shows where copies of a box exist and warns when asset bytes exist only on this machine. `beebox/docs/server/boxes.md:232` points to it. It reports and does not back up. `beebox/docs/media/assets.md:231` still says there is no annex remote and `numcopies` is 1. The decision (mandatory remotes, annex special remote, VPS snapshots, or operator checklist) is still open.
+
+## Boxholder direction (2026-10-25)
+
+The boxholder wants a box's basic data to be easy to back up, on every
+install (server, Mac app, NAS, a laptop box), not only the server:
+
+- **Scope: the data, not the reinstallable parts.** The box's git history,
+  its annexed asset bytes, and whatever box state cannot be rebuilt. Leave
+  out what an install recreates: the engine, `node_modules`, caches, search
+  indexes, generated docs. Which secrets belong in a backup is an open
+  question; a backup that holds them must be encrypted.
+- **Encryption,** probably. The backup target may be a third-party store.
+- **An existing system,** not a bespoke backup format.
+
+### Candidates to compare
+
+- **restic** or **kopia**: encrypted, deduplicated snapshots to local disk,
+  S3-compatible stores, B2, SFTP, or anything rclone reaches. One binary;
+  restore without beebox. Needs an include/exclude list and a key the
+  boxholder keeps.
+- **borg**: the same model; needs borg on the target too (or a host such as
+  BorgBase).
+- **git-annex special remote** with encryption (`encryption=hybrid`), plus a
+  git remote for history (optionally `git-remote-gcrypt`). It uses the
+  mechanism boxes already have and raises `numcopies` honestly. It covers
+  only what git and annex track, and the boxholder needs two remotes.
+
+### Questions for the design
+
+- What is "box data" exactly: list each path under a box and state back up,
+  rebuild, or leave out. Include state outside the box directory (the secret
+  store, auth files).
+- Who runs it: a box schedule, the hub, or the host (cron, NAS snapshot
+  task)? What does Admin's Backup section show when it is on?
+- Where does the key live, and how does the boxholder restore it on a new
+  machine? A lost key is a lost backup.
+- What does a restore look like, and how is it tested (a restore into a
+  throwaway box on a schedule)?
+
