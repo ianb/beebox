@@ -278,7 +278,8 @@ evidence model.
   chat, the app bar's question count shows the newest pending question
   beside the chat, or puts the one in front away without "Later"
   (`useQuestionToggle`, `question-tab.ts`). With a pending question in front, the
-  empty chat says "Answer the question here, or start something else." and
+  empty chat says "Answer the question “<card title>” here, or start
+  something else." and
   shows no openers (`useQuestionInFront`), so a reply reads as a probable
   answer. The question reaches the agent as the `open-card`
   snapshot attribute; the agent judges whether the message answers it, does
