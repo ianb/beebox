@@ -36,5 +36,5 @@ empty or aging expires them at 30 days.
 - Whether a long, old agent question is ever the right opening (the
   boxholder's first report was such a question).
 
-Deferred from `beebox/docs/plans/questions-beside-the-chat.md` (NOT in
+Deferred from `beebox/docs/implemented-plans/questions-beside-the-chat.md` (NOT in
 scope).
