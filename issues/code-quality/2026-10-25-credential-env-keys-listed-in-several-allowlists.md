@@ -15,8 +15,9 @@ comparison, and `providerEnvAdditions` (`src/core/provider-env/core.ts`). Some
 exclusions are deliberate (an ambient `CLAUDE_CODE_OAUTH_TOKEN` stays out of the
 hub and agent lists; see
 issues/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md). Adding
-the long-lived Claude token for per-box users needed a coordinated edit in
-each place, and review round 6 found spawn sites (scan import's SDK call, the
+the long-lived Claude token for per-box users meant keeping it out of the two
+inherited-environment lists while adding it to the injection and the warm-slot
+comparison, and review round 6 found spawn sites (scan import's SDK call, the
 Codex engine) that build a Claude CLI environment outside
 `providerEnvAdditions` or compare a fixed key list.
 
