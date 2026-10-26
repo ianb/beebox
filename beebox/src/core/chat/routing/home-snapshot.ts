@@ -12,7 +12,10 @@
  * host who can read the 0644 file learns nothing. It also carries the token
  * hashes of the devices whose pairer could open the box at shutdown: the box
  * checks a pairer's membership on every request, and the hub, which cannot,
- * serves the snapshot only to those. A host reboot regenerates the
+ * serves the snapshot only to those, and only while the member list the box
+ * publishes in `hub-meta.json` is the one it had at shutdown: a member removed
+ * by a hand edit while the box sleeps reaches the scheduler's republish, and
+ * the hub then stops serving the snapshot. A host reboot regenerates the
  * hub secrets (`hub/secrets.ts`), so an older snapshot then fails to decrypt
  * and the hub takes its ordinary path.
  */
@@ -24,6 +27,7 @@ import { z } from "zod";
 import { writeFileAtomicSync } from "../../../lib/atomic-write.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
+import { computeHubMeta } from "../../hub-meta.js";
 import { mobileTokenHashesWithAccess } from "../../mobile/request-auth.js";
 import { quickChatHome, quickChatHomeSchema, type QuickChatHome } from "./quick-chat-home.js";
 
@@ -33,13 +37,17 @@ const KEY_INFO_PREFIX = "beebox quick-chat home snapshot v1 ";
 const SHUTDOWN_DEADLINE_MS = 5_000;
 
 const envelopeSchema = z.strictObject({ v: z.literal(1), iv: z.string(), tag: z.string(), data: z.string() });
-const plaintextSchema = z.strictObject({ savedAt: z.string(), home: quickChatHomeSchema, deviceTokenHashes: z.array(z.string()) });
+const plaintextSchema = z.strictObject({
+  savedAt: z.string(), home: quickChatHomeSchema, deviceTokenHashes: z.array(z.string()), allowedEmails: z.array(z.string()),
+});
 
 export interface HomeSnapshot {
   savedAt: string;
   home: QuickChatHome;
   /** SHA-256 of each mobile device token the hub may serve this snapshot to. */
   deviceTokenHashes: string[];
+  /** The box's published member list at shutdown (`hub-meta.json`'s `allowedEmails`). */
+  allowedEmails: string[];
 }
 
 function snapshotPath(boxRoot: string): string {
@@ -107,7 +115,8 @@ export async function writeHomeSnapshotsAtShutdown(boxes: readonly { slug: strin
         return;
       }
       const [home, deviceTokenHashes] = answer;
-      writeHomeSnapshot(box.boxRoot, { slug: box.slug, hubSecret, snapshot: { savedAt: getBoxTimeISO(box.boxRoot), home, deviceTokenHashes } });
+      const { allowedEmails } = computeHubMeta(box.boxRoot, () => new Date());
+      writeHomeSnapshot(box.boxRoot, { slug: box.slug, hubSecret, snapshot: { savedAt: getBoxTimeISO(box.boxRoot), home, deviceTokenHashes, allowedEmails } });
     } catch (e) {
       console.warn(`[home-snapshot] ${box.slug}: could not write a snapshot: ${errorMessage(e)}`);
     } finally {

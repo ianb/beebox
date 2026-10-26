@@ -18,6 +18,7 @@ import type { Endpoint, EndpointProvider } from "../../../src/hub/endpoints.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 import { removeHomeSnapshot, writeHomeSnapshot } from "../../../src/core/chat/routing/home-snapshot.js";
 import { hashToken } from "../../../src/core/token-store.js";
+import { refreshHubMeta } from "../../../src/core/hub-meta.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const HUB_SECRET = "test-hub-secret-for-home-snapshot-route";
@@ -64,6 +65,7 @@ const endpoints: EndpointProvider = {
 };
 
 const box = await makeTmpBox();
+refreshHubMeta(box.root);
 const ticket = createMobilePairingTicket(box.root);
 const redeemed = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "test mobile" });
 if (!redeemed) throw new Error("test mobile pairing failed");
@@ -97,11 +99,11 @@ async function ask(headers: Record<string, string>): Promise<{ status: number; c
   return { status: response.status, cacheControl: response.headers.get("cache-control"), body: await response.json(), wakes: state.wakes };
 }
 
-function sleepBox(withSnapshot: boolean): void {
+function sleepBox(withSnapshot: boolean, allowedEmails: string[]): void {
   state.awake = false;
   state.wakes = 0;
   removeHomeSnapshot(box.root);
-  if (withSnapshot) writeHomeSnapshot(box.root, { slug: "test1", hubSecret: HUB_SECRET, snapshot: { savedAt: "2026-10-26T15:12:00.000Z", home, deviceTokenHashes: [hashToken(deviceToken)] } });
+  if (withSnapshot) writeHomeSnapshot(box.root, { slug: "test1", hubSecret: HUB_SECRET, snapshot: { savedAt: "2026-10-26T15:12:00.000Z", home, deviceTokenHashes: [hashToken(deviceToken)], allowedEmails } });
 }
 
 void test("home snapshot route", async (t) => {
@@ -114,7 +116,7 @@ void test("home snapshot route", async (t) => {
   });
 
   // ## Asleep, with a snapshot: the box's last answer, and no wake
-  sleepBox(true);
+  sleepBox(true, []);
   await t.check(ask(mobile), {
     status: 200,
     cacheControl: "no-store",
@@ -128,12 +130,16 @@ void test("home snapshot route", async (t) => {
   // ## A device the snapshot does not list: the ordinary path, where the box checks its pairer
   await t.check(ask(unlisted), { status: 200, cacheControl: null, body: { from: "box" }, wakes: 1 });
 
+  // ## The member list changed while the box slept: the ordinary path, where the box checks the pairer
+  sleepBox(true, ["removed@example.com"]);
+  await t.check(ask(mobile), { status: 200, cacheControl: null, body: { from: "box" }, wakes: 1 });
+
   // ## Asleep, with no snapshot: the ordinary path wakes the box
-  sleepBox(false);
+  sleepBox(false, []);
   await t.check(ask(mobile), { status: 200, cacheControl: null, body: { from: "box" }, wakes: 1 });
 
   // ## Awake: the box answers, even with a snapshot on disk
-  sleepBox(true);
+  sleepBox(true, []);
   state.awake = true;
   await t.check(ask(mobile), { status: 200, cacheControl: null, body: { from: "box" }, wakes: 1 });
 });

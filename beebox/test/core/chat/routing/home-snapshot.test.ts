@@ -23,6 +23,7 @@ const snapshot: HomeSnapshot = {
     recentChats: [{ sessionId: "s-bike", label: "Fix the bike brakes", lastActivity: "2026-10-26T15:10:00.000Z", landmark: null }],
   },
   deviceTokenHashes: ["0f1e"],
+  allowedEmails: [],
 };
 
 async function pairDevice(boxRoot: string, createdBy: string | null): Promise<string> {
@@ -100,5 +101,6 @@ void test("shutdown writes the box's own home under a hub, for the devices whose
     savedAt: "2026-10-26T15:12:00.000Z",
     home: { open: [], recentlySent: [], recentChats: [], shortcuts: [] },
     deviceTokenHashes: [hashToken(unowned)],
+    allowedEmails: [],
   });
 });

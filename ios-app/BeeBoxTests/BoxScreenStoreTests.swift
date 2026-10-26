@@ -445,6 +445,18 @@ final class BoxScreenStoreTests: XCTestCase {
         XCTAssertEqual(client.homeCalls, 2)
     }
 
+    /// Cancellations one after another do not ask again at once each time.
+    func testRepeatedCancellationsWaitOnTheBackoff() async throws {
+        let client = FakeClient()
+        let (store, _) = makeStore(client, retryDelays: [10])
+        store.setForeground(true)
+        client.nextHomeErrors = [URLError(.cancelled), URLError(.cancelled), URLError(.cancelled)]
+        store.setShownBox(box.id)
+        try await waitUntil { client.homeCalls == 2 }
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(client.homeCalls, 2)
+    }
+
     func testRefreshFailureKinds() {
         XCTAssertEqual(BoxScreenStore.RefreshFailure(URLError(.cannotConnectToHost)), .unreachable)
         XCTAssertEqual(BoxScreenStore.RefreshFailure(QuickChatAPI.APIError.notOpen), .notOpen)

@@ -360,9 +360,15 @@ final class BoxScreenStore: ObservableObject {
             }
             if Self.isCancellation(error) {
                 // A switch or the background cancelled it. A box shown again
-                // meanwhile found this refresh still running, so ask now.
+                // meanwhile found this refresh still running, so ask now; a
+                // cancellation again before an answer waits on the backoff.
                 refreshes[boxID] = .idle
-                resumeShownBox()
+                if homeRetryAttempts[boxID, default: 0] == 0 {
+                    homeRetryAttempts[boxID] = 1
+                    resumeShownBox()
+                } else {
+                    scheduleHomeRetry(boxID: boxID)
+                }
                 return
             }
             let failure = RefreshFailure(error)

@@ -14,7 +14,7 @@
 
 import type { FastifyReply } from "fastify";
 import { readHomeSnapshot } from "../../core/chat/routing/home-snapshot.js";
-import { bearerMatchesHashes } from "../../core/hub-meta.js";
+import { bearerMatchesHashes, readHubMeta } from "../../core/hub-meta.js";
 import type { QuickChatHome } from "../../core/chat/routing/quick-chat-home.js";
 import type { EndpointProvider } from "../endpoints.js";
 
@@ -42,6 +42,10 @@ export function sendAsleepHome(reply: FastifyReply, args: AsleepHomeRequest): bo
   return true;
 }
 
+function sameMembers(published: readonly string[] | undefined, atShutdown: readonly string[]): boolean {
+  return published !== undefined && published.length === atShutdown.length && published.every((email, i) => email === atShutdown[i]);
+}
+
 function asleepHomeAnswer(args: AsleepHomeRequest): AsleepHomeAnswer | undefined {
   const { slug } = args;
   if (!args.mobileAuthed || slug === null || args.method !== "GET" || args.reqPath !== `/${slug}/api/trpc/quickChat.home`) return undefined;
@@ -50,5 +54,7 @@ function asleepHomeAnswer(args: AsleepHomeRequest): AsleepHomeAnswer | undefined
   if (boxRoot === undefined || hubSecret === "" || args.endpoints.get(slug) !== undefined) return undefined;
   const snapshot = readHomeSnapshot(boxRoot, { slug, hubSecret });
   if (snapshot === undefined || !bearerMatchesHashes(args.authorization, snapshot.deviceTokenHashes)) return undefined;
+  // A member list changed while the box slept may have dropped this device's pairer; the box decides.
+  if (!sameMembers(readHubMeta(boxRoot)?.allowedEmails, snapshot.allowedEmails)) return undefined;
   return { result: { data: { ...snapshot.home, asleep: { savedAt: snapshot.savedAt } } } };
 }
