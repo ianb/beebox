@@ -22,20 +22,24 @@
  * stall Codex, and Claude's variadic `--tools` swallows a positional prompt.
  * The child runs in its own process group so a timeout or a signal to this
  * wrapper takes the whole reviewer tree down instead of orphaning it.
+ *
+ * A Codex run with no `--model` picks Sol or Astra from the weekly quota room
+ * (`bin/lib/quota-room.ts`), and every Codex run records its 7-day use before
+ * and after in the review cost ledger; `bin/quota-room` reports both.
  */
 
 import { spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
+import { readCodexQuotaNow } from "../workstreams-app/src/server/main/quota-collect.js";
 import { gitOrNull } from "./lib/git.js";
+import { appendReviewCost, ledgerPath, pickCodexReviewModel, weeklyWindow, type ReviewCostRow } from "./lib/quota-room.js";
+import type { Quota } from "../workstreams-app/src/shared/documents.js";
 
 type Engine = "codex" | "claude";
 
-const DEFAULT_MODEL: Record<Engine, string> = {
-  codex: "gpt-6-sol",
-  claude: "claude-opus-5-5",
-};
+const CLAUDE_DEFAULT_MODEL = "claude-opus-5-5";
 const EFFORTS: Record<Engine, readonly string[]> = {
   codex: ["minimal", "low", "medium", "high", "xhigh"],
   claude: ["low", "medium", "high", "xhigh", "max"],
@@ -47,13 +51,14 @@ const TAIL_LINES = 20;
 const USAGE = `usage: bin/cross-model-run --engine codex|claude [--model <id>] [--effort <level>]
        [--prompt-file <path>] [--out <path.md>] [--cwd <root>] [--timeout <minutes>]
 The prompt is read from --prompt-file, or stdin when that is omitted.
-Defaults: model ${DEFAULT_MODEL.codex} (codex) / ${DEFAULT_MODEL.claude} (claude); effort high;
+Defaults: model picked from quota room (codex; see bin/quota-room) / ${CLAUDE_DEFAULT_MODEL} (claude); effort high;
 out scratch/cross-model/<timestamp>-<engine>.md; cwd the git root; timeout ${DEFAULT_TIMEOUT_MINUTES} min.
 `;
 
 interface RunOptions {
   engine: Engine;
-  model: string;
+  /** Undefined: Claude takes its default; Codex picks from the quota room. */
+  model: string | undefined;
   effort: string;
   prompt: string;
   out: string;
@@ -128,7 +133,7 @@ function parseOptions(argv: string[]): RunOptions {
   if (prompt.trim() === "") usageFail("the prompt is empty");
   return {
     engine,
-    model: values.model ?? DEFAULT_MODEL[engine],
+    model: values.model,
     effort: values.effort,
     prompt,
     out,
@@ -137,7 +142,7 @@ function parseOptions(argv: string[]): RunOptions {
   };
 }
 
-function engineArgs(opts: RunOptions): string[] {
+function engineArgs(opts: RunOptions & { model: string }): string[] {
   if (opts.engine === "codex") {
     return [
       "exec", "-", "-s", "read-only", "-C", opts.cwd, "-m", opts.model,
@@ -171,7 +176,7 @@ interface ChildResult {
 }
 
 /** Run the engine in its own process group, logging stdout+stderr to `logPath`. */
-async function runEngine(opts: RunOptions, logPath: string): Promise<ChildResult> {
+async function runEngine(opts: RunOptions & { model: string }, logPath: string): Promise<ChildResult> {
   const log = fs.createWriteStream(logPath);
   const child = spawn(opts.engine, engineArgs(opts), {
     cwd: opts.cwd,
@@ -237,9 +242,21 @@ async function runEngine(opts: RunOptions, logPath: string): Promise<ChildResult
   return { code, signal, timedOut, stdout };
 }
 
+function weeklyOf(quota: Quota): Quota["windows"][number] | null {
+  return quota.status === "available" ? weeklyWindow(quota) : null;
+}
+
 async function main(): Promise<void> {
-  const opts = parseOptions(process.argv.slice(2));
-  requireEngine(opts.engine);
+  const parsed = parseOptions(process.argv.slice(2));
+  requireEngine(parsed.engine);
+  const before = parsed.engine === "codex" ? await readCodexQuotaNow() : null;
+  let model = parsed.model ?? CLAUDE_DEFAULT_MODEL;
+  if (parsed.model === undefined && before !== null) {
+    const pick = pickCodexReviewModel(before, new Date());
+    model = pick.model;
+    process.stderr.write(`cross-model-run: picked ${pick.model}: ${pick.reason}\n`);
+  }
+  const opts = { ...parsed, model };
   fs.mkdirSync(path.dirname(opts.out), { recursive: true });
   const base = opts.out.replace(/\.md$/, "");
   const promptPath = `${base}.prompt.md`;
@@ -250,6 +267,12 @@ async function main(): Promise<void> {
   const started = Date.now();
   const result = await runEngine(opts, logPath);
   const seconds = Math.round((Date.now() - started) / 1000);
+  if (before !== null) {
+    // Codex writes its answer to opts.out; an empty one is a failure.
+    const answered = result.code === 0 && fs.existsSync(opts.out) && fs.readFileSync(opts.out, "utf8").trim() !== "";
+    const outcome = result.timedOut ? "timed-out" : answered ? "answered" : "failed";
+    await recordCost(before, { model: opts.model, effort: opts.effort, outcome, seconds });
+  }
   if (result.timedOut) {
     fail(`${opts.engine} timed out after ${opts.timeoutMs / 60_000} min; raw output: ${logPath}\n${tail(logPath)}`, 124);
   }
@@ -265,6 +288,21 @@ async function main(): Promise<void> {
     `cross-model-run: ${opts.engine} ${opts.model} effort=${opts.effort} ${seconds}s\n` +
       `answer: ${opts.out}\nprompt: ${promptPath}\nraw: ${logPath}\n\n${answer}\n`,
   );
+}
+
+/** One ledger row per Codex review; skipped, with a note, when either read has no weekly window. */
+async function recordCost(before: Quota, run: Pick<ReviewCostRow, "model" | "effort" | "outcome" | "seconds">): Promise<void> {
+  const first = weeklyOf(before);
+  const second = weeklyOf(await readCodexQuotaNow());
+  if (first === null || second === null) {
+    process.stderr.write("cross-model-run: no Codex 7-day reading; review cost not recorded\n");
+    return;
+  }
+  appendReviewCost(ledgerPath(), {
+    at: new Date().toISOString(), ...run,
+    usedBefore: first.usedPercent, usedAfter: second.usedPercent,
+    resetsBefore: first.resetsAt, resetsAfter: second.resetsAt,
+  });
 }
 
 await main();

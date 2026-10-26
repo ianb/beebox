@@ -198,6 +198,11 @@ export async function glmQuotaFromEnv(): Promise<(() => Promise<GlmQuotaResponse
   return key === null ? null : () => requestGlmQuota(key, 10_000);
 }
 
+/** A fresh Codex read that bypasses the shared cache, for a before/after measurement. */
+export function readCodexQuotaNow(): Promise<Quota> {
+  return requestCodexQuota(new Date(), () => requestCodexRateLimits(5_000, "codex"));
+}
+
 export async function collectAgentQuotas(options: CollectQuotasOptions): Promise<Quota[]> {
   const now = options.now ?? new Date();
   const fetchedAt = now.toISOString();
