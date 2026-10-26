@@ -1,6 +1,6 @@
 /**
  * `bin/quota-room` — each weekly window's use against the clock, the Codex
- * reviewer `bin/cross-model-run` would pick now, and the measured cost of a
+ * reviewer `bin/cross-model-run --hard` would pick now, and the measured cost of a
  * review by model. Logic lives in `bin/lib/quota-room.ts`.
  */
 
@@ -39,7 +39,7 @@ for (const quota of quotas) {
 const codex = quotas.find((quota) => quota.provider === "codex");
 if (codex !== undefined) {
   const pick = pickCodexReviewModel(codex, now);
-  lines.push("", `cross-model codex reviewer: ${pick.model} (${pick.reason})`);
+  lines.push("", `cross-model codex reviewer for a --hard review: ${pick.model} (${pick.reason})`);
 }
 const costs = summarizeCosts(readReviewCosts(ledgerPath()));
 lines.push("", costs.length === 0

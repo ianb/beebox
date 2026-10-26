@@ -23,8 +23,8 @@
  * The child runs in its own process group so a timeout or a signal to this
  * wrapper takes the whole reviewer tree down instead of orphaning it.
  *
- * A Codex run with no `--model` picks Sol or Astra from the weekly quota room
- * (`bin/lib/quota-room.ts`), and every Codex run records its 7-day use before
+ * A Codex run with no `--model` uses Sol; with `--hard` it uses Astra when the
+ * weekly quota has room (`bin/lib/quota-room.ts`). Every Codex run records its 7-day use before
  * and after in the review cost ledger; `bin/quota-room` reports both.
  */
 
@@ -34,7 +34,7 @@ import * as path from "node:path";
 import { parseArgs } from "node:util";
 import { readCodexQuotaNow } from "../workstreams-app/src/server/main/quota-collect.js";
 import { gitOrNull } from "./lib/git.js";
-import { appendReviewCost, ledgerPath, pickCodexReviewModel, weeklyWindow, type ReviewCostRow } from "./lib/quota-room.js";
+import { appendReviewCost, ledgerPath, pickCodexReviewModel, SOL, weeklyWindow, type ReviewCostRow } from "./lib/quota-room.js";
 import type { Quota } from "../workstreams-app/src/shared/documents.js";
 
 type Engine = "codex" | "claude";
@@ -48,17 +48,18 @@ const DEFAULT_TIMEOUT_MINUTES = 30;
 const KILL_GRACE_MS = 10_000;
 const TAIL_LINES = 20;
 
-const USAGE = `usage: bin/cross-model-run --engine codex|claude [--model <id>] [--effort <level>]
+const USAGE = `usage: bin/cross-model-run --engine codex|claude [--model <id> | --hard] [--effort <level>]
        [--prompt-file <path>] [--out <path.md>] [--cwd <root>] [--timeout <minutes>]
 The prompt is read from --prompt-file, or stdin when that is omitted.
-Defaults: model picked from quota room (codex; see bin/quota-room) / ${CLAUDE_DEFAULT_MODEL} (claude); effort high;
+Defaults: model ${SOL} (codex; --hard picks Astra when bin/quota-room shows room) / ${CLAUDE_DEFAULT_MODEL} (claude); effort high;
 out scratch/cross-model/<timestamp>-<engine>.md; cwd the git root; timeout ${DEFAULT_TIMEOUT_MINUTES} min.
 `;
 
 interface RunOptions {
   engine: Engine;
-  /** Undefined: Claude takes its default; Codex picks from the quota room. */
+  /** Undefined: Claude takes its default; Codex uses Sol, or picks from the quota room when hard. */
   model: string | undefined;
+  hard: boolean;
   effort: string;
   prompt: string;
   out: string;
@@ -101,6 +102,7 @@ const CLI_OPTIONS = {
   out: { type: "string" },
   cwd: { type: "string" },
   timeout: { type: "string", default: String(DEFAULT_TIMEOUT_MINUTES) },
+  hard: { type: "boolean", default: false },
   help: { type: "boolean", default: false },
 } as const;
 
@@ -134,6 +136,7 @@ function parseOptions(argv: string[]): RunOptions {
   return {
     engine,
     model: values.model,
+    hard: values.hard,
     effort: values.effort,
     prompt,
     out,
@@ -252,7 +255,7 @@ async function main(): Promise<void> {
   const before = parsed.engine === "codex" ? await readCodexQuotaNow() : null;
   let model = parsed.model ?? CLAUDE_DEFAULT_MODEL;
   if (parsed.model === undefined && before !== null) {
-    const pick = pickCodexReviewModel(before, new Date());
+    const pick = parsed.hard ? pickCodexReviewModel(before, new Date()) : { model: SOL, reason: "routine review (no --hard)" };
     model = pick.model;
     process.stderr.write(`cross-model-run: picked ${pick.model}: ${pick.reason}\n`);
   }
