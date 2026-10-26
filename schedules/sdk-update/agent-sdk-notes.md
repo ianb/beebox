@@ -33,7 +33,7 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.309`, Codex `0.164.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.310`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
@@ -42,11 +42,11 @@ Codex entries here are labeled as such; they carry their own pin.
   the root copy and `bin/` tooling still imports it.
 - **Latest reviewed upstream version:** `0.3.310` (SDK), `2.1.310` (Claude Code), `0.164.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved on 2026-10-25 — Agent SDK
-  to `0.3.309`, Codex to `0.164.0`. The suite has 7 failures in one
-  SDK-unrelated file:
-  `issues/bugs/2026-10-25-box-install-test-red-after-per-box-users.md`. Next:
-  `0.3.310` (settles 2026-10-25T21:21Z). Open:
+- **Current recommendation:** Agent SDK moved to `0.3.310` on 2026-10-26;
+  nothing newer is published on any channel. Production deploys recovered after
+  the per-box-user migration (2026-10-25). The suite has 2 SDK-unrelated
+  failures: `issues/bugs/2026-10-26-duplicate-bbx-nav-questions-id.md`
+  (`box-install.test.ts` passes again). Open:
   `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
@@ -74,7 +74,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.310 / Claude Code 2.1.310 — pending (published 2026-10-23T21:21Z)
+### 0.3.310 / Claude Code 2.1.310 — APPLIED 2026-10-26 (published 2026-10-23T21:21Z)
 
 SDK parity-only. 2.1.310, for this repo: lower memory in SDK and `-p` sessions
 during compaction with a very large transcript (beebox chat sessions run long);
@@ -83,7 +83,7 @@ as base64, so the next request does not fail again; an MCP tool call that times
 out on an unanswered elicitation tells Claude not to repeat it. HARNESS:
 background cleanup no longer deletes recent files when `cleanupPeriodDays` is
 very large; read prompts show where a symlink leads.
-- **Action:** Settled path; takeable 2026-10-25T21:21Z.
+- **Action:** Applied 2026-10-26. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.310, `pnpm -C beebox test` (12,997 pass, 2 fail, 2 skip; both in `ui-scan.annotations.test.ts`, a duplicate DOM id from `b43325339`).
 
 ### Codex 0.164.0 — APPLIED 2026-10-25 (published 2026-10-23T04:48Z)
 
