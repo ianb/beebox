@@ -74,6 +74,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   // ---- Questions and jobs ----------------------------------------------
   { name: "answer", audience: "agent", smoke: MUTATES },
   { name: "dismiss", audience: "agent", smoke: MUTATES },
+  { name: "question", audience: "agent", smoke: MUTATES },
   { name: "finish", audience: "agent", smoke: { skip: "deletes the job card it is given" } },
   { name: "intake", audience: "agent", smoke: MUTATES },
   { name: "triage", audience: "agent", smoke: { run: ["triage", "decisions", "--json"] } },
@@ -180,6 +181,11 @@ export const SURFACE: readonly SurfaceEntry[] = [
     name: "todo-review",
     audience: "engine",
     reason: "the stock todo-review procedure's precheck and validate; `verify` retires todos and commits, and the agent's side is the brief `check` prints",
+  },
+  {
+    name: "question-review",
+    audience: "engine",
+    reason: "the stock question-review procedure's precheck and validate; `verify` writes the review latch, and the agent's side is the brief `check` prints",
   },
   { name: "field-test", audience: "engine", reason: "the agent field-test harness, run by a developer in this repo" },
 ];

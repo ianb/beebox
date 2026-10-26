@@ -56,9 +56,15 @@ function SegmentDivider() {
 const SEGMENT = "flex items-center gap-1 px-1 sm:px-1.5 py-0.5 hover:bg-white/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40";
 
 /** The badges as drawn, from counts; the theme studio renders them with fixed ones. */
-export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, escalatedTodos, errorCount, onOpenErrors }: {
+export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, escalatedTodos, errorCount, onOpenErrors, questionToggle }: {
   base: string;
   pendingQuestions: number;
+  /**
+   * In a chat, the questions segment shows and hides the question beside the
+   * chat (docs/plans/questions-later-and-figure-it-out.md, Track B); absent, it
+   * links to the Questions page.
+   */
+  questionToggle?: { label: string; onToggle: () => void } | undefined;
   onPlateTodos: number;
   /** Of `onPlateTodos`, how many are past due — draws a small dot on the plate segment. */
   escalatedTodos: number;
@@ -67,9 +73,23 @@ export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, esca
   onOpenErrors: () => void;
 }) {
   const showErrors = errorCount > 0;
+  const handleToggleQuestion = questionToggle?.onToggle;
 
   const segments = [
-    pendingQuestions > 0 ? (
+    pendingQuestions > 0 && questionToggle !== undefined ? (
+      <button
+        key="questions"
+        type="button"
+        id="bbx-nav-questions"
+        onClick={handleToggleQuestion}
+        className={SEGMENT}
+        title={`${questionToggle.label} (${pendingQuestions} waiting)`}
+        aria-label={`${questionToggle.label} (${pendingQuestions} waiting)`}
+      >
+        <QuestionIcon />
+        {pendingQuestions}
+      </button>
+    ) : pendingQuestions > 0 ? (
       <Link
         key="questions"
         id="bbx-nav-questions"

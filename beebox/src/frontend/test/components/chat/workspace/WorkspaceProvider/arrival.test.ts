@@ -10,9 +10,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { arrivalPlan, arrivalWaits, pickArrivalQuestion } from "../../../../../src/components/chat/workspace/WorkspaceProvider/arrival.js";
+import { arrivalPlan, arrivalWaits } from "../../../../../src/components/chat/workspace/WorkspaceProvider/arrival.js";
 import { decideWorkspaceNavigation } from "../../../../../src/components/chat/workspace/history.js";
-import type { QuestionInfo } from "../../../../../src/components/questions/QuestionForm/view.js";
 
 const LIST = "_content/lending/Lending_List.lending-list.card";
 const BOX = "_content/Box.landmark.card";
@@ -69,36 +68,6 @@ void test("The provider passes null when forDir returned no landmark or the quer
     nothing: arrivalPlan({ arrive: true, viewport: "desktop", tabCount: 0, target: null, question: null }),
     questionOnly: arrivalPlan({ arrive: true, viewport: "desktop", tabCount: 0, target: null, question: Q }),
   }, { nothing: [], questionOnly: [Q] });
-});
-
-function question(over: Partial<QuestionInfo> & Pick<QuestionInfo, "relativePath">): QuestionInfo {
-  const name = over.relativePath.split("/").at(-1) ?? "";
-  return { path: `/box/${over.relativePath}`, name, type: "question", subdir: undefined, state: "pending", prompt: "Which?", inputType: "text", ...over };
-}
-
-// ## The newest pending question is picked
-//
-// Newest by `asked-at`, then by path; answered, dismissed, and unparseable
-// cards are never picked, and a card with no `asked-at` sorts oldest.
-void test("The newest pending question is picked", async (t) => {
-  t.check({
-    newest: pickArrivalQuestion([
-      question({ relativePath: "_bookkeeping/questions/z-old.question.card", askedAt: "2026-09-01T00:00:00Z" }),
-      question({ relativePath: "_bookkeeping/questions/a-new.question.card", askedAt: "2026-10-20T00:00:00Z" }),
-      question({ relativePath: "_bookkeeping/questions/undated.question.card" }),
-    ]),
-    skipped: pickArrivalQuestion([
-      question({ relativePath: "_bookkeeping/questions/answered.question.card", askedAt: "2026-10-24T00:00:00Z", state: "answered" }),
-      question({ relativePath: "_bookkeeping/questions/dismissed.question.card", askedAt: "2026-10-23T00:00:00Z", state: "dismissed" }),
-      question({ relativePath: "_bookkeeping/questions/broken.question.card", askedAt: "2026-10-22T00:00:00Z", invalid: true }),
-      question({ relativePath: "_bookkeeping/questions/pending.question.card", askedAt: "2026-10-01T00:00:00Z" }),
-    ]),
-    none: pickArrivalQuestion([]),
-  }, {
-    newest: "_bookkeeping/questions/a-new.question.card",
-    skipped: "_bookkeeping/questions/pending.question.card",
-    none: null,
-  });
 });
 
 // ## Only a chat with nothing to open waits for arrival's queries

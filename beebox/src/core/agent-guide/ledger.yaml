@@ -26,8 +26,11 @@ budget:
   # silent machinery work (user-facing-language workstream).
   # Raised 2026-10-20 (+48) to the post-merge measurement: the chat prompt's
   # `google-drive:` health line (Docs-API-unavailable notice, drive-docs-api-health).
+  # Raised 2026-10-26 (+65) for the `figure-it-out` and `simplify-question`
+  # box skills' descriptions and the `question-review` procedure's
+  # description (docs/plans/questions-later-and-figure-it-out.md).
   guide_words: 5743
-  always_loaded_words: 10928
+  always_loaded_words: 10993
   uncited_words_per_section: 60
 
 lint:

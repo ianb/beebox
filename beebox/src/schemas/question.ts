@@ -76,6 +76,19 @@ const QuestionContextEntry = z.object({
   text: z.string().optional(),
 });
 
+/**
+ * What the box decided in place of an answer. Written only by `bbx question
+ * decide` (`core/commands/question-decide.ts`); never an answer, so it never
+ * sets `answered-at` or `answer`.
+ */
+const QuestionProvisional = z.object({
+  decision: z.string(),
+  reasoning: z.string(),
+  undo: z.string(),
+  "decided-at": z.string().datetime({ offset: true }),
+});
+export type QuestionProvisionalFields = z.infer<typeof QuestionProvisional>;
+
 const QuestionAnswer = z.object({
   text: z.string().optional(),
   selected: z.string().optional(),
@@ -118,7 +131,8 @@ export type AnsweredViaValue = z.infer<typeof AnsweredVia>;
 /**
  * Parse-time coherence of the lifecycle fields: at most one of `answered-at`,
  * `dismissed-at` and `expired-at`; `answered-at` requires `answer`; `answer`
- * and `answered-via` appear only with `answered-at`. Answering a dismissed or
+ * and `answered-via` appear only with `answered-at`; `provisional` requires
+ * one of the three timestamps (a later answer keeps it as history). Answering a dismissed or
  * expired question clears their timestamp to keep this holding (see
  * `core/commands/answer.ts`).
  */
@@ -126,6 +140,13 @@ function refineQuestionLifecycle(fields: Record<string, unknown>, ctx: z.core.$R
   const present = STATE_TIMESTAMPS.filter((key) => fields[key] !== undefined);
   for (const key of present.slice(1)) {
     ctx.addIssue({ code: "custom", path: [key], message: `"${key}" must not appear with "${present[0] ?? ""}"` });
+  }
+  if (fields["provisional"] !== undefined && present.length === 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["provisional"],
+      message: "\"provisional\" requires \"dismissed-at\", \"expired-at\" or \"answered-at\"",
+    });
   }
   const answered = fields["answered-at"] !== undefined;
   if (answered && fields["answer"] === undefined) {
@@ -160,6 +181,7 @@ export const QuestionSchema = cardSchema("question", {
     "answered-via": AnsweredVia.optional(),
     "dismissed-at": z.string().datetime({ offset: true }).optional(),
     "expired-at": z.string().datetime({ offset: true }).optional(),
+    provisional: QuestionProvisional.optional(),
   },
   instructions: `# Question Cards
 
@@ -170,9 +192,9 @@ A question card asks the user something and routes the answer back for processin
 - A question's state is read from which lifecycle timestamp it carries:
   - pending — none of \`answered-at\`, \`dismissed-at\`, \`expired-at\`: awaiting an answer.
   - answered — has \`answered-at\` (and \`answer\`); terminal — an answered question does not accept a fresh answer.
-  - dismissed — has \`dismissed-at\`: the boxholder declined to answer. Still answerable later.
+  - dismissed — has \`dismissed-at\`: put away for now (Later), by the person or by Figure it out. Still answerable later.
   - expired — has \`expired-at\`: aged out of the active view by the aging sweep, without an answer. Still answerable later — expiry demotes visibility, it does not close the question.
-  A card carries at most one of the three timestamps; answering a dismissed or expired question removes its timestamp. Before asking something new, check \`_bookkeeping/questions/\` including answered/dismissed/expired cards: an existing answer is a \`user-stated\` fact, and a dismissal or expiry is a signal the boxholder didn't care to answer that.
+  A card carries at most one of the three timestamps; answering a dismissed or expired question removes its timestamp. Before asking something new, check \`_bookkeeping/questions/\` including answered/dismissed/expired cards: an existing answer is a \`user-stated\` fact, and a dismissal or expiry means the question was put off, not answered.
 - \`memo:\` — context explaining WHY you're asking, so the user can answer without looking anything up.
 - \`prompt:\` — the actual question.
 - \`input:\` — \`{type: select|text|confirm, options?: [{id, label}]}\`. \`select\` requires at least two options. \`confirm\` and \`text\` must NOT carry options.
@@ -189,6 +211,8 @@ After the user answers, the system fills in:
 - \`answered-via:\` — \`web\`, \`cli\`, or \`chat\`. A \`chat\` answer (\`bbx answer <path> --via chat "<their words>"\`) is one you record from a conversation in which the person answered a pending card; it writes no follow-up job, because you do the directive yourself, in that conversation, before you answer the card. Answering is the last step: while the work is not done the card stays pending, and the pending card is the work item. For a select question pass the option's label; for a confirm question pass yes or no. If the briefing already holds the answer, answer the card from it without asking again. In a shared chat the message's \`user\` attribute names who answered; put it in the answer text ("Juni: mostly lending").
 
 Dismissing sets \`dismissed-at:\`; the aging sweep expiring a question sets \`expired-at:\`.
+
+\`provisional:\` — \`{decision, reasoning, undo, decided-at}\`: what the box decided in place of an answer. It is not the person's answer, and only \`bbx question decide\` writes it. A later answer keeps it as history.
 
 For select questions, make options mutually exclusive. For confirm questions, make the prompt unambiguous about what "yes" means.`,
 });

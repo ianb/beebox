@@ -212,6 +212,33 @@ void test("answered-at requires answer; answer and answered-via require answered
   t.check(issues({ "dismissed-at": ASKED_AT, "expired-at": ASKED_AT }), "expired-at: \"expired-at\" must not appear with \"dismissed-at\"");
 });
 
+// ## `provisional` requires a closing timestamp; an answered card keeps it
+//
+// `provisional` is what the box decided in place of an answer
+// (`bbx question decide`). A pending card has no decision to record; a later
+// answer keeps it as history.
+const PROVISIONAL = {
+  decision: "Filed it under Taxes",
+  reasoning: "Same vendor as last year",
+  undo: "Move the receipt back to the inbox",
+  "decided-at": ASKED_AT,
+};
+void test("`provisional` requires a closing timestamp; an answered card keeps it", async (t) => {
+  t.check(issues({ provisional: PROVISIONAL }), "provisional: \"provisional\" requires \"dismissed-at\", \"expired-at\" or \"answered-at\"");
+
+  t.check(issues({ provisional: PROVISIONAL, "dismissed-at": ASKED_AT }), "valid");
+
+  t.check(issues({ provisional: PROVISIONAL, "expired-at": ASKED_AT }), "valid");
+
+  t.check(issues({ provisional: PROVISIONAL, answer: { text: "Blue" }, "answered-at": ASKED_AT }), "valid");
+
+  // A partial object is refused on the missing fields; zod's wording is not pinned.
+  t.check(
+    issues({ provisional: { decision: "x" }, "dismissed-at": ASKED_AT }).split("\n").map((line) => line.split(":")[0]),
+    ["provisional.reasoning", "provisional.undo", "provisional.decided-at"],
+  );
+});
+
 // ## Confirm template: no options, `asked-at` still set
 void test("Confirm template: no options, `asked-at` still set", async (t) => {
   await t.checkText(

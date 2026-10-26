@@ -13,11 +13,11 @@ import type { WorkspaceAction, PaneId } from "../state-types.js";
 import { serializeWorkspaceState } from "../storage";
 import { storageScopeFor } from "../../../../lib/storage-scope";
 import { createWorkspaceBrowserStore } from "./workspace-browser-store";
-import { arrivalPlan, arrivalWaits, pickArrivalQuestion } from "./arrival";
+import { arrivalPlan, arrivalWaits } from "./arrival";
 import { trpc } from "../../../../lib/trpc/client";
 import type { ConversationTarget } from "@shared/chat-composer-binding";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
-import { useDismissOnClose } from "../../../questions/question-tab";
+import { pickArrivalQuestion, useDismissOnClose } from "../../../questions/question-tab";
 
 declare module "@tanstack/history" { interface HistoryState { bbxWorkspace?: WorkspaceHistoryEntry; bbxWorkspaceRevealConversation?: boolean; bbxConversationOverlay?: boolean } }
 const Workspace = createContext<ReturnType<typeof useWorkspaceController> | null>(null);

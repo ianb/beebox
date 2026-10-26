@@ -1,0 +1,42 @@
+---
+name: question-review
+description: |-
+  Daily review of put-off and long-waiting questions. Each ends decided by
+  the box or asked again simpler. Skips with no agent when none qualifies.
+steps:
+  - id: review
+    description: End every question in the review brief decided or asked again
+    precheck:
+      shells:
+        - |-
+          bbx engine question-review check
+          # Prints the review brief (instructions + questions) for the agent;
+          # exits CHECK_SKIP_CODE (75) when no question needs review.
+      whys:
+        - |-
+          No need to invoke an agent when no question has been put away for
+          3 days without a decision or pending for 14 days, or every such
+          question was reviewed in the last 14 days.
+      pass-output: true
+    run:
+      agents:
+        - prompt: |-
+            The precheck output above is a question review brief: how to work
+            it, then the questions. Work every question in it with the
+            figure-it-out skill, using its Review ending: every question ends
+            decided (bbx question decide) or asked again (bbx question
+            reraise). Never run bbx answer: only the person answers. Commit
+            your edits.
+
+            GIT: Do NOT add Co-Authored-By to commits. The system adds the
+            appropriate trailers automatically.
+          max-turns: 20
+    validate:
+      shells:
+        - bbx engine question-review verify
+      whys:
+        - |-
+          A put-away question left without a decision would never come
+          back; Later must end in a decision or in the question asked again.
+      severity: review
+---

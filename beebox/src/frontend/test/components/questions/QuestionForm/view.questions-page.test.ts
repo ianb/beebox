@@ -1,11 +1,9 @@
-// # A question beside the chat: answer it or say "Not now"
+// # The Questions page form: Later, and "Answer in chat"
 //
-// Beside the chat a question card offers two choices
-// (docs/plans/questions-beside-the-chat.md, Track B): answer it (in the chat
-// for a text question, with the card's buttons for select and confirm) or
-// "Not now", which closes the tab; the workspace's close dismisses it. On the
-// Questions page the form keeps its own text box, its note, and "Dismiss",
-// and a row can offer "Answer in chat", including a dismissed one.
+// On the Questions page a question keeps its form: its own text box, a
+// confirm's note, and "Later", which puts it away (the dismiss transition;
+// docs/plans/questions-later-and-figure-it-out.md). A row can offer "Answer in
+// chat", including a dismissed one, to bring it beside the chat.
 //
 // These mount the real `QuestionForm` in a DOM with a tRPC link that records
 // the calls it receives.
@@ -59,7 +57,6 @@ function controls(view: Mounted) {
   return {
     buttons: [...view.container.querySelectorAll("button")].map((b) => b.textContent),
     textBoxes: view.container.querySelectorAll("textarea").length,
-    hint: view.container.textContent.includes("Answer in the chat.") ? "Answer in the chat." : null,
   };
 }
 
@@ -68,57 +65,24 @@ async function click(view: Mounted, label: string) {
   if (button instanceof HTMLElement) await view.act(() => { button.click(); });
 }
 
-// ## A text question beside the chat has no box of its own
-//
-// The composer is where the answer goes; "Not now" closes the tab and sends
-// nothing itself (the workspace's close dismisses).
-void test("A text question beside the chat has no box of its own", async (t) => {
-  const closed: string[] = [];
-  const { view, calls } = await render({ question: question({}), onAnswered: () => {}, beside: { onNotNow: () => { closed.push(PATH); } } });
-  t.check(controls(view), { buttons: ["Not now"], textBoxes: 0, hint: "Answer in the chat." });
-  await click(view, "Not now");
-  t.check({ closed, calls }, { closed: [PATH], calls: [] });
-  await view.unmount();
-});
-
-// ## A confirm question beside the chat keeps its buttons, without the note
-void test("A confirm question beside the chat keeps its buttons, without the note", async (t) => {
-  const { view } = await render({ question: question({ inputType: "confirm" }), onAnswered: () => {}, beside: { onNotNow: () => {} } });
-  t.check(controls(view), { buttons: ["Yes", "No", "Not now"], textBoxes: 0, hint: null });
-  await view.unmount();
-});
-
-// ## On the Questions page the form is unchanged
-void test("On the Questions page the form is unchanged", async (t) => {
+// ## A pending question offers Later, which puts it away
+void test("A pending question offers Later, which puts it away", async (t) => {
   const { view, calls } = await render({ question: question({}), onAnswered: () => {} });
-  t.check(controls(view), { buttons: ["Submit Answer", "Dismiss"], textBoxes: 1, hint: null });
-  await click(view, "Dismiss");
+  t.check(controls(view), { buttons: ["Submit Answer", "Later"], textBoxes: 1 });
+  await click(view, "Later");
   t.check(calls, ["actions.dismiss"]);
   await view.unmount();
 });
 
-// ## A dismissed row offers "Answer in chat" and no Dismiss
+// ## A dismissed row offers "Answer in chat" and no Later
 //
 // A dismissed question stays answerable (docs/questions.md, Lifecycle), so the
-// way back is the same action as for a pending one.
-void test("A dismissed row offers Answer in chat and no Dismiss", async (t) => {
+// way back is "Answer in chat"; it is already put away.
+void test("A dismissed row offers Answer in chat and no Later", async (t) => {
   const opened: string[] = [];
   const { view } = await render({ question: question({ state: "dismissed" }), onAnswered: () => {}, onAnswerInChat: () => { opened.push(PATH); } });
-  t.check(controls(view), { buttons: ["Submit Answer", "Answer in chat"], textBoxes: 1, hint: null });
+  t.check(controls(view), { buttons: ["Submit Answer", "Answer in chat"], textBoxes: 1 });
   await click(view, "Answer in chat");
   t.check(opened, [PATH]);
-  await view.unmount();
-});
-
-// ## With the chat hidden, "Answer in the chat" reveals it
-//
-// On the desktop the question can fill the screen (focus layout, or two card
-// panes); then the hint is a button that brings the chat back beside it.
-void test("With the chat hidden, Answer in the chat reveals it", async (t) => {
-  const shown: string[] = [];
-  const { view } = await render({ question: question({}), onAnswered: () => {}, beside: { onNotNow: () => {}, onShowChat: () => { shown.push("chat"); } } });
-  t.check(controls(view), { buttons: ["Answer in the chat", "Not now"], textBoxes: 0, hint: null });
-  await click(view, "Answer in the chat");
-  t.check(shown, ["chat"]);
   await view.unmount();
 });

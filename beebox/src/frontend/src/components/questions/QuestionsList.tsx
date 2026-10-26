@@ -45,7 +45,14 @@ function demotedCard(q: QuestionInfo, actions: { onAnswered: () => void; answerI
   const { onAnswered, answerInChat } = actions;
   return (
     <Stack key={q.path} gap="xs">
-      <StatusBadge status={q.state ?? "expired"} size="sm" className="self-start" />
+      {q.provisional === undefined ? <StatusBadge status={q.state ?? "expired"} size="sm" className="self-start" /> : (
+        // The box's decision, never the person's answer
+        // (docs/plans/questions-later-and-figure-it-out.md, Track C).
+        <div data-testid="question-box-decided">
+          <Text as="p" size="sm" weight="semibold">The box decided for now: {q.provisional.decision}</Text>
+          <Text as="p" size="sm" tone="subtle">{q.provisional.reasoning}</Text>
+        </div>
+      )}
       <QuestionForm question={q} sourcePath={q.relativePath} onAnswered={onAnswered}
         {...(answerInChat === undefined ? {} : { onAnswerInChat: () => answerInChat(q.relativePath) })} />
     </Stack>
@@ -101,9 +108,11 @@ export function QuestionsList() {
   const invalid = questions.filter((q) => q.invalid === true);
   const pending = questions.filter((q) => q.invalid !== true && q.state === "pending");
   const answered = questions.filter((q) => q.invalid !== true && q.state === "answered");
-  const demoted = questions.filter(
+  const putAway = questions.filter(
     (q) => q.invalid !== true && (q.state === "dismissed" || q.state === "expired")
   );
+  const decided = putAway.filter((q) => q.provisional !== undefined);
+  const demoted = putAway.filter((q) => q.provisional === undefined);
   const archive = [...demoted, ...answered];
 
   if (isLoading) {
@@ -112,7 +121,7 @@ export function QuestionsList() {
 
   return (
     <Stack gap="lg">
-      {pending.length === 0 && archive.length === 0 && invalid.length === 0 ? (
+      {pending.length === 0 && archive.length === 0 && decided.length === 0 && invalid.length === 0 ? (
         <Text as="p" tone="subtle">No questions yet.</Text>
       ) : null}
 
@@ -138,6 +147,17 @@ export function QuestionsList() {
               {...(answerInChat === undefined ? {} : { onAnswerInChat: () => answerInChat(q.relativePath) })}
             />
           ))}
+        </Stack>
+      ) : null}
+
+      {decided.length > 0 ? (
+        <Stack gap="sm">
+          <Text as="h2" size="sm" weight="semibold" tone="subtle" uppercase>
+            The box decided for now
+          </Text>
+          <Stack gap="sm">
+            {decided.map((q) => demotedCard(q, { onAnswered, answerInChat }))}
+          </Stack>
         </Stack>
       ) : null}
 

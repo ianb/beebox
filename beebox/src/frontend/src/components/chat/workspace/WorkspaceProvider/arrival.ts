@@ -1,5 +1,4 @@
 import type { WorkspaceNavigationDecision } from "../history";
-import type { QuestionInfo } from "../../../questions/QuestionForm/view";
 
 /**
  * Arrival: going to a place with no saved arrangement opens the place
@@ -22,26 +21,13 @@ export function arrivalPlan(input: {
   tabCount: number;
   /** The payload's `arrival` path; null when the place has no landmark or the query failed. */
   target: string | null;
-  /** The root's arrival question (`pickArrivalQuestion`); null elsewhere, when none is pending, or when the query failed. */
+  /** The root's arrival question (`pickArrivalQuestion`, `questions/question-tab.ts`); null elsewhere, when none is pending, or when the query failed. */
   question: string | null;
 }): string[] {
   if (!input.arrive || input.tabCount > 0) return [];
   const question = input.question === null ? [] : [input.question];
   if (input.viewport === "mobile") return question;
   return [...(input.target === null ? [] : [input.target]), ...question];
-}
-
-/**
- * The question a new root chat opens beside it: the newest pending card with
- * a prompt, by `asked-at` then by path. A card that failed to parse
- * (`invalid`) has nothing to ask and is never picked. Null when nothing is
- * pending.
- */
-export function pickArrivalQuestion(items: readonly QuestionInfo[]): string | null {
-  const askable = items
-    .filter((q) => q.state === "pending" && q.invalid !== true && q.prompt !== undefined)
-    .toSorted((a, b) => (b.askedAt ?? "").localeCompare(a.askedAt ?? "") || b.relativePath.localeCompare(a.relativePath));
-  return askable[0]?.relativePath ?? null;
 }
 
 /**

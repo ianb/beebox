@@ -131,10 +131,18 @@ pending ──answer──> answered
   `answered-via` records `web`, `cli`, or `chat`; a `chat` answer is the agent
   recording what the person said in a conversation, and writes no follow-up
   job (see "The answer round-trip").
-- **`dismissed`** (`dismissed-at`) — the boxholder declined to answer via the Dismiss
-  affordance (`bbx dismiss` / `actions.dismiss`). Only a `pending` question
-  can be dismissed. Dismissed questions **remain answerable** — an
-  un-dismissal is the boxholder's prerogative.
+- **`dismissed`** (`dismissed-at`) — put away for now: the person chose
+  "Later" (`bbx dismiss` / `actions.dismiss`) or "Figure it out"
+  (`actions.figureOut`). Only a `pending` question can be dismissed.
+  Dismissed questions **remain answerable**, and the daily question review
+  brings each one back (`bbx question reraise`, which sets `asked-at` to now)
+  or decides it (see "Figuring it out").
+- **`provisional`** (field, not a state) — what the box decided in place of
+  an answer (`bbx question decide`): `decision`, `reasoning`, `undo`,
+  `decided-at`. It sits on a dismissed or expired card, and stays as history
+  on one the person later answers. It is never the person's answer: it sets
+  no `answered-at` or `answer:`, and what the box learns from it is
+  `basis: inferred`.
 - **`expired`** (`expired-at`) — aged out of the active view by the aging sweep without an
   answer. Expiry **demotes visibility, it does not close the question** —
   the card stays in `_bookkeeping/questions/` and remains answerable. Only a
@@ -261,11 +269,15 @@ evidence model.
   the active tab: on the desktop on top of the Box page, on the phone alone,
   with the composer under it (`arrivalPlan`, `WorkspaceProvider/arrival.ts`).
   A chat opened beside another card, or one with a saved arrangement, opens
-  no question. The person answers in the chat, or with the card's buttons
-  for `select` and `confirm`; beside the chat a `text` question has no text
-  box of its own ("Answer in the chat."). Closing a pending question's tab is
-  "Not now": it dismisses the card (`question-tab.ts`); the close control
-  carries that label. The question reaches the agent as the `open-card`
+  no question. Beside the chat the question is pasted onto a stub card with
+  no answer controls (`QuestionForm/beside.tsx`, look in
+  `themes/question-beside.css`): the person answers in the chat, and a
+  `select` question lists its choices in a line. The pinned row offers
+  "Later" (puts it away; the tab's ✕ does the same) and "Figure it out"
+  (hands it to the box in the background; see "Figuring it out"). In a
+  chat, the app bar's question count shows the newest pending question
+  beside the chat, or puts the one in front away without "Later"
+  (`useQuestionToggle`, `question-tab.ts`). The question reaches the agent as the `open-card`
   snapshot attribute; the agent judges whether the message answers it, does
   the directive in the conversation, then records the answer with
   `bbx answer --via chat`. A dismissed or expired question comes back the
@@ -296,9 +308,10 @@ evidence model.
   `input.type`: `confirm` → Yes/No buttons + optional note; `select` →
   radios (submits the label; the backend resolves it); `text` → textarea.
   `memo` and `learning.proposal` render above the widget — the boxholder
-  sees what the box is trying to learn before answering. A Dismiss
-  affordance is available while `pending`; beside the chat it is "Not now",
-  which closes the tab.
+  sees what the box is trying to learn before answering. "Later" is
+  available while `pending`. Questions the box decided are listed under
+  "The box decided for now", with the decision and its reasoning, and stay
+  answerable.
 - **Notifications + nudges** — `checkPendingQuestionsAndNotify`
   (`question-alert.ts`) notifies once per newly-pending question through
   `notifyBoxholder` (push); the aging sweep's nudge is a second,
@@ -332,6 +345,29 @@ agent-guide context:
   nowhere (the follow-up job still records `learning:` if declared, even
   with no directive). Set `expires-after:` for a question that should age
   out sooner (or later) than the defaults.
+
+## Figuring it out
+
+A question the person hands off, or one that waited long or was put away,
+is settled by an agent with two box skills
+(`docs/plans/questions-later-and-figure-it-out.md`):
+
+- **`figure-it-out`** decides conservatively (the reversible choice that
+  changes least; never delete, send, spend, publish, or reword the person's
+  words) and records it with `bbx question decide`, or makes the question
+  simpler and asks it again. It never runs `bbx answer` for a question the
+  person did not answer.
+- **`simplify-question`** rewrites a question so it is simpler for the person
+  to decide or understand: concrete, with the box's default, or split into the
+  part the box can decide and the part only the person can.
+
+"Figure it out" on the card puts the question away and starts a background
+chat (`actions.figureOut`, through `deliverUserMessage`); the chat is in the
+chat list. The daily `question-review` procedure takes questions put away
+three or more days ago and questions pending fourteen or more days, five per
+run, and ends each one decided or asked again. When the person later answers a
+decided question, the follow-up reconciles: it reverses what it can and says
+what it could not.
 
 ## NOT in scope
 

@@ -12,19 +12,20 @@
  * question look like on the wire."
  *
  * In the workspace the card is beside the chat
- * (docs/plans/questions-beside-the-chat.md, Track B): the person answers in
- * the chat or with the card's buttons, or says "Not now", which closes the
- * tab. The agent answers from the CLI, so the card refreshes on the bus.
+ * (docs/plans/questions-later-and-figure-it-out.md, Track A): the question
+ * pasted onto a stub card (`QuestionBeside`); the person answers in the chat,
+ * or chooses Later or Figure it out. The agent answers from the CLI, so the
+ * card refreshes on the bus.
  */
 
 import { trpc } from "../lib/trpc/client";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import { oneOf } from "../lib/live-refresh";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
-import { useWorkspace } from "./chat/workspace/WorkspaceProvider/provider";
 import { cardTarget } from "./chat/workspace/use-open-beside/hook";
-import { revealConversationActions } from "./chat/workspace/history";
 import { QuestionForm } from "./questions/QuestionForm/view";
+import { QuestionBeside } from "./questions/QuestionBeside/view";
+import { useBesideActions } from "./questions/question-tab";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
 import { StatusMessage } from "./ui/StatusMessage";
@@ -41,13 +42,14 @@ const ANSWERABLE = new Set(["pending", "expired", "dismissed"]);
 
 export function QuestionCardView({ data, onNavigate, mode }: RendererProps) {
   const utils = trpc.useUtils();
-  const workspace = useWorkspace();
   const { data: questions, isLoading, isError, refetch } = trpc.status.questions.useQuery();
   useLiveRefresh({
     when: oneOf("question-answered", "question-dismissed", "question-expired", "file-change"),
     refresh: () => { void utils.status.questions.invalidate(); },
   });
   const question = questions?.items.find((q) => q.relativePath === data.path);
+  // A tab beside the chat; an embed in a chat message or a full page is not.
+  const beside = useBesideActions(data.path, mode === "companion");
 
   if (isLoading) {
     return <StatusMessage>Loading...</StatusMessage>;
@@ -68,47 +70,46 @@ export function QuestionCardView({ data, onNavigate, mode }: RendererProps) {
 
   const onAnswered = () => void utils.status.questions.invalidate();
   const answerable = ANSWERABLE.has(question.state ?? "pending");
-  // A tab beside the chat; an embed in a chat message or a full page is not.
-  const beside = workspace === null || mode !== "companion" ? undefined : {
-    onNotNow: () => workspace.onCloseTab(data.path),
-    // On the phone the composer row stays under the card; on the desktop the chat can be hidden.
-    onShowChat: workspace.mobile || workspace.transcriptVisible ? undefined : () => {
-      for (const action of revealConversationActions({ state: workspace.store.get(), cardPath: data.path, viewport: "desktop" })) workspace.dispatch(action);
-    },
-  };
+
+  if (answerable && beside !== undefined) {
+    return <div className="p-4 max-w-2xl mx-auto"><QuestionBeside question={question} actions={beside} /></div>;
+  }
 
   if (answerable) {
     return (
       <div className="p-4 max-w-2xl mx-auto">
-        <QuestionForm question={question} sourcePath={data.path} onAnswered={onAnswered} {...(beside === undefined ? {} : { beside })} />
+        <QuestionForm question={question} sourcePath={data.path} onAnswered={onAnswered} />
       </div>
     );
   }
 
   const others = (questions?.items ?? []).filter((q) => q.state === "pending" && q.invalid !== true).length;
+  const answered = (
+    <Stack gap="sm">
+      <Heading level={2}>{question.prompt}</Heading>
+      {renderQuestionAnswer(question)}
+      {question.learning?.proposal !== undefined ? (
+        <Card padding="sm" background="info" border="none">
+          <Text as="div" size="xs" tone="subtle" uppercase weight="semibold" className="mb-1">
+            What the box wanted to learn
+          </Text>
+          <Text as="div" size="sm">{question.learning.proposal}</Text>
+        </Card>
+      ) : null}
+      <StatusBadge status={question.state ?? "answered"} size="sm" className="self-start" />
+      {beside === undefined || others === 0 ? null : (
+        <InlineAction intent="quiet" className="self-start underline"
+          onClick={() => onNavigate(cardTarget(SYSTEM_CARD_PATHS.questions), { label: "Questions" })}>
+          {others === 1 ? "1 more question" : `${others} more questions`}
+        </InlineAction>
+      )}
+    </Stack>
+  );
   return (
     <div className="p-4 max-w-2xl mx-auto">
-      <Card padding="md" {...bbxSource("card", data.path)}>
-        <Stack gap="sm">
-          <Heading level={2}>{question.prompt}</Heading>
-          {renderQuestionAnswer(question)}
-          {question.learning?.proposal !== undefined ? (
-            <Card padding="sm" background="info" border="none">
-              <Text as="div" size="xs" tone="subtle" uppercase weight="semibold" className="mb-1">
-                What the box wanted to learn
-              </Text>
-              <Text as="div" size="sm">{question.learning.proposal}</Text>
-            </Card>
-          ) : null}
-          <StatusBadge status={question.state ?? "answered"} size="sm" className="self-start" />
-          {beside === undefined || others === 0 ? null : (
-            <InlineAction intent="quiet" className="self-start underline"
-              onClick={() => onNavigate(cardTarget(SYSTEM_CARD_PATHS.questions), { label: "Questions" })}>
-              {others === 1 ? "1 more question" : `${others} more questions`}
-            </InlineAction>
-          )}
-        </Stack>
-      </Card>
+      {beside === undefined
+        ? <Card padding="md" {...bbxSource("card", data.path)}>{answered}</Card>
+        : <div className="bbx-question-patch" data-question-beside="" data-chat-side={beside.chatSide} {...bbxSource("card", data.path)}>{answered}</div>}
     </div>
   );
 }

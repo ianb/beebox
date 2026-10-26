@@ -25,21 +25,18 @@ import { Text } from "../../ui/Text";
 import { ErrorText } from "../../ui/ErrorText";
 import { Heading } from "../../ui/Heading";
 import { QuestionMemo } from "./memo";
-import { NOT_NOW } from "../question-tab";
+import { LATER } from "../question-tab";
 import type { RouterOutput } from "../../../lib/trpc/client";
 
 export type QuestionInfo = RouterOutput["status"]["questions"]["items"][number];
 
 /**
  * Where the form is shown, beyond the Questions page
- * (docs/plans/questions-beside-the-chat.md, Track B). `beside`: the question is
- * a card beside the chat, so a text question is answered in the chat, a
- * confirm needs no note, and "Not now" closes the tab (which dismisses it).
- * `onAnswerInChat`: a list row offers to open the question beside the chat.
+ * (docs/plans/questions-beside-the-chat.md, Track B): `onAnswerInChat`, a list
+ * row offers to open the question beside the chat. Beside the chat the card is
+ * `QuestionBeside` (`beside.tsx`), not this form.
  */
 interface FormPlace {
-  /** `onShowChat` is set when the chat is hidden (desktop focus, or two card panes), so "Answer in the chat" can reveal it. */
-  beside?: { onNotNow: () => void; onShowChat?: (() => void) | undefined };
   onAnswerInChat?: () => void;
 }
 
@@ -60,7 +57,7 @@ interface QuestionFormProps extends FormPlace {
  * silently breaking the questions loop. So the prompt leads (it's the
  * question), the context scrolls, and the answer never hides.
  */
-function QuestionContext({ question }: { question: QuestionInfo }) {
+export function QuestionContext({ question }: { question: QuestionInfo }) {
   const hasMemo = question.memo !== undefined && question.memo !== "";
   const hasLearning = question.learning?.proposal !== undefined;
   return (
@@ -99,31 +96,27 @@ const SUBMIT_ROW_CLASSES = "sticky bottom-0 bg-white py-2 -mb-2";
 
 /**
  * The row's secondary actions: "Answer in chat" where a list offers it, then
- * the decline for a pending question: "Dismiss" on the Questions page, or
- * "Not now" beside the chat, which closes the tab (and that dismisses it).
+ * "Later" for a pending question, which puts it away (the dismiss transition).
  */
 function DismissButton({ question, onAnswered, place }: { question: QuestionInfo; onAnswered: () => void; place: FormPlace }) {
   const dismissMutation = trpc.actions.dismiss.useMutation({ onSuccess: () => onAnswered() });
   const pending = question.state === "pending";
   const handleAnswerInChat = place.onAnswerInChat;
-  const handleNotNow = place.beside?.onNotNow;
   return (
     <>
       {handleAnswerInChat === undefined ? null : (
         <Button type="button" intent="ghost" size="sm" onClick={handleAnswerInChat}>Answer in chat</Button>
       )}
-      {!pending ? null : handleNotNow !== undefined ? (
-        <Button type="button" intent="ghost" size="sm" onClick={handleNotNow}>{NOT_NOW}</Button>
-      ) : (
+      {!pending ? null : (
         <Button
           type="button"
           intent="ghost"
           size="sm"
           loading={dismissMutation.isPending}
-          loadingLabel="Dismissing…"
+          loadingLabel="Putting away…"
           onClick={() => dismissMutation.mutate({ questionPath: question.relativePath })}
         >
-          Dismiss
+          {LATER}
         </Button>
       )}
     </>
@@ -149,15 +142,13 @@ function ConfirmForm({ question, onAnswered, place }: { question: QuestionInfo; 
 
   return (
     <Stack gap="sm">
-      {place.beside === undefined ? (
-        <TextareaField
-          label="Note (optional)"
-          value={note}
-          onChange={setNote}
-          placeholder="Add context for your answer..."
-          rows={2}
-        />
-      ) : null}
+      <TextareaField
+        label="Note (optional)"
+        value={note}
+        onChange={setNote}
+        placeholder="Add context for your answer..."
+        rows={2}
+      />
       {error !== null ? <ErrorText>{error}</ErrorText> : null}
       <Row gap="sm" className={SUBMIT_ROW_CLASSES}>
         <Button
@@ -233,19 +224,6 @@ function SelectForm({ question, onAnswered, place }: { question: QuestionInfo; o
   );
 }
 
-/** Beside the chat a text question has no box of its own: the chat's composer is where the answer goes. */
-function AnswerInTheChat({ question, onAnswered, place }: { question: QuestionInfo; onAnswered: () => void; place: FormPlace }) {
-  const handleShowChat = place.beside?.onShowChat;
-  return (
-    <Row gap="sm" className={SUBMIT_ROW_CLASSES}>
-      {handleShowChat === undefined
-        ? <Text as="p" size="sm" tone="subtle">Answer in the chat.</Text>
-        : <Button type="button" intent="secondary" size="sm" onClick={handleShowChat}>Answer in the chat</Button>}
-      <DismissButton question={question} onAnswered={onAnswered} place={place} />
-    </Row>
-  );
-}
-
 function TextForm({ question, onAnswered, place }: { question: QuestionInfo; onAnswered: () => void; place: FormPlace }) {
   const [textAnswer, setTextAnswer] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -305,9 +283,7 @@ export function QuestionForm({ question, onAnswered, sourcePath, ...place }: Que
           case "select":
             return <SelectForm question={question} onAnswered={onAnswered} place={place} />;
           case "text":
-            return place.beside === undefined
-              ? <TextForm question={question} onAnswered={onAnswered} place={place} />
-              : <AnswerInTheChat question={question} onAnswered={onAnswered} place={place} />;
+            return <TextForm question={question} onAnswered={onAnswered} place={place} />;
           case undefined:
             // The question card failed to load (see status.ts's questions query)
             // — no widget can be rendered; only Dismiss (or nothing) is offered.

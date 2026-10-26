@@ -41,6 +41,8 @@ export interface QuestionInfo extends QuestionCardInfo {
   options?: string[] | undefined;
   learning?: QuestionFields["learning"] | undefined;
   answer?: QuestionFields["answer"] | undefined;
+  /** What the box decided in place of an answer (`bbx question decide`); not the person's answer. */
+  provisional?: QuestionFields["provisional"] | undefined;
   /** The card's `asked-at`, so a caller can order pending questions by when the box asked them. */
   askedAt?: string | undefined;
   /**
@@ -238,6 +240,7 @@ export const statusRouter = router({
             options: fields.input.options?.map((o) => o.label),
             learning: fields.learning,
             answer: fields.answer,
+            provisional: fields.provisional,
             askedAt: fields["asked-at"],
           };
         } catch (e) {
