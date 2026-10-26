@@ -1,15 +1,27 @@
 ---
 title: "Encrypted, scheduled backups of box data"
-status: active
+status: partial
 workstream: box-backups
 issues:
-  - ../../../issues/decisions/2026-08-07-server-backup-story.md
+  - ../../../issues/closed/decisions/2026-08-07-server-backup-story.md
 ---
 # Encrypted, scheduled backups of box data
 
 Create a one-shot operator command that captures a box and its durable outside-the-box state into an encrypted restic repository. Install-specific timers call the same command. A restore command recovers a selected snapshot into an empty box location.
 
-**Issues addressed:** [server backup story](../../../issues/decisions/2026-08-07-server-backup-story.md). The related [export guide](../../../issues/features/2026-07-20-export-md-agent-instructions.md) and [dormant-box encryption](../../../issues/exploration/2026-08-11-encryption-at-rest.md) remain separate work.
+## Implementation status (2026-10-26)
+
+The capture command, encrypted Restic configuration, external-state inventory,
+per-install schedules, retention, integrity check, and whole-box restore are
+implemented; see the [backup guide](../backups.md) and
+`src/core/box-backup/`. A local synthetic Restic restore validated Git and
+annex data, durable box files, and the selected secret share. Restore currently
+writes the newest verified snapshot (or `--snapshot`) to an empty target and
+reports its ID and external-state directory afterward. It does not yet show
+the selected snapshot paths and request confirmation before writing; that
+restore preview remains future work.
+
+**Issues addressed:** [server backup story](../../../issues/closed/decisions/2026-08-07-server-backup-story.md). The related [export guide](../../../issues/features/2026-07-20-export-md-agent-instructions.md) and [dormant-box encryption](../../../issues/exploration/2026-08-11-encryption-at-rest.md) remain separate work.
 
 ## Design
 
@@ -55,7 +67,7 @@ The smallest useful version is a documented restic command with an include list 
 
 ## Stated preferences this plan trades against
 
-- The boxholder chose an existing encrypted backup system, recurring runs, secrets included, a chosen destination/key, command-line control, and no separate backup surface (`issues/decisions/2026-08-07-server-backup-story.md:31-55` and the 2026-10-25 discussion). Restic is the archive format; Bee Box supplies orchestration only.
+- The boxholder chose an existing encrypted backup system, recurring runs, secrets included, a chosen destination/key, command-line control, and no separate backup surface (`issues/closed/decisions/2026-08-07-server-backup-story.md:31-55` and the 2026-10-25 discussion). Restic is the archive format; Bee Box supplies orchestration only.
 - A Mac app initiated cloud-to-local copy is future work. Use ordinary restic repositories and stable snapshot metadata so a later Mac client can copy or mirror them without changing the stored box format. The exact pull path is not designed here.
 - `beebox/AGENTS.md:7`: *“`bbx` is the box agent's surface, not yours.”* Backup belongs under `bbx engine`, outside agent reach.
 - `docs/architecture/spirit.md`, “You should be able to see the gears,” favors an inspectable result over a silent timer. `docs/design/trust.md`, “Trust to keep,” makes omissions and restore verification first-class.

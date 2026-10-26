@@ -5,7 +5,15 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-10-26** — implemented by commit `56be01944`. The boxholder chose
+encrypted Restic snapshots configured and controlled through the CLI, with
+installation-specific schedules and whole-box restore. This resolves the
+backup-story decision with per-box snapshots rather than requiring Git and
+annex remotes or relying on provider snapshots. Mac-initiated cloud-to-local
+backup remains outside this work and is recorded in the partial plan.
 
 The deployed server has no first-class backup mechanism.
 `docs/server/operations.md` defers to "whatever backup mechanism is
@@ -67,7 +75,7 @@ install (server, Mac app, NAS, a laptop box), not only the server:
 
 ## Research 2026-10-25
 
-The [portable encrypted backup comparison](../../research/box-backups/2026-10-25-portable-encrypted-backup.md)
+The [portable encrypted backup comparison](../../../research/box-backups/2026-10-25-portable-encrypted-backup.md)
 inventories box, runtime, and external state and recommends restic as the
 common snapshot engine, pending a consistency and restore design. The
 post-isolation production boxes are on `/var/lib/beebox`, a separate volume

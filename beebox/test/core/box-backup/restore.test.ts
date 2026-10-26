@@ -65,7 +65,8 @@ void test("restore stages the selected verified snapshot as box and external sta
         if (args[0] === "restore") {
           const stage = args[3]!;
           const box = path.join(stage, "synthetic/box");
-          const secret = path.join(stage, `Users/test/.config/beebox/backups/staging/${backupId}/secrets/box.json`);
+          const secretSource = snapshotPaths.find((source) => source.includes(`/staging/${backupId}/secrets/`));
+          const secret = secretSource ? path.join(stage, secretSource.replace(/^[/\\]+/, "")) : "";
           await fs.mkdir(path.join(box, "_config"), { recursive: true });
           await fs.mkdir(path.join(box, ".git", "annex"), { recursive: true });
           if (snapshotPaths.some((source) => source.endsWith(`/staging/${backupId}/secrets/box.json`))) {

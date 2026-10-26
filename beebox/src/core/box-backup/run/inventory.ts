@@ -23,6 +23,7 @@ export async function backupInventory({ boxRoot, backupId }: { boxRoot: string; 
     { kind: "box-secrets", source: secretsFilePath(), target: path.join(stagingRoot, "secrets", `${slug}.json`), required: onUnitHost() },
   ];
   const skipped: BackupInventory["skipped"] = [];
+  // TODO(env-migration): keep these install/path overrides aligned with the existing auth and session loaders until backup paths move into a typed runtime schema.
   const unitHost = onUnitHost();
   const dedicatedHome = process.env.BBX_BACKUP_DEDICATED_HOME === "1";
   if (dedicatedHome && !unitHost) {

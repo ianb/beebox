@@ -34,6 +34,7 @@ void test("dedicated-home inventory selects that box's auth state and excludes t
 });
 
 void test("unit-host inventory omits hub credentials but selects per-box Claude and Codex logins", async (t) => {
+  // These environment overrides exercise the deployment-specific inventory branch and are restored in teardown.
   const previousUnitHost = process.env.BBX_UNIT_HOST;
   const previousDedicatedHome = process.env.BBX_BACKUP_DEDICATED_HOME;
   process.env.BBX_UNIT_HOST = "1";
@@ -56,6 +57,7 @@ void test("unit-host inventory omits hub credentials but selects per-box Claude 
 });
 
 void test("local: repository URLs resolve their path before rejecting a repository inside the box", async (t) => {
+  // Disable the unit-host guard to cover the local-repository containment path.
   const previousUnitHost = process.env.BBX_UNIT_HOST;
   delete process.env.BBX_UNIT_HOST;
   const box = await makeTmpBox();

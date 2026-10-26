@@ -4,7 +4,7 @@ The boxholder wants scheduled, configurable, encrypted backups across server,
 Mac app, Compose/NAS, and laptop installs. Secrets belong in the backup. The
 snapshot format should be an existing tool's, and reinstallable software and
 rebuildable caches stay out. This note informs the open
-[backup decision](../../issues/decisions/2026-08-07-server-backup-story.md);
+[backup decision](../../issues/closed/decisions/2026-08-07-server-backup-story.md);
 it is not a plan or an implementation.
 
 ## Inventory and restore value

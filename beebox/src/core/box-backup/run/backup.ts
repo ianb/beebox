@@ -5,6 +5,7 @@ import { createReadStream } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
+import { isWithin } from "../../../lib/box-containment.js";
 import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../../lib/box-maintenance/admission.js";
 import { slugOfBoxRoot } from "../../../lib/box-slug.js";
 import { onUnitHost } from "../../../lib/unit-host.js";
@@ -130,7 +131,6 @@ async function ensureRepositoryIdentity({ repository, passwordFile, backupId, ex
 
 function isLocalRepository(repository: string): boolean { return repository.startsWith("local:") || !/^[a-z][\d+.a-z-]*:/i.test(repository) || repository.startsWith("/") || repository.startsWith("."); }
 function localRepositoryPath(repository: string): string { return repository.startsWith("local:") ? repository.slice("local:".length) : repository; }
-function isWithin(parent: string, candidate: string): boolean { const relative = path.relative(parent, candidate); return relative === "" || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`)); }
 async function realPathCandidate(file: string): Promise<string> {
   const absolute = path.resolve(file);
   try { return await fs.realpath(absolute); }

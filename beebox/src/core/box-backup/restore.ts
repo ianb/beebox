@@ -3,6 +3,8 @@ import { execa } from "execa";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
+import { errnoCode } from "../../shared/error-guards.js";
+import { pathExistsStrict } from "../../lib/file-exists.js";
 import { listSnapshots, type BackupSnapshot } from "./run/backup.js";
 import { runRestic } from "./restic.js";
 
@@ -139,7 +141,7 @@ async function findExternalRoot({ staging, snapshotPaths, backupId }: { staging:
     if (stagingIndex === -1 || parts[stagingIndex + 2] !== "secrets" || !parts[stagingIndex + 3]?.endsWith(".json")) continue;
     const root = path.join(staging, ...parts.slice(0, stagingIndex + 2));
     const secret = path.join(root, ...parts.slice(stagingIndex + 2));
-    if (await exists(secret)) return root;
+    if (await pathExistsStrict(secret, { followLinks: true })) return root;
   }
   throw new RestoreSecretShareNotFoundError(backupId);
 }
@@ -147,8 +149,10 @@ async function findExternalRoot({ staging, snapshotPaths, backupId }: { staging:
 async function findBoxRootRecursively(directory: string, depth: number): Promise<string | null> {
   if (await isBoxRoot(directory)) return directory;
   if (depth === 0) return null;
-  const entries = await fs.readdir(directory, { withFileTypes: true }).catch(() => null);
-  if (!entries) return null;
+  const entries = await fs.readdir(directory, { withFileTypes: true }).catch((error) => {
+    if (errnoCode(error) === "ENOENT") return [];
+    throw error;
+  });
   for (const entry of entries) {
     if (!entry.isDirectory() || entry.name === ".git") continue;
     const found = await findBoxRootRecursively(path.join(directory, entry.name), depth - 1);
@@ -158,10 +162,17 @@ async function findBoxRootRecursively(directory: string, depth: number): Promise
 }
 
 async function isBoxRoot(directory: string): Promise<boolean> {
-  try {
-    const pkg = packageSchema.parse(JSON.parse(await fs.readFile(path.join(directory, "package.json"), "utf8")));
-    return Boolean(pkg.dependencies?.beebox && pkg.beebox?.shapeVersion === 3 && (await fs.stat(path.join(directory, "_config")).catch(() => null))?.isDirectory());
-  } catch (_error) { return false; }
+  let content: string;
+  try { content = await fs.readFile(path.join(directory, "package.json"), "utf8"); }
+  catch (error) { if (errnoCode(error) === "ENOENT") return false; throw error; }
+  let value: unknown;
+  try { value = JSON.parse(content); }
+  // Directory discovery probes arbitrary restored paths; invalid package JSON means this candidate is not a box root.
+  catch (error) { if (error instanceof SyntaxError) return false; throw error; }
+  const parsed = packageSchema.safeParse(value);
+  if (!parsed.success || !parsed.data.dependencies?.beebox || parsed.data.beebox?.shapeVersion !== 3) return false;
+  try { return (await fs.stat(path.join(directory, "_config"))).isDirectory(); }
+  catch (error) { if (errnoCode(error) === "ENOENT") return false; throw error; }
 }
 
 async function validateRecoveredBox(boxPath: string): Promise<void> {
@@ -170,14 +181,10 @@ async function validateRecoveredBox(boxPath: string): Promise<void> {
     throw new RestoreGitValidationError(boxPath, String(error));
   });
   if (git.exitCode !== 0) throw new RestoreGitValidationError(boxPath, git.stderr.trim());
-  if (await exists(path.join(boxPath, ".git", "annex"))) {
+  if (await pathExistsStrict(path.join(boxPath, ".git", "annex"), { followLinks: true })) {
     const annex = await execa("git", ["-c", safeDirectory, "annex", "fsck"], { cwd: boxPath, reject: false }).catch((error) => {
       throw new RestoreAnnexValidationError(boxPath, String(error));
     });
     if (annex.exitCode !== 0) throw new RestoreAnnexValidationError(boxPath, annex.stderr.trim());
   }
-}
-
-async function exists(file: string): Promise<boolean> {
-  try { await fs.access(file); return true; } catch (_error) { return false; }
 }
