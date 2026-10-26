@@ -1,6 +1,6 @@
 ---
 title: "Encrypted, scheduled backups of box data"
-status: partial
+status: implemented
 workstream: box-backups
 issues:
   - ../../../issues/closed/decisions/2026-08-07-server-backup-story.md
@@ -15,11 +15,10 @@ The capture command, encrypted Restic configuration, external-state inventory,
 per-install schedules, retention, integrity check, and whole-box restore are
 implemented; see the [backup guide](../backups.md) and
 `src/core/box-backup/`. A local synthetic Restic restore validated Git and
-annex data, durable box files, and the selected secret share. Restore currently
-writes the newest verified snapshot (or `--snapshot`) to an empty target and
-reports its ID and external-state directory afterward. It does not yet show
-the selected snapshot paths and request confirmation before writing; that
-restore preview remains future work.
+annex data, durable box files, and the selected secret share. Restore previews
+the selected verified snapshot, source paths, exclusions, and output paths
+without touching the target. Writing requires `--apply` with its exact full
+snapshot ID, and a target inside an existing box is refused.
 
 **Issues addressed:** [server backup story](../../../issues/closed/decisions/2026-08-07-server-backup-story.md). The related [export guide](../../../issues/features/2026-07-20-export-md-agent-instructions.md) and [dormant-box encryption](../../../issues/exploration/2026-08-11-encryption-at-rest.md) remain separate work.
 

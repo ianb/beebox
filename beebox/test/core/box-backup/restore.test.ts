@@ -6,7 +6,7 @@ import { instanceOf } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { restoreBoxBackup, RestoreTargetNotEmptyError } from "../../../src/core/box-backup/restore.js";
+import { previewBoxBackup, restoreBoxBackup, RestoreTargetInsideBoxError, RestoreTargetNotEmptyError } from "../../../src/core/box-backup/restore.js";
 
 void test("restore refuses a target that already contains data", async (t) => {
   const target = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-restore-target-"));
@@ -43,6 +43,23 @@ void test("restore refuses a symlink target even when its destination is empty",
   t.check(await fs.readdir(destination), []);
 });
 
+void test("restore refuses an empty target inside a live box through a linked parent", async (t) => {
+  const base = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-restore-live-box-"));
+  t.teardown(() => fs.rm(base, { recursive: true, force: true }));
+  const box = path.join(base, "box");
+  await fs.mkdir(path.join(box, "_config"), { recursive: true });
+  await fs.mkdir(path.join(box, "cards"));
+  await fs.writeFile(path.join(box, "package.json"), JSON.stringify({ dependencies: { beebox: "link:.beebox/engine" }, beebox: { shapeVersion: 3 } }));
+  await fs.symlink(path.join(box, "cards"), path.join(base, "linked-cards"));
+  for (const target of [path.join(box, "recovery"), path.join(base, "linked-cards", "recovery")]) {
+    let failure: unknown;
+    try { await previewBoxBackup({ repository: "unused", passwordFile: "unused", target }); }
+    catch (error) { failure = error; }
+    t.check(failure, instanceOf(RestoreTargetInsideBoxError));
+  }
+  t.check(await fs.readdir(box), ["_config", "cards", "package.json"]);
+});
+
 void test("restore stages the selected verified snapshot as box and external state", async (t) => {
   const base = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-restore-integration-"));
   t.teardown(() => fs.rm(base, { recursive: true, force: true }));
@@ -52,10 +69,10 @@ void test("restore stages the selected verified snapshot as box and external sta
   const gitCalls: string[][] = [];
   const snapshotPaths = ["/synthetic/box", `/Users/me/.config/beebox/backups/staging/${backupId}/secrets/box.json`];
   let gitExitCode = 0;
-  const { restoreBoxBackup: restore } = await t.mockImport("../../../src/core/box-backup/restore.ts", {
+  const { previewBoxBackup: preview, restoreBoxBackup: restore } = await t.mockImport("../../../src/core/box-backup/restore.ts", {
     "../../../src/core/box-backup/run/backup.ts": {
       listSnapshots: async () => [
-        { id: "verified-snapshot", time: "2026-10-25T10:00:00.000Z", host: backupId, paths: snapshotPaths, tags: [`bbx-backup:${backupId}`, "verified"] },
+        { id: "verified-snapshot", time: "2026-10-25T10:00:00.000Z", host: backupId, paths: snapshotPaths, tags: [`bbx-backup:${backupId}`, "verified"], excludes: ["node_modules"] },
         { id: "partial-snapshot", time: "2026-10-26T10:00:00.000Z", host: backupId, paths: ["/synthetic/box"], tags: [`bbx-backup:${backupId}`] },
       ],
     },
@@ -84,6 +101,19 @@ void test("restore stages the selected verified snapshot as box and external sta
       return { exitCode: gitExitCode, stderr: gitExitCode === 0 ? "" : "fatal: detected dubious ownership" };
     } },
   });
+
+  const inspection = await preview({ repository: "synthetic-repo", passwordFile: "synthetic-password", target, snapshot: "verified" });
+  t.check(inspection, {
+    snapshotId: "verified-snapshot",
+    snapshotTime: "2026-10-25T10:00:00.000Z",
+    backupId,
+    sourcePaths: snapshotPaths,
+    excludedPatterns: ["node_modules"],
+    boxPath: path.join(target, "box"),
+    externalPath: path.join(target, "external"),
+  });
+  t.check(await fs.readdir(base), []);
+  t.check(calls, []);
 
   const result = await restore({ repository: "synthetic-repo", passwordFile: "synthetic-password", target });
 

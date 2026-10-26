@@ -6,7 +6,7 @@ import { checkBackup } from "../../core/box-backup/check.js";
 import { configureBackup, runBackup } from "../../core/box-backup/run/backup.js";
 import { pruneBackup } from "../../core/box-backup/retention.js";
 import { backupStatus } from "../../core/box-backup/status.js";
-import { restoreBoxBackup } from "../../core/box-backup/restore.js";
+import { previewBoxBackup, restoreBoxBackup } from "../../core/box-backup/restore.js";
 import type { BackupRetention } from "../../core/box-backup/config.js";
 
 function fail(stage: string, error: unknown): void {
@@ -30,6 +30,10 @@ function retention(options: { keepDaily?: string; keepWeekly?: string; keepMonth
 
 class InvalidBackupRetentionError extends Error {
   constructor() { super("Backup retention counts must be positive integers"); this.name = "InvalidBackupRetentionError"; }
+}
+
+class RestoreSnapshotPinRequiredError extends Error {
+  constructor(snapshotId: string) { super(`To write this restore, rerun with --snapshot ${snapshotId} --apply`); this.name = "RestoreSnapshotPinRequiredError"; }
 }
 
 async function runAndRetain(boxRoot: string): Promise<void> {
@@ -106,14 +110,30 @@ backupCommand
 
 backupCommand
   .command("restore")
-  .description("Restore a verified snapshot to an empty target for inspection")
+  .description("Preview a verified snapshot; --apply writes it to an empty target")
   .requiredOption("--repository <url>", "Restic repository URL or path")
   .requiredOption("--password-file <path>", "Recovery password file")
   .requiredOption("--target <empty-dir>", "Empty restore destination")
   .option("--snapshot <id>", "Verified snapshot ID (default: newest)")
-  .action(async (options: { repository: string; passwordFile: string; target: string; snapshot?: string }) => {
+  .option("--apply", "Restore the exact snapshot named by --snapshot after showing the preview")
+  .action(async (options: { repository: string; passwordFile: string; target: string; snapshot?: string; apply?: boolean }) => {
     try {
-      const restored = await restoreBoxBackup(options);
+      const preview = await previewBoxBackup(options);
+      console.log(`Verified snapshot: ${preview.snapshotId} (${preview.snapshotTime})`);
+      console.log(`Backup identity: ${preview.backupId}`);
+      console.log("Snapshot source paths:");
+      for (const source of preview.sourcePaths) console.log(`  ${source}`);
+      console.log("Snapshot exclusions:");
+      if (preview.excludedPatterns.length === 0) console.log("  (none recorded)");
+      else for (const pattern of preview.excludedPatterns) console.log(`  ${pattern}`);
+      console.log(`Box output: ${preview.boxPath}`);
+      console.log(`External state output: ${preview.externalPath}`);
+      if (!options.apply) {
+        console.log(`Preview only; restore target untouched. To restore, rerun with --snapshot ${preview.snapshotId} --apply.`);
+        return;
+      }
+      if (options.snapshot !== preview.snapshotId) throw new RestoreSnapshotPinRequiredError(preview.snapshotId);
+      const restored = await restoreBoxBackup({ repository: options.repository, passwordFile: options.passwordFile, target: options.target, snapshot: preview.snapshotId });
       console.log(`Restored verified snapshot ${restored.snapshotId} to ${restored.boxPath}. External state awaits review in ${restored.externalPath}.`);
     } catch (error) { fail("restore", error); }
   });
