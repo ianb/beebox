@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-26T01:59:03Z
+Generated: 2026-10-26T02:07:00Z
 Total documents: 580
 
 ## Issues
@@ -6165,6 +6165,7 @@ Referenced by:
 - ../issues/bugs/2026-10-25-failed-box-unit-stays-failed-until-reset.md:8 (frontmatter) — design: ../../beebox/docs/implemented-plans/per-box-units.md
 - ../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:11 (mention) — **Closed:** resolved by the box-isolation branch (per-box-units, `beebox/docs/plans/per-box-units.md`). `deploy/deploy.s
 - ../issues/features/2026-09-04-cross-box-filesystem-isolation.md:12 (mention) — > **Status (2026-10-24):** the implementation (one Linux user and one socket-activated unit per box, `beebox/docs/implem
+- ../issues/features/2026-10-26-create-a-box-on-the-server-without-the-script.md:25 (mention) — `docs/implemented-plans/per-box-units.md`), so an Admin button cannot do these
 
 References:
 - → ../issues/features/2026-09-04-cross-box-filesystem-isolation.md (frontmatter)
