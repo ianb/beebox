@@ -1,8 +1,8 @@
-// # A question beside the chat: answer in the chat, Later, or Figure it out
+// # A question beside the chat: answer in the chat, Later, or Decide for me
 //
 // Beside the chat the question is pasted onto a stub card with no answer
 // controls: the person answers in the chat, in words, so a select question
-// lists its choices in a line. The row offers Later and Figure it out; a
+// lists its choices in a line. The row offers Later and Decide for me; a
 // question the box decided says so, as the box's, and stays the person's to
 // answer (docs/plans/questions-later-and-figure-it-out.md, Track A).
 //
@@ -75,22 +75,22 @@ async function click(view: Mounted, label: string) {
   if (button instanceof HTMLElement) await view.act(() => { button.click(); });
 }
 
-// ## A pending question: no answer controls, Later and Figure it out
+// ## A pending question: no answer controls, Later and Decide for me
 //
 // A select question lists its choices; the buttons call the row's actions.
-void test("A pending question: no answer controls, Later and Figure it out", async (t) => {
+void test("A pending question: no answer controls, Later and Decide for me", async (t) => {
   const log: string[] = [];
   const { view, calls } = await render({ question: question({ inputType: "select", options: ["Finance", "Personal", "Taxes"] }), actions: actions({}, log) });
-  t.check(seen(view), { buttons: ["Later", "Figure it out"], textBoxes: 0, choices: "Finance, Personal, or Taxes?", decided: null, hint: "Answer in the chat.", side: "right" });
+  t.check(seen(view), { buttons: ["Later", "Decide for me"], textBoxes: 0, choices: "Finance, Personal, or Taxes?", decided: null, hint: "Answer in the chat.", side: "right" });
   await click(view, "Later");
-  await click(view, "Figure it out");
+  await click(view, "Decide for me");
   t.check({ log, calls }, { log: ["later", "figure"], calls: [] });
   await view.unmount();
 });
 
 // ## A put-away question offers only answering in the chat
 //
-// It is already put away, and Figure it out starts from a pending question
+// It is already put away, and Decide for me starts from a pending question
 // (`actions.figureOut` puts it away first).
 void test("A put-away question offers only answering in the chat", async (t) => {
   const { view } = await render({ question: question({ state: "dismissed" }), actions: actions({ chatSide: "below" }, []) });
@@ -116,6 +116,6 @@ void test("With the chat hidden, Answer in the chat reveals it", async (t) => {
   const log: string[] = [];
   const { view } = await render({ question: question({}), actions: actions({ onShowChat: () => { log.push("chat"); } }, log) });
   await click(view, "Answer in the chat");
-  t.check({ buttons: seen(view).buttons, log }, { buttons: ["Answer in the chat", "Later", "Figure it out"], log: ["chat"] });
+  t.check({ buttons: seen(view).buttons, log }, { buttons: ["Answer in the chat", "Later", "Decide for me"], log: ["chat"] });
   await view.unmount();
 });

@@ -3,7 +3,7 @@
  * Track A): the question pasted onto a stub card. No answer controls: the
  * person answers in the chat, in their own words, so a select question lists
  * its choices in a line. The pinned row offers the two other choices: "Later"
- * puts it away, "Figure it out" hands it to the box. A question the box
+ * puts it away, "Decide for me" hands it to the box (the figure-it-out skill). A question the box
  * decided says so, and is still the person's to answer.
  *
  * The look lives in `themes/question-beside.css`, keyed on
@@ -54,8 +54,9 @@ export function QuestionBeside({ question, actions }: { question: QuestionInfo; 
           : <Button type="button" intent="secondary" size="sm" onClick={handleShowChat}>Answer in the chat</Button>}
         {pending ? <Button type="button" intent="ghost" size="sm" onClick={handleLater}>{LATER}</Button> : null}
         {pending && decided === undefined ? (
-          <Button type="button" intent="ghost" size="sm" loading={actions.figuring} loadingLabel="Handing it off…" onClick={handleFigureOut}>
-            Figure it out
+          <Button type="button" intent="ghost" size="sm" loading={actions.figuring} loadingLabel="Handing it off…" onClick={handleFigureOut}
+            title="The box decides for now, or asks it again more simply">
+            Decide for me
           </Button>
         ) : null}
       </div>

@@ -77,7 +77,7 @@ export const actionsRouter = router({
     }),
 
   /**
-   * "Figure it out": put the question away (the dismiss transition), then start
+   * "Decide for me": put the question away (the dismiss transition), then start
    * a background chat that runs the figure-it-out skill on it. A delivery
    * failure after the dismiss leaves the card dismissed (the daily question
    * review picks it up) and returns an error; a non-pending card is refused by

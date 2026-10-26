@@ -166,3 +166,17 @@ export function useQuestionToggle(): { label: string; onToggle: () => void } | u
     },
   };
 }
+
+/**
+ * Whether a pending question is the card in front, beside this chat. The
+ * empty chat then refers to it instead of offering openers
+ * (docs/plans/questions-later-and-figure-it-out.md). Queries the question
+ * list only while a question card is in front.
+ */
+export function useQuestionInFront(): boolean {
+  const workspace = useWorkspace();
+  const front = workspace?.projection.foregroundPath ?? null;
+  const asking = front !== null && isQuestionPath(front);
+  const { data } = trpc.status.questions.useQuery(undefined, { enabled: asking });
+  return asking && data !== undefined && dismissesOnClose(front, data.items);
+}

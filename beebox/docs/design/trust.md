@@ -39,7 +39,7 @@ approval flows; it is design to fill, not history.
 
 A question, the first rung, is never auto-answered, because silence is not
 consent. It is nudged once and then expires, so an unanswered ask stops
-claiming attention. When the person hands a question off ("Figure it out"),
+claiming attention. When the person hands a question off ("Decide for me"),
 or it waits too long, the box may decide it conservatively and reversibly,
 recorded as provisional: not an answer, never the person's words, and
 replaced by their answer whenever they give one

@@ -132,7 +132,7 @@ pending ──answer──> answered
   recording what the person said in a conversation, and writes no follow-up
   job (see "The answer round-trip").
 - **`dismissed`** (`dismissed-at`) — put away for now: the person chose
-  "Later" (`bbx dismiss` / `actions.dismiss`) or "Figure it out"
+  "Later" (`bbx dismiss` / `actions.dismiss`) or "Decide for me"
   (`actions.figureOut`). Only a `pending` question can be dismissed.
   Dismissed questions **remain answerable**, and the daily question review
   brings each one back (`bbx question reraise`, which sets `asked-at` to now)
@@ -273,11 +273,14 @@ evidence model.
   no answer controls (`QuestionForm/beside.tsx`, look in
   `themes/question-beside.css`): the person answers in the chat, and a
   `select` question lists its choices in a line. The pinned row offers
-  "Later" (puts it away; the tab's ✕ does the same) and "Figure it out"
+  "Later" (puts it away; the tab's ✕ does the same) and "Decide for me"
   (hands it to the box in the background; see "Figuring it out"). In a
   chat, the app bar's question count shows the newest pending question
   beside the chat, or puts the one in front away without "Later"
-  (`useQuestionToggle`, `question-tab.ts`). The question reaches the agent as the `open-card`
+  (`useQuestionToggle`, `question-tab.ts`). With a pending question in front, the
+  empty chat says "Answer the question here, or start something else." and
+  shows no openers (`useQuestionInFront`), so a reply reads as a probable
+  answer. The question reaches the agent as the `open-card`
   snapshot attribute; the agent judges whether the message answers it, does
   the directive in the conversation, then records the answer with
   `bbx answer --via chat`. A dismissed or expired question comes back the
@@ -361,7 +364,7 @@ is settled by an agent with two box skills
   to decide or understand: concrete, with the box's default, or split into the
   part the box can decide and the part only the person can.
 
-"Figure it out" on the card puts the question away and starts a background
+"Decide for me" on the card puts the question away and starts a background
 chat (`actions.figureOut`, through `deliverUserMessage`); the chat is in the
 chat list. The daily `question-review` procedure takes questions put away
 three or more days ago and questions pending fourteen or more days, five per
