@@ -27,7 +27,7 @@ export interface Endpoint {
  * The target http-proxy-3 connects to for an endpoint. Its `setupOutgoing`
  * copies `socketPath` from the target beside `host` and `port`, and its type
  * wants both of the latter, so a socket endpoint passes a placeholder pair
- * (verified against the pinned version, docs/plans/per-box-units.md).
+ * (verified against the pinned version, docs/implemented-plans/per-box-units.md).
  */
 export function proxyTarget(endpoint: Endpoint): string | { host: string; port: number; socketPath: string } {
   if (endpoint.socketPath === undefined) return endpoint.origin;

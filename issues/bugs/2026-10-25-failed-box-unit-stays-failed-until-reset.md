@@ -5,7 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-memory-and-crash-recovery — the hub's slow retry covers the resident hub only
-design: ../../beebox/docs/plans/per-box-units.md
+design: ../../beebox/docs/implemented-plans/per-box-units.md
 labels: [box-isolation]
 ---
 

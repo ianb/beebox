@@ -1,6 +1,6 @@
 ---
 title: "One systemd unit and one OS user per box, and a cloud-init host"
-status: draft
+status: implemented
 workstream: box-isolation
 issues:
   - ../../../issues/features/2026-09-04-cross-box-filesystem-isolation.md
@@ -371,7 +371,7 @@ The hub secret reaches a unit as a systemd credential and becomes
 
 ### Track B: identity, the shared state split
 
-See [the subplan](per-box-units.subplan.md). Its first chunk is a probe on
+See [the subplan](../plans/per-box-units.subplan.md). Its first chunk is a probe on
 a throwaway VM that runs one box as its own user under Track C's unit with
 no other change and records every failed read; the table in the subplan is
 settled from that run, not from grep alone.
@@ -744,7 +744,7 @@ anything.
 
 ## Subplans
 
-[per-box-units.subplan.md](per-box-units.subplan.md): the identity split,
+[per-box-units.subplan.md](../plans/per-box-units.subplan.md): the identity split,
 one row per shared file, with its probe chunk first.
 
 ## Failure modes

@@ -237,7 +237,7 @@ async function ensurePackageDocsUncontended(packageRoot: string): Promise<Ensure
     for (const d of docs) await writeFile(join(tmp, d.filename), d.content);
     await writeFile(join(tmp, FINGERPRINT_FILE), `${want}\n`);
     // Readable by every user: `mkdtemp` makes a 0700 directory, and on a unit
-    // host (docs/plans/per-box-units.md) the deploy's build is read by each
+    // host (docs/implemented-plans/per-box-units.md) the deploy's build is read by each
     // box user, whose `bbx engine init` otherwise cannot open the fingerprint
     // (found on the VM, 2026-10-24). The writer's umask may be 077 too.
     await chmod(tmp, 0o755);

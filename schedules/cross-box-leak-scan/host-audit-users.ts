@@ -2,7 +2,7 @@
  * The unit-host half of the host audit: on a host where each box runs as its
  * own Linux user (`bbx-<slug>`, home `/var/lib/beebox/<slug>`), isolation is
  * enforced by file modes and ownership. These checks read the layout that
- * `beebox/docs/plans/per-box-units.md` specifies and report any deviation.
+ * `beebox/docs/implemented-plans/per-box-units.md` specifies and report any deviation.
  *
  * Same constraint as `host-audit.ts`: no import from `beebox/src/**`, and no
  * native dependency (users and groups come from `/etc/passwd` and

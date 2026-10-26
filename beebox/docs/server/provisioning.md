@@ -96,7 +96,7 @@ hand-made `callback` site went.
 ## Server layout
 
 One Linux user and one set of systemd units per box
-([design](../plans/per-box-units.md)). Nothing runs as root except the deploy,
+([design](../implemented-plans/per-box-units.md)). Nothing runs as root except the deploy,
 the scheduler's one wrapper, and the nightly Claude Code update. The accounts:
 
 - `bbx-<slug>` — one per box, UID 2000–2999, in group `beebox-boxes`. Owns

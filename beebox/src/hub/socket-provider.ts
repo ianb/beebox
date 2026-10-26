@@ -1,6 +1,6 @@
 /**
  * The endpoint provider for a unit host: every box is a systemd socket unit
- * (`beebox-box@<slug>.socket`, docs/plans/per-box-units.md Track D), and the
+ * (`beebox-box@<slug>.socket`, docs/implemented-plans/per-box-units.md Track D), and the
  * hub neither spawns nor stops anything. It polls unit state in one batched
  * `systemctl list-units` call, connects to a box's socket to wake it (the
  * connection is what starts the service), and remembers the last readiness

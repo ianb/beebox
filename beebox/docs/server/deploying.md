@@ -90,7 +90,7 @@ older child cannot overwrite newer intent.
 ## The box units
 
 Each box is its own user and its own socket-activated units
-([per-box units](../plans/per-box-units.md); the layout is in
+([per-box units](../implemented-plans/per-box-units.md); the layout is in
 [provisioning](provisioning.md#server-layout)). The deploy first checks that
 the host has that layout (the `beebox-sched` user, `/var/lib/beebox`, the
 `beebox-boxes` group) and refuses otherwise, before building anything. It

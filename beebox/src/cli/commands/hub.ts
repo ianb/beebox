@@ -56,7 +56,7 @@ function registerAddBoxSubcommand(parent: Command): void {
     .argument("<slug>", "URL prefix the box is served under")
     .argument("<path>", "Path to the box root")
     .option("-c, --config <path>", "Path to hub.json (default: ~/.config/beebox/hub.json)")
-    .option("--socket", "A unit host: route to /run/beebox/<slug>.sock instead of spawning (docs/plans/per-box-units.md)")
+    .option("--socket", "A unit host: route to /run/beebox/<slug>.sock instead of spawning (docs/implemented-plans/per-box-units.md)")
     .option("--dry-run", "Validate and print what would change, without writing");
 
   // Options come from `.opts()` rather than the action's third parameter:
@@ -225,7 +225,7 @@ async function startSpawning(config: HubConfig): Promise<HubEndpoints> {
 }
 
 /**
- * A unit host (docs/plans/per-box-units.md): systemd owns every box process.
+ * A unit host (docs/implemented-plans/per-box-units.md): systemd owns every box process.
  * The hub reads boxes only through their published metadata, holds one secret
  * per box per boot, writes the env file the units load, and routes to sockets.
  */
