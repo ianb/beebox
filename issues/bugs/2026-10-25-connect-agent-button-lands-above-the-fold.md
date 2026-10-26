@@ -23,3 +23,9 @@ Where: the readiness block is driven by `agents.readiness`
 `src/frontend/src/components/admin/` (the Claude and Codex sign-in machines,
 `claudeAuthMachine.ts`). Not investigated: whether the Admin route accepts a
 section fragment today.
+
+**2026-10-25 (retrospective 20261025-233625):** Unfixed at this date, so no
+regression test exists yet. The fix should come with one: a DOM test
+([DOM tests](../../beebox/docs/testing/check.md#dom-tests)) that follows the
+button's link and checks that the sign-in section is the scroll and focus
+target.
