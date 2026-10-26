@@ -18,6 +18,12 @@ restarts services, and checks readiness. Ordinary requests do not acquire the
 controller's maintenance permissions. `deploy-info.json` records the shipped
 commit; final deployment success is written only after the checks finish.
 
+The controller runs as root and holds no gate file itself: it groups the boxes
+by owner and starts one holder (`bbx engine maintenance hold`) per owner, as
+that owner, which closes and later reopens its boxes. On the old layout that
+is one holder as `beebox`; on a unit host it is one per box user. A host with
+no box runs the activation alone.
+
 Per-box convergence invokes `bbx migrate --sweep --within-maintenance --json`
 under the existing controller. That single operation handles deterministic
 migrations and generated guidance with snapshots and changed-path commits.
@@ -81,6 +87,37 @@ The hook records its requested SHA synchronously before launching through
 `bin/lib/detach.ts`, so an agent command ending cannot kill the deploy by
 process group. That ordered hook request stays authoritative: a late-starting
 older child cannot overwrite newer intent.
+
+## A unit host
+
+On a host migrated to one user and one unit per box
+([per-box units](../plans/per-box-units.md)), the deploy also: stops every
+`beebox-box@*` socket and service with the hub and scheduler, so a request
+during the window cannot wake a box onto a half-copied tree; installs the
+versioned units (`deploy/systemd/beebox-box@.socket`, `beebox-box@.service`,
+`beebox-pass@.service`) and the `box-sandbox.conf` drop-in both templates
+include; installs `bbx-box-run` and its one sudoers line for `beebox-sched`;
+converges each box as its own user with the units' `/etc/beebox/box.env`;
+runs `bbx host sync` for each box as root, installing the distro packages the
+box recorded since the last deploy (a sandboxed box cannot install, it records);
+reconciles each box's `node_modules` as its owner; and starts the sockets again
+after the services. The one-time migration is
+`deploy/server-bin/migrate-to-box-users.sh`, run by hand as root after a
+snapshot with the services stopped; `--dry-run` prints every step. Boxes that
+live on a separate volume (production's did, at the old path) need that volume
+mounted at `/var/lib/beebox` before the run, since a move across filesystems
+is a copy; the script refuses otherwise. A Hetzner snapshot covers the
+server's own disk and not a volume, so the volume's boxes are backed up only
+by a copy taken elsewhere ([box backups](boxes.md)). A host
+provisioned before `cloud-init.yaml` needs what that file gives a fresh one
+first: `claude` and `uv` in `/usr/local/bin` (a box unit cannot see
+`/home/beebox/.local/bin`), a system git identity, and the `claude-update`
+unit running as root; the script refuses until the first two are there. After
+the run a deploy writes the scheduler's sudoers entry. Box users have no login
+file: before the run, store a `claude setup-token` token under
+`claude-oauth-token` and grant it to every box, so the migration's secret
+export carries it into each box's store ([configuration](configuration.md),
+"The long-lived token").
 
 ## The maintenance boundary
 

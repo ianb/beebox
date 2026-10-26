@@ -23,6 +23,16 @@
  * bounds how long a revoked device keeps a live session. Renewal re-checks the
  * device store, so a revoked device stops renewing at once and is locked out
  * within one TTL.
+ *
+ * On a unit host (docs/plans/per-box-units.md, question 7) the hub runs
+ * outside every box and cannot read the file secret, so the key is DERIVED
+ * instead: HKDF over the per-box, per-boot hub secret the box receives as a
+ * systemd credential (`BBX_HUB_SECRET` with `BBX_UNIT_HOST=1`), which the hub
+ * holds for that box and no sibling knows. Both sides derive the same key and
+ * the hub refuses a junk cookie without waking the box. The secret changes at
+ * reboot, so cookies die with it; the device re-mints one from its bearer.
+ * No file is written on that host. A spawning hub shares one secret across
+ * its children, so there the per-box file stays the key.
  */
 
 import * as crypto from "node:crypto";
@@ -66,6 +76,27 @@ export type MobileSession = z.infer<typeof MobileSessionSchema>;
 /** Per-box secret, cached per box root — the file is read once per process. */
 const secretCache = new Map<string, string>();
 
+/** HKDF context for the unit-host key: changing it invalidates every live cookie on such a host. */
+const UNIT_HOST_KEY_INFO = "beebox mobile session v1";
+const derivedKeys = new Map<string, string>();
+
+/** The cookie key a unit host derives from a box's hub secret; the hub and the box both call this. */
+export function deriveMobileSessionKey(hubSecret: string): string {
+  const cached = derivedKeys.get(hubSecret);
+  if (cached !== undefined) return cached;
+  const key = Buffer.from(crypto.hkdfSync("sha256", hubSecret, "", UNIT_HOST_KEY_INFO, SECRET_BYTES)).toString("hex");
+  derivedKeys.set(hubSecret, key);
+  return key;
+}
+
+/** The derived key when this process is a box unit on a unit host; null elsewhere. */
+function unitHostKey(): string | null {
+  if (process.env.BBX_UNIT_HOST !== "1") return null;
+  const hubSecret = process.env.BBX_HUB_SECRET;
+  if (!hubSecret) return null;
+  return deriveMobileSessionKey(hubSecret);
+}
+
 function secretPath(boxRoot: string): string {
   return path.join(boxRoot, SECRET_RELATIVE_PATH);
 }
@@ -82,6 +113,8 @@ function secretPath(boxRoot: string): string {
  * creates (see `getOrCreateSecret`), and only the box ever signs.
  */
 function readSecret(boxRoot: string): string | null {
+  const derived = unitHostKey();
+  if (derived !== null) return derived;
   const cached = secretCache.get(boxRoot);
   if (cached !== undefined) return cached;
 
@@ -125,10 +158,7 @@ function getOrCreateSecret(boxRoot: string): string {
   return generated;
 }
 
-/** The signature this box would produce for a payload, or null if it has no secret. */
-function expectedSignature(boxRoot: string, payload: string): string | null {
-  const key = readSecret(boxRoot);
-  if (key === null) return null;
+function signature(key: string, payload: string): string {
   return crypto.createHmac("sha256", key).update(payload).digest("hex");
 }
 
@@ -152,11 +182,7 @@ export function signMobileSession(
     createdBy: opts.createdBy,
     exp: Date.now() + opts.ttlMs,
   });
-  const signature = crypto
-    .createHmac("sha256", getOrCreateSecret(boxRoot))
-    .update(payload)
-    .digest("hex");
-  return `${Buffer.from(payload).toString("base64url")}.${signature}`;
+  return `${Buffer.from(payload).toString("base64url")}.${signature(getOrCreateSecret(boxRoot), payload)}`;
 }
 
 /**
@@ -165,12 +191,21 @@ export function signMobileSession(
  * The whole input is untrusted, so every step fails closed.
  */
 export function verifyMobileSession(boxRoot: string, cookie: string | undefined): MobileSession | null {
+  return verifyMobileSessionWithKey(readSecret(boxRoot), cookie);
+}
+
+/**
+ * The same check against a key the caller holds: the hub on a unit host,
+ * with the key it derives from the box's hub secret. A null key (a box that
+ * has never minted) verifies nothing.
+ */
+export function verifyMobileSessionWithKey(key: string | null, cookie: string | undefined): MobileSession | null {
   if (typeof cookie !== "string" || cookie.length === 0) return null;
 
   const dotIndex = cookie.indexOf(".");
   if (dotIndex === -1) return null;
   const payloadB64 = cookie.slice(0, dotIndex);
-  const signature = cookie.slice(dotIndex + 1);
+  const presented = cookie.slice(dotIndex + 1);
 
   let payload: string;
   try {
@@ -183,9 +218,8 @@ export function verifyMobileSession(boxRoot: string, cookie: string | undefined)
   // Null means no secret exists for this box — nothing has ever been minted,
   // so no cookie could legitimately verify. Fail closed rather than create one
   // (see readSecret).
-  const expected = expectedSignature(boxRoot, payload);
-  if (expected === null) return null;
-  if (!signaturesEqual(signature, expected)) return null;
+  if (key === null) return null;
+  if (!signaturesEqual(presented, signature(key, payload))) return null;
 
   let parsed: unknown;
   try {
@@ -209,4 +243,5 @@ export function verifyMobileSession(boxRoot: string, cookie: string | undefined)
 /** Test seam: drop cached secrets so a test can swap box roots in-process. */
 export function clearMobileSessionSecretCache(): void {
   secretCache.clear();
+  derivedKeys.clear();
 }

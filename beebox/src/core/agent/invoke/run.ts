@@ -280,7 +280,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     if (isThirdPartyModel(options.model)) {
       await providerEnvAdditions({ boxRoot, model: options.model, purpose: "agent-run" });
     } else {
-      await checkClaudeAuth();
+      await checkClaudeAuth({ boxRoot });
     }
   } catch (e) {
     if (e instanceof ClaudeAuthError || e instanceof ProviderSetupError) {

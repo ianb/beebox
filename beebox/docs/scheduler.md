@@ -123,3 +123,15 @@ bbx scheduler install
 The plist captures the current `PATH` at install time (needed for nvm). If you update node versions, re-run `bbx scheduler install`.
 
 Stderr goes to `~/.local/share/beebox/scheduler-stderr.log` (for crash diagnostics only — structured logs are in per-box JSONL files).
+
+## One pass, one box: `bbx engine scheduler pass`
+
+The daemon's per-box body (admission, the dirty-repo note, the heartbeat, the
+growth probe, the tick, the alerts) is `bbx engine scheduler pass <boxRoot>`
+(`src/core/schedule/scheduler/pass.ts`). On a machine without units the daemon
+runs it in process. On a unit host (docs/plans/per-box-units.md) the daemon runs
+as `beebox-sched`, whose manifest is `/var/lib/beebox-sched/.config/beebox/boxes.json`,
+and runs each box's pass as that box's own user through
+`sudo bbx-box-run <slug> scheduler-pass`, the one root path it may call, which
+starts `beebox-pass@<slug>.service` inside the box sandbox and waits for it. The
+wrapper's presence at `/usr/local/sbin/bbx-box-run` selects that path.

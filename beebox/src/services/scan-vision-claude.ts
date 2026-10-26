@@ -20,6 +20,7 @@ import { MODEL_ID } from "../shared/model-ids.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
 import { boxSessionSettings } from "../core/agent/box-session-settings.js";
 import { buildScriptEnv } from "../core/script-env/core.js";
+import { providerEnvAdditions } from "../core/provider-env/core.js";
 import { dropUndefined } from "../lib/drop-undefined.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { isRecord } from "../shared/is-record.js";
@@ -319,6 +320,11 @@ async function runScanQuery({
   // buildScriptEnv strips ANTHROPIC_API_KEY to force subscription auth
   // (same conventions as core/agent/run.ts).
   const env = dropUndefined(await buildScriptEnv(boxRoot, { CLAUDECODE: undefined }));
+  // First-party additions, as every other spawn path: the box's long-lived
+  // token when it has one, and its telemetry choice (review round 6, codex
+  // gpt-6-sol, 2026-10-25: the preflight accepted a token-granted box and this
+  // call then ran without the token).
+  await providerEnvAdditions({ boxRoot, model: null, purpose: "scan-vision", env });
   const binaryPath = resolveClaudeCodeBinary();
 
   const userMessage: SDKUserMessage = {

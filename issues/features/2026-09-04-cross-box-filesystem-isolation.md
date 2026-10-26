@@ -1,6 +1,6 @@
 ---
 title: "Cross-box filesystem isolation: a box process should not be able to read a sibling box"
-workstream: unattached
+workstream: box-isolation
 area: beebox
 priority: important
 labels: [security]
@@ -8,6 +8,8 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-cross-box-leak-scan — reviewing security-report §7b
 ---
+
+> **Status (2026-10-24):** the implementation (one Linux user and one socket-activated unit per box, `beebox/docs/plans/per-box-units.md`) has landed on `main`. Left open: the production migration (plan step 10) has not run. The boxholder owns plan questions 10 and 11 and subplan questions 1 and 2.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

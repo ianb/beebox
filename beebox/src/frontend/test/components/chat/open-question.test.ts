@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { composerPlaceholder, moreQuestionsLabel, openQuestionLine, pickOpenQuestion } from "../../../src/components/chat/open-question.js";
+import { moreQuestionsLabel, openQuestionLine, pickOpenQuestion } from "../../../src/components/chat/open-question.js";
 import type { QuestionInfo } from "../../../src/components/questions/QuestionForm.js";
 
 const DIR = "_bookkeeping/questions";
@@ -66,25 +66,5 @@ void test("A select question lists its options in the line; the count reads 'and
     confirm: "Is the stove back?",
     none: null,
     some: "and 38 more",
-  });
-});
-
-// ## The composer asks the question only while the chat is empty
-//
-// A tab stays `unstarted` while it holds its reservation receipt, so the chat
-// can have a sent message and still carry the open question. The placeholder
-// follows the same guard as the openers: no messages and nothing streaming.
-void test("The composer placeholder is the prompt only before the first message", async (t) => {
-  const openQuestion = pickOpenQuestion([card("A", { askedAt: "2026-10-20T10:00:00Z", prompt: "What do you want to keep track of here?" })]);
-  t.check({
-    empty: composerPlaceholder({ openQuestion, messageCount: 0, isStreaming: false }),
-    oneMessage: composerPlaceholder({ openQuestion, messageCount: 1, isStreaming: false }),
-    streaming: composerPlaceholder({ openQuestion, messageCount: 0, isStreaming: true }),
-    noQuestion: composerPlaceholder({ openQuestion: null, messageCount: 0, isStreaming: false }),
-  }, {
-    empty: "What do you want to keep track of here?",
-    oneMessage: undefined,
-    streaming: undefined,
-    noQuestion: undefined,
   });
 });

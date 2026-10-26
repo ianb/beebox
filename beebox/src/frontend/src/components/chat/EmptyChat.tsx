@@ -1,5 +1,6 @@
 import { ChatOpeners } from "../openers/ChatOpeners";
 import type { OpenerSendOutcome } from "../openers/opener-send";
+import { QuestionMemo } from "../questions/QuestionMemo";
 import { InlineAction } from "../ui/InlineAction";
 import { MaterialContext } from "../ui/material";
 import { moreQuestionsLabel, openQuestionLine, type OpenQuestion } from "./open-question";
@@ -10,7 +11,7 @@ import { moreQuestionsLabel, openQuestionLine, type OpenQuestion } from "./open-
  * options in the sentence, "All the choices" when it has more than fit), the
  * card's memo under it in the quiet style, then "and N more" to the Questions
  * page and a quiet "Not now". Clicking the line
- * puts the cursor in the composer, whose placeholder is the prompt. Text for
+ * puts the cursor in the composer. Text for
  * every input type: the person answers by typing or speaking.
  */
 function OpenQuestionLine({ question, onFocusComposer, onNotNow, onOpenQuestions }: {
@@ -28,7 +29,7 @@ function OpenQuestionLine({ question, onFocusComposer, onNotNow, onOpenQuestions
         <button type="button" className="text-left text-lg leading-snug" onClick={onFocusComposer} data-question-path={question.path}>
           {openQuestionLine(question)}
         </button>
-        {question.memo === null ? null : <p className="text-sm">{question.memo}</p>}
+        {question.memo === null ? null : <div className="text-sm" data-testid="chat-open-question-memo"><QuestionMemo memo={question.memo} path={question.path} /></div>}
         <p className="text-sm">
           {question.optionsBeyond > 0 ? <><InlineAction intent="quiet" className="underline" onClick={onOpenQuestions}>All the choices</InlineAction>{" · "}</> : null}
           {more === null ? null : <><InlineAction intent="quiet" className="underline" onClick={onOpenQuestions}>{more}</InlineAction>{" · "}</>}

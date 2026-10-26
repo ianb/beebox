@@ -57,28 +57,31 @@ deploy/prod-ssh
 ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST)
 ```
 
-**Do not pass `-o StrictHostKeyChecking=no`.** That flag belongs in first-contact provisioning scripts (`add-box.sh`, `setup-server.sh`) where the host hasn't been seen yet. For ad-hoc work the host is already in `~/.ssh/known_hosts` and disabling the check just removes a real safety. If you get a host-key error, investigate it — don't suppress it.
+**Do not pass `-o StrictHostKeyChecking=no`.** That flag belongs in first-contact provisioning scripts (`add-box.sh`, `hetzner/provision.sh`) where the host hasn't been seen yet. For ad-hoc work the host is already in `~/.ssh/known_hosts` and disabling the check just removes a real safety. If you get a host-key error, investigate it — don't suppress it.
 
 **Common inspection targets** (run via `deploy/prod-ssh '<cmd>'`):
 
 | What | Where |
 |------|-------|
-| Box data | `/home/beebox/boxes/<box>/` |
+| Box data | `/home/beebox/boxes/<box>/` (owned by `beebox`); on a unit host `/var/lib/beebox/<box>/box/` (owned by `bbx-<box>`, see [provisioning](provisioning.md#per-box-layout-arrives-with-the-migration)) |
 | Hub routing table (which boxes `bbx hub` serves, and at what slug) | `/home/beebox/.config/beebox/hub.json` |
-| Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/beebox/.config/beebox/boxes.json` |
-| Service logs | `journalctl -u beebox-hub -n 200 --no-pager` / `journalctl -u beebox-scheduler -n 200 --no-pager` |
+| Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/beebox/.config/beebox/boxes.json`; on a unit host `/var/lib/beebox-sched/.config/beebox/boxes.json` (the scheduler's own user) |
+| Service logs | `journalctl -u beebox-hub -n 200 --no-pager` / `journalctl -u beebox-scheduler -n 200 --no-pager`; a box's own engine on a unit host: `journalctl -u beebox-box@<box> -n 200 --no-pager` |
+| Box unit state (unit host) | `systemctl list-units 'beebox-box@*'`; a box that will not start: `systemctl status beebox-box@<box>`, then `systemctl reset-failed beebox-box@<box>` once fixed |
 | Service status | `systemctl status beebox-hub beebox-scheduler --no-pager` |
 | Client debug log per box | `/home/beebox/boxes/<box>/.beebox/client-debug.log` |
 | Procedure runs | `/home/beebox/boxes/<box>/_bookkeeping/procedure/runs/` |
-| Claude Code update log | `/home/beebox/claude-update.log` |
+| Claude Code update log | `/var/log/beebox/claude-update.log` |
 | Source the server is actually running | `/opt/beebox/beebox/src/` (rsynced `.ts`, no `dist/`) |
 
-**Running `bbx` commands on the server** — must be as the `beebox` user so file ownership stays correct:
+**Running `bbx` commands on the server** — as the box's owner so file ownership stays correct: `beebox` for a box under `/home/beebox/boxes`, `bbx-<box>` on a unit host:
 
 ```bash
 deploy/prod-ssh "su - beebox -c 'bbx boxes list'"
 # or after sshing in as root:
 su - beebox -c "cd /home/beebox/boxes/<box> && bbx validate"
+# unit host: the box's own user, with the units' environment
+su - bbx-<box> -c "set -a; . /etc/beebox/box.env; set +a; cd /var/lib/beebox/<box>/box && bbx validate"
 ```
 
 > ⚠️ **Source `/home/beebox/.env` for env-dependent commands.** The systemd
@@ -97,6 +100,27 @@ su - beebox -c "cd /home/beebox/boxes/<box> && bbx validate"
 >
 > (This produced a bogus "two boxes have missing connectors" health report on
 > 2026-07-14 — the connectors were healthy; the bare invocation was the bug.)
+
+**Memory probe.** Every `bbx engine serve` process records its memory in
+each served box's `.beebox/memory/` (`src/webapp/server/memory-probe.ts`):
+
+- `samples.jsonl`: one line a minute with RSS, used and total heap, the heap
+  limit, `external` and `arrayBuffers` memory, and the count of live handles
+  (all in MB). It rotates to `samples.1.jsonl` at 1 MiB, about three days.
+- `<time>-pid<pid>-<pct>.heapprofile`: the V8 sampling heap profile, written
+  the first time in a process the heap passes 50%, 70%, or 85% of its limit.
+  The server log gets one `[memory] heap passed …` line naming the file. Open
+  it in Chrome DevTools (Memory tab, Load) and read the bottom-up view: it
+  shows the allocation stacks of the live JavaScript heap. The newest six
+  profiles, at most 64 MiB, are kept.
+
+After an OOM, read the last samples (how fast the heap climbed, and whether
+`external` or RSS outside the heap grew instead) and the newest profile. A
+hub child's crash output is in the box's `.beebox/hub-child.log`; a failed
+restart's error is the box's `lastError` in the hub's `/healthz`. For a full
+heap snapshot at the moment of an OOM, start the process with
+`NODE_OPTIONS=--heapsnapshot-near-heap-limit=1` and a `--diagnostic-dir` with
+free disk about twice the heap size; it is off by default for that cost.
 
 **Live memory inspection.** `kill -USR1 <node-pid>` opens the inspector on
 `127.0.0.1:9229` without a restart. A heap snapshot forces a full GC and needs
@@ -177,15 +201,15 @@ For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox
 
 ## Nightly Claude Code updates
 
-Claude Code's built-in auto-updater only fires reliably during long-running interactive sessions — server-side short-lived invocations drift behind. A systemd timer runs `claude update` as the `callback` user nightly around 04:00 UTC (with up to 30m jitter).
+Claude Code's built-in auto-updater only fires reliably during long-running interactive sessions — server-side short-lived invocations drift behind. A systemd timer runs `claude update` as root nightly around 04:00 UTC (with up to 30m jitter).
 
-**Units** (installed by `setup-server.sh`):
+**Units** (installed by `hetzner/provision.sh`; they run as root, since the wrapper re-copies the update to `/usr/local/bin/claude`):
 - `claude-update.timer` — schedule (`OnCalendar=*-*-* 04:00:00`, `Persistent=true` so missed runs catch up at boot).
 - `claude-update.service` — oneshot that invokes the wrapper below.
 - `claude-update-failure.service` — triggered via `OnFailure=` if the wrapper can't record its own failure (e.g. script missing / disk full); logs to syslog `daemon.err`.
 
 **Wrapper**: `deploy/claude-update.sh` (served from the checked-out tree at `/opt/beebox/beebox/deploy/claude-update.sh`, so `deploy.sh` rsync picks up edits). It:
-- Appends `starting:` / `ok:` or `FAIL:` lines with UTC timestamps to `/home/beebox/claude-update.log`.
+- Appends `starting:` / `ok:` or `FAIL:` lines with UTC timestamps to `/var/log/beebox/claude-update.log`.
 - Also writes failures to syslog via `logger -t claude-update -p daemon.err`.
 - Exits with claude's exit code so systemd marks the unit failed (triggering the belt-and-suspenders `OnFailure` unit).
 
@@ -193,7 +217,7 @@ Claude Code's built-in auto-updater only fires reliably during long-running inte
 
 ```bash
 # The wrapper's own log (every run appends a line)
-ssh root@<server> tail -50 /home/beebox/claude-update.log
+ssh root@<server> tail -50 /var/log/beebox/claude-update.log
 
 # Systemd view (last run, next run, last 20 journal lines)
 ssh root@<server> 'systemctl list-timers claude-update.timer --no-pager; \

@@ -89,6 +89,9 @@ export async function planAddBoxToHubConfig(opts: {
   configPath: string;
   slug: string;
   boxPath: string;
+  /** The box's socket unit path on a unit host (`/run/beebox/<slug>.sock`);
+   *  the validator refuses a mix with socketless entries. */
+  socket?: string | undefined;
 }): Promise<AddBoxToHubPlan> {
   const { configPath, slug } = opts;
   const boxPath = path.resolve(opts.boxPath);
@@ -147,7 +150,7 @@ export async function planAddBoxToHubConfig(opts: {
     );
   }
 
-  const next = { ...current, boxes: { ...current.boxes, [slug]: { path: boxPath } } };
+  const next = { ...current, boxes: { ...current.boxes, [slug]: { path: boxPath, ...(opts.socket !== undefined && { socket: opts.socket }) } } };
   // The candidate goes through the hub's own validator BEFORE anything is
   // written: reserved slug, malformed slug, and "two slugs, one events.db"
   // all fail here with the live file untouched.

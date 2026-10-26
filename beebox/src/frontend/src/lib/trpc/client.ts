@@ -152,7 +152,7 @@ function getWsClient(): ReturnType<typeof createWSClient> {
  * — same URL, same `fetch`, same 401 handling, and the WS split above is
  * untouched. A proxy that buffers the response degrades this to the old
  * all-at-once behavior rather than breaking it (hence `proxy_buffering off` in
- * deploy/setup-server.sh).
+ * deploy/nginx/beebox.conf).
  *
  * The HTTP branch retries a query whose box did not answer (`./transient.ts`),
  * with backoff sized to a deploy restart. Retrying here rather than in React

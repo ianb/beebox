@@ -90,7 +90,7 @@
   background-color: #fffdf5;
 }
 .bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material textarea::placeholder {
-  color: #596c71;
+  color: #808e90;
 }
 /* Only the idle mic has bg-primary; recording and paused states keep their
    danger/pulsing colors from InteractiveChat-voice-button. */

@@ -140,7 +140,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   },
   {
     name: "scheduler",
-    subcommands: ["start", "install", "uninstall"],
+    subcommands: ["start", "pass", "install", "uninstall"],
     audience: "engine",
     reason: "daemon lifecycle: `start` is a systemd and launchd ExecStart, `install` writes the launchd plist",
   },
@@ -158,7 +158,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   },
   {
     name: "secrets",
-    subcommands: ["set", "rm", "grant", "revoke", "list", "copy-grants", "migrate"],
+    subcommands: ["set", "rm", "grant", "revoke", "list", "copy-grants", "export-box", "migrate"],
     audience: "engine",
     reason: "mutations refuse an agent session without --agent-confirmed; `list` and `copy-grants` span the machine",
   },

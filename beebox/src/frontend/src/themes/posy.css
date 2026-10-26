@@ -21,7 +21,7 @@
 [data-chrome-theme="posy"] .bbx-composer-material>section{background:transparent;border:0;}
 [data-chrome-theme="posy"] .bbx-composer-material>div.bg-gradient-to-r{background:transparent;}
 [data-chrome-theme="posy"] .bbx-composer-material textarea{background:#fff7f0;color:var(--posy-ink);border:1px solid #b8a8c2;}
-[data-chrome-theme="posy"] .bbx-composer-material textarea::placeholder{color:#765a72;}
+[data-chrome-theme="posy"] .bbx-composer-material textarea::placeholder{color:#998292;}
 [data-chrome-theme="posy"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic[data-mic="idle"]):enabled{background:#f01978;color:#fff5eb;border:1px solid #ad91a8;border-radius:2px;box-shadow:2px 2px 0 #c8b9cf;}
 [data-chrome-theme="posy"] :is(#bbx-composer-add,#bbx-composer-capture,#bbx-composer-keyboard):enabled{background:#72cfb0;color:#201525;border:1px solid #9eaaa8;border-radius:2px;box-shadow:2px 2px 0 #c8b9cf;}
 .bbx-card-theme[data-card-theme="posy"]{--bbx-paper:#fff7f0;--bbx-ink:#201525;--bbx-ink-soft:#624b63;--bbx-pen:#ad1557;--bbx-edge:#b8a8c2;--bbx-underlay:#f4c8d8;--bbx-tint:#ffdf55;--bbx-sheet:#fae6ec;--bbx-quote-paper:#e8daf5;--bbx-quote-layer-paper:#e8daf5;--bbx-blockquote-paper:#e8daf5;--bbx-blockquote-padding:.6em 1em;--bbx-blockquote-edge:2px;--bbx-code-paper:#d5eee3;--bbx-code-ink:#253f37;--bbx-sheet-radius:2px;--bbx-bullet:#e91e78;--bbx-counter:#7653b0;}

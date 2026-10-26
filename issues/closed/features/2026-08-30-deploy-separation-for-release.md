@@ -41,7 +41,7 @@ Shape to design (not decided):
   useful pattern, personal endpoints), add-box/migrate scripts (half setup, half
   personal history), `claude-update.sh`, the notification wiring.
 
-Overlaps to name, not absorb: [setup-server drift](../../code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md),
+Overlaps to name, not absorb: [setup-server drift](../code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md),
 the installation-remaining work (the visitor-facing install paths), and the
 name-change plan (renaming will touch every one of these files anyway —
 sequencing the separation before or with the rename avoids doing it twice).

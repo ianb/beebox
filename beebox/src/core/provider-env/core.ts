@@ -9,9 +9,10 @@
  */
 
 import { assertNever } from "../../shared/invariant.js";
-import { isThirdPartyModel, providerOf } from "../../shared/agent-models.js";
+import { isThirdPartyModel, providerOf, type AgentEngine } from "../../shared/agent-models.js";
 import { loadClaudeCodeTelemetry } from "../box/config.js";
 import { glmEnvAdditions, resolveGlmKeyOrThrow } from "../glm-key.js";
+import { claudeOauthTokenEnv } from "../claude-oauth-token.js";
 import { openRouterChatAdditions } from "./openrouter-chat.js";
 import { ProviderSetupError } from "../provider-setup-error.js";
 
@@ -24,13 +25,20 @@ export async function providerEnvAdditions(params: {
   boxRoot: string;
   /** The resolved model — null/undefined means the harness default, first-party. */
   model: string | null | undefined;
+  /**
+   * The engine that will run: the Codex engine is not the Claude CLI, so it
+   * gets no first-party additions (the Claude token in particular; review
+   * round 6, codex gpt-6-sol, 2026-10-25). Omitted means Claude.
+   */
+  engine?: AgentEngine | undefined;
   /** Access-log label for the key resolution. */
   purpose: string;
   env?: Record<string, string | undefined>;
 }): Promise<Record<string, string> | null> {
   const { boxRoot, model, purpose } = params;
+  if (params.engine === "codex") return null;
   const additions = model === null || model === undefined
-    ? await firstPartyAdditions(boxRoot)
+    ? await firstPartyAdditions(boxRoot, purpose)
     : await additionsFor({ boxRoot, model, purpose });
   if (additions !== null && params.env) Object.assign(params.env, additions);
   return additions;
@@ -74,17 +82,19 @@ const NO_ANTHROPIC_TELEMETRY = {
  * A first-party run sends Claude Code's metrics and error reports unless the
  * box turned them off (`claudeCodeTelemetry`). Nonessential traffic stays on:
  * the owner chose Anthropic for these runs, and the setting is about
- * telemetry only.
+ * telemetry only. The run authenticates with the box's long-lived token when
+ * it has one (`core/claude-oauth-token.ts`), else with the CLI's login file.
  */
-async function firstPartyAdditions(boxRoot: string): Promise<Record<string, string> | null> {
-  if ((await loadClaudeCodeTelemetry(boxRoot)) === "on") return null;
-  return { DISABLE_TELEMETRY: "1", DISABLE_ERROR_REPORTING: "1" };
+async function firstPartyAdditions(boxRoot: string, purpose: string): Promise<Record<string, string> | null> {
+  const additions = await claudeOauthTokenEnv(boxRoot, { purpose, observe: true });
+  if ((await loadClaudeCodeTelemetry(boxRoot)) !== "on") Object.assign(additions, { DISABLE_TELEMETRY: "1", DISABLE_ERROR_REPORTING: "1" });
+  return Object.keys(additions).length === 0 ? null : additions;
 }
 
 /** Any run that points the CLI at another endpoint also gets {@link NO_ANTHROPIC_TELEMETRY}, so a new provider cannot forget it. */
 async function additionsFor(params: { boxRoot: string; model: string; purpose: string }): Promise<Record<string, string> | null> {
   const provider = providerOf(params.model);
-  if (provider === "anthropic") return firstPartyAdditions(params.boxRoot);
+  if (provider === "anthropic") return firstPartyAdditions(params.boxRoot, params.purpose);
   const endpoint = await endpointFor(params);
   return endpoint === null ? null : { ...endpoint, ...NO_ANTHROPIC_TELEMETRY };
 }

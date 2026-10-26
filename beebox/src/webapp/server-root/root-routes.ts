@@ -19,6 +19,7 @@ import { loadBoxSchemas } from "../../schemas.js";
 import { getEngineVersionReport } from "../../core/engine-version.js";
 import { filterAccessibleBoxes } from "../box-access.js";
 import { readBoxIdentity } from "../../core/landmark/box-identity.js";
+import { hubMetaReadsEnabled, readHubMeta } from "../../core/hub-meta.js";
 import { stampBoxIdentity, documentBoxSlug } from "./index-html.js";
 import { loginRedirect } from "../base-prefix.js";
 import type { BoxSpec } from "../server-types.js";
@@ -154,10 +155,16 @@ export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Prom
  *
  * Names are read concurrently and each one degrades to the slug on its own,
  * so one unreadable box can't cost the others their names or fail the list.
+ * On a unit host the hub cannot read a box's content and shows what the box
+ * published in its hub metadata (`core/hub-meta.ts`; plan question 8).
  */
 export async function describeBoxes(boxes: BoxSpec[]): Promise<BoxListing[]> {
   return Promise.all(
     boxes.map(async (b) => {
+      if (hubMetaReadsEnabled()) {
+        const identity = readHubMeta(b.boxRoot)?.identity;
+        return { slug: b.slug, name: identity?.name ?? b.slug, symbol: identity?.symbol ?? null };
+      }
       const { name, symbol } = await readBoxIdentity({ boxRoot: b.boxRoot, slug: b.slug });
       return { slug: b.slug, name, symbol };
     }),

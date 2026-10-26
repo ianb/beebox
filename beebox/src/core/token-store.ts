@@ -35,6 +35,7 @@ import { errnoCode } from "../shared/error-guards.js";
 import { requestScopedLock, withFileLock, type LockProfile } from "../lib/file-lock.js";
 import { isRecord } from "../shared/is-record.js";
 import { writeFileAtomicSync } from "../lib/atomic-write.js";
+import { refreshHubMeta } from "./hub-meta.js";
 
 const LOCK_WAIT_MS = 5_000;
 
@@ -228,5 +229,9 @@ export class TokenStore<TRecord extends TokenRecord> {
   private write(boxRoot: string, records: TRecord[]): void {
     const store = { [this.options.collectionKey]: records };
     writeFileAtomicSync(this.storePath(boxRoot), { content: JSON.stringify(store, null, 2) + "\n", mode: 0o600 });
+    // The hub verifies bearers by hash from the box's published metadata
+    // (`core/hub-meta.ts`); a mint or revoke must reach it at once. A write
+    // that only stamped `lastUsedAt` changes no hash and is skipped there.
+    refreshHubMeta(boxRoot);
   }
 }

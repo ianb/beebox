@@ -18,12 +18,6 @@
     "reason": "The deploy refreshes the retired command's symlink so servers provisioned before the tombstone still answer stale calls."
   },
   {
-    "path": "beebox/deploy/hetzner/setup-server.sh",
-    "occurrenceClass": "standalone-cli-token",
-    "expectedCount": 1,
-    "reason": "Provisioning installs the tombstone under the retired command's name alongside bbx."
-  },
-  {
     "path": "beebox/docs/name-history.md",
     "occurrenceClass": "compact-name",
     "expectedCount": 2,

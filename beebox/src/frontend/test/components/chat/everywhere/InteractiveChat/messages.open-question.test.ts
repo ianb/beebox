@@ -50,7 +50,7 @@ async function mountEmpty(props: ListProps) {
 function shown(container: HTMLElement) {
   const question = container.querySelector<HTMLElement>("[data-testid=chat-open-question]");
   return {
-    question: question === null ? null : [...question.querySelectorAll<HTMLElement>("button, p")].map((el) => el.textContent?.trim() ?? ""),
+    question: question === null ? null : [...question.querySelectorAll<HTMLElement>("button, p, [data-testid=chat-open-question-memo]")].filter((el) => el.parentElement?.closest("[data-testid=chat-open-question-memo]") === null).map((el) => el.textContent?.trim() ?? ""),
     openers: [...container.querySelectorAll<HTMLElement>("[data-testid=chat-openers] button")].map((el) => el.textContent),
     label: container.querySelector(".bbx-chat-empty-label")?.textContent,
   };
@@ -109,4 +109,14 @@ void test("With no open question the empty state is the openers alone", async (t
   const view = await mountEmpty(emptyChat({ openQuestion: null, log: [], openers: ["Log a new loan"] }));
   t.teardown(() => view.unmount());
   t.check(shown(view.container), { question: null, openers: ["Log a new loan"], label: "Start a conversation." });
+});
+
+// The agent writes the memo with card markup, quoting what the person said.
+// The quote shows as a quote, never as the raw `{% quote %}` tags.
+void test("A memo's quote markup renders, not its tags", async (t) => {
+  const memo = "You said {% quote %}keep it simple{% /quote %} last week.";
+  const view = await mountEmpty(emptyChat({ openQuestion: { ...ROOT_QUESTION, memo }, log: [] }));
+  t.teardown(() => view.unmount());
+  const shownMemo = view.container.querySelector<HTMLElement>("[data-testid=chat-open-question-memo]");
+  t.check(shownMemo?.textContent?.replaceAll(/\s+/gu, " ").trim(), "You said “keep it simple” last week.");
 });

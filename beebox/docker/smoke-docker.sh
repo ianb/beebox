@@ -68,7 +68,7 @@ fi
 echo "smoke: ok — image built ($IMAGE_TAG)"
 
 # ── 0. the tools a box runs are on PATH ────────────────────────────────────
-# The server's list (deploy/hetzner/setup-server.sh, deploy.sh's post-deploy
+# The server's list (deploy/hetzner/cloud-init.yaml, deploy.sh's post-deploy
 # check) and this image's list drifted once: no qpdf (PDF scan uploads 503),
 # no uv (Docling), no codex. Each name must resolve and run.
 if ! docker run --rm --entrypoint bash "$IMAGE_TAG" -c '

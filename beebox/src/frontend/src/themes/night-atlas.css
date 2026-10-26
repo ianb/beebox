@@ -74,7 +74,7 @@
   background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
   color: #e0f5e9;
 }
-.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material textarea::placeholder { color: #bfe2d8; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material textarea::placeholder { color: #74a29e; }
 /* Enabled sends and the idle mic only; preserve recording and disabled cues. */
 .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
 .bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-composer-mic[data-mic="idle"] {

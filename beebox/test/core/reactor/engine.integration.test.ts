@@ -28,7 +28,7 @@ const intakeJob = (description: string, opts?: { priority?: "normal" | "low" }) 
   createIntakeJobTemplate({
     description,
     items: [],
-    ...(opts ?? {}),
+    ...opts,
   });
 
 // Override the reactor's slow real subsystems with no-ops. None of these

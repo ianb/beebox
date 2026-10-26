@@ -1,0 +1,39 @@
+# One box's engine, run as the box's own user from the box's own home. Started
+# by beebox-box@<slug>.socket on demand, never enabled on its own. The sandbox
+# (read-only system, no /home, only this box's home under /var/lib/beebox,
+# private /tmp, memory ceiling) is the box-sandbox.conf drop-in, shared with
+# beebox-pass@.service so every box process sees the same filesystem.
+#
+# The hub secret is a systemd credential, not an environment file: the hub
+# (user `beebox`) writes /run/beebox/<slug>.hub-secret 0600 and cannot chgrp
+# it to a box group it is not a member of; LoadCredential= has the service
+# manager read it and hands this box, and only this box, the file under
+# $CREDENTIALS_DIRECTORY. The engine reads it from there (src/lib/systemd-credentials.ts).
+#
+# Start limits: a box that fails five times in five minutes stays failed until
+# the next deploy or a `systemctl reset-failed`; the hub's 503 names the state.
+[Unit]
+Description=Bee Box %i
+Requires=beebox-box@%i.socket
+After=network.target beebox-box@%i.socket
+# The box's home may be a separately mounted volume (production: /var/lib/beebox).
+RequiresMountsFor=/var/lib/beebox/%i
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=bbx-%i
+Group=bbx-%i
+WorkingDirectory=/var/lib/beebox/%i/box
+EnvironmentFile=/etc/beebox/box.env
+LoadCredential=hub-secret:/run/beebox/%i.hub-secret
+ExecStart=/usr/local/bin/bbx engine serve /var/lib/beebox/%i/box --slug %i --socket /run/beebox/%i.sock --idle-exit 1800000
+# SIGTERM to every process in the cgroup: the engine drains its own writes,
+# and a Claude Code or Docling subprocess goes down with it. With
+# KillMode=mixed a subprocess still running when the engine exited was left
+# behind ("remains running after unit stopped", probe VM 2026-10-24).
+KillMode=control-group
+TimeoutStopSec=90
+Restart=on-failure
+RestartSec=5

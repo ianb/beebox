@@ -1,0 +1,18 @@
+# One listening socket per box: /run/beebox/<slug>.sock. systemd owns it and
+# starts beebox-box@<slug>.service on the first connection; the service adopts
+# the socket as fd 3 (LISTEN_FDS) and exits when idle, after which the socket
+# keeps listening and the next connection starts it again. The hub (user
+# `beebox`) connects as group `beebox`; the box owns it; no sibling box can.
+# Installed by deploy.sh with the other units in deploy/systemd/.
+[Unit]
+Description=Bee Box %i (socket)
+
+[Socket]
+ListenStream=/run/beebox/%i.sock
+SocketUser=bbx-%i
+SocketGroup=beebox
+SocketMode=0660
+RemoveOnStop=yes
+
+[Install]
+WantedBy=sockets.target

@@ -35,6 +35,7 @@ import {
   runHostApt,
   sudoAllowsWrapper,
 } from "../../core/host-packages-system.js";
+import { onUnitHost } from "../../lib/unit-host.js";
 
 const HOST_EXIT = { ok: 0, error: 1, refused: 2, unsupported: 3 } as const;
 
@@ -60,8 +61,13 @@ function unsupportedMessage(names: readonly string[]): string {
   ].join("\n");
 }
 
+
 /** Checks the host can install; prints why not. */
 async function installBlocker(system: HostSystem, names: readonly string[]): Promise<number | null> {
+  if (onUnitHost()) {
+    console.log(`${names.join(" ")} is recorded; this host installs recorded packages at the next deploy. Nothing more to do here.`);
+    return HOST_EXIT.ok;
+  }
   if (!(await system.supportsInstalls())) {
     console.error(unsupportedMessage(names));
     return HOST_EXIT.unsupported;

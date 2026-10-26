@@ -21,6 +21,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 
 import { loadBoxRoots, type BoxRoot } from "./box-manifest.js";
+import { checkBoxEnvSecrets, checkBoxUserLayout, isUnitHost } from "./host-audit-users.js";
 
 export type { BoxRoot } from "./box-manifest.js";
 export { loadBoxRoots } from "./box-manifest.js";
@@ -294,6 +295,7 @@ export async function checkUnknownSharedFiles(homeDir: string): Promise<HostFind
 
 export async function auditHost(homeDir: string): Promise<HostFinding[]> {
   const { boxes, findings: manifestFindings } = await loadBoxRoots(homeDir);
+  const unitFindings = isUnitHost(boxes) ? [...(await checkBoxUserLayout(boxes)), ...(await checkBoxEnvSecrets())] : [];
   return [
     ...manifestFindings,
     ...(await checkModes(homeDir)),
@@ -301,6 +303,7 @@ export async function auditHost(homeDir: string): Promise<HostFinding[]> {
     ...(await checkPerCwdKeying(homeDir, boxes)),
     ...checkNestedBoxes(boxes),
     ...(await checkUnknownSharedFiles(homeDir)),
+    ...unitFindings,
   ];
 }
 

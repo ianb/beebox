@@ -255,6 +255,7 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 | `docs-generated-at` | Timestamp of last `generateDocs()` run. |
 | `events.db`, `events.db-shm`, `events.db-wal` | SQLite event bus database. |
 | `logs/` | Per-run agent session logs (`<sessionId>.log`). |
+| `memory/` | The serve process's memory samples and threshold heap profiles, size-capped. See `docs/server/operations.md` (Memory probe). |
 | `box-growth-health.json` | Latest box file/directory/Git measurement, acknowledged size baseline, and explicit ongoing-rate expectations used by the growth health warning. Machine-written and schema-validated; use the dashboard actions instead of editing or deleting it. |
 | `scheduler.jsonl` | One JSONL line per scheduler tick. Records which scripts ran/skipped/errored. |
 | `usage.db` | Token-usage tracking database. |

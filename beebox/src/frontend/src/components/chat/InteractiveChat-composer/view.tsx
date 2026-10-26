@@ -88,7 +88,7 @@ export function ComposerSendButton({
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds, placeholder,
+  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds,
 }: ComposerRowProps & {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -110,7 +110,7 @@ function DesktopComposerRow({
         onPaste={onPaste}
         onDrop={onDrop}
         readOnly={isTranscribing}
-        placeholder={isTranscribing ? "Listening..." : placeholder ?? "Type a message..."}
+        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: false, isTranscribing })}
         minRows={1}
         maxRows={8}
@@ -186,7 +186,7 @@ export function ChatInputArea({
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  narrationEnabled, includeControlIds, placeholder, label,
+  narrationEnabled, includeControlIds, label,
 }: ComposerRowProps & {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   handleKeyDown: (e: React.KeyboardEvent) => void;
@@ -308,7 +308,6 @@ export function ChatInputArea({
           onPaste={onPaste}
           onDrop={onDrop}
           includeControlIds={hasControlIds}
-          placeholder={placeholder}
         />
 
         {/* Mobile: spacer */}

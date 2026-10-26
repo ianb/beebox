@@ -170,7 +170,7 @@ export async function resolveScanVision(
     return { vision: createGeminiScanVision({ route: selection.value.route }) };
   }
   try {
-    await checkClaudeAuth();
+    await checkClaudeAuth({ boxRoot });
   } catch (e) {
     if (e instanceof ClaudeAuthError) return { error: e.message };
     throw e;

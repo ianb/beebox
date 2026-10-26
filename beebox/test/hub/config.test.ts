@@ -10,7 +10,7 @@ import { any, instanceOf, str } from "@ianbicking/tap-check/check";
 import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { loadHubConfig, HubConfigError, type HubConfig } from "../../src/hub/config.js";
+import { loadHubConfig, isUnitHostConfig, HubConfigError, type HubConfig } from "../../src/hub/config.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
 async function writeConfig(dir: string, obj: object): Promise<string> {
@@ -301,4 +301,28 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
   const keepNegPathErr = await loadRejected(keepNegPath);
   t.check(keepNegPathErr, instanceOf(HubConfigError));
   t.check(keepNegPathErr.message, str`Hub config at ${keepNegPath} is invalid:\n  - keepRecent: ${any(String)}`);
+});
+
+// ## Socket entries (a unit host) are all or nothing, and own the idle rules
+//
+// docs/plans/per-box-units.md, Track D: a hub routes either to systemd socket
+// units or to children it spawns; a half-migrated file must not load, and
+// `lazy`/`idleMs`/`keepRecent` have no process to act on when systemd owns them.
+void test("Socket entries are all or nothing, and refuse the hub's own idle rules", async (t) => {
+  t.teardown(() => box.cleanup());
+  const box = await makeTmpBox();
+  await box.write("boxes/a/.beebox/box.json", "");
+  await box.write("boxes/b/.beebox/box.json", "");
+
+  const unitHost = await writeConfig(box.root, { boxes: { a: { path: "./boxes/a", socket: "/run/beebox/a.sock" }, b: { path: "./boxes/b", socket: "/run/beebox/b.sock" } } });
+  const config = await loadOk(unitHost);
+  t.check(config.boxes, { a: { path: path.join(box.root, "boxes/a"), socket: "/run/beebox/a.sock" }, b: { path: path.join(box.root, "boxes/b"), socket: "/run/beebox/b.sock" } });
+  t.check(isUnitHostConfig(config), true);
+  t.check(isUnitHostConfig({ boxes: { a: { path: "/x" } } }), false);
+
+  const mixed = await writeConfig(box.root, { boxes: { a: { path: "./boxes/a", socket: "/run/beebox/a.sock" }, b: { path: "./boxes/b" } } });
+  t.check((await loadRejected(mixed)).message, `Hub config at ${mixed}: some boxes name a socket and some do not (without: b). A hub routes either to systemd socket units or to children it spawns, never both; give every box a socket or none.`);
+
+  const idle = await writeConfig(box.root, { lazy: true, idleMs: 60_000, boxes: { a: { path: "./boxes/a", socket: "/run/beebox/a.sock" } } });
+  t.check((await loadRejected(idle)).message, `Hub config at ${idle}: lazy, idleMs cannot be set when boxes name sockets. systemd starts a box on its first connection and the engine exits itself when idle (bbx engine serve --idle-exit, set in the unit); the hub has no process to stop.`);
 });

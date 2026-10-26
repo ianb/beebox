@@ -102,7 +102,7 @@ writes the input manifest last (so a partial build never masks staleness).
 - `links.ts` — base-path handling and internal-link resolution.
 - `evaluation-tags.ts` — markup for model-comparison pages: `{% model name vendor %}` pills,
   `{% verdict is="correct|okay|failed" %}` badges, `{% sample title %}` boxes, and
-  `{% audio src="/assets/…" /%}` players; the `.md` twin keeps the first three and drops players.
+  `{% audio src="/assets/…" ref="…" /%}` players (`ref`, optional, labels the take and is the player's id); the `.md` twin keeps the first three and drops players.
   An audio `src` joins the link check: it must be a file under `site/assets/`.
 - `sources.ts` — the single definition of the input source set + content-hash
   manifest, shared by `build.ts` (writes `dist/.inputs.json`) and

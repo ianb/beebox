@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { acquireLock, inspectLock, LockHeldError, releaseLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "../file-lock.js";
+import { acquireLock, inspectLock, LockHeldError, releaseLock, requestScopedLock, scanLocks, updateLockMetadata, withFileLock, type LockHolder } from "../file-lock.js";
 import { resolveGitDir } from "../git-lock.js";
 import { writeFileAtomic } from "../atomic-write.js";
 import { readJsonIfPresent } from "../json-state.js";
@@ -126,9 +126,14 @@ export interface BoxWork {
   release(): Promise<void>;
 }
 
-/** Serialize lease publication with the drain's zero-reader observation. */
+/**
+ * Serialize lease publication with the drain's zero-reader observation. Every
+ * section under it is a few file operations, so it takes the request profile:
+ * a holder killed inside one (a box child's OOM) must not refuse startup and
+ * every admitted write for the default profile's five minutes.
+ */
 function withAdmission<T>(directory: string, fn: () => Promise<T>): Promise<T> {
-  return withFileLock({ lockPath: join(directory, "admission.lock"), metadata: {}, waitMs: 10_000 }, fn);
+  return withFileLock({ lockPath: requestScopedLock(join(directory, "admission.lock")), metadata: {}, waitMs: 10_000 }, fn);
 }
 
 /** Retain before checking phase: closure cannot miss a writer that saw open. */
@@ -216,11 +221,16 @@ export function boxWorkEnvironment(): Record<string, string> {
   return permit ? { BBX_BOX_WORK: JSON.stringify(permit) } : inherited ? { BBX_BOX_WORK: inherited } : {};
 }
 
-export async function boxMaintenanceStatus(boxRoot: string): Promise<MaintenanceStatus | null> {
-  const directory = await directoryFor(boxRoot);
+export async function boxMaintenanceStatus(boxRoot: string): Promise<MaintenanceStatus | null> { return maintenanceStatusIn(await directoryFor(boxRoot)); }
+
+/** The status in a directory a permit names, for a reader that must not ask git (root: git refuses another user's repository). */
+export async function maintenanceStatusIn(directory: string): Promise<MaintenanceStatus | null> {
   const phase = await readPhase(directory);
   return phase && { ...phase, owner: await ownerOf(directory), step: await readMaintenanceStep(directory, phase.id) };
 }
+
+/** The maintenance directory an encoded permit (`BBX_BOX_WORK`, a holder's report) refers to. */
+export function permitDirectory(encoded: string): string { return permitSchema.parse(JSON.parse(encoded)).directory; }
 
 export interface BoxMaintenance extends BoxWork {
   /** Whether this owner still holds the box; false once its lock was lost or reclaimed. */
