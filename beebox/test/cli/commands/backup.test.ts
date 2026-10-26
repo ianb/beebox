@@ -3,6 +3,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { backupConfigPath, updateBackupSchedule, writeBackupConfig } from "../../../src/core/box-backup/config.js";
+import { scheduledBackupDecision } from "../../../src/core/box-backup/scheduled.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 void test("restore previews without writing, then applies only a pinned snapshot", async (t) => {
@@ -101,6 +102,80 @@ void test("scheduled run skips when off while a manual run still captures", asyn
   t.check({ captures, lines, exitCode: process.exitCode }, {
     captures: 1,
     lines: ["Verified snapshot snapshot-id at 2026-10-26T00:00:00.000Z (0s). External: 1 items, 0 secrets."],
+    exitCode: originalExitCode,
+  });
+});
+
+void test("scheduled run skips a box with no backup configuration", async (t) => {
+  const box = await makeTmpBox();
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalExitCode = process.exitCode;
+  const lines: string[] = [];
+  let captures = 0;
+  console.log = (...args: unknown[]) => { lines.push(args.map(String).join(" ")); };
+  console.error = (...args: unknown[]) => { lines.push(args.map(String).join(" ")); };
+  t.teardown(async () => {
+    console.log = originalLog;
+    console.error = originalError;
+    process.exitCode = originalExitCode;
+    await box.cleanup();
+  });
+  const { backupCommand } = await t.mockImport("../../../src/cli/commands/backup.ts", {
+    "../../../src/core/box-backup/run/backup.ts": {
+      configureBackup: async () => { throw new Error("not used"); },
+      listSnapshots: async () => [],
+      runBackup: async () => {
+        captures += 1;
+        throw new Error("not used");
+      },
+    },
+    "../../../src/core/box-backup/retention.ts": { pruneBackup: async () => ({ pruned: 0 }) },
+    "../../../src/core/box-backup/scheduled.ts": {
+      scheduledBackupDecision: () => "due",
+      waitForScheduledBackupQuiet: async () => ({ quiet: true, waitedMs: 0 }),
+    },
+  });
+  await backupCommand.parseAsync(["run", box.root, "--scheduled"], { from: "user" });
+  t.check({ captures, lines, exitCode: process.exitCode }, {
+    captures: 0,
+    lines: ["Scheduled backup skipped; backups are not configured."],
+    exitCode: originalExitCode,
+  });
+});
+
+void test("scheduled run rechecks Daily after the quiet wait", async (t) => {
+  const box = await makeTmpBox();
+  const originalLog = console.log;
+  const originalExitCode = process.exitCode;
+  const lines: string[] = [];
+  let captures = 0;
+  console.log = (...args: unknown[]) => { lines.push(args.map(String).join(" ")); };
+  t.teardown(async () => {
+    console.log = originalLog;
+    process.exitCode = originalExitCode;
+    await fs.rm(backupConfigPath(box.root), { force: true });
+    await box.cleanup();
+  });
+  await writeBackupConfig({ boxRoot: box.root, repository: "/tmp/repository", passwordFile: "/tmp/password" });
+  const { backupCommand } = await t.mockImport("../../../src/cli/commands/backup.ts", {
+    "../../../src/core/box-backup/run/backup.ts": {
+      configureBackup: async () => { throw new Error("not used"); },
+      listSnapshots: async () => [],
+      runBackup: async () => { captures += 1; throw new Error("not used"); },
+    },
+    "../../../src/core/box-backup/scheduled.ts": {
+      scheduledBackupDecision,
+      waitForScheduledBackupQuiet: async () => {
+        await updateBackupSchedule({ boxRoot: box.root, schedule: "off" });
+        return { quiet: true, waitedMs: 600_000 };
+      },
+    },
+  });
+  await backupCommand.parseAsync(["run", box.root, "--scheduled"], { from: "user" });
+  t.check({ captures, lines, exitCode: process.exitCode }, {
+    captures: 0,
+    lines: ["Scheduled backup skipped; the schedule or latest snapshot changed while waiting for quiet."],
     exitCode: originalExitCode,
   });
 });

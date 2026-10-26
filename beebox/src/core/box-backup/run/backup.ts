@@ -25,6 +25,9 @@ export async function runBackup({ boxRoot }: { boxRoot: string }): Promise<Backu
   const maintenance = await acquireBackupMaintenance(config.boxRoot, startedAt);
   const stagingRoot = path.join(path.dirname(backupConfigPath(config.boxRoot)), "staging", config.backupId);
   try {
+    // A killed host runner can leave a stale repository lock. Restic's plain
+    // unlock removes stale locks only, preserving locks held by live writers.
+    await runRestic({ repository: config.repository, passwordFile: config.passwordFile, args: ["unlock"] });
     const inventory = await backupInventory({ boxRoot: config.boxRoot, backupId: config.backupId });
     await maintenance.step("Preparing backup files");
     await fs.rm(stagingRoot, { recursive: true, force: true });
@@ -112,7 +115,7 @@ async function requireMaintenanceOwner(maintenance: Awaited<ReturnType<typeof ac
   if (!(await maintenance.held())) throw new BackupMaintenanceOwnerExpiredError();
 }
 
-export async function configureBackup({ boxRoot, repository, passwordFile, retention, backupId: requestedBackupId, timeoutMs }: { boxRoot: string; repository: string; passwordFile: string; retention?: BackupRetention; backupId?: string; timeoutMs?: number }): Promise<BackupConfig> {
+export async function configureBackup({ boxRoot, repository, passwordFile, retention, backupId: requestedBackupId, timeoutMs, initialSchedule }: { boxRoot: string; repository: string; passwordFile: string; retention?: BackupRetention; backupId?: string; timeoutMs?: number; initialSchedule?: "daily" | "off" }): Promise<BackupConfig> {
   const realRoot = await fs.realpath(boxRoot);
   if (requestedBackupId && !z.string().uuid().safeParse(requestedBackupId).success) throw new InvalidBackupIdError();
   await validateBackupPaths({ realRoot, repository, passwordFile });
@@ -123,7 +126,7 @@ export async function configureBackup({ boxRoot, repository, passwordFile, reten
   const backupId = priorConfig?.backupId ?? requestedBackupId ?? randomUUID();
   await ensureRepositoryIdentity({ repository, passwordFile, backupId, explicitIdentity: Boolean(priorConfig || requestedBackupId), ...(timeoutMs === undefined ? {} : { timeoutMs }) });
   const nextRetention = retention ?? priorConfig?.retention;
-  const config = await writeBackupConfig({ boxRoot: realRoot, repository, passwordFile, backupId, ...(nextRetention === undefined ? {} : { retention: nextRetention }) });
+  const config = await writeBackupConfig({ boxRoot: realRoot, repository, passwordFile, backupId, ...(nextRetention === undefined ? {} : { retention: nextRetention }), ...(initialSchedule === undefined ? {} : { initialSchedule }) });
   return config;
 }
 

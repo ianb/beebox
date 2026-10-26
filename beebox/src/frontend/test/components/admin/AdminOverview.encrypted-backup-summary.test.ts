@@ -18,6 +18,7 @@ const base: ConfiguredStatus = {
   repository: "s3:safe-bucket/box",
   retention: { daily: 7, weekly: 4, monthly: 12 },
   schedule: "daily",
+  runnerStatus: "running",
   newestVerified: null,
   lastAttempt: null,
   maintenance: null,
@@ -28,9 +29,9 @@ function status(overrides?: Partial<ConfiguredStatus>): ConfiguredStatus {
 }
 
 void test("summarizes encrypted backup lifecycle", async (t) => {
-  const unconfigured: Status & { configured: false; repository: null; retention: null; schedule: "daily"; newestVerified: null; lastAttempt: null; maintenance: null } = {
+  const unconfigured: Status & { configured: false; repository: null; retention: null; schedule: "off"; newestVerified: null; lastAttempt: null; maintenance: null } = {
     boxRoot: "/srv/box", boxSlug: "box", installKind: "local", configured: false,
-    repository: null, retention: null, schedule: "daily", newestVerified: null, lastAttempt: null, maintenance: null,
+    repository: null, retention: null, schedule: "off", runnerStatus: "unavailable", newestVerified: null, lastAttempt: null, maintenance: null,
   };
   t.check(summarizeEncryptedBackup(unconfigured), { state: "ready", summary: "Not configured", tone: "warning" });
   t.check(summarizeEncryptedBackup(status({})), { state: "ready", summary: "No local snapshot record; inspect repository", tone: "warning" });
@@ -41,6 +42,7 @@ void test("summarizes encrypted backup lifecycle", async (t) => {
   })), { state: "ready", summary: "Last run failed; previous snapshot available", tone: "warning" });
   t.check(summarizeEncryptedBackup(status({ maintenance: "running" })), { state: "ready", summary: "Backup running", tone: "info" });
   t.check(summarizeEncryptedBackup(status({ schedule: "off" })), { state: "ready", summary: "Manual backups only", tone: "neutral" });
+  t.check(summarizeEncryptedBackup(status({ runnerStatus: "unavailable" })), { state: "ready", summary: "Daily backup runner unavailable", tone: "warning" });
   t.check(summarizeEncryptedBackup(status({
     lastAttempt: { startedAt: "2026-10-26T12:00:00.000Z", completedAt: "2026-10-26T12:01:00.000Z", outcome: "failed", error: "Snapshot verified; retention could not be applied" },
     maintenance: "running",

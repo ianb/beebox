@@ -46,7 +46,8 @@ void test("encrypted backup status is local, and schedule preserves the existing
     configured: false,
     repository: null,
     retention: null,
-    schedule: "daily",
+    schedule: "off",
+    runnerStatus: process.env.BBX_INSTALL_KIND === "mac-app" ? "running" : "unavailable",
     newestVerified: null,
     lastAttempt: null,
     maintenance: null,
@@ -58,7 +59,7 @@ void test("encrypted backup status is local, and schedule preserves the existing
   const configured = await writeBackupConfig({ boxRoot: box.root, repository: "s3:https://user:repository-secret@example.invalid/repo", passwordFile: key.passwordFile });
   const ownerStatus = await admin.encryptedBackupStatus();
   t.check([ownerStatus.boxSlug, ownerStatus.installKind, ownerStatus.configured, ownerStatus.repository, ownerStatus.schedule, ownerStatus.newestVerified], ["test", process.env.BBX_UNIT_HOST === "1" ? "unit-host" : process.env.BBX_INSTALL_KIND === "mac-app" ? "mac-app" : process.env.BBX_INSTALL_KIND === "docker" ? "docker" : "local", true, "s3:https://***@example.invalid/repo", "daily", null]);
-  t.check(Object.keys(ownerStatus).toSorted(), ["boxRoot", "boxSlug", "configured", "installKind", "lastAttempt", "maintenance", "newestVerified", "repository", "retention", "schedule"]);
+  t.check(Object.keys(ownerStatus).toSorted(), ["boxRoot", "boxSlug", "configured", "installKind", "lastAttempt", "maintenance", "newestVerified", "repository", "retention", "runnerStatus", "schedule"]);
   t.check(ownerStatus.repository, "s3:https://***@example.invalid/repo");
 
   const directory = path.dirname(backupConfigPath(box.root));

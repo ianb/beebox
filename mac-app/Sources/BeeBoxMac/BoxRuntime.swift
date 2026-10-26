@@ -407,47 +407,17 @@ final class BoxRuntime: ObservableObject {
         return relay
     }
 
-    /// Catch up an overdue configured backup while this app is already hosting
-    /// the box. Each probe is a short-lived process in the running VM.
+    /// Catch up an overdue configured backup while this app hosts the box.
+    /// The CLI checks due state and waits for a quiet box before capture.
     private func backupLoop(_ container: LinuxContainer, log: LogWriter) async {
         let statusInterval: Duration = .seconds(900)
-        let idleInterval: Duration = .seconds(60)
         while !Task.isCancelled, self.container === container {
             do {
-                let status = try await runInVM(container, arguments: ["bbx", "engine", "backup", "status", "/data/box", "--json"], log: log, logOutput: false)
-                guard status.exitCode == 0 else {
-                    appLog("backup status failed (exit \(status.exitCode)); see \(Paths.log.path)")
-                    try await Task.sleep(for: statusInterval)
-                    continue
-                }
-                let state = try JSONDecoder().decode(BackupStatus.self, from: status.stdout)
-                guard state.configured, state.due else {
-                    try await Task.sleep(for: statusInterval)
-                    continue
-                }
-
-                appLog("overdue backup detected; waiting for ten minutes without admitted box work")
-                var idleSince: Date?
-                while !Task.isCancelled, self.container === container {
-                    let idle = try await runInVM(container, arguments: ["bbx", "engine", "backup", "idle", "/data/box"], log: log, logOutput: false)
-                    if idle.exitCode == 0 {
-                        idleSince = idleSince ?? Date()
-                        if let idleSince, Date().timeIntervalSince(idleSince) >= 600 { break }
-                    } else if idle.exitCode == 1 {
-                        idleSince = nil
-                    } else {
-                        appLog("backup idle check failed (exit \(idle.exitCode)); see \(Paths.log.path)")
-                        idleSince = nil
-                    }
-                    try await Task.sleep(for: idleInterval)
-                }
-                guard !Task.isCancelled, self.container === container else { return }
-                appLog("ten-minute quiet window reached; starting backup")
-                let backup = try await runInVM(container, arguments: ["bbx", "engine", "backup", "run", "/data/box", "--scheduled"], log: log, logOutput: true)
+                let backup = try await runInVM(container, arguments: ["bbx", "engine", "backup", "run", "/data/box", "--scheduled"], log: log, logOutput: false)
                 if backup.exitCode != 0 {
                     appLog("backup failed (exit \(backup.exitCode)); it will be retried while the app remains open")
-                    try await Task.sleep(for: statusInterval)
                 }
+                try await Task.sleep(for: statusInterval)
             } catch is CancellationError {
                 return
             } catch {
@@ -455,11 +425,6 @@ final class BoxRuntime: ObservableObject {
                 do { try await Task.sleep(for: statusInterval) } catch { return }
             }
         }
-    }
-
-    private struct BackupStatus: Decodable {
-        let configured: Bool
-        let due: Bool
     }
 
     private struct VMCommandResult {

@@ -38,9 +38,8 @@ The CLI remains the runner and recovery tool.
 ### Trust
 
 The owner explicitly saves destination and password, then runs the shown CLI
-command for the first backup. Daily runs become automatic only when a host runner invokes the CLI.
-The section must say when that runner is not confirmed; configuration alone
-is not evidence of a recurring backup. Recovery remains a CLI action with a
+command for the first backup. Daily runs become automatic after Admin confirms
+the install's runner and records the owner's opt-in. Recovery remains a CLI action with a
 snapshot preview and exact-ID apply.
 
 ### When it goes wrong or does nothing
@@ -50,7 +49,7 @@ with no local run record says that Admin cannot yet confirm a snapshot and
 shows the manual capture command. Repository or
 password failures show an error without returning password bytes or a Restic
 command line. A stale verified snapshot remains visible beside the failed
-attempt. A missing host runner is named as a separate setup step.
+attempt. A missing server timer blocks Daily and is shown as a repair state.
 
 ### Walkthrough
 
@@ -91,7 +90,7 @@ separate.
 - `src/core/box-backup/status.ts:6-16`: CLI status finds the newest verified snapshot and daily due state through Restic. Admin reads local run outcomes instead, so page loads cannot contend with repository locks or network latency.
 - `src/cli/commands/backup.ts:51-109`: configure/run/status/check already work. Admin configures and reports; the CLI keeps capture and retention.
 - `src/webapp/server/box-admission.ts:40-79` and `src/webapp/trpc/procedures.ts:28-34`: HTTP and tRPC mutations hold work leases. Keep long capture in the host-owned CLI runner; the web process may idle-exit.
-- `deploy/systemd/beebox-backup@.service:12`, `mac-app/Sources/BeeBoxMac/BoxRuntime.swift:416-445`, and `docker/README.md:30-36`: install runners already call the CLI. Keep them as schedule owners.
+- `deploy/systemd/beebox-backup@.service:12` and `mac-app/Sources/BeeBoxMac/BoxRuntime.swift:416-445`: server and Mac runners call the CLI. Docker and direct local need a serving-process catch-up loop.
 
 ## Prior art (external)
 
@@ -104,7 +103,7 @@ work uses the existing internal API and runner.
 - **Backup configuration** (existing): one machine file per resolved box root; identifies repository, key-file path, daily schedule, retention, and backup identity. It is not the encrypted repository or a box Git file (`src/core/box-backup/config.ts:10-20`).
 - **Verified snapshot** (existing): a Restic snapshot tagged `verified` for this backup identity. It is not proof that a host timer is installed (`src/core/box-backup/status.ts:11-16`).
 - **Last attempt** (new): one machine-owned final status record for a CLI run, with start/end time, outcome, and safe error summary. It points at a verified snapshot on success; it is not a history of every run. Live maintenance state supplies `running` or `interrupted` without a second running marker.
-- **Host runner** (existing): systemd timer, Mac app loop, launchd, or Docker/NAS scheduler that invokes the CLI. It is not a box-authored scheduled script.
+- **Host runner:** systemd timer, Mac app loop, or serving-process catch-up loop that invokes the CLI. Optional launchd or NAS schedulers can invoke the same idempotent CLI. It is not a box-authored scheduled script.
 
 ## Tracks / scope
 
@@ -146,15 +145,32 @@ work uses the existing internal API and runner.
 
 ### D. Schedule setting and install guidance
 
-**What:** Allow daily or manual-only preference in machine config. Keep host runners as the source of actual invocation.
+**What:** Allow daily or manual-only preference in machine config. Daily must have an installed, running owner for scheduled invocation; the Admin switch must not merely save permission for an absent runner.
 
 **Why:** A box-authored scheduled script runs inside `withBoxWork` (`src/core/schedule/scheduler/pass.ts:31-37`) and would wait on its own admission when backup takes exclusive maintenance.
 
-**Direction:** Accept `schedule: daily|off`, preserving `daily` in existing configs. Keep manual CLI `run` available when daily runs are off. Add `run --scheduled` for host runners; it skips when off. Make `status.due` false when off so the Mac loop does not enter an idle-wait cycle or poll Restic for an unavailable scheduled run. Update the server unit and install instructions to use `--scheduled`, and pass it from the Mac loop as a second guard. Show install-specific runner guidance; do not claim the runner is enabled unless it can be verified.
+**Direction:** Accept `schedule: daily|off`, preserving `daily` in existing configs but starting new Admin configuration at `off`. Keep manual CLI `run` available when daily runs are off. Add `run --scheduled` for host runners; it skips when off. Make `status.due` false when off so the Mac loop does not enter an idle-wait cycle or poll Restic for an unavailable scheduled run. Update the server unit and install instructions to use `--scheduled`, and pass it from the Mac loop as a second guard.
 
 **Vocabulary lock-ins:** `daily` and `off`; `off` controls unattended runs, not manual capture or restore.
 
 **First implementation chunk:** Test configured-off scheduled CLI run skipping Restic, manual run working, and old daily config continuing to run.
+
+### D2. Runner guarantee after boxholder review (2026-10-26)
+
+The first implementation left a gap: the Admin daily switch rewrote only the config. The boxholder's correction is that turning it on should ensure a schedule exists. `deploy/deploy.sh:912-927` installs but does not enable per-box backup timers; `deploy/add-box.sh:504` enables only the box socket; `docker/compose.yaml:13-52` has no backup runner. The Mac app starts a backup loop after the VM starts (`mac-app/Sources/BeeBoxMac/BoxRuntime.swift:263-268,412-449`).
+
+**Reviewed direction:** The runner is part of each supported install. Server box units have `NoNewPrivileges=yes`, so Admin cannot enable a timer through sudo. `add-box.sh` and deploy convergence instead enable a per-box timer with each socket. The timer checks hourly so a quiet timeout or a failed capture can retry; the CLI due policy still limits verified snapshots to daily. A new `serverAutoEnabled` config flag defaults false, including legacy configs; Admin sets it only after confirming the timer is active. Thus a legacy `--configure-only` does not begin capture merely because a deploy installs timers. On Docker and direct local `bbx serve`, a background loop owned by the serving process invokes the CLI outside any web request's box-work lease and catches up after restart. The Mac app keeps its host loop but delegates due and quiet checks to the same CLI policy. New Admin configurations start with daily off; the owner turns daily on when ready.
+
+**Truthful control:** Server Admin verifies timer enabled and active before saving daily; turning off writes the config gate, leaving the inert timer installed. Mac, Docker, and local Admin requests are served while their built-in loop runs; status says they catch up while the app/box runs. Missing runner state prevents enabling Daily and shows the host repair command where needed. Existing server CLI configs retain their raw daily value but are presented as off until the owner opts in. The boxholder accepted catch-up while a direct local `bbx serve` is running; an OS job is not required.
+
+**One scheduled-run policy:** `bbx engine backup run --scheduled` exits 0 without capture when configuration is missing, daily is off, a verified capture exists for this calendar day (with a minimum gap), or a failed attempt needs a short retry delay. It waits for a quiet box, then rechecks schedule and attempt state before requesting the exclusive maintenance hold. That makes a stray old launchd/cron job or a second runner ordinarily skip a duplicate. The Mac app calls this policy directly. Repository access and capture still run in the CLI process, not in the Admin request.
+
+**Interrupted runs:** A host shutdown may kill a Restic subprocess mid-command.
+Before the next capture, the CLI runs plain `restic unlock`, which removes
+stale locks and leaves live writers' locks in place; the existing ownerless
+backup maintenance retry then proceeds.
+
+**Tests:** Exercise new-config default off, unconfigured scheduled-run skip, due/retry/quiet policy, server timer convergence and missing-timer refusal, loop overlap and startup wiring. Re-run selected tests, typecheck, layout/doc checks, and cross-model diff review. No browser-started backup action is added: `scheduler.trigger` waits inside a request work lease (`src/webapp/trpc/procedures.ts:28-34`, `routers/scheduler/router.ts:167-189`), whereas capture drains all such leases (`src/core/box-backup/run/backup.ts:21-27`).
 
 ## Could this be simpler?
 
@@ -165,7 +181,8 @@ capture implementation.
 
 ## Subplans
 
-None. The install runners already exist; this plan connects to them.
+None. Track D2 adds the missing Docker/direct-local runner and server timer
+convergence in this plan.
 
 ## Failure modes
 
@@ -178,7 +195,7 @@ None. The install runners already exist; this plan connects to them.
 | Crashed backup leaves ownerless draining maintenance | Add core test | A later backup retries only this phase | Clear |
 | A scheduled run fails after an older verified snapshot | Add status test | Last attempt and newest verified shown separately | Clear |
 | Another trigger starts during a run | Add concurrency test | Existing maintenance admission refuses duplicate; report busy | Clear |
-| Daily preference saved but host runner absent | UI state test | Say “runner not confirmed” and show install setup | Clear |
+| Daily preference saved but host runner absent | UI state test | Refuse enable; show timer repair when a prior daily config lost its runner | Clear |
 | Existing CLI config predates Admin | Add read test | Show current config without reading key bytes | Clear |
 | Bad Admin destination makes Restic retry indefinitely | Add bounded setup test | Stop repository validation after 120 seconds with safe error | Clear |
 | Unit-host manual command runs as the wrong user | UI command test | Show per-box Unix user with unit environment | Clear |
@@ -203,7 +220,7 @@ None. The install runners already exist; this plan connects to them.
 
 ## Open design questions
 
-None for the first implementation chunk. Install-specific runner activation remains a host setup step and is presented as such.
+None for the first implementation chunk. The boxholder chose catch-up while a direct local box is running.
 
 ## Knowledge audits
 
@@ -224,7 +241,8 @@ Host → Encrypted backups, and smoke before asking to land. No new test tier.
 2. Owner-only tRPC procedures and CLI outcome recording, with route tests.
 3. Frontend section, overview, DOM tests, and browser walk.
 4. Schedule `daily|off`, CLI semantics, install guidance, and documentation.
-5. Security report draft for the credential-bearing route and backend egress; cross-model diff review; commit the implementation while the report awaits human review.
+5. Track D2 runner convergence and shared due/quiet policy, with focused tests.
+6. Security report draft for the credential-bearing route and backend egress; cross-model diff review; commit the implementation while the report awaits human review.
 
 ## Rollout shape
 

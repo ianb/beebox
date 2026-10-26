@@ -6,9 +6,10 @@ import { checkBackup } from "../../core/box-backup/check.js";
 import { configureBackup, runBackup } from "../../core/box-backup/run/backup.js";
 import { pruneBackup } from "../../core/box-backup/retention.js";
 import { backupStatus } from "../../core/box-backup/status.js";
-import { readBackupConfig } from "../../core/box-backup/config.js";
-import { recordBackupPostVerificationFailure } from "../../core/box-backup/attempt.js";
+import { MissingBackupConfigError, readBackupConfig } from "../../core/box-backup/config.js";
+import { readBackupAttempt, recordBackupPostVerificationFailure } from "../../core/box-backup/attempt.js";
 import { previewBoxBackup, restoreBoxBackup } from "../../core/box-backup/restore.js";
+import { scheduledBackupDecision, waitForScheduledBackupQuiet } from "../../core/box-backup/scheduled.js";
 import type { BackupRetention } from "../../core/box-backup/config.js";
 
 function fail(stage: string, error: unknown): void {
@@ -79,12 +80,45 @@ backupCommand
   .command("run")
   .description("Capture one snapshot, then apply retention")
   .argument("<boxRoot>", "Box root")
-  .option("--scheduled", "Skip capture when the configured schedule is manual-only")
+  .option("--scheduled", "Apply automatic-run due checks and wait for a quiet box")
   .action(async (boxRoot: string, options: { scheduled?: boolean }) => {
     try {
-      if (options.scheduled && (await readBackupConfig({ boxRoot })).schedule === "off") {
-        console.log("Scheduled backup skipped; automatic backups are off.");
-        return;
+      if (options.scheduled) {
+        let config;
+        try { config = await readBackupConfig({ boxRoot }); }
+        catch (error) {
+          if (!(error instanceof MissingBackupConfigError)) throw error;
+          console.log("Scheduled backup skipped; backups are not configured.");
+          return;
+        }
+        const decision = scheduledBackupDecision({ schedule: config.schedule, serverAutoEnabled: config.serverAutoEnabled, attempt: await readBackupAttempt({ boxRoot }) });
+        if (decision !== "due") {
+          const messages = {
+            off: "Scheduled backup skipped; automatic backups are off.",
+            "server-runner-not-enabled": "Scheduled backup skipped; daily backups are not enabled for this server box.",
+            "recently-verified": "Scheduled backup skipped; a verified snapshot is less than one day old.",
+            "recent-failure": "Scheduled backup skipped; the last failed attempt is still in its retry delay.",
+            due: "",
+          };
+          console.log(messages[decision]);
+          return;
+        }
+        const quiet = await waitForScheduledBackupQuiet({ boxRoot });
+        if (!quiet.quiet) {
+          console.error("Scheduled backup skipped; the box did not become quiet within one hour.");
+          return;
+        }
+        let currentConfig;
+        try { currentConfig = await readBackupConfig({ boxRoot }); }
+        catch (error) {
+          if (!(error instanceof MissingBackupConfigError)) throw error;
+          console.log("Scheduled backup skipped; backups are no longer configured.");
+          return;
+        }
+        if (scheduledBackupDecision({ schedule: currentConfig.schedule, serverAutoEnabled: currentConfig.serverAutoEnabled, attempt: await readBackupAttempt({ boxRoot }) }) !== "due") {
+          console.log("Scheduled backup skipped; the schedule or latest snapshot changed while waiting for quiet.");
+          return;
+        }
       }
       await runAndRetain(boxRoot);
     }

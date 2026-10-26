@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { trpc } from "../../lib/trpc/client";
+import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { ErrorText } from "../ui/ErrorText";
@@ -37,7 +37,7 @@ export function EncryptedBackupsSection() {
   const query = trpc.admin.encryptedBackupStatus.useQuery();
   const configure = trpc.admin.configureEncryptedBackup.useMutation();
   const setSchedule = trpc.admin.updateEncryptedBackupSchedule.useMutation({
-    onSuccess: async () => utils.admin.encryptedBackupStatus.invalidate(),
+    onSettled: async () => utils.admin.encryptedBackupStatus.invalidate(),
   });
   const [repository, setRepository] = useState("");
   const [password, setPassword] = useState("");
@@ -117,22 +117,18 @@ export function EncryptedBackupsSection() {
             <Stack gap="md">
               <div>
                 <Row gap="sm" wrap><Text size="sm" weight="semibold">Destination</Text><Text size="sm" breakAll>{query.data.repository}</Text></Row>
-                <Row gap="sm" wrap><Text size="sm" weight="semibold">Schedule</Text><Text size="sm">{query.data.schedule === "daily" ? "Daily preferred" : "Manual only"}</Text></Row>
+                <Row gap="sm" wrap><Text size="sm" weight="semibold">Schedule</Text><Text size="sm">{query.data.schedule === "daily" ? "Daily" : "Manual only"}</Text></Row>
                 {query.data.retention ? <Row gap="sm" wrap><Text size="sm" weight="semibold">Retention</Text><Text size="sm">{query.data.retention.daily} daily · {query.data.retention.weekly} weekly · {query.data.retention.monthly} monthly snapshots</Text></Row> : null}
               </div>
 
-              <Stack gap="xs">
-                <Text size="sm" weight="semibold">Unattended backups</Text>
-                <CheckboxField
-                  id="bbx-admin-encrypted-backups-daily"
-                  label="Allow daily backups when a host runner invokes them"
-                  checked={query.data.schedule === "daily"}
-                  disabled={setSchedule.isPending}
-                  onChange={(checked) => setSchedule.mutate({ schedule: checked ? "daily" : "off" })}
-                  helper="This preference does not install or start a runner. Confirm the runner is set up for this host before relying on daily backups."
-                />
-                {setSchedule.error ? <div role="alert"><ErrorText>Could not update the backup schedule.</ErrorText></div> : null}
-              </Stack>
+              <DailyBackupControl
+                status={query.data}
+                pending={setSchedule.isPending}
+                error={setSchedule.error !== null}
+                refreshing={query.isFetching}
+                onChange={(schedule) => setSchedule.mutate({ schedule })}
+                onRefresh={() => void query.refetch()}
+              />
 
               <Stack gap="xs">
                 <Text size="sm" weight="semibold">Latest verified snapshot</Text>
@@ -155,7 +151,7 @@ export function EncryptedBackupsSection() {
               <Card background="warm" border="subtle" padding="sm">
                 <Stack gap="sm">
                   <Text size="sm" weight="semibold">Run a backup from the host</Text>
-                  <Hint>Admin does not start a backup in the browser. The host runner setup is a separate step; this page cannot confirm that it is active. S3 or SFTP provider credentials must already be available to that host.</Hint>
+                  <Hint>Run the first backup manually with this command. Daily backups use the same CLI when enabled. S3 or SFTP provider credentials must already be available to this host.</Hint>
                   {query.data.boxRoot ? (
                     <>
                       <Text size="xs" tone="muted">Host command</Text>
@@ -175,5 +171,39 @@ export function EncryptedBackupsSection() {
         </Stack>
       ) : null}
     </AdminSectionCard>
+  );
+}
+
+function DailyBackupControl({ status, pending, error, refreshing, onChange, onRefresh }: {
+  status: RouterOutput["admin"]["encryptedBackupStatus"];
+  pending: boolean;
+  error: boolean;
+  refreshing: boolean;
+  onChange: (schedule: "daily" | "off") => void;
+  onRefresh: () => void;
+}) {
+  const available = status.runnerStatus === "enabled" || status.runnerStatus === "running";
+  const unitHost = status.installKind === "unit-host";
+  return (
+    <Stack gap="xs">
+      <Text size="sm" weight="semibold">Unattended backups</Text>
+      <CheckboxField
+        id="bbx-admin-encrypted-backups-daily"
+        label="Daily backups"
+        checked={status.schedule === "daily"}
+        disabled={pending}
+        onChange={(checked) => onChange(checked ? "daily" : "off")}
+        helper={unitHost ? "Uses this box's installed server timer." : "Runs while this box is open and catches up after it starts again."}
+      />
+      {!available ? (
+        <div role="alert">
+          <ErrorText>{unitHost ? "The server timer is unavailable. An operator must enable it before Daily can run." : "The automatic backup runner is unavailable. Restart the box service before enabling Daily."}</ErrorText>
+          {unitHost ? <Text size="sm" mono breakAll>{`sudo systemctl enable --now ${shellQuote(`beebox-backup@${status.boxSlug}.timer`)}`}</Text> : null}
+          <Button className="self-start" intent="secondary" onClick={onRefresh} loading={refreshing} loadingLabel="Checking…">Check again</Button>
+        </div>
+      ) : null}
+      {status.schedule === "daily" && available ? <Hint>{unitHost ? "Server timer enabled." : "Automatic checks run while this box is open and catch up after restart."}</Hint> : null}
+      {error ? <div role="alert"><ErrorText>Could not update the backup schedule.</ErrorText></div> : null}
+    </Stack>
   );
 }

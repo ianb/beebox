@@ -901,6 +901,7 @@ REMOTE
 set -euo pipefail
 install_dir="$1"
 changed=0
+backup_timer_changed=0
 # Keep existing unit hosts current with the engine's pinned restic contract.
 # The installer is version-aware and downloads only when the binary is absent
 # or older than the release this checkout requires.
@@ -917,6 +918,9 @@ for unit in "${units[@]}"; do
     install -o root -g root -m 0644 "$src" "$dest"
     echo "  installed $unit"
     changed=1
+    if [[ "$unit" == beebox-backup@.timer ]]; then
+      backup_timer_changed=1
+    fi
   fi
 done
 # A fresh host has never enabled the hub; an existing one is a no-op.
@@ -964,6 +968,19 @@ if [[ $changed -eq 1 ]]; then
   systemctl daemon-reload
   echo "  daemon-reload done"
 fi
+# Existing boxes predate the timer guarantee. Converge a timer for every
+# enabled per-box socket; the CLI's server-automatic opt-in keeps legacy boxes
+# and boxes with backups switched off from taking snapshots.
+for home in /var/lib/beebox/*/; do
+  [[ -e "$home/box/.git" ]] || continue
+  slug=$(basename "$home")
+  [[ "$slug" =~ ^[a-z0-9][a-z0-9-]{0,27}$ ]] || continue
+  systemctl is-enabled --quiet "beebox-box@$slug.socket" || continue
+  systemctl enable --now "beebox-backup@$slug.timer"
+  if [[ $backup_timer_changed -eq 1 ]]; then
+    systemctl restart "beebox-backup@$slug.timer"
+  fi
+done
 REMOTE
 
   # Web push needs one server-wide VAPID keypair. It is self-generated (no

@@ -5,9 +5,11 @@ import { backupAttemptStatus } from "../../../../core/box-backup/attempt.js";
 import { createManagedBackupPasswordFile } from "../../../../core/box-backup/admin-config.js";
 import { MissingBackupConfigError, readBackupConfig, updateBackupSchedule } from "../../../../core/box-backup/config.js";
 import { configureBackup } from "../../../../core/box-backup/run/backup.js";
+import { serverBackupTimerStatus } from "../../../../core/box-backup/server-timer-status.js";
 import { getBackupStatus, NotAGitBoxError } from "../../../../core/box/backup-status.js";
 import { onUnitHost } from "../../../../lib/unit-host.js";
 import { authenticatedOwnerProcedure, ownerProcedure } from "../../procedures.js";
+import { localBackupRunnerActive } from "../../../../core/box-backup/local-runner.js";
 
 const retentionSchema = z.object({
   daily: z.number().int().positive().max(365),
@@ -46,7 +48,8 @@ export const backupAdminProcedures = {
           configured: false,
           repository: null,
           retention: null,
-          schedule: "daily" as const,
+          schedule: "off" as const,
+          runnerStatus: await backupRunnerStatus(ctx.boxSlug),
           newestVerified: null,
           lastAttempt: null,
           maintenance: null,
@@ -62,7 +65,8 @@ export const backupAdminProcedures = {
       configured: true,
       repository: redactRepositoryCredentials(config.repository),
       retention: config.retention,
-      schedule: config.schedule,
+      schedule: onUnitHost() && !config.serverAutoEnabled ? "off" as const : config.schedule,
+      runnerStatus: await backupRunnerStatus(ctx.boxSlug),
       newestVerified: attempt.newestVerified,
       lastAttempt: attempt.lastAttempt,
       maintenance: attempt.maintenance,
@@ -93,6 +97,7 @@ export const backupAdminProcedures = {
             repository: input.repository,
             passwordFile: managed.passwordFile,
             timeoutMs: 120_000,
+            initialSchedule: "off",
             ...(input.retention === undefined ? {} : { retention: input.retention }),
           });
           return { success: true as const, configured: true as const, schedule: configured.schedule };
@@ -113,16 +118,39 @@ export const backupAdminProcedures = {
     .input(z.object({ schedule: scheduleSchema }).strict())
     .mutation(async ({ input, ctx }) => {
       try {
-        const config = await updateBackupSchedule({ boxRoot: ctx.boxRoot, schedule: input.schedule });
+        if (input.schedule === "daily") {
+          await readBackupConfig({ boxRoot: ctx.boxRoot });
+          await ensureBackupRunner(ctx.boxSlug);
+          const config = await updateBackupSchedule({ boxRoot: ctx.boxRoot, schedule: "daily", serverAutoEnabled: onUnitHost() });
+          return { success: true as const, schedule: config.schedule };
+        }
+        const config = await updateBackupSchedule({ boxRoot: ctx.boxRoot, schedule: "off", serverAutoEnabled: false });
         return { success: true as const, schedule: config.schedule };
       } catch (_error) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Encrypted backups must be configured before changing the schedule." });
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Could not confirm the daily backup runner. Check the host timer or service and try again." });
       }
     }),
 };
 
 function redactRepositoryCredentials(repository: string): string {
   return repository.replace(/([a-z][\d+.a-z-]*:\/\/)[^/@]*@/gi, "$1***@");
+}
+
+async function backupRunnerStatus(slug: string): Promise<"enabled" | "disabled" | "unavailable" | "running"> {
+  if (!onUnitHost()) {
+    if (process.env.BBX_INSTALL_KIND === "mac-app") return "running";
+    return localBackupRunnerActive() ? "running" : "unavailable";
+  }
+  return serverBackupTimerStatus(slug);
+}
+
+async function ensureBackupRunner(slug: string): Promise<void> {
+  const state = await backupRunnerStatus(slug);
+  if (state !== "enabled" && state !== "running") throw new BackupRunnerUnavailableError();
+}
+
+class BackupRunnerUnavailableError extends Error {
+  constructor() { super("Backup runner is not active"); this.name = "BackupRunnerUnavailableError"; }
 }
 
 function backupInstallKind(): "unit-host" | "mac-app" | "docker" | "local" {

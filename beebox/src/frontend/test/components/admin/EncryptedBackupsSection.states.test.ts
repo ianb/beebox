@@ -41,7 +41,8 @@ void test("shows write-only setup and host-only first run guidance", async (t) =
     configured: false,
     repository: null,
     retention: null,
-    schedule: "daily",
+    schedule: "off",
+    runnerStatus: "unavailable",
     newestVerified: null,
     lastAttempt: null,
     maintenance: null,
@@ -64,6 +65,7 @@ void test("shows verified and failed run facts separately with a shell-quoted co
     repository: "s3:bucket/box",
     retention: { daily: 7, weekly: 4, monthly: 12 },
     schedule: "daily",
+    runnerStatus: "running",
     newestVerified: { snapshotId: "verified-1", verifiedAt: "2026-10-26T12:00:00.000Z" },
     lastAttempt: { startedAt: "2026-10-26T12:00:00.000Z", completedAt: "2026-10-26T12:01:00.000Z", outcome: "failed", error: "Repository operation failed; check repository access and credentials" },
     maintenance: null,
@@ -71,8 +73,8 @@ void test("shows verified and failed run facts separately with a shell-quoted co
   t.check(html, any(String).includes("verified-1"));
   t.check(html, any(String).includes("Repository operation failed; check repository access and credentials"));
   t.check(html, any(String).includes("bbx engine backup run &#x27;/srv/My Box&#x27;"));
-  t.check(html, any(String).includes("this page cannot confirm that it is active"));
-  t.check(html, any(String).includes("already be available to that host"));
+  t.check(html, any(String).includes("Automatic checks run while this box is open"));
+  t.check(html, any(String).includes("already be available to this host"));
   t.check(html, not(any(String).includes("/Applications/Bee Box Desktop.app/Contents/MacOS/BeeBoxMac")));
 });
 
@@ -85,6 +87,7 @@ void test("does not mistake missing local run history for an empty repository", 
     repository: "s3:bucket/box",
     retention: { daily: 7, weekly: 4, monthly: 12 },
     schedule: "daily",
+    runnerStatus: "running",
     newestVerified: null,
     lastAttempt: null,
     maintenance: null,
@@ -102,6 +105,7 @@ void test("runs as the box service user on unit hosts", async (t) => {
     repository: "s3:bucket/box",
     retention: { daily: 7, weekly: 4, monthly: 12 },
     schedule: "daily",
+    runnerStatus: "enabled",
     newestVerified: null,
     lastAttempt: null,
     maintenance: null,
@@ -112,6 +116,17 @@ void test("runs as the box service user on unit hosts", async (t) => {
   t.check(html, not(any(String).includes("/Applications/Bee Box Desktop.app")));
 });
 
+void test("shows an operator command when the server timer is missing", async (t) => {
+  const html = await render({
+    boxRoot: "/var/lib/beebox/box/box", boxSlug: "box", installKind: "unit-host",
+    configured: true, repository: "s3:bucket/box", retention: { daily: 7, weekly: 4, monthly: 12 },
+    schedule: "off", runnerStatus: "disabled", newestVerified: null, lastAttempt: null, maintenance: null,
+  });
+  t.check(html, any(String).includes("The server timer is unavailable"));
+  t.check(html, any(String).includes("sudo systemctl enable --now &#x27;beebox-backup@box.timer&#x27;"));
+  t.check(html, any(String).includes("Check again"));
+});
+
 void test("copies the command for Mac app and Docker installs", async (t) => {
   for (const [installKind, expected] of [
     ["mac-app", "/Applications/Bee Box Desktop.app/Contents/MacOS/BeeBoxMac&quot; backup run"],
@@ -120,7 +135,7 @@ void test("copies the command for Mac app and Docker installs", async (t) => {
     const html = await render({
       boxRoot: "/data/box", boxSlug: "box", installKind, configured: true,
       repository: "s3:bucket/box", retention: { daily: 7, weekly: 4, monthly: 12 },
-      schedule: "daily", newestVerified: null, lastAttempt: null, maintenance: null,
+      schedule: "daily", runnerStatus: "running", newestVerified: null, lastAttempt: null, maintenance: null,
     });
     t.check(html, any(String).includes(expected));
   }

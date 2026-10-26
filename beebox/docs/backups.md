@@ -44,6 +44,9 @@ The signed-in owner can configure a repository and recovery password in
 **Admin → Host → Encrypted backups**. Save the recovery password outside this
 machine first. Admin stores a protected password file in machine state and
 shows the destination, latest locally recorded run, and a daily on/off switch.
+New Admin setups begin with daily backups off. Turn them on after the first
+manual capture. On the server, Admin confirms the per-box timer before saving
+the switch; local and Docker boxes catch up while `bbx serve` is running.
 Admin does not provision a bucket, SSH key, or provider account. Those
 credentials must already be available to the box's OS user, including when a
 host scheduler runs without an interactive shell.
@@ -62,7 +65,8 @@ bbx engine backup check <box-root>
 Configuration validates or initializes the repository and makes the first
 snapshot. It records the repository, password-file path, and retention in
 the box user's machine configuration, outside the captured box. By default
-the operator schedule is daily and retention keeps seven daily, four weekly,
+the CLI schedule is daily on local, Docker, and Mac installs; a production server
+requires an explicit Admin daily opt-in. Retention keeps seven daily, four weekly,
 and twelve monthly verified snapshots. `configure` accepts `--keep-daily`,
 `--keep-weekly`, and `--keep-monthly` counts. Every run first captures a
 verified snapshot, then applies retention. A retention failure returns a
@@ -80,40 +84,43 @@ briefly closes the box to new work, waits for admitted work to finish, then
 holds that pause while restic reads the files. A large annex collection or
 slow destination can make the pause long. The result prints the **verified**
 snapshot ID; tagging a restic snapshot changes its ID. Timer logs carry
-failures. `status --json` is for install schedulers; ordinary `status` prints
-the latest verified snapshot or a clear unconfigured state. With daily runs off,
-`status --json` uses the local record so install schedulers can skip remote polling; human `status` reads the repository. Admin reads a
+failures. `status --json` is available to host tooling; ordinary `status` prints
+the latest verified snapshot or a clear unconfigured state. `status --json`
+uses the local record and the same due policy as scheduled runs, without
+contacting the repository; human `status` reads the repository. Admin reads a
 local record of completed CLI runs; it does not query the remote repository
 when the page opens. Use CLI `status` to inspect snapshots in the repository.
 Run `check --read-data` periodically if you want restic to read every stored byte.
 
 ## Schedule by installation
 
-Admin's daily switch controls whether a host-invoked `run --scheduled` makes a
-new snapshot. Turning it on does not install or enable a host runner. The
-section cannot confirm that an external timer is active; set one up as below
-and check its logs. Turning daily off leaves manual `run` and restore
-available.
+Admin's daily switch confirms the install's runner and controls whether
+`run --scheduled` makes a new snapshot. The CLI skips an unconfigured box,
+recent verified run, or a recent failed attempt, then waits for a quiet box
+before capture. Turning daily off leaves manual `run` and restore available.
 
-- **Production server:** configure as its `bbx-<slug>` Unix user with the
-  unit environment loaded and `--configure-only`, then run the first capture
-  through `systemctl start --wait beebox-backup@<slug>.service`. Only after
-  that succeeds, enable `beebox-backup@<slug>.timer`. The daily timer runs
-  the same sandboxed service as that box user. Keep the password file under
+- **Production server:** each registered box has an enabled hourly timer that
+  checks whether a daily snapshot is due, even
+  before it has a backup destination. The timer does no capture until the
+  signed-in owner turns Daily on in Admin. Older CLI configurations also wait
+  for this explicit opt-in. Run the first capture with the manual command
+  shown in Admin, then turn Daily on. The timer runs the same sandboxed CLI
+  as that box user. Keep the password file under
   `/var/lib/beebox/<slug>/` outside `box/`; network repositories are the
   portable destination in this sandbox. Keep backend credentials per box.
-  For example, with shell variables set to your slug, repository, and
+  If Admin reports the timer missing, an operator can restore it with
+  `sudo systemctl enable --now beebox-backup@<slug>.timer` on the host, then
+  choose **Check again** in Admin.
+  For CLI setup, with shell variables set to your slug, repository, and
   password file:
 
   ```sh
   sudo -u "bbx-$slug" -H bash -c \
     'set -a; source /etc/beebox/box.env; set +a; bbx engine backup configure "/var/lib/beebox/$1/box" --repository "$2" --password-file "$3" --configure-only' \
     backup-setup "$slug" "$repository" "$password_file"
-  sudo systemctl start --wait "beebox-backup@$slug.service"
-  sudo systemctl enable --now "beebox-backup@$slug.timer"
   ```
-  For a manual capture after turning daily backups off in Admin, run as that
-  box user with the unit environment; starting the timer service would skip:
+  For the first or any later manual capture, run as that box user with the
+  unit environment; starting the timer service would skip until Daily is on:
 
   ```sh
   sudo -u "bbx-$slug" -H bash -c \
@@ -126,12 +133,13 @@ available.
   Use the app bundle's `BeeBoxMac backup` command to configure and inspect
   the repository inside its running VM; see the
   [Mac backup commands](../../mac-app/README.md#backup-commands).
-- **Docker or NAS:** schedule `docker compose run --rm box bbx engine backup
-  run /data/box --scheduled` from the Compose directory with the host's scheduler. This
-  one-shot uses the current box image and its machine-state volumes.
-- **Local laptop box:** use the provided launchd template or another host
-  scheduler to invoke `bbx engine backup run <box-root> --scheduled` daily. The password
-  file and repository must be available in that scheduler's environment.
+- **Docker or NAS:** the serving container checks every fifteen minutes and
+  catches up after restart. It uses the same machine-state volumes as manual
+  `docker compose exec box bbx engine backup run /data/box`.
+- **Local laptop box:** `bbx serve` checks every fifteen minutes and catches
+  up after restart. If it is closed, no scheduled backup runs until it opens.
+  An optional host scheduler may also invoke `bbx engine backup run
+  <box-root> --scheduled`; the CLI due check prevents duplicate snapshots.
 
 Do not put backup inside a box-authored scheduled script. It would enter the
 normal scheduler's box-work admission before the backup could take its

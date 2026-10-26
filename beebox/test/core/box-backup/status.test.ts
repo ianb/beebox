@@ -1,4 +1,4 @@
-// Manual-only backup status uses the local verified result and never contacts Restic.
+// Machine status uses the local verified result and never contacts Restic.
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 
@@ -28,4 +28,18 @@ void test("off schedule human status still reads the repository", async (t) => {
     configured: true, due: false, newestVerified: { id: "remote-id", time: "2026-10-26T00:00:00.000Z" },
   });
   t.check(resticReads, 1);
+});
+
+void test("daily JSON status uses the same local due record as the scheduled CLI", async (t) => {
+  let resticReads = 0;
+  const verifiedAt = new Date().toISOString();
+  const { backupStatus } = await t.mockImport("../../../src/core/box-backup/status.ts", {
+    "../../../src/core/box-backup/config.ts": { MissingBackupConfigError: class MissingBackupConfigError extends Error {}, readBackupConfig: async () => ({ schedule: "daily", serverAutoEnabled: false }) },
+    "../../../src/core/box-backup/run/backup.ts": { listSnapshots: async () => { resticReads += 1; return []; } },
+    "../../../src/core/box-backup/attempt.ts": { readBackupAttempt: async () => ({ outcome: "verified", completedAt: verifiedAt, verified: { snapshotId: "local-id", verifiedAt } }) },
+  });
+  t.check(await backupStatus({ boxRoot: "/synthetic/box", json: true }), {
+    configured: true, due: false, newestVerified: { id: "local-id", time: verifiedAt },
+  });
+  t.check(resticReads, 0);
 });

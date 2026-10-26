@@ -50,6 +50,8 @@ import { listenOn, resolveListenTarget } from "./listen-target.js";
 import { listenBaseUrl, publishServeEndpoints } from "./serve-publish.js";
 import { installIdleExit } from "./idle-exit.js";
 import { startServeMemoryProbe } from "./memory-probe.js";
+import { onUnitHost } from "../../lib/unit-host.js";
+import { startLocalBackupRunnerForServer, stopLocalBackupRunnerForServer } from "../../core/box-backup/local-runner.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "../server-types.js";
@@ -345,9 +347,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // Write PID file to each box
   const pidFiles: string[] = [];
   for (const box of boxes) {
-    const pidFile = path.join(box.boxRoot, ".bbx-serve.pid");
-    await fs.promises.writeFile(pidFile, String(process.pid));
-    pidFiles.push(pidFile);
+    const pidFile = path.join(box.boxRoot, ".bbx-serve.pid"); await fs.promises.writeFile(pidFile, String(process.pid)); pidFiles.push(pidFile);
   }
 
   let maintenanceCheck: ReturnType<typeof setInterval> | undefined;
@@ -358,6 +358,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   const shutdown = async (signal: string, exitCode?: number) => {
     console.log(`\nReceived ${signal}, shutting down...`);
     clearInterval(maintenanceCheck); await (await memoryProbe).stop();
+    await stopLocalBackupRunnerForServer();
     for (const pf of pidFiles) {
       await fs.promises.unlink(pf).catch(() => {});
     }
@@ -369,9 +370,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     // systemd's cgroup teardown), and a git killed mid-index-write leaves a
     // `.git/index.lock` that blocks every writer in the box until a human
     // removes it. Bounded — a stuck span must not hold the process open.
-    if (!(await drainBoxGitLocks(GIT_DRAIN_MS))) {
-      console.warn("Git writes were still in flight at shutdown; exiting anyway.");
-    }
+    if (!(await drainBoxGitLocks(GIT_DRAIN_MS))) console.warn("Git writes were still in flight at shutdown; exiting anyway.");
     console.log("Server closed.");
     process.exit(exitCode ?? 0);
   };
@@ -405,6 +404,10 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     await withoutBoxWork(() => listenOn(server, target));
     markStartupPhase("listening");
     await publishServeEndpoints({ boxes, target, baseUrl });
+    // Server boxes use their host's systemd timer; the Mac app has its own
+    // lifecycle-aware loop. Direct local and Docker installs catch up while
+    // this server is running, outside HTTP request work leases.
+    startLocalBackupRunnerForServer({ boxRoots: boxes.map((box) => box.boxRoot), unitHost: onUnitHost(), installKind: process.env.BBX_INSTALL_KIND });
     if (options.idleExitMs !== undefined) {
       installIdleExit({ server, boxes, idleMs: options.idleExitMs, onIdle: () => fireShutdown("idle") });
     }

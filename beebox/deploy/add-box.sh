@@ -502,6 +502,9 @@ chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
 # The engine link and node_modules are the deploy's job; the socket unit
 # serves the box on its first request.
 systemctl enable --now "beebox-box@$BOX_NAME.socket"
+# The system timer is always present for a registered server box. The backup
+# command checks the box's explicit server-automatic opt-in before doing work.
+systemctl enable --now "beebox-backup@$BOX_NAME.timer"
 
 # ── Register the box with both manifests ────────────────────────────
 # They are separate on purpose, BOTH are live, and they take DIFFERENT paths:

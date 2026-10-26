@@ -23,11 +23,15 @@ void test("backup configuration is outside the box and pinned to its resolved ro
   t.check({ backupId: manualOnly.backupId, repository: manualOnly.repository, passwordFile: manualOnly.passwordFile, retention: manualOnly.retention, schedule: manualOnly.schedule }, {
     backupId: config.backupId, repository: config.repository, passwordFile: config.passwordFile, retention: config.retention, schedule: "off",
   });
+  const enabled = await updateBackupSchedule({ boxRoot: box.root, schedule: "daily", serverAutoEnabled: true });
+  t.check([enabled.schedule, enabled.serverAutoEnabled], ["daily", true]);
+  const disabled = await updateBackupSchedule({ boxRoot: box.root, schedule: "off" });
+  t.check([disabled.schedule, disabled.serverAutoEnabled], ["off", false]);
   const reconfigured = await writeBackupConfig({ boxRoot: box.root, repository: "/tmp/updated-repository", passwordFile: "/tmp/updated-password" });
   t.check({ backupId: reconfigured.backupId, schedule: reconfigured.schedule }, { backupId: config.backupId, schedule: "off" });
-  const legacyConfig = { ...manualOnly, schedule: undefined };
+  const legacyConfig = { ...manualOnly, schedule: undefined, serverAutoEnabled: undefined };
   await fs.writeFile(backupConfigPath(box.root), `${JSON.stringify(legacyConfig)}\n`, { mode: 0o600 });
-  t.check((await readBackupConfig({ boxRoot: box.root })).schedule, "daily");
+  t.check([(await readBackupConfig({ boxRoot: box.root })).schedule, (await readBackupConfig({ boxRoot: box.root })).serverAutoEnabled], ["daily", false]);
 });
 
 function configPathInsideBox(configPath: string, boxRoot: string): boolean { return configPath.startsWith(`${boxRoot}/`); }
