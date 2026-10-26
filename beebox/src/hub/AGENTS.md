@@ -37,7 +37,10 @@ hand.
 `Supervisor.ensureRunning()` cold-starts a box on its first proxied request
 and idle-stops it after `idleMs` — the same semantics `workstreams-app/src/router/server/listener.ts` uses
 for dev worktrees. Non-lazy (the default) starts every box resident at hub
-boot and never idle-stops them.
+boot and never idle-stops them. The server no longer uses the `Supervisor` at
+all (every production box is a socket unit, below); the spawning path stays
+because the dev router runs on it, so do not retire it as server-only
+leftovers.
 
 `keepRecent: N` (lazy-only; a positive value on a resident hub is a config
 error) keeps the N most-recently-used boxes alive instead of idle-stopping
