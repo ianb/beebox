@@ -28,7 +28,7 @@ A question card is something the box asked the person. Here they have not answer
 ## How you were called decides how it ends
 
 - **Handed off** (the message says the person handed it to you from the question card): they want it gone. Decide it (below). If only the person can decide it, make it simpler with the \`simplify-question\` skill and leave it put away; the daily review asks it again. Never \`bbx question reraise\` here.
-- **Review** (the question review brief): every question ends decided or asked again. Decide it, or ask it again with \`bbx question reraise <path>\` - simplified with \`simplify-question\`, or as it is with one sentence added to the memo saying why only the person can decide it. Leaving it as you found it is not an ending: a question put away with Later must come back.
+- **Review** (the question review brief): every put-away question ends decided or asked again. Decide it, or ask it again with \`bbx question reraise <path>\` - simplified with \`simplify-question\`, or as it is with one sentence added to the memo saying why only the person can decide it. Leaving it as you found it is not an ending: a question put away with Later must come back. A question still waiting (pending) is already being asked: decide it, simplify it in place, or leave it.
 
 ## Decide conservatively
 

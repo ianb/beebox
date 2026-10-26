@@ -53,7 +53,7 @@ export function QuestionBeside({ question, actions }: { question: QuestionInfo; 
           ? <Text as="p" size="sm" tone="subtle">{decided === undefined ? "Answer in the chat." : "Answer it yourself in the chat."}</Text>
           : <Button type="button" intent="secondary" size="sm" onClick={handleShowChat}>Answer in the chat</Button>}
         {pending ? <Button type="button" intent="ghost" size="sm" onClick={handleLater}>{LATER}</Button> : null}
-        {decided === undefined ? (
+        {pending && decided === undefined ? (
           <Button type="button" intent="ghost" size="sm" loading={actions.figuring} loadingLabel="Handing it off…" onClick={handleFigureOut}>
             Figure it out
           </Button>

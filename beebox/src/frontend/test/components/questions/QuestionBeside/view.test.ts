@@ -88,10 +88,13 @@ void test("A pending question: no answer controls, Later and Figure it out", asy
   await view.unmount();
 });
 
-// ## A put-away question offers Figure it out, not Later
-void test("A put-away question offers Figure it out, not Later", async (t) => {
+// ## A put-away question offers only answering in the chat
+//
+// It is already put away, and Figure it out starts from a pending question
+// (`actions.figureOut` puts it away first).
+void test("A put-away question offers only answering in the chat", async (t) => {
   const { view } = await render({ question: question({ state: "dismissed" }), actions: actions({ chatSide: "below" }, []) });
-  t.check(seen(view), { buttons: ["Figure it out"], textBoxes: 0, choices: null, decided: null, hint: "Answer in the chat.", side: "below" });
+  t.check(seen(view), { buttons: [], textBoxes: 0, choices: null, decided: null, hint: "Answer in the chat.", side: "below" });
   await view.unmount();
 });
 

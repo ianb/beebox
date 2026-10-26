@@ -11318,12 +11318,26 @@ test1:
       peak: 44160
       added: 0
       turns: 2
+    - date: 2026-10-26T02:41:26.787Z
+      boxCommit: ae126b7b2542869874979dcfa4d1baaa14c915fd
+      repoCommit: b433253393aa210c8743529dd10c63eac7c0efda
+      initial: 44161
+      peak: 44161
+      added: 0
+      turns: 2
   figure-it-out-leaves-risky:
     - date: 2026-10-26T02:26:21.173Z
       boxCommit: 529a56d0937006b1a8288b56393e64b9760c6dd9
       repoCommit: 3c6386c84cc3e910a96c8da2b53fa5e9f663184a
       initial: 44097
       peak: 44097
+      added: 0
+      turns: 2
+    - date: 2026-10-26T02:41:49.791Z
+      boxCommit: 4fba22d658fa64e72496a8b733450c80bdd0934c
+      repoCommit: b433253393aa210c8743529dd10c63eac7c0efda
+      initial: 44098
+      peak: 44098
       added: 0
       turns: 2
   simplify-question-concrete:

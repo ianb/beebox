@@ -212,7 +212,7 @@ After the user answers, the system fills in:
 
 Dismissing sets \`dismissed-at:\`; the aging sweep expiring a question sets \`expired-at:\`.
 
-\`provisional:\` — \`{decision, reasoning, undo, decided-at}\`: what the box decided in place of an answer. It is not the person's answer, and only \`bbx question decide\` writes it. A later answer keeps it as history.
+\`provisional:\` — \`{decision, reasoning, undo, decided-at}\`: what the box decided in place of an answer. It is not the person's answer, and only \`bbx question decide\` writes it. A later answer keeps it as history; before recording that answer (any \`--via\`), reverse what the box did where the answer differs, as far as \`undo\` and git allow, and say what you reversed.
 
 For select questions, make options mutually exclusive. For confirm questions, make the prompt unambiguous about what "yes" means.`,
 });
