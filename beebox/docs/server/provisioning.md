@@ -95,24 +95,44 @@ hand-made `callback` site went.
 
 ## Server layout
 
-Services run as the **`beebox` user** (User/Group in systemd unit files), not root.
-`/opt/beebox/` is root-owned and read-only to that user; `/home/beebox/` is its own.
+One Linux user and one set of systemd units per box
+([design](../plans/per-box-units.md)). Nothing runs as root except the deploy,
+the scheduler's one wrapper, and the nightly Claude Code update. The accounts:
+
+- `bbx-<slug>` — one per box, UID 2000–2999, in group `beebox-boxes`. Owns
+  the box and runs its engine and its scheduler passes. No sudo, no login file.
+- `beebox` — the hub. Routes requests to the boxes' sockets and holds no box
+  secret; it joins no box group.
+- `beebox-sched` — the scheduler daemon. Its one sudo grant is
+  `bbx-box-run <slug> scheduler-pass`, which runs a pass as that box's user.
+
+`/opt/beebox/` is root-owned and read-only to every account; each box's home
+is private to its user (`0751` at the top so the hub can read the one file the
+box publishes, `0700` inside).
 
 ```
-/opt/beebox/              # Source code
+/opt/beebox/                       # Source code
   beebox/
-/home/beebox/boxes/       # Box data (each is a git repo)
-  test1/
-  hearth/
-/home/beebox/.config/beebox/hub.json   # Hub routing table (slug -> box path)
-/home/beebox/.env         # Environment variables (API keys)
-/home/beebox/.claude/.credentials.json  # Claude Code OAuth credentials (beebox:beebox, 0600)
-/home/beebox/.local/bin/claude  # Claude Code (native install, auto-updates)
-/usr/local/bin/bbx           # CLI symlink (deploy installs it)
-/usr/local/bin/codex         # Workspace-pinned Codex CLI symlink
-/usr/local/sbin/bbx-host-apt # Root wrapper for box package installs (deploy installs it)
-/etc/sudoers.d/beebox-host-apt  # Lets the beebox user run only that wrapper
-/var/log/beebox/host-apt.log # One JSON line per box install attempt
+/var/lib/beebox/<slug>/            # A box user's home (0751, bbx-<slug>)
+  box/                             #   the box itself (a git repo)
+  .config/beebox/secrets.json      #   the box's own secret store (its grants only)
+  .claude/                         #   Claude Code state for that box's agent
+/var/lib/beebox-sched/.config/beebox/boxes.json  # Scheduler manifest (which boxes get passes)
+/home/beebox/.config/beebox/hub.json   # Hub routing table (slug -> socket)
+/home/beebox/.config/beebox/secrets.json  # Master secret store; add-box.sh exports a box's share
+/home/beebox/.env                  # The hub's environment; the hub derives the box units' file from it
+/etc/beebox/box.env                # Environment every box unit and scheduler pass loads (hub-written)
+/run/beebox/<slug>.sock            # The box's socket (systemd-owned)
+/run/beebox/<slug>.hub-secret      # The hub's per-box secret for this boot
+/var/cache/beebox/{uv,hf}          # Shared caches, group beebox-boxes
+/usr/local/bin/claude              # Claude Code (a copy the nightly updater refreshes)
+/usr/local/bin/uv                  # uv, for box scripts
+/usr/local/bin/bbx                 # CLI symlink (deploy installs it)
+/usr/local/bin/codex               # Workspace-pinned Codex CLI symlink
+/usr/local/sbin/bbx-box-run        # The scheduler's root wrapper (deploy installs it)
+/etc/sudoers.d/beebox-sched        # Lets beebox-sched run only that wrapper
+/usr/local/sbin/bbx-host-apt       # Root wrapper for distro package installs (deploy installs it)
+/var/log/beebox/host-apt.log       # One JSON line per package install attempt
 /usr/local/sbin/bbx-deploy-window  # Deploy page + downtime record (deploy installs it)
 /usr/local/sbin/bbx-nginx-site     # Installs the repo nginx site (deploy installs it)
 /run/beebox-deploy/deploy-in-progress.html  # Present only while a deploy has the services down
@@ -120,56 +140,67 @@ Services run as the **`beebox` user** (User/Group in systemd unit files), not ro
 /etc/nginx/sites-available/beebox  # From deploy/nginx/beebox.conf (deploy installs it)
 ```
 
+Production keeps `/var/lib/beebox` on a separate volume. A Hetzner snapshot of
+the server does not include a volume, so the boxes are backed up only by a
+copy taken elsewhere ([deploying](deploying.md#the-box-units)).
+
+A host that was provisioned before this layout cannot be deployed to:
+`deploy.sh` and `add-box.sh` refuse when the `beebox-sched` user,
+`/var/lib/beebox`, or the `beebox-boxes` group is missing. The one-time
+migration script was removed after the last such host migrated (2026-10-25);
+provision a new host from `cloud-init.yaml` instead.
+
 ### Box package installs
 
-A box agent installs a distro package with `bbx host install <pkg> --why ...`.
-The command records the need in the box's `_config/host-packages.json`, then
-runs `bbx-host-apt` through sudo. The wrapper installs only additive,
-service-free packages from the distro sources. `deploy.sh` installs the
-wrapper and the sudoers entry on every deploy, so the provisioners need no
-copy. After a server rebuild, `bbx host sync` in each box reinstalls what the
-box recorded. Policy and threat model: `server-bin/bbx-host-apt` and
+A box agent asks for a distro package with `bbx host install <pkg> --why ...`.
+The box has no sudo, so the command only records the need in the box's
+`_config/host-packages.json`; the next deploy runs `bbx host sync` for every
+box as root, which installs the recorded packages through `bbx-host-apt`. The
+wrapper installs only additive, service-free packages from the distro
+sources. After a server rebuild the same step reinstalls what every box
+recorded. Policy and threat model: `server-bin/bbx-host-apt` and
 `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 `server-bin/bbx-host-apt.smoke.sh`.
 
-### Per-box layout (arrives with the migration)
-
-The layout below is the current one. The migration in
-[the per-box units plan](../plans/per-box-units.md) replaces it with one
-account and one set of units per box:
-
-- Boxes live at `/var/lib/beebox/<slug>/box`, owned by `bbx-<slug>`.
-- The hub runs as `beebox`; the scheduler runs as `beebox-sched`.
-- Units: `beebox-box@<slug>.socket` and `.service` (the box engine, socket
-  activated), `beebox-pass@<slug>.service` (a scheduler pass for one box).
-
 ## Systemd units
 
-The live server runs `bbx hub` (see `src/cli/commands/hub.ts`) in place of the
-old single shared `beebox-serve` process — one hub process routes
-`/<slug>/...` to per-box children, each spawned via that box's own `bbx serve`
-(so each box can pin its own engine version independently). The scheduler is
-unaffected by this change and still runs as a separate unit.
+Every file under `deploy/systemd/` is installed whole on every deploy.
 
-- `beebox-hub` — the hub: reads `hub.json`, spawns/routes/health-checks each
-  box's own `bbx serve` child.
-- `beebox-scheduler` — scheduler daemon for periodic tasks (still reads
-  `~/.config/beebox/boxes.json`, the older manifest — see
-  `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why retiring that
-  manifest is deferred, not forgotten).
+- `beebox-hub` — the hub (`bbx engine hub`, as `beebox`): reads `hub.json`,
+  mints one secret per box per boot into `/run/beebox/`, writes
+  `/etc/beebox/box.env`, and routes `/<slug>/...` to that box's socket. It
+  spawns nothing.
+- `beebox-box@<slug>.socket` — systemd listens on `/run/beebox/<slug>.sock`
+  and starts the service on the first connection.
+- `beebox-box@<slug>.service` — the box's engine (`bbx engine serve`, as
+  `bbx-<slug>`, under the `box-sandbox.conf` drop-in). It exits after thirty
+  idle minutes and the socket starts it again on demand, so an idle box is
+  normally `inactive`.
+- `beebox-pass@<slug>.service` — one scheduler pass for one box, as its user.
+- `beebox-scheduler` — the scheduler daemon (as `beebox-sched`): reads its
+  manifest and starts a `beebox-pass@<slug>` through `bbx-box-run` when a
+  box has work due. (The manifest is the older `boxes.json`; see
+  `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
+  retiring it is deferred.)
 
 ```bash
 # Check status
-systemctl status beebox-hub
-systemctl status beebox-scheduler
+systemctl status beebox-hub beebox-scheduler
+systemctl list-units 'beebox-box@*' 'beebox-pass@*'
 
 # View logs
 journalctl -u beebox-hub -f
-journalctl -u beebox-scheduler -f
+journalctl -u beebox-box@<slug> -f
 
 # Restart after config changes (hub.json doesn't hot-reload — a box add/remove needs this)
 systemctl restart beebox-hub
+# Restart one box's engine
+systemctl restart beebox-box@<slug>.service
 ```
+
+`server-bin/box-units.smoke.sh`, run as root on the server, checks the whole
+arrangement: ownership, the sandbox, the hub secret's reach, the scheduler's
+wrapper.
 
 ### Git-drain drop-in (`deploy/systemd/all/git-drain.conf`)
 

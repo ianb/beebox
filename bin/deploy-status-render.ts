@@ -100,7 +100,7 @@ function renderDisk(disk: DiskHealth): string {
 }
 
 function renderMigrations(boxes: MigrationStatus[]): string[] {
-  if (boxes.length === 0) return [line("Migrations", "no boxes found under /home/beebox/boxes")];
+  if (boxes.length === 0) return [line("Migrations", "no boxes found under /var/lib/beebox")];
   const attention = boxes.filter((box) => !box.status.ok || box.status.data.pending.length > 0 || box.status.data.questions.length > 0 || !box.status.data.manifest);
   if (attention.length === 0) return [line("Migrations", `${String(boxes.length)} boxes, none pending`)];
   const out = [line("Migrations", `${String(boxes.length)} boxes, ${String(attention.length)} need attention`)];

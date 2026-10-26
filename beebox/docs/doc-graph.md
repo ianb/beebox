@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-25T18:03:35Z
+Generated: 2026-10-26T01:47:05Z
 Total documents: 580
 
 ## Issues
@@ -748,7 +748,7 @@ Referenced by:
 - docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
 - docs/implemented-plans/retire-doctest.md:1056 (mention) — `CONTRIBUTING.md:28,56`, and `README.md:48`.
 - docs/implemented-plans/workstreams.md:758 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
-- docs/server/boxes.md:37 (link) — see the root [`README.md`](../../README.md) for that path. This doc is about
+- docs/server/boxes.md:32 (link) — see the root [`README.md`](../../README.md) for that path. This doc is about
 - docs/testing/knowledge-audits.md:73 (mention) — - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card
 - docs/user-stories/catalog/2026-08-21.md:2640 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus
 - src/core/agent-guide/guide.md:130 (mention) — `node_modules/beebox/box-docs/`; its `README.md` has one line per doc saying
@@ -809,7 +809,7 @@ Title: "Deploy" | 64 lines
 Referenced by:
 - docs/implemented-plans/deploy-maintenance-page.md:213 (mention) — keeping the `Deploy failed` prefix that `deploy/AGENTS.md`'s poll matches —
 - docs/implemented-plans/doc-structure-install-server.md:114 (mention) — setup docs (next cluster). The scripts themselves. `deploy/AGENTS.md`.
-- docs/server/deploying.md:68 (mention) — (see `deploy/AGENTS.md` for the wait/poll pattern).
+- docs/server/deploying.md:67 (mention) — (see `deploy/AGENTS.md` for the wait/poll pattern).
 
 References:
 - → docs/install/docker.md (mention)
@@ -817,7 +817,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 39 lines
+Title: "Deploy" | 40 lines
 
 Referenced by:
 - deploy/AGENTS.md:5 (mention) — — so don't send anyone here to set up a Bee Box. See `deploy/README.md`.
@@ -983,7 +983,7 @@ Referenced by:
 - docs/box-work.md:6 (link) — [box layout](box-layout.md); what a box agent reads is in
 - docs/cards.md:17 (link) — - Where cards live on disk: [box layout](box-layout.md).
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/glossary.md:28 (mention) — **box** — A single user's working directory under `~/src/boxes/` (or `/home/beebox/boxes/` on the server). Contains the
+- docs/glossary.md:28 (mention) — **box** — A single user's working directory under `~/src/boxes/` (or `/var/lib/beebox/<slug>/box/` on the server). Conta
 - docs/guides.md:32 (link) — | Box layout: the on-disk shape of a box | [box-layout](box-layout.md) |
 - docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/media/assets.md`, `docs/box-layout.md`, install docs, and
 - docs/implemented-plans/attach-directories-superseded.md:177 (mention) — - `docs/box-layout.md`
@@ -1133,7 +1133,7 @@ Referenced by:
 - docs/guides.md:47 (link) — | Client debug log | [client-debug-log](client-debug-log.md) |
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:555 (mention) — errors (`docs/client-debug-log.md`).
-- docs/server/operations.md:200 (link) — For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-l
+- docs/server/operations.md:203 (link) — For SSH-only debugging: `ssh root@<server> tail /var/lib/beebox/<box>/box/.beebox/client-debug.log`. See [`client-debug-
 - docs/testing.md:95 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
 - frontend.md:143 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
 - ../.claude/skills/bbx-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
@@ -2057,7 +2057,7 @@ References:
 
 #### docs/secrets.md
 
-Title: "Secrets: the machine-level store" | 541 lines | current reference
+Title: "Secrets: the machine-level store" | 542 lines | current reference
 
 Referenced by:
 - AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -2080,7 +2080,7 @@ Referenced by:
 - docs/plans/publish-sites-admin.md:55 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
 - docs/security-report.md:302 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
-- docs/server/boxes.md:107 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
+- docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
 - docs/testing/check.md:268 (link) — ([secrets](../secrets.md)): `setSecret` and `grantSecret`
 - docs/testing/real-models.md:31 (link) — the secret ([secrets](../secrets.md)). Grants are keyed by box slug, so a
@@ -2174,6 +2174,7 @@ Referenced by:
 - ../issues/exploration/2026-08-11-encryption-at-rest.md:57 (mention) — - **Credentials are already hashed at rest** (`docs/security-report.md` §2:
 - ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:101 (mention) — The security-doc claim is now corrected: `beebox/docs/security-overview.md` and `beebox/docs/security-report.md` name wh
 - ../issues/features/2026-10-14-show-privacy-implications-of-this-box-setup.md:18 (link) — [the security report](../../beebox/docs/security-report.md) lists every
+- ../issues/features/2026-10-24-gmail-over-imap-app-password.md:28 (mention) — (`beebox/docs/security-report.md`, egress table: "no `gmail.send` scope
 
 References:
 - → docs/security-overview.md (link)
@@ -2832,7 +2833,7 @@ Referenced by:
 - docs/reports/migration-rollout-2026-05-23.md:3 (mention) — Frozen 2026-09-25 from `docs/migrations.md`. The 2026-05-23 production
 - docs/reports/migration-rollout-2026-05-23.md:6 (link) — runbook is [card migrations](../cards/migrations.md). Do not update in place.
 - docs/server.md:24 (link) — - Box data migrations and recovery: [migrations](cards/migrations.md).
-- docs/server/deploying.md:41 (link) — [migrations](../cards/migrations.md) for recovery, questions, and timeout limits.
+- docs/server/deploying.md:40 (link) — [migrations](../cards/migrations.md) for recovery, questions, and timeout limits.
 - ../.claude/skills/bbx-migration/SKILL.md:12 (mention) — lives in **`beebox/docs/cards/migrations.md`** — read it before writing one.
 - ../issues/closed/bugs/2026-07-11-pre-v2-session-resume-broken.md:40 (mention) — migration script territory (`docs/cards/migrations.md`).
 - ../issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md:21 (mention) — and it is written down in `docs/cards/migrations.md` and in the migration script's own
@@ -3112,6 +3113,7 @@ Referenced by:
 - docs/plans/email-tracking.md:292 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
 - docs/user-stories/catalog/2026-06-26.md:2057 (mention) — - docs/connectors/gmail.md lines 37-41 (user documentation with examples)
 - ../research/fabric-review.md:75 (mention) — - **Connectors cover more than copying.** Gmail, Calendar and Drive copy content into cards and commit it (`beebox/docs/
+- ../research/google-connect-options-2026-10.md:353 (mention) — `docs.scalekit.com/agentkit/connectors/gmail.md`; Auth0
 
 References:
 - → docs/connectors/google-auth.md (link)
@@ -3129,7 +3131,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-connectors.md:58 (mention) — | `google-setup.md` | `connectors/google-auth.md` |
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/server.md:25 (link) — - Google OAuth credentials: [Google setup](connectors/google-auth.md).
-- docs/server/configuration.md:190 (link) — Create the OAuth client as in [Google setup](../connectors/google-auth.md) with the
+- docs/server/configuration.md:186 (link) — Create the OAuth client as in [Google setup](../connectors/google-auth.md) with the
 - docs/server/health-checks.md:197 (link) — in [`google-setup.md`](../connectors/google-auth.md#token-expired--invalid_grant); design
 - ../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md:25 (mention) — - `docs/connectors/google-auth.md` already walks an operator through consent screen +
 - ../issues/features/2026-10-08-gmail-forwarding-as-the-read-path.md:15 (mention) — (`beebox/docs/connectors/google-auth.md`). A shipped vendor client does not
@@ -3850,7 +3852,7 @@ Title: "Box agents install distro packages on their host" | 579 lines | shipped 
 Referenced by:
 - docs/plans/per-box-units.md:197 (mention) — anywhere (`docs/implemented-plans/box-host-packages.md:141-143`).
 - docs/security-report.md:403 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
-- docs/server/provisioning.md:132 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+- docs/server/provisioning.md:162 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
 References:
@@ -3992,7 +3994,7 @@ Referenced by:
 - docs/plans/source-available-release.md:395 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server/boxes.md:8 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](../implemented-plans/boxes-as-packages-v2.md)
 - docs/server/operations.md:68 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
-- docs/server/provisioning.md:158 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why retiring that
+- docs/server/provisioning.md:183 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/user-stories/catalog/2026-08-21.md:9058 (mention) — - **Keep the box I have open from being stopped underneath me** — Code is fine; the story's scope is wrong. The server h
 - ../issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md:25 (mention) — `boxes-as-packages-v2.md` accepted.
@@ -5462,6 +5464,7 @@ Title: "Dead Google auth as a first-class health + notify condition" | 140 lines
 Referenced by:
 - docs/connectors/google-auth.md:152 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - docs/server/health-checks.md:198 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
+- ../issues/closed/decisions/2026-07-28-nango-google-auth-broker.md:70 (mention) — (`7fbeb287`, plan in `beebox/docs/implemented-plans/google-auth-reauth-health.md`).
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/google-auth-reauth-health.md
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:14 (link) — [google-auth-reauth-health](../../beebox/docs/implemented-plans/google-auth-reauth-health.md).
 
@@ -7956,8 +7959,9 @@ Referenced by:
 - docs/plans/installation-story.md:425 (mention) — - **Guide**: `docs/install/docker.md` — local usage first (init, auth,
 - docs/plans/operator-member-password-reset.md:491 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
 - docs/server.md:6 (link) — shape; the supported install is [Docker](install/docker.md). The scripts live
-- docs/server/configuration.md:167 (link) — [box login](../install/docker.md#box-login-on-by-default); owner recovery is
+- docs/server/configuration.md:163 (link) — [box login](../install/docker.md#box-login-on-by-default); owner recovery is
 - docs/server/provisioning.md:9 (link) — > [`../docs/docker-install.md`](../install/docker.md). Read that one.
+- ../issues/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md:11 (mention) — `beebox/docs/install/docker.md` ("token fallback") and `beebox/docker/compose.yaml`
 - ../issues/closed/bugs/2026-09-30-container-loses-machine-state-on-recreate.md:24 (mention) — > in the old container layer). `beebox/docs/install/docker.md` "Updating"
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:41 (mention) — as a variant in `beebox/docs/install/docker.md` (keep loopback mapping,
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/install/developer.md`, `docs/install/docker.md`, `docs/install/agent.md`
@@ -7999,7 +8003,7 @@ Referenced by:
 - docs/plans/container-first.review.md:59 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
 - docs/plans/pdf-intake-design.md:14 (link) — > design are live. Current model: [`../assets.md`](../media/assets.md).
 - docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > report addresses. Current model: [`../assets.md`](../media/assets.md).
-- docs/server/operations.md:238 (link) — [`assets.md`](../media/assets.md). Periodic operational checks belong in
+- docs/server/operations.md:241 (link) — [`assets.md`](../media/assets.md). Periodic operational checks belong in
 - ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md:10 (mention) — > migration: `docs/media/assets.md` records "3,655 manifests removed", the old
 - ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:41 (mention) — in `docs/media/assets.md` — no install or deploy doc says to install it.
 - ../issues/decisions/2026-08-07-server-backup-story.md:13 (mention) — `numcopies: 1` with no annex remote (`docs/media/assets.md`); only migrations
@@ -9135,13 +9139,13 @@ References:
 
 #### docs/plans/per-box-units.md
 
-Title: "One systemd unit and one OS user per box, and a cloud-init host" | 1047 lines | proposal | draft
+Title: "One systemd unit and one OS user per box, and a cloud-init host" | 1071 lines | proposal | draft
 
 Referenced by:
 - docs/plans/per-box-units.subplan.md:9 (link) — Subplan of [per-box-units.md](per-box-units.md), Track B. Today every box
 - docs/scheduler.md:132 (mention) — runs it in process. On a unit host (docs/plans/per-box-units.md) the daemon runs
-- docs/server/deploying.md:94 (link) — ([per-box units](../plans/per-box-units.md)), the deploy also: stops every
-- docs/server/provisioning.md:138 (link) — [the per-box units plan](../plans/per-box-units.md) replaces it with one
+- docs/server/deploying.md:93 (link) — ([per-box units](../plans/per-box-units.md); the layout is in
+- docs/server/provisioning.md:99 (link) — ([design](../plans/per-box-units.md)). Nothing runs as root except the deploy,
 - src/hub/AGENTS.md:67 (mention) — the box processes (`deploy/systemd/beebox-box@.*`, docs/plans/per-box-units.md)
 - ../issues/bugs/2026-10-25-failed-box-unit-stays-failed-until-reset.md:8 (frontmatter) — design: ../../beebox/docs/plans/per-box-units.md
 - ../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:11 (mention) — **Closed:** resolved by the box-isolation branch (per-box-units, `beebox/docs/plans/per-box-units.md`). `deploy/deploy.s
@@ -9172,7 +9176,7 @@ References:
 
 #### docs/plans/per-box-units.subplan.md
 
-Title: "Per-box users: where each piece of shared host state goes" | 230 lines | proposal | draft
+Title: "Per-box users: where each piece of shared host state goes" | 240 lines | proposal | draft
 
 Referenced by:
 - docs/plans/per-box-units.md:374 (link) — See [the subplan](per-box-units.subplan.md). Its first chunk is a probe on
@@ -9766,7 +9770,7 @@ Title: "Git-annex conversion report — 2026-08-01" | 107 lines | dated report
 
 Referenced by:
 - docs/media/assets.md:10 (link) — [2026-08-01 conversion report](../reports/git-annex-conversion-2026-08-01.md).
-- docs/server/operations.md:241 (link) — [dated historical report](../reports/git-annex-conversion-2026-08-01.md); do not
+- docs/server/operations.md:244 (link) — [dated historical report](../reports/git-annex-conversion-2026-08-01.md); do not
 
 References:
 - → docs/media/assets.md (link)
@@ -9959,7 +9963,7 @@ References:
 
 #### docs/server/boxes.md
 
-Title: "Boxes on the server" | 305 lines | current reference
+Title: "Boxes on the server" | 304 lines | current reference
 
 Referenced by:
 - README.md:104 (link) — - [`docs/server/boxes.md`](docs/server/boxes.md) — provisioning a box behind a multi-box hub
@@ -9973,7 +9977,7 @@ Referenced by:
 - docs/plans/cli-restructure.md:133 (mention) — (see `docs/server/boxes.md`), `bbx upgrade` is the per-box engine-upgrade
 - docs/plans/source-available-release.md:70 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/server/boxes.md:6-8`
 - docs/server.md:17 (link) — | [Boxes](server/boxes.md) | Adding a box to the hub, by hand or with `add-box.sh`; the box's push credential; troublesh
-- docs/server/operations.md:145 (link) — ([boxes](boxes.md#one-command-add-boxsh)). To register a box that is already on disk,
+- docs/server/operations.md:148 (link) — ([boxes](boxes.md#one-command-add-boxsh)). To register a box that is already on disk,
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:75 (mention) — - **Reconcile the docs.** `docs/server/boxes.md` describes the generic shape
 - ../issues/closed/decisions/2026-03-15-per-box-secret-management.md:23 (mention) — For now: manually copy secret files to new boxes. See `docs/server/boxes.md`'s "Connector secrets" section.
 - ../issues/closed/features/2026-08-17-no-surface-for-changing-who-can-use-a-box.md:68 (link) — [`docs/server/boxes.md`](../../../beebox/docs/server/boxes.md) says so.
@@ -9988,18 +9992,21 @@ References:
 - → docs/server/configuration.md (link)
 - → docs/secrets.md (link)
 - → docs/server/provisioning.md (link)
+- → docs/server/operations.md (link)
 
 #### docs/server/configuration.md
 
-Title: "Server configuration" | 210 lines | current reference
+Title: "Server configuration" | 206 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure-connectors.md:87 (mention) — `server/configuration.md`'s Google OAuth env vars.
 - docs/implemented-plans/doc-structure-install-server.md:81 (mention) — | `deploy/README.md` Environment variables, Web Push, Authentication, Google OAuth, Per-box access control; `server-oper
 - docs/notifications.md:185 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
-- docs/server.md:15 (link) — | [Configuration](server/configuration.md) | `/home/beebox/.env`, the service user's Claude and Codex logins, box login
-- docs/server/boxes.md:101 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
+- docs/server.md:15 (link) — | [Configuration](server/configuration.md) | `/home/beebox/.env`, the boxes' Claude token and Codex logins, box login an
+- docs/server/boxes.md:96 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
+- docs/server/deploying.md:113 (link) — ([configuration](configuration.md), "The long-lived token").
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:33 (mention) — (`beebox/docs/server/configuration.md`), so its box agents likely see that
+- ../issues/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md:24 (mention) — (`src/core/claude-oauth-token.ts`, `docs/server/configuration.md`, "The
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:77 (mention) — (`beebox/docs/server/configuration.md`, "Transferring the Claude login"). If
 
 References:
@@ -10010,7 +10017,7 @@ References:
 
 #### docs/server/deploying.md
 
-Title: "Deploying" | 160 lines | current reference
+Title: "Deploying" | 167 lines | current reference
 
 Referenced by:
 - AGENTS.md:26 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
@@ -10019,7 +10026,8 @@ Referenced by:
 - docs/implemented-plans/doc-structure-install-server.md:82 (mention) — | `deploy/README.md` deploy.sh; `server-operations.md` Maintenance and replacement, Prod runs the bundle, Rolling back |
 - docs/implemented-plans/retire-type-specific-core-tags.md:86 (mention) — - Migration runner: `src/core/migrations.ts` (append-only `MIGRATIONS`, manifest `_config/migrations.jsonl`), `bbx engin
 - docs/server.md:16 (link) — | [Deploying](server/deploying.md) | `deploy.sh`, the maintenance boundary, the deploy page, rollback, what production a
-- docs/server/health-checks.md:11 (link) — **`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches
+- docs/server/health-checks.md:11 (link) — **`GET /healthz/canary` — active box check.** Cold-starts one box (a connection to its socket starts the unit), then fet
+- docs/server/provisioning.md:145 (link) — copy taken elsewhere ([deploying](deploying.md#the-box-units)).
 - ../issues/closed/bugs/2026-10-22-deploy-failure-after-stop-leaves-services-down.md:18 (mention) — `beebox/docs/server/deploying.md` now matches. The per-box reinstall marker was
 
 References:
@@ -10027,6 +10035,8 @@ References:
 - → docs/server/health-checks.md (link)
 - → deploy/AGENTS.md (mention)
 - → docs/plans/per-box-units.md (link)
+- → docs/server/provisioning.md (link)
+- → docs/server/configuration.md (link)
 
 #### docs/server/health-checks.md
 
@@ -10049,8 +10059,8 @@ Referenced by:
 - docs/plans/asset-annex.md:490 (mention) — the deploy runbooks (`docs/server/health-checks.md`) without touching
 - docs/reports/git-annex-conversion-2026-08-01.md:14 (link) — > and [`../server/health-checks.md`](../server/health-checks.md) for current health checks.
 - docs/server.md:19 (link) — | [Health checks](server/health-checks.md) | The runbooks: hub endpoints, engine quota, box growth, template updates, co
-- docs/server/deploying.md:49 (link) — localhost (see [`../docs/health-checks.md`](health-checks.md)): it polls
-- docs/server/operations.md:189 (link) — `health.check` answers from a cached snapshot by default (see [`health-checks.md`](health-checks.md#healthcheck-snapshot
+- docs/server/deploying.md:48 (link) — localhost (see [`../docs/health-checks.md`](health-checks.md)): it polls
+- docs/server/operations.md:192 (link) — `health.check` answers from a cached snapshot by default (see [`health-checks.md`](health-checks.md#healthcheck-snapshot
 - src/hub/AGENTS.md:15 (mention) — `docs/server/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:83 (mention) — (`docs/server/health-checks.md`). Decide where a Tailscale check belongs rather than
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:32 (mention) — a non-engineer, unlike `health-checks.md` (author's prod runbook).
@@ -10066,12 +10076,12 @@ References:
 
 #### docs/server/operations.md
 
-Title: "Server operations" | 243 lines | current reference
+Title: "Server operations" | 246 lines | current reference
 
 Referenced by:
 - deploy/README.md:23 (link) — | `prod-ssh`, `prod-curl`, `prod-browse` | Reach the production server and the authenticated app as the owner. [Operatio
 - docs/box-layout.md:258 (mention) — | `memory/` | The serve process's memory samples and threshold heap profiles, size-capped. See `docs/server/operations.m
-- docs/box-work.md:99 (link) — owner so file ownership stays correct ([operations](server/operations.md#connecting-for-debugging-and-inspection)).
+- docs/box-work.md:99 (link) — ([operations](server/operations.md#connecting-for-debugging-and-inspection)).
 - docs/implemented-plans/box-memory-and-crash-recovery.md:39 (mention) — Docs: about 30 lines in `docs/server/operations.md`. Total about 520 lines.
 - docs/implemented-plans/box-migration.subplan.md:163 (mention) — **Server mechanics** (`docs/server/operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:502 (mention) — rewritten for the hub era; `docs/server/operations.md` and `docs/ideas.md` had stale pre-hub
@@ -10082,9 +10092,11 @@ Referenced by:
 - docs/plans/per-box-units.md:777 (mention) — | Hub's `/etc/beebox/box.env` stale after `/home/beebox/.env` edit without hub restart | no | same as today: env changes
 - docs/reports/git-annex-conversion-2026-08-01.md:13 (link) — > [`../server/operations.md`](../server/operations.md) for current operations,
 - docs/server.md:18 (link) — | [Operations](server/operations.md) | Connecting, running `bbx` on the server, scripts that run there, diagnostics, the
+- docs/server/boxes.md:303 (link) — and run box commands as that user next time ([operations](operations.md)).
 - docs/server/health-checks.md:56 (link) — - `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the s
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:14 (mention) — only and proxies to `127.0.0.1:3210` (`deploy/` + `docs/server/operations.md`).
+- ../issues/bugs/2026-10-25-diag-bearer-health-check-401.md:11 (mention) — `docs/server/operations.md` ("Live health") tells a machine caller to run
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:19 (mention) — rollback runbook: `docs/server/operations.md`. A Codex adversarial review
 - ../issues/decisions/2026-08-07-server-backup-story.md:11 (mention) — `docs/server/operations.md` defers to "whatever backup mechanism is
 
@@ -10099,19 +10111,22 @@ References:
 
 #### docs/server/provisioning.md
 
-Title: "Server provisioning" | 214 lines | current reference
+Title: "Server provisioning" | 245 lines | current reference
 
 Referenced by:
 - deploy/README.md:21 (link) — | `hetzner/create-server.sh`, `hetzner/cloud-init.yaml`, `hetzner/provision.sh` | Example provisioners for the one host
 - docs/implemented-plans/doc-structure-install-server.md:80 (mention) — | `deploy/README.md` intro, Prerequisites, Setup, create-server, setup-server, Server layout, Box package installs, Syst
 - docs/server.md:14 (link) — | [Provisioning](server/provisioning.md) | Creating and setting up the host: prerequisites, the provisioners, server lay
-- docs/server/boxes.md:146 (link) — by its own user `bbx-<name>` ([provisioning](provisioning.md#per-box-layout-arrives-with-the-migration)).
+- docs/server/boxes.md:140 (link) — by its own user `bbx-<name>` ([provisioning](provisioning.md#server-layout)).
+- docs/server/deploying.md:94 (link) — [provisioning](provisioning.md#server-layout)). The deploy first checks that
 - docs/server/operations.md:7 (link) — Reference for the running beebox server (production at `box.example.com`). Provisioning is [its own page](provisioning.m
+- ../issues/bugs/2026-10-25-feedback-review-collect-reads-the-retired-box-path.md:26 (mention) — `feedback-review/run-on-server.ts`; the layout is `docs/server/provisioning.md`
 
 References:
 - → docs/install/docker.md (link)
-- → docs/implemented-plans/box-host-packages.md (mention)
 - → docs/plans/per-box-units.md (link)
+- → docs/server/deploying.md (link)
+- → docs/implemented-plans/box-host-packages.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 
 ### docs/testing/
@@ -10779,7 +10794,7 @@ Referenced by:
 - docs/implemented-plans/mobile-token-handshake.md:82 (mention) — unacceptable."* `src/hub/AGENTS.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
 - docs/plans/per-box-units.md:70 (mention) — `src/hub/AGENTS.md`). Not a BIG CHANGE, but near it; Track B is the part
 - docs/plans/per-box-units.subplan.md:41 (mention) — - `src/hub/AGENTS.md`, "Spawned children get an allowlisted env": fail
-- docs/server/boxes.md:24 (mention) — (`src/hub/AGENTS.md`, "A unit host"). `bbx engine hub add-box --socket`
+- docs/server/boxes.md:22 (mention) — and the hub only routes (`src/hub/AGENTS.md`, "A unit host");
 - ../issues/docs-and-chores/2026-07-04-box-registry-manifests.md:33 (mention) — `beebox/src/hub/AGENTS.md`,
 
 References:

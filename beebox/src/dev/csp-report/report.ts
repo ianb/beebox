@@ -65,7 +65,7 @@ const SCRATCH_DIR = path.join(MONOREPO_ROOT, "scratch");
 const REPORT_PATH = path.join(SCRATCH_DIR, "csp-report.html");
 const STATE_PATH = path.join(SCRATCH_DIR, "csp-report-state.json");
 const DEPLOY_TARGET_SCRIPT = path.resolve(import.meta.dirname, "../../../deploy/deploy-target.sh");
-const PROD_LOG_GLOB = "/home/beebox/boxes/*/.beebox/csp-reports.log";
+const PROD_LOG_GLOB = "/var/lib/beebox/*/box/.beebox/csp-reports.log";
 
 type Scope = "local" | "prod";
 

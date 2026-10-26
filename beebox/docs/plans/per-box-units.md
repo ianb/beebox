@@ -985,18 +985,28 @@ install` and `bbx tick` behave as before from inside a box.
 10. Production migration, by hand, after a snapshot, with the boxholder
     present.
 
-## Implementation status (2026-10-24, evening)
+## Implementation status (2026-10-25)
 
 Built, committed and run on a throwaway Hetzner VM: every track, the smoke
 (31/31), `cloud-init.yaml` + `provision.sh` from a blank server, `add-box.sh`
 for two boxes, `migrate-to-box-users.sh` for a third (dry run, run, resume,
 no-op rerun), thirteen `deploy.sh` runs as the fixes landed, the probe
 (subplan chunk 1, its rows settled or handed to the boxholder). Questions 7,
-8 and 9 were decided and built the same day. Open for the boxholder: the
-agent login per box (subplan question 1) and the Google token (subplan
-question 2), both decided at the production migration, which is step 10 and
-has not run. The fixes the VM forced are listed under Track E's "Found on the
-VM" and the following paragraph.
+8 and 9 were decided and built the same day. Subplan question 1 was decided
+and built as the long-lived token (`claude setup-token`, one hub secret
+granted to every box; a copied login file dies at its first refresh).
+
+Production migrated on 2026-10-25: six boxes, each its own user and units,
+the boxes on the host's volume mounted at `/var/lib/beebox`. Two things the
+migration found: the old box directory was a separate volume, so the move was
+a copy onto the root disk until the volume was remounted at the new path (the
+script then gained a cross-filesystem refusal, and the units
+`RequiresMountsFor=`); and a box whose directory is named `box` took "box" as
+its slug for its grants (`slugOfBoxRoot` now uses the parent directory on a
+unit host). After the migration the single-user server layout was retired:
+`migrate-to-box-users.sh` was deleted, `deploy.sh` and `add-box.sh` refuse a
+host without the layout, and `docs/server/` describes only this one. The
+hub's child-spawning path stays for the dev router.
 
 **Found on the VM, second pass.** A fresh host had no `/usr/local/bin/bbx`
 (the old provisioner's link; the deploy makes it now), no scheduler home

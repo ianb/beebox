@@ -1,10 +1,8 @@
-# The scheduler daemon on a unit host: its own user, beebox-sched, with no box
-# group and one sudo grant (bbx-box-run), running each box's pass as that box's
-# user through beebox-pass@<slug>.service (docs/plans/per-box-units.md, Track
-# E; docs/scheduler.md). Its manifest is ~/.config/beebox/boxes.json under
-# /var/lib/beebox-sched. Installed whole by deploy.sh once the beebox-sched
-# user exists (migrate-to-box-users.sh installs it at migration); a host that
-# has not migrated keeps the unit the old provisioner wrote.
+# The scheduler daemon: its own user, beebox-sched, with no box group and one
+# sudo grant (bbx-box-run), running each box's pass as that box's user through
+# beebox-pass@<slug>.service (docs/plans/per-box-units.md, Track E;
+# docs/scheduler.md). Its manifest is ~/.config/beebox/boxes.json under
+# /var/lib/beebox-sched. Installed whole by deploy.sh on every deploy.
 [Unit]
 Description=Bee Box Scheduler
 After=network.target

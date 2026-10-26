@@ -25,7 +25,7 @@ to change a user-facing word, change it here first. Decisions recorded
 
 ## Storage and files
 
-**box** — A single user's working directory under `~/src/boxes/` (or `/home/beebox/boxes/` on the server). Contains the user's cards, config, and state, and is also its own npm package (`package.json`, `src/`) and git repo — one root, `boxRoot` — see `docs/box-layout.md`.
+**box** — A single user's working directory under `~/src/boxes/` (or `/var/lib/beebox/<slug>/box/` on the server). Contains the user's cards, config, and state, and is also its own npm package (`package.json`, `src/`) and git repo — one root, `boxRoot` — see `docs/box-layout.md`.
 *User-facing:* same — "your box" is the user's box, the totality of their stuff. Never the app's name for itself (no "box assistant"), and never a bare place label: the root place is named for the box (its slug, so a fleet's tabs differ). "Home" is the pill's label for a chat bound to no place (`HOME_PLACE` in `src/frontend/src/lib/place-label.ts`).
 
 **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "users" of the system). See AGENTS.md note on avoiding personal names.
