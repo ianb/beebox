@@ -26,6 +26,15 @@ Key files:
 - `prod-ssh` — SSH to prod as root for diagnostics and administration
 - `prod-curl` / `prod-browse` — inspect the authenticated production app
 
+## Which account runs a step
+
+Each box runs as its own user ([provisioning](../docs/server/provisioning.md)).
+For each step a script adds, name the account that runs it and the layout it
+runs against, both layouts while a migration is in progress. Root passes every
+permission check, so a step that works as root proves nothing for a box user.
+An environment value that names a file (a key, a tokens file) must be readable
+by every box user.
+
 ## Rollback
 
 Any commit in history redeploys with one command (full pipeline — build,
