@@ -159,9 +159,9 @@ read-only reviewer in the foreground and saves `<out>.prompt.md`, `<out>.log`
 worktree. Judgment lives in the `cross-model` skill. Exit 127/124/1 means
 missing engine, timeout, or failure/empty answer.
 
-A Codex run with no `--model` picks Astra when the weekly window has room
-(use 15 points behind the clock, or at most 10% used in the week's first day)
-and Sol otherwise. Every Codex run appends its 7-day use before and after to
+A Codex run with no `--model` uses Sol. With `--hard` it picks Astra when the
+weekly window has room (use 15 points behind the clock, or at most 10% used in
+the week's first day) and Sol otherwise. Every Codex run appends its 7-day use before and after to
 `~/.cache/beebox/cross-model-quota.jsonl`. `bin/quota-room` prints each
 window's use against the clock, the current pick, and the mean cost of a
 review by model; thresholds live in `bin/lib/quota-room.ts`.

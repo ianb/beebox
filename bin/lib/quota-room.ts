@@ -1,6 +1,7 @@
 /**
  * Quota room: how far each weekly window's use is ahead of or behind the
- * clock, and the Codex reviewer model that `bin/cross-model-run` picks from it.
+ * clock, and the Codex reviewer model that `bin/cross-model-run --hard` picks
+ * from it. A review without `--hard` runs on Sol whatever the room.
  *
  * Room is elapsed percent minus used percent. Positive room means use is
  * behind the schedule, so a costlier model fits. In the first seventh of a
@@ -75,6 +76,7 @@ export interface ModelPick {
 
 const round = (n: number): string => n.toFixed(0);
 
+/** The model for a hard review: Astra when the weekly window has room. */
 export function pickCodexReviewModel(quota: Quota, now: Date): ModelPick {
   const weekly = quota.status === "available" ? weeklyWindow(quota) : null;
   const room = weekly === null ? null : windowRoom(weekly, now);

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-26T02:07:00Z
-Total documents: 580
+Generated: 2026-10-26T03:33:17Z
+Total documents: 582
 
 ## Issues
 
@@ -309,7 +309,7 @@ Referenced by:
 - ../.claude/skills/bbx-plan/TEMPLATE.md:38 (mention) — - beebox/AGENTS.md — conventions, validation contract, "no features
 - ../.claude/skills/browse/references/authentication.md:54 (mention) — live sessions (`beebox/AGENTS.md`). If you cannot get one, say which findings
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Test what a real agent learned from its guidance. Box audits cover box-loaded guidance (box AGENTS.md, gene
-- ../.claude/skills/launch-worktree-session/SKILL.md:65 (mention) — `/finish` or `$finish` in prose. Both agents read `AGENTS.md`. Pass handoff
+- ../.claude/skills/launch-worktree-session/SKILL.md:66 (mention) — `/finish` or `$finish` in prose. Both agents read `AGENTS.md`. Pass handoff
 - ../AGENTS.md:7 (link) — - **Main system:** [beebox/AGENTS.md](beebox/AGENTS.md).
 - ../bin/docs/worktree-lifecycle.md:79 (mention) — Both agents read the tracked `AGENTS.md` files directly.
 - ../dev/devprocess-talk/bottlenecks.md:109 (mention) — 2. **Prose rule → measured failure → check.** Sigils (rule Sep 20, refusal Oct 7 after 83 sessions); Codex guidance (han
@@ -846,7 +846,7 @@ Referenced by:
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:73 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
-- ../bin/AGENTS.md:187 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
+- ../bin/AGENTS.md:194 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:40 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
@@ -1455,12 +1455,13 @@ Title: "Glossary" | 101 lines | current reference
 
 Referenced by:
 - docs/design/representation.md:63 (link) — holds those terms ([`../glossary.md`](../glossary.md#user-facing-register)).
-- docs/design/trust.md:73 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
+- docs/design/trust.md:77 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/guides.md:56 (link) — | Glossary | [glossary](glossary.md) |
 - docs/implemented-plans/design-reconciliation.md:28 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/implemented-plans/docs-reorg.gap-analysis.md:149 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
 - docs/implemented-plans/docs-reorg.md:92 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
 - docs/implemented-plans/front-door.md:332 (mention) — - **Glossary, user-facing register** (`docs/glossary.md`): "card" is
+- docs/implemented-plans/questions-later-and-figure-it-out.md:520 (mention) — `docs/design/trust.md` (the rung), `docs/glossary.md`.
 - docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
 - docs/implemented-plans/vocab-glossary-sweep.md:37 (mention) — editing a label has one place to check. `docs/glossary.md` already claims
 - docs/plans/agent-docs.md:369 (mention) — - concepts: `glossary.md`, `cards-as-markdown.md`, `connectors.md`,
@@ -1579,7 +1580,7 @@ References:
 
 #### docs/landmarks.md
 
-Title: "Landmarks" | 334 lines | current reference
+Title: "Landmarks" | 337 lines | current reference
 
 Referenced by:
 - docs/design/representation.md:115 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
@@ -1596,6 +1597,7 @@ Referenced by:
 - docs/implemented-plans/open-chat-from-card.md:100 (mention) — `contextDir` chosen at the call site (`LandmarkSection.tsx:96`). `docs/landmarks.md` (per the
 - docs/implemented-plans/place-shows-cards.md:244 (mention) — - **Place** (exists: a landmark's directory, `docs/landmarks.md`). Not a new
 - docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
+- docs/implemented-plans/questions-beside-the-chat.md:151 (mention) — `docs/landmarks.md`. Not a BIG CHANGE.
 - docs/implemented-plans/top-nav-ia.md:204 (mention) — - **No landmark full form exists.** `docs/landmarks.md:119-134`
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/plans/box-screen.md:510 (mention) — - **Agent guidance.** The `nav.card` instructions (`src/schemas/nav.ts`) name the avatar menu for the box-wide pages and
@@ -1638,7 +1640,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1906 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1904 lines | current reference
 
 Referenced by:
 - AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1660,6 +1662,7 @@ Referenced by:
 - docs/implemented-plans/native-hq-fallback-resilience.md:41 (mention) — - `ChatAPI.transcribeAudio` already logs transport, HTTP, and decode failures, but its thrown server error keeps only th
 - docs/implemented-plans/notifications-design-notes.md:52 (mention) — record from pairing (`docs/mobile-contract.md`, `pairing.devices`), which
 - docs/implemented-plans/notifications.md:263 (mention) — - **Mobile contract.** `docs/mobile-contract.md:8` the sync rule; the
+- docs/implemented-plans/questions-beside-the-chat.md:150 (mention) — lines across `docs/questions.md`, `docs/mobile-contract.md`,
 - docs/implemented-plans/resilient-voice-recording.md:900 (mention) — - `mobile-contract.md` gains a voice staging section. §5.2 is marked "legacy,
 - docs/implemented-plans/retire-memo.md:222 (mention) — `docs/mobile-contract.md:1396-1411` prose changes from "memo" to "doc"; no
 - docs/implemented-plans/router-transient-failure-resilience.md:774 (mention) — paired to a dev-router URL at all (`beebox/docs/mobile-contract.md:21-23`).
@@ -1738,7 +1741,7 @@ References:
 - → docs/plans/agent-points-at-ui.md (mention)
 - → docs/implemented-plans/ios-audio-retranscription.md (mention)
 - → docs/model-policy.md (mention)
-- → docs/implemented-plans/front-door.md (mention)
+- → docs/questions.md (mention)
 - → docs/plans/chat-photo-batch-upload.md (mention)
 - → docs/implemented-plans/bulk-file-upload.md (mention)
 - → docs/implemented-plans/ios-quick-chat-hq.md (mention)
@@ -1923,7 +1926,7 @@ References:
 
 #### docs/questions.md
 
-Title: "Questions" | 353 lines | current reference
+Title: "Questions" | 398 lines | current reference
 
 Referenced by:
 - docs/design/trust.md:37 (link) — answer there as a `basis: user-stated` belief — [`../questions.md`](../questions.md).) Keep this as the umbrella princip
@@ -1931,9 +1934,12 @@ Referenced by:
 - docs/guides.md:43 (link) — | Questions: the question subsystem | [questions](questions.md) |
 - docs/implemented-plans/doc-structure.md:549 (mention) — Results) fit subsystem docs like `questions.md` as well as it fits tiers?
 - docs/implemented-plans/front-door.md:160 (mention) — for questions (`docs/questions.md`, "Where questions live"). It is answered
+- docs/implemented-plans/questions-beside-the-chat.md:73 (mention) — answerable (`docs/questions.md`, Lifecycle: "Dismissed questions **remain
 - docs/implemented-plans/questions-end-to-end.md:468 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
+- docs/implemented-plans/questions-later-and-figure-it-out.md:519 (mention) — 7. Docs: `docs/questions.md` (Later, provisional, the review),
 - docs/implemented-plans/todo-annotation.md:68 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
 - docs/landmarks.md:74 (mention) — **`openers`** (zero or more strings) — one-line first moves, phrased from the person's side. They show as buttons on an
+- docs/mobile-contract.md:1001 (mention) — A question beside the chat travels as `openCard`, like any card (`docs/questions.md`, "Surfacing");
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:21 (mention) — dismissed questions are not re-asked (`docs/questions.md`).
@@ -1942,6 +1948,7 @@ Referenced by:
 - ../issues/exploration/2026-09-24-todo-completion-requires-an-answer.md:30 (mention) — - The questions subsystem (`beebox/docs/questions.md`) already models an
 - ../issues/features/2026-07-19-write-only-secret-capture-in-chat.md:34 (mention) — - **Explicitly NOT the questions subsystem.** Questions (`docs/questions.md`) are an
 - ../issues/features/2026-10-08-agent-files-a-grant-request.md:36 (mention) — subsystem (`beebox/docs/questions.md`) already has.
+- ../issues/features/2026-10-26-question-backlog-beside-the-chat.md:22 (mention) — (`beebox/docs/questions.md`, "Beside a new chat"). Closing its tab dismisses
 - ../research/imbue-studio/comparison.md:107 (mention) — (`docs/questions.md`) already has that shape.
 - ../research/opencode/inspiration.md:82 (mention) — | `question` tool blocking on a `Deferred` | question cards that outlive the session (`docs/questions.md`) | beebox is a
 
@@ -1949,9 +1956,9 @@ References:
 - → docs/implemented-plans/questions-end-to-end.md (mention)
 - → docs/implemented-plans/box-retrospectives.md (mention)
 - → AGENTS.md (mention)
-- → docs/implemented-plans/front-door.md (mention)
-- → docs/implemented-plans/top-nav-ia.md (mention)
+- → docs/implemented-plans/questions-beside-the-chat.md (mention)
 - → src/core/agent-guide/guide.md (mention)
+- → docs/implemented-plans/questions-later-and-figure-it-out.md (mention)
 
 #### docs/README.md
 
@@ -2394,7 +2401,7 @@ Referenced by:
 - docs/design/processing.md:40 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:80 (link) — marker for spot-checking ([`../triage.md`](../triage.md)).
 - docs/design/teaching.md:24 (link) — rules at the destination ([`../triage.md`](../triage.md)).
-- docs/design/trust.md:71 (link) — ([`../triage.md`](../triage.md)).
+- docs/design/trust.md:75 (link) — ([`../triage.md`](../triage.md)).
 - docs/guides.md:42 (link) — | Triage: the intake pipeline | [triage](triage.md) |
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/docs-reorg.md:342 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
@@ -2509,14 +2516,16 @@ Referenced by:
 - docs/architecture/writing-style.md:63 (mention) — - **spirit**: Which values from spirit.md does this section express or depend on? (e.g., "inspectable history", "messy i
 - docs/design/README.md:6 (link) — compass is [`../architecture/spirit.md`](../architecture/spirit.md) — **design
 - docs/design/identity.md:7 (mention) — not an app you open (ruling 3; the feel is `../architecture/spirit.md`'s
-- docs/design/trust.md:48 (mention) — for a person (spirit.md's "nothing should just disappear";
+- docs/design/trust.md:52 (mention) — for a person (spirit.md's "nothing should just disappear";
 - docs/development/workflow.md:89 (link) — [spirit.md](../architecture/spirit.md) it serves and risks.
 - docs/implemented-plans/activity-detail.md:55 (mention) — Serves "see the gears" (`beebox/docs/architecture/spirit.md`) at the depth
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/implemented-plans/docs-reorg.md:335 (mention) — `docs/design/` (8 topic files + README acknowledging spirit.md),
 - docs/implemented-plans/live-gap-marker.md:56 (mention) — (`docs/architecture/spirit.md:79`) by sending a known hole as unsure.
 - docs/implemented-plans/mac-app-engine-channel.md:632 (mention) — is the paperwork spirit.md argues against.
+- docs/implemented-plans/questions-beside-the-chat.md:69 (mention) — (`docs/architecture/spirit.md`): the person answers in their own words in the
 - docs/implemented-plans/questions-end-to-end.md:376 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
+- docs/implemented-plans/questions-later-and-figure-it-out.md:66 (mention) — rather than nagging forever" (`docs/architecture/spirit.md`).
 - docs/plans/ios-app-intent-capture.md:46 (mention) — - **Serves:** `architecture/spirit.md`, “The best stuff comes from the people”: “The box's job is to collect, preserve,
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
@@ -2956,10 +2965,10 @@ Title: "Quick chat" | 330 lines | current reference
 
 Referenced by:
 - docs/chat.md:13 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
-- docs/design/trust.md:49 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
+- docs/design/trust.md:53 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
 - docs/implemented-plans/clerk-quick-send.md:54 (mention) — today (`docs/chat/quick-chat.md`, "The box screen"). The page toast says
 - docs/landmarks.md:235 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
-- docs/mobile-contract.md:1309 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
+- docs/mobile-contract.md:1307 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
 - docs/plans/box-screen.md:376 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - docs/plans/chat-routing.md:20 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
 - docs/plans/gmail-admission-and-preparation.md:26 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
@@ -3308,7 +3317,7 @@ Title: "Representation should mirror the shape of the idea" | 119 lines | design
 
 Referenced by:
 - docs/design/README.md:20 (link) — - [`representation.md`](representation.md) — the anchor principle: the representation mirrors the shape of the idea (Eng
-- docs/design/trust.md:51 (mention) — on some things without asking (`representation.md`,
+- docs/design/trust.md:55 (mention) — on some things without asking (`representation.md`,
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../implemented-
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:75 (mention) — compromise that rests on trust to keep. `representation.md` gains "Acting
 
@@ -3339,7 +3348,7 @@ References:
 
 #### docs/design/trust.md
 
-Title: "Trust and authorization" | 87 lines | design rationale
+Title: "Trust and authorization" | 91 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:25 (link) — - [`trust.md`](trust.md) — two axes: trust to act (question → confirmation → automatic, question rules) and trust to kee
@@ -3347,6 +3356,7 @@ Referenced by:
 - docs/implemented-plans/design-md-retired-sections.md:55 (mention) — process-fields; see `../design/trust.md`.*
 - docs/implemented-plans/file-wordless-captures.md:52 (mention) — `beebox/docs/design/trust.md` names as what *"lets the box act forward on some
 - docs/implemented-plans/plugins.design.md:66 (mention) — Per `design/trust.md`, question then confirmation then automatic:
+- docs/implemented-plans/questions-later-and-figure-it-out.md:86 (mention) — - This changes a stated rule. `docs/design/trust.md`: "A question, the first
 - docs/plans/ios-app-intent-capture.md:76 (mention) — - `docs/design/trust.md`, “capture must cost nothing in the moment, or the thought is not captured.” Local persistence p
 - docs/plans/ios-app-intent-capture.product-shape.review.md:40 (mention) — - `beebox/docs/design/trust.md:56-61` says “Quick chat is a compromise, not a pattern to copy” and that “capture must co
 - ../.claude/skills/bbx-design/SKILL.md:21 (mention) — current shape; `interaction-model.md` and `trust.md` matter most here.
@@ -4053,7 +4063,7 @@ Title: "Bulk file upload" | 468 lines | shipped history | implemented
 
 Referenced by:
 - docs/box-layout.md:159 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:1026 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:1024 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:36 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -5346,9 +5356,8 @@ Title: "The front door: what a person meets when they open their box" | 1255 lin
 
 Referenced by:
 - docs/box-layout.md:318 (mention) — does; a folder the person made never folds (`docs/implemented-plans/front-door.md`,
+- docs/implemented-plans/questions-beside-the-chat.md:13 (link) — [front-door](../implemented-plans/front-door.md), Track A.
 - docs/landmarks.md:34 (mention) — A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a
-- docs/mobile-contract.md:1002 (mention) — (`docs/implemented-plans/front-door.md`, Track A), sent by the web composer on every message while it is
-- docs/questions.md:258 (mention) — - **The empty root chat** (`docs/implemented-plans/front-door.md`, Track A) — an
 - test/user-stories/journeys/I-deciding/reports/2026-10-22.md:79 (mention) — | 1 | Note 1: nothing says what the app is. | P (designed) | The front door is the root question "What do you want to ke
 - ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:11 (mention) — **Closed:** resolved by the front-door branch (merge commit on `main`; see `beebox/docs/implemented-plans/front-door.md`
 
@@ -5393,6 +5402,7 @@ Title: "DOM doctests for frontend effects, events, and render counts" | 383 line
 
 Referenced by:
 - docs/implemented-plans/front-door.md:722 (mention) — (`docs/implemented-plans/frontend-dom-harness.md`) that the line renders on
+- docs/implemented-plans/questions-beside-the-chat.md:494 (mention) — `docs/implemented-plans/frontend-dom-harness.md`) for the close wrapper and
 
 References:
 - → ../issues/closed/code-quality/2026-10-10-frontend-has-no-dom-effect-test-harness.md (frontmatter)
@@ -5617,7 +5627,7 @@ Title: "On-device HQ for iOS quick chat thoughts" | 236 lines | shipped history 
 
 Referenced by:
 - docs/implemented-plans/hq-always.md:83 (link) — | iOS quick chat (box screen) | on-device HQ, else live (`<speech source="box-screen" stt="live">`); no recording reache
-- docs/mobile-contract.md:1300 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
+- docs/mobile-contract.md:1298 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
 - ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:40 (link) — should use it." Built per [the plan](../../beebox/docs/implemented-plans/ios-quick-chat-hq.md):
 
 References:
@@ -5706,7 +5716,7 @@ Title: "Landmark arrival" | 940 lines | shipped history | implemented
 
 Referenced by:
 - docs/cards/migrations.md:369 (mention) — Track B of `docs/implemented-plans/landmark-arrival.md`. Chat openers moved from briefing
-- docs/landmarks.md:309 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
+- docs/landmarks.md:312 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
 - ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
 - ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
@@ -5913,7 +5923,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1727 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1725 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -6379,7 +6389,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 447 lines | shipped history | implemented
 
 Referenced by:
-- ../bin/AGENTS.md:170 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../bin/AGENTS.md:177 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:239 (mention) — - **Lives in:** `bin/private-issues`, `bin/CLAUDE.md` "Private-issues shadow repo", `issues/CLAUDE.md`, `beebox/docs/imp
 
 References:
@@ -6514,6 +6524,24 @@ References:
 - → docs/development/technologies.md (mention)
 - → docs/plans/source-available-release.md (mention)
 
+#### docs/implemented-plans/questions-beside-the-chat.md
+
+Title: "Questions open beside the chat" | 556 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/questions-later-and-figure-it-out.md:10 (mention) — A question beside the chat (`questions-beside-the-chat.md`, shipped in this
+- docs/questions.md:266 (mention) — - **Beside a new chat** (`docs/implemented-plans/questions-beside-the-chat.md`) — when a
+- ../issues/features/2026-10-26-question-backlog-beside-the-chat.md:39 (mention) — Deferred from `beebox/docs/implemented-plans/questions-beside-the-chat.md` (NOT in
+
+References:
+- → docs/implemented-plans/front-door.md (link)
+- → ../issues/features/2026-07-23-mobile-modal-not-split-pane.md (link)
+- → docs/architecture/spirit.md (mention)
+- → docs/questions.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/landmarks.md (mention)
+- → docs/implemented-plans/frontend-dom-harness.md (mention)
+
 #### docs/implemented-plans/questions-end-to-end.md
 
 Title: "Questions, end-to-end" | 667 lines | shipped history | implemented
@@ -6538,6 +6566,22 @@ References:
 - → docs/architecture/spirit.md (mention)
 - → docs/questions.md (mention)
 - → docs/user-stories/catalog/2026-06-26.md (mention)
+
+#### docs/implemented-plans/questions-later-and-figure-it-out.md
+
+Title: "Questions: Later, Figure it out, and a simpler next time" | 549 lines | shipped history | implemented
+
+Referenced by:
+- docs/questions.md:357 (mention) — (`docs/implemented-plans/questions-later-and-figure-it-out.md`):
+
+References:
+- → ../issues/features/2026-10-26-question-backlog-beside-the-chat.md (frontmatter)
+- → docs/implemented-plans/questions-beside-the-chat.md (mention)
+- → ../issues/features/2026-10-26-question-backlog-beside-the-chat.md (link)
+- → docs/architecture/spirit.md (mention)
+- → docs/design/trust.md (mention)
+- → docs/questions.md (mention)
+- → docs/glossary.md (mention)
 
 #### docs/implemented-plans/readable-card-fields.md **[ORPHAN]**
 
@@ -7583,7 +7627,6 @@ Referenced by:
 - docs/implemented-plans/nav-card.md:18 (mention) — **Where the entries render changed (2026-08, `docs/implemented-plans/top-nav-ia.md`
 - docs/landmarks.md:186 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
 - docs/plans/box-screen.md:45 (mention) — - This changes shipped navigation from `beebox/docs/implemented-plans/top-nav-ia.md`: line 296 puts Dashboard, Browse, H
-- docs/questions.md:272 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
 - docs/user-stories/catalog/2026-08-21.md:9051 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a
 - ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:43 (mention) — That is a reasonable IA decision (`docs/implemented-plans/top-nav-ia.md` Track C), but it
 - ../issues/closed/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:42 (link) — [top-nav-ia](../../../beebox/docs/implemented-plans/top-nav-ia.md) — which
@@ -8376,7 +8419,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 515 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1025 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:1023 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/closed/bugs/2026-07-30-capture-teardown-race.md:15 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
@@ -8956,7 +8999,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 157 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1721 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1719 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:40 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:11 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -10667,7 +10710,7 @@ Referenced by:
 - docs/implemented-plans/retire-memo.md:230 (mention) — memo mentions in `agent-guide/guide.md:79,285,406`, `capture-session.tsx:84`,
 - docs/plans/prompt-surface-cleanup-evaluation.md:655 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
 - docs/prompts/review.md:67 (mention) — - **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/a
-- docs/questions.md:309 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
+- docs/questions.md:330 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md:84 (mention) — | 31 | Note 4: it offered to remind the person this evening; "it offered, didn't do it". | P | Transcript 11:45:15: "I c
 - test/user-stories/journeys/G-paperwork/reports/2026-10-22.md:81 (mention) — | 5 | Note 2, Note 10, closing: "Admin → Host → Notifications" is jargon; "I do not know where that is." | P | The agent
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:44 (mention) — - **One line:** the always-loaded box agent guide is a hand-written `guide.md` backed by `ledger.yaml` — one row per rul

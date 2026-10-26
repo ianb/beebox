@@ -14,22 +14,33 @@
  */
 
 import { useState } from "react";
-import { trpc } from "../../lib/trpc/client";
-import { bbxSource } from "../../lib/source-tag";
-import { RadioGroup, TextareaField } from "../ui/fields/field";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { Stack } from "../ui/Stack";
-import { Row } from "../ui/Row";
-import { Text } from "../ui/Text";
-import { ErrorText } from "../ui/ErrorText";
-import { Heading } from "../ui/Heading";
-import { QuestionMemo } from "./QuestionMemo";
-import type { RouterOutput } from "../../lib/trpc/client";
+import { trpc } from "../../../lib/trpc/client";
+import { bbxSource } from "../../../lib/source-tag";
+import { RadioGroup, TextareaField } from "../../ui/fields/field";
+import { Button } from "../../ui/Button";
+import { Card } from "../../ui/Card";
+import { Stack } from "../../ui/Stack";
+import { Row } from "../../ui/Row";
+import { Text } from "../../ui/Text";
+import { ErrorText } from "../../ui/ErrorText";
+import { Heading } from "../../ui/Heading";
+import { QuestionMemo } from "./memo";
+import { LATER } from "../question-tab";
+import type { RouterOutput } from "../../../lib/trpc/client";
 
 export type QuestionInfo = RouterOutput["status"]["questions"]["items"][number];
 
-interface QuestionFormProps {
+/**
+ * Where the form is shown, beyond the Questions page
+ * (docs/implemented-plans/questions-beside-the-chat.md, Track B): `onAnswerInChat`, a list
+ * row offers to open the question beside the chat. Beside the chat the card is
+ * `QuestionBeside` (`beside.tsx`), not this form.
+ */
+interface FormPlace {
+  onAnswerInChat?: () => void;
+}
+
+interface QuestionFormProps extends FormPlace {
   question: QuestionInfo;
   onAnswered: () => void;
   sourcePath?: string;
@@ -46,7 +57,7 @@ interface QuestionFormProps {
  * silently breaking the questions loop. So the prompt leads (it's the
  * question), the context scrolls, and the answer never hides.
  */
-function QuestionContext({ question }: { question: QuestionInfo }) {
+export function QuestionContext({ question }: { question: QuestionInfo }) {
   const hasMemo = question.memo !== undefined && question.memo !== "";
   const hasLearning = question.learning?.proposal !== undefined;
   return (
@@ -83,24 +94,36 @@ function QuestionContext({ question }: { question: QuestionInfo }) {
  *  are white, so the pinned row paints over content sliding beneath it. */
 const SUBMIT_ROW_CLASSES = "sticky bottom-0 bg-white py-2 -mb-2";
 
-function DismissButton({ question, onAnswered }: { question: QuestionInfo; onAnswered: () => void }) {
+/**
+ * The row's secondary actions: "Answer in chat" where a list offers it, then
+ * "Later" for a pending question, which puts it away (the dismiss transition).
+ */
+function DismissButton({ question, onAnswered, place }: { question: QuestionInfo; onAnswered: () => void; place: FormPlace }) {
   const dismissMutation = trpc.actions.dismiss.useMutation({ onSuccess: () => onAnswered() });
-  if (question.state !== "pending") return null;
+  const pending = question.state === "pending";
+  const handleAnswerInChat = place.onAnswerInChat;
   return (
-    <Button
-      type="button"
-      intent="ghost"
-      size="sm"
-      loading={dismissMutation.isPending}
-      loadingLabel="Dismissing…"
-      onClick={() => dismissMutation.mutate({ questionPath: question.relativePath })}
-    >
-      Dismiss
-    </Button>
+    <>
+      {handleAnswerInChat === undefined ? null : (
+        <Button type="button" intent="ghost" size="sm" onClick={handleAnswerInChat}>Answer in chat</Button>
+      )}
+      {!pending ? null : (
+        <Button
+          type="button"
+          intent="ghost"
+          size="sm"
+          loading={dismissMutation.isPending}
+          loadingLabel="Putting away…"
+          onClick={() => dismissMutation.mutate({ questionPath: question.relativePath })}
+        >
+          {LATER}
+        </Button>
+      )}
+    </>
   );
 }
 
-function ConfirmForm({ question, onAnswered }: { question: QuestionInfo; onAnswered: () => void }) {
+function ConfirmForm({ question, onAnswered, place }: { question: QuestionInfo; onAnswered: () => void; place: FormPlace }) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const answerMutation = trpc.actions.answer.useMutation({
@@ -146,13 +169,13 @@ function ConfirmForm({ question, onAnswered }: { question: QuestionInfo; onAnswe
         >
           No
         </Button>
-        <DismissButton question={question} onAnswered={onAnswered} />
+        <DismissButton question={question} onAnswered={onAnswered} place={place} />
       </Row>
     </Stack>
   );
 }
 
-function SelectForm({ question, onAnswered }: { question: QuestionInfo; onAnswered: () => void }) {
+function SelectForm({ question, onAnswered, place }: { question: QuestionInfo; onAnswered: () => void; place: FormPlace }) {
   const [selectedOption, setSelectedOption] = useState("");
   const [error, setError] = useState<string | null>(null);
   const answerMutation = trpc.actions.answer.useMutation({
@@ -194,14 +217,14 @@ function SelectForm({ question, onAnswered }: { question: QuestionInfo; onAnswer
           >
             Submit Answer
           </Button>
-          <DismissButton question={question} onAnswered={onAnswered} />
+          <DismissButton question={question} onAnswered={onAnswered} place={place} />
         </Row>
       </Stack>
     </form>
   );
 }
 
-function TextForm({ question, onAnswered }: { question: QuestionInfo; onAnswered: () => void }) {
+function TextForm({ question, onAnswered, place }: { question: QuestionInfo; onAnswered: () => void; place: FormPlace }) {
   const [textAnswer, setTextAnswer] = useState("");
   const [error, setError] = useState<string | null>(null);
   const answerMutation = trpc.actions.answer.useMutation({
@@ -240,14 +263,14 @@ function TextForm({ question, onAnswered }: { question: QuestionInfo; onAnswered
           >
             Submit Answer
           </Button>
-          <DismissButton question={question} onAnswered={onAnswered} />
+          <DismissButton question={question} onAnswered={onAnswered} place={place} />
         </Row>
       </Stack>
     </form>
   );
 }
 
-export function QuestionForm({ question, onAnswered, sourcePath }: QuestionFormProps) {
+export function QuestionForm({ question, onAnswered, sourcePath, ...place }: QuestionFormProps) {
   const inputType = question.inputType;
 
   return (
@@ -256,15 +279,15 @@ export function QuestionForm({ question, onAnswered, sourcePath }: QuestionFormP
       {(() => {
         switch (inputType) {
           case "confirm":
-            return <ConfirmForm question={question} onAnswered={onAnswered} />;
+            return <ConfirmForm question={question} onAnswered={onAnswered} place={place} />;
           case "select":
-            return <SelectForm question={question} onAnswered={onAnswered} />;
+            return <SelectForm question={question} onAnswered={onAnswered} place={place} />;
           case "text":
-            return <TextForm question={question} onAnswered={onAnswered} />;
+            return <TextForm question={question} onAnswered={onAnswered} place={place} />;
           case undefined:
             // The question card failed to load (see status.ts's questions query)
             // — no widget can be rendered; only Dismiss (or nothing) is offered.
-            return <DismissButton question={question} onAnswered={onAnswered} />;
+            return <DismissButton question={question} onAnswered={onAnswered} place={place} />;
         }
       })()}
     </Card>

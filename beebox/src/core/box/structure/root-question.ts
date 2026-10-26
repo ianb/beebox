@@ -42,6 +42,7 @@ export async function installRootQuestion(boxRoot: string): Promise<string | nul
   const entries = await fs.readdir(dir);
   if (entries.some((name) => name.endsWith(".question.card"))) return null;
   const content = createTextQuestionTemplate({
+    title: "What this box is for",
     prompt: ROOT_QUESTION_PROMPT,
     memo: "I'd like to know what this box is for before I suggest anything.",
     askedAt: getBoxTimeISO(boxRoot),

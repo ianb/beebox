@@ -5,7 +5,7 @@
 
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
-import type { QuestionInfo } from "../questions/QuestionForm";
+import type { QuestionInfo } from "../questions/QuestionForm/view";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
 import { StatusBadge } from "../ui/StatusBadge";

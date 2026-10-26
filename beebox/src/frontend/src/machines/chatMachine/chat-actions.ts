@@ -39,7 +39,6 @@ export function cardFieldsFromEvent(event: SendEvent): ChatSendContext & Pick<Se
     ...(event.startup !== undefined ? { startup: event.startup } : {}),
     ...(event.binding !== undefined ? { binding: event.binding } : {}),
     ...(event.openCard !== undefined ? { openCard: event.openCard } : {}),
-    ...(event.openQuestion !== undefined ? { openQuestion: event.openQuestion } : {}),
     ...(event.cardActivity && event.cardActivity.length > 0 ? { cardActivity: event.cardActivity } : {}),
     ...(event.cardState && Object.keys(event.cardState).length > 0 ? { cardState: event.cardState } : {}),
   };

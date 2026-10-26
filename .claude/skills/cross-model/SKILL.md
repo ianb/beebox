@@ -126,11 +126,12 @@ bin/cross-model-run --engine codex --prompt-file scratch/cross-model/<name>.prom
 ```
 
 It runs the reviewer read-only at `--effort high` and prints the answer path
-and answer. Claude defaults to `claude-opus-5-5`; Codex picks `gpt-6-astra`
-when the weekly quota has room and `gpt-6-sol` otherwise (`bin/quota-room`).
-Use `--model fable` (Claude) for plan mode and `--model gpt-6-astra` (Codex)
-for a hard plan or a disputed finding; honor a human's model override within
-the family. `--help`
+and answer. Claude defaults to `claude-opus-5-5`; Codex defaults to
+`gpt-6-sol`. Pass `--hard` for a difficult review (an open design, concurrency,
+security, a large or cross-cutting diff, a disputed finding): Codex then picks
+`gpt-6-astra` when the weekly quota has room (`bin/quota-room`). Routine
+reviews, about half, stay on Sol. With `--engine claude`, use `--model fable` for plan mode;
+honor a human's model override within the family. `--help`
 lists `--out`, `--cwd`, and `--timeout` (default 30 min). A nonzero exit (127
 missing engine, 124 timeout, 1 failure or empty answer) prints the raw-log
 tail; report it. If a Codex model stalls, retry once with an older model the

@@ -77,6 +77,10 @@ the real `HOME` and only the two file overrides. Tests already do all of
 this (`makeTmpBox()` and the test preloads; see [testing](testing.md)); prefer
 a test when the bug fits one.
 
+Run later commands from inside the box as `<worktree>/beebox/bin/bbx <verb>`,
+which rebuilds a stale bundle. `pnpm --dir` changes the working directory, so
+box detection fails, and not every verb takes `--box`.
+
 ## Auditing what a box agent knows
 
 Use the knowledge-audit skill and [knowledge audits](testing/knowledge-audits.md#running-it).

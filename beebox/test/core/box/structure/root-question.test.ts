@@ -38,6 +38,7 @@ void test("A box with no questions gets the root question, pending; a second cal
     state: "pending",
   });
   t.check(content, str`---
+title: What this box is for
 memo: I'd like to know what this box is for before I suggest anything.
 prompt: What do you want to keep track of here?
 input:

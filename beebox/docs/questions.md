@@ -131,10 +131,18 @@ pending ──answer──> answered
   `answered-via` records `web`, `cli`, or `chat`; a `chat` answer is the agent
   recording what the person said in a conversation, and writes no follow-up
   job (see "The answer round-trip").
-- **`dismissed`** (`dismissed-at`) — the boxholder declined to answer via the Dismiss
-  affordance (`bbx dismiss` / `actions.dismiss`). Only a `pending` question
-  can be dismissed. Dismissed questions **remain answerable** — an
-  un-dismissal is the boxholder's prerogative.
+- **`dismissed`** (`dismissed-at`) — put away for now: the person chose
+  "Later" (`bbx dismiss` / `actions.dismiss`) or "Decide for me"
+  (`actions.figureOut`). Only a `pending` question can be dismissed.
+  Dismissed questions **remain answerable**, and the daily question review
+  brings each one back (`bbx question reraise`, which sets `asked-at` to now)
+  or decides it (see "Figuring it out").
+- **`provisional`** (field, not a state) — what the box decided in place of
+  an answer (`bbx question decide`): `decision`, `reasoning`, `undo`,
+  `decided-at`. It sits on a dismissed or expired card, and stays as history
+  on one the person later answers. It is never the person's answer: it sets
+  no `answered-at` or `answer:`, and what the box learns from it is
+  `basis: inferred`.
 - **`expired`** (`expired-at`) — aged out of the active view by the aging sweep without an
   answer. Expiry **demotes visibility, it does not close the question** —
   the card stays in `_bookkeeping/questions/` and remains answerable. Only a
@@ -255,26 +263,37 @@ evidence model.
 
 ## Surfacing
 
-- **The empty root chat** (`docs/implemented-plans/front-door.md`, Track A) — an
-  unstarted chat at the box root shows the newest pending question (by
-  `asked-at`, then path) as the agent's opening line: the `prompt`, the
-  `memo` under it, "and N more" to the Questions page, and a quiet "Not now"
-  (`actions.dismiss`). Text for every input type: a `select` question lists
-  its options in the sentence, and the person answers by typing or speaking.
-  A card that fails to parse is
-  never shown there but counts toward N. The send carries the card's path
-  as `openQuestion`, which the agent sees as the `open-question` snapshot
-  attribute on every message while the card is pending; the agent does the
-  directive in the conversation, then records the answer with
-  `bbx answer --via chat`. A new box seeds one such question
-  (`installRootQuestion`): "What do you want to keep track of here?"
-- **Header badge** — retired 2026-08 with the nav link row
-  (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
-  pending-question count, and Questions has no nav presence unless a box
-  pins `/questions` in its `nav.card`. The Dashboard's attention cards
+- **Beside a new chat** (`docs/implemented-plans/questions-beside-the-chat.md`) — when a
+  new root chat arrives with no cards open, the workspace opens the newest
+  pending question (by `asked-at`, then path; never an unparseable card) as
+  the active tab: on the desktop on top of the Box page, on the phone alone,
+  with the composer under it (`arrivalPlan`, `WorkspaceProvider/arrival.ts`).
+  A chat opened beside another card, or one with a saved arrangement, opens
+  no question. Beside the chat the question is pasted onto a stub card with
+  no answer controls (`QuestionForm/beside.tsx`, look in
+  `themes/question-beside.css`): the person answers in the chat, and a
+  `select` question lists its choices in a line. The pinned row offers
+  "Later" (puts it away; the tab's ✕ does the same) and "Decide for me"
+  (hands it to the box in the background; see "Figuring it out"). In a
+  chat, the app bar's question count shows the newest pending question
+  beside the chat, or puts the one in front away without "Later"
+  (`useQuestionToggle`, `question-tab.ts`). With a pending question in front, the
+  empty chat says "Answer the question “<card title>” here, or start
+  something else." and
+  shows no openers (`useQuestionInFront`), so a reply reads as a probable
+  answer. The question reaches the agent as the `open-card`
+  snapshot attribute; the agent judges whether the message answers it, does
+  the directive in the conversation, then records the answer with
+  `bbx answer --via chat`. A dismissed or expired question comes back the
+  same way: "Answer in chat" on its Questions page row, or the agent's link
+  to the card. A new box seeds one question (`installRootQuestion`): "What do
+  you want to keep track of here?"
+- **App bar count** — the app bar shows the pending-question count beside
+  the todo count (`AttentionBadgesFace.tsx`, `id="bbx-nav-questions"`),
+  linking to the Questions page. The Dashboard's attention cards
   (fed by the same `status.questions` tRPC query, invalidated on
-  `question-answered`/`card-created`/`question-expired` bus events) are the
-  in-app "there is activity" signal.
+  `question-answered`/`card-created`/`question-expired` bus events) carry
+  the same signal.
 - **Questions page** (`QuestionsPage` / `QuestionsList.tsx`) — the full list:
   pending at the top, an archive of answered/dismissed/expired below
   showing the recorded answer and state (not just a state word). Expired
@@ -289,12 +308,14 @@ evidence model.
   actually learned; that recording happens separately, in the follow-up
   job's commits. Every deep link into a question card lands somewhere
   actionable, never a bare frontmatter dump.
-- **Type-driven form** (`QuestionForm.tsx`) — dispatches exhaustively on
+- **Type-driven form** (`QuestionForm/view.tsx`) — dispatches exhaustively on
   `input.type`: `confirm` → Yes/No buttons + optional note; `select` →
   radios (submits the label; the backend resolves it); `text` → textarea.
   `memo` and `learning.proposal` render above the widget — the boxholder
-  sees what the box is trying to learn before answering. A Dismiss
-  affordance is available while `pending`.
+  sees what the box is trying to learn before answering. "Later" is
+  available while `pending`. Questions the box decided are listed under
+  "The box decided for now", with the decision and its reasoning, and stay
+  answerable.
 - **Notifications + nudges** — `checkPendingQuestionsAndNotify`
   (`question-alert.ts`) notifies once per newly-pending question through
   `notifyBoxholder` (push); the aging sweep's nudge is a second,
@@ -329,15 +350,39 @@ agent-guide context:
   with no directive). Set `expires-after:` for a question that should age
   out sooner (or later) than the defaults.
 
+## Figuring it out
+
+A question the person hands off, or one that waited long or was put away,
+is settled by an agent with two box skills
+(`docs/implemented-plans/questions-later-and-figure-it-out.md`):
+
+- **`figure-it-out`** decides conservatively (the reversible choice that
+  changes least; never delete, send, spend, publish, or reword the person's
+  words) and records it with `bbx question decide`, or makes the question
+  simpler and asks it again. It never runs `bbx answer` for a question the
+  person did not answer.
+- **`simplify-question`** rewrites a question so it is simpler for the person
+  to decide or understand: concrete, with the box's default, or split into the
+  part the box can decide and the part only the person can.
+
+"Decide for me" on the card puts the question away and starts a background
+chat (`actions.figureOut`, through `deliverUserMessage`); the chat is in the
+chat list. The daily `question-review` procedure takes questions put away
+three or more days ago and questions pending fourteen or more days, five per
+run, and ends each one decided or asked again. When the person later answers a
+decided question, the follow-up reconciles: it reverses what it can and says
+what it could not.
+
 ## NOT in scope
 
 - **An in-chat question tag.** Rejected, not deferred
   (`issues/closed/features/2026-06-09-in-chat-interactive-questions.md`): synchronous
   chat is a different situation from the async queue — the agent just asks
   in prose, and retrospectives convert chat into learning. `_bookkeeping/questions/`
-  is the only structured-question primitive. What the empty root chat adds
-  (above) is a surface for a *pending card*, answered in words; it creates
-  no cards from chat and adds no structured in-chat control.
+  is the only structured-question primitive. A question beside the chat
+  (above) is a *pending card* in the workspace, answered in words or on the
+  card; it creates no cards from chat and adds no structured in-chat
+  control.
 - **Web-push action buttons.** Chromium-only across browsers; revisit with
   the iOS app's push story.
 - **Question batching** (one card covering several held items at once).

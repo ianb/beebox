@@ -36,11 +36,6 @@ const COMPOSER_STATES = [
   { ...RESTING, typingMode: true },
 ];
 
-const OPEN_QUESTION = {
-  path: "_content/questions/seed-table.question.card", prompt: "Should the welcome table go by the door or the window?",
-  memo: "The hall opens at ten.", inputType: "select" as const, options: ["Door", "Window"], optionsBeyond: 0, more: 2,
-};
-
 /** No such card: a swatch click reports that it could not save, and changes nothing. */
 const WELCOME_PATH = "_theme-studio/Welcome table.doc.card";
 
@@ -83,8 +78,7 @@ function ChatCard({ card, cardStock }: { card: string; cardStock: string }) {
 export function StudioConversation({ card, cardStock }: { card: string; cardStock: string }) {
   return <section aria-label="Conversation styling sample" className="min-w-0">
     <div className="flex py-4">
-      <EmptyChat openers={["Plan the seed exchange"]} onSendOpener={() => "accepted"} openQuestion={OPEN_QUESTION}
-        onFocusComposer={noop} onQuestionNotNow={noop} onOpenQuestions={noop} />
+      <EmptyChat openers={["Plan the seed exchange"]} onSendOpener={() => "accepted"} />
     </div>
     <div className="space-y-2 pb-4">
       <LoadOlderHeader hasOlder loadingOlder={false} onLoadOlder={noop} />

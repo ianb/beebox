@@ -79,13 +79,11 @@ export function useBoundEmission(opts: {
   emissionStore: EmissionStore;
   captureCardSend: () => CardSendFields;
   acceptCardSend?: (fields: CardSendFields) => void;
-  /** The pending question this chat is asking; rides on every send while set (docs/implemented-plans/front-door.md, Track A). */
-  openQuestion?: string;
   getWitness: () => ChatWitness;
   onSent: () => void;
 }) {
   const conversation = useBoxConversation();
-  const { pool, target, selection, attention, emissionStore, captureCardSend, acceptCardSend, openQuestion, getWitness, onSent } = opts;
+  const { pool, target, selection, attention, emissionStore, captureCardSend, acceptCardSend, getWitness, onSent } = opts;
   const [pending, setPending] = useState(() => {
     try { return createPendingSendsStore(sessionStorage, { boxSlug: pool.boxSlug, storageScope: pool.storageScope }); }
     catch (_cause) {
@@ -118,11 +116,10 @@ export function useBoundEmission(opts: {
     const witness = attention !== undefined || nativeBinding !== undefined
       ? { ...witnessed, zoomedView: focused === undefined ? null : `view:${focused.startsWith("/") ? focused.slice(1) : focused}` }
       : witnessed;
-    const cardFieldsNow = attention !== undefined || nativeBinding !== undefined
+    const fields = attention !== undefined || nativeBinding !== undefined
       ? { ...cardFields, openCard: focused === undefined ? undefined : parseRef(focused).path,
         ...(focused !== undefined && parseRef(focused).path === cardFields.openCard ? {} : { cardActivity: undefined, cardState: undefined }) }
       : cardFields;
-    const fields = { ...cardFieldsNow, ...(openQuestion === undefined ? {} : { openQuestion }) };
     let preparedId: string | undefined;
     let dispatched = false;
     const release = () => {

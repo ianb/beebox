@@ -127,6 +127,7 @@ async function createGuessQuestion(opts: {
   ].join("\n");
 
   const xml = createSelectQuestionTemplate({
+    title: `Where ${decision.file} goes`,
     memo,
     prompt: `Which category does ${decision.file} belong in?`,
     options,

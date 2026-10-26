@@ -160,6 +160,7 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
     failure = attempted.failure ?? failure;
   }
   const content = createTextQuestionTemplate({
+    title: `Migration ${opts.name} needs a decision`,
     memo: `Migration ${opts.name} needs attention`, askedAt: getBoxTimeISO(opts.boxRoot),
     // Failure output names host paths; the box commit lint refuses them in a card.
     prompt: redactAbsoluteMachinePaths(`${reason}\nMigration: ${opts.name}\nRecovery: ${recoveryRef}\n${failure}`),

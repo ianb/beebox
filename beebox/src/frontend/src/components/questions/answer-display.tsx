@@ -11,7 +11,7 @@
  */
 
 import { Text } from "../ui/Text";
-import type { QuestionInfo } from "./QuestionForm";
+import type { QuestionInfo } from "./QuestionForm/view";
 
 /** Human label for a confirm question's `answer.selected` ("yes" | "no"). */
 function confirmDecisionLabel(selected: string): string {

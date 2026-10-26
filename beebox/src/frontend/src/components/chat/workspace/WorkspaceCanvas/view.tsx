@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useQuestionCloseLabel } from "../../../questions/question-tab";
 import { useParams } from "@tanstack/react-router";
 import { VisuallyHidden } from "../../../ui/VisuallyHidden";
 import { MaterialContext } from "../../../ui/material";
@@ -33,6 +34,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
   const { boxSlug } = useParams({ strict: false });
   const tabs = workspace ? workspace.tabsForPane(pane) : [];
   const identities = useCardIdentities(tabs.map((item) => item.target.path));
+  const closeLabel = useQuestionCloseLabel(tabs.map((item) => item.target.path));
   if (!workspace) return null;
   const { onSelectTab: handleSelectTab, onCloseTab: handleCloseTab, onTogglePin: handleTogglePin } = workspace;
   const workspacePdf = isWorkspacePdf(tab.target.path, tab.target.viewer);
@@ -49,7 +51,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
     className={visible ? "bbx-companion-desk relative flex flex-col min-w-0 min-h-0" : "hidden"}>
     {visible ? <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
       <SidecarTabStrip id={workspace.mobile ? "bbx-panel-tabs-mobile" : pane === "left" ? "bbx-panel-tabs" : "bbx-panel-tabs-right"} tabs={tabs} activePath={tab.target.path} identities={identities} boxSlug={boxSlug}
-        onSelectTab={handleSelectTab} onCloseTab={handleCloseTab} onTogglePin={handleTogglePin} />
+        onSelectTab={handleSelectTab} onCloseTab={handleCloseTab} onTogglePin={handleTogglePin} closeLabel={closeLabel} />
       <WorkspaceControls pane={pane} pdfPath={workspacePdf ? tab.target.path : undefined} />
     </div> : null}
     <div role="tabpanel" id={workspacePanelId(tab.target.path)} aria-labelledby={visible ? workspaceTabId(tab.target.path) : undefined} tabIndex={0} aria-hidden={!visible} aria-busy={editing || undefined} data-bbx-scan="exclude"
