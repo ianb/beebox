@@ -12,7 +12,7 @@
 # deploy.sh's job and runs on the first deploy; provision.sh covers the few
 # root steps in between. Re-running is not a thing: a host is created once.
 #
-# Users and groups (docs/plans/per-box-units.md, "Ontology"):
+# Users and groups (docs/implemented-plans/per-box-units.md, "Ontology"):
 #   beebox        runs the hub; owns /home/beebox and the deployed tree's files.
 #   beebox-sched  runs the scheduler daemon; the only account sudo lets run
 #                 /usr/local/sbin/bbx-box-run.

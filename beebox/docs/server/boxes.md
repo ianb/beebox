@@ -17,22 +17,17 @@ deployment (`box.example.com`) rather than something every hub needs.
   [`docs/box-layout.md`](../box-layout.md) for the full shape. `bbx init <path>`
   scaffolds a new one from scratch.
 - **`hub.json`** is the routing table a `bbx hub` process reads: a map of URL
-  slug → box path, plus optional `port`/`host`/`lazy`/`idleMs`/`keepRecent`.
-  On a unit host every entry also names its `socket`
+  slug → box path. On the server every entry also names its `socket`
   (`/run/beebox/<slug>.sock`): systemd starts the box on its first connection
-  and the hub only routes, so the three idle settings are refused there
-  (`src/hub/AGENTS.md`, "A unit host"). `bbx engine hub add-box --socket`
-  writes such an entry.
+  and the hub only routes (`src/hub/AGENTS.md`, "A unit host");
+  `bbx engine hub add-box --socket` writes such an entry. Without a socket
+  the hub spawns and idle-stops each box's `bbx serve` child itself
+  (`lazy`/`idleMs`/`keepRecent`), which is how the dev router
+  (`workstreams-app/src/router/lifecycle.ts`) serves worktrees; those three
+  settings are refused on a socket entry.
   See `src/hub/config.ts` for the schema. The hub does **not** hot-reload
   this file — adding or removing a box entry needs a hub restart (SIGHUP
-  only reloads the crash-loop latch, not the box list). With `lazy: true`,
-  every configured box starts "stopped" instead of spawning at hub startup —
-  the hub cold-starts a box's `bbx serve` child on its first proxied request
-  and idle-stops it again after `idleMs`, the same lazy-per-worktree
-  semantics the dev router (`workstreams-app/src/router/lifecycle.ts`) uses for
-  dev worktrees. `keepRecent: N` (lazy-only) keeps the N most-recently-used boxes alive rather than
-  idle-stopping them, and pre-starts that set on a hub restart (recency is
-  persisted to `hub-state.json` beside the config) — see `src/hub/AGENTS.md`.
+  only reloads the crash-loop latch, not the box list).
 - **`bbx serve`** (no hub) is still the standalone story for a single box —
   see the root [`README.md`](../../README.md) for that path. This doc is about
   the multi-box case.
@@ -122,9 +117,9 @@ from its admin page.
 Without a granted key the affected connector emits a health warning but the box
 still runs; `bbx secrets status` names exactly which grant is missing.
 
-On a unit host each box reads its own copy of the store, exported from the
-master with `bbx engine secrets export-box <box>` (`add-box.sh` and the
-migration do this). Grant on the master as `beebox`, then re-export that box;
+On the server each box reads its own copy of the store, exported from the
+master with `bbx engine secrets export-box <box>` (`add-box.sh` does this).
+Grant on the master as `beebox`, then re-export that box;
 a box's Admin page reaches only its own copy there and refuses a grant to
 another box with that instruction.
 
@@ -141,13 +136,12 @@ a machine's existing files into the store once with `bbx secrets migrate`
 The rest of this section documents one operator's concrete setup — adapt the
 paths and service names for your own hub host, not copy them verbatim.
 
-- Boxes live at `/home/beebox/boxes/<name>/`, one per directory, each its
-  own git repo; on a unit host at `/var/lib/beebox/<name>/box/`, each owned
-  by its own user `bbx-<name>` ([provisioning](provisioning.md#per-box-layout-arrives-with-the-migration)).
-  `add-box.sh` detects the layout on the server and, on a unit host, creates
-  the user, copies the box's share of the secret store into the box user's
-  own store (`bbx engine secrets export-box`) and enables the box's socket
-  unit; a box name is then capped at 28 characters (the user name's limit).
+- Boxes live at `/var/lib/beebox/<name>/box/`, each its own git repo owned
+  by its own user `bbx-<name>` ([provisioning](provisioning.md#server-layout)).
+  `add-box.sh` creates the user, copies the box's share of the master secret
+  store into the box user's own store (`bbx engine secrets export-box`) and
+  enables the box's socket unit. A box name is capped at 28 characters (the
+  user name's limit).
 - `hub.json` lives at `/home/beebox/.config/beebox/hub.json`.
 - The hub runs as a systemd unit (`beebox-hub` in examples above).
 - On that deployment the whole of this document is one command:
@@ -288,8 +282,11 @@ unknown-command error.
 ### Box exists but isn't served
 
 Check the hub's own log/health output first (`GET /healthz` on the hub)
-before assuming the box process itself is at fault — a box missing from
-`hub.json`, or a slug typo, means the hub never spawns it at all.
+before assuming the box itself is at fault — a box missing from `hub.json`,
+or a slug typo, means the hub never routes to it at all. If the hub routes
+and the box still does not answer, look at its units:
+`systemctl status beebox-box@<name>.socket beebox-box@<name>.service` and
+`journalctl -u beebox-box@<name>`.
 
 ### "API key not configured" warnings
 
@@ -299,6 +296,8 @@ value was never supplied, or a grant whose secret was removed.
 
 ### Permission denied writing to box directories
 
-If a box was provisioned as `root` instead of its intended service user, its
-files won't be writable by the process that runs `bbx hub`/`bbx serve`. Fix
-ownership recursively for the affected box directory.
+If something ran as `root` inside a box (a by-hand `git` command, a stray
+script), the files it made are not writable by the box's own user
+`bbx-<name>`, which is what runs the engine. Fix ownership recursively for the
+affected box directory (`chown -R bbx-<name>:bbx-<name> /var/lib/beebox/<name>/box`),
+and run box commands as that user next time ([operations](operations.md)).

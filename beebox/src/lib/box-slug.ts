@@ -21,7 +21,7 @@ import { onUnitHost } from "./unit-host.js";
 
 /**
  * The slug a root's path names. On a unit host every box lives at
- * `<home>/box` (`docs/plans/per-box-units.md`: `/var/lib/beebox/<slug>/box`),
+ * `<home>/box` (`docs/implemented-plans/per-box-units.md`: `/var/lib/beebox/<slug>/box`),
  * so the directory's own name is `box` for all of them and the slug is its
  * parent's. Found on production the day of the migration (2026-10-25): every
  * box resolved its grants under the name `box` and found none.

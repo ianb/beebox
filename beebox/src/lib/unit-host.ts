@@ -1,5 +1,5 @@
 /**
- * Whether this process is a box unit on a unit host (docs/plans/per-box-units.md):
+ * Whether this process is a box unit on a unit host (docs/implemented-plans/per-box-units.md):
  * one Linux user and one systemd unit per box, the box sandboxed and without
  * sudo. The unit's environment file says so (`BBX_UNIT_HOST=1`,
  * `src/hub/box-env-file.ts`); nothing else sets it. What changes on such a

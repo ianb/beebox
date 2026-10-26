@@ -19,7 +19,7 @@ The frontend captures browser console errors/warnings and forwards them to the s
 ```bash
 # SSH to server and read the log
 deploy/prod-ssh \
-  cat /home/beebox/boxes/<box-name>/.beebox/client-debug.log
+  cat /var/lib/beebox/<box-name>/box/.beebox/client-debug.log
 ```
 
 **tRPC procedure** — `debugLog.get` returns the per-box in-memory ring buffer

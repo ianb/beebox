@@ -55,8 +55,8 @@ import { gitOrNull } from "./lib/git.js";
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
 /**
- * Runs on the server as root. Every step is a read; the per-box status runs as
- * `beebox` so nothing it might touch changes owner. Prints `@@section` markers
+ * Runs on the server as root. Every step is a read; each box's status runs as
+ * its own user, `bbx-<slug>`, so nothing it might touch changes owner. Prints `@@section` markers
  * the local side splits on. The diag key goes to curl on stdin, not argv.
  */
 const REMOTE_SCRIPT = String.raw`
@@ -76,10 +76,11 @@ else
 fi
 unset KEY
 echo "@@section migrations"
-for boxdir in /home/beebox/boxes/*/; do
+for boxdir in /var/lib/beebox/*/box/; do
   [ -e "$boxdir/.git" ] || continue
-  echo "@@box $(basename "$boxdir")"
-  sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 60 bbx engine migrate --status --json' bbx-status "$boxdir" 2>&1 | tail -n 3
+  slug=$(basename "$(dirname "$boxdir")")
+  echo "@@box $slug"
+  sudo -u "bbx-$slug" -H bash -lc 'set -a; source /etc/beebox/box.env 2>/dev/null; set +a; cd "$1" && timeout 60 bbx engine migrate --status --json' bbx-status "$boxdir" 2>&1 | tail -n 3
   echo "@@rc $?"
 done
 echo "@@section end"

@@ -18,11 +18,9 @@
 # every box (issues: per-box reinstall marker, 2026-10-22).
 #
 # One box's failure prints ERROR and the next box proceeds; the exit status is
-# 0 unless the arguments are wrong. Installs and verification run as the box's
-# owner (beebox for /home/beebox/boxes/<slug>, bbx-<slug> for
-# /var/lib/beebox/<slug>/box on a unit host), the account that must be able to
-# run the result; root passes every permission check. The boxes root is
-# searched one and two levels down, so both layouts work with one call each.
+# 0 unless the arguments are wrong. Each box is <boxes root>/<slug>/box, and
+# installs and verification run as its user, bbx-<slug>, the account that must
+# be able to run the result; root passes every permission check.
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
@@ -35,12 +33,12 @@ link_check="$engine/bin/box-engine-link"
 verify_as_owner() { sudo -u "$owner" -H bash -lc '"$0" verify "$1"' "$link_check" "$1"; }
 STAMP_NAME=".bbx-install-stamp"
 
-for box in "$boxes_root"/*/ "$boxes_root"/*/box/; do
+for box in "$boxes_root"/*/box/; do
   box="${box%/}"
   pj="$box/package.json"
-  [[ -f "$pj" ]] || continue   # a legacy-shape box has no manifest
-  name="${box#"$boxes_root"/}"
-  owner=$(stat -c %U "$box")
+  [[ -f "$pj" ]] || continue   # no manifest yet: nothing to install
+  name=$(basename "$(dirname "$box")")
+  owner="bbx-$name"
 
   if ! sudo -u "$owner" -H bash -lc '"$0" link "$1" "$2"' "$link_check" "$box" "$engine"; then
     echo "  ERROR $name: could not link .beebox/engine; skipping its install." >&2

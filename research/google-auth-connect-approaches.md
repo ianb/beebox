@@ -6,6 +6,8 @@ do?" A focused scan of how self-hosted agents and the surrounding tooling handle
 Google account connection, with dispositions for beebox. Flat top-level
 note (cross-cuts beyond the openclaw-hermes corpus).*
 
+> **2026-10-24:** partly superseded by [google-connect-options-2026-10](google-connect-options-2026-10.md), which adds the verification evidence this note lacked. Nango was built and rejected on 2026-07-28 ([record](../issues/closed/decisions/2026-07-28-nango-google-auth-broker.md)).
+
 ## Three models in the field
 
 | Model | Who | Who sets up the OAuth app | Who holds tokens | Verification burden |

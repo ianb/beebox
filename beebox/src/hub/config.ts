@@ -56,7 +56,7 @@ const boxEntrySchema = z.strictObject({
    *  Absent: the hub's own store. */
   secretsFile: z.string().min(1).optional(),
   /** The Unix socket this box's unit listens on (`/run/beebox/<slug>.sock`).
-   *  Present on a unit host (docs/plans/per-box-units.md), where the hub
+   *  Present on a unit host (docs/implemented-plans/per-box-units.md), where the hub
    *  routes to systemd-owned sockets and spawns nothing; absent on a hub that
    *  spawns children itself. All entries of one hub agree. */
   socket: z.string().min(1).optional(),

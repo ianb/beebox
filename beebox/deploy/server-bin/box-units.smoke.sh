@@ -96,14 +96,14 @@ check_not "the secret is not in the exec-time environment" -- bash -c "tr '\0' '
 check_not "the sibling's secret is not in $A's environment" -- bash -c "tr '\0' '\n' < /proc/$main_pid/environ | grep -qF \"\$(cat /run/beebox/$B.hub-secret)\""
 
 echo "== the scheduler's one root path"
-if [[ -e /usr/local/sbin/bbx-box-run ]] && id beebox-sched >/dev/null 2>&1; then
+check "the wrapper is installed (deploy.sh installs it)" -- test -x /usr/local/sbin/bbx-box-run
+check "the beebox-sched user exists" -- id beebox-sched
+if [[ -x /usr/local/sbin/bbx-box-run ]] && id beebox-sched >/dev/null 2>&1; then
   check "a pass runs for $A through bbx-box-run" -- runuser -u beebox-sched -- sudo -n /usr/local/sbin/bbx-box-run "$A" scheduler-pass
   check "the pass wrote the box's scheduler log" -- test -s "/var/lib/beebox/$A/box/.beebox/scheduler.jsonl"
   check_not "an unknown slug is refused" -- runuser -u beebox-sched -- sudo -n /usr/local/sbin/bbx-box-run no-such-box scheduler-pass
   check_not "an operation outside the set is refused" -- runuser -u beebox-sched -- sudo -n /usr/local/sbin/bbx-box-run "$A" shell
   check_not "the hub user may not call it" -- runuser -u beebox -- sudo -n /usr/local/sbin/bbx-box-run "$A" scheduler-pass
-else
-  echo "SKIP bbx-box-run: wrapper or beebox-sched user absent (deploy installs them)"
 fi
 
 echo "== the view from inside $A's unit"

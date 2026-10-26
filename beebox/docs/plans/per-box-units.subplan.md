@@ -6,7 +6,7 @@ issues: []
 ---
 # Per-box users: where each piece of shared host state goes
 
-Subplan of [per-box-units.md](per-box-units.md), Track B. Today every box
+Subplan of [per-box-units.md](../implemented-plans/per-box-units.md), Track B. Today every box
 process runs as `beebox` and reads host-wide files freely. Once a box runs
 as `bbx-<slug>` with `ProtectHome=yes`, each of those files is unreadable
 unless this subplan says where it goes. One row per file: hub-only, a

@@ -63,41 +63,43 @@ ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST)
 
 | What | Where |
 |------|-------|
-| Box data | `/home/beebox/boxes/<box>/` (owned by `beebox`); on a unit host `/var/lib/beebox/<box>/box/` (owned by `bbx-<box>`, see [provisioning](provisioning.md#per-box-layout-arrives-with-the-migration)) |
+| Box data | `/var/lib/beebox/<box>/box/`, owned by the box's own user `bbx-<box>` ([provisioning](provisioning.md#server-layout)) |
 | Hub routing table (which boxes `bbx hub` serves, and at what slug) | `/home/beebox/.config/beebox/hub.json` |
-| Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/beebox/.config/beebox/boxes.json`; on a unit host `/var/lib/beebox-sched/.config/beebox/boxes.json` (the scheduler's own user) |
-| Service logs | `journalctl -u beebox-hub -n 200 --no-pager` / `journalctl -u beebox-scheduler -n 200 --no-pager`; a box's own engine on a unit host: `journalctl -u beebox-box@<box> -n 200 --no-pager` |
-| Box unit state (unit host) | `systemctl list-units 'beebox-box@*'`; a box that will not start: `systemctl status beebox-box@<box>`, then `systemctl reset-failed beebox-box@<box>` once fixed |
+| Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/var/lib/beebox-sched/.config/beebox/boxes.json` (the scheduler's own user) |
+| Service logs | `journalctl -u beebox-hub -n 200 --no-pager` / `journalctl -u beebox-scheduler -n 200 --no-pager`; a box's own engine: `journalctl -u beebox-box@<box> -n 200 --no-pager`; one scheduler pass: `journalctl -u beebox-pass@<box>` |
+| Box unit state | `systemctl list-units 'beebox-box@*'`; a box that will not start: `systemctl status beebox-box@<box>`, then `systemctl reset-failed beebox-box@<box>` once fixed |
 | Service status | `systemctl status beebox-hub beebox-scheduler --no-pager` |
-| Client debug log per box | `/home/beebox/boxes/<box>/.beebox/client-debug.log` |
-| Procedure runs | `/home/beebox/boxes/<box>/_bookkeeping/procedure/runs/` |
+| Client debug log per box | `/var/lib/beebox/<box>/box/.beebox/client-debug.log` |
+| Procedure runs | `/var/lib/beebox/<box>/box/_bookkeeping/procedure/runs/` |
 | Claude Code update log | `/var/log/beebox/claude-update.log` |
 | Source the server is actually running | `/opt/beebox/beebox/src/` (rsynced `.ts`, no `dist/`) |
 
-**Running `bbx` commands on the server** — as the box's owner so file ownership stays correct: `beebox` for a box under `/home/beebox/boxes`, `bbx-<box>` on a unit host:
+**Running `bbx` commands on the server** — as the box's own user, so file
+ownership stays correct and the command sees the box's own secret store:
 
 ```bash
-deploy/prod-ssh "su - beebox -c 'bbx boxes list'"
-# or after sshing in as root:
-su - beebox -c "cd /home/beebox/boxes/<box> && bbx validate"
-# unit host: the box's own user, with the units' environment
+# after sshing in as root: the box's user, with the units' environment
 su - bbx-<box> -c "set -a; . /etc/beebox/box.env; set +a; cd /var/lib/beebox/<box>/box && bbx validate"
+# hub-side commands run as the hub user
+deploy/prod-ssh "su - beebox -c 'bbx engine hub add-box --help'"
 ```
 
-> ⚠️ **Source `/home/beebox/.env` for env-dependent commands.** The systemd
-> services load it via `EnvironmentFile=/home/beebox/.env`, but an ad-hoc SSH
-> invocation does **not** inherit it. Most visibly, `bbx health`'s connector-presence
-> probe reads `BBX_GOOGLE_TOKENS_FILE` (the centralized Google-OAuth token path) from
-> that env; without it the probe falls back to a legacy `google.secret.json` that
+> ⚠️ **Source `/etc/beebox/box.env` for box commands.** The box units load it
+> (`EnvironmentFile=`), but an ad-hoc SSH invocation does **not** inherit it.
+> Most visibly, `bbx health`'s connector-presence probe reads
+> `BBX_GOOGLE_TOKENS_FILE` (the centralized Google-OAuth token path) from that
+> env; without it the probe falls back to a legacy `google.secret.json` that
 > prod doesn't use and reports a **false** `blocked: missing connectors` for
-> `google`/`gmail` — even when both are syncing fine. Always source it so an ad-hoc
-> check sees what the services see:
+> `google`/`gmail` — even when both are syncing fine. Always source it so an
+> ad-hoc check sees what the services see:
 >
 > ```bash
 > deploy/prod-ssh \
->   "su - beebox -c 'set -a; . /home/beebox/.env; bbx health --box /home/beebox/boxes/<box>'"
+>   "su - bbx-<box> -c 'set -a; . /etc/beebox/box.env; set +a; bbx health --box /var/lib/beebox/<box>/box'"
 > ```
 >
+> `/home/beebox/.env` is the hub's own file; the hub derives `box.env` from it
+> at each start, so edit the former and restart the hub.
 > (This produced a bogus "two boxes have missing connectors" health report on
 > 2026-07-14 — the connectors were healthy; the bare invocation was the bug.)
 
@@ -116,8 +118,9 @@ each served box's `.beebox/memory/` (`src/webapp/server/memory-probe.ts`):
 
 After an OOM, read the last samples (how fast the heap climbed, and whether
 `external` or RSS outside the heap grew instead) and the newest profile. A
-hub child's crash output is in the box's `.beebox/hub-child.log`; a failed
-restart's error is the box's `lastError` in the hub's `/healthz`. For a full
+box engine's crash output is in its unit's journal
+(`journalctl -u beebox-box@<box>`); a unit that will not start shows in
+`systemctl status beebox-box@<box>`. For a full
 heap snapshot at the moment of an OOM, start the process with
 `NODE_OPTIONS=--heapsnapshot-near-heap-limit=1` and a `--diagnostic-dir` with
 free disk about twice the heap size; it is off by default for that cost.
@@ -158,9 +161,9 @@ for operations that genuinely require root (systemctl, chown, package
 installs) and leave a comment saying why.
 
 Why this matters — historical bug: an earlier feedback-resolver script SSHed
-as root and ran `git commit` directly. That created objects under
-`/home/beebox/boxes/<box>/.git/objects/<prefix>/` owned by root, and the
-next `beebox`-user commit that happened to hash into one of those prefixes
+as root and ran `git commit` directly. That created objects under the box's
+`.git/objects/<prefix>/` owned by root, and the
+next box-user commit that happened to hash into one of those prefixes
 failed with `insufficient permission for adding an object to repository
 database`. Same shape for the `mv` into `config/feedback/resolved/` — that
 directory ended up root-owned too, blocking beebox writes. The failures
@@ -197,7 +200,7 @@ curl -H "Authorization: Bearer $BBX_DIAG_API_KEY" \
 
 On localhost/dev (no `GOOGLE_OAUTH_CLIENT_ID` set), auth is disabled entirely — curl works without the header.
 
-For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-log.md`](../client-debug-log.md) for the log file format.
+For SSH-only debugging: `ssh root@<server> tail /var/lib/beebox/<box>/box/.beebox/client-debug.log`. See [`client-debug-log.md`](../client-debug-log.md) for the log file format.
 
 ## Nightly Claude Code updates
 

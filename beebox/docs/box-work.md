@@ -94,10 +94,10 @@ around the guard.
   ([deploy README](../deploy/README.md#checking-deploy-state)).
 - **The server** is reached with `deploy/prod-ssh`, which works from a worktree
   by reading the main checkout's `deploy/target.env`. Box data is at
-  `/home/beebox/boxes/<box>/` (as the `beebox` user) or, on a unit host, at
-  `/var/lib/beebox/<box>/box/` (as `bbx-<box>`); run `bbx` there as the box's
-  owner so file ownership stays correct ([operations](server/operations.md#connecting-for-debugging-and-inspection)).
-- **Source `/home/beebox/.env` before env-dependent commands.** Ad-hoc SSH does
+  `/var/lib/beebox/<box>/box/`, owned by the box's own user `bbx-<box>`; run
+  `bbx` there as that user so file ownership stays correct
+  ([operations](server/operations.md#connecting-for-debugging-and-inspection)).
+- **Source `/etc/beebox/box.env` before box commands.** Ad-hoc SSH does
   not inherit the services' environment, so a bare `bbx health` reports
   connectors missing that are syncing. Suspect the diagnostic before the box.
 - **The authenticated app** is reached with `deploy/prod-curl` and
