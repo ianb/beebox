@@ -25,7 +25,7 @@ not applicable:
 
 | Claimed benefit | Reality |
 |---|---|
-| Fixes the 7-day refresh-token expiry | **Never applied.** That's a *Testing*-status policy; this OAuth app is already External · In production · Unverified. Diagnosed in [google-oauth-pairing-broken](../bugs/2026-07-28-google-oauth-pairing-broken.md) *before* the Nango work began — the premise was stale and checkable in this tracker the whole time. |
+| Fixes the 7-day refresh-token expiry | **Never applied.** That's a *Testing*-status policy; this OAuth app is already External · In production · Unverified. Diagnosed in [google-oauth-pairing-broken](../../bugs/2026-07-28-google-oauth-pairing-broken.md) *before* the Nango work began — the premise was stale and checkable in this tracker the whole time. |
 | Removes the "unverified app" consent screen | **Unchanged.** Nango has no shared Google app; you register your own OAuth client and users see the same click-through. |
 | Stops Google revoking an unverified app's tokens | **Unchanged**, same reason. |
 | Ends per-box re-auth (one grant, many boxes) | **Already true** via the shared `BBX_GOOGLE_TOKENS_FILE`. One grant already serves every box. |
@@ -63,7 +63,7 @@ Absent one of those, revisiting this is redoing rejected work.
 
 The original pain was the unverified-app click-through and occasional token
 revocation. Per
-[google-oauth-pairing-broken](../bugs/2026-07-28-google-oauth-pairing-broken.md),
+[google-oauth-pairing-broken](../../bugs/2026-07-28-google-oauth-pairing-broken.md),
 the tractable levers are both broker-free, and one is already done:
 
 1. **A clear "reconnect Google" prompt** when the refresh token dies — **landed**

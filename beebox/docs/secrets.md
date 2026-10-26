@@ -414,8 +414,8 @@ across boxes into one entry with a grant per box, and writes every grant at
 migration's).
 
 ```bash
-bbx secrets migrate --root /home/beebox/boxes --dry-run   # print the plan, write nothing
-bbx secrets migrate --root /home/beebox/boxes --agent-confirmed
+bbx secrets migrate --root ~/boxes --dry-run   # print the plan, write nothing
+bbx secrets migrate --root ~/boxes --agent-confirmed
 ```
 
 With no `--root` it migrates the machine's registered boxes

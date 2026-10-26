@@ -27,11 +27,11 @@ export async function boxRunWrapperPresent(): Promise<boolean> {
 const UNIT_BOX_ROOT = /^\/var\/lib\/beebox\/([\da-z][\da-z-]*)\/box\/?$/;
 
 /**
- * The unit's instance name when `boxRoot` is a unit host's box, else
- * undefined. The deploy installs the wrapper on every host, so its presence
- * alone must not send a box that still lives under /home/beebox/boxes through
- * a pass unit that does not exist for it (cross-model review, codex
- * gpt-6-sol, 2026-10-24).
+ * The unit's instance name when `boxRoot` is a unit host's box
+ * (`/var/lib/beebox/<slug>/box`), else undefined. A box anywhere else (a
+ * development checkout, a laptop) has no pass unit, so the wrapper's presence
+ * alone must not send it through one (cross-model review, codex gpt-6-sol,
+ * 2026-10-24).
  */
 export function unitSlugForBoxRoot(boxRoot: string): string | undefined {
   return UNIT_BOX_ROOT.exec(path.resolve(boxRoot))?.[1];

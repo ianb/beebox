@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 #
 # Smoke test for bbx-host-apt, the root wrapper that installs distro packages
-# for a box. Builds a server-like image, then drives the wrapper as the box
-# user through sudo and asserts each policy decision.
+# for a box. Builds a server-like image, then drives the wrapper as an
+# unprivileged user through a sudo grant and asserts each policy decision. The
+# grant is a test stand-in for an untrusted caller: on the server only root
+# runs the wrapper (deploy.sh's `bbx host sync` step).
 #
 #   deploy/server-bin/bbx-host-apt.smoke.sh [ubuntu|debian]...   (default: both)
 #

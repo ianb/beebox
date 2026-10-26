@@ -7,7 +7,8 @@
 // compared package.json against node_modules/react, which a no-op install never
 // touches, so every deploy reinstalled every box.
 //
-// These examples run the real helper against a temporary boxes root, with
+// These examples run the real helper against a temporary boxes root laid out
+// as the server keeps it (`<slug>/box`, owned by `bbx-<slug>`), with
 // `sudo`, `pnpm` and the engine's `box-engine-link` replaced by stubs that log
 // their calls and fail on request.
 
@@ -26,9 +27,9 @@ const stubs = {
   // `sudo -u <user> -H <command...>` runs the command as the test user, naming the requested account.
   sudo: "#!/usr/bin/env bash\nexport BBX_TEST_AS=\"$2\"\nshift 3\nexec \"$@\"\n",
   // `pnpm install` in a box: logs the box and whether it runs non-interactively, fails when the box asks it to.
-  pnpm: "#!/usr/bin/env bash\necho \"install $(basename \"$PWD\") ci=${CI:-unset}\" >> \"$BBX_TEST_LOG\"\n[[ -e .fail-install ]] && exit 1\nexit 0\n",
+  pnpm: "#!/usr/bin/env bash\necho \"install $(basename \"$(dirname \"$PWD\")\") ci=${CI:-unset}\" >> \"$BBX_TEST_LOG\"\n[[ -e .fail-install ]] && exit 1\nexit 0\n",
   // `box-engine-link link|verify <box> ...`: logs the call and the account it ran as, fails when the box asks it to.
-  "box-engine-link": "#!/usr/bin/env bash\necho \"$1 $(basename \"$2\") as=${BBX_TEST_AS:-root}\" >> \"$BBX_TEST_LOG\"\n[[ -e \"$2/.fail-$1\" ]] && exit 1\nexit 0\n",
+  "box-engine-link": "#!/usr/bin/env bash\necho \"$1 $(basename \"$(dirname \"$2\")\") as=${BBX_TEST_AS:-root}\" >> \"$BBX_TEST_LOG\"\n[[ -e \"$2/.fail-$1\" ]] && exit 1\nexit 0\n",
 };
 
 async function setup() {
@@ -56,7 +57,7 @@ async function setup() {
     return { ...outcome, stdout: outcome.stdout.trim(), stderr: outcome.stderr.trim(), calls };
   }
   async function box(name: string, opts?: { manifest: false }) {
-    const dir = join(boxes, name);
+    const dir = join(boxes, name, "box");
     await mkdir(join(dir, "node_modules"), { recursive: true });
     if (opts === undefined) await writeFile(join(dir, "package.json"), "{}\n");
     return dir;
@@ -80,12 +81,12 @@ void test("A box with no install on record is installed once and then left alone
   const first = await s.run();
   t.check(
     { code: first.code, calls: first.calls, stamped: (await s.stampAge(a)) !== null },
-    { code: 0, calls: ["link a as=beebox", "install a ci=true", "verify a as=beebox"], stamped: true },
+    { code: 0, calls: ["link a as=bbx-a", "install a ci=true", "verify a as=bbx-a"], stamped: true },
   );
 
   // The stamp is what records the install; a second run finds nothing to do.
   const second = await s.run();
-  t.check({ code: second.code, calls: second.calls, stdout: second.stdout }, { code: 0, calls: ["link a as=beebox", "verify a as=beebox"], stdout: "" });
+  t.check({ code: second.code, calls: second.calls, stdout: second.stdout }, { code: 0, calls: ["link a as=bbx-a", "verify a as=bbx-a"], stdout: "" });
 });
 
 void test("A manifest or lockfile newer than the stamp reinstalls the box", async (t) => {
@@ -104,7 +105,7 @@ void test("A manifest or lockfile newer than the stamp reinstalls the box", asyn
   t.check(
     { calls: result.calls, stdout: result.stdout },
     {
-      calls: ["link a as=beebox", "install a ci=true", "verify a as=beebox", "link b as=beebox", "install b ci=true", "verify b as=beebox"],
+      calls: ["link a as=bbx-a", "install a ci=true", "verify a as=bbx-a", "link b as=bbx-b", "install b ci=true", "verify b as=bbx-b"],
       stdout: "a: installing (package.json changed since the last install)...\n  b: installing (pnpm-lock.yaml changed since the last install)...",
     },
   );
@@ -149,14 +150,14 @@ void test("A recorded install that no longer verifies is reinstalled", async (t)
   const result = await s.run();
   t.check(
     { calls: result.calls, stdout: result.stdout },
-    { calls: ["link a as=beebox", "verify a as=beebox", "install a ci=true", "verify a as=beebox"], stdout: "a: installing (the recorded install no longer verifies)..." },
+    { calls: ["link a as=bbx-a", "verify a as=bbx-a", "install a ci=true", "verify a as=bbx-a"], stdout: "a: installing (the recorded install no longer verifies)..." },
   );
 });
 
-void test("A legacy box without a manifest and a box whose link fails are skipped, and the rest proceed", async (t) => {
+void test("A box without a manifest yet and a box whose link fails are skipped, and the rest proceed", async (t) => {
   const s = await setup();
   t.teardown(() => rm(s.root, { recursive: true, force: true }));
-  await s.box("legacy", { manifest: false });
+  await s.box("unmanifested", { manifest: false });
   const unlinked = await s.box("unlinked");
   await writeFile(join(unlinked, ".fail-link"), "");
   await s.box("z");
@@ -164,7 +165,7 @@ void test("A legacy box without a manifest and a box whose link fails are skippe
   const result = await s.run();
   t.check(
     { code: result.code, calls: result.calls, stderr: result.stderr },
-    { code: 0, calls: ["link unlinked as=beebox", "link z as=beebox", "install z ci=true", "verify z as=beebox"], stderr: "ERROR unlinked: could not link .beebox/engine; skipping its install." },
+    { code: 0, calls: ["link unlinked as=bbx-unlinked", "link z as=bbx-z", "install z ci=true", "verify z as=bbx-z"], stderr: "ERROR unlinked: could not link .beebox/engine; skipping its install." },
   );
 });
 

@@ -4,7 +4,7 @@
  * (`controller.ts`) runs the trusted deployment command as root.
  *
  * Why a process and not a `seteuid` in the controller: on a unit host
- * (docs/plans/per-box-units.md) every box has its own user, and the gate
+ * (docs/implemented-plans/per-box-units.md) every box has its own user, and the gate
  * files under a box's Git directory must belong to that user. One process can
  * wear one identity at a time, so the controller spawns one of these per
  * owner and keeps root for itself. A host with one owner for every box runs

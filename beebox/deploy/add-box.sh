@@ -65,12 +65,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BBX_USER="beebox"
 BBX_HOME="/home/$BBX_USER"
-BOXES_DIR="$BBX_HOME/boxes"
-# A unit host (docs/plans/per-box-units.md) keeps each box as its own user at
-# /var/lib/beebox/<slug>/box and routes to a systemd socket unit. Decided on
-# the server, below, from the presence of /var/lib/beebox; everything after
-# the preflight branches on UNIT_HOST.
-UNIT_HOST=""
 
 # ── Parse arguments ─────────────────────────────────────────────────
 REPO=""
@@ -145,7 +139,11 @@ if [[ "$REPO" =~ ^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$ ]]; then
 fi
 
 [[ -n "$BOX_NAME" ]] || BOX_NAME=$(basename "$REPO" .git)
-BOX_PATH="$BOXES_DIR/$BOX_NAME"
+# Each box is its own user, bbx-<slug>, at /var/lib/beebox/<slug>/box, served by
+# a systemd socket unit (docs/plans/per-box-units.md). $BBX_USER is the hub.
+BOX_HOME="/var/lib/beebox/$BOX_NAME"
+BOX_PATH="$BOX_HOME/box"
+BOX_OWNER="bbx-$BOX_NAME"
 # A box user name is `bbx-<slug>`, capped by useradd at 32 characters.
 if [[ ${#BOX_NAME} -gt 28 ]]; then
   echo "Error: box name '$BOX_NAME' is longer than 28 characters; its user name bbx-$BOX_NAME would not fit."
@@ -159,9 +157,7 @@ fi
 # limit). Key filenames take underscores because that is the existing
 # convention on the server; the host alias keeps the box's own hyphens.
 SSH_ALIAS="github.com-box-$BOX_NAME"
-KEY_PATH="$BBX_HOME/.ssh/id_ed25519_box_${BOX_NAME//-/_}"
-# On a unit host the key lives in the box user's home; re-pointed once the
-# layout is known (below, after the preflight).
+KEY_PATH="$BOX_HOME/.ssh/id_ed25519_box_${BOX_NAME//-/_}"
 
 # Only a GitHub remote gets this treatment: the alias trick exists to select
 # among per-repo deploy keys, which is a GitHub concept. Rewriting a GitLab or
@@ -230,6 +226,14 @@ SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
 
 SSH_OPTS=(-A -o StrictHostKeyChecking=no)
 
+# The per-box layout is the only server shape this script provisions.
+if ! ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "id beebox-sched >/dev/null 2>&1 && test -d /var/lib/beebox && getent group beebox-boxes >/dev/null"; then
+  echo "Error: This host predates the per-box layout (one user and unit per box)."
+  echo "       Provision a new host from deploy/hetzner/cloud-init.yaml; the one-time migration script was removed after the last host migrated (2026-10-25)."
+  exit 1
+fi
+echo "Server layout: one user and unit per box ($BOX_PATH as $BOX_OWNER)."
+
 # ── Preflight (read-only on the server) ─────────────────────────────
 # `bbx engine hub add-box --dry-run` validates the slug against the LIVE hub.json:
 # reserved names, slug already taken by another box, and a config the hub
@@ -237,24 +241,10 @@ SSH_OPTS=(-A -o StrictHostKeyChecking=no)
 # point — the previous version of this script failed at the very end, after
 # it had already cloned, inited, and written config, leaving the operator
 # unsure how much had landed.
-# shellcheck disable=SC2029
-if ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "test -d /var/lib/beebox && id beebox-sched >/dev/null 2>&1"; then
-  UNIT_HOST="1"
-  BOX_HOME="/var/lib/beebox/$BOX_NAME"
-  BOX_PATH="$BOX_HOME/box"
-  BOX_OWNER="bbx-$BOX_NAME"
-  SOCKET_FLAG="--socket"
-  KEY_PATH="$BOX_HOME/.ssh/id_ed25519_box_${BOX_NAME//-/_}"
-  echo "Server layout: one user and unit per box ($BOX_PATH as $BOX_OWNER)."
-else
-  BOX_OWNER="$BBX_USER"
-  SOCKET_FLAG=""
-fi
-
 echo "Preflight: validating slug '$BOX_NAME' against the live hub config..."
 # shellcheck disable=SC2029
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
-  "su - $BBX_USER -c \"bbx engine hub add-box '$BOX_NAME' '$BOX_PATH' $SOCKET_FLAG --dry-run\""
+  "su - $BBX_USER -c \"bbx engine hub add-box '$BOX_NAME' '$BOX_PATH' --socket --dry-run\""
 
 # ── Preflight for --create (local + GitHub, still no mutation) ──────
 # Deliberately after the hub preflight: a name the hub would refuse must never
@@ -291,9 +281,7 @@ if [[ -n "$DRY_RUN" ]]; then
     echo ""
   fi
   echo "[dry-run] Would then, on the server:"
-  if [[ -n "$UNIT_HOST" ]]; then
-    echo "  - create user $BOX_OWNER with home $BOX_HOME (0751), in group beebox-boxes"
-  fi
+  echo "  - create user $BOX_OWNER with home $BOX_HOME (0751), in group beebox-boxes"
   echo "  - clone $REPO to $BOX_PATH (or pull, if it exists)"
   echo "  - run 'bbx engine init' in it as $BOX_OWNER"
   if [[ -n "$ALLOW_CSV" ]]; then
@@ -302,12 +290,10 @@ if [[ -n "$DRY_RUN" ]]; then
   if [[ -n "$SECRETS_FROM" ]]; then
     echo "  - copy box '$SECRETS_FROM's secret grants (bbx engine secrets copy-grants; no files move)"
   fi
-  echo "  - register with the hub (bbx engine hub add-box, per the plan above)"
-  echo "  - register with the scheduler manifest (bbx engine boxes add)"
-  if [[ -n "$UNIT_HOST" ]]; then
-    echo "  - copy the box's grants into its own secret store and verify the copy"
-    echo "  - systemctl enable --now beebox-box@$BOX_NAME.socket"
-  fi
+  echo "  - copy the box's grants into its own secret store and verify the copy"
+  echo "  - systemctl enable --now beebox-box@$BOX_NAME.socket"
+  echo "  - register with the hub (bbx engine hub add-box --socket, per the plan above)"
+  echo "  - register with the scheduler manifest (bbx engine boxes add, in beebox-sched's home)"
   echo "  - systemctl restart beebox-hub beebox-scheduler"
   echo "  - verify with the hub's canary for this box"
   if [[ -z "$PUSH_REMOTE" ]]; then
@@ -372,31 +358,29 @@ echo "Adding box '$BOX_NAME' from $REPO..."
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s <<REMOTE
 set -euo pipefail
 
-# On a unit host the box gets its own user first (docs/plans/per-box-units.md):
-# bbx-<slug>, a UID from 2000-2999, home /var/lib/beebox/<slug> at 0751 so
-# the hub can reach the one file the box publishes, in the shared-cache group.
-if [[ -n "$UNIT_HOST" ]]; then
-  if ! id "$BOX_OWNER" >/dev/null 2>&1; then
-    # A run that failed between groupadd and useradd left the group: reuse its id.
-    if getent group "$BOX_OWNER" >/dev/null; then
-      uid=\$(getent group "$BOX_OWNER" | cut -d: -f3)
-    else
-      uid=""
-      for candidate in \$(seq 2000 2999); do
-        if ! getent passwd "\$candidate" >/dev/null && ! getent group "\$candidate" >/dev/null; then uid="\$candidate"; break; fi
-      done
-      [[ -n "\$uid" ]] || { echo "no free UID in 2000-2999"; exit 1; }
-      groupadd -g "\$uid" "$BOX_OWNER"
-    fi
-    useradd -u "\$uid" -g "$BOX_OWNER" -G beebox-boxes -d "$BOX_HOME" -M -s /bin/bash "$BOX_OWNER"
-    echo "Created user $BOX_OWNER (uid \$uid)."
+# The box gets its own user first (docs/plans/per-box-units.md): bbx-<slug>,
+# a UID from 2000-2999, home /var/lib/beebox/<slug> at 0751 so the hub can
+# reach the one file the box publishes, in the shared-cache group.
+if ! id "$BOX_OWNER" >/dev/null 2>&1; then
+  # A run that failed between groupadd and useradd left the group: reuse its id.
+  if getent group "$BOX_OWNER" >/dev/null; then
+    uid=\$(getent group "$BOX_OWNER" | cut -d: -f3)
+  else
+    uid=""
+    for candidate in \$(seq 2000 2999); do
+      if ! getent passwd "\$candidate" >/dev/null && ! getent group "\$candidate" >/dev/null; then uid="\$candidate"; break; fi
+    done
+    [[ -n "\$uid" ]] || { echo "no free UID in 2000-2999"; exit 1; }
+    groupadd -g "\$uid" "$BOX_OWNER"
   fi
-  install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0751 "$BOX_HOME"
-  for d in .claude .codex .config .local .cache .ssh; do
-    install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0700 "$BOX_HOME/\$d"
-  done
-  su - "$BOX_OWNER" -c 'git config --global user.email beebox@box.example.com && git config --global user.name "Bee Box"'
+  useradd -u "\$uid" -g "$BOX_OWNER" -G beebox-boxes -d "$BOX_HOME" -M -s /bin/bash "$BOX_OWNER"
+  echo "Created user $BOX_OWNER (uid \$uid)."
 fi
+install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0751 "$BOX_HOME"
+for d in .claude .codex .config .local .cache .ssh; do
+  install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0700 "$BOX_HOME/\$d"
+done
+su - "$BOX_OWNER" -c 'git config --global user.email beebox@box.example.com && git config --global user.name "Bee Box"'
 
 # Clone/pull as root (su drops the SSH agent socket, breaking agent
 # forwarding), then chown to the box's owner. The pull names the owner's
@@ -419,15 +403,15 @@ fi
 # manifest registrations, the restart) would otherwise register a box whose
 # structure is not known-good, and the restart would put it in front of users.
 chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
-# On a unit host every file a box owns is private to it (the unit's UMask=0077);
-# the engine opens the root, .beebox/ and hub-meta.json for the hub itself.
-[[ -z "$UNIT_HOST" ]] || chmod -R go-rwx "$BOX_PATH"
+# Every file a box owns is private to it (the unit's UMask=0077); the engine
+# opens the root, .beebox/ and hub-meta.json for the hub itself.
+chmod -R go-rwx "$BOX_PATH"
 # No --skip-git flag: it is gone (a box is always a git repo), and this is an
 # EXISTING box, so bbx engine init re-inits in place and makes no initial commit of
 # its own. It does bring the box git-annex configuration up to spec, which is
 # the point of running it here.
 echo "Running bbx engine init to update box structure..."
-if ! su - $BOX_OWNER -c "umask 007; cd '$BOX_PATH' && BBX_UNIT_HOST=${UNIT_HOST:+1} bbx engine init ." 2>&1; then
+if ! su - $BOX_OWNER -c "umask 007; cd '$BOX_PATH' && BBX_UNIT_HOST=1 bbx engine init ." 2>&1; then
   echo "bbx engine init FAILED for $BOX_PATH — stopping before the box is registered."
   echo "The repo is cloned; fix the box and re-run this script."
   exit 1
@@ -484,8 +468,7 @@ fi
 
 # Re-chown everything (bbx engine init / the writes above ran as root in places).
 chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
-if [[ -n "$UNIT_HOST" ]]; then
-  # The box's own secret store: its share of the hub user's master, verified.
+# The box's own secret store: its share of the hub user's master, verified.
   # Grants are still made on the master (bbx engine secrets grant as beebox);
   # this copies the result (per-box-units.subplan.md).
   store="$BOX_HOME/.config/beebox/secrets.json"
@@ -516,10 +499,9 @@ if [[ -n "$UNIT_HOST" ]]; then
     exit 1
   fi
   echo "Secrets: \$store holds the box's grants (\${copy:-none})."
-  # Unit host: the engine link and node_modules are the deploy's job; the
-  # socket unit serves the box on its first request.
-  systemctl enable --now "beebox-box@$BOX_NAME.socket"
-fi
+# The engine link and node_modules are the deploy's job; the socket unit
+# serves the box on its first request.
+systemctl enable --now "beebox-box@$BOX_NAME.socket"
 
 # ── Register the box with both manifests ────────────────────────────
 # They are separate on purpose, BOTH are live, and they take DIFFERENT paths:
@@ -538,18 +520,14 @@ fi
 # The hub goes first: it is the step with real validation behind it, so if
 # anything is going to be refused it is refused while boxes.json is still
 # untouched. Both commands are idempotent and print what they did.
-su - $BBX_USER -c "bbx engine hub add-box '$BOX_NAME' '$BOX_PATH' $SOCKET_FLAG"
-if [[ -n "$UNIT_HOST" ]]; then
-  # The scheduler runs as its own user on a unit host and its manifest lives
-  # under that home, but that user cannot read the box (0751 root, private
-  # contents), and 'bbx engine boxes add' validates the box before writing. So
-  # root writes the manifest into the scheduler user's home and hands it over
-  # (cross-model review round 2, codex gpt-6-sol, 2026-10-24).
-  HOME=/var/lib/beebox-sched bbx engine boxes add "\$CONTENT_DIR"
-  chown -R beebox-sched:beebox-sched /var/lib/beebox-sched/.config
-else
-  su - $BBX_USER -c "bbx engine boxes add '\$CONTENT_DIR'"
-fi
+su - $BBX_USER -c "bbx engine hub add-box '$BOX_NAME' '$BOX_PATH' --socket"
+# The scheduler runs as its own user and its manifest lives under that home,
+# but that user cannot read the box (0751 root, private contents), and
+# 'bbx engine boxes add' validates the box before writing. So root writes the
+# manifest into the scheduler user's home and hands it over (cross-model
+# review round 2, codex gpt-6-sol, 2026-10-24).
+HOME=/var/lib/beebox-sched bbx engine boxes add "\$CONTENT_DIR"
+chown -R beebox-sched:beebox-sched /var/lib/beebox-sched/.config
 
 # Restart both services LAST, so they pick up the box, its access config,
 # and its secrets in a single restart.

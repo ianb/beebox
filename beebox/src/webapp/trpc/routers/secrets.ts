@@ -22,7 +22,7 @@
  * `machineView` is the whole store, reachable from any box's admin page since
  * there is no separate hub UI to put it in.
  *
- * On a unit host (docs/plans/per-box-units.md, question 9) the process reads
+ * On a unit host (docs/implemented-plans/per-box-units.md, question 9) the process reads
  * the box's OWN copy of the store, exported from the operator's master, so a
  * grant to another box made here would report success and change nothing
  * that box reads. There the surface is box-scoped: a procedure naming another

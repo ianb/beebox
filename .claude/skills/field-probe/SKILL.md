@@ -58,7 +58,7 @@ to ≤5 steps; if the probe needs more, split it into rounds.
 4. **Hand off** with the headline above. Include what to reproduce (their words
    for the symptom, not yours) and roughly how long.
 5. **Pull the readings.** For a prod box: the client debug log lives at
-   `/home/beebox/boxes/<slug>/.beebox/client-debug.log` on the
+   `/var/lib/beebox/<slug>/box/.beebox/client-debug.log` on the
    server (`deploy/target.env` in the MAIN checkout; worktrees don't have it),
    or via the box's debug-log route with `deploy/prod-curl`. Local/worktree
    boxes: read the file directly. Grep the probe's tag (e.g. `[scroll-trace]`).

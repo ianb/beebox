@@ -5,7 +5,7 @@
  *
  * Extracted from the daemon loop (`./core.ts`) so a unit host can run it as
  * the box's user, inside the box sandbox, through `bbx engine scheduler pass
- * <boxRoot>` in `beebox-pass@<slug>.service` (docs/plans/per-box-units.md,
+ * <boxRoot>` in `beebox-pass@<slug>.service` (docs/implemented-plans/per-box-units.md,
  * Track E). On a machine without units the daemon calls it in process.
  */
 

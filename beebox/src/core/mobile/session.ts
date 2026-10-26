@@ -24,7 +24,7 @@
  * device store, so a revoked device stops renewing at once and is locked out
  * within one TTL.
  *
- * On a unit host (docs/plans/per-box-units.md, question 7) the hub runs
+ * On a unit host (docs/implemented-plans/per-box-units.md, question 7) the hub runs
  * outside every box and cannot read the file secret, so the key is DERIVED
  * instead: HKDF over the per-box, per-boot hub secret the box receives as a
  * systemd credential (`BBX_HUB_SECRET` with `BBX_UNIT_HOST=1`), which the hub

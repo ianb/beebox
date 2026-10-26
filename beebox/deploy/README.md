@@ -34,5 +34,6 @@ prod healthy, are migrations pending, how full is the disk". It reads the main
 checkout's `.deploy-logs/deploys.jsonl`, `.last-deployed-sha`, and
 `.deploy-checkout.lock`, then makes one SSH call for the server's
 `deploy-info.json`, `df`, unit states, the hub's passive `/healthz`, and each
-box's `bbx engine migrate --status --json` with `/home/beebox/.env` sourced.
+box's `bbx engine migrate --status --json`, run as the box's own user with
+`/etc/beebox/box.env` sourced.
 Each section reports its own reason when it cannot run.

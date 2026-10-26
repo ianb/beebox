@@ -14,7 +14,7 @@
  * host that key is derived from the box's hub secret (`core/mobile/session.ts`,
  * `deriveMobileSessionKey`), which the hub minted for that box, so the hub
  * verifies a cookie the same way the box does and a junk cookie wakes nothing
- * (docs/plans/per-box-units.md, question 7, decided 2026-10-24).
+ * (docs/implemented-plans/per-box-units.md, question 7, decided 2026-10-24).
  */
 
 import type http from "node:http";
