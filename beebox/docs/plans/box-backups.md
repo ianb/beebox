@@ -1,6 +1,6 @@
 ---
 title: "Encrypted, scheduled backups of box data"
-status: draft
+status: active
 workstream: box-backups
 issues:
   - ../../../issues/decisions/2026-08-07-server-backup-story.md

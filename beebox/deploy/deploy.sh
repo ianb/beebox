@@ -901,11 +901,15 @@ REMOTE
 set -euo pipefail
 install_dir="$1"
 changed=0
+# Keep existing unit hosts current with the engine's pinned restic contract.
+# The installer is version-aware and downloads only when the binary is absent
+# or older than the release this checkout requires.
+bash "$install_dir/beebox/deploy/install-restic.sh" /usr/local/bin/restic
 # The per-box units (docs/plans/per-box-units.md, Track C) are versioned
 # files, installed whole: a template socket and service, the pass service, and
 # the sandbox drop-in both templates include. The hub and scheduler units are
 # installed whole too; the scheduler runs as the scheduler user.
-units=(beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-hub.service beebox-scheduler.service)
+units=(beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-backup@.service beebox-backup@.timer beebox-hub.service beebox-scheduler.service)
 for unit in "${units[@]}"; do
   src="$install_dir/beebox/deploy/systemd/$unit"
   dest="/etc/systemd/system/$unit"
@@ -927,7 +931,7 @@ systemctl enable beebox-scheduler.service >/dev/null 2>&1 || true
 # round 5, codex gpt-6-sol, 2026-10-24). cloud-init's tmpfiles entry creates it
 # with the same owner and mode; the layout preflight guarantees the group.
 install -d -o beebox -g beebox-boxes -m 2755 /etc/beebox
-for unit in beebox-box@.service beebox-pass@.service; do
+for unit in beebox-box@.service beebox-pass@.service beebox-backup@.service; do
   dir="/etc/systemd/system/$unit.d"
   mkdir -p "$dir"
   dest="$dir/box-sandbox.conf"

@@ -88,8 +88,10 @@ decide which hosts see them. Connect
 Google and it syncs in both directions. Quick chat sends your
 message and bounded conversation context to TypeSafe through OpenRouter to
 choose a destination. Each wakeup pushes
-the box's git history to whatever remote you configured — and nowhere
-else. Bee Box itself sends no telemetry or analytics. The Claude Code CLI it
+the box's git history to whatever remote you configured. If you opt into
+[encrypted backups](docs/backups.md), scheduled restic snapshots send the
+box's files, annex objects, and its secrets to the repository you choose.
+Bee Box itself sends no telemetry or analytics. The Claude Code CLI it
 runs sends Anthropic usage metrics on Claude models unless you turn that off
 in Admin → Agent engine and model.
 

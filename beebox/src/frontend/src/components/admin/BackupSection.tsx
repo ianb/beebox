@@ -17,7 +17,7 @@ import { trpc } from "../../lib/trpc/client";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION =
-  "Where copies of this box exist besides this machine. Its history and its attachments travel separately, so they are reported separately.";
+  "Git and git-annex copies of this box. History and attachments travel separately. This section does not check encrypted backups.";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -42,7 +42,7 @@ export function BackupSection() {
 
       {query.data != null && status == null ? (
         <p className="text-sm text-warm-700">
-          This box is not a git repository, so nothing about it is versioned or backed up.
+          This box is not a git repository, so this section cannot report Git copies or history.
         </p>
       ) : null}
 
@@ -50,7 +50,7 @@ export function BackupSection() {
         <div>
           <Row label="Git remote">
             {status.remote === null ? (
-              <span className="text-danger">none configured — this box is nowhere else</span>
+              <span className="text-danger">none configured — no Git remote copy</span>
             ) : (
               <>
                 <span className="font-mono text-xs">{status.remote.url}</span>
@@ -90,8 +90,8 @@ export function BackupSection() {
             <div className="mt-3 text-sm text-warning-dark bg-warning-50 rounded p-3">
               <p className="font-semibold mb-1">
                 {status.assetRisk.fileCount} file
-                {status.assetRisk.fileCount === 1 ? "" : "s"} ({humanBytes(status.assetRisk.bytes)}) exist only on
-                this machine.
+                {status.assetRisk.fileCount === 1 ? "" : "s"} ({humanBytes(status.assetRisk.bytes)}) have no
+                git-annex remote copy.
               </p>
               {status.assetRisk.reason === "no-annex-remote" ? (
                 <p>

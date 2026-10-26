@@ -27,4 +27,14 @@ docker compose up -d
 open http://localhost:3210/box/
 ```
 
+To schedule backups on a Docker or NAS host, configure its scheduler to run
+`docker compose run --rm box bbx engine backup run /data/box` from this
+directory at the desired cadence. This starts a one-shot from the exact image
+used by the `box` service, with the same box and durable machine-state volumes.
+Build or pull the image before the first scheduled run, and after updating it.
+The backup repository and password file must be configured for the box first,
+and must be reachable from the container. The command holds box admission for
+capture and runs retention after a successful capture; scheduler logs carry
+the stage when it fails.
+
 Verify changes to this packaging with `./smoke-docker.sh`.

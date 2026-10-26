@@ -24,7 +24,9 @@ nothing, and every script below refuses with the setup steps.
 | `deploy-target.sh`, `target.env.example` | Load the deploy target; the template for it. |
 | `deploy-outcome.sh`, `notify-macos` | Record a deploy's outcome; the macOS notifier `BBX_DEPLOY_NOTIFY` can name. |
 | `claude-update.sh` | The nightly Claude Code updater the server's timer runs. |
-| `nginx/`, `systemd/`, `server-bin/` | The nginx site, the unit drop-ins, and the root helpers a deploy installs. |
+| `install-restic.sh` | Installs the pinned restic release after verifying the upstream SHA-256 checksum. Deploy refreshes it when the pinned version changes. |
+| `launchd/` | LaunchAgent template for daily backups of a local Mac box; see its README for path substitution and bootstrap commands. |
+| `nginx/`, `systemd/`, `server-bin/` | The nginx site, unit drop-ins, and root helpers a deploy installs. `beebox-backup@.timer` is an opt-in per-box daily backup timer; enable it after configuring that box's backup repository and key. |
 
 ## Checking deploy state
 

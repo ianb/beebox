@@ -97,13 +97,21 @@ LABEL org.opencontainers.image.version=$BEEBOX_VERSION \
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
        pandoc imagemagick poppler-utils python3-openpyxl xlsx2csv qpdf ffmpeg git git-lfs git-annex curl ca-certificates \
-       sudo systemd dbus procps \
+       sudo systemd dbus procps bzip2 \
   && rm -rf /var/lib/apt/lists/* \
   # Debian ships ImageMagick 6 (`convert`); the agent contract and our scripts
   # call `magick` (IM7). Symlink so both names work (same as cloud-init.yaml).
   && if ! command -v magick >/dev/null 2>&1 && command -v convert >/dev/null 2>&1; then \
        ln -sf "$(command -v convert)" /usr/local/bin/magick; \
      fi
+
+# The engine invokes restic as a host tool. Pin the upstream release and
+# verify its published checksum before installing it; TARGETARCH selects the
+# image's actual Linux binary, including Apple Silicon Mac VMs.
+COPY beebox/deploy/install-restic.sh /usr/local/sbin/install-restic
+COPY beebox/deploy/restic-LICENSE /usr/local/sbin/restic-LICENSE
+RUN chmod 0755 /usr/local/sbin/install-restic \
+  && /usr/local/sbin/install-restic /usr/local/bin/restic
 
 # uv runs Docling (`uvx docling`, scan-import's document mode), as on the
 # server. Installed system-wide; its cache and Docling's model weights live in

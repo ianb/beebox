@@ -10,6 +10,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 ## Ideas we adopted
 
+### restic, by the restic contributors
+
+- **Source:** [restic](https://github.com/restic/restic) (BSD 2-Clause; [licence](beebox/deploy/restic-LICENSE)).
+- **What we took:** Its encrypted, deduplicated repository and snapshot, check, retention, and restore commands as the backup format and engine.
+- **Where it landed:** `beebox/src/core/box-backup/`, `beebox/deploy/install-restic.sh`, and `beebox/docs/backups.md`.
+
 ### Just Press Record
 
 - **Source:** [Open Planet Software's recording integrations](https://openplanet.zendesk.com/hc/en-gb/articles/48116180645521-One-tap-recording-integrations) (proprietary product; no source code or assets copied).
