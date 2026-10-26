@@ -1,6 +1,9 @@
 // Restore previews the exact recovery point before the operator opts into writing.
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import * as fs from "node:fs/promises";
+import { backupConfigPath, updateBackupSchedule, writeBackupConfig } from "../../../src/core/box-backup/config.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 void test("restore previews without writing, then applies only a pinned snapshot", async (t) => {
   const snapshotId = "a".repeat(64);
@@ -62,4 +65,42 @@ void test("restore previews without writing, then applies only a pinned snapshot
   await backupCommand.parseAsync([...baseArgs, "--snapshot", snapshotId, "--apply"], { from: "user" });
   t.check(applied, [{ repository: "synthetic-repo", passwordFile: "synthetic-password", target, snapshot: snapshotId }]);
   t.check(lines.at(-1), `Restored verified snapshot ${snapshotId} to ${target}/box. External state awaits review in ${target}/external.`);
+});
+
+void test("scheduled run skips when off while a manual run still captures", async (t) => {
+  const box = await makeTmpBox();
+  const originalLog = console.log;
+  const originalExitCode = process.exitCode;
+  const lines: string[] = [];
+  let captures = 0;
+  console.log = (...args: unknown[]) => { lines.push(args.map(String).join(" ")); };
+  t.teardown(async () => {
+    console.log = originalLog;
+    process.exitCode = originalExitCode;
+    await fs.rm(backupConfigPath(box.root), { force: true });
+    await box.cleanup();
+  });
+  await writeBackupConfig({ boxRoot: box.root, repository: "/tmp/repository", passwordFile: "/tmp/password" });
+  await updateBackupSchedule({ boxRoot: box.root, schedule: "off" });
+  const { backupCommand } = await t.mockImport("../../../src/cli/commands/backup.ts", {
+    "../../../src/core/box-backup/run/backup.ts": {
+      configureBackup: async () => { throw new Error("not used"); },
+      listSnapshots: async () => [],
+      runBackup: async () => {
+        captures += 1;
+        return { snapshotId: "snapshot-id", verifiedAt: "2026-10-26T00:00:00.000Z", durationMs: 1, externalState: { included: 1, skipped: 0, secretEntries: 0, includedKinds: [], skippedKinds: [] } };
+      },
+    },
+    "../../../src/core/box-backup/retention.ts": { pruneBackup: async () => ({ pruned: 0 }) },
+  });
+
+  await backupCommand.parseAsync(["run", box.root, "--scheduled"], { from: "user" });
+  t.check({ captures, lines, exitCode: process.exitCode }, { captures: 0, lines: ["Scheduled backup skipped; automatic backups are off."], exitCode: originalExitCode });
+  lines.length = 0;
+  await backupCommand.parseAsync(["run", box.root], { from: "user" });
+  t.check({ captures, lines, exitCode: process.exitCode }, {
+    captures: 1,
+    lines: ["Verified snapshot snapshot-id at 2026-10-26T00:00:00.000Z (0s). External: 1 items, 0 secrets."],
+    exitCode: originalExitCode,
+  });
 });

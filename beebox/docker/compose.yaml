@@ -47,6 +47,7 @@ services:
       BBX_GIT_NAME: ${BBX_GIT_NAME:-Bee Box}
       BBX_GIT_EMAIL: ${BBX_GIT_EMAIL:-beebox@box.example.com}
       BBX_BACKUP_DEDICATED_HOME: "1"
+      BBX_INSTALL_KIND: docker
 
   # Public HTTPS front door — only started with `--profile public`. Absent
   # from a plain `docker compose up`. Terminates TLS (auto-cert from Let's

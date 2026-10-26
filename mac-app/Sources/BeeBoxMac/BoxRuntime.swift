@@ -361,6 +361,7 @@ final class BoxRuntime: ObservableObject {
                 "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
                 // This VM's home and Claude volume belong to this one box.
                 "BBX_BACKUP_DEDICATED_HOME=1",
+                "BBX_INSTALL_KIND=mac-app",
             ]
             config.process.stdout = stdout ?? log
             config.process.stderr = log
@@ -442,7 +443,7 @@ final class BoxRuntime: ObservableObject {
                 }
                 guard !Task.isCancelled, self.container === container else { return }
                 appLog("ten-minute quiet window reached; starting backup")
-                let backup = try await runInVM(container, arguments: ["bbx", "engine", "backup", "run", "/data/box"], log: log, logOutput: true)
+                let backup = try await runInVM(container, arguments: ["bbx", "engine", "backup", "run", "/data/box", "--scheduled"], log: log, logOutput: true)
                 if backup.exitCode != 0 {
                     appLog("backup failed (exit \(backup.exitCode)); it will be retried while the app remains open")
                     try await Task.sleep(for: statusInterval)
@@ -495,6 +496,7 @@ final class BoxRuntime: ObservableObject {
                 "CLAUDE_CONFIG_DIR=/app/claude-config",
                 "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
                 "BBX_BACKUP_DEDICATED_HOME=1",
+                "BBX_INSTALL_KIND=mac-app",
                 "BBX_CLI_PREBUILT=1",
                 "COREPACK_ENABLE_DOWNLOAD_PROMPT=0",
                 "COREPACK_HOME=/opt/corepack",

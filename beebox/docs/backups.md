@@ -40,8 +40,16 @@ separately; it is not bundled with the engine. A bare local box may use an
 accessible local directory. The production sandbox and Mac VM do not gain
 access to arbitrary host disks from this command.
 
-Create a strong recovery password and a 0600 file containing it. For a box
-at `<box-root>`, run:
+The signed-in owner can configure a repository and recovery password in
+**Admin → Host → Encrypted backups**. Save the recovery password outside this
+machine first. Admin stores a protected password file in machine state and
+shows the destination, latest locally recorded run, and a daily on/off switch.
+Admin does not provision a bucket, SSH key, or provider account. Those
+credentials must already be available to the box's OS user, including when a
+host scheduler runs without an interactive shell.
+
+For CLI setup, create a strong recovery password and a 0600 file containing
+it. For a box at `<box-root>`, run:
 
 ```sh
 bbx engine backup configure <box-root> \
@@ -66,16 +74,26 @@ configuring the same repository. The command accepts that identity only if
 every snapshot in the repository belongs to it. Do not adopt while the old
 installation can still write to the repository.
 
-Run a backup by hand with `bbx engine backup run <box-root>`. The command
+Run a backup by hand with `bbx engine backup run <box-root>`, including when
+daily backups are off. The command
 briefly closes the box to new work, waits for admitted work to finish, then
 holds that pause while restic reads the files. A large annex collection or
 slow destination can make the pause long. The result prints the **verified**
 snapshot ID; tagging a restic snapshot changes its ID. Timer logs carry
 failures. `status --json` is for install schedulers; ordinary `status` prints
-the latest verified snapshot or a clear unconfigured state. Run `check
---read-data` periodically if you want restic to read every stored byte.
+the latest verified snapshot or a clear unconfigured state. With daily runs off,
+`status --json` uses the local record so install schedulers can skip remote polling; human `status` reads the repository. Admin reads a
+local record of completed CLI runs; it does not query the remote repository
+when the page opens. Use CLI `status` to inspect snapshots in the repository.
+Run `check --read-data` periodically if you want restic to read every stored byte.
 
 ## Schedule by installation
+
+Admin's daily switch controls whether a host-invoked `run --scheduled` makes a
+new snapshot. Turning it on does not install or enable a host runner. The
+section cannot confirm that an external timer is active; set one up as below
+and check its logs. Turning daily off leaves manual `run` and restore
+available.
 
 - **Production server:** configure as its `bbx-<slug>` Unix user with the
   unit environment loaded and `--configure-only`, then run the first capture
@@ -94,6 +112,14 @@ the latest verified snapshot or a clear unconfigured state. Run `check
   sudo systemctl start --wait "beebox-backup@$slug.service"
   sudo systemctl enable --now "beebox-backup@$slug.timer"
   ```
+  For a manual capture after turning daily backups off in Admin, run as that
+  box user with the unit environment; starting the timer service would skip:
+
+  ```sh
+  sudo -u "bbx-$slug" -H bash -c \
+    'set -a; source /etc/beebox/box.env; set +a; exec bbx engine backup run "/var/lib/beebox/$1/box"' \
+    backup-run "$slug"
+  ```
 - **Mac app:** while the app hosts its local box, it checks for a due backup.
   After reopening, it waits for ten minutes without admitted box work before
   an overdue run. If the app stays closed, no backup runs until it reopens.
@@ -101,10 +127,10 @@ the latest verified snapshot or a clear unconfigured state. Run `check
   the repository inside its running VM; see the
   [Mac backup commands](../../mac-app/README.md#backup-commands).
 - **Docker or NAS:** schedule `docker compose run --rm box bbx engine backup
-  run /data/box` from the Compose directory with the host's scheduler. This
+  run /data/box --scheduled` from the Compose directory with the host's scheduler. This
   one-shot uses the current box image and its machine-state volumes.
 - **Local laptop box:** use the provided launchd template or another host
-  scheduler to invoke `bbx engine backup run <box-root>` daily. The password
+  scheduler to invoke `bbx engine backup run <box-root> --scheduled` daily. The password
   file and repository must be available in that scheduler's environment.
 
 Do not put backup inside a box-authored scheduled script. It would enter the

@@ -6,11 +6,12 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
+import { withFileLock } from "../../lib/file-lock.js";
 
 const retentionSchema = z.object({ daily: z.number().int().positive(), weekly: z.number().int().positive(), monthly: z.number().int().positive() }).strict();
 const configSchema = z.object({
   version: z.literal(1), boxRoot: z.string(), backupId: z.string().uuid(), repository: z.string().min(1),
-  passwordFile: z.string().min(1), schedule: z.literal("daily"), retention: retentionSchema,
+  passwordFile: z.string().min(1), schedule: z.enum(["daily", "off"]).default("daily"), retention: retentionSchema,
 }).strict();
 export type BackupConfig = z.infer<typeof configSchema>;
 export type BackupRetention = BackupConfig["retention"];
@@ -43,10 +44,29 @@ export async function writeBackupConfig({ boxRoot, repository, passwordFile, ret
 }): Promise<BackupConfig> {
   const realRoot = await fs.realpath(boxRoot);
   const file = backupConfigPath(realRoot);
-  const config = configSchema.parse({ version: 1, boxRoot: realRoot, backupId: backupId ?? randomUUID(), repository, passwordFile: path.resolve(passwordFile), schedule: "daily", retention: retention ?? { daily: 7, weekly: 4, monthly: 12 } });
   await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
-  await writeFileAtomic(file, { content: `${JSON.stringify(config, null, 2)}\n`, mode: 0o600 });
-  return config;
+  return withBackupConfigLock(file, async () => {
+    let prior: BackupConfig | undefined;
+    try { prior = await readBackupConfig({ boxRoot: realRoot }); }
+    catch (error) { if (!(error instanceof MissingBackupConfigError)) throw error; }
+    const config = configSchema.parse({ version: 1, boxRoot: realRoot, backupId: backupId ?? prior?.backupId ?? randomUUID(), repository, passwordFile: path.resolve(passwordFile), schedule: prior?.schedule ?? "daily", retention: retention ?? prior?.retention ?? { daily: 7, weekly: 4, monthly: 12 } });
+    await writeFileAtomic(file, { content: `${JSON.stringify(config, null, 2)}\n`, mode: 0o600 });
+    return config;
+  });
+}
+
+export async function updateBackupSchedule({ boxRoot, schedule }: { boxRoot: string; schedule: "daily" | "off" }): Promise<BackupConfig> {
+  const file = backupConfigPath(boxRoot);
+  return withBackupConfigLock(file, async () => {
+    const config = await readBackupConfig({ boxRoot });
+    const updated = configSchema.parse({ ...config, schedule });
+    await writeFileAtomic(file, { content: `${JSON.stringify(updated, null, 2)}\n`, mode: 0o600 });
+    return updated;
+  });
+}
+
+function withBackupConfigLock<T>(file: string, fn: () => Promise<T>): Promise<T> {
+  return withFileLock({ lockPath: `${file}.lock`, metadata: { purpose: "box-backup-config" }, waitMs: 10_000 }, fn);
 }
 
 export class InvalidBackupConfigError extends Error {

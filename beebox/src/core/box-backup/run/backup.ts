@@ -14,15 +14,15 @@ import { exportBoxStore } from "../../secrets/export-box.js";
 import { backupConfigPath, MissingBackupConfigError, readBackupConfig, writeBackupConfig, type BackupConfig, type BackupRetention } from "../config.js";
 import { backupInventory } from "./inventory.js";
 import { ResticCommandError, runRestic } from "../restic.js";
+import { recordBackupFailure, recordBackupVerified } from "../attempt.js";
 
 export interface BackupExternalStateSummary { included: number; skipped: number; secretEntries: number; includedKinds: string[]; skippedKinds: string[] }
-export interface BackupRunResult { snapshotId: string; verifiedAt: string; durationMs: number; externalState: BackupExternalStateSummary }
+export interface BackupRunResult { snapshotId: string; startedAt: string; verifiedAt: string; durationMs: number; externalState: BackupExternalStateSummary }
 export async function runBackup({ boxRoot }: { boxRoot: string }): Promise<BackupRunResult> {
   const config = await readBackupConfig({ boxRoot });
-  const existing = await boxMaintenanceStatus(boxRoot);
-  if (existing && !existing.owner) throw new BackupMaintenanceError(existing.reason);
   const started = Date.now();
-  const maintenance = await acquireBoxMaintenance(boxRoot, { reason: "box backup" });
+  const startedAt = new Date(started).toISOString();
+  const maintenance = await acquireBackupMaintenance(config.boxRoot, startedAt);
   const stagingRoot = path.join(path.dirname(backupConfigPath(config.boxRoot)), "staging", config.backupId);
   try {
     const inventory = await backupInventory({ boxRoot: config.boxRoot, backupId: config.backupId });
@@ -81,10 +81,30 @@ export async function runBackup({ boxRoot }: { boxRoot: string }): Promise<Backu
       includedKinds: [...new Set(includedKinds)].toSorted(),
       skippedKinds: [...new Set(skippedKinds)].toSorted(),
     };
-    return { snapshotId, verifiedAt: new Date().toISOString(), durationMs: Date.now() - started, externalState: externalSummary };
+    const verifiedAt = new Date().toISOString();
+    await recordBackupVerified({ boxRoot: config.boxRoot, startedAt, snapshotId, verifiedAt });
+    return { snapshotId, startedAt, verifiedAt, durationMs: Date.now() - started, externalState: externalSummary };
+  } catch (error) {
+    await recordBackupFailure({ boxRoot: config.boxRoot, startedAt, error });
+    throw error;
   } finally {
     try { await fs.rm(stagingRoot, { recursive: true, force: true }); }
     finally { await maintenance.complete(); }
+  }
+}
+
+async function acquireBackupMaintenance(boxRoot: string, startedAt: string): Promise<Awaited<ReturnType<typeof acquireBoxMaintenance>>> {
+  const existing = await boxMaintenanceStatus(boxRoot);
+  if (existing && !existing.owner && !(existing.reason === "box backup" && existing.phase === "draining")) {
+    const error = new BackupMaintenanceError(existing.reason);
+    await recordBackupFailure({ boxRoot, startedAt, error });
+    throw error;
+  }
+  try { return await acquireBoxMaintenance(boxRoot, { reason: "box backup" }); }
+  catch (error) {
+    const current = await boxMaintenanceStatus(boxRoot);
+    if (!(current?.owner && current.reason === "box backup")) await recordBackupFailure({ boxRoot, startedAt, error });
+    throw error;
   }
 }
 
@@ -92,7 +112,7 @@ async function requireMaintenanceOwner(maintenance: Awaited<ReturnType<typeof ac
   if (!(await maintenance.held())) throw new BackupMaintenanceOwnerExpiredError();
 }
 
-export async function configureBackup({ boxRoot, repository, passwordFile, retention, backupId: requestedBackupId }: { boxRoot: string; repository: string; passwordFile: string; retention?: BackupRetention; backupId?: string }): Promise<BackupConfig> {
+export async function configureBackup({ boxRoot, repository, passwordFile, retention, backupId: requestedBackupId, timeoutMs }: { boxRoot: string; repository: string; passwordFile: string; retention?: BackupRetention; backupId?: string; timeoutMs?: number }): Promise<BackupConfig> {
   const realRoot = await fs.realpath(boxRoot);
   if (requestedBackupId && !z.string().uuid().safeParse(requestedBackupId).success) throw new InvalidBackupIdError();
   await validateBackupPaths({ realRoot, repository, passwordFile });
@@ -101,7 +121,7 @@ export async function configureBackup({ boxRoot, repository, passwordFile, reten
   catch (error) { if (!(error instanceof MissingBackupConfigError)) throw error; }
   if (priorConfig && requestedBackupId && priorConfig.backupId !== requestedBackupId) throw new BackupRepositoryIdentityError();
   const backupId = priorConfig?.backupId ?? requestedBackupId ?? randomUUID();
-  await ensureRepositoryIdentity({ repository, passwordFile, backupId, explicitIdentity: Boolean(priorConfig || requestedBackupId) });
+  await ensureRepositoryIdentity({ repository, passwordFile, backupId, explicitIdentity: Boolean(priorConfig || requestedBackupId), ...(timeoutMs === undefined ? {} : { timeoutMs }) });
   const nextRetention = retention ?? priorConfig?.retention;
   const config = await writeBackupConfig({ boxRoot: realRoot, repository, passwordFile, backupId, ...(nextRetention === undefined ? {} : { retention: nextRetention }) });
   return config;
@@ -118,14 +138,14 @@ async function validateBackupPaths({ realRoot, repository, passwordFile }: { rea
   if (!passwordStat.isFile() || passwordStat.isSymbolicLink() || (passwordStat.mode & 0o077) !== 0) throw new BackupPasswordPermissionsError();
 }
 
-async function ensureRepositoryIdentity({ repository, passwordFile, backupId, explicitIdentity }: { repository: string; passwordFile: string; backupId: string; explicitIdentity: boolean }): Promise<void> {
+async function ensureRepositoryIdentity({ repository, passwordFile, backupId, explicitIdentity, timeoutMs }: { repository: string; passwordFile: string; backupId: string; explicitIdentity: boolean; timeoutMs?: number }): Promise<void> {
   try {
-    const snapshots = await listSnapshots({ repository, passwordFile });
+    const snapshots = await listSnapshots({ repository, passwordFile, ...(timeoutMs === undefined ? {} : { timeoutMs }) });
     if (snapshots.length > 0 && (!explicitIdentity || snapshots.some((snapshot) => !snapshot.tags.includes(`bbx-backup:${backupId}`) || snapshot.host !== backupId))) throw new BackupRepositoryIdentityError();
   } catch (error) {
     if (error instanceof BackupRepositoryIdentityError) throw error;
     if (!(error instanceof ResticCommandError) || !isRepositoryMissing(error.detail)) throw error;
-    await runRestic({ repository, passwordFile, args: ["init"] });
+    await runRestic({ repository, passwordFile, args: ["init"], ...(timeoutMs === undefined ? {} : { timeoutMs }) });
   }
 }
 
@@ -158,8 +178,8 @@ async function fileTreeFingerprint(source: string): Promise<string> {
 }
 
 export interface BackupSnapshot { id: string; time: string; host: string; paths: string[]; tags: string[]; excludes?: string[] }
-export async function listSnapshots({ repository, passwordFile, backupId }: { repository: string; passwordFile: string; backupId?: string }): Promise<BackupSnapshot[]> {
-  const result = await runRestic({ repository, passwordFile, args: ["snapshots", "--json"] });
+export async function listSnapshots({ repository, passwordFile, backupId, timeoutMs }: { repository: string; passwordFile: string; backupId?: string; timeoutMs?: number }): Promise<BackupSnapshot[]> {
+  const result = await runRestic({ repository, passwordFile, args: ["snapshots", "--json"], ...(timeoutMs === undefined ? {} : { timeoutMs }) });
   const parsed: unknown = JSON.parse(result.stdout);
   if (!Array.isArray(parsed)) throw new InvalidSnapshotListError();
   return parsed.map((entry): BackupSnapshot => {

@@ -28,6 +28,7 @@ export type AdminSectionId =
   | "cloudflare-publishing"
   | "tailscale"
   | "backup"
+  | "encrypted-backups"
   | "notifications";
 
 /** Where a section's settings live. Shown beside the section on the overview. */
@@ -54,6 +55,7 @@ export const ADMIN_SECTIONS: Record<AdminSectionId, AdminSectionDef> = {
   "cloudflare-publishing": { title: "Cloudflare publishing", blurb: "Cloudflare tokens for publishing pages, and which boxes may use them.", scope: "mixed" },
   "tailscale": { title: "Tailscale", blurb: "Reaching this host from your other devices over Tailscale.", scope: "host" },
   "backup": { title: "Backup", blurb: "Whether this box's git history and media are backed up off this host.", scope: "box" },
+  "encrypted-backups": { title: "Encrypted backups", blurb: "Restic snapshots encrypted with a recovery password and stored outside this host.", scope: "host" },
   "notifications": { title: "Notifications", blurb: "Push notifications from this box on the device you are using now.", scope: "device" },
 };
 
@@ -74,7 +76,7 @@ export const ADMIN_GROUPS: readonly AdminGroupDef[] = [
   { tab: "people", label: "People", description: "Who can sign in to this box.", sections: ["allowed-users", "invite"] },
   { tab: "connections", label: "Connections", description: "Outside services this box talks to.", sections: ["google-services", "gmail-filters", "cloudflare-publishing"] },
   { tab: "secrets", label: "Secrets", description: "API keys this box can use, and the keys shared across boxes on this host.", sections: ["secrets"] },
-  { tab: "host", label: "Host", description: "The machine this box runs on and the device you are using.", sections: ["tailscale", "backup", "notifications"] },
+  { tab: "host", label: "Host", description: "The machine this box runs on and the device you are using.", sections: ["tailscale", "backup", "encrypted-backups", "notifications"] },
 ];
 
 export const ADMIN_TAB_LABELS: Record<AdminTab, string> = {

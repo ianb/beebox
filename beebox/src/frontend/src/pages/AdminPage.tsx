@@ -21,6 +21,7 @@ import { CloudflarePublishConnectionsSection } from "../components/admin/Cloudfl
 import { NotificationsSection } from "../components/admin/NotificationsSection/view";
 import { TailscaleSection } from "../components/admin/TailscaleSection";
 import { BackupSection } from "../components/admin/BackupSection";
+import { EncryptedBackupsSection } from "../components/admin/EncryptedBackupsSection";
 import { InviteSection } from "../components/admin/InviteSection";
 import { AdminOverview } from "../components/admin/AdminOverview/view";
 import { ADMIN_TAB_LABELS, ADMIN_TABS, DEFAULT_ADMIN_TAB, adminSectionElementId, adminTabForSection, type AdminSectionId, type AdminTab } from "../components/admin/sections";
@@ -112,6 +113,7 @@ function HostPanel() {
   return <>
     <ProbeSection name="Tailscale"><TailscaleSection /></ProbeSection>
     <ProbeSection name="Backup"><BackupSection /></ProbeSection>
+    <ProbeSection name="EncryptedBackups"><EncryptedBackupsSection /></ProbeSection>
     <ProbeSection name="Notifications"><NotificationsSection /></ProbeSection>
   </>;
 }

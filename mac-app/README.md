@@ -228,6 +228,12 @@ VM_HOME=/home/node
 "$APP" backup check
 ```
 
+The signed-in owner can also configure the repository and recovery password
+in the box's Admin → Host → Encrypted backups section. The VM still needs its
+provider credentials in the mounted home, as above. Admin's daily switch is
+honored by the app's backup loop while the app is open; `"$APP" backup run`
+remains available for a manual capture even when daily runs are off.
+
 Open Bee Box Desktop and start the box before invoking these commands. The
 private control socket lives under `~/Library/Application Support/Bee Box/run`
 and accepts only typed backup commands.

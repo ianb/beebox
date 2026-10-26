@@ -6,6 +6,8 @@ import { checkBackup } from "../../core/box-backup/check.js";
 import { configureBackup, runBackup } from "../../core/box-backup/run/backup.js";
 import { pruneBackup } from "../../core/box-backup/retention.js";
 import { backupStatus } from "../../core/box-backup/status.js";
+import { readBackupConfig } from "../../core/box-backup/config.js";
+import { recordBackupPostVerificationFailure } from "../../core/box-backup/attempt.js";
 import { previewBoxBackup, restoreBoxBackup } from "../../core/box-backup/restore.js";
 import type { BackupRetention } from "../../core/box-backup/config.js";
 
@@ -44,6 +46,7 @@ async function runAndRetain(boxRoot: string): Promise<void> {
   try {
     await pruneBackup({ boxRoot });
   } catch (error) {
+    await recordBackupPostVerificationFailure({ boxRoot, snapshotId: result.snapshotId, startedAt: result.startedAt });
     fail(`retention after verified snapshot ${result.snapshotId}`, error);
   }
 }
@@ -76,8 +79,15 @@ backupCommand
   .command("run")
   .description("Capture one snapshot, then apply retention")
   .argument("<boxRoot>", "Box root")
-  .action(async (boxRoot: string) => {
-    try { await runAndRetain(boxRoot); }
+  .option("--scheduled", "Skip capture when the configured schedule is manual-only")
+  .action(async (boxRoot: string, options: { scheduled?: boolean }) => {
+    try {
+      if (options.scheduled && (await readBackupConfig({ boxRoot })).schedule === "off") {
+        console.log("Scheduled backup skipped; automatic backups are off.");
+        return;
+      }
+      await runAndRetain(boxRoot);
+    }
     catch (error) { fail("capture", error); }
   });
 
@@ -88,10 +98,10 @@ backupCommand
   .option("--json", "Machine-readable status")
   .action(async (boxRoot: string, options: { json?: boolean }) => {
     try {
-      const status = await backupStatus({ boxRoot });
+      const status = await backupStatus({ boxRoot, json: options.json === true });
       if (options.json) console.log(JSON.stringify(status));
       else if (!status.configured) console.log("Backup not configured.");
-      else if (status.newestVerified === null) console.log("Backup configured; no verified snapshot yet.");
+      else if (status.newestVerified === null) console.log(status.due ? "Backup configured; no verified snapshot yet." : "No verified snapshot found in the repository; automatic backups are off.");
       else console.log(`Latest verified snapshot ${status.newestVerified.id} at ${status.newestVerified.time}${status.due ? " (backup due)" : ""}.`);
     } catch (error) { fail("status", error); }
   });
