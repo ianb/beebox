@@ -42,3 +42,11 @@ journey-walks-late-oct/20261022T211450Z-implemented.md,
 risky-merge-review/20261022T221012Z-implemented.md. Root `AGENTS.md` now says
 workers report check failures only in their own files and the committer
 reruns the checks.
+
+**2026-10-25 (retrospective 20261025-233625):** Two more sessions. The layout
+check crashed on a cached path deleted by a parallel worker, blocking another
+track's commit; a whole-package typecheck failed on a sibling agent's mid-edit
+file, and a `git add` with one bad pathspec aborted so the commit took only
+another agent's staged renames. Coding feedback:
+dup-sweep-frontend/20261023T200509Z-implemented.md,
+risky-merge-review/20261023T052627Z-implemented.md.
