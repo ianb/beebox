@@ -401,7 +401,7 @@ No decision depends on an external premise. Searched nothing.
   - Schedule in `defaults.ts`: `question-review`, cron `0 6 * * *`,
     `notBefore: "20h"`, `enabled: true` (the precheck skips when idle, as
     todo-review does). `installSchedules` installs it into existing boxes
-    too; see open question 4.
+    too, by decision (open question 4).
 - **Vocabulary lock-ins.** `question-review`, `bbx engine question-review
   check|verify`.
 - **First implementation chunk.** The pure selection with tests (thresholds,
@@ -435,7 +435,7 @@ none
 | Figure it out: dismiss lands, chat fails to start | New mutation test | Error to client, toast; card stays dismissed; review picks it up after 3 days | Clear |
 | Figure it out: chat starts, agent fails later | None (agent run) | Card stays dismissed without `provisional`; the background chat shows the failure; review picks it up | Clear in the chat list |
 | `decide` twice on one card | New command test | Refused when `provisional` exists | Clear |
-| Agent runs `bbx answer` instead of `decide` | Knowledge audit | Skill says never. Not enforced in code: `bbx answer` accepts a dismissed card (`answer.ts:221`) and its follow-up records `basis: user-stated`. Accepted risk, open question 3 | Visible only in the background chat and git; the audit guards |
+| Agent runs `bbx answer` instead of `decide` | Knowledge audit | Skill says never. Not enforced in code, by decision (open question 3): `bbx answer` accepts a dismissed card (`answer.ts:221`), as it must for a person's answer relayed from chat | Visible only in the background chat and git; the audit guards |
 | Agent decides something irreversible | Knowledge audit | Skill forbids; the background chat is visible | Clear after the fact |
 | `decide` on an answered card | New command test | Refused by allowed states | Clear |
 | `reraise` on a card with `provisional` | New command test | Refused | Clear |
@@ -481,19 +481,13 @@ none
 1. Thresholds (3 days after Later, 14 days pending, 5 per run). Lean: start
    there; they are constants in one module.
 2. The patch color per theme family. Settled with screenshots in Track A.
-3. **Enforcing that a background agent cannot answer** (boxholder decision).
-   The skill forbids `bbx answer` and an audit checks it, but code does not
-   stop it. A code guard would need to know that no person is behind the
-   turn (the CLI does not know its session), or a "handed off" marker on the
-   card that `bbx answer` refuses without an override flag. Lean: accept the
-   risk with the audit; the background chat and git show any such answer.
-4. **The review on existing boxes** (boxholder decision). `installSchedules`
-   installs every default schedule into existing boxes, enabled unless
-   marked off (`defaults.ts:476-486`). Enabled, the review starts deciding
-   an existing backlog (five a day, each provisional and visible) without
-   anyone pressing Figure it out. Lean: enabled; the boxholder asked for a
-   process for questions that "haven't been answered or keep getting
-   dismissed". The alternative is `enabled: false`, turned on per box.
+3. **No code guard against an agent answering** (boxholder, 2026-10-26: "code
+   doesn't have to block an agent from answering at all. Usually the agent
+   will answer on behalf of a user who answered in chat anyway"). The skill
+   and the audit carry the rule.
+4. **The review runs on existing boxes** (boxholder, 2026-10-26: "Yes, let it
+   go through existing boxes"): the schedule ships `enabled: true` and
+   `installSchedules` installs it everywhere.
 
 ## Knowledge audits
 
