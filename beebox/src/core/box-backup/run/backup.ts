@@ -157,7 +157,7 @@ async function fileTreeFingerprint(source: string): Promise<string> {
   return rows.join("\n");
 }
 
-export interface BackupSnapshot { id: string; time: string; host: string; paths: string[]; tags: string[] }
+export interface BackupSnapshot { id: string; time: string; host: string; paths: string[]; tags: string[]; excludes?: string[] }
 export async function listSnapshots({ repository, passwordFile, backupId }: { repository: string; passwordFile: string; backupId?: string }): Promise<BackupSnapshot[]> {
   const result = await runRestic({ repository, passwordFile, args: ["snapshots", "--json"] });
   const parsed: unknown = JSON.parse(result.stdout);
@@ -166,7 +166,7 @@ export async function listSnapshots({ repository, passwordFile, backupId }: { re
     const parsedRow = snapshotLineSchema.safeParse(entry);
     if (!parsedRow.success) throw new InvalidSnapshotListError();
     const row = parsedRow.data;
-    const snapshot = { id: row.id, time: row.time, host: row.hostname, paths: row.paths, tags: row.tags ?? [] };
+    const snapshot = { id: row.id, time: row.time, host: row.hostname, paths: row.paths, tags: row.tags ?? [], excludes: row.excludes ?? [] };
     return snapshot;
   }).filter((snapshot) => backupId === undefined || snapshot.tags.includes(`bbx-backup:${backupId}`));
 }
@@ -187,4 +187,4 @@ class BackupMaintenanceOwnerExpiredError extends Error { constructor() { super("
 class BackupMissingExternalStateError extends Error { constructor(kind: string) { super(`Backup expected ${kind} state, but it is missing`); this.name = "BackupMissingExternalStateError"; } }
 
 const summaryLineSchema = z.object({ message_type: z.string().optional(), snapshot_id: z.string().optional() }).passthrough();
-const snapshotLineSchema = z.object({ id: z.string(), time: z.string(), hostname: z.string(), paths: z.array(z.string()), tags: z.array(z.string()).nullable().optional() }).passthrough();
+const snapshotLineSchema = z.object({ id: z.string(), time: z.string(), hostname: z.string(), paths: z.array(z.string()), tags: z.array(z.string()).nullable().optional(), excludes: z.array(z.string()).optional() }).passthrough();

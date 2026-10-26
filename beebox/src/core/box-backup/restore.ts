@@ -21,8 +21,21 @@ export interface RestoreBackupResult {
   externalPath: string;
 }
 
+export interface RestoreBackupPreview {
+  snapshotId: string;
+  snapshotTime: string;
+  backupId: string;
+  sourcePaths: string[];
+  excludedPatterns: string[];
+  boxPath: string;
+  externalPath: string;
+}
+
 export class RestoreTargetNotEmptyError extends Error {
   constructor(target: string) { super(`restore target must be empty: ${target}`); this.name = "RestoreTargetNotEmptyError"; }
+}
+export class RestoreTargetInsideBoxError extends Error {
+  constructor(target: string) { super(`restore target is inside an existing box: ${target}`); this.name = "RestoreTargetInsideBoxError"; }
 }
 export class RestoreSnapshotNotFoundError extends Error {
   constructor(snapshot: string) { super(`snapshot ${snapshot} was not found as a verified snapshot`); this.name = "RestoreSnapshotNotFoundError"; }
@@ -53,6 +66,23 @@ const packageSchema = z.object({
   dependencies: z.record(z.string(), z.string()).optional(),
   beebox: z.object({ shapeVersion: z.number().optional() }).optional(),
 }).passthrough();
+
+/** Resolve a verified snapshot and its destinations without creating the target. */
+export async function previewBoxBackup(options: RestoreBackupOptions): Promise<RestoreBackupPreview> {
+  const target = path.resolve(options.target);
+  await assertEmptyTarget(target);
+  const snapshots = await listSnapshots({ repository: options.repository, passwordFile: options.passwordFile });
+  const selected = selectSnapshot(snapshots, options.snapshot);
+  return {
+    snapshotId: selected.id,
+    snapshotTime: selected.time,
+    backupId: selected.host,
+    sourcePaths: selected.paths,
+    excludedPatterns: selected.excludes ?? [],
+    boxPath: path.join(target, "box"),
+    externalPath: path.join(target, "external"),
+  };
+}
 
 export async function restoreBoxBackup(options: RestoreBackupOptions): Promise<RestoreBackupResult> {
   const target = path.resolve(options.target);
@@ -115,12 +145,25 @@ async function assertEmptyTarget(target: string): Promise<void> {
     throw error;
   });
   if (targetStat?.isSymbolicLink() || (targetStat && !targetStat.isDirectory())) throw new RestoreTargetNotEmptyError(target);
-  if (!targetStat) return;
-  try {
+  if (targetStat) {
     const entries = await fs.readdir(target);
     if (entries.length > 0) throw new RestoreTargetNotEmptyError(target);
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+  }
+  let ancestor = targetStat ? target : path.dirname(target);
+  for (;;) {
+    try { ancestor = await fs.realpath(ancestor); break; }
+    catch (error) {
+      if (errnoCode(error) !== "ENOENT") throw error;
+      const parent = path.dirname(ancestor);
+      if (parent === ancestor) throw error;
+      ancestor = parent;
+    }
+  }
+  for (;;) {
+    if (await isBoxRoot(ancestor)) throw new RestoreTargetInsideBoxError(target);
+    const parent = path.dirname(ancestor);
+    if (parent === ancestor) break;
+    ancestor = parent;
   }
 }
 

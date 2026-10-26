@@ -115,7 +115,7 @@ exclusive capture hold.
 
 Install the engine and restic, obtain the repository address and recovery
 password from outside the failed machine, and restore into an **empty**
-directory:
+directory outside any box:
 
 ```sh
 bbx engine backup restore \
@@ -124,10 +124,18 @@ bbx engine backup restore \
   --target <empty-restore-directory>
 ```
 
-`--snapshot <verified-id>` selects an older point in time. The command puts
-the recovered box in `box/` and staged machine state in `external/` beneath
-the target. It validates Git and annex content; a validation failure leaves
-both recovered directories for inspection and exits nonzero. Inspect both
+This first command previews the selected verified snapshot, its captured
+source paths and exclusions, and the planned `box/` and `external/` output
+paths. It leaves the restore target untouched. Copy the full snapshot ID from
+the preview, then run the same command with `--snapshot <full-id> --apply` to
+write it. `--apply` prints the preview again and requires that exact ID; a
+short prefix or an unpinned newest snapshot cannot write files.
+
+`--snapshot <verified-id>` selects an older point in time for the preview.
+The applied restore puts the recovered box in `box/` and staged machine state
+in `external/` beneath the target. It validates Git and annex content; a
+validation failure leaves both recovered directories for inspection and exits
+nonzero. Inspect both
 before activation. Merge only this box's external
 state into a shared home or secret store; never replace another box's state
 with the staged files. Repair ownership and any encoded session paths,

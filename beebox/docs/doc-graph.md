@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-26T11:38:30Z
+Generated: 2026-10-26T18:41:20Z
 Total documents: 585
 
 ## Issues
@@ -15,6 +15,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines) · shipped history · implemented
 - **docs/implemented-plans/bbx-remind.md** — "bbx remind: one command for check-ins and reminders" (290 lines) · shipped history · implemented
 - **docs/implemented-plans/bloom-theme.md** — "Bloom system and card theme" (213 lines) · shipped history · implemented
+- **docs/implemented-plans/box-backups.md** — "Encrypted, scheduled backups of box data" (205 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (679 lines) · shipped history · implemented
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
 - **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (516 lines) · shipped history · implemented
@@ -72,7 +73,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
-- **docs/plans/box-backups.md** — "Encrypted, scheduled backups of box data" (206 lines) · proposal · partial
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (156 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (161 lines) · proposal · partial
@@ -957,12 +957,12 @@ References:
 
 #### docs/backups.md
 
-Title: "Encrypted box backups" | 144 lines | current reference
+Title: "Encrypted box backups" | 152 lines | current reference
 
 Referenced by:
 - README.md:92 (link) — [encrypted backups](docs/backups.md), scheduled restic snapshots send the
 - docs/guides.md:38 (link) — | Encrypted box backups and recovery | [backups](backups.md) |
-- docs/plans/box-backups.md:16 (link) — implemented; see the [backup guide](../backups.md) and
+- docs/implemented-plans/box-backups.md:16 (link) — implemented; see the [backup guide](../backups.md) and
 - docs/security-report.md:414 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
 
 References:
@@ -1013,6 +1013,7 @@ Referenced by:
 - docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/media/assets.md`, `docs/box-layout.md`, install docs, and
 - docs/implemented-plans/attach-directories-superseded.md:177 (mention) — - `docs/box-layout.md`
 - docs/implemented-plans/box-agents-md.md:161 (mention) — `docs/box-layout.md`, `.claude/skills/bbx-context/SKILL.md`.
+- docs/implemented-plans/box-backups.md:95 (mention) — - **Box root** (existing): the resolved version-3 package directory; identifies the box files, not its external machine
 - docs/implemented-plans/box-docs-in-package.md:184 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
 - docs/implemented-plans/box-growth-health-checks.md:454 (mention) — **What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/box-retrospectives.md:422 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
@@ -1041,7 +1042,6 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:67 (mention) — `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
 - docs/implemented-plans/web-push-notifications.review-codex.md:41 (mention) — for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
-- docs/plans/box-backups.md:96 (mention) — - **Box root** (existing): the resolved version-3 package directory; identifies the box files, not its external machine
 - docs/plans/installation-story.md:134 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
 - docs/plans/prompt-surface-cleanup-evaluation.md:152 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
@@ -2551,6 +2551,7 @@ Referenced by:
 - docs/design/trust.md:52 (mention) — for a person (spirit.md's "nothing should just disappear";
 - docs/development/workflow.md:89 (link) — [spirit.md](../architecture/spirit.md) it serves and risks.
 - docs/implemented-plans/activity-detail.md:55 (mention) — Serves "see the gears" (`beebox/docs/architecture/spirit.md`) at the depth
+- docs/implemented-plans/box-backups.md:46 (mention) — - **Serves:** `docs/architecture/spirit.md`, “You should be able to see the gears”: a result names its snapshot and veri
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/implemented-plans/docs-reorg.md:335 (mention) — `docs/design/` (8 topic files + README acknowledging spirit.md),
 - docs/implemented-plans/live-gap-marker.md:56 (mention) — (`docs/architecture/spirit.md:79`) by sending a known hole as unsure.
@@ -2558,7 +2559,6 @@ Referenced by:
 - docs/implemented-plans/questions-beside-the-chat.md:69 (mention) — (`docs/architecture/spirit.md`): the person answers in their own words in the
 - docs/implemented-plans/questions-end-to-end.md:376 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
 - docs/implemented-plans/questions-later-and-figure-it-out.md:66 (mention) — rather than nagging forever" (`docs/architecture/spirit.md`).
-- docs/plans/box-backups.md:47 (mention) — - **Serves:** `docs/architecture/spirit.md`, “You should be able to see the gears”: a result names its snapshot and veri
 - docs/plans/ios-app-intent-capture.md:46 (mention) — - **Serves:** `architecture/spirit.md`, “The best stuff comes from the people”: “The box's job is to collect, preserve,
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
@@ -3387,11 +3387,11 @@ Title: "Trust and authorization" | 91 lines | design rationale
 Referenced by:
 - docs/design/README.md:25 (link) — - [`trust.md`](trust.md) — two axes: trust to act (question → confirmation → automatic, question rules) and trust to kee
 - docs/design/representation.md:71 (mention) — ladder instead (`trust.md`).
+- docs/implemented-plans/box-backups.md:72 (mention) — - `docs/architecture/spirit.md`, “You should be able to see the gears,” favors an inspectable result over a silent timer
 - docs/implemented-plans/design-md-retired-sections.md:55 (mention) — process-fields; see `../design/trust.md`.*
 - docs/implemented-plans/file-wordless-captures.md:52 (mention) — `beebox/docs/design/trust.md` names as what *"lets the box act forward on some
 - docs/implemented-plans/plugins.design.md:66 (mention) — Per `design/trust.md`, question then confirmation then automatic:
 - docs/implemented-plans/questions-later-and-figure-it-out.md:86 (mention) — - This changes a stated rule. `docs/design/trust.md`: "A question, the first
-- docs/plans/box-backups.md:73 (mention) — - `docs/architecture/spirit.md`, “You should be able to see the gears,” favors an inspectable result over a silent timer
 - docs/plans/ios-app-intent-capture.md:76 (mention) — - `docs/design/trust.md`, “capture must cost nothing in the moment, or the thought is not captured.” Local persistence p
 - docs/plans/ios-app-intent-capture.product-shape.review.md:40 (mention) — - `beebox/docs/design/trust.md:56-61` says “Quick chat is a compromise, not a pattern to copy” and that “capture must co
 - ../.claude/skills/bbx-design/SKILL.md:21 (mention) — current shape; `interaction-model.md` and `trust.md` matter most here.
@@ -3846,6 +3846,21 @@ References:
 - → docs/box-guidance.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/box/tricks.md (mention)
+
+#### docs/implemented-plans/box-backups.md **[ORPHAN]**
+
+Title: "Encrypted, scheduled backups of box data" | 205 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/decisions/2026-08-07-server-backup-story.md (frontmatter)
+- → docs/backups.md (link)
+- → ../issues/closed/decisions/2026-08-07-server-backup-story.md (link)
+- → ../issues/features/2026-07-20-export-md-agent-instructions.md (link)
+- → ../issues/exploration/2026-08-11-encryption-at-rest.md (link)
+- → docs/architecture/spirit.md (mention)
+- → docs/design/trust.md (mention)
+- → docs/server/provisioning.md (mention)
+- → docs/box-layout.md (mention)
 
 #### docs/implemented-plans/box-docs-in-package.md
 
@@ -8290,21 +8305,6 @@ References:
 - → docs/testing.md (mention)
 - → docs/cards/migrations.md (mention)
 
-#### docs/plans/box-backups.md **[ORPHAN]**
-
-Title: "Encrypted, scheduled backups of box data" | 206 lines | proposal | partial
-
-References:
-- → ../issues/closed/decisions/2026-08-07-server-backup-story.md (frontmatter)
-- → docs/backups.md (link)
-- → ../issues/closed/decisions/2026-08-07-server-backup-story.md (link)
-- → ../issues/features/2026-07-20-export-md-agent-instructions.md (link)
-- → ../issues/exploration/2026-08-11-encryption-at-rest.md (link)
-- → docs/architecture/spirit.md (mention)
-- → docs/design/trust.md (mention)
-- → docs/server/provisioning.md (mention)
-- → docs/box-layout.md (mention)
-
 #### docs/plans/box-commentary-surface.md
 
 Title: "In-box Commentary Surface for Out-of-Box Files" | 787 lines | proposal | partial
@@ -10212,8 +10212,8 @@ Title: "Server provisioning" | 247 lines | current reference
 Referenced by:
 - deploy/AGENTS.md:31 (link) — Each box runs as its own user ([provisioning](../docs/server/provisioning.md)).
 - deploy/README.md:21 (link) — | `hetzner/create-server.sh`, `hetzner/cloud-init.yaml`, `hetzner/provision.sh` | Example provisioners for the one host
+- docs/implemented-plans/box-backups.md:83 (mention) — - `beebox/docs/server/provisioning.md:145-147`: *“A Hetzner snapshot of the server does not include a volume”* holding p
 - docs/implemented-plans/doc-structure-install-server.md:80 (mention) — | `deploy/README.md` intro, Prerequisites, Setup, create-server, setup-server, Server layout, Box package installs, Syst
-- docs/plans/box-backups.md:84 (mention) — - `beebox/docs/server/provisioning.md:145-147`: *“A Hetzner snapshot of the server does not include a volume”* holding p
 - docs/server.md:14 (link) — | [Provisioning](server/provisioning.md) | Creating and setting up the host: prerequisites, the provisioners, server lay
 - docs/server/boxes.md:140 (link) — by its own user `bbx-<name>` ([provisioning](provisioning.md#server-layout)).
 - docs/server/deploying.md:94 (link) — [provisioning](provisioning.md#server-layout)). The deploy first checks that
