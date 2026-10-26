@@ -39,3 +39,12 @@ void test("A blank title is skipped, dotted names keep their dots, job cards dro
   t.check(cardTitle({ path: "_content/Foo.v2.doc.card", frontmatter: {} }), "Foo.v2");
   t.check(cardTitle({ path: "_content/x.report.job.card", frontmatter: {} }), "x");
 });
+
+// A question card without a `title:` is headed by its prompt's first sentence,
+// as its tab is (`questionTitle`), not by its filename.
+void test("An untitled question card is headed by its prompt", async (t) => {
+  t.check({
+    untitled: cardTitle({ path: "_bookkeeping/questions/scan-x_photo-003.review.question.card", frontmatter: { prompt: "Review photo-003: confirm the description. Then the back." } }),
+    titled: cardTitle({ path: "_bookkeeping/questions/scan-x_photo-003.review.question.card", frontmatter: { title: "Check scanned photo 003", prompt: "Review photo-003." } }),
+  }, { untitled: "Review photo-003: confirm the description.", titled: "Check scanned photo 003" });
+});

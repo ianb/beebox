@@ -10,6 +10,7 @@
 import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { IsoDuration } from "../shared/iso-duration.js";
 import { z } from "zod";
+import { questionTitle } from "../shared/question-title.js";
 import { QuestionLearning, type QuestionLearningFields } from "../question-fields.js";
 
 export { QuestionLearning, type QuestionLearningFields, type QuestionLearningSinkValue } from "../question-fields.js";
@@ -192,10 +193,11 @@ A question card asks the user something and routes the answer back for processin
 - A question's state is read from which lifecycle timestamp it carries:
   - pending — none of \`answered-at\`, \`dismissed-at\`, \`expired-at\`: awaiting an answer.
   - answered — has \`answered-at\` (and \`answer\`); terminal — an answered question does not accept a fresh answer.
-  - dismissed — has \`dismissed-at\`: put away for now (Later), by the person or by Figure it out. Still answerable later.
+  - dismissed — has \`dismissed-at\`: put away for now (Later), by the person or by Decide for me. Still answerable later.
   - expired — has \`expired-at\`: aged out of the active view by the aging sweep, without an answer. Still answerable later — expiry demotes visibility, it does not close the question.
   A card carries at most one of the three timestamps; answering a dismissed or expired question removes its timestamp. Before asking something new, check \`_bookkeeping/questions/\` including answered/dismissed/expired cards: an existing answer is a \`user-stated\` fact, and a dismissal or expiry means the question was put off, not answered.
 - \`memo:\` — context explaining WHY you're asking, so the user can answer without looking anything up.
+- \`title:\` — a short name for the question, a few words ("Folder for the hardware receipt"): its tab and the chat beside it show this. Without one, the prompt's first sentence stands in.
 - \`prompt:\` — the actual question.
 - \`input:\` — \`{type: select|text|confirm, options?: [{id, label}]}\`. \`select\` requires at least two options. \`confirm\` and \`text\` must NOT carry options.
 - \`learning:\` — optional. Set it when the answer is also evidence for a durable belief, not just a one-shot decision: \`{sink: guide|briefing|personality, ref?: <card path>, proposal: <the belief being tested, quotable>}\`. State what you are trying to learn and where it should be recorded — when the destination is known, declaring it here is cheap and turns recording the answer into a mechanical follow-up step. For sink \`briefing\`, \`ref\` MUST be the ROOT briefing card: directory briefings are not compiled into any agent's context (only the root briefing becomes the box's \`AGENTS.md\`), so a belief recorded against a directory briefing would never be seen. When the boxholder answers, the follow-up job records the confirmed (or denied) belief in that sink as a \`basis: user-stated\` fact — the strongest evidence tier, since the boxholder said it directly.
@@ -215,6 +217,8 @@ Dismissing sets \`dismissed-at:\`; the aging sweep expiring a question sets \`ex
 \`provisional:\` — \`{decision, reasoning, undo, decided-at}\`: what the box decided in place of an answer. It is not the person's answer, and only \`bbx question decide\` writes it. A later answer keeps it as history; before recording that answer (any \`--via\`), reverse what the box did where the answer differs, as far as \`undo\` and git allow, and say what you reversed.
 
 For select questions, make options mutually exclusive. For confirm questions, make the prompt unambiguous about what "yes" means.`,
+  // Untitled questions are named by their prompt, not their filename.
+  summarize: (card, base) => (card.title !== undefined && card.title.trim() !== "" ? base : { ...base, title: questionTitle(card.prompt) }),
 });
 
 export type QuestionFields = InferCardFields<typeof QuestionSchema>;
@@ -230,12 +234,15 @@ interface CreateSelectQuestionTemplateParams {
   learning?: QuestionLearningFields;
   expiresAfter?: string;
   context?: QuestionContextEntryFields[];
+  /** A short name for the question (its tab, the chat's line); omitted, the prompt's first sentence stands in. */
+  title?: string;
 }
 
 export function createSelectQuestionTemplate(
   params: CreateSelectQuestionTemplateParams
 ): string {
   const fields: Record<string, unknown> = {
+    ...(params.title === undefined ? {} : { title: params.title }),
     memo: params.memo,
     prompt: params.prompt,
     input: { type: "select", options: params.options },
@@ -256,10 +263,13 @@ interface CreateQuestionTemplateParams {
   learning?: QuestionLearningFields;
   expiresAfter?: string;
   context?: QuestionContextEntryFields[];
+  /** A short name for the question (its tab, the chat's line); omitted, the prompt's first sentence stands in. */
+  title?: string;
 }
 
 export function createTextQuestionTemplate(params: CreateQuestionTemplateParams): string {
   const fields: Record<string, unknown> = {
+    ...(params.title === undefined ? {} : { title: params.title }),
     memo: params.memo,
     prompt: params.prompt,
     input: { type: "text" },
@@ -274,6 +284,7 @@ export function createTextQuestionTemplate(params: CreateQuestionTemplateParams)
 
 export function createConfirmQuestionTemplate(params: CreateQuestionTemplateParams): string {
   const fields: Record<string, unknown> = {
+    ...(params.title === undefined ? {} : { title: params.title }),
     memo: params.memo,
     prompt: params.prompt,
     input: { type: "confirm" },

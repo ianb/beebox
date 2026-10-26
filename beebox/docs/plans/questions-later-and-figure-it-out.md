@@ -519,6 +519,25 @@ registry; the four knowledge audits for the agent's judgment. No new tier.
 7. Docs: `docs/questions.md` (Later, provisional, the review),
    `docs/design/trust.md` (the rung), `docs/glossary.md`.
 
+## As implemented (2026-10-26)
+
+- **Button label:** "Decide for me" (boxholder: "Figure it out" did not say
+  who figures it out). The skill keeps its name, `figure-it-out`.
+- **The empty chat names the question:** with a pending question in front,
+  it says "Answer the question “<title>” here, or start something else." and
+  shows no openers (`EmptyChat`, `useQuestionInFront`).
+- **Question titles** (boxholder: "Question cards should have real titles
+  too"): the code that writes question cards sets `title:` (scan import,
+  scan rejections, triage, migration repair, the root question), the schema
+  instructions ask agents for one, and an untitled card is named by its
+  prompt's first sentence (`shared/question-title.ts`, used by the schema's
+  `summarize` and the frontend `cardTitle`), never its filename.
+- **Figure it out shows only on a pending question**, and the question
+  card's instructions carry the reconcile-before-answering rule for chat
+  answers too (diff review).
+- `defaults.ts` was at its line limit; the schedules moved to
+  `default-schedules.ts`.
+
 ## Rollout shape
 
 Done when the tests named in each first chunk pass, the four audits pass, and

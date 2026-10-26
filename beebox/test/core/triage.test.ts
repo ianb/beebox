@@ -248,6 +248,7 @@ destinations:
   t.check(
     yaml,
     str`---
+title: Where Mystery.doc.card goes
 memo: |-
   The triage agent wasn't sure where this item belongs.
 

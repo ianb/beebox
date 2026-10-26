@@ -28,7 +28,7 @@ A question that keeps being put away is usually hard to answer as asked. Make it
 
 ## How
 
-- Edit the card in place: \`prompt\`, \`memo\`, and \`input\` (a \`select\` question's options must still be ones \`bbx answer\` can record). Keep its \`directive\` and \`learning\` true to the new wording. Git keeps the old version.
+- Edit the card in place: \`title\` (a few words naming it), \`prompt\`, \`memo\`, and \`input\` (a \`select\` question's options must still be ones \`bbx answer\` can record). Keep its \`directive\` and \`learning\` true to the new wording. Git keeps the old version.
 - Never change the card's lifecycle fields by hand. Asking it again is \`bbx question reraise <path>\`, and only where \`figure-it-out\` says to.
 - Commit with a message that says how you made it simpler.
 `;
