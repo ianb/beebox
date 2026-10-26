@@ -216,8 +216,8 @@ requires the simulator's hardware-keyboard connection to be disabled.
 
 The box screen has its own fixture: `--box-screen-fixture=<state>`, where state
 is `empty`, `multi-box`, `needs-choice`, `not-delivered`, `waiting-to-send`,
-`sent`, `refresh-failed`, `box-closed`, or `checking`. It uses isolated stores
-and a fake server.
+`sent`, `refresh-failed`, `box-closed`, `checking`, or `asleep`. It uses
+isolated stores and a fake server.
 
 For user-facing composer or capture work, record which of these were actually
 tested. Do not describe a simulator-only pass as device verification.

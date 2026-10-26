@@ -4,8 +4,10 @@ import SwiftUI
 /// The box screen with isolated stores and a fake server, for simulator
 /// screenshots of each face: `--box-screen-fixture=<state>`, where state is
 /// `empty`, `multi-box`, `needs-choice`, `not-delivered`, `waiting-to-send`,
-/// `sent`, `refresh-failed`, `box-closed`, or `checking`. The last three show
-/// a list last updated three hours ago that the box has not confirmed. `empty` has no `nav.card` shortcuts, so its
+/// `sent`, `refresh-failed`, `box-closed`, `checking`, or `asleep`. The
+/// failed, closed, and checking states show a list last updated three hours
+/// ago that the box has not confirmed; `asleep` shows the hub's answer for a
+/// box that went to sleep three hours ago. `empty` has no `nav.card` shortcuts, so its
 /// Shortcuts section is absent; the others show two.
 struct BoxScreenFixtureScreen: View {
     private static let fixtureName = ProcessInfo.processInfo.arguments
@@ -100,7 +102,11 @@ struct BoxScreenFixtureScreen: View {
         default: []
         }
         let sent: [QuickChatView] = fixture == "sent" ? FixtureQuickChatClient.sent : []
-        let home = FixtureQuickChatClient.home(open: open, withShortcuts: fixture != "empty")
+        var home = FixtureQuickChatClient.home(open: open, withShortcuts: fixture != "empty")
+        if fixture == "asleep" {
+            let savedAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3 * 60 * 60))
+            home.asleep = QuickChatHome.Asleep(savedAt: savedAt)
+        }
         let unconfirmed: BoxScreenStore.Refresh? = switch fixture {
         case "refresh-failed": .failed(.unreachable)
         case "box-closed": .failed(.closed(reason: "docs refresh"))

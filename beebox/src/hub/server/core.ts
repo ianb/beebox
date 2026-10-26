@@ -59,6 +59,7 @@ import { invariant } from "../../shared/invariant.js";
 import type { HubVerdict } from "../health.js";
 import { registerHealthRoutes } from "./health-routes.js";
 import { registerHubErrorHandler } from "./http-error.js";
+import { sendAsleepHome } from "./home-snapshot-route.js";
 import { replyNoEndpoint } from "./box-unavailable.js";
 import type { DiskHealth } from "../disk-health.js";
 
@@ -490,6 +491,9 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       // removed any client copy; this is the trusted injection.
       if (slug !== null) injectBasePrefix(request.raw.headers, `/${slug}`);
     }
+
+    // The phone's box screen gets a sleeping box's last home without waking it.
+    if (sendAsleepHome(reply, { mobileAuthed, method: request.method, reqPath, slug, boxRootBySlug, secretFor, endpoints })) return reply;
 
     // A lazy hub's box may be "stopped" (idle-collected or never yet
     // requested) — ensureRunning cold-starts it and waits for readiness,

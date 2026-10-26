@@ -101,10 +101,11 @@ final class BoxScreenStoreTests: XCTestCase {
 
     private func makeStore(
         _ client: FakeClient,
-        retryDelays: [TimeInterval] = BoxScreenStore.homeRetryDelays
+        retryDelays: [TimeInterval] = BoxScreenStore.homeRetryDelays,
+        asleepRecheckDelay: TimeInterval = BoxScreenStore.asleepRecheckDelay
     ) -> (BoxScreenStore, ComposerDraftRepository) {
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let store = BoxScreenStore(repository: repository, retryDelays: retryDelays, client: { _ in client })
+        let store = BoxScreenStore(repository: repository, retryDelays: retryDelays, asleepRecheckDelay: asleepRecheckDelay, client: { _ in client })
         store.updateBoxes([box])
         return (store, repository)
     }
@@ -362,6 +363,32 @@ final class BoxScreenStoreTests: XCTestCase {
         let shownCalls = client.homeCalls
         try await Task.sleep(for: .milliseconds(200))
         XCTAssertEqual(client.homeCalls, shownCalls)
+    }
+
+    /// The hub answers for a sleeping box with its last list (contract §5.11):
+    /// current, dated from when the box went to sleep, and asked again while
+    /// shown so the live list replaces it once the box wakes.
+    func testAnAsleepAnswerIsCurrentAndIsAskedAgainUntilTheBoxWakes() async throws {
+        let client = FakeClient()
+        client.homeAnswer.recentChats = [.init(sessionId: "s9", label: "Fix the bike", lastActivity: "t", landmark: nil)]
+        client.homeAnswer.asleep = .init(savedAt: "2026-10-26T15:12:00.000Z")
+        let (store, repository) = makeStore(client, asleepRecheckDelay: 0.01)
+        store.setForeground(true)
+        store.setShownBox(box.id)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        XCTAssertEqual(store.homeDates[box.id], Date(timeIntervalSince1970: 1_793_027_520))
+
+        // A relaunch draws the cached snapshot with its own age, not the file's.
+        let relaunched = BoxScreenStore(repository: repository, client: { _ in client })
+        relaunched.updateBoxes([box])
+        await relaunched.loadCachedHome(boxID: box.id)
+        XCTAssertEqual(relaunched.homeDates[box.id], Date(timeIntervalSince1970: 1_793_027_520))
+
+        client.homeAnswer.asleep = nil
+        try await waitUntil { store.homes[self.box.id]?.asleep == nil }
+        let calls = client.homeCalls
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(client.homeCalls, calls, "a live answer is not asked again")
     }
 
     func testRefreshFailureKinds() {

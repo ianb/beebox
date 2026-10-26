@@ -140,6 +140,18 @@ struct BoxScreenView: View {
                 }
                 .accessibilityElement(children: .contain)
             }
+        case _ where confirmed && screenStore.homes[box.id]?.asleep != nil:
+            Section {
+                VStack(alignment: .leading, spacing: 2) {
+                    Label("\(box.label) is asleep", systemImage: "moon.zzz")
+                    if let date = screenStore.homeDates[box.id] {
+                        Text("Chats as of \(date.formatted(.relative(presentation: .named))).")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
         case .refreshing where checkingIsSlow && confirmed == false:
             Section {
                 HStack(spacing: 10) {

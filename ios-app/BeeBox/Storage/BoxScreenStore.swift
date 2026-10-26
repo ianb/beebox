@@ -145,6 +145,9 @@ final class BoxScreenStore: ObservableObject {
     /// Waits between automatic retries of a failed home refresh; the last
     /// repeats.
     nonisolated static let homeRetryDelays: [TimeInterval] = [5, 10, 20, 40, 60]
+    /// How often the shown box screen asks again while the hub answers for a
+    /// sleeping box, so the live list replaces the snapshot once it wakes.
+    nonisolated static let asleepRecheckDelay: TimeInterval = 60
 
     enum StoreError: LocalizedError {
         case boxNotPaired
@@ -182,6 +185,7 @@ final class BoxScreenStore: ObservableObject {
     private let client: (PairedBox) -> any QuickChatClient
     private let now: () -> Date
     private let retryDelays: [TimeInterval]
+    private let asleepRecheckDelay: TimeInterval
     /// Counts stays in the foreground. A refresh confirms only in the stay it
     /// started in.
     private var foregroundGeneration = 0
@@ -204,12 +208,14 @@ final class BoxScreenStore: ObservableObject {
         repository: ComposerDraftRepository = ComposerDraftRepository(),
         now: @escaping () -> Date = Date.init,
         retryDelays: [TimeInterval] = BoxScreenStore.homeRetryDelays,
+        asleepRecheckDelay: TimeInterval = BoxScreenStore.asleepRecheckDelay,
         client: @escaping (PairedBox) -> any QuickChatClient = { QuickChatAPI(box: $0) }
     ) {
         self.repository = repository
         self.client = client
         self.now = now
         self.retryDelays = retryDelays
+        self.asleepRecheckDelay = asleepRecheckDelay
         let relay = SubmitRelay()
         outbox = QuickChatOutbox(repository: repository, now: now) { entry in
             try await relay.submit(entry)
@@ -300,7 +306,8 @@ final class BoxScreenStore: ObservableObject {
             return
         }
         homes[boxID] = cached.home
-        homeDates[boxID] = cached.savedAt
+        // A cached snapshot is as old as the box's sleep, not the file.
+        homeDates[boxID] = cached.home.asleep.map { $0.savedDate } ?? cached.savedAt
     }
 
     /// Ask the server for the box's home. A refresh already in flight from
@@ -330,11 +337,14 @@ final class BoxScreenStore: ObservableObject {
             // than the server's list, so the list wins.
             answers[boxID]?.removeAll { $0.serial <= startSerial && Self.isOpen($0.view) }
             homes[boxID] = home
-            homeDates[boxID] = now()
+            homeDates[boxID] = home.asleep.map { $0.savedDate ?? now() } ?? now()
             refreshes[boxID] = .idle
             homeRetryAttempts[boxID] = nil
             if generation == foregroundGeneration {
                 confirmedBoxIDs.insert(boxID)
+            }
+            if home.asleep != nil {
+                scheduleHomeCheck(boxID: boxID, after: asleepRecheckDelay)
             }
             if failedBefore {
                 BoxLog.info("box screen refresh recovered", category: .net, targetBoxID: boxID)
@@ -532,12 +542,20 @@ final class BoxScreenStore: ObservableObject {
     /// After a failed refresh of the shown box, in the foreground: try again
     /// after the next backoff delay.
     private func scheduleHomeRetry(boxID: UUID) {
-        guard foreground, shownBoxID == boxID, retryDelays.isEmpty == false else {
+        guard retryDelays.isEmpty == false else {
             return
         }
         let attempt = homeRetryAttempts[boxID, default: 0]
         homeRetryAttempts[boxID] = attempt + 1
-        let delay = retryDelays[min(attempt, retryDelays.count - 1)]
+        scheduleHomeCheck(boxID: boxID, after: retryDelays[min(attempt, retryDelays.count - 1)])
+    }
+
+    /// Refresh the shown box after `delay`, while it stays shown in the
+    /// foreground.
+    private func scheduleHomeCheck(boxID: UUID, after delay: TimeInterval) {
+        guard foreground, shownBoxID == boxID else {
+            return
+        }
         homeRetryTask?.cancel()
         homeRetryTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(delay))
@@ -608,7 +626,7 @@ extension BoxScreenStore {
     /// Seed the fixture screen's state without a server.
     func replaceForFixture(home: QuickChatHome?, sent: [QuickChatView], boxID: UUID, savedAt: Date? = nil) {
         homes[boxID] = home
-        homeDates[boxID] = savedAt ?? now()
+        homeDates[boxID] = savedAt ?? home?.asleep?.savedDate ?? now()
         if savedAt == nil {
             confirmedBoxIDs.insert(boxID)
         }

@@ -18,8 +18,9 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { quickChatViewSchema } from "../../../../src/core/chat/routing/quick-chat-record.js";
+import { quickChatHomeSchema } from "../../../../src/core/chat/routing/quick-chat-home.js";
 import {
-  quickChatChooseInput, quickChatDiscardInput, quickChatHomeSchema, quickChatRetryInput, quickChatSubmitInput,
+  quickChatChooseInput, quickChatDiscardInput, quickChatRetryInput, quickChatSubmitInput,
 } from "../../../../src/webapp/trpc/routers/quick-chat.js";
 import { z } from "zod";
 import { makeTestServer, type InjectResult } from "../../../helpers/test-route-server.js";
@@ -81,13 +82,14 @@ void test("Every fixture in the directory is one of the three kinds, and each pa
     else if (name === "choose-request.json") results[name] = check(quickChatChooseInput, body);
     else if (name === "discard-request.json") results[name] = check(quickChatDiscardInput, body);
     else if (name === "retry-request.json") results[name] = check(quickChatRetryInput, body);
-    else if (name === "home.json") results[name] = check(quickChatHomeSchema, dataOf(body));
+    else if (name.startsWith("home")) results[name] = check(quickChatHomeSchema, dataOf(body));
     else if (name.startsWith("view-")) results[name] = check(quickChatViewSchema, dataOf(body));
     else results[name] = "unknown fixture kind";
   }
   t.check(results, {
     "choose-request.json": "ok",
     "discard-request.json": "ok",
+    "home-asleep.json": "ok",
     "home.json": "ok",
     "retry-request.json": "ok",
     "submit-external-request.json": "ok",
