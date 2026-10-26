@@ -1,6 +1,6 @@
 ---
 title: "With the box asleep, the iOS app opens on an old chat and a stale chat list, with no sign that either is out of date"
-workstream: unattached
+workstream: ios-stale-chat
 area: ios
 labels: [ios, chat]
 filed-by: agent
