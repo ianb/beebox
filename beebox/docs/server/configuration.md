@@ -82,12 +82,19 @@ script does **not** seed it — add it as an explicit step:
 1. In the Apple Developer account, create a key with the Apple Push Notifications
    service enabled and download its `.p8` file (Apple offers the download once). Note
    its Key ID and the account's Team ID.
-2. Copy the file to the server outside the deploy tree, readable only by the service
-   user: `install -m 600 -o beebox AuthKey_<KEYID>.p8 /home/beebox/.apns/`.
+2. Copy the file to the server outside the deploy tree, readable by every box
+   user and nobody else. The boxes send the pushes (their engines for
+   callouts, their scheduler passes for reminders and alerts), and each runs
+   as its own user in the `beebox-boxes` group, so the key cannot live under
+   the hub's home:
+   `install -d -o root -g beebox-boxes -m 0750 /etc/beebox/apns && install -o root -g beebox-boxes -m 0640 AuthKey_<KEYID>.p8 /etc/beebox/apns/`.
 3. Add `BBX_APNS_KEY_PATH` (that file), `BBX_APNS_KEY_ID`, `BBX_APNS_TEAM_ID`, and
    `BBX_APNS_BUNDLE_ID` (the iOS app's bundle id) to `/home/beebox/.env`.
-4. Restart **both** services, since the server (callouts) and the scheduler
-   (reminders, alerts) both send: `systemctl restart beebox-hub beebox-scheduler`.
+4. Restart the hub, which rewrites `/etc/beebox/box.env` from that file, then
+   the box units so they load it: `systemctl restart beebox-hub` and
+   `systemctl restart 'beebox-box@*.service'`. A box that cannot read the key
+   logs `APNs push ... failed: Failed loading token key: EACCES` in its journal
+   and sends nothing.
 
 One key serves both APNs hosts; each phone reports whether its build is `sandbox` or
 `production` when it registers, and the server sends to that host. With any of the four

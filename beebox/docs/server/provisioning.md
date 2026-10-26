@@ -102,7 +102,9 @@ the scheduler's one wrapper, and the nightly Claude Code update. The accounts:
 - `bbx-<slug>` — one per box, UID 2000–2999, in group `beebox-boxes`. Owns
   the box and runs its engine and its scheduler passes. No sudo, no login file.
 - `beebox` — the hub. Routes requests to the boxes' sockets and holds no box
-  secret; it joins no box group.
+  secret. It is in `beebox-boxes` for the shared caches (cloud-init puts it
+  there); that group guards no box file, since each box's home is private to
+  the box's own user and group.
 - `beebox-sched` — the scheduler daemon. Its one sudo grant is
   `bbx-box-run <slug> scheduler-pass`, which runs a pass as that box's user.
 
