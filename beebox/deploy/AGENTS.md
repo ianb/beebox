@@ -32,8 +32,9 @@ Each box runs as its own user ([provisioning](../docs/server/provisioning.md)).
 For each step a script adds, name the account that runs it and the layout it
 runs against, both layouts while a migration is in progress. Root passes every
 permission check, so a step that works as root proves nothing for a box user.
-An environment value that names a file (a key, a tokens file) must be readable
-by every box user.
+An environment value that names a file must be readable by the account that
+reads it: a shared file such as a push-signing key by every box user, a box's
+own file by that box's user only.
 
 ## Rollback
 
