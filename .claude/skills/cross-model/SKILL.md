@@ -130,7 +130,7 @@ and answer. Claude defaults to `claude-opus-5-5`; Codex defaults to
 `gpt-6-sol`. Pass `--hard` for a difficult review (an open design, concurrency,
 security, a large or cross-cutting diff, a disputed finding): Codex then picks
 `gpt-6-astra` when the weekly quota has room (`bin/quota-room`). Routine
-reviews, about half, stay on Sol. Use `--model fable` (Claude) for plan mode;
+reviews, about half, stay on Sol. With `--engine claude`, use `--model fable` for plan mode;
 honor a human's model override within the family. `--help`
 lists `--out`, `--cwd`, and `--timeout` (default 30 min). A nonzero exit (127
 missing engine, 124 timeout, 1 failure or empty answer) prints the raw-log

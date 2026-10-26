@@ -117,8 +117,8 @@ issues** close the same way inside `private-issues/`, where `doc-check --fix`
 does not apply — repair private→private links by hand.
 
 ## 7. Gate, then `bin/land`
-The workstream's isolated test1 clone: if its `keep` branch has commits the
-source test1 lacks, merge them into the source test1's `main` and push. Conflict
+The workstream's isolated test1 clone: if it has a `keep` branch (none → skip)
+with commits the source test1 lacks, merge them into its `main` and push. Conflict
 → BLOCKED, both left intact. `test-setup` is disposable and never merged.
 All must hold: `git status --porcelain` empty; passing verification still applies
 under step 3 (recheck only affected coverage); and, private leg only,
