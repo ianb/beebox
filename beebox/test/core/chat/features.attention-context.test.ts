@@ -43,7 +43,7 @@ void test("line 12", async (t) => {
 });
 
 // A question beside the chat reaches the agent as the open card, like any
-// card (docs/plans/questions-beside-the-chat.md, Track C). A tab from before
+// card (docs/implemented-plans/questions-beside-the-chat.md, Track C). A tab from before
 // that change may still send `openQuestion`; the send schema strips the
 // unknown key, so the message parses and carries only `open-card`.
 void test("A question beside the chat rides as open-card; a stale openQuestion is dropped", async (t) => {

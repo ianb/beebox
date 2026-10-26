@@ -1,6 +1,6 @@
 ---
 title: "Questions open beside the chat"
-status: draft
+status: implemented
 workstream: front-door
 issues: []
 ---

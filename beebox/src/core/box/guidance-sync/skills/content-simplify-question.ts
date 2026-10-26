@@ -5,7 +5,7 @@
 
 /**
  * The `simplify-question` skill: rewrite a question card so it is simpler for
- * the person to decide or to understand (docs/plans/questions-later-and-figure-it-out.md,
+ * the person to decide or to understand (docs/implemented-plans/questions-later-and-figure-it-out.md,
  * Track D). Simpler is not shorter: often it is more concrete. The
  * `figure-it-out` skill uses it as one way to settle a question.
  */

@@ -8,7 +8,7 @@ import type { WorkspaceNavigationDecision } from "../history";
  *
  * At the root, arrival also opens the newest pending question, active, so a
  * new chat has the question beside it
- * (docs/plans/questions-beside-the-chat.md, Track A). The desktop opens the
+ * (docs/implemented-plans/questions-beside-the-chat.md, Track A). The desktop opens the
  * place first and the question on top; the phone, where one card or the chat
  * fits, opens only the question, and otherwise nothing: the chat wins.
  * Returns the paths to open in order; the last is the active tab.

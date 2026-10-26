@@ -263,7 +263,7 @@ evidence model.
 
 ## Surfacing
 
-- **Beside a new chat** (`docs/plans/questions-beside-the-chat.md`) — when a
+- **Beside a new chat** (`docs/implemented-plans/questions-beside-the-chat.md`) — when a
   new root chat arrives with no cards open, the workspace opens the newest
   pending question (by `asked-at`, then path; never an unparseable card) as
   the active tab: on the desktop on top of the Box page, on the phone alone,
@@ -354,7 +354,7 @@ agent-guide context:
 
 A question the person hands off, or one that waited long or was put away,
 is settled by an agent with two box skills
-(`docs/plans/questions-later-and-figure-it-out.md`):
+(`docs/implemented-plans/questions-later-and-figure-it-out.md`):
 
 - **`figure-it-out`** decides conservatively (the reversible choice that
   changes least; never delete, send, spend, publish, or reword the person's

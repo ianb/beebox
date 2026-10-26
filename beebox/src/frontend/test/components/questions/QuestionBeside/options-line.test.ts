@@ -1,7 +1,7 @@
 // # A select question's choices as a spoken line
 //
 // Beside the chat the person answers in words, so the card lists a select
-// question's choices in a sentence ending (docs/plans/questions-later-and-figure-it-out.md,
+// question's choices in a sentence ending (docs/implemented-plans/questions-later-and-figure-it-out.md,
 // Track A); past six, the line says how many more.
 
 import { test } from "tap";

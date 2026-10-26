@@ -8778,7 +8778,7 @@ tests:
   # === Front door (docs/implemented-plans/front-door.md) ===
   # Two agent-facing rules. answer-in-chat: a message sent while a pending
   # question card is the `open-card` (beside the chat,
-  # docs/plans/questions-beside-the-chat.md) answers it; the agent does the directive first and answers
+  # docs/implemented-plans/questions-beside-the-chat.md) answers it; the agent does the directive first and answers
   # the card last, with `--via chat`, and offers ideas only after hearing.
   # offer-a-page: offering a page when a kind of card grows. Status (Claude,
   # disposable copy of the worktree's test1 clone): offer-a-page passed
@@ -8825,7 +8825,7 @@ tests:
 
   # open-card-not-an-answer: a question beside the chat makes a message a
   # probable answer, not a certain one; an unrelated request leaves the card
-  # as it is (docs/plans/questions-beside-the-chat.md, Track C). Status
+  # as it is (docs/implemented-plans/questions-beside-the-chat.md, Track C). Status
   # (Claude, the worktree's test1 clone): passed 2026-10-26, 0 reads, 44k ctx;
   # set the reminder and left the card "exactly as it is". Its first run
   # failed only on a negative pattern that matched "No `bbx answer`".
@@ -8852,7 +8852,7 @@ tests:
       - 'bbx answer\s+\S*question\.card'
     tags: [front-door, question]
 
-  # Figuring it out (docs/plans/questions-later-and-figure-it-out.md): the
+  # Figuring it out (docs/implemented-plans/questions-later-and-figure-it-out.md): the
   # figure-it-out and simplify-question box skills. A box decision is
   # provisional (`bbx question decide`), never an answer; risky choices are
   # never decided; a put-off question comes back simpler. Status (Claude, the

@@ -3,7 +3,7 @@
 // The chat system prompt tells the agent that a question card as `open-card`
 // is the question the person sees beside the chat, and the order of operations when a message answers it:
 // directive and learning first, `bbx answer --via chat` last, an unrelated
-// message leaves the card as it is (docs/plans/questions-beside-the-chat.md, Track C). The
+// message leaves the card as it is (docs/implemented-plans/questions-beside-the-chat.md, Track C). The
 // onboarding step of offering ideas after hearing rides on the root question's
 // directive, not here, so the always-loaded prompt stays within its budget. This pins the rule's presence
 // and its two anchors, the open card and the command, so a prompt edit that

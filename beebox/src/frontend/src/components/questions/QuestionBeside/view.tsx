@@ -1,5 +1,5 @@
 /**
- * A question beside the chat (docs/plans/questions-later-and-figure-it-out.md,
+ * A question beside the chat (docs/implemented-plans/questions-later-and-figure-it-out.md,
  * Track A): the question pasted onto a stub card. No answer controls: the
  * person answers in the chat, in their own words, so a select question lists
  * its choices in a line. The pinned row offers the two other choices: "Later"

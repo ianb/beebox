@@ -6,7 +6,7 @@
 /**
  * The `figure-it-out` skill: settle a question card without the person, when
  * they handed it off ("Decide for me" on the card) or when the daily question
- * review reaches it (docs/plans/questions-later-and-figure-it-out.md, Track D).
+ * review reaches it (docs/implemented-plans/questions-later-and-figure-it-out.md, Track D).
  * The box decides conservatively and records the decision as provisional, never
  * as the person's answer; simplifying the question is one way to figure it out.
  */

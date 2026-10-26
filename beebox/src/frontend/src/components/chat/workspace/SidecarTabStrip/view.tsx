@@ -125,7 +125,7 @@ function useTabStripReveal({ activePath, tabRefs, tabCount, pinnedCount }: { act
 
 /**
  * A tab's close button. `closing` names a close that means more than closing,
- * "Not now" on a pending question (docs/plans/questions-beside-the-chat.md).
+ * "Not now" on a pending question (docs/implemented-plans/questions-beside-the-chat.md).
  */
 function TabCloseButton({ title, pinned, closing, onClose }: { title: string; pinned: boolean; closing: string | null; onClose: () => void }) {
   return (

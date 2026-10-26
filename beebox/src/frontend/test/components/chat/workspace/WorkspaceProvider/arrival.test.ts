@@ -4,7 +4,7 @@
 // place beside the chat: its single entry-point card, else its landmark card
 // (docs/implemented-plans/landmark-arrival.md, Track D). At the root it also
 // opens the newest pending question on top, and on the phone only the
-// question (docs/plans/questions-beside-the-chat.md, Track A). `arrivalPlan`
+// question (docs/implemented-plans/questions-beside-the-chat.md, Track A). `arrivalPlan`
 // makes the final decision in the workspace provider, after the store's
 // candidate flag is taken and arrival's queries have settled.
 

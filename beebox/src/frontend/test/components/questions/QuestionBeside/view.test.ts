@@ -4,7 +4,7 @@
 // controls: the person answers in the chat, in words, so a select question
 // lists its choices in a line. The row offers Later and Decide for me; a
 // question the box decided says so, as the box's, and stays the person's to
-// answer (docs/plans/questions-later-and-figure-it-out.md, Track A).
+// answer (docs/implemented-plans/questions-later-and-figure-it-out.md, Track A).
 //
 // These mount the real `QuestionBeside` in a DOM.
 

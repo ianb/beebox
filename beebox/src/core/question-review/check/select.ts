@@ -1,6 +1,6 @@
 /**
  * Which questions the daily `question-review` procedure takes up
- * (`docs/plans/questions-later-and-figure-it-out.md`, Track F).
+ * (`docs/implemented-plans/questions-later-and-figure-it-out.md`, Track F).
  *
  * A pure function over already-loaded cards, so thresholds, the latch, and the
  * cap are testable without a box. The thresholds live here and nowhere else.

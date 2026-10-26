@@ -2,7 +2,7 @@
 //
 // On the Questions page a question keeps its form: its own text box, a
 // confirm's note, and "Later", which puts it away (the dismiss transition;
-// docs/plans/questions-later-and-figure-it-out.md). A row can offer "Answer in
+// docs/implemented-plans/questions-later-and-figure-it-out.md). A row can offer "Answer in
 // chat", including a dismissed one, to bring it beside the chat.
 //
 // These mount the real `QuestionForm` in a DOM with a tRPC link that records

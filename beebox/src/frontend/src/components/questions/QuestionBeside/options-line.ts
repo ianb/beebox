@@ -2,7 +2,7 @@
  * A select question's options as the end of a spoken line ("Finance,
  * Personal, or Taxes?"). Beside the chat the person answers in words, so the
  * card lists the choices instead of offering buttons
- * (docs/plans/questions-later-and-figure-it-out.md, Track A). Past
+ * (docs/implemented-plans/questions-later-and-figure-it-out.md, Track A). Past
  * `OPTIONS_SHOWN` the line says how many more there are. Null for a question
  * with no options.
  */

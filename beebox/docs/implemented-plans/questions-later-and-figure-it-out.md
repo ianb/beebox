@@ -1,6 +1,6 @@
 ---
 title: "Questions: Later, Figure it out, and a simpler next time"
-status: draft
+status: implemented
 workstream: front-door
 issues:
   - ../../../issues/features/2026-10-26-question-backlog-beside-the-chat.md

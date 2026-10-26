@@ -12,7 +12,7 @@
  * question look like on the wire."
  *
  * In the workspace the card is beside the chat
- * (docs/plans/questions-later-and-figure-it-out.md, Track A): the question
+ * (docs/implemented-plans/questions-later-and-figure-it-out.md, Track A): the question
  * pasted onto a stub card (`QuestionBeside`); the person answers in the chat,
  * or chooses Later or Decide for me. The agent answers from the CLI, so the
  * card refreshes on the bus.

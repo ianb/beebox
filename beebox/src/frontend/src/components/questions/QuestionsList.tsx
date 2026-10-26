@@ -47,7 +47,7 @@ function demotedCard(q: QuestionInfo, actions: { onAnswered: () => void; answerI
     <Stack key={q.path} gap="xs">
       {q.provisional === undefined ? <StatusBadge status={q.state ?? "expired"} size="sm" className="self-start" /> : (
         // The box's decision, never the person's answer
-        // (docs/plans/questions-later-and-figure-it-out.md, Track C).
+        // (docs/implemented-plans/questions-later-and-figure-it-out.md, Track C).
         <div data-testid="question-box-decided">
           <Text as="p" size="sm" weight="semibold">The box decided for now: {q.provisional.decision}</Text>
           <Text as="p" size="sm" tone="subtle">{q.provisional.reasoning}</Text>

@@ -8,7 +8,7 @@ import { displayName } from "../../lib/display-name";
  * An empty chat: the openers, then the plain empty-state line. With a pending
  * question beside the chat, the line names it and the openers step aside, so
  * a reply reads as a probable answer to that question
- * (docs/plans/questions-later-and-figure-it-out.md). The name is the card's
+ * (docs/implemented-plans/questions-later-and-figure-it-out.md). The name is the card's
  * title, as its tab shows it.
  */
 export function EmptyChat({ openers, onSendOpener }: {

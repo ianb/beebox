@@ -1,7 +1,7 @@
 // # Closing a question's tab
 //
 // Closing the tab of a pending question is "Not now": it dismisses the card
-// (docs/plans/questions-beside-the-chat.md, Track B). Any other card, and a
+// (docs/implemented-plans/questions-beside-the-chat.md, Track B). Any other card, and a
 // question that is answered, dismissed, expired, or unparseable, closes like
 // any tab.
 
@@ -37,7 +37,7 @@ void test("Only a pending question's close dismisses it", async (t) => {
 //
 // It puts away the pending question in front (hiding, not Later: it stays
 // pending), else brings the newest pending question beside the chat, else
-// opens the Questions page (docs/plans/questions-later-and-figure-it-out.md,
+// opens the Questions page (docs/implemented-plans/questions-later-and-figure-it-out.md,
 // Track B).
 void test("The question counter hides the question in front, else shows the newest", async (t) => {
   const at = (name: string) => `_bookkeeping/questions/${name}.question.card`;

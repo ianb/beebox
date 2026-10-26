@@ -2,7 +2,7 @@
 //
 // A question with no `title:` is named by the first sentence of its prompt,
 // cut at a word to fit a tab, so an untitled card reads as its question and
-// not its filename (docs/plans/questions-later-and-figure-it-out.md). The
+// not its filename (docs/implemented-plans/questions-later-and-figure-it-out.md). The
 // schema's `summarize` (tabs, listings) and the frontend's `cardTitle` (the
 // card's heading) both use it.
 

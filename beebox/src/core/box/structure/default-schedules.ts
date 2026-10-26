@@ -124,7 +124,7 @@ export const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 6 * * *",
     notBefore: "20h",
     onWakeup: false,
-    // Seeded ENABLED (boxholder, 2026-10-26, docs/plans/questions-later-and-figure-it-out.md
+    // Seeded ENABLED (boxholder, 2026-10-26, docs/implemented-plans/questions-later-and-figure-it-out.md
     // open question 4), and installed into existing boxes. Like todo-review,
     // the precheck exits CHECK_SKIP when no question qualifies, so a quiet box
     // runs no agent.

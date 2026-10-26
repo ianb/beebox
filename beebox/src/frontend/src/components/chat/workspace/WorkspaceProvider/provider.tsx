@@ -89,7 +89,7 @@ function performBrowseDetailHandoff(input: BrowseDetailHandoff & {
  * enables the place query on the desktop layout. It uses the same input as the
  * chat's openers query (`useChatBinding`), so one request serves both. At the
  * root of a new chat it also enables the questions query on both layouts, for
- * the arrival question (docs/plans/questions-beside-the-chat.md, Track A).
+ * the arrival question (docs/implemented-plans/questions-beside-the-chat.md, Track A).
  */
 function usePlaceArrival(input: { store: WorkspaceBrowserStore; viewport: "mobile" | "desktop"; contextDir: string | undefined; unstarted: boolean }) {
   const { store, viewport, contextDir } = input;
@@ -291,7 +291,7 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
     activeView: projection.foregroundPath ? state.tabs[projection.foregroundPath] ?? null : null,
     onZoomView: (view: { target: ViewTarget; label: string }) => open(view.target, { label: view.label }),
     onSelectTab: (path: string) => dispatch({ type: "selectTab", path, at: Date.now(), viewport }),
-    // Closing a pending question's tab is "Not now" (docs/plans/questions-beside-the-chat.md, Track B).
+    // Closing a pending question's tab is "Not now" (docs/implemented-plans/questions-beside-the-chat.md, Track B).
     onCloseTab: (path: string) => { dispatch({ type: "closeTab", path, viewport }); dismissOnClose(path); },
     onTogglePin: (path: string) => dispatch({ type: "togglePin", path, at: Date.now() }),
   };
