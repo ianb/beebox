@@ -17,6 +17,7 @@ import { createHubServer } from "../../../src/hub/server/core.js";
 import type { Endpoint, EndpointProvider } from "../../../src/hub/endpoints.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 import { removeHomeSnapshot, writeHomeSnapshot } from "../../../src/core/chat/routing/home-snapshot.js";
+import { hashToken } from "../../../src/core/token-store.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const HUB_SECRET = "test-hub-secret-for-home-snapshot-route";
@@ -66,7 +67,13 @@ const box = await makeTmpBox();
 const ticket = createMobilePairingTicket(box.root);
 const redeemed = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "test mobile" });
 if (!redeemed) throw new Error("test mobile pairing failed");
-const mobile = { authorization: `Bearer ${redeemed.deviceToken}` };
+const deviceToken = redeemed.deviceToken;
+const mobile = { authorization: `Bearer ${deviceToken}` };
+// A paired device the snapshot does not list: its pairer lost access before the box slept.
+const otherTicket = createMobilePairingTicket(box.root);
+const other = await redeemMobilePairingTicket(box.root, { pairingToken: otherTicket.token, deviceLabel: "removed member" });
+if (!other) throw new Error("test mobile pairing failed");
+const unlisted = { authorization: `Bearer ${other.deviceToken}` };
 
 const hubServer = await createHubServer({
   endpoints,
@@ -94,7 +101,7 @@ function sleepBox(withSnapshot: boolean): void {
   state.awake = false;
   state.wakes = 0;
   removeHomeSnapshot(box.root);
-  if (withSnapshot) writeHomeSnapshot(box.root, { slug: "test1", hubSecret: HUB_SECRET, snapshot: { savedAt: "2026-10-26T15:12:00.000Z", home } });
+  if (withSnapshot) writeHomeSnapshot(box.root, { slug: "test1", hubSecret: HUB_SECRET, snapshot: { savedAt: "2026-10-26T15:12:00.000Z", home, deviceTokenHashes: [hashToken(deviceToken)] } });
 }
 
 void test("home snapshot route", async (t) => {
@@ -117,6 +124,9 @@ void test("home snapshot route", async (t) => {
 
   // ## Without a credential: the wall, and no wake
   await t.check(ask({}), { status: 401, cacheControl: null, body: { error: "Not authenticated" }, wakes: 0 });
+
+  // ## A device the snapshot does not list: the ordinary path, where the box checks its pairer
+  await t.check(ask(unlisted), { status: 200, cacheControl: null, body: { from: "box" }, wakes: 1 });
 
   // ## Asleep, with no snapshot: the ordinary path wakes the box
   sleepBox(false);

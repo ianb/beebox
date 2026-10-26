@@ -493,7 +493,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     }
 
     // The phone's box screen gets a sleeping box's last home without waking it.
-    if (sendAsleepHome(reply, { mobileAuthed, method: request.method, reqPath, slug, boxRootBySlug, secretFor, endpoints })) return reply;
+    if (sendAsleepHome(reply, { mobileAuthed, authorization: request.headers.authorization, method: request.method, reqPath, slug, boxRootBySlug, secretFor, endpoints })) return reply;
 
     // A lazy hub's box may be "stopped" (idle-collected or never yet
     // requested) — ensureRunning cold-starts it and waits for readiness,

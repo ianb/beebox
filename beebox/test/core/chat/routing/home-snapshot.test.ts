@@ -11,6 +11,8 @@ import { join } from "node:path";
 import {
   readHomeSnapshot, removeHomeSnapshot, writeHomeSnapshot, writeHomeSnapshotsAtShutdown, type HomeSnapshot,
 } from "../../../../src/core/chat/routing/home-snapshot.js";
+import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../../src/core/mobile/pairing.js";
+import { hashToken } from "../../../../src/core/token-store.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 const SECRET = "hub-secret-for-home-snapshot-test";
@@ -20,7 +22,15 @@ const snapshot: HomeSnapshot = {
     open: [], recentlySent: [], shortcuts: [],
     recentChats: [{ sessionId: "s-bike", label: "Fix the bike brakes", lastActivity: "2026-10-26T15:10:00.000Z", landmark: null }],
   },
+  deviceTokenHashes: ["0f1e"],
 };
+
+async function pairDevice(boxRoot: string, createdBy: string | null): Promise<string> {
+  const ticket = createMobilePairingTicket(boxRoot, { createdBy });
+  const redeemed = await redeemMobilePairingTicket(boxRoot, { pairingToken: ticket.token, deviceLabel: "test" });
+  if (!redeemed) throw new Error("test pairing failed");
+  return redeemed.deviceToken;
+}
 
 void test("the hub reads back what the box wrote, and the file holds no chat title", async (t) => {
   const box = await makeTmpBox();
@@ -73,9 +83,13 @@ void test("startup removes the snapshot, and removing an absent one is fine", as
   t.check(readHomeSnapshot(box.root, { slug: "test1", hubSecret: SECRET }), undefined);
 });
 
-void test("shutdown writes the box's own home under a hub, and nothing without one", async (t) => {
+// The box checks a pairer's membership on every request (`core/mobile/request-auth.ts`);
+// the snapshot lists only devices that would pass, so the hub can serve no one else.
+void test("shutdown writes the box's own home under a hub, for the devices whose pairer can open it", async (t) => {
   const box = await makeTmpBox();
   t.teardown(() => box.cleanup());
+  const unowned = await pairDevice(box.root, null);
+  await pairDevice(box.root, "removed@example.com");
   await writeHomeSnapshotsAtShutdown([{ slug: "test1", boxRoot: box.root }], undefined);
   t.check(readHomeSnapshot(box.root, { slug: "test1", hubSecret: SECRET }), undefined);
 
@@ -85,5 +99,6 @@ void test("shutdown writes the box's own home under a hub, and nothing without o
   t.check(readHomeSnapshot(box.root, { slug: "test1", hubSecret: SECRET }), {
     savedAt: "2026-10-26T15:12:00.000Z",
     home: { open: [], recentlySent: [], recentChats: [], shortcuts: [] },
+    deviceTokenHashes: [hashToken(unowned)],
   });
 });

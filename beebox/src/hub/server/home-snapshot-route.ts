@@ -4,14 +4,17 @@
  * (`core/chat/routing/home-snapshot.ts`), without waking it
  * (docs/plans/ios-box-screen-stale-list.md, Track 3).
  *
- * Only a verified mobile credential, only `GET quickChat.home`, and only while
- * the provider's non-waking `get()` has no endpoint. Anything else, or no
+ * Only a verified mobile credential that is also a bearer the snapshot lists
+ * (a device whose pairer could open the box when it went to sleep), only
+ * `GET quickChat.home`, and only while the provider's non-waking `get()` has
+ * no endpoint. Anything else, or no
  * snapshot that opens, answers undefined and the request takes the ordinary
  * path, which wakes the box.
  */
 
 import type { FastifyReply } from "fastify";
 import { readHomeSnapshot } from "../../core/chat/routing/home-snapshot.js";
+import { bearerMatchesHashes } from "../../core/hub-meta.js";
 import type { QuickChatHome } from "../../core/chat/routing/quick-chat-home.js";
 import type { EndpointProvider } from "../endpoints.js";
 
@@ -22,6 +25,7 @@ interface AsleepHomeAnswer {
 
 interface AsleepHomeRequest {
   mobileAuthed: boolean;
+  authorization: string | undefined;
   method: string;
   reqPath: string;
   slug: string | null;
@@ -45,6 +49,6 @@ function asleepHomeAnswer(args: AsleepHomeRequest): AsleepHomeAnswer | undefined
   const hubSecret = args.secretFor(slug);
   if (boxRoot === undefined || hubSecret === "" || args.endpoints.get(slug) !== undefined) return undefined;
   const snapshot = readHomeSnapshot(boxRoot, { slug, hubSecret });
-  if (snapshot === undefined) return undefined;
+  if (snapshot === undefined || !bearerMatchesHashes(args.authorization, snapshot.deviceTokenHashes)) return undefined;
   return { result: { data: { ...snapshot.home, asleep: { savedAt: snapshot.savedAt } } } };
 }

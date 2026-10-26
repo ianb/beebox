@@ -9,7 +9,10 @@
  * path, through the 0751 directories that file's writer sets. Unlike that file
  * it holds box content (chat titles), so it is encrypted with AES-256-GCM
  * under a key both sides derive from the box's hub secret; another user on the
- * host who can read the 0644 file learns nothing. A host reboot regenerates the
+ * host who can read the 0644 file learns nothing. It also carries the token
+ * hashes of the devices whose pairer could open the box at shutdown: the box
+ * checks a pairer's membership on every request, and the hub, which cannot,
+ * serves the snapshot only to those. A host reboot regenerates the
  * hub secrets (`hub/secrets.ts`), so an older snapshot then fails to decrypt
  * and the hub takes its ordinary path.
  */
@@ -21,6 +24,7 @@ import { z } from "zod";
 import { writeFileAtomicSync } from "../../../lib/atomic-write.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
+import { mobileTokenHashesWithAccess } from "../../mobile/request-auth.js";
 import { quickChatHome, quickChatHomeSchema, type QuickChatHome } from "./quick-chat-home.js";
 
 const SNAPSHOT_RELATIVE_PATH = ".beebox/quick-chat-home.snapshot.json";
@@ -29,11 +33,13 @@ const KEY_INFO_PREFIX = "beebox quick-chat home snapshot v1 ";
 const SHUTDOWN_DEADLINE_MS = 5_000;
 
 const envelopeSchema = z.strictObject({ v: z.literal(1), iv: z.string(), tag: z.string(), data: z.string() });
-const plaintextSchema = z.strictObject({ savedAt: z.string(), home: quickChatHomeSchema });
+const plaintextSchema = z.strictObject({ savedAt: z.string(), home: quickChatHomeSchema, deviceTokenHashes: z.array(z.string()) });
 
 export interface HomeSnapshot {
   savedAt: string;
   home: QuickChatHome;
+  /** SHA-256 of each mobile device token the hub may serve this snapshot to. */
+  deviceTokenHashes: string[];
 }
 
 function snapshotPath(boxRoot: string): string {
@@ -95,12 +101,13 @@ export async function writeHomeSnapshotsAtShutdown(boxes: readonly { slug: strin
     let timer: NodeJS.Timeout | undefined;
     const late = new Promise<"late">((resolve) => { timer = setTimeout(() => { resolve("late"); }, SHUTDOWN_DEADLINE_MS); });
     try {
-      const home = await Promise.race([quickChatHome(box.boxRoot), late]);
-      if (home === "late") {
+      const answer = await Promise.race([Promise.all([quickChatHome(box.boxRoot), mobileTokenHashesWithAccess(box.boxRoot)]), late]);
+      if (answer === "late") {
         console.warn(`[home-snapshot] ${box.slug}: home not ready within ${String(SHUTDOWN_DEADLINE_MS)} ms; no snapshot`);
         return;
       }
-      writeHomeSnapshot(box.boxRoot, { slug: box.slug, hubSecret, snapshot: { savedAt: getBoxTimeISO(box.boxRoot), home } });
+      const [home, deviceTokenHashes] = answer;
+      writeHomeSnapshot(box.boxRoot, { slug: box.slug, hubSecret, snapshot: { savedAt: getBoxTimeISO(box.boxRoot), home, deviceTokenHashes } });
     } catch (e) {
       console.warn(`[home-snapshot] ${box.slug}: could not write a snapshot: ${errorMessage(e)}`);
     } finally {

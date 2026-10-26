@@ -14,6 +14,8 @@ final class BoxScreenStoreTests: XCTestCase {
         var homeFails = false
         var homeError: Error = URLError(.timedOut)
         var homeCalls = 0
+        /// Thrown by the next calls of `home`, one each, before `homeFails` applies.
+        var nextHomeErrors: [Error] = []
         var submitted: [(UUID, String)] = []
         var submittedOrigins: [QuickChatOrigin?] = []
         var submittedSources: [String?] = []
@@ -74,6 +76,9 @@ final class BoxScreenStoreTests: XCTestCase {
         func home() async throws -> QuickChatHome {
             homeCalls += 1
             await duringHome?()
+            if nextHomeErrors.isEmpty == false {
+                throw nextHomeErrors.removeFirst()
+            }
             if homeFails {
                 throw homeError
             }
@@ -389,6 +394,55 @@ final class BoxScreenStoreTests: XCTestCase {
         let calls = client.homeCalls
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(client.homeCalls, calls, "a live answer is not asked again")
+    }
+
+    /// Opening a chat and coming back to the same box screen cancels the
+    /// sleeping box's check; showing the screen again re-arms it.
+    func testShowingASleepingBoxAgainResumesItsCheck() async throws {
+        let client = FakeClient()
+        client.homeAnswer.asleep = .init(savedAt: "2026-10-26T15:12:00.000Z")
+        let (store, _) = makeStore(client, asleepRecheckDelay: 0.05)
+        store.setForeground(true)
+        store.setShownBox(box.id)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        store.setShownBox(nil)
+        client.homeAnswer.asleep = nil
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertNotNil(store.homes[box.id]?.asleep, "no check while the screen is not shown")
+
+        store.setShownBox(box.id)
+        try await waitUntil { store.homes[self.box.id]?.asleep == nil }
+    }
+
+    /// A failed check of a sleeping box says so, rather than keeping its
+    /// earlier answer styled as current.
+    func testAFailedCheckUnconfirmsTheHome() async throws {
+        let client = FakeClient()
+        client.homeAnswer.asleep = .init(savedAt: "2026-10-26T15:12:00.000Z")
+        let (store, _) = makeStore(client, retryDelays: [10], asleepRecheckDelay: 0.01)
+        store.setForeground(true)
+        store.setShownBox(box.id)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        client.homeFails = true
+        try await waitUntil { store.refreshes[self.box.id] == .failed(.unreachable) }
+        XCTAssertFalse(store.confirmedBoxIDs.contains(box.id))
+    }
+
+    /// Switching away and back while a refresh runs finds it still running;
+    /// when it then ends cancelled, the shown box asks again.
+    func testACancelledRefreshOfAShownBoxIsReplaced() async throws {
+        let client = FakeClient()
+        let (store, _) = makeStore(client)
+        store.setForeground(true)
+        client.nextHomeErrors = [URLError(.cancelled)]
+        client.duringHome = {
+            client.duringHome = nil
+            store.setShownBox(nil)
+            store.setShownBox(self.box.id)
+        }
+        await store.refresh(boxID: box.id)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        XCTAssertEqual(client.homeCalls, 2)
     }
 
     func testRefreshFailureKinds() {

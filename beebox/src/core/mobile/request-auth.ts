@@ -26,7 +26,7 @@
  */
 
 import { verifyMobileSession, MOBILE_COOKIE_NAME } from "./session.js";
-import { resolveMobileBearerIdentity, type MobileBearerIdentity } from "./pairing.js";
+import { resolveMobileBearerIdentity, unrevokedMobileDevices, type MobileBearerIdentity } from "./pairing.js";
 import { parseCookieHeaderAll } from "../../lib/cookies.js";
 import { canAccessBox } from "../../webapp/box-access.js";
 import { getOwnerEmail } from "../../webapp/auth.js";
@@ -70,6 +70,18 @@ async function whilePairerHasAccess(boxRoot: string, auth: MobileRequestAuth): P
     console.warn(`[mobile-auth] refusing device ${auth.deviceId}: its pairer can no longer open the box at ${boxRoot}`);
   }
   return null;
+}
+
+/**
+ * The token hashes a request may present now: unrevoked devices whose pairer
+ * can still open the box. A sleeping box's home snapshot carries them, since
+ * the hub cannot ask the box (`core/chat/routing/home-snapshot.ts`).
+ */
+export async function mobileTokenHashesWithAccess(boxRoot: string): Promise<string[]> {
+  const ownerEmail = getOwnerEmail();
+  const devices = await Promise.all(unrevokedMobileDevices(boxRoot).map(async (device) =>
+    device.createdBy === null || await canAccessBox({ boxRoot, email: device.createdBy, ownerEmail }) ? [device.tokenHash] : []));
+  return devices.flat().toSorted();
 }
 
 /**

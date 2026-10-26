@@ -132,7 +132,7 @@ No design decision depends on an external premise. `Text(_:format: .relative(pre
 
 **Direction.**
 
-- New module `src/core/chat/routing/home-snapshot.ts`: `writeHomeSnapshot(boxRoot, { hubSecret, now })`, `removeHomeSnapshot(boxRoot)`, `readHomeSnapshot(boxRoot, { hubSecret })`. The file is `{ v: 1, iv, tag, data }` (base64), mode 0644, written atomically like `writeHubMeta` (`hub-meta.ts:174-193`), including its directory modes. The plaintext is `{ savedAt, home }`. `readHomeSnapshot` returns `{ savedAt, home }` or undefined (absent, wrong key, or malformed; malformed and wrong-key log a warning).
+- New module `src/core/chat/routing/home-snapshot.ts`: `writeHomeSnapshot(boxRoot, { slug, hubSecret, snapshot })`, `removeHomeSnapshot(boxRoot)`, `readHomeSnapshot(boxRoot, { slug, hubSecret })`. The file is `{ v: 1, iv, tag, data }` (base64), mode 0644, written atomically like `writeHubMeta` (`hub-meta.ts:174-193`); the 0751 directory modes come from that writer, which runs at every start. The plaintext is `{ savedAt, home, deviceTokenHashes }`. `readHomeSnapshot` returns it or undefined (absent, wrong key, or malformed; malformed and wrong-key log a warning).
 - `shutdown` in `src/webapp/server/app.ts`: after `server.close()`, for each box, write the snapshot when `BBX_HUB_SECRET` is set. Bounded by a 5 s deadline; a result that arrives after the deadline is not written. A failure logs a warning and the shutdown continues. With no hub secret (a box run by hand) it writes nothing. The home is computed as for a live request, including its handling of an unreadable Codex index, so the snapshot is no less complete than a live answer.
 - Start: `removeHomeSnapshot` for each box as the first step of serve startup, before the server is created and before chat maintenance (`app.ts:333`, `src/webapp/routes/chat/register.ts:86`). A failure other than ENOENT is an error that stops the start, because a kept snapshot would be served after this box changes.
 
@@ -146,7 +146,7 @@ No design decision depends on an external premise. `Text(_:format: .relative(pre
 
 - New `src/hub/server/home-snapshot-route.ts`: `trySnapshotHome({ request, slug, boxRoot, secret, endpoints, mobileAuthed })` returns the reply body or undefined. The body is the tRPC envelope `{ result: { data: { ...home, asleep: { savedAt } } } }`, with `cache-control: no-store`.
 - Only the exact path and method; a query string is allowed and ignored (the phone sends none).
-- Only `mobileAuthed`. A browser session or an agent bearer takes today's path.
+- Only `mobileAuthed`, and only a bearer whose hash the snapshot lists. At shutdown the box lists the unrevoked devices whose pairer can still open it, the same test it applies to every request (`src/core/mobile/request-auth.ts`, `whilePairerHasAccess`); on a unit host the hub's own check verifies only the token hash (`src/hub/server/box-credentials.ts:42-48`), so without the list a removed member's phone could read the snapshot (diff review, codex gpt-6-astra, 2026-10-26). A browser session, a cookie, or an agent bearer takes today's path.
 - Logs: none per request. A wrong-key or malformed snapshot warns once per file mtime, in the read.
 
 **Vocabulary lock-ins.** The `asleep` field.
@@ -156,7 +156,7 @@ No design decision depends on an external premise. `Text(_:format: .relative(pre
 **Direction.**
 
 - `quickChatHomeSchema` gains `asleep: z.object({ savedAt: z.string() }).optional()`; `docs/mobile-contract.md` §5.11 and the Q1 row describe it; new shared fixture `test/mobile-contract/fixtures/quick-chat/home-asleep.json` decoded by the TypeScript schema and by XCTest.
-- iOS `QuickChatHome` gains `asleep: Asleep?`. A home with `asleep` is a success: confirmed, `homeDates` from `savedAt`, primary styling kept. The view shows the asleep row from the Design table while the box is confirmed and its home carries `asleep`. While shown in the foreground, the store re-checks a sleeping box every 60 s on the same retry task. The cached copy keeps `asleep`, and `loadCachedHome` dates a cached snapshot from its `savedAt` rather than the file's modification time.
+- iOS `QuickChatHome` gains `asleep: Asleep?`. A home with `asleep` is a success: confirmed, `homeDates` from `savedAt`, primary styling kept. The view shows the asleep row from the Design table while the box is confirmed and its home carries `asleep`. While shown in the foreground, the store re-checks a sleeping box every 60 s on the same retry task. The cached copy keeps `asleep`, and `loadCachedHome` dates a cached snapshot from its `savedAt` rather than the file's modification time. Showing the box screen again re-arms the check, which leaving it cancelled. A failed refresh removes the box from `confirmedBoxIDs`, so a failed check of a sleeping box shows the failure row and drops the primary style. A refresh that ends cancelled asks again when its box is still shown, since a screen shown meanwhile found it still running.
 
 ## Could this be simpler?
 

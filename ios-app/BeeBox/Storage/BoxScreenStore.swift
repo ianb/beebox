@@ -261,7 +261,7 @@ final class BoxScreenStore: ObservableObject {
         self.foreground = foreground
         if foreground {
             resumeRetries()
-            refreshShownIfUnconfirmed()
+            resumeShownBox()
         } else {
             retryTask?.cancel()
             retryTask = nil
@@ -282,7 +282,7 @@ final class BoxScreenStore: ObservableObject {
         shownBoxID = boxID
         stopAwaiting()
         stopHomeRetry()
-        refreshShownIfUnconfirmed()
+        resumeShownBox()
     }
 
     /// The person's "Retry now": refresh at once and restart the backoff.
@@ -359,13 +359,16 @@ final class BoxScreenStore: ObservableObject {
                 return
             }
             if Self.isCancellation(error) {
-                // A switch or the background cancelled it; whoever shows the
-                // box next refreshes again.
+                // A switch or the background cancelled it. A box shown again
+                // meanwhile found this refresh still running, so ask now.
                 refreshes[boxID] = .idle
+                resumeShownBox()
                 return
             }
             let failure = RefreshFailure(error)
             refreshes[boxID] = .failed(failure)
+            // An earlier answer, even the hub's for a sleeping box, is no longer confirmed.
+            confirmedBoxIDs.remove(boxID)
             if failedBefore == false {
                 BoxLog.warn(
                     "box screen refresh failed kind=\(failure.logName) \(Self.describe(error))",
@@ -530,12 +533,18 @@ final class BoxScreenStore: ObservableObject {
         followUp = nil
     }
 
-    private func refreshShownIfUnconfirmed() {
-        guard foreground, let boxID = shownBoxID, confirmedBoxIDs.contains(boxID) == false else {
+    /// Bring the shown box's home up to date: refresh an unconfirmed one, or
+    /// re-arm the check of a sleeping box, which a change of shown box cancelled.
+    private func resumeShownBox() {
+        guard foreground, let boxID = shownBoxID else {
             return
         }
-        Task {
-            await refresh(boxID: boxID)
+        if confirmedBoxIDs.contains(boxID) == false {
+            Task {
+                await refresh(boxID: boxID)
+            }
+        } else if homes[boxID]?.asleep != nil {
+            scheduleHomeCheck(boxID: boxID, after: asleepRecheckDelay)
         }
     }
 

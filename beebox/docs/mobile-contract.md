@@ -1341,8 +1341,9 @@ See §1.3 (full request/response/errors).
   (`docs/plans/ios-box-screen-stale-list.md`).
 - **Asleep box:** a box under a hub leaves its `home` answer, encrypted for the hub, at a
   clean shutdown and deletes it first at startup (`src/core/chat/routing/home-snapshot.ts`).
-  For a phone with a verified mobile credential, the hub answers `GET quickChat.home` of a
-  box its provider reports asleep from that copy, adding `asleep: {savedAt}`, without waking
+  For a phone whose bearer token the copy lists (an unrevoked device whose pairer could open the
+  box at shutdown), the hub answers `GET quickChat.home` of a box its provider reports asleep
+  from that copy, adding `asleep: {savedAt}`, without waking
   the box (`src/hub/server/home-snapshot-route.ts`). The box itself never sends `asleep`. With
   no copy the hub can open, the request wakes the box as before. The phone treats an `asleep`
   answer as current: it keeps the first recent chat styled as the one to pick up, says the box
