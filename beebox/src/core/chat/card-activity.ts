@@ -63,15 +63,12 @@ export type CardStateDetails = Partial<Record<ActivityKind, string>>;
  * The per-send context a client stamps on a user turn, as one list of names
  * shared by the HTTP send body, `ChatSendInput`, and the client's SEND event:
  * `openCard`, the card open beside the chat (snapshot `open-card`);
- * `openQuestion`, the pending question card the root chat is asking
- * (`open-question`, docs/implemented-plans/front-door.md); `cardActivity`, what the person
- * did to the open card since the last reply; `cardState`, per-kind detail for
+ * `cardActivity`, what the person did to the open card since the last reply; `cardState`, per-kind detail for
  * it. All omitted when empty. Adding a field here is the one type change; the
  * omit-when-empty spreads at each hop still name it.
  */
 export interface ChatSendContext {
   openCard?: string;
-  openQuestion?: string;
   cardActivity?: ActivityKind[];
   cardState?: CardStateDetails;
 }

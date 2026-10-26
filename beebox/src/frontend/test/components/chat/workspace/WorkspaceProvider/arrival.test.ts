@@ -1,54 +1,107 @@
-// # Arrival opens the place on the desktop layout
+// # Arrival opens the place, and at the root the newest question
 //
 // Going to a place whose chat has no saved arrangement in this tab opens the
 // place beside the chat: its single entry-point card, else its landmark card
-// (docs/implemented-plans/landmark-arrival.md, Track D). `arrivalOpens` makes the final
-// decision in the workspace provider, after the store's candidate flag is taken
-// and the place's `landmarks.forDir` query has settled.
+// (docs/implemented-plans/landmark-arrival.md, Track D). At the root it also
+// opens the newest pending question on top, and on the phone only the
+// question (docs/plans/questions-beside-the-chat.md, Track A). `arrivalPlan`
+// makes the final decision in the workspace provider, after the store's
+// candidate flag is taken and arrival's queries have settled.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { arrivalOpens, arrivalWaits } from "../../../../../src/components/chat/workspace/WorkspaceProvider/arrival.js";
+import { arrivalPlan, arrivalWaits, pickArrivalQuestion } from "../../../../../src/components/chat/workspace/WorkspaceProvider/arrival.js";
 import { decideWorkspaceNavigation } from "../../../../../src/components/chat/workspace/history.js";
+import type { QuestionInfo } from "../../../../../src/components/questions/QuestionForm/view.js";
 
 const LIST = "_content/lending/Lending_List.lending-list.card";
+const BOX = "_content/Box.landmark.card";
+const Q = "_bookkeeping/questions/Pacific-timezone.question.card";
 
 // ## A new place chat on the desktop layout opens the target
 //
 // The candidate flag is set, nothing is open, and the payload names a target.
 void test("The candidate flag is set, nothing is open, and the payload names a target.", async (t) => {
-  t.check(arrivalOpens({ arrive: true, viewport: "desktop", tabCount: 0, target: LIST }), true);
+  t.check(arrivalPlan({ arrive: true, viewport: "desktop", tabCount: 0, target: LIST, question: null }), [LIST]);
 });
 
-// ## The phone layout never opens a card
+// ## A new root chat opens the Box page, then the question on top
 //
-// On a phone only one card or the chat fits, and the chat wins (boxholder
-// decision c).
-void test("On a phone only one card or the chat fits, and the chat wins (boxholder decis...", async (t) => {
-  t.check(arrivalOpens({ arrive: true, viewport: "mobile", tabCount: 0, target: LIST }), false);
+// The last path is the active tab, so the question is in front and the Box
+// page is under it when the person closes the question.
+void test("A new root chat opens the Box page, then the question on top", async (t) => {
+  t.check(arrivalPlan({ arrive: true, viewport: "desktop", tabCount: 0, target: BOX, question: Q }), [BOX, Q]);
+});
+
+// ## The phone opens only the question
+//
+// On a phone only one card or the chat fits. The chat wins over the place
+// (boxholder decision c); a pending question wins over an empty chat
+// (boxholder, 2026-10-25: "the question is mostly what you are responding
+// to, not the chat history, so the mobile view works").
+void test("The phone opens only the question", async (t) => {
+  t.check({
+    place: arrivalPlan({ arrive: true, viewport: "mobile", tabCount: 0, target: LIST, question: null }),
+    root: arrivalPlan({ arrive: true, viewport: "mobile", tabCount: 0, target: BOX, question: Q }),
+  }, { place: [], root: [Q] });
 });
 
 // ## A chat with a saved arrangement is left as it was
 //
 // A saved arrangement clears the candidate flag, so `arrive` is false.
 void test("A saved arrangement clears the candidate flag, so arrive is false.", async (t) => {
-  t.check(arrivalOpens({ arrive: false, viewport: "desktop", tabCount: 0, target: LIST }), false);
+  t.check(arrivalPlan({ arrive: false, viewport: "desktop", tabCount: 0, target: BOX, question: Q }), []);
 });
 
 // ## Arrival never adds to cards that are already open
+//
+// A chat opened beside Admin has a tab already, so no question opens over it.
 void test("Arrival never adds to cards that are already open", async (t) => {
-  t.check(arrivalOpens({ arrive: true, viewport: "desktop", tabCount: 1, target: LIST }), false);
+  t.check(arrivalPlan({ arrive: true, viewport: "desktop", tabCount: 1, target: BOX, question: Q }), []);
 });
 
-// ## No landmark or a failed query opens nothing
+// ## No landmark or a failed query opens what remains
 //
-// The provider passes null when `forDir` returned no landmark or the query
+// The provider passes null when `forDir` returned no landmark or a query
 // failed.
 void test("The provider passes null when forDir returned no landmark or the query failed.", async (t) => {
-  t.check(arrivalOpens({ arrive: true, viewport: "desktop", tabCount: 0, target: null }), false);
+  t.check({
+    nothing: arrivalPlan({ arrive: true, viewport: "desktop", tabCount: 0, target: null, question: null }),
+    questionOnly: arrivalPlan({ arrive: true, viewport: "desktop", tabCount: 0, target: null, question: Q }),
+  }, { nothing: [], questionOnly: [Q] });
 });
 
-// ## Only a chat with nothing to open waits for the place query
+function question(over: Partial<QuestionInfo> & Pick<QuestionInfo, "relativePath">): QuestionInfo {
+  const name = over.relativePath.split("/").at(-1) ?? "";
+  return { path: `/box/${over.relativePath}`, name, type: "question", subdir: undefined, state: "pending", prompt: "Which?", inputType: "text", ...over };
+}
+
+// ## The newest pending question is picked
+//
+// Newest by `asked-at`, then by path; answered, dismissed, and unparseable
+// cards are never picked, and a card with no `asked-at` sorts oldest.
+void test("The newest pending question is picked", async (t) => {
+  t.check({
+    newest: pickArrivalQuestion([
+      question({ relativePath: "_bookkeeping/questions/z-old.question.card", askedAt: "2026-09-01T00:00:00Z" }),
+      question({ relativePath: "_bookkeeping/questions/a-new.question.card", askedAt: "2026-10-20T00:00:00Z" }),
+      question({ relativePath: "_bookkeeping/questions/undated.question.card" }),
+    ]),
+    skipped: pickArrivalQuestion([
+      question({ relativePath: "_bookkeeping/questions/answered.question.card", askedAt: "2026-10-24T00:00:00Z", state: "answered" }),
+      question({ relativePath: "_bookkeeping/questions/dismissed.question.card", askedAt: "2026-10-23T00:00:00Z", state: "dismissed" }),
+      question({ relativePath: "_bookkeeping/questions/broken.question.card", askedAt: "2026-10-22T00:00:00Z", invalid: true }),
+      question({ relativePath: "_bookkeeping/questions/pending.question.card", askedAt: "2026-10-01T00:00:00Z" }),
+    ]),
+    none: pickArrivalQuestion([]),
+  }, {
+    newest: "_bookkeeping/questions/a-new.question.card",
+    skipped: "_bookkeeping/questions/pending.question.card",
+    none: null,
+  });
+});
+
+// ## Only a chat with nothing to open waits for arrival's queries
 //
 // The provider decides the navigation first and waits for `landmarks.forDir`
 // only when that decision is `keep-current`, the one step where arrival can
@@ -59,7 +112,7 @@ void test("The provider decides the navigation first and waits for landmarks.for
     freshCard: "_content/lending/Piranesi_Noor.loan.card" });
   t.check(
     ({ decision: decision.kind,
-      waits: arrivalWaits({ decision: decision.kind, candidate: true, viewport: "desktop", settled: false }) }),
+      waits: arrivalWaits({ decision: decision.kind, candidate: true, settled: false }) }),
     {
     decision: "open-url",
     waits: false,
@@ -69,15 +122,15 @@ void test("The provider decides the navigation first and waits for landmarks.for
 
 // A history snapshot is a saved arrangement, so it does not wait either.
 void test("A history snapshot is a saved arrangement, so it does not wait either.", async (t) => {
-  t.check(arrivalWaits({ decision: "restore-snapshot", candidate: true, viewport: "desktop", settled: false }), false);
+  t.check(arrivalWaits({ decision: "restore-snapshot", candidate: true, settled: false }), false);
 });
 
 // A chat with no card in its route waits while the query is in flight, and
 // proceeds once it settles.
 void test("A chat with no card in its route waits while the query is in flight, and proc...", async (t) => {
   t.check(
-    ({ inFlight: arrivalWaits({ decision: "keep-current", candidate: true, viewport: "desktop", settled: false }),
-      settled: arrivalWaits({ decision: "keep-current", candidate: true, viewport: "desktop", settled: true }) }),
+    ({ inFlight: arrivalWaits({ decision: "keep-current", candidate: true, settled: false }),
+      settled: arrivalWaits({ decision: "keep-current", candidate: true, settled: true }) }),
     {
     inFlight: true,
     settled: false,
@@ -85,15 +138,7 @@ void test("A chat with no card in its route waits while the query is in flight, 
   );
 });
 
-// The phone layout never arrives, and a cancelled arrival has no candidate, so
-// neither waits.
-void test("The phone layout never arrives, and a cancelled arrival has no candidate, so...", async (t) => {
-  t.check(
-    ({ phone: arrivalWaits({ decision: "keep-current", candidate: true, viewport: "mobile", settled: false }),
-      cancelled: arrivalWaits({ decision: "keep-current", candidate: false, viewport: "desktop", settled: false }) }),
-    {
-    phone: false,
-    cancelled: false,
-  },
-  );
+// A cancelled arrival has no candidate, so it does not wait.
+void test("A cancelled arrival has no candidate, so it does not wait.", async (t) => {
+  t.check(arrivalWaits({ decision: "keep-current", candidate: false, settled: false }), false);
 });

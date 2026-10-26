@@ -17,7 +17,8 @@ import { href } from "../../lib/routing";
 import { trpc } from "../../lib/trpc/client";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { oneOf } from "../../lib/live-refresh";
-import { QuestionForm, type QuestionInfo } from "./QuestionForm";
+import { QuestionForm, type QuestionInfo } from "./QuestionForm/view";
+import { useAnswerInChat } from "./question-tab";
 import { renderQuestionAnswer } from "./answer-display";
 import { bbxSource } from "../../lib/source-tag";
 import { Stack } from "../ui/Stack";
@@ -40,11 +41,13 @@ function answeredCard(q: QuestionInfo) {
   );
 }
 
-function demotedCard(q: QuestionInfo, onAnswered: () => void) {
+function demotedCard(q: QuestionInfo, actions: { onAnswered: () => void; answerInChat: ((path: string) => void) | undefined }) {
+  const { onAnswered, answerInChat } = actions;
   return (
     <Stack key={q.path} gap="xs">
       <StatusBadge status={q.state ?? "expired"} size="sm" className="self-start" />
-      <QuestionForm question={q} sourcePath={q.relativePath} onAnswered={onAnswered} />
+      <QuestionForm question={q} sourcePath={q.relativePath} onAnswered={onAnswered}
+        {...(answerInChat === undefined ? {} : { onAnswerInChat: () => answerInChat(q.relativePath) })} />
     </Stack>
   );
 }
@@ -80,6 +83,7 @@ export function QuestionsList() {
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.status.questions.useQuery();
   const { boxSlug } = useParams({ strict: false });
+  const answerInChat = useAnswerInChat();
 
   const questions = data?.items ?? [];
 
@@ -131,6 +135,7 @@ export function QuestionsList() {
               question={q}
               sourcePath={q.relativePath}
               onAnswered={onAnswered}
+              {...(answerInChat === undefined ? {} : { onAnswerInChat: () => answerInChat(q.relativePath) })}
             />
           ))}
         </Stack>
@@ -142,7 +147,7 @@ export function QuestionsList() {
             Archive
           </Text>
           <Stack gap="sm">
-            {demoted.map((q) => demotedCard(q, onAnswered))}
+            {demoted.map((q) => demotedCard(q, { onAnswered, answerInChat }))}
             {answered.map((q) => answeredCard(q))}
           </Stack>
         </Stack>

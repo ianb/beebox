@@ -8776,8 +8776,9 @@ tests:
     tags: [dev-guidance, testing]
 
   # === Front door (docs/implemented-plans/front-door.md) ===
-  # Two agent-facing rules. answer-in-chat: a message under `open-question`
-  # answers a pending card; the agent does the directive first and answers
+  # Two agent-facing rules. answer-in-chat: a message sent while a pending
+  # question card is the `open-card` (beside the chat,
+  # docs/plans/questions-beside-the-chat.md) answers it; the agent does the directive first and answers
   # the card last, with `--via chat`, and offers ideas only after hearing.
   # offer-a-page: offering a page when a kind of card grows. Status (Claude,
   # disposable copy of the worktree's test1 clone): offer-a-page passed
@@ -8787,12 +8788,16 @@ tests:
   # 2026-10-20, 0 reads, 42k ctx: briefing and Box page first, commit, then
   # `bbx answer --via chat` last, no job, three lending ideas; its first run
   # failed only on a negative pattern that matched "doesn't create a
-  # follow-up job", now requiring a verb of creation.
+  # follow-up job", now requiring a verb of creation. Rerun with `open-card`
+  # in place of `open-question`: passed 2026-10-26, 0 reads, 44k ctx. After
+  # the rule was shortened, one run described "the answer command ... via
+  # chat" without naming `bbx answer`, in the right order; the first pattern
+  # now accepts that wording.
   - id: front-door-answer-in-chat
     chat_mode: true
     prompt: >
       The message you just received carries the snapshot attribute
-      open-question="_bookkeeping/questions/what-to-keep-track-of.question.card",
+      open-card="_bookkeeping/questions/what-to-keep-track-of.question.card",
       a pending text question whose prompt is "What do you want to keep track
       of here?", with a directive to write the purpose into the briefing and
       the Box page in the person's words and then offer two or three things
@@ -8809,13 +8814,42 @@ tests:
       answers the card first, creates a job or a new question card, or opens
       with what the box can do.
     correct_matches:
-      - 'bbx answer[^\n]{0,120}(?:--)?via chat|--via chat[^\n]{0,120}bbx answer'
+      - 'bbx answer[^\n]{0,120}(?:--)?via chat|--via chat[^\n]{0,120}bbx answer|answer command[^\n]{0,120}via chat'
       - '(?:briefing|purpose)[\s\S]{0,400}(?:then|last|after|finally|only then)[\s\S]{0,160}(?:answer|bbx answer)|(?:before|prior to)[\s\S]{0,80}(?:answer(?:ing)? the (?:card|question))'
       - 'lent|lend|loan|borrow'
     response_not_matches:
       # A negation ("a chat answer doesn't create a follow-up job") is correct;
       # only creating one, or a new question card, fails.
       - '(?:creates?|creating|writes?|writing|spawns?)\s+(?:a |the |one )?(?:new )?(?:follow-?up job|question-followup|question card)'
+    tags: [front-door, question]
+
+  # open-card-not-an-answer: a question beside the chat makes a message a
+  # probable answer, not a certain one; an unrelated request leaves the card
+  # as it is (docs/plans/questions-beside-the-chat.md, Track C). Status
+  # (Claude, the worktree's test1 clone): passed 2026-10-26, 0 reads, 44k ctx;
+  # set the reminder and left the card "exactly as it is". Its first run
+  # failed only on a negative pattern that matched "No `bbx answer`".
+  - id: front-door-open-card-not-an-answer
+    chat_mode: true
+    prompt: >
+      The message you just received carries the snapshot attribute
+      open-card="_bookkeeping/questions/Pacific-timezone.question.card",
+      a pending confirm question whose prompt is "Should I note in the box
+      briefing that you're in the Pacific timezone?". The person wrote:
+      "Remind me to call the vet on Thursday." Describe what you do with the
+      message and with the question card. Explain only; do not read files,
+      use tools, or change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Sets the reminder and leaves the question card pending: the message is
+      about something else. FAILS if it answers the card (bbx answer) or
+      treats the reminder as a yes or no.
+    correct_matches:
+      - 'remind|vet'
+      - '(?:leave|leaves|leaving|keep|keeps|stays?)[^\n]{0,80}(?:pending|open|unanswered|as it is)|(?:not|n.t|without)[^\n]{0,40}answer'
+    response_not_matches:
+      # An actual answer command names the card; "No `bbx answer`" does not.
+      - 'bbx answer\s+\S*question\.card'
     tags: [front-door, question]
 
   - id: front-door-offer-a-page

@@ -13,10 +13,11 @@ import type { WorkspaceAction, PaneId } from "../state-types.js";
 import { serializeWorkspaceState } from "../storage";
 import { storageScopeFor } from "../../../../lib/storage-scope";
 import { createWorkspaceBrowserStore } from "./workspace-browser-store";
-import { arrivalOpens, arrivalWaits } from "./arrival";
+import { arrivalPlan, arrivalWaits, pickArrivalQuestion } from "./arrival";
 import { trpc } from "../../../../lib/trpc/client";
 import type { ConversationTarget } from "@shared/chat-composer-binding";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { useDismissOnClose } from "../../../questions/question-tab";
 
 declare module "@tanstack/history" { interface HistoryState { bbxWorkspace?: WorkspaceHistoryEntry; bbxWorkspaceRevealConversation?: boolean; bbxConversationOverlay?: boolean } }
 const Workspace = createContext<ReturnType<typeof useWorkspaceController> | null>(null);
@@ -86,25 +87,40 @@ function performBrowseDetailHandoff(input: BrowseDetailHandoff & {
 /**
  * Arrival (docs/implemented-plans/landmark-arrival.md, Track D). The store's candidate flag
  * enables the place query on the desktop layout. It uses the same input as the
- * chat's openers query (`useChatBinding`), so one request serves both.
+ * chat's openers query (`useChatBinding`), so one request serves both. At the
+ * root of a new chat it also enables the questions query on both layouts, for
+ * the arrival question (docs/plans/questions-beside-the-chat.md, Track A).
  */
-function usePlaceArrival(input: { store: WorkspaceBrowserStore; viewport: "mobile" | "desktop"; contextDir: string | undefined }) {
+function usePlaceArrival(input: { store: WorkspaceBrowserStore; viewport: "mobile" | "desktop"; contextDir: string | undefined; unstarted: boolean }) {
   const { store, viewport, contextDir } = input;
   const candidate = useSyncExternalStore(store.subscribe, store.hasArrival, store.hasArrival);
-  const query = trpc.landmarks.forDir.useQuery({ dir: contextDir ?? "" },
-    { enabled: viewport === "desktop" && candidate && contextDir !== undefined });
-  return { candidate, settled: query.isSuccess || query.isError,
-    target: query.data?.landmark?.arrival ?? null, failure: query.isError ? query.error : null };
+  const placeEnabled = viewport === "desktop" && candidate && contextDir !== undefined;
+  // Only a new chat: an existing one opened in a new tab has no saved arrangement either.
+  const questionsEnabled = candidate && contextDir === "" && input.unstarted;
+  const query = trpc.landmarks.forDir.useQuery({ dir: contextDir ?? "" }, { enabled: placeEnabled });
+  const questions = trpc.status.questions.useQuery(undefined, { enabled: questionsEnabled });
+  const done = (q: { isSuccess: boolean; isError: boolean }, enabled: boolean) => !enabled || q.isSuccess || q.isError;
+  return { candidate, settled: done(query, placeEnabled) && done(questions, questionsEnabled),
+    target: query.data?.landmark?.arrival ?? null, failure: query.isError ? query.error : null,
+    question: questionsEnabled && questions.data !== undefined ? pickArrivalQuestion(questions.data.items) : null,
+    questionsFailure: questions.isError ? questions.error : null };
 }
 
-/** Takes the candidate flag and opens the arrival target beside the chat when `arrivalOpens` says so. */
+/**
+ * Takes the candidate flag and opens what `arrivalPlan` names beside the chat.
+ * The store's own dispatch carries no focus effect, so the cursor stays in the
+ * composer.
+ */
 function arriveAtPlace(input: { store: WorkspaceBrowserStore; viewport: "mobile" | "desktop"; contextDir: string | undefined;
-  target: string | null; failure: unknown }) {
-  const { store, viewport, target } = input;
+  arrival: Pick<ReturnType<typeof usePlaceArrival>, "target" | "failure" | "question" | "questionsFailure"> }) {
+  const { store, viewport, arrival } = input;
   const arrive = store.takeArrival();
-  if (arrive && input.failure !== null) console.warn(`[workspace] arrival: place query failed for "${input.contextDir ?? ""}"`, input.failure);
-  if (target === null || !arrivalOpens({ arrive, viewport, tabCount: Object.keys(store.get().tabs).length, target })) return;
-  store.dispatch({ type: "openCard", target: { path: target, viewer: null, params: {}, viewState: null }, label: target, at: Date.now(), viewport });
+  if (arrive && arrival.failure !== null) console.warn(`[workspace] arrival: place query failed for "${input.contextDir ?? ""}"`, arrival.failure);
+  if (arrive && arrival.questionsFailure !== null) console.warn("[workspace] arrival: questions query failed", arrival.questionsFailure);
+  const paths = arrivalPlan({ arrive, viewport, tabCount: Object.keys(store.get().tabs).length, target: arrival.target, question: arrival.question });
+  for (const path of paths) {
+    store.dispatch({ type: "openCard", target: { path, viewer: null, params: {}, viewState: null }, label: path, at: Date.now(), viewport });
+  }
 }
 
 /** The route's card and the navigation it calls for; decided before any wait for arrival. */
@@ -118,11 +134,11 @@ function routeNavigation(input: { location: ReturnType<typeof useLocation>; spla
 }
 
 export function useWorkspace() { return useContext(Workspace); }
-export function WorkspaceProvider({ target, children }: { target: ConversationTarget | undefined; children: ReactNode }) {
-  const value = useWorkspaceController(target);
+export function WorkspaceProvider({ target, unstarted, children }: { target: ConversationTarget | undefined; unstarted: boolean; children: ReactNode }) {
+  const value = useWorkspaceController(target, unstarted);
   return <Workspace.Provider value={value}>{children}</Workspace.Provider>;
 }
-function useWorkspaceController(conversationTarget: ConversationTarget | undefined) {
+function useWorkspaceController(conversationTarget: ConversationTarget | undefined, unstarted: boolean) {
   const { boxSlug = "", _splat } = useParams({ strict: false });
   const location = useLocation();
   const routeReady = useRouterState({ select: state => !state.isLoading && state.resolvedLocation?.href === state.location.href });
@@ -137,7 +153,8 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
   const pendingAdoption = useSyncExternalStore(store.subscribe, store.getAdoption, store.getAdoption);
   const notice = useSyncExternalStore(store.subscribe, store.getNotice, store.getNotice);
   const contextDir = conversationTarget?.contextDir;
-  const arrival = usePlaceArrival({ store, viewport, contextDir });
+  const arrival = usePlaceArrival({ store, viewport, contextDir, unstarted });
+  const dismissOnClose = useDismissOnClose();
   const identity = conversationTarget?.kind === "session" ? conversationTarget.sessionId : conversationTarget?.clientConversationId ?? "";
   const scope = storageScopeFor(apiBase);
   const projection = projectWorkspace(state, viewport);
@@ -172,7 +189,7 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
     const { incoming, decision } = routeNavigation({ location, splat: _splat, scope, identity, revealConversation });
     const special = pendingAdoption?.to === identity || location.state.bbxConversationOverlay === true;
     // The stamp stays unobserved while waiting, so the effect runs this route again when the query settles.
-    if (!special && arrivalWaits({ decision: decision.kind, candidate: store.hasArrival(), viewport, settled: arrival.settled })) return;
+    if (!special && arrivalWaits({ decision: decision.kind, candidate: store.hasArrival(), settled: arrival.settled })) return;
     observed.current = routeStamp;
     if (pendingAdoption?.to === identity) {
       revealStoredConversation({ store, incoming, viewport, openIncoming: true, enabled: revealConversation });
@@ -197,12 +214,13 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
       revealStoredConversation({ store, incoming: target, viewport, openIncoming: false, enabled: revealConversation });
     }
     if (decision.kind === "keep-current") {
-      arriveAtPlace({ store, viewport, contextDir, target: arrival.target, failure: arrival.failure });
+      arriveAtPlace({ store, viewport, contextDir, arrival: { target: arrival.target, failure: arrival.failure,
+        question: arrival.question, questionsFailure: arrival.questionsFailure } });
       revealStoredConversation({ store, incoming, viewport, openIncoming: false, enabled: revealConversation });
     }
     projectHistory(true, revealConversation ? { retainedTarget: incoming ?? undefined } : undefined);
   }, [routeReady, identity, routeBound, location, _splat, scope, store, viewport, projectHistory, pendingAdoption,
-    arrival.candidate, arrival.settled, arrival.target, arrival.failure, contextDir]);
+    arrival.candidate, arrival.settled, arrival.target, arrival.failure, arrival.question, arrival.questionsFailure, contextDir]);
 
   useEffect(() => {
     if (!routeReady || previousMobile.current === mobile) return;
@@ -273,7 +291,8 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
     activeView: projection.foregroundPath ? state.tabs[projection.foregroundPath] ?? null : null,
     onZoomView: (view: { target: ViewTarget; label: string }) => open(view.target, { label: view.label }),
     onSelectTab: (path: string) => dispatch({ type: "selectTab", path, at: Date.now(), viewport }),
-    onCloseTab: (path: string) => dispatch({ type: "closeTab", path, viewport }),
+    // Closing a pending question's tab is "Not now" (docs/plans/questions-beside-the-chat.md, Track B).
+    onCloseTab: (path: string) => { dispatch({ type: "closeTab", path, viewport }); dismissOnClose(path); },
     onTogglePin: (path: string) => dispatch({ type: "togglePin", path, at: Date.now() }),
   };
 }

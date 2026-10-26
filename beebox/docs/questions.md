@@ -255,26 +255,29 @@ evidence model.
 
 ## Surfacing
 
-- **The empty root chat** (`docs/implemented-plans/front-door.md`, Track A) — an
-  unstarted chat at the box root shows the newest pending question (by
-  `asked-at`, then path) as the agent's opening line: the `prompt`, the
-  `memo` under it, "and N more" to the Questions page, and a quiet "Not now"
-  (`actions.dismiss`). Text for every input type: a `select` question lists
-  its options in the sentence, and the person answers by typing or speaking.
-  A card that fails to parse is
-  never shown there but counts toward N. The send carries the card's path
-  as `openQuestion`, which the agent sees as the `open-question` snapshot
-  attribute on every message while the card is pending; the agent does the
-  directive in the conversation, then records the answer with
-  `bbx answer --via chat`. A new box seeds one such question
-  (`installRootQuestion`): "What do you want to keep track of here?"
-- **Header badge** — retired 2026-08 with the nav link row
-  (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
-  pending-question count, and Questions has no nav presence unless a box
-  pins `/questions` in its `nav.card`. The Dashboard's attention cards
+- **Beside a new chat** (`docs/plans/questions-beside-the-chat.md`) — when a
+  new root chat arrives with no cards open, the workspace opens the newest
+  pending question (by `asked-at`, then path; never an unparseable card) as
+  the active tab: on the desktop on top of the Box page, on the phone alone,
+  with the composer under it (`arrivalPlan`, `WorkspaceProvider/arrival.ts`).
+  A chat opened beside another card, or one with a saved arrangement, opens
+  no question. The person answers in the chat, or with the card's buttons
+  for `select` and `confirm`; beside the chat a `text` question has no text
+  box of its own ("Answer in the chat."). Closing a pending question's tab is
+  "Not now": it dismisses the card (`question-tab.ts`); the close control
+  carries that label. The question reaches the agent as the `open-card`
+  snapshot attribute; the agent judges whether the message answers it, does
+  the directive in the conversation, then records the answer with
+  `bbx answer --via chat`. A dismissed or expired question comes back the
+  same way: "Answer in chat" on its Questions page row, or the agent's link
+  to the card. A new box seeds one question (`installRootQuestion`): "What do
+  you want to keep track of here?"
+- **App bar count** — the app bar shows the pending-question count beside
+  the todo count (`AttentionBadgesFace.tsx`, `id="bbx-nav-questions"`),
+  linking to the Questions page. The Dashboard's attention cards
   (fed by the same `status.questions` tRPC query, invalidated on
-  `question-answered`/`card-created`/`question-expired` bus events) are the
-  in-app "there is activity" signal.
+  `question-answered`/`card-created`/`question-expired` bus events) carry
+  the same signal.
 - **Questions page** (`QuestionsPage` / `QuestionsList.tsx`) — the full list:
   pending at the top, an archive of answered/dismissed/expired below
   showing the recorded answer and state (not just a state word). Expired
@@ -289,12 +292,13 @@ evidence model.
   actually learned; that recording happens separately, in the follow-up
   job's commits. Every deep link into a question card lands somewhere
   actionable, never a bare frontmatter dump.
-- **Type-driven form** (`QuestionForm.tsx`) — dispatches exhaustively on
+- **Type-driven form** (`QuestionForm/view.tsx`) — dispatches exhaustively on
   `input.type`: `confirm` → Yes/No buttons + optional note; `select` →
   radios (submits the label; the backend resolves it); `text` → textarea.
   `memo` and `learning.proposal` render above the widget — the boxholder
   sees what the box is trying to learn before answering. A Dismiss
-  affordance is available while `pending`.
+  affordance is available while `pending`; beside the chat it is "Not now",
+  which closes the tab.
 - **Notifications + nudges** — `checkPendingQuestionsAndNotify`
   (`question-alert.ts`) notifies once per newly-pending question through
   `notifyBoxholder` (push); the aging sweep's nudge is a second,
@@ -335,9 +339,10 @@ agent-guide context:
   (`issues/closed/features/2026-06-09-in-chat-interactive-questions.md`): synchronous
   chat is a different situation from the async queue — the agent just asks
   in prose, and retrospectives convert chat into learning. `_bookkeeping/questions/`
-  is the only structured-question primitive. What the empty root chat adds
-  (above) is a surface for a *pending card*, answered in words; it creates
-  no cards from chat and adds no structured in-chat control.
+  is the only structured-question primitive. A question beside the chat
+  (above) is a *pending card* in the workspace, answered in words or on the
+  card; it creates no cards from chat and adds no structured in-chat
+  control.
 - **Web-push action buttons.** Chromium-only across browsers; revisit with
   the iOS app's push story.
 - **Question batching** (one card covering several held items at once).

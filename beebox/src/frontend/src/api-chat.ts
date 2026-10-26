@@ -351,7 +351,7 @@ export async function startChatTurn(params: {
   engine?: string;
   model?: string;
 } & ChatSendContext): Promise<ChatTurnStart> {
-  const { session, message, images, contextDir, seedFeatures, engine, model, openCard, openQuestion, cardActivity, cardState } = params;
+  const { session, message, images, contextDir, seedFeatures, engine, model, openCard, cardActivity, cardState } = params;
   const apiBase = getApiBase();
   const messageId = params.messageId ?? newMessageId();
 
@@ -374,7 +374,6 @@ export async function startChatTurn(params: {
         ...(engine !== undefined ? { engine } : {}),
         ...(model !== undefined ? { model } : {}),
         ...(openCard !== undefined ? { openCard } : {}),
-        ...(openQuestion !== undefined ? { openQuestion } : {}),
         ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
         ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
         // Ambient, not a caller-supplied field: only the browser can tell the

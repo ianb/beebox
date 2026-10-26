@@ -11075,6 +11075,27 @@ test1:
       peak: 44381
       added: 0
       turns: 2
+    - date: 2026-10-26T01:11:05.807Z
+      boxCommit: d0c8581e913945ef469578e419398bf3f4a36303
+      repoCommit: 49eddc1c34c8f88305b385160d37a2ff96a56d60
+      initial: 44067
+      peak: 44067
+      added: 0
+      turns: 2
+    - date: 2026-10-26T01:16:43.243Z
+      boxCommit: 4a325052c154fa9f6740e71143e3eb1f736d6633
+      repoCommit: 49eddc1c34c8f88305b385160d37a2ff96a56d60
+      initial: 44056
+      peak: 44056
+      added: 0
+      turns: 2
+    - date: 2026-10-26T01:24:42.056Z
+      boxCommit: 4a325052c154fa9f6740e71143e3eb1f736d6633
+      repoCommit: 49eddc1c34c8f88305b385160d37a2ff96a56d60
+      initial: 44056
+      peak: 44056
+      added: 0
+      turns: 2
   gmail-rule-procedure:
     - date: 2026-10-22T22:14:12.572Z
       boxCommit: d56d16d7a8cebec1d03d1cff0474c6c5cf95790d
@@ -11246,6 +11267,28 @@ test1:
       peak: 36438
       added: 2403
       turns: 4
+  front-door-open-card-not-an-answer:
+    - date: 2026-10-26T01:11:32.827Z
+      boxCommit: 4a325052c154fa9f6740e71143e3eb1f736d6633
+      repoCommit: 49eddc1c34c8f88305b385160d37a2ff96a56d60
+      initial: 44021
+      peak: 44021
+      added: 0
+      turns: 2
+    - date: 2026-10-26T01:13:05.766Z
+      boxCommit: 4a325052c154fa9f6740e71143e3eb1f736d6633
+      repoCommit: 49eddc1c34c8f88305b385160d37a2ff96a56d60
+      initial: 44021
+      peak: 44021
+      added: 0
+      turns: 2
+    - date: 2026-10-26T01:17:03.903Z
+      boxCommit: 4a325052c154fa9f6740e71143e3eb1f736d6633
+      repoCommit: 49eddc1c34c8f88305b385160d37a2ff96a56d60
+      initial: 44010
+      peak: 44010
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

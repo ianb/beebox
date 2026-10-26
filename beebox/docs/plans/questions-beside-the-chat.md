@@ -514,6 +514,37 @@ No new test tier.
    (`AttentionBadgesFace.tsx:75`); `docs/landmarks.md` arrival paragraph; `docs/mobile-contract.md`.
    File the backlog issue.
 
+## As implemented (2026-10-26)
+
+Deviations from the tracks above, each with its reason:
+
+- **"Answer in chat" placement.** It calls `workspace.open` with no pane hint,
+  then `revealConversationActions` (`workspace/history.ts:42`) on the
+  desktop. The workspace already opens a card opposite the visible chat,
+  which is the Questions page's own pane, and the reveal actions cover both
+  the focus layout and a split with two card panes. No `destinationPane`
+  was needed (`components/questions/question-tab.ts`, `useAnswerInChat`).
+- **Where "Not now" lives.** The provider's `onCloseTab` dismisses
+  (`useDismissOnClose`); the card's own "Not now" button calls the same
+  close, so there is one path. The card is "beside the chat" only in
+  companion mode (`RendererProps.mode`), so an embed in a chat message keeps
+  the Questions-page form.
+- **The card refreshes on the bus** (`useLiveRefresh` in
+  `QuestionCardView`): the agent answers from the CLI, and without it the
+  card kept its form after the chat answer.
+- **No provider-level DOM test for arrival.** No such harness exists for
+  `WorkspaceProvider`; the decisions are pure and tested
+  (`arrival.test.ts`), and the two-tab open, the phone open, closing as a
+  dismiss, and a chat answer were checked on test1 in the browser
+  (exhibit "How a question looks beside a new chat").
+
+- **From the diff review (codex gpt-6-sol).** Question arrival also requires
+  an unstarted chat (`WorkspaceProvider`'s `unstarted`, from
+  `conversation.unstarted`): an existing chat opened in a new browser tab has
+  no saved arrangement either, and must not open a question over its
+  history. With the chat hidden on the desktop, a text question's "Answer in
+  the chat" is a button that reveals the chat.
+
 ## Rollout shape
 
 Done when: the tests named in each track's first chunk pass; the two

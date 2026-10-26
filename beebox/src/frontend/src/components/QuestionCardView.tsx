@@ -10,29 +10,56 @@
  * get the fully-typed, already-validated question rather than re-parsing
  * `data.frontmatter` by hand — one source of truth for "what does a
  * question look like on the wire."
+ *
+ * In the workspace the card is beside the chat
+ * (docs/plans/questions-beside-the-chat.md, Track B): the person answers in
+ * the chat or with the card's buttons, or says "Not now", which closes the
+ * tab. The agent answers from the CLI, so the card refreshes on the bus.
  */
 
 import { trpc } from "../lib/trpc/client";
-import { QuestionForm } from "./questions/QuestionForm";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
+import { oneOf } from "../lib/live-refresh";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { useWorkspace } from "./chat/workspace/WorkspaceProvider/provider";
+import { cardTarget } from "./chat/workspace/use-open-beside/hook";
+import { revealConversationActions } from "./chat/workspace/history";
+import { QuestionForm } from "./questions/QuestionForm/view";
 import { Card } from "./ui/Card";
 import { Text } from "./ui/Text";
 import { StatusMessage } from "./ui/StatusMessage";
 import { Heading } from "./ui/Heading";
 import { StatusBadge } from "./ui/StatusBadge";
 import { Stack } from "./ui/Stack";
+import { Button } from "./ui/Button";
+import { InlineAction } from "./ui/InlineAction";
 import { bbxSource } from "../lib/source-tag";
 import { renderQuestionAnswer } from "./questions/answer-display";
 import type { RendererProps } from "../file-type-registry";
 
 const ANSWERABLE = new Set(["pending", "expired", "dismissed"]);
 
-export function QuestionCardView({ data }: RendererProps) {
+export function QuestionCardView({ data, onNavigate, mode }: RendererProps) {
   const utils = trpc.useUtils();
-  const { data: questions, isLoading } = trpc.status.questions.useQuery();
+  const workspace = useWorkspace();
+  const { data: questions, isLoading, isError, refetch } = trpc.status.questions.useQuery();
+  useLiveRefresh({
+    when: oneOf("question-answered", "question-dismissed", "question-expired", "file-change"),
+    refresh: () => { void utils.status.questions.invalidate(); },
+  });
   const question = questions?.items.find((q) => q.relativePath === data.path);
 
   if (isLoading) {
     return <StatusMessage>Loading...</StatusMessage>;
+  }
+
+  if (isError) {
+    return (
+      <StatusMessage>
+        Couldn't load this question.{" "}
+        <Button type="button" intent="ghost" size="sm" onClick={() => void refetch()}>Retry</Button>
+      </StatusMessage>
+    );
   }
 
   if (question === undefined) {
@@ -41,15 +68,24 @@ export function QuestionCardView({ data }: RendererProps) {
 
   const onAnswered = () => void utils.status.questions.invalidate();
   const answerable = ANSWERABLE.has(question.state ?? "pending");
+  // A tab beside the chat; an embed in a chat message or a full page is not.
+  const beside = workspace === null || mode !== "companion" ? undefined : {
+    onNotNow: () => workspace.onCloseTab(data.path),
+    // On the phone the composer row stays under the card; on the desktop the chat can be hidden.
+    onShowChat: workspace.mobile || workspace.transcriptVisible ? undefined : () => {
+      for (const action of revealConversationActions({ state: workspace.store.get(), cardPath: data.path, viewport: "desktop" })) workspace.dispatch(action);
+    },
+  };
 
   if (answerable) {
     return (
       <div className="p-4 max-w-2xl mx-auto">
-        <QuestionForm question={question} sourcePath={data.path} onAnswered={onAnswered} />
+        <QuestionForm question={question} sourcePath={data.path} onAnswered={onAnswered} {...(beside === undefined ? {} : { beside })} />
       </div>
     );
   }
 
+  const others = (questions?.items ?? []).filter((q) => q.state === "pending" && q.invalid !== true).length;
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <Card padding="md" {...bbxSource("card", data.path)}>
@@ -65,6 +101,12 @@ export function QuestionCardView({ data }: RendererProps) {
             </Card>
           ) : null}
           <StatusBadge status={question.state ?? "answered"} size="sm" className="self-start" />
+          {beside === undefined || others === 0 ? null : (
+            <InlineAction intent="quiet" className="self-start underline"
+              onClick={() => onNavigate(cardTarget(SYSTEM_CARD_PATHS.questions), { label: "Questions" })}>
+              {others === 1 ? "1 more question" : `${others} more questions`}
+            </InlineAction>
+          )}
         </Stack>
       </Card>
     </div>

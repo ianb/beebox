@@ -90,13 +90,6 @@ export const sendBodySchema = z.object({
    * attribute. Omitted when no card is open.
    */
   openCard: z.string().optional(),
-  /**
-   * Box-relative path of the pending question card the root chat is showing
-   * (its empty state asks it), sent on every message while it is pending and
-   * surfaced to the agent as the `open-question` snapshot attribute. Omitted
-   * when the chat shows none.
-   */
-  openQuestion: z.string().optional(),
   /** Frozen content attention at the send gesture; never a session target. */
   viewContext: attentionSnapshotSchema.optional(),
   /**
@@ -177,15 +170,14 @@ export function resolveChannel(
 
 /**
  * Normalize the companion-pane fields off a send body into the shape
- * `ChatSendInput` wants: `openCard` and `openQuestion` (non-empty paths),
+ * `ChatSendInput` wants: `openCard` (a non-empty path),
  * `cardActivity` (valid kinds only), `cardState` (per-kind detail strings). Everything is filtered
  * defensively at this parse boundary; absent/invalid fields are simply omitted.
  */
 export function extractCardFields(
-  body: Pick<SendBody, "openCard" | "openQuestion" | "cardActivity" | "cardState" | "viewContext">,
+  body: Pick<SendBody, "openCard" | "cardActivity" | "cardState" | "viewContext">,
 ): SendCardFields {
   const out: SendCardFields = {};
-  if (typeof body.openQuestion === "string" && body.openQuestion !== "") out.openQuestion = body.openQuestion;
   if (body.viewContext !== undefined) {
     out.viewContext = body.viewContext;
     if (body.viewContext.focusedRef !== undefined) out.openCard = parseRef(body.viewContext.focusedRef).path;

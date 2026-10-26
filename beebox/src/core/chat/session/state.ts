@@ -204,8 +204,8 @@ export function deleteSessionFile(boxRoot: string, sessionFile: string | null): 
 /**
  * Combine several queued sends into one turn: text joined with blank lines,
  * image attachments concatenated with per-message id offsets so `[imageN]`
- * tokens from different messages don't collide. The latest queued `channel`,
- * `openCard` and `openQuestion` win — they reflect where the user is now — but
+ * tokens from different messages don't collide. The latest queued `channel`
+ * and `openCard` win — they reflect where the user is now — but
  * `cardActivity` is unioned for that subject. With captured attention, only
  * sends about the latest focused ref participate; activity on another card
  * must not be attributed to it. Legacy clients retain their batch union.
@@ -215,12 +215,10 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   const combinedTextParts: string[] = [];
   let channel: ChatChannel | undefined;
   let openCard: string | undefined;
-  let openQuestion: string | undefined;
   let idOffset = 0;
   for (const q of queued) {
     if (q.channel !== undefined) channel = q.channel;
     if (q.openCard !== undefined) openCard = q.openCard;
-    if (q.openQuestion !== undefined) openQuestion = q.openQuestion;
     const imgs = q.images ?? [];
     let text = q.text;
     if (imgs.length > 0 && idOffset > 0) {
@@ -253,7 +251,6 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     ...(channel !== undefined ? { channel } : {}),
     ...(viewContext !== undefined ? { viewContext } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
-    ...(openQuestion !== undefined ? { openQuestion } : {}),
     ...(cardActivity.length > 0 ? { cardActivity } : {}),
     ...(Object.keys(cardState).length > 0 ? { cardState } : {}),
     ...(queued.some((q) => q.clientComposed === true) ? { clientComposed: true as const } : {}),
