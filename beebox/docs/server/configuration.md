@@ -34,7 +34,7 @@ BBX_VAPID_PRIVATE_KEY=...
 BBX_VAPID_SUBJECT=mailto:you@example.com
 
 # APNs (optional — enables push to the paired iPhone app). See below.
-BBX_APNS_KEY_PATH=/home/beebox/.apns/AuthKey_ABC123DEFG.p8
+BBX_APNS_KEY_PATH=/etc/beebox/apns/AuthKey_ABC123DEFG.p8
 BBX_APNS_KEY_ID=ABC123DEFG
 BBX_APNS_TEAM_ID=...
 BBX_APNS_BUNDLE_ID=...
@@ -83,7 +83,7 @@ script does **not** seed it — add it as an explicit step:
    service enabled and download its `.p8` file (Apple offers the download once). Note
    its Key ID and the account's Team ID.
 2. Copy the file to the server outside the deploy tree, readable by every box
-   user and nobody else. The boxes send the pushes (their engines for
+   user (and the hub, which shares their group) and nobody else. The boxes send the pushes (their engines for
    callouts, their scheduler passes for reminders and alerts), and each runs
    as its own user in the `beebox-boxes` group, so the key cannot live under
    the hub's home:
