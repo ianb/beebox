@@ -1,12 +1,16 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: c8428cca5
-date: 2026-10-02
-model: claude-sonnet-5-5
+generated-at-rev: 56be01944
+date: 2026-10-26
+model: GPT-6 Codex
 reviewed-by: Ian Bicking
 ---
 
 # Security overview
+
+**Scoped amendment (2026-10-26; reviewed by Ian):** Adds opt-in encrypted
+backup egress and its key-custody limit from the box-backups worktree. It is
+not a full security-report refresh.
 
 **Scoped amendment (2026-09-21), reviewed by Ian:** Quick chat only, against
 `34eaa95fc3f9a48d29f4e2d32c6e8aab3e3de04b`. The unchanged `generated-at-rev` remains the
@@ -192,6 +196,12 @@ The summary:
   (Google/Mozilla/Apple).
 - **Your git remote** — every wakeup pushes the box's full history to
   the remote *you* configured; no remote, no push.
+- **Your backup repository, if configured** — a first capture and enabled
+  daily host/app schedule send encrypted snapshots of the box, annex objects,
+  its secrets, and available per-box transcripts to the destination you choose.
+  The box's OS user holds the unattended recovery key and destination access;
+  keep a separate copy of the key and use destination-side deletion protection
+  where possible. An unconfigured box has no complete backup.
 - **Cloudflare** — if configured, the server uses its machine-held API token
   to provision one shared Worker and R2 bucket per publishing box, upload
   release files after `bbx pub prepare <name>`, and attach the box's
