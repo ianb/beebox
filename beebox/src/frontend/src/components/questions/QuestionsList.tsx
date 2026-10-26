@@ -17,7 +17,8 @@ import { href } from "../../lib/routing";
 import { trpc } from "../../lib/trpc/client";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { oneOf } from "../../lib/live-refresh";
-import { QuestionForm, type QuestionInfo } from "./QuestionForm";
+import { QuestionForm, type QuestionInfo } from "./QuestionForm/view";
+import { useAnswerInChat } from "./question-tab";
 import { renderQuestionAnswer } from "./answer-display";
 import { bbxSource } from "../../lib/source-tag";
 import { Stack } from "../ui/Stack";
@@ -40,11 +41,20 @@ function answeredCard(q: QuestionInfo) {
   );
 }
 
-function demotedCard(q: QuestionInfo, onAnswered: () => void) {
+function demotedCard(q: QuestionInfo, actions: { onAnswered: () => void; answerInChat: ((path: string) => void) | undefined }) {
+  const { onAnswered, answerInChat } = actions;
   return (
     <Stack key={q.path} gap="xs">
-      <StatusBadge status={q.state ?? "expired"} size="sm" className="self-start" />
-      <QuestionForm question={q} sourcePath={q.relativePath} onAnswered={onAnswered} />
+      {q.provisional === undefined ? <StatusBadge status={q.state ?? "expired"} size="sm" className="self-start" /> : (
+        // The box's decision, never the person's answer
+        // (docs/implemented-plans/questions-later-and-figure-it-out.md, Track C).
+        <div data-testid="question-box-decided">
+          <Text as="p" size="sm" weight="semibold">The box decided for now: {q.provisional.decision}</Text>
+          <Text as="p" size="sm" tone="subtle">{q.provisional.reasoning}</Text>
+        </div>
+      )}
+      <QuestionForm question={q} sourcePath={q.relativePath} onAnswered={onAnswered}
+        {...(answerInChat === undefined ? {} : { onAnswerInChat: () => answerInChat(q.relativePath) })} />
     </Stack>
   );
 }
@@ -80,6 +90,7 @@ export function QuestionsList() {
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.status.questions.useQuery();
   const { boxSlug } = useParams({ strict: false });
+  const answerInChat = useAnswerInChat();
 
   const questions = data?.items ?? [];
 
@@ -97,9 +108,11 @@ export function QuestionsList() {
   const invalid = questions.filter((q) => q.invalid === true);
   const pending = questions.filter((q) => q.invalid !== true && q.state === "pending");
   const answered = questions.filter((q) => q.invalid !== true && q.state === "answered");
-  const demoted = questions.filter(
+  const putAway = questions.filter(
     (q) => q.invalid !== true && (q.state === "dismissed" || q.state === "expired")
   );
+  const decided = putAway.filter((q) => q.provisional !== undefined);
+  const demoted = putAway.filter((q) => q.provisional === undefined);
   const archive = [...demoted, ...answered];
 
   if (isLoading) {
@@ -108,7 +121,7 @@ export function QuestionsList() {
 
   return (
     <Stack gap="lg">
-      {pending.length === 0 && archive.length === 0 && invalid.length === 0 ? (
+      {pending.length === 0 && archive.length === 0 && decided.length === 0 && invalid.length === 0 ? (
         <Text as="p" tone="subtle">No questions yet.</Text>
       ) : null}
 
@@ -131,8 +144,20 @@ export function QuestionsList() {
               question={q}
               sourcePath={q.relativePath}
               onAnswered={onAnswered}
+              {...(answerInChat === undefined ? {} : { onAnswerInChat: () => answerInChat(q.relativePath) })}
             />
           ))}
+        </Stack>
+      ) : null}
+
+      {decided.length > 0 ? (
+        <Stack gap="sm">
+          <Text as="h2" size="sm" weight="semibold" tone="subtle" uppercase>
+            The box decided for now
+          </Text>
+          <Stack gap="sm">
+            {decided.map((q) => demotedCard(q, { onAnswered, answerInChat }))}
+          </Stack>
         </Stack>
       ) : null}
 
@@ -142,7 +167,7 @@ export function QuestionsList() {
             Archive
           </Text>
           <Stack gap="sm">
-            {demoted.map((q) => demotedCard(q, onAnswered))}
+            {demoted.map((q) => demotedCard(q, { onAnswered, answerInChat }))}
             {answered.map((q) => answeredCard(q))}
           </Stack>
         </Stack>

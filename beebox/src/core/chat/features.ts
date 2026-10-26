@@ -184,8 +184,6 @@ export function composeChatAppSnapshot(input: {
   health?: string;
   todos?: string;
   openCard?: string;
-  /** The pending question card the root chat is asking (`open-question`). */
-  openQuestion?: string;
   viewContext?: AttentionSnapshot;
   /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
   activityChildren?: string;
@@ -207,7 +205,6 @@ export function composeChatAppSnapshot(input: {
     ["health", input.health],
     ["todos", input.todos],
     ["open-card", input.openCard],
-    ["open-question", input.openQuestion],
     ["surface", input.viewContext?.surface],
     ["transcript", input.viewContext?.transcript],
   ];

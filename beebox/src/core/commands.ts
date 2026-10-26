@@ -27,6 +27,8 @@ import {
   procedureRunCommand,
   procedureStatusCommand,
 } from "./commands/procedure.js";
+import { questionDecideCommand } from "./commands/question-decide.js";
+import { questionReraiseCommand } from "./commands/question-reraise.js";
 import { scanImportCommand } from "./commands/scan-import/command.js";
 import { searchCommand } from "./commands/search.js";
 import { trashCommand } from "./commands/trash/command.js";
@@ -47,6 +49,8 @@ export const commands = defineRegistry<CommandDefinition>({
     connectorSyncCommand,
     answerCommand,
     dismissCommand,
+    questionDecideCommand,
+    questionReraiseCommand,
     trashCommand,
     moveCommand,
     procedureRunCommand,

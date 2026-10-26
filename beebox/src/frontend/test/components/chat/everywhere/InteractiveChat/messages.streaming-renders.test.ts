@@ -43,7 +43,7 @@ function streaming(streamText: string): ListProps {
     totalEntries: history.length, onLoadOlder: noop, loadingOlder: false,
     sendSignal: 1, captureSignal: 0, liveTurnId: "t2", proseEnabled: true, pendingHq: [], onHqSendLive: noop,
     captureBubbles: [], captureVerbs: { retry: noopAsync, discard: noopAsync }, audioOverlayStore: createAudioOverlayStore(),
-    openers: [], onSendOpener: () => "accepted" as const, openQuestion: null, onFocusComposer: noop, onQuestionNotNow: noop, onOpenQuestions: noop,
+    openers: [], onSendOpener: () => "accepted" as const,
   };
 }
 

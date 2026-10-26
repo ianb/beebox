@@ -109,6 +109,7 @@ async function writeQuestion(boxRoot: string, receipt: DecisionReceipt): Promise
   const file = containedPath(boxRoot, receipt.application.questionRef);
   if (await pathExistsStrict(file, { followLinks: false })) return;
   const content = createSelectQuestionTemplate({
+    title: `Where ${path.basename(receipt.application.to)} goes`,
     memo: `${receipt.judgment.outcome === "no-match" ? "No destination fit this item." : "The destination is unclear."}\n\n${receipt.judgment.reason.text}\n\nHeld at: ${receipt.application.to}`,
     prompt: `Where does ${path.basename(receipt.application.to)} belong?`,
     options: [...receipt.instructions.destinations.map((d) => ({ id: d.optionId, label: d.name })), { id: "_other", label: "Other: give a directive" }],

@@ -160,7 +160,7 @@ function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: R
 function WorkspaceShellProvider({ children }: { children: ReactNode }) {
   const conversation = useBoxConversation();
   invariant(conversation, "WorkspaceShellProvider requires BoxConversationProvider");
-  return <WorkspaceProvider target={conversation.rendered?.target}>{children}</WorkspaceProvider>;
+  return <WorkspaceProvider target={conversation.rendered?.target} unstarted={conversation.unstarted}>{children}</WorkspaceProvider>;
 }
 
 /**

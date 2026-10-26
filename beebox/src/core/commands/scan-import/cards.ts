@@ -127,6 +127,7 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
       directiveParts.push(`Cross-check the back transcription against ${sessionAttachRelDir}/${photoBasename}.attach/${backFilename}.`);
     }
     const questionContent = createTextQuestionTemplate({
+      title: `Check scanned photo ${photoIdx}`,
       memo,
       prompt: `Review ${photoBasename}: confirm description and back-of-photo text are accurate.`,
       directive: directiveParts.join(" "),

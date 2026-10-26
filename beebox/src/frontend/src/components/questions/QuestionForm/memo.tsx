@@ -1,7 +1,7 @@
 import { useCallback } from "react";
-import type { NavigateHint, ViewTarget } from "../../lib/view-url";
-import { useWorkspace } from "../chat/workspace/WorkspaceProvider/provider";
-import { Markdown } from "../Markdown/body";
+import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
+import { useWorkspace } from "../../chat/workspace/WorkspaceProvider/provider";
+import { Markdown } from "../../Markdown/body";
 
 /**
  * A question card's memo, rendered as the card body is: the agent writes it

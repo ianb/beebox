@@ -37,8 +37,6 @@ export function useEmissionDispatch(opts: {
   send: (event: ChatEvent) => void;
   captureCardSend: () => CardSendFields;
   acceptCardSend?: (fields: CardSendFields) => void;
-  /** The pending question the root chat is asking, sent with every message while pending. */
-  openQuestion?: string;
   boxSlug: string | undefined;
   activeView: { target: ViewTarget } | null;
   messages: SessionEntry[];
@@ -85,7 +83,6 @@ export function useEmissionDispatch(opts: {
   const { captureEmissionDispatch, dispatchNativeEmission, failedRegion } = useBoundEmission({
     pool: opts.pool, target: opts.target, selection: opts.selection, attention: opts.attention,
     emissionStore, captureCardSend, acceptCardSend: opts.acceptCardSend, getWitness,
-    ...(opts.openQuestion === undefined ? {} : { openQuestion: opts.openQuestion }),
     // A `chat:new` notification rides along with the first message only.
     onSent: () => { clearOpenedNotification(); onSent(); },
   });

@@ -123,7 +123,36 @@ function useTabStripReveal({ activePath, tabRefs, tabCount, pinnedCount }: { act
   return overflow;
 }
 
-export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onSelectTab, onCloseTab, onTogglePin }: {
+/**
+ * A tab's close button. `closing` names a close that means more than closing,
+ * "Not now" on a pending question (docs/implemented-plans/questions-beside-the-chat.md).
+ */
+function TabCloseButton({ title, pinned, closing, onClose }: { title: string; pinned: boolean; closing: string | null; onClose: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+      aria-label={closing === null ? `Close ${title}` : `${closing}: ${title}`}
+      title={closing ?? "Close tab"}
+      data-close-kind={closing === null ? undefined : "not-now"}
+      className={cn(
+        "bbx-interface-tab-action flex-shrink-0 mr-1 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        // On a pinned tab the close button is the thing you did not ask
+        // for; it stays out of the way until you reach for it.
+        pinned ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "",
+      )}
+    >
+      <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6l-12 12" />
+      </svg>
+    </button>
+  );
+}
+
+export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onSelectTab, onCloseTab, onTogglePin, closeLabel }: {
   id: string;
   tabs: PanelTab[];
   activePath: string;
@@ -132,6 +161,8 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
   boxSlug: string | undefined;
   onSelectTab: (path: string) => void;
   onCloseTab: (path: string) => void;
+  /** A tab whose close means more than closing, e.g. "Not now" on a pending question; null for a plain close. */
+  closeLabel?: (path: string) => string | null;
   onTogglePin: (path: string) => void;
 }) {
   const presentation = useBoxPresentation();
@@ -231,25 +262,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
         >
           <PinIcon filled={tab.pinned} />
         </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onCloseTab(tab.target.path);
-          }}
-          aria-label={`Close ${title}`}
-          title="Close tab"
-          className={cn(
-            "bbx-interface-tab-action flex-shrink-0 mr-1 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-            // On a pinned tab the close button is the thing you did not ask
-            // for; it stays out of the way until you reach for it.
-            tab.pinned ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "",
-          )}
-        >
-          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6l-12 12" />
-          </svg>
-        </button>
+        <TabCloseButton title={title} pinned={tab.pinned} closing={closeLabel?.(tab.target.path) ?? null} onClose={() => onCloseTab(tab.target.path)} />
       </div>
     );
   }
