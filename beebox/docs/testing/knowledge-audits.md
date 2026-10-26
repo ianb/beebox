@@ -160,9 +160,11 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `correct_contains` / `correct_contains_any` — strings that must appear in the response.
   Keep a literal only for a term the guide itself teaches; grade a free-text
   answer with `correct_matches`, and a box audit's card write with `cards_contain`.
-- `correct_matches` — case-insensitive regexes that must match the response; use
-  when the required relationship has legitimate wording variation that a list
-  of exact substrings would overfit.
+- `correct_matches` — JavaScript regexes, run with the `i` flag, that must match
+  the response (an inline flag such as `(?i)` is a syntax error); use when the
+  required relationship has legitimate wording variation that a list of exact
+  substrings would overfit. Explain-only answers often describe a command
+  without naming it.
 - `cards_contain` — strings that must appear in card files created by the agent.
 - `cards_not_under` — box-relative directory prefixes (`_tmp/`) no card the agent created or modified may sit under.
 - `should_read` — files the agent should read before answering.
@@ -182,6 +184,7 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `final_reply` — when true, the text checks run on the text the chat shows: the reply after the last tool call, earlier text with `<speech>`, a folded text's callouts, and the last earlier line (text or progress update) when the reply is only acks. The chat folds other text written before a later tool call into the activity row. Use it for audits about how the reply reads.
 - `chat_mode` — when true, the agent runs with `chatSystemPrompt()` instead of the default working-directory prompt. Use for tests that audit chat-mode knowledge — the agent in a chat session sees the chat prompt's tag descriptions (`<speech>`, `<chat-app>`, `<ack>`, `<callout>`, `<schedule>`, etc.), so a non-chat-mode audit can't legitimately expect direct knowledge of those. If the test prompt declares `narration="on"` via a `<chat-app>` snapshot, `NARRATION_OVERLAY` is also appended — mirroring what `ChatSession.resolveSystemPrompt` does when narration is enabled on the session.
 - `response_not_contains` — list of substrings that must NOT appear in the agent's response. Useful for testing prompt overrides: e.g. the narration overlay tells the agent not to emit `<speech>` even when the user spoke; the audit can assert this directly.
+- `response_not_matches` — regexes, as in `correct_matches`, that must NOT match the response. Match the command form (`bbx answer <`), not a bare name, or a correct negation ("No `bbx answer`") fails.
 
 Example:
 

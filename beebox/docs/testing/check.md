@@ -2,7 +2,7 @@
 
 **Location:** `test/<area>/<name>.test.ts`, mirroring the `src/` path
 **Runner:** [tap](https://node-tap.org/) with the `@ianbicking/tap-check/tap` plugin
-**Run:** `pnpm test`, or `pnpm exec tap test/<path>.test.ts` from the package
+**Run:** `pnpm test`, or `pnpm exec tap test/<path>.test.ts` from `beebox/`, frontend tests included (`src/frontend/test/<path>`); tap takes files or a glob, not a directory
 
 A test file is `<name>.test.ts`, run by tap. Each test compares whole values
 with `t.check(actual, expected)`. The expected value is written as code, and
@@ -304,7 +304,9 @@ registered in `.taprc`). Memoization in a test therefore matches the browser.
   `resetRenders()`. Reset after the setup renders, then check the exact counts
   for the step under test. An exact object catches a component that starts
   rendering.
-- End each test with `unmount()` (or `t.teardown`), so the cleanups run.
+- End each test with `unmount()` (or `t.teardown`), so the cleanups run. A
+  test `QueryClient` sets `gcTime: Infinity` for mutations as well as queries;
+  a mutation's default 5-minute timer keeps the test process alive.
 - A component that calls `useParams` needs a router around it, as in
   `src/frontend/test/components/PersonView.person-view.test.ts`.
 
