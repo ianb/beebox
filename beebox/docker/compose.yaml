@@ -46,6 +46,7 @@ services:
       # Overrides the image's baked git identity for the box's commits.
       BBX_GIT_NAME: ${BBX_GIT_NAME:-Bee Box}
       BBX_GIT_EMAIL: ${BBX_GIT_EMAIL:-beebox@box.example.com}
+      BBX_BACKUP_DEDICATED_HOME: "1"
 
   # Public HTTPS front door — only started with `--profile public`. Absent
   # from a plain `docker compose up`. Terminates TLS (auto-cert from Let's

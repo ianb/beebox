@@ -93,7 +93,7 @@ about to sleep, while it can still reach you. A forgotten box becoming an
 ## The hard part: key custody
 
 This is the same problem as
-[the backup story](../decisions/2026-08-07-server-backup-story.md), and it
+[the backup story](../closed/decisions/2026-08-07-server-backup-story.md), and it
 should be decided with it:
 
 - If the server discards the key at sleep, **losing it means losing the box.**
@@ -127,7 +127,7 @@ Genuinely open, and not the opt-in's job:
 
 ## Related
 
-- [server backup story](../decisions/2026-08-07-server-backup-story.md) —
+- [server backup story](../closed/decisions/2026-08-07-server-backup-story.md) —
   decide together; a dormant encrypted box is also the ideal backup unit.
 - [Cloudflare Flexible SSL leaves edge-to-origin plaintext](../bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md)
   — encryption *in transit*, live today, and a strictly larger exposure than a

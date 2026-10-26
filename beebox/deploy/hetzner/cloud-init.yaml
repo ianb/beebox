@@ -39,6 +39,7 @@ packages:
   - qpdf
   - ffmpeg
   - rsync
+  - bzip2
 
 groups:
   - beebox-boxes
@@ -96,6 +97,16 @@ write_files:
 
 runcmd:
   - systemd-tmpfiles --create /etc/tmpfiles.d/beebox.conf
+  # The unit server is amd64. Install the same checksum-verified restic build
+  # used in the Docker/Mac VM image.
+  - curl -fsSL -o /tmp/restic_0.19.1_linux_amd64.bz2 https://github.com/restic/restic/releases/download/v0.19.1/restic_0.19.1_linux_amd64.bz2
+  - echo 'f415415624dcc452f2a02b8c33641791a8c6d6d3b65bbb3543fcf9a25151585c  /tmp/restic_0.19.1_linux_amd64.bz2' | sha256sum -c -
+  - bunzip2 -c /tmp/restic_0.19.1_linux_amd64.bz2 > /usr/local/bin/restic
+  - chmod 0755 /usr/local/bin/restic
+  - mkdir -p /usr/local/share/doc/restic
+  - curl -fsSL -o /usr/local/share/doc/restic/LICENSE https://raw.githubusercontent.com/restic/restic/v0.19.1/LICENSE
+  - rm /tmp/restic_0.19.1_linux_amd64.bz2
+  - restic version
   # Node 24 from NodeSource, plus pnpm through corepack.
   - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
   - DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nodejs

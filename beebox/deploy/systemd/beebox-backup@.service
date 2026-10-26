@@ -1,0 +1,16 @@
+# One verified backup for a box, run by its own account inside the box sandbox.
+[Unit]
+Description=Bee Box %i backup
+RequiresMountsFor=/var/lib/beebox/%i
+
+[Service]
+Type=oneshot
+User=bbx-%i
+Group=bbx-%i
+WorkingDirectory=/var/lib/beebox/%i/box
+EnvironmentFile=/etc/beebox/box.env
+ExecStart=/usr/local/bin/bbx engine backup run /var/lib/beebox/%i/box
+TimeoutStartSec=24h
+
+[Install]
+WantedBy=multi-user.target

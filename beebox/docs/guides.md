@@ -35,6 +35,7 @@ where new material goes and how it is named.
 | Box work: running against the test box, throwaway boxes, and production from the dev repo | [box-work](box-work.md) |
 | Agent guide: the always-loaded guide, its ledger of rules, and the bin test | [agent-guide](agent-guide.md) |
 | Secrets: the machine-level store and grants | [secrets](secrets.md) |
+| Encrypted box backups and recovery | [backups](backups.md) |
 | Procedures: multi-step workflows as cards | [procedure-implementation](procedure-implementation.md) |
 | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
 | Notifications, reminders, and watches (`bbx notify`, `notify:` schedules, `bbx changes`, `bbx judge`) | [notifications](notifications.md) |

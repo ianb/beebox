@@ -1,11 +1,19 @@
 ---
 title: "Box data has no easy backup, on the server or any other install"
-workstream: security-report
+workstream: box-backups
 area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-10-26** — implemented by commit `56be01944`. The boxholder chose
+encrypted Restic snapshots configured and controlled through the CLI, with
+installation-specific schedules and whole-box restore. This resolves the
+backup-story decision with per-box snapshots rather than requiring Git and
+annex remotes or relying on provider snapshots. Mac-initiated cloud-to-local
+backup remains outside this work and is recorded in the partial plan.
 
 The deployed server has no first-class backup mechanism.
 `docs/server/operations.md` defers to "whatever backup mechanism is
@@ -65,3 +73,13 @@ install (server, Mac app, NAS, a laptop box), not only the server:
 - What does a restore look like, and how is it tested (a restore into a
   throwaway box on a schedule)?
 
+## Research 2026-10-25
+
+The [portable encrypted backup comparison](../../../research/box-backups/2026-10-25-portable-encrypted-backup.md)
+inventories box, runtime, and external state and recommends restic as the
+common snapshot engine, pending a consistency and restore design. The
+post-isolation production boxes are on `/var/lib/beebox`, a separate volume
+excluded from Hetzner server snapshots (`beebox/docs/server/provisioning.md`);
+an optional Git remote still does not carry annex bytes or ignored state.
+Decisions needed before planning: destination guidance, recovery-key handoff,
+retention, and whether the initial restore flow needs single-file UI recovery.

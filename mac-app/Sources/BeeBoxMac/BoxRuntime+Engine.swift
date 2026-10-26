@@ -206,17 +206,17 @@ extension BoxRuntime {
 
 /// Collects a process's stdout while also appending it to the box log.
 final class CaptureWriter: Writer, @unchecked Sendable {
-    private let also: LogWriter
+    private let also: LogWriter?
     private let lock = NSLock()
     private var buffer = Data()
 
-    init(also: LogWriter) { self.also = also }
+    init(also: LogWriter?) { self.also = also }
 
     var text: String { lock.withLock { String(decoding: buffer, as: UTF8.self) } }
 
     func write(_ data: Data) throws {
         lock.withLock { buffer.append(data) }
-        try also.write(data)
+        if let also { try also.write(data) }
     }
 
     func close() throws {}

@@ -32,6 +32,7 @@ export const VERB_COMMANDS = defineRegistry<CommandLoader>({
     answer: async () => (await import("./commands/answer.js")).answerCommand,
     attachments: async () => (await import("./commands/attachments.js")).attachmentsCommand,
     auth: async () => (await import("./commands/auth.js")).authCommand,
+    backup: async () => (await import("./commands/backup.js")).backupCommand,
     boxes: async () => (await import("./commands/boxes.js")).boxesCommand,
     calendar: async () => (await import("./commands/calendar.js")).calendarCommand,
     changes: async () => (await import("./commands/changes.js")).changesCommand,

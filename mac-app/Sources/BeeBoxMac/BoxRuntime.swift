@@ -51,6 +51,7 @@ final class BoxRuntime: ObservableObject {
 
     var manager: ContainerManager?
     private var container: LinuxContainer?
+    private var backupTask: Task<Void, Never>?
     var log: LogWriter?
     private var statsTask: Task<Void, Never>?
     private var forwarder: PortForwarder?
@@ -89,6 +90,8 @@ final class BoxRuntime: ObservableObject {
     func stop() async {
         startTask?.cancel()
         startTask = nil
+        backupTask?.cancel()
+        backupTask = nil
         await teardown()
     }
 
@@ -262,6 +265,7 @@ final class BoxRuntime: ObservableObject {
             phase = .running(base.appending(path: "box/"))
             finish(succeeded: true)
             watch(container, exit: exit)
+            backupTask = Task { await backupLoop(container, log: log) }
         } catch is StartAbandoned {
             appLog("start abandoned: hosting was turned off or the box was stopped")
             finish(succeeded: false)
@@ -355,6 +359,8 @@ final class BoxRuntime: ObservableObject {
             config.process.environmentVariables += [
                 // Claude writes transcripts under CLAUDE_CONFIG_DIR, not ~/.claude.
                 "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
+                // This VM's home and Claude volume belong to this one box.
+                "BBX_BACKUP_DEDICATED_HOME=1",
             ]
             config.process.stdout = stdout ?? log
             config.process.stderr = log
@@ -400,6 +406,107 @@ final class BoxRuntime: ObservableObject {
         return relay
     }
 
+    /// Catch up an overdue configured backup while this app is already hosting
+    /// the box. Each probe is a short-lived process in the running VM.
+    private func backupLoop(_ container: LinuxContainer, log: LogWriter) async {
+        let statusInterval: Duration = .seconds(900)
+        let idleInterval: Duration = .seconds(60)
+        while !Task.isCancelled, self.container === container {
+            do {
+                let status = try await runInVM(container, arguments: ["bbx", "engine", "backup", "status", "/data/box", "--json"], log: log, logOutput: false)
+                guard status.exitCode == 0 else {
+                    appLog("backup status failed (exit \(status.exitCode)); see \(Paths.log.path)")
+                    try await Task.sleep(for: statusInterval)
+                    continue
+                }
+                let state = try JSONDecoder().decode(BackupStatus.self, from: status.stdout)
+                guard state.configured, state.due else {
+                    try await Task.sleep(for: statusInterval)
+                    continue
+                }
+
+                appLog("overdue backup detected; waiting for ten minutes without admitted box work")
+                var idleSince: Date?
+                while !Task.isCancelled, self.container === container {
+                    let idle = try await runInVM(container, arguments: ["bbx", "engine", "backup", "idle", "/data/box"], log: log, logOutput: false)
+                    if idle.exitCode == 0 {
+                        idleSince = idleSince ?? Date()
+                        if let idleSince, Date().timeIntervalSince(idleSince) >= 600 { break }
+                    } else if idle.exitCode == 1 {
+                        idleSince = nil
+                    } else {
+                        appLog("backup idle check failed (exit \(idle.exitCode)); see \(Paths.log.path)")
+                        idleSince = nil
+                    }
+                    try await Task.sleep(for: idleInterval)
+                }
+                guard !Task.isCancelled, self.container === container else { return }
+                appLog("ten-minute quiet window reached; starting backup")
+                let backup = try await runInVM(container, arguments: ["bbx", "engine", "backup", "run", "/data/box"], log: log, logOutput: true)
+                if backup.exitCode != 0 {
+                    appLog("backup failed (exit \(backup.exitCode)); it will be retried while the app remains open")
+                    try await Task.sleep(for: statusInterval)
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                appLog("backup scheduler probe failed: \(error); see \(Paths.log.path)")
+                do { try await Task.sleep(for: statusInterval) } catch { return }
+            }
+        }
+    }
+
+    private struct BackupStatus: Decodable {
+        let configured: Bool
+        let due: Bool
+    }
+
+    private struct VMCommandResult {
+        let exitCode: Int32
+        let stdout: Data
+        let stderr: Data
+    }
+
+    func runBackupCommand(_ command: BackupCommand) async -> BackupCommandResponse {
+        guard let container else {
+            return BackupCommandResponse(exitCode: 1, stdout: "", stderr: "The Bee Box VM is not running. Open Bee Box Desktop and start the box, then retry.\n")
+        }
+        do {
+            let commandLog: LogWriter
+            if let log { commandLog = log }
+            else { commandLog = try LogWriter(url: Paths.log) }
+            let result = try await runInVM(container, arguments: command.engineArguments, log: commandLog, logOutput: true)
+            return BackupCommandResponse(exitCode: result.exitCode, stdout: String(decoding: result.stdout, as: UTF8.self), stderr: String(decoding: result.stderr, as: UTF8.self))
+        } catch {
+            return BackupCommandResponse(exitCode: 1, stdout: "", stderr: "Backup command failed: \(error.localizedDescription)\n")
+        }
+    }
+
+    private func runInVM(_ container: LinuxContainer, arguments: [String], log: LogWriter, logOutput: Bool) async throws -> VMCommandResult {
+        let capture = CaptureWriter(also: logOutput ? log : nil)
+        let errorCapture = CaptureWriter(also: log)
+        let process = try await container.exec("backup-\(UUID().uuidString)") { config in
+            config.arguments = arguments
+            config.user = .init(uid: 1000, gid: 1000, username: "node")
+            config.workingDirectory = "/data/box"
+            config.environmentVariables = [
+                "PATH=\(BackupCommand.guestHome)/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "HOME=\(BackupCommand.guestHome)",
+                "CLAUDE_CONFIG_DIR=/app/claude-config",
+                "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
+                "BBX_BACKUP_DEDICATED_HOME=1",
+                "BBX_CLI_PREBUILT=1",
+                "COREPACK_ENABLE_DOWNLOAD_PROMPT=0",
+                "COREPACK_HOME=/opt/corepack",
+            ]
+            config.stdout = capture
+            config.stderr = errorCapture
+        }
+        try await process.start()
+        let status = try await process.wait()
+        return VMCommandResult(exitCode: status.exitCode, stdout: Data(capture.text.utf8), stderr: Data(errorCapture.text.utf8))
+    }
+
     private func waitForServer(_ base: URL) async throws {
         let deadline = Date().addingTimeInterval(600)
         while Date() < deadline {
@@ -439,6 +546,8 @@ final class BoxRuntime: ObservableObject {
             let code = await exit.value
             guard let self, self.container === container else { return }
             self.statsTask?.cancel()
+            self.backupTask?.cancel()
+            self.backupTask = nil
             self.container = nil
             self.phase = .failed("the box exited (\(code.map { String($0) } ?? "unknown")); see \(Paths.log.path)")
         }

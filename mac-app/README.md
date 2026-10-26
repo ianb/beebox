@@ -200,6 +200,44 @@ rm -f ~/Library/Preferences/run.beebox.mac.plist
 The app installs no login items or background services, and its VM runs only
 while the app does.
 
+### Backup commands
+
+Backup configuration and one-shot operations go through the running app, which
+owns the VM. Put the restic password in a file in the mounted VM home; the file
+contents never pass through the command socket:
+
+```sh
+mkdir -p "$HOME/Library/Application Support/Bee Box/home/.config/beebox"
+chmod 700 "$HOME/Library/Application Support/Bee Box/home/.config/beebox"
+# Create this file with your password using a password manager or secure editor:
+# ~/Library/Application Support/Bee Box/home/.config/beebox/backup-password
+chmod 600 "$HOME/Library/Application Support/Bee Box/home/.config/beebox/backup-password"
+
+mkdir -p "$HOME/Library/Application Support/Bee Box/home/.aws"
+chmod 700 "$HOME/Library/Application Support/Bee Box/home/.aws"
+# Create ~/.aws/credentials in the mounted home with the S3-compatible
+# provider's access key and secret under the [default] profile; then:
+chmod 600 "$HOME/Library/Application Support/Bee Box/home/.aws/credentials"
+
+APP="/Applications/Bee Box Desktop.app/Contents/MacOS/BeeBoxMac"
+VM_HOME=/home/node
+"$APP" backup configure --repository 's3:https://<provider-endpoint>/<bucket>/box' \
+  --password-file "$VM_HOME/.config/beebox/backup-password"
+"$APP" backup status --json
+"$APP" backup run
+"$APP" backup check
+```
+
+Open Bee Box Desktop and start the box before invoking these commands. The
+private control socket lives under `~/Library/Application Support/Bee Box/run`
+and accepts only typed backup commands.
+
+The VM runs backup commands with a fixed environment, so it cannot receive
+provider-specific credentials such as `B2_ACCOUNT_ID` and `B2_ACCOUNT_KEY`.
+For Backblaze B2, use its S3-compatible endpoint and credentials in the mounted
+home's `~/.aws/credentials` file; restic reads that file by default for the S3
+backend. Restic recommends B2's S3-compatible API over its native B2 backend.
+
 ## Release
 
 One-time setup on the maintainer's Mac (done 2026-10-07):

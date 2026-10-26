@@ -5,7 +5,7 @@ import { acquireBoxWork, boxWorkEnvironment, type BoxWork } from "../../lib/box-
 
 const independentlyOwned = new Set([
   "answer", "maintenance", "migrate", "docs", "upgrade", "serve", "hub", "scheduler",
-  "auth", "secrets", "boxes", "tailscale", "field-test",
+  "auth", "secrets", "boxes", "tailscale", "field-test", "backup",
 ]);
 // Read-only commands: they mutate nothing, so there is nothing to admit. Some
 // also run where no box exists at all — `agent-context --hook` fires in EVERY
