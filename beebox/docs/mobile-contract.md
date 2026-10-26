@@ -1328,8 +1328,17 @@ See §1.3 (full request/response/errors).
   repeated `submit` of one id returns one record and posts once. A `sending` view with
   `expired: true` is past the six-day delivery limit and offers only Open chat and Discard.
 - **Request deadline:** legacy external `quickChat.submit` requests retain their bounded
-  20-second timeout; other quick-chat mutations use 60 seconds. Current App Intent
+  20-second timeout; other quick-chat mutations use 60 seconds. `home` uses 20 seconds, so a
+  box whose host is asleep reads as unreachable while the person looks. Current App Intent
   acknowledgment is local (§5.12), not a wait for this endpoint.
+- **Box not answering:** a 503 from any procedure is read as the hub's body
+  (`src/hub/server/box-unavailable.ts`): `{error:"box_closed",reason}` is "closed for
+  <reason>" (reason cut to 80 characters); any other 503 body is "not open right now". The box
+  screen refreshes `home` when it appears and when the app comes to the foreground, unless the
+  box already answered in this foreground stay, and retries a failed refresh while it shows
+  (5, 10, 20, 40, then every 60 seconds). Until the box answers in the current stay, its status
+  row gives the failure and the list's age, and no recent chat is styled as the one to pick up
+  (`docs/plans/ios-box-screen-stale-list.md`).
 - **Outbox:** the phone stores `{id,boxID,text,origin,source?,hqService?,createdAt,attempts,lastAttemptAt}` in
   `quick-chat-outbox.json` before the first request and removes an entry only when `submit`
   answers. A failed request keeps it; retries follow a backoff while the app is in the
@@ -1342,7 +1351,8 @@ See §1.3 (full request/response/errors).
   `ios-app/BeeBox/Storage/QuickChatOutbox.swift`; `ios-app/BeeBox/Storage/BoxScreenStore.swift`.
   Box `src/webapp/trpc/routers/quick-chat.ts`; `src/core/chat/routing/quick-chat-record.ts`.
 - **Drift:** LOUD. A request the server rejects keeps the entry in the outbox and the row
-  visible; an answer the phone cannot decode fails the refresh and shows "Could not refresh".
+  visible; an answer the phone cannot decode fails the refresh and shows "Could not refresh
+  <box>".
 
 ### 5.12 Quick capture — durable source acceptance
 

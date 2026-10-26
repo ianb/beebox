@@ -4,7 +4,8 @@ import SwiftUI
 /// The box screen with isolated stores and a fake server, for simulator
 /// screenshots of each face: `--box-screen-fixture=<state>`, where state is
 /// `empty`, `multi-box`, `needs-choice`, `not-delivered`, `waiting-to-send`,
-/// `sent`, or `refresh-failed`. `empty` has no `nav.card` shortcuts, so its
+/// `sent`, `refresh-failed`, `box-closed`, or `checking`. The last three show
+/// a list last updated three hours ago that the box has not confirmed. `empty` has no `nav.card` shortcuts, so its
 /// Shortcuts section is absent; the others show two.
 struct BoxScreenFixtureScreen: View {
     private static let fixtureName = ProcessInfo.processInfo.arguments
@@ -100,10 +101,21 @@ struct BoxScreenFixtureScreen: View {
         }
         let sent: [QuickChatView] = fixture == "sent" ? FixtureQuickChatClient.sent : []
         let home = FixtureQuickChatClient.home(open: open, withShortcuts: fixture != "empty")
-        screenStore.replaceForFixture(home: home, sent: sent, boxID: box.id)
+        let unconfirmed: BoxScreenStore.Refresh? = switch fixture {
+        case "refresh-failed": .failed(.unreachable)
+        case "box-closed": .failed(.closed(reason: "docs refresh"))
+        case "checking": .refreshing
+        default: nil
+        }
+        screenStore.replaceForFixture(
+            home: home,
+            sent: sent,
+            boxID: box.id,
+            savedAt: unconfirmed == nil ? nil : Date().addingTimeInterval(-3 * 60 * 60)
+        )
         await screenStore.start()
-        if fixture == "refresh-failed" {
-            screenStore.failRefreshForFixture(boxID: box.id)
+        if let unconfirmed {
+            screenStore.setRefreshForFixture(unconfirmed, boxID: box.id)
         }
     }
 

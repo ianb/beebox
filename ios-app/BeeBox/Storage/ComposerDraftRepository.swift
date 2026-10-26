@@ -200,13 +200,16 @@ actor ComposerDraftRepository {
     }
 
     /// The last `quickChat.home` answer for a box, so the box screen draws at
-    /// once on the next launch. A cache: an unreadable copy is dropped.
-    func loadQuickChatHome(boxID: UUID) -> QuickChatHome? {
+    /// once on the next launch, with when it was saved: the file's modification
+    /// date, nil when unreadable. A cache: an unreadable copy is dropped.
+    func loadQuickChatHome(boxID: UUID) -> (home: QuickChatHome, savedAt: Date?)? {
         let url = boxDirectory(boxID: boxID).appendingPathComponent("quick-chat-home.json")
-        guard let data = try? Data(contentsOf: url) else {
+        guard let data = try? Data(contentsOf: url),
+              let home = try? JSONDecoder().decode(QuickChatHome.self, from: data) else {
             return nil
         }
-        return try? JSONDecoder().decode(QuickChatHome.self, from: data)
+        let savedAt = try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+        return (home, savedAt)
     }
 
     func saveQuickChatHome(_ home: QuickChatHome, boxID: UUID) throws {
