@@ -38,9 +38,9 @@ With no cached list, the second line drops the age ("Trying again.") and the sec
 
 The primary styling returns when a fresh answer lands. Tapping any chat still opens it; the web view's own unreachable page (`ios-app/BeeBox/Views/RootView.swift:629-630`, `UnreachableBoxView`) covers that path. The app does not open a chat by itself on launch today (`ios-app/BeeBox/Models/RootSurface.swift:61-85` shows the box screen on a cold launch) and this plan does not change that.
 
-Opening a chat from the snapshot list wakes the box through the normal request path, as today. The snapshot answer itself does not wake it. While the box screen shows a sleeping box in the foreground, the app asks again every 60 s; the hub answers each from the snapshot until the box wakes for some other reason, and then the live answer replaces it.
+Opening a chat from the snapshot list wakes the box through the normal request path, as today. The snapshot answer itself does not wake it. While the box screen shows a sleeping box in the foreground, the app asks again every 60 s; the hub answers each from the snapshot until the box wakes for some other reason, and then the live answer replaces it. While the last answer said asleep, the app holds its other wake-causing background requests: the capture list shows the phone's own captures, and the log upload keeps its queue (on disk, so the launch flush also holds) until an awake answer. The boxholder chose this on 2026-10-26.
 
-When the hub has no snapshot it can read (a crash, a host reboot, a box from before this change), the request takes today's path and wakes the box once. This plan reads the boxholder's "don't wake" as applying to the snapshot answer; the stricter reading would leave the phone with no list until something else wakes the box. Flagged for the boxholder.
+When the hub has no snapshot it can read (a crash, a host reboot, a box from before this change), the request takes today's path and wakes the box once. This plan reads the boxholder's "don't wake" as applying to the snapshot answer; the stricter reading would leave the phone with no list until something else wakes the box. The boxholder kept this behavior on 2026-10-26.
 
 The status row is a status line plus a style change. No new surface, card type, or notification, so the bbx-design skill's full template is not used.
 

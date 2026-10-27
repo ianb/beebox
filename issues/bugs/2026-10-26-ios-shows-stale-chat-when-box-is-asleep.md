@@ -65,5 +65,10 @@ On the iPhone, against the hosted box, after a deploy:
    <box>", "Last updated …", no chat highlighted; turning airplane mode off
    updates the list within about a minute without touching the screen.
 
-Known: opening the app still wakes the box a few seconds later, through the
-capture list and the diagnostic log upload, which are separate requests.
+5. With the box asleep (step 2), open the app and leave it on the box screen
+   for two minutes. Expected: the box stays asleep (the hub's status page or
+   `systemctl status` shows it stopped). Opening a chat wakes it.
+
+Known: with no snapshot the hub can open (a crash, a host reboot, the first
+sleep after the deploy), opening the app wakes the box once. The boxholder
+accepted this on 2026-10-26.

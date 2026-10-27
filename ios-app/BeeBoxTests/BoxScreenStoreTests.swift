@@ -96,7 +96,11 @@ final class BoxScreenStoreTests: XCTestCase {
         requiresDeviceUnlock: false
     )
 
+    /// What the store told the log upload, in order.
+    private var asleepReports: [Bool] = []
+
     override func setUpWithError() throws {
+        asleepReports = []
         rootURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     }
 
@@ -110,7 +114,11 @@ final class BoxScreenStoreTests: XCTestCase {
         asleepRecheckDelay: TimeInterval = BoxScreenStore.asleepRecheckDelay
     ) -> (BoxScreenStore, ComposerDraftRepository) {
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let store = BoxScreenStore(repository: repository, retryDelays: retryDelays, asleepRecheckDelay: asleepRecheckDelay, client: { _ in client })
+        let store = BoxScreenStore(
+            repository: repository, retryDelays: retryDelays, asleepRecheckDelay: asleepRecheckDelay,
+            reportAsleep: { [weak self] _, asleep in self?.asleepReports.append(asleep) },
+            client: { _ in client }
+        )
         store.updateBoxes([box])
         return (store, repository)
     }
@@ -285,7 +293,7 @@ final class BoxScreenStoreTests: XCTestCase {
         XCTAssertEqual(store.refreshes[box.id], .failed(.unreachable))
         XCTAssertEqual(store.homes[box.id]?.recentChats.map(\.label), ["Plan the week", "Trip planning"])
 
-        let relaunched = BoxScreenStore(repository: repository, client: { _ in client })
+        let relaunched = BoxScreenStore(repository: repository, reportAsleep: { _, _ in }, client: { _ in client })
         relaunched.updateBoxes([box])
         await relaunched.loadCachedHome(boxID: box.id)
         XCTAssertEqual(relaunched.homes[box.id]?.recentChats.map(\.label), ["Plan the week", "Trip planning"])
@@ -384,7 +392,7 @@ final class BoxScreenStoreTests: XCTestCase {
         XCTAssertEqual(store.homeDates[box.id], Date(timeIntervalSince1970: 1_793_027_520))
 
         // A relaunch draws the cached snapshot with its own age, not the file's.
-        let relaunched = BoxScreenStore(repository: repository, client: { _ in client })
+        let relaunched = BoxScreenStore(repository: repository, reportAsleep: { _, _ in }, client: { _ in client })
         relaunched.updateBoxes([box])
         await relaunched.loadCachedHome(boxID: box.id)
         XCTAssertEqual(relaunched.homeDates[box.id], Date(timeIntervalSince1970: 1_793_027_520))
@@ -394,6 +402,9 @@ final class BoxScreenStoreTests: XCTestCase {
         let calls = client.homeCalls
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(client.homeCalls, calls, "a live answer is not asked again")
+        // The log upload held off while the box slept and resumes once it answers awake.
+        XCTAssertEqual(asleepReports.first, true)
+        XCTAssertEqual(asleepReports.last, false)
     }
 
     /// Opening a chat and coming back to the same box screen cancels the
@@ -599,7 +610,7 @@ final class BoxScreenStoreTests: XCTestCase {
         client.offline = false
         client.submitAnswer = .sent
         client.destination = .init(label: "Trip planning", sessionId: "s1")
-        let relaunched = BoxScreenStore(repository: repository, client: { _ in client })
+        let relaunched = BoxScreenStore(repository: repository, reportAsleep: { _, _ in }, client: { _ in client })
         relaunched.updateBoxes([box])
         relaunched.setShownBox(box.id)
         await relaunched.start()

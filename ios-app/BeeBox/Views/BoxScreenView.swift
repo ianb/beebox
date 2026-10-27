@@ -35,12 +35,16 @@ struct BoxScreenView: View {
     var initiallyShowsBoxes = false
     @State private var checkingIsSlow = false
 
+    private var boxAwake: Bool {
+        screenStore.confirmedBoxIDs.contains(box.id) && screenStore.homes[box.id]?.asleep == nil
+    }
+
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
                 List {
                     refreshNotice
-                    QuickCaptureSection(box: box, boxes: boxes, onOpen: onOpen)
+                    QuickCaptureSection(box: box, boxes: boxes, boxAwake: boxAwake, onOpen: onOpen)
                     needsSection
                     sentSection
                     recentSection

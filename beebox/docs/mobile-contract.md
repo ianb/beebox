@@ -1348,7 +1348,9 @@ See §1.3 (full request/response/errors).
   no copy the hub can open, the request wakes the box as before. The phone treats an `asleep`
   answer as current: it keeps the first recent chat styled as the one to pick up, says the box
   is asleep with the time of `savedAt`, and asks again every 60 seconds while the box screen
-  shows. Fixture: `home-asleep.json`.
+  shows. Fixture: `home-asleep.json`. While the last answer said `asleep`, the phone also holds
+  its other background requests that would wake the box: the capture list shows this phone's
+  captures only, and the diagnostic log upload (§8) keeps its queue until an awake answer.
 - **Outbox:** the phone stores `{id,boxID,text,origin,source?,hqService?,createdAt,attempts,lastAttemptAt}` in
   `quick-chat-outbox.json` before the first request and removes an entry only when `submit`
   answers. A failed request keeps it; retries follow a backoff while the app is in the

@@ -186,6 +186,9 @@ final class BoxScreenStore: ObservableObject {
     private let now: () -> Date
     private let retryDelays: [TimeInterval]
     private let asleepRecheckDelay: TimeInterval
+    /// Told whether each answered home said the box is asleep, so the log
+    /// upload holds off instead of waking it.
+    private let reportAsleep: (UUID, Bool) -> Void
     /// Counts stays in the foreground. A refresh confirms only in the stay it
     /// started in.
     private var foregroundGeneration = 0
@@ -209,6 +212,9 @@ final class BoxScreenStore: ObservableObject {
         now: @escaping () -> Date = Date.init,
         retryDelays: [TimeInterval] = BoxScreenStore.homeRetryDelays,
         asleepRecheckDelay: TimeInterval = BoxScreenStore.asleepRecheckDelay,
+        reportAsleep: @escaping (UUID, Bool) -> Void = { boxID, asleep in
+            Task { await LogForwarder.shared.setAsleep(asleep, boxID: boxID) }
+        },
         client: @escaping (PairedBox) -> any QuickChatClient = { QuickChatAPI(box: $0) }
     ) {
         self.repository = repository
@@ -216,6 +222,7 @@ final class BoxScreenStore: ObservableObject {
         self.now = now
         self.retryDelays = retryDelays
         self.asleepRecheckDelay = asleepRecheckDelay
+        self.reportAsleep = reportAsleep
         let relay = SubmitRelay()
         outbox = QuickChatOutbox(repository: repository, now: now) { entry in
             try await relay.submit(entry)
@@ -338,6 +345,7 @@ final class BoxScreenStore: ObservableObject {
             answers[boxID]?.removeAll { $0.serial <= startSerial && Self.isOpen($0.view) }
             homes[boxID] = home
             homeDates[boxID] = home.asleep.map { $0.savedDate ?? now() } ?? now()
+            reportAsleep(boxID, home.asleep != nil)
             refreshes[boxID] = .idle
             homeRetryAttempts[boxID] = nil
             if generation == foregroundGeneration {
