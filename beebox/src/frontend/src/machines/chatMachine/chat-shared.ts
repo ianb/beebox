@@ -151,27 +151,29 @@ export function reconcilePending(params: {
   serverUsers.reverse();
 
   // Transcript turns that echo an earlier send: a later unreconciled message
-  // was sent after them even when its baseline predates their writing.
+  // was sent after them even when its baseline predates their writing. They
+  // are kept on the entry, because the earlier send is gone from the pending
+  // list after this pass.
   const echoesSoFar: string[] = [];
-  const unplaced: Array<{ pending: PendingSessionEntry; sentAfter: Set<string> }> = [];
-  const stillPending = pendingMessages.filter((pm) => {
+  const stillPending: PendingSessionEntry[] = [];
+  for (const pm of pendingMessages) {
     const pmText = normalizeForCompare(entryText(pm));
-    if (pmText.length === 0) return false;
+    if (pmText.length === 0) continue;
     const baseline = new Set(pm.reconcileKnownUuids);
     const echo = serverUsers.find((server) => {
       return !baseline.has(server.uuid) && server.remainingText.includes(pmText);
     });
-    if (!echo) {
-      unplaced.push({ pending: pm, sentAfter: new Set([...pm.reconcileKnownUuids, ...echoesSoFar]) });
-      return true;
+    if (echo) {
+      echo.remainingText = echo.remainingText.replace(pmText, "");
+      echoesSoFar.push(echo.uuid);
+      continue;
     }
-    echo.remainingText = echo.remainingText.replace(pmText, "");
-    echoesSoFar.push(echo.uuid);
-    return false;
-  });
+    const earlier = (pm.sentAfterEchoes ?? []).filter((uuid) => !echoesSoFar.includes(uuid));
+    stillPending.push(echoesSoFar.length === 0 ? pm : { ...pm, sentAfterEchoes: [...earlier, ...echoesSoFar] });
+  }
 
   return {
-    messages: placePending(serverMessages, unplaced),
+    messages: placePending(serverMessages, stillPending),
     pendingMessages: stillPending,
   };
 }
@@ -190,12 +192,10 @@ export function reconcilePending(params: {
  * transcript (an empty or unavailable history when it was sent) there is
  * nothing to place it after, and it stays last.
  */
-function placePending(
-  serverMessages: SessionEntry[],
-  unplaced: Array<{ pending: PendingSessionEntry; sentAfter: Set<string> }>,
-): SessionEntry[] {
+function placePending(serverMessages: SessionEntry[], pendingMessages: PendingSessionEntry[]): SessionEntry[] {
   const messages = [...serverMessages];
-  for (const { pending, sentAfter } of unplaced) {
+  for (const pending of pendingMessages) {
+    const sentAfter = new Set([...pending.reconcileKnownUuids, ...pending.sentAfterEchoes ?? []]);
     const anchor = serverMessages.findLastIndex((entry) => sentAfter.has(entry.uuid));
     const later = anchor === -1 ? undefined : serverMessages.slice(anchor + 1).find((entry) => entry.type === "user");
     // Inserting before the same turn again keeps several such messages in order.

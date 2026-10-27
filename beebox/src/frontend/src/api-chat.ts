@@ -111,6 +111,13 @@ export interface SessionEntry {
    * send. Kept on the entry so later snapshots retain the original baseline.
    */
   reconcileKnownUuids?: string[];
+  /**
+   * Client-only: transcript turns that echoed sends made before this one but
+   * written after its baseline was taken. Placement only (`placePending` in
+   * chatMachine); kept apart from the baseline, which would stop a merged
+   * queued turn from confirming this send too.
+   */
+  sentAfterEchoes?: string[];
 }
 
 /** A client-created entry tracked until authoritative history echoes it. */

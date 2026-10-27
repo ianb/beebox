@@ -68,6 +68,12 @@ void test("A refused send stays after the send that beat it", async (t) => {
   const refused = { ...pendingEntry("pB", "<typed>short</typed>"), reconcileKnownUuids: ["s0", "a0"] };
   const result = reconcilePending({ serverMessages: server, pendingMessages: [first, refused] });
   t.check(result.messages.map((m) => m.uuid), ["s0", "a0", "sA", "aA", "pB", "sC", "aC"]);
+
+  // On a page left open, the first send reconciles on one refresh and is gone
+  // from the pending list on the next; the second keeps its place.
+  const firstRefresh = reconcilePending({ serverMessages: server.slice(0, 4), pendingMessages: [first, refused] });
+  const nextRefresh = reconcilePending({ serverMessages: server, pendingMessages: firstRefresh.pendingMessages });
+  t.check(nextRefresh.messages.map((m) => m.uuid), ["s0", "a0", "sA", "aA", "pB", "sC", "aC"]);
 });
 
 // Only a later user turn means the agent moved on: a reply still arriving to
@@ -156,7 +162,9 @@ void test("Two client sends need two server occurrences.", async (t) => {
   const first = pendingEntry("p-one", "<typed>yes</typed>");
   const second = pendingEntry("p-two", "<typed>yes</typed>");
   const result = reconcilePending({ serverMessages: [durable], pendingMessages: [first, second] });
-  t.check(result, { messages: [durable, second], pendingMessages: [second] });
+  // The second keeps the first one's turn as a turn it was sent after (placement only).
+  const stillPending = { ...second, sentAfterEchoes: ["s-one"] };
+  t.check(result, { messages: [durable, stillPending], pendingMessages: [stillPending] });
 });
 
 // ## Chronological matching respects each send's baseline
