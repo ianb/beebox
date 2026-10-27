@@ -163,9 +163,38 @@ export function reconcilePending(params: {
   });
 
   return {
-    messages: [...serverMessages, ...stillPending],
+    messages: placePending(serverMessages, stillPending),
     pendingMessages: stillPending,
   };
+}
+
+/**
+ * Where each unreconciled message goes. Normally after everything: it is the
+ * newest thing in the chat. But once the transcript holds a user turn the
+ * message was not sent after (outside its `reconcileKnownUuids` baseline), the
+ * agent has moved on without it (a send refused as busy, a queue dropped by a
+ * restart). At the end it read as the newest message, below turns that came
+ * later (`issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
+ * Such a message sits right after the last entry of its baseline that the
+ * transcript holds, which is where it was sent. The baseline is used rather than timestamps because an
+ * optimistic copy is stamped by the client's clock and the transcript by the
+ * box's.
+ */
+function placePending(serverMessages: SessionEntry[], pendingMessages: PendingSessionEntry[]): SessionEntry[] {
+  const messages = [...serverMessages];
+  const placed = new Set<string>();
+  for (const pending of pendingMessages) {
+    const known = new Set(pending.reconcileKnownUuids);
+    // With no baseline entry in the transcript (an empty or unavailable
+    // history when it was sent) there is nothing to place it after.
+    const anchor = serverMessages.findLastIndex((entry) => known.has(entry.uuid));
+    const overtaken = anchor !== -1 && serverMessages.slice(anchor + 1).some((entry) => entry.type === "user");
+    // After its baseline, and after any earlier message already placed there.
+    const index = overtaken ? messages.findLastIndex((entry) => known.has(entry.uuid) || placed.has(entry.uuid)) + 1 : messages.length;
+    messages.splice(index, 0, pending);
+    placed.add(pending.uuid);
+  }
+  return messages;
 }
 
 /**

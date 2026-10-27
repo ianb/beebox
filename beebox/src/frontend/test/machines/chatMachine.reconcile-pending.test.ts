@@ -32,6 +32,41 @@ void test("Pending message not yet on the server → re-appended, kept pending",
   t.check(result, { messages: [...server, ...pending], pendingMessages: pending });
 });
 
+// ## A message the agent moved on without stays where it was sent
+//
+// A send refused as busy, or a queue dropped by a restart, leaves a user
+// message the transcript never gets. Once a later user turn is in the
+// transcript, the message goes right after the entries it was sent after (its
+// baseline), not at the end below turns that came later
+// (`issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
+function assistantEntry(uuid: string, text: string): SessionEntry {
+  return { uuid, type: "assistant", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text }] };
+}
+
+void test("A message a later user turn overtook sits after its baseline", async (t) => {
+  const server = [
+    userEntry("s1", "<typed>first</typed>"), assistantEntry("a1", "reply one"),
+    userEntry("s2", "<typed>later</typed>"), assistantEntry("a2", "reply two"),
+  ];
+  const lost = { ...pendingEntry("p1", "<typed>lost</typed>"), reconcileKnownUuids: ["s1", "a1"] };
+  const alsoLost = { ...pendingEntry("p2", "<typed>also lost</typed>"), reconcileKnownUuids: ["s1", "a1"] };
+  const result = reconcilePending({ serverMessages: server, pendingMessages: [lost, alsoLost] });
+  t.check(result.messages.map((m) => m.uuid), ["s1", "a1", "p1", "p2", "s2", "a2"]);
+});
+
+// Only a later user turn means the agent moved on: a reply still arriving to
+// an earlier message does not, and a message with no baseline entry in the
+// transcript has nothing to sit after. Both stay at the end.
+void test("Without a later user turn, or without a baseline, the message stays last", async (t) => {
+  const server = [userEntry("s1", "<typed>first</typed>"), assistantEntry("a1", "reply one"), assistantEntry("a2", "more of the reply")];
+  const waiting = { ...pendingEntry("p1", "<typed>next</typed>"), reconcileKnownUuids: ["s1", "a1"] };
+  const unanchored = pendingEntry("p2", "<typed>from an empty history</typed>");
+  t.check([
+    reconcilePending({ serverMessages: server, pendingMessages: [waiting] }).messages.map((m) => m.uuid),
+    reconcilePending({ serverMessages: [...server, userEntry("s2", "<typed>later</typed>")], pendingMessages: [unanchored] }).messages.map((m) => m.uuid),
+  ], [["s1", "a1", "a2", "p1"], ["s1", "a1", "a2", "s2", "p2"]]);
+});
+
 // ## Server-injected user attribution → reconcile MUST still drop the pending entry
 //
 // When the server stores a user message, it calls `injectUserAttr` to

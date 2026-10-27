@@ -1,6 +1,6 @@
 ---
 title: "A send rejected as busy is still recorded as delivered, then shows forever as the newest chat message"
-workstream: busy-send-rejection
+workstream: bug-burndown-5
 area: beebox
 labels: [chat, voice]
 filed-by: agent
@@ -86,6 +86,37 @@ The fix is a design choice: persist the queue and replay it on start, or have
 `stop()` mark dropped queued messages undelivered (remove the dedup claim and
 emit an undelivered marker the chat view renders with resend and discard, which
 is defect 2's proposed rendering).
+
+## 2026-10-27 (bug-burndown-5): defect 2 placement fixed; rendering and the queue drop remain
+
+Placement is fixed in `reconcilePending` (`beebox/src/frontend/src/machines/chatMachine/chat-shared.ts`,
+`placePending`). An unreconciled user message stays last unless the
+transcript holds a user turn after the last entry it was sent after (its
+`reconcileKnownUuids` baseline). Then it sits right after that baseline entry,
+at the point where it was sent. Placement uses the baseline, not timestamps,
+because the client stamps an optimistic copy with its own clock. Test:
+`beebox/src/frontend/test/machines/chatMachine.reconcile-pending.test.ts`.
+
+Found while fixing: the server returns event-log messages for only 10 minutes
+(`ACCEPTED_WINDOW_MS`, `beebox/src/core/chat/session/accepted-messages.ts`).
+After a reload more than 10 minutes later the orphan is no longer shown, so
+"forever, after every reload" holds only inside that window. On a page left
+open, the optimistic copy stays until the page is reloaded.
+
+Still open, and needs a product decision:
+
+- **Show that it was not delivered.** The message now sits in the right
+  place, but it looks the same as a message waiting to send. The proposal above
+  is a "not delivered" state with resend and discard. A person would then see
+  the mis-sent message marked and could remove it. Without this, they see a
+  dimmed message that never resolves until it ages out.
+- **The dropped queue (re-encounter above).** Persist the queue and replay it
+  on start, or have `stop()` mark dropped messages undelivered (remove the
+  dedup claim, emit an undelivered marker). Lean: mark undelivered. It reuses
+  the rendering above, and a replay would deliver a message the person may
+  no longer want, which is the mis-send case.
+- **A message with no baseline in the transcript** (sent into an empty or
+  unavailable history) still goes last; there is nothing to place it after.
 
 ## Related
 
