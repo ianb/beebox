@@ -157,7 +157,7 @@
     "commander": "^13.0.0",
     "cron-parser": "^5.5.0",
     "cronstrue": "^3.24.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.25.12",
     "execa": "^9.6.1",
     "fastify": "^5.7.2",
     "file-type": "^22.0.1",
