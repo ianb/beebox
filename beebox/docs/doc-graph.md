@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-27T00:42:52Z
-Total documents: 586
+Generated: 2026-10-27T19:21:33Z
+Total documents: 588
 
 ## Issues
 
@@ -9,13 +9,12 @@ Total documents: 586
 
 These documents are not referenced by any other document.
 
-- **deploy/launchd/README.md** — "Local box backup with launchd" (35 lines)
+- **deploy/launchd/README.md** — "Local box backup with launchd" (36 lines)
 - **docs/implemented-plans/acknowledgements-backfill.md** — "Acknowledgements backfill: credit adopted external ideas" (319 lines) · shipped history · implemented
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines) · implementation review
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines) · shipped history · implemented
 - **docs/implemented-plans/bbx-remind.md** — "bbx remind: one command for check-ins and reminders" (290 lines) · shipped history · implemented
 - **docs/implemented-plans/bloom-theme.md** — "Bloom system and card theme" (213 lines) · shipped history · implemented
-- **docs/implemented-plans/box-backups.md** — "Encrypted, scheduled backups of box data" (205 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (679 lines) · shipped history · implemented
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
 - **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (516 lines) · shipped history · implemented
@@ -73,6 +72,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
+- **docs/plans/admin-encrypted-backups.md** — "Configure encrypted backups in Admin" (261 lines) · proposal · partial
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (156 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (161 lines) · proposal · partial
@@ -846,7 +846,7 @@ Referenced by:
 - docs/plans/installation-story.md:287 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:762 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:491 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:413 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:419 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:73 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -871,7 +871,7 @@ References:
 
 #### deploy/launchd/README.md **[ORPHAN]**
 
-Title: "Local box backup with launchd" | 35 lines
+Title: "Local box backup with launchd" | 36 lines
 
 No references in or out.
 
@@ -879,7 +879,7 @@ No references in or out.
 
 #### docker/README.md
 
-Title: "Docker packaging" | 41 lines
+Title: "Docker packaging" | 42 lines
 
 Referenced by:
 - docs/implemented-plans/portable-engine-dependency.md:165 (mention) — `docs/box-layout.md` (dependency and repair), `docker/README.md`.
@@ -957,13 +957,13 @@ References:
 
 #### docs/backups.md
 
-Title: "Encrypted box backups" | 152 lines | current reference
+Title: "Encrypted box backups" | 186 lines | current reference
 
 Referenced by:
 - README.md:92 (link) — [encrypted backups](docs/backups.md), scheduled restic snapshots send the
 - docs/guides.md:38 (link) — | Encrypted box backups and recovery | [backups](backups.md) |
 - docs/implemented-plans/box-backups.md:16 (link) — implemented; see the [backup guide](../backups.md) and
-- docs/security-report.md:414 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
+- docs/security-report.md:420 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
 
 References:
 - → ../mac-app/README.md (link)
@@ -1161,7 +1161,7 @@ Referenced by:
 - docs/guides.md:48 (link) — | Client debug log | [client-debug-log](client-debug-log.md) |
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:555 (mention) — errors (`docs/client-debug-log.md`).
-- docs/server/operations.md:203 (link) — For SSH-only debugging: `ssh root@<server> tail /var/lib/beebox/<box>/box/.beebox/client-debug.log`. See [`client-debug-
+- docs/server/operations.md:205 (link) — For SSH-only debugging: `ssh root@<server> tail /var/lib/beebox/<box>/box/.beebox/client-debug.log`. See [`client-debug-
 - docs/testing.md:95 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
 - frontend.md:143 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
 - ../.claude/skills/bbx-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
@@ -1229,7 +1229,7 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:77 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:387 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:393 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - src/dev/AGENTS.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:19 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
@@ -1381,6 +1381,7 @@ Referenced by:
 - docs/implemented-plans/secret-entry-guidance.md:39 (mention) — (`docs/engineering-principles.md:151`): *"An affordance may display only what
 - docs/implemented-plans/see-as-the-user.md:28 (mention) — - `beebox/docs/engineering-principles.md` — traced by number below.
 - docs/implemented-plans/semantic-search.md:25 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
+- docs/implemented-plans/stable-card-body.md:110 (mention) — - `beebox/docs/engineering-principles.md` §11, *Enforcement beats
 - docs/implemented-plans/tailscale-expose-and-protect.md:42 (mention) — - `beebox/docs/engineering-principles.md` — especially fail-closed /
 - docs/implemented-plans/todo-annotation.md:54 (mention) — - `beebox/docs/engineering-principles.md` — especially
 - docs/implemented-plans/top-nav-ia.md:117 (mention) — - `beebox/docs/engineering-principles.md` — reuse-over-rebuild,
@@ -1897,6 +1898,7 @@ Referenced by:
 - docs/implemented-plans/plugins-slice-2.md:13 (mention) — "Conventions" list in `docs/plugins.md` into rules a doctest enforces.
 - docs/implemented-plans/plugins-slice-3.md:39 (mention) — `docs/plugins.md` and the design notes so the next planner does not re-derive
 - docs/implemented-plans/plugins.md:57 (mention) — Authored docs separately: `docs/plugins.md` authoring guide (~150 lines),
+- ../issues/exploration/2026-10-26-box-game-framework-plugin.md:73 (mention) — - Where it renders in the box (plugin views, `beebox/docs/plugins.md`) and
 
 References:
 - → docs/implemented-plans/plugins.md (link)
@@ -2117,7 +2119,7 @@ Referenced by:
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:506 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:55 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:307 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:313 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
@@ -2135,7 +2137,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 339 lines | current reference
+Title: "Security overview" | 347 lines | current reference
 
 Referenced by:
 - README.md:99 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -2148,7 +2150,7 @@ Referenced by:
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/plans/publish-sites-admin.md:43 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
-- docs/security-report.md:150 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
+- docs/security-report.md:155 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/server.md:26 (link) — - The security posture of the whole: [security overview](security-overview.md).
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:14 (mention) — - **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
@@ -2179,7 +2181,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 660 lines | current reference
+Title: "Security report — structured version" | 666 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:285 (link) — page's title, site, and URL, but not its text. See [security report §3](../security-report.md#3-data-egress).
@@ -2198,7 +2200,7 @@ Referenced by:
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
 - docs/plans/per-box-units.subplan.md:29 (mention) — (`docs/security-report.md:531`) unchanged with a different group name.
 - docs/plans/publication-approval-card.md:23 (mention) — The card schema adds a new vocabulary, so follow `beebox/docs/cards/schemas.md` and the additive-schema rule in `bbx-gui
-- docs/security-overview.md:61 (link) — [`security-report.md`](security-report.md).
+- docs/security-overview.md:66 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:10 (mention) — - **`beebox/docs/security-report.md`** — the *structured version*: an
 - ../dev/devprocess-talk/reports/sweep-quality.md:266 (mention) — - **Lives in:** `.claude/skills/security-report/SKILL.md` (277 lines), `beebox/docs/security-report.md` (630 lines, 8 se
@@ -2561,6 +2563,7 @@ Referenced by:
 - docs/implemented-plans/questions-beside-the-chat.md:69 (mention) — (`docs/architecture/spirit.md`): the person answers in their own words in the
 - docs/implemented-plans/questions-end-to-end.md:376 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
 - docs/implemented-plans/questions-later-and-figure-it-out.md:66 (mention) — rather than nagging forever" (`docs/architecture/spirit.md`).
+- docs/plans/admin-encrypted-backups.md:35 (mention) — - **Serves:** `docs/architecture/spirit.md`, “You should be able to see the gears”: the section names the snapshot, when
 - docs/plans/ios-app-intent-capture.md:46 (mention) — - **Serves:** `architecture/spirit.md`, “The best stuff comes from the people”: “The box's job is to collect, preserve,
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
@@ -3455,9 +3458,11 @@ Referenced by:
 - docs/user-stories/catalog/2026-08-21.md:8800 (mention) — Files: `beebox/src/services/docling-version.ts`, `bin/check-docling-update.ts`, `beebox/docs/development/maintenance.md`
 - src/dev/AGENTS.md:8 (mention) — | `prompt-report.ts` | Generates `src/dev/reports/prompt-report.md` (system-wide prompt inventory, gitignored) | `docs/d
 - ../.claude/skills/security-report/SKILL.md:96 (mention) — or suspected drift. This is also tracked in `beebox/docs/development/maintenance.md`.
+- ../dev/dependency-inventory-2026-10.md:32 (mention) — 2. **`madge` (79 MB, 73 packages only it pulls; on the server).** Its only job is the weekly `lint:circular` check. `oxl
 - ../issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md:14 (mention) — semantics. Documented in `beebox/docs/development/maintenance.md`.
 - ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:11 (mention) — (`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/development/maintenance.md` says
 - ../issues/closed/code-quality/2026-08-25-oxlint-circular-no-cadence.md:20 (mention) — What remains is the smaller half. `beebox/docs/development/maintenance.md` lists two
+- ../issues/closed/code-quality/2026-10-27-question-tab-workspace-provider-import-cycle.md:23 (mention) — `beebox/docs/development/maintenance.md` says any cycle means a module needs
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:12 (mention) — **Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single la
 - ../issues/closed/exploration/2026-07-25-opengrep-self-cve-scanner.md:11 (mention) — > Closed 2026-09-05 (`fixed?` confirmed): `security/opengrep/`, `pnpm security:opengrep`, and the `docs/development/main
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:175 (mention) — - Cadence declared in the registry (this read) vs in `docs/development/maintenance.md`
@@ -3849,9 +3854,12 @@ References:
 - → docs/box-layout.md (mention)
 - → docs/box/tricks.md (mention)
 
-#### docs/implemented-plans/box-backups.md **[ORPHAN]**
+#### docs/implemented-plans/box-backups.md
 
 Title: "Encrypted, scheduled backups of box data" | 205 lines | shipped history | implemented
+
+Referenced by:
+- docs/plans/admin-encrypted-backups.md:80 (mention) — - The completed plan at `docs/implemented-plans/box-backups.md:120` says “Do not add Admin controls in this track.” This
 
 References:
 - → ../issues/closed/decisions/2026-08-07-server-backup-story.md (frontmatter)
@@ -3913,7 +3921,7 @@ Title: "Box agents install distro packages on their host" | 579 lines | shipped 
 
 Referenced by:
 - docs/implemented-plans/per-box-units.md:197 (mention) — anywhere (`docs/implemented-plans/box-host-packages.md:141-143`).
-- docs/security-report.md:411 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:417 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:164 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -3940,7 +3948,7 @@ References:
 Title: "Box child memory probes and crash recovery" | 408 lines | shipped history | implemented
 
 Referenced by:
-- ../issues/bugs/2026-10-25-failed-box-unit-stays-failed-until-reset.md:21 (link) — [plan](../../beebox/docs/implemented-plans/box-memory-and-crash-recovery.md)). The unit
+- ../issues/closed/bugs/2026-10-25-failed-box-unit-stays-failed-until-reset.md:32 (link) — [plan](../../../beebox/docs/implemented-plans/box-memory-and-crash-recovery.md)). The unit
 
 References:
 - → docs/server/operations.md (mention)
@@ -5455,6 +5463,7 @@ Title: "DOM doctests for frontend effects, events, and render counts" | 383 line
 Referenced by:
 - docs/implemented-plans/front-door.md:722 (mention) — (`docs/implemented-plans/frontend-dom-harness.md`) that the line renders on
 - docs/implemented-plans/questions-beside-the-chat.md:494 (mention) — `docs/implemented-plans/frontend-dom-harness.md`) for the close wrapper and
+- ../dev/dependency-inventory-2026-10.md:192 (mention) — | `@happy-dom/global-registrator` | dev | Installs happy-dom globals for tests | test/helpers/dom-globals.ts; ~25 fronte
 
 References:
 - → ../issues/closed/code-quality/2026-10-10-frontend-has-no-dom-effect-test-harness.md (frontmatter)
@@ -6237,7 +6246,7 @@ Referenced by:
 - docs/server/deploying.md:93 (link) — ([per-box units](../implemented-plans/per-box-units.md); the layout is in
 - docs/server/provisioning.md:99 (link) — ([design](../implemented-plans/per-box-units.md)). Nothing runs as root except the deploy,
 - src/hub/AGENTS.md:70 (mention) — the box processes (`deploy/systemd/beebox-box@.*`, docs/plans/per-box-units.md)
-- ../issues/bugs/2026-10-25-failed-box-unit-stays-failed-until-reset.md:8 (frontmatter) — design: ../../beebox/docs/implemented-plans/per-box-units.md
+- ../issues/closed/bugs/2026-10-25-failed-box-unit-stays-failed-until-reset.md:8 (frontmatter) — design: ../../../beebox/docs/implemented-plans/per-box-units.md
 - ../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:11 (mention) — **Closed:** resolved by the box-isolation branch (per-box-units, `beebox/docs/plans/per-box-units.md`). `deploy/deploy.s
 - ../issues/features/2026-09-04-cross-box-filesystem-isolation.md:12 (mention) — > **Status (2026-10-24):** the implementation (one Linux user and one socket-activated unit per box, `beebox/docs/implem
 - ../issues/features/2026-10-26-create-a-box-on-the-server-without-the-script.md:25 (mention) — `docs/implemented-plans/per-box-units.md`), so an Admin button cannot do these
@@ -7307,7 +7316,7 @@ Referenced by:
 - docs/plans/box-glm-provider.md:83 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:197 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:323 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:329 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
 - docs/user-stories/catalog/2026-08-21.md:9047 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -7479,6 +7488,17 @@ Referenced by:
 References:
 - → docs/implemented-plans/slopo-codehealth-adoption.md (mention)
 - → docs/implemented-plans/rest-to-trpc-consolidation.md (mention)
+
+#### docs/implemented-plans/stable-card-body.md
+
+Title: "A card body does not remount when only its surroundings change" | 370 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md:13 (mention) — **Closed 2026-10-27:** fixed on branch worktree-card-remount (fff864dbb, 82206ada5): the shared Markdown renderer now us
+
+References:
+- → ../issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md (frontmatter)
+- → docs/engineering-principles.md (mention)
 
 #### docs/implemented-plans/stack-and-text-roles.md
 
@@ -7782,6 +7802,7 @@ Title: "Move the repo to TypeScript 7, except typescript-eslint" | 407 lines | s
 
 Referenced by:
 - docs/implemented-plans/retire-doctest.md:46 (mention) — move (`beebox/docs/implemented-plans/typescript-7.md`) left
+- ../dev/dependency-inventory-2026-10.md:206 (mention) — | `@typescript/native` | dev | TypeScript 7 (native) providing the tsc binary | `tsc` in build and typecheck scripts | 2
 - ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:12 (mention) — **Closed:** implemented on branch worktree-ts7 (plan `beebox/docs/implemented-plans/typescript-7.md`). The repo uses Typ
 - ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:171 (link) — [TypeScript 7 plan](../../../beebox/docs/implemented-plans/typescript-7.md). The tools that
 - ../issues/watch/2026-10-17-move-typescript-eslint-to-typescript-7.md:13 (link) — The [TypeScript 7 plan](../../beebox/docs/implemented-plans/typescript-7.md) moves every
@@ -8086,7 +8107,7 @@ References:
 
 #### docs/install/docker.md
 
-Title: "Docker install (local + VPS)" | 404 lines | current reference
+Title: "Docker install (local + VPS)" | 413 lines | current reference
 
 Referenced by:
 - deploy/AGENTS.md:4 (mention) — is not the install path — that is the container flow in `docs/install/docker.md`
@@ -8107,8 +8128,8 @@ Referenced by:
 - docs/server.md:6 (link) — shape; the supported install is [Docker](install/docker.md). The scripts live
 - docs/server/configuration.md:170 (link) — [box login](../install/docker.md#box-login-on-by-default); owner recovery is
 - docs/server/provisioning.md:9 (link) — > [`../docs/docker-install.md`](../install/docker.md). Read that one.
-- ../issues/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md:11 (mention) — `beebox/docs/install/docker.md` ("token fallback") and `beebox/docker/compose.yaml`
 - ../issues/closed/bugs/2026-09-30-container-loses-machine-state-on-recreate.md:24 (mention) — > in the old container layer). `beebox/docs/install/docker.md` "Updating"
+- ../issues/closed/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md:17 (mention) — `beebox/docs/install/docker.md` ("token fallback") and `beebox/docker/compose.yaml`
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:41 (mention) — as a variant in `beebox/docs/install/docker.md` (keep loopback mapping,
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/install/developer.md`, `docs/install/docker.md`, `docs/install/agent.md`
 - ../issues/closed/features/2026-08-30-deploy-separation-for-release.md:56 (mention) — > generic core the issue asks for is what `docs/install/docker.md` already
@@ -8149,7 +8170,7 @@ Referenced by:
 - docs/plans/container-first.review.md:59 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
 - docs/plans/pdf-intake-design.md:14 (link) — > design are live. Current model: [`../assets.md`](../media/assets.md).
 - docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > report addresses. Current model: [`../assets.md`](../media/assets.md).
-- docs/server/operations.md:241 (link) — [`assets.md`](../media/assets.md). Periodic operational checks belong in
+- docs/server/operations.md:243 (link) — [`assets.md`](../media/assets.md). Periodic operational checks belong in
 - ../issues/closed/code-quality/2026-05-27-review-asset-manifest-scope.md:10 (mention) — > migration: `docs/media/assets.md` records "3,655 manifests removed", the old
 - ../issues/closed/decisions/2026-08-07-server-backup-story.md:21 (mention) — `numcopies: 1` with no annex remote (`docs/media/assets.md`); only migrations
 - ../issues/closed/features/2026-09-14-every-box-uses-git-annex.md:41 (mention) — in `docs/media/assets.md` — no install or deploy doc says to install it.
@@ -8179,6 +8200,16 @@ Referenced by:
 - docs/media.md:13 (link) — | [Image transforms](media/image-transforms.md) | `/api/images/*`: the parameters, the errors, the cache, and the helper
 
 ### docs/plans/
+
+#### docs/plans/admin-encrypted-backups.md **[ORPHAN]**
+
+Title: "Configure encrypted backups in Admin" | 261 lines | proposal | partial
+
+References:
+- → ../issues/closed/decisions/2026-08-07-server-backup-story.md (link)
+- → docs/architecture/spirit.md (mention)
+- → docs/implemented-plans/box-backups.md (mention)
+- → ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md (link)
 
 #### docs/plans/agent-docs.md
 
@@ -9419,7 +9450,7 @@ References:
 Title: "Serve box publications from one shared hostname" | 172 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:651 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:657 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
@@ -9439,7 +9470,7 @@ Title: "Static site publishing with admin setup and human approval" | 296 lines 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:168 (mention) — - Mark `publish-sites-admin.md` and `publication-approval-card.md` with a note that this plan supersedes their source an
 - docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:644 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/security-report.md:650 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 - docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
@@ -9882,7 +9913,7 @@ Title: "Git-annex conversion report — 2026-08-01" | 107 lines | dated report
 
 Referenced by:
 - docs/media/assets.md:10 (link) — [2026-08-01 conversion report](../reports/git-annex-conversion-2026-08-01.md).
-- docs/server/operations.md:244 (link) — [dated historical report](../reports/git-annex-conversion-2026-08-01.md); do not
+- docs/server/operations.md:246 (link) — [dated historical report](../reports/git-annex-conversion-2026-08-01.md); do not
 
 References:
 - → docs/media/assets.md (link)
@@ -10118,8 +10149,8 @@ Referenced by:
 - docs/server/boxes.md:96 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
 - docs/server/deploying.md:113 (link) — ([configuration](configuration.md), "The long-lived token").
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:33 (mention) — (`beebox/docs/server/configuration.md`), so its box agents likely see that
-- ../issues/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md:24 (mention) — (`src/core/claude-oauth-token.ts`, `docs/server/configuration.md`, "The
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:77 (mention) — (`beebox/docs/server/configuration.md`, "Transferring the Claude login"). If
+- ../issues/closed/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md:30 (mention) — (`src/core/claude-oauth-token.ts`, `docs/server/configuration.md`, "The
 
 References:
 - → docs/secrets.md (link)
@@ -10172,7 +10203,7 @@ Referenced by:
 - docs/reports/git-annex-conversion-2026-08-01.md:14 (link) — > and [`../server/health-checks.md`](../server/health-checks.md) for current health checks.
 - docs/server.md:19 (link) — | [Health checks](server/health-checks.md) | The runbooks: hub endpoints, engine quota, box growth, template updates, co
 - docs/server/deploying.md:48 (link) — localhost (see [`../docs/health-checks.md`](health-checks.md)): it polls
-- docs/server/operations.md:192 (link) — `health.check` answers from a cached snapshot by default (see [`health-checks.md`](health-checks.md#healthcheck-snapshot
+- docs/server/operations.md:194 (link) — `health.check` answers from a cached snapshot by default (see [`health-checks.md`](health-checks.md#healthcheck-snapshot
 - src/hub/AGENTS.md:15 (mention) — `docs/server/health-checks.md`. Do NOT derive health from `restarts` (a lifetime
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:83 (mention) — (`docs/server/health-checks.md`). Decide where a Tailscale check belongs rather than
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:32 (mention) — a non-engineer, unlike `health-checks.md` (author's prod runbook).
@@ -10188,7 +10219,7 @@ References:
 
 #### docs/server/operations.md
 
-Title: "Server operations" | 246 lines | current reference
+Title: "Server operations" | 248 lines | current reference
 
 Referenced by:
 - deploy/README.md:23 (link) — | `prod-ssh`, `prod-curl`, `prod-browse` | Reach the production server and the authenticated app as the owner. [Operatio
@@ -10208,7 +10239,7 @@ Referenced by:
 - docs/server/health-checks.md:56 (link) — - `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the s
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:14 (mention) — only and proxies to `127.0.0.1:3210` (`deploy/` + `docs/server/operations.md`).
-- ../issues/bugs/2026-10-25-diag-bearer-health-check-401.md:11 (mention) — `docs/server/operations.md` ("Live health") tells a machine caller to run
+- ../issues/closed/bugs/2026-10-25-diag-bearer-health-check-401.md:21 (mention) — `docs/server/operations.md` ("Live health") tells a machine caller to run
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:19 (mention) — rollback runbook: `docs/server/operations.md`. A Codex adversarial review
 - ../issues/closed/decisions/2026-08-07-server-backup-story.md:19 (mention) — `docs/server/operations.md` defers to "whatever backup mechanism is
 
@@ -10234,7 +10265,7 @@ Referenced by:
 - docs/server/boxes.md:140 (link) — by its own user `bbx-<name>` ([provisioning](provisioning.md#server-layout)).
 - docs/server/deploying.md:94 (link) — [provisioning](provisioning.md#server-layout)). The deploy first checks that
 - docs/server/operations.md:7 (link) — Reference for the running beebox server (production at `box.example.com`). Provisioning is [its own page](provisioning.m
-- ../issues/bugs/2026-10-25-feedback-review-collect-reads-the-retired-box-path.md:26 (mention) — `feedback-review/run-on-server.ts`; the layout is `docs/server/provisioning.md`
+- ../issues/closed/bugs/2026-10-25-feedback-review-collect-reads-the-retired-box-path.md:33 (mention) — `feedback-review/run-on-server.ts`; the layout is `docs/server/provisioning.md`
 - ../issues/closed/decisions/2026-08-07-server-backup-story.md:82 (mention) — excluded from Hetzner server snapshots (`beebox/docs/server/provisioning.md`);
 - ../research/box-backups/2026-10-25-portable-encrypted-backup.md:20 (mention) — | Hub routing config and scheduler manifest | Host rebuild material | `hub.json` and `boxes.json` register boxes on a mu
 
@@ -10880,7 +10911,7 @@ No references in or out.
 
 #### src/frontend/src/components/chat/AGENTS.md
 
-Title: "Chat UI" | 170 lines
+Title: "Chat UI" | 177 lines
 
 Referenced by:
 - docs/chat.md:21 (mention) — - The chat component's invariants for code changes (scroll model, streaming to finalize, the input store): `src/frontend

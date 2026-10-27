@@ -62,7 +62,7 @@ Go to **APIs & Services → Credentials**:
 
 ## Where tokens live
 
-Google OAuth tokens are stored centrally (shared across all boxes on the server). Set `BBX_GOOGLE_TOKENS_FILE` env var to point to the token file (e.g., `/home/beebox/.google-tokens.json`). If not set, tokens fall back to per-box `_config/connectors/google.secret.json`.
+`BBX_GOOGLE_TOKENS_FILE` names a token file shared by every box that sees it (e.g., `/home/beebox/.google-tokens.json`). On a unit host, where each box is its own user and the variable is not passed to boxes, each box keeps its own token at `~/.config/beebox/google-tokens.json` in the box user's home. Otherwise tokens fall back to per-box `_config/connectors/google.secret.json`, inside the box tree; `bbx health` warns about that file.
 
 ## Authorize Bee Box
 
@@ -71,7 +71,7 @@ Google OAuth tokens are stored centrally (shared across all boxes on the server)
 1. Go to any box's **Admin** page
 2. In the **Google Services** section, click **Connect Google Account**
 3. You'll be redirected to Google for authorization
-4. After approving, you'll be redirected back — the token is now available to all boxes
+4. After approving, you'll be redirected back. With `BBX_GOOGLE_TOKENS_FILE`, every box that shares that file now has the token; on a unit host (the server), only the box you connected from has it, so connect each box that needs Google
 
 ### CLI
 

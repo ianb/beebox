@@ -4,8 +4,7 @@
  * Different connectors hold credentials differently:
  *   - The machine secret store: a grant to this box's slug, with a value
  *     (`docs/secrets.md`) — where every migrated connector now lives.
- *   - Google OAuth: three things at once — the shared BBX_GOOGLE_TOKENS_FILE
- *     record, the per-box `googleServices` policy, and a box grant for the
+ *   - Google OAuth: three things at once — the token record (`google/token-store.ts`), the per-box `googleServices` policy, and a box grant for the
  *     OAuth app's client credentials (gmail, calendar, drive).
  *
  * This module dispatches the "is this connector configured for this box?" check
@@ -15,15 +14,14 @@
  * script that then fails for want of a credential.
  */
 import { existsSync } from "node:fs";
-import * as path from "node:path";
 import {
   isGoogleServiceAllowed,
   type GoogleServiceName,
 } from "./core/box/config.js";
 import { hasBoxGoogleClientCreds } from "./google/auth.js";
+import { centralTokenPath, legacySecretPath } from "./google/token-store.js";
 import { loadSecretStore } from "./core/secrets/store.js";
 import { boxSlug } from "./lib/box-slug.js";
-import { getBoxDir } from "./lib/paths/core.js";
 import type { ScheduleRequirements } from "./schemas/scheduled-script/schema.js";
 
 type Predicate = (boxRoot: string) => Promise<boolean>;
@@ -47,10 +45,9 @@ function googleServicePredicate(service: GoogleServiceName): Predicate {
 }
 
 function hasGoogleTokens(boxRoot: string): boolean {
-  const central = process.env.BBX_GOOGLE_TOKENS_FILE;
-  if (central && existsSync(central)) return true;
-  const legacy = path.join(getBoxDir(boxRoot, "connectors"), "google.secret.json");
-  return existsSync(legacy);
+  const central = centralTokenPath();
+  if (central !== null && existsSync(central)) return true;
+  return existsSync(legacySecretPath(boxRoot));
 }
 
 const registry: Record<string, Predicate> = {

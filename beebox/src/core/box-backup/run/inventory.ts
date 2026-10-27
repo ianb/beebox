@@ -38,7 +38,8 @@ export async function backupInventory({ boxRoot, backupId }: { boxRoot: string; 
   } else if (unitHost) {
     skipped.push({ kind: "auth", reason: "hub-owned account store is outside the per-box backup" });
     skipped.push({ kind: "session-secret", reason: "hub-owned session secret is outside the per-box backup" });
-    skipped.push({ kind: "google-tokens", reason: "server token grant is stored in the box tree or managed by the hub" });
+    const tokens = centralTokenPath();
+    if (tokens) external.push({ kind: "google-tokens", source: tokens, target: path.join(stagingRoot, "auth", "google-tokens.json"), required: false });
     external.push({ kind: "origin-id", source: process.env.BBX_ORIGIN_ID_FILE ?? path.join(BBX_STATE_DIR, "origin-id"), target: path.join(stagingRoot, "origin", "origin-id"), required: false });
     const claudeConfig = process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), ".claude");
     external.push({ kind: "claude-auth", source: path.join(claudeConfig, ".credentials.json"), target: path.join(stagingRoot, "claude-auth", "credentials.json"), required: false });
