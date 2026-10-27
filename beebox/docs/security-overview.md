@@ -1,12 +1,17 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: 56be01944
+generated-at-rev: c0844b44e
 date: 2026-10-26
 model: GPT-6 Codex
 reviewed-by: Ian Bicking
 ---
 
 # Security overview
+
+**Scoped amendment (2026-10-26; reviewed by Ian):** The Admin page now accepts a
+signed-in owner's backup destination and recovery password, while the CLI and
+install runners perform captures. This reflects the worktree changes and is not a full
+security refresh.
 
 **Scoped amendment (2026-10-26; reviewed by Ian):** Adds opt-in encrypted
 backup egress and its key-custody limit from the box-backups worktree. It is
@@ -196,12 +201,15 @@ The summary:
   (Google/Mozilla/Apple).
 - **Your git remote** — every wakeup pushes the box's full history to
   the remote *you* configured; no remote, no push.
-- **Your backup repository, if configured** — a first capture and enabled
-  daily host/app schedule send encrypted snapshots of the box, annex objects,
+- **Your backup repository, if configured** — CLI captures and an installed
+  daily host/app runner, when enabled, send encrypted snapshots of the box, annex objects,
   its secrets, and available per-box transcripts to the destination you choose.
   The box's OS user holds the unattended recovery key and destination access;
   keep a separate copy of the key and use destination-side deletion protection
-  where possible. An unconfigured box has no complete backup.
+  where possible. Admin setup prepares the repository but does not capture a
+  snapshot. Daily is off until the owner turns it on; Admin confirms a runner
+  before accepting that switch. Local and Docker runners catch up only while
+  the box is serving. An unconfigured box has no complete backup.
 - **Cloudflare** — if configured, the server uses its machine-held API token
   to provision one shared Worker and R2 bucket per publishing box, upload
   release files after `bbx pub prepare <name>`, and attach the box's
