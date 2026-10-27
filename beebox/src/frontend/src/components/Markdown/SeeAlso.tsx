@@ -30,8 +30,8 @@ function flattenText(node: ReactNode): string {
   return "";
 }
 
-const MARKER_CLASS =
-  "ml-1 align-middle text-xs not-italic text-warm-400 underline decoration-dotted underline-offset-2";
+const MARKER_CLASS = "ml-1 align-middle text-xs not-italic underline decoration-dotted underline-offset-2";
+const MARKER_INK = "text-card-soft";
 
 interface SeeAlsoProps {
   sourceRef?: string;
@@ -51,7 +51,7 @@ export function SeeAlso({ sourceRef, href, children }: SeeAlsoProps): ReactNode 
     // chip that navigates to a clamped-to-root file the ref never named.
     if (target === null) {
       return (
-        <span title={`${title} — escapes the box root`} className={`${MARKER_CLASS} text-danger`}>
+        <span title={`${title} — escapes the box root`} className={`${MARKER_CLASS} text-card-danger`}>
           [see also: {label} (unresolvable)]
         </span>
       );
@@ -61,7 +61,7 @@ export function SeeAlso({ sourceRef, href, children }: SeeAlsoProps): ReactNode 
         type="button"
         onClick={() => linkCtx.onNavigate(target, { label })}
         title={title}
-        className={`${MARKER_CLASS} cursor-pointer hover:text-warm-700`}
+        className={`${MARKER_CLASS} ${MARKER_INK} cursor-pointer hover:text-card-ink`}
       >
         [see also: {label}]
       </button>
@@ -71,7 +71,7 @@ export function SeeAlso({ sourceRef, href, children }: SeeAlsoProps): ReactNode 
     const label = externalLabel(href);
     const title = reason === "" ? href : `${reason} — ${href}`;
     return (
-      <span title={title} className={MARKER_CLASS}>
+      <span title={title} className={`${MARKER_CLASS} ${MARKER_INK}`}>
         [see also ↗ {label}]
       </span>
     );
@@ -81,7 +81,7 @@ export function SeeAlso({ sourceRef, href, children }: SeeAlsoProps): ReactNode 
   // body. Render a visible marker rather than silently dropping content so
   // an unvalidated stray tag isn't invisible.
   return (
-    <span title={reason === "" ? undefined : reason} className={`${MARKER_CLASS} text-danger`}>
+    <span title={reason === "" ? undefined : reason} className={`${MARKER_CLASS} text-card-danger`}>
       [see also: missing ref/href]
     </span>
   );

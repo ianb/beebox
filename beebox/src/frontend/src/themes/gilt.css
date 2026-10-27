@@ -94,6 +94,7 @@
   --bbx-slip-edge-light: #ffffff26;
   --bbx-paper: var(--gilt-paper);
   --bbx-ink: var(--gilt-ink);
+  --bbx-danger: #fea6b0;
   --bbx-ink-soft: var(--gilt-soft);
   --bbx-pen: var(--gilt-accent);
   --bbx-edge: var(--gilt-edge);

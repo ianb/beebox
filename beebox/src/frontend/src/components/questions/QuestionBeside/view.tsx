@@ -13,7 +13,7 @@
 import { Button } from "../../ui/Button";
 import { Text } from "../../ui/Text";
 import { bbxSource } from "../../../lib/source-tag";
-import { LATER } from "../question-tab";
+import { LATER } from "../question-close";
 import { optionsLine } from "./options-line";
 import { QuestionContext, type QuestionInfo } from "../QuestionForm/view";
 

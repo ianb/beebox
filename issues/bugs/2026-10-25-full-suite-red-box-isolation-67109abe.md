@@ -69,3 +69,8 @@ Reproduce at the blamed landing:
 git log -1 67109abe
 pnpm --dir beebox exec tap test/user-stories/journey-phone-wait.test.ts
 ```
+
+
+## 2026-10-27: not reproduced on main
+
+`pnpm exec tap test/user-stories/journey-phone-wait.test.ts` passes on main at `0d5d7a877` (exit 0). Check the hourly full-suite ledger for a green run since; if there is one, close as fixed. The two reds (2026-10-23 and 2026-10-25) are the same file.

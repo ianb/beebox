@@ -31,7 +31,6 @@
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.3.226",
     "execa": "^9.6.1",
     "yaml": "^2.7.0",
     "zod": "^4.4.3"
@@ -41,7 +40,6 @@
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^24.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
-    "agent-browser": "^0.27.0",
     "@ianbicking/tap-check": "workspace:*",
     "better-sqlite3": "^12.10.0",
     "esbuild": "^0.25.12",
@@ -70,8 +68,7 @@
     "peerDependencyRules": {
       "allowedVersions": {
         "@typescript-eslint/parser": "8",
-        "eslint-plugin-react-hooks": "7",
-        "madge>typescript": "6"
+        "eslint-plugin-react-hooks": "7"
       }
     }
   },

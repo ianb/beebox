@@ -1,8 +1,8 @@
 # beebox — one box, one compose project.
 #
 # Local:  docker compose run --rm box bbx init /data/box   # once
-#         docker compose run --rm box claude auth login    # once (or use
-#                                                           # CLAUDE_CODE_OAUTH_TOKEN)
+#         docker compose run --rm box claude auth login    # once (or the
+#                                                           # claude-oauth-token secret)
 #         docker compose up -d
 #         open http://localhost:3210/box/
 #
@@ -36,9 +36,9 @@ services:
       # NAMED volume so a recreated container keeps them; `down -v` drops it
       # (everyone signs in again, accounts and stored keys are gone).
       - home:/home/node
-    # Optional: provider keys (see the parent .env.example) and, as the
-    # headless-auth fallback, CLAUDE_CODE_OAUTH_TOKEN from a laptop-side
-    # `claude setup-token`. Absent .env is fine.
+    # Optional: provider keys (see the parent .env.example). Absent .env is
+    # fine. A `claude setup-token` token goes in the secret store, not here
+    # (docs/install/docker.md, "Claude auth").
     env_file:
       - path: .env
         required: false

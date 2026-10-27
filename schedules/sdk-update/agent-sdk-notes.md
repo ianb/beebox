@@ -34,16 +34,14 @@ until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
 - **Current pins:** Agent SDK `0.3.310`, Codex `0.164.0` (both `@openai/codex`
-  and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
-  still carries a second, unmanaged Agent SDK pin at `0.3.226` —
-  `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
-  fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
-  `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
-  the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.310` (SDK), `2.1.310` (Claude Code), `0.164.0` (Codex)
+  and `@openai/codex-sdk`), all in `beebox/package.json`.
+  `workstreams-app/package.json` pins the same Agent SDK version, and the
+  updater moves both. The root's unmanaged pin is gone (2026-10-27,
+  `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
+- **Latest reviewed upstream version:** `0.3.311` (SDK), `2.1.311` (Claude Code), `0.164.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.310` on 2026-10-26;
-  nothing newer is published on any channel. Production deploys recovered after
+- **Current recommendation:** Agent SDK moved to `0.3.310` on 2026-10-26.
+  Next: `0.3.311` (settles 2026-10-28T19:49Z). Production deploys recovered after
   the per-box-user migration (2026-10-25). The suite has 2 SDK-unrelated
   failures: `issues/bugs/2026-10-26-duplicate-bbx-nav-questions-id.md`
   (`box-install.test.ts` passes again). Open:
@@ -73,6 +71,28 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.311 / Claude Code 2.1.311 — pending (published 2026-10-26T19:49Z)
+
+- **RUNTIME, wanted:** `claude -p` and SDK sessions no longer save transcript
+  messages out of order or keep messages that were taken back — beebox reads
+  and resumes SDK transcripts (`core/usage.ts`, chat session code); no
+  beebox failure observed, so settled path. Also: requests the API marked
+  not-to-retry are no longer retried for minutes; subagents can use MCP tools
+  from servers that connect after they start; a 200K+ request in a
+  standard-context session compacts instead of stopping on "Usage credits
+  required for 1M context"; Write/Edit no longer stall 5 s on very large
+  changes; shell commands that hit their timeout return output so far.
+- **SDK:** `ModelUsage` splits cache creation into 5m/1h lifetimes; background
+  start-up work waits for the first model request (up to ~10 s) when a message
+  arrives during start-up; minimum Node 18.14 (beebox runs Node 24).
+- **HARNESS:** `SubagentStop` hooks now run once per subagent instead of about
+  twice a minute; a subagent's isolated worktree is no longer removed while a
+  background subagent it started still works in it; stale MEMORY.md /
+  CLAUDE.md after auto-compaction fixed; `--output-format json`/`stream-json`
+  escape DEL, C1 and format characters (parsed values unchanged).
+- **Action:** Settled path; takeable 2026-10-28T19:49Z.
+- **Sources:** [SDK 0.3.311](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03311), [Claude Code 2.1.311](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21311)
 
 ### 0.3.310 / Claude Code 2.1.310 — APPLIED 2026-10-26 (published 2026-10-23T21:21Z)
 
@@ -3106,7 +3126,7 @@ earlier caution is not left standing as an unresolved suspicion against
 `0.3.228`. The underlying flake in `file-watcher.doctest.md` is a real test-suite
 issue, but it belongs to the repo, not to this ledger.
 
-### Monitor reliability — the SDK pin has split in two (FILED 2026-09-01 as `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`)
+### Monitor reliability — the SDK pin has split in two (FILED 2026-09-01 as `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`)
 
 Not an upstream release; recorded here because it degrades this monitor. The
 prediction below held: `pnpm update-agent-sdk --check` on 2026-09-01 reported

@@ -102,3 +102,100 @@ test("resolves a doc card by moving and committing only that path", () => {
   const staged = execFileSync("git", ["-C", boxRoot, "diff", "--cached", "--name-only"], { encoding: "utf8" });
   assert.equal(staged.trim(), "unrelated.txt");
 });
+
+// The server path, with `ssh` replaced by a script that runs the remote script
+// locally under a temporary root and records which user it would run as. On
+// the server the hub (`beebox`) lists the boxes from `hub.json`, and each box
+// is scanned, read and resolved as its own user (`bbx-<slug>`).
+function fakeServer(): { root: string; env: NodeJS.ProcessEnv; log: string; boxRoot: string } {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "feedback-collect-server-"));
+  tempDirs.push(root);
+  const binDir = path.join(root, "bin");
+  fs.mkdirSync(binDir);
+  const log = path.join(root, "ssh.log");
+  const bbx = fileURLToPath(new URL("../beebox/bin/bbx", import.meta.url));
+  fs.writeFileSync(path.join(binDir, "ssh"), [
+    "#!/bin/bash",
+    "# ssh -A <target> <remote command>; the script arrives on stdin.",
+    `echo "$3" >> ${JSON.stringify(log)}`,
+    `sed -e "s#/home/beebox#${root}/home#g" -e "s#/var/lib/beebox#${root}/var#g" -e "s#/usr/local/bin/bbx#${bbx}#g" | bash -s`,
+  ].join("\n"), { mode: 0o755 });
+  fs.mkdirSync(path.join(root, "home", ".config", "beebox"), { recursive: true });
+  fs.writeFileSync(path.join(root, "home", ".config", "beebox", "hub.json"), JSON.stringify({
+    boxes: {
+      a: { path: "/var/lib/beebox/a/box", socket: "/run/beebox/a.sock" },
+      b: { path: "/var/lib/beebox/b/box", socket: "/run/beebox/b.sock" },
+    },
+  }));
+  fs.mkdirSync(path.join(root, "var", "b", "box", ".beebox"), { recursive: true });
+  const boxRoot = path.join(root, "var", "a", "box");
+  fs.mkdirSync(path.join(boxRoot, ".beebox"), { recursive: true });
+  fs.writeFileSync(path.join(boxRoot, ".beebox", "box.json"), JSON.stringify({ version: "1.0.0", shapeVersion: 3 }));
+  fs.writeFileSync(path.join(boxRoot, "package.json"), JSON.stringify({ name: "a", private: true, dependencies: { beebox: "0.0.0" } }));
+  fs.mkdirSync(path.join(boxRoot, "_config", "feedback"), { recursive: true });
+  return { root, env: { ...process.env, PATH: `${binDir}:${process.env.PATH ?? ""}` }, log, boxRoot };
+}
+
+function runRemote(server: { root: string; env: NodeJS.ProcessEnv }, ...args: string[]) {
+  const emptyLocal = path.join(server.root, "no-local-boxes");
+  return spawnSync(process.execPath, ["--import", "tsx", script, "--boxes", emptyLocal, "--ssh-target", "root@server.test", ...args], {
+    encoding: "utf8",
+    env: server.env,
+  });
+}
+
+test("reads each server box as its own user, listing them as the hub user", () => {
+  const server = fakeServer();
+  fs.writeFileSync(path.join(server.boxRoot, "_config", "feedback", "observation.doc.card"), "---\ntitle: Observation\n---\nFrom the server\n");
+
+  const result = runRemote(server);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Found 1 unresolved feedback item/);
+  assert.match(result.stdout, /\[remote:a\] observation\.doc\.card/);
+  assert.match(result.stdout, /From the server/);
+  assert.deepEqual(fs.readFileSync(server.log, "utf8").trim().split("\n"), [
+    "su - beebox -s /bin/bash",
+    "su - bbx-a -s /bin/bash",
+    "su - bbx-a -s /bin/bash",
+    "su - bbx-b -s /bin/bash",
+  ]);
+});
+
+test("resolves a server box's card as that box's user", () => {
+  const server = fakeServer();
+  const card = path.join(server.boxRoot, "_config", "feedback", "observation.doc.card");
+  fs.writeFileSync(card, "---\ntitle: Observation\n---\nObservation\n");
+  execFileSync("git", ["init", "-q", server.boxRoot]);
+  execFileSync("git", ["-C", server.boxRoot, "config", "user.name", "Test User"]);
+  execFileSync("git", ["-C", server.boxRoot, "config", "user.email", "test@example.com"]);
+  execFileSync("git", ["-C", server.boxRoot, "config", "core.hooksPath", "/dev/null"]);
+  execFileSync("git", ["-C", server.boxRoot, "add", "."]);
+  execFileSync("git", ["-C", server.boxRoot, "commit", "-qm", "Initial"]);
+
+  const result = runRemote(server, "--resolve", "observation.doc.card");
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(!fs.existsSync(card));
+  assert.ok(fs.existsSync(path.join(server.boxRoot, "_config", "feedback", "resolved", "observation.doc.card")));
+  assert.equal(fs.readFileSync(server.log, "utf8").trim().split("\n").at(-1), "su - bbx-a -s /bin/bash");
+});
+
+test("a box root its user cannot reach fails the scan instead of reading as an empty inbox", () => {
+  const server = fakeServer();
+  fs.writeFileSync(path.join(server.boxRoot, "_config", "feedback", "observation.doc.card"), "Observation\n");
+  // Box b exists but its user cannot search it (as with a wrong owner on the server).
+  const rootB = path.join(server.root, "var", "b", "box");
+  fs.chmodSync(rootB, 0o600);
+  const result = runRemote(server, "--resolve-all");
+  fs.chmodSync(rootB, 0o755);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Cannot scan \/var\/lib\/beebox\/b\/box\/_config\/feedback as bbx-b .*box root \S+\/b\/box is not a readable box/);
+  assert.ok(fs.existsSync(path.join(server.boxRoot, "_config", "feedback", "observation.doc.card")));
+});
+
+test("a hub.json slug that is not a valid box name stops the scan", () => {
+  const server = fakeServer();
+  fs.writeFileSync(path.join(server.root, "home", ".config", "beebox", "hub.json"), JSON.stringify({ boxes: { "a;rm": { path: "/var/lib/beebox/a/box" } } }));
+  const result = runRemote(server);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /not a server user runOnServer may run as: "bbx-a;rm"/);
+});

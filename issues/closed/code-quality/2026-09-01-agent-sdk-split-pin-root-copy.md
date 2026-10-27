@@ -7,7 +7,16 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — running `update-agent-sdk --check` during the 2026-09-01 review
 labels: [sdk-update]
+resolution: implemented
 ---
+
+Closed 2026-10-27 on the dep-reduction workstream. Nothing in `bin/` imports
+the SDK any more (quota collection moved into `workstreams-app` on
+2026-10-23), so the root pin is removed. `workstreams-app/package.json` now
+pins the same exact version as beebox, so one copy installs, and
+`bin/update-agent-sdk.ts` moves both pins together and refuses to run when
+they disagree. The `(binary: …)` version comes from beebox's own
+`resolveClaudeCodeBinary`.
 
 `@anthropic-ai/claude-agent-sdk` is pinned twice. `beebox/package.json` carries
 the pin the `sdk-update` schedule maintains (`0.3.251` today). The monorepo root

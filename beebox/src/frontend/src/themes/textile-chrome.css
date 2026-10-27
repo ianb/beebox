@@ -56,7 +56,7 @@
   border-radius: 8px;
 }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: var(--textile-ink); --bbx-ink-soft: var(--textile-soft); --bbx-pen: var(--textile-accent); }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: var(--textile-ink); --bbx-danger: var(--textile-danger); --bbx-ink-soft: var(--textile-soft); --bbx-pen: var(--textile-accent); }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: var(--textile-ink); }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) #bbx-chat-load-older {
   background: var(--textile-paper);

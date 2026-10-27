@@ -16,10 +16,13 @@
  * nested-quoting acrobatics.
  *
  * Caller rule: pick the lowest-privilege user that gets the job done.
- * `beebox` is the right default for anything touching a box (filesystem
- * reads/writes, git in the box, `bbx` commands). `root` is only correct for
+ * Each box is private to its own user `bbx-<slug>` (`boxUser(slug)`), so
+ * anything that reads or writes a box (its files, git, `bbx` commands) runs as
+ * that box's user. `beebox`, the default, is the hub: it reads the hub's own
+ * files (`hub.json`) and no box's. `root` is only correct for
  * server-management operations (systemctl, chown, apt, etc.) and even then
- * should be a deliberate, commented choice.
+ * should be a deliberate, commented choice. See
+ * `beebox/docs/server/provisioning.md`, "Server layout".
  */
 
 import { spawnSync } from "node:child_process";
@@ -30,14 +33,34 @@ import { deployTarget } from "../bin/deploy-target.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/** A box's own Unix user on the server. */
+export type BoxUser = `bbx-${string}`;
+
+/** The hub's slug rule (`beebox/src/hub/config.ts`), so a user name is safe in a shell command. */
+const SLUG_PATTERN = /^[\da-z]([\da-z-]*[\da-z])?$/;
+
+export class InvalidServerUserError extends Error {
+  constructor(user: string) {
+    super(`not a server user runOnServer may run as: ${JSON.stringify(user)}`);
+    this.name = "InvalidServerUserError";
+  }
+}
+
+/** The Unix user that owns box `slug` on the server. */
+export function boxUser(slug: string): BoxUser {
+  if (!SLUG_PATTERN.test(slug)) throw new InvalidServerUserError(`bbx-${slug}`);
+  return `bbx-${slug}`;
+}
+
 export interface RunOnServerOptions {
   /** Bash script to run on the server. Multi-line is fine; treat it like a
    *  shell-script file's contents. `set -e` is NOT added automatically. */
   script: string;
-  /** Which user to run the script as. Default `beebox` (least privilege,
-   *  the owner of box files). Use `"root"` only for operations that genuinely
-   *  require it (systemctl, chown, package installs) and document the why. */
-  asUser?: "beebox" | "root";
+  /** Which user to run the script as. Default `beebox` (the hub, which can
+   *  read no box). A box's own files: `boxUser(slug)`. Use `"root"` only for
+   *  operations that genuinely require it (systemctl, chown, package
+   *  installs) and document the why. */
+  asUser?: "beebox" | "root" | BoxUser;
   /**
    * Override the SSH endpoint (`user@host`). Defaults to this machine's
    * configured deploy target, SSH user included — don't rebuild `root@…` from
@@ -67,6 +90,7 @@ function defaultSshTarget(): string {
 
 export function runOnServer(opts: RunOnServerOptions): RunOnServerResult {
   const asUser = opts.asUser ?? "beebox";
+  if (asUser.startsWith("bbx-")) boxUser(asUser.slice("bbx-".length));
   const sshTarget = opts.sshTarget ?? defaultSshTarget();
 
   // When dropping to a non-root user, `su - <user> -s /bin/bash` starts a

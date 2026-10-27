@@ -26,8 +26,8 @@ including the one that stopped the sweep from faking its own findings).
 - **Do not land a red branch, and do not land what you did not verify.** A
   finding you left alone, or a fix whose tests you could not run, is a `normal`
   alert describing the branch — not a landing.
-- **Config changes are still yours to land** (this sweep owns `.madgerc` and
-  the oxlint baseline), but say in the alert when a change is config rather
+- **Config changes are still yours to land** (this sweep owns `beebox/.oxlint-cycles.json`
+  and the oxlint baseline), but say in the alert when a change is config rather
   than code: those alter what FUTURE runs report, which is the one edit class
   worth the boxholder's eye.
 
