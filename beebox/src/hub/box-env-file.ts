@@ -8,7 +8,8 @@
  * basics systemd sets per user (`HOME`, `USER`, `PATH`, the temp dirs); the
  * paths the identity subplan derives from the box user's home instead
  * (`BBX_SECRETS_FILE`, `CLAUDE_CONFIG_DIR`, `BBX_AUTH_FILE`,
- * `BBX_GOOGLE_TOKENS_FILE`); and the hub secret, which is a per-box
+ * `BBX_GOOGLE_TOKENS_FILE`, which `google/token-store.ts` derives on a unit
+ * host); and the hub secret, which is a per-box
  * credential. The host-wide paths every box shares are appended.
  */
 

@@ -3,15 +3,18 @@
  * write of it. The OAuth2 *client* built from these tokens lives in
  * `google-auth.ts`; this file knows only about the file.
  *
- * Storage: centralized via the BBX_GOOGLE_TOKENS_FILE env var (preferred), or
- * per-box _config/connectors/google.secret.json (legacy fallback). The
- * centralized case means ONE refresh token is shared by gmail/calendar/drive
- * across every box on the server — which is why the "this grant is dead" state
- * lives here, with the credential, rather than in per-connector or per-box
- * state. See docs/implemented-plans/google-auth-reauth-health.md.
+ * Storage: the BBX_GOOGLE_TOKENS_FILE env var (preferred); on a unit host,
+ * where each box is its own user, the box user's own
+ * `~/.config/beebox/google-tokens.json` beside its secret store; else per-box
+ * _config/connectors/google.secret.json (legacy fallback, inside the box tree
+ * the agent works in). With the env var, ONE refresh token is shared by
+ * gmail/calendar/drive across every box that names the file — which is why the
+ * "this grant is dead" state lives here, with the credential, rather than in
+ * per-connector or per-box state. See docs/implemented-plans/google-auth-reauth-health.md.
  */
 
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { errnoCode } from "../shared/error-guards.js";
@@ -19,6 +22,7 @@ import { getBoxDir } from "../lib/paths/core.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { requestScopedLock, withFileLock } from "../lib/file-lock.js";
 import { getBoxTimeISO } from "../lib/time.js";
+import { onUnitHost } from "../lib/unit-host.js";
 
 class NoTokenStoragePathError extends Error {
   constructor() {
@@ -87,11 +91,14 @@ export function legacySecretPath(boxRoot: string): string {
 }
 
 /**
- * Resolve the centralized token file path.
- * Returns the path from BBX_GOOGLE_TOKENS_FILE env var, or null if not set.
+ * The token file outside any box tree: BBX_GOOGLE_TOKENS_FILE, else on a unit
+ * host the box user's home (the hub leaves the variable out of `box.env`, so
+ * the hub's own file never reaches a box). Null on a machine with neither.
  */
 export function centralTokenPath(): string | null {
-  return process.env.BBX_GOOGLE_TOKENS_FILE || null;
+  const configured = process.env.BBX_GOOGLE_TOKENS_FILE;
+  if (configured !== undefined && configured !== "") return configured;
+  return onUnitHost() ? path.join(os.homedir(), ".config", "beebox", "google-tokens.json") : null;
 }
 
 /**
