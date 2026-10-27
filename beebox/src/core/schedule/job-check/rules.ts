@@ -1,7 +1,7 @@
 /**
  * The job check's rules, pure: which jobs are waiting, which are due, the
  * backoff, the lifetime, and the daily bound. `./core.ts` reads the disk and
- * applies them. See docs/plans/on-demand-job-triggers.md, Track B.
+ * applies them. See docs/implemented-plans/on-demand-job-triggers.md, Track B.
  */
 
 const HOUR_MS = 60 * 60 * 1000;

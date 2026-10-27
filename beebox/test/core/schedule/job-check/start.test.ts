@@ -4,7 +4,7 @@
 // went. `logRunEnd` writes one `job-check` line with action `run ended` to the
 // box's `scheduler.jsonl`: `ok`, the outcome's counts, and the detail of a
 // failed run, or the error of a rejected one. See
-// docs/plans/on-demand-job-triggers.md, Track C.
+// docs/implemented-plans/on-demand-job-triggers.md, Track C.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

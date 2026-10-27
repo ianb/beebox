@@ -5,7 +5,7 @@
 // committed is due, no wakeup is running, and the daily bound allows it. It
 // records each attempt in `.beebox/job-check.json` and writes each decision to
 // `scheduler.jsonl`. The starter is injected here; it answers as the box
-// server or the daemon would. See docs/plans/on-demand-job-triggers.md, Track B.
+// server or the daemon would. See docs/implemented-plans/on-demand-job-triggers.md, Track B.
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";

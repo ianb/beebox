@@ -3,7 +3,7 @@
 // Pure functions behind the scheduler pass's job check
 // (`src/core/schedule/job-check/rules.ts`): which waiting jobs are
 // due, the backoff, the 7-day lifetime, and the daily bound. See
-// docs/plans/on-demand-job-triggers.md, Track B.
+// docs/implemented-plans/on-demand-job-triggers.md, Track B.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

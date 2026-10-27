@@ -11,7 +11,7 @@
  * wakeup is running. A job that keeps
  * failing is retried at +1 h, +6 h, then daily, and given up 7 days after the
  * check first saw it; the card stays, and the `stalled-jobs` health check
- * names it. See docs/plans/on-demand-job-triggers.md, Track B.
+ * names it. See docs/implemented-plans/on-demand-job-triggers.md, Track B.
  *
  * Each decision that starts, skips for the bound, fails to start, or gives up
  * is a `job-check` line in the box's `scheduler.jsonl`. An idle box (no

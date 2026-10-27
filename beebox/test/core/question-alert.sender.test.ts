@@ -5,7 +5,7 @@
 // from a tooling child. A send that throws, comes back `failed`, or is skipped
 // `unconfigured` leaves no latch entry, so the next finalize sends again; a
 // send skipped `no-audience` everywhere is latched (nobody to reach). See
-// docs/plans/on-demand-job-triggers.md, Track A.
+// docs/implemented-plans/on-demand-job-triggers.md, Track A.
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -4,7 +4,7 @@
 // only when it went out or could never go anywhere. The rule reads the
 // delivery details the channel code writes (`notification/intent.ts`):
 // `present`, `no-audience`, or `unconfigured` for a skip. See
-// docs/plans/on-demand-job-triggers.md, Track A.
+// docs/implemented-plans/on-demand-job-triggers.md, Track A.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

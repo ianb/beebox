@@ -357,7 +357,7 @@ void test("Each profile stamps BBXSPAWNPROFILE, so a credentialed bbx verb branc
 // endpoint file, and the host's `BBX_PUBLIC_URL` has no box path. On a unit host
 // the hub starts an idle box for a request to `<base>/<slug>`, so `boxServerEnv`
 // names that URL, with the slug from the box's home (`<home>/box`). See
-// docs/plans/on-demand-job-triggers.md, Track A.
+// docs/implemented-plans/on-demand-job-triggers.md, Track A.
 void test("On a unit host, the box name comes from the box's path", async (t) => {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-unit-env-"));
   const boxRoot = path.join(home, "fam", "box");

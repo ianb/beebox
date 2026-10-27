@@ -4,7 +4,7 @@
 // server to start the run (`wakeup.start`). The server answers once the child
 // has taken the cycle lock, without waiting for the run; a second request while
 // its run is in flight answers `running` and spawns nothing. Only the box's
-// agent or its signed-in owner may ask. See docs/plans/on-demand-job-triggers.md,
+// agent or its signed-in owner may ask. See docs/implemented-plans/on-demand-job-triggers.md,
 // Track C.
 
 import { test } from "tap";

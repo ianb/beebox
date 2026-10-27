@@ -5,7 +5,7 @@
 // watches the child's output for `[wakeup-cycle] acquired` and answers
 // `started` on it; a child that reports `skipped: "wakeup-running"` first
 // answers `running`; one that ends any other way first answers `failed`.
-// `done` is the whole run either way. See docs/plans/on-demand-job-triggers.md,
+// `done` is the whole run either way. See docs/implemented-plans/on-demand-job-triggers.md,
 // Track C.
 
 import { test } from "tap";

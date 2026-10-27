@@ -5,7 +5,7 @@
  * (`./core.ts`). The run must outlive the pass: on a unit host the pass is a
  * oneshot unit whose cgroup ends with it, so the box server starts the run
  * (`wakeup.start`); elsewhere the daemon's own long-lived process does. Both
- * come here. See docs/plans/on-demand-job-triggers.md, Track C.
+ * come here. See docs/implemented-plans/on-demand-job-triggers.md, Track C.
  */
 
 import { withBoxWork, withoutBoxWork } from "../../../lib/box-maintenance/admission.js";

@@ -1,6 +1,6 @@
 ---
 title: "On-demand job triggers and server-routed finalize notifications"
-status: active
+status: implemented
 workstream: box-isolation-followups
 issues: []
 ---
@@ -852,7 +852,7 @@ no schedules today.
   counted; they ride along.
 - **Routing scheduled `notify:` actions and promotion notices on the
   on-wakeup path** (`run-action.ts:82`, `promotion.ts:92` reached from
-  `tick-utils.ts`). File an issue when this plan lands.
+  `tick-utils.ts`). Filed as `issues/bugs/2026-10-27-wakeup-child-notices-bypass-the-box-server.md`.
 - **The `bbx notify` refactor onto `routedSender`.** Not needed.
 - **Question aging on boxes with no wakeups at all.** The daily
   `question-review` procedure is the backstop.

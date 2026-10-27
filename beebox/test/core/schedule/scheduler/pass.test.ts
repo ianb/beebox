@@ -4,7 +4,7 @@
 // check after the tick and before the box alerts, in its own `try`: a check
 // that throws is one `job-check` line in the box's `scheduler.jsonl`, and the
 // tick's line and the rest of the pass are unaffected. See
-// docs/plans/on-demand-job-triggers.md, Track B.
+// docs/implemented-plans/on-demand-job-triggers.md, Track B.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

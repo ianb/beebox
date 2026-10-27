@@ -3,7 +3,7 @@
 // `bbx finalize` runs as a tooling child that holds the box environment
 // (`BBX_SERVER_URL`, `BBX_BOX_NAME`, `BBX_AGENT_TOKEN`) and none of the channel
 // keys. `routedSender` sends through the server's `notifications.send` when all
-// three are set, and in this process when one is missing. See docs/plans/on-demand-job-triggers.md, Track A.
+// three are set, and in this process when one is missing. See docs/implemented-plans/on-demand-job-triggers.md, Track A.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
