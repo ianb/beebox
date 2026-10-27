@@ -84,6 +84,7 @@
 .bbx-card-theme[data-card-theme="goldfish"] {
   --bbx-paper: #f6f8ed;
   --bbx-ink: #294d4b;
+  --bbx-danger: #a92d4a;
   --bbx-ink-soft: #56675a;
   --bbx-pen: #27686c;
   --bbx-edge: #93bfaf;

@@ -162,6 +162,7 @@
    Raw tool details are light plates (chrome.css, .bbx-chat-plate). */
 .bbx-box-presentation[data-chrome-theme="deck"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
   --bbx-ink: #d8f4ef;
+  --bbx-danger: #fda5af;
   --bbx-ink-soft: #b2cbc5;
   --bbx-pen: #83e7ec;
 }
@@ -196,6 +197,7 @@
   --bbx-code-ink: #d8f4ef;
   --bbx-paper: #29312e;
   --bbx-ink: #d8f4ef;
+  --bbx-danger: #fda5af;
   --bbx-ink-soft: #a4cbc9;
   --bbx-pen: #83e7ec;
   --bbx-edge: #608b83;

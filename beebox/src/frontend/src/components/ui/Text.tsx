@@ -50,7 +50,7 @@ const MATERIAL_TONE_CLASSES: Record<TextTone, string> = {
   subtle: "text-card-soft",
   emphasis: "text-card-ink",
   strong: "text-card-ink",
-  danger: "text-danger-dark",
+  danger: "text-card-danger",
 };
 
 function toneClass(tone: TextTone, material: boolean | undefined): string {

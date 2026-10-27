@@ -17,7 +17,7 @@ interface UnknownTagProps {
 }
 
 function Opening({ name, attrs }: UnknownTagProps) {
-  return <code className="text-warm-700 text-xs">{authoredOpening(name ?? "", attrs ?? "")}</code>;
+  return <code className="text-card-soft text-xs">{authoredOpening(name ?? "", attrs ?? "")}</code>;
 }
 
 export function UnknownTagInline(props: UnknownTagProps) {
