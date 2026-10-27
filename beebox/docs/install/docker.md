@@ -346,21 +346,30 @@ keeps waiting; Ctrl-C and run the command again. Confirm with
 `docker compose run --rm box claude auth status` (`"loggedIn": true`).
 
 If interactive login is awkward on a headless server, use the **token
-fallback**:
+fallback**: a long-lived token in the box's secret store.
 
 1. On a machine with a browser, run `claude setup-token` and copy the token.
-2. Put it in `beebox/docker/.env`:
+   It is good for about a year.
+2. Store it and grant it to the box:
 
    ```bash
-   CLAUDE_CODE_OAUTH_TOKEN=...
+   docker compose run --rm box bbx secrets set claude-oauth-token   # paste at the hidden prompt
+   docker compose run --rm box bbx secrets grant /data/box claude-oauth-token
    ```
 
-3. `docker compose up -d`. The token is passed via the env-file; no interactive
-   step needed.
+   Without a terminal, pipe the token in instead:
+   `printf '%s' "$TOKEN" | docker compose run --rm -T box bbx secrets set claude-oauth-token`.
+   Admin → Secrets does the same from the browser.
 
-Either way, the doctor-style check is `docker compose run --rm box claude
-auth status`. Serving pages needs no login; running an agent (chat, reactor)
-does.
+The store lives in the `home` volume. The box hands the token to the agent's
+Claude CLI for each run; nothing to restart. When it expires, set it again.
+A `CLAUDE_CODE_OAUTH_TOKEN` line in `docker/.env` does not work: the box does
+not pass that variable on to the agent.
+
+The check is the box's Admin page, or its health check, which says "signed in
+with the box's long-lived token" when the grant is in place.
+`docker compose run --rm box claude auth status` checks the interactive login
+only. Serving pages needs no login; running an agent (chat, reactor) does.
 
 **Codex** is the other engine. Sign in from the box's Admin → Agents page, or
 in a terminal with `docker compose run --rm box codex login --device-auth`
