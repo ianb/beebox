@@ -1303,7 +1303,7 @@ See §1.3 (full request/response/errors).
   `<external-input source="apple-app-intents">`. A repeated `submit` of a stored id keeps its
   stored origin, source, and hqService. A box from before hqService strips the key and frames the
   thought `stt="live"`. Each mutation answers a
-  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts}`. A view may carry
+  `QuickChatView`; `home` answers `{open,recentlySent,recentChats,shortcuts,asleep?}`. A view may carry
   `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
   whose `message` is the person's note and may be empty. Both box screens show the title,
   linked to `url`, above the note, and hide an empty note. Retry on a `sending` row calls
@@ -1328,8 +1328,29 @@ See §1.3 (full request/response/errors).
   repeated `submit` of one id returns one record and posts once. A `sending` view with
   `expired: true` is past the six-day delivery limit and offers only Open chat and Discard.
 - **Request deadline:** legacy external `quickChat.submit` requests retain their bounded
-  20-second timeout; other quick-chat mutations use 60 seconds. Current App Intent
+  20-second timeout; other quick-chat mutations use 60 seconds. `home` uses 20 seconds, so a
+  box whose host is asleep reads as unreachable while the person looks. Current App Intent
   acknowledgment is local (§5.12), not a wait for this endpoint.
+- **Box not answering:** a 503 from any procedure is read as the hub's body
+  (`src/hub/server/box-unavailable.ts`): `{error:"box_closed",reason}` is "closed for
+  <reason>" (reason cut to 80 characters); any other 503 body is "not open right now". The box
+  screen refreshes `home` when it appears and when the app comes to the foreground, unless the
+  box already answered in this foreground stay, and retries a failed refresh while it shows
+  (5, 10, 20, 40, then every 60 seconds). Until the box answers in the current stay, its status
+  row gives the failure and the list's age, and no recent chat is styled as the one to pick up
+  (`docs/implemented-plans/ios-box-screen-stale-list.md`).
+- **Asleep box:** a box under a hub leaves its `home` answer, encrypted for the hub, at a
+  clean shutdown and deletes it first at startup (`src/core/chat/routing/home-snapshot.ts`).
+  For a phone whose bearer token the copy lists (an unrevoked device whose pairer could open the
+  box at shutdown), the hub answers `GET quickChat.home` of a box its provider reports asleep
+  from that copy, adding `asleep: {savedAt}`, without waking
+  the box (`src/hub/server/home-snapshot-route.ts`). The box itself never sends `asleep`. With
+  no copy the hub can open, the request wakes the box as before. The phone treats an `asleep`
+  answer as current: it keeps the first recent chat styled as the one to pick up, says the box
+  is asleep with the time of `savedAt`, and asks again every 60 seconds while the box screen
+  shows. Fixture: `home-asleep.json`. While the last answer said `asleep`, the phone also holds
+  its other background requests that would wake the box: the capture list shows this phone's
+  captures only, and the diagnostic log upload (§8) keeps its queue until an awake answer.
 - **Outbox:** the phone stores `{id,boxID,text,origin,source?,hqService?,createdAt,attempts,lastAttemptAt}` in
   `quick-chat-outbox.json` before the first request and removes an entry only when `submit`
   answers. A failed request keeps it; retries follow a backoff while the app is in the
@@ -1342,7 +1363,8 @@ See §1.3 (full request/response/errors).
   `ios-app/BeeBox/Storage/QuickChatOutbox.swift`; `ios-app/BeeBox/Storage/BoxScreenStore.swift`.
   Box `src/webapp/trpc/routers/quick-chat.ts`; `src/core/chat/routing/quick-chat-record.ts`.
 - **Drift:** LOUD. A request the server rejects keeps the entry in the outbox and the row
-  visible; an answer the phone cannot decode fails the refresh and shows "Could not refresh".
+  visible; an answer the phone cannot decode fails the refresh and shows "Could not refresh
+  <box>".
 
 ### 5.12 Quick capture — durable source acceptance
 
@@ -1560,7 +1582,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
 | S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
-| Q1 | `quickChat.submit` / `choose` / `retry` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,origin,source?,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id,channel:"ios-native"}` / `{id}`; external requires `origin:"external",source:"apple-app-intents"`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts}` | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
+| Q1 | `quickChat.submit` / `choose` / `retry` / `discard` / `home` (§5.11) | native→box | `POST` `{id,message,origin,source?,channel:"ios-native"}` / `{id,candidateId,channel:"ios-native"}` / `{id,channel:"ios-native"}` / `{id}`; external requires `origin:"external",source:"apple-app-intents"`; `GET` home; res tRPC `QuickChatView` / `{open,recentlySent,recentChats,shortcuts,asleep?}` (`asleep` only from the hub, §5.11) | `Services/QuickChatAPI.swift` · `QuickChatAPI`; `Models/QuickChatView.swift` | `trpc/routers/quick-chat.ts`; `core/chat/routing/quick-chat-record.ts` · `quickChatViewSchema` | LOUD |
 | Q2 | Quick capture (§5.12) | native/extension→box | one complete multipart POST plus owner-scoped tRPC capabilities/list/detail/retry/choose/delete | `Storage/QuickCaptureStore.swift`; `Services/QuickCaptureAPI.swift`; `Services/QuickCaptureUploadCoordinator.swift`; `Intents/CaptureThoughtIntent.swift`; `Intents/VoiceNoteIntents.swift` | `shared/quick-capture.ts`; `routes/quick-capture/`; `trpc/routers/quick-capture.ts`; `core/quick-capture/` | LOUD; local source retained |
 | W3 | Box screen navigation (§3.5) | web→native | main-frame navigation to `<baseURL>/box`, cancelled by native | `Views/ChatWebView.swift` · `isBoxScreenURL`, `Coordinator.mainFramePolicy(for:)` | the `/<box>/box` route; the landmark menu's box row | SILENT-degraded |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `bbx_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |

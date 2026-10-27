@@ -97,13 +97,57 @@ extension QuickChatView {
 /// `home` refresh, and anything that answers after the person left the box
 /// screen, switched boxes, or put the app in the background only update the
 /// rows.
+///
+/// A box's home is confirmed once the server answers after the app last came
+/// to the foreground. The box screen refreshes an unconfirmed home when it
+/// shows and when the app comes forward, and retries a failed refresh on a
+/// backoff while it shows (docs/implemented-plans/ios-box-screen-stale-list.md).
 @MainActor
 final class BoxScreenStore: ObservableObject {
+    enum RefreshFailure: Equatable {
+        /// No connection, or no answer before the timeout.
+        case unreachable
+        /// The hub's 503 `box_closed`.
+        case closed(reason: String?)
+        /// Any other 503.
+        case notOpen
+        case other
+
+        init(_ error: Error) {
+            switch error {
+            case QuickChatAPI.APIError.closed(let reason):
+                self = .closed(reason: reason)
+            case QuickChatAPI.APIError.notOpen:
+                self = .notOpen
+            case is URLError:
+                self = .unreachable
+            default:
+                self = .other
+            }
+        }
+
+        var logName: String {
+            switch self {
+            case .unreachable: "unreachable"
+            case .closed: "closed"
+            case .notOpen: "notOpen"
+            case .other: "other"
+            }
+        }
+    }
+
     enum Refresh: Equatable {
         case idle
         case refreshing
-        case failed
+        case failed(RefreshFailure)
     }
+
+    /// Waits between automatic retries of a failed home refresh; the last
+    /// repeats.
+    nonisolated static let homeRetryDelays: [TimeInterval] = [5, 10, 20, 40, 60]
+    /// How often the shown box screen asks again while the hub answers for a
+    /// sleeping box, so the live list replaces the snapshot once it wakes.
+    nonisolated static let asleepRecheckDelay: TimeInterval = 60
 
     enum StoreError: LocalizedError {
         case boxNotPaired
@@ -121,6 +165,12 @@ final class BoxScreenStore: ObservableObject {
 
     let outbox: QuickChatOutbox
     @Published private(set) var homes: [UUID: QuickChatHome] = [:]
+    /// When each shown home came from the server; absent when the cache file
+    /// has no readable date.
+    @Published private(set) var homeDates: [UUID: Date] = [:]
+    /// Boxes whose home the server answered since the app last came to the
+    /// foreground.
+    @Published private(set) var confirmedBoxIDs: Set<UUID> = []
     @Published private(set) var refreshes: [UUID: Refresh] = [:]
     /// Records with a choose, discard, or retry in flight.
     @Published private(set) var busyIDs: Set<UUID> = []
@@ -133,6 +183,20 @@ final class BoxScreenStore: ObservableObject {
 
     private let repository: ComposerDraftRepository
     private let client: (PairedBox) -> any QuickChatClient
+    private let now: () -> Date
+    private let retryDelays: [TimeInterval]
+    private let asleepRecheckDelay: TimeInterval
+    /// Told whether each answered home said the box is asleep, so the log
+    /// upload holds off instead of waking it.
+    private let reportAsleep: (UUID, Bool) -> Void
+    /// Counts stays in the foreground. A refresh confirms only in the stay it
+    /// started in.
+    private var foregroundGeneration = 0
+    /// The generation of each box's latest refresh; only that refresh writes
+    /// the box's state.
+    private var refreshGenerations: [UUID: Int] = [:]
+    private var homeRetryTask: Task<Void, Never>?
+    private var homeRetryAttempts: [UUID: Int] = [:]
     private var boxes: [PairedBox] = []
     private var answerSerial = 0
     private var foreground = false
@@ -146,10 +210,19 @@ final class BoxScreenStore: ObservableObject {
     init(
         repository: ComposerDraftRepository = ComposerDraftRepository(),
         now: @escaping () -> Date = Date.init,
+        retryDelays: [TimeInterval] = BoxScreenStore.homeRetryDelays,
+        asleepRecheckDelay: TimeInterval = BoxScreenStore.asleepRecheckDelay,
+        reportAsleep: @escaping (UUID, Bool) -> Void = { boxID, asleep in
+            Task { await LogForwarder.shared.setAsleep(asleep, boxID: boxID) }
+        },
         client: @escaping (PairedBox) -> any QuickChatClient = { QuickChatAPI(box: $0) }
     ) {
         self.repository = repository
         self.client = client
+        self.now = now
+        self.retryDelays = retryDelays
+        self.asleepRecheckDelay = asleepRecheckDelay
+        self.reportAsleep = reportAsleep
         let relay = SubmitRelay()
         outbox = QuickChatOutbox(repository: repository, now: now) { entry in
             try await relay.submit(entry)
@@ -164,7 +237,11 @@ final class BoxScreenStore: ObservableObject {
         self.boxes = boxes
         for boxID in removed {
             homes[boxID] = nil
+            homeDates[boxID] = nil
+            confirmedBoxIDs.remove(boxID)
             refreshes[boxID] = nil
+            refreshGenerations[boxID] = nil
+            homeRetryAttempts[boxID] = nil
             answers[boxID] = nil
         }
         guard outbox.isLoaded, removed.isEmpty == false else {
@@ -184,15 +261,21 @@ final class BoxScreenStore: ObservableObject {
         resumeRetries()
     }
 
-    /// The outbox retries on its backoff only while the app is in the foreground.
+    /// The outbox retries on its backoff only while the app is in the
+    /// foreground. Going to the background unconfirms every home; coming back
+    /// refreshes the shown one.
     func setForeground(_ foreground: Bool) {
         self.foreground = foreground
         if foreground {
             resumeRetries()
+            resumeShownBox()
         } else {
             retryTask?.cancel()
             retryTask = nil
             stopAwaiting()
+            foregroundGeneration += 1
+            confirmedBoxIDs.removeAll()
+            stopHomeRetry()
         }
     }
 
@@ -205,6 +288,14 @@ final class BoxScreenStore: ObservableObject {
         }
         shownBoxID = boxID
         stopAwaiting()
+        stopHomeRetry()
+        resumeShownBox()
+    }
+
+    /// The person's "Retry now": refresh at once and restart the backoff.
+    func retryHomeNow(boxID: UUID) async {
+        stopHomeRetry()
+        await refresh(boxID: boxID)
     }
 
     func consumeFollowUp(_ request: BoxScreenFollowUpRequest) {
@@ -221,24 +312,49 @@ final class BoxScreenStore: ObservableObject {
         guard homes[boxID] == nil else {
             return
         }
-        homes[boxID] = cached
+        homes[boxID] = cached.home
+        // A cached snapshot is as old as the box's sleep, not the file.
+        homeDates[boxID] = cached.home.asleep.map { $0.savedDate } ?? cached.savedAt
     }
 
+    /// Ask the server for the box's home. A refresh already in flight from
+    /// this foreground stay answers for both; one from an earlier stay does
+    /// not, because its answer cannot confirm the home.
     func refresh(boxID: UUID) async {
-        guard let box = box(boxID), refreshes[boxID] != .refreshing else {
+        let generation = foregroundGeneration
+        guard let box = box(boxID),
+              refreshes[boxID] != .refreshing || refreshGenerations[boxID] != generation else {
             return
         }
-        let wasFailed = refreshes[boxID] == .failed
+        let failedBefore: Bool
+        if case .failed = refreshes[boxID] {
+            failedBefore = true
+        } else {
+            failedBefore = false
+        }
+        refreshGenerations[boxID] = generation
         refreshes[boxID] = .refreshing
         let startSerial = answerSerial
         do {
             let home = try await client(box).home()
+            guard refreshGenerations[boxID] == generation else {
+                return
+            }
             // An open answer that arrived before this refresh started is older
             // than the server's list, so the list wins.
             answers[boxID]?.removeAll { $0.serial <= startSerial && Self.isOpen($0.view) }
             homes[boxID] = home
+            homeDates[boxID] = home.asleep.map { $0.savedDate ?? now() } ?? now()
+            reportAsleep(boxID, home.asleep != nil)
             refreshes[boxID] = .idle
-            if wasFailed {
+            homeRetryAttempts[boxID] = nil
+            if generation == foregroundGeneration {
+                confirmedBoxIDs.insert(boxID)
+            }
+            if home.asleep != nil {
+                scheduleHomeCheck(boxID: boxID, after: asleepRecheckDelay)
+            }
+            if failedBefore {
                 BoxLog.info("box screen refresh recovered", category: .net, targetBoxID: boxID)
             }
             do {
@@ -247,10 +363,34 @@ final class BoxScreenStore: ObservableObject {
                 BoxLog.warn("box screen home cache save failed error=\(type(of: error))", category: .net, targetBoxID: boxID)
             }
         } catch {
-            refreshes[boxID] = .failed
-            if wasFailed == false {
-                BoxLog.warn("box screen refresh failed \(Self.describe(error))", category: .net, targetBoxID: boxID)
+            guard refreshGenerations[boxID] == generation else {
+                return
             }
+            if Self.isCancellation(error) {
+                // A switch or the background cancelled it. A box shown again
+                // meanwhile found this refresh still running, so ask now; a
+                // cancellation again before an answer waits on the backoff.
+                refreshes[boxID] = .idle
+                if homeRetryAttempts[boxID, default: 0] == 0 {
+                    homeRetryAttempts[boxID] = 1
+                    resumeShownBox()
+                } else {
+                    scheduleHomeRetry(boxID: boxID)
+                }
+                return
+            }
+            let failure = RefreshFailure(error)
+            refreshes[boxID] = .failed(failure)
+            // An earlier answer, even the hub's for a sleeping box, is no longer confirmed.
+            confirmedBoxIDs.remove(boxID)
+            if failedBefore == false {
+                BoxLog.warn(
+                    "box screen refresh failed kind=\(failure.logName) \(Self.describe(error))",
+                    category: .net,
+                    targetBoxID: boxID
+                )
+            }
+            scheduleHomeRetry(boxID: boxID)
         }
     }
 
@@ -407,6 +547,58 @@ final class BoxScreenStore: ObservableObject {
         followUp = nil
     }
 
+    /// Bring the shown box's home up to date: refresh an unconfirmed one, or
+    /// re-arm the check of a sleeping box, which a change of shown box cancelled.
+    private func resumeShownBox() {
+        guard foreground, let boxID = shownBoxID else {
+            return
+        }
+        if confirmedBoxIDs.contains(boxID) == false {
+            Task {
+                await refresh(boxID: boxID)
+            }
+        } else if homes[boxID]?.asleep != nil {
+            scheduleHomeCheck(boxID: boxID, after: asleepRecheckDelay)
+        }
+    }
+
+    /// After a failed refresh of the shown box, in the foreground: try again
+    /// after the next backoff delay.
+    private func scheduleHomeRetry(boxID: UUID) {
+        guard retryDelays.isEmpty == false else {
+            return
+        }
+        let attempt = homeRetryAttempts[boxID, default: 0]
+        homeRetryAttempts[boxID] = attempt + 1
+        scheduleHomeCheck(boxID: boxID, after: retryDelays[min(attempt, retryDelays.count - 1)])
+    }
+
+    /// Refresh the shown box after `delay`, while it stays shown in the
+    /// foreground.
+    private func scheduleHomeCheck(boxID: UUID, after delay: TimeInterval) {
+        guard foreground, shownBoxID == boxID else {
+            return
+        }
+        homeRetryTask?.cancel()
+        homeRetryTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard Task.isCancelled == false else {
+                return
+            }
+            await self?.refresh(boxID: boxID)
+        }
+    }
+
+    private func stopHomeRetry() {
+        homeRetryTask?.cancel()
+        homeRetryTask = nil
+        homeRetryAttempts.removeAll()
+    }
+
+    private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
+    }
+
     private func resumeRetries() {
         guard foreground, outbox.isLoaded else {
             return
@@ -455,16 +647,20 @@ private final class SubmitRelay {
 #if DEBUG
 extension BoxScreenStore {
     /// Seed the fixture screen's state without a server.
-    func replaceForFixture(home: QuickChatHome?, sent: [QuickChatView], boxID: UUID) {
+    func replaceForFixture(home: QuickChatHome?, sent: [QuickChatView], boxID: UUID, savedAt: Date? = nil) {
         homes[boxID] = home
+        homeDates[boxID] = savedAt ?? home?.asleep?.savedDate ?? now()
+        if savedAt == nil {
+            confirmedBoxIDs.insert(boxID)
+        }
         answers[boxID] = sent.map { view in
             answerSerial += 1
             return Answer(view: view, serial: answerSerial)
         }
     }
 
-    func failRefreshForFixture(boxID: UUID) {
-        refreshes[boxID] = .failed
+    func setRefreshForFixture(_ refresh: Refresh, boxID: UUID) {
+        refreshes[boxID] = refresh
     }
 }
 #endif

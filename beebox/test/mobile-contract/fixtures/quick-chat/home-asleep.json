@@ -1,0 +1,24 @@
+{
+  "result": {
+    "data": {
+      "open": [],
+      "recentlySent": [],
+      "recentChats": [
+        {
+          "sessionId": "8c2f4a6e-1b3d-4f5a-9e7c-0d2b4f6a8c1e",
+          "label": "Fix the bike brakes",
+          "lastActivity": "2026-10-26T15:10:00.000Z",
+          "landmark": null
+        },
+        {
+          "sessionId": "2a4c6e8f-0b1d-4e3f-8a5c-7e9b1d3f5a70",
+          "label": "Garden beds",
+          "lastActivity": "2026-10-26T09:30:00.000Z",
+          "landmark": { "dir": "_content/Garden", "label": "Garden", "symbol": "🌱" }
+        }
+      ],
+      "shortcuts": [],
+      "asleep": { "savedAt": "2026-10-26T15:12:00.000Z" }
+    }
+  }
+}

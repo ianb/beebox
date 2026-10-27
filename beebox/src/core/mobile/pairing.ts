@@ -195,6 +195,13 @@ export interface MobileBearerIdentity {
   createdBy: string | null;
 }
 
+/** The token hash and pairer of each device that is not revoked. */
+export function unrevokedMobileDevices(boxRoot: string): { tokenHash: string; createdBy: string | null }[] {
+  return deviceStore.read(boxRoot)
+    .filter((device) => device.revokedAt === undefined)
+    .map((device) => ({ tokenHash: device.tokenHash, createdBy: device.createdBy }));
+}
+
 export async function resolveMobileBearerIdentity(
   boxRoot: string,
   authorization: string | undefined,

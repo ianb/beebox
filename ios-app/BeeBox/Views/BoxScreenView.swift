@@ -10,9 +10,15 @@ import SwiftUI
 /// When the person's own send or choose comes back, the store's `followUp`
 /// says what to do: open the chat it went to, as "Open chat" does, or scroll
 /// its row into view and announce its status line.
+///
+/// Until the box answers after the app came forward, the recent chats may be
+/// old: none is styled as the one to pick up, and a slow or failed check says
+/// so above the list, with the list's age.
 struct BoxScreenView: View {
     static let allChatsPath = "chats"
     private static let boxesSectionID = "boxes"
+    /// A check that answers within this long shows no status row.
+    private static let checkingNoticeDelay: Duration = .seconds(2)
 
     var box: PairedBox
     var boxes: [PairedBox]
@@ -27,13 +33,18 @@ struct BoxScreenView: View {
     var onSelectBox: (PairedBox) -> Void
     /// Open scrolled to the Boxes section, for the multi-box fixture.
     var initiallyShowsBoxes = false
+    @State private var checkingIsSlow = false
+
+    private var boxAwake: Bool {
+        screenStore.confirmedBoxIDs.contains(box.id) && screenStore.homes[box.id]?.asleep == nil
+    }
 
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
                 List {
                     refreshNotice
-                    QuickCaptureSection(box: box, boxes: boxes, onOpen: onOpen)
+                    QuickCaptureSection(box: box, boxes: boxes, boxAwake: boxAwake, onOpen: onOpen)
                     needsSection
                     sentSection
                     recentSection
@@ -69,6 +80,27 @@ struct BoxScreenView: View {
         .onDisappear {
             screenStore.setShownBox(nil)
         }
+        .task(id: screenStore.refreshes[box.id]) {
+            checkingIsSlow = false
+            guard screenStore.refreshes[box.id] == .refreshing else {
+                return
+            }
+            try? await Task.sleep(for: Self.checkingNoticeDelay)
+            if Task.isCancelled == false {
+                checkingIsSlow = true
+            }
+        }
+    }
+
+    private var confirmed: Bool {
+        screenStore.confirmedBoxIDs.contains(box.id)
+    }
+
+    private var failed: Bool {
+        if case .failed = screenStore.refreshes[box.id] {
+            return true
+        }
+        return false
     }
 
     private func perform(_ request: BoxScreenFollowUpRequest?, proxy: ScrollViewProxy) {
@@ -94,18 +126,79 @@ struct BoxScreenView: View {
 
     @ViewBuilder
     private var refreshNotice: some View {
-        if screenStore.refreshes[box.id] == .failed {
+        switch screenStore.refreshes[box.id] {
+        case .failed(let failure):
             Section {
-                HStack {
-                    Label("Could not refresh", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label(Self.failureTitle(failure, box: box.label), systemImage: "exclamationmark.triangle")
+                        Text([ageLine, "Trying again."].compactMap(\.self).joined(separator: " "))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer()
-                    Button("Retry") {
-                        Task { await screenStore.refresh(boxID: box.id) }
+                    Button("Retry now") {
+                        Task { await screenStore.retryHomeNow(boxID: box.id) }
                     }
                     .buttonStyle(.borderless)
                 }
+                .accessibilityElement(children: .contain)
             }
+        case _ where confirmed && screenStore.homes[box.id]?.asleep != nil:
+            Section {
+                VStack(alignment: .leading, spacing: 2) {
+                    Label("\(box.label) is asleep", systemImage: "moon.zzz")
+                    if let date = screenStore.homeDates[box.id] {
+                        Text("Chats as of \(date.formatted(.relative(presentation: .named))).")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+        case .refreshing where checkingIsSlow && confirmed == false:
+            Section {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Checking \(box.label)…")
+                        if let ageLine {
+                            Text(ageLine)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+        default:
+            EmptyView()
+        }
+    }
+
+    /// How old the shown chats are, or nil when no chats are shown.
+    private var ageLine: String? {
+        guard screenStore.homes[box.id] != nil else {
+            return nil
+        }
+        guard let date = screenStore.homeDates[box.id] else {
+            return "Last updated on an earlier visit."
+        }
+        return "Last updated \(date.formatted(.relative(presentation: .named)))."
+    }
+
+    static func failureTitle(_ failure: BoxScreenStore.RefreshFailure, box: String) -> String {
+        switch failure {
+        case .unreachable:
+            "Can't reach \(box)"
+        case .closed(let reason?):
+            "\(box) is closed for \(reason)"
+        case .closed(nil):
+            "\(box) is closed right now"
+        case .notOpen:
+            "\(box) is not open right now"
+        case .other:
+            "Could not refresh \(box)"
         }
     }
 
@@ -146,9 +239,10 @@ struct BoxScreenView: View {
         Section("Pick up where you left off") {
             if let home = screenStore.homes[box.id] {
                 ForEach(Array(home.recentChats.enumerated()), id: \.element.id) { index, chat in
-                    recentChatRow(chat, primary: index == 0)
+                    // Only a list the box confirmed names the chat to pick up.
+                    recentChatRow(chat, primary: index == 0 && confirmed)
                 }
-            } else if screenStore.refreshes[box.id] != .failed {
+            } else if failed == false {
                 HStack {
                     ProgressView()
                     Text("Loading chats")
