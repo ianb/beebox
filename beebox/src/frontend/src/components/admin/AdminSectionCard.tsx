@@ -18,7 +18,9 @@ export function AdminSectionCard({ id, description, busy, children }: { id: Admi
   const headingId = adminSectionHeadingId(id);
   const section = ADMIN_SECTIONS[id];
   return (
-    <Card as="section" id={adminSectionElementId(id)} aria-labelledby={headingId} aria-busy={busy} shadow>
+    // A section is focusable only while it is a landing target (`scrollToSection`
+    // in AdminPage.tsx); the ring shows where the page landed.
+    <Card as="section" id={adminSectionElementId(id)} aria-labelledby={headingId} aria-busy={busy} shadow className="focus:outline-none focus:ring-2 focus:ring-accent">
       <Stack gap="md">
         <Stack gap="xs">
           <Row wrap gap="sm" align="center">
