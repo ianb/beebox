@@ -11,7 +11,7 @@
 
 import { errorMessage } from "@shared/error-guards";
 import { isRecord } from "@shared/is-record";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getApiBase } from "../../api";
 import { resolveRelativePath } from "../../lib/view-url";
 import { useViewFileHelpers } from "../../hooks/useViewFileHelpers";
@@ -135,7 +135,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
       <div className="p-4">
         {figureEl}
         {description.trim() !== "" ? (
-          <div className="mt-3 max-w-2xl text-warm-700">
+          <div className="mt-3 max-w-2xl text-card-soft">
             <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{description}</Markdown>
           </div>
         ) : null}
@@ -143,14 +143,19 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     );
   }
   if (caption !== undefined && caption.trim() !== "") {
-    return (
-      <figure className="my-2">
-        {figureEl}
-        <figcaption className="text-xs text-warm-700 mt-1 text-center">{caption}</figcaption>
-      </figure>
-    );
+    return <CaptionedFigure caption={caption}>{figureEl}</CaptionedFigure>;
   }
   return figureEl;
+}
+
+/** An embedded figure with its `![caption]` beneath, in the surrounding material's soft ink. */
+export function CaptionedFigure({ caption, children }: { caption: string; children: ReactNode }) {
+  return (
+    <figure className="my-2">
+      {children}
+      <figcaption className="text-xs text-card-soft mt-1 text-center">{caption}</figcaption>
+    </figure>
+  );
 }
 
 function FigureError({ message }: { message: string }) {

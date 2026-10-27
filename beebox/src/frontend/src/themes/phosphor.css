@@ -27,7 +27,7 @@
 [data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material){color:#82ed91;background:#03130a;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material{background:#03130a;}
 /* Material ink, read by text in the reply, pending and meta materials and on the neutral file desk. */
-[data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-pending-material,.bbx-chat-meta-material,.bbx-interface-card-desk[data-card-content="neutral"]){--bbx-ink:#82ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#b5ffc0;}
+[data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-pending-material,.bbx-chat-meta-material,.bbx-interface-card-desk[data-card-content="neutral"]){--bbx-ink:#82ed91;--bbx-danger:#e36379;--bbx-ink-soft:#60bb70;--bbx-pen:#b5ffc0;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material::before{content:"┌─ INCOMING ─────────────────────────────────────────────";display:block;color:#51c468;font:11px/1 monospace;white-space:nowrap;overflow:hidden;margin:0 0 12px;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper{color:#a7ffb1;background:#071a0c;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper :is(.bbx-chat-user-token,.bbx-chat-user-attachment,.bbx-chat-user-attachment-badge){background:#ffffff1f;}
@@ -65,6 +65,7 @@
 [data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile):disabled{color:#3f7a4a;background:transparent;}
 .bbx-card-theme[data-card-theme="phosphor"]{
   --bbx-paper:#041108;--bbx-ink:#83ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#a7ffb1;--bbx-edge:#328646;--bbx-underlay:#020804;--bbx-tint:#082311;--bbx-sheet:#082311;--bbx-quote-paper:#082311;--bbx-quote-layer-paper:#082311;--bbx-blockquote-paper:#082311;--bbx-blockquote-padding:.6em 1em;--bbx-blockquote-edge:0;--bbx-code-paper:#020804;--bbx-code-ink:#a7ffb1;--bbx-sheet-radius:0;--bbx-slip-light:#ffffff0c;--bbx-slip-edge-light:#ffffff26;--bbx-selection:#a7ffb1;--bbx-selection-ink:#020804;--bbx-bullet:#70ec83;--bbx-counter:#70ec83;color-scheme:dark;
+  --bbx-danger:#e36379;
   font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
 }
 .bbx-card-surface[data-card-theme="phosphor"]{background:#041108;border:0;box-shadow:none;}

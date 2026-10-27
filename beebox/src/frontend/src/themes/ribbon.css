@@ -168,6 +168,7 @@
 /* Chat material ink, read by text in the reply, pending and meta materials. */
 .bbx-box-presentation[data-chrome-theme="ribbon"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
   --bbx-ink: #173f35;
+  --bbx-danger: #a32745;
   --bbx-ink-soft: #514a34;
   --bbx-pen: #84300b;
 }
@@ -195,6 +196,7 @@
 .bbx-card-theme[data-card-theme="ribbon"] {
   --bbx-paper: #fff6df;
   --bbx-ink: #173f35;
+  --bbx-danger: #a32745;
   --bbx-ink-soft: #686045;
   --bbx-pen: #a43b0d;
   --bbx-edge: #a48c60;

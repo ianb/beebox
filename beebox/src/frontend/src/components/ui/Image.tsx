@@ -218,7 +218,7 @@ function wrapInFigure({ node, caption, stretch, extraClass }: { node: ReactNode;
   return (
     <figure className={cn("inline-flex flex-col items-center", stretch ? "w-full" : "", extraClass)}>
       {node}
-      <figcaption className="mt-1 max-w-full text-xs text-warm-700 italic text-center">
+      <figcaption className="mt-1 max-w-full text-xs text-card-soft italic text-center">
         {caption}
       </figcaption>
     </figure>

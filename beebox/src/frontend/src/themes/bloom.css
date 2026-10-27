@@ -149,6 +149,7 @@
 .bbx-card-theme[data-card-theme="bloom"] {
   --bbx-paper: #fffdf5;
   --bbx-ink: #344957;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #596c71;
   --bbx-pen: #a33d54;
   --bbx-edge: #c5bda7;
