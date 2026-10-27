@@ -166,15 +166,6 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<BatchO
   return { success: agentResult.success, selected: selectedPaths };
 }
 
-/**
- * A job's description: its card, its refs pasted up to
- * `JOB_INLINE_BUDGET_BYTES` (the rest listed by path with sizes), and its
- * type's instructions. The full form `describeJob` gives selection.
- */
-export async function buildJobDescription(job: JobWithContent, boxRoot: string): Promise<string> {
-  return (await describeJob(job, boxRoot)).full;
-}
-
 /** A ref's content as read for pasting, or null when it is omitted (logged). */
 async function readRef(boxRoot: string, opts: { ref: string; relPath: string }): Promise<string | null> {
   const { ref, relPath } = opts;
@@ -182,14 +173,14 @@ async function readRef(boxRoot: string, opts: { ref: string; relPath: string }):
   if (contained === null) {
     // An escaping ref inlined here would be an arbitrary local-file read into
     // the agent's prompt. Treat it as broken (omit), but never silently.
-    console.warn(`buildJobDescription: ref "${ref}" in ${relPath} escapes the box; omitting`);
+    console.warn(`describeJob: ref "${ref}" in ${relPath} escapes the box; omitting`);
     return null;
   }
   try {
     return await readContainedFile(boxRoot, contained);
   } catch (e) {
     if (e instanceof RefEscapesBoxError) {
-      console.warn(`buildJobDescription: ref "${ref}" in ${relPath} resolves outside the box via symlink; omitting`);
+      console.warn(`describeJob: ref "${ref}" in ${relPath} resolves outside the box via symlink; omitting`);
     } else if (errnoCode(e) !== "ENOENT") {
       // Referenced file doesn't exist — omit it; the agent will discover this.
       console.debug(`Could not inline ref ${ref}:`, e);

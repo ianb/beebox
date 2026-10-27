@@ -16,6 +16,7 @@ import { getSystemState } from "../../../core/state.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { createOrAppendIntakeJob, INTAKE_JOB_MAX_ITEMS, splitOversizedIntakeJobs } from "../../../job-cards/intake-utils.js";
+import { restoreJobsToHead } from "../../../job-cards/restore-to-head.js";
 import { collectExistingJobRefs, releaseTakenItems } from "./job-refs.js";
 import { createContainsBackfillJobTemplate } from "../../../schemas/contains-backfill-job.js";
 import { readCardFrontmatter, collectRefs } from "../../../core/card-io.js";
@@ -188,15 +189,26 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
  */
 export async function splitOversizedJobs(boxRoot: string): Promise<number> {
   const splits = await splitOversizedIntakeJobs(boxRoot);
+  let committed = 0;
   for (const { original, chunks } of splits) {
-    await stageAndCommitPaths(boxRoot, {
-      paths: [original, ...chunks],
-      message: `Split intake job ${path.basename(original)} into ${chunks.length} jobs of at most ${INTAKE_JOB_MAX_ITEMS} items`,
-      trailers: { "Triggered-By": "bbx wakeup", Phase: "intake-split" },
-    });
+    try {
+      await stageAndCommitPaths(boxRoot, {
+        paths: [original, ...chunks],
+        message: `Split intake job ${path.basename(original)} into ${chunks.length} jobs of at most ${INTAKE_JOB_MAX_ITEMS} items`,
+        trailers: { "Triggered-By": "bbx wakeup", Phase: "intake-split" },
+      });
+    } catch (error) {
+      // Uncommitted chunks would hold the items while the job check skips
+      // them. Put the original back and the chunks away, so the next wakeup
+      // finds the oversized job and splits it again.
+      console.warn(`  Split of ${original} was not committed; restoring it for the next wakeup: ${errorMessage(error)}`);
+      await restoreJobsToHead(boxRoot, { jobs: [original, ...chunks], label: "intake-split" });
+      continue;
+    }
+    committed += 1;
     console.log(`  Split ${original} into ${chunks.length} jobs`);
   }
-  return splits.length;
+  return committed;
 }
 
 /**

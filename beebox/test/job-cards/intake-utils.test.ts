@@ -10,6 +10,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, not, unordered } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
+import { chmod, readdir } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { createOrAppendIntakeJob } from "../../src/job-cards/intake-utils.js";
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
@@ -270,4 +271,32 @@ void test("Same-second names stay distinct", async (t) => {
     { counts, distinct: [...names].length, ages: found.map((job) => job.createdAt?.toISOString()) },
     { counts: [25, 25, 10], distinct: 3, ages: ["2026-10-27T12:00:00.000Z", "2026-10-27T12:00:00.000Z", "2026-10-27T12:00:00.000Z"] },
   );
+});
+
+// ## A write that fails partway is undone
+//
+// A job with 20 items and a call with 12: the append of 5 succeeds, then the
+// new job for the other 7 cannot be written (here the jobs directory refuses
+// new files). The writer throws without returning paths, so no caller would
+// commit the appended job, which would hold its new items while the job check
+// skipped it. So the append is undone: the job is as it was, and no new file
+// is left.
+void test("A write that fails partway is undone", async (t) => {
+  const box = await makeTmpBox();
+  const jobsDir = `${box.root}/_bookkeeping/jobs`;
+  t.teardown(async () => {
+    await chmod(jobsDir, 0o755);
+    await box.cleanup();
+  });
+  const existing = "_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card";
+  await box.write(existing, createIntakeJobTemplate({ priority: "normal", description: "old", items: refs(0, 20) }));
+  const before = await box.read(existing);
+  await chmod(jobsDir, 0o555);
+  const thrown = await createOrAppendIntakeJob({ boxRoot: box.root, items: refs(20, 12), description: "Scan" })
+    .then(() => "no error", (e: unknown) => (e instanceof Error && "code" in e ? e.code : "other"));
+  t.check({ thrown, job: await box.read(existing), files: (await readdir(jobsDir)).toSorted() }, {
+    thrown: "EACCES",
+    job: before,
+    files: [".gitkeep", "2026-10-01T00-00-00-inbox.intake.job.card"],
+  });
 });

@@ -12,8 +12,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { simpleGit } from "simple-git";
-import { hasCommits, stageAndCommitPaths, unstageFiles, withBoxGitLock } from "../../../lib/git/core/operations.js";
+import { hasCommits, stageAndCommitPaths, unstageFiles } from "../../../lib/git/core/operations.js";
+import { committedPaths, restoreJobsToHead } from "../../../job-cards/restore-to-head.js";
 import type { CommandResult } from "../../command-types.js";
 import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
 import type { SessionLayout } from "./session.js";
@@ -71,13 +71,6 @@ async function discardUncommittedSession(
   for (const p of paths) await fs.rm(path.join(boxRoot, p), { recursive: true, force: true });
 }
 
-/** The files under `relPaths` that HEAD tracks; empty before the first commit. */
-async function committedPaths(boxRoot: string, relPaths: string[]): Promise<string[]> {
-  if (!(await hasCommits(boxRoot))) return [];
-  const listed = await simpleGit(boxRoot).raw(["ls-tree", "-r", "--name-only", "HEAD", "--", ...relPaths]);
-  return listed.split("\n").filter((line) => line !== "");
-}
-
 /**
  * Queue a committed session for triage and commit the job paths written, so
  * the scheduler pass's job check (which counts only committed jobs) starts a
@@ -107,28 +100,7 @@ export async function queueCommittedSessionIntake(
     return jobs;
   } catch (error) {
     console.warn(`[scan-import] Intake jobs ${jobs.join(", ")} were not committed; restoring them so the next wakeup queues the items:`, error);
-    await restoreJobsToHead(boxRoot, jobs);
+    await restoreJobsToHead(boxRoot, { jobs, label: "scan-import" });
     return null;
-  }
-}
-
-/**
- * Put job cards back as `HEAD` has them: a new card is removed, an appended
- * one loses the append. An uncommitted job would hold its items (step 4b
- * counts every job's refs as jobbed) while the job check skips it as a write in
- * progress, so the items would wait for nothing. Restored, they are unjobbed
- * inbox cards again, and the next wakeup's step 4b jobs and commits them.
- */
-async function restoreJobsToHead(boxRoot: string, jobs: string[]): Promise<void> {
-  try {
-    await withBoxGitLock(boxRoot, async () => {
-      const tracked = await committedPaths(boxRoot, jobs);
-      const added = jobs.filter((job) => !tracked.includes(job));
-      if (tracked.length > 0) await simpleGit(boxRoot).raw(["checkout", "HEAD", "--", ...tracked]);
-      if (added.length > 0 && (await hasCommits(boxRoot))) await unstageFiles(boxRoot, added);
-      for (const job of added) await fs.rm(path.join(boxRoot, job), { force: true });
-    });
-  } catch (error) {
-    console.error(`[scan-import] Could not restore uncommitted intake jobs ${jobs.join(", ")}; their items wait until a commit takes them:`, error);
   }
 }

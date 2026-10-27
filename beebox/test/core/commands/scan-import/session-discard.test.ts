@@ -17,7 +17,8 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, str } from "@ianbicking/tap-check/check";
 import { join } from "node:path";
-import { chmod, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { execa } from "execa";
 import Sharp from "sharp";
 import { createFakeDocling } from "../../../../src/services/docling/core.js";
@@ -243,4 +244,41 @@ void test("Scan intake jobs are committed, or put back", async (t) => {
     head: ["_bookkeeping/jobs/.gitkeep", existing, committed?.[1] ?? "second job"],
     status: "",
   });
+});
+
+// ## In a package box, the restore uses box-relative paths
+//
+// A package box's repository is one level above the box root (the box is its
+// `content/` directory). The restore compares `git ls-tree` names with
+// box-relative job paths and checks them out; `ls-tree` names paths relative to
+// the working directory, the box root, so the appended job is found as tracked
+// and put back rather than taken for a new file.
+void test("In a package box, the restore uses box-relative paths", async (t) => {
+  const pkg = await mkdtemp(join(tmpdir(), "bbx-pkg-"));
+  t.teardown(() => rm(pkg, { recursive: true, force: true }));
+  const boxRoot = join(pkg, "content");
+  const existing = "_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card";
+  await mkdir(join(boxRoot, "_bookkeeping/jobs"), { recursive: true });
+  await writeFile(join(boxRoot, existing), createIntakeJobTemplate({ priority: "normal", description: "old", items: ["_content/inbox/old.doc.card"] }));
+  const git = (...args: string[]) => execa("git", args, { cwd: pkg });
+  await git("init", "-q", "-b", "main");
+  await git("add", "-A");
+  await git("-c", "user.email=t@example.org", "-c", "user.name=T", "commit", "-qm", "init");
+  const hook = join(pkg, ".git/hooks/pre-commit");
+  await writeFile(hook, "#!/bin/sh\nexit 1\n");
+  await chmod(hook, 0o755);
+  const before = await readFile(join(boxRoot, existing), "utf-8");
+
+  const warn = console.warn;
+  console.warn = () => {};
+  let refused;
+  try {
+    refused = await queueCommittedSessionIntake(boxRoot, { items: ["_content/inbox/new.capture-session.card"], description: "Scan: 1 photo" });
+  } finally {
+    console.warn = warn;
+  }
+  t.check(
+    { refused, job: await readFile(join(boxRoot, existing), "utf-8"), status: (await git("status", "--porcelain")).stdout },
+    { refused: null, job: before, status: "" },
+  );
 });

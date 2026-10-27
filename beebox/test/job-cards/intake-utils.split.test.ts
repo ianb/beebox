@@ -5,13 +5,15 @@
 // into jobs of at most 25 (`splitOversizedIntakeJobs`, committed by the wakeup's
 // `splitOversizedJobs`). Chunk names derive from the original's, so a split
 // stopped partway resumes without a second set, and each chunk is published
-// atomically, so a file under a chunk's name is always complete. See
+// atomically (`writeFileAtomic`), so a file under a chunk's name is always
+// complete. A split whose commit fails is put back for the next wakeup. See
 // docs/plans/bounded-reactor-batches.md, Track B.
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { execSync } from "node:child_process";
-import { readdir, writeFile } from "node:fs/promises";
+import { chmod, readdir, rm, writeFile } from "node:fs/promises";
+import { execa } from "execa";
 import { join } from "node:path";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { splitOversizedIntakeJobs } from "../../src/job-cards/intake-utils.js";
@@ -117,31 +119,44 @@ void test("A split stopped partway resumes under the same names", async (t) => {
   });
 });
 
-// ## An interrupted chunk write leaves no chunk under its name
+// ## A split whose commit is refused is put back
 //
-// The write of chunk 6 fails partway (the process is killed, the disk fills).
-// Chunks are published atomically, so a partial chunk exists only as a temp
-// file, never under its final name; the original stays; and the next split
-// writes chunk 6 whole.
-void test("An interrupted chunk write leaves no chunk under its name", async (t) => {
+// Uncommitted chunks would hold the items while the job check skips them. So
+// when the box refuses the split's commit, the original comes back from
+// `HEAD` and the chunks are removed; the next wakeup finds the oversized job
+// and splits it again.
+void test("A split whose commit is refused is put back", async (t) => {
   const box = await boxWithOversizedJob(t);
-  const interrupted = await splitOversizedIntakeJobs(box.root, {
-    write: async (filePath, content) => {
-      if (filePath.endsWith("-part-06.intake.job.card")) {
-        await writeFile(`${filePath}.tmp-interrupted`, content.slice(0, 40));
-        throw new Error("killed during the write");
-      }
-      await writeFile(filePath, content);
-    },
-  }).catch((e: unknown) => (e instanceof Error ? e.message : "threw"));
-  const afterInterrupt = await jobFiles(box);
-  await splitOversizedIntakeJobs(box.root);
-  t.check({ interrupted, afterInterrupt, sixth: itemsOf(await box.read(part(6))), files: await jobFiles(box) }, {
-    interrupted: "killed during the write",
-    afterInterrupt: [ORIGINAL, ...parts(1, 5)].toSorted(),
-    sixth: refs(125, 25),
-    files: parts(1, 12),
-  });
+  const { stdout } = await execa("git", ["rev-parse", "--git-path", "hooks"], { cwd: box.root });
+  const hook = join(box.root, stdout, "pre-commit");
+  await writeFile(hook, "#!/bin/sh\necho 'refused' >&2\nexit 1\n");
+  await chmod(hook, 0o755);
+  const original = await box.read(ORIGINAL);
+  const warn = console.warn;
+  const error = console.error;
+  console.warn = () => {};
+  console.error = () => {};
+  let refused: number;
+  try {
+    refused = await splitOversizedJobs(box.root);
+  } finally {
+    console.warn = warn;
+    console.error = error;
+  }
+  t.check(
+    { refused, files: await jobFiles(box), original: await box.read(ORIGINAL), status: execSync("git status --porcelain", { cwd: box.root }).toString().trim() },
+    { refused: 0, files: [ORIGINAL], original, status: "" },
+  );
+
+  await rm(hook);
+  const log = console.log;
+  console.log = () => {};
+  try {
+    t.check(await splitOversizedJobs(box.root), 1);
+  } finally {
+    console.log = log;
+  }
+  t.check(await jobFiles(box), parts(1, 12));
 });
 
 // ## The job check starts a run for the chunks at once

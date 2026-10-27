@@ -14,7 +14,7 @@ import * as path from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import {
   BATCH_PROMPT_BUDGET_BYTES,
-  buildJobDescription,
+  describeJob,
   NOT_PASTED_HEADING,
   processBatchJobs,
   selectBatch,
@@ -54,7 +54,7 @@ void test("A job pastes refs up to 40 KB and lists the rest", async (t) => {
   await cardOf(box, { rel: "_content/inbox/b.doc.card", kb: 20 });
   await cardOf(box, { rel: "_content/inbox/c.doc.card", kb: 5 });
   const content = createIntakeJobTemplate({ description: "Triage 3 inbox items", items: ["_content/inbox/a.doc.card", "_content/inbox/b.doc.card", "_content/inbox/c.doc.card"] });
-  const description = await buildJobDescription(job("_bookkeeping/jobs/j.intake.job.card", content), box.root);
+  const description = (await describeJob(job("_bookkeeping/jobs/j.intake.job.card", content), box.root)).full;
   t.check(outline(description), [
     "### _bookkeeping/jobs/j.intake.job.card",
     "#### _content/inbox/a.doc.card",

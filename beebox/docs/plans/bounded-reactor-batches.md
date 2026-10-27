@@ -269,7 +269,17 @@ past the cap go to a new job with the same key.
   check skips a dirty job, so the items would wait for nothing. Put back, they
   are unjobbed inbox cards, and the next wakeup's step 4b jobs and commits
   them. (Retrying the commit was the alternative; a commit refused by the
-  box's hook fails again.)
+  box's hook fails again.) The restore compares `git ls-tree` names with
+  box-relative paths; `ls-tree` without `--full-name` names paths relative to
+  the working directory (the box root), so in a package box, whose repository
+  is one level up, they are box-relative already (verified with a test; diff
+  review finding 2 assumed repository-relative names).
+- **A write that fails partway** (diff review finding 3). When
+  `createOrAppendIntakeJob` throws after writing some files (the append
+  landed, a new job's write failed), it puts back the appended job's previous
+  text and removes the new files before rethrowing, so no item is held by a
+  job no caller commits. It undoes its own writes rather than restoring from
+  `HEAD`: the appended job may hold another writer's uncommitted items.
 - Wordless filing already commits the returned job (`filing-sweep.ts:86-88`);
   it stages the returned list.
 
@@ -327,6 +337,15 @@ job of any size.
   25 items`, trailers `Triggered-By: bbx wakeup`, `Phase: intake-split`, the
   same form step 4b's commit uses (`steps.ts:257-266`). Logged in the wakeup
   output.
+- **A refused split commit** (diff review, coordinator decision). When the
+  commit fails (a hook refuses it, a git error), the split is put back as
+  scan import does: the original comes back from `HEAD` and the chunks are
+  removed (`beebox/src/job-cards/restore-to-head.ts`), so the next wakeup
+  finds the oversized original and splits it again. Uncommitted chunks would
+  otherwise hold the items while the job check skips them. **Accepted, not
+  recovered:** a process killed between deleting the original and the commit
+  leaves uncommitted chunks; the window is one unlink and one commit inside a
+  wakeup.
 - Job check effect: the chunks are new paths, so each is first seen now (a
   fresh 7-day lifetime) and due at once. The original's entry is pruned
   (`rules.ts` drops entries for files no longer present).
@@ -521,7 +540,10 @@ none
 | The split stops after writing some chunks | new (interrupted split) | stable names: the next split writes only the missing chunks, then deletes the original | clear (commit history) |
 | A scan import's new jobs are not committed | new (scan caller test) | `queueCommittedSessionIntake` commits every returned path | clear |
 | That commit fails | new (refused commit) | the written job paths are put back as `HEAD` has them; step 4b re-jobs the items | clear (warning) |
-| A chunk write is interrupted | new (interrupted write) | atomic publish: no partial file under a chunk's name | clear |
+| A chunk write is interrupted | none (`writeFileAtomic`'s own guarantee) | atomic publish: no partial file under a chunk's name | clear |
+| The split's commit is refused | new (refusing hook) | original restored from `HEAD`, chunks removed; the next wakeup splits again | clear (warning) |
+| The process is killed between deleting the original and the commit | none | **accepted**: uncommitted chunks hold the items until a commit takes them; one unlink and one commit wide | silent until the next commit |
+| The intake writer fails after an append | new (partial write) | its own writes undone before it rethrows | clear (the caller's warning) |
 | A hand-edited intake job over the cap | new | split on the next wakeup | clear (commit) |
 | A cycle's session fails (API error) | new | the run stops, as today | clear (`job-check run ended`) |
 | The box's model has a short context window | none | unsupported: the reactor needs a long-context model (Prior art) | the session fails, as it would without this plan |
@@ -652,8 +674,14 @@ All `t.check` tests; one claim each, with one example.
   already written and the original still present → the next split writes
   `-part-06` to `-part-12`, leaves 1 to 5 as they were, deletes the original;
   12 chunks in total.
-- **Interrupted chunk write**: the write of `-part-06` fails partway → no
-  file under that name, the original stays; the next split writes it whole.
+- **Refused split commit** (a refusing hook): the original is back from
+  `HEAD`, no chunk is left, the tree is clean; the next split succeeds with 12
+  chunks.
+- **Partial intake write**: a 20-item job and 12 new items, the jobs directory
+  refusing new files → the append is undone and no new file is left.
+- **Package-box restore**: a box nested one level inside its repository, its
+  scan intake commit refused → the appended job is back to its `HEAD`
+  content.
 - **Scan commit refused**: a scan's intake commit refused by the box's hook →
   the appended job is back to its `HEAD` content, the new job is gone, the
   working tree is clean.

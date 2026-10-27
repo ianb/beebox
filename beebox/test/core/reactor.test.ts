@@ -11,7 +11,7 @@ import {
   buildReactorUserPrompt,
 } from "../../src/core/reactor/prompts.js";
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
-import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";
+import { describeJob } from "../../src/core/reactor/engine/batch-jobs.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import * as fs from "node:fs/promises";
@@ -242,11 +242,11 @@ void test("Non-existent directory returns empty array", async (t) => {
   t.check(cards, []);
 });
 
-// ## buildJobDescription
+// ## describeJob
 //
 // ### Includes the job card and priority label (no xml fence)
 void test("Includes the job card and priority label (no xml fence)", async (t) => {
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     {
       card: { file: "task.intake.job.card", priority: "low", createdAt: null },
       relPath: "_bookkeeping/jobs/task.intake.job.card",
@@ -258,7 +258,7 @@ void test("Includes the job card and priority label (no xml fence)", async (t) =
       }),
     },
     "/tmp/fake-box",
-  );
+  )).full;
   // The schema instructions after the heading are large generated text, so only
   // their heading is checked; the card section above them is exact.
   t.check(
@@ -289,7 +289,7 @@ void test("The core purge fix:", async (t) => {
   const box = await makeTmpBox({ git: true });
   await box.write("store/inbox/item1.card", "---\nstatus: new\n---\nHello from item one");
 
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     {
       card: { file: "x.intake.job.card", priority: "normal", createdAt: null },
       relPath: "_bookkeeping/jobs/x.intake.job.card",
@@ -300,7 +300,7 @@ void test("The core purge fix:", async (t) => {
       }),
     },
     box.root,
-  );
+  )).full;
 
   t.check(
     desc,
@@ -334,7 +334,7 @@ void test("The core purge fix:", async (t) => {
 
 // ### Handles missing refs gracefully
 void test("Handles missing refs gracefully", async (t) => {
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     {
       card: { file: "task.intake.job.card", priority: "normal", createdAt: null },
       relPath: "_bookkeeping/jobs/task.intake.job.card",
@@ -345,7 +345,7 @@ void test("Handles missing refs gracefully", async (t) => {
       }),
     },
     "/tmp/fake-box",
-  );
+  )).full;
   t.check(
     desc,
     str`${[
@@ -371,14 +371,14 @@ void test("Handles missing refs gracefully", async (t) => {
 // A job that isn't a recognized frontmatter card (legacy XML, hand-edited) is
 // surfaced with its raw content and a warning rather than crashing the batch.
 void test("A job that isn't a recognized frontmatter card (legacy XML, hand-edited) is s...", async (t) => {
-  const desc = await buildJobDescription(
+  const desc = (await describeJob(
     {
       card: { file: "legacy.job.card", priority: "normal", createdAt: null },
       relPath: "_bookkeeping/jobs/legacy.job.card",
       content: "<job><description>Old XML job</description></job>",
     },
     "/tmp/fake-box",
-  );
+  )).full;
   t.check(
     desc,
     `### _bookkeeping/jobs/legacy.job.card
