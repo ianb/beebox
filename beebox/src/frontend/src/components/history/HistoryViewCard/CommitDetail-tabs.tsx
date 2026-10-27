@@ -6,7 +6,7 @@ import { getApiBase } from "../../../api";
 import { isImageFileName } from "../../../lib/binary-files";
 import { Badge } from "../../ui/Badge";
 import { ExternalLink } from "../../ui/ExternalLink";
-import { Image } from "../../ui/Image";
+import { Image } from "../../ui/Image/view";
 import { Pre } from "../../ui/Pre";
 import type { DiffFile } from "./CommitDetail-diff";
 import { extractNewFileContent } from "./CommitDetail-diff";

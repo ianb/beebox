@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-27T20:16:15Z
+Generated: 2026-10-27T20:25:16Z
 Total documents: 589
 
 ## Issues
@@ -10656,13 +10656,13 @@ Referenced by:
 - docs/user-stories/README.md:24 (mention) — README.md                this file
 - docs/user-stories/catalog/2026-08-21.md:10 (link) — method are in [the pipeline README](../README.md). The underlying
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:122 (mention) — - **Lives in:** `beebox/docs/user-stories/README.md`, `beebox/docs/user-stories/catalog/{2026-06-26.md,2026-08-21.md,.js
-- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:73 (link) — [the pipeline README](../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:43 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:62 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:56 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:44 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:84 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:64 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
+- ../issues/closed/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:88 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/docs-and-chores/2026-05-26-dev-scripts-into-bin.md:45 (mention) — (`beebox/docs/user-stories/README.md`, `journeys/README.md` — 9 lines invoking
 
 References:
@@ -10715,7 +10715,6 @@ Referenced by:
 - docs/user-stories/README.md:5 (link) — The current catalog is [catalog/2026-08-21.md](catalog/2026-08-21.md). It is produced by reading
 - docs/user-stories/catalog/2026-06-26.md:7 (link) — > [2026-08-21.md](2026-08-21.md). This file describes the product as it
 - test/user-stories/journeys/README.md:4 (link) — there. The [capability catalog](../../../docs/user-stories/catalog/2026-08-21.md) next door answers "does the
-- ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:51 (link) — This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../beebox/docs/user-stories/catalog/2026-08-21.md#fl
 - ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:23 (link) — This issue is why [`capture/a-capture-still-arrives-when-transcription-is-down`](../../../../beebox/user-stories/catalog
 - ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:42 (link) — This issue is why [`connectors/configure-which-gmail-calendar-and-drive-content`](../../../beebox/docs/user-stories/cata
 - ../issues/closed/bugs/2026-08-21-failed-in-box-image-shows-the-browser-glyph.md:36 (link) — This issue is why [`browse/images-still-show-when-the-source-blocks`](../../../beebox/docs/user-stories/catalog/2026-08-
@@ -10723,6 +10722,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-21-history-shows-no-trigger-for-procedure-and-trick-commit.md:62 (link) — This issue is why [`browse/see-which-changes-the-box-made-on-its-own-and`](../../../beebox/docs/user-stories/catalog/202
 - ../issues/closed/bugs/2026-08-21-one-failing-calendar-aborts-the-whole-calendar-sync-ins.md:53 (link) — An independent adversarial source recheck marked [`connectors/calendar-sync-repairs-an-expired-sync-token-and`](../../..
 - ../issues/closed/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:42 (link) — This issue is why [`publish/collect-replies-from-a-published-page`](../../../beebox/docs/user-stories/catalog/2026-08-21
+- ../issues/closed/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:66 (link) — This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../../beebox/docs/user-stories/catalog/2026-08-21.md
 - ../issues/closed/bugs/2026-08-21-trashing-or-deleting-a-google-drive-card-does-not-stop.md:35 (link) — The story was narrowed from raw deletion to the supported trash-and-restore lifecycle and re-keyed as [`connectors/stop-
 - ../issues/closed/bugs/2026-10-05-speech-browser-test-fails-on-main.md:34 (mention) — 2026-08-21 recorded this cause (`beebox/docs/user-stories/catalog/2026-08-21.md`)
 - ../issues/closed/docs-and-chores/2026-08-24-stories-frontmatter-field-undocumented.md:17 (mention) — pointing at slugs in `beebox/user-stories/catalog/2026-08-21.md` (moved to `beebox/docs/user-stories/catalog/2026-08-21.

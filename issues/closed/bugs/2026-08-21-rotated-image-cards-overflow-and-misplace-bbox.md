@@ -1,12 +1,27 @@
 ---
 title: "A rotated image card overflows its panel and its subject box no longer matches the photo"
-workstream: unattached
+workstream: bug-burndown-5
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — driving /browse to check the image-card user stories
 priority: normal
 ---
+
+> **Closed 2026-10-27 (bug-burndown-5), rendering only:** at a quarter turn,
+> `Image` now sizes its box to the turned photo's shape (from the photo's
+> natural size, capped per size) and turns the photo and its overlay together as
+> one frame (`components/ui/Image/layers.tsx`); at a half turn with an overlay,
+> the shared wrapper turns. `BboxOverlay` no longer takes a transform. Checked
+> in the browser on both test1 scan cards below at 1280 and 375 wide: the photo
+> fits the panel, and an overlay moved to the photo's top-left quarter lands at
+> the bottom-left of the 270° display, as the rotation requires. DOM test:
+> `src/frontend/test/components/ui/Image/view.rotation.test.ts`.
+> **Not addressed:** the stored `rotation` values on those cards are still
+> wrong (both photos display upside down), and no UI corrects a wrong value.
+> The user-story recheck for `browse/view-a-photo-card-with-its-analysis`
+> described below was not run.
 
 An image card whose frontmatter carries `rotation: "90"` or `rotation: "270"`
 renders the photo with a CSS `rotate()` transform. A CSS transform does not
@@ -48,8 +63,8 @@ frontmatter field and its rendering.
 
 ## Updating the user-story catalog
 
-This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../beebox/docs/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
-flagged ❌ in [the user-story catalog](../../beebox/docs/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
+This issue is why [`browse/view-a-photo-card-with-its-analysis`](../../../beebox/docs/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../../beebox/docs/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
 actually do, where every claim is checked against the source.
 
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a
@@ -70,7 +85,7 @@ pnpm exec tsx beebox/src/scripts/user-stories/render/core.ts \
 The recheck is adversarial by design: it will not mark the story accurate just because
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
-[the pipeline README](../../beebox/docs/user-stories/README.md).
+[the pipeline README](../../../beebox/docs/user-stories/README.md).
 
 ## Audit 2026-10-22
 

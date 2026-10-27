@@ -48,7 +48,7 @@ import { assignLocators, stampLocators } from "@shared/todo-locators";
 import { Link } from "../markdown-link/link";
 import { useOptionalLightbox } from "../LightboxProvider";
 import { Button } from "../ui/Button";
-import { Image } from "../ui/Image";
+import { Image } from "../ui/Image/view";
 import { VideoEmbed } from "../ui/VideoEmbed";
 import { detectVideoEmbed } from "../../lib/video-url";
 import {
