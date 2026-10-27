@@ -18,7 +18,7 @@ export interface IncludeFileContext {
   Link: ComponentType<{ href?: string; children?: ReactNode }>;
 }
 
-const ROW_CLASS = "bbx-include-file my-1 text-sm text-warm-700";
+const ROW_CLASS = "bbx-include-file my-1 text-sm text-card-soft";
 
 export function makeIncludeFileComponent(ctx: IncludeFileContext): (props: { path?: string }) => ReactNode {
   return function IncludeFile({ path }: { path?: string }): ReactNode {
@@ -27,7 +27,7 @@ export function makeIncludeFileComponent(ctx: IncludeFileContext): (props: { pat
     if (target === null) {
       return (
         <div className={ROW_CLASS} title="This file is outside the parts of the box this app shows">
-          includes <code>{path}</code> <span className="text-warm-400">(not viewable here)</span>
+          includes <code>{path}</code> <span className="text-card-soft">(not viewable here)</span>
         </div>
       );
     }
@@ -40,14 +40,14 @@ function IncludedLink({ path, boxPath, Link }: { path: string; boxPath: string; 
   if (kind.data?.kind === "missing") {
     return (
       <div className={ROW_CLASS} title={`No file at ${boxPath}`}>
-        includes <code>{path}</code> <span className="text-danger">(missing)</span>
+        includes <code>{path}</code> <span className="text-card-danger">(missing)</span>
       </div>
     );
   }
   return (
     <div className={ROW_CLASS}>
       includes <Link href={path}><code>{path}</code></Link>
-      {kind.error ? <span className="ml-1 text-warm-400" title={kind.error.message}>(could not check)</span> : null}
+      {kind.error ? <span className="ml-1 text-card-soft" title={kind.error.message}>(could not check)</span> : null}
     </div>
   );
 }

@@ -3,6 +3,7 @@
   --textile-paper: #fff7e9;
   --textile-ink: #542939;
   --textile-soft: #785563;
+  --textile-danger: #b0344f;
   --textile-placeholder: #9c8187;
   --textile-edge: #c9aa91;
   --textile-accent: #973c59;
@@ -24,6 +25,7 @@
   --textile-paper: #182a3e;
   --textile-ink: #f1e9d7;
   --textile-soft: #c4bda9;
+  --textile-danger: #fd95a3;
   --textile-placeholder: #757978;
   --textile-edge: #4c6279;
   --textile-accent: #c9c09f;
@@ -107,6 +109,7 @@
 .bbx-card-theme:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]) {
   --bbx-paper: var(--textile-paper);
   --bbx-ink: var(--textile-ink);
+  --bbx-danger: var(--textile-danger);
   --bbx-ink-soft: var(--textile-soft);
   --bbx-pen: var(--textile-accent);
   --bbx-edge: var(--textile-edge);

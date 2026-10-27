@@ -1,12 +1,19 @@
 ---
 title: "feedback-review/collect.ts reads boxes at the retired single-user path as the hub user"
-workstream: box-isolation
+workstream: box-isolation-followups
 area: tooling
 filed-by: agent
 discovered-by: agent
 discovered-in: box-isolation — retiring the single-user server layout, 2026-10-25
 labels: [deploy, server, feedback-review]
+resolution: implemented
 ---
+
+**Closed 2026-10-27 (box-isolation-followups).** The boxholder wants the tool
+kept. `collect.ts` lists the server's boxes from `hub.json` as `beebox` and
+scans, reads and resolves each box as `bbx-<slug>` (`runOnServer`'s new
+`boxUser(slug)`). A box root its user cannot reach fails the scan. Tested
+against a fake `ssh`; not yet run against production.
 
 `feedback-review/collect.ts` finds and reads each box's `_config/feedback/`
 files on the server with `REMOTE_BOXES_DIR = "/home/beebox/boxes"`, through

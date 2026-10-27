@@ -179,6 +179,39 @@ async function loginAndProxy(t: Test) {
     wrong: 401,
   });
 
+  // ## The diagnostic bearer proxies its whitelisted reads without a browser session
+  //
+  // `docs/server/operations.md` ("Live health") documents `BBX_DIAG_API_KEY` as a
+  // bearer on a box's `health.check`. The hub passes a GET on the whitelisted
+  // procedures through with no identity attached, and the box checks the key
+  // again (`isDiagnosticBypassRequest`, `src/webapp/auth.ts`). Anything else the
+  // key is sent to stays behind the wall.
+
+  const priorDiagKey = process.env.BBX_DIAG_API_KEY;
+  process.env.BBX_DIAG_API_KEY = "test-diag-key-for-hub-auth-test";
+  const diag = { authorization: "Bearer test-diag-key-for-hub-auth-test" };
+  const diagHealth = await fetch(`${hubBase}/test1/api/trpc/health.check?input=%7B%22fresh%22%3Atrue%7D`, { headers: diag });
+  const diagBody = BoxEcho.parse(await diagHealth.json());
+  const diagOther = await fetch(`${hubBase}/test1/api/trpc/history.list`, { headers: diag });
+  const diagPost = await fetch(`${hubBase}/test1/api/trpc/health.check`, { method: "POST", headers: diag });
+  const diagWrong = await fetch(`${hubBase}/test1/api/trpc/health.check`, { headers: { authorization: "Bearer wrong" } });
+  if (priorDiagKey === undefined) delete process.env.BBX_DIAG_API_KEY;
+  else process.env.BBX_DIAG_API_KEY = priorDiagKey;
+  t.check({
+    status: diagHealth.status,
+    email: diagBody.xBbxAuthenticatedEmail,
+    secret: diagBody.xBbxHubSecret,
+    other: diagOther.status,
+    post: diagPost.status,
+    wrong: diagWrong.status,
+  }, {
+    status: 200,
+    email: null,
+    secret: null,
+    other: 401,
+    post: 401,
+    wrong: 401,
+  });
 }
 
 async function bogusCredentials(t: Test) {

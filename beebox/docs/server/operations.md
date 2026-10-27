@@ -67,7 +67,7 @@ ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST)
 | Hub routing table (which boxes `bbx hub` serves, and at what slug) | `/home/beebox/.config/beebox/hub.json` |
 | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/var/lib/beebox-sched/.config/beebox/boxes.json` (the scheduler's own user) |
 | Service logs | `journalctl -u beebox-hub -n 200 --no-pager` / `journalctl -u beebox-scheduler -n 200 --no-pager`; a box's own engine: `journalctl -u beebox-box@<box> -n 200 --no-pager`; one scheduler pass: `journalctl -u beebox-pass@<box>` |
-| Box unit state | `systemctl list-units 'beebox-box@*'`; a box that will not start: `systemctl status beebox-box@<box>`, then `systemctl reset-failed beebox-box@<box>` once fixed |
+| Box unit state | `systemctl list-units 'beebox-box@*'`; a box that keeps crashing restarts itself with a delay that grows to 5 min: `systemctl status beebox-box@<box>`, then `systemctl restart beebox-box@<box>` once fixed to skip the wait |
 | Service status | `systemctl status beebox-hub beebox-scheduler --no-pager` |
 | Client debug log per box | `/var/lib/beebox/<box>/box/.beebox/client-debug.log` |
 | Procedure runs | `/var/lib/beebox/<box>/box/_bookkeeping/procedure/runs/` |
@@ -153,12 +153,14 @@ restart, not just a config edit. To *add* a box, run `deploy/add-box.sh` rather 
 Ad-hoc shell as above is fine, but **scripts** (anything in this repo that
 shells out to the server programmatically) should go through the single
 chokepoint at [`feedback-review/run-on-server.ts`](../../../feedback-review/run-on-server.ts).
-`runOnServer({ script, asUser, host })` SSHes in as `root` (the entry point
-key auth is set up for), then immediately `su - beebox` before running the
+`runOnServer({ script, asUser, sshTarget })` SSHes in as `root` (the entry point
+key auth is set up for), then immediately `su - <asUser>` before running the
 script, with the script piped via stdin so multi-line content and quotes work
-without escaping. `asUser` defaults to `beebox`; only set `asUser: "root"`
-for operations that genuinely require root (systemctl, chown, package
-installs) and leave a comment saying why.
+without escaping. Each box is private to its own user, so anything that reads
+or writes a box runs as `asUser: boxUser(slug)` (`bbx-<slug>`). `asUser` defaults to
+`beebox`, the hub, which can read `hub.json` and no box. Only set
+`asUser: "root"` for operations that genuinely require root (systemctl,
+chown, package installs) and leave a comment saying why.
 
 Why this matters — historical bug: an earlier feedback-resolver script SSHed
 as root and ran `git commit` directly. That created objects under the box's
@@ -182,7 +184,7 @@ callers. Don't write a fresh `ssh root@... 'command'` line.
 
 In production, `/api/trpc/debugLog.get` and `/api/trpc/health.check` sit behind the Google OAuth cookie gate — `curl` without a browser cookie gets rejected.
 
-**Bypass** for machine access: if `BBX_DIAG_API_KEY` is set in `/home/beebox/.env`, GET requests to those two endpoints are allowed with an `Authorization: Bearer <key>` header. The debug log returns the tRPC envelope (`{"result":{"data":{"entries":[…]}}}`):
+**Bypass** for machine access: if `BBX_DIAG_API_KEY` is set in `/home/beebox/.env`, GET requests to those two endpoints (and `chat.statusAll`) are allowed with an `Authorization: Bearer <key>` header. The hub passes such a request through without identity, and the box checks the key again against its own copy (`/etc/beebox/box.env`). The debug log returns the tRPC envelope (`{"result":{"data":{"entries":[…]}}}`):
 
 ```bash
 curl -H "Authorization: Bearer $BBX_DIAG_API_KEY" \

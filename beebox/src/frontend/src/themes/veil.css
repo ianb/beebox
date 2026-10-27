@@ -64,6 +64,7 @@
 .bbx-card-theme[data-card-theme="veil"] {
   --bbx-paper: #eff1dc;
   --bbx-ink: #2c4436;
+  --bbx-danger: #ab2f4b;
   --bbx-ink-soft: #4d5843;
   --bbx-pen: #8e2b55;
   --bbx-edge: #8a9b73;
