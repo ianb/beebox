@@ -34,3 +34,8 @@ decides which. Until then a real regression in the reinstall check (the
 Reproduce: `pnpm -C beebox test` (2026-10-25: 12,906 pass, 7 fail, 2 skip), or
 the file alone from `beebox/`:
 `node --import tsx --import ./test/helpers/isolate-user-home.ts --import @ianbicking/tap-check/tap test/deploy/box-install.test.ts`.
+
+
+## 2026-10-27: not reproduced on main
+
+On main at `0d5d7a877`, the file passes on its own (exit 0, no failures). `0f5c09f44` ("one user and one unit per box is the only layout") was the last change to the test and to `bbx-box-install`. Close as fixed.
