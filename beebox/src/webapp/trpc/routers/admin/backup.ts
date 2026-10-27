@@ -138,6 +138,8 @@ function redactRepositoryCredentials(repository: string): string {
 
 async function backupRunnerStatus(slug: string): Promise<"enabled" | "disabled" | "unavailable" | "running"> {
   if (!onUnitHost()) {
+    // TODO(env-migration): install kind is launch-time runtime context; keep
+    // this direct read until it is added to serverEnvSchema.
     if (process.env.BBX_INSTALL_KIND === "mac-app") return "running";
     return localBackupRunnerActive() ? "running" : "unavailable";
   }
@@ -155,6 +157,8 @@ class BackupRunnerUnavailableError extends Error {
 
 function backupInstallKind(): "unit-host" | "mac-app" | "docker" | "local" {
   if (onUnitHost()) return "unit-host";
+  // TODO(env-migration): install kind is launch-time runtime context; keep
+  // these direct reads until it is added to serverEnvSchema.
   if (process.env.BBX_INSTALL_KIND === "mac-app") return "mac-app";
   if (process.env.BBX_INSTALL_KIND === "docker") return "docker";
   return "local";

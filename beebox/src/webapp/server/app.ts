@@ -407,6 +407,8 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     // Server boxes use their host's systemd timer; the Mac app has its own
     // lifecycle-aware loop. Direct local and Docker installs catch up while
     // this server is running, outside HTTP request work leases.
+    // TODO(env-migration): install kind is launch-time runtime context; keep
+    // this direct read until it is added to serverEnvSchema.
     startLocalBackupRunnerForServer({ boxRoots: boxes.map((box) => box.boxRoot), unitHost: onUnitHost(), installKind: process.env.BBX_INSTALL_KIND });
     if (options.idleExitMs !== undefined) {
       installIdleExit({ server, boxes, idleMs: options.idleExitMs, onIdle: () => fireShutdown("idle") });

@@ -1,6 +1,6 @@
 ---
 title: "Configure encrypted backups in Admin"
-status: draft
+status: partial
 workstream: box-backups
 issues: []
 ---
@@ -230,16 +230,20 @@ operator CLI workflow; no knowledge audit is needed.
 ## What will hold this after it ships
 
 Core tests cover password-file isolation, attempt outcomes, crash retry, and
-schedule semantics; route tests cover owner authorization and safe DTOs; a DOM
-test covers first setup, recorded outcome, failure, and legacy CLI configuration.
-Run selected tests, typecheck, lint, layout/doc checks, a browser walk of
-Host → Encrypted backups, and smoke before asking to land. No new test tier.
+schedule semantics; route tests cover owner authorization and safe DTOs; DOM
+tests cover setup, recorded outcome, failure, and legacy CLI configuration.
+The full browser walk of Host → Encrypted backups remains unverified: the
+worktree browse key reaches Admin but is not a signed-in owner for the encrypted
+backup procedure, so the setup form and Daily control cannot be exercised with
+that session. This is tracked in
+[the browse-key owner issue](../../../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md).
 
 ## Implementation order
 
 1. Core managed password file and status/attempt seams, with focused tests.
 2. Owner-only tRPC procedures and CLI outcome recording, with route tests.
-3. Frontend section, overview, DOM tests, and browser walk.
+3. Frontend section, overview, and DOM tests are implemented. The signed-in
+   browser walk remains a manual check; see the issue above.
 4. Schedule `daily|off`, CLI semantics, install guidance, and documentation.
 5. Track D2 runner convergence and shared due/quiet policy, with focused tests.
 6. Security report draft for the credential-bearing route and backend egress; cross-model diff review; commit the implementation while the report awaits human review.
@@ -251,5 +255,6 @@ checks, so it cannot silently adopt another box's snapshots. Capture still
 verifies the repository and tags only completed snapshots. A failed attempt
 never replaces the newest verified snapshot. Existing host runners continue
 invoking the CLI with `--scheduled`; a daily/off setting controls only those
-scheduled invocations. The plan is done when the focused code and UI tests, browser walk,
-selected suite, typecheck, lint, layout/doc checks, and cross-model review pass.
+scheduled invocations. The implementation and automated checks are complete.
+The signed-in browser walk remains the outstanding manual check because the
+worktree browse identity is not a signed-in owner; see the linked issue above.
