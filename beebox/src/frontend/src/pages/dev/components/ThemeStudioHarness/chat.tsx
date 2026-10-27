@@ -59,7 +59,7 @@ const REPLY: SessionEntry[] = [{
     { type: "tool_result", toolUseId: "studio-read", resultSummary: "Before Saturday: choose three seed varieties…" },
     { type: "tool_use", toolName: "Grep", toolId: "studio-grep", input: { pattern: "envelope", path: "notes" } },
     { type: "tool_result", toolUseId: "studio-grep", resultSummary: "notes/Seed exchange.doc.card: Label each envelope clearly" },
-    { type: "text", text: "Start with labeled envelopes and a small welcome table. **Keep the instructions short** so everyone can join in. See [before Saturday](#before-saturday)." },
+    { type: "text", text: "Start with labeled envelopes and a small welcome table. **Keep the instructions short** so everyone can join in. See [before Saturday](#before-saturday). Last year it {% source ref=\"../outside-the-box.md\" %}ran out by eleven{% /source %}." },
   ],
 }];
 const COMPACTED = entry({ uuid: "studio-compacted", type: "compaction" }, "Earlier: the hall, the date and who brings tape.");

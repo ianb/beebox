@@ -7,6 +7,7 @@
   --bbx-font: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", "Varela Round", ui-sans-serif, system-ui, sans-serif;
   --bbx-paper: #fff8fa;
   --bbx-ink: #4a2234;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #7a4a5e;
   --bbx-pen: #c2185b;
   --bbx-edge: #f6c3d3;
@@ -24,6 +25,7 @@
 .bbx-card-theme[data-card-theme="letter-set"][data-card-stock="lemon"] {
   --bbx-paper: #fff8d6;
   --bbx-ink: #43381a;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #6e5e2e;
   --bbx-pen: #2d6fa8;
   --bbx-edge: #ecd98a;
@@ -38,6 +40,7 @@
 .bbx-card-theme[data-card-theme="letter-set"][data-card-stock="sky"] {
   --bbx-paper: #eaf5fc;
   --bbx-ink: #20384a;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #4a6276;
   --bbx-edge: #b9dcf0;
   --bbx-underlay: #d6ebf7;

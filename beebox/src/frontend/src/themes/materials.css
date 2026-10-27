@@ -52,11 +52,19 @@
   font-family: var(--bbx-font);
 }
 
-/* Danger ink (the Tailwind `card-danger` role): the app's rose pulled toward
-   the material's own ink, so small error text keeps the ink's contrast on
-   any paper, light or dark. Chat materials set ink too, so they derive it. */
+/* Danger ink (the Tailwind `card-danger` role), for small error text. Each
+   catalog theme sets its own red, at least 5:1 on its paper, sheet and tint.
+   A theme without one gets the app's rose pulled toward its ink, which keeps
+   most of the ink's contrast. Chat materials set ink too, so they derive it. */
 :is(.bbx-card-theme, .bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
-  --bbx-danger: color-mix(in oklab, #c2788a 50%, var(--bbx-ink, #4a3f32));
+  --bbx-danger: color-mix(in oklab, #c2788a 50%, var(--bbx-ink, #2e2720));
+}
+@media print {
+  /* Print is black on white for every theme, so one red serves; it outranks
+     the themes' screen reds without restating each print block. */
+  :is(.bbx-card-theme, .bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
+    --bbx-danger: #9c1e3f !important;
+  }
 }
 
 /* A card theme with its own selection pair drops the system theme's code
@@ -76,6 +84,7 @@
   --bbx-slip-overhang: calc(var(--bbx-content-padding) + 0.625rem);
   --bbx-paper: #f5efe2;
   --bbx-ink: #332e27;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #4f4439;
   --bbx-pen: #2b4264;
   --bbx-edge: #d6c8af;
@@ -97,6 +106,7 @@
   --bbx-pen: #263b59;
   --bbx-paper: #ecdbb1;
   --bbx-ink: #3d3221;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #473a29;
   --bbx-edge: #c9b58b;
   --bbx-quote-paper: #f8eacb;
@@ -110,6 +120,7 @@
   --bbx-selection-code-ink: initial;
   --bbx-paper: #e0e9ee;
   --bbx-ink: #263a44;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #34444e;
   --bbx-edge: #b6cbd5;
   --bbx-quote-paper: #f0f5f6;
@@ -124,6 +135,7 @@
   --bbx-slip-overhang: calc(var(--bbx-content-padding) + 0.625rem);
   --bbx-paper: #faee9f;
   --bbx-ink: #36321b;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #625a30;
   --bbx-pen: #3c5169;
   --bbx-edge: #dacb73;
@@ -140,6 +152,7 @@
   --bbx-selection-ink: #16302a;
   --bbx-paper: #f6d1d0;
   --bbx-ink: #452d35;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #694a54;
   --bbx-edge: #d4a6ad;
   --bbx-quote-paper: #ffebea;
@@ -151,6 +164,7 @@
   --bbx-selection-ink: #2a1a0c;
   --bbx-paper: #d7ebcd;
   --bbx-ink: #2c3d29;
+  --bbx-danger: #9c1e3f;
   --bbx-ink-soft: #4a5e45;
   --bbx-edge: #adc4a4;
   --bbx-quote-paper: #edf6e7;
