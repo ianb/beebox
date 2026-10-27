@@ -273,6 +273,12 @@ for (const { family, current, target } of behind) {
 execFileSync("pnpm", ["install"], { cwd: REPO_ROOT, stdio: "inherit" });
 console.log("Typechecking beebox...");
 execFileSync("pnpm", ["-C", "beebox", "typecheck"], { cwd: REPO_ROOT, stdio: "inherit" });
+// The other workspaces on a bumped pin compile against the new types too.
+for (const manifestPath of new Set(behind.flatMap(({ family }) => family.alsoPinnedIn))) {
+  const dir = path.dirname(manifestPath);
+  console.log(`Typechecking ${path.relative(REPO_ROOT, dir)}...`);
+  execFileSync("pnpm", ["-C", dir, "typecheck"], { cwd: REPO_ROOT, stdio: "inherit" });
+}
 
 for (const { family } of behind) {
   console.log(`${family.label} now at ${pinnedVersion(family.npmNames[0], MANIFEST)} (binary: ${family.binaryVersion() ?? "not found"}).`);

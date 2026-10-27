@@ -53,7 +53,9 @@ function addScripts(pkgPath: string, pkg: Record<string, unknown>): string[] {
   };
   let scriptsAdded = 0;
   for (const [name, cmd] of Object.entries(scripts)) {
-    if (!(name in existingScripts)) {
+    // An earlier vibe-init wrote this madge script; replace it, not a custom one.
+    const outdated = name === "lint:circular" && existingScripts[name] === "madge --circular --extensions ts,tsx src/";
+    if (!(name in existingScripts) || outdated) {
       existingScripts[name] = cmd;
       scriptsAdded++;
     }

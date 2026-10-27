@@ -127,6 +127,13 @@ function runFullCheck() {
       cmd: "npx oxlint -c .oxlint-cycles.json src/",
       condition: () => existsSync(".oxlint-cycles.json"),
     },
+    {
+      // A project set up by an earlier vibe-init, before `vibe-init` reran
+      // and wrote .oxlint-cycles.json.
+      name: "Circular deps (madge)",
+      cmd: "npx madge --circular --extensions ts,tsx src/",
+      condition: () => existsSync(".madgerc") && !existsSync(".oxlint-cycles.json"),
+    },
   ];
 
   let failed = false;

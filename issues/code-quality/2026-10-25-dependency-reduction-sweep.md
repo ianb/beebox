@@ -44,4 +44,7 @@ are neighbors for code.
 
 The per-dependency inventory (2026-10-27) is in
 [dev/dependency-inventory-2026-10.md](../../dev/dependency-inventory-2026-10.md).
-No removal has been made yet; each one waits on the boxholder's review.
+Its status section records what the `dep-reduction` branch has removed (the
+first candidates the boxholder approved on 2026-10-27), which findings were
+wrong, and which went to decision issues. Every other row still needs a
+go-ahead.
