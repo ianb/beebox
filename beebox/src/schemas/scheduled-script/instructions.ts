@@ -17,7 +17,7 @@ Scheduled scripts define a command to run, or a notification to send, on a sched
 ## Schedule Types (mutually exclusive)
 - **cron**: Standard cron expression (e.g., \`0 6 * * *\` for 6am daily)
 - **at**: ISO datetime for a one-shot future execution
-- **rrule**: iCalendar RRULE for complex recurrence patterns. Without a \`DTSTART\`, occurrences fall at midnight UTC on matching days, counted from the day of the last run (a new card waits for its first matching day); for another time of day, or for \`COUNT\` or an exact \`INTERVAL\` phase, add \`;DTSTART=<yyyymmdd>T<hhmmss>Z\` (e.g. \`FREQ=WEEKLY;BYDAY=MO;DTSTART=20261005T080000Z\` is Mondays at 08:00 UTC)
+- **rrule**: iCalendar RRULE for complex recurrence patterns. Always give it a start in UTC: \`FREQ=WEEKLY;BYDAY=MO;DTSTART=20261102T140000Z\` is Mondays at 14:00 UTC. Schedules run in UTC, so convert the boxholder's time from the box timezone (\`timezone\` in \`_config/box.json\`). Without a \`DTSTART\`, \`bbx validate\` warns, and the rule runs at midnight UTC on matching days
 
 ## Frontmatter Fields
 - **not-before**: Minimum time since last run. Prevents running more often than this interval even if the schedule says otherwise. Use duration strings: \`5m\`, \`1h\`, \`4h\`, \`1d\`.

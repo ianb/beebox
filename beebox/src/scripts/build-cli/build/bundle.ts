@@ -17,7 +17,7 @@
 // `bbx` invocation (bin/bbx self-heals on staleness) or a test: the suite
 // rebuilds the bundle mid-run (test/hub.e2e.test.ts) while other tests exec the
 // CLI, which loads dist/exports/* and dist/view-widgets/* at runtime. When
-// only cli.mjs was renamed, `view test` under that overlap failed on a
+// only cli.mjs was renamed, `view check` under that overlap failed on a
 // partly written export.
 import { build } from "esbuild";
 import { buildPublicationWorker } from "./pub-worker.mjs";
@@ -110,7 +110,7 @@ await build({
 
 // Also build the public view-widgets layer (the `beebox/view-widgets`
 // export) to dist/view-widgets/index.js. Box-authored views import this
-// specifier for <CardLink>/<CardRef>/<Markdown>; `bbx view test` resolves it via the
+// specifier for <CardLink>/<CardRef>/<Markdown>; `bbx view check` resolves it via the
 // package `exports` map (the temp-dir node_modules/beebox symlink in
 // src/cli/commands/view/command.ts), and wraps the rendered view in the bundle's
 // NodeViewHostProvider. Only React (incl. its runtime entry points) stays

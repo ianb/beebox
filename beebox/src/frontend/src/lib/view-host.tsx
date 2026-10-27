@@ -11,7 +11,7 @@
  * The context carries every host capability the widgets need, so the widgets
  * consume context only — never tRPC, Router, or FileView directly. That is what
  * lets one widget source render both in the browser and in the provider-less
- * `bbx view test` node harness: each environment populates the capabilities
+ * `bbx view check` node harness: each environment populates the capabilities
  * differently (browser → tRPC + the surface's `onNavigate` + FileView; node →
  * a preloaded map + a no-op).
  */

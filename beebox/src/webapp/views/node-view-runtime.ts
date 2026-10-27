@@ -6,7 +6,7 @@
  * symlinking in the one host copy is what keeps hooks/dispatcher identity
  * intact instead of loading a second React.
  *
- * Two callers share this: `bbx view test` (renders in-process) and the view
+ * Two callers share this: `bbx view check` (renders in-process) and the view
  * compiler's metadata extractor (imports in a subprocess). Both just need a
  * file on disk they can `import()`; this module only does the filesystem
  * part.
@@ -59,7 +59,7 @@ export interface NodeViewModule {
  * wired up for the given view-host context:
  *
  * - `engine-hosted` — no box package hosts the compile, so resolve through the
- *   running beebox's own copies (`PACKAGE_ROOT`), same as `bbx view test`
+ *   running beebox's own copies (`PACKAGE_ROOT`), same as `bbx view check`
  *   has always done. Two levels are needed here because `PACKAGE_ROOT`'s own
  *   `node_modules` is itself a symlink into the shared workspace tree in dev, so
  *   `beebox` (self-reference, for `beebox/view-widgets`) can't live

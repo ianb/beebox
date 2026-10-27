@@ -1,7 +1,7 @@
 // # Checking all views in a box
 //
 // `checkViews(boxRoot, { timeoutMs })` renders every view in a box (each in a
-// killable `bbx view test` child) and reports which fail. It's the whole-box gate a
+// killable `bbx view render-one` child) and reports which fail. It's the whole-box gate a
 // migration uses (`bbx view check`) and the broken-view detector. `ok` is true only
 // when every view renders.
 

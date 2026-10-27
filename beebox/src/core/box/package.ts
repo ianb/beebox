@@ -194,7 +194,7 @@ export async function scaffoldPackageRoot(
     // react/react-dom are DIRECT deps of the box, not left to hoisting:
     // node-target compiled views externalize react/jsx-runtime, and pnpm's
     // strict isolation does not place beebox's transitive react at the
-    // box root — without these, `bbx view test` and view-metadata import fail
+    // box root — without these, `bbx view check` and view-metadata import fail
     // on any JSX view in a real (installed, non-symlinked) box. Ranges match
     // the engine's so the single-React-instance invariant holds.
     dependencies: {
