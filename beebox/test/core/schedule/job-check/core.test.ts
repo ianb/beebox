@@ -217,21 +217,71 @@ void test("Seven days after first sight the job is given up", async (t) => {
   });
 });
 
-// ## An unreadable state file is logged and read as empty
+// ## An unreadable state file stops the check
 //
-// That can cost one extra run, not a loop: the stamp rewrites the file.
-void test("An unreadable state file is logged and read as empty", async (t) => {
+// The file may hide today's count, so the check fails closed: it starts
+// nothing, leaves the file as it is, and names it in one line per pass.
+void test("An unreadable state file stops the check", async (t) => {
   const box = await committedJobBox(t);
   await box.write(".beebox/job-check.json", "{ not json");
-  const result = await checkWaitingJobs(box.root, { start: starter("started").start });
-  t.check({ result, log: await jobCheckLog(box), runsToday: (await readJobCheckState(box.root)).state.runsToday }, {
-    result: { kind: "started", files: [FILE] },
+  const s = starter("started");
+  const result = await checkWaitingJobs(box.root, { start: s.start });
+  t.check({ result, calls: s.calls, file: await readFile(jobCheckStatePath(box.root), "utf-8"), log: await jobCheckLog(box) }, {
+    result: { kind: "state-unreadable" },
+    calls: [],
+    file: "{ not json",
     log: [
-      { action: "state unreadable", error: "Expected property name or '}' in JSON at position 2 (line 1 column 3)" },
-      { action: "started", files: [FILE], runsToday: 1 },
+      { action: "state unreadable", file: jobCheckStatePath(box.root), error: "Expected property name or '}' in JSON at position 2 (line 1 column 3)" },
     ],
-    runsToday: 1,
   });
+});
+
+// ## The attempt is charged before the run starts
+//
+// The attempt and today's count are on disk when the starter is called, so a
+// write that fails can never let a run go uncounted: if the charge cannot be
+// saved, nothing starts. A run that answers `running` is refunded.
+void test("The attempt is charged before the run starts", async (t) => {
+  const box = await committedJobBox(t);
+  const seenAtStart: unknown[] = [];
+  const start = async (): Promise<JobCheckStart> => {
+    const { state } = await readJobCheckState(box.root);
+    seenAtStart.push({ runsToday: state.runsToday, attempts: state.jobs[FILE]?.attempts });
+    return { state: "running", detail: "another cycle" };
+  };
+  const refunded = await checkWaitingJobs(box.root, { start });
+  const afterRefund = await readJobCheckState(box.root);
+
+  const s = starter("started");
+  const unsaved = await checkWaitingJobs(box.root, {
+    start: s.start,
+    writeState: () => Promise.reject(new Error("disk full")),
+  }).catch((e: unknown) => (e instanceof Error ? `threw: ${e.message}` : "threw"));
+  t.check(
+    { refunded, seenAtStart, after: [afterRefund.state.runsToday, afterRefund.state.jobs[FILE]?.attempts], unsaved, calls: s.calls },
+    {
+      refunded: { kind: "not-started", state: "running", detail: "another cycle" },
+      seenAtStart: [{ runsToday: 1, attempts: 1 }],
+      after: [0, 0],
+      unsaved: "threw: disk full",
+      calls: [],
+    },
+  );
+});
+
+// ## Connector and low-priority jobs ride along
+//
+// A committed job tagged with a connector belongs to that connector's scoped
+// wakeup; a low-priority one rides along with any full wakeup. Neither starts
+// a run.
+void test("Connector and low-priority jobs ride along", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await box.write("_bookkeeping/jobs/mail.intake.job.card", "---\nconnector: gmail\npriority: normal\n---\n");
+  await box.write("_bookkeeping/jobs/photos.intake.job.card", "---\npriority: low\n---\n");
+  box.commitAll("jobs that ride along");
+  const s = starter("started");
+  t.check({ result: await checkWaitingJobs(box.root, { start: s.start }), calls: s.calls }, { result: { kind: "idle" }, calls: [] });
 });
 
 // ## The daily bound

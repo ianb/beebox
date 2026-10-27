@@ -79,14 +79,18 @@ The run is `bbx engine wakeup --max-cycles 3`. On a unit host the pass asks the
 box server to start it (`wakeup.start`, through the hub, which starts an idle
 box), because the pass unit's children end with the pass; elsewhere the
 daemon's own process starts it. Either way the pass waits only until the run's
-child holds the cycle lock, and an attempt is counted only then. A job is given
+child holds the cycle lock. The attempt and today's count are saved before the
+start, so a failed write starts nothing; a run that found the lock held or
+failed before taking it is refunded. A job is given
 up 7 days after the check first saw it; its card stays, and the
 `stalled-jobs` health check names it.
 
 State is `.beebox/job-check.json` (per job file: first sight, content hash,
 attempts, next time; per box: runs today), written under
-`.beebox/job-check.lock`. Deleting it makes every waiting job due once more,
-with a new 7-day lifetime. Decisions are `job-check` lines in
+`.beebox/job-check.lock`. An unreadable file stops the check (it may hide
+today's count): nothing starts, and each pass with a waiting job logs a
+`state unreadable` line naming it. Deleting the file makes every waiting job
+due once more, with a new 7-day lifetime. Decisions are `job-check` lines in
 `scheduler.jsonl`, with `action` one of `started`, `not started`,
 `daily bound`, `gave up`, `skipped`, `state unreadable`, or `run ended` (the
 run's `ok`, `jobsProcessed`, `jobsRemaining`, and detail, written when it

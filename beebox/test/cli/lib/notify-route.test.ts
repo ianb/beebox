@@ -2,9 +2,8 @@
 //
 // `bbx finalize` runs as a tooling child that holds the box environment
 // (`BBX_SERVER_URL`, `BBX_BOX_NAME`, `BBX_AGENT_TOKEN`) and none of the channel
-// keys. `routedSender` sends through the server's `notifications.send` and reads
-// reach from `notifications.channels` when all three are set, and in this
-// process when one is missing. See docs/plans/on-demand-job-triggers.md, Track A.
+// keys. `routedSender` sends through the server's `notifications.send` when all
+// three are set, and in this process when one is missing. See docs/plans/on-demand-job-triggers.md, Track A.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -52,10 +51,9 @@ void test("With the box environment the server sends; without it, this process d
   const routed = routedSender(server.boxRoot, { push: localPush });
   const sent = await routed.send({ intent: INTENT });
   t.check(
-    { deliveries: sent.deliveries, reach: await routed.reach(), server: [serverApns.sent.length, serverPush.sent.length], local: localPush.sent },
+    { deliveries: sent.deliveries, server: [serverApns.sent.length, serverPush.sent.length], local: localPush.sent },
     {
       deliveries: [{ channel: "apns", status: "sent" }, { channel: "web-push", status: "sent" }],
-      reach: { apns: true, webPush: true },
       server: [1, 1],
       local: [],
     },

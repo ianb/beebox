@@ -1,7 +1,7 @@
 // # The job check's rules
 //
 // Pure functions behind the scheduler pass's job check
-// (`src/core/schedule/job-check/rules.ts`): which jobs are waiting, which are
+// (`src/core/schedule/job-check/rules.ts`): which waiting jobs are
 // due, the backoff, the 7-day lifetime, and the daily bound. See
 // docs/plans/on-demand-job-triggers.md, Track B.
 
@@ -11,7 +11,6 @@ import {
   dueJobs,
   EMPTY_STATE,
   givenUp,
-  isWaitingJob,
   JOB_CHECK_RUNS_PER_DAY,
   nextAttemptAt,
   stampStarted,
@@ -22,23 +21,6 @@ import {
 const HOUR = 60 * 60 * 1000;
 const T0 = new Date("2026-10-27T12:00:00.000Z");
 const at = (ms: number): Date => new Date(T0.getTime() + ms);
-
-// ## Waiting
-//
-// Only an unscoped, normal-priority job whose working copy is its committed
-// content starts a run. A connector's job belongs to its scoped wakeup; a low
-// one rides along; an uncommitted card is a write in progress.
-void test("Waiting: unscoped, normal, committed", async (t) => {
-  t.check(
-    [
-      isWaitingJob({ connector: undefined, priority: "normal", clean: true }),
-      isWaitingJob({ connector: "gmail", priority: "normal", clean: true }),
-      isWaitingJob({ connector: undefined, priority: "low", clean: true }),
-      isWaitingJob({ connector: undefined, priority: "normal", clean: false }),
-    ],
-    [true, false, false, false],
-  );
-});
 
 // ## Backoff
 //

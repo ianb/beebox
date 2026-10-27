@@ -37,16 +37,6 @@ export interface JobCheckState {
 
 export const EMPTY_STATE: JobCheckState = { day: null, runsToday: 0, boundLoggedDay: null, jobs: {} };
 
-/**
- * A waiting job: unscoped (a connector's job belongs to its scoped wakeup),
- * normal priority (a low one rides along with any run), and its working copy
- * is its committed content (anything else is a write in progress or a
- * rejected commit).
- */
-export function isWaitingJob(job: { connector: string | undefined; priority: "normal" | "low"; clean: boolean }): boolean {
-  return job.connector === undefined && job.priority === "normal" && job.clean;
-}
-
 /** When a job that has had `attempts` runs is next due: +1 h, +6 h, then daily. */
 export function nextAttemptAt(attempts: number, now: Date): Date {
   const delayHours = attempts <= 1 ? 1 : attempts === 2 ? 6 : 24;

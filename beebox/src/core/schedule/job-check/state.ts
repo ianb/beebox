@@ -35,9 +35,9 @@ const stateSchema = z.object({
 });
 
 /**
- * The state, or the empty state. `problem` says why a file that exists could
- * not be used; the caller logs it. Treating it as empty costs at most one
- * extra run: the next stamp rewrites the file.
+ * The state; the empty state when there is no file. `problem` says why a file
+ * that exists could not be read or parsed: the check then starts nothing (it
+ * may hide today's count) and logs it.
  */
 export async function readJobCheckState(boxRoot: string): Promise<{ state: JobCheckState; problem: string | null }> {
   let raw: string;

@@ -90,6 +90,5 @@ export function routedSender(boxRoot: string, services?: NotifyServices): Notify
         }),
       );
     },
-    reach: async () => (await onServer(() => client.notifications.channels.query())).reach,
   };
 }

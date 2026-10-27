@@ -176,10 +176,10 @@ same `bbx finalize` call site as the pending-question notification sweep
   latch state.** A lost or corrupt latch file can only cause a duplicate
   nudge — it can never reset a question's age or block its expiry. The
   latch's only job is nudge-dedup.
-- **Expiry is not notification-channel-gated.** `checkPendingQuestionsAndNotify`
-  exits early with no channels configured, but the aging sweep's expiry half
+- **Expiry is not notification-channel-gated.** The aging sweep's expiry half
   always runs — only nudge *delivery* depends on a channel existing (the
-  header badge is the channel-independent surface).
+  header badge is the channel-independent surface). With nobody to reach,
+  the nudge and the alert are skipped `no-audience` and latched.
 - Time comes from `getBoxTime`/`getBoxTimeISO` (`BBX_TIME`-honoring), never
   `new Date()`, so the sweep is testable with frozen time
   (`test/core/question-aging.test.ts`).

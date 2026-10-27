@@ -85,7 +85,11 @@ export function wakeupReactorOptions(
   return reactorOptions;
 }
 
-/** `--max-cycles` wants a positive integer; commander prints this as the usage error. */
+/**
+ * `--max-cycles` wants a positive integer; commander prints this as the usage
+ * error. A class, not `new InvalidArgumentError("…")`: lint
+ * (`error/no-literal-error-message`) rejects a literal message.
+ */
 class MaxCyclesArgumentError extends InvalidArgumentError {
   constructor() {
     super("--max-cycles takes a positive integer");

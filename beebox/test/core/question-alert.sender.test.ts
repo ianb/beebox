@@ -45,7 +45,6 @@ function fakeSender(outcome: Outcome): NotifySender & { sends: string[] } {
       if (outcome === "throws") return Promise.reject(new Error("The box's server could not be reached"));
       return Promise.resolve({ id: "n1", deliveries: outcome, shown: false });
     },
-    reach: () => Promise.resolve({ apns: true, webPush: true }),
   };
 }
 

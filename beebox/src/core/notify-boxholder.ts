@@ -275,14 +275,12 @@ export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): 
  */
 export interface NotifySender {
   send(request: NotifyRequest): Promise<NotifyResult>;
-  reach(): Promise<ChannelFlags>;
 }
 
-/** Send and read reach in this process, with `services` for any request that names none. */
+/** Send in this process, with `services` for any request that names none. */
 export function inProcessSender(boxRoot: string, services?: NotifyServices): NotifySender {
   return {
     send: (request) => notifyBoxholder(boxRoot, { ...request, services: request.services ?? services }),
-    reach: () => notifyChannels(boxRoot, { services }),
   };
 }
 

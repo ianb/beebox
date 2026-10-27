@@ -67,18 +67,17 @@ export interface QuestionAlertResult {
 
 /**
  * Notify about the newly-pending questions through `sender` (default this
- * process, with `push`). Reach is read first; a throw there propagates and
- * nothing is saved. The latch is saved after the send: a send that did not go
- * out (`notificationSent`) is logged and its questions stay out of the latch,
- * so the next finalize announces them again until they leave pending.
+ * process, with `push`). The latch is saved after the send: a send that did
+ * not go out (`notificationSent`) is logged and its questions stay out of the
+ * latch, so the next finalize announces them again until they leave pending.
+ * A send with nobody to reach (every delivery skipped `no-audience`) counts
+ * as sent, so a box with no paired device is not re-announced every finalize.
  */
 export async function checkPendingQuestionsAndNotify(
   boxRoot: string,
   opts: { now: Date; push?: PushService; sender?: NotifySender },
 ): Promise<QuestionAlertResult | null> {
   const sender = opts.sender ?? inProcessSender(boxRoot, { push: opts.push });
-  const channels = await sender.reach();
-  if (!channels.webPush && !channels.apns) return null;
 
   const { pendingQuestions } = await generateContext(boxRoot);
   const pendingPaths = pendingQuestions.map((q) => q.path);
