@@ -111,6 +111,30 @@ export interface SessionEntry {
    * send. Kept on the entry so later snapshots retain the original baseline.
    */
   reconcileKnownUuids?: string[];
+  /**
+   * Client-only: transcript turns that echoed sends made before this one but
+   * written after its baseline was taken. Placement only (`placePending` in
+   * chatMachine); kept apart from the baseline, which would stop a merged
+   * queued turn from confirming this send too.
+   */
+  sentAfterEchoes?: string[];
+  /**
+   * Client-only, on an undelivered entry: transcript turns a later send not
+   * marked undelivered already retired against. Matching only; placement
+   * never reads it, so the bubble stays where it was sent.
+   */
+  claimedEchoes?: string[];
+  /** The client's id for the send, on the box's record of an accepted message (`chat.bootstrap`'s `pending`). */
+  messageId?: string;
+  /** The box accepted this message and the agent will never receive it (a queue dropped by a restart). */
+  undelivered?: true;
+  /** The send carried images, whose bytes the box's record does not keep. */
+  hadImages?: true;
+  /**
+   * Client-only: the box refused this queued send, so it recorded nothing.
+   * Discarding it is local; there is no marker on the box to discard.
+   */
+  sendRefused?: true;
 }
 
 /** A client-created entry tracked until authoritative history echoes it. */

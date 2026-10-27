@@ -90,9 +90,14 @@ function normalizeForCompare(text: string): string {
  * while the initial fetch is still in flight they overlap, and appending
  * blindly would render that message twice — once from each side.
  *
- * So an accepted entry is dropped when something already pending carries the
- * same text, compared through the same normalizer reconciliation uses, and
- * again by uuid so a repeated load cannot stack copies of one bus row.
+ * So an accepted entry is dropped when something already pending is the same
+ * send: the same message id (an optimistic copy's uuid is its message id), or,
+ * for a row from a box that records no id, the same text compared through the
+ * same normalizer reconciliation uses. Text alone would pair two identical
+ * sends crosswise, and when only one of them was dropped the wrong bubble
+ * would say so. The matched copy takes the box's word on delivery
+ * (`undelivered`, `hadImages`). A repeated load cannot stack copies of one bus
+ * row, because the row's uuid is checked too.
  */
 export function mergeAcceptedIntoPending(params: {
   pendingMessages: PendingSessionEntry[];
@@ -100,9 +105,21 @@ export function mergeAcceptedIntoPending(params: {
 }): PendingSessionEntry[] {
   const { pendingMessages, accepted } = params;
   if (accepted.length === 0) return pendingMessages;
+  const merged = [...pendingMessages];
   const seenUuids = new Set(pendingMessages.map((pm) => pm.uuid));
   const seenText = pendingMessages.map((pm) => normalizeForCompare(entryText(pm))).filter((t) => t !== "");
   const fresh = accepted.filter((entry) => {
+    if (entry.messageId !== undefined) {
+      const at = merged.findIndex((pm) => (pm.messageId ?? pm.uuid) === entry.messageId);
+      const match = merged[at];
+      if (match === undefined) return !seenUuids.has(entry.uuid);
+      merged[at] = {
+        ...match,
+        ...(entry.undelivered === true ? { undelivered: true as const } : {}),
+        ...(entry.hadImages === true ? { hadImages: true as const } : {}),
+      };
+      return false;
+    }
     if (seenUuids.has(entry.uuid)) return false;
     const text = normalizeForCompare(entryText(entry));
     const at = seenText.indexOf(text);
@@ -115,7 +132,37 @@ export function mergeAcceptedIntoPending(params: {
     seenUuids.add(entry.uuid);
     return true;
   });
-  return [...pendingMessages, ...fresh];
+  return [...merged, ...fresh];
+}
+
+/** Mark the pending entry for this send undelivered, in both lists; null when none is pending. */
+export function markPendingUndelivered(params: {
+  messages: SessionEntry[];
+  pendingMessages: PendingSessionEntry[];
+  messageId: string;
+  refused?: boolean;
+}): { messages: SessionEntry[]; pendingMessages: PendingSessionEntry[] } | null {
+  const { messages, pendingMessages, messageId, refused } = params;
+  const uuids = new Set(pendingMessages.filter((pm) => (pm.messageId ?? pm.uuid) === messageId).map((pm) => pm.uuid));
+  if (uuids.size === 0) return null;
+  const mark = <T extends SessionEntry>(entry: T): T => uuids.has(entry.uuid)
+    ? { ...entry, undelivered: true, ...(refused === true ? { sendRefused: true } : {}) }
+    : entry;
+  return { messages: messages.map(mark), pendingMessages: pendingMessages.map(mark) };
+}
+
+/** Remove a discarded send's pending entry from both lists. */
+export function removePendingSend(params: {
+  messages: SessionEntry[];
+  pendingMessages: PendingSessionEntry[];
+  messageId: string;
+}): { messages: SessionEntry[]; pendingMessages: PendingSessionEntry[] } {
+  const { messages, pendingMessages, messageId } = params;
+  const uuids = new Set(pendingMessages.filter((pm) => (pm.messageId ?? pm.uuid) === messageId).map((pm) => pm.uuid));
+  return {
+    messages: messages.filter((entry) => !uuids.has(entry.uuid)),
+    pendingMessages: pendingMessages.filter((entry) => !uuids.has(entry.uuid)),
+  };
 }
 
 /**
@@ -150,22 +197,85 @@ export function reconcilePending(params: {
   }
   serverUsers.reverse();
 
-  const stillPending = pendingMessages.filter((pm) => {
+  // Echoes go first to sends not marked undelivered. A dropped "yes" followed
+  // by a delivered "yes" would otherwise take the second one's turn: the
+  // dropped bubble retires and the delivered one stays looking queued. An
+  // undelivered send takes only a turn no other send could use, which is the
+  // case of a drain admitted during `stop()` that did deliver it.
+  const echoOf = new Map<PendingSessionEntry, string>();
+  const claimEcho = (pm: PendingSessionEntry): void => {
     const pmText = normalizeForCompare(entryText(pm));
-    if (pmText.length === 0) return false;
-    const baseline = new Set(pm.reconcileKnownUuids);
+    if (pmText.length === 0) return;
+    // An earlier send's echo from a previous pass is not this send's echo: a
+    // second identical "yes" must not be confirmed by the first one's turn on
+    // the next refresh. Within one pass a merged queued turn still confirms both.
+    const baseline = new Set([...pm.reconcileKnownUuids, ...pm.sentAfterEchoes ?? [], ...pm.claimedEchoes ?? []]);
     const echo = serverUsers.find((server) => {
       return !baseline.has(server.uuid) && server.remainingText.includes(pmText);
     });
-    if (!echo) return true;
+    if (!echo) return;
     echo.remainingText = echo.remainingText.replace(pmText, "");
-    return false;
+    echoOf.set(pm, echo.uuid);
+  };
+  for (const pm of pendingMessages) if (pm.undelivered !== true) claimEcho(pm);
+  for (const pm of pendingMessages) if (pm.undelivered === true) claimEcho(pm);
+  // The next pass must not hand an undelivered send the turn a delivered send
+  // retired against here: only the undelivered one would still be pending.
+  const claimed = pendingMessages.flatMap((pm) => {
+    const echo = echoOf.get(pm);
+    return pm.undelivered !== true && echo !== undefined ? [echo] : [];
   });
 
+  // Transcript turns that echo an earlier send: a later unreconciled message
+  // was sent after them even when its baseline predates their writing. They
+  // are kept on the entry, because the earlier send is gone from the pending
+  // list after this pass.
+  const echoesSoFar: string[] = [];
+  const stillPending: PendingSessionEntry[] = [];
+  for (const pm of pendingMessages) {
+    if (normalizeForCompare(entryText(pm)).length === 0) continue;
+    const echo = echoOf.get(pm);
+    if (echo !== undefined) {
+      echoesSoFar.push(echo);
+      continue;
+    }
+    const earlier = (pm.sentAfterEchoes ?? []).filter((uuid) => !echoesSoFar.includes(uuid));
+    const placed = echoesSoFar.length === 0 ? pm : { ...pm, sentAfterEchoes: [...earlier, ...echoesSoFar] };
+    const blocked = pm.undelivered === true ? claimed.filter((uuid) => !(pm.claimedEchoes ?? []).includes(uuid)) : [];
+    stillPending.push(blocked.length === 0 ? placed : { ...placed, claimedEchoes: [...placed.claimedEchoes ?? [], ...blocked] });
+  }
+
   return {
-    messages: [...serverMessages, ...stillPending],
+    messages: placePending(serverMessages, stillPending),
     pendingMessages: stillPending,
   };
+}
+
+/**
+ * Where each unreconciled message goes. Normally after everything: it is the
+ * newest thing in the chat. But once the transcript holds a user turn after
+ * everything the message was sent after (its `reconcileKnownUuids` baseline,
+ * plus the echoes of earlier sends), the agent has moved on without it (a send
+ * refused as busy, a queue dropped by a restart). At the end it read as the
+ * newest message, below turns that came later
+ * (`issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
+ * Such a message sits just before that later user turn. The baseline is used
+ * rather than timestamps because an optimistic copy is stamped by the client's
+ * clock and the transcript by the box's. With no baseline entry in the
+ * transcript (an empty or unavailable history when it was sent) there is
+ * nothing to place it after, and it stays last.
+ */
+function placePending(serverMessages: SessionEntry[], pendingMessages: PendingSessionEntry[]): SessionEntry[] {
+  const messages = [...serverMessages];
+  for (const pending of pendingMessages) {
+    const sentAfter = new Set([...pending.reconcileKnownUuids, ...pending.sentAfterEchoes ?? []]);
+    const anchor = serverMessages.findLastIndex((entry) => sentAfter.has(entry.uuid));
+    const later = anchor === -1 ? undefined : serverMessages.slice(anchor + 1).find((entry) => entry.type === "user");
+    // Inserting before the same turn again keeps several such messages in order.
+    const index = later === undefined ? messages.length : messages.indexOf(later);
+    messages.splice(index, 0, pending);
+  }
+  return messages;
 }
 
 /**

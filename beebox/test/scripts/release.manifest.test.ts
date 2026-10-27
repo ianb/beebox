@@ -109,3 +109,27 @@ void test("Every `exports` map target is covered by `files`", async (t) => {
 
   t.check(await findMissing(checkedIn), []);
 });
+
+// ## Every relative import in a shipped source file is shipped too
+//
+// `files` ships a few `.ts` sources so a box's own typecheck can follow types
+// into them. An import in one of those to a file `files` leaves out fails only
+// at the box's typecheck, the `pnpm release && pnpm smoke` step
+// (`issues/closed/bugs/2026-10-23-release-tarball-misses-chat-composer-binding.md`).
+void test("Every relative import in a shipped .ts source is covered by `files`", async (t) => {
+  const pkg = await loadPackageJson();
+  const sources = pkg.files.filter((entry) => entry.endsWith(".ts") && !entry.endsWith(".d.ts"));
+
+  t.check(sources, containing(["src/core/chat/card-activity.ts"]));
+
+  const unshipped: string[] = [];
+  for (const source of sources) {
+    const text = await readFile(path.join(PACKAGE_ROOT, source), "utf-8");
+    for (const match of text.matchAll(/from\s+"(\.\.?\/[^"]+)"/g)) {
+      const specifier = match[1] ?? "";
+      const target = path.posix.join(path.posix.dirname(source), specifier).replace(/\.js$/, ".ts");
+      if (!coveredByFiles(target, pkg.files)) unshipped.push(`${source} -> ${specifier}`);
+    }
+  }
+  t.check(unshipped, []);
+});

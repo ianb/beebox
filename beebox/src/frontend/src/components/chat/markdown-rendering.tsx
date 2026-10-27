@@ -8,7 +8,7 @@ import { useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { Markdown, type MarkdownComponentOverrides } from "../Markdown/body";
 import { useMarkdownRender } from "../../lib/markdown-render";
-import { Image } from "../ui/Image";
+import { Image } from "../ui/Image/view";
 import { VideoEmbed } from "../ui/VideoEmbed";
 import { detectVideoEmbed } from "../../lib/video-url";
 import { FileView } from "../FileView/view";

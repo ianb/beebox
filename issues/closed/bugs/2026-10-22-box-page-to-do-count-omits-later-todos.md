@@ -30,4 +30,4 @@ Report: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/rep
 
 The nav counts do not carry a "later" number. Options: add a later count to `NavCounts` and to the root line; or word the line so that it says what it counts ("1 due now"). The badge and the page should still agree.
 
-Related: [counts do not name what they count](../../bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md) (reopened 2026-10-22 for the card line), [a standing care hint becomes the only "now" todo](2026-10-22-standing-care-hint-becomes-the-only-now-todo.md) (the one "now" item in this walk).
+Related: [counts do not name what they count](2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md) (reopened 2026-10-22 for the card line), [a standing care hint becomes the only "now" todo](2026-10-22-standing-care-hint-becomes-the-only-now-todo.md) (the one "now" item in this walk).

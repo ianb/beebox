@@ -12,7 +12,7 @@
  * the composer references via `[fileN]` tokens.
  */
 
-import { Image } from "../../../ui/Image";
+import { Image } from "../../../ui/Image/view";
 import { CloseButton } from "../../../ui/CloseButton";
 import { useLightbox } from "../../../LightboxProvider";
 import { humanBytes } from "@shared/human-bytes";
