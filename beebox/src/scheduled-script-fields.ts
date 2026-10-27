@@ -17,19 +17,23 @@ import { resolveRefPath } from "./shared/ref-path/core.js";
 const { rrulestr } = rrulePkg;
 
 /**
- * The start a rule without DTSTART counts from. rrule otherwise takes the
- * parse time, and the scheduler parses on every check, so a rule like
- * `FREQ=WEEKLY;BYDAY=MO` had a fresh occurrence "now" on every tick of a
+ * Parse a scheduled script's `rrule`. rrule takes the parse time as the start
+ * of a rule with no DTSTART, and the scheduler parses on every check, so a rule
+ * like `FREQ=WEEKLY;BYDAY=MO` had a fresh occurrence "now" on every tick of a
  * Monday (issues/closed/bugs/2026-10-27-rrule-without-dtstart-is-due-on-every-tick.md).
- * A fixed start makes occurrences stable: midnight UTC on matching days, and
- * INTERVAL/COUNT counted from this date. A card that needs another time of
- * day or start writes its own DTSTART.
+ * Such a rule instead starts at midnight UTC of `anchor`'s day: the day of the
+ * last run (or the baseline) for a due or missed-occurrence check, so its
+ * occurrences are stable times on matching days. The DTSTART goes into the
+ * text, not rrulestr's `dtstart` option, which a multi-line rule (EXDATE,
+ * RDATE) ignores. A rule with its own DTSTART is parsed as written.
  */
-export const RRULE_DEFAULT_START = new Date(Date.UTC(2026, 0, 1));
-
-/** Parse a scheduled script's `rrule`, starting at {@link RRULE_DEFAULT_START} when it gives no DTSTART. */
-export function parseScheduleRrule(value: string): ReturnType<typeof rrulestr> {
-  return /\bDTSTART\b/iu.test(value) ? rrulestr(value) : rrulestr(value, { dtstart: RRULE_DEFAULT_START });
+export function parseScheduleRrule(value: string, { anchor }: { anchor: Date }): ReturnType<typeof rrulestr> {
+  if (/\bDTSTART\b/iu.test(value)) return rrulestr(value);
+  const day = anchor.toISOString().slice(0, 10).replaceAll("-", "");
+  const lines = value.trim().split(/\r?\n/u);
+  // A bare `FREQ=...` line is the RRULE; a multi-line value names its lines.
+  const named = lines.map((line) => (/^[A-Z-]+[:;]/iu.test(line) ? line : `RRULE:${line}`));
+  return rrulestr([`DTSTART:${day}T000000Z`, ...named].join("\n"));
 }
 
 // `new Date()` alone is far too permissive ("5" parses as May 2001), so
@@ -59,7 +63,7 @@ export const CronField = z.string().refine(
 export const RruleField = z.string().refine(
   (value) => {
     try {
-      parseScheduleRrule(value);
+      parseScheduleRrule(value, { anchor: new Date() });
       return true;
     } catch (_e) {
       return false;

@@ -163,8 +163,10 @@ function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
 
 function isRruleDue(rruleStr: string, ctx: ScheduleCheckContext): boolean {
   try {
-    const rule = parseScheduleRrule(rruleStr);
     const after = ctx.lastRun ? new Date(ctx.lastRun) : new Date(0);
+    // A never-run rule counts from today, so a new card waits for its first
+    // matching day instead of catching up on every past one.
+    const rule = parseScheduleRrule(rruleStr, { anchor: ctx.lastRun ? after : ctx.now });
     const occurrences = rule.between(after, ctx.now, false);
     return occurrences.length > 0;
   } catch (e) {

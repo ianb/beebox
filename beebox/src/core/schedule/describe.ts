@@ -74,7 +74,7 @@ function describeBase(script: ScheduleCadenceInput): string {
   }
   if (script.rrule) {
     try {
-      const text = parseScheduleRrule(script.rrule).toText();
+      const text = parseScheduleRrule(script.rrule, { anchor: new Date() }).toText();
       return text.charAt(0).toUpperCase() + text.slice(1);
     } catch (_e) {
       // Invalid rrule: show the raw expression rather than nothing.

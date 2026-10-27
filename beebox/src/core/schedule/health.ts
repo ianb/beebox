@@ -233,7 +233,7 @@ function findMissedOccurrence(
     ({ earliest, cadenceMs } = found);
   } else if (parsed.rrule) {
     try {
-      const rule = parseScheduleRrule(parsed.rrule);
+      const rule = parseScheduleRrule(parsed.rrule, { anchor: baseline });
       const between = rule.between(baseline, now, false);
       if (between.length === 0) return null;
       earliest = between[0] ?? null;

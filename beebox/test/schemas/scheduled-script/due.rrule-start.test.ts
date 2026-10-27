@@ -4,8 +4,10 @@
 // scheduler parses on every check, so `FREQ=WEEKLY;BYDAY=MO` had a fresh
 // occurrence "now" on every tick of a Monday
 // (issues/closed/bugs/2026-10-27-rrule-without-dtstart-is-due-on-every-tick.md).
-// Such a rule now counts from `RRULE_DEFAULT_START`: its occurrences are
-// midnight UTC on matching days. A rule with its own DTSTART is unchanged.
+// Such a rule now starts at midnight UTC of the last run's day (today for a
+// card that has never run), so its occurrences are midnight UTC on matching
+// days, a new card waits for its first matching day, and a multi-line rule
+// (EXDATE) gets the same start. A rule with its own DTSTART is unchanged.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -36,9 +38,10 @@ void test("a weekly rule without DTSTART is due once on its day, at midnight UTC
       laterTickSameMonday: due(monday, { lastRun: "2026-10-26T00:01:00Z", now: "2026-10-26T14:00:00Z" }),
       tuesday: due(monday, { lastRun: "2026-10-26T00:01:00Z", now: "2026-10-27T09:00:00Z" }),
       nextMonday: due(monday, { lastRun: "2026-10-26T00:01:00Z", now: "2026-11-02T00:00:10Z" }),
-      neverRun: due(monday, { lastRun: null, now: "2026-10-27T09:00:00Z" }),
+      neverRunTuesday: due(monday, { lastRun: null, now: "2026-10-27T09:00:00Z" }),
+      neverRunMonday: due(monday, { lastRun: null, now: "2026-11-02T09:00:00Z" }),
     },
-    { firstTickOfMonday: true, laterTickSameMonday: false, tuesday: false, nextMonday: true, neverRun: true },
+    { firstTickOfMonday: true, laterTickSameMonday: false, tuesday: false, nextMonday: true, neverRunTuesday: false, neverRunMonday: true },
   );
 });
 
@@ -51,5 +54,17 @@ void test("a rule with its own DTSTART keeps its time of day", async (t) => {
       laterSameDay: due(mondayAt8, { lastRun: "2026-10-26T08:00:30Z", now: "2026-10-26T20:00:00Z" }),
     },
     { beforeEight: false, atEight: true, laterSameDay: false },
+  );
+});
+
+void test("a rule with an EXDATE line gets the same start, and the EXDATE skips that Monday", async (t) => {
+  const skipNov2 = weekly("RRULE:FREQ=WEEKLY;BYDAY=MO\nEXDATE:20261102T000000Z");
+  t.check(
+    {
+      laterTickSameMonday: due(skipNov2, { lastRun: "2026-10-26T00:01:00Z", now: "2026-10-26T14:00:00Z" }),
+      skippedMonday: due(skipNov2, { lastRun: "2026-10-26T00:01:00Z", now: "2026-11-02T12:00:00Z" }),
+      followingMonday: due(skipNov2, { lastRun: "2026-10-26T00:01:00Z", now: "2026-11-09T00:00:10Z" }),
+    },
+    { laterTickSameMonday: false, skippedMonday: false, followingMonday: true },
   );
 });
