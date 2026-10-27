@@ -149,21 +149,6 @@ export async function checkClaudeAuth(deps: Pick<DoctorDeps, "run">): Promise<Ch
   return fail(name, { detail: "not logged in", remedy: "run `claude auth login`" });
 }
 
-export async function checkNativeSqlite(deps: Pick<DoctorDeps, "loadBetterSqlite3">): Promise<CheckResult> {
-  const name = "Native modules (better-sqlite3)";
-  try {
-    const detail = await deps.loadBetterSqlite3();
-    return pass(name, detail);
-  } catch (e) {
-    const firstLine = (e instanceof Error ? e.message : String(e)).split("\n")[0] ?? "";
-    return fail(name, {
-      detail: `better-sqlite3 failed to load: ${firstLine}`,
-      remedy:
-        "the compiled binary doesn't match this Node (ABI drift) — run `pnpm install` (or `pnpm rebuild better-sqlite3`) under the pinned Node version",
-    });
-  }
-}
-
 export function checkSdkBinary(deps: Pick<DoctorDeps, "resolveSdkBinary">): CheckResult {
   const name = "Agent SDK binary";
   const resolved = deps.resolveSdkBinary();

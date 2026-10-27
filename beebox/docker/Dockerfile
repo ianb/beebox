@@ -18,8 +18,8 @@
 # ─────────────────────────────────────────────────────────────────────────
 FROM node:24-bookworm-slim AS build
 
-# Native modules (better-sqlite3, etc.) may compile if no prebuilt binary is
-# available for this arch — give the throwaway build stage the toolchain.
+# Native modules may compile if no prebuilt binary is available for this
+# arch — give the throwaway build stage the toolchain.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
   && rm -rf /var/lib/apt/lists/*
@@ -204,8 +204,7 @@ RUN HOME=/opt/claude bash -c 'curl -fsSL https://claude.ai/install.sh | bash' \
   && /usr/local/bin/claude --version
 
 # Install the engine into /app from the baked tarball. --allow-build lets
-# better-sqlite3 (event-bus storage) and the other native/generated deps run
-# their install scripts — pnpm 10 blocks them by default (and, non-interactive,
+# the native/generated deps run their install scripts — pnpm 10 blocks them by default (and, non-interactive,
 # a blocked build is a hard error, not a warning). The flag form is the same
 # one src/scripts/smoke-external-box.ts uses; a package.json `pnpm` field is no
 # longer read by pnpm 10.26.
@@ -216,7 +215,6 @@ RUN printf '%s\n' \
       '  "type": "module"' \
       '}' > /app/package.json \
   && pnpm add \
-       --allow-build=better-sqlite3 \
        --allow-build=esbuild \
        --allow-build=@googleworkspace/cli \
        /app/beebox.tgz

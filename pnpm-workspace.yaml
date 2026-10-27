@@ -1,7 +1,6 @@
 onlyBuiltDependencies:
   - "@googleworkspace/cli"
   - agent-browser
-  - better-sqlite3
   - esbuild
   - sharp
   - unrs-resolver
