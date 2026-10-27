@@ -142,9 +142,17 @@ export type BusEvent = KnownBusEvent | UnknownBusEvent;
 /** Count of persisted rows surfaced as `unknown` sentinels this process. */
 let unknownEventCount = 0;
 
-/** A raw row as stored in SQLite (payload still a JSON string). */
-const eventRow = z.object({ id: z.number(), event: z.string(), data: z.string(), createdAt: z.string() });
-type EventRow = z.infer<typeof eventRow>;
+/** A row as read from SQLite. Only `id` (INTEGER PRIMARY KEY) is certain; SQLite
+ * lets any column hold any type, so the rest is checked in `validateRow`. */
+const storedEventRow = z.object({ id: z.number(), event: z.unknown(), data: z.unknown(), createdAt: z.unknown() });
+type StoredEventRow = z.infer<typeof storedEventRow>;
+/** A stored row whose columns are text (payload still a JSON string). */
+interface EventRow {
+  id: number;
+  event: string;
+  data: string;
+  createdAt: string;
+}
 const nameRow = z.object({ name: z.string() });
 const generationRow = z.object({ gen: z.number() });
 const maxIdRow = z.object({ maxId: z.number().nullable() });
@@ -163,6 +171,11 @@ const maxIdRow = z.object({ maxId: z.number().nullable() });
  * which the busy timeout does not cure.
  */
 function reconcileSchemaGeneration(db: SqliteDb, dbPath: string): void {
+  // The common open: the generation already matches, and no write lock is
+  // needed. Only a missing or different generation takes the lock and
+  // re-reads under it.
+  const current = db.prepare("SELECT schema_generation AS gen FROM event_meta WHERE id = 1").get(generationRow);
+  if (current?.gen === EVENT_SCHEMA_GENERATION) return;
   db.transaction(() => {
     const meta = db
       .prepare("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
@@ -228,7 +241,15 @@ function unknownEventRow(row: EventRow, { reason, raw }: { reason: string; raw?:
  * gates, it never transforms), so valid rows reach consumers byte-identical to
  * before.
  */
-function validateRow(row: EventRow): BusEvent {
+function validateRow(stored: StoredEventRow): BusEvent {
+  const { id, event, data, createdAt } = stored;
+  if (typeof event !== "string" || typeof data !== "string" || typeof createdAt !== "string") {
+    const textRow = { id, event: String(event), data: "", createdAt: String(createdAt) };
+    // Bytes are shown as SQLite hex text: the sentinel travels as JSON.
+    const raw = data instanceof Uint8Array ? `x'${Buffer.from(data).toString("hex")}'` : data;
+    return unknownEventRow(textRow, { reason: "a stored column is not text", raw });
+  }
+  const row: EventRow = { id, event, data, createdAt };
   let parsed: unknown;
   try {
     parsed = JSON.parse(row.data);
@@ -366,7 +387,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     }
   }
 
-  function parseRows(rows: EventRow[]): BusEvent[] {
+  function parseRows(rows: StoredEventRow[]): BusEvent[] {
     return rows.map(validateRow);
   }
 
@@ -409,7 +430,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
    * on every other read path.
    */
   function readRecent<K extends BusEventName>(request: { event: K; limit: number }): Array<KnownBusEvent<K> | UnknownBusEvent> {
-    const rows = readRecentStmt.all(eventRow, request.event, request.limit);
+    const rows = readRecentStmt.all(storedEventRow, request.event, request.limit);
     // The query selected only `request.event`; a row read back as another
     // event cannot occur, and dropping one keeps the type honest.
     const ofRequested = (event: BusEvent): event is KnownBusEvent<K> | UnknownBusEvent =>
@@ -418,7 +439,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
   }
 
   function readSince(afterId: number): BusEvent[] {
-    const rows = readSinceStmt.all(eventRow, afterId);
+    const rows = readSinceStmt.all(storedEventRow, afterId);
     return parseRows(rows);
   }
 
@@ -461,7 +482,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     pollTimer = setInterval(() => {
       if (listeners.size === 0) return; // no one listening, skip
 
-      const rows = readSinceStmt.all(eventRow, highWaterMark);
+      const rows = readSinceStmt.all(storedEventRow, highWaterMark);
 
       if (rows.length === 0) return;
 

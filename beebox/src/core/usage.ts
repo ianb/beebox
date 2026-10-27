@@ -289,10 +289,11 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
     db.transaction(() => {
       deleteUsage.run(sessionId);
       for (const [key, bucket] of buckets) {
-        // Keys are `${date}\t${model}` (parseSessionUsage).
-        const tab = key.indexOf("\t");
-        const date = key.slice(0, tab);
-        const model = key.slice(tab + 1);
+        // Keys are `${date}\t${model}` (parseSessionUsage). A model name
+        // holding a tab keeps only its first part, as it always has.
+        const parts = key.split("\t");
+        const date = parts[0] ?? "";
+        const model = parts[1] ?? "";
         upsertUsage.run(
           sessionId, task, date, model,
           bucket.inputTokens, bucket.outputTokens,

@@ -170,6 +170,8 @@ void test("Emit one valid row, then hand-write three broken ones directly into S
   ins.run("card-created", JSON.stringify({ path: 123 }));   // schema mismatch
   ins.run("cards-changed", "{not json");                     // syntax-level failure
   ins.run("mystery-event", JSON.stringify({ x: 1 }));        // unknown event name
+  // SQLite stores a BLOB in a TEXT column; node:sqlite reads it back as bytes.
+  raw.exec("INSERT INTO events (event, data) VALUES ('cards-changed', x'ff')");
   raw.close();
 
   const rows = bus.readSince(0);
@@ -178,6 +180,7 @@ void test("Emit one valid row, then hand-write three broken ones directly into S
     { id: 2, event: "unknown", data: { originalEvent: "card-created", raw: { path: 123 }, error: any(String) }, createdAt },
     { id: 3, event: "unknown", data: { originalEvent: "cards-changed", raw: "{not json", error: any(String).startsWith("JSON parse failed: SyntaxError") }, createdAt },
     { id: 4, event: "unknown", data: { originalEvent: "mystery-event", raw: { x: 1 }, error: 'unknown event name "mystery-event"' }, createdAt },
+    { id: 5, event: "unknown", data: { originalEvent: "cards-changed", raw: "x'ff'", error: "a stored column is not text" }, createdAt },
   ]);
 
   // The valid sibling keeps its real payload; a sentinel carries the original event
