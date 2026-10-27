@@ -41,7 +41,6 @@
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^24.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
-    "agent-browser": "^0.27.0",
     "@ianbicking/tap-check": "workspace:*",
     "better-sqlite3": "^12.10.0",
     "esbuild": "^0.25.12",

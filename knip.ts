@@ -21,8 +21,6 @@ const config: KnipConfig = {
     ".": {
       entry: ["bin/*.ts", "bin/**/*.test.ts"],
       project: ["bin/**/*.ts"],
-      // Invoked through bin/browse, a shell script knip does not read.
-      ignoreDependencies: ["agent-browser"],
     },
     "beebox": {
       entry: [
