@@ -4,7 +4,6 @@
  */
 
 import { stageAll, commit, withBoxGitLock } from "../../../lib/git/core/operations.js";
-import { fmt } from "../../../lib/format.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import type { CommandContext } from "../../command-runner.js";
 import {
@@ -65,8 +64,8 @@ export async function executeStep(
 ): Promise<StepExecutionResult> {
   const { ctx, step, runCardPath } = params;
 
-  ctx.writeLine(fmt.phase(`Step: ${step.id}`));
-  ctx.writeLine(fmt.dim(step.description));
+  ctx.writeLine(`=== Step: ${step.id} ===`);
+  ctx.writeLine(step.description);
   ctx.writeLine("");
 
   // Update run card: step is now running (uncommitted signal)
@@ -137,11 +136,11 @@ async function runPrecheck(params: ExecuteStepParams): Promise<PrecheckOutcome> 
     return { outcome: "continue", output: undefined };
   }
 
-  ctx.writeLine(fmt.dim("  Precheck..."));
+  ctx.writeLine("  Precheck...");
   const precheckResult = await executePhaseShells(boxRoot, step.precheck);
 
   if (precheckResult.skipped) {
-    ctx.writeLine(fmt.dim(`  Skipped: ${precheckResult.stdout || `precheck exit ${String(CHECK_SKIP_CODE)}`}`));
+    ctx.writeLine(`  Skipped: ${precheckResult.stdout || `precheck exit ${String(CHECK_SKIP_CODE)}`}`);
     // Card update only, no commit — if every step skips, the whole run dir
     // is removed at completion; if a later step does work, the skip history
     // rides along in that step's "Start procedure" commit.
@@ -159,9 +158,9 @@ async function runPrecheck(params: ExecuteStepParams): Promise<PrecheckOutcome> 
 
   if (precheckResult.exitCode !== 0) {
     await params.ensureMaterialized();
-    ctx.writeLine(fmt.fail(`Precheck failed (exit ${precheckResult.exitCode})`));
+    ctx.writeLine(`✗ Precheck failed (exit ${precheckResult.exitCode})`);
     if (precheckResult.stderr) {
-      ctx.writeLine(fmt.dim(`  ${precheckResult.stderr}`));
+      ctx.writeLine(`  ${precheckResult.stderr}`);
     }
     await updateStepInRunCard({
       runCardPath,
@@ -183,7 +182,7 @@ async function runPrecheck(params: ExecuteStepParams): Promise<PrecheckOutcome> 
     return { outcome: "failed" };
   }
 
-  ctx.writeLine(fmt.ok(`Precheck passed${precheckResult.stdout ? `: ${precheckResult.stdout}` : ""}`));
+  ctx.writeLine(`✓ Precheck passed${precheckResult.stdout ? `: ${precheckResult.stdout}` : ""}`);
 
   const output =
     step.precheck.passOutput && precheckResult.stdout ? precheckResult.stdout : undefined;
@@ -195,7 +194,7 @@ async function runPrecheck(params: ExecuteStepParams): Promise<PrecheckOutcome> 
  */
 async function recordNoRunPhase(params: ExecuteStepParams): Promise<void> {
   const { ctx, boxRoot, step, procedure, runCardPath } = params;
-  ctx.writeLine(fmt.warn("  No run phase defined"));
+  ctx.writeLine("  No run phase defined");
   await updateStepInRunCard({
     runCardPath,
     stepId: step.id,
@@ -372,9 +371,9 @@ async function recordStepResults(
   });
 
   if (succeeded) {
-    ctx.writeLine(fmt.ok(`Step completed: ${step.id}`));
+    ctx.writeLine(`✓ Step completed: ${step.id}`);
   } else {
-    ctx.writeLine(fmt.fail(`Step failed: ${step.id}`));
+    ctx.writeLine(`✗ Step failed: ${step.id}`);
   }
   ctx.writeLine("");
 
@@ -385,7 +384,7 @@ async function recordStepResults(
   });
   if (inconclusive !== undefined) {
     ctx.writeLine(
-      fmt.warn(`  Review of ${step.id} ${inconclusive.detail} — the work is unjudged, not rejected.`)
+      `  Review of ${step.id} ${inconclusive.detail} — the work is unjudged, not rejected.`
     );
   }
 

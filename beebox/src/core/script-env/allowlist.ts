@@ -62,8 +62,8 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "HOME",
   "USERPROFILE", // Windows HOME equivalent -- src/core/box.ts's homeDir fallback.
   "SHELL", // scheduled scripts' `runs:` commands execute through the shell (cli/commands/tick-helpers.ts).
-  "TERM", // color/tty detection in spawned `bbx` processes (src/lib/format.ts's chalk).
-  "NO_COLOR", // src/lib/format.ts -- the standard color-suppression opt-out.
+  "TERM", // terminal capabilities for spawned tools (git, pagers, editors).
+  "NO_COLOR", // the standard color-suppression opt-out, honored by spawned tools such as git.
   "TMPDIR",
   "TEMP",
   "TMP",

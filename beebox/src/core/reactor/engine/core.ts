@@ -23,7 +23,6 @@ import {
 } from "../../../lib/file-lock.js";
 import { createAgent as realCreateAgent } from "../../agent/invoke/core.js";
 import { generateDocs as realGenerateDocs } from "../../docs-gen/generate/core.js";
-import { fmt } from "../../../lib/format.js";
 import { runOneCycle, type RunCycleParams } from "./cycle.js";
 import { boxEngineUnavailability, engineWaitReason } from "../../schedule/engine-wait.js";
 import { runSync as realRunSync, runFinalize as realRunFinalize } from "./subprocess.js";
@@ -107,7 +106,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
   const lockFile = path.join(boxRoot, ".bbx-reactor.lock");
   const lockAcquired = await acquireReactorLock(lockFile);
   if (!lockAcquired) {
-    onLog?.(fmt.dim("Another reactor is already running, skipping.\n"));
+    onLog?.("Another reactor is already running, skipping.\n");
     return { success: true, jobsProcessed: 0, jobsRemaining: 0, skipped: "locked" };
   }
 
@@ -131,7 +130,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
   // Main loop
   for (let cycle = 0; cycle < maxCycles; cycle++) {
     if (cycle > 0) {
-      onLog?.(fmt.header(`\n--- Cycle ${cycle + 1} ---\n\n`));
+      onLog?.(`\n--- Cycle ${cycle + 1} ---\n\n`);
     }
 
     const result = await runOneCycle(cycleParams);
@@ -144,7 +143,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
       if (wait !== null) {
         // Deferred-recoverable: further cycles would burn attempts that
         // cannot succeed. Jobs stay pending for a cycle after the reset.
-        onLog?.(fmt.warn(`Stopping cycles: ${engineWaitReason(wait)}\n`));
+        onLog?.(`Stopping cycles: ${engineWaitReason(wait)}\n`);
         break;
       }
     }
@@ -156,17 +155,17 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
   }
 
   // Run finalize to flush outbound cards
-  onLog?.(fmt.header("\n[Finalize]\n"));
+  onLog?.("\n[Finalize]\n");
   const finalizeOk = await runFinalize(boxRoot, onLog);
   if (!finalizeOk) {
-    onLog?.(fmt.warn("Finalize failed.\n"));
+    onLog?.("Finalize failed.\n");
   }
   onLog?.("\n");
 
   // Polling mode: wait and repeat
   if (pollInterval > 0 && success) {
     await releaseReactorLock(lockFile);
-    onLog?.(fmt.dim(`\nPolling every ${pollInterval}s... (Ctrl+C to stop)\n`));
+    onLog?.(`\nPolling every ${pollInterval}s... (Ctrl+C to stop)\n`);
     await sleep(pollInterval * 1000);
     // Recurse for next poll iteration (re-acquires lock)
     const pollResult = await runReactor(options);

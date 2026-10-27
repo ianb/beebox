@@ -5,7 +5,6 @@
  */
 
 import { useRef } from "react";
-import TextareaAutosize from "react-textarea-autosize";
 import { CloseButton } from "../ui/CloseButton";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "./InteractiveChat-helpers";
@@ -39,7 +38,7 @@ export function MobileTextareaRow({
 
   return (
     <div className="flex gap-2 items-center">
-      <TextareaAutosize
+      <textarea
         // `-mobile`, not the desktop row's address: this row and the button
         // bar's row can be in the DOM at the same time (the bar stays mounted
         // under `hidden sm:block` while typing), so they cannot share one id.
@@ -54,8 +53,6 @@ export function MobileTextareaRow({
         enterKeyHint="enter"
         placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: true, isTranscribing })}
-        minRows={2}
-        maxRows={8}
         autoFocus
       />
       {isTranscribing ? (

@@ -51,45 +51,23 @@ export interface LintSummary {
 }
 
 interface FormatOptions {
-  /** Use colors in output (default: true). */
-  colors?: boolean;
   /** Show only files with issues (default: false). */
   onlyIssues?: boolean;
   /** Base path to strip from file paths for shorter output. */
   basePath?: string;
 }
 
-// ANSI color codes
-const colors = {
-  red: "[31m",
-  yellow: "[33m",
-  green: "[32m",
-  gray: "[90m",
-  bold: "[1m",
-  reset: "[0m",
-};
-
-const noColors = { red: "", yellow: "", green: "", gray: "", bold: "", reset: "" };
-
-function formatIssue(issue: LintIssue, useColors: boolean): string {
-  const c = useColors ? colors : noColors;
-
-  const severity =
-    issue.severity === "error"
-      ? `${c.red}error${c.reset}`
-      : `${c.yellow}warning${c.reset}`;
+function formatIssue(issue: LintIssue): string {
+  const severity = issue.severity === "error" ? "error" : "warning";
 
   const location = issue.location
-    ? `${c.gray}${String(issue.location.startLine)}:${String(issue.location.startColumn)}${c.reset} `
+    ? `${String(issue.location.startLine)}:${String(issue.location.startColumn)} `
     : "";
 
   return `  ${location}${severity}: ${issue.message}`;
 }
 
 function formatLintResult(result: LintResult, options: FormatOptions): string {
-  const useColors = options.colors === undefined ? true : options.colors;
-  const c = useColors ? colors : noColors;
-
   let path = result.path;
   if (options.basePath !== undefined && path.startsWith(options.basePath)) {
     path = path.slice(options.basePath.length);
@@ -104,9 +82,9 @@ function formatLintResult(result: LintResult, options: FormatOptions): string {
   }
 
   if (hasIssues) {
-    lines.push(`${c.bold}${path}${c.reset}`);
-    for (const error of result.errors) lines.push(formatIssue(error, useColors));
-    for (const warning of result.warnings) lines.push(formatIssue(warning, useColors));
+    lines.push(path);
+    for (const error of result.errors) lines.push(formatIssue(error));
+    for (const warning of result.warnings) lines.push(formatIssue(warning));
     lines.push(""); // blank line after
   }
 
@@ -152,8 +130,6 @@ export function countNonCanonicalRefs(summary: LintSummary): number {
  */
 export function formatLintResults(summary: LintSummary, options?: FormatOptions): string {
   const opts = options === undefined ? {} : options;
-  const useColors = opts.colors === undefined ? true : opts.colors;
-  const c = useColors ? colors : noColors;
 
   const lines: string[] = [];
   for (const result of summary.results) {
@@ -163,22 +139,22 @@ export function formatLintResults(summary: LintSummary, options?: FormatOptions)
 
   if (summary.totalErrors === 0 && summary.totalWarnings === 0) {
     lines.push(
-      `${c.green}✓${c.reset} ${String(summary.filesChecked)} files checked, no issues found`
+      `✓ ${String(summary.filesChecked)} files checked, no issues found`
     );
   } else {
     const errorPart =
       summary.totalErrors > 0
-        ? `${c.red}${String(summary.totalErrors)} error${summary.totalErrors === 1 ? "" : "s"}${c.reset}`
+        ? `${String(summary.totalErrors)} error${summary.totalErrors === 1 ? "" : "s"}`
         : "";
     const warningPart =
       summary.totalWarnings > 0
-        ? `${c.yellow}${String(summary.totalWarnings)} warning${summary.totalWarnings === 1 ? "" : "s"}${c.reset}`
+        ? `${String(summary.totalWarnings)} warning${summary.totalWarnings === 1 ? "" : "s"}`
         : "";
     const parts = [errorPart, warningPart].filter(Boolean).join(" and ");
     const brokenRefs = countBrokenRefs(summary);
     const brokenRefPart =
       brokenRefs > 0
-        ? ` (${c.yellow}${String(brokenRefs)} broken ref${brokenRefs === 1 ? "" : "s"}${c.reset})`
+        ? ` (${String(brokenRefs)} broken ref${brokenRefs === 1 ? "" : "s"})`
         : "";
     lines.push(
       `${String(summary.filesChecked)} file${summary.filesChecked === 1 ? "" : "s"} checked, ${parts} in ${String(summary.filesWithErrors)} file${summary.filesWithErrors === 1 ? "" : "s"}${brokenRefPart}`
