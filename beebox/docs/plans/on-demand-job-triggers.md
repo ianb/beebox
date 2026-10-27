@@ -1,6 +1,6 @@
 ---
 title: "On-demand job triggers and server-routed finalize notifications"
-status: draft
+status: active
 workstream: box-isolation-followups
 issues: []
 ---
@@ -68,12 +68,14 @@ send.
 
 | Track | Source lines (add + delete) | Test lines |
 |---|---|---|
-| A. Finalize notifications through the box server | ~120 | ~130 |
-| B. The pass's job check, with per-job backoff | ~165 | ~150 |
-| C. Starting the wakeup: server `wakeup.start`, idle protection, `--max-cycles` | ~65 | ~70 |
+| A. Finalize notifications through the box server | ~125 | ~140 |
+| B. The pass's job check, with per-job backoff | ~185 | ~180 |
+| C. Starting the wakeup: server `wakeup.start`, idle protection, `--max-cycles` | ~95 | ~90 |
 | D. Backlog after deploy (no runbook; a note and a watch step) | 0 | 0 |
 
-Total about 350 source and 350 test lines. Authored docs about 70 lines
+Total about 405 source and 410 test lines (round 3 added the HEAD-content
+check, the state lock, the acquisition acknowledgement, and the run-outcome
+log, about 55 source and 60 test lines). Authored docs about 70 lines
 (`beebox/docs/design/processing.md`, `beebox/docs/scheduler.md`,
 `beebox/src/core/reactor/DESIGN.md`). No generated output. Not a BIG CHANGE.
 The previous revision was about 460 source and 450 test lines; the shared
@@ -203,7 +205,7 @@ has no wakeup to run one)."*
 |---|---|---|
 | Job discovery with priority and connector | `beebox/src/core/reactor/job-discovery.ts:58-112` `findJobCards` (reads each card's frontmatter) | Reuse; return `connector` as well (one field). |
 | "Is a wakeup running?" | `beebox/src/cli/commands/wakeup/cycle-lock.ts:32-34` `wakeupCycleLockPath`; reactor lock `.bbx-reactor.lock` (`beebox/src/core/reactor/engine/core.ts:107`); `inspectLock` (`beebox/src/lib/file-lock.ts:485-496`, *"no side effects, never blocks a concurrent acquirer"*) | Reuse; no new lock. |
-| "Is this path in HEAD?" | `beebox/src/core/commands/scan-import/session-discard.ts:75-79` (`git ls-tree -r --name-only HEAD -- <paths>`) | Reuse the same query for candidate jobs. |
+| "Is this card's content committed?" | `git status --porcelain` limited to the candidate paths; the pass already reads repo status for its dirty-repo note (`pass.ts:51-66`). A path-only query (`session-discard.ts:75-79`, `git ls-tree`) is not enough (round-3 finding 1). | Reuse `git status`, scoped to candidates. |
 | Supervised full-wakeup child | `beebox/src/core/commands/wakeup.ts:46` `runBbxWakeup` | Reuse; add a `maxCycles` pass-through and a live-child count. |
 | Server-side wakeup on behalf of a shell | `beebox/src/webapp/trpc/routers/wakeup.ts:56-85` `wakeup.force` (awaits the whole run) | Add a sibling `wakeup.start` that does not wait. |
 | Client for the box's own server | `beebox/src/cli/lib/box-client.ts:45-67` `boxClient()` (reads three env vars) | Reuse; take the env as an argument so the pass can pass computed values. |
@@ -234,8 +236,8 @@ list; it reads the jobs directory.
 (`beebox/src/webapp/trpc/routers/share/router.ts:90`) and extension
 commentary (`beebox/src/webapp/trpc/routers/clerk.ts:60`) write inbox cards
 and no job. Only a full wakeup's step 4b jobs them. The pass check sees jobs,
-not inbox cards, so these wait for the next full wakeup that something else
-starts; see open decision 5.
+not inbox cards, so these ride along with the next full wakeup that something
+else starts (boxholder decision: do not widen the check).
 
 **What a capture with words can create.** The quick-capture worker delivers
 it to a chat (`beebox/src/webapp/routes/quick-capture/runtime.ts:24-29`).
@@ -315,28 +317,39 @@ Evaluated-only. No other decision depends on an external premise.
 - **Full wakeup** (existing: `beebox/src/cli/commands/wakeup/steps.ts:189`
   *"Under a full wakeup"*). `bbx engine wakeup` with no `--connector`.
 - **Waiting job** (new term, pure predicate `isWaitingJob`). An unscoped job
-  with normal priority whose card is in `HEAD`. Not a low-priority job (it
-  rides along), not a connector's job (its scoped wakeup owns it), not an
-  uncommitted card (a write in progress or a rejected commit).
+  with normal priority whose working copy equals its `HEAD` blob. Not a
+  low-priority job (it rides along), not a connector's job (its scoped wakeup
+  owns it), not an untracked card or a card with uncommitted edits (a write in
+  progress or a rejected commit).
 - **Job check** (new pass step, `checkWaitingJobs`). Runs once per pass,
   after the tick. Decides whether to start a full wakeup and records what it
   did.
-- **Job-check state** (new file, `.beebox/job-check.json`). Per job file: the
-  content hash it was attempted with, the attempt count, the first attempt
-  time, and the next eligible time. Per box: runs started today. Machine
-  state; not committed.
-- **Job backoff** (pure, `nextAttemptAt(attempts, firstAttemptAt)`). After
-  attempt 1: +1 h; after attempt 2: +6 h; after 3 or more: +24 h; none after
-  7 days from the first attempt (given up).
-- **Given-up job.** A waiting job past its 7-day window. The check never starts
-  a run for it again; it stays in the jobs directory and in `stalled-jobs`.
+- **Job-check state** (new file, `.beebox/job-check.json`, guarded by
+  `.beebox/job-check.lock`). Per job file path: when the check first saw it
+  waiting (`firstSeenAt`), the content hash it was last attempted with, the
+  attempt count since that hash, and the next eligible time. Per box: runs
+  started today. Machine state; not committed.
+- **Job backoff** (pure, `nextAttemptAt(attempts, now)`). After attempt 1:
+  +1 h; after attempt 2: +6 h; after 3 or more: +24 h.
+- **Job lifetime** (pure, `givenUp(firstSeenAt, now)`). 7 days per job file
+  path, from first sight. Edits to the card do not extend it.
+- **Given-up job.** A waiting job past its lifetime. The check never starts a
+  run for it again; it stays in the jobs directory and in `stalled-jobs`.
 - **`wakeup.start`** (new tRPC mutation). Ask the box server to start one full
-  wakeup now and return at once. Distinct from `wakeup.force`, which waits and
-  reports.
+  wakeup and answer once the child has taken the cycle lock (`started`), or
+  has skipped because another cycle holds it (`running`), or has failed before
+  taking it (`failed`). Distinct from `wakeup.force`, which waits for the whole
+  run and reports.
+- **Cycle-acquired line** (new output line, `[wakeup-cycle] acquired`).
+  Printed by `bbx engine wakeup` when it takes the cycle lock and the caller
+  asked for the outcome report (`WAKEUP_OUTCOME_ENV`,
+  `beebox/src/cli/wakeup-outcome.ts:33-36`).
 - **Live wakeup children** (new count). How many `runBbxWakeup` children this
   process is waiting on. Read by the idle decision.
-- **Notify sender** (new type, `NotifySender`) and **sent** (rule) — Track A,
-  unchanged from the previous revision.
+- **Notify sender** (new type, `NotifySender`): in process, or through the
+  box server's `notifications.send` and `notifications.channels`.
+- **Sent** (rule, `notificationSent`): which delivery results a latch may
+  record; defined by the skip details in Track A.
 
 ## Tracks / scope
 
@@ -362,10 +375,23 @@ inputs. A send that did not go out is not latched.
   export function inProcessSender(boxRoot: string, services?: NotifyServices): NotifySender;
   export function notificationSent(result: NotifyResult): boolean;
   ```
-  **Sent** means `notificationReached(result)` is true, or no delivery has
-  status `failed` (nothing can carry it, so a retry cannot help; the same rule
-  as `run-action.ts:83-86`). A thrown call, or a `failed` delivery that
-  reached no one, is not sent.
+  **Sent** (boxholder decision) is decided by the delivery details the
+  channel code writes; `beebox/src/core/notification/intent.ts:44-45` lists
+  them: *"`detail` is `present`, `no-audience`, or `unconfigured` for a
+  skip"*.
+  - Sent when `notificationReached(result)` is true (a channel sent it, or a
+    skip with detail `present`, `notify-boxholder.ts:69-71`).
+  - Sent when every delivery is a skip with detail `no-audience`
+    (`beebox/src/core/notification/channels.ts:50`: no paired device or web
+    subscription; there is nobody to reach, so a retry cannot help).
+  - Not sent when any delivery has status `failed`, or any skip has detail
+    `unconfigured` (`beebox/src/core/notification/apns-channel/core.ts:118`
+    for APNs, `beebox/src/core/notify-boxholder.ts:181` for web push: the
+    keys are missing in the sending process, which a later finalize may not
+    share), and nothing reached.
+  - Not sent when the call throws.
+  - A skip detail outside these three strings is logged as a warning and
+    treated as not sent.
 - `beebox/src/cli/lib/notify-route.ts`: add
   `routedSender(boxRoot: string, services?: NotifyServices): NotifySender`.
   `server` route: `send` calls `notifications.send.mutate` with the input
@@ -424,44 +450,62 @@ every host.
   with no `connector` and `priority: normal`. If none, prune the state file
   of entries whose files are gone and return. No git, no network, no log
   line. This is every minute on an idle box.
-- **Committed only.** For the candidates, one `git ls-tree -r --name-only
-  HEAD -- <paths>` (the `session-discard.ts:75-79` query). A card not in
-  `HEAD` is not waiting this minute. Reason: an answer writes the job and
-  commits within the same request, so a committed job is the box's work; an
-  uncommitted one is a write in progress, or a commit that was rejected
-  (round-2 finding 2). A card an agent writes and never commits does not start
-  a run; it rides along with the next run that something else starts.
+- **Committed content only** (round-3 finding 1). For the candidates, one
+  `git status --porcelain=v1 -z --untracked-files=all -- <paths>`. A
+  candidate with any entry (untracked, staged, or modified in the working
+  tree) is not waiting this minute: its working copy is not its `HEAD` blob,
+  and the reactor would read the uncommitted text (`job-discovery.ts:88`). A
+  path-only check (`git ls-tree`, `session-discard.ts:75-79`) would miss an
+  uncommitted edit to a tracked job. Reason for the rule: an answer writes the
+  job and commits within the same request, so committed content is the box's
+  work; anything else is a write in progress or a rejected commit. A card an
+  agent writes and never commits does not start a run; it rides along with the
+  next run that something else starts.
 - **Waiting job eligibility** (pure `isWaitingJob` + `dueJobs(state, jobs,
-  now)`). A waiting job is due when it has no state entry, or its content hash
-  differs from the entry's (an appended item or other edit is new work, round-2
-  finding 5: the entry is reset to attempt 0), or `now >= nextAt` and it is
-  not given up.
+  now)`). A waiting job is due when it is not given up and: it has no state
+  entry (record `firstSeenAt = now`); or its content hash differs from the
+  entry's (an appended item or other edit, round-2 finding 5: due at once,
+  attempts reset to 0, `firstSeenAt` kept); or `now >= nextAt`.
+- **Lifetime, decided** (round-3 finding 3, boxholder decision). 7 days per
+  job file path, from `firstSeenAt`. Edits make the job due again at once but
+  never extend the lifetime. So a failing job that rewrites its own card on
+  every run is bounded by the daily cap for at most 7 days, then given up.
 - **No wakeup running.** `inspectLock(wakeupCycleLockPath(boxRoot))` and
   `inspectLock(<boxRoot>/.bbx-reactor.lock)`. A live holder of either means
   a wakeup (full or scoped), `bbx reactor`, or scan's or filing's own wakeup is
   running; skip this minute without changing state. A stale holder reads as
   free (`inspectLock` returns null for stale).
-- **Daily bound.** At most `JOB_CHECK_RUNS_PER_DAY` (24, open decision 2)
-  runs started per box per box-time day, counted in the state file. At the
-  bound, log one `job-check` line per day and start nothing.
-- **Start** (Track C does the starting). If the start succeeds, stamp every
-  due job: `attempts += 1`, `firstAttemptAt` if unset, `hash`,
-  `nextAt = nextAttemptAt(...)`; increment today's count; log `job-check
-  started` with the job files. If the start fails, change no state and log
-  it; the next pass tries again. The next pass then finds the cycle lock held
-  and skips until the run ends.
+- **Daily bound, decided** (boxholder decision). At most
+  `JOB_CHECK_RUNS_PER_DAY` = 24 runs started by the check per box per
+  box-time day, counted in the state file. At the bound, log one `job-check`
+  line per day and start nothing.
+- **Start** (Track C does the starting; it answers only after the wakeup
+  child has taken the cycle lock). On `started`: stamp every due job
+  (`attempts += 1`, `hash`, `nextAt = nextAttemptAt(...)`), increment today's
+  count, log `job-check started` with the job files. On `running` (another
+  cycle took the lock first, round-3 finding 2) or `failed`, or a thrown
+  call: change no attempt or count, log it, and let the next pass try again.
+  A job is therefore never charged for a run that skipped it.
+- **One transition at a time** (round-3 finding 5). The whole step, from
+  reading the state file through the stamp, runs under
+  `withCardLock(lockPath, () => withFileLock({ lockPath, metadata: { purpose:
+  "job-check" }, waitMs: 0 }, fn))`, the pattern at
+  `beebox/src/job-cards/intake-utils.ts:94-97`, with `lockPath`
+  `.beebox/job-check.lock`. A second pass for the same box (the daemon beside
+  a manual `bbx engine scheduler pass`) gets `LockHeldError` and skips the
+  check this minute without touching state. The lock is held while the pass
+  waits for the start answer (at most 30 s); nothing else takes it.
 - **After a run.** Nothing waits for the run. The next passes see what is
   left: a finished job's file is gone and its entry is pruned; a job left
   behind (it failed, or the run's cycles ran out, round-2 finding 3) is due
-  again at its `nextAt` (1 h after the first attempt); a job written during
+  again at its `nextAt` (1 h after its first attempt); a job written during
   the run has no entry and is due at once.
-- **Give up.** When `nextAttemptAt` returns none (7 days after the first
-  attempt), mark the entry given up and log `job-check gave up on <file>` once.
-  The job card stays; `stalled-jobs` names it.
+- **Give up.** When `givenUp(firstSeenAt, now)` is true, mark the entry given
+  up and log `job-check gave up on <file>` once. The job card stays;
+  `stalled-jobs` names it.
 - **State file.** `.beebox/job-check.json`, zod schema, written with
   `writeFileAtomic` (`beebox/src/lib/atomic-write.ts`, as the endpoint file
-  is). One writer per box: passes for a box are serial (`core.ts:131-150`), and
-  the pass unit is a oneshot. An unreadable file is logged and treated as
+  is), only under the lock above. An unreadable file is logged and treated as
   empty, which can cost one extra run, not a loop: the next stamp rewrites it.
 - **Which jobs count, decided.** Only unscoped jobs. A job tagged with a
   connector whose schedule is disabled is not counted: it is created only by a
@@ -476,12 +520,14 @@ every host.
   deadline (`cycle.ts:117`) runs overdue ones in any full wakeup.
 
 **Vocabulary lock-ins.** `checkWaitingJobs`, `isWaitingJob`, `dueJobs`,
-`nextAttemptAt`, `.beebox/job-check.json`, `JOB_CHECK_RUNS_PER_DAY`, box-log
-event `job-check`.
+`nextAttemptAt`, `givenUp`, `.beebox/job-check.json`,
+`.beebox/job-check.lock`, `JOB_CHECK_RUNS_PER_DAY`, box-log event
+`job-check`.
 
 **First chunk.** The pure functions (`isWaitingJob`, `dueJobs`,
-`nextAttemptAt`, the daily bound) and the state file, with tests. Then the
-pass step with an injected starter. No open question.
+`nextAttemptAt`, `givenUp`, the daily bound) and the state file, with tests.
+Then the pass step under its lock, with an injected starter. No open
+question.
 
 ### Track C — Starting the wakeup
 
@@ -496,29 +542,51 @@ and already runs supervised wakeups (`wakeup.force`, scan, filing).
 
 **Direction.**
 
+- **Acknowledge only an acquired cycle** (round-3 finding 2). Checking the
+  lock and then spawning leaves a gap in which a scoped, scan, or filing
+  wakeup can take the cycle lock; the child would then print its
+  `wakeup-running` outcome and do nothing (`cycle-lock.ts:45-62`). So:
+  - `runUnderWakeupCycleLock` prints `[wakeup-cycle] acquired` right after
+    `acquireLock` succeeds, when `WAKEUP_OUTCOME_ENV` is set (which
+    `runBbxWakeup` always sets, `wakeup.ts:55-58`).
+  - A shared starter, `startBbxWakeup(opts): Promise<{ state: "started" |
+    "running" | "failed"; detail: string; done: Promise<WakeupRunResult> }>`,
+    calls `runBbxWakeup` with an `onChunk` that watches for that line. It
+    resolves `started` on the line, `running` when the run ends with outcome
+    `skipped: "wakeup-running"` before the line, and `failed` when the run
+    ends any other way before the line. `done` is the whole run.
+  - Both starters below use it, and the pass stamps state only on `started`.
+- **Log the run's end, success or not** (round-3 finding 6). Every caller of
+  `startBbxWakeup` attaches `done.then(result => log(result), error =>
+  log(error))`: a resolved `{ ok: false }` (nonzero exit, spawn error,
+  `beebox/src/core/commands/wakeup.ts:72-75`) is logged with its `detail`, as
+  is a rejection. The log is a `job-check run ended` line in the box's
+  `scheduler.jsonl` (`writeBoxLog`) with `ok`, the outcome's
+  `jobsProcessed`/`jobsRemaining`, and the detail.
 - **Unit host** (`onUnitHost()`): the pass builds a client with
   `boxClient(await boxServerEnv(boxRoot))` (Track A) and calls
   `wakeup.start.mutate({ reason: "job-check" })` with a 30 s timeout, the
-  hub's readiness bound (`beebox/src/hub/socket-provider.ts`, `READY_TIMEOUT_MS`).
-  The request goes through the hub, which starts an idle box. The pass waits
-  for the mutation's answer, not for the run.
+  hub's readiness bound (`beebox/src/hub/socket-provider.ts:71`
+  `READY_TIMEOUT_MS = 30_000`). The request goes through the hub, which starts
+  an idle box (`ensureRunning`, `socket-provider.ts:203-216`). The pass waits
+  for the acknowledgement, not for the run. A timeout counts as `failed`: no
+  stamp, retried next minute.
 - **Other hosts** (the daemon runs the pass in its own long-lived process,
-  `core.ts:144`): `void runBbxWakeup({ boxRoot, triggeredBy: "job-check",
-  maxCycles: TRIGGER_MAX_CYCLES }).catch(log)`; the pass returns at once. The
-  daemon's shutdown does not wait for it; a child left running finishes on its
-  own, and the cycle lock keeps a later one from overlapping. A one-shot `bbx
-  engine scheduler pass` on such a host keeps its process alive until the child
-  exits, because `runCollectedChild` holds the child's pipes.
+  `core.ts:144`): the pass awaits `startBbxWakeup(...)` for the
+  acknowledgement only, attaches the end log to `done`, and returns. The
+  daemon's shutdown does not wait for `done`; a child left running finishes on
+  its own, and the cycle lock keeps a later one from overlapping. A one-shot
+  `bbx engine scheduler pass` on such a host keeps its process alive until the
+  child exits, because `runCollectedChild` holds the child's pipes.
 - **`wakeup.start`** in `beebox/src/webapp/trpc/routers/wakeup.ts`. Same
   caller check as `notifications.send` (the box's agent or its signed-in
   owner, `notifications.ts:33-38`). If this process already has a run in
-  flight for the box, or `inspectLock` finds the cycle lock held, return
-  `{ started: false, reason: "running" }`. Otherwise start
-  `withoutBoxWork(() => withBoxWork({ boxRoot, reason: "job-check wakeup" },
-  () => runBbxWakeup({ boxRoot, triggeredBy: "job-check", maxCycles:
-  TRIGGER_MAX_CYCLES })))` without awaiting it (the admission wrap is
-  `promote-lifecycle.ts:109-119`'s), log its outcome when it ends, and return
-  `{ started: true }`. The pass stamps state only on `started: true`.
+  flight for the box, return `{ state: "running" }` without spawning.
+  Otherwise call `startBbxWakeup` inside `withoutBoxWork(() => withBoxWork({
+  boxRoot, reason: "job-check wakeup" }, ...))` (the admission wrap is
+  `promote-lifecycle.ts:109-119`'s; the permit spans the whole run), attach
+  the end log to `done`, and return the acknowledgement's `state` and
+  `detail`.
 - **Idle exit counts live wakeups.** `runBbxWakeup` increments a module
   counter before the spawn and decrements it in `finally`.
   `ActivityLedger.signals()` (`idle-exit.ts:88-97`) adds `liveWakeups()` to
@@ -527,13 +595,15 @@ and already runs supervised wakeups (`wakeup.force`, scan, filing).
 - **`bbx engine wakeup --max-cycles <n>`** (default 1, today's value at
   `command.ts:78`); `runBbxWakeup` passes it. `TRIGGER_MAX_CYCLES` is 3, the
   reactor's own default (`core.ts:213`). The reactor's loop repeats while jobs
-  remain and the last cycle processed one (`core.ts:132-156`). Open decision 3.
+  remain and the last cycle processed one (`core.ts:132-156`). Decided: 3.
 
-**Vocabulary lock-ins.** `wakeup.start`, `TRIGGER_MAX_CYCLES`,
-`--max-cycles`, `liveWakeups`, `triggeredBy: "job-check"`.
+**Vocabulary lock-ins.** `wakeup.start`, `startBbxWakeup`,
+`[wakeup-cycle] acquired`, `TRIGGER_MAX_CYCLES`, `--max-cycles`,
+`liveWakeups`, `triggeredBy: "job-check"`, box-log line `job-check run ended`.
 
-**First chunk.** `--max-cycles` and the live-wakeup idle signal, then
-`wakeup.start`, then the two starters, with tests. No open question.
+**First chunk.** `--max-cycles`, the acquired line, and the live-wakeup idle
+signal; then `startBbxWakeup`; then `wakeup.start` and the two starters, with
+tests. No open question.
 
 ### Track D — The backlog after deploy
 
@@ -553,15 +623,17 @@ after deploy starts a run for each box. No separate runbook.
   and `inbox-low` intake included (`cycle.ts:145-147`). The legacy scan intake
   job holds 26 sessions in one card, so its batch prompt is large and may not
   finish in 30 turns.
-- **Worst case for the backlog**, if a job never finishes: retries at +1 h,
-  +7 h, then daily to day 7, about 9 runs per box over the week, each up to 3
-  sessions (about 27 sessions per box), well under the daily bound.
+- **Worst case for the backlog**, if a job never finishes and is not edited:
+  retries at +1 h, +7 h, then daily until 7 days after the check first saw it,
+  about 9 runs per box over the week, each up to 3 sessions (about 27 sessions
+  per box). The old jobs' lifetime starts at first sight after deploy, not at
+  their creation 14 to 51 days ago.
 - **Watch step**, part of rollout: after deploy, read each box's
   `scheduler.jsonl` for the `job-check started` line and the box server's
-  journal for the run's outcome, and check `stalled-jobs` a day later. An
-  optional `bbx reactor --dry-run` before deploy shows the first batch; it
-  reads box content on production, so it needs the boxholder's yes (open
-  decision 6).
+  journal for the run's outcome (also the `job-check run ended` line), and
+  check `stalled-jobs` a day later. No production dry run (boxholder
+  decision): the first run is bounded at 3 sessions per box, and the watch
+  step reads the result.
 
 ## Could this be simpler?
 
@@ -609,27 +681,36 @@ none
 ## Failure modes
 
 > **Critical gap (accepted):** a job that fails in every run costs up to
-> about 9 runs over 7 days, then is given up. Each of those runs may include
-> other work, and the given-up job stays in the jobs directory. Handling:
-> `job-check gave up` in `scheduler.jsonl` and `stalled-jobs` in health.
-> Accepted per the boxholder's decision ("retried with a growing delay").
+> about 9 runs over 7 days, then is given up. A failing job whose agent
+> rewrites the card on every run is due again after each edit, so it can use
+> the whole daily bound (24 runs, up to 72 agent sessions) for up to 7 days
+> from first sight, then is given up; that is the worst case per box. The
+> given-up job stays in the jobs directory. Handling: `job-check started` and
+> `job-check gave up` in `scheduler.jsonl`, and `stalled-jobs` in health.
+> Accepted per the boxholder's decisions (growing delay; per-path lifetime;
+> 24 runs a day).
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | A job fails in every run | new (backoff and give-up tests) | 1 h, 6 h, daily, given up at 7 days | clear (`job-check` lines; `stalled-jobs`) |
-| An agent rewrites a failing job each run, so its hash changes | new (hash-reset test) | each change resets to attempt 0; the daily bound caps runs | clear (`job-check started` lines); bounded by the daily cap |
+| An agent rewrites a failing job each run, so its hash changes | new (hash-change test) | due again at once, but the lifetime from first sight does not move; the daily bound caps runs | clear (`job-check started` lines); bounded by 24 runs a day for 7 days |
+| An uncommitted edit to a tracked job | new (dirty tracked job test) | `git status` lists it, so it is not waiting | silent by design; the pass logs a dirty repo (`pass.ts:51-66`) |
 | The box server cannot be reached from the pass (hub down, DNS, 30 s timeout) | new (starter error) | no state change; logged; retried next minute | clear (one `job-check` line per pass) |
+| Another wakeup takes the cycle lock between the check and the child | new (`running` acknowledgement) | `startBbxWakeup` answers `running`; no attempt charged | clear (`job-check` line) |
+| The 30 s acknowledgement times out but the child takes the lock later | none | not stamped and not counted; later passes skip while the cycle lock is held; a job still left after the run is due at once, so it can get one uncharged run | clear (`job-check` timeout line, then `job-check run ended` from the server) |
+| The started run fails (nonzero exit, spawn error) | new (resolved `{ ok: false }`) | `job-check run ended` logged with the detail; the job is due at its `nextAt` | clear |
 | The server is killed mid-run (deploy, OOM) | none needed | job stays; due again at its `nextAt` | late, not lost |
 | A run is in flight when the pass checks | new (lock-held test) | `inspectLock` on cycle and reactor locks: skip | clear (no state change) |
-| Two passes race for one box (manual `bbx engine scheduler pass` beside the daemon) | none | the second `wakeup.start` returns `running`; the in-process run's cycle lock skips | clear |
+| Two passes race for one box (manual `bbx engine scheduler pass` beside the daemon) | new (overlapping passes) | `.beebox/job-check.lock`: the second skips the check without touching state | clear |
 | Scan or filing starts its own wakeup just after the pass started one | none | the later one skips on the cycle lock; scan's retry budget handles its skip (`wakeup.ts:126-127`) | clear (existing scan logs) |
-| A job card in the working tree but not in `HEAD` | new (uncommitted test) | not waiting; rides along | silent by design; the pass already logs a dirty repo (`pass.ts:51-66`) |
+| A job card in the working tree but not in `HEAD` | new (untracked test) | not waiting; rides along | silent by design; the pass already logs a dirty repo (`pass.ts:51-66`) |
 | State file corrupt or unreadable | new | logged, treated as empty; next stamp rewrites it | clear |
 | Daily bound reached | new | no more runs today; one line | clear |
 | Server idle-exits while the run is in flight | new (`decideIdle` with `liveRuns`) | live wakeups keep it up | clear |
 | Finalize child cannot reach the server | new (thrown send) | not latched; next finalize retries until the question leaves pending | clear (finalize log line) |
 | Server answers the send but a delivery `failed` | new (returned `failed`) | not latched; retried as above | clear |
-| No channel can carry the notification (all `skipped`) | new | latched as today | clear (skipped lines in the notification log) |
+| Every delivery skipped `no-audience` (nobody paired) | new | sent; latched | clear (skipped lines in the notification log) |
+| A delivery skipped `unconfigured` (keys missing in the sender) | new | not latched; retried at a later finalize until the question leaves pending | clear (skipped lines and the finalize line) |
 | Pass-started process on an idle unit host has no `BBX_BOX_NAME` | new (`buildEnv` test) | unit-host URL fallback | was silent; becomes routed |
 
 ## Agent-flow / user-flow edge cases
@@ -643,8 +724,10 @@ none
 - **Two agents touching the same card.** No new card writer; the check writes
   only `.beebox/job-check.json`. ADDRESSED.
 - **Hand-edit drift.** A person deletes `.beebox/job-check.json`: every
-  waiting job is due once more, one run, then backoff resumes. A person edits a
-  given-up job: its hash changes and it gets a fresh window. ADDRESSED.
+  waiting job is due once more and gets a new first sight (one more run and a
+  new 7-day lifetime; bounded by the daily cap). A person edits a given-up job:
+  it stays given up, because the lifetime is per path; renaming the card is a
+  new path and a new lifetime. ADDRESSED.
 - **Fabricated free-form value.** No new agent-written field. Not applicable.
 - **Validation error UX.** No new agent-facing message. ADDRESSED.
 - **Partial rollout.** During a deploy the old pass has no check; the first new
@@ -654,7 +737,8 @@ none
   with no entry and starts a run. Each link is one agent action; the daily
   bound caps a runaway chain. ADDRESSED by the bound.
 - **Inbox items without a job** (share, extension commentary). Not seen by
-  the check. DEFERRED, open decision 5.
+  the check; they ride along with the next full wakeup. ADDRESSED by
+  boxholder decision.
 - **Agent writes but never commits a job.** Not waiting. GAP, accepted: it
   rides along with the next run that something else starts.
 
@@ -673,9 +757,10 @@ Each walk is the planned code on a unit host unless it says otherwise.
    `.question-followup.job.card` (no connector, normal), confirms it is in
    `HEAD`, finds no state entry, finds both locks free, and is under the daily
    bound.
-3. It calls `wakeup.start` through the hub. The box server (started by the
-   hub if idle) starts `bbx engine wakeup --max-cycles 3` in the background and
-   answers `started: true`. The pass stamps the job (attempt 1, `nextAt` +1 h),
+3. Under `.beebox/job-check.lock`, it calls `wakeup.start` through the hub.
+   The box server (started by the hub if idle) starts `bbx engine wakeup
+   --max-cycles 3` in the background and answers `started` once the child
+   prints `[wakeup-cycle] acquired`. The pass stamps the job (attempt 1, `nextAt` +1 h),
    logs `job-check started`, runs `runBoxAlerts`, and ends.
 4. The wakeup child takes the cycle lock, runs steps 1-4d and the reactor with
    no filter. The follow-up job and every other pending job go into one batch
@@ -719,8 +804,10 @@ Today the walk stops after step 1.
    it prints today.
 2. The next pass finds the job. `boxServerEnv` gives the unit-host URL
    `${BBX_PUBLIC_URL}/<slug>`; `wakeup.start` goes through the hub, which
-   connects to the box's socket and starts the unit, and answers once the
-   server is up (well inside the 30 s timeout). Walk 1 from step 3.
+   connects to the box's socket and starts the unit. The server answers once
+   its wakeup child has taken the cycle lock; a cold start plus the child's
+   boot should fit in the 30 s timeout, and a timeout only means no stamp and
+   another try next minute. Walk 1 from step 3.
 
 **5. The box server idle-exits while the run is in flight.**
 
@@ -734,17 +821,19 @@ Today the walk stops after step 1.
 
 **6. A job that keeps failing.**
 
-Attempt 1 at t0. The job stays. Passes skip it until t0+1 h (attempt 2), then
-t0+7 h (3), then daily (4 to 9, the last before t0+7 d). At t0+7 d the next
-pass marks it given up and logs once. `stalled-jobs` already lists it. Any run
+First seen and attempted at t0. The job stays. Passes skip it until t0+1 h
+(attempt 2), then t0+7 h (3), then daily (4 to 9, the last before t0+7 d). If
+the agent edits the card, it is due at the next pass, but t0 does not move. At
+t0+7 d the next pass marks it given up and logs once. `stalled-jobs` already lists it. Any run
 started for other jobs in that week still includes it (it rides along); that
 costs a share of those runs, not extra runs.
 
 **7. A laptop or dev host (not a unit host).**
 
 The scheduler daemon runs `runSchedulerPass` in its own process. The check is
-the same; the starter is `void runBbxWakeup(...)` in that process, and the pass
-returns at once. A box that no scheduler daemon lists gets no check, as it gets
+the same; the starter is `startBbxWakeup(...)` in that process. The pass
+waits for the cycle-acquired line, attaches the end log to the run, and
+returns. A box that no scheduler daemon lists gets no check, as it gets
 no schedules today.
 
 ## NOT in scope
@@ -752,7 +841,7 @@ no schedules today.
 - **Moving scan or wordless filing off their own wakeups.** They keep them;
   the cycle lock makes the overlap one run (walks 2 and 3).
 - **Inbox items without a job** (share, extension commentary). The check reads
-  jobs only. Open decision 5.
+  jobs only; they ride along (boxholder decision).
 - **Making the reactor skip uncommitted job cards.** The check does not start
   a run for one, but a run started for other reasons still processes it, as
   today (round-2 finding 2 in full).
@@ -772,35 +861,25 @@ no schedules today.
 
 ## Open design questions
 
-1. **Backoff numbers and window.** The boxholder said "say 1 h, then 6 h,
-   then daily". Lean: exactly that, with a 7-day window from the first attempt
-   (code style's "a week is acceptable"), then given up.
-2. **Daily bound on runs started by the check.** Without one, an agent that
-   rewrites a failing job each run, or a long job chain, starts runs without
-   limit. Lean: 24 runs per box per day (at most 72 agent sessions with 3
-   cycles each). Worst case per box per day is therefore 24 runs; a normal day
-   is one run per burst of activity.
-3. **Cycles per run.** Lean: 3, the reactor's default. Each cycle is one agent
-   session; leftovers after 3 wait an hour (or ride along with the next new
-   job's run).
-4. **Should a started run sync connectors?** A full wakeup runs every
-   configured connector and on-wakeup scripts, even when the boxholder disabled
-   the check-email schedule (`connectors.ts:58-61`, `command.ts:142-153`). Scan
-   and filing already do this. Lean: keep the full wakeup.
-5. **Inbox items without a job** (share to inbox, extension commentary). Only
-   step 4b of a full wakeup jobs them. Options: (a) leave them to ride along
-   with the next run; (b) widen the check to committed normal-priority inbox
-   cards that no job references, which repeats step 4b's scan every minute.
-   Lean: (b) only if a boxholder reports a stalled share; (a) for now. Low
-   priority work (contains backfill, `inbox-low`) rides along in either case.
-6. **A dry run before deploy.** `bbx reactor --dry-run` on each production
-   box shows the first batch, but it reads box content on production. Lean:
-   skip it; the first run is bounded at 3 sessions per box, and the watch step
-   reads the result.
+None open. Settled by the boxholder after round 3, now in Direction:
 
-Settled since the last revision: the check runs in the pass; only unscoped
-jobs count; low priority never starts a run; only committed jobs count; a
-changed job card resets its backoff.
+- Backoff 1 h, 6 h, then daily (Track B).
+- Lifetime 7 days per job file path from first sight; edits make a job due
+  again but do not extend it (Track B).
+- At most 24 runs started by the check per box per day (Track B).
+- 3 reactor cycles per run (Track C).
+- A started run is a full wakeup, connector sync and on-wakeup scripts
+  included, as scan and filing runs are today (`connectors.ts:58-61`,
+  `command.ts:142-153`).
+- Inbox items without a job ride along; the check stays on jobs (Track B,
+  What already exists).
+- No production dry run; the first run is bounded and the watch step reads it
+  (Track D).
+- Notification skips: `unconfigured` is retried, `no-audience` and `present`
+  count as sent (Track A).
+- Earlier settled: the check runs in the pass; only unscoped normal-priority
+  jobs count; low priority never starts a run; only jobs whose working copy is
+  their committed content count.
 
 ## Knowledge audits
 
@@ -813,49 +892,67 @@ anything different.
 All tiers are `t.check` tests. Each names one claim that could be wrong, with
 one example.
 
-- **Waiting predicate** (`isWaitingJob`, pure): an unscoped normal job in
-  `HEAD` → true. Example: `{ connector: undefined, priority: "normal",
-  committed: true }` → true; `connector: "gmail"` → false; `priority: "low"` →
-  false; `committed: false` → false.
-- **Due rule** (`dueJobs`, pure): a job with no entry is due; one with
-  `nextAt` in the future is not; one whose hash changed is due with attempts
-  reset. Example: entry `{ attempts: 2, nextAt: now + 1h, hash: "a" }`, card
-  hash `"b"` → due, attempts 0.
-- **Backoff** (`nextAttemptAt`, pure): attempts 1, 2, 3, 4 from `t0` give
-  `t0+1h`, `+6h` after the second, then `+24h`; a value past `t0+7d` gives
-  none. Example: attempts 3 at `t0+7h` → `t0+31h`.
-- **Daily bound** (pure): 24 runs today → no start; a new box-time day resets
-  it.
-- **Lock held** (filesystem, `makeTmpBox()`): with the cycle lock held by a
-  live holder, the check starts nothing and the state file is unchanged.
-- **Committed only** (filesystem): a waiting-shaped job card written but not
-  committed starts nothing; after `git commit` it starts one run.
-- **Stamps only on start** (injected starter): a starter that returns
-  `started: false` or throws leaves the state file unchanged; `started: true`
-  stamps every due job and bumps today's count.
+- **Waiting predicate** (`isWaitingJob`, pure): an unscoped normal job whose
+  working copy is its `HEAD` content → true. Example: `{ connector: undefined,
+  priority: "normal", clean: true }` → true; `connector: "gmail"` → false;
+  `priority: "low"` → false; `clean: false` → false.
+- **Dirty tracked job** (filesystem, `makeTmpBox()`): a committed job card
+  with an uncommitted appended line starts nothing; after `git commit` it
+  starts one run.
+- **Untracked job** (filesystem): a job card written but never added starts
+  nothing.
+- **Due rule** (`dueJobs`, pure): no entry → due, `firstSeenAt` recorded;
+  `nextAt` in the future → not due; hash changed → due, attempts 0,
+  `firstSeenAt` unchanged. Example: entry `{ firstSeenAt: t0, attempts: 2,
+  nextAt: now + 1h, hash: "a" }`, card hash `"b"` → due, attempts 0,
+  `firstSeenAt: t0`.
+- **Backoff** (`nextAttemptAt`, pure): after attempts 1, 2, 3 at time `t`:
+  `t+1h`, `t+6h`, `t+24h`. Example: attempts 3 at `t0+7h` → `t0+31h`.
+- **Lifetime** (`givenUp`, pure): `firstSeenAt + 7d` reached → true, whatever
+  the hash or attempts. Example: an entry edited at `t0+6d23h` is due at once;
+  the same entry at `t0+7d` is given up.
+- **Daily bound** (pure): 24 runs today → no start; a new box-time day
+  resets it.
+- **Lock held** (filesystem): with the cycle lock held by a live holder, the
+  check starts nothing and the state file is unchanged.
+- **Overlapping passes** (filesystem): two `checkWaitingJobs` calls for one
+  box started together, with a starter that waits; exactly one calls the
+  starter and stamps; the other skips; today's count is 1.
+- **Stamps only on `started`** (injected starter): `running`, `failed`, or a
+  throw leave attempts and today's count unchanged; `started` stamps every due
+  job and bumps the count.
+- **Acknowledgement** (`startBbxWakeup` with an injected child stream): the
+  `[wakeup-cycle] acquired` line → `started`; a `wakeup-running` outcome
+  before it → `running`; an exit before it → `failed`.
+- **Acquired line** (wakeup command with an injected cycle): printed after the
+  lock is taken, only when `WAKEUP_OUTCOME_ENV` is set; not printed on a skip.
+- **End log** (injected `done`): a resolved `{ ok: false, detail: "bbx wakeup
+  exited with code 1" }` writes a `job-check run ended` line with `ok: false`
+  and the detail; a rejection writes one with the error.
 - **Prune** (filesystem): an entry whose job file is gone is removed on the
   next pass.
-- **Give up** (filesystem with box time): at `t0+7d` the entry is marked
-  given up, one `job-check gave up` line is written, and later passes start
-  nothing for it.
+- **Give up** (filesystem with box time): at `firstSeenAt + 7d` the entry is
+  marked given up, one `job-check gave up` line is written, later passes start
+  nothing for it, and an edit does not revive it.
 - **Pass isolation** (injected check that throws): the tick result and the
   box alerts still run and log.
 - **`wakeup.start`** (route test, `makeTestServer()` with an injected
-  `wakeupRunner`): returns `started: true` and calls the runner once; a second
-  call while it runs returns `running`; an unauthenticated non-agent caller is
-  refused.
-- **Non-unit starter**: calls `runBbxWakeup` (injected) without awaiting it;
-  the check returns before the runner resolves.
+  starter): returns the starter's state; a second call while a run is in
+  flight returns `running` without starting; an unauthenticated non-agent
+  caller is refused.
 - **`--max-cycles`**: the wakeup command passes the value to `runReactor`.
 - **Idle decision** (`decideIdle`): `liveRuns` from a live wakeup keeps the
   server up.
 - **Route choice** (`routedSender`): with the three env vars set, `send`
   calls the server and never `notifyBoxholder`; with one missing, in process.
-- **Sent rule** (`notificationSent`, pure): `sent` → true; all `skipped` →
-  true; one `failed` and nothing reached → false.
-- **Nudge and alert not latched on failure**: a sender that throws, and one
-  that returns a `failed` delivery; neither leaves a latch entry, and the next
-  call sends again.
+- **Sent rule** (`notificationSent`, pure): `sent` → true; skip `present` →
+  true; every delivery skipped `no-audience` → true; any skip `unconfigured`
+  with nothing reached → false; one `failed` with nothing reached → false; an
+  unknown skip detail → false.
+- **Nudge and alert not latched when not sent**: a sender that throws, one
+  that returns a `failed` delivery, and one that returns an `unconfigured`
+  skip; none leaves a latch entry, and the next call sends again. A sender
+  that returns only `no-audience` skips leaves the latch entry.
 - **Unit-host box name** (`buildEnv`/`boxServerEnv`): with `BBX_UNIT_HOST=1`,
   no endpoint file, `BBX_PUBLIC_URL=https://h`, box at
   `/var/lib/beebox/fam/box` → `BBX_SERVER_URL=https://h`, `BBX_BOX_NAME=fam`.
@@ -868,10 +965,12 @@ No new tier and no new mock beyond injected seams (`wakeupRunner` exists at
 1. Track A: `NotifySender`, `routedSender`, `notificationSent`, nudge and
    alert latching, finalize passing the sender. Commit. Then `buildEnv`'s
    unit-host fallback, `boxServerEnv`, and `boxClient(env)`. Commit.
-2. Track C: `--max-cycles`, the live-wakeup count and idle signal. Commit.
-   Then `wakeup.start`. Commit.
+2. Track C: `--max-cycles`, the acquired line, the live-wakeup count and idle
+   signal. Commit. Then `startBbxWakeup` with its end log, and
+   `wakeup.start`. Commit.
 3. Track B: the pure functions and the state file. Commit. Then the pass
-   step with both starters. Depends on 1 and 2. Commit.
+   step under `.beebox/job-check.lock`, with both starters. Depends on 1 and
+   2. Commit.
 4. Docs: `beebox/docs/design/processing.md` and `beebox/docs/scheduler.md`
    (the pass now starts full wakeups for waiting jobs),
    `beebox/src/core/reactor/DESIGN.md:58`, the stale Sync-button comment.
@@ -888,7 +987,7 @@ from `beebox/`.
 Before landing, on the probe VM (not production): with the box server
 idle-exited, commit a follow-up job as the box user and confirm the next pass
 starts the server and the run; then make a job fail and confirm the
-`job-check` lines and the 1 h `nextAt`.
+`job-check started` and `job-check run ended` lines and the 1 h `nextAt`.
 
 No data migration. `.beebox/job-check.json` is new and starts empty.
 
