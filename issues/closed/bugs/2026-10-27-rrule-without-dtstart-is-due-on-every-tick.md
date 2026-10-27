@@ -5,7 +5,10 @@ area: beebox
 labels: [schedules, bug]
 filed-by: agent
 discovered-in: dep-reduction — rrule vs ical.js research, 2026-10-27
+resolution: implemented
 ---
+
+Closed 2026-10-27 on the dep-reduction workstream (54df23ecd, refined in 2acf8ed04 and the blank-line fix after it). `parseScheduleRrule` in `beebox/src/scheduled-script-fields.ts` gives a rule without DTSTART a start of midnight UTC of the last run's day (today for a never-run card), and writes that `DTSTART:` line into the rule text so multi-line rules (EXDATE/RDATE) get it too. The script fires once per matching occurrence instead of on every tick. The due check, the missed-occurrence scan, the description, and the schema validator all parse through it. A rule with its own DTSTART (inline `;DTSTART=…` or a `DTSTART:` line) is unchanged. COUNT and an exact INTERVAL phase need an explicit DTSTART; the schema instructions and box docs say so. Divergence from the first approach (a fixed 2026-01-01 start): that anchor was replaced after cross-model review. Regression test: `beebox/test/schemas/scheduled-script/due.rrule-start.test.ts`.
 
 `isRruleDue` (`beebox/src/schemas/scheduled-script/due.ts:165-170`) parses the
 card's string with `rrulestr` on every check:
