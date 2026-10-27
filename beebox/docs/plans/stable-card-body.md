@@ -95,11 +95,11 @@ still remounts its embeds.
 
 | Track | Estimated changed lines (source + test) |
 |---|---|
-| 1. Fixed component types in `Markdown` | ~260 source, ~40 test |
-| 2. The embed boundary | ~70 source |
-| 3. Remount check in smoke | ~30 (plus the ~190-line `bin/card-remount-check.ts` already written) |
+| 1. Fixed component types in `Markdown` | ~260 source; the ~65-line DOM test is already written |
+| 2. The embed boundary | ~50 source, ~60 test |
+| 3. Keep the browser check | 0 (the ~190-line `bin/card-remount-check.ts` is already written) |
 
-About 600 changed lines in total. Well under the 2,000-line BIG CHANGE line.
+About 450 changed lines still to write. Well under the 2,000-line BIG CHANGE line.
 
 ## Stated preferences this plan trades against
 
@@ -112,7 +112,7 @@ About 600 changed lines in total. Well under the 2,000-line BIG CHANGE line.
   (`personal-vibe-check/preset/react-rules.ts:30`). It did not catch this,
   because the components are made in a plain factory called from `useMemo`,
   not inside a component body. Track 1 removes the factories, so the
-  existing rule covers what remains. Track 3 adds a behavior check.
+  existing rule covers what remains. DOM tests hold the behavior.
 - Memory "minimize invented concepts": Track 1 uses one React context, a
   platform mechanism, and does not add a registry or a stable-callback helper.
 
@@ -130,10 +130,18 @@ About 600 changed lines in total. Well under the 2,000-line BIG CHANGE line.
 - `components/chat/AGENTS.md:145`, *"Workspace card roots survive
   presentation changes"*: the card root does survive. The remount is inside it.
   That section is where the body rule goes.
-- No DOM test environment exists. Frontend component tests use
-  `renderToStaticMarkup` (`test/components/MarkdownCardView.markdown-card-view.test.ts:10`),
-  which cannot observe a remount. `bin/smoke` drives a real browser on a real
-  box (`docs/testing/smoke.md`). Reuse it for the behavior check.
+- A happy-dom test harness exists: `test/helpers/dom-harness.ts:85`,
+  *"Mount `element` in a fresh container under `document.body`, effects
+  flushed"*, with `rerender` (`:66`) and per-component render counts (`:70`).
+  `test/components/Markdown/body.image-card-links.test.ts` already mounts
+  `Markdown` with it. Reuse: `test/components/Markdown/body.stable-body.test.ts`
+  (written with this plan) mounts a body, re-renders it with a new
+  `onNavigate` or appended text, and checks that the link, both citations,
+  and the blockquote are the same DOM nodes. It fails today: all four are
+  replaced; the heading is kept.
+- `Para` drops its wrapper around a lone image by component name
+  (`body.tsx:121-125`, `componentDisplayName`, which matches `"Img"` or
+  `"Image"`). An embed override must keep the name `Img`.
 
 ## Prior art (external)
 
@@ -173,7 +181,10 @@ No new nouns. One new internal value:
   - `makeLink`, `makeImg`, `makeQuoteComponents`, `makeSourceComponents`,
     `makeTodoComponents`, `makeSeeAlsoComponent`, `makeIncludeFileComponent`,
     and `makeEmbedComponents` become exported components (`Link`, `Img`,
-    `QuoteInline`, …, `EmbedImg`) that call `useMarkdownRender()`.
+    `QuoteInline`, …, and the embed override) that call `useMarkdownRender()`.
+    The embed override's function is also named `Img` (in `FigureEmbed.tsx`),
+    so `Para`'s lone-image check (`body.tsx:121-125`) still unwraps a
+    standalone `![](…)`.
     `Blockquote` and `Task` move to module scope.
   - `buildRenderConfig` keeps only the Markdoc `config`. The component map is
     a module constant `MARKDOWN_COMPONENTS`.
@@ -185,38 +196,49 @@ No new nouns. One new internal value:
     (`chat/markdown-rendering.tsx:136`). Their `useMemo` calls go away.
 - **Vocabulary lock-ins:** `MarkdownRenderContext`, `useMarkdownRender`.
 - **First chunk:** add the context, convert `Link` and `Img`, and update
-  `Quote.quote.test.ts:15` (it calls `makeQuoteComponents`). The check still
-  fails because of the embed. The next chunk converts the rest.
+  `Quote.quote.test.ts:15` (it calls `makeQuoteComponents`). The next chunk
+  converts the rest; `body.stable-body.test.ts` passes after it.
 
 ### 2. The embed boundary
 
-- **What:** an embed is isolated from its host card in both directions.
+- **What:** an embed keeps its mount through any host change that does not
+  change the embed's own `src`, and its DOM activity does not drive the
+  host's outline.
 - **Why:** the boxholder's direction. Parent to child: a host re-render must
-  not remount or re-render the embed. Child to parent: the embed's own DOM
-  activity must not drive the host's machinery.
+  not remount the embed. Child to parent: the embed's own DOM activity must
+  not drive the host's machinery. The boundary does not promise zero
+  re-renders: the embed reads `onNavigate` from the render context, so a new
+  callback re-renders it in place. That keeps state, which is the
+  requirement, without a stable-callback helper. Nor does it isolate layout:
+  an embed that legitimately reloads still changes height (*NOT in scope*).
 - **Direction:**
-  - Parent to child: `EmbedImg` renders `<Embed target={…} caption={…} />`, a
-    `memo` component whose props are the resolved target fields only. It
-    reads `onNavigate` from the context when a link inside it is followed,
-    so a new callback does not re-render it.
+  - Parent to child: Track 1 already fixes the type. The embed's element
+    position is fixed by the Markdown tree, so React reconciles it in place.
+    The DOM test passes `Markdown` a module-constant override map whose `Img`
+    is a probe that counts mounts in an effect, re-renders the host with a
+    new `onNavigate`, and checks one mount. A probe is used because a real
+    `FileView` fetches its data over tRPC, which the harness does not serve.
+    The probe test verifies reconciliation, not the production maps. Those
+    are module constants (Track 1), so their identity cannot change, and
+    `bin/card-remount-check` verifies the real figure embed end to end.
   - Child to parent: the embed renders inside `<div data-card-embed>`.
     `CardContentsMenu`'s `MutationObserver` callback ignores records whose
     target is inside `[data-card-embed]`. Today each d3 redraw (each pick)
     runs `readOutline` over the whole front.
 - **Vocabulary lock-ins:** `data-card-embed`.
-- **First chunk:** `Embed` plus the wrapper and the observer filter.
-  `bin/card-remount-check` passes after this chunk.
+- **First chunk:** the wrapper and the observer filter, with a DOM test that a
+  mutation inside `[data-card-embed]` does not re-read the outline.
+  `bin/card-remount-check` passes after Tracks 1 and 2.
 
-### 3. The check runs before merges
+### 3. Keep the browser check as a dev command
 
-- **What:** `bin/smoke` runs the pin/unpin remount step from
-  `bin/card-remount-check.ts` against its box.
-- **Why:** there is no DOM test tier. The smoke walk is the existing tier that
-  drives a real browser, and it runs before any merge touching deployed paths.
-- **Direction:** move the fixture, the page scripts, and the verdict into
-  `bin/card-remount-check.ts` exports. `bin/smoke.ts` calls them as one step
-  with a smoke failure class. The standalone command stays for debugging.
-- **First chunk:** the step, about 5 s of extra smoke time.
+- **What:** `bin/card-remount-check` stays a standalone command.
+- **Why:** the DOM tests hold the remount invariant in the ordinary test tier.
+  Only a browser shows the visible symptom (scroll anchoring moving the reader,
+  the button expanding), and the command reproduces it in about 10 s.
+- **Direction:** no change. It is named in the `Markdown/body.tsx` header as
+  the way to see the symptom.
+- **First chunk:** none.
 
 ## Could this be simpler?
 
@@ -230,8 +252,10 @@ A simpler Track 2 is just `memo` on `Embed`. It leaves the child-to-parent
 direction (outline re-reads on each redraw). That costs a few lines, so it
 stays.
 
-Track 3 could be left out, with the standalone command run by hand. Then the
-next factory regresses silently. Per §11, enforcement beats convention.
+A smoke step was considered for the browser check. It is not needed: the
+DOM tests run in the ordinary suite and catch a remount in the body. Per
+§11, the enforcement is the tests; the browser command is for seeing the
+symptom.
 
 ## Subplans
 
@@ -242,10 +266,11 @@ none
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | A component used outside `Markdown` (a test, a dev harness) has no context | Track 1 test | `useMarkdownRender` throws | clear |
-| A caller passes a new `components` map each render, so embeds remount again | smoke step (Track 3) catches it for cards | none in code | silent until smoke |
-| `Embed` keeps showing a stale target after the text changes its `src` | Track 1 test: same text, new src → new target | memo compares target fields | clear (new figure appears) |
+| A caller passes a new `components` map each render, so its components remount again | `body.stable-body.test.ts` for `Markdown`'s defaults; none per caller | none in code | silent |
+| An embed keeps showing a stale target after the text changes its `src` | Track 2 DOM test: new `src` → new target rendered | no memo on the embed, so it re-renders with the new target | clear |
+| The embed override loses the `Img` name, so a standalone embed gains a paragraph wrapper | Track 1 test: a lone `![](…)` embed renders no `.bbx-paragraph` | name kept | silent without the test |
 | Context value changes re-render every link (no remount, a render cost) | none | accepted: re-render is cheap; remount was the bug | n/a |
-| Smoke box lacks `_content/` or the step can't find the Pin button | the check's setup errors | `CheckSetupError` classes | clear |
+| The browser check's box lacks `_content/`, or it can't find the Pin button | n/a (dev command) | `CheckSetupError` classes | clear |
 
 > **Accepted risk:** a caller passing an unstable `components` map. After
 > Track 1 only three callers pass one, and each becomes a module constant.
@@ -286,15 +311,12 @@ while tracing. Listed, not fixed:
   rare and needs a measured-height store.
 - `react-hooks/static-components` does not see components made in factories.
   A lint rule against component factories in `components/Markdown/` is
-  possible; not now, because after Track 1 none remain and smoke catches the
-  behavior.
+  possible; not now, because after Track 1 none remain and the DOM test
+  catches the behavior.
 
 ## Open design questions
 
-- **Track 3 placement.** Lean: a smoke step. The alternative is a manual dev
-  check only. Smoke writes three fixture files into its box; the smoke box is
-  a test box, so that is acceptable. Needs the boxholder's yes, since it adds
-  about 5 s to every smoke run.
+None. The embed test's seam was settled in Track 2 (a probe `Img` override).
 
 ## Knowledge audits
 
@@ -305,27 +327,27 @@ section and in the `Markdown/body.tsx` header comment.
 
 ## What will hold this after it ships
 
-- The smoke step (Track 3) is the behavior anchor: pin and unpin the tab of a
-  card being read; the figure, picker, and citation keep their DOM nodes.
-- A tap test in `test/components/Markdown/` renders `Markdown` with
-  `renderToStaticMarkup` to confirm the context wiring and the
-  missing-context error. It cannot observe remounts; that is the smoke step's
-  job. No new test tier.
+- `test/components/Markdown/body.stable-body.test.ts` (DOM harness, ordinary
+  suite): a new `onNavigate` or appended text keeps the link, citations, and
+  blockquote nodes. Written now; fails until Track 1.
+- The Track 2 DOM tests: an embed mounts once across a host re-render, and a
+  mutation inside it does not re-read the outline.
+- `bin/card-remount-check`: the real-browser symptom on a test box, run by hand.
+  No new test tier.
 
 ## Implementation order
 
 1. Context, `Link`, `Img`; update `Quote.quote.test.ts`. (Track 1, chunk 1)
 2. The remaining Markdown components; drop the factories; caller override
    constants. (Track 1)
-3. `Embed`, `data-card-embed`, observer filter. `bin/card-remount-check`
-   passes. (Track 2)
-4. The smoke step. (Track 3)
-5. Docs: `Markdown/body.tsx` header, `components/chat/AGENTS.md`.
+3. `data-card-embed`, observer filter, embed DOM tests.
+   `bin/card-remount-check` passes. (Track 2)
+4. Docs: `Markdown/body.tsx` header, `components/chat/AGENTS.md`.
 
 ## Rollout shape
 
 Done when `bin/card-remount-check` passes on the worktree's test1 clone, the
-smoke walk passes with the new step, `pnpm typecheck`, lint, and the
+DOM tests pass, `pnpm typecheck`, lint, and the
 change-selected tests pass, and the manual walk of the repro card (pick
 atoms, pin the tab, run an agent turn) keeps the picks. No data changes, no
 migration. Frontend only; ships in one piece.
