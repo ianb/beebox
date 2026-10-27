@@ -105,7 +105,7 @@
     "doc-graph-html": "tsx src/dev/doc-graph-html/html.ts",
     "test:watch": "tap --watch",
     "lint:oxlint": "oxlint -A no-unused-vars",
-    "lint:circular": "madge --circular --extensions ts,tsx src/"
+    "lint:circular": "oxlint -f default -c .oxlint-cycles.json src/"
   },
   "keywords": [
     "claude",
@@ -132,7 +132,6 @@
     "fraction.js": "^5.3.4",
     "json5": "^2.2.3",
     "lint-staged": "^16.2.7",
-    "madge": "^8.0.0",
     "oxlint": "^1.47.0",
     "tap": "^21.0.0",
     "tsx": "^4.23.15",

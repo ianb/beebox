@@ -69,8 +69,7 @@
     "peerDependencyRules": {
       "allowedVersions": {
         "@typescript-eslint/parser": "8",
-        "eslint-plugin-react-hooks": "7",
-        "madge>typescript": "6"
+        "eslint-plugin-react-hooks": "7"
       }
     }
   },

@@ -124,7 +124,8 @@ function runFullCheck() {
     },
     {
       name: "Circular deps",
-      cmd: "npx madge --circular --extensions ts,tsx src/",
+      cmd: "npx oxlint -c .oxlint-cycles.json src/",
+      condition: () => existsSync(".oxlint-cycles.json"),
     },
   ];
 
