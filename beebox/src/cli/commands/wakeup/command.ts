@@ -6,7 +6,8 @@
  * 2. Run housekeeping (sweep stale tmp uploads, refill root landmark)
  * 3. Run on-wakeup scheduled scripts
  * 4. Run connectors (pull external data, create jobs)
- *    4a. Clean up stale jobs whose refs all point at deleted files
+ *    4a. Clean up stale jobs whose refs all point at deleted files, and split
+ *        intake jobs over the item cap
  *    4b. Create intake jobs for unjobbed inbox items (captured notes, etc.)
  * 5. Process pending jobs via reactor (one cycle unless --max-cycles; skip low-priority)
  * 6. Push committed changes to the box's git remote (non-fatal if it fails)
@@ -39,6 +40,7 @@ import {
 import {
   runPreprocessors,
   cleanupStaleJobs,
+  splitOversizedJobs,
   createIntakeJobsForUnjobbed,
   createContainsBackfillJob,
   refreshSearchIndex,
@@ -205,6 +207,11 @@ async function runWakeupCycle(boxRoot: string, options: WakeupOptions): Promise<
   } else {
     console.log("  No stale jobs");
   }
+  console.log("");
+
+  // Step 4a, continued: split intake jobs over the item cap, before new items join them.
+  console.log("[Splitting oversized intake jobs]");
+  if ((await splitOversizedJobs(boxRoot)) === 0) console.log("  None over the cap");
   console.log("");
 
   // Step 4b: Create intake jobs for unjobbed inbox items.

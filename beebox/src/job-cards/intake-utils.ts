@@ -30,6 +30,7 @@ import * as path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { withCardLock } from "../lib/card-lock.js";
+import { writeFileAtomic } from "../lib/atomic-write.js";
 import { getBoxDir } from "../lib/paths/core.js";
 import { parseFrontmatterObject, renderFrontmatterBlock } from "../exports/cards.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
@@ -192,7 +193,7 @@ async function newestIntakeJobWithRoom(
   jobsDir: string,
   key: { connector: string | undefined; priority: "normal" | "low" }
 ): Promise<{ path: string; fields: IntakeJobFields } | null> {
-  const names = (await fs.readdir(jobsDir)).filter((name) => name.endsWith(".intake.job.card")).toSorted().toReversed();
+  const names = (await fs.readdir(jobsDir)).filter((name) => name.endsWith(INTAKE_SUFFIX)).toSorted().toReversed();
   for (const name of names) {
     const jobPath = path.join(jobsDir, name);
     const fields = await readIntakeJobFields(jobPath);
@@ -202,6 +203,83 @@ async function newestIntakeJobWithRoom(
     if (fields.items.length < INTAKE_JOB_MAX_ITEMS) return { path: jobPath, fields };
   }
   return null;
+}
+
+/** One oversized job split: the original's path (now deleted) and its chunks' paths, relative. */
+export interface IntakeSplit {
+  original: string;
+  chunks: string[];
+}
+
+/** Writes a chunk's final file; a test substitutes one that fails partway. */
+type ChunkWriter = (filePath: string, content: string) => Promise<void>;
+
+/**
+ * Split every intake job holding more than `INTAKE_JOB_MAX_ITEMS` items into
+ * jobs of at most that many, then delete the original. Only jobs written
+ * before the cap (or edited by hand) can be over it. Chunk `k` holds items
+ * `[25(k-1), 25k)` at `<original base>-part-NN.intake.job.card`, a name the
+ * original always yields, so the chunks keep its place in the oldest-first
+ * order and a split stopped partway resumes: a chunk that exists is left as
+ * it is (it may since have received appended items), the missing ones are
+ * written, and the original is deleted last. Each chunk is published
+ * atomically, so a file under a chunk's name is always complete. Returns one
+ * entry per split job, for the caller to commit.
+ */
+export async function splitOversizedIntakeJobs(boxRoot: string, opts?: { write?: ChunkWriter }): Promise<IntakeSplit[]> {
+  const write: ChunkWriter = opts?.write ?? ((filePath, content) => writeFileAtomic(filePath, { content }));
+  const jobsDir = getBoxDir(boxRoot, "jobs");
+  let names: string[];
+  try {
+    names = (await fs.readdir(jobsDir)).filter((name) => name.endsWith(INTAKE_SUFFIX)).toSorted();
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return [];
+    throw e;
+  }
+  const splits: IntakeSplit[] = [];
+  for (const name of names) {
+    const jobPath = path.join(jobsDir, name);
+    const key = await readIntakeJobFields(jobPath);
+    if (key === null || !Array.isArray(key.items) || key.items.length <= INTAKE_JOB_MAX_ITEMS) continue;
+    const priority = key.priority === "low" ? "low" : "normal";
+    const split = await withIntakeKeyLock(boxRoot, {
+      connector: key.connector, priority, run: () => splitLocked(boxRoot, { jobPath, priority, write }),
+    });
+    if (split !== null) splits.push(split);
+  }
+  return splits;
+}
+
+const INTAKE_SUFFIX = ".intake.job.card";
+
+async function splitLocked(
+  boxRoot: string,
+  { jobPath, priority, write }: { jobPath: string; priority: "normal" | "low"; write: ChunkWriter },
+): Promise<IntakeSplit | null> {
+  // Re-read under the lock: a writer may have changed it since the scan.
+  const fields = await readIntakeJobFields(jobPath);
+  if (fields === null || fields.items.length <= INTAKE_JOB_MAX_ITEMS) return null;
+  const base = jobPath.slice(0, -INTAKE_SUFFIX.length);
+  const chunks: string[] = [];
+  for (let i = 0; i < fields.items.length; i += INTAKE_JOB_MAX_ITEMS) {
+    const items = fields.items.slice(i, i + INTAKE_JOB_MAX_ITEMS);
+    const chunkPath = `${base}-part-${String(chunks.length + 1).padStart(2, "0")}${INTAKE_SUFFIX}`;
+    chunks.push(path.relative(boxRoot, chunkPath));
+    if (await exists(chunkPath)) continue;
+    await write(chunkPath, renderFrontmatterBlock({ ...fields, items, description: countDescription(items.length, priority) }));
+  }
+  await fs.unlink(jobPath);
+  return { original: path.relative(boxRoot, jobPath), chunks };
+}
+
+async function exists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return false;
+    throw e;
+  }
 }
 
 async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | null> {

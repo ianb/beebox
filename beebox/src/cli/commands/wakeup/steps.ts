@@ -15,7 +15,7 @@ import { runPreActions } from "../../../core/preactions.js";
 import { getSystemState } from "../../../core/state.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
-import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
+import { createOrAppendIntakeJob, INTAKE_JOB_MAX_ITEMS, splitOversizedIntakeJobs } from "../../../job-cards/intake-utils.js";
 import { collectExistingJobRefs, releaseTakenItems } from "./job-refs.js";
 import { createContainsBackfillJobTemplate } from "../../../schemas/contains-backfill-job.js";
 import { readCardFrontmatter, collectRefs } from "../../../core/card-io.js";
@@ -179,6 +179,24 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
   });
 
   return staleJobs.length;
+}
+
+/**
+ * Step 4a, continued: split intake jobs over the item cap (written before it, or edited
+ * by hand) into capped jobs, one commit per split job. Runs before step 4b and
+ * the reactor, so neither sees an oversized job. Returns how many were split.
+ */
+export async function splitOversizedJobs(boxRoot: string): Promise<number> {
+  const splits = await splitOversizedIntakeJobs(boxRoot);
+  for (const { original, chunks } of splits) {
+    await stageAndCommitPaths(boxRoot, {
+      paths: [original, ...chunks],
+      message: `Split intake job ${path.basename(original)} into ${chunks.length} jobs of at most ${INTAKE_JOB_MAX_ITEMS} items`,
+      trailers: { "Triggered-By": "bbx wakeup", Phase: "intake-split" },
+    });
+    console.log(`  Split ${original} into ${chunks.length} jobs`);
+  }
+  return splits.length;
 }
 
 /**
