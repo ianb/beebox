@@ -120,6 +120,24 @@ Still open, and needs a product decision:
 - **A message with no baseline in the transcript** (sent into an empty or
   unavailable history) still goes last; there is nothing to place it after.
 
+## 2026-10-27 (bug-burndown-5): not delivered is shown; the queue drop is marked
+
+Boxholder: *"sure, show not delivered. Fine about empty chat I guess."* After
+the plan review, the boxholder kept the record on the event log rather than a
+durable ledger. Plan: [chat-not-delivered](../../beebox/docs/plans/chat-not-delivered.md).
+
+- `stop()` records `chat-user-message-undelivered` for each client message it
+  drops: queued, idle, or in a drain not yet dispatched. A drain that reached
+  the engine is not marked.
+- The chat shows a red edge, "Not delivered", and Resend and Discard. Resend
+  sends the words as a new message; Discard records
+  `chat-user-message-discarded` and the message stays gone after reload.
+- A queued send the server refuses is marked the same way on the client.
+
+Accepted limits: the mark lasts at most 24 hours (bus retention) and is lost
+on an event-schema bump; a crash, which runs no `stop()`, leaves no mark. A
+message sent into an empty chat still goes last.
+
 ## Related
 
 - [Reload loses an in-flight question (closed)](../closed/bugs/2026-08-09-reload-loses-in-flight-question.md).
