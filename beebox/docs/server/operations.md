@@ -157,8 +157,7 @@ chokepoint at [`feedback-review/run-on-server.ts`](../../../feedback-review/run-
 key auth is set up for), then immediately `su - <asUser>` before running the
 script, with the script piped via stdin so multi-line content and quotes work
 without escaping. Each box is private to its own user, so anything that reads
-or writes a box runs as `asUser: boxUser(slug)` (`bbx-<slug>`); a script that
-runs `bbx` there loads `/etc/beebox/box.env` first. `asUser` defaults to
+or writes a box runs as `asUser: boxUser(slug)` (`bbx-<slug>`). `asUser` defaults to
 `beebox`, the hub, which can read `hub.json` and no box. Only set
 `asUser: "root"` for operations that genuinely require root (systemctl,
 chown, package installs) and leave a comment saying why.

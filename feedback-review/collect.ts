@@ -32,8 +32,7 @@ const FEEDBACK_DIR = path.join("_config", "feedback");
 const RESOLVED_DIR = path.join("_config", "feedback", "resolved");
 /** The hub's routing table: every box's slug and root (`beebox/docs/server/provisioning.md`). */
 const REMOTE_HUB_CONFIG = "/home/beebox/.config/beebox/hub.json";
-/** The environment a box's own processes load (`beebox/src/hub/box-env-file.ts`). */
-const REMOTE_BOX_ENV = "/etc/beebox/box.env";
+
 
 const DIRECTORY_DOCS = new Set(["AGENTS.md", "CLAUDE.md", "MAP.md", "README.md"]);
 
@@ -209,6 +208,8 @@ function collectRemoteFeedback(sshTarget: string, errors: string[]): FeedbackFil
       sshTarget,
       asUser: user,
       script: [
+        // A box root this user cannot reach is an error, not an empty inbox.
+        `test -d ${shellQuote(box.root)} || { echo ${shellQuote(`box root ${box.root} is not a readable directory`)} >&2; exit 1; }`,
         `test -d ${shellQuote(feedbackDir)} || exit ${NO_FEEDBACK_DIR}`,
         `find ${shellQuote(feedbackDir)} -mindepth 1 -maxdepth 1 -type f -print`,
       ].join("\n"),
@@ -283,12 +284,10 @@ function resolveRemoteFile(item: FeedbackFile, remote: NonNullable<FeedbackFile[
     "_config/feedback/resolved/"
   );
 
-  // Runs as the box's own user with the box units' environment; the deployed
-  // CLI lives at this stable symlink and commits the move and rewritten
-  // referrers by path.
+  // Runs as the box's own user; the deployed CLI lives at this stable symlink
+  // and commits the move and rewritten referrers by path.
   const script = [
     "set -e",
-    `set -a; . ${REMOTE_BOX_ENV}; set +a`,
     `test ! -e ${shellQuote(destPath)} || { echo 'Resolved destination already exists' >&2; exit 1; }`,
     `cd ${shellQuote(item.boxRoot)}`,
     `BBX_CLI_PREBUILT=1 /usr/local/bin/bbx mv --commit ${shellQuote(item.relPath)} ${shellQuote(destRel)}`,

@@ -12,7 +12,7 @@ resolution: implemented
 **Closed 2026-10-27 (box-isolation-followups).** The boxholder wants the tool
 kept. `collect.ts` lists the server's boxes from `hub.json` as `beebox` and
 scans, reads and resolves each box as `bbx-<slug>` (`runOnServer`'s new
-`boxUser(slug)`), loading `/etc/beebox/box.env` before `bbx mv`. Tested
+`boxUser(slug)`). A box root its user cannot reach fails the scan. Tested
 against a fake `ssh`; not yet run against production.
 
 `feedback-review/collect.ts` finds and reads each box's `_config/feedback/`

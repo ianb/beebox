@@ -225,10 +225,13 @@ export class SocketProvider implements EndpointProvider {
     const endpoint = this.endpointOf(box);
     const deadline = Date.now() + this.readyTimeoutMs;
     while (Date.now() < deadline) {
-      // A poll saw the unit crash while this wake waited: its journal line is
-      // the answer, not a probe timeout.
+      // A poll saw the unit crash while this wake waited, before or during a
+      // probe: its journal line is the answer, not a probe timeout or a probe
+      // that reached the dying process.
       if (this.isFailing(box)) return undefined;
-      if (await this.probe(endpoint)) {
+      const answered = await this.probe(endpoint);
+      if (this.isFailing(box)) return undefined;
+      if (answered) {
         box.ready = true;
         box.state = "active";
         box.lastError = undefined;

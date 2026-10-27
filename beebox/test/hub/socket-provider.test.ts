@@ -146,3 +146,20 @@ void test("a wake in flight stops when the unit crashes, keeping the journal lin
   t.check(await waking, undefined);
   t.check(provider.unavailable("a"), "unit crashed and is waiting to restart: Error: box.json is not valid JSON");
 });
+
+// The same when the crash lands while a probe is in flight: a probe answered by
+// the dying process does not mark the box ready.
+void test("a probe in flight when the unit crashes does not mark the box ready", async (t) => {
+  const a = await makeTmpBox({ git: true });
+  t.teardown(async () => { provider.stop(); await a.cleanup(); });
+  const systemd = fakeSystemd({ a: "inactive" }, { a: "Error: box.json is not valid JSON" });
+  const probe = async (): Promise<boolean> => {
+    systemd.states["a"] = "activating/auto-restart";
+    await provider.poll();
+    return true;
+  };
+  const provider = new SocketProvider({ config: configFor({ a: a.root }, a.path("hub.json")), runCommand: systemd.run, probe, pollMs: 60_000, readyTimeoutMs: 5_000 });
+  await provider.start();
+  t.check(await provider.ensureRunning("a"), undefined);
+  t.check(provider.unavailable("a"), "unit crashed and is waiting to restart: Error: box.json is not valid JSON");
+});

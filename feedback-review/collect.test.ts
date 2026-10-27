@@ -118,7 +118,7 @@ function fakeServer(): { root: string; env: NodeJS.ProcessEnv; log: string; boxR
     "#!/bin/bash",
     "# ssh -A <target> <remote command>; the script arrives on stdin.",
     `echo "$3" >> ${JSON.stringify(log)}`,
-    `sed -e "s#/home/beebox#${root}/home#g" -e "s#/var/lib/beebox#${root}/var#g" -e "s#/etc/beebox#${root}/etc#g" -e "s#/usr/local/bin/bbx#${bbx}#g" | bash -s`,
+    `sed -e "s#/home/beebox#${root}/home#g" -e "s#/var/lib/beebox#${root}/var#g" -e "s#/usr/local/bin/bbx#${bbx}#g" | bash -s`,
   ].join("\n"), { mode: 0o755 });
   fs.mkdirSync(path.join(root, "home", ".config", "beebox"), { recursive: true });
   fs.writeFileSync(path.join(root, "home", ".config", "beebox", "hub.json"), JSON.stringify({
@@ -127,8 +127,6 @@ function fakeServer(): { root: string; env: NodeJS.ProcessEnv; log: string; boxR
       b: { path: "/var/lib/beebox/b/box", socket: "/run/beebox/b.sock" },
     },
   }));
-  fs.mkdirSync(path.join(root, "etc"));
-  fs.writeFileSync(path.join(root, "etc", "box.env"), "BBX_UNIT_HOST=\"1\"\n");
   fs.mkdirSync(path.join(root, "var", "b", "box"), { recursive: true });
   const boxRoot = path.join(root, "var", "a", "box");
   fs.mkdirSync(path.join(boxRoot, ".beebox"), { recursive: true });
@@ -179,6 +177,16 @@ test("resolves a server box's card as that box's user", () => {
   assert.ok(!fs.existsSync(card));
   assert.ok(fs.existsSync(path.join(server.boxRoot, "_config", "feedback", "resolved", "observation.doc.card")));
   assert.equal(fs.readFileSync(server.log, "utf8").trim().split("\n").at(-1), "su - bbx-a -s /bin/bash");
+});
+
+test("a box root its user cannot reach fails the scan instead of reading as an empty inbox", () => {
+  const server = fakeServer();
+  fs.writeFileSync(path.join(server.boxRoot, "_config", "feedback", "observation.doc.card"), "Observation\n");
+  fs.rmSync(path.join(server.root, "var", "b"), { recursive: true });
+  const result = runRemote(server, "--resolve-all");
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Cannot scan \/var\/lib\/beebox\/b\/box\/_config\/feedback as bbx-b .*box root \S+\/b\/box is not a readable directory/);
+  assert.ok(fs.existsSync(path.join(server.boxRoot, "_config", "feedback", "observation.doc.card")));
 });
 
 test("a hub.json slug that is not a valid box name stops the scan", () => {
