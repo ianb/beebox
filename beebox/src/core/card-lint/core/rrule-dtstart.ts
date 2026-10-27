@@ -5,7 +5,7 @@
  * an INTERVAL phase have nothing fixed to count from. The schedule still runs;
  * this is a warning so the agent writing the card adds the start.
  *
- * Schedules run in UTC, so the DTSTART is written in UTC. When the box has a
+ * An rrule is evaluated in UTC, so the DTSTART is written in UTC. When the box has a
  * timezone, the message names it: the boxholder's "9am" is converted from it.
  */
 
@@ -19,9 +19,14 @@ export async function rruleDtstartWarnings({ fields, boxRoot }: { fields: Record
   const convert = timezone === null
     ? "in UTC"
     : `in UTC, converted from this box's timezone (${timezone})`;
+  // A one-line rule takes it inline; a multi-line one (RRULE: plus EXDATE:)
+  // takes its own first line, since rrulestr reads `;DTSTART=` only on the rule.
+  const fixed = rrule.trim().includes("\n")
+    ? "a first line `DTSTART:<yyyymmdd>T<hhmmss>Z`"
+    : `\`${rrule.trim()};DTSTART=<yyyymmdd>T<hhmmss>Z\``;
   return [{
     type: "validation",
     severity: "warning",
-    message: `rrule has no DTSTART, so it runs at midnight UTC on matching days. Add the start ${convert}: \`${rrule.trim()};DTSTART=<yyyymmdd>T<hhmmss>Z\``,
+    message: `rrule has no DTSTART, so it runs at midnight UTC on matching days. Add the start ${convert}: ${fixed}`,
   }];
 }

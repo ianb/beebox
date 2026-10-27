@@ -21,12 +21,14 @@ void test("a rule without DTSTART warns; one with DTSTART, or no rrule, does not
       inline: await messages({ rrule: "FREQ=WEEKLY;BYDAY=MO;DTSTART=20261102T140000Z" }),
       ownLine: await messages({ rrule: "DTSTART:20261102T140000Z\nRRULE:FREQ=WEEKLY;BYDAY=MO" }),
       cron: await messages({ cron: "0 6 * * *" }),
+      multiLine: await messages({ rrule: "RRULE:FREQ=WEEKLY;BYDAY=MO\nEXDATE:20261102T000000Z" }),
     },
     {
       missing: ["rrule has no DTSTART, so it runs at midnight UTC on matching days. Add the start in UTC: `FREQ=WEEKLY;BYDAY=MO;DTSTART=<yyyymmdd>T<hhmmss>Z`"],
       inline: [],
       ownLine: [],
       cron: [],
+      multiLine: ["rrule has no DTSTART, so it runs at midnight UTC on matching days. Add the start in UTC: a first line `DTSTART:<yyyymmdd>T<hhmmss>Z`"],
     },
   );
 });
