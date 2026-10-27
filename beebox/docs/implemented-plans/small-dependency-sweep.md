@@ -1,6 +1,6 @@
 ---
 title: "Small dependency sweep: chalk, get-port, chokidar, cheerio, open, rollup, react-textarea-autosize"
-status: draft
+status: implemented
 workstream: dep-reduction
 issues:
   - ../../../issues/code-quality/2026-10-25-dependency-reduction-sweep.md

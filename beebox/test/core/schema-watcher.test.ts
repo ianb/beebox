@@ -3,7 +3,7 @@
 // A running server watches the box's `src/schemas` and drops its cached
 // schemas when a file changes (`core/schema-watcher.ts`). An editor's write
 // burst must cause one invalidation, after the last write, and a box with no
-// local schemas must still start (docs/plans/small-dependency-sweep.md).
+// local schemas must still start (docs/implemented-plans/small-dependency-sweep.md).
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { eventually } from "@ianbicking/tap-check/check";

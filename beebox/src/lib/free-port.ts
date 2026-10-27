@@ -1,5 +1,5 @@
 /**
- * A free TCP port for a child server to bind (docs/plans/small-dependency-sweep.md;
+ * A free TCP port for a child server to bind (docs/implemented-plans/small-dependency-sweep.md;
  * it replaces get-port). Binds port 0 on the default host, which is dual-stack,
  * so a port an IPv4 or IPv6 listener holds is never returned. The port is free
  * when returned, not reserved: a caller still races anyone else between this

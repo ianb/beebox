@@ -1,6 +1,6 @@
 // # A free port for a child server
 //
-// `freePort` replaced get-port (docs/plans/small-dependency-sweep.md). The hub
+// `freePort` replaced get-port (docs/implemented-plans/small-dependency-sweep.md). The hub
 // gives each box child a port, and the dev router asks for several at once,
 // so a port must be bindable, distinct across parallel calls, and not one an
 // IPv6 listener already holds.
