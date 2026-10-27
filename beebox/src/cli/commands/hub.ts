@@ -193,7 +193,7 @@ export const hubCommand = new Command("hub")
     process.on("SIGTERM", () => void shutdown("SIGTERM"));
     // SIGHUP is "config reload" for the crash-loop latch (see Supervisor.reloadUnhealthy) —
     // it does NOT re-read hub.json; adding/removing boxes still needs a full restart.
-    // On a unit host systemd owns the retry budget (`systemctl reset-failed`).
+    // On a unit host systemd owns the retries (deploy/systemd/beebox-box@.service).
     process.on("SIGHUP", () => { if (endpoints instanceof Supervisor) endpoints.reloadUnhealthy(); });
 
     await new Promise<void>((resolve, reject) => {

@@ -67,7 +67,7 @@ ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST)
 | Hub routing table (which boxes `bbx hub` serves, and at what slug) | `/home/beebox/.config/beebox/hub.json` |
 | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/var/lib/beebox-sched/.config/beebox/boxes.json` (the scheduler's own user) |
 | Service logs | `journalctl -u beebox-hub -n 200 --no-pager` / `journalctl -u beebox-scheduler -n 200 --no-pager`; a box's own engine: `journalctl -u beebox-box@<box> -n 200 --no-pager`; one scheduler pass: `journalctl -u beebox-pass@<box>` |
-| Box unit state | `systemctl list-units 'beebox-box@*'`; a box that will not start: `systemctl status beebox-box@<box>`, then `systemctl reset-failed beebox-box@<box>` once fixed |
+| Box unit state | `systemctl list-units 'beebox-box@*'`; a box that keeps crashing restarts itself with a delay that grows to 5 min: `systemctl status beebox-box@<box>`, then `systemctl restart beebox-box@<box>` once fixed to skip the wait |
 | Service status | `systemctl status beebox-hub beebox-scheduler --no-pager` |
 | Client debug log per box | `/var/lib/beebox/<box>/box/.beebox/client-debug.log` |
 | Procedure runs | `/var/lib/beebox/<box>/box/_bookkeeping/procedure/runs/` |
