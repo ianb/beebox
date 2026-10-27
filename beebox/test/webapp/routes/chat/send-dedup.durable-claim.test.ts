@@ -15,7 +15,7 @@
 // On an idle chat the route records the message only once the session takes
 // the turn, inside `chatSession.send()`: recording it earlier left a send the
 // session then refused as busy in history and in the dedup map
-// (`issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`). So a
+// (`issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`). So a
 // duplicate can arrive in that window, and the shared outcome answers it.
 
 import { test } from "tap";

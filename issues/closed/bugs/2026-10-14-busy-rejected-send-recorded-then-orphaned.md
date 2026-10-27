@@ -1,12 +1,15 @@
 ---
 title: "A send rejected as busy is still recorded as delivered, then shows forever as the newest chat message"
 workstream: bug-burndown-5
+resolution: implemented
 area: beebox
 labels: [chat, voice]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — a chat on a personal box, 2026-10-14
 ---
+
+**Closed 2026-10-27 (bug-burndown-5), implemented.** Defect 1 (placement) was fixed earlier on this branch. Defect 2 is done in the not-delivered commits (`23ce7c4c7`..`f70fec4a7`): the chat marks a dropped message "Not delivered" with Resend and Discard, and `stop()` records the queue it drops. Divergence: the mark lives on the event log, not a durable ledger, so it lasts 24 hours at most and does not survive an event-schema bump; a crash leaves no mark (boxholder accepted). Plan: [chat-not-delivered](../../../beebox/docs/implemented-plans/chat-not-delivered.md).
 
 Two voice sends reached one chat 14 ms apart. The second was rejected because
 the first had just started a turn. The box still recorded the second as a user
@@ -124,7 +127,7 @@ Still open, and needs a product decision:
 
 Boxholder: *"sure, show not delivered. Fine about empty chat I guess."* After
 the plan review, the boxholder kept the record on the event log rather than a
-durable ledger. Plan: [chat-not-delivered](../../beebox/docs/plans/chat-not-delivered.md).
+durable ledger. Plan: [chat-not-delivered](../../../beebox/docs/implemented-plans/chat-not-delivered.md).
 
 - `stop()` records `chat-user-message-undelivered` for each client message it
   drops: queued, idle, or in a drain not yet dispatched. A drain that reached
@@ -140,5 +143,5 @@ message sent into an empty chat still goes last.
 
 ## Related
 
-- [Reload loses an in-flight question (closed)](../closed/bugs/2026-08-09-reload-loses-in-flight-question.md).
-- [iOS stale unconfirmed-emission banner (closed)](../closed/bugs/2026-08-03-ios-stale-unconfirmed-emission-banner.md).
+- [Reload loses an in-flight question (closed)](2026-08-09-reload-loses-in-flight-question.md).
+- [iOS stale unconfirmed-emission banner (closed)](2026-08-03-ios-stale-unconfirmed-emission-banner.md).

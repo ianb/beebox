@@ -1,6 +1,6 @@
 /**
  * Resend and Discard for a message the box accepted and the agent never got
- * (`docs/plans/chat-not-delivered.md`). Both are the person's actions: the box
+ * (`docs/implemented-plans/chat-not-delivered.md`). Both are the person's actions: the box
  * never resends on its own.
  */
 

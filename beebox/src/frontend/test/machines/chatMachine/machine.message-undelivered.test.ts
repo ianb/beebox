@@ -1,6 +1,6 @@
 // # Chat machine — a send the agent never got is marked not delivered
 //
-// `docs/plans/chat-not-delivered.md`, Track 2. The box reports a send it
+// `docs/implemented-plans/chat-not-delivered.md`, Track 2. The box reports a send it
 // dropped from a stopped queue (`chat-user-message-undelivered` →
 // MESSAGE_UNDELIVERED); a tab with no copy of that send refetches the box's
 // accepted list; and a queued send the box refuses outright is marked here,

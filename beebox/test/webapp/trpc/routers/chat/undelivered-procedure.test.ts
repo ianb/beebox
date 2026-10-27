@@ -1,6 +1,6 @@
 // # chat.discardUndelivered
 //
-// `docs/plans/chat-not-delivered.md`, Track 1: the person removes a message the
+// `docs/implemented-plans/chat-not-delivered.md`, Track 1: the person removes a message the
 // box dropped before the agent got it. The procedure answers NOT_FOUND unless
 // an undelivered marker exists, so it cannot hide a delivered message.
 

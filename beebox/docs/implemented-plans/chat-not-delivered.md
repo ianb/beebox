@@ -1,9 +1,9 @@
 ---
 title: "Chat shows a message the agent never got as not delivered"
-status: draft
+status: implemented
 workstream: bug-burndown-5
 issues:
-  - ../../../issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md
+  - ../../../issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md
 ---
 # Chat shows a message the agent never got as not delivered
 
@@ -13,7 +13,7 @@ shows that message as "queued" until it ages out. This plan records the drop,
 and the chat page shows the message as not delivered, with Resend and Discard.
 
 **Issues addressed:**
-[busy-rejected-send-recorded-then-orphaned](../../../issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md)
+[busy-rejected-send-recorded-then-orphaned](../../../issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md)
 (defect 2 rendering and the dropped-queue re-encounter; placement is already
 fixed on this branch). Searched `issues/` for "undelivered", "not delivered":
 the only other hits are closed and unrelated (a reminder notification, quick

@@ -7,7 +7,7 @@
  * (`webapp/routes/chat/register.ts`). A person who removes one records
  * `chat-user-message-discarded`. Neither deletes the accepted row: the bus
  * keeps all three, and `readAcceptedMessages` reads them together
- * (`docs/plans/chat-not-delivered.md`).
+ * (`docs/implemented-plans/chat-not-delivered.md`).
  *
  * Markers are keyed by message id, which the client coins once per send.
  */

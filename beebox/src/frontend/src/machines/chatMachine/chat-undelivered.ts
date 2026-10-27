@@ -1,6 +1,6 @@
 /**
  * The chat machine's handling of a send the agent never got
- * (`docs/plans/chat-not-delivered.md`): the box dropped it from a stopped
+ * (`docs/implemented-plans/chat-not-delivered.md`): the box dropped it from a stopped
  * queue (`chat-user-message-undelivered`), or refused a queued send outright.
  * Split from `machine.ts` and `chat-actions.ts` for their line budgets.
  */

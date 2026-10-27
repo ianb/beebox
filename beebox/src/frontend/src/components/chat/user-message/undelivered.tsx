@@ -1,6 +1,6 @@
 /**
  * The face of a message the box accepted and the agent never got
- * (`docs/plans/chat-not-delivered.md`): a danger edge around the bubble, the
+ * (`docs/implemented-plans/chat-not-delivered.md`): a danger edge around the bubble, the
  * line "Not delivered" inside it, and, on the person's own message, Resend and
  * Discard. The bubble keeps its own colors, so its text keeps its contrast.
  */

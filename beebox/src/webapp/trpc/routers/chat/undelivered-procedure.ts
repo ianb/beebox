@@ -1,6 +1,6 @@
 /**
  * `chat.discardUndelivered` — the person removes a message the box accepted
- * and then dropped before the agent received it (`docs/plans/chat-not-delivered.md`).
+ * and then dropped before the agent received it (`docs/implemented-plans/chat-not-delivered.md`).
  *
  * Records a discard marker; the accepted row stays on the bus. Refused with
  * NOT_FOUND unless an undelivered marker exists for the message, so a discard

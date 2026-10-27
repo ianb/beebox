@@ -139,7 +139,7 @@ export function createUserMessageSender(
       // the last word: the awaits since then let a concurrent send take the
       // turn, and this one is then refused. Recorded before that refusal, the
       // message sat in history and the dedup map, undelivered and unretryable
-      // (issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md).
+      // (issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md).
       // Now the refusal is a 409 with nothing recorded.
       const work = await acquireBoxWork(boxRoot, { reason: "chat send" });
       const admission = await startAckedRun(chatSession, {

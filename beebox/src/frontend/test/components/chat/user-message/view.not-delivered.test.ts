@@ -1,6 +1,6 @@
 // # User message bubble: queued and not delivered
 //
-// `docs/plans/chat-not-delivered.md`, Track 3. A message the agent never got
+// `docs/implemented-plans/chat-not-delivered.md`, Track 3. A message the agent never got
 // shows a danger edge and "Not delivered" in place of the queued look; the
 // person's own copy offers Resend and Discard, another user's offers neither,
 // and a message whose images the box did not keep offers Discard only.

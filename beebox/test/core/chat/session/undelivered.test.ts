@@ -1,6 +1,6 @@
 // # Undelivered and discarded chat messages on the acceptance record
 //
-// `docs/plans/chat-not-delivered.md`, Track 1. A message the box accepted and
+// `docs/implemented-plans/chat-not-delivered.md`, Track 1. A message the box accepted and
 // then dropped carries a `chat-user-message-undelivered` marker. The acceptance
 // reader returns it marked, past the 10-minute window that retires an ordinary
 // accepted message, until the person discards it. A discard is refused unless

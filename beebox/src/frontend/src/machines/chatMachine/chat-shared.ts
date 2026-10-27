@@ -258,7 +258,7 @@ export function reconcilePending(params: {
  * plus the echoes of earlier sends), the agent has moved on without it (a send
  * refused as busy, a queue dropped by a restart). At the end it read as the
  * newest message, below turns that came later
- * (`issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
+ * (`issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
  * Such a message sits just before that later user turn. The baseline is used
  * rather than timestamps because an optimistic copy is stamped by the client's
  * clock and the transcript by the box's. With no baseline entry in the

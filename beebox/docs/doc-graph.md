@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-27T23:21:14Z
+Generated: 2026-10-27T23:29:40Z
 Total documents: 593
 
 ## Issues
@@ -172,6 +172,7 @@ Referenced by:
 - docs/implemented-plans/card-view-widgets.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/cards-as-markdown-rfc.md:8 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/chat-composer-rerender.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/chat-not-delivered.md:117 (mention) — - `AGENTS.md`, minimize invented concepts (memory "prefer primitives"): two new
 - docs/implemented-plans/chat-stream-finalize-unify.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/clerk-quick-send.md:136 (mention) — - Lint: no rule changes (root `AGENTS.md`).
 - docs/implemented-plans/clerk-webpage-capture.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -268,7 +269,6 @@ Referenced by:
 - docs/plans/asset-offbox-storage.md:365 (mention) — remote (`AGENTS.md`). Asset push belongs in the same place, so the
 - docs/plans/box-commentary-surface.md:383 (mention) — (AGENTS.md exempts "per-box config, throwaway replies, and personal memory"),
 - docs/plans/change-based-test-selection.md:338 (mention) — per-worktree `AGENTS.md` mirrors regenerate from it.
-- docs/plans/chat-not-delivered.md:117 (mention) — - `AGENTS.md`, minimize invented concepts (memory "prefer primitives"): two new
 - docs/plans/chat-photo-batch-upload.md:53 (link) — - [`beebox/AGENTS.md`](../../AGENTS.md):101 — *"Read before writing. Don't
 - docs/plans/chat-scroll-model.md:217 (mention) — harness, all scenarios green, `decideScroll` deleted, nested AGENTS.md and
 - docs/plans/chat-search.md:253 (mention) — scroll" invariant, `frontend chat AGENTS.md`). One-shot like `companion`;
@@ -1322,6 +1322,7 @@ Referenced by:
 - docs/implemented-plans/card-themes.md:55 (link) — Design decisions below follow [engineering principles](../engineering-principles.md)
 - docs/implemented-plans/chat-header-chips.md:63 (mention) — - `docs/engineering-principles.md` — principle 2 (exhaustiveness; frontend
 - docs/implemented-plans/chat-image-files.md:54 (mention) — - **`beebox/docs/engineering-principles.md` #8 (one pipeline):** every image
+- docs/implemented-plans/chat-not-delivered.md:123 (mention) — - `docs/engineering-principles.md` fail-closed: Discard is refused unless an
 - docs/implemented-plans/chat-review.md:49 (mention) — - **`docs/engineering-principles.md`** — findings trace to:
 - docs/implemented-plans/chat-session-identity.md:32 (mention) — - `docs/engineering-principles.md` #1 types are structure (`:12`) — transcript
 - docs/implemented-plans/chat-titles.md:60 (mention) — - **`docs/engineering-principles.md` #8, one way to do each thing.** The
@@ -1404,7 +1405,6 @@ Referenced by:
 - docs/plans/change-based-test-selection.md:74 (mention) — - `docs/engineering-principles.md` **#4 — "Resilient AND never silent."** The
 - docs/plans/change-based-test-selection.review.md:155 (mention) — > The real test runner is Tap plus `.taprc` node args, includes, excludes, and the doctest loader (`beebox/.taprc:7-14`)
 - docs/plans/chat-everywhere.md:45 (link) — - Principles [1, 3, 4, 8, 9, 10, 13](../engineering-principles.md): typed navigation intent; validation at the native/ne
-- docs/plans/chat-not-delivered.md:123 (mention) — - `docs/engineering-principles.md` fail-closed: Discard is refused unless an
 - docs/plans/chat-photo-batch-upload.md:46 (link) — - [`docs/engineering-principles.md`](../engineering-principles.md) — chiefly
 - docs/plans/chat-session-delete.md:60 (mention) — - **`docs/engineering-principles.md`:**
 - docs/plans/clerk-tab-arrangements.md:67 (mention) — - Engineering principle 1, **Types are structure**, applies to transfer IDs, tab UUIDs, proposal states, and apply resul
@@ -2565,6 +2565,7 @@ Referenced by:
 - docs/development/workflow.md:89 (link) — [spirit.md](../architecture/spirit.md) it serves and risks.
 - docs/implemented-plans/activity-detail.md:55 (mention) — Serves "see the gears" (`beebox/docs/architecture/spirit.md`) at the depth
 - docs/implemented-plans/box-backups.md:46 (mention) — - **Serves:** `docs/architecture/spirit.md`, “You should be able to see the gears”: a result names its snapshot and veri
+- docs/implemented-plans/chat-not-delivered.md:66 (mention) — - **Serves:** "You should be able to see the gears" (`docs/architecture/spirit.md`)
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/implemented-plans/docs-reorg.md:335 (mention) — `docs/design/` (8 topic files + README acknowledging spirit.md),
 - docs/implemented-plans/live-gap-marker.md:56 (mention) — (`docs/architecture/spirit.md:79`) by sending a known hole as unsure.
@@ -2573,7 +2574,6 @@ Referenced by:
 - docs/implemented-plans/questions-end-to-end.md:376 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
 - docs/implemented-plans/questions-later-and-figure-it-out.md:66 (mention) — rather than nagging forever" (`docs/architecture/spirit.md`).
 - docs/plans/admin-encrypted-backups.md:35 (mention) — - **Serves:** `docs/architecture/spirit.md`, “You should be able to see the gears”: the section names the snapshot, when
-- docs/plans/chat-not-delivered.md:66 (mention) — - **Serves:** "You should be able to see the gears" (`docs/architecture/spirit.md`)
 - docs/plans/ios-app-intent-capture.md:46 (mention) — - **Serves:** `architecture/spirit.md`, “The best stuff comes from the people”: “The box's job is to collect, preserve,
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
@@ -4385,6 +4385,20 @@ References:
 - → ../issues/closed/features/2026-09-16-uploaded-chat-images-have-no-file-the-agent-can-use.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 - → docs/mobile-contract.md (mention)
+
+#### docs/implemented-plans/chat-not-delivered.md
+
+Title: "Chat shows a message the agent never got as not delivered" | 332 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md:12 (link) — **Closed 2026-10-27 (bug-burndown-5), implemented.** Defect 1 (placement) was fixed earlier on this branch. Defect 2 is
+
+References:
+- → ../issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md (frontmatter)
+- → ../issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md (link)
+- → docs/architecture/spirit.md (mention)
+- → AGENTS.md (mention)
+- → docs/engineering-principles.md (mention)
 
 #### docs/implemented-plans/chat-progress-fold.md
 
@@ -8567,20 +8581,6 @@ Referenced by:
 - docs/design/interface-as-cards-background.md:305 (mention) — | Chat | husk card per session + chat view + the slot | Below. **Husks shipped 2026-07** (`docs/plans/chat-husks.md`): a
 - docs/implemented-plans/docs-reorg.md:46 (mention) — plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
 - ../issues/closed/bugs/2026-07-22-chat-history-dropdown-not-landmark-scoped.md:23 (mention) — per-boot `reconcileChatHusks` (see `docs/plans/chat-husks.md` § Phase 2b).
-
-#### docs/plans/chat-not-delivered.md
-
-Title: "Chat shows a message the agent never got as not delivered" | 332 lines | proposal | draft
-
-Referenced by:
-- ../issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md:127 (link) — durable ledger. Plan: [chat-not-delivered](../../beebox/docs/plans/chat-not-delivered.md).
-
-References:
-- → ../issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md (frontmatter)
-- → ../issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md (link)
-- → docs/architecture/spirit.md (mention)
-- → AGENTS.md (mention)
-- → docs/engineering-principles.md (mention)
 
 #### docs/plans/chat-photo-batch-upload.md
 

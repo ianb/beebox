@@ -1,7 +1,7 @@
 // # A queued message that a stop drops is recorded as undelivered
 //
-// `issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`, the
-// dropped-queue re-encounter; `docs/plans/chat-not-delivered.md`, Track 1. A
+// `issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`, the
+// dropped-queue re-encounter; `docs/implemented-plans/chat-not-delivered.md`, Track 1. A
 // send that arrives during a streaming turn is accepted (`{queued: true}`, the
 // `chat-user-message` row) and queued. `stop()` empties the queue, and before
 // this change nothing recorded that, so the chat showed the message as queued

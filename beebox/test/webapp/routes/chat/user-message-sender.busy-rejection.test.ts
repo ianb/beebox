@@ -6,7 +6,7 @@
 // then the session refused the second as busy. The agent never got it, the
 // dedup claim blocked a retry, and the chat page showed it as the newest message
 // on every load
-// (`issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
+// (`issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
 //
 // The sender now records a message when the session takes its turn. A send the
 // session refuses is answered `409` and leaves nothing behind: no

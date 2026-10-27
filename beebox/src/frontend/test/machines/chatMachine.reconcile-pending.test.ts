@@ -38,7 +38,7 @@ void test("Pending message not yet on the server → re-appended, kept pending",
 // message the transcript never gets. Once a later user turn is in the
 // transcript, the message goes right after the entries it was sent after (its
 // baseline), not at the end below turns that came later
-// (`issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
+// (`issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
 function assistantEntry(uuid: string, text: string): SessionEntry {
   return { uuid, type: "assistant", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text }] };
 }
@@ -331,7 +331,7 @@ void test("A delivered capture is announced before the agent writes it to the tr
 // "yes" was dropped by a restart (undelivered), then "yes" was sent again and
 // delivered. The transcript's one "yes" is the second send's: the dropped copy
 // keeps its "Not delivered" face, placed where it was sent, and the delivered
-// copy retires instead of looking queued (docs/plans/chat-not-delivered.md),
+// copy retires instead of looking queued (docs/implemented-plans/chat-not-delivered.md),
 // on this refresh and every later one.
 void test("A dropped send does not take a later identical send's echo", async (t) => {
   const before = userEntry("s0", "<typed>ready?</typed>");
