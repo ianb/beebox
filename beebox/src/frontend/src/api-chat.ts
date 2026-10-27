@@ -118,6 +118,17 @@ export interface SessionEntry {
    * queued turn from confirming this send too.
    */
   sentAfterEchoes?: string[];
+  /** The client's id for the send, on the box's record of an accepted message (`chat.bootstrap`'s `pending`). */
+  messageId?: string;
+  /** The box accepted this message and the agent will never receive it (a queue dropped by a restart). */
+  undelivered?: true;
+  /** The send carried images, whose bytes the box's record does not keep. */
+  hadImages?: true;
+  /**
+   * Client-only: the box refused this queued send, so it recorded nothing.
+   * Discarding it is local; there is no marker on the box to discard.
+   */
+  sendRefused?: true;
 }
 
 /** A client-created entry tracked until authoritative history echoes it. */

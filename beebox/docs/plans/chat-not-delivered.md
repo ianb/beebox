@@ -213,8 +213,8 @@ evaluated-only.
 
 ### Track 2: mark it on the client
 
-- **What:** the client learns of the marker live and on load, and stops
-  reconciling the entry.
+- **What:** the client learns of the marker live and on load, and shows
+  the entry as undelivered.
 - **Why:** without this, the bubble stays "queued" until it ages out.
 - **Direction:**
   - `SessionEntry` gains `undelivered?: true` and `messageId?: string`

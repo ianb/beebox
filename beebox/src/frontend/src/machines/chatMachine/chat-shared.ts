@@ -90,9 +90,14 @@ function normalizeForCompare(text: string): string {
  * while the initial fetch is still in flight they overlap, and appending
  * blindly would render that message twice — once from each side.
  *
- * So an accepted entry is dropped when something already pending carries the
- * same text, compared through the same normalizer reconciliation uses, and
- * again by uuid so a repeated load cannot stack copies of one bus row.
+ * So an accepted entry is dropped when something already pending is the same
+ * send: the same message id (an optimistic copy's uuid is its message id), or,
+ * for a row from a box that records no id, the same text compared through the
+ * same normalizer reconciliation uses. Text alone would pair two identical
+ * sends crosswise, and when only one of them was dropped the wrong bubble
+ * would say so. The matched copy takes the box's word on delivery
+ * (`undelivered`, `hadImages`). A repeated load cannot stack copies of one bus
+ * row, because the row's uuid is checked too.
  */
 export function mergeAcceptedIntoPending(params: {
   pendingMessages: PendingSessionEntry[];
@@ -100,9 +105,21 @@ export function mergeAcceptedIntoPending(params: {
 }): PendingSessionEntry[] {
   const { pendingMessages, accepted } = params;
   if (accepted.length === 0) return pendingMessages;
+  const merged = [...pendingMessages];
   const seenUuids = new Set(pendingMessages.map((pm) => pm.uuid));
   const seenText = pendingMessages.map((pm) => normalizeForCompare(entryText(pm))).filter((t) => t !== "");
   const fresh = accepted.filter((entry) => {
+    if (entry.messageId !== undefined) {
+      const at = merged.findIndex((pm) => (pm.messageId ?? pm.uuid) === entry.messageId);
+      const match = merged[at];
+      if (match === undefined) return !seenUuids.has(entry.uuid);
+      merged[at] = {
+        ...match,
+        ...(entry.undelivered === true ? { undelivered: true as const } : {}),
+        ...(entry.hadImages === true ? { hadImages: true as const } : {}),
+      };
+      return false;
+    }
     if (seenUuids.has(entry.uuid)) return false;
     const text = normalizeForCompare(entryText(entry));
     const at = seenText.indexOf(text);
@@ -115,7 +132,37 @@ export function mergeAcceptedIntoPending(params: {
     seenUuids.add(entry.uuid);
     return true;
   });
-  return [...pendingMessages, ...fresh];
+  return [...merged, ...fresh];
+}
+
+/** Mark the pending entry for this send undelivered, in both lists; null when none is pending. */
+export function markPendingUndelivered(params: {
+  messages: SessionEntry[];
+  pendingMessages: PendingSessionEntry[];
+  messageId: string;
+  refused?: boolean;
+}): { messages: SessionEntry[]; pendingMessages: PendingSessionEntry[] } | null {
+  const { messages, pendingMessages, messageId, refused } = params;
+  const uuids = new Set(pendingMessages.filter((pm) => (pm.messageId ?? pm.uuid) === messageId).map((pm) => pm.uuid));
+  if (uuids.size === 0) return null;
+  const mark = <T extends SessionEntry>(entry: T): T => uuids.has(entry.uuid)
+    ? { ...entry, undelivered: true, ...(refused === true ? { sendRefused: true } : {}) }
+    : entry;
+  return { messages: messages.map(mark), pendingMessages: pendingMessages.map(mark) };
+}
+
+/** Remove a discarded send's pending entry from both lists. */
+export function removePendingSend(params: {
+  messages: SessionEntry[];
+  pendingMessages: PendingSessionEntry[];
+  messageId: string;
+}): { messages: SessionEntry[]; pendingMessages: PendingSessionEntry[] } {
+  const { messages, pendingMessages, messageId } = params;
+  const uuids = new Set(pendingMessages.filter((pm) => (pm.messageId ?? pm.uuid) === messageId).map((pm) => pm.uuid));
+  return {
+    messages: messages.filter((entry) => !uuids.has(entry.uuid)),
+    pendingMessages: pendingMessages.filter((entry) => !uuids.has(entry.uuid)),
+  };
 }
 
 /**
