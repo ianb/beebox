@@ -101,7 +101,7 @@ extension QuickChatView {
 /// A box's home is confirmed once the server answers after the app last came
 /// to the foreground. The box screen refreshes an unconfirmed home when it
 /// shows and when the app comes forward, and retries a failed refresh on a
-/// backoff while it shows (docs/plans/ios-box-screen-stale-list.md).
+/// backoff while it shows (docs/implemented-plans/ios-box-screen-stale-list.md).
 @MainActor
 final class BoxScreenStore: ObservableObject {
     enum RefreshFailure: Equatable {

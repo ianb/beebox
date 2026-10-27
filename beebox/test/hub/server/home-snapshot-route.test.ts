@@ -3,7 +3,7 @@
 // A verified mobile credential asking `GET quickChat.home` of a box the
 // provider reports asleep gets the box's last answer, marked `asleep`, and the
 // box is not woken. Every other request takes the ordinary path
-// (docs/plans/ios-box-screen-stale-list.md, Track 3).
+// (docs/implemented-plans/ios-box-screen-stale-list.md, Track 3).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

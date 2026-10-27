@@ -39,7 +39,7 @@ the other failure shape on the same path, and the closed
 
 ## Fixed 2026-10-26 (worktree ios-stale-chat)
 
-Plan: `beebox/docs/plans/ios-box-screen-stale-list.md`. The box screen
+Plan: `beebox/docs/implemented-plans/ios-box-screen-stale-list.md`. The box screen
 refreshed only on a cold launch or a box switch, so a return to the app showed
 the list from before with no request made, even when the box was awake. The
 app now checks the box when it comes forward, says when it cannot reach it and

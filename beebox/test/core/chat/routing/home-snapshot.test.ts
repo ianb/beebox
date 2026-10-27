@@ -2,7 +2,7 @@
 //
 // At a clean shutdown a box under a hub leaves its `quickChat.home` answer,
 // encrypted under a key derived from its hub secret and slug; the hub answers
-// the phone from it while the box sleeps (docs/plans/ios-box-screen-stale-list.md).
+// the phone from it while the box sleeps (docs/implemented-plans/ios-box-screen-stale-list.md).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

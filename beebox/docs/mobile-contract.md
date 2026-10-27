@@ -1338,7 +1338,7 @@ See §1.3 (full request/response/errors).
   box already answered in this foreground stay, and retries a failed refresh while it shows
   (5, 10, 20, 40, then every 60 seconds). Until the box answers in the current stay, its status
   row gives the failure and the list's age, and no recent chat is styled as the one to pick up
-  (`docs/plans/ios-box-screen-stale-list.md`).
+  (`docs/implemented-plans/ios-box-screen-stale-list.md`).
 - **Asleep box:** a box under a hub leaves its `home` answer, encrypted for the hub, at a
   clean shutdown and deletes it first at startup (`src/core/chat/routing/home-snapshot.ts`).
   For a phone whose bearer token the copy lists (an unrevoked device whose pairer could open the

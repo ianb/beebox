@@ -2,7 +2,7 @@
  * The hub's answer to the phone's box screen for a sleeping box: the box's
  * own last `quickChat.home` answer, from the snapshot it left at shutdown
  * (`core/chat/routing/home-snapshot.ts`), without waking it
- * (docs/plans/ios-box-screen-stale-list.md, Track 3).
+ * (docs/implemented-plans/ios-box-screen-stale-list.md, Track 3).
  *
  * Only a verified mobile credential that is also a bearer the snapshot lists
  * (a device whose pairer could open the box when it went to sleep), only

@@ -1,6 +1,6 @@
 ---
 title: "iOS box screen: an accurate chat list while the box sleeps, and an honest one when it cannot answer"
-status: draft
+status: implemented
 workstream: ios-stale-chat
 issues:
   - ../../../issues/bugs/2026-10-26-ios-shows-stale-chat-when-box-is-asleep.md
@@ -50,7 +50,7 @@ The smallest fix: refresh on return to the foreground, and show the cached age i
 
 Estimate: about 1,000 changed lines, not a big change.
 
-- Track 1 (iOS, implemented as of this revision): about 300 source and 160 test lines.
+- Track 1 (iOS): about 300 source and 160 test lines.
 - Track 2 (box writes the snapshot): about 60 source and 60 test lines.
 - Track 3 (hub serves it): about 70 source and 100 test lines.
 - Track 4 (contract and iOS): about 50 source, 40 test, and a fixture.
@@ -231,9 +231,9 @@ None: no agent-facing concept.
 
 1. Track 1: store, repository, API changes with tests. Done.
 2. Track 1: view status row, unconfirmed style, fixtures, `ios-app/AGENTS.md` fixture list. Done.
-3. Track 2 with its tests.
-4. Track 3 with its tests.
-5. Track 4: schema, fixture, contract doc, iOS decode and asleep row.
+3. Track 2 with its tests. Done.
+4. Track 3 with its tests. Done.
+5. Track 4: schema, fixture, contract doc, iOS decode and asleep row. Done.
 6. Simulator walk against the worktree's test1 clone through a local switchable proxy (forward, drop, hang, 503, and a recorded snapshot answer), before and after; exhibit. If a lazy local hub over a throwaway box can be run without touching the shared router, one end-to-end snapshot check through it.
 
 ## Rollout shape

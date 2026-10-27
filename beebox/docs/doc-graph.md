@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-26T18:41:20Z
-Total documents: 585
+Generated: 2026-10-27T00:42:52Z
+Total documents: 586
 
 ## Issues
 
@@ -1669,7 +1669,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1904 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1926 lines | current reference
 
 Referenced by:
 - AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1683,6 +1683,7 @@ Referenced by:
 - docs/implemented-plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
 - docs/implemented-plans/file-wordless-captures.md:243 (mention) — 4. Reference docs: `beebox/docs/mobile-contract.md` ("Material without authored input is saved without inventing an agen
 - docs/implemented-plans/front-door.md:419 (mention) — contract (`docs/mobile-contract.md:993`), where an optional field is an
+- docs/implemented-plans/ios-box-screen-stale-list.md:57 (mention) — - Docs: `ios-app/AGENTS.md` fixture list, `docs/mobile-contract.md` §5.11 and the Q1 row, hub guidance; reported separat
 - docs/implemented-plans/ios-log-forwarding.md:56 (mention) — machinery); the mobile-contract sync rule (`docs/mobile-contract.md` header).
 - docs/implemented-plans/ios-per-box-device-lock.md:265 (mention) — no `docs/mobile-contract.md` change because nothing crosses the wire. Commits
 - docs/implemented-plans/ios-quick-chat-hq.md:121 (mention) — `docs/mobile-contract.md` §4.2): the engine that produced HQ text. New on
@@ -1775,6 +1776,7 @@ References:
 - → docs/implemented-plans/bulk-file-upload.md (mention)
 - → docs/implemented-plans/ios-quick-chat-hq.md (mention)
 - → docs/chat/quick-chat.md (mention)
+- → docs/implemented-plans/ios-box-screen-stale-list.md (mention)
 - → docs/plans/ios-companion-review-2026-07-17.md (mention)
 - → docs/implemented-plans/mobile-token-handshake.md (mention)
 
@@ -5628,6 +5630,19 @@ References:
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 
+#### docs/implemented-plans/ios-box-screen-stale-list.md
+
+Title: "iOS box screen: an accurate chat list while the box sleeps, and an honest one when it cannot answer" | 242 lines | shipped history | implemented
+
+Referenced by:
+- docs/mobile-contract.md:1341 (mention) — (`docs/implemented-plans/ios-box-screen-stale-list.md`).
+- ../issues/bugs/2026-10-26-ios-shows-stale-chat-when-box-is-asleep.md:42 (mention) — Plan: `beebox/docs/implemented-plans/ios-box-screen-stale-list.md`. The box screen
+
+References:
+- → ../issues/bugs/2026-10-26-ios-shows-stale-chat-when-box-is-asleep.md (frontmatter)
+- → docs/mobile-contract.md (mention)
+- → docs/plans/box-screen.md (mention)
+
 #### docs/implemented-plans/ios-diagnostic-forwarding-completion.md
 
 Title: "iOS diagnostic forwarding completion" | 222 lines | shipped history | implemented
@@ -5973,7 +5988,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1725 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1747 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -8344,6 +8359,7 @@ References:
 Title: "Box screen: a thought goes in before the box loads" | 514 lines | proposal | partial
 
 Referenced by:
+- docs/implemented-plans/ios-box-screen-stale-list.md:63 (mention) — - `beebox/docs/plans/box-screen.md:256`: *"The box screen draws at once from the outbox and a cached copy of the last `h
 - docs/plans/chat-routing.md:14 (link) — **Superseded in part by [box-screen.md](box-screen.md).** The catalog, the
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:11 (frontmatter) — design: ../../beebox/docs/plans/box-screen.md
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:90 (link) — The [box screen plan](../../beebox/docs/plans/box-screen.md) is implemented on
@@ -9051,7 +9067,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 157 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1719 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1741 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:40 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:11 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md

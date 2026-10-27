@@ -1,7 +1,7 @@
 /**
  * The box screen's `quickChat.home` answer, left for the hub when the box goes
  * to sleep, so the phone gets the box's own last list without waking it
- * (docs/plans/ios-box-screen-stale-list.md, Track 2).
+ * (docs/implemented-plans/ios-box-screen-stale-list.md, Track 2).
  *
  * `bbx serve` writes it at a clean shutdown (an idle exit or a SIGTERM) and
  * deletes it first thing at startup, so it exists only while the box sleeps.
