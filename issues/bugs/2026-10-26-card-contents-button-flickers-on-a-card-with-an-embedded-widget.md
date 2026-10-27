@@ -1,6 +1,6 @@
 ---
 title: "On a doc card with an interactive widget, the contents button keeps showing the section title and hiding it again while nobody scrolls"
-workstream: unattached
+workstream: card-remount
 area: beebox
 priority: important
 labels: [frontend, cards, stability]
