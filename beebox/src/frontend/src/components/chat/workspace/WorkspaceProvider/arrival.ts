@@ -21,7 +21,7 @@ export function arrivalPlan(input: {
   tabCount: number;
   /** The payload's `arrival` path; null when the place has no landmark or the query failed. */
   target: string | null;
-  /** The root's arrival question (`pickArrivalQuestion`, `questions/question-tab.ts`); null elsewhere, when none is pending, or when the query failed. */
+  /** The root's arrival question (`pickArrivalQuestion`, `questions/question-close.ts`); null elsewhere, when none is pending, or when the query failed. */
   question: string | null;
 }): string[] {
   if (!input.arrive || input.tabCount > 0) return [];

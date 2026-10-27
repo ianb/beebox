@@ -25,7 +25,7 @@ import { Text } from "../../ui/Text";
 import { ErrorText } from "../../ui/ErrorText";
 import { Heading } from "../../ui/Heading";
 import { QuestionMemo } from "./memo";
-import { LATER } from "../question-tab";
+import { LATER } from "../question-close";
 import type { RouterOutput } from "../../../lib/trpc/client";
 
 export type QuestionInfo = RouterOutput["status"]["questions"]["items"][number];

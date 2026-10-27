@@ -5,7 +5,10 @@ area: dev-tooling
 labels: [code-quality, schedules, lint]
 filed-by: agent
 discovered-in: dep-reduction — 2026-10-27
+resolution: implemented
 ---
+
+Closed 2026-10-27 on the dep-reduction workstream. beebox `lint:oxlint` passes `-f default`, and `schedules/supplemental-lint/lib.ts` says the parse needs that format. A non-TTY run now prints the graphical format, and `reportLines` turns it into position-free lines.
 
 `schedules/supplemental-lint/lib.ts` turns each oxlint finding into one line
 made of the rule header and the flagged source line, so a finding keeps its
