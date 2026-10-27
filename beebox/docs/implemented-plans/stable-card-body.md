@@ -1,9 +1,9 @@
 ---
 title: "A card body does not remount when only its surroundings change"
-status: active
+status: implemented
 workstream: card-remount
 issues:
-  - ../../../issues/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
+  - ../../../issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
 ---
 # A card body does not remount when only its surroundings change
 

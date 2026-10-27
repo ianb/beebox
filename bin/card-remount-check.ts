@@ -10,7 +10,7 @@
  * afterwards, or if the scroller moved without the reader scrolling.
  *
  * Usage: bin/card-remount-check [--box-dir <dir>]   (default: this worktree's test1 clone)
- * Issue: issues/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
+ * Issue: issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
  */
 
 import { execFileSync } from "node:child_process";
