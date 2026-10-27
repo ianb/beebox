@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-27T20:28:42Z
-Total documents: 590
+Generated: 2026-10-27T21:45:55Z
+Total documents: 591
 
 ## Issues
 
@@ -69,6 +69,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/scan-uploader-version-drift.md** — "The scan uploader learns when it has drifted from the box" (587 lines) · shipped history · implemented
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (382 lines) · shipped history · implemented
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
+- **docs/implemented-plans/small-dependency-sweep.md** — "Small dependency sweep: chalk, get-port, chokidar, cheerio, open, rollup, react-textarea-autosize" (291 lines) · shipped history · implemented
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
@@ -3122,7 +3123,7 @@ Title: "Calendar" | 138 lines | current reference
 
 Referenced by:
 - docs/connectors.md:35 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
-- docs/connectors/google-auth.md:103 (link) — is the [calendar pull](calendar.md#verify).
+- docs/connectors/google-auth.md:95 (link) — is the [calendar pull](calendar.md#verify).
 - docs/design/README.md:34 (link) — [`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:45 (link) — calendar, a prime early integration, is [`../connectors/calendar.md`](../connectors/calendar.md).
 - docs/implemented-plans/doc-structure-connectors.md:49 (mention) — | calendar.md "Config and state" | state in `_config/connectors/google-calendar-state.json`; tokens in `_config/connecto
@@ -3146,6 +3147,7 @@ Referenced by:
 - docs/implemented-plans/connector-sync-isolation.md:291 (mention) — 1. Update `docs/connectors/drive.md` and the Drive skill text in
 - docs/implemented-plans/doc-structure-connectors.md:61 (mention) — | `google-drive.md` | `connectors/drive.md` |
 - docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/connectors/drive.md:141-150` "Folder Mounts" section.
+- docs/implemented-plans/small-dependency-sweep.md:107 (mention) — `beebox/docs/connectors/drive.md:262`,
 - docs/user-stories/catalog/2026-06-26.md:2716 (mention) — The implementation is complete and accurate. The google-drive.ts connector's syncFolder() method (lines 260-312) fully i
 - ../research/fabric-review.md:75 (mention) — - **Connectors cover more than copying.** Gmail, Calendar and Drive copy content into cards and commit it (`beebox/docs/
 
@@ -3171,7 +3173,7 @@ References:
 
 #### docs/connectors/google-auth.md
 
-Title: "Google auth" | 153 lines | current reference
+Title: "Google auth" | 139 lines | current reference
 
 Referenced by:
 - docs/connectors.md:31 (link) — authorization for the three Google connectors: [Google auth](connectors/google-auth.md).
@@ -3180,6 +3182,7 @@ Referenced by:
 - docs/connectors/gmail.md:15 (link) — in [Google auth](google-auth.md).
 - docs/implemented-plans/doc-structure-connectors.md:58 (mention) — | `google-setup.md` | `connectors/google-auth.md` |
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
+- docs/implemented-plans/small-dependency-sweep.md:106 (mention) — `beebox/docs/connectors/google-auth.md:79-84,144`,
 - docs/server.md:25 (link) — - Google OAuth credentials: [Google setup](connectors/google-auth.md).
 - docs/server/configuration.md:193 (link) — Create the OAuth client as in [Google setup](../connectors/google-auth.md) with the
 - docs/server/health-checks.md:197 (link) — in [`google-setup.md`](../connectors/google-auth.md#token-expired--invalid_grant); design
@@ -5536,7 +5539,7 @@ References:
 Title: "Dead Google auth as a first-class health + notify condition" | 140 lines | shipped history | implemented
 
 Referenced by:
-- docs/connectors/google-auth.md:152 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
+- docs/connectors/google-auth.md:138 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - docs/server/health-checks.md:198 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - ../issues/closed/decisions/2026-07-28-nango-google-auth-broker.md:70 (mention) — (`7fbeb287`, plan in `beebox/docs/implemented-plans/google-auth-reauth-health.md`).
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/google-auth-reauth-health.md
@@ -7501,6 +7504,16 @@ Referenced by:
 References:
 - → docs/implemented-plans/slopo-codehealth-adoption.md (mention)
 - → docs/implemented-plans/rest-to-trpc-consolidation.md (mention)
+
+#### docs/implemented-plans/small-dependency-sweep.md **[ORPHAN]**
+
+Title: "Small dependency sweep: chalk, get-port, chokidar, cheerio, open, rollup, react-textarea-autosize" | 291 lines | shipped history | implemented
+
+References:
+- → ../issues/code-quality/2026-10-25-dependency-reduction-sweep.md (frontmatter)
+- → docs/connectors/google-auth.md (mention)
+- → docs/connectors/drive.md (mention)
+- → docs/server/health-checks.md (mention)
 
 #### docs/implemented-plans/stable-card-body.md
 
@@ -10210,6 +10223,7 @@ Referenced by:
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:408 (mention) — `deploy/README.md`, and `docs/server/health-checks.md`.
 - docs/implemented-plans/node-sqlite.md:184 (mention) — dated history, such as `health-checks.md` and the `health.ts` incident
+- docs/implemented-plans/small-dependency-sweep.md:108 (mention) — `beebox/docs/server/health-checks.md:195`. The web flow is
 - docs/implemented-plans/tailscale-expose-and-protect.md:408 (mention) — on the server plus a short runbook note in `docs/server/health-checks.md`'s style
 - docs/implemented-plans/top-nav-ia.md:451 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/server/health-checks.md`); Overview
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.

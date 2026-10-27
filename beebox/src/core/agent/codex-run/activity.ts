@@ -1,7 +1,6 @@
 /** Render observable activity from official Codex SDK items. */
 
 import type { CodexSdkItem } from "../../../services/codex-sdk-session/core.js";
-import { fmt } from "../../../lib/format.js";
 import { codexDisplayCommand } from "../../../services/codex-tool-activity.js";
 
 export type CodexObservedActivity =
@@ -11,7 +10,7 @@ export type CodexObservedActivity =
 export function renderCodexCommand(item: CodexSdkItem): string {
   if (item.type !== "command_execution") return "";
   const suffix = item.exit_code === undefined ? "" : ` [exit ${String(item.exit_code)}]`;
-  return `${fmt.dim("$ ")}${fmt.cmd(codexDisplayCommand(item.command))}${fmt.dim(suffix)}\n${item.aggregated_output}`;
+  return `$ ${codexDisplayCommand(item.command)}${suffix}\n${item.aggregated_output}`;
 }
 
 export function emitObservedActivity(

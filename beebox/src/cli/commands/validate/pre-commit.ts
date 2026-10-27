@@ -61,10 +61,7 @@ export interface PreCommitOutcome {
  * hook runs on every commit, so "No staged cards or markdown to validate" would
  * be noise on every single one.
  */
-export async function runPreCommitChecks(
-  boxRoot: string,
-  { colors }: { colors: boolean }
-): Promise<PreCommitOutcome> {
+export async function runPreCommitChecks(boxRoot: string): Promise<PreCommitOutcome> {
   // The reads below are independent, and most are git processes; started
   // together they overlap instead of queueing (the hook runs on every commit).
   const [ignore, stagedCards, stagedMarkdown, systemCardErrors, unlisted, shape, strays, reservedSegmentErrors, removals] = await Promise.all([
@@ -95,7 +92,7 @@ export async function runPreCommitChecks(
     // a "✓ N files checked" line, which on the commit path is one more line of
     // routine-success output on every single commit.
     if (summary.totalErrors > 0 || summary.totalWarnings > 0) {
-      const output = formatLintResults(summary, { colors });
+      const output = formatLintResults(summary);
       if (output) sections.push(output);
     }
   }
@@ -103,7 +100,7 @@ export async function runPreCommitChecks(
   if (mdFiles.length > 0) {
     const summary = await lintMarkdownFiles(mdFiles, { boxRoot });
     errorCount += summary.totalErrors;
-    const output = formatMarkdownResults(summary, { colors });
+    const output = formatMarkdownResults(summary);
     if (output) sections.push(output);
   }
 

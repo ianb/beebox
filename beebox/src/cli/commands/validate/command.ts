@@ -33,7 +33,7 @@ import { loadValidationIgnore, type ValidationIgnore } from "../../../core/valid
 import type { LoadCardContext } from "../../../core/card-io.js";
 import { checkLegacyInstructionErrors, checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors, boxSchemaFieldWarnings } from "./box-checks.js";
 import { resolveCliTargetPath } from "../../lib/cli-target-path.js";
-import { canonicalBuckets, checkCommitted, countTotalErrors, printLastUrlCheck, printTextResults, useColor } from "./report.js";
+import { canonicalBuckets, checkCommitted, countTotalErrors, printLastUrlCheck, printTextResults } from "./report.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 
 
@@ -123,7 +123,7 @@ async function runUrlCheck(
   if (options.json === true) {
     console.log(JSON.stringify(report, null, 2));
   } else {
-    const text = formatUrlReport(report, { colors: useColor() });
+    const text = formatUrlReport(report);
     console.log(text ?? `Checked ${String(report.checked)} external URL(s); none broken.`);
   }
   process.exit(report.broken.length > 0 ? 1 : 0);
@@ -136,7 +136,7 @@ async function runUrlCheck(
  */
 async function runPreCommit(): Promise<never> {
   const boxRoot = await requireBoxRoot();
-  const outcome = await runPreCommitChecks(boxRoot, { colors: useColor() });
+  const outcome = await runPreCommitChecks(boxRoot);
   if (outcome.report !== "") console.log(outcome.report);
   if (outcome.linkWarnings !== null) process.stderr.write(`${outcome.linkWarnings}\n`);
   process.exit(outcome.errorCount > 0 ? 1 : 0);

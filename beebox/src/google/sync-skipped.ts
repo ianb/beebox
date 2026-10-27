@@ -23,7 +23,7 @@ export function serviceNotAllowed(service: GoogleServiceName): SyncSkipped {
 /**
  * No Google credential this process can use. The detail is
  * `explainGoogleAuthGap`'s relay-ready account of which piece is missing —
- * "run google-auth" is right for only one of the four causes.
+ * "reconnect Google" is right for only one of the four causes.
  */
 export async function serviceNotConfigured(boxRoot: string): Promise<SyncSkipped> {
   return { reason: "not-configured", detail: await explainGoogleAuthGap(boxRoot) };

@@ -4,8 +4,9 @@
  * The frontend tests run under plain Node with no jsdom, which is why
  * `ui-scan` walks the structural {@link ScanElement} view rather than `Element`
  * (see `src/frontend/src/lib/ui-scan/types.ts`). This helper is the test-side
- * counterpart of `live-dom.ts`: cheerio — already a dependency — parses the
- * markup, and two test-only attributes supply the two things a parser cannot
+ * counterpart of `live-dom.ts`: happy-dom — the frontend's test DOM — parses
+ * the markup (as a parser only; no globals are registered), and two test-only
+ * attributes supply the two things a parser cannot
  * know, because in the real browser they come from CSS and layout:
  *
  * - `data-test-style="display:none; opacity:0"` → the element's computed style
@@ -15,16 +16,11 @@
  * Everything else is the app's real markup, copied from the components.
  */
 
-import * as cheerio from "cheerio";
-import type { CheerioAPI } from "cheerio";
+import { Element, Text, Window, type Node as ParsedNode } from "happy-dom";
 import { invariant } from "../../../../src/shared/invariant.js";
 import type { VisibleElementLookup } from "../../../../src/frontend/src/lib/ui-scan/resolve.js";
 import type { ScanElement, ScanNode, ScanRect, ScanStyle } from "../../../../src/frontend/src/lib/ui-scan/types.js";
 import { isNodeVisible, type VisibilityNode } from "../../../../src/frontend/src/lib/ui-scan/live-dom/visibility.js";
-
-/** The parsed-node union, reached through cheerio's own API so `domhandler`
- *  (a transitive dependency) is never imported by name. */
-type ParsedNode = ReturnType<CheerioAPI["root"]>[number]["children"][number];
 
 const DEFAULT_STYLE: ScanStyle = { display: "block", visibility: "visible", opacity: "1" };
 const DEFAULT_RECT: ScanRect = { left: 0, top: 0, width: 120, height: 32 };
@@ -55,16 +51,18 @@ function parseRect(value: string | undefined): ScanRect {
 }
 
 function toScanNode(node: ParsedNode): ScanNode | null {
-  if (node.type === "text") return { kind: "text", text: node.data };
-  if (node.type !== "tag") return null;
-  const attributes = node.attribs;
+  if (node instanceof Text) return { kind: "text", text: node.data };
+  if (!(node instanceof Element)) return null;
+  const element = node;
+  const attributes: Record<string, string> = {};
+  for (const name of element.getAttributeNames()) attributes[name] = element.getAttribute(name) ?? "";
   const style = parseStyle(attributes["data-test-style"]);
   const rect = parseRect(attributes["data-test-rect"]);
   return {
     kind: "element",
-    tag: node.name,
+    tag: element.localName,
     attributes,
-    children: node.children.flatMap((child) => {
+    children: Array.from(node.childNodes).flatMap((child) => {
       const scanned = toScanNode(child);
       return scanned === null ? [] : [scanned];
     }),
@@ -78,9 +76,11 @@ function toScanNode(node: ParsedNode): ScanNode | null {
  * neither a control nor a landmark, so it never appears in a scan itself.
  */
 export function fixtureRoot(html: string): ScanElement {
-  const $ = cheerio.load(`<div data-test-rect="0,0,1024,768">${html}</div>`, null, false);
-  const wrapper = $.root()[0]?.children[0];
-  invariant(wrapper !== undefined, "ui-scan fixture parsed to nothing");
+  const document = new Window().document;
+  const host = document.createElement("div");
+  host.innerHTML = `<div data-test-rect="0,0,1024,768">${html}</div>`;
+  const wrapper = host.firstChild;
+  invariant(wrapper !== null, "ui-scan fixture parsed to nothing");
   const parsed = toScanNode(wrapper);
   invariant(parsed !== null && parsed.kind === "element", "ui-scan fixture root is not an element");
   return parsed;

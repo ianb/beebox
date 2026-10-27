@@ -6,7 +6,6 @@
  * callbacks come in as props.
  */
 
-import TextareaAutosize from "react-textarea-autosize";
 import { Dropdown } from "../../ui/Dropdown";
 import { CloseButton } from "../../ui/CloseButton";
 import { MenuItem } from "../../ui/dropdown-menu-item";
@@ -99,7 +98,7 @@ function DesktopComposerRow({
   const noteTyped = useComposerCaret({ textareaRef, text: input });
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
-      <TextareaAutosize
+      <textarea
         id={includeControlIds ? "bbx-composer-input" : undefined}
         ref={textareaRef}
         autoFocus
@@ -112,8 +111,6 @@ function DesktopComposerRow({
         readOnly={isTranscribing}
         placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: false, isTranscribing })}
-        minRows={1}
-        maxRows={8}
       />
       {isTranscribing ? (
         <>

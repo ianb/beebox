@@ -49,7 +49,6 @@ export const VERB_COMMANDS = defineRegistry<CommandLoader>({
     finalize: async () => (await import("./commands/finalize.js")).finalizeCommand,
     finish: async () => (await import("./commands/finish.js")).finishCommand,
     forceWakeup: async () => (await import("./commands/force-wakeup.js")).forceWakeupCommand,
-    googleAuth: async () => (await import("./commands/google-auth.js")).googleAuthCommand,
     handle: async () => (await import("./commands/handle.js")).handleCommand,
     health: async () => (await import("./commands/health.js")).healthCommand,
     host: async () => (await import("./commands/host.js")).hostCommand,
