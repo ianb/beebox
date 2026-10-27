@@ -5,10 +5,11 @@
 // issues/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
-import { createElement as h } from "react";
+import { createElement as h, useEffect, type ComponentType } from "react";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { Markdown } from "../../../src/components/Markdown/body.js";
+import { Markdown, type MarkdownComponentOverrides } from "../../../src/components/Markdown/body.js";
+import { CARD_EMBED_COMPONENTS } from "../../../src/components/FigureEmbed.js";
 import { BoxSlugProvider } from "../../../src/lib/box-slug.js";
 import type { ViewTarget } from "../../../src/lib/view-url.js";
 
@@ -61,4 +62,40 @@ void test("text added at the end keeps the nodes before it", async (t) => {
   const before = nodes(view.container);
   await view.rerender(render(`${source}\nAn appended paragraph.\n`, onNavigate));
   t.check(replaced(before, nodes(view.container)), []);
+});
+
+// An embed (`![](…)`) is a boundary: a host re-render reconciles it in place.
+// The probe stands in for the card embed, whose real `FileView` fetches over
+// tRPC; it counts its mounts. Named `Img`, as the real embed is, so `Para`
+// drops the wrapper around a lone one.
+let probeMounts = 0;
+function Img({ src }: { src?: string }) {
+  useEffect(() => { probeMounts += 1; }, []);
+  return h("span", { "data-probe": src });
+}
+// eslint-disable-next-line no-restricted-syntax -- widen the probe to Markdoc's uniform component-map type; Markdoc calls it with the `image` tag's props only
+const PROBE_COMPONENTS: MarkdownComponentOverrides = { Img: Img as unknown as ComponentType<Record<string, unknown>> };
+
+function renderEmbed(text: string, onNavigate: (target: ViewTarget) => void) {
+  return h(BoxSlugProvider, { boxSlug: "test", children: h(Markdown, { prose: "block", onNavigate, basePath: "_content/docs/Repro.doc.card", components: PROBE_COMPONENTS, children: text }) });
+}
+
+void test("an embed mounts once across host re-renders and follows its own src", async (t) => {
+  probeMounts = 0;
+  const embed = "Intro.\n\n![Atoms](../figures/Atoms.figure.card)\n";
+  const view = await mount(renderEmbed(embed, () => {}));
+  t.teardown(() => view.unmount());
+  await view.rerender(renderEmbed(embed, () => {}));
+  await view.rerender(renderEmbed(`${embed}\nMore text.\n`, () => {}));
+  t.check(probeMounts, 1);
+  // A lone embed is not wrapped in a paragraph.
+  t.check(view.container.querySelector("[data-probe]")?.parentElement?.className, "prose prose-sm max-w-none bbx-theme-prose");
+  // A changed src reaches the embed: it re-renders with the new target.
+  await view.rerender(renderEmbed("Intro.\n\n![Bonds](../figures/Bonds.figure.card)\n", () => {}));
+  t.check(view.container.querySelector("[data-probe]")?.getAttribute("data-probe"), "../figures/Bonds.figure.card");
+});
+
+void test("the card embed keeps the name Para unwraps", async (t) => {
+  // `Para` drops its wrapper around a lone child by component name (`Img`).
+  t.check(CARD_EMBED_COMPONENTS.Img?.name, "Img");
 });

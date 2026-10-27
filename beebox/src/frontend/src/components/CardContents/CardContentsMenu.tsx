@@ -41,6 +41,12 @@ export function readOutline(front: HTMLElement): { items: OutlineItem[]; heading
   return items === null ? null : { items, headings };
 }
 
+/** Inside an embed in the card body (`FigureEmbed.tsx`), whose own DOM changes are not the card's. */
+function insideEmbed(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  return element !== null && element.closest("[data-card-embed]") !== null;
+}
+
 /** Same headings in the same order, so the menu need not change. */
 function sameOutline(a: ReturnType<typeof readOutline>, b: ReturnType<typeof readOutline>): boolean {
   if (a === null || b === null) return a === b;
@@ -86,8 +92,11 @@ export function CardContentsMenu({ id, frontRef }: { id: string; frontRef: RefOb
       return sameOutline(previous, next) ? previous : next;
     });
     read();
-    // Bodies render late (lazy renderers, edits arriving over the bus).
-    const observer = new MutationObserver(read);
+    // Bodies render late (lazy renderers, edits arriving over the bus). An
+    // embed's own DOM activity (a figure redrawing) is not the card's outline.
+    const observer = new MutationObserver((records) => {
+      if (records.some((record) => !insideEmbed(record.target))) read();
+    });
     observer.observe(front, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();
   }, [frontRef]);

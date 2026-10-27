@@ -29,20 +29,8 @@
 
 import { isValidElement, type ReactNode } from "react";
 import { chatRefLabel, chatUsageWords, externalLabel, refLabel, refToViewTarget } from "../../lib/ref-label";
-import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { friendlyDate } from "../ui/FriendlyDate";
-
-export interface SourceLinkContext {
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  /** The host doc's path, so relative / `attach/` refs resolve correctly. */
-  basePath: string | undefined;
-  /**
-   * Optional: jump to this source's verbatim span in a sibling pane (the saved
-   * page beside a commentary). Returns true if it scrolled there; false → fall
-   * back to navigating to the target doc.
-   */
-  onJumpToQuote: ((quoteText: string) => Promise<boolean>) | undefined;
-}
+import { useMarkdownRender } from "../../lib/markdown-render";
 
 /** Plain text of a React subtree — the verbatim words inside a {% quote %}. */
 function flattenText(node: ReactNode): string {
@@ -58,13 +46,12 @@ function CitationChip({
   sourceRef,
   usage,
   quoteText,
-  linkCtx,
 }: {
   sourceRef: string;
   usage: string | undefined;
   quoteText: string;
-  linkCtx: SourceLinkContext;
 }): ReactNode {
+  const linkCtx = useMarkdownRender();
   const chat = chatRefLabel(sourceRef);
   const label = chat?.label ?? refLabel(sourceRef);
   const hasUsage = usage !== undefined && usage !== "";
@@ -115,13 +102,8 @@ function CitationChip({
  * page that owns this commentary's attach scope). There's no separate doc to
  * navigate to — clicking only jumps to the verbatim span in the page body.
  */
-function ContainerChip({
-  quoteText,
-  linkCtx,
-}: {
-  quoteText: string;
-  linkCtx: SourceLinkContext;
-}): ReactNode {
+function ContainerChip({ quoteText }: { quoteText: string }): ReactNode {
+  const linkCtx = useMarkdownRender();
   const handleClick = (): void => {
     const jump = linkCtx.onJumpToQuote;
     if (jump !== undefined && quoteText !== "") void jump(quoteText);
@@ -189,48 +171,41 @@ interface SourceProps {
   children?: ReactNode;
 }
 
-export function makeSourceComponents(linkCtx: SourceLinkContext): {
-  SourceInline: (props: SourceProps) => ReactNode;
-  SourceBlock: (props: SourceProps) => ReactNode;
-} {
-  function Citation({ sourceRef, href, usage, version, retrieved, children }: SourceProps): ReactNode {
-    const quoteText = flattenText(children);
-    if (sourceRef !== undefined && sourceRef !== "") {
-      return <CitationChip sourceRef={sourceRef} usage={usage} quoteText={quoteText} linkCtx={linkCtx} />;
-    }
-    if (href !== undefined && href !== "") {
-      return <ExternalChip href={href} version={version} retrieved={retrieved} />;
-    }
-    return <ContainerChip quoteText={quoteText} linkCtx={linkCtx} />;
+function Citation({ sourceRef, href, usage, version, retrieved, children }: SourceProps): ReactNode {
+  const quoteText = flattenText(children);
+  if (sourceRef !== undefined && sourceRef !== "") {
+    return <CitationChip sourceRef={sourceRef} usage={usage} quoteText={quoteText} />;
   }
+  if (href !== undefined && href !== "") {
+    return <ExternalChip href={href} version={version} retrieved={retrieved} />;
+  }
+  return <ContainerChip quoteText={quoteText} />;
+}
 
-  function SourceInline(props: SourceProps) {
-    const refValue = props.sourceRef === undefined ? "" : props.sourceRef;
-    return (
-      <span data-source-ref={refValue} data-source-href={props.href}>
+export function SourceInline(props: SourceProps) {
+  const refValue = props.sourceRef === undefined ? "" : props.sourceRef;
+  return (
+    <span data-source-ref={refValue} data-source-href={props.href}>
+      {props.children}
+      <Citation {...props} />
+    </span>
+  );
+}
+
+export function SourceBlock(props: SourceProps) {
+  const refValue = props.sourceRef === undefined ? "" : props.sourceRef;
+  return (
+    <figure
+      className="my-3 border-l-2 border-[color:var(--bbx-rule-strong,var(--color-warm-300))] pl-4 pr-3 py-2"
+      data-source-ref={refValue}
+      data-source-href={props.href}
+    >
+      <div className="[&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
         {props.children}
+      </div>
+      <figcaption className="text-xs mt-1">
         <Citation {...props} />
-      </span>
-    );
-  }
-
-  function SourceBlock(props: SourceProps) {
-    const refValue = props.sourceRef === undefined ? "" : props.sourceRef;
-    return (
-      <figure
-        className="my-3 border-l-2 border-[color:var(--bbx-rule-strong,var(--color-warm-300))] pl-4 pr-3 py-2"
-        data-source-ref={refValue}
-        data-source-href={props.href}
-      >
-        <div className="[&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
-          {props.children}
-        </div>
-        <figcaption className="text-xs mt-1">
-          <Citation {...props} />
-        </figcaption>
-      </figure>
-    );
-  }
-
-  return { SourceInline, SourceBlock };
+      </figcaption>
+    </figure>
+  );
 }

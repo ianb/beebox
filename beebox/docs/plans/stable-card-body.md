@@ -1,6 +1,6 @@
 ---
 title: "A card body does not remount when only its surroundings change"
-status: draft
+status: active
 workstream: card-remount
 issues:
   - ../../../issues/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
@@ -175,7 +175,9 @@ No new nouns. One new internal value:
 - **Why:** today a callback or text change makes new types and remounts
   every link, citation, quote, todo, and embed (Diagnosis, table rows 4-7).
 - **Direction:**
-  - `components/Markdown/render-context.ts`: `MarkdownRenderContext =
+  - `lib/markdown-render.ts` (beside `lib/box-slug.tsx`; inside
+    `components/Markdown/` it would make that directory two units, which
+    `pnpm layout-check` rejects): `MarkdownRenderContext =
     createContext<MarkdownRender | null>(null)` and
     `useMarkdownRender(): MarkdownRender`, which throws when it is missing.
   - `makeLink`, `makeImg`, `makeQuoteComponents`, `makeSourceComponents`,
@@ -343,6 +345,20 @@ section and in the `Markdown/body.tsx` header comment.
 3. `data-card-embed`, observer filter, embed DOM tests.
    `bin/card-remount-check` passes. (Track 2)
 4. Docs: `Markdown/body.tsx` header, `components/chat/AGENTS.md`.
+
+## Implementation notes
+
+- The `Markdown` memo depends on `children`, `basePath`, `tags`, and
+  `bodyLineOffset`. `cardPath` moved to the render context: only `TodoInline`
+  and `TodoBlock` read it, and the transform does not.
+- `IncludeFile` imports the default `Link` directly, as the old factory was
+  handed the default `Link`.
+- The embed wrapper is `<div data-card-embed class="contents">`, so it adds
+  no box to the layout.
+- Verified: `body.stable-body.test.ts` and
+  `CardContentsMenu.embed-boundary.test.ts` pass, and the latter fails with
+  the observer filter removed. `bin/card-remount-check` passes on the test1
+  clone. A pick changed to N survived a pin of the card's tab.
 
 ## Rollout shape
 
