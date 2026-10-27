@@ -38,11 +38,14 @@ const watchers = new Map<string, BoxWatcher>();
 const DOT_SEGMENT = /(^|[/\\])\../;
 
 /**
- * High-churn, never-live-rendered trees that would otherwise eat a watch per
- * subdirectory (_bookkeeping/procedure/runs/ alone exhausted the server's
- * inotify limit on 2026-06-11).
+ * High-churn or bulk, never-live-rendered trees that would otherwise eat a watch
+ * per subdirectory (_bookkeeping/procedure/runs/ alone exhausted the server's
+ * inotify limit on 2026-06-11). The archive changes only when something is
+ * filed, but every filed item's `.attach` folder costs a watch: on a box with
+ * ~1,360 archive folders (2026-10-27) it alone passed MAX_WATCHED_DIRS and
+ * froze live updates for ordinary content.
  */
-const HIGH_CHURN_DIRS = [BOX_DIRS.procedureRuns, BOX_DIRS.trash];
+const HIGH_CHURN_DIRS = [BOX_DIRS.procedureRuns, BOX_DIRS.trash, path.posix.dirname(BOX_DIRS.archiveDone)];
 
 /**
  * Absolute ceiling on live directory watches for one box. A watcher is a
