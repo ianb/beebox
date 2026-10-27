@@ -14,21 +14,18 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "tsx": "^4.23.15",
-    "typescript": "npm:@typescript/typescript6@^6.0.2"
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@tapjs/core": "^4.0.0",
     "@types/node": "^24.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
-    "esbuild": "^0.20.0",
     "eslint": "^9.39.2",
     "tap": "^21.0.0"
   },
   "peerDependencies": {
     "@tapjs/core": ">=4.0.0",
-    "esbuild": ">=0.20.0",
     "tap": ">=21.0.0"
   },
   "files": [

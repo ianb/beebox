@@ -56,8 +56,7 @@
     "typescript-eslint": "^8.55.0"
   },
   "devDependencies": {
-    "@typescript/native": "npm:typescript@7.0.2",
-    "husky": "^9.1.7"
+    "@typescript/native": "npm:typescript@7.0.2"
   },
   "license": "MIT",
   "author": "Ian Bicking",
