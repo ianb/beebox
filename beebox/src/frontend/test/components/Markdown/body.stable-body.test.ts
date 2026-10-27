@@ -2,7 +2,7 @@
 // change: a new `onNavigate` from the host, or text added elsewhere in the
 // body. A remount replaces the node and resets anything inside it (an embed's
 // state, focus, a reader's place). Issue:
-// issues/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
+// issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, useEffect, type ComponentType } from "react";

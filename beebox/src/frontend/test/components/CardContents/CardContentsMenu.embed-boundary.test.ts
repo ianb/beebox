@@ -1,7 +1,7 @@
 // The contents menu follows the card's own document, not an embed's: a figure
 // in the body that redraws must not make the menu re-read the outline, and a
 // heading the figure draws is not one of the card's sections. Issue:
-// issues/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
+// issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, createRef } from "react";
