@@ -159,7 +159,10 @@ export function reconcilePending(params: {
   for (const pm of pendingMessages) {
     const pmText = normalizeForCompare(entryText(pm));
     if (pmText.length === 0) continue;
-    const baseline = new Set(pm.reconcileKnownUuids);
+    // An earlier send's echo from a previous pass is not this send's echo: a
+    // second identical "yes" must not be confirmed by the first one's turn on
+    // the next refresh. Within one pass a merged queued turn still confirms both.
+    const baseline = new Set([...pm.reconcileKnownUuids, ...pm.sentAfterEchoes ?? []]);
     const echo = serverUsers.find((server) => {
       return !baseline.has(server.uuid) && server.remainingText.includes(pmText);
     });

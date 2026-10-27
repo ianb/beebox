@@ -165,6 +165,10 @@ void test("Two client sends need two server occurrences.", async (t) => {
   // The second keeps the first one's turn as a turn it was sent after (placement only).
   const stillPending = { ...second, sentAfterEchoes: ["s-one"] };
   t.check(result, { messages: [durable, stillPending], pendingMessages: [stillPending] });
+
+  // The next refresh of the same snapshot does not let the first "yes" confirm the second.
+  t.check(reconcilePending({ serverMessages: [durable], pendingMessages: result.pendingMessages }),
+    { messages: [durable, stillPending], pendingMessages: [stillPending] });
 });
 
 // ## Chronological matching respects each send's baseline
