@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-27T20:13:27Z
+Generated: 2026-10-27T20:16:15Z
 Total documents: 589
 
 ## Issues
@@ -11586,8 +11586,8 @@ Referenced by:
 - test/user-stories/journeys/B-inventory/reports/2026-10-09.md:226 (link) — Against [2026-10-08-2](2026-10-08-2.md), the valid photo-intake walk.
 - ../dev/journeys/reports/sweep-issues.md:103 (mention) — | `2026-08-23-webp-paste-rejected-though-the-app-emits-webp` | BUG | 08-23 | 09-13 | 21 | wontfix | `dc1fa06b1` (no trai
 - ../dev/journeys/reports/sweep-walks.md:24 (mention) — | **Push through.** "Confusion gets noted and then worked around, not surrendered to … Giving up is a last resort, not a
-- ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:35 (link) — Seen in the [B2 walk](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 64): searching "
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
+- ../issues/closed/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:45 (link) — Seen in the [B2 walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 64): searchin
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:36 (link) — [walk 2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 45).
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:91 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
 - ../issues/closed/bugs/2026-10-08-capture-finalized-with-nothing-landed-says-nothing.md:40 (link) — Report: [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 13, shot 06).
@@ -11619,7 +11619,7 @@ References:
 - → docs/agent-guide.md (mention)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md (link)
-- → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (link)
+- → ../issues/closed/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (link)
 - → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
 - → ../issues/closed/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
 - → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
@@ -11730,7 +11730,7 @@ References:
 - → ../issues/closed/bugs/2026-10-08-capture-finalized-with-nothing-landed-says-nothing.md (link)
 - → ../issues/closed/bugs/2026-10-08-chat-image-alt-text-numbers-content-blocks.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md (link)
-- → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (link)
+- → ../issues/closed/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (link)
 - → ../issues/closed/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
 - → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md (link)
@@ -11768,10 +11768,10 @@ References:
 Title: "C-reconnecting, 2026-09-21" | 151 lines
 
 Referenced by:
-- ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:29 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/closed/bugs/2026-09-21-browse-name-guard-refuses-visible-search-results.md:98 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:38 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md:34 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+- ../issues/closed/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:39 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:61 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:42 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 
@@ -11824,7 +11824,6 @@ References:
 - → ../issues/features/2026-08-23-card-chrome-controls-have-no-bbx-ids.md (mention)
 - → ../issues/bugs/2026-08-08-chat-composer-attach-ux.md (mention)
 - → ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md (mention)
-- → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (mention)
 
 #### test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md
 
