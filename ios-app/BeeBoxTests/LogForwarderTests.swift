@@ -496,6 +496,27 @@ final class LogForwarderTests: XCTestCase {
         XCTAssertEqual(queued.map(\.boxID), [other.id])
     }
 
+    /// Uploading lines to a sleeping box would wake it (mobile-contract §5.11).
+    /// The hold outlives the process, because the launch flush runs before the
+    /// box screen asks; an awake answer sends the held lines.
+    func testASleepingBoxsLinesWaitUntilItAnswersAwake() async {
+        let transport = StubLogTransport()
+        let first = makeForwarder(transport: transport)
+        await first.updateBoxes([box], selectedBoxID: box.id)
+        await first.setAsleep(true, boxID: box.id)
+        await first.record(makeEntry(message: "e0"))
+
+        let relaunched = makeForwarder(transport: transport)
+        await relaunched.updateBoxes([box], selectedBoxID: box.id)
+        await relaunched.flush()
+        XCTAssertEqual(transport.requestCount, 0)
+
+        await relaunched.setAsleep(false, boxID: box.id)
+        XCTAssertEqual(transport.requestCount, 1)
+        let queued = await relaunched.queuedEntries()
+        XCTAssertEqual(queued.count, 0)
+    }
+
     // MARK: - Helpers
 
     private var storageURL: URL {

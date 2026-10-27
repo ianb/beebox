@@ -8,6 +8,10 @@ struct QuickChatAPI {
     enum APIError: LocalizedError, Equatable {
         case invalidResponse
         case server(status: Int, message: String)
+        /// The hub's 503 `box_closed`: the box is closed for maintenance.
+        case closed(reason: String?)
+        /// Any other 503: the hub has no running box to answer.
+        case notOpen
 
         var errorDescription: String? {
             switch self {
@@ -15,6 +19,12 @@ struct QuickChatAPI {
                 "The box returned an unexpected response."
             case .server(_, let message):
                 message
+            case .closed(let reason?):
+                "The box is closed for \(reason)."
+            case .closed(nil):
+                "The box is closed right now."
+            case .notOpen:
+                "The box is not open right now."
             }
         }
 
@@ -93,9 +103,12 @@ struct QuickChatAPI {
         try mutation("quickChat.retry", body: RetryBody(id: Self.wireID(id), channel: Self.channel))
     }
 
+    /// Shorter than URLSession's default 60 s, so a box whose host is asleep
+    /// reads as unreachable while the person is still looking.
     func homeRequest() -> URLRequest {
         var request = URLRequest(url: box.apiURL.appendingPathComponent("trpc/quickChat.home"))
         request.httpMethod = "GET"
+        request.timeoutInterval = 20
         BoxRequest.apply(to: &request, box: box)
         return request
     }
@@ -128,10 +141,23 @@ struct QuickChatAPI {
         guard let http = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
         }
+        if http.statusCode == 503 {
+            throw Self.unavailableError(from: data)
+        }
         guard (200..<300).contains(http.statusCode) else {
             throw APIError.server(status: http.statusCode, message: Self.errorMessage(from: data))
         }
         return data
+    }
+
+    /// The hub's 503 body (`beebox/src/hub/server/box-unavailable.ts`):
+    /// `box_closed` with a short reason, or anything else.
+    static func unavailableError(from data: Data) -> APIError {
+        guard let body = try? JSONDecoder().decode(UnavailableBody.self, from: data), body.error == "box_closed" else {
+            return .notOpen
+        }
+        let reason = body.reason.map { String($0.prefix(80)) }
+        return .closed(reason: reason?.isEmpty == false ? reason : nil)
     }
 
     /// The tRPC error envelope's message, or a fixed sentence when the body is
@@ -155,6 +181,11 @@ struct QuickChatAPI {
     private struct Envelope<Value: Decodable>: Decodable {
         struct Result: Decodable { var data: Value }
         var result: Result
+    }
+
+    private struct UnavailableBody: Decodable {
+        var error: String
+        var reason: String?
     }
 
     private struct ErrorEnvelope: Decodable {

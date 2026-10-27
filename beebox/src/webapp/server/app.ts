@@ -49,6 +49,7 @@ import { markStartupPhase } from "../../lib/startup-timing.js";
 import { listenOn, resolveListenTarget } from "./listen-target.js";
 import { listenBaseUrl, publishServeEndpoints } from "./serve-publish.js";
 import { installIdleExit } from "./idle-exit.js";
+import { removeHomeSnapshot, writeHomeSnapshotsAtShutdown } from "../../core/chat/routing/home-snapshot.js";
 import { startServeMemoryProbe } from "./memory-probe.js";
 
 
@@ -327,7 +328,8 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // fatal: a box that cannot commit should still serve reads.
   // Also publish the file the hub reads instead of this box's own
   // (`core/hub-meta.ts`): a hand edit while the box slept is out before the first request.
-  for (const box of boxes) { await sweepStaleIndexLock(box.boxRoot); refreshHubMeta(box.boxRoot); }
+  // A sleeping box's snapshot for the hub goes before anything here can change its chats.
+  for (const box of boxes) { removeHomeSnapshot(box.boxRoot); await sweepStaleIndexLock(box.boxRoot); refreshHubMeta(box.boxRoot); }
   markStartupPhase("box-checks");
 
   let server: FastifyInstance;
@@ -358,12 +360,11 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   const shutdown = async (signal: string, exitCode?: number) => {
     console.log(`\nReceived ${signal}, shutting down...`);
     clearInterval(maintenanceCheck); await (await memoryProbe).stop();
-    for (const pf of pidFiles) {
-      await fs.promises.unlink(pf).catch(() => {});
-    }
+    for (const pf of pidFiles) await fs.promises.unlink(pf).catch(() => {});
     for (const box of boxes) await removeServeEndpoint(box.boxRoot);
     server.server.closeAllConnections();
     await server.close();
+    await writeHomeSnapshotsAtShutdown(boxes, process.env.BBX_HUB_SECRET);
     // Let any git write we started finish before we go. Exiting on top of one
     // orphans it into whatever SIGKILL follows (the hub's escalation, or
     // systemd's cgroup teardown), and a git killed mid-index-write leaves a
@@ -460,9 +461,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
 
   } catch (err) {
     for (const lease of startup.values()) await lease.release();
-    for (const pf of pidFiles) {
-      await fs.promises.unlink(pf).catch(() => {});
-    }
+    for (const pf of pidFiles) await fs.promises.unlink(pf).catch(() => {});
     server.log.error(err);
     process.exit(1);
   }

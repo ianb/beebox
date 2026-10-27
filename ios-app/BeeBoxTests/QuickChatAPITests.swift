@@ -150,6 +150,34 @@ final class QuickChatAPITests: XCTestCase {
         }
     }
 
+    /// The hub's 503 bodies, from `beebox/src/hub/server/box-unavailable.ts`.
+    /// The hub's answer for a sleeping box: the box's last home plus `asleep`.
+    func testAsleepHomeFixtureDecodes() throws {
+        let data = try Data(contentsOf: MobileContractFixtures.root.appendingPathComponent("quick-chat/home-asleep.json"))
+        let home = try QuickChatAPI.decodeHome(data)
+        XCTAssertEqual(home.recentChats.map(\.label), ["Fix the bike brakes", "Garden beds"])
+        XCTAssertEqual(home.asleep?.savedAt, "2026-10-26T15:12:00.000Z")
+        XCTAssertEqual(home.asleep?.savedDate, Date(timeIntervalSince1970: 1_793_027_520))
+    }
+
+    func testA503SaysWhetherTheBoxIsClosedOrNotOpen() async {
+        let closed = Data(#"{"error":"box_closed","reason":"docs refresh","since":"2026-10-26T10:00:00Z","owner":{"pid":12,"since":"2026-10-26T10:00:00Z"},"message":"Box test1 is closed for docs refresh (pid 12)"}"#.utf8)
+        let unavailable = Data(#"{"error":"box_unavailable","message":"Box test1 is not running"}"#.utf8)
+        for (body, expected) in [(closed, QuickChatAPI.APIError.closed(reason: "docs refresh")), (unavailable, .notOpen), (Data("Service Unavailable".utf8), .notOpen)] {
+            let api = QuickChatAPI(box: makeBox(), transport: QuickChatStubTransport(statusCode: 503, data: body))
+            do {
+                _ = try await api.home()
+                XCTFail("Expected an unavailable error")
+            } catch {
+                XCTAssertEqual(error as? QuickChatAPI.APIError, expected)
+            }
+        }
+    }
+
+    func testHomeGivesUpBeforeTheDefaultTimeout() {
+        XCTAssertEqual(api().homeRequest().timeoutInterval, 20)
+    }
+
     func testSubmitDecodesTheReturnedView() async throws {
         let data = try Data(contentsOf: MobileContractFixtures.root.appendingPathComponent("quick-chat/view-sent.json"))
         let view = try await QuickChatAPI(box: makeBox(), transport: QuickChatStubTransport(data: data))

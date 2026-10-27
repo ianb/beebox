@@ -16,7 +16,7 @@ import {
 import assert from "node:assert/strict";
 import type { BoxScreenAction, BoxScreenState, QuickChatView } from "../../../src/pages/box-screen/state.js";
 import { quickChatViewSchema } from "../../../../core/chat/routing/quick-chat-record.js";
-import { quickChatHomeSchema } from "../../../../webapp/trpc/routers/quick-chat.js";
+import { quickChatHomeSchema } from "../../../../core/chat/routing/quick-chat-home.js";
 
 const fixtures = new URL("../../../../../test/mobile-contract/fixtures/quick-chat/", import.meta.url);
 const fixtureData = (name: string): unknown => JSON.parse(readFileSync(new URL(`${name}.json`, fixtures), "utf8")).result.data;
