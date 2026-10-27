@@ -17,9 +17,6 @@ importers:
 
   .:
     dependencies:
-      '@anthropic-ai/claude-agent-sdk':
-        specifier: 0.3.226
-        version: 0.3.226(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
       execa:
         specifier: ^9.6.1
         version: 9.6.1
@@ -328,13 +325,13 @@ importers:
         version: typescript@7.0.2
       '@wxt-dev/module-react':
         specifier: ^1.2.2
-        version: 1.2.2(babel-plugin-react-compiler@1.0.0)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(wxt@0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@2.7.0))(jiti@2.7.0)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1))
+        version: 1.2.2(babel-plugin-react-compiler@1.0.0)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1))(wxt@0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@1.21.7))(jiti@1.21.7)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1))
       autoprefixer:
         specifier: ^10
         version: 10.5.0(postcss@8.5.15)
       eslint:
         specifier: ^9.39.2
-        version: 9.39.4(jiti@2.7.0)
+        version: 9.39.4(jiti@1.21.7)
       lint-staged:
         specifier: ^16.2.7
         version: 16.4.0
@@ -355,7 +352,7 @@ importers:
         version: '@typescript/typescript6@6.0.2'
       wxt:
         specifier: ^0.20.26
-        version: 0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@2.7.0))(jiti@2.7.0)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1)
+        version: 0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@1.21.7))(jiti@1.21.7)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1)
 
   beebox/pub-worker:
     dependencies:
@@ -486,7 +483,7 @@ importers:
         version: 1.0.0
       eslint:
         specifier: ^9.39.2
-        version: 9.39.4(jiti@1.21.7)
+        version: 9.39.4(jiti@2.7.0)
       happy-dom:
         specifier: 20.14.6
         version: 20.14.6
@@ -748,8 +745,8 @@ importers:
   workstreams-app:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':
-        specifier: 0.3.227
-        version: 0.3.227(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
+        specifier: 0.3.310
+        version: 0.3.310(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
       '@markdoc/markdoc':
         specifier: ^0.5.7
         version: 0.5.7(@types/react@18.3.29)(react@18.3.1)
@@ -877,29 +874,9 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.226':
-    resolution: {integrity: sha512-ycyuSgN2XaSYdze1eM2wDwNmXS5wPqIh1RxiDs99ywPr9lpe3Y/Xcv0nz9JN5ahNoPIgWHIfI9Ac1EWCOdIF1Q==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.227':
-    resolution: {integrity: sha512-9iL2Q5QSLAVRgAZnXeSag6g2k9e7ZOHktYxL5LzTg05lbcYCeop4eVs7R8+qsJRIHtbGthA919hrnzkq1Ij9GQ==}
-    cpu: [arm64]
-    os: [darwin]
-
   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.310':
     resolution: {integrity: sha512-gpzMjDZdcdA2Webuqm9j76exG8yNK/755ZYWbS3MM4vVBlAsm+enEO+hhNt0Mx1VMil28RWetvTO4ZJ3YODVMA==}
     cpu: [arm64]
-    os: [darwin]
-
-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.226':
-    resolution: {integrity: sha512-sOOCkhtMDGVKs6k3fpTAkCML974qOnt8Bm9zlC6rV0HkM0aP4bdDY1RAlKLF4fHmOP2s5fPTY3myZiHGDFnuUg==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.227':
-    resolution: {integrity: sha512-GDdYKtv3wC0kLGS5wrxUf5Oq2hkKW0Nw/CyqcxHEnmeuc8istbQM6dveTK66ufPyI5Q7FiHxmo/kL7YLlFdvtw==}
-    cpu: [x64]
     os: [darwin]
 
   '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.310':
@@ -907,35 +884,11 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.226':
-    resolution: {integrity: sha512-w/hsZ2SqJTyPxLgQiK6X0c2yQJ1W3jAJW5UV0gXLq6wnzUeOnHVtG+TnJu2LuHseHovRqDQ9t8EsDgnZE0vdlA==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.227':
-    resolution: {integrity: sha512-21cruWs2wTVUYqpDn2z3SgG3fnDmf3tpH7iSw/V1NIrvaiiN+tFfeliIEvZPzLzT26048GEvK6GZcFG5k5mshQ==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [musl]
-
   '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.310':
     resolution: {integrity: sha512-viXuvvtli3pfHzTEI+oeJzk3nldkfHvj757Xh/uAeximUT9ANZIq4SMZw2cSqbhASjni0qcO6B1x4BGx2LuQpw==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
-
-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.226':
-    resolution: {integrity: sha512-YNwwC37m2vcY47mWZGqRmDh2ZSrO0Z01iTlIDsPmvKv03+7pwyaXVuq01Evtyp7see+KGeIYkMN37HhEt/h+8Q==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.227':
-    resolution: {integrity: sha512-/Ve9ZVcULeYP6kxaEBFEwCDPAJRl/9O38PgXcOSCYIott6H3IA+4nb51Ee0ljITeA52IPyEo7stbduIjiPsp+g==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
 
   '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.310':
     resolution: {integrity: sha512-l6SPgUmJknjx+6/Pb7OR353fm3xBNAWqodFoC/Cflg0yMcLfz9iwNIc3Drgos2DqfHnid+ODqDzSO93AgQ7RmA==}
@@ -943,35 +896,11 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.226':
-    resolution: {integrity: sha512-sMRt4ocfctoYLxPKpbOUd8hHhoMz2eQX8d3DN78Gl8r4uTpsDz5NCFLdkk7ikuRzXvoMPzUrFy+wFVIF0B7TLA==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.227':
-    resolution: {integrity: sha512-YfpJj8YVkzG2MhPOnc24NtErwWRpWYDNxc2Ig359kR4ZbfGKlmonKvkXceUQaeFXSh1LNUZAjsm2Y04XdBaUbQ==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
   '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.310':
     resolution: {integrity: sha512-/qFgN5LcofB8PayxBXoa+xDxkYPPQeo/eCyN0DsyyeI67ifH/l49pz9J+sH0+ctDe9und0vMCJPzng70bx2K+Q==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
-
-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.226':
-    resolution: {integrity: sha512-gPoHNeko9E+bmKVPRiAcCAOyBBrVcIH/WdjmyaGVoTP2bKibTs978A42rMNtAnuPBcAGAiImQimUU7w1TXESFw==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.227':
-    resolution: {integrity: sha512-eBSNIOauM5+crbIH/f8G1vgGMIMHVwh+NDH6esCRKdbRVvcnE4+urdVFSaKz0G7Ji8c6WGKLQYqrdrAVdPyODw==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
 
   '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.310':
     resolution: {integrity: sha512-jx7awHPoofXuE6cRRQSzLUFyW6aUXbYD9AtnNIDUHmmPPrgJ9nSnqjPaqcNhOdaZH7onUUujEAq26N2tx29fYg==}
@@ -979,51 +908,15 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.226':
-    resolution: {integrity: sha512-qkzWTR3Ns8PimC5rx4+cwfuyHlCRocGIAcdWDUgpnI70qH5GlqX9R0VfM7wGOCs/C+fJ04Hg0GfAkMv4xriZwA==}
-    cpu: [arm64]
-    os: [win32]
-
-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.227':
-    resolution: {integrity: sha512-4vkR0Hn1TI6ypomZcpMTk7h8Wtk1iY59XDtpyk5bk7eMNxuNtlm8a4DX7OS00sn4/I3cUoDOhRpTVA4p7j5oxA==}
-    cpu: [arm64]
-    os: [win32]
-
   '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.310':
     resolution: {integrity: sha512-tRmDMhZpoWAIrZxFBTh6vyZB8W5gldU5/Rfo+cyq/OvBKTxxbim+/0tIa9QlJQncoVLXVN9eySYeeB9KMjio7w==}
     cpu: [arm64]
-    os: [win32]
-
-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.226':
-    resolution: {integrity: sha512-uxVbLwGSX6lvO5Tazv0gZu8WSg1o14DQsqGSY+5pDNUk28KmNbFIQAjky9KeDzk9lnf63/aQPPsaq6UAikWjqA==}
-    cpu: [x64]
-    os: [win32]
-
-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.227':
-    resolution: {integrity: sha512-iCEk00U8o8Y+0fsSCFbFGWGRokrfxo9kCwzBuKPjzvQEux06g7ps/O+Y0q9Nw/4iPCTXgUbekiSNcqg9CWaN9A==}
-    cpu: [x64]
     os: [win32]
 
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.310':
     resolution: {integrity: sha512-zvrIApxPccTJc6gCOtw5hj27QjWhhTi3z5x5iMmf9f0LZAKR+9mrgENVeFL7PP7zRGdYVhhX2SahbzxN83L/eA==}
     cpu: [x64]
     os: [win32]
-
-  '@anthropic-ai/claude-agent-sdk@0.3.226':
-    resolution: {integrity: sha512-RvaZCZSKGjNIN/bDrQbyq/XkjVaUAPThxFrwFz2jdl6DvGnUtsGlt7hmPsaGC6BDudbA8yvkZFSqaJveK3WhfQ==}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      '@anthropic-ai/sdk': '>=0.93.0'
-      '@modelcontextprotocol/sdk': ^1.29.0
-      zod: ^4.0.0
-
-  '@anthropic-ai/claude-agent-sdk@0.3.227':
-    resolution: {integrity: sha512-jNw9vBjaqHwuLy93d02PSBmounWjzEyO2RKA7/PR+5ooewIH7ceYo40yxaW2rJnGvXvjpLiuk7ZXM6/TFHQ+qQ==}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      '@anthropic-ai/sdk': '>=0.93.0'
-      '@modelcontextprotocol/sdk': ^1.29.0
-      zod: ^4.0.0
 
   '@anthropic-ai/claude-agent-sdk@0.3.310':
     resolution: {integrity: sha512-fo+sr+9Ks73P001f6XKRQlyzfIBAJMgXArLUkH5Tu98NikRDZeGtFQVj23d5/hj2ijpFgzffrr4fHywY9qUkoQ==}
@@ -9280,107 +9173,29 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.226':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.227':
-    optional: true
-
   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.310':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.226':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.227':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.310':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.226':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.227':
-    optional: true
-
   '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.310':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.226':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.227':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.310':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.226':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.227':
-    optional: true
-
   '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.310':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.226':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.227':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.310':
     optional: true
 
-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.226':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.227':
-    optional: true
-
   '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.310':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.226':
-    optional: true
-
-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.227':
     optional: true
 
   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.310':
     optional: true
-
-  '@anthropic-ai/claude-agent-sdk@0.3.226(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
-    dependencies:
-      '@anthropic-ai/sdk': 0.93.0(zod@4.4.3)
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
-      zod: 4.4.3
-    optionalDependencies:
-      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.226
-      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.226
-      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.226
-      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.226
-      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.226
-      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.226
-      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.226
-      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.226
-
-  '@anthropic-ai/claude-agent-sdk@0.3.227(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
-    dependencies:
-      '@anthropic-ai/sdk': 0.93.0(zod@4.4.3)
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
-      zod: 4.4.3
-    optionalDependencies:
-      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.3.227
-      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.3.227
-      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.3.227
-      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.3.227
-      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.3.227
-      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.3.227
-      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.3.227
-      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.3.227
 
   '@anthropic-ai/claude-agent-sdk@0.3.310(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
     dependencies:
@@ -12527,10 +12342,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitejs/plugin-react@6.0.2(babel-plugin-react-compiler@1.0.0)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
+  '@vitejs/plugin-react@6.0.2(babel-plugin-react-compiler@1.0.0)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+      vite: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1)
     optionalDependencies:
       babel-plugin-react-compiler: 1.0.0
 
@@ -12621,11 +12436,11 @@ snapshots:
       '@types/filesystem': 0.0.36
       '@types/har-format': 1.2.16
 
-  '@wxt-dev/module-react@1.2.2(babel-plugin-react-compiler@1.0.0)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(wxt@0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@2.7.0))(jiti@2.7.0)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1))':
+  '@wxt-dev/module-react@1.2.2(babel-plugin-react-compiler@1.0.0)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1))(wxt@0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@1.21.7))(jiti@1.21.7)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
-      '@vitejs/plugin-react': 6.0.2(babel-plugin-react-compiler@1.0.0)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-      vite: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-      wxt: 0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@2.7.0))(jiti@2.7.0)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1)
+      '@vitejs/plugin-react': 6.0.2(babel-plugin-react-compiler@1.0.0)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1))
+      vite: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1)
+      wxt: 0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@1.21.7))(jiti@1.21.7)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1)
     transitivePeerDependencies:
       - '@rolldown/plugin-babel'
       - babel-plugin-react-compiler
@@ -18264,13 +18079,13 @@ snapshots:
       core-util-is: 1.0.2
       extsprintf: 1.4.1
 
-  vite-node@6.0.0(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1):
+  vite-node@6.0.0(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1):
     dependencies:
       cac: 7.0.0
       es-module-lexer: 2.1.0
       obug: 2.1.2
       pathe: 2.0.3
-      vite: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+      vite: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1)
     transitivePeerDependencies:
       - '@types/node'
       - '@vitejs/devtools'
@@ -18306,7 +18121,7 @@ snapshots:
       lightningcss: 1.32.0
     optional: true
 
-  vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1):
+  vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.7
@@ -18317,7 +18132,7 @@ snapshots:
       '@types/node': 25.9.1
       esbuild: 0.27.7
       fsevents: 2.3.3
-      jiti: 2.7.0
+      jiti: 1.21.7
       tsx: 4.23.15
       yaml: 2.9.1
 
@@ -18549,7 +18364,7 @@ snapshots:
       is-wsl: 3.1.1
       powershell-utils: 0.1.0
 
-  wxt@0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@2.7.0))(jiti@2.7.0)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1):
+  wxt@0.20.26(@types/node@25.9.1)(eslint@9.39.4(jiti@1.21.7))(jiti@1.21.7)(oxc-parser@0.153.0)(rolldown@1.0.3)(rollup@4.60.4)(tsx@4.23.15)(yaml@2.9.1):
     dependencies:
       '@1natsu/wait-element': 4.2.0
       '@aklinker1/rollup-plugin-visualizer': 5.12.0(rollup@4.60.4)
@@ -18590,11 +18405,11 @@ snapshots:
       scule: 1.3.0
       tinyglobby: 0.2.16
       unimport: 6.3.0(oxc-parser@0.153.0)(rolldown@1.0.3)
-      vite: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-      vite-node: 6.0.0(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+      vite: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1)
+      vite-node: 6.0.0(@types/node@25.9.1)(esbuild@0.27.7)(jiti@1.21.7)(tsx@4.23.15)(yaml@2.9.1)
       web-ext-run: 0.2.4
     optionalDependencies:
-      eslint: 9.39.4(jiti@2.7.0)
+      eslint: 9.39.4(jiti@1.21.7)
     transitivePeerDependencies:
       - '@types/node'
       - '@vitejs/devtools'
