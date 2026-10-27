@@ -74,7 +74,12 @@ then `skipped: present` on every channel, and a `dot` still badges.
 - **Questions.** The question sweep sends a `dot`; a question with
   `urgency: time-bound` sends `quiet`. The aging nudge is `quiet` by design: a
   question unanswered for a week gets one quiet push before it expires, the one
-  exception to "a question is a dot unless time-bound".
+  exception to "a question is a dot unless time-bound". Both run in `bbx
+  finalize`, a tooling child without the keys, so they send through the box
+  server as `bbx notify` does (`routedSender`, `src/cli/lib/notify-route.ts`).
+  A send that threw, `failed`, or was skipped `unconfigured` is not latched and
+  is sent again at the next finalize while the question is pending; one skipped
+  `no-audience` everywhere is latched (`notificationSent`).
 - **Capture failure.** A capture that fails for good sends `quiet` to its chat
   when nobody is present.
 - **Health** never notifies on its own: failing syncs, expired auth, and

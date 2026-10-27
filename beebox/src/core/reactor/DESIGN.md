@@ -55,7 +55,7 @@ All pending jobs are described in a single prompt and processed by one agent ses
 
 `runReactor` accepts a `connectorFilter` option. When set, jobs whose `connector:` frontmatter field does not match are skipped — left in `_bookkeeping/jobs/` for a later run that does match them. This is how `bbx wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `connector: gmail` jobs, even if calendar or other jobs are also pending.
 
-Jobs with no `connector` (question follow-ups, contains backfill, full-wakeup and scan intake) match no filter, so they only run when the reactor is invoked with no filter (a full `bbx wakeup`, or `bbx reactor` directly).
+Jobs with no `connector` (question follow-ups, contains backfill, full-wakeup and scan intake) match no filter, so they only run when the reactor is invoked with no filter (a full `bbx wakeup`, or `bbx reactor` directly). Every scheduled wakeup is scoped, so the scheduler pass's job check starts the full wakeup: when an unscoped normal-priority job is committed and due and no wakeup is running, it starts one with `--max-cycles 3` (`src/core/schedule/job-check/core.ts`; [scheduler](../../../docs/scheduler.md#the-job-check)). Low-priority unscoped jobs ride along with any full wakeup.
 
 ## Prompt Construction
 

@@ -160,9 +160,10 @@ same `bbx finalize` call site as the pending-question notification sweep
 `bbx finalize`'s existing per-wakeup cadence.
 
 - **Nudge at 7 days pending** (default: `DEFAULT_NUDGE_AFTER_MS`). One
-  re-notification through `notifyBoxholder`, latched (`.beebox/
-  notified-questions.json`, the `nudged` map) so it fires exactly once per
-  question.
+  re-notification, sent through the box server from `bbx finalize`, latched
+  (`.beebox/notified-questions.json`, the `nudged` map) once it was sent, so
+  it fires once per question; a nudge that did not go out is tried again at
+  the next finalize ([notifications](notifications.md#sources)).
 - **Expire at 30 days pending** (default: `DEFAULT_EXPIRE_AFTER_MS`). Sets
   `expired-at`, commits with trailer `Expired-By:
   question-aging`, drops the question from the active list/header
