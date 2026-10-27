@@ -1,6 +1,6 @@
 ---
 title: "writing practice: assembling the user's own words into a finished form"
-workstream: unknown
+workstream: composition-editor
 needs: [design]
 area: beebox
 filed-by: agent
