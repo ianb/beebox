@@ -153,12 +153,15 @@ restart, not just a config edit. To *add* a box, run `deploy/add-box.sh` rather 
 Ad-hoc shell as above is fine, but **scripts** (anything in this repo that
 shells out to the server programmatically) should go through the single
 chokepoint at [`feedback-review/run-on-server.ts`](../../../feedback-review/run-on-server.ts).
-`runOnServer({ script, asUser, host })` SSHes in as `root` (the entry point
-key auth is set up for), then immediately `su - beebox` before running the
+`runOnServer({ script, asUser, sshTarget })` SSHes in as `root` (the entry point
+key auth is set up for), then immediately `su - <asUser>` before running the
 script, with the script piped via stdin so multi-line content and quotes work
-without escaping. `asUser` defaults to `beebox`; only set `asUser: "root"`
-for operations that genuinely require root (systemctl, chown, package
-installs) and leave a comment saying why.
+without escaping. Each box is private to its own user, so anything that reads
+or writes a box runs as `asUser: boxUser(slug)` (`bbx-<slug>`); a script that
+runs `bbx` there loads `/etc/beebox/box.env` first. `asUser` defaults to
+`beebox`, the hub, which can read `hub.json` and no box. Only set
+`asUser: "root"` for operations that genuinely require root (systemctl,
+chown, package installs) and leave a comment saying why.
 
 Why this matters — historical bug: an earlier feedback-resolver script SSHed
 as root and ran `git commit` directly. That created objects under the box's

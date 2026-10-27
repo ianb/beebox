@@ -8,6 +8,11 @@
  *   pnpm dlx tsx collect.ts --resolve-all      # mark all collected feedback resolved
  *   pnpm dlx tsx collect.ts --boxes ~/src/boxes # scan a different local directory
  *   pnpm dlx tsx collect.ts --no-remote        # skip remote server
+ *   pnpm dlx tsx collect.ts --ssh-target root@host  # a server other than the deploy target
+ *
+ * On the server each box is private to its own user (`bbx-<slug>`), so the
+ * collector lists the boxes from the hub's `hub.json` as `beebox`, then scans,
+ * reads and resolves each box's feedback as that box's user.
  */
 
 import * as fs from "node:fs";
@@ -18,14 +23,17 @@ import { fileURLToPath } from "node:url";
 
 import { deployTarget } from "../bin/deploy-target.js";
 
-import { runOnServer } from "./run-on-server.js";
+import { boxUser, runOnServer, type BoxUser } from "./run-on-server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const BOX_MARKER = ".beebox";
 const FEEDBACK_DIR = path.join("_config", "feedback");
 const RESOLVED_DIR = path.join("_config", "feedback", "resolved");
-const REMOTE_BOXES_DIR = "/home/beebox/boxes";
+/** The hub's routing table: every box's slug and root (`beebox/docs/server/provisioning.md`). */
+const REMOTE_HUB_CONFIG = "/home/beebox/.config/beebox/hub.json";
+/** The environment a box's own processes load (`beebox/src/hub/box-env-file.ts`). */
+const REMOTE_BOX_ENV = "/etc/beebox/box.env";
 
 const DIRECTORY_DOCS = new Set(["AGENTS.md", "CLAUDE.md", "MAP.md", "README.md"]);
 
@@ -50,12 +58,14 @@ function parseArgs(): {
   resolve: string | null;
   resolveAll: boolean;
   noRemote: boolean;
+  sshTarget: string | null;
 } {
   const args = process.argv.slice(2);
   let boxesDir = path.join(os.homedir(), "src", "boxes");
   let resolve: string | null = null;
   let resolveAll = false;
   let noRemote = false;
+  let sshTarget: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--boxes" && args[i + 1]) {
@@ -66,10 +76,12 @@ function parseArgs(): {
       resolveAll = true;
     } else if (args[i] === "--no-remote") {
       noRemote = true;
+    } else if (args[i] === "--ssh-target" && args[i + 1]) {
+      sshTarget = args[++i]!;
     }
   }
 
-  return { boxesDir, resolve, resolveAll, noRemote };
+  return { boxesDir, resolve, resolveAll, noRemote, sshTarget };
 }
 
 function findLocalBoxes(boxesDir: string): string[] {
@@ -93,7 +105,7 @@ interface FeedbackFile {
   filePath: string;
   relPath: string;
   content: string;
-  remoteSshTarget?: string;
+  remote?: { sshTarget: string; user: BoxUser };
 }
 
 function collectLocalFeedback(boxes: string[], errors: string[], requireDirectory: boolean): FeedbackFile[] {
@@ -146,57 +158,93 @@ function collectLocalFeedback(boxes: string[], errors: string[], requireDirector
   return items;
 }
 
-function collectRemoteFeedback(sshTarget: string, errors: string[]): FeedbackFile[] {
-  const find = runOnServer({
-    sshTarget,
-    script: [
-      "set -e",
-      `dirs=$(find ${shellQuote(REMOTE_BOXES_DIR)} -mindepth 3 -maxdepth 3 -type d -path '*/_config/feedback' -print)`,
-      `if [ -z "$dirs" ]; then echo 'No remote _config/feedback/ directories found; check the feedback path.' >&2; exit 1; fi`,
-      `find ${shellQuote(REMOTE_BOXES_DIR)} -mindepth 4 -maxdepth 4 -type f -path '*/_config/feedback/*' -print`,
-    ].join("\n"),
-  });
-  if (find.exitCode !== 0) {
-    errors.push(`Cannot scan ${sshTarget}: ${find.stderr.trim() || `exit ${find.exitCode}`}`);
+interface RemoteBox {
+  slug: string;
+  root: string;
+}
+
+/** The boxes in the server's `hub.json`, read as the hub user. */
+function listRemoteBoxes(sshTarget: string, errors: string[]): RemoteBox[] {
+  const read = runOnServer({ sshTarget, script: `cat ${shellQuote(REMOTE_HUB_CONFIG)}` });
+  if (read.exitCode !== 0) {
+    errors.push(`Cannot read ${REMOTE_HUB_CONFIG} on ${sshTarget}: ${read.stderr.trim() || `exit ${read.exitCode}`}`);
     return [];
   }
+  let config: unknown;
+  try {
+    config = JSON.parse(read.stdout);
+  } catch (err) {
+    errors.push(`Cannot parse ${REMOTE_HUB_CONFIG} on ${sshTarget}: ${String(err)}`);
+    return [];
+  }
+  const boxes = typeof config === "object" && config !== null && "boxes" in config ? config.boxes : undefined;
+  if (typeof boxes !== "object" || boxes === null) {
+    errors.push(`${REMOTE_HUB_CONFIG} on ${sshTarget} has no boxes object`);
+    return [];
+  }
+  const found: RemoteBox[] = [];
+  for (const [slug, entry] of Object.entries(boxes)) {
+    const root: unknown = typeof entry === "object" && entry !== null && "path" in entry ? entry.path : undefined;
+    if (typeof root !== "string" || !root.startsWith("/")) {
+      errors.push(`${REMOTE_HUB_CONFIG} on ${sshTarget}: box ${JSON.stringify(slug)} has no absolute path`);
+      continue;
+    }
+    found.push({ slug, root });
+  }
+  return found.sort((a, b) => a.slug.localeCompare(b.slug));
+}
 
-  const files = find.stdout.trim().split("\n").filter(Boolean);
+/** Exit status of the scan script when the box has no feedback directory. */
+const NO_FEEDBACK_DIR = 3;
+
+function collectRemoteFeedback(sshTarget: string, errors: string[]): FeedbackFile[] {
+  const boxes = listRemoteBoxes(sshTarget, errors);
   const items: FeedbackFile[] = [];
+  let feedbackDirsFound = 0;
 
-  for (const filePath of files.sort()) {
-    const file = path.basename(filePath);
-    if (!isCandidate(file)) continue;
-    if (!isFeedbackFilename(file)) {
-      errors.push(`Unrecognized remote feedback file: ${filePath}`);
-      continue;
-    }
-    // Path format: /home/beebox/boxes/<boxname>/_config/feedback/<file>
-    const boxName = filePath.split("/")[4];
-    if (!boxName) {
-      errors.push(`Unexpected remote feedback path: ${filePath}`);
-      continue;
-    }
-    const boxRoot = `${REMOTE_BOXES_DIR}/${boxName}`;
-    const relPath = filePath.slice(boxRoot.length + 1);
-
-    const read = runOnServer({
+  for (const box of boxes) {
+    const user = boxUser(box.slug);
+    const feedbackDir = `${box.root}/${FEEDBACK_DIR}`;
+    const find = runOnServer({
       sshTarget,
-      script: `cat ${shellQuote(filePath)}`,
+      asUser: user,
+      script: [
+        `test -d ${shellQuote(feedbackDir)} || exit ${NO_FEEDBACK_DIR}`,
+        `find ${shellQuote(feedbackDir)} -mindepth 1 -maxdepth 1 -type f -print`,
+      ].join("\n"),
     });
-    if (read.exitCode !== 0) {
-      errors.push(`Cannot read ${filePath}: ${read.stderr.trim() || `exit ${read.exitCode}`}`);
+    if (find.exitCode === NO_FEEDBACK_DIR) continue;
+    if (find.exitCode !== 0) {
+      errors.push(`Cannot scan ${feedbackDir} as ${user} on ${sshTarget}: ${find.stderr.trim() || `exit ${find.exitCode}`}`);
       continue;
     }
+    feedbackDirsFound++;
 
-    items.push({
-      boxRoot,
-      boxName: `remote:${boxName}`,
-      filePath,
-      relPath,
-      content: read.stdout,
-      remoteSshTarget: sshTarget,
-    });
+    for (const filePath of find.stdout.trim().split("\n").filter(Boolean).sort()) {
+      const file = path.basename(filePath);
+      if (!isCandidate(file)) continue;
+      if (!isFeedbackFilename(file)) {
+        errors.push(`Unrecognized remote feedback file: ${filePath}`);
+        continue;
+      }
+      const read = runOnServer({ sshTarget, asUser: user, script: `cat ${shellQuote(filePath)}` });
+      if (read.exitCode !== 0) {
+        errors.push(`Cannot read ${filePath}: ${read.stderr.trim() || `exit ${read.exitCode}`}`);
+        continue;
+      }
+      items.push({
+        boxRoot: box.root,
+        boxName: `remote:${box.slug}`,
+        filePath,
+        relPath: `${FEEDBACK_DIR}/${file}`,
+        content: read.stdout,
+        remote: { sshTarget, user },
+      });
+    }
+  }
+
+  if (boxes.length > 0 && feedbackDirsFound === 0) {
+    errors.push(`No _config/feedback/ directories found in ${boxes.length} remote box(es); check the feedback path.`);
   }
 
   return items;
@@ -225,7 +273,7 @@ function resolveLocalFile(item: FeedbackFile): boolean {
   }
 }
 
-function resolveRemoteFile(item: FeedbackFile): boolean {
+function resolveRemoteFile(item: FeedbackFile, remote: NonNullable<FeedbackFile["remote"]>): boolean {
   const destPath = item.filePath.replace(
     "/_config/feedback/",
     "/_config/feedback/resolved/"
@@ -235,16 +283,18 @@ function resolveRemoteFile(item: FeedbackFile): boolean {
     "_config/feedback/resolved/"
   );
 
-  // runOnServer drops to the `beebox` user; the deployed CLI lives at this
-  // stable symlink and commits the move and rewritten referrers by path.
+  // Runs as the box's own user with the box units' environment; the deployed
+  // CLI lives at this stable symlink and commits the move and rewritten
+  // referrers by path.
   const script = [
     "set -e",
+    `set -a; . ${REMOTE_BOX_ENV}; set +a`,
     `test ! -e ${shellQuote(destPath)} || { echo 'Resolved destination already exists' >&2; exit 1; }`,
     `cd ${shellQuote(item.boxRoot)}`,
     `BBX_CLI_PREBUILT=1 /usr/local/bin/bbx mv --commit ${shellQuote(item.relPath)} ${shellQuote(destRel)}`,
   ].join("\n");
 
-  const r = runOnServer({ sshTarget: item.remoteSshTarget!, script });
+  const r = runOnServer({ sshTarget: remote.sshTarget, asUser: remote.user, script });
   if (r.exitCode !== 0) {
     console.error(`Remote bbx mv failed resolving ${item.filePath}: ${r.stderr.trim() || `exit ${r.exitCode}`}. The box may contain partial changes; inspect it before retrying.`);
     return false;
@@ -254,8 +304,8 @@ function resolveRemoteFile(item: FeedbackFile): boolean {
 }
 
 function resolveFile(item: FeedbackFile): boolean {
-  if (item.remoteSshTarget) {
-    return resolveRemoteFile(item);
+  if (item.remote) {
+    return resolveRemoteFile(item, item.remote);
   }
   return resolveLocalFile(item);
 }
@@ -279,7 +329,7 @@ function printFeedback(items: FeedbackFile[]): void {
 }
 
 async function main(): Promise<void> {
-  const { boxesDir, resolve, resolveAll, noRemote } = parseArgs();
+  const { boxesDir, resolve, resolveAll, noRemote, sshTarget } = parseArgs();
 
   const localBoxes = findLocalBoxes(boxesDir);
   const errors: string[] = [];
@@ -289,7 +339,7 @@ async function main(): Promise<void> {
   const items: FeedbackFile[] = collectLocalFeedback(localBoxes, errors, noRemote);
 
   if (!noRemote) {
-    const remoteSshTarget = getRemoteSshTarget();
+    const remoteSshTarget = sshTarget ?? getRemoteSshTarget();
     if (remoteSshTarget) {
       items.push(...collectRemoteFeedback(remoteSshTarget, errors));
     } else {
