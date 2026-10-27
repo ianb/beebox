@@ -1,6 +1,6 @@
 ---
 title: "A sweep of the repo's dependencies, to remove the ones we do not need"
-workstream: unattached
+workstream: dep-reduction
 area: beebox
 labels: [dependencies, code-quality]
 filed-by: agent
@@ -39,3 +39,9 @@ keeps the remaining set current; fewer dependencies make that schedule
 cheaper. The [what-can-we-remove sweep](2026-09-14-what-can-we-remove-sweep.md)
 and the [functional duplication sweep](2026-10-22-functional-duplication-sweep.md)
 are neighbors for code.
+
+## Inventory
+
+The per-dependency inventory (2026-10-27) is in
+[dev/dependency-inventory-2026-10.md](../../dev/dependency-inventory-2026-10.md).
+No removal has been made yet; each one waits on the boxholder's review.
