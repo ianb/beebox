@@ -4,8 +4,8 @@
 // `BBX_GOOGLE_TOKENS_FILE` out of `/etc/beebox/box.env`, so the hub's own file
 // never reaches a box. The token then belongs beside the box user's secret
 // store, `~/.config/beebox/google-tokens.json` (`src/google/token-store.ts`),
-// outside the box tree the agent works in. The OAuth callback saves with no box
-// root, so before this rule a box had nowhere to write a fresh grant.
+// outside the box tree the agent works in. Before this rule the OAuth callback,
+// which saved with no box root, had nowhere to write a fresh grant.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -36,9 +36,14 @@ void test("a unit-host box saves and reads its Google token in its own home", as
   await writeFile(legacySecretPath(box.root), JSON.stringify({ refreshToken: "old-refresh" }));
   await t.check(loadGoogleTokens(box.root), { refreshToken: "old-refresh" });
 
-  // The OAuth callback's save (no box root) lands in the home file, which then wins.
-  await saveGoogleTokens({ refreshToken: "new-refresh" });
+  // A refresh carries only an access token. Its first write to the home file
+  // starts from the in-tree record, so the home file, which wins from then on,
+  // still holds the refresh token.
+  await saveGoogleTokens({ accessToken: "fresh-access" }, { boxRoot: box.root });
   const homeFile = path.join(home, ".config", "beebox", "google-tokens.json");
-  t.check(JSON.parse(await readFile(homeFile, "utf-8")), { refreshToken: "new-refresh", authCheckedAt: isoDate() });
-  await t.check(loadGoogleTokens(box.root), { refreshToken: "new-refresh", authCheckedAt: isoDate() });
+  t.check(JSON.parse(await readFile(homeFile, "utf-8")), { refreshToken: "old-refresh", accessToken: "fresh-access", authCheckedAt: isoDate() });
+
+  // A new grant from the OAuth callback lands in the home file too.
+  await saveGoogleTokens({ refreshToken: "new-refresh" }, { boxRoot: box.root });
+  await t.check(loadGoogleTokens(box.root), { refreshToken: "new-refresh", accessToken: "fresh-access", authCheckedAt: isoDate() });
 });

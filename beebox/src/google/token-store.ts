@@ -102,6 +102,17 @@ export function centralTokenPath(): string | null {
 }
 
 /**
+ * The record a first write to the central file starts from: the box's in-tree
+ * file, so a refresh that carries only an access token does not create a
+ * central record without the refresh token the box still holds in its tree.
+ */
+function seedPathFor(targetPath: string, boxRoot: string | undefined): string | undefined {
+  if (boxRoot === undefined) return undefined;
+  const legacy = legacySecretPath(boxRoot);
+  return legacy === targetPath ? undefined : legacy;
+}
+
+/**
  * Resolve the file a token write lands in — the centralized path when
  * configured, else the per-box legacy file. Null when neither is available.
  */
@@ -157,13 +168,13 @@ export async function loadGoogleTokens(boxRoot?: string): Promise<GoogleTokens |
  * degrade to "no tokens" because it only ever reads; a *writer* that degrades
  * the same way destroys the credential it failed to read.
  */
-async function readTokensForUpdate(targetPath: string): Promise<GoogleTokens> {
+async function readTokensForUpdate(targetPath: string, seedPath: string | undefined): Promise<GoogleTokens> {
   let content: string;
   try {
     content = await fs.readFile(targetPath, "utf-8");
   } catch (e) {
-    if (errnoCode(e) === "ENOENT") return {};
-    throw new GoogleTokenStoreCorruptError(targetPath, { cause: e });
+    if (errnoCode(e) !== "ENOENT") throw new GoogleTokenStoreCorruptError(targetPath, { cause: e });
+    return seedPath === undefined ? {} : readTokensForUpdate(seedPath, undefined);
   }
   try {
     return JSON.parse(content);
@@ -184,9 +195,10 @@ async function readTokensForUpdate(targetPath: string): Promise<GoogleTokens> {
  * callback, and a lost update there would leave a stale "reconnect" nag.
  */
 async function updateGoogleTokens(
-  targetPath: string,
+  file: { targetPath: string; seedPath: string | undefined },
   update: (existing: GoogleTokens) => GoogleTokens,
 ): Promise<void> {
+  const { targetPath, seedPath } = file;
   const lockPath = `${targetPath}.lock`;
   // Request-scoped: a short critical section whose callers fail fast (~5 s
   // retry budget), so a crashed holder must clear in seconds, not minutes.
@@ -202,7 +214,7 @@ async function updateGoogleTokens(
         timeoutError: () => new GoogleTokenLockError(lockPath),
       },
       async () => {
-        const existing = await readTokensForUpdate(targetPath);
+        const existing = await readTokensForUpdate(targetPath, seedPath);
         await writeFileAtomic(targetPath, {
           content: JSON.stringify(update(existing), null, 2),
           mode: 0o600,
@@ -232,7 +244,7 @@ export async function saveGoogleTokens(
   }
 
   const provesGrantWorks = !!(updates.accessToken || updates.refreshToken);
-  await updateGoogleTokens(targetPath, (existing) => {
+  await updateGoogleTokens({ targetPath, seedPath: seedPathFor(targetPath, boxRoot) }, (existing) => {
     const merged = { ...existing, ...updates };
     if (provesGrantWorks) {
       delete merged.needsReauthSince;
@@ -258,7 +270,7 @@ export async function markGoogleAuthDead(opts: {
     throw new NoTokenStoragePathError();
   }
   const nowIso = getBoxTimeISO(opts.boxRoot);
-  await updateGoogleTokens(targetPath, (existing) => ({
+  await updateGoogleTokens({ targetPath, seedPath: seedPathFor(targetPath, opts.boxRoot) }, (existing) => ({
     ...existing,
     needsReauthSince: existing.needsReauthSince ?? nowIso,
     reauthReason: opts.reason,

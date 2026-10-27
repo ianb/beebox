@@ -7,6 +7,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import { centralTokenPath } from "../../../../../google/token-store.js";
 import { getBoxDir } from "../../../../../lib/paths/core.js";
 import type { HealthCheck } from "../router.js";
 
@@ -29,14 +30,24 @@ export async function legacySecretFilesCheck(boxRoot: string): Promise<HealthChe
     entries = [];
   }
   const stray = entries.filter((name) => name.endsWith(".secret.json")).toSorted();
+  // Google's OAuth tokens never go in the store (the box rewrites them), so
+  // that file moves to the token path outside the tree instead of being deleted.
+  const keys = stray.filter((name) => name !== "google.secret.json");
+  const parts: string[] = [];
+  if (keys.length > 0) {
+    parts.push(`Legacy secret file${keys.length === 1 ? "" : "s"} — migrate to the machine store and delete: ` +
+      keys.map((name) => `_config/connectors/${name}`).join(", "));
+  }
+  if (keys.length !== stray.length) {
+    const central = centralTokenPath();
+    parts.push(central === null
+      ? "Google token in the box tree (_config/connectors/google.secret.json) — it is this box's live grant; set BBX_GOOGLE_TOKENS_FILE to move it out of the tree, and do not delete it"
+      : `Google token in the box tree — move _config/connectors/google.secret.json to ${central} (as the box's user), do not delete it`);
+  }
   return {
     name: "legacy-secret-files",
     ok: stray.length === 0,
-    message:
-      stray.length === 0
-        ? "No legacy secret files in the box tree"
-        : `Legacy secret file${stray.length === 1 ? "" : "s"} — migrate to the machine store and delete: ` +
-          stray.map((name) => `_config/connectors/${name}`).join(", "),
+    message: stray.length === 0 ? "No legacy secret files in the box tree" : parts.join(". "),
     severity: "warning",
   };
 }

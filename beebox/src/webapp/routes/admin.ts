@@ -99,9 +99,9 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       if (tokens.refresh_token) updates.refreshToken = tokens.refresh_token;
       if (tokens.access_token) updates.accessToken = tokens.access_token;
       if (tokens.expiry_date) updates.tokenExpiry = new Date(tokens.expiry_date).toISOString();
-      // Save to centralized token storage (not per-box)
-      await saveGoogleTokens(updates);
-      console.log("[google-oauth] Saved tokens (centralized), redirecting to:", `${returnUrl}?google=connected`);
+      // The box root only seeds a first central write from the in-tree file.
+      await saveGoogleTokens(updates, { boxRoot: box.boxRoot });
+      console.log("[google-oauth] Saved tokens, redirecting to:", `${returnUrl}?google=connected`);
       return reply.redirect(`${returnUrl}?google=connected`);
     } catch (err) {
       console.log("[google-oauth] Token exchange failed:", errorMessage(err));

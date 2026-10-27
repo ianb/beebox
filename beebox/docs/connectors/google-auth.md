@@ -71,7 +71,7 @@ Go to **APIs & Services → Credentials**:
 1. Go to any box's **Admin** page
 2. In the **Google Services** section, click **Connect Google Account**
 3. You'll be redirected to Google for authorization
-4. After approving, you'll be redirected back — the token is now available to all boxes
+4. After approving, you'll be redirected back. With `BBX_GOOGLE_TOKENS_FILE`, every box that shares that file now has the token; on a unit host (the server), only the box you connected from has it, so connect each box that needs Google
 
 ### CLI
 
