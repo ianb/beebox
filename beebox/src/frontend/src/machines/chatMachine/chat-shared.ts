@@ -209,7 +209,7 @@ export function reconcilePending(params: {
     // An earlier send's echo from a previous pass is not this send's echo: a
     // second identical "yes" must not be confirmed by the first one's turn on
     // the next refresh. Within one pass a merged queued turn still confirms both.
-    const baseline = new Set([...pm.reconcileKnownUuids, ...pm.sentAfterEchoes ?? []]);
+    const baseline = new Set([...pm.reconcileKnownUuids, ...pm.sentAfterEchoes ?? [], ...pm.claimedEchoes ?? []]);
     const echo = serverUsers.find((server) => {
       return !baseline.has(server.uuid) && server.remainingText.includes(pmText);
     });
@@ -219,6 +219,12 @@ export function reconcilePending(params: {
   };
   for (const pm of pendingMessages) if (pm.undelivered !== true) claimEcho(pm);
   for (const pm of pendingMessages) if (pm.undelivered === true) claimEcho(pm);
+  // The next pass must not hand an undelivered send the turn a delivered send
+  // retired against here: only the undelivered one would still be pending.
+  const claimed = pendingMessages.flatMap((pm) => {
+    const echo = echoOf.get(pm);
+    return pm.undelivered !== true && echo !== undefined ? [echo] : [];
+  });
 
   // Transcript turns that echo an earlier send: a later unreconciled message
   // was sent after them even when its baseline predates their writing. They
@@ -234,7 +240,9 @@ export function reconcilePending(params: {
       continue;
     }
     const earlier = (pm.sentAfterEchoes ?? []).filter((uuid) => !echoesSoFar.includes(uuid));
-    stillPending.push(echoesSoFar.length === 0 ? pm : { ...pm, sentAfterEchoes: [...earlier, ...echoesSoFar] });
+    const placed = echoesSoFar.length === 0 ? pm : { ...pm, sentAfterEchoes: [...earlier, ...echoesSoFar] };
+    const blocked = pm.undelivered === true ? claimed.filter((uuid) => !(pm.claimedEchoes ?? []).includes(uuid)) : [];
+    stillPending.push(blocked.length === 0 ? placed : { ...placed, claimedEchoes: [...placed.claimedEchoes ?? [], ...blocked] });
   }
 
   return {

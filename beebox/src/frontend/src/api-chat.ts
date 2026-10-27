@@ -118,6 +118,12 @@ export interface SessionEntry {
    * queued turn from confirming this send too.
    */
   sentAfterEchoes?: string[];
+  /**
+   * Client-only, on an undelivered entry: transcript turns a later send not
+   * marked undelivered already retired against. Matching only; placement
+   * never reads it, so the bubble stays where it was sent.
+   */
+  claimedEchoes?: string[];
   /** The client's id for the send, on the box's record of an accepted message (`chat.bootstrap`'s `pending`). */
   messageId?: string;
   /** The box accepted this message and the agent will never receive it (a queue dropped by a restart). */

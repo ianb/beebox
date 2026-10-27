@@ -299,7 +299,8 @@ export class ChatSession extends EventEmitter {
    */
   private drainQueue(): void {
     drainSessionQueue({ queue: this.messageQueue, paused: this.maintenancePaused,
-      send: async (input, queued) => { this.draining = queued; try { return await this.send(input, { independent: true, onAdmitted: () => { assertDrainHeld(queued); } }); } finally { this.draining = null; } },
+      // Checked at admission (no run started for a taken drain) and again at dispatch, after the awaits between; once dispatched, a stop no longer marks them.
+      send: async (input, queued) => { this.draining = queued; try { return await this.send(input, { independent: true, onAdmitted: () => { assertDrainHeld(queued); }, onDispatch: () => { assertDrainHeld(queued); this.draining = null; } }); } finally { this.draining = null; } },
       // A queued drain often has no "error" listener, and an unheard "error" throws (see start-refusal.ts); the drain has already logged it.
       onError: (error) => { if (this.listenerCount("error") > 0) this.emit("error", error); } });
   }
@@ -311,18 +312,19 @@ export class ChatSession extends EventEmitter {
    * Accepts either a plain string (back-compat) or a ChatSendInput object
    * carrying the text plus any image attachments referenced by `[imageN]`
    * tokens in the text. `onAdmitted` runs synchronously once this send holds the turn; a throw abandons it.
+   * `onDispatch` runs synchronously just before the content goes to the run, with no await between; a throw abandons it too.
    */
-  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void; onRefused?: (reason: string) => void }): Promise<boolean> {
+  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void; onDispatch?: () => void; onRefused?: (reason: string) => void }): Promise<boolean> {
     const opening = (async () => {
       const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent === true ? { inherited: null } : {}) });
-      try { return await work.run(() => this.sendAdmitted(message, { onAdmitted: options?.onAdmitted, onRefused: options?.onRefused })); }
+      try { return await work.run(() => this.sendAdmitted(message, options ?? {})); }
       finally { await work.release(); }
     })();
     this.opening.add(opening);
     try { return await opening; } finally { this.opening.delete(opening); }
   }
 
-  private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onRefused }: { onAdmitted: (() => void) | undefined; onRefused: ((reason: string) => void) | undefined }): Promise<boolean> {
+  private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onDispatch, onRefused }: NonNullable<Parameters<ChatSession["send"]>[1]>): Promise<boolean> {
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
     // A run that cannot start, or a live one whose provider setup is gone, is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
     const live = this.liveRun() !== null;
@@ -356,7 +358,7 @@ export class ChatSession extends EventEmitter {
     }
 
     // ready → streaming.
-    this.transition({ phase: "streaming", run });
+    onDispatch?.(); this.transition({ phase: "streaming", run });
     this.turnText = "";
     try {
       run.send(content, { clientComposed: rawInput.clientComposed === true });

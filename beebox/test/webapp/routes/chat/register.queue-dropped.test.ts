@@ -118,3 +118,50 @@ void test("a drain whose inputs a stop took neither delivers nor requeues them",
     engineGotOat: false,
   });
 });
+
+// ## A stop during the drain's run start: not delivered, and marked
+//
+// Between admission and dispatch the drain awaits the turn's composition and
+// the run start. A stop there takes the inputs; the run still comes up, and
+// the drain must check again at dispatch rather than send what was marked.
+void test("a stop while the drain's run is starting keeps the message from the engine", async (t) => {
+  const { backend, session, send, has, undelivered } = await setup(t);
+  await send("first message", "m1");
+  await eventually(() => has("first message"), { label: "first delivered", timeoutMs: 120_000 });
+  await send("add oat milk", "m-oat");
+  const realStart = backend.start.bind(backend);
+  let restarted = false;
+  backend.start = (opts) => { restarted = true; session.stop(); return realStart(opts); };
+  // The run ends without a result, so its close handler drains the queue into a fresh run.
+  session.restart();
+  await eventually(() => restarted, { label: "drain reached the run start", timeoutMs: 60_000 });
+  await session.whenStarted();
+  t.check({ undelivered: undelivered(), engineGotOat: has("add oat milk"), runs: backend.runs.length }, {
+    undelivered: [{ messageId: "m-oat" }],
+    engineGotOat: false,
+    runs: 2, // the fresh run did start; only the send was withheld
+  });
+});
+
+// ## A stop just after the drain's dispatch: delivered, and not marked
+//
+// Once the content is on the run, the engine has the message. A stop before
+// the drain's send settles (it still releases its box work) must not call it
+// undelivered.
+void test("a stop right after the drain dispatched does not mark the message", async (t) => {
+  const { backend, session, send, has, undelivered } = await setup(t);
+  await send("first message", "m1");
+  await eventually(() => has("first message"), { label: "first delivered", timeoutMs: 120_000 });
+  await send("add oat milk", "m-oat");
+  const realStart = backend.start.bind(backend);
+  backend.start = (opts) => {
+    const run = realStart(opts);
+    const realSend = run.send.bind(run);
+    run.send = (content, options) => { realSend(content, options); session.stop(); };
+    return run;
+  };
+  session.restart();
+  await eventually(() => has("add oat milk"), { label: "drain delivered", timeoutMs: 60_000 });
+  await session.whenStarted();
+  t.check({ undelivered: undelivered(), running: session.isRunning() }, { undelivered: [], running: false });
+});
