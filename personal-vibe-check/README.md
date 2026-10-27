@@ -178,7 +178,7 @@ See `conventions.md` for the full template with examples.
 
 The package includes these as dependencies (you don't install them):
 
-- `eslint`, `typescript-eslint` (parser and `@typescript-eslint/*` rules)
+- `typescript-eslint` (parser and `@typescript-eslint/*` rules), and the TypeScript 6 it loads
 - `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-security`
 - `eslint-plugin-default`, `eslint-plugin-error` — no default parameters; custom error classes
 - [`eslint-plugin-unicorn`](https://github.com/sindresorhus/eslint-plugin-unicorn) — misc best practices (modern APIs, array methods, filename conventions, etc.)
@@ -186,9 +186,8 @@ The package includes these as dependencies (you don't install them):
 
 Your project installs separately (as devDependencies):
 
-- `eslint@^9`, `prettier`, `oxlint`, `knip` — CLI tools invoked by npm scripts (ESLint pinned to v9; v10 has breaking plugin incompatibilities)
+- `eslint@^9`, `prettier`, `oxlint`, `knip` — CLI tools invoked by npm scripts. ESLint is the preset's peer dependency (`^9.39.2`), so the project's copy is the one it runs in; v10 has breaking plugin incompatibilities
 - `husky`, `lint-staged` — pre-commit hook infrastructure
-- `typescript` — peer dependency (>= 5)
 
 ## Linking for Local Development
 

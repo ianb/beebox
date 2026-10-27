@@ -19,7 +19,7 @@
     "@types/node": "^24.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
     "@ianbicking/tap-check": "workspace:*",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.25.12",
     "eslint": "^9.39.2",
     "tap": "^21.0.0",
     "tsx": "^4.23.15",
