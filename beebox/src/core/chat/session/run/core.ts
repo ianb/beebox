@@ -26,7 +26,7 @@ import {
 import { createTurnDurabilityGate } from "./transcript-sync.js";
 import { recordTurnMarkerForSession } from "../../turn-marker.js";
 import {
-  captureAssignedSessionId, drainSessionQueue, deleteSessionFile,
+  assertDrainHeld, captureAssignedSessionId, drainSessionQueue, deleteSessionFile,
   loadCurrentModel, loadSessionId, saveCurrentModel,
 } from "../state.js";
 import { pumpSessionRun } from "./consume.js";
@@ -58,7 +58,7 @@ export class ChatSession extends EventEmitter {
   private turnText = "";
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
-  // `draining`: non-null while a queued drain's send is in flight, holding its inputs (out of the queue, not yet delivered; `stop()` empties it)
+  // `draining`: non-null while a queued drain's send is in flight, holding its inputs (out of the queue, not yet delivered; `stop()` empties it in place)
   private messageQueue: ChatSendInput[] = []; private preparingTurn = false; private draining: ChatSendInput[] | null = null;
   private readonly opening = new Set<Promise<unknown>>(); // sends opening a turn; see `whenStarted`
   private maintenancePaused = false;
@@ -299,7 +299,7 @@ export class ChatSession extends EventEmitter {
    */
   private drainQueue(): void {
     drainSessionQueue({ queue: this.messageQueue, paused: this.maintenancePaused,
-      send: async (input, queued) => { this.draining = queued; try { return await this.send(input, { independent: true }); } finally { this.draining = null; } },
+      send: async (input, queued) => { this.draining = queued; try { return await this.send(input, { independent: true, onAdmitted: () => { assertDrainHeld(queued); } }); } finally { this.draining = null; } },
       // A queued drain often has no "error" listener, and an unheard "error" throws (see start-refusal.ts); the drain has already logged it.
       onError: (error) => { if (this.listenerCount("error") > 0) this.emit("error", error); } });
   }
@@ -453,7 +453,7 @@ export class ChatSession extends EventEmitter {
    * in-flight drain may still deliver; the client reconciles that case.
    */
   stop(): void {
-    const dropped = [...(this.draining ?? []), ...this.messageQueue]; this.messageQueue = []; if (this.draining !== null) this.draining = [];
+    const dropped = [...(this.draining?.splice(0) ?? []), ...this.messageQueue]; this.messageQueue = []; // the splice empties the drain's own list
     const run = this.liveRun();
     if (run !== null && (this.state.phase === "ready" || this.state.phase === "streaming")) {
       log("stop", "Stopping run");

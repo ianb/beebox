@@ -325,3 +325,18 @@ void test("A delivered capture is announced before the agent writes it to the tr
   t.check(again, { messages: [...shown, injected], pendingMessages: [injected] });
   t.check(already, { messages: [...shown, written], pendingMessages: [] });
 });
+
+// ## A dropped send does not take a later identical send's echo
+//
+// "yes" was dropped by a restart (undelivered), then "yes" was sent again and
+// delivered. The transcript's one "yes" is the second send's: the dropped copy
+// keeps its "Not delivered" face, placed where it was sent, and the delivered
+// copy retires instead of looking queued (docs/plans/chat-not-delivered.md).
+void test("A dropped send does not take a later identical send's echo", async (t) => {
+  const before = userEntry("s0", "<typed>ready?</typed>");
+  const dropped: PendingSessionEntry = { ...pendingEntry("m-dropped", "<typed>yes</typed>"), undelivered: true, reconcileKnownUuids: ["s0"] };
+  const delivered: PendingSessionEntry = { ...pendingEntry("m-delivered", "<typed>yes</typed>"), reconcileKnownUuids: ["s0"] };
+  const echo = userEntry("s-yes", "<typed>yes</typed>");
+  const result = reconcilePending({ serverMessages: [before, echo], pendingMessages: [dropped, delivered] });
+  t.check(result, { messages: [before, dropped, echo], pendingMessages: [dropped] });
+});

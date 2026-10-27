@@ -86,3 +86,35 @@ void test("a stop while a drain's send is in flight marks the drained inputs onc
     engineGotOat: false,
   });
 });
+
+// ## A drain whose inputs a stop took neither delivers nor requeues them
+//
+// The live-cap eviction (`registry/cap.ts`) stops a session and keeps it. Once
+// `stop()` has marked a drain's inputs undelivered, that drain must not deliver
+// them, now or on a later turn: the chat already offers to resend them.
+void test("a drain whose inputs a stop took neither delivers nor requeues them", async (t) => {
+  const { backend, session, send, has, undelivered } = await setup(t);
+  await send("first message", "m1");
+  await eventually(() => has("first message"), { label: "first delivered", timeoutMs: 120_000 });
+  await send("add oat milk", "m-oat");
+  // The turn result starts the drain synchronously after "done"; this microtask
+  // runs before the drain's send gets past its first await, so the stop lands
+  // while the send is in flight.
+  session.once("done", () => { queueMicrotask(() => { session.stop(); }); });
+  const first = backend.lastRun();
+  if (first === null) throw new Error("no run");
+  first.emitResult();
+  await eventually(() => !session.isRunning() && !session.isBusy(), { label: "stopped run closed", timeoutMs: 60_000 });
+  await session.whenStarted();
+
+  // The next turn's result drains the queue: only what was queued since.
+  await send("next message", "m-next");
+  await eventually(() => has("next message"), { label: "next delivered", timeoutMs: 60_000 });
+  backend.lastRun()?.emitResult();
+  await send("last message", "m-last");
+  await eventually(() => has("last message"), { label: "last delivered", timeoutMs: 60_000 });
+  t.check({ undelivered: undelivered(), engineGotOat: has("add oat milk") }, {
+    undelivered: [{ messageId: "m-oat" }],
+    engineGotOat: false,
+  });
+});

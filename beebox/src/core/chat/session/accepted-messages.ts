@@ -36,6 +36,7 @@
 import type { EventBus } from "../../event-bus/core.js";
 import { attachmentsBlockStart } from "../../../shared/composer-tokens.js";
 import type { SessionEntry } from "../../../cli/lib/session-entry.js";
+import type { SessionContentBlock } from "../../../cli/lib/session-content.js";
 import { userIdentity } from "../../../cli/lib/session-entry.js";
 import { readDropMarks } from "./undelivered.js";
 
@@ -138,6 +139,24 @@ function baselineFor(history: HistoryMarker[], at: number): string[] {
 }
 
 /**
+ * Who sent an accepted message, as the transcript entry will say.
+ *
+ * Normally the text's own attribution. The sender leaves a slash command
+ * unattributed, since any prefix stops the CLI parsing it
+ * (`webapp/routes/chat/user-message-sender.ts`), so when the text names nobody
+ * the row's sender stands in; otherwise another person's command would show
+ * as the viewer's own.
+ */
+function entryIdentity(
+  content: SessionContentBlock[],
+  rowUser: { email: string; name: string } | null,
+): { user: string | undefined; userEmail: string | undefined } {
+  const user = userIdentity(content, "user");
+  if (user === undefined && rowUser !== null) return { user: rowUser.name, userEmail: rowUser.email };
+  return { user, userEmail: userIdentity(content, "user-email") };
+}
+
+/**
  * Recent user messages this box accepted for `sessionId`, oldest-first.
  *
  * `now` is a parameter rather than a call to the clock so the window is
@@ -183,7 +202,10 @@ export function readAcceptedMessages(
     if (message === "") continue;
     if (messageId !== undefined && marks.discarded.has(messageId)) continue;
     const undelivered = messageId !== undefined && marks.undelivered.has(messageId);
-    if (!matchesSession(eventSessionId, sessionId)) continue;
+    // A send accepted before the engine assigned an id records no session; its
+    // drop marker records the id assigned since, which the reload asks with.
+    const markedSessionId = messageId === undefined ? undefined : marks.undelivered.get(messageId);
+    if (!matchesSession(eventSessionId ?? markedSessionId ?? null, sessionId)) continue;
     const rowEmail = rowUser?.email ?? null;
     if (eventSessionId === null && !matchesUser(rowEmail, viewerEmail)) continue;
     const at = Date.parse(timestamp);
@@ -204,8 +226,7 @@ export function readAcceptedMessages(
       type: "text" as const,
       text: message.slice(0, bodyEnd).replace(IMAGE_TOKEN_RE, "") + message.slice(bodyEnd),
     }];
-    const user = userIdentity(content, "user");
-    const userEmail = userIdentity(content, "user-email");
+    const { user, userEmail } = entryIdentity(content, rowUser);
     accepted.push({
       // Derived from the bus row id, so the same accepted message keeps the
       // same React key across refetches instead of remounting each time.

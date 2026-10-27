@@ -77,3 +77,46 @@ void test("a discard without a matching undelivered marker records nothing", asy
     discards: bus.readRecent({ event: "chat-user-message-discarded", limit: 10 }),
   }, { unmarked: "not-found", otherSession: "not-found", discards: [] });
 });
+
+// ## A send accepted before the chat had an id is found under the id it got
+//
+// The acceptance row records the session the send targeted, which for a chat
+// with no id yet is null; the drop marker records the id assigned since. The
+// reload asks with that id, and the id-less row's sender check still applies.
+void test("an undelivered message accepted with no session matches its marker's session", async (t) => {
+  const box = await makeTmpBox({ git: "none" });
+  t.teardown(() => box.cleanup());
+  const bus = createEventBus(box.root);
+  t.teardown(() => { bus.close(); });
+  const rosa = { email: "rosa@example.com", name: "Rosa Okafor" };
+  bus.emit("chat-user-message", { sessionId: null, message: "<typed user=\"Rosa Okafor\" user-email=\"rosa@example.com\">add oat milk</typed>", user: rosa, timestamp: ACCEPTED_AT, messageId: "m-oat" });
+  bus.emit("chat-user-message-undelivered", { sessionId: "s1", messageId: "m-oat", timestamp: ACCEPTED_AT });
+  const readAs = (viewerEmail: string) => readAcceptedMessages(bus, { sessionId: "s1", now: LATER, viewerEmail, history: [] }).map((m) => m.messageId);
+  t.check({ rosa: readAs("rosa@example.com"), tomas: readAs("tomas@example.com") }, { rosa: ["m-oat"], tomas: [] });
+});
+
+// ## A slash command names its sender through the row
+//
+// The sender does not attribute a slash command's text (`user-message-sender.ts`:
+// any prefix would stop the CLI parsing it), so the text names nobody. The
+// row's `user` does, and without it another person's dropped command would
+// show as the viewer's own.
+void test("an accepted message with no identity in its text takes the row's sender", async (t) => {
+  const box = await makeTmpBox({ git: "none" });
+  t.teardown(() => box.cleanup());
+  const bus = createEventBus(box.root);
+  t.teardown(() => { bus.close(); });
+  bus.emit("chat-user-message", { sessionId: "s1", message: "/compact", user: { email: "tomas@example.com", name: "Tomas Marlowe" }, timestamp: ACCEPTED_AT, messageId: "m-compact" });
+  bus.emit("chat-user-message-undelivered", { sessionId: "s1", messageId: "m-compact", timestamp: ACCEPTED_AT });
+  t.check(readAcceptedMessages(bus, { sessionId: "s1", now: LATER, viewerEmail: "rosa@example.com", history: [] }), [{
+    uuid: "accepted-1",
+    type: "user",
+    timestamp: ACCEPTED_AT,
+    content: [{ type: "text", text: "/compact" }],
+    user: "Tomas Marlowe",
+    userEmail: "tomas@example.com",
+    messageId: "m-compact",
+    undelivered: true,
+    reconcileKnownUuids: [],
+  }]);
+});

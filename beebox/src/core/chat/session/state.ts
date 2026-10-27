@@ -257,13 +257,28 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   };
 }
 
+/** A drain's inputs were taken by `stop()` before its send was admitted. */
+class DrainTakenError extends Error {
+  constructor() { super("The session stopped and took this drain's queued messages"); this.name = "DrainTakenError"; }
+}
+
+/**
+ * A drain's `onAdmitted` check: throw when `stop()` has emptied `queued`, so
+ * the send is abandoned before it delivers a message already marked undelivered.
+ */
+export function assertDrainHeld(queued: ChatSendInput[]): void {
+  if (queued.length === 0) throw new DrainTakenError();
+}
+
 /**
  * A queued turn is a new root operation. Its input goes back to the front of
  * the queue when the send is refused, when admission closes, or when the run
  * start throws, so the next drain (a turn result, a run close, or the end of
  * maintenance) can deliver it. `send` also gets the queued inputs themselves:
  * they are out of the queue until the send settles, and a `stop()` in that
- * time must still be able to name them.
+ * time must still be able to name them. A stop takes them by emptying that
+ * same array, so a drain it took requeues nothing, and the send is abandoned
+ * at admission ({@link assertDrainHeld}) rather than delivering them.
  */
 export function drainSessionQueue(opts: {
   queue: ChatSendInput[];
@@ -277,8 +292,9 @@ export function drainSessionQueue(opts: {
     if (!sent) opts.queue.unshift(...queued);
   }).catch((error: unknown) => {
     opts.queue.unshift(...queued);
-    if (error instanceof BoxMaintenanceError) return;
+    if (error instanceof BoxMaintenanceError || error instanceof DrainTakenError) return;
     log("drain", `Draining queued messages failed; ${queued.length} message(s) kept in the queue: ${errorMessage(error)}`);
     opts.onError(error instanceof Error ? error : new Error(String(error)));
   });
 }
+

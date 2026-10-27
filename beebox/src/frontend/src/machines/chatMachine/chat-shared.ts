@@ -197,15 +197,15 @@ export function reconcilePending(params: {
   }
   serverUsers.reverse();
 
-  // Transcript turns that echo an earlier send: a later unreconciled message
-  // was sent after them even when its baseline predates their writing. They
-  // are kept on the entry, because the earlier send is gone from the pending
-  // list after this pass.
-  const echoesSoFar: string[] = [];
-  const stillPending: PendingSessionEntry[] = [];
-  for (const pm of pendingMessages) {
+  // Echoes go first to sends not marked undelivered. A dropped "yes" followed
+  // by a delivered "yes" would otherwise take the second one's turn: the
+  // dropped bubble retires and the delivered one stays looking queued. An
+  // undelivered send takes only a turn no other send could use, which is the
+  // case of a drain admitted during `stop()` that did deliver it.
+  const echoOf = new Map<PendingSessionEntry, string>();
+  const claimEcho = (pm: PendingSessionEntry): void => {
     const pmText = normalizeForCompare(entryText(pm));
-    if (pmText.length === 0) continue;
+    if (pmText.length === 0) return;
     // An earlier send's echo from a previous pass is not this send's echo: a
     // second identical "yes" must not be confirmed by the first one's turn on
     // the next refresh. Within one pass a merged queued turn still confirms both.
@@ -213,9 +213,24 @@ export function reconcilePending(params: {
     const echo = serverUsers.find((server) => {
       return !baseline.has(server.uuid) && server.remainingText.includes(pmText);
     });
-    if (echo) {
-      echo.remainingText = echo.remainingText.replace(pmText, "");
-      echoesSoFar.push(echo.uuid);
+    if (!echo) return;
+    echo.remainingText = echo.remainingText.replace(pmText, "");
+    echoOf.set(pm, echo.uuid);
+  };
+  for (const pm of pendingMessages) if (pm.undelivered !== true) claimEcho(pm);
+  for (const pm of pendingMessages) if (pm.undelivered === true) claimEcho(pm);
+
+  // Transcript turns that echo an earlier send: a later unreconciled message
+  // was sent after them even when its baseline predates their writing. They
+  // are kept on the entry, because the earlier send is gone from the pending
+  // list after this pass.
+  const echoesSoFar: string[] = [];
+  const stillPending: PendingSessionEntry[] = [];
+  for (const pm of pendingMessages) {
+    if (normalizeForCompare(entryText(pm)).length === 0) continue;
+    const echo = echoOf.get(pm);
+    if (echo !== undefined) {
+      echoesSoFar.push(echo);
       continue;
     }
     const earlier = (pm.sentAfterEchoes ?? []).filter((uuid) => !echoesSoFar.includes(uuid));
