@@ -33,6 +33,8 @@ import { runHousekeeping } from "./housekeeping.js";
 import { reportWakeupOutcome } from "../../wakeup-outcome.js";
 import { runUnderWakeupCycleLock } from "./cycle-lock.js";
 import { runReactor } from "../../../core/reactor/engine/core.js";
+import { findJobCards } from "../../../core/reactor/job-discovery.js";
+import { getBoxDir } from "../../../lib/paths/core.js";
 import {
   runConnectors,
   wakeupExitCodeForConnectorErrors,
@@ -106,16 +108,25 @@ export function parseMaxCycles(value: string): number {
   return n;
 }
 
-async function processPendingJobs(
+export async function processPendingJobs(
   boxRoot: string,
-  opts: { connector: string | undefined; maxCycles: number | undefined },
+  opts: { connector: string | undefined; maxCycles: number | undefined; splitRefused: number; run?: typeof runReactor },
 ): Promise<{ reactorOk: boolean; reactorSkipped: boolean; jobsProcessed: number; jobsRemaining: number }> {
   // Step 5: Process pending jobs. Under --connector X, the connector
   // filter restricts processing to jobs tagged `connector: X` so a
   // gmail-scoped tick doesn't drain other connectors' work.
   console.log("[Processing pending jobs]");
+  if (opts.splitRefused > 0) {
+    // A refused split put its oversized original back; a reactor run now would
+    // be sent it whole. The run reports a failed reactor step (exit 1), so a
+    // job-check run ends `ok: false` and its jobs come due on their backoff.
+    console.log(`  Skipped: ${String(opts.splitRefused)} oversized intake job(s) could not be split; the next wakeup splits them first`);
+    console.log("");
+    const remaining = await findJobCards(getBoxDir(boxRoot, "jobs"), { connectorFilter: opts.connector });
+    return { reactorOk: false, reactorSkipped: false, jobsProcessed: 0, jobsRemaining: remaining.length };
+  }
   const reactorOptions = wakeupReactorOptions(boxRoot, opts);
-  const result = await runReactor(reactorOptions);
+  const result = await (opts.run ?? runReactor)(reactorOptions);
   if (result.jobsProcessed > 0) {
     console.log(`  Processed ${result.jobsProcessed} job(s)`);
   } else {
@@ -211,7 +222,8 @@ async function runWakeupCycle(boxRoot: string, options: WakeupOptions): Promise<
 
   // Step 4a, continued: split intake jobs over the item cap, before new items join them.
   console.log("[Splitting oversized intake jobs]");
-  if ((await splitOversizedJobs(boxRoot)) === 0) console.log("  None over the cap");
+  const split = await splitOversizedJobs(boxRoot);
+  if (split.committed === 0 && split.refused === 0) console.log("  None over the cap");
   console.log("");
 
   // Step 4b: Create intake jobs for unjobbed inbox items.
@@ -263,7 +275,10 @@ async function runWakeupCycle(boxRoot: string, options: WakeupOptions): Promise<
   // connector must scope the reactor's connectorFilter to that (unmatched)
   // name, not to "everything" (which is what `activeConnector` collapses
   // to when the name didn't match).
-  const jobs = await processPendingJobs(boxRoot, { connector: activeConnectorName, maxCycles: options.maxCycles });
+  const jobs = await processPendingJobs(boxRoot, { connector: activeConnectorName, maxCycles: options.maxCycles, splitRefused: split.refused });
+  // A skipped reactor step is a failed run, not a quiet one: the job check's
+  // `run ended` line reads the exit code.
+  if (split.refused > 0) process.exitCode = 1;
 
   // Step 6: Push committed changes to the box's git remote.
   if (!options.skipPush) {

@@ -6,7 +6,8 @@
 // `splitOversizedJobs`). Chunk names derive from the original's, so a split
 // stopped partway resumes without a second set, and each chunk is published
 // atomically (`writeFileAtomic`), so a file under a chunk's name is always
-// complete. A split whose commit fails is put back for the next wakeup. See
+// complete. A split whose commit fails is put back for the next wakeup, and
+// that wakeup skips its reactor step. See
 // docs/plans/bounded-reactor-batches.md, Track B.
 
 import { test, type Test } from "tap";
@@ -18,6 +19,7 @@ import { join } from "node:path";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { splitOversizedIntakeJobs } from "../../src/job-cards/intake-utils.js";
 import { splitOversizedJobs } from "../../src/cli/commands/wakeup/steps.js";
+import { processPendingJobs } from "../../src/cli/commands/wakeup/command.js";
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { checkWaitingJobs } from "../../src/core/schedule/job-check/core.js";
@@ -56,7 +58,7 @@ void test("A 300-item job becomes twelve jobs of 25, in one commit", async (t) =
   const log: string[] = [];
   const consoleLog = console.log;
   console.log = (line: string) => log.push(line);
-  let count: number;
+  let count;
   try {
     count = await splitOversizedJobs(box.root);
   } finally {
@@ -76,7 +78,7 @@ void test("A 300-item job becomes twelve jobs of 25, in one commit", async (t) =
       log,
     },
     {
-      count: 1,
+      count: { committed: 1, refused: 0 },
       files: [...parts(1, 12), "_bookkeeping/jobs/2026-09-02T00-00-00-inbox.intake.job.card", "_bookkeeping/jobs/2026-09-03T00-00-00-big.contains-backfill.job.card"],
       first: ["---", "priority: normal", "description: Triage 25 inbox items"],
       items: refs(0, 300),
@@ -136,7 +138,7 @@ void test("A split whose commit is refused is put back", async (t) => {
   const error = console.error;
   console.warn = () => {};
   console.error = () => {};
-  let refused: number;
+  let refused;
   try {
     refused = await splitOversizedJobs(box.root);
   } finally {
@@ -145,14 +147,44 @@ void test("A split whose commit is refused is put back", async (t) => {
   }
   t.check(
     { refused, files: await jobFiles(box), original: await box.read(ORIGINAL), status: execSync("git status --porcelain", { cwd: box.root }).toString().trim() },
-    { refused: 0, files: [ORIGINAL], original, status: "" },
+    { refused: { committed: 0, refused: 1 }, files: [ORIGINAL], original, status: "" },
   );
+
+  // That wakeup sends nothing to the reactor: the restored job holds 300
+  // items. The reactor step reports failure, and the job stays pending.
+  const reactorCalls: unknown[] = [];
+  const consoleLog = console.log;
+  const printed: string[] = [];
+  console.log = (line: string) => printed.push(line);
+  let step;
+  try {
+    step = await processPendingJobs(box.root, {
+      connector: undefined,
+      maxCycles: 3,
+      splitRefused: 1,
+      run: (opts) => {
+        reactorCalls.push(opts.boxRoot);
+        return Promise.resolve({ success: true, jobsProcessed: 0, jobsRemaining: 0 });
+      },
+    });
+  } finally {
+    console.log = consoleLog;
+  }
+  t.check({ step, reactorCalls, printed }, {
+    step: { reactorOk: false, reactorSkipped: false, jobsProcessed: 0, jobsRemaining: 1 },
+    reactorCalls: [],
+    printed: [
+      "[Processing pending jobs]",
+      "  Skipped: 1 oversized intake job(s) could not be split; the next wakeup splits them first",
+      "",
+    ],
+  });
 
   await rm(hook);
   const log = console.log;
   console.log = () => {};
   try {
-    t.check(await splitOversizedJobs(box.root), 1);
+    t.check(await splitOversizedJobs(box.root), { committed: 1, refused: 0 });
   } finally {
     console.log = log;
   }

@@ -185,9 +185,12 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
 /**
  * Step 4a, continued: split intake jobs over the item cap (written before it, or edited
  * by hand) into capped jobs, one commit per split job. Runs before step 4b and
- * the reactor, so neither sees an oversized job. Returns how many were split.
+ * the reactor, so neither sees an oversized job. Returns how many splits were
+ * committed and how many were refused and put back; after a refused one the
+ * wakeup skips its reactor step, which would otherwise be sent the restored
+ * oversized job.
  */
-export async function splitOversizedJobs(boxRoot: string): Promise<number> {
+export async function splitOversizedJobs(boxRoot: string): Promise<{ committed: number; refused: number }> {
   const splits = await splitOversizedIntakeJobs(boxRoot);
   let committed = 0;
   for (const { original, chunks } of splits) {
@@ -208,7 +211,7 @@ export async function splitOversizedJobs(boxRoot: string): Promise<number> {
     committed += 1;
     console.log(`  Split ${original} into ${chunks.length} jobs`);
   }
-  return committed;
+  return { committed, refused: splits.length - committed };
 }
 
 /**

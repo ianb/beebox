@@ -342,7 +342,9 @@ job of any size.
   scan import does: the original comes back from `HEAD` and the chunks are
   removed (`beebox/src/job-cards/restore-to-head.ts`), so the next wakeup
   finds the oversized original and splits it again. Uncommitted chunks would
-  otherwise hold the items while the job check skips them. **Accepted, not
+  otherwise hold the items while the job check skips them. That wakeup then
+  skips its reactor step, which would be sent the restored job whole, and
+  exits 1 (round-2 verification). **Accepted, not
   recovered:** a process killed between deleting the original and the commit
   leaves uncommitted chunks; the window is one unlink and one commit inside a
   wakeup.
@@ -541,7 +543,7 @@ none
 | A scan import's new jobs are not committed | new (scan caller test) | `queueCommittedSessionIntake` commits every returned path | clear |
 | That commit fails | new (refused commit) | the written job paths are put back as `HEAD` has them; step 4b re-jobs the items | clear (warning) |
 | A chunk write is interrupted | none (`writeFileAtomic`'s own guarantee) | atomic publish: no partial file under a chunk's name | clear |
-| The split's commit is refused | new (refusing hook) | original restored from `HEAD`, chunks removed; the next wakeup splits again | clear (warning) |
+| The split's commit is refused | new (refusing hook) | original restored from `HEAD`, chunks removed; that wakeup skips its reactor step (the restored job would be sent whole) and exits 1, so a job-check run ends `ok: false` and its charged jobs come due on their backoff; the next wakeup splits again | clear (warning, `Skipped:` line, `run ended` line) |
 | The process is killed between deleting the original and the commit | none | **accepted**: uncommitted chunks hold the items until a commit takes them; one unlink and one commit wide | silent until the next commit |
 | The intake writer fails after an append | new (partial write) | its own writes undone before it rethrows | clear (the caller's warning) |
 | A hand-edited intake job over the cap | new | split on the next wakeup | clear (commit) |
