@@ -24,7 +24,7 @@ import { useCompanionMaterial } from "../../../../hooks/useCompanionMaterial";
 import { PaneControls } from "../../../../components/chat/workspace/PaneControls";
 import { useMobileChatViewport } from "../../../../components/chat/everywhere/use-mobile-card-navigation";
 import { Pre } from "../../../../components/ui/Pre";
-import { Image } from "../../../../components/ui/Image";
+import { Image } from "../../../../components/ui/Image/view";
 import { Row } from "../../../../components/ui/Row";
 import { CaptionedFigure } from "../../../../components/FigureView/view";
 import { MaterialContext } from "../../../../components/ui/material";

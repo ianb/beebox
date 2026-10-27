@@ -32,6 +32,63 @@ void test("Pending message not yet on the server → re-appended, kept pending",
   t.check(result, { messages: [...server, ...pending], pendingMessages: pending });
 });
 
+// ## A message the agent moved on without stays where it was sent
+//
+// A send refused as busy, or a queue dropped by a restart, leaves a user
+// message the transcript never gets. Once a later user turn is in the
+// transcript, the message goes right after the entries it was sent after (its
+// baseline), not at the end below turns that came later
+// (`issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
+function assistantEntry(uuid: string, text: string): SessionEntry {
+  return { uuid, type: "assistant", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text }] };
+}
+
+void test("A message a later user turn overtook sits after its baseline", async (t) => {
+  const server = [
+    userEntry("s1", "<typed>first</typed>"), assistantEntry("a1", "reply one"),
+    userEntry("s2", "<typed>later</typed>"), assistantEntry("a2", "reply two"),
+  ];
+  const lost = { ...pendingEntry("p1", "<typed>lost</typed>"), reconcileKnownUuids: ["s1", "a1"] };
+  const alsoLost = { ...pendingEntry("p2", "<typed>also lost</typed>"), reconcileKnownUuids: ["s1", "a1"] };
+  const result = reconcilePending({ serverMessages: server, pendingMessages: [lost, alsoLost] });
+  t.check(result.messages.map((m) => m.uuid), ["s1", "a1", "p1", "p2", "s2", "a2"]);
+});
+
+// The issue's own sequence: two sends 14 ms apart. Both were accepted before
+// the first one's turn was written, so neither baseline holds that turn. The
+// first reconciles against it; the refused second was still sent after it,
+// so it goes after that turn's reply and before the next user turn.
+void test("A refused send stays after the send that beat it", async (t) => {
+  const server = [
+    userEntry("s0", "<typed>earlier</typed>"), assistantEntry("a0", "reply zero"),
+    userEntry("sA", "<typed>long message</typed>"), assistantEntry("aA", "reply to long"),
+    userEntry("sC", "<typed>next day</typed>"), assistantEntry("aC", "reply to next"),
+  ];
+  const first = { ...pendingEntry("pA", "<typed>long message</typed>"), reconcileKnownUuids: ["s0", "a0"] };
+  const refused = { ...pendingEntry("pB", "<typed>short</typed>"), reconcileKnownUuids: ["s0", "a0"] };
+  const result = reconcilePending({ serverMessages: server, pendingMessages: [first, refused] });
+  t.check(result.messages.map((m) => m.uuid), ["s0", "a0", "sA", "aA", "pB", "sC", "aC"]);
+
+  // On a page left open, the first send reconciles on one refresh and is gone
+  // from the pending list on the next; the second keeps its place.
+  const firstRefresh = reconcilePending({ serverMessages: server.slice(0, 4), pendingMessages: [first, refused] });
+  const nextRefresh = reconcilePending({ serverMessages: server, pendingMessages: firstRefresh.pendingMessages });
+  t.check(nextRefresh.messages.map((m) => m.uuid), ["s0", "a0", "sA", "aA", "pB", "sC", "aC"]);
+});
+
+// Only a later user turn means the agent moved on: a reply still arriving to
+// an earlier message does not, and a message with no baseline entry in the
+// transcript has nothing to sit after. Both stay at the end.
+void test("Without a later user turn, or without a baseline, the message stays last", async (t) => {
+  const server = [userEntry("s1", "<typed>first</typed>"), assistantEntry("a1", "reply one"), assistantEntry("a2", "more of the reply")];
+  const waiting = { ...pendingEntry("p1", "<typed>next</typed>"), reconcileKnownUuids: ["s1", "a1"] };
+  const unanchored = pendingEntry("p2", "<typed>from an empty history</typed>");
+  t.check([
+    reconcilePending({ serverMessages: server, pendingMessages: [waiting] }).messages.map((m) => m.uuid),
+    reconcilePending({ serverMessages: [...server, userEntry("s2", "<typed>later</typed>")], pendingMessages: [unanchored] }).messages.map((m) => m.uuid),
+  ], [["s1", "a1", "a2", "p1"], ["s1", "a1", "a2", "s2", "p2"]]);
+});
+
 // ## Server-injected user attribution → reconcile MUST still drop the pending entry
 //
 // When the server stores a user message, it calls `injectUserAttr` to
@@ -105,7 +162,13 @@ void test("Two client sends need two server occurrences.", async (t) => {
   const first = pendingEntry("p-one", "<typed>yes</typed>");
   const second = pendingEntry("p-two", "<typed>yes</typed>");
   const result = reconcilePending({ serverMessages: [durable], pendingMessages: [first, second] });
-  t.check(result, { messages: [durable, second], pendingMessages: [second] });
+  // The second keeps the first one's turn as a turn it was sent after (placement only).
+  const stillPending = { ...second, sentAfterEchoes: ["s-one"] };
+  t.check(result, { messages: [durable, stillPending], pendingMessages: [stillPending] });
+
+  // The next refresh of the same snapshot does not let the first "yes" confirm the second.
+  t.check(reconcilePending({ serverMessages: [durable], pendingMessages: result.pendingMessages }),
+    { messages: [durable, stillPending], pendingMessages: [stillPending] });
 });
 
 // ## Chronological matching respects each send's baseline
@@ -261,4 +324,26 @@ void test("A delivered capture is announced before the agent writes it to the tr
   t.check(late, { messages: [...shown, written], pendingMessages: [] });
   t.check(again, { messages: [...shown, injected], pendingMessages: [injected] });
   t.check(already, { messages: [...shown, written], pendingMessages: [] });
+});
+
+// ## A dropped send does not take a later identical send's echo
+//
+// "yes" was dropped by a restart (undelivered), then "yes" was sent again and
+// delivered. The transcript's one "yes" is the second send's: the dropped copy
+// keeps its "Not delivered" face, placed where it was sent, and the delivered
+// copy retires instead of looking queued (docs/implemented-plans/chat-not-delivered.md),
+// on this refresh and every later one.
+void test("A dropped send does not take a later identical send's echo", async (t) => {
+  const before = userEntry("s0", "<typed>ready?</typed>");
+  const dropped: PendingSessionEntry = { ...pendingEntry("m-dropped", "<typed>yes</typed>"), undelivered: true, reconcileKnownUuids: ["s0"] };
+  const delivered: PendingSessionEntry = { ...pendingEntry("m-delivered", "<typed>yes</typed>"), reconcileKnownUuids: ["s0"] };
+  const echo = userEntry("s-yes", "<typed>yes</typed>");
+  const result = reconcilePending({ serverMessages: [before, echo], pendingMessages: [dropped, delivered] });
+  const kept = { ...dropped, claimedEchoes: ["s-yes"] };
+  t.check(result, { messages: [before, kept, echo], pendingMessages: [kept] });
+
+  // The next refresh has only the dropped copy pending. The turn the delivered
+  // copy retired against is still not its echo.
+  const next = reconcilePending({ serverMessages: [before, echo], pendingMessages: result.pendingMessages });
+  t.check(next, { messages: [before, kept, echo], pendingMessages: [kept] });
 });

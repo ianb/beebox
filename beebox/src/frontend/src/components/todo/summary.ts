@@ -1,6 +1,6 @@
 /**
  * The place summary for one card (`docs/implemented-plans/todos-ui.md`, Track 4):
- * "3 now · 1 later · 1 overdue · 2 done" — the todo page's own split, so
+ * "3 todos now · 1 later · 1 overdue · 2 done" — the todo page's own split, so
  * the numbers agree with the todo page and its badge. It is the collection's reduction, rendered —
  * boxholder scope, so an agent follow-up never counts here — and the
  * reduction is complete regardless of the status filter
@@ -30,7 +30,7 @@ export interface SummaryPart {
  * The line's parts, or `null` when the card has nothing to summarize.
  *
  * The open todos are split as the todo page splits them: "now" is
- * always named once there is a line ("0 now · 2 done" says the card
+ * always named once there is a line ("0 todos now · 2 done" says the card
  * is finished), and "later" (open, waiting for a `start`) and the rest appear
  * only when non-zero. The control is "now" when it counts any,
  * else "later", so it never names a set it does not lead to. Dropped todos are
@@ -41,7 +41,9 @@ export function summaryParts(reduction: SummaryReduction): SummaryPart[] | null 
   const { open, onPlate, done, parked, escalated } = reduction;
   if (open + parked + done === 0) return null;
   const later = open - onPlate;
-  const parts: SummaryPart[] = [{ key: "open", count: onPlate, text: `${String(onPlate)} now`, action: onPlate > 0 }];
+  // The first part carries the noun the rest share: "1 now" alone left a
+  // reader asking "1 what?" (2026-10-22 walk).
+  const parts: SummaryPart[] = [{ key: "open", count: onPlate, text: `${String(onPlate)} ${onPlate === 1 ? "todo" : "todos"} now`, action: onPlate > 0 }];
   if (later > 0) parts.push({ key: "later", count: later, text: `${String(later)} later`, action: onPlate === 0 });
   if (escalated > 0) parts.push({ key: "overdue", count: escalated, text: `${String(escalated)} overdue`, action: false });
   if (parked > 0) parts.push({ key: "parked", count: parked, text: `${String(parked)} parked`, action: false });

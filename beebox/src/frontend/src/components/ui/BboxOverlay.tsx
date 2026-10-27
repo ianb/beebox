@@ -1,7 +1,7 @@
 /**
  * Absolute-positioned bounding box outline, meant to be placed inside an
- * `<Image overlay={...}>` wrapper. Coordinates are percentages relative to
- * the overlay container.
+ * `<Image overlay={...}>` wrapper. Coordinates are percentages of the photo
+ * as stored; `Image` turns the overlay with a rotated photo.
  */
 export interface BboxOverlayProps {
   /** Top edge as percentage [0..100]. */
@@ -12,11 +12,9 @@ export interface BboxOverlayProps {
   width: number;
   /** Height as percentage [0..100]. */
   height: number;
-  /** Additional transform (e.g. rotate) to match the underlying image. */
-  transform?: string;
 }
 
-export function BboxOverlay({ top, left, width, height, transform }: BboxOverlayProps) {
+export function BboxOverlay({ top, left, width, height }: BboxOverlayProps) {
   return (
     <div
       className="absolute border-2 border-primary rounded pointer-events-none"
@@ -25,7 +23,6 @@ export function BboxOverlay({ top, left, width, height, transform }: BboxOverlay
         left: `${left}%`,
         width: `${width}%`,
         height: `${height}%`,
-        transform,
       }}
     />
   );

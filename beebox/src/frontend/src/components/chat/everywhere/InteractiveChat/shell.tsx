@@ -235,7 +235,9 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const { activeView } = tabs;
   const cardSend = useCompanionCard({ focusedRef: attention?.focusedRef, activeView });
   const schedules = useChatSchedules({ messages, loaded: !snapshot.matches("loading"), isStreaming, send });
-  usePendingMessagePoll({ pendingCount: pendingMessages.filter((entry) => entry.pending === true).length, sessionId, send });
+  // A not-delivered message is pending but not on its way: no "queued" count, no poll for its echo.
+  const queuedCount = pendingMessages.filter((entry) => entry.pending === true && entry.undelivered !== true).length;
+  usePendingMessagePoll({ pendingCount: queuedCount, sessionId, send });
   const showAgentWorking = useProcessingStatusPoll({ processBusy: Boolean(processBusy), snapshot, sessionId, send });
 
   // The one user-send funnel: every send site builds an Emission and lands
@@ -342,7 +344,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       processRunning={processRunning}
       sessionId={sessionId}
       totalEntries={totalEntries}
-      pendingCount={pendingMessages.filter((entry) => entry.pending === true).length}
+      pendingCount={queuedCount}
       error={error} replyLost={replyLost}
       currentUserEmail={currentUser ? currentUser.email : undefined} currentUserName={currentUser ? currentUser.name : undefined}
       modelMarkers={model.modelMarkers}

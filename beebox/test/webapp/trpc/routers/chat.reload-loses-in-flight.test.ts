@@ -63,6 +63,7 @@ const DRAWER_KEY_ROW = {
   type: "user",
   timestamp: isoDate(),
   content: [{ type: "text", text: "<typed>where did I put the drawer key?</typed>" }],
+  messageId: "m-1", // the send's id, which the client matches its optimistic copy by
   reconcileKnownUuids: [],
 } as const;
 

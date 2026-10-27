@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { isRecord } from "@shared/is-record";
 import { Markdown } from "../components/Markdown/body";
-import { Image } from "../components/ui/Image";
+import { Image } from "../components/ui/Image/view";
 import { CheckboxField } from "../components/ui/fields/field";
 import { Text } from "../components/ui/Text";
 import { Row } from "../components/ui/Row";
@@ -125,14 +125,12 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
     );
   }
 
-  const rotationTransform = card.rotation !== 0 ? `rotate(${card.rotation}deg)` : undefined;
   const bbox = showBbox && card.subjectBbox ? (
     <BboxOverlay
       top={card.subjectBbox.y1 / 10}
       left={card.subjectBbox.x1 / 10}
       width={(card.subjectBbox.x2 - card.subjectBbox.x1) / 10}
       height={(card.subjectBbox.y2 - card.subjectBbox.y1) / 10}
-      transform={rotationTransform}
     />
   ) : null;
 

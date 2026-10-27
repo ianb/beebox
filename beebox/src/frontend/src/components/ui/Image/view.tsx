@@ -1,8 +1,9 @@
 import { useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { useLightbox } from "../LightboxProvider";
-import { cn } from "../../lib/cn";
-import { imageUrlKey } from "../../lib/image-url-key";
-import { useImageRecovery, withVersionStamp } from "../../hooks/use-image-recovery";
+import { useLightbox } from "../../LightboxProvider";
+import { cn } from "../../../lib/cn";
+import { imageUrlKey } from "../../../lib/image-url-key";
+import { useImageRecovery, withVersionStamp } from "../../../hooks/use-image-recovery";
+import { assembleImage, pickOuterLayer, type NaturalSize } from "./layers";
 
 const SIZE_CLASSES = {
   thumb: "w-16 h-16 object-cover",
@@ -60,8 +61,8 @@ interface BaseImageProps {
   /**
    * Outer-layout classes (margin, padding, flex item, sizing, position),
    * applied to whichever element ends up being outermost (figure when
-   * `caption` is set, the overlay wrapper when `overlay` is set, otherwise
-   * the img itself).
+   * `caption` is set, the rotated box for a quarter turn, the overlay
+   * wrapper when `overlay` is set, otherwise the img itself).
    */
   className?: string;
   /**
@@ -136,9 +137,11 @@ interface ImgElementProps {
   imgRef: React.RefObject<HTMLImageElement>;
   extraClass?: string;
   loading: "lazy" | "eager" | undefined;
+  /** Fill a rotated frame instead of sizing itself (`wrapQuarterTurn`). */
+  fill: boolean;
 }
 
-function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, stretch, lightbox, lightboxSrc, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
+function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, stretch, lightbox, lightboxSrc, lightboxCaption, imgRef, extraClass, loading, fill }: ImgElementProps) {
   const interactive = onActivate !== null;
   const handleClick = () => {
     if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
@@ -164,7 +167,7 @@ function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, ti
       // trapped inside the button they become dead clickable height instead
       // of collapsing into the layout. m-0 suppresses them; the button
       // carries the caller's spacing classes (extraClass) instead.
-      className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", interactive ? "m-0" : extraClass)}
+      className={cn(fill ? cn("block w-full h-full", size === "thumb" ? "object-cover" : "") : SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", interactive ? "m-0" : extraClass)}
       style={rotationStyle}
       onError={(event) => onError(event.currentTarget.currentSrc || src)}
       onLoad={(event) => onLoad(event.currentTarget)}
@@ -187,6 +190,7 @@ function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, ti
       className={cn(
         "block border-0 bg-transparent p-0",
         stretch ? "w-full" : "",
+        fill ? "w-full h-full" : "",
         lightbox ? "cursor-zoom-in" : "cursor-pointer",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         extraClass,
@@ -195,75 +199,6 @@ function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, ti
       {imgNode}
     </button>
   );
-}
-
-function wrapOrthogonal({ node, extraClass }: { node: ReactNode; extraClass?: string }): ReactNode {
-  return (
-    <div className={cn("flex items-center justify-center", extraClass)} style={{ padding: "15% 0" }}>
-      {node}
-    </div>
-  );
-}
-
-function wrapWithOverlay({ node, overlay, stretch, extraClass }: { node: ReactNode; overlay: ReactNode; stretch: boolean; extraClass?: string }): ReactNode {
-  return (
-    <div className={cn("relative inline-block", stretch ? "w-full" : "", extraClass)}>
-      {node}
-      {overlay}
-    </div>
-  );
-}
-
-function wrapInFigure({ node, caption, stretch, extraClass }: { node: ReactNode; caption: ReactNode; stretch: boolean; extraClass?: string }): ReactNode {
-  return (
-    <figure className={cn("inline-flex flex-col items-center", stretch ? "w-full" : "", extraClass)}>
-      {node}
-      <figcaption className="mt-1 max-w-full text-xs text-card-soft italic text-center">
-        {caption}
-      </figcaption>
-    </figure>
-  );
-}
-
-type OuterLayer = "figure" | "overlay" | "orthogonal" | "img";
-
-interface AssembleOpts {
-  base: ReactNode;
-  caption: ReactNode;
-  overlay: ReactNode;
-  errored: boolean;
-  isOrthogonal: boolean;
-  stretch: boolean;
-  outerLayer: OuterLayer;
-  className: string | undefined;
-}
-
-function assembleImage({ base, caption, overlay, errored, isOrthogonal, stretch, outerLayer, className }: AssembleOpts): ReactNode {
-  let node: ReactNode = base;
-  if (isOrthogonal && !errored) {
-    node = wrapOrthogonal({ node, extraClass: outerLayer === "orthogonal" ? className : undefined });
-  }
-  if (overlay !== undefined && !errored) {
-    node = wrapWithOverlay({ node, overlay, stretch, extraClass: outerLayer === "overlay" ? className : undefined });
-  }
-  if (caption !== undefined) {
-    node = wrapInFigure({ node, caption, stretch, extraClass: className });
-  }
-  return node;
-}
-
-interface OuterLayerOpts {
-  caption: ReactNode;
-  overlay: ReactNode;
-  errored: boolean;
-  isOrthogonal: boolean;
-}
-
-function pickOuterLayer({ caption, overlay, errored, isOrthogonal }: OuterLayerOpts): OuterLayer {
-  if (caption !== undefined) return "figure";
-  if (overlay !== undefined && !errored) return "overlay";
-  if (isOrthogonal && !errored) return "orthogonal";
-  return "img";
 }
 
 export function Image(props: ImageProps) {
@@ -300,7 +235,12 @@ export function Image(props: ImageProps) {
   // container that has width) rather than guessed from the file extension;
   // the wrappers then take the container's width, and the image follows.
   const [stretch, setStretch] = useState(false);
+  // The photo's own shape, which a quarter turn needs to size its box.
+  const [natural, setNatural] = useState<NaturalSize | null>(null);
   const noteLayout = (el: HTMLImageElement) => {
+    if (el.complete && el.naturalWidth > 0 && (natural?.width !== el.naturalWidth || natural.height !== el.naturalHeight)) {
+      setNatural({ width: el.naturalWidth, height: el.naturalHeight });
+    }
     if (stretch || !el.complete || el.naturalWidth === 0 || el.clientWidth > 0) return;
     const container = el.parentElement?.parentElement;
     if (container !== undefined && container !== null && container.clientWidth > 0) setStretch(true);
@@ -361,6 +301,9 @@ export function Image(props: ImageProps) {
 
   const rotationStyle: CSSProperties | undefined = rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
   const isOrthogonal = rotation === 90 || rotation === 270;
+  // The img turns by itself only when nothing turns with it: a quarter turn
+  // rotates its frame, and an overlay turns with the img in its wrapper.
+  const imgRotationStyle = isOrthogonal || overlay !== undefined ? undefined : rotationStyle;
 
   const activate: ((element: HTMLImageElement) => void) | null = errored
     ? null
@@ -371,8 +314,8 @@ export function Image(props: ImageProps) {
         : null;
 
   // Determine which layer is the outermost wrapper so the caller's
-  // className lands there. Layer order, inside-out: img → orthogonal
-  // padding → overlay wrapper → figure (caption).
+  // className lands there. Layer order, inside-out: img → quarter-turn
+  // box or overlay wrapper → figure (caption).
   const outerLayer = pickOuterLayer({ caption, overlay, errored, isOrthogonal });
   const imgExtra = outerLayer === "img" ? className : undefined;
 
@@ -385,7 +328,7 @@ export function Image(props: ImageProps) {
       alt={alt}
       size={size}
       bordered={bordered}
-      rotationStyle={rotationStyle}
+      rotationStyle={imgRotationStyle}
       title={title}
       onActivate={activate}
       onError={handleError}
@@ -397,8 +340,9 @@ export function Image(props: ImageProps) {
       imgRef={imgRef}
       extraClass={imgExtra}
       loading={loading}
+      fill={isOrthogonal}
     />
   );
 
-  return assembleImage({ base, caption, overlay, errored, isOrthogonal, stretch, outerLayer, className });
+  return assembleImage({ base, caption, overlay, errored, rotation, rotationStyle, natural, size, stretch, outerLayer, className });
 }
