@@ -7,6 +7,11 @@
  * path, line number and surrounding source, so moving a file or editing above a
  * finding re-reported it: run 20261003-193157 reported 21 unchanged warnings as
  * new after a directory reorganisation.
+ *
+ * The parse reads oxlint's graphical format. oxlint prints a one-line
+ * `file:line:col: …` format when stdout is not a terminal, so both beebox
+ * scripts pass `-f default`; a compact line would pass through unchanged and
+ * key the finding by position again.
  */
 
 /** Lines that say the tool ran, not what it found. */

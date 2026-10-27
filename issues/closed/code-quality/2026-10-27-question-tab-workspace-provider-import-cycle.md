@@ -5,7 +5,10 @@ area: frontend
 labels: [code-quality, circular-deps]
 filed-by: agent
 discovered-in: dep-reduction — running `pnpm lint:circular`, 2026-10-27
+resolution: implemented
 ---
+
+Closed 2026-10-27 on the dep-reduction workstream. `pickArrivalQuestion`, `useDismissOnClose`, `dismissesOnClose`, `isQuestionPath` and `LATER` moved to `questions/question-close.ts`, which imports no workspace module; the provider and the two question views import from it. `pnpm lint:circular` reports 0 findings.
 
 `pnpm lint:circular` (in `beebox/`) reports a value import cycle. It appeared
 in `133e23199` (2026-10-25, "Questions open beside the chat"):

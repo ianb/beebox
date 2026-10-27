@@ -15,7 +15,7 @@ The boxholder approved candidates 1–5 and 9. On the `worktree-dep-reduction` b
   - The frontend `postcss` declaration also stays: without it, knip's PostCSS plugin stops reading `postcss.config.js` and reports `autoprefixer` unused.
   - The frontend `lint-staged` config block runs, because lint-staged uses the nearest config for each file. Only the redundant dependency went.
 - **Filed as decisions:** candidate 6 (`issues/decisions/2026-10-27-replace-google-genai-with-a-rest-helper.md`), 7 (`issues/decisions/2026-10-27-drop-eslint-config-agent-from-the-preset.md`), and 8 (`issues/decisions/2026-10-27-shellcheck-from-npm-installs-126-packages.md`).
-- **Found on the way:** a value import cycle from 2026-10-25 (`issues/code-quality/2026-10-27-question-tab-workspace-provider-import-cycle.md`), and oxlint's one-line output when not on a terminal (`issues/code-quality/2026-10-27-oxlint-non-tty-output-defeats-supplemental-lint-keys.md`).
+- **Found on the way:** a value import cycle from 2026-10-25 (`issues/closed/code-quality/2026-10-27-question-tab-workspace-provider-import-cycle.md`, fixed), and oxlint's one-line output when not on a terminal (`issues/closed/code-quality/2026-10-27-oxlint-non-tty-output-defeats-supplemental-lint-keys.md`, fixed).
 
 The rest of this page is the inventory as first measured.
 

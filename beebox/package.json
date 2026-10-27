@@ -104,7 +104,7 @@
     "layout-move": "tsx src/dev/layout/move/cli.ts",
     "doc-graph-html": "tsx src/dev/doc-graph-html/html.ts",
     "test:watch": "tap --watch",
-    "lint:oxlint": "oxlint -A no-unused-vars",
+    "lint:oxlint": "oxlint -f default -A no-unused-vars",
     "lint:circular": "oxlint -f default -c .oxlint-cycles.json src/"
   },
   "keywords": [
