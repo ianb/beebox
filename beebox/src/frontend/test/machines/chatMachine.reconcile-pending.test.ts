@@ -54,6 +54,22 @@ void test("A message a later user turn overtook sits after its baseline", async 
   t.check(result.messages.map((m) => m.uuid), ["s1", "a1", "p1", "p2", "s2", "a2"]);
 });
 
+// The issue's own sequence: two sends 14 ms apart. Both were accepted before
+// the first one's turn was written, so neither baseline holds that turn. The
+// first reconciles against it; the refused second was still sent after it,
+// so it goes after that turn's reply and before the next user turn.
+void test("A refused send stays after the send that beat it", async (t) => {
+  const server = [
+    userEntry("s0", "<typed>earlier</typed>"), assistantEntry("a0", "reply zero"),
+    userEntry("sA", "<typed>long message</typed>"), assistantEntry("aA", "reply to long"),
+    userEntry("sC", "<typed>next day</typed>"), assistantEntry("aC", "reply to next"),
+  ];
+  const first = { ...pendingEntry("pA", "<typed>long message</typed>"), reconcileKnownUuids: ["s0", "a0"] };
+  const refused = { ...pendingEntry("pB", "<typed>short</typed>"), reconcileKnownUuids: ["s0", "a0"] };
+  const result = reconcilePending({ serverMessages: server, pendingMessages: [first, refused] });
+  t.check(result.messages.map((m) => m.uuid), ["s0", "a0", "sA", "aA", "pB", "sC", "aC"]);
+});
+
 // Only a later user turn means the agent moved on: a reply still arriving to
 // an earlier message does not, and a message with no baseline entry in the
 // transcript has nothing to sit after. Both stay at the end.

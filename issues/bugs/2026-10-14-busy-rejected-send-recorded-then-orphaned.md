@@ -91,10 +91,12 @@ is defect 2's proposed rendering).
 
 Placement is fixed in `reconcilePending` (`beebox/src/frontend/src/machines/chatMachine/chat-shared.ts`,
 `placePending`). An unreconciled user message stays last unless the
-transcript holds a user turn after the last entry it was sent after (its
-`reconcileKnownUuids` baseline). Then it sits right after that baseline entry,
-at the point where it was sent. Placement uses the baseline, not timestamps,
-because the client stamps an optimistic copy with its own clock. Test:
+transcript holds a user turn after the last entry it was sent after: its
+`reconcileKnownUuids` baseline, plus the transcript turns that earlier sends
+reconciled against. In the evidence above, both sends were accepted before the
+first one's turn was written. Then it sits just before that later user turn.
+Placement uses the baseline, not timestamps, because the client stamps an
+optimistic copy with its own clock. Test:
 `beebox/src/frontend/test/machines/chatMachine.reconcile-pending.test.ts`.
 
 Found while fixing: the server returns event-log messages for only 10 minutes

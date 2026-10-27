@@ -150,6 +150,10 @@ export function reconcilePending(params: {
   }
   serverUsers.reverse();
 
+  // Transcript turns that echo an earlier send: a later unreconciled message
+  // was sent after them even when its baseline predates their writing.
+  const echoesSoFar: string[] = [];
+  const unplaced: Array<{ pending: PendingSessionEntry; sentAfter: Set<string> }> = [];
   const stillPending = pendingMessages.filter((pm) => {
     const pmText = normalizeForCompare(entryText(pm));
     if (pmText.length === 0) return false;
@@ -157,42 +161,46 @@ export function reconcilePending(params: {
     const echo = serverUsers.find((server) => {
       return !baseline.has(server.uuid) && server.remainingText.includes(pmText);
     });
-    if (!echo) return true;
+    if (!echo) {
+      unplaced.push({ pending: pm, sentAfter: new Set([...pm.reconcileKnownUuids, ...echoesSoFar]) });
+      return true;
+    }
     echo.remainingText = echo.remainingText.replace(pmText, "");
+    echoesSoFar.push(echo.uuid);
     return false;
   });
 
   return {
-    messages: placePending(serverMessages, stillPending),
+    messages: placePending(serverMessages, unplaced),
     pendingMessages: stillPending,
   };
 }
 
 /**
  * Where each unreconciled message goes. Normally after everything: it is the
- * newest thing in the chat. But once the transcript holds a user turn the
- * message was not sent after (outside its `reconcileKnownUuids` baseline), the
- * agent has moved on without it (a send refused as busy, a queue dropped by a
- * restart). At the end it read as the newest message, below turns that came
- * later (`issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
- * Such a message sits right after the last entry of its baseline that the
- * transcript holds, which is where it was sent. The baseline is used rather than timestamps because an
- * optimistic copy is stamped by the client's clock and the transcript by the
- * box's.
+ * newest thing in the chat. But once the transcript holds a user turn after
+ * everything the message was sent after (its `reconcileKnownUuids` baseline,
+ * plus the echoes of earlier sends), the agent has moved on without it (a send
+ * refused as busy, a queue dropped by a restart). At the end it read as the
+ * newest message, below turns that came later
+ * (`issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md`).
+ * Such a message sits just before that later user turn. The baseline is used
+ * rather than timestamps because an optimistic copy is stamped by the client's
+ * clock and the transcript by the box's. With no baseline entry in the
+ * transcript (an empty or unavailable history when it was sent) there is
+ * nothing to place it after, and it stays last.
  */
-function placePending(serverMessages: SessionEntry[], pendingMessages: PendingSessionEntry[]): SessionEntry[] {
+function placePending(
+  serverMessages: SessionEntry[],
+  unplaced: Array<{ pending: PendingSessionEntry; sentAfter: Set<string> }>,
+): SessionEntry[] {
   const messages = [...serverMessages];
-  const placed = new Set<string>();
-  for (const pending of pendingMessages) {
-    const known = new Set(pending.reconcileKnownUuids);
-    // With no baseline entry in the transcript (an empty or unavailable
-    // history when it was sent) there is nothing to place it after.
-    const anchor = serverMessages.findLastIndex((entry) => known.has(entry.uuid));
-    const overtaken = anchor !== -1 && serverMessages.slice(anchor + 1).some((entry) => entry.type === "user");
-    // After its baseline, and after any earlier message already placed there.
-    const index = overtaken ? messages.findLastIndex((entry) => known.has(entry.uuid) || placed.has(entry.uuid)) + 1 : messages.length;
+  for (const { pending, sentAfter } of unplaced) {
+    const anchor = serverMessages.findLastIndex((entry) => sentAfter.has(entry.uuid));
+    const later = anchor === -1 ? undefined : serverMessages.slice(anchor + 1).find((entry) => entry.type === "user");
+    // Inserting before the same turn again keeps several such messages in order.
+    const index = later === undefined ? messages.length : messages.indexOf(later);
     messages.splice(index, 0, pending);
-    placed.add(pending.uuid);
   }
   return messages;
 }
