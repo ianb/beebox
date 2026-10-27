@@ -58,7 +58,8 @@ void test("a rule with its own DTSTART keeps its time of day", async (t) => {
 });
 
 void test("a rule with an EXDATE line gets the same start, and the EXDATE skips that Monday", async (t) => {
-  const skipNov2 = weekly("RRULE:FREQ=WEEKLY;BYDAY=MO\nEXDATE:20261102T000000Z");
+  // A blank line between the two is ignored, as rrulestr ignores it.
+  const skipNov2 = weekly("RRULE:FREQ=WEEKLY;BYDAY=MO\n\nEXDATE:20261102T000000Z");
   t.check(
     {
       laterTickSameMonday: due(skipNov2, { lastRun: "2026-10-26T00:01:00Z", now: "2026-10-26T14:00:00Z" }),

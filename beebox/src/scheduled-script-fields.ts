@@ -30,7 +30,7 @@ const { rrulestr } = rrulePkg;
 export function parseScheduleRrule(value: string, { anchor }: { anchor: Date }): ReturnType<typeof rrulestr> {
   if (/\bDTSTART\b/iu.test(value)) return rrulestr(value);
   const day = anchor.toISOString().slice(0, 10).replaceAll("-", "");
-  const lines = value.trim().split(/\r?\n/u);
+  const lines = value.split(/\r?\n/u).map((line) => line.trim()).filter((line) => line !== "");
   // A bare `FREQ=...` line is the RRULE; a multi-line value names its lines.
   const named = lines.map((line) => (/^[A-Z-]+[:;]/iu.test(line) ? line : `RRULE:${line}`));
   return rrulestr([`DTSTART:${day}T000000Z`, ...named].join("\n"));
