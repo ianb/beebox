@@ -3,10 +3,13 @@ title: "Danger-colored small text is 2 to 4.4:1 on every theme, so a citation wh
 workstream: theme-colors
 area: beebox
 labels: [themes, contrast]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — theme-check run after adding citations to the theme studio sample, 2026-10-26
 ---
+
+**Closed.** Resolved by 09f013512 and e64e23114. Each theme sets its own `--bbx-danger` red (card and chat materials) with a derived default; the unresolvable citation is back in the theme studio sample; `bin/theme-check` now audits danger token pairs. On the decision points: the boxholder chose a per-theme red, and the unresolvable marker stays danger-colored.
 
 A citation whose `ref` points outside the box renders as an inert marker,
 "[→ <label> (unresolvable)]", in `text-danger`
