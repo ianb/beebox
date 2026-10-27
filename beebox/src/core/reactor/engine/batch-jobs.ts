@@ -21,7 +21,6 @@ import { computeTodoAmbientLine } from "../../todo/ambient-summary.js";
 import type { ProcessJobsOptions, JobWithContent } from "../types.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { loadEffectiveBoxModel } from "../../model-policy.js";
-import { fmt } from "../../../lib/format.js";
 
 /**
  * Process agent jobs in a single batched agent session.
@@ -53,7 +52,7 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
   // Resolved once for the whole run: a pin that lands mid-run does not switch
   // the model out from under the agent (docs/implemented-plans/model-engine-policy.md).
   const boxModel = await loadEffectiveBoxModel(boxRoot);
-  if (boxModel !== null) onLog?.(fmt.dim(`  Model: ${boxModel}\n`));
+  if (boxModel !== null) onLog?.(`  Model: ${boxModel}\n`);
 
   onLog?.("\n");
   const maxTurns = typeFilter ? 10 : 30;

@@ -6,7 +6,7 @@ Scope: every direct `dependencies`, `devDependencies`, and `peerDependencies` en
 
 ## Status, 2026-10-27
 
-The boxholder approved candidates 1–5 and 9. On the `worktree-dep-reduction` branch (not merged):
+The boxholder approved candidates 1–5 and 9, then 6–8. All of it is merged:
 
 - **Done:** candidate 1 (one Agent SDK pin; the dev checkout went from three copies to one), 2 (madge replaced by oxlint `import/no-cycle`), 3 (root `agent-browser`), 5 (dead and duplicate declarations, with the corrections below), and 9 (`@types/three`). The lockfile went from 1,991 to 1,874 package versions. The dev checkout's install is about 650 MB smaller (two SDK copies, madge, `@types/three`), and the server loses about 450 MB (the root SDK copy, madge, `agent-browser`, `@types/three`).
 - **Wrong, so not done:**
@@ -14,7 +14,7 @@ The boxholder approved candidates 1–5 and 9. On the `worktree-dep-reduction` b
   - In candidate 5, three items stay. `beebox-clerk` runs `tsx` through its tap `node-arg`. Root `tsconfig.json` loads the `@fastify/cookie` types, and `bin/doctor.ts` imports `better-sqlite3`.
   - The frontend `postcss` declaration also stays: without it, knip's PostCSS plugin stops reading `postcss.config.js` and reports `autoprefixer` unused.
   - The frontend `lint-staged` config block runs, because lint-staged uses the nearest config for each file. Only the redundant dependency went.
-- **Filed as decisions:** candidate 6 (`issues/decisions/2026-10-27-replace-google-genai-with-a-rest-helper.md`), 7 (`issues/decisions/2026-10-27-drop-eslint-config-agent-from-the-preset.md`), and 8 (`issues/decisions/2026-10-27-shellcheck-from-npm-installs-126-packages.md`).
+- **Decided and done:** candidate 6, `@google/genai` replaced by a REST helper (`issues/closed/decisions/2026-10-27-replace-google-genai-with-a-rest-helper.md`); 7, `eslint-config-agent` dropped from the preset (`issues/closed/decisions/2026-10-27-drop-eslint-config-agent-from-the-preset.md`); and 8, shellcheck from the system package instead of the npm wrapper (`issues/closed/decisions/2026-10-27-shellcheck-from-npm-installs-126-packages.md`). The lockfile went from 1,874 to 1,736 package versions.
 - **Found on the way:** a value import cycle from 2026-10-25 (`issues/closed/code-quality/2026-10-27-question-tab-workspace-provider-import-cycle.md`, fixed), and oxlint's one-line output when not on a terminal (`issues/closed/code-quality/2026-10-27-oxlint-non-tty-output-defeats-supplemental-lint-keys.md`, fixed).
 
 The rest of this page is the inventory as first measured.

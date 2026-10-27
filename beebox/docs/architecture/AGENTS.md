@@ -42,7 +42,7 @@ pnpm generate:doc-images           # all images in architecture docs
 pnpm generate:doc-images --file diana  # just Diana's portrait
 ```
 
-Requires `SKE_GEMINI_API_KEY` env var. Uses `gemini-2.5-flash-image` model via `@google/genai` SDK.
+Requires `SKE_GEMINI_API_KEY` env var. Uses `gemini-2.5-flash-image` model via the REST helper in `src/services/gemini-rest.ts`.
 
 ## Writing guidelines
 

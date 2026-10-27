@@ -347,7 +347,7 @@ void test("Broken-reference warnings accumulate silently across renames/deletes 
     [box.path("_content/inbox/email/thread-x/thread.email-thread.card")],
     { boxRoot: box.root, ctx },
   );
-  const summary = formatLintResults(result, { colors: false }).split("\n").at(-1);
+  const summary = formatLintResults(result).split("\n").at(-1);
   t.check(summary, "1 file checked, 1 warning in 0 files (1 broken ref)");
 });
 
@@ -363,7 +363,7 @@ void test("A warning that isn't a broken ref (e.g.", async (t) => {
     [box.path("_content/inbox/notes/drift.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(formatLintResults(result, { colors: false }).split("\n").at(-1), "1 file checked, 1 warning in 0 files");
+  t.check(formatLintResults(result).split("\n").at(-1), "1 file checked, 1 warning in 0 files");
 });
 
 // ## An over-budget `contains:` field warns (never blocks)

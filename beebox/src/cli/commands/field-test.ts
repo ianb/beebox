@@ -7,7 +7,6 @@
 import * as path from "node:path";
 import { readdir } from "node:fs/promises";
 import { Command } from "commander";
-import chalk from "chalk";
 import { errorMessage } from "../../shared/error-guards.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { loadEmailFixture } from "../../field-test/email-fixture.js";
@@ -62,9 +61,7 @@ const injectEmailCommand = new Command("inject-email")
     // TODO(env-migration): harness var, still a direct read (see lib/env.ts).
     const statePath = options.state ?? process.env[FAKE_GMAIL_ENV];
     if (!statePath) {
-      console.error(
-        chalk.red(`No state file: pass --state <path> or set ${FAKE_GMAIL_ENV}.`),
-      );
+      console.error(`No state file: pass --state <path> or set ${FAKE_GMAIL_ENV}.`);
       process.exit(1);
     }
     try {
@@ -79,7 +76,7 @@ const injectEmailCommand = new Command("inject-email")
         `Injected ${loaded.message.id} into ${statePath} (historyId ${String(state.historyId)}).`,
       );
     } catch (error) {
-      console.error(chalk.red(errorMessage(error)));
+      console.error(errorMessage(error));
       process.exit(1);
     }
   });
@@ -104,11 +101,11 @@ const listCommand = new Command("list")
       try {
         const scenario = await loadFieldScenario(path.join(corpusDir, name));
         const items = `${String(scenario.checklist.length)} item(s)`;
-        console.log(`${chalk.bold(scenario.name)}  ${chalk.dim(items)}\n  ${scenario.description.trim()}`);
+        console.log(`${scenario.name}  ${items}\n  ${scenario.description.trim()}`);
       } catch (error) {
         // A scenario that no longer loads is exactly what `list` should shout
         // about: the alternative is discovering it when a run starts.
-        console.log(`${chalk.bold(name)}  ${chalk.red("does not load")}\n  ${errorMessage(error)}`);
+        console.log(`${name}  does not load\n  ${errorMessage(error)}`);
       }
     }
   });
@@ -130,14 +127,14 @@ const runCommand = new Command("run")
         console.log(`  ${item.id}: ${item.debrief?.outcome ?? "no debrief"} — ${checks}`);
       }
       if (result.aborted) {
-        console.error(chalk.red(`Run aborted at ${result.aborted.itemId ?? "(setup)"}: ${result.aborted.reason}`));
+        console.error(`Run aborted at ${result.aborted.itemId ?? "(setup)"}: ${result.aborted.reason}`);
         process.exit(1);
       }
       // A failing hard assert is the tier's whole point; exit non-zero so an
       // unattended run cannot be mistaken for a clean one.
       if (failedChecks.length > 0) process.exit(1);
     } catch (error) {
-      console.error(chalk.red(errorMessage(error)));
+      console.error(errorMessage(error));
       process.exit(1);
     }
   });
@@ -156,7 +153,7 @@ const reportCommand = new Command("report")
       await writeFieldReport(result);
       console.log(`Wrote ${path.join(result.runDir, REPORT_FILENAME)}`);
     } catch (error) {
-      console.error(chalk.red(errorMessage(error)));
+      console.error(errorMessage(error));
       process.exit(1);
     }
   });

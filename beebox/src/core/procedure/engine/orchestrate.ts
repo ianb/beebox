@@ -6,7 +6,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAll, commit, withBoxGitLock } from "../../../lib/git/core/operations.js";
-import { fmt } from "../../../lib/format.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { ok, err, type Result } from "../../../shared/result.js";
 import type { CommandContext } from "../../command-runner.js";
@@ -107,7 +106,7 @@ export async function finalizeRun(args: {
   if (!materialized) {
     // No-op run: every executed step skipped, nothing was ever committed.
     await fs.rm(runDir, { recursive: true, force: true });
-    ctx.writeLine(fmt.dim(`No-op run (all steps skipped) — removed ${path.relative(boxRoot, runDir)}`));
+    ctx.writeLine(`No-op run (all steps skipped) — removed ${path.relative(boxRoot, runDir)}`);
     return ok({ status: "skipped", procedure: procedureName, inconclusive: [] });
   }
 
@@ -136,19 +135,17 @@ export async function finalizeRun(args: {
   if (allSucceeded) {
     if (outcome === "inconclusive") {
       ctx.writeLine(
-        fmt.warn(
-          `Procedure completed, review inconclusive: ${procedureName} (${inconclusive
+        `Procedure completed, review inconclusive: ${procedureName} (${inconclusive
             .map((i) => `${i.stepId} ${i.detail}`)
             .join("; ")})`
-        )
       );
       return ok({ status: "inconclusive", procedure: procedureName, inconclusive });
     }
-    ctx.writeLine(fmt.ok(`Procedure completed: ${procedureName}`));
+    ctx.writeLine(`✓ Procedure completed: ${procedureName}`);
     return ok({ status: "completed", procedure: procedureName, inconclusive: [] });
   }
 
-  ctx.writeLine(fmt.fail(`Procedure failed: ${procedureName}`));
+  ctx.writeLine(`✗ Procedure failed: ${procedureName}`);
   return err({
     cause: "step-failed",
     message: `Procedure ${procedureName} failed at step: ${failedStepId ?? "unknown"}${failedStepError === null ? "" : ` — ${failedStepError}`}`,

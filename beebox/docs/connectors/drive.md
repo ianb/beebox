@@ -259,7 +259,7 @@ a `.gfolder.card` (`schemas/gfolder.ts`) driven by `drive-folder-sync.ts`.
 
 ### "Google auth not configured"
 
-Run `bbx google-auth` or connect via the Admin page.
+Connect Google on the Admin page (Google Services section).
 
 ### "Calendar service not enabled" (but you want Drive)
 

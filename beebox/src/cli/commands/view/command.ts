@@ -111,14 +111,14 @@ export function buildProps(opts: {
   };
 }
 
-/** Strip <script>/<style> from rendered HTML; --raw keeps them. */
+/** A whole `<script>` or `<style>` element. React's server output cannot hold
+ *  `</script` or `</style` inside one, so the lazy match cannot end early. */
+const SCRIPT_OR_STYLE = /<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/giu;
+
+/** Strip <script>/<style> from rendered HTML and wrap it as a document; --raw keeps it as rendered. */
 async function postProcess(html: string, { raw }: { raw: boolean }): Promise<string> {
   if (raw) return html;
-  const { load: cheerioLoad } = await import("cheerio");
-  const $ = cheerioLoad(html);
-  $("script").remove();
-  $("style").remove();
-  return $.html();
+  return `<html><head></head><body>${html.replace(SCRIPT_OR_STYLE, "")}</body></html>`;
 }
 
 interface RenderViewOptions {

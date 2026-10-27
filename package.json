@@ -41,13 +41,11 @@
     "@types/node": "^24.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
     "@ianbicking/tap-check": "workspace:*",
-    "better-sqlite3": "^12.10.0",
     "esbuild": "^0.25.12",
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "knip": "^6.41.0",
     "patch-package": "^8.0.0",
-    "shellcheck": "4.1.0",
     "tsx": "^4.23.15",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },

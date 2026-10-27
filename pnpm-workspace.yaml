@@ -1,10 +1,7 @@
 onlyBuiltDependencies:
-  - "@google/genai"
   - "@googleworkspace/cli"
   - agent-browser
-  - better-sqlite3
   - esbuild
-  - protobufjs
   - sharp
   - unrs-resolver
   - workerd

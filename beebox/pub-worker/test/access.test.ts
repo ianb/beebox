@@ -121,9 +121,13 @@ function accessRequest(path: string, assertionHeader: AssertionHeader): Request 
   return new Request(`https://pub.example.com${path}`, { headers });
 }
 
-function serve(path: string, assertionHeader: AssertionHeader, overrides?: Partial<ServeOptions>): Promise<Response> {
+function serveRequest(request: Request, overrides?: Partial<ServeOptions>): Promise<Response> {
   const opts: ServeOptions = { env: configuredEnv(), deps: makeDeps(), ...overrides };
-  return handle({ request: accessRequest(path, assertionHeader), env: opts.env, deps: opts.deps });
+  return handle({ request, env: opts.env, deps: opts.deps });
+}
+
+function serve(path: string, assertionHeader: AssertionHeader): Promise<Response> {
+  return serveRequest(accessRequest(path, assertionHeader));
 }
 
 type AccountAudience = { tier: "accounts"; allowedEmails: string[] } | { tier: "any-account" };
@@ -214,7 +218,7 @@ describe("account tiers — assertion rejection is always 401 (never serve)", ()
 
   it("401s when the JWKS is unreachable", async () => {
     await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
-    const res = await serve(SITE_PATH, await signAssertion(validClaims()), { deps: makeDeps({ jwksFor: () => () => Promise.resolve(null) }) });
+    const res = await serveRequest(accessRequest(SITE_PATH, await signAssertion(validClaims())), { deps: makeDeps({ jwksFor: () => () => Promise.resolve(null) }) });
     expect(res.status).toBe(401);
   });
 });
@@ -239,7 +243,7 @@ describe("account tiers unconfigured — fail closed to 404", () => {
     // surface is not served here — treat it like a missing surface rather than
     // advertising gated content with a 401.
     await seedSite({ tier: "accounts", allowedEmails: [ALLOWED_EMAIL] });
-    const res = await serve(SITE_PATH, await signAssertion(validClaims()), {
+    const res = await serveRequest(accessRequest(SITE_PATH, await signAssertion(validClaims())), {
       env: { ...configuredEnv(), ACCESS_TEAM_DOMAIN: "", ACCESS_AUD: "" },
     });
     expect(res.status).toBe(404);

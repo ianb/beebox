@@ -9,23 +9,28 @@
  * ambient module into another package's program.
  */
 
-declare module "eslint-config-agent" {
-  import type { ESLint, Linter } from "eslint";
+declare module "eslint-plugin-default" {
+  import type { ESLint } from "eslint";
 
-  /**
-   * Some entries still carry a legacy-eslintrc `plugins: string[]`, which flat
-   * config's own type forbids — hence the widened field. `preset.ts` normalizes
-   * those to the object form before spreading them.
-   */
-  type LegacyTolerantConfig = Omit<Linter.Config, "plugins"> & {
-    plugins?: Record<string, ESLint.Plugin> | string[];
-  };
-
-  const config: LegacyTolerantConfig[];
-  export default config;
+  const plugin: ESLint.Plugin;
+  export default plugin;
 }
 
-declare module "eslint-plugin-ddd" {
+declare module "eslint-plugin-error" {
+  import type { ESLint } from "eslint";
+
+  const plugin: ESLint.Plugin;
+  export default plugin;
+}
+
+declare module "eslint-plugin-react" {
+  import type { ESLint } from "eslint";
+
+  const plugin: ESLint.Plugin;
+  export default plugin;
+}
+
+declare module "eslint-plugin-security" {
   import type { ESLint } from "eslint";
 
   const plugin: ESLint.Plugin;

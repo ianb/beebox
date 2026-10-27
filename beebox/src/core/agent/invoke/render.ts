@@ -10,7 +10,6 @@ import type {
   SDKMessage,
   SDKAssistantMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import { fmt } from "../../../lib/format.js";
 import { isRecord } from "../../card-io.js";
 import { truncateTitle } from "../../file-summary.js";
 
@@ -45,14 +44,14 @@ function renderAssistantMessage(msg: SDKAssistantMessage): string {
       if (block.text) lines.push(block.text);
     } else if (block.type === "tool_use") {
       const inputSummary = summarizeToolInput(block.input);
-      lines.push(fmt.dim(`\n→ ${block.name}(${inputSummary})\n`));
+      lines.push(`\n→ ${block.name}(${inputSummary})\n`);
     } else if (block.type === "thinking") {
       // Thinking blocks: keep noise low — single line marker.
-      lines.push(fmt.dim("  …thinking…\n"));
+      lines.push("  …thinking…\n");
     }
   }
   if (msg.error) {
-    lines.push(fmt.fail(`\n[assistant error: ${msg.error}]\n`));
+    lines.push(`✗ \n[assistant error: ${msg.error}]\n`);
   }
   return lines.join("");
 }
@@ -66,8 +65,8 @@ function renderUserMessage(msg: Extract<SDKMessage, { type: "user" }>): string {
       if (block.type === "tool_result") {
         const text = extractToolResultText(block.content);
         const summary = text ? truncateTitle(text.replace(/\s+/g, " "), 200) : "(no content)";
-        const errMark = block.is_error ? fmt.fail(" [error]") : "";
-        lines.push(fmt.dim(`  ↳ ${summary}${errMark}\n`));
+        const errMark = block.is_error ? "✗  [error]" : "";
+        lines.push(`  ↳ ${summary}${errMark}\n`);
       }
     }
   }
@@ -76,11 +75,9 @@ function renderUserMessage(msg: Extract<SDKMessage, { type: "user" }>): string {
 
 function renderResultMessage(msg: Extract<SDKMessage, { type: "result" }>): string {
   if (msg.subtype === "success") {
-    return fmt.ok(
-      `\n[done in ${msg.num_turns} turn(s), ${(msg.duration_ms / 1000).toFixed(1)}s]\n`,
-    );
+    return `✓ \n[done in ${msg.num_turns} turn(s), ${(msg.duration_ms / 1000).toFixed(1)}s]\n`;
   }
-  return fmt.fail(`\n[result error: ${msg.subtype}]\n`);
+  return `✗ \n[result error: ${msg.subtype}]\n`;
 }
 
 /**
@@ -89,7 +86,7 @@ function renderResultMessage(msg: Extract<SDKMessage, { type: "result" }>): stri
 export function renderSdkMessage(msg: SDKMessage): string {
   if (msg.type === "system" && msg.subtype === "init") {
     const sid = msg.session_id;
-    return fmt.dim(`[session ${sid.slice(0, 8)} model=${msg.model}]\n`);
+    return `[session ${sid.slice(0, 8)} model=${msg.model}]\n`;
   }
   if (msg.type === "assistant") {
     return renderAssistantMessage(msg);

@@ -11,7 +11,6 @@ import {
   checkClaudeAuth,
   checkFrontendBuild,
   checkGitLfs,
-  checkNativeSqlite,
   checkNodeVersion,
   checkPnpm,
   checkSchedulesTick,
@@ -70,16 +69,6 @@ function fakeRun(responses: Record<string, CommandResult>): RunCommand {
 
 function ok(stdout: string): CommandResult {
   return { spawned: true, code: 0, stdout, stderr: "" };
-}
-
-/** Stands in for the native-module load failure a Node major bump produces. */
-class FakeAbiDriftError extends Error {
-  constructor() {
-    super(
-      "ERR_DLOPEN_FAILED: The module was compiled against a different Node.js version\nmore detail",
-    );
-    this.name = "FakeAbiDriftError";
-  }
 }
 
 // ─── Individual checks against a fake exec ─────────────────────────────────
@@ -267,6 +256,7 @@ function passingDeps(overrides: Partial<DoctorDeps>): DoctorDeps {
     "pandoc --version": ok("pandoc 3.8.2.1"),
     "magick -version": ok("Version: ImageMagick 7.1.1"),
     "pdftotext -v": ok("pdftotext version 26.04.0"),
+    "shellcheck --version": ok("ShellCheck - shell script analysis tool\nversion: 0.11.0"),
     "git-lfs version": ok("git-lfs/3.7.1"),
     "git config --get filter.lfs.clean": ok("git-lfs clean -- %f\n"),
     "claude --version": ok("1.2.3"),
@@ -282,7 +272,6 @@ function passingDeps(overrides: Partial<DoctorDeps>): DoctorDeps {
     engines: ">=22.11.0 <23",
     packageManager: "pnpm@10.26.2",
     resolveSdkBinary: () => "/repo/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
-    loadBetterSqlite3: async () => "loads and opens (SQLite 3.50.0)",
     nowMs: Date.parse("2026-08-24T12:00:00Z"),
     ...overrides,
   };
@@ -311,22 +300,6 @@ test("one failing check flips the aggregate JSON ok to false without hiding the 
   assert.equal(results.length, json.checks.length);
   assert.ok(results.some((r) => r.name === "Workspace installed" && !r.ok));
   assert.ok(results.some((r) => r.name === "Frontend build" && !r.ok));
-});
-
-test("checkNativeSqlite passes with the loader's detail and fails on a load error naming ABI drift", async () => {
-  const passResult = await checkNativeSqlite({ loadBetterSqlite3: async () => "loads and opens (SQLite 3.50.0)" });
-  assert.equal(passResult.ok, true);
-  assert.match(passResult.detail, /SQLite 3\.50\.0/);
-
-  const failResult = await checkNativeSqlite({
-    loadBetterSqlite3: async () => {
-      throw new FakeAbiDriftError();
-    },
-  });
-  assert.equal(failResult.ok, false);
-  assert.match(failResult.detail, /ERR_DLOPEN_FAILED/);
-  assert.equal(failResult.detail.includes("more detail"), false);
-  assert.match(failResult.remedy ?? "", /pnpm rebuild better-sqlite3/);
 });
 
 test("formatTable marks failures with a remedy line and passes with just a detail line", () => {

@@ -2,7 +2,6 @@
 
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
-import { fmt } from "../../../lib/format.js";
 import { buildScriptEnv } from "../../script-env/core.js";
 import { buildTimezoneContext, loadCodexTelemetry } from "../../box/config.js";
 import type { AgentResult } from "../types.js";
@@ -100,7 +99,7 @@ export async function runCodexAgent(
     const readOnly = isPromptOnly(options.tools);
     if (options.maxBudgetUsd !== undefined) {
       options.onOutput?.(
-        `${fmt.warn("Codex does not expose a per-turn USD budget; beebox will enforce the configured tool-turn limit only.")}\n`,
+        "Codex does not expose a per-turn USD budget; beebox will enforce the configured tool-turn limit only.\n",
       );
     }
     const env = await invocationEnv(options);
@@ -161,7 +160,7 @@ export async function runCodexAgent(
         onOutput: options.onOutput,
       });
     } catch (error) {
-      options.onOutput?.(`${fmt.warn(`Could not record Codex token usage: ${errorMessage(error)}`)}\n`);
+      options.onOutput?.(`Could not record Codex token usage: ${errorMessage(error)}\n`);
     }
     const validation = await validateHookPathsResult([...changedPaths]);
     if (validation.feedback !== null && !validation.hasErrors) {

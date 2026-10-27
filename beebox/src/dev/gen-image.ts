@@ -30,6 +30,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { extensionToMimetype } from "../lib/mimetype.js";
 import { errorMessage, toError } from "../shared/error-guards.js";
+import { GeminiHttpError, generateContent, type GeminiRequestPart, type GeminiResponse } from "../services/gemini-rest.js";
 
 const SELF = import.meta.filename;
 
@@ -42,10 +43,6 @@ interface Args {
   verbose: boolean;
   help: boolean;
 }
-
-type ContentPart =
-  | { text: string }
-  | { inlineData: { mimeType: string; data: string } };
 
 class GenImageError extends Error {
   readonly exitCode: number;
@@ -144,58 +141,21 @@ function resolveApiKey(override: string | null): { key: string; from: string } {
   );
 }
 
-/** Shape as it arrives over HTTP — the Gemini API may send `inlineData: null`
- * or omit it even for the variant of `ResponsePart` that carries it. */
-interface RawInlineDataPart { inlineData?: { mimeType: string; data: string } | null }
-/** Shape after `extractInlineData` has validated inlineData is genuinely present. */
-interface InlineDataPart { inlineData: { mimeType: string; data: string } }
-interface TextPart { text: string }
-type ResponsePart = RawInlineDataPart | TextPart;
-interface GenerateResponse {
-  candidates?: Array<{ content?: { parts?: ResponsePart[] } }>;
+/** The first candidate's parts, which is where the API puts the reply. */
+function firstParts(response: GeminiResponse): NonNullable<NonNullable<NonNullable<GeminiResponse["candidates"]>[number]["content"]>["parts"]> {
+  return response.candidates?.[0]?.content?.parts ?? [];
 }
 
-/** Duck-typed `.status` probe for a caught value — mirrors error-guards.ts's `errnoCode`. */
-function errorStatus(e: unknown): number | undefined {
-  if (typeof e !== "object" || e === null || !("status" in e)) return undefined;
-  const { status } = e;
-  return typeof status === "number" ? status : undefined;
-}
-
-function extractInlineData(p: ResponsePart): InlineDataPart | null {
-  if (!("inlineData" in p) || p.inlineData == null || p.inlineData.data.length === 0) return null;
-  return { inlineData: p.inlineData };
-}
-function hasText(p: ResponsePart): p is TextPart {
-  return "text" in p && p.text.length > 0;
-}
-
-function firstImagePart(response: GenerateResponse): InlineDataPart | null {
-  const candidates = response.candidates;
-  if (candidates === undefined || candidates.length === 0) return null;
-  const first = candidates[0];
-  if (first === undefined) return null;
-  const content = first.content;
-  if (content === undefined || content.parts === undefined) return null;
-  for (const p of content.parts) {
-    const inline = extractInlineData(p);
-    if (inline) return inline;
+function firstImageData(response: GeminiResponse): string | null {
+  for (const p of firstParts(response)) {
+    const data = p.inlineData?.data;
+    if (data) return data;
   }
   return null;
 }
 
-function textParts(response: GenerateResponse): string[] {
-  const out: string[] = [];
-  const candidates = response.candidates;
-  if (candidates === undefined || candidates.length === 0) return out;
-  const first = candidates[0];
-  if (first === undefined) return out;
-  const content = first.content;
-  if (content === undefined || content.parts === undefined) return out;
-  for (const p of content.parts) {
-    if (hasText(p)) out.push(p.text);
-  }
-  return out;
+function textParts(response: GeminiResponse): string[] {
+  return firstParts(response).flatMap((p) => (p.text ? [p.text] : []));
 }
 
 async function main(): Promise<void> {
@@ -218,7 +178,7 @@ async function main(): Promise<void> {
   const { key, from } = resolveApiKey(args.keyEnvOverride);
   if (args.verbose) console.error(`gen-image: using key from $${from}`);
 
-  const parts: ContentPart[] = [{ text: prompt }];
+  const parts: GeminiRequestPart[] = [{ text: prompt }];
   for (const ipath of args.inputs) {
     const buf = await readFile(ipath);
     parts.push({
@@ -226,27 +186,16 @@ async function main(): Promise<void> {
     });
   }
 
-  const { GoogleGenAI } = await import("@google/genai");
-  const ai = new GoogleGenAI({ apiKey: key });
-  let response: GenerateResponse;
+  let response: GeminiResponse;
   try {
-    // The SDK's declared return type (`GenerateContentResponse`) is a rich
-    // class with helper getters; we only read the raw `candidates` shape
-    // documented by the API, which is what `GenerateResponse` models. A
-    // structural check (not a cast) confirms the field we depend on exists.
-    const raw: unknown = await ai.models.generateContent({
+    response = await generateContent({
+      apiKey: key,
       model: args.model,
-      contents: parts,
-      config: { responseModalities: ["TEXT", "IMAGE"] },
+      parts,
+      generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
     });
-    if (typeof raw !== "object" || raw === null || !("candidates" in raw)) {
-      throw new GenImageError(3, "API error: response had no candidates field");
-    }
-    response = raw as GenerateResponse; // eslint-disable-line no-restricted-syntax -- narrowed above to an object carrying `candidates`; GenerateResponse only further types that field's inner shape, which the API contract guarantees
   } catch (err) {
-    if (err instanceof GenImageError) throw err;
-    const status = errorStatus(err);
-    if (status === 429) {
+    if (err instanceof GeminiHttpError && err.status === 429) {
       throw new GenImageError(
         3,
         `429 quota exceeded on $${from}.\n` +
@@ -263,10 +212,10 @@ async function main(): Promise<void> {
     }
   }
 
-  const part = firstImagePart(response);
-  if (part === null) throw new GenImageError(2, "no image part in response");
+  const imageData = firstImageData(response);
+  if (imageData === null) throw new GenImageError(2, "no image part in response");
 
-  await writeFile(args.output, Buffer.from(part.inlineData.data, "base64"));
+  await writeFile(args.output, Buffer.from(imageData, "base64"));
   console.log(resolve(args.output));
 }
 

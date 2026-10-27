@@ -40,6 +40,8 @@ packages:
   - ffmpeg
   - rsync
   - bzip2
+  # Lints shell scripts; the planned box-card shell linting runs it here.
+  - shellcheck
 
 groups:
   - beebox-boxes

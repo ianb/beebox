@@ -121,7 +121,7 @@ export default function Prose({ cards }) {
   // The box slug in the link is the temp box's random directory name.
   t.check(r, {
     code: 0,
-    stdout: str`<html><head></head><body><div><div class="prose prose-sm max-w-none bbx-theme-prose"><div class="bbx-paragraph">See <a class="bbx-theme-link" href="/${any(String)}/views/_content/inbox/B.doc.card">B</a>.</div><div class="bbx-paragraph"><span data-todo-status="open" data-todo-locator="7" class="group"><input type="checkbox" disabled="" readonly="" aria-label="Order lumber" class="accent-warm-500 mr-1 align-middle"><span class="text-card-ink">Order lumber</span></span></div></div></div></body></html>
+    stdout: str`<html><head></head><body><div><div class="prose prose-sm max-w-none bbx-theme-prose"><div class="bbx-paragraph">See <a class="bbx-theme-link" href="/${any(String)}/views/_content/inbox/B.doc.card">B</a>.</div><div class="bbx-paragraph"><span data-todo-status="open" data-todo-locator="7" class="group"><input type="checkbox" disabled="" readonly="" aria-label="Order lumber" class="accent-warm-500 mr-1 align-middle"/><span class="text-card-ink">Order lumber</span></span></div></div></div></body></html>
 `,
     stderr: "",
   });
@@ -153,7 +153,7 @@ export default function Image({ imageUrl, fileUrl }) {
   const r = await runViewTest(box.root, ["image"]);
   t.check(r, {
     code: 0,
-    stdout: '<html><head></head><body><a href="/api/files/store/Trip.attach/beach photo.jpg"><img src="/api/images/store/Trip.attach/beach photo.jpg?width=480&amp;format=auto"></a></body></html>\n',
+    stdout: '<html><head></head><body><a href="/api/files/store/Trip.attach/beach photo.jpg"><img src="/api/images/store/Trip.attach/beach photo.jpg?width=480&amp;format=auto"/></a></body></html>\n',
     stderr: "",
   });
 });

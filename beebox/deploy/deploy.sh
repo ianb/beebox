@@ -694,7 +694,7 @@ queue_remote stdin bash -s <<'REMOTE'
   # dev byte-for-byte (and fails loudly if the lockfile is stale rather than
   # silently resolving something new). HUSKY=0 skips husky's hook install (no
   # .git on the server) so it doesn't print a spurious ".git can't be found".
-  # patch-package still runs via the root postinstall to patch eslint-config-agent.
+  # patch-package still runs via the root postinstall to patch @typescript-eslint/eslint-plugin.
   cd /opt/beebox
   echo "  Reconciling workspace deps (frozen)..."
   # The install competes for RAM with every running box's `bbx engine serve` +
@@ -730,19 +730,6 @@ queue_remote stdin bash -s <<'REMOTE'
   # Refresh the operator-facing command after every dependency reconciliation.
   # Internal callers resolve this same direct package dependency themselves.
   ln -sf /opt/beebox/node_modules/.bin/codex /usr/local/bin/codex
-  # Native-module ABI guard. pnpm's side-effects cache keys build artifacts by
-  # dependency graph, NOT by Node ABI — after a Node major upgrade, a "clean"
-  # reinstall can silently restore a binary compiled for the old ABI (this
-  # broke every box child on the 22→24 upgrade, 2026-07-16, while the hub's
-  # /healthz stayed green). Load the module with the runtime that will serve
-  # traffic; on mismatch, force a real prebuild fetch/compile and re-verify —
-  # a second failure fails the deploy.
-  if ! node -e 'require("better-sqlite3")' 2>/dev/null; then
-    echo "  better-sqlite3 ABI mismatch — forcing rebuild for $(node -v)..."
-    (cd node_modules/better-sqlite3 && rm -rf build \
-      && { npx --no-install prebuild-install || npx --no-install node-gyp rebuild --release; })
-    node -e 'require("better-sqlite3")'
-  fi
 REMOTE
 
 # Reconcile each package-layout box's own node_modules against its manifest

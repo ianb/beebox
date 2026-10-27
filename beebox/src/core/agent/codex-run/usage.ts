@@ -1,4 +1,3 @@
-import { fmt } from "../../../lib/format.js";
 import { appendCodexTurnUsage, codexUsageModel, type CodexTokenUsage } from "../../codex-usage.js";
 
 export async function recordCodexAgentUsage(options: {
@@ -13,7 +12,7 @@ export async function recordCodexAgentUsage(options: {
   onOutput?: ((text: string) => void) | undefined;
 }): Promise<void> {
   if (options.usage === null) {
-    options.onOutput?.(`${fmt.warn("Codex did not report token usage for this turn.")}\n`);
+    options.onOutput?.("Codex did not report token usage for this turn.\n");
     return;
   }
   await appendCodexTurnUsage(options.boxRoot, {
@@ -25,7 +24,7 @@ export async function recordCodexAgentUsage(options: {
       threadId: options.threadId,
       requested: options.model,
       env: options.env,
-      warn: (text) => options.onOutput?.(`${fmt.warn(text)}\n`),
+      warn: (text) => options.onOutput?.(`${text}\n`),
     }),
     usage: options.usage,
   });

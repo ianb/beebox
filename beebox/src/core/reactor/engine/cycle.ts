@@ -10,7 +10,6 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { fmt } from "../../../lib/format.js";
 import { getBoxTime } from "../../../lib/time.js";
 import type { createAgent as realCreateAgent } from "../../agent/invoke/core.js";
 import type { generateDocs as realGenerateDocs } from "../../docs-gen/generate/core.js";
@@ -78,7 +77,7 @@ export async function runOneCycle(params: RunCycleParams): Promise<ReactorResult
   }
 
   const outcome = await processStage({ jobCards: discovered.jobCards, jobsDir, params });
-  onLog?.(fmt.dim(`\nCycle complete: ${outcome.jobsProcessed} processed, ${outcome.jobsRemaining} remaining\n`));
+  onLog?.(`\nCycle complete: ${outcome.jobsProcessed} processed, ${outcome.jobsRemaining} remaining\n`);
   return {
     success: outcome.success,
     jobsProcessed: outcome.jobsProcessed,
@@ -90,10 +89,10 @@ export async function runOneCycle(params: RunCycleParams): Promise<ReactorResult
 async function syncStage(params: RunCycleParams): Promise<void> {
   const { boxRoot, sync, onLog, runSync } = params;
   if (!sync) return;
-  onLog?.(fmt.header("[Sync]\n"));
+  onLog?.("[Sync]\n");
   const syncOk = await runSync(boxRoot, onLog);
   if (!syncOk) {
-    onLog?.(fmt.warn("Sync failed, continuing with existing jobs...\n"));
+    onLog?.("Sync failed, continuing with existing jobs...\n");
   }
   onLog?.("\n");
 }
@@ -101,7 +100,7 @@ async function syncStage(params: RunCycleParams): Promise<void> {
 /** Stage 2: refresh agent docs (fast no-op if inputs haven't changed). */
 async function refreshDocsStage(params: RunCycleParams): Promise<void> {
   const { boxRoot, onLog, generateDocs } = params;
-  onLog?.(fmt.dim("Refreshing agent docs...\n"));
+  onLog?.("Refreshing agent docs...\n");
   await generateDocs(boxRoot);
 }
 
@@ -153,20 +152,18 @@ async function discoverStage(opts: {
       (j) => j.createdAt !== null && now - j.createdAt.getTime() >= LOW_PRIORITY_MAX_WAIT_MS,
     );
     if (overdue.length === 0) {
-      onLog?.(fmt.dim(`Only ${jobCards.length} low-priority job(s), skipping.\n`));
+      onLog?.(`Only ${jobCards.length} low-priority job(s), skipping.\n`);
       return { kind: "skipped", remaining: jobCards.length };
     }
     selected = overdue.slice(0, OVERDUE_LOW_PRIORITY_PER_CYCLE);
     const deferred = jobCards.length - selected.length;
     onLog?.(
-      fmt.warn(
-        `${overdue.length} low-priority job(s) pending over ${LOW_PRIORITY_MAX_WAIT_LABEL}; processing ${selected.length}.\n`,
-      ),
+      `${overdue.length} low-priority job(s) pending over ${LOW_PRIORITY_MAX_WAIT_LABEL}; processing ${selected.length}.\n`,
     );
-    if (deferred > 0) onLog?.(fmt.dim(`  ${deferred} other low-priority job(s) wait for the next cycle.\n`));
+    if (deferred > 0) onLog?.(`  ${deferred} other low-priority job(s) wait for the next cycle.\n`);
   }
 
-  onLog?.(fmt.header(`Found ${selected.length} job(s):\n`));
+  onLog?.(`Found ${selected.length} job(s):\n`);
   for (const card of selected) {
     const label = card.priority === "low" ? " (low priority)" : "";
     onLog?.(`  - ${BOX_DIRS.jobs}/${card.file}${label}\n`);

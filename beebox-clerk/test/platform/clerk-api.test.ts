@@ -96,6 +96,7 @@ const okBody = JSON.stringify({ result: { data: { created: ["_content/inbox/A.we
 export class UnexpectedFetchError extends Error {
   constructor() {
     super("unexpected extra fetch");
+    this.name = "UnexpectedFetchError";
   }
 }
 
@@ -103,6 +104,7 @@ export class UnexpectedFetchError extends Error {
 export class NetworkDownError extends TypeError {
   constructor() {
     super("Failed to fetch");
+    this.name = "NetworkDownError";
   }
 }
 
