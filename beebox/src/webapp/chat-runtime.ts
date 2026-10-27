@@ -16,7 +16,15 @@ import type { ChatScheduleManager } from "../core/chat/schedules/core.js";
 import type { AgentEngine } from "../core/box/config.js";
 import type { ChatChannel } from "../shared/chat-channel.js";
 import type { SessionUser } from "./auth.js";
-import type { ChatSendContextWithView } from "../core/chat/card-activity.js";
+import type { ChatSendContext } from "../core/chat/card-activity.js";
+import type { AttentionSnapshot } from "../shared/chat-composer-binding.js";
+
+/**
+ * `ChatSendContext` plus the frozen attention snapshot the web client sends.
+ * Kept out of `card-activity.ts`: the package ships that file for box
+ * typechecks, and the binding module it would import is not shipped.
+ */
+export type ChatSendContextWithView = ChatSendContext & { viewContext?: AttentionSnapshot };
 
 /** The status + body one `/api/chat/send` request answers with. */
 export interface SendOutcome {
