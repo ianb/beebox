@@ -1,33 +1,165 @@
-/**
- * Admin → Backup: what of this box exists anywhere but the machine serving it.
- *
- * Split into its own file for the same reason as admin-google/admin-gmail:
- * `admin.ts` is the composition point, not a dumping ground. The measurement
- * itself lives in `core/box/backup-status.ts`; this only exposes it.
- *
- * Owner-only, and read-only by construction — the underlying module never
- * fetches, pushes, or writes, so viewing the page cannot change what it is
- * reporting on.
- */
-
-import { ownerProcedure } from "../../procedures.js";
+/** Owner-only setup and local status for encrypted Restic backups. */
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+import { backupAttemptStatus } from "../../../../core/box-backup/attempt.js";
+import { createManagedBackupPasswordFile } from "../../../../core/box-backup/admin-config.js";
+import { MissingBackupConfigError, readBackupConfig, updateBackupSchedule } from "../../../../core/box-backup/config.js";
+import { configureBackup } from "../../../../core/box-backup/run/backup.js";
+import { serverBackupTimerStatus } from "../../../../core/box-backup/server-timer-status.js";
 import { getBackupStatus, NotAGitBoxError } from "../../../../core/box/backup-status.js";
+import { onUnitHost } from "../../../../lib/unit-host.js";
+import { authenticatedOwnerProcedure, ownerProcedure } from "../../procedures.js";
+import { localBackupRunnerActive } from "../../../../core/box-backup/local-runner.js";
+
+const retentionSchema = z.object({
+  daily: z.number().int().positive().max(365),
+  weekly: z.number().int().positive().max(104),
+  monthly: z.number().int().positive().max(120),
+}).strict();
+
+const scheduleSchema = z.enum(["daily", "off"]);
+const recoveryPasswordSchema = z.string().min(1).max(4096).refine(
+  (value) => value === value.trim() && !/[\n\r]/.test(value),
+  "Recovery password must be one line with no leading or trailing whitespace.",
+);
 
 export const backupAdminProcedures = {
-  /**
-   * This box's backup posture: remote, unpushed commits, repo size, and the
-   * assets that exist only here.
-   *
-   * A box that is not a git repository is a legitimate state (a scratch box
-   * that was never `git init`ed), not an error to surface as a failed query —
-   * it comes back as `repo: null` so the section can say so plainly.
-   */
+  /** Git/annex backup posture for the existing Admin Backup section. */
   backupStatus: ownerProcedure.query(async ({ ctx }) => {
     try {
       return { repo: await getBackupStatus(ctx.boxRoot) };
-    } catch (e) {
-      if (e instanceof NotAGitBoxError) return { repo: null };
-      throw e;
+    } catch (error) {
+      if (error instanceof NotAGitBoxError) return { repo: null };
+      throw error;
     }
   }),
+
+  /** Reads machine-owned state only; never contacts the Restic repository. */
+  encryptedBackupStatus: authenticatedOwnerProcedure.query(async ({ ctx }) => {
+    let config;
+    try {
+      config = await readBackupConfig({ boxRoot: ctx.boxRoot });
+    } catch (error) {
+      if (error instanceof MissingBackupConfigError) {
+        return {
+          boxRoot: ctx.boxRoot,
+          boxSlug: ctx.boxSlug,
+          installKind: backupInstallKind(),
+          configured: false,
+          repository: null,
+          retention: null,
+          schedule: "off" as const,
+          runnerStatus: await backupRunnerStatus(ctx.boxSlug),
+          newestVerified: null,
+          lastAttempt: null,
+          maintenance: null,
+        };
+      }
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Encrypted backup configuration is unreadable." });
+    }
+    const attempt = await backupAttemptStatus({ boxRoot: ctx.boxRoot });
+    return {
+      boxRoot: ctx.boxRoot,
+      boxSlug: ctx.boxSlug,
+      installKind: backupInstallKind(),
+      configured: true,
+      repository: redactRepositoryCredentials(config.repository),
+      retention: config.retention,
+      schedule: onUnitHost() && !config.serverAutoEnabled ? "off" as const : config.schedule,
+      runnerStatus: await backupRunnerStatus(ctx.boxSlug),
+      newestVerified: attempt.newestVerified,
+      lastAttempt: attempt.lastAttempt,
+      maintenance: attempt.maintenance,
+    };
+  }),
+
+  configureEncryptedBackup: authenticatedOwnerProcedure
+    .input(z.object({
+      repository: z.string().trim().min(1).max(2048),
+      password: recoveryPasswordSchema,
+      retention: retentionSchema.optional(),
+    }).strict())
+    .mutation(async ({ input, ctx }) => {
+      try {
+        try {
+          await readBackupConfig({ boxRoot: ctx.boxRoot });
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Encrypted backups are already configured. Use the host CLI to change the repository." });
+        } catch (error) {
+          if (!(error instanceof MissingBackupConfigError)) throw error;
+        }
+        if (/[a-z][\d+.a-z-]*:\/\/[^/@]+@/i.test(input.repository)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Put repository credentials in the host's credential store instead of the repository address." });
+        }
+        const managed = await createManagedBackupPasswordFile({ boxRoot: ctx.boxRoot, password: input.password });
+        try {
+          const configured = await configureBackup({
+            boxRoot: ctx.boxRoot,
+            repository: input.repository,
+            passwordFile: managed.passwordFile,
+            timeoutMs: 120_000,
+            initialSchedule: "off",
+            ...(input.retention === undefined ? {} : { retention: input.retention }),
+          });
+          return { success: true as const, configured: true as const, schedule: configured.schedule };
+        } catch (_error) {
+          try { await managed.cleanup(); }
+          catch (_cleanupError) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Setup failed and cleanup of its temporary recovery file could not be confirmed." });
+          }
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Could not configure encrypted backups. Check the repository and recovery password." });
+        }
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Encrypted backup configuration is unreadable." });
+      }
+    }),
+
+  updateEncryptedBackupSchedule: authenticatedOwnerProcedure
+    .input(z.object({ schedule: scheduleSchema }).strict())
+    .mutation(async ({ input, ctx }) => {
+      try {
+        if (input.schedule === "daily") {
+          await readBackupConfig({ boxRoot: ctx.boxRoot });
+          await ensureBackupRunner(ctx.boxSlug);
+          const config = await updateBackupSchedule({ boxRoot: ctx.boxRoot, schedule: "daily", serverAutoEnabled: onUnitHost() });
+          return { success: true as const, schedule: config.schedule };
+        }
+        const config = await updateBackupSchedule({ boxRoot: ctx.boxRoot, schedule: "off", serverAutoEnabled: false });
+        return { success: true as const, schedule: config.schedule };
+      } catch (_error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Could not confirm the daily backup runner. Check the host timer or service and try again." });
+      }
+    }),
 };
+
+function redactRepositoryCredentials(repository: string): string {
+  return repository.replace(/([a-z][\d+.a-z-]*:\/\/)[^/@]*@/gi, "$1***@");
+}
+
+async function backupRunnerStatus(slug: string): Promise<"enabled" | "disabled" | "unavailable" | "running"> {
+  if (!onUnitHost()) {
+    // TODO(env-migration): install kind is launch-time runtime context; keep
+    // this direct read until it is added to serverEnvSchema.
+    if (process.env.BBX_INSTALL_KIND === "mac-app") return "running";
+    return localBackupRunnerActive() ? "running" : "unavailable";
+  }
+  return serverBackupTimerStatus(slug);
+}
+
+async function ensureBackupRunner(slug: string): Promise<void> {
+  const state = await backupRunnerStatus(slug);
+  if (state !== "enabled" && state !== "running") throw new BackupRunnerUnavailableError();
+}
+
+class BackupRunnerUnavailableError extends Error {
+  constructor() { super("Backup runner is not active"); this.name = "BackupRunnerUnavailableError"; }
+}
+
+function backupInstallKind(): "unit-host" | "mac-app" | "docker" | "local" {
+  if (onUnitHost()) return "unit-host";
+  // TODO(env-migration): install kind is launch-time runtime context; keep
+  // these direct reads until it is added to serverEnvSchema.
+  if (process.env.BBX_INSTALL_KIND === "mac-app") return "mac-app";
+  if (process.env.BBX_INSTALL_KIND === "docker") return "docker";
+  return "local";
+}

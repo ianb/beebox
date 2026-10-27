@@ -1,9 +1,9 @@
 [Unit]
-Description=Daily Bee Box %i backup
+Description=Bee Box %i daily backup check
 
 [Timer]
-OnCalendar=daily
-RandomizedDelaySec=1h
+OnCalendar=hourly
+RandomizedDelaySec=10m
 Persistent=true
 Unit=beebox-backup@%i.service
 

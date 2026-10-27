@@ -26,7 +26,7 @@ nothing, and every script below refuses with the setup steps.
 | `claude-update.sh` | The nightly Claude Code updater the server's timer runs. |
 | `install-restic.sh` | Installs the pinned restic release after verifying the upstream SHA-256 checksum. Deploy refreshes it when the pinned version changes. |
 | `launchd/` | LaunchAgent template for daily backups of a local Mac box; see its README for path substitution and bootstrap commands. |
-| `nginx/`, `systemd/`, `server-bin/` | The nginx site, unit drop-ins, and root helpers a deploy installs. `beebox-backup@.timer` is an opt-in per-box daily backup timer; enable it after configuring that box's backup repository and key. |
+| `nginx/`, `systemd/`, `server-bin/` | The nginx site, unit drop-ins, and root helpers a deploy installs. Each registered box has a `beebox-backup@.timer`; scheduled capture waits for the owner to enable Daily in Admin. |
 
 ## Checking deploy state
 

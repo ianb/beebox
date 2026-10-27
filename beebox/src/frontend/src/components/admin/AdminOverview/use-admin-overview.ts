@@ -13,7 +13,7 @@ import type { AdminSectionId } from "../sections";
 import { useIsLoopback } from "../TailscaleSection";
 import {
   claudeEnabled, fromQuery, ready, summarizeAgentEngine, summarizeAllowedUsers, summarizeBackup, summarizeClaude,
-  summarizeCloudflare, summarizeCodex, summarizeGmailFilters, summarizeGoogle, summarizeOpenRouter, summarizeSecrets,
+  summarizeCloudflare, summarizeCodex, summarizeEncryptedBackup, summarizeGmailFilters, summarizeGoogle, summarizeOpenRouter, summarizeSecrets,
   summarizeTailscale, type AdminSectionStatus,
 } from "./admin-overview-summaries";
 
@@ -66,6 +66,7 @@ export function useAdminOverview(): Record<AdminSectionId, AdminSectionStatus> {
   const loopback = useIsLoopback();
   const tailscale = trpc.admin.tailscaleBaseUrl.useQuery(undefined, { enabled: loopback });
   const backup = trpc.admin.backupStatus.useQuery();
+  const encryptedBackup = trpc.admin.encryptedBackupStatus.useQuery();
   const notifications = useNotificationStatus();
 
   return {
@@ -85,6 +86,7 @@ export function useAdminOverview(): Record<AdminSectionId, AdminSectionStatus> {
     "cloudflare-publishing": fromQuery(cloudflare, summarizeCloudflare),
     "tailscale": loopback ? fromQuery(tailscale, summarizeTailscale) : ready("Managed on the host", "neutral"),
     "backup": fromQuery(backup, summarizeBackup),
+    "encrypted-backups": fromQuery(encryptedBackup, summarizeEncryptedBackup),
     "notifications": notifications,
   };
 }

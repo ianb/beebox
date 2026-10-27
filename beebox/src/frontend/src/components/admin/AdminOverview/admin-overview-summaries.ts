@@ -134,3 +134,22 @@ export function summarizeBackup(result: Admin["backupStatus"]): AdminSectionStat
   if (repo.assetRisk !== null) issues.push(`${plural(repo.assetRisk.fileCount, "file")} only here`);
   return issues.length === 0 ? ready("Pushed to remote", "success") : ready(issues.join(" · "), "warning");
 }
+
+export function summarizeEncryptedBackup(result: Admin["encryptedBackupStatus"]): AdminSectionStatus {
+  if (!result.configured) return ready("Not configured", "warning");
+  if (result.maintenance === "running") return ready("Backup running", "info");
+  if (result.maintenance === "interrupted") return ready("Backup interrupted", "warning");
+  if (result.lastAttempt?.outcome === "failed") {
+    if (result.lastAttempt.error === "Snapshot verified; retention could not be applied") {
+      return ready("Snapshot verified; retention failed", "warning");
+    }
+    return ready(result.newestVerified === null ? "Last run failed; no prior local record" : "Last run failed; previous snapshot available", "warning");
+  }
+  if (result.schedule === "off") return ready("Manual backups only", "neutral");
+  if (result.runnerStatus !== "enabled" && result.runnerStatus !== "running") return ready("Daily backup runner unavailable", "warning");
+  if (result.newestVerified === null) return ready("No local snapshot record; inspect repository", "warning");
+  if (Date.now() - Date.parse(result.newestVerified.verifiedAt) > 36 * 60 * 60 * 1000) {
+    return ready("Latest verified snapshot is over 36 hours old", "warning");
+  }
+  return ready("Verified snapshot available", "success");
+}

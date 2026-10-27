@@ -18,6 +18,7 @@ import type { FastifyInstance } from "fastify";
 import type { BoxSpec } from "../server-types.js";
 import { getChatRuntime } from "../chat-runtime.js";
 import { loadChatSchedules } from "../../core/chat/schedules/core.js";
+import { localBackupCommandActive } from "../../core/box-backup/local-runner.js";
 
 export interface IdleSignals {
   /** When the last request began, the last socket opened or closed, in ms since the epoch. */
@@ -85,7 +86,7 @@ export class ActivityLedger {
   }
 
   signals(): IdleSignals {
-    let liveRuns = 0;
+    let liveRuns = localBackupCommandActive() ? 1 : 0;
     let pendingSchedules = 0;
     for (const box of this.boxes) {
       const runtime = getChatRuntime(box.boxRoot);

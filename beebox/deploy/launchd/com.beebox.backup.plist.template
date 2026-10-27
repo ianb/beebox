@@ -11,6 +11,7 @@
     <string>backup</string>
     <string>run</string>
     <string>__BOX_ROOT__</string>
+    <string>--scheduled</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>

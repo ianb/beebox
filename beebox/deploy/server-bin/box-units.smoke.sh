@@ -15,7 +15,7 @@ set -euo pipefail
 [[ "$EUID" -eq 0 ]] || { echo "run as root" >&2; exit 1; }
 keep=""
 [[ "${1:-}" == --keep ]] && keep=1
-for unit in beebox-box@.socket beebox-box@.service; do
+for unit in beebox-box@.socket beebox-box@.service beebox-backup@.timer; do
   [[ -e "/etc/systemd/system/$unit" ]] || { echo "missing /etc/systemd/system/$unit" >&2; exit 1; }
 done
 [[ -e /etc/systemd/system/beebox-box@.service.d/box-sandbox.conf ]] || { echo "missing box-sandbox.conf drop-in" >&2; exit 1; }
@@ -40,6 +40,7 @@ check_not() { # passes when the command exits non-zero
 cleanup() {
   [[ -n "$keep" ]] && { echo "keeping fixtures ($A, $B)"; return; }
   for slug in "$A" "$B"; do
+    systemctl disable --now "beebox-backup@$slug.timer" 2>/dev/null || true
     systemctl stop "beebox-box@$slug.socket" "beebox-box@$slug.service" 2>/dev/null || true
     systemctl reset-failed "beebox-box@$slug.service" 2>/dev/null || true
     rm -f "/run/beebox/$slug.hub-secret"
@@ -122,6 +123,10 @@ check "the boxes directory lists only this box" -- in_a bash -c "[[ \$(ls /var/l
 check_not "/home is hidden" -- in_a ls /home/beebox
 check_not "the system tree is read-only" -- in_a touch /usr/local/bin/probe
 check_not "no sudo (NoNewPrivileges)" -- in_a sudo -n true
+systemctl enable --now "beebox-backup@$A.timer"
+# The variables in this bash -c script expand inside the sandbox, not here.
+# shellcheck disable=SC2016
+check "the backup timer is readable inside the sandbox" -- in_a bash -c 'state=$(systemctl show --no-pager "beebox-backup@$1.timer" --property=UnitFileState,ActiveState); [[ "$state" == *"UnitFileState=enabled"* && "$state" == *"ActiveState=active"* ]]' backup-timer "$A"
 check "the toolchain runs inside the view" -- in_a bash -c "git --version && node --version && git annex version --raw"
 
 echo "== by path, outside any unit, as the sibling user"

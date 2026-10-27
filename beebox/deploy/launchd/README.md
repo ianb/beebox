@@ -25,7 +25,8 @@ plutil -lint ~/Library/LaunchAgents/com.beebox.backup.plist
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.beebox.backup.plist
 ```
 
-The template runs daily at 03:15 local time. If the Mac is asleep then,
+The template runs daily at 03:15 local time and checks the daily on/off setting
+saved in Admin → Host → Encrypted backups. If the Mac is asleep then,
 launchd runs the missed calendar event after wake. Inspect the two log files
 for backup or retention failures. To unload the schedule:
 

@@ -51,6 +51,8 @@ import { listenBaseUrl, publishServeEndpoints } from "./serve-publish.js";
 import { installIdleExit } from "./idle-exit.js";
 import { removeHomeSnapshot, writeHomeSnapshotsAtShutdown } from "../../core/chat/routing/home-snapshot.js";
 import { startServeMemoryProbe } from "./memory-probe.js";
+import { onUnitHost } from "../../lib/unit-host.js";
+import { startLocalBackupRunnerForServer, stopLocalBackupRunnerForServer } from "../../core/box-backup/local-runner.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "../server-types.js";
@@ -347,9 +349,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // Write PID file to each box
   const pidFiles: string[] = [];
   for (const box of boxes) {
-    const pidFile = path.join(box.boxRoot, ".bbx-serve.pid");
-    await fs.promises.writeFile(pidFile, String(process.pid));
-    pidFiles.push(pidFile);
+    const pidFile = path.join(box.boxRoot, ".bbx-serve.pid"); await fs.promises.writeFile(pidFile, String(process.pid)); pidFiles.push(pidFile);
   }
 
   let maintenanceCheck: ReturnType<typeof setInterval> | undefined;
@@ -360,19 +360,18 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   const shutdown = async (signal: string, exitCode?: number) => {
     console.log(`\nReceived ${signal}, shutting down...`);
     clearInterval(maintenanceCheck); await (await memoryProbe).stop();
-    for (const pf of pidFiles) await fs.promises.unlink(pf).catch(() => {});
+    await stopLocalBackupRunnerForServer();
     for (const box of boxes) await removeServeEndpoint(box.boxRoot);
     server.server.closeAllConnections();
     await server.close();
     await writeHomeSnapshotsAtShutdown(boxes, process.env.BBX_HUB_SECRET);
+    for (const pf of pidFiles) await fs.promises.unlink(pf).catch(() => {});
     // Let any git write we started finish before we go. Exiting on top of one
     // orphans it into whatever SIGKILL follows (the hub's escalation, or
     // systemd's cgroup teardown), and a git killed mid-index-write leaves a
     // `.git/index.lock` that blocks every writer in the box until a human
     // removes it. Bounded — a stuck span must not hold the process open.
-    if (!(await drainBoxGitLocks(GIT_DRAIN_MS))) {
-      console.warn("Git writes were still in flight at shutdown; exiting anyway.");
-    }
+    if (!(await drainBoxGitLocks(GIT_DRAIN_MS))) console.warn("Git writes were still in flight at shutdown; exiting anyway.");
     console.log("Server closed.");
     process.exit(exitCode ?? 0);
   };
@@ -406,6 +405,12 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     await withoutBoxWork(() => listenOn(server, target));
     markStartupPhase("listening");
     await publishServeEndpoints({ boxes, target, baseUrl });
+    // Server boxes use their host's systemd timer; the Mac app has its own
+    // lifecycle-aware loop. Direct local and Docker installs catch up while
+    // this server is running, outside HTTP request work leases.
+    // TODO(env-migration): install kind is launch-time runtime context; keep
+    // this direct read until it is added to serverEnvSchema.
+    startLocalBackupRunnerForServer({ boxRoots: boxes.map((box) => box.boxRoot), unitHost: onUnitHost(), installKind: process.env.BBX_INSTALL_KIND });
     if (options.idleExitMs !== undefined) {
       installIdleExit({ server, boxes, idleMs: options.idleExitMs, onIdle: () => fireShutdown("idle") });
     }

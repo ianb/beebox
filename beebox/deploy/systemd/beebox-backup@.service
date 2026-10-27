@@ -9,7 +9,7 @@ User=bbx-%i
 Group=bbx-%i
 WorkingDirectory=/var/lib/beebox/%i/box
 EnvironmentFile=/etc/beebox/box.env
-ExecStart=/usr/local/bin/bbx engine backup run /var/lib/beebox/%i/box
+ExecStart=/usr/local/bin/bbx engine backup run /var/lib/beebox/%i/box --scheduled
 TimeoutStartSec=24h
 
 [Install]
