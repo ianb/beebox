@@ -11,33 +11,41 @@
  * What lands in the renderable tree:
  *  - Built-in node renders are configured so links become `Link`, images
  *    become `Img`, paragraphs become `Para`, and the document root becomes
- *    a fragment. The corresponding React components are built fresh per
- *    render with `view:` / relative-path / lightbox routing baked in.
+ *    a fragment.
  *  - The `{% quote %}` tag becomes `QuoteInline` or `QuoteBlock` (see
  *    `markdoc-config.ts` and `Quote.tsx`).
  *  - A fenced code block becomes `Fence`: the block plus a Copy button.
  *
  * Callers can pass `components` to override or extend the map. The most
- * common case is chat, which replaces `Link`, `Img`, and `Para` to render
- * file previews, sized inline images, and lone-image grid layouts.
+ * common case is chat, which replaces `Img` and `Para` to render embeds,
+ * sized inline images, and lone-image grid layouts.
+ *
+ * Every component in the map, and in a caller's override map, is declared
+ * once at module scope and reads per-render values (`onNavigate`, `basePath`,
+ * …) from `MarkdownRenderContext` (`lib/markdown-render.ts`). A component made per
+ * render is a new React type: React remounts it, an embedded figure loses its
+ * state, and the reader's place moves. So a new callback or edited text
+ * updates the body in place. `bin/card-remount-check` shows the symptom in a
+ * real browser; `body.stable-body.test.ts` holds the rule.
  */
 
 import { Fragment, useMemo, useRef } from "react";
 import * as React from "react";
-import Markdoc, { type Config, type RenderableTreeNode, type Schema } from "@markdoc/markdoc";
+import Markdoc, { type Config, type Schema } from "@markdoc/markdoc";
 import { makeHeadingNode } from "@shared/markdoc-config/tags/core";
 import { withScopedTags, rewriteUnknownTags } from "@shared/markdoc-config/scoped";
 import { UnknownTagInline, UnknownTagBlock } from "./UnknownTag";
 import { makeHtmlTag } from "@shared/markdoc-config/tags/html-schema";
-import { makeQuoteComponents } from "./Quote";
-import { makeSourceComponents } from "./Source";
+import { QuoteInline, QuoteBlock } from "./Quote";
+import { SourceInline, SourceBlock } from "./Source";
 import { RedactedInline, RedactedBlock } from "./Redacted";
-import { makeTodoComponents } from "./Todo";
-import { makeSeeAlsoComponent } from "./SeeAlso";
-import { makeIncludeFileComponent } from "./IncludeFile";
+import { TodoInline, TodoBlock } from "./Todo";
+import { SeeAlso } from "./SeeAlso";
+import { IncludeFile } from "./IncludeFile";
+import { MarkdownRenderContext, useMarkdownRender, type MarkdownRender } from "../../lib/markdown-render";
 import { isInstructionFile, rewriteIncludeLines } from "../../lib/include-lines";
 import { assignLocators, stampLocators } from "@shared/todo-locators";
-import { makeLink, type LinkContext } from "../markdown-link/link";
+import { Link } from "../markdown-link/link";
 import { useOptionalLightbox } from "../LightboxProvider";
 import { Button } from "../ui/Button";
 import { Image } from "../ui/Image";
@@ -61,44 +69,43 @@ const { transform, renderers, Tag, nodes: markdocNodes } = Markdoc;
 // Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
 // `parse` — see lib/markdoc-parse.ts.
 
-export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string; width?: string }> {
-  return function Img({ src, alt, title, width }) {
-    // A markdown image pointed at a recognized video URL renders an embedded
-    // player instead. ID extraction can still fail on a YouTube-looking URL —
-    // `detectVideoEmbed` returns null there and we fall through to the image.
-    const video = typeof src === "string" ? detectVideoEmbed(src) : null;
-    if (video !== null) {
-      return <VideoEmbed embedUrl={video.embedUrl} title={alt ?? ""} className="mx-auto" />;
-    }
-    const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug: ctx.boxSlug, basePath: ctx.basePath }) : "";
-    const displaySrc = transformedResolvedImageUrl(resolved, {
-      width: 960,
-      fit: "scale-down",
-      quality: 85,
-      format: "auto",
-    }) ?? resolved;
-    const proxyFallbackSrc = externalImageProxyUrl(resolved, ctx.boxSlug);
-    const image = (
-      <Image
-        src={displaySrc}
-        lightboxSrc={resolved}
-        alt={alt ?? ""}
-        size="chat"
-        lightbox
-        className={width === undefined ? "block mx-auto my-2" : "block w-full my-2"}
-        {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}
-        {...(title !== undefined ? { title } : {})}
-      />
-    );
-    if (width === undefined) return image;
-    // An HTML `<img width>` (the only way to size an image in a body): pixels
-    // or a percentage of the column, never wider than the column.
-    return (
-      <span className="block mx-auto max-w-full" style={{ width: width.endsWith("%") ? width : `${width}px` }}>
-        {image}
-      </span>
-    );
-  };
+export function Img({ src, alt, title, width }: { src?: string; alt?: string; title?: string; width?: string }): ReactNode {
+  const ctx = useMarkdownRender();
+  // A markdown image pointed at a recognized video URL renders an embedded
+  // player instead. ID extraction can still fail on a YouTube-looking URL —
+  // `detectVideoEmbed` returns null there and we fall through to the image.
+  const video = typeof src === "string" ? detectVideoEmbed(src) : null;
+  if (video !== null) {
+    return <VideoEmbed embedUrl={video.embedUrl} title={alt ?? ""} className="mx-auto" />;
+  }
+  const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug: ctx.boxSlug, basePath: ctx.basePath }) : "";
+  const displaySrc = transformedResolvedImageUrl(resolved, {
+    width: 960,
+    fit: "scale-down",
+    quality: 85,
+    format: "auto",
+  }) ?? resolved;
+  const proxyFallbackSrc = externalImageProxyUrl(resolved, ctx.boxSlug);
+  const image = (
+    <Image
+      src={displaySrc}
+      lightboxSrc={resolved}
+      alt={alt ?? ""}
+      size="chat"
+      lightbox
+      className={width === undefined ? "block mx-auto my-2" : "block w-full my-2"}
+      {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}
+      {...(title !== undefined ? { title } : {})}
+    />
+  );
+  if (width === undefined) return image;
+  // An HTML `<img width>` (the only way to size an image in a body): pixels
+  // or a percentage of the column, never wider than the column.
+  return (
+    <span className="block mx-auto max-w-full" style={{ width: width.endsWith("%") ? width : `${width}px` }}>
+      {image}
+    </span>
+  );
 }
 
 /**
@@ -181,11 +188,6 @@ function Fence({ children, "data-language": language }: { children?: ReactNode; 
   );
 }
 
-interface RenderConfigBundle {
-  config: Config;
-  components: Record<string, React.ComponentType<Record<string, unknown>>>;
-}
-
 // Render-only: `rewriteIncludeLines` writes it for an instruction file's
 // include lines. It is not in the shared tag table, so no agent writes it.
 const includeFileTag: Schema = {
@@ -194,7 +196,7 @@ const includeFileTag: Schema = {
   attributes: { path: { type: String, required: true } },
 };
 
-function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags, includes }: { cardPath: string | null; tags: Readonly<Record<string, Schema>> | undefined; includes: boolean }): RenderConfigBundle {
+function buildRenderConfig({ tags, includes }: { tags: Readonly<Record<string, Schema>> | undefined; includes: boolean }): Config {
   const base = withScopedTags(tags);
   const config: Config = {
     ...base,
@@ -234,14 +236,15 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags, includes }: {
       },
     },
   };
-  const Link = makeLink(linkCtx);
-  const Img = makeImg(linkCtx);
-  const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
-  const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
-  const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath });
-  const SeeAlso = makeSeeAlsoComponent({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
-  const IncludeFile = makeIncludeFileComponent({ basePath: linkCtx.basePath, Link });
-  const Task = ({ done }: { done?: boolean }) => (
+  return config;
+}
+
+function Blockquote({ children }: { children?: ReactNode }) {
+  return <blockquote className="bbx-blockquote">{children}</blockquote>;
+}
+
+function Task({ done }: { done?: boolean }) {
+  return (
     <input
       type="checkbox"
       checked={done === true}
@@ -250,38 +253,47 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags, includes }: {
       className="mr-2 align-middle accent-warm-500"
     />
   );
-  // Markdoc's renderer wants one homogeneous `Record<string, ComponentType<Record<string,unknown>>>`
-  // map, but each of these components has its own specific, narrower prop type
-  // (Link's {href,title,children}, Img's {src,alt,title}, etc). Markdoc only ever
-  // invokes a component with the props declared for its tag in `buildRenderConfig`
-  // above, so the real prop shape is guaranteed by that contract, not by this
-  // widening cast — centralizing it here (rather than at each call site) is the
-  // code-style.md-blessed pattern for this exact situation.
-  // eslint-disable-next-line no-restricted-syntax -- widen a specifically-typed component to the shared map type; Markdoc only calls it with the props declared for its tag, so the real shape is guaranteed by the tag config above, not by this cast
-  const cast = <T,>(c: T) => c as unknown as React.ComponentType<Record<string, unknown>>;
-  const components: Record<string, React.ComponentType<Record<string, unknown>>> = {
-    Fragment: cast(Fragment),
-    Para: cast(Para),
-    Fence: cast(Fence),
-    Blockquote: cast(({ children }: { children?: ReactNode }) => <blockquote className="bbx-blockquote">{children}</blockquote>),
-    Link: cast(Link),
-    Img: cast(Img),
-    QuoteInline: cast(QuoteInline),
-    QuoteBlock: cast(QuoteBlock),
-    SourceInline: cast(SourceInline),
-    SourceBlock: cast(SourceBlock),
-    Task: cast(Task),
-    RedactedInline: cast(RedactedInline),
-    RedactedBlock: cast(RedactedBlock),
-    TodoInline: cast(TodoInline),
-    TodoBlock: cast(TodoBlock),
-    SeeAlso: cast(SeeAlso),
-    IncludeFile: cast(IncludeFile),
-    UnknownTagInline: cast(UnknownTagInline),
-    UnknownTagBlock: cast(UnknownTagBlock),
-  };
-  return { config, components };
 }
+
+type MarkdownComponent = React.ComponentType<Record<string, unknown>>;
+
+// Markdoc's renderer wants one homogeneous `Record<string, ComponentType<Record<string,unknown>>>`
+// map, but each of these components has its own specific, narrower prop type
+// (Link's {href,title,children}, Img's {src,alt,title}, etc). Markdoc only ever
+// invokes a component with the props declared for its tag in `buildRenderConfig`
+// above, so the real prop shape is guaranteed by that contract, not by this
+// widening cast — centralizing it here (rather than at each call site) is the
+// code-style.md-blessed pattern for this exact situation.
+// eslint-disable-next-line no-restricted-syntax -- widen a specifically-typed component to the shared map type; Markdoc only calls it with the props declared for its tag, so the real shape is guaranteed by the tag config above, not by this cast
+const cast = <T,>(c: T) => c as unknown as MarkdownComponent;
+
+/**
+ * The component for each name Markdoc emits. Declared once: a component made
+ * per render is a new React type, and React would remount it (and an embed's
+ * whole subtree) on every render. Per-render values come from
+ * `MarkdownRenderContext`.
+ */
+const MARKDOWN_COMPONENTS: Readonly<Record<string, MarkdownComponent>> = {
+  Fragment: cast(Fragment),
+  Para: cast(Para),
+  Fence: cast(Fence),
+  Blockquote: cast(Blockquote),
+  Link: cast(Link),
+  Img: cast(Img),
+  QuoteInline: cast(QuoteInline),
+  QuoteBlock: cast(QuoteBlock),
+  SourceInline: cast(SourceInline),
+  SourceBlock: cast(SourceBlock),
+  Task: cast(Task),
+  RedactedInline: cast(RedactedInline),
+  RedactedBlock: cast(RedactedBlock),
+  TodoInline: cast(TodoInline),
+  TodoBlock: cast(TodoBlock),
+  SeeAlso: cast(SeeAlso),
+  IncludeFile: cast(IncludeFile),
+  UnknownTagInline: cast(UnknownTagInline),
+  UnknownTagBlock: cast(UnknownTagBlock),
+};
 
 type ProseVariant = false | "block" | "inline";
 
@@ -303,7 +315,7 @@ interface MarkdownProps {
   prose?: ProseVariant;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   basePath?: string;
-  /** See LinkContext.onJumpToQuote — wired by CommentaryView for source chips. */
+  /** See MarkdownRender.onJumpToQuote — wired by CommentaryView for source chips. */
   onJumpToQuote?: (quoteText: string) => Promise<boolean>;
   /**
    * The card whose whole body `children` is, and how many file lines precede
@@ -336,29 +348,39 @@ export function Markdown({
   const cardPath = card?.path ?? null;
   const bodyLineOffset = card?.bodyLineOffset ?? null;
   const openImageLink = useOptionalLightbox()?.openFromElement;
-  const { tree, mergedComponents } = useMemo(() => {
-    const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote, openImageLink };
+  // The tree depends only on what the transform reads. Callbacks reach the
+  // components through the context, so a new `onNavigate` re-renders the body
+  // in place rather than remounting it.
+  const tree = useMemo(() => {
     const includes = isInstructionFile(basePath);
-    const { config, components: defaults } = buildRenderConfig(ctx, { cardPath, tags, includes });
+    const config = buildRenderConfig({ tags, includes });
     const ast = parseMarkdown(includes ? rewriteIncludeLines(children) : children);
     rewriteUnknownTags(ast, config);
     // The collector's own numbering, so a rendered todo and the todo a write
     // addresses cannot disagree about which one `line#2` is.
     if (bodyLineOffset !== null) stampLocators(assignLocators(ast, bodyLineOffset));
-    const t: RenderableTreeNode = transform(ast, config);
-    // `components` is `Partial<...>`, so a plain object spread would carry
-    // possibly-`undefined` values into the merged map; only copy overrides
-    // that are actually set.
-    const merged: Record<string, React.ComponentType<Record<string, unknown>>> = { ...defaults };
+    return transform(ast, config);
+  }, [children, basePath, tags, bodyLineOffset]);
+  // `components` is `Partial<...>`, so a plain object spread would carry
+  // possibly-`undefined` values into the merged map; only copy overrides
+  // that are actually set. A caller passes a module constant, so this stays put.
+  const mergedComponents = useMemo(() => {
+    const merged: Record<string, MarkdownComponent> = { ...MARKDOWN_COMPONENTS };
     for (const [name, override] of Object.entries(components ?? {})) {
       if (override !== undefined) merged[name] = override;
     }
-    return { tree: t, mergedComponents: merged };
-  }, [children, onNavigate, basePath, boxSlug, components, tags, onJumpToQuote, cardPath, bodyLineOffset, openImageLink]);
+    return merged;
+  }, [components]);
+  const render = useMemo<MarkdownRender>(
+    () => ({ onNavigate, basePath, boxSlug, onJumpToQuote, openImageLink, cardPath }),
+    [onNavigate, basePath, boxSlug, onJumpToQuote, openImageLink, cardPath],
+  );
 
-  const rendered = renderers.react(tree, React, {
-    components: mergedComponents,
-  });
+  const rendered = (
+    <MarkdownRenderContext.Provider value={render}>
+      {renderers.react(tree, React, { components: mergedComponents })}
+    </MarkdownRenderContext.Provider>
+  );
 
   if (prose === "block") {
     return <div className="prose prose-sm max-w-none bbx-theme-prose" data-card-outline={outline === true ? "" : undefined}>{rendered}</div>;

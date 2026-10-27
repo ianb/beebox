@@ -9,11 +9,9 @@
  * place, and todo locators count from `bodyLineOffset`.
  */
 
-import { useMemo } from "react";
-import { useParams } from "@tanstack/react-router";
 import { Markdown } from "../Markdown/body";
 import { AttachedComments } from "../AttachedComments";
-import { makeEmbedComponents } from "../FigureEmbed";
+import { CARD_EMBED_COMPONENTS } from "../FigureEmbed";
 import { shownCardBody } from "../../lib/card-field-faces";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../../lib/selection/quote-extract";
 import type { FileData } from "../../file-type-registry";
@@ -92,12 +90,6 @@ export function CardBody({
 }): ReactNode {
   const body = shownCardBody(data.body, title);
   const speakers = body === null ? [] : extractQuoteSpeakers(body);
-  const { boxSlug } = useParams({ strict: false });
-  // Inline figure embeds: `![](view:…figure.card)` renders the figure in place.
-  const components = useMemo(
-    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined, openImageLink: undefined }),
-    [onNavigate, data.path, boxSlug],
-  );
 
   return (
     <>
@@ -112,7 +104,8 @@ export function CardBody({
             outline
             onNavigate={onNavigate}
             basePath={data.path}
-            components={components}
+            // Inline figure embeds: `![](…figure.card)` renders the figure in place.
+            components={CARD_EMBED_COMPONENTS}
             {...(data.bodyLineOffset === undefined ? {} : { card: { path: data.path, bodyLineOffset: data.bodyLineOffset } })}
           >
             {body}

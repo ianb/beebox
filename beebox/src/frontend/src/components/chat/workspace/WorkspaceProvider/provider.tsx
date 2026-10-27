@@ -17,7 +17,7 @@ import { arrivalPlan, arrivalWaits } from "./arrival";
 import { trpc } from "../../../../lib/trpc/client";
 import type { ConversationTarget } from "@shared/chat-composer-binding";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
-import { pickArrivalQuestion, useDismissOnClose } from "../../../questions/question-tab";
+import { pickArrivalQuestion, useDismissOnClose } from "../../../questions/question-close";
 
 declare module "@tanstack/history" { interface HistoryState { bbxWorkspace?: WorkspaceHistoryEntry; bbxWorkspaceRevealConversation?: boolean; bbxConversationOverlay?: boolean } }
 const Workspace = createContext<ReturnType<typeof useWorkspaceController> | null>(null);

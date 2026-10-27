@@ -1,0 +1,9 @@
+{
+  // `pnpm lint:circular`: only import/no-cycle runs. Type-only cycles erase at
+  // compile time and are fine; only value cycles mean a module needs splitting
+  // (docs/development/maintenance.md). Without ignoreTypes the check reported
+  // 41 cycles here, 40 of them type-only back-edges into a barrel.
+  "plugins": ["import"],
+  "categories": { "correctness": "off" },
+  "rules": { "import/no-cycle": ["error", { "ignoreTypes": true }] }
+}

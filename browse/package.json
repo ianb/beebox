@@ -21,7 +21,6 @@
     "@typescript/native": "npm:typescript@7.0.2",
     "@ianbicking/tap-check": "workspace:*",
     "eslint": "^9.0.0",
-    "eslint-import-resolver-typescript": "^4.4.4",
     "tap": "^21.0.0",
     "tsx": "^4.23.15",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
