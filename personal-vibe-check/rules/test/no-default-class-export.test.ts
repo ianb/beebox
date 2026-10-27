@@ -7,7 +7,7 @@ const tester = new RuleTester({
 });
 
 describe("no-default-class-export", () => {
-  it("flags default class exports and autofixes them to named exports", () => {
+  it("flags default class exports and autofixes only a named declaration", () => {
     tester.run("no-default-class-export", noDefaultClassExport, {
       valid: [
         "export class Foo {}",
@@ -23,12 +23,12 @@ describe("no-default-class-export", () => {
         },
         {
           code: "export default class extends Bar { run() {} }",
-          output: "export class ClassName extends Bar { run() {} }",
+          output: null,
           errors: [{ messageId: "noDefaultClassDeclaration", data: { className: "ClassName" } }],
         },
         {
           code: "export default (class Named { run() {} });",
-          output: "export class Named { run() {} }",
+          output: null,
           errors: [{ messageId: "noDefaultClassExpression" }],
         },
       ],
