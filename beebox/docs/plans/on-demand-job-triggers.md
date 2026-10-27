@@ -505,8 +505,11 @@ every host.
   `stalled-jobs` names it.
 - **State file.** `.beebox/job-check.json`, zod schema, written with
   `writeFileAtomic` (`beebox/src/lib/atomic-write.ts`, as the endpoint file
-  is), only under the lock above. An unreadable file is logged and treated as
-  empty, which can cost one extra run, not a loop: the next stamp rewrites it.
+  is), only under the lock above. A missing file is empty state. Any other
+  read or parse failure starts nothing that pass and logs one `state unreadable`
+  line naming the file, so the daily cap cannot reset (implementation review,
+  2026-10-27). An attempt and the day's count are saved before a run starts and
+  refunded when the run answers `running` or `failed`.
 - **Which jobs count, decided.** Only unscoped jobs. A job tagged with a
   connector whose schedule is disabled is not counted: it is created only by a
   scoped wakeup of that connector, which the boxholder ran on purpose
@@ -704,7 +707,7 @@ none
 | Two passes race for one box (manual `bbx engine scheduler pass` beside the daemon) | new (overlapping passes) | `.beebox/job-check.lock`: the second skips the check without touching state | clear |
 | Scan or filing starts its own wakeup just after the pass started one | none | the later one skips on the cycle lock; scan's retry budget handles its skip (`wakeup.ts:126-127`) | clear (existing scan logs) |
 | A job card in the working tree but not in `HEAD` | new (untracked test) | not waiting; rides along | silent by design; the pass already logs a dirty repo (`pass.ts:51-66`) |
-| State file corrupt or unreadable | new | logged, treated as empty; next stamp rewrites it | clear |
+| State file corrupt or unreadable | new | logged; no run starts until it reads (fail closed) | clear |
 | Daily bound reached | new | no more runs today; one line | clear |
 | Server idle-exits while the run is in flight | new (`decideIdle` with `liveRuns`) | live wakeups keep it up | clear |
 | Finalize child cannot reach the server | new (thrown send) | not latched; next finalize retries until the question leaves pending | clear (finalize log line) |
