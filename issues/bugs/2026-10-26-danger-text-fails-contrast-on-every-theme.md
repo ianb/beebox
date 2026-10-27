@@ -1,6 +1,6 @@
 ---
 title: "Danger-colored small text is 2 to 4.4:1 on every theme, so a citation whose source cannot be found is hard to read"
-workstream: unattached
+workstream: theme-colors
 area: beebox
 labels: [themes, contrast]
 filed-by: agent

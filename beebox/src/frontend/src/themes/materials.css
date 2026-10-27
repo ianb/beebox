@@ -52,6 +52,13 @@
   font-family: var(--bbx-font);
 }
 
+/* Danger ink (the Tailwind `card-danger` role): the app's rose pulled toward
+   the material's own ink, so small error text keeps the ink's contrast on
+   any paper, light or dark. Chat materials set ink too, so they derive it. */
+:is(.bbx-card-theme, .bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
+  --bbx-danger: color-mix(in oklab, #c2788a 50%, var(--bbx-ink, #4a3f32));
+}
+
 /* A card theme with its own selection pair drops the system theme's code
    pair, which was chosen for a different selection color. */
 .bbx-card-theme:is([data-card-theme="paper"], [data-card-theme="post-it"]) {

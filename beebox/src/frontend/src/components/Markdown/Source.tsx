@@ -79,7 +79,7 @@ function CitationChip({
   // whatever a clamped-to-root path happened to hit.
   if (target === null) {
     return (
-      <span title={`${title} — escapes the box root`} className="not-italic text-danger text-xs ml-1">
+      <span title={`${title} — escapes the box root`} className="not-italic text-card-danger text-xs ml-1">
         [→ {label} (unresolvable)]
       </span>
     );
