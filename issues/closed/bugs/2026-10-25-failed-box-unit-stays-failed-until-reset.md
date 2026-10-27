@@ -16,7 +16,7 @@ after 5 s, the delay growing over six restarts to 5 min (`RestartSteps=`,
 `RestartMaxDelaySec=`, systemd 254+), matching `UNHEALTHY_RETRY_MS`. The hub
 needs no new privilege. `socket-provider.ts` reads the `auto-restart`
 sub-state as a crash loop: a 503 with the last journal line, a broken
-`/healthz` verdict, and no connection that would skip the delay. Not yet run
+`/healthz` verdict, and no wait on a socket that cannot answer yet. Not yet run
 against real systemd; the first deploy or `box-units.smoke.sh` on a unit host
 shows it.
 

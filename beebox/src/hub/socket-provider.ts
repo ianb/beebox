@@ -16,8 +16,8 @@
  * A crashing box is retried by systemd, not here: the unit restarts itself with
  * a growing delay and has no start limit (deploy/systemd/beebox-box@.service).
  * While it waits out a delay, its sub-state is `auto-restart`; the hub reports
- * that as a crash loop (503 with the last journal line) and does not connect,
- * since a connection would start the unit at once and skip the delay.
+ * that as a crash loop (503 with the last journal line) and does not wait on
+ * the socket, which cannot answer until systemd's delay has passed.
  */
 
 import { execFile } from "node:child_process";
@@ -211,16 +211,23 @@ export class SocketProvider implements EndpointProvider {
     if (!box) return undefined;
     const live = this.get(slug);
     if (live) return live;
-    if (box.state === "failed" || box.state === "auto-restart") return undefined;
+    if (this.isFailing(box)) return undefined;
     if (box.waking) return box.waking;
     box.waking = this.wake(box).finally(() => { box.waking = undefined; });
     return box.waking;
+  }
+
+  private isFailing(box: SocketBox): boolean {
+    return box.state === "failed" || box.state === "auto-restart";
   }
 
   private async wake(box: SocketBox): Promise<Endpoint | undefined> {
     const endpoint = this.endpointOf(box);
     const deadline = Date.now() + this.readyTimeoutMs;
     while (Date.now() < deadline) {
+      // A poll saw the unit crash while this wake waited: its journal line is
+      // the answer, not a probe timeout.
+      if (this.isFailing(box)) return undefined;
       if (await this.probe(endpoint)) {
         box.ready = true;
         box.state = "active";

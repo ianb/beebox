@@ -10,13 +10,13 @@
 # manager read it and hands this box, and only this box, the file under
 # $CREDENTIALS_DIRECTORY. The engine reads it from there (src/lib/systemd-credentials.ts).
 #
-# Restarts: a box that crashes is restarted after 5 s, the delay growing over
-# six restarts to 5 min (the resident hub's UNHEALTHY_RETRY_MS,
+# Restarts: a box that crashes is restarted after 5 s, the delay growing with
+# each consecutive restart to 5 min (the resident hub's UNHEALTHY_RETRY_MS,
 # src/hub/supervisor/crash-backoff.ts) and staying there. No start limit, so a
 # crash loop never latches the unit `failed`; it comes back without a human.
-# While it waits, the hub answers 503 with the unit's last journal line and does
-# not connect (a connection would start it at once). A clean idle exit (0) is
-# not a failure and does not restart. RestartSteps= needs systemd 254 or later.
+# While it waits, the hub answers 503 with the unit's last journal line. A clean
+# idle exit (0) is not a failure and does not restart. RestartSteps= needs
+# systemd 254 or later.
 [Unit]
 Description=Bee Box %i
 Requires=beebox-box@%i.socket

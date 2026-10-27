@@ -112,8 +112,8 @@ void test("at start, a box whose metadata holds a pending schedule is woken", as
 // The unit has no start limit and a growing `RestartSec`
 // (deploy/systemd/beebox-box@.service), so a crash loop never latches. While a
 // unit waits to restart, the hub answers 503 with its last journal line, counts
-// it toward the health verdict, and does not connect: a connection would start
-// the unit at once and skip the delay.
+// it toward the health verdict, and does not wait on a socket that cannot
+// answer until the delay has passed.
 void test("a unit waiting to restart is a crash loop that the hub does not poke", async (t) => {
   const a = await makeTmpBox({ git: true });
   t.teardown(async () => { provider.stop(); await a.cleanup(); });
@@ -130,4 +130,19 @@ void test("a unit waiting to restart is a crash loop that the hub does not poke"
   await provider.poll();
   t.check(await provider.ensureRunning("a"), { slug: "a", origin: "http://localhost", socketPath: "/run/beebox/a.sock" });
   t.check(provider.unavailable("a"), undefined);
+});
+
+// A wake already waiting when a poll sees the unit crash stops there, so the 503
+// carries the crash's journal line rather than a probe timeout.
+void test("a wake in flight stops when the unit crashes, keeping the journal line", async (t) => {
+  const a = await makeTmpBox({ git: true });
+  t.teardown(async () => { provider.stop(); await a.cleanup(); });
+  const systemd = fakeSystemd({ a: "inactive" }, { a: "Error: box.json is not valid JSON" });
+  const provider = new SocketProvider({ config: configFor({ a: a.root }, a.path("hub.json")), runCommand: systemd.run, probe: async () => false, pollMs: 60_000, readyTimeoutMs: 5_000 });
+  await provider.start();
+  const waking = provider.ensureRunning("a");
+  systemd.states["a"] = "activating/auto-restart";
+  await provider.poll();
+  t.check(await waking, undefined);
+  t.check(provider.unavailable("a"), "unit crashed and is waiting to restart: Error: box.json is not valid JSON");
 });
