@@ -19,7 +19,7 @@ import { measureBoxGrowthIfDue } from "../../box-growth/health.js";
 import { runBoxAlerts } from "./box-alerts.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { refreshHubMeta } from "../../hub-meta.js";
-import { writeBoxLog } from "./box-log.js";
+import { writeBoxLog } from "../box-log.js";
 
 export type PassOutcome = "ran" | "not-a-box" | "maintenance";
 

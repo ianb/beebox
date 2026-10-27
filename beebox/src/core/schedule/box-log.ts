@@ -2,8 +2,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { TickResult } from "../../../cli/commands/tick.js";
-import { errnoCode } from "../../../shared/error-guards.js";
+import type { TickResult } from "../../cli/commands/tick.js";
+import { errnoCode } from "../../shared/error-guards.js";
 
 const SCHEDULER_LOG_FILENAME = "scheduler.jsonl";
 const MAX_LOG_BYTES = 1_000_000; // 1MB
