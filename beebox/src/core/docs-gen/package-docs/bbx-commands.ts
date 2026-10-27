@@ -112,7 +112,7 @@ function bbxCommandsTemplates(): string[] {
 }
 
 /**
- * Hand-written command sections: mv, rm, validate, view test, answer, contains, status, session, reactor, finish.
+ * Hand-written command sections: mv, rm, validate, view check, answer, contains, status, session, reactor, finish.
  */
 function bbxCommandsCore(): string[] {
   return [
@@ -158,18 +158,19 @@ function bbxCommandsCore(): string[] {
     "so you rarely call this yourself; run it to re-check one card while debugging. Returns a",
     "non-zero exit code on failure.",
     "",
-    "## bbx view test",
+    "## bbx view check",
     "",
-    "Render-test an agent-authored view (`views/<slug>.tsx`) in Node — no browser needed.",
+    "Render every agent-authored view (`views/<slug>.tsx`) in Node and report which fail.",
     "",
     "```",
-    "bbx view test <slug> [--path <card>] [--raw]",
+    "bbx view check [--json]",
     "```",
     "",
-    "Compiles the view, loads the real cards its `dependencies` select, renders it once, and",
-    "prints the HTML — or, on failure, the error with a stack mapped to your `.tsx` source.",
-    "Use it to check a view after writing it. It's a synchronous render (no effects/async",
-    `helpers); see \`${BOX_PACKAGE_DOCS}/views.md\` for what it does and doesn't cover.`,
+    "Compiles each view, loads the real cards its `dependencies` select, renders it once, and",
+    "prints `✓ <slug>` or `✗ <slug>` with the error and a stack mapped to your `.tsx` source.",
+    "Exits non-zero if any view fails. Run it after writing or changing a view. It's a",
+    "synchronous render (no effects/async helpers); see",
+    `\`${BOX_PACKAGE_DOCS}/views.md\` for what it does and doesn't cover.`,
     "",
     "## bbx answer",
     "",

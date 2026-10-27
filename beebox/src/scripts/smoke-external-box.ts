@@ -299,9 +299,9 @@ async function validate(boxDir: string): Promise<void> {
   });
   // Real node-target render: proves react/jsx-runtime AND the view-widgets
   // bundle resolve at runtime in an installed (non-symlinked) box.
-  await step("bbx view test widget (node-target render)", {
+  await step("bbx view check (node-target render)", {
     file: "node_modules/.bin/bbx",
-    args: ["view", "test", "widget"],
+    args: ["view", "check"],
     cwd: boxDir,
   });
 }

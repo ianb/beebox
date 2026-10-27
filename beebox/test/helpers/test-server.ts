@@ -115,7 +115,7 @@ function getTemplateBox(): Promise<string> {
       // A real box resolves react/react-dom from its OWN node_modules (view
       // metadata import + node-target render). `scaffoldBoxRoot({deps})` only
       // symlinks beebox, so simulate the box's react dependency by
-      // symlinking the engine's copy beside it — the same trick `bbx view test`
+      // symlinking the engine's copy beside it — the same trick `bbx view check`
       // and the view tests use. Without this, view-metadata import fails to
       // resolve react and returns empty dependencies (a view matches no cards).
       const reactNodeModules = dirname(dirname(createRequire(import.meta.url).resolve("react/package.json")));

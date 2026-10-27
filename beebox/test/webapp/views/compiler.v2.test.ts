@@ -11,7 +11,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, eventually, isoDate } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
-import { basename, join, dirname } from "node:path";
+import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { spawn, execFileSync } from "node:child_process";
@@ -23,7 +23,7 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 /**
  * Build a v3 (one-root, package-shaped) fixture box: a root with its own
  * `node_modules/beebox` and `node_modules/react` — symlinked to the
- * real engine copies, the same temp-symlink trick `bbx view test` uses
+ * real engine copies, the same temp-symlink trick `bbx view check` uses
  * (src/cli/commands/view/command.ts), adapted here to simulate what a real
  * `pnpm install` of beebox would produce for a box's OWN node_modules.
  */
@@ -68,7 +68,7 @@ export default function WidgetView() {
 
 function runViewTest(contentRoot: string, slug: string) {
   return new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve) => {
-    const child = spawn(process.execPath, [join(PACKAGE_ROOT, "dist/cli.mjs"), "view", "test", slug], {
+    const child = spawn(process.execPath, [join(PACKAGE_ROOT, "dist/cli.mjs"), "view", "render-one", slug], {
       cwd: contentRoot,
     });
     let stdout = "";
@@ -120,16 +120,14 @@ void test("listViews finds a view at `boxRoot/src/views`", async (t) => {
     lastModified: isoDate(),
   });
 
-  // ## `bbx view test` renders it, resolving `beebox/view-widgets` and `react` through the box's own real `node_modules`
+  // ## `bbx view check` renders it (via the hidden `view render-one`), resolving `beebox/view-widgets` and `react` through the box's own real `node_modules`
 
   const r = await runViewTest(box.contentRoot, "widget-view");
   t.check(r, {
     code: 0,
-    stdout: `<html><head></head><body><div><a href="/${basename(box.root)}/views/_content/inbox/Test.doc.card" class="bbx-theme-link">Test</a></div></body></html>\n`,
+    stdout: "",
     stderr: "",
   });
-
-  // The rendered `<CardLink>` derives its label from the ref's filename (`Test`):
 
 });
 

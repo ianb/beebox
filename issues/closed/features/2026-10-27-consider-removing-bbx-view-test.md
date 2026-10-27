@@ -5,7 +5,10 @@ area: beebox
 labels: [cli, views]
 filed-by: agent
 discovered-in: dep-reduction — small dependency sweep, 2026-10-27
+resolution: implemented
 ---
+
+Closed 2026-10-27 on the dep-reduction workstream. The boxholder decided to remove it. Production box transcripts since 2026-10-25 edit views in 23 sessions and never ran it. `bbx view test` is gone; `bbx view check` (renders every view, non-zero on failure) is the documented way to check a view, and the guidance in `src/core/views/doc/core.ts` and `src/core/docs-gen/package-docs/bbx-commands.ts` says so. `view check` runs each view in a child process, so the render path stays as a hidden `bbx view render-one <slug>` that prints no HTML. Validation on edit compile-checks a view but does not render it. The `views-render-test-command` knowledge audit passes against the new guidance.
 
 While cheerio was being removed from `bbx view test`'s output step, the
 boxholder said: "I think that's an old self debug path that we've improved

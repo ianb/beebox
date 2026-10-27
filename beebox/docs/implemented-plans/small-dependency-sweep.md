@@ -196,7 +196,7 @@ One track, one commit per package.
    space for `&nbsp;`). The boxholder called `bbx view test` "an old self
    debug path … could maybe be removed", so the output is accepted as React
    writes it and the two pinned strings change. Removing the command is
-   `issues/features/2026-10-27-consider-removing-bbx-view-test.md`. The
+   `issues/closed/features/2026-10-27-consider-removing-bbx-view-test.md`. The
    fixture stays in `beebox/test/`, so beebox declares `happy-dom` (the
    frontend's exact version); moving it into the frontend's tests set off
    an unrelated layout rule for `live-dom/`. The ui-scan fixture parses with happy-dom's
