@@ -5,7 +5,10 @@ area: beebox
 labels: [dependencies]
 filed-by: agent
 discovered-in: dep-reduction — dependency inventory, 2026-10-27
+resolution: implemented
 ---
+
+Closed 2026-10-27 on the dep-reduction workstream. Decision: replace it. `beebox/src/services/gemini-rest.ts` posts `generateContent` through `ky` like `tts.ts` and validates the fields callers read with zod. A non-2xx answer throws `GeminiHttpError` (status and the API's message); empty responses still throw each caller's existing error. The SDK retried only when `retryOptions` was set, and no caller set it, so the helper does not retry and has no timeout unless a caller passes one. `protobufjs`, which only the SDK pulled in, left the build-script allow lists. `google-auth-library` stays: `src/google/auth.ts` uses it directly. One real `gemini-2.5-flash` call through the helper returned the expected shape.
 
 `@google/genai` is a beebox runtime dependency with about 17.8 MB and 14
 packages that nothing else in the repo pulls. It is also one of two routes to

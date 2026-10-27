@@ -149,9 +149,9 @@ export const enabledRules: Linter.RulesRecord = {
   "valid-typeof": "error",
 
   // ── Import rules ─────────────────────────────────────────────────
-  "import/first": "error",
-  "import/newline-after-import": "error",
-  "import/no-absolute-path": "error",
+  "import-x/first": "error",
+  "import-x/newline-after-import": "error",
+  "import-x/no-absolute-path": "error",
 
   // ── Import-x rules ────────────────────────────────────────────
   // (import-x/default, import-x/named, import-x/export are skipped — TypeScript already catches these)

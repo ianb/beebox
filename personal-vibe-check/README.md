@@ -178,11 +178,9 @@ See `conventions.md` for the full template with examples.
 
 The package includes these as dependencies (you don't install them):
 
-- `eslint`, `@eslint/js`, `@eslint/eslintrc`
-- `@typescript-eslint/eslint-plugin`, `@typescript-eslint/parser`, `typescript-eslint`
-- `eslint-config-agent` (base rule set — all rules reviewed and selectively enabled/disabled)
-- `eslint-plugin-import`, `eslint-plugin-react`, `eslint-plugin-react-hooks`
-- `eslint-plugin-security`, `eslint-plugin-class-export`, `eslint-plugin-n`
+- `eslint`, `typescript-eslint` (parser and `@typescript-eslint/*` rules)
+- `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-plugin-security`
+- `eslint-plugin-default`, `eslint-plugin-error` — no default parameters; custom error classes
 - [`eslint-plugin-unicorn`](https://github.com/sindresorhus/eslint-plugin-unicorn) — misc best practices (modern APIs, array methods, filename conventions, etc.)
 - [`eslint-plugin-import-x`](https://github.com/un-ts/eslint-plugin-import-x) — import/export hygiene (mutable exports, self-imports, misleading renames, etc.)
 

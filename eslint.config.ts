@@ -14,9 +14,9 @@
 // worktree tooling and the test selector — real TypeScript that used to
 // pass pre-commit on typecheck alone (issues/closed/code-quality/2026-08-26-bin-typescript-is-not-linted.md).
 //
-// The global-ignore entry below still matters: vibeCheck's underlying
-// eslint-config-agent contributes rule entries with no `files` key of their
-// own, which would otherwise apply to every root file the PostToolUse hook
+// The global-ignore entry below still matters: vibeCheck contributes
+// entries with no `files` key of their own (the retirements and .tsx
+// overrides), which would otherwise apply to every root file the PostToolUse hook
 // hands eslint — including `dev/`, which stays unlinted by decision (its pages
 // are deliberately casual; see workstreams-app/docs/exhibits.md). Subprojects
 // are unaffected: their hook cwd is their own directory, where their own

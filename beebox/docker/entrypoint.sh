@@ -100,8 +100,6 @@ box_install() {
   ( cd "$BOX_ROOT" && pnpm install \
       --allow-build=better-sqlite3 \
       --allow-build=esbuild \
-      --allow-build=@google/genai \
-      --allow-build=protobufjs \
       --allow-build=@googleworkspace/cli )
   /app/node_modules/beebox/bin/box-engine-link verify "$BOX_ROOT"
 }

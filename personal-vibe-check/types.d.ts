@@ -7,7 +7,7 @@
  * that source into every consumer's program, type-checked under whichever
  * tsconfig that consumer happens to have. Ten packages here disagree about
  * `exactOptionalPropertyTypes`, module resolution, and `lib`, and several of the
- * plugins this preset imports (`eslint-config-agent`, `eslint-plugin-ddd`,
+ * plugins this preset imports (`eslint-plugin-default`, `eslint-plugin-error`,
  * `eslint-plugin-jsx-a11y`) ship no types at all, so `noImplicitAny` consumers
  * would inherit TS7016 errors from a file they don't own. A `.d.ts` is covered
  * by `skipLibCheck`, so consumers get the contract and nothing else.
@@ -52,7 +52,7 @@ export interface VibeCheckOptions {
   /**
    * Source roots the reviewed ruleset applies to. Default `["src"]`. Add e.g.
    * `"scripts"` to hold first-party tooling outside `src/` to the same rules
-   * instead of eslint-config-agent's harsher global base. Only affects the main
+   * instead of leaving them without the reviewed rules. Only affects the main
    * (non-type-aware) rule block; the type-aware scope stays src-only since it
    * needs tsconfig project membership.
    */

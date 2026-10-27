@@ -100,7 +100,7 @@ test("diff: collapses long equal runs to 3 lines of context", async (t) => {
 
 test("diff: a long actual against a short expected stays short (corpus 25)", async (t) => {
   const value = JSON.stringify({ items: Array.from({ length: 30 }, (_, i) => ({ id: i, name: `item${i}`, tags: ["x"] })) }, null, 2);
-  const { diff } = failure(value, `{\n  "items": []\n}`);
+  const { diff } = failure(value, "{\n  \"items\": []\n}");
   t.check(diff, `- expected
 + actual
 
@@ -122,8 +122,8 @@ test("diff: a long actual against a short expected stays short (corpus 25)", asy
 });
 
 test("diff: wildcard lines that match are context, not changes (corpus 16c)", async (t) => {
-  const actual = `{\n  "id": "abc",\n  "at": "2026-09-29T02:28:16.337Z",\n  "n": 3\n}`;
-  const expected = `{\n  "id": "«uuid»",\n  "at": "«date»",\n  "n": «int»\n}`;
+  const actual = "{\n  \"id\": \"abc\",\n  \"at\": \"2026-09-29T02:28:16.337Z\",\n  \"n\": 3\n}";
+  const expected = "{\n  \"id\": \"«uuid»\",\n  \"at\": \"«date»\",\n  \"n\": «int»\n}";
   t.check(failure(actual, expected).diff, `- expected
 + actual
 
@@ -275,9 +275,9 @@ test("suggested: pid, hostname, today's date, and epoch timestamps", async (t) =
 });
 
 test("suggested: lines that already match keep the author's wildcards (corpus 16c)", async (t) => {
-  const actual = `{\n  "id": "abc",\n  "at": "2026-09-29T02:28:16.337Z",\n  "n": 3\n}`;
-  const { suggested } = failure(actual, `{\n  "id": "«uuid»",\n  "at": "«date»",\n  "n": «int»\n}`);
-  t.check(suggested, `{\n  "id": "abc",\n  "at": "«date»",\n  "n": «int»\n}`);
+  const actual = "{\n  \"id\": \"abc\",\n  \"at\": \"2026-09-29T02:28:16.337Z\",\n  \"n\": 3\n}";
+  const { suggested } = failure(actual, "{\n  \"id\": \"«uuid»\",\n  \"at\": \"«date»\",\n  \"n\": «int»\n}");
+  t.check(suggested, "{\n  \"id\": \"abc\",\n  \"at\": \"«date»\",\n  \"n\": «int»\n}");
   t.checkText(actual, suggested);
 });
 
@@ -334,13 +334,13 @@ test("t.checkText() reports a pass with an empty name and a failure as 'check fa
   TestBase.prototype.checkText.call(fake, "a", "a");
   TestBase.prototype.checkText.call(fake, "a", "b");
   t.check(calls.map(([kind, msg]) => [kind, msg]), [["pass", ""], ["fail", "check failed"]]);
-  t.check(Object.keys(calls[1]?.[2] ?? {}).sort(), ["diff", "suggested"]);
+  t.check(Object.keys(calls[1]?.[2] ?? {}).toSorted(), ["diff", "suggested"]);
 });
 
 test("t.checkText() adds the hint when there is one", async (t) => {
   const { fake, calls } = recorder();
   TestBase.prototype.checkText.call(fake, "HELLO", '"HELLO"');
-  t.check(Object.keys(calls[0]?.[2] ?? {}).sort(), ["diff", "hint", "suggested"]);
+  t.check(Object.keys(calls[0]?.[2] ?? {}).toSorted(), ["diff", "hint", "suggested"]);
 });
 
 test("t.checkThrows() compares the name, or name and message", async (t) => {
@@ -349,15 +349,15 @@ test("t.checkThrows() compares the name, or name and message", async (t) => {
   TestBase.prototype.checkThrows.call(fake, boom, "RangeError");
   TestBase.prototype.checkThrows.call(fake, boom, "RangeError: bad «int»");
   TestBase.prototype.checkThrows.call(fake, boom, "TypeError");
-  TestBase.prototype.checkThrows.call(fake, () => undefined, "RangeError");
+  TestBase.prototype.checkThrows.call(fake, () => {}, "RangeError");
   t.check(calls.map(([kind]) => kind), ["pass", "pass", "fail", "fail"]);
 });
 
 test("t.checkThrows() puts the stack in the failure", async (t) => {
   const { fake, calls } = recorder();
   TestBase.prototype.checkThrows.call(fake, () => { throw new RangeError("x"); }, "TypeError");
-  TestBase.prototype.checkThrows.call(fake, () => undefined, "TypeError");
-  t.check(Object.keys(calls[0]?.[2] ?? {}).sort(), ["diff", "stack", "suggested"]);
+  TestBase.prototype.checkThrows.call(fake, () => {}, "TypeError");
+  t.check(Object.keys(calls[0]?.[2] ?? {}).toSorted(), ["diff", "stack", "suggested"]);
   const [kind, message, extra] = calls[1] ?? [];
   t.check({ kind, message, keys: Object.keys(extra ?? {}), expected: (extra?.expected as { value?: unknown } | undefined)?.value }, { kind: "fail", message: "no error thrown", keys: ["expected"], expected: "TypeError" });
 });

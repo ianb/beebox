@@ -6,11 +6,10 @@
 // Run from browse/ via: pnpm verify-help [--update]
 
 import { readFile, readdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { run } from "../runner.js";
 
-const HELP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "help");
+const HELP_DIR = join(import.meta.dirname, "..", "..", "help");
 
 interface Drift {
   command: string;
@@ -25,7 +24,7 @@ async function captureHelp(command: string): Promise<string> {
 
 async function main(): Promise<number> {
   const update = process.argv.includes("--update");
-  const entries = (await readdir(HELP_DIR)).filter((f) => f.endsWith(".txt")).sort();
+  const entries = (await readdir(HELP_DIR)).filter((f) => f.endsWith(".txt")).toSorted();
   if (entries.length === 0) {
     process.stderr.write(`No help snapshots in ${HELP_DIR}\n`);
     return 1;

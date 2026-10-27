@@ -84,6 +84,7 @@ interface BinaryCheckSpec {
 const EXTERNAL_TOOL_CHECKS: BinaryCheckSpec[] = [
   { displayName: "pandoc", binary: "pandoc", versionArgs: ["--version"], remedy: "install pandoc (brew install pandoc / apt-get install pandoc)" },
   { displayName: "magick", binary: "magick", versionArgs: ["-version"], remedy: "install ImageMagick (brew install imagemagick / apt-get install imagemagick)" },
+  { displayName: "shellcheck", binary: "shellcheck", versionArgs: ["--version"], remedy: "install shellcheck (brew install shellcheck / apt-get install shellcheck)" },
   { displayName: "pdftotext", binary: "pdftotext", versionArgs: ["-v"], remedy: "install poppler-utils (brew install poppler / apt-get install poppler-utils)" },
 ];
 

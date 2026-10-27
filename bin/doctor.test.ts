@@ -267,6 +267,7 @@ function passingDeps(overrides: Partial<DoctorDeps>): DoctorDeps {
     "pandoc --version": ok("pandoc 3.8.2.1"),
     "magick -version": ok("Version: ImageMagick 7.1.1"),
     "pdftotext -v": ok("pdftotext version 26.04.0"),
+    "shellcheck --version": ok("ShellCheck - shell script analysis tool\nversion: 0.11.0"),
     "git-lfs version": ok("git-lfs/3.7.1"),
     "git config --get filter.lfs.clean": ok("git-lfs clean -- %f\n"),
     "claude --version": ok("1.2.3"),

@@ -12,6 +12,7 @@
 
 import ky from "ky";
 import { isRecord } from "../shared/is-record.js";
+import { generateContent } from "../services/gemini-rest.js";
 import { OPENROUTER_BASE_URL, openRouterProvider, type ModelRoute } from "./openrouter.js";
 
 export const AUDIO_QUESTION_MODEL = "gemini-3.7-flash";
@@ -87,18 +88,12 @@ async function askViaGemini(
   apiKey: string,
   { audio, mimeType, question, context, transcript }: AudioQuestionInput,
 ): Promise<{ answer: string; model: string }> {
-  const { GoogleGenAI } = await import("@google/genai");
-  const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
+    apiKey,
     model: AUDIO_QUESTION_MODEL,
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: buildAudioQuestionPrompt({ question, context, transcript }) },
-          { inlineData: { mimeType, data: audio.toString("base64") } },
-        ],
-      },
+    parts: [
+      { text: buildAudioQuestionPrompt({ question, context, transcript }) },
+      { inlineData: { mimeType, data: audio.toString("base64") } },
     ],
   });
 

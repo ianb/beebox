@@ -19,7 +19,8 @@
  *   - better-sqlite3 loads and opens a database — the direct probe for
  *     Node-ABI drift, the failure the version pin exists to prevent.
  *   - `pandoc`, `magick`, `pdftotext` on PATH (the external-tools contract
- *     promised to agents in `beebox/src/core/agent-guide/guide.md`).
+ *     promised to agents in `beebox/src/core/agent-guide/guide.md`), and
+ *     `shellcheck`, which the pre-commit hook and the schedule lint run.
  *   - `git-lfs` binary present AND its filters are actually installed
  *     (`git config --get filter.lfs.clean` resolves) — the binary alone is
  *     not enough (`src/core/box/index.ts` wires LFS `.gitattributes` per box).
