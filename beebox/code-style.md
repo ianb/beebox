@@ -11,14 +11,14 @@ pnpm typecheck    # TypeScript errors
 pnpm lint:changed # ESLint over your diff (iteration); `pnpm lint` is the whole tree
 pnpm lint:oxlint  # Supplemental linter (fast, catches patterns ESLint misses)
 pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/development/maintenance.md)
-pnpm lint:circular  # Circular dependency detector (madge)
+pnpm lint:circular  # Circular dependency detector (oxlint import/no-cycle)
 ```
 
 - The tsconfig is strict — no implicit `any` allowed
 - ESLint config is in `eslint.config.ts` with rules reviewed individually
 - oxlint provides supplemental checks (ambiguous constructors, useless spreads, identical ternary branches, etc.) — run periodically, not in pre-commit
 - knip detects unused files, exports, and dependencies — run periodically to catch dead code
-- madge detects circular dependencies — type-only cycles (`import type`) are acceptable, value import cycles are not
+- `lint:circular` detects circular dependencies — type-only cycles (`import type`) are acceptable, value import cycles are not
 - `pnpm lint` covers `src/`, `scripts/`, AND `test/` — test code is held to the same reviewed ruleset as src (the eslint config's `roots` option), so per-edit lint reports on test files are real pre-commit blockers, not noise
 
 ## Error Handling

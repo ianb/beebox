@@ -6,21 +6,35 @@ test("reportLines drops the banner, blank lines, and per-run timings", () => {
   const output = [
     "",
     "> beebox@0.1.0 lint:circular /repo/beebox",
-    "> madge --circular --extensions ts,tsx src/",
+    "> oxlint -f default -c .oxlint-cycles.json src/",
     "",
-    "- Finding files",
-    "Processed 1812 files (3.3s) (45 warnings)",
-    "Finished in 412ms on 1812 files",
-    "✔ No circular dependency found!",
+    "Found 0 warnings and 0 errors.",
+    "Finished in 298ms on 2746 files with 1 rules using 12 threads.",
     " ELIFECYCLE  Command failed with exit code 1.",
   ].join("\n");
-  assert.deepEqual(reportLines(output), ["- Finding files", "✔ No circular dependency found!"]);
+  assert.deepEqual(reportLines(output), []);
 });
 
-test("reportLines strips madge's ordinal so a cycle keeps its identity when the list shifts", () => {
-  const before = reportLines("1) a.ts > b.ts\n2) c.ts > d.ts\n");
-  const after = reportLines("1) a.ts > b.ts\n2) NEW.ts > x.ts\n3) c.ts > d.ts\n");
-  assert.deepEqual(newLines(before, after), ["NEW.ts > x.ts"]);
+// no-cycle follows its help line with a note: the import path that closes the
+// cycle, drawn over several lines. It is part of the finding, not a finding.
+test("reportLines folds a no-cycle finding's path diagram into the finding", () => {
+  const output = [
+    "  x import(no-cycle): Dependency cycle detected",
+    "    ,-[src/q/tab.ts:13:30]",
+    " 12 | import { toastError } from \"../ui/toast-store\";",
+    " 13 | import { useWorkspace } from \"../ws/provider\";",
+    "    :                              ^^^^^^^^^^^^^^^^",
+    "    `----",
+    "  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.",
+    "  note: These paths form a cycle:",
+    "           ╭──▶ ../ws/provider (src/ws/provider.tsx)",
+    "           │         ⬇ imports",
+    "           │    ../../q/tab (src/q/tab.ts)",
+    "           ╰─────────╯ imports the current file",
+    "",
+    "Found 0 warnings and 1 error.",
+  ].join("\n");
+  assert.deepEqual(reportLines(output), ["x import(no-cycle): Dependency cycle detected | import { useWorkspace } from \"../ws/provider\";"]);
 });
 
 const finding = ({ path, line, code }: { path: string; line: number; code: string }): string => [

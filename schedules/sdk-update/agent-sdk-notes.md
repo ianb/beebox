@@ -34,12 +34,10 @@ until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
 - **Current pins:** Agent SDK `0.3.310`, Codex `0.164.0` (both `@openai/codex`
-  and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
-  still carries a second, unmanaged Agent SDK pin at `0.3.226` —
-  `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
-  fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
-  `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
-  the root copy and `bin/` tooling still imports it.
+  and `@openai/codex-sdk`), all in `beebox/package.json`.
+  `workstreams-app/package.json` pins the same Agent SDK version, and the
+  updater moves both. The root's unmanaged pin is gone (2026-10-27,
+  `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
 - **Latest reviewed upstream version:** `0.3.311` (SDK), `2.1.311` (Claude Code), `0.164.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.310` on 2026-10-26.
@@ -3128,7 +3126,7 @@ earlier caution is not left standing as an unresolved suspicion against
 `0.3.228`. The underlying flake in `file-watcher.doctest.md` is a real test-suite
 issue, but it belongs to the repo, not to this ledger.
 
-### Monitor reliability — the SDK pin has split in two (FILED 2026-09-01 as `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`)
+### Monitor reliability — the SDK pin has split in two (FILED 2026-09-01 as `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`)
 
 Not an upstream release; recorded here because it degrades this monitor. The
 prediction below held: `pnpm update-agent-sdk --check` on 2026-09-01 reported

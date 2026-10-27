@@ -16,8 +16,8 @@ npx vibe-init
 2. Create `eslint.config.ts` importing the preset
 3. Create `prettier.config.ts` importing the base Prettier config
 4. Create `tsconfig.json` extending the base config (if none exists)
-5. Create `knip.json` for dead code detection, and `.madgerc` so `lint:circular` ignores type-only imports
-6. Install CLI tools (`eslint`, `prettier`, `oxlint`, `knip`, `madge`) as devDependencies
+5. Create `knip.json` for dead code detection, and `.oxlint-cycles.json` so `lint:circular` runs only oxlint's cycle check and ignores type-only imports
+6. Install CLI tools (`eslint`, `prettier`, `oxlint`, `knip`) as devDependencies
 7. Set up husky + lint-staged with a pre-commit hook (runs Prettier + ESLint on staged files)
 
 Then run all checks:
@@ -33,7 +33,7 @@ If you prefer to set things up yourself instead of using `vibe-init`:
 ### 1. Install
 
 ```bash
-npm install --save-dev @ianbicking/personal-vibe-check eslint@^9 prettier oxlint knip madge husky lint-staged
+npm install --save-dev @ianbicking/personal-vibe-check eslint@^9 prettier oxlint knip husky lint-staged
 ```
 
 The package bundles all ESLint plugins as dependencies — you don't need to install them individually.
@@ -96,18 +96,19 @@ Create `knip.json`:
 
 Set `entry` to your actual entry points. Add `ignore` and `ignoreDependencies` as needed.
 
-### 5b. Madge Config (circular imports)
+### 5b. Cycle Check Config (circular imports)
+
+`.oxlint-cycles.json`:
 
 ```json
 {
-  "detectiveOptions": {
-    "ts": { "skipTypeImports": true },
-    "tsx": { "skipTypeImports": true }
-  }
+  "plugins": ["import"],
+  "categories": { "correctness": "off" },
+  "rules": { "import/no-cycle": ["error", { "ignoreTypes": true }] }
 }
 ```
 
-Without it, madge counts `import type` edges, so every type-only back-edge into a barrel reads as a cycle. Type-only cycles are acceptable; this leaves only value cycles.
+`lint:circular` runs oxlint with only this rule. Without `ignoreTypes`, it counts `import type` edges, so every type-only back-edge into a barrel reads as a cycle. Type-only cycles are acceptable; this leaves only value cycles.
 
 ### 6. Package Scripts
 
@@ -122,7 +123,7 @@ Add to `package.json`:
     "format:check": "prettier --check src/",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
-    "lint:circular": "madge --circular --extensions ts,tsx src/",
+    "lint:circular": "oxlint -c .oxlint-cycles.json src/",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -152,7 +153,7 @@ npm run typecheck
 | `npm run lint` | ESLint | Code quality, style, security, React hooks |
 | `npm run lint:oxlint` | oxlint | Ambiguous constructors, useless spreads, identical ternary branches |
 | `npm run lint:knip` | knip | Unused files, exports, dependencies |
-| `npm run lint:circular` | madge | Circular dependency chains (type-only cycles are OK) |
+| `npm run lint:circular` | oxlint `import/no-cycle` | Circular dependency chains (type-only cycles are OK) |
 
 `npx vibe-check` runs all five in sequence, stopping on the first failure.
 
@@ -187,7 +188,7 @@ The package includes these as dependencies (you don't install them):
 
 Your project installs separately (as devDependencies):
 
-- `eslint@^9`, `prettier`, `oxlint`, `knip`, `madge` — CLI tools invoked by npm scripts (ESLint pinned to v9; v10 has breaking plugin incompatibilities)
+- `eslint@^9`, `prettier`, `oxlint`, `knip` — CLI tools invoked by npm scripts (ESLint pinned to v9; v10 has breaking plugin incompatibilities)
 - `husky`, `lint-staged` — pre-commit hook infrastructure
 - `typescript` — peer dependency (>= 5)
 
@@ -200,4 +201,4 @@ If you're developing the package alongside a project:
 npm link ../personal-vibe-check
 ```
 
-Note: `npm link` doesn't hoist binaries from the linked package, so you still need `eslint`, `oxlint`, `knip`, and `madge` as direct devDependencies in the consuming project.
+Note: `npm link` doesn't hoist binaries from the linked package, so you still need `eslint`, `oxlint`, and `knip` as direct devDependencies in the consuming project.
