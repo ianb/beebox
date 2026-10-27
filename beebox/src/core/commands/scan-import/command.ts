@@ -332,8 +332,8 @@ async function importPhotoSession(
 
   const intakeItems = [sessionCardRelPath, ...questionPaths];
   const intakeDescription = `Scan from ${sourceLabel}: ${bundles.length} photo${bundles.length === 1 ? "" : "s"}${questionPaths.length > 0 ? `, ${questionPaths.length} review question${questionPaths.length === 1 ? "" : "s"}` : ""}`;
-  const intakeJobPath = await queueCommittedSessionIntake(ctx.boxRoot, { items: intakeItems, description: intakeDescription });
-  ctx.writeLine(`\nIntake job: ${intakeJobPath ?? "not created; the next wakeup queues it"}`);
+  const intakeJobPaths = await queueCommittedSessionIntake(ctx.boxRoot, { items: intakeItems, description: intakeDescription });
+  ctx.writeLine(`\nIntake jobs: ${intakeJobPaths?.join(", ") ?? "not created; the next wakeup queues it"}`);
   ctx.writeLine(`Session: ${sessionCardRelPath}`);
 
   return {
@@ -348,7 +348,7 @@ async function importPhotoSession(
       unsureCount: unsurePages.length,
       blankCount: blankPages.length,
       reviewQuestions: questionPaths.length,
-      intakeJobPath,
+      intakeJobPaths,
     },
   };
 }

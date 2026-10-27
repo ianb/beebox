@@ -13,7 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { simpleGit } from "simple-git";
-import { hasCommits, unstageFiles } from "../../../lib/git/core/operations.js";
+import { hasCommits, stageAndCommitPaths, unstageFiles, withBoxGitLock } from "../../../lib/git/core/operations.js";
 import type { CommandResult } from "../../command-types.js";
 import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
 import type { SessionLayout } from "./session.js";
@@ -79,19 +79,56 @@ async function committedPaths(boxRoot: string, relPaths: string[]): Promise<stri
 }
 
 /**
- * Queue a committed session for triage. The import has already landed, so a
- * failure here must not fail it: the ledger would never record the hash, and a
- * retry would import a second copy. Wakeup jobs any inbox card that no job
- * references, so the session is still triaged. Returns null when queuing failed.
+ * Queue a committed session for triage and commit the job paths written, so
+ * the scheduler pass's job check (which counts only committed jobs) starts a
+ * run for them. The import has already landed, so a failure here must not fail
+ * it: the ledger would never record the hash, and a retry would import a
+ * second copy. Wakeup jobs any inbox card that no job references, so the
+ * session is still triaged. Returns the committed job paths, or null when
+ * queuing or committing failed.
  */
 export async function queueCommittedSessionIntake(
   boxRoot: string,
   { items, description }: { items: string[]; description: string },
-): Promise<string | null> {
+): Promise<string[] | null> {
+  let jobs: string[];
   try {
-    return await createOrAppendIntakeJob({ boxRoot, items, description });
+    jobs = await createOrAppendIntakeJob({ boxRoot, items, description });
   } catch (error) {
     console.warn(`[scan-import] Intake job for ${items[0] ?? "a scan session"} was not created; the next wakeup queues it:`, error);
     return null;
+  }
+  try {
+    await stageAndCommitPaths(boxRoot, {
+      paths: jobs,
+      message: `Queue scan intake: ${jobs.length} job(s)`,
+      trailers: { "Created-By": "scan-import" },
+    });
+    return jobs;
+  } catch (error) {
+    console.warn(`[scan-import] Intake jobs ${jobs.join(", ")} were not committed; restoring them so the next wakeup queues the items:`, error);
+    await restoreJobsToHead(boxRoot, jobs);
+    return null;
+  }
+}
+
+/**
+ * Put job cards back as `HEAD` has them: a new card is removed, an appended
+ * one loses the append. An uncommitted job would hold its items (step 4b
+ * counts every job's refs as jobbed) while the job check skips it as a write in
+ * progress, so the items would wait for nothing. Restored, they are unjobbed
+ * inbox cards again, and the next wakeup's step 4b jobs and commits them.
+ */
+async function restoreJobsToHead(boxRoot: string, jobs: string[]): Promise<void> {
+  try {
+    await withBoxGitLock(boxRoot, async () => {
+      const tracked = await committedPaths(boxRoot, jobs);
+      const added = jobs.filter((job) => !tracked.includes(job));
+      if (tracked.length > 0) await simpleGit(boxRoot).raw(["checkout", "HEAD", "--", ...tracked]);
+      if (added.length > 0 && (await hasCommits(boxRoot))) await unstageFiles(boxRoot, added);
+      for (const job of added) await fs.rm(path.join(boxRoot, job), { force: true });
+    });
+  } catch (error) {
+    console.error(`[scan-import] Could not restore uncommitted intake jobs ${jobs.join(", ")}; their items wait until a commit takes them:`, error);
   }
 }

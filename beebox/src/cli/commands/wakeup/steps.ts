@@ -327,27 +327,23 @@ async function findUnjobbedInboxItems(
 }
 
 /**
- * Create batched intake job files (each batch its own file so the agent
- * can finish each within its turn limit) and append their paths to
- * `jobPaths`.
+ * Queue `items` as intake work and append the job paths written to
+ * `jobPaths`. The writer caps each job at `INTAKE_JOB_MAX_ITEMS` and starts
+ * new jobs past it, so the agent can finish each within its turn limit.
  */
 async function createBatchedIntakeJobs(
   boxRoot: string,
   opts: { items: string[]; connector: string | undefined; priority: "normal" | "low"; label: string; jobPaths: string[] }
 ): Promise<void> {
   const { items } = opts;
-  const INTAKE_BATCH_SIZE = 10;
-  for (let i = 0; i < items.length; i += INTAKE_BATCH_SIZE) {
-    const batch = items.slice(i, i + INTAKE_BATCH_SIZE);
-    const jobPath = await createOrAppendIntakeJob({
-      boxRoot,
-      connector: opts.connector,
-      items: batch,
-      priority: opts.priority,
-      description: `Triage ${batch.length} ${opts.label}${batch.length === 1 ? "" : "s"}`,
-    });
-    opts.jobPaths.push(jobPath);
-  }
+  const written = await createOrAppendIntakeJob({
+    boxRoot,
+    connector: opts.connector,
+    items,
+    priority: opts.priority,
+    description: `Triage ${items.length} ${opts.label}${items.length === 1 ? "" : "s"}`,
+  });
+  opts.jobPaths.push(...written);
 }
 
 /** Cards per contains-backfill job; the next wakeup queues the next batch. */

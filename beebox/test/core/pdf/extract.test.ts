@@ -57,13 +57,13 @@ function parsePdfCard(content: string, source: string) {
 }
 
 // What `runPdfMode` reports in `data`.
-const PdfImportData = z.object({ extracted: z.boolean(), sessionCardPath: z.string(), intakeJobPath: z.string().nullable() });
+const PdfImportData = z.object({ extracted: z.boolean(), sessionCardPath: z.string(), intakeJobPaths: z.array(z.string()).nullable() });
 const importData = (result: CommandResult) => PdfImportData.parse(result.data);
 
 // `importData` as the checks expect it. The session card name carries a clock stamp and a
 // random suffix; the job card name carries the clock.
 const sessionCardPath = str`_content/inbox/scan-${any(String)}.capture-session.card`;
-const intakeJobPath = str`_bookkeeping/jobs/${any(String)}`;
+const intakeJobPaths = [str`_bookkeeping/jobs/${any(String)}`];
 
 // The session card `runPdfMode` writes: it lists the pdf card, plus the uploader when one is given.
 const sessionCardText = (uploader?: string) => `---
@@ -127,7 +127,7 @@ void test("A successful extraction lands an extracted pdf card", async (t) => {
   const result = await importPdf(box, { docling });
   t.check({ success: result.success, data: importData(result) }, {
     success: true,
-    data: { extracted: true, sessionCardPath, intakeJobPath },
+    data: { extracted: true, sessionCardPath, intakeJobPaths },
   });
 
   // The fake was asked for a no-OCR extraction — `do_ocr=False` is the default, not
@@ -385,7 +385,7 @@ void test("Nothing is lost:", async (t) => {
   const result = await importPdf(box, { docling });
   t.check({ success: result.success, data: importData(result) }, {
     success: true,
-    data: { extracted: false, sessionCardPath, intakeJobPath },
+    data: { extracted: false, sessionCardPath, intakeJobPaths },
   });
 
   t.check(await attachContents(box), "source.pdf");
@@ -401,7 +401,7 @@ void test("Nothing is lost:", async (t) => {
     },
     body: "",
   });
-  // Intake still completed (the `intakeJobPath` above) — a Docling problem is not an intake problem.
+  // Intake still completed (the `intakeJobPaths` above) — a Docling problem is not an intake problem.
 });
 
 // ## Empty markdown is an extraction with an empty body, not a failure
@@ -419,7 +419,7 @@ void test("A document with no readable text is a real answer.", async (t) => {
   });
   const box = await makeTmpBox({ git: true });
   const result = await importPdf(box, { docling: createFakeDocling({ markdown: "", pageCount: 1 }) });
-  t.check(importData(result), { extracted: true, sessionCardPath, intakeJobPath });
+  t.check(importData(result), { extracted: true, sessionCardPath, intakeJobPaths });
 
   const { rel, content } = await readPdfCard(box);
   const card = parsePdfCard(content, rel);

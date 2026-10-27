@@ -83,9 +83,9 @@ export async function runFilingSweep(args: { boxRoot: string; wakeupRunning: boo
   if (changedJobs.length > 0) await stageAndCommitPaths(boxRoot, { paths: changedJobs, message: "Take captures with words out of filing", trailers: { "Triggered-By": "quick-capture filing" } });
   for (const id of plan.clear) await updateRecord({ boxRoot, id, change: clearFiling });
   if (plan.queue.length > 0) {
-    const job = await createOrAppendIntakeJob({ boxRoot, items: plan.queue, priority: "normal",
+    const jobs = await createOrAppendIntakeJob({ boxRoot, items: plan.queue, priority: "normal",
       description: `Triage new items, including ${plan.queue.length} saved capture${plan.queue.length === 1 ? "" : "s"}` });
-    await stageAndCommitPaths(boxRoot, { paths: [job], message: "Queue saved captures for filing", trailers: { "Triggered-By": "quick-capture filing" } });
+    await stageAndCommitPaths(boxRoot, { paths: jobs, message: "Queue saved captures for filing", trailers: { "Triggered-By": "quick-capture filing" } });
   }
   for (const id of plan.exhausted) await updateRecord({ boxRoot, id, change: record => { record.error = FILING_WAITING_ERROR; } });
   if (plan.kick.length === 0 || args.wakeupRunning) return false;

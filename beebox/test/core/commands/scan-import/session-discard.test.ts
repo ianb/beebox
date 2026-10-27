@@ -23,6 +23,8 @@ import Sharp from "sharp";
 import { createFakeDocling } from "../../../../src/services/docling/core.js";
 import { runPdfMode } from "../../../../src/core/commands/scan-import/pdf.js";
 import { runPhotoMode } from "../../../../src/core/commands/scan-import/command.js";
+import { queueCommittedSessionIntake } from "../../../../src/core/commands/scan-import/session-discard.js";
+import { createIntakeJobTemplate } from "../../../../src/schemas/intake-job.js";
 import { createFakeScanVision } from "../../../../src/services/scan-vision.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -189,4 +191,56 @@ void test("The ledger records the hash only for an import that succeeded, so fai
   t.check(await importPdf(box), "imported true");
 
   t.check({ sessions: await sessions(box), staged: await staged(box) }, { sessions: ONE_SESSION, staged: [] });
+});
+
+// ## Scan intake jobs are committed, or put back
+//
+// The job check counts only committed jobs, so the scan's intake jobs are
+// committed in one commit. Here a job already holds 24 items, and the scan's
+// three items fill it and start another; both paths are in `HEAD`.
+//
+// When that commit is refused (23 more items: 22 fill the second job, one
+// starts a third), the jobs are put back as `HEAD` has them: the
+// appended job loses the append and the new job is removed. An uncommitted job
+// would hold its items (the wakeup counts every job's refs as jobbed) while the
+// job check skips it, so the items would wait for nothing; put back, they are
+// unjobbed inbox cards that the next wakeup's step 4b jobs and commits.
+void test("Scan intake jobs are committed, or put back", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  const existing = "_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card";
+  const old = Array.from({ length: 24 }, (_, i) => `_content/inbox/old-${String(i)}.doc.card`);
+  await box.write(existing, createIntakeJobTemplate({ priority: "normal", description: "old", items: old }));
+  box.commitAll("existing job");
+  const headFiles = async () => (await execa("git", ["ls-tree", "-r", "--name-only", "HEAD", "_bookkeeping/jobs"], { cwd: box.root })).stdout.split("\n");
+  const status = async () => (await execa("git", ["status", "--porcelain", "--untracked-files=all", "_bookkeeping/jobs"], { cwd: box.root })).stdout;
+
+  const scan = ["a", "b", "c"].map((n) => `_content/inbox/scan-${n}.capture-session.card`);
+  const committed = await queueCommittedSessionIntake(box.root, { items: scan, description: "Scan: 3 photos" });
+  t.check({ committed, head: await headFiles(), status: await status() }, {
+    committed: [existing, str`_bookkeeping/jobs/${any(String)}-inbox-${any(String)}.intake.job.card`],
+    head: ["_bookkeeping/jobs/.gitkeep", existing, committed?.[1] ?? "second job"],
+    status: "",
+  });
+
+  const second = committed?.[1] ?? "second job";
+  const before = await box.read(second);
+  const restore = await refuseCommits(box);
+  t.teardown(restore);
+  const warn = console.warn;
+  console.warn = () => {};
+  let refused;
+  try {
+    // 23 items: 22 fill the second job, and one starts a third.
+    const burst = Array.from({ length: 23 }, (_, i) => `_content/inbox/burst-${String(i)}.capture-session.card`);
+    refused = await queueCommittedSessionIntake(box.root, { items: burst, description: "Scan: 23 photos" });
+  } finally {
+    console.warn = warn;
+  }
+  t.check({ refused, second: await box.read(second), head: await headFiles(), status: await status() }, {
+    refused: null,
+    second: before,
+    head: ["_bookkeeping/jobs/.gitkeep", existing, committed?.[1] ?? "second job"],
+    status: "",
+  });
 });
