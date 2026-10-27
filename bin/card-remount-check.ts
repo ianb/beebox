@@ -51,6 +51,12 @@ class PageNotReadyError extends CheckSetupError {
     this.name = "PageNotReadyError";
   }
 }
+class FixtureConflictError extends CheckSetupError {
+  constructor(path: string) {
+    super(`${path} exists with other content; the check writes only its own fixture files`);
+    this.name = "FixtureConflictError";
+  }
+}
 class PinButtonMissingError extends CheckSetupError {
   constructor() {
     super("no Pin button on the card's tab");
@@ -104,7 +110,7 @@ function docCard(): string {
   const sections = Array.from({ length: 8 }, (_, index) => {
     const n = index + 1;
     const paragraphs = [1, 2, 3].map((p) => `Paragraph ${p} of section ${n}. ${filler}`).join("\n\n");
-    const extra = n === 2 ? "\n\n![Atoms](../figures/Atoms.figure.card)"
+    const extra = n === 2 ? "\n\n![Atoms](../figures/Remount_Repro_Atoms.figure.card)"
       : n === 4 ? '\n\n{% source href="https://www.britannica.com/science/chemical-bonding" %}\nA block citation in section 4.\n{% /source %}'
         : "";
     return `## Section ${n}\n\n${paragraphs}${extra}`;
@@ -115,13 +121,16 @@ function docCard(): string {
 function writeFixture(box: string): void {
   if (!existsSync(join(box, "_content"))) throw new NotABoxError(box);
   const files: Record<string, string> = {
-    "_content/figures/Atoms.figure.card": "---\nruntime: d3\nentry: attach/sketch.ts\ntitle: Atoms\n---\nTwo atom pickers and a drawing (card-remount-check fixture).\n",
-    "_content/figures/Atoms.attach/sketch.ts": SKETCH,
+    "_content/figures/Remount_Repro_Atoms.figure.card": "---\nruntime: d3\nentry: attach/sketch.ts\ntitle: Atoms\n---\nTwo atom pickers and a drawing (card-remount-check fixture).\n",
+    "_content/figures/Remount_Repro_Atoms.attach/sketch.ts": SKETCH,
     [CARD]: docCard(),
   };
   for (const [path, content] of Object.entries(files)) {
     const full = join(box, path);
-    if (existsSync(full) && readFileSync(full, "utf8") === content) continue;
+    if (existsSync(full)) {
+      if (readFileSync(full, "utf8") === content) continue;
+      throw new FixtureConflictError(full);
+    }
     mkdirSync(dirname(full), { recursive: true });
     writeFileSync(full, content);
   }
@@ -186,20 +195,25 @@ function main(): number {
   browse("open", `/chat?card=${encodeURIComponent(CARD)}`);
   waitUntilReady();
   // Pin, then unpin: two workspace changes that leave the card as it was.
+  // Read after each, so a scroll jump that the second change undoes still fails.
+  const replaced = new Set<string>();
+  const scrollTops: unknown[] = [];
   for (let i = 0; i < 2; i++) {
     if (evalJson(PIN) !== "clicked") throw new PinButtonMissingError();
     browse("wait", "1500");
+    const result = evalJson(REPORT);
+    if (typeof result !== "object" || result === null || !("replaced" in result) || !("scrollTop" in result)
+      || !isStrings(result.replaced) || !Array.isArray(result.scrollTop)) throw new PageResultError(result);
+    const [start, now]: unknown[] = result.scrollTop;
+    if (i === 0) scrollTops.push(start);
+    scrollTops.push(now);
+    for (const name of result.replaced) replaced.add(name);
   }
-  const result = evalJson(REPORT);
-  if (typeof result !== "object" || result === null || !("replaced" in result) || !("scrollTop" in result)
-    || !isStrings(result.replaced) || !Array.isArray(result.scrollTop)) throw new PageResultError(result);
-  const replaced = result.replaced;
-  const [start, end]: unknown[] = result.scrollTop;
-  if (replaced.length === 0 && start === end) {
+  if (replaced.size === 0 && scrollTops.every((top) => top === scrollTops[0])) {
     console.log("ok: pinning the tab left the card body in place");
     return 0;
   }
-  console.error(`FAIL: pinning the tab remounted ${replaced.join(", ") || "nothing"}; scroll moved ${start} -> ${end} with no reader scroll`);
+  console.error(`FAIL: pinning the tab remounted ${[...replaced].join(", ") || "nothing"}; scroll went ${scrollTops.join(" -> ")} with no reader scroll`);
   return 1;
 }
 

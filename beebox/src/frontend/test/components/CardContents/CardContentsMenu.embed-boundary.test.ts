@@ -1,6 +1,6 @@
-// The contents menu follows the card's own document, not an embed's DOM
-// activity: a figure in the body that redraws must not make the menu re-read
-// the outline. Issue:
+// The contents menu follows the card's own document, not an embed's: a figure
+// in the body that redraws must not make the menu re-read the outline, and a
+// heading the figure draws is not one of the card's sections. Issue:
 // issues/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
@@ -48,8 +48,8 @@ void test("a change inside an embed leaves the outline; a change in the card re-
   // An embed is not an outline root here, so a re-read would list its heading.
   await addHeading(view, { parent: view.container.querySelector("#embed"), text: "Drawn" });
   t.check(await sections(view), ["Plan", "Lodging", "Food", "Costs"]);
-  // The same change in the card's own body is read. That read sees the
-  // embed's heading too: the boundary filters change events, not content.
+  // The same change in the card's own body is read, and that read still
+  // leaves out the embed's heading.
   await addHeading(view, { parent: view.container.querySelector("[data-card-outline]"), text: "Notes" });
-  t.check(await sections(view), ["Plan", "Lodging", "Food", "Costs", "Drawn", "Notes"]);
+  t.check(await sections(view), ["Plan", "Lodging", "Food", "Costs", "Notes"]);
 });

@@ -11,8 +11,9 @@
  * Headings come from the rendered DOM: the document renderers mark their
  * prose wrapper `data-card-outline` (`Markdown`'s `outline` prop), and the
  * heading node gives each heading a stable id (`makeHeadingNode`). Only
- * headings of the first outline root count, so a card embedded in the body
- * does not add its own headings.
+ * headings of the first outline root count, and none inside an embed
+ * (`data-card-embed`), so a card or figure embedded in the body does not add
+ * its own headings.
  */
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
@@ -33,7 +34,7 @@ export function readOutline(front: HTMLElement): { items: OutlineItem[]; heading
   const headings = new Map<string, HTMLElement>();
   const entries: OutlineEntry[] = [];
   for (const heading of root.querySelectorAll<HTMLElement>("h1[id], h2[id], h3[id]")) {
-    if (heading.closest("[data-card-outline]") !== root) continue;
+    if (heading.closest("[data-card-outline]") !== root || insideEmbed(heading)) continue;
     headings.set(heading.id, heading);
     entries.push({ id: heading.id, level: Number(heading.tagName.slice(1)), text: heading.textContent });
   }
