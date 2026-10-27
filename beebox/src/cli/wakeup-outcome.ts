@@ -110,6 +110,20 @@ const reportSchema = z.object({
   skipped: z.literal("wakeup-running").optional(),
 });
 
+/**
+ * Printed when the cycle takes the per-box cycle lock, for a caller that asked
+ * for the outcome. A starter that must not wait for the whole run
+ * (`startBbxWakeup`) answers on this line: before it, another cycle could
+ * still take the lock and this one would skip.
+ */
+export const WAKEUP_CYCLE_ACQUIRED = "[wakeup-cycle] acquired";
+
+/** Print {@link WAKEUP_CYCLE_ACQUIRED}, if the caller asked for the outcome. */
+export function reportCycleAcquired(): void {
+  if (process.env[WAKEUP_OUTCOME_ENV] !== "1") return;
+  console.log(WAKEUP_CYCLE_ACQUIRED);
+}
+
 /** Print the outcome, if the caller asked for it. */
 export function reportWakeupOutcome(report: WakeupOutcomeReport): void {
   if (process.env[WAKEUP_OUTCOME_ENV] !== "1") return;

@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { readFile, readdir } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { initBox } from "../../../../src/core/box/structure/core.js";
-import { createIntakeJobsForUnjobbed, cleanupStaleJobs } from "../../../../src/cli/commands/wakeup/command.js";
+import { createIntakeJobsForUnjobbed, cleanupStaleJobs, parseMaxCycles, wakeupReactorOptions } from "../../../../src/cli/commands/wakeup/command.js";
 import type { Connector } from "../../../../src/connector.js";
 
 // A fixed box clock makes the job filenames (stamped in box time) stable.
@@ -344,4 +344,32 @@ void test("A job that leaves status: off relies on the schema default (pending),
   box.commitAll("queue statusless job");
 
   t.check(await cleanupStaleJobs(box.root), 1);
+});
+
+// ## `--max-cycles` reaches the reactor
+//
+// A wakeup runs one reactor cycle unless `--max-cycles <n>` asks for more; the
+// job check's run asks for 3 (docs/implemented-plans/on-demand-job-triggers.md, Track C).
+// The value must be a positive integer.
+void test("--max-cycles reaches the reactor", async (t) => {
+  t.check(
+    {
+      default: wakeupReactorOptions("/box", { connector: undefined, maxCycles: undefined }),
+      three: wakeupReactorOptions("/box", { connector: undefined, maxCycles: parseMaxCycles("3") }),
+      scoped: wakeupReactorOptions("/box", { connector: "gmail", maxCycles: undefined }),
+      rejected: ["0", "1.5", "x"].map((value) => {
+        try {
+          return parseMaxCycles(value);
+        } catch (e) {
+          return e instanceof Error ? e.message : "not an Error";
+        }
+      }),
+    },
+    {
+      default: { boxRoot: "/box", maxCycles: 1, skipLowPriority: true },
+      three: { boxRoot: "/box", maxCycles: 3, skipLowPriority: true },
+      scoped: { boxRoot: "/box", maxCycles: 1, skipLowPriority: true, connectorFilter: "gmail" },
+      rejected: ["--max-cycles takes a positive integer", "--max-cycles takes a positive integer", "--max-cycles takes a positive integer"],
+    },
+  );
 });

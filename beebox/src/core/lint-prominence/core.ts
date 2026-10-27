@@ -301,12 +301,9 @@ function dirOf(relPath: string): string {
 }
 
 /** Format prominence-budget warnings for `bbx validate`'s text output. Never counted toward the exit code, `info` included. */
-export function formatProminenceLintWarnings(warnings: ProminenceLintWarning[], { colors }: { colors: boolean }): string {
+export function formatProminenceLintWarnings(warnings: ProminenceLintWarning[]): string {
   if (warnings.length === 0) return "";
-  const ESC = "";
-  const yellow = colors ? (s: string) => `${ESC}[33m${s}${ESC}[0m` : (s: string) => s;
-  const cyan = colors ? (s: string) => `${ESC}[36m${s}${ESC}[0m` : (s: string) => s;
   return warnings
-    .map((w) => `${w.severity === "info" ? cyan("info") : yellow("warning")}  ${w.path}  [${w.rule}] ${w.message}`)
+    .map((w) => `${w.severity === "info" ? "info" : "warning"}  ${w.path}  [${w.rule}] ${w.message}`)
     .join("\n");
 }

@@ -5,12 +5,11 @@
  */
 
 import { CronExpressionParser } from "cron-parser";
-import rrulePkg from "rrule";
 import { parseDuration } from "../../scheduled-script-duration.js";
+import { parseScheduleRrule } from "../../scheduled-script-fields.js";
 import type { ParsedScheduledScript } from "./schema.js";
 import type { ScriptState } from "../../core/schedule/state.js";
 
-const { rrulestr } = rrulePkg;
 
 // --- Schedule evaluation ---
 
@@ -164,8 +163,10 @@ function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
 
 function isRruleDue(rruleStr: string, ctx: ScheduleCheckContext): boolean {
   try {
-    const rule = rrulestr(rruleStr);
     const after = ctx.lastRun ? new Date(ctx.lastRun) : new Date(0);
+    // A never-run rule counts from today, so a new card waits for its first
+    // matching day instead of catching up on every past one.
+    const rule = parseScheduleRrule(rruleStr, { anchor: ctx.lastRun ? after : ctx.now });
     const occurrences = rule.between(after, ctx.now, false);
     return occurrences.length > 0;
   } catch (e) {

@@ -730,19 +730,6 @@ queue_remote stdin bash -s <<'REMOTE'
   # Refresh the operator-facing command after every dependency reconciliation.
   # Internal callers resolve this same direct package dependency themselves.
   ln -sf /opt/beebox/node_modules/.bin/codex /usr/local/bin/codex
-  # Native-module ABI guard. pnpm's side-effects cache keys build artifacts by
-  # dependency graph, NOT by Node ABI — after a Node major upgrade, a "clean"
-  # reinstall can silently restore a binary compiled for the old ABI (this
-  # broke every box child on the 22→24 upgrade, 2026-07-16, while the hub's
-  # /healthz stayed green). Load the module with the runtime that will serve
-  # traffic; on mismatch, force a real prebuild fetch/compile and re-verify —
-  # a second failure fails the deploy.
-  if ! node -e 'require("better-sqlite3")' 2>/dev/null; then
-    echo "  better-sqlite3 ABI mismatch — forcing rebuild for $(node -v)..."
-    (cd node_modules/better-sqlite3 && rm -rf build \
-      && { npx --no-install prebuild-install || npx --no-install node-gyp rebuild --release; })
-    node -e 'require("better-sqlite3")'
-  fi
 REMOTE
 
 # Reconcile each package-layout box's own node_modules against its manifest
@@ -1053,7 +1040,10 @@ REMOTE
       echo "  deploy/hetzner/cloud-init.yaml), then redeploy."
       exit 1
     fi
-    codex_check_home=$(mktemp -d)
+    # Codex refuses to put its helper binaries under a temporary directory and
+    # warns on every run, so the throwaway CODEX_HOME lives in root's cache.
+    mkdir -p "$HOME/.cache"
+    codex_check_home=$(mktemp -d "$HOME/.cache/bbx-codex-check.XXXXXX")
     trap 'rm -rf "$codex_check_home"' EXIT
     if ! CODEX_HOME="$codex_check_home" codex plugin --help >/dev/null; then
       echo "  FAILED: package-pinned Codex CLI does not support plugins"

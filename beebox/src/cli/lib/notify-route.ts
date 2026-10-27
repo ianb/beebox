@@ -15,7 +15,14 @@ import type { TRPCClient } from "@trpc/client";
 import { boxClient } from "./box-client.js";
 import { refusalFor } from "./credentialed-verb.js";
 import type { AppRouter } from "../../webapp/trpc/routers.js";
-import { notifyChannels, type ChannelFlags, type NotifyServices } from "../../core/notify-boxholder.js";
+import {
+  inProcessSender,
+  notifyChannels,
+  type ChannelFlags,
+  type NotifySender,
+  type NotifyServices,
+} from "../../core/notify-boxholder.js";
+import { formatTarget } from "../../core/notification/target.js";
 
 export type NotifyRoute =
   | { kind: "server"; client: TRPCClient<AppRouter> }
@@ -61,4 +68,27 @@ export async function channelReach(boxRoot: string, opts: { route: NotifyRoute; 
   return route.kind === "server"
     ? (await onServer(() => route.client.notifications.channels.query())).reach
     : notifyChannels(boxRoot, { services });
+}
+
+/**
+ * A sender for the sweeps `bbx finalize` runs (question nudges and alerts):
+ * the box server when this process has the box environment, else this
+ * process. As with `bbx notify`, a named server that does not answer throws;
+ * the caller leaves its latch unset and tries again at the next finalize.
+ */
+export function routedSender(boxRoot: string, services?: NotifyServices): NotifySender {
+  const route = notifyRoute();
+  if (route.kind === "local") return inProcessSender(boxRoot, services);
+  const { client } = route;
+  return {
+    send: ({ intent, channel }) => {
+      const { title, body, loudness, source, tag } = intent;
+      return onServer(() =>
+        client.notifications.send.mutate({
+          intent: { title, body, target: formatTarget(intent.target), loudness, source, ...(tag === undefined ? {} : { tag }) },
+          channel,
+        }),
+      );
+    },
+  };
 }

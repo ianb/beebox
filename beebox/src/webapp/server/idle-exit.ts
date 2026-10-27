@@ -19,6 +19,7 @@ import type { BoxSpec } from "../server-types.js";
 import { getChatRuntime } from "../chat-runtime.js";
 import { loadChatSchedules } from "../../core/chat/schedules/core.js";
 import { localBackupCommandActive } from "../../core/box-backup/local-runner.js";
+import { liveWakeups } from "../../core/commands/wakeup.js";
 
 export interface IdleSignals {
   /** When the last request began, the last socket opened or closed, in ms since the epoch. */
@@ -27,7 +28,8 @@ export interface IdleSignals {
   inFlight: number;
   /** Upgraded connections (tRPC subscriptions, the transcription proxy) still open. */
   openSockets: number;
-  /** Chat sessions with a running or busy subprocess. */
+  /** Chat sessions with a running or busy subprocess, a local backup, and
+   *  wakeup children this process spawned (job check, scan, filing, force). */
   liveRuns: number;
   /** Unfired chat schedules on disk, overdue ones included: they fire from this process. */
   pendingSchedules: number;
@@ -86,7 +88,7 @@ export class ActivityLedger {
   }
 
   signals(): IdleSignals {
-    let liveRuns = localBackupCommandActive() ? 1 : 0;
+    let liveRuns = (localBackupCommandActive() ? 1 : 0) + liveWakeups();
     let pendingSchedules = 0;
     for (const box of this.boxes) {
       const runtime = getChatRuntime(box.boxRoot);

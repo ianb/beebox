@@ -10,7 +10,6 @@
 
 import { getHead } from "../../../lib/git/core/operations.js";
 import { invariant } from "../../../shared/invariant.js";
-import { fmt } from "../../../lib/format.js";
 import type { ParsedStep } from "../engine-types.js";
 import type { ExecuteStepParams } from "./step.js";
 import {
@@ -178,7 +177,7 @@ export async function runAndValidate(
     reviewExhausted: false, invocationFailure: error,
   });
 
-  ctx.writeLine(fmt.dim("  Validating..."));
+  ctx.writeLine("  Validating...");
   let validateResult = await validate(gitRef);
   if (validateResult.invocationFailure !== undefined) {
     return rejectedValidation(validateResult, validateResult.invocationFailure);
@@ -195,7 +194,7 @@ export async function runAndValidate(
   invariant(step.run, "review-severity retry reached without a run phase");
   if (step.run.agents.length !== 1 || sessionId === undefined) {
     ctx.writeLine(
-      fmt.fail("  severity=review needs exactly one resumable run agent to retry — failing the step.")
+      "✗   severity=review needs exactly one resumable run agent to retry — failing the step."
     );
     return { gitRef, sessionId, runStdout, validateResult, reviewExhausted: true };
   }
@@ -203,7 +202,7 @@ export async function runAndValidate(
   let attempt = 0;
   while (validateResult.status === "fail" && attempt < MAX_REVIEW_RETRIES) {
     attempt++;
-    ctx.writeLine(fmt.warn(`  Validation failed (review) — retry ${attempt}/${MAX_REVIEW_RETRIES}`));
+    ctx.writeLine(`  Validation failed (review) — retry ${attempt}/${MAX_REVIEW_RETRIES}`);
     const failureContext = buildFailureContext({ step, validateResult });
     const retried = await runRunAgents({ ...params, retry: { sessionId, failureContext } });
     if (retried.sessionId !== undefined) {
@@ -245,7 +244,7 @@ export async function runAndValidate(
   if (reviewExhausted) {
     const plural = MAX_REVIEW_RETRIES === 1 ? "retry" : "retries";
     ctx.writeLine(
-      fmt.fail(`  Validation still failing after ${MAX_REVIEW_RETRIES} ${plural} — failing the step.`)
+      `✗   Validation still failing after ${MAX_REVIEW_RETRIES} ${plural} — failing the step.`
     );
   }
   return { gitRef, sessionId, runStdout, validateResult, reviewExhausted };

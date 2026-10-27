@@ -20,7 +20,7 @@
 // ./router-core.ts (`createRouterCore(effects, config)`, owning the worktrees map
 // and driving transitions through injected effects); the state model in
 // ./router-lifecycle.ts; the serialized pidfile store in ./router-pidfile.ts; the
-// REAL effects (execa, get-port, http.request probes) in ./router-real-effects.ts;
+// REAL effects (execa, freePort, http.request probes) in ./router-real-effects.ts;
 // the proxy and its retry/body-replay machinery in ./router-proxy.ts; the pages
 // the router renders itself in ./router-pages.ts; the per-request dispatch in
 // ./router-dispatch.ts and the WS upgrade in ./router-upgrade.ts; the shared

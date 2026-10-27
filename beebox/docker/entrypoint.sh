@@ -92,13 +92,12 @@ box_install() {
     return 0
   fi
   echo "beebox: installing box dependencies..." >&2
-  # --allow-build approves the box's native/generated deps (better-sqlite3 et
-  # al.) to run their install scripts. pnpm 10 blocks them by default, and
+  # --allow-build approves the box's native/generated deps (esbuild et al.)
+  # to run their install scripts. pnpm 10 blocks them by default, and
   # non-interactively a blocked build is a hard error — the box package.json's
   # `pnpm.onlyBuiltDependencies` is no longer read by pnpm 10.26, so the
   # approval has to come from the flags (same set as the engine install).
   ( cd "$BOX_ROOT" && pnpm install \
-      --allow-build=better-sqlite3 \
       --allow-build=esbuild \
       --allow-build=@googleworkspace/cli )
   /app/node_modules/beebox/bin/box-engine-link verify "$BOX_ROOT"

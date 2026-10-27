@@ -26,7 +26,6 @@ import {
   type EnrichedSession,
 } from "./format.js";
 import type { SessionEntry } from "../../lib/session.js";
-import { fmt } from "../../../lib/format.js";
 import { renderEntries, type RenderOptions } from "./render.js";
 import { invariant } from "../../../shared/invariant.js";
 
@@ -116,10 +115,8 @@ async function printSearchedRootsFooter(boxRoot: string): Promise<void> {
   const roots = await listSessionRoots(boxRoot);
   const landmarks = roots.length - 1;
   console.log(
-    fmt.dim(
-      `Searched ${roots.length} project dir${roots.length === 1 ? "" : "s"} ` +
-        `(box root + ${landmarks} landmark dir${landmarks === 1 ? "" : "s"}).`
-    )
+    `Searched ${roots.length} project dir${roots.length === 1 ? "" : "s"} ` +
+      `(box root + ${landmarks} landmark dir${landmarks === 1 ? "" : "s"}).`
   );
 }
 
@@ -191,7 +188,7 @@ export async function runListMode(options: {
       : "Recent sessions:\n"
   );
   if (grouping) {
-    console.log(fmt.dim(`(sessions bound to ${cwdContextDir} or an enclosing dir listed first)`));
+    console.log(`(sessions bound to ${cwdContextDir} or an enclosing dir listed first)`);
     console.log();
   }
   for (const meta of sorted) {

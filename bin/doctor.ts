@@ -16,8 +16,6 @@
  *   - Node version satisfies root package.json `engines.node`.
  *   - pnpm present, major version matches `packageManager`.
  *   - Workspace installed from the root (hoisted `node_modules/.pnpm`).
- *   - better-sqlite3 loads and opens a database — the direct probe for
- *     Node-ABI drift, the failure the version pin exists to prevent.
  *   - `pandoc`, `magick`, `pdftotext` on PATH (the external-tools contract
  *     promised to agents in `beebox/src/core/agent-guide/guide.md`), and
  *     `shellcheck`, which the pre-commit hook and the schedule lint run.
@@ -61,13 +59,10 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { createRequire } from "node:module";
-import type BetterSqlite3Module from "better-sqlite3";
 // Workspace import of an engine module from root tooling. Verified to work
 // cleanly (both `tsc --noEmit` and `node --import tsx` resolve it via the
 // `.js`-extension NodeNext convention) — no awkwardness to fall back from.
 import { resolveClaudeCodeBinary } from "../beebox/src/core/sdk-binary-path.js";
-import { isRecord } from "../beebox/src/shared/is-record.js";
 import {
   createRealRun,
   MissingEnginesNodeError,
@@ -81,7 +76,6 @@ import {
   checkExternalTools,
   checkFrontendBuild,
   checkGitLfs,
-  checkNativeSqlite,
   checkNodeVersion,
   checkPnpm,
   checkProductionDisk,
@@ -94,11 +88,10 @@ import {
 // ─── Runner ───────────────────────────────────────────────────────────────
 
 export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
-  const [pnpmResult, workspaceResult, nativeSqliteResult, externalTools, gitLfsResult, claudeResult, typescriptResult] =
+  const [pnpmResult, workspaceResult, externalTools, gitLfsResult, claudeResult, typescriptResult] =
     await Promise.all([
       checkPnpm(deps),
       Promise.resolve(checkWorkspaceInstalled(deps)),
-      checkNativeSqlite(deps),
       checkExternalTools(deps),
       checkGitLfs(deps),
       checkClaudeAuth(deps),
@@ -111,7 +104,6 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
     checkNodeVersion(deps),
     pnpmResult,
     workspaceResult,
-    nativeSqliteResult,
     ...externalTools,
     gitLfsResult,
     claudeResult,
@@ -168,21 +160,6 @@ async function main(): Promise<void> {
     packageManager,
     resolveSdkBinary: resolveClaudeCodeBinary,
     nowMs: Date.now(),
-    loadBetterSqlite3: async () => {
-      // createRequire, not `import()`: tsx's dynamic-import transform runs
-      // es-module-lexer over this file and chokes on it (Parse error at the
-      // header comment) — and better-sqlite3 is CJS regardless.
-      const require = createRequire(import.meta.url);
-      const BetterSqlite3: typeof BetterSqlite3Module = require("better-sqlite3");
-      const db = new BetterSqlite3(":memory:");
-      try {
-        const row: unknown = db.prepare("select sqlite_version() as v").get();
-        const version = isRecord(row) && typeof row.v === "string" ? row.v : "unknown";
-        return `loads and opens (SQLite ${version})`;
-      } finally {
-        db.close();
-      }
-    },
   };
 
   const results = await runChecks(deps);

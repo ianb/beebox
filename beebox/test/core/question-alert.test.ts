@@ -15,7 +15,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
-import { checkPendingQuestionsAndNotify } from "../../src/core/question-alert.js";
+import { checkPendingQuestionsAndNotify, loadQuestionLatch } from "../../src/core/question-alert.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../src/services/push.js";
 import { readRecent } from "../../src/core/notification/log.js";
@@ -108,18 +108,47 @@ web-push sent`);
   ]);
 });
 
-// ## No reachable channel → no sweep
-void test("No reachable channel → no sweep", async (t) => {
-  t.teardown(async () => {
-    try {
-      await box.cleanup();
-    } catch (error) {
-      t.error(error);
-    }
-  });
+// ## Nobody to reach is latched; missing keys are not
+//
+// With no paired phone and no subscribed browser, the sweep still sends: every
+// channel is skipped `no-audience`, which counts as sent (a retry cannot reach
+// anyone), so the question is latched and not announced again. A subscribed
+// browser with no VAPID keys in the sending process is skipped `unconfigured`:
+// not sent, so the question stays out of the latch for the next finalize.
+void test("Nobody to reach is latched; missing keys are not", async (t) => {
   const box = await makeTmpBox({ git: true });
+  t.teardown(async () => {
+    await box.cleanup();
+    await fs.rm(storeDir, { recursive: true, force: true });
+  });
+  for (const name of ["BBX_VAPID_PUBLIC_KEY", "BBX_VAPID_PRIVATE_KEY", "BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE"]) delete process.env[name];
   await box.seed("_bookkeeping/questions/Color.question.card", question("What color?"));
   box.commitAll("seed");
 
-  t.check(await checkPendingQuestionsAndNotify(box.root, { now: NOW }), null);
+  const nobody = await checkPendingQuestionsAndNotify(box.root, { now: NOW });
+  const again = await checkPendingQuestionsAndNotify(box.root, { now: NOW });
+  const nobodyLog = await lastLogged(box);
+
+  // Now a browser subscribes, and a time-bound question (a `quiet` one, which
+  // web push carries) arrives while this process has no keys.
+  await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: NOW });
+  await box.seed("_bookkeeping/questions/Form.question.card", question("Sign the form by Friday?", "time-bound"));
+  const warn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (line: string) => warnings.push(line);
+  let unconfigured;
+  try {
+    unconfigured = await checkPendingQuestionsAndNotify(box.root, { now: NOW });
+  } finally {
+    console.warn = warn;
+  }
+  t.check({ nobody, again, nobodyLog, unconfigured, warnings, latch: (await loadQuestionLatch(box.root)).paths }, {
+    nobody: { notified: ["_bookkeeping/questions/Color.question.card"] },
+    again: null,
+    nobodyLog: `dot → question:_bookkeeping/questions/Color.question.card
+apns skipped: no-audience`,
+    unconfigured: null,
+    warnings: ["Question alert for 1 question(s) not sent: apns skipped (no-audience), web-push skipped (unconfigured)"],
+    latch: ["_bookkeeping/questions/Color.question.card"],
+  });
 });

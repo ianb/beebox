@@ -8,6 +8,8 @@ import type { createAgent as realCreateAgent } from "../agent/invoke/core.js";
 export interface JobCardInfo {
   file: string;
   priority: "normal" | "low";
+  /** The card's `connector:`; absent for an unscoped job. */
+  connector?: string;
   /**
    * When the job card first appeared, used to bound how long low-priority
    * work may wait (see `discoverStage`). Read from the filename's timestamp

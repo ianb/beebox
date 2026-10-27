@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-27T20:34:34Z
-Total documents: 589
+Generated: 2026-10-27T23:21:14Z
+Total documents: 593
 
 ## Issues
 
@@ -268,6 +268,7 @@ Referenced by:
 - docs/plans/asset-offbox-storage.md:365 (mention) — remote (`AGENTS.md`). Asset push belongs in the same place, so the
 - docs/plans/box-commentary-surface.md:383 (mention) — (AGENTS.md exempts "per-box config, throwaway replies, and personal memory"),
 - docs/plans/change-based-test-selection.md:338 (mention) — per-worktree `AGENTS.md` mirrors regenerate from it.
+- docs/plans/chat-not-delivered.md:117 (mention) — - `AGENTS.md`, minimize invented concepts (memory "prefer primitives"): two new
 - docs/plans/chat-photo-batch-upload.md:53 (link) — - [`beebox/AGENTS.md`](../../AGENTS.md):101 — *"Read before writing. Don't
 - docs/plans/chat-scroll-model.md:217 (mention) — harness, all scenarios green, `decideScroll` deleted, nested AGENTS.md and
 - docs/plans/chat-search.md:253 (mention) — scroll" invariant, `frontend chat AGENTS.md`). One-shot like `companion`;
@@ -577,6 +578,7 @@ Referenced by:
 - docs/implemented-plans/model-engine-policy.md:89 (mention) — - `code-style.md` — no default parameters, max 2 positional params, no `any`.
 - docs/implemented-plans/named-places.md:62 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional params,
 - docs/implemented-plans/normalize-chat-links.md:93 (mention) — - **`beebox/code-style.md:` no default parameters; max 2 positional
+- docs/implemented-plans/on-demand-job-triggers.md:111 (mention) — - **Code style: "Nothing retries forever"** (`beebox/code-style.md`,
 - docs/implemented-plans/open-chat-from-card.md:57 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional params (the new
 - docs/implemented-plans/procedure-validation-completion.md:44 (mention) — - **`beebox/code-style.md`** — no `any`; no default parameters; max 2 positional params (named-params objects); custom e
 - docs/implemented-plans/prompt-calibration.md:142 (mention) — - Remove the root's link to the completed lint-suppression audit (`docs/reports/eslint-rule-suppression-audit-2026-05-30
@@ -1354,6 +1356,7 @@ Referenced by:
 - docs/implemented-plans/native-hq-fallback-resilience.md:27 (mention) — - Engineering principle **#4, resilient and never silent**: “Degradation is allowed for failures that can genuinely happ
 - docs/implemented-plans/notifications.md:132 (mention) — - **Resilient and never silent** (`docs/engineering-principles.md:49`). An
 - docs/implemented-plans/on-demand-image-thumbnails.md:21 (mention) — - Principle 3 requires HTTP query input to be validated once at the boundary: `docs/engineering-principles.md:37`: *"Val
+- docs/implemented-plans/on-demand-job-triggers.md:105 (mention) — (`beebox/docs/engineering-principles.md:49`). Today the question alert in a
 - docs/implemented-plans/one-root-box-layout.md:113 (mention) — boundaries)** — `docs/engineering-principles.md:12,37`: the box path
 - docs/implemented-plans/openrouter-chat-models.md:404 (mention) — (`beebox/docs/engineering-principles.md`, validate at the boundary).
 - docs/implemented-plans/per-box-units.md:80 (mention) — - `beebox/docs/engineering-principles.md` §4 (resilient and never silent):
@@ -1401,6 +1404,7 @@ Referenced by:
 - docs/plans/change-based-test-selection.md:74 (mention) — - `docs/engineering-principles.md` **#4 — "Resilient AND never silent."** The
 - docs/plans/change-based-test-selection.review.md:155 (mention) — > The real test runner is Tap plus `.taprc` node args, includes, excludes, and the doctest loader (`beebox/.taprc:7-14`)
 - docs/plans/chat-everywhere.md:45 (link) — - Principles [1, 3, 4, 8, 9, 10, 13](../engineering-principles.md): typed navigation intent; validation at the native/ne
+- docs/plans/chat-not-delivered.md:123 (mention) — - `docs/engineering-principles.md` fail-closed: Discard is refused unless an
 - docs/plans/chat-photo-batch-upload.md:46 (link) — - [`docs/engineering-principles.md`](../engineering-principles.md) — chiefly
 - docs/plans/chat-session-delete.md:60 (mention) — - **`docs/engineering-principles.md`:**
 - docs/plans/clerk-tab-arrangements.md:67 (mention) — - Engineering principle 1, **Types are structure**, applies to transfer IDs, tab UUIDs, proposal states, and apply resul
@@ -1701,7 +1705,7 @@ Referenced by:
 - docs/implemented-plans/scan-uploader-version-drift.md:193 (mention) — `docs/mobile-contract.md:1088-1105` states the server never branches on it —
 - docs/implemented-plans/secret-entry-guidance.md:533 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
 - docs/mobile-parity.md:5 (mention) — detail lives in `docs/mobile-contract.md`. Cell values: **done**,
-- docs/notifications.md:189 (link) — ([mobile contract §5.9](mobile-contract.md)).
+- docs/notifications.md:194 (link) — ([mobile contract §5.9](mobile-contract.md)).
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
 - docs/plans/agent-points-at-ui.md:77 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
 - docs/plans/android-companion-app.md:16 (mention) — implements **exactly** the contract in `docs/mobile-contract.md`; it adds no new
@@ -1864,7 +1868,7 @@ Referenced by:
 
 #### docs/notifications.md
 
-Title: "Notifications" | 244 lines | current reference
+Title: "Notifications" | 249 lines | current reference
 
 Referenced by:
 - docs/design/interaction-model.md:37 (link) — [`../notifications.md`](../notifications.md) are implementation, not design,
@@ -1873,6 +1877,7 @@ Referenced by:
 - docs/implemented-plans/notifications.md:20 (mention) — > walk"](../notifications.md#verification-walk) — has not run; it is gated
 - docs/implemented-plans/remove-telegram.md:38 (mention) — so I am told. The channel rule (`docs/notifications.md`, *Channels*) has
 - docs/implemented-plans/retire-type-specific-core-tags.md:148 (mention) — The sentences at `briefing.tsx:95-97` ("write their answer into `{% purpose %}`") and `:129-130` change to match. `docs/
+- docs/questions.md:166 (link) — the next finalize ([notifications](notifications.md#sources)).
 - docs/server/configuration.md:71 (link) — [notifications](../notifications.md).
 - docs/testing/knowledge-audits.md:106 (link) — `BBX_NOTIFY_FAKE=1` ([notifications](../notifications.md)).
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:25 (mention) — is present (`docs/notifications.md`, the root briefing's "Reaching me").
@@ -1960,7 +1965,7 @@ References:
 
 #### docs/questions.md
 
-Title: "Questions" | 398 lines | current reference
+Title: "Questions" | 399 lines | current reference
 
 Referenced by:
 - docs/design/trust.md:37 (link) — answer there as a `basis: user-stated` belief — [`../questions.md`](../questions.md).) Keep this as the umbrella princip
@@ -1990,6 +1995,7 @@ References:
 - → docs/implemented-plans/questions-end-to-end.md (mention)
 - → docs/implemented-plans/box-retrospectives.md (mention)
 - → AGENTS.md (mention)
+- → docs/notifications.md (link)
 - → docs/implemented-plans/questions-beside-the-chat.md (mention)
 - → src/core/agent-guide/guide.md (mention)
 - → docs/implemented-plans/questions-later-and-figure-it-out.md (mention)
@@ -2064,13 +2070,13 @@ References:
 
 #### docs/scheduler.md
 
-Title: "Scheduler" | 138 lines | current reference
+Title: "Scheduler" | 175 lines | current reference
 
 Referenced by:
 - AGENTS.md:52 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
 - docs/design/README.md:34 (link) — [`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:9 (link) — (`bbx tick`, see [`../scheduler.md`](../scheduler.md)), a connector pulls new
-- docs/design/processing.md:25 (link) — ([`../scheduler.md`](../scheduler.md)) and agent-set timers
+- docs/design/processing.md:28 (link) — it up after 7 days ([`../scheduler.md`](../scheduler.md#the-job-check)).
 - docs/glossary.md:55 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
 - docs/guides.md:40 (link) — | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
 - docs/implemented-plans/chat-review.md:714 (mention) — `docs/scheduler.md`'s example set.
@@ -2081,9 +2087,11 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:180 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
 - docs/implemented-plans/mvp-implementation-guide.md:17 (mention) — > (never built — scheduling is `bbx tick`, `../scheduler.md`), `agents.json` +
 - docs/implemented-plans/notifications.md:1137 (mention) — | Reminder fires while the scheduler is down | existing catch-up (`docs/scheduler.md` sleep recovery) | fires on next ti
+- docs/implemented-plans/on-demand-job-triggers.md:79 (mention) — (`beebox/docs/design/processing.md`, `beebox/docs/scheduler.md`,
 - docs/implemented-plans/scanner-ingest.md:128 (mention) — - **Scheduler daemon on prod** — `docs/scheduler.md:21`: *"The daemon runs `bbx
 - docs/plans/agent-docs.md:69 (mention) — - Leak scan of the candidate set: `scheduler.md` names a real box in an
 - docs/plans/asset-annex.md:597 (mention) — `docs/scheduler.md`) rather than inline in wakeup. Read-only means
+- src/core/reactor/DESIGN.md:58 (link) — Jobs with no `connector` (question follow-ups, contains backfill, full-wakeup and scan intake) match no filter, so they
 - ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:49 (mention) — - **Lives in:** `beebox/docs/scheduler.md`; box `_config/schedules/`.
 - ../issues/closed/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:27 (mention) — `docs/scheduler.md`). Is the latency gap real for the user, and could it be closed
 - ../issues/docs-and-chores/2026-07-04-box-registry-manifests.md:32 (mention) — Refs: `beebox/docs/scheduler.md`, `beebox/docs/server/boxes.md`,
@@ -2435,7 +2443,7 @@ Referenced by:
 - docs/box-layout.md:182 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
 - docs/connectors.md:132 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:33 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
-- docs/design/processing.md:40 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
+- docs/design/processing.md:47 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:80 (link) — marker for spot-checking ([`../triage.md`](../triage.md)).
 - docs/design/teaching.md:24 (link) — rules at the destination ([`../triage.md`](../triage.md)).
 - docs/design/trust.md:75 (link) — ([`../triage.md`](../triage.md)).
@@ -2565,6 +2573,7 @@ Referenced by:
 - docs/implemented-plans/questions-end-to-end.md:376 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
 - docs/implemented-plans/questions-later-and-figure-it-out.md:66 (mention) — rather than nagging forever" (`docs/architecture/spirit.md`).
 - docs/plans/admin-encrypted-backups.md:35 (mention) — - **Serves:** `docs/architecture/spirit.md`, “You should be able to see the gears”: the section names the snapshot, when
+- docs/plans/chat-not-delivered.md:66 (mention) — - **Serves:** "You should be able to see the gears" (`docs/architecture/spirit.md`)
 - docs/plans/ios-app-intent-capture.md:46 (mention) — - **Serves:** `architecture/spirit.md`, “The best stuff comes from the people”: “The box's job is to collect, preserve,
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
@@ -3050,13 +3059,13 @@ Title: "Chat check-ins" | 102 lines | current reference
 Referenced by:
 - docs/chat.md:11 (link) — | [Check-ins](chat/schedules.md) | Agent-set timers that come back to one conversation (`bbx remind --here`): lifecycle,
 - docs/design/README.md:35 (link) — and [`../chat/schedules.md`](../chat/schedules.md).
-- docs/design/processing.md:26 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
+- docs/design/processing.md:33 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
 - docs/implemented-plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/implemented-plans/design-reconciliation.md:579 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/doc-structure-chat.md:70 (mention) — | `chat-schedules.md` | `chat/schedules.md` | |
 - docs/implemented-plans/mvp-implementation-guide.md:248 (mention) — See `docs/scheduler.md` and `docs/chat/schedules.md` for scheduling examples.
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:103 (mention) — Approved destinations, now applied: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lif
-- docs/notifications.md:95 (link) — ([chat check-ins](chat/schedules.md)).
+- docs/notifications.md:100 (link) — ([chat check-ins](chat/schedules.md)).
 - ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:67 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
 - ../research/fabric-review.md:73 (mention) — - **One agent per box, with the whole box.** The agent is Claude Code or Codex with a shell, procedures and schedules (`
 - ../research/lifeos-review.md:68 (mention) — | Weekly review that shows last week's "next step" and freezes a snapshot | **Adapt**, as a scheduled procedure that ope
@@ -3121,7 +3130,7 @@ Title: "Calendar" | 138 lines | current reference
 
 Referenced by:
 - docs/connectors.md:35 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
-- docs/connectors/google-auth.md:103 (link) — is the [calendar pull](calendar.md#verify).
+- docs/connectors/google-auth.md:95 (link) — is the [calendar pull](calendar.md#verify).
 - docs/design/README.md:34 (link) — [`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:45 (link) — calendar, a prime early integration, is [`../connectors/calendar.md`](../connectors/calendar.md).
 - docs/implemented-plans/doc-structure-connectors.md:49 (mention) — | calendar.md "Config and state" | state in `_config/connectors/google-calendar-state.json`; tokens in `_config/connecto
@@ -3145,6 +3154,7 @@ Referenced by:
 - docs/implemented-plans/connector-sync-isolation.md:291 (mention) — 1. Update `docs/connectors/drive.md` and the Drive skill text in
 - docs/implemented-plans/doc-structure-connectors.md:61 (mention) — | `google-drive.md` | `connectors/drive.md` |
 - docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/connectors/drive.md:141-150` "Folder Mounts" section.
+- docs/implemented-plans/small-dependency-sweep.md:107 (mention) — `beebox/docs/connectors/drive.md:262`,
 - docs/user-stories/catalog/2026-06-26.md:2716 (mention) — The implementation is complete and accurate. The google-drive.ts connector's syncFolder() method (lines 260-312) fully i
 - ../research/fabric-review.md:75 (mention) — - **Connectors cover more than copying.** Gmail, Calendar and Drive copy content into cards and commit it (`beebox/docs/
 
@@ -3170,7 +3180,7 @@ References:
 
 #### docs/connectors/google-auth.md
 
-Title: "Google auth" | 153 lines | current reference
+Title: "Google auth" | 139 lines | current reference
 
 Referenced by:
 - docs/connectors.md:31 (link) — authorization for the three Google connectors: [Google auth](connectors/google-auth.md).
@@ -3179,6 +3189,7 @@ Referenced by:
 - docs/connectors/gmail.md:15 (link) — in [Google auth](google-auth.md).
 - docs/implemented-plans/doc-structure-connectors.md:58 (mention) — | `google-setup.md` | `connectors/google-auth.md` |
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
+- docs/implemented-plans/small-dependency-sweep.md:106 (mention) — `beebox/docs/connectors/google-auth.md:79-84,144`,
 - docs/server.md:25 (link) — - Google OAuth credentials: [Google setup](connectors/google-auth.md).
 - docs/server/configuration.md:193 (link) — Create the OAuth client as in [Google setup](../connectors/google-auth.md) with the
 - docs/server/health-checks.md:197 (link) — in [`google-setup.md`](../connectors/google-auth.md#token-expired--invalid_grant); design
@@ -3304,12 +3315,13 @@ References:
 
 #### docs/design/processing.md
 
-Title: "Processing — wakeup, the reactor, and the question loop" | 69 lines | design rationale
+Title: "Processing — wakeup, the reactor, and the question loop" | 80 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:23 (link) — - [`processing.md`](processing.md) — what `bbx wakeup` and the reactor actually do (verified against code), what "proces
 - docs/design/interaction-model.md:12 (mention) — and load-bearing for the engine (see `processing.md`).
 - docs/glossary.md:55 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
+- docs/implemented-plans/on-demand-job-triggers.md:42 (mention) — (`beebox/docs/design/processing.md`, "The question loop": *"When the user
 
 References:
 - → docs/scheduler.md (link)
@@ -3378,7 +3390,7 @@ Title: "Teaching — how the system learns what to do" | 42 lines | design ratio
 
 Referenced by:
 - docs/design/README.md:27 (link) — - [`teaching.md`](teaching.md) — the teaching relationship and what shipped of it (retro, personality/guide cards, brief
-- docs/design/processing.md:45 (mention) — personality/guide cards (see `teaching.md`) — not from a hardcoded pipeline.
+- docs/design/processing.md:52 (mention) — personality/guide cards (see `teaching.md`) — not from a hardcoded pipeline.
 
 References:
 - → docs/implemented-plans/box-retrospectives.md (mention)
@@ -3459,7 +3471,7 @@ Referenced by:
 - docs/user-stories/catalog/2026-08-21.md:8800 (mention) — Files: `beebox/src/services/docling-version.ts`, `bin/check-docling-update.ts`, `beebox/docs/development/maintenance.md`
 - src/dev/AGENTS.md:8 (mention) — | `prompt-report.ts` | Generates `src/dev/reports/prompt-report.md` (system-wide prompt inventory, gitignored) | `docs/d
 - ../.claude/skills/security-report/SKILL.md:96 (mention) — or suspected drift. This is also tracked in `beebox/docs/development/maintenance.md`.
-- ../dev/dependency-inventory-2026-10.md:32 (mention) — 2. **`madge` (79 MB, 73 packages only it pulls; on the server).** Its only job is the weekly `lint:circular` check. `oxl
+- ../dev/dependency-inventory-2026-10.md:34 (mention) — 2. **`madge` (79 MB, 73 packages only it pulls; on the server).** Its only job is the weekly `lint:circular` check. `oxl
 - ../issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md:14 (mention) — semantics. Documented in `beebox/docs/development/maintenance.md`.
 - ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:11 (mention) — (`2026-08-24-run-periodic-sweeps-weekly.md`), and `docs/development/maintenance.md` says
 - ../issues/closed/code-quality/2026-08-25-oxlint-circular-no-cadence.md:20 (mention) — What remains is the smaller half. `beebox/docs/development/maintenance.md` lists two
@@ -3510,6 +3522,7 @@ Referenced by:
 - docs/development/workflow.md:5 (mention) — services](technologies.md).
 - docs/implemented-plans/doc-structure-development.md:64 (mention) — | `technologies.md` | `development/technologies.md` |
 - docs/implemented-plans/doc-structure-install-server.md:174 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
+- docs/implemented-plans/node-sqlite.md:182 (mention) — 7. Update the current docs: `beebox/docs/development/technologies.md:15`,
 - docs/implemented-plans/purge-agent-doctest.md:67 (mention) — `beebox/docs/development/technologies.md`, `site/docs/dev/README.md`,
 - ../issues/docs-and-chores/2026-10-17-public-provider-list-drifts-from-code.md:13 (mention) — `beebox/docs/development/technologies.md` ("AI services used"). Page
 - ../research/fabric-review.md:96 (mention) — | Subprocessor list that names one vendor while the product offers ten; training on content unless the person opts out |
@@ -5464,7 +5477,7 @@ Title: "DOM doctests for frontend effects, events, and render counts" | 383 line
 Referenced by:
 - docs/implemented-plans/front-door.md:722 (mention) — (`docs/implemented-plans/frontend-dom-harness.md`) that the line renders on
 - docs/implemented-plans/questions-beside-the-chat.md:494 (mention) — `docs/implemented-plans/frontend-dom-harness.md`) for the close wrapper and
-- ../dev/dependency-inventory-2026-10.md:192 (mention) — | `@happy-dom/global-registrator` | dev | Installs happy-dom globals for tests | test/helpers/dom-globals.ts; ~25 fronte
+- ../dev/dependency-inventory-2026-10.md:194 (mention) — | `@happy-dom/global-registrator` | dev | Installs happy-dom globals for tests | test/helpers/dom-globals.ts; ~25 fronte
 
 References:
 - → ../issues/closed/code-quality/2026-10-10-frontend-has-no-dom-effect-test-harness.md (frontmatter)
@@ -5534,7 +5547,7 @@ References:
 Title: "Dead Google auth as a first-class health + notify condition" | 140 lines | shipped history | implemented
 
 Referenced by:
-- docs/connectors/google-auth.md:152 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
+- docs/connectors/google-auth.md:138 (link) — Design notes: [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - docs/server/health-checks.md:198 (link) — notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
 - ../issues/closed/decisions/2026-07-28-nango-google-auth-broker.md:70 (mention) — (`7fbeb287`, plan in `beebox/docs/implemented-plans/google-auth-reauth-health.md`).
 - ../issues/features/2026-07-28-google-auth-expiry-health-and-notify.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/google-auth-reauth-health.md
@@ -6103,6 +6116,19 @@ References:
 - → docs/plans/interface-as-cards.md (mention)
 - → docs/landmarks.md (mention)
 
+#### docs/implemented-plans/node-sqlite.md
+
+Title: "Replace better-sqlite3 with node:sqlite" | 280 lines | shipped history | implemented
+
+Referenced by:
+- ../dev/dependency-inventory-2026-10.md:19 (mention) — - **Later rounds, 2026-10-27:** `better-sqlite3` became `node:sqlite` (`beebox/docs/implemented-plans/node-sqlite.md`).
+
+References:
+- → ../issues/closed/code-quality/2026-10-27-better-sqlite3-install-prints-dep0176-on-deploy.md (frontmatter)
+- → ../issues/code-quality/2026-10-25-dependency-reduction-sweep.md (frontmatter)
+- → docs/development/technologies.md (mention)
+- → docs/server/health-checks.md (mention)
+
 #### docs/implemented-plans/normalize-chat-links.md **[ORPHAN]**
 
 Title: "Normalize chat/card links" | 707 lines | shipped history | implemented
@@ -6174,6 +6200,21 @@ References:
 - → AGENTS.md (mention)
 - → docs/engineering-principles.md (mention)
 
+#### docs/implemented-plans/on-demand-job-triggers.md
+
+Title: "On-demand job triggers and server-routed finalize notifications" | 1001 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/bugs/2026-10-27-wakeup-child-notices-bypass-the-box-server.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/on-demand-job-triggers.md
+
+References:
+- → docs/design/processing.md (mention)
+- → docs/scheduler.md (mention)
+- → src/core/reactor/DESIGN.md (mention)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → docs/server/configuration.md (mention)
+
 #### docs/implemented-plans/one-root-box-layout.md
 
 Title: "One-root box layout (shapeVersion 3)" | 578 lines | shipped history | implemented
@@ -6243,7 +6284,7 @@ Title: "One systemd unit and one OS user per box, and a cloud-init host" | 1071 
 
 Referenced by:
 - docs/plans/per-box-units.subplan.md:9 (link) — Subplan of [per-box-units.md](../implemented-plans/per-box-units.md), Track B. Today every box
-- docs/scheduler.md:132 (mention) — runs it in process. On a unit host (docs/plans/per-box-units.md) the daemon runs
+- docs/scheduler.md:169 (mention) — runs it in process. On a unit host (docs/plans/per-box-units.md) the daemon runs
 - docs/server/deploying.md:93 (link) — ([per-box units](../implemented-plans/per-box-units.md); the layout is in
 - docs/server/provisioning.md:99 (link) — ([design](../implemented-plans/per-box-units.md)). Nothing runs as root except the deploy,
 - src/hub/AGENTS.md:70 (mention) — the box processes (`deploy/systemd/beebox-box@.*`, docs/plans/per-box-units.md)
@@ -6605,7 +6646,7 @@ Title: "Questions open beside the chat" | 556 lines | shipped history | implemen
 
 Referenced by:
 - docs/implemented-plans/questions-later-and-figure-it-out.md:10 (mention) — A question beside the chat (`questions-beside-the-chat.md`, shipped in this
-- docs/questions.md:266 (mention) — - **Beside a new chat** (`docs/implemented-plans/questions-beside-the-chat.md`) — when a
+- docs/questions.md:267 (mention) — - **Beside a new chat** (`docs/implemented-plans/questions-beside-the-chat.md`) — when a
 - ../issues/features/2026-10-26-question-backlog-beside-the-chat.md:39 (mention) — Deferred from `beebox/docs/implemented-plans/questions-beside-the-chat.md` (NOT in
 
 References:
@@ -6647,7 +6688,7 @@ References:
 Title: "Questions: Later, Figure it out, and a simpler next time" | 549 lines | shipped history | implemented
 
 Referenced by:
-- docs/questions.md:357 (mention) — (`docs/implemented-plans/questions-later-and-figure-it-out.md`):
+- docs/questions.md:358 (mention) — (`docs/implemented-plans/questions-later-and-figure-it-out.md`):
 
 References:
 - → ../issues/features/2026-10-26-question-backlog-beside-the-chat.md (frontmatter)
@@ -7490,6 +7531,19 @@ References:
 - → docs/implemented-plans/slopo-codehealth-adoption.md (mention)
 - → docs/implemented-plans/rest-to-trpc-consolidation.md (mention)
 
+#### docs/implemented-plans/small-dependency-sweep.md
+
+Title: "Small dependency sweep: chalk, get-port, chokidar, cheerio, open, rollup, react-textarea-autosize" | 291 lines | shipped history | implemented
+
+Referenced by:
+- ../dev/dependency-inventory-2026-10.md:19 (mention) — - **Later rounds, 2026-10-27:** `better-sqlite3` became `node:sqlite` (`beebox/docs/implemented-plans/node-sqlite.md`).
+
+References:
+- → ../issues/code-quality/2026-10-25-dependency-reduction-sweep.md (frontmatter)
+- → docs/connectors/google-auth.md (mention)
+- → docs/connectors/drive.md (mention)
+- → docs/server/health-checks.md (mention)
+
 #### docs/implemented-plans/stable-card-body.md
 
 Title: "A card body does not remount when only its surroundings change" | 370 lines | shipped history | implemented
@@ -7803,7 +7857,7 @@ Title: "Move the repo to TypeScript 7, except typescript-eslint" | 407 lines | s
 
 Referenced by:
 - docs/implemented-plans/retire-doctest.md:46 (mention) — move (`beebox/docs/implemented-plans/typescript-7.md`) left
-- ../dev/dependency-inventory-2026-10.md:206 (mention) — | `@typescript/native` | dev | TypeScript 7 (native) providing the tsc binary | `tsc` in build and typecheck scripts | 2
+- ../dev/dependency-inventory-2026-10.md:208 (mention) — | `@typescript/native` | dev | TypeScript 7 (native) providing the tsc binary | `tsc` in build and typecheck scripts | 2
 - ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:12 (mention) — **Closed:** implemented on branch worktree-ts7 (plan `beebox/docs/implemented-plans/typescript-7.md`). The repo uses Typ
 - ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:171 (link) — [TypeScript 7 plan](../../../beebox/docs/implemented-plans/typescript-7.md). The tools that
 - ../issues/watch/2026-10-17-move-typescript-eslint-to-typescript-7.md:13 (link) — The [TypeScript 7 plan](../../beebox/docs/implemented-plans/typescript-7.md) moves every
@@ -8513,6 +8567,20 @@ Referenced by:
 - docs/design/interface-as-cards-background.md:305 (mention) — | Chat | husk card per session + chat view + the slot | Below. **Husks shipped 2026-07** (`docs/plans/chat-husks.md`): a
 - docs/implemented-plans/docs-reorg.md:46 (mention) — plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
 - ../issues/closed/bugs/2026-07-22-chat-history-dropdown-not-landmark-scoped.md:23 (mention) — per-boot `reconcileChatHusks` (see `docs/plans/chat-husks.md` § Phase 2b).
+
+#### docs/plans/chat-not-delivered.md
+
+Title: "Chat shows a message the agent never got as not delivered" | 332 lines | proposal | draft
+
+Referenced by:
+- ../issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md:127 (link) — durable ledger. Plan: [chat-not-delivered](../../beebox/docs/plans/chat-not-delivered.md).
+
+References:
+- → ../issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md (frontmatter)
+- → ../issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md (link)
+- → docs/architecture/spirit.md (mention)
+- → AGENTS.md (mention)
+- → docs/engineering-principles.md (mention)
 
 #### docs/plans/chat-photo-batch-upload.md
 
@@ -10145,7 +10213,8 @@ Title: "Server configuration" | 213 lines | current reference
 Referenced by:
 - docs/implemented-plans/doc-structure-connectors.md:87 (mention) — `server/configuration.md`'s Google OAuth env vars.
 - docs/implemented-plans/doc-structure-install-server.md:81 (mention) — | `deploy/README.md` Environment variables, Web Push, Authentication, Google OAuth, Per-box access control; `server-oper
-- docs/notifications.md:185 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
+- docs/implemented-plans/on-demand-job-triggers.md:275 (mention) — 2750, as `beebox/docs/server/configuration.md` ("APNs (iPhone push) key")
+- docs/notifications.md:190 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
 - docs/server.md:15 (link) — | [Configuration](server/configuration.md) | `/home/beebox/.env`, the boxes' Claude token and Codex logins, box login an
 - docs/server/boxes.md:96 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
 - docs/server/deploying.md:113 (link) — ([configuration](configuration.md), "The long-lived token").
@@ -10197,6 +10266,8 @@ Referenced by:
 - docs/implemented-plans/drive-docs-api-health.md:116 (mention) — - `docs/server/health-checks.md` gets a `google-docs-api` section, and its stale claim that connector episodes send push
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:408 (mention) — `deploy/README.md`, and `docs/server/health-checks.md`.
+- docs/implemented-plans/node-sqlite.md:184 (mention) — dated history, such as `health-checks.md` and the `health.ts` incident
+- docs/implemented-plans/small-dependency-sweep.md:108 (mention) — `beebox/docs/server/health-checks.md:195`. The web flow is
 - docs/implemented-plans/tailscale-expose-and-protect.md:408 (mention) — on the server plus a short runbook note in `docs/server/health-checks.md`'s style
 - docs/implemented-plans/top-nav-ia.md:451 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/server/health-checks.md`); Overview
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
@@ -10815,7 +10886,7 @@ Referenced by:
 - docs/implemented-plans/retire-memo.md:230 (mention) — memo mentions in `agent-guide/guide.md:79,285,406`, `capture-session.tsx:84`,
 - docs/plans/prompt-surface-cleanup-evaluation.md:655 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
 - docs/prompts/review.md:67 (mention) — - **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/a
-- docs/questions.md:330 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
+- docs/questions.md:331 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md:84 (mention) — | 31 | Note 4: it offered to remind the person this evening; "it offered, didn't do it". | P | Transcript 11:45:15: "I c
 - test/user-stories/journeys/G-paperwork/reports/2026-10-22.md:81 (mention) — | 5 | Note 2, Note 10, closing: "Admin → Host → Notifications" is jargon; "I do not know where that is." | P | The agent
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:44 (mention) — - **One line:** the always-loaded box agent guide is a hand-written `guide.md` backed by `ledger.yaml` — one row per rul
@@ -10863,11 +10934,12 @@ Title: "Reactor Design" | 103 lines
 
 Referenced by:
 - AGENTS.md:40 (link) — - Backend domain and orchestration: `src/core/`; reactor details: [reactor design](src/core/reactor/DESIGN.md).
-- docs/design/processing.md:30 (mention) — `runReactor` (`src/core/reactor/DESIGN.md`): sync (`bbx wakeup` as its step
+- docs/design/processing.md:37 (mention) — `runReactor` (`src/core/reactor/DESIGN.md`): sync (`bbx wakeup` as its step
 - docs/glossary.md:57 (mention) — **reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent pr
 - docs/implemented-plans/design-reconciliation.md:134 (mention) — (src/core/reactor/DESIGN.md, "Two Processing Paths"), and the current design
 - docs/implemented-plans/docs-reorg.gap-analysis.md:39 (mention) — hint today is `reactor/DESIGN.md:78`).
 - docs/implemented-plans/docs-reorg.md:205 (mention) — `DESIGN.md`/`IMPLEMENTATION.md` — never cross-referenced. Decide canonical
+- docs/implemented-plans/on-demand-job-triggers.md:80 (mention) — `beebox/src/core/reactor/DESIGN.md`). No generated output. Not a BIG CHANGE.
 - docs/implemented-plans/remove-telegram.md:260 (mention) — *Chat jobs* section of `src/core/reactor/DESIGN.md:37`; the thread helpers
 - docs/user-stories/catalog/2026-08-21.md:934 (mention) — Files: `beebox/src/core/reactor/chat-jobs.ts`, `beebox/src/core/chat/reactor-sessions.ts`, `beebox/src/core/reactor/DESI
 - src/core/reactor/AGENTS.md:3 (link) — See [DESIGN.md](DESIGN.md) for the full architecture, flow, and rationale.
@@ -10877,6 +10949,7 @@ Referenced by:
 - ../research/gstack/notes/design-shotgun.md:51 (mention) — > "Pre-fill what you inferred from the codebase, DESIGN.md, and office-hours output. Then ask for what's missing. Frame
 
 References:
+- → docs/scheduler.md (link)
 - → src/core/reactor/AGENTS.md (mention)
 
 ### src/dev/

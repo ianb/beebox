@@ -26,8 +26,8 @@ import {
 } from "../schemas/question.js";
 import { renderFrontmatterBlock, splitCardContent } from "../exports/cards.js";
 import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
-import { loadQuestionLatch, saveQuestionLatch } from "./question-alert.js";
-import { notifyBoxholder } from "./notify-boxholder.js";
+import { loadQuestionLatch, notSentDetail, saveQuestionLatch } from "./question-alert.js";
+import { inProcessSender, type NotifySender } from "./notify-boxholder.js";
 import { parseTarget } from "./notification/target.js";
 import { getBoxTime, getBoxTimeISO } from "../lib/time.js";
 import type { CommandContext } from "./command-runner.js";
@@ -60,6 +60,8 @@ export interface QuestionAgingResult {
 export interface QuestionAgingOptions {
   /** Injected services (tests / immediate delivery), forwarded to notifyBoxholder. */
   push?: PushService | undefined;
+  /** Where nudges go out from; default this process, with `push`. `bbx finalize` passes the box server's. */
+  sender?: NotifySender | undefined;
 }
 
 /** The expiry window for a question: the override if set, else the default. */
@@ -143,6 +145,30 @@ function emitQuestionExpired(boxRoot: string, relativePath: string): void {
 }
 
 /**
+ * Send one nudge; true when it was sent (`notificationSent`). One that did not
+ * go out is logged and left unlatched, so the next finalize tries again until
+ * the question leaves pending.
+ */
+async function sendNudge(sender: NotifySender, opts: { relativePath: string; prompt: string; now: Date }): Promise<boolean> {
+  const { relativePath, prompt, now } = opts;
+  const detail = await notSentDetail(() =>
+    sender.send({
+      intent: {
+        title: "⏰ Reminder: a question is waiting",
+        body: prompt,
+        target: parseTarget(`question:${relativePath}`),
+        loudness: "quiet",
+        source: "question-nudge",
+      },
+      now,
+    }),
+  );
+  if (detail === null) return true;
+  console.warn(`Question nudge for ${relativePath} not sent: ${detail}`);
+  return false;
+}
+
+/**
  * Age every pending question: nudge once at the halfway/default threshold,
  * expire past the full window. Never synthesizes an answer — expiry only
  * demotes visibility (the card stays in `_bookkeeping/questions/`, still answerable).
@@ -154,6 +180,7 @@ export async function ageQuestions(
   opts?: QuestionAgingOptions,
 ): Promise<QuestionAgingResult> {
   const options = opts ?? {};
+  const sender = options.sender ?? inProcessSender(boxRoot, { push: options.push });
   const ctx: CommandContext = { boxRoot, write: () => {}, writeLine: () => {} };
   const now = getBoxTime(boxRoot);
 
@@ -206,19 +233,10 @@ export async function ageQuestions(
     stillPending.add(q.relativePath);
 
     if (ageMs >= nudgeThresholdMs(fields) && latch.nudged[q.relativePath] === undefined) {
-      await notifyBoxholder(boxRoot, {
-        intent: {
-          title: "⏰ Reminder: a question is waiting",
-          body: fields.prompt,
-          target: parseTarget(`question:${q.relativePath}`),
-          loudness: "quiet",
-          source: "question-nudge",
-        },
-        now,
-        services: { push: options.push },
-      });
-      latch.nudged[q.relativePath] = now.toISOString();
-      nudged.push(q.relativePath);
+      if (await sendNudge(sender, { relativePath: q.relativePath, prompt: fields.prompt, now })) {
+        latch.nudged[q.relativePath] = now.toISOString();
+        nudged.push(q.relativePath);
+      }
     }
   }
 

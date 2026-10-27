@@ -37,6 +37,9 @@ import { pickBoxSubprocessEnv } from "./allowlist.js";
 import type { SpawnProfile } from "../../lib/spawn-profile.js";
 import { pathWithGitShim } from "./git-shim.js";
 import { readServeEndpoint } from "../serve-endpoint.js";
+import { onUnitHost } from "../../lib/unit-host.js";
+import { getPublicUrl } from "../../lib/public-url.js";
+import { slugOfBoxRoot } from "../../lib/box-slug.js";
 
 // Path to Bee Box's own bin/ so subprocesses can find `bbx`.
 // Prepended to PATH inside buildScriptEnv so every box-spawned subprocess
@@ -116,6 +119,55 @@ export function parsePublicUrl(publicUrl: string | undefined | null): BoxEnvPiec
   };
 }
 
+/** The three values `cli/lib/box-client.ts` reads to reach this box's own server. */
+export interface BoxServerEnv {
+  BBX_SERVER_URL?: string;
+  BBX_BOX_NAME?: string;
+  BBX_AGENT_TOKEN?: string;
+}
+
+/**
+ * Where this box's server answers. Priority: live ambient > the serving
+ * process's disk registration > on a unit host, the hub's base URL with this
+ * box's slug > box.json publicUrl > PUBLIC_URL env. The disk registration
+ * crosses the process boundary for CLI invocations while retaining the
+ * box-root key. The live ambient lets a local dev server supply the env vars
+ * without requiring publicUrl to be configured in box.json. On a unit host the
+ * hub starts an idle box on demand, so its URL is valid whether this box's
+ * server runs or not (a process the scheduler pass starts while it is idle).
+ */
+async function boxPublicUrl(boxRoot: string): Promise<string | undefined> {
+  const ambient = ambientPublicUrls.get(boxRoot);
+  if (ambient !== undefined) return ambient;
+  const endpoint = await readServeEndpoint(boxRoot);
+  if (endpoint?.publicUrl !== undefined) return endpoint.publicUrl;
+  const hubBase = getPublicUrl("").replace(/\/+$/, "");
+  if (onUnitHost() && hubBase !== "") return `${hubBase}/${slugOfBoxRoot(boxRoot)}`;
+  const config = await loadBoxConfig(boxRoot);
+  return config.publicUrl ?? process.env.BBX_PUBLIC_URL ?? process.env.PUBLIC_URL;
+}
+
+/**
+ * `BBX_SERVER_URL`, `BBX_BOX_NAME`, and `BBX_AGENT_TOKEN` for this box, each
+ * absent when it cannot be derived. Every box-spawned child gets them, and the
+ * scheduler pass builds its own box client from them.
+ */
+export async function boxServerEnv(boxRoot: string): Promise<BoxServerEnv> {
+  const out: BoxServerEnv = {};
+  const { serverUrl, boxName } = parsePublicUrl(await boxPublicUrl(boxRoot));
+  if (serverUrl) out.BBX_SERVER_URL = serverUrl;
+  if (boxName) out.BBX_BOX_NAME = boxName;
+
+  // Loopback auth: lets the subprocess's `bbx chat ...` calls through the
+  // per-box auth wall in production. See core/agent-token.ts.
+  try {
+    out.BBX_AGENT_TOKEN = getOrCreateAgentToken(boxRoot);
+  } catch (e) {
+    console.warn(`[script-env] could not provision agent token for ${boxRoot}:`, e);
+  }
+  return out;
+}
+
 async function buildEnv(
   boxRoot: string,
   { additions, connectorCreds, profile }: {
@@ -140,26 +192,7 @@ async function buildEnv(
   // how the parent process's PATH was set up.
   env.PATH = await prependBbxBinToPath(env.PATH);
 
-  // Priority: live ambient > the serving process's disk registration >
-  // box.json publicUrl > PUBLIC_URL env. The disk registration crosses the
-  // process boundary for CLI invocations while retaining the box-root key.
-  // The live ambient lets a local dev server supply the env vars without
-  // requiring publicUrl to be configured in box.json.
-  const ambient = ambientPublicUrls.get(boxRoot);
-  const config = await loadBoxConfig(boxRoot);
-  const endpoint = ambient === undefined ? await readServeEndpoint(boxRoot) : undefined;
-  const publicUrl = ambient ?? endpoint?.publicUrl ?? config.publicUrl ?? process.env.BBX_PUBLIC_URL ?? process.env.PUBLIC_URL;
-  const { serverUrl, boxName } = parsePublicUrl(publicUrl);
-  if (serverUrl) env.BBX_SERVER_URL = serverUrl;
-  if (boxName) env.BBX_BOX_NAME = boxName;
-
-  // Loopback auth: lets the subprocess's `bbx chat ...` calls through the
-  // per-box auth wall in production. See core/agent-token.ts.
-  try {
-    env.BBX_AGENT_TOKEN = getOrCreateAgentToken(boxRoot);
-  } catch (e) {
-    console.warn(`[script-env] could not provision agent token for ${boxRoot}:`, e);
-  }
+  Object.assign(env, await boxServerEnv(boxRoot));
 
   if (additions) {
     for (const [k, v] of Object.entries(additions)) {

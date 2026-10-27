@@ -15,10 +15,17 @@ second concurrent wakeup skips rather than waits):
    unjobbed inbox items (captured notes, etc.), refresh the search index, and, when
    the refresh succeeded, queue a low-priority `contains` backfill job if
    searchable cards lack the field.
-5. **Process pending jobs** — one reactor cycle (skipping low-priority jobs).
+5. **Process pending jobs** — one reactor cycle unless `--max-cycles <n>`
+   asks for more (skipping low-priority jobs).
 6. **Push** committed changes to the box's git remote (non-fatal).
 
 `bbx wakeup --connector X` scopes the whole pass to one connector's jobs.
+Every scheduled wakeup is scoped this way, so a job with no `connector:` (a
+question follow-up, scan or capture intake, a job an agent wrote) runs only in
+a full wakeup. The scheduler pass's **job check** starts one: about a minute
+after such a job is committed, if no wakeup is running, with up to three
+reactor cycles, retrying a job that stays at +1 h, +6 h, then daily, and giving
+it up after 7 days ([`../scheduler.md`](../scheduler.md#the-job-check)).
 Wakeup does **not** "execute commands" (command cards are gone; outbound cards
 are flushed by `bbx finalize` inside the reactor), and it does **not** schedule
 the next wakeup — recurring runs come from the `bbx tick` daemon
@@ -52,6 +59,10 @@ refs to the cards being discussed, and a `directive` — instructions for what
 to do with the answer. When the user answers (web or `bbx answer`), the system
 creates a **follow-up job** from the directive (`src/schemas/question-followup-job.ts`);
 it does not resume the paused session — session-resume is chat's mechanism.
+The follow-up job has no `connector:`; the scheduler pass's job check starts the
+full wakeup that runs it. The question alert and the 7-day nudge are sent from
+`bbx finalize` through the box server, which holds the push keys; one that did
+not go out is not latched, so the next finalize sends it again.
 
 Unresolved design (ruling 12): whether long-running interrupted work should
 instead resume its original session, and how context-ref *roles*

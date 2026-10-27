@@ -1,4 +1,4 @@
-// # Validation ignore: _config/bbx-validate.ignore + color gating
+// # Validation ignore: _config/bbx-validate.ignore
 //
 // `loadValidationIgnore` reads the box's operator-owned `_config/bbx-validate.ignore`
 // (a gitignore-style file — the `.gitignore` analogue for `bbx validate`) and
@@ -9,7 +9,8 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { loadValidationIgnore } from "../../src/core/validation-ignore.js";
-import { useColor } from "../../src/cli/commands/validate/report.js";
+import { formatLintResults } from "../../src/exports/cards.js";
+import { formatUrlReport } from "../../src/core/external/url-check/core.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -58,28 +59,18 @@ void test("With patterns, matching paths are ignored and others aren't.", async 
   await box.cleanup();
 });
 
-// ## Color gating
+// ## Plain output
 //
-// `useColor` emits ANSI only for a real terminal and never when `NO_COLOR` is set.
-// Under the test harness stdout is piped (not a TTY), so it stays off — the common
-// piped/pasted case gets clean, escape-free output:
-void test("useColor emits ANSI only for a real terminal and never when NOCOLOR is set.", async (t) => {
-  t.check(useColor(), false);
-});
-
-// Force a TTY to exercise the terminal branch, and confirm `NO_COLOR` still wins:
-void test("Force a TTY to exercise the terminal branch, and confirm NOCOLOR still wins:", async (t) => {
-  const orig = process.stdout.isTTY;
-  process.stdout.isTTY = true;
-  const noEnv = process.env.NO_COLOR;
-  delete process.env.NO_COLOR;
-  const onTty = useColor();
-  process.env.NO_COLOR = "1";
-  const withNoColor = useColor();
-  if (noEnv === undefined) delete process.env.NO_COLOR; else process.env.NO_COLOR = noEnv;
-  process.stdout.isTTY = orig;
-  t.check([onTty, withNoColor], [
-    true,
-    false,
-  ]);
+// `bbx validate` output carries no ANSI escapes, on a terminal or off one:
+void test("validate report formatters emit no ANSI escapes.", async (t) => {
+  const lint = formatLintResults({
+    results: [{ path: "a.md", errors: [{ severity: "error", type: "schema", message: "bad", location: { source: "", startLine: 1, startColumn: 2, endLine: 1, endColumn: 3 } }], warnings: [] }],
+    totalErrors: 1,
+    totalWarnings: 0,
+    filesChecked: 1,
+    filesWithErrors: 1,
+  });
+  const urls = formatUrlReport({ checked: 2, broken: [{ url: "https://x.test", status: 404, detail: "404", referrers: ["a.md"] }], transient: ["https://y.test"] });
+  t.check([lint.includes("\u001B"), (urls ?? "").includes("\u001B")], [false, false]);
+  t.check(urls, "broken  https://x.test  [404]  (a.md)\ntransient  https://y.test  (unreachable this run — will retry)\n\n1 broken external URL (warning — not blocking; fix or remove the link)");
 });

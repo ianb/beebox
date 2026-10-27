@@ -292,18 +292,15 @@ async function checkExternalUrlsLocked(
 }
 
 /** Render a report as the human-readable warning block (or null when clean). */
-export function formatUrlReport(report: UrlCheckReport, { colors }: { colors: boolean }): string | null {
+export function formatUrlReport(report: UrlCheckReport): string | null {
   if (report.broken.length === 0 && report.transient.length === 0) return null;
-  const ESC = "";
-  const red = colors ? (s: string) => `${ESC}[31m${s}${ESC}[0m` : (s: string) => s;
-  const dim = colors ? (s: string) => `${ESC}[2m${s}${ESC}[0m` : (s: string) => s;
   const lines: string[] = [];
   for (const b of report.broken) {
-    const where = b.referrers.length > 0 ? `  ${dim(`(${b.referrers.join(", ")})`)}` : "";
-    lines.push(`${red("broken")}  ${b.url}  [${b.detail}]${where}`);
+    const where = b.referrers.length > 0 ? `  (${b.referrers.join(", ")})` : "";
+    lines.push(`broken  ${b.url}  [${b.detail}]${where}`);
   }
   for (const url of report.transient) {
-    lines.push(`${dim("transient")}  ${url}  ${dim("(unreachable this run — will retry)")}`);
+    lines.push(`transient  ${url}  (unreachable this run — will retry)`);
   }
   if (report.broken.length > 0) {
     const word = report.broken.length === 1 ? "URL" : "URLs";

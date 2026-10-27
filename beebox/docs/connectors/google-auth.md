@@ -73,14 +73,6 @@ Go to **APIs & Services → Credentials**:
 3. You'll be redirected to Google for authorization
 4. After approving, you'll be redirected back. With `BBX_GOOGLE_TOKENS_FILE`, every box that shares that file now has the token; on a unit host (the server), only the box you connected from has it, so connect each box that needs Google
 
-### CLI
-
-```bash
-bbx google-auth
-```
-
-(Client ID/Secret come from the box's granted `google-oauth-client-id`/`google-oauth-client-secret` machine-store entries — see step 4 above.)
-
 ## Per-box service policy
 
 After connecting, enable specific services per box in each box's Admin page (Calendar, Gmail, Drive toggles). Or edit `_config/box.json` directly:
@@ -137,14 +129,8 @@ comes back `invalid_grant`:
   the health condition persists until it's fixed.
 - Gmail, Calendar and Drive sync pause; the rest of the box keeps working.
 
-Reconnect from the admin page's Google Services section (**Re-authorize**), or
-from the CLI:
-
-```bash
-bbx google-auth --reauth
-```
-
-Either way, the new grant clears the condition automatically.
+Reconnect from the admin page's Google Services section (**Re-authorize**).
+The new grant clears the condition automatically.
 
 The state is stored with the credential, so on a server sharing one
 `BBX_GOOGLE_TOKENS_FILE` across boxes, reconnecting once fixes every box.
