@@ -222,8 +222,12 @@ void test("A 10-day override nudges at 5 days (half), not the default 7:", async
     expired: [],
   });
 
+  // The fake push stands in for the server's keys: a nudge whose web push is
+  // skipped `unconfigured` is not sent, so it is not latched (Track A of
+  // docs/implemented-plans/on-demand-job-triggers.md).
+
   setTime(addMs(ASKED_AT, TEN_DAYS_MS / 2));
-  t.check(await ageQuestions(box.root), {
+  t.check(await ageQuestions(box.root, { push: createFakePush() }), {
     nudged: [
       "_bookkeeping/questions/Deadline.question.card",
     ],

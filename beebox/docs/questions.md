@@ -160,9 +160,10 @@ same `bbx finalize` call site as the pending-question notification sweep
 `bbx finalize`'s existing per-wakeup cadence.
 
 - **Nudge at 7 days pending** (default: `DEFAULT_NUDGE_AFTER_MS`). One
-  re-notification through `notifyBoxholder`, latched (`.beebox/
-  notified-questions.json`, the `nudged` map) so it fires exactly once per
-  question.
+  re-notification, sent through the box server from `bbx finalize`, latched
+  (`.beebox/notified-questions.json`, the `nudged` map) once it was sent, so
+  it fires once per question; a nudge that did not go out is tried again at
+  the next finalize ([notifications](notifications.md#sources)).
 - **Expire at 30 days pending** (default: `DEFAULT_EXPIRE_AFTER_MS`). Sets
   `expired-at`, commits with trailer `Expired-By:
   question-aging`, drops the question from the active list/header
@@ -175,10 +176,10 @@ same `bbx finalize` call site as the pending-question notification sweep
   latch state.** A lost or corrupt latch file can only cause a duplicate
   nudge — it can never reset a question's age or block its expiry. The
   latch's only job is nudge-dedup.
-- **Expiry is not notification-channel-gated.** `checkPendingQuestionsAndNotify`
-  exits early with no channels configured, but the aging sweep's expiry half
+- **Expiry is not notification-channel-gated.** The aging sweep's expiry half
   always runs — only nudge *delivery* depends on a channel existing (the
-  header badge is the channel-independent surface).
+  header badge is the channel-independent surface). With nobody to reach,
+  the nudge and the alert are skipped `no-audience` and latched.
 - Time comes from `getBoxTime`/`getBoxTimeISO` (`BBX_TIME`-honoring), never
   `new Date()`, so the sweep is testable with frozen time
   (`test/core/question-aging.test.ts`).

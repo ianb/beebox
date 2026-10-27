@@ -97,7 +97,7 @@ export async function findJobCards(
       console.debug(`findJobCards: cannot read ${file}, using defaults:`, e);
     }
     if (connectorFilter !== undefined && connector !== connectorFilter) continue;
-    results.push({ file, priority, createdAt: await readCreatedAt(jobPath, file) });
+    results.push({ file, priority, ...(connector === undefined ? {} : { connector }), createdAt: await readCreatedAt(jobPath, file) });
   }
 
   // Sort: normal-priority first, low-priority last; within a priority,

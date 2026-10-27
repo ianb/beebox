@@ -7,7 +7,12 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { decideIdle, type IdleSignals } from "../../../src/webapp/server/idle-exit.js";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import fastify from "fastify";
+import { ActivityLedger, decideIdle, type IdleSignals } from "../../../src/webapp/server/idle-exit.js";
+import { runBbxWakeup } from "../../../src/core/commands/wakeup.js";
 
 const quiet: IdleSignals = { lastActivityAt: 0, inFlight: 0, openSockets: 0, liveRuns: 0, pendingSchedules: 0 };
 const clock = { now: 10_000, idleMs: 5_000 };
@@ -24,4 +29,26 @@ void test("every signal keeps the box up on its own, in priority order", async (
 void test("quiet for the whole window exits; one millisecond short does not", async (t) => {
   t.check(decideIdle({ ...quiet, lastActivityAt: 5_000 }, clock), { exit: true });
   t.check(decideIdle({ ...quiet, lastActivityAt: 5_001 }, clock), { exit: false, keptBy: "recent-activity" });
+});
+
+// A wakeup child this process spawned (the job check's, scan's, filing's, or a
+// forced one) counts as a live run, so the server does not drain under it. The
+// child here runs in a directory that is not a box and fails at once; while
+// the server waits on it, the ledger counts it.
+void test("a live wakeup child keeps the box up", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "bbx-idle-wakeup-"));
+  const server = fastify();
+  t.teardown(async () => {
+    await server.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+  const ledger = new ActivityLedger({ server, boxes: [], now: () => 0 });
+
+  const run = runBbxWakeup({ boxRoot: dir, triggeredBy: "test" });
+  const during = decideIdle(ledger.signals(), clock);
+  await run;
+  t.check({ during, after: decideIdle(ledger.signals(), clock) }, {
+    during: { exit: false, keptBy: "live-runs" },
+    after: { exit: true },
+  });
 });

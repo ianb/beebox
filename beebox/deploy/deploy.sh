@@ -1040,7 +1040,10 @@ REMOTE
       echo "  deploy/hetzner/cloud-init.yaml), then redeploy."
       exit 1
     fi
-    codex_check_home=$(mktemp -d)
+    # Codex refuses to put its helper binaries under a temporary directory and
+    # warns on every run, so the throwaway CODEX_HOME lives in root's cache.
+    mkdir -p "$HOME/.cache"
+    codex_check_home=$(mktemp -d "$HOME/.cache/bbx-codex-check.XXXXXX")
     trap 'rm -rf "$codex_check_home"' EXIT
     if ! CODEX_HOME="$codex_check_home" codex plugin --help >/dev/null; then
       echo "  FAILED: package-pinned Codex CLI does not support plugins"
