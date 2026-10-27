@@ -5,12 +5,11 @@
  */
 
 import { CronExpressionParser } from "cron-parser";
-import rrulePkg from "rrule";
 import { parseDuration } from "../../scheduled-script-duration.js";
+import { parseScheduleRrule } from "../../scheduled-script-fields.js";
 import type { ParsedScheduledScript } from "./schema.js";
 import type { ScriptState } from "../../core/schedule/state.js";
 
-const { rrulestr } = rrulePkg;
 
 // --- Schedule evaluation ---
 
@@ -164,7 +163,7 @@ function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
 
 function isRruleDue(rruleStr: string, ctx: ScheduleCheckContext): boolean {
   try {
-    const rule = rrulestr(rruleStr);
+    const rule = parseScheduleRrule(rruleStr);
     const after = ctx.lastRun ? new Date(ctx.lastRun) : new Date(0);
     const occurrences = rule.between(after, ctx.now, false);
     return occurrences.length > 0;

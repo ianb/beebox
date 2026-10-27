@@ -16,6 +16,22 @@ import { resolveRefPath } from "./shared/ref-path/core.js";
 
 const { rrulestr } = rrulePkg;
 
+/**
+ * The start a rule without DTSTART counts from. rrule otherwise takes the
+ * parse time, and the scheduler parses on every check, so a rule like
+ * `FREQ=WEEKLY;BYDAY=MO` had a fresh occurrence "now" on every tick of a
+ * Monday (issues/closed/bugs/2026-10-27-rrule-without-dtstart-is-due-on-every-tick.md).
+ * A fixed start makes occurrences stable: midnight UTC on matching days, and
+ * INTERVAL/COUNT counted from this date. A card that needs another time of
+ * day or start writes its own DTSTART.
+ */
+export const RRULE_DEFAULT_START = new Date(Date.UTC(2026, 0, 1));
+
+/** Parse a scheduled script's `rrule`, starting at {@link RRULE_DEFAULT_START} when it gives no DTSTART. */
+export function parseScheduleRrule(value: string): ReturnType<typeof rrulestr> {
+  return /\bDTSTART\b/iu.test(value) ? rrulestr(value) : rrulestr(value, { dtstart: RRULE_DEFAULT_START });
+}
+
 // `new Date()` alone is far too permissive ("5" parses as May 2001), so
 // require an ISO 8601 shape first: date, optionally time, optionally zone.
 const ISO_DATETIME_SHAPE = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
@@ -43,7 +59,7 @@ export const CronField = z.string().refine(
 export const RruleField = z.string().refine(
   (value) => {
     try {
-      rrulestr(value);
+      parseScheduleRrule(value);
       return true;
     } catch (_e) {
       return false;

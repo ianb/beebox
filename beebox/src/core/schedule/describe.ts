@@ -8,9 +8,8 @@
  */
 
 import cronstrue from "cronstrue";
-import rrulePkg from "rrule";
+import { parseScheduleRrule } from "../../scheduled-script-fields.js";
 
-const { rrulestr } = rrulePkg;
 
 /** The timing subset of a ParsedScheduledScript (which satisfies it structurally). */
 export interface ScheduleCadenceInput {
@@ -75,7 +74,7 @@ function describeBase(script: ScheduleCadenceInput): string {
   }
   if (script.rrule) {
     try {
-      const text = rrulestr(script.rrule).toText();
+      const text = parseScheduleRrule(script.rrule).toText();
       return text.charAt(0).toUpperCase() + text.slice(1);
     } catch (_e) {
       // Invalid rrule: show the raw expression rather than nothing.

@@ -5,7 +5,10 @@ area: beebox
 labels: [schedules, bug]
 filed-by: agent
 discovered-in: dep-reduction — rrule vs ical.js research, 2026-10-27
+resolution: implemented
 ---
+
+Closed 2026-10-27 on the dep-reduction workstream. `parseScheduleRrule` in `beebox/src/scheduled-script-fields.ts` gives a rule without DTSTART a fixed start, `RRULE_DEFAULT_START` (2026-01-01T00:00Z), so its occurrences are midnight UTC on matching days and INTERVAL/COUNT count from that date. The due check, the missed-occurrence scan, the description, and the schema validator all parse through it. A rule with its own DTSTART (inline `;DTSTART=…` or a `DTSTART:` line) is unchanged. The schema instructions and box docs say how to set another time of day. Regression test: `beebox/test/schemas/scheduled-script/due.rrule-start.test.ts`.
 
 `isRruleDue` (`beebox/src/schemas/scheduled-script/due.ts:165-170`) parses the
 card's string with `rrulestr` on every check:
