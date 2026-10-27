@@ -159,11 +159,11 @@ function ExternalChip({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="not-italic text-warm-700 hover:text-warm-900 text-xs ml-1 no-underline hover:underline underline-offset-2"
+      className="bbx-theme-link not-italic text-xs ml-1"
       title={title}
     >
       [↗ {externalLabel(href)}
-      {shownDate === null ? null : <span className="text-warm-400">{` · ${shownDate}`}</span>}]
+      {shownDate === null ? null : <span>{` · ${shownDate}`}</span>}]
     </a>
   );
 }
@@ -218,14 +218,14 @@ export function makeSourceComponents(linkCtx: SourceLinkContext): {
     const refValue = props.sourceRef === undefined ? "" : props.sourceRef;
     return (
       <figure
-        className="my-3 border-l-2 border-warm-300 bg-warm-50/50 pl-4 pr-3 py-2 rounded-r"
+        className="my-3 border-l-2 border-[color:var(--bbx-rule-strong,var(--color-warm-300))] pl-4 pr-3 py-2"
         data-source-ref={refValue}
         data-source-href={props.href}
       >
-        <div className="text-warm-800 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
+        <div className="[&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
           {props.children}
         </div>
-        <figcaption className="text-xs text-warm-700 mt-1">
+        <figcaption className="text-xs mt-1">
           <Citation {...props} />
         </figcaption>
       </figure>

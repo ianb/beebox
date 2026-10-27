@@ -64,6 +64,14 @@ doors open: 10:00
 bring: seeds + curiosity
 \`\`\`
 
+## Sources
+
+The hall is free {% source href="https://example.org/hall-hours" retrieved="2026-10-01" %}until noon on Saturdays{% /source %}.
+
+{% source href="https://example.org/seed-saving" %}
+Dry seeds for a week before you seal the envelope.
+{% /source %}
+
 This sample includes **bold**, *italic*, ~~retired text~~ and a [sample link](#before-saturday).`;
 
 const READING_PATH = "notes/Seed exchange.doc.card";
