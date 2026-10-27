@@ -6,6 +6,7 @@
  * grants — `docs/implemented-plans/secret-custody.md`).
  */
 
+import { existsSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import { centralTokenPath } from "../../../../../google/token-store.js";
 import { getBoxDir } from "../../../../../lib/paths/core.js";
@@ -40,9 +41,14 @@ export async function legacySecretFilesCheck(boxRoot: string): Promise<HealthChe
   }
   if (keys.length !== stray.length) {
     const central = centralTokenPath();
-    parts.push(central === null
-      ? "Google token in the box tree (_config/connectors/google.secret.json) — it is this box's live grant; set BBX_GOOGLE_TOKENS_FILE to move it out of the tree, and do not delete it"
-      : `Google token in the box tree — move _config/connectors/google.secret.json to ${central} (as the box's user), do not delete it`);
+    if (central === null) {
+      parts.push("Google token in the box tree (_config/connectors/google.secret.json) — it is this box's live grant; set BBX_GOOGLE_TOKENS_FILE to move it out of the tree, and do not delete it");
+    } else if (existsSync(central)) {
+      // The first write there started from the in-tree record, so it holds the grant.
+      parts.push(`Google token copy in the box tree — ${central} already holds the grant; delete _config/connectors/google.secret.json`);
+    } else {
+      parts.push(`Google token in the box tree — copy _config/connectors/google.secret.json to ${central} (as the box's user), then delete the in-tree file`);
+    }
   }
   return {
     name: "legacy-secret-files",

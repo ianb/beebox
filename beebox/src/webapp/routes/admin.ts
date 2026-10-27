@@ -9,7 +9,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { getBoxGoogleClientCreds, createOAuth2Client } from "../../google/auth.js";
-import { saveGoogleTokens, type GoogleTokens } from "../../google/token-store.js";
+import { centralTokenPath, saveGoogleTokens, type GoogleTokens } from "../../google/token-store.js";
 import { parseOAuthState, consumeGoogleOAuthState } from "../../google/oauth-state.js";
 import { resolveRequestIdentity } from "../auth.js";
 import { isRecord } from "../../shared/is-record.js";
@@ -99,8 +99,10 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       if (tokens.refresh_token) updates.refreshToken = tokens.refresh_token;
       if (tokens.access_token) updates.accessToken = tokens.access_token;
       if (tokens.expiry_date) updates.tokenExpiry = new Date(tokens.expiry_date).toISOString();
-      // The box root only seeds a first central write from the in-tree file.
-      await saveGoogleTokens(updates, { boxRoot: box.boxRoot });
+      // Only to a file outside the box tree. The box root seeds a first write
+      // there from the in-tree file; with no such file configured it would make
+      // the in-tree file the target, so it is not passed and the save fails.
+      await saveGoogleTokens(updates, centralTokenPath() === null ? {} : { boxRoot: box.boxRoot });
       console.log("[google-oauth] Saved tokens, redirecting to:", `${returnUrl}?google=connected`);
       return reply.redirect(`${returnUrl}?google=connected`);
     } catch (err) {

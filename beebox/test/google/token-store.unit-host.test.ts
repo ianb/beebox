@@ -12,7 +12,7 @@ import "@ianbicking/tap-check/tap";
 import { isoDate } from "@ianbicking/tap-check/check";
 import * as os from "node:os";
 import * as path from "node:path";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { legacySecretPath, loadGoogleTokens, saveGoogleTokens } from "../../src/google/token-store.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
@@ -26,6 +26,7 @@ void test("a unit-host box saves and reads its Google token in its own home", as
       else process.env[name] = value;
     }
     await box.cleanup();
+    await rm(home, { recursive: true, force: true });
   });
   process.env.HOME = home;
   process.env.BBX_UNIT_HOST = "1";
