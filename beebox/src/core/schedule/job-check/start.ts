@@ -13,6 +13,9 @@ import { errorMessage } from "../../../shared/error-guards.js";
 import { runBbxWakeup, startBbxWakeup, type WakeupStart } from "../../commands/wakeup.js";
 import type { WakeupRunner, WakeupRunResult } from "../../wakeup-runner.js";
 import { writeBoxLog } from "../box-log.js";
+import { onUnitHost } from "../../../lib/unit-host.js";
+import { boxClient } from "../../../cli/lib/box-client.js";
+import { boxServerEnv } from "../../script-env/core.js";
 
 /** Reactor cycles a job-check run asks for: the reactor's own default. */
 export const TRIGGER_MAX_CYCLES = 3;
@@ -81,4 +84,32 @@ export async function startJobCheckWakeup(boxRoot: string, opts?: { run?: Wakeup
     .finally(() => inFlight.delete(boxRoot))
     .catch((error: unknown) => console.error(`[job-check] ${boxRoot}: run bookkeeping failed`, error));
   return answered;
+}
+
+/** How long the pass waits for the server's answer: the hub's readiness bound for starting an idle box. */
+const START_TIMEOUT_MS = 30_000;
+
+/**
+ * Ask the box server to start the run (`wakeup.start`), through the hub,
+ * which starts an idle box. A timeout or an unreachable server is `failed`:
+ * nothing is stamped, and the next pass tries again.
+ */
+async function startThroughServer(boxRoot: string): Promise<JobCheckStart> {
+  const client = boxClient(await boxServerEnv(boxRoot));
+  if (!client.ok) return { state: "failed", detail: client.error.message };
+  try {
+    const { state, detail } = await client.value.wakeup.start.mutate({ reason: "job-check" }, { signal: AbortSignal.timeout(START_TIMEOUT_MS) });
+    return { state, detail };
+  } catch (e) {
+    return { state: "failed", detail: errorMessage(e) };
+  }
+}
+
+/**
+ * Where the pass starts the run. On a unit host the pass is a oneshot unit
+ * whose children end with it, so the box server starts it; elsewhere the
+ * daemon runs the pass in its own long-lived process, which starts it.
+ */
+export function jobCheckStarter(): (boxRoot: string) => Promise<JobCheckStart> {
+  return onUnitHost() ? startThroughServer : (boxRoot) => startJobCheckWakeup(boxRoot);
 }

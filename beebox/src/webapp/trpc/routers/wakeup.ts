@@ -23,7 +23,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { router, publicProcedure, authedProcedure } from "../procedures.js";
 import { runBbxWakeup } from "../../../core/commands/wakeup.js";
-import { startJobCheckWakeup, type JobCheckStart } from "../../../core/schedule/job-check/start.js";
+import { startJobCheckWakeup, type JobCheckStart } from "../../../core/schedule/job-check/core.js";
 import type { WakeupRunResult } from "../../../core/wakeup-runner.js";
 
 /**
@@ -102,7 +102,7 @@ export const wakeupRouter = router({
    * its child has taken the cycle lock (`started`), found it held
    * (`running`), or failed before taking it (`failed`). Unlike `force`, it
    * does not wait for the run: the pass that asks is short-lived, and this
-   * server outlives it (`core/schedule/scheduler/job-check/start.ts`).
+   * server outlives it (`core/schedule/job-check/start.ts`).
    */
   start: agentOrOwnerProcedure
     .input(z.object({ reason: z.literal("job-check") }).strict())

@@ -1,7 +1,7 @@
 /**
  * One scheduler pass over one box: admission, the dirty-repo note, the
- * heartbeat, the growth probe, the tick, the alerts, each landing in the
- * box's own `.beebox/scheduler.jsonl`.
+ * heartbeat, the growth probe, the tick, the job check (`../job-check/core.ts`),
+ * the alerts, each landing in the box's own `.beebox/scheduler.jsonl`.
  *
  * Extracted from the daemon loop (`./core.ts`) so a unit host can run it as
  * the box's user, inside the box sandbox, through `bbx engine scheduler pass
@@ -20,6 +20,7 @@ import { runBoxAlerts } from "./box-alerts.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { refreshHubMeta } from "../../hub-meta.js";
 import { writeBoxLog } from "../box-log.js";
+import { checkWaitingJobs } from "../job-check/core.js";
 
 export type PassOutcome = "ran" | "not-a-box" | "maintenance";
 
@@ -28,16 +29,22 @@ export type PassOutcome = "ran" | "not-a-box" | "maintenance";
  * for maintenance and the pass was deferred, an ordinary outcome, not a
  * failure; anything else that throws is the daemon's to report.
  */
-export async function runSchedulerPass(boxPath: string): Promise<PassOutcome> {
+/** The pass's job check; a test substitutes one. */
+export type JobCheck = (boxRoot: string) => Promise<unknown>;
+
+const defaultJobCheck: JobCheck = (boxRoot) => checkWaitingJobs(boxRoot);
+
+export async function runSchedulerPass(boxPath: string, opts?: { jobCheck?: JobCheck }): Promise<PassOutcome> {
+  const jobCheck = opts?.jobCheck ?? defaultJobCheck;
   try {
-    return await withBoxWork({ boxRoot: boxPath, reason: "scheduler pass" }, () => passBody(boxPath));
+    return await withBoxWork({ boxRoot: boxPath, reason: "scheduler pass" }, () => passBody(boxPath, jobCheck));
   } catch (error) {
     if (error instanceof BoxMaintenanceError) return "maintenance";
     throw error;
   }
 }
 
-async function passBody(boxPath: string): Promise<PassOutcome> {
+async function passBody(boxPath: string, jobCheck: JobCheck): Promise<PassOutcome> {
   const stamp = () => new Date().toISOString();
   try {
     if (!(await isBoxRoot(boxPath))) {
@@ -104,6 +111,18 @@ async function passBody(boxPath: string): Promise<PassOutcome> {
     });
   } catch (err) {
     await writeBoxLog(boxPath, { ts: stamp(), event: "tick", box: boxPath, error: errorMessage(err) });
+  }
+
+  // After the tick, so a scoped wakeup the tick ran inline has released the
+  // cycle lock. Its own failure never touches the tick or the alerts.
+  try {
+    await jobCheck(boxPath);
+  } catch (err) {
+    try {
+      await writeBoxLog(boxPath, { ts: stamp(), event: "job-check", box: boxPath, error: errorMessage(err) });
+    } catch (logError) {
+      console.error(`[${stamp()}] ${boxPath}: could not record a job-check failure`, logError);
+    }
   }
 
   await runBoxAlerts(boxPath, (entry) => writeBoxLog(boxPath, { ...entry, box: boxPath }));

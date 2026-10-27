@@ -163,12 +163,12 @@ void test("Type filter only matches typed suffix", async (t) => {
   await box.write("_bookkeeping/jobs/sweep.intake.job.card", "---\nconnector: gmail\n---\nIntake");
 
   const digestOnly = await findJobCards(jobsDir, { typeFilter: "digest" });
-  t.check(digestOnly, [{ file: "msg1.digest.job.card", priority: "normal", createdAt: isoDate() }]);
+  t.check(digestOnly, [{ file: "msg1.digest.job.card", priority: "normal", connector: "rss", createdAt: isoDate() }]);
 
   const all = await findJobCards(jobsDir);
   t.check(all, [
-    { file: "msg1.digest.job.card", priority: "normal", createdAt: isoDate() },
-    { file: "sweep.intake.job.card", priority: "normal", createdAt: isoDate() },
+    { file: "msg1.digest.job.card", priority: "normal", connector: "rss", createdAt: isoDate() },
+    { file: "sweep.intake.job.card", priority: "normal", connector: "gmail", createdAt: isoDate() },
   ]);
 
   await box.cleanup();
@@ -195,11 +195,13 @@ void test("A job no connector made (here, a full wakeup's inbox triage) matches 
     "feed.digest.job.card",
   ]);
 
-  // Other jobs stay put for a future run that does match them
+  // Other jobs stay put for a future run that does match them. Each card's
+  // connector comes back with it; the unscoped job has none (the scheduler
+  // pass's job check reads that):
   const noFilter = await findJobCards(jobsDir);
   t.check(noFilter, [
-    { file: "email.intake.job.card", priority: "normal", createdAt: isoDate() },
-    { file: "feed.digest.job.card", priority: "normal", createdAt: isoDate() },
+    { file: "email.intake.job.card", priority: "normal", connector: "gmail", createdAt: isoDate() },
+    { file: "feed.digest.job.card", priority: "normal", connector: "rss", createdAt: isoDate() },
     { file: "inbox.intake.job.card", priority: "normal", createdAt: isoDate() },
   ]);
 
@@ -219,7 +221,7 @@ void test("Current job cards are YAML frontmatter, not XML — discovery reads t
   await box.write("_bookkeeping/jobs/y2.intake.job.card", "---\nconnector: rss\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
 
   const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
-  t.check(gmailOnly, [{ file: "y1.intake.job.card", priority: "low", createdAt: isoDate() }]);
+  t.check(gmailOnly, [{ file: "y1.intake.job.card", priority: "low", connector: "gmail", createdAt: isoDate() }]);
 
   await box.cleanup();
 });

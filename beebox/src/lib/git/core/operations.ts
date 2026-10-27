@@ -271,7 +271,7 @@ export async function pathsHaveChanges(boxRoot: string, paths: string[]): Promis
  * untracked. A path already deleted and committed is absent: `git add` refuses
  * it ("pathspec did not match any files").
  */
-async function changedFiles(boxRoot: string, paths: string[]): Promise<string[]> {
+export async function changedFiles(boxRoot: string, paths: string[]): Promise<string[]> {
   if (paths.length === 0) return [];
   const git = simpleGit(boxRoot);
   // Porcelain paths are relative to the repository root, not to boxRoot.
