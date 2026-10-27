@@ -18,7 +18,7 @@ plugin registry. That one use is the reason for:
 - `patches/eslint-config-agent+1.9.3.patch`, one of the two patches that keep
   `patch-package` in the root `postinstall`. The other patch, for
   `@typescript-eslint/eslint-plugin`, is the subject of
-  [its own issue](../docs-and-chores/2026-09-27-drop-typescript-eslint-no-misused-promises-patch.md);
+  [its own issue](../../docs-and-chores/2026-09-27-drop-typescript-eslint-no-misused-promises-patch.md);
 - `eslint-plugin-n` (no rule used), `eslint-plugin-class-export` (one rule), and
   `eslint-plugin-import` (three rules: `first`, `newline-after-import`,
   `no-absolute-path`, which `eslint-plugin-import-x` also provides);
@@ -33,4 +33,4 @@ needed, pnpm's `patchedDependencies` can hold it. The decision is whether the
 preset still wants anything else from eslint-config-agent, for example
 updates to its rule list that someone reviews.
 
-Inventory rows: [dev/dependency-inventory-2026-10.md](../../dev/dependency-inventory-2026-10.md).
+Inventory rows: [dev/dependency-inventory-2026-10.md](../../../dev/dependency-inventory-2026-10.md).

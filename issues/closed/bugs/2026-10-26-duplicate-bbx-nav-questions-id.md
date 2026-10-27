@@ -1,12 +1,19 @@
 ---
 title: "`AttentionBadgesFace` renders `id=\"bbx-nav-questions\"` twice; `ui-scan.annotations.test.ts` is red"
-workstream: unattached
+workstream: bug-burndown-5
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — full suite after the Agent SDK 0.3.310 bump
 labels: [test-failure]
 ---
+
+> **Closed 2026-10-27 (bug-burndown-5):** the two elements were the two modes
+> of one control (show-the-question toggle in a chat, Questions link elsewhere),
+> never both rendered. They are now one `QuestionsSegment` that carries
+> `id="bbx-nav-questions"` once; the Track 4 table row now points at
+> `AttentionBadgesFace.tsx`. `ui-scan.annotations.test.ts` passes.
 
 `beebox/src/frontend/src/components/app-bar-faces/AttentionBadgesFace.tsx`
 sets `id="bbx-nav-questions"` on two elements (lines 83 and 95). A DOM id must
