@@ -15,7 +15,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any } from "@ianbicking/tap-check/check";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { join } from "node:path";
 import { assertEventSchemaNotNewer, createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
 import { eventSchemas, isBusEventName } from "../../src/core/event-bus/schemas.js";
@@ -165,7 +165,7 @@ void test("Emit one valid row, then hand-write three broken ones directly into S
   bus.emit("cards-changed", { source: "gmail" });
 
   const dbPath = join(box.root, ".beebox/events.db");
-  const raw = new Database(dbPath);
+  const raw = new DatabaseSync(dbPath);
   const ins = raw.prepare("INSERT INTO events (event, data) VALUES (?, ?)");
   ins.run("card-created", JSON.stringify({ path: 123 }));   // schema mismatch
   ins.run("cards-changed", "{not json");                     // syntax-level failure
@@ -210,7 +210,7 @@ void test("Persist two rows, then simulate a deploy that bumped the schema gener
 
   bus1.close();
 
-  const raw = new Database(join(box.root, ".beebox/events.db"));
+  const raw = new DatabaseSync(join(box.root, ".beebox/events.db"));
   raw.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(EVENT_SCHEMA_GENERATION - 1);
   raw.close();
 
@@ -238,7 +238,7 @@ void test("Two engine checkouts can serve one box. When the stored generation is
   bus1.emit("cards-changed", { source: "a" });
   bus1.close();
 
-  const raw = new Database(dbPath);
+  const raw = new DatabaseSync(dbPath);
   raw.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(EVENT_SCHEMA_GENERATION + 1);
   raw.close();
 
@@ -255,7 +255,7 @@ void test("Two engine checkouts can serve one box. When the stored generation is
     assertEventSchemaNotNewer(box.root);
   }, expected);
 
-  const after = new Database(dbPath, { readonly: true });
+  const after = new DatabaseSync(dbPath, { readOnly: true });
   t.check(after.prepare("SELECT schema_generation AS gen FROM event_meta").all(), [{ gen: EVENT_SCHEMA_GENERATION + 1 }]);
   t.check(after.prepare("SELECT id, event, data FROM events").all(), [
     { id: 1, event: "cards-changed", data: JSON.stringify({ source: "a" }) },
@@ -304,7 +304,7 @@ void test("A box upgraded from before generation stamping has an events table fu
   const box = await makeTmpBox();
   const legacyPath = join(box.root, ".beebox");
   await box.write(".beebox/.keep", "");
-  const legacy = new Database(join(legacyPath, "events.db"));
+  const legacy = new DatabaseSync(join(legacyPath, "events.db"));
   legacy.exec("CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, event TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')))");
   legacy.prepare("INSERT INTO events (event, data) VALUES (?, ?)").run("cards-changed", JSON.stringify({ source: "old" }));
   legacy.close();

@@ -46,11 +46,9 @@ export class BoxPackageConflictError extends Error {
  * blocked build is a hard error). Written into each box's package.json as
  * `pnpm.onlyBuiltDependencies` and passed as `--allow-build` flags by the
  * smoke scripts. The two shell copies — `docker/Dockerfile` and
- * `docker/entrypoint.sh` — must be updated by hand; `docker/smoke-docker.sh`
- * fails the image build when they drift.
+ * `docker/entrypoint.sh` — must be updated by hand; no script compares them.
  */
 export const BOX_BUILT_DEPENDENCIES = [
-  "better-sqlite3",
   "esbuild",
   "@googleworkspace/cli",
 ];

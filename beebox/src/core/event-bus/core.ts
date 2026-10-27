@@ -37,9 +37,10 @@
  * against current schemas" is an invariant, not a hope.
  */
 
-import Database from "better-sqlite3";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { z } from "zod";
+import { openSqlite, type SqliteDb } from "../sqlite.js";
 import { eventSchemas, isBusEventName, type BusEventName, type EventMap } from "./schemas.js";
 
 export type { BusEventName, EventMap } from "./schemas.js";
@@ -80,15 +81,15 @@ class NewerEventSchemaError extends Error {
 export function assertEventSchemaNotNewer(boxRoot: string): void {
   const dbPath = path.join(boxRoot, ".beebox/events.db");
   if (!fs.existsSync(dbPath)) return;
-  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  const db = openSqlite(dbPath, { readOnly: true });
   try {
     const table = db
-      .prepare<[], { name: string }>("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'event_meta'")
-      .get();
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'event_meta'")
+      .get(nameRow);
     if (table === undefined) return;
     const meta = db
-      .prepare<[], { gen: number }>("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
-      .get();
+      .prepare("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
+      .get(generationRow);
     if (meta !== undefined) throwIfNewer(dbPath, meta.gen);
   } finally {
     db.close();
@@ -142,12 +143,11 @@ export type BusEvent = KnownBusEvent | UnknownBusEvent;
 let unknownEventCount = 0;
 
 /** A raw row as stored in SQLite (payload still a JSON string). */
-interface EventRow {
-  id: number;
-  event: string;
-  data: string;
-  createdAt: string;
-}
+const eventRow = z.object({ id: z.number(), event: z.string(), data: z.string(), createdAt: z.string() });
+type EventRow = z.infer<typeof eventRow>;
+const nameRow = z.object({ name: z.string() });
+const generationRow = z.object({ gen: z.number() });
+const maxIdRow = z.object({ maxId: z.number().nullable() });
 
 /**
  * Reconcile the persisted schema generation against {@link EVENT_SCHEMA_GENERATION}.
@@ -156,15 +156,17 @@ interface EventRow {
  * data into current consumers. A NEWER on-disk generation throws
  * {@link NewerEventSchemaError} and leaves the rows alone: an older engine
  * opening a box a newer engine serves must not wipe that engine's history.
- * Meta read + truncate + meta write run in one transaction so a startup race
- * between processes of one deploy is unambiguous (they share the constant, so
- * it converges anyway — the transaction just removes the interleaving).
+ * Meta read + truncate + meta write run in one IMMEDIATE transaction so a
+ * startup race between processes of one deploy is unambiguous (they share the
+ * constant, so it converges anyway). A deferred one let two processes read
+ * the old generation; the second write then failed with SQLITE_BUSY_SNAPSHOT,
+ * which the busy timeout does not cure.
  */
-function reconcileSchemaGeneration(db: Database.Database, dbPath: string): void {
-  const reconcile = db.transaction(() => {
+function reconcileSchemaGeneration(db: SqliteDb, dbPath: string): void {
+  db.transaction(() => {
     const meta = db
-      .prepare<[], { gen: number }>("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
-      .get();
+      .prepare("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
+      .get(generationRow);
     if (meta === undefined) {
       // No meta row: either a fresh DB (0 events — the DELETE is a harmless
       // no-op) or a legacy DB written before generation stamping existed. A
@@ -195,8 +197,7 @@ function reconcileSchemaGeneration(db: Database.Database, dbPath: string): void 
         `[EventBus] Event-schema generation changed (${meta.gen} → ${EVENT_SCHEMA_GENERATION}); truncated ${deleted} persisted event(s). Reconnecting clients resync via the bus's full-resync path.`,
       );
     }
-  });
-  reconcile();
+  }, { immediate: true });
 }
 
 /**
@@ -304,8 +305,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
   const dbPath = path.join(boxRoot, ".beebox/events.db");
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = openSqlite(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -334,16 +334,16 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
   const insertStmt = db.prepare(
     "INSERT INTO events (event, data) VALUES (?, ?)"
   );
-  const readSinceStmt = db.prepare<[number], EventRow>(
+  const readSinceStmt = db.prepare(
     "SELECT id, event, data, created_at as createdAt FROM events WHERE id > ? ORDER BY id"
   );
-  const readRecentStmt = db.prepare<[string, number], EventRow>(
+  const readRecentStmt = db.prepare(
     "SELECT id, event, data, created_at as createdAt FROM events WHERE event = ? ORDER BY id DESC LIMIT ?"
   );
   const pruneStmt = db.prepare(
     "DELETE FROM events WHERE created_at < ?"
   );
-  const maxIdStmt = db.prepare<[], { maxId: number | null }>(
+  const maxIdStmt = db.prepare(
     "SELECT MAX(id) as maxId FROM events"
   );
 
@@ -353,7 +353,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
 
   // High-water mark: the highest event ID we've dispatched locally.
   // Used by the poll loop to detect events inserted by other processes.
-  const initialRow = maxIdStmt.get();
+  const initialRow = maxIdStmt.get(maxIdRow);
   let highWaterMark = initialRow?.maxId ?? 0;
 
   function notifyListeners(busEvent: BusEvent): void {
@@ -409,7 +409,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
    * on every other read path.
    */
   function readRecent<K extends BusEventName>(request: { event: K; limit: number }): Array<KnownBusEvent<K> | UnknownBusEvent> {
-    const rows = readRecentStmt.all(request.event, request.limit);
+    const rows = readRecentStmt.all(eventRow, request.event, request.limit);
     // The query selected only `request.event`; a row read back as another
     // event cannot occur, and dropping one keeps the type honest.
     const ofRequested = (event: BusEvent): event is KnownBusEvent<K> | UnknownBusEvent =>
@@ -418,7 +418,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
   }
 
   function readSince(afterId: number): BusEvent[] {
-    const rows = readSinceStmt.all(afterId);
+    const rows = readSinceStmt.all(eventRow, afterId);
     return parseRows(rows);
   }
 
@@ -461,7 +461,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     pollTimer = setInterval(() => {
       if (listeners.size === 0) return; // no one listening, skip
 
-      const rows = readSinceStmt.all(highWaterMark);
+      const rows = readSinceStmt.all(eventRow, highWaterMark);
 
       if (rows.length === 0) return;
 

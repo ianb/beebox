@@ -4,9 +4,9 @@
 // loader-hook overhead that dominates tsx startup, and splitting lets a run
 // load only the command it names (src/cli/commands.ts).
 //
-// node_modules are externalized (`packages: "external"`): native addons like
-// better-sqlite3 can't be bundled, and loading deps from disk keeps their own
-// __dirname / asset resolution intact.
+// node_modules are externalized (`packages: "external"`): native addons can't
+// be bundled, and loading deps from disk keeps their own __dirname / asset
+// resolution intact.
 //
 // An external sourcemap (cli.mjs.map) gives real stack traces under
 // `node --enable-source-maps` without slowing startup — node loads the map

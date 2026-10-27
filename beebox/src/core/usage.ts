@@ -9,7 +9,6 @@
  * The SQLite DB lives at .beebox/usage.db (not git-tracked, rebuildable).
  */
 
-import Database from "better-sqlite3";
 import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -18,6 +17,7 @@ import { listSessions } from "../cli/lib/session.js";
 import { CODEX_USAGE_REL_PATH, readCodexTurnUsage } from "./codex-usage.js";
 import { BOX_DIRS } from "../lib/paths/core.js";
 import { jsonlLines } from "../lib/jsonl-lines.js";
+import { openSqlite, type SqliteDb } from "./sqlite.js";
 
 const DB_REL_PATH = ".beebox/usage.db";
 const MANIFEST_REL_PATH = `${BOX_DIRS.usage}/session-manifest.jsonl`;
@@ -62,11 +62,10 @@ Example queries:
   FROM usage GROUP BY task, model ORDER BY task, output DESC;
 `.trim();
 
-function openDb(boxRoot: string): Database.Database {
+function openDb(boxRoot: string): SqliteDb {
   const dbPath = path.join(boxRoot, DB_REL_PATH);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = openSqlite(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS usage (
       session_id TEXT NOT NULL,
@@ -240,7 +239,7 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
     sessionFiles.push({ sessionId: s.sessionId, path: s.path });
   }
 
-  const getSyncState = db.prepare<[string], { file_size: number }>(
+  const getSyncState = db.prepare(
     "SELECT file_size FROM sync_state WHERE session_id = ?"
   );
   const upsertUsage = db.prepare(`
@@ -270,7 +269,7 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
     }
 
     // Check if already processed at this size
-    const row = getSyncState.get(sessionId);
+    const row = getSyncState.get(syncStateRow, sessionId);
     if (row && row.file_size === stat.size) {
       result.sessionsSkipped++;
       continue;
@@ -287,10 +286,13 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
     const buckets = await parseSessionUsage(filePath);
 
     // Upsert within a transaction
-    const txn = db.transaction(() => {
+    db.transaction(() => {
       deleteUsage.run(sessionId);
       for (const [key, bucket] of buckets) {
-        const [date, model] = key.split("\t");
+        // Keys are `${date}\t${model}` (parseSessionUsage).
+        const tab = key.indexOf("\t");
+        const date = key.slice(0, tab);
+        const model = key.slice(tab + 1);
         upsertUsage.run(
           sessionId, task, date, model,
           bucket.inputTokens, bucket.outputTokens,
@@ -300,7 +302,6 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
       }
       upsertSync.run(sessionId, stat.size);
     });
-    txn();
 
     result.sessionsProcessed++;
   }
@@ -313,7 +314,7 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
     // A box that has never run Codex has no Codex ledger.
   }
   const codexSyncKey = "__beebox_codex_turn_ledger__";
-  if (codexSize !== null && getSyncState.get(codexSyncKey)?.file_size !== codexSize) {
+  if (codexSize !== null && getSyncState.get(syncStateRow, codexSyncKey)?.file_size !== codexSize) {
     const codexEntries = await readCodexTurnUsage(boxRoot);
     const sessions = new Set(codexEntries.map((entry) => entry.sessionId));
     const buckets = new Map<string, UsageBucket & { sessionId: string; task: string; date: string; model: string }>();
@@ -354,7 +355,7 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
         );
       }
       upsertSync.run(codexSyncKey, codexSize);
-    })();
+    });
     result.sessionsProcessed += sessions.size;
   }
 
@@ -362,14 +363,18 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
   return result;
 }
 
+const syncStateRow = z.object({ file_size: z.number() });
+
 /**
- * Run an arbitrary SQL query against the usage database.
+ * Run an arbitrary SQL query against the usage database. Read-only: a write
+ * fails, and a statement that returns no rows (ATTACH, PRAGMA assignments)
+ * is refused before it runs.
  */
 export function queryUsage(boxRoot: string, sql: string): unknown[] {
   const db = openDb(boxRoot);
   try {
-    const stmt = db.prepare(sql);
-    return stmt.all();
+    db.exec("PRAGMA query_only = ON");
+    return db.prepare(sql).allUnchecked();
   } finally {
     db.close();
   }

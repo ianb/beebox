@@ -12,8 +12,8 @@ pnpm 10 workspaces across `beebox`, its frontend, `tap-check`,
 
 The backend is Fastify 5 with tRPC 11, including WebSocket subscriptions; raw
 Fastify routes are reserved for transports that do not fit tRPC. Zod 4 validates
-untrusted boundaries. SQLite through `better-sqlite3` backs usage accounting,
-the event bus, box packaging, and hub health. The frontend is React 18 with
+untrusted boundaries. SQLite through Node's built-in `node:sqlite` (wrapped by
+`src/core/sqlite.ts`) backs usage accounting and the event bus. The frontend is React 18 with
 Vite, TanStack Query and Router, XState 5, and Tailwind. Markdoc renders card
 markdown. Tests run on tap, with the `tap-check` plugin (`t.check`) layered on top.
 
