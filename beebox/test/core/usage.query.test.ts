@@ -4,7 +4,7 @@
 // it must not change the usage database. A write fails, and a statement that
 // returns no rows (ATTACH, PRAGMA assignments) is refused before it runs, as
 // better-sqlite3's `.all()` refused it before the move to node:sqlite
-// (docs/plans/node-sqlite.md).
+// (docs/implemented-plans/node-sqlite.md).
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { queryUsage } from "../../src/core/usage.js";

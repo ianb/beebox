@@ -1,5 +1,5 @@
 /**
- * The one place beebox opens SQLite (docs/plans/node-sqlite.md). It wraps
+ * The one place beebox opens SQLite (docs/implemented-plans/node-sqlite.md). It wraps
  * `node:sqlite` with what the event bus and usage accounting need:
  * better-sqlite3's 5 s busy timeout, WAL on writable opens, a synchronous
  * `transaction()`, and rows validated by a zod schema instead of cast.

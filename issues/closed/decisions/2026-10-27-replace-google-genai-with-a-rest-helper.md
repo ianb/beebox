@@ -28,4 +28,4 @@ decision before the swap:
   example `GeminiEmptyResponseError`), and whether any retry the SDK does must
   be kept.
 
-Inventory row: [dev/dependency-inventory-2026-10.md](../../dev/dependency-inventory-2026-10.md).
+Inventory row: [dev/dependency-inventory-2026-10.md](../../../dev/dependency-inventory-2026-10.md).

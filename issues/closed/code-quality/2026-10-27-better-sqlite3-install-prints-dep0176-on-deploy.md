@@ -1,11 +1,14 @@
 ---
 title: "better-sqlite3's install script prints a Node DEP0176 warning on deploy"
-workstream: unattached
+workstream: dep-reduction
+resolution: implemented
 area: deploy
 labels: [deploy, noise, dependencies]
 filed-by: agent
 discovered-in: dep-reduction — deploy log for 11e6c5bfa, 2026-10-27
 ---
+
+Closed: better-sqlite3 was removed (commit b3ad8cc08, node:sqlite plan), so its install script no longer runs.
 
 When a deploy reinstalls dependencies (lockfile change), the log shows:
 

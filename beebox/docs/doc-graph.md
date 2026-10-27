@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-27T19:21:33Z
-Total documents: 588
+Generated: 2026-10-27T20:28:42Z
+Total documents: 590
 
 ## Issues
 
@@ -46,6 +46,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/moved-card-forwarding.md** — "Follow a card after its path moves" (213 lines) · shipped history · implemented
 - **docs/implemented-plans/named-places.md** — "Named Places (`place` cards + `bbx location mark`)" (474 lines) · shipped history · implemented
 - **docs/implemented-plans/native-hq-fallback-resilience.md** — "Native HQ fallback resilience" (193 lines) · shipped history · implemented
+- **docs/implemented-plans/node-sqlite.md** — "Replace better-sqlite3 with node:sqlite" (280 lines) · shipped history · implemented
 - **docs/implemented-plans/normalize-chat-links.md** — "Normalize chat/card links" (707 lines) · shipped history · implemented
 - **docs/implemented-plans/on-demand-image-thumbnails.md** — "On-demand image thumbnails" (254 lines) · shipped history · implemented
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (343 lines) · shipped history · implemented
@@ -98,6 +99,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -3509,6 +3511,7 @@ Referenced by:
 - docs/development/workflow.md:5 (mention) — services](technologies.md).
 - docs/implemented-plans/doc-structure-development.md:64 (mention) — | `technologies.md` | `development/technologies.md` |
 - docs/implemented-plans/doc-structure-install-server.md:174 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
+- docs/implemented-plans/node-sqlite.md:182 (mention) — 7. Update the current docs: `beebox/docs/development/technologies.md:15`,
 - docs/implemented-plans/purge-agent-doctest.md:67 (mention) — `beebox/docs/development/technologies.md`, `site/docs/dev/README.md`,
 - ../issues/docs-and-chores/2026-10-17-public-provider-list-drifts-from-code.md:13 (mention) — `beebox/docs/development/technologies.md` ("AI services used"). Page
 - ../research/fabric-review.md:96 (mention) — | Subprocessor list that names one vendor while the product offers ten; training on content unless the person opts out |
@@ -6102,6 +6105,16 @@ References:
 - → docs/plans/interface-as-cards.md (mention)
 - → docs/landmarks.md (mention)
 
+#### docs/implemented-plans/node-sqlite.md **[ORPHAN]**
+
+Title: "Replace better-sqlite3 with node:sqlite" | 280 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/code-quality/2026-10-27-better-sqlite3-install-prints-dep0176-on-deploy.md (frontmatter)
+- → ../issues/code-quality/2026-10-25-dependency-reduction-sweep.md (frontmatter)
+- → docs/development/technologies.md (mention)
+- → docs/server/health-checks.md (mention)
+
 #### docs/implemented-plans/normalize-chat-links.md **[ORPHAN]**
 
 Title: "Normalize chat/card links" | 707 lines | shipped history | implemented
@@ -8100,7 +8113,7 @@ Referenced by:
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:80 (mention) — gotcha `docs/install/developer.md` has to warn about — a real argument for a
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/install/developer.md`, `docs/install/docker.md`, `docs/install/agent.md`
 - ../issues/features/2026-07-19-installation-remaining-work.md:16 (mention) — - From-source developer install: `beebox/docs/install/developer.md`,
-- ../issues/features/2026-08-25-shellcheck-shell-in-box-cards.md:39 (mention) — developer install lists (`docs/install/developer.md:32,36`) — today only the
+- ../issues/features/2026-08-25-shellcheck-shell-in-box-cards.md:40 (mention) — `docs/install/developer.md` names it. Still open: add it to deploy.sh's
 
 References:
 - → docs/install/docker.md (link)
@@ -10106,7 +10119,7 @@ References:
 
 #### docs/server/boxes.md
 
-Title: "Boxes on the server" | 304 lines | current reference
+Title: "Boxes on the server" | 306 lines | current reference
 
 Referenced by:
 - README.md:106 (link) — - [`docs/server/boxes.md`](docs/server/boxes.md) — provisioning a box behind a multi-box hub
@@ -10196,6 +10209,7 @@ Referenced by:
 - docs/implemented-plans/drive-docs-api-health.md:116 (mention) — - `docs/server/health-checks.md` gets a `google-docs-api` section, and its stale claim that connector episodes send push
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:408 (mention) — `deploy/README.md`, and `docs/server/health-checks.md`.
+- docs/implemented-plans/node-sqlite.md:184 (mention) — dated history, such as `health-checks.md` and the `health.ts` incident
 - docs/implemented-plans/tailscale-expose-and-protect.md:408 (mention) — on the server plus a short runbook note in `docs/server/health-checks.md`'s style
 - docs/implemented-plans/top-nav-ia.md:451 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/server/health-checks.md`); Overview
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
@@ -10235,7 +10249,7 @@ Referenced by:
 - docs/plans/migration-reliability.md:761 (link) — [migrations](../cards/migrations.md), [server operations](../server/operations.md),
 - docs/reports/git-annex-conversion-2026-08-01.md:13 (link) — > [`../server/operations.md`](../server/operations.md) for current operations,
 - docs/server.md:18 (link) — | [Operations](server/operations.md) | Connecting, running `bbx` on the server, scripts that run there, diagnostics, the
-- docs/server/boxes.md:303 (link) — and run box commands as that user next time ([operations](operations.md)).
+- docs/server/boxes.md:305 (link) — and run box commands as that user next time ([operations](operations.md)).
 - docs/server/health-checks.md:56 (link) — - `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the s
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:14 (mention) — only and proxies to `127.0.0.1:3210` (`deploy/` + `docs/server/operations.md`).
@@ -10262,7 +10276,7 @@ Referenced by:
 - docs/implemented-plans/box-backups.md:83 (mention) — - `beebox/docs/server/provisioning.md:145-147`: *“A Hetzner snapshot of the server does not include a volume”* holding p
 - docs/implemented-plans/doc-structure-install-server.md:80 (mention) — | `deploy/README.md` intro, Prerequisites, Setup, create-server, setup-server, Server layout, Box package installs, Syst
 - docs/server.md:14 (link) — | [Provisioning](server/provisioning.md) | Creating and setting up the host: prerequisites, the provisioners, server lay
-- docs/server/boxes.md:140 (link) — by its own user `bbx-<name>` ([provisioning](provisioning.md#server-layout)).
+- docs/server/boxes.md:142 (link) — by its own user `bbx-<name>` ([provisioning](provisioning.md#server-layout)).
 - docs/server/deploying.md:94 (link) — [provisioning](provisioning.md#server-layout)). The deploy first checks that
 - docs/server/operations.md:7 (link) — Reference for the running beebox server (production at `box.example.com`). Provisioning is [its own page](provisioning.m
 - ../issues/closed/bugs/2026-10-25-feedback-review-collect-reads-the-retired-box-path.md:33 (mention) — `feedback-review/run-on-server.ts`; the layout is `docs/server/provisioning.md`
@@ -10898,6 +10912,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
+
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 21 lines
+
+No references in or out.
 
 ### src/frontend/public/earcons/
 

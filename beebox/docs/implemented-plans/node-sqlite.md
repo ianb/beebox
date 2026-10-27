@@ -1,9 +1,9 @@
 ---
 title: "Replace better-sqlite3 with node:sqlite"
-status: draft
+status: implemented
 workstream: dep-reduction
 issues:
-  - ../../../issues/code-quality/2026-10-27-better-sqlite3-install-prints-dep0176-on-deploy.md
+  - ../../../issues/closed/code-quality/2026-10-27-better-sqlite3-install-prints-dep0176-on-deploy.md
   - ../../../issues/code-quality/2026-10-25-dependency-reduction-sweep.md
 ---
 # Replace better-sqlite3 with node:sqlite

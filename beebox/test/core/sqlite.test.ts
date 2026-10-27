@@ -1,7 +1,7 @@
 // # The SQLite wrapper
 //
 // `core/sqlite.ts` is the one place beebox opens SQLite
-// (docs/plans/node-sqlite.md). It carries over better-sqlite3's behavior the
+// (docs/implemented-plans/node-sqlite.md). It carries over better-sqlite3's behavior the
 // event bus and usage accounting relied on: a 5 s busy timeout, WAL on
 // writable opens, synchronous transactions, numeric write results, and
 // `.all()` refusing a statement that returns no rows. Rows are validated by a
