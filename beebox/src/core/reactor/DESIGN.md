@@ -17,7 +17,7 @@ The reactor is the main orchestration loop that turns pending job cards into com
   │     │  b. generateDocs (refresh agent docs)    │ │
   │     │  c. findJobCards (scan _bookkeeping/jobs/)         │ │
   │     │  d. Agent processing (batch)             │ │
-  │     │  e. Count remaining → loop or stop       │ │
+  │     │  e. Count processed among those sent     │ │
   │     └──────────────────────────────────────────┘ │
   │  3. bbx finalize (flush outbound)                 │
   │  4. Release lock                                 │
@@ -29,7 +29,15 @@ The reactor is the main orchestration loop that turns pending job cards into com
 
 ### Batch jobs (default)
 
-All pending jobs are described in a single prompt and processed by one agent session. The agent works through them sequentially, calling `bbx finish` after each. This is efficient for small, independent jobs — one session startup cost amortized across many jobs.
+The pending jobs that fit the prompt budget are described in a single prompt and processed by one agent session. The agent works through them sequentially, calling `bbx finish` after each. This is efficient for small, independent jobs — one session startup cost amortized across many jobs.
+
+The prompt is bounded (a 300-item intake job once made a 3 MB prompt the model refused):
+
+- **Per job:** refs are pasted in order up to `JOB_INLINE_BUDGET_BYTES` (40 KB); the ref that would cross it and every ref after it are listed under "Not pasted in (open these with your tools)" with their sizes.
+- **Per batch:** `selectBatch` measures each choice on the assembled prompt, framing and separators included, against `BATCH_PROMPT_BUDGET_BYTES` (160 KB). The oldest job (discovery order: normal before low, oldest first) is always sent: in full, else with every ref listed, else given by path (its card named, with an instruction to open it). Later jobs go first-fit; one that does not fit is logged `deferred (prompt budget)` and waits. A prompt still over the budget (one type's instructions alone exceeding it) throws `BatchPromptTooLargeError` before any session.
+- **Within a run:** a cycle counts processed jobs among those it sent, and later cycles skip jobs an earlier cycle sent, so each cycle takes the next jobs. The run stops when nothing unsent remains or a session fails.
+
+Low-priority jobs come after every normal one, so while normal work fills every batch they wait: a stated limit, with no fairness rule.
 
 **File:** `batch-jobs.ts`
 
@@ -61,11 +69,11 @@ Jobs with no `connector` (question follow-ups, contains backfill, full-wakeup an
 
 The reactor builds two prompts for the agent:
 
-- **System prompt** tells the agent what context it already has (job card content, referenced files, schema instructions, rules files) so it doesn't waste turns re-reading things. This is important because Claude Code auto-loads AGENTS.md and rules files — the agent needs to know it already has this information.
+- **System prompt** tells the agent what context it already has (job card content, the referenced files that were pasted, schema instructions, rules files) so it doesn't waste turns re-reading things, and that it must open a listed ref or a job given by path itself. This is important because Claude Code auto-loads AGENTS.md and rules files — the agent needs to know it already has this information.
 
 - **User prompt** lists the actual jobs to process with their card content (frontmatter + body), inlined referenced files (threads, items), and schema-specific processing instructions.
 
-Job descriptions inline referenced files (from the job card's `thread.ref` field and each `items[].ref` entry) and look up schema-defined processing instructions for the job's card type. This gives the agent everything it needs in the initial prompt.
+Job descriptions inline referenced files (from the job card's `thread.ref` field and each `items[].ref` entry) within the per-job budget, list the rest by path, and look up schema-defined processing instructions for the job's card type.
 
 **File:** `prompts.ts`
 

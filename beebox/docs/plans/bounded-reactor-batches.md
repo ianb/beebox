@@ -261,10 +261,15 @@ past the cap go to a new job with the same key.
   (`Queue scan intake: <k> job(s)`, trailer `Created-By: scan-import`) and
   returns `string[] | null`. Both callers print `Intake jobs:` with the list
   (or the existing "not created" line) and return `intakeJobPaths` in their
-  `data` in place of `intakeJobPath`. A failure to commit is caught and
-  logged like a failure to queue: the import has already landed, and the next
-  wakeup's step 4b re-jobs the items (the existing reason at
-  `session-discard.ts:81-86`).
+  `data` in place of `intakeJobPath`. **A failure to commit** (round-2 review
+  finding 1) is caught and logged, and the job paths it wrote are put back as
+  `HEAD` has them: a new card is removed, an appended card loses the append
+  (`git checkout HEAD --` under the box git lock). Step 4b alone would not
+  recover: it counts every job's refs as held (`job-refs.ts:38`), and the job
+  check skips a dirty job, so the items would wait for nothing. Put back, they
+  are unjobbed inbox cards, and the next wakeup's step 4b jobs and commits
+  them. (Retrying the commit was the alternative; a commit refused by the
+  box's hook fails again.)
 - Wordless filing already commits the returned job (`filing-sweep.ts:86-88`);
   it stages the returned list.
 
@@ -307,7 +312,10 @@ job of any size.
   list, with the same `connector` and `priority` and a count-derived
   description, at the stable name `<original base>-part-NN.intake.job.card`.
   A chunk file that already exists is left as it is (it is from an
-  interrupted split, and may since have received appended items). Then the
+  interrupted split, and may since have received appended items). Each chunk
+  is published with `writeFileAtomic` (`beebox/src/lib/atomic-write.ts`), so
+  a partial chunk exists only as a temp sibling, never under its final name
+  (round-2 review finding 2): an existing chunk is a complete one. Then the
   original is deleted. The names start with the original's stamp, so the
   chunks keep the original job's place in the oldest-first order
   (`job-discovery.ts:103-109`).
@@ -357,11 +365,14 @@ job, can be several hundred KB.
   of a job: its header, a line `This job's card is too large to paste
   (<size>). Open it before you start: <path>`, and its type's instructions.
 - **A hard limit on the assembled prompt** (review finding 2). New pure
-  `selectBatch(jobs, { framingBytes, budget })` in `batch-jobs.ts`, called by
-  `processBatchJobs`. `framingBytes` is the size of
-  `buildReactorUserPrompt` with no job descriptions (the ambient line, the
-  "Please process" line, the closing line, and the per-job list overhead).
-  Jobs arrive in discovery order (normal before low, oldest first).
+  `selectBatch(jobs, { assemble, budget })` in `batch-jobs.ts`, called by
+  `processBatchJobs`. `assemble` builds the user prompt from the chosen
+  descriptions (`buildReactorUserPrompt` with its ambient line), and each
+  choice is measured on the prompt it would produce, so the framing, the job
+  count in the "Please process" line, and the `\n\n` separator between
+  descriptions (`prompts.ts:42-46`) all count (round-2 review finding 3; a
+  fixed `framingBytes` missed the separators). Jobs arrive in discovery order
+  (normal before low, oldest first).
   - The first job is always selected. It is sent in full if that fits the
     budget left; else with all its refs listed; else given by path.
   - Each later job is selected only if its full description fits the budget
@@ -509,6 +520,8 @@ none
 | The agent ignores listed refs and finishes the job | none | the system prompt says to open them; if not, the items stay in the inbox unjobbed and step 4b re-jobs them on the next wakeup | late, not lost |
 | The split stops after writing some chunks | new (interrupted split) | stable names: the next split writes only the missing chunks, then deletes the original | clear (commit history) |
 | A scan import's new jobs are not committed | new (scan caller test) | `queueCommittedSessionIntake` commits every returned path | clear |
+| That commit fails | new (refused commit) | the written job paths are put back as `HEAD` has them; step 4b re-jobs the items | clear (warning) |
+| A chunk write is interrupted | new (interrupted write) | atomic publish: no partial file under a chunk's name | clear |
 | A hand-edited intake job over the cap | new | split on the next wakeup | clear (commit) |
 | A cycle's session fails (API error) | new | the run stops, as today | clear (`job-check run ended`) |
 | The box's model has a short context window | none | unsupported: the reactor needs a long-context model (Prior art) | the session fails, as it would without this plan |
@@ -619,11 +632,14 @@ All `t.check` tests; one claim each, with one example.
 - **Hard limit, huge card**: a 300 KB hand-written job card, alone → the job
   is given by path; the assembled prompt is under 160 KB and contains the
   "too large to paste" line with the path.
-- **Hard limit, framing counted**: with an ambient line, descriptions that
-  would fit 160 KB by themselves but not with the framing → the last one is
-  deferred.
+- **Hard limit, framing and separators counted**: descriptions that would
+  fit 160 KB by themselves but not with the framing, or not with the `\n\n`
+  between them → the last one is deferred.
 - **Post-assembly check**: a type whose instructions alone exceed the budget
-  → typed error, no agent invoked.
+  → typed error, no agent invoked. Shown at scale with the test-only
+  `promptBudget` option (a 1 KB budget against the intake-job instructions):
+  box-local job types' instructions do not reach the batch prompt, and no
+  built-in type's come near 160 KB.
 - **First fit**: descriptions of 100, 60, 30 KB → 100 and 30 selected, 60
   deferred and logged.
 - **Prompt wording**: the system prompt no longer says referenced files need
@@ -636,6 +652,11 @@ All `t.check` tests; one claim each, with one example.
   already written and the original still present → the next split writes
   `-part-06` to `-part-12`, leaves 1 to 5 as they were, deletes the original;
   12 chunks in total.
+- **Interrupted chunk write**: the write of `-part-06` fails partway → no
+  file under that name, the original stays; the next split writes it whole.
+- **Scan commit refused**: a scan's intake commit refused by the box's hook →
+  the appended job is back to its `HEAD` content, the new job is gone, the
+  working tree is clean.
 - **First pass after a split** (job check with a box clock): the original was
   charged; after the split, the next `checkWaitingJobs` sees the chunk paths
   with no entry and starts a run at once.
