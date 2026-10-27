@@ -104,6 +104,13 @@ export interface ChatSendInput extends ChatSendContext {
    * Sticky across queued sends: one composed input marks the combined turn.
    */
   clientComposed?: true;
+  /**
+   * The client's id for this send (the send body's `messageId`), set on a
+   * queued input so `stop()` can name each message it drops. Not carried into
+   * a combined drain turn (`combineQueuedInputs`); the drain keeps the queued
+   * inputs themselves.
+   */
+  messageId?: string;
 }
 
 /**

@@ -261,17 +261,19 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
  * A queued turn is a new root operation. Its input goes back to the front of
  * the queue when the send is refused, when admission closes, or when the run
  * start throws, so the next drain (a turn result, a run close, or the end of
- * maintenance) can deliver it.
+ * maintenance) can deliver it. `send` also gets the queued inputs themselves:
+ * they are out of the queue until the send settles, and a `stop()` in that
+ * time must still be able to name them.
  */
 export function drainSessionQueue(opts: {
   queue: ChatSendInput[];
   paused: boolean;
-  send: (input: ChatSendInput) => Promise<boolean>;
+  send: (input: ChatSendInput, queued: ChatSendInput[]) => Promise<boolean>;
   onError: (error: Error) => void;
 }): void {
   if (opts.paused || opts.queue.length === 0) return;
   const queued = opts.queue.splice(0);
-  void opts.send(combineQueuedInputs(queued)).then((sent) => {
+  void opts.send(combineQueuedInputs(queued), queued).then((sent) => {
     if (!sent) opts.queue.unshift(...queued);
   }).catch((error: unknown) => {
     opts.queue.unshift(...queued);

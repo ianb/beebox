@@ -23,12 +23,21 @@
  * `reconcilePending` it already applies to its own optimistic copies
  * (`frontend/src/machines/chat-shared.ts`). One reconciliation, in one place,
  * rather than a second implementation here that could disagree with it.
+ *
+ * A message the box dropped before the agent got it carries an undelivered
+ * marker (`./undelivered.ts`). It comes back marked `undelivered`, past the
+ * acceptance window, until the person discards it. The bus is not a durable
+ * ledger: its rows last at most 24 hours (startup prunes older ones) and vanish
+ * when an engine update bumps the event-schema generation
+ * (`EVENT_SCHEMA_GENERATION`, `core/event-bus/core.ts`), so a mark lasts no
+ * longer than that.
  */
 
 import type { EventBus } from "../../event-bus/core.js";
 import { attachmentsBlockStart } from "../../../shared/composer-tokens.js";
 import type { SessionEntry } from "../../../cli/lib/session-entry.js";
 import { userIdentity } from "../../../cli/lib/session-entry.js";
+import { readDropMarks } from "./undelivered.js";
 
 /**
  * How far back acceptance still means anything.
@@ -132,7 +141,8 @@ function baselineFor(history: HistoryMarker[], at: number): string[] {
  * Recent user messages this box accepted for `sessionId`, oldest-first.
  *
  * `now` is a parameter rather than a call to the clock so the window is
- * testable without waiting out ten minutes.
+ * testable without waiting out ten minutes. A discarded message is skipped; an
+ * undelivered one is returned whatever its age (see the header).
  */
 export function readAcceptedMessages(
   eventBus: EventBus,
@@ -164,17 +174,20 @@ export function readAcceptedMessages(
 ): AcceptedMessage[] {
   const cutoff = now.getTime() - ACCEPTED_WINDOW_MS;
   const accepted: AcceptedMessage[] = [];
+  const marks = readDropMarks(eventBus);
   for (const event of eventBus.readRecent({ event: "chat-user-message", limit: ACCEPTED_SCAN_LIMIT })) {
     // A row that failed validation on the way out of SQLite is the "unknown"
     // sentinel; every other row was validated against this event's schema.
     if (event.event === "unknown") continue;
-    const { sessionId: eventSessionId, message, timestamp, user: rowUser } = event.data;
+    const { sessionId: eventSessionId, message, timestamp, user: rowUser, messageId, hadImages } = event.data;
     if (message === "") continue;
+    if (messageId !== undefined && marks.discarded.has(messageId)) continue;
+    const undelivered = messageId !== undefined && marks.undelivered.has(messageId);
     if (!matchesSession(eventSessionId, sessionId)) continue;
     const rowEmail = rowUser?.email ?? null;
     if (eventSessionId === null && !matchesUser(rowEmail, viewerEmail)) continue;
     const at = Date.parse(timestamp);
-    if (!Number.isFinite(at) || at < cutoff) continue;
+    if (!Number.isFinite(at) || (!undelivered && at < cutoff)) continue;
 
     // The bus carries the same attributed text the transcript will (the
     // human-input wrapper shell and all), which is what lets the client compare
@@ -202,6 +215,10 @@ export function readAcceptedMessages(
       content,
       ...(user ? { user } : {}),
       ...(userEmail ? { userEmail } : {}),
+      // The client matches its own optimistic copy by this id before text.
+      ...(messageId !== undefined ? { messageId } : {}),
+      ...(undelivered ? { undelivered: true as const } : {}),
+      ...(hadImages === true ? { hadImages: true as const } : {}),
       reconcileKnownUuids: baselineFor(history, at),
     });
   }

@@ -79,6 +79,10 @@ export function createUserMessageSender(
           message: attributed,
           user: user ? { email: user.email, name: user.name } : null,
           timestamp: new Date().toISOString(),
+          // The id lets a later drop mark this row (`chat-user-message-undelivered`);
+          // `hadImages` tells a reloaded page that Resend cannot carry the images.
+          ...(messageId ? { messageId } : {}),
+          ...(images !== undefined && images.length > 0 ? { hadImages: true as const } : {}),
         });
         if (messageId) recordDurableClaim(boxRoot, { messageId, processedMessageIds });
       };
@@ -91,7 +95,8 @@ export function createUserMessageSender(
       // of delivering the copy this request already handed to the session.
       if (chatSession.isBusy()) {
         recordUserMessage();
-        chatSession.enqueue(buildSendInput({ text: attributed, images, channel, cardFields: fields }));
+        // The id rides on the queued input so a `stop()` that drops it can say which message it lost.
+        chatSession.enqueue({ ...buildSendInput({ text: attributed, images, channel, cardFields: fields }), ...(messageId ? { messageId } : {}) });
         return respond({ status: 200, body: { queued: true } });
       }
 
