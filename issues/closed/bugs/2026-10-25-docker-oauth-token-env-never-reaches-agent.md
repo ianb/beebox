@@ -1,12 +1,18 @@
 ---
 title: "Docker's `CLAUDE_CODE_OAUTH_TOKEN` env fallback never reaches the agent subprocess"
-workstream: box-isolation
+workstream: box-isolation-followups
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: box-isolation — review round 6 (codex gpt-6-sol) of the long-lived token change
 labels: [docker, auth]
+resolution: implemented
 ---
+
+**Closed 2026-10-27 (box-isolation-followups).** Option 1: the Docker doc's
+token fallback and the compose comments now point at the `claude-oauth-token`
+secret (`bbx secrets set` and `bbx secrets grant /data/box`, or Admin →
+Secrets), and say an env-file line does not reach the agent.
 
 `beebox/docs/install/docker.md` ("token fallback") and `beebox/docker/compose.yaml`
 tell a headless install to put a `claude setup-token` token in `docker/.env` as
