@@ -3,7 +3,7 @@
 // The scan transport passes HEIC/HEIF bytes through with the MIME type derived
 // from their extension, preserving compatibility with Sharp builds without an
 // HEVC decoder. Other unsupported formats, including AVIF, are converted before
-// the SDK request. This test captures the actual Google GenAI HTTP payload and
+// the request. This test captures the actual Gemini HTTP payload and
 // never contacts a provider.
 
 import { test } from "tap";
@@ -37,8 +37,8 @@ void test("line 18", async (t) => {
 
   const GeminiRequest = z.object({ contents: z.array(z.object({ parts: z.array(z.object({ inlineData: z.object({ data: z.string(), mimeType: z.string() }).optional() })) })) });
   const requestBodies: Array<z.infer<typeof GeminiRequest>> = [];
-  globalThis.fetch = async (_input, init) => {
-    requestBodies.push(GeminiRequest.parse(JSON.parse(String(init?.body))));
+  globalThis.fetch = async (input, init) => {
+    requestBodies.push(GeminiRequest.parse(await new Request(input, init).json()));
     return Response.json({
       candidates: [{ content: { parts: [{ text: JSON.stringify([
           { index: 0, kind: "back", paired_with_index: null, description: "", title: "", rotation: 0, subject_bbox: null, has_text: false, text_blocks: [], date_hint: null, flag_for_review: false, flag_reason: null },

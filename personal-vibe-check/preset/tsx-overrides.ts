@@ -1,8 +1,8 @@
 import type { Linter } from "eslint";
 import { AS_BAN_SELECTORS } from "./enabled-rules.ts";
 
-// eslint-config-agent applies a strict `no-restricted-syntax` selector set to
-// .tsx files. We keep all of it EXCEPT the nullish-coalescing (`??`) ban —
+// The strict `no-restricted-syntax` selector set for .tsx files (formerly
+// eslint-config-agent's). We keep all of it EXCEPT the nullish-coalescing (`??`) ban —
 // `a ?? b` is good idiom (same call as retiring no-optional-chaining), not a
 // smell. The `as`-cast ban stays: treat `as` like Rust's `unsafe` — allowed
 // only when guarded by a justifying `eslint-disable` comment or centralized
@@ -76,14 +76,10 @@ const tsxRestrictedSyntaxNoNullish = [
   },
 ];
 
-// When react:false, .tsx files fall through to eslint-config-agent's strict
-// React profile, which (a) bans `??` via no-restricted-syntax and (b) sets
-// much shorter size budgets (max-lines 100, max-lines-per-function 70) and
-// disables complexity. Both are wrong for .tsx here: JSX/markup is verbose,
-// so .tsx wants the SAME budgets as .ts, not less, and `??` is fine.
-// Override to allow `??` (keeping the `as`/switch selectors) and equalize
-// the size/complexity limits with .ts. (react:true overrides these on .tsx
-// through the main block instead.)
+// When react:false, .tsx files carry the `??`-free selector set, the same
+// size budgets as .ts (JSX/markup is verbose, so .tsx wants the SAME budgets
+// as .ts, not less) and the same complexity limit. (react:true sets these on
+// .tsx through the main block instead.)
 export const tsxOverride: Linter.Config = {
   files: ["**/*.{tsx,jsx}"],
   rules: {
@@ -96,14 +92,5 @@ export const tsxOverride: Linter.Config = {
     // otherwise escape no-shadow entirely. Re-assert it here.
     "no-shadow": "off",
     "@typescript-eslint/no-shadow": "error",
-    // Same gap, opposite direction: these two are in disabledRules,
-    // which `.tsx` never reaches, so eslint-config-agent's base
-    // leaves them ON there. They demand that every top-level
-    // declaration be exported — `const x = 42` is a violation — which
-    // is the inverse of the export-what's-needed rule in
-    // beebox/code-style.md and blocks un-exporting anything in
-    // a `.tsx`. Off here so the rejection actually applies.
-    "class-export/class-export": "off",
-    "required-exports/required-exports": "off",
   },
 };

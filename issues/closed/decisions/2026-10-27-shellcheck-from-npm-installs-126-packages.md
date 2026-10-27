@@ -5,7 +5,10 @@ area: dev-tooling
 labels: [dependencies]
 filed-by: agent
 discovered-in: dep-reduction — dependency inventory, 2026-10-27
+resolution: implemented
 ---
+
+Closed 2026-10-27 on the dep-reduction workstream. Decision: use the system shellcheck. The npm wrapper is gone from the root devDependencies. `bin/precommit-security.ts` and `bin/lib/schedules-lint.ts` run `shellcheck` from PATH and name the install command when it is missing, and `bin/doctor` checks for it. The production server has the apt package (0.9.0, installed 2026-10-27), and `deploy/hetzner/cloud-init.yaml` lists it for new servers. The Mac uses Homebrew's (0.11.0). The deploy's required-tools check does not list it yet; the box-card shell linting feature adds that when server code runs it.
 
 The root devDependency `shellcheck` is an npm wrapper that downloads the
 shellcheck binary. It pulls in 126 transitive packages (7.3 MB that no other

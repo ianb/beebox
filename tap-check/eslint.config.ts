@@ -1,9 +1,8 @@
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 export default [
-  ...vibeCheck({ react: false, ignores: ["**/*.mjs"] }),
+  ...vibeCheck({ react: false, roots: ["src", "test"], ignores: ["**/*.mjs"] }),
   {
     rules: {
-      "no-optional-chaining/no-optional-chaining": "off",
       "default/no-default-params": "off",
       "max-params": ["error", 2],
       "max-lines-per-function": "off",
@@ -15,12 +14,9 @@ export default [
       "security/detect-object-injection": "off",
       "security/detect-bidi-characters": "off",
       "default/no-hardcoded-urls": "off",
-      "custom/jsx-classname-required": "off",
       "no-restricted-syntax": "off",
       "complexity": "off",
       "@typescript-eslint/no-this-alias": "off",
-      "single-export/single-export": "off",
-      "ddd/require-spec-file": "off",
     },
   },
 ];

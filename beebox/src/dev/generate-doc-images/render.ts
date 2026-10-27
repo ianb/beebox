@@ -10,6 +10,7 @@ import { promisify } from "node:util";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { errnoCode, errorMessage } from "../../shared/error-guards.js";
+import { generateContent, type GeminiRequestPart } from "../../services/gemini-rest.js";
 import type { PromptPart } from "./types.js";
 
 const execFileAsync = promisify(execFile);
@@ -18,45 +19,22 @@ export async function generateImage(
   prompt: string | PromptPart[],
   { model, apiKey }: { model: string; apiKey: string },
 ): Promise<Buffer | null> {
-  const { GoogleGenAI } = await import("@google/genai");
-  const ai = new GoogleGenAI({ apiKey });
+  const parts: GeminiRequestPart[] = typeof prompt === "string"
+    ? [{ text: prompt }]
+    : prompt.map((part) => part.type === "text"
+      ? { text: part.text }
+      : { inlineData: { mimeType: part.mimeType, data: part.buffer.toString("base64") } });
 
-  let contents: string | Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>;
-
-  if (typeof prompt === "string") {
-    contents = prompt;
-  } else {
-    contents = prompt.map((part) => {
-      if (part.type === "text") {
-        return { text: part.text };
-      }
-      return {
-        inlineData: {
-          mimeType: part.mimeType,
-          data: part.buffer.toString("base64"),
-        },
-      };
-    });
-  }
-
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
+    apiKey,
     model,
-    contents,
-    config: {
-      responseModalities: ["TEXT", "IMAGE"],
-    },
+    parts,
+    generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
   });
 
-  if (response.candidates && response.candidates.length > 0) {
-    const candidate = response.candidates[0];
-    const content = candidate ? candidate.content : undefined;
-    if (content && content.parts) {
-      for (const part of content.parts) {
-        if ("inlineData" in part && part.inlineData.data) {
-          return Buffer.from(part.inlineData.data, "base64");
-        }
-      }
-    }
+  for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+    const data = part.inlineData?.data;
+    if (data) return Buffer.from(data, "base64");
   }
 
   return null;

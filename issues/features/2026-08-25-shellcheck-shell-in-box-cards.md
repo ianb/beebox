@@ -35,6 +35,7 @@ missing `shellcheck` binary a warning (skip) or a hard error? — the pre-commit
 hook `bbx init` installs runs `bbx validate --pre-commit` on every box commit,
 so a hard error would block box commits on any machine without shellcheck.
 
-Provisioning: add `shellcheck` to `deploy/setup-server.sh:22` and the
-developer install lists (`docs/install/developer.md:32,36`) — today only the
-dev-machine `schedules/` gate needs it, and it is not in either list.
+Provisioning (done 2026-10-27, dep-reduction): the production server has
+apt's shellcheck 0.9.0, `deploy/hetzner/cloud-init.yaml` lists it, and
+`docs/install/developer.md` names it. Still open: add it to deploy.sh's
+required-tools check and to `docker/Dockerfile` when this feature ships.

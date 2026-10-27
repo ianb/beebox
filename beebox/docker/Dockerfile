@@ -218,8 +218,6 @@ RUN printf '%s\n' \
   && pnpm add \
        --allow-build=better-sqlite3 \
        --allow-build=esbuild \
-       --allow-build=@google/genai \
-       --allow-build=protobufjs \
        --allow-build=@googleworkspace/cli \
        /app/beebox.tgz
 

@@ -52,8 +52,6 @@ export class BoxPackageConflictError extends Error {
 export const BOX_BUILT_DEPENDENCIES = [
   "better-sqlite3",
   "esbuild",
-  "@google/genai",
-  "protobufjs",
   "@googleworkspace/cli",
 ];
 

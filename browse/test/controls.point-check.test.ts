@@ -66,15 +66,15 @@ class StubElement extends StubNode {
   }
   matches(selector: string): boolean {
     return selector.split(",").some((part) => {
-      const role = /^\[role="(.+)"\]$/.exec(part);
+      const role = /^\[role="(.+)"]$/.exec(part);
       if (role !== null) return this.attrs.role === role[1];
       if (part === "a[href]") return this.tagName === "A" && "href" in this.attrs;
       return this.tagName === part.toUpperCase();
     });
   }
   closest(selector: string): StubElement | null {
-    for (let e: StubElement | null = this; e !== null; e = e.parentElement) if (e.matches(selector)) return e;
-    return null;
+    if (this.matches(selector)) return this;
+    return this.parentElement?.closest(selector) ?? null;
   }
   checkVisibility(): boolean { return true; }
   scrollIntoView(): void { /* every stand-in box is on screen */ }

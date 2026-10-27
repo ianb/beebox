@@ -35,7 +35,7 @@ const ENTRIES = [
 ];
 
 // ## Targets: bbx- ids in either spelling, refs, and everything else untouched
-void test("Targets: bbx- ids in either spelling, refs, and everything else untouched", async (t) => {
+void test("Targets: bbx- ids in either spelling, refs, and everything else untouched", async () => {
   assert.deepEqual(parseTarget("bbx-nav-profile"), { kind: "id", id: "bbx-nav-profile" });
   assert.deepEqual(parseTarget("#bbx-nav-profile"), { kind: "id", id: "bbx-nav-profile" });
   assert.deepEqual(parseTarget("@e12"), { kind: "ref", ref: "e12" });
@@ -50,7 +50,7 @@ void test("Targets: bbx- ids in either spelling, refs, and everything else untou
 });
 
 // ## Annotate: unique role+name matches get their id appended; ambiguous and unnamed-by-this-engine do not
-void test("Annotate: unique role+name matches get their id appended; ambiguous and unnamed-by-this-engine do not", async (t) => {
+void test("Annotate: unique role+name matches get their id appended; ambiguous and unnamed-by-this-engine do not", async () => {
   const out = annotateSnapshot(SNAPSHOT, ENTRIES);
   const lines = out.text.split("\n");
   assert.equal(lines[1], '  - button "Where you are: Chat" [expanded=false, ref=e7, id=bbx-nav-place]');
@@ -61,7 +61,7 @@ void test("Annotate: unique role+name matches get their id appended; ambiguous a
   assert.equal(lines[8], '  - button "Send" [disabled, ref=e12, id=bbx-composer-send]');
   assert.deepEqual(out.refs["e8"], { role: "button", name: "User", id: null });
   assert.deepEqual(out.refs["e12"], { role: "button", name: "Send", id: "bbx-composer-send" });
-  assert.deepEqual(out.unmatched.sort(), ["e1", "e2", "e4", "e6", "e8", "e9"]);
+  assert.deepEqual(out.unmatched.toSorted(), ["e1", "e2", "e4", "e6", "e8", "e9"]);
 });
 
 // ## Snapshot escaping and rich names agree with the live DOM check
@@ -70,7 +70,7 @@ void test("Annotate: unique role+name matches get their id appended; ambiguous a
 // those escapes before matching the live element, whose `textContent` also needs
 // spaces inserted between block-level children (for example, a title, type badge,
 // path, and snippet in one Search option).
-void test("Snapshot output escapes quotes and backslashes in an accessible name.", async (t) => {
+void test("Snapshot output escapes quotes and backslashes in an accessible name.", async () => {
   const RICH_SNAPSHOT = '- option "A title type path \\"quoted\\" \\\\Inbox" [ref=e20]';
   const rich = annotateSnapshot(RICH_SNAPSHOT, [{ id: "bbx-search-result", role: "option", name: 'A title type path "quoted" \\Inbox' }]);
   assert.equal(rich.text, '- option "A title type path \\"quoted\\" \\\\Inbox" [ref=e20, id=bbx-search-result]');
@@ -78,7 +78,7 @@ void test("Snapshot output escapes quotes and backslashes in an accessible name.
 
 // Escaped control characters must stay on one snapshot line. An unfamiliar
 // upstream escape must leave the snapshot readable rather than throwing.
-void test("Escaped control characters must stay on one snapshot line.", async (t) => {
+void test("Escaped control characters must stay on one snapshot line.", async () => {
   const multilineName = "Line\nwith\ttab";
   const multilineSnapshot = `- button ${JSON.stringify(multilineName)} [ref=e21]`;
   const multiline = annotateSnapshot(multilineSnapshot, []);
@@ -90,7 +90,7 @@ void test("Escaped control characters must stay on one snapshot line.", async (t
 });
 
 // ## Annotate: live lookups fill the gaps and update the ref table
-void test("Annotate: live lookups fill the gaps and update the ref table", async (t) => {
+void test("Annotate: live lookups fill the gaps and update the ref table", async () => {
   const out = annotateSnapshot(SNAPSHOT, ENTRIES);
   const text = applyLiveIds(out, { e8: "bbx-nav-profile", e9: "bbx-panel-close", e1: "not-a-bbx-id" });
   const lines = text.split("\n");
@@ -101,7 +101,7 @@ void test("Annotate: live lookups fill the gaps and update the ref table", async
 });
 
 // ## Renumbering: a ref that changed hands between the last two snapshots is described both ways
-void test("Renumbering: a ref that changed hands between the last two snapshots is described both ways", async (t) => {
+void test("Renumbering: a ref that changed hands between the last two snapshots is described both ways", async () => {
   const user = { role: "button", name: "User", id: "bbx-nav-profile" };
   const heading = { role: "heading", name: "Chat", id: null };
   assert.equal(refRenumbered(user, user), null);
@@ -112,7 +112,7 @@ void test("Renumbering: a ref that changed hands between the last two snapshots 
 });
 
 // ## Check result: anything that is not a well-formed pass is a failure
-void test("Check result: anything that is not a well-formed pass is a failure", async (t) => {
+void test("Check result: anything that is not a well-formed pass is a failure", async () => {
   assert.deepEqual(parseCheckResult('"{\\"ok\\":true,\\"scrolled\\":false}"'), { ok: true, scrolled: false });
   assert.deepEqual(parseCheckResult('{"ok":false,"reason":"disabled","detail":"button#bbx-composer-send"}'), { ok: false, reason: "disabled", detail: "button#bbx-composer-send" });
   assert.deepEqual(parseCheckResult('"{\\"ok\\":true,\\"scrolled\\":true,\\"clickAt\\":{\\"x\\":12.5,\\"y\\":40}}"'), { ok: true, scrolled: true, clickAt: { x: 12.5, y: 40 } });
@@ -122,7 +122,7 @@ void test("Check result: anything that is not a well-formed pass is a failure", 
 });
 
 // ## Geometry: zero-size and off-screen boxes are refused, on-screen passes
-void test("Geometry: zero-size and off-screen boxes are refused, on-screen passes", async (t) => {
+void test("Geometry: zero-size and off-screen boxes are refused, on-screen passes", async () => {
   const vp = { width: 1280, height: 800 };
   assert.equal(judgeBox({ x: 10, y: 10, width: 0, height: 20 }, vp).ok, false);
   assert.equal(judgeBox({ x: -9999, y: 10, width: 50, height: 20 }, vp).ok, false);
@@ -133,7 +133,7 @@ void test("Geometry: zero-size and off-screen boxes are refused, on-screen passe
 });
 
 // ## Target commands: every element-taking command resolves a bbx- id
-void test("Target commands: scrollintoview takes a bbx- id like click does", async (t) => {
+void test("Target commands: scrollintoview takes a bbx- id like click does", async () => {
   // The journey walker prompt teaches `scrollintoview bbx-…`; without this entry the
   // id reached upstream unresolved and failed "Element not found" (F-newcomer, 2026-10-22).
   assert.ok(TARGET_COMMANDS.has("scrollintoview"));
