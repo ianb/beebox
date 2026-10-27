@@ -182,7 +182,7 @@ callers. Don't write a fresh `ssh root@... 'command'` line.
 
 In production, `/api/trpc/debugLog.get` and `/api/trpc/health.check` sit behind the Google OAuth cookie gate — `curl` without a browser cookie gets rejected.
 
-**Bypass** for machine access: if `BBX_DIAG_API_KEY` is set in `/home/beebox/.env`, GET requests to those two endpoints are allowed with an `Authorization: Bearer <key>` header. The debug log returns the tRPC envelope (`{"result":{"data":{"entries":[…]}}}`):
+**Bypass** for machine access: if `BBX_DIAG_API_KEY` is set in `/home/beebox/.env`, GET requests to those two endpoints (and `chat.statusAll`) are allowed with an `Authorization: Bearer <key>` header. The hub passes such a request through without identity, and the box checks the key again against its own copy (`/etc/beebox/box.env`). The debug log returns the tRPC envelope (`{"result":{"data":{"entries":[…]}}}`):
 
 ```bash
 curl -H "Authorization: Bearer $BBX_DIAG_API_KEY" \

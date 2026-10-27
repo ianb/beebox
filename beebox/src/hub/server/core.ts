@@ -50,6 +50,7 @@ import type { BoxSpec } from "../../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import {
   resolveRequestIdentity,
+  isDiagnosticBypassRequest,
   getOwnerEmail,
   HUB_SECRET_HEADER,
   HUB_EMAIL_HEADER,
@@ -128,6 +129,22 @@ function parseSlug(reqPath: string): string | null {
 async function hasMobileAuth(opts: { boxRoot: string | undefined; hubSecret: string; headers: http.IncomingHttpHeaders }): Promise<boolean> {
   if (opts.boxRoot === undefined) return false;
   return boxMobileAuthed({ boxRoot: opts.boxRoot, hubSecret: opts.hubSecret }, opts.headers);
+}
+
+/** A machine bearer that clears the hub's wall for this box and path without a session. */
+async function hasBearerAuth(request: FastifyRequest, opts: { slug: string; reqPath: string; boxRoot: string | undefined }): Promise<boolean> {
+  const { slug, reqPath, boxRoot } = opts;
+  // A scan-upload bearer authorizes ONLY `/<slug>/api/scan/…` (see
+  // ./scan-gate.ts); on any other path this is false and the request falls
+  // through to the wall, which 401s it.
+  return await hasScanAuth({ boxRoot, headers: request.headers, reqPath, slug })
+    // The diagnostic bearer on its whitelisted GET reads (`webapp/auth.ts`):
+    // passed through without identity, and the box checks the key again
+    // against its own copy (`docs/server/operations.md`).
+    || isDiagnosticBypassRequest(request)
+    // The box's own agent token (`core/agent/token.ts`), verified against that
+    // box: a `bbx` command pointed at the hub URL instead of the child's port.
+    || (boxRoot !== undefined && agentAuthed(boxRoot, request.headers.authorization));
 }
 
 async function listMobileAuthorizedBoxes(opts: { boxes: BoxSpec[]; headers: http.IncomingHttpHeaders }): Promise<BoxListing[]> {
@@ -464,15 +481,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const slug = parseSlug(reqPath);
     const mobileAuthed = slug !== null
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), hubSecret: secretFor(slug), headers: request.headers });
-    // A scan-upload bearer authorizes ONLY `/<slug>/api/scan/…` (see
-    // ./scan-gate.ts); on any other path this is false and the request falls
-    // through to the wall below, which 401s it.
-    const scanAuthed = slug !== null
-      && await hasScanAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers, reqPath, slug });
-    // The box's own agent token (`core/agent/token.ts`), verified against that
-    // box: a `bbx` command pointed at the hub URL instead of the child's port.
-    const agentBoxRoot = slug === null ? undefined : boxRootBySlug.get(slug);
-    const perBoxAuthed = mobileAuthed || scanAuthed || (agentBoxRoot !== undefined && agentAuthed(agentBoxRoot, request.headers.authorization));
+    const perBoxAuthed = mobileAuthed
+      || (slug !== null && await hasBearerAuth(request, { slug, reqPath, boxRoot: boxRootBySlug.get(slug) }));
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(request.headers), hubSecret: secretFor(slug), openAccess });
