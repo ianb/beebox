@@ -45,7 +45,7 @@ export async function explainGoogleAuthGap(boxRoot?: string): Promise<string> {
     const legacy = legacySecretPath(boxRoot);
     const where = central === null
       ? `${legacy} (BBX_GOOGLE_TOKENS_FILE is not set in this process)`
-      : `${central} (from BBX_GOOGLE_TOKENS_FILE), or ${legacy}`;
+      : `${central} (${process.env.BBX_GOOGLE_TOKENS_FILE ? "from BBX_GOOGLE_TOKENS_FILE" : "the box user's own file"}), or ${legacy}`;
     const tokens = await loadGoogleTokens(boxRoot);
     if (tokens === null) {
       const seen = (central !== null && existsSync(central)) || existsSync(legacy);

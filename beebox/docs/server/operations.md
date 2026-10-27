@@ -86,11 +86,11 @@ deploy/prod-ssh "su - beebox -c 'bbx engine hub add-box --help'"
 
 > ⚠️ **Source `/etc/beebox/box.env` for box commands.** The box units load it
 > (`EnvironmentFile=`), but an ad-hoc SSH invocation does **not** inherit it.
-> Most visibly, `bbx health`'s connector-presence probe reads
-> `BBX_GOOGLE_TOKENS_FILE` (the centralized Google-OAuth token path) from that
-> env; without it the probe falls back to a legacy `google.secret.json` that
-> prod doesn't use and reports a **false** `blocked: missing connectors` for
-> `google`/`gmail` — even when both are syncing fine. Always source it so an
+> Most visibly, `BBX_UNIT_HOST=1` from that file is what points Google at the
+> box user's own token file (`~/.config/beebox/google-tokens.json`); without
+> it `bbx health`'s connector-presence probe looks only for a legacy
+> `google.secret.json` and reports a **false** `blocked: missing connectors`
+> for `google`/`gmail` — even when both are syncing fine. Always source it so an
 > ad-hoc check sees what the services see:
 >
 > ```bash
