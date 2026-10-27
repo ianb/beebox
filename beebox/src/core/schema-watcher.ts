@@ -17,8 +17,10 @@
  *
  * Caveat: this watches the `src/schemas` directory itself (recursively), which
  * catches edits/adds/removals once the dir exists, but not the dir being
- * *created* (a box's first-ever local schema in a previously-empty box).
- * That one-time case is covered by the manual reload endpoint or the next
+ * *created* (a box's first-ever local schema in a previously-empty box), and
+ * not a replacement of the dir (deleted and made again: the watch stays on the
+ * old directory). chokidar, which this replaced, missed both too.
+ * Both are covered by the manual reload endpoint or the next
  * daily recycle — not worth watching the whole `config/` tree for.
  */
 
