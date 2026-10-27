@@ -209,7 +209,8 @@ function collectRemoteFeedback(sshTarget: string, errors: string[]): FeedbackFil
       asUser: user,
       script: [
         // A box root this user cannot reach is an error, not an empty inbox.
-        `test -d ${shellQuote(box.root)} || { echo ${shellQuote(`box root ${box.root} is not a readable directory`)} >&2; exit 1; }`,
+        // Every box has `.beebox/`; reading it needs search permission on the root.
+        `test -r ${shellQuote(`${box.root}/${BOX_MARKER}`)} || { echo ${shellQuote(`box root ${box.root} is not a readable box`)} >&2; exit 1; }`,
         `test -d ${shellQuote(feedbackDir)} || exit ${NO_FEEDBACK_DIR}`,
         `find ${shellQuote(feedbackDir)} -mindepth 1 -maxdepth 1 -type f -print`,
       ].join("\n"),

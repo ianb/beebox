@@ -127,7 +127,7 @@ function fakeServer(): { root: string; env: NodeJS.ProcessEnv; log: string; boxR
       b: { path: "/var/lib/beebox/b/box", socket: "/run/beebox/b.sock" },
     },
   }));
-  fs.mkdirSync(path.join(root, "var", "b", "box"), { recursive: true });
+  fs.mkdirSync(path.join(root, "var", "b", "box", ".beebox"), { recursive: true });
   const boxRoot = path.join(root, "var", "a", "box");
   fs.mkdirSync(path.join(boxRoot, ".beebox"), { recursive: true });
   fs.writeFileSync(path.join(boxRoot, ".beebox", "box.json"), JSON.stringify({ version: "1.0.0", shapeVersion: 3 }));
@@ -182,10 +182,13 @@ test("resolves a server box's card as that box's user", () => {
 test("a box root its user cannot reach fails the scan instead of reading as an empty inbox", () => {
   const server = fakeServer();
   fs.writeFileSync(path.join(server.boxRoot, "_config", "feedback", "observation.doc.card"), "Observation\n");
-  fs.rmSync(path.join(server.root, "var", "b"), { recursive: true });
+  // Box b exists but its user cannot search it (as with a wrong owner on the server).
+  const rootB = path.join(server.root, "var", "b", "box");
+  fs.chmodSync(rootB, 0o600);
   const result = runRemote(server, "--resolve-all");
+  fs.chmodSync(rootB, 0o755);
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /Cannot scan \/var\/lib\/beebox\/b\/box\/_config\/feedback as bbx-b .*box root \S+\/b\/box is not a readable directory/);
+  assert.match(result.stderr, /Cannot scan \/var\/lib\/beebox\/b\/box\/_config\/feedback as bbx-b .*box root \S+\/b\/box is not a readable box/);
   assert.ok(fs.existsSync(path.join(server.boxRoot, "_config", "feedback", "observation.doc.card")));
 });
 
