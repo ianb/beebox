@@ -13,10 +13,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { generateContext } from "../webapp/context.js";
-import { notifyBoxholder, notifyChannels } from "./notify-boxholder.js";
+import { describeDeliveries, inProcessSender, notificationSent, type NotifySender } from "./notify-boxholder.js";
 import { parseTarget, type Target } from "./notification/target.js";
 import type { PushService } from "../services/push.js";
-import { errnoCode } from "../shared/error-guards.js";
+import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import { z } from "zod";
 
 const LATCH_PATH = ".beebox/notified-questions.json";
@@ -65,11 +65,19 @@ export interface QuestionAlertResult {
   notified: string[];
 }
 
+/**
+ * Notify about the newly-pending questions through `sender` (default this
+ * process, with `push`). Reach is read first; a throw there propagates and
+ * nothing is saved. The latch is saved after the send: a send that did not go
+ * out (`notificationSent`) is logged and its questions stay out of the latch,
+ * so the next finalize announces them again until they leave pending.
+ */
 export async function checkPendingQuestionsAndNotify(
   boxRoot: string,
-  opts: { now: Date; push?: PushService },
+  opts: { now: Date; push?: PushService; sender?: NotifySender },
 ): Promise<QuestionAlertResult | null> {
-  const channels = await notifyChannels(boxRoot, { services: { push: opts.push } });
+  const sender = opts.sender ?? inProcessSender(boxRoot, { push: opts.push });
+  const channels = await sender.reach();
   if (!channels.webPush && !channels.apns) return null;
 
   const { pendingQuestions } = await generateContext(boxRoot);
@@ -86,9 +94,12 @@ export async function checkPendingQuestionsAndNotify(
   const prunedNudged = Object.fromEntries(
     Object.entries(latch.nudged).filter(([p]) => pendingPaths.includes(p)),
   );
-  await saveQuestionLatch(boxRoot, { paths: pendingPaths, nudged: prunedNudged });
+  const save = (paths: string[]): Promise<void> => saveQuestionLatch(boxRoot, { paths, nudged: prunedNudged });
 
-  if (fresh.length === 0) return null;
+  if (fresh.length === 0) {
+    await save(pendingPaths);
+    return null;
+  }
 
   const title = fresh.length === 1
     ? "❓ A question needs an answer"
@@ -102,11 +113,25 @@ export async function checkPendingQuestionsAndNotify(
   // A dot badges the phone; a question that blocks something with a date
   // also sends a muted notification.
   const loudness = fresh.some((q) => q.urgency === "time-bound") ? "quiet" : "dot";
-  await notifyBoxholder(boxRoot, {
-    intent: { title, body, target, loudness, source: "question-alert" },
-    now: opts.now,
-    services: { push: opts.push },
-  });
-
+  const notSent = await notSentDetail(() =>
+    sender.send({ intent: { title, body, target, loudness, source: "question-alert" }, now: opts.now }),
+  );
+  if (notSent !== null) {
+    const freshPaths = new Set(fresh.map((q) => q.path));
+    await save(pendingPaths.filter((p) => !freshPaths.has(p)));
+    console.warn(`Question alert for ${fresh.length} question(s) not sent: ${notSent}`);
+    return null;
+  }
+  await save(pendingPaths);
   return { notified: fresh.map((q) => q.path) };
+}
+
+/** Null when the send went out; else what happened, for the log line. */
+export async function notSentDetail(send: () => ReturnType<NotifySender["send"]>): Promise<string | null> {
+  try {
+    const result = await send();
+    return notificationSent(result) ? null : describeDeliveries(result);
+  } catch (e) {
+    return errorMessage(e);
+  }
 }
