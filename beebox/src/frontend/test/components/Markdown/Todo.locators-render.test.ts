@@ -16,7 +16,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { markdocConfig } from "../../../../shared/markdoc-config/tags/core.js";
 import { assignLocators, stampLocators } from "../../../../shared/todo-locators.js";
 import { extractBodyTodos } from "../../../../core/todo/extract/body.js";
-import { makeTodoComponents } from "../../../src/components/Markdown/Todo.js";
+import { TodoBlock, TodoInline } from "../../../src/components/Markdown/Todo.js";
+import { MarkdownRenderContext } from "../../../src/lib/markdown-render.js";
 
 globalThis.React = React;
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
@@ -86,8 +87,8 @@ void test("locator is not a declared attribute, so a hand-written one is dropped
 void test("Rendered with the todo components, each todo's element names its locator, whi...", async (t) => {
   const ast = parse(body);
   stampLocators(assignLocators(ast, 4));
-  const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath: "Porch.doc.card" });
-  const html = renderToStaticMarkup(React.createElement(React.Fragment, null,
+  const render = { onNavigate: () => {}, basePath: undefined, boxSlug: undefined, onJumpToQuote: undefined, openImageLink: undefined, cardPath: "Porch.doc.card" };
+  const html = renderToStaticMarkup(React.createElement(MarkdownRenderContext.Provider, { value: render },
     renderers.react(transform(ast, markdocConfig), React, { components: { TodoInline, TodoBlock } })));
   t.check([...html.matchAll(/data-todo-locator="([^"]*)"/g)].map((m) => m[1]).join(" "), "7 7#2 9");
 });

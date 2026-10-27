@@ -7,11 +7,12 @@
 import { useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { Markdown, type MarkdownComponentOverrides } from "../Markdown/body";
+import { useMarkdownRender } from "../../lib/markdown-render";
 import { Image } from "../ui/Image";
 import { VideoEmbed } from "../ui/VideoEmbed";
 import { detectVideoEmbed } from "../../lib/video-url";
 import { FileView } from "../FileView/view";
-import { externalImageProxyUrl, resolveContentTarget, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
+import { externalImageProxyUrl, resolveContentTarget, resolveImageSrc, type ViewTarget } from "../../lib/view-url";
 import { isUrlRef } from "@shared/ref-path/core";
 import { useBustedImageSrc } from "../../lib/file-version";
 import { transformedResolvedImageUrl } from "../../lib/image-transform-url";
@@ -133,56 +134,44 @@ function ChatParagraph({ children }: { children?: React.ReactNode }) {
   return <div className="bbx-paragraph">{children}</div>;
 }
 
-function makeChatMarkdownComponents(
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void,
-  { boxSlug }: { boxSlug: string | undefined },
-): MarkdownComponentOverrides {
-  // `![…](…)` is the embed syntax. An image src embeds an image (chat sizing +
-  // lightbox); any other in-box path embeds that card/file inline (frameless)
-  // via its own viewer.
-  function ChatImg({ src, alt }: { src?: string; alt?: string }) {
-    // An embedded card is a document: a selection inside it attaches with the
-    // card's own ref, not as chat-transcript text (SelectionCapture nesting).
-    const captureSelection = useConversationSelectionCapture();
-    const video = src ? detectVideoEmbed(src) : null;
-    if (video !== null) {
-      return <VideoEmbed embedUrl={video.embedUrl} title={alt || ""} className="mx-auto" />;
-    }
-    if (!src) return <ChatInlineImage src="" alt={alt || ""} />;
-    // Box-root base (`undefined`), like every other path in a chat message.
-    const target = isUrlRef(src) || isImagePath(src) ? null : resolveContentTarget(undefined, src);
-    if (target !== null) {
-      // Frameless embed (no chat header/border): the renderer owns its
-      // appearance and the caption, so an embedded image card reads like a
-      // plain captioned image. To open a card in the sidebar, use a link.
-      return (
-        <FileView
-          path={target.path}
-          mode="embed"
-          rendererName={target.viewer}
-          viewState={target.viewState}
-          onNavigate={onNavigate}
-          onAddSelection={captureSelection}
-          params={target.params}
-          {...(alt !== undefined && alt !== "" ? { caption: alt } : {})}
-        />
-      );
-    }
-    // Also the fall-through for an embed path that escapes the box root
-    // (`resolveContentTarget` → null): `resolveImageSrc` returns an empty src
-    // for it, so it renders as a broken image rather than silently embedding
-    // some other card.
-    const resolved = resolveImageSrc(src, { boxSlug, basePath: undefined });
-    return <ChatInlineImage src={resolved} alt={alt || ""} />;
+// `![…](…)` is the embed syntax. An image src embeds an image (chat sizing +
+// lightbox); any other in-box path embeds that card/file inline (frameless)
+// via its own viewer.
+function ChatImg({ src, alt }: { src?: string; alt?: string }) {
+  const { onNavigate, boxSlug } = useMarkdownRender();
+  // An embedded card is a document: a selection inside it attaches with the
+  // card's own ref, not as chat-transcript text (SelectionCapture nesting).
+  const captureSelection = useConversationSelectionCapture();
+  const video = src ? detectVideoEmbed(src) : null;
+  if (video !== null) {
+    return <VideoEmbed embedUrl={video.embedUrl} title={alt || ""} className="mx-auto" />;
   }
-  // No `Link` override: the shared `makeLink` (with a box-root base and
-  // onNavigate wired to the companion pane) already renders a plain-path link
-  // that opens in the sidebar on click, an external link, and the retired-`view:`
-  // legacy marker.
-  return {
-    Para: castMarkdownComponent(ChatParagraph),
-    Img: castMarkdownComponent(ChatImg),
-  };
+  if (!src) return <ChatInlineImage src="" alt={alt || ""} />;
+  // Box-root base (`undefined`), like every other path in a chat message.
+  const target = isUrlRef(src) || isImagePath(src) ? null : resolveContentTarget(undefined, src);
+  if (target !== null) {
+    // Frameless embed (no chat header/border): the renderer owns its
+    // appearance and the caption, so an embedded image card reads like a
+    // plain captioned image. To open a card in the sidebar, use a link.
+    return (
+      <FileView
+        path={target.path}
+        mode="embed"
+        rendererName={target.viewer}
+        viewState={target.viewState}
+        onNavigate={onNavigate}
+        onAddSelection={captureSelection}
+        params={target.params}
+        {...(alt !== undefined && alt !== "" ? { caption: alt } : {})}
+      />
+    );
+  }
+  // Also the fall-through for an embed path that escapes the box root
+  // (`resolveContentTarget` → null): `resolveImageSrc` returns an empty src
+  // for it, so it renders as a broken image rather than silently embedding
+  // some other card.
+  const resolved = resolveImageSrc(src, { boxSlug, basePath: undefined });
+  return <ChatInlineImage src={resolved} alt={alt || ""} />;
 }
 
 /**
@@ -198,6 +187,17 @@ function castMarkdownComponent<P extends object>(
   // eslint-disable-next-line no-restricted-syntax -- Markdoc's component map requires a uniform `ComponentType<Record<string, unknown>>` signature; each override's real props are narrower, and this is the one place that crosses that boundary.
   return component as unknown as React.ComponentType<Record<string, unknown>>;
 }
+
+/**
+ * Chat's overrides, declared once so a streaming message reconciles in place.
+ * No `Link` override: the shared `Link` (with a box-root base and onNavigate
+ * wired to the companion pane) already renders a plain-path link that opens in
+ * the sidebar on click, an external link, and the retired-`view:` legacy marker.
+ */
+const CHAT_MARKDOWN_COMPONENTS: MarkdownComponentOverrides = {
+  Para: castMarkdownComponent(ChatParagraph),
+  Img: castMarkdownComponent(ChatImg),
+};
 
 /**
  * Render markdown content with prose styling. Every path in a chat message —
@@ -218,7 +218,6 @@ export function MarkdownContent({
     () => stripStructuredOutputTags(stripSpeechTags(text)),
     [text],
   );
-  const { boxSlug } = useParams({ strict: false });
   const handleNavigate = useCallback(
     (target: ViewTarget) => {
       if (onZoomView) {
@@ -227,16 +226,12 @@ export function MarkdownContent({
     },
     [onZoomView],
   );
-  const components = useMemo(
-    () => makeChatMarkdownComponents(handleNavigate, { boxSlug }),
-    [handleNavigate, boxSlug],
-  );
 
   if (!cleaned) return null;
 
   return (
     <div className="prose prose-sm max-w-none overflow-hidden">
-      <Markdown components={components} onNavigate={handleNavigate} basePath={undefined}>{cleaned}</Markdown>
+      <Markdown components={CHAT_MARKDOWN_COMPONENTS} onNavigate={handleNavigate} basePath={undefined}>{cleaned}</Markdown>
     </div>
   );
 }

@@ -17,8 +17,8 @@ import { resolveContentTarget } from "../lib/view-url";
 import { isUrlRef } from "@shared/ref-path/core";
 import { isImagePath } from "./chat/message-parsing";
 import { FileView } from "./FileView/view";
-import { makeImg, type MarkdownComponentOverrides } from "./Markdown/body";
-import type { LinkContext } from "./markdown-link/link";
+import { Img as DefaultImg, type MarkdownComponentOverrides } from "./Markdown/body";
+import { useMarkdownRender } from "../lib/markdown-render";
 
 // Markdoc's `MarkdownComponentOverrides` map wants one homogeneous
 // `ComponentType<Record<string,unknown>>`, but `Img` below has its own
@@ -29,27 +29,30 @@ import type { LinkContext } from "./markdown-link/link";
 const cast = <T,>(c: T) => c as unknown as ComponentType<Record<string, unknown>>;
 
 /**
- * Markdown component overrides that inline card/file embeds. Pass to
- * `<Markdown components={makeEmbedComponents(ctx)}>`.
+ * The embed. Named `Img`, the name Markdown's `Para` looks for, so a
+ * standalone `![](…)` gets no paragraph wrapper. Declared once, so a host
+ * re-render reconciles the embed in place and keeps its state.
+ *
+ * `data-card-embed` marks the embed's boundary for the host: the host card's
+ * contents menu ignores DOM changes inside it (a figure redrawing).
  */
-export function makeEmbedComponents(ctx: LinkContext): MarkdownComponentOverrides {
-  const DefaultImg = makeImg(ctx);
-  const { onNavigate } = ctx;
-  function Img({ src, alt, title, width }: { src?: string; alt?: string; title?: string; width?: string }) {
-    // An in-box, non-image path embeds the card/file inline via its own viewer.
-    // Images and external URLs are ordinary markdown images.
-    // A `null` target is an embed path that escapes the box root; it falls
-    // through to `DefaultImg`, whose `resolveImageSrc` yields an empty src —
-    // a visibly broken image instead of a silently substituted card.
-    const target =
-      typeof src === "string" && src !== "" && !isUrlRef(src) && !isImagePath(src)
-        ? resolveContentTarget(ctx.basePath, src)
-        : null;
-    if (target !== null) {
-      // Frameless embed: the renderer owns its own appearance and the caption
-      // (a media renderer shows it beneath, so an image card reads like a plain
-      // captioned image). No `<figure>`/header wrapper here.
-      return (
+function Img({ src, alt, title, width }: { src?: string; alt?: string; title?: string; width?: string }) {
+  const { onNavigate, basePath } = useMarkdownRender();
+  // An in-box, non-image path embeds the card/file inline via its own viewer.
+  // Images and external URLs are ordinary markdown images.
+  // A `null` target is an embed path that escapes the box root; it falls
+  // through to `DefaultImg`, whose `resolveImageSrc` yields an empty src —
+  // a visibly broken image instead of a silently substituted card.
+  const target =
+    typeof src === "string" && src !== "" && !isUrlRef(src) && !isImagePath(src)
+      ? resolveContentTarget(basePath, src)
+      : null;
+  if (target !== null) {
+    // Frameless embed: the renderer owns its own appearance and the caption
+    // (a media renderer shows it beneath, so an image card reads like a plain
+    // captioned image). No `<figure>`/header wrapper here.
+    return (
+      <div data-card-embed="" className="contents">
         <FileView
           path={target.path}
           mode="embed"
@@ -59,9 +62,11 @@ export function makeEmbedComponents(ctx: LinkContext): MarkdownComponentOverride
           params={target.params}
           {...(alt !== undefined && alt !== "" ? { caption: alt } : {})}
         />
-      );
-    }
-    return <DefaultImg src={src} alt={alt} title={title} width={width} />;
+      </div>
+    );
   }
-  return { Img: cast(Img) };
+  return <DefaultImg src={src} alt={alt} title={title} width={width} />;
 }
+
+/** Markdown component overrides that inline card/file embeds: `<Markdown components={CARD_EMBED_COMPONENTS}>`. */
+export const CARD_EMBED_COMPONENTS: MarkdownComponentOverrides = { Img: cast(Img) };

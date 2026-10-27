@@ -19,13 +19,7 @@
 
 import { isValidElement, type ReactNode } from "react";
 import { externalLabel, refLabel, refToViewTarget } from "../../lib/ref-label";
-import type { NavigateHint, ViewTarget } from "../../lib/view-url";
-
-export interface SeeAlsoLinkContext {
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  /** The host doc's path, so relative / `attach/` refs resolve correctly. */
-  basePath: string | undefined;
-}
+import { useMarkdownRender } from "../../lib/markdown-render";
 
 /** Plain text of a React subtree — the see-also's reason. */
 function flattenText(node: ReactNode): string {
@@ -45,51 +39,50 @@ interface SeeAlsoProps {
   children?: ReactNode;
 }
 
-export function makeSeeAlsoComponent(linkCtx: SeeAlsoLinkContext): (props: SeeAlsoProps) => ReactNode {
-  return function SeeAlso({ sourceRef, href, children }: SeeAlsoProps): ReactNode {
-    const reason = flattenText(children).trim();
-    if (sourceRef !== undefined && sourceRef !== "") {
-      const label = refLabel(sourceRef);
-      const title = reason === "" ? `See also: ${sourceRef}` : `${reason} — ${sourceRef}`;
-      const target = refToViewTarget(sourceRef, linkCtx.basePath);
-      // A ref that escapes the box root has nothing to open — mark it broken
-      // (same shape as the missing-target case below) instead of rendering a
-      // chip that navigates to a clamped-to-root file the ref never named.
-      if (target === null) {
-        return (
-          <span title={`${title} — escapes the box root`} className={`${MARKER_CLASS} text-card-danger`}>
-            [see also: {label} (unresolvable)]
-          </span>
-        );
-      }
+export function SeeAlso({ sourceRef, href, children }: SeeAlsoProps): ReactNode {
+  const linkCtx = useMarkdownRender();
+  const reason = flattenText(children).trim();
+  if (sourceRef !== undefined && sourceRef !== "") {
+    const label = refLabel(sourceRef);
+    const title = reason === "" ? `See also: ${sourceRef}` : `${reason} — ${sourceRef}`;
+    const target = refToViewTarget(sourceRef, linkCtx.basePath);
+    // A ref that escapes the box root has nothing to open — mark it broken
+    // (same shape as the missing-target case below) instead of rendering a
+    // chip that navigates to a clamped-to-root file the ref never named.
+    if (target === null) {
       return (
-        <button
-          type="button"
-          onClick={() => linkCtx.onNavigate(target, { label })}
-          title={title}
-          className={`${MARKER_CLASS} ${MARKER_INK} cursor-pointer hover:text-card-ink`}
-        >
-          [see also: {label}]
-        </button>
-      );
-    }
-    if (href !== undefined && href !== "") {
-      const label = externalLabel(href);
-      const title = reason === "" ? href : `${reason} — ${href}`;
-      return (
-        <span title={title} className={`${MARKER_CLASS} ${MARKER_INK}`}>
-          [see also ↗ {label}]
+        <span title={`${title} — escapes the box root`} className={`${MARKER_CLASS} text-card-danger`}>
+          [see also: {label} (unresolvable)]
         </span>
       );
     }
-    // Both ref and href absent is a validate() error
-    // (`see-also-missing-target`) — never reaches transform in a validated
-    // body. Render a visible marker rather than silently dropping content so
-    // an unvalidated stray tag isn't invisible.
     return (
-      <span title={reason === "" ? undefined : reason} className={`${MARKER_CLASS} text-card-danger`}>
-        [see also: missing ref/href]
+      <button
+        type="button"
+        onClick={() => linkCtx.onNavigate(target, { label })}
+        title={title}
+        className={`${MARKER_CLASS} ${MARKER_INK} cursor-pointer hover:text-card-ink`}
+      >
+        [see also: {label}]
+      </button>
+    );
+  }
+  if (href !== undefined && href !== "") {
+    const label = externalLabel(href);
+    const title = reason === "" ? href : `${reason} — ${href}`;
+    return (
+      <span title={title} className={`${MARKER_CLASS} ${MARKER_INK}`}>
+        [see also ↗ {label}]
       </span>
     );
-  };
+  }
+  // Both ref and href absent is a validate() error
+  // (`see-also-missing-target`) — never reaches transform in a validated
+  // body. Render a visible marker rather than silently dropping content so
+  // an unvalidated stray tag isn't invisible.
+  return (
+    <span title={reason === "" ? undefined : reason} className={`${MARKER_CLASS} text-card-danger`}>
+      [see also: missing ref/href]
+    </span>
+  );
 }

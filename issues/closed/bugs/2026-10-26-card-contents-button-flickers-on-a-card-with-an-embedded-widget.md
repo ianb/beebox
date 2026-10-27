@@ -1,6 +1,7 @@
 ---
 title: "On a doc card with an interactive widget, the contents button keeps showing the section title and hiding it again while nobody scrolls"
-workstream: unattached
+workstream: card-remount
+resolution: implemented
 area: beebox
 priority: important
 labels: [frontend, cards, stability]
@@ -8,6 +9,8 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder report on a hosted box, 2026-10-26
 ---
+
+**Closed 2026-10-27:** fixed on branch worktree-card-remount (fff864dbb, 82206ada5): the shared Markdown renderer now uses fixed component types, so a card body stays mounted when only its surroundings change, and embeds are a boundary for the contents menu. Plan: `beebox/docs/implemented-plans/stable-card-body.md`.
 
 On a long doc card opened in the companion pane, the contents button at the
 top right (`beebox/src/frontend/src/components/CardContents/CardContentsMenu.tsx`)
