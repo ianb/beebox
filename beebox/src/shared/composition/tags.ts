@@ -16,7 +16,7 @@ import type { Schema } from "@markdoc/markdoc";
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
 const { Tag } = Markdoc;
 
-const EDITORIAL_KINDS = ["joiner", "gap", "note", "check"] as const;
+export const EDITORIAL_KINDS = ["joiner", "gap", "note", "check"] as const;
 
 const composition: Schema = {
   validate(node) {
