@@ -108,10 +108,9 @@ your report. A tour of a deleted page is not a finding, it is a leftover.
   issue that justified it, and per name fix, the tour, checkpoint and artifact
   that reported it. An edit with no justification in the message is
   indistinguishable from laundering a regression.
-- **Land with `bin/land`.** When it refuses because `main` moved, merge `main`
-  into this branch, resolve any conflicts, rerun the checks, and land again.
-  If the main checkout is dirty or off `main`, alert `normal`, say so, and stop:
-  the commit is safe on this branch. Never push, never force.
+- **Land with the finish skill.** It merges `main`, resolves, rechecks and
+  lands. If it reports BLOCKED, alert `normal` with its reason and stop: the
+  commit is safe on this branch. Never push, never force.
 
 ## Reporting
 
