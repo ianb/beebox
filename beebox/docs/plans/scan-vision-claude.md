@@ -252,7 +252,7 @@ export interface ScanVisionService {
   holds at the service boundary, not per-backend.
 - File layout: `src/services/scan-vision.ts` (interface, error class,
   Gemini wrapper, fake, backend selection helper) and
-  `src/services/scan-vision-claude.ts` (the Claude backend — kept
+  `src/services/scan-vision-claude/core.ts` (the Claude backend — kept
   separate for the 300-line file limit).
 - `ScanVisionBatchError.retry` has four values — `"transient"` (backoff
   and re-attempt the same batch), `"split"` (re-run as smaller
@@ -578,7 +578,7 @@ cards, that change carries the audit.)
    `ScanVisionBatchError`, `GeminiScanVision` wrapper,
    `createFakeScanVision`, backend selection helper, +
    `test/services/scan-vision.test.ts`.
-2. **Claude backend** — `src/services/scan-vision-claude.ts`
+2. **Claude backend** — `src/services/scan-vision-claude/core.ts`
    (normalization, Zod-generated tightened schema, outline note,
    post-conditions incl. slot invariant + legibility→flag folding,
    usage/cost mapping) + parse-boundary doctest with canned SDK-shaped
