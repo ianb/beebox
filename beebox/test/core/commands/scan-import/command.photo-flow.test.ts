@@ -58,7 +58,7 @@ function imported(counts: { photoCount: number; pairedCount: number; unsureCount
       sessionCardPath: str`_content/inbox/scan-${any(String)}.capture-session.card`,
       orphanBackCount: 0,
       blankCount: 0,
-      intakeJobPath: str`_bookkeeping/jobs/${any(String)}-inbox.intake.job.card`,
+      intakeJobPaths: [any(String).matches(/^_bookkeeping\/jobs\/.+-inbox-[\da-f]{8}\.intake\.job\.card$/)],
       ...counts,
     },
   };

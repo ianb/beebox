@@ -3,7 +3,7 @@
  * flow, as a service interface with two real implementations and a fake.
  *
  * The default backend is Claude Sonnet via the Claude Agent SDK
- * (`scan-vision-claude.ts`) — zero extra setup beyond the Claude auth the
+ * (`scan-vision-claude/core.ts`) — zero extra setup beyond the Claude auth the
  * reactor already requires. Gemini Flash stays available as an opt-in
  * (`BBX_SCAN_VISION=gemini`) for deployments that hold a key that reaches it —
  * a granted `gemini` secret, or an `openrouter` one standing in for it

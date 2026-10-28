@@ -255,12 +255,14 @@ void test("Stale lock is cleaned up", async (t) => {
 //
 // ### Multiple cycles process remaining jobs
 //
-// The reactor loops when jobs remain after a cycle. Here we start with
-// 2 jobs but the agent only finishes 1 per invocation, requiring 2 cycles.
+// The reactor loops when jobs remain after a cycle. Here two jobs of about
+// 100 KB each do not fit one 160 KB batch prompt together: cycle 1 sends the
+// first (the second is deferred), and cycle 2 sends the second.
 void test("The reactor loops when jobs remain after a cycle.", async (t) => {
   const box = await makeTmpBox({ git: true });
-  await box.write("_bookkeeping/jobs/task1.intake.job.card", intakeJob("First task"));
-  await box.write("_bookkeeping/jobs/task2.intake.job.card", intakeJob("Second task"));
+  const large = (description: string) => `${intakeJob(description)}${"x".repeat(100 * 1024)}\n`;
+  await box.write("_bookkeeping/jobs/task1.intake.job.card", large("First task"));
+  await box.write("_bookkeeping/jobs/task2.intake.job.card", large("Second task"));
   box.commitAll("Add jobs");
 
   let cycle = 0;

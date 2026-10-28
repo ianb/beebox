@@ -10,9 +10,8 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, str } from "@ianbicking/tap-check/check";
 import { runOneCycle } from "../../../../src/core/reactor/engine/cycle.js";
-import type { RunCycleParams } from "../../../../src/core/reactor/engine/cycle.js";
+import type { CycleResult, RunCycleParams } from "../../../../src/core/reactor/engine/cycle.js";
 import { runReactor } from "../../../../src/core/reactor/engine/core.js";
-import type { ReactorResult } from "../../../../src/core/reactor/engine/core.js";
 import type { createAgent } from "../../../../src/core/agent/invoke/core.js";
 import { invariant } from "../../../../src/shared/invariant.js";
 import { finishJob } from "../../../../src/core/finish-job.js";
@@ -44,6 +43,7 @@ function cycleParams(boxRoot: string, agentFactory: RunCycleParams["agentFactory
     agentFactory,
     runSync: async () => true,
     generateDocs: async () => {},
+    attempted: new Set<string>(),
   };
 }
 
@@ -74,7 +74,7 @@ async function cycleOn<A = undefined>(
   { act, skipLowPriority, after }: {
     act?: FakeAct;
     skipLowPriority: boolean;
-    after?: (box: TmpBox, run: () => Promise<ReactorResult>) => Promise<A>;
+    after?: (box: TmpBox, run: () => Promise<CycleResult>) => Promise<A>;
   },
 ) {
   const box = await makeTmpBox({ git: true });
@@ -127,6 +127,7 @@ void test("Discovery: no jobs → clean no-op cycle", async (t) => {
     success: true,
     jobsProcessed: 0,
     jobsRemaining: 0,
+    selected: 0,
     invoked: 0,
   });
 });
@@ -141,6 +142,7 @@ void test("An empty queue never reaches the agent factory.", async (t) => {
     success: true,
     jobsProcessed: 0,
     jobsRemaining: 1,
+    selected: 0,
     invoked: 0,
   });
 });
@@ -164,6 +166,7 @@ void test("skipLowPriority buys \"an idle box doesn't spend an agent turn every 
     success: true,
     jobsProcessed: 1,
     jobsRemaining: 0,
+    selected: 1,
     invoked: 1,
   });
 });
@@ -193,6 +196,7 @@ void test("A box coming out of a long wedge can hold months of deferred work, an
       success: true,
       jobsProcessed: 5,
       jobsRemaining: 2,
+      selected: 5,
       invoked: 1,
     },
     left: [
@@ -203,6 +207,7 @@ void test("A box coming out of a long wedge can hold months of deferred work, an
       success: true,
       jobsProcessed: 2,
       jobsRemaining: 0,
+      selected: 2,
     },
   });
 });
@@ -221,7 +226,7 @@ void test("The cap applies only to the deadline path.", async (t) => {
   );
   const [offered] = prompts;
   invariant(offered, "the agent was offered a prompt");
-  t.check(summary(mixed), { success: true, jobsProcessed: 0, jobsRemaining: 8, invoked: 1 });
+  t.check(summary(mixed), { success: true, jobsProcessed: 0, jobsRemaining: 8, selected: 8, invoked: 1 });
   // The prompt is large generated text. The normal job appears, and before the first low-priority job.
   t.check(offered, str`${any(String)}${normal}${any(String)}2020-01-01T00-00-00-b${any(String)}`);
   t.check(offered.split("2020-01-01T00-00-00-b")[0], any(String).includes("2026-06-01T00-00-00-now"));
@@ -249,6 +254,7 @@ void test("The wakeup todo-review sweep (docs/implemented-plans/todo-annotation.
     success: true,
     jobsProcessed: 1,
     jobsRemaining: 0,
+    selected: 1,
     invoked: 1,
   });
 });
@@ -275,56 +281,64 @@ void test("The processed count is a set difference against the jobs the cycle se
     success: true,
     jobsProcessed: 2,
     jobsRemaining: 1,
+    selected: 2,
     invoked: 1,
   },
   );
 });
 
-// ## Engine: `maxCycles` caps the loop even with jobs remaining
+// ## Engine: rotation within a run
 //
-// Five jobs, one finished per cycle, capped at 2 cycles: the reactor stops at
-// the cap with the backlog intact.
-void test("Five jobs, one finished per cycle, capped at 2 cycles:", async (t) => {
-  t.teardown(async () => {
-    try {
-      await box3.cleanup();
-    } catch (error) {
-      t.error(error);
-    }
-  });
+// Five jobs of about 70 KB each: a batch prompt (160 KB) holds two. The agent
+// finishes nothing, but its session succeeds, so the run goes on, and cycle 2
+// sends the next two jobs instead of resending the first two. `maxCycles`
+// still caps the run. (docs/implemented-plans/bounded-reactor-batches.md, Track C.)
+void test("Rotation: each cycle of a run sends jobs it has not sent", async (t) => {
   const box3 = await makeTmpBox({ git: true });
+  t.teardown(() => box3.cleanup());
   for (const n of ["j1", "j2", "j3", "j4", "j5"]) {
-    await box3.write(`${jobsDir}/${n}.intake.job.card`, intakeJob(`Job ${n}`));
+    await box3.write(`${jobsDir}/${n}.intake.job.card`, `${intakeJob(`Job ${n}`)}${"x".repeat(70 * 1024)}\n`);
   }
   box3.commitAll("add jobs");
 
-  let cycles = 0;
-  const onePerCycle = (opts: CreateAgentOptions) => {
-    const n = ++cycles;
-    return createFakeAgent({ name: opts.name, act: finishing(`j${n}.intake.job.card`) });
-  };
+  const sent: string[][] = [];
+  const recording = (succeed: boolean) => (opts: CreateAgentOptions) =>
+    createFakeAgent({
+      name: opts.name,
+      act: async ({ prompt }) => {
+        sent.push([...prompt.matchAll(/^### _bookkeeping\/jobs\/(j\d)\.intake\.job\.card/gm)].map((m) => m[1] ?? ""));
+        return { success: succeed };
+      },
+    });
 
-  const capped = await runReactor({ boxRoot: box3.root, ...engineOverrides, createAgent: onePerCycle, maxCycles: 2 });
-  t.check(({ processed: capped.jobsProcessed, remaining: capped.jobsRemaining, cycles }), {
-    processed: 2,
-    remaining: 3,
-    cycles: 2,
-  });
-
-  // ## Engine: a stuck cycle stops the loop early
-  //
-  // An agent that consumes nothing would loop forever; the engine breaks after one
-  // zero-progress cycle instead of burning through `maxCycles`.
-
-  cycles = 0;
-  const stuckFactory = (opts: CreateAgentOptions) => {
-    cycles += 1;
-    return createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
-  };
-  const stuck = await runReactor({ boxRoot: box3.root, ...engineOverrides, createAgent: stuckFactory, maxCycles: 3 });
-  t.check(({ processed: stuck.jobsProcessed, remaining: stuck.jobsRemaining, cycles }), {
+  const rotated = await runReactor({ boxRoot: box3.root, ...engineOverrides, createAgent: recording(true), maxCycles: 2 });
+  t.check({ processed: rotated.jobsProcessed, remaining: rotated.jobsRemaining, sent }, {
     processed: 0,
-    remaining: 3,
-    cycles: 1,
+    remaining: 5,
+    sent: [["j1", "j2"], ["j3", "j4"]],
   });
+
+  // ## Engine: a failed session stops the run
+  //
+  // An API error costs one session: the loop does not go on to the next jobs.
+
+  sent.length = 0;
+  const failed = await runReactor({ boxRoot: box3.root, ...engineOverrides, createAgent: recording(false), maxCycles: 3 });
+  t.check({ success: failed.success, sent }, { success: false, sent: [["j1", "j2"]] });
+});
+
+// ## Processed is counted among the jobs sent
+//
+// Four jobs of about 70 KB: the batch prompt holds two. The agent finishes both
+// it was sent; the cycle reports 2 processed, 2 remaining, 2 selected. The two
+// deferred jobs were never tried, so they are not counted as failures.
+void test("Processed is counted among the jobs sent", async (t) => {
+  const big = (n: string) => `${intakeJob(`Job ${n}`)}${"x".repeat(70 * 1024)}\n`;
+  t.check(
+    summary(await cycleOn(
+      { "j1.intake.job.card": big("1"), "j2.intake.job.card": big("2"), "j3.intake.job.card": big("3"), "j4.intake.job.card": big("4") },
+      { skipLowPriority: false, act: finishingPromptedJobs },
+    )),
+    { success: true, jobsProcessed: 2, jobsRemaining: 2, selected: 2, invoked: 1 },
+  );
 });

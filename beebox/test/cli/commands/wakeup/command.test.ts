@@ -16,6 +16,20 @@ import type { Connector } from "../../../../src/connector.js";
 // A fixed box clock makes the job filenames (stamped in box time) stable.
 process.env.BBX_TIME = "2026-03-04T05:06:07Z";
 
+/** A new intake job's random 8-hex name suffix, shown as `<hex>`. */
+const shown = (name: string): string => name.replace(/-[\da-f]{8}(?=\.intake\.job\.card$)/, "-<hex>");
+
+/** The jobs directory's filenames, suffixes shown as `<hex>`, sorted. */
+async function jobNames(root: string): Promise<string[]> {
+  return (await readdir(join(root, "_bookkeeping/jobs"))).map(shown).toSorted();
+}
+
+/** The content of the job whose shown name is `name`. */
+async function readJob(root: string, name: string): Promise<string> {
+  const file = (await readdir(join(root, "_bookkeeping/jobs"))).find((f) => shown(f) === name);
+  return readFile(join(root, "_bookkeeping/jobs", file ?? name), "utf-8");
+}
+
 // ## createIntakeJobsForUnjobbed
 //
 // ### Creates intake jobs for unjobbed inbox items
@@ -36,12 +50,10 @@ void test("When there are card files in content/inbox/ that aren't referenced by
   t.check(count, 2);
 
   // A job was created in _bookkeeping/jobs/
-  const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
-  const jobFile = allFiles.find(f => f.endsWith(".intake.job.card"));
-  t.check(allFiles, [".gitkeep", "2026-03-04T05-06-07-inbox.intake.job.card"]);
+  t.check(await jobNames(box.root), [".gitkeep", "2026-03-04T05-06-07-inbox-<hex>.intake.job.card"]);
 
   // The job references both items
-  const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFile ?? ""), "utf-8");
+  const content = await readJob(box.root, "2026-03-04T05-06-07-inbox-<hex>.intake.job.card");
   t.check(content, `---
 priority: normal
 description: Triage 2 inbox items
@@ -96,13 +108,11 @@ void test("Capture sessions, images, and audio cards get their own low-priority 
   const count = await createIntakeJobsForUnjobbed(box.root);
   t.check(count, 3);
 
-  const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
-  const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card")).toSorted();
-  t.check(allFiles, [".gitkeep", "2026-03-04T05-06-07-inbox-low.intake.job.card", "2026-03-04T05-06-07-inbox.intake.job.card"]);
+  t.check(await jobNames(box.root), [".gitkeep", "2026-03-04T05-06-07-inbox-<hex>.intake.job.card", "2026-03-04T05-06-07-inbox-low-<hex>.intake.job.card"]);
 
   // One normal-priority job with the doc, one low-priority with captures
-  const job0 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0] ?? ""), "utf-8");
-  const job1 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[1] ?? ""), "utf-8");
+  const job0 = await readJob(box.root, "2026-03-04T05-06-07-inbox-low-<hex>.intake.job.card");
+  const job1 = await readJob(box.root, "2026-03-04T05-06-07-inbox-<hex>.intake.job.card");
   t.check(job0, `---
 priority: low
 description: Triage 2 capture items
@@ -235,7 +245,7 @@ void test("A full wakeup's intake job has no connector, and the scoped reactor p
   const jobsDir = join(box.root, "_bookkeeping/jobs");
   const intakeJobs = async () => (await readdir(jobsDir)).filter((f) => f.endsWith(".intake.job.card")).toSorted();
   const [unscoped] = await intakeJobs();
-  t.check(unscoped, "2026-03-04T05-06-07-inbox.intake.job.card");
+  t.check(shown(unscoped ?? ""), "2026-03-04T05-06-07-inbox-<hex>.intake.job.card");
 
   // The gmail-scoped scan takes both email items. The unscoped job keeps the doc,
   // and its description counts what remains:
@@ -243,7 +253,7 @@ void test("A full wakeup's intake job has no connector, and the scoped reactor p
   const fakeGmail: Connector = { name: "gmail", inboxPaths: ["_content/inbox/email"], sync: async () => ({ success: true, created: [], updated: [] }) };
   t.check(await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail }), 2);
 
-  const gmailJob = (await intakeJobs()).find((f) => f.endsWith("-gmail.intake.job.card"));
+  const gmailJob = (await intakeJobs()).find((f) => shown(f).endsWith("-gmail-<hex>.intake.job.card"));
   const gmailContent = await readFile(join(jobsDir, gmailJob ?? ""), "utf-8");
   t.check(gmailContent, `---
 connector: gmail
@@ -286,7 +296,7 @@ void test("A job that the move empties is deleted.", async (t) => {
   t.check(await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail }), 1);
 
   const jobs = (await readdir(join(box.root, "_bookkeeping/jobs"))).filter((f) => f.endsWith(".intake.job.card"));
-  t.check(jobs, ["2026-03-04T05-06-07-gmail.intake.job.card"]);
+  t.check(jobs.map(shown), ["2026-03-04T05-06-07-gmail-<hex>.intake.job.card"]);
 
   t.checkText(execSync("git status --porcelain", { cwd: box.root }).toString().trim(), "");
 
@@ -371,5 +381,31 @@ void test("--max-cycles reaches the reactor", async (t) => {
       scoped: { boxRoot: "/box", maxCycles: 1, skipLowPriority: true, connectorFilter: "gmail" },
       rejected: ["--max-cycles takes a positive integer", "--max-cycles takes a positive integer", "--max-cycles takes a positive integer"],
     },
+  );
+});
+
+// ### Sixty items make three capped jobs in one commit
+//
+// Step 4b hands every unjobbed item to the intake writer at once; the writer
+// caps each job at 25 (`INTAKE_JOB_MAX_ITEMS`), so 60 items become jobs of 25,
+// 25, and 10, all committed together.
+void test("Sixty items make three capped jobs in one commit", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await initBox(box.root);
+  box.commitAll("init box");
+  for (let i = 0; i < 60; i++) await box.seed(`_content/inbox/note-${String(i).padStart(2, "0")}.doc.card`, "---\ntitle: Note\n---\n");
+  box.commitAll("add items");
+
+  t.check(await createIntakeJobsForUnjobbed(box.root), 60);
+  const files = (await readdir(join(box.root, "_bookkeeping/jobs"))).filter((f) => f.endsWith(".intake.job.card"));
+  const sizes = await Promise.all(files.map(async (f) => (await readFile(join(box.root, "_bookkeeping/jobs", f), "utf-8")).split("\n").filter((l) => l.startsWith("  - ref: ")).length));
+  t.check(
+    {
+      sizes: sizes.toSorted((a, b) => b - a),
+      lastCommit: execSync("git log -1 --format=%s", { cwd: box.root }).toString().trim(),
+      status: execSync("git status --porcelain", { cwd: box.root }).toString().trim(),
+    },
+    { sizes: [25, 25, 10], lastCommit: "Create intake jobs for 60 unjobbed inbox item(s)", status: "" },
   );
 });

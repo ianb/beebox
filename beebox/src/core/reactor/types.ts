@@ -34,4 +34,6 @@ export interface ProcessJobsOptions {
   typeFilter?: string | undefined;
   onLog?: ((text: string) => void) | undefined;
   createAgent: typeof realCreateAgent;
+  /** The batch prompt budget in bytes; `BATCH_PROMPT_BUDGET_BYTES` unless a test scales it down. */
+  promptBudget?: number | undefined;
 }

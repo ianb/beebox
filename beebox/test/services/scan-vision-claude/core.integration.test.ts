@@ -14,9 +14,9 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any } from "@ianbicking/tap-check/check";
-import { createClaudeScanVision } from "../../src/services/scan-vision-claude.js";
-import { resolveClaudeCodeBinary } from "../../src/core/sdk-binary-path.js";
-import { checkClaudeAuth } from "../../src/core/agent/auth-preflight.js";
+import { createClaudeScanVision } from "../../../src/services/scan-vision-claude/core.js";
+import { resolveClaudeCodeBinary } from "../../../src/core/sdk-binary-path.js";
+import { checkClaudeAuth } from "../../../src/core/agent/auth-preflight.js";
 import Sharp from "sharp";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";

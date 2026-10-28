@@ -12,8 +12,8 @@ import { any, instanceOf } from "@ianbicking/tap-check/check";
 import {
   claudeScanWireSchema,
   parseClaudeScanBatch,
-} from "../../src/services/scan-vision-claude.js";
-import { ScanVisionBatchError } from "../../src/services/scan-vision.js";
+} from "../../../src/services/scan-vision-claude/core.js";
+import { ScanVisionBatchError } from "../../../src/services/scan-vision.js";
 
 /** Run a parse that must throw a batch error; null when it did not throw. */
 function caught(run: () => unknown): ScanVisionBatchError | null {
