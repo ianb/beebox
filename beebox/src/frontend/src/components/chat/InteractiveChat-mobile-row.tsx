@@ -36,6 +36,7 @@ export function MobileTextareaRow({
   const noteTyped = useComposerCaret({ textareaRef, text: input });
   useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick: transcription.transcript });
 
+  const sendLabel = isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)";
   return (
     <div className="flex gap-2 items-center">
       <textarea
@@ -110,7 +111,8 @@ export function MobileTextareaRow({
         }}
         // A live segment can always be sent (live text may be paused; HQ supplies the words).
         disabled={sendDisabledReason !== undefined || !(segmentCapturing(transcription.state) || (isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim())}
-        title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
+        label={sendLabel}
+        title={sendDisabledReason ?? sendLabel}
       />
     </div>
   );

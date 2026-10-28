@@ -43,6 +43,7 @@ export function TargetStrip(props: {
           id={includeControlIds ? "bbx-chat-stop-speech" : undefined}
           onClick={onStopSpeech}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
+          aria-label="Stop speaking"
           title="Stop speaking"
         >
           {/* Speaker-x (audio), not the stop circle — that one stops the agent. */}

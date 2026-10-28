@@ -113,11 +113,12 @@ export async function mount(element: ReactNode): Promise<Mounted> {
 // throws unless exactly one element matches, so a renamed or duplicated
 // control fails the test where it is looked up.
 
-/** The element with this id under `root`. */
+/** The one element with this id under `root`. */
 export function byId(root: ParentNode, id: string): HTMLElement {
-  const found = root.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
-  if (found === null) throw new Error(`no element with id "${id}"`);
-  return found;
+  const found = [...root.querySelectorAll<HTMLElement>(`#${CSS.escape(id)}`)];
+  const [only] = found;
+  if (found.length === 1 && only !== undefined) return only;
+  throw new Error(`${found.length} elements with id "${id}"`);
 }
 
 export interface RoleQuery {
@@ -179,13 +180,15 @@ function roleOf(el: HTMLElement): string | null {
 /**
  * A subset of the accessible-name computation: `aria-labelledby`, then
  * `aria-label`, then a `<label>` for a form field, then text content outside
- * `aria-hidden` subtrees, then `title`.
+ * `aria-hidden` subtrees, then `title`. An empty source falls through to the
+ * next, as in the browser.
  */
 export function accessibleName(el: HTMLElement): string {
   const labelledBy = el.getAttribute("aria-labelledby");
-  if (labelledBy !== null) {
-    return collapse(labelledBy.split(/\s+/).map((id) => visibleText(el.ownerDocument.getElementById(id))).join(" "));
-  }
+  const referenced = labelledBy === null
+    ? ""
+    : collapse(labelledBy.split(/\s+/).map((id) => visibleText(el.ownerDocument.getElementById(id))).join(" "));
+  if (referenced !== "") return referenced;
   const label = el.getAttribute("aria-label");
   if (label !== null && label.trim() !== "") return collapse(label);
   const forLabel = el.id === "" ? null : el.ownerDocument.querySelector(`label[for="${CSS.escape(el.id)}"]`);

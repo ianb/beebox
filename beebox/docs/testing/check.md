@@ -303,8 +303,9 @@ registered in `.taprc`). Memoization in a test therefore matches the browser.
 - Find an element the way a person or the box agent does, in this order: by
   its `bbx-` id for a static control (`byId(view.container, id)`); by role and
   accessible name for a per-row or dynamic control
-  (`byRole(view.container, { role: "button", name: "Discard" })`); by visible
-  text only when the copy itself is under test. Both helpers throw unless
+  (`byRole(view.container, { role: "button", name: "Discard" })`). When the
+  copy itself is under test, find the element as above and check its text
+  with `t.check`; do not search by the text. Both helpers throw unless
   exactly one element matches; `allByRole` returns every match. The lint rule
   `tap-check/no-text-locator` flags a `.find` or `.filter` on `textContent`.
   The [accessible-name rule](../../frontend.md#frontend-ui-primitives) says
