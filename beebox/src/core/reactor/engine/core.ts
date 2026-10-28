@@ -125,6 +125,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     agentFactory,
     runSync,
     generateDocs,
+    attempted: new Set<string>(),
   };
 
   // Main loop
@@ -140,16 +141,16 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
     if (!result.success) {
       success = false;
       const wait = await boxEngineUnavailability(boxRoot);
-      if (wait !== null) {
-        // Deferred-recoverable: further cycles would burn attempts that
-        // cannot succeed. Jobs stay pending for a cycle after the reset.
-        onLog?.(`Stopping cycles: ${engineWaitReason(wait)}\n`);
-        break;
-      }
+      // Deferred-recoverable: further cycles would burn attempts that cannot
+      // succeed. Jobs stay pending for a cycle after the reset.
+      onLog?.(wait === null ? "Stopping cycles: the agent session failed.\n" : `Stopping cycles: ${engineWaitReason(wait)}\n`);
+      break;
     }
 
-    // Stop if no jobs remain or if we didn't process any (stuck)
-    if (result.jobsRemaining === 0 || result.jobsProcessed === 0) {
+    // Stop when no job remains or the cycle had nothing new to send. A cycle
+    // that left its jobs unfinished does not stop the run: they are attempted,
+    // so the next cycle takes the next jobs.
+    if (result.jobsRemaining === 0 || result.selected === 0) {
       break;
     }
   }
