@@ -6,7 +6,7 @@ bin/browse open /chats                          # → http://localhost:3210/<wt>
 bin/browse open /test1/chats                    # WRONG — doubles the box, lands elsewhere silently
 bin/browse open https://example.com             # bare URL passes through unchanged
 bin/browse back / forward / reload
-AGENT_BROWSER_INIT_SCRIPTS=/abs/stub.js bin/browse open /admin  # after close --all; stub fetch here, network route misses batched tRPC
+bin/browse open /admin --init-script /abs/stub.js  # launch options (--args, --headed, …) need a closed browser; stub fetch here, network route misses batched tRPC
 
 # Reading
 bin/browse snapshot -i                          # interactive elements only (preferred)
