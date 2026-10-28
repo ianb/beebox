@@ -69,6 +69,7 @@ function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean; c
     { clock: opts?.clock ?? unrefClock },
   );
   actor.on("maxDurationReached", (event) => emitted.push(event.type));
+  actor.on("idleClosed", (event) => emitted.push(event.type));
   actor.start();
   actor.send({ type: "START", targetSessionId: "chat-1" });
   return {
@@ -181,7 +182,7 @@ void test("A segment started while held starts held.", async (t) => {
 //
 // `CONNECT_TIMEOUT` bounds only reaching `MIC_LIVE` (mic permission and worklet
 // startup). After that, a box that is down — or restarting for a minute —
-// keeps the segment in `recordingLocal` for as long as the user talks.
+// keeps the segment in `recordingLocal` (until the idle close, below).
 void test("CONNECTTIMEOUT bounds only reaching MICLIVE (mic permission and worklet start...", async (t) => {
   const s = segment({ delays: { CONNECT_TIMEOUT: 10 } });
   s.emit({ type: "MIC_LIVE" });
@@ -380,27 +381,13 @@ void test("Nothing was sealed yet:", async (t) => {
   t.check(s.context(), contextWith({ recording: null }));
 });
 
-// ## No idle timeout while live text is paused
-//
-// `NO_LIVE_TEXT_TIMEOUT` lives on `recording`, where new live text resets it.
-// In `recordingLocal` no text can arrive, so it does not run there.
-void test("NO_LIVE_TEXT_TIMEOUT runs in recording, not in recordingLocal.", async (t) => {
-  const s = segment({ delays: { NO_LIVE_TEXT_TIMEOUT: 10 } });
-  s.emit({ type: "MIC_LIVE" });
-  await sleep(40);
-  t.check(s.state(), "recordingLocal");
-
-  s.emit({ type: "WS_CONNECTED" });
-  await sleep(40);
-  t.check(s.state(), "idle");
-});
-
 // ## The mic closes after five minutes with no new live text
 //
 // issues/features/2026-10-28-web-live-recorder-closes-mic-after-idle.md.
 // Idle means no new live text, not a quiet mic: Deepgram answers noise with
 // empty interim results and re-sends unchanged finals, and those must not keep
-// the mic open. A change in the text restarts the timer.
+// the mic open. A change in the text restarts the timer. The timer also runs
+// in `recordingLocal`: a mic whose live text never connects is idle too.
 const noise = (finalText: string): TranscriptionEvent => ({ type: "TEXT_UPDATE", finalText, interimText: "", finalWords: null });
 
 void test("New live text restarts the idle timer; empty or unchanged updates do not.", async (t) => {
@@ -425,8 +412,10 @@ void test("New live text restarts the idle timer; empty or unchanged updates do 
 });
 
 // The idle close ends the segment the way a manual stop does: the actor gets
-// STOP, the text and the recording (for the HQ pass) stay in context. Only the
-// notice differs, a warning that names why the mic closed.
+// STOP, and the text and the recording stay in context for the hook to fold
+// and seal. It adds a warning that names why the mic closed, and emits
+// `idleClosed` so the chat ends the voice turn (a later reply must not reopen
+// the mic).
 void test("The idle close ends the segment like a manual stop, plus a notice.", async (t) => {
   const run = (end: (s: ReturnType<typeof segment>, clock: SimulatedClock) => void) => {
     const clock = new SimulatedClock();
@@ -450,10 +439,43 @@ void test("The idle close ends the segment like a manual stop, plus a notice.", 
   t.check(idle.context(), contextWith({
     finalTranscript: "buy milk",
     recording: idle.recording,
-    error: "Mic closed — nothing was said for 5 minutes",
+    error: "Mic closed — no new words for 5 minutes",
     errorLevel: "warning",
   }));
   t.check(idle.cues, ["MicOffSound"]);
+  t.check(manual.emitted, []);
+  t.check(idle.emitted, ["idleClosed"]);
+});
+
+void test("A mic with no live socket closes after the timeout.", async (t) => {
+  const clock = new SimulatedClock();
+  const s = segment({ clock });
+  s.emit({ type: "MIC_LIVE" });
+  clock.increment(NO_LIVE_TEXT_TIMEOUT_MS - 1);
+  t.check(s.state(), "recordingLocal");
+
+  clock.increment(1);
+  t.check(s.state(), "idle");
+
+  t.check(s.emitted, ["idleClosed"]);
+});
+
+// A hold while live text is down also keeps the mic, and its release restarts
+// the timer.
+void test("Without a live socket, a held mic outlasts the timeout, which restarts on release.", async (t) => {
+  const clock = new SimulatedClock();
+  const s = segment({ clock });
+  s.emit({ type: "MIC_LIVE" });
+  s.actor.send({ type: "HOLD", held: true });
+  clock.increment(NO_LIVE_TEXT_TIMEOUT_MS * 2);
+  t.check(s.state(), "recordingLocal");
+
+  s.actor.send({ type: "HOLD", held: false });
+  clock.increment(NO_LIVE_TEXT_TIMEOUT_MS - 1);
+  t.check(s.state(), "recordingLocal");
+
+  clock.increment(1);
+  t.check(s.state(), "idle");
 });
 
 // ## MAX_DURATION submits the segment

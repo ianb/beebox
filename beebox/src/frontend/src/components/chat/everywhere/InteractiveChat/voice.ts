@@ -178,6 +178,8 @@ export function useChatVoice(opts: {
           break;
       }
     },
+    // End the voice turn, so a reply arriving later does not reopen the mic.
+    onIdleClose: () => composerSend({ type: "STOP_DICTATION" }),
     onUnconsumedTranscript: (text) => {
       // Recording ended without a send or a manual stop (mic taken away past
       // its recovery window, idle auto-stop).

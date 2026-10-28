@@ -93,6 +93,11 @@ export interface MaxDurationReached {
   type: "maxDurationReached";
 }
 
+/** Emitted: the idle close ended the segment, so the voice turn ends with it. */
+export interface IdleClosed {
+  type: "idleClosed";
+}
+
 /** Input the machine hands the actor for one segment. */
 export interface TranscriptionActorInput {
   targetSessionId: string | null;
@@ -120,14 +125,15 @@ export function requireEvent<T extends TranscriptionEvent["type"]>(
 // The idle close (issues/features/2026-10-28-web-live-recorder-closes-mic-after-idle.md).
 
 /**
- * How long the mic stays open in `recording` with no new live text before it
- * closes as if the person pressed stop. Counts live text, not mic silence:
- * noise that transcribes to nothing is still idle.
+ * How long the mic stays open with no new live text before it closes as if
+ * the person pressed stop. Counts live text, not mic silence: noise that
+ * transcribes to nothing is still idle, and so is a mic whose live text is
+ * down (the recording keeps what was said).
  */
 export const NO_LIVE_TEXT_TIMEOUT_MS = 5 * 60 * 1000;
 
 /** Shown after the idle close, so a closed mic is not mistaken for a lost one. */
-export const IDLE_CLOSE_NOTICE = "Mic closed — nothing was said for 5 minutes";
+export const IDLE_CLOSE_NOTICE = "Mic closed — no new words for 5 minutes";
 
 /**
  * Whether a live-text update brings new words. Providers re-send unchanged

@@ -53,6 +53,8 @@ export interface UseRealtimeTranscriptionOptions {
    * words silently disappear from the composer when `isTranscribing` flips.
    */
   onUnconsumedTranscript?: (transcript: string) => void;
+  /** The mic closed after a stretch with no new live text. */
+  onIdleClose?: () => void;
 }
 
 export interface UseRealtimeTranscriptionResult {
@@ -154,6 +156,11 @@ function useSegmentEnd(opts: {
     });
     return () => sub.unsubscribe();
   }, [actorRef, pendingSendRef]);
+
+  useEffect(() => {
+    const sub = actorRef.on("idleClosed", () => optionsRef.current.onIdleClose?.());
+    return () => sub.unsubscribe();
+  }, [actorRef, optionsRef]);
 
   // A parked send fires once the machine is idle and the recording is in context.
   useEffect(() => {
