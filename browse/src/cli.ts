@@ -9,7 +9,7 @@ import { TARGET_COMMANDS } from "./controls.js";
 import { runEnhancedScreenshot } from "./screenshot.js";
 import { openClerkPopup, waitTimeoutMs } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
-import { daemonRunning, hoistLaunchOptions, waitForDaemonExit } from "./launch-options.js";
+import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit } from "./launch-options.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -258,7 +258,9 @@ async function main(): Promise<number> {
 
   const code = await runPassthrough(args);
   if (code === 0 && PAGE_CHANGING.has(sub)) await noteAction(sub);
-  if (code === 0 && sub === "close") await waitForDaemonExit(socketDir, session);
+  if (code === 0 && sub === "close") {
+    await waitForDaemonExit(socketDir, args.includes("--all") ? knownSessions(socketDir) : [session]);
+  }
   return code;
 }
 

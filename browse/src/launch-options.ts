@@ -7,7 +7,7 @@
  * them.
  */
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BrowseConfigError } from "./worktree.js";
 
@@ -33,7 +33,7 @@ const LAUNCH_OPTIONS: ReadonlyMap<string, LaunchOption> = new Map([
   ["--color-scheme", { env: "AGENT_BROWSER_COLOR_SCHEME", kind: "value" }],
   ["--download-path", { env: "AGENT_BROWSER_DOWNLOAD_PATH", kind: "value" }],
   ["--engine", { env: "AGENT_BROWSER_ENGINE", kind: "value" }],
-  ["--state", { env: "AGENT_BROWSER_STATE", kind: "value" }],
+  // Not --state: `wait --state hidden` shares the name. Use AGENT_BROWSER_STATE.
   ["--session-name", { env: "AGENT_BROWSER_SESSION_NAME", kind: "value" }],
 ]);
 
@@ -102,10 +102,19 @@ const DAEMON_EXIT_WAIT_MS = 3000;
  * "running". Gives up quietly after {@link DAEMON_EXIT_WAIT_MS}; the next
  * launch says so.
  */
-export async function waitForDaemonExit(socketDir: string, session: string): Promise<void> {
+export async function waitForDaemonExit(socketDir: string, sessions: readonly string[]): Promise<void> {
   const deadline = Date.now() + DAEMON_EXIT_WAIT_MS;
-  while (daemonRunning(socketDir, session) && Date.now() < deadline) {
+  while (sessions.some((session) => daemonRunning(socketDir, session)) && Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+/** Every session with a pid file in `socketDir` (for `close --all`). */
+export function knownSessions(socketDir: string): string[] {
+  try {
+    return readdirSync(socketDir).filter((f) => f.endsWith(".pid")).map((f) => f.slice(0, -".pid".length));
+  } catch {
+    return [];
   }
 }
 

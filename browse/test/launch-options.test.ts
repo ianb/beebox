@@ -56,3 +56,12 @@ void test("Options that attach to another browser are refused.", async (t) => {
     "BrowseConfigError: --auto-connect is not supported: bin/browse drives its own local browser, and seeds it with the browse key",
   );
 });
+
+// `--state` stays put: it is also `wait`'s option (`wait "#x" --state hidden`).
+void test("wait --state is not taken for a launch option.", async (t) => {
+  t.check(hoistLaunchOptions(["wait", "#spinner", "--state", "hidden"], {}), {
+    args: ["wait", "#spinner", "--state", "hidden"],
+    env: {},
+    flags: [],
+  });
+});
