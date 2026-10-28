@@ -78,6 +78,7 @@ export function MobileTextareaRow({
               clearDraft();
             }}
             className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+            aria-label="Edit before sending"
             title="Edit before sending"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -71,6 +71,7 @@ export function ComposerSendButton({
       onClick={onClick}
       disabled={disabled}
       className={`flex items-center justify-center ${dim} rounded-full flex-shrink-0 bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+      aria-label={title}
       title={title}
     >
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,6 +133,7 @@ function DesktopComposerRow({
               clearDraft();
             }}
             className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+            aria-label="Edit before sending"
             title="Edit before sending"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,6 +317,7 @@ export function ChatInputArea({
           id={hasControlIds ? "bbx-composer-keyboard" : undefined}
           onClick={onKeyboard}
           className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
+          aria-label="Type a message"
           title="Type a message"
         >
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
