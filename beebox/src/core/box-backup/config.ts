@@ -70,7 +70,7 @@ function withBackupConfigLock<T>(file: string, fn: () => Promise<T>): Promise<T>
   return withFileLock({ lockPath: `${file}.lock`, metadata: { purpose: "box-backup-config" }, waitMs: 10_000 }, fn);
 }
 
-export class InvalidBackupConfigError extends Error {
+class InvalidBackupConfigError extends Error {
   constructor(file: string, detail: string) { super(`Invalid backup configuration ${file}: ${detail}`); this.name = "InvalidBackupConfigError"; }
 }
 export class MissingBackupConfigError extends Error {

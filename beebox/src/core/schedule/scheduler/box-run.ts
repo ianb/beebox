@@ -11,7 +11,7 @@ import * as path from "node:path";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { runCollectedChild } from "../../../lib/run-child.js";
 
-export const BOX_RUN_WRAPPER = "/usr/local/sbin/bbx-box-run";
+const BOX_RUN_WRAPPER = "/usr/local/sbin/bbx-box-run";
 
 export async function boxRunWrapperPresent(): Promise<boolean> {
   try {
@@ -37,7 +37,7 @@ export function unitSlugForBoxRoot(boxRoot: string): string | undefined {
   return UNIT_BOX_ROOT.exec(path.resolve(boxRoot))?.[1];
 }
 
-export class BoxRunFailedError extends Error {
+class BoxRunFailedError extends Error {
   readonly slug: string;
   readonly code: number;
   constructor(run: { slug: string; code: number; output: string }) {

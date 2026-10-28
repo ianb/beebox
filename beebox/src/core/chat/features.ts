@@ -58,16 +58,6 @@ const FEATURE_INDEX = new Map<string, FeatureDescriptor>(
   FEATURE_LIST.map((f) => [f.name, f]),
 );
 
-/** All registered features, in declaration order. */
-export function listFeatures(): readonly FeatureDescriptor[] {
-  return FEATURE_LIST;
-}
-
-/** Look up a descriptor by name, or null if unknown. */
-export function getFeature(name: string): FeatureDescriptor | null {
-  return FEATURE_INDEX.get(name) ?? null;
-}
-
 /** True if the name is a registered feature. */
 export function isKnownFeature(name: string): boolean {
   return FEATURE_INDEX.has(name);
@@ -81,7 +71,7 @@ export function isValidValue(name: string, value: string): boolean {
 }
 
 /** Map of all features in their default state. */
-export function getDefaults(): FeatureMap {
+function getDefaults(): FeatureMap {
   const out: FeatureMap = {};
   for (const f of FEATURE_LIST) out[f.name] = f.default;
   return out;

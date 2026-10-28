@@ -31,7 +31,7 @@ import { loadEffectiveBoxModel } from "../../model-policy.js";
 export const BATCH_PROMPT_BUDGET_BYTES = 160 * 1024;
 
 /** The most bytes of pasted ref content one job description carries; the rest are listed by path. */
-export const JOB_INLINE_BUDGET_BYTES = 40 * 1024;
+const JOB_INLINE_BUDGET_BYTES = 40 * 1024;
 
 /** The heading over the refs a description lists instead of pasting. */
 export const NOT_PASTED_HEADING = "#### Not pasted in (open these with your tools)";

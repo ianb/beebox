@@ -12,7 +12,7 @@ import { SCREENS } from "@shared/theme-screens";
 import { readStoredFlag, writeStoredFlag, type StoredFlag } from "../../../../lib/stored-flag";
 
 /** Theme names the studio's own CSS styles (`theme-studio-*.css`). */
-export const STUDIO_THEMES = ["draft", "undertow", "deck-study", "patina-study", "rose-trellis-study", "gold-thread-study"] as const;
+const STUDIO_THEMES = ["draft", "undertow", "deck-study", "patina-study", "rose-trellis-study", "gold-thread-study"] as const;
 const OTHER = "\u0000other";
 const OPEN_FLAG: StoredFlag = { storage: () => localStorage, key: "bbx-theme-studio-controls-open" };
 
