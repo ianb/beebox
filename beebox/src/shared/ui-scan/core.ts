@@ -77,9 +77,10 @@ export type UiScanEntry = z.infer<typeof uiScanEntrySchema>;
  * Server-side cap on reported entries and on the duplicate-address list,
  * matching the client scan's own `MAX_ENTRIES`. The client truncates and says
  * so; this is the boundary's refusal to accept more than that from a client
- * that didn't.
+ * that didn't. A Questions page of 40 pending questions, each a named group of
+ * four controls, is about 230 entries.
  */
-export const MAX_SCAN_ENTRIES = 200;
+export const MAX_SCAN_ENTRIES = 300;
 
 /** A client's successful answer: the inventory plus the facts the dump states. */
 export const uiScanPayloadSchema = z

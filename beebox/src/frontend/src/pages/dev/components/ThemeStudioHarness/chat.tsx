@@ -93,7 +93,9 @@ export function StudioConversation({ card, cardStock }: { card: string; cardStoc
     </div>
     {/* Each state keeps the composer's ids, which theme rules key on, so the ids repeat. */}
     <div className="space-y-3">
-      {[RESTING, ...COMPOSER_STATES].map((spec, i) => <ComposerSpecimen key={i} spec={spec} includeControlIds showHeader={false} material label={`Compose message, state ${i + 1}`} />)}
+      {[RESTING, ...COMPOSER_STATES].map((spec, i) => <div key={i} role="group" aria-label={`Composer state ${i + 1}`}>
+        <ComposerSpecimen spec={spec} includeControlIds showHeader={false} material label={`Compose message, state ${i + 1}`} />
+      </div>)}
     </div>
   </section>;
 }

@@ -11,7 +11,7 @@
  * the chat/directory association model.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import { type ViewTarget } from "../../lib/view-url";
@@ -108,16 +108,18 @@ export function LandmarkSection({
 }) {
   const labelText = landmark.label || toDisplayPath(landmark.path);
   const indentClass = INDENT_CLASSES[Math.min(landmark.depth, INDENT_CLASSES.length - 1)];
+  // The title names the card, so each landmark's "New chat" is that landmark's.
+  const headingId = useId();
 
   return (
-    <Card padding="md" border="subtle" shadow className={indentClass}>
+    <Card padding="md" border="subtle" shadow className={indentClass} role="group" aria-labelledby={headingId}>
       <Stack gap="md">
         <div className="flex items-center gap-3">
           <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
           {/* min-w-0 flex-1: the path below wraps break-all, so a shrink-to-fit
               header column would break a short path mid-word. */}
           <Stack gap="xs" className="min-w-0 flex-1">
-            <Heading level={2}>{labelText}</Heading>
+            <Heading level={2} id={headingId}>{labelText}</Heading>
             <PathLink dir={landmark.dir} cardPath={landmark.path} boxSlug={boxSlug} />
           </Stack>
         </div>

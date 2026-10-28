@@ -177,12 +177,18 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
   const ambiguous = ambiguousMarks(pinned.map((t) => ({ symbol: identities.get(t.target.path)?.symbol ?? null })));
   const overflow = useTabStripReveal({ activePath, tabRefs, tabCount: tabs.length, pinnedCount: pinned.length });
 
+  // The stored label is what the link that opened this tab called it — a
+  // stand-in until the card's own title arrives, never the final word.
+  const titleOf = (tab: PanelTab) => identities.get(tab.target.path)?.title ?? displayName(tab.target.path);
+  const titleCounts = new Map<string, number>();
+  for (const tab of tabs) titleCounts.set(titleOf(tab), (titleCounts.get(titleOf(tab)) ?? 0) + 1);
+
   function renderTab(tab: PanelTab) {
     const isActive = tab.target.path === activePath;
     const identity = identities.get(tab.target.path) ?? null;
-    // The stored label is what the link that opened this tab called it — a
-    // stand-in until the card's own title arrives, never the final word.
-    const title = identity?.title ?? displayName(tab.target.path);
+    const title = titleOf(tab);
+    // Two open cards can share a title; their names then carry the path.
+    const name = (titleCounts.get(title) ?? 0) > 1 ? `${title} (${tab.target.path})` : title;
     const face = pinnedFace({ symbol: identity?.symbol ?? null, title, ambiguous });
     const theme = themeForTab({ path: tab.target.path, identity, presentation });
     return (
@@ -221,6 +227,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
             if (target) onSelectTab(target.target.path);
           }}
           aria-selected={isActive}
+          aria-label={name === title ? undefined : name}
           onClick={() => onSelectTab(tab.target.path)}
           // The full title and path stay reachable on hover, which is where a
           // mark-only tab's identity lives.
@@ -249,7 +256,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
             e.stopPropagation();
             onTogglePin(tab.target.path);
           }}
-          aria-label={tab.pinned ? `Unpin ${title}` : `Pin ${title}`}
+          aria-label={tab.pinned ? `Unpin ${name}` : `Pin ${name}`}
           aria-pressed={tab.pinned}
           title={tab.pinned ? "Unpin tab" : "Pin tab"}
           className={cn(
@@ -262,7 +269,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
         >
           <PinIcon filled={tab.pinned} />
         </button>
-        <TabCloseButton title={title} pinned={tab.pinned} closing={closeLabel?.(tab.target.path) ?? null} onClose={() => onCloseTab(tab.target.path)} />
+        <TabCloseButton title={name} pinned={tab.pinned} closing={closeLabel?.(tab.target.path) ?? null} onClose={() => onCloseTab(tab.target.path)} />
       </div>
     );
   }
