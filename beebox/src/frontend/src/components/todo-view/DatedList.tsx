@@ -23,9 +23,10 @@ import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hoo
 import type { DatedTodo } from "../todo-view-card-logic";
 import { dueWord, localIsoDate, startPrefix } from "../todo/item-logic";
 import { boxNow } from "../../lib/box-clock";
+import { cardUrl } from "@shared/card-url";
 
 function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | undefined }) {
-  const cardHref = boxSlug === undefined ? undefined : href(`/${boxSlug}/browse/${dated.cardPath}`);
+  const cardHref = boxSlug === undefined ? undefined : href(cardUrl(boxSlug, dated.cardPath));
   // In a workspace pane the card opens in the other pane (`docs/implemented-plans/todos-ui.md`, Track 5).
   const openBeside = useOpenBeside();
   const name = <Text material size="xs" tone="muted">{dated.cardTitle}</Text>;

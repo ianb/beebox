@@ -1262,7 +1262,9 @@ See §1.3 (full request/response/errors).
   and badge; `quiet`, `dot` (no `loudness` key), and an unknown value present nothing, because the
   webview shows its own banner. A tap (`didReceive`) renders `target` with `notificationId` to a
   box-relative path by `NotificationTarget`, the Swift mirror of `target.ts`'s `parseTarget` and
-  `targetUrl`, and loads it in the chat webview (§3.1). A missing or unreadable target opens
+  `targetUrl`, and loads it in the chat webview (§3.1). A `card:` or `question:` target renders
+  to `views/<path>`, which opens the card beside the chat; boxes before 2026-10-28 rendered
+  `browse/<path>`, which still redirects. A missing or unreadable target opens
   nothing new and logs a warning. On every foreground the app clears the badge and removes
   delivered `dot` notifications.
 - **Box identity.** The payload names the box in `box`. A tap opens on the paired box whose slug
@@ -1909,7 +1911,7 @@ waiting in `PendingEmissionStore`, open the web app instead. The rule is
 
 The box screen mounts no web content. Its composer sends through `quickChat.submit` (§5.11) with a
 new-thought draft stored apart from the chat draft. Its links (recent chats, "All chats", the
-box's `nav.card` shortcuts) show the web app at a box-relative path through the same
+box's `nav.card` shortcuts, whose card refs arrive as `/views/<path>`) show the web app at a box-relative path through the same
 `ChatWebView.NavigationRequest` a notification tap uses (§3.1). The web app returns to the box
 screen through the navigation in §3.5. The web view, once created, stays mounted and hidden behind
 the box screen. No emission version, native target type, or binding JSON changes for the box screen.

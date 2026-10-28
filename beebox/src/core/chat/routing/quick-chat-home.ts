@@ -45,7 +45,7 @@ export const quickChatHomeSchema = z.object({
 /** Project `nav.card` entries onto links; an absent or invalid card has none, as in the menu. */
 function shortcutsFrom(entries: NavEntryResolved[]): QuickChatHome["shortcuts"] {
   return entries.flatMap((entry) => {
-    if (entry.kind === "ref") return [{ label: entry.label === "" ? entry.target : entry.label, to: `/browse/${entry.target}` }];
+    if (entry.kind === "ref") return [{ label: entry.label === "" ? entry.target : entry.label, to: `/views/${entry.target}` }];
     if (BOX_SCREEN_ROUTES.has(entry.target)) return [];
     return [{ label: entry.label === "" ? navRouteFor(entry.target)?.label ?? entry.target : entry.label, to: entry.target }];
   });

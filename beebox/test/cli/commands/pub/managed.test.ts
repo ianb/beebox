@@ -22,7 +22,7 @@ const candidate: Candidate = {
   name: "notes",
   title: "Notes",
   cardPath: "_content/publications/abcdefghijklmnopqrstuvwxyz.publication.card",
-  approvalUrl: "/box-a/browse/notes/Notes.publication.card",
+  approvalUrl: "/box-a/views/notes/Notes.publication.card",
   revision: "b".repeat(64),
   releaseId,
   requestedScope: { kind: "site", hostHandle: "notes-host", tier: "public", expiresAt: null, slug: "notes" },
@@ -95,7 +95,7 @@ void test("A matching audience can advance the active release immediately; a pen
     "  release: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "  files: 1; scan findings: 0; skipped binaries: 0",
     "  publication URL: https://notes.example.workers.dev/p/notes/",
-    "  approval: open the publication card /box-a/browse/notes/Notes.publication.card in this box's app.",
+    "  approval: open the publication card /box-a/views/notes/Notes.publication.card in this box's app.",
     "    index.html  42 bytes  sha256:cccccccccccccccc…",
     "  content is live under the already approved audience; within-scope updates take effect immediately.",
   ]);
@@ -107,7 +107,7 @@ void test("A matching audience can advance the active release immediately; a pen
     "  release: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "  files: 1; scan findings: 0; skipped binaries: 0",
     "  candidate URL (awaiting member approval): https://notes.example.workers.dev/p/notes/",
-    "  approval: open the publication card /box-a/browse/notes/Notes.publication.card in this box's app.",
+    "  approval: open the publication card /box-a/views/notes/Notes.publication.card in this box's app.",
     "    index.html  42 bytes  sha256:cccccccccccccccc…",
     "  waiting for a signed-in box member to approve and enable this release.",
   ]);
@@ -119,7 +119,7 @@ void test("A matching audience can advance the active release immediately; a pen
     "  release: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "  files: 1; scan findings: 0; skipped binaries: 0",
     "  publication URL: https://notes.example.workers.dev/p/notes/",
-    "  approval: open the publication card /box-a/browse/notes/Notes.publication.card in this box's app.",
+    "  approval: open the publication card /box-a/views/notes/Notes.publication.card in this box's app.",
     "    index.html  42 bytes  sha256:cccccccccccccccc…",
     "  serving state is unknown; check the publication card _content/publications/abcdefghijklmnopqrstuvwxyz.publication.card before describing it as live or disabled.",
   ]);
@@ -176,7 +176,7 @@ void test("Publication links preserve the tier route, and the approval link uses
   t.check(
     publicationApprovalUrl({ serverUrl: "https://boxes.example", approvalPath: candidate.approvalUrl })
     ,
-    "https://boxes.example/box-a/browse/notes/Notes.publication.card",
+    "https://boxes.example/box-a/views/notes/Notes.publication.card",
   );
 
   t.check(publicationApprovalUrl({ serverUrl: undefined, approvalPath: candidate.approvalUrl }), null);

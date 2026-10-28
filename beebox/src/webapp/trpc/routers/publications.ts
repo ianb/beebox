@@ -15,7 +15,7 @@ import {
 } from "../../../publish/managed-publication-actions.js";
 import { listManagedPublications, readManagedPublicationReleaseFile } from "../../../publish/managed-publication-queries.js";
 import { configureManagedPublicationSharedHost } from "../../../publish/managed-publication-shared-host.js";
-import { cardBrowseUrl } from "../../../shared/card-browse-url.js";
+import { cardUrl } from "../../../shared/card-url.js";
 import { authenticatedOwnerProcedure, authedProcedure, router } from "../procedures.js";
 
 const pubIdInput = pubIdSchema;
@@ -71,7 +71,7 @@ export const publicationsRouter = router({
           card: input.card,
           ownerEmail: getOwnerEmail(),
         }, ctx.services.managedPublicationRuntime);
-        return { ...candidate, approvalUrl: cardBrowseUrl({ boxSlug: ctx.boxSlug, cardPath: candidate.cardPath }) };
+        return { ...candidate, approvalUrl: cardUrl(ctx.boxSlug, candidate.cardPath.split("/").map(encodeURIComponent).join("/")) };
       } catch (error) { publicationError(error); }
     }),
 

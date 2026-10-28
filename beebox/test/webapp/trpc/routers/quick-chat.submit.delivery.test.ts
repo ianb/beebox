@@ -562,7 +562,7 @@ void test("home lists unfinished thoughts, the ones sent in the last day, recent
       },
       {
         label: "Garden plan",
-        to: "/browse/_content/Garden/Garden.landmark.card",
+        to: "/views/_content/Garden/Garden.landmark.card",
       },
     ],
   ]);

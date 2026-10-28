@@ -15,16 +15,17 @@ function render(value: string) {
 
 // ## The six schemes
 //
-// Cards and questions open the card browser, as question alerts did before.
+// Cards and questions open the card beside the chat (a question as its stub
+// card, as the app-bar question counter opens it).
 // `chat:<id>` opens that chat; `chat:new` opens an empty chat that shows the
 // notification (by id) as a banner. `admin:<section>` opens the Admin card with
 // the section in its view state; the card opens the section's tab and scrolls
 // to it.
-void test("Cards and questions open the card browser, as question alerts did before.", async (t) => {
+void test("Cards and questions open the card beside the chat.", async (t) => {
   await t.checkText(["chat:8f2c-41aa", "chat:new", "card:_content/pets/pepper-shots.todo.card", "question:_bookkeeping/questions/Color.question.card", "admin:google-services", "dashboard"].map(render).join("\n"), `chat:8f2c-41aa -> /family/chat?session=8f2c-41aa
 chat:new -> /family/chat?new=1&notification=n7Qx
-card:_content/pets/pepper-shots.todo.card -> /family/browse/_content/pets/pepper-shots.todo.card
-question:_bookkeeping/questions/Color.question.card -> /family/browse/_bookkeeping/questions/Color.question.card
+card:_content/pets/pepper-shots.todo.card -> /family/views/_content/pets/pepper-shots.todo.card
+question:_bookkeeping/questions/Color.question.card -> /family/views/_bookkeeping/questions/Color.question.card
 admin:google-services -> /family/views/_config/interface/admin.card?viewState=%7B%22section%22%3A%22google-services%22%7D
 dashboard -> /family/`);
 });
@@ -32,7 +33,7 @@ dashboard -> /family/`);
 // A card path is a box ref, resolved from the box root, so a leading slash or a
 // `./` segment normalizes away:
 void test("A card path is a box ref, resolved from the box root, so a leading slash or a...", async (t) => {
-  t.check(render("card:/_content/./notes/Plan.doc.card"), "card:_content/notes/Plan.doc.card -> /family/browse/_content/notes/Plan.doc.card");
+  t.check(render("card:/_content/./notes/Plan.doc.card"), "card:_content/notes/Plan.doc.card -> /family/views/_content/notes/Plan.doc.card");
 });
 
 // ## Bad values name the valid schemes

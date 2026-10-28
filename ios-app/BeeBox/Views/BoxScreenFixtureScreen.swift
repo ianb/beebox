@@ -210,7 +210,7 @@ private struct FixtureQuickChatClient: QuickChatClient {
             ],
             shortcuts: withShortcuts ? [
                 .init(label: "Questions", to: "/questions"),
-                .init(label: "Garden plan", to: "/browse/_content/garden/Garden.landmark.card"),
+                .init(label: "Garden plan", to: "/views/_content/garden/Garden.landmark.card"),
             ] : []
         )
     }
