@@ -54,7 +54,7 @@ function EnableToggle({ name, enabled }: { name: string; enabled: boolean }) {
       checked={enabled}
       onChange={(next) => mutation.mutate({ name, enabled: next })}
       disabled={mutation.isPending}
-      label={enabled ? "Disable schedule" : "Enable schedule"}
+      label={`Schedule ${name}`}
       className="shrink-0"
     />
   );

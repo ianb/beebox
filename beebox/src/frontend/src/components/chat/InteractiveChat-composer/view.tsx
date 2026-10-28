@@ -55,11 +55,14 @@ const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
  * DOM, so the mobile row passes its own address.
  */
 export function ComposerSendButton({
-  id, onClick, disabled, title, size,
+  id, onClick, disabled, label, title, size,
 }: {
   id?: string;
   onClick: () => void;
   disabled: boolean;
+  /** Accessible name: the action ("Send"), never the disabled reason. */
+  label: string;
+  /** Tooltip; the disabled reason when there is one. */
   title: string;
   /** `lg` on the button bar (matches the circle controls), `md` on the mobile drop-up row. */
   size: "lg" | "md";
@@ -71,6 +74,7 @@ export function ComposerSendButton({
       onClick={onClick}
       disabled={disabled}
       className={`flex items-center justify-center ${dim} rounded-full flex-shrink-0 bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+      aria-label={label}
       title={title}
     >
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,6 +100,7 @@ function DesktopComposerRow({
   includeControlIds: boolean;
 }) {
   const noteTyped = useComposerCaret({ textareaRef, text: input });
+  const sendLabel = isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)";
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
       <textarea
@@ -132,6 +137,7 @@ function DesktopComposerRow({
               clearDraft();
             }}
             className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+            aria-label="Edit before sending"
             title="Edit before sending"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,7 +172,8 @@ function DesktopComposerRow({
         // A live segment can always be sent: with live text paused its words
         // arrive only from the HQ pass (docs/implemented-plans/resilient-voice-recording.md).
         disabled={sendDisabledReason !== undefined || !(segmentCapturing(transcription.state) || (isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim())}
-        title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
+        label={sendLabel}
+        title={sendDisabledReason ?? sendLabel}
       />
     </div>
   );
@@ -315,6 +322,7 @@ export function ChatInputArea({
           id={hasControlIds ? "bbx-composer-keyboard" : undefined}
           onClick={onKeyboard}
           className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
+          aria-label="Type a message"
           title="Type a message"
         >
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
