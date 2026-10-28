@@ -36,6 +36,12 @@ void test("A card path is a box ref, resolved from the box root, so a leading sl
   t.check(render("card:/_content/./notes/Plan.doc.card"), "card:_content/notes/Plan.doc.card -> /family/views/_content/notes/Plan.doc.card");
 });
 
+// Each path segment is encoded, so a `#` or `?` in a filename stays part of
+// the path instead of starting a fragment or query:
+void test("Each path segment is encoded, so a `#` or `?` in a filename stays part of...", async (t) => {
+  t.check(render("card:_content/notes/Soup #2.doc.card"), "card:_content/notes/Soup #2.doc.card -> /family/views/_content/notes/Soup%20%232.doc.card");
+});
+
 // ## Bad values name the valid schemes
 //
 // A path that escapes the box or lands outside its underscore areas fails

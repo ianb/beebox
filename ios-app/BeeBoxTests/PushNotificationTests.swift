@@ -350,6 +350,13 @@ final class PushNotificationTests: XCTestCase {
         )
     }
 
+    func testCardPathSegmentsAreEncoded() {
+        XCTAssertEqual(
+            render("card:_content/notes/Soup #2.doc.card"),
+            "/family/views/_content/notes/Soup%20%232.doc.card"
+        )
+    }
+
     func testBadTargetsOpenNothing() {
         XCTAssertNil(NotificationTarget("https://example.com/"))
         XCTAssertNil(NotificationTarget("/box/health"))

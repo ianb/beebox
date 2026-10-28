@@ -6,7 +6,6 @@
  */
 
 import { useParams } from "@tanstack/react-router";
-import { encodePathForUrl } from "../../lib/view-url";
 import { withBase } from "../../api";
 import type { CaptureChipModel } from "./capture-message";
 import { captureChipLabel } from "./capture-message";
@@ -22,7 +21,7 @@ export function CaptureBadge({ label }: { label: string }) {
 
 export function CaptureChip({ model }: { model: CaptureChipModel }) {
   const { boxSlug } = useParams({ strict: false });
-  const href = withBase(cardUrl(boxSlug ?? "", encodePathForUrl(model.doc)));
+  const href = withBase(cardUrl(boxSlug ?? "", model.doc));
   return (
     <a href={href} className="bbx-chat-user-attachment block rounded-lg bg-black/15 px-3 py-2 hover:bg-black/25">
       <div className="flex items-center gap-1.5 text-sm font-medium">

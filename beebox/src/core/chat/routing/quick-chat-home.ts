@@ -13,6 +13,7 @@ import { loadAllSessions } from "../session/list/core.js";
 import { chatLandmark, recentLandmarkChatsFrom, type RecentLandmarkChat } from "../session/recent-landmark.js";
 import { quickChatView, quickChatViewSchema, type QuickChatView } from "./quick-chat-record.js";
 import { listOpenQuickChatRecords, listRecentlySentQuickChatRecords } from "./quick-chat-store.js";
+import { boxCardPath } from "../../../shared/card-url.js";
 
 const RECENTLY_SENT_LIMIT = 5;
 const RECENT_CHATS_LIMIT = 5;
@@ -45,7 +46,7 @@ export const quickChatHomeSchema = z.object({
 /** Project `nav.card` entries onto links; an absent or invalid card has none, as in the menu. */
 function shortcutsFrom(entries: NavEntryResolved[]): QuickChatHome["shortcuts"] {
   return entries.flatMap((entry) => {
-    if (entry.kind === "ref") return [{ label: entry.label === "" ? entry.target : entry.label, to: `/views/${entry.target}` }];
+    if (entry.kind === "ref") return [{ label: entry.label === "" ? entry.target : entry.label, to: boxCardPath(entry.target) }];
     if (BOX_SCREEN_ROUTES.has(entry.target)) return [];
     return [{ label: entry.label === "" ? navRouteFor(entry.target)?.label ?? entry.target : entry.label, to: entry.target }];
   });

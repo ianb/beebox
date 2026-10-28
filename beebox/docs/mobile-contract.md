@@ -1263,7 +1263,7 @@ See §1.3 (full request/response/errors).
   webview shows its own banner. A tap (`didReceive`) renders `target` with `notificationId` to a
   box-relative path by `NotificationTarget`, the Swift mirror of `target.ts`'s `parseTarget` and
   `targetUrl`, and loads it in the chat webview (§3.1). A `card:` or `question:` target renders
-  to `views/<path>`, which opens the card beside the chat; boxes before 2026-10-28 rendered
+  to `views/<path>`, each path segment `encodeURIComponent`-encoded, which opens the card beside the chat; boxes before 2026-10-28 rendered
   `browse/<path>`, which still redirects. A missing or unreadable target opens
   nothing new and logs a warning. On every foreground the app clears the badge and removes
   delivered `dot` notifications.

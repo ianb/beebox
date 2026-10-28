@@ -8,7 +8,6 @@
 
 import { withBase } from "../../../../api-core";
 import { toDisplayPath } from "@shared/display-path";
-import { encodePathForUrl } from "../../../../lib/view-url";
 import { isOffMachineOrigin } from "../../../../lib/off-machine-origin";
 import { qrSvg } from "../../../../lib/qr-svg";
 import { cardUrl } from "@shared/card-url";
@@ -16,7 +15,7 @@ import { cardUrl } from "@shared/card-url";
 /** The card's page at `origin`, for the QR code: the card URL, each path segment encoded. */
 export function cardAddress(origin: string, card: { boxSlug: string; path: string }): string {
   const { boxSlug, path } = card;
-  return new URL(withBase(cardUrl(boxSlug, encodePathForUrl(path))), origin).toString();
+  return new URL(withBase(cardUrl(boxSlug, path)), origin).toString();
 }
 
 /** `here` is the page's own URL; its origin decides the QR code. */

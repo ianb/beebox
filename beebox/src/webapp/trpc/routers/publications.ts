@@ -71,7 +71,7 @@ export const publicationsRouter = router({
           card: input.card,
           ownerEmail: getOwnerEmail(),
         }, ctx.services.managedPublicationRuntime);
-        return { ...candidate, approvalUrl: cardUrl(ctx.boxSlug, candidate.cardPath.split("/").map(encodeURIComponent).join("/")) };
+        return { ...candidate, approvalUrl: cardUrl(ctx.boxSlug, candidate.cardPath) };
       } catch (error) { publicationError(error); }
     }),
 
