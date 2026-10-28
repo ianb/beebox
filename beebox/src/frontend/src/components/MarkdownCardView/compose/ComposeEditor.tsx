@@ -48,7 +48,7 @@ const theme = EditorView.theme({
 /** The editor's frame, rendered where the composition block stands; nothing while the block is not mounted. */
 function Frame({ host, children }: { host: HTMLElement | null; children: ReactNode }): ReactNode {
   if (host === null) return null;
-  return createPortal(<section aria-label="Composition editor" className="bbx-composition my-4 rounded border border-card-rule">{children}</section>, host);
+  return createPortal(<section aria-label="Composition editor" className="bbx-composition my-4 rounded border border-card-pen">{children}</section>, host);
 }
 
 interface Session {
@@ -158,12 +158,13 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
   const alarming = saveState.kind === "not-saved" || saveState.kind === "not-synced" || saveState.kind === "removed";
   return (
     <Frame host={host}>
-      <Row gap="sm" align="center" justify="end" wrap className="border-b border-card-rule px-2 py-1 print:hidden">
+      <Row gap="sm" align="center" justify="end" wrap className="rounded-t border-b border-card-pen bg-card-tint px-3 py-1.5 print:hidden">
+        <span className="text-sm font-semibold text-card-pen">Composition</span>
         <span role="status" aria-live="polite" className="mr-auto">
           <Text as="span" size="xs" tone={alarming ? "danger" : "muted"} material>{stateText}</Text>
         </span>
-        <Button id={controlAddress("bbx-composition-save", instance)} size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Save</Button>
-        <Button id={controlAddress("bbx-composition-done", instance)} size="sm" intent="secondary" onClick={done}>Done</Button>
+        <Button id={controlAddress("bbx-composition-save", instance)} label="Save composition" size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Save</Button>
+        <Button id={controlAddress("bbx-composition-done", instance)} label="Done editing composition" size="sm" intent="secondary" onClick={done}>Done</Button>
       </Row>
       {malformed ? <ErrorText className="px-4 pt-2">A tag in this composition is malformed, so its marks show as raw text.</ErrorText> : null}
       {session === null ? null : <Attach view={session.view} focused={focused} />}

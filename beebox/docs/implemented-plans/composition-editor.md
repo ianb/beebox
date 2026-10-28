@@ -42,6 +42,7 @@ disagrees with this section, this section is right.
 - Read view: `src/frontend/src/components/MarkdownCardView/{Composition.tsx,type-markdown.ts}`.
 - Editor: `src/frontend/src/components/MarkdownCardView/compose/`.
 - Server: `src/core/composition-file.ts` and `card.readComposition` / `card.writeComposition` in `src/webapp/trpc/routers/card.ts`.
+- The read-view button that opens the editor is labeled "Edit" (not "Compose"); the block header reads "Composition".
 
 **Differences from the plan:**
 - `writeComposition` returns a discriminated result, `{status: "written", ..., commitWarning}` or `{status: "conflict", text, regionHash}`, instead of a tRPC `CONFLICT` error. Text that would break the region is refused with `PRECONDITION_FAILED`.
