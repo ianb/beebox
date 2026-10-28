@@ -125,7 +125,7 @@ export function requireEvent<T extends TranscriptionEvent["type"]>(
   return event;
 }
 
-// The idle close (issues/features/2026-10-28-web-live-recorder-closes-mic-after-idle.md).
+// The idle close (issues/closed/features/2026-10-28-web-live-recorder-closes-mic-after-idle.md).
 
 /**
  * How long the mic stays open with no new live text before it closes as if

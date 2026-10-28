@@ -1,12 +1,15 @@
 ---
 title: "The web live recorder closes the microphone after about 5 minutes with no new live text"
 workstream: mic-idle-close
+resolution: implemented
 area: beebox
 labels: [voice, frontend]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request, 2026-10-28
 ---
+
+**Closed (implemented, 2026-10-28):** landed in 629e7e8f1, d7a022784, fd52180af. The web live recorder closes the mic after 5 minutes with no new live text and shows a notice. Open question not covered: whether the native iOS recorder needs the same limit. That belongs to [iOS sleeps with the mic open](../../bugs/2026-08-18-ios-sleeps-with-the-mic-open.md).
 
 When the web live recorder is open and no new live text has come in for about
 5 minutes, it should close the microphone on its own. Today it stays open until
@@ -27,10 +30,10 @@ To decide when this is built:
   the HQ pass runs on the audio as it would after a manual stop.
 - What the person sees: a short notice that the mic closed because nothing was
   said, so a closed mic is not mistaken for a dropped one
-  ([the recording-drop alarm](../closed/bugs/2026-09-30-recording-drop-klaxon-conflates-mic-and-live-text-loss.md)
+  ([the recording-drop alarm](../bugs/2026-09-30-recording-drop-klaxon-conflates-mic-and-live-text-loss.md)
   separated those two cases already).
 - Whether the iOS app needs the same limit. Its open-mic sleep problem is a
-  separate issue ([iOS sleeps with the mic open](../bugs/2026-08-18-ios-sleeps-with-the-mic-open.md)).
+  separate issue ([iOS sleeps with the mic open](../../bugs/2026-08-18-ios-sleeps-with-the-mic-open.md)).
 
 ## Decided (2026-10-28)
 
