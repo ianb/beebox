@@ -18,11 +18,16 @@ function harness(initial: string) {
   const states: string[] = [];
   const timers: { fn: () => void; ms: number; live: boolean }[] = [];
   const replies: (WriteResult | Error)[] = [];
+  const readFailures: Error[] = [];
   let disk: ReadResult = { text: initial, regionHash: `h:${initial}` };
   let text = initial;
   let remoteApplied = 0;
   const client: SyncClient = {
-    read: async () => disk,
+    read: async () => {
+      const failure = readFailures.shift();
+      if (failure !== undefined) throw failure;
+      return disk;
+    },
     write: async (input) => {
       writes.push(input);
       const reply = replies.shift() ?? { status: "written", regionHash: `h:${input.text}`, commit: input.commit ? "abc123" : null, commitWarning: null };
@@ -50,7 +55,7 @@ function harness(initial: string) {
     retryMs: 3000,
   });
   return {
-    sync, writes, states, replies,
+    sync, writes, states, replies, readFailures,
     type(next: string) { text = next; sync.localChanged(); },
     text: () => text,
     remoteApplied: () => remoteApplied,
@@ -147,4 +152,41 @@ void test("composition removed", async (t) => {
   t.check({ states: h.states, pending: h.pending(), writes: h.writes.length }, {
     states: ["The composition was removed from this card"], pending: [], writes: 0,
   });
+});
+
+// ## A failed read of the agent's change shows "Not synced" and retries with growing delays
+void test("failing read retries", async (t) => {
+  const h = harness("One two.");
+  h.readFailures.push(new Error("socket closed"), new Error("socket closed"));
+  h.setDisk({ text: "One two three.", regionHash: "agent" });
+  h.sync.remoteChanged();
+  await h.sync.settled();
+  t.check({ states: h.states, pending: h.pending() }, { states: ["Not synced: socket closed, retrying"], pending: [3000] });
+  await h.fire();
+  t.check(h.pending(), [6000]);
+  await h.fire();
+  t.check({ text: h.text(), states: h.states.slice(1), pending: h.pending() }, {
+    text: "One two three.", states: ["Not synced: socket closed, retrying", "Saved to disk"], pending: [],
+  });
+});
+
+// ## The unmount flush retries a failed write, and reports failure when it never gets through
+void test("dispose flush retries", async (t) => {
+  const h = harness("Draft.");
+  h.type("Draft, unsaved.");
+  h.replies.push(new Error("offline"));
+  const flushed = h.sync.dispose();
+  await h.sync.settled();
+  await h.fire();
+  t.check({ flushed: await flushed, texts: h.writes.map((w) => w.text) }, { flushed: true, texts: ["Draft, unsaved.", "Draft, unsaved."] });
+
+  const failing = harness("Draft.");
+  failing.type("Lost?");
+  failing.replies.push(new Error("offline"), new Error("offline"), new Error("offline"), new Error("offline"));
+  const result = failing.sync.dispose();
+  for (let i = 0; i < 3; i += 1) {
+    await failing.sync.settled();
+    await failing.fire();
+  }
+  t.check({ flushed: await result, writes: failing.writes.length, unsaved: failing.sync.hasUnsaved() }, { flushed: false, writes: 4, unsaved: true });
 });

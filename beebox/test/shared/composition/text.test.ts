@@ -87,3 +87,11 @@ void test("plain text with source", async (t) => {
     openMarks: 0,
   });
 });
+
+// ## Plain text: tag syntax inside inline code is literal text, beside a real mark on the same line
+void test("plain text with inline code", async (t) => {
+  t.check(compositionPlainText('`{% editorial kind="note" %}literal{% /editorial %}` and {% editorial kind="joiner" %}agent{% /editorial %}'), {
+    text: '`{% editorial kind="note" %}literal{% /editorial %}` and [agent]',
+    openMarks: 1,
+  });
+});

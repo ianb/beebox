@@ -111,6 +111,12 @@ Composition-Save: person`);
     await outcome(c.card.writeComposition({ path: cardPath, baseRegionHash: committed.regionHash, text: "{% composition %}", commit: false })),
     "PRECONDITION_FAILED: The text would break the composition (multiple); nothing was written",
   );
+  // A closing tag in the text would end the region early and save the rest outside it.
+  t.check(
+    await outcome(c.card.writeComposition({ path: cardPath, baseRegionHash: committed.regionHash, text: "Kept.\n{% /composition %}\nOutside.", commit: false })),
+    "PRECONDITION_FAILED: The text would break the composition (closed-early); nothing was written",
+  );
+  t.check(await box.read(cardPath), card("Notes, revised by the agent.", "Dear Samuel,\n\nThanks!"));
 
   // ## A non-doc card is rejected
 

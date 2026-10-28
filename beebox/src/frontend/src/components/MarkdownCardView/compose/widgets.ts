@@ -10,12 +10,16 @@
 import { EditorSelection, Prec, StateField, type EditorState, type Extension, type Range, type RangeSet } from "@codemirror/state";
 import { Decoration, EditorView, WidgetType, keymap, type DecorationSet } from "@codemirror/view";
 import { el, widgetButton } from "./dom";
-import { scanMarks, type MarkKind, type MarkRange, type Scan } from "./scan";
+import { scanMarks, wholeMarkRange, type MarkKind, type MarkRange, type Scan } from "./scan";
 
 const WHOLE: ReadonlySet<MarkKind> = new Set(["gap", "note", "joiner"]);
 
+function deleteWhole(view: EditorView, range: { from: number; to: number }): void {
+  view.dispatch({ changes: wholeMarkRange(view.state.doc.toString(), range), userEvent: "delete.mark" });
+}
+
 function removeWhole(view: EditorView, mark: MarkRange): void {
-  view.dispatch({ changes: { from: mark.openFrom, to: mark.closeTo }, userEvent: "delete.mark" });
+  deleteWhole(view, { from: mark.openFrom, to: mark.closeTo });
 }
 
 function unwrap(view: EditorView, mark: MarkRange): void {
@@ -136,7 +140,7 @@ function deleteAcross(forward: boolean) {
       break;
     }
     if (found === null) return false;
-    if (found.whole) view.dispatch({ changes: { from: found.from, to: found.to }, userEvent: "delete.mark" });
+    if (found.whole) deleteWhole(view, found);
     else view.dispatch({ selection: EditorSelection.cursor(forward ? found.to : found.from) });
     return true;
   };

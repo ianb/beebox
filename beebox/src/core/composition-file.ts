@@ -15,8 +15,12 @@ export type CompositionRead = { text: string; regionHash: string } | Composition
 export type CompositionWrite =
   | { status: "written"; regionHash: string; changed: boolean }
   | { status: "conflict"; text: string; regionHash: string }
-  /** `where: "text"`: the new text would break the region (for example a stray closing tag); nothing was written. */
-  | { status: "problem"; problem: CompositionProblem["problem"]; where: "file" | "text" };
+  /**
+   * `where: "text"`: the new text would break the region, nothing was written.
+   * `closed-early`: the text holds a `{% /composition %}`, so the region would
+   * end inside it and the rest would land outside.
+   */
+  | { status: "problem"; problem: CompositionProblem["problem"] | "closed-early"; where: "file" | "text" };
 
 /** SHA-256 of the region text (the form `findComposition` returns), as hex. */
 export function compositionHash(text: string): string {
@@ -50,6 +54,8 @@ export async function writeCompositionFile(
   const nextBody = spliceComposition(body, { region: found, text });
   const next = findComposition(nextBody);
   if ("problem" in next) return { status: "problem", problem: next.problem, where: "text" };
+  // The region found again must be exactly the text sent (less the final newline the splice supplies).
+  if (next.text !== text.replace(/\n$/, "")) return { status: "problem", problem: "closed-early", where: "text" };
   const content = prefix + nextBody;
   const changed = content !== raw;
   if (changed) await writeFileAtomic(fullPath, { content });

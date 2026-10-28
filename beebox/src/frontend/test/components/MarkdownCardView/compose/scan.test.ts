@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { scanMarks } from "../../../../src/components/MarkdownCardView/compose/scan.js";
+import { scanMarks, wholeMarkRange } from "../../../../src/components/MarkdownCardView/compose/scan.js";
 
 // ## Inline marks of each kind, with their delimiter ranges
 void test("inline marks", async (t) => {
@@ -54,4 +54,28 @@ void test("malformed", async (t) => {
 void test("pasted tag syntax", async (t) => {
   t.check(scanMarks('Pasted {% editorial kind="joiner" %}words{% /editorial %}').marks.map((m) => m.kind), ["joiner"]);
   t.check(scanMarks("Pasted {% editorial kind=").malformed, false);
+});
+
+// ## Tag syntax inside inline code stays text; a real mark beside it is found
+void test("inline code", async (t) => {
+  t.check(scanMarks('`{% editorial kind="note" %}literal{% /editorial %}` and {% editorial kind="joiner" %}agent{% /editorial %}'), {
+    malformed: false,
+    marks: [{ kind: "joiner", openFrom: 57, openTo: 86, closeFrom: 91, closeTo: 107, note: null }],
+  });
+});
+
+// ## Removing a whole mark leaves single spacing: one blank line between paragraphs, one space between words
+void test("whole-mark removal range", async (t) => {
+  const remove = (text: string, mark: string) => {
+    const from = text.indexOf(mark);
+    const range = wholeMarkRange(text, { from, to: from + mark.length });
+    return text.slice(0, range.from) + text.slice(range.to);
+  };
+  const gap = '{% editorial kind="gap" %}x{% /editorial %}';
+  t.check(remove(`A.\n\n${gap}\n\nB.`, gap), "A.\n\nB.");
+  t.check(remove(`A.\n\n${gap}`, gap), "A.");
+  t.check(remove(`${gap}\n\nB.`, gap), "B.");
+  t.check(remove(`them. ${gap} By May`, gap), "them. By May");
+  t.check(remove(`them. ${gap}\n\nNext.`, gap), "them.\n\nNext.");
+  t.check(remove(`(${gap}) words`, gap), "() words");
 });

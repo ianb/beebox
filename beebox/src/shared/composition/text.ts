@@ -88,6 +88,18 @@ export function normalizeComposition(text: string): string {
 
 // One `editorial` or `source` tag: `{% name attrs %}`, `{% /name %}`, or self-closing `{% name attrs /%}`.
 const TAG = /{%\s*(?<close>\/)?\s*(?<name>editorial|source)\b(?<attrs>(?:"(?:[^"\\]|\\.)*"|[^"%]|%(?!}))*)%}/g;
+// An inline code span on one line: a backtick run, then the same run again.
+const CODE_SPAN = /(?<!`)(?<run>`+)(?!`)[^\n]*?(?<!`)\k<run>(?!`)/g;
+
+/**
+ * Each `editorial` or `source` tag delimiter in the text, outside inline code
+ * spans (Markdoc leaves tag syntax in code as literal text). The compose
+ * editor's scan and Copy both find tags through this.
+ */
+export function compositionTagMatches(text: string): RegExpExecArray[] {
+  const spans = [...text.matchAll(CODE_SPAN)].map((m) => [m.index, m.index + m[0].length] as const);
+  return [...text.matchAll(TAG)].filter((m) => !spans.some(([from, to]) => m.index >= from && m.index < to));
+}
 
 interface Replacement {
   from: number;
@@ -139,7 +151,7 @@ export function compositionPlainText(text: string): { text: string; openMarks: n
   const tagLines = markLines(normalized);
   let openMarks = 0;
   const replacements: Replacement[] = [];
-  for (const match of normalized.matchAll(TAG)) {
+  for (const match of compositionTagMatches(normalized)) {
     const line = normalized.slice(0, match.index).split("\n").length - 1;
     if (!tagLines.has(line)) continue;
     const closing = match.groups?.["close"] !== undefined;

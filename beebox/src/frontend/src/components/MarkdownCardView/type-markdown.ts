@@ -10,7 +10,7 @@ import type { ComponentType } from "react";
 import type { Schema } from "@markdoc/markdoc";
 import { compositionTags } from "@shared/composition/tags";
 import { CARD_EMBED_COMPONENTS } from "../FigureEmbed";
-import { lazyComponent } from "../../lib/lazy-component";
+import { lazyOverlay } from "../../lib/lazy-component";
 import { CompositionBlock, EditorialBlock, EditorialInline, type ComposeEditorProps } from "./Composition";
 import type { MarkdownComponentOverrides } from "../Markdown/body";
 
@@ -25,8 +25,9 @@ export interface CardTypeMarkdown {
 // eslint-disable-next-line no-restricted-syntax -- widen a specifically-typed component to the shared override-map type; Markdoc only calls it with the props declared for its tag in `compositionTags`
 const cast = <T,>(c: T) => c as unknown as ComponentType<Record<string, unknown>>;
 
-// Lazy: CodeMirror loads only when someone presses Compose.
-const ComposeEditor = lazyComponent(() => import("./compose/ComposeEditor"), (m) => m.ComposeEditor);
+// Lazy: CodeMirror loads only when someone presses Compose. It renders into
+// the block's host, so it shows nothing of its own in `CardBody` while loading.
+const ComposeEditor = lazyOverlay(() => import("./compose/ComposeEditor"), (m) => m.ComposeEditor);
 
 const CARD_TYPE_MARKDOWN: Readonly<Record<string, CardTypeMarkdown>> = {
   doc: {

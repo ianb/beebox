@@ -16,7 +16,7 @@ import { shownCardBody } from "../../lib/card-field-faces";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../../lib/selection/quote-extract";
 import type { FileData } from "../../file-type-registry";
 import { useMemo, type ReactNode } from "react";
-import { CompositionCardContext, type CompositionCard } from "./Composition";
+import { CompositionCardContext, useComposeSession, type CompositionCard } from "./Composition";
 import type { CardTypeMarkdown } from "./type-markdown";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { StatusMessage } from "../ui/StatusMessage";
@@ -95,9 +95,11 @@ export function CardBody({
 }): ReactNode {
   const body = shownCardBody(data.body, title);
   const composeEditor = markdown?.composeEditor ?? null;
+  // Owned here, above the parsed body, so a remounted composition block keeps its editor.
+  const compose = useComposeSession({ body: data.body ?? "", cardPath: data.path, composeEditor });
   const composition = useMemo<CompositionCard>(
-    () => ({ body: data.body ?? "", cardPath: data.path, composeEditor }),
-    [data.body, data.path, composeEditor],
+    () => ({ body: data.body ?? "", cardPath: data.path, composeEditor, ...compose.session }),
+    [data.body, data.path, composeEditor, compose.session],
   );
   const speakers = body === null ? [] : extractQuoteSpeakers(body);
 
@@ -107,6 +109,8 @@ export function CardBody({
 
       <AttachedComments cardPath={data.path} frontmatter={data.frontmatter} />
 
+      {/* Where the editor shows when the body lost its composition (`useComposeSession`). */}
+      {compose.fallback}
       {body !== null ? (
         <div data-card-section="body">
           <CompositionCardContext.Provider value={composition}>
@@ -127,6 +131,7 @@ export function CardBody({
       ) : hideEmptyBody ? null : (
         <StatusMessage className="p-4">No body content</StatusMessage>
       )}
+      {compose.editor}
     </>
   );
 }

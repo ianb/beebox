@@ -3,26 +3,42 @@
 // (`docs/plans/composition-editor.md`, Track 3).
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
-import { createElement as h } from "react";
+import { createElement as h, useId, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { Markdown } from "../../../src/components/Markdown/body.js";
-import { CompositionCardContext, type CompositionCard } from "../../../src/components/MarkdownCardView/Composition.js";
+import {
+  CompositionCardContext, useComposeSession, type ComposeEditorProps, type CompositionCard,
+} from "../../../src/components/MarkdownCardView/Composition.js";
 import { cardTypeMarkdown } from "../../../src/components/MarkdownCardView/type-markdown.js";
 import { BoxSlugProvider } from "../../../src/lib/box-slug.js";
 
 const doc = cardTypeMarkdown("doc");
-const Editor = () => h("div", { "data-editor": "" });
+// The editor renders into the host the block leaves in its place, as the real one does.
+// Its `data-editor` value is per mount, so a remounted editor shows a new one.
+function Editor({ host }: ComposeEditorProps): ReactNode {
+  const instance = useId();
+  return host === null ? null : createPortal(h("div", { "data-editor": instance }), host);
+}
 
-function render(body: string, composeEditor: CompositionCard["composeEditor"]) {
-  const card: CompositionCard = { body, cardPath: "_content/docs/Draft.doc.card", composeEditor };
-  return h(BoxSlugProvider, {
-    boxSlug: "test",
-    children: h(CompositionCardContext.Provider, {
+/** What `CardBody` does: the compose session sits above the Markdown tree. */
+function Body({ body, composeEditor }: { body: string; composeEditor: CompositionCard["composeEditor"] }): ReactNode {
+  const cardPath = "_content/docs/Draft.doc.card";
+  const compose = useComposeSession({ body, cardPath, composeEditor });
+  const card: CompositionCard = { body, cardPath, composeEditor, ...compose.session };
+  return h("div", null,
+    compose.fallback,
+    h(CompositionCardContext.Provider, {
       value: card,
       children: h(Markdown, { onNavigate: () => {}, tags: doc?.tags, components: doc?.components, children: body }),
     }),
-  });
+    compose.editor);
+}
+
+function render(body: string, composeEditor: CompositionCard["composeEditor"]) {
+  return h(BoxSlugProvider, { boxSlug: "test", children: h(Body, { body, composeEditor }) });
 }
 
 const piece = (inner: string) => `Preface.\n\n{% composition %}\n${inner}\n{% /composition %}\n`;
@@ -78,5 +94,34 @@ void test("Compose shows only for one closed composition, and opens the editor",
   t.teardown(() => view.unmount());
   const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Compose");
   await view.act(() => { compose?.click(); });
-  t.check({ editor: view.container.querySelector("[data-editor]") !== null, block: view.container.querySelector("section") }, { editor: true, block: null });
+  t.check({ editors: view.container.querySelectorAll("[data-editor]").length, blocks: view.container.querySelectorAll("section").length }, { editors: 1, blocks: 0 });
+});
+
+// ## Text added above the composition remounts the block (Markdoc renders it
+// without keys), but the editor lives above the Markdown tree and stays.
+void test("the editor survives the block remounting", async (t) => {
+  const view = await mount(render(piece("Plain."), Editor));
+  t.teardown(() => view.unmount());
+  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Compose");
+  await view.act(() => { compose?.click(); });
+  const before = view.container.querySelector("[data-editor]")?.getAttribute("data-editor");
+  await view.rerender(render(`A new first paragraph.\n\n${piece("Plain.")}`, Editor));
+  t.check(before, any(String));
+  t.check(view.container.querySelector("[data-editor]")?.getAttribute("data-editor"), before);
+});
+
+// ## The composition removed or broken while composing: the editor moves to a
+// host at the top of the body (where it says why it stopped, with Done)
+void test("the editor stays visible when the composition goes away", async (t) => {
+  const view = await mount(render(piece("Plain."), Editor));
+  t.teardown(() => view.unmount());
+  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Compose");
+  await view.act(() => { compose?.click(); });
+  const before = view.container.querySelector("[data-editor]")?.getAttribute("data-editor") ?? null;
+  t.check(before, any(String));
+  for (const body of ["Notes only; the agent removed the composition.\n", `${piece("One.")}\n${piece("Two.")}`]) {
+    await view.rerender(render(body, Editor));
+    const editors = [...view.container.querySelectorAll("[data-editor]")].map((el) => el.getAttribute("data-editor"));
+    t.check(editors, [before]);
+  }
 });

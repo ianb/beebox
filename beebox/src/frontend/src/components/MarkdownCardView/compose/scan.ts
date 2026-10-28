@@ -8,6 +8,7 @@
  */
 import { parseMarkdown } from "@shared/markdoc-config/parse/core";
 import { EDITORIAL_KINDS } from "@shared/composition/tags";
+import { compositionTagMatches } from "@shared/composition/text";
 
 export type MarkKind = (typeof EDITORIAL_KINDS)[number] | "source";
 
@@ -27,8 +28,6 @@ export interface Scan {
   marks: MarkRange[];
   malformed: boolean;
 }
-
-const TAG = /{%\s*(?<close>\/)?\s*(?<name>editorial|source)\b(?<attrs>(?:"(?:[^"\\]|\\.)*"|[^"%]|%(?!}))*)%}/g;
 
 const KIND_ATTR = /\bkind\s*=\s*"([^"]*)"/;
 const NOTE_ATTR = /\bnote\s*=\s*"((?:[^"\\]|\\.)*)"/;
@@ -52,7 +51,7 @@ const MALFORMED: Scan = { marks: [], malformed: true };
 export function scanMarks(text: string): Scan {
   const marks: MarkRange[] = [];
   const open: { name: string; kind: MarkKind; from: number; to: number; note: string | null }[] = [];
-  for (const match of text.matchAll(TAG)) {
+  for (const match of compositionTagMatches(text)) {
     const name = match.groups?.["name"] ?? "";
     const attrs = match.groups?.["attrs"] ?? "";
     const from = match.index;
@@ -71,4 +70,23 @@ export function scanMarks(text: string): Scan {
   }
   if (open.length > 0 || markdocTagCount(text) !== marks.length) return MALFORMED;
   return { marks: marks.toSorted((a, b) => a.openFrom - b.openFrom), malformed: false };
+}
+
+/**
+ * The range to delete when a whole mark (gap, note, joiner) is removed, so
+ * the spacing left behind matches the rest of the text: a mark alone on its
+ * lines takes one neighbouring blank line with it (paragraphs stay one blank
+ * line apart), and an inline mark between two spaces takes one of them.
+ */
+export function wholeMarkRange(text: string, { from, to }: { from: number; to: number }): { from: number; to: number } {
+  const startsLine = from === 0 || text[from - 1] === "\n";
+  const endsLine = to === text.length || text[to] === "\n";
+  if (startsLine && endsLine) {
+    if (text.startsWith("\n\n", to)) return { from, to: to + 2 };
+    if (from >= 2 && text.startsWith("\n\n", from - 2)) return { from: from - 2, to };
+    if (text[to] === "\n") return { from, to: to + 1 };
+    return { from: Math.max(0, from - 1), to };
+  }
+  if (text[from - 1] === " " && (text[to] === " " || endsLine)) return { from: from - 1, to };
+  return { from, to };
 }

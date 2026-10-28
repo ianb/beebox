@@ -35,6 +35,8 @@ export type SaveState =
   | { kind: "saved-disk" }
   | { kind: "saved" }
   | { kind: "not-saved"; error: string }
+  /** A read of the agent's changes failed; `retrying` is false once the retries ran out. */
+  | { kind: "not-synced"; error: string; retrying: boolean }
   | { kind: "commit-failed"; message: string }
   | { kind: "removed"; problem: string };
 
@@ -45,6 +47,7 @@ export function saveStateText(state: SaveState): string {
     case "saved-disk": return "Saved to disk";
     case "saved": return "Saved";
     case "not-saved": return `Not saved: ${state.error}, retrying`;
+    case "not-synced": return state.retrying ? `Not synced: ${state.error}, retrying` : `Not synced: ${state.error}`;
     case "commit-failed": return state.message;
     case "removed":
       return state.problem === "none"
@@ -66,6 +69,10 @@ export interface SyncOptions {
 
 /** A write that keeps meeting newer agent text gives up after this many merges and retries later. */
 const MAX_MERGES = 3;
+/** A failed read retries after `retryMs`, doubling, this many times; then the next file-change or reconnect tries again. */
+const MAX_READ_RETRIES = 5;
+/** Writes the unmount flush tries before it gives up (the page's leave warning stays on). */
+const DISPOSE_ATTEMPTS = 4;
 
 export class CompositionSync {
   /** The disk text the editor last agreed with (normalized), the merge base. */
@@ -74,6 +81,7 @@ export class CompositionSync {
   /** The disk text as last read or written; the editor is dirty when it differs. */
   private lastSent: string;
   private cancelTimer: (() => void) | null = null;
+  private cancelReadRetry: (() => void) | null = null;
   private lane: Promise<unknown> = Promise.resolve();
   private queued = 0;
   private syncQueued = false;
@@ -96,6 +104,12 @@ export class CompositionSync {
 
   /** A `file-change` for the card arrived (or the socket reconnected). */
   remoteChanged(): void {
+    this.cancelReadRetry?.();
+    this.cancelReadRetry = null;
+    this.readRemote(0);
+  }
+
+  private readRemote(attempt: number): void {
     if (this.stopped || this.syncQueued) return;
     this.syncQueued = true;
     void this.enqueue(async () => {
@@ -105,12 +119,20 @@ export class CompositionSync {
       try {
         read = await this.opts.client.read();
       } catch (e) {
-        // The next file-change or reconnect reads again.
         console.warn("Compose: reading the composition failed:", e);
+        const retrying = attempt < MAX_READ_RETRIES && !this.disposed;
+        this.setState({ kind: "not-synced", error: errorMessage(e), retrying });
+        if (retrying) {
+          this.cancelReadRetry = this.opts.schedule(() => {
+            this.cancelReadRetry = null;
+            this.readRemote(attempt + 1);
+          }, this.opts.retryMs * 2 ** attempt);
+        }
         return;
       }
       if ("problem" in read) this.remove(read.problem);
       else if (read.regionHash !== this.syncedHash) this.absorb(read);
+      if (this.state.kind === "not-synced") this.setState({ kind: this.opts.editor.text() === this.lastSent ? "saved-disk" : "idle" });
     });
   }
 
@@ -136,11 +158,21 @@ export class CompositionSync {
     return !this.stopped && (this.cancelTimer !== null || this.queued > 0 || this.state.kind === "not-saved");
   }
 
-  /** The editor unmounted: flush once, schedule nothing more. */
-  dispose(): void {
+  /**
+   * The session ended without Done (the card view unmounted, or the app
+   * navigated away): write what is unsaved, retrying a few times. Resolves false when it never got
+   * through, so the caller keeps the page's leave warning on.
+   */
+  async dispose(): Promise<boolean> {
     this.disposed = true;
     this.clearTimer();
-    void this.enqueue(() => this.write(false));
+    this.cancelReadRetry?.();
+    this.cancelReadRetry = null;
+    for (let attempt = 1; ; attempt += 1) {
+      if (await this.enqueue(() => this.write(false)) || this.stopped) return true;
+      if (attempt >= DISPOSE_ATTEMPTS) return false;
+      await new Promise<void>((resolve) => this.opts.schedule(resolve, this.opts.retryMs));
+    }
   }
 
   private setState(state: SaveState): void {
