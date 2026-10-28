@@ -178,7 +178,7 @@ void test("dispose flush retries", async (t) => {
   const flushed = h.sync.dispose();
   await h.sync.settled();
   await h.fire();
-  t.check({ flushed: await flushed, texts: h.writes.map((w) => w.text) }, { flushed: true, texts: ["Draft, unsaved.", "Draft, unsaved."] });
+  t.check({ flushed: await flushed, texts: h.writes.map((w) => w.text) }, { flushed: { ok: true }, texts: ["Draft, unsaved.", "Draft, unsaved."] });
 
   const failing = harness("Draft.");
   failing.type("Lost?");
@@ -188,5 +188,16 @@ void test("dispose flush retries", async (t) => {
     await failing.sync.settled();
     await failing.fire();
   }
-  t.check({ flushed: await result, writes: failing.writes.length, unsaved: failing.sync.hasUnsaved() }, { flushed: false, writes: 4, unsaved: true });
+  t.check({ flushed: await result, writes: failing.writes.length, unsaved: failing.sync.hasUnsaved() }, { flushed: { ok: false, error: "offline" }, writes: 4, unsaved: true });
+});
+
+// ## After Save, an agent change merged in from disk makes the state "Saved to disk", not "Saved"
+void test("saved goes stale on a remote change", async (t) => {
+  const h = harness("One two.");
+  h.type("One two, mine.");
+  await h.sync.save();
+  h.setDisk({ text: "One two, mine. Agent's line.", regionHash: "agent" });
+  h.sync.remoteChanged();
+  await h.sync.settled();
+  t.check({ text: h.text(), states: h.states }, { text: "One two, mine. Agent's line.", states: ["Saving…", "Saved", "Saved to disk"] });
 });

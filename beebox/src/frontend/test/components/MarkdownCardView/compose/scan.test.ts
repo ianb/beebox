@@ -64,6 +64,11 @@ void test("inline code", async (t) => {
   });
 });
 
+// ## Escaped backticks open no code span: the mark between them is found
+void test("escaped backticks", async (t) => {
+  t.check(scanMarks('\\`{% editorial kind="joiner" %}agent{% /editorial %}\\`').marks.map((m) => m.kind), ["joiner"]);
+});
+
 // ## Removing a whole mark leaves single spacing: one blank line between paragraphs, one space between words
 void test("whole-mark removal range", async (t) => {
   const remove = (text: string, mark: string) => {

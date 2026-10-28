@@ -16,6 +16,8 @@ import { errorMessage } from "@shared/error-guards";
 import { normalizeComposition } from "@shared/composition/text";
 import { controlAddress } from "@shared/ui-scan/control-address";
 import { trpcClient } from "../../../lib/trpc/client";
+import { displayName } from "../../../lib/display-name";
+import { toastError } from "../../ui/toast-store";
 import { fileChangeAt } from "../../../lib/live-refresh";
 import { useLiveRefresh } from "../../../hooks/useLiveRefresh";
 import { Button } from "../../ui/Button";
@@ -133,9 +135,15 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
     window.addEventListener("beforeunload", beforeUnload);
     return () => {
       ended = true;
-      // A flush that never gets through keeps the leave warning on.
+      // A flush that never gets through keeps the leave warning on, and says
+      // so where the person will see it: the editor is already gone.
       void created.sync.dispose().then((flushed) => {
-        if (flushed) window.removeEventListener("beforeunload", beforeUnload);
+        if (flushed.ok) {
+          window.removeEventListener("beforeunload", beforeUnload);
+          return;
+        }
+        console.error(`Compose: the final write of ${cardPath} failed:`, flushed.error);
+        toastError(`Your composition edits to ${displayName(cardPath)} were not saved`, { cause: flushed.error, persist: true });
       });
       created.view.destroy();
     };

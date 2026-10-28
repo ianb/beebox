@@ -160,17 +160,17 @@ export class CompositionSync {
 
   /**
    * The session ended without Done (the card view unmounted, or the app
-   * navigated away): write what is unsaved, retrying a few times. Resolves false when it never got
-   * through, so the caller keeps the page's leave warning on.
+   * navigated away): write what is unsaved, retrying a few times. Resolves
+   * with the error when it never got through.
    */
-  async dispose(): Promise<boolean> {
+  async dispose(): Promise<{ ok: true } | { ok: false; error: string }> {
     this.disposed = true;
     this.clearTimer();
     this.cancelReadRetry?.();
     this.cancelReadRetry = null;
     for (let attempt = 1; ; attempt += 1) {
-      if (await this.enqueue(() => this.write(false)) || this.stopped) return true;
-      if (attempt >= DISPOSE_ATTEMPTS) return false;
+      if (await this.enqueue(() => this.write(false)) || this.stopped) return { ok: true };
+      if (attempt >= DISPOSE_ATTEMPTS) return { ok: false, error: this.state.kind === "not-saved" ? this.state.error : "the write failed" };
       await new Promise<void>((resolve) => this.opts.schedule(resolve, this.opts.retryMs));
     }
   }
@@ -217,6 +217,8 @@ export class CompositionSync {
     const local = this.opts.editor.text();
     const { merged, conflicts } = mergeComposition(this.base, { local, remote: theirs });
     this.opts.editor.applyRemote({ changes: diffToChanges(local, merged), conflicts });
+    // The disk now holds text the last commit does not: no longer "Saved".
+    if (this.state.kind === "saved") this.setState({ kind: "saved-disk" });
     this.base = theirs;
     this.syncedHash = remote.regionHash;
     this.lastSent = remote.text;

@@ -95,3 +95,8 @@ void test("plain text with inline code", async (t) => {
     openMarks: 1,
   });
 });
+
+// ## Plain text: escaped backticks open no code span, so a mark between them is real
+void test("plain text with escaped backticks", async (t) => {
+  t.check(compositionPlainText('\\`{% editorial kind="joiner" %}agent{% /editorial %}\\`'), { text: "\\`[agent]\\`", openMarks: 1 });
+});

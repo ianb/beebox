@@ -89,7 +89,9 @@ export function normalizeComposition(text: string): string {
 // One `editorial` or `source` tag: `{% name attrs %}`, `{% /name %}`, or self-closing `{% name attrs /%}`.
 const TAG = /{%\s*(?<close>\/)?\s*(?<name>editorial|source)\b(?<attrs>(?:"(?:[^"\\]|\\.)*"|[^"%]|%(?!}))*)%}/g;
 // An inline code span on one line: a backtick run, then the same run again.
-const CODE_SPAN = /(?<!`)(?<run>`+)(?!`)[^\n]*?(?<!`)\k<run>(?!`)/g;
+// A backslash-escaped backtick does not open one (inside a span, a backslash
+// is literal, so the closing run may follow one).
+const CODE_SPAN = /(?<![\\`])(?<run>`+)(?!`)[^\n]*?(?<!`)\k<run>(?!`)/g;
 
 /**
  * Each `editorial` or `source` tag delimiter in the text, outside inline code
