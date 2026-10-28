@@ -3,7 +3,7 @@
 // `scanMarks` gives each `editorial` and `source` mark's delimiter offsets,
 // which the compose editor turns into widgets. A tag that is unclosed,
 // mismatched, or names an unknown kind makes the whole text `malformed`, and
-// the editor shows it raw (`docs/plans/composition-editor.md`, Failure modes).
+// the editor shows it raw (`docs/implemented-plans/composition-editor.md`, Failure modes).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -1,5 +1,5 @@
 /**
- * The read view of a doc card's composition (`docs/plans/composition-editor.md`,
+ * The read view of a doc card's composition (`docs/implemented-plans/composition-editor.md`,
  * Track 3): `CompositionBlock` frames the piece with Copy and Compose, and
  * `EditorialInline` / `EditorialBlock` show the agent's marks inside it.
  *

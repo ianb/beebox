@@ -5489,7 +5489,7 @@ tests:
       use plain markdown" rule directly (an unknown tag trips validation) and
       itself suggests checking card-recipe.md for an existing field.
 
-  # === Compositions (docs/plans/composition-editor.md) ===
+  # === Compositions (docs/implemented-plans/composition-editor.md) ===
   #
   # `{% composition %}` and `{% editorial %}` are doc-card scoped tags taught
   # in the doc schema instructions ("## Compositions" in

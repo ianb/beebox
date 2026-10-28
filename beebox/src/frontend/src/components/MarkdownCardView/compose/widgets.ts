@@ -1,5 +1,5 @@
 /**
- * The marks as widgets in the compose editor (`docs/plans/composition-editor.md`,
+ * The marks as widgets in the compose editor (`docs/implemented-plans/composition-editor.md`,
  * Track 5). Gap, note, and joiner marks are agent text: each becomes one
  * atomic widget; gap and note have "×" (remove the tag and its words), a
  * joiner has no button and Backspace or Delete removes it whole. Check and

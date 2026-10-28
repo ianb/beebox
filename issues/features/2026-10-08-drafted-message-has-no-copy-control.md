@@ -34,3 +34,7 @@ Seen again in [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports
 ## Reopened 2026-10-22 (journey walks)
 
 [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (R6): the agent wrote all five drafts in the walk (Noor, Marisol twice, Bram, Idris) as blockquotes, as on 2026-10-09, so none had the Copy button that `e84154b1a` added to fenced code blocks. The fix reached no draft in the journey that filed this issue. The walker did not try to copy this time. Either guidance tells the agent to put a ready-to-send message in a fenced block, or blockquotes in cards and chat get a copy control too.
+
+## Partly addressed 2026-10-27
+
+A `{% composition %}` block in a doc card has a Copy button ([composition editor](../../beebox/docs/implemented-plans/composition-editor.md)). Drafts written as blockquotes in chat or in cards still have no copy control, so this stays open.

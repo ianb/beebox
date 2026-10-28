@@ -1,6 +1,6 @@
 ---
 title: "Composition editor: design"
-status: draft
+status: implemented
 workstream: composition-editor
 issues: []
 ---

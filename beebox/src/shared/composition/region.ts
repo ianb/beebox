@@ -1,7 +1,7 @@
 /**
  * Where a doc card's `{% composition %}` region is, and how to replace its
  * text. The server and the editor both use these, so they agree on the
- * region (`docs/plans/composition-editor.md`, Track 1).
+ * region (`docs/implemented-plans/composition-editor.md`, Track 1).
  *
  * The composition text is the source strictly between the line that holds
  * `{% composition %}` and the line that holds `{% /composition %}`.

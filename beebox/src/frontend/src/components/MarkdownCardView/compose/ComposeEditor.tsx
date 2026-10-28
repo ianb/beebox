@@ -1,6 +1,6 @@
 /**
  * Compose mode: a CodeMirror editor over a doc card's composition text, in
- * place of the read view's block (`docs/plans/composition-editor.md`,
+ * place of the read view's block (`docs/implemented-plans/composition-editor.md`,
  * Track 5). Lazy-loaded from `type-markdown.ts`, so readers who never press
  * Compose do not download CodeMirror. `sync.ts` owns autosave, Save, and
  * merging; this file wires it to the view, the toolbar, and the page.

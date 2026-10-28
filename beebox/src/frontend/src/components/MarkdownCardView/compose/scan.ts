@@ -1,6 +1,6 @@
 /**
  * Where the marks are in composition source text, for the editor's widgets
- * (`docs/plans/composition-editor.md`, Track 5). Markdoc decides whether the
+ * (`docs/implemented-plans/composition-editor.md`, Track 5). Markdoc decides whether the
  * tags are well formed, but gives inline tags line numbers only, so the
  * character offsets come from pairing the tag delimiters here. When the two
  * disagree, or a tag is unclosed or names an unknown kind, the text is

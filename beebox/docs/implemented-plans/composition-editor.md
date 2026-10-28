@@ -1,6 +1,6 @@
 ---
 title: "Composition editor"
-status: draft
+status: implemented
 workstream: composition-editor
 issues:
   - ../../../issues/features/2026-07-05-writing-skill.md
@@ -29,6 +29,35 @@ agent's concurrent edits, and commits on the person's Save.
   [reader-context sidecar tag](../../../issues/exploration/2026-09-30-reader-context-writing-and-structured-thinking-tag.md)
   (another hidden-annotation tag; no shared code now).
 - Searched the queue for "editor", "composition", "boneyard": no other match.
+
+## As built (2026-10-27)
+
+All five tracks shipped. The text below is the plan as written; where it
+disagrees with this section, this section is right.
+
+**Where things are:**
+- Tags: `src/shared/composition/tags.ts` (not `markdoc-config/tags/composition.ts`).
+- Region finder, text export, merge: `src/shared/composition/{region,text,merge}.ts`.
+- Cardinality lint: inside `lintBodyMarkdoc` (`src/core/body-markdoc-lint.ts`), not `lint-cards.ts`.
+- Read view: `src/frontend/src/components/MarkdownCardView/{Composition.tsx,type-markdown.ts}`.
+- Editor: `src/frontend/src/components/MarkdownCardView/compose/`.
+- Server: `src/core/composition-file.ts` and `card.readComposition` / `card.writeComposition` in `src/webapp/trpc/routers/card.ts`.
+
+**Differences from the plan:**
+- `writeComposition` returns a discriminated result, `{status: "written", ..., commitWarning}` or `{status: "conflict", text, regionHash}`, instead of a tRPC `CONFLICT` error. Text that would break the region is refused with `PRECONDITION_FAILED`.
+- The merge re-merges word-level conflicts character by character, which avoids false conflicts.
+- `CardBody` owns the compose session and the editor DOM attaches through a portal, so the editor survives a re-render of the card body (found in review).
+- The knowledge audits ran as `knows_about` (the instructions live in `card-doc.md`, not the always-on guide); both passed.
+- Size was about 2,630 changed lines (about 1,700 source, 900 tests) against an estimate of 1,950.
+
+**Not verified:** no phone pass (implementation order step 6), no dark-mode
+check. The failure toast after navigation and the fallback for a composition
+removed while composing are covered by unit tests only, not in a browser.
+
+**Open question:** Save commits the whole card, so uncommitted agent edits
+outside the region are committed with it under the `Composition-Save: person`
+trailer. Today the trailer describes the button press, not the content. The
+boxholder decides whether Save should commit only the region.
 
 ## Design
 

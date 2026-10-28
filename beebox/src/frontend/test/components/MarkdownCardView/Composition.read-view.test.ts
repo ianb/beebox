@@ -1,6 +1,6 @@
 // A doc card's composition renders as a framed block with Copy (and Compose
 // when an editor is wired), and each editorial mark renders by kind
-// (`docs/plans/composition-editor.md`, Track 3).
+// (`docs/implemented-plans/composition-editor.md`, Track 3).
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, useId, type ReactNode } from "react";

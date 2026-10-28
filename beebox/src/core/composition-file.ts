@@ -1,6 +1,6 @@
 /**
  * Read and replace a doc card's composition text on disk, with the region
- * hash as the write precondition (`docs/plans/composition-editor.md`,
+ * hash as the write precondition (`docs/implemented-plans/composition-editor.md`,
  * Track 4). The region is found in the body after frontmatter, so its
  * offsets are shifted by the frontmatter's length before splicing the file.
  */

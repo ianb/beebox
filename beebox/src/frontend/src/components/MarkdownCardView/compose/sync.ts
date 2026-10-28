@@ -1,6 +1,6 @@
 /**
  * Keeps the compose editor and the card on disk in step
- * (`docs/plans/composition-editor.md`, Track 5): autosave after a pause in
+ * (`docs/implemented-plans/composition-editor.md`, Track 5): autosave after a pause in
  * typing, Save with a commit, merge of the agent's changes, and the save
  * state the toolbar shows. Writes and reads run one at a time in order, so
  * only one write is ever in flight. The tRPC client, the editor, and the

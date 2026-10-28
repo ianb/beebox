@@ -8,6 +8,8 @@ discovered-in: main session — after being told my README prose was "all AI"
 priority: backlog
 ---
 
+> **Partly resolved 2026-10-27:** the editing surface and the marks for agent-placed text shipped as the [composition editor](../../beebox/docs/implemented-plans/composition-editor.md). The writing practice itself (collection, elicitation, outline mode) is still open.
+
 **Reframed 2026-07-20.** This was originally scoped as "prose that doesn't read
 as LLM-generated" — an anti-AI-tells style guide for agent-composed text. That's
 the wrong shape. Boxholder:

@@ -1,5 +1,5 @@
 /**
- * Merge conflicts shown in the compose editor (`docs/plans/composition-editor.md`,
+ * Merge conflicts shown in the compose editor (`docs/implemented-plans/composition-editor.md`,
  * Track 5). Where the agent and the person changed the same span, the
  * person's text stays and the agent's version shows after it as a widget,
  * "agent's version, not merged", with "Use this" (replace the span) and

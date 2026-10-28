@@ -1,6 +1,6 @@
 /**
  * Three-way merge of composition text, and the minimal edits that turn one
- * text into another (`docs/plans/composition-editor.md`, Track 5). The
+ * text into another (`docs/implemented-plans/composition-editor.md`, Track 5). The
  * editor merges the agent's change on disk (`remote`) into the person's
  * on-screen text (`local`) against the text both started from (`base`).
  *

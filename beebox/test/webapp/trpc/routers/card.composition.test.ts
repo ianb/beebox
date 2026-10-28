@@ -2,7 +2,7 @@
 //
 // The composition editor reads a doc card's `{% composition %}` text with a
 // region hash, and writes it back with that hash as the precondition
-// (`docs/plans/composition-editor.md`, Track 4). The write replaces only the
+// (`docs/implemented-plans/composition-editor.md`, Track 4). The write replaces only the
 // region, so an agent's edit elsewhere in the card does not conflict and
 // survives. `commit: true` is Save: it commits the card with webapp trailers.
 

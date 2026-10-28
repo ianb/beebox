@@ -1,6 +1,6 @@
 /**
  * Composition text transforms that keep what it renders
- * (`docs/plans/composition-editor.md`, Track 1): whitespace normalization,
+ * (`docs/implemented-plans/composition-editor.md`, Track 1): whitespace normalization,
  * which the editor applies on each read, and the plain-text form that Copy
  * puts on the clipboard.
  */

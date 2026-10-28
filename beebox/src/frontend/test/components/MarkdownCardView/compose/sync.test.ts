@@ -2,7 +2,7 @@
 //
 // `CompositionSync` autosaves after a pause, saves with a commit, merges the
 // agent's changes, and reports the save state the toolbar shows
-// (`docs/plans/composition-editor.md`, Track 5 and Failure modes). Here the
+// (`docs/implemented-plans/composition-editor.md`, Track 5 and Failure modes). Here the
 // tRPC client, the editor, and the timers are fakes.
 
 import { test } from "tap";

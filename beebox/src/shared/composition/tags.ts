@@ -1,5 +1,5 @@
 /**
- * The doc card's composition vocabulary (`docs/plans/composition-editor.md`):
+ * The doc card's composition vocabulary (`docs/implemented-plans/composition-editor.md`):
  * two tags valid only in a doc body (`CardSchemaConfig.markdocTags` on the
  * doc schema).
  *
