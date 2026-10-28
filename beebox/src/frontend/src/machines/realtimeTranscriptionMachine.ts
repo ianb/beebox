@@ -41,7 +41,11 @@ import { setup, assign, emit, enqueueActions, forwardTo, fromCallback, not, stat
 import { recordingStop, recordingError, micLost, recordingResumed, liveTextPaused, liveTextResumed } from "../lib/audio/earcons";
 import type { PendingRecording } from "../lib/audio/voice-stager";
 import {
+  IDLE_CLOSE_NOTICE,
   MachineActionError,
+  NO_LIVE_TEXT_TIMEOUT_MS,
+  isNewLiveText,
+  requireEvent,
   type FinalWord,
   type MaxDurationReached,
   type TranscriptionActorCommand,
@@ -58,19 +62,6 @@ const unprovidedTranscriptionActor = fromCallback<TranscriptionActorCommand, Tra
   const message = "transcriptionActor was not provided; use liveTranscriptionMachine";
   throw new MachineActionError(message);
 });
-
-function requireEvent<T extends TranscriptionEvent["type"]>(
-  event: TranscriptionEvent,
-  opts: { type: T; action: string },
-): Extract<TranscriptionEvent, { type: T }> {
-  // Narrowing through a type-predicate helper keeps the action bodies cast-free.
-  const matches = (e: TranscriptionEvent): e is Extract<TranscriptionEvent, { type: T }> => e.type === opts.type;
-  if (!matches(event)) {
-    const message = `${opts.action}: unexpected event type "${event.type}"`;
-    throw new MachineActionError(message);
-  }
-  return event;
-}
 
 const EMPTY_SEGMENT = {
   finalTranscript: "",
@@ -134,6 +125,7 @@ export const realtimeTranscriptionMachine = setup({
   guards: {
     micDrop: ({ event }) => event.type === "CONNECTION_DEGRADED" && event.cause === "microphone",
     liveTextDropped: ({ context }) => context.liveTextCue === "dropped",
+    newLiveText: ({ context, event }) => isNewLiveText(context, requireEvent(event, { type: "TEXT_UPDATE", action: "newLiveText" })),
   },
   actions: {
     applyTextUpdate: assign(({ event }) => {
@@ -171,6 +163,7 @@ export const realtimeTranscriptionMachine = setup({
     setTimeoutWarning: assign({ error: "Transcription timed out — partial text preserved", errorLevel: "warning" as const }),
     setMicInterrupted: assign({ error: "Microphone interrupted — recovering…", errorLevel: "warning" as const }),
     setMicDropEnded: assign({ error: "Recording stopped — the microphone was taken away", errorLevel: "warning" as const }),
+    setIdleClosed: assign({ error: IDLE_CLOSE_NOTICE, errorLevel: "warning" as const }),
     clearError: assign({ error: null }),
     playMicLost: () => {
       micLost.play();
@@ -212,7 +205,7 @@ export const realtimeTranscriptionMachine = setup({
   },
   delays: {
     FINALIZE_TIMEOUT: 10000,
-    SILENCE_TIMEOUT: 5 * 60 * 1000,
+    NO_LIVE_TEXT_TIMEOUT: NO_LIVE_TEXT_TIMEOUT_MS,
     // Memory no longer grows with the segment (audio stages to the box), so
     // a conversation is sent in hour-long parts rather than stopping.
     MAX_DURATION: 60 * 60 * 1000,
@@ -290,8 +283,8 @@ export const realtimeTranscriptionMachine = setup({
           },
         },
         recordingLocal: {
-          // No SILENCE_TIMEOUT: no live text arrives to reset it (MAX_DURATION
-          // still bounds the segment). Errors about the live socket keep the
+          // No NO_LIVE_TEXT_TIMEOUT: no live text can arrive here, so the
+          // person may be talking (MAX_DURATION still bounds the segment). Errors about the live socket keep the
           // recording going; the actor has already stopped or kept retrying.
           // Losing live text only pauses spoken keywords, so it gets a quiet
           // cue, and only once the loss has lasted (never at segment start,
@@ -323,20 +316,27 @@ export const realtimeTranscriptionMachine = setup({
         },
         recording: {
           after: {
-            SILENCE_TIMEOUT: {
+            // The same end as a manual STOP; the text stays for the composer
+            // and the recording goes on to its HQ pass.
+            NO_LIVE_TEXT_TIMEOUT: {
               // Held: the silence is ours, not the person's.
               guard: ({ context }) => !context.held,
               target: "finalizing",
               actions: [
-                () => console.info("[realtime-transcription] Silence timeout — auto-stopping"),
+                () => console.info("[realtime-transcription] No new live text — closing the mic"),
+                "setIdleClosed",
                 "sendStopToTranscriber",
                 "playMicOffSound",
               ],
             },
           },
           on: {
-            TEXT_UPDATE: { target: "recording", reenter: true, actions: "applyTextUpdate" },
-            // Re-entering restarts the silence timer when the hold ends.
+            // Re-entering restarts the idle timer; unchanged text does not.
+            TEXT_UPDATE: [
+              { guard: "newLiveText", target: "recording", reenter: true, actions: "applyTextUpdate" },
+              { actions: "applyTextUpdate" },
+            ],
+            // Re-entering restarts the idle timer when the hold ends.
             HOLD: { target: "recording", reenter: true, actions: ["setHeld", forwardTo("transcriber")] },
             CONNECTION_DEGRADED: [
               { guard: "micDrop", target: "reconnecting", actions: ["playMicLost", "setMicInterrupted"] },

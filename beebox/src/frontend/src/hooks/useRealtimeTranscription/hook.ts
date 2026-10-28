@@ -49,7 +49,7 @@ export interface UseRealtimeTranscriptionOptions {
   /**
    * Called when a segment ends with transcript text nobody took: no stop()
    * promise was awaiting it and no send keyword fired — a mic loss that
-   * outlasted its window, or a silence auto-stop. Without a handler the
+   * outlasted its window, or an idle auto-stop. Without a handler the
    * words silently disappear from the composer when `isTranscribing` flips.
    */
   onUnconsumedTranscript?: (transcript: string) => void;

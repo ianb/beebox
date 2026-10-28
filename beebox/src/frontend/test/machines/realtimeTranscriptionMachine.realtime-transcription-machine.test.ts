@@ -17,12 +17,12 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { is } from "@ianbicking/tap-check/check";
-import { createActor, fromCallback } from "xstate";
+import { SimulatedClock, createActor, fromCallback } from "xstate";
 import {
   realtimeTranscriptionMachine,
   transcriptionStateOf,
 } from "../../src/machines/realtimeTranscriptionMachine.js";
-import type { TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent } from "../../src/machines/transcription-events.js";
+import { NO_LIVE_TEXT_TIMEOUT_MS, type TranscriptionActorCommand, type TranscriptionActorInput, type TranscriptionEvent } from "../../src/machines/transcription-events.js";
 
 // Most examples leave a segment mid-recording with its long timers pending
 // (MAX_DURATION is an hour); unref'd timers let the test process exit anyway.
@@ -37,7 +37,7 @@ const unrefClock = {
 
 const EARCON_ACTIONS = ["playMicLost", "playRecordingResumed", "playLiveTextPaused", "playLiveTextResumed", "playMicOffSound", "playStartFailedSound"] as const;
 
-function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean; cues?: boolean }) {
+function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean; cues?: boolean; clock?: SimulatedClock }) {
   const log: string[] = [];
   const cues: string[] = [];
   const earcons = Object.fromEntries(
@@ -66,7 +66,7 @@ function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean; c
       actions: earcons,
       delays: opts?.delays ?? {},
     }),
-    { clock: unrefClock },
+    { clock: opts?.clock ?? unrefClock },
   );
   actor.on("maxDurationReached", (event) => emitted.push(event.type));
   actor.start();
@@ -141,10 +141,10 @@ void test("HOLD keeps the open segment, its text, and its recording.", async (t)
   t.check(s.context(), contextWith({ finalTranscript: "before the replay", recording: s.recording }));
 });
 
-// Speech longer than the silence timeout does not auto-stop a held segment;
-// releasing the hold starts the silence timer over.
-void test("A held segment outlasts the silence timeout, which restarts on release.", async (t) => {
-  const s = segment({ delays: { SILENCE_TIMEOUT: 80 } });
+// Speech longer than the idle timeout does not auto-stop a held segment;
+// releasing the hold starts the idle timer over.
+void test("A held segment outlasts the idle timeout, which restarts on release.", async (t) => {
+  const s = segment({ delays: { NO_LIVE_TEXT_TIMEOUT: 80 } });
   s.emit({ type: "MIC_LIVE" });
   s.emit({ type: "WS_CONNECTED" });
   s.actor.send({ type: "HOLD", held: true });
@@ -380,12 +380,12 @@ void test("Nothing was sealed yet:", async (t) => {
   t.check(s.context(), contextWith({ recording: null }));
 });
 
-// ## No silence timeout while live text is paused
+// ## No idle timeout while live text is paused
 //
-// `SILENCE_TIMEOUT` lives on `recording`, where each live-text update resets it.
-// In `recordingLocal` no text arrives to reset it, so it does not run there.
-void test("SILENCETIMEOUT lives on recording, where each live-text update resets it.", async (t) => {
-  const s = segment({ delays: { SILENCE_TIMEOUT: 10 } });
+// `NO_LIVE_TEXT_TIMEOUT` lives on `recording`, where new live text resets it.
+// In `recordingLocal` no text can arrive, so it does not run there.
+void test("NO_LIVE_TEXT_TIMEOUT runs in recording, not in recordingLocal.", async (t) => {
+  const s = segment({ delays: { NO_LIVE_TEXT_TIMEOUT: 10 } });
   s.emit({ type: "MIC_LIVE" });
   await sleep(40);
   t.check(s.state(), "recordingLocal");
@@ -393,6 +393,67 @@ void test("SILENCETIMEOUT lives on recording, where each live-text update resets
   s.emit({ type: "WS_CONNECTED" });
   await sleep(40);
   t.check(s.state(), "idle");
+});
+
+// ## The mic closes after five minutes with no new live text
+//
+// issues/features/2026-10-28-web-live-recorder-closes-mic-after-idle.md.
+// Idle means no new live text, not a quiet mic: Deepgram answers noise with
+// empty interim results and re-sends unchanged finals, and those must not keep
+// the mic open. A change in the text restarts the timer.
+const noise = (finalText: string): TranscriptionEvent => ({ type: "TEXT_UPDATE", finalText, interimText: "", finalWords: null });
+
+void test("New live text restarts the idle timer; empty or unchanged updates do not.", async (t) => {
+  const clock = new SimulatedClock();
+  const s = segment({ clock });
+  s.emit({ type: "MIC_LIVE" });
+  s.emit({ type: "WS_CONNECTED" });
+  clock.increment(NO_LIVE_TEXT_TIMEOUT_MS - 1000);
+  s.emit({ type: "TEXT_UPDATE", finalText: "", interimText: "remind me", finalWords: null });
+  clock.increment(NO_LIVE_TEXT_TIMEOUT_MS - 1000);
+  s.emit(noise("remind me"));
+  clock.increment(NO_LIVE_TEXT_TIMEOUT_MS - 1000);
+  t.check(s.state(), "recording");
+
+  s.emit(noise("remind me"));
+  s.emit({ type: "TEXT_UPDATE", finalText: "remind me", interimText: " ", finalWords: null });
+  clock.increment(999);
+  t.check(s.state(), "recording");
+
+  clock.increment(1);
+  t.check(s.state(), "idle");
+});
+
+// The idle close ends the segment the way a manual stop does: the actor gets
+// STOP, the text and the recording (for the HQ pass) stay in context. Only the
+// notice differs, a warning that names why the mic closed.
+void test("The idle close ends the segment like a manual stop, plus a notice.", async (t) => {
+  const run = (end: (s: ReturnType<typeof segment>, clock: SimulatedClock) => void) => {
+    const clock = new SimulatedClock();
+    const s = segment({ clock, cues: true });
+    s.emit({ type: "MIC_LIVE" });
+    s.emit({ type: "WS_CONNECTED" });
+    s.emit(noise("buy milk"));
+    end(s, clock);
+    return s;
+  };
+  const manual = run((s) => s.actor.send({ type: "STOP" }));
+  const idle = run((_s, clock) => clock.increment(NO_LIVE_TEXT_TIMEOUT_MS));
+
+  t.check(manual.state(), "idle");
+  t.check(idle.state(), "idle");
+
+  t.check(manual.log, ["actor start target=chat-1", "STOP", "actor stopped"]);
+  t.check(idle.log, ["actor start target=chat-1", "STOP", "actor stopped"]);
+
+  t.check(manual.context(), contextWith({ finalTranscript: "buy milk", recording: manual.recording }));
+  t.check(idle.context(), contextWith({
+    finalTranscript: "buy milk",
+    recording: idle.recording,
+    error: "Mic closed — nothing was said for 5 minutes",
+    errorLevel: "warning",
+  }));
+  t.check(idle.cues, ["MicOffSound"]);
 });
 
 // ## MAX_DURATION submits the segment

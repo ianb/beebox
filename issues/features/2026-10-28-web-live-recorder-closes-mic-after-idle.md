@@ -1,6 +1,6 @@
 ---
 title: "The web live recorder closes the microphone after about 5 minutes with no new live text"
-workstream: unattached
+workstream: mic-idle-close
 area: beebox
 labels: [voice, frontend]
 filed-by: agent

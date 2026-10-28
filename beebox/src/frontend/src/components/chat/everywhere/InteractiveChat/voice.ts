@@ -180,7 +180,7 @@ export function useChatVoice(opts: {
     },
     onUnconsumedTranscript: (text) => {
       // Recording ended without a send or a manual stop (mic taken away past
-      // its recovery window, silence auto-stop).
+      // its recovery window, idle auto-stop).
       // Fold the words into the composer so they stay visible and editable
       // instead of vanishing when isTranscribing flips false.
       inputStore.set((existing) => joinTranscript(existing, text));

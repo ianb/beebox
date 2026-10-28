@@ -102,3 +102,43 @@ export interface TranscriptionActorInput {
 
 /** Commands the machine sends the actor. */
 export type TranscriptionActorCommand = { type: "STOP" } | { type: "CANCEL" } | { type: "HOLD"; held: boolean };
+
+/** Narrow `event` to `type`, or throw: `action` was wired to an event it can't handle. */
+export function requireEvent<T extends TranscriptionEvent["type"]>(
+  event: TranscriptionEvent,
+  opts: { type: T; action: string },
+): Extract<TranscriptionEvent, { type: T }> {
+  // Narrowing through a type-predicate helper keeps the action bodies cast-free.
+  const matches = (e: TranscriptionEvent): e is Extract<TranscriptionEvent, { type: T }> => e.type === opts.type;
+  if (!matches(event)) {
+    const message = `${opts.action}: unexpected event type "${event.type}"`;
+    throw new MachineActionError(message);
+  }
+  return event;
+}
+
+// The idle close (issues/features/2026-10-28-web-live-recorder-closes-mic-after-idle.md).
+
+/**
+ * How long the mic stays open in `recording` with no new live text before it
+ * closes as if the person pressed stop. Counts live text, not mic silence:
+ * noise that transcribes to nothing is still idle.
+ */
+export const NO_LIVE_TEXT_TIMEOUT_MS = 5 * 60 * 1000;
+
+/** Shown after the idle close, so a closed mic is not mistaken for a lost one. */
+export const IDLE_CLOSE_NOTICE = "Mic closed — nothing was said for 5 minutes";
+
+/**
+ * Whether a live-text update brings new words. Providers re-send unchanged
+ * text (Deepgram answers noise with empty results, a reconnect re-sends the
+ * segment), so only a change in the final text or a non-empty new interim
+ * counts.
+ */
+export function isNewLiveText(
+  prev: { finalTranscript: string; interimTranscript: string },
+  next: { finalText: string; interimText: string },
+): boolean {
+  if (next.finalText !== prev.finalTranscript) return true;
+  return next.interimText.trim() !== "" && next.interimText !== prev.interimTranscript;
+}
