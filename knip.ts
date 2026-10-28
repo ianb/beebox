@@ -86,6 +86,10 @@ const config: KnipConfig = {
         // @happy-dom/global-registrator, which takes happy-dom as ^20.14.6.
         // Listing it here pins the shim itself (docs/implemented-plans/frontend-dom-harness.md).
         "happy-dom",
+        // Imported by beebox/src/shared/composition/merge.ts, which the
+        // frontend bundles through @shared/*; knip files that import under the
+        // beebox workspace, but the bundle is the frontend's.
+        "node-diff3",
       ],
     },
   },
@@ -117,6 +121,13 @@ const config: KnipConfig = {
     "du",
     // test/lib/typescript/syntax.test.ts counts its own child processes with `pgrep -P`.
     "pgrep",
+    // maintenance/controller.ts resolves a box owner's home with `getent passwd`.
+    "getent",
+    // box-backup/restic.ts runs the system restic.
+    "restic",
+    // bin/precommit-security.ts and bin/lib/schedules-lint.ts run the system
+    // shellcheck (the npm wrapper was dropped in 792b4cb69).
+    "shellcheck",
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
     // beebox package scripts, invoked across the workspace boundary:
