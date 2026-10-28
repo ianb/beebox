@@ -182,7 +182,7 @@ bbx pub cat "_content/guides/Field Guide.publication.card" index.html --pending
 `bbx pub prepare <card-path>` builds a project when present, scans and uploads
 an immutable release, and reports the prepared and live state. A new
 publication stays disabled until a box member enables it on the card's page in
-the app (`/<box>/browse/<card path>`). A refresh of an enabled publication with
+the app (`/<box>/views/<card path>`). A refresh of an enabled publication with
 the same audience and destination goes live when preparation succeeds. A
 change to `tier`, `slug`, or `emails` is a request that waits for a signed-in
 member. Prepare prints a `publication URL:` line and an `approval:` line with

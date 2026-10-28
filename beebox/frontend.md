@@ -113,6 +113,13 @@ and send destination; only an explicit conversation action selects a recipient.
 Source editing, image lightboxes, capture, and other task-specific dialogs remain
 appropriate overlays for their distinct interactions.
 
+A link to a card opens it beside the chat: build it with `cardUrl` from
+`src/shared/card-url.ts` (`/<box>/views/<path>`). Notifications, chips, list
+rows, and dashboard items use it. Browse (`/<box>/browse/<path>`) is a
+maintenance view of the files. Link to it only when the person asks to see a
+directory's files ("Open <dir>/") or chose a maintenance action ("Open in
+browse view").
+
 ## Data and state
 
 Request/response data is a tRPC query or mutation through the client in

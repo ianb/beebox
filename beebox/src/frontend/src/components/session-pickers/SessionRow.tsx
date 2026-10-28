@@ -15,6 +15,7 @@ import { useNow } from "../../lib/use-now";
 import { Text } from "../ui/Text";
 import type { RouterOutput } from "../../lib/trpc/client";
 import { DeleteChatAction } from "../chat-delete/DeleteChatDialog";
+import { cardUrl } from "@shared/card-url";
 
 /** A session as `chat.byLandmark` reports it under a landmark. */
 type PickerSession = RouterOutput["chat"]["byLandmark"]["landmarks"][number]["sessions"][number];
@@ -63,7 +64,7 @@ export function SessionRow({ session, boxSlug }: { session: SessionRowItem; boxS
       </Link>
       {/* The session's husk card — the durable, editable face of this chat. */}
       <Link
-        to={href(`/${boxSlug}/browse/${session.huskPath}`)}
+        to={href(cardUrl(boxSlug, session.huskPath))}
         title="Open this chat's card"
         aria-label="Open this chat's card"
         className="flex items-center px-2 rounded border border-subtle text-warm-400 hover:text-info-dark hover:border-info-400 transition-colors"
