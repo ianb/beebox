@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-no-browse-links — cross-model review of card links
+resolution: implemented
 ---
+
+Closed by eeb107ed8: a `?` in a card filename is now a validation error (`lintCardsDispatch`), so card links never carry one. The view-URL format is unchanged.
 
 A card whose filename contains `?` (for example `_content/Soup?2.doc.card`) does not open from a card link. The link URL is correct: `cardUrl` (`beebox/src/shared/card-url.ts`) encodes the segment to `Soup%3F2.doc.card`.
 
