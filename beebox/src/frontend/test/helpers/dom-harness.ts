@@ -106,3 +106,103 @@ export async function mount(element: ReactNode): Promise<Mounted> {
     },
   };
 }
+
+// ---------- finding controls ----------
+// How a DOM test finds an element (docs/testing/check.md, "DOM tests"): the
+// `bbx-` id for a static control, else role + accessible name. Each helper
+// throws unless exactly one element matches, so a renamed or duplicated
+// control fails the test where it is looked up.
+
+/** The element with this id under `root`. */
+export function byId(root: ParentNode, id: string): HTMLElement {
+  const found = root.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+  if (found === null) throw new Error(`no element with id "${id}"`);
+  return found;
+}
+
+export interface RoleQuery {
+  role: string;
+  /** The accessible name, compared after collapsing whitespace. */
+  name: string;
+}
+
+/** The one element under `root` with this role and accessible name. */
+export function byRole(root: ParentNode, query: RoleQuery): HTMLElement {
+  const found = allByRole(root, query);
+  const [only] = found;
+  if (found.length === 1 && only !== undefined) return only;
+  const names = allByRole(root, { role: query.role, name: "*" }).map((el) => JSON.stringify(accessibleName(el)));
+  throw new Error(`${found.length} ${query.role} elements named "${query.name}"; ${query.role} names here: ${names.join(", ") || "none"}`);
+}
+
+/** Every element under `root` with this role and accessible name; name `"*"` matches any. */
+export function allByRole(root: ParentNode, { role, name }: RoleQuery): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>("*")].filter(
+    (el) => roleOf(el) === role && (name === "*" || accessibleName(el) === collapse(name)),
+  );
+}
+
+const IMPLICIT_ROLES: Record<string, string> = {
+  BUTTON: "button",
+  TEXTAREA: "textbox",
+  SELECT: "combobox",
+  H1: "heading",
+  H2: "heading",
+  H3: "heading",
+  H4: "heading",
+  H5: "heading",
+  H6: "heading",
+  DIALOG: "dialog",
+};
+
+const INPUT_ROLES: Record<string, string> = {
+  button: "button",
+  submit: "button",
+  reset: "button",
+  checkbox: "checkbox",
+  radio: "radio",
+  text: "textbox",
+  search: "searchbox",
+  email: "textbox",
+  url: "textbox",
+};
+
+/** The explicit role, else the implicit role of the common interactive tags. */
+function roleOf(el: HTMLElement): string | null {
+  const explicit = el.getAttribute("role");
+  if (explicit !== null) return explicit.split(" ")[0] ?? null;
+  if (el.tagName === "A") return el.hasAttribute("href") ? "link" : null;
+  if (el.tagName === "INPUT") return INPUT_ROLES[el.getAttribute("type") ?? "text"] ?? null;
+  return IMPLICIT_ROLES[el.tagName] ?? null;
+}
+
+/**
+ * A subset of the accessible-name computation: `aria-labelledby`, then
+ * `aria-label`, then a `<label>` for a form field, then text content outside
+ * `aria-hidden` subtrees, then `title`.
+ */
+export function accessibleName(el: HTMLElement): string {
+  const labelledBy = el.getAttribute("aria-labelledby");
+  if (labelledBy !== null) {
+    return collapse(labelledBy.split(/\s+/).map((id) => visibleText(el.ownerDocument.getElementById(id))).join(" "));
+  }
+  const label = el.getAttribute("aria-label");
+  if (label !== null && label.trim() !== "") return collapse(label);
+  const forLabel = el.id === "" ? null : el.ownerDocument.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+  const fieldLabel = forLabel ?? el.closest("label");
+  if (fieldLabel !== null && fieldLabel !== el) return collapse(visibleText(fieldLabel));
+  const text = collapse(visibleText(el));
+  return text === "" ? collapse(el.getAttribute("title") ?? "") : text;
+}
+
+function visibleText(node: Node | null): string {
+  if (node === null) return "";
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+  if (node instanceof HTMLElement && node.getAttribute("aria-hidden") === "true") return "";
+  if (node instanceof HTMLImageElement) return node.alt;
+  return [...node.childNodes].map(visibleText).join("");
+}
+
+function collapse(text: string): string {
+  return text.replaceAll(/\s+/g, " ").trim();
+}

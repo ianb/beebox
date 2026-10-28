@@ -144,6 +144,12 @@ Check changed UI in a browser with the browse skill, including the console error
 
 Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `duplicate-id` in the [tours](docs/testing/tours.md) catches collisions). The box agent and `bin/browse` address controls by it (`src/frontend/src/lib/ui-scan/resolve.ts`). Per-row controls get one only when a unique derived id is obvious. Never rename an existing id; iOS mirrors some of them.
 
+Every control also has an accessible name, which screen readers, the box agent, `bin/browse`, tours, and DOM tests all use:
+
+- The name says the action and, on a per-row control, its object: "Delete Soup", not "Delete" on every row.
+- An icon-only control sets `aria-label`, or the primitive's `label` prop. `title` alone is not enough; `jsx-a11y/control-has-associated-label` enforces this on native elements.
+- A toggle or disclosure keeps one name in both states and exposes the state: `aria-checked` on a switch, `aria-pressed` on a toggle button, `aria-expanded` on a disclosure.
+
 **Actions**
 - `<Button>` — labeled or icon-only commit-action. Props: `intent` (primary/secondary/destructive/accent/success/ghost), `shape` (rect/circle), `size`, `icon`, `loading` (auto-on for Promise `onClick`), `loadingLabel` (takes a function `(secs) => ...` to show elapsed time), `flash` (post-click feedback like "Copied!"). Discriminated union enforces `label` for icon-only variants.
 - `<CloseButton>` — X-icon dismiss. `onDark` prop for dark backdrops.
