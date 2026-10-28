@@ -38,10 +38,13 @@ Codex entries here are labeled as such; they carry their own pin.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.311` (SDK), `2.1.311` (Claude Code), `0.164.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.312` (SDK), `2.1.312` (Claude Code), `0.165.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.310` on 2026-10-26.
-  Next: `0.3.311` (settles 2026-10-28T19:49Z). Production deploys recovered after
+  Next: `0.3.311` (settles 2026-10-28T19:49Z), `0.3.312` (2026-10-29T18:37Z).
+  **Codex `0.165.0` is held** until
+  `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md` is
+  decided (memory v2 on by default for fresh profiles). Production deploys recovered after
   the per-box-user migration (2026-10-25). The suite has 2 SDK-unrelated
   failures: `issues/bugs/2026-10-26-duplicate-bbx-nav-questions-id.md`
   (`box-install.test.ts` passes again). Open:
@@ -71,6 +74,34 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### Codex 0.165.0 — HELD pending a decision (published 2026-10-27T20:09Z)
+
+- **Held:** *"Enabled memory v2 by default for fresh profiles."* Box Codex
+  chats run as per-box users with fresh Codex homes, and `CODEX_FIXED_CONFIG`
+  (`beebox/src/services/codex-binary.ts:18`) sets no memory key, so every box's
+  Codex chats would start keeping Codex-side memories outside the box's cards.
+  Decision filed: `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
+  Take 0.165.0 (settles 2026-10-29T20:09Z) once it is decided, with the memory
+  key pinned if the answer is off.
+- Also: GPT-6.1 Terra in the catalogs; built-in Vertex AI provider; reasoning
+  effort changes mid-conversation on by default; queued agent messages no
+  longer restart work after an interrupt; no retry when a provider reports a
+  model not found; remote MCP requests cancelled when dropped; a marketplace
+  URL validation gap closed.
+- **Sources:** [rust-v0.165.0](https://github.com/openai/codex/releases/tag/rust-v0.165.0)
+
+### 0.3.312 / Claude Code 2.1.312 — pending (published 2026-10-27T18:37Z)
+
+SDK: `Settings` type gains auto-mode keys; AskUserQuestion answers can carry
+`unanswered`; `resolveSettings()` reads managed auto-mode settings as the CLI
+does. beebox uses none. Claude Code 2.1.312, for this repo: Write no longer
+overwrites a very large CLAUDE.md or rules file after reading only its start;
+`paths:` skills are found after a Bash `cd` deeper into the repo; a command
+with an invalid name no longer stops all commands loading (which could leave
+`claude -p` with no output); prompt/agent hooks run at most 24 at a time; a
+subagent's `autoCompactWindow` now lowers the global window.
+- **Action:** Settled path; takeable 2026-10-29T18:37Z.
 
 ### 0.3.311 / Claude Code 2.1.311 — pending (published 2026-10-26T19:49Z)
 
