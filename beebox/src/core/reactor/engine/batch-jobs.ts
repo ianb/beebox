@@ -8,7 +8,7 @@
  * `JOB_INLINE_BUDGET_BYTES` and lists the rest by path; the assembled prompt
  * stays within `BATCH_PROMPT_BUDGET_BYTES`, so later jobs that do not fit wait
  * for the next cycle (`selectBatch`). A 300-item intake job once made a 3 MB
- * prompt that the model refused (docs/plans/bounded-reactor-batches.md).
+ * prompt that the model refused (docs/implemented-plans/bounded-reactor-batches.md).
  */
 
 import {

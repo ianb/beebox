@@ -5,7 +5,7 @@
 // `JOB_INLINE_BUDGET_BYTES` (40 KB) and lists the rest by path; the assembled
 // prompt stays within `BATCH_PROMPT_BUDGET_BYTES` (160 KB), measured with its
 // framing and separators; the oldest job is always sent, if need be by path;
-// later jobs that do not fit wait. See docs/plans/bounded-reactor-batches.md,
+// later jobs that do not fit wait. See docs/implemented-plans/bounded-reactor-batches.md,
 // Track C.
 
 import { test } from "tap";

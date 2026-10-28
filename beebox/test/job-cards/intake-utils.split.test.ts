@@ -8,7 +8,7 @@
 // atomically (`writeFileAtomic`), so a file under a chunk's name is always
 // complete. A split whose commit fails is put back for the next wakeup, and
 // that wakeup skips its reactor step. See
-// docs/plans/bounded-reactor-batches.md, Track B.
+// docs/implemented-plans/bounded-reactor-batches.md, Track B.
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";

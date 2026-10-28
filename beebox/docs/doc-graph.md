@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-27T23:29:40Z
+Generated: 2026-10-28T02:34:18Z
 Total documents: 593
 
 ## Issues
@@ -15,6 +15,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines) · shipped history · implemented
 - **docs/implemented-plans/bbx-remind.md** — "bbx remind: one command for check-ins and reminders" (290 lines) · shipped history · implemented
 - **docs/implemented-plans/bloom-theme.md** — "Bloom system and card theme" (213 lines) · shipped history · implemented
+- **docs/implemented-plans/bounded-reactor-batches.md** — "Bounded reactor batches and capped intake jobs" (727 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (679 lines) · shipped history · implemented
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
 - **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (516 lines) · shipped history · implemented
@@ -98,7 +99,6 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -535,6 +535,7 @@ Referenced by:
 - docs/implemented-plans/app-wide-csp.md:37 (mention) — - `beebox/code-style.md:` no `any`, max 2 positional params, custom error
 - docs/implemented-plans/architectural-review.md:70 (mention) — They come from three sources: `beebox/code-style.md`, the monorepo
 - docs/implemented-plans/bbx-agent-surface.md:95 (mention) — - **`beebox/code-style.md:112`**: files max 300 lines. `src/cli/index.ts` (moved to `beebox/src/cli/entry/run.ts`) is 21
+- docs/implemented-plans/bounded-reactor-batches.md:81 (mention) — - **Code style: "Nothing retries forever"** (`beebox/code-style.md`,
 - docs/implemented-plans/box-git-lock.md:599 (mention) — `code-style.md`'s async-error-handling list beside the existing `file-lock` and
 - docs/implemented-plans/box-growth-health-checks.md:90 (mention) — - `code-style.md:39-40` requires logs to carry enough context to debug the
 - docs/implemented-plans/box-retrospectives.md:48 (mention) — - `beebox/code-style.md` — custom error classes; no silent error
@@ -1308,6 +1309,7 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:32 (mention) — >   `docs/engineering-principles.md`, Track N bbx-codehealth checks, Track O
 - docs/implemented-plans/authored-view-history-state.md:15 (link) — - The boxholder chose explicit adoption by authored views rather than automatic component-state preservation. This keeps
 - docs/implemented-plans/bbx-agent-surface.md:77 (mention) — (`beebox/docs/engineering-principles.md:87`). This is the principle the plan
+- docs/implemented-plans/bounded-reactor-batches.md:85 (mention) — (`beebox/docs/engineering-principles.md:49`). Every ref left out of the
 - docs/implemented-plans/box-git-lock.md:44 (mention) — - `docs/engineering-principles.md` **§4 Resilient AND never silent — and never
 - docs/implemented-plans/box-growth-health-checks.md:73 (mention) — disk boundary. `docs/engineering-principles.md:39-47` says: *"Disk reads,
 - docs/implemented-plans/box-host-packages.md:73 (mention) — - **Principle 3, validate at boundaries** (`docs/engineering-principles.md:37`).
@@ -2076,7 +2078,7 @@ Referenced by:
 - AGENTS.md:52 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
 - docs/design/README.md:34 (link) — [`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:9 (link) — (`bbx tick`, see [`../scheduler.md`](../scheduler.md)), a connector pulls new
-- docs/design/processing.md:28 (link) — it up after 7 days ([`../scheduler.md`](../scheduler.md#the-job-check)).
+- docs/design/processing.md:32 (link) — it up after 7 days ([`../scheduler.md`](../scheduler.md#the-job-check)).
 - docs/glossary.md:55 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
 - docs/guides.md:40 (link) — | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
 - docs/implemented-plans/chat-review.md:714 (mention) — `docs/scheduler.md`'s example set.
@@ -2091,7 +2093,7 @@ Referenced by:
 - docs/implemented-plans/scanner-ingest.md:128 (mention) — - **Scheduler daemon on prod** — `docs/scheduler.md:21`: *"The daemon runs `bbx
 - docs/plans/agent-docs.md:69 (mention) — - Leak scan of the candidate set: `scheduler.md` names a real box in an
 - docs/plans/asset-annex.md:597 (mention) — `docs/scheduler.md`) rather than inline in wakeup. Read-only means
-- src/core/reactor/DESIGN.md:58 (link) — Jobs with no `connector` (question follow-ups, contains backfill, full-wakeup and scan intake) match no filter, so they
+- src/core/reactor/DESIGN.md:66 (link) — Jobs with no `connector` (question follow-ups, contains backfill, full-wakeup and scan intake) match no filter, so they
 - ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:49 (mention) — - **Lives in:** `beebox/docs/scheduler.md`; box `_config/schedules/`.
 - ../issues/closed/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:27 (mention) — `docs/scheduler.md`). Is the latency gap real for the user, and could it be closed
 - ../issues/docs-and-chores/2026-07-04-box-registry-manifests.md:32 (mention) — Refs: `beebox/docs/scheduler.md`, `beebox/docs/server/boxes.md`,
@@ -2443,7 +2445,7 @@ Referenced by:
 - docs/box-layout.md:182 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
 - docs/connectors.md:132 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:33 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
-- docs/design/processing.md:47 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
+- docs/design/processing.md:51 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
 - docs/design/representation.md:80 (link) — marker for spot-checking ([`../triage.md`](../triage.md)).
 - docs/design/teaching.md:24 (link) — rules at the destination ([`../triage.md`](../triage.md)).
 - docs/design/trust.md:75 (link) — ([`../triage.md`](../triage.md)).
@@ -3059,7 +3061,7 @@ Title: "Chat check-ins" | 102 lines | current reference
 Referenced by:
 - docs/chat.md:11 (link) — | [Check-ins](chat/schedules.md) | Agent-set timers that come back to one conversation (`bbx remind --here`): lifecycle,
 - docs/design/README.md:35 (link) — and [`../chat/schedules.md`](../chat/schedules.md).
-- docs/design/processing.md:33 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
+- docs/design/processing.md:37 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
 - docs/implemented-plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/implemented-plans/design-reconciliation.md:579 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/doc-structure-chat.md:70 (mention) — | `chat-schedules.md` | `chat/schedules.md` | |
@@ -3315,18 +3317,19 @@ References:
 
 #### docs/design/processing.md
 
-Title: "Processing — wakeup, the reactor, and the question loop" | 80 lines | design rationale
+Title: "Processing — wakeup, the reactor, and the question loop" | 84 lines | design rationale
 
 Referenced by:
 - docs/design/README.md:23 (link) — - [`processing.md`](processing.md) — what `bbx wakeup` and the reactor actually do (verified against code), what "proces
 - docs/design/interaction-model.md:12 (mention) — and load-bearing for the engine (see `processing.md`).
 - docs/glossary.md:55 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
+- docs/implemented-plans/bounded-reactor-batches.md:75 (mention) — `beebox/docs/design/processing.md`). No generated output. Not a BIG CHANGE.
 - docs/implemented-plans/on-demand-job-triggers.md:42 (mention) — (`beebox/docs/design/processing.md`, "The question loop": *"When the user
 
 References:
+- → src/core/reactor/DESIGN.md (link)
 - → docs/scheduler.md (link)
 - → docs/chat/schedules.md (link)
-- → src/core/reactor/DESIGN.md (mention)
 - → docs/triage.md (link)
 - → docs/design/teaching.md (mention)
 
@@ -3390,7 +3393,7 @@ Title: "Teaching — how the system learns what to do" | 42 lines | design ratio
 
 Referenced by:
 - docs/design/README.md:27 (link) — - [`teaching.md`](teaching.md) — the teaching relationship and what shipped of it (retro, personality/guide cards, brief
-- docs/design/processing.md:52 (mention) — personality/guide cards (see `teaching.md`) — not from a hardcoded pipeline.
+- docs/design/processing.md:56 (mention) — personality/guide cards (see `teaching.md`) — not from a hardcoded pipeline.
 
 References:
 - → docs/implemented-plans/box-retrospectives.md (mention)
@@ -3850,6 +3853,17 @@ References:
 Title: "Bloom system and card theme" | 213 lines | shipped history | implemented
 
 No references in or out.
+
+#### docs/implemented-plans/bounded-reactor-batches.md **[ORPHAN]**
+
+Title: "Bounded reactor batches and capped intake jobs" | 727 lines | shipped history | implemented
+
+References:
+- → src/core/reactor/DESIGN.md (mention)
+- → docs/design/processing.md (mention)
+- → code-style.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/on-demand-job-triggers.md (mention)
 
 #### docs/implemented-plans/box-agents-md.md
 
@@ -6219,6 +6233,7 @@ References:
 Title: "On-demand job triggers and server-routed finalize notifications" | 1001 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/bounded-reactor-batches.md:92 (mention) — - **Shipped precedent.** The job check (`beebox/docs/implemented-plans/on-demand-job-triggers.md`),
 - ../issues/bugs/2026-10-27-wakeup-child-notices-bypass-the-box-server.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/on-demand-job-triggers.md
 
 References:
@@ -10923,19 +10938,20 @@ Title: "Reactor" | 22 lines
 
 Referenced by:
 - docs/implemented-plans/file-layout.md:135 (mention) — `src/core/reactor/AGENTS.md`, `src/frontend/src/components/chat/AGENTS.md`,
-- src/core/reactor/DESIGN.md:64 (mention) — - **System prompt** tells the agent what context it already has (job card content, referenced files, schema instructions
+- src/core/reactor/DESIGN.md:72 (mention) — - **System prompt** tells the agent what context it already has (job card content, the referenced files that were pasted
 
 References:
 - → src/core/reactor/DESIGN.md (link)
 
 #### src/core/reactor/DESIGN.md
 
-Title: "Reactor Design" | 103 lines
+Title: "Reactor Design" | 111 lines
 
 Referenced by:
 - AGENTS.md:40 (link) — - Backend domain and orchestration: `src/core/`; reactor details: [reactor design](src/core/reactor/DESIGN.md).
-- docs/design/processing.md:37 (mention) — `runReactor` (`src/core/reactor/DESIGN.md`): sync (`bbx wakeup` as its step
+- docs/design/processing.md:23 (link) — ([reactor design](../../src/core/reactor/DESIGN.md#batch-jobs-default)).
 - docs/glossary.md:57 (mention) — **reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent pr
+- docs/implemented-plans/bounded-reactor-batches.md:74 (mention) — (`beebox/src/core/reactor/DESIGN.md`, the intake-job instructions,
 - docs/implemented-plans/design-reconciliation.md:134 (mention) — (src/core/reactor/DESIGN.md, "Two Processing Paths"), and the current design
 - docs/implemented-plans/docs-reorg.gap-analysis.md:39 (mention) — hint today is `reactor/DESIGN.md:78`).
 - docs/implemented-plans/docs-reorg.md:205 (mention) — `DESIGN.md`/`IMPLEMENTATION.md` — never cross-referenced. Decide canonical
@@ -10972,14 +10988,6 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
-
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 21 lines
-
-No references in or out.
 
 ### src/frontend/public/earcons/
 

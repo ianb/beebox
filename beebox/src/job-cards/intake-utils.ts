@@ -7,7 +7,7 @@
  * room; one job holds at most `INTAKE_JOB_MAX_ITEMS`, and the rest start new
  * jobs of the same key. A job that grew without limit once held 300 items, and
  * its batch prompt passed the model's limit
- * (docs/plans/bounded-reactor-batches.md).
+ * (docs/implemented-plans/bounded-reactor-batches.md).
  *
  * `connector` is set only by a connector-scoped wakeup, and is the reactor's
  * connector filter key: use the connector's canonical name (e.g. "gmail"), or
@@ -31,6 +31,7 @@ import { errnoCode } from "../shared/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { writeFileAtomic } from "../lib/atomic-write.js";
+import { pathExistsStrict } from "../lib/file-exists.js";
 import { getBoxDir } from "../lib/paths/core.js";
 import { parseFrontmatterObject, renderFrontmatterBlock } from "../exports/cards.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
@@ -264,7 +265,7 @@ export interface IntakeSplit {
  * Accepted: a process killed after the original is deleted and before the
  * commit leaves uncommitted chunks that hold the items while the job check
  * skips them. The window is one unlink and one commit inside a wakeup; nothing
- * recovers it (docs/plans/bounded-reactor-batches.md, Failure modes).
+ * recovers it (docs/implemented-plans/bounded-reactor-batches.md, Failure modes).
  */
 export async function splitOversizedIntakeJobs(boxRoot: string): Promise<IntakeSplit[]> {
   const jobsDir = getBoxDir(boxRoot, "jobs");
@@ -304,21 +305,11 @@ async function splitLocked(
     const items = fields.items.slice(i, i + INTAKE_JOB_MAX_ITEMS);
     const chunkPath = `${base}-part-${String(chunks.length + 1).padStart(2, "0")}${INTAKE_SUFFIX}`;
     chunks.push(path.relative(boxRoot, chunkPath));
-    if (await exists(chunkPath)) continue;
+    if (await pathExistsStrict(chunkPath, { followLinks: true })) continue;
     await writeFileAtomic(chunkPath, { content: renderFrontmatterBlock({ ...fields, items, description: countDescription(items.length, priority) }) });
   }
   await fs.unlink(jobPath);
   return { original: path.relative(boxRoot, jobPath), chunks };
-}
-
-async function exists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") return false;
-    throw e;
-  }
 }
 
 async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | null> {

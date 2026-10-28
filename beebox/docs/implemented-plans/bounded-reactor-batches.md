@@ -1,6 +1,6 @@
 ---
 title: "Bounded reactor batches and capped intake jobs"
-status: active
+status: implemented
 workstream: box-isolation-followups
 issues: []
 ---
@@ -715,7 +715,9 @@ All `t.check` tests; one claim each, with one example.
 Tests first, per chunk. Done when the tests above pass, change-selected tests
 pass, and `pnpm typecheck` and `pnpm layout-check` pass from `beebox/`.
 
-Before landing, on a test box (not production): queue 300 inbox items into
+Not done before landing: the end-to-end check below never ran on a test box or
+production. Run it if the split or rotation misbehaves. The planned check was,
+on a test box (not production): queue 300 inbox items into
 one legacy-named intake job, run `bbx engine wakeup --max-cycles 3`, and
 confirm the split commit, a dry run's prompt size under 160 KB, and the
 deferred list. Interrupt one split (kill the wakeup after the first chunk) and
