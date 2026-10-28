@@ -91,7 +91,8 @@ write_files:
       HF_HOME=/var/cache/beebox/hf
       UV_TORCH_BACKEND=cpu
   # Private key material for GitHub pushes lives per box; the host only needs
-  # GitHub's host key so the first clone does not prompt.
+  # GitHub's host key so the first clone does not prompt. deploy.sh writes the
+  # same line on hosts provisioned before it was here.
   - path: /etc/ssh/ssh_known_hosts
     append: true
     content: |

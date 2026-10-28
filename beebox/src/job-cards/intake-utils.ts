@@ -55,7 +55,7 @@ function timestampedJobFilename(
 }
 
 /** The most items one intake job holds: what one agent session can triage. */
-export const INTAKE_JOB_MAX_ITEMS = 25;
+export const INTAKE_JOB_MAX_ITEMS = 10;
 
 export interface IntakeJobOptions {
   boxRoot: string;
@@ -252,7 +252,7 @@ export interface IntakeSplit {
  * Split every intake job holding more than `INTAKE_JOB_MAX_ITEMS` items into
  * jobs of at most that many, then delete the original. Only jobs written
  * before the cap (or edited by hand) can be over it. Chunk `k` holds items
- * `[25(k-1), 25k)` at `<original base>-part-NN.intake.job.card`, a name the
+ * `[10(k-1), 10k)` at `<original base>-part-NN.intake.job.card`, a name the
  * original always yields, so the chunks keep its place in the oldest-first
  * order and a split stopped partway resumes: a chunk that exists is left as
  * it is (it may since have received appended items), the missing ones are
@@ -291,6 +291,11 @@ export async function splitOversizedIntakeJobs(boxRoot: string): Promise<IntakeS
 }
 
 const INTAKE_SUFFIX = ".intake.job.card";
+
+/** An intake job card, by its name. */
+export function isIntakeJob(jobPath: string): boolean {
+  return jobPath.endsWith(INTAKE_SUFFIX);
+}
 
 async function splitLocked(
   boxRoot: string,

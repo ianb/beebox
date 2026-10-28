@@ -2,7 +2,7 @@
 //
 // `createOrAppendIntakeJob` manages intake job files in a box. It appends items
 // to the newest pending job with the same batching key, `(connector, priority)`,
-// that has room, and starts new jobs past `INTAKE_JOB_MAX_ITEMS` (25). It
+// that has room, and starts new jobs past `INTAKE_JOB_MAX_ITEMS` (10). It
 // returns every job path it wrote. A new job's name ends in a random 8-hex
 // suffix, so jobs created in the same second never share a name.
 
@@ -207,16 +207,16 @@ items:
 ---`);
 });
 
-// ## The cap: a job holds at most 25 items
+// ## The cap: a job holds at most 10 items
 //
-// A job with 20 items and a call with 12: the job takes 5 and reaches 25, and
-// a new job holds the other 7. The appended job's description comes from its
+// A job with 8 items and a call with 5: the job takes 2 and reaches 10, and
+// a new job holds the other 3. The appended job's description comes from its
 // count; the new job holds only part of the call, so its description does too.
-void test("The cap: a job holds at most 25 items", async (t) => {
+void test("The cap: a job holds at most 10 items", async (t) => {
   const box = await makeTmpBox();
   t.teardown(() => box.cleanup());
-  await box.write("_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card", createIntakeJobTemplate({ priority: "normal", description: "old", items: refs(0, 20) }));
-  const written = await createOrAppendIntakeJob({ boxRoot: box.root, items: refs(20, 12), description: "Scan from phone: 12 photos" });
+  await box.write("_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card", createIntakeJobTemplate({ priority: "normal", description: "old", items: refs(0, 8) }));
+  const written = await createOrAppendIntakeJob({ boxRoot: box.root, items: refs(8, 5), description: "Scan from phone: 5 photos" });
   const [full, fresh] = written;
   assert.ok(full !== undefined && fresh !== undefined);
   const freshCard = await box.read(fresh);
@@ -224,25 +224,25 @@ void test("The cap: a job holds at most 25 items", async (t) => {
     { written, full: itemsOf(await box.read(full)), fresh: itemsOf(freshCard), freshDescription: freshCard.split("\n")[2] },
     {
       written: ["_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card", newJob("inbox")],
-      full: refs(0, 25),
-      fresh: refs(25, 7),
-      freshDescription: "description: Triage 7 inbox items",
+      full: refs(0, 10),
+      fresh: refs(10, 3),
+      freshDescription: "description: Triage 3 inbox items",
     },
   );
-  t.check((await box.read(full)).split("\n")[2], "description: Triage 25 inbox items");
+  t.check((await box.read(full)).split("\n")[2], "description: Triage 10 inbox items");
 });
 
 // ## The newest job with room receives the append
 //
-// Two unscoped normal jobs, an older one with 10 items and a newer one with 25
+// Two unscoped normal jobs, an older one with 5 items and a newer one with 10
 // (full): a new job is not needed for one item, so it goes to the older one,
 // the only one with room. With room in both, the newer receives it, so the
 // older job's content (and the job check's backoff for it) stays still.
 void test("The newest job with room receives the append", async (t) => {
   const box = await makeTmpBox();
   t.teardown(() => box.cleanup());
-  await box.write("_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card", createIntakeJobTemplate({ priority: "normal", description: "older", items: refs(0, 10) }));
-  await box.write("_bookkeeping/jobs/2026-10-02T00-00-00-inbox.intake.job.card", createIntakeJobTemplate({ priority: "normal", description: "newer", items: refs(100, 25) }));
+  await box.write("_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card", createIntakeJobTemplate({ priority: "normal", description: "older", items: refs(0, 5) }));
+  await box.write("_bookkeeping/jobs/2026-10-02T00-00-00-inbox.intake.job.card", createIntakeJobTemplate({ priority: "normal", description: "newer", items: refs(100, 10) }));
   const toOlder = await createOrAppendIntakeJob({ boxRoot: box.root, items: refs(200, 1), description: "one" });
   await box.write("_bookkeeping/jobs/2026-10-03T00-00-00-inbox.intake.job.card", createIntakeJobTemplate({ priority: "normal", description: "newest", items: refs(300, 3) }));
   const toNewest = await createOrAppendIntakeJob({ boxRoot: box.root, items: refs(400, 1), description: "one" });
@@ -254,8 +254,8 @@ void test("The newest job with room receives the append", async (t) => {
 
 // ## Same-second names stay distinct
 //
-// Sixty items in one frozen box second make three new jobs (25, 25, 10) with
-// three distinct names, and discovery still reads each one's age from its stamp.
+// Sixty items in one frozen box second make six new jobs of 10 with
+// six distinct names, and discovery still reads each one's age from its stamp.
 void test("Same-second names stay distinct", async (t) => {
   const box = await makeTmpBox();
   process.env.BBX_TIME = "2026-10-27T12:00:00Z";
@@ -269,14 +269,14 @@ void test("Same-second names stay distinct", async (t) => {
   const found = await findJobCards(`${box.root}/_bookkeeping/jobs`);
   t.check(
     { counts, distinct: [...names].length, ages: found.map((job) => job.createdAt?.toISOString()) },
-    { counts: [25, 25, 10], distinct: 3, ages: ["2026-10-27T12:00:00.000Z", "2026-10-27T12:00:00.000Z", "2026-10-27T12:00:00.000Z"] },
+    { counts: [10, 10, 10, 10, 10, 10], distinct: 6, ages: Array.from({ length: 6 }, () => "2026-10-27T12:00:00.000Z") },
   );
 });
 
 // ## A write that fails partway is undone
 //
-// A job with 20 items and a call with 12: the append of 5 succeeds, then the
-// new job for the other 7 cannot be written (here the jobs directory refuses
+// A job with 8 items and a call with 5: the append of 2 succeeds, then the
+// new job for the other 3 cannot be written (here the jobs directory refuses
 // new files). The writer throws without returning paths, so no caller would
 // commit the appended job, which would hold its new items while the job check
 // skipped it. So the append is undone: the job is as it was, and no new file
@@ -289,10 +289,10 @@ void test("A write that fails partway is undone", async (t) => {
     await box.cleanup();
   });
   const existing = "_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card";
-  await box.write(existing, createIntakeJobTemplate({ priority: "normal", description: "old", items: refs(0, 20) }));
+  await box.write(existing, createIntakeJobTemplate({ priority: "normal", description: "old", items: refs(0, 8) }));
   const before = await box.read(existing);
   await chmod(jobsDir, 0o555);
-  const thrown = await createOrAppendIntakeJob({ boxRoot: box.root, items: refs(20, 12), description: "Scan" })
+  const thrown = await createOrAppendIntakeJob({ boxRoot: box.root, items: refs(8, 5), description: "Scan" })
     .then(() => "no error", (e: unknown) => (e instanceof Error && "code" in e ? e.code : "other"));
   t.check({ thrown, job: await box.read(existing), files: (await readdir(jobsDir)).toSorted() }, {
     thrown: "EACCES",

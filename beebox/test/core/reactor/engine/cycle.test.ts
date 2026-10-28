@@ -19,6 +19,8 @@ import { createFakeAgent } from "../../fake-agent.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { createIntakeJobTemplate } from "../../../../src/schemas/intake-job.js";
+import { createContainsBackfillJobTemplate } from "../../../../src/schemas/contains-backfill-job.js";
+import { createQuestionFollowupJobTemplate } from "../../../../src/schemas/question-followup-job.js";
 import { createTodoReviewJobTemplate } from "../../../../src/schemas/todo-review-job.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -28,6 +30,13 @@ type FakeAct = Parameters<typeof createFakeAgent>[0]["act"];
 
 const intakeJob = (description: string, opts?: { priority?: "normal" | "low" }) =>
   createIntakeJobTemplate({ description, items: [], ...opts });
+
+// A batch carries at most one intake job, so tests that need several jobs in
+// one batch use other job types: a normal-priority question follow-up and a
+// low-priority contains-backfill.
+const followupJob = (description: string) =>
+  createQuestionFollowupJobTemplate({ description, questionRef: "_content/questions/q.question.card", directive: "Act on it", answer: "Yes" });
+const backfillJob = () => createContainsBackfillJobTemplate({ items: [], remaining: 0 });
 
 // Base cycle params: fast fakes for the subprocess/doc stages (same rationale
 // as test/core/reactor/engine.integration.test.ts), no filters, sync off.
@@ -110,8 +119,8 @@ const summary = ({ prompts: _prompts, after: _after, ...rest }: { prompts?: unkn
 const overdueBacklog = () =>
   Object.fromEntries(
     Array.from({ length: 7 }, (_, i) => [
-      `2020-01-0${i + 1}T00-00-00-b.intake.job.card`,
-      intakeJob(`Overdue ${i + 1}`, { priority: "low" }),
+      `2020-01-0${i + 1}T00-00-00-b.contains-backfill.job.card`,
+      backfillJob(),
     ]),
   );
 
@@ -200,8 +209,8 @@ void test("A box coming out of a long wedge can hold months of deferred work, an
       invoked: 1,
     },
     left: [
-      "2020-01-06T00-00-00-b.intake.job.card",
-      "2020-01-07T00-00-00-b.intake.job.card",
+      "2020-01-06T00-00-00-b.contains-backfill.job.card",
+      "2020-01-07T00-00-00-b.contains-backfill.job.card",
     ],
     second: {
       success: true,
@@ -219,9 +228,9 @@ void test("A box coming out of a long wedge can hold months of deferred work, an
 // low-priority cards must not push the normal job to a later wakeup. All eight
 // are offered, and the normal job is listed first.
 void test("The cap applies only to the deadline path.", async (t) => {
-  const normal = "2026-06-01T00-00-00-now.intake.job.card";
+  const normal = "2026-06-01T00-00-00-now.question-followup.job.card";
   const { prompts, ...mixed } = await cycleOn(
-    { ...overdueBacklog(), [normal]: intakeJob("Real work") },
+    { ...overdueBacklog(), [normal]: followupJob("Real work") },
     { skipLowPriority: true },
   );
   const [offered] = prompts;
@@ -267,14 +276,14 @@ void test("The wakeup todo-review sweep (docs/implemented-plans/todo-annotation.
 // have reported 1) and reports the newcomer as remaining.
 void test("The processed count is a set difference against the jobs the cycle set out to...", async (t) => {
   const consumeBoth = async ({ boxRoot }: { boxRoot: string }) => {
-    await finishing("a.intake.job.card", "b.intake.job.card")({ boxRoot });
+    await finishing("a.question-followup.job.card", "b.question-followup.job.card")({ boxRoot });
     // A connector delivers a new job mid-cycle.
     await fs.writeFile(path.join(boxRoot, jobsDir, "new.intake.job.card"), intakeJob("Newcomer"));
     return { success: true };
   };
   t.check(
     summary(await cycleOn(
-      { "a.intake.job.card": intakeJob("Job A"), "b.intake.job.card": intakeJob("Job B") },
+      { "a.question-followup.job.card": followupJob("Job A"), "b.question-followup.job.card": followupJob("Job B") },
       { skipLowPriority: false, act: consumeBoth },
     )),
     {
@@ -297,7 +306,7 @@ void test("Rotation: each cycle of a run sends jobs it has not sent", async (t) 
   const box3 = await makeTmpBox({ git: true });
   t.teardown(() => box3.cleanup());
   for (const n of ["j1", "j2", "j3", "j4", "j5"]) {
-    await box3.write(`${jobsDir}/${n}.intake.job.card`, `${intakeJob(`Job ${n}`)}${"x".repeat(70 * 1024)}\n`);
+    await box3.write(`${jobsDir}/${n}.question-followup.job.card`, `${followupJob(`Job ${n}`)}${"x".repeat(70 * 1024)}\n`);
   }
   box3.commitAll("add jobs");
 
@@ -306,7 +315,7 @@ void test("Rotation: each cycle of a run sends jobs it has not sent", async (t) 
     createFakeAgent({
       name: opts.name,
       act: async ({ prompt }) => {
-        sent.push([...prompt.matchAll(/^### _bookkeeping\/jobs\/(j\d)\.intake\.job\.card/gm)].map((m) => m[1] ?? ""));
+        sent.push([...prompt.matchAll(/^### _bookkeeping\/jobs\/(j\d)\.question-followup\.job\.card/gm)].map((m) => m[1] ?? ""));
         return { success: succeed };
       },
     });
@@ -333,10 +342,10 @@ void test("Rotation: each cycle of a run sends jobs it has not sent", async (t) 
 // it was sent; the cycle reports 2 processed, 2 remaining, 2 selected. The two
 // deferred jobs were never tried, so they are not counted as failures.
 void test("Processed is counted among the jobs sent", async (t) => {
-  const big = (n: string) => `${intakeJob(`Job ${n}`)}${"x".repeat(70 * 1024)}\n`;
+  const big = (n: string) => `${followupJob(`Job ${n}`)}${"x".repeat(70 * 1024)}\n`;
   t.check(
     summary(await cycleOn(
-      { "j1.intake.job.card": big("1"), "j2.intake.job.card": big("2"), "j3.intake.job.card": big("3"), "j4.intake.job.card": big("4") },
+      { "j1.question-followup.job.card": big("1"), "j2.question-followup.job.card": big("2"), "j3.question-followup.job.card": big("3"), "j4.question-followup.job.card": big("4") },
       { skipLowPriority: false, act: finishingPromptedJobs },
     )),
     { success: true, jobsProcessed: 2, jobsRemaining: 2, selected: 2, invoked: 1 },
