@@ -30,7 +30,7 @@
  * severity via its own `validate` hook; running it again here would
  * double-report the same violation).
  */
-import { relative } from "node:path";
+import { basename, relative } from "node:path";
 import { isSystemCardType, systemCardLocationError } from "../../../shared/system-card-paths.js";
 import { retiredTypeHint } from "../../../cards/retired-types.js";
 
@@ -131,6 +131,9 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
     return errorResult(path, errorMessage(e));
   }
 
+  // A `?` in a card filename starts the query part of a card link
+  // (`/<box>/views/<path>`, the `?card=` value), so the link opens a different path.
+  if (basename(path).includes("?")) return errorResult(path, "card filename must not contain `?`: card links read it as the start of a query; rename the file");
   const fileType = typeFromFilename(path);
   if (fileType !== undefined && isSystemCardType(fileType)) {
     const locationError = systemCardLocationError(fileType, relative(options.boxRoot, path));
