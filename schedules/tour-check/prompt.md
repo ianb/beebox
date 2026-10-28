@@ -104,8 +104,9 @@ your report. A tour of a deleted page is not a finding, it is a leftover.
   names"). You describe the app; you do not fix its behavior or layout. A
   landed `beebox/src/` change deploys.
 - **File issues.** Yes.
-- **Commit**, with a message that names, per edit, the landing / plan / issue
-  that justified it. An edit with no justification in the message is
+- **Commit**, with a message that names, per tour edit, the landing / plan /
+  issue that justified it, and per name fix, the tour, checkpoint and artifact
+  that reported it. An edit with no justification in the message is
   indistinguishable from laundering a regression.
 - **Land with `bin/land`.** It can legitimately refuse (the main checkout must
   be clean and on `main`, the merge a fast-forward). That is not a failure to

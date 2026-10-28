@@ -134,9 +134,16 @@ async function auditCheckpointLabels(input: CaptureInput & { reportPath: string 
   const { name, viewport, session, pushFinding, reportPath } = input;
   try {
     const scan = await scanPage(session);
-    if (scan === null) return;
+    if (scan === null) {
+      await writeFile(reportPath, JSON.stringify({ skipped: "no window.__bbxUiScan on this page" }, null, 2), "utf8");
+      pushFinding({ severity: "info", checkpoint: name, viewport: viewport.name, message: "label audit skipped: the page has no UI scan hook (not an app page?)" });
+      return;
+    }
     const ambiguous = ambiguousControls(scan.entries);
-    await writeFile(reportPath, JSON.stringify({ ambiguous, duplicateIds: scan.duplicateIds }, null, 2), "utf8");
+    await writeFile(reportPath, JSON.stringify({ ambiguous, truncated: scan.truncated, duplicateIds: scan.duplicateIds }, null, 2), "utf8");
+    if (scan.truncated) {
+      pushFinding({ severity: "warn", checkpoint: name, viewport: viewport.name, message: "label audit incomplete: the UI scan hit its entry cap" });
+    }
     if (ambiguous.length === 0) return;
     const shown = ambiguous.slice(0, 6).map((g) => `\n  - ${describeAmbiguous(g)}`).join("");
     const more = ambiguous.length > 6 ? `\n  - … ${String(ambiguous.length - 6)} more in ${path.basename(reportPath)}` : "";
