@@ -191,7 +191,7 @@ export function ComposeEditor({ cardPath, onClose, host, instance }: ComposeEdit
     <Frame host={host}>
       <Row gap="sm" align="center" justify="between" className="px-2 py-1">
         <ErrorText>{message}</ErrorText>
-        <Button id={controlAddress("bbx-composition-done", instance)} size="sm" intent="secondary" onClick={onClose}>Done</Button>
+        <Button id={controlAddress("bbx-composition-close", instance)} label="Done editing composition" size="sm" intent="secondary" onClick={onClose}>Done</Button>
       </Row>
     </Frame>
   );
