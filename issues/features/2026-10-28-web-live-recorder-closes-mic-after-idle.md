@@ -39,7 +39,10 @@ To decide when this is built:
   and unchanged re-sends. Now only new words restart it
   (`NO_LIVE_TEXT_TIMEOUT_MS` in
   `beebox/src/frontend/src/machines/transcription-events.ts`).
-- The timer also runs while live text is down (`recordingLocal`). A box
+- One countdown runs for the whole segment. Only new words restart it (a
+  socket drop, a reconnect, or the gap marker a drop adds does not), and so
+  does the release of a hold while speech plays.
+- The countdown also runs while live text is down (`recordingLocal`). A box
   whose live text never connects otherwise kept the mic open for the
   hour-long segment limit. The cost: a person who talks through more than 5
   minutes of a network outage has the mic closed on them. The audio up to

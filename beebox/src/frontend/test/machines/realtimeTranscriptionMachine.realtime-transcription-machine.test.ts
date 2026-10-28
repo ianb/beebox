@@ -447,6 +447,27 @@ void test("The idle close ends the segment like a manual stop, plus a notice.", 
   t.check(idle.emitted, ["idleClosed"]);
 });
 
+// A socket that drops and reconnects does not restart the countdown, and
+// neither does the gap marker the drop adds to the text.
+void test("Socket drops and reconnects do not restart the idle countdown.", async (t) => {
+  const clock = new SimulatedClock();
+  const s = segment({ clock });
+  s.emit({ type: "MIC_LIVE" });
+  s.emit({ type: "WS_CONNECTED" });
+  s.emit(noise("buy milk"));
+  clock.increment(NO_LIVE_TEXT_TIMEOUT_MS - 2000);
+  s.emit(noise("buy milk […]"));
+  s.emit({ type: "CONNECTION_DEGRADED", cause: "network" });
+  clock.increment(1000);
+  s.emit({ type: "CONNECTION_RESTORED" });
+  s.emit(noise("buy milk"));
+  clock.increment(999);
+  t.check(s.state(), "recording");
+
+  clock.increment(1);
+  t.check(s.state(), "idle");
+});
+
 void test("A mic with no live socket closes after the timeout.", async (t) => {
   const clock = new SimulatedClock();
   const s = segment({ clock });

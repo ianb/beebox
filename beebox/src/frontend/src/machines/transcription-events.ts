@@ -4,6 +4,7 @@
  * reference the type without a value import cycle.
  */
 
+import { LIVE_GAP_MARKER } from "../lib/audio/live-gap-marker";
 import type { PendingRecording } from "../lib/audio/voice-stager";
 
 /**
@@ -86,6 +87,8 @@ export type TranscriptionEvent =
    */
   | { type: "TRANSCRIPTION_DONE"; text?: string; words?: FinalWord[] | null; recording: PendingRecording }
   | { type: "SERVER_ERROR"; message: string }
+  /** Raised by the machine itself: the segment brought no new words for `NO_LIVE_TEXT_TIMEOUT_MS`. */
+  | { type: "IDLE_TIMEOUT" }
   | { type: "SETUP_ERROR"; message: string };
 
 /** Emitted (not a transition event): the segment hit `MAX_DURATION` and is being submitted. */
@@ -135,16 +138,18 @@ export const NO_LIVE_TEXT_TIMEOUT_MS = 5 * 60 * 1000;
 /** Shown after the idle close, so a closed mic is not mistaken for a lost one. */
 export const IDLE_CLOSE_NOTICE = "Mic closed — no new words for 5 minutes";
 
+const withoutGapMarkers = (text: string) => text.split(LIVE_GAP_MARKER).join(" ").replace(/\s+/g, " ").trim();
+
 /**
  * Whether a live-text update brings new words. Providers re-send unchanged
  * text (Deepgram answers noise with empty results, a reconnect re-sends the
- * segment), so only a change in the final text or a non-empty new interim
- * counts.
+ * segment), and a socket drop adds or drops a gap marker, so only a change in
+ * the final words or a non-empty new interim counts.
  */
 export function isNewLiveText(
   prev: { finalTranscript: string; interimTranscript: string },
   next: { finalText: string; interimText: string },
 ): boolean {
-  if (next.finalText !== prev.finalTranscript) return true;
+  if (withoutGapMarkers(next.finalText) !== withoutGapMarkers(prev.finalTranscript)) return true;
   return next.interimText.trim() !== "" && next.interimText !== prev.interimTranscript;
 }

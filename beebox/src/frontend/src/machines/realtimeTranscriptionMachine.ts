@@ -17,8 +17,9 @@
  *   - `reconnecting`: the microphone was lost. No audio flows, so
  *     `RECONNECT_WINDOW` bounds it and expiry ends the segment.
  *
- * In `recording` and `recordingLocal`, `NO_LIVE_TEXT_TIMEOUT` closes a mic
- * that has brought no new live text for 5 minutes.
+ * One countdown per segment (`armIdleClose`, restarted only by new words and
+ * by HOLD) closes a mic that has brought no new live text for 5 minutes, in
+ * `recording` or `recordingLocal`. Socket drops and reconnects do not restart it.
  *
  * Every end of a segment after `MIC_LIVE` goes through `TRANSCRIPTION_DONE`,
  * which carries the recording's sealing obligation (`PendingRecording`) —
@@ -40,7 +41,7 @@
  * test provides a fake.
  */
 
-import { setup, assign, emit, enqueueActions, forwardTo, fromCallback, not, stateIn, type SnapshotFrom } from "xstate";
+import { setup, assign, cancel, emit, enqueueActions, forwardTo, fromCallback, not, stateIn, type SnapshotFrom } from "xstate";
 import { recordingStop, recordingError, micLost, recordingResumed, liveTextPaused, liveTextResumed } from "../lib/audio/earcons";
 import type { PendingRecording } from "../lib/audio/voice-stager";
 import {
@@ -94,6 +95,8 @@ export type TranscriptionErrorLevel = "error" | "warning";
  */
 const IDLE_CLOSE_ACTIONS = ["logIdleClose", "setIdleClosed", "emitIdleClosed", "sendStopToTranscriber", "playMicOffSound"] as const;
 const IDLE_CLOSE = { guard: "notHeld", target: "finalizing", actions: IDLE_CLOSE_ACTIONS } as const;
+/** New words restart the idle countdown; unchanged text does not. */
+const TEXT_UPDATE_HANDLER = [{ guard: "newLiveText", actions: ["applyTextUpdate", "armIdleClose"] }, { actions: "applyTextUpdate" }] as const;
 
 export const realtimeTranscriptionMachine = setup({
   types: {
@@ -216,6 +219,13 @@ export const realtimeTranscriptionMachine = setup({
     },
     emitMaxDurationReached: emit({ type: "maxDurationReached" }),
     emitIdleClosed: emit({ type: "idleClosed" }),
+    // A delayed event, not an `after`: an `after` restarts whenever its state
+    // is entered, so a flapping socket would keep the mic open.
+    armIdleClose: enqueueActions(({ enqueue }) => {
+      enqueue.cancel("idleClose");
+      enqueue.raise({ type: "IDLE_TIMEOUT" }, { delay: "NO_LIVE_TEXT_TIMEOUT", id: "idleClose" });
+    }),
+    disarmIdleClose: cancel("idleClose"),
     logIdleClose: () => console.info("[realtime-transcription] No new live text — closing the mic"),
   },
   delays: {
@@ -256,8 +266,11 @@ export const realtimeTranscriptionMachine = setup({
         input: ({ context }) => ({ targetSessionId: context.targetSessionId, held: context.held }),
       },
       on: {
-        HOLD: { actions: ["setHeld", forwardTo("transcriber")] },
+        // A hold's release starts the countdown over (a held timeout is ignored).
+        HOLD: { actions: ["setHeld", forwardTo("transcriber"), "armIdleClose"] },
       },
+      entry: "armIdleClose",
+      exit: "disarmIdleClose",
       after: {
         // The segment is SUBMITTED, not folded: the emitted event lets the
         // hook park a send (the path a spoken "send" takes) before STOP's
@@ -298,9 +311,9 @@ export const realtimeTranscriptionMachine = setup({
           },
         },
         recordingLocal: {
-          // NO_LIVE_TEXT_TIMEOUT runs here too: a mic whose live text never
-          // connects is as forgotten as one hearing only noise. Errors about the live socket keep the
-          // recording going; the actor has already stopped or kept retrying.
+          // The idle close runs here too: a mic whose live text never connects
+          // is as forgotten as one hearing only noise. Errors about the live
+          // socket keep the recording going; the actor has already stopped or kept retrying.
           // Losing live text only pauses spoken keywords, so it gets a quiet
           // cue, and only once the loss has lasted (never at segment start,
           // before the first socket opens: liveTextCue is still "none").
@@ -309,9 +322,9 @@ export const realtimeTranscriptionMachine = setup({
               guard: "liveTextDropped",
               actions: ["playLiveTextPaused", "announceLiveTextPaused"],
             },
-            NO_LIVE_TEXT_TIMEOUT: IDLE_CLOSE,
           },
           on: {
+            IDLE_TIMEOUT: IDLE_CLOSE,
             WS_CONNECTED: { target: "recording", actions: "settleLiveTextReturned" },
             CONNECTION_RESTORED: {
               target: "recording",
@@ -324,26 +337,16 @@ export const realtimeTranscriptionMachine = setup({
             },
             WS_ERROR: { actions: "setError" },
             SERVER_ERROR: { actions: "setError" },
-            TEXT_UPDATE: { actions: "applyTextUpdate" },
-            // Re-entering restarts the idle timer when the hold ends.
-            HOLD: { target: "recordingLocal", reenter: true, actions: ["setHeld", forwardTo("transcriber")] },
+            TEXT_UPDATE: TEXT_UPDATE_HANDLER,
             STOP: { target: "finalizing", actions: "sendStopToTranscriber" },
             CANCEL: "cancelling",
             TRANSCRIPTION_DONE: { target: "#realtimeTranscription.idle", actions: "setFinalTranscript" },
           },
         },
         recording: {
-          after: {
-            NO_LIVE_TEXT_TIMEOUT: IDLE_CLOSE,
-          },
           on: {
-            // Re-entering restarts the idle timer; unchanged text does not.
-            TEXT_UPDATE: [
-              { guard: "newLiveText", target: "recording", reenter: true, actions: "applyTextUpdate" },
-              { actions: "applyTextUpdate" },
-            ],
-            // Re-entering restarts the idle timer when the hold ends.
-            HOLD: { target: "recording", reenter: true, actions: ["setHeld", forwardTo("transcriber")] },
+            IDLE_TIMEOUT: IDLE_CLOSE,
+            TEXT_UPDATE: TEXT_UPDATE_HANDLER,
             CONNECTION_DEGRADED: [
               { guard: "micDrop", target: "reconnecting", actions: ["playMicLost", "setMicInterrupted"] },
               // Network: the audio keeps staging, only live text pauses.
@@ -379,12 +382,12 @@ export const realtimeTranscriptionMachine = setup({
             // The mic is back and so is the live socket…
             CONNECTION_RESTORED: {
               target: "recording",
-              actions: ["playRecordingResumed", "clearError"],
+              actions: ["playRecordingResumed", "clearError", "armIdleClose"],
             },
             // …or the mic is back but the socket is not.
             MIC_LIVE: {
               target: "recordingLocal",
-              actions: ["playRecordingResumed", "clearError"],
+              actions: ["playRecordingResumed", "clearError", "armIdleClose"],
             },
             WS_ERROR: { actions: "setError" },
             SERVER_ERROR: { actions: "setError" },
