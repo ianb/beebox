@@ -54,8 +54,14 @@ builds on:
   is enough.
 - The output is the clean composition block, with an easy copy.
 - CodeMirror 6, editing source text, with tags shown as widgets. Chosen over
-  ProseMirror to avoid a Markdoc parser/serializer and to keep saves
-  byte-identical outside the person's edits.
+  ProseMirror to avoid a Markdoc parser/serializer and to limit scope.
+- Formatting does not change authorship. The agent may add paragraph breaks,
+  make lists, and rearrange layout without a mark.
+- Whitespace normalization is acceptable when it is a semantic no-op. The
+  editor unwraps hard-wrapped paragraphs when it reads the composition.
+- The rare silent loss of an agent edit (see *Failure modes*) is accepted.
+- The size estimate is accepted. The tag name `editorial` stays. No device
+  spike before building; CodeMirror is widely used on touch devices.
 
 ## Smallest fix and budget
 
@@ -69,17 +75,17 @@ work.
 
 | Track | Source | Tests |
 |---|---|---|
-| 1. Tags, region finder, plain-text export (shared, pure) | 180 | 150 |
+| 1. Tags, region finder, normalization, plain-text export (shared, pure) | 220 | 190 |
 | 2. Doc schema wiring and agent guidance | 70 | 20 |
 | 3. Read view: composition block, marks, Copy | 200 | 80 |
 | 4. Server: read and write composition | 170 | 160 |
 | 5. Editor: CodeMirror, widgets, autosave, merge | 600 | 220 |
 | Knowledge audit entry | 20 | — |
-| **Total** | **≈1,240** | **≈630** |
+| **Total** | **≈1,280** | **≈670** |
 
-**≈1,870 lines.** This is under the 2,000-line BIG CHANGE line, but close
-to it; if Track 5 grows past 800 source lines, I report the revised estimate
-before continuing. Authored docs outside this plan: the doc schema
+**≈1,950 lines.** This is near the 2,000-line BIG CHANGE line; the boxholder
+expects this size (2026-10-27), so crossing it does not stop the work. I
+report the revised estimate if Track 5 grows past 800 source lines. Authored docs outside this plan: the doc schema
 instructions (counted in Track 2). No generated output beyond the regenerated
 `box-docs/card-doc.md`.
 
@@ -106,7 +112,8 @@ editor is lazy-loaded, so readers who never press Compose do not download it.
   `{% source %}`. Commit labeling reuses trailers. No new card type.
 - **Memory: bias toward strict; stop over-engineering rare failures.** The
   lock-free race between the agent's Edit tool and the server's write is
-  documented as accepted (see *Failure modes*), not engineered away.
+  accepted by the boxholder (see *Failure modes*). Whitespace is normalized
+  instead of preserved byte for byte.
 - **Shipped precedent: `card.setTheme`** (`src/webapp/trpc/routers/card.ts:181-240`):
   lock, read, splice, `writeFileAtomic`, then emit `file-change`. The write
   mutation copies this shape, minus the commit.
@@ -187,7 +194,7 @@ editor is lazy-loaded, so readers who never press Compose do not download it.
   <https://codemirror.net/docs/ref/>. **Adopted** (dependency).
 - iOS Safari selection handles missing in `@codemirror/view` ≥6.35.1, fixed
   and closed 2026-04-15: <https://github.com/codemirror/dev/issues/1538>.
-  Evaluated; the spike (chunk 0) checks the current version on a device.
+  Evaluated; the browser walk includes one pass on a phone.
 - Backspace across atomic ranges with replace decorations misbehaves:
   <https://discuss.codemirror.net/t/backspace-on-decoration-with-atomic-ranges-not-working-correctly/6641>.
   Evaluated; Track 5 adds a delete keymap for marks.
@@ -231,8 +238,11 @@ designs; no entry needed. The bracket convention has no single author.
   No new noun.
 - **Region hash** — SHA-256 of the composition text, computed by the server.
   The write precondition. Not the file ETag (`file-etag.ts`, mtime+size).
-- **Base text** — the composition text the editor last synced with the disk.
-  The base of the three-way merge.
+- **Base text** — the composition text the editor last synced with the disk,
+  after normalization. The base of the three-way merge.
+- **Normalized text** — composition text with soft line breaks inside each
+  paragraph joined by a space, trailing spaces removed, and runs of blank
+  lines reduced to one. It renders the same as the input.
 - **Save** — the person's explicit commit of the card: the editor's current
   text is written through the same hash-checked path, then committed, with
   trailers `Source: webapp`, `Endpoint: card.writeComposition`,
@@ -260,7 +270,14 @@ designs; no entry needed. The bracket convention has no single author.
     and `CompositionProblem = {problem: "none" | "multiple" | "inline" |
     "unclosed"}`. It parses with Markdoc and uses node `lines`.
   - `spliceComposition(body, region, text): string`.
-  - `compositionPlainText(text: string): {text, openMarks: number}`. Removes
+  - `normalizeComposition(text: string): string`. Uses the Markdoc parse's
+    paragraph nodes (`lines`) and joins the soft line breaks inside each
+    paragraph, removing the continuation line's indent. Hard breaks (two
+    trailing spaces or `\`), fences, tables, headings, and tag lines are
+    untouched; trailing spaces on other lines are removed; three or more
+    newlines become two. Idempotent.
+  - `compositionPlainText(text: string): {text, openMarks: number}`.
+    Normalizes first, so a hard-wrapped paragraph pastes as one line. Removes
     `source` tags and keeps their content; renders each open `editorial` as
     `[content]`; leaves other Markdown as written.
   - Cardinality: `lintBodyMarkdoc` validates per node, so it cannot see two
@@ -272,8 +289,9 @@ designs; no entry needed. The bracket convention has no single author.
 - **First implementation chunk:** the tag file and the three functions with
   `t.check` tests covering: no region, one region, two regions, inline
   `composition`, unclosed tag, splice preserving bytes outside the region,
-  plain-text export with each kind and with `source`, and a lint test that a
-  doc card with two compositions warns.
+  normalization (a wrapped paragraph, a wrapped list item, a hard break kept,
+  a fence kept, and idempotence), plain-text export with each kind and with
+  `source`, and a lint test that a doc card with two compositions warns.
 
 ### Track 2 — Doc schema wiring and guidance
 
@@ -288,6 +306,10 @@ designs; no entry needed. The bracket convention has no single author.
   - Inside it, the text is the person's. Do not add or change words there
     except on their instruction. Mark every word of yours with
     `{% editorial %}`, by kind. Use `{% source %}` for secondhand lines.
+  - Formatting is free and needs no mark: paragraph breaks, lists,
+    headings, and moving the person's sentences into an order. It keeps the
+    words, so it keeps the authorship.
+  - Write each paragraph on one line; do not hard-wrap inside a composition.
   - Do not use `{% quote %}` inside a composition.
   - The person may edit while you work. Re-read the card before each edit.
 - **Vocabulary lock-ins:** the section heading, which the knowledge audit
@@ -368,15 +390,18 @@ designs; no entry needed. The bracket convention has no single author.
     delimiters and keeps the content.
   - Autosave: 800 ms after the last keystroke; one write in flight; the next
     waits.
+  - Normalize on read: on entering Compose and on each remote read, the
+    editor applies `normalizeComposition` to the disk text before using it.
+    If the text changed, the next autosave writes the normalized form. The
+    agent's wrapped lines therefore never reach the merge as line changes.
   - Sync: on `file-change` for the card path, call `readComposition`. If the
     hash equals the last synced hash, stop (own echo or a change outside the
-    region). Else merge.
+    region). Else normalize and merge.
   - Merge (pure, `src/shared/composition-merge.ts`):
     `mergeComposition(base, local, remote) → {merged, conflicts}` with
-    `node-diff3`. Its string inputs split on whitespace by default, which
-    loses spacing, so the function tokenizes itself: `text.split(/(\s+)/)`
-    keeps every separator as a token, and joining the merged tokens gives
-    the bytes back. A conflict hunk keeps the local side in `merged`; each
+    `node-diff3`. Its string inputs split on whitespace and drop it, so the
+    function tokenizes itself with `text.split(/(\s+)/)`, which keeps each
+    separator as a token and makes the merge a plain join. A conflict hunk keeps the local side in `merged`; each
     conflict also returns `{from, to, remote}`: the range of the local side
     in `merged`, and the remote text. Then `diffToChanges(local, merged)` gives minimal CodeMirror
     changes, dispatched with `Transaction.remote.of(true)` and
@@ -404,8 +429,9 @@ designs; no entry needed. The bracket convention has no single author.
     read view. A failed write keeps the editor open with "Not saved".
 - **Vocabulary lock-ins:** none beyond Track 4.
 - **First implementation chunk:** `scan.ts` and `composition-merge.ts` with
-  tests (pure). The merge tests check exact bytes for double spaces, blank
-  lines, a trailing newline, and edits on both sides of a tag. Then the
+  tests (pure). The merge tests cover edits on both sides of a tag, a
+  paragraph split by the agent while the person types in it, and a same-span
+  conflict. Then the
   editor view with widgets; then sync, with a test that Save before the
   debounce commits the on-screen text.
 
@@ -437,7 +463,7 @@ designs; no entry needed. The bracket convention has no single author.
 
 ## Failure modes
 
-> **Accepted risk:** the agent's Edit tool writes without `withCardLock`. If
+> **Accepted risk (boxholder, 2026-10-27):** the agent's Edit tool writes without `withCardLock`. If
 > it writes between `writeComposition`'s read and its atomic rename (a few
 > milliseconds), the agent's change is overwritten. Claude Code's Edit
 > refuses to write a file modified since its last read (Claude Code tool behavior,
@@ -445,8 +471,7 @@ designs; no entry needed. The bracket convention has no single author.
 > agent write landing inside a single server request. The loss is silent and
 > the overwritten bytes are not restored unless the agent committed first.
 > Closing it means making the agent's writes take a lock the server also
-> takes, which is a new subsystem; the boxholder decides whether to accept
-> this risk (asked 2026-10-27).
+> takes, which is a new subsystem. Not built.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
@@ -454,7 +479,8 @@ designs; no entry needed. The bracket convention has no single author.
 | Agent leaves a tag unclosed inside the composition | Track 1 (`unclosed`), Track 5 scan test | No Compose button for a broken region; scan `malformed` shows raw text with warning style | Clear |
 | Agent adds a second composition | Track 1 lint test | Read view hides Compose; lint warns | Clear |
 | Agent and person change the same paragraph | Merge test | Local kept; remote shown as an editor widget with Use this / Dismiss | Clear |
-| Merge alters spacing the person typed | Merge byte tests | Tokenizer keeps separators | Clear |
+| Agent hard-wraps a paragraph it edits | Track 1 normalization test | Unwrapped on the editor's next read; the autosave writes it back unwrapped | Clear (renders the same) |
+| Normalization changes rendering | Track 1 tests (hard break, fence, list) | Joins only soft breaks inside paragraphs | Clear |
 | Save pressed before autosave fires | Track 5 sync test | Save sends the on-screen text with `commit: true` | Clear |
 | Direct call to the write mutation on a non-doc card | Track 4 test | Rejected with `BAD_REQUEST` | Clear |
 | Autosave write fails (network, 500) | Track 5 sync test with a failing client | "Not saved" state, retry, `beforeunload` | Clear |
@@ -508,13 +534,12 @@ designs; no entry needed. The bracket convention has no single author.
 
 ## Open design questions
 
-- **Tag name `editorial`.** Lean: keep it. It names an editor's insertion,
-  which matches the bracket convention. Alternatives: `agent`, `aside`.
 - **Copy and Markdown syntax.** Copy keeps Markdown as written (`*emphasis*`
   stays as asterisks). Lean: fine for LinkedIn-style plain posts; revisit with
   real examples, as the boxholder said.
-- **Mobile editing.** Compose is offered on the phone too. Lean: keep it
-  unless the spike shows touch problems; then hide Compose below a width.
+- **Mobile editing.** Compose is offered on the phone too. If the phone pass
+  in the browser walk shows touch problems, file an issue; hiding Compose
+  below a width is the fallback.
 
 ## Knowledge audits
 
@@ -540,22 +565,18 @@ and record the status comment, in the Track 2 chunk.
 - `body.stable-body.test.ts` and `bin/card-remount-check` hold the
   no-remount rule for the new components.
 - No new test tier. The CodeMirror widget behavior on touch is checked once
-  by hand in the spike and in a browser walk with `bin/browse`; it is not
-  held by an automated test.
+  by hand in the browser walk; it is not held by an automated test.
 
 ## Implementation order
 
-0. **Spike (throwaway branch):** CodeMirror with one atomic widget mark, a
-   simulated remote change, and undo, on the boxholder's iPhone in Safari and
-   in the iOS app. Proceed if the selection handles, backspace across a mark,
-   and remote-change-then-undo work. If not, stop and re-plan.
 1. Track 1 (tags and pure functions).
 2. Track 2 (schema, guidance, knowledge audit run).
 3. Track 3 (read view and Copy). Depends on 1 and 2.
 4. Track 4 (mutations). Depends on 1.
 5. Track 5 (editor). Depends on 3 and 4.
 6. Browser walk of the design walkthrough on a test1 clone card, with an
-   exhibit.
+   exhibit, and one pass on a phone (selection, backspace across a mark,
+   undo after a remote change).
 
 ## Rollout shape
 

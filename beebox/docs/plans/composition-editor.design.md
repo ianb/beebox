@@ -73,6 +73,9 @@ only reads on the phone still sees what is unresolved.
   instruction, as the writing practice says ("the document changes only on
   instruction"). The guidance states this; the editor does not enforce it.
   An instruction moves it; nothing records standing trust to compose.
+- **Formatting** (paragraph breaks, lists, order of the person's sentences)
+  is automatic and unmarked. It keeps the person's words, so it keeps their
+  authorship.
 - **Marks** are placed by the agent and resolved only by the person: accept (a
   transcript check), dismiss (a note), or replace by typing (a gap or a joining
   sentence). No mark resolves automatically. Implicit resolution on edit is
