@@ -82,9 +82,9 @@ export function useComposeSession({ body, cardPath, composeEditor }: {
 
 export const CompositionCardContext = createContext<CompositionCard | null>(null);
 
-function copyLabel(openMarks: number): string {
-  if (openMarks === 0) return "Copy";
-  return `Copy (${String(openMarks)} open mark${openMarks === 1 ? "" : "s"})`;
+function openMarksSuffix(openMarks: number): string {
+  if (openMarks === 0) return "";
+  return ` (${String(openMarks)} open mark${openMarks === 1 ? "" : "s"})`;
 }
 
 /** The element the compose editor renders into (`useComposeSession`). */
@@ -107,11 +107,11 @@ export function CompositionBlock({ children }: { children?: ReactNode }): ReactN
       {plain === null || card === null ? null : (
         <div className="flex items-center justify-end gap-2 rounded-t border-b border-card-pen bg-card-tint px-3 py-1.5 print:hidden">
           <span className="mr-auto text-sm font-semibold text-card-pen">Composition</span>
-          <Button id={controlAddress("bbx-composition-copy", card.instance)} size="sm" intent="secondary" flash={{ label: "Copied" }} aria-live="polite" onClick={() => navigator.clipboard.writeText(plain.text)}>
-            {copyLabel(plain.openMarks)}
+          <Button id={controlAddress("bbx-composition-copy", card.instance)} label={`Copy composition${openMarksSuffix(plain.openMarks)}`} size="sm" intent="secondary" flash={{ label: "Copied" }} aria-live="polite" onClick={() => navigator.clipboard.writeText(plain.text)}>
+            {`Copy${openMarksSuffix(plain.openMarks)}`}
           </Button>
           {canCompose ? (
-            <Button id={controlAddress("bbx-composition-compose", card.instance)} size="sm" intent="primary" onClick={handleCompose}>Edit</Button>
+            <Button id={controlAddress("bbx-composition-compose", card.instance)} label="Edit composition" size="sm" intent="primary" onClick={handleCompose}>Edit</Button>
           ) : null}
         </div>
       )}

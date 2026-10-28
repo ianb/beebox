@@ -73,9 +73,9 @@ void test("Copy copies the plain text and counts open marks", async (t) => {
   });
   const view = await mount(render(piece('One {% editorial kind="gap" %}more{% /editorial %} line.\n\nTwo {% editorial kind="joiner" %}and{% /editorial %} three.'), null));
   t.teardown(() => view.unmount());
-  const labels = () => [...view.container.querySelectorAll("section button")].map((b) => b.textContent);
-  t.check(labels(), ["Copy (2 open marks)"]);
-  const [copy] = view.container.querySelectorAll("button");
+  const copy = view.container.querySelector<HTMLButtonElement>('button[aria-label^="Copy composition"]');
+  const labels = () => [copy?.textContent];
+  t.check({ name: copy?.getAttribute("aria-label"), labels: labels() }, { name: "Copy composition (2 open marks)", labels: ["Copy (2 open marks)"] });
   await view.act(() => { copy?.click(); });
   await view.act(() => Promise.resolve());
   t.check({ copied, labels: labels() }, { copied: ["One [more] line.\n\nTwo [and] three."], labels: ["Copied"] });
@@ -85,14 +85,14 @@ void test("Compose shows only for one closed composition, and opens the editor",
   const labels = async (body: string) => {
     const view = await mount(render(body, Editor));
     t.teardown(() => view.unmount());
-    return [...view.container.querySelectorAll("section button")].map((b) => b.textContent);
+    return [...view.container.querySelectorAll("section button")].map((b) => b.getAttribute("aria-label"));
   };
-  t.check(await labels(piece("Plain.")), ["Copy", "Edit"]);
+  t.check(await labels(piece("Plain.")), ["Copy composition", "Edit composition"]);
   t.check(await labels(`${piece("One.")}\n${piece("Two.")}`), []);
   t.check(await labels("No composition here.\n"), []);
   const view = await mount(render(piece("Plain."), Editor));
   t.teardown(() => view.unmount());
-  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Edit");
+  const compose = view.container.querySelector<HTMLButtonElement>('button[aria-label="Edit composition"]');
   await view.act(() => { compose?.click(); });
   t.check({ editors: view.container.querySelectorAll("[data-editor]").length, blocks: view.container.querySelectorAll("section").length }, { editors: 1, blocks: 0 });
 });
@@ -102,7 +102,7 @@ void test("Compose shows only for one closed composition, and opens the editor",
 void test("the editor survives the block remounting", async (t) => {
   const view = await mount(render(piece("Plain."), Editor));
   t.teardown(() => view.unmount());
-  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Edit");
+  const compose = view.container.querySelector<HTMLButtonElement>('button[aria-label="Edit composition"]');
   await view.act(() => { compose?.click(); });
   const before = view.container.querySelector("[data-editor]")?.getAttribute("data-editor");
   await view.rerender(render(`A new first paragraph.\n\n${piece("Plain.")}`, Editor));
@@ -115,7 +115,7 @@ void test("the editor survives the block remounting", async (t) => {
 void test("the editor stays visible when the composition goes away", async (t) => {
   const view = await mount(render(piece("Plain."), Editor));
   t.teardown(() => view.unmount());
-  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Edit");
+  const compose = view.container.querySelector<HTMLButtonElement>('button[aria-label="Edit composition"]');
   await view.act(() => { compose?.click(); });
   const before = view.container.querySelector("[data-editor]")?.getAttribute("data-editor") ?? null;
   t.check(before, any(String));

@@ -163,8 +163,8 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
         <span role="status" aria-live="polite" className="mr-auto">
           <Text as="span" size="xs" tone={alarming ? "danger" : "muted"} material>{stateText}</Text>
         </span>
-        <Button id={controlAddress("bbx-composition-save", instance)} size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Save</Button>
-        <Button id={controlAddress("bbx-composition-done", instance)} size="sm" intent="secondary" onClick={done}>Done</Button>
+        <Button id={controlAddress("bbx-composition-save", instance)} label="Save composition" size="sm" intent="primary" disabled={saveState.kind === "removed"} onClick={async () => { await session?.sync.save(); }}>Save</Button>
+        <Button id={controlAddress("bbx-composition-done", instance)} label="Done editing composition" size="sm" intent="secondary" onClick={done}>Done</Button>
       </Row>
       {malformed ? <ErrorText className="px-4 pt-2">A tag in this composition is malformed, so its marks show as raw text.</ErrorText> : null}
       {session === null ? null : <Attach view={session.view} focused={focused} />}
