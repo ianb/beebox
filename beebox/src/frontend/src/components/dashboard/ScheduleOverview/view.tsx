@@ -78,6 +78,7 @@ function TriggerButton({ name, enabled, onFinished }: { name: string; enabled: b
       disabled={!enabled}
       loading={mutation.isPending}
       loadingLabel="..."
+      label={`Run ${name}`}
       title={!enabled ? "Schedule is disabled" : `Run ${name} now`}
     >
       Run

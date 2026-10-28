@@ -52,3 +52,13 @@ DOM.enable" on `snapshot`. The mobile pass aborted at
 `Theme_Tour.doc.card` ([fixture issue](../docs-and-chores/2026-09-23-test1-lacks-theme-tour-fixtures.md)),
 so the card pane shows "Card not found". Artifacts:
 `beebox/test/tours/.artifacts/workspace-panes/2026-10-22T04-15-21-598Z/`.
+
+## Re-encounter, 2026-10-28 - weekly tour check run 20261028-161719
+
+Solo `bin/tour workspace-panes`. Both viewports wrote
+`card-beside-conversation` and `conversation-with-floating-restore`, then the
+run made no progress and was killed after 15 minutes, before it wrote a
+`summary.md`. In the first `--all` run the 30-minute limit expired before
+this tour started. `Theme_Tour.doc.card` now loads ("Card themes tour" shows
+in the pane). Artifacts:
+`beebox/test/tours/.artifacts/workspace-panes/2026-10-28T22-06-39-911Z/`.

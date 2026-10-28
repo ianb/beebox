@@ -79,7 +79,7 @@ export function CalendarSection() {
       <Card material padding="lg" border="none" shadow>
         <Heading level={2} className="mb-4">Google Calendar</Heading>
         <Notice tone="warning">{error}</Notice>
-        <GoogleConnectLink id="bbx-settings-calendar-connect-google" />
+        <GoogleConnectLink id="bbx-settings-calendar-connect-google" service="Calendar" />
       </Card>
     );
   }
