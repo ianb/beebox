@@ -15,7 +15,7 @@ correctness fixes.
 
 Three channels are assessed. **Runtime** is beebox's own use of the
 SDK (`src/core/agent/`, `src/core/chat/session/`, `src/services/claude-chat/core.ts`,
-`src/services/scan-vision-claude.ts`, `src/core/sdk-hooks.ts`). **Harness** is
+`src/services/scan-vision-claude/core.ts`, `src/core/sdk-hooks.ts`). **Harness** is
 the Claude Code the boxholder and every worker session run in — `.claude/hooks/`,
 `.claude/agents/finish.md` and the `/finish` flow, `bin/` worktree tooling,
 `bin/land`, and the isolation rules worker sessions run under. Most SDK releases
@@ -209,7 +209,7 @@ improvements". Nothing to assess. Applied 2026-10-22 with `0.3.304`.
   - An omitted `permissionMode` now starts in `default` on third-party providers
     or with telemetry off. Checked: every beebox `query()` either passes
     `bypassPermissions` (agent runs via `run.ts`, chat) or runs with
-    `tools: []` (`services/scan-vision-claude.ts`).
+    `tools: []` (`services/scan-vision-claude/core.ts`).
 - **Fixes:** structured output no longer delivers a refused response as
   `structured_output`; Read refuses image sources over 128 MB instead of loading
   them whole; "Prompt is too long" when stopping during compaction; prompt
@@ -616,7 +616,7 @@ background processes and sandboxed commands. Nothing for beebox.
   applies and, on third-party providers or with telemetry off, the session starts
   in auto mode like `claude -p`."* Checked every `query()` site. Agent runs
   (`core/agent/invoke/run.ts:82`) and chat (`services/claude-chat/core.ts`) pass
-  `bypassPermissions`. Scan vision (`services/scan-vision-claude.ts`) omits it but
+  `bypassPermissions`. Scan vision (`services/scan-vision-claude/core.ts`) omits it but
   runs with `tools: []` and `settingSources: []`, so no `defaultMode` can load and
   auto mode has nothing to review. `bin/agent-quotas-requests.ts` also omits it,
   for a usage query.
@@ -2694,7 +2694,7 @@ CLI before editing.
   `background_tasks_changed` snapshot.
 - **BeeBox applicability (runtime):**
   - **Both cost changes land on a value beebox records.**
-    `scan-vision-claude.ts` reads `result.total_cost_usd` per scan batch (and
+    `scan-vision-claude/core.ts` reads `result.total_cost_usd` per scan batch (and
     `toBatchUsage` reads `result.usage`). The 1.1× data-residency multiplier
     makes that figure larger but *more accurate* where it applies; the
     one-shot/background-subagent change makes it correct as of release rather
@@ -3310,7 +3310,7 @@ apply. Recorded because several items land squarely on this repo's workflow.
 - **BeeBox applicability (runtime):** Additive, nothing act-now, but it
   lands on a surface already flagged in this ledger. BeeBox's token
   accounting reads `result.usage` in `toBatchUsage`
-  (`src/services/scan-vision-claude.ts`) and aggregates JSONL assistant-message
+  (`src/services/scan-vision-claude/core.ts`) and aggregates JSONL assistant-message
   usage in `src/core/usage.ts`; neither consumes agent-tool (`AgentOutput`)
   usage today, so subagent output tokens are simply absent from both. Combined
   with the `usage` vs `modelUsage` note in the 0.3.223 entry, this is the second
@@ -3516,13 +3516,13 @@ outstanding work — it is durable evidence.
     auto-denials should be rare there. This is a future opportunity if we ever
     want to surface denied tool calls in the chat UI.
   - `api_error_status: 529`: `isTransientClaudeFailure`
-    (`src/services/scan-vision-claude.ts:239`) currently decides retry-worthiness
+    (`src/services/scan-vision-claude/core.ts:239`) currently decides retry-worthiness
     by regex-matching `/rate.?limit|overloaded|529|429/` against the result
     subtype/error text. The new structural field is the intended replacement for
     exactly that text match — worth switching to once pinned, keeping the regex
     as a fallback for 429/rate-limit cases the field does not cover.
   - `usage` vs `modelUsage`: `toBatchUsage`
-    (`src/services/scan-vision-claude.ts:228`) computes scan token accounting
+    (`src/services/scan-vision-claude/core.ts:228`) computes scan token accounting
     from `result.usage`, which upstream now documents as main-loop-only and
     per-turn. Scan batches are single-turn, but any subagent or
     query-pipeline calls would be excluded, so the reported batch token counts

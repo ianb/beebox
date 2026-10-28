@@ -10,21 +10,15 @@
  * outline-then-capture prompting with a machine-checked slot invariant, and a
  * hermetic call surface (`tools: []`, no filesystem settings, no connectors). `subject_bbox`
  * is schema-forced to null — Sonnet's boxes carry a systematic y-offset and
- * are never trusted. Rotation is best-effort (measured inconsistent).
+ * are never trusted. Each photo page's rotation comes from a second, Haiku
+ * call that picks the upright copy among four turned ones
+ * (`correctPhotoRotations`).
  */
 
-import type { SDKUserMessage, SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { query as ClaudeQuery } from "@anthropic-ai/claude-agent-sdk";
+import type { SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
-import { MODEL_ID } from "../shared/model-ids.js";
-import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
-import { boxSessionSettings } from "../core/agent/box-session-settings.js";
-import { buildScriptEnv } from "../core/script-env/core.js";
-import { providerEnvAdditions } from "../core/provider-env/core.js";
-import { dropUndefined } from "../lib/drop-undefined.js";
-import { errorMessage } from "../shared/error-guards.js";
-import { isRecord } from "../shared/is-record.js";
-import { readScanVisionImage, type ScanVisionImageInput } from "../core/describe-images/image-input.js";
+import { MODEL_ID } from "../../shared/model-ids.js";
+import { readScanVisionImage } from "../../core/describe-images/image-input.js";
 import {
   assertBatchAlignment,
   buildScanPrompt,
@@ -32,16 +26,22 @@ import {
   ScanBatchMisalignedError,
   type BatchUsage,
   type RawScanAnalysis,
-} from "../core/describe-images/gemini.js";
+} from "../../core/describe-images/gemini.js";
+import {
+  runClaudeQuery,
+  toBatchUsage,
+  toWireSchema,
+  type ClaudeQueryFunction,
+  type ScanImage,
+} from "./query.js";
+import { correctPhotoRotations } from "./upright.js";
 import {
   ScanVisionBatchError,
   type ScanVisionResult,
   type ScanVisionService,
-} from "./scan-vision.js";
+} from "../scan-vision.js";
 
-const MAX_TURNS = 8;
-
-export type ClaudeQueryFunction = typeof ClaudeQuery;
+export type { ClaudeQueryFunction } from "./query.js";
 
 const slotSchema = z.object({
   slot: z.int(),
@@ -68,31 +68,9 @@ type ClaudeScanAnalysis = z.infer<typeof claudeScanAnalysisSchema>;
 
 const claudeResponseSchema = z.object({ pages: z.array(claudeScanAnalysisSchema) });
 
-/** Drop the vacuous MAX_SAFE_INTEGER bounds `z.toJSONSchema` puts on `z.int()`
- *  — structured-output dialects commonly reject numeric range constraints. */
-function stripIntBounds(node: unknown): void {
-  if (Array.isArray(node)) {
-    for (const item of node) stripIntBounds(item);
-    return;
-  }
-  if (!isRecord(node)) return;
-  const record = node;
-  if (record["type"] === "integer") {
-    delete record["minimum"];
-    delete record["maximum"];
-  }
-  for (const value of Object.values(record)) stripIntBounds(value);
-}
-
 /** The JSON Schema handed to the SDK's `outputFormat` — generated, not hand-written. */
 export function claudeScanWireSchema(): Record<string, unknown> {
-  const schema = z.toJSONSchema(claudeResponseSchema);
-  // The CLI validates --json-schema with a draft-07 ajv; the 2020-12 `$schema`
-  // marker z.toJSONSchema emits makes it reject the whole schema ("no schema
-  // with key or ref"). The structure is draft-07-compatible, so drop the marker.
-  delete schema["$schema"];
-  stripIntBounds(schema);
-  return schema;
+  return toWireSchema(claudeResponseSchema);
 }
 
 /**
@@ -168,22 +146,6 @@ class ClaudeScanSchemaError extends ScanVisionBatchError {
   }
 }
 
-/** The query stream ended without ever yielding a result message. */
-class ClaudeScanNoResultError extends ScanVisionBatchError {
-  constructor() {
-    super("Claude scan query ended without a result message", { retry: "fatal" });
-    this.name = "ClaudeScanNoResultError";
-  }
-}
-
-/** The SDK subprocess itself could not run (spawn/auth-level failure). */
-class ClaudeScanSubprocessError extends ScanVisionBatchError {
-  constructor({ detail, cause }: { detail: string; cause: unknown }) {
-    super(`Claude scan subprocess failed: ${detail}`, { retry: "fatal", cause });
-    this.name = "ClaudeScanSubprocessError";
-  }
-}
-
 function checkSlotInvariant(page: ClaudeScanAnalysis): boolean {
   if (page.slots.length !== page.slot_count) return false;
   const numbers = page.slots.map((s) => s.slot).toSorted((a, b) => a - b);
@@ -209,16 +171,6 @@ function foldSlotsIntoReviewFlags(page: ClaudeScanAnalysis): RawScanAnalysis {
   };
 }
 
-function toBatchUsage(result: SDKResultMessage): BatchUsage {
-  const usage = result.usage;
-  return {
-    prompt: usage.input_tokens + usage.cache_creation_input_tokens + usage.cache_read_input_tokens,
-    // The SDK reports no separate thinking count; it is folded into output.
-    output: usage.output_tokens,
-    thinking: 0,
-  };
-}
-
 /** Rate/capacity blips are worth re-attempting the same batch. */
 function isTransientClaudeFailure(text: string): boolean {
   return /rate.?limit|overloaded|529|429/iu.test(text);
@@ -239,7 +191,7 @@ export function createClaudeScanVision({
     // preamble amortizes over 3 pages.
     batchSize: 3,
     async analyzeBatch(args): Promise<ScanVisionResult> {
-      const images: Array<{ data: string; mediaType: ScanVisionImageInput["mediaType"] }> = [];
+      const images: ScanImage[] = [];
       for (const imagePath of args.imagePaths) {
         const image = await readScanVisionImage(imagePath);
         images.push({ data: image.data.toString("base64"), mediaType: image.mediaType });
@@ -261,12 +213,12 @@ export function createClaudeScanVision({
         throw new ClaudeScanFailedError({ detail, retry, usage, costUsd });
       }
 
-      const analyses = parseClaudeScanBatch(result.structured_output, {
+      const parsed = parseClaudeScanBatch(result.structured_output, {
         imageCount: args.imagePaths.length,
         usage,
         costUsd,
       });
-      return { analyses, usage, costUsd };
+      return correctPhotoRotations({ boxRoot, analyses: parsed, images, usage, costUsd, query: queryOverride });
     },
   };
 }
@@ -303,81 +255,28 @@ export function parseClaudeScanBatch(
   return analyses;
 }
 
-/** One hermetic SDK call; throws `ScanVisionBatchError` (`fatal`) when the
- *  subprocess itself cannot run (spawn/auth-level failures). */
+/** One hermetic scan-batch call. */
 async function runScanQuery({
   boxRoot,
   text,
   images,
-  query: queryOverride,
+  query,
 }: {
   boxRoot: string;
   text: string;
-  images: Array<{ data: string; mediaType: ScanVisionImageInput["mediaType"] }>;
+  images: ScanImage[];
   query?: ClaudeQueryFunction | undefined;
 }): Promise<SDKResultMessage> {
-  // CLAUDECODE is unset so the SDK can run nested inside Claude Code;
-  // buildScriptEnv strips ANTHROPIC_API_KEY to force subscription auth
-  // (same conventions as core/agent/run.ts).
-  const env = dropUndefined(await buildScriptEnv(boxRoot, { CLAUDECODE: undefined }));
-  // First-party additions, as every other spawn path: the box's long-lived
-  // token when it has one, and its telemetry choice (review round 6, codex
-  // gpt-6-sol, 2026-10-25: the preflight accepted a token-granted box and this
-  // call then ran without the token).
-  await providerEnvAdditions({ boxRoot, model: null, purpose: "scan-vision", env });
-  const binaryPath = resolveClaudeCodeBinary();
-
-  const userMessage: SDKUserMessage = {
-    type: "user",
-    message: {
-      role: "user",
-      content: [
-        { type: "text", text },
-        ...images.map(
-          ({ data, mediaType }) =>
-            ({ type: "image", source: { type: "base64", media_type: mediaType, data } }) as const
-        ),
-      ],
-    },
-    parent_tool_use_id: null,
-    session_id: "",
-  };
-  async function* prompt(): AsyncGenerator<SDKUserMessage> {
-    yield userMessage;
-  }
-
-  try {
-    // Dynamic — see `core/agent/stream.ts`: keeps the Agent SDK out of the
-    // startup graph of every `bbx` invocation that never asks for vision.
-    const query = queryOverride ?? (await import("@anthropic-ai/claude-agent-sdk")).query;
-    const q = query({
-      prompt: prompt(),
-      options: {
-        model: MODEL_ID.sonnet,
-        maxTurns: MAX_TURNS,
-        cwd: boxRoot,
-        env,
-        tools: [],
-        ...boxSessionSettings({ boxRoot, loadBoxContext: false }),
-        // Composed by beebox; the CLI must not expand `@path` mentions in it.
-        verbatimPrompts: true,
-        systemPrompt: { type: "preset", preset: "claude_code" },
-        outputFormat: { type: "json_schema", schema: claudeScanWireSchema() },
-        ...(binaryPath === null ? {} : { pathToClaudeCodeExecutable: binaryPath }),
-      },
-    });
-    let result: SDKResultMessage | null = null;
-    for await (const msg of q) {
-      if (msg.type === "result") result = msg;
-    }
-    if (result === null) {
-      throw new ClaudeScanNoResultError();
-    }
-    return result;
-  } catch (e) {
-    if (e instanceof ScanVisionBatchError) throw e;
-    // A throw from query() iteration is process-level (spawn failure, missing
-    // or broken binary, dead subprocess) — the provider is broken, not the page.
-    throw new ClaudeScanSubprocessError({ detail: errorMessage(e), cause: e });
-  }
+  return runClaudeQuery({
+    boxRoot,
+    content: [
+      { type: "text", text },
+      ...images.map(
+        ({ data, mediaType }) => ({ type: "image", source: { type: "base64", media_type: mediaType, data } }) as const
+      ),
+    ],
+    model: MODEL_ID.sonnet,
+    schema: claudeScanWireSchema(),
+    query,
+  });
 }

@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { createClaudeScanVision, type ClaudeQueryFunction } from "../../src/services/scan-vision-claude.js";
+import { createClaudeScanVision, type ClaudeQueryFunction } from "../../../src/services/scan-vision-claude/core.js";
 import Sharp from "sharp";
 import { z } from "zod";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
