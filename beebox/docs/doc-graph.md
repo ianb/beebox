@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-28T02:34:18Z
-Total documents: 593
+Generated: 2026-10-28T04:05:33Z
+Total documents: 595
 
 ## Issues
 
@@ -3409,6 +3409,7 @@ Referenced by:
 - docs/design/README.md:25 (link) — - [`trust.md`](trust.md) — two axes: trust to act (question → confirmation → automatic, question rules) and trust to kee
 - docs/design/representation.md:71 (mention) — ladder instead (`trust.md`).
 - docs/implemented-plans/box-backups.md:72 (mention) — - `docs/architecture/spirit.md`, “You should be able to see the gears,” favors an inspectable result over a silent timer
+- docs/implemented-plans/composition-editor.design.md:72 (link) — [trust.md](../design/trust.md): the agent changes the composition on
 - docs/implemented-plans/design-md-retired-sections.md:55 (mention) — process-fields; see `../design/trust.md`.*
 - docs/implemented-plans/file-wordless-captures.md:52 (mention) — `beebox/docs/design/trust.md` names as what *"lets the box act forward on some
 - docs/implemented-plans/plugins.design.md:66 (mention) — Per `design/trust.md`, question then confirmation then automatic:
@@ -4664,6 +4665,36 @@ Title: "Companion-pane card activity awareness for chat" | 372 lines | shipped h
 
 References:
 - → code-style.md (mention)
+
+#### docs/implemented-plans/composition-editor.design.md
+
+Title: "Composition editor: design" | 135 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/composition-editor.md:64 (link) — See [composition-editor.design.md](composition-editor.design.md).
+
+References:
+- → docs/implemented-plans/composition-editor.md (link)
+- → docs/design/trust.md (link)
+
+#### docs/implemented-plans/composition-editor.md
+
+Title: "Composition editor" | 620 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/composition-editor.design.md:9 (link) — **Parent plan:** [composition-editor.md](composition-editor.md)
+
+References:
+- → ../issues/features/2026-07-05-writing-skill.md (frontmatter)
+- → ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md (frontmatter)
+- → ../issues/features/2026-07-05-writing-skill.md (link)
+- → ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md (link)
+- → ../issues/features/2026-10-13-suggested-edits-tracked-changes.md (link)
+- → ../issues/exploration/2026-09-30-reader-context-writing-and-structured-thinking-tag.md (link)
+- → docs/implemented-plans/composition-editor.design.md (link)
+- → docs/implemented-plans/stable-card-body.md (mention)
+- → docs/plans/source-editor.md (mention)
+- → src/core/agent-guide/guide.md (mention)
 
 #### docs/implemented-plans/concurrent-workstream-creation.md
 
@@ -7578,6 +7609,7 @@ References:
 Title: "A card body does not remount when only its surroundings change" | 370 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/composition-editor.md:149 (mention) — - **Shipped precedent: stable card body** (`docs/implemented-plans/stable-card-body.md`):
 - ../issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md:13 (mention) — **Closed 2026-10-27:** fixed on branch worktree-card-remount (fff864dbb, 82206ada5): the shared Markdown renderer now us
 
 References:
@@ -9748,6 +9780,7 @@ References:
 Title: "Source Editor Plan" | 150 lines | proposal | active
 
 Referenced by:
+- docs/implemented-plans/composition-editor.md:151 (mention) — - **The source-editor plan** (`docs/plans/source-editor.md`) chose deliberate
 - docs/implemented-plans/docs-reorg.md:45 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-cleanup-evaluation.md`,
 - docs/reports/plan-directory-migration-history-2026-09-13.md:21 (mention) — `source-editor.md` (unimplemented proposal). The intake → triage → handle
 
@@ -10891,6 +10924,7 @@ Referenced by:
 - docs/implemented-plans/bbx-remind.md:60 (mention) — - No channel can reach the person at the chosen loudness: the command refuses and says how to turn a channel on. The age
 - docs/implemented-plans/box-agents-md.md:157 (mention) — - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
 - docs/implemented-plans/chat-progress-fold.md:166 (mention) — - The agent guide's line on command descriptions (`guide.md`, SPEAKING) stays.
+- docs/implemented-plans/composition-editor.md:213 (mention) — - **Quoting law.** `src/core/agent-guide/guide.md:39-55`. Unchanged; inside a
 - docs/implemented-plans/drive-docs-api-health.md:114 (mention) — - `guide.md:448` becomes *"`bbx health` — scheduled-task and box health, including connector problems; yours to run."* (
 - docs/implemented-plans/dup-sweep-backend-final.md:184 (mention) — `core/agent-guide/guide.md:437` and `core/agent-guide/ledger.yaml:507`.
 - docs/implemented-plans/front-door.md:94 (mention) — | "Landmarks page" with no on-screen path (B row 25) | The page exists; the only route is the place menu's "Find a landm

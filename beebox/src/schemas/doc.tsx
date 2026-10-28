@@ -15,6 +15,7 @@ import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 import { mediaVia } from "../cards/media-via.js";
 import { SourcesEntrySchema } from "../cards/sources-entry.js";
+import { compositionTags } from "../shared/composition/tags.js";
 
 /**
  * How a doc's content arrived (`apple-share-extension`, `telegram`, `text`).
@@ -35,6 +36,7 @@ export const DocSchema = cardSchema("doc", {
     sources: z.array(SourcesEntrySchema).optional(),
     body: body(z.string()),
   },
+  markdocTags: compositionTags,
   instructions: `# Doc Cards
 
 A doc card is a generic typed document with a title and a markdown body.
@@ -80,6 +82,43 @@ We drove down on Friday...
 
 References to other cards use the standard ref form (frontmatter
 \`{ref: "..."}\` or inline markdown links to card paths).
+
+## Compositions
+
+A composition is a piece of writing that the person is making: a post, a
+letter, a talk. Make one when the person turns material into writing of
+their own. Put the piece between \`{% composition %}\` and
+\`{% /composition %}\`, each tag on its own line. A doc card has at most one
+composition. Keep sources, notes, and revision notes outside it.
+
+Inside a composition, the text is the person's. Add or change words there
+only when the person tells you to. Put every word of yours in
+\`{% editorial kind="…" %}\`:
+
+- \`joiner\`: your text that joins the person's parts, until they replace it.
+- \`gap\`: a description of content that is missing.
+- \`note\`: a comment or question for the person.
+- \`check\`: wraps the person's words that you are not sure of, such as a
+  doubtful transcript line; \`note="…"\` says why.
+
+Wrap a line that came through someone else's account in \`{% source %}\`. Do
+not use \`{% quote %}\` inside a composition; the composition already says
+the words are the person's. Formatting is free and needs no mark: paragraph
+breaks, lists, headings, and putting the person's sentences in a new order
+keep their words. Write each paragraph on one line; do not hard-wrap.
+
+The person can edit the composition while you work. Read the card again
+just before each edit.
+
+\`\`\`
+{% composition %}
+The garden was Odette's idea. {% editorial kind="joiner" %}After that first spring,{% /editorial %} we planted it together every year.
+
+{% editorial kind="gap" %}What the first harvest was like.{% /editorial %}
+
+Odette said {% editorial kind="check" note="unclear in the recording" %}the beans came up in a week{% /editorial %}.
+{% /composition %}
+\`\`\`
 
 ## Embedding images and other files
 

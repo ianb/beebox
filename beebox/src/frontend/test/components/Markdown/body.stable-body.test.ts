@@ -11,6 +11,7 @@ import "@ianbicking/tap-check/tap";
 import { Markdown, type MarkdownComponentOverrides } from "../../../src/components/Markdown/body.js";
 import { CARD_EMBED_COMPONENTS } from "../../../src/components/FigureEmbed.js";
 import { BoxSlugProvider } from "../../../src/lib/box-slug.js";
+import { cardTypeMarkdown } from "../../../src/components/MarkdownCardView/type-markdown.js";
 import type { ViewTarget } from "../../../src/lib/view-url.js";
 
 const source = [
@@ -98,4 +99,23 @@ void test("an embed mounts once across host re-renders and follows its own src",
 void test("the card embed keeps the name Para unwraps", async (t) => {
   // `Para` drops its wrapper around a lone child by component name (`Img`).
   t.check(CARD_EMBED_COMPONENTS.Img?.name, "Img");
+});
+
+// The doc type's composition components are module constants too
+// (`components/MarkdownCardView/type-markdown.ts`): the block and its marks keep their nodes.
+const doc = cardTypeMarkdown("doc");
+const composition = "{% composition %}\nRain {% editorial kind=\"joiner\" %}came early{% /editorial %}.\n{% /composition %}\n";
+
+function renderDoc(text: string, onNavigate: (target: ViewTarget) => void) {
+  return h(BoxSlugProvider, { boxSlug: "test", children: h(Markdown, { prose: "block", onNavigate, tags: doc?.tags, components: doc?.components, children: text }) });
+}
+
+void test("a composition keeps its block and marks across host re-renders", async (t) => {
+  const view = await mount(renderDoc(composition, () => {}));
+  t.teardown(() => view.unmount());
+  const find = () => ({ block: view.container.querySelector("section"), mark: view.container.querySelector("[data-editorial]") });
+  const before = find();
+  await view.rerender(renderDoc(composition, () => {}));
+  await view.rerender(renderDoc(`${composition}\nAfter.\n`, () => {}));
+  t.check(replaced(before, find()), []);
 });

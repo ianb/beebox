@@ -15,7 +15,9 @@ import { CARD_EMBED_COMPONENTS } from "../FigureEmbed";
 import { shownCardBody } from "../../lib/card-field-faces";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../../lib/selection/quote-extract";
 import type { FileData } from "../../file-type-registry";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import { CompositionCardContext, useComposeSession, type CompositionCard } from "./Composition";
+import type { CardTypeMarkdown } from "./type-markdown";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { StatusMessage } from "../ui/StatusMessage";
 
@@ -75,20 +77,30 @@ function QuoteSpeakersLine({
  * `title` is the card's displayed title (`bodyHeadingTitle`). A body opening
  * with the same `# heading` would show it twice, so that line is blanked
  * (`shownCardBody`). `hideEmptyBody` drops the "No body content" line, which a
- * front that shows fields above the body passes.
+ * front that shows fields above the body passes. `markdown` is the card type's
+ * scoped tags and components (`cardTypeMarkdown`).
  */
 export function CardBody({
   data,
   title,
   onNavigate,
   hideEmptyBody,
+  markdown,
 }: {
   data: FileData;
   title: string | undefined;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   hideEmptyBody: boolean;
+  markdown?: CardTypeMarkdown | undefined;
 }): ReactNode {
   const body = shownCardBody(data.body, title);
+  const composeEditor = markdown?.composeEditor ?? null;
+  // Owned here, above the parsed body, so a remounted composition block keeps its editor.
+  const compose = useComposeSession({ body: data.body ?? "", cardPath: data.path, composeEditor });
+  const composition = useMemo<CompositionCard>(
+    () => ({ body: data.body ?? "", cardPath: data.path, composeEditor, ...compose.session }),
+    [data.body, data.path, composeEditor, compose.session],
+  );
   const speakers = body === null ? [] : extractQuoteSpeakers(body);
 
   return (
@@ -97,23 +109,29 @@ export function CardBody({
 
       <AttachedComments cardPath={data.path} frontmatter={data.frontmatter} />
 
+      {/* Where the editor shows when the body lost its composition (`useComposeSession`). */}
+      {compose.fallback}
       {body !== null ? (
         <div data-card-section="body">
-          <Markdown
-            prose="block"
-            outline
-            onNavigate={onNavigate}
-            basePath={data.path}
-            // Inline figure embeds: `![](…figure.card)` renders the figure in place.
-            components={CARD_EMBED_COMPONENTS}
-            {...(data.bodyLineOffset === undefined ? {} : { card: { path: data.path, bodyLineOffset: data.bodyLineOffset } })}
-          >
-            {body}
-          </Markdown>
+          <CompositionCardContext.Provider value={composition}>
+            <Markdown
+              prose="block"
+              outline
+              onNavigate={onNavigate}
+              basePath={data.path}
+              // Inline figure embeds: `![](…figure.card)` renders the figure in place.
+              components={markdown?.components ?? CARD_EMBED_COMPONENTS}
+              {...(markdown === undefined ? {} : { tags: markdown.tags })}
+              {...(data.bodyLineOffset === undefined ? {} : { card: { path: data.path, bodyLineOffset: data.bodyLineOffset } })}
+            >
+              {body}
+            </Markdown>
+          </CompositionCardContext.Provider>
         </div>
       ) : hideEmptyBody ? null : (
         <StatusMessage className="p-4">No body content</StatusMessage>
       )}
+      {compose.editor}
     </>
   );
 }
