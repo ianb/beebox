@@ -5,7 +5,7 @@
 // person's own copy offers Resend and Discard, another user's offers neither,
 // and a message whose images the box did not keep offers Discard only.
 // First, and bare: React DOM must load after the happy-dom window exists.
-import { mount } from "../../../helpers/dom-harness.js";
+import { byRole, mount } from "../../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
 import { UserMessage, type UndeliveredVerbs } from "../../../../src/components/chat/user-message/view.js";
@@ -65,7 +65,7 @@ void test("a failed discard keeps the bubble and shows the error", async (t) => 
   const refusing: UndeliveredVerbs = { resend: async () => {}, discard: async () => { throw new Error("This message is not marked as undelivered"); } };
   const { view, read } = await face(entry({ pending: true, undelivered: true, reconcileKnownUuids: [] }), refusing);
   t.teardown(() => view.unmount());
-  const discard = [...view.container.querySelectorAll("button")].find((button) => button.textContent === "Discard");
-  await view.act(() => { discard?.click(); });
+  const discard = byRole(view.container, { role: "button", name: "Discard" });
+  await view.act(() => { discard.click(); });
   t.check(read(), { edge: ["outline", "outline-2", "outline-card-danger", "outline-offset-2"], status: "Not delivered", buttons: ["Resend", "Discard"], alert: "This message is not marked as undelivered" });
 });

@@ -300,6 +300,16 @@ registered in `.taprc`). Memoization in a test therefore matches the browser.
   React DOM loaded first.
 - Change state through the handle: `rerender(element)` as a parent would, or
   `act(fn)` for a setter or an event. Both resolve after effects flush.
+- Find an element the way a person or the box agent does, in this order: by
+  its `bbx-` id for a static control (`byId(view.container, id)`); by role and
+  accessible name for a per-row or dynamic control
+  (`byRole(view.container, { role: "button", name: "Discard" })`). When the
+  copy itself is under test, find the element as above and check its text
+  with `t.check`; do not search by the text. Both helpers throw unless
+  exactly one element matches; `allByRole` returns every match. The lint rule
+  `tap-check/no-text-locator` flags a `.find` or `.filter` on `textContent`.
+  The [accessible-name rule](../../frontend.md#frontend-ui-primitives) says
+  what a good name is.
 - `renders()` counts committed renders per component name since mount or
   `resetRenders()`. Reset after the setup renders, then check the exact counts
   for the step under test. An exact object catches a component that starts

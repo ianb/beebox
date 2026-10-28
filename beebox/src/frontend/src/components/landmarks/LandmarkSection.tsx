@@ -258,7 +258,7 @@ function LinkTile({
 
   if (isUrlRef(link.ref)) {
     return (
-      <a href={link.ref} target="_blank" rel="noopener noreferrer" className="block">
+      <a href={link.ref} target="_blank" rel="noopener noreferrer" aria-label={display} className="block">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
           <Text as="div" size="xs" tone="muted" truncate>{link.ref}</Text>
@@ -280,7 +280,7 @@ function LinkTile({
   const target = resolveContentTarget(undefined, link.ref);
   if (onNavigate !== undefined && target !== null) {
     return (
-      <button type="button" onClick={() => onNavigate(target)} className="block w-full text-left">
+      <button type="button" onClick={() => onNavigate(target)} aria-label={display} className="block w-full text-left">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
           <TileDetail detail={link.detail} />
@@ -291,7 +291,7 @@ function LinkTile({
   }
 
   return (
-    <Link to={href(`/${boxSlug}/views/${link.ref}`)} className="block">
+    <Link to={href(`/${boxSlug}/views/${link.ref}`)} aria-label={display} className="block">
       <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
         <Text as="div" size="sm" weight="medium">{display}</Text>
         <TileDetail detail={link.detail} />
@@ -320,7 +320,7 @@ function LinkRow({
 
   if (isUrlRef(link.ref)) {
     return (
-      <a href={link.ref} target="_blank" rel="noopener noreferrer" className={rowClasses}>
+      <a href={link.ref} target="_blank" rel="noopener noreferrer" aria-label={display} className={rowClasses}>
         <div className={`font-medium ${ink} truncate`}>{display}</div>
         <div className={`text-xs ${soft} truncate`}>{link.ref}</div>
       </a>
@@ -346,7 +346,7 @@ function LinkRow({
   );
   const target = resolveContentTarget(undefined, link.ref);
   if (onNavigate !== undefined && target !== null) {
-    return <button type="button" onClick={() => onNavigate(target)} className={rowClasses}>{body}</button>;
+    return <button type="button" onClick={() => onNavigate(target)} aria-label={display} className={rowClasses}>{body}</button>;
   }
-  return <Link to={href(`/${boxSlug}/views/${link.ref}`)} className={rowClasses}>{body}</Link>;
+  return <Link to={href(`/${boxSlug}/views/${link.ref}`)} aria-label={display} className={rowClasses}>{body}</Link>;
 }
