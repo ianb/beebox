@@ -5677,7 +5677,7 @@ tests:
     correct_contains_any: ["full-bleed"]
     tags: [views, layout]
 
-  # === Views: render-test command (bbx view test) ===
+  # === Views: render-test command (bbx view check) ===
   #
   # Indirect knowledge, like the other view-authoring audits: the command lives
   # in node_modules/beebox/box-docs/views.md (Testing a View), the bbx-commands.md reference, and
@@ -5687,7 +5687,7 @@ tests:
   # asking them whether it works.
   #
   # Status (2026-06-20): 1/1 passes — agent reads node_modules/beebox/box-docs/views.md (1 read,
-  # 0 searches) and names `bbx view test <slug>` as the verification step. NOTE on
+  # 0 searches) and named `bbx view test <slug>` (since removed; the command is now `bbx view check`) as the verification step. NOTE on
   # prompt shape: a *cold* "how do I test a view" prompt fails — the agent answers
   # from training (0 reads) and misses the post-training command, even proposing a
   # puppeteer trick. An *authoring* framing that asks for a written plan and says
@@ -5705,11 +5705,11 @@ tests:
     expected_level: knows_about
     watch_for: >
       Reads the views guide (per the views/ stub's "read before creating
-      views"), then names `bbx view test <slug>` as how it verifies the view
+      views"), then names `bbx view check` as how it verifies the view
       renders — not "open it in the browser", "visit the page", or "ask the
       user".
     should_read: ["node_modules/beebox/box-docs/views.md"]
-    correct_contains: ["bbx view test"]
+    correct_contains: ["bbx view check"]
     tags: [views]
 
   # Status (2026-09-26, Claude): 1/1 passed on the doc-structure test1 clone;

@@ -17,11 +17,19 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 
+/**
+ * Where "Connect an agent" goes: the Claude Code sign-in, with Codex below it,
+ * not the top of the Agents tab, where the engine picker fills the first screen.
+ */
+export function adminAgentsTarget(boxSlug: string) {
+  return legacyAdminRedirect({ boxSlug, search: { section: "claude-code" }, state: undefined });
+}
+
 function useOpenAdminAgents(): (options: { replace: boolean }) => void {
   const navigate = useNavigate();
   const { boxSlug } = useParams({ strict: false });
   return ({ replace }) => {
-    const target = legacyAdminRedirect({ boxSlug: boxSlug ?? "", search: { tab: "agents" }, state: undefined });
+    const target = adminAgentsTarget(boxSlug ?? "");
     void navigate({ to: href(target.to), search: toSearch(target.search), replace });
   };
 }

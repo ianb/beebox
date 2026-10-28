@@ -10,7 +10,7 @@
 import { cn } from "../../lib/cn";
 import type { DoclingItem, DoclingTableCell } from "../../lib/docling/parse";
 import { Badge } from "../ui/Badge";
-import { Image } from "../ui/Image";
+import { Image } from "../ui/Image/view";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";

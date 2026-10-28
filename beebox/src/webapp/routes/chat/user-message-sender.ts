@@ -79,6 +79,10 @@ export function createUserMessageSender(
           message: attributed,
           user: user ? { email: user.email, name: user.name } : null,
           timestamp: new Date().toISOString(),
+          // The id lets a later drop mark this row (`chat-user-message-undelivered`);
+          // `hadImages` tells a reloaded page that Resend cannot carry the images.
+          ...(messageId ? { messageId } : {}),
+          ...(images !== undefined && images.length > 0 ? { hadImages: true as const } : {}),
         });
         if (messageId) recordDurableClaim(boxRoot, { messageId, processedMessageIds });
       };
@@ -91,7 +95,8 @@ export function createUserMessageSender(
       // of delivering the copy this request already handed to the session.
       if (chatSession.isBusy()) {
         recordUserMessage();
-        chatSession.enqueue(buildSendInput({ text: attributed, images, channel, cardFields: fields }));
+        // The id rides on the queued input so a `stop()` that drops it can say which message it lost.
+        chatSession.enqueue({ ...buildSendInput({ text: attributed, images, channel, cardFields: fields }), ...(messageId ? { messageId } : {}) });
         return respond({ status: 200, body: { queued: true } });
       }
 
@@ -134,7 +139,7 @@ export function createUserMessageSender(
       // the last word: the awaits since then let a concurrent send take the
       // turn, and this one is then refused. Recorded before that refusal, the
       // message sat in history and the dedup map, undelivered and unretryable
-      // (issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md).
+      // (issues/closed/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md).
       // Now the refusal is a 409 with nothing recorded.
       const work = await acquireBoxWork(boxRoot, { reason: "chat send" });
       const admission = await startAckedRun(chatSession, {

@@ -23,6 +23,12 @@ export interface SessionEntry {
   user?: string;
   /** Email of the sender (for identity matching across devices) */
   userEmail?: string;
+  /** The client's id for the send; on accepted messages only (`core/chat/session/accepted-messages.ts`). */
+  messageId?: string;
+  /** The box accepted this message and dropped it before the agent received it. */
+  undelivered?: true;
+  /** The send carried images, which the accepted record does not keep. */
+  hadImages?: true;
 }
 
 /**

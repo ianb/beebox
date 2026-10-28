@@ -7,7 +7,7 @@
 // `cards` and renders its body through the `Markdown` widget with the recipe's
 // scoped tags and components.
 //
-// This renders the built plugin view the way `bbx view test` does after its
+// This renders the built plugin view the way `bbx view check` does after its
 // compile step: `dist/plugins/recipe/view.js` is built by the real plugin build
 // step, imported through the package `exports` map, given the cards the real
 // loader selects, and rendered to a string inside `NodeViewHostProvider`. The
@@ -44,7 +44,7 @@ async function activateRecipe(box: TmpBox) {
   await writeFile(join(box.root, "src", "schemas", "recipe.ts"), SCHEMA_STUB);
 }
 
-/** What `bbx view test` does after compiling: props from the real card loader, rendered in the node view host. */
+/** What `bbx view check` does after compiling: props from the real card loader, rendered in the node view host. */
 async function renderRecipe(box: TmpBox, params: Record<string, string>) {
   const { cards, files } = await loadViewCards(box.root, ["**/*.recipe.card"]);
   const props = buildProps({ cards, files, params, boxSlug: "test" });

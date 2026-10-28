@@ -69,7 +69,7 @@ startVoiceStagingDrainer();
  */
 export function RootLayout() {
   // Every page gets the route's slug as context, so `Markdown` reads it
-  // without depending on the router (it also renders in `bbx view test`).
+  // without depending on the router (it also renders in `bbx view check`).
   const { boxSlug } = useParams({ strict: false });
   return (
     <BoxSlugProvider boxSlug={boxSlug}>

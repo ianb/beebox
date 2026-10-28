@@ -7,7 +7,7 @@
  * Part of the public `beebox/view-widgets` set. Like CardLink, the card
  * reference prop is `cardRef` (React reserves `ref`). Both controls and the
  * inline render come from the view host, so behavior is surface-correct and the
- * same source works in the browser and the `bbx view test` node harness.
+ * same source works in the browser and the `bbx view check` node harness.
  */
 
 import { useState, type ReactNode } from "react";

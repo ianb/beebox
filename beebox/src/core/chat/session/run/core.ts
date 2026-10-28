@@ -26,7 +26,7 @@ import {
 import { createTurnDurabilityGate } from "./transcript-sync.js";
 import { recordTurnMarkerForSession } from "../../turn-marker.js";
 import {
-  captureAssignedSessionId, drainSessionQueue, deleteSessionFile,
+  assertDrainHeld, captureAssignedSessionId, drainSessionQueue, deleteSessionFile,
   loadCurrentModel, loadSessionId, saveCurrentModel,
 } from "../state.js";
 import { pumpSessionRun } from "./consume.js";
@@ -58,7 +58,8 @@ export class ChatSession extends EventEmitter {
   private turnText = "";
   /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
   private readonly healthGate = createHealthGate();
-  private messageQueue: ChatSendInput[] = []; private preparingTurn = false; private draining = false; // `draining`: a queued drain's send is in flight
+  // `draining`: non-null while a queued drain's send is in flight, holding its inputs (out of the queue, not yet delivered; `stop()` empties it in place)
+  private messageQueue: ChatSendInput[] = []; private preparingTurn = false; private draining: ChatSendInput[] | null = null;
   private readonly opening = new Set<Promise<unknown>>(); // sends opening a turn; see `whenStarted`
   private maintenancePaused = false;
   private readonly options: ChatSessionOptions;
@@ -220,7 +221,7 @@ export class ChatSession extends EventEmitter {
     this.transition({ phase: "idle" });
     // A failed drain does not drain again: with two queued messages and a
     // start that keeps failing, the two would alternate without end.
-    if (!this.draining) this.drainQueue();
+    if (this.draining === null) this.drainQueue();
   }
 
   private consumeMessages(run: ChatBackendRun): Promise<void> {
@@ -298,7 +299,8 @@ export class ChatSession extends EventEmitter {
    */
   private drainQueue(): void {
     drainSessionQueue({ queue: this.messageQueue, paused: this.maintenancePaused,
-      send: async (input) => { this.draining = true; try { return await this.send(input, { independent: true }); } finally { this.draining = false; } },
+      // Checked at admission (no run started for a taken drain) and again at dispatch, after the awaits between; once dispatched, a stop no longer marks them.
+      send: async (input, queued) => { this.draining = queued; try { return await this.send(input, { independent: true, onAdmitted: () => { assertDrainHeld(queued); }, onDispatch: () => { assertDrainHeld(queued); this.draining = null; } }); } finally { this.draining = null; } },
       // A queued drain often has no "error" listener, and an unheard "error" throws (see start-refusal.ts); the drain has already logged it.
       onError: (error) => { if (this.listenerCount("error") > 0) this.emit("error", error); } });
   }
@@ -310,18 +312,19 @@ export class ChatSession extends EventEmitter {
    * Accepts either a plain string (back-compat) or a ChatSendInput object
    * carrying the text plus any image attachments referenced by `[imageN]`
    * tokens in the text. `onAdmitted` runs synchronously once this send holds the turn; a throw abandons it.
+   * `onDispatch` runs synchronously just before the content goes to the run, with no await between; a throw abandons it too.
    */
-  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void; onRefused?: (reason: string) => void }): Promise<boolean> {
+  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void; onDispatch?: () => void; onRefused?: (reason: string) => void }): Promise<boolean> {
     const opening = (async () => {
       const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent === true ? { inherited: null } : {}) });
-      try { return await work.run(() => this.sendAdmitted(message, { onAdmitted: options?.onAdmitted, onRefused: options?.onRefused })); }
+      try { return await work.run(() => this.sendAdmitted(message, options ?? {})); }
       finally { await work.release(); }
     })();
     this.opening.add(opening);
     try { return await opening; } finally { this.opening.delete(opening); }
   }
 
-  private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onRefused }: { onAdmitted: (() => void) | undefined; onRefused: ((reason: string) => void) | undefined }): Promise<boolean> {
+  private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onDispatch, onRefused }: NonNullable<Parameters<ChatSession["send"]>[1]>): Promise<boolean> {
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
     // A run that cannot start, or a live one whose provider setup is gone, is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
     const live = this.liveRun() !== null;
@@ -355,7 +358,7 @@ export class ChatSession extends EventEmitter {
     }
 
     // ready → streaming.
-    this.transition({ phase: "streaming", run });
+    onDispatch?.(); this.transition({ phase: "streaming", run });
     this.turnText = "";
     try {
       run.send(content, { clientComposed: rawInput.clientComposed === true });
@@ -444,17 +447,24 @@ export class ChatSession extends EventEmitter {
   /**
    * Stop the current run gracefully. Clears the pending queue so the
    * close handler won't auto-drain into a fresh run.
+   *
+   * The queue is lost whether or not a run is live: every caller discards the
+   * session after this (or, for the live-cap eviction, its run). So every
+   * input lost here, the queue and an in-flight drain's inputs alike, goes out
+   * as "queue-dropped", which the route layer records as undelivered. An
+   * in-flight drain may still deliver; the client reconciles that case.
    */
   stop(): void {
+    const dropped = [...(this.draining?.splice(0) ?? []), ...this.messageQueue]; this.messageQueue = []; // the splice empties the drain's own list
     const run = this.liveRun();
     if (run !== null && (this.state.phase === "ready" || this.state.phase === "streaming")) {
       log("stop", "Stopping run");
       // → stopping: the close handler reads this phase as the intentional-stop
       // signal and won't drain the queue.
       this.transition({ phase: "stopping", run, wasBusy: lifecycleBusy(this.state) });
-      this.messageQueue = [];
       void run.close();
     }
+    if (dropped.length > 0) this.emit("queue-dropped", dropped);
   }
 
   /**

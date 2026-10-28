@@ -3,7 +3,7 @@
  *
  * `Markdown` needs the slug to build link and image URLs. Reading it with the
  * router's `useParams` tied `Markdown` to the app router, so it could not
- * render in `bbx view test` (Node, `react-dom/server`, no router). The app's
+ * render in `bbx view check` (Node, `react-dom/server`, no router). The app's
  * root layout provides the slug from the route; the node view host
  * (`view-widgets/node-entry.tsx`) provides the node host's slug.
  *

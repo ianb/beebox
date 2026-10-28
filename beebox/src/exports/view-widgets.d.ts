@@ -45,5 +45,5 @@ export const Markdown: ComponentType<{
   /** Components by the name a scoped tag's transform emits. */
   components?: Partial<Record<string, ComponentType<Record<string, unknown>>>>;
 }>;
-/** Supplies the node view host (and the box slug) so widgets resolve their context in `bbx view test`. */
+/** Supplies the node view host (and the box slug) so widgets resolve their context in `bbx view check`. */
 export const NodeViewHostProvider: ComponentType<{ boxSlug?: string; children: ReactNode }>;

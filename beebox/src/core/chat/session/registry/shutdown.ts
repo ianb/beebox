@@ -19,7 +19,10 @@ export interface ShutdownChatSession {
  * but its start (the bootstrap docs commit, then the backend spawn) would
  * finish after the caller tore the box down; so openings settle next, and a
  * run they opened is stopped too. Stopping clears a session's queue, so a
- * stopped run does not drain into a new send.
+ * stopped run does not drain into a new send. Last, every session is stopped
+ * once more, running or not: a queue held without a run (a failed start, a
+ * maintenance pause) or filled during the shutdown wait is lost with the
+ * process, and `stop()` is what records those messages as undelivered.
  */
 export async function stopChatSessionsAndWait(
   sessions: ShutdownChatSession[],
@@ -61,5 +64,6 @@ export async function stopChatSessionsAndWait(
     return [...unfinished].map(label);
   } finally {
     timeout.stop();
+    for (const session of sessions) session.stop();
   }
 }
