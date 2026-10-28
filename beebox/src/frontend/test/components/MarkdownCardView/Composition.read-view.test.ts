@@ -87,12 +87,12 @@ void test("Compose shows only for one closed composition, and opens the editor",
     t.teardown(() => view.unmount());
     return [...view.container.querySelectorAll("section button")].map((b) => b.textContent);
   };
-  t.check(await labels(piece("Plain.")), ["Copy", "Compose"]);
+  t.check(await labels(piece("Plain.")), ["Copy", "Edit"]);
   t.check(await labels(`${piece("One.")}\n${piece("Two.")}`), []);
   t.check(await labels("No composition here.\n"), []);
   const view = await mount(render(piece("Plain."), Editor));
   t.teardown(() => view.unmount());
-  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Compose");
+  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Edit");
   await view.act(() => { compose?.click(); });
   t.check({ editors: view.container.querySelectorAll("[data-editor]").length, blocks: view.container.querySelectorAll("section").length }, { editors: 1, blocks: 0 });
 });
@@ -102,7 +102,7 @@ void test("Compose shows only for one closed composition, and opens the editor",
 void test("the editor survives the block remounting", async (t) => {
   const view = await mount(render(piece("Plain."), Editor));
   t.teardown(() => view.unmount());
-  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Compose");
+  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Edit");
   await view.act(() => { compose?.click(); });
   const before = view.container.querySelector("[data-editor]")?.getAttribute("data-editor");
   await view.rerender(render(`A new first paragraph.\n\n${piece("Plain.")}`, Editor));
@@ -115,7 +115,7 @@ void test("the editor survives the block remounting", async (t) => {
 void test("the editor stays visible when the composition goes away", async (t) => {
   const view = await mount(render(piece("Plain."), Editor));
   t.teardown(() => view.unmount());
-  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Compose");
+  const compose = [...view.container.querySelectorAll("button")].find((b) => b.textContent === "Edit");
   await view.act(() => { compose?.click(); });
   const before = view.container.querySelector("[data-editor]")?.getAttribute("data-editor") ?? null;
   t.check(before, any(String));

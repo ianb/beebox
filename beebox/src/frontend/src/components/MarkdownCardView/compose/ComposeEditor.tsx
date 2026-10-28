@@ -48,7 +48,7 @@ const theme = EditorView.theme({
 /** The editor's frame, rendered where the composition block stands; nothing while the block is not mounted. */
 function Frame({ host, children }: { host: HTMLElement | null; children: ReactNode }): ReactNode {
   if (host === null) return null;
-  return createPortal(<section aria-label="Composition editor" className="bbx-composition my-4 rounded border border-card-rule">{children}</section>, host);
+  return createPortal(<section aria-label="Composition editor" className="bbx-composition my-4 rounded border border-card-pen">{children}</section>, host);
 }
 
 interface Session {
@@ -158,7 +158,8 @@ function Editor({ cardPath, onClose, host, instance, initial }: ComposeEditorPro
   const alarming = saveState.kind === "not-saved" || saveState.kind === "not-synced" || saveState.kind === "removed";
   return (
     <Frame host={host}>
-      <Row gap="sm" align="center" justify="end" wrap className="border-b border-card-rule px-2 py-1 print:hidden">
+      <Row gap="sm" align="center" justify="end" wrap className="rounded-t border-b border-card-pen bg-card-tint px-3 py-1.5 print:hidden">
+        <span className="text-sm font-semibold text-card-pen">Composition</span>
         <span role="status" aria-live="polite" className="mr-auto">
           <Text as="span" size="xs" tone={alarming ? "danger" : "muted"} material>{stateText}</Text>
         </span>

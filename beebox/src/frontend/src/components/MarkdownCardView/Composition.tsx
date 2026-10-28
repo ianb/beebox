@@ -103,14 +103,15 @@ export function CompositionBlock({ children }: { children?: ReactNode }): ReactN
   if (canCompose && card.composing && plain !== null) return <ComposeHost register={card.composeHost} />;
   const handleCompose = () => card?.startCompose();
   return (
-    <section aria-label="Composition" className="bbx-composition my-4 rounded border border-card-rule">
+    <section aria-label="Composition" className="bbx-composition my-4 rounded border border-card-pen">
       {plain === null || card === null ? null : (
-        <div className="flex justify-end gap-2 border-b border-card-rule px-2 py-1 print:hidden">
+        <div className="flex items-center justify-end gap-2 rounded-t border-b border-card-pen bg-card-tint px-3 py-1.5 print:hidden">
+          <span className="mr-auto text-sm font-semibold text-card-pen">Composition</span>
           <Button id={controlAddress("bbx-composition-copy", card.instance)} size="sm" intent="secondary" flash={{ label: "Copied" }} aria-live="polite" onClick={() => navigator.clipboard.writeText(plain.text)}>
             {copyLabel(plain.openMarks)}
           </Button>
           {canCompose ? (
-            <Button id={controlAddress("bbx-composition-compose", card.instance)} size="sm" intent="secondary" onClick={handleCompose}>Compose</Button>
+            <Button id={controlAddress("bbx-composition-compose", card.instance)} size="sm" intent="primary" onClick={handleCompose}>Edit</Button>
           ) : null}
         </div>
       )}
