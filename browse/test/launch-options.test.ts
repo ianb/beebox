@@ -46,3 +46,13 @@ void test("--profile is refused.", async (t) => {
     "BrowseConfigError: --profile is not supported: bin/browse gives each worktree and --session its own profile; use --session <name>",
   );
 });
+
+// A flag that would attach bin/browse to another browser (the person's own
+// Chrome, a cloud provider, an iOS device) is refused: the wrapper would seed
+// that browser with the browse key.
+void test("Options that attach to another browser are refused.", async (t) => {
+  await t.checkThrows(
+    () => hoistLaunchOptions(["--auto-connect", "open", "/"], {}),
+    "BrowseConfigError: --auto-connect is not supported: bin/browse drives its own local browser, and seeds it with the browse key",
+  );
+});

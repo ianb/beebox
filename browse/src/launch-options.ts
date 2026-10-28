@@ -33,11 +33,20 @@ const LAUNCH_OPTIONS: ReadonlyMap<string, LaunchOption> = new Map([
   ["--color-scheme", { env: "AGENT_BROWSER_COLOR_SCHEME", kind: "value" }],
   ["--download-path", { env: "AGENT_BROWSER_DOWNLOAD_PATH", kind: "value" }],
   ["--engine", { env: "AGENT_BROWSER_ENGINE", kind: "value" }],
+  ["--state", { env: "AGENT_BROWSER_STATE", kind: "value" }],
+  ["--session-name", { env: "AGENT_BROWSER_SESSION_NAME", kind: "value" }],
 ]);
+
+const ISOLATED = "bin/browse drives its own local browser, and seeds it with the browse key";
 
 /** Launch options bin/browse sets itself; a caller's value would break worktree isolation. */
 const OWNED_OPTIONS: ReadonlyMap<string, string> = new Map([
   ["--profile", "bin/browse gives each worktree and --session its own profile; use --session <name>"],
+  ["--cdp", ISOLATED],
+  ["--auto-connect", ISOLATED],
+  ["--provider", ISOLATED],
+  ["-p", ISOLATED],
+  ["--device", ISOLATED],
 ]);
 
 export interface HoistedLaunchOptions {
@@ -83,6 +92,21 @@ export function hoistLaunchOptions(args: readonly string[], env: Readonly<Record
     }
   }
   return { args: rest, env: out, flags };
+}
+
+const DAEMON_EXIT_WAIT_MS = 3000;
+
+/**
+ * Wait until `session`'s daemon has exited. Upstream's `close` answers before
+ * the daemon exits (~100 ms), so a launch right after it could be refused as
+ * "running". Gives up quietly after {@link DAEMON_EXIT_WAIT_MS}; the next
+ * launch says so.
+ */
+export async function waitForDaemonExit(socketDir: string, session: string): Promise<void> {
+  const deadline = Date.now() + DAEMON_EXIT_WAIT_MS;
+  while (daemonRunning(socketDir, session) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
 }
 
 /**

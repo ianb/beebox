@@ -9,7 +9,7 @@ import { TARGET_COMMANDS } from "./controls.js";
 import { runEnhancedScreenshot } from "./screenshot.js";
 import { openClerkPopup, waitTimeoutMs } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
-import { daemonRunning, hoistLaunchOptions } from "./launch-options.js";
+import { daemonRunning, hoistLaunchOptions, waitForDaemonExit } from "./launch-options.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -181,7 +181,9 @@ async function main(): Promise<number> {
 
   // A running browser keeps the options it started with; upstream would
   // ignore the new ones without a word.
-  if (launch.flags.length > 0 && sub !== "close" && daemonRunning(process.env["AGENT_BROWSER_SOCKET_DIR"] ?? "", process.env["AGENT_BROWSER_SESSION"] ?? "default")) {
+  const socketDir = process.env["AGENT_BROWSER_SOCKET_DIR"] ?? "";
+  const session = process.env["AGENT_BROWSER_SESSION"] ?? "default";
+  if (launch.flags.length > 0 && sub !== "close" && daemonRunning(socketDir, session)) {
     throw new BrowseConfigError(`${launch.flags.join(", ")} apply when the browser starts, and it is running: run bin/browse close first`);
   }
 
@@ -256,6 +258,7 @@ async function main(): Promise<number> {
 
   const code = await runPassthrough(args);
   if (code === 0 && PAGE_CHANGING.has(sub)) await noteAction(sub);
+  if (code === 0 && sub === "close") await waitForDaemonExit(socketDir, session);
   return code;
 }
 
