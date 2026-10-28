@@ -190,6 +190,9 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
     // Two open cards can share a title; their names then carry the path.
     const name = (titleCounts.get(title) ?? 0) > 1 ? `${title} (${tab.target.path})` : title;
     const face = pinnedFace({ symbol: identity?.symbol ?? null, title, ambiguous });
+    // A pinned tab's visible text is its abbreviation; the name keeps it first.
+    const tabLabel = name === title ? undefined : tab.pinned && face.abbreviation !== null ? `${face.abbreviation} ${name}` : name;
+
     const theme = themeForTab({ path: tab.target.path, identity, presentation });
     return (
       <div
@@ -227,7 +230,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
             if (target) onSelectTab(target.target.path);
           }}
           aria-selected={isActive}
-          aria-label={name === title ? undefined : name}
+          aria-label={tabLabel}
           onClick={() => onSelectTab(tab.target.path)}
           // The full title and path stay reachable on hover, which is where a
           // mark-only tab's identity lives.

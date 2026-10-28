@@ -206,6 +206,13 @@ void test("A named group is the container of its controls; an unnamed one is not
   });
 });
 
+// A name longer than the boundary accepts is shortened, so one long card title
+// costs its own tail rather than the whole scan.
+void test("A name past the boundary's limit is shortened to fit.", async (t) => {
+  const found = scan(`<button>${"a".repeat(320)}</button>`).entries[0];
+  t.check({ length: found?.name.length, end: found?.name.slice(-2) }, { length: 300, end: "a…" });
+});
+
 // ## An id outside the grammar is not an address
 //
 // The scan reports an `id` only when it is a well-formed address

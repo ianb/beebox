@@ -55,6 +55,9 @@ const plainText = (max: number): z.ZodString =>
     // eslint-disable-next-line no-control-regex -- rejecting control characters is the point
     .regex(/^[^\u0000-\u001F\u007F]+$/, "must be single-line text");
 
+/** Longest name or container the boundary accepts; the client scan shortens to fit. */
+export const MAX_SCAN_NAME_LENGTH = 300;
+
 /** One control or landmark, as the client reports it. */
 const uiScanEntrySchema = z
   .object({
@@ -62,8 +65,8 @@ const uiScanEntrySchema = z
     /** The element's `bbx-` DOM id, or null for a control with no address. */
     id: z.string().max(MAX_CONTROL_ID_LENGTH).regex(CONTROL_ID_PATTERN).nullable(),
     role: plainText(60),
-    name: plainText(300),
-    container: plainText(300).nullable(),
+    name: plainText(MAX_SCAN_NAME_LENGTH),
+    container: plainText(MAX_SCAN_NAME_LENGTH).nullable(),
     does: plainText(600).nullable(),
     actions: z.array(controlActionSchema).max(3),
     disabled: z.boolean(),

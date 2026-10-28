@@ -22,7 +22,7 @@
  * `visibility.ts`, shared with the resolver so the two cannot disagree.
  */
 
-import { MAX_SCAN_ENTRIES } from "@shared/ui-scan/core";
+import { MAX_SCAN_ENTRIES, MAX_SCAN_NAME_LENGTH } from "@shared/ui-scan/core";
 import { computeAccessibleName } from "./accessible-name.js";
 import { classifyElement } from "./roles.js";
 import { isControlAddress } from "../resolve.js";
@@ -93,6 +93,14 @@ function isContentBoundary(element: ScanElement): boolean {
 }
 
 /** An attribute present but blank says nothing, so it reads as absent. */
+/**
+ * A name the boundary would refuse, shortened. A long card title in a tab or a
+ * control's name otherwise fails the whole scan rather than that one line.
+ */
+function fitName(name: string): string {
+  return name.length <= MAX_SCAN_NAME_LENGTH ? name : `${name.slice(0, MAX_SCAN_NAME_LENGTH - 1)}…`;
+}
+
 function nonEmpty(value: string | null): string | null {
   if (value === null) return null;
   const trimmed = value.trim();
@@ -191,7 +199,7 @@ export function scanControls(root: ScanElement, options: ScanOptions): ScanResul
       if (rect.width > 0 && rect.height > 0) {
         // A landmark is never named by its contents (see `accessible-name.ts`):
         // `<main>` would otherwise report the whole transcript as its name.
-        const name = computeAccessibleName(element, { byId, fromContent: classified.kind === "control" });
+        const name = fitName(computeAccessibleName(element, { byId, fromContent: classified.kind === "control" }));
         if (name === "") {
           // A landmark tag that only becomes one when named (a bare `<section>`)
           // is not a missing label — it is just a box.
