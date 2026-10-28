@@ -90,7 +90,7 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
       const meta = await getViewMeta(viewPath, { viewHost: boxPackageHost(boxShape) });
 
       // A live page silently omits cards that fail to load, so the `skipped`
-      // diagnostics are dropped here; `bbx view test` surfaces them instead.
+      // diagnostics are dropped here; `bbx view check` surfaces them instead.
       const { cards, files } = await loadViewCards(boxRoot, meta.dependencies);
       return { cards, files };
     }

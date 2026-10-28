@@ -1,8 +1,9 @@
-// # bbx view test
+// # bbx view render-one
 //
-// `bbx view test <slug>` renders an agent-authored view in Node — in-process, no
-// server — and prints the output, or on failure the error with a source-mapped
-// stack. It loads the same cards the running app would pass the view.
+// The hidden `bbx view render-one <slug>`, the per-view child `bbx view check`
+// spawns, renders an agent-authored view in Node — in-process, no server — and
+// exits 0, or on failure prints the error with a source-mapped stack to stderr.
+// It loads the same cards the running app would pass the view. It prints no HTML.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -35,15 +36,15 @@ async function writeView(box: TmpBox, { rel, content }: { rel: string; content: 
 }
 
 // Run the prebuilt CLI with the box as cwd (requireBoxRoot walks up from there).
-interface ViewTestResult {
+interface RenderOneResult {
   code: number | null;
   stdout: string;
   stderr: string;
 }
 
-function runViewTest(boxRoot: string, args: string[]): Promise<ViewTestResult> {
+function runRenderOne(boxRoot: string, args: string[]): Promise<RenderOneResult> {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [join(PKG, "dist/cli.mjs"), "view", "test", ...args], { cwd: boxRoot });
+    const child = spawn(process.execPath, [join(PKG, "dist/cli.mjs"), "view", "render-one", ...args], { cwd: boxRoot });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (d) => { stdout += String(d); });
@@ -61,8 +62,8 @@ Body
 
 // ## Happy path — renders real cards
 //
-// A view that renders off its `cards` prop produces HTML and exits 0:
-void test("A view that renders off its cards prop produces HTML and exits 0:", async (t) => {
+// A view that renders off its `cards` prop renders and exits 0:
+void test("A view that renders off its cards prop renders and exits 0:", async (t) => {
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -82,10 +83,10 @@ export default function Count({ cards }) {
 }
 ` });
 
-  const r = await runViewTest(box.root, ["count"]);
+  const r = await runRenderOne(box.root, ["count"]);
   t.check(r, {
     code: 0,
-    stdout: "<html><head></head><body><div>cards: 2</div></body></html>\n",
+    stdout: "",
     stderr: "",
   });
 });
@@ -117,12 +118,11 @@ export default function Prose({ cards }) {
 }
 ` });
 
-  const r = await runViewTest(box.root, ["prose"]);
+  const r = await runRenderOne(box.root, ["prose"]);
   // The box slug in the link is the temp box's random directory name.
   t.check(r, {
     code: 0,
-    stdout: str`<html><head></head><body><div><div class="prose prose-sm max-w-none bbx-theme-prose"><div class="bbx-paragraph">See <a class="bbx-theme-link" href="/${any(String)}/views/_content/inbox/B.doc.card">B</a>.</div><div class="bbx-paragraph"><span data-todo-status="open" data-todo-locator="7" class="group"><input type="checkbox" disabled="" readonly="" aria-label="Order lumber" class="accent-warm-500 mr-1 align-middle"/><span class="text-card-ink">Order lumber</span></span></div></div></div></body></html>
-`,
+    stdout: "",
     stderr: "",
   });
 });
@@ -150,10 +150,10 @@ export default function Image({ imageUrl, fileUrl }) {
 }
 ` });
 
-  const r = await runViewTest(box.root, ["image"]);
+  const r = await runRenderOne(box.root, ["image"]);
   t.check(r, {
     code: 0,
-    stdout: '<html><head></head><body><a href="/api/files/store/Trip.attach/beach photo.jpg"><img src="/api/images/store/Trip.attach/beach photo.jpg?width=480&amp;format=auto"/></a></body></html>\n',
+    stdout: "",
     stderr: "",
   });
 });
@@ -181,7 +181,7 @@ export default function Boom() {
 }
 ` });
 
-  const r = await runViewTest(box.root, ["boom"]);
+  const r = await runRenderOne(box.root, ["boom"]);
   // The stack names the view source file; its other frames hold temp and install paths.
   t.check(r, {
     code: 1,
@@ -215,7 +215,7 @@ const boom = missing.value;
 export default function TopThrow() { return <div>{boom}</div>; }
 ` });
 
-  const r = await runViewTest(box.root, ["topthrow"]);
+  const r = await runRenderOne(box.root, ["topthrow"]);
   t.check(r, {
     code: 1,
     stdout: "",
@@ -250,12 +250,12 @@ export default function Early({ readFile, fileUrl }) {
 }
 ` });
 
-  const r = await runViewTest(box.root, ["early"]);
+  const r = await runRenderOne(box.root, ["early"]);
   t.check(r, {
     code: 1,
     stdout: "",
-    stderr: str`View render failed: ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view test' does not execute (v1 renders the component body once).
-ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view test' does not execute (v1 renders the component body once).
+    stderr: str`View render failed: ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view check' does not execute (v1 renders the component body once).
+ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view check' does not execute (v1 renders the component body once).
 ${any(String)}
 `,
   });
@@ -271,42 +271,12 @@ void test("Nonexistent view", async (t) => {
     }
   });
   const box = await makeViewBox();
-  const r = await runViewTest(box.root, ["ghost"]);
+  const r = await runRenderOne(box.root, ["ghost"]);
   t.check(r, {
     code: 1,
     stdout: "",
     stderr: str`Error: View not found: ghost (looked for ${any(String)}/src/views/ghost.tsx)
 `,
-  });
-});
-
-// ## --path warns when the card isn't selected
-//
-// `--path` sets `params.path`; if the path isn't among the view's selected cards,
-// the command warns (but still renders):
-void test("--path sets params.path; if the path isn't among the view's selected cards, t...", async (t) => {
-  t.teardown(async () => {
-    try {
-      await box.cleanup();
-    } catch (error) {
-      t.error(error);
-    }
-  });
-  const box = await makeViewBox();
-  await writeView(box, { rel: "page.tsx", content: `
-export const name = "Page";
-export const dependencies = ["_content/**/*.card"];
-export const modes = ["page"];
-export default function Page({ params, viewHistory }) {
-  return <div>{"path: " + (params.path || "none") + "; canPush: " + viewHistory.canPush}</div>;
-}
-` });
-
-  const r = await runViewTest(box.root, ["page", "--path", "_content/inbox/Nope.doc.card"]);
-  t.check(r, {
-    code: 0,
-    stdout: "<html><head></head><body><div>path: _content/inbox/Nope.doc.card; canPush: false</div></body></html>\n",
-    stderr: "Warning: --path _content/inbox/Nope.doc.card is not among the 0 card(s) this view's dependencies select; the view will render without it.\n",
   });
 });
 
@@ -331,24 +301,24 @@ export const modes = ["page"];
 export default function List({ cards }) { return <div>n: {cards.length}</div>; }
 ` });
 
-  const r = await runViewTest(box.root, ["list"]);
+  const r = await runRenderOne(box.root, ["list"]);
   const badCardStderr = str`
 1 card(s) selected by dependencies failed to load:
   _content/inbox/Bad.bogus.card: ${any(String)}/_content/inbox/Bad.bogus.card: not a recognized card: no frontmatter block with a registered type
 `;
   t.check(r, {
     code: 1,
-    stdout: "<html><head></head><body><div>n: <!-- -->0</div></body></html>\n",
+    stdout: "",
     stderr: str`${badCardStderr}(pass --allow-invalid-cards to treat this as success)
 `,
   });
 
   // With the flag it exits 0:
 
-  const ok = await runViewTest(box.root, ["list", "--allow-invalid-cards"]);
+  const ok = await runRenderOne(box.root, ["list", "--allow-invalid-cards"]);
   t.check(ok, {
     code: 0,
-    stdout: "<html><head></head><body><div>n: <!-- -->0</div></body></html>\n",
+    stdout: "",
     stderr: badCardStderr,
   });
 });

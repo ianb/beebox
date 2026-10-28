@@ -1,9 +1,13 @@
 /**
  * Utilities for creating and appending to intake job cards.
  *
- * `bbx wakeup` and scan import call createOrAppendIntakeJob() for new inbox
- * items. Items join the pending intake job with the same batching key,
- * `(connector, priority)`, rather than starting a new job.
+ * `bbx wakeup`, scan import, and wordless capture filing call
+ * createOrAppendIntakeJob() for new inbox items. Items join the newest pending
+ * intake job with the same batching key, `(connector, priority)`, that has
+ * room; one job holds at most `INTAKE_JOB_MAX_ITEMS`, and the rest start new
+ * jobs of the same key. A job that grew without limit once held 300 items, and
+ * its batch prompt passed the model's limit
+ * (docs/implemented-plans/bounded-reactor-batches.md).
  *
  * `connector` is set only by a connector-scoped wakeup, and is the reactor's
  * connector filter key: use the connector's canonical name (e.g. "gmail"), or
@@ -20,22 +24,38 @@
  * file lock cannot see (both layers, same reasoning as question-transition.ts).
  */
 
+import { randomBytes } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { withCardLock } from "../lib/card-lock.js";
+import { writeFileAtomic } from "../lib/atomic-write.js";
+import { pathExistsStrict } from "../lib/file-exists.js";
 import { getBoxDir } from "../lib/paths/core.js";
 import { parseFrontmatterObject, renderFrontmatterBlock } from "../exports/cards.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
-import { findPendingJobCard, timestampedJobFilename } from "./core.js";
+import { getBoxTimeISO } from "../lib/time.js";
 
-class IntakeJobReadError extends Error {
-  constructor(jobPath: string) {
-    super(`appendToIntakeJob: failed to read ${jobPath}`);
-    this.name = "IntakeJobReadError";
-  }
+/**
+ * Build a job-card filename: `<timestamp>-<stem>[-<suffix>].<extension>`,
+ * where the timestamp is the box's current time as `YYYY-MM-DDTHH-MM-SS`
+ * (colons and the fractional dot replaced with dashes so it's
+ * filesystem-safe). `extension` is the full suffix after the stem, e.g.
+ * `chat.job.card` or `intake.job.card`. `suffix` keeps two jobs of one stem
+ * created in the same second apart; the stamp stays first, so discovery still
+ * reads the job's age from it.
+ */
+function timestampedJobFilename(
+  boxRoot: string,
+  { stem, extension, suffix }: { stem: string; extension: string; suffix?: string | undefined }
+): string {
+  const timestamp = getBoxTimeISO(boxRoot).replace(/[.:]/g, "-").slice(0, 19);
+  return `${timestamp}-${stem}${suffix === undefined ? "" : `-${suffix}`}.${extension}`;
 }
+
+/** The most items one intake job holds: what one agent session can triage. */
+export const INTAKE_JOB_MAX_ITEMS = 25;
 
 export interface IntakeJobOptions {
   boxRoot: string;
@@ -48,8 +68,9 @@ export interface IntakeJobOptions {
 
 /**
  * The filename stem for a new intake job: the connector's name, or `inbox`
- * for an unscoped job, with `-low` for a low-priority one. Distinct per
- * batching key, so two jobs created in the same second never share a name.
+ * for an unscoped job, with `-low` for a low-priority one. A new job's name
+ * adds a random suffix, since one call can create several jobs of a key in
+ * the same second.
  */
 function intakeJobStem(connector: string | undefined, priority: "normal" | "low"): string {
   const base = connector === undefined ? "inbox" : safeStem(connector);
@@ -60,13 +81,21 @@ function safeStem(name: string): string {
   return name.replace(/[^\dA-Za-z-]/g, "-");
 }
 
+/** The description a job's item count implies. */
+function countDescription(count: number, priority: "normal" | "low"): string {
+  const label = priority === "low" ? "capture item" : "inbox item";
+  return `Triage ${count} ${label}${count === 1 ? "" : "s"}`;
+}
+
 /**
- * Create a new intake job or append items to the existing pending one with
- * the same `(connector, priority)`. Returns the relative path to the job card.
+ * Add `items` to intake jobs of the `(connector, priority)` key: first to the
+ * newest pending one with room, up to `INTAKE_JOB_MAX_ITEMS`, then to new jobs
+ * of at most that many. Returns the relative path of every job written, for
+ * the caller to commit.
  */
 export async function createOrAppendIntakeJob(
   opts: IntakeJobOptions
-): Promise<string> {
+): Promise<string[]> {
   const priority = opts.priority ?? "normal";
   return withIntakeKeyLock(opts.boxRoot, {
     connector: opts.connector, priority, run: () => createOrAppendIntakeJobLocked(opts, priority),
@@ -128,8 +157,7 @@ export async function removeItemsFromIntakeJob(opts: {
       await fs.unlink(jobPath);
       return true;
     }
-    const label = priority === "low" ? "capture item" : "inbox item";
-    fields.description = `Triage ${kept.length} ${label}${kept.length === 1 ? "" : "s"}`;
+    fields.description = countDescription(kept.length, priority);
     fields.items = kept;
     await fs.writeFile(jobPath, renderFrontmatterBlock(fields));
     return true;
@@ -143,53 +171,145 @@ const INTAKE_LOCK_WAIT_MS = 10_000;
 async function createOrAppendIntakeJobLocked(
   opts: IntakeJobOptions,
   priority: "normal" | "low",
-): Promise<string> {
+): Promise<string[]> {
   const jobsDir = getBoxDir(opts.boxRoot, "jobs");
   await fs.mkdir(jobsDir, { recursive: true });
-
-  const existing = await findExistingIntakeJob(jobsDir, { connector: opts.connector, priority });
-
-  if (existing) {
-    await appendToIntakeJob(existing.path, {
-      items: opts.items,
-      description: opts.description,
-    });
-    return path.relative(opts.boxRoot, existing.path);
+  const written: string[] = [];
+  let rest = opts.items;
+  // What to put back if a later write throws: the appended job's previous
+  // text, and every new job path. Left half-written, a job would hold items
+  // that no caller commits (it never gets the paths), so the wakeup's step 4b
+  // would count them as jobbed while the job check skips the dirty job.
+  let previous: { path: string; content: string } | null = null;
+  const created: string[] = [];
+  try {
+    const existing = rest.length === 0 ? null : await newestIntakeJobWithRoom(jobsDir, { connector: opts.connector, priority });
+    if (existing !== null) {
+      const taken = rest.slice(0, INTAKE_JOB_MAX_ITEMS - existing.fields.items.length);
+      rest = rest.slice(taken.length);
+      const items = [...existing.fields.items, ...taken.map((ref) => ({ ref }))];
+      previous = { path: existing.path, content: await fs.readFile(existing.path, "utf-8") };
+      // The caller's description names only its own items; the count is true of the job.
+      await fs.writeFile(existing.path, renderFrontmatterBlock({ ...existing.fields, items, description: countDescription(items.length, priority) }));
+      written.push(path.relative(opts.boxRoot, existing.path));
+    }
+    await writeNewIntakeJobs(opts, { priority, items: rest, jobsDir, created });
+  } catch (error) {
+    if (previous !== null) await fs.writeFile(previous.path, previous.content);
+    for (const jobPath of created) await fs.rm(jobPath, { force: true });
+    throw error;
   }
+  return [...written, ...created.map((jobPath) => path.relative(opts.boxRoot, jobPath))];
+}
 
-  // Create a new job card
-  const jobFilename = timestampedJobFilename(opts.boxRoot, {
-    stem: intakeJobStem(opts.connector, priority),
-    extension: "intake.job.card",
-  });
-  const jobPath = path.join(jobsDir, jobFilename);
-
-  const content = createIntakeJobTemplate({
-    connector: opts.connector,
-    priority,
-    description: opts.description,
-    items: opts.items,
-  });
-  await fs.writeFile(jobPath, content);
-  return path.relative(opts.boxRoot, jobPath);
+/** Write `items` into new jobs of at most `INTAKE_JOB_MAX_ITEMS`, pushing each absolute path onto `created` before its write. */
+async function writeNewIntakeJobs(
+  opts: IntakeJobOptions,
+  { priority, items: rest, jobsDir, created }: { priority: "normal" | "low"; items: string[]; jobsDir: string; created: string[] },
+): Promise<void> {
+  for (let i = 0; i < rest.length; i += INTAKE_JOB_MAX_ITEMS) {
+    const items = rest.slice(i, i + INTAKE_JOB_MAX_ITEMS);
+    const jobFilename = timestampedJobFilename(opts.boxRoot, {
+      stem: intakeJobStem(opts.connector, priority),
+      extension: "intake.job.card",
+      suffix: randomBytes(4).toString("hex"),
+    });
+    const jobPath = path.join(jobsDir, jobFilename);
+    const description = items.length === opts.items.length ? opts.description : countDescription(items.length, priority);
+    created.push(jobPath);
+    await fs.writeFile(jobPath, createIntakeJobTemplate({ connector: opts.connector, priority, description, items }));
+  }
 }
 
 /**
- * Find an existing pending intake job card with the same connector (or none)
- * and priority. Returns the absolute path wrapped in an object, or null when
- * none exists.
+ * The newest pending intake job (latest filename stamp) of the key with fewer
+ * than `INTAKE_JOB_MAX_ITEMS` items, or null. The newest, so an older job's
+ * content, and with it the job check's backoff for it, stays still.
  */
-async function findExistingIntakeJob(
+async function newestIntakeJobWithRoom(
   jobsDir: string,
   key: { connector: string | undefined; priority: "normal" | "low" }
-): Promise<{ path: string } | null> {
-  const found = await findPendingJobCard({
-    jobsDir,
-    suffix: ".intake.job.card",
-    match: (fields) =>
-      fields["connector"] === key.connector && (fields["priority"] === "low" ? "low" : "normal") === key.priority,
-  });
-  return found === null ? null : { path: found };
+): Promise<{ path: string; fields: IntakeJobFields } | null> {
+  const names = (await fs.readdir(jobsDir)).filter((name) => name.endsWith(INTAKE_SUFFIX)).toSorted().toReversed();
+  for (const name of names) {
+    const jobPath = path.join(jobsDir, name);
+    const fields = await readIntakeJobFields(jobPath);
+    if (fields === null || fields.connector !== key.connector) continue;
+    if ((fields.priority === "low" ? "low" : "normal") !== key.priority) continue;
+    if (!Array.isArray(fields.items)) continue;
+    if (fields.items.length < INTAKE_JOB_MAX_ITEMS) return { path: jobPath, fields };
+  }
+  return null;
+}
+
+/** One oversized job split: the original's path (now deleted) and its chunks' paths, relative. */
+export interface IntakeSplit {
+  original: string;
+  chunks: string[];
+}
+
+/**
+ * Split every intake job holding more than `INTAKE_JOB_MAX_ITEMS` items into
+ * jobs of at most that many, then delete the original. Only jobs written
+ * before the cap (or edited by hand) can be over it. Chunk `k` holds items
+ * `[25(k-1), 25k)` at `<original base>-part-NN.intake.job.card`, a name the
+ * original always yields, so the chunks keep its place in the oldest-first
+ * order and a split stopped partway resumes: a chunk that exists is left as
+ * it is (it may since have received appended items), the missing ones are
+ * written, and the original is deleted last. Each chunk is published
+ * atomically, so a file under a chunk's name is always complete. Returns one
+ * entry per split job, for the caller to commit; a caller whose commit fails
+ * restores the original from `HEAD` and removes the chunks
+ * (`restore-to-head.ts`), so the next wakeup splits it again.
+ *
+ * Accepted: a process killed after the original is deleted and before the
+ * commit leaves uncommitted chunks that hold the items while the job check
+ * skips them. The window is one unlink and one commit inside a wakeup; nothing
+ * recovers it (docs/implemented-plans/bounded-reactor-batches.md, Failure modes).
+ */
+export async function splitOversizedIntakeJobs(boxRoot: string): Promise<IntakeSplit[]> {
+  const jobsDir = getBoxDir(boxRoot, "jobs");
+  let names: string[];
+  try {
+    names = (await fs.readdir(jobsDir)).filter((name) => name.endsWith(INTAKE_SUFFIX)).toSorted();
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return [];
+    throw e;
+  }
+  const splits: IntakeSplit[] = [];
+  for (const name of names) {
+    const jobPath = path.join(jobsDir, name);
+    const key = await readIntakeJobFields(jobPath);
+    if (key === null || !Array.isArray(key.items) || key.items.length <= INTAKE_JOB_MAX_ITEMS) continue;
+    const priority = key.priority === "low" ? "low" : "normal";
+    const split = await withIntakeKeyLock(boxRoot, {
+      connector: key.connector, priority, run: () => splitLocked(boxRoot, { jobPath, priority }),
+    });
+    if (split !== null) splits.push(split);
+  }
+  return splits;
+}
+
+const INTAKE_SUFFIX = ".intake.job.card";
+
+async function splitLocked(
+  boxRoot: string,
+  { jobPath, priority }: { jobPath: string; priority: "normal" | "low" },
+): Promise<IntakeSplit | null> {
+  // Re-read under the lock: a writer may have changed it since the scan.
+  const fields = await readIntakeJobFields(jobPath);
+  if (fields === null || fields.items.length <= INTAKE_JOB_MAX_ITEMS) return null;
+  const base = jobPath.slice(0, -INTAKE_SUFFIX.length);
+  const chunks: string[] = [];
+  for (let i = 0; i < fields.items.length; i += INTAKE_JOB_MAX_ITEMS) {
+    const items = fields.items.slice(i, i + INTAKE_JOB_MAX_ITEMS);
+    const chunkPath = `${base}-part-${String(chunks.length + 1).padStart(2, "0")}${INTAKE_SUFFIX}`;
+    chunks.push(path.relative(boxRoot, chunkPath));
+    if (await pathExistsStrict(chunkPath, { followLinks: true })) continue;
+    await writeFileAtomic(chunkPath, { content: renderFrontmatterBlock({ ...fields, items, description: countDescription(items.length, priority) }) });
+  }
+  await fs.unlink(jobPath);
+  return { original: path.relative(boxRoot, jobPath), chunks };
 }
 
 async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | null> {
@@ -207,20 +327,4 @@ async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | 
   // best-effort append path).
   // eslint-disable-next-line no-restricted-syntax -- parse boundary: best-effort append path; the loose frontmatter mapping is vouched for as IntakeJobFields (validated on load elsewhere)
   return parseFrontmatterObject(content) as IntakeJobFields | null;
-}
-
-/**
- * Append items to an existing intake job card and update its description.
- */
-async function appendToIntakeJob(
-  jobPath: string,
-  opts: { items: string[]; description: string }
-): Promise<void> {
-  const fields = await readIntakeJobFields(jobPath);
-  if (fields === null) {
-    throw new IntakeJobReadError(jobPath);
-  }
-  fields.description = opts.description;
-  fields.items = [...fields.items, ...opts.items.map((ref) => ({ ref }))];
-  await fs.writeFile(jobPath, renderFrontmatterBlock(fields));
 }

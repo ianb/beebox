@@ -11,12 +11,16 @@ second concurrent wakeup skips rather than waits):
    root landmark).
 3. Run **on-wakeup scheduled scripts**.
 4. Run **connectors** — pull external data, create job cards in
-   `_bookkeeping/jobs/`; then clean up stale jobs, create intake jobs for
-   unjobbed inbox items (captured notes, etc.), refresh the search index, and, when
+   `_bookkeeping/jobs/`; then clean up stale jobs, split any intake job over
+   25 items into jobs of 25 (one commit, `Phase: intake-split`), create
+   intake jobs for unjobbed inbox items (captured notes, etc.; at most 25
+   items per job), refresh the search index, and, when
    the refresh succeeded, queue a low-priority `contains` backfill job if
    searchable cards lack the field.
 5. **Process pending jobs** — one reactor cycle unless `--max-cycles <n>`
-   asks for more (skipping low-priority jobs).
+   asks for more (skipping low-priority jobs). A cycle sends only the jobs
+   that fit a 160 KB prompt budget; later cycles take the jobs not yet sent
+   ([reactor design](../../src/core/reactor/DESIGN.md#batch-jobs-default)).
 6. **Push** committed changes to the box's git remote (non-fatal).
 
 `bbx wakeup --connector X` scopes the whole pass to one connector's jobs.

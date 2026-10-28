@@ -106,7 +106,7 @@ export function cssInlinePlugin(): Plugin {
 /**
  * The modules a plugin view takes from its host rather than bundling. The box
  * view compiler resolves them: in the browser to the `window.__bbxReact` /
- * `window.__bbxReactDOM` shims, in Node (`bbx view test`) to the box's own
+ * `window.__bbxReactDOM` shims, in Node (`bbx view check`) to the box's own
  * copies, so the view shares the host's React instance and dispatcher.
  */
 export const VIEW_HOST_MODULES = ["react", "react/jsx-runtime", "react/jsx-dev-runtime", "react-dom", "react-dom/client"];

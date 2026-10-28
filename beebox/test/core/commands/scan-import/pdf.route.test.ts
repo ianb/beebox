@@ -58,7 +58,7 @@ const PDF_IMPORTED = {
     sessionCardPath: str`_content/inbox/scan-${any(String)}.capture-session.card`,
     pdfCardPath: str`_content/inbox/scan-${any(String)}.attach/source.pdf.card`,
     extracted: true,
-    intakeJobPath: str`_bookkeeping/jobs/${any(String)}-inbox.intake.job.card`,
+    intakeJobPaths: [any(String).matches(/^_bookkeeping\/jobs\/.+-inbox-[\da-f]{8}\.intake\.job\.card$/)],
   },
 };
 

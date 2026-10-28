@@ -146,7 +146,7 @@ interface AgentViewRendererProps {
  * Browser implementation of the host's `useResolvedRef` capability: title/type/
  * existence via the `views.resolveRef` tRPC query, resolved against the view's
  * basePath (read from the host so this stays a bare named-hook reference the
- * widget can call). Node `bbx view test` supplies its own filename-derived
+ * widget can call). Node `bbx view check` supplies its own filename-derived
  * version — the widget consumes whichever through context.
  */
 function useBrowserResolvedRef(cardRef: string): ResolvedRef | null {
