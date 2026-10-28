@@ -9,6 +9,7 @@ import { TARGET_COMMANDS } from "./controls.js";
 import { runEnhancedScreenshot } from "./screenshot.js";
 import { openClerkPopup, waitTimeoutMs } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
+import { daemonRunning, hoistLaunchOptions } from "./launch-options.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -158,17 +159,11 @@ async function main(): Promise<number> {
     process.env["AGENT_BROWSER_PROFILE"] = await sessionProfileDir(name);
     args = [...args.slice(0, sessionIndex), ...args.slice(sessionIndex + 2)];
   }
-  // `--args <flags>` (Chrome launch flags) is read only when the browser
-  // starts, and on `open` the browse-key cookie step below starts it first, so
-  // upstream drops a later `--args` ("daemon already running"). Hoist it into
-  // the env var every child honors, as for --session.
-  const launchIndex = args.indexOf("--args");
-  if (launchIndex !== -1) {
-    const flags = args[launchIndex + 1];
-    if (flags === undefined || flags === "") throw new BrowseConfigError("--args requires a value");
-    process.env["AGENT_BROWSER_ARGS"] = flags;
-    args = [...args.slice(0, launchIndex), ...args.slice(launchIndex + 2)];
-  }
+  // Launch options (`--args`, `--headed`, …) go to every child through their
+  // env vars, so the cookie step that starts the browser has them too.
+  const launch = hoistLaunchOptions(args, process.env);
+  args = launch.args;
+  Object.assign(process.env, launch.env);
   const noWaitIdx = args.indexOf("--no-wait");
   const skipWait = noWaitIdx !== -1;
   if (skipWait) args = [...args.slice(0, noWaitIdx), ...args.slice(noWaitIdx + 1)];
@@ -182,6 +177,12 @@ async function main(): Promise<number> {
   // skipping the open rewrite and the cookie (upstream then gets a bare path).
   if (sub.startsWith("-") && !PASSTHROUGH_LEADING_FLAGS.has(sub)) {
     throw new BrowseConfigError(`put ${sub} after the subcommand (e.g. bin/browse open /chats ${sub} …)`);
+  }
+
+  // A running browser keeps the options it started with; upstream would
+  // ignore the new ones without a word.
+  if (launch.flags.length > 0 && sub !== "close" && daemonRunning(process.env["AGENT_BROWSER_SOCKET_DIR"] ?? "", process.env["AGENT_BROWSER_SESSION"] ?? "default")) {
+    throw new BrowseConfigError(`${launch.flags.join(", ")} apply when the browser starts, and it is running: run bin/browse close first`);
   }
 
   if (sub !== "open" && sub !== "close") {
