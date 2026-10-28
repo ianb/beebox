@@ -28,6 +28,7 @@ import { ChevronIcon } from "./ChevronIcon";
 import { LandmarkGroupRows, useLandmarkRowInk } from "./LandmarkGroupRows";
 import { LandmarkSessions } from "./LandmarkSessions";
 import type { CardSymbolData } from "@shared/card-symbol";
+import { cardUrl } from "@shared/card-url";
 
 export interface ResolvedLink {
   ref: string;
@@ -64,7 +65,7 @@ interface Landmark {
  */
 const INDENT_CLASSES = ["", "ml-2 sm:ml-8", "ml-4 sm:ml-16", "ml-6 sm:ml-24", "ml-8 sm:ml-32"];
 
-function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
+function PathLink({ dir, cardPath, boxSlug }: { dir: string; cardPath: string; boxSlug: string }) {
   // The root landmark has no meaningful path — a bare "/" under its title
   // reads as leftover plumbing (a field-test operator stared at it and
   // guessed "a separator with the parts missing"). The tile's label carries
@@ -72,7 +73,7 @@ function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
   if (dir === "") return null;
   return (
     <Link
-      to={href(`/${boxSlug}/browse/${dir}`)}
+      to={href(cardUrl(boxSlug, cardPath))}
       className="inline-block self-start min-w-0 max-w-full px-2 py-0.5 -mx-2 rounded hover:bg-warm-100"
     >
       {/*
@@ -117,7 +118,7 @@ export function LandmarkSection({
               header column would break a short path mid-word. */}
           <Stack gap="xs" className="min-w-0 flex-1">
             <Heading level={2}>{labelText}</Heading>
-            <PathLink dir={landmark.dir} boxSlug={boxSlug} />
+            <PathLink dir={landmark.dir} cardPath={landmark.path} boxSlug={boxSlug} />
           </Stack>
         </div>
 
