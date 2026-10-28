@@ -11363,6 +11363,22 @@ test1:
       peak: 44132
       added: 0
       turns: 2
+  composition-editorial-marks:
+    - date: 2026-10-28T02:41:11.248Z
+      boxCommit: 4ab87d399251ede2c88ee5f1dc7b055997a64075
+      repoCommit: f2243dc044011ca373b32ec6892761042f0467ba
+      initial: 33789
+      peak: 36190
+      added: 2401
+      turns: 6
+  composition-one-per-card:
+    - date: 2026-10-28T02:41:11.248Z
+      boxCommit: 4ab87d399251ede2c88ee5f1dc7b055997a64075
+      repoCommit: f2243dc044011ca373b32ec6892761042f0467ba
+      initial: 33751
+      peak: 37650
+      added: 3899
+      turns: 7
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
