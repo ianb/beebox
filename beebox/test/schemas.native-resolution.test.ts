@@ -8,7 +8,7 @@
 // no resolve hooks, no synthesized `package.json`.
 //
 // We can't run a real `pnpm install` in a test, so we use the same trick
-// `bbx view test` uses to prove native resolution against the real package
+// `bbx view check` uses to prove native resolution against the real package
 // (`src/cli/commands/view/command.ts`): symlink `node_modules/beebox` straight
 // at the engine's own `PACKAGE_ROOT`. A schema file importing
 // `beebox/cards` / `beebox/schema` through that symlink is

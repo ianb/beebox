@@ -24,10 +24,11 @@ import { BackupSection } from "../components/admin/BackupSection";
 import { EncryptedBackupsSection } from "../components/admin/EncryptedBackupsSection";
 import { InviteSection } from "../components/admin/InviteSection";
 import { AdminOverview } from "../components/admin/AdminOverview/view";
-import { ADMIN_TAB_LABELS, ADMIN_TABS, DEFAULT_ADMIN_TAB, adminSectionElementId, adminTabForSection, type AdminSectionId, type AdminTab } from "../components/admin/sections";
+import { ADMIN_TAB_LABELS, ADMIN_TABS, DEFAULT_ADMIN_TAB, adminTabForSection, type AdminSectionId, type AdminTab } from "../components/admin/sections";
 import { Stack } from "../components/ui/Stack";
 import { TabBar } from "../components/ui/TabBar";
 import { AdminHangProbe, ProbeSection } from "../components/admin/AdminHangProbe";
+import { landOnSection } from "../components/admin/land-on-section";
 
 export interface AdminCardBodyProps {
   arrival: AdminArrivalState;
@@ -48,10 +49,10 @@ export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed, tab:
   const tab = requestedTab ?? sectionTab ?? arrivalTab ?? DEFAULT_ADMIN_TAB;
   const openSection = (id: AdminSectionId) => {
     onTabChange(adminTabForSection(id));
-    scrollToSection(id);
+    landOnSection(id);
   };
   useEffect(() => {
-    if (section !== null) scrollToSection(section);
+    if (section !== null) landOnSection(section);
   }, [section]);
   return (
     <AdminHangProbe page="admin"><Stack gap="none" overflow="auto" focusable className="h-full">
@@ -74,11 +75,6 @@ export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed, tab:
       </Stack>
     </Stack></AdminHangProbe>
   );
-}
-
-/** Every panel stays mounted, so the section is in the DOM once its tab is shown. */
-function scrollToSection(id: AdminSectionId): void {
-  requestAnimationFrame(() => document.getElementById(adminSectionElementId(id))?.scrollIntoView({ block: "start" }));
 }
 
 function AgentsPanel() {

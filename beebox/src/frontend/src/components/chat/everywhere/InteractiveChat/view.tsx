@@ -172,6 +172,7 @@ function MessageListRegion(props: ChatBodyProps) {
       audioOverlayStore={audioOverlayStore}
       openers={openers}
       onSendOpener={actions.handleSendOpener}
+      undeliveredVerbs={actions.undeliveredVerbs}
       />
     </ChatRenderProfiler>
   );

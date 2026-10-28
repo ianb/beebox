@@ -52,7 +52,7 @@ export type { BusEventName, EventMap } from "./schemas.js";
  * (see `reconcileSchemaGeneration`). All processes of one deploy
  * share this constant, so a startup race converges regardless.
  */
-export const EVENT_SCHEMA_GENERATION = 10;
+export const EVENT_SCHEMA_GENERATION = 11;
 
 /**
  * The box's events.db carries an event-schema generation newer than this

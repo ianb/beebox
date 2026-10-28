@@ -62,6 +62,7 @@ import {
 import { pluginLintIssues } from "./plugin-lint.js";
 import { lintCardSymbolSrc, lintFigureEntry } from "./path-fields.js";
 import { lintFilenameAttachRef } from "./filename-attach.js";
+import { rruleDtstartWarnings } from "./rrule-dtstart.js";
 import { lintDuplicateChatSession } from "./chat-duplicates.js";
 import { lintDuplicatePublicationId } from "../publication-duplicates.js";
 import { findAbsoluteMachinePaths } from "../../../lib/absolute-path-check.js";
@@ -291,6 +292,9 @@ async function lintFrontmatterCard(input: {
   // plugin is active — see plugin-lint.ts.
   if (type === "figure") {
     warnings.push(...(await lintFigureEntry({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
+  }
+  if (type === "scheduled-script") {
+    warnings.push(...(await rruleDtstartWarnings({ fields: parsed.fields, boxRoot: options.boxRoot })));
   }
   warnings.push(...(await pluginLintIssues({ path, type, fields: parsed.fields, boxRoot: options.boxRoot })));
   warnings.push(...lintFilenameAttachRef({ path, type, fields: parsed.fields }));

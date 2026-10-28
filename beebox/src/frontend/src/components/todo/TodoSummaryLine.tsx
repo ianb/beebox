@@ -13,7 +13,7 @@ import { Fragment, type ReactNode } from "react";
 import { InlineAction } from "../ui/InlineAction";
 import { summaryParts, type SummaryPart, type SummaryReduction } from "./summary";
 
-/** What the line's control ("N now", or "N later" when nothing is due now) does; `null` when it has nothing to do (a box view, no pane to open in), and then the count is plain text. */
+/** What the line's control ("N todos now", or "N later" when nothing is due now) does; `null` when it has nothing to do (a box view, no pane to open in), and then the count is plain text. */
 export interface OpenAction {
   onClick: () => void;
   title: string;

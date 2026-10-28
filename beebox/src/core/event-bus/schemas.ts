@@ -163,11 +163,32 @@ export const eventSchemas = {
   }),
   /** Cards in the box changed (coarse refresh signal). */
   "cards-changed": z.object({ source: z.string() }),
-  /** A user message was sent into a chat session. */
+  /**
+   * A user message was sent into a chat session. `messageId` is the client's
+   * id for the send, absent from clients that send none. `hadImages` is set
+   * when the send carried images, whose bytes this row does not keep.
+   */
   "chat-user-message": z.object({
     sessionId: z.string().nullable(),
     message: z.string(),
     user: z.object({ email: z.string(), name: z.string() }).nullable(),
+    timestamp: z.string(),
+    messageId: z.string().optional(),
+    hadImages: z.literal(true).optional(),
+  }),
+  /**
+   * An accepted user message was dropped before the agent received it: the
+   * session stopped with it still queued (`ChatSession.stop`).
+   */
+  "chat-user-message-undelivered": z.object({
+    sessionId: z.string().nullable(),
+    messageId: z.string(),
+    timestamp: z.string(),
+  }),
+  /** The person removed an undelivered message from the chat (`chat.discardUndelivered`). */
+  "chat-user-message-discarded": z.object({
+    sessionId: z.string().nullable(),
+    messageId: z.string(),
     timestamp: z.string(),
   }),
   /** A chat turn completed. */

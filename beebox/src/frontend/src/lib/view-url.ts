@@ -418,7 +418,7 @@ export function apiImageUrl(boxSlug: string, path: string): string {
 }
 
 // Read Vite's base URL. Wrapped so the bare `import.meta.env` access doesn't
-// crash in plain Node (test runners, the `bbx view test` widget bundle) where
+// crash in plain Node (test runners, the `bbx view check` widget bundle) where
 // `import.meta.env` is undefined.
 export function viteBase(): string {
   try {

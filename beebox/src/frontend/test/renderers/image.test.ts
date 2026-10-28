@@ -8,7 +8,7 @@ import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LightboxProvider } from "../../src/components/LightboxProvider.js";
-import { Image } from "../../src/components/ui/Image.js";
+import { Image } from "../../src/components/ui/Image/view.js";
 
 globalThis.React = React;
 

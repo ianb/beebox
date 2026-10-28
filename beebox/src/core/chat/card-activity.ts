@@ -30,7 +30,6 @@
 // value). Re-exported here so this module's many backend importers of both are
 // unaffected; the union/serialization logic below still owns them.
 import { ACTIVITY_KINDS, type ActivityKind } from "../../shared/card-activity-kinds.js";
-import type { AttentionSnapshot } from "../../shared/chat-composer-binding.js";
 
 export { type ActivityKind };
 
@@ -72,9 +71,6 @@ export interface ChatSendContext {
   cardActivity?: ActivityKind[];
   cardState?: CardStateDetails;
 }
-
-/** `ChatSendContext` plus the frozen attention snapshot the web client sends. */
-export type ChatSendContextWithView = ChatSendContext & { viewContext?: AttentionSnapshot };
 
 /**
  * Merge several detail maps into one, latest-wins per kind, dropping
