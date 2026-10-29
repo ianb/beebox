@@ -3,10 +3,13 @@ title: "Drive folder sync commits every pass, because `last-sync` on the folder 
 workstream: drive-sync-noop-commits
 area: beebox
 labels: [connectors, google-drive, git-history]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder looking at a box's commit history, 2026-10-29"
 ---
+
+Resolved by plan `beebox/docs/plans/drive-sync-time-out-of-card.md` (commits bd8223f78, 7b30d768a, eeea955df on `worktree-drive-sync-noop-commits`): the sync time moved into the gitignored Drive state, the folder card is written only when its content changes, and migration `gfolder-last-sync-2026-10` strips `last-sync` from existing cards. Calendar and Gmail were checked and do not commit on a pass that changed nothing.
 
 A box's history fills with "Sync Google Drive: 1 updated" commits, several an
 hour, each a one-line diff on the mount's `.gfolder.card`:

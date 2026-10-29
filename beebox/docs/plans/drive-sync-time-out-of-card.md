@@ -3,7 +3,7 @@ title: "Drive folder sync time moves out of the folder card"
 status: draft
 workstream: drive-sync-noop-commits
 issues:
-  - ../../../issues/bugs/2026-10-29-drive-folder-sync-commits-when-only-last-sync-changed.md
+  - ../../../issues/closed/bugs/2026-10-29-drive-folder-sync-commits-when-only-last-sync-changed.md
 ---
 # Drive folder sync time moves out of the folder card
 
@@ -14,7 +14,7 @@ Drive connector's gitignored state file, makes the card write skip when nothing
 else changed, and strips `last-sync` from existing cards with a migration.
 
 **Issues addressed:**
-`issues/bugs/2026-10-29-drive-folder-sync-commits-when-only-last-sync-changed.md`.
+`issues/closed/bugs/2026-10-29-drive-folder-sync-commits-when-only-last-sync-changed.md`.
 Searched `issues/` for `last-sync`, `noop commit`, `empty commit`, `Sync Google
 Drive`: no other item covers this. The calendar/Gmail question from the
 boxholder ("the Google Calendar commit issue") is answered under *What already
