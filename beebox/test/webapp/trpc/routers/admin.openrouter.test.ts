@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { mkdtemp } from "node:fs/promises";
@@ -89,9 +90,13 @@ void test("An empty box: no models, no key", async (t) => {
       ok: true,
       found: true,
       model: {
+        id: "moonshotai/kimi-k2-0905:exacto",
         name: "MoonshotAI: Kimi K2 0905",
         contextLength: 262144,
+        maxCompletionTokens: 98304,
         supportsTools: true,
+        supportedParameters: containing<string>(["tools"]),
+        inputModalities: ["text"],
         pricing: { promptPerMTok: 0.6, completionPerMTok: 2.5, cacheReadPerMTok: null },
       },
     },
@@ -166,9 +171,13 @@ void test("An empty box: no models, no key", async (t) => {
           ok: true,
           found: true,
           model: {
+            id: "qwen/qwen3-coder",
             name: "Qwen: Qwen3 Coder 480B A35B",
             contextLength: 262144,
+            maxCompletionTokens: 65536,
             supportsTools: true,
+            supportedParameters: containing<string>(["tools"]),
+            inputModalities: ["text"],
             pricing: { promptPerMTok: 0.3, completionPerMTok: 1, cacheReadPerMTok: 0.1 },
           },
         },

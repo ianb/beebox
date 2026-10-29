@@ -27,16 +27,27 @@ const catalogSchema = z.object({
     name: z.string(),
     context_length: z.number().nullable().optional(),
     supported_parameters: z.array(z.string()).optional(),
+    architecture: z.object({ input_modalities: z.array(z.string()).optional() }).optional(),
+    top_provider: z.object({ max_completion_tokens: z.number().nullable().optional() }).optional(),
     pricing: z.object({ prompt: priceSchema, completion: priceSchema, input_cache_read: priceSchema }),
   })),
 });
 type CatalogEntry = z.infer<typeof catalogSchema>["data"][number];
 
-/** What admin shows and checks for one model. Prices are dollars per million tokens. */
+/**
+ * What admin shows and checks for one model, and what a pi run needs to build
+ * a model pi's own catalog lacks. Prices are dollars per million tokens.
+ */
 export interface CatalogModel {
+  /** The id as asked, `:variant` suffix kept: the variant is what OpenRouter routes. */
+  id: string;
   name: string;
   contextLength: number | null;
+  maxCompletionTokens: number | null;
   supportsTools: boolean;
+  /** OpenRouter's request parameters for the model; `reasoning` marks a reasoning model. */
+  supportedParameters: string[];
+  inputModalities: string[];
   pricing: { promptPerMTok: number | null; completionPerMTok: number | null; cacheReadPerMTok: number | null };
 }
 
@@ -95,9 +106,13 @@ export async function lookupOpenRouterModel(
     ok: true,
     found: true,
     model: {
+      id,
       name: entry.name,
       contextLength: entry.context_length ?? null,
+      maxCompletionTokens: entry.top_provider?.max_completion_tokens ?? null,
       supportsTools: entry.supported_parameters?.includes("tools") === true,
+      supportedParameters: entry.supported_parameters ?? [],
+      inputModalities: entry.architecture?.input_modalities ?? [],
       pricing: {
         promptPerMTok: perMillion(entry.pricing.prompt),
         completionPerMTok: perMillion(entry.pricing.completion),
