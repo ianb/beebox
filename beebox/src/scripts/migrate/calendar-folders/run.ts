@@ -155,6 +155,7 @@ export async function runCalendarFolders({ boxRoot, mode }: { boxRoot: string; m
     ...plan.cards.map((card) => `card ${card.stem}.calendar.card for ${card.id}`),
     ...plan.moves.map((m) => `move ${m.from} -> ${m.to}`),
     ...plan.leftAlone.map((f) => `left alone (no calendar named in the file): ${f}`),
+    ...plan.untracked.map((key) => `untracked ${key}: it shared a file with another tracked event, which keeps it`),
   ];
   if (mode === "plan") return { code: 0, lines: [...summary, "(dry run; pass --apply)"] };
 

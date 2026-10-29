@@ -8,6 +8,7 @@
  * to `_content/calendar/`.
  */
 
+import { contentHash } from "../../../lib/content-hash.js";
 import { calendarCardStem } from "../../../connectors/google-calendar/calendar-folders.js";
 import { eventFileStem } from "../../../connectors/google-calendar/event-filename.js";
 import { icsToGoogleEvent } from "../../../connectors/google-calendar/ics.js";
@@ -54,6 +55,8 @@ export type CalendarFoldersPlan =
     index: EventFileIndex;
     /** Stranded files with no provable calendar, left where they are. */
     leftAlone: string[];
+    /** Index keys dropped because another entry kept the file they shared. */
+    untracked: string[];
   };
 
 const OLD_DATE = /^(\d{4}-\d{2}-\d{2}|no-date)_/;
@@ -84,11 +87,49 @@ function newEventName(opts: { filename: string; eventId: string; content: string
   return `${eventFileStem({ date, summary: ics.summary, shortId: eventId.slice(-8) })}.ics`;
 }
 
+/**
+ * Entries that share one file with another entry, to drop. The keeper is the
+ * one whose recorded hash matches the file, when exactly one does, else the
+ * first — the same choice the connector's `dropDuplicateFilenames` makes. Two
+ * moves out of one file could never both finish.
+ */
+function sharedFileLosers(index: EventFileIndex, topFiles: ReadonlyMap<string, string>): Set<string> {
+  const byFile = new Map<string, string[]>();
+  for (const [key, entry] of Object.entries(index)) {
+    const keys = byFile.get(getFilename(entry));
+    if (keys) keys.push(key);
+    else byFile.set(getFilename(entry), [key]);
+  }
+  const losers = new Set<string>();
+  for (const [file, keys] of byFile) {
+    if (keys.length < 2) continue;
+    const content = topFiles.get(file);
+    const hash = content === undefined ? undefined : contentHash(content);
+    const matching = keys.filter((key) => {
+      const entry = index[key];
+      return entry !== undefined && typeof entry !== "string" && entry.contentHash === hash;
+    });
+    const keeper = matching.length === 1 ? matching[0] : keys[0];
+    for (const key of keys) if (key !== keeper) losers.add(key);
+  }
+  return losers;
+}
+
+/** Converged: nothing at the top level to move, and every calendar the box needs has a card. */
+function isCurrent(input: CalendarFoldersInput): boolean {
+  const { index, topFiles, strandedFiles, cards, calendars } = input;
+  if (topFiles.size > 0 || [...strandedFiles.values()].some((c) => readIcs(c).calendarId !== undefined)) return false;
+  const needed = new Set(calendars);
+  for (const [key, entry] of Object.entries(index)) {
+    const id = entryCalendarId(key, entry);
+    if (!isLegacyCalendarId(id)) needed.add(id);
+  }
+  return [...needed].every((id) => cards.has(id));
+}
+
 export function planCalendarFolders(input: CalendarFoldersInput): CalendarFoldersPlan {
   const { index, topFiles, strandedFiles, cards, existing, calendars, names, roles } = input;
-  if (topFiles.size === 0 && ![...strandedFiles.values()].some((c) => readIcs(c).calendarId !== undefined)) {
-    return { kind: "current" };
-  }
+  if (isCurrent(input)) return { kind: "current" };
   const reasons: string[] = [];
   const stems = new Map(cards);
   const planned: PlannedCard[] = [];
@@ -115,7 +156,9 @@ export function planCalendarFolders(input: CalendarFoldersInput): CalendarFolder
     moves.push({ from, to });
   };
 
+  const losers = sharedFileLosers(index, topFiles);
   for (const [key, entry] of Object.entries(index)) {
+    if (losers.has(key)) continue;
     const filename = getFilename(entry);
     const content = topFiles.get(filename);
     let calendarId = entryCalendarId(key, entry);
@@ -156,5 +199,5 @@ export function planCalendarFolders(input: CalendarFoldersInput): CalendarFolder
   }
 
   if (reasons.length > 0) return { kind: "error", reasons };
-  return { kind: "migrate", cards: planned, moves, index: nextIndex, leftAlone };
+  return { kind: "migrate", cards: planned, moves, index: nextIndex, leftAlone, untracked: [...losers] };
 }

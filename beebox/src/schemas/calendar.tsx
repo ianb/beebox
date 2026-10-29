@@ -40,7 +40,8 @@ export const CalendarSchema = cardSchema("calendar", {
   instructions: `# Calendar Cards
 
 A \`.calendar.card\` is one synced calendar. Its events are \`.ics\` files in
-the card's attach folder, named \`{date}_{title}_{id}.ics\`:
+the card's attach folder, named \`{date}_{title}_{id}.ics\`. Sync with Google
+is two-way: changes made here are sent on the next calendar sync.
 
 \`\`\`
 _content/calendar/Family.calendar.card

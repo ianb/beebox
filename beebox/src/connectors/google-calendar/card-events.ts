@@ -7,12 +7,15 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parsesAsEvent } from "./ics.js";
+import { parsesAsDatedEvent } from "./ics.js";
 import { listIcsFiles } from "./calendar-folders.js";
 import { filterByDateRange, parseIcsContent } from "./utils.js";
 
 export interface CardEvent {
-  /** ISO instants; an all-day event's are local midnights. */
+  /**
+   * ISO instants for a timed event. An all-day event's are calendar dates
+   * (`2026-11-05`), so a viewer in another zone shows it on the same day.
+   */
   start: string;
   end: string;
   allDay: boolean;
@@ -22,23 +25,32 @@ export interface CardEvent {
   file: string;
 }
 
+/** The calendar date of a local midnight, as ical.js gives an all-day DTSTART. */
+function localDate(date: Date): string {
+  return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export async function loadCardEvents(folder: string, range: { from: Date; to: Date }): Promise<{ events: CardEvent[]; unreadable: string[] }> {
   const unreadable: string[] = [];
-  const events: CardEvent[] = [];
+  const events: Array<{ at: number; event: CardEvent }> = [];
   for (const file of await listIcsFiles(folder)) {
     const content = await fs.readFile(path.join(folder, file), "utf-8");
-    if (!parsesAsEvent(content)) {
+    if (!parsesAsDatedEvent(content)) {
       unreadable.push(file);
       continue;
     }
     // The range expands recurring series; single events still need the filter.
     for (const event of filterByDateRange(parseIcsContent(content, { filename: file, range }), range)) {
-      events.push({
-        start: event.start.toISOString(), end: event.end.toISOString(), allDay: event.allDay,
+      events.push({ at: event.start.getTime(), event: {
+        start: event.allDay ? localDate(event.start) : event.start.toISOString(),
+        end: event.allDay ? localDate(event.end) : event.end.toISOString(),
+        allDay: event.allDay,
         summary: event.summary, location: event.location, file,
-      });
+      } });
     }
   }
-  events.sort((a, b) => a.start.localeCompare(b.start));
-  return { events, unreadable: unreadable.toSorted() };
+  return {
+    events: events.toSorted((a, b) => a.at - b.at).map((e) => e.event),
+    unreadable: unreadable.toSorted(),
+  };
 }

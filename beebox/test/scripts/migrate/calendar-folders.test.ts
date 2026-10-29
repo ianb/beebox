@@ -61,6 +61,7 @@ void test("tracked files move into their calendar's folder under the readable na
       "evt-new-1 primary": { filename: "2026-08-01_Book_the_hall_vt-new-1.ics", calendarId: "primary", pendingSince: "2026-06-01T00:00:00.000Z" },
     },
     leftAlone: [],
+    untracked: [],
   });
   t.end();
 });
@@ -92,6 +93,7 @@ void test("untracked, legacy, and stranded files go to the calendar they name", 
     ],
     index: { "oldevent0003 school@group": { filename: "2026-06-01_Concert_vent0003.ics", calendarId: "school@group" } },
     leftAlone: ["stranded/anon.ics"],
+    untracked: [],
   });
   t.end();
 });
@@ -113,7 +115,47 @@ void test("an occupied destination or an unplaceable file stops the plan; a conv
     index: { "oldevent0003 (legacy)": "2026-06-01_ent0003.ics" },
     topFiles: new Map([["2026-06-01_ent0003.ics", ics("Concert", { start: "20260601" })]]),
   })), { kind: "error", reasons: ["2026-06-01_ent0003.ics: tracked with no calendar, and the file names none"] });
-  t.check(planCalendarFolders(input({ strandedFiles: new Map([["anon.ics", ics("Anon", { start: "20260502" })]]) })), { kind: "current" });
+  t.check(planCalendarFolders(input({
+    strandedFiles: new Map([["anon.ics", ics("Anon", { start: "20260502" })]]),
+    cards: new Map([["primary", "Priya_Marlowe"], ["school@group", "School"]]),
+  })), { kind: "current" });
+  t.end();
+});
+
+// Two entries that share one file (an index written before keys named the
+// calendar) cannot both move out of it. The one whose recorded hash matches
+// the file keeps it, as the connector's own dedupe decides.
+void test("entries sharing one file: the one matching the file keeps it", (t) => {
+  const content = ics("Concert", { start: "20260601" });
+  const plan = planCalendarFolders(input({
+    index: {
+      "aaaaaaaashared01 primary": { filename: "2026-06-01_shared01.ics", calendarId: "primary", contentHash: "stale" },
+      "bbbbbbbbshared01 school@group": { filename: "2026-06-01_shared01.ics", calendarId: "school@group", contentHash: contentHash(content) },
+    },
+    topFiles: new Map([["2026-06-01_shared01.ics", content]]),
+  }));
+  t.check(plan.kind === "migrate" ? { moves: plan.moves, untracked: plan.untracked } : plan, {
+    moves: [{ from: "2026-06-01_shared01.ics", to: "School.attach/2026-06-01_Concert_shared01.ics" }],
+    untracked: ["aaaaaaaashared01 primary"],
+  });
+  t.end();
+});
+
+// A calendar whose tracked file is already gone still needs its card: the
+// connector will not create a card for a calendar with tracked events, so
+// without one that calendar would never sync again.
+void test("a calendar with tracked events but no card is not current", (t) => {
+  t.check(planCalendarFolders(input({
+    calendars: ["primary"],
+    index: { "abcdefghswim0001 primary": { filename: "2026-06-25_swim0001.ics", calendarId: "primary" } },
+  })), {
+    kind: "migrate",
+    cards: [{ stem: "Priya_Marlowe", id: "primary", name: "Priya Marlowe", access: "owner", syncing: true }],
+    moves: [],
+    index: { "abcdefghswim0001 primary": { filename: "2026-06-25_swim0001.ics", calendarId: "primary" } },
+    leftAlone: [],
+    untracked: [],
+  });
   t.end();
 });
 

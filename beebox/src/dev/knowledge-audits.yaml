@@ -3176,8 +3176,12 @@ tests:
   # sync is bidirectional — creates .ics files, describes editing, explains push.
   # Before fix: agent thought calendar was read-only (0/3 pass).
 
-  # Status (2026-10-29, calendar-cards): not yet run; see the plan's
-  # Knowledge audits section.
+  # Status (2026-10-29, calendar-cards, Claude): pass on the migrated test1
+  # clone with a fictional Marlowe Family card; 2 reads, 34k ctx. Same run:
+  # calendar-create-event, -edit-event, -vtimezone-authoring, -upcoming-events
+  # pass; calendar-bidirectional failed only its literal "two-way" check (the
+  # answer was right) and passed on a rerun; card-calendar.md now also says
+  # "two-way" so the card doc alone carries it.
   - id: calendar-folder-picks-calendar
     prompt: >
       Where would you write a new event so that it lands on the Marlowe Family

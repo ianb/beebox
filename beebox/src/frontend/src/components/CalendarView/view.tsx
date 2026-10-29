@@ -57,11 +57,18 @@ interface ListedEvent {
   file: string;
 }
 
+/** When an event starts, for display: an all-day `2026-11-05` is that local date, not UTC midnight. */
+function startOf(event: ListedEvent): Date {
+  if (!event.allDay) return new Date(event.start);
+  const [y, m, d] = event.start.split("-").map(Number);
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
+}
+
 /** Events grouped under their day's label, in order. */
 function byDay(events: readonly ListedEvent[]): Array<[string, ListedEvent[]]> {
   const groups = new Map<string, ListedEvent[]>();
   for (const event of events) {
-    const label = dayLabel(new Date(event.start));
+    const label = dayLabel(startOf(event));
     const group = groups.get(label);
     if (group) group.push(event);
     else groups.set(label, [event]);
@@ -74,7 +81,7 @@ function StatusLines({ access, syncing }: { access: string | undefined; syncing:
   if (!readOnly && syncing) return null;
   return (
     <div className="mb-3 flex flex-col gap-1">
-      {readOnly ? <Text material tone="muted" size="sm">Read-only in Google: changes made here are not sent.</Text> : null}
+      {readOnly ? <Text material tone="muted" size="sm">Read-only in Google: Google does not accept changes from here.</Text> : null}
       {syncing ? null : <Text material tone="muted" size="sm">Not pulled from Google: changes made there no longer arrive here.</Text>}
     </div>
   );

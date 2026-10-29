@@ -21,14 +21,19 @@ void test("events in range, recurrence expanded, unreadable files named", async 
   await box.seed(`${dir}/b.ics`, ics("Far off", "DTSTART:20261220T150000Z\r\nDTEND:20261220T160000Z\r\n"));
   await box.seed(`${dir}/c.ics`, ics("Swim", "DTSTART:20261030T163000Z\r\nDTEND:20261030T180000Z\r\nRRULE:FREQ=WEEKLY;COUNT=3\r\n"));
   await box.seed(`${dir}/d.ics`, "not a calendar\n");
+  // Parses, but has no start: it cannot be placed, so it is unreadable, not "no events".
+  await box.seed(`${dir}/e.ics`, ics("Undated", ""));
+  // All-day: a calendar date, so a viewer in any zone shows it on Nov 3.
+  await box.seed(`${dir}/f.ics`, ics("Election day", "DTSTART;VALUE=DATE:20261103\r\nDTEND;VALUE=DATE:20261104\r\n"));
 
   t.check(await loadCardEvents(join(box.root, dir), { from: new Date("2026-10-29T00:00:00Z"), to: new Date("2026-11-28T00:00:00Z") }), {
     events: [
       { start: "2026-10-30T16:30:00.000Z", end: "2026-10-30T18:00:00.000Z", allDay: false, summary: "Swim", location: undefined, file: "c.ics" },
+      { start: "2026-11-03", end: "2026-11-04", allDay: true, summary: "Election day", location: undefined, file: "f.ics" },
       { start: "2026-11-05T15:00:00.000Z", end: "2026-11-05T16:00:00.000Z", allDay: false, summary: "Dentist", location: "Lakeview Dental", file: "a.ics" },
       { start: "2026-11-06T16:30:00.000Z", end: "2026-11-06T18:00:00.000Z", allDay: false, summary: "Swim", location: undefined, file: "c.ics" },
       { start: "2026-11-13T16:30:00.000Z", end: "2026-11-13T18:00:00.000Z", allDay: false, summary: "Swim", location: undefined, file: "c.ics" },
     ],
-    unreadable: ["d.ics"],
+    unreadable: ["d.ics", "e.ics"],
   });
 });

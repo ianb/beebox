@@ -353,10 +353,11 @@ function readEventTime(
   return result;
 }
 
-/** Whether `content` parses as a calendar holding an event. Quiet: the caller reports a file that does not. */
-export function parsesAsEvent(content: string): boolean {
+/** Whether `content` parses as a calendar holding an event with a start. Quiet: the caller reports a file that does not. */
+export function parsesAsDatedEvent(content: string): boolean {
   try {
-    return new ICAL.Component(ICAL.parse(content)).getFirstSubcomponent("vevent") !== null;
+    const vevent = new ICAL.Component(ICAL.parse(content)).getFirstSubcomponent("vevent");
+    return vevent !== null && asIcalTime(vevent.getFirstPropertyValue("dtstart")) !== null;
   } catch (_e) {
     // ignore: a parse error is exactly the "no" this answers; the caller names the file
     return false;
