@@ -1,15 +1,27 @@
 /* Card preview framing and optional box-scoped chrome. */
-/* Selection colors are optional theme tokens, set in pairs. A card theme's
-   pair overrides the system theme's through the cascade; with neither, the
-   fallback here applies. A theme whose selection is dark adds a code pair
-   that stays visible on dark code blocks. */
+/* Selection colors are optional theme tokens, set in pairs: a rule that sets
+   a background sets its ink (test/tours/selection-pairs.test.ts). A card
+   theme's pair overrides the system theme's through the cascade; with
+   neither, the fallback here applies. A theme whose selection is dark adds a
+   code pair that stays visible on dark code blocks. A background without an
+   ink gets black or white, whichever reads on it. The theme studio previews
+   selection with the same declarations under ::highlight(), kept in separate
+   rules so a browser without ::highlight() keeps ::selection. */
 ::selection {
   background-color: var(--bbx-selection, #bcd4f6);
-  color: var(--bbx-selection-ink, #14202e);
+  color: var(--bbx-selection-ink, oklch(from var(--bbx-selection, #bcd4f6) clamp(0, (0.58 - l) * 1000, 1) 0 0));
 }
 :is(pre, pre *)::selection {
   background-color: var(--bbx-selection-code, var(--bbx-selection, #bcd4f6));
-  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, #14202e));
+  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, oklch(from var(--bbx-selection-code, var(--bbx-selection, #bcd4f6)) clamp(0, (0.58 - l) * 1000, 1) 0 0)));
+}
+::highlight(bbx-selection-preview) {
+  background-color: var(--bbx-selection, #bcd4f6);
+  color: var(--bbx-selection-ink, oklch(from var(--bbx-selection, #bcd4f6) clamp(0, (0.58 - l) * 1000, 1) 0 0));
+}
+:is(pre, pre *)::highlight(bbx-selection-preview) {
+  background-color: var(--bbx-selection-code, var(--bbx-selection, #bcd4f6));
+  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, oklch(from var(--bbx-selection-code, var(--bbx-selection, #bcd4f6)) clamp(0, (0.58 - l) * 1000, 1) 0 0)));
 }
 /* Chrome owns the common desk and its saturated material palette. */
 .bbx-box-presentation {

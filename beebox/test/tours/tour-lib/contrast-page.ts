@@ -60,6 +60,17 @@ export interface PageRuns {
   lines: RunLines[];
   /** Run ids the capture cannot score: in a faded group over an image, or partly covered by another element. */
   unmeasured: number[];
+  /** The `::selection` colors of each element the theme studio paints as selected. */
+  selections: Selection[];
+}
+
+/** Selected text's ink and background, as `::selection` resolves them where the text sits. */
+export interface Selection {
+  selector: string;
+  text: string;
+  fg: Rgba;
+  bg: Rgba;
+  rects: Rect[];
 }
 
 /**
@@ -86,6 +97,9 @@ export interface PageRuns {
  * - Text shadows stay in the capture: a halo is part of what is read against.
  * - Controls draw their own surfaces by design, and a region that sets its
  *   own `--bbx-ink` declares its own material, so neither gets a surface check.
+ * - Selection: the theme studio paints sample text with the
+ *   `bbx-selection-preview` highlight; each such element's `::selection`
+ *   colors are read, and the highlight is hidden for the capture.
  */
 export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
@@ -328,11 +342,21 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     add(input, { text: showing, color, placeholder: input.value === "", boxes: [new DOMRect(box.left + l, box.top + t, box.width - l - px("border-right-width") - px("padding-right"), box.height - t - px("border-bottom-width") - px("padding-bottom"))] });
   }
   hitAll.remove();
+  const selections = [];
+  for (const range of CSS.highlights?.get("bbx-selection-preview") ?? []) {
+    const el = range.startContainer.parentElement;
+    if (el === null) continue;
+    const cs = getComputedStyle(el, "::selection");
+    const fg = parse(cs.color);
+    const bg = parse(cs.backgroundColor);
+    const rects = [...range.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }));
+    if (fg !== null && bg !== null) selections.push({ selector: describe(el), text: range.toString().trim(), fg, bg, rects });
+  }
   const style = document.createElement("style");
   style.id = "bbx-contrast-hide-text";
-  style.textContent = "*, *::before, *::after, ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; caret-color: transparent !important; }";
+  style.textContent = "*, *::before, *::after, ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; caret-color: transparent !important; } ::highlight(bbx-selection-preview) { color: transparent !important; background-color: transparent !important; }";
   document.head.append(style);
-  return { width: vw, height: vh, runs: [...byElement.values()], materials, lines: [...linesOf.values()], unmeasured: [...unmeasurable] };
+  return { width: vw, height: vh, runs: [...byElement.values()], materials, lines: [...linesOf.values()], unmeasured: [...unmeasurable], selections };
 })())`;
 
 export interface OverlayMark {
