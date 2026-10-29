@@ -1,6 +1,6 @@
 ---
 title: "Drive folder sync time moves out of the folder card"
-status: draft
+status: implemented
 workstream: drive-sync-noop-commits
 issues:
   - ../../../issues/closed/bugs/2026-10-29-drive-folder-sync-commits-when-only-last-sync-changed.md

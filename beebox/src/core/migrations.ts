@@ -179,7 +179,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // (`folders` in google-drive.state.json) and deletes the key, so a mirror
   // pass that changed nothing on Drive changes no tracked file. Seeds the
   // state before writing cards; a card it cannot plan exits 2 as a leftover.
-  // Plan: docs/plans/drive-sync-time-out-of-card.md.
+  // Plan: docs/implemented-plans/drive-sync-time-out-of-card.md.
   { name: "gfolder-last-sync-2026-10", script: "src/scripts/migrate/gfolder-last-sync/run.ts" },
 ];
 
