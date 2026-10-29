@@ -1,6 +1,6 @@
 ---
 title: "agent browser scoped to box"
-workstream: unknown
+workstream: shared-browser
 needs: [design]
 area: beebox
 priority: backlog
@@ -15,3 +15,11 @@ Design questions:
 - **Where it runs.** Server-side (the box agent runs on the server, so a headless Chromium next to it hitting `127.0.0.1:3210/<box>/...`) vs. handed to the chat subprocess. Reuse the agent-browser infra `bin/browse` already wraps.
 - **Capability surface.** Likely read-mostly: navigate, snapshot the a11y tree, screenshot, read console — the self-verification loop. Click/fill is more fraught (real mutations as the principal) and can come later behind explicit intent.
 - **Connection to the views/interactive-app work.** This is the missing half of "agent builds an interactive app": build it (the view write API + card-type→view binding) AND look at it. Pairs with [Capability map for the boxholder agent](../exploration/2026-05-19-capability-map.md) — "I can view the rendered box" is a composed capability the agent won't infer from its tool list.
+
+## Research (2026-10-29)
+
+The wider ask is a browser the agent and the person share for any website,
+with handoff both ways. Survey, spike and recommended shape:
+[research/embedded-browser/](../../research/embedded-browser/README.md). The
+box-scoped self-check described above is one use of the same per-box browser:
+the agent opens its own box's pages through the same broker.
