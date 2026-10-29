@@ -214,3 +214,11 @@ compiled tie-breaks have run live only on a synthetic box. Running them on the
 real box needs a non-Jev model pass over its rules, which awaits the boxholder.
 The duplicate check marked 33 of 36 restored real scan sessions removable and
 kept 3 for triage.
+
+With the boxholder's approval, the compile pass ran on the real box's rules. It
+produced 18 tie-breaks and found each property's ID in the box's own cards. The
+replay then hit the box's daily Jev cap after 80 of 93 documents. On those 80,
+agreement went from 72 to 73: two property misses fixed, one real overlap
+flipped. The remaining confident misses need boxholder-stated guide rules; one
+of them, a tie-break naming bills, did not reach those bills' payment
+confirmations.
