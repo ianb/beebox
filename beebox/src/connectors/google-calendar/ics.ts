@@ -325,15 +325,6 @@ export function eventToIcs(
   return comp.toString();
 }
 
-export function eventFilename(event: GoogleCalendarEvent): string {
-  const dateStr =
-    event.start?.dateTime?.slice(0, 10) ||
-    event.start?.date ||
-    "no-date";
-  const shortId = event.id.slice(-8);
-  return `${dateStr}_${shortId}.ics`;
-}
-
 /** Check if an event's start falls within a time window */
 export function isInWindow(event: GoogleCalendarEvent, window: { start: Date; end: Date }): boolean {
   // Recurring masters: Google already filtered server-side via timeMin/timeMax

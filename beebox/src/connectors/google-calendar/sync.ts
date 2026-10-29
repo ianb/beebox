@@ -14,10 +14,10 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { type GoogleCalendarService } from "../../services/google-calendar/core.js";
 import {
   eventToIcs,
-  eventFilename,
   isInWindow,
   type GoogleCalendarEvent,
 } from "./ics.js";
+import { eventFilename } from "./event-filename.js";
 import {
   formatEventDate,
   describeChanges,

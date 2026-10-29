@@ -1,6 +1,6 @@
 ---
 title: "A calendar should be a card, with its events under it"
-workstream: unattached
+workstream: calendar-cards
 area: beebox
 labels: [calendar, connectors, cards]
 filed-by: agent

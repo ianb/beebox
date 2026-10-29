@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-29T18:45:32Z
-Total documents: 596
+Generated: 2026-10-29T22:02:59Z
+Total documents: 598
 
 ## Issues
 
@@ -1505,6 +1505,7 @@ Referenced by:
 - docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
 - docs/implemented-plans/vocab-glossary-sweep.md:37 (mention) — editing a label has one place to check. `docs/glossary.md` already claims
 - docs/plans/agent-docs.md:369 (mention) — - concepts: `glossary.md`, `cards-as-markdown.md`, `connectors.md`,
+- docs/plans/calendar-cards.md:59 (mention) — calendar folder is the existing attach scope (`docs/glossary.md:40`:
 - docs/plans/pdf-intake-design.md:61 (link) — **Intake-time extraction.** When a PDF arrives (`bbx import`, capture endpoint, email connector), the intake path runs d
 - ../dev/devprocess-talk/reports/sweep-instructions.md:342 (mention) — - **Lives in:** `beebox/docs/glossary.md` (91 lines).
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:18 (mention) — > glossary's new user-facing register (`beebox/docs/glossary.md`). UI copy
@@ -3145,6 +3146,7 @@ Referenced by:
 - docs/implemented-plans/mvp-implementation-guide.md:695 (mention) — calendar.md          # Rules for calendar operations
 - docs/implemented-plans/user-story-audit-followups.md:37 (mention) — `docs/connectors/calendar.md` updated ([46]).
 - docs/plans/agent-docs.md:374 (mention) — `calendar.md`.
+- docs/plans/calendar-cards.md:50 (mention) — continuing. Authored docs (calendar.md, this plan excluded): about 120 lines.
 - docs/user-stories/catalog/2026-06-26.md:2281 (mention) — Key limitation from docs/connectors/calendar.md (line 77): "One-way only. Local .ics edits are not detected or pushed ba
 - ../issues/exploration/2026-09-17-caldir-calendar-as-a-directory.md:21 (mention) — (`beebox/docs/connectors/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
 - ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:62 (mention) — `beebox/docs/connectors/calendar.md`: **no existing file is ever renamed, so no rename
@@ -8542,6 +8544,34 @@ References:
 - → docs/chat/quick-chat.md (mention)
 - → docs/box/quick-chat.md (mention)
 - → docs/landmarks.md (mention)
+
+#### docs/plans/calendar-cards.design.md
+
+Title: "Calendar cards: design" | 128 lines | proposal | draft
+
+Referenced by:
+- docs/plans/calendar-cards.md:24 (link) — [calendar-cards.design.md](calendar-cards.design.md). Boxholder decisions
+
+References:
+- → ../issues/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md (frontmatter)
+- → ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md (frontmatter)
+- → docs/plans/calendar-cards.md (link)
+
+#### docs/plans/calendar-cards.md
+
+Title: "Calendar cards and readable event filenames" | 356 lines | proposal | draft
+
+Referenced by:
+- docs/plans/calendar-cards.design.md:11 (link) — **Parent plan:** [calendar-cards](calendar-cards.md)
+
+References:
+- → ../issues/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md (frontmatter)
+- → ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md (frontmatter)
+- → ../issues/exploration/2026-09-17-caldir-calendar-as-a-directory.md (frontmatter)
+- → ../issues/features/2026-10-15-connectors-as-plugins.md (link)
+- → docs/plans/calendar-cards.design.md (link)
+- → docs/connectors/calendar.md (mention)
+- → docs/glossary.md (mention)
 
 #### docs/plans/capture-fast-landing.md
 
