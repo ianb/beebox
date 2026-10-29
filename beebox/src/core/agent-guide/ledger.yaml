@@ -30,7 +30,7 @@ budget:
   # box skills' descriptions and the `question-review` procedure's
   # description (docs/implemented-plans/questions-later-and-figure-it-out.md).
   # Raised 2026-10-29 (+6) for the new `calendar` card type's entry in the
-  # guide's card-type list (docs/plans/calendar-cards.md); the calendar skill
+  # guide's card-type list (docs/implemented-plans/calendar-cards.md); the calendar skill
   # description was trimmed to offset the rest.
   guide_words: 5743
   always_loaded_words: 10999

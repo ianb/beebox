@@ -1,12 +1,15 @@
 ---
 title: "caldir reached the same calendar-as-a-directory design; take its filenames, and note the provider gap"
-workstream: unattached
+workstream: calendar-cards
 area: beebox
 labels: [calendar, connectors, prior-art]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder asked how it compares to what we do
+resolution: superseded
 ---
+
+> **Closed:** Closed as folded into the filename issue (calendar-ics-filenames-carry-the-title), resolved by the calendar-cards workstream.
 
 [caldir](https://caldir.org/) ([t4t5/caldir](https://github.com/t4t5/caldir),
 Rust, on crates.io) "stores your calendar as a directory of ICS files", synced

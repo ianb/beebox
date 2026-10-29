@@ -1,10 +1,10 @@
 ---
 title: "Calendar cards: design"
-status: draft
+status: implemented
 workstream: calendar-cards
 issues:
-  - ../../../issues/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md
-  - ../../../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md
+  - ../../../issues/closed/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md
+  - ../../../issues/closed/features/2026-09-17-calendar-ics-filenames-carry-the-title.md
 ---
 # Calendar cards: design
 

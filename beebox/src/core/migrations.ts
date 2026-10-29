@@ -185,7 +185,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // per calendar with its events in `<Name>.attach/`, renamed to
   // `{date}_{title}_{shortId}.ics`, and rewrites the event index to match.
   // Writes a journal first; the calendar connector refuses to sync while it
-  // exists, and a rerun finishes it. Plan: docs/plans/calendar-cards.md.
+  // exists, and a rerun finishes it. Plan: docs/implemented-plans/calendar-cards.md.
   { name: "calendar-folders-2026-10", script: "src/scripts/migrate/calendar-folders/run.ts" },
 ];
 

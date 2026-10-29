@@ -6,7 +6,10 @@ labels: [calendar, connectors, cards]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-plugins-planning — plugins slice 3 discussion, 2026-10-10
+resolution: implemented
 ---
+
+> **Closed:** Closed by the calendar-cards workstream (merged to main). Each synced calendar is a `calendar` card with its events as `.ics` files in the card attach folder; migration `calendar-folders-2026-10` moves existing files. See beebox/docs/connectors/calendar.md.
 
 Today a calendar is a bare directory of `.ics` files under `_content/calendar/`,
 written by the Google Calendar connector. The connector declares a

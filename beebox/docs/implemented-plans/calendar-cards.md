@@ -1,11 +1,11 @@
 ---
 title: "Calendar cards and readable event filenames"
-status: draft
+status: implemented
 workstream: calendar-cards
 issues:
-  - ../../../issues/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md
-  - ../../../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md
-  - ../../../issues/exploration/2026-09-17-caldir-calendar-as-a-directory.md
+  - ../../../issues/closed/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md
+  - ../../../issues/closed/features/2026-09-17-calendar-ics-filenames-carry-the-title.md
+  - ../../../issues/closed/exploration/2026-09-17-caldir-calendar-as-a-directory.md
 ---
 # Calendar cards and readable event filenames
 
