@@ -26,3 +26,10 @@ Three request paths are affected, and each sets headers differently:
 
 The boxholder wants Bee Box to be the identified app. It is out of scope for
 the pi engine workstream.
+
+## Research
+
+Probed 2026-10-29 on pi 1.4.0: pi sends `HTTP-Referer: https://pi.dev`,
+`X-OpenRouter-Title: pi` and `X-OpenRouter-Categories: cli-agent`. A
+`providers.openrouter.headers` entry in pi's `agentDir/models.json` replaced
+the first two on the wire. `PI_TELEMETRY=0` removes all three.
