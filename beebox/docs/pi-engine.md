@@ -39,6 +39,12 @@ says so. The admin note and the run use the same lookup (`lookupPiModel`,
 - The bash tool runs with the box agent's environment from `buildScriptEnv`,
   not the server's. A chat's shell has `BBX_CHAT_SESSION_ID` from its first
   turn, because Bee Box picks the pi session id before the session opens.
+- That filter keeps secrets out of the shell's own environment. It is not a
+  wall: pi's tools run as the box server's OS user, so `read` on
+  `/proc/self/environ`, or a context file linked to it, reaches the server's
+  environment. Claude and Codex agents have the same reach through
+  `/proc/<server pid>/environ`. The boundary is the per-box OS user, as the
+  security overview records under "Managed-site code and same-user trust".
 - Tools: `read`, `bash`, `edit`, `write`, `ls`. The box validator checks each
   `edit` and `write` and sends findings back to the model in the same turn.
 

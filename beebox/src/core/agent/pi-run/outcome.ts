@@ -47,14 +47,14 @@ function assistantText(message: AssistantMessage): string {
 }
 
 /**
- * Text, reasoning or a tool call (the remaining block type), as Codex counts activity. pi ends a thrown
- * run with an assistant message holding one empty text block, which is none.
+ * Reply text or a tool call (the remaining block type). Reasoning alone is
+ * none: a run that only reasoned did no work, so its failure is a model
+ * failure. pi ends a thrown run with one empty text block, also none.
  */
 function substantive(message: AssistantMessage): boolean {
   return message.content.some((block) => {
     if (block.type === "text") return block.text.trim() !== "";
-    if (block.type === "thinking") return block.thinking.trim() !== "";
-    return true;
+    return block.type !== "thinking";
   });
 }
 

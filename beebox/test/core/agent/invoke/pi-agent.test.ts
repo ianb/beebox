@@ -115,12 +115,14 @@ void test("a run that fails with only pi's empty failure message is an invocatio
   });
 });
 
+// Reasoning alone is no work, so the failure is a model failure that a
+// procedure step must not record as partial work.
 void test("a completed run whose last reply has no text fails, naming the model", async (t) => {
   const { invoke } = await piBox(t);
   faux.setResponses([fauxAssistantMessage(fauxThinking("Thinking only."))]);
   const result = await createPiAgent({ name: "pi-test" }, deps).invoke(invoke());
   t.check({ success: result.success, error: !result.success && result.error, invocationFailure: !result.success && result.invocationFailure }, {
-    success: false, error: `pi model ${MODEL} ended the run without reply text`, invocationFailure: undefined,
+    success: false, error: `pi model ${MODEL} ended the run without reply text`, invocationFailure: true,
   });
 });
 
