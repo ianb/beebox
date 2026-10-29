@@ -589,10 +589,11 @@ fi
 # an earlier setup can name a different IdentityFile, and origin is about to
 # point at this alias regardless — so ask ssh what the alias actually resolves
 # to rather than trusting the grep.
-RESOLVED=$(ssh -G "$SSH_ALIAS" 2>/dev/null | awk '$1 == "identityfile" { print $2 }' | head -1)
-RESOLVED="${RESOLVED/#\~/$HOME}"
-if [[ "$RESOLVED" != "$KEY_PATH" ]]; then
-  echo "ERROR: ssh resolves $SSH_ALIAS to identity '$RESOLVED', not '$KEY_PATH'." >&2
+# Escaped: the outer heredoc is unquoted, so these must expand on the server.
+RESOLVED=\$(ssh -G "$SSH_ALIAS" 2>/dev/null | awk '\$1 == "identityfile" { print \$2 }' | head -1)
+RESOLVED="\${RESOLVED/#\~/\$HOME}"
+if [[ "\$RESOLVED" != "$KEY_PATH" ]]; then
+  echo "ERROR: ssh resolves $SSH_ALIAS to identity '\$RESOLVED', not '$KEY_PATH'." >&2
   echo "  An existing ssh config stanza is claiming this alias. Fix it by hand:" >&2
   echo "  pointing the box's origin at an alias that uses another key would fail" >&2
   echo "  to push in a way nothing reports." >&2
