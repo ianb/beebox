@@ -43,7 +43,9 @@ Other marks exist for particular kinds of card, such as a recipe's
 ingredients and steps. A kind of card declares its own marks, and they are
 valid only in that kind's body; the same mark typed into a plain doc is reported as
 an error rather than accepted silently. A box can declare marks for its own
-kinds. The baseline three are the ones the whole system agrees on, and the only
+kinds. A document card, for instance, can mark one region as a composition, the
+writing you are making, inside which the agent's own contributions carry a mark
+of their own, so your words stay yours. The baseline three are the ones the whole system agrees on, and the only
 ones every card shares.
 
 Why it is built this way: [the representation mirrors the idea](../design/representation.md)

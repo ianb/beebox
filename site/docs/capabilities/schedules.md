@@ -25,6 +25,11 @@ background process that keeps them running.
   schedule's row, the headline when it needs attention, and a history of the
   recent runs. A run that found nothing to do reads as fine rather than
   "waiting".
+- Starts a full processing pass by itself when a job card is waiting that no
+  connector-specific schedule would pick up (for example the follow-up to a
+  question you answered, or a batch of scanned items). The scheduler checks
+  for these on each pass, starts at most 24 a day, spaces out retries, and gives
+  a job up after seven days; the card stays and a health check names it.
 - Waits instead of failing when a schedule needs a connector (e.g. Gmail)
   that is not currently configured.
 
@@ -43,7 +48,10 @@ out of quota, a due script skips cleanly and is marked "waiting," not
 
 **Limits**
 
-The run history is kept on the machine, not in the box, and holds the last
+A recurrence rule with no start date begins at midnight UTC of the day it last
+ran (today, for a new one), so times of day are in UTC unless the rule sets its
+own start; a rule that counts occurrences or needs an exact interval phase must
+set one. The run history is kept on the machine, not in the box, and holds the last
 twenty runs of each schedule. A hung scheduled script is eventually stopped along with everything it
 started, rather than left running forever, but the documentation does not
 describe a way to run schedules without a machine that is on and reachable

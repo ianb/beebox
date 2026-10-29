@@ -51,7 +51,12 @@ The iOS app is a native shell around the same web chat you use in a
 browser; it adds native pairing, recording, and speech input, delivered into
 the chat over a bridge. It opens on a native box screen, with a text box for a
 thought, your recent chats, and your other boxes; the chat itself loads when
-you open one. A thought typed or spoken there waits in an outbox on the phone
+you open one. The app checks the box each time the box screen comes forward. When
+the box cannot answer, it says so and how old the list is, and stops showing the
+first chat as the current one. When a hosted box has gone to sleep, the hub
+answers the phone with the chat list the box left behind when it went to sleep,
+without waking the box, and the screen says the box is asleep and when the list
+is from. Only a paired device whose pairer can still open the box is served. A thought typed or spoken there waits in an outbox on the phone
 if the box is unreachable, and the app retries. A finished capture becomes a `capture-session` card
 with typed cards for what it contains (`image`, `audio`, `file`). Capture
 runs when you use it, not on a schedule. Clipping web pages is a separate
