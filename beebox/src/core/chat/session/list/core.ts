@@ -26,6 +26,7 @@ import { deriveTranscriptState, type TranscriptState } from "../availability.js"
 import { listCodexThreadMetadata, type CodexThreadMetadata } from "../codex-transcript/core.js";
 import { containedSessionCwd } from "../transcript-paths.js";
 import type { AgentEngine } from "../../../box/config.js";
+import { EngineNotImplementedError, assertEngineImplemented } from "../../../../shared/agent-models.js";
 
 /**
  * Chats resolved at once — see {@link mapInBatchesSettled}. `resolveSessionLabel`
@@ -331,6 +332,8 @@ export function labelSource(entry: ChatSessionEntry): SessionLabelSource {
       return { kind: "preview", text: entry.nativePreview };
     case "claude":
       return { kind: "transcript", logPath: entry.logPath };
+    case "pi":
+      throw new EngineNotImplementedError(entry.engine, "labelling a chat");
     default:
       return assertNever(entry.engine);
   }
@@ -371,6 +374,7 @@ async function resolveHusk(options: {
 }): Promise<HuskResolution> {
   const { boxRoot, husk, engine, codexMetadata, codexAvailable } = options;
   const logPath = huskTranscriptPath(boxRoot, husk);
+  assertEngineImplemented(engine, "listing a chat");
   let mtime: Date;
   try {
     if (engine === "codex") {

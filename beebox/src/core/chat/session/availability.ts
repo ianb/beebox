@@ -6,6 +6,7 @@ import type { ChatSessionRegistry } from "./registry/core.js";
 import { resolveRecordedChatEngine } from "./engine.js";
 import { codexSessionExists } from "./codex-transcript/core.js";
 import { localOrigin } from "./origin.js";
+import { assertEngineImplemented } from "../../../shared/agent-models.js";
 
 /**
  * Where a chat's transcript is — the question a husk alone cannot answer.
@@ -95,6 +96,7 @@ export async function resolveSessionAvailability(args: { boxRoot: string; sessio
   // means `missingTranscript`, whose `unknown` transcript state is already the
   // "no record of this session" the chat surfaces render.
   const engine = await resolveRecordedChatEngine(args.boxRoot, { sessionId: args.sessionId, husk });
+  if (engine !== null) assertEngineImplemented(engine, "checking a chat transcript");
   if (engine === "codex") {
     if (await codexSessionExists(args.boxRoot, args.sessionId)) return { kind: "resumable" };
     return missingTranscript(husk);

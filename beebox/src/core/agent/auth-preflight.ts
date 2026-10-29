@@ -23,7 +23,7 @@ import {
   type CodexCliService,
 } from "../../services/codex-cli/core.js";
 import { providerEnvAdditions } from "../provider-env/core.js";
-import { isThirdPartyModel } from "../../shared/agent-models.js";
+import { EngineNotImplementedError, isThirdPartyModel, type AgentEngine } from "../../shared/agent-models.js";
 import { ProviderSetupError } from "../provider-setup-error.js";
 import { invariant } from "../../shared/invariant.js";
 
@@ -197,7 +197,7 @@ export async function preflightChatBackend(params: {
     requiresClaudeAuth?: boolean | undefined;
     requiresCodexAuth?: boolean | undefined;
   };
-  engine?: "claude" | "codex" | undefined;
+  engine?: AgentEngine | undefined;
   /** The model this turn will run — a third-party model is gated on its provider setup. */
   model?: string | undefined;
   /** Box root for the provider check. Required when `model` is a third-party id. */
@@ -207,6 +207,7 @@ export async function preflightChatBackend(params: {
   claudeCli?: ClaudeCliService | undefined;
   codexCli?: CodexCliService | undefined;
 }): Promise<boolean> {
+  if (params.engine === "pi") return refuse(params.session, new EngineNotImplementedError(params.engine, "starting a chat"));
   if (params.engine === "codex") {
     if (params.backend.requiresCodexAuth !== true) return true;
     try {

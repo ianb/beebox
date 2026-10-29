@@ -37,6 +37,7 @@ import { toSdkUserContent } from "../claude-chat-content.js";
 import { resolveHarnessPluginPath } from "../../core/agent/plugin-paths.js";
 import { boxSessionSettings } from "../../core/agent/box-session-settings.js";
 import { createCodexChatBackend } from "./codex-chat.js";
+import { EngineNotImplementedError, type AgentEngine } from "../../shared/agent-models.js";
 import type {
   ChatBackend,
   ChatBackendRun,
@@ -434,13 +435,13 @@ export function createChatBackend(): ChatBackend {
   return {
     requiresClaudeAuth: true,
     requiresCodexAuth: true,
-    start: (opts) => opts.engine === "codex" ? codex.start(opts) : claude.start(opts),
-    prewarm: async (opts) => {
-      if (opts.engine !== "codex") await claude.prewarm?.(opts);
-    },
-    load: async (engine) => {
-      if (engine !== "codex") await claude.load?.(engine);
-    },
+    start: (opts) => ({
+      claude: () => claude.start(opts), codex: () => codex.start(opts),
+      pi: () => { throw new EngineNotImplementedError(opts.engine ?? "claude", "starting a chat"); },
+    } satisfies Record<AgentEngine, () => ChatBackendRun>)[opts.engine ?? "claude"](),
+    // Only the Claude backend keeps warm processes; the others have nothing to prewarm or load.
+    prewarm: async (opts) => { if ((opts.engine ?? "claude") === "claude") await claude.prewarm?.(opts); },
+    load: async (engine) => { if ((engine ?? "claude") === "claude") await claude.load?.(engine); },
     closeWarm: async () => { await claude.closeWarm?.(); },
     closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
     hasWarm: () => claude.hasWarm?.() ?? false,

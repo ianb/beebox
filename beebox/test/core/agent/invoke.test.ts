@@ -57,3 +57,17 @@ void test("Configuration errors never fall back silently to a different vendor."
 
   await box.cleanup();
 });
+
+// ## pi is a known engine but cannot be selected yet
+//
+// Until pi's chat backend lands (docs/plans/pi-box-engine.md, Track 6), a box
+// config naming pi is refused rather than run on another engine.
+void test("A box config naming pi is refused rather than run on another engine.", async (t) => {
+  const box = await makeTmpBox();
+  await setEngine(box.root, "pi");
+  const agent = createAgent({ name: "selection-test" });
+
+  await t.checkThrows(async () => (await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true })), "EngineNotImplementedError: the pi engine is not available yet (box config agentEngine)");
+
+  await box.cleanup();
+});

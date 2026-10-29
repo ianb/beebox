@@ -7,7 +7,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { chatModelOptions, parseChatAgentEngine, type AddedModel } from "@shared/chat-models.js";
-import { AGENT_ENGINES, providerOf } from "@shared/agent-models.js";
+import { AGENT_ENGINES, isSelectableAgentEngine, providerOf, type AgentEngine } from "@shared/agent-models.js";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION =
@@ -34,7 +34,7 @@ const OPENROUTER_BACKGROUND_HINT =
   "box's smallModel is set to a Claude model, and reading photos during scan import (unless the server sets " +
   "BBX_SCAN_VISION=gemini).";
 
-const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
+const ENGINE_LABELS: Record<AgentEngine, string> = { claude: "Claude Code", codex: "Codex", pi: "pi" };
 
 const ENGINE_OPTIONS = [
   {
@@ -97,8 +97,9 @@ export function AgentEngineSection() {
             options={ENGINE_OPTIONS}
             disabled={update.isPending}
             onChange={(agentEngine) => {
-              if (agentEngine !== "claude" && agentEngine !== "codex") return;
-              update.mutate({ agentEngine });
+              const parsed = parseChatAgentEngine(agentEngine);
+              if (parsed === null) return;
+              update.mutate({ agentEngine: parsed });
             }}
           />
           <Stack gap="xs">
@@ -107,11 +108,11 @@ export function AgentEngineSection() {
               Which harnesses a new chat may choose. Turn off an engine this box has no
               account for, so nobody starts a chat that cannot run.
             </Hint>
-            {AGENT_ENGINES.map((candidate) => (
+            {AGENT_ENGINES.filter(isSelectableAgentEngine).map((candidate) => (
               <CheckboxField
                 key={candidate}
                 id={`bbx-admin-engine-enabled-${candidate}`}
-                label={ENGINE_LABELS[candidate] ?? candidate}
+                label={ENGINE_LABELS[candidate]}
                 checked={candidate === engine || config.data.engines[candidate] === true}
                 // The default engine cannot be turned off — a box whose default
                 // engine is unavailable cannot run at all.

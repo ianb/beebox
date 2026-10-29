@@ -27,6 +27,7 @@ import { resolveChatTarget } from "./target.js";
 import { loadSessionHistory } from "./load-history.js";
 import { MAX_SESSION_ENTRIES } from "../../../cli/lib/session.js";
 import { jsonlLines } from "../../../lib/jsonl-lines.js";
+import { assertEngineImplemented } from "../../../shared/agent-models.js";
 
 /** Raised when the non-busy `send()` of a delivered user message fails. Retryable. */
 export class UserMessageDeliveryError extends Error {
@@ -74,7 +75,9 @@ export async function userMessageAlreadyLanded(opts: {
   const { boxRoot, sessionId, marker } = opts;
   const logPrefix = opts.logPrefix ?? "chat";
   if (sessionId === null) return false;
-  if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
+  const engine = await resolveChatEngine(boxRoot, { sessionId });
+  assertEngineImplemented(engine, "probing a chat transcript");
+  if (engine === "codex") {
     try {
       // The message being probed was sent just before a crash, so it sits at
       // the end of the thread: read the newest entries, not the oldest page

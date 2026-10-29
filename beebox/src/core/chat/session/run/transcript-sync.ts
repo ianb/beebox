@@ -23,6 +23,7 @@ import { resolveSessionLogPath } from "../history.js";
 import type { ChatMessage } from "../messages.js";
 import { resolveChatEngine } from "../engine.js";
 import { loadSessionHistory } from "../load-history.js";
+import { assertEngineImplemented } from "../../../../shared/agent-models.js";
 
 /** How long past `result` we'll wait for the flush before giving up. The
  *  measured lag is ~150ms; the cap only bites if the CLI misbehaves. */
@@ -70,7 +71,9 @@ export async function waitForTranscriptEntry(
   },
 ): Promise<boolean> {
   const deadline = Date.now() + (timeoutMs ?? WAIT_TIMEOUT_MS);
-  if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
+  const engine = await resolveChatEngine(boxRoot, { sessionId });
+  assertEngineImplemented(engine, "waiting for a chat transcript");
+  if (engine === "codex") {
     return waitForCodexHistoryEntry({ boxRoot, sessionId, uuid, deadline });
   }
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);

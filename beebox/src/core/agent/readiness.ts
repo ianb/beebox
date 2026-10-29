@@ -15,7 +15,8 @@
 
 import { AUTH_PROBE_INCONCLUSIVE, CLI_MISSING, type ClaudeCliService } from "../../services/claude-cli.js";
 import type { CodexAuthStatus, CodexCliService } from "../../services/codex-cli/core.js";
-import { isThirdPartyModel, providerOf } from "../../shared/agent-models.js";
+import { EngineNotImplementedError, isThirdPartyModel, providerOf } from "../../shared/agent-models.js";
+import { assertNever } from "../../shared/invariant.js";
 import { loadAddedModels, loadAgentEngine, loadBoxModel } from "../box/config.js";
 import { glmKeyUsable } from "../glm-key.js";
 import { openRouterKeyUsable } from "../openrouter.js";
@@ -61,7 +62,16 @@ async function openrouterState(boxRoot: string): Promise<ProviderState> {
 
 async function defaultState(boxRoot: string, states: Record<"claude" | "codex" | "openrouter", ProviderState>): Promise<ProviderState> {
   const engine = await loadAgentEngine(boxRoot);
-  if (engine === "codex") return states.codex;
+  switch (engine) {
+    case "codex":
+      return states.codex;
+    case "pi":
+      throw new EngineNotImplementedError(engine, "checking agent readiness");
+    case "claude":
+      break;
+    default:
+      return assertNever(engine);
+  }
   const model = await loadBoxModel(boxRoot);
   if (!isThirdPartyModel(model)) return states.claude;
   if (providerOf(model) === "glm") return (await glmKeyUsable(boxRoot)) ? "ready" : "not-ready";

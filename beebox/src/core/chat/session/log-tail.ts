@@ -15,6 +15,7 @@ import { errnoCode } from "../../../shared/error-guards.js";
 import { resolveSessionLogPath } from "./history.js";
 import { resolveChatEngine } from "./engine.js";
 import { loadSessionHistory } from "./load-history.js";
+import { assertEngineImplemented } from "../../../shared/agent-models.js";
 
 /**
  * Cap at 128KB — `Speaker N<L>` patterns are dense in any recent diarized
@@ -25,7 +26,9 @@ const LOG_TAIL_BYTES = 128 * 1024;
 
 export async function readSessionLogTail(boxRoot: string, sessionId: string): Promise<string> {
   try {
-    if ((await resolveChatEngine(boxRoot, { sessionId })) === "codex") {
+    const engine = await resolveChatEngine(boxRoot, { sessionId });
+    assertEngineImplemented(engine, "reading a chat log tail");
+    if (engine === "codex") {
       const { entries } = await loadSessionHistory(boxRoot, {
         sessionId,
         slice: { mode: "tail", tail: 100 },

@@ -24,6 +24,7 @@ import {
 import { errnoCode } from "../../../shared/error-guards.js";
 import { resolveRecordedChatEngine } from "./engine.js";
 import { readCodexSessionHistoryIfPresent } from "./codex-transcript/core.js";
+import { assertEngineImplemented } from "../../../shared/agent-models.js";
 
 // Re-exported so callers of the loader name their slice from the same module.
 export type { SessionLogSlice } from "../../../cli/lib/session.js";
@@ -174,6 +175,7 @@ export async function loadSessionHistory(
   // `git reset --hard` rewound the box's chat registry and husk card
   // (2026-09-03). Only a RECORDED `codex` reaches the RPC now.
   const engine = await resolveRecordedChatEngine(boxRoot, { sessionId });
+  if (engine !== null) assertEngineImplemented(engine, "reading chat history");
 
   if (engine === "codex") {
     const history = await readCodexSessionHistoryIfPresent({ boxRoot, sessionId, slice });

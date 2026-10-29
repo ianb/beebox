@@ -21,6 +21,7 @@ import {
 } from "../agent/engine-availability-store.js";
 import {
   describeEngineUnavailability,
+  engineProvider,
   formatRetryAt,
 } from "../agent/engine-unavailability.js";
 
@@ -29,7 +30,8 @@ export async function boxEngineUnavailability(
   boxRoot: string,
 ): Promise<StoredEngineUnavailability | null> {
   try {
-    const provider = await loadAgentEngine(boxRoot);
+    const provider = engineProvider(await loadAgentEngine(boxRoot));
+    if (provider === null) return null;
     return await liveEngineUnavailability({ provider, now: getBoxTime(boxRoot) });
   } catch (e) {
     // Fail open: an availability hint must never block scheduled work.

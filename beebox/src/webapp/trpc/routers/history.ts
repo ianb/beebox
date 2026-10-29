@@ -24,6 +24,7 @@ import { boxRelativePath } from "../../../shared/box-path.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import * as path from "node:path";
 import { isWithin } from "../../../lib/box-containment.js";
+import { assertEngineImplemented } from "../../../shared/agent-models.js";
 
 /**
  * Compose the list of `--grep` regexes that express the selected filter.
@@ -163,7 +164,9 @@ export const historyRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      if (await resolveChatEngine(ctx.boxRoot, { sessionId: input.sessionId }) === "codex") {
+      const engine = await resolveChatEngine(ctx.boxRoot, { sessionId: input.sessionId });
+      assertEngineImplemented(engine, "reading a chat log");
+      if (engine === "codex") {
         const found = await codexSessionExists(ctx.boxRoot, input.sessionId);
         if (!found) {
           return {

@@ -1,11 +1,11 @@
 /** Resolve which native harness owns a session used by diagnostic CLI commands. */
 
-import type { AgentEngine } from "../../core/box/config.js";
+import { AGENT_ENGINES, isAgentEngine, type AgentEngine } from "../../shared/agent-models.js";
 import { loadHistoryEntries } from "../../core/chat/session/history.js";
 
 class InvalidDiagnosticEngineError extends Error {
   constructor(value: string) {
-    super(`Unknown session engine "${value}". Expected claude or codex.`);
+    super(`Unknown session engine "${value}". Expected ${AGENT_ENGINES.join(", ")}.`);
     this.name = "InvalidDiagnosticEngineError";
   }
 }
@@ -20,7 +20,7 @@ class UnsupportedCodexSessionModeError extends Error {
 }
 
 export function parseDiagnosticEngine(value: string): AgentEngine {
-  if (value === "claude" || value === "codex") return value;
+  if (isAgentEngine(value)) return value;
   throw new InvalidDiagnosticEngineError(value);
 }
 

@@ -198,6 +198,20 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
 
   t.check((await caller(box.root).admin.boxConfig()).agentEngine, "codex");
 
+  // pi is refused as the default or an enabled engine until its chat backend
+  // lands (docs/plans/pi-box-engine.md, Track 6). The config is left as it was.
+
+  const refusePi = (input: Parameters<ReturnType<typeof caller>["admin"]["updateBoxConfig"]>[0]) =>
+    caller(box.root).admin.updateBoxConfig(input).then(
+      () => "allowed",
+      (error) => `${error.code}: ${error.message}`,
+    );
+  t.check([await refusePi({ agentEngine: "pi" }), await refusePi({ engines: { codex: true, pi: true } })], [
+    "BAD_REQUEST: the pi engine is not available yet (selecting it for a box)",
+    "BAD_REQUEST: the pi engine is not available yet (selecting it for a box)",
+  ]);
+  t.check(JSON.parse(await box.read("_config/box.json")).agentEngine, "codex");
+
   // Retired model pins are shown as the current model in Admin, matching the model
   // the runtime will use instead of presenting a working pin as unavailable.
 

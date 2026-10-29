@@ -31,6 +31,7 @@ import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
 import { readCodexSessionUpdatedAt } from "./codex-transcript/core.js";
+import { assertEngineImplemented, isAgentEngine } from "../../../shared/agent-models.js";
 
 const HISTORY_FILE = ".beebox/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".beebox/chat-session-id.json";
@@ -78,7 +79,7 @@ function parseSessionEntry(raw: unknown): SessionHistoryEntry | null {
   if (raw === null || typeof raw !== "object") return null;
   if (!("id" in raw) || typeof raw.id !== "string") return null;
   const engine = "engine" in raw ? raw.engine : "claude";
-  if (engine !== "claude" && engine !== "codex") return null;
+  if (!isAgentEngine(engine)) return null;
   const entry: SessionHistoryEntry = { id: raw.id, engine };
   // `""` is kept, not treated as absent: it is the box-root landmark, which
   // `appendHistory` and `getDirectoryForSession` both document as a real
@@ -339,6 +340,7 @@ export async function getLastSessionForDirectory(boxRoot: string, contextDir: st
     if (!entry) continue;
     const matches = entry.contextDir === contextDir || (contextDir === "" && entry.contextDir === undefined);
     if (!matches) continue;
+    assertEngineImplemented(entry.engine, "checking a chat transcript");
     try {
       if (entry.engine === "codex") await readCodexSessionUpdatedAt(boxRoot, entry.id);
       else await fs.access(sessionLogPathFor(boxRoot, entry));

@@ -32,6 +32,7 @@ import { runChecks } from "../../audit-checks.js";
 import { generateAgentContextMirrors } from "../../../../core/agent-context-mirrors.js";
 import { AGENTS_MD, CLAUDE_MD } from "../../../../core/agent-instruction-files.js";
 import { ensureAuditPackageDocs, removeFixtures, writeFixtures } from "./fixtures.js";
+import { assertEngineImplemented } from "../../../../shared/agent-models.js";
 
 export type { AuditTest, TestSuite };
 
@@ -130,6 +131,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   // Save git state so we can restore after the test
   const headBefore = execSync("git rev-parse HEAD", { cwd: boxRoot, encoding: "utf-8" }).trim();
   const engine = options.engine ?? await loadAgentEngine(boxRoot);
+  assertEngineImplemented(engine, "running a knowledge audit");
 
   // Clean any leftover memory files from previous runs
   const memoryDir = path.join(boxRoot, ".claude", "memory");

@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
+import { chatModelForEngine, chatModelLabel, chatModelOptions, isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
 import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES } from "../../src/shared/agent-models.js";
 import { boxDefaultModel, liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, resolveSmallModelForEngine, loadEffectiveSmallModel } from "../../src/core/model-policy.js";
 import { loadBoxModel, loadEnabledEngines, clearBoxConfigCache } from "../../src/core/box/config.js";
@@ -31,7 +31,8 @@ const labelled = (r: { model: string | null; source: string }) => ({ model: labe
 //
 // Every model id an engine offers belongs to a tier, and a tier round-trips back
 // to a model that engine can run. The round-trip is by model, not by tier name.
-const ENGINES: AgentEngine[] = ["claude", "codex"];
+// pi has no tier table: it runs only the box's added OpenRouter models.
+const ENGINES = ["claude", "codex"] as const;
 
 /** Does every model this engine offers reverse to a tier selecting that same model? */
 function tiersRoundTrip(engine: AgentEngine): boolean {
@@ -52,6 +53,25 @@ void test("line 29", async (t) => {
     null,
     null,
   ]);
+});
+
+// ## pi runs only the box's added models
+//
+// pi has no models of its own and no tier table (docs/plans/pi-box-engine.md,
+// Track 2): its menu is the owner's added OpenRouter list with no "Default" row,
+// a removed added pick is kept for the spawn to refuse, and asking it for a tier
+// is a broken invariant.
+void test("pi runs only the box's added models", async (t) => {
+  const added = [{ id: "qwen/qwen3-coder", label: "Qwen3 Coder" }];
+  t.check([chatModelOptions("pi", added), chatModelOptions("pi", [])], [
+    [{ label: "Qwen3 Coder", model: "qwen/qwen3-coder" }],
+    [],
+  ]);
+  t.check([chatModelForEngine("pi", "qwen/qwen3-coder"), chatModelLabel("pi", { model: "qwen/qwen3-coder", added: [] })], [
+    "qwen/qwen3-coder",
+    "qwen/qwen3-coder (removed in admin)",
+  ]);
+  t.checkThrows(() => resolveProcedureModel({ engine: "pi", model: "strong" }), "InvariantError: pi has no procedure tiers; its models come from the box's added OpenRouter list");
 });
 
 // Web chats persist overrides independently by native session id. The saved
@@ -356,6 +376,14 @@ void test("A box with no Codex subscription should not be offered Codex chats.",
   t.check(await loadEnabledEngines(engineBox.root), [
     "claude",
     "codex",
+  ]);
+
+  // pi cannot be enabled until its chat backend lands (docs/plans/pi-box-engine.md,
+  // Track 6), so a hand-written `pi: true` offers nothing.
+
+  await writeEngines({ engines: { claude: true, pi: true } });
+  t.check(await loadEnabledEngines(engineBox.root), [
+    "claude",
   ]);
 
   await engineBox.cleanup();

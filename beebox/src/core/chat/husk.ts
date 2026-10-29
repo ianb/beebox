@@ -34,6 +34,7 @@ import {
   type ChatHuskEntry,
 } from "./husk-read.js";
 import { parseFrontmatterObject } from "../../cards/frontmatter.js";
+import { assertEngineImplemented } from "../../shared/agent-models.js";
 
 /** Keep husk titles bookmark-sized, not transcript-sized. */
 const TITLE_MAX_LEN = 80;
@@ -167,6 +168,7 @@ export async function commitChatHusk(boxRoot: string, huskPath: string): Promise
  * answer to decide whether this machine is the session's origin.
  */
 async function transcriptMtime(boxRoot: string, opts: { sessionId: string; engine: AgentEngine }): Promise<Date | null> {
+  assertEngineImplemented(opts.engine, "checking a chat transcript");
   try {
     return opts.engine === "codex"
       ? await readCodexSessionUpdatedAt(boxRoot, opts.sessionId)

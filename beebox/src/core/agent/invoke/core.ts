@@ -22,6 +22,8 @@ import type {
   StructuredAgentResult,
   AgentResult,
 } from "../types.js";
+import { EngineNotImplementedError, type AgentEngine } from "../../../shared/agent-models.js";
+import { assertNever } from "../../../shared/invariant.js";
 
 export type {
   AgentInvokeOptions,
@@ -156,6 +158,19 @@ export function createClaudeAgent(options: {
   };
 }
 
+function agentFor(engine: AgentEngine, options: Parameters<typeof createAgent>[0]): Agent {
+  switch (engine) {
+    case "claude":
+      return createClaudeAgent(options);
+    case "codex":
+      return createCodexAgent(options);
+    case "pi":
+      throw new EngineNotImplementedError(engine, "running a batch agent");
+    default:
+      return assertNever(engine);
+  }
+}
+
 /**
  * Create an agent that selects the box's configured native harness on first
  * invocation. The selected delegate remains fixed for this Agent instance.
@@ -172,9 +187,7 @@ export function createAgent(options: {
   const resolve = (boxRoot: string): Promise<Agent> => {
     if (delegate !== null) return Promise.resolve(delegate);
     resolving ??= loadAgentEngine(boxRoot).then((engine) => {
-      delegate = engine === "codex"
-        ? createCodexAgent(options)
-        : createClaudeAgent(options);
+      delegate = agentFor(engine, options);
       return delegate;
     });
     return resolving;

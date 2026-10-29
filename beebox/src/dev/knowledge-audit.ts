@@ -25,6 +25,7 @@ import { DEFAULT_DEV_AUDIT_MODEL, devRepoRoot, runDevTest } from "./lib/test-run
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { AgentEngine } from "../core/box/config.js";
 import type { AuditTest, TestResult } from "./lib/test-runner/runner/run-test.js";
+import { AGENT_ENGINES, isAgentEngine } from "../shared/agent-models.js";
 
 const DEFAULT_TESTS_DIR = path.join(PACKAGE_ROOT, "src", "dev");
 const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_TESTS_DIR, "reports");
@@ -32,13 +33,13 @@ const HISTORY_PATH = path.join(DEFAULT_TESTS_DIR, "context-history.yaml");
 
 class InvalidAuditEngineError extends InvalidArgumentError {
   constructor() {
-    super("Expected claude or codex");
+    super(`Expected ${AGENT_ENGINES.join(", ")}`);
     this.name = "InvalidAuditEngineError";
   }
 }
 
 function parseEngine(value: string): AgentEngine {
-  if (value === "claude" || value === "codex") return value;
+  if (isAgentEngine(value)) return value;
   throw new InvalidAuditEngineError();
 }
 

@@ -44,6 +44,7 @@ import {
 } from "../../lib/diagnostic-session.js";
 import type { AgentEngine } from "../../../core/box/config.js";
 import { isWithin } from "../../../lib/box-containment.js";
+import { assertEngineImplemented } from "../../../shared/agent-models.js";
 
 /**
  * The box-relative directory the command was run from ("" when at the box
@@ -83,6 +84,7 @@ async function explicitSessionLogPath(options: {
     // TODO(env-migration): native harness identity inherited only by this command path.
     codexThreadId: process.env["CODEX_THREAD_ID"],
   });
+  assertEngineImplemented(engine, "reading a session");
   if (engine === "claude") {
     const found = await findSessionLog(options.boxRoot, options.sessionId);
     if (found.ok) return found.value;
@@ -130,8 +132,8 @@ function validateSessionOptions(options: {
   list: boolean;
   since: string | undefined;
 }): void {
-  if (options.requestedEngine === "codex" && (options.list || options.latest || options.since)) {
-    console.error("--engine codex currently requires an explicit session ID.");
+  if (options.requestedEngine !== undefined && options.requestedEngine !== "claude" && (options.list || options.latest || options.since)) {
+    console.error(`--engine ${options.requestedEngine} currently requires an explicit session ID.`);
     process.exit(1);
   }
   if (options.since && options.latest) {

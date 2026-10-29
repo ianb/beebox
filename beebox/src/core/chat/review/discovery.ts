@@ -37,6 +37,7 @@ import { loadSessionHistory } from "../session/load-history.js";
 import { readCodexSessionUpdatedAt } from "../session/codex-transcript/core.js";
 import type { AgentEngine } from "../../box/config.js";
 import { stripChatAppTags } from "../../../shared/chat-tags.js";
+import { assertEngineImplemented } from "../../../shared/agent-models.js";
 
 /**
  * How long a transcript must sit unmodified before it is reviewed — don't
@@ -248,6 +249,7 @@ async function qualifyHusk(
   }
   const logPath = huskTranscriptPath(boxRoot, husk);
   const engine = await resolveChatEngine(boxRoot, { sessionId: husk.session, husk });
+  assertEngineImplemented(engine, "reviewing a chat");
 
   let mtime: Date;
   try {

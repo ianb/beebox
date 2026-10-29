@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "@xstate/react";
 import type { ConversationTarget } from "@shared/chat-composer-binding";
+import { parseChatAgentEngine } from "@shared/chat-models.js";
 import type { ChatMachineInput } from "../../../machines/chat-types";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
 import { busEventData } from "../../../lib/bus-events";
@@ -26,7 +27,7 @@ export function conversationTargetFor(input: ChatMachineInput, clientConversatio
     kind: "start",
     clientConversationId,
     contextDir,
-    engine: input.startEngine === "codex" ? "codex" : "claude",
+    engine: parseChatAgentEngine(input.startEngine) ?? "claude",
     ...(input.startModel === undefined ? {} : { model: input.startModel }),
   };
 }

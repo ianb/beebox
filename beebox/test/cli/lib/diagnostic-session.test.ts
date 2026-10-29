@@ -18,7 +18,7 @@ import { makeTmpBox } from "../../helpers/test-helpers.js";
 void test("line 18", async (t) => {
   t.check(parseDiagnosticEngine("codex"), "codex");
 
-  await t.checkThrows(async () => (parseDiagnosticEngine("other")), "InvalidDiagnosticEngineError: Unknown session engine \"other\". Expected claude or codex.");
+  await t.checkThrows(async () => (parseDiagnosticEngine("other")), "InvalidDiagnosticEngineError: Unknown session engine \"other\". Expected claude, codex, pi.");
 
   await t.checkThrows(async () => (validateCodexSessionMode({ raw: true, toolReport: false, full: false })), "UnsupportedCodexSessionModeError: Codex sessions support readable dialogue only; --raw, --tool-report, and --full require native rollout detail that app-server does not expose.");
 

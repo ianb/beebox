@@ -5,7 +5,7 @@
  */
 
 import { checkAgentReadiness, type AgentReadiness, type ReadinessServices } from "../../core/agent/readiness.js";
-import { loadAddedModels, loadBoxConfig, type AgentEngine } from "../../core/box/config.js";
+import { loadAddedModels, loadAgentEngine, loadBoxConfig, type AgentEngine } from "../../core/box/config.js";
 import { updateBoxConfigFields } from "../box-config-write.js";
 
 export type EngineSwitch =
@@ -18,11 +18,14 @@ export type EngineSwitch =
  * OpenRouter model. A default that works is never touched, so logging in to
  * a second provider later changes nothing. The pinned model is cleared on an
  * engine switch so the new engine's own default applies.
+ *
+ * pi is never a source or a target: a pi box stays on pi and shows why it
+ * cannot run (boxholder, 2026-10-29: "if someone wants pi then they want pi").
  */
 export async function reconcileDefaultEngine(boxRoot: string, services: ReadinessServices): Promise<EngineSwitch> {
   const readiness = await checkAgentReadiness(boxRoot, services);
   if (readiness.defaultReady) return { switched: false, readiness };
-  const target = await pickTarget(boxRoot, readiness);
+  const target = await pickTarget(boxRoot, { readiness, current: await loadAgentEngine(boxRoot) });
   if (target === null) return { switched: false, readiness };
   const config = await loadBoxConfig(boxRoot);
   const result = await updateBoxConfigFields({
@@ -39,7 +42,12 @@ export async function reconcileDefaultEngine(boxRoot: string, services: Readines
   return { switched: true, readiness: await checkAgentReadiness(boxRoot, services), ...target };
 }
 
-async function pickTarget(boxRoot: string, readiness: AgentReadiness): Promise<{ agentEngine: AgentEngine; agentModel: string | null } | null> {
+/** Exported for its doctest. Returns claude or codex only: never pi. */
+export async function pickTarget(
+  boxRoot: string,
+  { readiness, current }: { readiness: AgentReadiness; current: AgentEngine },
+): Promise<{ agentEngine: Exclude<AgentEngine, "pi">; agentModel: string | null } | null> {
+  if (current === "pi") return null;
   if (readiness.claude === "ready") return { agentEngine: "claude", agentModel: null };
   if (readiness.codex === "ready") return { agentEngine: "codex", agentModel: null };
   if (readiness.openrouter === "ready") {

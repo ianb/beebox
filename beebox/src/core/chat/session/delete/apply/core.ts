@@ -21,6 +21,7 @@ import type { AgentEngine } from "../../../../box/config.js";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession } from "../../state.js";
+import { assertEngineImplemented } from "../../../../../shared/agent-models.js";
 
 async function inspectCodexStorage(boxRoot: string, sessionId: string) {
   const present = await codexSessionExists(boxRoot, sessionId);
@@ -157,6 +158,7 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
   const historyEntry = (await readHistoryFile(options.boxRoot, { strict: true }))?.sessions
     .find((entry) => entry.id === sessionId);
   const engine: AgentEngine = historyEntry?.engine ?? "claude";
+  assertEngineImplemented(engine, "deleting a chat");
   const targets = engine === "claude"
     ? await resolveSessionStorageTargets({ boxRoot: options.boxRoot, contextDir: authority.contextDir, sessionId })
     : null;

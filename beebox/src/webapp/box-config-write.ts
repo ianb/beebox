@@ -11,6 +11,12 @@ import { stageAndCommitPaths } from "../lib/git/core/operations.js";
 import { isRecord } from "../shared/is-record.js";
 import { BOX_DIRS } from "../lib/paths/core.js";
 import { clearBoxConfigCache } from "../core/box/config.js";
+import {
+  AGENT_ENGINES,
+  EngineNotImplementedError,
+  isSelectableAgentEngine,
+  type AgentEngine,
+} from "../shared/agent-models.js";
 import { canonicalizeEmail } from "./local-users.js";
 
 const LOCK_WAIT_MS = 5_000;
@@ -92,14 +98,20 @@ export async function updateBoxConfigFields(options: {
   boxRoot: string;
   allowedEmails?: string[] | undefined;
   googleServices?: Partial<Record<"calendar" | "gmail" | "drive", boolean | undefined>> | undefined;
-  agentEngine?: "claude" | "codex" | undefined;
+  agentEngine?: AgentEngine | undefined;
   /** The box's pinned model; `null` clears the pin (no policy). */
   agentModel?: string | null | undefined;
   /** Which engines the box may offer. The default engine is always kept. */
-  engines?: Partial<Record<"claude" | "codex", boolean | undefined>> | undefined;
+  engines?: Partial<Record<AgentEngine, boolean | undefined>> | undefined;
   claudeCodeTelemetry?: "on" | "off" | undefined;
   codexTelemetry?: "on" | "off" | undefined;
 }): Promise<BoxConfigMutationResult> {
+  // Guard until pi's chat backend lands (docs/plans/pi-box-engine.md, Track 6).
+  const unselectable = [
+    ...(options.agentEngine === undefined ? [] : [options.agentEngine]),
+    ...AGENT_ENGINES.filter((engine) => options.engines?.[engine] === true),
+  ].find((engine) => !isSelectableAgentEngine(engine));
+  if (unselectable !== undefined) throw new EngineNotImplementedError(unselectable, "selecting it for a box");
   const changed = [
     ...(options.allowedEmails === undefined ? [] : ["allowedEmails"]),
     ...(options.googleServices === undefined ? [] : ["googleServices"]),

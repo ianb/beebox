@@ -39,6 +39,7 @@ import {
   type ChatManifestSession,
 } from "./manifest.js";
 import { chatSearchStore, type ChatSearchIndex } from "./store.js";
+import { EngineNotImplementedError } from "../../shared/agent-models.js";
 
 export interface OpenChatSearchIndexResult {
   db: ChatSearchIndex;
@@ -103,6 +104,8 @@ function transcriptEntries(boxRoot: string, entry: ChatSessionEntry): Promise<Se
       return claudeEntries(entry.logPath);
     case "codex":
       return codexEntries(boxRoot, entry.sessionId);
+    case "pi":
+      throw new EngineNotImplementedError(entry.engine, "reading a chat transcript");
     default:
       return assertNever(entry.engine);
   }

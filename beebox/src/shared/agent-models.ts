@@ -2,8 +2,48 @@ import { MODEL_ID } from "./model-ids.js";
 import { invariant } from "./invariant.js";
 
 /** Agent-engine names shared by box config, chat, and procedure model policy. */
-export const AGENT_ENGINES = ["claude", "codex"] as const;
+export const AGENT_ENGINES = ["claude", "codex", "pi"] as const;
 export type AgentEngine = (typeof AGENT_ENGINES)[number];
+
+/** Narrow an untrusted value (config, URL, CLI flag) to an engine name. */
+export function isAgentEngine(value: unknown): value is AgentEngine {
+  const engines: readonly unknown[] = AGENT_ENGINES;
+  return engines.includes(value);
+}
+
+/**
+ * Whether a box may select this engine today. pi is a known engine but is
+ * refused as a box's default or enabled engine until its chat backend lands
+ * (docs/plans/pi-box-engine.md: Track 6's last chunk removes this guard).
+ */
+export function isSelectableAgentEngine(engine: AgentEngine): boolean {
+  return engine !== "pi";
+}
+
+/**
+ * A code path an engine does not have yet. The pi engine is being added in
+ * tracks (docs/plans/pi-box-engine.md); each pi arm that has no
+ * implementation throws this rather than falling through to another engine's.
+ */
+export class EngineNotImplementedError extends Error {
+  readonly engine: AgentEngine;
+
+  constructor(engine: AgentEngine, operation: string) {
+    super(`the ${engine} engine is not available yet (${operation})`);
+    this.name = "EngineNotImplementedError";
+    this.engine = engine;
+  }
+}
+
+/**
+ * Narrow away an engine whose path at this site is not implemented yet. A
+ * placeholder for sites the native session store will own
+ * (docs/plans/pi-box-engine.md, Track 5); removing this function makes the
+ * compiler list them.
+ */
+export function assertEngineImplemented(engine: AgentEngine, operation: string): asserts engine is Exclude<AgentEngine, "pi"> {
+  if (engine === "pi") throw new EngineNotImplementedError(engine, operation);
+}
 
 /**
  * Portable procedure tiers, followed by the provider-shaped legacy aliases
@@ -41,6 +81,8 @@ export type ModelProvider = "anthropic" | "glm" | "openai" | "openrouter";
 const ENGINE_DEFAULT_PROVIDER: Record<AgentEngine, ModelProvider> = {
   claude: "anthropic",
   codex: "openai",
+  // pi runs only owner-added OpenRouter models and has no tier table.
+  pi: "openrouter",
 };
 
 /**
@@ -103,6 +145,9 @@ const PROCEDURE_MODELS: Record<AgentEngine, Partial<Record<ModelProvider, Record
       strongest: MODEL_ID.astra,
     },
   },
+  // Empty on purpose: any built-in pi default would spend without the owner
+  // adding the model (docs/plans/pi-box-engine.md, Track 2).
+  pi: {},
 };
 
 /** Narrow an untrusted string to a portable tier (or legacy alias). */
@@ -130,6 +175,7 @@ export function resolveProcedureModel(params: {
   /** Tier column — first-party vs GLM on claude. Missing means the engine's own provider. */
   provider?: ModelProvider;
 }): string {
+  invariant(params.engine !== "pi", "pi has no procedure tiers; its models come from the box's added OpenRouter list");
   const columns = PROCEDURE_MODELS[params.engine];
   const own = ENGINE_DEFAULT_PROVIDER[params.engine];
   const fallback = columns[own];

@@ -20,7 +20,7 @@ import { MenuItem, MenuDivider } from "../../../ui/dropdown-menu-item";
 import { chatModelLabel, chatModelOptions, type ChatAgentEngine } from "@shared/chat-models.js";
 import { isGlmModelId, useAddedModels, useGlmAvailable } from "./model-availability-store";
 
-const ENGINE_NAMES: Record<ChatAgentEngine, string> = { claude: "Claude", codex: "Codex" };
+const ENGINE_NAMES: Record<ChatAgentEngine, string> = { claude: "Claude", codex: "Codex", pi: "pi" };
 
 /** A pushpin, the box-default action's face. */
 function PinIcon({ filled }: { filled: boolean }) {
@@ -143,7 +143,8 @@ export function ModelPanel(props: ModelPanelProps) {
     ? null
     : chatModelLabel(agentEngine, { model: boxDefault, added: addedModels }) ?? boxDefault;
   // This chat's own engine leads — it is the section the chat can always act
-  // on — then the box's default, then anything else.
+  // on — then the box's default, then anything else. Claude and Codex always
+  // show a heading; pi, an opt-in engine, shows only where the box uses it.
   const order = [...new Set<ChatAgentEngine>([agentEngine, boxEngine, ...enabledEngines, "claude", "codex"])];
   return (
     <>
