@@ -16,7 +16,7 @@ automatically. Write markdown as described below; the build handles the rest.
 Everything under `site/docs/` mirrors exactly where it will publish under
 `/docs/`. `site/docs/capabilities/gmail.md` becomes `/docs/capabilities/gmail.md`.
 Files directly under `site/docs/` (no subdirectory) must be numbered spine
-files (`01-what-bee-box-is.md` … `11-making-it-yours.md`) — everything else
+files (`01-what-bee-box-is.md` … `13-making-it-yours.md`) — everything else
 belongs in a directory.
 
 The directories: `capabilities/`, `concepts/`, `install/`, `security/`,
@@ -147,7 +147,7 @@ source uses; the convention is stated for the authored pages only.
 
 ## Themes
 
-`docs-themes.md`, beside this file, is the internal frame: the ten themes that
+`docs-themes.md`, beside this file, is the internal frame: the eleven themes that
 distinguish Bee Box, what each means, how the product expresses it, and where
 it is thinner than it sounds. It is not published. Write against it: a page
 earns its place by carrying a theme, and a theme that has gone thin gets said

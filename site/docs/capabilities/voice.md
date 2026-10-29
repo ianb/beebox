@@ -17,6 +17,9 @@ phone, not a bolt-on to typing.
   partial, so it does not answer yet and the next message continues it.
 - Keeps dictating through a brief network drop or the microphone getting
   grabbed by something else, instead of losing what you said.
+- Closes the browser's microphone on its own after five minutes with no new
+  spoken words, keeps the text, and shows a notice saying why, so a forgotten
+  recorder does not stay open.
 - Every dictated message gets a second, higher-quality transcription from the
   box when a transcription key is available; there is no setting for it. The
   live text on screen is sent only when that pass cannot run or fails, and it is

@@ -20,6 +20,10 @@ box. Chat is the everyday way you talk to it.
 - Recovers a message that failed to send instead of losing it, offering to
   retry it, put it back in the box as a draft, or discard it, and keeps an
   unfinished draft across reloads.
+- Marks a message the agent never received (for example, one still waiting
+  when the box restarted) as not delivered, at the place you sent it, with
+  Resend and Discard. A message that is only waiting behind the current reply
+  is shown as queued, not as failed.
 - Searches what was said in your chats, not only their titles: a search field
   on the Recent chats panel returns one row per chat with a highlighted snippet,
   and opening a result lands on the matching message.
@@ -64,7 +68,9 @@ connect one.
 
 **Limits**
 
-A chat that cannot be resumed (for example, an old session format) says so
+The not-delivered mark is kept for at most 24 hours, and a crash (as opposed
+to a restart) loses a queued message without leaving the mark. A chat that
+cannot be resumed (for example, an old session format) says so
 rather than silently starting a new, disconnected one. The documentation
 does not describe a message-editing feature; a sent message stands as sent.
 Chat search matches the words as typed and does not understand meaning, by

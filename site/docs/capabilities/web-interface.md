@@ -36,7 +36,7 @@ desktop and phone.
 - **History** — every change, drawn from git, with diffs and the files touched.
 - **Storage** — how much space the box is using and where.
 - **Settings** — pairing a phone, connectors, and other account controls.
-- **Admin**: host-wide controls, owner only, in six tabs: an overview of each section's state, agents (which agent is running and which extra OpenRouter models a box may run), people (allowed users and invites), connections, secrets (each key a collapsed row showing what uses it), and the host, which holds notifications: browser push on or off, a three-day list of what each channel did, and the paired phones.
+- **Admin**: host-wide controls, owner only, in six tabs: an overview of each section's state, agents (which agent is running and which extra OpenRouter models a box may run), people (allowed users and invites), connections, secrets (each key a collapsed row showing what uses it), and the host, which holds notifications (browser push on or off, a three-day list of what each channel did, and the paired phones) and encrypted backups of the box (see [backups](../install/backups.md) and [your data and safety](../10-your-data-and-safety.md)).
 
 Each kind of card gets its own display: a recipe with scalable amounts, a
 dashboard or a todo list, a document, a spreadsheet, a PDF, a photo, a person,
@@ -53,7 +53,14 @@ with no theme of its own follows whichever interface theme it is shown under.
 Turning a card over also offers to copy its original text, or for a photo the
 image itself, and to print the card on its own (the printed page ends with the
 box and the card's path, and, if you tick a box beside Print, a QR code of the
-card's address). A long document, one with four or more headings, gets a
+card's address). A document card can mark one region as a composition, the piece of writing you
+are making, as distinct from the notes and agent remarks around it. The card
+shows that region as its own block with an Edit button and a Copy button. Edit
+opens a text editor on the region only. It saves to disk as you type without
+making a commit, folds in changes the agent makes to the region at the same
+time, and commits when you press Save. Inside a composition the text is yours
+by default; anything the agent adds there carries a mark that says it is the
+agent's. A long document, one with four or more headings, gets a
 Contents button that lists them and jumps to one. A code block in a card or
 chat has a Copy button, which is how a message the agent drafted for you gets
 into another app. A search result for a section opens the card at that section. When you have more than twenty landmarks, the landmark menu
@@ -79,10 +86,15 @@ that are due now, each linking to its list. The badge is still a bare number
 beside an icon, so it can read as a wrong total; the Todos page's headline
 states the number and what it covers ("N now, M later, K for the agent", with
 overdue todos called out separately), and todos assigned to the agent are left
-out of the badge. Some card-body
-links still point at an older internal address rather than the one that
-actually opens, though following one still works. A rotated photo
-occasionally renders upside down or clipped.
+out of the badge. Links from
+notifications, the dashboard, and file chips open the card beside the chat;
+some other links still go through the older Browse address, and following one
+still works. A scanned photo's rotation comes from a second check that picks
+the upright copy; if that check fails, the first guess is kept and the page is
+flagged for review, so a photo can occasionally still come out turned. The
+composition editor has had no pass on a phone or in dark mode, and Save commits
+the whole card, so the agent's uncommitted edits outside the composition go
+into the same commit.
 
 **Go deeper**
 
