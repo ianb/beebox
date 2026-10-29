@@ -19,6 +19,7 @@ import { ThemeStudioControls, type StudioState } from "./controls";
 import { StudioNav } from "./nav";
 import { StudioConversation } from "./chat";
 import { StudioCards } from "./cards";
+import { useSelectionPreview } from "./selection";
 
 const ROUTE = "/$boxSlug/dev-harness/dev/theme-studio";
 const LEGACY_STUDY_IDS: Record<string, string> = {
@@ -71,6 +72,7 @@ function StudioPresentation(studioCase: StudioCase) {
   // The composer specimen takes focus as it mounts, which scrolls it into
   // view; the studio opens at the top.
   useLayoutEffect(() => { scroller.current?.scrollTo({ top: 0 }); }, []);
+  useSelectionPreview(scroller);
   return <PresentationSnapshot data={usePresentation(studioCase)} error="presentation.json: rules[2].theme must name a theme">
     <div ref={surface} className="bbx-box-presentation h-full flex flex-col" data-chrome-theme={system} data-chrome-stock={systemStock}>
       <StudioNav />
