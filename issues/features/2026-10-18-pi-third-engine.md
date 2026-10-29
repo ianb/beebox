@@ -1,6 +1,6 @@
 ---
-title: "Plain pi as a BYO-model third box engine — watch, don't build"
-workstream: unattached
+title: "Plain pi as a third box engine on OpenRouter models"
+workstream: pi-engine
 area: beebox
 labels: [engine, vendor-risk, research]
 filed-by: agent
