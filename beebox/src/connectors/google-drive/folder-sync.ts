@@ -65,19 +65,18 @@ export async function syncFolderCard(
       // an untrash on Drive puts the mount straight back.
       const message = "folder is in Drive trash";
       result.notes.push(`${relCard}: ${message}`);
-      await stampOutcome(
-        { mount, name: folder.name, link: null, error: message, problems: null },
-        deps,
-      );
-      result.updated.push(relCard);
+      if (await stampOutcome({ mount, name: folder.name, link: null, error: message, problems: null }, deps)) {
+        result.updated.push(relCard);
+      }
       return result;
     }
     listing = await deps.service.listFiles(mount.driveId);
   } catch (err) {
     const message = errorMessage(err);
     result.failures.push(`Folder sync failed for ${relCard}: ${message}`);
-    await stampOutcome({ mount, name: null, link: null, error: message, problems: null }, deps);
-    result.updated.push(relCard);
+    if (await stampOutcome({ mount, name: null, link: null, error: message, problems: null }, deps)) {
+      result.updated.push(relCard);
+    }
     return result;
   }
 
@@ -164,7 +163,7 @@ export async function syncFolderCard(
   const caps = plan.refusals.filter((refusal) => refusal.reason !== "cycle");
   const capError = caps.length > 0 ? caps.map((refusal) => refusal.message).join("; ") : null;
   if (caps.length > 0) deps.budget.capped = true;
-  await stampOutcome(
+  const stamped = await stampOutcome(
     {
       mount,
       name: folder.name,
@@ -174,7 +173,7 @@ export async function syncFolderCard(
     },
     deps,
   );
-  result.updated.push(relCard);
+  if (stamped) result.updated.push(relCard);
   return result;
 }
 
@@ -223,6 +222,11 @@ async function probeAbsentees(
   return { updated, notes, problems };
 }
 
+/**
+ * Re-stamp the card with what the pass found, then record that it ran. True
+ * when the card changed: only then is it this pass's to commit. A stamp that
+ * throws records no time, so the time never runs ahead of the card's outcome.
+ */
 async function stampOutcome(
   outcome: {
     mount: FolderMount;
@@ -233,12 +237,13 @@ async function stampOutcome(
     problems: FolderProblemCounts | null;
   },
   deps: FolderSyncDeps,
-): Promise<void> {
-  await stampGfolderCard(outcome.mount.cardPath, {
+): Promise<boolean> {
+  const changed = await stampGfolderCard(outcome.mount.cardPath, {
     name: outcome.name,
     link: outcome.link,
-    lastSync: getBoxTimeISO(deps.boxRoot),
     error: outcome.error,
     problems: outcome.problems,
   });
+  deps.recordFolderSync(outcome.mount.driveId, getBoxTimeISO(deps.boxRoot));
+  return changed;
 }
