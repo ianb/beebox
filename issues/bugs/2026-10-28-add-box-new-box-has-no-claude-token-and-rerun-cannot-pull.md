@@ -31,3 +31,10 @@ the alias and key), or skip the pull for an existing box.
 Fixed in the same session: the push-key identity check expanded its
 variables on the laptop and stopped every GitHub-remote run with
 `RESOLVED: unbound variable` (f0bcd8c8b).
+
+**2026-10-28 (retrospective 20261028-234100):** No test covers `add-box.sh`;
+both defects reached production. Prevention to land with the fix: the
+dry-run names the token grant and who runs the pull, a test in
+`beebox/test/deploy/` checks that dry-run text for a new box, and a test with
+stubbed `git`/`sudo` checks that a re-run on an existing box pulls as the box
+owner (or skips the pull).
