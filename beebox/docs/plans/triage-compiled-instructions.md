@@ -124,7 +124,7 @@ boxholder, not from a published scheme.
   provenance: a `capture-session` card whose `uploader` (legacy field: `source`)
   starts with `scan-upload/` (`beebox/src/schemas/capture-session.tsx:44`), that
   is not `annotated: true`, has no audio clips, whose every card in scope is one
-  its own manifest lists (so a note added later keeps it for review even after
+  its own manifest lists directly (so a note added later keeps it for review even after
   intake moves the scope and its history is lost), and whose whole scope is what one
   import wrote: every scope file arrived in a single commit and nothing has
   changed or been added since (a never-committed import counts when every entry

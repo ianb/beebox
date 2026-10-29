@@ -159,9 +159,10 @@ async function scopeUnedited(boxRoot: string, card: string): Promise<boolean> {
 }
 
 /**
- * Every card in the scope is one the session's own manifest lists, or lies in a
- * listed card's attach scope. A card added later (a note) is not listed, and
- * this holds even after intake moves the scope and its history is lost.
+ * Every card in the scope is one the session's own manifest lists directly.
+ * Imports put no cards inside a listed card's attach scope, so a card added
+ * later anywhere in the scope (a note) is unlisted, and this holds even after
+ * intake moves the scope and its history is lost.
  */
 async function scopeIsManifest(boxRoot: string, options: { item: string; fields: Record<string, unknown> }): Promise<boolean> {
   const attach = attachDirFor(options.item);
@@ -170,7 +171,7 @@ async function scopeIsManifest(boxRoot: string, options: { item: string; fields:
     return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
   }).map((entry) => path.join(attach, entry.replace(/^attach\//u, "")));
   const cards = (await listScope(path.join(boxRoot, attach))).map((file) => path.relative(boxRoot, file)).filter(isCardFile);
-  return cards.every((card) => listed.includes(card) || listed.some((owner) => card.startsWith(`${attachDirFor(owner)}/`)));
+  return cards.every((card) => listed.includes(card));
 }
 
 /** Removable: a bare file, or an unannotated, voice-free scan-upload session no one has edited. */

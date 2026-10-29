@@ -159,9 +159,11 @@ void test("An unlisted card in a moved, never-recommitted scan scope keeps it fo
   await box.write("_content/archive/Filed.pdf", bytes("scanned"));
   await simpleGit(box.root).add("_content/archive").then(() => simpleGit(box.root).commit("File the original"));
   await scanSession(box, { name: "Moved", source: bytes("scanned"), uploader: "scan-upload/laptop", derivative: "five" });
-  await box.write(`${staged}/Moved.attach/Notes.doc.card`, "---\ntitle: Notes\n---\nCall the bank about this.");
-  t.check((await findExactDuplicates(box.root, [`/${staged}/Moved.capture-session.card`])).map((finding) => finding.disposition), ["review"]);
-  await fs.rm(box.path(`${staged}/Moved.attach/Notes.doc.card`));
+  for (const note of ["Moved.attach/Notes.doc.card", "Moved.attach/source.attach/Notes.doc.card"]) {
+    await box.write(`${staged}/${note}`, "---\ntitle: Notes\n---\nCall the bank about this.");
+    t.check((await findExactDuplicates(box.root, [`/${staged}/Moved.capture-session.card`])).map((finding) => [note, finding.disposition]), [[note, "review"]]);
+    await fs.rm(box.path(`${staged}/${note}`));
+  }
   t.check((await findExactDuplicates(box.root, [`/${staged}/Moved.capture-session.card`])).map((finding) => finding.disposition), ["removable"]);
 });
 
