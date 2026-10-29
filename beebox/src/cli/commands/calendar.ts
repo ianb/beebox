@@ -18,7 +18,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot, getBoxDir } from "../../lib/paths/core.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import {
   availableCalendarsWithSyncing,
   loadCalendarConfig,
@@ -37,8 +37,8 @@ import {
   jsonFlag,
   runCredentialedVerb,
 } from "../lib/credentialed-verb.js";
+import { loadBoxEvents } from "../../connectors/google-calendar/calendar-folders.js";
 import {
-  loadAllEvents,
   filterByDateRange,
   formatEvent,
   parseTimespan,
@@ -70,7 +70,6 @@ export const calendarCommand = new Command("calendar")
   .argument("[timespan]", 'Time range: "today", "3d" (days), "2w" (weeks), "1m" (months) (default: 7d)')
   .action(async (timespan?: string) => {
     const boxRoot = await requireBoxRoot();
-    const calDir = getBoxDir(boxRoot, "calendar");
     const now = new Date();
 
     let from: Date;
@@ -88,8 +87,8 @@ export const calendarCommand = new Command("calendar")
       label = `next ${timespan || "7d"}`;
     }
 
-    // Pass range to loadAllEvents so recurring events get expanded
-    const events = await loadAllEvents(calDir, { from, to });
+    // Pass the range so recurring events get expanded
+    const events = await loadBoxEvents(boxRoot, { from, to });
     const filtered = filterByDateRange(events, { from, to });
 
     if (filtered.length === 0) {

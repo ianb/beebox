@@ -37,4 +37,4 @@ Open: which shape, and whether a connector plugin is a third-party surface
 three. The medium/content line the boxholder drew ("intake is medium") argues
 for keeping at least one source in core.
 
-Related: [a calendar is a card with its events under it](2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md).
+Related: [a calendar is a card with its events under it](../closed/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md).

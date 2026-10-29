@@ -6,12 +6,14 @@
  *   _bookkeeping/connectors/google-calendar-state.json  - { syncTokens, eventFiles }
  *   _config/connectors/google.secret.json          - shared Google OAuth2 credentials
  *
- * Events are stored as individual .ics files in _content/calendar/.
+ * Each synced calendar is a `<Name>.calendar.card` in _content/calendar/, and
+ * its events are individual .ics files in the card's attach folder
+ * (`<Name>.attach/`); see calendar-folders.ts.
  * Uses singleEvents=false so recurring events are returned as compact masters
  * with RRULEs (expanded at query time by calendar-utils.ts).
  * Exception instances (single overrides of recurring events) are skipped.
  * Incremental sync may return events outside the time window, so we filter
- * client-side. Filename format: {YYYY-MM-DD}_{shortId}.ics
+ * client-side. Filename format: {YYYY-MM-DD}_{title}_{shortId}.ics
  */
 
 import * as fs from "node:fs/promises";
@@ -54,6 +56,9 @@ import { runCalendarSync } from "./run.js";
 import { pushAndCleanOrphans, processLocalDeletes } from "./push.js";
 import { pushPendingLocalEdits } from "./local-push.js";
 import { dropDuplicateFilenames } from "./event-index.js";
+import { calendarMigrationJournalPath } from "./calendar-folders.js";
+import { prepareCalendarFolders } from "./calendar-cards.js";
+import { pathExistsStrict } from "../../lib/file-exists.js";
 import { assertNever } from "../../shared/invariant.js";
 
 interface GoogleCalendarConnectorOptions {
@@ -130,6 +135,15 @@ class GoogleCalendarConnector implements Connector {
       return skippedSync(await serviceNotConfigured(this.boxRoot));
     }
 
+    // A half-finished calendar-folders migration leaves files moved but the
+    // index not yet pointing at them; a sync now would insert them into Google
+    // as new events. The migration resumes from its journal.
+    if (await pathExistsStrict(calendarMigrationJournalPath(this.boxRoot), { followLinks: true })) {
+      const error = "Calendar sync refused: the calendar-folders migration is unfinished (run bbx engine migrate)";
+      console.error(error);
+      return { success: false, created: [], updated: [], error };
+    }
+
     const config = await this.loadConfig();
     let state: CalendarState;
     try {
@@ -174,8 +188,8 @@ class GoogleCalendarConnector implements Connector {
       return opts;
     };
 
-    const calDir = this.calendarDir();
-    await fs.mkdir(calDir, { recursive: true });
+    const calRoot = this.calendarDir();
+    await fs.mkdir(calRoot, { recursive: true });
 
     // Time window for client-side filtering (incremental sync can return
     // events outside our window, e.g. all instances of a recurring event)
@@ -195,15 +209,20 @@ class GoogleCalendarConnector implements Connector {
     const stranded: string[] = [];
     const allNotes: SyncNote[] = [];
     const failures: CalendarSyncFailure[] = [];
+    const { folders, cardPaths } = await prepareCalendarFolders({
+      boxRoot: this.boxRoot, calRoot, configured: calendars,
+      facts: { names: calendarNames, roles: calendarRoles }, index: state.eventFiles, failures,
+    });
     // One file per entry is what every pass below assumes. A box that synced
     // under the old bare-id keys can hold two entries for one file; the ones
     // that lose the file are untracked here and reported, rather than left to
     // have their event patched with the keeper's content.
-    for (const dup of await dropDuplicateFilenames({ index: state.eventFiles, calDir })) {
-      console.warn(`  Untracked ${dup.key} — _content/calendar/${dup.filename} belongs to another entry`);
+    for (const dup of await dropDuplicateFilenames({ index: state.eventFiles, folders })) {
+      const dupPath = path.relative(this.boxRoot, path.join(folders.get(dup.calendarId) ?? calRoot, dup.filename));
+      console.warn(`  Untracked ${dup.key} — ${dupPath} belongs to another entry`);
       failures.push(localCalendarFailure({
         calendarId: dup.calendarId, operation: "stale-cleanup",
-        path: `_content/calendar/${dup.filename}`,
+        path: dupPath,
         detail: "two tracked events named one file; this entry was untracked",
       }));
     }
@@ -214,6 +233,10 @@ class GoogleCalendarConnector implements Connector {
     const reconciledEventKeys = new Set<string>();
 
     for (const calendarId of calendars) {
+      // A calendar with no usable card was reported by prepareCalendarFolders.
+      const calDir = folders.get(calendarId);
+      if (calDir === undefined) continue;
+      await fs.mkdir(calDir, { recursive: true });
       const existingSyncToken = state.syncTokens[calendarId];
 
       const outcome = await runCalendarSync({
@@ -234,7 +257,7 @@ class GoogleCalendarConnector implements Connector {
     }
 
     // Process locally-marked deletes (X-BBX-DELETE property)
-    const deleteResult = await processLocalDeletes({ boxRoot: this.boxRoot, calendar, state, calDir });
+    const deleteResult = await processLocalDeletes({ boxRoot: this.boxRoot, calendar, state, folders });
     deleted.push(...deleteResult.deleted);
     allNotes.push(...deleteResult.notes);
     failures.push(...deleteResult.failures);
@@ -244,7 +267,7 @@ class GoogleCalendarConnector implements Connector {
     // file marked X-BBX-DELETE is gone (or still marked, and skipped) rather
     // than patched.
     const pendingResult = await pushPendingLocalEdits({
-      boxRoot: this.boxRoot, calendar, state, calDir, reconciledEventKeys, icsOptsFor, now,
+      boxRoot: this.boxRoot, calendar, state, folders, reconciledEventKeys, icsOptsFor, now,
     });
     updated.push(...pendingResult.updated);
     allNotes.push(...pendingResult.notes);
@@ -252,9 +275,8 @@ class GoogleCalendarConnector implements Connector {
     stranded.push(...pendingResult.stranded);
 
     // Push locally-created files to Google, clean unparseable orphans
-    const defaultCalendarId = calendars[0] || "primary";
     const orphanResult = await pushAndCleanOrphans(
-      { boxRoot: this.boxRoot, calendar, state, calDir, defaultCalendarId },
+      { boxRoot: this.boxRoot, calendar, state, calRoot, folders },
     );
     const pushed = orphanResult.pushed;
     deleted.push(...orphanResult.deleted);
@@ -275,6 +297,7 @@ class GoogleCalendarConnector implements Connector {
     const changedEventFiles = [...created, ...updated, ...deleted, ...pushed, ...stranded];
     const paths = [
       ...changedEventFiles,
+      ...cardPaths,
       path.relative(this.boxRoot, this.statePath()),
       "_config/connectors/google-calendar.json",
     ];

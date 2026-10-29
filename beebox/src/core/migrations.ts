@@ -181,6 +181,12 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // state before writing cards; a card it cannot plan exits 2 as a leftover.
   // Plan: docs/implemented-plans/drive-sync-time-out-of-card.md.
   { name: "gfolder-last-sync-2026-10", script: "src/scripts/migrate/gfolder-last-sync/run.ts" },
+  // Moves the flat `_content/calendar/*.ics` into one `<Name>.calendar.card`
+  // per calendar with its events in `<Name>.attach/`, renamed to
+  // `{date}_{title}_{shortId}.ics`, and rewrites the event index to match.
+  // Writes a journal first; the calendar connector refuses to sync while it
+  // exists, and a rerun finishes it. Plan: docs/implemented-plans/calendar-cards.md.
+  { name: "calendar-folders-2026-10", script: "src/scripts/migrate/calendar-folders/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

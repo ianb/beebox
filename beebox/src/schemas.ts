@@ -37,6 +37,7 @@ import { CaptureSessionSchema } from "./schemas/capture-session.js";
 import { UploadBatchSchema } from "./schemas/upload-batch.js";
 import { RecordSchema } from "./schemas/record.js";
 import { EmailThreadSchema } from "./schemas/email-thread.js";
+import { CalendarSchema } from "./schemas/calendar.js";
 import { EmailMessageSchema } from "./schemas/email-message.js";
 import { EmailOutboundSchema } from "./schemas/email-outbound.js";
 import { IntakeJobSchema } from "./schemas/intake-job.js";
@@ -114,6 +115,7 @@ export const cardSchemas = defineRegistry<CardSchema>({
     FigureSchema,
     // synced & captured
     EmailThreadSchema,
+    CalendarSchema,
     EmailMessageSchema,
     PublicationSchema,
     GdocSchema,
