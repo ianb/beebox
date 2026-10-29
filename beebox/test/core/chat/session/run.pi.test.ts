@@ -80,12 +80,18 @@ const streamed = (messages: ChatMessage[]): string => messages.map((message) => 
   return isRecord(event?.delta) && typeof event.delta.text === "string" ? event.delta.text : "";
 }).join("");
 
+// A new chat's shell already knows its session id, so `bbx chat` commands in its first turn target it.
 void test("a turn streams, ends with its entries in history, and applies its features", async (t) => {
   const { box, open } = await piChat(t);
   const { session, turn } = open();
+  const command = "echo id=$BBX_CHAT_SESSION_ID";
+  let shell: unknown = null;
   faux.setResponses([
-    fauxAssistantMessage(fauxToolCall("bash", { command: "echo hi" }, { id: "call-1" })),
-    fauxAssistantMessage("Done. <chat-app narration=\"on\"/>"),
+    fauxAssistantMessage(fauxToolCall("bash", { command }, { id: "call-1" })),
+    (context) => {
+      shell = context.messages.flatMap((m) => (m.role === "toolResult" ? m.content : []));
+      return fauxAssistantMessage("Done. <chat-app narration=\"on\"/>");
+    },
   ]);
   const messages = await turn({ text: "hello" });
   const sessionId = session.getSessionId() ?? "";
@@ -93,11 +99,12 @@ void test("a turn streams, ends with its entries in history, and applies its fea
   t.check(messages.filter((m) => m.type !== "stream_event").map(shape), [
     { type: "system" },
     { type: "user" },
-    { type: "assistant", uuid, content: [{ type: "tool_use", id: "call-1", name: "bash", input: { command: "echo hi" } }] },
+    { type: "assistant", uuid, content: [{ type: "tool_use", id: "call-1", name: "bash", input: { command } }] },
     { type: "assistant", uuid, content: [{ type: "text", text: "Done. <chat-app narration=\"on\"/>" }] },
     { type: "result", subtype: "completed", session_id: sessionId, is_error: false, duration_ms: 0, num_turns: 1, total_cost_usd: 0 },
   ]);
   t.check(streamed(messages), "Done. <chat-app narration=\"on\"/>");
+  t.check(shell, [{ type: "text", text: `id=${sessionId}\n` }]);
 
   // Read at once, as the chat UI does when a turn ends.
   const emitted = messages.flatMap((m) => (m.type === "assistant" && m.uuid !== undefined ? [m.uuid] : []));

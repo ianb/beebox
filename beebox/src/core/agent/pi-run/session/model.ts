@@ -10,6 +10,7 @@
  * that cannot say what a correct request needs refuses the run.
  */
 
+import { getBuiltinModels } from "@earendil-works/pi-ai/providers/all";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { lookupOpenRouterModel, type CatalogModel } from "../../../openrouter-catalog.js";
 import { piModelUnusable } from "../../../provider-env/openrouter-chat.js";
@@ -17,6 +18,8 @@ import type { FetchLike } from "../../../secrets/probe-registry.js";
 
 /** pi's chat model type; pi-coding-agent does not re-export pi-ai's `Model`. */
 export type PiModel = NonNullable<ReturnType<ModelRuntime["getModel"]>>;
+
+const NO_CONTEXT_LENGTH = "OpenRouter lists no context length for it";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
@@ -34,7 +37,7 @@ const OPENROUTER_COMPAT = {
  * context length is the ceiling.
  */
 export function piModelFromListing(listing: CatalogModel): PiModel {
-  if (listing.contextLength === null) throw piModelUnusable(listing.id, "OpenRouter lists no context length for it");
+  if (listing.contextLength === null) throw piModelUnusable(listing.id, NO_CONTEXT_LENGTH);
   const { promptPerMTok, completionPerMTok, cacheReadPerMTok } = listing.pricing;
   return {
     id: listing.id,
@@ -51,6 +54,46 @@ export function piModelFromListing(listing: CatalogModel): PiModel {
   };
 }
 
+/** Where pi looks a model up first: a model runtime, or pi's bundled catalog alone. */
+export type PiCatalog = Pick<ModelRuntime, "getModel">;
+
+/**
+ * pi's bundled OpenRouter catalog, which is what a runtime holds when it never
+ * refreshes (`offline.ts`). For admin, which has no runtime.
+ */
+export function piBundledCatalog(): PiCatalog {
+  const byId = new Map<string, PiModel>(getBuiltinModels("openrouter").map((model) => [model.id, model]));
+  return { getModel: (provider, id) => (provider === "openrouter" ? byId.get(id) : undefined) };
+}
+
+/** A model from pi's catalog, one built from OpenRouter's listing, or why neither can run. */
+export type PiModelLookup =
+  | { source: "pi"; model: PiModel }
+  | { source: "listing"; model: PiModel; pricesKnown: boolean }
+  | { source: "none"; missing: string };
+
+/**
+ * The model for `id`: pi's catalog entry; for a `:variant` id, pi's entry for
+ * the base model under the full id (the variant routes the same model);
+ * otherwise one built from OpenRouter's listing. Admin's warning uses this
+ * too, so it and the run never disagree.
+ */
+export async function lookupPiModel(
+  { catalog, id }: { catalog: PiCatalog; id: string },
+  deps: { fetch: FetchLike; now: number },
+): Promise<PiModelLookup> {
+  const exact = catalog.getModel("openrouter", id);
+  if (exact !== undefined) return { source: "pi", model: exact };
+  const base = catalog.getModel("openrouter", id.split(":")[0] ?? id);
+  if (base !== undefined) return { source: "pi", model: { ...base, id } };
+  const listed = await lookupOpenRouterModel(id, deps);
+  if (!listed.ok) return { source: "none", missing: `its OpenRouter listing could not be read (${listed.error})` };
+  if (!listed.found) return { source: "none", missing: "neither pi nor OpenRouter lists it" };
+  if (listed.model.contextLength === null) return { source: "none", missing: NO_CONTEXT_LENGTH };
+  const { promptPerMTok, completionPerMTok } = listed.model.pricing;
+  return { source: "listing", model: piModelFromListing(listed.model), pricesKnown: promptPerMTok !== null && completionPerMTok !== null };
+}
+
 /**
  * A resolved model, and whether its input and output prices are known. pi's
  * catalog always prices its models; a listing may not, and a budgeted run
@@ -61,22 +104,12 @@ export interface ResolvedPiModel {
   pricesKnown: boolean;
 }
 
-/**
- * The model for `id`: pi's catalog entry; for a `:variant` id, pi's entry for
- * the base model under the full id (the variant routes the same model);
- * otherwise one built from OpenRouter's listing.
- */
+/** `lookupPiModel` for a run: a model that cannot run refuses with `OpenRouterSetupError`. */
 export async function resolvePiModel(
-  { runtime, id }: { runtime: ModelRuntime; id: string },
+  args: { catalog: PiCatalog; id: string },
   deps: { fetch: FetchLike; now: number },
 ): Promise<ResolvedPiModel> {
-  const exact = runtime.getModel("openrouter", id);
-  if (exact !== undefined) return { model: exact, pricesKnown: true };
-  const base = runtime.getModel("openrouter", id.split(":")[0] ?? id);
-  if (base !== undefined) return { model: { ...base, id }, pricesKnown: true };
-  const listed = await lookupOpenRouterModel(id, deps);
-  if (!listed.ok) throw piModelUnusable(id, `its OpenRouter listing could not be read (${listed.error})`);
-  if (!listed.found) throw piModelUnusable(id, "neither pi nor OpenRouter lists it");
-  const { promptPerMTok, completionPerMTok } = listed.model.pricing;
-  return { model: piModelFromListing(listed.model), pricesKnown: promptPerMTok !== null && completionPerMTok !== null };
+  const found = await lookupPiModel(args, deps);
+  if (found.source === "none") throw piModelUnusable(args.id, found.missing);
+  return { model: found.model, pricesKnown: found.source === "pi" || found.pricesKnown };
 }

@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
 import { defineTool, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { NESTED_AGENTS_LINE } from "../../../../../src/core/agent/pi-run/session/context.js";
-import { resolvePiModel } from "../../../../../src/core/agent/pi-run/session/model.js";
+import { lookupPiModel, piBundledCatalog, resolvePiModel } from "../../../../../src/core/agent/pi-run/session/model.js";
 import { piSessionsDir } from "../../../../../src/core/pi-sessions.js";
 import { openPiSession, type PiSessionOptions } from "../../../../../src/core/agent/pi-run/session/core.js";
 import { getOrCreateAgentToken } from "../../../../../src/core/agent/token.js";
@@ -62,12 +62,22 @@ function guidance(prompt: string) {
   return ["ZEBRA-4417", "OTTER-2210", "FROB-77", NESTED_AGENTS_LINE, "SYSTEM-5150"].filter((s) => prompt.includes(s));
 }
 
+// A box agent can write `.pi/` and pi's agent dir; a `SYSTEM.md` in either would replace pi's base prompt.
 void test("a session carries the box's guidance; loadBoxContext false carries only the system prompt", async (t) => {
   const box = await piBox(t);
+  await mkdir(join(box.root, ".pi"), { recursive: true });
+  await writeFile(join(box.root, ".pi/SYSTEM.md"), "Project base KESTREL-31.\n");
+  await mkdir(join(box.root, ".beebox/pi/agent"), { recursive: true });
+  await writeFile(join(box.root, ".beebox/pi/agent/SYSTEM.md"), "Agent-dir base KESTREL-32.\n");
   const full = await open({ boxRoot: box.root, systemPrompt: "SYSTEM-5150" });
   t.teardown(() => full.session.dispose());
-  t.check({ guidance: guidance(full.session.systemPrompt), tools: full.session.getActiveToolNames() }, {
+  t.check({
+    guidance: guidance(full.session.systemPrompt),
+    replaced: full.session.systemPrompt.includes("KESTREL"),
+    tools: full.session.getActiveToolNames(),
+  }, {
     guidance: ["ZEBRA-4417", "OTTER-2210", "FROB-77", NESTED_AGENTS_LINE, "SYSTEM-5150"],
+    replaced: false,
     tools: ["read", "bash", "edit", "write", "ls"],
   });
   t.check(full.session.sessionFile, str`${piSessionsDir(box.root)}/${any(String)}_${full.sessionId}.jsonl`);
@@ -143,7 +153,7 @@ void test("a listed model keeps its reasoning, images and prices; a missing cont
     { ...entry, id: "acme/unpriced", supported_parameters: ["tools"], pricing: {} },
     { ...entry, id: "acme/no-context", context_length: null, pricing: {} },
   ]);
-  const resolve = async (id: string) => (await resolvePiModel({ runtime, id }, { fetch, now: 0 })).model;
+  const resolve = async (id: string) => (await resolvePiModel({ catalog: runtime, id }, { fetch, now: 0 })).model;
   t.check(await resolve("acme/thinker:exacto"), {
     id: "acme/thinker:exacto", name: "Listed", api: "openai-completions", provider: "openrouter",
     baseUrl: "https://openrouter.ai/api/v1", reasoning: true, input: ["text", "image"],
@@ -156,4 +166,21 @@ void test("a listed model keeps its reasoning, images and prices; a missing cont
     "OpenRouterSetupError: This run uses the OpenRouter model acme/no-context, but OpenRouter lists no context length for it, "
       + "so pi cannot build a correct request for it. Pick another model in Admin → OpenRouter models.",
   );
+});
+
+// Admin warns from the same lookup, against pi's bundled catalog (no runtime).
+void test("admin's lookup says where a model comes from, or what it lacks", async (t) => {
+  clearOpenRouterCatalogCache();
+  t.teardown(clearOpenRouterCatalogCache);
+  const fetch = listing([
+    { ...entry, id: "acme/unpriced", supported_parameters: ["tools"], pricing: {} },
+    { ...entry, id: "acme/no-context", context_length: null, pricing: {} },
+  ]);
+  const source = async (id: string) => {
+    const found = await lookupPiModel({ catalog: piBundledCatalog(), id }, { fetch, now: 0 });
+    return found.source === "listing" ? { source: found.source, pricesKnown: found.pricesKnown } : found.source === "none" ? found : found.source;
+  };
+  t.check(await source("anthropic/claude-haiku-4.5:nitro"), "pi");
+  t.check(await source("acme/unpriced"), { source: "listing", pricesKnown: false });
+  t.check(await source("acme/no-context"), { source: "none", missing: "OpenRouter lists no context length for it" });
 });

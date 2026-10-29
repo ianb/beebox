@@ -18,6 +18,7 @@ import { passwordResetAdminProcedures } from "./password-resets.js";
 import { describeAllowedUsers } from "./user-details.js";
 import { getLoginGoogleClientCreds } from "../../../../google/auth.js";
 import { normalizeModelId } from "../../../../shared/model-ids.js";
+import { openRouterKeyUsable } from "../../../../core/openrouter.js";
 import { AGENT_ENGINES, type AgentEngine } from "../../../../shared/agent-models.js";
 
 /**
@@ -97,6 +98,8 @@ export const adminRouter = router({
       agentEngine: config.agentEngine,
       agentModel: config.agentModel === undefined ? null : normalizeModelId(config.agentModel),
       openrouterModels: await loadAddedModels(ctx.boxRoot),
+      // pi needs the key as well as an added model; a presence check, not a key read.
+      openrouterKeyGranted: await openRouterKeyUsable(ctx.boxRoot),
       // Absent means "only the default engine", the same rule loadEnabledEngines
       // applies — resolved here so the UI never has to re-derive it.
       engines: config.engines ?? { [config.agentEngine]: true },

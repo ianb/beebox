@@ -7,6 +7,7 @@
  * pi's session file.
  */
 
+import { randomUUID } from "node:crypto";
 import type { ImageContent } from "@earendil-works/pi-ai";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { createAsyncIterableQueue } from "../claude-chat-queue.js";
@@ -23,6 +24,7 @@ import { openPiSession, type PiSessionDeps } from "../../core/agent/pi-run/sessi
 import { watchPiValidation, type PiAgentEvent } from "../../core/agent/pi-run/validate.js";
 import { piModelMissing } from "../../core/provider-env/openrouter-chat.js";
 import type { HookValidationResult } from "../../cli/validate-hook/command.js";
+import { BBX_CHAT_SESSION_ID_ENV } from "../../core/chat/session/id-file.js";
 import { findBoxRoot } from "../../lib/paths/core.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import { invariant } from "../../shared/invariant.js";
@@ -85,11 +87,21 @@ function turnResult(
   };
 }
 
-async function openChatSession(opts: ChatBackendStartOptions, deps: PiSessionDeps | undefined): Promise<AgentSession> {
+/**
+ * `sessionId` is known before pi opens, new or resumed, so the shell gets it as
+ * `BBX_CHAT_SESSION_ID` from the first turn and needs no post-spawn id file.
+ */
+async function openChatSession(
+  opts: ChatBackendStartOptions,
+  { sessionId, deps }: { sessionId: string; deps: PiSessionDeps | undefined },
+): Promise<AgentSession> {
   const boxRoot = opts.boxRoot ?? await findBoxRoot(opts.cwd);
   invariant(boxRoot !== null, "a pi chat runs in a box");
   if (opts.model === undefined) throw piModelMissing();
-  const env = Object.fromEntries(Object.entries(opts.env).flatMap(([name, value]) => (value === undefined ? [] : [[name, value]])));
+  const env: Record<string, string> = {
+    ...Object.fromEntries(Object.entries(opts.env).flatMap(([name, value]) => (value === undefined ? [] : [[name, value]]))),
+    [BBX_CHAT_SESSION_ID_ENV]: sessionId,
+  };
   const opened = await openPiSession({
     boxRoot,
     model: opts.model,
@@ -100,6 +112,7 @@ async function openChatSession(opts: ChatBackendStartOptions, deps: PiSessionDep
     // A landmark chat resumes from its landmark: pi finds a session by id only under the cwd it was created in.
     cwd: opts.cwd,
     resumeSessionId: opts.resumeSessionId,
+    newSessionId: sessionId,
   }, deps);
   invariant(opened.kind === "session", "a chat opens a pi session, never a dry run");
   return opened.session;
@@ -132,8 +145,9 @@ function createRun(opts: ChatBackendStartOptions, deps: PiSessionDeps | undefine
   let live: AgentSession | null = null;
   let active: PiRunWatch | null = null;
   let unsubscribe = (): void => {};
-  const sessionId = (): string => live?.sessionId ?? opts.resumeSessionId ?? "";
-  const opening = openChatSession(opts, deps).then((session) => {
+  const id = opts.resumeSessionId ?? randomUUID();
+  const sessionId = (): string => live?.sessionId ?? id;
+  const opening = openChatSession(opts, { sessionId: id, deps }).then((session) => {
     live = session;
     unsubscribe = session.agent.subscribe(relay(session, { push, partials: opts.includePartialMessages === true }));
     push({ type: "system", subtype: "init", session_id: session.sessionId });

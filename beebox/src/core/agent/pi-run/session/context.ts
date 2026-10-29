@@ -30,6 +30,7 @@ export interface PiContextOptions {
  * pi's settings and resource loader for one run. Settings are in memory, so
  * a box's `.pi/settings.json` cannot enable packages. No extension loads:
  * pi extensions are code, and here they would run inside the box server.
+ * pi's base prompt always applies; no box file replaces it.
  */
 export async function piResources(
   options: PiContextOptions,
@@ -47,6 +48,8 @@ export async function piResources(
     noExtensions: true,
     noContextFiles: !loadBoxContext,
     noSkills: !loadBoxContext,
+    // A `SYSTEM.md` in `.pi/` or the agent dir would replace pi's base prompt, and a box agent can write either.
+    systemPromptOverride: () => {},
     // pi reads an `appendSystemPrompt` entry that names an existing path as that file, so the text goes in through the override.
     appendSystemPrompt: [],
     appendSystemPromptOverride: () => append,

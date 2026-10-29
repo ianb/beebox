@@ -14,6 +14,9 @@ effect.
 | `smallModel` | The model for the cheap structured passes (chat review, retro observation, triage). Missing means the `efficient` tier for whichever engine runs the pass, or the box default when that is an OpenRouter model. There is no admin control; set it in the file or ask the box agent. |
 | `engines` | Which harnesses a new chat may be started on. Missing means only `agentEngine`; the default engine can never be disabled. |
 
+A pi box has no tier table. It runs only added OpenRouter models and must
+pin one as its default; see [the pi engine](pi-engine.md).
+
 ## Two levels
 
 **The box default** is `agentModel` in `_config/box.json`, beside `agentEngine`.

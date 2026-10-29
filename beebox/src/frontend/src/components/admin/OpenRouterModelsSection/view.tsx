@@ -2,12 +2,14 @@
  * Admin → OpenRouter models: the owner's act that lets this box run a model
  * OpenRouter carries, billed per use. A key alone runs nothing; each model is
  * added here, validated server-side against OpenRouter's catalog
- * (`docs/implemented-plans/openrouter-chat-models.md`). Shown only when Claude Code is an
- * enabled engine — these models ride its transport.
+ * (`docs/implemented-plans/openrouter-chat-models.md`). Shown only when Claude Code or pi is an
+ * enabled engine — the two engines that run these models.
  */
 
 import { useState } from "react";
 import { trpc } from "../../../lib/trpc/client";
+import { AGENT_ENGINES } from "@shared/agent-models.js";
+import { runsAddedModels } from "@shared/chat-models.js";
 import { Button } from "../../ui/Button";
 import { ExternalLink } from "../../ui/ExternalLink";
 import { ErrorText } from "../../ui/ErrorText";
@@ -36,12 +38,12 @@ const SUGGESTIONS = [
 
 export function OpenRouterModelsSection() {
   const config = trpc.admin.boxConfig.useQuery();
-  const claudeEnabled = config.data !== undefined
-    && (config.data.agentEngine === "claude" || config.data.engines.claude === true);
+  const runsAdded = config.data !== undefined
+    && AGENT_ENGINES.some((e) => runsAddedModels(e) && (config.data.agentEngine === e || config.data.engines[e] === true));
   if (config.error !== null) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION}><ErrorText>{config.error.message}</ErrorText></AdminSectionCard>;
   if (config.data === undefined) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION} busy><Hint>Loading…</Hint></AdminSectionCard>;
   // The section keeps its address when it does not apply, so the overview and an agent can still point at it.
-  if (!claudeEnabled) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION}><Hint>Not available: Claude Code is off for this box. Turn it on under Agent engine and model.</Hint></AdminSectionCard>;
+  if (!runsAdded) return <AdminSectionCard id="openrouter-models" description={DESCRIPTION}><Hint>Not available: Claude Code is off for this box. Turn it on under Agent engine and model.</Hint></AdminSectionCard>;
   return <OpenRouterModelsCard defaultModel={config.data.agentModel} />;
 }
 

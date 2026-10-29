@@ -26,6 +26,9 @@ import { piResources } from "./context.js";
 import { resolvePiModel } from "./model.js";
 import { piBashTool, piToolAllowlist } from "./tools.js";
 
+// Admin warns about an added model through the run's own lookup.
+export { lookupPiModel, piBundledCatalog } from "./model.js";
+
 export interface PiSessionOptions {
   boxRoot: string;
   /** An added OpenRouter model id, as the box's model policy resolved it. */
@@ -41,8 +44,10 @@ export interface PiSessionOptions {
   loadBoxContext?: boolean | undefined;
   /** As `AgentInvokeOptions.cwd`; defaults to the box root. */
   cwd?: string | undefined;
-  /** Reopen this pi session; omitted starts a new one with a fresh UUID. */
+  /** Reopen this pi session; omitted starts a new one. */
   resumeSessionId?: string | undefined;
+  /** The id for a new session, when the caller needs it before the session opens; defaults to a fresh UUID. */
+  newSessionId?: string | undefined;
   /** Tools the caller adds, such as a structured result tool. Always allowed. */
   customTools?: ToolDefinition[] | undefined;
   /** Refuse a model whose input or output price is unknown, for a run with a budget. */
@@ -81,9 +86,11 @@ export class PiSessionNotFoundError extends Error {
   }
 }
 
-function sessionManagerFor(options: { boxRoot: string; cwd: string; resumeSessionId: string | undefined }): SessionManager {
+function sessionManagerFor(
+  options: { boxRoot: string; cwd: string; resumeSessionId: string | undefined; newSessionId: string | undefined },
+): SessionManager {
   const dir = piSessionsDir(options.boxRoot);
-  if (options.resumeSessionId === undefined) return SessionManager.create(options.cwd, dir, { id: randomUUID() });
+  if (options.resumeSessionId === undefined) return SessionManager.create(options.cwd, dir, { id: options.newSessionId ?? randomUUID() });
   const path = SessionManager.findById(options.cwd, options.resumeSessionId, dir);
   if (path === undefined) throw new PiSessionNotFoundError(options.resumeSessionId);
   return SessionManager.open(path, dir);
@@ -105,7 +112,7 @@ export async function openPiSession(options: PiSessionOptions, deps?: PiSessionD
   const runtime = await (deps?.createRuntime ?? createRuntime)({ authPath: join(agentDir, "auth.json") });
   await runtime.setRuntimeApiKey("openrouter", key);
   const { model, pricesKnown } = await resolvePiModel(
-    { runtime, id: options.model },
+    { catalog: runtime, id: options.model },
     { fetch: deps?.fetch ?? fetch, now: (deps?.now ?? Date.now)() },
   );
   if (options.requireKnownPrices === true && !pricesKnown) throw piModelUnpriced(options.model);
@@ -122,7 +129,7 @@ export async function openPiSession(options: PiSessionOptions, deps?: PiSessionD
     agentDir,
     modelRuntime: runtime,
     model,
-    sessionManager: sessionManagerFor({ boxRoot, cwd, resumeSessionId: options.resumeSessionId }),
+    sessionManager: sessionManagerFor({ boxRoot, cwd, resumeSessionId: options.resumeSessionId, newSessionId: options.newSessionId }),
     settingsManager,
     resourceLoader,
     // A custom tool named `bash` replaces the built-in one; the allowlist decides whether it is active.
