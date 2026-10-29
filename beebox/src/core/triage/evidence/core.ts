@@ -34,6 +34,12 @@ export const evidenceSchema = z.object({
 });
 export type Evidence = z.infer<typeof evidenceSchema>;
 type Part = Evidence["parts"][number];
+const DOCUMENT_MEDIA_TYPES: Record<string, string> = {
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".odt": "application/vnd.oasis.opendocument.text",
+  ".rtf": "application/rtf",
+  ".epub": "application/epub+zip",
+};
 export interface PrepareItemOptions {
   boxRoot: string;
   sourceRef: string;
@@ -110,6 +116,38 @@ async function prepareImage({ file, part }: { file: string; part: Part }, option
       }
  }
 
+async function preparePdf({ file, part }: { file: string; part: Part }, options: PrepareItemOptions): Promise<void> {
+  part.mediaType = "application/pdf";
+  const probe = await probePdf(file);
+  if (probe.textLayerSource === "probed" && probe.textLayerQuality === "good") {
+    part.text = await extractPdfText(file) ?? "";
+    part.method = "pdf-native-text";
+    part.toolVersion = (await execa("pdftotext", ["-v"], { reject: false })).stderr.split("\n")[0] ?? "poppler-version-unreported";
+  }
+  if (part.text.trim() === "") {
+    const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-triage-"));
+    try {
+      const ocr = probe.textLayerQuality === "junk" || probe.textLayerSource === "assumed" ? "replace" : "regions";
+      const extraction = await (options.docling ?? createDoclingService()).extract(file, { workDir: workspace, ocr, languages: null });
+      part.method = `docling-${ocr}`;
+      if (extraction.ok) {
+        const bounded = await checkExtractionBounds(extraction.value);
+        if (bounded.ok) { part.text = extraction.value.markdown; part.toolVersion = extraction.value.version; }
+        else part.omissions.push(bounded.error);
+      }
+      else part.omissions.push(extraction.error);
+    } finally { await fs.rm(workspace, { recursive: true, force: true }); }
+  }
+}
+
+/** pandoc is a box-host tool (docker/Dockerfile); GFM keeps tables as pipe tables. */
+async function prepareDocument({ file, part, extension }: { file: string; part: Part; extension: string }): Promise<void> {
+  part.mediaType = DOCUMENT_MEDIA_TYPES[extension] ?? "application/octet-stream";
+  part.text = (await execa("pandoc", [file, "--to=gfm", "--wrap=none"])).stdout;
+  part.method = "pandoc-gfm";
+  part.toolVersion = (await execa("pandoc", ["--version"])).stdout.split("\n")[0] ?? "pandoc-version-unreported";
+}
+
 function cachedPart(input: { ref: string; bytes: Buffer }, evidence: Evidence | undefined): Part | undefined {
   if (evidence?.recipe.adapterVersion !== 2) return undefined;
   return evidence.parts.find((part) => part.ref === input.ref && part.digest === sha256Hex(input.bytes) && part.status === "ready" && part.text !== "" && !["duplicate-text", "provenance-only"].includes(part.method));
@@ -124,30 +162,12 @@ async function preparePart(input: { file: string; bytes: Buffer }, options: Prep
   const extension = path.extname(file).toLowerCase();
   try {
     if (extension === ".pdf") {
-      part.mediaType = "application/pdf";
-      const probe = await probePdf(file);
-      if (probe.textLayerSource === "probed" && probe.textLayerQuality === "good") {
-        part.text = await extractPdfText(file) ?? "";
-        part.method = "pdf-native-text";
-        part.toolVersion = (await execa("pdftotext", ["-v"], { reject: false })).stderr.split("\n")[0] ?? "poppler-version-unreported";
-      }
-      if (part.text.trim() === "") {
-        const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-triage-"));
-        try {
-          const ocr = probe.textLayerQuality === "junk" || probe.textLayerSource === "assumed" ? "replace" : "regions";
-          const extraction = await (options.docling ?? createDoclingService()).extract(file, { workDir: workspace, ocr, languages: null });
-          part.method = `docling-${ocr}`;
-          if (extraction.ok) {
-            const bounded = await checkExtractionBounds(extraction.value);
-            if (bounded.ok) { part.text = extraction.value.markdown; part.toolVersion = extraction.value.version; }
-            else part.omissions.push(bounded.error);
-          }
-          else part.omissions.push(extraction.error);
-        } finally { await fs.rm(workspace, { recursive: true, force: true }); }
-      }
+      await preparePdf({ file, part }, options);
     } else if ([".png", ".jpg", ".jpeg", ".avif", ".webp", ".heic", ".gif", ".tiff", ".tif"].includes(extension)) {
       part.mediaType = `image/${extension.slice(1)}`;
       await prepareImage({ file, part }, options);
+    } else if (extension in DOCUMENT_MEDIA_TYPES) {
+      await prepareDocument({ file, part, extension });
     } else if ([".card", ".md", ".txt", ".csv", ".json", ".yaml", ".yml", ".html", ".htm", ".xml", ".eml"].includes(extension)) {
       part.text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
       part.mediaType = extension === ".html" || extension === ".htm" ? "text/html" : "text/plain";
@@ -240,7 +260,7 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
     status: "unavailable",
     parts, recipe: { adapterVersion: 2, steps: parts.map((part) => `${part.ref}: ${part.method}`), maxTextChars, maxRequestChars },
   };
-  let packed = packEvidence(evidence, instructions);
+  let packed = packEvidence(evidence, { instructions });
   // Prefer existing analyzed text without re-reading its PDF pages. If the
   // owner representation was excluded, prepare deferred PDFs/pages and repack.
   // Each deferred image/PDF enters this fallback at most once.
@@ -253,8 +273,10 @@ export async function prepareItem(options: PrepareItemOptions): Promise<Evidence
       const index = parts.findIndex((candidate) => candidate.ref === part.ref);
       parts[index] = await preparePart({ file, bytes }, options);
     }
-    packed = packEvidence(evidence, instructions);
+    packed = packEvidence(evidence, { instructions });
   }
+  // Only after every fallback representation has had its chance: excerpt what is still excluded.
+  packed = packEvidence(evidence, { instructions, excerpts: true });
   await verifyEvidence(options.boxRoot, packed);
   return evidenceSchema.parse(packed);
 }

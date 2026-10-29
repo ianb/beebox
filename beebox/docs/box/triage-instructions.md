@@ -64,8 +64,11 @@ Inspect evidence status, parts, methods and omissions before interpreting a
 judgment. Unsupported attachments, broken text layers and failed extraction are
 missing evidence, not proof that the item is irrelevant. Raw image/PDF bytes are
 not Jev input. Preparation performs extraction in temporary space and cleans it.
-It does not silently truncate. Agent interpretations must identify their source
-and uncertainty; never substitute a guessed transcription for missing text.
+It does not silently truncate: a part too large for the budget sends a leading
+excerpt and records what was left out. Word, ODT, RTF and EPUB files convert
+through pandoc. Jev receives only parts with text, plus a reason for each
+unread part. Agent interpretations must identify their source and uncertainty;
+never substitute a guessed transcription for missing text.
 
 A failure is an opportunity to improve rules scientifically:
 
