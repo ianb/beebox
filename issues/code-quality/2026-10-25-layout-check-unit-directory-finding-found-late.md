@@ -24,3 +24,12 @@ unit), front-door/20261026T023747Z-implemented.md (two move rounds).
 Directions named in the entries: name the importer and imported file in the
 finding; run the check from `lint:changed`; a dry-run form that reports the
 unit graph for a proposed file and import.
+
+**2026-10-28 (retrospective 20261028-234100):** Plans now name paths the rule
+rejects, and each implementer relocates by experiment.
+composition-editor/20261028T031807Z-implemented.md (three planned paths
+rejected; asks for a dry-run that takes a proposed path),
+card-remount/20261027T042408Z-implemented.md (a shared context module moved
+after commit), bug-burndown-5/20261027T202959Z-implemented.md (two commits
+blocked), mic-idle-close/20261028T150028Z-implemented.md (a helper module
+beside a machine file).
