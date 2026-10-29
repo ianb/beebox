@@ -8,6 +8,9 @@
  * them, and its boxholder has no shell to run `claude auth login` in, so the
  * web UI uses this to block input and send the owner to Admin → Agents.
  *
+ * A pi box runs only an added OpenRouter model chosen as its default, with the
+ * box's key, so its default reports which of the two is missing.
+ *
  * An inconclusive probe reads as `unknown`, which counts as usable for
  * blocking (the run-time preflight lets it through too) and as unusable for
  * switching (the default is never moved on a guess).
@@ -15,13 +18,17 @@
 
 import { AUTH_PROBE_INCONCLUSIVE, CLI_MISSING, type ClaudeCliService } from "../../services/claude-cli.js";
 import type { CodexAuthStatus, CodexCliService } from "../../services/codex-cli/core.js";
-import { EngineNotImplementedError, isThirdPartyModel, providerOf } from "../../shared/agent-models.js";
+import { isThirdPartyModel, providerOf } from "../../shared/agent-models.js";
 import { assertNever } from "../../shared/invariant.js";
 import { loadAddedModels, loadAgentEngine, loadBoxModel } from "../box/config.js";
 import { glmKeyUsable } from "../glm-key.js";
+import { resolveBoxModelForEngine } from "../model-policy.js";
 import { openRouterKeyUsable } from "../openrouter.js";
 
 export type ProviderState = "ready" | "not-ready" | "unknown";
+
+/** Whether a pi default can run, or the first thing it lacks. */
+export type PiReadiness = "ready" | "needs-default-model" | "needs-key";
 
 export interface AgentReadiness {
   claude: ProviderState;
@@ -31,6 +38,8 @@ export interface AgentReadiness {
   anyReady: boolean;
   /** The box's default engine and pinned model can run. */
   defaultReady: boolean;
+  /** Present only when the box's engine is pi: what its default lacks. */
+  pi?: PiReadiness;
 }
 
 export interface ReadinessServices {
@@ -60,23 +69,41 @@ async function openrouterState(boxRoot: string): Promise<ProviderState> {
   return (await openRouterKeyUsable(boxRoot)) ? "ready" : "not-ready";
 }
 
-async function defaultState(boxRoot: string, states: Record<"claude" | "codex" | "openrouter", ProviderState>): Promise<ProviderState> {
+/**
+ * A pi box's default: an added model chosen as the default, then the key —
+ * the order the spawn gate checks them in (`openRouterChatAdditions`).
+ * Exported for its doctest; a pi box cannot load until pi's chat backend lands.
+ */
+export async function piReadiness(boxRoot: string): Promise<PiReadiness> {
+  const model = resolveBoxModelForEngine("pi", { pinned: await loadBoxModel(boxRoot), added: await loadAddedModels(boxRoot) });
+  if (model === null) return "needs-default-model";
+  return (await openRouterKeyUsable(boxRoot)) ? "ready" : "needs-key";
+}
+
+interface DefaultState {
+  state: ProviderState;
+  pi?: PiReadiness;
+}
+
+async function defaultState(boxRoot: string, states: Record<"claude" | "codex" | "openrouter", ProviderState>): Promise<DefaultState> {
   const engine = await loadAgentEngine(boxRoot);
   switch (engine) {
     case "codex":
-      return states.codex;
-    case "pi":
-      throw new EngineNotImplementedError(engine, "checking agent readiness");
+      return { state: states.codex };
+    case "pi": {
+      const pi = await piReadiness(boxRoot);
+      return { state: pi === "ready" ? "ready" : "not-ready", pi };
+    }
     case "claude":
       break;
     default:
       return assertNever(engine);
   }
   const model = await loadBoxModel(boxRoot);
-  if (!isThirdPartyModel(model)) return states.claude;
-  if (providerOf(model) === "glm") return (await glmKeyUsable(boxRoot)) ? "ready" : "not-ready";
+  if (!isThirdPartyModel(model)) return { state: states.claude };
+  if (providerOf(model) === "glm") return { state: (await glmKeyUsable(boxRoot)) ? "ready" : "not-ready" };
   const added = await loadAddedModels(boxRoot);
-  return added.some((m) => m.id === model) ? states.openrouter : "not-ready";
+  return { state: added.some((m) => m.id === model) ? states.openrouter : "not-ready" };
 }
 
 /**
@@ -125,9 +152,10 @@ export async function checkAgentReadiness(boxRoot: string, services: ReadinessSe
     openrouterState(boxRoot),
   ]);
   const states = { claude, codex, openrouter };
-  const defaultReady = usable(await defaultState(boxRoot, states));
+  const { state, pi } = await defaultState(boxRoot, states);
+  const defaultReady = usable(state);
   // A runnable default counts even when it is none of the three (a GLM
   // model with its key).
   const anyReady = usable(claude) || usable(codex) || openrouter === "ready" || defaultReady;
-  return { ...states, anyReady, defaultReady };
+  return { ...states, anyReady, defaultReady, ...(pi === undefined ? {} : { pi }) };
 }

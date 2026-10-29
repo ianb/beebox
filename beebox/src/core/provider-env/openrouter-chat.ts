@@ -64,6 +64,17 @@ class OpenRouterSetupError extends ProviderSetupError {
 }
 
 /**
+ * A pi run with no model to run. pi has no default of its own: the box must
+ * choose one of its added models (docs/plans/pi-box-engine.md, Track 2).
+ */
+export function piModelMissing(): ProviderSetupError {
+  return new OpenRouterSetupError(
+    "This box runs the pi engine, which runs only models added in Admin → OpenRouter models, "
+      + "and no default model is chosen from them. Choose one as the default model in Admin → Agent engine and model.",
+  );
+}
+
+/**
  * The gate: resolve the env for one OpenRouter model, or throw
  * {@link OpenRouterSetupError}. List membership is checked before the key so
  * a removed model refuses the same way whether or not a key exists.

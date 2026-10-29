@@ -10,7 +10,7 @@ import { withFileLock } from "../lib/file-lock.js";
 import { stageAndCommitPaths } from "../lib/git/core/operations.js";
 import { isRecord } from "../shared/is-record.js";
 import { BOX_DIRS } from "../lib/paths/core.js";
-import { clearBoxConfigCache } from "../core/box/config.js";
+import { clearBoxConfigCache, parseAddedModel } from "../core/box/config.js";
 import {
   AGENT_ENGINES,
   EngineNotImplementedError,
@@ -31,6 +31,27 @@ class BoxConfigWriteError extends Error {
     super("Box configuration is unreadable; refusing to replace it.", options);
     this.name = "BoxConfigWriteError";
   }
+}
+
+/**
+ * pi runs only the box's added OpenRouter models and has no default of its
+ * own, so a pi box must name one of them (docs/plans/pi-box-engine.md, Track 2).
+ */
+export class PiDefaultModelRequiredError extends Error {
+  constructor() {
+    super("The pi engine runs only models added in Admin → OpenRouter models. Choose one of them as the default model in the same save.");
+    this.name = "PiDefaultModelRequiredError";
+  }
+}
+
+/** Whether the config, as about to be written, names an added model as a pi box's default. */
+function piDefaultIsAdded(config: Record<string, unknown>): boolean {
+  const raw = config.openrouterModels;
+  const entries: readonly unknown[] = Array.isArray(raw) ? raw : [];
+  return entries.some((entry) => {
+    const added = parseAddedModel(entry);
+    return added !== null && added.id === config.agentModel;
+  });
 }
 
 export interface BoxConfigMutationResult {
@@ -149,6 +170,10 @@ export async function updateBoxConfigFields(options: {
       }
       if (options.claudeCodeTelemetry !== undefined) config.claudeCodeTelemetry = options.claudeCodeTelemetry;
       if (options.codexTelemetry !== undefined) config.codexTelemetry = options.codexTelemetry;
+      // Checked on the result, so a pi box cannot lose its default to a later
+      // model write either. A save that touches neither field is not blocked.
+      const touchesDefault = options.agentEngine !== undefined || options.agentModel !== undefined;
+      if (touchesDefault && config.agentEngine === "pi" && !piDefaultIsAdded(config)) throw new PiDefaultModelRequiredError();
     },
   });
 }

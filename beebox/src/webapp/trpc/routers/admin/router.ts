@@ -9,7 +9,7 @@ import { agentAuthAdminProcedures } from "./agent-auth.js";
 import { openrouterAdminProcedures } from "./openrouter.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../../services/tailscale.js";
-import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, updateBoxConfigFields } from "../../../box-config-write.js";
+import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, PiDefaultModelRequiredError, updateBoxConfigFields } from "../../../box-config-write.js";
 import { isConfigurableModel, loadAddedModels } from "../../../../core/box/config.js";
 import { canonicalizeEmail, getLocalUser } from "../../../local-users.js";
 import { gmailAdminProcedures } from "./gmail.js";
@@ -149,7 +149,7 @@ export const adminRouter = router({
         ...(input.claudeCodeTelemetry === undefined ? {} : { claudeCodeTelemetry: input.claudeCodeTelemetry }),
         ...(input.codexTelemetry === undefined ? {} : { codexTelemetry: input.codexTelemetry }),
       }).catch((e: unknown) => {
-        if (e instanceof EngineNotImplementedError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message, cause: e });
+        if (e instanceof EngineNotImplementedError || e instanceof PiDefaultModelRequiredError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message, cause: e });
         throw e;
       });
       if (result.commitError) {

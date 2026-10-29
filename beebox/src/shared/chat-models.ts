@@ -69,7 +69,7 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
 };
 
 /** Whether this engine runs the box's added OpenRouter models. */
-function runsAddedModels(engine: ChatAgentEngine): boolean {
+export function runsAddedModels(engine: ChatAgentEngine): boolean {
   switch (engine) {
     case "claude":
     case "pi":
