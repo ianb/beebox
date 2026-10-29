@@ -1,6 +1,6 @@
 ---
 title: "Drive folder sync commits every pass, because `last-sync` on the folder card always changes"
-workstream: unattached
+workstream: drive-sync-noop-commits
 area: beebox
 labels: [connectors, google-drive, git-history]
 filed-by: agent

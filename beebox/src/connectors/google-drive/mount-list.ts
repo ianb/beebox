@@ -13,6 +13,7 @@ import * as path from "node:path";
 import { parseFrontmatterObject } from "../../cards/frontmatter.js";
 import { isRecord } from "../../shared/is-record.js";
 import { findDriveCardTracking, type DriveCardKind } from "./tracking.js";
+import { loadDriveState } from "./state.js";
 import type { FolderProblemCounts } from "./folder-types.js";
 
 export interface FolderMountChildCounts {
@@ -32,7 +33,7 @@ export interface FolderMountSummary {
   name: string | null;
   /** `webViewLink` for the Drive folder, absent until the first sync. */
   link: string | null;
-  /** When the last sync ran; null until the first one. */
+  /** When the last sync ran (Drive state, not the card); null until the first one. */
   lastSync: string | null;
   /** Why the last sync failed; null when it succeeded (or never ran). */
   error: string | null;
@@ -79,10 +80,11 @@ function count(fields: Record<string, unknown> | null, key: string): number {
  *
  * The fields come off the card's frontmatter rather than `driveCardSummary`:
  * a mount list wants the mount card's own fields, including `drive.link`,
- * which the summary does not carry.
+ * which the summary does not carry. The sync time comes from Drive state.
  */
 export async function listFolderMounts(boxRoot: string): Promise<FolderMountSummary[]> {
   const tracking = await findDriveCardTracking(boxRoot);
+  const { folders } = await loadDriveState(boxRoot);
 
   const countsByDir = new Map<string, FolderMountChildCounts>();
   const bump = (dir: string, kind: DriveCardKind): void => {
@@ -110,7 +112,7 @@ export async function listFolderMounts(boxRoot: string): Promise<FolderMountSumm
       driveId: card.driveId,
       name: field(fields, "title"),
       link: field(isRecord(drive) ? drive : null, "link"),
-      lastSync: field(fields, "last-sync"),
+      lastSync: folders[card.driveId]?.lastSync ?? null,
       error: field(fields, "error"),
       children: countsByDir.get(dir) ?? { files: 0, links: 0 },
       problems: folderProblemCounts(card.content),
