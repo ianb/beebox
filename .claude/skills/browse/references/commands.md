@@ -6,7 +6,7 @@ bin/browse open /chats                          # → http://localhost:3210/<wt>
 bin/browse open /test1/chats                    # WRONG — doubles the box, lands elsewhere silently
 bin/browse open https://example.com             # bare URL passes through unchanged
 bin/browse back / forward / reload
-bin/browse open /admin --init-script /abs/stub.js  # launch options (--args, --headed, …) need a closed browser; stub fetch here, network route misses batched tRPC
+bin/browse open /admin --init-script /abs/stub.js  # launch options need a closed browser; stub fetch here (network route misses batched tRPC) and getUserMedia (--args never reaches Chromium: issues/bugs/2026-10-28-browse-args-flags-do-not-reach-chromium.md)
 
 # Reading
 bin/browse snapshot -i                          # interactive elements only (preferred)
