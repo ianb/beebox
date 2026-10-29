@@ -1,6 +1,6 @@
 ---
 title: "pi as a third box engine, on OpenRouter models"
-status: draft
+status: active
 workstream: pi-engine
 issues:
   - ../../../issues/features/2026-10-18-pi-third-engine.md
@@ -108,7 +108,8 @@ web chat and chat work handled by `bbx wakeup` dependent on Claude Code,
 which does not satisfy the job"*). An open stack that still needs Claude Code
 for chat is not an open stack.
 
-**Chosen design: about 2,900 changed lines. BIG CHANGE.**
+**Chosen design: about 2,900 changed lines. BIG CHANGE.** Approved by the
+boxholder, 2026-10-29.
 
 | Track | Subject | Source | Tests |
 |---|---|---|---|
@@ -349,10 +350,10 @@ pi cannot have one without spending unasked.
   (`openrouter-chat-models.md`, `removeOpenrouterModel`).
 - Automatic recovery (`reconcileDefaultEngine`,
   `webapp/trpc/agent-default-switch.ts:22`) moves an unready default to
-  Claude, then Codex, then OpenRouter-on-claude. **Decision needed** (below,
-  Open design questions): whether it may move a pi box. The plan's direction
-  until decided: it never switches a box away from pi, and never switches a
-  box to pi. A pi box with a revoked key stays on pi and shows `needs-key`.
+  Claude, then Codex, then OpenRouter-on-claude. It never switches a box
+  away from pi, and never switches a box to pi. A pi box with a revoked key
+  stays on pi and shows `needs-key` (boxholder, 2026-10-29: *"if someone
+  wants pi then they want pi"*).
 - An explicit chat pick of an added model the owner has since removed is
   kept and refused at spawn, as on claude (`model-policy.ts:110`).
 - A chat pinned to a non-OpenRouter model on a box now running pi falls
@@ -611,7 +612,7 @@ None.
 | Structured follow-up after abort or limit | new doctest | follow-up only after `completed` | clear |
 | Invalid edit in a pi chat | new chat test | shared validator fails the turn | clear |
 | Finalized assistant message missing | new chat test | feature processing and history read checked | clear |
-| Automatic recovery switches a pi box to Claude | new doctest | reconcile skips pi (pending decision) | clear |
+| Automatic recovery switches a pi box to Claude | new doctest | reconcile skips pi | clear |
 | `PI_OFFLINE` lost, `grep` tool used | new doctest checks allowlist | `grep`/`find` not offered | clear |
 | pi session file missing for a husk | new store doctest | `exists` false → unavailable, like Codex | clear |
 | pi JSONL version bump on upgrade | none | pi migrates on load (`CURRENT_SESSION_VERSION`); pinned version | clear on failure |
@@ -658,15 +659,6 @@ No critical gap.
 
 ## Open design questions
 
-- **Automatic recovery and pi (boxholder decision).** When a box's default
-  engine cannot run, `reconcileDefaultEngine` moves the box to another
-  engine that can (Claude, then Codex, then an added model on Claude). On a
-  pi box whose key grant was removed, or whose default model was removed, that would move the box's work
-  to Claude Code without the owner choosing it. Option A, keep pi: the box
-  stays on pi, its work refuses with "needs key" until the owner fixes it.
-  Option B, recover: the box keeps working on another engine, off the open
-  stack. Lean: A, because the reason for pi is the open stack. The plan is
-  written for A; B is a one-line change in `pickTarget`.
 - Whether the pi engine should eventually ship a small default model list on
   OpenRouter. Lean: no; the spend gate is the owner's act.
 
