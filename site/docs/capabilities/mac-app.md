@@ -87,8 +87,26 @@ box's scan upload endpoint, the same one the command-line `scan-uploader`
 script uses; a record on the Mac keeps a file from being sent twice. The app
 keeps a log at `~/Library/Application Support/Bee Box/logs/app.log`.
 
+**Engine updates**
+
+The app and the engine release separately. Each time the box starts, the app
+checks the daily published engine image, and downloads it when it is newer and
+the app can run it. If the image needs a newer app, the app leaves it alone and
+Preferences says so. The update waits when the box has uncommitted edits, and a
+running box is never stopped for one. If the new engine fails to start, the app
+goes back to the previous engine and the box starts again. After an update has
+finished there is no automatic rollback. Preferences → Box on this Mac has a
+"Check for Engine Updates…" button that stops the box, checks, and starts it.
+
+**Backups**
+
+The app can keep encrypted backups of the box it hosts in a restic repository
+you choose. It checks for a due backup while it runs, waits ten minutes after
+reopening before an overdue one, and runs none while the app is closed. You set
+the repository up with the app's `backup` command line, or from the box's
+Admin page. See [backups](../install/backups.md) and [your data and safety](../10-your-data-and-safety.md).
+
 **Limits**
 
 The app is new (first release October 2026) and has had little use beyond its
-author. A box on your Mac updates its engine only when the app itself
-updates.
+author.

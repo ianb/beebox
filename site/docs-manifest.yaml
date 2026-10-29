@@ -20,6 +20,10 @@
   publish: install/docker.md
   description: "Docker install, local and VPS."
 
+- source: beebox/docs/backups.md
+  publish: install/backups.md
+  description: "Encrypted restic backups of a box: set up, schedule per install, and restore onto another machine."
+
 - source: beebox/docs/security-overview.md
   publish: security/overview.md
   description: "What the agent can do, what leaves the machine, and where data lives."

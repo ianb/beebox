@@ -1,8 +1,9 @@
 /* Shared framing for cards where the surrounding interface is part of the
    reading surface: sidecar panels and their tabs. */
 .bbx-interface-card-desk[data-card-content="card"] {
+  --bbx-card-desk-padding: 20px;
   background: var(--bbx-desk-pattern, none), var(--bbx-desk-background, #e4e0d9);
-  padding: 20px;
+  padding: var(--bbx-card-desk-padding);
 }
 
 .bbx-interface-card-desk[data-card-content="card"] > .bbx-card-surface {
@@ -81,7 +82,7 @@
 
 @media (max-width: 640px) {
   .bbx-interface-card-desk[data-card-content="card"] {
-    padding: 12px;
+    --bbx-card-desk-padding: 12px;
   }
 }
 

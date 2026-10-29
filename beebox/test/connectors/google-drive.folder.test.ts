@@ -27,7 +27,9 @@ import {
 import { extractDriveFileId } from "../../src/connectors/google-drive/types.js";
 import { createGfolderTemplate } from "../../src/schemas/gfolder.js";
 import ky from "ky";
-import { any } from "@ianbicking/tap-check/check";
+import { execSync } from "node:child_process";
+import { loadDriveState } from "../../src/connectors/google-drive/state.js";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import {
   loadDocsApiDiagnosis,
   recordDocsApiDiagnosis,
@@ -474,21 +476,27 @@ title: Scan 2024.pdf
 origin: mirror
 ---`);
 
-  // The folder card is re-stamped with the Drive name, link, and the last outcome.
+  // The folder card is re-stamped with the Drive name and link. When the pass
+  // ran goes to the gitignored Drive state, keyed by the folder's Drive ID.
 
-  const folderCard = await box.read("_content/drive/recipes/Recipes.gfolder.card");
-  await t.checkText(folderCard.replace(/last-sync: .*/, "last-sync: «stamped»"), `---
+  await t.checkText(await box.read("_content/drive/recipes/Recipes.gfolder.card"), `---
 drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «stamped»
 ---`);
+  const firstSync = (await loadDriveState(box.root)).folders["folder-1"]?.lastSync;
+  t.check(firstSync, isoDate());
 
-  // A second pass with nothing changed creates nothing and rewrites no pointer.
+  // A second pass with nothing changed on Drive changes no tracked file, so it
+  // reports nothing and makes no commit; only the state's sync time moves.
 
+  const head = () => execSync("git rev-parse HEAD", { cwd: box.root, encoding: "utf-8" });
+  const before = head();
   const again = await connector.sync();
-  t.check(again, { success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] });
+  t.check(again, { success: true, created: [], updated: [] });
+  t.check(head(), before);
+  t.check((await loadDriveState(box.root)).folders["folder-1"], { lastSync: isoDate() });
 });
 
 // ## Docs API diagnosis — folder discovery counts, and a capped pass clears only on evidence

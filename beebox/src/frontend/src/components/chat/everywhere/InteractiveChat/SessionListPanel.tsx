@@ -50,6 +50,7 @@ import { agoOnClock } from "../../../../lib/relative-time";
 import { useNow } from "../../../../lib/use-now";
 import { useChatSearch, ChatSearchRows } from "./session-search";
 import { StatusMessage } from "../../../ui/StatusMessage";
+import { cardUrl } from "@shared/card-url";
 
 type LoadState =
   | { kind: "loading" }
@@ -222,7 +223,7 @@ function DeadSessionGroups({ dead, boxSlug, allRows }: { dead: DeadChatInfo[]; b
               <Link
                 key={s.sessionId}
                 role="menuitem"
-                to={href(`/${boxSlug}/browse/${s.huskPath}`)}
+                to={href(cardUrl(boxSlug, s.huskPath))}
                 onClick={close}
                 title={`Session ${s.sessionId}`}
                 className="block px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"

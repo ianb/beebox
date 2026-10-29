@@ -5489,6 +5489,58 @@ tests:
       use plain markdown" rule directly (an unknown tag trips validation) and
       itself suggests checking card-recipe.md for an existing field.
 
+  # === Compositions (docs/implemented-plans/composition-editor.md) ===
+  #
+  # `{% composition %}` and `{% editorial %}` are doc-card scoped tags taught
+  # in the doc schema instructions ("## Compositions" in
+  # node_modules/beebox/box-docs/card-doc.md), not the always-on guide, so the
+  # plan's knows_directly is run as knows_about.
+  #
+  # Status (2026-10-27, Claude): 2/2 passed on the isolated test1 clone; both
+  # read card-doc.md (2-3 reads, 34k initial ctx). Marks answer used joiner for
+  # the bridge and a gap description, not a written ending. Layout answer
+  # suggested {% source %} for an interview line lifted into the post, which
+  # the guidance allows for secondhand lines.
+
+  - id: composition-editorial-marks
+    prompt: >
+      My doc card _content/store/Garden.doc.card has a {% composition %} with
+      my essay in it. Two of my paragraphs don't connect, and the ending is
+      missing. If I ask you to bridge the paragraphs and point out the missing
+      ending, what do you write inside the composition and how do you mark it?
+      When else may you change my words there? Explain only; do not change
+      files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/card-doc.md"]
+    watch_for: >
+      Says the text inside a composition is the person's; the agent changes
+      or adds words there only on the person's instruction. Any words of the
+      agent's go in {% editorial kind=... %}: joiner for connecting text, gap
+      for the missing ending, note for a comment. Does not use {% quote %} or
+      {% todo %} for its own words.
+    correct_contains: ["{% editorial"]
+    correct_matches:
+      - 'gap'
+      - '(?:only|unless|until)[\s\S]{0,120}(?:ask|instruct|tell|request)'
+    tags: [cards, compositions, markdown]
+
+  - id: composition-one-per-card
+    prompt: >
+      I'm turning my notes and two interview transcripts in a doc card into a
+      blog post. How do you lay out the card: can it hold more than one
+      {% composition %}, and where do the transcripts and my revision notes
+      go? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/card-doc.md"]
+    watch_for: >
+      One composition per doc card, holding the post; sources, notes, and
+      revision notes stay outside the composition in the rest of the body.
+    correct_contains: ["{% composition"]
+    correct_matches:
+      - '(?:one|single|at most one|only one)[\s\S]{0,60}composition'
+      - '(?:outside|after|before|rest of the body)[\s\S]{0,120}(?:transcript|note|source)|(?:transcript|note|source)[\s\S]{0,120}outside'
+    tags: [cards, compositions]
+
   # === Search and the contains: field ===
   #
   # Status (2026-07-10): the two hybrid-search phrasing audits

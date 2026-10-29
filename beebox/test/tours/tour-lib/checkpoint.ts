@@ -10,6 +10,7 @@ import type { BrowseSession } from "./browse.js";
 import { runAxe } from "./axe.js";
 import { auditBackdrops, describeBackdropFailure } from "./backdrop.js";
 import { auditContrast, describeContrastFailure, mergeContrastSteps } from "./contrast.js";
+import { ambiguousControls, describeAmbiguous, scanPage } from "./labels.js";
 import type { CheckpointArtifact, Finding, ViewportSpec } from "./types.js";
 
 export interface CaptureInput {
@@ -74,6 +75,7 @@ export async function captureCheckpoint(input: CaptureInput): Promise<CaptureRes
 
   await auditCheckpointContrast({ ...input, reportPath: path.join(artifactsDir, `${name}.${viewport.name}.contrast.json`) });
   await auditCheckpointBackdrops(input);
+  await auditCheckpointLabels({ ...input, reportPath: path.join(artifactsDir, `${name}.${viewport.name}.labels.json`) });
 
   return {
     url,
@@ -121,5 +123,33 @@ async function auditCheckpointBackdrops(input: CaptureInput): Promise<void> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     pushFinding({ severity: "warn", checkpoint: name, viewport: viewport.name, message: `backdrop audit failed (no backdrop result for this checkpoint): ${message}` });
+  }
+}
+
+/**
+ * Controls the box agent cannot tell apart (labels.ts). A finding, not a gate:
+ * the weekly tour check files it or fixes the names.
+ */
+async function auditCheckpointLabels(input: CaptureInput & { reportPath: string }): Promise<void> {
+  const { name, viewport, session, pushFinding, reportPath } = input;
+  try {
+    const scan = await scanPage(session);
+    if (scan === null) {
+      await writeFile(reportPath, JSON.stringify({ skipped: "no window.__bbxUiScan on this page" }, null, 2), "utf8");
+      pushFinding({ severity: "info", checkpoint: name, viewport: viewport.name, message: "label audit skipped: the page has no UI scan hook (not an app page?)" });
+      return;
+    }
+    const ambiguous = ambiguousControls(scan.entries);
+    await writeFile(reportPath, JSON.stringify({ ambiguous, truncated: scan.truncated, duplicateIds: scan.duplicateIds }, null, 2), "utf8");
+    if (scan.truncated) {
+      pushFinding({ severity: "warn", checkpoint: name, viewport: viewport.name, message: "label audit incomplete: the UI scan hit its entry cap" });
+    }
+    if (ambiguous.length === 0) return;
+    const shown = ambiguous.slice(0, 6).map((g) => `\n  - ${describeAmbiguous(g)}`).join("");
+    const more = ambiguous.length > 6 ? `\n  - … ${String(ambiguous.length - 6)} more in ${path.basename(reportPath)}` : "";
+    pushFinding({ severity: "fail", checkpoint: name, viewport: viewport.name, message: `${String(ambiguous.length)} control names the agent cannot tell apart${shown}${more}` });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    pushFinding({ severity: "warn", checkpoint: name, viewport: viewport.name, message: `label audit failed (no label result for this checkpoint): ${message}` });
   }
 }

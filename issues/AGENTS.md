@@ -247,7 +247,8 @@ remain directly addressable. Their links and unique basenames remain enforced.
 
 Close with `git mv` into `closed/<category>/`, preserving the category. Add
 `resolution: implemented`, `wontfix`, or `superseded`, plus a short opening note
-naming the resolving commit, plan, or reason. Open issues must not carry
+naming the resolving commit, plan, or reason. The move adds a directory level;
+recompute each relative link in the body from the new location. Open issues must not carry
 `resolution:`. Git history is the archive; periodic maintenance may delete
 long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; they are `AGENTS.md` now. Older documents here keep the old name and carry a naming note. Tests were Markdown doctests (`*.doctest.md`, run by the `agent-doctest` package) until 2026-10-18; they are `.test.ts` files with `t.check` now, in the same directory under the same base name, and the package is `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

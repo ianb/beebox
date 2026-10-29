@@ -13,8 +13,11 @@ hand: it preprocesses new inbox items, runs housekeeping, runs
 **connectors** (the code that syncs an external service such as Gmail or
 Calendar into the box), creates job cards for what arrived, hands those jobs
 to the agent, and pushes the box's git history to your remote if you
-configured one. On a fresh box, scheduled runs are off until you turn them
-on.
+configured one. On a fresh box, the scheduled connector syncs and the nightly
+chat review are off until you turn them on. A few housekeeping routines are on
+from the start; the ones that run an agent (a weekly retrospective of your
+chats, a daily review of todos, a daily review of questions) do so only when
+there is something for them to work on.
 
 **Triage.** **Triage** is the step that decides where a new item belongs:
 file it, archive it, link it to an existing card, or leave it. Classification

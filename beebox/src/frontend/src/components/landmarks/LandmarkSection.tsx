@@ -11,7 +11,7 @@
  * the chat/directory association model.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import { type ViewTarget } from "../../lib/view-url";
@@ -28,6 +28,7 @@ import { ChevronIcon } from "./ChevronIcon";
 import { LandmarkGroupRows, useLandmarkRowInk } from "./LandmarkGroupRows";
 import { LandmarkSessions } from "./LandmarkSessions";
 import type { CardSymbolData } from "@shared/card-symbol";
+import { cardUrl } from "@shared/card-url";
 
 export interface ResolvedLink {
   ref: string;
@@ -64,7 +65,7 @@ interface Landmark {
  */
 const INDENT_CLASSES = ["", "ml-2 sm:ml-8", "ml-4 sm:ml-16", "ml-6 sm:ml-24", "ml-8 sm:ml-32"];
 
-function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
+function PathLink({ dir, cardPath, boxSlug }: { dir: string; cardPath: string; boxSlug: string }) {
   // The root landmark has no meaningful path — a bare "/" under its title
   // reads as leftover plumbing (a field-test operator stared at it and
   // guessed "a separator with the parts missing"). The tile's label carries
@@ -72,7 +73,7 @@ function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
   if (dir === "") return null;
   return (
     <Link
-      to={href(`/${boxSlug}/browse/${dir}`)}
+      to={href(cardUrl(boxSlug, cardPath))}
       className="inline-block self-start min-w-0 max-w-full px-2 py-0.5 -mx-2 rounded hover:bg-warm-100"
     >
       {/*
@@ -107,17 +108,19 @@ export function LandmarkSection({
 }) {
   const labelText = landmark.label || toDisplayPath(landmark.path);
   const indentClass = INDENT_CLASSES[Math.min(landmark.depth, INDENT_CLASSES.length - 1)];
+  // The title names the card, so each landmark's "New chat" is that landmark's.
+  const headingId = useId();
 
   return (
-    <Card padding="md" border="subtle" shadow className={indentClass}>
+    <Card padding="md" border="subtle" shadow className={indentClass} role="group" aria-labelledby={headingId}>
       <Stack gap="md">
         <div className="flex items-center gap-3">
           <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
           {/* min-w-0 flex-1: the path below wraps break-all, so a shrink-to-fit
               header column would break a short path mid-word. */}
           <Stack gap="xs" className="min-w-0 flex-1">
-            <Heading level={2}>{labelText}</Heading>
-            <PathLink dir={landmark.dir} boxSlug={boxSlug} />
+            <Heading level={2} id={headingId}>{labelText}</Heading>
+            <PathLink dir={landmark.dir} cardPath={landmark.path} boxSlug={boxSlug} />
           </Stack>
         </div>
 
@@ -257,7 +260,7 @@ function LinkTile({
 
   if (isUrlRef(link.ref)) {
     return (
-      <a href={link.ref} target="_blank" rel="noopener noreferrer" className="block">
+      <a href={link.ref} target="_blank" rel="noopener noreferrer" aria-label={display} className="block">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
           <Text as="div" size="xs" tone="muted" truncate>{link.ref}</Text>
@@ -279,7 +282,7 @@ function LinkTile({
   const target = resolveContentTarget(undefined, link.ref);
   if (onNavigate !== undefined && target !== null) {
     return (
-      <button type="button" onClick={() => onNavigate(target)} className="block w-full text-left">
+      <button type="button" onClick={() => onNavigate(target)} aria-label={display} className="block w-full text-left">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
           <TileDetail detail={link.detail} />
@@ -290,7 +293,7 @@ function LinkTile({
   }
 
   return (
-    <Link to={href(`/${boxSlug}/views/${link.ref}`)} className="block">
+    <Link to={href(`/${boxSlug}/views/${link.ref}`)} aria-label={display} className="block">
       <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
         <Text as="div" size="sm" weight="medium">{display}</Text>
         <TileDetail detail={link.detail} />
@@ -319,7 +322,7 @@ function LinkRow({
 
   if (isUrlRef(link.ref)) {
     return (
-      <a href={link.ref} target="_blank" rel="noopener noreferrer" className={rowClasses}>
+      <a href={link.ref} target="_blank" rel="noopener noreferrer" aria-label={display} className={rowClasses}>
         <div className={`font-medium ${ink} truncate`}>{display}</div>
         <div className={`text-xs ${soft} truncate`}>{link.ref}</div>
       </a>
@@ -345,7 +348,7 @@ function LinkRow({
   );
   const target = resolveContentTarget(undefined, link.ref);
   if (onNavigate !== undefined && target !== null) {
-    return <button type="button" onClick={() => onNavigate(target)} className={rowClasses}>{body}</button>;
+    return <button type="button" onClick={() => onNavigate(target)} aria-label={display} className={rowClasses}>{body}</button>;
   }
-  return <Link to={href(`/${boxSlug}/views/${link.ref}`)} className={rowClasses}>{body}</Link>;
+  return <Link to={href(`/${boxSlug}/views/${link.ref}`)} aria-label={display} className={rowClasses}>{body}</Link>;
 }

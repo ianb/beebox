@@ -242,7 +242,7 @@ void test("the API prepares and restricts serving changes to members", async (t)
   const prepared = await publicationCaller("user").publications.prepare({ card: HOME_CARD });
   t.check(({ cardPath: prepared.cardPath, approvalUrl: prepared.approvalUrl }), {
     cardPath: "_content/Home.publication.card",
-    approvalUrl: "/box-a/browse/_content/Home.publication.card",
+    approvalUrl: "/box-a/views/_content/Home.publication.card",
   });
 
   // Agent and open contexts cannot change serving state; a signed-in member can.

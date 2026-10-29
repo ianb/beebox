@@ -75,7 +75,9 @@ function ancestorInstructionFiles(boxRoot: string): string[] {
  * no instruction file above `boxRoot` loads, and claude.ai connectors are off
  * in both (`disableClaudeAiConnectors` is a flag-level setting; any source that
  * sets it true wins). Both disallow the built-ins that act on the host's
- * Claude account ({@link HOST_ACCOUNT_TOOLS}).
+ * Claude account ({@link HOST_ACCOUNT_TOOLS}), and both turn off Claude Code's
+ * commit and PR attribution: every box commit is an agent's, and the engine
+ * adds its own trailers, so a `Co-Authored-By` line is noise.
  */
 export function boxSessionSettings(
   { boxRoot, loadBoxContext }: { boxRoot: string; loadBoxContext: boolean },
@@ -85,6 +87,7 @@ export function boxSessionSettings(
     settings: {
       disableClaudeAiConnectors: true,
       claudeMdExcludes: ancestorInstructionFiles(boxRoot),
+      attribution: { commit: "", pr: "", sessionUrl: false },
     },
     disallowedTools: [...HOST_ACCOUNT_TOOLS],
   };

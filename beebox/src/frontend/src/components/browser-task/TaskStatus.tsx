@@ -81,7 +81,7 @@ function ClosedToggle({ closed, cardPath }: { closed: boolean; cardPath: string 
     <Toggle
       checked={!closed}
       disabled={mutation.isPending}
-      label={closed ? "Closed" : "Accepting batches"}
+      label="Accepting batches"
       onChange={(open) => mutation.mutate({ path: cardPath, closed: !open })}
     />
   );

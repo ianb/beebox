@@ -113,6 +113,13 @@ and send destination; only an explicit conversation action selects a recipient.
 Source editing, image lightboxes, capture, and other task-specific dialogs remain
 appropriate overlays for their distinct interactions.
 
+A link to a card opens it beside the chat: build it with `cardUrl` from
+`src/shared/card-url.ts` (`/<box>/views/<path>`). Notifications, chips, list
+rows, and dashboard items use it. Browse (`/<box>/browse/<path>`) is a
+maintenance view of the files. Link to it only when the person asks to see a
+directory's files ("Open <dir>/") or chose a maintenance action ("Open in
+browse view").
+
 ## Data and state
 
 Request/response data is a tRPC query or mutation through the client in
@@ -143,6 +150,12 @@ A page's own supporting components live in `pages/<x>/components/`; shared ones 
 Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-debug-log.md). When a change can affect the two-pane layout (`<Stack hideOnMobile>`, `<MobileBackButton>`), also check it at phone width (`set viewport 375 800`).
 
 Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `duplicate-id` in the [tours](docs/testing/tours.md) catches collisions). The box agent and `bin/browse` address controls by it (`src/frontend/src/lib/ui-scan/resolve.ts`). Per-row controls get one only when a unique derived id is obvious. Never rename an existing id; iOS mirrors some of them.
+
+Every control also has an accessible name, which screen readers, the box agent, `bin/browse`, tours, and DOM tests all use:
+
+- The name says the action and, on a per-row control, its object: "Delete Soup", not "Delete" on every row. When an item repeats several controls (a question card's "Submit", "Later", "Answer in chat"), name the item instead: `role="group"` with `aria-labelledby` its heading (`<Card role="group">`). The box agent's scan reports a named group as the container of those controls.
+- An icon-only control sets `aria-label`, or the primitive's `label` prop. `title` alone is not enough; `jsx-a11y/control-has-associated-label` enforces this on native elements.
+- A toggle or disclosure keeps one name in both states and exposes the state: `aria-checked` on a switch, `aria-pressed` on a toggle button, `aria-expanded` on a disclosure.
 
 **Actions**
 - `<Button>` — labeled or icon-only commit-action. Props: `intent` (primary/secondary/destructive/accent/success/ghost), `shape` (rect/circle), `size`, `icon`, `loading` (auto-on for Promise `onClick`), `loadingLabel` (takes a function `(secs) => ...` to show elapsed time), `flash` (post-click feedback like "Copied!"). Discriminated union enforces `label` for icon-only variants.

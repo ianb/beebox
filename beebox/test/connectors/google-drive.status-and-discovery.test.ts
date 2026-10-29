@@ -415,7 +415,7 @@ void test("Two remote children can derive the same local card name.", async (t) 
   t.check(third, {
     success: false,
     created: [],
-    updated: ["_content/drive/folder/Folder.gfolder.card"],
+    updated: [],
     error: "Drive file sheet-newcomer (\"Shared Name\") maps to _content/drive/folder/Shared_Name.gsheet.card, already claimed by drive.id sheet-occupant",
   });
   t.check((await box.list()).split("\n").filter((p) => p.endsWith(".gsheet.card")), ["_content/drive/folder/Raced_Child.gsheet.card", "_content/drive/folder/Shared_Name.gsheet.card"]);

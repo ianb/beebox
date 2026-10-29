@@ -33,7 +33,7 @@ export interface StoredPushSubscription {
 export interface PushPayload {
   title: string;
   body: string;
-  /** Root-relative deep link opened on notificationclick (e.g. "/box/browse/x"). */
+  /** Root-relative deep link opened on notificationclick (e.g. "/box/views/x"). */
   url: string;
   tag?: string | undefined;
   /**

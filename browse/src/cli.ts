@@ -9,6 +9,7 @@ import { TARGET_COMMANDS } from "./controls.js";
 import { runEnhancedScreenshot } from "./screenshot.js";
 import { openClerkPopup, waitTimeoutMs } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
+import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit } from "./launch-options.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -49,6 +50,9 @@ function readyTimeoutMs(): number {
 // and `screenshot` wait BEFORE reading so they capture the settled state.
 const WAIT_AFTER = new Set(["open"]);
 const WAIT_BEFORE = new Set(["snapshot", "screenshot"]);
+
+// Leading flags upstream answers on its own, with no page or subcommand.
+const PASSTHROUGH_LEADING_FLAGS = new Set(["--help", "-h", "--version", "-V"]);
 
 // Commands that can change the page under a snapshot's refs. After one runs, a
 // `@eN` ref is refused until the next snapshot (`noteAction`).
@@ -155,6 +159,11 @@ async function main(): Promise<number> {
     process.env["AGENT_BROWSER_PROFILE"] = await sessionProfileDir(name);
     args = [...args.slice(0, sessionIndex), ...args.slice(sessionIndex + 2)];
   }
+  // Launch options (`--args`, `--headed`, …) go to every child through their
+  // env vars, so the cookie step that starts the browser has them too.
+  const launch = hoistLaunchOptions(args, process.env);
+  args = launch.args;
+  Object.assign(process.env, launch.env);
   const noWaitIdx = args.indexOf("--no-wait");
   const skipWait = noWaitIdx !== -1;
   if (skipWait) args = [...args.slice(0, noWaitIdx), ...args.slice(noWaitIdx + 1)];
@@ -164,6 +173,19 @@ async function main(): Promise<number> {
   }
   const ctx = detectWorktreeContext();
   const sub = args[0] === undefined ? "" : args[0];
+  // Any other flag before the subcommand would be taken for the subcommand,
+  // skipping the open rewrite and the cookie (upstream then gets a bare path).
+  if (sub.startsWith("-") && !PASSTHROUGH_LEADING_FLAGS.has(sub)) {
+    throw new BrowseConfigError(`put ${sub} after the subcommand (e.g. bin/browse open /chats ${sub} …)`);
+  }
+
+  // A running browser keeps the options it started with; upstream would
+  // ignore the new ones without a word.
+  const socketDir = process.env["AGENT_BROWSER_SOCKET_DIR"] ?? "";
+  const session = process.env["AGENT_BROWSER_SESSION"] ?? "default";
+  if (launch.flags.length > 0 && sub !== "close" && daemonRunning(socketDir, session)) {
+    throw new BrowseConfigError(`${launch.flags.join(", ")} apply when the browser starts, and it is running: run bin/browse close first`);
+  }
 
   if (sub !== "open" && sub !== "close") {
     await refreshAuthCookie(ctx);
@@ -236,6 +258,9 @@ async function main(): Promise<number> {
 
   const code = await runPassthrough(args);
   if (code === 0 && PAGE_CHANGING.has(sub)) await noteAction(sub);
+  if (code === 0 && sub === "close") {
+    await waitForDaemonExit(socketDir, args.includes("--all") ? knownSessions(socketDir) : [session]);
+  }
   return code;
 }
 

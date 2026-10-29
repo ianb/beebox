@@ -19,3 +19,9 @@ perf-easy-wins/20261024T165655Z-landed.md.
 
 Directions named in the entries: let `--fix` rewrite repo paths in test files
 too, or print the remaining old-basename matches after a move.
+
+**2026-10-28 (retrospective 20261028-234100):** Four more finishes edited the
+old path by hand after `--fix`: composition-editor/20261028T041113Z-landed.md
+(two test files), dep-reduction/20261027T214638Z-landed.md,
+card-remount/20261027T192240Z-landed.md (two test comments), and
+ios-stale-chat/20261027T004354Z-landed.md (code comments, fixed with `sed`).

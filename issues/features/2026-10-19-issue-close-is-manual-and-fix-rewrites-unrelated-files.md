@@ -24,3 +24,10 @@ applied another worker's 387-file sweep).
 Direction: a `bin/issues close` verb that moves the file, sets the
 frontmatter, adds the note, and rewrites only links that point at the moved
 file, printing each rewritten path.
+
+**2026-10-28 (retrospective 20261028-234100):** Two more sessions broke
+relative links in a closed issue's body with `git mv`, and `--fix` could not
+repair ambiguous basenames: bug-burndown-5/20261027T202959Z-implemented.md,
+box-isolation-followups/20261027T055233Z-implemented.md. `issues/AGENTS.md`
+"Closed items" now says to recompute them; a close verb that rewrites the links
+is still the fix.

@@ -300,8 +300,8 @@ evidence model.
   showing the recorded answer and state (not just a state word). Expired
   questions render with the answer form still available — demoted, not
   closed.
-- **Browse renderer** — the `question` file-type renderer
-  (`src/frontend/src/renderers/question.tsx`) registers on `/browse/<path>`
+- **Card renderer** — the `question` file-type renderer
+  (`src/frontend/src/renderers/question.tsx`) renders `/views/<path>` card
   deep links (from notifications, dashboard, `context:` refs): shows the
   embedded `QuestionForm` when the question is answerable, or the recorded
   answer plus the `learning:` proposal once it's answered. The proposal is

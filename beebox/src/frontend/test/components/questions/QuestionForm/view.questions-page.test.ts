@@ -9,7 +9,7 @@
 // the calls it receives.
 
 // First, and bare: React DOM must load after the happy-dom window exists.
-import { mount, type Mounted } from "../../../helpers/dom-harness.js";
+import { byRole, mount, type Mounted } from "../../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -61,8 +61,8 @@ function controls(view: Mounted) {
 }
 
 async function click(view: Mounted, label: string) {
-  const button = [...view.container.querySelectorAll("button")].find((b) => b.textContent === label);
-  if (button instanceof HTMLElement) await view.act(() => { button.click(); });
+  const button = byRole(view.container, { role: "button", name: label });
+  await view.act(() => { button.click(); });
 }
 
 // ## A pending question offers Later, which puts it away

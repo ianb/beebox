@@ -45,7 +45,7 @@ export function DriveSection() {
         {/* Distinct id from the not-connected branch below: ids are authored
             once (ui-scan annotations test counts source literals), even
             when the branches are mutually exclusive at runtime. */}
-        <GoogleConnectLink id="bbx-settings-drive-connect-google-error" />
+        <GoogleConnectLink id="bbx-settings-drive-connect-google-error" service="Drive" />
       </DriveShell>
     );
   }
@@ -71,7 +71,7 @@ export function DriveSection() {
           Google isn&apos;t connected for this box, so there is nothing to mirror
           from yet.
         </Text>
-        <GoogleConnectLink id="bbx-settings-drive-connect-google" />
+        <GoogleConnectLink id="bbx-settings-drive-connect-google" service="Drive" />
       </DriveShell>
     );
   }

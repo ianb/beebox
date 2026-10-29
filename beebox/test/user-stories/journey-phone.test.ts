@@ -135,7 +135,7 @@ void test("How a notification reads on the phone", async (t) => {
     formatPhoneEntry(logged({ id: "n3", source: "x", loudness: "quiet", target: "dashboard", body: "", sent: "present" }), opts),
   ], [
     "Mon, Oct 26, 12:48 PM — sound\nRenew the home insurance\nPrice goes up on Nov 7.\nTap opens: /chat?new=1&notification=n1",
-    "Mon, Oct 26, 12:48 PM — badge only\nRenew the home insurance\nTap opens: /browse/_content/home/insurance.doc.card",
+    "Mon, Oct 26, 12:48 PM — badge only\nRenew the home insurance\nTap opens: /views/_content/home/insurance.doc.card",
     "Mon, Oct 26, 12:48 PM — shown in the app, which was open; not sent to the phone\nRenew the home insurance\nTap opens: /",
   ]);
 });

@@ -31,8 +31,7 @@ workstream:
   # baseline in the store are the memory.
   session: fresh
   permissionMode: bypassPermissions
-  # The prompt says "never touch src/"; this makes the editing tools refuse it.
-  # Bash stays open (the session needs git, bin/tour, bin/land), so it is a
-  # guard against the ordinary path, not a sandbox.
-  disallowedTools: ["Edit(beebox/src/**)"]
+  # The session may change accessible names in beebox/src/frontend (prompt,
+  # "Fix control names"); the prompt bounds that, since an Edit pattern cannot
+  # say "names only".
   maxBudgetUsd: 4
