@@ -6,7 +6,11 @@ labels: [tours]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-tour-check — weekly tour check run 20261028-161719
+resolution: implemented
 ---
+
+Fixed in workstream a11y-labels: the pinned row now covers the desk padding
+under the sticky stop, and the question heading wraps long words.
 
 A pending question card opened in the chat workspace pane draws its body text
 outside the card. On the phone, the text continues below the card bottom and

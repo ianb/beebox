@@ -153,7 +153,7 @@ Every static interactive control carries a stable `id="bbx-<area>-<control>"`: k
 
 Every control also has an accessible name, which screen readers, the box agent, `bin/browse`, tours, and DOM tests all use:
 
-- The name says the action and, on a per-row control, its object: "Delete Soup", not "Delete" on every row.
+- The name says the action and, on a per-row control, its object: "Delete Soup", not "Delete" on every row. When an item repeats several controls (a question card's "Submit", "Later", "Answer in chat"), name the item instead: `role="group"` with `aria-labelledby` its heading (`<Card role="group">`). The box agent's scan reports a named group as the container of those controls.
 - An icon-only control sets `aria-label`, or the primitive's `label` prop. `title` alone is not enough; `jsx-a11y/control-has-associated-label` enforces this on native elements.
 - A toggle or disclosure keeps one name in both states and exposes the state: `aria-checked` on a switch, `aria-pressed` on a toggle button, `aria-expanded` on a disclosure.
 

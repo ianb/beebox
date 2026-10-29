@@ -6,8 +6,17 @@ labels: [tours, a11y]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-tour-check — weekly tour check run 20261028-161719
-needs: [decision]
+resolution: implemented
 ---
+
+Resolved in workstream a11y-labels. A repeated item is a named `role="group"`
+(the scan now counts a named group as a container): question cards by prompt,
+landmark cards by title, workspace panes by side, the theme studio desks and
+composer states by specimen. Tabs for cards with the same title add the path
+to the name; Recent activity links add the short hash. The scan cap went from
+200 to 300 entries, since 40 question groups pushed the Questions page past it.
+What the tours still report: test1 holds several pending copies of the same
+question ("What is unsure-001.jpg?" five times), which no name can tell apart.
 
 The tour label audit (`beebox/test/tours/tour-lib/labels.ts`) reports
 controls that share a role, a name and a container. The weekly tour check

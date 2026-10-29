@@ -11,12 +11,18 @@ import type { ScanElement } from "../types.js";
 /** What the scan treats an element as, or null for "not reported". */
 export type ScanKind = "control" | "landmark";
 
-/** Roles that group the dump. A landmark with no name is not a landmark. */
+/**
+ * Roles that group the dump. A landmark with no name is not a landmark. A named
+ * `group` is not an ARIA landmark, but it is how a repeated item names its own
+ * controls (each question's "Later"), and a screen reader announces it the
+ * same way; an unnamed one is just a box.
+ */
 const LANDMARK_ROLES = new Set([
   "banner",
   "complementary",
   "contentinfo",
   "form",
+  "group",
   "main",
   "navigation",
   "region",
@@ -110,7 +116,7 @@ export function classifyElement(element: ScanElement): {
   const role = explicit === null ? implicitRole(element) : explicit.trim().split(/\s+/)[0] ?? null;
   if (role === null) return null;
   if (LANDMARK_ROLES.has(role)) {
-    return { kind: "landmark", role, nameRequired: NAME_REQUIRED_LANDMARK_TAGS.has(element.tag) };
+    return { kind: "landmark", role, nameRequired: role === "group" || NAME_REQUIRED_LANDMARK_TAGS.has(element.tag) };
   }
   if (WIDGET_ROLES.has(role)) return { kind: "control", role, nameRequired: false };
   return null;

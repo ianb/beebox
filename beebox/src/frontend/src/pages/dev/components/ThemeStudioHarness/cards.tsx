@@ -100,8 +100,10 @@ function tab(path: string, { label, pinned }: { label: string; pinned: boolean }
  * the desk's direct child. A card is themed (`data-active-card`); any other
  * file sits on a neutral desk.
  */
-function CompanionDesk({ id, tabs, active, identities, content, children }: {
+function CompanionDesk({ id, label, tabs, active, identities, content, children }: {
   id: string;
+  /** Names the desk, as the workspace names a pane, so each desk's pane controls are its own. */
+  label: string;
   tabs: PanelTab[];
   active: string;
   identities: Map<string, CardIdentity>;
@@ -110,7 +112,8 @@ function CompanionDesk({ id, tabs, active, identities, content, children }: {
 }) {
   const material = useCompanionMaterial(active);
   const mobile = useMobileChatViewport();
-  return <div ref={material} data-active-card={content === "card" || undefined} className="bbx-companion-desk relative flex flex-col min-w-0 min-h-0">
+  return <div ref={material} data-active-card={content === "card" || undefined} className="bbx-companion-desk relative flex flex-col min-w-0 min-h-0"
+    role="group" aria-label={label}>
     <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
       <SidecarTabStrip id={id} tabs={tabs} activePath={active} identities={identities} boxSlug={undefined}
         onSelectTab={noop} onCloseTab={noop} onTogglePin={noop} />
@@ -176,15 +179,15 @@ export function StudioCards({ name, stock }: { name: string; stock: string }) {
     ["notes/Volunteers.doc.card", identity("Volunteers", "🙋")],
   ]);
   return <div className="min-w-0 space-y-4">
-    <CompanionDesk id="bbx-studio-tabs-reading" active={READING_PATH} identities={identities} content="card"
+    <CompanionDesk id="bbx-studio-tabs-reading" label="Reading card" active={READING_PATH} identities={identities} content="card"
       tabs={[tab(READING_PATH, { label: "Seed exchange", pinned: true }), tab("notes/Welcome table.doc.card", { label: "Welcome table", pinned: false })]}>
       <ReadingCard theme={theme} />
     </CompanionDesk>
-    <CompanionDesk id="bbx-studio-tabs-settings" active={SETTINGS_PATH} identities={identities} content="card"
+    <CompanionDesk id="bbx-studio-tabs-settings" label="Settings card" active={SETTINGS_PATH} identities={identities} content="card"
       tabs={[tab(SETTINGS_PATH, { label: "Settings", pinned: false }), tab("notes/Volunteers.doc.card", { label: "Volunteers", pinned: false })]}>
       <SettingsCard theme={theme} />
     </CompanionDesk>
-    <CompanionDesk id="bbx-studio-tabs-file" active={FILE_PATH} identities={identities} content="neutral"
+    <CompanionDesk id="bbx-studio-tabs-file" label="Plain file" active={FILE_PATH} identities={identities} content="neutral"
       tabs={[tab(FILE_PATH, { label: "packing-list.txt", pinned: false })]}>
       <Pre className="m-4">{"envelopes  40\nlabels     2 sheets\ntape       1 roll\npens       6"}</Pre>
     </CompanionDesk>
