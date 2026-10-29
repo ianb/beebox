@@ -18,7 +18,7 @@ import { passwordResetAdminProcedures } from "./password-resets.js";
 import { describeAllowedUsers } from "./user-details.js";
 import { getLoginGoogleClientCreds } from "../../../../google/auth.js";
 import { normalizeModelId } from "../../../../shared/model-ids.js";
-import { AGENT_ENGINES, EngineNotImplementedError, type AgentEngine } from "../../../../shared/agent-models.js";
+import { AGENT_ENGINES, type AgentEngine } from "../../../../shared/agent-models.js";
 
 /**
  * Shape of `_config/box.json`, validated on read (config is untrusted input).
@@ -149,7 +149,7 @@ export const adminRouter = router({
         ...(input.claudeCodeTelemetry === undefined ? {} : { claudeCodeTelemetry: input.claudeCodeTelemetry }),
         ...(input.codexTelemetry === undefined ? {} : { codexTelemetry: input.codexTelemetry }),
       }).catch((e: unknown) => {
-        if (e instanceof EngineNotImplementedError || e instanceof PiDefaultModelRequiredError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message, cause: e });
+        if (e instanceof PiDefaultModelRequiredError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message, cause: e });
         throw e;
       });
       if (result.commitError) {

@@ -11,9 +11,9 @@
  */
 
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import { lookupOpenRouterModel, type CatalogModel } from "../../openrouter-catalog.js";
-import { piModelUnusable } from "../../provider-env/openrouter-chat.js";
-import type { FetchLike } from "../../secrets/probe-registry.js";
+import { lookupOpenRouterModel, type CatalogModel } from "../../../openrouter-catalog.js";
+import { piModelUnusable } from "../../../provider-env/openrouter-chat.js";
+import type { FetchLike } from "../../../secrets/probe-registry.js";
 
 /** pi's chat model type; pi-coding-agent does not re-export pi-ai's `Model`. */
 export type PiModel = NonNullable<ReturnType<ModelRuntime["getModel"]>>;

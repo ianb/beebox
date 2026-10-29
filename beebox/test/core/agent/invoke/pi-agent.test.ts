@@ -17,7 +17,6 @@ import {
   createAssistantMessageEventStream, fauxAssistantMessage, fauxProvider, fauxToolCall, type AssistantMessageEventStream,
 } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import { agentFor } from "../../../../src/core/agent/invoke/core.js";
 import { createPiAgent } from "../../../../src/core/agent/invoke/pi-agent.js";
 import type { AgentInvokeOptions } from "../../../../src/core/agent/types.js";
 import { clearOpenRouterCatalogCache } from "../../../../src/core/openrouter-catalog.js";
@@ -204,12 +203,5 @@ void test("an invalid edit is steered back to the model, and fails the run if it
     + "Fix the file before you finish; the run fails if this still stands.");
   t.check({ success: result.success, error: !result.success && result.error, output: result.output }, {
     success: false, error: "pi edits failed Bee Box validation", output: str`${any(String)}Bee Box validation failed:\n${finding}\n${any(String)}`,
-  });
-});
-
-void test("createAgent's dispatch runs pi for a pi box", async (t) => {
-  const { invoke } = await piBox(t);
-  t.check(await agentFor("pi", { name: "pi-test" }).invoke(invoke({ dryRun: true, prompt: "hello" })), {
-    success: true, exitCode: 0, sessionId: "", output: "[DRY RUN] Would run pi with prompt:\nhello",
   });
 });

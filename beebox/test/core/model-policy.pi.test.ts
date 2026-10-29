@@ -6,9 +6,8 @@
 // refuses. None of them reaches `resolveProcedureModel`, whose invariant
 // would throw.
 //
-// These call the pure resolvers. The loaders (`loadTierResolver`,
-// `loadEffectiveSmallModel`) need a box whose config says `agentEngine: "pi"`,
-// which config refuses until pi's chat backend lands (Track 6).
+// The background-work loaders (`loadTierResolver`, `loadEffectiveSmallModel`)
+// are checked on a pi box at the end.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -21,6 +20,9 @@ import {
   resolveTierModel,
 } from "../../src/core/model-policy.js";
 import { piModelMissing } from "../../src/core/provider-env/openrouter-chat.js";
+import { loadEffectiveSmallModel, loadTierResolver } from "../../src/core/model-policy.js";
+import { clearBoxConfigCache } from "../../src/core/box/config.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const qwen = { id: "qwen/qwen3-coder", label: "Qwen3 Coder" };
 const deepseek = { id: "deepseek/deepseek-chat-v3.1", label: "DeepSeek v3.1" };
@@ -89,4 +91,20 @@ void test("a pi run with no model refuses with the OpenRouter setup error", asyn
     message: "This box runs the pi engine, which runs only models added in Admin → OpenRouter models, "
       + "and no default model is chosen from them. Choose one as the default model in Admin → Agent engine and model.",
   });
+});
+
+// A pi box with a Haiku `smallModel` left from its claude days: small passes
+// and the efficient tier run the added default; with no default they refuse.
+void test("background work on a pi box runs added models or refuses", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const load = async (config: object) => {
+    await box.write("_config/box.json", JSON.stringify({ agentEngine: "pi", smallModel: haiku, openrouterModels: added, ...config }));
+    clearBoxConfigCache(box.root);
+    const tiers = await loadTierResolver(box.root);
+    const attempt = (run: () => string | Promise<string>) => Promise.resolve().then(run).catch((e: Error) => e.name);
+    return [await attempt(() => loadEffectiveSmallModel(box.root)), await attempt(() => tiers("efficient")), await attempt(() => tiers("strong"))];
+  };
+  t.check(await load({ agentModel: qwen.id }), [qwen.id, qwen.id, qwen.id]);
+  t.check(await load({}), ["OpenRouterSetupError", "OpenRouterSetupError", "OpenRouterSetupError"]);
 });

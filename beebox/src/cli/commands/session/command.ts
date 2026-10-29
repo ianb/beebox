@@ -40,7 +40,7 @@ import { SESSION_STORES } from "../../../core/chat/session/native-store.js";
 import {
   parseDiagnosticEngine,
   resolveDiagnosticEngine,
-  validateCodexSessionMode,
+  validateNativeSessionMode,
 } from "../../lib/diagnostic-session.js";
 import type { AgentEngine } from "../../../core/box/config.js";
 import { isWithin } from "../../../lib/box-containment.js";
@@ -109,7 +109,7 @@ async function claudeSessionLogPath(options: ExplicitSessionOptions): Promise<st
 /** Render a Codex thread or pi session here, as readable dialogue through the native store. */
 async function printNativeSession(engine: "codex" | "pi", options: ExplicitSessionOptions): Promise<void> {
   try {
-    validateCodexSessionMode({
+    validateNativeSessionMode(engine, {
       raw: options.raw,
       toolReport: options.toolReport,
       full: options.full,

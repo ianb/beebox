@@ -378,12 +378,12 @@ void test("A box with no Codex subscription should not be offered Codex chats.",
     "codex",
   ]);
 
-  // pi cannot be enabled until its chat backend lands (docs/plans/pi-box-engine.md,
-  // Track 6), so a hand-written `pi: true` offers nothing.
+  // pi is enabled like any other engine.
 
   await writeEngines({ engines: { claude: true, pi: true } });
   t.check(await loadEnabledEngines(engineBox.root), [
     "claude",
+    "pi",
   ]);
 
   await engineBox.cleanup();

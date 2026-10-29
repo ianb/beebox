@@ -18,10 +18,10 @@ import {
   type AgentSession,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import { piAgentDir, piSessionsDir } from "../../pi-sessions.js";
-import { addedModelKey, piModelUnpriced } from "../../provider-env/openrouter-chat.js";
-import { buildScriptEnv } from "../../script-env/core.js";
-import type { FetchLike } from "../../secrets/probe-registry.js";
+import { piAgentDir, piSessionsDir } from "../../../pi-sessions.js";
+import { addedModelKey, piModelUnpriced } from "../../../provider-env/openrouter-chat.js";
+import { buildScriptEnv } from "../../../script-env/core.js";
+import type { FetchLike } from "../../../secrets/probe-registry.js";
 import { piResources } from "./context.js";
 import { resolvePiModel } from "./model.js";
 import { piBashTool, piToolAllowlist } from "./tools.js";

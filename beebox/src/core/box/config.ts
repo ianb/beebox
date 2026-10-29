@@ -12,9 +12,7 @@ import { getBoxDir } from "../../lib/paths/core.js";
 import { pluginNames } from "../../plugins.js";
 import {
   AGENT_ENGINES,
-  EngineNotImplementedError,
   isAgentEngine,
-  isSelectableAgentEngine,
   modelTier,
   type AgentEngine,
 } from "../../shared/agent-models.js";
@@ -126,7 +124,7 @@ class InvalidAgentEngineError extends Error {
   readonly value: unknown;
 
   constructor(value: unknown) {
-    super("Box config agentEngine must be either claude or codex");
+    super(`Box config agentEngine must be one of ${AGENT_ENGINES.join(", ")}`);
     this.name = "InvalidAgentEngineError";
     this.value = value;
   }
@@ -212,8 +210,6 @@ export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
   const engine: unknown = config.agentEngine;
   if (engine === undefined) return "claude";
   if (!isAgentEngine(engine)) throw new InvalidAgentEngineError(engine);
-  // Guard until pi's chat backend lands (docs/plans/pi-box-engine.md, Track 6).
-  if (!isSelectableAgentEngine(engine)) throw new EngineNotImplementedError(engine, "box config agentEngine");
   return engine;
 }
 
@@ -365,7 +361,7 @@ export async function loadEnabledEngines(boxRoot: string): Promise<AgentEngine[]
     );
   }
   return AGENT_ENGINES.filter((engine) =>
-    engine === fallback || (isSelectableAgentEngine(engine) && config.engines?.[engine] === true));
+    engine === fallback || config.engines?.[engine] === true);
 }
 
 /**

@@ -12,18 +12,8 @@ export function isAgentEngine(value: unknown): value is AgentEngine {
 }
 
 /**
- * Whether a box may select this engine today. pi is a known engine but is
- * refused as a box's default or enabled engine until its chat backend lands
- * (docs/plans/pi-box-engine.md: Track 6's last chunk removes this guard).
- */
-export function isSelectableAgentEngine(engine: AgentEngine): boolean {
-  return engine !== "pi";
-}
-
-/**
- * A code path an engine does not have yet. The pi engine is being added in
- * tracks (docs/plans/pi-box-engine.md); each pi arm that has no
- * implementation throws this rather than falling through to another engine's.
+ * A code path an engine does not have. Its one user is the knowledge audit on
+ * pi, which needs a pi behavior reader (docs/plans/pi-box-engine.md).
  */
 export class EngineNotImplementedError extends Error {
   readonly engine: AgentEngine;

@@ -23,7 +23,8 @@ import {
   type CodexCliService,
 } from "../../services/codex-cli/core.js";
 import { providerEnvAdditions } from "../provider-env/core.js";
-import { EngineNotImplementedError, isThirdPartyModel, type AgentEngine } from "../../shared/agent-models.js";
+import { addedModelKey, piModelMissing } from "../provider-env/openrouter-chat.js";
+import { isThirdPartyModel, type AgentEngine } from "../../shared/agent-models.js";
 import { ProviderSetupError } from "../provider-setup-error.js";
 import { invariant } from "../../shared/invariant.js";
 
@@ -192,6 +193,22 @@ function refuse(session: { emit(event: "error", error: Error): boolean }, error:
   return false;
 }
 
+/**
+ * A pi chat's setup: a model from the added list and a usable OpenRouter key,
+ * the two things pi readiness reports as `needs-default-model` and `needs-key`.
+ */
+async function piSetupRefusal(params: { boxRoot?: string | undefined; model?: string | undefined }): Promise<ProviderSetupError | null> {
+  invariant(params.boxRoot !== undefined, "preflightChatBackend: a pi chat requires boxRoot");
+  if (params.model === undefined) return piModelMissing();
+  try {
+    await addedModelKey({ boxRoot: params.boxRoot, model: params.model, purpose: "chat-preflight" });
+    return null;
+  } catch (e) {
+    if (e instanceof ProviderSetupError) return e;
+    throw e;
+  }
+}
+
 export async function preflightChatBackend(params: {
   backend: {
     requiresClaudeAuth?: boolean | undefined;
@@ -207,7 +224,10 @@ export async function preflightChatBackend(params: {
   claudeCli?: ClaudeCliService | undefined;
   codexCli?: CodexCliService | undefined;
 }): Promise<boolean> {
-  if (params.engine === "pi") return refuse(params.session, new EngineNotImplementedError(params.engine, "starting a chat"));
+  if (params.engine === "pi") {
+    const refusal = await piSetupRefusal(params);
+    return refusal === null || refuse(params.session, refusal);
+  }
   if (params.engine === "codex") {
     if (params.backend.requiresCodexAuth !== true) return true;
     try {

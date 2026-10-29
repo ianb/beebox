@@ -2,9 +2,8 @@
 //
 // pi has no model of its own, so the admin write refuses a pi box whose
 // default is not one of its added OpenRouter models
-// (docs/plans/pi-box-engine.md, Track 2). Until pi's chat backend lands, the
-// write also refuses selecting pi at all; both checks apply. A pi config can
-// still arrive by hand edit, which is where the default rule is reachable now.
+// (docs/plans/pi-box-engine.md, Track 2), in the save that selects pi and in
+// every later save of the model.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -31,15 +30,14 @@ void test("a pi box's default model must be one it added", async (t) => {
   );
   const saved = async () => JSON.parse(await box.read("_config/box.json"));
 
-  // Selecting pi is refused by the Track 1 guard, even with an added default.
+  // Selecting pi needs an added default in the same save.
   await box.write("_config/box.json", JSON.stringify({ openrouterModels: [qwen, deepseek] }));
-  t.check(await save({ agentEngine: "pi", agentModel: qwen.id }), "BAD_REQUEST: the pi engine is not available yet (selecting it for a box)");
-
-  // On a hand-edited pi box, a write that clears the default or sets one pi
-  // cannot run is refused, and the file is left as it was.
-  const piConfig = { agentEngine: "pi", agentModel: qwen.id, openrouterModels: [qwen, deepseek] };
-  await box.write("_config/box.json", JSON.stringify(piConfig));
   const refused = "BAD_REQUEST: The pi engine runs only models added in Admin → OpenRouter models. Choose one of them as the default model in the same save.";
+  t.check([await save({ agentEngine: "pi" }), await save({ agentEngine: "pi", agentModel: qwen.id })], [refused, "saved: pi qwen/qwen3-coder"]);
+
+  // On a pi box, a write that clears the default or sets one pi cannot run is
+  // refused, and the file is left as it was.
+  const piConfig = JSON.parse(await box.read("_config/box.json"));
   t.check([
     await save({ agentModel: null }),
     await save({ agentModel: resolveProcedureModel({ engine: "claude", model: "strong" }) }),

@@ -4,7 +4,7 @@ import type { z } from "zod";
 import { validateStructuredResult } from "../json.js";
 import { appendSessionManifest } from "../manifest.js";
 import { createCarrier } from "../model-carry.js";
-import { runPiAgent } from "../pi-run/run.js";
+import { runPiAgent } from "../pi-run/run/core.js";
 import type { Agent, AgentInvokeOptions, AgentResult, StructuredAgentResult } from "../types.js";
 import { buildAgentTimeContext } from "./simulated-clock.js";
 

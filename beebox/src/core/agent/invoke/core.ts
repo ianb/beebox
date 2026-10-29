@@ -159,8 +159,8 @@ export function createClaudeAgent(options: {
   };
 }
 
-/** The batch agent of one engine. Exported for its dispatch test: box config refuses `pi` until its chat lands. */
-export function agentFor(engine: AgentEngine, options: Parameters<typeof createAgent>[0]): Agent {
+/** The batch agent of one engine. */
+function agentFor(engine: AgentEngine, options: Parameters<typeof createAgent>[0]): Agent {
   switch (engine) {
     case "claude":
       return createClaudeAgent(options);

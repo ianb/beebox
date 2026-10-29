@@ -53,21 +53,20 @@ void test("Configuration errors never fall back silently to a different vendor."
   await setEngine(box.root, "mystery");
   const agent = createAgent({ name: "selection-test" });
 
-  await t.checkThrows(async () => (await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true })), "InvalidAgentEngineError: Box config agentEngine must be either claude or codex");
+  await t.checkThrows(async () => (await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true })), "InvalidAgentEngineError: Box config agentEngine must be one of claude, codex, pi");
 
   await box.cleanup();
 });
 
-// ## pi is a known engine but cannot be selected yet
-//
-// Until pi's chat backend lands (docs/plans/pi-box-engine.md, Track 6), a box
-// config naming pi is refused rather than run on another engine.
-void test("A box config naming pi is refused rather than run on another engine.", async (t) => {
+// ## A pi box runs pi
+void test("A pi box runs pi", async (t) => {
   const box = await makeTmpBox();
   await setEngine(box.root, "pi");
   const agent = createAgent({ name: "selection-test" });
 
-  await t.checkThrows(async () => (await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true })), "EngineNotImplementedError: the pi engine is not available yet (box config agentEngine)");
+  t.check(await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true }), {
+    success: true, output: "[DRY RUN] Would run pi with prompt:\nhello", exitCode: 0, sessionId: "",
+  });
 
   await box.cleanup();
 });

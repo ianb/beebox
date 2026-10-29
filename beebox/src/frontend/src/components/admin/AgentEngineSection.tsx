@@ -7,7 +7,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { chatModelOptions, parseChatAgentEngine, type AddedModel } from "@shared/chat-models.js";
-import { AGENT_ENGINES, isSelectableAgentEngine, providerOf, type AgentEngine } from "@shared/agent-models.js";
+import { AGENT_ENGINES, providerOf, type AgentEngine } from "@shared/agent-models.js";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION =
@@ -108,7 +108,7 @@ export function AgentEngineSection() {
               Which harnesses a new chat may choose. Turn off an engine this box has no
               account for, so nobody starts a chat that cannot run.
             </Hint>
-            {AGENT_ENGINES.filter(isSelectableAgentEngine).map((candidate) => (
+            {AGENT_ENGINES.map((candidate) => (
               <CheckboxField
                 key={candidate}
                 id={`bbx-admin-engine-enabled-${candidate}`}

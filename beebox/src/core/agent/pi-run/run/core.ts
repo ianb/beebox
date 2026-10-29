@@ -10,16 +10,16 @@
 
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { z } from "zod";
-import { errorMessage } from "../../../shared/error-guards.js";
-import { invariant } from "../../../shared/invariant.js";
-import { loadAddedModels, loadBoxModel } from "../../box/config.js";
-import { resolveBoxModelForEngine } from "../../model-policy.js";
-import { piModelMissing } from "../../provider-env/openrouter-chat.js";
-import type { AgentResult } from "../types.js";
-import { resultFromPiRun, watchPiRun, type PiOutcome, type PiRunWatch } from "./outcome.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
+import { invariant } from "../../../../shared/invariant.js";
+import { loadAddedModels, loadBoxModel } from "../../../box/config.js";
+import { resolveBoxModelForEngine } from "../../../model-policy.js";
+import { piModelMissing } from "../../../provider-env/openrouter-chat.js";
+import type { AgentResult } from "../../types.js";
+import { resultFromPiRun, watchPiRun, type PiOutcome, type PiRunWatch } from "../outcome.js";
 import { piResultTool, RESULT_TOOL_FOLLOW_UP, type PiResultTool } from "./result-tool.js";
-import { openPiSession, type PiSessionDeps } from "./session.js";
-import { watchPiValidation } from "./validate.js";
+import { openPiSession, type PiSessionDeps } from "../session/core.js";
+import { watchPiValidation } from "../validate.js";
 
 export interface PiRunOptions {
   signal?: AbortSignal | undefined;

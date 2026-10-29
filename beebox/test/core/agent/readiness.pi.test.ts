@@ -5,8 +5,7 @@
 // readiness names the first piece missing, in the order the spawn gate checks
 // them: the default model, then the key.
 //
-// `piReadiness` reads only the model fields and the key, so these boxes need
-// no `agentEngine: "pi"`, which config refuses until pi's chat backend lands.
+// `piReadiness` reads only the model fields and the key.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -42,8 +42,8 @@ export async function reconcileDefaultEngine(boxRoot: string, services: Readines
   return { switched: true, readiness: await checkAgentReadiness(boxRoot, services), ...target };
 }
 
-/** Exported for its doctest. Returns claude or codex only: never pi. */
-export async function pickTarget(
+/** Returns claude or codex only: never pi. */
+async function pickTarget(
   boxRoot: string,
   { readiness, current }: { readiness: AgentReadiness; current: AgentEngine },
 ): Promise<{ agentEngine: Exclude<AgentEngine, "pi">; agentModel: string | null } | null> {

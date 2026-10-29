@@ -9,8 +9,8 @@
 
 import { join } from "node:path";
 import { DefaultResourceLoader, SettingsManager } from "@earendil-works/pi-coding-agent";
-import { expandInstructionIncludes } from "../../agent-context-includes.js";
-import { instructionFilePath } from "../../agent-instruction-files.js";
+import { expandInstructionIncludes } from "../../../agent-context-includes.js";
+import { instructionFilePath } from "../../../agent-instruction-files.js";
 
 /** pi has no harness rule for scoped guidance files; Codex's built-in prompt has one, pi's does not. */
 export const NESTED_AGENTS_LINE =
@@ -47,7 +47,9 @@ export async function piResources(
     noExtensions: true,
     noContextFiles: !loadBoxContext,
     noSkills: !loadBoxContext,
-    appendSystemPrompt: append,
+    // pi reads an `appendSystemPrompt` entry that names an existing path as that file, so the text goes in through the override.
+    appendSystemPrompt: [],
+    appendSystemPromptOverride: () => append,
   });
   await resourceLoader.reload();
   return { settingsManager, resourceLoader };
