@@ -33,15 +33,15 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.310`, Codex `0.164.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.311`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
 - **Latest reviewed upstream version:** `0.3.312` (SDK), `2.1.312` (Claude Code), `0.165.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.310` on 2026-10-26.
-  Next: `0.3.311` (settles 2026-10-28T19:49Z), `0.3.312` (2026-10-29T18:37Z).
+- **Current recommendation:** Agent SDK moved to `0.3.311` on 2026-10-29.
+  Next: `0.3.312` (settles 2026-10-29T18:37Z).
   **Codex `0.165.0` is held** until
   `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md` is
   decided (memory v2 on by default for fresh profiles). Production deploys recovered after
@@ -103,7 +103,7 @@ with an invalid name no longer stops all commands loading (which could leave
 subagent's `autoCompactWindow` now lowers the global window.
 - **Action:** Settled path; takeable 2026-10-29T18:37Z.
 
-### 0.3.311 / Claude Code 2.1.311 — pending (published 2026-10-26T19:49Z)
+### 0.3.311 / Claude Code 2.1.311 — APPLIED 2026-10-29 (published 2026-10-26T19:49Z)
 
 - **RUNTIME, wanted:** `claude -p` and SDK sessions no longer save transcript
   messages out of order or keep messages that were taken back — beebox reads
@@ -122,7 +122,7 @@ subagent's `autoCompactWindow` now lowers the global window.
   background subagent it started still works in it; stale MEMORY.md /
   CLAUDE.md after auto-compaction fixed; `--output-format json`/`stream-json`
   escape DEL, C1 and format characters (parsed values unchanged).
-- **Action:** Settled path; takeable 2026-10-28T19:49Z.
+- **Action:** Applied 2026-10-29 (`beebox` and `workstreams-app` pins). Verified: typecheck (beebox and workstreams-app), steering probe (4/4) on bundled CLI 2.1.311 (now hoisted to the root `node_modules`), `pnpm -C beebox test` (13,464 pass, 1 fail, 2 skip; the failure is a clock-dependent admin test, `issues/bugs/2026-10-29-encrypted-backup-summary-test-depends-on-clock.md`).
 - **Sources:** [SDK 0.3.311](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03311), [Claude Code 2.1.311](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21311)
 
 ### 0.3.310 / Claude Code 2.1.310 — APPLIED 2026-10-26 (published 2026-10-23T21:21Z)
