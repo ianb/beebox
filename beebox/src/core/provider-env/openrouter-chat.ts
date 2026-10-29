@@ -85,6 +85,14 @@ export function piModelUnusable(model: string, missing: string): ProviderSetupEr
   );
 }
 
+/** A run with a spending limit on a model whose price OpenRouter does not list. */
+export function piModelUnpriced(model: string): ProviderSetupError {
+  return new OpenRouterSetupError(
+    `This run has a spending limit, but OpenRouter lists no price for the model ${model}, so pi cannot estimate its cost. `
+      + "Pick another model in Admin → OpenRouter models.",
+  );
+}
+
 /** The params the gate takes: the box, the model id, and the audit purpose of the key read. */
 interface GateParams {
   boxRoot: string;

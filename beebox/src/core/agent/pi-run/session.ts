@@ -18,20 +18,13 @@ import {
   type AgentSession,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import { addedModelKey } from "../../provider-env/openrouter-chat.js";
+import { piAgentDir, piSessionsDir } from "../../pi-sessions.js";
+import { addedModelKey, piModelUnpriced } from "../../provider-env/openrouter-chat.js";
 import { buildScriptEnv } from "../../script-env/core.js";
 import type { FetchLike } from "../../secrets/probe-registry.js";
 import { piResources } from "./context.js";
 import { resolvePiModel } from "./model.js";
 import { piBashTool, piToolAllowlist } from "./tools.js";
-
-export function piAgentDir(boxRoot: string): string {
-  return join(boxRoot, ".beebox", "pi", "agent");
-}
-
-export function piSessionsDir(boxRoot: string): string {
-  return join(boxRoot, ".beebox", "pi", "sessions");
-}
 
 export interface PiSessionOptions {
   boxRoot: string;
@@ -52,6 +45,8 @@ export interface PiSessionOptions {
   resumeSessionId?: string | undefined;
   /** Tools the caller adds, such as a structured result tool. Always allowed. */
   customTools?: ToolDefinition[] | undefined;
+  /** Refuse a model whose input or output price is unknown, for a run with a budget. */
+  requireKnownPrices?: boolean | undefined;
   dryRun?: boolean | undefined;
 }
 
@@ -109,10 +104,11 @@ export async function openPiSession(options: PiSessionOptions, deps?: PiSessionD
   const agentDir = piAgentDir(boxRoot);
   const runtime = await (deps?.createRuntime ?? createRuntime)({ authPath: join(agentDir, "auth.json") });
   await runtime.setRuntimeApiKey("openrouter", key);
-  const model = await resolvePiModel(
+  const { model, pricesKnown } = await resolvePiModel(
     { runtime, id: options.model },
     { fetch: deps?.fetch ?? fetch, now: (deps?.now ?? Date.now)() },
   );
+  if (options.requireKnownPrices === true && !pricesKnown) throw piModelUnpriced(options.model);
   const { settingsManager, resourceLoader } = await piResources({
     boxRoot,
     cwd,

@@ -15,6 +15,7 @@ import { appendSessionManifest } from "../manifest.js";
 import { runAgent, type RunAgentOptions } from "./run.js";
 import { createCarrier } from "../model-carry.js";
 import { createCodexAgent } from "../codex-agent.js";
+import { createPiAgent } from "./pi-agent.js";
 import { loadAgentEngine } from "../../box/config.js";
 import type {
   AgentInvokeOptions,
@@ -22,7 +23,7 @@ import type {
   StructuredAgentResult,
   AgentResult,
 } from "../types.js";
-import { EngineNotImplementedError, type AgentEngine } from "../../../shared/agent-models.js";
+import type { AgentEngine } from "../../../shared/agent-models.js";
 import { assertNever } from "../../../shared/invariant.js";
 
 export type {
@@ -158,14 +159,15 @@ export function createClaudeAgent(options: {
   };
 }
 
-function agentFor(engine: AgentEngine, options: Parameters<typeof createAgent>[0]): Agent {
+/** The batch agent of one engine. Exported for its dispatch test: box config refuses `pi` until its chat lands. */
+export function agentFor(engine: AgentEngine, options: Parameters<typeof createAgent>[0]): Agent {
   switch (engine) {
     case "claude":
       return createClaudeAgent(options);
     case "codex":
       return createCodexAgent(options);
     case "pi":
-      throw new EngineNotImplementedError(engine, "running a batch agent");
+      return createPiAgent(options);
     default:
       return assertNever(engine);
   }

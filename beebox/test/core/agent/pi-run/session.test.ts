@@ -16,7 +16,8 @@ import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-work
 import { defineTool, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { NESTED_AGENTS_LINE } from "../../../../src/core/agent/pi-run/context.js";
 import { resolvePiModel } from "../../../../src/core/agent/pi-run/model.js";
-import { openPiSession, piSessionsDir, type PiSessionOptions } from "../../../../src/core/agent/pi-run/session.js";
+import { piSessionsDir } from "../../../../src/core/pi-sessions.js";
+import { openPiSession, type PiSessionOptions } from "../../../../src/core/agent/pi-run/session.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 import { clearOpenRouterCatalogCache } from "../../../../src/core/openrouter-catalog.js";
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
@@ -142,7 +143,7 @@ void test("a listed model keeps its reasoning, images and prices; a missing cont
     { ...entry, id: "acme/unpriced", supported_parameters: ["tools"], pricing: {} },
     { ...entry, id: "acme/no-context", context_length: null, pricing: {} },
   ]);
-  const resolve = async (id: string) => resolvePiModel({ runtime, id }, { fetch, now: 0 });
+  const resolve = async (id: string) => (await resolvePiModel({ runtime, id }, { fetch, now: 0 })).model;
   t.check(await resolve("acme/thinker:exacto"), {
     id: "acme/thinker:exacto", name: "Listed", api: "openai-completions", provider: "openrouter",
     baseUrl: "https://openrouter.ai/api/v1", reasoning: true, input: ["text", "image"],

@@ -52,6 +52,16 @@ export function piModelFromListing(listing: CatalogModel): PiModel {
 }
 
 /**
+ * A resolved model, and whether its input and output prices are known. pi's
+ * catalog always prices its models; a listing may not, and a budgeted run
+ * cannot be held to a budget it cannot estimate.
+ */
+export interface ResolvedPiModel {
+  model: PiModel;
+  pricesKnown: boolean;
+}
+
+/**
  * The model for `id`: pi's catalog entry; for a `:variant` id, pi's entry for
  * the base model under the full id (the variant routes the same model);
  * otherwise one built from OpenRouter's listing.
@@ -59,13 +69,14 @@ export function piModelFromListing(listing: CatalogModel): PiModel {
 export async function resolvePiModel(
   { runtime, id }: { runtime: ModelRuntime; id: string },
   deps: { fetch: FetchLike; now: number },
-): Promise<PiModel> {
+): Promise<ResolvedPiModel> {
   const exact = runtime.getModel("openrouter", id);
-  if (exact !== undefined) return exact;
+  if (exact !== undefined) return { model: exact, pricesKnown: true };
   const base = runtime.getModel("openrouter", id.split(":")[0] ?? id);
-  if (base !== undefined) return { ...base, id };
+  if (base !== undefined) return { model: { ...base, id }, pricesKnown: true };
   const listed = await lookupOpenRouterModel(id, deps);
   if (!listed.ok) throw piModelUnusable(id, `its OpenRouter listing could not be read (${listed.error})`);
   if (!listed.found) throw piModelUnusable(id, "neither pi nor OpenRouter lists it");
-  return piModelFromListing(listed.model);
+  const { promptPerMTok, completionPerMTok } = listed.model.pricing;
+  return { model: piModelFromListing(listed.model), pricesKnown: promptPerMTok !== null && completionPerMTok !== null };
 }
