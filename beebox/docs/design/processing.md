@@ -12,8 +12,8 @@ second concurrent wakeup skips rather than waits):
 3. Run **on-wakeup scheduled scripts**.
 4. Run **connectors** — pull external data, create job cards in
    `_bookkeeping/jobs/`; then clean up stale jobs, split any intake job over
-   25 items into jobs of 25 (one commit, `Phase: intake-split`), create
-   intake jobs for unjobbed inbox items (captured notes, etc.; at most 25
+   10 items into jobs of 10 (one commit, `Phase: intake-split`), create
+   intake jobs for unjobbed inbox items (captured notes, etc.; at most 10
    items per job), refresh the search index, and, when
    the refresh succeeded, queue a low-priority `contains` backfill job if
    searchable cards lack the field.

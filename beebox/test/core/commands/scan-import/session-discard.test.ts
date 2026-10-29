@@ -197,10 +197,10 @@ void test("The ledger records the hash only for an import that succeeded, so fai
 // ## Scan intake jobs are committed, or put back
 //
 // The job check counts only committed jobs, so the scan's intake jobs are
-// committed in one commit. Here a job already holds 24 items, and the scan's
+// committed in one commit. Here a job already holds 8 items, and the scan's
 // three items fill it and start another; both paths are in `HEAD`.
 //
-// When that commit is refused (23 more items: 22 fill the second job, one
+// When that commit is refused (10 more items: 9 fill the second job, one
 // starts a third), the jobs are put back as `HEAD` has them: the
 // appended job loses the append and the new job is removed. An uncommitted job
 // would hold its items (the wakeup counts every job's refs as jobbed) while the
@@ -210,7 +210,7 @@ void test("Scan intake jobs are committed, or put back", async (t) => {
   const box = await makeTmpBox({ git: true });
   t.teardown(() => box.cleanup());
   const existing = "_bookkeeping/jobs/2026-10-01T00-00-00-inbox.intake.job.card";
-  const old = Array.from({ length: 24 }, (_, i) => `_content/inbox/old-${String(i)}.doc.card`);
+  const old = Array.from({ length: 8 }, (_, i) => `_content/inbox/old-${String(i)}.doc.card`);
   await box.write(existing, createIntakeJobTemplate({ priority: "normal", description: "old", items: old }));
   box.commitAll("existing job");
   const headFiles = async () => (await execa("git", ["ls-tree", "-r", "--name-only", "HEAD", "_bookkeeping/jobs"], { cwd: box.root })).stdout.split("\n");
@@ -232,9 +232,9 @@ void test("Scan intake jobs are committed, or put back", async (t) => {
   console.warn = () => {};
   let refused;
   try {
-    // 23 items: 22 fill the second job, and one starts a third.
-    const burst = Array.from({ length: 23 }, (_, i) => `_content/inbox/burst-${String(i)}.capture-session.card`);
-    refused = await queueCommittedSessionIntake(box.root, { items: burst, description: "Scan: 23 photos" });
+    // 10 items: 9 fill the second job, and one starts a third.
+    const burst = Array.from({ length: 10 }, (_, i) => `_content/inbox/burst-${String(i)}.capture-session.card`);
+    refused = await queueCommittedSessionIntake(box.root, { items: burst, description: "Scan: 10 photos" });
   } finally {
     console.warn = warn;
   }

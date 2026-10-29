@@ -26,6 +26,7 @@ import { computeTodoAmbientLine } from "../../todo/ambient-summary.js";
 import type { ProcessJobsOptions, JobWithContent } from "../types.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { loadEffectiveBoxModel } from "../../model-policy.js";
+import { isIntakeJob } from "../../../job-cards/intake-utils.js";
 
 /** A hard limit on the UTF-8 bytes of the assembled batch prompt (about 40,000 to 55,000 tokens). */
 export const BATCH_PROMPT_BUDGET_BYTES = 160 * 1024;
@@ -74,6 +75,9 @@ export interface BatchSelection {
  * separators included. The first job is always selected: in full if that
  * fits, else with every ref listed, else given by path. Each later job is
  * selected only if its full description fits (first fit); the rest wait.
+ * A batch carries at most one intake job: the budget counts bytes, but a
+ * session runs out of turns first, and six 25-item scan jobs that fit the
+ * bytes left one session filing none of them.
  */
 export function selectBatch(
   jobs: JobForms[],
@@ -84,11 +88,17 @@ export function selectBatch(
   const deferred: string[] = [];
   const fits = (candidate: { relPath: string; description: string }): boolean =>
     byteLength(assemble([...selected, candidate])) <= budget;
+  let intakeSelected = false;
   for (const [i, job] of jobs.entries()) {
+    const intake = isIntakeJob(job.relPath);
     if (i === 0) {
       const form = [job.full, job.listed].find((description) => fits({ relPath: job.relPath, description })) ?? job.byPath;
       selected.push({ relPath: job.relPath, description: form });
+      intakeSelected = intake;
+    } else if (intake && intakeSelected) {
+      deferred.push(job.relPath);
     } else if (fits({ relPath: job.relPath, description: job.full })) {
+      intakeSelected ||= intake;
       selected.push({ relPath: job.relPath, description: job.full });
     } else {
       deferred.push(job.relPath);
@@ -118,7 +128,7 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<BatchO
     buildReactorUserPrompt(selected.map((s) => s.relPath), { jobDescriptions: selected.map((s) => s.description), ambientLine });
   const budget = opts.promptBudget ?? BATCH_PROMPT_BUDGET_BYTES;
   const { selected, deferred } = selectBatch(forms, { assemble, budget });
-  for (const relPath of deferred) onLog?.(`  deferred (prompt budget): ${relPath}\n`);
+  for (const relPath of deferred) onLog?.(`  deferred to a later cycle: ${relPath}\n`);
   const userPrompt = assemble(selected);
   const promptBytes = byteLength(userPrompt);
   // Selection measured each choice, so only a first job whose by-path form is

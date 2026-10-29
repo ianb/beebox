@@ -1,8 +1,8 @@
 // # Splitting oversized intake jobs
 //
-// Before the 25-item cap, one intake job grew to 300 items and its batch prompt
+// Before the item cap, one intake job grew to 300 items and its batch prompt
 // passed the model's limit. Every wakeup now splits an intake job over the cap
-// into jobs of at most 25 (`splitOversizedIntakeJobs`, committed by the wakeup's
+// into jobs of at most 10 (`splitOversizedIntakeJobs`, committed by the wakeup's
 // `splitOversizedJobs`). Chunk names derive from the original's, so a split
 // stopped partway resumes without a second set, and each chunk is published
 // atomically (`writeFileAtomic`), so a file under a chunk's name is always
@@ -44,14 +44,14 @@ async function jobFiles(box: TmpBox): Promise<string[]> {
   return (await readdir(join(box.root, "_bookkeeping/jobs"))).filter((f) => f.endsWith(".job.card")).map((f) => `_bookkeeping/jobs/${f}`).toSorted();
 }
 
-// ## A 300-item job becomes twelve jobs of 25, in one commit
+// ## A 300-item job becomes thirty jobs of 10, in one commit
 //
 // Items keep their order and the job keeps its key; each chunk's description
-// counts its own items. A 25-item job is left alone, and so is a job of another
+// counts its own items. A 10-item job is left alone, and so is a job of another
 // type, whatever its size.
-void test("A 300-item job becomes twelve jobs of 25, in one commit", async (t) => {
+void test("A 300-item job becomes thirty jobs of 10, in one commit", async (t) => {
   const box = await boxWithOversizedJob(t);
-  await box.write("_bookkeeping/jobs/2026-09-02T00-00-00-inbox.intake.job.card", createIntakeJobTemplate({ priority: "normal", description: "full", items: refs(500, 25) }));
+  await box.write("_bookkeeping/jobs/2026-09-02T00-00-00-inbox.intake.job.card", createIntakeJobTemplate({ priority: "normal", description: "full", items: refs(500, 10) }));
   await box.write("_bookkeeping/jobs/2026-09-03T00-00-00-big.contains-backfill.job.card", `---\npriority: low\nitems:\n${refs(600, 300).map((r) => `  - ref: ${r}`).join("\n")}\n---\n`);
   box.commitAll("other jobs");
 
@@ -65,7 +65,7 @@ void test("A 300-item job becomes twelve jobs of 25, in one commit", async (t) =
     console.log = consoleLog;
   }
   const first = await box.read(part(1));
-  const chunkItems = await Promise.all(parts(1, 12).map(async (p) => itemsOf(await box.read(p))));
+  const chunkItems = await Promise.all(parts(1, 30).map(async (p) => itemsOf(await box.read(p))));
   t.check(
     {
       count,
@@ -79,13 +79,13 @@ void test("A 300-item job becomes twelve jobs of 25, in one commit", async (t) =
     },
     {
       count: { committed: 1, refused: 0 },
-      files: [...parts(1, 12), "_bookkeeping/jobs/2026-09-02T00-00-00-inbox.intake.job.card", "_bookkeeping/jobs/2026-09-03T00-00-00-big.contains-backfill.job.card"],
-      first: ["---", "priority: normal", "description: Triage 25 inbox items"],
+      files: [...parts(1, 30), "_bookkeeping/jobs/2026-09-02T00-00-00-inbox.intake.job.card", "_bookkeeping/jobs/2026-09-03T00-00-00-big.contains-backfill.job.card"],
+      first: ["---", "priority: normal", "description: Triage 10 inbox items"],
       items: refs(0, 300),
-      sizes: [25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25],
-      commit: "Split intake job 2026-09-01T00-00-00-scan.intake.job.card into 12 jobs of at most 25 items\nintake-split",
+      sizes: Array.from({ length: 30 }, () => 10),
+      commit: "Split intake job 2026-09-01T00-00-00-scan.intake.job.card into 30 jobs of at most 10 items\nintake-split",
       status: "",
-      log: ["  Split _bookkeeping/jobs/2026-09-01T00-00-00-scan.intake.job.card into 12 jobs"],
+      log: ["  Split _bookkeeping/jobs/2026-09-01T00-00-00-scan.intake.job.card into 30 jobs"],
     },
   );
 
@@ -93,9 +93,9 @@ void test("A 300-item job becomes twelve jobs of 25, in one commit", async (t) =
   // job of the same priority.
   await box.write("_bookkeeping/jobs/2026-10-27T00-00-00-q.question-followup.job.card", "---\npriority: normal\n---\n");
   const order = (await findJobCards(join(box.root, "_bookkeeping/jobs"))).map((j) => j.file);
-  t.check(order.slice(10, 14), [
-    `${BASE}-part-11.intake.job.card`,
-    `${BASE}-part-12.intake.job.card`,
+  t.check(order.slice(28, 32), [
+    `${BASE}-part-29.intake.job.card`,
+    `${BASE}-part-30.intake.job.card`,
     "2026-09-02T00-00-00-inbox.intake.job.card",
     "2026-10-27T00-00-00-q.question-followup.job.card",
   ]);
@@ -104,19 +104,19 @@ void test("A 300-item job becomes twelve jobs of 25, in one commit", async (t) =
 // ## A split stopped partway resumes under the same names
 //
 // Chunks 1 to 5 were written (chunk 5 has since received an appended item) and
-// the original is still there. The next split writes 6 to 12, leaves 1 to 5 as
-// they are, and deletes the original: twelve chunks, never a second set.
+// the original is still there. The next split writes 6 to 30, leaves 1 to 5 as
+// they are, and deletes the original: thirty chunks, never a second set.
 void test("A split stopped partway resumes under the same names", async (t) => {
   const box = await boxWithOversizedJob(t);
   for (let n = 1; n <= 5; n++) {
-    const items = n === 5 ? [...refs(100, 25).slice(0, 24), "_content/inbox/late.doc.card"] : refs((n - 1) * 25, 25);
+    const items = n === 5 ? [...refs(100, 10).slice(0, 9), "_content/inbox/late.doc.card"] : refs((n - 1) * 10, 10);
     await box.write(part(n), createIntakeJobTemplate({ priority: "normal", description: `chunk ${String(n)}`, items }));
   }
   const fifth = await box.read(part(5));
   const splits = await splitOversizedIntakeJobs(box.root);
   t.check({ splits, files: await jobFiles(box), fifth: await box.read(part(5)) }, {
-    splits: [{ original: ORIGINAL, chunks: parts(1, 12) }],
-    files: parts(1, 12),
+    splits: [{ original: ORIGINAL, chunks: parts(1, 30) }],
+    files: parts(1, 30),
     fifth,
   });
 });
@@ -188,7 +188,7 @@ void test("A split whose commit is refused is put back", async (t) => {
   } finally {
     console.log = log;
   }
-  t.check(await jobFiles(box), parts(1, 12));
+  t.check(await jobFiles(box), parts(1, 30));
 });
 
 // ## The job check starts a run for the chunks at once
@@ -207,6 +207,6 @@ void test("The job check starts a run for the chunks at once", async (t) => {
   const after = await checkWaitingJobs(box.root, { start: started });
   t.check({ before, after }, {
     before: { kind: "started", files: [`${BASE}.intake.job.card`] },
-    after: { kind: "started", files: parts(1, 12).map((p) => p.replace("_bookkeeping/jobs/", "")) },
+    after: { kind: "started", files: parts(1, 30).map((p) => p.replace("_bookkeeping/jobs/", "")) },
   });
 });
