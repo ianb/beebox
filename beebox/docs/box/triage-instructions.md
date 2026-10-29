@@ -35,7 +35,8 @@ overlap, and identifying facts quoted from box cards. The result is
 `_bookkeeping/triage/compiled-instructions.json`. Canonical rule text is always
 kept; compiled text is appended after it. An overlap that neither rules nor
 principles settle becomes a question for the boxholder, and Jev marks such
-items unclear until it is answered. The file is generated: never edit it. Edit
+items unclear until it is answered. A recompile that no longer finds the conflict
+removes its unanswered question. The file is generated: never edit it. Edit
 the guide or a landmark instead. Any change to them, or to a cited card, makes
 the file stale, and the next non-dry-run `bbx triage --engine jev` recompiles.
 `bbx triage instructions` reports whether it is current, stale, absent or invalid.

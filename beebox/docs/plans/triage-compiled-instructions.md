@@ -293,8 +293,10 @@ The compile operation:
 5. Under the box Git lock, recompute the raw sources and cited-card digests and
    reread the compiled file. If either changed since step 1, discard this result,
    questions included, and report `superseded`. Otherwise write the compiled file
-   and the new question files (an existing question file is kept), and make one
-   scoped commit of them, with trailers `Triage-Compiled: <short digest of compiledFrom>` and
+   and the new question files (an existing question file is kept). Pending
+   conflict questions that the previous file listed and this one does not are
+   removed; answered, dismissed and expired ones stay (boxholder, 2026-10-29).
+   Make one scoped commit of all of it, with trailers `Triage-Compiled: <short digest of compiledFrom>` and
    `Triage-Classifier: <model>`.
 
 Use in the snapshot:
@@ -405,11 +407,6 @@ accepted risk in a committed, readable file.
 
 ## Open design questions
 
-- When a recompile no longer lists a conflict (the boxholder edited the guide
-  directly, or the agent reworded the case), its earlier unanswered question
-  stays pending. Lean: on a successful compile, remove unanswered generated
-  `Triage_Conflict_*` questions that the new file does not list, and keep
-  answered ones. Needs the boxholder's decision (cross-model code review finding).
 
 - Should `bbx triage compile` also replay confirmed receipts and refuse a
   compile that regresses them? Lean: yes, in the wiring plan, once a box has

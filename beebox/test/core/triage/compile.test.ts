@@ -143,3 +143,25 @@ void test("Cited facts stay inside the box and must match what the agent could r
   const edited = await compileTriageInstructions({ boxRoot: box.root, agent: fakeAgent(output, () => box.write(PROPERTY.slice(1), "---\ntitle: Garage\n---\nThe house is at parcel 01-234.\n")) });
   t.check(edited, { status: "superseded" });
 });
+
+// A recompile that no longer lists a conflict retires its unanswered question
+// in the same commit. An answered conflict question stays as history.
+void test("Settled conflicts retire their pending questions; answered ones stay.", async (t) => {
+  const box = await fixtureBox(t);
+  const two: CompileOutput = { ...output, tieBreaks: [], conflicts: [
+    { between: [MONEY, SHOP], when: "a garage utility bill", why: "both rules claim it" },
+    { between: [MONEY, SHOP], when: "a garage phone bill", why: "both rules claim it" },
+  ] };
+  const first = await compileTriageInstructions({ boxRoot: box.root, agent: fakeAgent(two) });
+  const [utility = "", phone = ""] = first.status === "compiled" ? first.compiled.conflicts.map((conflict) => conflict.questionRef) : [];
+  const answered = (await fs.readFile(box.path(phone.slice(1)), "utf8")).replace("---\n", "---\nanswer:\n  text: Shop.\nanswered-at: 2026-10-29T12:00:00Z\n");
+  await box.write(phone.slice(1), answered);
+  box.commitAll("answer one question");
+  await box.write(SHOP.slice(1), landmark("Anything about the garage building, including its property tax and utilities."));
+  box.commitAll("settle utilities in the shop rule");
+
+  const second = await compileTriageInstructions({ boxRoot: box.root, agent: fakeAgent(output) });
+  t.check(second.status === "compiled" ? second.retired : null, [utility]);
+  t.check([await fs.access(box.path(utility.slice(1))).then(() => "exists", () => "removed"), await fs.readFile(box.path(phone.slice(1)), "utf8")], ["removed", answered]);
+  t.check((await execa("git", ["status", "--porcelain"], { cwd: box.root })).stdout, "");
+});
