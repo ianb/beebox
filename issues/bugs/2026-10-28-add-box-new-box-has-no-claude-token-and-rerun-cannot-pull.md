@@ -33,7 +33,8 @@ variables on the laptop and stopped every GitHub-remote run with
 `RESOLVED: unbound variable` (f0bcd8c8b).
 
 **2026-10-28 (retrospective 20261028-234100):** No test covers `add-box.sh`;
-both defects reached production. Prevention to land with the fix: a test in
-`beebox/test/deploy/` that runs the script's dry-run for a new box and for an
-existing box with the push alias set, and checks that the plan grants
-`claude-oauth-token` and runs the pull as the box owner (or skips it).
+both defects reached production. Prevention to land with the fix: the
+dry-run names the token grant and who runs the pull, a test in
+`beebox/test/deploy/` checks that dry-run text for a new box, and a test with
+stubbed `git`/`sudo` checks that a re-run on an existing box pulls as the box
+owner (or skips the pull).

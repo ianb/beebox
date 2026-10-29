@@ -40,7 +40,7 @@ Create `test/<name>.test.ts`, mirroring the `src/` path. A good model:
 
 ## Running
 
-- One file, **from the package directory** (`beebox/`, frontend tests too): `pnpm exec tap test/<path>.test.ts`
+- One file, **from the package directory** (`beebox/` for frontend tests too): `pnpm exec tap test/<path>.test.ts` or `src/frontend/test/<path>.test.ts`
 - What your diff implicates: `pnpm test:changed`; `-j1` rules out contention. The full
   suite runs hourly on `main`. After a URL shape or class string changes, grep tests for the old literal.
 - If tap cannot start (a missing module under `node_modules/@tapjs`), stop and

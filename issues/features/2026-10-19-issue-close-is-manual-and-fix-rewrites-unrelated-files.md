@@ -29,5 +29,5 @@ file, printing each rewritten path.
 relative links in a closed issue's body with `git mv`, and `--fix` could not
 repair ambiguous basenames: bug-burndown-5/20261027T202959Z-implemented.md,
 box-isolation-followups/20261027T055233Z-implemented.md. `issues/AGENTS.md`
-"Closed items" now names the extra `../`; a close verb that rewrites the links
+"Closed items" now says to recompute them; a close verb that rewrites the links
 is still the fix.
