@@ -84,6 +84,7 @@ tests:
       - '(?:best.effort|do.your.best)[\s\S]{0,160}(?:permit|allow|policy|instruction)|(?:permit|allow|policy|instruction)[\s\S]{0,160}(?:best.effort|do.your.best)'
     tags: [jev-triage]
 
+  # Status (2026-10-29, Claude): passed on the worktree test1 clone; 0 reads/searches, 34k context.
   - id: triage-compiled-is-generated
     prompt: >
       A filing tie-break in this box's compiled triage instructions looks

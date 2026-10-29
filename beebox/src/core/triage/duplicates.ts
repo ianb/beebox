@@ -19,7 +19,7 @@ import { parseAnnexPointer } from "../../lib/annex-pointer.js";
 import { sha256Hex } from "../../lib/content-hash.js";
 import { isWithin } from "../../lib/box-containment.js";
 import { hasCommits } from "../../lib/git/core/operations.js";
-import { pathExistsStrict } from "../../lib/file-exists.js";
+import { withBoxGitLock } from "../../lib/git-lock.js";
 import type { CommandContext } from "../command-types.js";
 import { moveCardsToTrash, commitTrashReceipt } from "../commands/trash/command.js";
 import { moveFileToTrash } from "../commands/trash/file.js";
@@ -141,20 +141,21 @@ async function itemDigests(boxRoot: string, item: string): Promise<Array<{ ref: 
   return result;
 }
 
-/** No scope file has a commit after the one that added it, nor an uncommitted change to tracked bytes. */
+/**
+ * The whole scope is exactly what one import wrote. Committed: every scope file
+ * arrived in one commit and nothing has changed or been added since, so a card
+ * authored later in the scope (a note) keeps the item for review. Never
+ * committed (an import left staged): every entry is new.
+ */
 async function scopeUnedited(boxRoot: string, card: string): Promise<boolean> {
   const git = simpleGit(boxRoot);
   const scope = [card, attachDirFor(card)];
-  if (await hasCommits(boxRoot)) {
-    const log = await git.raw(["log", "--format=%x00%H", "--name-only", "--relative", "--", ...scope]);
-    const counts = new Map<string, number>();
-    for (const entry of log.split("\0").slice(1)) {
-      for (const file of entry.split("\n").slice(1).filter(Boolean)) counts.set(file, (counts.get(file) ?? 0) + 1);
-    }
-    if ([...counts.values()].some((count) => count > 1)) return false;
-  }
-  const status = await git.raw(["status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ...scope]);
-  return status.split("\0").filter(Boolean).every((entry) => entry.startsWith("?? ") || entry.startsWith("A  "));
+  const commits = await hasCommits(boxRoot)
+    ? new Set((await git.raw(["log", "--format=%H", "--", ...scope])).split("\n").filter(Boolean))
+    : new Set<string>();
+  const status = (await git.raw(["status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ...scope])).split("\0").filter(Boolean);
+  if (commits.size === 1) return status.length === 0;
+  return commits.size === 0 && status.every((entry) => entry.startsWith("?? ") || entry.startsWith("A  "));
 }
 
 /** Removable: a bare file, or an unannotated, voice-free scan-upload session no one has edited. */
@@ -173,6 +174,9 @@ async function dispositionOf(boxRoot: string, item: string): Promise<DuplicateFi
 /** Check items in sorted ref order; the first of several identical items is kept and the later ones are its duplicates. */
 export async function findExactDuplicates(boxRoot: string, sourceRefs: string[]): Promise<DuplicateFinding[]> {
   const items = [...new Set(sourceRefs.map(itemPath))].toSorted();
+  // Only inbox items are candidates; a filed document must never match itself.
+  const inbox = `${path.relative(boxRoot, getBoxDir(boxRoot, "inbox"))}/`;
+  for (const item of items) invariant(item.startsWith(inbox), `Duplicate check takes inbox items only: ${toRef(item)}`);
   const digests = new Map<string, Array<{ ref: string; digest: Digest }>>();
   for (const item of items) {
     const found = await itemDigests(boxRoot, item);
@@ -199,33 +203,44 @@ export interface DuplicateRemoval { sourceRef: string; copyOf: string; trashRefs
 
 class StaleDuplicateFindingError extends Error {
   readonly ref: string;
-  constructor(ref: string, problem: "changed" | "is gone") {
+  constructor(ref: string, problem: "changed" | "is no longer a duplicate") {
     super(`Stale duplicate finding: ${ref} ${problem}; check again`);
     this.name = "StaleDuplicateFindingError";
     this.ref = ref;
   }
 }
 
-/** Re-verify every removable finding's bytes and copies, then trash each with its own scoped commit. */
-export async function applyDuplicateRemovals(boxRoot: string, options: { findings: DuplicateFinding[]; ctx?: CommandContext }): Promise<DuplicateRemoval[]> {
+const findingKey = (finding: DuplicateFinding): string => JSON.stringify([finding.disposition, finding.originals]);
+
+/**
+ * Under the box Git lock, check each removable finding again from scratch (its
+ * originals, their filed copies' current bytes, its disposition) and trash it
+ * with its own scoped commit only if the fresh finding is identical.
+ */
+export async function applyDuplicateRemovals(boxRoot: string, options: {
+  findings: DuplicateFinding[];
+  /** Every ref the findings were checked against, so a copy of an earlier kept item still matches. */
+  checked: string[];
+  ctx?: CommandContext;
+}): Promise<DuplicateRemoval[]> {
   const ctx = options.ctx ?? { boxRoot, write: () => {}, writeLine: () => {} };
   const removable = options.findings.filter((finding) => finding.disposition === "removable");
-  for (const finding of removable) {
-    for (const original of finding.originals) {
-      const now = await digestOf({ boxRoot, wanted: () => true }, path.join(boxRoot, itemPath(original.ref)));
-      if (now?.sha256 !== original.sha256) throw new StaleDuplicateFindingError(original.ref, "changed");
-      if (!await pathExistsStrict(path.join(boxRoot, itemPath(original.copyOf)), { followLinks: false })) throw new StaleDuplicateFindingError(original.copyOf, "is gone");
+  return withBoxGitLock(boxRoot, async () => {
+    const fresh = new Map((await findExactDuplicates(boxRoot, options.checked)).map((finding) => [finding.sourceRef, finding]));
+    for (const finding of removable) {
+      const now = fresh.get(finding.sourceRef);
+      if (now === undefined || findingKey(now) !== findingKey(finding)) throw new StaleDuplicateFindingError(finding.sourceRef, now === undefined ? "is no longer a duplicate" : "changed");
     }
-  }
-  const removals: DuplicateRemoval[] = [];
-  for (const finding of removable) {
-    const copyOf = [...new Set(finding.originals.map((original) => original.copyOf))].join(", ");
-    const item = itemPath(finding.sourceRef);
-    const receipt = isCardFile(item) ? await moveCardsToTrash(ctx, [item]) : await moveFileToTrash(boxRoot, item);
-    const commit = await commitTrashReceipt(boxRoot, {
-      receipt, reason: `exact duplicate of ${copyOf}`, trailers: { "Trashed-By": "bbx triage duplicates", "Triage-Duplicate-Of": copyOf },
-    });
-    removals.push({ sourceRef: finding.sourceRef, copyOf, trashRefs: receipt.moves.map((move) => toRef(move.destPath)), commit });
-  }
-  return removals;
+    const removals: DuplicateRemoval[] = [];
+    for (const finding of removable) {
+      const copyOf = [...new Set(finding.originals.map((original) => original.copyOf))].join(", ");
+      const item = itemPath(finding.sourceRef);
+      const receipt = isCardFile(item) ? await moveCardsToTrash(ctx, [item]) : await moveFileToTrash(boxRoot, item);
+      const commit = await commitTrashReceipt(boxRoot, {
+        receipt, reason: `exact duplicate of ${copyOf}`, trailers: { "Trashed-By": "bbx triage duplicates", "Triage-Duplicate-Of": copyOf },
+      });
+      removals.push({ sourceRef: finding.sourceRef, copyOf, trashRefs: receipt.moves.map((move) => toRef(move.destPath)), commit });
+    }
+    return removals;
+  });
 }

@@ -4,6 +4,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../../shared/error-guards.js";
+import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 export const COMPILED_INSTRUCTIONS_REF = "/_bookkeeping/triage/compiled-instructions.json";
 const digest = (text: string): string => createHash("sha256").update(text).digest("hex");
@@ -40,12 +42,23 @@ export type CompiledState =
   | { status: "stale" | "absent" }
   | { status: "invalid"; error: string };
 
-/** Current digest of each cited card, null when it is missing. */
+/** A cited card's text; null when the ref is not a canonical box card ref, resolves outside the box, or is missing. */
+export async function readCitedCard(boxRoot: string, ref: string): Promise<string | null> {
+  const parsed = parseRef(ref);
+  const relative = resolveRefPath({ fromPath: undefined, ref: parsed.path, kind: "card" });
+  if (relative === null || ref !== `/${relative}` || parsed.query !== undefined || parsed.fragment !== undefined) return null;
+  try {
+    const real = await fs.realpath(path.join(boxRoot, relative));
+    if (!isWithin(await fs.realpath(boxRoot), real)) return null;
+    return await fs.readFile(real, "utf8");
+  } catch (error) { if (errnoCode(error) === "ENOENT") return null; throw error; }
+}
+
+export const citedDigest = (text: string | null): string | null => text === null ? null : digest(text);
+
+/** Current digest of each cited card, null when it is missing or not a box card. */
 export async function citedDigests(boxRoot: string, refs: string[]): Promise<Array<{ ref: string; digest: string | null }>> {
-  return Promise.all([...new Set(refs)].toSorted().map(async (ref) => {
-    try { return { ref, digest: digest(await fs.readFile(path.join(boxRoot, ref.slice(1)), "utf8")) }; }
-    catch (error) { if (errnoCode(error) === "ENOENT") return { ref, digest: null }; throw error; }
-  }));
+  return Promise.all([...new Set(refs)].toSorted().map(async (ref) => ({ ref, digest: citedDigest(await readCitedCard(boxRoot, ref)) })));
 }
 
 /** The staleness key: raw sources, then the cited cards' current digests. */

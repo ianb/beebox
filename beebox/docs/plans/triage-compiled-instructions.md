@@ -123,8 +123,10 @@ boxholder, not from a published scheme.
   to lose. That means a bare file, or a scan-import session with verified
   provenance: a `capture-session` card whose `uploader` (legacy field: `source`)
   starts with `scan-upload/` (`beebox/src/schemas/capture-session.tsx:44`), that
-  is not `annotated: true`, has no audio clips, and whose every file in its
-  scope has no commit after the one that added it. The same card type also
+  is not `annotated: true`, has no audio clips, and whose whole scope is what one
+  import wrote: every scope file arrived in a single commit and nothing has
+  changed or been added since (a never-committed import counts when every entry
+  is new). The same card type also
   holds chat captures (`capture-session.tsx:4-6`), so the suffix alone is not
   enough. Other exact duplicates are reported for review and never moved.
 - **Principle** (new text, no type): one built-in default tie-break sentence at
@@ -178,7 +180,11 @@ counted, so an item whose only originals are tiny is never a duplicate. Items ar
 order, so the first of several identical staged items is kept and the later
 ones are duplicates of it. Without `--apply`, or in dry-run, findings are
 reported and nothing moves. Each finding says `removable` or `review`.
-Applied removable card items go through `moveCardsToTrash` and `commitTrashReceipt`,
+Apply runs under the box Git lock, checks every originally checked ref again
+from scratch, and refuses (moving nothing) if any removable finding changed,
+including its filed copy's bytes. Candidates must be inbox items, so a filed
+document cannot match itself. Bare files move with the annex-preserving move
+helper. Applied removable card items go through `moveCardsToTrash` and `commitTrashReceipt`,
 with reason `exact duplicate of <ref>`. Bare files get a new
 `moveFileToTrash(boxRoot, ref)` that reuses the collision stamping at
 `trash/command.ts:376` (**`export function withCollisionStamp(`**).
@@ -253,7 +259,11 @@ The compile operation:
 
 1. Build the raw snapshot, ignoring any compiled file.
 2. Invoke `createAgent({ name: "triage-compile" }).invokeStructured(agentOutputSchema, …)`
-   with `maxTurns: 8`, `maxBudgetUsd: 1` and `loadBoxContext: true`. The agent
+   with `maxTurns: 8`, `maxBudgetUsd: 1` and `loadBoxContext: false`. (A live
+   run with box context spent the $1 ceiling on four destinations; the snapshot
+   file carries the rules, and the agent reads cards with its tools.) Pair
+   fields are length-2 arrays: the agent CLI rejects the `prefixItems` that
+   `z.tuple` serializes to. The agent
    sees the raw snapshot file and the principles. It returns `destinations`,
    `tieBreaks` and `conflicts`, without question refs. The prompt asks it to
    write, for each destination, boundary text to add after its canonical rule,
@@ -262,10 +272,14 @@ The compile operation:
    `facts`, quoting a box card verbatim.
 3. Validate the output. Every snapshot destination ref appears exactly once.
    Every `between` and `winner` is a snapshot ref, and the winner is one of
-   the pair. No pair appears as both a tie-break and a conflict. Each
-   `basis` is either `principle 1`–`principle 3` or text that occurs verbatim in
-   the raw policy or a landmark rule. Each fact's `text` occurs verbatim in its
-   `ref` card; that card's `{ ref, digest }` is appended to `compiledFrom`. On failure,
+   the pair. No pair and case (`when`) appears as both a tie-break and a
+   conflict; one pair may have a settled case and an unsettled one. Each `basis`
+   starts with `principle 1`–`principle 3`, or quotes text in double quotes that
+   occurs verbatim in the raw policy or a landmark rule. Each fact's `text` occurs verbatim in its
+   `ref` card; the ref must be a canonical card ref that resolves inside the box.
+   The cards are read once, and that card's `{ ref, digest }` from those bytes is
+   appended to `compiledFrom`. A cited card modified after the pass started
+   makes the result `superseded`. On failure,
    write nothing and exit non-zero with the validation message.
 4. Prepare each conflict, in memory, as a text question for
    `_bookkeeping/questions/Triage_Conflict_<sha256(refA|refB|when)[:12]>.question.card`.
@@ -387,6 +401,12 @@ accepted risk in a committed, readable file.
   serve that; the box doc tells agents to use them.
 
 ## Open design questions
+
+- When a recompile no longer lists a conflict (the boxholder edited the guide
+  directly, or the agent reworded the case), its earlier unanswered question
+  stays pending. Lean: on a successful compile, remove unanswered generated
+  `Triage_Conflict_*` questions that the new file does not list, and keep
+  answered ones. Needs the boxholder's decision (cross-model code review finding).
 
 - Should `bbx triage compile` also replay confirmed receipts and refuse a
   compile that regresses them? Lean: yes, in the wiring plan, once a box has

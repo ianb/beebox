@@ -93,8 +93,9 @@ void test("An uncommitted edit makes a scan session a review item.", async (t) =
 void test("Apply trashes only removable items, each with a Triage-Duplicate-Of commit.", async (t) => {
   const box = await fixture();
   t.teardown(() => box.cleanup());
-  const findings = await findExactDuplicates(box.root, await stagedRefs(box));
-  const removals = await applyDuplicateRemovals(box.root, { findings });
+  const checked = await stagedRefs(box);
+  const findings = await findExactDuplicates(box.root, checked);
+  const removals = await applyDuplicateRemovals(box.root, { findings, checked });
   t.check(removals.map((removal) => [removal.sourceRef, removal.trashRefs]), [
     ["/_content/inbox/staged/A-copy.pdf", ["/_bookkeeping/trash/A-copy.pdf"]],
     ["/_content/inbox/staged/B-copy.pdf", ["/_bookkeeping/trash/B-copy.pdf"]],
@@ -120,12 +121,39 @@ void test("Apply trashes only removable items, each with a Triage-Duplicate-Of c
   t.check((await simpleGit(box.root).status()).files, []);
 });
 
-// Apply re-verifies bytes; a finding stale since the check moves nothing.
-void test("Apply refuses a finding whose bytes changed since the check.", async (t) => {
+// Apply checks again from scratch; a finding stale since the check moves
+// nothing. That covers the staged item changing and its filed copy changing.
+void test("Apply refuses a finding that changed since the check.", async (t) => {
   const box = await fixture();
   t.teardown(() => box.cleanup());
-  const findings = await findExactDuplicates(box.root, [`/${staged}/A-copy.pdf`, `/${staged}/B-copy.pdf`]);
+  const checked = [`/${staged}/A-copy.pdf`, `/${staged}/B-copy.pdf`];
+  const findings = await findExactDuplicates(box.root, checked);
   await box.write(`${staged}/B-copy.pdf`, bytes("changed"));
-  await t.checkThrows(() => applyDuplicateRemovals(box.root, { findings }), "StaleDuplicateFindingError: Stale duplicate finding: /_content/inbox/staged/B-copy.pdf changed; check again");
+  await t.checkThrows(() => applyDuplicateRemovals(box.root, { findings, checked }), "StaleDuplicateFindingError: Stale duplicate finding: /_content/inbox/staged/B-copy.pdf is no longer a duplicate; check again");
+
+  await box.write(`${staged}/B-copy.pdf`, bytes("plain"));
+  const again = await findExactDuplicates(box.root, checked);
+  await box.write("_content/archive/Plain.pdf", bytes("replaced"));
+  await simpleGit(box.root).add(".").then(() => simpleGit(box.root).commit("Replace the filed copy"));
+  await t.checkThrows(() => applyDuplicateRemovals(box.root, { findings: again, checked }), "StaleDuplicateFindingError: Stale duplicate finding: /_content/inbox/staged/B-copy.pdf is no longer a duplicate; check again");
   t.check((await fs.readdir(box.path(staged))).filter((name) => name.endsWith("-copy.pdf")), ["A-copy.pdf", "B-copy.pdf"]);
+});
+
+// A card the boxholder adds later inside a scan session's scope is authored
+// context, so the session is for review even though no file was edited.
+void test("A card added later in a scan session's scope keeps it for review.", async (t) => {
+  const box = await fixture();
+  t.teardown(() => box.cleanup());
+  await box.write(`${staged}/Scan2.attach/Notes.doc.card`, "---\ntitle: Notes\n---\nCall the bank about this.");
+  await simpleGit(box.root).add(".").then(() => simpleGit(box.root).commit("Add a note"));
+  t.check((await findExactDuplicates(box.root, [`/${staged}/Scan1.capture-session.card`, `/${staged}/Scan2.capture-session.card`])).map((finding) => [finding.sourceRef, finding.disposition]), [
+    ["/_content/inbox/staged/Scan2.capture-session.card", "review"],
+  ]);
+});
+
+// Only inbox items are candidates, so a filed document never matches itself.
+void test("A ref outside the inbox is refused.", async (t) => {
+  const box = await fixture();
+  t.teardown(() => box.cleanup());
+  await t.checkThrows(() => findExactDuplicates(box.root, ["/_content/archive/Plain.pdf"]), "InvariantError: Duplicate check takes inbox items only: /_content/archive/Plain.pdf");
 });

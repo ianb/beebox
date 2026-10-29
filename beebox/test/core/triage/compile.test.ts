@@ -130,3 +130,16 @@ void test("Conflicts become questions; a concurrent edit supersedes the pass.", 
 
   t.check(await compileTriageInstructions({ boxRoot: box.root, agent: () => Promise.resolve({ success: false, error: "budget exhausted" }) }), { status: "failed", error: "budget exhausted" });
 });
+
+// A cited ref must be a canonical card ref inside the box: a traversal out of
+// the box reads as a missing card. A cited card edited while the agent runs
+// supersedes the pass, since the agent may have read the old text.
+void test("Cited facts stay inside the box and must match what the agent could read.", async (t) => {
+  const box = await fixtureBox(t);
+  const outside: CompileOutput = { ...output, destinations: [output.destinations[0]!, { ...output.destinations[1]!, facts: [{ text: "parcel 01-234", ref: "/../outside/Property.doc.card" }] }] };
+  t.check(await compileTriageInstructions({ boxRoot: box.root, agent: fakeAgent(outside) }), {
+    status: "invalid", output: outside, errors: ["/_content/shop/Shop.landmark.card: fact cites missing card /../outside/Property.doc.card"],
+  });
+  const edited = await compileTriageInstructions({ boxRoot: box.root, agent: fakeAgent(output, () => box.write(PROPERTY.slice(1), "---\ntitle: Garage\n---\nThe house is at parcel 01-234.\n")) });
+  t.check(edited, { status: "superseded" });
+});

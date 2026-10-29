@@ -9,6 +9,7 @@ import { pathExistsStrict } from "../../../lib/file-exists.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { assertSafeTrashDestination } from "./namespace-guard.js";
 import { withCollisionStamp, type TrashReceipt } from "./command.js";
+import { movePathPreservingAnnexSymlink } from "../../card-files/move-phase2.js";
 
 /** Move a bare file into `_bookkeeping/trash/`; a taken name gets `_<stamp>` before its extension. */
 export async function moveFileToTrash(boxRoot: string, ref: string): Promise<TrashReceipt> {
@@ -25,7 +26,8 @@ export async function moveFileToTrash(boxRoot: string, ref: string): Promise<Tra
   }
   await fs.mkdir(trashDir, { recursive: true });
   await assertSafeTrashDestination(boxRoot, destPath);
-  await fs.rename(sourcePath, destPath);
+  // A plain rename would leave a relative annex symlink pointing from the wrong depth.
+  await movePathPreservingAnnexSymlink(sourcePath, destPath);
   const move = { sourcePath: path.relative(boxRoot, sourcePath), destPath: path.relative(boxRoot, destPath) };
   return { moves: [{ ...move, relatedFiles: [], fileMoves: [move] }], gitPaths: [move.sourcePath, move.destPath] };
 }

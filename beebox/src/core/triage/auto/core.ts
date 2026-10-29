@@ -72,9 +72,10 @@ export async function runJevTriage(options: RunJevOptions): Promise<JevTriageRes
   const listed = entries.filter((entry) => !entry.isDirectory() && !entry.name.startsWith(".")).map((entry) => entry.name).toSorted();
   const refOf = (file: string): string => `/${path.relative(options.boxRoot, path.join(staged, file)).split(path.sep).join("/")}`;
   // Exact duplicates never reach a model. Removable ones are trashed; review ones are still judged.
-  const duplicates = listed.length === 0 ? [] : await findExactDuplicates(options.boxRoot, listed.map(refOf));
+  const checked = listed.map(refOf);
+  const duplicates = listed.length === 0 ? [] : await findExactDuplicates(options.boxRoot, checked);
   const removable = new Set(duplicates.filter((finding) => finding.disposition === "removable").map((finding) => finding.sourceRef));
-  if (!options.dryRun && removable.size > 0) await applyDuplicateRemovals(options.boxRoot, { findings: duplicates });
+  if (!options.dryRun && removable.size > 0) await applyDuplicateRemovals(options.boxRoot, { findings: duplicates, checked });
   const files = listed.filter((file) => !removable.has(refOf(file)));
   // No agent pass for an empty run.
   const compiled = files.length === 0 ? null : await ensureCompiled(options);

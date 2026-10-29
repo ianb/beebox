@@ -23,8 +23,9 @@ export function registerDuplicatesCommand(triageCommand: Command, reporting: (co
     .option("--apply", "Move removable duplicates to trash, one scoped commit each; review ones never move"))
     .action((refs: string[], options: OutputOptions & { apply?: boolean }) => cliAction(async () => {
       const boxRoot = await requireBoxRoot();
-      const findings = await findExactDuplicates(boxRoot, refs.length > 0 ? refs : await stagedRefs(boxRoot));
-      const removals = options.apply === true ? await applyDuplicateRemovals(boxRoot, { findings }) : [];
+      const checked = refs.length > 0 ? refs : await stagedRefs(boxRoot);
+      const findings = await findExactDuplicates(boxRoot, checked);
+      const removals = options.apply === true ? await applyDuplicateRemovals(boxRoot, { findings, checked }) : [];
       const lines = findings.map((finding) => `${finding.sourceRef}\t${finding.disposition}\t${[...new Set(finding.originals.map((original) => original.copyOf))].join(", ")}`);
       const tail = options.apply === true ? `Trashed ${String(removals.length)}.` : "Not applied; use --apply to trash removable ones.";
       await output({ findings, removals }, { ...withInheritedJson(triageCommand, options), summary: [`${String(findings.length)} duplicate(s). ${tail}`, ...lines].join("\n") });
