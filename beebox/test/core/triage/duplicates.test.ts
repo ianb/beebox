@@ -151,6 +151,20 @@ void test("A card added later in a scan session's scope keeps it for review.", a
   ]);
 });
 
+// The same holds after intake moves the scope and its history is lost: the
+// note is not in the session's manifest.
+void test("An unlisted card in a moved, never-recommitted scan scope keeps it for review.", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write("_content/archive/Filed.pdf", bytes("scanned"));
+  await simpleGit(box.root).add("_content/archive").then(() => simpleGit(box.root).commit("File the original"));
+  await scanSession(box, { name: "Moved", source: bytes("scanned"), uploader: "scan-upload/laptop", derivative: "five" });
+  await box.write(`${staged}/Moved.attach/Notes.doc.card`, "---\ntitle: Notes\n---\nCall the bank about this.");
+  t.check((await findExactDuplicates(box.root, [`/${staged}/Moved.capture-session.card`])).map((finding) => finding.disposition), ["review"]);
+  await fs.rm(box.path(`${staged}/Moved.attach/Notes.doc.card`));
+  t.check((await findExactDuplicates(box.root, [`/${staged}/Moved.capture-session.card`])).map((finding) => finding.disposition), ["removable"]);
+});
+
 // Only inbox items are candidates, so a filed document never matches itself.
 void test("A ref outside the inbox is refused.", async (t) => {
   const box = await fixture();

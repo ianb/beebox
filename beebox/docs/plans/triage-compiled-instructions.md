@@ -123,7 +123,9 @@ boxholder, not from a published scheme.
   to lose. That means a bare file, or a scan-import session with verified
   provenance: a `capture-session` card whose `uploader` (legacy field: `source`)
   starts with `scan-upload/` (`beebox/src/schemas/capture-session.tsx:44`), that
-  is not `annotated: true`, has no audio clips, and whose whole scope is what one
+  is not `annotated: true`, has no audio clips, whose every card in scope is one
+  its own manifest lists (so a note added later keeps it for review even after
+  intake moves the scope and its history is lost), and whose whole scope is what one
   import wrote: every scope file arrived in a single commit and nothing has
   changed or been added since (a never-committed import counts when every entry
   is new). The same card type also
@@ -278,7 +280,8 @@ The compile operation:
    occurs verbatim in the raw policy or a landmark rule. Each fact's `text` occurs verbatim in its
    `ref` card; the ref must be a canonical card ref that resolves inside the box.
    The cards are read once, and that card's `{ ref, digest }` from those bytes is
-   appended to `compiledFrom`. A cited card modified after the pass started
+   appended to `compiledFrom`. A cited card modified or replaced (mtime or
+   ctime) after the pass started
    makes the result `superseded`. On failure,
    write nothing and exit non-zero with the validation message.
 4. Prepare each conflict, in memory, as a text question for

@@ -103,7 +103,8 @@ async function readCards(boxRoot: string, refs: string[]): Promise<Map<string, s
 async function changedSince(boxRoot: string, options: { refs: string[]; startedAt: number }): Promise<boolean> {
   for (const ref of new Set(options.refs)) {
     const stat = await fs.stat(path.join(boxRoot, ref.slice(1))).catch(() => null);
-    if (stat === null || stat.mtimeMs >= options.startedAt) return true;
+    // ctime too: a rename keeps an older file's mtime but changes its ctime.
+    if (stat === null || Math.max(stat.mtimeMs, stat.ctimeMs) >= options.startedAt) return true;
   }
   return false;
 }

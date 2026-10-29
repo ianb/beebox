@@ -158,6 +158,21 @@ async function scopeUnedited(boxRoot: string, card: string): Promise<boolean> {
   return commits.size === 0 && status.every((entry) => entry.startsWith("?? ") || entry.startsWith("A  "));
 }
 
+/**
+ * Every card in the scope is one the session's own manifest lists, or lies in a
+ * listed card's attach scope. A card added later (a note) is not listed, and
+ * this holds even after intake moves the scope and its history is lost.
+ */
+async function scopeIsManifest(boxRoot: string, options: { item: string; fields: Record<string, unknown> }): Promise<boolean> {
+  const attach = attachDirFor(options.item);
+  const listed = ["images", "files", "audio-clips"].flatMap((key) => {
+    const value = options.fields[key];
+    return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+  }).map((entry) => path.join(attach, entry.replace(/^attach\//u, "")));
+  const cards = (await listScope(path.join(boxRoot, attach))).map((file) => path.relative(boxRoot, file)).filter(isCardFile);
+  return cards.every((card) => listed.includes(card) || listed.some((owner) => card.startsWith(`${attachDirFor(owner)}/`)));
+}
+
 /** Removable: a bare file, or an unannotated, voice-free scan-upload session no one has edited. */
 async function dispositionOf(boxRoot: string, item: string): Promise<DuplicateFinding["disposition"]> {
   if (!isCardFile(item)) return "removable";
@@ -168,7 +183,7 @@ async function dispositionOf(boxRoot: string, item: string): Promise<DuplicateFi
   const clips = fields["audio-clips"];
   const voiceFree = clips === undefined || clips === null || (Array.isArray(clips) && clips.length === 0);
   if (typeof uploader !== "string" || !uploader.startsWith("scan-upload/") || fields.annotated === true || !voiceFree) return "review";
-  return await scopeUnedited(boxRoot, item) ? "removable" : "review";
+  return await scopeIsManifest(boxRoot, { item, fields }) && await scopeUnedited(boxRoot, item) ? "removable" : "review";
 }
 
 /** Check items in sorted ref order; the first of several identical items is kept and the later ones are its duplicates. */
