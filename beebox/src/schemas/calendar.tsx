@@ -72,9 +72,11 @@ no longer arrive, and edits made here are still sent.
 ## Body
 
 The person's own notes about the calendar. The connector never writes it.`,
+  // Listed under its Google name (`title`); the one fact worth a second line
+  // is that the calendar cannot be changed from here.
   summarize: (card, base) => {
     const { access } = card["google-calendar"];
-    return access === undefined ? base : { ...base, detail: access };
+    return access === "reader" || access === "freeBusyReader" ? { ...base, detail: "Read-only in Google" } : base;
   },
 });
 

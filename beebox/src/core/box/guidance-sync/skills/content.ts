@@ -19,20 +19,20 @@ import { BOX_PACKAGE_DOCS } from "../../../docs-gen/shared.js";
  */
 export const CALENDAR_SKILL = `---
 name: calendar
-description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files in _content/calendar/. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
+description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files in a calendar card's folder under _content/calendar/. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
 ---
 
 # Calendar
 
-Calendar events live as \`.ics\` files in \`_content/calendar/\`. Sync with Google Calendar is **two-way**:
+Each synced calendar is a card, \`_content/calendar/<Name>.calendar.card\`, and its events are \`.ics\` files in the card's attach folder, \`<Name>.attach/\`, named \`{date}_{title}_{id}.ics\`. Sync with Google Calendar is **two-way**:
 
 - **View events:** \`bbx calendar\` shows upcoming events (\`bbx calendar today\`, \`bbx calendar 2w\`, …).
-- **Create an event:** write a new \`.ics\` file in \`_content/calendar/\`. The next sync pushes it to Google Calendar.
-  - Include \`X-BBX-CALENDAR-ID:<calendar-id>\` to target a specific calendar (defaults to primary).
+- **Create an event:** write a new \`.ics\` file in the attach folder of the calendar it belongs to; the folder decides the calendar. Any file name works; the sync renames it once Google has the event. A file directly in \`_content/calendar/\` is not pushed.
   - Optionally include \`X-BBX-REASON:<why>\` and \`X-BBX-REF:<path>\` for tracking.
 - **Edit an event:** modify a tracked \`.ics\` file directly. The next sync pushes the changes.
 - **Delete an event:** add an \`X-BBX-DELETE:<reason>\` property to a tracked \`.ics\` file. The next sync deletes it from Google Calendar.
-- **\`_content/calendar/stranded/\`** holds edits Google would never take (the event was deleted there, or the push failed for a week). They are not synced. Move a file back up into \`_content/calendar/\` to push it as a new event, or delete it.
+- **\`<Name>.attach/stranded/\`** holds edits Google would never take (the event was deleted there, or the push failed for a week). They are not synced. Move a file back up into \`<Name>.attach/\` to push it as a new event, or delete it.
+- Only \`owner\` and \`writer\` calendars accept changes (\`google-calendar.access\` on the card).
 
 **Timezone requirement:** non-all-day events MUST include a VTIMEZONE component and a TZID parameter on DTSTART/DTEND. Never create floating-time events — they'll be rejected.
 

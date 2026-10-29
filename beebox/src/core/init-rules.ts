@@ -38,13 +38,13 @@ export const connectorRules: ConnectorRule[] = [
     paths: ["_content/calendar/**/*.ics"],
     instructions: `# Calendar Event Files (.ics)
 
-These are Google Calendar events synced by the wakeup cycle. Each file is a single VEVENT in iCalendar format.
+These are Google Calendar events synced by the wakeup cycle. Each file is a single VEVENT in iCalendar format, in the attach folder of its calendar's card (\`_content/calendar/Family.attach/\` for \`Family.calendar.card\`). The folder is the calendar.
 
 ## Key properties
 
 Standard iCalendar: SUMMARY, DESCRIPTION, LOCATION, DTSTART, DTEND, STATUS, TRANSP (OPAQUE=busy, TRANSPARENT=free).
 
-Custom properties track the source calendar:
+Custom properties record the source calendar (the folder decides it; a new file needs none of them):
 - \`X-BBX-CALENDAR-ID\` — the Google Calendar ID this event belongs to
 - \`X-BBX-CALENDAR-NAME\` — display name of the calendar
 - \`X-BBX-CALENDAR-ROLE\` — access role: \`owner\`, \`writer\`, or \`reader\`
@@ -57,7 +57,7 @@ Custom properties track the source calendar:
 
 ## Filename format
 
-\`{YYYY-MM-DD}_{shortId}.ics\` — the date is the event start date, shortId is derived from the Google event ID.
+\`{YYYY-MM-DD}_{title}_{shortId}.ics\` — the event's start date, its title, and the last eight characters of the Google event ID. The sync renames a file when its event's date or title changes, and gives a new file you wrote this name once Google has the event. Do not move a file between calendar folders; the moved file is read as a new event.
 
 ## Querying
 

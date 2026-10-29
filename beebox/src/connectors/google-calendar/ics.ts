@@ -353,6 +353,16 @@ function readEventTime(
   return result;
 }
 
+/** Whether `content` parses as a calendar holding an event. Quiet: the caller reports a file that does not. */
+export function parsesAsEvent(content: string): boolean {
+  try {
+    return new ICAL.Component(ICAL.parse(content)).getFirstSubcomponent("vevent") !== null;
+  } catch (_e) {
+    // ignore: a parse error is exactly the "no" this answers; the caller names the file
+    return false;
+  }
+}
+
 /**
  * Parse a local .ics file back into a Google Calendar API event object.
  * Returns null if the file can't be parsed.
