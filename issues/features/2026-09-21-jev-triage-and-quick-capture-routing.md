@@ -199,3 +199,10 @@ Mechanism findings:
   not do the action.
 - That box files scans through intake jobs that an agent works directly. Making
   `--engine jev` the triage default would not reach them.
+
+Follow-up the same day: after the preparation fixes (oversized parts send a leading
+excerpt, Word/ODT/RTF/EPUB convert through pandoc, and Jev's request carries only
+readable parts), the same replay agreed on 81/93. All 7 preparation failures now
+agree. The remaining misses are rule overlaps and missing identifying facts. The
+boxholder judged one counted miss acceptable, which gives 82/93. Next:
+[compiled instructions plan](../../beebox/docs/plans/triage-compiled-instructions.md).
