@@ -148,21 +148,30 @@ calendar.
   (`processLocalDeletes`, `pushPendingLocalEdits`, `dropDuplicateFilenames`)
   take the map and resolve each entry's folder from `entry.calendarId`. An
   entry with no folder is skipped and reported once. `dropDuplicateFilenames`
-  groups by `(calendarId, filename)`.
+  groups by `(calendarId, filename)`. Every check that asks "does another entry
+  hold this name" is scoped to one calendar: `uniqueEventFilename` receives
+  only that calendar's entries, and the orphan pass builds its tracked set per
+  folder. Two calendars may hold the same basename.
 - `pushAndCleanOrphans` loops over the folders. The target calendar is the
   folder's calendar. `X-BBX-CALENDAR-ID` in a file that disagrees with its
   folder is a failure, not a silent re-route. `defaultCalendarId` goes away.
   It also lists `_content/calendar/` itself and reports each stray `.ics`.
 - `loadAllEvents` stays per directory. `bbx calendar` calls it once per
   folder in the map and merges.
+- The connector refuses to sync (a failed sync naming the file) while the
+  migration journal (track C) exists.
+- Calendars removed from the sync set keep today's behavior: no pull, but
+  local edits and new files in their folders are still pushed (the pending
+  pass iterates the whole index today, `local-push.ts:212`). The card says
+  "Not pulled from Google" for them, not "no longer syncing".
 
 **Vocabulary lock-ins.** Filename shape above; `calendar-folders.ts`;
 "stray event file" in failure text.
 
-**First implementation chunk.** `eventFileStem` plus `eventFilename` with
-tests (`test/connectors/google-calendar/utils.test.ts` sibling: new
-`ics-filename.test.ts`): title with punctuation, emoji-only title, missing
-title, long title, all-day date.
+**First implementation chunk.** `eventFileStem` plus `eventFilename` in
+`event-filename.ts` with tests (`event-filename.test.ts`): title with
+punctuation, emoji-only title, missing title, long title, all-day date.
+Done in the first commit.
 
 ### B. `calendar` schema and card upkeep
 
@@ -170,8 +179,13 @@ title, long title, all-day date.
 
 **Direction.** `src/schemas/calendar.tsx`:
 `cardSchema("calendar", { category: "synced", fields: { "google-calendar":
-z.object({ id: z.string(), name: z.string(), access: z.string(), syncing:
-z.boolean() }) }, summarize: title = name, instructions })`. Instructions:
+z.object({ id: z.string(), access: z.string().optional(), syncing:
+z.boolean() }), body }, instructions })`. The calendar's Google name is the
+card's global `title`, as `gfolder` stamps its Drive name
+(`src/schemas/gfolder.ts:84`). `access` is optional because the migration may
+not know it: the settings save rewrites the config with only `calendars` and
+the window, dropping the cached `calendarRoles` (`calendar.ts` router,
+`updateConfig`), and the next sync stamps it. Instructions:
 events are `.ics` files in `<card basename>.attach/`; to add an event to this
 calendar write an `.ics` there; reader calendars are read-only in Google; the
 connector rewrites `google-calendar:`; do not edit it. Register in
@@ -183,43 +197,64 @@ calendar with no card and no index entries, create
 taken) and its folder. For each card, rewrite `google-calendar` from the
 fetched calendar list, with `syncing` = "id is in `config.calendars`". Write
 only when the bytes change, and add written card paths to the sync's commit
-list. The card name is fixed at creation; a Google rename changes `name` only.
+list. The card name is fixed at creation; a Google rename changes `title` only.
 
 **First chunk.** Schema plus a test that a card parses and summarizes.
 
 ### C. Migration `calendar-folders-2026-10`
 
-**What.** Script migration, all or nothing (copy the shape of
+**What.** Script migration (shape of
 `src/scripts/migrate/briefing-openers/run.ts`: plan the whole box, apply,
-verify, exit 1 without writing on a plan failure).
+verify, exit 1 without writing on a plan failure). It is not atomic on disk;
+the runner's snapshot is a recovery copy, not a rollback
+(`docs/cards/migrations.md`, "Admission, snapshots, and failures"). Crash
+safety comes from a journal and the connector's refusal to run while it
+exists (Apply, below).
 
-**Plan step.** Load config and index with the connector's own loaders. No
-calendar directory or no index: exit 0, nothing to do. Already migrated
+**Plan step.** A journal on disk is resumed first (Apply, below), before
+any other check. Load config and index with the connector's own loaders; an
+absent index is an empty one. No calendar directory: exit 0. Already migrated
 (every entry's file exists inside a calendar folder and no `.ics` sits at the
 top level): exit 0. Otherwise:
 - One card per calendar id that appears in the index or in
   `config.calendars`, named from `config.calendarNames[id]` (the cached
   names; fallback: the id), `access` from `config.calendarRoles`, `syncing`
   from `config.calendars`.
-- For each entry: new name = `eventFileStem` with the date and short id taken
-  from the current filename (`^(\d{4}-\d{2}-\d{2}|no-date)_([^_.]+)`) and the
-  title from the file's `SUMMARY`. The date is reused, not recomputed, so the
-  name matches what the pull computes from Google. A calendar-hash suffix is
-  dropped: inside one folder it no longer disambiguates anything. A current
-  name that does not match the pattern fails the plan (exit 1, names it).
+- For each entry: new name = `eventFileStem` with the short id from the
+  index key's event id (last eight characters, as `eventFilename` does), the
+  title from the file's `SUMMARY` (`(no title)`, which `eventToIcs` writes for
+  a missing title at `ics.ts:285`, counts as none), and the date from the
+  current filename when it starts `YYYY-MM-DD_` or `no-date_`. The date is
+  reused so the name matches what the pull computes from Google's
+  `start.dateTime`. A tracked file under any other name (a pushed local event
+  keeps its own name until a pull renames it, `push.ts:120`) takes the date
+  from its `DTSTART` value as written. A calendar-hash suffix is dropped:
+  inside one folder it no longer disambiguates anything.
 - Untracked top-level `.ics` (a local event not yet pushed): move into the
   folder of its `X-BBX-CALENDAR-ID`, else of `config.calendars[0]` (today's
   push default, `connector.ts:255`), keeping its name.
 - `(legacy)` entries: attribute by `X-BBX-CALENDAR-ID`
   in the file; none found fails the plan.
-- Two entries planned onto one path fails the plan.
-- Existing `_content/calendar/stranded/` is left where it is; the push scan
-  never reads it.
+- Two moves planned onto one path fails the plan, and so does any
+  destination that already exists on disk. Only a resumed journal accepts an
+  occupied destination, and only for a move the journal records.
+- Calendar names and roles come from the config cache; a missing role leaves
+  `access` out.
+- Files in an existing `_content/calendar/stranded/` move to the
+  `stranded/` folder of the calendar their `X-BBX-CALENDAR-ID` names. A file
+  with no provable calendar stays where it is and is listed in the output;
+  the push scan never reads that folder.
 
-**Apply.** `git mv`-equivalent renames (plain renames; the runner commits the
-changed paths), write cards, rewrite each entry's `filename`, save the index.
-File content is untouched, so every recorded `contentHash` still matches, and
-a pending local edit (hash mismatch) stays pending.
+**Apply.** Write the full plan (every move, every card, the new index) to a
+journal, `_bookkeeping/connectors/google-calendar-migration.json`, atomically
+(`writeFileAtomic`, as `state.ts:224` writes the index), before the first
+change. Then write cards, move files without overwriting, save the new
+index, delete the journal. A rerun that finds a journal resumes it: a move
+whose source is gone and whose destination exists is done. While the journal
+exists the connector refuses to sync, so a half-moved box is never read as
+untracked files to insert into Google. File content is untouched, so every
+recorded `contentHash` still matches, and a pending local edit (hash
+mismatch) keeps its `pendingSince` and stays pending.
 
 **Verify.** Re-run the plan's "already migrated" check; fail with exit 1 if
 not converged.
@@ -231,10 +266,15 @@ config }` with tests, before any fs code.
 
 **Direction.** tRPC `calendar.cardEvents({ path, from, to })`: validates
 `path` ends in `.calendar.card` under `_content/calendar/`, loads
-`<stem>.attach/` with `loadAllEvents`, returns `{ start, end, allDay, summary,
-location, file }[]`. A `calendar` renderer (priority 100, like
+`<stem>.attach/` with `loadAllEvents`, then `filterByDateRange` (the load
+expands recurrence in range but keeps out-of-range single events, as the CLI
+already handles at `cli/commands/calendar.ts:91`), and returns `{ start, end,
+allDay, summary, location, file }[]` plus `unreadable: string[]`, the files
+that did not parse. A folder that cannot be read (other than missing) is a
+query error, not an empty list. The page shows unreadable files above the
+list, so "No events" is only said for a complete read. A `calendar` renderer (priority 100, like
 `renderers/person.tsx`) shows the name, "Read-only in Google" for reader
-access, "No longer syncing" when `syncing` is false, then the next 30 days
+access, "Not pulled from Google" when `syncing` is false, then the next 30 days
 grouped by day, each row linking to its file. Empty: "No events between
 <from> and <to>." The card body renders through the existing card chrome.
 
@@ -280,6 +320,11 @@ None.
 | 410 refetch deletes a stale file | Existing `google-calendar.test.ts` 410 cases, fixtures move | `stale.ts` with per-calendar `calDir` | Clear |
 | Recurring master in folder | Existing recurrence tests, fixtures move | Unchanged | — |
 | Plan cannot place an entry | New migration test | Exit 1, nothing written | Clear |
+| Crash mid-migration, then a sync | New | Journal; connector refuses | Clear |
+| Migration destination occupied by other bytes | New | Plan fails | Clear |
+| Same basename in two calendars, one untracked | New | Per-calendar tracked set | Clear |
+| Daily series older than 500 occurrences shows nothing upcoming | No | No (`MAX_EXPANSIONS`, `utils.ts:177`) | Silent; existing, also in the CLI. Accepted here; file an issue |
+| Crash after the index save, before the journal is deleted | New | Journal resumed before the already-migrated check | Clear |
 
 No critical gap.
 
@@ -301,7 +346,9 @@ No critical gap.
   map is rebuilt from cards each sync.
 - **Validation UX:** a hand-broken card fails card lint with the schema
   message; the sync reports the calendar skipped.
-- **Partial migration:** all or nothing; the runner's snapshot covers a crash.
+- **Partial migration:** ADDRESSED by the journal and the connector refusal
+  (track C, Apply). Test: interrupt after the moves, before the index save;
+  the sync refuses; the rerun finishes.
 
 ## NOT in scope
 
@@ -313,6 +360,10 @@ No critical gap.
   the pre-rename product prefix (test1 has them; nothing reads them). Changing content would read
   as a local edit. File an issue.
 - Moving events between calendars by moving files.
+- Timed stranding for a new local event Google keeps rejecting. Today it stays
+  untracked and is reported each sync (`push.ts:157`); unchanged.
+- The settings save dropping cached calendar names and roles. Existing; the
+  sync restores them. File an issue.
 - Cards outside `_content/calendar/`.
 
 ## Open design questions

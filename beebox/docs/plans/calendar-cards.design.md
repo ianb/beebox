@@ -76,11 +76,12 @@ interrupts; the commit message says what moved and why.
 
 The design adds no new action. Two existing actions change place:
 
-- **Push of a new local event.** Today a new `.ics` must carry the calendar
-  id in the file, or the push skips it. With this design the folder names
-  the calendar, so a file dropped into `Family.attach/` is pushed to Family.
-  This stays automatic, as it is today; the sync commit records each push,
-  and a refused push is retried and then stranded as today.
+- **Push of a new local event.** Today a new `.ics` goes to the calendar
+  named by `X-BBX-CALENDAR-ID` in the file, or to the first configured
+  calendar. With this design the folder names the calendar, so a file dropped
+  into `Family.attach/` is pushed to Family. This stays automatic, as it is
+  today; the sync commit records each push. A push Google refuses is reported
+  on every sync and the file stays where it is, as today.
 - **Card fields.** The connector writes and rewrites the calendar card's
   fields from Google on each sync. The card's body is the person's; the
   connector never writes it.
@@ -91,7 +92,8 @@ the event contents and the index are kept.
 ## When it goes wrong or does nothing
 
 - **No events in the window.** The card says "No events between Oct 29 and
-  Jan 27" (the sync window), so an empty list reads as a fact, not a fault.
+  Nov 28" (the next 30 days), so an empty list reads as a fact, not a fault.
+  A folder that cannot be read shows an error, never an empty list.
 - **A read-only calendar edited locally.** The card says it is read-only.
   If a person edits a file anyway, the sync reports the refused push and
   strands the file after seven days, as today; the stranded file sits in
@@ -99,8 +101,9 @@ the event contents and the index are kept.
 - **A calendar renamed in Google.** The card title follows Google; the card
   file and folder keep their first name, because a rename would move every
   event file again. The card shows the Google name.
-- **A calendar removed from the sync set.** Its card and folder stay. The
-  card says it is no longer syncing; nothing is deleted.
+- **A calendar removed from the sync set.** Its card and folder stay and
+  nothing is deleted. The card says "Not pulled from Google": Google's changes
+  stop arriving, while edits made in the box are still sent, as today.
 - **An event whose title has no usable characters** (empty, emoji only).
   The filename falls back to `{date}_{shortId}.ics`, the current shape.
 - **A file without a calendar folder** (left at the top of
