@@ -32,7 +32,8 @@ function previewRange(root: Element): Range | null {
   const start = content.length - content.trimStart().length;
   const range = document.createRange();
   range.setStart(text, start);
-  range.setEnd(text, Math.min(content.length, start + 24));
+  const space = content.lastIndexOf(" ", start + 24);
+  range.setEnd(text, content.length <= start + 24 ? content.length : space > start ? space : start + 24);
   return range;
 }
 
