@@ -48,6 +48,10 @@ void test("Unreadable frontmatter is a leftover only when it names last-sync", a
     kind: "leftover",
     reason: "frontmatter does not parse; delete the last-sync line by hand",
   });
+  t.check(planGfolderLastSync("---\ntitle: [unclosed\n  last-sync: 2026-10-01T00:00:00.000Z\n---\n"), {
+    kind: "leftover",
+    reason: "frontmatter does not parse; delete the last-sync line by hand",
+  });
   t.check(planGfolderLastSync("---\ntitle: [unclosed\n---\n"), { kind: "current" });
   t.check(planGfolderLastSync("---\nlast-sync: 2026-10-01T00:00:00.000Z\n---\n"), {
     kind: "leftover",
@@ -101,6 +105,13 @@ void test("A card the migration cannot plan exits 2 and is named last", async (t
   t.teardown(() => box.cleanup());
   await box.write("_content/drive/recipes/Recipes.gfolder.card", OLD_CARD);
   await box.write("_content/drive/odd/Odd.gfolder.card", "---\nlast-sync: 2026-10-01T00:00:00.000Z\n---\n");
+  t.check(await runGfolderLastSync({ boxRoot: box.root, mode: "plan" }), {
+    code: 2,
+    lines: [
+      "would strip last-sync from _content/drive/recipes/Recipes.gfolder.card (dry run; pass --apply)",
+      "leftover: _content/drive/odd/Odd.gfolder.card: last-sync or drive.id is not a plain string; delete the last-sync line by hand",
+    ],
+  });
   t.check(await runGfolderLastSync({ boxRoot: box.root, mode: "apply" }), {
     code: 2,
     lines: [

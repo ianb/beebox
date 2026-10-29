@@ -78,8 +78,10 @@ function useLastSync(cardPath: string): LastSync {
   const mounts = trpc.drive.mounts.useQuery();
   if (mounts.error !== null) return { kind: "unavailable" };
   if (mounts.data === undefined) return { kind: "loading" };
-  const at = mounts.data.mounts.find((mount) => mount.cardPath === cardPath)?.lastSync ?? null;
-  return { kind: "known", at };
+  // A card missing from the list is one the mirror does not run (two cards
+  // claiming one Drive folder are both left out), so its time is not known.
+  const mount = mounts.data.mounts.find((entry) => entry.cardPath === cardPath);
+  return mount === undefined ? { kind: "unavailable" } : { kind: "known", at: mount.lastSync };
 }
 
 /** Name, Drive link, and the outcome of the last mirror pass. */

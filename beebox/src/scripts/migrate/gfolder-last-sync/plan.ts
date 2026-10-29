@@ -29,7 +29,7 @@ export function planGfolderLastSync(text: string): GfolderLastSyncPlan {
   const document = editableFrontmatterDocument(split.frontmatterText);
   if (document === null) {
     // Unreadable YAML might still hold the key; only a person can say what the block meant.
-    return /^last-sync:/m.test(split.frontmatterText)
+    return /^\s*last-sync\s*:/m.test(split.frontmatterText)
       ? { kind: "leftover", reason: "frontmatter does not parse; delete the last-sync line by hand" }
       : { kind: "current" };
   }

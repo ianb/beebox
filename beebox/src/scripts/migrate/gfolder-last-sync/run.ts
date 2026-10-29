@@ -76,7 +76,7 @@ export async function runGfolderLastSync({ boxRoot, mode }: { boxRoot: string; m
   }
   const names = strips.map((strip) => strip.relPath);
   if (mode === "plan") {
-    return { code: 0, lines: [...names.map((name) => `would strip last-sync from ${name} (dry run; pass --apply)`), ...leftovers] };
+    return { code: leftoverCode, lines: [...names.map((name) => `would strip last-sync from ${name} (dry run; pass --apply)`), ...leftovers] };
   }
   await updateTransientState({
     boxRoot,
