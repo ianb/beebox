@@ -87,5 +87,11 @@ model. The OpenRouter key's usage line in admin is the bill.
 the same exact version in `beebox/package.json`. Bump both together. pi has no
 semver policy, so then run the pi tests (`test/core/agent/pi-run/`,
 `test/core/agent/invoke/pi-agent.test.ts`, `test/core/chat/session/run.pi.test.ts`)
-and a live smoke on a cheap added model: one chat turn, one structured call,
-and one resume.
+and the live smoke, `pnpm pi-smoke` from `beebox/` (`src/dev/pi-smoke.ts`).
+It needs `BBX_OPENROUTER_API_KEY` in the environment or `beebox/.env`, and
+runs in a throwaway box with its own secret store. On each model it runs a
+batch turn that reads a file, a resume, a structured call, a bash call that
+must not see a server variable, and a chat turn read back from the session
+file. With no model argument it runs `deepseek/deepseek-v3.2` (reasoning on)
+and `qwen/qwen3-coder` (reasoning off), for under $0.01. It stops once pi's
+estimate passes $0.25.

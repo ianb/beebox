@@ -41,6 +41,9 @@ export {
   type EnsureCommittedOptions,
 } from "./commit.js";
 
+// For the pi live smoke (`src/dev/pi-smoke.ts`), which passes pi's runtime seam.
+export { createPiAgent } from "./pi-agent.js";
+
 // ─── Agent interface ─────────────────────────────────────────────────
 
 /**

@@ -69,6 +69,9 @@ export {
   type FakeChatBackendRun,
 } from "./fake.js";
 
+// For the pi live smoke (`src/dev/pi-smoke.ts`), which passes pi's runtime seam.
+export { createPiChatBackend } from "./pi-chat.js";
+
 // ─── Real implementation ─────────────────────────────────────────────────────
 
 /** Pull a string `session_id` off a raw SDK message, or null if absent. */
