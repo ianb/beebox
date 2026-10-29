@@ -16,7 +16,6 @@ import {
   loadHistoryEntries,
   appendHistory,
   getDirectoryForSession,
-  getLastSessionForDirectory,
   resolveSessionLogPath,
   sessionLogPathFor,
   removeSessionFromHistory,
@@ -25,6 +24,7 @@ import {
   getMostActiveSavedAt,
   setMostActive,
 } from "../../../../src/core/chat/session/history.js";
+import { getLastSessionForDirectory } from "../../../../src/core/chat/session/last-session.js";
 import { getSessionDir, getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { resolveChatEngine } from "../../../../src/core/chat/session/engine.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
