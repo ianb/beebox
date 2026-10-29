@@ -110,10 +110,7 @@ void test("End to end — subfolders become subdirectories, mirrored on the same
       "_content/drive/recipes/Desserts/Cookies.attach/Sheet1.json",
       "_content/drive/recipes/Desserts/Cookies.gsheet.card",
     ],
-    updated: [
-      "_content/drive/recipes/Desserts/Desserts.gfolder.card",
-      "_content/drive/recipes/Recipes.gfolder.card",
-    ],
+    updated: ["_content/drive/recipes/Recipes.gfolder.card"],
   });
 
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
@@ -130,7 +127,6 @@ drive:
   id: folder-2
   link: https://drive.google.com/file/d/folder-2/view
 title: Desserts
-last-sync: «date»
 ---`);
 });
 
@@ -207,7 +203,7 @@ sheets:
   const warnings = await captureWarnings(async () => {
     cycles.push(await connector.sync());
   });
-  t.check(cycles, [{ success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] }]);
+  t.check(cycles, [{ success: true, created: [], updated: [] }]);
   t.check(warnings, [
     "[google-drive] _content/drive/recipes/Recipes.gfolder.card: Folder folder-1 (\"Back To Recipes\") already mirrored on this pass (via shortcut shortcut-2) — cycle, not descended",
   ]);
@@ -216,7 +212,6 @@ drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «date»
 ---`);
 });
 
@@ -290,7 +285,6 @@ drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «date»
 not-in-folder: 1
 ---`);
 
@@ -320,7 +314,6 @@ drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «date»
 unknown: 1
 ---`);
 });
@@ -376,7 +369,6 @@ drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «date»
 ---`);
 });
 
@@ -429,7 +421,7 @@ void test("The tombstone the connector leaves behind is a mirror of Drive's tras
   t.check(back, {
     success: true,
     created: ["_content/drive/recipes/Bake_Times.attach/Sheet1.json", "_content/drive/recipes/Bake_Times.gsheet.card"],
-    updated: ["_content/drive/recipes/Recipes.gfolder.card"],
+    updated: [],
   });
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
     "_content/drive/recipes/Bake_Times.gsheet.card",
@@ -488,7 +480,7 @@ void test("The same tombstone made by a person means the opposite thing:", async
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), ["_content/drive/recipes/Recipes.gfolder.card"]);
 
   const after = await connector.sync();
-  t.check(after, { success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] });
+  t.check(after, { success: true, created: [], updated: [] });
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), ["_content/drive/recipes/Recipes.gfolder.card"]);
 });
 
@@ -544,7 +536,6 @@ drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «date»
 error: folder is in Drive trash
 ---`);
 
@@ -557,6 +548,5 @@ drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «date»
 ---`);
 });

@@ -152,7 +152,7 @@ void test("No token file is involved anywhere in this block:", async (t) => {
       cardPath: "_content/drive/recipes/Recipes.gfolder.card",
       name: "Recipes",
       created: ["_content/drive/recipes/Budget_2026.attach/Sheet1.json", "_content/drive/recipes/Budget_2026.gsheet.card"],
-      updated: ["_content/drive/recipes/Recipes.gfolder.card"],
+      updated: [],
       pushed: [],
       failures: [],
       notes: [],
@@ -168,7 +168,6 @@ drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «date»
 ---`);
 
   // The commit says who asked. The bearer is what the auth wall accepted, so the
