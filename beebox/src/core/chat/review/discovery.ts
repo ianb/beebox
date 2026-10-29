@@ -37,7 +37,7 @@ import { loadSessionHistory } from "../session/load-history.js";
 import { readCodexSessionUpdatedAt } from "../session/codex-transcript/core.js";
 import type { AgentEngine } from "../../box/config.js";
 import { stripChatAppTags } from "../../../shared/chat-tags.js";
-import { EngineNotImplementedError } from "../../../shared/agent-models.js";
+import { SESSION_STORES } from "../session/native-store.js";
 import { assertNever } from "../../../shared/invariant.js";
 
 /**
@@ -189,7 +189,7 @@ function claudePages(logPath: string): SpanPageReader {
   return ({ offset, limit }) => parseSessionLog({ logPath, slice: { mode: "page", offset, limit } });
 }
 
-function codexPages(boxRoot: string, sessionId: string): SpanPageReader {
+function nativePages(boxRoot: string, sessionId: string): SpanPageReader {
   return ({ offset, limit }) => loadSessionHistory(boxRoot, {
     sessionId,
     slice: { mode: "page", offset, limit },
@@ -213,7 +213,7 @@ export async function readSessionWindow(args: {
 }): Promise<ResolvedSpan | null> {
   const readPage = args.boxRoot === undefined
     ? claudePages(args.logPath)
-    : codexPages(args.boxRoot, args.sessionId);
+    : nativePages(args.boxRoot, args.sessionId);
   const applied = sessionState(args.state, args.sessionId).applied[args.consumer] ?? null;
   try {
     const span = await resolveSpan({ readPage, applied, limit: PARSE_LIMIT });
@@ -227,6 +227,33 @@ export async function readSessionWindow(args: {
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return null;
     throw e;
+  }
+}
+
+/**
+ * When the session's transcript was last written, or `null` when it is gone.
+ * Not the native session store for Claude and Codex: a Claude transcript is
+ * found at the husk's own path, and an unknown Codex thread throws here rather
+ * than counting as a missing transcript, which the store's `null` would change.
+ */
+export async function transcriptUpdatedAt(
+  boxRoot: string,
+  session: { engine: AgentEngine; sessionId: string; logPath: string },
+): Promise<Date | null> {
+  switch (session.engine) {
+    case "codex":
+      return readCodexSessionUpdatedAt(boxRoot, session.sessionId);
+    case "claude":
+      try {
+        return (await fs.stat(session.logPath)).mtime;
+      } catch (e) {
+        if (errnoCode(e) === "ENOENT") return null;
+        throw e;
+      }
+    case "pi":
+      return SESSION_STORES.pi.updatedAt(boxRoot, session.sessionId);
+    default:
+      return assertNever(session.engine);
   }
 }
 
@@ -251,25 +278,8 @@ async function qualifyHusk(
   const logPath = huskTranscriptPath(boxRoot, husk);
   const engine = await resolveChatEngine(boxRoot, { sessionId: husk.session, husk });
 
-  // Not the native session store: a Claude transcript is found at the husk's
-  // own path, and an unknown Codex thread throws here rather than counting as
-  // a missing transcript, which the store's `null` would change.
-  let mtime: Date;
-  try {
-    switch (engine) {
-      case "codex":
-        mtime = await readCodexSessionUpdatedAt(boxRoot, husk.session);
-        break;
-      case "claude":
-        mtime = (await fs.stat(logPath)).mtime;
-        break;
-      case "pi":
-        throw new EngineNotImplementedError(engine, "reviewing a chat");
-      default:
-        return assertNever(engine);
-    }
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") throw e;
+  const mtime = await transcriptUpdatedAt(boxRoot, { engine, sessionId: husk.session, logPath });
+  if (mtime === null) {
     result.missingTranscripts += 1;
     return null;
   }
@@ -281,19 +291,19 @@ async function qualifyHusk(
     return null;
   }
 
-  const codexHistory = engine === "codex"
+  const nativeHistory = engine !== "claude"
     ? await loadSessionHistory(boxRoot, {
       sessionId: husk.session,
       slice: { mode: "page", offset: 0, limit: PARSE_LIMIT },
     })
     : null;
-  const meta = codexHistory === null
+  const meta = nativeHistory === null
     ? await getSessionMetadata({ sessionId: husk.session, logPath, snippetMaxLen: 80 })
     : {
-      userTurns: codexHistory.entries.filter((entry) => entry.type === "user").length,
+      userTurns: nativeHistory.entries.filter((entry) => entry.type === "user").length,
       // Strip the `<chat-app …/>` prepend before slicing, as the Claude path
       // does via `getSessionMetadata`'s snippet extraction.
-      firstUserSnippet: stripChatAppTags(codexHistory.entries.find((entry) => entry.type === "user")?.content
+      firstUserSnippet: stripChatAppTags(nativeHistory.entries.find((entry) => entry.type === "user")?.content
         .filter((block) => block.type === "text")
         .map((block) => block.text ?? "")
         .join("\n") ?? "").trim().slice(0, 80),
@@ -313,7 +323,7 @@ async function qualifyHusk(
     sessionId: husk.session,
     logPath,
     state: options.state,
-    ...(engine === "codex" ? { boxRoot } : {}),
+    ...(engine === "claude" ? {} : { boxRoot }),
   } as const;
   const appliedFor = (consumer: string) =>
     sessionState(options.state, husk.session).applied[consumer] ?? null;
@@ -341,7 +351,7 @@ async function qualifyHusk(
     sessionId: husk.session,
     huskPath: husk.path,
     logPath,
-    ...(engine === "codex" ? { engine } : {}),
+    ...(engine === "claude" ? {} : { engine }),
     mtime,
     spanChars,
     bootstrap: span.bootstrap,

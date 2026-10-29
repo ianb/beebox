@@ -36,7 +36,7 @@ import {
   type SinceWindow,
 } from "./modes.js";
 import { assertNever, invariant } from "../../../shared/invariant.js";
-import { readCodexSessionHistory } from "../../../core/chat/session/codex-transcript/core.js";
+import { SESSION_STORES } from "../../../core/chat/session/native-store.js";
 import {
   parseDiagnosticEngine,
   resolveDiagnosticEngine,
@@ -44,7 +44,6 @@ import {
 } from "../../lib/diagnostic-session.js";
 import type { AgentEngine } from "../../../core/box/config.js";
 import { isWithin } from "../../../lib/box-containment.js";
-import { EngineNotImplementedError } from "../../../shared/agent-models.js";
 
 /**
  * The box-relative directory the command was run from ("" when at the box
@@ -90,10 +89,9 @@ async function explicitSessionLogPath(options: ExplicitSessionOptions): Promise<
     case "claude":
       return claudeSessionLogPath(options);
     case "codex":
-      await printCodexSession(options);
-      return null;
     case "pi":
-      throw new EngineNotImplementedError(engine, "reading a session");
+      await printNativeSession(engine, options);
+      return null;
     default:
       return assertNever(engine);
   }
@@ -108,8 +106,8 @@ async function claudeSessionLogPath(options: ExplicitSessionOptions): Promise<st
   process.exit(1);
 }
 
-/** Render a Codex thread here; it has no log file to hand back. */
-async function printCodexSession(options: ExplicitSessionOptions): Promise<void> {
+/** Render a Codex thread or pi session here, as readable dialogue through the native store. */
+async function printNativeSession(engine: "codex" | "pi", options: ExplicitSessionOptions): Promise<void> {
   try {
     validateCodexSessionMode({
       raw: options.raw,
@@ -120,17 +118,21 @@ async function printCodexSession(options: ExplicitSessionOptions): Promise<void>
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
-  const { entries, total } = await readCodexSessionHistory({
-    boxRoot: options.boxRoot,
+  const history = await SESSION_STORES[engine].readHistory(options.boxRoot, {
     sessionId: options.sessionId,
     slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
   });
+  if (history === null) {
+    console.error(`No ${engine} session ${options.sessionId} in this box.`);
+    process.exit(1);
+  }
+  const { entries, total } = history;
   if (!sessionEntriesPrintable({
     entries,
     sessionId: options.sessionId,
     allowHuge: options.allowHuge,
   })) process.exit(1);
-  console.log(`Session: ${options.sessionId} (codex)\n`);
+  console.log(`Session: ${options.sessionId} (${engine})\n`);
   if (entries.length < total) {
     console.warn(
       `Note: this session has ${String(total)} entries; showing the first ${String(entries.length)}.`,

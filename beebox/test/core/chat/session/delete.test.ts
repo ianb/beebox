@@ -16,6 +16,7 @@ import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/
 import { ChatScheduleManager } from "../../../../src/core/chat/schedules/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { piSessionsDir } from "../../../../src/core/pi-sessions.js";
 
 async function missing(target: string): Promise<boolean> {
   try { await access(target); return false; } catch (_error) { return true; }
@@ -41,7 +42,7 @@ async function chatFixture(opts: {
   git?: boolean;
   title?: string;
   transcript?: boolean;
-  history?: false | { contextDir?: string };
+  history?: false | { contextDir?: string; engine?: "pi" };
 }) {
   const d = opts.digit;
   const box = await makeTmpBox(opts.git ? { git: true } : {});
@@ -304,5 +305,23 @@ void test("SDK no-change failure restores beebox state", async (t) => {
     ],
     blocked: false,
   },
+  );
+});
+
+// ## A pi chat's session file is its storage
+void test("A pi chat's session file is its storage", async (t) => {
+  const fx = await chatFixture({ digit: "3", history: { engine: "pi" } });
+  t.teardown(() => fx.cleanup());
+  const { box, sessionId, registry, scheduleManager } = fx;
+  const piFile = join(piSessionsDir(box.root), `2026-10-29T21-33-48-061Z_${sessionId}.jsonl`);
+  const otherFile = join(piSessionsDir(box.root), "2026-10-29T21-33-48-061Z_33333333-0000-4000-8000-000000000000.jsonl");
+  await mkdir(piSessionsDir(box.root), { recursive: true });
+  await writeFile(piFile, "{}\n");
+  await writeFile(otherFile, "{}\n");
+
+  const result = await deleteChatSession({ boxRoot: box.root, sessionId, runtime: { registry, scheduleManager, maintenance: Promise.resolve() } });
+  t.check(
+    { status: result.status, piFileGone: await missing(piFile), otherKept: !(await missing(otherFile)), history: await loadHistory(box.root) },
+    { status: "deleted", piFileGone: true, otherKept: true, history: [] },
   );
 });

@@ -26,7 +26,7 @@ import { deriveTranscriptState, type TranscriptState } from "../availability.js"
 import { listCodexThreadMetadata, type CodexThreadMetadata } from "../codex-transcript/core.js";
 import { containedSessionCwd } from "../transcript-paths.js";
 import type { AgentEngine } from "../../../box/config.js";
-import { EngineNotImplementedError } from "../../../../shared/agent-models.js";
+import { findPiSessionFile } from "../pi-transcript.js";
 
 /**
  * Chats resolved at once — see {@link mapInBatchesSettled}. `resolveSessionLabel`
@@ -296,11 +296,11 @@ const LABEL_CACHE_MAX = 2000;
 const labelCache = new Map<string, string>();
 
 async function labelFor(entry: ChatSessionEntry): Promise<string> {
-  // Only the transcript source is worth caching: a title rode the husk, and a
+  // Only a transcript source is worth caching: a title rode the husk, and a
   // Codex preview came free with the thread listing.
   if (entry.title !== undefined && entry.title !== "") return entry.title;
   const source = labelSource(entry);
-  if (source.kind !== "transcript") {
+  if (source.kind === "preview") {
     return resolveSessionLabel({ sessionId: entry.sessionId, title: entry.title, source });
   }
   const key = `${source.logPath}\0${entry.mtime.getTime()}`;
@@ -333,7 +333,7 @@ export function labelSource(entry: ChatSessionEntry): SessionLabelSource {
     case "claude":
       return { kind: "transcript", logPath: entry.logPath };
     case "pi":
-      throw new EngineNotImplementedError(entry.engine, "labelling a chat");
+      return { kind: "pi-transcript", logPath: entry.logPath };
     default:
       return assertNever(entry.engine);
   }
@@ -373,10 +373,11 @@ async function resolveHusk(options: {
   codexAvailable: boolean;
 }): Promise<HuskResolution> {
   const { boxRoot, husk, engine, codexMetadata, codexAvailable } = options;
-  const logPath = huskTranscriptPath(boxRoot, husk);
+  let logPath = huskTranscriptPath(boxRoot, husk);
   // Not the native session store: Codex times come from one thread listing
-  // for the whole enumeration (`readCodexThreads`), not one read per chat, and
-  // a Claude transcript is found at the husk's own path.
+  // for the whole enumeration (`readCodexThreads`), not one read per chat, a
+  // Claude transcript is found at the husk's own path, and a pi chat's
+  // `logPath` becomes its session file, for labelling and chat search.
   let mtime: Date;
   try {
     switch (engine) {
@@ -391,13 +392,17 @@ async function resolveHusk(options: {
       case "claude":
         mtime = (await fs.stat(logPath)).mtime;
         break;
-      case "pi":
-        throw new EngineNotImplementedError(engine, "listing a chat");
+      case "pi": {
+        const piPath = await findPiSessionFile(boxRoot, husk.session);
+        if (piPath === null) return await deadHusk(husk);
+        logPath = piPath;
+        mtime = (await fs.stat(logPath)).mtime;
+        break;
+      }
       default:
         return assertNever(engine);
     }
   } catch (e) {
-    if (e instanceof EngineNotImplementedError) throw e;
     if (errnoCode(e) !== "ENOENT") {
       // Not "the transcript was cleaned up" — the file may well be there and
       // unreadable (EACCES, EIO). Say so loudly rather than silently, and don't

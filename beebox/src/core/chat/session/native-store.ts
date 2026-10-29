@@ -3,7 +3,8 @@
  * engine keeps it (`docs/plans/pi-box-engine.md`, Track 5).
  *
  * Each engine owns its transcript format and location — Claude Code's JSONL
- * under `~/.claude/projects/`, Codex's threads behind its app-server — and
+ * under `~/.claude/projects/`, Codex's threads behind its app-server, pi's
+ * JSONL under `.beebox/pi/sessions/` — and
  * beebox reads it in place rather than keeping a copy. A caller that asks one
  * of these three questions looks the engine up in {@link SESSION_STORES}
  * instead of branching on it, so a new engine is one more entry, and the
@@ -17,7 +18,7 @@
 
 import * as fs from "node:fs/promises";
 import { errnoCode } from "../../../shared/error-guards.js";
-import { EngineNotImplementedError, type AgentEngine } from "../../../shared/agent-models.js";
+import type { AgentEngine } from "../../../shared/agent-models.js";
 import { parseSessionLog, type SessionEntry, type SessionLogSlice } from "../../../cli/lib/session.js";
 import { resolveSessionLogPath } from "./history.js";
 import {
@@ -26,6 +27,7 @@ import {
   readCodexSessionUpdatedAt,
 } from "./codex-transcript/core.js";
 import { CodexHistoryRpcError } from "../../../services/codex-history-server.js";
+import { findPiSessionFile, parsePiSessionLog } from "./pi-transcript.js";
 
 /** A bounded window of a transcript, with the exact count of the whole. */
 export interface NativeHistory {
@@ -80,17 +82,24 @@ const codexStore: NativeSessionStore = {
   readHistory: (boxRoot, { sessionId, slice }) => readCodexSessionHistoryIfPresent({ boxRoot, sessionId, slice }),
 };
 
-function notImplemented(engine: AgentEngine): NativeSessionStore {
-  const refuse = (operation: string) => () => Promise.reject(new EngineNotImplementedError(engine, operation));
-  return {
-    exists: refuse("checking a chat transcript"),
-    updatedAt: refuse("checking a chat transcript"),
-    readHistory: refuse("reading chat history"),
-  };
-}
+/** pi's session file under `.beebox/pi/sessions/`, read directly (`pi-transcript.ts`). */
+const piStore: NativeSessionStore = {
+  async exists(boxRoot, sessionId) {
+    return (await findPiSessionFile(boxRoot, sessionId)) !== null;
+  },
+  async updatedAt(boxRoot, sessionId) {
+    const path = await findPiSessionFile(boxRoot, sessionId);
+    return path === null ? null : ((await unlessMissing(fs.stat(path)))?.mtime ?? null);
+  },
+  async readHistory(boxRoot, { sessionId, slice }) {
+    const path = await findPiSessionFile(boxRoot, sessionId);
+    if (path === null) return null;
+    return unlessMissing(parsePiSessionLog({ path, slice }).then(({ entries, total }) => ({ entries, total })));
+  },
+};
 
 export const SESSION_STORES: Record<AgentEngine, NativeSessionStore> = {
   claude: claudeStore,
   codex: codexStore,
-  pi: notImplemented("pi"),
+  pi: piStore,
 };
