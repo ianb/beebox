@@ -10,19 +10,19 @@
    rules so a browser without ::highlight() keeps ::selection. */
 ::selection {
   background-color: var(--bbx-selection, #bcd4f6);
-  color: var(--bbx-selection-ink, color(from var(--bbx-selection, #bcd4f6) srgb-linear clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1) clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1) clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1)));
+  color: var(--bbx-selection-ink, color(from var(--bbx-selection, #bcd4f6) srgb-linear clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1)));
 }
 :is(pre, pre *)::selection {
   background-color: var(--bbx-selection-code, var(--bbx-selection, #bcd4f6));
-  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, color(from var(--bbx-selection-code, var(--bbx-selection, #bcd4f6)) srgb-linear clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1) clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1) clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1))));
+  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, color(from var(--bbx-selection-code, var(--bbx-selection, #bcd4f6)) srgb-linear clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1))));
 }
 ::highlight(bbx-selection-preview) {
   background-color: var(--bbx-selection, #bcd4f6);
-  color: var(--bbx-selection-ink, color(from var(--bbx-selection, #bcd4f6) srgb-linear clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1) clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1) clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1)));
+  color: var(--bbx-selection-ink, color(from var(--bbx-selection, #bcd4f6) srgb-linear clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1)));
 }
 :is(pre, pre *)::highlight(bbx-selection-preview) {
   background-color: var(--bbx-selection-code, var(--bbx-selection, #bcd4f6));
-  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, color(from var(--bbx-selection-code, var(--bbx-selection, #bcd4f6)) srgb-linear clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1) clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1) clamp(0, (0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 10000, 1))));
+  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, color(from var(--bbx-selection-code, var(--bbx-selection, #bcd4f6)) srgb-linear clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1))));
 }
 /* Chrome owns the common desk and its saturated material palette. */
 .bbx-box-presentation {
