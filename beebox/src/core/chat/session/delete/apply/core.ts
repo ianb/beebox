@@ -11,7 +11,7 @@ import {
   type MostActiveFile,
   type SessionHistoryEntry,
 } from "../../history.js";
-import { deleteSdkSessionStorage, inspectSessionStoragePresence, resolveSessionStorageTargets, type DeleteStorageOptions, type SessionStorageState } from "./storage.js";
+import { deleteSdkSessionStorage, inspectSessionStoragePresence, resolveSessionStorageTargets, type DeleteStorageOptions, type SessionStorageState, type SessionStorageTargets } from "./storage.js";
 import type { ChatSessionRegistry } from "../../registry/core.js";
 import { parseSdkSessionId } from "../../id.js";
 import { finishDeletedHusks } from "./husks.js";
@@ -21,7 +21,8 @@ import type { AgentEngine } from "../../../../box/config.js";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession } from "../../state.js";
-import { assertEngineImplemented } from "../../../../../shared/agent-models.js";
+import { EngineNotImplementedError } from "../../../../../shared/agent-models.js";
+import { assertNever } from "../../../../../shared/invariant.js";
 
 async function inspectCodexStorage(boxRoot: string, sessionId: string) {
   const present = await codexSessionExists(boxRoot, sessionId);
@@ -158,10 +159,21 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
   const historyEntry = (await readHistoryFile(options.boxRoot, { strict: true }))?.sessions
     .find((entry) => entry.id === sessionId);
   const engine: AgentEngine = historyEntry?.engine ?? "claude";
-  assertEngineImplemented(engine, "deleting a chat");
-  const targets = engine === "claude"
-    ? await resolveSessionStorageTargets({ boxRoot: options.boxRoot, contextDir: authority.contextDir, sessionId })
-    : null;
+  // `null` targets mean Codex: its thread is deleted through its own
+  // `thread/delete`, not as files.
+  let targets: SessionStorageTargets | null;
+  switch (engine) {
+    case "claude":
+      targets = await resolveSessionStorageTargets({ boxRoot: options.boxRoot, contextDir: authority.contextDir, sessionId });
+      break;
+    case "codex":
+      targets = null;
+      break;
+    case "pi":
+      throw new EngineNotImplementedError(engine, "deleting a chat");
+    default:
+      return assertNever(engine);
+  }
   const beforeStorage = targets === null
     ? await inspectCodexStorage(options.boxRoot, sessionId)
     : await inspectSessionStoragePresence(targets);

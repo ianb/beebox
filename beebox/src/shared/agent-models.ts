@@ -36,16 +36,6 @@ export class EngineNotImplementedError extends Error {
 }
 
 /**
- * Narrow away an engine whose path at this site is not implemented yet. A
- * placeholder for sites the native session store will own
- * (docs/plans/pi-box-engine.md, Track 5); removing this function makes the
- * compiler list them.
- */
-export function assertEngineImplemented(engine: AgentEngine, operation: string): asserts engine is Exclude<AgentEngine, "pi"> {
-  if (engine === "pi") throw new EngineNotImplementedError(engine, operation);
-}
-
-/**
  * Portable procedure tiers, followed by the provider-shaped legacy aliases
  * accepted by existing box cards. New procedure cards should use the tiers.
  */

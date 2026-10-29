@@ -15,13 +15,13 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
-import { loadHistoryEntries, resolveSessionLogPath, type SessionHistoryEntry } from "./session/history.js";
+import { loadHistoryEntries, type SessionHistoryEntry } from "./session/history.js";
 import { localOrigin, type LocalOrigin } from "./session/origin.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../box/config.js";
 import { extractSnippet } from "../../cli/lib/session-text.js";
 import { errnoCode } from "../../shared/error-guards.js";
-import { readCodexSessionUpdatedAt } from "./session/codex-transcript/core.js";
+import { SESSION_STORES } from "./session/native-store.js";
 import { loadSessionHistory } from "./session/load-history.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
@@ -34,7 +34,6 @@ import {
   type ChatHuskEntry,
 } from "./husk-read.js";
 import { parseFrontmatterObject } from "../../cards/frontmatter.js";
-import { assertEngineImplemented } from "../../shared/agent-models.js";
 
 /** Keep husk titles bookmark-sized, not transcript-sized. */
 const TITLE_MAX_LEN = 80;
@@ -168,13 +167,10 @@ export async function commitChatHusk(boxRoot: string, huskPath: string): Promise
  * answer to decide whether this machine is the session's origin.
  */
 async function transcriptMtime(boxRoot: string, opts: { sessionId: string; engine: AgentEngine }): Promise<Date | null> {
-  assertEngineImplemented(opts.engine, "checking a chat transcript");
   try {
-    return opts.engine === "codex"
-      ? await readCodexSessionUpdatedAt(boxRoot, opts.sessionId)
-      : (await fs.stat(await resolveSessionLogPath(boxRoot, opts.sessionId))).mtime;
+    return await SESSION_STORES[opts.engine].updatedAt(boxRoot, opts.sessionId);
   } catch (_e) {
-    // Absent (or unreadable) transcript — the caller's whole question.
+    // Unreadable transcript — treated as absent, the caller's whole question.
     return null;
   }
 }

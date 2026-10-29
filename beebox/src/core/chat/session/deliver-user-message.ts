@@ -27,7 +27,8 @@ import { resolveChatTarget } from "./target.js";
 import { loadSessionHistory } from "./load-history.js";
 import { MAX_SESSION_ENTRIES } from "../../../cli/lib/session.js";
 import { jsonlLines } from "../../../lib/jsonl-lines.js";
-import { assertEngineImplemented } from "../../../shared/agent-models.js";
+import { assertNever } from "../../../shared/invariant.js";
+import type { AgentEngine } from "../../../shared/agent-models.js";
 
 /** Raised when the non-busy `send()` of a delivered user message fails. Retryable. */
 export class UserMessageDeliveryError extends Error {
@@ -76,24 +77,45 @@ export async function userMessageAlreadyLanded(opts: {
   const logPrefix = opts.logPrefix ?? "chat";
   if (sessionId === null) return false;
   const engine = await resolveChatEngine(boxRoot, { sessionId });
-  assertEngineImplemented(engine, "probing a chat transcript");
-  if (engine === "codex") {
-    try {
-      // The message being probed was sent just before a crash, so it sits at
-      // the end of the thread: read the newest entries, not the oldest page
-      // (a thread longer than MAX_SESSION_ENTRIES would otherwise hide it).
-      const { entries } = await loadSessionHistory(boxRoot, {
-        sessionId,
-        slice: { mode: "tail", tail: MAX_SESSION_ENTRIES },
-      });
-      return entries.some((entry) => entry.content.some(
-        (block) => block.type === "text" && block.text?.includes(marker) === true,
-      ));
-    } catch (error) {
-      console.warn(`[${logPrefix}] Could not read Codex transcript for at-most-once probe:`, error);
-      return false;
-    }
+  const probe = { boxRoot, sessionId, marker, logPrefix };
+  switch (engine) {
+    case "claude":
+      return claudeLogContains(probe);
+    case "codex":
+    case "pi":
+      return historyContains(probe, engine);
+    default:
+      return assertNever(engine);
   }
+}
+
+interface LandedProbe {
+  boxRoot: string;
+  sessionId: string;
+  marker: string;
+  logPrefix: string;
+}
+
+/** Other engines: the newest history entries, read through the native store. */
+async function historyContains({ boxRoot, sessionId, marker, logPrefix }: LandedProbe, engine: AgentEngine): Promise<boolean> {
+  try {
+    // The message being probed was sent just before a crash, so it sits at
+    // the end of the thread: read the newest entries, not the oldest page
+    // (a thread longer than MAX_SESSION_ENTRIES would otherwise hide it).
+    const { entries } = await loadSessionHistory(boxRoot, {
+      sessionId,
+      slice: { mode: "tail", tail: MAX_SESSION_ENTRIES },
+    });
+    return entries.some((entry) => entry.content.some(
+      (block) => block.type === "text" && block.text?.includes(marker) === true,
+    ));
+  } catch (error) {
+    console.warn(`[${logPrefix}] Could not read ${engine} transcript for at-most-once probe:`, error);
+    return false;
+  }
+}
+
+async function claudeLogContains({ boxRoot, sessionId, marker, logPrefix }: LandedProbe): Promise<boolean> {
   const logPath = await resolveSessionLogPath(boxRoot, sessionId);
   try {
     // Stream line by line with an early return — the target chat is the

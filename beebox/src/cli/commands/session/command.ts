@@ -35,7 +35,7 @@ import {
   transcriptPrintable,
   type SinceWindow,
 } from "./modes.js";
-import { invariant } from "../../../shared/invariant.js";
+import { assertNever, invariant } from "../../../shared/invariant.js";
 import { readCodexSessionHistory } from "../../../core/chat/session/codex-transcript/core.js";
 import {
   parseDiagnosticEngine,
@@ -44,7 +44,7 @@ import {
 } from "../../lib/diagnostic-session.js";
 import type { AgentEngine } from "../../../core/box/config.js";
 import { isWithin } from "../../../lib/box-containment.js";
-import { assertEngineImplemented } from "../../../shared/agent-models.js";
+import { EngineNotImplementedError } from "../../../shared/agent-models.js";
 
 /**
  * The box-relative directory the command was run from ("" when at the box
@@ -67,7 +67,7 @@ function requestedSessionEngine(value: string | undefined): AgentEngine | undefi
   }
 }
 
-async function explicitSessionLogPath(options: {
+interface ExplicitSessionOptions {
   boxRoot: string;
   sessionId: string;
   requestedEngine: AgentEngine | undefined;
@@ -76,7 +76,9 @@ async function explicitSessionLogPath(options: {
   full: boolean;
   allowHuge: boolean;
   renderOptions: RenderOptions;
-}): Promise<string | null> {
+}
+
+async function explicitSessionLogPath(options: ExplicitSessionOptions): Promise<string | null> {
   const engine = await resolveDiagnosticEngine({
     boxRoot: options.boxRoot,
     sessionId: options.sessionId,
@@ -84,16 +86,30 @@ async function explicitSessionLogPath(options: {
     // TODO(env-migration): native harness identity inherited only by this command path.
     codexThreadId: process.env["CODEX_THREAD_ID"],
   });
-  assertEngineImplemented(engine, "reading a session");
-  if (engine === "claude") {
-    const found = await findSessionLog(options.boxRoot, options.sessionId);
-    if (found.ok) return found.value;
-    console.error(`Session log not found for id: ${options.sessionId}`);
-    console.error("Searched:");
-    for (const dir of found.error) console.error(`  ${dir}`);
-    process.exit(1);
+  switch (engine) {
+    case "claude":
+      return claudeSessionLogPath(options);
+    case "codex":
+      await printCodexSession(options);
+      return null;
+    case "pi":
+      throw new EngineNotImplementedError(engine, "reading a session");
+    default:
+      return assertNever(engine);
   }
+}
 
+async function claudeSessionLogPath(options: ExplicitSessionOptions): Promise<string> {
+  const found = await findSessionLog(options.boxRoot, options.sessionId);
+  if (found.ok) return found.value;
+  console.error(`Session log not found for id: ${options.sessionId}`);
+  console.error("Searched:");
+  for (const dir of found.error) console.error(`  ${dir}`);
+  process.exit(1);
+}
+
+/** Render a Codex thread here; it has no log file to hand back. */
+async function printCodexSession(options: ExplicitSessionOptions): Promise<void> {
   try {
     validateCodexSessionMode({
       raw: options.raw,
@@ -122,7 +138,6 @@ async function explicitSessionLogPath(options: {
   }
   if (entries.length === 0) console.log("(empty session)");
   else renderEntries(entries, options.renderOptions);
-  return null;
 }
 
 function validateSessionOptions(options: {

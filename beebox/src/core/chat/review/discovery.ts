@@ -37,7 +37,8 @@ import { loadSessionHistory } from "../session/load-history.js";
 import { readCodexSessionUpdatedAt } from "../session/codex-transcript/core.js";
 import type { AgentEngine } from "../../box/config.js";
 import { stripChatAppTags } from "../../../shared/chat-tags.js";
-import { assertEngineImplemented } from "../../../shared/agent-models.js";
+import { EngineNotImplementedError } from "../../../shared/agent-models.js";
+import { assertNever } from "../../../shared/invariant.js";
 
 /**
  * How long a transcript must sit unmodified before it is reviewed — don't
@@ -249,13 +250,24 @@ async function qualifyHusk(
   }
   const logPath = huskTranscriptPath(boxRoot, husk);
   const engine = await resolveChatEngine(boxRoot, { sessionId: husk.session, husk });
-  assertEngineImplemented(engine, "reviewing a chat");
 
+  // Not the native session store: a Claude transcript is found at the husk's
+  // own path, and an unknown Codex thread throws here rather than counting as
+  // a missing transcript, which the store's `null` would change.
   let mtime: Date;
   try {
-    mtime = engine === "codex"
-      ? await readCodexSessionUpdatedAt(boxRoot, husk.session)
-      : (await fs.stat(logPath)).mtime;
+    switch (engine) {
+      case "codex":
+        mtime = await readCodexSessionUpdatedAt(boxRoot, husk.session);
+        break;
+      case "claude":
+        mtime = (await fs.stat(logPath)).mtime;
+        break;
+      case "pi":
+        throw new EngineNotImplementedError(engine, "reviewing a chat");
+      default:
+        return assertNever(engine);
+    }
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw e;
     result.missingTranscripts += 1;

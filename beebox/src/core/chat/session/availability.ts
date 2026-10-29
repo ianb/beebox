@@ -1,12 +1,8 @@
-import * as fs from "node:fs/promises";
-import { errnoCode } from "../../../shared/error-guards.js";
 import { findChatHuskEntry, type ChatHuskEntry } from "../husk-read.js";
-import { resolveSessionLogPath } from "./history.js";
 import type { ChatSessionRegistry } from "./registry/core.js";
 import { resolveRecordedChatEngine } from "./engine.js";
-import { codexSessionExists } from "./codex-transcript/core.js";
+import { SESSION_STORES } from "./native-store.js";
 import { localOrigin } from "./origin.js";
-import { assertEngineImplemented } from "../../../shared/agent-models.js";
 
 /**
  * Where a chat's transcript is — the question a husk alone cannot answer.
@@ -92,21 +88,10 @@ export async function resolveSessionAvailability(args: { boxRoot: string; sessio
   // thread for such an id made a clean "no transcript here" depend on Codex's
   // error WORDING (`isNotFound`), and an unrecognized phrasing surfaced the raw
   // RPC error instead (2026-09-03). Unrecorded falls through to the local
-  // transcript file: present means resumable whatever wrote it, and absent
-  // means `missingTranscript`, whose `unknown` transcript state is already the
-  // "no record of this session" the chat surfaces render.
+  // Claude transcript file: present means resumable whatever wrote it, and
+  // absent means `missingTranscript`, whose `unknown` transcript state is
+  // already the "no record of this session" the chat surfaces render.
   const engine = await resolveRecordedChatEngine(args.boxRoot, { sessionId: args.sessionId, husk });
-  if (engine !== null) assertEngineImplemented(engine, "checking a chat transcript");
-  if (engine === "codex") {
-    if (await codexSessionExists(args.boxRoot, args.sessionId)) return { kind: "resumable" };
-    return missingTranscript(husk);
-  }
-  const logPath = await resolveSessionLogPath(args.boxRoot, args.sessionId);
-  try {
-    await fs.access(logPath);
-    return { kind: "resumable" };
-  } catch (error) {
-    if (errnoCode(error) !== "ENOENT") throw error;
-    return missingTranscript(husk);
-  }
+  if (await SESSION_STORES[engine ?? "claude"].exists(args.boxRoot, args.sessionId)) return { kind: "resumable" };
+  return missingTranscript(husk);
 }

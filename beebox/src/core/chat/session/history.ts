@@ -30,8 +30,8 @@ import { isRecord } from "../../card-io.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
-import { readCodexSessionUpdatedAt } from "./codex-transcript/core.js";
-import { assertEngineImplemented, isAgentEngine } from "../../../shared/agent-models.js";
+import { SESSION_STORES } from "./native-store.js";
+import { isAgentEngine } from "../../../shared/agent-models.js";
 
 const HISTORY_FILE = ".beebox/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".beebox/chat-session-id.json";
@@ -313,6 +313,20 @@ export function sessionLogPathFor(boxRoot: string, entry: SessionHistoryEntry): 
 
 
 /**
+ * Whether the entry's transcript is on this machine. Any failure reads as
+ * absent: the rejection only tells us the transcript cannot be reached, which
+ * is the signal the ghost check wants. Claude's file is checked at the path
+ * this entry names rather than through the store, which would re-read the
+ * history file once per entry.
+ */
+async function hasTranscript(boxRoot: string, entry: SessionHistoryEntry): Promise<boolean> {
+  const present = entry.engine === "claude"
+    ? fs.access(sessionLogPathFor(boxRoot, entry)).then(() => true)
+    : SESSION_STORES[entry.engine].updatedAt(boxRoot, entry.id).then((at) => at !== null);
+  return present.catch(() => false);
+}
+
+/**
  * Find the most-recently-created session associated with a directory.
  * "Most recent" means later in the history file's session list — entries
  * are appended in creation order, so the last match wins.
@@ -340,20 +354,10 @@ export async function getLastSessionForDirectory(boxRoot: string, contextDir: st
     if (!entry) continue;
     const matches = entry.contextDir === contextDir || (contextDir === "" && entry.contextDir === undefined);
     if (!matches) continue;
-    assertEngineImplemented(entry.engine, "checking a chat transcript");
-    try {
-      if (entry.engine === "codex") await readCodexSessionUpdatedAt(boxRoot, entry.id);
-      else await fs.access(sessionLogPathFor(boxRoot, entry));
-      return entry.id;
-    } catch (_e) {
-      // Ghost entry — no log on disk. The fs.access rejection only tells us
-      // the file is absent (which is the signal we want), so we ignore the
-      // error object itself and log our own contextual warning instead. A
-      // recurring ghost-creation bug shows up as repeated skips for the
-      // same id across sessions.
-      console.warn(`[chat-session-history] Skipping ghost ${entry.engine} entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id}`);
-      continue;
-    }
+    if (await hasTranscript(boxRoot, entry)) return entry.id;
+    // Ghost entry — no transcript. A recurring ghost-creation bug shows up as
+    // repeated skips for the same id across sessions.
+    console.warn(`[chat-session-history] Skipping ghost ${entry.engine} entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id}`);
   }
   return null;
 }

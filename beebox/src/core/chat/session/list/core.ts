@@ -26,7 +26,7 @@ import { deriveTranscriptState, type TranscriptState } from "../availability.js"
 import { listCodexThreadMetadata, type CodexThreadMetadata } from "../codex-transcript/core.js";
 import { containedSessionCwd } from "../transcript-paths.js";
 import type { AgentEngine } from "../../../box/config.js";
-import { EngineNotImplementedError, assertEngineImplemented } from "../../../../shared/agent-models.js";
+import { EngineNotImplementedError } from "../../../../shared/agent-models.js";
 
 /**
  * Chats resolved at once — see {@link mapInBatchesSettled}. `resolveSessionLabel`
@@ -374,20 +374,30 @@ async function resolveHusk(options: {
 }): Promise<HuskResolution> {
   const { boxRoot, husk, engine, codexMetadata, codexAvailable } = options;
   const logPath = huskTranscriptPath(boxRoot, husk);
-  assertEngineImplemented(engine, "listing a chat");
+  // Not the native session store: Codex times come from one thread listing
+  // for the whole enumeration (`readCodexThreads`), not one read per chat, and
+  // a Claude transcript is found at the husk's own path.
   let mtime: Date;
   try {
-    if (engine === "codex") {
-      // "Codex couldn't be asked" and "Codex has no such thread" are different
-      // facts: the second is a dead husk, the first is one we can't classify,
-      // so it goes in neither list rather than being reported as expired.
-      if (!codexAvailable) return { kind: "unreadable" };
-      if (codexMetadata === undefined) return await deadHusk(husk);
-      mtime = codexMetadata.updatedAt;
-    } else {
-      mtime = (await fs.stat(logPath)).mtime;
+    switch (engine) {
+      case "codex":
+        // "Codex couldn't be asked" and "Codex has no such thread" are different
+        // facts: the second is a dead husk, the first is one we can't classify,
+        // so it goes in neither list rather than being reported as expired.
+        if (!codexAvailable) return { kind: "unreadable" };
+        if (codexMetadata === undefined) return await deadHusk(husk);
+        mtime = codexMetadata.updatedAt;
+        break;
+      case "claude":
+        mtime = (await fs.stat(logPath)).mtime;
+        break;
+      case "pi":
+        throw new EngineNotImplementedError(engine, "listing a chat");
+      default:
+        return assertNever(engine);
     }
   } catch (e) {
+    if (e instanceof EngineNotImplementedError) throw e;
     if (errnoCode(e) !== "ENOENT") {
       // Not "the transcript was cleaned up" — the file may well be there and
       // unreadable (EACCES, EIO). Say so loudly rather than silently, and don't
