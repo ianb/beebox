@@ -29,6 +29,9 @@ export interface CalendarCardRef {
   cardPath: string;
   /** Absolute path of the card's attach folder (may not exist yet). */
   folder: string;
+  /** The calendar's name (`title`) and access role, as the card last recorded them. */
+  name: string | undefined;
+  access: string | undefined;
 }
 
 export interface CalendarFolders {
@@ -61,11 +64,12 @@ export function calendarMigrationJournalPath(boxRoot: string): string {
 
 const CALENDAR_SCHEMAS = new Map([[CalendarSchema.type, CalendarSchema]]);
 
-/** The calendar a card names, or undefined when the card does not parse as one. */
-async function readCardId(cardPath: string): Promise<string | undefined> {
+/** The calendar a card names, with its name and access, or undefined when the card does not parse as one. */
+async function readCard(cardPath: string): Promise<{ id: string; name: string | undefined; access: string | undefined } | undefined> {
   try {
     const card = parseCardText(await fs.readFile(cardPath, "utf-8"), { source: cardPath, schemas: CALENDAR_SCHEMAS });
-    return cardFields(card, CalendarSchema)["google-calendar"].id;
+    const fields = cardFields(card, CalendarSchema);
+    return { id: fields["google-calendar"].id, name: fields.title, access: fields["google-calendar"].access };
   } catch (err: unknown) {
     if (err instanceof CardIOError) return undefined;
     throw err;
@@ -93,14 +97,15 @@ export async function loadCalendarFolders(opts: { boxRoot: string; calRoot: stri
   for (const name of names.filter((n) => n.endsWith(CARD_SUFFIX)).toSorted()) {
     const cardPath = path.join(calRoot, name);
     const rel = path.relative(boxRoot, cardPath);
-    const id = await readCardId(cardPath);
-    if (id === undefined) {
+    const card = await readCard(cardPath);
+    if (card === undefined) {
       problems.push(localCalendarFailure({
         calendarId: "(unknown)", operation: "stale-cleanup", path: rel,
         detail: "calendar card does not parse; its calendar is not synced",
       }));
       continue;
     }
+    const { id } = card;
     const prior = byId.get(id);
     if (prior !== undefined || duplicated.has(id)) {
       duplicated.add(id);
@@ -111,7 +116,7 @@ export async function loadCalendarFolders(opts: { boxRoot: string; calRoot: stri
       }));
       continue;
     }
-    byId.set(id, { cardPath, folder: cardFolder(cardPath) });
+    byId.set(id, { cardPath, folder: cardFolder(cardPath), name: card.name, access: card.access });
   }
   return { byId, problems, duplicated };
 }
@@ -128,11 +133,19 @@ export async function listIcsFiles(dir: string): Promise<string[]> {
 
 /**
  * Every calendar folder's events in a range, merged and sorted by start, for
- * the `bbx calendar` view. Recurring events are expanded within the range;
+ * the `bbx calendar` view, each labeled with its folder's calendar. Recurring events are expanded within the range;
  * the caller still filters single events to it (`filterByDateRange`).
  */
 export async function loadBoxEvents(boxRoot: string, range: { from: Date; to: Date }): Promise<CalendarEvent[]> {
   const { byId } = await loadCalendarFolders({ boxRoot, calRoot: getBoxDir(boxRoot, "calendar") });
-  const perFolder = await Promise.all([...byId.values()].map(async (ref) => loadAllEvents(ref.folder, range)));
+  // The card says which calendar a folder is, so its name and role label the
+  // events; a file's own X-BBX-CALENDAR-* lines can be stale or, in files
+  // synced before the product rename, under another prefix.
+  const perFolder = await Promise.all([...byId].map(async ([id, ref]) =>
+    (await loadAllEvents(ref.folder, range)).map((event) => ({
+      ...event, calendarId: id,
+      ...(ref.name === undefined ? {} : { calendarName: ref.name }),
+      ...(ref.access === undefined ? {} : { calendarRole: ref.access }),
+    }))));
   return perFolder.flat().toSorted((a, b) => a.start.getTime() - b.start.getTime());
 }
