@@ -206,3 +206,11 @@ readable parts), the same replay agreed on 81/93. All 7 preparation failures now
 agree. The remaining misses are rule overlaps and missing identifying facts. The
 boxholder judged one counted miss acceptable, which gives 82/93. Next:
 [compiled instructions plan](../../beebox/docs/plans/triage-compiled-instructions.md).
+
+Implemented in the worktree per the plan: `bbx triage duplicates`, the default
+principles, and `bbx triage compile`, all wired into `--engine jev`. Principles in
+the policy alone did not move Jev on the replay's overlap misses (80/93). The
+compiled tie-breaks have run live only on a synthetic box. Running them on the
+real box needs a non-Jev model pass over its rules, which awaits the boxholder.
+The duplicate check marked 33 of 36 restored real scan sessions removable and
+kept 3 for triage.
