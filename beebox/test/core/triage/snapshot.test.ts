@@ -9,7 +9,7 @@ import { any, isoDate } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
-import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
+import { compileInstructionSnapshot, DEFAULT_TRIAGE_PRINCIPLES } from "../../../src/core/triage/snapshot.js";
 import { judgeItem } from "../../../src/core/triage/judge.js";
 import { serializeTriageRequest } from "../../../src/core/triage/request.js";
 import { JEV_MAX_REQUEST_CHARS } from "../../../src/services/jev-wire.js";
@@ -49,6 +49,7 @@ const normalPolicy = `# Intake Guide
 
 - Shared household administration.
 
+${DEFAULT_TRIAGE_PRINCIPLES}
 Source precedence: user-stated > feedback > inferred > default. Never weaken user-stated policy to satisfy an inferred rule. Unresolved conflicting instructions mean unclear. Landmark rules describe destination boundaries; the intake guide governs how to decide. Best effort is permitted when the policy explicitly allows it.`;
 
 async function fixtureBox(t: { teardown(fn: () => Promise<void>): void }) {
@@ -84,6 +85,7 @@ void test("line 20", async (t) => {
   ]);
 
   t.check(initial.policy, `No intake guide exists. Be conservative: choose unclear for uncertain placement or missing necessary evidence. Choose no-match only when readable evidence shows no category fits.
+${DEFAULT_TRIAGE_PRINCIPLES}
 Source precedence: user-stated > feedback > inferred > default. Never weaken user-stated policy to satisfy an inferred rule. Unresolved conflicting instructions mean unclear. Landmark rules describe destination boundaries; the intake guide governs how to decide. Best effort is permitted when the policy explicitly allows it.`);
 
   await box.write("_config/intake.guide.card", guide);
@@ -107,6 +109,7 @@ Source precedence: user-stated > feedback > inferred > default. Never weaken use
 
 - Shared household administration.
 
+${DEFAULT_TRIAGE_PRINCIPLES}
 Source precedence: user-stated > feedback > inferred > default. Never weaken user-stated policy to satisfy an inferred rule. Unresolved conflicting instructions mean unclear. Landmark rules describe destination boundaries; the intake guide governs how to decide. Best effort is permitted when the policy explicitly allows it.`,
     trial: true,
     sources: [
@@ -154,7 +157,7 @@ void test("judgment ties, reserved outcomes and request size", async (t) => {
   const firstDestination = normal.destinations[0];
   invariant(firstDestination, "fixture compiles destinations");
   const evidence: Evidence = { version: 1, source: { ref: "/_content/inbox/staged/input.txt", digest: "a".repeat(64), gitRevision: null, attachmentRef: null }, status: "ready", parts: [{ ref: "/_content/inbox/staged/input.txt", digest: "a".repeat(64), mediaType: "text/plain", method: "native-text", toolVersion: "1", status: "ready", text: "Bank statement", omissions: [] }], recipe: { adapterVersion: 1, steps: ["native text"], maxTextChars: 1000 } };
-  const requestHash = "54dbef87e1dfeab94b5c793d27452b1b3febe237fef82ae46f084c7b7b47be9a";
+  const requestHash = "926a68a5bd1f05d0f26b7606a134fe779a2a2e077d5f82ee8c6d02ce0c169527";
   const summary = (head: string) => ({
     kind: "summary" as const,
     text: `Classifier summary: ${head}; instructions: /_config/intake.guide.card, /_content/a/records/Records.landmark.card, /_content/b/records/Records.landmark.card.`,

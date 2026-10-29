@@ -1,0 +1,132 @@
+// # Compiled triage instructions
+//
+// One agent pass adds roles, boundaries, tie-breaks and cited facts after the
+// canonical destination rules; it never replaces them. Output is validated
+// before anything is written. The file is used only while the guide, every
+// landmark and every cited card still match the digests it was compiled from.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
+import { execa } from "execa";
+import * as fs from "node:fs/promises";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { compileInstructionSnapshot, compileInstructionSnapshotWithStatus } from "../../../src/core/triage/snapshot.js";
+import { compileTriageInstructions, validateCompileOutput, type CompileAgent } from "../../../src/core/triage/compile.js";
+import type { CompileOutput } from "../../../src/core/triage/compiled.js";
+
+const landmark = (rule: string) => `---\nsymbol:\n  glyph: 📁\nnavigation:\n  label: Place\ndestinations:\n  - for: [triage]\n    rules: ${rule}\n---\n`;
+const MONEY = "/_content/money/Money.landmark.card";
+const SHOP = "/_content/shop/Shop.landmark.card";
+const PROPERTY = "/_content/shop/Property.doc.card";
+
+async function fixtureBox(t: { teardown(fn: () => Promise<void>): void }) {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await box.write(MONEY.slice(1), landmark("Bills and payment confirmations."));
+  await box.write(SHOP.slice(1), landmark("Anything about the garage building, including its property tax."));
+  await box.write(PROPERTY.slice(1), "---\ntitle: Garage\n---\nThe garage is at 12 Example Street, parcel 01-234.\n");
+  box.commitAll("fixture");
+  return box;
+}
+
+const output: CompileOutput = {
+  destinations: [
+    { ref: MONEY, role: "work", boundaries: "Property tax for the garage goes to shop, not here.", facts: [] },
+    { ref: SHOP, role: "work", boundaries: "", facts: [{ text: "parcel 01-234", ref: PROPERTY }] },
+  ],
+  tieBreaks: [{ between: [MONEY, SHOP], when: "a property tax bill for the garage", winner: SHOP, basis: "principle 1" }],
+  conflicts: [],
+};
+const fakeAgent = (data: CompileOutput, during?: () => Promise<void>): CompileAgent => async () => {
+  await during?.();
+  return { success: true, data, model: "fake-model" };
+};
+
+// A valid pass writes the file and commits it with trailers; the snapshot then
+// keeps the canonical rule first and appends role, boundaries and the cited fact.
+void test("A valid compile is written, committed and used by the snapshot.", async (t) => {
+  const box = await fixtureBox(t);
+  const result = await compileTriageInstructions({ boxRoot: box.root, agent: fakeAgent(output) });
+  t.check(result.status, "compiled");
+  const log = await execa("git", ["log", "-1", "--format=%s%n%(trailers:key=Triage-Classifier,valueonly)"], { cwd: box.root });
+  t.check(log.stdout.trim(), "Compile triage instructions: 1 tie-break(s), 0 conflict question(s)\nfake-model");
+
+  const { snapshot, compiled } = await compileInstructionSnapshotWithStatus(box.root);
+  t.check([compiled.status, snapshot.destinations.map((d) => d.rules), snapshot.sources.at(-1)?.ref], [
+    "current",
+    [
+      "Bills and payment confirmations.\nRole: work to be done.\nProperty tax for the garage goes to shop, not here.",
+      "Anything about the garage building, including its property tax.\nRole: work to be done.\nFacts: parcel 01-234 (from /_content/shop/Property.doc.card)",
+    ],
+    "/_bookkeeping/triage/compiled-instructions.json",
+  ]);
+  t.check(snapshot.policy, any(String).includes("- a property tax bill for the garage: shop over money (basis: principle 1)."));
+
+  // Editing a landmark, or a card a fact cites, makes the file stale: raw rules apply.
+  await box.write(PROPERTY.slice(1), "---\ntitle: Garage\n---\nMoved.\n");
+  const stale = await compileInstructionSnapshotWithStatus(box.root);
+  t.check([stale.compiled.status, stale.snapshot.destinations.map((d) => d.rules)], [
+    "stale",
+    ["Bills and payment confirmations.", "Anything about the garage building, including its property tax."],
+  ]);
+
+  // Trials always compile raw, so an overlay tests canonical edits only.
+  const overlay = `${box.root}/candidate.card`;
+  await fs.writeFile(overlay, landmark("Bills only."));
+  t.check((await compileInstructionSnapshotWithStatus(box.root, { landmarkOverlays: { [MONEY]: overlay } })).compiled.status, "not-used");
+});
+
+void test("An unreadable compiled file is reported as invalid and raw rules apply.", async (t) => {
+  const box = await fixtureBox(t);
+  await box.write("_bookkeeping/triage/compiled-instructions.json", "{\"version\": 2}");
+  const { snapshot, compiled } = await compileInstructionSnapshotWithStatus(box.root);
+  t.check([compiled, snapshot.sources.map((s) => s.ref)], [
+    { status: "invalid", error: "/_bookkeeping/triage/compiled-instructions.json: version: Invalid input: expected 1; note: Invalid input: expected \"Generated by bbx triage compile. Edit the intake guide or a landmark instead; the next compile replaces this file.\"; compiledFrom: Invalid input: expected array, received undefined; principlesVersion: Invalid input: expected number, received undefined; model: Invalid input: expected string, received undefined; destinations: Invalid input: expected array, received undefined; tieBreaks: Invalid input: expected array, received undefined; conflicts: Invalid input: expected array, received undefined" },
+    ["/_config/intake.guide.card", MONEY, SHOP],
+  ]);
+});
+
+// Validation rejects output that would misroute or invent: a missing destination,
+// a winner outside its pair, an unquoted basis, a misquoted fact, and one case
+// both settled and in conflict. A quoted rule basis, and a conflict on another
+// case of a settled pair, are accepted.
+void test("Invalid agent output is rejected with named errors.", async (t) => {
+  const box = await fixtureBox(t);
+  const raw = await compileInstructionSnapshot(box.root, { raw: true });
+  const bad: CompileOutput = {
+    destinations: [{ ref: MONEY, role: "archive", boundaries: "", facts: [{ text: "parcel 99-999", ref: PROPERTY }] }],
+    tieBreaks: [
+      { between: [MONEY, SHOP], when: "any bill", winner: "/_content/elsewhere/X.landmark.card", basis: "money always wins" },
+      { between: [MONEY, SHOP], when: "a garage repair", winner: SHOP, basis: "shop rule: \"Anything about the garage building\"" },
+    ],
+    conflicts: [{ between: [SHOP, MONEY], when: "Any bill", why: "unclear" }, { between: [MONEY, SHOP], when: "a garage phone bill", why: "both claim it" }],
+  };
+  t.check(validateCompileOutput(raw, { output: bad, cards: new Map([[PROPERTY, "parcel 01-234"]]) }), [
+    "destinations: /_content/shop/Shop.landmark.card must appear exactly once",
+    "tieBreaks[0].winner: /_content/elsewhere/X.landmark.card is not one of the pair",
+    "tieBreaks[0].basis: neither a leading principle number nor quoted verbatim rule text",
+    "conflicts[0]: the same pair and case is also a tie-break",
+    "/_content/money/Money.landmark.card: fact does not occur verbatim in /_content/shop/Property.doc.card",
+  ]);
+  t.check(await compileTriageInstructions({ boxRoot: box.root, agent: fakeAgent(bad) }), { status: "invalid", output: bad, errors: validateCompileOutput(raw, { output: bad, cards: new Map([[PROPERTY, await fs.readFile(box.path(PROPERTY.slice(1)), "utf8")]]) }) });
+  t.check(await fs.access(box.path("_bookkeeping/triage/compiled-instructions.json")).then(() => "exists", () => "absent"), "absent");
+});
+
+// A conflict becomes a text question committed with the file. A landmark edit
+// during the agent's run supersedes the result: neither file nor question is written.
+void test("Conflicts become questions; a concurrent edit supersedes the pass.", async (t) => {
+  const box = await fixtureBox(t);
+  const conflicted: CompileOutput = { ...output, tieBreaks: [], conflicts: [{ between: [MONEY, SHOP], when: "a garage utility bill", why: "both rules claim it" }] };
+  const superseded = await compileTriageInstructions({ boxRoot: box.root, agent: fakeAgent(conflicted, () => box.write(MONEY.slice(1), landmark("Bills."))) });
+  t.check([superseded, (await fs.readdir(box.path("_bookkeeping/questions"))).filter((name) => name.endsWith(".question.card"))], [{ status: "superseded" }, []]);
+
+  const result = await compileTriageInstructions({ boxRoot: box.root, agent: fakeAgent(conflicted) });
+  const questionRef = result.status === "compiled" ? result.compiled.conflicts[0]?.questionRef ?? "" : "";
+  const question = await fs.readFile(box.path(questionRef.slice(1)), "utf8");
+  t.check(question, any(String).includes("input:\n  type: text"));
+  t.check(question, any(String).includes("Case: a garage utility bill"));
+  t.check((await compileInstructionSnapshot(box.root)).policy, any(String).includes("use unclear for these cases:\n- a garage utility bill: money or shop."));
+
+  t.check(await compileTriageInstructions({ boxRoot: box.root, agent: () => Promise.resolve({ success: false, error: "budget exhausted" }) }), { status: "failed", error: "budget exhausted" });
+});

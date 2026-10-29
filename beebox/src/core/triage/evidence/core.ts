@@ -59,7 +59,7 @@ function resolve(boxRoot: string, ref: string): string {
   invariant(relative !== null, `Invalid evidence ref: ${ref}`);
   return path.join(boxRoot, relative);
 }
-async function listScope(directory: string): Promise<string[]> {
+export async function listScope(directory: string): Promise<string[]> {
   if (!await pathExistsStrict(directory, { followLinks: false })) return [];
   const result: string[] = [];
   for (const entry of (await fs.readdir(directory, { withFileTypes: true })).toSorted((a, b) => a.name.localeCompare(b.name))) {

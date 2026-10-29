@@ -15,7 +15,7 @@ interface Representations {
   pages: Map<string, string>;
   sidecars: Set<string>;
 }
-function fieldRef(value: unknown): string | undefined {
+export function fieldRef(value: unknown): string | undefined {
   if (typeof value !== "object" || value === null || !("ref" in value)) return undefined;
   return typeof value.ref === "string" ? value.ref : undefined;
 }

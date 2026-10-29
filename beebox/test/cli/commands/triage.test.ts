@@ -57,9 +57,11 @@ void test("line 55", async (t) => {
   const childNames = triageCommand.commands.map((command) => command.name()).toSorted();
   t.check(childNames, [
     "apply",
+    "compile",
     "confirm",
     "correct",
     "decisions",
+    "duplicates",
     "instructions",
     "judge",
     "prepare",

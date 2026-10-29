@@ -84,6 +84,18 @@ tests:
       - '(?:best.effort|do.your.best)[\s\S]{0,160}(?:permit|allow|policy|instruction)|(?:permit|allow|policy|instruction)[\s\S]{0,160}(?:best.effort|do.your.best)'
     tags: [jev-triage]
 
+  - id: triage-compiled-is-generated
+    prompt: >
+      A filing tie-break in this box's compiled triage instructions looks
+      wrong. Where should the fix go, and should the compiled file be edited?
+      Explain briefly without reading files, using tools, or changing anything.
+    expected_level: knows_directly
+    watch_for: "Edits the intake guide or a landmark rule, never the generated compiled file"
+    correct_matches:
+      - '(?:guide|landmark)'
+      - '(?:not|never|don.t|shouldn.t)[\s\S]{0,80}edit[\s\S]{0,80}(?:compiled|generated)|(?:compiled|generated)[\s\S]{0,120}(?:not|never)[\s\S]{0,40}edit'
+    tags: [jev-triage]
+
   - id: triage-evidence-honesty
     prompt: >
       A document's attachment could not be extracted, so the classifier has
