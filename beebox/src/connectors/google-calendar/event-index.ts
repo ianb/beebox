@@ -56,7 +56,7 @@ export interface EventFileEntry {
   filename: string;
   calendarId: string;
   /** Hash of the ICS content last written by the connector (for detecting local edits) */
-  contentHash?: string;
+  contentHash?: string | undefined;
   /** Google event `updated` timestamp captured at the last pull, for remote-change detection */
   remoteUpdated?: string | undefined;
   /**

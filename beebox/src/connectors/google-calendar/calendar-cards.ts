@@ -15,9 +15,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { editableFrontmatterDocument, renderFrontmatterDocument, splitCardContent } from "../../exports/cards.js";
 import { createCalendarTemplate } from "../../schemas/calendar.js";
-import { sanitizeFilenameStem } from "../../shared/filename.js";
 import { pathExistsStrict } from "../../lib/file-exists.js";
-import { cardFolder, loadCalendarFolders, type CalendarFolders } from "./calendar-folders.js";
+import { calendarCardStem, cardFolder, loadCalendarFolders, type CalendarFolders } from "./calendar-folders.js";
 import { localCalendarFailure, type CalendarSyncFailure } from "./notes.js";
 import { entryCalendarId, isLegacyCalendarId, type EventFileIndex } from "./event-index.js";
 
@@ -50,7 +49,7 @@ function entryCounts(index: EventFileIndex): Map<string, number> {
  * first, and its files are meant for this calendar.
  */
 async function freeCardPath(calRoot: string, name: string): Promise<string> {
-  const stem = sanitizeFilenameStem(name, { fallback: "Calendar" });
+  const stem = calendarCardStem(name);
   for (let n = 1; ; n++) {
     const candidate = path.join(calRoot, `${n === 1 ? stem : `${stem}_${String(n)}`}.calendar.card`);
     if (!await pathExistsStrict(candidate, { followLinks: false })) return candidate;

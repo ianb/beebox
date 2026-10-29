@@ -17,6 +17,7 @@ import { CardIOError, cardFields, parseCardText } from "../../core/card-io.js";
 import { CalendarSchema } from "../../schemas/calendar.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { getBoxDir } from "../../lib/paths/core.js";
+import { sanitizeFilenameStem } from "../../shared/filename.js";
 import { localCalendarFailure, type CalendarSyncFailure } from "./notes.js";
 import { loadAllEvents, type CalendarEvent } from "./utils.js";
 
@@ -37,6 +38,15 @@ export interface CalendarFolders {
   problems: CalendarSyncFailure[];
   /** Calendars claimed by more than one card, so by none in `byId`. */
   duplicated: Set<string>;
+}
+
+/**
+ * The file-name stem for a new calendar card, from the calendar's name. A
+ * primary calendar is named by its account's address, so `@` and `.` become
+ * separators rather than vanishing (`me_example_com`, not `meexamplecom`).
+ */
+export function calendarCardStem(name: string): string {
+  return sanitizeFilenameStem(name.replace(/[.@]/g, " "), { fallback: "Calendar" });
 }
 
 /** The attach folder of a calendar card, by the card's absolute path. */
