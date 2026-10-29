@@ -197,13 +197,14 @@ export async function pushPendingLocalEdits(opts: {
   boxRoot: string;
   calendar: GoogleCalendarService;
   state: CalendarState;
-  calDir: string;
+  /** Calendar id → its folder. An entry whose calendar has none is skipped (the connector reports it). */
+  folders: ReadonlyMap<string, string>;
   reconciledEventKeys: Set<string>;
   icsOptsFor: (calendarId: string) => IcsOptions;
   /** Domain time (the connector's injected clock) — the retry window's "now". */
   now: Date;
 }): Promise<{ updated: string[]; notes: SyncNote[]; failures: CalendarSyncFailure[]; stranded: string[] }> {
-  const { boxRoot, calendar, state, calDir, reconciledEventKeys, icsOptsFor, now } = opts;
+  const { boxRoot, calendar, state, folders, reconciledEventKeys, icsOptsFor, now } = opts;
   const updated: string[] = [];
   const notes: SyncNote[] = [];
   const failures: CalendarSyncFailure[] = [];
@@ -214,6 +215,8 @@ export async function pushPendingLocalEdits(opts: {
     const storedHash = entry.contentHash;
     if (storedHash === undefined) continue;
     if (reconciledEventKeys.has(key)) continue;
+    const calDir = folders.get(entry.calendarId);
+    if (calDir === undefined) continue;
     const { eventId: googleEventId } = parseEventKey(key);
 
     const filePath = path.join(calDir, entry.filename);

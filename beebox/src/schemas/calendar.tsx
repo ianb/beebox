@@ -26,11 +26,13 @@ export const CalendarSchema = cardSchema("calendar", {
     "google-calendar": z.object({
       id: z.string(),
       // Google's accessRole for this account: owner, writer, reader, or
-      // freeBusyReader. Only owner and writer calendars accept edits.
-      access: z.string(),
+      // freeBusyReader. Only owner and writer calendars accept edits. Absent
+      // until a sync has reported it.
+      access: z.string().optional(),
       // Whether the calendar is in the sync set (Settings, or
       // `bbx calendar add/remove`). A calendar taken out keeps its card and
-      // its files; they stop updating.
+      // its files; Google's changes stop arriving, and edits made in the box
+      // are still sent.
       syncing: z.boolean(),
     }),
     body: body(z.string()),
@@ -64,12 +66,16 @@ changes calendar, and the moved file is read as a new event.
 
 Connector-managed; do not hand-edit. \`title\` is the calendar's name in Google
 and \`google-calendar:\` is re-stamped on every sync. \`syncing: false\` means
-the calendar was removed from the sync set: its files stay and stop updating.
+the calendar was removed from the sync set: its files stay, Google's changes
+no longer arrive, and edits made here are still sent.
 
 ## Body
 
 The person's own notes about the calendar. The connector never writes it.`,
-  summarize: (card, base) => ({ ...base, detail: card["google-calendar"].access }),
+  summarize: (card, base) => {
+    const { access } = card["google-calendar"];
+    return access === undefined ? base : { ...base, detail: access };
+  },
 });
 
 export type CalendarFields = InferCardFields<typeof CalendarSchema>;
@@ -78,11 +84,12 @@ export type CalendarFields = InferCardFields<typeof CalendarSchema>;
 export function createCalendarTemplate(options: {
   name: string;
   id: string;
-  access: string;
+  access?: string | undefined;
   syncing: boolean;
 }): string {
+  const { name, id, access, syncing } = options;
   return renderFrontmatterBlock({
-    title: options.name,
-    "google-calendar": { id: options.id, access: options.access, syncing: options.syncing },
+    title: name,
+    "google-calendar": { id, ...(access === undefined ? {} : { access }), syncing },
   });
 }
