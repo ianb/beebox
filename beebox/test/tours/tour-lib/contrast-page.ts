@@ -350,7 +350,8 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     const fg = parse(cs.color);
     const bg = parse(cs.backgroundColor);
     const rects = [...range.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }));
-    if (fg !== null && bg !== null) selections.push({ selector: describe(el), text: range.toString().trim(), fg, bg, rects });
+    // A range in hidden text (a card's other face) renders nothing to read.
+    if (fg !== null && bg !== null && rects.some((r) => r.w > 0 && r.h > 0)) selections.push({ selector: describe(el), text: range.toString().trim(), fg, bg, rects });
   }
   const style = document.createElement("style");
   style.id = "bbx-contrast-hide-text";

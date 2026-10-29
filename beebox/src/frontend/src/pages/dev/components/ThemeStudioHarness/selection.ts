@@ -16,7 +16,8 @@ const SCOPES = [
   ".bbx-conversation-desk",
   ".bbx-chat-user-paper",
   ".bbx-chat-reply-material .bbx-paragraph",
-  ".bbx-conversation-desk .bbx-card-theme .bbx-paragraph",
+  // The card in chat shows its back.
+  ".bbx-conversation-desk .bbx-card-back p",
   ".bbx-companion-desk .bbx-card-theme .bbx-paragraph",
   ".bbx-companion-desk .bbx-card-theme pre",
   ".bbx-companion-desk [data-card-content='neutral'] pre",
