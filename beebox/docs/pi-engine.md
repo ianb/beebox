@@ -56,6 +56,8 @@ server, so pi ignores them:
   process.
 - **No settings files.** Settings are in memory, so `.pi/settings.json`
   cannot enable packages.
+- **No `auth.json`.** Credentials are in memory. pi runs a stored key that
+  starts with `!` as a shell command, with the server's environment.
 - **No `models.json`.** It could point the OpenRouter provider, and the key,
   at another host.
 - **No `SYSTEM.md`.** It would replace pi's base prompt. The box's guidance
@@ -70,6 +72,9 @@ server, so pi ignores them:
 - Steer a running step from the chat UI. A message sent mid-turn waits for
   the turn, as on Claude.
 - Show raw transcripts in `bbx session --raw` or `bbx feedback`.
+- Run `deepseek/deepseek-chat-v3.1`. pi's catalog marks it as a reasoning
+  model, so pi turns reasoning on, and the model then writes its tool calls
+  inside its reasoning. No tool runs. Use `deepseek/deepseek-v3.2`.
 
 ## Cost is an estimate
 

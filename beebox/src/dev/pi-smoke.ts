@@ -26,7 +26,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs, parseEnv } from "node:util";
 import { z } from "zod";
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { ModelRuntime, type CreateModelRuntimeOptions } from "@earendil-works/pi-coding-agent";
 import { createPiAgent } from "../core/agent/invoke/core.js";
 import type { AgentResult } from "../core/agent/types.js";
 import { scaffoldBoxRoot } from "../core/box/package.js";
@@ -84,8 +84,8 @@ async function openRouterKey(): Promise<string | null> {
 /** pi's real runtime, with the placeholder from the scratch store swapped for the real key in memory. */
 function runtimeWithKey(key: string) {
   return {
-    createRuntime: async ({ authPath }: { authPath: string }): Promise<ModelRuntime> => {
-      const runtime = await ModelRuntime.create({ authPath, modelsPath: null });
+    createRuntime: async (options: CreateModelRuntimeOptions): Promise<ModelRuntime> => {
+      const runtime = await ModelRuntime.create(options);
       const set = runtime.setRuntimeApiKey.bind(runtime);
       runtime.setRuntimeApiKey = async (provider, value) => {
         if (value !== PLACEHOLDER_KEY) throw new UnexpectedKeyError();

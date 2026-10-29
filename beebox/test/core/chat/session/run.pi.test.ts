@@ -11,7 +11,7 @@ import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, eventually, str } from "@ianbicking/tap-check/check";
 import { once } from "node:events";
-import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
+import { fauxAssistantMessage, fauxProvider, fauxThinking, fauxToolCall } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { adaptBackendMessage, type ChatMessage, type ChatSendInput } from "../../../../src/core/chat/session/messages.js";
@@ -27,8 +27,8 @@ import { plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.j
 const MODEL = "test/faux";
 const faux = fauxProvider({ provider: "openrouter", models: [{ id: MODEL, input: ["text"] }] });
 const backend = createPiChatBackend({
-  createRuntime: async ({ authPath }) => {
-    const runtime = await ModelRuntime.create({ authPath, modelsPath: null });
+  createRuntime: async (options) => {
+    const runtime = await ModelRuntime.create(options);
     runtime.registerNativeProvider(faux.provider);
     return runtime;
   },
@@ -175,9 +175,9 @@ void test("pi's cost survives the third-party cost strip", async (t) => {
   t.check(adaptBackendMessage({ provider: "pi", message: result }, { model: MODEL }), result);
 });
 
-// `ChatSession` holds a send while a turn runs; the backend itself takes one
-// as pi's follow-up, answered in the same run before its one result.
-void test("a send while a turn runs is a follow-up in the same run", async (t) => {
+// `ChatSession` holds a send while a turn runs; the backend itself, as Codex
+// does, runs one sent mid-turn as its own turn after it, with its own result.
+void test("a send while a turn runs is its own turn after it", async (t) => {
   const { box } = await piChat(t);
   const run = backend.start({ engine: "pi", cwd: box.root, boxRoot: box.root, systemPrompt: "chat", env: {}, model: MODEL });
   t.teardown(() => run.close());
@@ -193,14 +193,24 @@ void test("a send while a turn runs is a follow-up in the same run", async (t) =
       const { message } = item;
       if (message.type === "user" || message.type === "assistant") seen.push(message.message.content.map((block) => block.text ?? "").join(""));
       if (message.type === "result") seen.push(`result ${message.subtype}`);
-      if (message.type === "result") return;
+      if (seen.filter((line) => line.startsWith("result")).length === 2) return;
     }
   })();
   run.send([{ type: "text", text: "first" }]);
   await eventually(() => faux.state.callCount > 0 && faux.getPendingResponseCount() === 1, { label: "the first call is waiting" });
   run.send([{ type: "text", text: "second" }]);
-  await eventually(() => seen.includes("second"), { label: "the follow-up is queued" });
   release();
   await reading;
-  t.check(seen, ["first", "second", "one", "after 2 user messages", "result completed"]);
+  t.check(seen, ["first", "one", "result completed", "second", "after 2 user messages", "result completed"]);
+});
+
+// A reply with reasoning and no text would show an empty turn as a success.
+void test("a turn whose reply has no text ends in error", async (t) => {
+  const { open } = await piChat(t);
+  const { turn } = open();
+  faux.setResponses([fauxAssistantMessage(fauxThinking("I should answer."))]);
+  t.check((await turn({ text: "hello" })).filter((m) => m.type === "result").map(shape), [{
+    type: "result", subtype: "failed", session_id: any(String), is_error: true, duration_ms: 0, num_turns: 1, total_cost_usd: 0,
+    result: `pi model ${MODEL} ended the run without reply text`,
+  }]);
 });

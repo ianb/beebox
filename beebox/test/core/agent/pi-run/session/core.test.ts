@@ -10,14 +10,14 @@
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, str } from "@ianbicking/tap-check/check";
-import { mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai";
-import { defineTool, ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { defineTool, ModelRuntime, type CreateModelRuntimeOptions } from "@earendil-works/pi-coding-agent";
 import { NESTED_AGENTS_LINE } from "../../../../../src/core/agent/pi-run/session/context.js";
 import { lookupPiModel, piBundledCatalog, resolvePiModel } from "../../../../../src/core/agent/pi-run/session/model.js";
 import { piSessionsDir } from "../../../../../src/core/pi-sessions.js";
-import { openPiSession, type PiSessionOptions } from "../../../../../src/core/agent/pi-run/session/core.js";
+import { openPiSession, piRuntimeOptions, type PiSessionOptions } from "../../../../../src/core/agent/pi-run/session/core.js";
 import { getOrCreateAgentToken } from "../../../../../src/core/agent/token.js";
 import { clearOpenRouterCatalogCache } from "../../../../../src/core/openrouter-catalog.js";
 import { grantSecret, setSecret } from "../../../../../src/core/secrets/lifecycle.js";
@@ -27,8 +27,8 @@ import { makeTmpBox, type TmpBox } from "../../../../helpers/test-helpers.js";
 const MODEL = "test/faux";
 const faux = fauxProvider({ provider: "openrouter", models: [{ id: MODEL }] });
 // pi's OpenRouter provider replaced by faux: no catalog entry but MODEL exists.
-const createRuntime = async ({ authPath }: { authPath: string }) => {
-  const runtime = await ModelRuntime.create({ authPath, modelsPath: null });
+const createRuntime = async (options: CreateModelRuntimeOptions) => {
+  const runtime = await ModelRuntime.create(options);
   runtime.registerNativeProvider(faux.provider);
   return runtime;
 };
@@ -85,6 +85,22 @@ void test("a session carries the box's guidance; loadBoxContext false carries on
   const bare = await open({ boxRoot: box.root, systemPrompt: "SYSTEM-5150", loadBoxContext: false });
   t.teardown(() => bare.session.dispose());
   t.check(guidance(bare.session.systemPrompt), ["SYSTEM-5150"]);
+});
+
+// pi runs an `auth.json` key that starts with `!` as a shell command, with the
+// server's environment. The box can write pi's agent dir, so pi reads no
+// credential file; the real runtime is used here, not the faux one.
+void test("a box-written auth.json command does not run", async (t) => {
+  const box = await piBox(t);
+  const catalogModel = "anthropic/claude-haiku-4.5";
+  await writeFile(join(box.root, "_config/box.json"), JSON.stringify({ openrouterModels: [{ id: catalogModel, label: "Haiku" }] }));
+  const sentinel = join(box.root, "sentinel");
+  const command = { type: "api_key", key: `!touch '${sentinel}'` };
+  await mkdir(join(box.root, ".beebox/pi/agent"), { recursive: true });
+  await writeFile(join(box.root, ".beebox/pi/agent/auth.json"), JSON.stringify({ anthropic: command, openai: command, openrouter: command }));
+  const opened = await openPiSession({ boxRoot: box.root, model: catalogModel, purpose: "test" });
+  if (opened.kind === "session") opened.session.dispose();
+  t.check({ opened: opened.kind, ran: await access(sentinel).then(() => true, () => false) }, { opened: "session", ran: false });
 });
 
 // `[]` is a prompt-only pass; grep and find are never offered, because pi
@@ -146,7 +162,7 @@ const entry = { name: "Listed", context_length: 131072, top_provider: { max_comp
 void test("a listed model keeps its reasoning, images and prices; a missing context length refuses", async (t) => {
   clearOpenRouterCatalogCache();
   t.teardown(clearOpenRouterCatalogCache);
-  const runtime = await createRuntime({ authPath: join(await piBox(t).then((b) => b.root), ".beebox/pi/agent/auth.json") });
+  const runtime = await createRuntime(piRuntimeOptions());
   const fetch = listing([
     { ...entry, id: "acme/thinker", supported_parameters: ["tools", "reasoning"], architecture: { input_modalities: ["text", "image"] },
       pricing: { prompt: "0.000001", completion: "0.000002", input_cache_read: "0.0000005" } },

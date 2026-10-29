@@ -16,7 +16,7 @@ import { loadAddedModels, loadBoxModel } from "../../../box/config.js";
 import { resolveBoxModelForEngine } from "../../../model-policy.js";
 import { piModelMissing } from "../../../provider-env/openrouter-chat.js";
 import type { AgentResult } from "../../types.js";
-import { resultFromPiRun, watchPiRun, type PiOutcome, type PiRunWatch } from "../outcome.js";
+import { noReplyError, resultFromPiRun, watchPiRun, type PiOutcome, type PiRunWatch } from "../outcome.js";
 import { piResultTool, RESULT_TOOL_FOLLOW_UP, type PiResultTool } from "./result-tool.js";
 import { openPiSession, type PiSessionDeps } from "../session/core.js";
 import { watchPiValidation } from "../validate.js";
@@ -39,6 +39,8 @@ export interface PiRunOptions {
   loadBoxContext?: boolean | undefined;
   tools?: string[] | undefined;
   resumeSessionId?: string | undefined;
+  /** The id for a new session, as `AgentInvokeOptions` callers supply it; defaults to a fresh UUID. */
+  newSessionId?: string | undefined;
   onSessionId?: ((id: string) => void) | undefined;
   /** For a structured invocation: the `submit_result` arguments, checked against it by pi, are the run's `structuredOutput`. */
   resultSchema?: z.ZodType | undefined;
@@ -66,6 +68,7 @@ async function openForRun(options: PiRunOptions & { resultTool: PiResultTool | u
     loadBoxContext: options.loadBoxContext,
     cwd: options.cwd,
     resumeSessionId: options.resumeSessionId,
+    newSessionId: options.newSessionId,
     customTools: options.resultTool === undefined ? undefined : [options.resultTool.tool],
     requireKnownPrices: options.maxBudgetUsd !== undefined,
   }, deps);
@@ -82,11 +85,15 @@ async function promptOnce(session: AgentSession, { watch, text }: { watch: PiRun
   }
 }
 
-/** The run's outcome after the settle-time checks: a validation finding that still stands, or no structured result. */
-function settledOutcome(outcome: PiOutcome, checks: { invalid: boolean; missingResult: boolean }): PiOutcome {
+/**
+ * The run's outcome after the settle-time checks: a validation finding that
+ * still stands, no structured result, or, for a run without one, no reply text.
+ */
+function settledOutcome(outcome: PiOutcome, checks: { invalid: boolean; missingResult: boolean; noReply: string | null }): PiOutcome {
   if (outcome.state !== "completed") return outcome;
   if (checks.invalid) return { state: "failed", error: "pi edits failed Bee Box validation" };
   if (checks.missingResult) return { state: "failed", error: "model did not return a structured result" };
+  if (checks.noReply !== null) return { state: "failed", error: checks.noReply };
   return outcome;
 }
 
@@ -117,6 +124,7 @@ async function drive(session: AgentSession, options: PiRunOptions & { resultTool
       outcome: settledOutcome(watch.outcome(), {
         invalid: validated.hasErrors,
         missingResult: resultTool !== undefined && resultTool.submitted() === undefined,
+        noReply: resultTool === undefined ? noReplyError(session) : null,
       }),
       output: watch.output() + notes,
       resultText: session.getLastAssistantText() ?? "",

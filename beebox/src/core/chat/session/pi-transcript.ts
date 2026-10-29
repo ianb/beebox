@@ -71,19 +71,31 @@ function claudeMessage(message: Record<string, unknown>): { type: "user" | "assi
   }
 }
 
-/** Each parsed line of a pi session file, after the header's version is checked. */
-async function* piLines(path: string): AsyncGenerator<Record<string, unknown>> {
+/**
+ * Each parsed line of a pi session file, after the header's version is
+ * checked. `mediaSessionId` is the header's session id on a line whose image
+ * payloads were stripped: its images are then served by the session-media
+ * route, which finds the line by its entry `id`.
+ */
+async function* piLines(path: string): AsyncGenerator<{ raw: Record<string, unknown>; mediaSessionId: string | null }> {
+  let sessionId: string | null = null;
   for await (const line of readTranscriptLines(path)) {
     // A line past the byte bound even without its images: not shown, as Claude's is not parsed.
     if (line.kind === "oversize") continue;
     const raw = parseJsonlLine(line.text, "pi-transcript");
     if (raw === null) continue;
-    if (raw.type === "session" && raw["version"] !== PI_SESSION_VERSION) throw new PiSessionVersionError(path, raw["version"]);
-    yield raw;
+    if (raw.type === "session") {
+      if (raw["version"] !== PI_SESSION_VERSION) throw new PiSessionVersionError(path, raw["version"]);
+      sessionId = typeof raw["id"] === "string" ? raw["id"] : null;
+    }
+    yield { raw, mediaSessionId: line.mediaStripped ? sessionId : null };
   }
 }
 
-function piEntry(raw: Record<string, unknown>, recent: SessionEntry[]): SessionEntry | null {
+function piEntry(
+  { raw, mediaSessionId }: { raw: Record<string, unknown>; mediaSessionId: string | null },
+  recent: SessionEntry[],
+): SessionEntry | null {
   const meta = { uuid: String(raw["id"] ?? ""), timestamp: String(raw["timestamp"] ?? "") };
   if (raw.type === "compaction") {
     const summary = typeof raw["summary"] === "string" ? [{ type: "text" as const, text: raw["summary"] }] : [];
@@ -91,14 +103,14 @@ function piEntry(raw: Record<string, unknown>, recent: SessionEntry[]): SessionE
   }
   if (raw.type !== "message" || !isRecord(raw["message"])) return null;
   const record = claudeMessage(raw["message"]);
-  return record === null ? null : buildEntry({ ...meta, ...record }, { recent, mediaSessionId: null });
+  return record === null ? null : buildEntry({ ...meta, ...record }, { recent, mediaSessionId });
 }
 
 /** A slice of one pi session file. Throws ENOENT when the file is gone, as `parseSessionLog` does. */
 export async function parsePiSessionLog(params: { path: string; slice: SessionLogSlice }): Promise<SessionLogResult> {
   const scan = new SessionScan(params.slice);
-  for await (const raw of piLines(params.path)) {
-    const entry = piEntry(raw, scan.recent());
+  for await (const line of piLines(params.path)) {
+    const entry = piEntry(line, scan.recent());
     if (entry !== null) scan.record(entry);
   }
   return scan.result();
@@ -106,7 +118,7 @@ export async function parsePiSessionLog(params: { path: string; slice: SessionLo
 
 /** The session's first real user message as a list label snippet, or `null`. */
 export async function readPiFirstUserSnippet(args: { path: string; snippetMaxLen: number }): Promise<string | null> {
-  for await (const raw of piLines(args.path)) {
+  for await (const { raw } of piLines(args.path)) {
     const message = isRecord(raw["message"]) ? raw["message"] : null;
     if (raw.type !== "message" || message?.["role"] !== "user") continue;
     const text = contentBlocks(message["content"]).filter((block) => block.type === "text").map((block) => String(block["text"] ?? "")).join("\n");

@@ -23,6 +23,7 @@ import { join } from "node:path";
 import { chatModelFileForSession } from "../../state.js";
 import { deletePiSession, piSessionFiles } from "../../pi-transcript.js";
 import { assertNever } from "../../../../../shared/invariant.js";
+import { resolveRecordedChatEngine } from "../../engine.js";
 
 function presence(present: boolean): SessionStoragePresence {
   return { jsonl: present, sidecar: false, state: present ? "present" : "absent" };
@@ -189,7 +190,11 @@ export async function deleteChatSession(options: DeleteChatOptions): Promise<Del
   await verifyHistoryBinding({ boxRoot: options.boxRoot, sessionId, contextDir: authority.contextDir });
   const historyEntry = (await readHistoryFile(options.boxRoot, { strict: true }))?.sessions
     .find((entry) => entry.id === sessionId);
-  const native = await nativeStorage({ ...options, sessionId, engine: historyEntry?.engine ?? "claude", contextDir: authority.contextDir });
+  // The husk's engine stamp outranks history, as for every engine read; an unstamped, unrecorded chat is Claude's.
+  const engine = await resolveRecordedChatEngine(options.boxRoot, {
+    sessionId, husk: authority.active.find((husk) => husk.engine !== undefined) ?? null, historyEngine: historyEntry?.engine ?? null,
+  });
+  const native = await nativeStorage({ ...options, sessionId, engine: engine ?? "claude", contextDir: authority.contextDir });
   const beforeStorage = await native.inspect();
   logDeletePhase({ sessionId, phase: "preflight", detail: { storage: beforeStorage.state, activeHusks: authority.active.length } });
   const releaseReview = await acquireChatReviewLease(options.boxRoot, "chat-delete");

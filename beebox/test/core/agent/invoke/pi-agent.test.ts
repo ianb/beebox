@@ -14,9 +14,10 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import {
-  createAssistantMessageEventStream, fauxAssistantMessage, fauxProvider, fauxToolCall, type AssistantMessageEventStream,
+  createAssistantMessageEventStream, fauxAssistantMessage, fauxProvider, fauxText, fauxThinking, fauxToolCall,
+  type AssistantMessageEventStream,
 } from "@earendil-works/pi-ai";
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { ModelRuntime, type CreateModelRuntimeOptions } from "@earendil-works/pi-coding-agent";
 import { createPiAgent } from "../../../../src/core/agent/invoke/pi-agent.js";
 import type { AgentInvokeOptions } from "../../../../src/core/agent/types.js";
 import { clearOpenRouterCatalogCache } from "../../../../src/core/openrouter-catalog.js";
@@ -41,8 +42,8 @@ function costed(inner: AssistantMessageEventStream): AssistantMessageEventStream
   return outer;
 }
 const deps = {
-  createRuntime: async ({ authPath }: { authPath: string }) => {
-    const runtime = await ModelRuntime.create({ authPath, modelsPath: null });
+  createRuntime: async (options: CreateModelRuntimeOptions) => {
+    const runtime = await ModelRuntime.create(options);
     const { provider } = faux;
     runtime.registerNativeProvider({
       ...provider,
@@ -102,6 +103,38 @@ void test("a provider error fails the run with the provider's message", async (t
     success: false, exitCode: 1, error: "402 Insufficient credits", invocationFailure: true,
     sessionId: any(String), output: any(String), resultText: "", structuredOutput: undefined,
   });
+});
+
+// pi ends a thrown run with one empty text block; that is no activity.
+void test("a run that fails with only pi's empty failure message is an invocation failure", async (t) => {
+  const { invoke } = await piBox(t);
+  faux.setResponses([fauxAssistantMessage(fauxText(""), { stopReason: "error", errorMessage: "Provider rejected the request" })]);
+  const result = await createPiAgent({ name: "pi-test" }, deps).invoke(invoke());
+  t.check({ error: !result.success && result.error, invocationFailure: !result.success && result.invocationFailure }, {
+    error: "Provider rejected the request", invocationFailure: true,
+  });
+});
+
+void test("a completed run whose last reply has no text fails, naming the model", async (t) => {
+  const { invoke } = await piBox(t);
+  faux.setResponses([fauxAssistantMessage(fauxThinking("Thinking only."))]);
+  const result = await createPiAgent({ name: "pi-test" }, deps).invoke(invoke());
+  t.check({ success: result.success, error: !result.success && result.error, invocationFailure: !result.success && result.invocationFailure }, {
+    success: false, error: `pi model ${MODEL} ended the run without reply text`, invocationFailure: undefined,
+  });
+});
+
+// As on Claude: a caller-minted id names the new session, so a later resume finds it.
+void test("a new session takes the caller's id", async (t) => {
+  const { invoke } = await piBox(t);
+  const supplied = "11111111-2222-4333-8444-555555555555";
+  const agent = createPiAgent({ name: "pi-test", sessionId: supplied }, deps);
+  faux.setResponses([fauxAssistantMessage("Hi.")]);
+  const result = await agent.invoke(invoke());
+  t.check({ sessionId: result.sessionId, agent: agent.sessionId }, { sessionId: supplied, agent: supplied });
+  faux.setResponses([fauxAssistantMessage("Again.")]);
+  const resumed = await createPiAgent({ name: "pi-test", sessionId: supplied, resume: true }, deps).invoke(invoke());
+  t.check({ sessionId: resumed.sessionId, resultText: resumed.resultText }, { sessionId: supplied, resultText: "Again." });
 });
 
 void test("the caller's signal interrupts a run", async (t) => {

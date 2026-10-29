@@ -19,7 +19,7 @@ import type {
   NativeChatBackendMessage,
 } from "../claude-chat-types.js";
 import type { ChatMessage, ChatMessageContent, ChatResultPhase } from "../../core/chat/message-types.js";
-import { watchPiRun, type PiOutcome, type PiRunWatch } from "../../core/agent/pi-run/outcome.js";
+import { noReplyError, watchPiRun, type PiOutcome, type PiRunWatch } from "../../core/agent/pi-run/outcome.js";
 import { openPiSession, type PiSessionDeps } from "../../core/agent/pi-run/session/core.js";
 import { watchPiValidation, type PiAgentEvent } from "../../core/agent/pi-run/validate.js";
 import { piModelMissing } from "../../core/provider-env/openrouter-chat.js";
@@ -66,12 +66,13 @@ function piInput(session: AgentSession, content: ChatContentBlock[]): { text: st
   return { text: content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("\n"), images };
 }
 
+/** `noReply` is `noReplyError` for the turn: a completed turn whose last message has no text ends in error. */
 function turnResult(
-  { outcome, validated }: { outcome: PiOutcome; validated: HookValidationResult },
+  { outcome, validated, noReply }: { outcome: PiOutcome; validated: HookValidationResult; noReply: string | null },
   facts: { sessionId: string; durationMs: number; costUsd: number },
 ): ChatMessage {
   const invalid = validated.hasErrors ? `Bee Box validation failed:\n${validated.feedback ?? "Unknown validation error"}` : null;
-  const error = outcome.state === "failed" || outcome.state === "limit" ? outcome.error : null;
+  const error = outcome.state === "failed" || outcome.state === "limit" ? outcome.error : outcome.state === "completed" ? noReply : null;
   const detail = [error, invalid].filter((part): part is string => part !== null).join("\n\n");
   const subtype = invalid !== null || error !== null ? "failed" : outcome.state;
   return {
@@ -167,7 +168,7 @@ function createRun(opts: ChatBackendStartOptions, deps: PiSessionDeps | undefine
     try {
       await session.prompt(text, { images }).catch((error: unknown) => watch.fail(errorMessage(error)));
       push(turnResult(
-        { outcome: watch.outcome(), validated: await validation.settle() },
+        { outcome: watch.outcome(), validated: await validation.settle(), noReply: noReplyError(session) },
         { sessionId: session.sessionId, durationMs: Date.now() - started, costUsd: watch.costUsd() },
       ));
     } finally {
@@ -182,18 +183,10 @@ function createRun(opts: ChatBackendStartOptions, deps: PiSessionDeps | undefine
     closed: false,
     messages: queue.iterable,
     // Ignores `clientComposed`: pi does not expand `@path` mentions in prompt text.
+    // A send during a turn is its own turn after it, with its own result, as on
+    // Codex; pi's `followUp` would fold it into the running prompt's one result.
     send(content): void {
       if (run.closed) return;
-      const running = live;
-      if (running !== null && active !== null && running.isStreaming) {
-        // Queued for after the running work, as Claude queues a send mid-turn.
-        void Promise.resolve().then(async () => {
-          const { text, images } = piInput(running, content);
-          await running.followUp(text, images);
-          push({ type: "user", session_id: running.sessionId, message: { role: "user", content } });
-        }).catch((error: unknown) => push(failure({ phase: "turn", sessionId: sessionId(), error })));
-        return;
-      }
       chain = chain.then(async () => {
         const session = await opening;
         if (session !== null) await turn(session, content);

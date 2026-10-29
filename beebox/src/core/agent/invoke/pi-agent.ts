@@ -10,7 +10,7 @@ import { buildAgentTimeContext } from "./simulated-clock.js";
 
 export interface CreatePiAgentOptions {
   name: string;
-  /** With `resume`, the pi session the first invoke reopens. */
+  /** With `resume`, the pi session the first invoke reopens; without it, the id the first invoke creates. */
   sessionId?: string;
   resume?: boolean;
   onOutput?: (text: string) => void;
@@ -22,6 +22,8 @@ type PiSessionDeps = Parameters<typeof runPiAgent>[1];
 /** Create a batch agent backed by an in-process pi session. */
 export function createPiAgent(options: CreatePiAgentOptions, deps?: PiSessionDeps): Agent {
   let sessionId: string | null = options.resume === true ? options.sessionId ?? null : null;
+  // As on Claude: a caller-minted id names the new session, so later resumes find it.
+  const newSessionId = options.resume === true ? undefined : options.sessionId;
   // pi finds a session by id only under the cwd it was created in.
   let sessionCwd: string | undefined;
   let manifestWritten = false;
@@ -48,6 +50,7 @@ export function createPiAgent(options: CreatePiAgentOptions, deps?: PiSessionDep
       loadBoxContext: invoke.loadBoxContext,
       tools: invoke.tools,
       resumeSessionId: sessionId ?? undefined,
+      newSessionId: resuming ? undefined : newSessionId,
       resultSchema,
       onSessionId: (assigned) => {
         if (!resuming) sessionCwd = invoke.cwd ?? invoke.boxRoot;

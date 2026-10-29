@@ -5,16 +5,17 @@
  *
  * State lives in the box under `.beebox/pi/`: pi's `agentDir` in `agent/` and
  * its session files in `sessions/`. The OpenRouter key is handed to pi in
- * memory and is never written there.
+ * memory and is never written there, and no credential file is read.
  */
 
 import "./offline.js";
 import { randomUUID } from "node:crypto";
-import { join } from "node:path";
+import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
 import {
   createAgentSession,
   ModelRuntime,
   SessionManager,
+  type CreateModelRuntimeOptions,
   type AgentSession,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
@@ -59,8 +60,8 @@ export interface PiSessionDeps {
   /** For OpenRouter's public model listing, read only when pi's catalog lacks the model. */
   fetch?: FetchLike | undefined;
   now?: (() => number) | undefined;
-  /** Tests substitute pi's `faux` provider here. */
-  createRuntime?: ((options: { authPath: string }) => Promise<ModelRuntime>) | undefined;
+  /** Tests substitute pi's `faux` provider here; pass `options` through to `ModelRuntime.create`. */
+  createRuntime?: ((options: CreateModelRuntimeOptions) => Promise<ModelRuntime>) | undefined;
 }
 
 export type OpenedPiSession =
@@ -68,11 +69,17 @@ export type OpenedPiSession =
   | { kind: "session"; session: AgentSession; sessionId: string; tools: string[] };
 
 /**
- * `models.json` is not read: a box agent can write under `.beebox/`, and that
- * file can point the OpenRouter provider, and the key with it, at another host.
+ * pi's runtime reads no box file. A box agent can write under `.beebox/`:
+ * `models.json` can point the OpenRouter provider, and the key with it, at
+ * another host, and pi runs an `auth.json` key that starts with `!` as a shell
+ * command in the server's environment. Credentials stay in memory instead.
  */
-async function createRuntime(options: { authPath: string }): Promise<ModelRuntime> {
-  return ModelRuntime.create({ authPath: options.authPath, modelsPath: null });
+export function piRuntimeOptions(): CreateModelRuntimeOptions {
+  return { credentials: new InMemoryCredentialStore(), modelsPath: null };
+}
+
+async function createRuntime(options: CreateModelRuntimeOptions): Promise<ModelRuntime> {
+  return ModelRuntime.create(options);
 }
 
 /** A resume names a pi session with no file under the box's pi sessions directory. */
@@ -109,7 +116,7 @@ export async function openPiSession(options: PiSessionOptions, deps?: PiSessionD
   const cwd = options.cwd ?? boxRoot;
   const key = await addedModelKey({ boxRoot, model: options.model, purpose: options.purpose });
   const agentDir = piAgentDir(boxRoot);
-  const runtime = await (deps?.createRuntime ?? createRuntime)({ authPath: join(agentDir, "auth.json") });
+  const runtime = await (deps?.createRuntime ?? createRuntime)(piRuntimeOptions());
   await runtime.setRuntimeApiKey("openrouter", key);
   const { model, pricesKnown } = await resolvePiModel(
     { catalog: runtime, id: options.model },

@@ -47,6 +47,27 @@ function assistantText(message: AssistantMessage): string {
 }
 
 /**
+ * Text, reasoning or a tool call (the remaining block type), as Codex counts activity. pi ends a thrown
+ * run with an assistant message holding one empty text block, which is none.
+ */
+function substantive(message: AssistantMessage): boolean {
+  return message.content.some((block) => {
+    if (block.type === "text") return block.text.trim() !== "";
+    if (block.type === "thinking") return block.thinking.trim() !== "";
+    return true;
+  });
+}
+
+/**
+ * Why a completed run with no structured result has no reply: its last
+ * assistant message has reasoning and no text. `null` when it has text.
+ */
+export function noReplyError(session: AgentSession): string | null {
+  if ((session.getLastAssistantText() ?? "").trim() !== "") return null;
+  return `pi model ${session.model?.id ?? "(unknown)"} ended the run without reply text`;
+}
+
+/**
  * Watch one invocation: collect assistant text, count turns, sum the cost
  * estimate, and abort past a limit. Turns are counted at `turn_end` and
  * enforced at the next `turn_start`, so the last allowed turn finishes and
@@ -69,7 +90,7 @@ export function watchPiRun(session: AgentSession, limits: PiRunLimits): PiRunWat
   };
   const onMessage = (message: AssistantMessage): void => {
     cost += message.usage.cost.total;
-    activity ||= message.content.length > 0;
+    activity ||= substantive(message);
     const text = assistantText(message);
     if (text !== "") emit(`${text}\n`);
     const budget = limits.maxBudgetUsd;

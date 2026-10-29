@@ -32,7 +32,8 @@
  * Auth is the box's own wall — this route sits under `/api/*` like every
  * other, so the same session gates it (`server-box-scope.ts`). It reads only
  * transcripts belonging to sessions this box knows about: `resolveSessionLogPath`
- * answers from the box's own session history, and the ids are constrained to
+ * answers from the box's own session history, pi's session files are under the
+ * box's `.beebox/pi/sessions/`, and the ids are constrained to
  * characters that cannot leave that directory (`shared/session-media.ts`).
  */
 
@@ -40,6 +41,7 @@ import type { FastifyInstance } from "fastify";
 import { findTranscriptLineByUuid } from "../../../../cli/lib/session-line-scan.js";
 import { extractSessionMedia } from "../../../../cli/lib/session-media-extract.js";
 import { resolveSessionLogPath } from "../../../../core/chat/session/history.js";
+import { findPiSessionFile } from "../../../../core/chat/session/pi-transcript.js";
 import { parseSessionMediaRef, SESSION_MEDIA_ROUTE } from "../../../../shared/session-media.js";
 
 /**
@@ -67,8 +69,11 @@ export function registerApiSessionMediaRoutes({
       const ref = parseSessionMediaRef(request.params["*"] ?? "");
       if (ref === null) return reply.status(400).send({ error: "Malformed media reference" });
 
-      const logPath = await resolveSessionLogPath(boxRoot, ref.sessionId);
-      const lookup = await findTranscriptLineByUuid({ logPath, uuid: ref.entryUuid });
+      // A pi chat's session file is under the box, named by session id, and its entries are keyed by `id`.
+      const piPath = await findPiSessionFile(boxRoot, ref.sessionId);
+      const lookup = await findTranscriptLineByUuid(piPath === null
+        ? { logPath: await resolveSessionLogPath(boxRoot, ref.sessionId), uuid: ref.entryUuid }
+        : { logPath: piPath, uuid: ref.entryUuid, key: "id" });
       if (!lookup.found) {
         if (lookup.reason === "too-large") {
           return reply.status(413).send({ error: "Transcript entry too large to read" });
