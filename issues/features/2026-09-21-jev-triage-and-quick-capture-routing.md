@@ -1,6 +1,6 @@
 ---
 title: "Try Jev for document triage, and for a quick-capture entry point that routes itself to the right chat and landmark"
-workstream: jev-triage
+workstream: jev-triage-trial
 area: beebox
 labels: [triage, chat, models]
 filed-by: agent
@@ -164,3 +164,38 @@ not deploy. Final implementation checks are recorded in the linked plan/review.
 ## Next-action note (2026-10-06)
 
 Checked "fixed?": partly. Quick capture: Quick chat routes through a Jev choice (`beebox/docs/chat/quick-chat.md`; plan `beebox/docs/plans/chat-routing.md`, status partial); its entry points are now with the `quick-chat-design` workstream. Document triage: a Jev engine exists (`beebox/src/core/triage/judge.ts`) but production routing is unchanged, no per-box thresholds are chosen, and preparation failures block a classifier-only replacement (2026-09-28 note). Telegram and non-chat destinations remain.
+
+## 2026-10-29 — replay against a real box's filing history
+
+The boxholder approved Jev calls on one production box's content for an offline trial. A
+read-only copy of its history supplied 93 distinct PDF/Word documents that are now filed
+in its eight triage destinations. The current home of each is the ground truth. Each
+was prepared by the worktree engine under a neutral filename and judged against the
+box's current instructions. Vision was disabled: it calls a non-Jev provider. Per-item
+detail is private.
+
+- Current rules: 74/93 agree (80%), or 74/86 of readable documents (86%). 9 wrong
+  destination, 3 unclear, 7 preparation failures.
+- The 36 scans as their original inbox items (card plus attach scope): 29/36 agree, and
+  35/36 match the raw-PDF outcome. Repeating the 12 disagreements twice changed 1 of 24
+  outcomes, so the misses are systematic.
+- Disagreements by cause: overlapping rules with no stated tie-break (5); an identifying
+  fact missing from the rules, such as a property ID when the mailing address points
+  elsewhere (2); a destination's stated exception not applied (2); fair unclear on
+  low-context items (3); preparation (7).
+- Candidate landmark-rule edits (overlay only) brought agreement to 79/93 (92% of readable):
+  6 fixed, 1 low-margin regression. The edits were fitted on the scored cases, so the
+  regression count is the meaningful part. The replay loop worked as designed.
+
+Mechanism findings:
+
+- `packEvidence` drops a part whole when it exceeds the text or request budget. Long
+  documents (insurance policies, a purchase offer) became `unavailable`; no leading
+  excerpt went through. 5 of 7 preparation failures. `.docx` is unsupported (2).
+- Most of the box's recent triage was not classification. About 240 of 285 inbox scan
+  items were duplicate copies, which the agent trashed. Filing also meant actions: a
+  docket card, a bill card reconciled against checking, attaching a scan to an existing
+  card. Jev has no duplicate check or discard outcome, and it picks the place but does
+  not do the action.
+- That box files scans through intake jobs that an agent works directly. Making
+  `--engine jev` the triage default would not reach them.
