@@ -10,7 +10,7 @@ import { invariant } from "../../shared/invariant.js";
 import { getAllDriveHandlers } from "./handlers.js";
 import { nonEmptyString } from "../../shared/optional-string.js";
 
-const DRIVE_CARD_IGNORE = [
+export const DRIVE_CARD_IGNORE = [
   "node_modules/**",
   ".git/**",
   `${BOX_DIRS.tmp}/**`,

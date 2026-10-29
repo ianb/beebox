@@ -268,8 +268,10 @@ none
 ## Knowledge audits
 
 The schema instructions change (an agent learns the card has no sync time).
-Existing audits: grep `knowledge-audits.yaml` for `gfolder` during
-implementation; update any entry that expects `last-sync`. No new concept.
+No new concept, so no new audit. `src/dev/knowledge-audits.yaml` has no entry
+that mentions `last-sync`; the two Drive mount audits (`drive-three-kinds`,
+`drive-mount-folder`) ask about card kinds and `bbx drive mount`, which this
+plan does not change, so none was rerun.
 
 ## What will hold this after it ships
 
