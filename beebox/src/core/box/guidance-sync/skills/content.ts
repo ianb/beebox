@@ -19,7 +19,7 @@ import { BOX_PACKAGE_DOCS } from "../../../docs-gen/shared.js";
  */
 export const CALENDAR_SKILL = `---
 name: calendar
-description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files in a calendar card's folder under _content/calendar/. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
+description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
 ---
 
 # Calendar

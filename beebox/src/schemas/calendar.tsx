@@ -19,7 +19,7 @@ import { z } from "zod";
 import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 
 export const CalendarSchema = cardSchema("calendar", {
-  brief: "A synced calendar; its events are .ics files in its attach folder",
+  brief: "A synced calendar",
   description: "A synced calendar — its events are .ics files in the card's attach folder; created and re-stamped by the Google Calendar connector",
   category: "synced",
   fields: {

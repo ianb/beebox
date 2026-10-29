@@ -404,3 +404,26 @@ migration applies on this worktree's test1 copy, `bbx validate` is clean, and
 a second run reports nothing to do. Migration is scripted and atomic per box.
 No compatibility reader is kept for the flat layout, so no deferred cleanup
 issue is owed.
+
+## Implementation notes (2026-10-29)
+
+- Measured size: 2,025 changed source and test lines, about 2,200 with the
+  calendar doc and filed issues. That passes the 2,000-line BIG CHANGE line
+  the estimate (1,960) sat just under; reported to the boxholder for approval.
+- Card stems from an address-named calendar (the primary calendar is named by
+  its account address) turn `@` and `.` into separators
+  (`calendarCardStem`), so `me@example.com` is `me_example_com`.
+- An attach folder that exists without its card is adopted when the connector
+  creates that calendar's card.
+- The card list line shows "Read-only in Google" for reader calendars and
+  nothing otherwise; the raw access role read as jargon.
+- Cross-model code review (codex gpt-6-astra, verified by gpt-6-sol) found
+  five defects, all fixed. Accepted residual: the card page's 30-day window
+  compares all-day events as server-local midnights against the browser's
+  window, so across zones an all-day event exactly at the window's edge can
+  be included or left out by a day.
+- The migration was applied to this worktree's test1 clone by running the
+  script directly (`--apply`), because the clone has other pending migrations
+  and an open migration question that `bbx engine migrate --apply` would act
+  on. 116 events moved into 6 calendar folders; a second run reported
+  "already current"; `bbx validate` passed on the cards.

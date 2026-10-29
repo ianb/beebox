@@ -45,7 +45,7 @@ const CONNECTORS: ConnectorInfo[] = [
     name: "google-calendar",
     produces: [],
     description: [
-      "Two-way sync between Google Calendar and `.ics` files, one `calendar` card per calendar in `_content/calendar/` with its events in the card's attach folder. Viewing,",
+      "Two-way sync between Google Calendar and `.ics` files in `_content/calendar/`. Viewing,",
       "creating, editing, and deleting events is the `calendar` skill (`.claude/skills/calendar/`);",
       "the file format, editability by calendar role, and filename form are the",
       "`connector-calendar` rule, which loads when an `.ics` file is in play. Sync state lives in",

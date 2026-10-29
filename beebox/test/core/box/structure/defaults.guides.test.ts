@@ -17,10 +17,36 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { installGuides } from "../../../../src/core/box/structure/core.js";
 import { createInitialGuideTemplate } from "../../../../src/schemas/guide/templates.js";
+import { parse as parseYaml, stringify as stringifyYaml } from "../../../../src/lib/yaml-package.js";
+import { isRecord } from "../../../../src/shared/is-record.js";
+
+/** The calendar guide's two action instructions before events moved into calendar card folders (2026-10-29). */
+const PRE_FOLDER_INSTRUCTIONS: Readonly<Record<string, string>> = {
+  "Create Event": "Write a new .ics file in _content/calendar/ with proper ICS format including VTIMEZONE and TZID. Use X-BBX-CALENDAR-ID to target a specific calendar. The event will be pushed to Google Calendar on next sync.",
+  "Edit Event": "Find the .ics file in _content/calendar/ and edit the relevant properties. Changes are pushed to Google Calendar on next sync.",
+};
+
+/**
+ * The stock form before calendar events moved into calendar card folders,
+ * re-rendered through the template's own YAML serializer so line folding
+ * matches what shipped.
+ */
+function preFolderStock(name: string): string {
+  const current = createInitialGuideTemplate({ name });
+  if (name !== "calendar") return current;
+  const fields: unknown = parseYaml(current.slice("---\n".length, current.lastIndexOf("---\n")));
+  if (!isRecord(fields) || !Array.isArray(fields["actions"])) throw new Error("calendar guide has no actions");
+  for (const action of fields["actions"]) {
+    if (isRecord(action) && typeof action["name"] === "string" && PRE_FOLDER_INSTRUCTIONS[action["name"]] !== undefined) {
+      action["instructions"] = PRE_FOLDER_INSTRUCTIONS[action["name"]];
+    }
+  }
+  return `---\n${stringifyYaml(fields)}---\n`;
+}
 
 /** The stock form before memo cards were retired: actions said "memo card". */
 function preDocStock(name: string): string {
-  return createInitialGuideTemplate({ name })
+  return preFolderStock(name)
     .replace("(notes, bookmarks, captures)", "(memos, bookmarks, captures)")
     .replaceAll("Create a doc card", "Create a memo card");
 }
@@ -70,6 +96,14 @@ void test("An untracked box's old stock guides update in place", async (t) => {
   ]);
 
   t.check(await fs.readFile(path.join(box, "_config/intake.guide.card"), "utf-8"), createInitialGuideTemplate({ name: "intake" }));
+
+  // ## An untracked box's pre-folder stock calendar guide updates in place
+
+  const preFolder = await boxWith({ "_config/calendar.guide.card": preFolderStock("calendar") });
+  t.teardown(() => fs.rm(preFolder, { recursive: true, force: true }));
+  t.check((await installGuides(preFolder)).filter((entry) => entry.includes("calendar.guide.card")), [
+    "calendar.guide.card (updated)",
+  ]);
 
   // ## An untracked box's pre-`basis` stock guide updates in place
 
