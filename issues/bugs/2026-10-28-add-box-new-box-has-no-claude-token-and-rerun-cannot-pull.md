@@ -31,3 +31,9 @@ the alias and key), or skip the pull for an existing box.
 Fixed in the same session: the push-key identity check expanded its
 variables on the laptop and stopped every GitHub-remote run with
 `RESOLVED: unbound variable` (f0bcd8c8b).
+
+**2026-10-28 (retrospective 20261028-234100):** No test covers `add-box.sh`;
+both defects reached production. Prevention to land with the fix: a test in
+`beebox/test/deploy/` that runs the script's dry-run for a new box and for an
+existing box with the push alias set, and checks that the plan grants
+`claude-oauth-token` and runs the pull as the box owner (or skips it).
