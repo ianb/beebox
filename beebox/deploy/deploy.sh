@@ -517,6 +517,8 @@ RSYNC_OPTS=(-az --delete
 # install is non-prod because the runtime uses tsx, itself a devDep).
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
+# The agent-browser package itself is a beebox dependency (the box browser,
+# docs/plans/shared-browser.md), so it installs with beebox.
 for repo in personal-vibe-check tap-check beebox; do
   local_path="$CHECKOUT/$repo/"
   if [[ ! -d "$local_path" ]]; then
@@ -1014,6 +1016,16 @@ REMOTE
   # The restart succeeded (set -e would have exited above otherwise): the EXIT
   # trap must not start the services a second time if a later check fails.
   printf 'SERVICES_STOPPED=0\n' >> "$REMOTE_SCRIPT"
+
+  # The box browser's host pieces: passt, Chrome for Testing, the launcher's
+  # unshare copy and its AppArmor profiles, then a check that Chrome keeps its
+  # sandbox (docs/plans/shared-browser.md, Track F). After the restart, so a
+  # first install's download does not lengthen the downtime window; a failure
+  # here fails the deploy with the services up. Bytes from the build checkout
+  # through stdin, as for the other root helpers.
+  queue_step "Installing the box browser..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-browser-install"
 
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is

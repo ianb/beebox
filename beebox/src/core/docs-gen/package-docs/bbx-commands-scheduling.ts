@@ -123,6 +123,7 @@ export function bbxCommandsScheduling(): string[] {
     "",
     ...bbxCommandsNotify(),
     ...bbxCommandsChat(),
+    ...bbxCommandsBrowser(),
   ];
 }
 
@@ -217,6 +218,24 @@ function bbxCommandsChat(): string[] {
     "which recording you mean. The recording is available only while the chat",
     "tab that recorded it is open, and only for the last few voice messages",
     "(the retention window).",
+    "",
+  ];
+}
+
+/** The `## bbx browser` section: the box's shared browser; the how-to is the `browser` skill. */
+function bbxCommandsBrowser(): string[] {
+  return [
+    "## bbx browser",
+    "",
+    "- `bbx browser <agent-browser command>` — Drive the box's one shared",
+    "  browser: `open <url>`, `snapshot -i` (interactive elements with refs",
+    "  such as `@e3`), `click @e3`, `fill @e4 \"text\"`, `get text @e5`, `wait`,",
+    "  `tab list`, `screenshot` (saved under `_tmp/browser/`). Logins persist.",
+    "  The person opens the same live browser from the profile menu's Browser",
+    "  item on a computer. Use WebFetch for public pages; use this for a page",
+    "  that needs a login, scripts, or the person's help. `bbx browser` with no",
+    "  arguments prints the short help. When to stop and ask the person, and",
+    "  what it refuses: the `browser` skill (`.claude/skills/browser/SKILL.md`).",
     "",
   ];
 }

@@ -23,6 +23,7 @@ void test("It installs the managed skills and returns their names.", async (t) =
   const { written } = await generateSkills(box.root);
   t.check(written, [
     "beebox-system-feedback",
+    "browser",
     "browser-task",
     "calendar",
     "drive",
@@ -85,6 +86,7 @@ void test("Listing a plugin in config/box.json plugins adds its skill, with the 
   t.check(({ written, conflicts, head: text.split("\n").slice(0, 5) }), {
     written: [
     "beebox-system-feedback",
+    "browser",
     "browser-task",
     "calendar",
     "drive",
@@ -115,6 +117,7 @@ void test("Listing a plugin in config/box.json plugins adds its skill, with the 
   await generateSkills(box.root);
   t.check(await readdir(skillFile(box, "")), [
     "beebox-system-feedback",
+    "browser",
     "browser-task",
     "calendar",
     "drive",
@@ -150,6 +153,7 @@ void test("A SKILL.md without the marker is the box's own.", async (t) => {
     {
     written: [
     "beebox-system-feedback",
+    "browser",
     "browser-task",
     "calendar",
     "drive",

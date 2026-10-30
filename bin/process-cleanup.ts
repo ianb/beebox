@@ -55,6 +55,7 @@ import { execa } from "execa";
 import { cwdOf, etimeToSeconds, psRows, type PsRow } from "./process-table.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { isWithin } from "../beebox/src/lib/box-containment.js";
+import { BBX_STATE_DIR } from "../beebox/src/lib/state-dir.js";
 
 // `etimeToSeconds` is re-exported because it is part of this module's tested
 // surface (bin/test/process-cleanup.liveness.test.ts).
@@ -141,7 +142,8 @@ function worktreeForPath(p: string): string | null {
 /**
  * The agent-browser pids a worktree's socket dir currently vouches for — read
  * from its `*.pid` files (the live daemon `default.pid` and any per-session
- * `<name>.pid`). Any *other* agent-browser process for that
+ * `<name>.pid`), plus every box browser's (`boxBrowserSocketDirs`). Any
+ * *other* agent-browser process for that
  * worktree is a superseded orphan: the upstream daemon stops serving its socket
  * on idle/supersession but never exits — it reparents to PID 1 and sleeps
  * forever — so a fresh daemon is spawned on next use and the old one lingers,
@@ -149,22 +151,46 @@ function worktreeForPath(p: string): string | null {
  * vouched for, so every agent-browser there is reapable).
  */
 async function currentDaemonPids(worktree: string): Promise<Set<number>> {
-  const sockDir = path.join(BROWSE_CACHE_ROOT, worktree, "socket");
   const live = new Set<number>();
+  const dirs = [path.join(BROWSE_CACHE_ROOT, worktree, "socket"), ...(await boxBrowserSocketDirs())];
+  await Promise.all(dirs.map((dir) => addPidFiles(dir, live)));
+  return live;
+}
+
+/**
+ * Box browsers' socket dirs, `<BBX_STATE_DIR>/browser/<slug>-<key>/sock`
+ * (beebox/src/core/browser/paths.ts). A box engine's browser host runs its
+ * daemon from the same `node_modules/agent-browser` as `bin/browse`, so
+ * without these pid files every `bin/browse` call killed the box browser
+ * the person was using (shared-browser plan, G1). Vouched for regardless of
+ * worktree: the engine that owns the box decides their lifetime.
+ */
+async function boxBrowserSocketDirs(): Promise<string[]> {
+  const root = path.join(BBX_STATE_DIR, "browser");
+  try {
+    return (await fs.readdir(root)).map((name) => path.join(root, name, "sock"));
+  } catch (_e) {
+    // No box browser has ever run for this user: nothing to vouch for.
+    return [];
+  }
+}
+
+/** Add the pids named by `dir`'s `*.pid` files to `live`. */
+async function addPidFiles(dir: string, live: Set<number>): Promise<void> {
   let entries: string[];
   try {
-    entries = await fs.readdir(sockDir);
+    entries = await fs.readdir(dir);
   } catch (_e) {
-    // No socket dir for this worktree (never browsed, or already cleaned up):
-    // nothing is vouched for, which is the documented empty-set answer.
-    return live;
+    // No socket dir (never browsed, or already cleaned up): nothing is vouched
+    // for, which is the documented empty-set answer.
+    return;
   }
   await Promise.all(
     entries
       .filter((f) => f.endsWith(".pid"))
       .map(async (f) => {
         try {
-          const pid = Number((await fs.readFile(path.join(sockDir, f), "utf8")).trim());
+          const pid = Number((await fs.readFile(path.join(dir, f), "utf8")).trim());
           if (Number.isFinite(pid) && pid > 0) live.add(pid);
         } catch (_e) {
           // The pidfile was removed between readdir and readFile, or is
@@ -173,7 +199,6 @@ async function currentDaemonPids(worktree: string): Promise<Set<number>> {
         }
       }),
   );
-  return live;
 }
 
 /** Absolute path of a worktree name as this module attributes them. */
