@@ -16,15 +16,15 @@ const STATE = "/Users/me/.local/share/beebox";
 void test("Each box gets its own directory under the state directory", (t) => {
   const key = boxRootKey("/Users/me/boxes/kitchen");
   t.check(key, "9cdeb62e");
-  t.check(browserPaths({ boxRoot: "/Users/me/boxes/kitchen", slug: "kitchen", stateDir: STATE }), {
-    root: `${STATE}/browser/kitchen-${key}`,
-    profile: `${STATE}/browser/kitchen-${key}/profile`,
-    socketDir: `${STATE}/browser/kitchen-${key}/sock`,
-    relaySocket: `${STATE}/browser/kitchen-${key}/dashboard.sock`,
-    cliSocket: `${STATE}/browser/kitchen-${key}/cli.sock`,
-    downloads: `${STATE}/browser/kitchen-${key}/downloads`,
-    log: `${STATE}/browser/kitchen-${key}/host.log`,
-    config: `${STATE}/browser/kitchen-${key}/agent-browser.json`,
+  t.check(browserPaths({ boxRoot: "/Users/me/boxes/kitchen", stateDir: STATE }), {
+    root: `${STATE}/browser/${key}`,
+    profile: `${STATE}/browser/${key}/profile`,
+    socketDir: `${STATE}/browser/${key}/sock`,
+    relaySocket: `${STATE}/browser/${key}/dashboard.sock`,
+    cliSocket: `${STATE}/browser/${key}/cli.sock`,
+    downloads: `${STATE}/browser/${key}/downloads`,
+    log: `${STATE}/browser/${key}/host.log`,
+    config: `${STATE}/browser/${key}/agent-browser.json`,
   });
   t.end();
 });
@@ -33,22 +33,31 @@ void test("Each box gets its own directory under the state directory", (t) => {
 // slug alone they would share logins and stop each other's browser
 // (cross-model review, 2026-10-30).
 void test("Two boxes with the same slug in different places get different directories", (t) => {
-  const a = browserPaths({ boxRoot: "/Users/me/src/box-worktrees/alpha/test1", slug: "test1", stateDir: STATE });
-  const b = browserPaths({ boxRoot: "/Users/me/src/box-worktrees/beta/test1", slug: "test1", stateDir: STATE });
-  t.check([a.root, b.root], [`${STATE}/browser/test1-3caf1411`, `${STATE}/browser/test1-f860c15e`]);
+  const a = browserPaths({ boxRoot: "/Users/me/src/box-worktrees/alpha/test1", stateDir: STATE });
+  const b = browserPaths({ boxRoot: "/Users/me/src/box-worktrees/beta/test1", stateDir: STATE });
+  t.check([a.root, b.root], [`${STATE}/browser/3caf1411`, `${STATE}/browser/f860c15e`]);
   t.end();
 });
 
 // The daemon socket `<root>/sock/box.sock` is the longer of the two sockets.
 void test("A socket path over 100 bytes is refused with the path in the message", async (t) => {
-  const longSlug = "a-box-with-a-rather-long-name-for-testing";
-  const box = { boxRoot: "/x", slug: longSlug, stateDir: "/Users/you/a-rather-deep/state/.local/share/beebox" };
+  const box = { boxRoot: "/x", stateDir: "/Users/you/a-rather-deep/state/with-a-rather-long-name-for-testing/.local/share/beebox" };
   await t.checkThrows(() => browserPaths(box), "BrowserPathTooLongError");
   try {
     browserPaths(box);
   } catch (err) {
-    t.check(err instanceof BrowserPathTooLongError ? err.socketPath : err, `/Users/you/a-rather-deep/state/.local/share/beebox/browser/${longSlug}-b3d1db31/sock/box.sock`);
+    t.check(err instanceof BrowserPathTooLongError ? err.socketPath : err, "/Users/you/a-rather-deep/state/with-a-rather-long-name-for-testing/.local/share/beebox/browser/b3d1db31/sock/box.sock");
   }
+});
+
+// A unit host's state directory holds the slug. With the slug in the directory
+// name as well, `mn-social-services` came to 104 bytes and every `bbx browser`
+// command failed (2026-10-30).
+void test("A unit host's box name of 32 characters fits under the socket limit", (t) => {
+  const slug = "mn-social-services-and-more-word";
+  const paths = browserPaths({ boxRoot: `/var/lib/beebox/${slug}/box`, stateDir: `/var/lib/beebox/${slug}/.local/share/beebox` });
+  t.check(paths.socketDir, `/var/lib/beebox/${slug}/.local/share/beebox/browser/${boxRootKey(`/var/lib/beebox/${slug}/box`)}/sock`);
+  t.end();
 });
 
 void test("On a unit host the browser is the deploy's link, or nothing", (t) => {

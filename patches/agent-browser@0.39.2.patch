@@ -1,0 +1,21 @@
+diff --git a/scripts/postinstall.js b/scripts/postinstall.js
+index 12281bd2a8527526b0678a70e3b9611cd0705053..1a17d9941a7c99523e542cf800dbfdf799b71712 100644
+--- a/scripts/postinstall.js
++++ b/scripts/postinstall.js
+@@ -115,14 +115,8 @@ async function main() {
+     if (platform() !== 'win32') {
+       chmodSync(binaryPath, 0o755);
+     }
+-    console.log(`✓ Native binary ready: ${binaryName}`);
+-
+-    writeInstallMethod();
+-
+-    // On global installs, fix npm's bin entry to use native binary directly
+-    await fixGlobalInstallBin();
+-
+-    showInstallReminder();
++    // beebox: the chmod is all this install needs. It is never global, finds
++    // its Chrome itself, and `npm prefix -g` warns about pnpm's settings.
+     return;
+   }
+ 

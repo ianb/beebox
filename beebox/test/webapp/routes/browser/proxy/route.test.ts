@@ -48,7 +48,7 @@ const ctx = await makeTestServer({
     },
   },
 });
-const paths = browserPaths({ boxRoot: ctx.boxRoot, slug: TEST_SLUG, stateDir });
+const paths = browserPaths({ boxRoot: ctx.boxRoot, stateDir });
 await mkdir(paths.root, { recursive: true });
 
 /** What the fake dashboard saw of each request. */

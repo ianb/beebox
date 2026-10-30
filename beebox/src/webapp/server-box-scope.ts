@@ -348,7 +348,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   registerCardSubmissionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
-  registerBrowserExecRoute({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
+  registerBrowserExecRoute({ server: instance, boxRoot: box.boxRoot, services: options.services ?? {} });
   // The person's view of the box browser. It checks its own credentials:
   // the hook above admits agents and lets asset paths through unauthenticated.
   await registerBrowserProxyRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });

@@ -1,16 +1,28 @@
 onlyBuiltDependencies:
   - "@googleworkspace/cli"
-  - agent-browser
+  # 0.39.2 ships its native binaries without the execute bit; its postinstall
+  # sets it (patched below to do only that). bin/browse's 0.41.0 starts through
+  # the package's Node wrapper, which sets the bit itself.
+  - agent-browser@0.39.2
   - esbuild
   - sharp
   - unrs-resolver
   - workerd
 
 ignoredBuiltDependencies:
+  - agent-browser@0.41.0
   - "@google/genai"
   - "@ianbicking/personal-vibe-check"
   - protobufjs
   - spawn-sync
+
+# Patches applied at install, before build scripts run.
+patchedDependencies:
+  # Crash fix for `return` outside a function (beebox/eslint.config.ts).
+  "@typescript-eslint/eslint-plugin@8.59.4": patches/@typescript-eslint__eslint-plugin@8.59.4.patch
+  # Postinstall reduced to its chmod: the rest prints npm config warnings and
+  # a "No Chrome installation detected" notice on every install.
+  agent-browser@0.39.2: patches/agent-browser@0.39.2.patch
 
 packages:
   - beebox
@@ -61,3 +73,8 @@ minimumReleaseAgeExclude:
   # server's `codex` symlink run, and a model or protocol change lands there
   # within days. Both `@openai/codex` and `@openai/codex-sdk` (pinned together).
   - "@openai/codex*"
+  # One release, by name: the boxholder approved 0.41.0 on 2026-10-30, a day
+  # inside the gate, for its stuck-tab recovery (issue
+  # 2026-07-14-browse-daemon-wedges-on-animated-canvas). Remove this line at
+  # the next agent-browser bump; later releases wait the full seven days.
+  - "agent-browser@0.41.0"

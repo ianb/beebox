@@ -65,7 +65,6 @@ export interface BrowserHostHandle {
 
 export interface EnsureBrowserHostInput {
   readonly boxRoot: string;
-  readonly slug: string;
   /** Defaults to `BBX_STATE_DIR`; a test passes a short temporary one. */
   readonly stateDir?: string;
 }
@@ -163,7 +162,7 @@ async function spawnHost(paths: BrowserPaths, input: Required<EnsureBrowserHostI
   try {
     const command = [
       path.join(PACKAGE_ROOT, "bin", "bbx"),
-      "engine", "browser-host", "--box", input.boxRoot, "--slug", input.slug, "--state-dir", input.stateDir,
+      "engine", "browser-host", "--box", input.boxRoot, "--state-dir", input.stateDir,
       "--engine-pid", String(process.pid),
     ];
     const options: SpawnOptions = { cwd: input.boxRoot, env: process.env, detached: true, stdio: ["ignore", logFd, logFd] };
@@ -224,7 +223,7 @@ export async function ensureBrowserHost(input: EnsureBrowserHostInput): Promise<
     if (hosts.get(key) === existing) hosts.delete(key);
     return ensureBrowserHost(input);
   }
-  const starting = startHost({ boxRoot: key, slug: input.slug, stateDir: input.stateDir ?? BBX_STATE_DIR });
+  const starting = startHost({ boxRoot: key, stateDir: input.stateDir ?? BBX_STATE_DIR });
   hosts.set(key, starting);
   pendingStarts.add(starting);
   try {

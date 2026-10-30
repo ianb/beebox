@@ -58,6 +58,9 @@ export class MicCapture {
   private workletNode: AudioWorkletNode | null = null;
   private analyser: AnalyserNode | null = null;
   private levelData: Uint8Array<ArrayBuffer> | null = null;
+  /** Mute point upstream of {@link speechTrack}, so a held mic reaches the recognizer as silence. */
+  private speechGain: GainNode | null = null;
+  private speechDestination: MediaStreamAudioDestinationNode | null = null;
   private muteGraceId: ReturnType<typeof setTimeout> | null = null;
   private recovering = false;
   private stopped = false;
@@ -132,6 +135,24 @@ export class MicCapture {
   }
 
   /**
+   * A track carrying this capture for an in-browser recognizer. It comes off
+   * the audio graph, so it outlives a mic swap ({@link reacquire}) and goes
+   * silent while held. Null if the graph is not up.
+   */
+  speechTrack(opts: { held: boolean }): MediaStreamTrack | null {
+    if (!this.audioContext || !this.sourceNode) return null;
+    this.speechGain = this.audioContext.createGain();
+    this.speechDestination = this.audioContext.createMediaStreamDestination();
+    this.sourceNode.connect(this.speechGain).connect(this.speechDestination);
+    this.setSpeechHeld(opts.held);
+    return this.speechDestination.stream.getAudioTracks().at(0) ?? null;
+  }
+
+  setSpeechHeld(held: boolean) {
+    if (this.speechGain) this.speechGain.gain.value = held ? 0 : 1;
+  }
+
+  /**
    * Recover from the OS taking the mic: notify the caller, then retry
    * re-acquisition with backoff until it succeeds or {@link stopCapture}
    * aborts the loop (the transcription machine bounds the window and stops
@@ -171,6 +192,7 @@ export class MicCapture {
     this.sourceNode = this.audioContext.createMediaStreamSource(stream);
     this.sourceNode.connect(this.workletNode);
     if (this.analyser) this.sourceNode.connect(this.analyser);
+    if (this.speechGain) this.sourceNode.connect(this.speechGain);
     // iOS suspends the AudioContext during interruptions; resume alongside
     // the new stream or the worklet stays silent even with a live track.
     if (this.audioContext.state !== "running") await this.audioContext.resume();
@@ -239,6 +261,14 @@ export class MicCapture {
       this.analyser.disconnect();
       this.analyser = null;
       this.levelData = null;
+    }
+    if (this.speechGain) {
+      this.speechGain.disconnect();
+      this.speechGain = null;
+    }
+    if (this.speechDestination) {
+      for (const track of this.speechDestination.stream.getTracks()) track.stop();
+      this.speechDestination = null;
     }
   }
 

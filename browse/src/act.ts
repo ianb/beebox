@@ -15,6 +15,7 @@ import {
   isInteractiveRole, judgeBox, parseCheckResult, parseTarget, refAfterActionDetail, refRenumbered, upstreamSelector,
 } from "./controls.js";
 import type { Box, CheckResult, Locator, RefRecord, RefTable, ScanEntry, Target } from "./controls.js";
+import { CAPTURE_TIMEOUT_MS, noAnswer, stuckCaptureMessage } from "./stuck.js";
 import { isOwnOrigin } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -162,18 +163,27 @@ async function liveRefId(ref: string): Promise<string | null> {
  * untouched (its consumers parse upstream's shape).
  */
 export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeContext): Promise<number> {
-  if (!(await onOwnPage(ctx))) {
-    return runPassthrough(["snapshot", ...args]);
-  }
+  const ownPage = await onOwnPage(ctx);
   let text: string;
+  let warnings: string;
   try {
-    ({ stdout: text } = await run(["snapshot", ...args]));
+    ({ stdout: text, stderr: warnings } = await run(["snapshot", ...args], { timeoutMs: CAPTURE_TIMEOUT_MS }));
   } catch (e) {
+    if (noAnswer(e)) {
+      process.stderr.write(stuckCaptureMessage("snapshot"));
+      return 1;
+    }
     if (e instanceof AgentBrowserError) {
       process.stderr.write(`${failureText(e)}\n`);
       return e.code === -1 ? 1 : e.code;
     }
     throw e;
+  }
+  if (!ownPage) {
+    // Another origin has no ids to add: upstream's output as it printed it.
+    process.stdout.write(text);
+    process.stderr.write(warnings);
+    return 0;
   }
   if (args.includes("--json")) {
     // Upstream's shape is passed through untouched (its consumers parse it);
@@ -349,7 +359,7 @@ export async function checkedAction({ sub, args, ctx }: { sub: string; args: rea
         break;
       case "opaque":
         // XPath / `text=`: upstream's CDP engine reports "Element not found"
-        // for these itself (measured 0.27.0), and `get box` cannot resolve
+        // for these itself (measured 0.27.0 and 0.41.0), and `get box` cannot resolve
         // them, so there is nothing to check — hand them over and say so.
         process.stderr.write(`browse: ${raw} is not a form the precondition check can resolve; passing it to upstream unchecked\n`);
         return runPassthrough([sub, target.selector, ...rest]);

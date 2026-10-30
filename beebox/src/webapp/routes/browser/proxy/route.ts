@@ -29,6 +29,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ProxyServer } from "http-proxy-3";
 import { BrowserCommandSocketError, sendBrowserCommand } from "../../../../core/browser/command-socket.js";
 import { BrowserHostFailedError, BrowserNotInstalledError, ensureBrowserHost, type BrowserHostHandle } from "../../../../core/browser/host/start.js";
+import { BrowserPathTooLongError } from "../../../../core/browser/paths.js";
 import { isRewritableType, rewriteDashboardBody } from "../../../../core/browser/rewrite.js";
 import { SESSION_PROBLEM_PREFIX } from "../../../../core/browser/session.js";
 import type { Services } from "../../../../services/container.js";
@@ -66,6 +67,7 @@ function sendPage(reply: FastifyReply, page: { status: number; title: string; de
 /** The page for a host that cannot be reached, or null for an error this route does not explain. */
 function hostFailurePage(e: unknown): { status: number; title: string; detail: string } | null {
   if (e instanceof BrowserNotInstalledError) return { status: 503, title: "No browser installed", detail: e.reason };
+  if (e instanceof BrowserPathTooLongError) return { status: 503, title: "The box browser cannot start here", detail: e.message };
   if (e instanceof BrowserHostFailedError) return { status: 502, title: "The box browser did not start", detail: e.message };
   return null;
 }
@@ -198,7 +200,7 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
         socket.close(1008, "invalid session port");
         return;
       }
-      bridgeStream(socket, { relaySocket: ensureHost({ boxRoot, slug: boxSlug }).then((host) => host.paths.relaySocket), port });
+      bridgeStream(socket, { relaySocket: ensureHost({ boxRoot }).then((host) => host.paths.relaySocket), port });
     });
 
     scope.all("/browser/*", async (request, reply) => {
@@ -215,7 +217,7 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
       }
       let host: BrowserHostHandle;
       try {
-        host = await ensureHost({ boxRoot, slug: boxSlug });
+        host = await ensureHost({ boxRoot });
       } catch (e) {
         const page = hostFailurePage(e);
         if (page === null) throw e;

@@ -1,12 +1,15 @@
 ---
 title: "`pnpm perf:load` hangs with no output when the `bin/browse` browser does not answer"
-workstream: unattached
+workstream: browse-wedge
 area: beebox
 labels: [dev-tooling]
 filed-by: agent
 discovered-in: worktree-boot-hint — measuring cold box loads, 2026-10-22
 priority: normal
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Third form fixed in 713bf637e/357afe042: every CDP command and the trace-complete event get a 60 s deadline, so an unanswered command fails the run (verified by freezing the browser mid-run: exit 1, CdpError named) instead of hanging.
 
 On 2026-10-22, `pnpm perf:load` ran for minutes and printed nothing, or
 printed one run and then exited with status 0 and no summary. Two causes were

@@ -15,7 +15,7 @@ import net from "node:net";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 import { signSession } from "../../../../src/webapp/auth.js";
-import { browserPaths, type BrowserPaths } from "../../../../src/core/browser/paths.js";
+import { BrowserPathTooLongError, browserPaths, type BrowserPaths } from "../../../../src/core/browser/paths.js";
 import { BrowserNotInstalledError, type BrowserHostHandle, type EnsureBrowserHostInput } from "../../../../src/core/browser/host/start.js";
 
 /** A command socket that records each request and answers with `reply`. */
@@ -42,18 +42,20 @@ async function setup(t: Test) {
   const stateDir = await fs.mkdtemp("/tmp/bbxe-");
   const hostCalls: EnsureBrowserHostInput[] = [];
   let installed = true;
+  let hostError: Error | null = null;
   const ctx = await makeTestServer({
     openAccess: false,
     services: {
       browserHost: async (input) => {
         hostCalls.push(input);
+        if (hostError !== null) throw hostError;
         if (!installed) throw new BrowserNotInstalledError("the server has no browser installed (/opt/beebox-browser/chrome is missing; the deploy installs it)");
         const handle: BrowserHostHandle = { paths: browserPaths({ ...input, stateDir }), pid: 1 };
         return handle;
       },
     },
   });
-  const socket = await fakeCommandSocket(browserPaths({ boxRoot: ctx.boxRoot, slug: "test", stateDir }));
+  const socket = await fakeCommandSocket(browserPaths({ boxRoot: ctx.boxRoot, stateDir }));
   t.teardown(async () => {
     await socket.close();
     await ctx.cleanup();
@@ -66,6 +68,7 @@ async function setup(t: Test) {
     ctx, socket, hostCalls, exec,
     agent: { authorization: `Bearer ${getOrCreateAgentToken(ctx.boxRoot)}` },
     uninstall: () => (installed = false),
+    failHost: (e: Error) => (hostError = e),
   };
 }
 
@@ -73,7 +76,7 @@ void test("The agent bearer runs a command through the host's command socket", a
   const { ctx, socket, hostCalls, exec, agent } = await setup(t);
   t.check(await exec(["get", "title"], agent), { statusCode: 200, body: { exitCode: 0, stdout: "Example Domain\n", stderr: "" } });
   t.check({ hostCalls, requests: socket.requests }, {
-    hostCalls: [{ boxRoot: ctx.boxRoot, slug: "test" }],
+    hostCalls: [{ boxRoot: ctx.boxRoot }],
     requests: [{ args: ["get", "title"] }],
   });
 });
@@ -100,6 +103,16 @@ void test("A flag that would leave the box browser is refused, naming the flag",
     body: { error: "bbx browser: ✖ Too small: expected array to have >=1 items\n  → at args" },
   });
   t.check({ hostCalls, requests: socket.requests }, { hostCalls: [], requests: [] });
+});
+
+// A bare 500 sent the box's agent looking for a missing Chromium (2026-10-30).
+void test("A socket path over the limit answers 503 with the reason", async (t) => {
+  const { exec, agent, failHost } = await setup(t);
+  failHost(new BrowserPathTooLongError("/a/long/path.sock"));
+  t.check(await exec(["get", "url"], agent), {
+    statusCode: 503,
+    body: { error: "The box browser's socket path is 17 bytes, over the 100-byte limit for Unix sockets: /a/long/path.sock. Use a shorter box slug or home directory." },
+  });
 });
 
 void test("A box with no browser installed answers 503 with the reason", async (t) => {

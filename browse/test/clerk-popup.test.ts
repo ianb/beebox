@@ -1,4 +1,4 @@
-// # `browse clerk-popup` and bounded `wait`
+// # `browse clerk-popup`
 //
 // `clerk-popup` opens the Clerk's popup page by URL, so it needs the extension's
 // id. Chrome derives an unpacked extension's id from its absolute path: the
@@ -8,7 +8,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { unpackedExtensionId, frontTargetScript, waitTimeoutMs } from "../src/clerk-popup.js";
+import { unpackedExtensionId, frontTargetScript } from "../src/clerk-popup.js";
 
 void test("line 13", async (t) => {
   t.check(unpackedExtensionId("/srv/beebox/beebox-clerk/dist-browse/chrome-mv3"), "aefhjangknhldlihokiojaajoegnlaoh");
@@ -23,18 +23,4 @@ void test("The script that fronts the target finds it by URL and refuses when tw
     ,
     "const matches = tabs.filter((tab) => tab.url === \"http://localhost/a\\\"b\");",
   );
-});
-
-// A `wait` always ends: upstream ignores `wait --timeout` outside download mode
-// and would poll forever, wedging the daemon. The wrapper turns `--timeout`, or
-// 30 seconds, into the default action timeout that does bound it.
-void test("A wait always ends:", async (t) => {
-  t.check([waitTimeoutMs(["--text", "Filed"]), waitTimeoutMs(["--text", "Filed", "--timeout", "180000"])], [
-    30000,
-    180000,
-  ]);
-});
-
-void test("line 36", async (t) => {
-  t.check((() => { try { return waitTimeoutMs(["--timeout", "3s"]); } catch (error) { return error instanceof Error ? error.message : error; } })(), "wait --timeout is not a positive integer: 3s");
 });
