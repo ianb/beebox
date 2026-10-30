@@ -125,13 +125,8 @@ if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
     echo "Created new DNS record."
   fi
 
-  # Set SSL mode to Flexible (Cloudflare→origin over HTTP)
-  echo "Setting SSL mode to Flexible..."
-  curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/settings/ssl" \
-    -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-    -H "Content-Type: application/json" \
-    --data '{"value":"flexible"}' >/dev/null
-  echo "SSL mode set."
+  # The zone's SSL mode is left alone: it covers every hostname in the zone.
+  # This host's mode is a Configuration Rule (docs/server/provisioning.md).
 else
   echo "Skipping DNS update (set CLOUDFLARE_API_TOKEN to enable)"
 fi
@@ -174,7 +169,9 @@ fi
 echo ""
 echo "  Next steps:"
 echo "    1. Edit /home/beebox/.env on the server (PUBLIC_URL, optional keys)"
-echo "    2. From a checkout whose deploy/target.env names this server,"
+echo "    2. Install the Origin CA certificate (docs/server/provisioning.md, Origin TLS);"
+echo "       the first deploy fails until it exists"
+echo "    3. From a checkout whose deploy/target.env names this server,"
 echo "       run deploy/deploy.sh (installs the tree, units, sudoers, nginx site)"
-echo "    3. Run deploy/add-box.sh to create the first box"
+echo "    4. Run deploy/add-box.sh to create the first box"
 echo "════════════════════════════════════════════════════"

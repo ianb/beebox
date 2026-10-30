@@ -164,3 +164,6 @@ carry `requestedRef`, so previous rollbacks are recognizable). Rolling forward
 again is the same command with the newer sha. Note a rollback across a
 `pnpm-lock.yaml`/`patches/` change triggers a clean reinstall in the build
 checkout, so it takes a few minutes instead of seconds.
+
+A ref whose nginx site has no 443 listener is refused, because it would take the
+site offline: see [Origin TLS](provisioning.md#origin-tls).

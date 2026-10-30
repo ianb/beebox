@@ -45,6 +45,10 @@ frozen install, restart, healthcheck — so a rollback is as safe as a deploy):
 ./deploy/deploy.sh --ref <old-sha>
 ```
 
+`deploy.sh` refuses a ref whose nginx site has no 443 listener: Cloudflare
+connects to 443, so that site would take production offline while the health
+check, which uses `localhost:3210`, stays green.
+
 `deploy-info.json` records `requestedRef` so rollbacks are recognizable in
 `deploy-history.json` on the server.
 

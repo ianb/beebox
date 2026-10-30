@@ -68,8 +68,7 @@ What it does:
 2. Ensures your SSH key is registered with Hetzner
 3. Creates a cpx21 (3 vCPU, 4GB RAM) in Ashburn
 4. Updates Cloudflare DNS for `box.example.com` (if token provided)
-5. Sets Cloudflare SSL to Flexible
-6. Passes `hetzner/cloud-init.yaml` as user data, waits for cloud-init to finish, then uploads and runs `hetzner/provision.sh`
+5. Passes `hetzner/cloud-init.yaml` as user data, waits for cloud-init to finish, then uploads and runs `hetzner/provision.sh`
 
 Then run `deploy/deploy.sh` from a checkout whose `target.env` names the server, and `deploy/add-box.sh` for each box.
 
@@ -268,4 +267,32 @@ end.
 ## DNS and HTTPS
 
 - DNS: `box.example.com` → server IP (Cloudflare proxied, auto-managed by `hetzner/create-server.sh`)
-- HTTPS: Handled by Cloudflare (SSL mode: Flexible — HTTPS to Cloudflare, HTTP to origin)
+- HTTPS: Cloudflare terminates the visitor's TLS. nginx terminates Cloudflare's TLS on 443 with an Origin CA certificate. See [Origin TLS](#origin-tls).
+
+## Origin TLS
+
+Cloudflare connects to nginx on 443 and validates its certificate, set by a Configuration Rule for this hostname. The SSL mode of the zone is not used, because it covers every hostname in the zone.
+
+**The certificate** lives on the server at `/etc/nginx/beebox-tls/origin.pem` and `origin.key`. It is not in git and no deploy writes it. Create it in the Cloudflare dashboard under SSL/TLS, Origin Server, for the production hostname only. The dashboard shows the key once. To install it from the laptop:
+
+```bash
+deploy/prod-ssh 'install -d -m 0700 /etc/nginx/beebox-tls'
+deploy/prod-ssh 'install -m 0644 /dev/stdin /etc/nginx/beebox-tls/origin.pem' < origin.pem
+deploy/prod-ssh 'install -m 0600 /dev/stdin /etc/nginx/beebox-tls/origin.key' < origin.key
+```
+
+Then delete the local copy of the key. A missing or mismatched file fails `nginx -t` at the next deploy, before anything stops.
+
+**The firewall** is `hetzner/origin-firewall.sh <server>`, where `<server>` is the name `hcloud server list` shows. It keeps SSH open to everyone and limits 443 to Cloudflare's published ranges. `--allow-http` also allows 80 from Cloudflare. It replaces the firewall's rules on every run, so edit the script, not the Hetzner console. Re-run it when Cloudflare announces a range change; until then, visitors routed through a new range get a 522.
+
+**Cloudflare must redirect HTTP visitors.** Full (strict) follows the visitor's scheme: a plain HTTP visitor produces a plain HTTP request to the origin unless the edge redirects first. Check that `curl -I http://box.example.com/` returns a 301 to HTTPS.
+
+**To return to plain HTTP in an incident:** run `origin-firewall.sh <server> --allow-http` if 80 is closed, then delete the Configuration Rule. A deploy of a ref with no 443 listener is refused unless `BBX_DEPLOY_ALLOW_NO_ORIGIN_TLS=1` is set; set it only after the rule is gone.
+
+To verify the listener, use `curl` on the server. `prod-curl` talks to the hub directly and skips nginx:
+
+```bash
+deploy/prod-ssh 'curl -sS -o /dev/null -w "%{http_code}\n" --cacert origin_ca_root.pem --resolve box.example.com:443:127.0.0.1 https://box.example.com/auth/login'
+```
+
+Download `origin_ca_root.pem`, [Cloudflare's published root](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/), to the server first; it matches the certificate's key type. `ss -tn sport = :443` shows Cloudflare's connections, and `ss -tn sport = :80` shows any that remain in plaintext.
