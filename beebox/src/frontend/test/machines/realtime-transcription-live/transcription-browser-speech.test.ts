@@ -95,6 +95,17 @@ void test("a fatal error gives up once; other errors just restart", (t) => {
   t.end();
 });
 
+void test("a fatal error settles the tail once, so a later finish adds nothing", (t) => {
+  const { instances, updates, link } = rig();
+  instances[0]?.say([{ text: "hello world", isFinal: false }]);
+  instances[0]?.onerror?.({ error: "audio-capture", message: "" });
+  t.check(updates.at(-1), { finalText: "hello world", interimText: "" });
+  const before = updates.length;
+  link.finish();
+  t.check(updates.slice(before), []);
+  t.end();
+});
+
 void test("a recognizer that ends at once over and over gives up", (t) => {
   const { instances, errors, link } = rig();
   t.teardown(() => link.detach());

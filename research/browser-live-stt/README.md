@@ -113,13 +113,18 @@ engine, for any service. `Emission` would gain a `liveService` next to `hqServic
 (`beebox/src/frontend/src/input/emission.ts`, and the quick-chat record in
 `beebox/src/core/chat/routing/quick-chat-record.ts`).
 
+"Local" here covers live recognition only. The recording still uploads to the
+box for HQ, and the box sends it to its HQ provider when one is configured.
+
 ## Proposed product
 
 - A "Live text" row in the voice chip's panel: **Box service** or **This device**,
   with **This device** offered only when `available()` is not `unavailable`.
 - Choosing it starts the 220 MB download on that click (the gesture `install()`
   needs), with progress, because `install()` reports none and takes minutes.
-- The setting is per device. A device without a ready pack uses the box's service.
+- The setting is per device. A device that chose it but has no ready pack records
+  with no live text, so spoken keywords do not work; the prototype does this
+  instead of quietly sending live audio to the box's provider.
 - A box with no key gets working live text on Chrome desktop. HQ still needs a key,
   and without one the message keeps its live text, as the end-to-end run showed.
 - Copy says "on this device"; Safari is never offered this, so the claim holds.

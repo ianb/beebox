@@ -321,7 +321,7 @@ class TranscriptionSession {
         onMicRestored: () => {
           if (this.disposed || this.stopping) return;
           this.watchdog.notePcm();
-          this.sendBack(this.connection ? { type: "CONNECTION_RESTORED" } : { type: "MIC_LIVE" });
+          this.sendBack(this.connection || this.browserSpeech ? { type: "CONNECTION_RESTORED" } : { type: "MIC_LIVE" });
         },
       });
       await this.mic.start();
@@ -341,16 +341,17 @@ class TranscriptionSession {
     this.sendBack({ type: "MIC_LIVE" });
     this.watchdog.start();
     window.addEventListener("offline", this.onOffline);
-    this.browserSpeech = await startBrowserSpeech({
+    const speech = await startBrowserSpeech({
       track: () => this.mic?.speechTrack({ held: this.held }) ?? null,
       callbacks: this.callbacks,
       stillWanted: () => !this.disposed && !this.stopping,
     });
-    if (this.browserSpeech) {
+    if (speech === "not-opted-in") {
+      if (!this.isDisposed()) this.beginLinking();
+    } else if (speech !== "unavailable") {
+      this.browserSpeech = speech;
       this.text.connected({ covered: true });
       this.sendBack({ type: "WS_CONNECTED" });
-    } else if (!this.isDisposed()) {
-      this.beginLinking();
     }
   }
 

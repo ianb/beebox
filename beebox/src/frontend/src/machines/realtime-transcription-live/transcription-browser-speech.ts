@@ -137,7 +137,13 @@ export class BrowserSpeechLink {
   private onEnd(): void {
     this.foldInstance();
     this.emit();
-    if (this.wanted && !this.fatal) this.spawn();
+    if (!this.wanted || this.fatal) return;
+    try {
+      this.spawn();
+    } catch (e) {
+      console.error("[realtime-transcription] browser speech restart failed:", e);
+      this.giveUp("The browser's speech recognizer could not restart");
+    }
   }
 
   private foldInstance(): void {
@@ -158,12 +164,15 @@ export class BrowserSpeechLink {
   }
 
   private giveUp(message: string): void {
+    this.foldInstance();
+    this.emit();
     this.detach();
     this.callbacks.onServerError(message);
   }
 
   /** End of segment: everything heard so far becomes final, now. */
   finish(): void {
+    if (!this.wanted) return;
     this.foldInstance();
     this.emit();
     this.detach();
@@ -187,29 +196,36 @@ export class BrowserSpeechLink {
 }
 
 /**
- * The on-device engine for a segment, when this device opted in and its
- * language pack is installed. Anything short of that returns null and the
- * segment uses the box's service, as it does for everyone else.
+ * The on-device engine for a segment. `"not-opted-in"` means this device uses
+ * the box's service as usual. `"unavailable"` means it opted in but the engine
+ * cannot run: the segment records with no live text rather than sending live
+ * audio to a provider the person chose not to use.
  */
 export async function startBrowserSpeech(opts: {
   track: () => MediaStreamTrack | null;
   callbacks: ServiceCallbacks;
   stillWanted: () => boolean;
-}): Promise<BrowserSpeechLink | null> {
-  if (liveEngine() !== "browser") return null;
+}): Promise<BrowserSpeechLink | "not-opted-in" | "unavailable"> {
+  if (liveEngine() !== "browser") return "not-opted-in";
   const ctor = speechRecognitionCtor();
   const lang = browserSpeechLang();
   const availability = await browserSpeechAvailability(lang).catch((e: unknown) => {
     console.warn("[realtime-transcription] browser speech availability check failed:", e);
     return "unavailable" as const;
   });
-  if (!opts.stillWanted()) return null;
+  if (!opts.stillWanted()) return "unavailable";
   const track = availability === "available" ? opts.track() : null;
   if (ctor === null || track === null) {
-    console.warn(`[realtime-transcription] browser speech not ready (${availability}, ${lang}); using the box's service`);
-    return null;
+    console.warn(`[realtime-transcription] browser speech not ready (${availability}, ${lang}); recording without live text`);
+    return "unavailable";
   }
   const link = new BrowserSpeechLink({ ctor, lang, listen: (recognizer) => recognizer.start(track), callbacks: opts.callbacks });
-  link.start();
+  try {
+    link.start();
+  } catch (e) {
+    console.error("[realtime-transcription] browser speech failed to start; recording without live text:", e);
+    link.detach();
+    return "unavailable";
+  }
   return link;
 }
