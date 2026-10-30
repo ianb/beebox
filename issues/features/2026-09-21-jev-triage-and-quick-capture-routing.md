@@ -222,3 +222,9 @@ agreement went from 72 to 73: two property misses fixed, one real overlap
 flipped. The remaining confident misses need boxholder-stated guide rules; one
 of them, a tie-break naming bills, did not reach those bills' payment
 confirmations.
+
+The full replay ran with the cap waived. The compiled rules plus one
+boxholder-stated guide rule, tried on the scratch copy only, agreed on 86/93
+(87/93 with the accepted case), against 82/93 on raw rules. Five misses were
+fixed and one real overlap flipped. Of the six left, two are wrong destinations
+and four are unclear.
