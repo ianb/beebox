@@ -696,7 +696,7 @@ queue_remote stdin bash -s <<'REMOTE'
   # dev byte-for-byte (and fails loudly if the lockfile is stale rather than
   # silently resolving something new). HUSKY=0 skips husky's hook install (no
   # .git on the server) so it doesn't print a spurious ".git can't be found".
-  # patch-package still runs via the root postinstall to patch @typescript-eslint/eslint-plugin.
+  # pnpm applies the patches in pnpm-workspace.yaml's patchedDependencies.
   cd /opt/beebox
   echo "  Reconciling workspace deps (frozen)..."
   # The install competes for RAM with every running box's `bbx engine serve` +
