@@ -29,11 +29,14 @@ budget:
   # Raised 2026-10-26 (+65) for the `figure-it-out` and `simplify-question`
   # box skills' descriptions and the `question-review` procedure's
   # description (docs/implemented-plans/questions-later-and-figure-it-out.md).
+  # Raised 2026-10-29 (+6) for the new `calendar` card type's entry in the
+  # guide's card-type list (docs/implemented-plans/calendar-cards.md); the calendar skill
+  # description was trimmed to offset the rest.
   # Raised 2026-10-30 (+90) for the box browser: TOOLS' `tools.browser`
   # pointer (+67) and the `browser` box skill's description
   # (docs/plans/shared-browser.md, chunk 11).
   guide_words: 5743
-  always_loaded_words: 11083
+  always_loaded_words: 11089
   uncited_words_per_section: 60
 
 lint:
@@ -645,11 +648,11 @@ rows:
     audits: [triage-vs-reactor-flow, triage-pipeline-stages]
     mechanics: box-docs/triage.md
   - id: intake.triage-replay
-    rule: Triage replay is read-only; guide policy and landmark boundaries are distinct; destination follow-up questions create ordinary agent todos; missing evidence and confirmation need honest provenance.
+    rule: Triage replay is read-only; guide policy and landmark boundaries are distinct; compiled triage instructions are generated from them and never edited; destination follow-up questions create ordinary agent todos; missing evidence and confirmation need honest provenance.
     handle: INTAKE
     bin: indirect
     reason: Needed when triaging or correcting a filing decision; keep the repair procedure in an on-demand document.
-    audits: [triage-cli-replay, triage-rule-repair, triage-source-policy, triage-evidence-honesty, triage-destination-todo-question]
+    audits: [triage-cli-replay, triage-rule-repair, triage-source-policy, triage-evidence-honesty, triage-destination-todo-question, triage-compiled-is-generated]
     mechanics: box-docs/triage-instructions.md
   - id: intake.capture-detail
     rule: The capture pipeline (preparation worker, timeline, the `<capture>` message, `bbx scan-import` batches landing in the inbox).

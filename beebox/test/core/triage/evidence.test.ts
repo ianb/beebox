@@ -9,10 +9,11 @@ import "@ianbicking/tap-check/tap";
 import { any } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { execa } from "execa";
 import { prepareItem, verifyEvidence } from "../../../src/core/triage/evidence/core.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
 import type { InstructionSnapshot } from "../../../src/core/triage/snapshot.js";
-import { serializeTriageRequest } from "../../../src/core/triage/request.js";
+import { serializeTriageRequest, triageRequestState } from "../../../src/core/triage/request.js";
 import { JEV_MAX_REQUEST_CHARS } from "../../../src/services/jev-wire.js";
 import { createFakeDocling } from "../../../src/services/docling/core.js";
 import type { DoclingService } from "../../../src/services/docling/core.js";
@@ -446,3 +447,44 @@ async function checkBudgetAndAnnex(t: Test, box: TmpBox) {
 
   await t.checkThrows(async () => (await prepareItem({ boxRoot: box.root, sourceRef: "/../../etc/passwd" })), "InvariantError: Invalid evidence ref: /../../etc/passwd");
 }
+
+// An oversized part sends a leading excerpt with an omission instead of nothing.
+// Word-processor files go through pandoc. Jev's request state carries only
+// readable text, plus a reason for each unread part; digests stay in the receipt.
+void test("Oversized parts become excerpts; documents convert; the request omits empty parts.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  await box.write("_content/inbox/staged/long.txt", "Policy declarations. ".repeat(50));
+  const excerpt = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/long.txt", maxTextChars: 300 });
+  t.check([excerpt.status, excerpt.parts[0]?.text.length, excerpt.parts[0]?.omissions], [
+    "partial",
+    300,
+    ["Excerpt: the first 300 of 1050 characters; the text budget excluded the rest"],
+  ]);
+
+  const docx = path.join(box.root, "_content/inbox/staged/Appeal.docx");
+  await execa("pandoc", ["--from=gfm", "-o", docx], { input: "# Valuation appeal\n\n| Year | Value |\n|---|---|\n| 2024 | 100 |\n" });
+  const document = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Appeal.docx" });
+  t.check([document.status, document.parts[0]?.method, document.parts[0]?.text], [
+    "ready",
+    "pandoc-gfm",
+    any(String).includes("| 2024 | 100"),
+  ]);
+
+  await box.write("_content/inbox/staged/Notice.doc.card", "Household notice");
+  await box.write("_content/inbox/staged/Notice.attach/blob.bin", "opaque bytes");
+  await box.write("_content/inbox/staged/Notice.attach/copy.txt", "Household notice");
+  const notice = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Notice.doc.card" });
+  t.check(triageRequestState(notice), {
+    source: "/_content/inbox/staged/Notice.doc.card",
+    status: "partial",
+    parts: [{ ref: "/_content/inbox/staged/Notice.doc.card", mediaType: "text/plain", method: "utf8", text: "Household notice" }],
+    unread: [{ ref: "/_content/inbox/staged/Notice.attach/blob.bin", mediaType: "application/octet-stream", reason: "Unsupported media: .bin; No readable content prepared" }],
+  });
+});

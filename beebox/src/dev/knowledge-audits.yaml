@@ -84,6 +84,19 @@ tests:
       - '(?:best.effort|do.your.best)[\s\S]{0,160}(?:permit|allow|policy|instruction)|(?:permit|allow|policy|instruction)[\s\S]{0,160}(?:best.effort|do.your.best)'
     tags: [jev-triage]
 
+  # Status (2026-10-29, Claude): passed on the worktree test1 clone; 0 reads/searches, 34k context.
+  - id: triage-compiled-is-generated
+    prompt: >
+      A filing tie-break in this box's compiled triage instructions looks
+      wrong. Where should the fix go, and should the compiled file be edited?
+      Explain briefly without reading files, using tools, or changing anything.
+    expected_level: knows_directly
+    watch_for: "Edits the intake guide or a landmark rule, never the generated compiled file"
+    correct_matches:
+      - '(?:guide|landmark)'
+      - '(?:not|never|don.t|shouldn.t)[\s\S]{0,80}edit[\s\S]{0,80}(?:compiled|generated)|(?:compiled|generated)[\s\S]{0,120}(?:not|never)[\s\S]{0,40}edit'
+    tags: [jev-triage]
+
   - id: triage-evidence-honesty
     prompt: >
       A document's attachment could not be extracted, so the classifier has
@@ -760,6 +773,41 @@ tests:
       - 'Claude in Chrome'
       - 'file_upload|Focus card|Submit batch|Copy prompt'
     tags: [browser-task]
+
+  # === Nested AGENTS.md on pi ===
+  #
+  # pi loads only the walk-up AGENTS.md at session start. Its read, edit and
+  # write tools append a deeper directory's AGENTS.md to the result the first
+  # time they touch a file there (docs/pi-engine.md, "Nested AGENTS.md"); the
+  # pi reader counts that delivery as a read. read_before_edit checks the
+  # order. pi only: Claude Code loads the nested file without a Read, and only
+  # pi's reader records edits, so should_read and read_before_edit fail on
+  # Claude and Codex by design.
+  # Status (2026-10-29, pi, deepseek/deepseek-v3.2): before delivery, the agent
+  # edited first and read the AGENTS.md only after an `ls` listed it. With
+  # delivery, 4 of 6 runs passed; each pass added the `- Changed:` line in its
+  # first edit. The 2 failures hit the 12-turn limit while checking line
+  # endings before an edit, with the delivered rule already in hand; the block
+  # then said only "Instructions for files in ..." and the model probed where
+  # the file ended. After the block was marked as not part of the file, 3 of 3
+  # passed (4-9 turns, 23k initial context, $0.003-$0.008 per run).
+  - id: pi-nested-agents-before-edit
+    prompt: >
+      In the slow-cooker party mix recipe in _content/recipes, add 1 cup of
+      cheese crackers to the ingredients.
+    expected_level: knows_directly
+    watch_for: "Has _content/recipes/AGENTS.md (read or delivered) before editing the recipe, and adds the Notes line that file asks for"
+    fixture:
+      _content/recipes/AGENTS.md: |
+        # Recipes
+
+        When you change a recipe in this directory, add a line to its
+        `## Notes` section that starts with `- Changed:` and says what changed.
+    should_read: ["_content/recipes/AGENTS.md"]
+    read_before_edit: ["_content/recipes/AGENTS.md"]
+    cards_contain: ["- Changed:", "cheese crackers"]
+    max_turns: 12
+    tags: [pi, nested-agents]
 
   # === Box Structure and Navigation ===
   #
@@ -1856,7 +1904,7 @@ tests:
     watch_for: >
       Opens the calendar guide (its compiled doc, or the guide card) before
       answering, and describes its Create Event action: a new .ics file in
-      _content/calendar/, pushed on the next sync.
+      the calendar card's attach folder, pushed on the next sync.
     should_read_any: ["calendar-guide.md", "calendar.guide.card"]
     correct_matches: ['\.ics|event file|calendar folder']
     tags: [guides]
@@ -3212,10 +3260,30 @@ tests:
   # sync is bidirectional — creates .ics files, describes editing, explains push.
   # Before fix: agent thought calendar was read-only (0/3 pass).
 
+  # Status (2026-10-29, calendar-cards, Claude): pass on the migrated test1
+  # clone with a fictional Marlowe Family card; 2 reads, 34k ctx. Same run:
+  # calendar-create-event, -edit-event, -vtimezone-authoring, -upcoming-events
+  # pass; calendar-bidirectional failed only its literal "two-way" check (the
+  # answer was right) and passed on a rerun; card-calendar.md now also says
+  # "two-way" so the card doc alone carries it.
+  - id: calendar-folder-picks-calendar
+    prompt: >
+      Where would you write a new event so that it lands on the Marlowe Family
+      calendar rather than another one? Answer from what you know about this
+      box; do not change any files.
+    expected_level: knows_directly
+    watch_for: >
+      Names the calendar card's attach folder
+      (_content/calendar/Marlowe_Family.attach/) and says the folder decides
+      the calendar. Does not tell the agent to set X-BBX-CALENDAR-ID or to
+      write into _content/calendar/ itself.
+    correct_matches: ['Marlowe_Family\.attach|attach folder']
+    tags: [calendar]
+
   - id: calendar-create-event
     prompt: "I need to add a dentist appointment next Tuesday at 2pm to my calendar. Can you do that?"
     expected_level: knows_about
-    watch_for: "Says yes and creates an .ics file in _content/calendar/ — does NOT say calendar is read-only or suggest using Google Calendar directly"
+    watch_for: "Says yes and creates an .ics file in a calendar card's attach folder under _content/calendar/ — does NOT say calendar is read-only or suggest using Google Calendar directly"
     correct_contains: ["sync"]
     max_turns: 15
     tags: [calendar]

@@ -64,15 +64,57 @@ class OpenRouterSetupError extends ProviderSetupError {
 }
 
 /**
- * The gate: resolve the env for one OpenRouter model, or throw
- * {@link OpenRouterSetupError}. List membership is checked before the key so
- * a removed model refuses the same way whether or not a key exists.
+ * A pi run with no model to run. pi has no default of its own: the box must
+ * choose one of its added models (docs/implemented-plans/pi-box-engine.md, Track 2).
  */
-export async function openRouterChatAdditions(params: {
+export function piModelMissing(): ProviderSetupError {
+  return new OpenRouterSetupError(
+    "This box runs the pi engine, which runs only models added in Admin → OpenRouter models, "
+      + "and no default model is chosen from them. Choose one as the default model in Admin → Agent engine and model.",
+  );
+}
+
+/**
+ * An added model whose OpenRouter listing lacks something a pi request needs,
+ * such as its context length.
+ */
+export function piModelUnusable(model: string, missing: string): ProviderSetupError {
+  return new OpenRouterSetupError(
+    `This run uses the OpenRouter model ${model}, but ${missing}, so pi cannot build a correct request for it. `
+      + "Pick another model in Admin → OpenRouter models.",
+  );
+}
+
+/** A run with a spending limit on a model whose price OpenRouter does not list. */
+export function piModelUnpriced(model: string): ProviderSetupError {
+  return new OpenRouterSetupError(
+    `This run has a spending limit, but OpenRouter lists no price for the model ${model}, so pi cannot estimate its cost. `
+      + "Pick another model in Admin → OpenRouter models.",
+  );
+}
+
+/** The params the gate takes: the box, the model id, and the audit purpose of the key read. */
+interface GateParams {
   boxRoot: string;
   model: string;
   purpose: string;
-}): Promise<Record<string, string>> {
+}
+
+/**
+ * The gate: resolve the env for one OpenRouter model, or throw
+ * {@link OpenRouterSetupError}.
+ */
+export async function openRouterChatAdditions(params: GateParams): Promise<Record<string, string>> {
+  return openRouterChatEnv({ key: await addedModelKey(params), model: params.model });
+}
+
+/**
+ * The gate itself: the key value for one added OpenRouter model, or throw
+ * {@link OpenRouterSetupError}. List membership is checked before the key so
+ * a removed model refuses the same way whether or not a key exists. pi takes
+ * the key value; the claude engine takes {@link openRouterChatAdditions}.
+ */
+export async function addedModelKey(params: GateParams): Promise<string> {
   const { boxRoot, model } = params;
   if (!(await loadAddedModels(boxRoot)).some((m) => m.id === model)) {
     throw new OpenRouterSetupError(
@@ -87,5 +129,5 @@ export async function openRouterChatAdditions(params: {
         + `(${resolved.error.message}). Add one in Admin → Secrets and grant it to this box.`,
     );
   }
-  return openRouterChatEnv({ key: resolved.value.value, model });
+  return resolved.value.value;
 }

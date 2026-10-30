@@ -12,8 +12,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { binTsArgs } from "../lib/bin-ts.js";
 
-const repo = path.resolve(process.cwd(), "..");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "finish-preflight-"));
 
 const git = (...args: string[]): string =>
@@ -38,7 +38,7 @@ const preflight = (): {
   verification: { command: string; skip?: string }[];
 } =>
   JSON.parse(
-    execFileSync(process.execPath, ["--import", import.meta.resolve("tsx"), path.join(repo, "bin/finish-preflight.ts"), "--json"], {
+    execFileSync(process.execPath, binTsArgs("bin/finish-preflight.ts", ["--json"]), {
       cwd: root,
       encoding: "utf8",
       env: { ...process.env, GIT_MERGE_AUTOEDIT: "no" },
@@ -120,6 +120,51 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
     "no merge on this branch brought code; pre-commit covered every commit",
   ]);
 
+  // ## A docs-only branch skips after main brings code
+  //
+  // When the branch changes only Markdown, the merged tree's code is main's
+  // code, so the merge of main's code does not force the checks.
+
+  git("checkout", "-q", "-b", "worktree-notes", "main");
+  commit("notes/plan.md", "# plan\n");
+  git("checkout", "-q", "main");
+  commit("bin/main-code.ts", "export const d = 1;\n");
+  git("checkout", "-q", "worktree-notes");
+  const notes = preflight();
+  t.check([notes.merge.status, notes.skipTypecheckLint.value, notes.skipTypecheckLint.reason.includes("the branch changed only .md files")], [
+    "merged",
+    true,
+    true,
+  ]);
+
+  // A merge commit that edits code (a conflict resolution, or here an evil
+  // merge amended by hand) leaves HEAD's code unlike main's, so the checks run
+  // even though every non-merge branch commit was docs-only.
+
+  git("checkout", "-q", "-b", "worktree-resolve", "main");
+  commit("notes/resolve.md", "# resolve\n");
+  git("checkout", "-q", "main");
+  commit("bin/main-code.ts", "export const d = 2;\n");
+  git("checkout", "-q", "worktree-resolve");
+  git("merge", "-q", "--no-ff", "main");
+  write("bin/main-code.ts", "export const d = 3;\n");
+  git("commit", "-q", "--amend", "-a", "--no-edit");
+  const resolved = preflight();
+  t.check([resolved.skipTypecheckLint.value, typecheck(resolved)], [false, "runs"]);
+  assert.ok(resolved.skipTypecheckLint.reason.includes("bin/main-code.ts"));
+
+  // A branch commit that renames code to Markdown touched code too: git's
+  // rename detection would list only the `.md` side.
+
+  git("checkout", "-q", "-b", "worktree-rename", "main");
+  git("mv", "bin/main-code.ts", "notes/main-code.md");
+  git("commit", "-qm", "rename");
+  git("checkout", "-q", "main");
+  commit("bin/later-code.ts", "export const e = 1;\n");
+  git("checkout", "-q", "worktree-rename");
+  const renamed = preflight();
+  t.check([renamed.skipTypecheckLint.value, renamed.skipTypecheckLint.reason.includes("bin/main-code.ts")], [false, true]);
+
   // ## Arguments
   //
   // `--help` prints the usage. It must not merge main: main gains a commit here,
@@ -131,7 +176,7 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
   git("checkout", "-q", "worktree-docs");
   const before = git("rev-parse", "HEAD");
   const cli = (arg: string) =>
-    spawnSync(process.execPath, ["--import", import.meta.resolve("tsx"), path.join(repo, "bin/finish-preflight.ts"), arg], {
+    spawnSync(process.execPath, binTsArgs("bin/finish-preflight.ts", [arg]), {
       cwd: root,
       encoding: "utf8",
     });

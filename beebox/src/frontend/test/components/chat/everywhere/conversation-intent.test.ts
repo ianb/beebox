@@ -6,9 +6,11 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { routeConversationRequest, createResolutionGate } from "../../../../src/components/chat/everywhere/conversation-intent.js";
+import { routeConversationRequest, createResolutionGate, routeSelectionUpdate } from "../../../../src/components/chat/everywhere/conversation-intent.js";
+import { resolveConversation } from "../../../../src/components/chat/everywhere/resolve-conversation.js";
 import type { ConversationSelection } from "../../../../../shared/chat-composer-binding.js";
 
+type ResolveParams = Parameters<typeof resolveConversation>[0];
 const kitchen: ConversationSelection = { kind: "ready", label: "Kitchen", target: { kind: "session", sessionId: "kitchen-chat", contextDir: "kitchen" } };
 const cold: ConversationSelection = { kind: "resolving", requestId: "initial", contextDir: "" };
 const base = { first: false, chatPage: false, search: {}, selection: kitchen, remembered: null, cardPath: "/house/pantry.doc.card", browseDir: null };
@@ -94,4 +96,34 @@ void test("A restored existing target is revalidated, and Back can restore the p
     contextDir: "kitchen",
     engine: "codex",
   });
+});
+
+// A box whose default engine is not Claude opens a landmark as an unsent
+// `start` target. The route pins it to the history entry, and the route change
+// that follows restores it from there: the same selection with its keys in
+// another order. Pinning must see it as already saved, or the same-URL replace
+// re-fires forever (the router treats the state as unchanged and only reloads).
+void test("A restored start selection is already pinned to its history entry", async (t) => {
+  // A test double built on a null prototype with only the procedures a fresh
+  // non-Claude resolution calls (the pattern resolve-conversation.test.ts uses).
+  const utils: ResolveParams["utils"] = Object.assign(Object.create(null), { chat: {
+    status: { fetch: async () => ({ boxEngine: "pi" }) },
+    newFeatures: { fetch: async () => ({}) },
+  } });
+  const reserve = async () => { throw new Error("pi does not reserve"); };
+  const request = { kind: "new" as const, contextDir: "_content/projects/porch" };
+  const opened = (await resolveConversation({ utils, reserve, receipts: null, request })).selection;
+  t.check(opened.kind === "ready" ? opened.target.kind : null, "start");
+  if (opened.kind !== "ready") return;
+  const restored = (await resolveConversation({ utils, reserve, receipts: null,
+    request: { kind: "restore", target: opened.target, label: opened.label } })).selection;
+  t.check([Object.keys(opened), Object.keys(restored)], [["kind", "label", "target"], ["kind", "target", "label"]]);
+  const pin = { chatPage: true, search: {}, capture: false };
+  t.check(routeSelectionUpdate({ ...pin, selection: restored, saved: opened }), null);
+
+  t.check(routeSelectionUpdate({ ...pin, selection: restored, saved: undefined }), { session: null, consumeCapture: false });
+
+  t.check(routeSelectionUpdate({ ...pin, capture: true, selection: restored, saved: opened }), { session: null, consumeCapture: true });
+
+  t.check(routeSelectionUpdate({ ...pin, selection: kitchen, saved: kitchen }), { session: "kitchen-chat", consumeCapture: false });
 });

@@ -15,7 +15,7 @@ import type { ChatMessage } from "../core/chat/message-types.js";
 
 /** A provider-normalized event emitted by a non-Claude chat backend. */
 export interface NativeChatBackendMessage {
-  provider: "codex";
+  provider: "codex" | "pi";
   message: ChatMessage;
 }
 

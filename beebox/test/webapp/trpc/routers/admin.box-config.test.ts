@@ -124,6 +124,7 @@ void test("The configured Google owner can mint before any local-password accoun
     agentEngine: "claude",
     agentModel: null,
     openrouterModels: [],
+    openrouterKeyGranted: false,
     engines: { claude: true },
     claudeCodeTelemetry: "on",
     codexTelemetry: "off",
@@ -182,6 +183,7 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
     agentEngine: "claude",
     agentModel: null,
     openrouterModels: [],
+    openrouterKeyGranted: false,
     engines: { claude: true },
     claudeCodeTelemetry: "on",
     codexTelemetry: "off",
@@ -197,6 +199,7 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
   t.check({ returned: engineResult.agentEngine, saved: engineConfig.agentEngine }, { returned: "codex", saved: "codex" });
 
   t.check((await caller(box.root).admin.boxConfig()).agentEngine, "codex");
+
 
   // Retired model pins are shown as the current model in Admin, matching the model
   // the runtime will use instead of presenting a working pin as unavailable.

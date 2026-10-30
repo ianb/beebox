@@ -4,8 +4,9 @@
  *
  * Every scheduled occurrence in the interval runs in time order, each as
  * `bbx tick --script <name>` at its own `BBX_TIME`, with fake channels forced
- * and the real channel keys removed. A `runs:` occurrence is read back from the
- * script's run state, since `bbx tick` exits 0 when it skipped or failed; its
+ * and the real channel keys removed. The tick runs with `--json`, since it
+ * exits 0 when a script skipped or errored: the script's record says whether it
+ * ran, and a `runs:` occurrence's deferral reason is read from its run state; its
  * jobs are drained (a failed job is reported, as the box records it), and the cards are listed again so a schedule it created is
  * run too. At the end the box wakes up once at the new time, and only then is
  * `.beebox/clock-offset.json` written. A wait that stops keeps its record in
@@ -20,6 +21,7 @@ import { dirname, join, resolve } from "node:path";
 import { cardFields, parseCardText } from "../../../src/core/card-io.ts";
 import { readRecent } from "../../../src/core/notification/log.ts";
 import { loadScriptState } from "../../../src/core/schedule/state.ts";
+import { z } from "zod";
 import { clockOffsetPath } from "../../../src/lib/time.ts";
 import { createCardSchemaMap } from "../../../src/schemas.ts";
 import { ScheduledScriptSchema, parseScheduledScript } from "../../../src/schemas/scheduled-script/schema.tsx";
@@ -115,6 +117,30 @@ function bbx(box: string, opts: { args: string[]; at: Date }): { ok: boolean; ou
   }
 }
 
+const tickReportSchema = z.object({
+  scripts: z.array(z.object({
+    name: z.string(),
+    status: z.enum(["ran", "skipped", "error", "inconclusive"]),
+    command: z.string().optional(),
+    error: z.string().optional(),
+    reason: z.string().optional(),
+  })),
+});
+
+type TickRecord = z.infer<typeof tickReportSchema>["scripts"][number];
+
+/** The record `bbx tick --json` printed for script `name`; undefined when it printed none. */
+function tickRecord(result: { ok: boolean; output: string }, name: string): TickRecord | undefined {
+  const report = tickReportSchema.parse(JSON.parse(result.output));
+  return report.scripts.find((s) => s.name === name);
+}
+
+/** Why a tick did not run the script: its record's reason, or the tick's own output. */
+function notRunBecause(result: { output: string }, record: TickRecord | undefined): string {
+  if (record === undefined) return result.output.trim();
+  return record.reason ?? record.error ?? "";
+}
+
 /** The first line of a command's output that says what went wrong. */
 function firstLine(output: string): string {
   const lines = output.split("\n").map((l) => l.trim());
@@ -142,18 +168,21 @@ async function runOccurrence(box: string, opts: { o: Occurrence; found: Findings
   const at = tickTime(o);
   const seen = new Set((await readRecent(box, { days: ALL_DAYS, now: at })).map((n) => n.intent.id));
   // `--force` for `runs:`: an open chat would otherwise defer it; liveness gates still apply.
-  const result = bbx(box, { args: ["tick", "--script", o.name, ...(o.kind === "runs" ? ["--force"] : [])], at });
+  const result = bbx(box, { args: ["tick", "--json", "--script", o.name, ...(o.kind === "runs" ? ["--force"] : [])], at });
+  if (!result.ok) throw new WaitStepError(`${occurrenceKey(o)}: bbx tick failed:\n${result.output.trim()}`);
+  const record = tickRecord(result, o.name);
   if (o.kind === "notify") {
     if (firedFor(await readRecent(box, { days: ALL_DAYS, now: at }), { seen, name: o.name }) === undefined) {
-      noRecord.push(`${occurrenceKey(o)}:\n${result.output.trim() || "the tick did not run it (not due by the card's own run record)"}`);
+      noRecord.push(`${occurrenceKey(o)}:\n${notRunBecause(result, record) || "the tick did not run it (not due by the card's own run record)"}`);
     }
     return;
   }
-  const state = await loadScriptState(box, o.name);
-  if (state.lastRun === null || Date.parse(state.lastRun) < o.at.getTime()) {
-    throw new WaitStepError(`${occurrenceKey(o)} did not run:\n${result.output.trim()}`, { notRun: occurrenceKey(o) });
+  // A record with no command never started the script (not due, a parse error); a run or a deferral has one.
+  if (record === undefined || record.command === undefined) {
+    throw new WaitStepError(`${occurrenceKey(o)} did not run:\n${notRunBecause(result, record)}`, { notRun: occurrenceKey(o) });
   }
-  if (state.lastResult === "failure") failed.push(`${occurrenceKey(o)}: ${firstLine(state.lastError ?? "failed")}`);
+  if (record.status === "error") failed.push(`${occurrenceKey(o)}: ${firstLine(record.error ?? "failed")}`);
+  const state = await loadScriptState(box, o.name);
   // Often "nothing to do"; a real box records it the same way and runs the card again next time.
   if (state.lastResult === "deferred") found.deferred.push(`${occurrenceKey(o)}: ${state.lastDeferReason ?? "deferred"}`);
   drain(box, { at, failed });

@@ -31,7 +31,7 @@ function replayResult(candidate: { todoAnswers: Record<string, number> | undefin
       todoAnswers: { [OPTION]: 0.9 },
       outcome: "destination",
       destinationRef: "/_content/bills/Bills.landmark.card",
-      requestHash: "f7e86f65ae49bb11c8c1885e3c68f68b8412a5166866737d8d6d498635b819ca",
+      requestHash: "3d4c511addf2f291fd8aa9532a1eaa140c986dcd06f6e2cecca5b85faa376898",
       requestedModel: "typesafe/jev-1.13",
       returnedModel: "fake-jev",
       answer: choice,
@@ -81,21 +81,21 @@ void test("line 22", async (t) => {
   await saveDecisionReceipt(box.root, receipt);
   const shared = { boxRoot: box.root, ids: [receipt.id], maxCalls: 1 };
   const same = await replayDecisions({ ...shared, instructions, jev: answer(0.8) });
-  t.check(same.results[0], replayResult({ todoAnswers: { [OPTION]: 0.8 }, requestHash: "fba23eabe64c388ffaf35f6c8157f926b90761fe5adb572d7a36a49a44a5ab4a" }, false));
+  t.check(same.results[0], replayResult({ todoAnswers: { [OPTION]: 0.8 }, requestHash: "08132d63c5211325c4f9b137867480524dbd3ea14cdcfd99d4f276938d5d6b3e" }, false));
 
   const no = await replayDecisions({ ...shared, instructions, jev: answer(0.1) });
-  t.check(no.results[0], replayResult({ todoAnswers: { [OPTION]: 0.1 }, requestHash: "fba23eabe64c388ffaf35f6c8157f926b90761fe5adb572d7a36a49a44a5ab4a" }, true));
+  t.check(no.results[0], replayResult({ todoAnswers: { [OPTION]: 0.1 }, requestHash: "08132d63c5211325c4f9b137867480524dbd3ea14cdcfd99d4f276938d5d6b3e" }, true));
 
   const tie = await replayDecisions({ ...shared, instructions, jev: answer(0.5) });
-  t.check(tie.results[0], replayResult({ todoAnswers: { [OPTION]: 0.5 }, requestHash: "fba23eabe64c388ffaf35f6c8157f926b90761fe5adb572d7a36a49a44a5ab4a" }, true));
+  t.check(tie.results[0], replayResult({ todoAnswers: { [OPTION]: 0.5 }, requestHash: "08132d63c5211325c4f9b137867480524dbd3ea14cdcfd99d4f276938d5d6b3e" }, true));
 
   const changed = { ...instructions, destinations: instructions.destinations.map((destination) => ({ ...destination, todoQuestion: "Is the payment disputed?" })) };
   const newQuestion = await replayDecisions({ ...shared, instructions: changed, jev: answer(0.9) });
-  t.check(newQuestion.results[0], replayResult({ todoAnswers: { [OPTION]: 0.9 }, requestHash: "f94b5fca24342fb2a7c545aef29300991f40b3d33c8a44e5b7e1dc5ad75a6505" }, true));
+  t.check(newQuestion.results[0], replayResult({ todoAnswers: { [OPTION]: 0.9 }, requestHash: "eae8f04ef1ef768c30c26ea2e68ed47f7707668f3abbfde183ca2e507326f94a" }, true));
 
   const omitted = { ...instructions, destinations: instructions.destinations.map(({ todoQuestion: _todoQuestion, ...destination }) => destination) };
   const absent = await replayDecisions({ ...shared, instructions: omitted, jev: answer(0.9) });
-  t.check(absent.results[0], replayResult({ todoAnswers: undefined, requestHash: "c984d29738092475dbf163eac9d2d2c9f1ffdedf9355a5bbab60c155d9c7d3b4" }, true));
+  t.check(absent.results[0], replayResult({ todoAnswers: undefined, requestHash: "43b7ed78055792cf8c13ec367ec879fc1066183e6cd2aaebd35f8789bf015a97" }, true));
 
   t.check(await fs.readFile(path.join(box.root, sourceRef.slice(1)), "utf8"), originalBytes);
 });

@@ -37,6 +37,9 @@ import { toSdkUserContent } from "../claude-chat-content.js";
 import { resolveHarnessPluginPath } from "../../core/agent/plugin-paths.js";
 import { boxSessionSettings } from "../../core/agent/box-session-settings.js";
 import { createCodexChatBackend } from "./codex-chat.js";
+import { createPiChatBackend } from "./pi-chat.js";
+import type { AgentEngine } from "../../shared/agent-models.js";
+import { injectedCredentials } from "../../lib/credential-env.js";
 import type {
   ChatBackend,
   ChatBackendRun,
@@ -66,6 +69,9 @@ export {
   type FakeChatBackend,
   type FakeChatBackendRun,
 } from "./fake.js";
+
+// For the pi live smoke (`src/dev/pi-smoke.ts`), which passes pi's runtime seam.
+export { createPiChatBackend } from "./pi-chat.js";
 
 // ─── Real implementation ─────────────────────────────────────────────────────
 
@@ -142,9 +148,7 @@ export function buildQueryOptions(
   if (opts.model !== undefined) {
     queryOptions.model = opts.model;
   }
-  if (opts.tools !== undefined) {
-    queryOptions.tools = opts.tools;
-  }
+  if (opts.tools !== undefined) queryOptions.tools = opts.tools;
   queryOptions.hooks = { PreToolUse: [gitMvNudgeHook()] };
   queryOptions.plugins = [{
     type: "local",
@@ -158,13 +162,13 @@ export function buildQueryOptions(
 }
 
 /**
- * Provider credentials are baked into a warm subprocess's env, and a consumed
- * slot's env wins over the caller's — so a key rotation between prewarm and
- * send must invalidate the slot rather than silently keep the old credential.
- * The telemetry flags ride the same way: a box that turns telemetry off must
- * not be served a slot warmed while it was on.
+ * Provider credentials (the `claudeEngine` injections, `lib/credential-env.ts`)
+ * are baked into a warm subprocess's env, and a consumed slot's env wins over the
+ * caller's — so a key rotation between prewarm and send must invalidate the slot
+ * rather than silently keep the old credential. The telemetry flags ride the same
+ * way: a box that turns telemetry off must not reuse a slot warmed while it was on.
  */
-const PROVIDER_ENV_KEYS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "API_TIMEOUT_MS", "DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] as const;
+const PROVIDER_ENV_KEYS: readonly string[] = [...injectedCredentials("claudeEngine"), "API_TIMEOUT_MS", "DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"];
 
 function providerEnvMatches(warm: Record<string, string | undefined>, next: Record<string, string | undefined>): boolean {
   return PROVIDER_ENV_KEYS.every((key) => (warm[key] ?? null) === (next[key] ?? null));
@@ -431,16 +435,16 @@ function createClaudeChatBackend(): ChatBackend {
 export function createChatBackend(): ChatBackend {
   const claude = createClaudeChatBackend();
   const codex = createCodexChatBackend();
+  const pi = createPiChatBackend();
   return {
     requiresClaudeAuth: true,
     requiresCodexAuth: true,
-    start: (opts) => opts.engine === "codex" ? codex.start(opts) : claude.start(opts),
-    prewarm: async (opts) => {
-      if (opts.engine !== "codex") await claude.prewarm?.(opts);
-    },
-    load: async (engine) => {
-      if (engine !== "codex") await claude.load?.(engine);
-    },
+    start: (opts) => ({
+      claude: () => claude.start(opts), codex: () => codex.start(opts), pi: () => pi.start(opts),
+    } satisfies Record<AgentEngine, () => ChatBackendRun>)[opts.engine ?? "claude"](),
+    // Only the Claude backend keeps warm processes; the others have nothing to prewarm or load.
+    prewarm: async (opts) => { if ((opts.engine ?? "claude") === "claude") await claude.prewarm?.(opts); },
+    load: async (engine) => { if ((engine ?? "claude") === "claude") await claude.load?.(engine); },
     closeWarm: async () => { await claude.closeWarm?.(); },
     closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
     hasWarm: () => claude.hasWarm?.() ?? false,

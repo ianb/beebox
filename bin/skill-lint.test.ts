@@ -16,6 +16,7 @@ import { dirname, join, resolve } from "node:path";
 import { after, test } from "node:test";
 
 import { lintSkills, type Finding } from "./skill-lint.js";
+import { binTsArgs } from "./lib/bin-ts.js";
 
 const REPO_ROOT = resolve(import.meta.dirname, "..");
 const roots: string[] = [];
@@ -161,7 +162,7 @@ test("Codex-ignored frontmatter keys are information, not failures", () => {
 });
 
 function cli(...args: string[]): { status: number | null; stdout: string } {
-  const result = spawnSync(process.execPath, ["--import", "tsx", join(REPO_ROOT, "bin", "skill-lint.ts"), ...args], {
+  const result = spawnSync(process.execPath, binTsArgs("bin/skill-lint.ts", args), {
     cwd: REPO_ROOT,
     encoding: "utf8",
   });

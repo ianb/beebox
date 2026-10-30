@@ -3,7 +3,7 @@
  * from audit results for manual evaluation.
  */
 
-import type { TestResult } from "./test-runner/runner/run-test.js";
+import type { ReadBeforeEditOutcome, TestResult } from "./test-runner/runner/run-test.js";
 import type { ContextHistoryEntry } from "./context-history.js";
 import { invariant } from "../../shared/invariant.js";
 
@@ -210,6 +210,18 @@ function formatShouldReadAny(checks: Checks): string[] {
   return [`- ${check.wasRead ? "\u2713" : "\u2717"} Read any of [${check.files.join(", ")}]${detail}`];
 }
 
+const READ_BEFORE_EDIT_DETAIL: Record<ReadBeforeEditOutcome, string> = {
+  "read-first": "",
+  "read-after": " (read only after it)",
+  "not-read": " (never read)",
+  "not-recorded": " (this engine's reader does not record edits)",
+};
+
+function formatReadBeforeEdit(checks: Checks): string[] {
+  return checks.readBeforeEditChecks.map((c) =>
+    `- ${c.outcome === "read-first" ? "\u2713" : "\u2717"} Read ${c.file} before the first edit${READ_BEFORE_EDIT_DETAIL[c.outcome]}`);
+}
+
 function formatShouldSearch(checks: Checks): string[] {
   if (checks.shouldSearchCheck === undefined) return [];
   const check = checks.shouldSearchCheck;
@@ -256,6 +268,7 @@ function formatCheckLines(checks: Checks): string[] {
   for (const c of checks.shouldNotReadChecks) {
     checkLines.push(`- ${c.wasRead ? "\u2717" : "\u2713"} Did not read ${c.file}`);
   }
+  checkLines.push(...formatReadBeforeEdit(checks));
   for (const c of checks.bashContainsChecks) {
     const detail = c.found && c.matchedCommand ? ` (matched: "${c.matchedCommand}")` : "";
     checkLines.push(`- ${c.found ? "\u2713" : "\u2717"} Bash command contains "${c.expected}"${detail}`);

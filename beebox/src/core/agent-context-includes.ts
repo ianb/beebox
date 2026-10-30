@@ -47,13 +47,28 @@ async function allowedRealRoots(boxRoot: string): Promise<string[]> {
   return roots;
 }
 
+/** An instruction file's text without its include-only lines, which {@link expandInstructionIncludes} expands. */
+export function withoutIncludeLines(content: string): string {
+  return content.replaceAll(INCLUDE_PATTERN, "").replaceAll(/\n{3,}/gu, "\n\n").trim();
+}
+
+/** Whether an instruction file has include-only lines for {@link expandInstructionIncludes} to expand. */
+export function hasIncludeLines(content: string): boolean {
+  return content.match(INCLUDE_PATTERN) !== null;
+}
+
 /** Expand include-only lines recursively, bounded to the box package. */
 export async function expandInstructionIncludes(options: {
   /** The root instruction file (`instructionFilePath(boxRoot, "")`, made absolute). */
   instructionPath: string;
   boxRoot: string;
+  /**
+   * Include targets already in the agent's context, skipped and added to. A
+   * caller that expands several instruction files into one context shares it.
+   */
+  seen?: Set<string> | undefined;
 }): Promise<string> {
-  const seen = new Set<string>();
+  const seen = options.seen ?? new Set<string>();
   const sections: string[] = [];
   const realRoots = await allowedRealRoots(options.boxRoot);
   const visit = async (path: string): Promise<void> => {

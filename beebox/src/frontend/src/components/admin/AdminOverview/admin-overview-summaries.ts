@@ -39,7 +39,7 @@ function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
-const ENGINE_LABELS = { claude: "Claude Code", codex: "Codex" } as const;
+const ENGINE_LABELS = { claude: "Claude Code", codex: "Codex", pi: "pi" } as const;
 
 export function summarizeAgentEngine(config: BoxConfig): AdminSectionStatus {
   const engine = ENGINE_LABELS[config.agentEngine];

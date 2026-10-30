@@ -8,10 +8,11 @@
  * slightly different fallback orders.
  */
 
-import { isChatModelAllowed, isOpenRouterModelId, type AddedModel } from "../shared/chat-models.js";
-import { modelTier, procedureTier, providerOf, resolveProcedureModel, type AgentEngine, type ProcedureModelName } from "../shared/agent-models.js";
+import { isChatModelAllowed, isOpenRouterModelId, runsAddedModels, type AddedModel } from "../shared/chat-models.js";
+import { hasProcedureTiers, modelTier, procedureTier, providerOf, resolveProcedureModel, type AgentEngine, type ProcedureModelName } from "../shared/agent-models.js";
 import { normalizeModelId } from "../shared/model-ids.js";
 import { loadAddedModels, loadAgentEngine, loadBoxModel, loadSmallModel } from "./box/config.js";
+import { piModelMissing } from "./provider-env/openrouter-chat.js";
 
 /** A chat's own model state: an explicit pick, or "whatever the box says". */
 export type ChatModelChoice =
@@ -47,6 +48,9 @@ const UNPINNED_DEFAULT_TIER = "strong";
  * `normalizeModelId`, and without that step it would fail the registry check
  * and read as "no policy".
  *
+ * pi has no tiers to translate by, so on pi only an added OpenRouter pin runs
+ * and any other pin reads as none (docs/implemented-plans/pi-box-engine.md, Track 2).
+ *
  * `null` means the box pinned nothing — this function translates a pin, it does
  * not invent one. What an unpinned box actually runs is {@link boxDefaultModel},
  * one level up; the small-pass slot answers the same question differently
@@ -60,6 +64,7 @@ export function resolveBoxModelForEngine(
   if (pinned === null) return null;
   const model = normalizeModelId(pinned);
   if (isChatModelAllowed(engine, { model, added })) return model;
+  if (!hasProcedureTiers(engine)) return null;
   const tier = modelTier(model);
   if (tier === null) return null;
   return resolveProcedureModel({ engine, model: tier, provider: providerOf(model) });
@@ -79,12 +84,16 @@ export function resolveBoxModelForEngine(
  * A pin that exists but names no known model still yields `null`: a box saying
  * something the policy cannot read is not the same as a box saying nothing, and
  * quietly substituting a default there would hide a misconfiguration.
+ *
+ * pi is the exception to "always a default": it has no model of its own, and
+ * any built-in one would spend without the owner adding it. An unpinned pi box
+ * has no default, and its runs refuse until the owner chooses one.
  */
 export function boxDefaultModel(
   engine: AgentEngine,
   { pinned, added }: { pinned: string | null; added: readonly AddedModel[] },
 ): string | null {
-  if (pinned === null) return resolveProcedureModel({ engine, model: UNPINNED_DEFAULT_TIER });
+  if (pinned === null) return hasProcedureTiers(engine) ? resolveProcedureModel({ engine, model: UNPINNED_DEFAULT_TIER }) : null;
   return resolveBoxModelForEngine(engine, { pinned, added });
 }
 
@@ -96,7 +105,7 @@ export function boxDefaultModel(
  * policy rather than to nothing.
  *
  * One exception keeps a pick the box no longer allows: an OpenRouter model the
- * owner removed from admin. Falling through would quietly change who answers
+ * owner removed from admin, on an engine that runs added models (claude, pi). Falling through would quietly change who answers
  * the chat, so the pick survives here and the spawn refuses it with the fix
  * (boxholder, 2026-09-19).
  */
@@ -107,7 +116,7 @@ export function resolveEffectiveModel(
   if (choice.kind === "explicit") {
     const explicit = normalizeModelId(choice.model);
     if (isChatModelAllowed(engine, { model: explicit, added })) return { model: explicit, source: "explicit" };
-    if (engine === "claude" && isOpenRouterModelId(explicit)) return { model: explicit, source: "explicit" };
+    if (runsAddedModels(engine) && isOpenRouterModelId(explicit)) return { model: explicit, source: "explicit" };
   }
   const fromPolicy = boxDefaultModel(engine, { pinned, added });
   if (fromPolicy !== null) return { model: fromPolicy, source: "default" };
@@ -143,7 +152,7 @@ export async function loadEffectiveBoxModel(boxRoot: string): Promise<string | n
  * The model the box's cheap structured passes run on — chat review, retro
  * observation, triage.
  *
- * Unlike the main policy this never returns null: a small pass always has an
+ * On claude and codex this never returns null: a small pass always has an
  * answer, and the answer defaults to the `efficient` tier for whichever engine
  * is running it. These passes used to name a provider-shaped nickname
  * (`"haiku"`) which the Codex delegate forwarded to the Codex SDK verbatim
@@ -154,6 +163,11 @@ export async function loadEffectiveBoxModel(boxRoot: string): Promise<string | n
  * such a box takes the default itself: background work follows the model the
  * owner chose instead of quietly needing a Claude login (boxholder,
  * 2026-10-15).
+ *
+ * pi has no efficient tier either. A pinned small model runs only if it is
+ * added, else the box default; with no default the answer is `null`, which the
+ * loaders below turn into the setup refusal. A first-party `smallModel` left
+ * from the box's claude days is a pin pi cannot run, so it reads as none.
  */
 export function resolveSmallModelForEngine(params: {
   engine: AgentEngine;
@@ -161,9 +175,10 @@ export function resolveSmallModelForEngine(params: {
   added: readonly AddedModel[];
   /** The box's effective default model — picks the efficient tier's provider when `pinned` is null. */
   boxDefault: string | null;
-}): string {
+}): string | null {
   const chosen = resolveBoxModelForEngine(params.engine, { pinned: params.pinned, added: params.added });
   if (chosen !== null) return chosen;
+  if (!hasProcedureTiers(params.engine)) return params.boxDefault;
   if (params.boxDefault !== null && providerOf(params.boxDefault) === "openrouter") return params.boxDefault;
   // No pinned small model: take the engine's efficient tier on the provider
   // the box's own default runs, so a GLM-defaulted box's cheap passes stay GLM
@@ -183,35 +198,54 @@ export function resolveSmallModelForEngine(params: {
  * stand in: `efficient` and `balanced` take the small model, `strong` and
  * `strongest` the default (boxholder, 2026-10-15). `small` is the resolved
  * small model, which is itself the default when the slot is unpinned.
+ *
+ * pi always uses the two slots, having no tier table. Either slot may be
+ * `null` there (no default chosen), and so may the answer.
  */
 export function resolveTierModel(params: {
   engine: AgentEngine;
   name: ProcedureModelName;
   boxDefault: string | null;
-  small: string;
-}): string {
+  small: string | null;
+}): string | null {
   const provider = providerOf(params.boxDefault ?? "");
-  if (params.engine === "claude" && params.boxDefault !== null && provider === "openrouter") {
+  const slots = !hasProcedureTiers(params.engine)
+    || (params.engine === "claude" && params.boxDefault !== null && provider === "openrouter");
+  if (slots) {
     const tier = procedureTier(params.name);
     return tier === "efficient" || tier === "balanced" ? params.small : params.boxDefault;
   }
   return resolveProcedureModel({ engine: params.engine, model: params.name, provider });
 }
 
-/** The box's small-pass model for its own engine. One read, one concrete id. */
-export async function loadEffectiveSmallModel(boxRoot: string): Promise<string> {
+async function loadSmallSlot(boxRoot: string): Promise<string | null> {
   const engine = await loadAgentEngine(boxRoot);
   const boxDefault = await loadEffectiveBoxModel(boxRoot);
   return resolveSmallModelForEngine({ engine, pinned: await loadSmallModel(boxRoot), added: await loadAddedModels(boxRoot), boxDefault });
 }
 
 /**
+ * The box's small-pass model for its own engine. One read, one concrete id. A
+ * pi box with no model for the slot refuses with the OpenRouter setup error.
+ */
+export async function loadEffectiveSmallModel(boxRoot: string): Promise<string> {
+  const model = await loadSmallSlot(boxRoot);
+  if (model === null) throw piModelMissing();
+  return model;
+}
+
+/**
  * Resolve procedure tiers for one run. The box config is read once, so every
- * step of a run sees the same policy.
+ * step of a run sees the same policy. A tier with no model (a pi box with no
+ * default) refuses when it is asked for, not before.
  */
 export async function loadTierResolver(boxRoot: string): Promise<(name: ProcedureModelName) => string> {
   const engine = await loadAgentEngine(boxRoot);
   const boxDefault = await loadEffectiveBoxModel(boxRoot);
-  const small = await loadEffectiveSmallModel(boxRoot);
-  return (name) => resolveTierModel({ engine, name, boxDefault, small });
+  const small = await loadSmallSlot(boxRoot);
+  return (name) => {
+    const model = resolveTierModel({ engine, name, boxDefault, small });
+    if (model === null) throw piModelMissing();
+    return model;
+  };
 }

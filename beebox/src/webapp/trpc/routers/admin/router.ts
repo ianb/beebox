@@ -9,7 +9,7 @@ import { agentAuthAdminProcedures } from "./agent-auth.js";
 import { openrouterAdminProcedures } from "./openrouter.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../../services/tailscale.js";
-import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, updateBoxConfigFields } from "../../../box-config-write.js";
+import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, PiDefaultModelRequiredError, updateBoxConfigFields } from "../../../box-config-write.js";
 import { isConfigurableModel, loadAddedModels } from "../../../../core/box/config.js";
 import { canonicalizeEmail, getLocalUser } from "../../../local-users.js";
 import { gmailAdminProcedures } from "./gmail.js";
@@ -18,6 +18,8 @@ import { passwordResetAdminProcedures } from "./password-resets.js";
 import { describeAllowedUsers } from "./user-details.js";
 import { getLoginGoogleClientCreds } from "../../../../google/auth.js";
 import { normalizeModelId } from "../../../../shared/model-ids.js";
+import { openRouterKeyUsable } from "../../../../core/openrouter.js";
+import { AGENT_ENGINES, type AgentEngine } from "../../../../shared/agent-models.js";
 
 /**
  * Shape of `_config/box.json`, validated on read (config is untrusted input).
@@ -30,19 +32,26 @@ const googleServicesSchema = z.object({
   drive: z.boolean().optional(),
 });
 
+/** Which engines the box offers. An object, not a record, so an unknown key is dropped rather than failing the read. */
+const enginesSchema = z.object({
+  claude: z.boolean().optional(),
+  codex: z.boolean().optional(),
+  pi: z.boolean().optional(),
+} satisfies Record<AgentEngine, z.ZodOptional<z.ZodBoolean>>);
+
 const boxConfigSchema = z.object({
   // Same fail-closed reading as `loadClaudeCodeTelemetry`: an invalid value is off.
   claudeCodeTelemetry: z.enum(["on", "off"]).default("on").catch("off"),
   // Codex analytics are opt-in (`loadCodexTelemetry`).
   codexTelemetry: z.enum(["on", "off"]).default("off").catch("off"),
-  agentEngine: z.enum(["claude", "codex"]).default("claude"),
+  agentEngine: z.enum(AGENT_ENGINES).default("claude"),
   // Deliberately a plain string, not an enum over the model registry: this is
   // a `parse` of the whole file, so a stale or hand-typed model would throw the
   // entire admin page away. The resolver (`core/model-policy.ts`) is the
   // boundary that rejects an unusable value; here it only needs to survive the
   // trip so the UI can show it back as unrecognized.
   agentModel: z.string().optional(),
-  engines: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional(),
+  engines: enginesSchema.optional(),
   allowedEmails: z.array(z.string()).default([]),
   publicUrl: z.string().nullable().default(null),
   googleServices: googleServicesSchema.default({}),
@@ -89,6 +98,8 @@ export const adminRouter = router({
       agentEngine: config.agentEngine,
       agentModel: config.agentModel === undefined ? null : normalizeModelId(config.agentModel),
       openrouterModels: await loadAddedModels(ctx.boxRoot),
+      // pi needs the key as well as an added model; a presence check, not a key read.
+      openrouterKeyGranted: await openRouterKeyUsable(ctx.boxRoot),
       // Absent means "only the default engine", the same rule loadEnabledEngines
       // applies — resolved here so the UI never has to re-derive it.
       engines: config.engines ?? { [config.agentEngine]: true },
@@ -110,7 +121,7 @@ export const adminRouter = router({
         .object({
           allowedEmails: z.array(z.string()).optional(),
           googleServices: googleServicesSchema.optional(),
-          agentEngine: z.enum(["claude", "codex"]).optional(),
+          agentEngine: z.enum(AGENT_ENGINES).optional(),
           /**
            * `null` clears the box's model policy. A model no engine offers is
            * refused here rather than saved: the resolver would drop it on every
@@ -119,7 +130,7 @@ export const adminRouter = router({
            * the mutation, which can read the box's list.
            */
           agentModel: z.string().nullable().optional(),
-          engines: z.object({ claude: z.boolean().optional(), codex: z.boolean().optional() }).optional(),
+          engines: enginesSchema.optional(),
           claudeCodeTelemetry: z.enum(["on", "off"]).optional(),
           codexTelemetry: z.enum(["on", "off"]).optional(),
         })
@@ -140,6 +151,9 @@ export const adminRouter = router({
         ...(input.engines === undefined ? {} : { engines: input.engines }),
         ...(input.claudeCodeTelemetry === undefined ? {} : { claudeCodeTelemetry: input.claudeCodeTelemetry }),
         ...(input.codexTelemetry === undefined ? {} : { codexTelemetry: input.codexTelemetry }),
+      }).catch((e: unknown) => {
+        if (e instanceof PiDefaultModelRequiredError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message, cause: e });
+        throw e;
       });
       if (result.commitError) {
         console.error(`[admin] box config was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);

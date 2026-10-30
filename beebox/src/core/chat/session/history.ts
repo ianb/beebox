@@ -30,7 +30,7 @@ import { isRecord } from "../../card-io.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
-import { readCodexSessionUpdatedAt } from "./codex-transcript/core.js";
+import { isAgentEngine } from "../../../shared/agent-models.js";
 
 const HISTORY_FILE = ".beebox/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".beebox/chat-session-id.json";
@@ -78,7 +78,7 @@ function parseSessionEntry(raw: unknown): SessionHistoryEntry | null {
   if (raw === null || typeof raw !== "object") return null;
   if (!("id" in raw) || typeof raw.id !== "string") return null;
   const engine = "engine" in raw ? raw.engine : "claude";
-  if (engine !== "claude" && engine !== "codex") return null;
+  if (!isAgentEngine(engine)) return null;
   const entry: SessionHistoryEntry = { id: raw.id, engine };
   // `""` is kept, not treated as absent: it is the box-root landmark, which
   // `appendHistory` and `getDirectoryForSession` both document as a real
@@ -310,51 +310,6 @@ export function sessionLogPathFor(boxRoot: string, entry: SessionHistoryEntry): 
 }
 
 
-
-/**
- * Find the most-recently-created session associated with a directory.
- * "Most recent" means later in the history file's session list — entries
- * are appended in creation order, so the last match wins.
- *
- * Pre-landmark sessions have no recorded `contextDir`. They're treated
- * as box-root chats, so a query for `""` (the root binding) matches
- * both empty-string entries and entries with no `contextDir` at all.
- */
-export async function getLastSessionForDirectory(boxRoot: string, contextDir: string): Promise<string | null> {
-  const entries = await loadHistoryEntries(boxRoot);
-  // Walk newest → oldest and skip ghost entries — history rows are written
-  // when the SDK first assigns an id (before any output is committed), so a
-  // turn that errors immediately leaves an entry pointing at a JSONL that
-  // never gets created. Returning the ghost id sends the user to a chat the
-  // SDK can't resume and silently fails. fs.access is cheap relative to
-  // user-facing latency on a "Chat" click.
-  //
-  // Testing caveat: this means tests that exercise this helper can't just
-  // call appendHistory — they must also seed an empty JSONL at the path
-  // resolveSessionLogPath() produces, or every entry looks like a ghost and
-  // the helper returns null. See test/core/chat/session/history.test.ts's
-  // seedSessionLog/cleanupSessionLogs helpers.
-  for (let i = entries.length - 1; i >= 0; i -= 1) {
-    const entry = entries[i];
-    if (!entry) continue;
-    const matches = entry.contextDir === contextDir || (contextDir === "" && entry.contextDir === undefined);
-    if (!matches) continue;
-    try {
-      if (entry.engine === "codex") await readCodexSessionUpdatedAt(boxRoot, entry.id);
-      else await fs.access(sessionLogPathFor(boxRoot, entry));
-      return entry.id;
-    } catch (_e) {
-      // Ghost entry — no log on disk. The fs.access rejection only tells us
-      // the file is absent (which is the signal we want), so we ignore the
-      // error object itself and log our own contextual warning instead. A
-      // recurring ghost-creation bug shows up as repeated skips for the
-      // same id across sessions.
-      console.warn(`[chat-session-history] Skipping ghost ${entry.engine} entry for ${contextDir === "" ? "<root>" : contextDir}: ${entry.id}`);
-      continue;
-    }
-  }
-  return null;
-}
 
 /**
  * Read the feature map persisted for a session, or null if no entry

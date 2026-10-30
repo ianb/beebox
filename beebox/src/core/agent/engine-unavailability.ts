@@ -12,11 +12,26 @@
  */
 
 import type { AgentEngine } from "../box/config.js";
+import { assertNever } from "../../shared/invariant.js";
 
-/** The account/provider a box's `agentEngine` runs on. Same values as
- * {@link AgentEngine} today; a distinct alias because unavailability is
- * account-scoped, not box-scoped. */
-export type EngineProvider = AgentEngine;
+/** The machine-wide accounts whose quota this store tracks. Unavailability is
+ * account-scoped, not box-scoped, so pi is absent: it runs on a key granted
+ * per box (docs/implemented-plans/pi-box-engine.md, Track 4). */
+export const ENGINE_PROVIDERS = ["claude", "codex"] as const satisfies readonly AgentEngine[];
+export type EngineProvider = (typeof ENGINE_PROVIDERS)[number];
+
+/** The tracked account an engine runs on, or null when it has none. */
+export function engineProvider(engine: AgentEngine): EngineProvider | null {
+  switch (engine) {
+    case "claude":
+    case "codex":
+      return engine;
+    case "pi":
+      return null;
+    default:
+      return assertNever(engine);
+  }
+}
 
 export interface EngineUnavailability {
   provider: EngineProvider;

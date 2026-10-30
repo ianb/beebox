@@ -7,7 +7,9 @@ onlyBuiltDependencies:
   - workerd
 
 ignoredBuiltDependencies:
+  - "@google/genai"
   - "@ianbicking/personal-vibe-check"
+  - protobufjs
   - spawn-sync
 
 packages:

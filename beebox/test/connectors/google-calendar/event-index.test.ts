@@ -92,10 +92,9 @@ const icsFiles = async (dir: string): Promise<string[]> =>
 //
 // Both calendars return an event called `evt-shared`, on the same day. They are
 // different events — a standup at work, a dentist appointment at home — and this
-// is the ordinary case: one invitation copied into both calendars. The natural
-// file name (`{date}_{shortId}.ics`) carries neither the calendar nor anything
-// else that separates them, so the second event's name is disambiguated with a
-// short hash of its calendar id. Each event ends up with its own file.
+// is the ordinary case: one invitation copied into both calendars. Each calendar
+// has its own folder (`work.attach/`, `home.attach/`), so each event gets its own
+// file and its own entry. Keyed by the bare id, the two would share one entry.
 void test("Both calendars return an event called evt-shared, on the same day.", async (t) => {
   t.teardown(async () => {
     try {
@@ -129,14 +128,13 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   });
 
   const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
-  const dir = join(box.root, "_content/calendar");
+  const workDir = join(box.root, "_content/calendar/work.attach");
+  const dir = join(box.root, "_content/calendar/home.attach");
   const first = await connector.sync();
-  t.check({ success: first.success, files: await icsFiles(dir) }, {
+  t.check({ success: first.success, work: await icsFiles(workDir), home: await icsFiles(dir) }, {
     success: true,
-    files: [
-      "2026-06-10_t-shared.ics",
-      "2026-06-10_t-shared_4ea140.ics",
-    ],
+    work: ["2026-06-10_Standup_t-shared.ics"],
+    home: ["2026-06-10_Dentist_t-shared.ics"],
   });
 
   // Both are tracked, under one key each. Keyed by the bare id, the second sync
@@ -149,8 +147,9 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
 
   // Each file names the calendar it came from:
 
-  const workIcs = await readFile(join(dir, "2026-06-10_t-shared.ics"), "utf-8");
-  const homeIcs = await readFile(join(dir, "2026-06-10_t-shared_4ea140.ics"), "utf-8");
+  const workIcs = await readFile(join(workDir, "2026-06-10_Standup_t-shared.ics"), "utf-8");
+  const homeFile = "2026-06-10_Dentist_t-shared.ics";
+  const homeIcs = await readFile(join(dir, homeFile), "utf-8");
   t.check(
     {
       work: workIcs.includes("X-BBX-CALENDAR-ID:work"),
@@ -169,7 +168,9 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   // still reconciles ITS `evt-shared`, which must not make the pass skip home's.
 
   calendar.silent.add("home");
-  await writeFile(join(dir, "2026-06-10_t-shared_4ea140.ics"), homeIcs.replace("SUMMARY:Dentist", "SUMMARY:Dentist MINE"));
+  // The title edit is pushed by the pending-edit pass, which leaves the name
+  // alone; renaming is the pull's job.
+  await writeFile(join(dir, homeFile), homeIcs.replace("SUMMARY:Dentist", "SUMMARY:Dentist MINE"));
 
   const second = await connector.sync();
   t.check(
@@ -202,17 +203,19 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   }];
 
   const third = await connector.sync();
+  // Home's pull returns the pushed title, so its file is renamed to match.
+  const renamedHome = "2026-06-10_Dentist_MINE_t-shared.ics";
   t.check(
     {
       success: third.success,
-      files: await icsFiles(dir),
+      work: await icsFiles(workDir),
+      home: await icsFiles(dir),
       tracked: await trackedKeys(box.root),
     },
     {
     success: true,
-    files: [
-      "2026-06-10_t-shared_4ea140.ics",
-    ],
+    work: [],
+    home: [renamedHome],
     tracked: [
       "evt-shared home",
     ],
@@ -222,7 +225,7 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   // ## Two entries naming one file are deduped on the way in
   //
   // A box that synced under the old bare-id keys can have written two events into
-  // one file. Every pass downstream assumes one file per entry — the pending-edit
+  // one file. Within one calendar's folder that is still possible. Every pass downstream assumes one file per entry — the pending-edit
   // pass patches "the" event a file belongs to — so the index is deduped once per
   // sync. Here neither entry records a hash, so there is nothing to choose on and
   // index order decides. Untracking the loser is safe because the file stays tracked
@@ -233,8 +236,8 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
     version: 2,
     syncTokens: {},
     eventFiles: {
-      "evt-shared home": { filename: "2026-06-10_t-shared_4ea140.ics", calendarId: "home" },
-      "evt-ghost work": { filename: "2026-06-10_t-shared_4ea140.ics", calendarId: "work" },
+      "evt-shared home": { filename: renamedHome, calendarId: "home" },
+      "evt-ghost home": { filename: renamedHome, calendarId: "home" },
     },
   };
   await writeFile(statePath, JSON.stringify(collided, null, 2));
@@ -244,7 +247,7 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
     {
       success: deduped.success,
       blamed: deduped.error?.includes(
-        "_content/calendar/2026-06-10_t-shared_4ea140.ics (stale-cleanup, local: two tracked events named one file; this entry was untracked)",
+        `_content/calendar/home.attach/${renamedHome} (stale-cleanup, local: two tracked events named one file; this entry was untracked)`,
       ),
       tracked: await trackedKeys(box.root),
     },
@@ -263,22 +266,21 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   // and patches into the wrong calendar's event: the exact failure this dedupe
   // exists to prevent.
 
-  const homeFile = "2026-06-10_t-shared_4ea140.ics";
-  const homeHash = contentHash(await readFile(join(dir, homeFile), "utf-8"));
+  const homeHash = contentHash(await readFile(join(dir, renamedHome), "utf-8"));
   await writeFile(statePath, JSON.stringify({
     version: 2,
     syncTokens: {},
     eventFiles: {
       // First in order, and NOT what the file holds.
-      "evt-ghost work": { filename: homeFile, calendarId: "work", contentHash: "0000000000000000" },
-      "evt-shared home": { filename: homeFile, calendarId: "home", contentHash: homeHash },
+      "evt-ghost home": { filename: renamedHome, calendarId: "home", contentHash: "0000000000000000" },
+      "evt-shared home": { filename: renamedHome, calendarId: "home", contentHash: homeHash },
     },
   }, null, 2));
 
   const byHash = await connector.sync();
   t.check(
     {
-      blamed: byHash.error?.includes(`_content/calendar/${homeFile} (stale-cleanup`),
+      blamed: byHash.error?.includes(`_content/calendar/home.attach/${renamedHome} (stale-cleanup`),
       tracked: await trackedKeys(box.root),
     },
     {
@@ -323,12 +325,11 @@ void test("State written before the key change is keyed by the bare event id and
   });
   const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
   const seeded = await connector.sync();
-  const dir = join(box.root, "_content/calendar");
+  const dir = join(box.root, "_content/calendar/Main.attach");
+  const oldFile = "2026-06-08_Standing_meeting_evt-old.ics";
   t.check({ success: seeded.success, files: await icsFiles(dir) }, {
     success: true,
-    files: [
-      "2026-06-08_evt-old.ics",
-    ],
+    files: [oldFile],
   });
 
   // Rewrite the state the way the old connector wrote it: bare-id keys, no version
@@ -346,7 +347,7 @@ void test("State written before the key change is keyed by the bare event id and
   await writeFile(statePath, JSON.stringify({
     syncTokens: {},
     eventFiles: {
-      "evt-old": "2026-06-08_evt-old.ics",
+      "evt-old": oldFile,
       "evt-other": { filename: "2026-06-20_vt-other.ics", calendarId: "primary" },
     },
   }, null, 2));
@@ -373,7 +374,7 @@ void test("State written before the key change is keyed by the bare event id and
     success: true,
     remoteEvents: 1,
     files: [
-      "2026-06-08_evt-old.ics",
+      oldFile,
       "2026-06-20_vt-other.ics",
     ],
     tracked: [
