@@ -1,6 +1,6 @@
 ---
 title: "Offer browser Web Speech as a live-transcription option, and as the no-key fallback"
-workstream: unattached
+workstream: browser-live-stt
 area: beebox
 labels: [voice, transcription]
 filed-by: agent
@@ -99,3 +99,10 @@ After reviewing the options, the boxholder chose:
 Background from the 2026-10-06 survey: Firefox has no Web Speech recognition;
 Chrome without `processLocally` sends audio to Google; Safari reportedly works
 offline only for English.
+
+## Findings (2026-10-30)
+
+[Measured results and a recommendation](../../research/browser-live-stt/README.md).
+Chrome desktop's on-device recognizer works for live text alongside the HQ
+recording, and a flagged prototype runs end to end. Safari cannot require
+on-device recognition, which revises the 2026-10-06 decision to include it.

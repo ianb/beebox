@@ -1,0 +1,19 @@
+<!doctype html><meta charset=utf-8><title>web speech probe</title>
+<script type=module>
+const q = new URLSearchParams(location.search);
+const lang = q.get("lang") ?? "en-US";
+const t0 = performance.now();
+const log = (ev, data = {}) => fetch("/log", { method: "POST", body: JSON.stringify({ t: Math.round(performance.now() - t0), ev, ...data }) });
+const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+await log("ua", { ua: navigator.userAgent, hasSR: !!window.SpeechRecognition, hasWebkit: !!window.webkitSpeechRecognition, proto: SR ? Object.getOwnPropertyNames(SR.prototype) : [], statics: SR ? Object.getOwnPropertyNames(SR) : [] });
+if (!SR) { await log("end"); throw 0; }
+if (SR.available) {
+  for (const processLocally of [true, false]) await log("available", { processLocally, result: await SR.available({ langs: [lang], processLocally }).catch(e => String(e)) });
+}
+if (q.get("install") && SR.install) {
+  const s = performance.now();
+  const ok = await SR.install({ langs: [lang], processLocally: true }).catch(e => String(e));
+  await log("install", { ok, ms: Math.round(performance.now() - s), after: await SR.available({ langs: [lang], processLocally: true }).catch(e => String(e)) });
+}
+await log("end");
+</script>

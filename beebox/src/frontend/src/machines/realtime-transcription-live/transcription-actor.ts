@@ -30,7 +30,7 @@
  * A stalled-but-not-closed transport (a phone clinging to dying wifi) keeps
  * `ws.readyState === OPEN` while `ws.send()` piles into `bufferedAmount`; the
  * liveness watchdog treats a `bufferedAmount` stuck above 0 for
- * {@link STALL_TIMEOUT_MS} (or a `window 'offline'` event) as a drop.
+ * 2.5 s (see LivenessWatchdog; or a `window 'offline'` event) as a drop.
  *
  * ## Mic resilience
  *
@@ -47,6 +47,7 @@ import { enqueueChunk, enqueueCreate, enqueueDiscard, enqueueFinalize } from "..
 import { startStagedRecording, type StagedRecording } from "../../lib/audio/voice-stager";
 import { TranscriptionServiceResolver } from "../../lib/audio/transcription-config-cache";
 import { MicCapture } from "./transcription-mic";
+import { startBrowserSpeech, type BrowserSpeechLink } from "./transcription-browser-speech";
 import {
   type ConnectionHandle,
   type ServiceCallbacks,
@@ -58,6 +59,7 @@ import {
   startVoxtralConnection,
 } from "./transcription-connections";
 import { openOnce } from "./transcription-wait-for-open";
+import { LivenessWatchdog } from "./transcription-watchdog";
 import { ReplayRing } from "./transcription-replay-ring";
 import { SegmentTranscript } from "./transcription-segment-text";
 import type { TranscriptionService } from "@shared/transcription-services.js";
@@ -67,13 +69,6 @@ type SendBack = (event: TranscriptionEvent) => void;
 
 const VOICE_STAGING_SINK = { enqueueCreate, enqueueChunk, enqueueFinalize, enqueueDiscard };
 
-/** Poll interval for the liveness watchdog. */
-const WATCHDOG_INTERVAL_MS = 500;
-/**
- * How long `ws.bufferedAmount` may stay above 0 before we judge the socket
- * stalled. A healthy socket drains our ~300ms PCM frames near-instantly.
- */
-const STALL_TIMEOUT_MS = 2500;
 /** Per-attempt cap on waiting for a socket to open. */
 const OPEN_TIMEOUT_MS = 2500;
 /**
@@ -88,11 +83,6 @@ const REPLAY_CAP_CHUNKS = 100;
  * re-transcribe up to 30 s the live text already holds.
  */
 const REPLAY_PAD_CHUNKS = 10;
-/**
- * How long the worklet may deliver no PCM frames before we judge the capture
- * pipeline dead (catch-all behind MicCapture's track `ended`/`mute` handlers).
- */
-const MIC_SILENT_TIMEOUT_MS = 4000;
 /** Full-jitter backoff between failed connect attempts; the loop never gives up on its own. */
 const RETRY_BACKOFF = { baseMs: 400, capMs: 30_000 } as const;
 /**
@@ -112,6 +102,8 @@ class TranscriptionSession {
   private handedOff = false;
   private cancelled = false;
   private connection: ConnectionHandle | null = null;
+  /** Experimental: on-device live text in place of `connection` (lib/audio/live-engine.ts). */
+  private browserSpeech: BrowserSpeechLink | null = null;
   private mic: MicCapture | null = null;
   private disposed = false;
   /**
@@ -127,14 +119,21 @@ class TranscriptionSession {
   private linking = false;
   /** Live text was abandoned for this segment (a close/error a retry can't fix). */
   private liveAbandoned = false;
-  /** Last time the worklet delivered a PCM frame (mic liveness watchdog). */
-  private lastPcmAt = 0;
   /** Speech is playing: frames are recorded and sent as silence (HOLD). */
-  held = false;
+  private held = false;
   /** An intentional stop is in progress: a close now is the end of stream. */
   private stopping = false;
-  private watchdogId: ReturnType<typeof setInterval> | null = null;
-  private lastDrainedAt = 0;
+  private readonly watchdog = new LivenessWatchdog({
+    idle: () => this.disposed || this.stopping,
+    micPresent: () => this.mic !== null,
+    // beginRecovery self-guards, so re-triggering while recovering is a no-op.
+    onMicSilent: () => void this.mic?.beginRecovery(),
+    socket: () => this.connection?.ws,
+    onStalled: (bufferedAmount) => {
+      console.warn(`[realtime-transcription] socket stalled mid-recording (bufferedAmount=${String(bufferedAmount)}) — reconnecting`);
+      this.dropLink();
+    },
+  });
   private readonly callbacks: ServiceCallbacks = {
     onTextUpdate: ({ finalText, interimText, finalWords }) => {
       if (this.disposed) return;
@@ -147,7 +146,7 @@ class TranscriptionSession {
       this.sendBack({ type: "TRANSCRIPTION_DONE", text: this.text.textWith(text ?? ""), recording: this.handOff() });
     },
     onServerError: (message) => {
-      if (this.disposed || !this.connection) return;
+      if (this.disposed || (!this.connection && !this.browserSpeech)) return;
       console.error(`[realtime-transcription] service error — live text off for this segment: ${message}`);
       this.abandonLive({ type: "SERVER_ERROR", message });
     },
@@ -166,13 +165,6 @@ class TranscriptionSession {
   private handOff(): StagedRecording {
     this.handedOff = true;
     return this.recording;
-  }
-
-  private stopWatchdog() {
-    if (this.watchdogId !== null) {
-      clearInterval(this.watchdogId);
-      this.watchdogId = null;
-    }
   }
 
   private startConnection(service: TranscriptionService): Promise<ConnectionHandle> {
@@ -215,28 +207,6 @@ class TranscriptionSession {
     this.sendBack({ type: "TRANSCRIPTION_DONE", text: this.text.textWith(finalFn()), words, recording: this.handOff() });
   }
 
-  private startWatchdog() {
-    this.stopWatchdog();
-    this.lastDrainedAt = performance.now();
-    this.lastPcmAt = performance.now();
-    this.watchdogId = setInterval(() => {
-      if (this.disposed || this.stopping) return;
-      // beginRecovery self-guards, so re-triggering while recovering is a no-op.
-      if (this.mic && performance.now() - this.lastPcmAt > MIC_SILENT_TIMEOUT_MS) {
-        void this.mic.beginRecovery();
-        return;
-      }
-      const ws = this.connection?.ws;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return; // onclose owns real closes
-      if (ws.bufferedAmount === 0) {
-        this.lastDrainedAt = performance.now();
-      } else if (performance.now() - this.lastDrainedAt > STALL_TIMEOUT_MS) {
-        console.warn(`[realtime-transcription] socket stalled mid-recording (bufferedAmount=${ws.bufferedAmount}) — reconnecting`);
-        this.dropLink();
-      }
-    }, WATCHDOG_INTERVAL_MS);
-  }
-
   /** A live socket went away: keep recording, and reconnect. */
   private dropLink() {
     if (!this.connection || this.disposed || this.stopping) return;
@@ -257,6 +227,7 @@ class TranscriptionSession {
     this.sendTextNow();
     discardSocket(this.connection);
     this.connection = null;
+    this.browserSpeech?.detach();
     this.sendBack(event);
   }
 
@@ -316,7 +287,7 @@ class TranscriptionSession {
     this.attachActorHandlers(next.ws);
     if (this.text.connected({ covered: this.replay.coversGap() })) this.sendTextNow();
     for (const frame of this.replay.sinceGap()) next.sendPcm(frame);
-    this.lastDrainedAt = performance.now();
+    this.watchdog.noteDrained();
     const first = !this.connectedFired;
     this.connectedFired = true;
     // A mic mid-recovery owns the next event (see onMicRestored).
@@ -334,7 +305,7 @@ class TranscriptionSession {
     try {
       this.mic = new MicCapture({
         onPcm: (captured) => {
-          this.lastPcmAt = performance.now();
+          this.watchdog.notePcm();
           // Held: same-length silence keeps the recording's timeline and the
           // live socket going without the speech the mic hears.
           const samples = this.held ? new ArrayBuffer(captured.byteLength) : captured;
@@ -349,7 +320,7 @@ class TranscriptionSession {
         },
         onMicRestored: () => {
           if (this.disposed || this.stopping) return;
-          this.lastPcmAt = performance.now();
+          this.watchdog.notePcm();
           this.sendBack(this.connection ? { type: "CONNECTION_RESTORED" } : { type: "MIC_LIVE" });
         },
       });
@@ -368,9 +339,24 @@ class TranscriptionSession {
       return;
     }
     this.sendBack({ type: "MIC_LIVE" });
-    this.startWatchdog();
+    this.watchdog.start();
     window.addEventListener("offline", this.onOffline);
-    this.beginLinking();
+    this.browserSpeech = await startBrowserSpeech({
+      track: () => this.mic?.speechTrack({ held: this.held }) ?? null,
+      callbacks: this.callbacks,
+      stillWanted: () => !this.disposed && !this.stopping,
+    });
+    if (this.browserSpeech) {
+      this.text.connected({ covered: true });
+      this.sendBack({ type: "WS_CONNECTED" });
+    } else if (!this.isDisposed()) {
+      this.beginLinking();
+    }
+  }
+
+  setHeld(held: boolean) {
+    this.held = held;
+    this.mic?.setSpeechHeld(held);
   }
 
   stop() {
@@ -378,7 +364,8 @@ class TranscriptionSession {
     // `stopping` makes a close from here on the end of stream, and ends the loop.
     this.stopping = true;
     this.linking = false;
-    this.stopWatchdog();
+    this.watchdog.stop();
+    this.browserSpeech?.finish();
     if (this.mic) this.mic.stopCapture();
     if (this.connection) this.connection.endStream();
     // Finalize now rather than waiting on the socket's transcription.done
@@ -407,7 +394,7 @@ class TranscriptionSession {
     this.disposed = true;
     this.linking = false;
     this.settleRecording();
-    this.stopWatchdog();
+    this.watchdog.stop();
     window.removeEventListener("offline", this.onOffline);
     if (this.mic) {
       this.mic.dispose();
@@ -415,6 +402,7 @@ class TranscriptionSession {
     }
     discardSocket(this.connection);
     this.connection = null;
+    this.browserSpeech?.detach();
   }
 }
 
@@ -425,7 +413,7 @@ export const transcriptionActor = fromCallback<TranscriptionActorCommand, Transc
 
     receive((event) => {
       if (event.type === "STOP") session.stop();
-      else if (event.type === "HOLD") session.held = event.held;
+      else if (event.type === "HOLD") session.setHeld(event.held);
       else session.cancel();
     });
 
