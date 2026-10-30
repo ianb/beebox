@@ -314,13 +314,13 @@ void test("End to end:", async (t) => {
 // A box engine's browser host runs agent-browser from the same worktree
 // `node_modules` as `bin/browse`, and `bin/browse` reaps every daemon of its
 // worktree that its own socket dir does not vouch for. The box browser's pid
-// files, under `<BBX_STATE_DIR>/browser/<slug>-<key>/sock/`, vouch for its
+// files, under `<BBX_STATE_DIR>/browser/<key>/sock/`, vouch for its
 // daemons, so a `bin/browse` call no longer kills the page a person is using
 // (shared-browser plan, Track B; seen in G1). An unvouched daemon still goes.
 void test("bin/browse's reaper spares daemons a box browser's pid files vouch for", async (t) => {
   const boxDaemon = await browserFor("box-wt");
   const orphan = await browserFor("box-wt");
-  const sockDir = join(home, ".local/share/beebox/browser/test1-0123abcd/sock");
+  const sockDir = join(home, ".local/share/beebox/browser/0123abcd/sock");
   await mkdir(sockDir, { recursive: true });
   await writeFile(join(sockDir, "box.pid"), `${boxDaemon}\n`);
   const script = `import { reclaimWorktreeBrowsers } from ${JSON.stringify(join(repoRoot, "bin/process-cleanup.ts"))};

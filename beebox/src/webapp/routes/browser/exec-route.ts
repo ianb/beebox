@@ -20,24 +20,24 @@ import { verifyAgentBearer } from "../../../core/agent/token.js";
 import { sendBrowserCommand, BrowserCommandSocketError } from "../../../core/browser/command-socket.js";
 import { checkExecArgs, EXEC_BODY } from "../../../core/browser/exec-args.js";
 import { BrowserHostFailedError, BrowserNotInstalledError, ensureBrowserHost } from "../../../core/browser/host/start.js";
+import { BrowserPathTooLongError } from "../../../core/browser/paths.js";
 import type { Services } from "../../../services/container.js";
 
 export interface BrowserExecRouteContext {
   readonly server: FastifyInstance;
   readonly boxRoot: string;
-  readonly boxSlug: string;
   readonly services: Services;
 }
 
 /** The status and `{ error }` body for a failure to reach the host, or null for an unexpected error. */
 function hostFailure(e: unknown): { status: number; error: string } | null {
-  if (e instanceof BrowserNotInstalledError) return { status: 503, error: e.message };
+  if (e instanceof BrowserNotInstalledError || e instanceof BrowserPathTooLongError) return { status: 503, error: e.message };
   if (e instanceof BrowserHostFailedError || e instanceof BrowserCommandSocketError) return { status: 502, error: e.message };
   return null;
 }
 
 export function registerBrowserExecRoute(ctx: BrowserExecRouteContext): void {
-  const { server, boxRoot, boxSlug, services } = ctx;
+  const { server, boxRoot, services } = ctx;
   const ensureHost = services.browserHost ?? ensureBrowserHost;
 
   server.post<{ Body: unknown }>("/api/browser/exec", async (request, reply) => {
@@ -53,7 +53,7 @@ export function registerBrowserExecRoute(ctx: BrowserExecRouteContext): void {
     const check = checkExecArgs(body.data.args);
     if (!check.ok) return reply.status(400).send({ error: check.message });
     try {
-      const host = await ensureHost({ boxRoot, slug: boxSlug });
+      const host = await ensureHost({ boxRoot });
       return reply.status(200).send(await sendBrowserCommand(host.paths.cliSocket, body.data.args));
     } catch (e) {
       const failure = hostFailure(e);

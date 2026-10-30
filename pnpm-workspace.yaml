@@ -1,8 +1,8 @@
 onlyBuiltDependencies:
   - "@googleworkspace/cli"
   # 0.39.2 ships its native binaries without the execute bit; its postinstall
-  # sets it (patched below to do only that). bin/browse's 0.27.0 ships them
-  # executable, so its script would only print.
+  # sets it (patched below to do only that). bin/browse's 0.41.0 starts through
+  # the package's Node wrapper, which sets the bit itself.
   - agent-browser@0.39.2
   - esbuild
   - sharp
@@ -10,7 +10,7 @@ onlyBuiltDependencies:
   - workerd
 
 ignoredBuiltDependencies:
-  - agent-browser@0.27.0
+  - agent-browser@0.41.0
   - "@google/genai"
   - "@ianbicking/personal-vibe-check"
   - protobufjs

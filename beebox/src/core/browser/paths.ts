@@ -1,7 +1,7 @@
 /**
  * Where a box's browser keeps its files (docs/plans/shared-browser.md, Track B).
  *
- * Everything lives under `<BBX_STATE_DIR>/browser/<slug>-<key>/`: outside the
+ * Everything lives under `<BBX_STATE_DIR>/browser/<key>/`: outside the
  * box's git repository (cookies and logins must never be committed) and
  * outside `_tmp/` (swept after seven days, which would log the person out).
  * On a unit host `BBX_STATE_DIR` is in the box user's own home
@@ -11,8 +11,10 @@
  * `BBX_STATE_DIR` is per OS user, not per box. In dev every worktree has its
  * own clone of `test1`, all with the slug `test1`, so the slug alone would give
  * them one shared profile, and one worktree's browser start would stop
- * another's. `<key>` is a short hash of the box root, which separates them;
- * the slug keeps the directory readable.
+ * another's. `<key>` is a short hash of the box root, which separates them.
+ * The slug stays out of the name: on a unit host it is already in the state
+ * directory, and a second copy put a box with an 18-letter name over the socket
+ * limit (2026-10-30).
  *
  * agent-browser's daemon listens on `<socketDir>/<session>.sock`. A Unix
  * socket path has a hard length limit (103 bytes on macOS, 107 on Linux), and
@@ -30,7 +32,7 @@ export const BOX_BROWSER_SESSION = "box";
 const MAX_SOCKET_PATH_BYTES = 100;
 
 export interface BrowserPaths {
-  /** `<state>/browser/<slug>-<key>`, the parent of everything below. */
+  /** `<state>/browser/<key>`, the parent of everything below. */
   readonly root: string;
   /** Chromium's user-data directory: cookies, logins, site settings. */
   readonly profile: string;
@@ -65,15 +67,13 @@ export function boxRootKey(boxRoot: string): string {
 export interface BrowserBox {
   /** The box's root directory; its hash keys the browser directory. */
   readonly boxRoot: string;
-  /** The box's URL slug, kept in the directory name for readability. */
-  readonly slug: string;
   /** The state directory (`BBX_STATE_DIR` in production code). */
   readonly stateDir: string;
 }
 
 /** The browser paths for one box. */
-export function browserPaths({ boxRoot, slug, stateDir }: BrowserBox): BrowserPaths {
-  const root = path.join(stateDir, "browser", `${slug}-${boxRootKey(boxRoot)}`);
+export function browserPaths({ boxRoot, stateDir }: BrowserBox): BrowserPaths {
+  const root = path.join(stateDir, "browser", boxRootKey(boxRoot));
   const socketDir = path.join(root, "sock");
   const relaySocket = path.join(root, "dashboard.sock");
   const cliSocket = path.join(root, "cli.sock");
