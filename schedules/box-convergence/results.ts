@@ -124,7 +124,9 @@ export interface ConvergenceAlert {
  * even when every box it did check is clean.
  *
  * `check-failed` carries checks that could not run. It says nothing about the
- * box, so it is separate from `unconverged` and from connector warnings.
+ * box, so it is separate from `unconverged` and from connector warnings. It
+ * resolves only on a run with complete coverage: a run that skipped a box has
+ * not shown that its check recovered.
  *
  * `prod-connector-activity` carries production connectors that are quiet or
  * failing (`connectorFindings`). It resolves only on a run that read every
@@ -168,6 +170,7 @@ export function reportPlan(input: {
   }
   const keep: string[] = alerts.map((alert) => alert.condition);
   if (!input.convergenceCoverage && !keep.includes("unconverged")) keep.push("unconverged");
+  if ((!input.convergenceCoverage || !input.connectorCoverage) && !keep.includes("check-failed")) keep.push("check-failed");
   if (!input.connectorCoverage && !keep.includes("prod-connector-activity")) keep.push("prod-connector-activity");
   return { alerts, keep };
 }

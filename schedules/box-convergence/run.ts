@@ -67,7 +67,7 @@ async function inspectOrApply(root: string, where: "local" | "prod"): Promise<st
   const unreachable = where === "prod" ? sshUnreachable(outcome.exitCode, outcome.output) : null;
   if (unreachable !== null) return unreachable;
   if (outcome.timedOut) {
-    findings.push(`${where} ${root}: Timed out; migration remains incomplete`);
+    convergenceCheckFailed(`${where} ${root}: Timed out; migration remains incomplete`);
     return null;
   }
   const failure = checkFailure(outcome.output, outcome.exitCode);
@@ -127,6 +127,8 @@ async function readConnectorHealth(root: string): Promise<boolean> {
   const outcome = await execChild({ file: ssh, args: [prodBoxCommand(root, { cliArgs: ["health", "--json", "--box", root], timeoutSeconds: 100 })] }, {
     cwd: REPO_ROOT, env, timeoutMs: HEALTH_TIMEOUT_MS, input: null, logFile: null,
   });
+  const unreachable = sshUnreachable(outcome.exitCode, outcome.output);
+  if (unreachable !== null) throw new ProdUnreachableError(unreachable);
   const warnings = connectorWarnings(outcome.output);
   if (warnings === null) {
     checkFailures.push(`prod ${root}: health unreadable (exit ${String(outcome.exitCode)}${outcome.timedOut ? ", timed out" : ""}): ${outcome.output.slice(-300)}`);
@@ -207,6 +209,7 @@ async function main(): Promise<void> {
       if (unreachable !== null) break;
       try { if (!await readConnectorHealth(root)) connectorCoverage = false; }
       catch (error) {
+        if (error instanceof ProdUnreachableError) throw error;
         connectorCoverage = false;
         checkFailures.push(`prod ${root}: health unreadable: ${String(error)}`);
       }

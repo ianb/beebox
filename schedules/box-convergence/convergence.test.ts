@@ -21,10 +21,10 @@ test("findings are one standing condition whatever boxes they name", () => {
 test("a clean run resolves everything, but not when production went unchecked", () => {
   assert.deepEqual(reportPlan({ checkFailures: [], findings: [], unreachableDetail: null, convergenceCoverage: true, connectorFindings: [], connectorCoverage: true }), { alerts: [], keep: [] });
   const offline = reportPlan({ checkFailures: [], findings: [], unreachableDetail: null, convergenceCoverage: false, connectorFindings: [], connectorCoverage: false });
-  assert.deepEqual(offline, { alerts: [], keep: ["unconverged", "prod-connector-activity"] });
+  assert.deepEqual(offline, { alerts: [], keep: ["unconverged", "check-failed", "prod-connector-activity"] });
   const longOffline = reportPlan({ checkFailures: [], findings: [], unreachableDetail: "Production unreachable for 25h: line", convergenceCoverage: false, connectorFindings: [], connectorCoverage: false });
   assert.deepEqual(longOffline.alerts.map((alert) => alert.condition), ["prod-unreachable"]);
-  assert.deepEqual(longOffline.keep, ["prod-unreachable", "unconverged", "prod-connector-activity"]);
+  assert.deepEqual(longOffline.keep, ["prod-unreachable", "unconverged", "check-failed", "prod-connector-activity"]);
 });
 test("production connector warnings are one standing condition, resolved only by complete coverage", () => {
   const warned = reportPlan({ checkFailures: [], findings: [], unreachableDetail: null, convergenceCoverage: true,
@@ -39,6 +39,9 @@ test("production connector warnings are one standing condition, resolved only by
   });
   assert.deepEqual(reportPlan({ checkFailures: [], findings: [], unreachableDetail: null, convergenceCoverage: true, connectorFindings: [], connectorCoverage: true }),
     { alerts: [], keep: [] });
+  // Health unread for a box: a check-failed alert from an earlier run must not resolve.
+  assert.deepEqual(reportPlan({ checkFailures: [], findings: [], unreachableDetail: null, convergenceCoverage: true,
+    connectorFindings: [], connectorCoverage: false }).keep, ["check-failed", "prod-connector-activity"]);
   // One unreadable box leaves convergence covered, but the connector condition stays open:
   assert.deepEqual(reportPlan({ checkFailures: ["prod /b: health unreadable"], findings: [], unreachableDetail: null, convergenceCoverage: true,
     connectorFindings: [], connectorCoverage: false }).keep, ["check-failed", "prod-connector-activity"]);
