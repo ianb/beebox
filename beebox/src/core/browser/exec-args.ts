@@ -9,7 +9,8 @@
  * strings is parsed as a separate command, so `batch "connect wss://x"` would
  * get past a check on the first word. The list is exact tokens and the
  * `--flag=value` form; it is a refusal list, so a flag missing from it is
- * allowed through.
+ * allowed through. `--namespace` picks another daemon socket directory, so
+ * another set of sessions.
  *
  * To find the subcommand the check skips the value that follows a
  * value-taking global flag (`--max-output 5000 open ...`); without that, a
@@ -18,6 +19,7 @@
  */
 
 import { z } from "zod";
+import { BOX_BROWSER_SESSION } from "./paths.js";
 
 /** Shape of the exec route's request body. */
 export const EXEC_BODY = z.object({ args: z.array(z.string().max(8192)).min(1).max(64) });
@@ -39,6 +41,7 @@ export const REFUSED_FLAGS = [
   "--config",
   "--headed",
   "--extension",
+  "--namespace",
 ] as const;
 
 /** Subcommands that leave the box browser or change the install. */
@@ -111,11 +114,11 @@ function refuseFlag(flag: string): ExecArgsCheck {
   return { ok: false, refused: flag, message: `bbx browser: ${flag} is fixed for the box browser; the box uses one browser profile` };
 }
 
-/** Checks the argument list the agent passed to `bbx browser`. */
-export function checkExecArgs(args: readonly string[]): ExecArgsCheck {
+/** Checks `args` against the refused lists; a flag in `allowed` is not refused (its value is still skipped). */
+function checkArgs(args: readonly string[], allowed: ReadonlySet<string>): ExecArgsCheck {
   for (const token of args) {
     const name = flagName(token);
-    if (isRefusedFlag(name)) return refuseFlag(name);
+    if (isRefusedFlag(name) && !allowed.has(name)) return refuseFlag(name);
     // A short flag can carry its value glued on (`-pbrowserbase`).
     if (token.startsWith("-p") && !token.startsWith("--")) return refuseFlag("-p");
   }
@@ -131,4 +134,27 @@ export function checkExecArgs(args: readonly string[]): ExecArgsCheck {
     break;
   }
   return { ok: true };
+}
+
+/** Checks the argument list the agent passed to `bbx browser`. */
+export function checkExecArgs(args: readonly string[]): ExecArgsCheck {
+  return checkArgs(args, new Set());
+}
+
+export const ONE_SESSION_MESSAGE = `the box browser has one session, "${BOX_BROWSER_SESSION}"`;
+
+/**
+ * Checks the arguments the proxied dashboard posts to its own `/api/exec`.
+ * The dashboard prefixes every command with `--session <name>`, so
+ * `--session box` (or `--session=box`) is allowed and any other session is
+ * refused; the rest is checked as for the agent. A `--session` that another
+ * flag would take as its value is still checked here, which can only refuse more.
+ */
+export function checkDashboardExecArgs(args: readonly string[]): ExecArgsCheck {
+  for (let i = 0; i < args.length; i++) {
+    const token = args[i] ?? "";
+    const session = token === "--session" ? args[i + 1] : flagName(token) === "--session" ? token.slice("--session=".length) : null;
+    if (session !== null && session !== BOX_BROWSER_SESSION) return { ok: false, refused: "--session", message: ONE_SESSION_MESSAGE };
+  }
+  return checkArgs(args, new Set(["--session"]));
 }

@@ -28,8 +28,8 @@ import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { dashboardEnv, runAgentBrowser } from "./agent-browser.js";
 import { resolveBrowserExecutable } from "../install.js";
 import { BOX_BROWSER_SESSION, browserPaths, type BrowserBox, type BrowserPaths } from "../paths.js";
-import { startCommandServer } from "./command-server.js";
-import { startRelay } from "./relay.js";
+import { startCommandServer, type CommandServer } from "./command-server.js";
+import { startRelay, type Relay } from "./relay.js";
 
 /** The deploy's sandbox check (`../host/sandbox-check.ts`) runs the same binary. */
 export { agentBrowserBinary } from "./agent-browser.js";
@@ -144,6 +144,33 @@ async function stopBrowser(paths: BrowserPaths, env: Record<string, string>): Pr
   }
 }
 
+/** What a host start has brought up so far; null for a part not yet started. */
+interface Started {
+  readonly commands: CommandServer | null;
+  readonly relay: Relay | null;
+}
+
+/**
+ * Stop whatever this host started, in the order that keeps the box browser
+ * from coming back: the command socket first, so no new command starts a
+ * daemon while the browser stops, then the session and dashboard, then the
+ * relay. Used both on SIGTERM and when a start fails after `dashboard start`,
+ * which detaches: without this a failed start would leave the dashboard and
+ * the session running until the next host's stale cleanup.
+ */
+async function stopStarted(paths: BrowserPaths, { env, started }: { env: Record<string, string>; started: Started }): Promise<void> {
+  if (started.commands !== null) await started.commands.close();
+  try {
+    await stopBrowser(paths, env);
+  } catch (e) {
+    log(`stop failed: ${errorMessage(e)}`);
+  }
+  if (started.relay !== null) await started.relay.close();
+  // A server that failed while listening may have left its socket file.
+  await fs.rm(paths.cliSocket, { force: true });
+  await fs.rm(paths.relaySocket, { force: true });
+}
+
 /** Resolves with the reason once SIGTERM or SIGINT arrives or the engine is gone. */
 function untilStopped(): Promise<string> {
   const parent = process.ppid;
@@ -174,26 +201,25 @@ export async function runBrowserHost(box: BrowserBox): Promise<void> {
   await clearStale(paths, env);
 
   const port = onUnitHost() ? NAMESPACE_DASHBOARD_PORT : await freePort();
-  const started = await runAgentBrowser(["dashboard", "start", "--port", String(port)], { env, cwd: paths.root });
-  log(`agent-browser dashboard start --port ${String(port)} -> ${String(started.code)} ${started.output}`);
-  if (started.code !== 0) throw new BrowserHostStartError({ step: "dashboard-start", detail: started.output });
-  if (!(await waitForPort(port))) {
-    await stopBrowser(paths, env);
-    throw new BrowserHostStartError({ step: "dashboard-port", detail: `nothing listens on 127.0.0.1:${String(port)}` });
+  const dashboard = await runAgentBrowser(["dashboard", "start", "--port", String(port)], { env, cwd: paths.root });
+  log(`agent-browser dashboard start --port ${String(port)} -> ${String(dashboard.code)} ${dashboard.output}`);
+  if (dashboard.code !== 0) throw new BrowserHostStartError({ step: "dashboard-start", detail: dashboard.output });
+  let started: Started = { commands: null, relay: null };
+  try {
+    if (!(await waitForPort(port))) {
+      throw new BrowserHostStartError({ step: "dashboard-port", detail: `nothing listens on 127.0.0.1:${String(port)}` });
+    }
+    // Before the relay: the engine takes a connectable relay to mean the host is ready.
+    started = { ...started, commands: await startCommandServer({ socketPath: paths.cliSocket, env, cwd: paths.root }) };
+    log(`command socket ${paths.cliSocket}`);
+    started = { ...started, relay: await startRelay({ socketPath: paths.relaySocket, port }) };
+    log(`relay ${paths.relaySocket} -> 127.0.0.1:${String(port)}`);
+  } catch (e) {
+    log(`start failed after the dashboard started: ${errorMessage(e)}`);
+    await stopStarted(paths, { env, started });
+    throw e;
   }
-  // Before the relay: the engine takes a connectable relay to mean the host is ready.
-  const commands = await startCommandServer({ socketPath: paths.cliSocket, env, cwd: paths.root });
-  log(`command socket ${paths.cliSocket}`);
-  const relay = await startRelay({ socketPath: paths.relaySocket, port });
-  log(`relay ${paths.relaySocket} -> 127.0.0.1:${String(port)}`);
 
   log(`stopping: ${await untilStopped()}`);
-  // First, so no new command starts a daemon while the browser stops.
-  await commands.close();
-  try {
-    await stopBrowser(paths, env);
-  } catch (e) {
-    log(`stop failed: ${errorMessage(e)}`);
-  }
-  await relay.close();
+  await stopStarted(paths, { env, started });
 }

@@ -7,7 +7,9 @@
 // dashboard, daemon and Chrome pids and checks that none survives a graceful
 // stop, nor a SIGKILL of the host followed by a new start: `dashboard start`
 // and the daemon detach, so only the next host's stale cleanup reaches them.
-// A login cookie set by a local page must survive both restarts. The
+// A login cookie set by a local page must survive both restarts. A dashboard
+// that dies alone (it is detached from the host) is noticed by the next
+// `ensureBrowserHost`, which starts a new host. The
 // command socket answers the agent's commands with agent-browser's text output.
 //
 // Skips, saying why, when no Chrome is installed for agent-browser.
@@ -189,4 +191,14 @@ void test("A real browser host starts, serves the dashboard through the relay, a
   const thirdPids = await recordPids(third);
   // One dashboard runs: the new one.
   t.check(alive(thirdPids.dashboard), true);
+
+  // Fourth run: the dashboard dies alone; the next call replaces the host.
+  process.kill(thirdPids.dashboard, "SIGKILL");
+  t.check(await eventually(() => !alive(thirdPids.dashboard) && "dead", { label: "the dashboard exits" }), "dead");
+  const fourth = await ensureBrowserHost(box);
+  await run(fourth, ["open", siteUrl]);
+  t.check(await title(fourth), "login=priya");
+  const fourthPids = await recordPids(fourth);
+  // The old host was stopped; a new dashboard serves the relay.
+  t.check({ oldHost: alive(third.pid), oldDashboard: alive(thirdPids.dashboard), newDashboard: alive(fourthPids.dashboard) }, { oldHost: false, oldDashboard: false, newDashboard: true });
 });

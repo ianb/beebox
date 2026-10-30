@@ -16,6 +16,17 @@
 
 import { WebSocket, type RawData } from "ws";
 
+/** Input queued before the upstream opens is capped here, so a slow host start cannot fill memory. */
+export const PENDING_CAP_BYTES = 1024 * 1024;
+
+/** The close code for a message too big to process (RFC 6455). */
+const MESSAGE_TOO_BIG = 1009;
+
+function byteLength(data: RawData): number {
+  if (Array.isArray(data)) return data.reduce((sum, part) => sum + part.length, 0);
+  return data instanceof ArrayBuffer ? data.byteLength : data.length;
+}
+
 /** WebSocket close codes an endpoint may send; others (1005, 1006, 1015) only describe a close. */
 function sendableCode(code: number): number {
   return code === 1000 || (code >= 1001 && code <= 1014 && code !== 1005 && code !== 1006) || (code >= 3000 && code <= 4999) ? code : 1000;
@@ -33,16 +44,27 @@ function closeQuietly(socket: WebSocket, { code, reason }: { code: number; reaso
 /**
  * Copy messages between `client` and the dashboard's stream for `port`. The
  * relay socket arrives as a promise because the host may still be starting;
- * the client's handlers are attached at once, so input sent meanwhile waits.
+ * the client's handlers are attached at once, so input sent meanwhile waits,
+ * up to `PENDING_CAP_BYTES`; past that the client is closed with 1009.
  */
 export function bridgeStream(client: WebSocket, target: { relaySocket: Promise<string>; port: number }): void {
   // Input sent before the upstream opens waits here, in order.
   const pending: { data: RawData; isBinary: boolean }[] = [];
+  let pendingBytes = 0;
   let upstream: WebSocket | null = null;
   let clientClosed = false;
   client.on("message", (data, isBinary) => {
-    if (upstream?.readyState === WebSocket.OPEN) upstream.send(data, { binary: isBinary });
-    else pending.push({ data, isBinary });
+    if (upstream?.readyState === WebSocket.OPEN) {
+      upstream.send(data, { binary: isBinary });
+      return;
+    }
+    pendingBytes += byteLength(data);
+    if (pendingBytes > PENDING_CAP_BYTES) {
+      pending.length = 0;
+      closeQuietly(client, { code: MESSAGE_TOO_BIG, reason: "too much input before the box browser was ready" });
+      return;
+    }
+    pending.push({ data, isBinary });
   });
   client.on("close", (code, reason) => {
     clientClosed = true;

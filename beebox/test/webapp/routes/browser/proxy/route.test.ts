@@ -26,6 +26,9 @@ import { makeTestServer, TEST_SLUG } from "../../../../helpers/test-route-server
 
 const ORIGINAL_OWNER = process.env.BBX_OWNER_EMAIL;
 process.env.BBX_OWNER_EMAIL = "priya@example.com";
+// No public URL unless a test sets one: dev's cookie-only WebSocket rule applies.
+delete process.env.BBX_PUBLIC_URL;
+delete process.env.PUBLIC_URL;
 const SESSION = `bbx_session=${signSession({ email: "priya@example.com", name: "Priya" })}`;
 const PREFIX = `/${TEST_SLUG}/browser`;
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", [others]: any(String) };
@@ -156,6 +159,34 @@ void t.test("A JSON POST reaches the dashboard byte for byte", async (st) => {
   st.check(seen, [{ method: "POST", url: "/api/exec", host: "localhost", origin: "http://localhost", cookie: undefined, authorization: undefined, body: payload }]);
 });
 
+// ## The dashboard's POSTs reach only the box session
+//
+// The dashboard prefixes its commands with `--session <name>`, and its "New
+// session" adds `--provider` or `--engine`; the box has one session, so only
+// `--session box` passes, with the agent's refused flags (plan Track C).
+// `/api/kill` and `/api/sessions` name a session too. A refused POST never
+// reaches the dashboard.
+void t.test("The dashboard's POSTs reach only the box session", async (st) => {
+  seen.length = 0;
+  const allowed = JSON.stringify({ args: ["--session", "box", "open", "https://example.com"] });
+  const ok = await ctx.response({ method: "POST", url: "/browser/api/exec", payload: allowed, headers: { cookie: SESSION, "content-type": "application/json" } });
+  st.check(ok, { status: 200, headers: { "content-type": "application/json", [others]: any(String) }, body: { success: true } });
+  st.check(seen, [{ method: "POST", url: "/api/exec", host: "localhost", origin: "http://localhost", cookie: undefined, authorization: undefined, body: allowed }]);
+
+  seen.length = 0;
+  const post = (url: string, body: unknown) => ctx.response({ method: "POST", url, payload: JSON.stringify(body), headers: { cookie: SESSION, "content-type": "application/json" } });
+  st.check(await post("/browser/api/exec", { args: ["--session", "personal", "open", "x"] }), { status: 403, headers: JSON_HEADERS, body: { error: "the box browser has one session, \"box\"" } });
+  st.check(await post("/browser/api/exec", { args: ["--provider", "browserbase", "--session", "box", "open", "x"] }), {
+    status: 403,
+    headers: JSON_HEADERS,
+    body: { error: "bbx browser: --provider is fixed for the box browser; the box uses one browser profile" },
+  });
+  st.check(await post("/browser/api/kill", { session: "personal" }), { status: 403, headers: JSON_HEADERS, body: { error: "the box browser has one session, \"box\"" } });
+  st.check(await post("/browser/api/exec?x=1", { args: [1] }), { status: 400, headers: JSON_HEADERS, body: { error: "the request body must be { args: string[] }" } });
+  st.check(await post("/browser/api/exec", { args: ["--session", "box", "eval", "x".repeat(64 * 1024)] }), { status: 413, headers: JSON_HEADERS, body: { error: "request body too large" } });
+  st.check(seen, []);
+});
+
 // ## Agents and other origins are refused
 //
 // The agent bearer passes the box auth hook, so the page refuses it itself:
@@ -234,6 +265,34 @@ void t.test("A page's WebSocket is bridged on the session cookie; a cross-site o
     socket.on("error", () => resolve(-1));
   });
   st.check(refused, 403);
+});
+
+// ## With a public URL configured, an unlabelled WebSocket must come from it
+//
+// The session cookie is SameSite=Lax, and a sibling subdomain is same-site,
+// so it carries the cookie. Production sets `BBX_PUBLIC_URL`; there the
+// handshake's `Origin` must be that URL's origin.
+void t.test("With a public URL, an unlabelled WebSocket must name its origin", async (st) => {
+  process.env.BBX_PUBLIC_URL = "https://box.example.org/";
+  st.teardown(() => { delete process.env.BBX_PUBLIC_URL; });
+  const bound = ctx.server.server.address();
+  const address = typeof bound === "object" && bound !== null ? `ws://127.0.0.1:${String(bound.port)}` : "";
+  const url = `${address}${PREFIX}/api/session/9222/stream`;
+  const sibling = await new Promise<number>((resolve) => {
+    const socket = new WebSocket(url, { headers: { cookie: SESSION, origin: "https://evil.example.org" } });
+    st.teardown(() => socket.terminate());
+    socket.on("unexpected-response", (_req, res) => resolve(res.statusCode ?? 0));
+    socket.on("open", () => resolve(101));
+    socket.on("error", () => resolve(-1));
+  });
+  st.check(sibling, 403);
+  const first = await new Promise<string>((resolve, reject) => {
+    const socket = new WebSocket(url, { headers: { cookie: SESSION, origin: "https://box.example.org" } });
+    st.teardown(() => socket.terminate());
+    socket.on("message", (data) => resolve(String(data)));
+    socket.on("error", reject);
+  });
+  st.check(first, "hello /api/session/9222/stream from origin http://localhost");
 });
 
 // ## No browser installed: a page that says why

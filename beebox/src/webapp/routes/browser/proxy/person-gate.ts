@@ -49,30 +49,36 @@ function originOf(url: string): string | null {
   }
 }
 
-/** True when the request names no `Origin`, or names this box's own. */
 /**
  * A WebSocket handshake with no fetch metadata. Chrome sends no
  * `Sec-Fetch-Site` on WebSocket handshakes, and the box cannot rebuild the
- * browser's origin to compare with `Origin`: the dev router, Vite and the hub
- * each rewrite `Host`, and none forwards the original (found in the dev smoke
- * run, 2026-10-30). Such a handshake is accepted on the session cookie alone,
- * which is `SameSite=Lax` (`routes/auth/password-post.ts`), so a cross-site
- * page's handshake does not carry it and fails the person check.
+ * browser's origin from the request: the dev router, Vite and the hub each
+ * rewrite `Host`, and none forwards the original (found in the dev smoke run,
+ * 2026-10-30).
  */
 function isUnlabelledWebSocket(request: FastifyRequest): boolean {
   return (request.headers.upgrade ?? "").toLowerCase() === "websocket" && request.headers["sec-fetch-site"] === undefined;
 }
 
+/**
+ * True when the request names no `Origin`, or names this box's own.
+ *
+ * An unlabelled WebSocket must name the box's public URL when one is
+ * configured (production sets `BBX_PUBLIC_URL`). The session cookie is
+ * `SameSite=Lax` (`routes/auth/password-post.ts`), which a sibling subdomain
+ * still receives, being same-site, so the cookie alone is not enough there.
+ * With no public URL (dev) the handshake is accepted on the cookie alone.
+ */
 export async function isSameOrigin(ctx: PersonGateContext, request: FastifyRequest): Promise<boolean> {
   const origin = request.headers.origin;
   if (origin === undefined) return true;
   const site = request.headers["sec-fetch-site"];
   if (site === "same-origin") return true;
   if (site !== undefined) return false;
-  if (isUnlabelledWebSocket(request)) return true;
-  if (origin === `${request.protocol}://${request.host}`) return true;
   const publicUrl = await resolveBoxPublicUrl(ctx.boxRoot);
-  return publicUrl !== undefined && originOf(publicUrl) === origin;
+  const publicOrigin = publicUrl === undefined ? null : originOf(publicUrl);
+  if (isUnlabelledWebSocket(request)) return publicUrl === undefined || publicOrigin === origin;
+  return origin === `${request.protocol}://${request.host}` || publicOrigin === origin;
 }
 
 /** An unauthenticated top-level page load, which goes to the login page instead of a 401. */

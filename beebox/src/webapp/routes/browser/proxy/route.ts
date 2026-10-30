@@ -18,10 +18,13 @@
  * The routes live in their own encapsulated scope with no body parsing: the
  * built-in JSON parser drains the request stream, which left every proxied
  * JSON POST hanging behind the hub (`src/hub/server/core.ts`), and the
- * dashboard's `/api/exec` is a JSON POST.
+ * dashboard's `/api/exec` is a JSON POST. The POSTs that can reach another
+ * session are the exception: their bodies are read here, checked
+ * (`dashboard-post.ts`), and sent on from the buffer.
  */
 
 import type { IncomingMessage } from "node:http";
+import { Readable } from "node:stream";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ProxyServer } from "http-proxy-3";
 import { BrowserCommandSocketError } from "../../../../core/browser/command-socket.js";
@@ -29,6 +32,7 @@ import { BrowserHostFailedError, BrowserNotInstalledError, ensureBrowserHost, ty
 import { isRewritableType, rewriteDashboardBody } from "../../../../core/browser/rewrite.js";
 import { ensureBoxSession } from "../../../../core/browser/session.js";
 import type { Services } from "../../../../services/container.js";
+import { checkDashboardPost, DASHBOARD_POST_CAP_BYTES, isCheckedDashboardPost } from "./dashboard-post.js";
 import { browserPrefix } from "./prefix.js";
 import { checkPerson, sendRefusal } from "./person-gate.js";
 import { BROWSER_PAGE_CSP, decodeBody, messagePage, responseHeaders, withNotice } from "./response.js";
@@ -66,11 +70,25 @@ function hostFailurePage(e: unknown): { status: number; title: string; detail: s
   return null;
 }
 
+interface Upstream {
+  readonly reply: FastifyReply;
+  readonly relaySocket: string;
+  readonly path: string;
+  /** The request body, already read; null to stream it from the request. */
+  readonly body: Buffer | null;
+  readonly createProxy: () => ProxyServer;
+}
+
 /** Send the request to the dashboard behind `relaySocket` and resolve with its response, unread. */
-function forward(request: FastifyRequest, upstream: { reply: FastifyReply; relaySocket: string; path: string; createProxy: () => ProxyServer }): Promise<IncomingMessage> {
+function forward(request: FastifyRequest, upstream: Upstream): Promise<IncomingMessage> {
   const raw = request.raw;
   for (const name of Object.keys(raw.headers)) {
     if (isDroppedRequestHeader(name)) delete raw.headers[name];
+  }
+  if (upstream.body !== null) {
+    // The dashboard reads exactly `Content-Length` bytes and ignores chunked framing.
+    delete raw.headers["transfer-encoding"];
+    raw.headers["content-length"] = String(upstream.body.length);
   }
   return new Promise((resolve, reject) => {
     // One proxy per request, so its single `proxyRes` belongs to this request.
@@ -84,7 +102,12 @@ function forward(request: FastifyRequest, upstream: { reply: FastifyReply; relay
         raw,
         // Not written to (`selfHandleResponse`); its close aborts the upstream request.
         upstream.reply.raw,
-        { target: { host: "localhost", port: 0, socketPath: upstream.relaySocket }, selfHandleResponse: true, headers: UPSTREAM_HEADERS },
+        {
+          target: { host: "localhost", port: 0, socketPath: upstream.relaySocket },
+          selfHandleResponse: true,
+          headers: UPSTREAM_HEADERS,
+          ...(upstream.body === null ? {} : { buffer: Readable.from([upstream.body]) }),
+        },
         (e) => reject(e),
       );
     } finally {
@@ -98,6 +121,18 @@ async function readAll(stream: IncomingMessage): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
   return Buffer.concat(chunks);
+}
+
+/** The request body, or null when it is over `cap` bytes (the rest is still read and dropped). */
+async function readCapped(stream: IncomingMessage, cap: number): Promise<Buffer | null> {
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  for await (const chunk of stream) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+    bytes += buffer.length;
+    if (bytes <= cap) chunks.push(buffer);
+  }
+  return bytes > cap ? null : Buffer.concat(chunks);
 }
 
 /** True for the path of the dashboard's top page, `/` with or without a query. */
@@ -163,6 +198,14 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
       if (!request.url.startsWith(`${marker}/`)) return reply.status(404).send({ error: "Not found" });
       const path = request.url.slice(marker.length);
       const prefix = browserPrefix({ slug: boxSlug, referer: request.headers.referer });
+      let requestBody: Buffer | null = null;
+      if (isCheckedDashboardPost({ method: request.method, path })) {
+        if (Number(request.headers["content-length"] ?? 0) > DASHBOARD_POST_CAP_BYTES) return reply.status(413).send({ error: "request body too large" });
+        requestBody = await readCapped(request.raw, DASHBOARD_POST_CAP_BYTES);
+        if (requestBody === null) return reply.status(413).send({ error: "request body too large" });
+        const check = checkDashboardPost(path, requestBody);
+        if (!check.ok) return reply.status(check.status).send({ error: check.error });
+      }
       let host: BrowserHostHandle;
       try {
         host = await ensureHost({ boxRoot, slug: boxSlug });
@@ -174,7 +217,7 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
       const notice = request.method === "GET" && isTopPage(path) ? await sessionNotice(host) : null;
       let upstream: IncomingMessage;
       try {
-        upstream = await forward(request, { reply, relaySocket: host.paths.relaySocket, path, createProxy });
+        upstream = await forward(request, { reply, relaySocket: host.paths.relaySocket, path, body: requestBody, createProxy });
       } catch (e) {
         return sendPage(reply, { status: 502, title: "The box browser did not answer", detail: e instanceof Error ? e.message : String(e) });
       }

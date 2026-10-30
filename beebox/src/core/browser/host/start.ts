@@ -10,6 +10,11 @@
  * from the engine's shutdown sequence). Chrome itself idles out through the
  * daemon's own timeout.
  *
+ * A live host can still have lost its dashboard: `dashboard start` detaches,
+ * so the dashboard is not the host's child and can die alone. Before a
+ * running host is returned, the dashboard must answer through the relay;
+ * if it does not, the host is stopped and a new one started.
+ *
  * The host runs in its own process group so one signal reaches all of it.
  * Its output goes to the box's `host.log`, truncated at each start, so a
  * failed start can show the person the lines that explain it.
@@ -17,6 +22,7 @@
 
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import * as fs from "node:fs";
+import http from "node:http";
 import net from "node:net";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
@@ -31,6 +37,9 @@ const READY_TIMEOUT_MS = 20_000;
 const READY_POLL_MS = 100;
 const STOP_GRACE_MS = 5000;
 const LOG_TAIL_LINES = 40;
+const DASHBOARD_CHECK_TIMEOUT_MS = 3000;
+/** A dashboard that answered this recently is not asked again: every proxied asset calls `ensureBrowserHost`. */
+const DASHBOARD_CHECK_FRESH_MS = 5000;
 
 /** No browser to run: the reason says why, for the page and `bbx browser`. */
 export class BrowserNotInstalledError extends Error {
@@ -69,6 +78,10 @@ interface RunningHost {
 
 /** Keyed by box root. A pending start is shared, so concurrent callers start one host. */
 const hosts = new Map<string, Promise<RunningHost>>();
+/** Starts not yet settled; a caller that waited on one gets the new host unchecked. */
+const pendingStarts = new Set<Promise<RunningHost>>();
+/** When each host's dashboard last answered. */
+const lastAnswered = new WeakMap<RunningHost, number>();
 
 function hasExited(child: ChildProcess): boolean {
   return child.exitCode !== null || child.signalCode !== null;
@@ -102,6 +115,39 @@ function killGroup(pid: number, sig: NodeJS.Signals): void {
     // ESRCH: the whole group has already exited.
     if (errnoCode(e) !== "ESRCH") throw e;
   }
+}
+
+/** True when the dashboard answers `GET /api/sessions` with 200 through the relay within 3 s. */
+function dashboardAnswers(relaySocket: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const request = http.request(
+      {
+        socketPath: relaySocket,
+        path: "/api/sessions",
+        method: "GET",
+        // The pair the dashboard accepts as its own loopback page.
+        headers: { host: "localhost", origin: "http://localhost" },
+        timeout: DASHBOARD_CHECK_TIMEOUT_MS,
+      },
+      (response) => {
+        response.resume();
+        resolve(response.statusCode === 200);
+      },
+    );
+    request.once("timeout", () => request.destroy());
+    request.once("error", () => resolve(false));
+    request.end();
+  });
+}
+
+/** True when `host` is running and its dashboard answers, or answered within the last 5 s. */
+async function isHealthy(host: RunningHost): Promise<boolean> {
+  if (hasExited(host.child)) return false;
+  const last = lastAnswered.get(host);
+  if (last !== undefined && Date.now() - last < DASHBOARD_CHECK_FRESH_MS) return true;
+  if (!(await dashboardAnswers(host.handle.paths.relaySocket))) return false;
+  lastAnswered.set(host, Date.now());
+  return true;
 }
 
 async function spawnHost(paths: BrowserPaths, input: Required<EnsureBrowserHostInput>): Promise<ChildProcess> {
@@ -148,7 +194,8 @@ async function startHost(input: Required<EnsureBrowserHostInput>): Promise<Runni
 }
 
 /**
- * The running browser host for a box, started if there is none. Throws
+ * The running browser host for a box, started if there is none, or started
+ * again if its dashboard does not answer. Throws
  * `BrowserNotInstalledError` when no browser resolves and
  * `BrowserHostFailedError` when the host does not come up within 20 s.
  */
@@ -158,24 +205,34 @@ export async function ensureBrowserHost(input: EnsureBrowserHostInput): Promise<
   const key = path.resolve(input.boxRoot);
   const existing = hosts.get(key);
   if (existing !== undefined) {
+    const wasPending = pendingStarts.has(existing);
     let running: RunningHost | null = null;
     try {
       running = await existing;
     } catch (_e) {
       // That start's error went to the caller that began it; this call starts again.
     }
-    if (running !== null && !hasExited(running.child)) return running.handle;
-    // The previous start failed or the host died: forget it and start again.
+    // A start that just finished was ready by its own check; it is not asked again.
+    if (running !== null && wasPending && !hasExited(running.child)) return running.handle;
+    if (running !== null && (await isHealthy(running))) return running.handle;
+    if (running !== null) {
+      console.warn(`Box browser host ${String(running.handle.pid)} for ${key}: the dashboard does not answer; starting a new host.`);
+      await stopHost(running);
+    }
+    // The previous start failed or the host or its dashboard died: forget it and start again.
     if (hosts.get(key) === existing) hosts.delete(key);
     return ensureBrowserHost(input);
   }
   const starting = startHost({ boxRoot: key, slug: input.slug, stateDir: input.stateDir ?? BBX_STATE_DIR });
   hosts.set(key, starting);
+  pendingStarts.add(starting);
   try {
     return (await starting).handle;
   } catch (e) {
     if (hosts.get(key) === starting) hosts.delete(key);
     throw e;
+  } finally {
+    pendingStarts.delete(starting);
   }
 }
 
