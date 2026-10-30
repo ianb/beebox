@@ -10,7 +10,12 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { getBoxDir } from "../../lib/paths/core.js";
 import { pluginNames } from "../../plugins.js";
-import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
+import {
+  AGENT_ENGINES,
+  isAgentEngine,
+  modelTier,
+  type AgentEngine,
+} from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 import { ADDED_MODEL_LABEL_MAX, isOpenRouterModelId, type AddedModel } from "../../shared/chat-models.js";
 import type { PresentationConfig } from "../../shared/card-theme/core.js";
@@ -119,7 +124,7 @@ class InvalidAgentEngineError extends Error {
   readonly value: unknown;
 
   constructor(value: unknown) {
-    super("Box config agentEngine must be either claude or codex");
+    super(`Box config agentEngine must be one of ${AGENT_ENGINES.join(", ")}`);
     this.name = "InvalidAgentEngineError";
     this.value = value;
   }
@@ -204,8 +209,8 @@ export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
   const config = await loadBoxConfig(boxRoot);
   const engine: unknown = config.agentEngine;
   if (engine === undefined) return "claude";
-  if (engine === "claude" || engine === "codex") return engine;
-  throw new InvalidAgentEngineError(engine);
+  if (!isAgentEngine(engine)) throw new InvalidAgentEngineError(engine);
+  return engine;
 }
 
 /** Why a `plugins` entry activates nothing; worded by `describeInvalidPluginEntries` (`core/plugins/active.ts`). */
@@ -355,7 +360,8 @@ export async function loadEnabledEngines(boxRoot: string): Promise<AgentEngine[]
       `Box config disables its own default engine (${fallback}); treating it as enabled, since nothing could run otherwise.`,
     );
   }
-  return AGENT_ENGINES.filter((engine) => engine === fallback || config.engines?.[engine] === true);
+  return AGENT_ENGINES.filter((engine) =>
+    engine === fallback || config.engines?.[engine] === true);
 }
 
 /**

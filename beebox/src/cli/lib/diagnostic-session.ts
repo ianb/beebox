@@ -1,36 +1,39 @@
 /** Resolve which native harness owns a session used by diagnostic CLI commands. */
 
-import type { AgentEngine } from "../../core/box/config.js";
+import { AGENT_ENGINES, isAgentEngine, type AgentEngine } from "../../shared/agent-models.js";
 import { loadHistoryEntries } from "../../core/chat/session/history.js";
 
 class InvalidDiagnosticEngineError extends Error {
   constructor(value: string) {
-    super(`Unknown session engine "${value}". Expected claude or codex.`);
+    super(`Unknown session engine "${value}". Expected ${AGENT_ENGINES.join(", ")}.`);
     this.name = "InvalidDiagnosticEngineError";
   }
 }
 
-class UnsupportedCodexSessionModeError extends Error {
-  constructor() {
-    super(
-      "Codex sessions support readable dialogue only; --raw, --tool-report, and --full require native rollout detail that app-server does not expose.",
-    );
-    this.name = "UnsupportedCodexSessionModeError";
+const NATIVE_DETAIL_GAP: Record<"codex" | "pi", string> = {
+  codex: "Codex sessions support readable dialogue only; --raw, --tool-report, and --full require native rollout detail that app-server does not expose.",
+  pi: "pi sessions support readable dialogue only; --raw, --tool-report, and --full read Claude Code transcript detail, which pi does not write.",
+};
+
+class UnsupportedNativeSessionModeError extends Error {
+  constructor(engine: "codex" | "pi") {
+    super(NATIVE_DETAIL_GAP[engine]);
+    this.name = "UnsupportedNativeSessionModeError";
   }
 }
 
 export function parseDiagnosticEngine(value: string): AgentEngine {
-  if (value === "claude" || value === "codex") return value;
+  if (isAgentEngine(value)) return value;
   throw new InvalidDiagnosticEngineError(value);
 }
 
-export function validateCodexSessionMode(options: {
+export function validateNativeSessionMode(engine: "codex" | "pi", options: {
   raw: boolean;
   toolReport: boolean;
   full: boolean;
 }): void {
   if (options.raw || options.toolReport || options.full) {
-    throw new UnsupportedCodexSessionModeError();
+    throw new UnsupportedNativeSessionModeError(engine);
   }
 }
 

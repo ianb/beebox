@@ -330,6 +330,7 @@ void test("The SDK prices every turn as Claude, which overstated OpenRouter spen
       cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 0 },
       server_tool_use: { web_search_requests: 0, web_fetch_requests: 0 },
       service_tier: "standard", inference_geo: "us", iterations: [], speed: "standard",
+      fallback_credit: null, output_tokens_details: { thinking_tokens: 0 },
     },
     permission_denials: [], session_id: "s", uuid: randomUUID(),
   };

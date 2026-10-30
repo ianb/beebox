@@ -11,7 +11,7 @@ import { useEffect, type ReactNode } from "react";
 import type { AdminArrivalState } from "../lib/admin-card-state";
 import { ClaudeCodeSection } from "../components/admin/ClaudeCodeSection";
 import { CodexSection } from "../components/admin/CodexSection";
-import { AgentEngineSection } from "../components/admin/AgentEngineSection";
+import { AgentEngineSection } from "../components/admin/AgentEngineSection/view";
 import { OpenRouterModelsSection } from "../components/admin/OpenRouterModelsSection/view";
 import { AllowedEmailsSection } from "../components/admin/AllowedEmailsSection";
 import { GoogleServicesSection } from "../components/admin/GoogleServicesSection/view";

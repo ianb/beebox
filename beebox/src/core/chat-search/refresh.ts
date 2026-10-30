@@ -5,7 +5,7 @@
  * changed, persist when dirty. A chat from this morning is findable on the
  * next search; no scheduler.
  *
- * The diff key is per-session: unchanged transcript mtime (Claude stat /
+ * The diff key is per-session: unchanged transcript mtime (Claude and pi stat /
  * Codex thread `updatedAt`) ⇒ skip; otherwise parse the transcript, chunk
  * from the recorded entry cursor, and insert only the new tail. A manifest
  * entry whose cursor now EXCEEDS the transcript's entry count marks a
@@ -39,6 +39,7 @@ import {
   type ChatManifestSession,
 } from "./manifest.js";
 import { chatSearchStore, type ChatSearchIndex } from "./store.js";
+import { parsePiSessionLog } from "../chat/session/pi-transcript.js";
 
 export interface OpenChatSearchIndexResult {
   db: ChatSearchIndex;
@@ -97,12 +98,20 @@ async function codexEntries(boxRoot: string, sessionId: string): Promise<Session
     }));
 }
 
+/** `logPath` is the pi session file for a pi chat (`list/core.ts`). */
+async function piEntries(logPath: string): Promise<SessionEntry[]> {
+  return readAllEntries((offset) =>
+    parsePiSessionLog({ path: logPath, slice: { mode: "page", offset, limit: MAX_SESSION_ENTRIES } }));
+}
+
 function transcriptEntries(boxRoot: string, entry: ChatSessionEntry): Promise<SessionEntry[]> {
   switch (entry.engine) {
     case "claude":
       return claudeEntries(entry.logPath);
     case "codex":
       return codexEntries(boxRoot, entry.sessionId);
+    case "pi":
+      return piEntries(entry.logPath);
     default:
       return assertNever(entry.engine);
   }

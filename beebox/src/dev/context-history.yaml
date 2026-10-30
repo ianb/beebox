@@ -11421,6 +11421,64 @@ test1:
       peak: 37650
       added: 3899
       turns: 7
+  pi-nested-agents-before-edit:
+    - date: 2026-10-29T23:47:59.344Z
+      boxCommit: 0a09cf9db42a1ac608404c8ac84ce51354549c54
+      repoCommit: e6f2c550b3efa08b1bf1b1170bf7569f918e9a3a
+      initial: 22577
+      peak: 26081
+      added: 3504
+      turns: 10
+    - date: 2026-10-30T00:09:38.638Z
+      boxCommit: 0a09cf9db42a1ac608404c8ac84ce51354549c54
+      repoCommit: 0d7616c5c0fb31f75e0448b34ddb4ed40fc27e2f
+      initial: 22578
+      peak: 26611
+      added: 4033
+      turns: 6
+    - date: 2026-10-30T00:11:56.841Z
+      boxCommit: 0a09cf9db42a1ac608404c8ac84ce51354549c54
+      repoCommit: 0d7616c5c0fb31f75e0448b34ddb4ed40fc27e2f
+      initial: 22591
+      peak: 27933
+      added: 5342
+      turns: 13
+    - date: 2026-10-30T00:14:15.725Z
+      boxCommit: 0a09cf9db42a1ac608404c8ac84ce51354549c54
+      repoCommit: 0d7616c5c0fb31f75e0448b34ddb4ed40fc27e2f
+      initial: 22591
+      peak: 28074
+      added: 5483
+      turns: 13
+    - date: 2026-10-30T00:16:55.667Z
+      boxCommit: 0a09cf9db42a1ac608404c8ac84ce51354549c54
+      repoCommit: 0d7616c5c0fb31f75e0448b34ddb4ed40fc27e2f
+      initial: 22578
+      peak: 25244
+      added: 2666
+      turns: 6
+    - date: 2026-10-30T00:18:26.010Z
+      boxCommit: 0a09cf9db42a1ac608404c8ac84ce51354549c54
+      repoCommit: 0d7616c5c0fb31f75e0448b34ddb4ed40fc27e2f
+      initial: 22591
+      peak: 27888
+      added: 5297
+      turns: 9
+    - date: 2026-10-30T00:18:49.086Z
+      boxCommit: 0a09cf9db42a1ac608404c8ac84ce51354549c54
+      repoCommit: 0d7616c5c0fb31f75e0448b34ddb4ed40fc27e2f
+      initial: 22578
+      peak: 23979
+      added: 1401
+      turns: 4
+  calendar-folder-picks-calendar:
+    - date: 2026-10-29T22:39:44.235Z
+      boxCommit: fcaac6b54b800b67b1561893f627b18a3426e6e6
+      repoCommit: fcb3ff4fbf1fc5419aa0605fbd653f92c1d17fb4
+      initial: 33725
+      peak: 38471
+      added: 4746
+      turns: 6
   triage-compiled-is-generated:
     - date: 2026-10-29T22:20:49.388Z
       boxCommit: d3cfa06eb6134047b440027792168c780de9fbe4
@@ -11436,14 +11494,6 @@ test1:
       peak: 33710
       added: 0
       turns: 2
-  calendar-folder-picks-calendar:
-    - date: 2026-10-29T22:39:44.235Z
-      boxCommit: fcaac6b54b800b67b1561893f627b18a3426e6e6
-      repoCommit: fcb3ff4fbf1fc5419aa0605fbd653f92c1d17fb4
-      initial: 33725
-      peak: 38471
-      added: 4746
-      turns: 6
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

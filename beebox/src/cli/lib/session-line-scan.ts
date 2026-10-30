@@ -104,12 +104,15 @@ async function findLineEnd(handle: FileHandle, { from, size }: { from: number; s
 /**
  * The transcript line whose entry uuid is `uuid`, as a string.
  *
+ * `key` is the entry's id field: `uuid` in Claude's transcript, `id` in pi's
+ * session file, where `parentId` cannot match for the same reason.
+ *
  * Returns `too-large` rather than the line when it exceeds
  * {@link MAX_MEDIA_LINE_BYTES}: the caller wants one image out of it, and a
  * line that big is not one this route will allocate on a client's say-so.
  */
 export async function findTranscriptLineByUuid(
-  { logPath, uuid }: { logPath: string; uuid: string },
+  { logPath, uuid, key }: { logPath: string; uuid: string; key?: "uuid" | "id" },
 ): Promise<LineLookupResult> {
   let handle: FileHandle;
   try {
@@ -120,7 +123,7 @@ export async function findTranscriptLineByUuid(
     return { found: false, reason: "not-found" };
   }
   try {
-    const needle = Buffer.from(`"uuid":"${uuid}"`, "utf8");
+    const needle = Buffer.from(`"${key ?? "uuid"}":"${uuid}"`, "utf8");
     const at = await findNeedle(handle, needle);
     if (at === -1) return { found: false, reason: "not-found" };
 

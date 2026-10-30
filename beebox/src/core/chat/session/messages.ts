@@ -309,10 +309,12 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
  * `total_cost_usd`: the SDK prices every turn as Claude, which overstated
  * OpenRouter spend 5–20× when measured (`docs/implemented-plans/openrouter-chat-models.md`,
  * Track 1 (h)). No figure is better than a wrong one; the real spend is the
- * provider's own.
+ * provider's own. A native backend's result (pi) carries its own harness's
+ * figure and keeps it.
  */
 export function adaptBackendMessage(msg: ChatBackendMessage, { model }: { model: string | null | undefined }): ChatMessage | null {
-  const adapted = "provider" in msg ? msg.message : adaptSdkMessage(msg);
+  if ("provider" in msg) return msg.message;
+  const adapted = adaptSdkMessage(msg);
   if (adapted?.type !== "result" || !isThirdPartyModel(model)) return adapted;
   const { total_cost_usd: _misreported, ...rest } = adapted;
   return rest;

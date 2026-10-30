@@ -133,6 +133,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:** One declared, static small-model slot for cheap passes, with no router and no fallback.
 - **Where it landed:** `beebox/docs/model-policy.md`, `beebox/src/core/model-policy.ts`, `beebox/src/core/box/config.ts`
 
+### pi, by Mario Zechner (earendil-works)
+
+- **Source:** [pi](https://github.com/earendil-works/pi) (MIT, as declared in the package metadata).
+- **What we took:** The pi coding-agent harness as a third box engine, used as a library.
+- **Where it landed:** `beebox/src/core/agent/pi-run/`, `beebox/src/services/claude-chat/pi-chat.ts`, and `beebox/docs/pi-engine.md`.
+
 ### Sentry feedback widget, by getsentry (Sentry)
 
 - **Source:** https://github.com/getsentry/sentry-javascript (MIT)

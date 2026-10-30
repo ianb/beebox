@@ -8,7 +8,9 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
+import { z } from "zod";
 import { readFile, writeFile } from "node:fs/promises";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -25,8 +27,9 @@ import type { TestServer } from "../../../helpers/test-route-server.js";
 const fixture = async (name: string) => readFile(new URL(`../../../fixtures/openrouter/${name}`, import.meta.url), "utf8");
 const models = await fixture("models.json");
 const key = await fixture("key.json");
+let catalog = models;
 async function openrouterFetch(url: string) {
-  return new Response(url.endsWith("/key") ? key : models, { status: 200 });
+  return new Response(url.endsWith("/key") ? key : catalog, { status: 200 });
 }
 
 function caller(server: TestServer, opts?: { isOwner?: boolean }) {
@@ -89,12 +92,17 @@ void test("An empty box: no models, no key", async (t) => {
       ok: true,
       found: true,
       model: {
+        id: "moonshotai/kimi-k2-0905:exacto",
         name: "MoonshotAI: Kimi K2 0905",
         contextLength: 262144,
+        maxCompletionTokens: 98304,
         supportsTools: true,
+        supportedParameters: containing<string>(["tools"]),
+        inputModalities: ["text"],
         pricing: { promptPerMTok: 0.6, completionPerMTok: 2.5, cacheReadPerMTok: null },
       },
     },
+    piWarning: null,
   });
 
   // ## The added model can be the box default, and then cannot be removed
@@ -166,15 +174,41 @@ void test("An empty box: no models, no key", async (t) => {
           ok: true,
           found: true,
           model: {
+            id: "qwen/qwen3-coder",
             name: "Qwen: Qwen3 Coder 480B A35B",
             contextLength: 262144,
+            maxCompletionTokens: 65536,
             supportsTools: true,
+            supportedParameters: containing<string>(["tools"]),
+            inputModalities: ["text"],
             pricing: { promptPerMTok: 0.3, completionPerMTok: 1, cacheReadPerMTok: 0.1 },
           },
         },
+        piWarning: null,
       },
     ],
   });
+
+  // ## On a box that can run pi, a model pi's catalog lacks is flagged
+  //
+  // Quiet while pi is off; once pi is enabled, the row says pi builds the
+  // model from OpenRouter's listing, and that an unlisted price counts as $0.
+
+  const { data } = z.object({ data: z.array(z.record(z.string(), z.unknown())) }).parse(JSON.parse(models));
+  const qwen = data.find((m) => m.id === "qwen/qwen3-coder");
+  catalog = JSON.stringify({ data: [...data, { ...qwen, id: "acme/not-in-pi", pricing: {} }] });
+  clearOpenRouterCatalogCache();
+  t.teardown(() => { catalog = models; });
+  await caller(server).admin.addOpenrouterModel({ id: "acme/not-in-pi", label: "Acme" });
+  clearBoxConfigCache(server.boxRoot);
+  const warnings = async () => (await caller(server).admin.openrouterModels()).models.map((m) => [m.id, m.piWarning]);
+  t.check(await warnings(), [["qwen/qwen3-coder", null], ["acme/not-in-pi", null]]);
+  await caller(server).admin.updateBoxConfig({ engines: { claude: true, pi: true } });
+  clearBoxConfigCache(server.boxRoot);
+  t.check(await warnings(), [
+    ["qwen/qwen3-coder", null],
+    ["acme/not-in-pi", "pi has no built-in settings for this model, so it uses OpenRouter's listing. OpenRouter lists no price for it, so pi counts its cost as $0."],
+  ]);
 
   // ## Owner only
 

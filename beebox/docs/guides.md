@@ -44,6 +44,7 @@ where new material goes and how it is named.
 | Questions: the question subsystem | [questions](questions.md) |
 | Landmarks: the navigation surface | [landmarks](landmarks.md) |
 | Model policy: which engine and model a box thinks with | [model-policy](model-policy.md) |
+| The pi engine: open-source harness on added OpenRouter models | [pi-engine](pi-engine.md) |
 | Publishing: the managed static-site publisher, operator side | [publishing](publishing.md) |
 | Client debug log | [client-debug-log](client-debug-log.md) |
 | Data-source tagging in the UI | [data-source-tagging](data-source-tagging.md) |

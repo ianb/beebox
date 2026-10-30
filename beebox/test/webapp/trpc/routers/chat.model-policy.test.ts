@@ -12,6 +12,8 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, str } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { TestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -80,6 +82,14 @@ void test("A pin is visible to the next status read:", async (t) => {
   // Pinning is the owner's call.
 
   t.check(await caller(server, { isOwner: false }).chat.setDefaultModel({ model: "claude-sonnet-5-5" }).catch((e) => e.code), "FORBIDDEN");
+
+  // A pi box cannot clear its pin: pi has no model of its own.
+
+  const qwen = { id: "qwen/qwen3-coder", label: "Qwen3 Coder" };
+  await writeFile(join(server.boxRoot, "_config/box.json"), JSON.stringify({ agentEngine: "pi", agentModel: qwen.id, openrouterModels: [qwen] }));
+  clearBoxConfigCache(server.boxRoot);
+  t.check(await caller(server).chat.setDefaultModel({ model: null }).catch((e) => `${e.code}: ${e.message}`), "BAD_REQUEST: "
+    + "The pi engine runs only models added in Admin → OpenRouter models. Choose one of them as the default model in the same save.");
 
   await server.cleanup();
 });

@@ -24,9 +24,7 @@
  * See docs/implemented-plans/chat-review.md § Track C.
  */
 
-import * as fs from "node:fs/promises";
-import { errnoCode } from "../../../../shared/error-guards.js";
-import { discoverSessions, QUIESCENCE_MS, type QualifiedSession } from "../discovery.js";
+import { discoverSessions, QUIESCENCE_MS, transcriptUpdatedAt, type QualifiedSession } from "../discovery.js";
 import { reviewMetadataSpan } from "./metadata.js";
 import { reviewTitleSpan, type TitleRunContext } from "./title.js";
 import { readHuskFields } from "./husk-write.js";
@@ -34,7 +32,6 @@ import type { ChatReviewer } from "../reviewer.js";
 import type { TitleFreshnessChecker } from "../freshness.js";
 import { loadReviewState, saveReviewState, type ReviewState } from "../state.js";
 import { LockHeldError, withChatReviewLock } from "../lock.js";
-import { readCodexSessionUpdatedAt } from "../../session/codex-transcript/core.js";
 import { commitSessionManifest } from "../../../agent/manifest.js";
 
 export interface RunOptions {
@@ -127,13 +124,8 @@ async function reviewOne(
   // longer covers the material actually reviewed — the transcript is re-read
   // inside each pass — so re-check it against the file as it stands now, and
   // defer rather than summarize a conversation back in progress.
-  let mtime: Date;
-  try {
-    mtime = session.engine === "codex"
-      ? await readCodexSessionUpdatedAt(boxRoot, session.sessionId)
-      : (await fs.stat(session.logPath)).mtime;
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") throw e;
+  const mtime = await transcriptUpdatedAt(boxRoot, { ...session, engine: session.engine ?? "claude" });
+  if (mtime === null) {
     summary.missingTranscripts += 1;
     return false;
   }

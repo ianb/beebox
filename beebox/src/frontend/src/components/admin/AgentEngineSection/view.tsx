@@ -1,14 +1,15 @@
 /** Per-box native agent harness and model policy. */
 
-import { trpc } from "../../lib/trpc/client";
-import { CheckboxField, RadioGroup, SelectField } from "../ui/fields/field";
-import { Stack } from "../ui/Stack";
-import { Text } from "../ui/Text";
-import { ErrorText } from "../ui/ErrorText";
-import { Hint } from "../ui/Hint";
+import { trpc } from "../../../lib/trpc/client";
+import { CheckboxField, RadioGroup, SelectField } from "../../ui/fields/field";
+import { Stack } from "../../ui/Stack";
+import { Text } from "../../ui/Text";
+import { ErrorText } from "../../ui/ErrorText";
+import { Hint } from "../../ui/Hint";
 import { chatModelOptions, parseChatAgentEngine, type AddedModel } from "@shared/chat-models.js";
-import { AGENT_ENGINES, providerOf } from "@shared/agent-models.js";
-import { AdminSectionCard } from "./AdminSectionCard";
+import { AGENT_ENGINES, providerOf, type AgentEngine } from "@shared/agent-models.js";
+import { AdminSectionCard } from "../AdminSectionCard";
+import { piDefaultFor, piMissing } from "./pi";
 
 const DESCRIPTION =
   "Choose the native harness for new chats, wakeups, and procedures. Chats with a recorded engine keep using it; legacy chats default to Claude.";
@@ -34,7 +35,16 @@ const OPENROUTER_BACKGROUND_HINT =
   "box's smallModel is set to a Claude model, and reading photos during scan import (unless the server sets " +
   "BBX_SCAN_VISION=gemini).";
 
-const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
+const ENGINE_LABELS: Record<AgentEngine, string> = { claude: "Claude Code", codex: "Codex", pi: "pi" };
+
+function engineOptions(piBlocked: string | null) {
+  return [...ENGINE_OPTIONS, {
+    value: "pi",
+    label: "pi",
+    description: piBlocked ?? "Use pi, an open-source harness, with a model added under OpenRouter models.",
+    disabled: piBlocked !== null,
+  }];
+}
 
 const ENGINE_OPTIONS = [
   {
@@ -84,6 +94,11 @@ export function AgentEngineSection() {
       ? update.variables.agentEngine ?? config.data.agentEngine
       : config.data.agentEngine;
   const model = config.data?.agentModel ?? null;
+  const added = config.data?.openrouterModels ?? [];
+  const keyGranted = config.data?.openrouterKeyGranted === true;
+  // Choosing pi saves a default from the added list with it, so only the list and key can block the choice.
+  const piBlocked = engine === "pi" ? null : piMissing({ added, keyGranted });
+  const piHelper = piMissing({ added, keyGranted, ...(engine === "pi" ? { piDefault: model } : {}) });
 
   return (
     <AdminSectionCard id="agent-engine" description={DESCRIPTION}>
@@ -94,11 +109,12 @@ export function AgentEngineSection() {
             idPrefix="bbx-admin-agent-engine"
             variant="cards"
             value={engine}
-            options={ENGINE_OPTIONS}
+            options={engineOptions(piBlocked)}
             disabled={update.isPending}
             onChange={(agentEngine) => {
-              if (agentEngine !== "claude" && agentEngine !== "codex") return;
-              update.mutate({ agentEngine });
+              const parsed = parseChatAgentEngine(agentEngine);
+              if (parsed === null) return;
+              update.mutate(parsed === "pi" ? { agentEngine: parsed, agentModel: piDefaultFor(model, added) } : { agentEngine: parsed });
             }}
           />
           <Stack gap="xs">
@@ -111,12 +127,16 @@ export function AgentEngineSection() {
               <CheckboxField
                 key={candidate}
                 id={`bbx-admin-engine-enabled-${candidate}`}
-                label={ENGINE_LABELS[candidate] ?? candidate}
+                label={ENGINE_LABELS[candidate]}
                 checked={candidate === engine || config.data.engines[candidate] === true}
                 // The default engine cannot be turned off — a box whose default
                 // engine is unavailable cannot run at all.
-                disabled={candidate === engine || update.isPending}
-                helper={candidate === engine ? "The default engine is always available." : undefined}
+                // pi can still be turned off while it lacks something, never on.
+                disabled={candidate === engine || update.isPending
+                  || (candidate === "pi" && piBlocked !== null && config.data.engines.pi !== true)}
+                helper={candidate === "pi" && piHelper !== null
+                  ? piHelper
+                  : candidate === engine ? "The default engine is always available." : undefined}
                 onChange={(checked) => {
                   update.mutate({ engines: { ...config.data.engines, [candidate]: checked } });
                 }}

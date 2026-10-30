@@ -73,7 +73,7 @@ export async function reviewMetadataSpan(
     logPath: session.logPath,
     state,
     consumer: METADATA_CONSUMER,
-    ...(session.engine === "codex" ? { boxRoot } : {}),
+    ...(session.engine === undefined || session.engine === "claude" ? {} : { boxRoot }),
   });
   if (span === null) {
     // Vanished between discovery and now. Nothing to fold in; the husk stands.
