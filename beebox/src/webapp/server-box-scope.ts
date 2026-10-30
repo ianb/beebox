@@ -23,6 +23,8 @@ import { registerBulkUploadRoutes } from "./routes/bulk-upload/register.js";
 import { registerCardSubmissionRoutes } from "./routes/card-submission.js";
 import { registerScanUploadRoutes } from "./routes/scan-upload/register.js";
 import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
+import { registerBrowserExecRoute } from "./routes/browser/exec-route.js";
+import { registerBrowserProxyRoutes } from "./routes/browser/proxy/route.js";
 import { appRouter } from "./trpc/routers.js";
 import type { TrpcActor, TrpcContext } from "./trpc/context.js";
 import {
@@ -346,6 +348,10 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   registerCardSubmissionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
+  registerBrowserExecRoute({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
+  // The person's view of the box browser. It checks its own credentials:
+  // the hook above admits agents and lets asset paths through unauthenticated.
+  await registerBrowserProxyRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
   // The box's own icon and manifest, ahead of the static mount below so the
   // fleet-wide files don't shadow them.
   registerBoxIdentityAssetRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug, frontendPath });

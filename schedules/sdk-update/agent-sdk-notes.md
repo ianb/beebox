@@ -33,15 +33,17 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.311`, Codex `0.164.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.312`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.312` (SDK), `2.1.312` (Claude Code), `0.165.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.314` (SDK), `2.1.314` (Claude Code), `0.166.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.311` on 2026-10-29.
-  Next: `0.3.312` (settles 2026-10-29T18:37Z).
+- **Current recommendation:** Agent SDK moved to `0.3.312` on 2026-10-30.
+  Next: `0.3.314` (settles 2026-11-01T00:14Z). While Codex is held,
+  `pnpm update-agent-sdk` would also move Codex, so set the SDK pins in
+  `beebox/package.json` and `workstreams-app/package.json` by hand.
   **Codex `0.165.0` is held** until
   `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md` is
   decided (memory v2 on by default for fresh profiles). Production deploys recovered after
@@ -75,6 +77,36 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
+### Codex 0.166.0 — HELD with 0.165.0 (published 2026-10-29T19:47Z)
+
+Preserves approval and permission settings on resume and fork; reasoning-token
+accounting survives resume and fork, avoiding premature compaction (both apply
+to beebox's Codex chat); app-server start and stop races fixed; `codex queue
+--resume`; `codex doctor --network-only`; keyboard transcript selection. No
+new memory behavior. Settles 2026-10-31T19:47Z; held behind
+`issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`, since
+it includes 0.165.0.
+- **Sources:** [rust-v0.166.0](https://github.com/openai/codex/releases/tag/rust-v0.166.0)
+
+### 0.3.314 / Claude Code 2.1.314 — pending (published 2026-10-30T00:14Z); 0.3.313 never published
+
+- **RUNTIME:** long SDK turns with many subagents no longer keep each
+  subagent's tool results until the turn ends (memory); `claude -p` exits 1 and
+  prints the error when startup fails, where it exited 0 silently; a broken
+  unparseable reply and its retry prompts leave the conversation when Claude
+  gives up; a PreCompact hook's output is cut at 10,000 characters; idle
+  compaction also runs with telemetry off.
+- **SDK:** a settings file left out of `settingSources` no longer supplies auto
+  mode rules or saved permission consents (scan vision passes
+  `settingSources: []`; agent runs use `bypassPermissions`).
+  `permissions.blockWritesOutsideWorkingDirectories` is new in `Settings`.
+- **HARNESS:** Bash-matching hooks now also run on Monitor shell commands;
+  sandbox protections now apply to a worktree entered by `claude -p --resume`;
+  background diff refreshes no longer take `.git/index.lock` (a cause of git
+  commands failing at that moment); Bash clears inherited `which` aliases.
+- **Action:** Settled path; takeable 2026-11-01T00:14Z.
+- **Sources:** [SDK 0.3.314](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03314), [Claude Code 2.1.314](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21314)
+
 ### Codex 0.165.0 — HELD pending a decision (published 2026-10-27T20:09Z)
 
 - **Held:** *"Enabled memory v2 by default for fresh profiles."* Box Codex
@@ -91,7 +123,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   URL validation gap closed.
 - **Sources:** [rust-v0.165.0](https://github.com/openai/codex/releases/tag/rust-v0.165.0)
 
-### 0.3.312 / Claude Code 2.1.312 — pending (published 2026-10-27T18:37Z)
+### 0.3.312 / Claude Code 2.1.312 — APPLIED 2026-10-30 (published 2026-10-27T18:37Z)
 
 SDK: `Settings` type gains auto-mode keys; AskUserQuestion answers can carry
 `unanswered`; `resolveSettings()` reads managed auto-mode settings as the CLI
@@ -101,7 +133,7 @@ overwrites a very large CLAUDE.md or rules file after reading only its start;
 with an invalid name no longer stops all commands loading (which could leave
 `claude -p` with no output); prompt/agent hooks run at most 24 at a time; a
 subagent's `autoCompactWindow` now lowers the global window.
-- **Action:** Settled path; takeable 2026-10-29T18:37Z.
+- **Action:** Applied 2026-10-30, SDK pins only, so Codex stayed held. Verified: typecheck (beebox and workstreams-app), steering probe (4/4) on bundled CLI 2.1.312, `pnpm -C beebox test` (13,722 pass, 2 fail, 2 skip; both failures are source- or clock-based: `issues/bugs/2026-10-29-encrypted-backup-summary-test-depends-on-clock.md`, `issues/bugs/2026-10-30-codex-boundary-test-red-after-native-store.md`).
 
 ### 0.3.311 / Claude Code 2.1.311 — APPLIED 2026-10-29 (published 2026-10-26T19:49Z)
 

@@ -1,13 +1,16 @@
 ---
 title: "Tests use a real card type or feature as a generic fixture, so removing it breaks unrelated tests"
-workstream: unattached
+workstream: tooling-burndown
 area: beebox
 labels: [testing, doctest]
 needs: [decision]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261010-224248
+resolution: wontfix
 ---
+
+**Closed (wontfix, 2026-10-30):** The boxholder accepted the coupling (2026-10-30). The card-type half was already stale (recipe is a plugin; leftover .recipe.card paths are inert). For features, a test-only feature would need a registration hook in production code (src/core/chat/features.ts) and would still leave the serialized <chat-app> fixtures; removing a feature costs mechanical edits in about eight test files instead.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

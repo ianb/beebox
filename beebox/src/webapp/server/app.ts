@@ -53,6 +53,7 @@ import { removeHomeSnapshot, writeHomeSnapshotsAtShutdown } from "../../core/cha
 import { startServeMemoryProbe } from "./memory-probe.js";
 import { onUnitHost } from "../../lib/unit-host.js";
 import { startLocalBackupRunnerForServer, stopLocalBackupRunnerForServer } from "../../core/box-backup/local-runner.js";
+import { stopBrowserHosts } from "../../core/browser/host/start.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "../server-types.js";
@@ -361,6 +362,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     console.log(`\nReceived ${signal}, shutting down...`);
     clearInterval(maintenanceCheck); await (await memoryProbe).stop();
     await stopLocalBackupRunnerForServer();
+    await stopBrowserHosts();
     for (const box of boxes) await removeServeEndpoint(box.boxRoot);
     server.server.closeAllConnections();
     await server.close();

@@ -93,5 +93,5 @@ scope: any rule that asks for more tests.
   Keep each guidance file net shorter (root `AGENTS.md`, "agent and skill files
   only ever grow").
 
-Related: [doctests use real types as generic fixtures](../../code-quality/2026-10-10-doctests-use-real-types-as-generic-fixtures.md),
+Related: [doctests use real types as generic fixtures](../code-quality/2026-10-10-doctests-use-real-types-as-generic-fixtures.md),
 [doctest usability review](../exploration/2026-09-27-doctest-usability-review.md).
