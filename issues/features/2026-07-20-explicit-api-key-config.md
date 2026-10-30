@@ -29,3 +29,5 @@ work is visible in the queue rather than only inside the plan doc.
 Distinct from [provider-endpoint-config](2026-07-18-provider-endpoint-config.md)
 (non-Anthropic providers/endpoints — a much bigger question); this is
 Anthropic-only, auth-mechanism-only.
+
+Re-reviewed 2026-10-30: still unbuilt. The per-box grant injection used for GLM and OpenRouter (credential-env.ts claudeEngine 'inject', provider-env/core.ts) is now a ready vehicle for a configured key.

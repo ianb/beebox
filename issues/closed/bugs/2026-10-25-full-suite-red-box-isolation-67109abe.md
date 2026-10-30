@@ -6,7 +6,10 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-isolation — the hourly full-suite run on main
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Re-reviewed 2026-10-30: same file as the d049e985 report; it passes in the 2026-10-30 full-suite run on main at badbabebc.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `67109abe`. Bisecting the landings since the last tested

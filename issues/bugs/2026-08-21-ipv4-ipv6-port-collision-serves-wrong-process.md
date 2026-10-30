@@ -96,3 +96,7 @@ one-off repair, not a fix — nothing stops the collision recurring.
 ## Audit 2026-10-22
 
 Fixed in part: the mobile bootstrap no longer fails silently. It logs each transient failure and the final give-up, retries up to a bound, and answers 503 with the detail (`workstreams-app/src/router/server/proxy.ts:255-267`, `d253bd902`). Still open: the probe checks one address family (`workstreams-app/src/router/server/real-effects.ts:388` calls `get-port` with no host), the hub does not verify the identity of the process it proxies to, and the orphan-survival question is unanswered.
+
+Re-reviewed 2026-10-30: freePort (837ab84f1) now probes dual-stack, closing the allocation half; the identity check and orphan cleanup remain.
+
+Out of date in the body above: Mark the 'probe and bind both families' direction done by 837ab84f1 and correct the 2026-10-22 audit line that says the probe checks one family.

@@ -6,7 +6,10 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-late-oct — the hourly full-suite run on main
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Re-reviewed 2026-10-30: the hourly full suite on main at badbabebc passes journey-phone-wait.test.ts; the remaining reds are the encrypted-backup clock test and the codex boundary test, each with its own issue.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `d049e985`. Bisecting the landings since the last tested

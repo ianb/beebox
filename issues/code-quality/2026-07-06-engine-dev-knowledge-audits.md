@@ -51,3 +51,7 @@ to edit beebox" → this proposed engine-dev harness.
 Not scheduled work — filed as an idea. Priority is low unless engine-dev
 onboarding (human or agent) starts showing the recall gaps this would
 catch.
+
+Re-reviewed 2026-10-30: the dev-surface runner the body asks for shipped in 6cd8fb1f6 (`pnpm knowledge-audit run --dev`); what remains is the engine-convention entries.
+
+Out of date in the body above: Replace 'What it would take' with: the runner and `surface: dev` discriminator exist (6cd8fb1f6). Remaining: recover the six removed engine-dev entries (assertNever/invariant, Result, withCardLock, resolveContainedRef, fenceForPrompt, logging policy) and add them as surface: dev entries; current dev entries cover process guidance only.

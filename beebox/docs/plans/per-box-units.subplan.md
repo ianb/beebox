@@ -13,7 +13,7 @@ unless this subplan says where it goes. One row per file: hub-only, a
 per-box copy, or a shared directory with a group.
 
 **Issues addressed:** none of its own; it serves the parent's
-[cross-box filesystem isolation](../../../issues/features/2026-09-04-cross-box-filesystem-isolation.md).
+[cross-box filesystem isolation](../../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md).
 
 ## Design
 

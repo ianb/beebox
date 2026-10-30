@@ -25,3 +25,7 @@ Open questions:
 - **Failure behavior.** What happens if a hook fails? Block the operation, log and continue, ask the boxholder? Probably depends on hook type (validation hooks block, observation hooks log).
 
 The bigger framing question: this is the same insight as "use hooks instead of memory" at the personal-config layer, applied to the agent-loop layer. beebox has hooks at the git layer (pre-commit/post-commit) and at the scheduler layer (wakeup). Adding them at the agent-loop layer would be a third tier.
+
+Re-reviewed 2026-10-30: the runtime now uses fixed Claude SDK hooks (a PreToolUse git-mv nudge, the PostToolUse validate hook, SessionStart context), and schedule health reaches every chat turn. No per-box, configurable hook layer exists.
+
+Out of date in the body above: Replace 'What it doesn't currently expose is agent-loop hooks' with the current fixed hooks (claude-chat/core.ts:152, validate-hook, agent-context --hook) and narrow the proposal to a declared, configurable hook vocabulary. Mark the health-check-at-session-start candidate as met by the per-turn snapshot.

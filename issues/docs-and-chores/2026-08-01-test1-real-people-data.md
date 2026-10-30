@@ -18,3 +18,5 @@ Left open by that work:
   the fictional demo cast where found.
 - Whether git history scrubbing of the box repo matters. test1 is
   local-only; probably "no", but that's a boxholder call, not a default.
+
+Re-reviewed 2026-10-30: the scan-guide replacement has not landed (plan still under docs/plans/), and test1 still carries _content/docs/CLAUDE_SCANS.md, so even the file this issue says is handled remains.

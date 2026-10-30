@@ -49,3 +49,5 @@ stale web comment, and simulator-warning items remain open.
 ## Audit 2026-10-22
 
 Two items are now gone: the stale comment in `beebox/src/frontend/src/input/emission.ts` no longer exists. Still open: `requiresOnDeviceRecognition` is not set in `ios-app/BeeBox/Services/SpeechDictation.swift`; `SWIFT_VERSION = 5.0` remains in `ios-app/BeeBox.xcodeproj/project.pbxproj`; the 76x76@1x icon slot remains in `ios-app/BeeBox/Assets.xcassets/AppIcon.appiconset/Contents.json`. The temp WAV is now removed in the quick-chat send paths (`ios-app/BeeBox/Views/NativeComposerView.swift:851,894,1354`). Cancel, erase, and mic-off paths were not re-checked.
+
+Re-reviewed 2026-10-30: cancel/reset still drops the WAV URL without deleting the file (SpeechDictation.swift:349); the other open items are unchanged.

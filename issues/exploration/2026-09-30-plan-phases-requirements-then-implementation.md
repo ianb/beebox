@@ -50,3 +50,5 @@ at all.
 
 Related: [ontology-first planning](../closed/exploration/2026-09-17-ontology-first-planning.md),
 which also proposed an earlier phase before architecture.
+
+Re-reviewed 2026-10-30: a separate bbx-design skill now hands off before the tracks (TEMPLATE.md 'Design' section), which is a partial phase split for person-facing work; requirements are still not their own phase.

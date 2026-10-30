@@ -18,3 +18,5 @@ Design notes:
 ## Audit 2026-10-22
 
 Partly covered. Personality and guide beliefs can hold `confidence: hypothesis` with a `basis` and provenance (`beebox/src/guide-fields.ts:14`; `beebox/docs/implemented-plans/box-retrospectives.md:219`). Still missing: a refutation or confirmation trigger per hunch, per-hunch aging, and a home for state-shaped suspicions that fit no personality or guide entry.
+
+Re-reviewed 2026-10-30: The 2026-10-22 audit still holds. The personality card's context-notes carry a coarse duration (ongoing/temporary/past), which is the nearest existing home for state-shaped suspicions, but there is still no refutation trigger or per-entry aging.

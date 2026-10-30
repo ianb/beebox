@@ -16,3 +16,5 @@ Open questions:
 - **One guide or per-stream?** A single `intake.guide.card` is simpler but blurs domains; per-stream guides (recipes vs bookmarks vs voice memos) match how feedback naturally clusters but multiplies setup.
 - **Feedback surface.** Where does the boxholder say "this routing was wrong"? Probably a lightweight "wrong bucket" gesture on archived items + periodic guide-revision passes that read accumulated signals and rewrite the guide.
 - **Relation to landmarks/triage-design.** `docs/plans/triage-design.md` already sketches a typed-routing pipeline using `<triage-destination>` on landmarks. Guides and landmarks both encode routing intent — figure out the division (landmarks = structural destinations, guides = policy for choosing among them?) before building either further.
+
+Re-reviewed 2026-10-30: the guide-as-policy shape shipped as bbx triage with _config/intake.guide.card plus landmark destinations, and corrections keep provenance. A correction only proposes a guide change; no scheduled guide-revision pass exists, which may justify a narrower follow-up.

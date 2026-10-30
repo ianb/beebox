@@ -31,3 +31,5 @@ Cheap to try because it's a connector + a couple of card-field additions; no
 deep architectural changes. Worth doing as a focused experiment to see whether
 the prosody annotations actually steer agent behavior in useful ways, or just
 add noise.
+
+Re-reviewed 2026-10-30: Unstarted. The TTS comparison (beebox/docs/implemented-plans/tts-comparison-second-run.md) did not include Hume, so the 'Speak' half is also untested.

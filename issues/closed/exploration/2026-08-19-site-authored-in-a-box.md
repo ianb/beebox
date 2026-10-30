@@ -8,7 +8,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-public-site — walkthrough-prototype design conversation
 priority: backlog
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Re-reviewed 2026-10-30: site/box-export.ts (9c8fa6efb) exports box cards into site/cards/; site page, aside and doc card types exist; site/card-authoring.md documents the box workbench.
 
 Part of the public site's idea is to demonstrate callback-box *using*
 callback-box. Extend that to the site's own production: a box becomes the
@@ -42,5 +45,5 @@ cards in chat is the elicitation).
 First experiment when picked up: `page` schema in a test box, author the
 walkthrough prototype as a card there, crude export to `site/content/`.
 
-Related: [public site](../features/2026-07-20-public-site.md),
-[Bee Box rename](../closed/decisions/2026-08-19-bee-box-rename.md).
+Related: [public site](../../features/2026-07-20-public-site.md),
+[Bee Box rename](../decisions/2026-08-19-bee-box-rename.md).

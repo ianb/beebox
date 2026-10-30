@@ -60,3 +60,5 @@ Creating the file is the easy half (Drive `files.create` /
 - [Agent emits bare card filenames in chat](../closed/bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)
   — the synced-doc card type is the most exposed surface; a create flow adds
   another place the agent references these cards.
+
+Re-reviewed 2026-10-30: Still no Drive create call. Folder mounts (gfolder cards, connectors/google-drive/folder-plan.ts) now exist and are a natural answer to 'where does the new doc land'.

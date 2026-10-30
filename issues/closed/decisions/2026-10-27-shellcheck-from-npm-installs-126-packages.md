@@ -23,7 +23,7 @@ Options:
 - keep the npm package, but declare it in a workspace that deploy does not
   sync;
 - keep it as it is, if box-side card linting will run shellcheck on the
-  server ([box-content linting](../../features/2026-07-24-box-content-card-linting.md),
+  server ([box-content linting](../features/2026-07-24-box-content-card-linting.md),
   [shellcheck in box cards](../../features/2026-08-25-shellcheck-shell-in-box-cards.md)).
 
 The third option depends on where that feature runs, so decide it there

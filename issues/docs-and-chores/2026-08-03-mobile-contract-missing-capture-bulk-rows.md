@@ -22,3 +22,5 @@ Index (§7) with a same-commit sync rule, but it lags shipped code:
 The `bbx-ios-overlap` skill currently carries a caveat about this gap; once the
 doc's index and anchor block cover capture + bulk, drop that caveat from the
 skill.
+
+Re-reviewed 2026-10-30: unchanged. The bulk rows also cite the old routes/bulk-upload.ts path, and ios-app now has CaptureUploadCoordinator.swift and BulkPhotoStaging.swift, which the anchor list should also consider.

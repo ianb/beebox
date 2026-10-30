@@ -29,3 +29,5 @@ wall-clock times in a UTC `Date` and which need converting back), keeping UTC
 for boxes without one. Adopting it shifts ai-class's existing cron schedules
 to Chicago time, so tell the boxholder before it ships. The guidance and the
 DTSTART warning (`core/card-lint/core/rrule-dtstart.ts`) change with it.
+
+Re-reviewed 2026-10-30: still true; cron is parsed without `tz` in due.ts:146 and in `beebox/src/core/schedule/health.ts:280` (the issue's bare `health.ts` now lives there).

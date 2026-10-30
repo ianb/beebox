@@ -61,3 +61,5 @@ mode.
 Fit with the box: recipes and todos already exist. The new parts are a plan
 card that orders meals over days, freezer/staple inventory, derived reminders,
 and an order-reconciliation procedure over email.
+
+Re-reviewed 2026-10-30: research is complete; what remains is choosing which ideas (plan card, thaw reminders, freezer/staple inventory, order reconciliation) to file as features.

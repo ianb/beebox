@@ -11,7 +11,7 @@ discovered-in: worktree-dup-sweep-frontend — frontend pass of the functional-d
 
 Closed by the plan [frontend-visual-near-duplicates](../../../beebox/docs/implemented-plans/frontend-visual-near-duplicates.md), commits 8c2371aea through 6f3b0f124.
 
-Part of the [functional-duplication sweep](../../code-quality/2026-10-22-functional-duplication-sweep.md).
+Part of the [functional-duplication sweep](2026-10-22-functional-duplication-sweep.md).
 The sweep merged markup that rendered identically. These groups render
 differently today, so a merge changes how something looks or what a screen
 reader hears.

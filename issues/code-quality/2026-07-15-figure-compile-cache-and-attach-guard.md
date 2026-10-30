@@ -45,3 +45,5 @@ need a cache-eviction and dependency-freshness design.
 ## Audit 2026-10-22
 
 Items 2 and 3 still hold. The compiler moved to `beebox/src/webapp/views/compiler/compile.ts`. The `cache` and `metaCache` maps are at lines 64-65. Entries leave only through the invalidate function near line 452. The cache key still uses the entry file mtime and size, with no `metafile` tracking of imports.
+
+Re-reviewed 2026-10-30: items 2 and 3 still hold; the maps are now at compile.ts:62-63.

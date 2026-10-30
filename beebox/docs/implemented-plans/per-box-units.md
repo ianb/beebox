@@ -3,7 +3,7 @@ title: "One systemd unit and one OS user per box, and a cloud-init host"
 status: implemented
 workstream: box-isolation
 issues:
-  - ../../../issues/features/2026-09-04-cross-box-filesystem-isolation.md
+  - ../../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md
   - ../../../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md
 ---
 # One systemd unit and one OS user per box, and a cloud-init host
@@ -17,7 +17,7 @@ box users. The host is provisioned by a cloud-init file instead of a script
 that never re-runs.
 
 **Issues addressed:**
-[cross-box filesystem isolation](../../../issues/features/2026-09-04-cross-box-filesystem-isolation.md)
+[cross-box filesystem isolation](../../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md)
 (resolved by Tracks B and C);
 [setup-server.sh is not re-run by deploy](../../../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md)
 (resolved by Track F: units and the provisioner become versioned files

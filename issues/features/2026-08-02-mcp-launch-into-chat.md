@@ -74,3 +74,7 @@ being told "go start a chat over there" and losing the thread.
 - Memory Atlas architecture review (`research/memory-atlas-architecture-review.md`)
   — the feature set this belongs to.
 </content>
+
+Re-reviewed 2026-10-30: Still unbuilt. Box agents have no MCP tool server; the house pattern for agent-to-client actions is a bbx chat subcommand the browser tab answers (bbx chat ui, bbx chat screenshot).
+
+Out of date in the body above: Reframe 'Why MCP' as an agent-invoked command: a `bbx chat` subcommand that asks the tab to navigate, following the chat ui/screenshot long-poll pattern, unless MCP tools are introduced separately.

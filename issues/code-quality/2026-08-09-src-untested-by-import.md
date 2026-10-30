@@ -66,3 +66,7 @@ the origin issue.
 ## Audit 2026-10-22
 
 The count is out of date. The claim "no component-render test tier" no longer holds: `beebox/src/frontend/test/components/` has 117 test files, 42 of which render components. Re-measure before using the 430-file figure.
+
+Re-reviewed 2026-10-30: the body's numbers are stale as the audit note says; re-measure or close as informational.
+
+Out of date in the body above: Re-run the import-graph measurement and replace the table and the 'no component-render test tier' paragraph, or close the issue as an informational measurement with no task.

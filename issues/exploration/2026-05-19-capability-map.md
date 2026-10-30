@@ -12,3 +12,7 @@ Shape: written at the boxholder's level of abstraction (what the boxholder can *
 Open questions:
 - **Global vs. conditional load.** One always-loaded document is simple but costs tokens every turn for unused capabilities. Per-domain files loaded via `paths:` rules scales better but the agent has to know to look.
 - **Generated vs. hand-written.** Generated from schema/tool annotations stays fresh but misses the *composed* capabilities, which are the whole point. Hand-written captures composition but drifts. Probably hand-written with an audit hook that complains when tools are added without capability-map updates.
+
+Re-reviewed 2026-10-30: most of this shipped as box-docs/what-you-could-do.md, a hand-written map of what a person could ask for, loaded on demand through the what-can-you-do skill. Not built: systematic 'can't do' entries and an audit that flags new tools without a map update.
+
+Out of date in the body above: Record that what-you-could-do.md and the what-can-you-do skill answer the global-vs-conditional and generated-vs-hand-written questions; narrow to negative-space entries and a drift check, or close as implemented.

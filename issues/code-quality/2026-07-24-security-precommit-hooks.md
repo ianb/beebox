@@ -14,7 +14,7 @@ openclaw runs a battery of off-the-shelf hooks via the `pre-commit`/`prek`
 framework. We use husky, so adopting these means adding husky-hook lines + a CI
 step, **not** adopting `pre-commit`. Scope here is the **dev repo** (protecting
 what we commit) — box-content linting is a separate track (see
-[../features/2026-07-24-box-content-card-linting.md](../features/2026-07-24-box-content-card-linting.md)).
+[../features/2026-07-24-box-content-card-linting.md](../closed/features/2026-07-24-box-content-card-linting.md)).
 
 Approved to adopt (Ian, 2026-07-24):
 

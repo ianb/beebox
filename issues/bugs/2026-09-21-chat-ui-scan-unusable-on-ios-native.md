@@ -54,3 +54,7 @@ connected.
 - Distinguishing those two directions needs to know whether the iOS app's
   WebView is wired to the chat-session websocket the same way a desktop/mobile
   browser tab is; this was not investigated as part of this triage pass.
+
+Re-reviewed 2026-10-30: the mechanism section is wrong. The native shell already answers the scan with its controls (since 2026-08-23), so no-client means the iOS webview did not ack the request at all; why is not established.
+
+Out of date in the body above: Replace 'Nothing in this path is channel-aware' and the 'native would need to participate' option with the existing native scan (NativeControlRegistry, coverage dom+native). Reframe the open question: why the webview on that session sent no ack (backgrounded or suspended webview, session id mismatch, or an older app build).

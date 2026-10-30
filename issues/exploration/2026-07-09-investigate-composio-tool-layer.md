@@ -51,3 +51,7 @@ integration is real work. Composio trades that for breadth-fast + managed auth.
 **Disposition:** investigate — likely "adopt for long-tail *actions* via MCP, keep
 hand-rolled typed connectors for the core *syncs* we own," but the self-hosted/auth
 custody question gates whether it fits the source-available story at all.
+
+Re-reviewed 2026-10-30: The 2026-07-28 header says the auth question resolved toward Nango, but the later feature issues/features/2026-09-06-connectors-via-composio-managed-auth.md proposes Composio managed auth as an opt-in token source. The two disagree; the header should defer to the newer issue.
+
+Out of date in the body above: Revise the 2026-07-28 update: the auth/custody sub-question was reopened by issues/features/2026-09-06-connectors-via-composio-managed-auth.md (Composio as an opt-in token source, gated on whether its Google app is verified for restricted scopes). Leave this issue for the tool-catalog question only.

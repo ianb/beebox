@@ -81,3 +81,7 @@ of each agent inventing its own.
   issue's problem. Added 2026-10-09 at the boxholder's request.
 - [Citation conventions and kept copies](2026-10-09-citation-conventions-and-kept-copies-of-sources.md)
   — the convention that makes a captured page a citable copy.
+
+Re-reviewed 2026-10-30: still no server-side capture. Clerk is no longer the only producer: the iOS share extension writes a link-only webpage card (share/router.ts:47-60) with no body or frozen snapshot, which a server capture could fill in.
+
+Out of date in the body above: Correct 'That is the only producer. Nothing under webapp/routes or core/commands writes a webpage card': the iOS share router (beebox/src/webapp/trpc/routers/share/router.ts) writes link-only webpage cards. Add it as a likely caller of the server-side capture.

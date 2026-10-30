@@ -34,3 +34,5 @@ allowlist entries. First, confirm that no box's scheduled scripts or
 field-test setup sets these variables outside the repo. The sweep did not do
 this removal because it deletes a test harness entry point, not a single
 dead export.
+
+Re-reviewed 2026-10-30: still unreferenced; the only stubs.yaml files seen are the old scenario fixtures under ~/src/boxes/scenarios, which no code runs.

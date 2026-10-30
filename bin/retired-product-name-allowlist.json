@@ -216,7 +216,7 @@
     "reason": "The issue records the former command in a historical example."
   },
   {
-    "path": "issues/exploration/2026-08-19-site-authored-in-a-box.md",
+    "path": "issues/closed/exploration/2026-08-19-site-authored-in-a-box.md",
     "occurrenceClass": "kebab-name",
     "expectedCount": 4,
     "reason": "The exploration records the former repository name as historical context."

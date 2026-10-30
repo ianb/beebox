@@ -73,3 +73,7 @@ Criteria from the boxholder:
   something on the page that came from what the person gave.
 - Sources that never pass through a browser upload (paper, mail, captures,
   photos, messages, a shared box) are where Notebook cannot follow.
+
+Re-reviewed 2026-10-30: still open for discussion; the next action should move from frontmatter to the next-action store.
+
+Out of date in the body above: Remove `next-action: discuss` from frontmatter and set it with `bin/issues next-action <issue> discuss` if still wanted.

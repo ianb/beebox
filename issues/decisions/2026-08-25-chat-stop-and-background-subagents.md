@@ -38,3 +38,5 @@ implemented until the pin reaches it. See the 0.3.246 entry in the
 ## Audit 2026-10-22
 
 The pin no longer blocks this. The SDK pin reached 0.3.246 on 2026-08-27 (see `schedules/sdk-update/agent-sdk-notes.md`) and is now 0.3.304 (`beebox/package.json:139`). No code uses `perTaskStopAffordance`. The chat stop path is `interrupt()` in `beebox/src/core/chat/session/run/core.ts:381`. `beebox/src/services/claude-chat.ts` no longer exists. The decision is still open.
+
+Re-reviewed 2026-10-30: pointers drifted again (SDK pin now 0.3.312, interrupt at run/core.ts:387). Still undecided.

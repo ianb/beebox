@@ -19,3 +19,5 @@ Reconfirmed 2026-09-24: still unverified. `chat-session-routes.ts` is gone; `set
 ## Audit 2026-10-22
 
 Still unverified: no test switches the model in a live session. The `setModel` procedure is now at `beebox/src/webapp/trpc/routers/chat/control-procedures.ts:270`. The policy test is `beebox/test/webapp/trpc/routers/chat.model-policy.test.ts`.
+
+Re-reviewed 2026-10-30: setModel is now at control-procedures.ts:275; still no live-session switch test.

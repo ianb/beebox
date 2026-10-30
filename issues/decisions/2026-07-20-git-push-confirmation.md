@@ -31,3 +31,5 @@ system info so it's at least visible. Related:
 [EXPORT.md](../features/2026-07-20-export-md-agent-instructions.md)
 (the backup paragraph), the security report's data-flow inventory
 ([agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)).
+
+Re-reviewed 2026-10-30: one option is partly in place: the admin Backup section shows the Git remote URL (beebox/src/frontend/src/components/admin/BackupSection.tsx:51-56). No consent gate exists.

@@ -48,3 +48,7 @@ Spaced review and numeric mastery stay rejected
 Courses are the opt-in courseware plugin, not core Bee Box
 (`beebox/src/plugins/courseware/`). This issue now has `area: courseware`, so
 core and journey work leave it out.
+
+Re-reviewed 2026-10-30: not built; pointers moved into the courseware plugin.
+
+Out of date in the body above: Update pointers: `beebox/src/schemas/progress.ts` -> `beebox/src/plugins/courseware/progress.ts`; `guidance-sync/skills/content.ts:134` -> `beebox/src/plugins/courseware/skill.ts:129`.

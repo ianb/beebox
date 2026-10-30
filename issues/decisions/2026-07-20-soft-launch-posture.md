@@ -206,3 +206,7 @@ writing as its first dogfood),
 (the menu-of-flows direction), plus the scrub edits (four files) and
 [installation-remaining-work](../features/2026-07-19-installation-remaining-work.md)
 as standing context.
+
+Re-reviewed 2026-10-30: most gates are closed; the remaining ones are iOS pairing robustness, the first-hour experience, and the one issues-scrub question. Whether the soft launch has happened (which closes this) is for the boxholder to say.
+
+Out of date in the body above: Update the Gates section: mark gate 1's dev-router-lan-exposure FIXED and gate 2 closed; confirm gate 3 against README.md; list only the gates still open (ios-pairing-flow-robustness, first-run-experience, the ledger-box scrub question).

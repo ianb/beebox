@@ -44,3 +44,5 @@ page, Admin and secrets, and phone layout for the conversation and a card.
 
 Related: [agent documentation](2026-09-12-agent-documentation.md) (the public
 corpus a chatbot can be pointed at) could include the same pages.
+
+Re-reviewed 2026-10-30: Still absent. The shipped box docs directory is beebox/box-docs/ (installed at node_modules/beebox/box-docs/), not beebox/docs/box/ as the issue says.

@@ -52,3 +52,7 @@ removes most of that objection: 17 MB is cheaper than many web pages' images.
 
 A short spike answers most of this: load it in a scratch page, feed recorded
 dictation in short windows, and measure latency, accuracy, and CPU.
+
+Re-reviewed 2026-10-30: the browser-live-stt spike answered most questions (see research/browser-live-stt/README.md); Whistle is recorded as 'Later', the route for browsers without on-device Web Speech.
+
+Out of date in the body above: Add a Result section linking research/browser-live-stt/README.md: in-page WASM works, 18 MB, Apache-2.0, LibriSpeech WER 10.3% vs Chrome on-device 8.4%, words commit about 2 s late, needs a Worker. Mark answered: runs in page, license, latency. Still open: accuracy on real dictation, battery, keyword-spotting behavior with revised windows. State the trigger for picking it up (Safari/Firefox/Android live text becomes wanted).

@@ -48,3 +48,7 @@ window and communicate it in the UI; and surface redeem/pair failures to the use
 ## Audit 2026-10-22
 
 The scheme half of the second weakness is fixed. `PairingTransport` (`apple-shared/Sources/BeeBoxShared/PairingTransport.swift:19-22`) refuses plain `http` to any host that is not loopback, `.local`, or a private, link-local, or Tailscale address, before redeem (`005299baf`). No "Add this box?" confirmation exists for an externally opened link. Pending tickets are still in the process-local `pendingPairings` map (`beebox/src/core/mobile/pairing.ts:66`), so the idle-stop race remains.
+
+Re-reviewed 2026-10-30: two items remain open: no confirmation before redeeming an externally opened pairing link, and pending tickets held in memory (10-minute TTL) while the hub idle-stops after 5 minutes. Duplicate redeem, silent failures, and the plain-http case are fixed.
+
+Out of date in the body above: Retitle to the two open items (external-link confirmation; in-memory ticket vs idle-stop) and collapse the original four-part body into a short 'resolved' list, since duplicate redeem, silent failure, and http are fixed per the 2026-10-17 note and 2026-10-22 audit.

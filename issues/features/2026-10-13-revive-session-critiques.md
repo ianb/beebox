@@ -49,3 +49,5 @@ What a revival needs to decide:
   dev variant or the tool list widened.
 
 Also fix the doc so it does not promise `@session-critique` until the grader exists.
+
+Re-reviewed 2026-10-30: Still open. The --tool-report option is declared in beebox/src/cli/commands/session/command.ts:170.

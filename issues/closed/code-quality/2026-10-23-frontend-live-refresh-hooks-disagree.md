@@ -12,7 +12,7 @@ resolution: implemented
 
 **Closed:** implemented by the dup-sweep-frontend branch (plan frontend-unify-formatters-refresh-storage; commits 65147fadb through 1bb95099e). Each commit message names the behavior changes. Wording was covered by unit/DOM tests, not checked in a browser.
 
-Part of the [functional-duplication sweep](../../code-quality/2026-10-22-functional-duplication-sweep.md).
+Part of the [functional-duplication sweep](2026-10-22-functional-duplication-sweep.md).
 Views that refetch when a box file changes each subscribe to the bus and
 filter `file-change` events by hand. The sweep moved the shared "skip the
 first connect" idiom into `useBusSubscription`'s `onReconnect`. The rest

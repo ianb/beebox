@@ -53,3 +53,7 @@ A `do-it` request was set. Changed to `discuss`: the issue lists four options an
 ## Decision (2026-10-06)
 
 A local schedule in this monorepo (`schedules/`, run by `bin/schedules`), not a box schedule, pulls the production feedback in. It replaces the hand-run `feedback-review/collect.ts` step.
+
+Re-reviewed 2026-10-30: the decided local schedule does not exist yet. Two side bugs are stale: feedback is now cards with written context and an optional session ID (453400e0d), so the wrong-session-context capture no longer applies, and the local scan now uses the .beebox marker.
+
+Out of date in the body above: Mark the 'wrong session's context' bug as superseded by feedback-as-cards (453400e0d) and the v2 local-scan concern as fixed (collect.ts checks .beebox). Leave the 2026-10-06 decision (local schedule) as the remaining work.

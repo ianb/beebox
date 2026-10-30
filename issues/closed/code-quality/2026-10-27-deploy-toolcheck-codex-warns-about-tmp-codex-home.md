@@ -5,7 +5,10 @@ area: deploy
 labels: [deploy, noise]
 filed-by: agent
 discovered-in: dep-reduction — deploy logs for 738fcbddb and 11e6c5bfa, 2026-10-27
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Re-reviewed 2026-10-30: fixed in 729a3deae; deploy.sh now makes the throwaway Codex home under ~/.cache.
 
 Every deploy's "Verifying required external tools..." step prints:
 

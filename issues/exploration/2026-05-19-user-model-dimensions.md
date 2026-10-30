@@ -15,3 +15,5 @@ Related to the memory-writing guidance above: a deep model of the principal (box
 - What kinds of errors are tolerable vs. costly
 
 The static part of the system isn't the principal's content; it's the *axes* the system watches for evidence along. Boxholder-specific: harder than the coding-assistant case because the boxholder may not articulate preferences directly — the agent has to infer from how conversations land.
+
+Re-reviewed 2026-10-30: Still open. The personality card holds tone and traits as free-form lists; nothing names the axes the agent should watch. issues/exploration/2026-09-11-explicit-but-rich.md frames the same goal and could absorb this.

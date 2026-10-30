@@ -39,3 +39,5 @@ Provisioning (done 2026-10-27, dep-reduction): the production server has
 apt's shellcheck 0.9.0, `deploy/hetzner/cloud-init.yaml` lists it, and
 `docs/install/developer.md` names it. Still open: add it to deploy.sh's
 required-tools check and to `docker/Dockerfile` when this feature ships.
+
+Re-reviewed 2026-10-30: Absorbs the shellcheck half of 2026-07-24-box-content-card-linting.md, which is a duplicate.

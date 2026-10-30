@@ -11,3 +11,7 @@ Triggered by an opportunity to show beebox live that came up before either the s
 **My demo-readiness.** Independent of the system: a short demo needs a script, a known-good golden path, and at least one rehearsed "here's where it gets interesting" moment. The instinct to show "everything" in five minutes is the failure mode. Probably worth keeping a `docs/demo-script.md` or similar — even a stub — so the next opportunity isn't a cold start. Also: a list of things that *don't* yet work well enough to show, so I can route around them without discovering live.
 
 Neither is urgent until the next opportunity. But the friction is reusable — the same gap will appear every time.
+
+Re-reviewed 2026-10-30: the system half (a seeded, non-private demo box) is now tracked by the modeled demo family box feature. The personal demo script and the do-not-show list are still unwritten.
+
+Out of date in the body above: Point the 'system demo-readiness' section at features/2026-07-22-modeled-demo-family-box.md and narrow this issue to the demo script, golden path, and list of things to route around.

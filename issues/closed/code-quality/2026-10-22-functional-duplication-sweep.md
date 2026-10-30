@@ -6,7 +6,10 @@ labels: [code-quality]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder idea while planning quota work, 2026-10-22
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Re-reviewed 2026-10-30: both passes merged (frontend 71d1fa389, backend 3f3f59143); frontend leftovers are tracked in [smaller near-duplicates](../../code-quality/2026-10-23-frontend-smaller-near-duplicates.md).
 
 Agents write most of the code, often without finding a helper that already
 does the job. The result is functional duplication: two implementations of one
@@ -14,10 +17,10 @@ behavior with different names and shapes. Text-level clone detection misses
 most of it. Each copy drifts, and a fix lands in one copy only.
 
 Known instances already filed:
-[fold search and browse summaries onto summarize](2026-09-20-fold-search-and-browse-summaries-onto-summarize.md),
-[one way to log everywhere](2026-07-04-logging-consolidation.md),
-[chat session shared core](../closed/code-quality/2026-07-06-chat-session-shared-core.md).
-The [what-can-we-remove sweep](2026-09-14-what-can-we-remove-sweep.md) is a
+[fold search and browse summaries onto summarize](../../code-quality/2026-09-20-fold-search-and-browse-summaries-onto-summarize.md),
+[one way to log everywhere](../../code-quality/2026-07-04-logging-consolidation.md),
+[chat session shared core](2026-07-06-chat-session-shared-core.md).
+The [what-can-we-remove sweep](../../code-quality/2026-09-14-what-can-we-remove-sweep.md) is a
 neighbor: it removes code with no purpose. This sweep merges code with one
 purpose and two implementations.
 
@@ -62,16 +65,16 @@ header, useBoxNow on useNow, sessionStorage JSON, snippet, parentDir,
 skip-first-connect (onReconnect), push support, plain left click, dashboard
 time-ago, secret reveal, raw file and image URLs.
 
-Filed: [stall-recovery-polls-rotated-session-id](../closed/bugs/2026-10-23-stall-recovery-polls-rotated-session-id.md),
-[chat-composer-enter-sends-during-ime-composition](../closed/bugs/2026-10-23-chat-composer-enter-sends-during-ime-composition.md),
-[frontend-live-refresh-hooks-disagree](../closed/code-quality/2026-10-23-frontend-live-refresh-hooks-disagree.md),
-[frontend-time-and-duration-formatters](../closed/code-quality/2026-10-23-frontend-time-and-duration-formatters.md),
-[byte-size-formatters-disagree](../closed/code-quality/2026-10-23-byte-size-formatters-disagree.md),
-[card-display-name-helpers-disagree](../closed/code-quality/2026-10-23-card-display-name-helpers-disagree.md),
-[browser-storage-keys-and-reads-inconsistent](../closed/code-quality/2026-10-23-browser-storage-keys-and-reads-inconsistent.md),
-[frontend-visual-near-duplicates](../closed/code-quality/2026-10-23-frontend-visual-near-duplicates.md),
-[frontend-smaller-near-duplicates](2026-10-23-frontend-smaller-near-duplicates.md),
-and a note on [browse-list-live-refresh-not-firing](../bugs/2026-07-31-browse-list-live-refresh-not-firing.md).
+Filed: [stall-recovery-polls-rotated-session-id](../bugs/2026-10-23-stall-recovery-polls-rotated-session-id.md),
+[chat-composer-enter-sends-during-ime-composition](../bugs/2026-10-23-chat-composer-enter-sends-during-ime-composition.md),
+[frontend-live-refresh-hooks-disagree](2026-10-23-frontend-live-refresh-hooks-disagree.md),
+[frontend-time-and-duration-formatters](2026-10-23-frontend-time-and-duration-formatters.md),
+[byte-size-formatters-disagree](2026-10-23-byte-size-formatters-disagree.md),
+[card-display-name-helpers-disagree](2026-10-23-card-display-name-helpers-disagree.md),
+[browser-storage-keys-and-reads-inconsistent](2026-10-23-browser-storage-keys-and-reads-inconsistent.md),
+[frontend-visual-near-duplicates](2026-10-23-frontend-visual-near-duplicates.md),
+[frontend-smaller-near-duplicates](../../code-quality/2026-10-23-frontend-smaller-near-duplicates.md),
+and a note on [browse-list-live-refresh-not-firing](../../bugs/2026-07-31-browse-list-live-refresh-not-firing.md).
 
 Not duplication: clock-style m:ss formats, arrow-key list navigation (three
 different rules), global hotkeys (one each), scroll-to-bottom one-liners,
@@ -109,14 +112,14 @@ names the members and the canonical choice.
 | `pidAlive` (4), `killGroup` (1), `bootTimeMs` (1) in `bin/` | merged onto `hub/child-process-utils.ts`, test added | 72 |
 
 Filed, because a merge changes output or needs a choice:
-[quota collection twice](../closed/code-quality/2026-10-23-agent-quota-collection-exists-twice.md),
-[frontmatter split/parse/write](../closed/code-quality/2026-10-23-frontmatter-read-and-write-have-many-implementations.md),
-[two card filename parsers](../closed/code-quality/2026-10-23-two-card-filename-parsers.md),
-[atomic writes, JSON state loaders, strict exists](../closed/code-quality/2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md),
-[inline path containment](../closed/code-quality/2026-10-23-path-containment-checks-are-inlined.md),
-[bin git, process, and argv helpers](../closed/code-quality/2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md),
-[dates and durations](../closed/code-quality/2026-10-23-date-and-duration-formatting-variants.md),
-[text helpers: truncate, slug, escape, coercion, sha256](../closed/code-quality/2026-10-23-text-helpers-with-diverging-rules.md).
+[quota collection twice](2026-10-23-agent-quota-collection-exists-twice.md),
+[frontmatter split/parse/write](2026-10-23-frontmatter-read-and-write-have-many-implementations.md),
+[two card filename parsers](2026-10-23-two-card-filename-parsers.md),
+[atomic writes, JSON state loaders, strict exists](2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md),
+[inline path containment](2026-10-23-path-containment-checks-are-inlined.md),
+[bin git, process, and argv helpers](2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md),
+[dates and durations](2026-10-23-date-and-duration-formatting-variants.md),
+[text helpers: truncate, slug, escape, coercion, sha256](2026-10-23-text-helpers-with-diverging-rules.md).
 
 Judged not duplication, or not worth a merge: the dev router's own error,
 `sleep`, `killGroup`, and `pidAlive` copies (the router keeps itself

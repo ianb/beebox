@@ -96,3 +96,7 @@ think it works" into screenshots someone can look at.
 ## Audit 2026-10-22
 
 The declaration half is fixed in commit `4927fc6f8`. `ios-app/BeeBox/Info.plist:32-44` now lists `UISupportedInterfaceOrientations` (portrait and both landscapes) and an iPad set with all four. The "no orientation keys" statement above is no longer true, and the Xcode warning should be gone. The layout and Split View work, and the simulator verification, remain open. `TARGETED_DEVICE_FAMILY` is still `"1,2"`.
+
+Re-reviewed 2026-10-30: The Xcode warning is fixed. Split View and iPad layout overlap the iPad support issue; this one should keep only iPhone landscape layout and its simulator fixtures.
+
+Out of date in the body above: Narrow to iPhone landscape (composer, keyboard, capture-composer-fixtures landscape states) and move the Split View/size-class and iPad points to 2026-08-30-ipad-support.md, or merge the two.

@@ -86,3 +86,7 @@ your things once you have things.
 ## Audit 2026-10-22
 
 The search half shipped in commit `aec22079d` ("Add Search as a canonical interface card with Cmd-K quick search"). `SYSTEM_CARD_PATHS.search` is `_config/interface/search.card` (`beebox/src/shared/system-card-paths.ts:13`). A `search` tRPC router reads the engine (`beebox/src/webapp/trpc/routers/search.ts`). The home-surface half is still open: no decision names one of dashboard, inventory, or landmarks as home.
+
+Re-reviewed 2026-10-30: Search shipped; only the home-surface choice is open. The box screen plan is a new candidate for that role alongside dashboard, inventory and landmarks.
+
+Out of date in the body above: Retitle to the home-surface question, collapse the search-design sections to a one-line 'shipped in aec22079d' note, and add the box screen (plans/box-screen.md) to the candidate list.

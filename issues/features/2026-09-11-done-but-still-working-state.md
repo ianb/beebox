@@ -169,3 +169,7 @@ https://code.claude.com/docs/en/agent-sdk/sessions.md
 ## Audit 2026-10-22
 
 Still open: chat has no "idle with N tasks running" state. `showAgentWorking` is still one boolean. Pointers moved: `InteractiveChat.tsx` is now a directory. The poll is at `beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/shell.tsx:287` and the composer status at `.../InteractiveChat/view.tsx:319`. The background task strip changed in commit 27e697c16: its membership now follows the SDK `background_tasks_changed` event, and ambient watcher tasks no longer show. The strip logic is in `.../InteractiveChat/background-tasks.ts`.
+
+Re-reviewed 2026-10-30: the three-state chat status is still missing (shell.tsx:241). The issue's open question, whether a background subagent survives a normal turn end, is answered: it does in production, until idle eviction stops it (issues/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md).
+
+Out of date in the body above: Replace the 'What is genuinely unestablished' paragraph and the research claim that the SDK runs subagents to completion before the result: background subagents do outlive the parent turn in the current SDK pin, and the idle-eviction bug shows the session lifecycle must account for them. Update the shell.tsx line to :241.

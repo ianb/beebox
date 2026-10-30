@@ -163,3 +163,5 @@ What people do with glossaries and ontologies for coding agents.
   [Ontology-Grounded Project Memory for Coding Agents](https://arxiv.org/abs/2608.13662)
   No primary source was found for the claim that asking a planner for "a
   strong ontology" improves its architecture. The rest is anecdote.
+
+Re-reviewed 2026-10-30: nothing built yet. The source-layout review this waited on is closed, so placement design is unblocked.

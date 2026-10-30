@@ -9,7 +9,7 @@ priority: important
 ---
 
 A box authoring site pages (the box-as-CMS direction — see
-[the exploration issue](../exploration/2026-08-19-site-authored-in-a-box.md))
+[the exploration issue](../closed/exploration/2026-08-19-site-authored-in-a-box.md))
 trips two warning classes on every `cb validate`:
 
 - card-lint's ref-walker reads `{% aside ref="why-it-asks" /%}` as a box
@@ -52,3 +52,5 @@ deliberately.
 ## Audit 2026-10-22
 
 Half of the second warning now has a mechanism. A schema can declare its body tags (`markdocTags`, `beebox/src/cards/schema.ts:254`, commit `eebb195b6`, 2026-10-10), and `beebox/src/core/body-markdoc-lint.ts` accepts them. Not verified: whether the site vocabulary declares its tags this way. The `aside.ref` collision with the ref walker is unchanged.
+
+Re-reviewed 2026-10-30: markdocTags exists and works for doc; nothing in the repo declares the site vocabulary through it, and the aside ref attribute is unchanged.

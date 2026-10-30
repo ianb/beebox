@@ -32,3 +32,7 @@ If [the issue system moves inside beebox](../exploration/2026-07-21-issues-insid
 meta issues become a card-ref pattern and could get real aggregation
 (open/closed rollup on the meta's view) — worth keeping the two ideas
 linked.
+
+Re-reviewed 2026-10-30: labels: now exist and are a browser facet, and issues/AGENTS.md tells agents to use them in place of new schema fields, which conflicts with the proposed meta: true flag. What labels lack is a tracker body with framing and a rollup.
+
+Out of date in the body above: Replace the 'meta: true frontmatter flag' option with a labels-based approach (a label plus one tracker issue per label), or state why a new key is still needed.

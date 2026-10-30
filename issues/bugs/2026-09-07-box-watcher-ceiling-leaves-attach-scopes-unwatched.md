@@ -51,3 +51,7 @@ Directions:
   Admin, not only a stderr line.
 
 **2026-10-06:** the file watcher no longer watches `node_modules/` directories at any depth, so a project's dependency tree no longer counts toward the ceiling.
+
+Re-reviewed 2026-10-30: the ceiling and per-scope watches remain. Since filing, the archive is excluded (be5ef4164) and a box-watch-limit health check reports the breach (db57ccf95), which covers the third direction.
+
+Out of date in the body above: Mark the 'visible in bbx health / Admin' direction done (db57ccf95, box-watch-limit check) and add the 2026-10-27 archive exclusion; the remaining directions are recursive fs.watch on macOS or parent-watching attach scopes.

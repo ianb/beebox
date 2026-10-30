@@ -56,3 +56,7 @@ output schema**, so changing the shape changes an LLM output contract and the
 observer prompt, not just field names. `src/core/retro/report.ts:85` (moved to `beebox/src/core/retro/scan/report.ts`) reads
 `obs.sinkRef`. And confirm whether observations are persisted in retro run state
 — if they are, this needs a migration rather than a rename.
+
+Re-reviewed 2026-10-30: still unconstrained, and the schema's own example path is now wrong: it says config/intake.guide.card, but guide cards live at _config/*.guide.card.
+
+Out of date in the body above: Add to part 1 that the sinkRef describe() example and observer.ts:45 point at the pre-v2 'config/' prefix, so the prompt itself teaches an unreachable path; update file references to observations.ts:39 and scan/report.ts:86.

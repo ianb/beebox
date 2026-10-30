@@ -29,3 +29,5 @@ it is not yet found.
 
 Done when a `--no-edit` merge on a worktree branch records the trailers in a
 trailer block, with a test that runs a real merge in a fixture repo.
+
+Re-reviewed 2026-10-30: Reproduced on main by 5e92076e0 (2026-10-30), after the filing.

@@ -43,3 +43,7 @@ which the container path makes more pressing but which is its own decision.
 ## Audit 2026-10-22
 
 Partly done. The root `README.md` no longer lists the from-source guide first. It points to an agent install prompt, and `beebox/docs/install/agent.md` (line 42) recommends the Docker path for users and the from-source path for contributors. Still open: `beebox/docs/install/docker.md` still builds the image locally (`docker compose build --pull`), and no published image exists. The plan `beebox/docs/plans/container-first.md` has `status: draft` and covers the published image.
+
+Re-reviewed 2026-10-30: a published image now exists (`.github/workflows/image.yml`, used by the Mac app), so the 2026-10-22 audit line 'no published image exists' is wrong. The compose install still builds from a clone.
+
+Out of date in the body above: Replace the audit's 'no published image exists' with: an image is published to ghcr.io on version tags and daily :latest; remaining work is pointing `docker.md` and the compose file at the published image instead of `docker compose build`, plus the unverified steps.

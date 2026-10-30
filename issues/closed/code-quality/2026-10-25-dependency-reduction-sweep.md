@@ -6,7 +6,10 @@ labels: [dependencies, code-quality]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder idea, 2026-10-25
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Re-reviewed 2026-10-30: every inventory candidate is done or decided (dev/dependency-inventory-2026-10.md); lockfile went from 1,991 to 1,701 package versions.
 
 Each dependency costs install time, image size, update work, and supply-chain
 exposure. Nobody has reviewed the dependency list as a whole. On 2026-10-25 the
@@ -34,16 +37,16 @@ Knip already reports unused dependencies; start from its output, then read
 the code for the rest. A removal that changes behavior, or where the choice
 of replacement is a design question, gets filed instead of merged.
 
-Related: the [weekly dependency update schedule](../docs-and-chores/2026-09-28-weekly-dependency-update-schedule.md)
+Related: the [weekly dependency update schedule](../../docs-and-chores/2026-09-28-weekly-dependency-update-schedule.md)
 keeps the remaining set current; fewer dependencies make that schedule
-cheaper. The [what-can-we-remove sweep](2026-09-14-what-can-we-remove-sweep.md)
+cheaper. The [what-can-we-remove sweep](../../code-quality/2026-09-14-what-can-we-remove-sweep.md)
 and the [functional duplication sweep](2026-10-22-functional-duplication-sweep.md)
 are neighbors for code.
 
 ## Inventory
 
 The per-dependency inventory (2026-10-27) is in
-[dev/dependency-inventory-2026-10.md](../../dev/dependency-inventory-2026-10.md).
+[dev/dependency-inventory-2026-10.md](../../../dev/dependency-inventory-2026-10.md).
 Its status section records what the `dep-reduction` branch has removed (the
 first candidates the boxholder approved on 2026-10-27), which findings were
 wrong, and which went to decision issues. Every other row still needs a

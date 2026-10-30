@@ -23,3 +23,7 @@ untested. The direction: pull the routing into a pure function that takes
 `WKScriptMessage` unpacking as a thin wrapper, and test the function with one
 case per channel plus a wrong-origin, a subframe, and a malformed body. Do it
 with the next change to that file, not as a standalone refactor.
+
+Re-reviewed 2026-10-30: the body says every message is frame- and origin-checked before decoding, but only two of eleven channels are. Whether the other nine need the check (e.g. beeboxComposerCommand from a subframe) is a question to settle before writing the routing tests.
+
+Out of date in the body above: Correct the mechanism: the handler checks main frame and origin only for beeboxComposerBinding, and origin only for beeboxSession; nine channels have no check. Add a question whether subframe/cross-origin messages on those channels are reachable (navigation policy at :546) and should be refused.

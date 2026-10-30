@@ -73,3 +73,5 @@ Open questions for an eventual plan (don't design here):
   the card it's about, rather than a separate `~/.claude/projects` artifact? That
   would close the "session about a card leaves no trace on it" gap directly — but
   it's a bigger move (the SDK owns session-log writing today).
+
+Re-reviewed 2026-10-30: still unbuilt. The card-activity vocabulary moved to beebox/src/shared/card-activity-kinds.ts; src/core/chat-card-activity.ts is gone.

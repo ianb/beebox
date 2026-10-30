@@ -29,3 +29,7 @@ Not urgent for the same reason as search — the agent navigates by path convent
 ## Audit 2026-10-22
 
 The code pointer is stale. `findIncomingRefs` and `findOutgoingRefs` no longer exist in the repo (there is no `cardworks/` directory). Ref extraction now lives in `beebox/src/cards/extract-refs.ts` and `beebox/src/core/canonicalize-refs.ts`. A search of `beebox/src` finds no incoming-refs query, no `bbx refs` command, and no "Referenced by" panel. The surface is still unbuilt. Re-check the real data source before designing.
+
+Re-reviewed 2026-10-30: the core surface shipped: a 'Mentioned by' list in card Properties, an inbound-ref report on trash and the delete confirm, and an inventory filter by incoming refs. Still open: a bbx refs CLI, version-pin display, structural location per ref, and unlinked mentions.
+
+Out of date in the body above: Replace the 2026-10-22 audit with a status section citing find-inbound-card-refs.ts, card.inboundRefs, CardMentions in CardProperties.tsx, and the trash inbound report; narrow the remaining scope to bbx refs --incoming/--outgoing, showing the pinned version and fragment per ref, grouping by source kind, and unlinked mentions. Consider closing if those are not wanted.

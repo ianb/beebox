@@ -150,7 +150,7 @@ Verified 2026-07-21 (URLs fetched):
 ## Direction shift (2026-08-19) — the box authors the site
 
 Settled in conversation with the boxholder after the walkthrough prototype
-(see [the exploration issue](../../../issues/exploration/2026-08-19-site-authored-in-a-box.md)
+(see [the exploration issue](../../../issues/closed/exploration/2026-08-19-site-authored-in-a-box.md)
 and [the rename decision](../../../issues/closed/decisions/2026-08-19-bee-box-rename.md)).
 Three layers:
 

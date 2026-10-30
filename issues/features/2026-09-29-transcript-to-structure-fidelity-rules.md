@@ -43,3 +43,7 @@ Verification is a knowledge audit. Give the agent a transcript that contains
 a suggestion, a tentative date, and a third party's preference, and check that
 it files none of these as a decision, a dated event, or a fact about the
 boxholder.
+
+Re-reviewed 2026-10-30: Still no fidelity rules in capture, narration, or chat prompts. Cited line numbers and the recording.* rule location have moved.
+
+Out of date in the body above: Update references: capture-session.tsx:58 -> :85; prompts.ts:61 -> :77; the recording.* rules are entries in beebox/src/core/agent-guide/ledger.yaml (recording.box-files-not-memory, recording.routing, recording.dont-drop), rendered into the guide, not authored in guide.md.

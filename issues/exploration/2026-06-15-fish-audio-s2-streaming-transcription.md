@@ -21,3 +21,7 @@ waits on the final), per-minute cost vs. Deepgram, and whether it offers a
 temp-key/browser-direct path or needs a server proxy like Voxtral. File under
 "curious how well it works" — a focused bake-off against the current providers
 on a handful of real short voice commands, not a commitment to switch.
+
+Re-reviewed 2026-10-30: The premise looks wrong. Elsewhere in the repo, Fish S2 is a text-to-speech model (tested as TTS in the TTS comparison), and Fish's transcription model is `transcribe-1`. Whether Fish offers streaming STT at all needs checking before any bake-off.
+
+Out of date in the body above: Correct the premise: S2 is Fish Audio's TTS model. Re-point the evaluation at Fish's STT offering (transcribe-1) only if it has a realtime/streaming mode; otherwise close. Note that browser on-device STT (research/browser-live-stt) is now another short-utterance option.

@@ -75,3 +75,5 @@ output. The boxholder wants one Mac app that plays the iOS app's role.
 > (`imbue-ai/mngr`, `apps/minds/CHANGELOG.md`). See
 > [research/imbue-studio/comparison.md](../../research/imbue-studio/comparison.md),
 > section 3.
+
+Re-reviewed 2026-10-30: input (shortcut, voice, selections) and quick drop are still open. Since the 2026-10-17 note the app was renamed Bee Box Desktop and gained the engine image channel and encrypted backups.

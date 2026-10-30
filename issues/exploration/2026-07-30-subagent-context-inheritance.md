@@ -50,3 +50,7 @@ Related: `beebox/src/core/agent-guide/laws.ts` already does the
 "small set of named, inviolable rules that outrank everything else" pattern for
 *box* agents. There's no dev-repo equivalent, and if this turns out to be a real
 gap, that file is the model for what a good answer looks like.
+
+Re-reviewed 2026-10-30: a general-purpose subagent spawned for an issue review received the root AGENTS.md, including the shared-router prohibition, without being told. Typed agents (.claude/agents/finish.md) and subagent-spawned subagents remain unchecked.
+
+Out of date in the body above: Record the general-purpose result as answered (inherits AGENTS.md). Narrow the open check to the typed finish agent and nested subagents; close if those also inherit.

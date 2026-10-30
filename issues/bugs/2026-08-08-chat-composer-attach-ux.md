@@ -123,3 +123,7 @@ Walker reaction, not a recurrence. [B-inventory](../../beebox/test/user-stories/
 ## Re-encounter 2026-10-22 (journey walks)
 
 [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 8): after "Add files…" with a PDF and two photos, the composer held "[file#1] [image#1] [image#2]". The walker: "A bit odd-looking but fine." The sent message hid the tokens. This is the behavior that the manual test expects, so manual-testing stays; the tokens are still visible while typing, which item 1 accepts.
+
+Re-reviewed 2026-10-30: all three items are settled in code or by decision. The run-2 'upload panel shows No files yet' observation is moot on the web: the bulk-upload overlay was deleted on 2026-09-06.
+
+Out of date in the body above: In 'Re-checked 2026-08-25', mark the bulk-upload panel observation as obsolete (web overlay deleted 2026-09-06); the issue is then only the manual-testing look.

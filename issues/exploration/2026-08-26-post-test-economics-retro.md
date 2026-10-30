@@ -73,3 +73,7 @@ and 7 within the hour.
 ## Audit 2026-10-22
 
 Done since filing: the merge-time smoke tier decision is closed (`issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md`). The Codex item switch now has a `default` branch that skips and warns (`beebox/src/services/codex-tool-activity.ts:240`). Incidents 4, 8 and 11 have closed issues. Not verified and still open: the hourly-run self-test and known-red carry-forward (improvement 1), selection-miss edges from the ledger (improvement 3), and the UI keep-the-streamed-bubble fix (improvement 4).
+
+Re-reviewed 2026-10-30: the known-red carry-forward half of improvement 1 shipped in 65cad1b48. Still unverified: the filing self-test, the out-of-band 'cannot start' channel, selection-miss spawner edges, and the keep-the-streamed-bubble UI fix.
+
+Out of date in the body above: In the 2026-10-22 audit list, move 'known-red carry-forward' from open to done (schedules/full-suite/state.ts, red.ts). Consider splitting the remaining open items into their own issues and closing the retro.

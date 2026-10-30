@@ -39,3 +39,5 @@ notice. The boxholder chose to wait for the full fix.
 
 Verify in a real Terminal tab, because the Codex TUI does not start in a
 headless pseudo-terminal.
+
+Re-reviewed 2026-10-30: the overrides are unchanged. The agents-md workstream this waited on has landed (e2f697572), so the work is now unblocked.

@@ -31,3 +31,5 @@ developer pastes the alert's title and schedule instead.
 Questions: whether the slug replaces the id in the filename or sits beside
 it; how to number repeats of the same condition; whether closed alerts keep
 their slug for history.
+
+Re-reviewed 2026-10-30: no slug yet. Alerts are now addressable by id through a page anchor (`schedule-alert-<id>`), which a slug could reuse.

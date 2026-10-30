@@ -89,3 +89,5 @@ is a one-off baseline enough or does it want to be a periodic check?
 ## Audit 2026-10-22
 
 Still open: no trigger eval has run. The checkout now has 22 repository skills in `.claude/skills/`. Only two `bbx-guide-*` skills remain (`bbx-guide-api`, `bbx-guide-schemas`). `.agents/skills/skill-creator/` is still absent, so the harness path above does not exist.
+
+Re-reviewed 2026-10-30: still not run. Claude Code now ships a `claude plugin eval` command for plugin eval suites, which may replace the missing vendored harness; check whether it covers native skill triggering.

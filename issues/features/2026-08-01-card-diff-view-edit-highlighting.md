@@ -99,3 +99,7 @@ to design for:
 - [selection-provenance-canonical-anchors](2026-07-08-selection-provenance-canonical-anchors.md)
   — anchoring/provenance machinery a diff view would lean on.
 </content>
+
+Re-reviewed 2026-10-30: A small slice exists: chat activity lines now show an edit's before/after excerpt (72226e395). The card-side diff view against git history is still unbuilt.
+
+Out of date in the body above: Add a note that the chat activity excerpt (72226e395, plans/activity-detail.md) covers 'what did it change' at a glance in chat; scope this issue to the card-side rendered diff and accept/reject.

@@ -71,3 +71,7 @@ callers, then remove the `bbx` subcommand.
   boundary that already exists, or is it a separate package?
 - What do the box templates and `bbx init` need to change to stop declaring the
   server tree?
+
+Re-reviewed 2026-10-30: `serve` and `hub` now live under `bbx engine` (e60f01718); the dependency split, which the body calls the bigger cost, has not started.
+
+Out of date in the body above: Retitle toward the dependency split. Note that `bbx serve` became `bbx engine serve` (e60f01718) and the supervisor spawns `engine serve` (beebox/src/hub/supervisor/child-spawn.ts:95). Update 'Real callers' paths and drop the top-level-command framing.

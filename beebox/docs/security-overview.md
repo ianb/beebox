@@ -325,7 +325,7 @@ The ones you should actually weigh:
   two-box probe in the suite and re-swept weekly
   ([§7b](security-report.md#7b-cross-box-leakage-on-a-shared-host)).
   A per-box boundary on disk is accepted for now, not for good
-  ([direction](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md)).
+  ([direction](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md)).
 - **CSP is report-only** so far; enforcement is a staged flip.
 - **The box browser's page runs third-party script on the box's origin**:
   the Browser item shows agent-browser's own dashboard, and its script can do

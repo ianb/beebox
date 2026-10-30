@@ -145,3 +145,7 @@ before the move.
 ## Audit 2026-10-22
 
 `https://beebox.run` serves the public site (HTTP 200, `llms.txt` and the `.md` twins reachable), so the DNS, certificate and Cloudflare Pages items in section 5 are probably done. The checkboxes are not updated. The `beebox` package is not on npm (`npm view beebox` returns 404), so section 4 is open. The remaining sections need the developer's accounts and cannot be verified from the repository.
+
+Re-reviewed 2026-10-30: section 7 is done and later superseded: production moved to one user per box under /var/lib/beebox, and the migrate-to-beebox-user.sh script it names was removed (0f5c09f44). Open items are npm publish, OAuth confirmation, public profiles, Apple records and devices, and the completion check.
+
+Out of date in the body above: Check off or replace section 7 with a note that the per-box-user layout superseded it (script removed in 0f5c09f44); check off the section 5 DNS/certificate/Pages items per the 2026-10-22 audit; leave npm, OAuth, profiles, Apple, and completion.

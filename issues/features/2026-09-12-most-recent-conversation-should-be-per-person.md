@@ -48,3 +48,5 @@ is a single-user assumption the rest of the system is moving away from.
 Related: the sessionStorage key `bbx-conversation:<box>` is per-browser, so a
 returning person on their own device already gets their own thread — the
 box-wide fallback is what bites a newcomer or a fresh device.
+
+Re-reviewed 2026-10-30: still box-wide. The default resolution is now bootstrap-procedure.ts:113 (getMostActive over the box), reached from resolve-conversation.ts for the 'default' request kind.

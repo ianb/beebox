@@ -114,3 +114,5 @@ headings and both claims miss; `deck-theme` aborts at `deck-composer-menu`),
 and `Theme_Tour.landmark.card` (`system-themes` aborts at "Properties").
 Every expectation miss in this run has this cause. Artifacts:
 `beebox/test/tours/.artifacts/<tour>/2026-10-28T2*`.
+
+Re-reviewed 2026-10-30: stock test1 still lacks markdown-note.md, Theme_Tour.landmark.card, and both bloom fixtures; the fix (install fixtures before a tour run) has not been made.

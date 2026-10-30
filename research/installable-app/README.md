@@ -43,7 +43,7 @@ it asks what an app would add on top of it.
    the user with the user's SSH keys, browser profiles, and every other
    file. The open containment items
    ([allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md),
-   [cross-box isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md))
+   [cross-box isolation](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md))
    get harder. A native app also gets the user's global
    `~/.claude` configuration (CLAUDE.md, hooks, MCP servers) in every box
    agent unless it sets `CLAUDE_CONFIG_DIR`, which the allowlist already

@@ -13,3 +13,7 @@ Worth a deliberate pass with a design consultation or shotgun approach. Two patt
 - **Memorable-thing forcing question**: what's the one thing a developer-user should remember after seeing the chat controls for the first time? Probably has to do with transparency or agent-as-collaborator. Constraint that disciplines everything else.
 
 Full notes on the underlying skills: `~/src/beebox/gstack-review/notes/design-consultation.md` and `notes/design-shotgun.md`. Not adopting the gstack skills wholesale (heavy infrastructure), but the SAFE/RISK and memorable-thing patterns work standalone.
+
+Re-reviewed 2026-10-30: The gstack notes moved to research/gstack/notes/. Chat-surface design has since proceeded piecemeal in the input-widget and chat-everywhere plans; no end-to-end design pass with the SAFE/RISK split exists.
+
+Out of date in the body above: Change `~/src/beebox/gstack-review/notes/...` to `research/gstack/notes/design-consultation.md` and `design-shotgun.md`. Remove the personal memory path further up. Link beebox/docs/plans/input-widget.md and chat-everywhere.md as the current piecemeal work.

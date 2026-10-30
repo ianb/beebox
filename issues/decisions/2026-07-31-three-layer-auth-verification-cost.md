@@ -108,3 +108,5 @@ exists to close.
 ## Audit 2026-10-22
 
 No credential registry or credential-by-layer test exists yet. The layers still verify independently. Pointers moved. The dev router auth is now `workstreams-app/src/router/server/auth.ts` and `auth-deps.ts` (`resolveMobileForBox` at line 128, `resolveWorktreeAsset` at line 150); `bin/router-auth*.ts` no longer exists. In `beebox/src/hub/server/core.ts`: `hasMobileAuth` is at line 142, `decideHubAuth` at 225, `/api/boxes` at 333, the HTTP catch-all gate at about 492 and the WebSocket upgrade gate at about 548. In `beebox/src/webapp/server-box-scope.ts`: the browse-key rung is at about line 100, the mobile rung at 107, and the tRPC context recomputes `authed` at about line 302.
+
+Re-reviewed 2026-10-30: beebox/src/hub no longer references the browse key, so the six-site count in the body may now be lower; recount before deciding.

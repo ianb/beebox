@@ -39,3 +39,5 @@ review notes are unambiguous and greppable.
 Output of the review: comments/decisions per named fragment, then edits (via
 the prompt-surface-review workflow / normal prompt-editing flow) and a fresh
 ledger point.
+
+Re-reviewed 2026-10-30: the review has not happened, and the size ledger still holds a single point from 2026-07-12, so the rerun-after-prompt-changes habit is not being followed either.

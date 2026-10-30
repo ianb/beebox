@@ -49,3 +49,5 @@ Related:
   documents the watchdog and its accepted null-session gap.
 - [browse-key-ws-upgrade-headers](../closed/bugs/2026-08-09-browse-key-ws-upgrade-headers.md)
   records the harness-specific socket failure and its fix.
+
+Re-reviewed 2026-10-30: not reproduced since August. The watchdog has since absorbed tab-return recovery under a frozen session id (1182b1d0e), which changes the code paths listed here.

@@ -3,7 +3,7 @@ title: "Small dependency sweep: chalk, get-port, chokidar, cheerio, open, rollup
 status: implemented
 workstream: dep-reduction
 issues:
-  - ../../../issues/code-quality/2026-10-25-dependency-reduction-sweep.md
+  - ../../../issues/closed/code-quality/2026-10-25-dependency-reduction-sweep.md
 ---
 # Small dependency sweep
 

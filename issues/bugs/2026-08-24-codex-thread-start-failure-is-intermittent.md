@@ -81,3 +81,5 @@ So the next occurrence should carry a stack that names the throw site. The
 mechanism in the original issue — a `.id` read on an unmaterialized thread — was
 checked and does not hold: `codex.startThread()` is synchronous and always
 returns a `Thread`. The real source of the observed `TypeError` is still unknown.
+
+Re-reviewed 2026-10-30: the 2026-09-12 activation check is overdue. No occurrence in the local test box log; the production hub-child logs would settle it, and the deferral note says to close as not reproducible if none is found.

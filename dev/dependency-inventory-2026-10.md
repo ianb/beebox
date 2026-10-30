@@ -1,6 +1,6 @@
 # Dependency inventory, October 2026
 
-Workstream: `dep-reduction`. Issue: [dependency reduction sweep](../issues/code-quality/2026-10-25-dependency-reduction-sweep.md). Measured 2026-10-27 on the `worktree-dep-reduction` branch at `a1329944e`. Analysis only: nothing is removed yet. Each removal needs its own go-ahead, or a go-ahead for a batch.
+Workstream: `dep-reduction`. Issue: [dependency reduction sweep](../issues/closed/code-quality/2026-10-25-dependency-reduction-sweep.md). Measured 2026-10-27 on the `worktree-dep-reduction` branch at `a1329944e`. Analysis only: nothing is removed yet. Each removal needs its own go-ahead, or a go-ahead for a batch.
 
 Scope: every direct `dependencies`, `devDependencies`, and `peerDependencies` entry in the 13 workspace packages, 284 declarations in all. The issue's 2026-10-25 counts left out seven packages: `beebox/src/frontend` (20 runtime / 23 dev), `beebox-clerk` (7 / 16), `canvas-loop` (2 / 12), `site` (3 / 6), `browse` (1 / 9), `browse/packages/agent-browser-typed` (1 / 0), `beebox/pub-worker` (1 / 8), and `scan-uploader` (0 / 10). The other counts still match.
 

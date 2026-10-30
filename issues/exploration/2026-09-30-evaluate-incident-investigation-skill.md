@@ -73,3 +73,7 @@ practice (level 3).
   skill, or the prod-incident path only.
 
 **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific content moved to `beebox/docs/testing.md` ("Choosing an instrument", "Reproducing a bug") and `beebox/frontend.md`.
+
+Re-reviewed 2026-10-30:
+
+Out of date in the body above: Replace the bbx-debug comparison (SKILL.md, 1,450 words, Phase 6) with beebox/docs/testing.md 'Reproducing a bug' (plus the field-probe skill). Note that the 'what would have prevented this?' prompt no longer exists anywhere, so levels 2 and 3 have no current home.

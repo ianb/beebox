@@ -88,3 +88,4 @@ two can't drift again).
 > — the seed writes `_config/box.json` on the one-root layout and the doctest
 > still read the v2 path. Fixed in `1b13cc5ed`; passes for real.
 
+Re-reviewed 2026-10-30: the manual-test assertion was fixed in 1b13cc5ed; only the rename remains.

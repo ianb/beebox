@@ -158,3 +158,5 @@ branch merges to `main` and deploys.
    in the new box has the copied secrets (not a stray package-root `config/`).
 4. Re-run the same command — expect a pull, both manifest steps reporting
    already-present, and a second "Canary OK".
+
+Re-reviewed 2026-10-30: the script registers with the hub and no longer restarts beebox-serve. A real production add ran on 2026-10-28; its new defects are filed separately. The manual-testing steps here use pre-isolation commands (bbx hub add-box) and paths.

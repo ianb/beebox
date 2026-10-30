@@ -103,3 +103,5 @@ Boxholder's words quoted; the rest is agent structure.
   mechanical checks run every build; agent-derived content is committed,
   commit-stamped, refreshed periodically, with the build displaying drift
   rather than regenerating.
+
+Re-reviewed 2026-10-30: still partial. The site now publishes through Cloudflare (beebox.run), not GitHub Pages as the principles section says.

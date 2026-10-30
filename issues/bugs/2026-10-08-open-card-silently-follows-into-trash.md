@@ -31,3 +31,5 @@ The report did not confirm whether following into the trash is intended. The
 choices: close the panel when the new path is under the trash directory, or
 keep it and mark it "In the trash" with a restore control. The agent also did
 not say where the page went until the walker had watched it vanish.
+
+Re-reviewed 2026-10-30: Still true. The follow now happens through read-miss recovery (FileView/view.tsx useMovedCardRecovery, core/moved-card-recovery.ts, 0adddf91f) and WorkspaceCanvas/view.tsx:46; neither distinguishes a move into trash.

@@ -124,3 +124,7 @@ recommendation.
 Sources: [Introducing Flux](https://deepgram.com/learn/introducing-flux-conversational-speech-recognition),
 [Flux TTS](https://deepgram.com/learn/introducing-flux-tts-conversation-native-text-to-speech-for-real-time-voice-agents),
 [Flux docs](https://developers.deepgram.com/docs/flux/quickstart).
+
+Re-reviewed 2026-10-30: Flux TTS was included in the TTS comparison (no direction control). The free tier window (to 2026-09-12) has passed. The turn-taking question, whether end-of-turn and barge-in work standalone, is still unanswered.
+
+Out of date in the body above: Mark the TTS bullet answered by beebox/docs/implemented-plans/tts-comparison-second-run.md; drop the free-tier note (expired 2026-09-12); fold the inline 'moved to' path into the plain current path. Keep the end-of-turn and barge-in questions as the scope.

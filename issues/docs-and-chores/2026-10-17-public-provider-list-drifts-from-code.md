@@ -67,3 +67,5 @@ outbound hosts would catch them too, but with more noise.
   `technologies.md` link there? The check needs one target.
 - Does Replicate stay as a view adapter? If it is a test feature, the
   answer may be to remove it rather than disclose it.
+
+Re-reviewed 2026-10-30: the 'AI services used' section now names the pi engine via OpenRouter, but still omits Replicate, GLM, and the OpenRouter model behind quick chat and the filing judge. No mechanical check exists.

@@ -42,3 +42,5 @@ Reconfirmed 2026-09-24: still open, and more concrete. `renderActivityChildren` 
 ## Audit 2026-10-22
 
 Still open. Corrected pointers: `renderActivityChildren` is at `beebox/src/core/chat/card-activity.ts:123`. The `scrolled` reporter is now `beebox/src/frontend/src/components/chat/workspace/WorkspaceCanvas/view.tsx:54`. The prompt text lives under `beebox/src/core/chat/session/prompts.ts`.
+
+Re-reviewed 2026-10-30: renderActivityChildren is now at card-activity.ts:116; unchanged.

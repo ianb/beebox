@@ -84,3 +84,7 @@ unknown rather than assuming audible.
 - **Privacy/creepiness.** "I noticed you put your phone down" would be unwelcome.
   The instruction should shape *how* the agent answers, never become something it
   remarks on.
+
+Re-reviewed 2026-10-30: Partly overlapping signal shipped: <chat-app> carries transcript visible/hidden, and the prompt tells the agent not to toggle speech on it. Tab/app focus and mute are still unknown to the agent.
+
+Out of date in the body above: Note the shipped `transcript` attribute and its 'do not toggle narration' guidance; this issue is now about adding focus (tab hidden / app backgrounded) and mute, and reconciling the voice-leaning guidance with that existing rule. Update composeTurnContent path to core/chat/session/run/start.ts.

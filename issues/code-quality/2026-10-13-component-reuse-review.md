@@ -52,3 +52,7 @@ The review:
 
 The scan counted with grep; it did not read the components, so some of the
 eight dialogs may differ on purpose.
+
+Re-reviewed 2026-10-30: the Dialog half shipped as ModalCard (91aec1ffe); input/select primitives, the two remaining overlays and the reporting check remain.
+
+Out of date in the body above: Mark step 1 done for modals (ModalCard, 91aec1ffe). Update counts: role="dialog" in 5 non-modal components, fixed inset-0 in ImageLightbox and CaptureOverlay, raw <input> in 13 files and <select> in 3. Keep steps 2 and 4.

@@ -10,3 +10,7 @@ priority: normal
 The analogy is how `git log --format=json` doesn't exist but git GUIs parse git's output anyway — except here the command itself controls the schema and the renderer can be co-designed. Commands would declare their output schema; the UI maps command names to renderer components. The admin page or a debug panel could be the first surface.
 
 This also helps with the bounded-output problem: a renderer can decide what to show by default and expose a "show all" control, rather than the CLI trying to guess a good human default.
+
+Re-reviewed 2026-10-30: most box-agent commands now offer --json, so the CLI half is largely met per command. No command declares an output schema and no UI renderers exist.
+
+Out of date in the body above: Add a status line: --json exists on search, query, todos, tick, plugins, docs, relink, migrate, and health; open scope is declared output schemas plus UI renderers.

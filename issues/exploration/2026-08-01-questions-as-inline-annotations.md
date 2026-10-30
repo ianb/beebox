@@ -116,3 +116,5 @@ kind: the question points at exactly the commits it is asking about.
 - ProofEditor as an agent↔human doc-collaboration surface — the external
   inspiration; a separate exploration if the boxholder wants to track the tool
   itself.
+
+Re-reviewed 2026-10-30: Still undecided. The questions subsystem has had more features added since this was filed (Later, Figure it out, a daily review), which raises the cost of retiring it.

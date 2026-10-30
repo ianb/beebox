@@ -56,3 +56,5 @@ in place of its consequence ("this is the key insight").
    may fit better than an error.
 
 Related: [check out aislop](../exploration/2026-05-29-check-out-aislop.md).
+
+Re-reviewed 2026-10-30: counts are down slightly (load-bearing 145 to 135, genuinely 296 to 238, 'the real ' 362 to 305) with no sweep or check in place.

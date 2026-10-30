@@ -72,3 +72,7 @@ process-level failure modes of the guarded transition
   question-alert/aging block (only the full finalize and `-c push` run
   it); if scoped finalize runs ever become a primary cadence, the sweep
   needs its own trigger.
+
+Re-reviewed 2026-10-30: the rollout section is done: the question-lifecycle migration is retired in the migration ledger and test1's question cards are converted; template parks are tracked in the parks issue. The process-level test gaps and the observation follow-ups remain.
+
+Out of date in the body above: Mark the Rollout section complete (migration retired, migrations.ts:107; parks tracked by the template-parks issue) and retitle around the test gaps and observation follow-ups.
