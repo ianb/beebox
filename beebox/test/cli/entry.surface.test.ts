@@ -106,13 +106,44 @@ void test("scheduler, pub, and secrets each have a read half an agent uses and a
   t.check(overlapping, []);
 });
 
-// The agent's `scheduler` offers the reads; the operator's offers the daemon
-// lifecycle. A subcommand named by neither entry is deliberately dropped — that is
-// how the deprecated `bbx scheduler add|remove|list` aliases left the CLI.
-void test("The agent's scheduler offers the reads; the operator's offers the daemon life...", async (t) => {
-  t.check(subNames(program.commands.find((c) => c.name() === "scheduler")), ["log", "status"]);
+// Every subcommand a split family registers is in the table, so none vanishes
+// from the CLI. The only subcommands the table may omit are the ones their own
+// description marks `[deprecated]` — that is how `bbx scheduler add|remove|list`
+// left the surface. The registered set is read off the loaded family, not listed
+// here, so a new `.command(...)` that nobody classified fails this test.
+const registeredSubcommands = (family: string) => subNames(loaded.byVerb.get(family));
+const ownedSubcommands = (family: string, audience: "agent" | "engine") =>
+  SURFACE.filter((e) => e.name === family && e.audience === audience).flatMap((e) => [...(e.subcommands ?? [])]);
+const unclassifiedSubcommands = splitNames.flatMap((family) => {
+  const owned = new Set([...ownedSubcommands(family, "agent"), ...ownedSubcommands(family, "engine")]);
+  const deprecated = (loaded.byVerb.get(family)?.commands ?? [])
+    .filter((c) => c.description().startsWith("[deprecated]"))
+    .map((c) => c.name());
+  return registeredSubcommands(family)
+    .filter((name) => !owned.has(name) && !deprecated.includes(name))
+    .map((name) => `${family} ${name}`);
+});
+const phantomSubcommands = splitNames.flatMap((family) =>
+  [...ownedSubcommands(family, "agent"), ...ownedSubcommands(family, "engine")]
+    .filter((name) => !registeredSubcommands(family).includes(name))
+    .map((name) => `${family} ${name}`),
+);
+// The built program offers each audience exactly the subcommands the table gives it.
+const builtDivergence = splitNames.flatMap((family) =>
+  (["agent", "engine"] as const).flatMap((audience) => {
+    const parent = audience === "agent" ? program : engineParent;
+    const built = subNames(parent?.commands.find((c) => c.name() === family));
+    const expected = ownedSubcommands(family, audience).toSorted();
+    return JSON.stringify(built) === JSON.stringify(expected) ? [] : [`${audience} ${family}: built ${built.join(",")} vs table ${expected.join(",")}`];
+  }),
+);
 
-  t.check(subNames(engineParent?.commands.find((c) => c.name() === "scheduler")), ["install", "pass", "start", "uninstall"]);
+void test("Every subcommand a split family registers is in the table, so none vanishes from...", async (t) => {
+  t.check(unclassifiedSubcommands, []);
+
+  t.check(phantomSubcommands, []);
+
+  t.check(builtDivergence, []);
 });
 
 // ## Every eviction gives a reason, and every agent verb a smoke decision

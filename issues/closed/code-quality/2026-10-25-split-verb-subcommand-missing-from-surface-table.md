@@ -5,8 +5,11 @@ area: beebox
 labels: [cli, testing]
 filed-by: agent
 discovered-by: agent
+resolution: implemented
 discovered-in: worktree-retrospective — retrospective 20261025-233625
 ---
+
+**Resolved 2026-10-29** — commit a8a800ed5 adds the test in `beebox/test/cli/entry.surface.test.ts`. No family was missing a subcommand at the time.
 
 A family that splits into subcommands lists them in `subcommands` in
 `beebox/src/cli/entry/surface-data.ts`. A new `.command(...)` registered

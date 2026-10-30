@@ -34,6 +34,9 @@ export interface TickOptions {
    * chat). Liveness gates still apply: a live lock-group holder and running
    * scripts/procedures defer even under force. */
   force?: boolean;
+  /** Print the tick's result as one JSON object on stdout (see `TickReport`).
+   * Implies `quiet`: stdout carries nothing else. */
+  json?: boolean;
 }
 
 export interface ScriptResult {
@@ -44,7 +47,17 @@ export interface ScriptResult {
   status: "ran" | "skipped" | "error" | "inconclusive";
   command?: string;
   durationMs?: number;
+  /** On "error" or "inconclusive": what went wrong. */
   error?: string;
+  /** On "skipped": why the script did not run (not due, disabled, budget
+   *  exceeded, system busy, a defer marker from the run itself). */
+  reason?: string;
+}
+
+/** What `bbx tick --json` prints: the tick's result plus whether it was a dry
+ *  run, where "ran" means the script would run. */
+export interface TickReport extends TickResult {
+  dryRun: boolean;
 }
 
 export interface TickResult {
@@ -87,9 +100,11 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
 
   // A running script or procedure defers the whole tick; an active chat defers
   // every card except `notify:` ones (see tickBusyState).
-  const busy = await tickBusyState(boxRoot, { running, options });
+  const { state: busy, blockers } = await tickBusyState(boxRoot, { running, options });
+  const busyReason = `system busy: ${blockers.join(", ")}`;
   if (busy === "defer-all") {
-    return { ranCount: 0, skipCount: files.length, errorCount: 0, inconclusiveCount: 0, scripts: [] };
+    const deferred = files.map((f): ScriptResult => ({ name: f.replace(".scheduled-script.card", ""), status: "skipped", reason: busyReason }));
+    return { ranCount: 0, skipCount: files.length, errorCount: 0, inconclusiveCount: 0, scripts: deferred };
   }
 
   for (const file of files) {
@@ -110,6 +125,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
 
     if (busy === "chat" && parsed.action.kind !== "notify") {
       skipCount++;
+      scripts.push({ name: scriptName, status: "skipped", reason: `${busyReason} (only notify: cards run)` });
       continue;
     }
 
@@ -121,7 +137,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       if (skip.line) console.log(skip.line);
       if (skip.cause !== undefined && !options.dryRun) await noteTickSkip(promotion, skip.cause);
       skipCount++;
-      scripts.push({ name: scriptName, status: "skipped" });
+      scripts.push({ name: scriptName, status: "skipped", reason: skip.reason });
       continue;
     }
 
@@ -162,6 +178,7 @@ export const tickCommand = new Command("tick")
   .option("--dry-run", "Show what would run without executing")
   .option("--script <name>", "Only evaluate a specific script (by filename stem)")
   .option("--force", "Run the --script now, bypassing schedule, budget, and active-chat checks")
+  .option("--json", "Print one JSON object with a ran, skipped (with reason), or error record per script; the exit status stays 0")
   .option("--box <path>", "Box root path (defaults to current directory)")
   .action(async (options: TickOptions & { box?: string }) => {
     if (options.force && !options.script) {
@@ -169,5 +186,9 @@ export const tickCommand = new Command("tick")
       process.exit(1);
     }
     const boxRoot = options.box ?? await requireBoxRoot();
-    await runTick(boxRoot, options);
+    const result = await runTick(boxRoot, options.json ? { ...options, quiet: true } : options);
+    if (options.json) {
+      const report: TickReport = { dryRun: options.dryRun === true, ...result };
+      console.log(JSON.stringify(report, null, 2));
+    }
   });
