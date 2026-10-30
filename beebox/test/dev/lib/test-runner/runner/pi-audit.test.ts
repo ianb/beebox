@@ -111,6 +111,31 @@ void test("delivered guidance counts as a read, in order with the edits", async 
   });
 });
 
+// pi runs one message's calls in parallel, so a read beside the edit came too
+// late to shape it; a read that failed showed nothing.
+void test("a read in the edit's own message is not first, and a failed read is not a read", async (t) => {
+  const box = await piBox(t);
+  const card = "_content/recipes/Soup.recipe.card";
+  await writeFile(join(box.root, card), "Soup\n");
+  execSync("git add -A && git commit -qm soup", { cwd: box.root });
+  const missing = "_content/recipes/Missing.md";
+  const ordered: AuditTest = { ...audit, should_not_read: [], bash_contains: [], read_before_edit: ["_content/recipes/AGENTS.md", missing] };
+  faux.setResponses([
+    fauxAssistantMessage(fauxToolCall("read", { path: missing })),
+    fauxAssistantMessage([
+      fauxToolCall("read", { path: "_content/recipes/AGENTS.md" }),
+      fauxToolCall("edit", { path: card, edits: [{ oldText: "Soup", newText: "Cumin soup" }] }),
+    ]),
+    fauxAssistantMessage("Added cumin."),
+  ]);
+  const { behavior, checks } = await runTest({ test: ordered, boxRoot: box.root, piDeps });
+  t.check(behavior.readsBeforeFirstEdit, 0);
+  t.check(checks.readBeforeEditChecks, [
+    { file: "_content/recipes/AGENTS.md", outcome: "read-after" },
+    { file: missing, outcome: "not-read" },
+  ]);
+});
+
 void test("a pi session with no file is a missing transcript, not an empty audit", async (t) => {
   const box = await makeTmpBox();
   t.teardown(() => box.cleanup());

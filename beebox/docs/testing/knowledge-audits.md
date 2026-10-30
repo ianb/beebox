@@ -184,6 +184,8 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `read_before_edit` — files the agent must read before its first edit or
   write. Only pi's reader records edits, so on Claude and Codex the check
   fails. pi counts a nested `AGENTS.md` that a file tool delivered as a read.
+  A read counts only from an earlier message than the edit (pi runs one
+  message's tool calls in parallel) and only when it did not fail.
 - `should_search` — `web`, `box`, or `any`: the agent must look something up
   before answering. `web` is a WebSearch or WebFetch (a Codex provider search
   counts), `box` a `bbx search` command, `any` either. Use it for the laws

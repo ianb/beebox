@@ -52,6 +52,11 @@ export function withoutIncludeLines(content: string): string {
   return content.replaceAll(INCLUDE_PATTERN, "").replaceAll(/\n{3,}/gu, "\n\n").trim();
 }
 
+/** Whether an instruction file has include-only lines for {@link expandInstructionIncludes} to expand. */
+export function hasIncludeLines(content: string): boolean {
+  return content.match(INCLUDE_PATTERN) !== null;
+}
+
 /** Expand include-only lines recursively, bounded to the box package. */
 export async function expandInstructionIncludes(options: {
   /** The root instruction file (`instructionFilePath(boxRoot, "")`, made absolute). */

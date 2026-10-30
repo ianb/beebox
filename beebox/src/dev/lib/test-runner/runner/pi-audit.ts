@@ -2,10 +2,13 @@
  * Knowledge-audit behavior from a pi session file (JSONL version 3, read by
  * `piLines`). pi's tools are lowercase and take a `path`; they map onto the
  * audit vocabulary: `read` is a file read, `ls` a search, `bash` a command
- * (and a read or search when it runs one, as for Claude and Codex). An
+ * (and a read or search when it runs one, as for Claude and Codex). A `read`
+ * counts at its result, and only when that result is not an error. An
  * instruction file a tool result delivered (`<nested-agents-md>`) counts as a
  * read at that result. `edit` and `write` are recorded only as the point of
- * the first edit, for `read_before_edit`. pi has no sub-agents. Each assistant
+ * the first edit, for `read_before_edit`: the reads before it are those of
+ * earlier assistant messages, since pi runs one message's tool calls in
+ * parallel. pi has no sub-agents. Each assistant
  * message's usage gives one turn's loaded context.
  */
 
@@ -22,7 +25,7 @@ import type { AgentBehavior } from "./run-test.js";
 
 const blockSchema = z.union([
   z.object({ type: z.literal("text"), text: z.string() }),
-  z.object({ type: z.literal("toolCall"), name: z.string(), arguments: z.record(z.string(), z.unknown()) }),
+  z.object({ type: z.literal("toolCall"), id: z.string(), name: z.string(), arguments: z.record(z.string(), z.unknown()) }),
   z.object({ type: z.string() }),
 ]);
 
@@ -37,16 +40,24 @@ const assistantRecordSchema = z.object({
 
 const toolResultRecordSchema = z.object({
   type: z.literal("message"),
-  message: z.object({ role: z.literal("toolResult"), content: z.array(blockSchema) }),
+  message: z.object({ role: z.literal("toolResult"), toolCallId: z.string(), isError: z.boolean(), content: z.array(blockSchema) }),
 });
 
 const EDIT_TOOLS = new Set(["edit", "write"]);
 
-/** Instruction files delivered in a tool result record, or none for any other record. */
-function deliveredIn(record: Record<string, unknown>): string[] {
+/**
+ * The files a tool result record shows the model: the path of a `read` that
+ * succeeded (from `pendingReads`, by call id), then the instruction files it
+ * delivered. None for any other record.
+ */
+function filesReadIn(record: Record<string, unknown>, pendingReads: Map<string, string>): string[] {
   const parsed = toolResultRecordSchema.safeParse(record);
   if (!parsed.success) return [];
-  return parsed.data.message.content.flatMap((block) => ("text" in block ? deliveredGuidancePaths(block.text) : []));
+  const { toolCallId, isError, content } = parsed.data.message;
+  const read = pendingReads.get(toolCallId);
+  pendingReads.delete(toolCallId);
+  const files = read === undefined || isError ? [] : [read];
+  return [...files, ...content.flatMap((block) => ("text" in block ? deliveredGuidancePaths(block.text) : []))];
 }
 
 function stringArg(args: Record<string, unknown>, name: string): string {
@@ -55,10 +66,6 @@ function stringArg(args: Record<string, unknown>, name: string): string {
 }
 
 const PI_TOOL_CATEGORIZERS: Record<string, (args: Record<string, unknown>, acc: BehaviorAccumulator) => void> = {
-  read: (args, acc) => {
-    const file = stringArg(args, "path");
-    if (file) acc.filesRead.push(file);
-  },
   ls: (args, acc) => acc.searches.push({ tool: "ls", summary: stringArg(args, "path") || "." }),
   bash: (args, acc) => {
     const command = stringArg(args, "command");
@@ -78,19 +85,21 @@ export function piBehaviorFromRecords(records: Iterable<Record<string, unknown>>
   const turns: TurnUsage[] = [];
   let replyStart = 0;
   let readsBeforeFirstEdit: number | null = null;
+  const pendingReads = new Map<string, string>();
   for (const record of records) {
-    acc.filesRead.push(...deliveredIn(record));
+    acc.filesRead.push(...filesReadIn(record, pendingReads));
     const parsed = assistantRecordSchema.safeParse(record);
     if (!parsed.success) continue;
     const { content, usage } = parsed.data.message;
     if (usage) turns.push({ inputTokens: usage.input, cacheCreationInputTokens: usage.cacheWrite, cacheReadInputTokens: usage.cacheRead });
+    if (content.some((block) => "arguments" in block && EDIT_TOOLS.has(block.name))) readsBeforeFirstEdit ??= acc.filesRead.length;
     for (const block of content) {
       if ("text" in block && block.text) {
         responseChunks.push(block.text);
         replyBlocks.push({ text: block.text, update: false });
       }
       if ("arguments" in block) {
-        if (EDIT_TOOLS.has(block.name)) readsBeforeFirstEdit ??= acc.filesRead.length;
+        if (block.name === "read" && stringArg(block.arguments, "path")) pendingReads.set(block.id, stringArg(block.arguments, "path"));
         PI_TOOL_CATEGORIZERS[block.name]?.(block.arguments, acc);
         replyStart = replyBlocks.length;
       }

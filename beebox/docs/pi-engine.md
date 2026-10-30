@@ -61,13 +61,19 @@ After one of these tools runs on a file in the box, each instruction file
 (`AGENTS.md`, else `CLAUDE.md`) between the working directory and the file's
 directory is appended to the tool result in a `<nested-agents-md path="...">`
 block, with its `@` includes expanded. A file goes in once per session; a
-resumed session can deliver it again. Reading the instruction file itself
-counts as delivery. An include the root file already expanded is not
-repeated. One file adds at most 12,000 characters. bash and `ls` deliver
-nothing.
+resumed session can deliver it again. A `read` of the whole instruction file
+counts as delivery when the file has no `@` includes; a partial read, or a
+file with includes, gets the full block. An include the root file already
+expanded is not repeated. One file adds at most 12,000 characters. bash and
+`ls` deliver nothing. When a file's guidance fails to load, the tool's result
+stands with a note in place of the block, the server logs a warning, and a
+later touch tries again.
 
 A box agent can write a symlink. An instruction file whose real path is
-outside the box is not read, and the server logs a warning. On an `edit` or
+outside the box is not read, and the server logs a warning. This check keeps
+ordinary box links from pulling outside files into guidance; it is not a
+security boundary, because pi's own `read` can already read any file the
+server's OS user can, and the per-box OS user is the boundary. On an `edit` or
 `write` the guidance arrives after the change, so the model may need a second
 edit; the knowledge audit `pi-nested-agents-before-edit` checks the order with
 `read_before_edit`.
