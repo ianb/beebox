@@ -37,8 +37,10 @@ export class AgentBrowserError extends Error {
   readonly args: readonly string[];
   /** The signal that ended the client, or null when it exited (or was killed by our own timeout). */
   readonly signal: string | null;
-  constructor({ code, stderr, stdout, args, signal, elapsedMs }: {
-    code: number; stderr: string; stdout: string; args: readonly string[]; signal?: string | null; elapsedMs?: number;
+  /** True when `timeoutMs` elapsed and this wrapper killed the client: upstream never answered. */
+  readonly timedOut: boolean;
+  constructor({ code, stderr, stdout, args, signal, elapsedMs, timedOut }: {
+    code: number; stderr: string; stdout: string; args: readonly string[]; signal?: string | null; elapsedMs?: number; timedOut?: boolean;
   }) {
     const output = stderr.trim() || stdout.trim();
     super(signal === undefined || signal === null
@@ -50,6 +52,7 @@ export class AgentBrowserError extends Error {
     this.stdout = stdout;
     this.args = args;
     this.signal = signal ?? null;
+    this.timedOut = timedOut ?? false;
   }
 
   /** Text for a caller to print: never empty, names the cause or says upstream gave none. */
@@ -77,19 +80,35 @@ export interface RunOptions {
   timeoutMs?: number;
 }
 
+/** SIGKILL a detached child's whole process group; it may already be gone. */
+function killGroup(pid: number | undefined): void {
+  if (pid === undefined) return;
+  try {
+    process.kill(-pid, "SIGKILL");
+  } catch {
+    // ESRCH: the group already exited.
+  }
+}
+
 export async function run(args: readonly string[], options?: RunOptions): Promise<RunResult> {
   const binary = resolveBinary();
   const opts: RunOptions = options === undefined ? {} : options;
   return new Promise((resolve, reject) => {
     const env = opts.env === undefined ? process.env : { ...process.env, ...opts.env };
-    const child = spawn("node", [binary, ...args], { stdio: ["ignore", "pipe", "pipe"], env });
+    // `agent-browser.js` is a shim that spawns the native client with inherited
+    // stdio. Killing only the shim leaves the client holding our pipes, so
+    // `close` waited out its 152 s of re-sends and the ceiling never fired
+    // early. A ceiling therefore runs the client in its own process group and
+    // kills the group.
+    const bounded = opts.timeoutMs !== undefined;
+    const child = spawn("node", [binary, ...args], { stdio: ["ignore", "pipe", "pipe"], env, detached: bounded });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
     const started = Date.now();
     const timer = opts.timeoutMs === undefined ? null : setTimeout(() => {
       timedOut = true;
-      child.kill("SIGKILL");
+      killGroup(child.pid);
     }, opts.timeoutMs);
     child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString("utf8"); });
     child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString("utf8"); });
@@ -97,7 +116,7 @@ export async function run(args: readonly string[], options?: RunOptions): Promis
     child.on("close", (code, signal) => {
       if (timer !== null) clearTimeout(timer);
       if (timedOut) {
-        reject(new AgentBrowserError({ code: -1, stderr: `killed after ${String(opts.timeoutMs)}ms`, stdout, args }));
+        reject(new AgentBrowserError({ code: -1, stderr: `killed after ${String(opts.timeoutMs)}ms`, stdout, args, timedOut: true }));
         return;
       }
       if (code === 0) {

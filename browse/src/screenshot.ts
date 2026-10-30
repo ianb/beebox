@@ -1,6 +1,7 @@
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getTitle, getUrl, screenshot as runScreenshot } from "agent-browser-typed";
+import { CAPTURE_TIMEOUT_MS } from "./stuck.js";
 import type { WorktreeContext } from "./worktree.js";
 
 const DEFAULT_DIR_FROM_REPO = ".claude/screenshots";
@@ -26,7 +27,7 @@ export async function runEnhancedScreenshot(invocation: ScreenshotInvocation, ct
   await mkdir(dirOf(imagePath), { recursive: true });
   const optsForCall = invocation.full ? { path: imagePath, full: true } : { path: imagePath };
   const optsFinal = invocation.annotate ? { ...optsForCall, annotate: true } : optsForCall;
-  await runScreenshot(optsFinal);
+  await runScreenshot(optsFinal, { timeoutMs: CAPTURE_TIMEOUT_MS });
   const [url, title] = await Promise.all([getUrl(), getTitle()]);
   const sidecar: ScreenshotSidecar = {
     url,

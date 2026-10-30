@@ -8,7 +8,7 @@
  */
 import * as fs from "node:fs/promises";
 import { z } from "zod";
-import { CdpPage, type CdpConnection } from "./cdp.js";
+import { CdpPage, COMMAND_TIMEOUT_MS, type CdpConnection } from "./cdp.js";
 import { NetworkLog, type RequestTiming } from "./network-log.js";
 import { OBSERVER_SCRIPT, collectPageMetrics, hasAppMarks, readMark, type PageMetrics } from "./page-metrics.js";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -120,11 +120,24 @@ async function startTrace(page: CdpPage): Promise<void> {
   await page.send("Tracing.start", { transferMode: "ReturnAsStream", traceConfig: { includedCategories: categories } });
 }
 
+class TraceTimeoutError extends Error {
+  constructor() {
+    super(`CDP Tracing.tracingComplete: no event within ${String(COMMAND_TIMEOUT_MS / 1000)} s`);
+    this.name = "TraceTimeoutError";
+  }
+}
+
 async function stopTrace(page: CdpPage, tracePath: string): Promise<void> {
-  const complete = new Promise<string>((resolve) => {
+  // An event, not a command, so it needs its own deadline (see COMMAND_TIMEOUT_MS).
+  const complete = new Promise<string>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      off();
+      reject(new TraceTimeoutError());
+    }, COMMAND_TIMEOUT_MS);
     const off = page.cdp.onEvent((event) => {
       if (event.sessionId !== page.sessionId || event.method !== "Tracing.tracingComplete") return;
       off();
+      clearTimeout(timer);
       resolve(z.object({ stream: z.string() }).parse(event.params).stream);
     });
   });

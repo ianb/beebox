@@ -15,6 +15,7 @@ import {
   isInteractiveRole, judgeBox, parseCheckResult, parseTarget, refAfterActionDetail, refRenumbered, upstreamSelector,
 } from "./controls.js";
 import type { Box, CheckResult, Locator, RefRecord, RefTable, ScanEntry, Target } from "./controls.js";
+import { CAPTURE_TIMEOUT_MS, isStuck, stuckCaptureMessage } from "./stuck.js";
 import { isOwnOrigin } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -167,8 +168,12 @@ export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeCo
   }
   let text: string;
   try {
-    ({ stdout: text } = await run(["snapshot", ...args]));
+    ({ stdout: text } = await run(["snapshot", ...args], { timeoutMs: CAPTURE_TIMEOUT_MS }));
   } catch (e) {
+    if (isStuck(e)) {
+      process.stderr.write(stuckCaptureMessage("snapshot"));
+      return 1;
+    }
     if (e instanceof AgentBrowserError) {
       process.stderr.write(`${failureText(e)}\n`);
       return e.code === -1 ? 1 : e.code;

@@ -10,6 +10,7 @@ import { runEnhancedScreenshot } from "./screenshot.js";
 import { openClerkPopup, waitTimeoutMs } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
 import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit } from "./launch-options.js";
+import { isStuck, PROBE_TIMEOUT_MS, stuckCaptureMessage, wedgedMessage } from "./stuck.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -85,6 +86,23 @@ async function refreshAuthCookie(ctx: WorktreeContext): Promise<void> {
     return; // No page yet; the next `open` seeds the cookie.
   }
   if (isOwnOrigin(current, ctx)) await run(authCookieArgs(current, ctx));
+}
+
+/**
+ * Whether a running daemon still answers. A wedged one fails every later
+ * upstream call after 152 s, and a `bin/browse` command makes several, so the
+ * caller learns nothing for minutes. No daemon yet means nothing to probe: the
+ * command will start one, and a cold launch must not count against the probe.
+ */
+async function daemonAnswers(socketDir: string, session: string): Promise<boolean> {
+  if (!daemonRunning(socketDir, session)) return true;
+  try {
+    await run(["get", "url"], { timeoutMs: PROBE_TIMEOUT_MS });
+  } catch (e) {
+    if (isStuck(e)) return false;
+    // Any answer, even an error (no page yet), means the daemon is serving.
+  }
+  return true;
 }
 
 async function waitForReady(ctx: WorktreeContext): Promise<void> {
@@ -187,6 +205,12 @@ async function main(): Promise<number> {
     throw new BrowseConfigError(`${launch.flags.join(", ")} apply when the browser starts, and it is running: run bin/browse close first`);
   }
 
+  // `close` is the recovery for a wedged session, so it is never refused.
+  if (sub !== "close" && !(await daemonAnswers(socketDir, session))) {
+    process.stderr.write(wedgedMessage());
+    return 1;
+  }
+
   if (sub !== "open" && sub !== "close") {
     await refreshAuthCookie(ctx);
   }
@@ -213,7 +237,14 @@ async function main(): Promise<number> {
     const parsed = parseScreenshotArgs(args.slice(1));
     if (parsed.kind === "help") { process.stdout.write(SCREENSHOT_USAGE); return 0; }
     if (parsed.kind === "error") { process.stderr.write(`browse screenshot: ${parsed.message}\n${SCREENSHOT_USAGE}`); return 2; }
-    const result = await runEnhancedScreenshot(parsed.invocation, ctx);
+    let result;
+    try {
+      result = await runEnhancedScreenshot(parsed.invocation, ctx);
+    } catch (e) {
+      if (!isStuck(e)) throw e;
+      process.stderr.write(stuckCaptureMessage("screenshot"));
+      return 1;
+    }
     process.stdout.write(`${result.imagePath}\n`);
     process.stdout.write(`url: ${result.sidecar.url}\n`);
     process.stdout.write(`title: ${result.sidecar.title}\n`);
