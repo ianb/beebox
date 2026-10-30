@@ -20,9 +20,9 @@ allowlist to fix a leak. The personal blocklist is optional when absent, but a
 malformed or tracked list fails closed; diagnostics never print matched private
 values. Read [commit guards](docs/commit-guards.md) before changing the guards
 or hooks. On a shared branch use `git add <paths> && git commit -- <paths>` (or
-`stageAndCommitPaths`). Parallel agents in one worktree share the index,
-`COMMIT_EDITMSG`, and whole-tree pre-commit checks: give each its own package,
-name the others' directories in its briefing, and let one agent commit. Never
+`stageAndCommitPaths`). Parallel agents in one worktree share the index and
+`COMMIT_EDITMSG`: let one agent commit. Pre-commit checks run in a snapshot of
+the commit index, so others' unstaged files do not affect them. Never
 `git reset --hard` or `git checkout .` while another agent edits. `main` was
 rewritten and force-pushed around 2026-09-02, so hashes recorded before then do
 not resolve: worktree branches `git merge main`, never rebase or reconcile old
