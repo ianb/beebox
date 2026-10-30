@@ -1,6 +1,6 @@
 ---
 title: "Shared browser: one web browser per box that the agent and the person both use"
-status: draft
+status: active
 workstream: shared-browser
 issues: []
 ---
