@@ -197,7 +197,7 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
     scope.all("/browser/*", async (request, reply) => {
       if (!request.url.startsWith(`${marker}/`)) return reply.status(404).send({ error: "Not found" });
       const path = request.url.slice(marker.length);
-      const prefix = browserPrefix({ slug: boxSlug, referer: request.headers.referer });
+      const prefix = browserPrefix({ slug: boxSlug, forwardedPrefix: request.headers["x-forwarded-prefix"] });
       let requestBody: Buffer | null = null;
       if (isCheckedDashboardPost({ method: request.method, path })) {
         if (Number(request.headers["content-length"] ?? 0) > DASHBOARD_POST_CAP_BYTES) return reply.status(413).send({ error: "request body too large" });
@@ -229,8 +229,8 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
       if (!rewritten) return reply.send(upstream);
       const isHtml = (contentType ?? "").toLowerCase().startsWith("text/html");
       let body = rewriteDashboardBody(await decodeBody(await readAll(upstream), upstream.headers["content-encoding"]), prefix);
-      // The prefix depends on the Referer, so no rewritten response may be cached.
-      reply.header("cache-control", "no-store").header("vary", "Referer");
+      // The prefix depends on a request header, so no rewritten response may be cached.
+      reply.header("cache-control", "no-store").header("vary", "X-Forwarded-Prefix");
       if (isHtml) {
         if (notice !== null) body = withNotice(body, notice);
         reply.header("content-security-policy", BROWSER_PAGE_CSP).header("referrer-policy", "same-origin");

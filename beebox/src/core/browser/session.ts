@@ -19,13 +19,13 @@ import { BOX_BROWSER_SESSION } from "./paths.js";
  * The session names in `agent-browser session list` output, or null when the
  * output is not in a known shape. Known shapes: "No active sessions", or
  * "Active sessions:" followed by one name per line, the current one marked
- * with `->`.
+ * with `→` (agent-browser 0.39.2); an ASCII `->` is read the same way.
  */
 export function parseSessionList(stdout: string): string[] | null {
   const lines = stdout.trim().split("\n").map((line) => line.trim()).filter((line) => line !== "");
   if (lines.length === 1 && lines[0] === "No active sessions") return [];
   if (lines[0] !== "Active sessions:") return null;
-  const names = lines.slice(1).map((line) => line.replace(/^->\s*/, ""));
+  const names = lines.slice(1).map((line) => line.replace(/^(?:→|->)\s*/, ""));
   return names.every((name) => /^[\w.-]+$/.test(name)) ? names : null;
 }
 

@@ -12,10 +12,12 @@ void test("Known shapes give the names; anything else is unknown", async (t) => 
   t.check(
     {
       none: parseSessionList("No active sessions\n"),
-      some: parseSessionList("Active sessions:\n-> box\n   agent1\n"),
+      // The shape agent-browser 0.39.2 prints.
+      some: parseSessionList("Active sessions:\n→ box\n   agent1\n"),
+      ascii: parseSessionList("Active sessions:\n-> box\n"),
       error: parseSessionList("Error: daemon not responding\n"),
       oddName: parseSessionList("Active sessions:\n-> box (stale)\n"),
     },
-    { none: [], some: ["box", "agent1"], error: null, oddName: null },
+    { none: [], some: ["box", "agent1"], ascii: ["box"], error: null, oddName: null },
   );
 });

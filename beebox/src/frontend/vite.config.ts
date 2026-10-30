@@ -170,12 +170,15 @@ export default defineConfig({
       },
       // Per-box browser page and its live-view WebSocket: /<base>/<box>/browser
       // and below (docs/plans/shared-browser.md). The engine serves it; Vite
-      // would otherwise answer with the SPA document.
+      // would otherwise answer with the SPA document. The stripped base goes
+      // along as X-Forwarded-Prefix: the dashboard's paths are rewritten under
+      // it (src/webapp/routes/browser/proxy/prefix.ts).
       [`^${BASE_PREFIX}/[^/]+/browser(/|$)`]: {
         target: backendTarget,
         changeOrigin: true,
         ws: true,
         rewrite: stripBase,
+        ...(BASE_PREFIX === "" ? {} : { headers: { "x-forwarded-prefix": BASE_PREFIX } }),
       },
       // Per-box auth: /<base>/<box>/auth/...
       [`^${BASE_PREFIX}/[^/]+/auth/`]: {
