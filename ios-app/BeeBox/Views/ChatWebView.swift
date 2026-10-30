@@ -82,6 +82,23 @@ enum NativeComposerCommandDelivery {
     case rejection(NativeComposerCommandAcknowledgement)
 }
 
+/// The web-to-native script-message channels (contract §3.3). Registration and
+/// routing both read this list, so a channel cannot be registered without passing
+/// through the frame guard in `Coordinator.receiveBridgeMessage`.
+enum NativeBridgeChannel: String, CaseIterable {
+    case composerBinding = "beeboxComposerBinding"
+    case session = "beeboxSession"
+    case emissionReceipt = "beeboxEmissionReceipt"
+    case locationResult = "beeboxLocationResult"
+    case locationState = "beeboxLocationState"
+    case narrationState = "beeboxNarrationState"
+    case hqDictationState = "beeboxHqDictationState"
+    case speechPlaybackState = "beeboxSpeechPlaybackState"
+    case responseState = "beeboxResponseState"
+    case composerCommand = "beeboxComposerCommand"
+    case lastAudioRequest = "beeboxLastAudioRequest"
+}
+
 struct ChatWebView: UIViewRepresentable {
     enum Page: Equatable {
         case chat
@@ -216,17 +233,9 @@ struct ChatWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let configuration = Self.makeConfiguration()
         if page == .chat {
-            configuration.userContentController.add(context.coordinator, name: "beeboxComposerBinding")
-            configuration.userContentController.add(context.coordinator, name: "beeboxSession")
-            configuration.userContentController.add(context.coordinator, name: "beeboxEmissionReceipt")
-            configuration.userContentController.add(context.coordinator, name: "beeboxLocationResult")
-            configuration.userContentController.add(context.coordinator, name: "beeboxLocationState")
-            configuration.userContentController.add(context.coordinator, name: "beeboxNarrationState")
-            configuration.userContentController.add(context.coordinator, name: "beeboxHqDictationState")
-            configuration.userContentController.add(context.coordinator, name: "beeboxSpeechPlaybackState")
-            configuration.userContentController.add(context.coordinator, name: "beeboxResponseState")
-            configuration.userContentController.add(context.coordinator, name: "beeboxComposerCommand")
-            configuration.userContentController.add(context.coordinator, name: "beeboxLastAudioRequest")
+            for channel in NativeBridgeChannel.allCases {
+                configuration.userContentController.add(context.coordinator, name: channel.rawValue)
+            }
         }
         if let script = startupScript() {
             configuration.userContentController.addUserScript(script)
@@ -374,6 +383,7 @@ struct ChatWebView: UIViewRepresentable {
         /// Start is latched through offline retries and cleared only by a
         /// successful load, matching the failure latch below.
         private var navigationStartLogged = false
+        private var refusedBridgeMessages = Set<String>()
         private let evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)?
         private let openExternalURL: (URL) -> Void
         private let loadInCurrentContext: (WKWebView, URLRequest) -> Void
@@ -482,6 +492,7 @@ struct ChatWebView: UIViewRepresentable {
             // once the replacement document commits; didFinish then redelivers
             // the same persisted IDs into the new page.
             inflightEmissionGenerations.removeAll()
+            refusedBridgeMessages.removeAll()
         }
 
         func webView(
@@ -589,61 +600,90 @@ struct ChatWebView: UIViewRepresentable {
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            if message.name == "beeboxComposerBinding" {
-                guard message.frameInfo.isMainFrame,
-                      let frameURL = message.frameInfo.request.url,
-                      ChatWebView.origin(from: frameURL) == allowedOrigin,
-                      let payload = ChatWebView.dictionaryPayload(from: message.body),
-                      let data = try? JSONSerialization.data(withJSONObject: payload),
-                      let binding = try? JSONDecoder().decode(NativeComposerBinding.self, from: data),
-                      binding.isValid else { return }
-                composerBindingNegotiated = true
-                onComposerBinding(binding)
-                message.webView?.evaluateJavaScript("window.beeboxComposerBindingVersion=1; window.dispatchEvent(new Event('beebox:composer-binding-ready'));")
+            receiveBridgeMessage(
+                name: message.name,
+                isMainFrame: message.frameInfo.isMainFrame,
+                frameOrigin: ChatWebView.origin(from: message.frameInfo.securityOrigin),
+                body: message.body,
+                webView: message.webView
+            )
+        }
+
+        /// The routing behind `userContentController`, apart from `WKScriptMessage`,
+        /// which a test cannot construct.
+        ///
+        /// WebKit exposes `window.webkit.messageHandlers` to every frame, and
+        /// `forMainFrameOnly` on the startup script does not change that, so a
+        /// subframe can post on any channel. Only the box's own main frame may
+        /// drive native (contract §3.3).
+        func receiveBridgeMessage(
+            name: String,
+            isMainFrame: Bool,
+            frameOrigin: String?,
+            body: Any,
+            webView: WKWebView?
+        ) {
+            guard let channel = NativeBridgeChannel(rawValue: name) else {
                 return
             }
-            if message.name == "beeboxEmissionReceipt" {
-                receiveEmissionReceipt(message.body)
+            guard isMainFrame, let allowedOrigin, frameOrigin == allowedOrigin else {
+                noteRefusedBridgeMessage(channel, isMainFrame: isMainFrame)
                 return
             }
-            if message.name == "beeboxLocationResult" {
-                receiveLocationResult(message.body)
+            switch channel {
+            case .composerBinding:
+                receiveComposerBinding(body, webView: webView)
+            case .session:
+                receiveSession(body)
+            case .emissionReceipt:
+                receiveEmissionReceipt(body)
+            case .locationResult:
+                receiveLocationResult(body)
+            case .locationState:
+                receiveLocationState(body)
+            case .narrationState:
+                receiveNarrationState(body)
+            case .hqDictationState:
+                receiveHqDictationState(body)
+            case .speechPlaybackState:
+                receiveSpeechPlaybackState(body)
+            case .responseState:
+                receiveResponseState(body)
+            case .composerCommand:
+                receiveComposerCommand(body)
+            case .lastAudioRequest:
+                receiveLastAudioRequest(body)
+            }
+        }
+
+        /// One line per channel and frame kind per document, because the sender
+        /// is a page that can post in a loop.
+        private func noteRefusedBridgeMessage(_ channel: NativeBridgeChannel, isMainFrame: Bool) {
+            let frame = isMainFrame ? "mainFrame" : "subframe"
+            guard refusedBridgeMessages.insert("\(channel.rawValue) \(frame)").inserted else {
                 return
             }
-            if message.name == "beeboxLocationState" {
-                receiveLocationState(message.body)
-                return
-            }
-            if message.name == "beeboxNarrationState" {
-                receiveNarrationState(message.body)
-                return
-            }
-            if message.name == "beeboxHqDictationState" {
-                receiveHqDictationState(message.body)
-                return
-            }
-            if message.name == "beeboxSpeechPlaybackState" {
-                receiveSpeechPlaybackState(message.body)
-                return
-            }
-            if message.name == "beeboxResponseState" {
-                receiveResponseState(message.body)
-                return
-            }
-            if message.name == "beeboxComposerCommand" {
-                receiveComposerCommand(message.body)
-                return
-            }
-            if message.name == "beeboxLastAudioRequest" {
-                receiveLastAudioRequest(message.body)
-                return
-            }
-            guard message.name == "beeboxSession", let urlString = message.body as? String, let url = URL(string: urlString) else {
-                return
-            }
-            guard ChatWebView.origin(from: url) == allowedOrigin else {
-                return
-            }
+            BoxLog.warn(
+                "bridge message refused channel=\(channel.rawValue) frame=\(frame)",
+                category: .webview,
+                targetBoxID: boxID
+            )
+        }
+
+        private func receiveComposerBinding(_ body: Any, webView: WKWebView?) {
+            guard let payload = ChatWebView.dictionaryPayload(from: body),
+                  let data = try? JSONSerialization.data(withJSONObject: payload),
+                  let binding = try? JSONDecoder().decode(NativeComposerBinding.self, from: data),
+                  binding.isValid else { return }
+            composerBindingNegotiated = true
+            onComposerBinding(binding)
+            webView?.evaluateJavaScript("window.beeboxComposerBindingVersion=1; window.dispatchEvent(new Event('beebox:composer-binding-ready'));")
+        }
+
+        private func receiveSession(_ body: Any) {
+            guard let urlString = body as? String,
+                  let url = URL(string: urlString),
+                  ChatWebView.origin(from: url) == allowedOrigin else { return }
             onSessionChange(ChatWebView.visibleSessionID(from: url))
         }
 
@@ -1059,10 +1099,26 @@ struct ChatWebView: UIViewRepresentable {
         guard let scheme = url.scheme, let host = url.host else {
             return nil
         }
-        if let port = url.port {
-            return "\(scheme)://\(host):\(port)"
+        return origin(scheme: scheme, host: host, port: url.port ?? 0)
+    }
+
+    /// The origin WebKit enforces, which is the frame's document and not its
+    /// request: a page served with CSP `sandbox` (captured pages) has an opaque
+    /// origin, reported here as nil, though its request URL is on the box.
+    static func origin(from securityOrigin: WKSecurityOrigin) -> String? {
+        guard securityOrigin.protocol.isEmpty == false, securityOrigin.host.isEmpty == false else {
+            return nil
         }
-        return "\(scheme)://\(host)"
+        return origin(scheme: securityOrigin.protocol, host: securityOrigin.host, port: securityOrigin.port)
+    }
+
+    /// `port` 0 means none. The form `window.location.origin` and WebKit use: a
+    /// paired URL that spells out `HTTPS://Box.example.com:443` is the same origin.
+    private static func origin(scheme: String, host: String, port: Int) -> String {
+        let scheme = scheme.lowercased()
+        let host = host.lowercased()
+        let isDefaultPort = port == 0 || (scheme == "http" && port == 80) || (scheme == "https" && port == 443)
+        return isDefaultPort ? "\(scheme)://\(host)" : "\(scheme)://\(host):\(port)"
     }
 
     static func newWindowDestination(for url: URL, allowedOrigin: String?) -> NewWindowDestination {
