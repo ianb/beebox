@@ -37,3 +37,5 @@ and the destination rendering boundary around that attempt. Avoid speculative
 render/controller changes without a red-capable reproduction.
 
 Related: [chat input everywhere](../features/2026-08-30-chat-input-everywhere.md).
+
+Re-reviewed 2026-10-30: no recurrence recorded since 2026-09-07. The menu item now reads 'Open <dir>/' and uses in-app navigation.

@@ -92,3 +92,7 @@ but *handling it gracefully* is where we can be better than the field.
 Follow the concrete reproduction or verification steps above. Confirm the
 observed result matches the expected behavior described in this issue before
 clearing the manual-testing flag.
+
+Re-reviewed 2026-10-30: Implemented and merged; still awaiting the manual revoke test. Telegram was removed, so step (c) expects a web-push notification only.
+
+Out of date in the body above: Change 'Implemented on worktree-google-reauth-health' to merged on main, and step (c) of the manual test from 'Telegram/push' to web push. Point the 'pieces already exist' list at beebox/src/google/auth-status.ts and core/schedule/scheduler/google-auth-alert.ts, or drop that pre-implementation section.

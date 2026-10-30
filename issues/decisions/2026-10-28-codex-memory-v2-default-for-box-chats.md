@@ -38,3 +38,5 @@ and edit it.
 
 The sdk-update schedule will hold Codex at 0.164.0 until this is decided, and
 take 0.165.0 after.
+
+Re-reviewed 2026-10-30: the pin is held at 0.164.0 pending this call; the issue lacks `needs: [decision]` in frontmatter.

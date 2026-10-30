@@ -162,3 +162,5 @@ target state, final message assembly, and dispatch.
 Native TTS playback, native transcript rendering, cross-device draft sync,
 pixel-for-pixel React parity, Android UI implementation, and a new upload
 protocol remain explicitly out of scope.
+
+Re-reviewed 2026-10-30: unchanged; only Track 6 landscape and real-device acceptance remain. The developer may want to add needs: [manual-testing].

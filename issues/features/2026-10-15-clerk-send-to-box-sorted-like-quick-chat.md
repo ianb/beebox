@@ -98,3 +98,7 @@ in the `web-search-fetch` workstream.
   boxholder: send the full page now, design trimming from real captures; a
   first finder is parked on branch `wip-clerk-feed-items`. This issue stays
   open for part 2.
+
+Re-reviewed 2026-10-30: part 1 shipped; part 2 (feed items) is untouched and the parked finder is still only on `wip-clerk-feed-items`. The owning worktree `clerk-quick-send` no longer exists.
+
+Out of date in the body above: Retitle to the open half (capture one feed item, not the whole feed page) and set workstream to unattached; the clerk-quick-send worktree is gone.

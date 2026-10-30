@@ -12542,6 +12542,70 @@ audit-box:
       peak: 41928
       added: 0
       turns: 2
+  browser-login-needed:
+    - date: 2026-10-30T05:26:07.300Z
+      boxCommit: 3e86fa75c920f0b25577f1d869bcb13624a747b9
+      repoCommit: 93e4da1d09d3549712a0d8ea3a579bd66c4f6542
+      initial: 44439
+      peak: 44439
+      added: 0
+      turns: 2
+  browser-vs-webfetch:
+    - date: 2026-10-30T05:26:07.300Z
+      boxCommit: 3e86fa75c920f0b25577f1d869bcb13624a747b9
+      repoCommit: 93e4da1d09d3549712a0d8ea3a579bd66c4f6542
+      initial: 34175
+      peak: 34175
+      added: 0
+      turns: 2
+  browser-task-authoring:
+    - date: 2026-10-30T05:26:07.300Z
+      boxCommit: 3e86fa75c920f0b25577f1d869bcb13624a747b9
+      repoCommit: 93e4da1d09d3549712a0d8ea3a579bd66c4f6542
+      initial: 34186
+      peak: 38893
+      added: 4707
+      turns: 4
+  browser-task-drain:
+    - date: 2026-10-30T05:26:07.300Z
+      boxCommit: 3e86fa75c920f0b25577f1d869bcb13624a747b9
+      repoCommit: 93e4da1d09d3549712a0d8ea3a579bd66c4f6542
+      initial: 34177
+      peak: 39404
+      added: 5227
+      turns: 4
+  browser-task-discovery-ongoing:
+    - date: 2026-10-30T05:26:07.300Z
+      boxCommit: 3e86fa75c920f0b25577f1d869bcb13624a747b9
+      repoCommit: 93e4da1d09d3549712a0d8ea3a579bd66c4f6542
+      initial: 34189
+      peak: 49664
+      added: 15475
+      turns: 10
+  browser-task-discovery-bulk:
+    - date: 2026-10-30T05:26:07.300Z
+      boxCommit: 3e86fa75c920f0b25577f1d869bcb13624a747b9
+      repoCommit: 93e4da1d09d3549712a0d8ea3a579bd66c4f6542
+      initial: 34183
+      peak: 42907
+      added: 8724
+      turns: 8
+  browser-task-not-for-public-feeds:
+    - date: 2026-10-30T05:26:07.300Z
+      boxCommit: 3e86fa75c920f0b25577f1d869bcb13624a747b9
+      repoCommit: 93e4da1d09d3549712a0d8ea3a579bd66c4f6542
+      initial: 34177
+      peak: 58197
+      added: 24020
+      turns: 21
+  browser-task-run-skill:
+    - date: 2026-10-30T05:26:07.300Z
+      boxCommit: 3e86fa75c920f0b25577f1d869bcb13624a747b9
+      repoCommit: 93e4da1d09d3549712a0d8ea3a579bd66c4f6542
+      initial: 34197
+      peak: 42632
+      added: 8435
+      turns: 13
 dev-checkout:
   dev-spirit-doc:
     - date: 2026-10-08T04:37:43.997Z

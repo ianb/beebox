@@ -35,6 +35,7 @@ import { viewLintCommand } from "./lint.js";
 import { loadViewCards } from "../../../core/views/cards.js";
 import { typecheckViews } from "./typecheck.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
+import { buildScriptEnv } from "../../../core/script-env/core.js";
 import type { ViewProps } from "../../../core/views/types.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 
@@ -207,8 +208,11 @@ const DEFAULT_VIEW_CHECK_TIMEOUT_MS = 30_000;
  * event loop is blocked. SIGKILL guarantees the hang dies. Never rejects:
  * spawn/exit failures resolve to `ok: false` so one bad view can't abort the
  * sweep.
+ *
+ * The child runs box-authored view code, so it gets the agent profile
+ * (`buildScriptEnv`), never this process's own environment.
  */
-function checkOneView(args: {
+async function checkOneView(args: {
   boxRoot: string;
   slug: string;
   timeoutMs: number;
@@ -217,9 +221,16 @@ function checkOneView(args: {
   const { boxRoot, slug, timeoutMs, allowInvalidCards } = args;
   const bbxBin = path.join(PACKAGE_ROOT, "bin", "bbx");
   const testArgs = ["view", "render-one", slug, ...(allowInvalidCards ? ["--allow-invalid-cards"] : [])];
+  let env: NodeJS.ProcessEnv;
+  try {
+    env = await buildScriptEnv(boxRoot);
+  } catch (e) {
+    return { slug, ok: false, error: `could not build the render environment: ${errorMessage(e)}` };
+  }
   return new Promise((resolve) => {
     const child = spawn(bbxBin, testArgs, {
       cwd: boxRoot,
+      env,
       stdio: ["ignore", "ignore", "pipe"],
       timeout: timeoutMs,
       killSignal: "SIGKILL",

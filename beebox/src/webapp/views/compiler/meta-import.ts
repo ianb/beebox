@@ -18,6 +18,13 @@
  * limit was tried first; a `SIGXCPU` handler (tap installs one) swallows it,
  * and macOS sends no SIGKILL at the hard limit. On 2026-10-16 an orphaned
  * runner had spun for 16 days.
+ *
+ * The view is box-authored code and its exports come back as metadata the
+ * server lists, so the child must not see the server's environment: a view
+ * exporting `name = process.env.BBX_HUB_SECRET` would publish the secret. It
+ * gets `agentAllowlistEnv()`, the agent profile's inherited allowlist without
+ * the values `buildScriptEnv` injects: importing a module needs no way back to
+ * the server, and an engine-hosted compile has no box to derive one from.
  */
 
 import * as fs from "node:fs/promises";
@@ -25,6 +32,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { z } from "zod";
 import { writeNodeViewModule, type ViewHostContext } from "../node-view-runtime.js";
+import { agentAllowlistEnv } from "../../../core/script-env/core.js";
 
 const RUNNER_FILENAME = "extract-meta-runner.mjs";
 const IMPORT_TIMEOUT_MS = 3_000;
@@ -75,6 +83,7 @@ function runInSubprocess(dir: string, moduleUrl: string): Promise<ImportedViewMe
   return new Promise((resolve) => {
     const runnerPath = path.join(dir, RUNNER_FILENAME);
     const child = spawn(process.execPath, [runnerPath, moduleUrl], {
+      env: agentAllowlistEnv(),
       timeout: IMPORT_TIMEOUT_MS,
       killSignal: "SIGKILL",
     });

@@ -32,3 +32,5 @@ over downloaded audio is heavier but under the box's control.
 
 Related: [server-side webpage capture](2026-09-11-server-side-webpage-capture.md),
 [fetch blocked pages](2026-10-04-fetch-blocked-pages.md).
+
+Re-reviewed 2026-10-30: Still open. The video-url path is beebox/src/frontend/src/lib/video-url.ts, not beebox/src/lib/video-url.ts.

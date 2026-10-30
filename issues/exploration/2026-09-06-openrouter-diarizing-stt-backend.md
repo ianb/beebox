@@ -131,3 +131,7 @@ questions before it would be worth building:
 Evaluate alongside the other diarization-adjacent watch items:
 [Gemini transcription](../watch/2026-08-27-gemini-transcribe-as-transcription-backend.md)
 and [Deepgram Flux](2026-08-13-deepgram-flux-stt-tts-turn-taking.md).
+
+Re-reviewed 2026-10-30: The backend in the title shipped as `mai-diarized`. Only the accuracy comparison with `voxtral-diarized` on real recordings remains, so the title and 'The tension' section are out of date.
+
+Out of date in the body above: Retitle to the remaining work, for example 'Compare mai-diarized with voxtral-diarized on real two-person recordings'. Trim 'The tension' to the open accuracy question and mark the hqService question answered. Update the path to beebox/src/core/transcription/dispatch/openrouter.ts.

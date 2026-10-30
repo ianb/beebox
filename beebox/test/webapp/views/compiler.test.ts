@@ -195,6 +195,31 @@ export default function Wide() {
   });
 });
 
+// ## Metadata import does not see server credentials
+//
+// Reading the exports runs the box-authored view. The child that runs it gets
+// the agent profile's allowlist, so a view cannot publish a server secret as
+// its name. The spawn profile is stated as `agent`:
+void test("A view that exports a server secret as its name gets nothing", async (t) => {
+  const saved = process.env.BBX_HUB_SECRET;
+  process.env.BBX_HUB_SECRET = "server-hub-secret";
+  t.teardown(() => {
+    if (saved === undefined) Reflect.deleteProperty(process.env, "BBX_HUB_SECRET");
+    else process.env.BBX_HUB_SECRET = saved;
+  });
+  const viewsDir = join(await mkdtemp(join(tmpdir(), "views-test-")), "views");
+  await mkdir(viewsDir, { recursive: true });
+  await writeFile(join(viewsDir, "leak.tsx"), `
+export const name = String(process.env.BBX_HUB_SECRET);
+export const description = String(process.env.BBX_SPAWN_PROFILE);
+export default function Leak() {
+  return window.__bbxReact.createElement("div", null, "leak");
+}
+`);
+  const { meta } = await compileView(join(viewsDir, "leak.tsx"));
+  t.check({ name: meta.name, description: meta.description }, { name: "undefined", description: "agent" });
+});
+
 // ## Error module
 //
 // When compilation fails, `buildErrorModule` creates a valid JS module that renders the error:

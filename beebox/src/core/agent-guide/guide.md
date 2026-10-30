@@ -561,6 +561,13 @@ A missing Debian/Ubuntu command-line tool is installed with `bbx host
 install`, never `sudo apt`; how, and what to do when it is refused, is its
 entry in `bbx-commands.md`.
 
+<!-- rules: tools.browser -->
+Read public pages with WebFetch. A page that needs a login, scripts, or the
+person's help goes through `bbx browser`, the box's shared browser (the
+`browser` skill). At a login or a "verify you are human" check, ask the person
+in chat to open Browser from the profile menu on a computer, do the step, and
+tell you when done; never ask for or type their password.
+
 ## PROVENANCE — `{% quote %}` and `{% source %}`
 
 <!-- rules: provenance.two-tags -->

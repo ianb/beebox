@@ -7,7 +7,7 @@ Thin wrapper around the upstream [`agent-browser`](https://github.com/vercel-lab
 - **Worktree-aware URL rewriting** — `bin/browse open /dashboard` resolves to `http://localhost:3210/<this-worktree>/<box>/dashboard`.
 - **Self-describing screenshots** — `bin/browse screenshot` writes a sidecar `<image>.json` with `{url, title, timestamp, takenInWorktree}`.
 - **Indexed default path** — `bin/browse screenshot` with no path saves to `.claude/screenshots/NNNN-<slug>.png`.
-- **Bounded settle wait** — `open`, `snapshot`, and `screenshot` wait for the app's React Query activity to quiet down (`<body data-bbx-loading="false">`), but only on this worktree's own origin, and only for `BROWSE_READY_TIMEOUT_MS` (default 15000) before proceeding with a note on stderr. `--no-wait` skips it. Upstream's `wait --fn` polls forever unless `AGENT_BROWSER_DEFAULT_TIMEOUT` is set, so the bound is what keeps a page that never sets the marker — `about:blank`, any other site, the login wall — from hanging the command.
+- **Bounded settle wait** — `open`, `snapshot`, and `screenshot` wait for the app's React Query activity to quiet down (`<body data-bbx-loading="false">`), but only on this worktree's own origin, and only for `BROWSE_READY_TIMEOUT_MS` (default 15000) before proceeding with a note on stderr. `--no-wait` skips it. The wrapper passes the bound as `wait --timeout`, which keeps a page that never sets the marker — `about:blank`, any other site, the login wall — from hanging the command.
 - **Per-session Chrome profiles** — each `--session <name>` gets `profiles/<name>` under the worktree's browse cache, because Chrome refuses to open a profile another live instance holds.
 
 Cheat sheet: [`.claude/skills/browse/SKILL.md`](../.claude/skills/browse/SKILL.md).

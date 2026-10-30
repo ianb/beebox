@@ -64,3 +64,5 @@ Related: [move to AGENTS.md only](../closed/docs-and-chores/2026-09-18-move-to-a
 
 Sources: [mods README](https://github.com/anthropics/claude-code/tree/main/mods),
 [the post that prompted this](https://x.com/Voxyz_ai/status/2099564071972450641).
+
+Re-reviewed 2026-10-30: mods are available in the installed Claude Code (it ships a built-in plugin-authoring skill for making them); nothing in the repo uses one yet.

@@ -1,4 +1,5 @@
 import { run } from "../runner.js";
+import type { RunOptions } from "../runner.js";
 
 export interface ScreenshotOptions {
   path: string;
@@ -11,13 +12,13 @@ export interface ScreenshotResult {
   path: string;
 }
 
-export async function screenshot(options: ScreenshotOptions): Promise<ScreenshotResult> {
+export async function screenshot(options: ScreenshotOptions, runOptions?: RunOptions): Promise<ScreenshotResult> {
   const { path, selector, full, annotate } = options;
   const args: string[] = ["screenshot"];
   if (selector !== undefined) args.push(selector);
   args.push(path);
   if (full === true) args.push("--full");
   if (annotate === true) args.push("--annotate");
-  await run(args);
+  await run(args, runOptions);
   return { path };
 }

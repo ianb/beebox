@@ -52,3 +52,5 @@ pointed away from the cache (`bug-burndown-3/20261019T185933Z-landed.md`).
 Deleting the cache directory cleared both. `beebox/AGENTS.md` now names that
 step; the cache key is still the fix. The `backlog` priority may be stale now
 that it recurs.
+
+Re-reviewed 2026-10-30: the cache key in bin/lint-changed.ts is unchanged; the problem stands.

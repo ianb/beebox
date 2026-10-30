@@ -49,3 +49,5 @@ Neighbors: `issues/features/2026-10-05-box-agent-interface-screenshots.md`
 `issues/features/2026-06-12-agent-browser-scoped-to-box.md` (a browser the
 agent can drive, scoped to its box). A server-side renderer could serve all
 three.
+
+Re-reviewed 2026-10-30: still open. The shared box browser (`bbx browser`, landed 2026-10-30) gives the agent a headless Chrome, but it has no box credential, so it cannot yet open the box's own authenticated pages; that self-view gap is the same blocker recorded on the agent-browser issue.

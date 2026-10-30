@@ -27,9 +27,10 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { mkdtemp, mkdir, readFile, rm, writeFile, chmod } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile, chmod, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { createRequire } from "node:module";
 import { buildChildEnv } from "../../src/hub/supervisor/child-env.js";
 import { defaultSpawnChild, spawnBoxChild, type SpawnChildFn } from "../../src/hub/supervisor/child-spawn.js";
 import { renderBoxEnvFile } from "../../src/hub/box-env-file.js";
@@ -49,6 +50,9 @@ import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { glmEnvAdditions } from "../../src/core/glm-key.js";
 import { openRouterChatEnv } from "../../src/core/provider-env/openrouter-chat.js";
 import { CREDENTIAL_ENV, type CredentialConsumer, type CredentialVisibility } from "../../src/lib/credential-env.js";
+import { compileView } from "../../src/webapp/views/compiler/compile.js";
+import { checkViews } from "../../src/cli/commands/view/command.js";
+import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
 /** Every credential name in the matrix. The last is listed nowhere in `src/`. */
@@ -111,6 +115,9 @@ const COLUMNS = [
   "runClaude", "scan", "codexNoEnv", "codexEnv",
   // A procedure's shell step (`core/procedure/shell.ts`), which runs box-authored scripts.
   "procShell",
+  // Box-authored view code: the metadata import child (`webapp/views/compiler/meta-import.ts`)
+  // and `bbx view check`'s render child (`cli/commands/view/command.ts`).
+  "viewMeta", "viewRender",
   // The `claude` CLI's own commands: status with and without a box, login, logout.
   "status", "statusNoBox", "login", "logout",
   // The gws connector CLI.
@@ -190,6 +197,27 @@ async function recorded(dir: string, label: string): Promise<Env> {
   const env = asEnv(JSON.parse(await readFile(file, "utf-8")));
   await rm(file);
   return env;
+}
+
+/**
+ * A view that reports its environment as its `name` export (read by the
+ * metadata import child) and as its render error (raised in `bbx view check`'s
+ * render child).
+ */
+async function viewEnvironments(boxRoot: string): Promise<{ viewMeta: Env; viewRender: Env }> {
+  const reactNodeModules = dirname(dirname(createRequire(join(PACKAGE_ROOT, "package.json")).resolve("react/package.json")));
+  await symlink(join(reactNodeModules, "react"), join(boxRoot, "node_modules", "react"), "dir");
+  await mkdir(join(boxRoot, "src/views"), { recursive: true });
+  await writeFile(join(boxRoot, "src/views/env.tsx"), `export const name = JSON.stringify(process.env);
+export default function Env() {
+  throw new Error("ENV:" + JSON.stringify(process.env));
+}
+`);
+  const viewMeta = asEnv(JSON.parse((await compileView(join(boxRoot, "src/views/env.tsx"))).meta.name));
+  const error = (await checkViews({ boxRoot, timeoutMs: 60_000 })).views[0]?.error ?? "";
+  const reported = /ENV:(.*)/.exec(error)?.[1];
+  if (reported === undefined) throw new Error(`the render child did not report its environment: ${error}`);
+  return { viewMeta, viewRender: asEnv(JSON.parse(reported)) };
 }
 
 void test("Which process sees which credential variable", async (t) => {
@@ -282,6 +310,11 @@ void test("Which process sees which credential variable", async (t) => {
   const shell = await runShell(box.root, `"${process.execPath}" -e 'process.stdout.write(JSON.stringify(process.env))'`);
   const procShell = asEnv(JSON.parse(shell.stdout));
 
+  // --- Box-authored views that report their own environment. ---
+  const viewBox = await makeTmpBox({ deps: true, git: true });
+  t.teardown(() => viewBox.cleanup());
+  const { viewMeta, viewRender } = await viewEnvironments(viewBox.root);
+
   // --- The `claude` CLI's own commands, through a recorder named `claude` first on PATH. ---
   await envRecorder(bin, { name: "claude", extra: `
 if (process.argv[3] === "status") process.stdout.write("{}");
@@ -320,41 +353,44 @@ if (process.argv[3] === "login") { process.stdout.write("https://claude.ai/oauth
     const narrowed = expectedInjections(box.root, provider);
     return (name: string) => cell(env, { name, injected: narrowed });
   };
+  const viewInjected = expectedInjections(viewBox.root);
+  const ofViewBox = (env: Env) => (name: string) => cell(env, { name, injected: viewInjected });
   t.check(render({
     hubAllow: of(hubAllow), hubChild: of(hubChild), boxEnv: of(boxEnv),
     agent: of(agent), tooling: of(tooling),
     addFirst: of(addFirst), addGlm: ofProvider(addGlm, "glm"), addOR: ofProvider(addOR, "openrouter"), addCodex: of(addCodex), addPi: of(addPi),
     runClaude: of(runClaude), scan: of(scan), codexNoEnv: of(codexNoEnv), codexEnv: of(codexEnv), procShell: of(procShell),
+    viewMeta: of(viewMeta), viewRender: ofViewBox(viewRender),
     status: of(status), statusNoBox: of(statusNoBox), login: of(login), logout: of(logout),
     gws: of(gws),
     warm,
   }), [
-    // hubAllow hubChild boxEnv | agent tooling | addFirst addGlm addOR addCodex addPi | runClaude scan codexNoEnv codexEnv procShell | status statusNoBox login logout | gws | warm
-    "CLAUDE_CODE_OAUTH_TOKEN          - - - - - J - - - - J J - - - J - I I I c",
-    "ANTHROPIC_API_KEY                - - - - - - - B - - - - - - - I I I I I -",
-    "ANTHROPIC_AUTH_TOKEN             - - - - - - J J - - - - - - - I I I I I c",
-    "ANTHROPIC_BASE_URL               - - - - - - J J - - - - - - - I I I I I c",
-    "BBX_SESSION_SECRET               - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_HUB_SECRET                   - J - - - - - - - - - - - - - I I I I I -",
-    "BBX_DIAG_API_KEY                 I I I - - - - - - - - - - - - I I I I I -",
-    "BBX_BROWSE_API_KEY               - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_AGENT_TOKEN                  - - - J J - - - - - J J J J J I I I I I -",
-    "BBX_VAPID_PRIVATE_KEY            I I I - - - - - - - - - - - - I I I I I -",
-    "BBX_VAPID_PUBLIC_KEY             I I I - - - - - - - - - - - - I I I I I -",
-    "GOOGLE_OAUTH_CLIENT_ID           - - - - - - - - - - - - - - - I I I I I -",
-    "GOOGLE_OAUTH_CLIENT_SECRET       - - - - - - - - - - - - - - - I I I I I -",
-    "GOOGLE_WORKSPACE_CLI_TOKEN       - - - - - - - - - - - - - - - I I I I J -",
-    "BBX_MISTRAL_API_KEY              - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_DEEPGRAM_API_KEY             - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_DEEPGRAM_PROJECT             - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_OPENAI_API_KEY               - - - - - - - - - - - - - - - I I I I I -",
-    "THINKING_OPENAI_API_KEY          - - - - - - - - - - - - - - - I I I I I -",
-    "GEMINI_KEY                       - - - - - - - - - - - - - - - I I I I I -",
-    "SKE_GEMINI_API_KEY               - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_OPENROUTER_API_KEY           - - - - - - - - - - - - - - - I I I I I -",
-    "OPENAI_API_KEY                   - - - - - - - - - - - - - - - I I I I I -",
-    "CODEX_API_KEY                    - - - - - - - - - - - - - - - I I I I I -",
-    "BBX_UNLISTED_CREDENTIAL_SENTINEL - - - - - - - - - - - - - - - I I I I I -",
+    // hubAllow hubChild boxEnv | agent tooling | addFirst addGlm addOR addCodex addPi | runClaude scan codexNoEnv codexEnv procShell | viewMeta viewRender | status statusNoBox login logout | gws | warm
+    "CLAUDE_CODE_OAUTH_TOKEN          - - - - - J - - - - J J - - - - - J - I I I c",
+    "ANTHROPIC_API_KEY                - - - - - - - B - - - - - - - - - I I I I I -",
+    "ANTHROPIC_AUTH_TOKEN             - - - - - - J J - - - - - - - - - I I I I I c",
+    "ANTHROPIC_BASE_URL               - - - - - - J J - - - - - - - - - I I I I I c",
+    "BBX_SESSION_SECRET               - - - - - - - - - - - - - - - - - I I I I I -",
+    "BBX_HUB_SECRET                   - J - - - - - - - - - - - - - - - I I I I I -",
+    "BBX_DIAG_API_KEY                 I I I - - - - - - - - - - - - - - I I I I I -",
+    "BBX_BROWSE_API_KEY               - - - - - - - - - - - - - - - - - I I I I I -",
+    "BBX_AGENT_TOKEN                  - - - J J - - - - - J J J J J - J I I I I I -",
+    "BBX_VAPID_PRIVATE_KEY            I I I - - - - - - - - - - - - - - I I I I I -",
+    "BBX_VAPID_PUBLIC_KEY             I I I - - - - - - - - - - - - - - I I I I I -",
+    "GOOGLE_OAUTH_CLIENT_ID           - - - - - - - - - - - - - - - - - I I I I I -",
+    "GOOGLE_OAUTH_CLIENT_SECRET       - - - - - - - - - - - - - - - - - I I I I I -",
+    "GOOGLE_WORKSPACE_CLI_TOKEN       - - - - - - - - - - - - - - - - - I I I I J -",
+    "BBX_MISTRAL_API_KEY              - - - - - - - - - - - - - - - - - I I I I I -",
+    "BBX_DEEPGRAM_API_KEY             - - - - - - - - - - - - - - - - - I I I I I -",
+    "BBX_DEEPGRAM_PROJECT             - - - - - - - - - - - - - - - - - I I I I I -",
+    "BBX_OPENAI_API_KEY               - - - - - - - - - - - - - - - - - I I I I I -",
+    "THINKING_OPENAI_API_KEY          - - - - - - - - - - - - - - - - - I I I I I -",
+    "GEMINI_KEY                       - - - - - - - - - - - - - - - - - I I I I I -",
+    "SKE_GEMINI_API_KEY               - - - - - - - - - - - - - - - - - I I I I I -",
+    "BBX_OPENROUTER_API_KEY           - - - - - - - - - - - - - - - - - I I I I I -",
+    "OPENAI_API_KEY                   - - - - - - - - - - - - - - - - - I I I I I -",
+    "CODEX_API_KEY                    - - - - - - - - - - - - - - - - - I I I I I -",
+    "BBX_UNLISTED_CREDENTIAL_SENTINEL - - - - - - - - - - - - - - - - - I I I I I -",
   ]);
 
   // The table in `lib/credential-env.ts` says what these processes do.

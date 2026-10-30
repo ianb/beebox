@@ -45,3 +45,5 @@ ahead from one that has not pushed in months.
 
 Thresholds and which surface to build are open, and the second is a product
 decision about how much the boxholder wants to be told.
+
+Re-reviewed 2026-10-30: still open. The Admin overview now shows an 'unpushed commit' count per box (admin-overview-summaries.ts:133), but nobody is alerted and there is still no last-successful-push time. The restic box backups (src/core/box-backup/) are a separate path and do not watch the git remote.

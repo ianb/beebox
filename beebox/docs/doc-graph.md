@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-30T05:29:36Z
-Total documents: 606
+Generated: 2026-10-30T14:11:55Z
+Total documents: 607
 
 ## Issues
 
@@ -785,6 +785,7 @@ Referenced by:
 - ../research/claude-elixir-phoenix/enforcement-and-hooks.md:6 (link) — **Snapshot date:** 2026-07-30. Companion to [README.md](README.md).
 - ../research/claude-elixir-phoenix/measurement.md:3 (link) — **Snapshot date:** 2026-07-30. Companion to [README.md](README.md).
 - ../research/claude-elixir-phoenix/workflow-and-orchestration.md:3 (link) — **Snapshot date:** 2026-07-30. Companion to [README.md](README.md).
+- ../research/embedded-browser/agent-browser-platforms.md:95 (mention) — WebRTC, or noVNC when `ENABLE_WEBRTC=false` (`README.md` lines 140-146).
 - ../research/gstack/skills.md:6 (link) — See [README.md](README.md) for the status legend.
 - ../research/imbue-studio/architecture.md:229 (mention) — `.gitignore` excludes `data/*` and whitelists only each folder's `README.md`. Git therefore holds code, skills, config,
 - ../research/imbue-studio/chat-app.md:3 (link) — Read after a first hands-on session in which the chat held up well. Paths under `system/apps/chat/`, `docs/` and `.agent
@@ -859,7 +860,7 @@ Referenced by:
 - docs/plans/installation-story.md:287 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:762 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:491 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:419 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:461 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:73 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -870,6 +871,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:18 (mention) — once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
 - ../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:15 (mention) — (`deploy/README.md` documents this as a known gap). So a change to the
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:58 (mention) — directly (`deploy/README.md:191` says the live server now runs `bbx hub`, so
+- ../research/embedded-browser/beebox-today.md:53 (mention) — - One Ubuntu VPS, many boxes (`beebox/deploy/README.md`, `beebox/docs/server/provisioning.md:95-130`). Per-box isolation
 - ../research/openclaw-hermes/deep-installation.md:96 (mention) — and `beebox/deploy/README.md`.
 
 References:
@@ -942,6 +944,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-box-guidance.md:261 (mention) — | `.beebox/agent-guide.md` (11,081 words) | always | generated | `agent-guide/index.ts` | yes | no (ignored) |
 - docs/implemented-plans/user-location.md:128 (mention) — `.beebox/agent-guide.md`. Sections are **not** gated on box
 - docs/plans/agent-docs.md:415 (mention) — - The box-specific agent guide (`.beebox/agent-guide.md`) needs a box to
+- docs/plans/shared-browser.md:91 (mention) — - **Agent guide budget.** `docs/agent-guide.md` test 3: *"Does it apply only when touching one thing (a field, a command
 - docs/prompts/logging.md:10 (mention) — - Verifying that generated documentation (`agent-guide.md`, card rules) is actually loaded
 - docs/testing/knowledge-audits.md:37 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `AG
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:232 (mention) — The scaffold provides `package.json` (with `beebox` pinned), `tsconfig.json`, the standard data directories (`box/`, `st
@@ -958,6 +961,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md:21 (mention) — these passes silently pulls the full box CLAUDE.md → `agent-guide.md` → rules
 - ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md:19 (mention) — The always-loaded layer (agent-guide.md, CLAUDE.md includes, system prompts) has no size discipline: every addition feel
 - ../issues/exploration/2026-06-17-loading-eagerness-axis.md:18 (mention) — - **Always-on** — root `AGENTS.md` + the generated `agent-guide.md`. Paid for on
+- ../research/embedded-browser/beebox-today.md:89 (mention) — - Tools are given as shell commands, not MCP. Agents get file/shell/web built-ins plus the `bbx` CLI, documented by the
 - ../research/openclaw-hermes/compare-context-memory.md:18 (mention) — | Files | Root `CLAUDE.md` (`@`-includes `agent-guide.md`, `briefing.md`, `MAP.md`); `.beebox/agent-guide.md` (657 lines
 - ../research/openclaw-hermes/compare-skills-tools.md:33 (mention) — editing `*.memo.card` loads `card-memo.md`). The agent guide (`agent-guide.md`) is the
 - ../research/openclaw-hermes/compare-ux-prompt.md:20 (mention) — | **Builder** | No single builder. Layers: Claude Code preset prompt + auto-loaded box `CLAUDE.md` (`@`-includes `agent-
@@ -976,7 +980,7 @@ Referenced by:
 - README.md:92 (link) — [encrypted backups](docs/backups.md), scheduled restic snapshots send the
 - docs/guides.md:38 (link) — | Encrypted box backups and recovery | [backups](backups.md) |
 - docs/implemented-plans/box-backups.md:16 (link) — implemented; see the [backup guide](../backups.md) and
-- docs/security-report.md:420 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
+- docs/security-report.md:462 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
 
 References:
 - → ../mac-app/README.md (link)
@@ -1071,6 +1075,7 @@ Referenced by:
 - ../issues/closed/docs-and-chores/2026-08-03-one-temp-file-convention-for-agents.md:24 (mention) — the dev-repo `docs/box-layout.md:82` ("scratch space (not committed)"). **Box
 - ../issues/features/2026-10-08-modify-this-view-from-the-context-menu.md:33 (mention) — shell: boxes hold no app code (`beebox/docs/box-layout.md`), and Studio's own
 - ../research/box-backups/2026-10-25-portable-encrypted-backup.md:14 (mention) — | Box source and content: `_content/`, `_config/`, `_bookkeeping/`, `_publish/`, `src/`, root guidance, package files, a
+- ../research/embedded-browser/beebox-today.md:74 (mention) — - Box layout (`beebox/docs/box-layout.md`): the box root is a git repo with a closed top-level vocabulary. `.beebox/` is
 - ../research/imbue-studio/comparison.md:21 (mention) — | Self-modification | The whole shell, chat app, and skills live in the workspace repo; an `update-self` skill merges up
 - ../research/pai/information-layout.md:13 (mention) — knows-about / discoverable layering) and `docs/box-layout.md`. The two systems
 
@@ -1243,10 +1248,11 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:77 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:393 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:434 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - src/dev/AGENTS.md:16 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:19 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
+- ../research/embedded-browser/beebox-today.md:63 (mention) — - Auth wall: `beebox/src/webapp/server-box-scope.ts` (per-box), hub gate in `beebox/src/hub/server/core.ts`. Session coo
 
 References:
 - → docs/scheduled/csp-violation-review.md (mention)
@@ -1445,6 +1451,7 @@ Referenced by:
 - docs/plans/scan-guide-card.md:23 (mention) — - `docs/engineering-principles.md` — traced by number below:
 - docs/plans/scan-retry-and-document-route.md:33 (mention) — (`docs/engineering-principles.md:49`): *"Degradation is allowed for failures
 - docs/plans/scan-vision-claude.md:27 (mention) — - `beebox/docs/engineering-principles.md` — especially
+- docs/plans/shared-browser.md:90 (mention) — - **Engineering principles** (`docs/engineering-principles.md`): **3** (validate at boundaries: the exec route filters a
 - docs/plans/tts-backend-selection.md:33 (mention) — - **Principle 4, resilient AND never silent** (`docs/engineering-principles.md:49`):
 - docs/plans/workspace-pane-controls.md:48 (link) — applications. [Engineering principles](../engineering-principles.md) supply the
 - docs/plans/workstreams-app.md:46 (mention) — (`docs/engineering-principles.md:37-47`): validate every app API input and
@@ -1780,6 +1787,7 @@ Referenced by:
 - ../issues/features/2026-10-06-ios-on-device-hq-transcription.md:16 (mention) — (`POST /api/chat/transcribe-audio`, `beebox/docs/mobile-contract.md` §5.2), and
 - ../issues/features/2026-10-07-mac-companion-app.md:30 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
 - ../issues/features/2026-10-08-web-warns-when-ios-app-is-out-of-date.md:35 (mention) — (`beebox/docs/mobile-contract.md`) should also count, since a contract change
+- ../research/embedded-browser/beebox-today.md:83 (mention) — - Mobile: the iOS app is a WKWebView of the web app (`ios-app/BeeBox/Views/ChatWebView.swift`); contract in `beebox/docs
 - ../research/installable-app/tailscale.md:103 (mention) — (`beebox/docs/mobile-contract.md` §1.1). A box-owned node gives that URL a
 - ../research/omi-review.md:175 (link) — as our [mobile contract](../beebox/docs/mobile-contract.md) drift table.
 - ../research/opencode/inspiration.md:78 (mention) — | One server, many clients; ACP; desktop sidecar | web + iOS over one server; `docs/mobile-contract.md` | already done,
@@ -2014,6 +2022,7 @@ Referenced by:
 - docs/landmarks.md:74 (mention) — **`openers`** (zero or more strings) — one-line first moves, phrased from the person's side. They show as buttons on an
 - docs/mobile-contract.md:1001 (mention) — A question beside the chat travels as `openCard`, like any card (`docs/questions.md`, "Surfacing");
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
+- docs/plans/shared-browser.md:52 (mention) — - Acting in a logged-in account (send, post, buy, delete, change settings) starts as **confirmation**: box guidance tell
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:21 (mention) — dismissed questions are not re-asked (`docs/questions.md`).
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:15 (mention) — See `docs/questions.md` § Aging.
@@ -2162,7 +2171,7 @@ Referenced by:
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 - docs/plans/document-comments.md:506 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 - docs/plans/publish-sites-admin.md:55 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:313 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/security-report.md:331 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
@@ -2172,6 +2181,7 @@ Referenced by:
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
 - ../issues/features/2026-10-08-agent-files-a-grant-request.md:23 (mention) — (`beebox/docs/secrets.md`) and OAuth scopes on the connector, and does not add
 - ../research/box-backups/2026-10-25-portable-encrypted-backup.md:18 (mention) — | Per-box `~/.config/beebox/secrets.json` (or `BBX_SECRETS_FILE`), `~/.bbx-auth.json` (or override), session secret, Goo
+- ../research/embedded-browser/beebox-today.md:73 (mention) — - `beebox/docs/secrets.md`: connector credentials live in one machine-level store (`~/.config/beebox/secrets.json`, 0600
 - ../research/imbue-studio/comparison.md:15 (mention) — | Default-deny per-action permissions | Every third-party call leaves through a gateway with detent rules; the agent fil
 - ../research/web-search-fetch/README.md:40 (link) — | Exa as a second search engine for scouring the web | **adopt** | Best freshness and forum recall in the probes. WebSea
 
@@ -2180,7 +2190,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 347 lines | current reference
+Title: "Security overview" | 357 lines | current reference
 
 Referenced by:
 - README.md:99 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -2193,7 +2203,7 @@ Referenced by:
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/plans/publish-sites-admin.md:43 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
-- docs/security-report.md:155 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
+- docs/security-report.md:170 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/server.md:26 (link) — - The security posture of the whole: [security overview](security-overview.md).
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:14 (mention) — - **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
@@ -2215,6 +2225,7 @@ Referenced by:
 References:
 - → ../SECURITY.md (link)
 - → docs/security-report.md (link)
+- → ../issues/bugs/2026-10-29-view-metadata-import-runs-box-code-with-the-server-env.md (link)
 - → ../issues/code-quality/2026-08-07-member-level-writing-procedures.md (link)
 - → ../issues/features/2026-07-20-agent-containment-allowed-directories.md (link)
 - → ../issues/closed/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
@@ -2224,7 +2235,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 666 lines | current reference
+Title: "Security report — structured version" | 716 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:285 (link) — page's title, site, and URL, but not its text. See [security report §3](../security-report.md#3-data-egress).
@@ -2244,6 +2255,7 @@ Referenced by:
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
 - docs/plans/per-box-units.subplan.md:29 (mention) — (`docs/security-report.md:531`) unchanged with a different group name.
 - docs/plans/publication-approval-card.md:23 (mention) — The card schema adds a new vocabulary, so follow `beebox/docs/cards/schemas.md` and the additive-schema rule in `bbx-gui
+- docs/plans/shared-browser.md:89 (mention) — - **Cross-box isolation is zero-exception.** `docs/security-report.md:546`: *"every path input in the route and tRPC inv
 - docs/security-overview.md:66 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:10 (mention) — - **`beebox/docs/security-report.md`** — the *structured version*: an
@@ -2261,8 +2273,10 @@ Referenced by:
 - ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:101 (mention) — The security-doc claim is now corrected: `beebox/docs/security-overview.md` and `beebox/docs/security-report.md` name wh
 - ../issues/features/2026-10-14-show-privacy-implications-of-this-box-setup.md:18 (link) — [the security report](../../beebox/docs/security-report.md) lists every
 - ../issues/features/2026-10-24-gmail-over-imap-app-password.md:28 (mention) — (`beebox/docs/security-report.md`, egress table: "no `gmail.send` scope
+- ../research/embedded-browser/beebox-today.md:56 (mention) — - Egress: no network filtering exists in `deploy/` (no `IPAddress*`, `RestrictAddress*`, `PrivateNetwork`, nftables). Eg
 
 References:
+- → docs/plans/shared-browser.md (link)
 - → docs/security-overview.md (link)
 - → ../issues/code-quality/2026-08-07-member-level-writing-procedures.md (link)
 - → ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md (link)
@@ -2272,6 +2286,8 @@ References:
 - → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
 - → ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md (link)
 - → docs/implemented-plans/secret-custody.md (mention)
+- → ../issues/bugs/2026-10-29-view-metadata-import-runs-box-code-with-the-server-env.md (link)
+- → ../issues/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md (link)
 - → ../issues/decisions/2026-07-20-git-push-confirmation.md (link)
 - → ../issues/closed/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
 - → docs/content-security-policy.md (link)
@@ -2279,6 +2295,7 @@ References:
 - → ../issues/features/2026-07-20-agent-containment-allowed-directories.md (link)
 - → ../issues/closed/features/2026-07-20-schedules-off-by-default.md (link)
 - → ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md (link)
+- → ../research/embedded-browser/linux-verification.md (link)
 - → docs/implemented-plans/box-host-packages.md (mention)
 - → ../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md (link)
 - → deploy/README.md (mention)
@@ -3346,6 +3363,7 @@ Title: "Privacy and egress" | 35 lines | design rationale
 Referenced by:
 - docs/design/README.md:26 (link) — - [`privacy-and-egress.md`](privacy-and-egress.md) — one box, one circle of sharing; nothing leaves the box without a gr
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:83 (mention) — with the quoting tiebreak. New `privacy-and-egress.md` holds the sharing,
+- ../research/embedded-browser/beebox-today.md:56 (mention) — - Egress: no network filtering exists in `deploy/` (no `IPAddress*`, `RestrictAddress*`, `PrivateNetwork`, nftables). Eg
 
 References:
 - → docs/design/identity.md (mention)
@@ -3550,7 +3568,7 @@ Referenced by:
 - docs/implemented-plans/yaml-read-parser.md:49 (mention) — 200 changed source and test lines. Docs: `docs/development/performance.md`,
 - src/dev/AGENTS.md:18 (mention) — | `perf/` | Page-load and box-start measurement: `pnpm perf:hub` (local production-shaped hub + edge stand-in), `perf:lo
 - ../issues/bugs/2026-10-07-box-first-load-is-slow.md:77 (mention) — Measurement tooling and procedure: `beebox/docs/development/performance.md`.
-- ../issues/bugs/2026-10-22-perf-load-hangs-silently-on-a-wedged-browse-daemon.md:40 (mention) — `beebox/docs/development/performance.md`.
+- ../issues/closed/bugs/2026-10-22-perf-load-hangs-silently-on-a-wedged-browse-daemon.md:43 (mention) — `beebox/docs/development/performance.md`.
 
 References:
 - → docs/implemented-plans/yaml-read-parser.md (mention)
@@ -3719,6 +3737,7 @@ Title: "Let an agent-driven browser reach a local dev page" | 175 lines | shippe
 Referenced by:
 - ../issues/bugs/2026-07-31-browse-list-live-refresh-not-firing.md:51 (mention) — `beebox/docs/implemented-plans/agent-token-browser-auth.md` — that is now the only way
 - ../issues/closed/bugs/2026-07-31-browse-cannot-authenticate-dev-pages.md:16 (mention) — `beebox/docs/implemented-plans/agent-token-browser-auth.md`.
+- ../research/embedded-browser/beebox-today.md:38 (mention) — - `beebox/docs/implemented-plans/agent-token-browser-auth.md` (historical) is about dev: letting `bin/browse` reach a lo
 
 #### docs/implemented-plans/annex-at-init.md
 
@@ -3991,9 +4010,10 @@ Title: "Box agents install distro packages on their host" | 579 lines | shipped 
 
 Referenced by:
 - docs/implemented-plans/per-box-units.md:197 (mention) — anywhere (`docs/implemented-plans/box-host-packages.md:141-143`).
-- docs/security-report.md:417 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:459 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:164 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
+- ../research/embedded-browser/beebox-today.md:58 (mention) — - Docker image (`beebox/docker/Dockerfile`): `node:24-bookworm-slim`; apt installs pandoc, imagemagick, poppler, ffmpeg,
 
 References:
 - → ../issues/closed/features/2026-09-16-box-installs-distro-packages.md (frontmatter)
@@ -4134,7 +4154,7 @@ Referenced by:
 - docs/plans/source-available-release.md:395 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server/boxes.md:8 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](../implemented-plans/boxes-as-packages-v2.md)
 - docs/server/operations.md:68 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
-- docs/server/provisioning.md:185 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
+- docs/server/provisioning.md:210 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/user-stories/catalog/2026-08-21.md:9058 (mention) — - **Keep the box I have open from being stopped underneath me** — Code is fine; the story's scope is wrong. The server h
 - ../issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md:25 (mention) — `boxes-as-packages-v2.md` accepted.
@@ -4167,6 +4187,7 @@ Referenced by:
 - ../issues/closed/features/2026-09-13-browser-task-history-and-subject.md:31 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/closed/features/2026-09-13-browser-task-inbox-table-view.md:32 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/features/2026-09-17-box-as-mcp-server-hands-out-tasks.md:107 (link) — - [browser-task card](../../beebox/docs/implemented-plans/browser-task-card.md)
+- ../research/embedded-browser/beebox-today.md:11 (mention) — **a. browser-task card (a prompt card that is its own inbox).** Plan: `beebox/docs/implemented-plans/browser-task-card.m
 - ../research/web-search-fetch/README.md:57 (link) — | Logged-in persistent profile | **later** | The only route to content behind the boxholder's own accounts (including pa
 
 References:
@@ -4180,6 +4201,7 @@ Title: "browser-task follow-ups: cadence, history and subject, review table" | 1
 
 Referenced by:
 - ../issues/features/2026-09-17-box-as-mcp-server-hands-out-tasks.md:108 (link) — and [its follow-ups](../../beebox/docs/implemented-plans/browser-task-followups.md).
+- ../research/embedded-browser/beebox-today.md:11 (mention) — **a. browser-task card (a prompt card that is its own inbox).** Plan: `beebox/docs/implemented-plans/browser-task-card.m
 
 References:
 - → ../issues/closed/features/2026-09-13-browser-task-cadence-and-staleness.md (frontmatter)
@@ -6481,6 +6503,8 @@ Referenced by:
 - ../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:11 (mention) — **Closed:** resolved by the box-isolation branch (per-box-units, `beebox/docs/plans/per-box-units.md`). `deploy/deploy.s
 - ../issues/features/2026-09-04-cross-box-filesystem-isolation.md:12 (mention) — > **Status (2026-10-24):** the implementation (one Linux user and one socket-activated unit per box, `beebox/docs/implem
 - ../issues/features/2026-10-26-create-a-box-on-the-server-without-the-script.md:25 (mention) — `docs/implemented-plans/per-box-units.md`), so an Admin button cannot do these
+- ../research/embedded-browser/beebox-today.md:53 (mention) — - One Ubuntu VPS, many boxes (`beebox/deploy/README.md`, `beebox/docs/server/provisioning.md:95-130`). Per-box isolation
+- ../research/embedded-browser/linux-verification.md:36 (mention) — - **Memory.** 688 MB for three tabs fits under `MemoryHigh=1G` alone, but the engine (144-223 MB per `docs/implemented-p
 
 References:
 - → ../issues/features/2026-09-04-cross-box-filesystem-isolation.md (frontmatter)
@@ -7291,6 +7315,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-07-06-chat-session-shared-core.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:12 (mention) — Superseded by the opposite decision: `beebox/docs/implemented-plans/retire-doctest.md` converted every doctest to a `.te
 - ../issues/closed/code-quality/2026-10-08-landmark-menu-ssr-layout-effect-warning.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/closed/code-quality/2026-10-10-doctests-use-real-types-as-generic-fixtures.md:15 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/closed/code-quality/2026-10-13-shared-helper-spawn-bin-ts-from-doctest.md:23 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/closed/decisions/2026-07-29-manual-testing-flag-overuse.md:15 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/closed/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:15 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
@@ -7301,7 +7326,6 @@ Referenced by:
 - ../issues/code-quality/2026-08-25-field-test-models-chat-is-now-a-box-pin.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-10-08-remove-tests-that-never-earn-their-keep.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-10-08-test-volume-sweep.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
-- ../issues/code-quality/2026-10-10-doctests-use-real-types-as-generic-fixtures.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-10-16-narrow-types-to-remove-doctest-casts.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/decisions/2026-07-10-boxes-dead-beebox-symlinks.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
@@ -7570,7 +7594,7 @@ Referenced by:
 - docs/plans/box-glm-provider.md:83 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
 - docs/plans/publish-sites-admin.md:197 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:329 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:348 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
 - docs/user-stories/catalog/2026-08-21.md:9047 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -9109,6 +9133,7 @@ Title: "One browser: artifacts, docs, code, plans, and exhibits in one place" | 
 
 Referenced by:
 - docs/plans/document-comments.md:334 (mention) — - The document viewer route, which is **defined by `general-browser.md`**, not
+- docs/plans/shared-browser.md:107 (mention) — - **Name collision to avoid.** The box already has a `browse` card listing, and `docs/plans/general-browser.md` is the d
 - ../issues/closed/code-quality/2026-08-22-retire-doc-browser-dead-code.md:29 (link) — ([general-browser](../../../beebox/docs/plans/general-browser.md), Track 5),
 - ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md:73 (link) — - [general-browser](../../../beebox/docs/plans/general-browser.md) — its
 - ../issues/closed/features/2026-08-22-issues-browser-has-no-workstream-filter.md:25 (link) — ([general-browser](../../../beebox/docs/plans/general-browser.md)), which
@@ -9745,7 +9770,7 @@ References:
 Title: "Serve box publications from one shared hostname" | 172 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:657 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:699 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
@@ -9765,7 +9790,7 @@ Title: "Static site publishing with admin setup and human approval" | 296 lines 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:168 (mention) — - Mark `publish-sites-admin.md` and `publication-approval-card.md` with a note that this plan supersedes their source an
 - docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:650 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/security-report.md:692 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 - docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
@@ -9919,6 +9944,30 @@ References:
 - → ../issues/features/2026-08-08-no-visible-search-or-home.md (frontmatter)
 - → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/adding-api-endpoints.md (mention)
+
+#### docs/plans/shared-browser.md
+
+Title: "Shared browser: one web browser per box that the agent and the person both use" | 316 lines | proposal | partial
+
+Referenced by:
+- docs/security-report.md:12 (link) — shared box browser ([plan](plans/shared-browser.md)): the person's
+- docs/server/provisioning.md:169 (link) — Each box's browser ([plan](../plans/shared-browser.md)) runs in its own network
+- ../issues/features/2026-06-12-agent-browser-scoped-to-box.md:34 (link) — Partly resolved. Done: the box has one browser the agent drives with `bbx browser` and the person opens from the avatar
+- ../research/embedded-browser/acceptance-walkthrough.md:3 (link) — Gate G1 of [the shared-browser plan](../../beebox/docs/plans/shared-browser.md#implementation-order). Question: with the
+- ../research/embedded-browser/linux-verification.md:3 (link) — Chunk F0 of [the shared-browser plan](../../beebox/docs/plans/shared-browser.md). A throwaway Hetzner cpx21 (Ubuntu 24.0
+
+References:
+- → ../research/embedded-browser/README.md (link)
+- → docs/questions.md (mention)
+- → docs/security-report.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/agent-guide.md (mention)
+- → docs/plans/general-browser.md (mention)
+- → ../research/embedded-browser/hosted-and-agent-interfaces.md (link)
+- → ../research/embedded-browser/agent-browser-platforms.md (link)
+- → docs/server/provisioning.md (mention)
+- → ../research/embedded-browser/linux-verification.md (link)
+- → ../research/embedded-browser/acceptance-walkthrough.md (link)
 
 #### docs/plans/source-available-release.md
 
@@ -10554,13 +10603,14 @@ References:
 
 #### docs/server/provisioning.md
 
-Title: "Server provisioning" | 247 lines | current reference
+Title: "Server provisioning" | 272 lines | current reference
 
 Referenced by:
 - deploy/AGENTS.md:31 (link) — Each box runs as its own user ([provisioning](../docs/server/provisioning.md)).
 - deploy/README.md:21 (link) — | `hetzner/create-server.sh`, `hetzner/cloud-init.yaml`, `hetzner/provision.sh` | Example provisioners for the one host
 - docs/implemented-plans/box-backups.md:83 (mention) — - `beebox/docs/server/provisioning.md:145-147`: *“A Hetzner snapshot of the server does not include a volume”* holding p
 - docs/implemented-plans/doc-structure-install-server.md:80 (mention) — | `deploy/README.md` intro, Prerequisites, Setup, create-server, setup-server, Server layout, Box package installs, Syst
+- docs/plans/shared-browser.md:158 (mention) — - **Why:** the dashboard needs an address the person can reach through beebox's login (`docs/server/provisioning.md:245-
 - docs/server.md:14 (link) — | [Provisioning](server/provisioning.md) | Creating and setting up the host: prerequisites, the provisioners, server lay
 - docs/server/boxes.md:142 (link) — by its own user `bbx-<name>` ([provisioning](provisioning.md#server-layout)).
 - docs/server/deploying.md:94 (link) — [provisioning](provisioning.md#server-layout)). The deploy first checks that
@@ -10568,12 +10618,15 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-25-feedback-review-collect-reads-the-retired-box-path.md:33 (mention) — `feedback-review/run-on-server.ts`; the layout is `docs/server/provisioning.md`
 - ../issues/closed/decisions/2026-08-07-server-backup-story.md:82 (mention) — excluded from Hetzner server snapshots (`beebox/docs/server/provisioning.md`);
 - ../research/box-backups/2026-10-25-portable-encrypted-backup.md:20 (mention) — | Hub routing config and scheduler manifest | Host rebuild material | `hub.json` and `boxes.json` register boxes on a mu
+- ../research/embedded-browser/beebox-today.md:53 (mention) — - One Ubuntu VPS, many boxes (`beebox/deploy/README.md`, `beebox/docs/server/provisioning.md:95-130`). Per-box isolation
 
 References:
 - → docs/install/docker.md (link)
 - → docs/implemented-plans/per-box-units.md (link)
 - → docs/server/deploying.md (link)
 - → docs/implemented-plans/box-host-packages.md (mention)
+- → docs/plans/shared-browser.md (link)
+- → ../research/embedded-browser/linux-verification.md (link)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 
 ### docs/testing/
@@ -11096,7 +11149,7 @@ References:
 
 #### src/core/agent-guide/guide.md
 
-Title: "Bee Box Agent Guide" | 631 lines
+Title: "Bee Box Agent Guide" | 638 lines
 
 Referenced by:
 - docs/agent-guide.md:19 (mention) — - `guide.md` holds the text, written by hand as one document. Its header
@@ -11129,6 +11182,7 @@ Referenced by:
 - ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:26 (mention) — - the agent guide (`beebox/src/core/agent-guide/guide.md`), whose box-side
 - ../issues/features/2026-07-05-writing-skill.md:672 (mention) — The code pointers in this issue are stale. `THE_LAW_OF_QUOTING` and `laws.ts` no longer exist. The law of quoting is now
 - ../issues/features/2026-09-29-transcript-to-structure-fidelity-rules.md:37 (mention) — (`recording.*` rules in `beebox/src/core/agent-guide/guide.md`) avoids three
+- ../research/embedded-browser/beebox-today.md:89 (mention) — - Tools are given as shell commands, not MCP. Agents get file/shell/web built-ins plus the `bbx` CLI, documented by the
 - ../research/notebooklm/comparison.md:17 (mention) — | Grounding | Only selected sources plus the conversation; the FAQ says it does not answer when the answer is not in the
 - ../research/omi-review.md:198 (mention) — (`beebox/src/core/agent-guide/guide.md`, `recording.routing`). Git gives
 
@@ -12039,8 +12093,8 @@ References:
 Title: "B-inventory, 2026-10-22" | 182 lines
 
 Referenced by:
-- ../issues/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md:32 (link) — The same upstream error on a page with no canvas. In the [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwo
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:42 (link) — Still present in six of seven walks: `userEmail` is in `session_context` of the box chat and of the chat-title session i
+- ../issues/closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md:35 (link) — The same upstream error on a page with no canvas. In the [G-paperwork](../../../beebox/test/user-stories/journeys/G-pape
 - ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:66 (link) — - [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-22.md) (row 40): building two car
 - ../issues/closed/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md:18 (link) — Reports: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (H1), [B-inventory]
 - ../issues/code-quality/2026-09-20-fold-search-and-browse-summaries-onto-summarize.md:40 (link) — In [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-22.md) (rows 13, 14) the box agent
@@ -12056,7 +12110,7 @@ References:
 - → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
 - → ../issues/closed/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md (link)
-- → ../issues/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md (link)
+- → ../issues/closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md (link)
 - → test/user-stories/journeys/B-inventory/reports/2026-10-09.md (link)
 
 ### test/user-stories/journeys/C-reconnecting/reports/
@@ -12424,10 +12478,10 @@ References:
 Title: "G-paperwork, 2026-10-22" | 166 lines
 
 Referenced by:
-- ../issues/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md:32 (link) — The same upstream error on a page with no canvas. In the [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwo
 - ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:125 (link) — [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 8): after "Add files…" wit
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:62 (link) — - Did not recur in [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (rows 4, 34)
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:42 (link) — Still present in six of seven walks: `userEmail` is in `session_context` of the box chat and of the chat-title session i
+- ../issues/closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md:35 (link) — The same upstream error on a page with no canvas. In the [G-paperwork](../../../beebox/test/user-stories/journeys/G-pape
 - ../issues/closed/bugs/2026-10-22-before-a-date-deadline-recorded-as-due-that-date.md:17 (link) — Report: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (R1).
 - ../issues/closed/bugs/2026-10-22-box-page-to-do-count-omits-later-todos.md:23 (link) — Report: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 26).
 - ../issues/closed/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md:18 (link) — Reports: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (H1), [B-inventory]
@@ -12458,7 +12512,7 @@ References:
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
 - → ../issues/closed/bugs/2026-10-22-todo-card-row-next-date-is-iso.md (link)
 - → ../issues/closed/bugs/2026-10-22-browse-command-killed-by-a-signal-exits-1-silently.md (link)
-- → ../issues/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md (link)
+- → ../issues/closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md (link)
 - → ../issues/closed/docs-and-chores/2026-10-22-walker-prompt-gaps-from-the-2026-10-22-walks.md (link)
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (link)
 

@@ -103,3 +103,5 @@ start until the keys exist.
 Follow the concrete reproduction or verification steps above. Confirm the
 observed result matches the expected behavior described in this issue before
 clearing the manual-testing flag.
+
+Re-reviewed 2026-10-30: no commit records any of the listed verifications; whether prod now holds generated VAPID keys was not checked.

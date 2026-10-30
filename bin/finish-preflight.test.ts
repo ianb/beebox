@@ -44,6 +44,11 @@ test("docsOnly is an iff over every path", () => {
   assert.equal(isDocsOnly(["issues/features/x.md", "README.md", "beebox/docs/architecture/images/a.png"]), true);
   assert.equal(isDocsOnly(["site/docs-manifest.yaml"]), false);
   assert.equal(isDocsOnly([]), false);
+  // A docs directory inside a source or test tree holds code, not doc assets.
+  assert.equal(isDocsOnly(["beebox/src/connectors/google-drive/handlers/docs/handler.ts"]), false);
+  assert.equal(isDocsOnly(["beebox/test/connectors/google-drive/handlers/docs/whitespace.test.ts"]), false);
+  assert.equal(isDocsOnly(["beebox/docs/user-stories/catalog/2026-08-21.jsonl", "docs/diagram.svg"]), true);
+  assert.equal(isDocsOnly(["beebox/docs/render.ts"]), false);
 });
 
 test("codeChanged ignores docs and tests", () => {

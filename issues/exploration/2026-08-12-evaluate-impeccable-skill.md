@@ -46,3 +46,5 @@ triage) and link back here with a recommendation — including "no", if that's t
 answer.
 
 **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific content moved to `beebox/docs/testing.md` ("Choosing an instrument", "Reproducing a bug") and `beebox/frontend.md`.
+
+Re-reviewed 2026-10-30: still unevaluated. The skill list it names is stale: bbx-debug and doctest no longer exist as skills.

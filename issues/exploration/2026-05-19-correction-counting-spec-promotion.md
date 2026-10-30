@@ -23,3 +23,5 @@ Probably belongs in the same flow as retrospectives the user already runs. The m
 ## Audit 2026-10-22
 
 Part of this shipped for box beliefs. The box retrospective (`beebox/docs/implemented-plans/box-retrospectives.md`, lines 214-226) counts how many distinct sessions show the same proposal. One session gives `hypothesis`, two or more give `low`, four or more give `medium`. Promotion past `medium` needs the boxholder through a question card. Still missing: a distinct 'correction' extraction type during compaction, and promotion of a recurring correction into a spec-level rule. The retrospective writes beliefs, not spec rules.
+
+Re-reviewed 2026-10-30: unchanged since the 2026-10-22 audit. On the dev side, the retrospective schedule already promotes recurring coding feedback into guidance, which may be a model for the box version.

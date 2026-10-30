@@ -24,3 +24,7 @@ Open: how `claude auth login` and `codex login --device-auth` run on a NAS
 with no terminal the user knows how to open. The box's admin UI may need to
 drive those flows (show the URL, take the pasted code) for any appliance
 target. That is the same need a future desktop app would have.
+
+Re-reviewed 2026-10-30: The published-image blocker is met: image.yml publishes to GHCR on v* tags. The release/update decision is still open (no changelog, no tracks-main-or-tags statement).
+
+Out of date in the body above: Replace the 'Blocked on a published image (item 6)' sentence: the image now publishes on v* tags via .github/workflows/image.yml; the remaining blocker is the release-discipline decision (changelog, which tag a store entry follows, update notice).

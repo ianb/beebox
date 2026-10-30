@@ -72,3 +72,5 @@ same advice for actions that cannot be undone.
   [speaker references](2026-10-20-same-speaker-names-across-recordings.md).
 - Speech output: [inline delivery markup](../exploration/2026-10-20-tts-inline-delivery-markup.md).
 - Diarization in settings: [diarization as a capability](2026-08-31-request-diarization-as-capability-not-model.md).
+
+Re-reviewed 2026-10-30: Nothing changed yet. `bbx chat retranscribe --timestamps` (beebox/src/cli/commands/chat/audio.ts:212) also requests word timing and belongs in step 3.

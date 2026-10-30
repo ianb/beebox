@@ -39,3 +39,5 @@ plan-mode exit), or is it purely an SDK-internal concern we can keep ignoring?
 ## Audit 2026-10-22
 
 Still true. The line pointer moved: the `conversation_reset` case that returns null is now at `beebox/src/core/chat/session/messages.ts:282-288`.
+
+Re-reviewed 2026-10-30: unchanged; the case is now at messages.ts:289-296.

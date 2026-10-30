@@ -164,6 +164,31 @@ recorded. Policy and threat model: `server-bin/bbx-host-apt` and
 `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 `server-bin/bbx-host-apt.smoke.sh`.
 
+### Box browser
+
+Each box's browser ([plan](../plans/shared-browser.md)) runs in its own network
+namespace, so other box users on the host cannot reach its dashboard, stream or
+Chrome debugging port, and the browser cannot reach host loopback. Every deploy
+runs `server-bin/bbx-browser-install` as root, after the services restart:
+
+- `passt`, for `pasta`, which gives the namespace outbound network only.
+- Chrome for Testing under `/opt/beebox-browser/.agent-browser/browsers/`,
+  installed by the pinned agent-browser (`install --with-deps`,
+  `HOME=/opt/beebox-browser`), and the link `/opt/beebox-browser/chrome` the
+  engine reads. It reinstalls when the agent-browser version changes or after 7
+  days, and keeps the previous Chrome for a browser still running from it.
+- `/opt/beebox-browser/bin/unshare`, a copy of `/usr/bin/unshare` that only
+  group `beebox-boxes` may run, and `apparmor/beebox-browser` in
+  `/etc/apparmor.d/`. Ubuntu 24.04 lets a program create a user namespace only
+  under a profile that grants it; these two profiles grant it to that copy and
+  to Chrome, whose own sandbox needs it.
+- A check, as one box user under the box sandbox, that `chrome://sandbox` says
+  "adequately sandboxed". Chrome without its sandbox runs anyway, so the check
+  fails the deploy instead. A host with no box yet skips it.
+
+`cloud-init.yaml` installs `passt` too. The setup was verified on a throwaway
+Ubuntu 24.04 host: [linux-verification.md](../../../research/embedded-browser/linux-verification.md).
+
 ## Systemd units
 
 Every file under `deploy/systemd/` is installed whole on every deploy.

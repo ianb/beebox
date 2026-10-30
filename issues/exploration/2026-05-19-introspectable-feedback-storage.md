@@ -24,3 +24,7 @@ Connections:
 - [Declared per-box autonomy matrix with encounter queue](2026-05-19-autonomy-matrix.md) writes promotion candidates here.
 
 The discipline that makes this work: nothing in the system writes accumulated observations to a *new* file — everything goes through the feedback layer with its type tag. Otherwise the sprawl returns under different filenames.
+
+Re-reviewed 2026-10-30: `bbx feedback` no longer exists; agent feedback became doc cards in `_config/feedback/` (commit aeec841d1, beebox/docs/implemented-plans/feedback-as-cards.md). The single-introspectable-surface idea still stands, but its proposed storage layer is gone.
+
+Out of date in the body above: Replace 'extend `bbx feedback`' with the current mechanism: `_config/feedback/` doc cards (feedback-as-cards plan). Restate the proposal as either a typed card location for accumulated observations or a derived view over existing card types; drop the 'whatever the existing feedback mechanism is' hedge.

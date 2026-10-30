@@ -91,7 +91,10 @@ network — authentication is structurally always-on; there is no flag,
 env var, or config field that disables the login wall — and it limits
 what the box's own moving parts inherit: per-box processes and agent
 subprocesses get an allowlisted environment that omits the
-session-signing secret and other cross-box credentials. Be precise
+session-signing secret and other cross-box credentials (two known
+exceptions are open: [box card schemas](../../issues/bugs/2026-10-30-box-schemas-load-inside-the-server-process.md)
+load inside the server process, and [server-side commits](../../issues/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md)
+run box Git hooks with the server's environment). Be precise
 about what that is: **env-level isolation, not OS-level.** Everything
 runs as one OS user, and the secret is also a 0600 file that same-user
 code could read — the stripping stops accidents and lazy exfiltration,
@@ -322,8 +325,16 @@ The ones you should actually weigh:
   two-box probe in the suite and re-swept weekly
   ([§7b](security-report.md#7b-cross-box-leakage-on-a-shared-host)).
   A per-box boundary on disk is accepted for now, not for good
-  ([direction](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md)).
+  ([direction](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md)).
 - **CSP is report-only** so far; enforcement is a staged flip.
+- **The box browser's page runs third-party script on the box's origin**:
+  the Browser item shows agent-browser's own dashboard, and its script can do
+  anything the signed-in person can do in that box. A bug in it that rendered
+  a browsed page as HTML would reach the box. The version is pinned and
+  reviewed at each bump, and the page's CSP keeps script to the dashboard's
+  own files. The browser's cookies sit unencrypted in the box user's state
+  directory, outside git and backups
+  ([§1, §2, §5](security-report.md#8-accepted-risks-roll-up)).
 - **Open invite links don't verify email ownership**: pin the invite to
   an email when you know it, and send invite URLs over a channel you
   trust.

@@ -85,3 +85,7 @@ discoverable without a repo-specific convention.
 ## Audit 2026-10-22
 
 Points 1 to 4 are already in the code (commit 67a0a383e). `prompt` is optional and `createBrowserTaskTemplate` emits a four-heading scaffold (`beebox/src/schemas/browser-task.ts:250-290`). `limit` is a frontmatter field (line 91) and the guidance says to compare `coverage` with it (line 221). The guidance asks for an optional `group` label (line 186) and requires a scope pass by a box-aware agent (line 223). Point 5 remains: the guidance names no directory for task cards. The developer can keep this issue for point 5 alone, or close it with a note.
+
+Re-reviewed 2026-10-30: points 1-4 are shipped; only point 5 (a named location for task cards) remains.
+
+Out of date in the body above: Retitle and rewrite the body to point 5 only: no named convention for where browser-task cards live; drop the shipped points 1-4 to a short history line.

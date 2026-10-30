@@ -27,7 +27,7 @@ resolution: implemented
 > (mouse move + wheel / scrollintoview) and to verify with a screenshot
 > before reporting anything unreachable. agent-browser's flaky wheel dispatch
 > is filed as
-> [agent-browser-wheel-dispatch-flaky](../../bugs/2026-08-09-agent-browser-wheel-dispatch-flaky.md).
+> [agent-browser-wheel-dispatch-flaky](2026-08-09-agent-browser-wheel-dispatch-flaky.md).
 A recipe card longer than the viewport is unreadable: the view cuts off (in the
 prototype: right after the third ingredient) and no scroll input moves it. The
 failure is identical in all three surfaces that render a card:

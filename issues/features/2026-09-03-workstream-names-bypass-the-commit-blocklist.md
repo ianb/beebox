@@ -61,3 +61,7 @@ not audit what is already tracked, and `git grep -il <term>` remains the manual
 answer. A `--audit` mode running every entry against the tracked tree would
 make it one command. Left deliberately — the name check was the piece that
 stops the term at the source.
+
+Re-reviewed 2026-10-30: The name check shipped (bin/workstreams:184); only the tracked-tree audit mode remains.
+
+Out of date in the body above: Retitle to the remaining gap ('Adding a blocklist entry does not audit tracked files') and set area to dev tooling (bin), not beebox.

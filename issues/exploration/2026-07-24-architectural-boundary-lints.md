@@ -39,7 +39,7 @@ keeps getting violated before writing any rule — an unused boundary lint is ju
 ceremony.
 
 Related: the box-content linting track in
-[../features/2026-07-24-box-content-card-linting.md](../features/2026-07-24-box-content-card-linting.md)
+[../features/2026-07-24-box-content-card-linting.md](../closed/features/2026-07-24-box-content-card-linting.md)
 and the dev-repo hooks in
 [../code-quality/2026-07-24-security-precommit-hooks.md](../code-quality/2026-07-24-security-precommit-hooks.md).
 

@@ -34,3 +34,5 @@ script's flags were used or ignored; whether the commit format answers "was
 this test reviewed" from `git log`. Record the counts and the calls as a
 dated note on the finish issue, adjust the skill text or the flags, and
 close this one.
+
+Re-reviewed 2026-10-30: the step this reviews has not landed, so there is no week of finishes to read yet.

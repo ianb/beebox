@@ -44,3 +44,5 @@ by topic instead of by workstream.
   do worst.
 
 Not a decision to replace exhibits.
+
+Re-reviewed 2026-10-30: no trial yet. Television skills (television, tv-table, tv-tasks, tv-calendar) are now available to agent sessions on this machine, so the install step may already be done.

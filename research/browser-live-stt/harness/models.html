@@ -1,0 +1,59 @@
+<!doctype html><meta charset=utf-8><title>in-page models</title>
+<script src="/whistle-files/needle.js"></script>
+<script type=module>
+async function pcm(src) {
+  const ctx = new OfflineAudioContext(1, 16000, 16000);
+  const buf = await ctx.decodeAudioData(await (await fetch(src)).arrayBuffer());
+  return buf.getChannelData(0);
+}
+const pct = (a, q) => [...a].sort((x, y) => x - y)[Math.floor(q * (a.length - 1))];
+
+/** Whistle's own live API, fed one second at a time. Main thread: this is a timing probe, not UI. */
+window.whistleStream = async function ({ src, seconds = 1e9 }) {
+  const t0 = performance.now();
+  const m = await createNeedle({ locateFile: (p) => `/whistle-files/${p}` });
+  const cact = new Uint8Array(await (await fetch("/whistle-files/whistle.cact")).arrayBuffer());
+  const p = m._malloc(cact.length); m.HEAPU8.set(cact, p);
+  const ok = m._needle_load(p, BigInt(cact.length));
+  const loadMs = performance.now() - t0;
+  const audio = await pcm(src);
+  const OUT = 1 << 20, out = m._malloc(OUT), inp = m._malloc(16000 * 4), en = m._malloc(3);
+  m.HEAPU8.set([101, 110, 0], en);
+  const passes = [], committed = [], timeline = [];
+  const n = Math.min(audio.length, seconds * 16000);
+  for (let i = 0; i < n; i += 16000) {
+    const chunk = audio.subarray(i, i + 16000);
+    new Float32Array(m.HEAPU8.buffer).set(chunk, inp >> 2);
+    const s = performance.now();
+    m._needle_stream_transcribe_process(inp, chunk.length, en, 0, out, OUT);
+    passes.push(performance.now() - s);
+    const j = JSON.parse(m.UTF8ToString(out));
+    if (j.text) committed.push(j.text);
+    timeline.push({ at: (i + chunk.length) / 16000, committed: j.text ?? "", pending: j.pending ?? "", words: (j.words ?? []).map((w) => [w.word, w.end]) });
+  }
+  m._needle_stream_transcribe_stop(out, OUT);
+  const last = JSON.parse(m.UTF8ToString(out));
+  if (last.text) committed.push(last.text);
+  return { ok, loadMs: Math.round(loadMs), memMB: m.HEAPU8.length >> 20, passes: { n: passes.length, p50: Math.round(pct(passes, 0.5)), p90: Math.round(pct(passes, 0.9)), max: Math.round(pct(passes, 1)) }, text: committed.join(" "), timeline: timeline.slice(0, 40) };
+};
+
+/** Transformers.js: one batch pass per utterance, the way VAD-segmented demos run it. */
+window.tjs = async function ({ model, device, dtype, src, bounds }) {
+  const { pipeline } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3");
+  const t0 = performance.now();
+  const asr = await pipeline("automatic-speech-recognition", model, { device, dtype });
+  const loadMs = performance.now() - t0;
+  const audio = await pcm(src);
+  const texts = [], rtf = [], ms = [];
+  let from = 0;
+  for (const b of bounds) {
+    const clip = audio.subarray(Math.round(from * 16000), Math.round(b * 16000));
+    const s = performance.now();
+    const r = await asr(clip);
+    ms.push(performance.now() - s); rtf.push(ms.at(-1) / 1000 / (b - from));
+    texts.push(r.text); from = b + 1;
+  }
+  return { model, device, loadMs: Math.round(loadMs), adapter: !!navigator.gpu, passMs: { p50: Math.round(pct(ms, 0.5)), p90: Math.round(pct(ms, 0.9)) }, rtfP50: pct(rtf, 0.5), text: texts.join(" ") };
+};
+window.ready = true;
+</script>

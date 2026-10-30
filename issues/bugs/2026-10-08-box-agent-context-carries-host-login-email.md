@@ -40,3 +40,7 @@ Present in every walk of the round: `userEmail` in the box agent's session conte
 ## Re-encounter 2026-10-22 (journey walks)
 
 Still present in six of seven walks: `userEmail` is in `session_context` of the box chat and of the chat-title session in [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-22.md) (R2), [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-22.md) (R2; twice in each of four transcripts), [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (R1), [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (R8), [G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (R4), and [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (R12). No agent used it. In G the agent asked whether the name on a letter was the person's, and used that name.
+
+Re-reviewed 2026-10-30: Production now runs each box as its own user with a setup-token in CLAUDE_CODE_OAUTH_TOKEN (beebox/src/core/claude-oauth-token.ts), so the email may no longer reach production box agents; local dev boxes still use the host login file. Not yet checked on a production transcript.
+
+Out of date in the body above: Update the 'Open question' paragraph: production no longer uses a shared subscription login but a per-box setup-token; record whether a production box transcript still carries userEmail, and narrow the issue to local/dev hosts if it does not.

@@ -22,6 +22,7 @@ import type { FetchLike } from "../core/secrets/probe-registry.js";
 import type { CloudflarePublishTokenVerifier } from "./cloudflare-publish-token-verifier.js";
 import type { ManagedPublicationRuntime } from "./managed-publication-runtime/core.js";
 import type { NotifyServices } from "../core/notify-boxholder.js";
+import type { BrowserHostHandle, EnsureBrowserHostInput } from "../core/browser/host/start.js";
 
 // ─── Services container ──────────────────────────────────────────────────────
 
@@ -62,4 +63,10 @@ export interface Services {
    * built from the server's own keys and config; a test injects fakes.
    */
   notify?: NotifyServices | undefined;
+  /**
+   * How the browser exec route finds the box browser host. Production leaves
+   * it unset and uses `ensureBrowserHost`, which starts a real host; a test
+   * substitutes one whose command socket it serves itself.
+   */
+  browserHost?: ((input: EnsureBrowserHostInput) => Promise<BrowserHostHandle>) | undefined;
 }

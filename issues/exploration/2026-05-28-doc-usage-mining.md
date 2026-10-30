@@ -19,3 +19,5 @@ Open questions:
 - **Noise filtering.** Subagent reads, hook reads, `/clear`'d sessions, exploratory greps — all distort the picture. Weight by session not raw count; filter by tool_use_id provenance; probably ignore sessions under some token threshold.
 - **Shape.** Mirror the doc-graph split: a dry `pnpm doc-usage` markdown report for the numbers, plus a fourth section in `doc-graph.html` ("What agents actually open") that overlays the rings/pillars with usage hot-spots.
 - **Retention.** Transcripts are local-only and the user can clear them. Aggregate into a small persistent table so the historical signal survives clearing.
+
+Re-reviewed 2026-10-30: Still unbuilt. bin/skill-usage.ts with bin/lib/transcripts.ts already reads Claude Code transcripts for skill usage, so a doc-Read counter can reuse that scanner instead of starting fresh.

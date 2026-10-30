@@ -103,3 +103,7 @@ Full survey and probes: [research/web-search-fetch](../../research/web-search-fe
 ## Re-encounter 2026-10-22 (journey walks)
 
 A box agent case, not dev tooling: in [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (row 13, R15) a shop's product page returned a "Pardon Our Interruption" bot page and a price-comparison site returned 403. The agent reported that it could not find that shop's prices, so one of the person's two shops was missing from the comparison. The priority may be stale.
+
+Re-reviewed 2026-10-30: the 2026-10-15 finding that a box has no headless render path is now out of date; the shared box browser installs Chrome per box and supports a person logging in so the agent continues in that session. No fetch entry point or per-host adapters exist yet.
+
+Out of date in the body above: Correct the survey bullet 'A box has no headless render path today': the shared box browser (`bbx browser`, `deploy/server-bin/bbx-browser-install`) now provides one, plus the untested 'logged-in persistent profile' route via the G2 flow. Re-scope the remaining work to the fetch entry point, per-host adapters, and the open stealth/proxy decision.

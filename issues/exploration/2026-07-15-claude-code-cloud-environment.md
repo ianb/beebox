@@ -250,3 +250,7 @@ Open questions / decisions before doing it:
 - **Repo hygiene for cloud:** the `.claude/settings.json` PostToolUse/SessionStart
   hooks assume the local layout; confirm each is a clean no-op (not an error)
   when `CLAUDE_CODE_REMOTE=true` and no worktree layout exists.
+
+Re-reviewed 2026-10-30: still not set up. The Node pin moved to 24, so the research's 'nvm has 22' point no longer covers the requirement.
+
+Out of date in the body above: Gap 3 and the minimal setup: the repo now requires Node 24.11+ (package.json:73, .nvmrc), which the cloud image did not list as preinstalled; the setup script must install Node 24 via nvm. Drop the .claude/settings.json line numbers.

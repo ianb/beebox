@@ -30,6 +30,7 @@ import {
   VIEWS_SKILL,
 } from "./content.js";
 import { BEEBOX_SYSTEM_FEEDBACK_SKILL } from "./content-beebox-system-feedback.js";
+import { BROWSER_SKILL } from "./content-browser.js";
 import { BROWSER_TASK_SKILL } from "./content-browser-task.js";
 import { WHAT_CAN_YOU_DO_SKILL } from "./content-what-can-you-do.js";
 import { FIGURE_IT_OUT_SKILL } from "./content-figure-it-out.js";
@@ -77,6 +78,7 @@ function pluginSkill(plugin: PluginDefinition, skill: string): BoxSkill {
 function buildBoxSkills(plugins: readonly PluginDefinition[]): BoxSkill[] {
   const skills: BoxSkill[] = [
     { name: "beebox-system-feedback", content: BEEBOX_SYSTEM_FEEDBACK_SKILL },
+    { name: "browser", content: BROWSER_SKILL },
     { name: "browser-task", content: BROWSER_TASK_SKILL },
     { name: "calendar", content: CALENDAR_SKILL },
     { name: "drive", content: DRIVE_SKILL },

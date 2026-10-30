@@ -42,3 +42,4 @@ Design needs to settle:
 - Web and native parity: the mode/request, unavailable state, and resulting
   `diarized` provenance must mean the same thing on both surfaces.
 
+Re-reviewed 2026-10-30: The picker now has two diarized model entries (Voxtral and MAI), which strengthens the case for a capability request.

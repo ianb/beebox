@@ -10,3 +10,5 @@ If we ever want richer PDF handling than scan-import currently does — form-fie
 
 - <https://github.com/jbarrow/commonforms>
 - HN discussion: <https://news.ycombinator.com/item?id=47984675>
+
+Re-reviewed 2026-10-30: still not evaluated; the Docling pointer pdf-extract.ts is now beebox/src/core/pdf/extract.ts.

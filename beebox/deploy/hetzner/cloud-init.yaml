@@ -42,6 +42,10 @@ packages:
   - bzip2
   # Lints shell scripts; the planned box-card shell linting runs it here.
   - shellcheck
+  # pasta gives each box browser its private network (docs/plans/shared-browser.md,
+  # Track F). The deploy installs it too, with Chrome for Testing, the launcher's
+  # unshare copy and the AppArmor profiles (deploy/server-bin/bbx-browser-install).
+  - passt
 
 groups:
   - beebox-boxes

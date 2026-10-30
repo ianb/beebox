@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# Install the box browser's host pieces and prove Chrome keeps its sandbox.
+#
+#   bbx-browser-install <engine>     (as root; deploy.sh runs it every deploy)
+#
+# <engine> is the installed beebox package, /opt/beebox/beebox. What it
+# installs, and why (docs/plans/shared-browser.md, Track F; the verified setup
+# is research/embedded-browser/linux-verification.md):
+#   - passt, whose pasta gives each box browser outbound network and nothing
+#     back (src/core/browser/host/namespace.ts).
+#   - Chrome for Testing under /opt/beebox-browser/.agent-browser, by the
+#     pinned agent-browser's own `install --with-deps`, with
+#     /opt/beebox-browser/chrome linked to it (UNIT_HOST_BROWSER_PATH,
+#     src/core/browser/install.ts). A box cannot install it: no sudo.
+#   - /opt/beebox-browser/bin/unshare, a copy of /usr/bin/unshare that only
+#     group beebox-boxes may run, and deploy/apparmor/beebox-browser, which
+#     lets that copy and Chrome create user namespaces on Ubuntu 24.04.
+# Then it runs `bbx engine browser-host --check-sandbox` as one box user inside
+# the box sandbox. Chrome without its sandbox runs anyway, so without this the
+# failure would be silent.
+#
+# Idempotent: each piece is compared with what is there and replaced only when
+# it differs. Chrome is reinstalled when the pinned agent-browser version
+# changes or the last install is over 7 days old (agent-browser installs the
+# current stable Chrome for Testing, so this is how security fixes arrive);
+# the previous Chrome stays until the next change, for a browser still running
+# from it. Output is quiet on success and complete on failure.
+set -euo pipefail
+# The deploy's remote script runs with /home/beebox/.env's PATH, which omits
+# /usr/sbin; apt, dpkg and apparmor_parser need it.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: bbx-browser-install <engine>" >&2
+  exit 64
+fi
+engine="$1"
+readonly ROOT=/opt/beebox-browser
+readonly LINK="$ROOT/chrome"
+readonly UNSHARE="$ROOT/bin/unshare"
+readonly STAMP="$ROOT/.installed-by"
+readonly APPARMOR_SRC="$engine/deploy/apparmor/beebox-browser"
+readonly APPARMOR_DEST=/etc/apparmor.d/beebox-browser
+readonly CHROME_REFRESH_DAYS=7
+
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+# Run a command with its output kept back unless it fails.
+quietly() {
+  if ! "$@" > "$log" 2>&1; then
+    echo "  FAILED: $*" >&2
+    sed 's/^/    /' "$log" >&2
+    return 1
+  fi
+}
+
+install -d -o root -g root -m 0755 "$ROOT" "$ROOT/bin"
+
+# --- passt -------------------------------------------------------------------
+if ! dpkg-query -W -f='${Status}' passt 2> /dev/null | grep -qx 'install ok installed'; then
+  quietly apt-get update -qq
+  quietly env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq passt
+  echo "  installed passt"
+fi
+
+# --- Chrome for Testing ------------------------------------------------------
+pkg_json=$(cd "$engine" && node -p 'require.resolve("agent-browser/package.json")')
+ab_version=$(node -p 'require(process.argv[1]).version' "$pkg_json")
+case "$(uname -m)" in
+  x86_64) ab_arch=x64 ;;
+  aarch64 | arm64) ab_arch=arm64 ;;
+  *) echo "  FAILED: no agent-browser binary for $(uname -m)" >&2; exit 1 ;;
+esac
+ab="$(dirname "$pkg_json")/bin/agent-browser-linux-$ab_arch"
+[[ -x "$ab" ]] || { echo "  FAILED: $ab is missing or not executable" >&2; exit 1; }
+
+chrome_current() {
+  [[ -x "$LINK" ]] && [[ "$(cat "$STAMP" 2> /dev/null)" == "agent-browser $ab_version" ]] &&
+    [[ -n "$(find "$STAMP" -mtime "-$CHROME_REFRESH_DAYS")" ]]
+}
+if ! chrome_current; then
+  previous=$(readlink "$LINK" 2> /dev/null || true)
+  quietly env HOME="$ROOT" "$ab" install --with-deps
+  # Agent-browser unpacks each version flat: browsers/chrome-<version>/chrome.
+  newest=$(find "$ROOT/.agent-browser/browsers" -mindepth 2 -maxdepth 2 -type f -name chrome -path '*/chrome-*/chrome' | sort -V | tail -n 1)
+  [[ -n "$newest" && -x "$newest" ]] || { echo "  FAILED: no chrome under $ROOT/.agent-browser/browsers after install" >&2; exit 1; }
+  if [[ "$newest" != "$previous" ]]; then
+    ln -sfn "$newest" "$LINK.new"
+    mv -Tf "$LINK.new" "$LINK"
+    echo "  linked $LINK -> $newest"
+  fi
+  # Keep the linked Chrome and the one before it; a running browser may still use the older one.
+  for dir in "$ROOT/.agent-browser/browsers"/chrome-*/; do
+    dir="${dir%/}"
+    [[ "$dir/chrome" == "$newest" || "$dir/chrome" == "$previous" ]] && continue
+    rm -rf -- "$dir"
+    echo "  removed $dir"
+  done
+  printf 'agent-browser %s\n' "$ab_version" > "$STAMP"
+fi
+# Box users read and run everything here except the unshare copy.
+find "$ROOT" -mindepth 1 -maxdepth 1 ! -name bin -exec chmod -R a+rX {} +
+
+# --- The launcher's unshare --------------------------------------------------
+if ! cmp -s /usr/bin/unshare "$UNSHARE" || [[ "$(stat -c '%U:%G %a' "$UNSHARE")" != "root:beebox-boxes 750" ]]; then
+  # Into place by rename: a box may be running the old copy.
+  install -o root -g beebox-boxes -m 0750 /usr/bin/unshare "$UNSHARE.new"
+  mv -f "$UNSHARE.new" "$UNSHARE"
+  echo "  installed $UNSHARE"
+fi
+
+# --- AppArmor ----------------------------------------------------------------
+if ! cmp -s "$APPARMOR_SRC" "$APPARMOR_DEST" || ! grep -q '^beebox-browser-unshare ' /sys/kernel/security/apparmor/profiles; then
+  install -o root -g root -m 0644 "$APPARMOR_SRC" "$APPARMOR_DEST"
+  quietly apparmor_parser -r "$APPARMOR_DEST"
+  echo "  loaded $APPARMOR_DEST"
+fi
+
+# --- The check ----------------------------------------------------------------
+# One existing box user, through the box units' own sandbox drop-in and
+# environment file. A host with no box yet has nobody to check as.
+slug=""
+for home in /var/lib/beebox/*/; do
+  candidate=$(basename "$home")
+  [[ "$candidate" =~ ^[a-z0-9][a-z0-9-]{0,27}$ && -e "$home/box/.git" ]] || continue
+  getent passwd "bbx-$candidate" > /dev/null || continue
+  slug="$candidate"
+  break
+done
+if [[ -z "$slug" ]]; then
+  echo "  no box user yet; Chrome sandbox check skipped"
+  exit 0
+fi
+props=()
+while IFS= read -r line; do
+  [[ "$line" =~ ^[A-Za-z]+= ]] || continue
+  props+=(-p "${line//%i/$slug}")
+done < "$engine/deploy/systemd/box-sandbox.conf"
+if ! timeout 150 systemd-run --quiet --wait --pipe --collect \
+  --uid="bbx-$slug" --gid="bbx-$slug" \
+  -p EnvironmentFile=/etc/beebox/box.env -p "WorkingDirectory=/var/lib/beebox/$slug/box" -p RuntimeMaxSec=120 \
+  "${props[@]}" -- /usr/local/bin/bbx engine browser-host --check-sandbox < /dev/null > "$log" 2>&1; then
+  echo "  FAILED: Chrome is not sandboxed inside the box browser's namespace (checked as bbx-$slug)." >&2
+  sed 's/^/    /' "$log" >&2
+  echo "  The browser would run without Chrome's sandbox. See research/embedded-browser/linux-verification.md." >&2
+  exit 1
+fi
+echo "  Chrome sandbox check passed (as bbx-$slug)"
