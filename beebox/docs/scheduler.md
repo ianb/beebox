@@ -20,6 +20,8 @@ launchctl load ~/Library/LaunchAgents/com.beebox.scheduler.plist
 
 The daemon runs `bbx tick` every 60 seconds for each configured box. `bbx tick` checks all `_config/schedules/*.scheduled-script.card` files against their cron/at/rrule schedules and runs any that are due.
 
+`bbx tick --json` prints the result as one object with a record per script: `ran`, `skipped` with its `reason` (not due, disabled, budget exceeded, system busy, a deferral), `error` with its message, or `inconclusive`. The exit status is 0 whether or not a script errored (`bbx engine wakeup --skip-push` followed by `bbx tick` in the field-test day advance relies on that), so a caller reads `errorCount` or the records.
+
 Key behaviors:
 - **Config reload** — The box list is reloaded each cycle, so `bbx boxes add/remove` takes effect without restarting
 - **Error isolation** — One box failing doesn't affect others

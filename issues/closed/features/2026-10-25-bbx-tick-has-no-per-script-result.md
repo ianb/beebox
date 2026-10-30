@@ -5,8 +5,11 @@ area: beebox
 labels: [scheduler, testing, harness]
 filed-by: agent
 discovered-by: agent
+resolution: implemented
 discovered-in: worktree-retrospective — retrospective 20261025-233625
 ---
+
+**Resolved 2026-10-29** — `bbx tick --json` prints a record per script (ran, skipped with reason, error with message). The exit status stays 0 on script errors: the field-test day advance runs `bbx tick` and fails on a nonzero exit. The journey phone-walk harness is not in this repository, so its switch to `--json` is left to its owner.
 
 `bbx tick` exits 0 when a script errored or was deferred and prints no
 machine-readable outcome per script. Harness code that drives a box through

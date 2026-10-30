@@ -65,7 +65,7 @@ void test("with a chat active, a due reminder sends and a due command waits", as
   });
 
   const result = await runTick(box.root, { quiet: true });
-  t.check(result.scripts, [{ name: "remind-call", status: "ran", command: "notify: Call back", durationMs: any(Number).int() }]);
+  t.check(result.scripts, [{ name: "nightly-echo", status: "skipped", reason: "system busy: chat:s-1 (only notify: cards run)" }, { name: "remind-call", status: "ran", command: "notify: Call back", durationMs: any(Number).int() }]);
   t.check(await lastRuns(box, ["remind-call", "nightly-echo"]), { "remind-call": "success", "nightly-echo": null });
   t.check((await readRecent(box.root, { days: 36500 })).map((s) => s.intent.title), ["Call back"]);
   // The `once` card is deleted, but the housekeeping commit waits for the chat:

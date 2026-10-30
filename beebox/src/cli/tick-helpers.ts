@@ -114,9 +114,9 @@ export async function findBusyBlockers(
 export async function tickBusyState(
   boxRoot: string,
   { running, options }: { running: RunningScripts; options: TickOptions },
-): Promise<"defer-all" | "chat" | "none"> {
+): Promise<{ state: "defer-all" | "chat" | "none"; blockers: string[] }> {
   const blockers = effectiveBusyBlockers(await findBusyBlockers(boxRoot, running), { force: options.force === true });
-  if (blockers.length === 0) return "none";
+  if (blockers.length === 0) return { state: "none", blockers };
   const chatOnly = blockers.every(isChatBlocker);
   if (!options.quiet) {
     const hint = chatOnly
@@ -124,7 +124,7 @@ export async function tickBusyState(
       : "";
     console.log(`Tick deferred — system busy: ${blockers.join(", ")}${hint}`);
   }
-  return chatOnly ? "chat" : "defer-all";
+  return { state: chatOnly ? "chat" : "defer-all", blockers };
 }
 
 interface SkipContext {
@@ -137,9 +137,11 @@ interface SkipContext {
   options: TickOptions;
 }
 
-/** A skip: the line to print (empty means "skip silently") and, when recorded, its cause. */
+/** A skip: the line to print (empty means "skip silently"), why it skipped
+ * (reported per script by `bbx tick --json`), and, when recorded, its cause. */
 export interface SkipDecision {
   line: string;
+  reason: string;
   cause?: SkipCause | undefined;
 }
 
@@ -152,12 +154,14 @@ export interface SkipDecision {
  * holder (never preempt running work). */
 export async function evaluateSkip(ctx: SkipContext): Promise<SkipDecision | null> {
   const { boxRoot, parsed, scriptName, state, now, running, options } = ctx;
-  const say = (text: string, cause?: SkipCause): SkipDecision => ({ line: options.quiet ? "" : `  Skipping ${scriptName}: ${text}`, cause });
+  const say = (text: string, cause?: SkipCause): SkipDecision => ({ line: options.quiet ? "" : `  Skipping ${scriptName}: ${text}`, reason: text, cause });
 
   if (options.force) {
     if (!parsed.enabled) return say("disabled (enabled: false)");
+  } else if (!parsed.enabled) {
+    return { line: "", reason: "disabled (enabled: false)" };
   } else if (!isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, lastFailureFinal: state.lastFailureFinal === true, now })) {
-    return { line: "" };
+    return { line: "", reason: "not due" };
   }
 
   // Engine unavailable (e.g. quota-exhausted): running would burn an attempt
@@ -291,7 +295,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
       // The pipeline deferred on purpose (a defer marker): nothing to do this
       // time. Not an error; the tick log shows it as skipped, with the reason.
       if (!options.quiet) console.log(`  ${scheduleOutcomeLine(run)}`);
-      return { name: scriptName, status: "skipped", command, durationMs: run.durationMs, error: run.error };
+      return { name: scriptName, status: "skipped", command, durationMs: run.durationMs, reason: run.error };
     }
     if (run.result !== "success") {
       if (!options.quiet) console.error(`  ${scheduleOutcomeLine(run)}`);
