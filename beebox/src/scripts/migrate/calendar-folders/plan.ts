@@ -115,10 +115,16 @@ function sharedFileLosers(index: EventFileIndex, topFiles: ReadonlyMap<string, s
   return losers;
 }
 
-/** Converged: nothing at the top level to move, and every calendar the box needs has a card. */
+/**
+ * Converged: nothing at the top level to move, and every calendar the box
+ * needs has a card. A box that never synced a calendar (no index entries) needs
+ * none: the connector makes cards the first time it syncs, and a card made
+ * here from the default `primary` would sit in a box that has no calendar.
+ */
 function isCurrent(input: CalendarFoldersInput): boolean {
   const { index, topFiles, strandedFiles, cards, calendars } = input;
   if (topFiles.size > 0 || [...strandedFiles.values()].some((c) => readIcs(c).calendarId !== undefined)) return false;
+  if (Object.keys(index).length === 0) return true;
   const needed = new Set(calendars);
   for (const [key, entry] of Object.entries(index)) {
     const id = entryCalendarId(key, entry);

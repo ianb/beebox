@@ -1,12 +1,15 @@
 ---
 title: "Opening an attach folder without a trailing slash shows \"No text content available\""
-workstream: unattached
+workstream: calendar-cards
 area: beebox
 labels: [frontend, attach-scope]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-calendar-cards — screenshotting a calendar card's event folder
+resolution: implemented
 ---
+
+**Closed 2026-10-29:** fixed by commit a8351d1d9. The directory renderer's selector now also matches `.attach` folder names (`src/frontend/src/renderers/directory.tsx`); covered by a selector unit test, not checked in a browser.
 
 The directory renderer decides a path is a directory when its last segment has
 no dot (`src/frontend/src/renderers/directory.tsx`, the `match` selector:
