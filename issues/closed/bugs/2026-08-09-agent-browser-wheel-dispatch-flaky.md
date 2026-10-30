@@ -1,12 +1,15 @@
 ---
 title: "agent-browser `mouse wheel` dispatch is flaky: os error 35 after retries, multi-minute hangs"
-workstream: integration-tests
+workstream: browse-wedge
 area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — live re-test of the card-views-cannot-scroll finding
 labels: [field-test-findings, harness]
 priority: backlog
+resolution: superseded
 ---
+
+**Closed (superseded, 2026-10-30):** The os error 35 hangs were the general daemon wedge (2026-07-14-browse-daemon-wedges-on-animated-canvas), not wheel dispatch: 12 of 12 mouse wheel calls returned in 1-2 s on 2026-10-30. Pane scrolling uses scroll --selector (browse skill); wheel at 0,0 is documented there.
 
 During live UI verification through `bin/browse`, `mouse wheel <dy>` worked
 once, then failed repeatedly with `Failed to read: Resource temporarily
@@ -19,7 +22,7 @@ wheel and `scrollintoview`.
 
 This matters for field tests: scrolling is how an operator reads any card
 longer than the viewport, and the first onboarding run's
-[card-views-cannot-scroll](../closed/bugs/2026-08-08-card-views-cannot-scroll.md)
+[card-views-cannot-scroll](2026-08-08-card-views-cannot-scroll.md)
 finding was largely this tool gap. The operator prompt now teaches
 mouse-move-plus-wheel and scrollintoview, but the wheel path needs to be
 reliable to trust "content below the fold" observations.
