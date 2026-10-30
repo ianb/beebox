@@ -1,9 +1,8 @@
 // # Per-invocation agent environment
 //
 // Research allowance IDs reach the real runner setup for both model engines.
-// Explicit environment additions use an agent-safe environment without server
-// secrets. Ordinary Codex calls retain their prior environment behavior. Only the
-// external SDK/CLI boundaries are replaced here.
+// Every run, with or without explicit additions, uses an agent-safe environment
+// without server secrets. Only the external SDK/CLI boundaries are replaced here.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -70,12 +69,14 @@ void test("line 20", async (t) => {
 
   t.check(codexEnv.CODEX_HOME, process.env.CODEX_HOME);
 
-  let defaultEnv: unknown = "unset";
+  // A Codex call without additions gets the same agent profile, never the SDK's
+  // default of the whole server environment.
+  let defaultEnv: Record<string, string | undefined> = {};
   await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "" }, (options: CodexSdkSessionOptions) => {
-    defaultEnv = options.env;
+    defaultEnv = options.env ?? {};
     return { id: null, run: async () => ({ sessionId: "fake-default", output: "done", resultText: "done", durationMs: 1, status: "completed", error: null, usage: null, items: [] }) };
   });
-  t.check(defaultEnv, undefined);
+  t.check([defaultEnv.BBX_SPAWN_PROFILE, defaultEnv.BBX_HUB_SECRET ?? null, defaultEnv.BBX_TRIAGE_RUN_ID], ["agent", null, "inherited-run"]);
 
   const next = await buildScriptEnv(box.root);
   t.check([next.BBX_TRIAGE_RUN_ID, next.BBX_TRIAGE_RESEARCH ?? null, next.BBX_HUB_SECRET ?? null], [
