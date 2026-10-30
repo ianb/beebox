@@ -159,6 +159,86 @@ function inlineCodeRanges(line: string): Array<[number, number]> {
   return ranges;
 }
 
+// One link target's fate: unchanged, rewritten, or a finding to report.
+type TargetDecision = (target: string) => LinkDecision;
+
+// Walk the inline Markdown links of `content`, outside inline-code spans and
+// fenced code blocks, and apply `decide` to each target.
+function mapLinks(content: string, decide: TargetDecision): RepairResult {
+  const rewrites: LinkRewrite[] = [];
+  const unfixable: UnfixableLink[] = [];
+  let inFence = false;
+  const outLines = content.split("\n").map((line, i) => {
+    const lineNum = i + 1;
+    if (/^\s*(```+|~~~+)/.test(line)) {
+      inFence = !inFence; // a fence delimiter toggles the code block; leave the line as-is
+      return line;
+    }
+    if (inFence) return line;
+
+    const codeRanges = inlineCodeRanges(line);
+    const inCode = (offset: number): boolean => codeRanges.some(([s, e]) => offset >= s && offset < e);
+
+    let out = "";
+    let cursor = 0;
+    for (const match of line.matchAll(LINK_RE)) {
+      const full = match[0];
+      const target = match[2] ?? "";
+      const offset = match.index;
+      let replacement = full;
+      if (!inCode(offset)) {
+        const decision = decide(target);
+        if (decision.kind === "unfixable") {
+          unfixable.push({ line: lineNum, target, reason: decision.reason });
+        } else if (decision.kind === "rewrite") {
+          rewrites.push({ line: lineNum, from: target, to: decision.to });
+          replacement = `[${match[1] ?? ""}](${decision.to})`;
+        }
+      }
+      out += line.slice(cursor, offset) + replacement;
+      cursor = offset + full.length;
+    }
+    return out + line.slice(cursor);
+  });
+
+  return { content: outLines.join("\n"), rewrites, unfixable };
+}
+
+// Walk the path-bearing plan/issue frontmatter fields without reserializing
+// YAML (which would churn unrelated formatting and comments). The schema keeps
+// these paths as plain scalar values or an `issues:` block list.
+function mapFrontmatterPaths(content: string, decide: TargetDecision): RepairResult {
+  const fence = frontmatterFence(content);
+  if (fence === null) return { content, rewrites: [], unfixable: [] };
+  const rewrites: LinkRewrite[] = [];
+  const unfixable: UnfixableLink[] = [];
+  let inFrontmatter = true;
+  let issuesList = false;
+  const lines = content.split("\n").map((line, index) => {
+    if (!inFrontmatter) return line;
+    if (index === fence.closingLine) {
+      inFrontmatter = false;
+      return line;
+    }
+    if (index === 0) return line;
+    const scalar = /^(design|superseded-by):(\s*)(\S+\.md)$/.exec(line);
+    if (/^issues:\s*$/.test(line)) issuesList = true;
+    else if (/^\S/.test(line)) issuesList = false;
+    const listItem = issuesList ? /^(\s+-\s+)(\S+\.md)$/.exec(line) : null;
+    const target = scalar?.[3] ?? listItem?.[2];
+    if (!target) return line;
+    const decision = decide(target);
+    if (decision.kind === "unfixable") {
+      unfixable.push({ line: index + 1, target, reason: decision.reason });
+      return line;
+    }
+    if (decision.kind !== "rewrite") return line;
+    rewrites.push({ line: index + 1, from: target, to: decision.to });
+    return scalar ? `${scalar[1]}:${scalar[2]}${decision.to}` : `${listItem?.[1] ?? ""}${decision.to}`;
+  });
+  return { content: lines.join("\n"), rewrites, unfixable };
+}
+
 // Repair broken relative .md links in one file's content. `fromRel` is the
 // file's repo-relative POSIX path; `fileExists` tests a repo-relative path;
 // `basenameLookup` maps a basename to the repo-relative files carrying it.
@@ -180,50 +260,12 @@ export function repairLinks({
   basenameLookup: Map<string, string[]>;
   suffixMatches?: SuffixMatches;
 }): RepairResult {
-  const rewrites: LinkRewrite[] = [];
-  const unfixable: UnfixableLink[] = [];
   const ctx: DecideContext = { fromDir: path.posix.dirname(fromRel), fileExists, basenameLookup, suffixMatches };
-
-  let inFence = false;
-  const outLines = content.split("\n").map((line, i) => {
-    const lineNum = i + 1;
-    if (/^\s*(```+|~~~+)/.test(line)) {
-      inFence = !inFence; // a fence delimiter toggles the code block; leave the line as-is
-      return line;
-    }
-    if (inFence) return line;
-
-    const codeRanges = inlineCodeRanges(line);
-    const inCode = (offset: number): boolean => codeRanges.some(([s, e]) => offset >= s && offset < e);
-
-    let out = "";
-    let cursor = 0;
-    for (const match of line.matchAll(LINK_RE)) {
-      const full = match[0];
-      const target = match[2] ?? "";
-      const offset = match.index;
-      let replacement = full;
-      if (!inCode(offset)) {
-        const decision = decideLink(target, ctx);
-        if (decision.kind === "unfixable") {
-          unfixable.push({ line: lineNum, target, reason: decision.reason });
-        } else if (decision.kind === "rewrite") {
-          rewrites.push({ line: lineNum, from: target, to: decision.to });
-          replacement = `[${match[1] ?? ""}](${decision.to})`;
-        }
-      }
-      out += line.slice(cursor, offset) + replacement;
-      cursor = offset + full.length;
-    }
-    return out + line.slice(cursor);
-  });
-
-  return { content: outLines.join("\n"), rewrites, unfixable };
+  return mapLinks(content, (target) => decideLink(target, ctx));
 }
 
-// Repair the path-bearing plan/issue frontmatter fields without reserializing
-// YAML (which would churn unrelated formatting and comments). The schema keeps
-// these paths as plain scalar values or an `issues:` block list.
+// The frontmatter half of repairLinks: `design:`, `superseded-by:`, and
+// `issues:` list paths.
 export function repairFrontmatterPaths({
   fromRel,
   content,
@@ -235,34 +277,68 @@ export function repairFrontmatterPaths({
   fileExists: (repoRelPath: string) => boolean;
   basenameLookup: Map<string, string[]>;
 }): RepairResult {
-  const fence = frontmatterFence(content);
-  if (fence === null) return { content, rewrites: [], unfixable: [] };
-  const rewrites: LinkRewrite[] = [];
-  const unfixable: UnfixableLink[] = [];
   const ctx: DecideContext = { fromDir: path.posix.dirname(fromRel), fileExists, basenameLookup, suffixMatches: undefined };
-  let inFrontmatter = true;
-  let issuesList = false;
-  const lines = content.split("\n").map((line, index) => {
-    if (!inFrontmatter) return line;
-    if (index === fence.closingLine) {
-      inFrontmatter = false;
-      return line;
-    }
-    if (index === 0) return line;
-    const scalar = /^(design|superseded-by):(\s*)(\S+\.md)$/.exec(line);
-    if (/^issues:\s*$/.test(line)) issuesList = true;
-    else if (/^\S/.test(line)) issuesList = false;
-    const listItem = issuesList ? /^(\s+-\s+)(\S+\.md)$/.exec(line) : null;
-    const target = scalar?.[3] ?? listItem?.[2];
-    if (!target) return line;
-    const decision = decideLink(target, ctx);
-    if (decision.kind === "unfixable") {
-      unfixable.push({ line: index + 1, target, reason: decision.reason });
-      return line;
-    }
+  return mapFrontmatterPaths(content, (target) => decideLink(target, ctx));
+}
+
+// ─── Relocation by identity (bin/lib/doc-move.ts) ────────────────────────────
+//
+// A move knows exactly which file moved, so it never guesses by basename: a
+// target is rewritten only when it resolves to a path `relocate` maps.
+
+/** A resolved target's new repo-relative path, or `undefined` to leave the link alone. */
+export type Relocate = (repoRel: string) => string | undefined;
+
+// Re-express each relative link (any file type) and frontmatter path that
+// resolves from `resolveFrom`'s directory, writing the new target relative to
+// `writeFrom`'s directory. For links in another file both are that file's
+// path; for a moved file's own links they are its old and new paths.
+export function relocateLinks({ resolveFrom, writeFrom, content, relocate }: {
+  resolveFrom: string;
+  writeFrom: string;
+  content: string;
+  relocate: Relocate;
+}): { content: string; rewrites: LinkRewrite[] } {
+  const resolveDir = path.posix.dirname(resolveFrom);
+  const writeDir = path.posix.dirname(writeFrom);
+  const decide: TargetDecision = (target) => {
+    const { pathPart, anchor } = splitAnchor(target);
+    if (!pathPart || pathPart.startsWith("/") || pathPart.startsWith("<") || hasUriScheme(pathPart) || /\s/.test(pathPart)) return { kind: "leave" };
+    const resolved = path.posix.normalize(path.posix.join(resolveDir, pathPart)).replace(/\/$/, "");
+    if (resolved.startsWith("..")) return { kind: "leave" }; // escapes the repo
+    const moved = relocate(resolved);
+    if (moved === undefined) return { kind: "leave" };
+    if (moved === resolved && resolveDir === writeDir) return { kind: "leave" }; // keep the link's own spelling
+    const relative = path.posix.relative(writeDir, moved) || ".";
+    const slash = pathPart.endsWith("/") && !relative.endsWith("/") ? "/" : "";
+    const newTarget = `${relative}${slash}${anchor}`;
+    return newTarget === target ? { kind: "leave" } : { kind: "rewrite", to: newTarget };
+  };
+  const frontmatter = mapFrontmatterPaths(content, decide);
+  const links = mapLinks(frontmatter.content, decide);
+  const definitions = mapDefinitions(links.content, decide);
+  return {
+    content: definitions.content,
+    rewrites: [...frontmatter.rewrites, ...links.rewrites, ...definitions.rewrites].toSorted((a, b) => a.line - b.line),
+  };
+}
+
+// Reference-style link definitions (`[label]: target "title"`), outside
+// fenced code blocks.
+const DEFINITION_RE = /^(\s{0,3}\[[^\]]+]:\s*)(\S+)(.*)$/;
+
+function mapDefinitions(content: string, decide: TargetDecision): { content: string; rewrites: LinkRewrite[] } {
+  const rewrites: LinkRewrite[] = [];
+  let inFence = false;
+  const lines = content.split("\n").map((line, i) => {
+    if (/^\s*(```+|~~~+)/.test(line)) inFence = !inFence;
+    const m = inFence ? null : DEFINITION_RE.exec(line);
+    const target = m?.[2];
+    if (!m || target === undefined) return line;
+    const decision = decide(target);
     if (decision.kind !== "rewrite") return line;
-    rewrites.push({ line: index + 1, from: target, to: decision.to });
-    return scalar ? `${scalar[1]}:${scalar[2]}${decision.to}` : `${listItem?.[1] ?? ""}${decision.to}`;
+    rewrites.push({ line: i + 1, from: target, to: decision.to });
+    return `${m[1] ?? ""}${decision.to}${m[3] ?? ""}`;
   });
-  return { content: lines.join("\n"), rewrites, unfixable };
+  return { content: lines.join("\n"), rewrites };
 }

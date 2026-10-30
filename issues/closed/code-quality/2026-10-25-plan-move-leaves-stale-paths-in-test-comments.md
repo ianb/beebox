@@ -1,12 +1,15 @@
 ---
 title: "doc-check --fix leaves a moved plan's old path in test comments"
-workstream: unattached
+workstream: tooling-burndown
 area: beebox
 labels: [doc-check, finish, tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261025-233625
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Landed in 14281ed4a and 1883523c6. Finish now moves a plan with bin/doc-move, which rewrites references that resolve to the moved file by exact path, test files and shell comments included, and prints any old-path token it cannot rewrite. doc-check --fix still skips tests, because its repair guesses by basename. The finish agent's manual grep step is gone (e42984ab0).
 
 When finish moves a plan to `docs/implemented-plans/`, `doc-check --fix`
 rewrites links in docs and some source comments but skips tests. The finish
