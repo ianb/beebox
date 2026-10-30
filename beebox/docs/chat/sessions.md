@@ -57,7 +57,7 @@ move (a caller bug over internal state — not a degradable condition).
   drain. `restart()` leaves the phase as-is and just closes the run, so the same
   close handler **does** drain the queue into a fresh run — the wedged-session
   recovery path. `resetSession()` is `stop()` plus clearing the saved session id.
-- **Evict.** Registry eviction calls `stop()`.
+- **Evict.** Registry eviction calls `stop()`. The sweep and the live cap skip a chat with a live background task until its run has been quiet for four hours (`run/live-tasks.ts`). A stop or restart with tasks still live ends the process (`abort()`), because a subagent on closed input gets its Bash calls refused in a user's name; the CLI tells the next turn the task did not finish.
 - **The busy-flip ordering.** On `result`, the phase advances to `ready`
   (`isBusy()` → `false`) **before** `<chat-app>` feature deltas are applied, so a
   `features-changed` listener can call `setFeature()` without hitting the

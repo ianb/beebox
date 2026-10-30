@@ -14,6 +14,21 @@ import type { RegistryEntry } from "./options.js";
 
 const log = makeLog("ChatSessionRegistry");
 
+/** Whether anything still needs this entry's subprocess: a listener or background work. */
+function isHeld(entry: RegistryEntry): boolean {
+  return entry.refCount > 0 || entry.session.isWorkingInBackground();
+}
+
+/** Stop and drop every entry quiet since `cutoff` that nothing holds. */
+export function evictIdleEntries(entries: Map<string, RegistryEntry>, cutoff: number): void {
+  for (const [id, entry] of entries) {
+    if (entry.lastActivity > cutoff || isHeld(entry)) continue;
+    log("sweep", `Idle eviction of ${id}`);
+    entry.session.stop();
+    entries.delete(id);
+  }
+}
+
 export function enforceLiveCap(
   entries: Map<string, RegistryEntry>,
   opts: { maxLive: number; currentSessionId: string },
@@ -28,11 +43,11 @@ export function enforceLiveCap(
   if (live.length < opts.maxLive) return;
 
   // Evict the oldest live entry that isn't the current session and has no
-  // in-flight listeners.
+  // in-flight listeners or background work.
   live.sort((a, b) => a.entry.lastSubprocessUse - b.entry.lastSubprocessUse);
   for (const candidate of live) {
     if (candidate.id === opts.currentSessionId) continue;
-    if (candidate.entry.refCount > 0) continue;
+    if (isHeld(candidate.entry)) continue;
     log("evict", `Stopping subprocess for ${candidate.id} (LRU under cap)`);
     candidate.entry.session.stop();
     return;

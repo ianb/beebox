@@ -40,6 +40,7 @@ import {
 } from "./start.js";
 import type { ChatSessionOptions } from "../options.js";
 import { createHealthGate } from "../../../session-context.js";
+import { createLiveTasks, endRun } from "./live-tasks.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
 export { chatSystemPrompt, NARRATION_OVERLAY, buildContentBlocks };
@@ -61,6 +62,7 @@ export class ChatSession extends EventEmitter {
   // `draining`: non-null while a queued drain's send is in flight, holding its inputs (out of the queue, not yet delivered; `stop()` empties it in place)
   private messageQueue: ChatSendInput[] = []; private preparingTurn = false; private draining: ChatSendInput[] | null = null;
   private readonly opening = new Set<Promise<unknown>>(); // sends opening a turn; see `whenStarted`
+  private readonly liveTasks: ReturnType<typeof createLiveTasks>;
   private maintenancePaused = false;
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
@@ -90,6 +92,7 @@ export class ChatSession extends EventEmitter {
     options = options ?? {};
     this.boxRoot = boxRoot;
     this.options = options;
+    this.liveTasks = createLiveTasks(options.now ?? Date.now);
     this.coined = createCoinedRunState(options);
     this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;
     this.modelFile = options.modelFile ?? null;
@@ -109,14 +112,8 @@ export class ChatSession extends EventEmitter {
         this.emit("features-changed", { features });
       },
     });
-    if (this.sessionId) {
-      log("init", `Loaded session: ${this.sessionId}`);
-    } else {
-      log("init", "No saved session, will create on first message");
-    }
-    if (this.explicitModel) {
-      log("init", `Loaded model override: ${this.explicitModel}`);
-    }
+    log("init", this.sessionId ? `Loaded session: ${this.sessionId}` : "No saved session, will create on first message");
+    if (this.explicitModel) log("init", `Loaded model override: ${this.explicitModel}`);
   }
 
   /**
@@ -193,6 +190,7 @@ export class ChatSession extends EventEmitter {
     });
     this.transition({ phase: "ready", run });
     this.coined.noteRunStarted(this.sessionId, this.options);
+    this.liveTasks.set([]); this.liveTasks.noteRunMessage();
     this.emit("task-level", []); // The live-task level is per-process; the CLI sends none at startup.
 
     // Background loop: pump SDK messages into handleMessage. Capture errors
@@ -229,13 +227,14 @@ export class ChatSession extends EventEmitter {
       durability: this.durability,
       boxRoot: this.boxRoot, model: this.resolvedModel,
       getSessionId: () => this.sessionId,
+      noteRunMessage: () => { this.liveTasks.noteRunMessage(); },
       recordTurnMarker: (sessionId) => recordTurnMarkerForSession(this.boxRoot, sessionId),
       handleMessage: (msg) => this.handleMessage(msg),
       isStopping: () => this.state.phase === "stopping",
       toIdle: () => { if (this.state.phase !== "idle") this.transition({ phase: "idle" }); },
       releaseRunLock: () => this.runLock.release(),
       emitError: (err) => { this.emit("error", err); },
-      emitClose: (code) => { this.emit("task-level", []); this.emit("close", code); }, // its tasks ended with it
+      emitClose: (code) => { this.liveTasks.set([]); this.emit("task-level", []); this.emit("close", code); }, // its tasks ended with it
       queueLength: () => this.messageQueue.length,
       drainQueue: () => this.drainQueue(),
       log,
@@ -256,7 +255,7 @@ export class ChatSession extends EventEmitter {
     // Background-task events fire between turns (no per-turn SSE attached), so
     // wireSession bridges them to the global event bus, not the per-turn stream.
     if (msg.type === "task") { this.emit("task", msg.task); return; }
-    if (msg.type === "task-level") { this.emit("task-level", msg.tasks); return; }
+    if (msg.type === "task-level") { this.liveTasks.set(msg.tasks); this.emit("task-level", msg.tasks); return; }
     // Accumulate assistant text for schedule parsing
     this.turnText = accumulateAssistantText(this.turnText, msg);
 
@@ -386,10 +385,7 @@ export class ChatSession extends EventEmitter {
   /** Interrupt the current turn. */
   interrupt(): void {
     const run = this.liveRun();
-    if (run === null) {
-      log("interrupt", "No run to interrupt");
-      return;
-    }
+    if (run === null) { log("interrupt", "No run to interrupt"); return; }
     log("interrupt", "Sending interrupt");
     void run.interrupt().catch((e: unknown) => {
       log("interrupt", `Interrupt failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -444,6 +440,9 @@ export class ChatSession extends EventEmitter {
 
   isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state); }
 
+  /** A background task is live and the run has not gone quiet (`./live-tasks.ts`). */
+  isWorkingInBackground(): boolean { return this.isRunning() && this.liveTasks.isWorking(); }
+
   /**
    * Stop the current run gracefully. Clears the pending queue so the
    * close handler won't auto-drain into a fresh run.
@@ -462,7 +461,7 @@ export class ChatSession extends EventEmitter {
       // → stopping: the close handler reads this phase as the intentional-stop
       // signal and won't drain the queue.
       this.transition({ phase: "stopping", run, wasBusy: lifecycleBusy(this.state) });
-      void run.close();
+      endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId });
     }
     if (dropped.length > 0) this.emit("queue-dropped", dropped);
   }
@@ -482,7 +481,7 @@ export class ChatSession extends EventEmitter {
     // Leave the phase as-is (ready/streaming): the close handler sees it's not
     // "stopping" and drains the queue into a fresh run.
     log("restart", "Closing run — close handler will drain any queued messages");
-    void run.close();
+    endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId });
   }
 
   /**

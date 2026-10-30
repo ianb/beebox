@@ -52,6 +52,8 @@ export interface ChatRunPumpHost {
   /** The model this run started on — decides what its result may report. */
   model: string | null;
   getSessionId: () => string | null;
+  /** The run produced a message, including one the adapter drops. */
+  noteRunMessage: () => void;
   /** Record the "since my last reply" marker before the queue drains. */
   recordTurnMarker: (sessionId: string) => Promise<void>;
   handleMessage: (msg: ChatMessage) => void;
@@ -71,7 +73,7 @@ export interface ChatRunPumpHost {
 export function pumpSessionRun(run: ChatBackendRun, host: ChatRunPumpHost): Promise<void> {
   return pumpChatRun({
     run,
-    adapt: (msg) => adaptBackendMessage(msg, { model: host.model }),
+    adapt: (msg) => { host.noteRunMessage(); return adaptBackendMessage(msg, { model: host.model }); },
     onMessage: async (msg) => {
       host.durability.observe(msg);
       // Hold `result` until the transcript is flushed: consumers refetch history

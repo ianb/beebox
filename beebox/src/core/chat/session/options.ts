@@ -15,6 +15,8 @@ import type { ChatBackend } from "../../../services/claude-chat/core.js";
  * defaults match the pre-existing "main chat" behavior.
  */
 export interface ChatSessionOptions {
+  /** Deadline clock for the background-task stall limit. Default: `Date.now`. */
+  now?: () => number;
   /** Resolves the system prompt at process-start. Default: chatSystemPrompt() + tzContext. */
   systemPrompt?: (boxRoot: string) => Promise<string>;
   /**
