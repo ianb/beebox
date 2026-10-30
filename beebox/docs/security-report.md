@@ -16,6 +16,13 @@ cookies (§2), and the per-box network namespace on the production server
 (§5). Scoped to those rows; not a re-audit of other changes since
 `c0844b44e` or of the private security tier.
 
+**Scoped amendment (2026-10-30, credential environment table; reviewed by
+Ian):** Adds the long-lived Claude token row and the single credential table
+behind the child-env, agent, and tooling allowlists (§2); records the Codex-run
+and procedure-shell environment fixes and the open view-metadata gap (§2, §7b
+channel C). Scoped to those rows; not a re-audit of other changes since
+`c0844b44e` or of the private security tier.
+
 **Scoped amendment (2026-10-26; reviewed by Ian):** Adds the signed-in-owner
 Admin page backup setup and schedule controls, machine-local attempt record, and
 host-specific runner behavior on this worktree. This amendment updates the backup
@@ -327,6 +334,7 @@ returns 500 "not configured" without reading R2 (`pub-worker/src/worker.ts`,
 | Provider keys — Mistral / Deepgram / OpenAI / Gemini / OpenRouter (`mistral-key.ts`, `deepgram-key.ts`, `embeddings-key.ts`, `openai-thinking-key.ts`, `gemini-key.ts`, `openrouter.ts`) | Machine secret store only, per-box grant (`docs/secrets.md`) — the box-file and env-var fallbacks (`BBX_MISTRAL_API_KEY`, `BBX_DEEPGRAM_API_KEY`/`_PROJECT`, `BBX_OPENAI_API_KEY`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`, `SKE_GEMINI_API_KEY`) have been removed, along with their entries in `SECRET_ENV_NAMES` and the hub/tooling allowlists | Spend/abuse the provider account | Per-box grant | Operator-set | ok — the file-mode gap this row used to carry is closed with the fallback that created it: [connector-secret-file-modes](../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md) |
 | Restic recovery password and backend credentials (`src/core/box-backup/admin-config.ts`, `config.ts`, `run/backup.ts`, `restic.ts`) | Owner enters a password once on the Admin page or provides a 0600 file through CLI; the Admin server endpoint writes a new 0600 file outside the box, and the per-box 0600 config stores its path and repository URL, not the password. Restic backend credentials come from the standard environment or per-user credential files | Unlock encrypted backups; destination credential may also permit deletion | Per-box repository; local to box's OS user | Owner keeps an independent recovery copy; a lost password makes snapshots unreadable | mitigated; high / local — the Admin server endpoint refuses leading/trailing whitespace and line breaks, checks repository identity before saving config, and removes its new key file on setup failure. Restic receives arguments without a shell. A process running as the box user can still read the unattended key and may delete backups; destination versioning or immutability is recommended. |
 | Mac backup command socket (`mac-app/Sources/BeeBoxMac/BackupControl.swift`) | Unix socket under the app's private run directory, mode 0600; accepts typed configure/run/status/check requests and executes them as the VM's `node` user | Configure destination and cause an encrypted backup from the local Mac box; no arbitrary guest command | Same Mac OS user; only while the app runs | App closes the socket at exit | mitigated; medium / local — no password bytes cross the socket, but the guest password-file path and repository URL do. A same-user process can already read the app's mounted home and control its files. |
+| Long-lived Claude token — `claude-oauth-token` in the machine secret store (`core/claude-oauth-token.ts`) | Secret store, per-box grant; injected as `CLAUDE_CODE_OAUTH_TOKEN` into first-party Claude runs and the `claude auth status` probe only. An ambient `CLAUDE_CODE_OAUTH_TOKEN` is in no allowlist and is dropped from the probe (`src/lib/credential-env.ts`) | Run Claude Code as the boxholder's subscription | Per-box grant | Long-lived, no refresh; rotate by minting a new one with `claude setup-token` and replacing the store entry | ok |
 | `ANTHROPIC_API_KEY` | **Deliberately withheld** (absent from both the hub and script-env allowlists; also stripped in `cli/bootstrap.ts`) | — | — | — | ok — a leak-prevention control forcing subscription auth, not a stored credential |
 
 **Positive control — the hub child-env allowlist**
@@ -347,6 +355,28 @@ credential name and prefix removed, since the store is the only place a
 connector reads one from and a spawned `runs:` command has no reason to
 inherit it. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.test.ts`.
+Since 2026-10-29 the credential entries of all three lists come from one table,
+`src/lib/credential-env.ts`, which gives every credential variable a visibility
+(inherit, inject, blank, deny) for the hub child, the agent and tooling
+profiles, and a Claude CLI run, with a reason; the warm-slot comparison takes
+its credential keys from it. `test/credential-visibility/every-consumer.test.ts`
+reads each consumer's environment at its process boundary and pins every cell;
+`test/lib/credential-env.test.ts` fails when a credential-looking name enters a
+plain list. Codex agent runs without explicit additions now get the agent
+profile; before, the Codex SDK copied the whole server environment into the
+CLI. Procedure shell steps (`core/procedure/shell.ts`) likewise received the
+whole server environment beneath the agent profile, because execa merges
+`process.env` by default; they now get the agent profile plus four named
+per-run values (`TRIAGE_ITEMS`, `BBX_CHAT_SESSION_ID`,
+`BBX_CHAT_SESSION_ID_FILE`, `CODEX_THREAD_ID`), none a credential
+(`test/core/procedure/shell.test.ts`). **Open gap, high:** view metadata import
+(`webapp/views/compiler/meta-import.ts`) runs box-authored view code in a child
+with the whole server environment, so a view can return `BBX_HUB_SECRET`,
+`BBX_DIAG_API_KEY`, or `BBX_VAPID_PRIVATE_KEY` as metadata when the server
+lists views
+([view-metadata-import-runs-box-code-with-the-server-env](../../issues/bugs/2026-10-29-view-metadata-import-runs-box-code-with-the-server-env.md)).
+Remaining spreads, not agent code: the `claude auth` commands and the gws
+CLI ([claude-auth-commands-and-gws-spread-the-server-env](../../issues/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md)).
 The standard trick runner is a deliberate exception by declaration: it resolves
 only the selected trick's named dependencies and puts those values in that
 single child environment for that invocation; it does not widen the general
@@ -557,7 +587,7 @@ another box's caller. Three channels, and what covers each:
 |---|---|---|---|
 | **A. Network** — a request carrying box A's credential (session cookie, agent bearer, mobile token) reaches box B's data, through B's scope or through A's scope with a path that climbs out | The recurring shape: a caller-supplied path-like input joined onto `boxRoot` without a containment helper (`boxRelativePath`, `containWithinBox`, `resolveContainedRef`, `resolveCardPath`, …) | Per-scope auth wall (`server-box-scope.ts`, §1) rejects A's credential on B; every path input in the route and tRPC inventory (§1) is bounded by a containment helper — must be **zero** exceptions | `test/scenarios/cross-box-probe.test.ts` (the regression anchor: box A's bearer against every read surface of box B); `schedules/cross-box-leak-scan` static sweep, weekly, hands off any new unbounded path input |
 | **B. Filesystem** — a box process reads another box's files or shared host state directly | `~/.bbx-session-secret`, `~/.bbx-auth.json`, the machine secret store, the shared Google token, `~/.claude/projects/<encoded cwd>`, `/tmp/claude-<uid>/…` | **Accepted for now** as the env-level posture (§8), with a fix on the books — [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md): one OS user, files are readable by any same-user process. Compensations: 0600/0700 modes; per-cwd keying of transcripts and task output; `bbx secrets` refuses an agent asking about another box (`secrets-guard.ts`) | `schedules/cross-box-leak-scan` host audit (local, and production over SSH from the main checkout): modes, per-cwd keying maps each project dir to at most one box, no nested box roots, no undocumented file under `~/.config/beebox` / `~/.local/share/beebox` |
-| **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2) | `test/hub/supervisor.test.ts` |
+| **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2), whose credential entries come from `src/lib/credential-env.ts`. Open gap: view metadata import gives box-authored view code the whole server environment (§2) | `test/hub/supervisor.test.ts`; `test/credential-visibility/every-consumer.test.ts` |
 
 **Findings of the 2026-09-03 scan** (state after this pass):
 
