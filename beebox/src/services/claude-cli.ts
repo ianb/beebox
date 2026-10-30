@@ -141,6 +141,8 @@ export function createClaudeCliService(options?: { boxRoot?: string | undefined 
       const stdin = login.process.stdin;
       if (!stdin || stdin.destroyed) return { accepted: false, error: "Sign-in process is not accepting input — start again" };
       return new Promise((resolve) => {
+        // A write error is also emitted as "error"; without a listener it would crash the server.
+        stdin.once("error", (err) => { resolve({ accepted: false, error: err.message }); });
         stdin.write(`${code.trim()}\n`, (err) => {
           resolve(err ? { accepted: false, error: err.message } : { accepted: true });
         });

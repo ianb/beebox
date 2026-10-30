@@ -94,6 +94,9 @@ export class CodexHistoryServer {
     this.child.on("error", (error) => {
       this.failPending(new CodexHistoryServerExitError({ detail: error.message }));
     });
+    this.child.stdin.on("error", (error) => {
+      this.failPending(new CodexHistoryServerExitError({ detail: error.message }));
+    });
     this.child.on("exit", (code, signal) => {
       if (this.closing) return;
       const error = new CodexHistoryServerExitError({
