@@ -21,8 +21,8 @@ Ian):** Adds the long-lived Claude token row and the single credential table
 behind the child-env, agent, and tooling allowlists (§2); records the Codex-run
 and procedure-shell environment fixes and the open view-metadata gap (§2, §7b
 channel C). Scoped to those rows; not a re-audit of other changes since
-`c0844b44e` or of the private security tier. Later on 2026-10-30, not yet
-reviewed: the view-metadata gap is fixed, and two other open gaps are recorded
+`c0844b44e` or of the private security tier. Later on 2026-10-30, also reviewed
+by Ian: the view-metadata gap is fixed, and two other open gaps are recorded
 (§2, §7b channel C).
 
 **Scoped amendment (2026-10-26; reviewed by Ian):** Adds the signed-in-owner
