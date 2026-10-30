@@ -87,3 +87,7 @@ or Network tab to capture from. Disposition: ship bounded instrumentation
 send its own report, so the probe must either catch the loop before it locks
 up, or report from somewhere the main thread does not own (a Web Worker
 watchdog, or a breadcrumb that the next page load sends).
+
+Re-reviewed 2026-10-30: the field probe merged to main on 2026-09-25, so the 'not deployed yet' text is stale. No probe report in the local test box log.
+
+Out of date in the body above: Change 'The temporary field probe is committed as 225de6982 ... not deployed yet' to say it merged in 62c8ff444 and is live; the next step is the boxholder's next freeze plus the log grep.

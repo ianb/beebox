@@ -21,3 +21,7 @@ pass. That needs an explicit "boot complete" / "still pre-starting" state on the
 health verdict so a caller can distinguish "booting" from "idle". Deferred from
 that plan as its own decision: is the readiness state worth adding, or is the
 180s window good enough?
+
+Re-reviewed 2026-10-30: production moved to the unit-host path, which does not block on box readiness; the issue now applies only to the spawning hub (dev router, hosts without units).
+
+Out of date in the body above: State that prod runs startUnitHost (per-box units, 2026-10-25) and is unaffected; the block is in startSpawning (hub.ts:223) only. Fix the stale path `src/cli/commands/hub.ts` to `beebox/src/cli/commands/hub.ts`. Reconsider whether the readiness-state decision still matters for a dev-only path.

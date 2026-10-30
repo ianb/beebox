@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — full suite after the Agent SDK 0.3.309 / Codex 0.164.0 bump
 labels: [test-failure]
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Re-reviewed 2026-10-30: box-install.test.ts passes in the 2026-10-30 full-suite run on main at badbabebc.
 
 `beebox/test/deploy/box-install.test.ts` fails on current main with 7
 failures. The test runs `deploy/server-bin/bbx-box-install` against a temporary

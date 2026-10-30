@@ -44,3 +44,7 @@ commands) or the tooling allowlist (gws) plus the one injected value, add
 `claudeAuth` and `gws` consumers to `src/lib/credential-env.ts`, and update
 the matrix. Check on macOS that `claude auth status` still finds the keychain
 login (it needs `USER`, which the allowlist has).
+
+Re-reviewed 2026-10-30: since the server now seals its own secrets out of process.env at startup, the named BBX_* secrets no longer reach these children in a running server; provider API keys and unlisted variables still do. The matrix test shows I for all because it runs without sealing.
+
+Out of date in the body above: Replace the 'Under the hub that is BBX_HUB_SECRET, BBX_DIAG_API_KEY, and BBX_VAPID_PRIVATE_KEY' paragraph: after sealServerSecrets (src/lib/server-secrets.ts) those names are gone from process.env; what still leaks is provider keys (ANTHROPIC_API_KEY, OPENAI keys, BBX_MISTRAL/DEEPGRAM/OPENROUTER, GEMINI) and any unlisted variable, per the I cells in every-consumer.test.ts.

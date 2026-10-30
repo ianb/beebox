@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: normal
+resolution: superseded
 ---
+
+**Closed (superseded, 2026-10-30):** Re-reviewed 2026-10-30: the premise is gone. The trick engine commits only the paths the trick changed, and `bbx trick --no-commit` (8bd70069e, box-docs/tricks.md) runs a trick for testing and reports its own exit code.
 
 While testing a new generator trick outside of `bbx trick`'s own auto-commit
 path (to avoid it capturing unrelated dirty files — see the separate

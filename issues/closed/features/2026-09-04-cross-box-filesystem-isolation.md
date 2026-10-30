@@ -7,7 +7,10 @@ labels: [security]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-cross-box-leak-scan — reviewing security-report §7b
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Re-reviewed 2026-10-30: production runs one user and one unit per box since 0f5c09f44 (2026-10-25); deploy/server-bin/box-units.smoke.sh asserts a sibling box user cannot list or read another box.
 
 > **Status (2026-10-24):** the implementation (one Linux user and one socket-activated unit per box, `beebox/docs/implemented-plans/per-box-units.md`) has landed on `main`. Left open: the production migration (plan step 10) has not run. The boxholder owns plan questions 10 and 11 and subplan questions 1 and 2.
 
@@ -35,7 +38,7 @@ What "fixed" means is the design question. Candidates, not exclusive:
   issue already names; still worth supporting the no-container path.
 - **Allowed-directories control plane** for the agent — the write-side
   sibling,
-  [agent-containment-allowed-directories](2026-07-20-agent-containment-allowed-directories.md).
+  [agent-containment-allowed-directories](../../features/2026-07-20-agent-containment-allowed-directories.md).
   Necessary for the agent but not sufficient for the box's own processes,
   and expressible only in what Claude Code's settings can enforce.
 

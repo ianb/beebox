@@ -92,3 +92,7 @@ Reproduced without a sleeping display by pausing (SIGSTOP) the session Chrome's 
 Confirmed the same night with a real asleep display: the workspace-panes tour aborted at its first screenshot on both viewports, and passed once the display was woken. `bin/tour` now wakes the display and holds it on while tours run (ea3502dff). `bin/browse screenshot` itself still only names the cause; that is the open question above.
 
 On agent-browser 0.41.0 (2026-10-30), a stalled capture fails after 30 s, other commands keep working, and captures recover once the display wakes. `bin/browse` reports upstream's 30 s failure with the same display-asleep hint. `mouse wheel` stalls the same way while the display is asleep.
+
+Re-reviewed 2026-10-30: the hang is explained and bounded (30 s failure with a display-asleep hint; tours hold the display awake). What remains is the boxholder's choice whether bin/browse screenshot should wake the display itself.
+
+Out of date in the body above: Retitle from 'hangs' to the remaining decision: should bin/browse screenshot wake the display (caffeinate -u) before capturing.

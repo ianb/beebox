@@ -95,3 +95,6 @@ people will first try this.
 > worktree: 502 recovery, tab scroll, pin, landmark strip) are desktop-first
 > and land before this.
 
+Re-reviewed 2026-10-30: The core modal model shipped with chat everywhere (1a74113ae): one foreground region on mobile, callouts for ambient replies, and a transcript-hidden hint to the agent. What remains is mode-switch gestures, the minimal feedback set, and voice reliability.
+
+Out of date in the body above: Add a status section: the modal foreground switch and callout-on-hidden-transcript shipped (chat-everywhere plan). Trim the 'model' section to what is still open: mode-switch affordance, in-flight/pending-question feedback in document mode, voice reliability, and the iPad exception. The 2026-09-06 sequencing note is satisfied.

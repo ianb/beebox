@@ -29,3 +29,7 @@ Direction: build the commit environment from an allowlist, keep the Git variable
 hooks depend on, and add a column to
 `test/credential-visibility/every-consumer.test.ts` that reads the environment
 from a real hook.
+
+Re-reviewed 2026-10-30: The server now removes its named credentials from process.env at startup (404a180f2, 2ef5c3e51), so a hook no longer receives BBX_HUB_SECRET through commitEnvironment. The hook still gets every other server variable; the allowlist direction stands.
+
+Out of date in the body above: Replace the 'the hook receives BBX_HUB_SECRET' sentence: after the seal the named server secrets are gone from process.env; list what a hook still receives (other server env) and keep the allowlist direction.

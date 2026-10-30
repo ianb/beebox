@@ -13,3 +13,5 @@ issue activates, inspect the legacy-name inputs in
 `beebox/src/lib/state-migration.ts` and their call sites and tests. Remove only
 the compatibility that the rename work explicitly made temporary, after the
 deployed migration has had one week to run.
+
+Re-reviewed 2026-10-30: the settling period ended long ago and the legacy-name inputs are all still in state-migration.ts; the issue is actionable now.

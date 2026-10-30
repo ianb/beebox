@@ -60,3 +60,7 @@ helper.
 
 No code changed. Filed traces only, so whoever picks this up starts from the
 owners rather than the symptom.
+
+Re-reviewed 2026-10-30: the frontend name derivations now share one helper (cc0214162), but citation labels still come from the filename with no title lookup, and the backend emit-tags copy is separate.
+
+Out of date in the body above: In the 2026-09-12 trace, note that refLabel and displayName now share cardDisplayName (cc0214162), so convergence is half done; displayFromRef in emit-tags.ts remains separate, and the ref-to-title lookup is still the open decision.

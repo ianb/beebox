@@ -108,3 +108,7 @@ under the composer. Relaunching the app hit the same closure. The web client
 already had the page loaded and kept working. Two gaps: the router gives up in
 about a second on a closure the box says will end, and the app has no retry
 from that page.
+
+Re-reviewed 2026-10-30: The blank screen itself is fixed by UnreachableBoxView. Open: a local failure record, and the router's short give-up and plain-text 503 when a box is closed for maintenance.
+
+Out of date in the body above: Retitle to the remaining work (iOS shows the router's plain-text 503 when a box is closed for maintenance, and keeps no local failure record), and move the 2026-09-12 fix to a short history paragraph.

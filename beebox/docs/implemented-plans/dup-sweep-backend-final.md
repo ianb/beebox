@@ -29,7 +29,7 @@ records why, so the issue can close with a decision instead of an open list.
 [apostrophes lost in slugs](../../../issues/bugs/2026-09-02-apostrophes-lost-in-slugs-and-titles.md)
 says the slugger stays as it is, and its fix is a title lookup at the
 derivation sites. This plan does not touch those sites. The parent
-[duplication sweep](../../../issues/code-quality/2026-10-22-functional-duplication-sweep.md)
+[duplication sweep](../../../issues/closed/code-quality/2026-10-22-functional-duplication-sweep.md)
 stays open for its frontend pass.
 
 ## Design

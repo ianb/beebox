@@ -84,3 +84,7 @@ it, so the reachable harm is narrower than it was. What is undecided is what
 these background notices SHOULD do when their recorded target is gone: skip the
 notice, redirect it to the most-active chat, or start a fresh one. Each loses
 something different, and the notice exists to tell the boxholder something.
+
+Re-reviewed 2026-10-30: only the bulk-upload door remains; lifecycle.ts still calls getOrCreate on a persisted target id without a check.
+
+Out of date in the body above: Retitle to the remaining bulk-upload self-note door and move the closed controls/thread-session sections into a short resolved note; the remaining work is a product decision (skip, redirect, or start fresh).

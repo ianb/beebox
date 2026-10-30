@@ -165,3 +165,7 @@ boxholder's "the dashboard is crap" covers both.
 ## Audit 2026-10-22
 
 Drift in the openers slice. Openers now live on landmarks, not on the bound directory's briefing card (`beebox/src/schemas/landmark.ts:120-128`; commits `35ce15e2f` and `6973f0767` retired the root onboarding openers). The rest of the scope (menu of flows, onboarding landmark, dashboard first-run state) is still undone.
+
+Re-reviewed 2026-10-30: The front door shipped (6bfcaa16b): a new box seeds the question "What do you want to keep track of here?" and the empty root chat asks it, with one stock opener (voice walkthrough). The menu of flows and onboarding mechanisms remain open; starters (2026-10-08 issue) are the planned fuller answer.
+
+Out of date in the body above: Add an update section for the front door (implemented-plans/front-door.md, 6bfcaa16b): the chat zero-state now shows a seeded pending root question, so the 'Chat has no zero-state' and 'bbx init seeds zero user-recognizable content' audit bullets are out of date. Point the menu-of-flows scope at the starter-manifest issue.

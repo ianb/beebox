@@ -68,3 +68,5 @@ Still present in the [A-lending walk](../../beebox/test/user-stories/journeys/A-
 ## Re-encounter 2026-10-09 (journey walks)
 
 Seen again in two walks, now through the go-to line. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 37): "Go to Loans" replaced the conversation with a fresh, empty chat; the walker assumed the old one was "still somewhere". The building conversation has `contextDir: ""` (`.beebox/chat-session-history.json`), so the Loans place's own chat is a different conversation (`useOpenLandmarkChat`, landmark-arrival plan decision b). [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 59): switching place silently moved the walker to a different conversation and left them unsure which to ask from; answers were right from both. The priority may be stale given the repeat.
+
+Re-reviewed 2026-10-30: unchanged. The grouping is now at chat/router.ts byLandmark (~:190-240).

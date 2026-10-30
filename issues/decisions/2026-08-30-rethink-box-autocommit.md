@@ -148,3 +148,7 @@ be found by reading `beebox/src`.
   message level (docs-gen scopes to `isTemplateManagedPath`; connectors and
   commands scope to their own writes). The open question is cadence, not
   separation.
+
+Re-reviewed 2026-10-30: still undecided; groundwork pointers have drifted.
+
+Out of date in the body above: In the groundwork section: replace lib/git.ts with lib/git/ (core/operations.ts, internal.ts); drop tricks from the stageAll list and note the trick fix; box A's trick-driven volume claim may no longer absorb other work.

@@ -7,10 +7,13 @@ filed-by: agent
 discovered-in: worktree-openclaw-security-lints — while scoping shellcheck for embedded box shell
 needs: [design]
 priority: normal
+resolution: superseded
 ---
 
+**Closed (superseded, 2026-10-30):** Re-reviewed 2026-10-30: the shellcheck half is [shellcheck shell in box cards](../../features/2026-08-25-shellcheck-shell-in-box-cards.md). The duplicate-key and tab half is already enforced: both YAML parsers in beebox/src/lib/read-yaml.ts reject duplicate keys and tab indentation.
+
 Distinct scope from the dev-repo hooks
-([../code-quality/2026-07-24-security-precommit-hooks.md](../code-quality/2026-07-24-security-precommit-hooks.md)):
+([../code-quality/2026-07-24-security-precommit-hooks.md](../../code-quality/2026-07-24-security-precommit-hooks.md)):
 this validates **box content**, so it belongs in `bbx`'s card-validation path
 (per-box), not the monorepo pre-commit.
 

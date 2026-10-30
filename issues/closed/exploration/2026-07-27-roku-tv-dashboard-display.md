@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked to research
 priority: backlog
+resolution: superseded
 ---
+
+**Closed (superseded, 2026-10-30):** Re-reviewed 2026-10-30: the 2026-07-27 assessment rejected a native Roku channel; a TV reduces to a browser-capable device on the [Echo Show dashboard view](../../features/2026-07-27-echo-show-display-dashboard-view.md) path.
 
 Same want as the [Echo Show dashboard](2026-07-27-echo-show-dashboard-display.md):
 get box content up on the **Roku TVs**, ideally an always-on glanceable
@@ -91,4 +94,4 @@ one to prototype first.
 - [Echo Show dashboard display](2026-07-27-echo-show-dashboard-display.md) —
   sibling surface; shares the device-scoped display-feed core.
 - Device-scoped auth reuses the mobile device-token model
-  ([mobile device token no expiry](../code-quality/2026-07-19-mobile-device-token-no-expiry.md)).
+  ([mobile device token no expiry](../../code-quality/2026-07-19-mobile-device-token-no-expiry.md)).

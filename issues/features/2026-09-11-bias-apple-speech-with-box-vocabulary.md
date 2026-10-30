@@ -119,3 +119,7 @@ Server engines take the same list better. Whisper's `prompt` raised name
 recall on Earnings-21 from 67% to 79%, and voxtral's `context_bias` from 67%
 to 77% (single words only; see
 [voxtral context_bias rejects multi-word prompt](../closed/bugs/2026-10-23-voxtral-context-bias-rejects-multi-word-prompt.md)).
+
+Re-reviewed 2026-10-30: the title's premise is settled by measurement; passing strings to the current Apple recognizer does nothing. The remaining work is a box-level vocabulary source for the server engines, plus an optional unmeasured second-pass merge on iOS.
+
+Out of date in the body above: Retitle to the box-level vocabulary source served to every recognizer (Whisper prompt, Voxtral context_bias, iOS DictationTranscriber merge), and move 'which strings, when' to the front; set area to beebox if the server part leads.

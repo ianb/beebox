@@ -594,7 +594,7 @@ another box's caller. Three channels, and what covers each:
 | Channel | What a leak looks like | Control | Verified by |
 |---|---|---|---|
 | **A. Network** — a request carrying box A's credential (session cookie, agent bearer, mobile token) reaches box B's data, through B's scope or through A's scope with a path that climbs out | The recurring shape: a caller-supplied path-like input joined onto `boxRoot` without a containment helper (`boxRelativePath`, `containWithinBox`, `resolveContainedRef`, `resolveCardPath`, …) | Per-scope auth wall (`server-box-scope.ts`, §1) rejects A's credential on B; every path input in the route and tRPC inventory (§1) is bounded by a containment helper — must be **zero** exceptions | `test/scenarios/cross-box-probe.test.ts` (the regression anchor: box A's bearer against every read surface of box B); `schedules/cross-box-leak-scan` static sweep, weekly, hands off any new unbounded path input |
-| **B. Filesystem** — a box process reads another box's files or shared host state directly | `~/.bbx-session-secret`, `~/.bbx-auth.json`, the machine secret store, the shared Google token, `~/.claude/projects/<encoded cwd>`, `/tmp/claude-<uid>/…` | **Accepted for now** as the env-level posture (§8), with a fix on the books — [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md): one OS user, files are readable by any same-user process. Compensations: 0600/0700 modes; per-cwd keying of transcripts and task output; `bbx secrets` refuses an agent asking about another box (`secrets-guard.ts`) | `schedules/cross-box-leak-scan` host audit (local, and production over SSH from the main checkout): modes, per-cwd keying maps each project dir to at most one box, no nested box roots, no undocumented file under `~/.config/beebox` / `~/.local/share/beebox` |
+| **B. Filesystem** — a box process reads another box's files or shared host state directly | `~/.bbx-session-secret`, `~/.bbx-auth.json`, the machine secret store, the shared Google token, `~/.claude/projects/<encoded cwd>`, `/tmp/claude-<uid>/…` | **Accepted for now** as the env-level posture (§8), with a fix on the books — [cross-box-filesystem-isolation](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md): one OS user, files are readable by any same-user process. Compensations: 0600/0700 modes; per-cwd keying of transcripts and task output; `bbx secrets` refuses an agent asking about another box (`secrets-guard.ts`) | `schedules/cross-box-leak-scan` host audit (local, and production over SSH from the main checkout): modes, per-cwd keying maps each project dir to at most one box, no nested box roots, no undocumented file under `~/.config/beebox` / `~/.local/share/beebox` |
 | **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2), whose credential entries come from `src/lib/credential-env.ts`. Fixed 2026-10-30: view metadata import gave box-authored view code the whole server environment; it now gets the agent allowlist. Open gaps: box card schemas load inside the server process, and server-side commits run box Git hooks with the whole server environment (§2) | `test/hub/supervisor.test.ts`; `test/credential-visibility/every-consumer.test.ts` |
 
 **Findings of the 2026-09-03 scan** (state after this pass):
@@ -619,7 +619,7 @@ is not a credential-only path; recorded as accepted rather than closed
 (cross-model review, 2026-09-04). Channel B is not defended and is not
 claimed to be; a determined same-user process reads what it likes. That is
 accepted for now and tracked for a fix in
-[cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md)
+[cross-box-filesystem-isolation](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md)
 (the agent-side half is
 [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md),
 which shares the two-box fixture). Boxes also share one browser origin
@@ -679,7 +679,7 @@ Every `accepted` item, with its rationale:
    the aggregated `scheduler-stderr.log`), and a symlink it plants inside its
    own box is followed by string-contained read sinks. Env-level isolation is
    the posture for now — a per-box boundary is tracked in
-   [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md);
+   [cross-box-filesystem-isolation](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md);
    the network channel is tested to zero and re-swept weekly. (§7b)
 
 13. **Box agents install distro packages as root** — through one validating

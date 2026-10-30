@@ -84,3 +84,7 @@ be the right builder.
 
 Per "examples do double duty," every piece of this family should both make a good
 demo AND model good box setup for someone learning from it.
+
+Re-reviewed 2026-10-30: The suggested builder `src/scenario/` was removed (741dca4cb); `bbx field-test` (beebox/src/field-test/) is the nearest seed machinery now.
+
+Out of date in the body above: Replace the `src/scenario/` builder suggestion with beebox/src/field-test/ (bbx field-test) or a plain seed script.

@@ -75,3 +75,5 @@ phrasing of them is worth more than a paraphrase.
 Short — it is meant to be consulted constantly, and length defeats that. The
 trigger should be broad (any substantial prose written to the developer), so
 the description matters more than the name.
+
+Re-reviewed 2026-10-30: no skill exists. The retrospective schedule's coding-feedback ledger (bin/coding-feedback) is a further source of the developer's own corrections to collect from.

@@ -6,7 +6,10 @@ labels: [tests, code-quality]
 filed-by: agent
 discovered-by: Ian
 discovered-in: skills-review — "we write too many tests" (2026-10-08)
+resolution: superseded
 ---
+
+**Closed (superseded, 2026-10-30):** Re-reviewed 2026-10-30: same proposal as [remove tests that never earn their keep](../../code-quality/2026-10-08-remove-tests-that-never-earn-their-keep.md), which carries the agreed criteria and later rounds.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

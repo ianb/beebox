@@ -37,7 +37,7 @@ legacy routes.
 - **Blog shape.** A blog needs dated posts, an index, feeds (RSS/Atom),
   permalinks that never change, and drafts. These could be a box-local page
   or post schema plus a site project, or a stock blog template. Compare
-  [site authored in a box](../exploration/2026-08-19-site-authored-in-a-box.md),
+  [site authored in a box](../closed/exploration/2026-08-19-site-authored-in-a-box.md),
   which proposes the same thing for beebox.run.
 - **Importing an existing site.** Old URLs must keep working (redirects), and
   existing posts come in from another system's export.

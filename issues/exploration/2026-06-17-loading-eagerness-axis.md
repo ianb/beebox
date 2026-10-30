@@ -56,3 +56,7 @@ analogous to the memory-writing guidance above (which routes *facts*; this route
 just-use-a-rule; should the box actively *suggest* promoting an oversized
 AGENTS.md section into a rule/skill when the size lint fires; how does this
 interact with `agent-guide.md` generation (another always-on consumer).
+
+Re-reviewed 2026-10-30: The tier router exists for developers as the bbx-context skill, and the box agent routes durable rules to briefing and guide cards. Box skills are a managed set the box cannot author, which rules out sub-idea 2. What remains is whether the box agent itself needs the tier router and whether the size lint should suggest promoting sections.
+
+Out of date in the body above: Cite .claude/skills/bbx-context/SKILL.md as the shipped tier router (developer-facing) and guide.md RECORDING as the box-agent routing. Note that box skills are managed by beebox/src/core/box/guidance-sync/skills/core.ts and not box-authored, so 'be more eager to mint skills' is decided against. Fix the lint path to beebox/src/core/instruction-file-lint.ts. Narrow the open question to the two remaining items.

@@ -21,3 +21,5 @@ each card-type doc, keeping doc and validation drift-free by construction.
 
 Not scheduled work — filed so the endorsed-but-missing state is recorded
 somewhere actionable rather than only inside a frozen RFC.
+
+Re-reviewed 2026-10-30: Generator now lives in beebox/src/core/docs-gen/ (bbx docs refresh); still emits no JSON Schema.

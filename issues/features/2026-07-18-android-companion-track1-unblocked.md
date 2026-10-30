@@ -27,3 +27,5 @@ internal/sideload testing can proceed in parallel.
 
 No emulator system image is installed (not needed for unit tests; add one or
 use a real device over adb when the device pass matters).
+
+Re-reviewed 2026-10-30: still not started. The server-side 2026-07-17 mobile bugs the plan wanted fixed first are now closed, and the Node pin moved to 24, so re-check the toolchain before starting.

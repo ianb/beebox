@@ -88,3 +88,5 @@ Related: the health-monitor surfacing that started this
 (`docs/scheduler.md` / the scheduled-task health state at
 `config/schedules/.state/*.json`), and the consolidation instinct generally
 (prefer one home over duplicated instructions).
+
+Re-reviewed 2026-10-30: the Admin interface card (_config/interface/admin.card) now exists for host-wide controls; it holds no maintenance playbook. Decide whether the maintenance owner is that card, a landmark, or both.

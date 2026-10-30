@@ -58,3 +58,7 @@ say they need conversion rather than describing them as a supported second shape
 ## Audit 2026-10-22
 
 Part 1 is mostly gone. Most listed sites were deleted or moved in the layout moves and later rewrites; a search for the legacy-box wording finds two stale comments: `beebox/src/core/list-cards.ts:95` and `beebox/src/lib/git/core/operations.ts:113`. Part 2 is unverified: the scenario boxes under `~/src/boxes/scenarios/` now use a `box/` subdirectory with a different layout, so re-check them before acting.
+
+Re-reviewed 2026-10-30: part 1 is down to two comments; part 2 is obsolete because the scenario boxes belong to the deleted `bbx scenario` runner (741dca4cb) and no repo code uses them.
+
+Out of date in the body above: Shrink part 1 to the two remaining comments (list-cards.ts:95, git/core/operations.ts:113). Replace part 2 with: the ~/src/boxes/scenarios dirs are fixtures of the deleted bbx scenario runner; delete them locally or ignore (boxholder's machine, not repo work).

@@ -33,3 +33,5 @@ Probed 2026-10-29 on pi 1.4.0: pi sends `HTTP-Referer: https://pi.dev`,
 `X-OpenRouter-Title: pi` and `X-OpenRouter-Categories: cli-agent`. A
 `providers.openrouter.headers` entry in pi's `agentDir/models.json` replaced
 the first two on the wire. `PI_TELEMETRY=0` removes all three.
+
+Re-reviewed 2026-10-30: no attribution headers anywhere in beebox/src. The pi engine is no longer planned; it shipped (`beebox/src/core/agent/pi-run/`) and still sends pi's own headers.
