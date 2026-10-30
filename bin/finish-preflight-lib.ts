@@ -149,10 +149,18 @@ export function isTestPath(path: string): boolean {
  * checkpoint note finish appends under `issues/` was flipping every
  * docs-only landing into the full test tier plus the smoke walk. This
  * matches `hasCodeChange`, which already treats any `.md` as a doc.
+ *
+ * A doc asset sits in a top-level docs directory (`docs/` or `<package>/docs/`)
+ * and is not script source: a `docs` directory deeper in a tree is ordinary
+ * code (`beebox/src/connectors/google-drive/handlers/docs/handler.ts`).
  */
 export function isDocsOnly(paths: string[]): boolean {
   if (paths.length === 0) return false;
-  return paths.every((path) => isDocPath(path) || path.split("/").includes("docs"));
+  return paths.every((path) => isDocPath(path) || isDocAsset(path));
+}
+
+function isDocAsset(path: string): boolean {
+  return /^([^/]+\/)?docs\//.test(path) && !/\.(ts|tsx|js|jsx|mjs|cjs|sh)$/.test(path);
 }
 
 /** Anything the public site build reads: site/ itself, or any markdown (the docs manifest promotes repo docs). */

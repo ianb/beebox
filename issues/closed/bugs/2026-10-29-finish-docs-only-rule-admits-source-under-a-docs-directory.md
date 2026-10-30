@@ -1,12 +1,15 @@
 ---
 title: "finish-preflight treats source code in any `docs/` directory as a docs-only change"
-workstream: unattached
+workstream: tooling-burndown
 area: bin
 labels: [finish, verification]
 filed-by: agent
 discovered-by: agent
 discovered-in: "tooling-burndown worker — finish-preflight skip-rule change, 2026-10-29"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** isDocsOnly now counts a non-.md path as a doc asset only in a top-level docs directory (docs/ or <package>/docs/) and never when it is TS/JS or shell source; tests in bin/finish-preflight.test.ts cover the Google Drive docs handler paths.
 
 `isDocsOnly` in `bin/finish-preflight-lib.ts` counts a path as a doc when it is
 a `.md` file or when any path segment is `docs`. The second clause matches

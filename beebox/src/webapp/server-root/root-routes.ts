@@ -28,6 +28,7 @@ import { verifyMobileRequest } from "../../core/mobile/request-auth.js";
 import { verifyBrowseKey } from "../../core/browse-key.js";
 import type { CardSymbolData } from "../../shared/card-symbol.js";
 import { startupPhases } from "../../lib/startup-timing.js";
+import { serverSecret } from "../../lib/server-secrets.js";
 
 /** Body of `POST /api/push/resubscribe` — validated at the HTTP boundary. */
 const resubscribeBodySchema = z.object({
@@ -182,7 +183,7 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // server-level state — boxes have their own richer health endpoint at
   // /<box>/api/trpc/health.check that this does NOT roll up.
   server.get("/healthz", async (request, reply) => {
-    if (!process.env.BBX_DIAG_API_KEY) {
+    if (!serverSecret("BBX_DIAG_API_KEY")) {
       return reply.status(503).send({ status: "unconfigured", error: "BBX_DIAG_API_KEY not set" });
     }
     if (!verifyDiagBearerKey(request)) {

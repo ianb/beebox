@@ -20,13 +20,18 @@
  *   `/etc/beebox/box.env` (`hub/box-env-file.ts`) takes only the `inherit`
  *   names.
  * - `agent` — every box subprocess that runs agent-authored code:
- *   `buildScriptEnv`. The Claude, Codex and pi engines all start from it.
+ *   `buildScriptEnv`. The Claude, Codex and pi engines all start from it, and
+ *   so does `bbx view check`'s render child. The view metadata import child
+ *   takes this allowlist without the injected names (`agentAllowlistEnv`).
  * - `tooling` — the box's own `bbx` tooling: `buildToolingScriptEnv`.
  * - `claudeEngine` — what a Claude CLI run gets on top of `agent`: the most
  *   that `providerEnvAdditions` (`core/provider-env/core.ts`) or the prompt
  *   logger (`core/agent/invoke/run.ts`) adds for any provider. Never
  *   `inherit`. The warm slot compares the `inject` names, since an injected
  *   value can change between prewarm and send.
+ *
+ * The server moves the credentials it uses out of its own `process.env` at
+ * startup (`lib/server-secrets.ts`), so a spread after that point omits them.
  *
  * Not governed here, because they spread `process.env` rather than take a
  * list: the `claude auth` commands (`services/claude-cli.ts`, which drops an
@@ -91,7 +96,7 @@ export const CREDENTIAL_ENV: Readonly<Record<string, CredentialRule>> = {
   },
   BBX_BROWSE_API_KEY: {
     visibility: DENY_ALL,
-    why: "The dev browse-service bearer: full app access machine-wide. No box process reads it.",
+    why: "The dev browse-service bearer: full app access machine-wide. A dev box server verifies it in process (core/browse-key.ts); no box subprocess reads it.",
   },
   BBX_AGENT_TOKEN: {
     visibility: { ...DENY_ALL, agent: "inject", tooling: "inject" },

@@ -21,6 +21,7 @@ import { errnoCode } from "../shared/error-guards.js";
 import { canonicalizeEmail, getLocalOwnerEmail, getLocalUser } from "./local-users.js";
 import { getLocalUserCached } from "./local-users-cache.js";
 import { AuthStoreUnavailableError } from "./local-users-errors.js";
+import { serverSecret } from "../lib/server-secrets.js";
 
 const COOKIE_NAME = "bbx_session";
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -34,8 +35,9 @@ function getSessionSecret(): string {
   // TODO(env-migration): BBX_SESSION_SECRET is validated + redacted at startup
   // (lib/env.ts serverEnvSchema); this read stays direct because it carries a
   // file-fallback + caching path that doesn't belong in a schema.
-  if (process.env.BBX_SESSION_SECRET) {
-    cachedSecret = process.env.BBX_SESSION_SECRET;
+  const envSecret = serverSecret("BBX_SESSION_SECRET");
+  if (envSecret) {
+    cachedSecret = envSecret;
     return cachedSecret;
   }
 
@@ -69,7 +71,7 @@ function getSessionSecret(): string {
 export type DiagRequest = Pick<FastifyRequest, "method" | "url" | "headers">;
 
 export function verifyDiagBearerKey(request: Pick<DiagRequest, "headers">): boolean {
-  const key = process.env.BBX_DIAG_API_KEY;
+  const key = serverSecret("BBX_DIAG_API_KEY");
   if (!key) return false;
   const auth = request.headers["authorization"];
   if (typeof auth !== "string") return false;
@@ -158,7 +160,12 @@ export const HUB_AUTH_OFF_HEADER = "x-bbx-hub-auth";
  * headers." See `resolveRequestIdentity`.
  */
 export function isHubMode(): boolean {
-  return !!process.env.BBX_HUB_SECRET;
+  return !!hubSecret();
+}
+
+/** This box's hub secret, or undefined outside hub mode. */
+export function hubSecret(): string | undefined {
+  return serverSecret("BBX_HUB_SECRET");
 }
 
 /**
@@ -184,7 +191,7 @@ export interface IdentityRequest {
  * header is missing, or the value doesn't match.
  */
 export function verifyHubSecret(request: Pick<IdentityRequest, "headers">): boolean {
-  const secret = process.env.BBX_HUB_SECRET;
+  const secret = hubSecret();
   if (!secret) return false;
   const header = request.headers[HUB_SECRET_HEADER];
   if (typeof header !== "string") return false;

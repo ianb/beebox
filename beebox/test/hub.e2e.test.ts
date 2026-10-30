@@ -38,6 +38,8 @@ const execFileP = promisify(execFile);
 tap.setTimeout(600_000);
 
 const STARTUP_TIMEOUT_MS = 120_000;
+const SCHEMAS_DIR = "src/schemas";
+const SCHEMA_ENV_PROBE = "schema-env-probe.json";
 
 // Auth is always-on now — there is no open-mode opt-out anymore, so the spawned
 // `bbx hub` always enforces the wall. This e2e therefore authenticates for real:
@@ -149,6 +151,15 @@ async function makeFixtureBox() {
   await installGuides(boxRoot);
   await installSchedules(boxRoot);
   await installPersonality(boxRoot);
+  // Records what box-authored schema code finds in the server's environment.
+  const schemasDir = path.join(boxRoot, SCHEMAS_DIR);
+  await fs.mkdir(schemasDir, { recursive: true });
+  await fs.writeFile(path.join(schemasDir, "env-probe.ts"), `import { writeFileSync } from "node:fs";
+import { cardSchema } from "beebox/cards";
+const names = ["BBX_HUB_SECRET", "BBX_DIAG_API_KEY"];
+writeFileSync(${JSON.stringify(path.join(target, SCHEMA_ENV_PROBE))}, JSON.stringify(names.filter((name) => process.env[name] !== undefined)));
+export default cardSchema("env-probe", {});
+`);
 
   return { target, boxRoot };
 }
@@ -281,6 +292,15 @@ void test("Rebuild the CLI bundle once, up front, outside the timed readiness wa
       ]),
     },
   });
+
+  // The authenticated request above needed the hub secret, so the child still
+  // holds it. Schema code in the same process finds neither credential:
+
+  const probe: unknown = JSON.parse(await waitFor(
+    () => fs.readFile(path.join(fixture!.target, SCHEMA_ENV_PROBE), "utf-8").catch(() => null),
+    { timeoutMs: 30_000, intervalMs: 100, label: "the fixture schema to record its environment" },
+  ));
+  t.check(probe, []);
 
   // ## SIGTERM kills the hub AND its child -- no orphan
   //
