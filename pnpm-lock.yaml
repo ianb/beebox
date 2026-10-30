@@ -536,8 +536,8 @@ importers:
   browse/packages/agent-browser-typed:
     dependencies:
       agent-browser:
-        specifier: ^0.27.0
-        version: 0.27.0
+        specifier: 0.41.0
+        version: 0.41.0
 
   canvas-loop:
     dependencies:
@@ -4277,8 +4277,9 @@ packages:
     resolution: {integrity: sha512-TQf59BsZnytt8GdJKLPfUZ54g/iaUL2OWDSFCCvMOhsHduDQxO8xC4PNeyIkVcA5KwL2phPSv0douC0fgWzmnA==}
     engines: {node: '>= 20'}
 
-  agent-browser@0.27.0:
-    resolution: {integrity: sha512-mmHzVsYFVA6nshNNGJzg83aVMgKpf4h98ytY3pvtJB1Cot0ZyA2bfnkbSngGD56Azkj+GlhVH6qx9DfKOVE0yg==}
+  agent-browser@0.41.0:
+    resolution: {integrity: sha512-XJtBouE5+gGUKyZU1COSmnxU6MKIlmLE2oEyHzl0ohLVOhuRjx9kqQ9vOqxiiW/Gbvi4JPF4Oz777Mn3FGiHAA==}
+    engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
     hasBin: true
 
   agent-browser@0.39.2:
@@ -12308,7 +12309,7 @@ snapshots:
 
   agent-base@9.0.0: {}
 
-  agent-browser@0.27.0: {}
+  agent-browser@0.41.0: {}
 
   agent-browser@0.39.2(patch_hash=46f9468903775f0f7cd6b4c306f17f32011bbfab4b8ea77ec6b144db0b22af01): {}
 

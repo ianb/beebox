@@ -60,7 +60,7 @@ The demo `Orbit.figure.card` (in the test box at
 level only — canvas mounted at declared size, generated controls present, no
 error state — because the browse screenshot op flaked
 ([agent-browser-screenshot-flake](../closed/bugs/2026-07-10-agent-browser-screenshot-flake.md),
-[browse-daemon-wedges-on-animated-canvas](2026-07-14-browse-daemon-wedges-on-animated-canvas.md)).
+[browse-daemon-wedges-on-animated-canvas](../closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md)).
 Its rendered frames were checked separately via the headless CLI. **To close:**
 open the card in a real browser and eyeball it — sun + 3 planets animate, the
 speed slider / show-orbits toggle / focus select / reset button work, a planet

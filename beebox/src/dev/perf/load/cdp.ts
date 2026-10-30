@@ -47,7 +47,17 @@ interface Pending {
   method: string;
   resolve: (result: unknown) => void;
   reject: (error: Error) => void;
+  timer: NodeJS.Timeout;
 }
+
+/**
+ * How long one command may go unanswered. A tab that stopped responding never
+ * answers, and the open socket keeps Node alive, so without a deadline a run
+ * hung with no output and no exit (2026-10-23, perf:load on a wedged browse
+ * browser). The slowest real command, `Page.navigate` on a cold box, takes a
+ * few seconds.
+ */
+export const COMMAND_TIMEOUT_MS = 60_000;
 
 export class CdpConnection {
   private nextId = 1;
@@ -57,7 +67,10 @@ export class CdpConnection {
   private constructor(private readonly socket: WebSocket) {
     socket.addEventListener("message", (ev) => this.onMessage(ev));
     socket.addEventListener("close", () => {
-      for (const p of this.pending.values()) p.reject(new CdpError(p.method, "connection closed"));
+      for (const p of this.pending.values()) {
+        clearTimeout(p.timer);
+        p.reject(new CdpError(p.method, "connection closed"));
+      }
       this.pending.clear();
     });
   }
@@ -76,7 +89,11 @@ export class CdpConnection {
     const id = this.nextId++;
     const message = { id, method, params: options?.params ?? {}, ...(options?.sessionId === undefined ? {} : { sessionId: options.sessionId }) };
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { method, resolve, reject });
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new CdpError(method, `no answer within ${String(COMMAND_TIMEOUT_MS / 1000)} s; the tab may have stopped responding`));
+      }, COMMAND_TIMEOUT_MS);
+      this.pending.set(id, { method, resolve, reject, timer });
       this.socket.send(JSON.stringify(message));
     });
   }
@@ -102,6 +119,7 @@ export class CdpConnection {
       const pending = this.pending.get(msg.id);
       if (!pending) return;
       this.pending.delete(msg.id);
+      clearTimeout(pending.timer);
       if (msg.error) pending.reject(new CdpError(pending.method, msg.error.message));
       else pending.resolve(msg.result);
       return;

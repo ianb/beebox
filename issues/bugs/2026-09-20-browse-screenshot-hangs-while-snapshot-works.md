@@ -82,3 +82,13 @@ Seen again in [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/repo
 ## Re-encounter 2026-10-18 (turn-feedback workstream)
 
 Seen again in the evening: `/turn-feedback/test1/chats` screenshots timed out while `/box` and `main`'s pages captured, which looked page-specific and cost a bisect through the agent's own change before the baseline hung too. Intermittent capture made it read as a code bug. Verification fell back to `bin/browse eval` polling. A first step of "is the display asleep?" in the browse skill would have saved the round trips.
+
+## Mechanism and wrapper change, 2026-10-30 (browse-wedge)
+
+Reproduced without a sleeping display by pausing (SIGSTOP) the session Chrome's GPU process: the capture waits for a frame that never comes. On agent-browser 0.27.0 the client re-sends the capture five times and fails after 152 s, while `eval` and `snapshot` keep working, the same as every report above. Details and a version comparison are in the [daemon wedge issue](../closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md).
+
+`bin/browse screenshot` now stops after 45 s and prints "On macOS a stuck capture usually means the display is asleep: `caffeinate -u -t 2` wakes it" (713bf637e). The display could not be held asleep long enough tonight to test the real case: another app's wake lock turned it back on within seconds. Open question for the boxholder: should `bin/browse screenshot` wake the display itself (`caffeinate -u`) before capturing? That fixes unattended runs but turns the screen on.
+
+Confirmed the same night with a real asleep display: the workspace-panes tour aborted at its first screenshot on both viewports, and passed once the display was woken. `bin/tour` now wakes the display and holds it on while tours run (ea3502dff). `bin/browse screenshot` itself still only names the cause; that is the open question above.
+
+On agent-browser 0.41.0 (2026-10-30), a stalled capture fails after 30 s, other commands keep working, and captures recover once the display wakes. `bin/browse` reports upstream's 30 s failure with the same display-asleep hint. `mouse wheel` stalls the same way while the display is asleep.
