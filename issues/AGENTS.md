@@ -59,7 +59,7 @@ category and the date is the filing date. There is no `type:` field.
   ordinary queue or schedule periodic checks; move actionable work elsewhere.
 
 Choose the dominant category: a bug whose likely fix is a refactor remains a
-bug. Reclassify with `git mv`.
+bug. Reclassify with `bin/doc-move <issue> issues/<category>/`.
 
 ## Frontmatter
 
@@ -223,10 +223,9 @@ The `issue` value is the path under `issues/`, URL-encoded. Add
 `&issueVisibility=private` only for a private issue; public is the default.
 
 Issue basenames must be unique across the tree; duplicates fail doc-check.
-After any move, close,
-reclassification, or rename, run `pnpm --dir beebox doc-check --fix`; it repairs
-inbound links for moved files by unique basename and reports true renames,
-deletions, or ambiguity for manual repair.
+Move or rename with `bin/doc-move` and close with `bin/issues close`: both
+rewrite every reference to the moved file, print each one, and print
+`check by hand` for anything they cannot rewrite.
 
 ## Deferred items
 
@@ -245,10 +244,10 @@ remain directly addressable. Their links and unique basenames remain enforced.
 
 ## Closed items
 
-Close with `git mv` into `closed/<category>/`, preserving the category. Add
-`resolution: implemented`, `wontfix`, or `superseded`, plus a short opening note
-naming the resolving commit, plan, or reason. The move adds a directory level;
-recompute each relative link in the body from the new location. Open issues must not carry
+Close with `bin/issues close <issue> --resolution implemented|wontfix|superseded
+--note "<resolving commit, plan, or reason>"`. It moves the file into
+`closed/<category>/`, sets `resolution:` and `workstream:`, and makes the note
+the opening line of the body. Open issues must not carry
 `resolution:`. Git history is the archive; periodic maintenance may delete
 long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; they are `AGENTS.md` now. Older documents here keep the old name and carry a naming note. Tests were Markdown doctests (`*.doctest.md`, run by the `agent-doctest` package) until 2026-10-18; they are `.test.ts` files with `t.check` now, in the same directory under the same base name, and the package is `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 
@@ -265,7 +264,7 @@ where and under what conditions it appeared, then apply the matching transition:
   priority may be stale and, if no next action exists, set `discuss` so the
   developer sees it. Preserve any existing next action. `important` needs no
   priority note.
-- Reopen a closed issue with `git mv`, remove `resolution:`, and record what the
+- Reopen a closed issue with `bin/doc-move`, remove `resolution:`, and record what the
   previous fix missed. Keep a new report separate only when it is a different
   defect. A duplicate of a closed issue is only closed if the closed one's fix
   is still in place.

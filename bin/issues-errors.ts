@@ -158,3 +158,61 @@ export class InvalidNextActionValueError extends UsageError {
     this.name = "InvalidNextActionValueError";
   }
 }
+
+// ─── close ───────────────────────────────────────────────────────────────────
+
+export class MissingClosePathError extends UsageError {
+  public constructor() {
+    super("close needs an issue: issues close <issue-path> --resolution <r> --note <text>");
+    this.name = "MissingClosePathError";
+  }
+}
+
+export class MissingResolutionError extends UsageError {
+  public constructor() {
+    super("close needs --resolution implemented|wontfix|superseded");
+    this.name = "MissingResolutionError";
+  }
+}
+
+export class MissingNoteError extends UsageError {
+  public constructor() {
+    super("close needs --note <text>: the resolving commit, plan, or reason");
+    this.name = "MissingNoteError";
+  }
+}
+
+export class MultipleWorkstreamsError extends UsageError {
+  public constructor() {
+    super("close takes one --workstream");
+    this.name = "MultipleWorkstreamsError";
+  }
+}
+
+export class AlreadyClosedIssueError extends UsageError {
+  public constructor(issuePath: string) {
+    super(`${issuePath} is already closed`);
+    this.name = "AlreadyClosedIssueError";
+  }
+}
+
+export class ManualTestingCloseError extends UsageError {
+  public constructor(issuePath: string) {
+    super(`${issuePath} has needs: [manual-testing]; only the developer clears that gate (issues/AGENTS.md, "Manual-testing lifecycle")`);
+    this.name = "ManualTestingCloseError";
+  }
+}
+
+export class MissingIssueFrontmatterError extends UsageError {
+  public constructor() {
+    super("issue has no YAML frontmatter");
+    this.name = "MissingIssueFrontmatterError";
+  }
+}
+
+export class BrokenNoteLinkError extends UsageError {
+  public constructor(closedPath: string, targets: string[]) {
+    super(`--note links resolve from ${closedPath}; these do not exist: ${targets.join(", ")}`);
+    this.name = "BrokenNoteLinkError";
+  }
+}

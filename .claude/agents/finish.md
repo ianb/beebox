@@ -85,18 +85,19 @@ from diff"). Evidence only — never a commit message, branch name, or the plan'
 own prose, and never a fabricated citation. PARTIAL/UNMET does not block. Then
 reconcile each plan in `plan.docs` this branch introduced or modified:
 
-- all MET → `git mv` `docs/plans/` → `docs/implemented-plans/`; fold durable "how it
+- all MET → move `docs/plans/` → `docs/implemented-plans/`; fold durable "how it
   works now" prose into a present-tense `docs/` reference, or delete the plan if
   code and reference docs now cover it.
 - any PARTIAL/UNMET → leave it in `docs/plans/` and edit prose to mark what is
   real (with links) vs still future — never "we will introduce X" when X exists.
   Draft the follow-up issue in the report (`workstream:` prefilled); don't file.
-- abandoned/superseded → `git mv` to `docs/unimplemented-plans/` + a row in its
+- abandoned/superseded → move to `docs/unimplemented-plans/` + a row in its
   README's disposition table.
 - Set frontmatter `status:` (`implemented`/`partial`/`superseded`/`parked`), no
-  duplicate prose line; renames follow `beebox/docs/README.md`. After a move run
-  `doc-check --fix` and `doc-graph` (`pnpm --dir beebox`), then `git grep` the old
-  basename: `--fix` skips tests and misses some paths in code comments and strings.
+  duplicate prose line; renames follow `beebox/docs/README.md`. Move with
+  `bin/doc-move <plan> <destination-dir>/`: it rewrites every
+  reference, tests included, and prints each; fix any `check by hand` line.
+  Then run `pnpm --dir beebox doc-graph`.
 
 ## 6. Close resolved issues
 Start with the sheet's `issues`, the plan's frontmatter `issues:`, the briefing,
@@ -106,15 +107,12 @@ references. Expand beyond those links only when the work or a candidate gives
 specific evidence of a missing related issue; search that symptom or identifier,
 not every file and symbol in the diff. Do not re-search candidates already
 reconciled in this work unit unless later changes affect their resolution.
-For each issue this work **actually resolves**: `git mv issues/<category>/<x>.md
-issues/closed/<category>/`, then in the moved file add `resolution:
-implemented|wontfix|superseded`, set `workstream:` to the bare workstream name, and
-put a closing note atop the body naming the resolving commit and any divergence from
-what the issue proposed. Then repair links as in step 5.
+For each issue this work **actually resolves**: `bin/issues close <issue>
+--resolution implemented|wontfix|superseded --workstream <name> --note "<resolving
+commit; any divergence from what the issue proposed>"`; fix any `check by hand` line.
 Never close an issue with `needs: [manual-testing]` — only the boxholder clears
 that. Ambiguous, or a deliberate punch-list → leave open and name it. **Private
-issues** close the same way inside `private-issues/`, where `doc-check --fix`
-does not apply — repair private→private links by hand.
+issues** close with the same command; commit them inside `private-issues/`.
 
 ## 7. Gate, then `bin/land`
 The workstream's isolated test1 clone: if it has a `keep` branch (none → skip)

@@ -121,6 +121,11 @@ commits them; `bin/issues next-action` lists, sets, and clears them from any
 checkout. `workstreams-app/src/server/main/issue-next-actions.ts` is the only
 reader and writer.
 
+`bin/issues close` and `bin/doc-move` share `bin/lib/doc-move.ts`: one `git mv`,
+then only references that resolve to the moved file's old path are rewritten.
+`doc-check --fix` stays the whole-tree, guess-by-basename repair; do not call it
+from a move.
+
 ## CODING_FEEDBACK (`bin/coding-feedback`)
 
 A short retrospective note an agent writes at four checkpoints: `plan-reviewed`
