@@ -214,11 +214,14 @@ test("a docs-only diff names every command as skipped rather than hiding it", ()
 });
 
 test("skipTypecheckLint keys on what pre-commit never saw", () => {
+  // The branch has code of its own, so every merge's code meets it.
   const skip = (merges: { sha: string; paths: string[] }[], stragglers: string[]): boolean =>
-    skipTypecheckLintDecision({ merges, stragglers }).value;
+    skipTypecheckLintDecision({ merges, stragglers, vsMain: ["beebox/src/mine.ts"] }).value;
   assert.equal(skip([], []), true);
   assert.equal(skip([{ sha: "a", paths: ["issues/bugs/x.md", "beebox/docs/a.md"] }], []), true);
   assert.equal(skip([{ sha: "a", paths: ["beebox/src/x.ts"] }], []), false);
+  // Tests are typechecked, so a merge that brought only a test still counts.
+  assert.equal(skip([{ sha: "a", paths: ["beebox/src/x.test.ts"] }], []), false);
   // An older merge's code is still unchecked when the newest merge brought only docs.
   const merges = [
     { sha: "new", paths: ["beebox/docs/a.md"] },
@@ -227,6 +230,24 @@ test("skipTypecheckLint keys on what pre-commit never saw", () => {
   assert.equal(skip(merges, []), false);
   // An uncommitted file ran no pre-commit at all, whatever the merges did.
   assert.equal(skip([], ["a.ts"]), false);
+  assert.equal(skipTypecheckLintDecision({ merges: [], stragglers: ["a.ts"], vsMain: [] }).value, false);
+});
+
+test("skipTypecheckLint skips a merge of code into a branch whose tree differs from main only in docs", () => {
+  const merges = [{ sha: "abcdef0123", paths: ["beebox/src/x.ts"] }];
+  const decide = (vsMain: string[]) => skipTypecheckLintDecision({ merges, stragglers: [], vsMain });
+  const docsOnly = decide(["issues/bugs/x.md", "beebox/docs/a.md"]);
+  assert.equal(docsOnly.value, true);
+  assert.match(docsOnly.reason, /^merge abcdef012 brought code, but HEAD differs from main only in \.md files/);
+  assert.equal(decide([]).value, true);
+  // Any non-.md path forces the checks: a branch test, a doc asset under docs/
+  // (a .ts there is typechecked), or a conflict resolved in code, which shows
+  // up in the same tree diff.
+  for (const path of ["beebox/src/x.test.ts", "beebox/docs/example.ts", "beebox/src/x.ts"]) {
+    const decision = decide(["beebox/docs/a.md", path]);
+    assert.equal(decision.value, false, path);
+    assert.ok(decision.reason.includes(path), decision.reason);
+  }
 });
 
 test("the skipped typecheck/lint commands are still listed, with the reason", () => {

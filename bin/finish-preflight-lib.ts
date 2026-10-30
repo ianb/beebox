@@ -384,6 +384,12 @@ export interface SkipInput {
   merges: { sha: string; paths: string[] }[];
   /** Uncommitted paths — never verified by any earlier commit's pre-commit. */
   stragglers: string[];
+  /**
+   * Paths where HEAD's committed tree differs from main's (`git diff main
+   * HEAD`, with main merged in): the branch's own commits plus whatever any
+   * merge resolved or otherwise changed.
+   */
+  vsMain: string[];
 }
 
 /**
@@ -393,7 +399,8 @@ export interface SkipInput {
  * is the one that holds without it. Pre-commit runs typecheck and lint on
  * every worktree commit, so the branch's own commits are already covered — a
  * finish needs them again only when something arrived that pre-commit never
- * saw: code from a merge, or an uncommitted straggler.
+ * saw: a non-`.md` path from a merge (tests included: they are typechecked),
+ * or an uncommitted straggler.
  *
  * Every merge counts, not just this run's. A first preflight run that merged
  * code from main and then stopped leaves a merge commit that a clean merge's
@@ -403,22 +410,37 @@ export interface SkipInput {
  * No later commit counts as evidence that the merged tree was checked:
  * pre-commit skips docs-only commits, and on any commit (a conflicted merge's
  * included) it typechecks only the packages that commit stages.
+ *
+ * A merge's code goes unchecked only when it meets code of the branch's own.
+ * When HEAD's tree differs from main's only in `.md` files, the merged code is
+ * main's code, which main's own landings checked. Any other path in that diff
+ * (a branch commit, a conflict resolved in code, an evil merge) still forces
+ * both checks.
  */
 export function skipTypecheckLintDecision(input: SkipInput): { value: boolean; reason: string } {
   if (input.stragglers.length > 0) {
     return { value: false, reason: "uncommitted paths never ran pre-commit" };
   }
-  const codeMerge = input.merges.find((merge) => hasCodeChange(merge.paths));
-  if (codeMerge !== undefined) {
+  const codeMerge = input.merges.find((merge) => merge.paths.some((path) => !isDocPath(path)));
+  if (codeMerge === undefined) {
+    if (input.merges.length === 0) {
+      return { value: true, reason: "no merge on this branch; pre-commit covered every commit" };
+    }
+    return { value: true, reason: "no merge on this branch brought code; pre-commit covered every commit" };
+  }
+  const merge = `merge ${codeMerge.sha.slice(0, 9)}`;
+  const ownCode = input.vsMain.filter((path) => !isDocPath(path));
+  if (ownCode.length === 0) {
     return {
-      value: false,
-      reason: `merge ${codeMerge.sha.slice(0, 9)} brought code in; no hook typechecked the merged tree`,
+      value: true,
+      reason: `${merge} brought code, but HEAD differs from main only in .md files; main's landings checked that code`,
     };
   }
-  if (input.merges.length === 0) {
-    return { value: true, reason: "no merge on this branch; pre-commit covered every commit" };
-  }
-  return { value: true, reason: "no merge on this branch brought code; pre-commit covered every commit" };
+  const more = ownCode.length > 1 ? ` +${String(ownCode.length - 1)}` : "";
+  return {
+    value: false,
+    reason: `${merge} brought code in and HEAD differs from main in code (${ownCode[0] ?? ""}${more}); no hook typechecked the merged tree`,
+  };
 }
 
 /** Below this many changed source lines a diff review finds nothing lint didn't. */

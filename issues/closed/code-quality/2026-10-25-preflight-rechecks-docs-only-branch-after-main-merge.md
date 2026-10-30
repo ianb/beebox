@@ -6,7 +6,17 @@ labels: [finish, tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261025-233625
+resolution: implemented
 ---
+
+**Closed 2026-10-29 (tooling-burndown).** `skipTypecheckLintDecision` now
+also takes `vsMain`, the paths where HEAD's tree differs from main's. When a
+merge brought code but `vsMain` holds only `.md` files, the sheet skips both
+checks and says why. The tree diff also catches a merge commit that edited
+code (a conflict resolution or an evil merge), so that case still runs them.
+A merge that brought only test files now counts as bringing code, since tests
+are typechecked. Tests: `bin/finish-preflight.test.ts`,
+`bin/test/finish-preflight.test.ts`.
 
 `skipTypecheckLintDecision` in `bin/finish-preflight-lib.ts` returns false
 for any merge that brought code in. When the branch's own diff against the

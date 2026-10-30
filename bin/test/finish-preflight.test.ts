@@ -120,6 +120,39 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
     "no merge on this branch brought code; pre-commit covered every commit",
   ]);
 
+  // ## A docs-only branch skips after main brings code
+  //
+  // When the branch changes only Markdown, the merged tree's code is main's
+  // code, so the merge of main's code does not force the checks.
+
+  git("checkout", "-q", "-b", "worktree-notes", "main");
+  commit("notes/plan.md", "# plan\n");
+  git("checkout", "-q", "main");
+  commit("bin/main-code.ts", "export const d = 1;\n");
+  git("checkout", "-q", "worktree-notes");
+  const notes = preflight();
+  t.check([notes.merge.status, notes.skipTypecheckLint.value, notes.skipTypecheckLint.reason.includes("only in .md files")], [
+    "merged",
+    true,
+    true,
+  ]);
+
+  // A merge commit that edits code (a conflict resolution, or here an evil
+  // merge amended by hand) leaves HEAD's code unlike main's, so the checks run
+  // even though every non-merge branch commit was docs-only.
+
+  git("checkout", "-q", "-b", "worktree-resolve", "main");
+  commit("notes/resolve.md", "# resolve\n");
+  git("checkout", "-q", "main");
+  commit("bin/main-code.ts", "export const d = 2;\n");
+  git("checkout", "-q", "worktree-resolve");
+  git("merge", "-q", "--no-ff", "main");
+  write("bin/main-code.ts", "export const d = 3;\n");
+  git("commit", "-q", "--amend", "-a", "--no-edit");
+  const resolved = preflight();
+  t.check([resolved.skipTypecheckLint.value, typecheck(resolved)], [false, "runs"]);
+  assert.ok(resolved.skipTypecheckLint.reason.includes("bin/main-code.ts"));
+
   // ## Arguments
   //
   // `--help` prints the usage. It must not merge main: main gains a commit here,

@@ -64,7 +64,8 @@ export interface Sheet {
 
 const SKIP_RULE =
   "pre-commit typechecks and lints what each worktree commit stages, so a finish needs them again " +
-  "only when code arrived outside those commits (any merge on the branch, or a straggler). " +
+  "only for an uncommitted straggler, or when a merge brought code and HEAD's tree differs from main's " +
+  "outside .md files. " +
   "`--no-verify` leaves no git evidence and is not detectable.";
 
 function hasScriptIn(root: string): (pkg: string, script: string) => boolean {
@@ -207,7 +208,13 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   const grouped = groupPaths(changed, packages);
   const skip = mergeSkipped
     ? { value: false, reason: "main was not merged in (--no-merge) and is not contained" }
-    : skipTypecheckLintDecision({ merges: branchMerges(root, merge), stragglers });
+    : skipTypecheckLintDecision({
+        merges: branchMerges(root, merge),
+        stragglers,
+        vsMain: git(["diff", "--name-only", "main", "HEAD"], { cwd: root, onError: "throw" })
+          .split("\n")
+          .filter((path) => path !== ""),
+      });
   // Selected BEFORE the verification list is built: a selector that failed
   // changes which test command the sheet names (the full suite, not the
   // selected set), so the two cannot disagree.
