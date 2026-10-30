@@ -11,7 +11,7 @@
  * `null`); a failed/unreachable POST warns once but never fails the command.
  */
 
-import { loopbackHeaders } from "./audio-fetch.js";
+import { loopbackHeaders } from "../../lib/loopback-headers.js";
 
 export interface RetranscriptionReport {
   kind: "retranscription";

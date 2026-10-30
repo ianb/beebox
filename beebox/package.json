@@ -158,6 +158,7 @@
     "@trpc/server": "^11.11.0",
     "@twemoji/svg": "^15.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
+    "agent-browser": "0.39.2",
     "commander": "^13.0.0",
     "cron-parser": "^5.5.0",
     "cronstrue": "^3.24.0",

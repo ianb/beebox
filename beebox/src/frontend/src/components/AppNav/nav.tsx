@@ -48,11 +48,11 @@ import { AppBarChipSlot, useAppBarPublishedPlace } from "../app-bar-chrome";
 import { placeLabel } from "../../lib/place-label";
 
 /**
- * Profile avatar + dropdown menu — the bar's "meta" corner: Settings and
- * Admin, the box-wide pages (Dashboard, Browse, History, Storage summary),
+ * Profile avatar + dropdown menu — the bar's "meta" corner: Settings,
+ * Admin and the box browser, the box-wide pages (Dashboard, Browse, History, Storage summary),
  * then the device items.
  */
-function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { user: CurrentUser | null; boxSlug: string; onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
+export function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { user: CurrentUser | null; boxSlug: string; onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
   const location = useRouterState({ select: (s) => s.location });
   const base = `/${boxSlug}`;
   const activePath = workspaceRouteTarget({ pathname: location.pathname, searchStr: location.searchStr, search: location.search })?.path;
@@ -72,6 +72,8 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
       ) : null}
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
       <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/views/${SYSTEM_CARD_PATHS.admin}`)} active={isOnAdmin}>Admin</MenuItem>
+      {/* The box browser the agent also drives, in its own tab (docs/plans/shared-browser.md, Track E). */}
+      <MenuItem id="bbx-profile-menu-browser" href={withBase(`/${boxSlug}/browser/`)} target="_blank">Browser</MenuItem>
       <MenuDivider />
       <BoxPageMenuItems boxSlug={boxSlug} />
       <MenuDivider />

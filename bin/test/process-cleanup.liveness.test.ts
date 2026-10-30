@@ -11,6 +11,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { eventually } from "@ianbicking/tap-check/check";
 import { execFile, spawn } from "node:child_process";
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -306,6 +307,36 @@ void test("End to end:", async (t) => {
   const stillStarting = await browserFor("dead-wt");
   await sweep({ BBX_CLEANUP_MIN_ORPHAN_AGE_SEC: "60" });
   t.check(alive(stillStarting), true);
+});
+
+// ## A box browser's daemon is not `bin/browse`'s orphan
+//
+// A box engine's browser host runs agent-browser from the same worktree
+// `node_modules` as `bin/browse`, and `bin/browse` reaps every daemon of its
+// worktree that its own socket dir does not vouch for. The box browser's pid
+// files, under `<BBX_STATE_DIR>/browser/<slug>-<key>/sock/`, vouch for its
+// daemons, so a `bin/browse` call no longer kills the page a person is using
+// (shared-browser plan, Track B; seen in G1). An unvouched daemon still goes.
+void test("bin/browse's reaper spares daemons a box browser's pid files vouch for", async (t) => {
+  const boxDaemon = await browserFor("box-wt");
+  const orphan = await browserFor("box-wt");
+  const sockDir = join(home, ".local/share/beebox/browser/test1-0123abcd/sock");
+  await mkdir(sockDir, { recursive: true });
+  await writeFile(join(sockDir, "box.pid"), `${boxDaemon}\n`);
+  const script = `import { reclaimWorktreeBrowsers } from ${JSON.stringify(join(repoRoot, "bin/process-cleanup.ts"))};
+const { killed, spared } = await reclaimWorktreeBrowsers({ worktree: "box-wt" });
+console.log(JSON.stringify({ killed: killed.map((p) => p.pid), spared: spared.map((p) => p.pid) }));`;
+  const { stdout } = await execFileAsync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
+    env: { ...process.env, HOME: home, BBX_CLEANUP_MIN_ORPHAN_AGE_SEC: "0" },
+  });
+  t.check(JSON.parse(stdout), { killed: [orphan], spared: [boxDaemon] });
+  t.check(await eventually(() => !alive(orphan) && { boxDaemon: alive(boxDaemon), orphan: alive(orphan) }, { label: "the orphan exits" }), {
+    boxDaemon: true,
+    orphan: false,
+  });
+  // The last case counts every daemon still running; this one is done.
+  process.kill(boxDaemon, "SIGKILL");
+  await rm(join(home, ".local/share/beebox/browser"), { recursive: true, force: true });
 });
 
 // That holds end to end, not just in the classifier. Break the liveness oracle —

@@ -32,8 +32,11 @@ budget:
   # Raised 2026-10-29 (+6) for the new `calendar` card type's entry in the
   # guide's card-type list (docs/implemented-plans/calendar-cards.md); the calendar skill
   # description was trimmed to offset the rest.
+  # Raised 2026-10-30 (+90) for the box browser: TOOLS' `tools.browser`
+  # pointer (+67) and the `browser` box skill's description
+  # (docs/plans/shared-browser.md, chunk 11).
   guide_words: 5743
-  always_loaded_words: 10999
+  always_loaded_words: 11089
   uncited_words_per_section: 60
 
 lint:
@@ -173,7 +176,7 @@ registry:
     referrers:
       - src/core/docs-gen/content.ts
   - handle: TOOLS
-    governs: the command-line converters on the box host and installing a missing one
+    governs: the command-line converters on the box host, installing a missing one, and the box browser
     referrers:
       - src/core/chat/session/prompts.ts
       - src/dev/knowledge-audits.yaml
@@ -1026,6 +1029,13 @@ rows:
     reason: Rare, and needed only when a tool is missing. Moved verbatim to a new `bbx host install` entry in bbx-commands.md; the guide keeps one pointer sentence carrying the command and the `sudo apt` prohibition, since the reflex fires before any doc is open.
     audits: [host-package-install]
     mechanics: box-docs/bbx-commands.md
+  - id: tools.browser
+    rule: "A page that needs a login, scripts, or the person's help is read with `bbx browser` (public pages with WebFetch first); at a login or human check, ask the person to open Browser from the profile menu on a computer and say when done, never ask for or type their password."
+    handle: TOOLS
+    bin: indirect
+    reason: The commands and the handoff are mechanics for one capability, so they live in the `browser` skill. The guide keeps one pointer sentence carrying the handoff and the password prohibition, because a login wall comes up inside tasks about something else and the reflex (asking for the password, or giving up) fires before any skill is open (shared-browser plan, 2026-10-30).
+    audits: [browser-login-needed, browser-vs-webfetch]
+    mechanics: browser skill
 
   # --- HISTORY ---
   - id: history.git-log-first
