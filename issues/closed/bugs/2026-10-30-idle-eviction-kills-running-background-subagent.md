@@ -1,12 +1,15 @@
 ---
 title: "Idle eviction stops a chat whose background subagent is still working; its next tool calls come back as \"the user doesn't want to take this action\""
-workstream: unattached
+workstream: idle-eviction
 area: beebox
 labels: [chat, subagents, sessions]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder asked what the 'declined commands' in a prod box chat were, 2026-10-30"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Fixed by 29403d204 under beebox/docs/implemented-plans/idle-eviction-background-work.md: sweep and cap keep chats with live background tasks; a server stop aborts the run instead of closing input. The false denial never reproduced on macOS; the CLI branch is inferred from production evidence, so only production confirms. A 2026-10-30 15:28 UTC denial cluster with no eviction nearby is unexplained and may not be covered.
 
 A box chat started a long background subagent (a source-collection run) and
 ended its own turn. With no new user message and no open SSE listener, the
@@ -46,5 +49,17 @@ Two defects:
    subagent's failed calls should say so, so the parent can resume the work
    instead of asking for a permission that does not exist.
 
-Neighbours: [done-but-still-working state](../features/2026-09-11-done-but-still-working-state.md),
-[chat stop and background subagents](../decisions/2026-08-25-chat-stop-and-background-subagents.md).
+Neighbours: [done-but-still-working state](../../features/2026-09-11-done-but-still-working-state.md),
+[chat stop and background subagents](../../decisions/2026-08-25-chat-stop-and-background-subagents.md).
+
+## Research (2026-10-30)
+
+Production evidence refines the mechanism above:
+
+- All the denials are Bash calls. Read and Write from the same subagents succeed in the same seconds. The denied commands include `pwd`. So the denial is tied to the tool, and the agent was not aborted.
+- `gitMvNudgeHook` is the only in-process hook, and it matches `Bash`. The CLI contains the string `PreToolUse hook cancelled (control stream closed)`. This fits, but it is not proven: the same sequence did not reproduce on macOS with SDK 0.3.312, through `query()` or through a real `ChatSessionRegistry` and `sweepIdle`.
+- Most clusters start after an eviction. One small cluster, 2026-10-30 15:28 UTC, has no eviction in the log and is unexplained.
+- The denial text is hard-coded in the CLI. Beebox cannot change it.
+- `Query.close()` with a live subagent stops it at once. The next turn gets a `task_notification` with status `stopped`: "didn't finish before the previous session ended".
+
+Fix and evidence: [plan](../../../beebox/docs/implemented-plans/idle-eviction-background-work.md).

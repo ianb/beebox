@@ -203,6 +203,8 @@ function createRun(opts: ChatBackendStartOptions, deps: PiSessionDeps | undefine
       run.closed = true;
       queue.end();
     },
+    // Pi reports no background tasks, so there is nothing to outlive `close()`.
+    abort: () => run.close(),
   };
   return run;
 }

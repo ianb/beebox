@@ -46,10 +46,14 @@ export interface FakeChatBackendRun extends ChatBackendRun {
   emitSessionInit(sessionId: string): void;
   /** Push a plain assistant text turn; `uuid` is the transcript entry it stands for. */
   emitAssistantText(text: string, opts?: { uuid?: string }): void;
+  /** Push the SDK's level signal: these background tasks are now live. */
+  emitBackgroundTasks(descriptions: string[]): void;
   /** Push an end-of-turn `result` message. */
   emitResult(opts?: { isError?: boolean; result?: string }): void;
   /** Whether `interrupt()` was called. */
   interrupted: boolean;
+  /** Whether `abort()` was called. */
+  aborted: boolean;
 }
 
 export interface FakeChatBackend extends ChatBackend {
@@ -156,6 +160,7 @@ export function createFakeChatBackend(): FakeChatBackend {
         sent,
         sentClientComposed,
         interrupted: false,
+        aborted: false,
         closed: false,
         messages: messageQueue.iterable,
         send(content: ChatContentBlock[], options?: ChatBackendSendOptions): void {
@@ -170,6 +175,10 @@ export function createFakeChatBackend(): FakeChatBackend {
           if (run.closed) return;
           run.closed = true;
           messageQueue.end();
+        },
+        async abort(): Promise<void> {
+          run.aborted = true;
+          await run.close();
         },
         emitMessage(msg: SDKMessage): void {
           messageQueue.push(msg);
@@ -189,6 +198,15 @@ export function createFakeChatBackend(): FakeChatBackend {
             message: { role: "assistant", content: [{ type: "text", text }] },
             session_id: opts.resumeSessionId ?? "",
             parent_tool_use_id: null,
+          }));
+        },
+        emitBackgroundTasks(descriptions: string[]): void {
+          run.emitMessage(fakeSdkMessage({
+            type: "system",
+            subtype: "background_tasks_changed",
+            session_id: opts.resumeSessionId ?? "",
+            uuid: "fake-task-level",
+            tasks: descriptions.map((description, i) => ({ task_id: `task-${i}`, task_type: "local_agent", description })),
           }));
         },
         emitResult(resultOpts?: { isError?: boolean; result?: string }): void {

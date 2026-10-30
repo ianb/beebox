@@ -114,6 +114,12 @@ export interface ChatBackendRun {
    * Idempotent.
    */
   close(): Promise<void>;
+  /**
+   * End the backend process now, background tasks included. `close()` only ends
+   * input: a Claude run then keeps going until its tasks finish, on a control
+   * channel that can no longer answer it. Idempotent.
+   */
+  abort(): Promise<void>;
   /** True after the messages iterator has returned (close or end-of-query). */
   closed: boolean;
 }

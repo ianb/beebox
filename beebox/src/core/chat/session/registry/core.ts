@@ -27,7 +27,7 @@ import type { AgentEngine } from "../../../box/config.js";
 import { createReservationFeatureHandoff, reserveAndWarm, sweepExpiredReservations } from "./reservations.js";
 import { recordSessionStart } from "./start-record.js";
 import { prewarmBackend } from "./warm.js";
-import { enforceLiveCap } from "./cap.js";
+import { enforceLiveCap, evictIdleEntries } from "./cap.js";
 import { pinEntry, pinSessionObject } from "./pins.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./options.js";
 import { stopChatSessionsAndWait } from "./shutdown.js";
@@ -237,7 +237,7 @@ export class ChatSessionRegistry extends EventEmitter {
       existing.lastActivity = this.now();
       return existing.session;
     }
-    const baseOpts = this.buildSessionOptions(sessionId);
+    const baseOpts = { ...this.buildSessionOptions(sessionId), now: this.now };
     // A reserved id names a conversation the harness has not created yet: the
     // run is told to *use* this id, and the landmark binding and feature seeds
     // captured at reserve time ride with it (nothing else carries them — the
@@ -313,7 +313,7 @@ export class ChatSessionRegistry extends EventEmitter {
     opts = opts ?? {};
     this.noteActivity();
     const { contextDir, seedFeatures, engine, model } = opts;
-    const baseOpts = this.buildSessionOptions(null);
+    const baseOpts = { ...this.buildSessionOptions(null), now: this.now };
     const session = new ChatSession(this.boxRoot, {
       ...baseOpts,
       backend: baseOpts.backend ?? this.backend,
@@ -453,19 +453,13 @@ export class ChatSessionRegistry extends EventEmitter {
   }
 
   /**
-   * Drop entries with no recent activity and no active SSE listeners.
+   * Drop entries with no recent activity, no active SSE listeners, and no
+   * background work still going: a subagent outlives its parent's turn.
    * Their subprocesses are stopped and their entries removed. Public so the
    * cleanup timer and tests (with an injected `now`) share one code path.
    */
   sweepIdle(): void {
-    const cutoff = this.now() - this.idleTimeoutMs;
-    for (const [id, entry] of this.entries) {
-      if (entry.lastActivity > cutoff) continue;
-      if (entry.refCount > 0) continue;
-      log("sweep", `Idle eviction of ${id}`);
-      entry.session.stop();
-      this.entries.delete(id);
-    }
+    evictIdleEntries(this.entries, this.now() - this.idleTimeoutMs);
     sweepExpiredReservations({ store: this.reservations, backend: this.backend });
     // Reap the warm slot once chat has gone quiet, so an idle box doesn't hold
     // a Claude subprocess around the clock. The next accessor re-warms it.

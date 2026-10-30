@@ -5,8 +5,11 @@
 // covers the pure option and warm-pool rules of the real adapter.
 
 import { test } from "tap";
+import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import "@ianbicking/tap-check/tap";
 import { buildQueryOptions, warmSlotKey, warmCompatible } from "../../src/services/claude-chat/core.js";
+import { buildRunFromQuery } from "../../src/services/claude-chat/claude-run.js";
+import { createAsyncIterableQueue } from "../../src/services/claude-chat-queue.js";
 
 // ## Query options
 //
@@ -162,4 +165,42 @@ void test("A warm slot has its session id baked in at spawn (--session-id), so t
     sameLandmark: true,
   },
   );
+});
+
+// ## `close` and `abort` differ in what they do to the SDK query
+//
+// `close` ends input and waits, and the CLI keeps running any background tasks.
+// `abort` must end the query itself, or a run that stops with tasks live goes on
+// working with its Bash calls refused.
+void test("close ends only the input; abort closes the query", async (t) => {
+  function makeRun() {
+    const stream = createAsyncIterableQueue<SDKMessage>();
+    const inputQueue = createAsyncIterableQueue<SDKUserMessage>();
+    const calls: string[] = [];
+    void (async () => {
+      for await (const _ of inputQueue.iterable) continue;
+      calls.push("input ended");
+      stream.end();
+    })();
+    const run = buildRunFromQuery({
+      q: {
+        [Symbol.asyncIterator]: () => stream.iterable[Symbol.asyncIterator](),
+        interrupt: async () => {},
+        close: () => { calls.push("query closed"); stream.end(); },
+      },
+      opts: { cwd: "/tmp", env: {}, systemPrompt: "" },
+      inputQueue,
+      messageQueue: createAsyncIterableQueue<SDKMessage>(),
+      sessionIdFilePath: null,
+    });
+    return { run, calls };
+  }
+
+  const gentle = makeRun();
+  await gentle.run.close();
+  t.check({ calls: gentle.calls, closed: gentle.run.closed }, { calls: ["input ended"], closed: true });
+
+  const hard = makeRun();
+  await hard.run.abort();
+  t.check({ calls: hard.calls.toSorted(), closed: hard.run.closed }, { calls: ["input ended", "query closed"], closed: true });
 });
