@@ -1,6 +1,6 @@
 ---
 title: "Triage: exact-duplicate removal and agent-compiled instructions with default tie-break principles"
-status: draft
+status: implemented
 workstream: jev-triage-trial
 issues:
   - ../../../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md

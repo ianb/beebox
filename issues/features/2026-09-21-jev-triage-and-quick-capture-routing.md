@@ -205,7 +205,7 @@ excerpt, Word/ODT/RTF/EPUB convert through pandoc, and Jev's request carries onl
 readable parts), the same replay agreed on 81/93. All 7 preparation failures now
 agree. The remaining misses are rule overlaps and missing identifying facts. The
 boxholder judged one counted miss acceptable, which gives 82/93. Next:
-[compiled instructions plan](../../beebox/docs/plans/triage-compiled-instructions.md).
+[compiled instructions plan](../../beebox/docs/implemented-plans/triage-compiled-instructions.md).
 
 Implemented in the worktree per the plan: `bbx triage duplicates`, the default
 principles, and `bbx triage compile`, all wired into `--engine jev`. Principles in
