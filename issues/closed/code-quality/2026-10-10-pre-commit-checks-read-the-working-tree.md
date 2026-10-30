@@ -11,7 +11,7 @@ resolution: implemented
 
 **Closed 2026-10-29:** fixed on the tooling-burndown branch ("Pre-commit
 checks run in a snapshot of the commit index"; plan
-[staged-commit-checks](../../../beebox/docs/plans/staged-commit-checks.md)).
+[staged-commit-checks](../../../beebox/docs/implemented-plans/staged-commit-checks.md)).
 The hook syncs a persistent copy of the commit index
 (`bin/staged-snapshot.ts`) and runs every check there, so a path-scoped commit
 passes with another agent's unstaged deletion, rename, half-written `.ts`, and

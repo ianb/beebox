@@ -1,6 +1,6 @@
 ---
 title: "Pre-commit checks run against the staged index"
-status: active
+status: implemented
 workstream: tooling-burndown
 issues:
   - ../../../issues/closed/code-quality/2026-10-10-pre-commit-checks-read-the-working-tree.md

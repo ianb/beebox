@@ -1,6 +1,6 @@
 ---
 title: "Move a tracked doc and rewrite every reference to it; close issues with one verb"
-status: draft
+status: implemented
 workstream: tooling-burndown
 issues:
   - ../../../issues/closed/features/2026-10-19-issue-close-is-manual-and-fix-rewrites-unrelated-files.md

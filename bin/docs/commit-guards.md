@@ -20,7 +20,7 @@ the commit index, the snapshot index, or the snapshot files differ from the
 tree captured at the start; commit again. Gitignored local inputs, such as
 `schedules/*/local.yaml`, are absent there. Manual `pnpm typecheck`,
 `layout-check`, and `doc-check` still read the working tree. Worktree teardown
-trashes the snapshot. Plan: `beebox/docs/plans/staged-commit-checks.md`.
+trashes the snapshot. Plan: `beebox/docs/implemented-plans/staged-commit-checks.md`.
 
 ## Home paths
 

@@ -1,6 +1,6 @@
 ---
 title: "One table of credential environment variables"
-status: active
+status: implemented
 workstream: unattached
 issues:
   - ../../../issues/closed/code-quality/2026-10-25-credential-env-keys-listed-in-several-allowlists.md
