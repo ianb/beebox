@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { checkDashboardExecArgs, checkExecArgs, EXEC_BODY, REFUSED_FLAGS, REFUSED_SUBCOMMANDS } from "../../../src/core/browser/exec-args.js";
+import { checkDashboardExecArgs, checkExecArgs, EXEC_BODY, execSubcommand, REFUSED_FLAGS, REFUSED_SUBCOMMANDS } from "../../../src/core/browser/exec-args.js";
 
 // Plan Track C: ordinary page commands pass.
 void test("Ordinary browser commands are accepted", (t) => {
@@ -73,6 +73,15 @@ void test("A flag's value that looks like a subcommand is not mistaken for one",
   t.check(checkExecArgs(["--screenshot-dir", "connect", "snapshot"]), { ok: true });
   t.check(checkExecArgs(["--max-output", "batch", "snapshot"]), { ok: true });
   t.check(checkExecArgs(["--screenshot-dir", "x", "install"]), { ok: false, refused: "install", message: "bbx browser: \"install\" is not available for the box browser" });
+  t.end();
+});
+
+// The command socket starts the session before a launching subcommand, found the same way.
+void test("The subcommand skips flags and their values", (t) => {
+  t.check(
+    [["--json", "open", "x"], ["--max-output", "5", "session", "list"], ["--json"], ["close"]].map((args) => execSubcommand(args)),
+    ["open", "session", null, "close"],
+  );
   t.end();
 });
 

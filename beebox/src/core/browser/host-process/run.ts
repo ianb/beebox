@@ -171,9 +171,25 @@ async function stopStarted(paths: BrowserPaths, { env, started }: { env: Record<
   await fs.rm(paths.relaySocket, { force: true });
 }
 
-/** Resolves with the reason once SIGTERM or SIGINT arrives or the engine is gone. */
-function untilStopped(): Promise<string> {
-  const parent = process.ppid;
+/** True while a process with `pid` exists; EPERM still means it exists. */
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return errnoCode(e) !== "ESRCH";
+  }
+}
+
+/**
+ * Resolves with the reason once SIGTERM or SIGINT arrives or the engine is
+ * gone. The engine is named by pid rather than read from `process.ppid`: an
+ * engine that exits while the host is still starting (a dev reload) leaves
+ * the host's parent already reparented when it first looks, and on a unit
+ * host the parent is the namespace launcher (two hosts outlived their
+ * engine this way in dev, 2026-10-30).
+ */
+function untilStopped(enginePid: number): Promise<string> {
   return new Promise((resolve) => {
     const done = (why: string): void => {
       clearInterval(watch);
@@ -181,15 +197,15 @@ function untilStopped(): Promise<string> {
     };
     process.once("SIGTERM", () => done("SIGTERM"));
     process.once("SIGINT", () => done("SIGINT"));
-    // A SIGKILLed engine sends nothing; the host notices it was reparented.
+    // A SIGKILLed engine sends nothing; the host notices it is gone.
     const watch = setInterval(() => {
-      if (process.ppid !== parent) done("the engine exited");
+      if (!isAlive(enginePid)) done("the engine exited");
     }, PARENT_POLL_MS);
   });
 }
 
 /** Run the host until SIGTERM, SIGINT, or the engine that started it goes away. */
-export async function runBrowserHost(box: BrowserBox): Promise<void> {
+export async function runBrowserHost(box: BrowserBox, { enginePid }: { enginePid: number }): Promise<void> {
   const paths = browserPaths(box);
   const executable = resolveBrowserExecutable();
   if (!executable.ok) throw new BrowserHostStartError({ step: "not-installed", detail: executable.reason });
@@ -220,6 +236,6 @@ export async function runBrowserHost(box: BrowserBox): Promise<void> {
     throw e;
   }
 
-  log(`stopping: ${await untilStopped()}`);
+  log(`stopping: ${await untilStopped(enginePid)}`);
   await stopStarted(paths, { env, started });
 }

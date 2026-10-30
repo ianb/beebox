@@ -164,6 +164,7 @@ async function spawnHost(paths: BrowserPaths, input: Required<EnsureBrowserHostI
     const command = [
       path.join(PACKAGE_ROOT, "bin", "bbx"),
       "engine", "browser-host", "--box", input.boxRoot, "--slug", input.slug, "--state-dir", input.stateDir,
+      "--engine-pid", String(process.pid),
     ];
     const options: SpawnOptions = { cwd: input.boxRoot, env: process.env, detached: true, stdio: ["ignore", logFd, logFd] };
     if (onUnitHost()) return await spawnInNamespace(command, options);

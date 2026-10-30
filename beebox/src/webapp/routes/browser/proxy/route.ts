@@ -27,10 +27,10 @@ import type { IncomingMessage } from "node:http";
 import { Readable } from "node:stream";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ProxyServer } from "http-proxy-3";
-import { BrowserCommandSocketError } from "../../../../core/browser/command-socket.js";
+import { BrowserCommandSocketError, sendBrowserCommand } from "../../../../core/browser/command-socket.js";
 import { BrowserHostFailedError, BrowserNotInstalledError, ensureBrowserHost, type BrowserHostHandle } from "../../../../core/browser/host/start.js";
 import { isRewritableType, rewriteDashboardBody } from "../../../../core/browser/rewrite.js";
-import { ensureBoxSession } from "../../../../core/browser/session.js";
+import { SESSION_PROBLEM_PREFIX } from "../../../../core/browser/session.js";
 import type { Services } from "../../../../services/container.js";
 import { checkDashboardPost, DASHBOARD_POST_CAP_BYTES, isCheckedDashboardPost } from "./dashboard-post.js";
 import { browserPrefix } from "./prefix.js";
@@ -146,10 +146,17 @@ function prefixedLocation(location: string | undefined, prefix: string): string 
   return `${prefix}${location}`;
 }
 
-/** Start the box session for the top page; a failure becomes a notice on the page. */
+/**
+ * Start the box session for the top page; a failure becomes a notice on the
+ * page. Any launching command starts it: the command socket runs
+ * `ensureBoxSession` first.
+ */
 async function sessionNotice(host: BrowserHostHandle): Promise<string | null> {
   try {
-    return await ensureBoxSession(host.paths.cliSocket);
+    const reply = await sendBrowserCommand(host.paths.cliSocket, ["get", "url"]);
+    if (reply.exitCode !== 0) return `Could not start the box browser: ${reply.stderr.trim() || `exit code ${String(reply.exitCode)}`}`;
+    const problem = reply.stderr.split("\n").find((line) => line.startsWith(SESSION_PROBLEM_PREFIX));
+    return problem === undefined ? null : problem.slice(SESSION_PROBLEM_PREFIX.length);
   } catch (e) {
     if (e instanceof BrowserCommandSocketError) return e.message;
     throw e;

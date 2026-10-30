@@ -6,7 +6,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { parseSessionList } from "../../../src/core/browser/session.js";
+import type { ExecReply } from "../../../src/core/browser/command-socket.js";
+import { ensureBoxSession, parseSessionList } from "../../../src/core/browser/session.js";
 
 void test("Known shapes give the names; anything else is unknown", async (t) => {
   t.check(
@@ -20,4 +21,40 @@ void test("Known shapes give the names; anything else is unknown", async (t) => 
     },
     { none: [], some: ["box", "agent1"], ascii: ["box"], error: null, oddName: null },
   );
+});
+
+/** A runner that answers from `replies` in order and records each command. */
+function fakeRunner(replies: ExecReply[]): { run: (args: readonly string[]) => Promise<ExecReply>; commands: string[][] } {
+  const commands: string[][] = [];
+  return {
+    commands,
+    run: (args) => {
+      commands.push([...args]);
+      return Promise.resolve(replies.shift() ?? { exitCode: 99, stdout: "", stderr: "no reply" });
+    },
+  };
+}
+
+const OK: ExecReply = { exitCode: 0, stdout: "", stderr: "" };
+
+// A missing session is started and given the box viewport (G2, 2026-10-30: headless Chrome's
+// own page size was 1280x577, and the dashboard's clicks landed low).
+void test("A missing session is opened and sized; a running one is left alone", async (t) => {
+  const missing = fakeRunner([{ ...OK, stdout: "No active sessions\n" }, OK, OK]);
+  t.check(await ensureBoxSession(missing.run), null);
+  t.check(missing.commands, [["session", "list"], ["open", "about:blank"], ["set", "viewport", "1280", "720"]]);
+  const running = fakeRunner([{ ...OK, stdout: "Active sessions:\n→ box\n" }]);
+  t.check(await ensureBoxSession(running.run), null);
+  t.check(running.commands, [["session", "list"]]);
+});
+
+void test("A list in an unknown shape opens nothing", async (t) => {
+  const odd = fakeRunner([{ ...OK, stdout: "Sessions: box\n" }]);
+  t.check(await ensureBoxSession(odd.run), "Could not read the browser's session list: Sessions: box");
+  t.check(odd.commands, [["session", "list"]]);
+});
+
+void test("A failed viewport is reported", async (t) => {
+  const failed = fakeRunner([{ ...OK, stdout: "No active sessions\n" }, OK, { exitCode: 1, stdout: "", stderr: "no page\n" }]);
+  t.check(await ensureBoxSession(failed.run), "Could not set the box browser's viewport: no page");
 });

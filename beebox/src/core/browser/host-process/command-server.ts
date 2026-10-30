@@ -11,6 +11,10 @@
  *
  * One request per connection: `{ args }` as JSON, ended by the client's
  * half-close (or a newline); one JSON line back, then the connection closes.
+ *
+ * A command that would launch the browser starts the box session first
+ * (`ensureBoxSession`), so every launch gets the box viewport. The checks run
+ * one at a time, so two commands at once cannot both launch.
  */
 
 import { spawn } from "node:child_process";
@@ -19,7 +23,8 @@ import net from "node:net";
 import { z } from "zod";
 import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { COMMAND_TIMEOUT_MS, TIMED_OUT_EXIT_CODE, type ExecReply } from "../command-socket.js";
-import { checkExecArgs, EXEC_BODY } from "../exec-args.js";
+import { checkExecArgs, EXEC_BODY, execSubcommand } from "../exec-args.js";
+import { ensureBoxSession, SESSION_PROBLEM_PREFIX } from "../session.js";
 import { agentBrowserBinary } from "./agent-browser.js";
 
 /** Each of stdout and stderr is kept up to this many bytes. */
@@ -28,6 +33,8 @@ const OUTPUT_CAP_BYTES = 2 * 1024 * 1024;
 const REQUEST_CAP_BYTES = 1024 * 1024;
 /** The exit code for a request the host refused before running anything (a usage error). */
 const REFUSED_EXIT_CODE = 2;
+/** Subcommands that do not launch the browser, so the session is not started for them. */
+const NO_LAUNCH_SUBCOMMANDS: ReadonlySet<string> = new Set(["session", "close", "quit", "exit"]);
 
 export interface CommandServer {
   close(): Promise<void>;
@@ -118,12 +125,31 @@ function runCommand(input: CommandServerInput & { readonly args: readonly string
   });
 }
 
+/** Runs `ensureBoxSession` before each launching command, one check at a time. */
+function sessionStarter(input: CommandServerInput): (args: readonly string[]) => Promise<string | null> {
+  let previous: Promise<unknown> = Promise.resolve();
+  const run = (args: readonly string[]): Promise<ExecReply> =>
+    runCommand({ ...input, args }, () => {
+      // Not killed with the connection: a half-started session would be left for the next command to find.
+    });
+  return (args) => {
+    const subcommand = execSubcommand(args);
+    if (subcommand === null || NO_LAUNCH_SUBCOMMANDS.has(subcommand)) return Promise.resolve(null);
+    const result = previous.then(() => ensureBoxSession(run));
+    previous = result.catch(() => null);
+    return result;
+  };
+}
+
 function handleConnection(input: CommandServerInput, open: Set<net.Socket>): (conn: net.Socket) => void {
+  const startSession = sessionStarter(input);
   return (conn) => {
     open.add(conn);
     let kill: (() => void) | undefined;
     let answered = false;
+    let gone = false;
     conn.on("close", () => {
+      gone = true;
       open.delete(conn);
       // The caller gave up (the engine's own timeout, or it exited): stop the command.
       if (!answered) kill?.();
@@ -146,7 +172,12 @@ function handleConnection(input: CommandServerInput, open: Set<net.Socket>): (co
         answer(request.reply);
         return;
       }
-      void runCommand({ ...input, args: request.args }, (k) => (kill = k)).then(answer);
+      void startSession(request.args).then(async (problem) => {
+        if (gone) return;
+        // The command still runs: it launches the browser without the box viewport, and says so.
+        const reply = await runCommand({ ...input, args: request.args }, (k) => (kill = k));
+        answer(problem === null ? reply : { ...reply, stderr: `${SESSION_PROBLEM_PREFIX}${problem}\n${reply.stderr}` });
+      });
     };
     conn.on("data", (chunk: Buffer) => {
       if (started) return;

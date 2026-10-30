@@ -21,6 +21,8 @@ import { getOrCreateAgentToken } from "../../../../../src/core/agent/token.js";
 import { BrowserNotInstalledError, type BrowserHostHandle } from "../../../../../src/core/browser/host/start.js";
 import { browserPaths } from "../../../../../src/core/browser/paths.js";
 import { EXEC_BODY } from "../../../../../src/core/browser/exec-args.js";
+import { SESSION_PROBLEM_PREFIX } from "../../../../../src/core/browser/session.js";
+import { withNotice } from "../../../../../src/webapp/routes/browser/proxy/response.js";
 import { signSession } from "../../../../../src/webapp/auth.js";
 import { makeTestServer, TEST_SLUG } from "../../../../helpers/test-route-server.js";
 
@@ -80,8 +82,8 @@ streams.on("connection", (socket, req) => {
 });
 await new Promise<void>((resolve) => dashboard.listen(paths.relaySocket, resolve));
 
-/** The command socket: `session list` answers `sessionList`; every request is recorded. */
-let sessionList = "Active sessions:\n-> box\n";
+/** The command socket: every request is recorded and answered with `cliStderr`. */
+let cliStderr = "";
 const commands: string[][] = [];
 const cli = net.createServer((conn) => {
   let text = "";
@@ -89,8 +91,7 @@ const cli = net.createServer((conn) => {
   conn.on("end", () => {
     const { args } = EXEC_BODY.parse(JSON.parse(text));
     commands.push(args);
-    const stdout = args[0] === "session" ? sessionList : "";
-    conn.end(`${JSON.stringify({ exitCode: 0, stdout, stderr: "" })}\n`);
+    conn.end(`${JSON.stringify({ exitCode: 0, stdout: "about:blank\n", stderr: cliStderr })}\n`);
   });
 });
 await new Promise<void>((resolve) => cli.listen(paths.cliSocket, resolve));
@@ -111,7 +112,8 @@ t.teardown(async () => {
 // `/<slug>/browser`; the page carries the browser page CSP and `no-store`;
 // the dashboard's own cookie does not reach the box origin. Upstream, the
 // request looks like the dashboard's own loopback page and carries none of
-// the person's credentials. The page load checks that the box session exists.
+// the person's credentials. The page load sends one command through the
+// command socket, which starts the box session if it is missing.
 void t.test("A signed-in person gets the dashboard, rewritten under the prefix", async (st) => {
   seen.length = 0;
   commands.length = 0;
@@ -128,7 +130,7 @@ void t.test("A signed-in person gets the dashboard, rewritten under the prefix",
   });
   st.check(page.headers["set-cookie"], undefined);
   st.check(seen, [{ method: "GET", url: "/", host: "localhost", origin: "http://localhost", cookie: undefined, authorization: undefined, body: "" }]);
-  st.check(commands, [["session", "list"]]);
+  st.check(commands, [["get", "url"]]);
 
   const script = await ctx.response({ method: "GET", url: "/browser/_next/static/app.js", headers: { cookie: SESSION } });
   st.check(script, {
@@ -138,13 +140,17 @@ void t.test("A signed-in person gets the dashboard, rewritten under the prefix",
   });
 });
 
-// ## With no box session, the page load starts one on about:blank
-void t.test("With no box session, the page load starts one on about:blank", async (st) => {
-  commands.length = 0;
-  sessionList = "No active sessions\n";
-  st.teardown(() => { sessionList = "Active sessions:\n-> box\n"; });
-  await ctx.response({ method: "GET", url: "/browser/", headers: { cookie: SESSION } });
-  st.check(commands, [["session", "list"], ["open", "about:blank"]]);
+// ## A box session that could not be started is a notice on the page
+//
+// The command socket reports it on its own stderr line; other stderr (such
+// as agent-browser's "launched browser") is not a problem.
+void t.test("A box session that could not be started is a notice on the page", async (st) => {
+  st.teardown(() => { cliStderr = ""; });
+  const html = `<!DOCTYPE html><html><head><script src="${PREFIX}/_next/static/app.js"></script></head><body><main>dashboard</main></body></html>`;
+  cliStderr = "[agent-browser] launched browser\n";
+  st.check((await ctx.response({ method: "GET", url: "/browser/", headers: { cookie: SESSION } })).body, html);
+  cliStderr = `[agent-browser] launched browser\n${SESSION_PROBLEM_PREFIX}Could not set the box browser's viewport: no page\n`;
+  st.check((await ctx.response({ method: "GET", url: "/browser/", headers: { cookie: SESSION } })).body, withNotice(html, "Could not set the box browser's viewport: no page"));
 });
 
 // ## A JSON POST reaches the dashboard byte for byte

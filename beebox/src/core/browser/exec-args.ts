@@ -122,18 +122,21 @@ function checkArgs(args: readonly string[], allowed: ReadonlySet<string>): ExecA
     // A short flag can carry its value glued on (`-pbrowserbase`).
     if (token.startsWith("-p") && !token.startsWith("--")) return refuseFlag("-p");
   }
-  for (let i = 0; i < args.length; i++) {
-    const token = args[i] ?? "";
-    if (token.startsWith("-")) {
-      if (VALUE_FLAGS.has(token)) i++;
-      continue;
-    }
-    if (isRefusedSubcommand(token)) {
-      return { ok: false, refused: token, message: `bbx browser: "${token}" is not available for the box browser` };
-    }
-    break;
+  const subcommand = execSubcommand(args);
+  if (subcommand !== null && isRefusedSubcommand(subcommand)) {
+    return { ok: false, refused: subcommand, message: `bbx browser: "${subcommand}" is not available for the box browser` };
   }
   return { ok: true };
+}
+
+/** The subcommand: the first argument that is not a flag or a flag's value; null when there is none. */
+export function execSubcommand(args: readonly string[]): string | null {
+  for (let i = 0; i < args.length; i++) {
+    const token = args[i] ?? "";
+    if (!token.startsWith("-")) return token;
+    if (VALUE_FLAGS.has(token)) i++;
+  }
+  return null;
 }
 
 /** Checks the argument list the agent passed to `bbx browser`. */

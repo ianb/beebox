@@ -11,13 +11,14 @@
 // that dies alone (it is detached from the host) is noticed by the next
 // `ensureBrowserHost`, which starts a new host. The
 // command socket answers the agent's commands with agent-browser's text output.
+// A host whose engine is already gone when it starts stops by itself.
 //
 // Skips, saying why, when no Chrome is installed for agent-browser.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { eventually } from "@ianbicking/tap-check/check";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import http from "node:http";
@@ -151,14 +152,19 @@ void test("A real browser host starts, serves the dashboard through the relay, a
   const first = await ensureBrowserHost(box);
   // A second call returns the running host.
   t.check(await ensureBrowserHost(box), first);
-  t.check(await run(first, ["open", "data:text/html,<title>hi</title><h1>hi</h1>"]), {
-    exitCode: 0, success: true, title: "hi", url: "data:text/html,<title>hi</title><h1>hi</h1>",
-  });
-  t.check(await title(first), "hi");
   // The command socket runs the agent's commands with agent-browser's text output.
   t.check(await sendBrowserCommand(first.paths.cliSocket, ["open", "data:text/html,<title>hi</title>"]), {
     exitCode: 0, stdout: "✓ hi\n  data:text/html,<title>hi</title>\n", stderr: "",
   });
+  // It launched the browser with the box viewport, the size the dashboard maps clicks onto
+  // (G2, 2026-10-30: without it the page was 1280x577 and clicks landed low).
+  const size = await sendBrowserCommand(first.paths.cliSocket, ["eval", "`${String(innerWidth)}x${String(innerHeight)}`"]);
+  // Page output comes between nonce-marked boundary lines.
+  t.check({ ...size, stdout: size.stdout.split("\n")[1] }, { exitCode: 0, stdout: "\"1280x720\"", stderr: "" });
+  t.check(await run(first, ["open", "data:text/html,<title>hi</title><h1>hi</h1>"]), {
+    exitCode: 0, success: true, title: "hi", url: "data:text/html,<title>hi</title><h1>hi</h1>",
+  });
+  t.check(await title(first), "hi");
   t.check(await sendBrowserCommand(first.paths.cliSocket, ["get", "title"]), { exitCode: 0, stdout: "hi\n", stderr: "" });
   // The host checks the arguments again, whatever the engine did.
   t.check(await sendBrowserCommand(first.paths.cliSocket, ["--profile", "/tmp/other", "open", "about:blank"]), {
@@ -201,4 +207,26 @@ void test("A real browser host starts, serves the dashboard through the relay, a
   const fourthPids = await recordPids(fourth);
   // The old host was stopped; a new dashboard serves the relay.
   t.check({ oldHost: alive(third.pid), oldDashboard: alive(thirdPids.dashboard), newDashboard: alive(fourthPids.dashboard) }, { oldHost: false, oldDashboard: false, newDashboard: true });
+});
+
+// An engine that exits while its host is still starting (a dev reload) left the
+// host running for hours: it read its parent after it had already been
+// reparented (2026-10-30). The host watches the engine pid it was given.
+void test("A host whose engine is already gone stops by itself", { skip: chrome === undefined ? "no Chrome for agent-browser (run `agent-browser install`)" : false }, async (t) => {
+  process.env.AGENT_BROWSER_EXECUTABLE_PATH = chrome;
+  const stateDir = await fs.mkdtemp("/tmp/bbxb-");
+  const boxRoot = await fs.mkdtemp("/tmp/bbxbox-");
+  t.teardown(async () => {
+    await fs.rm(stateDir, { recursive: true, force: true });
+    await fs.rm(boxRoot, { recursive: true, force: true });
+  });
+  const gone = spawn("true");
+  const deadPid = gone.pid ?? 0;
+  await new Promise((resolve) => gone.once("exit", resolve));
+  const host = spawn(path.join(PACKAGE_ROOT, "bin", "bbx"), ["engine", "browser-host", "--box", boxRoot, "--slug", "orphan", "--state-dir", stateDir, "--engine-pid", String(deadPid)], { stdio: "ignore" });
+  t.teardown(() => {
+    if (host.exitCode === null && host.signalCode === null) host.kill("SIGKILL");
+  });
+  const code = await new Promise<number | null>((resolve) => host.once("exit", resolve));
+  t.check(code, 0);
 });
