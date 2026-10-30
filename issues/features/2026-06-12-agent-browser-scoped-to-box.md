@@ -23,3 +23,8 @@ with handoff both ways. Survey, spike and recommended shape:
 [research/embedded-browser/](../../research/embedded-browser/README.md). The
 box-scoped self-check described above is one use of the same per-box browser:
 the agent opens its own box's pages through the same broker.
+
+Boxholder direction (2026-10-29): desktop only, no beebox-built viewer, no
+image per box, no input arbitration. The agent drives an agent-browser session
+through `bbx browser`; the person uses agent-browser's dashboard on the same
+session to log in and get past blocks.
