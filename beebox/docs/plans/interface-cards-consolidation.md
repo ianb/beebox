@@ -594,6 +594,6 @@ visual-tour, and production-convergence checks are not all complete.
 The finish merge preserves main's ready-state ConversationNotice removal and
 this work's deleted presentation callbacks. It is integration work, excluded
 from the report's source-removal totals. The existing
-[return-to-chat manual issue](../../../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md)
+[return-to-chat manual issue](../../../issues/closed/bugs/2026-08-23-no-consistent-way-back-to-chat.md)
 now describes the current Minimize/Restore controls rather than the deleted chip;
 its manual-testing gate remains open.

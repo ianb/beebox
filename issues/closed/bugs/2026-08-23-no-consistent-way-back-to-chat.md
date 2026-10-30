@@ -7,9 +7,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder stuck on a card page on iOS
 priority: important
-needs: [manual-testing]
+resolution: implemented
 ---
 
+**Closed (implemented, 2026-10-30):** Manually confirmed 2026-10-30: the boxholder reports it fixed (comment on the re-review priority page).
 
 > **Awaiting manual testing** — interface-card consolidation (`43f948450`)
 > replaces the retired web Chat chip with the workspace's Minimize cards /
@@ -76,13 +77,13 @@ and has to know the gesture.
 
 ## Related
 
-- [No visible search box and no home surface](../features/2026-08-08-no-visible-search-or-home.md)
+- [No visible search box and no home surface](../../features/2026-08-08-no-visible-search-or-home.md)
   — the same shape from the other direction: reaching the knowledge base rather
   than leaving it. Both are consequences of navigation living entirely in the
   place menus.
 - The browse route from a chat card pane is itself a single unlabeled icon
   (`FileView.tsx:296`), noted in
-  [PDFs and document cards have no real view](../closed/features/2026-08-23-pdf-and-document-cards-have-no-real-view.md).
+  [PDFs and document cards have no real view](../features/2026-08-23-pdf-and-document-cards-have-no-real-view.md).
   Entry and exit are both thin; the exit is thinner.
 
 ## Decided and built (2026-08-25)
@@ -109,7 +110,7 @@ The boxholder answered the two open questions.
 
 The switch menu's half of this — switching to a landmark coining a second empty
 chat instead of returning you to the one you left — is fixed with
-[the landmark-switch issue](../closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md),
+[the landmark-switch issue](2026-08-20-cannot-switch-landmarks-from-chat.md),
 which turned out to share a cause.
 
 > 2026-09-03 (main session): the iOS half is withdrawn. The floating chevron
