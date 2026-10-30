@@ -295,7 +295,9 @@ function rewriteLines(file: FileRewrite): string[] {
 /** The report both CLIs print: the move, each rewritten file and line, a total, and notices for stderr. */
 export function formatDocMove(plan: DocMovePlan, { dryRun }: { dryRun: boolean }): { stdout: string; stderr: string } {
   const verb = dryRun ? "would rewrite" : "rewrote";
-  const out = [`${dryRun ? "would move" : "moved"} ${plan.from} -> ${plan.to}`, ...rewriteLines(plan.moved)];
+  const out = [`${dryRun ? "would move" : "moved"} ${plan.from} -> ${plan.to}`];
+  // Own links are rewritten before a caller's edit (a closing note) shifts lines.
+  if (plan.moved.rewrites.length > 0) out.push(`  own links, by line in ${plan.from}:`, ...rewriteLines(plan.moved));
   for (const file of plan.files) {
     const label = file.repository === "private" && repositoryOf(plan.from) === "public" ? "private-issues (commit inside that repo): " : "";
     out.push(`${label}${verb} ${file.path}`, ...rewriteLines(file));
