@@ -11,7 +11,7 @@ import * as fs from "node:fs";
 import { assertEventSchemaNotNewer, createEventBus } from "../../core/event-bus/core.js";
 import { registerAuthSurface } from "../routes/auth/register.js";
 import { registerGoogleServicesCallback } from "../routes/admin.js";
-import { isHubMode } from "../auth.js";
+import { hubSecret, isHubMode } from "../auth.js";
 import { maybeArmFirstRunSetup } from "../setup-token.js";
 import { removeServeEndpoint } from "../../core/serve-endpoint.js";
 import { refreshHubMeta } from "../../core/hub-meta.js";
@@ -366,7 +366,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     for (const box of boxes) await removeServeEndpoint(box.boxRoot);
     server.server.closeAllConnections();
     await server.close();
-    await writeHomeSnapshotsAtShutdown(boxes, process.env.BBX_HUB_SECRET);
+    await writeHomeSnapshotsAtShutdown(boxes, hubSecret());
     for (const pf of pidFiles) await fs.promises.unlink(pf).catch(() => {});
     // Let any git write we started finish before we go. Exiting on top of one
     // orphans it into whatever SIGKILL follows (the hub's escalation, or

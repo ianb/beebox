@@ -19,7 +19,28 @@ sibling box's port (`src/lib/credential-env.ts`).
 This comes from reading the source; no exploit was run. It is an execution
 boundary, so an environment allowlist cannot close it.
 
-Decision needed: load schemas in a child process, which changes their execution
-contract and the cost of every schema load, or remove the secrets from the
-server's `process.env` after startup, or accept this under the trust model and
-state it in `docs/security-report.md`.
+Update 2026-10-30, boxholder decision: `bbx serve` now moves its credentials out
+of `process.env` at startup (`src/lib/server-secrets.ts`).
+`test/hub.e2e.test.ts` runs a real hub and box, and a schema there finds neither
+`BBX_HUB_SECRET` nor `BBX_DIAG_API_KEY` in the environment.
+
+A schema that targets the secrets can still get them, so this issue stays open.
+Found by reading the source; none was run:
+
+- It can import `lib/server-secrets.js` from the same process and call
+  `serverSecret`.
+- On Linux, `/proc/self/environ` keeps the environment the process started with.
+  `process.env` deletion does not change it. This exposes `BBX_DIAG_API_KEY` and
+  `BBX_VAPID_PRIVATE_KEY` from `/etc/beebox/box.env` on a unit host, and also
+  `BBX_HUB_SECRET` under a spawning hub.
+- A process of the box's user can read the unit's credential file under
+  `/run/credentials/`, if the unit's sandbox does not hide it from that process.
+
+The hub secret's reach depends on the hub mode. A spawning hub
+(`startSpawning`, `src/cli/commands/hub.ts`) gives every child one secret, so it
+is valid at a sibling's port. A unit host mints one per box
+(`src/hub/secrets.ts`), so it is valid only at that box.
+
+Done when schemas load outside the process that holds the credentials, or the
+boxholder accepts the remaining routes under the trust model and
+`docs/security-report.md` says so.

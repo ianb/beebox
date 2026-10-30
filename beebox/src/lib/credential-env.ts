@@ -30,6 +30,9 @@
  *   `inherit`. The warm slot compares the `inject` names, since an injected
  *   value can change between prewarm and send.
  *
+ * The server moves the credentials it uses out of its own `process.env` at
+ * startup (`lib/server-secrets.ts`), so a spread after that point omits them.
+ *
  * Not governed here, because they spread `process.env` rather than take a
  * list: the `claude auth` commands (`services/claude-cli.ts`, which drops an
  * ambient `CLAUDE_CODE_OAUTH_TOKEN` from the status probe) and the gws

@@ -14,6 +14,7 @@ import {
   saveGoogleTokens,
   type GoogleTokens,
 } from "./token-store.js";
+import { serverSecret } from "../lib/server-secrets.js";
 
 const DEFAULT_REDIRECT_URI = "http://localhost:8976/oauth/callback";
 
@@ -110,7 +111,7 @@ export async function hasBoxGoogleClientCreds(boxRoot: string): Promise<boolean>
  */
 export function getLoginGoogleClientCreds(): { clientId: string; clientSecret: string } | null {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+  const clientSecret = serverSecret("GOOGLE_OAUTH_CLIENT_SECRET");
   if (clientId && clientSecret) return { clientId, clientSecret };
   return null;
 }
