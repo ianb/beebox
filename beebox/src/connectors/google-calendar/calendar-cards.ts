@@ -99,7 +99,7 @@ export async function upkeepCalendarCards(opts: {
     await fs.writeFile(cardPath, createCalendarTemplate({
       name: facts.names[id] ?? id, id, ...(role === undefined ? {} : { access: role }), syncing: true,
     }));
-    folders.byId.set(id, { cardPath, folder: cardFolder(cardPath) });
+    folders.byId.set(id, { cardPath, folder: cardFolder(cardPath), name: facts.names[id] ?? id, access: role });
     written.push(path.relative(boxRoot, cardPath));
   }
 

@@ -159,6 +159,13 @@ void test("a calendar with tracked events but no card is not current", (t) => {
   t.end();
 });
 
+// A box that never synced a calendar has nothing to move and no index: it
+// gets no card. The connector makes cards when it first syncs.
+void test("a box that never synced a calendar is current and gets no card", (t) => {
+  t.check(planCalendarFolders(input({ calendars: ["primary"] })), { kind: "current" });
+  t.end();
+});
+
 async function flatBox(): Promise<{ box: TmpBox; edited: string }> {
   const box = await makeTmpBox({ git: true });
   const written = ics("Swim meet", { start: "20260625" });

@@ -199,12 +199,13 @@ export async function moveCardsToTrash(ctx: CommandContext, cardPaths: string[])
   return { moves, gitPaths };
 }
 
-/** Commit one completed trash move receipt with standard attribution. */
-export async function commitTrashReceipt(boxRoot: string, options: { receipt: TrashReceipt; reason?: string | undefined; actor?: string | undefined }): Promise<string | null> {
+/** Commit one completed trash move receipt with standard attribution; `trailers` add to or override it. */
+export async function commitTrashReceipt(boxRoot: string, options: { receipt: TrashReceipt; reason?: string | undefined; actor?: string | undefined; trailers?: Record<string, string> }): Promise<string | null> {
   const { receipt, reason } = options;
   const suffix = reason === undefined ? "" : `: ${reason}`;
+  const single = receipt.moves[0]?.sourcePath;
   const message =
-    receipt.moves.length === 1 ? `Trash card: ${path.basename(receipt.moves[0]?.sourcePath ?? "card")}${suffix}` : `Trash ${String(receipt.moves.length)} cards${suffix}`;
+    receipt.moves.length === 1 && single !== undefined ? `Trash ${isCardFile(single) ? "card" : "file"}: ${path.basename(single)}${suffix}` : `Trash ${String(receipt.moves.length)} cards${suffix}`;
   const status = await getStatus(boxRoot);
   const changedPaths = new Set([...status.staged, ...status.modified, ...status.untracked]);
   const paths = [...new Set(receipt.gitPaths.filter((gitPath) => changedPaths.has(gitPath) || [...changedPaths].some((changed) => changed.startsWith(`${gitPath}/`))))];
@@ -212,7 +213,7 @@ export async function commitTrashReceipt(boxRoot: string, options: { receipt: Tr
   return stageAndCommitPaths(boxRoot, {
     paths,
     message,
-    trailers: { "Trashed-By": "bbx rm", ...triggeredByTrailer(options.actor) },
+    trailers: { "Trashed-By": "bbx rm", ...triggeredByTrailer(options.actor), ...options.trailers },
   });
 }
 

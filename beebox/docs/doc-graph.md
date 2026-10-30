@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-29T23:46:43Z
-Total documents: 598
+Generated: 2026-10-30T01:18:56Z
+Total documents: 599
 
 ## Issues
 
@@ -1206,7 +1206,7 @@ Referenced by:
 - docs/server/health-checks.md:204 (link) — The connector activity record (see [connectors.md](../connectors.md#activity-record))
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:27 (mention) — - **Filesystem is state.** `beebox/docs/connectors.md:8`: *"External service → Connector.sync() → Writes/reads card file
 - docs/user-stories/catalog/2026-08-21.md:6008 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
-- src/core/agent-guide/guide.md:545 (mention) — procedure step resolves one by name at call time (`connectors.md`,
+- src/core/agent-guide/guide.md:546 (mention) — procedure step resolves one by name at call time (`connectors.md`,
 - test/user-stories/journeys/F-newcomer/reports/2026-10-22.md:71 (mention) — | 13 | Note 6: calendar: Google only, iCloud cannot connect; sign in and allow; changes only when asked; changes are kep
 - ../issues/closed/features/2026-04-27-gmail-sync-improvements.md:8 (mention) — **Closed:** Fully implemented: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the h
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:49 (mention) — Still open: the logger (no central module in `beebox/src/lib/`), `docs/reliability.md`, `docs/testing-practice.md`, `doc
@@ -2765,10 +2765,11 @@ Referenced by:
 
 #### docs/box/triage-instructions.md
 
-Title: "Triage instructions and replay" | 133 lines | current reference
+Title: "Triage instructions and replay" | 161 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/jev-document-triage.md:405 (mention) — is on-demand `docs/box/triage-instructions.md`, with short discoverability pointers
+- docs/implemented-plans/triage-compiled-instructions.md:443 (mention) — 5. Box docs (`docs/box/triage-instructions.md`), knowledge audit, change-selected
 - docs/triage.md:105 (link) — Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
 - src/core/agent-guide/guide.md:420 (link) — Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:153 (link) — The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
@@ -2783,7 +2784,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:621 (mention) — | trick auto-commit and trailer | 6 | `tricks.md` | 5 |
 - docs/implemented-plans/box-agents-md.md:347 (mention) — (`docs/box-guidance.md`, `docs/box-layout.md`, `docs/box/tricks.md`), the
 - docs/implemented-plans/doc-structure-box-guidance.md:395 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
-- src/core/agent-guide/guide.md:544 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
+- src/core/agent-guide/guide.md:545 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
 - ../issues/closed/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md:160 (mention) — `beebox/docs/box/tricks.md`.
 - ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:14 (mention) — **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
 
@@ -5842,6 +5843,7 @@ References:
 Title: "Replayable document triage with Jev" | 555 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/triage-compiled-instructions.md:57 (mention) — - Boxholder, 2026-09-28 (`beebox/docs/implemented-plans/jev-document-triage.md:46`):
 - docs/reports/jev-document-triage-experiment-2026-09-28.md:11 (link) — [plan](../plans/jev-document-triage.md) records the accepted admission boundary
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:109 (link) — and [implementation plan](../../beebox/docs/implemented-plans/jev-document-triage.md) cover only
 
@@ -7912,6 +7914,18 @@ References:
 - → ../issues/features/2026-08-12-show-retranscription-in-chat.md (frontmatter)
 - → AGENTS.md (mention)
 - → docs/engineering-principles.md (mention)
+
+#### docs/implemented-plans/triage-compiled-instructions.md
+
+Title: "Triage: exact-duplicate removal and agent-compiled instructions with default tie-break principles" | 452 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:208 (link) — [compiled instructions plan](../../beebox/docs/implemented-plans/triage-compiled-instructions.md).
+
+References:
+- → ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md (frontmatter)
+- → docs/implemented-plans/jev-document-triage.md (mention)
+- → docs/box/triage-instructions.md (mention)
 
 #### docs/implemented-plans/triage-todo-question.md
 
@@ -10972,7 +10986,7 @@ References:
 
 #### src/core/agent-guide/guide.md
 
-Title: "Bee Box Agent Guide" | 631 lines
+Title: "Bee Box Agent Guide" | 632 lines
 
 Referenced by:
 - docs/agent-guide.md:19 (mention) — - `guide.md` holds the text, written by hand as one document. Its header

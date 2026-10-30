@@ -11479,6 +11479,21 @@ test1:
       peak: 38471
       added: 4746
       turns: 6
+  triage-compiled-is-generated:
+    - date: 2026-10-29T22:20:49.388Z
+      boxCommit: d3cfa06eb6134047b440027792168c780de9fbe4
+      repoCommit: 0db9942d8022cd77e3c21d78a79ab12310cb75e7
+      initial: 33694
+      peak: 33694
+      added: 0
+      turns: 2
+    - date: 2026-10-30T01:49:16.472Z
+      boxCommit: d3cfa06eb6134047b440027792168c780de9fbe4
+      repoCommit: 78983bdb2ebc6a28362009fbfb470124fa19bf4f
+      initial: 33710
+      peak: 33710
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

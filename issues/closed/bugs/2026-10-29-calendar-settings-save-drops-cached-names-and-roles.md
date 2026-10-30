@@ -1,12 +1,15 @@
 ---
 title: "Saving calendar settings drops the cached calendar names and roles"
-workstream: unattached
+workstream: calendar-cards
 area: beebox
 labels: [calendar, settings]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-calendar-cards — cross-model plan review
+resolution: implemented
 ---
+
+**Closed 2026-10-29:** fixed by commit a8351d1d9. `calendar.updateConfig` now keeps the cached names and roles when saving (`src/webapp/trpc/routers/calendar.ts`).
 
 The settings mutation `calendar.updateConfig`
 (`src/webapp/trpc/routers/calendar.ts`) builds a new config with only

@@ -1,12 +1,15 @@
 ---
 title: "Calendar files synced before the product rename carry calendar properties nothing reads"
-workstream: unattached
+workstream: calendar-cards
 area: beebox
 labels: [calendar]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-calendar-cards — reading the test box's event files
+resolution: implemented
 ---
+
+**Closed 2026-10-29:** fixed by commit a8351d1d9. Resolved without rewriting files: `bbx calendar` now labels events from their folder's calendar card (`calendar-folders.ts`).
 
 Event files written before the product rename carry the calendar id, name,
 and role under the old product's property prefix instead of `X-BBX-CALENDAR-*`.
