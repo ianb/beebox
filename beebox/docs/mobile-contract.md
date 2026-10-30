@@ -264,7 +264,16 @@ the contract.
 | `beeboxComposerCommand` | V1 or V2 composer command (§4.7, §4.8) | → `receiveComposerCommand` |
 | `beeboxLastAudioRequest` | V1 last-audio request (§4.9) | → `receiveLastAudioRequest` |
 
-- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)`).
+- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)`, one per
+  `NativeBridgeChannel`).
+- **Every channel accepts only the box's own main frame.** WebKit exposes `webkit.messageHandlers` to
+  every frame, so `Coordinator.receiveBridgeMessage` refuses a message unless the frame is the main
+  frame and its `frameInfo.securityOrigin` equals the box's origin. A sandboxed page (opaque origin) is
+  refused even when its URL is on the box. Web code must post from the top document. Handlers stay in
+  the page content world because the web app runs there; a dedicated `WKContentWorld` would hide them
+  from the app. An app page with the box's real origin (including the shared-browser dashboard, if
+  opened in the webview) passes this guard; the guard separates frames, and same-origin script is
+  inside the box's trust boundary.
 - Session reporting: the native-authored startup script wraps `history.pushState`/`replaceState` +
   `popstate` and posts `location.href` on every nav; native extracts `?session=` via
   `visibleSessionID`. Origin-checked at both post and receipt time.
