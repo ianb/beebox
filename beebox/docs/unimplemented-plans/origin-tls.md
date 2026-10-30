@@ -1,6 +1,6 @@
 ---
 title: "Encrypt the Cloudflare-to-origin leg on the production server"
-status: active
+status: parked
 workstream: origin-tls
 issues:
   - ../../../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md
@@ -10,6 +10,25 @@ issues:
 Production traffic is HTTPS from the browser to Cloudflare and plain HTTP from Cloudflare to the origin. This plan adds a TLS listener with a Cloudflare Origin CA certificate, makes Cloudflare validate it, and blocks origin traffic that does not come from Cloudflare.
 
 **Issues addressed:** [cloudflare-flexible-ssl-origin-plaintext](../../../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md). Search of the queue with `bin/issues similar` found no duplicate. The nearest item, the closed `deploy-infra-drift-setup-server-not-rerun`, removed the drift that the issue body describes.
+
+## Activation
+
+The boxholder paused this work on 2026-10-30 before any cutover step. What landed is inert: `hetzner/origin-firewall.sh`, `check-origin-tls-ref.sh`, the runbook, and the removal of the zone-wide Flexible PATCH from `create-server.sh`. Production is unchanged, and the plaintext leg remains.
+
+The active changes are in commits `5c219bb6c` and `e7affaab3` in git history; a later commit reverted them. Make them again after the certificate is on the server:
+
+1. In `deploy/nginx/beebox.conf`, add to the server block:
+   ```nginx
+   listen 443 ssl default_server;
+   listen [::]:443 ssl default_server;
+   ssl_certificate /etc/nginx/beebox-tls/origin.pem;
+   ssl_certificate_key /etc/nginx/beebox-tls/origin.key;
+   ssl_protocols TLSv1.2 TLSv1.3;
+   ```
+2. In `deploy/deploy.sh`, after the latest-requested selection, add `"$SCRIPT_DIR/check-origin-tls-ref.sh" "$MONO_DIR" "$SHA"`.
+3. Update the two nginx deploy tests for the new listeners and certificate paths, and restore the rollback notes in `deploy/AGENTS.md` and `docs/server/deploying.md`.
+
+Then follow the cutover order below.
 
 ## Design
 

@@ -315,8 +315,6 @@ if [[ -n "$REQUESTED" && "$REQUESTED" != "$SHA" ]]; then
   SHA="$REQUESTED"
   RAW_REF="$REQUESTED"
 fi
-# Checked here, after the selection above, so a queued older ref is covered too.
-"$SCRIPT_DIR/check-origin-tls-ref.sh" "$MONO_DIR" "$SHA"
 
 step "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 

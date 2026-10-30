@@ -126,7 +126,7 @@ if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
   fi
 
   # The zone's SSL mode is left alone: it covers every hostname in the zone.
-  # This host's mode is a Configuration Rule (docs/server/provisioning.md).
+  # Set it in the Cloudflare dashboard (docs/server/provisioning.md).
 else
   echo "Skipping DNS update (set CLOUDFLARE_API_TOKEN to enable)"
 fi
@@ -169,10 +169,7 @@ fi
 echo ""
 echo "  Next steps:"
 echo "    1. Edit /home/beebox/.env on the server (PUBLIC_URL, optional keys)"
-echo "    2. Follow the cutover order in docs/server/provisioning.md, Origin TLS:"
-echo "       the first deploy fails until the certificate exists, and Cloudflare"
-echo "       uses plain HTTP until the hostname's Configuration Rule exists"
-echo "    3. From a checkout whose deploy/target.env names this server,"
+echo "    2. From a checkout whose deploy/target.env names this server,"
 echo "       run deploy/deploy.sh (installs the tree, units, sudoers, nginx site)"
-echo "    4. Run deploy/add-box.sh to create the first box"
+echo "    3. Run deploy/add-box.sh to create the first box"
 echo "════════════════════════════════════════════════════"

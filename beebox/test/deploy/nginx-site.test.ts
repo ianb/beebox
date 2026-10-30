@@ -8,7 +8,7 @@
 // which left a configuration nginx could no longer start with. These examples
 // run the helper against a real nginx, from that same layout.
 //
-// This needs `nginx` and `openssl` on the PATH (`brew install nginx` on macOS).
+// This needs `nginx` on the PATH (`brew install nginx` on macOS).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -57,11 +57,7 @@ async function productionLike() {
   await mkdir(join(root, "logs"));
   await mkdir(pageDir);
   const port = await freePort();
-  const tlsPort = await freePort();
   const upstreamPort = await freePort();
-  const tlsDir = join(root, "tls");
-  await mkdir(tlsDir);
-  await runFile("openssl", { args: ["req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1", "-nodes", "-days", "2", "-subj", "/CN=localhost", "-keyout", join(tlsDir, "origin.key"), "-out", join(tlsDir, "origin.pem")], env: process.env });
   const callback = `server { listen 127.0.0.1:${port} default_server; server_name _; location / { proxy_pass http://127.0.0.1:${upstreamPort}; } }\n`;
   await writeFile(join(etc, "sites-available/callback"), callback);
   await writeFile(join(etc, "sites-enabled/callback"), callback);
@@ -77,15 +73,12 @@ async function productionLike() {
   let site = await readFile("deploy/nginx/beebox.conf", "utf8");
   site = site.replace("listen 80 default_server;", `listen 127.0.0.1:${port} default_server;`)
     .replace("listen [::]:80 default_server;", "")
-    .replace("listen 443 ssl default_server;", `listen 127.0.0.1:${tlsPort} ssl default_server;`)
-    .replace("listen [::]:443 ssl default_server;", "")
-    .replaceAll("/etc/nginx/beebox-tls", tlsDir)
     .replace("http://127.0.0.1:3210", `http://127.0.0.1:${upstreamPort}`)
     .replaceAll("/run/beebox-deploy", pageDir);
   const src = join(root, "beebox.conf");
   await writeFile(src, site);
   const env = { ...process.env, BBX_NGINX_ETC: etc, BBX_NGINX_BIN: nginxBin, BBX_NGINX_RELOAD: `${nginxBin} -s reload` };
-  return { root, etc, pageDir, port, src, env, nginxBin, tlsDir };
+  return { root, etc, pageDir, port, src, env, nginxBin };
 }
 
 async function enabled(etc: string): Promise<string> {
@@ -238,29 +231,6 @@ nginx: configuration file ${r.etc}/nginx.conf test failed
       preDeployOwned: [],
     },
   );
-});
-
-// ## The certificate is not on the server yet
-//
-// The site names an Origin CA certificate that no deploy writes. Without it the
-// deploy fails with the previous sites restored, so the running site stays up.
-void test("A deploy before the certificate is installed fails with the old site restored", async (t) => {
-  t.teardown(async () => {
-    try {
-      await rm(c.root, { recursive: true, force: true });
-    } catch (error) {
-      t.error(error);
-    }
-  });
-  const c = await productionLike();
-  await rm(join(c.tlsDir, "origin.pem"));
-  const rejected = await runFile(helper, { args: ["install", c.src], env: c.env });
-  t.check(rejected, {
-    code: 1,
-    stdout: any(String),
-    stderr: any(String).includes("restored the previous sites"),
-  });
-  t.check(await enabled(c.etc), "callback");
 });
 
 // The deploy runs the helper by absolute path, and the helper names nginx by

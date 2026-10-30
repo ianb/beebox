@@ -267,11 +267,13 @@ end.
 ## DNS and HTTPS
 
 - DNS: `box.example.com` → server IP (Cloudflare proxied, auto-managed by `hetzner/create-server.sh`)
-- HTTPS: Cloudflare terminates the visitor's TLS. nginx terminates Cloudflare's TLS on 443 with an Origin CA certificate. See [Origin TLS](#origin-tls).
+- HTTPS: Handled by Cloudflare (SSL mode: Flexible — HTTPS to Cloudflare, HTTP to origin). [Origin TLS](#origin-tls) is the prepared fix and is not active.
 
 ## Origin TLS
 
-Cloudflare connects to nginx on 443 and validates its certificate, set by a Configuration Rule for this hostname. The SSL mode of the zone is not used, because it covers every hostname in the zone.
+**Not active.** Production still uses Flexible, and `nginx/beebox.conf` has no 443 listener. To activate this, first apply the changes in [the plan](../unimplemented-plans/origin-tls.md#activation). Install the certificate before the listener lands, or every deploy fails.
+
+When active, Cloudflare connects to nginx on 443 and validates its certificate, set by a Configuration Rule for this hostname. The SSL mode of the zone is not used, because it covers every hostname in the zone.
 
 **The certificate** lives on the server at `/etc/nginx/beebox-tls/origin.pem` and `origin.key`. It is not in git and no deploy writes it. Create it in the Cloudflare dashboard under SSL/TLS, Origin Server, for the production hostname only. The dashboard shows the key once. To install it from the laptop:
 
@@ -290,7 +292,7 @@ Then delete the local copy of the key. A missing or mismatched file fails `nginx
 1. Record the zone's SSL mode and any rule that matches the hostname. That is the state to return to.
 2. Install the certificate as above.
 3. Optional: run `origin-firewall.sh <server> --allow-http`. Do not omit the flag here: without it, port 80 closes while Cloudflare still uses it, and the site goes down.
-4. Deploy a commit with the 443 listener. Verify with the `curl` below.
+4. Apply the plan's activation changes and deploy them. Verify with the `curl` below.
 5. Add a Configuration Rule, last in the list: SSL set to Full (strict), for this hostname and the path `/__origin_tls_probe`. Request that path through the public URL. The hub's 404 proves Cloudflare reached 443. A 521, 522, 525, or 526 means it did not, and only that path is affected.
 6. Widen the rule to the whole hostname. Until this step, production traffic is still in plaintext. Verify that the app loads, that chat connects, that a fresh login sets a `Secure` cookie, and that `ss -tn sport = :443` shows connections.
 7. Check the edge redirect. Full (strict) follows the visitor's scheme, so a plain HTTP visitor produces a plain HTTP request to the origin unless the edge redirects first. `curl -I http://box.example.com/` must return a 301 to HTTPS.

@@ -3,6 +3,7 @@
 // Two scripts protect the Cloudflare-to-origin leg. `check-origin-tls-ref.sh`
 // refuses to deploy a commit whose nginx site has no 443 listener, because
 // Cloudflare connects on 443 and that deploy would take the site offline.
+// It is not wired into deploy.sh until origin TLS is activated (docs/unimplemented-plans/origin-tls.md).
 // `hetzner/origin-firewall.sh` writes the origin's firewall from Cloudflare's
 // published ranges. These examples run both scripts for real, with fake `curl`
 // and `hcloud` commands first on the PATH.
@@ -64,13 +65,6 @@ deploy: this would take the site offline. See docs/server/provisioning.md, Origi
 
   // The override exists for an operator who has already returned Cloudflare to port 80.
   t.check(await runFile(checkRef, { args: [repo, old], env: { ...process.env, BBX_DEPLOY_ALLOW_NO_ORIGIN_TLS: "1" } }), { code: 0, stdout: "", stderr: "" });
-});
-
-// deploy.sh must check after it picks the latest requested sha, or a queued old
-// ref would skip the guard.
-void test("deploy.sh runs the guard after the latest-requested selection", async (t) => {
-  const deploySh = await readFile("deploy/deploy.sh", "utf8");
-  t.check(deploySh, any(String).matches(/SHA="\$REQUESTED"\n {2}RAW_REF="\$REQUESTED"\nfi\n#[^\n]*\n"\$SCRIPT_DIR\/check-origin-tls-ref\.sh" "\$MONO_DIR" "\$SHA"\n/));
 });
 
 const FAKE_HCLOUD = `#!/bin/sh

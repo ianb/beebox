@@ -7,15 +7,13 @@
 // an outage. A 503 the hub sends itself passes through untouched.
 //
 // These examples start a real nginx on the repository file. Only the listen
-// ports, the upstream port, the certificate paths, and the page directory are
-// changed. This needs `nginx` and `openssl` on the PATH (`brew install nginx` on
-// macOS).
+// port, the upstream port, and the page directory are changed. This needs
+// `nginx` on the PATH (`brew install nginx` on macOS).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { createServer } from "node:http";
-import { get as httpsGet } from "node:https";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -52,19 +50,6 @@ async function get(port: number, init?: RequestInit & { path?: string }) {
   };
 }
 
-/** One GET over TLS, trusting the test's own certificate. */
-async function getTls(port: number, ca: string): Promise<{ status: number | undefined; body: string }> {
-  return new Promise((done, fail) => {
-    const req = httpsGet({ host: "127.0.0.1", port, path: "/some/box/page", servername: "localhost", ca, agent: false }, (res) => {
-      let body = "";
-      res.on("data", (chunk) => (body += String(chunk)));
-      res.on("end", () => done({ status: res.statusCode, body }));
-      res.on("error", fail);
-    });
-    req.on("error", fail);
-  });
-}
-
 void test("line 53", async (t) => {
   t.teardown(async () => {
     try {
@@ -80,18 +65,10 @@ void test("line 53", async (t) => {
   await mkdir(join(root, "logs"), { recursive: true });
   await mkdir(pageDir);
   const port = await freePort();
-  const tlsPort = await freePort();
   const upstreamPort = await freePort();
-  const tlsDir = join(root, "tls");
-  await mkdir(tlsDir);
-  await execFileAsync("openssl", ["req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:prime256v1", "-nodes", "-days", "2", "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost", "-keyout", join(tlsDir, "origin.key"), "-out", join(tlsDir, "origin.pem")]);
-  const certificate = await readFile(join(tlsDir, "origin.pem"), "utf8");
   let site = await readFile("deploy/nginx/beebox.conf", "utf8");
   site = substitute(site, { from: "listen 80 default_server;", to: `listen 127.0.0.1:${port};`, count: 1 });
   site = substitute(site, { from: "listen [::]:80 default_server;", to: "", count: 1 });
-  site = substitute(site, { from: "listen 443 ssl default_server;", to: `listen 127.0.0.1:${tlsPort} ssl;`, count: 1 });
-  site = substitute(site, { from: "listen [::]:443 ssl default_server;", to: "", count: 1 });
-  site = substitute(site, { from: "/etc/nginx/beebox-tls", to: tlsDir, count: 2 });
   site = substitute(site, { from: "http://127.0.0.1:3210", to: `http://127.0.0.1:${upstreamPort}`, count: 1 });
   site = substitute(site, { from: "/run/beebox-deploy", to: pageDir, count: 2 });
   await writeFile(join(root, "nginx.conf"), [
@@ -103,11 +80,9 @@ void test("line 53", async (t) => {
   const nginx = ["-p", root, "-c", join(root, "nginx.conf")];
   await execFileAsync("nginx", [...nginx, "-t", "-q"]);
   await execFileAsync("nginx", nginx);
-  const upstream = createServer((request, response) => {
-    forwardedProto = request.headers["x-forwarded-proto"];
+  const upstream = createServer((_request, response) => {
     response.writeHead(503, { "content-type": "application/json" }).end('{"error":"box_unavailable"}');
   });
-  let forwardedProto: string | string[] | undefined;
 
   // With the hub down and no deploy page, a visitor gets the plain 502.
 
@@ -137,11 +112,4 @@ void test("line 53", async (t) => {
   await new Promise<void>((done) => upstream.listen(upstreamPort, "127.0.0.1", done));
   const hub503 = await get(port);
   await t.checkText([hub503.status, hub503.body, String(hub503.deploy)].join(" "), "503 {\"error\":\"box_unavailable\"} null");
-  t.check(forwardedProto, "http");
-
-  // Over TLS the same site answers, and the hub learns the scheme, which is what
-  // marks the password-login cookie Secure (password-post.ts).
-
-  t.check(await getTls(tlsPort, certificate), { status: 503, body: '{"error":"box_unavailable"}' });
-  t.check(forwardedProto, "https");
 });

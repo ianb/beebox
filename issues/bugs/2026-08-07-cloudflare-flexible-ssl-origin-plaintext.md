@@ -1,12 +1,12 @@
 ---
 title: "Cloudflare 'Flexible' SSL leaves edge-to-origin traffic plain HTTP"
-workstream: origin-tls
+workstream: unattached
 area: beebox
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report
 priority: normal
-design: ../../beebox/docs/plans/origin-tls.md
+design: ../../beebox/docs/unimplemented-plans/origin-tls.md
 ---
 
 The public deploy path is Cloudflare-proxied DNS with SSL mode
@@ -28,4 +28,4 @@ Re-reviewed 2026-10-30: still Flexible with a port-80-only origin. The drift gap
 
 Out of date in the body above: Replace the deploy/setup-server.sh nginx reference and the 'not re-run by deploy.sh' caveat with deploy/nginx/beebox.conf (installed by deploy.sh) and deploy/hetzner/create-server.sh (sets Flexible).
 
-Fix in progress: [origin-tls plan](../../beebox/docs/plans/origin-tls.md). This issue closes after the Cloudflare rule is live, not at merge.
+Paused 2026-10-30 by the boxholder. The fix is prepared but not active: see [Activation in the origin-tls plan](../../beebox/docs/unimplemented-plans/origin-tls.md#activation). Production still has the plaintext leg. This issue closes after the Cloudflare rule is live, not at merge.
