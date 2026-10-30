@@ -379,6 +379,8 @@ export async function waitForBox(input: {
   budget: Budget;
 }): Promise<void> {
   const { url, key, budget } = input;
+  // Scaled like the walk's budget: a slow restart step means a slow host.
+  const coldStartMs = COLD_START_MS * budget.factor();
   let refused: SmokeFailureError | null = null;
   let lastBody = "";
   const { verdict, timedOut } = await pollUntilReady({
@@ -392,7 +394,7 @@ export async function waitForBox(input: {
         return null;
       }
     },
-    until: Date.now() + Math.min(COLD_START_MS, budget.remaining()),
+    until: Date.now() + Math.min(coldStartMs, budget.remaining()),
     now: Date.now,
     sleep,
     pollMs: POLL_MS,
@@ -408,11 +410,11 @@ export async function waitForBox(input: {
     throw new StillFailingAfterRestartError({
       message: failure.message,
       detail: failure.detail,
-      coldStartSeconds: String(COLD_START_MS / 1000),
+      coldStartSeconds: (coldStartMs / 1000).toFixed(0),
     });
   }
   throw (
     refused ??
-    new NoAnswerAfterRestartError({ url, coldStartSeconds: String(COLD_START_MS / 1000) })
+    new NoAnswerAfterRestartError({ url, coldStartSeconds: (coldStartMs / 1000).toFixed(0) })
   );
 }

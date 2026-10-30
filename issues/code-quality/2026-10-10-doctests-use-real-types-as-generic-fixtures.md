@@ -47,7 +47,9 @@ list breaks those, and a fixture feature would not help them.
 **Decision needed.** A test-only feature needs a registration seam in
 `features.ts` (production code), and the persistence tests' resolved-map
 assertions would still list every real feature. The alternatives: add the seam
-and narrow those assertions to the fixture key; or accept the coupling, since a
-feature removal costs a mechanical rename in three files. The lean is to accept
-the coupling and close this, because the seam adds a concept to production code
-for a rare, cheap breakage.
+and narrow those assertions to the fixture key; or accept the coupling. A
+feature removal then costs a rename in the three files above plus an edit to
+each serialized `<chat-app>` fixture (about five files), all mechanical; the
+seam would remove only the first part. The lean is to accept the coupling and
+close this, because the seam adds a concept to production code for a rare,
+mechanical breakage it only partly prevents.

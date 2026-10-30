@@ -58,7 +58,6 @@ import {
 import {
   BUDGET_MS,
   Budget,
-  MAX_SLOWDOWN,
   contentListing,
   faultInjection,
   generationAge,
@@ -292,15 +291,21 @@ export async function main(argv: string[]): Promise<number> {
 
   // Last resort. `race` above fails the step, but a spawned `bin/browse` that
   // never exits keeps the event loop alive and this process with it — so the
-  // deadline is also enforced by leaving. `unref` so a normal run is not held
-  // open by the timer itself. Set at the ceiling the budget can grow to.
-  const killer = setTimeout(() => {
-    process.stdout.write(
-      `\nFAIL smoke exceeded its ${String(budget.totalMs() / 1000)}s budget and was killed\n\nSMOKE: red\n`,
-    );
-    process.exit(1);
-  }, BUDGET_MS * MAX_SLOWDOWN + 5_000);
-  killer.unref();
+  // deadline is also enforced by leaving. Re-armed when the budget grows, so a
+  // hang on a healthy host still exits at the unscaled deadline. `unref` so a
+  // normal run is not held open by the timer itself.
+  let killer: NodeJS.Timeout | undefined;
+  const armKiller = (): void => {
+    if (killer !== undefined) clearTimeout(killer);
+    killer = setTimeout(() => {
+      process.stdout.write(
+        `\nFAIL smoke exceeded its ${(budget.totalMs() / 1000).toFixed(0)}s budget and was killed\n\nSMOKE: red\n`,
+      );
+      process.exit(1);
+    }, budget.remaining() + 5_000);
+    killer.unref();
+  };
+  armKiller();
 
   process.stdout.write(`smoke: ${baseUrl}\n`);
   if (faultInjection() !== null) {
@@ -368,7 +373,9 @@ export async function main(argv: string[]): Promise<number> {
     const ms = Date.now() - at;
     outcomes.set(step.id, { id: step.id, outcome: "ok", ms });
     process.stdout.write(`ok   ${step.name} (${formatStepTime(ms, history.get(step.id))})\n`);
+    const before = budget.totalMs();
     budget.scaleTo(walkSlowdown([...outcomes.values()], history));
+    if (budget.totalMs() !== before) armKiller();
   }
   finish("green");
   process.stdout.write(

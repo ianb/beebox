@@ -14,7 +14,8 @@ slower than usual its finished steps ran (their total time over the total of
 their run-log medians), up to 3 times 120 s. A step that hangs on a healthy host
 gets no extension, because the steps before it ran at their usual speed; the
 2026-10-27 and 2026-10-30 place-switch reds (earlier steps 0.5 to 1.5 times
-usual, the failing step alone at 85 to 108 s) still fail at 120 s. The verdict
+usual, the failing step alone at 85 to 108 s) still fail at 120 s. The cold-start
+wait and the last-resort process kill follow the same scaled deadline. The verdict
 stays green or red, so `bin/finish-verify` needs no change; the result line
 reads, for example, `SMOKE: green (49.1s of 139s budget, steps 1.2x usual)`.
 Waiting for load to drop was not chosen: load stays at 10 to 40 for hours here,
