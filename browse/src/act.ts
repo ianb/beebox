@@ -165,8 +165,9 @@ async function liveRefId(ref: string): Promise<string | null> {
 export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeContext): Promise<number> {
   const ownPage = await onOwnPage(ctx);
   let text: string;
+  let warnings: string;
   try {
-    ({ stdout: text } = await run(["snapshot", ...args], { timeoutMs: CAPTURE_TIMEOUT_MS }));
+    ({ stdout: text, stderr: warnings } = await run(["snapshot", ...args], { timeoutMs: CAPTURE_TIMEOUT_MS }));
   } catch (e) {
     if (isStuck(e)) {
       process.stderr.write(stuckCaptureMessage("snapshot"));
@@ -179,8 +180,9 @@ export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeCo
     throw e;
   }
   if (!ownPage) {
-    // Another origin has no ids to add: upstream's text as it printed it.
+    // Another origin has no ids to add: upstream's output as it printed it.
     process.stdout.write(text);
+    process.stderr.write(warnings);
     return 0;
   }
   if (args.includes("--json")) {

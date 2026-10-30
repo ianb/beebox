@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { constants as osConstants } from "node:os";
 import { dirname, join } from "node:path";
@@ -80,13 +80,27 @@ export interface RunOptions {
   timeoutMs?: number;
 }
 
-/** SIGKILL a detached child's whole process group; it may already be gone. */
-function killGroup(pid: number | undefined): void {
+/**
+ * SIGKILL the shim and the native client it spawned. `agent-browser.js`
+ * spawns the client with inherited stdio, so killing only the shim left the
+ * client holding our pipes: `close` waited out its 152 s of re-sends and the
+ * ceiling never fired early. The client stays in our process group, so a
+ * Ctrl-C still reaches it.
+ */
+function killTree(pid: number | undefined): void {
   if (pid === undefined) return;
+  let children: number[] = [];
   try {
-    process.kill(-pid, "SIGKILL");
+    children = execFileSync("pgrep", ["-P", String(pid)], { encoding: "utf8" }).split("\n").filter((l) => l !== "").map(Number);
   } catch {
-    // ESRCH: the group already exited.
+    // pgrep exits 1 when there are no children.
+  }
+  for (const target of [...children, pid]) {
+    try {
+      process.kill(target, "SIGKILL");
+    } catch {
+      // ESRCH: already exited.
+    }
   }
 }
 
@@ -95,20 +109,14 @@ export async function run(args: readonly string[], options?: RunOptions): Promis
   const opts: RunOptions = options === undefined ? {} : options;
   return new Promise((resolve, reject) => {
     const env = opts.env === undefined ? process.env : { ...process.env, ...opts.env };
-    // `agent-browser.js` is a shim that spawns the native client with inherited
-    // stdio. Killing only the shim leaves the client holding our pipes, so
-    // `close` waited out its 152 s of re-sends and the ceiling never fired
-    // early. A ceiling therefore runs the client in its own process group and
-    // kills the group.
-    const bounded = opts.timeoutMs !== undefined;
-    const child = spawn("node", [binary, ...args], { stdio: ["ignore", "pipe", "pipe"], env, detached: bounded });
+    const child = spawn("node", [binary, ...args], { stdio: ["ignore", "pipe", "pipe"], env });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
     const started = Date.now();
     const timer = opts.timeoutMs === undefined ? null : setTimeout(() => {
       timedOut = true;
-      killGroup(child.pid);
+      killTree(child.pid);
     }, opts.timeoutMs);
     child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString("utf8"); });
     child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString("utf8"); });

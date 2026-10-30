@@ -207,9 +207,12 @@ async function main(): Promise<number> {
 
   // `close` is the recovery for a wedged session, so it is never refused;
   // help needs no browser.
-  const wantsHelp = PASSTHROUGH_LEADING_FLAGS.has(sub) || args.includes("--help") || args.includes("-h");
-  if (wantsHelp) {
-    if (sub === "screenshot") { process.stdout.write(SCREENSHOT_USAGE); return 0; }
+  // Screenshot arguments are this wrapper's own, so their usage errors and
+  // help come first too.
+  const shot = sub === "screenshot" ? parseScreenshotArgs(args.slice(1)) : null;
+  if (shot?.kind === "help") { process.stdout.write(SCREENSHOT_USAGE); return 0; }
+  if (shot?.kind === "error") { process.stderr.write(`browse screenshot: ${shot.message}\n${SCREENSHOT_USAGE}`); return 2; }
+  if (shot === null && (PASSTHROUGH_LEADING_FLAGS.has(sub) || args.includes("--help") || args.includes("-h"))) {
     return runPassthrough(args);
   }
   if (sub !== "close" && !(await daemonAnswers(socketDir, session))) {
@@ -239,13 +242,10 @@ async function main(): Promise<number> {
     return code;
   }
 
-  if (sub === "screenshot") {
-    const parsed = parseScreenshotArgs(args.slice(1));
-    if (parsed.kind === "help") { process.stdout.write(SCREENSHOT_USAGE); return 0; }
-    if (parsed.kind === "error") { process.stderr.write(`browse screenshot: ${parsed.message}\n${SCREENSHOT_USAGE}`); return 2; }
+  if (shot !== null) {
     let result;
     try {
-      result = await runEnhancedScreenshot(parsed.invocation, ctx);
+      result = await runEnhancedScreenshot(shot.invocation, ctx);
     } catch (e) {
       if (!isStuck(e)) throw e;
       process.stderr.write(stuckCaptureMessage("screenshot"));
