@@ -77,7 +77,7 @@ function claudeMessage(message: Record<string, unknown>): { type: "user" | "assi
  * payloads were stripped: its images are then served by the session-media
  * route, which finds the line by its entry `id`.
  */
-async function* piLines(path: string): AsyncGenerator<{ raw: Record<string, unknown>; mediaSessionId: string | null }> {
+export async function* piLines(path: string): AsyncGenerator<{ raw: Record<string, unknown>; mediaSessionId: string | null }> {
   let sessionId: string | null = null;
   for await (const line of readTranscriptLines(path)) {
     // A line past the byte bound even without its images: not shown, as Claude's is not parsed.

@@ -11379,6 +11379,14 @@ test1:
       peak: 37650
       added: 3899
       turns: 7
+  pi-nested-agents-before-edit:
+    - date: 2026-10-29T23:47:59.344Z
+      boxCommit: 0a09cf9db42a1ac608404c8ac84ce51354549c54
+      repoCommit: e6f2c550b3efa08b1bf1b1170bf7569f918e9a3a
+      initial: 22577
+      peak: 26081
+      added: 3504
+      turns: 10
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

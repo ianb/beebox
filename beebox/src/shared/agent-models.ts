@@ -12,20 +12,6 @@ export function isAgentEngine(value: unknown): value is AgentEngine {
 }
 
 /**
- * A code path an engine does not have. Its one user is the knowledge audit on
- * pi, which needs a pi behavior reader (docs/plans/pi-box-engine.md).
- */
-export class EngineNotImplementedError extends Error {
-  readonly engine: AgentEngine;
-
-  constructor(engine: AgentEngine, operation: string) {
-    super(`the ${engine} engine is not available yet (${operation})`);
-    this.name = "EngineNotImplementedError";
-    this.engine = engine;
-  }
-}
-
-/**
  * Portable procedure tiers, followed by the provider-shaped legacy aliases
  * accepted by existing box cards. New procedure cards should use the tiers.
  */

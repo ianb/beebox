@@ -39,6 +39,8 @@ void test("Each audit regenerates the guidance the previous audit's cleanup remo
     "../../../../src/dev/lib/box-audits/core.ts",
     {
       "../../../../src/core/agent/invoke/core.ts": {
+        // Audits here run on claude; pi is never asked for.
+        createPiAgent: () => { throw new Error("pi is not used by this test"); },
         createClaudeAgent: () => ({
           name: "knowledge-audit",
           sessionId: null,
@@ -104,6 +106,8 @@ void test("A plugin audit's activation does not leak into the next audit", async
       // that activation reached docs generation.
       "../../../../src/dev/lib/box-audits/plugins.ts": { ...auditPlugins, assertAuditPluginsReady: async () => {} },
       "../../../../src/core/agent/invoke/core.ts": {
+        // Audits here run on claude; pi is never asked for.
+        createPiAgent: () => { throw new Error("pi is not used by this test"); },
         createClaudeAgent: () => ({
           name: "knowledge-audit",
           sessionId: null,

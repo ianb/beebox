@@ -9,31 +9,20 @@ import { execSync } from "node:child_process";
 import { parseYaml } from "../../../../lib/read-yaml.js";
 import { assertStandaloneBox, assertCleanAuditBox } from "../../box-guard.js";
 import { testSuiteSchema, type AuditTest, type SearchWhere, type TestSuite } from "../../test-suite-schema.js";
-import { errnoCode } from "../../../../shared/error-guards.js";
-import { createClaudeAgent } from "../../../../core/agent/invoke/core.js";
 import type { AgentInvokeOptions } from "../../../../core/agent/types.js";
-import { createCodexAgent } from "../../../../core/agent/codex-agent.js";
-import type { CodexObservedActivity } from "../../../../core/agent/codex-run/core.js";
+import type { PiSessionDeps } from "../../../../core/agent/pi-run/session/core.js";
 import { loadAgentEngine, type AgentEngine } from "../../../../core/box/config.js";
 import { chatSystemPrompt, NARRATION_OVERLAY } from "../../../../core/chat/session/run/core.js";
 import { buildLandmarkBoxContext } from "../../../../core/chat/session/landmark-context.js";
 import { buildLandmarkSessionNote } from "../../../../core/chat/session/prompts.js";
-import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../../cli/lib/session.js";
-import { getSessionLogPath } from "../../../../core/chat/session/transcript-paths.js";
-import {
-  readTurnUsage,
-  summarizeContextUsage,
-  type ContextStats,
-} from "../../context-usage.js";
-import { codexBehaviorFromActivity } from "./codex-audit.js";
-import { type BehaviorAccumulator, categorizeToolUse } from "./tool-use-behavior.js";
-import { type ReplyBlock, visibleReplyText } from "./reply-text.js";
+import type { ContextStats } from "../../context-usage.js";
+import { createAuditAgent } from "./audit-agent.js";
 import { runChecks } from "../../audit-checks.js";
 import { generateAgentContextMirrors } from "../../../../core/agent-context-mirrors.js";
 import { AGENTS_MD, CLAUDE_MD } from "../../../../core/agent-instruction-files.js";
 import { ensureAuditPackageDocs, removeFixtures, writeFixtures } from "./fixtures.js";
-import { EngineNotImplementedError } from "../../../../shared/agent-models.js";
 
+export { extractBehavior, KnowledgeAuditTranscriptError } from "./claude-audit.js";
 export type { AuditTest, TestSuite };
 
 export interface AgentBehavior {
@@ -82,13 +71,6 @@ class KnowledgeAuditAgentError extends Error {
   }
 }
 
-export class KnowledgeAuditTranscriptError extends Error {
-  constructor({ sessionId, logPath }: { sessionId: string; logPath: string }, cause: unknown) {
-    super(`Claude knowledge-audit transcript is missing for session ${sessionId}: ${logPath}. No audit checks were evaluated.`, { cause });
-    this.name = "KnowledgeAuditTranscriptError";
-  }
-}
-
 /**
  * Load audit tests from a YAML file.
  */
@@ -104,13 +86,6 @@ export function getTestsPath(scenarioDir: string): string {
   return path.join(scenarioDir, "knowledge-audits.yaml");
 }
 
-/** The engine an audit runs on: the requested one, else the box default. */
-async function auditEngine(boxRoot: string, requested: AgentEngine | undefined): Promise<Exclude<AgentEngine, "pi">> {
-  const engine = requested ?? await loadAgentEngine(boxRoot);
-  if (engine === "pi") throw new EngineNotImplementedError(engine, "running a knowledge audit");
-  return engine;
-}
-
 /**
  * Run a single knowledge audit and return the result.
  */
@@ -121,6 +96,8 @@ export interface RunTestOptions {
   onOutput?: (text: string) => void;
   /** Exact status this test's docs setup produced (see runBoxAudits); the box must show exactly this. */
   cliSetupStatus?: string;
+  /** pi's runtime seams (`createAuditAgent`); dev-only, never set on a server path. */
+  piDeps?: PiSessionDeps;
 }
 
 export async function runTest(options: RunTestOptions): Promise<TestResult> {
@@ -137,7 +114,7 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
 
   // Save git state so we can restore after the test
   const headBefore = execSync("git rev-parse HEAD", { cwd: boxRoot, encoding: "utf-8" }).trim();
-  const engine = await auditEngine(boxRoot, options.engine);
+  const engine = options.engine ?? await loadAgentEngine(boxRoot);
 
   // Clean any leftover memory files from previous runs
   const memoryDir = path.join(boxRoot, ".claude", "memory");
@@ -148,8 +125,8 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
   // throws, since `git clean -fd` won't touch gitignored paths.
   const fixturePaths = await writeFixtures(boxRoot, test.fixture);
   try {
-    if (engine === "codex" && test.fixture !== undefined) {
-      // An AGENTS.md fixture is read by Codex directly. A legacy CLAUDE.md
+    if (engine !== "claude" && test.fixture !== undefined) {
+      // An AGENTS.md fixture is read by Codex and pi directly. A legacy CLAUDE.md
       // fixture (unconverted box) gets an AGENTS.md mirror, removed afterwards.
       await generateAgentContextMirrors(boxRoot);
       fixturePaths.push(...fixturePaths
@@ -179,29 +156,15 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     // Claude keys persisted transcripts by the physical cwd (e.g. macOS
     // /tmp resolves to /private/tmp). Invoke and collect with that same path.
     if (engine === "claude") invokeOpts.cwd = await fs.realpath(invokeOpts.cwd ?? boxRoot);
-    const codexActivity: CodexObservedActivity[] = [];
-    const agentOptions = {
-      name: "knowledge-audit",
-      ...(onOutput && { onOutput }),
-    };
-    const agent = engine === "claude"
-      ? createClaudeAgent(agentOptions)
-      : createCodexAgent({
-        ...agentOptions,
-        onActivity: (activity) => codexActivity.push(activity),
-      });
-    const result = await agent.invoke(invokeOpts);
+    const audit = createAuditAgent(engine, { onOutput, piDeps: options.piDeps });
+    const result = await audit.agent.invoke(invokeOpts);
     // A run that started and stopped at its limit still has a transcript to
     // grade; only an invocation failure leaves nothing to audit.
     const unauditable = !result.success && (result.invocationFailure === true || result.sessionId === "");
     if (unauditable) throw new KnowledgeAuditAgentError(engine, result.error);
     const cardsAfter = test.cards_contain || test.cards_not_under ? await snapshotCardFiles(boxRoot) : new Map();
-    // Claude Code stores session logs keyed by the SDK's cwd. Codex activity
-    // comes from the validated live stream captured by its adapter above.
-    const logDir = invokeOpts.cwd ?? boxRoot;
-    const behavior = engine === "codex"
-      ? codexBehaviorFromActivity(codexActivity, result.resultText ?? result.output)
-      : await extractBehavior(logDir, result.sessionId);
+    // Claude Code stores session logs keyed by the SDK's cwd.
+    const behavior = await audit.behavior({ result, logDir: invokeOpts.cwd ?? boxRoot, boxRoot });
     const newOrModifiedCards = findNewOrModifiedCards(cardsBefore, cardsAfter);
     const checks = runChecks(test, { behavior, newOrModifiedCards });
     if (!result.success) checks.agentStopped = result.error;
@@ -211,112 +174,6 @@ export async function runTest(options: RunTestOptions): Promise<TestResult> {
     execSync(`git reset --hard ${headBefore}`, { cwd: boxRoot, encoding: "utf-8" });
     execSync("git clean -fd", { cwd: boxRoot, encoding: "utf-8" });
   }
-}
-
-/**
- * Extract agent behavior from a session transcript.
- *
- * Also walks into sub-agent logs (sibling `<sessionId>/subagents/*.jsonl`
- * directory written by Claude Code when the main agent delegates via the
- * Agent tool). Sub-agent tool calls count as the main agent's behavior for
- * audit purposes — otherwise every delegated Read would be invisible.
- * Sub-agent response text is NOT merged into responseText; only the main
- * agent's text reply is evaluated. The agent may delete its own cwd (a
- * fixture directory); then `logDir` is used as given, so the caller passes the
- * path it resolved before the run.
- */
-export async function extractBehavior(logDir: string, sessionId: string): Promise<AgentBehavior> {
-  const physicalDir = await fs.realpath(logDir)
-    .catch((error: unknown) => (errnoCode(error) === "ENOENT" ? logDir : Promise.reject(error)));
-  const logPath = getSessionLogPath(physicalDir, sessionId);
-  const { entries, total } = await parseSessionLog({
-    logPath,
-    slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
-  }).catch((error: unknown) => {
-    if (errnoCode(error) === "ENOENT") throw new KnowledgeAuditTranscriptError({ sessionId, logPath }, error);
-    throw error;
-  });
-  warnIfBehaviorReadTruncated({ logPath, entriesRead: entries.length, total });
-
-  const acc: BehaviorAccumulator = { filesRead: [], searches: [], bashCommands: [], bashRawCommands: [] };
-  const responseChunks: string[] = [];
-  // Text blocks and progress updates in order; replyStart is where the blocks
-  // after the last tool call start.
-  const replyBlocks: ReplyBlock[] = [];
-  let replyStart = 0;
-
-  for (const entry of entries) {
-    if (entry.type === "assistant") {
-      for (const block of entry.content) {
-        if (block.type === "text" && block.text) {
-          responseChunks.push(block.text);
-          replyBlocks.push({ text: block.text, update: false });
-        }
-        if (block.type === "thinking" && block.progressUpdate === true && block.text?.trim()) {
-          replyBlocks.push({ text: block.text, update: true });
-        }
-        if (block.type === "tool_use") {
-          categorizeToolUse(block, acc);
-          replyStart = replyBlocks.length;
-        }
-      }
-    }
-  }
-
-  // Merge tool uses from any sub-agent logs into the accumulator.
-  const subagentDir = path.join(path.dirname(logPath), sessionId, "subagents");
-  try {
-    const subagentFiles = await fs.readdir(subagentDir);
-    for (const file of subagentFiles) {
-      if (!file.endsWith(".jsonl")) continue;
-      const subagentLog = path.join(subagentDir, file);
-      const { entries: subEntries, total: subTotal } = await parseSessionLog({
-        logPath: subagentLog,
-        slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
-      });
-      warnIfBehaviorReadTruncated({ logPath: subagentLog, entriesRead: subEntries.length, total: subTotal });
-      for (const entry of subEntries) {
-        if (entry.type === "assistant") {
-          for (const block of entry.content) {
-            if (block.type === "tool_use") {
-              categorizeToolUse(block, acc);
-            }
-          }
-        }
-      }
-    }
-  } catch (e) {
-    // Sub-agent dir may not exist if the agent never delegated — that's fine.
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`[test-runner] Failed to read subagent logs at ${subagentDir}:`, e);
-    }
-  }
-
-  const responseText = responseChunks.join("\n").trim();
-  const replyText = visibleReplyText(replyBlocks, replyStart);
-
-  // Context-size accounting reads the same main session log (not subagent
-  // logs — those are separate contexts; baseline/peak is about what the box
-  // agent itself carries every turn).
-  const context = summarizeContextUsage(await readTurnUsage(logPath));
-
-  return {
-    ...acc,
-    responseText,
-    replyText,
-    responseLength: responseText.split(/\s+/).length,
-    context,
-  };
-}
-
-function warnIfBehaviorReadTruncated(args: {
-  logPath: string; entriesRead: number; total: number;
-}): void {
-  const { logPath, entriesRead, total } = args;
-  if (entriesRead >= total) return;
-  console.warn(
-    `[test-runner] Behavior extraction from ${logPath} has ${String(total)} entries; using the first ${String(entriesRead)}.`,
-  );
 }
 
 /**

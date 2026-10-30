@@ -725,6 +725,35 @@ tests:
       - 'file_upload|Focus card|Submit batch|Copy prompt'
     tags: [browser-task]
 
+  # === Nested AGENTS.md on pi ===
+  #
+  # pi loads only the walk-up AGENTS.md; its system prompt tells it to read the
+  # AGENTS.md files on the path to a directory before changing files there
+  # (NESTED_AGENTS_LINE, docs/plans/pi-box-engine.md). The fixture's rule shows
+  # whether the agent read it before the edit. pi only: Claude Code loads the
+  # nested file itself without a Read, so should_read fails there by design.
+  # The checks do not see order; read the session file for it.
+  # Status (2026-10-29, pi, deepseek/deepseek-v3.2): automated checks passed,
+  # but the order failed. The agent found and read the recipe, edited it, and
+  # read _content/recipes/AGENTS.md only after an `ls` listed it; it then added
+  # the `- Changed:` line in a second edit. 10 turns, 23k initial context, $0.015.
+  - id: pi-nested-agents-before-edit
+    prompt: >
+      In the slow-cooker party mix recipe in _content/recipes, add 1 cup of
+      cheese crackers to the ingredients.
+    expected_level: knows_directly
+    watch_for: "Reads _content/recipes/AGENTS.md before editing the recipe, and adds the Notes line that file asks for"
+    fixture:
+      _content/recipes/AGENTS.md: |
+        # Recipes
+
+        When you change a recipe in this directory, add a line to its
+        `## Notes` section that starts with `- Changed:` and says what changed.
+    should_read: ["_content/recipes/AGENTS.md"]
+    cards_contain: ["- Changed:", "cheese crackers"]
+    max_turns: 12
+    tags: [pi, nested-agents]
+
   # === Box Structure and Navigation ===
   #
   # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The

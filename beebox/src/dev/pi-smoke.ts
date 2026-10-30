@@ -11,32 +11,26 @@
  * file, a structured call, a resume, a chat-backend turn read back through the
  * pi session store, and a bash call that must not see a server-only variable.
  *
- * Key handling: box code reads the OpenRouter key from the machine secret
- * store through a per-box grant. This script never touches that store. It
- * points `BBX_SECRETS_FILE` at a store in the throwaway directory holding a
- * placeholder value granted to the throwaway box, so the production grant check
- * runs unchanged. The real key, `BBX_OPENROUTER_API_KEY` from the environment
- * or `beebox/.env`, reaches pi only in memory, through the `createRuntime`
- * seam the tests use for pi's `faux` provider.
+ * Key handling (`lib/openrouter-dev-key.ts`): the machine secret store is
+ * never touched. A scratch store in the throwaway directory grants a
+ * placeholder to each throwaway box, and the real key reaches pi only in memory.
  */
 
 import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { parseArgs, parseEnv } from "node:util";
+import { join } from "node:path";
+import { parseArgs } from "node:util";
 import { z } from "zod";
-import { ModelRuntime, type CreateModelRuntimeOptions } from "@earendil-works/pi-coding-agent";
 import { createPiAgent } from "../core/agent/invoke/core.js";
 import type { AgentResult } from "../core/agent/types.js";
 import { scaffoldBoxRoot } from "../core/box/package.js";
 import { SESSION_STORES } from "../core/chat/session/native-store.js";
 import { grantSecret, setSecret } from "../core/secrets/lifecycle.js";
 import { boxSlug } from "../lib/box-slug.js";
-import { errnoCode } from "../shared/error-guards.js";
 import { createPiChatBackend } from "../services/claude-chat/core.js";
+import { OPENROUTER_KEY_ENV, PI_DEV_PLACEHOLDER_KEY, openRouterDevKey, piDepsWithKey } from "./lib/openrouter-dev-key.js";
 
-const KEY_NAME = "BBX_OPENROUTER_API_KEY";
 /**
  * One model pi runs with reasoning on and one with it off. Not
  * `deepseek/deepseek-chat-v3.1`: at pi's default thinking level it writes its
@@ -44,56 +38,17 @@ const KEY_NAME = "BBX_OPENROUTER_API_KEY";
  */
 const DEFAULT_MODELS = ["deepseek/deepseek-v3.2", "qwen/qwen3-coder"];
 const COST_CAP_USD = 0.25;
-const PLACEHOLDER_KEY = "pi-smoke-placeholder";
 const SENTINEL_NAME = "BBX_PI_SMOKE_SENTINEL";
 const SENTINEL_VALUE = `server-only-${process.pid}`;
 
 /** pi's estimated spend across every model run so far. */
 let spentSoFar = 0;
 
-/** The session handed pi a key other than the scratch store's placeholder. */
-class UnexpectedKeyError extends Error {
-  constructor() {
-    super("pi-smoke: the session did not pass the scratch store's placeholder key");
-    this.name = "UnexpectedKeyError";
-  }
-}
-
 interface CaseResult {
   name: string;
   ok: boolean;
   costUsd: number;
   detail: string;
-}
-
-async function openRouterKey(): Promise<string | null> {
-  const fromEnv = process.env[KEY_NAME];
-  if (fromEnv !== undefined && fromEnv !== "") return fromEnv;
-  const envFile = resolve(import.meta.dirname, "../../.env");
-  let text: string;
-  try {
-    text = await readFile(envFile, "utf8");
-  } catch (error) {
-    if (errnoCode(error) === "ENOENT") return null;
-    throw error;
-  }
-  const value = parseEnv(text)[KEY_NAME];
-  return value === undefined || value === "" ? null : value;
-}
-
-/** pi's real runtime, with the placeholder from the scratch store swapped for the real key in memory. */
-function runtimeWithKey(key: string) {
-  return {
-    createRuntime: async (options: CreateModelRuntimeOptions): Promise<ModelRuntime> => {
-      const runtime = await ModelRuntime.create(options);
-      const set = runtime.setRuntimeApiKey.bind(runtime);
-      runtime.setRuntimeApiKey = async (provider, value) => {
-        if (value !== PLACEHOLDER_KEY) throw new UnexpectedKeyError();
-        await set(provider, key);
-      };
-      return runtime;
-    },
-  };
 }
 
 async function makeBox(parent: string, model: string): Promise<string> {
@@ -105,7 +60,7 @@ async function makeBox(parent: string, model: string): Promise<string> {
     agentModel: model,
     openrouterModels: [{ id: model, label: model }],
   }, null, 2)}\n`);
-  await setSecret({ name: "openrouter", value: PLACEHOLDER_KEY });
+  await setSecret({ name: "openrouter", value: PI_DEV_PLACEHOLDER_KEY });
   await grantSecret({ slug: await boxSlug(root), name: "openrouter", access: "server" });
   return root;
 }
@@ -122,7 +77,7 @@ function failureText(result: AgentResult | { success: false; error: string } | {
 async function runModel({ parent, model, key }: { parent: string; model: string; key: string }): Promise<CaseResult[]> {
   const boxRoot = await makeBox(parent, model);
   console.log(`\n== ${model}\nbox: ${boxRoot}`);
-  const deps = runtimeWithKey(key);
+  const deps = piDepsWithKey(key);
   const results: CaseResult[] = [];
   const word = `heron-${String(process.pid).slice(-3)}`;
   await writeFile(join(boxRoot, "_content/smoke-note.txt"), `The code word is ${word}.\n`);
@@ -226,9 +181,9 @@ async function runModel({ parent, model, key }: { parent: string; model: string;
 
 async function main(): Promise<number> {
   const { values, positionals } = parseArgs({ options: { dir: { type: "string" } }, allowPositionals: true });
-  const key = await openRouterKey();
+  const key = await openRouterDevKey();
   if (key === null) {
-    console.error(`pi-smoke: set ${KEY_NAME} in the environment or in beebox/.env. It spends real OpenRouter credit (a few cents).`);
+    console.error(`pi-smoke: set ${OPENROUTER_KEY_ENV} in the environment or in beebox/.env. It spends real OpenRouter credit (a few cents).`);
     return 2;
   }
   const parent = await mkdtemp(join(values.dir ?? tmpdir(), "pi-smoke-"));

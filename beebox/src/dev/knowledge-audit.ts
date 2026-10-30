@@ -4,7 +4,7 @@
  * or evaluate results.
  *
  * Usage (via pnpm script):
- *   pnpm knowledge-audit run [--box <path>] [--filter <tag-or-id>]
+ *   pnpm knowledge-audit run [--box <path>] [--filter <tag-or-id>] [--engine <engine>] [--pi-dev-key]
  *   pnpm knowledge-audit run --dev [--model <id>] [--filter <tag-or-id>]
  *   pnpm knowledge-audit list [--tests <path>]
  *   pnpm knowledge-audit eval <report-path>
@@ -24,8 +24,10 @@ import { recordRun, loadHistory, type RunMeasurement } from "./lib/context-histo
 import { DEFAULT_DEV_AUDIT_MODEL, devRepoRoot, runDevTest } from "./lib/test-runner/dev-session.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { AgentEngine } from "../core/box/config.js";
+import type { PiSessionDeps } from "../core/agent/pi-run/session/core.js";
 import type { AuditTest, TestResult } from "./lib/test-runner/runner/run-test.js";
 import { AGENT_ENGINES, isAgentEngine } from "../shared/agent-models.js";
+import { OPENROUTER_KEY_ENV, openRouterDevKey, piDepsWithKey } from "./lib/openrouter-dev-key.js";
 
 const DEFAULT_TESTS_DIR = path.join(PACKAGE_ROOT, "src", "dev");
 const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_TESTS_DIR, "reports");
@@ -136,6 +138,16 @@ async function runDevAudits(options: { tests: AuditTest[]; model: string; output
   });
 }
 
+/** `--pi-dev-key`: only with a scratch secret store, which must grant the box the placeholder key. */
+async function piDevDeps(): Promise<PiSessionDeps> {
+  const key = await openRouterDevKey();
+  if (process.env.BBX_SECRETS_FILE === undefined || key === null) {
+    console.error(`--pi-dev-key needs BBX_SECRETS_FILE (a scratch store) and ${OPENROUTER_KEY_ENV} in the environment or beebox/.env`);
+    process.exit(1);
+  }
+  return piDepsWithKey(key);
+}
+
 /** Short-circuiting git HEAD lookup; "unknown" if the dir isn't a repo. */
 function gitHead(cwd: string): string {
   try {
@@ -176,15 +188,16 @@ program
   .option("--model <id>", `Model for --dev sessions (default ${DEFAULT_DEV_AUDIT_MODEL})`)
   .option("--tests <path>", "Path to audits.yaml")
   .option("--filter <id-or-tag>", "Filter by audit ID or tag")
-  .option("--engine <engine>", "Override the box engine: claude or codex", parseEngine)
+  .option("--engine <engine>", `Override the box engine: ${AGENT_ENGINES.join(", ")}`, parseEngine)
+  .option("--pi-dev-key", `pi only: replace the placeholder in the BBX_SECRETS_FILE scratch store with ${OPENROUTER_KEY_ENV}, in memory`)
   .option("--output <path>", "Output report path")
   .action(async (options: {
-    box?: string; tests?: string; filter?: string; output?: string; engine?: AgentEngine; dev?: boolean; model?: string;
+    box?: string; tests?: string; filter?: string; output?: string; engine?: AgentEngine; dev?: boolean; model?: string; piDevKey?: boolean;
   }) => {
     const testsPath = options.tests ?? getTestsPath(DEFAULT_TESTS_DIR);
     const dev = options.dev === true;
-    if (dev && (options.box !== undefined || options.engine !== undefined)) {
-      console.error("--dev runs in this checkout with Claude; it takes no --box or --engine");
+    if (dev && (options.box !== undefined || options.engine !== undefined || options.piDevKey === true)) {
+      console.error("--dev runs in this checkout with Claude; it takes no --box, --engine or --pi-dev-key");
       process.exit(1);
     }
     if (!dev && options.model !== undefined) {
@@ -242,6 +255,7 @@ program
       tests,
       boxRoot: resolvedBox,
       engine,
+      ...(options.piDevKey === true && { piDeps: await piDevDeps() }),
       onTestStart: printAuditHeader,
       onTestDone: printAuditSummary,
     });
