@@ -91,7 +91,10 @@ network — authentication is structurally always-on; there is no flag,
 env var, or config field that disables the login wall — and it limits
 what the box's own moving parts inherit: per-box processes and agent
 subprocesses get an allowlisted environment that omits the
-session-signing secret and other cross-box credentials. Be precise
+session-signing secret and other cross-box credentials (two known
+exceptions are open: [box card schemas](../../issues/bugs/2026-10-30-box-schemas-load-inside-the-server-process.md)
+load inside the server process, and [server-side commits](../../issues/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md)
+run box Git hooks with the server's environment). Be precise
 about what that is: **env-level isolation, not OS-level.** Everything
 runs as one OS user, and the secret is also a 0600 file that same-user
 code could read — the stripping stops accidents and lazy exfiltration,
