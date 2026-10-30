@@ -1,12 +1,15 @@
 ---
 title: "View metadata import runs box-authored view code with the server's whole environment"
-workstream: unattached
+workstream: agent-ad8cceee119235ca5
 area: beebox
 labels: [security, env]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-agent-a80db54b588f8698c — cross-model security review (codex gpt-6-astra) of the credential table
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** The metadata import child now gets the agent profile's allowlist with BBX_SPAWN_PROFILE=agent (agentAllowlistEnv in src/core/script-env/core.ts), and bbx view check's render child gets buildScriptEnv. test/credential-visibility/every-consumer.test.ts pins both at the process boundary (viewMeta, viewRender columns); test/webapp/views/compiler.test.ts checks that a view exporting process.env.BBX_HUB_SECRET gets nothing. The engine-audience spreads found in the same audit are filed as 2026-10-30-upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env.
 
 `src/webapp/views/compiler/meta-import.ts` `runInSubprocess` spawns Node with
 no `env` option, so the child gets the server's `process.env`. The runner
