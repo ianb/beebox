@@ -12,6 +12,7 @@ The boxholder's ask: a browser inside beebox that the box agent and the person b
 | [site-reality.md](site-reality.md) | Bot detection, datacenter IP reputation, residential paths, stealth projects, captchas, terms of service |
 | [agent-browser-dashboard.md](agent-browser-dashboard.md) | After the boxholder's direction: what agent-browser's dashboard lets the person do, and what serving it behind beebox needs |
 | [acceptance-walkthrough.md](acceptance-walkthrough.md) | Plan gate G1 (2026-10-30): a login typed through the dashboard, read by the agent, kept across a restart |
+| [linux-verification.md](linux-verification.md) | Plan chunk F0 (2026-10-30): the box browser in a private network namespace on Ubuntu 24.04 under the box sandbox; the launcher and AppArmor profiles that work |
 | [security.md](security.md) | Prompt injection with logged-in sessions, CDP exposure, SSRF through the browser, profile storage, Chromium RAM; 12 threats with controls |
 
 ## What the survey found
