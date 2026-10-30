@@ -6,7 +6,10 @@ labels: [ios, tests, bridge]
 priority: normal
 filed-by: agent
 discovered-in: worktree-app-shell — iOS testing review for beebox/docs/plans/mac-app-shell.md
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Commit 7bc45e4a4: routing tests in ChatWebViewBridgeTests plus main-frame-only guard on every channel. Simulator only; not run on a real phone.
 
 `ChatWebView.Coordinator.userContentController(_:didReceive:)`
 (`ios-app/BeeBox/Views/ChatWebView.swift:591`) dispatches every web-to-native
