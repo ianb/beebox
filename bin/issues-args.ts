@@ -45,6 +45,8 @@ export const options = {
   priority: { type: "string", multiple: true },
   "next-action": { type: "string", multiple: true },
   message: { type: "string" },
+  resolution: { type: "string" },
+  note: { type: "string" },
   clear: { type: "boolean" },
 } as const;
 
@@ -74,6 +76,8 @@ export interface ParsedValues {
   priority?: string[] | undefined;
   "next-action"?: string[] | undefined;
   message?: string | undefined;
+  resolution?: string | undefined;
+  note?: string | undefined;
   clear?: boolean | undefined;
 }
 

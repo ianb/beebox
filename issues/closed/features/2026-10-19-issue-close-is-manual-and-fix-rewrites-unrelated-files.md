@@ -1,12 +1,15 @@
 ---
 title: "Closing an issue is a manual sequence, and doc-check --fix then rewrites unrelated files"
-workstream: unattached
+workstream: tooling-burndown
 area: bin
 labels: [issues, doc-check, tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261019-230412
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-30):** Landed in e42984ab0, 14281ed4a, and 1883523c6. The close verb moves the issue, sets resolution and workstream, puts the note first in the body, re-expresses the file's own links, and rewrites only references that resolve to the moved file, printing each one. It never runs doc-check --fix. Plan: [doc-move-and-issue-close](../../../beebox/docs/implemented-plans/doc-move-and-issue-close.md).
 
 Closing an issue takes a `git mv` into `issues/closed/`, frontmatter edits
 (`resolution:`, `workstream:`), a closing note, and a `doc-check --fix` run

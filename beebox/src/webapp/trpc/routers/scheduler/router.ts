@@ -50,6 +50,7 @@ const schedulerLogEntrySchema = z.object({
           command: z.string().optional(),
           durationMs: z.number().optional(),
           error: z.string().optional(),
+          reason: z.string().optional(),
         }),
       ),
     })

@@ -6,7 +6,17 @@ labels: [layout-check, tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261025-233625
+resolution: implemented
 ---
+
+**Closed 2026-10-29:** fixed on the tooling-burndown branch ("Layout check
+names the unit's import edges, runs from lint:changed, and explains a
+directory"). The rule-5 finding now ends with `Unit imports: a.ts -> b.ts, ...`
+and `Other entries: x.ts (imported by <path>)`, with `no importers` or
+`registry-fixed` as the other reasons. `pnpm lint:changed` runs the check on the
+same paths the hook does, deletions included. `pnpm layout-check --explain
+<dir>` prints a directory's entries, helpers, imports, and shared helpers, so a
+planner can place a stub file and read the result before committing.
 
 File-layout rule 5 (one unit per directory) fires when a new or moved module,
 a test support file, or a removed import changes the import graph. The finding

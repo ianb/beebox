@@ -1,12 +1,22 @@
 ---
 title: "Pre-commit checks read the working tree, so another agent's unstaged edits fail a path-scoped commit"
-workstream: unattached
+workstream: tooling-burndown
 area: bin
 labels: [hooks, worktrees]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261010-224248
+resolution: implemented
 ---
+
+**Closed 2026-10-29:** fixed on the tooling-burndown branch ("Pre-commit
+checks run in a snapshot of the commit index"; plan
+[staged-commit-checks](../../../beebox/docs/implemented-plans/staged-commit-checks.md)).
+The hook syncs a persistent copy of the commit index
+(`bin/staged-snapshot.ts`) and runs every check there, so a path-scoped commit
+passes with another agent's unstaged deletion, rename, half-written `.ts`, and
+unregistered doc on disk, and a staged type error is still blocked. The old
+hook failed the same clean commit with ENOENT in layout-check.
 
 Several pre-commit checks scan files on disk rather than the staged index. A
 path-scoped commit then fails on edits it does not include: an unstaged

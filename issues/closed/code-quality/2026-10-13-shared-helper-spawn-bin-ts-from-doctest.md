@@ -6,7 +6,19 @@ labels: [tests, tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261013-224557
+resolution: implemented
 ---
+
+**Closed 2026-10-29 (tooling-burndown).** `bin/lib/bin-ts.ts` exports
+`binTsArgs(entry, args)`: the node arguments that run a `bin/*.ts` entry with
+tsx resolved from the repository, the entry absolute or repo-relative. Every
+call site that spawned a bin TS entry with `--import tsx` or
+`import.meta.resolve("tsx")` uses it: `finish-verify`, finish-preflight's
+selector spawn, `test-select --run`, the schedules test support, and the bin
+tests for commit-provenance, codex-preamble, schedules-lint, skill-lint,
+test-select, finish-preflight, finish-preflight-merge, finish-verify,
+doc-lifecycle-check, briefing-sigils, and schedules alerts. Shebangs and
+package scripts keep `--import tsx`: they run where `node_modules` is present.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

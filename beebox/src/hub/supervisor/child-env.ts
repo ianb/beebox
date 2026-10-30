@@ -5,6 +5,8 @@
  * for how this fits into the supervisor's job.
  */
 
+import { inheritedCredentials } from "../../lib/credential-env.js";
+
 /**
  * Env vars a hub-spawned box child (`bbx serve`) may inherit from the hub's
  * own process env. Fail-closed ALLOWLIST, not a denylist -- `process.env`
@@ -16,7 +18,10 @@
  * `docs/implemented-plans/boxes-as-packages-v2.md`'s "Isolation is layered": the hub is
  * trusted, boxes are not trusted with each other's secrets). Widen this
  * list only by adding a new named entry with a reasoned comment -- never by
- * reverting to a spread.
+ * reverting to a spread. Credential VALUES are not listed here: they come from
+ * `lib/credential-env.ts`, whose `hubChild` column says which a child inherits
+ * (`BBX_DIAG_API_KEY`, the VAPID keys) and which the hub injects at spawn
+ * (`BBX_HUB_SECRET`).
  *
  * Connector credentials are NOT listed. A box's connectors resolve them from
  * the machine secret store (`docs/implemented-plans/secret-custody.md`), so a
@@ -35,7 +40,7 @@
  * deliberately excluded, and is actively stripped elsewhere:
  * `cli/bootstrap.ts`, `core/script-env.ts`).
  */
-const CHILD_ENV_ALLOWLIST: readonly string[] = [
+const CHILD_ENV_PLAIN: readonly string[] = [
   // --- OS/runtime basics ---
   "PATH",
   "HOME",
@@ -60,7 +65,6 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "BBX_PUBLIC_URL", // src/lib/public-url.ts -- preferred over PUBLIC_URL when set.
   "BBX_OWNER_EMAIL", // src/webapp/auth.ts getOwnerEmail() -- fleet owner identity, not a secret.
   "BBX_AUTH_FILE", // src/webapp/local-users.ts + auth-capabilities.ts -- shared credential/capability store path, not a credential.
-  "BBX_DIAG_API_KEY", // src/webapp/auth.ts verifyDiagBearerKey -- shared read-only diag bearer key.
   "BBX_GOOGLE_TOKENS_FILE", // src/google/auth.ts, requirements.ts -- a path, not a credential.
   "BBX_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path, not a credential. A child that missed it would read the DEFAULT store while the hub read the override, so every grant would silently vanish for served boxes.
   "BBX_SECRETS_STORE_ISOLATED", // src/core/secrets/store.ts -- the dev router's assertion that BBX_SECRETS_FILE is a throwaway store; a child that missed it would refuse agent browsing on a Secrets panel the router meant to be drivable.
@@ -80,11 +84,8 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "BBX_APNS_KEY_ID",
   "BBX_APNS_TEAM_ID",
   "BBX_APNS_BUNDLE_ID",
-  // src/core/send-push.ts -- the server sends web push. The private key reaches every box
-  // child, like the APNs key above: box servers are the sending side, and without it web
-  // push could never send under the hub (found 2026-09-26 while adding APNs).
-  "BBX_VAPID_PUBLIC_KEY",
-  "BBX_VAPID_PRIVATE_KEY",
+  // src/core/send-push.ts -- the server sends web push; the keys themselves are in the
+  // credential table (lib/credential-env.ts).
   "BBX_VAPID_SUBJECT",
 
   // --- Claude Agent SDK config knobs (not credentials) ---
@@ -93,6 +94,9 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "DISABLE_ERROR_REPORTING",
   "DO_NOT_TRACK",
 ];
+
+/** What a hub-spawned child inherits. Exported for `test/lib/credential-env.test.ts`. */
+export const CHILD_ENV_ALLOWLIST: readonly string[] = [...CHILD_ENV_PLAIN, ...inheritedCredentials("hubChild")];
 
 
 /**

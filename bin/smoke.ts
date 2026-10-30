@@ -36,7 +36,9 @@
  * also the floor the tier exists for — a server that cannot boot fails here.
  *
  * Deliberately model-free: no agent turns, nothing that spends tokens or waits
- * on a model. Budget is a hard wall-clock kill, not a target.
+ * on a model. Budget is a hard wall-clock kill, not a target. It grows when
+ * the finished steps ran slower than their usual times (a loaded host), up to
+ * a fixed ceiling; see `Budget` in bin/smoke-harness.ts.
  */
 
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
@@ -73,7 +75,7 @@ import {
 } from "./smoke-harness.js";
 import { contentCardPath, isFreshGeneration } from "./smoke-probe.js";
 import { git } from "./lib/git.js";
-import { formatStepTime, type SmokeStepRecord } from "./smoke-lib.js";
+import { formatStepTime, walkSlowdown, type SmokeStepRecord } from "./smoke-lib.js";
 import {
   cardViewRendered,
   currentPlaceLabel,
@@ -289,15 +291,21 @@ export async function main(argv: string[]): Promise<number> {
 
   // Last resort. `race` above fails the step, but a spawned `bin/browse` that
   // never exits keeps the event loop alive and this process with it — so the
-  // deadline is also enforced by leaving. `unref` so a normal run is not held
-  // open by the timer itself.
-  const killer = setTimeout(() => {
-    process.stdout.write(
-      `\nFAIL smoke exceeded its ${String(BUDGET_MS / 1000)}s budget and was killed\n\nSMOKE: red\n`,
-    );
-    process.exit(1);
-  }, BUDGET_MS + 5_000);
-  killer.unref();
+  // deadline is also enforced by leaving. Re-armed when the budget grows, so a
+  // hang on a healthy host still exits at the unscaled deadline. `unref` so a
+  // normal run is not held open by the timer itself.
+  let killer: NodeJS.Timeout | undefined;
+  const armKiller = (): void => {
+    if (killer !== undefined) clearTimeout(killer);
+    killer = setTimeout(() => {
+      process.stdout.write(
+        `\nFAIL smoke exceeded its ${(budget.totalMs() / 1000).toFixed(0)}s budget and was killed\n\nSMOKE: red\n`,
+      );
+      process.exit(1);
+    }, budget.remaining() + 5_000);
+    killer.unref();
+  };
+  armKiller();
 
   process.stdout.write(`smoke: ${baseUrl}\n`);
   if (faultInjection() !== null) {
@@ -349,7 +357,7 @@ export async function main(argv: string[]): Promise<number> {
       outcomes.set(step.id, { id: step.id, outcome: "fail", ms });
       const total = ((Date.now() - startedAt) / 1000).toFixed(1);
       const own = formatStepTime(ms, history.get(step.id));
-      process.stdout.write(`FAIL ${step.name} (${own}; walk ${total}s)\n`);
+      process.stdout.write(`FAIL ${step.name} (${own}; walk ${total}s of ${budgetLabel(budget)})\n`);
       const failure =
         e instanceof SmokeFailureError
           ? e
@@ -365,10 +373,21 @@ export async function main(argv: string[]): Promise<number> {
     const ms = Date.now() - at;
     outcomes.set(step.id, { id: step.id, outcome: "ok", ms });
     process.stdout.write(`ok   ${step.name} (${formatStepTime(ms, history.get(step.id))})\n`);
+    const before = budget.totalMs();
+    budget.scaleTo(walkSlowdown([...outcomes.values()], history));
+    if (budget.totalMs() !== before) armKiller();
   }
   finish("green");
-  process.stdout.write(`\nSMOKE: green (${((Date.now() - startedAt) / 1000).toFixed(1)}s)\n`);
+  process.stdout.write(
+    `\nSMOKE: green (${((Date.now() - startedAt) / 1000).toFixed(1)}s of ${budgetLabel(budget)})\n`,
+  );
   return 0;
+}
+
+/** `120s budget`, or `264s budget, steps 2.2x usual` once it has grown. */
+function budgetLabel(budget: Budget): string {
+  const total = `${(budget.totalMs() / 1000).toFixed(0)}s budget`;
+  return budget.factor() > 1 ? `${total}, steps ${budget.factor().toFixed(1)}x usual` : total;
 }
 
 function indent(text: string): string {

@@ -12,6 +12,27 @@ import { buildScriptEnv } from "../script-env/core.js";
 export const CHECK_SKIP_CODE = 75;
 
 /**
+ * Per-run context the procedure's caller holds in this process's env, passed
+ * to each shell step by name. The step's env is otherwise the agent profile
+ * (`buildScriptEnv`); none of these is a credential.
+ *
+ * - `TRIAGE_ITEMS`: the bucket a handler procedure works on, set by
+ *   `core/handle.ts` around the run.
+ * - `BBX_CHAT_SESSION_ID`, `BBX_CHAT_SESSION_ID_FILE`: the chat that ran
+ *   `bbx procedure run`, so a step's `bbx chat …` calls attribute to it
+ *   (`core/chat/session/id-file.ts`).
+ * - `CODEX_THREAD_ID`: the same for a Codex chat (`cli/commands/session/command.ts`).
+ */
+const PROCEDURE_RUN_ENV = ["TRIAGE_ITEMS", "BBX_CHAT_SESSION_ID", "BBX_CHAT_SESSION_ID_FILE", "CODEX_THREAD_ID"] as const;
+
+function procedureRunEnv(): Record<string, string> {
+  return Object.fromEntries(PROCEDURE_RUN_ENV.flatMap((name) => {
+    const value = process.env[name];
+    return value === undefined ? [] : [[name, value]];
+  }));
+}
+
+/**
  * Real guard for `ExecaError` — execa doesn't export one, but `error.name` is
  * a readonly `'ExecaError'` literal on the class, so a plain instanceof +
  * name check narrows soundly without a cast.
@@ -48,10 +69,14 @@ export async function runShell(
     // `bbx` happens to be on the user's PATH, but in a dev worktree it isn't, and
     // procedure shells (e.g. an agent-migration's `bbx view check` gate) must run
     // the same in both. buildScriptEnv prepends beebox's bin/ to PATH.
-    const env = await buildScriptEnv(boxRoot, { CHECK_SKIP: String(CHECK_SKIP_CODE) });
+    const env = await buildScriptEnv(boxRoot, { ...procedureRunEnv(), CHECK_SKIP: String(CHECK_SKIP_CODE) });
     const { stdout, stderr } = await execa("bash", ["-c", wrappedScript], {
       cwd: boxRoot,
       env,
+      // execa merges process.env under `env` by default, which would hand the
+      // script every server credential the allowlist withheld. Per-run context
+      // the step needs is passed by name above (PROCEDURE_RUN_ENV).
+      extendEnv: false,
       maxBuffer: 1024 * 1024, // 1MB
     });
 

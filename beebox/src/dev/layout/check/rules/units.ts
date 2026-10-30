@@ -125,18 +125,50 @@ interface UnitMessageSpec {
   dir: string;
   entry: ModuleFile;
   helpers: ModuleFile[];
+  edges: string[];
+  otherEntries: string[];
 }
 
+/** At most this many other entries are named in one finding; the rest are counted. */
+const MAX_NAMED_OTHER_ENTRIES = 5;
+
 function unitMessage(spec: UnitMessageSpec): string {
-  const { dir, entry, helpers } = spec;
+  const { dir, entry, helpers, edges, otherEntries } = spec;
   const stem = stemOf(entry.path);
   const helperNames = helpers.map((helper) => baseOf(helper.path)).toSorted().join(", ");
+  const named = otherEntries.slice(0, MAX_NAMED_OTHER_ENTRIES);
+  const rest = otherEntries.length - named.length;
+  const others = rest > 0 ? `${named.join(", ")}, and ${rest} more` : named.join(", ");
   return (
     `${baseOf(entry.path)} and its helpers ${helperNames} are one unit beside other units in ${dir}; ` +
     `make ${dir}/${stem}/ and move them in, dropping the ${stem}- prefix, and rename their mirrored tests to match. ` +
     `If a new import of one of these helpers made this a unit, importing through ${baseOf(entry.path)} instead may be the smaller fix ` +
-    "(beebox/docs/implemented-plans/file-layout.md, rule 5)"
+    `(beebox/docs/implemented-plans/file-layout.md, rule 5). Unit imports: ${edges.join(", ")}. Other entries: ${others}`
   );
+}
+
+/**
+ * Why a sibling is an entry of its directory, for a reader hunting the edge
+ * that split the directory: a registry fixes it, nothing imports it, or a
+ * module outside the directory imports it (the first such importer is named).
+ */
+function entryReason(params: { ctx: UnitsContext; dir: string; path: string }): string {
+  const { ctx, dir, path } = params;
+  if (ctx.fixedEntries.has(path)) return "registry-fixed";
+  const importers = [...(ctx.importersByTarget.get(path) ?? new Set<string>())].toSorted();
+  const outside = importers.find((importer) => dirOf(importer) !== dir);
+  return outside === undefined ? "no importers" : `imported by ${outside}`;
+}
+
+/** `importer -> imported` sibling edges inside one unit, by basename, sorted. */
+function unitEdges(params: { members: Set<string>; adjacency: Map<string, Set<string>> }): string[] {
+  const edges: string[] = [];
+  for (const from of params.members) {
+    for (const to of params.adjacency.get(from) ?? []) {
+      if (params.members.has(to)) edges.push(`${baseOf(from)} -> ${baseOf(to)}`);
+    }
+  }
+  return edges.toSorted();
 }
 
 /** The sole immediate child directory of `dir` strictly containing every importer, or null. */
@@ -176,35 +208,64 @@ function sharedTarget(spec: SharedTargetSpec): string | null {
   return candidate;
 }
 
-interface UnitDirectorySpec {
+interface DirectoryGraph {
   dir: string;
   siblings: ModuleFile[];
   entries: Set<string>;
+  adjacency: Map<string, Set<string>>;
   owners: Map<string, Set<string>>;
-  fixedEntries: Set<string>;
 }
 
-function unitDirectoryFindings(spec: UnitDirectorySpec): Finding[] {
-  const { dir, siblings, entries, owners, fixedEntries } = spec;
+function directoryGraph(ctx: UnitsContext, dir: string): DirectoryGraph {
+  const siblings = childrenOf(ctx.layout, dir).files.filter((file): file is ModuleFile => file.kind === "module");
+  const siblingPaths = new Set(siblings.map((sibling) => sibling.path));
+  const entries = new Set(
+    siblings
+      .filter(
+        (sibling) =>
+          ctx.fixedEntries.has(sibling.path) || isEntry(dir, ctx.importersByTarget.get(sibling.path) ?? new Set()),
+      )
+      .map((sibling) => sibling.path),
+  );
+  const adjacency = buildAdjacency(siblings, siblingPaths);
+  return { dir, siblings, entries, adjacency, owners: computeOwners(adjacency, entries) };
+}
+
+/** The siblings only `entryPath` reaches: its exclusive helpers. */
+function exclusiveHelpers(graph: DirectoryGraph, entryPath: string): ModuleFile[] {
+  return graph.siblings.filter((sibling) => {
+    if (graph.entries.has(sibling.path)) return false;
+    const ownerSet = graph.owners.get(sibling.path);
+    return ownerSet !== undefined && ownerSet.size === 1 && ownerSet.has(entryPath);
+  });
+}
+
+function unitMembers(entryPath: string, helpers: ModuleFile[]): Set<string> {
+  return new Set([entryPath, ...helpers.map((helper) => helper.path)]);
+}
+
+function unitDirectoryFindings(ctx: UnitsContext, graph: DirectoryGraph): Finding[] {
+  const { dir, siblings, entries, adjacency } = graph;
   if (entries.size < 2) return [];
   const findings: Finding[] = [];
   for (const entryPath of [...entries].toSorted()) {
     // A registry fixes this entry's location (itself, or as a set member's
     // source): it stays an entry of its directory and is never swept into
     // a unit-directory move, whatever helpers it exclusively reaches.
-    if (fixedEntries.has(entryPath)) continue;
+    if (ctx.fixedEntries.has(entryPath)) continue;
     const entryModule = siblings.find((sibling) => sibling.path === entryPath);
     if (entryModule === undefined) continue;
-    const helpers = siblings.filter((sibling) => {
-      if (entries.has(sibling.path)) return false;
-      const ownerSet = owners.get(sibling.path);
-      return ownerSet !== undefined && ownerSet.size === 1 && ownerSet.has(entryPath);
-    });
+    const helpers = exclusiveHelpers(graph, entryPath);
     if (helpers.length === 0) continue;
+    const otherEntries = [...entries]
+      .filter((other) => other !== entryPath)
+      .toSorted()
+      .map((other) => `${baseOf(other)} (${entryReason({ ctx, dir, path: other })})`);
+    const edges = unitEdges({ members: unitMembers(entryPath, helpers), adjacency });
     findings.push({
       rule: "unit-directory",
       path: entryPath,
-      message: unitMessage({ dir, entry: entryModule, helpers }),
+      message: unitMessage({ dir, entry: entryModule, helpers, edges, otherEntries }),
     });
   }
   return findings;
@@ -240,24 +301,13 @@ function sharedInfrastructureFindings(spec: SharedInfrastructureSpec): Finding[]
 }
 
 function checkDirectory(ctx: UnitsContext, dir: string): Finding[] {
-  const siblings = childrenOf(ctx.layout, dir).files.filter((file): file is ModuleFile => file.kind === "module");
-  if (siblings.length === 0) return [];
-  const siblingPaths = new Set(siblings.map((sibling) => sibling.path));
-  const entries = new Set(
-    siblings
-      .filter(
-        (sibling) =>
-          ctx.fixedEntries.has(sibling.path) || isEntry(dir, ctx.importersByTarget.get(sibling.path) ?? new Set()),
-      )
-      .map((sibling) => sibling.path),
-  );
-  const adjacency = buildAdjacency(siblings, siblingPaths);
-  const owners = computeOwners(adjacency, entries);
+  const graph = directoryGraph(ctx, dir);
+  if (graph.siblings.length === 0) return [];
   return [
-    ...unitDirectoryFindings({ dir, siblings, entries, owners, fixedEntries: ctx.fixedEntries }),
+    ...unitDirectoryFindings(ctx, graph),
     ...sharedInfrastructureFindings({
       dir,
-      siblings,
+      siblings: graph.siblings,
       importersByTarget: ctx.importersByTarget,
       setDirs: ctx.setDirs,
       fixedEntries: ctx.fixedEntries,
@@ -271,19 +321,58 @@ function compareFindings(a: Finding, b: Finding): number {
   return 0;
 }
 
+function unitsContext(layout: PackageLayout): UnitsContext {
+  return {
+    layout,
+    importersByTarget: moduleImportersOf(layout),
+    setDirs: new Set(modules(layout).flatMap((module) => module.registries.map((registry) => registry.directory))),
+    fixedEntries: computeFixedEntries(layout),
+  };
+}
+
+function scopeNote(ctx: UnitsContext, dir: string): string {
+  if (!inScope(ctx.layout, dir)) return " (outside the rule's scope)";
+  if (ctx.setDirs.has(dir)) return " (a set directory; rule 1 governs it)";
+  return "";
+}
+
+/**
+ * The unit graph of one directory as rule 5 sees it, for `layout-check
+ * --explain <dir>`: each entry with why it is one, its exclusive helpers and
+ * the sibling imports inside its unit, then helpers two or more entries
+ * reach. A planner can place a stub file with its imports and read the
+ * result before a commit trips the rule.
+ */
+export function explainDirectory(layout: PackageLayout, dir: string): string[] {
+  const ctx = unitsContext(layout);
+  const graph = directoryGraph(ctx, dir);
+  if (graph.siblings.length === 0) return [`${dir}: no modules`];
+  const lines = [`${dir}: ${graph.entries.size} entries${scopeNote(ctx, dir)}`];
+  for (const entryPath of [...graph.entries].toSorted()) {
+    lines.push(`  ${baseOf(entryPath)} (${entryReason({ ctx, dir, path: entryPath })})`);
+    const helpers = exclusiveHelpers(graph, entryPath);
+    if (helpers.length === 0) continue;
+    lines.push(`    helpers: ${helpers.map((helper) => baseOf(helper.path)).toSorted().join(", ")}`);
+    lines.push(`    imports: ${unitEdges({ members: unitMembers(entryPath, helpers), adjacency: graph.adjacency }).join(", ")}`);
+  }
+  const shared = graph.siblings
+    .filter((sibling) => (graph.owners.get(sibling.path)?.size ?? 0) > 1)
+    .map((sibling) => {
+      const owners = [...(graph.owners.get(sibling.path) ?? [])].map(baseOf).toSorted();
+      return `  ${baseOf(sibling.path)} (reached from ${owners.join(", ")})`;
+    })
+    .toSorted();
+  if (shared.length > 0) lines.push("shared helpers:", ...shared);
+  return lines;
+}
+
 export const unitsRule: LayoutRule = {
   description:
     "rule 3: a module reachable from two or more entries is infrastructure and moves to the lowest directory containing all its uses; " +
     "rule 5: a unit of two or more files becomes its own directory",
   check(layout: PackageLayout): Finding[] {
-    const setDirs = new Set(modules(layout).flatMap((module) => module.registries.map((registry) => registry.directory)));
-    const ctx: UnitsContext = {
-      layout,
-      importersByTarget: moduleImportersOf(layout),
-      setDirs,
-      fixedEntries: computeFixedEntries(layout),
-    };
-    const scopedDirs = [...layout.directories].filter((dir) => inScope(layout, dir) && !setDirs.has(dir));
+    const ctx = unitsContext(layout);
+    const scopedDirs = [...layout.directories].filter((dir) => inScope(layout, dir) && !ctx.setDirs.has(dir));
     return scopedDirs.flatMap((dir) => checkDirectory(ctx, dir)).toSorted(compareFindings);
   },
 };

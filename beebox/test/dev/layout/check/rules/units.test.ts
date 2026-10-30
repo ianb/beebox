@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { unitsRule } from "../../../../../src/dev/layout/check/rules/units.js";
+import { explainDirectory, unitsRule } from "../../../../../src/dev/layout/check/rules/units.js";
 import { layout } from "./fixture.js";
 
 // ## A flat utility directory where every file is imported from outside is clean
@@ -49,7 +49,7 @@ void test("wakeup.ts and init.ts are both entries (something outside commands/ i
     {
       rule: "unit-directory",
       path: "pkg/src/commands/wakeup.ts",
-      message: "wakeup.ts and its helpers wakeup-outcome.ts, wakeup-steps.ts are one unit beside other units in pkg/src/commands; make pkg/src/commands/wakeup/ and move them in, dropping the wakeup- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through wakeup.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+      message: "wakeup.ts and its helpers wakeup-outcome.ts, wakeup-steps.ts are one unit beside other units in pkg/src/commands; make pkg/src/commands/wakeup/ and move them in, dropping the wakeup- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through wakeup.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5). Unit imports: wakeup.ts -> wakeup-outcome.ts, wakeup.ts -> wakeup-steps.ts. Other entries: init.ts (imported by pkg/src/cli.ts)",
     },
   ]);
 });
@@ -105,7 +105,7 @@ void test("tool.ts and other.ts are each imported by nothing (a script run direc
     {
       rule: "unit-directory",
       path: "pkg/src/scripts/tool.ts",
-      message: "tool.ts and its helpers tool-helpers.ts are one unit beside other units in pkg/src/scripts; make pkg/src/scripts/tool/ and move them in, dropping the tool- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through tool.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+      message: "tool.ts and its helpers tool-helpers.ts are one unit beside other units in pkg/src/scripts; make pkg/src/scripts/tool/ and move them in, dropping the tool- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through tool.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5). Unit imports: tool.ts -> tool-helpers.ts. Other entries: other.ts (no importers)",
     },
   ]);
 });
@@ -127,7 +127,7 @@ void test("main.ts reaches types-helper.ts only through a type-only import; that
     {
       rule: "unit-directory",
       path: "pkg/src/typed/main.ts",
-      message: "main.ts and its helpers types-helper.ts are one unit beside other units in pkg/src/typed; make pkg/src/typed/main/ and move them in, dropping the main- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through main.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+      message: "main.ts and its helpers types-helper.ts are one unit beside other units in pkg/src/typed; make pkg/src/typed/main/ and move them in, dropping the main- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through main.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5). Unit imports: main.ts -> types-helper.ts. Other entries: other.ts (imported by pkg/src/entry2.ts)",
     },
   ]);
 });
@@ -167,7 +167,7 @@ void test("registry.ts declares src/setdir as a set (its directory), so setdir's
     {
       rule: "unit-directory",
       path: "pkg/src/setdir/memberA/second.ts",
-      message: "second.ts and its helpers second-helper.ts are one unit beside other units in pkg/src/setdir/memberA; make pkg/src/setdir/memberA/second/ and move them in, dropping the second- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through second.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+      message: "second.ts and its helpers second-helper.ts are one unit beside other units in pkg/src/setdir/memberA; make pkg/src/setdir/memberA/second/ and move them in, dropping the second- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through second.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5). Unit imports: second.ts -> second-helper.ts. Other entries: entry.ts (registry-fixed)",
     },
   ]);
 });
@@ -276,7 +276,7 @@ void test("helper.test.ts imports helper.ts directly (tests import internals fre
     {
       rule: "unit-directory",
       path: "pkg/src/priv/core.ts",
-      message: "core.ts and its helpers helper.ts are one unit beside other units in pkg/src/priv; make pkg/src/priv/core/ and move them in, dropping the core- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through core.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+      message: "core.ts and its helpers helper.ts are one unit beside other units in pkg/src/priv; make pkg/src/priv/core/ and move them in, dropping the core- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through core.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5). Unit imports: core.ts -> helper.ts. Other entries: other.ts (imported by pkg/src/entry4.ts)",
     },
   ]);
 });
@@ -310,7 +310,7 @@ void test("reg.ts declares src/mod/schemas as a set.", async (t) => {
     {
       rule: "unit-directory",
       path: "pkg/src/mod/user.ts",
-      message: "user.ts and its helpers user-helper.ts are one unit beside other units in pkg/src/mod; make pkg/src/mod/user/ and move them in, dropping the user- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through user.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+      message: "user.ts and its helpers user-helper.ts are one unit beside other units in pkg/src/mod; make pkg/src/mod/user/ and move them in, dropping the user- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through user.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5). Unit imports: user.ts -> user-helper.ts. Other entries: reg.ts (registry-fixed)",
     },
   ]);
 });
@@ -357,7 +357,40 @@ void test("scripts/ is an extra source root (e.g.", async (t) => {
     {
       rule: "unit-directory",
       path: "pkg/scripts/tool.ts",
-      message: "tool.ts and its helpers tool-helper.ts are one unit beside other units in pkg/scripts; make pkg/scripts/tool/ and move them in, dropping the tool- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through tool.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+      message: "tool.ts and its helpers tool-helper.ts are one unit beside other units in pkg/scripts; make pkg/scripts/tool/ and move them in, dropping the tool- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through tool.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5). Unit imports: tool.ts -> tool-helper.ts. Other entries: other.ts (imported by pkg/src/consumer.ts)",
     },
+  ]);
+});
+
+// ## The finding names the import chain and why each other entry is one
+//
+// The retrospective case: a support module nothing imports (`fixtures.ts`)
+// imports a sibling (`seed.ts`), which imports another (`seed-data.ts`). The
+// support module is an entry because nothing imports it, so its chain is a
+// unit beside `api.ts`. The finding lists both hops; `--explain` prints the
+// same graph for the directory, plus a helper both entries reach.
+void test("the retrospective case: a support module nothing imports", async (t) => {
+  const chainLayout = layout({
+    files: {
+      "src/store/api.ts": { imports: ["src/store/shared.ts"] },
+      "src/store/fixtures.ts": { imports: ["src/store/seed.ts", "src/store/shared.ts"] },
+      "src/store/seed.ts": { imports: ["src/store/seed-data.ts"] },
+      "src/store/seed-data.ts": { imports: [] },
+      "src/store/shared.ts": { imports: [] },
+      "src/app.ts": { imports: ["src/store/api.ts"] },
+    },
+  });
+  t.check(
+    unitsRule.check(chainLayout).map((finding) => finding.message.split("rule 5). ")[1]),
+    ["Unit imports: fixtures.ts -> seed.ts, seed.ts -> seed-data.ts. Other entries: api.ts (imported by pkg/src/app.ts)"],
+  );
+  t.check(explainDirectory(chainLayout, "pkg/src/store"), [
+    "pkg/src/store: 2 entries",
+    "  api.ts (imported by pkg/src/app.ts)",
+    "  fixtures.ts (no importers)",
+    "    helpers: seed-data.ts, seed.ts",
+    "    imports: fixtures.ts -> seed.ts, seed.ts -> seed-data.ts",
+    "shared helpers:",
+    "  shared.ts (reached from api.ts, fixtures.ts)",
   ]);
 });
