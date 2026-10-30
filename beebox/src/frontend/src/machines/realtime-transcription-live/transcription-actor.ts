@@ -346,9 +346,10 @@ class TranscriptionSession {
       callbacks: this.callbacks,
       stillWanted: () => !this.disposed && !this.stopping,
     });
-    if (speech === "not-opted-in") {
-      if (!this.isDisposed()) this.beginLinking();
-    } else if (speech !== "unavailable") {
+    if (speech === "not-opted-in") this.beginLinking();
+    else if ("unavailable" in speech) {
+      if (!this.disposed && !this.stopping) this.sendBack({ type: "WS_ERROR", message: speech.notice });
+    } else {
       this.browserSpeech = speech;
       this.text.connected({ covered: true });
       this.sendBack({ type: "WS_CONNECTED" });

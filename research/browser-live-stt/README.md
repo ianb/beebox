@@ -113,7 +113,7 @@ engine, for any service. `Emission` would gain a `liveService` next to `hqServic
 (`beebox/src/frontend/src/input/emission.ts`, and the quick-chat record in
 `beebox/src/core/chat/routing/quick-chat-record.ts`).
 
-"Local" here covers live recognition only. The recording still uploads to the
+"Local" covers live recognition only (boxholder decision, 2026-10-30). The recording still uploads to the
 box for HQ, and the box sends it to its HQ provider when one is configured.
 
 ## Proposed product
@@ -123,8 +123,9 @@ box for HQ, and the box sends it to its HQ provider when one is configured.
 - Choosing it starts the 220 MB download on that click (the gesture `install()`
   needs), with progress, because `install()` reports none and takes minutes.
 - The setting is per device. A device that chose it but has no ready pack records
-  with no live text, so spoken keywords do not work; the prototype does this
-  instead of quietly sending live audio to the box's provider.
+  with no live text, so spoken keywords do not work, and a notice points to the
+  download row in Voice settings. It does not fall back to the box's provider
+  (boxholder decision, 2026-10-30). The prototype has both the notice and the row.
 - A box with no key gets working live text on Chrome desktop. HQ still needs a key,
   and without one the message keeps its live text, as the end-to-end run showed.
 - Copy says "on this device"; Safari is never offered this, so the claim holds.
