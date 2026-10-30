@@ -49,3 +49,25 @@ summarized; then the adjudication.
 6. Accepted in part. The pattern is wider (`PASS`, `AUTH`, `CREDENTIAL`,
    `PRIVATE`). A full enumeration was rejected: it is a second hand-kept copy
    of every allowlist, which is what the issue asks to remove.
+
+## Diff review (security), codex gpt-6-astra round 1, gpt-6-sol round 2
+
+Round 1 confirmed by reconstruction that the refactor left every composed list
+and the warm-slot key set unchanged in membership. Its findings and their
+outcome:
+
+1. Procedure shells merged `process.env` (execa `extendEnv` default). Fixed:
+   pinned in the matrix, then `extendEnv: false`, in separate commits.
+2. View metadata import runs box view code with the server env. Filed:
+   `issues/bugs/2026-10-29-view-metadata-import-runs-box-code-with-the-server-env.md`.
+3. Codex CLI helpers, prompt logger, Docling spread the env. Added to
+   `issues/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md`.
+4. `J` accepted any non-ambient value. Fixed: only the expected value, per
+   provider column after round 2, reads `J`; others read `?`.
+5. Chat, prewarm, pi boundaries. Not adopted (unchanged call sites); round 2
+   agreed it is not blocking.
+6. Full classification of allowlist names. Not adopted; round 2 agreed it is
+   not blocking. Residual: a credential named outside the pattern can still
+   enter a plain list unnoticed.
+7. Table cells were not checked against behavior. Fixed: `observedTable`
+   compares every cell with the observed environments.

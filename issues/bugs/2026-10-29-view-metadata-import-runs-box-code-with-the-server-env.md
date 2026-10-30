@@ -20,7 +20,7 @@ the server env holds `BBX_HUB_SECRET`, `BBX_DIAG_API_KEY`, and
 `bbx view render-one` with no `env`; when an agent runs `bbx view check` that
 env is already the agent profile, but a server-side caller would pass its own.
 
-Every other path that runs box-authored code starts from `buildScriptEnv`
+Agent runs, tricks, and procedure shells start from `buildScriptEnv`
 (`src/core/script-env/core.ts`); `src/lib/credential-env.ts` lists what the
 agent profile may see. Direction: pass `buildScriptEnv(boxRoot)` to both
 spawns, add a column for each to

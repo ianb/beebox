@@ -9,8 +9,8 @@ discovered-in: worktree-agent-a80db54b588f8698c — characterizing credential vi
 ---
 
 Four spawn sites copy all of `process.env` into a CLI instead of building an
-allowlisted environment, so every server credential and every unlisted
-variable reaches the child:
+allowlisted environment, so the server's credentials and every unlisted
+variable reach the child (the exceptions are named per site):
 
 - `src/services/claude-cli.ts` `authStatus`: `{ ...process.env }`, minus an
   ambient `CLAUDE_CODE_OAUTH_TOKEN`, plus the box's token.

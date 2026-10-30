@@ -123,12 +123,19 @@ function render(columns: Record<Column, (name: string) => string>): string[] {
   return NAMES.map((name) => `${name.padEnd(33)}${COLUMNS.map((column) => columns[column](name).padEnd(2)).join("").trimEnd()}`);
 }
 
-/** The values beebox is expected to inject, by name: the fixtures set up below, and the providers' endpoints. */
-function expectedInjections(boxRoot: string): ReadonlyMap<string, readonly string[]> {
+/**
+ * The values beebox is expected to inject, by name: the fixtures set up below,
+ * and the provider's key and endpoint. `provider` narrows the provider entries
+ * to one, so a GLM run carrying the OpenRouter key reads `?`.
+ */
+function expectedInjections(boxRoot: string, provider?: "glm" | "openrouter"): ReadonlyMap<string, readonly string[]> {
+  const glm = { key: "placeholder-glm-key-of-sufficient-length", url: glmEnvAdditions("k").ANTHROPIC_BASE_URL };
+  const openRouter = { key: "placeholder-openrouter-key", url: openRouterChatEnv({ key: "k", model: "m" }).ANTHROPIC_BASE_URL ?? "" };
+  const providers = provider === "glm" ? [glm] : provider === "openrouter" ? [openRouter] : [glm, openRouter];
   return new Map<string, readonly string[]>([
     ["CLAUDE_CODE_OAUTH_TOKEN", ["sk-ant-oat01-fixture-token-of-sufficient-length-00"]],
-    ["ANTHROPIC_AUTH_TOKEN", ["placeholder-glm-key-of-sufficient-length", "placeholder-openrouter-key"]],
-    ["ANTHROPIC_BASE_URL", [glmEnvAdditions("k").ANTHROPIC_BASE_URL, openRouterChatEnv({ key: "k", model: "m" }).ANTHROPIC_BASE_URL ?? ""]],
+    ["ANTHROPIC_AUTH_TOKEN", providers.map((p) => p.key)],
+    ["ANTHROPIC_BASE_URL", providers.map((p) => p.url)],
     ["BBX_HUB_SECRET", ["minted-hub-secret"]],
     ["BBX_AGENT_TOKEN", [getOrCreateAgentToken(boxRoot)]],
     ["GOOGLE_WORKSPACE_CLI_TOKEN", ["minted-google-token"]],
@@ -308,10 +315,14 @@ if (process.argv[3] === "login") { process.stdout.write("https://claude.ai/oauth
 
   const injected = expectedInjections(box.root);
   const of = (env: Env | null | undefined) => (name: string) => cell(env, { name, injected });
+  const ofProvider = (env: Env | null | undefined, provider: "glm" | "openrouter") => {
+    const narrowed = expectedInjections(box.root, provider);
+    return (name: string) => cell(env, { name, injected: narrowed });
+  };
   t.check(render({
     hubAllow: of(hubAllow), hubChild: of(hubChild), boxEnv: of(boxEnv),
     agent: of(agent), tooling: of(tooling),
-    addFirst: of(addFirst), addGlm: of(addGlm), addOR: of(addOR), addCodex: of(addCodex), addPi: of(addPi),
+    addFirst: of(addFirst), addGlm: ofProvider(addGlm, "glm"), addOR: ofProvider(addOR, "openrouter"), addCodex: of(addCodex), addPi: of(addPi),
     runClaude: of(runClaude), scan: of(scan), codexNoEnv: of(codexNoEnv), codexEnv: of(codexEnv), procShell: of(procShell),
     status: of(status), statusNoBox: of(statusNoBox), login: of(login), logout: of(logout),
     gws: of(gws),
