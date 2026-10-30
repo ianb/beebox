@@ -182,9 +182,9 @@ export default [
     // 2026-09-27 (latest is 8.70.1; the fix only exists in canary prereleases,
     // which the workspace's 7-day `minimumReleaseAge` gate rightly refuses to
     // install). Rather than adopt an unvetted prerelease or carve out the
-    // rule, `patches/@typescript-eslint+eslint-plugin+8.59.4.patch` applies
-    // that exact upstream diff to the installed package via patch-package
-    // (already wired into the root `postinstall`), so the rule stays fully
+    // rule, `patches/@typescript-eslint__eslint-plugin@8.59.4.patch` applies
+    // that exact upstream diff to the installed package (pnpm's
+    // `patchedDependencies` in `pnpm-workspace.yaml`), so the rule stays fully
     // enabled — including type information — for these files. Drop that patch
     // once a released `@typescript-eslint/eslint-plugin` version already
     // contains the fix.

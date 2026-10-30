@@ -1,16 +1,28 @@
 onlyBuiltDependencies:
   - "@googleworkspace/cli"
-  - agent-browser
+  # 0.39.2 ships its native binaries without the execute bit; its postinstall
+  # sets it (patched below to do only that). bin/browse's 0.27.0 ships them
+  # executable, so its script would only print.
+  - agent-browser@0.39.2
   - esbuild
   - sharp
   - unrs-resolver
   - workerd
 
 ignoredBuiltDependencies:
+  - agent-browser@0.27.0
   - "@google/genai"
   - "@ianbicking/personal-vibe-check"
   - protobufjs
   - spawn-sync
+
+# Patches applied at install, before build scripts run.
+patchedDependencies:
+  # Crash fix for `return` outside a function (beebox/eslint.config.ts).
+  "@typescript-eslint/eslint-plugin@8.59.4": patches/@typescript-eslint__eslint-plugin@8.59.4.patch
+  # Postinstall reduced to its chmod: the rest prints npm config warnings and
+  # a "No Chrome installation detected" notice on every install.
+  agent-browser@0.39.2: patches/agent-browser@0.39.2.patch
 
 packages:
   - beebox
