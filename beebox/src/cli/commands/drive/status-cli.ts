@@ -9,6 +9,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { folderProblemCounts } from "../../../connectors/google-drive/mount-list.js";
+import { loadDriveState } from "../../../connectors/google-drive/state.js";
 import {
   driveCardSummary,
   findDriveCardTracking,
@@ -34,16 +35,18 @@ export async function runDriveStatus(boxRoot: string): Promise<void> {
     return;
   }
 
+  const { folders } = await loadDriveState(boxRoot);
   console.log(`${String(liveCards.length)} Drive card(s):\n`);
   for (const card of liveCards) {
     const summary = driveCardSummary(card.content);
+    const lastSync = folders[card.driveId]?.lastSync;
 
     console.log(`  ${card.relPath}`);
     console.log(`    Kind: ${DRIVE_KIND_LABEL[card.kind]}`);
     if (summary.title !== null) console.log(`    Title: ${summary.title}`);
     console.log(`    Drive ID: ${card.driveId}`);
     if (summary.driveModified !== null) console.log(`    Modified on Drive: ${summary.driveModified}`);
-    if (summary.lastSync !== null) console.log(`    Last synced: ${summary.lastSync}`);
+    if (card.kind === "folder" && lastSync !== undefined) console.log(`    Last synced: ${lastSync}`);
     if (summary.conflict) {
       console.log("    Conflict: merge the .remote.md beside the local copy, then delete it");
     }
@@ -85,6 +88,7 @@ export async function runDriveStatus(boxRoot: string): Promise<void> {
 /** The same working set as data, for `--json`. */
 async function driveStatusValue(boxRoot: string): Promise<unknown> {
   const { liveCards, duplicates, unreadable } = await findDriveCardTracking(boxRoot);
+  const { folders } = await loadDriveState(boxRoot);
   return {
     cards: liveCards.map((card) => {
       const summary = driveCardSummary(card.content);
@@ -94,7 +98,7 @@ async function driveStatusValue(boxRoot: string): Promise<unknown> {
         driveId: card.driveId,
         title: summary.title,
         driveModified: summary.driveModified,
-        lastSync: summary.lastSync,
+        lastSync: card.kind === "folder" ? folders[card.driveId]?.lastSync ?? null : null,
         conflict: summary.conflict,
         error: summary.error,
         tabs: summary.tabs,

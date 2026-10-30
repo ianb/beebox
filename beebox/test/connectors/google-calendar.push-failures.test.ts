@@ -33,7 +33,7 @@ async function throwCalendarHttpError(status: number, url: string): Promise<neve
 
 const PRIMARY = { id: "primary", summary: "Main", primary: true, accessRole: "owner" };
 
-const CAL_DIR = "_content/calendar";
+const CAL_DIR = "_content/calendar/Main.attach";
 
 // Boxes made by examples; the teardown removes them all.
 const boxes: Awaited<ReturnType<typeof makeTmpBox>>[] = [];
@@ -187,7 +187,7 @@ void test("When the local file changed and Google's copy did not, the connector 
       updated: result.updated.length,
       pushed: result.pushed ?? null,
       editKept: (await readIcs(box, file)).includes("Lunch MINE"),
-      blamed: result.error?.includes(`_content/calendar/${file} (local-push, HTTP 503)`),
+      blamed: result.error?.includes(`_content/calendar/Main.attach/${file} (local-push, HTTP 503)`),
     }),
     {
     success: false,

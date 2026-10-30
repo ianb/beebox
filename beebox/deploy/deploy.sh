@@ -922,6 +922,17 @@ systemctl enable beebox-scheduler.service >/dev/null 2>&1 || true
 # round 5, codex gpt-6-sol, 2026-10-24). cloud-init's tmpfiles entry creates it
 # with the same owner and mode; the layout preflight guarantees the group.
 install -d -o beebox -g beebox-boxes -m 2755 /etc/beebox
+# Box users push over ssh with only GitHub's host key in the system file;
+# cloud-init writes it on new hosts. A host provisioned before that line had
+# it only in ~beebox/.ssh/known_hosts, and every box push failed host-key
+# verification once boxes moved to their own users. Keep in step with
+# hetzner/cloud-init.yaml.
+github_host_key='github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl'
+if ! grep -qxF "$github_host_key" /etc/ssh/ssh_known_hosts 2>/dev/null; then
+  printf '%s\n' "$github_host_key" >> /etc/ssh/ssh_known_hosts
+  chmod 0644 /etc/ssh/ssh_known_hosts
+  echo "  added GitHub's host key to /etc/ssh/ssh_known_hosts"
+fi
 for unit in beebox-box@.service beebox-pass@.service beebox-backup@.service; do
   dir="/etc/systemd/system/$unit.d"
   mkdir -p "$dir"

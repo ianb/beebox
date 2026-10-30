@@ -1,13 +1,16 @@
 ---
 title: "Calendar `.ics` filenames should carry the event title, not eight characters of Google's event id"
-workstream: unattached
+workstream: calendar-cards
 area: beebox
 needs: [decision]
 labels: [calendar, connectors]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — comparing against caldir, which names files by date and title
+resolution: implemented
 ---
+
+> **Closed:** Closed by the calendar-cards workstream (merged to main). Event files are named by date and title (`eventFilename`); the migration renames existing files.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

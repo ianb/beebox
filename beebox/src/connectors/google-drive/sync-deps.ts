@@ -91,6 +91,9 @@ export function createFolderSyncDeps(options: {
       state.driveTrashed = state.driveTrashed.filter((id) => id !== driveId);
       restorable.delete(driveId);
     },
+    recordFolderSync: (driveId, at) => {
+      state.folders[driveId] = { lastSync: at };
+    },
     trashCard: async (card) => {
       const receipt = await moveCardsToTrash(silentCommandContext(boxRoot), [card.cardPath]);
       // Whose tombstone this is decides whether a Drive restore can undo it,

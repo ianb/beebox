@@ -5,7 +5,7 @@
   overflow: clip;
   background: #73bbbf;
   --bbx-selection: #f38630;
-  --bbx-selection-ink: #263f3d;
+  --bbx-selection-ink: #1d3533;
   --bbx-focus-ring: #27686c;
 }
 .bbx-box-presentation[data-chrome-theme="goldfish"]:not(.bbx-system-theme-preview)::before {
