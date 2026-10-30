@@ -11,6 +11,7 @@ The boxholder's ask: a browser inside beebox that the box agent and the person b
 | [hosted-and-agent-interfaces.md](hosted-and-agent-interfaces.md) | Hosted services (Browserbase, Cloudflare Browser Run, Kernel, Hyperbrowser, Anchor) and takeover UX in agent products; agent-side tools (agent-browser, chrome-devtools-mcp, Playwright MCP) |
 | [site-reality.md](site-reality.md) | Bot detection, datacenter IP reputation, residential paths, stealth projects, captchas, terms of service |
 | [agent-browser-dashboard.md](agent-browser-dashboard.md) | After the boxholder's direction: what agent-browser's dashboard lets the person do, and what serving it behind beebox needs |
+| [acceptance-walkthrough.md](acceptance-walkthrough.md) | Plan gate G1 (2026-10-30): a login typed through the dashboard, read by the agent, kept across a restart |
 | [security.md](security.md) | Prompt injection with logged-in sessions, CDP exposure, SSRF through the browser, profile storage, Chromium RAM; 12 threats with controls |
 
 ## What the survey found
