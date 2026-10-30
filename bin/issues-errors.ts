@@ -210,6 +210,13 @@ export class MissingIssueFrontmatterError extends UsageError {
   }
 }
 
+export class PrivateNoteLinkError extends UsageError {
+  public constructor(targets: string[]) {
+    super(`--note links into private-issues/ from a public issue: ${targets.join(", ")}; public files must never link there`);
+    this.name = "PrivateNoteLinkError";
+  }
+}
+
 export class BrokenNoteLinkError extends UsageError {
   public constructor(closedPath: string, targets: string[]) {
     super(`--note links resolve from ${closedPath}; these do not exist: ${targets.join(", ")}`);

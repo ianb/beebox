@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { REPO_ROOT, loadIssueEntries } from "../workstreams-app/src/server/main/issue-search-model.js";
 import { frontmatterFence } from "../beebox/src/cards/frontmatter.js";
 import { relocateLinks } from "../beebox/src/dev/doc-check/link-repair.js";
+import { findPrivateLinkViolations } from "../beebox/src/dev/doc-check/private-link.js";
 import { formatDocMove, moveDoc } from "./lib/doc-move.js";
 import { assignIssueWorkstream } from "./assign-issue-workstream.js";
 import { workstreamFromBranch } from "./commit-provenance.js";
@@ -20,7 +21,7 @@ import { oneOf, type ParsedValues } from "./issues-args.js";
 import { resolveEntry } from "./issues-context.js";
 import {
   AlreadyClosedIssueError, BrokenNoteLinkError, ManualTestingCloseError, MissingClosePathError,
-  MissingIssueFrontmatterError, MissingNoteError, MissingResolutionError, MultipleWorkstreamsError,
+  MissingIssueFrontmatterError, MissingNoteError, MissingResolutionError, MultipleWorkstreamsError, PrivateNoteLinkError,
 } from "./issues-errors.js";
 import { emitJson } from "./issues-output.js";
 
@@ -59,8 +60,11 @@ function currentBranch(): string | null {
 }
 
 // Relative links in the note are written from the closed location; one that
-// resolves nowhere from there is refused before anything moves.
+// resolves nowhere from there is refused before anything moves, and so is a
+// public issue's link into private-issues/ (issues/AGENTS.md, "Private issues").
 function assertNoteLinksResolve(note: string, closedRel: string): void {
+  const leaks = closedRel.startsWith("private-issues/") ? [] : findPrivateLinkViolations(closedRel, note);
+  if (leaks.length > 0) throw new PrivateNoteLinkError(leaks.map((v) => v.target));
   const broken: string[] = [];
   relocateLinks({
     resolveFrom: closedRel,

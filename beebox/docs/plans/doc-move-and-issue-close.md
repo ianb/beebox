@@ -158,7 +158,7 @@ references by identity, which is safe in tests too.
   file (link-scanned and not path-exempt Markdown, or a mention-scanned code
   file) that ends in the moved basename and resolves to `from` from the file's
   directory, package root, `beebox/`, or the repo root is reported on stderr
-  as a reference the move did not rewrite (reference-style links, HTML
+  as a reference the move did not rewrite (HTML
   `href`, `../`-relative mentions in code). doc-check is no safety net here:
   its graph resolves a stale inline link by basename
   (`beebox/src/dev/doc-graph-data/data.ts:223`).
@@ -270,7 +270,7 @@ none
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | A test fixture string names the moved file's exact path and gets rewritten | planned (planner test) | printed per line | clear (printed) |
-| A reference to the moved file uses a form the scanner does not know (reference-style `[x]: path`, HTML `href`, `../` mention in code) | planned | residual check | clear (stderr) |
+| A reference to the moved file uses a form the scanner does not know (HTML `href`, `../` mention in code) | planned | residual check | clear (stderr) |
 | Own link already broken before the move | planned | re-depthed by path, listed | clear (stderr) |
 | `to` already exists / cross-repo / non-`.md` | planned | refusal before any write | clear |
 | Ambiguous issue needle for `close` | existing `resolveEntry` tests | `AmbiguousIssueError` | clear |

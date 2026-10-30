@@ -31,7 +31,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { relocateLinks, type LinkRewrite } from "../../beebox/src/dev/doc-check/link-repair.js";
 import { findMentionsOf, repairFilePaths } from "../../beebox/src/dev/doc-check/file-paths.js";
-import { AGENT_DOCS_PREFIX, MENTION_SOURCE_RE, isFilePathExempt, isLinkScanned } from "../../beebox/src/dev/doc-check/scan-scope.js";
+import { AGENT_DOCS_PREFIX, isFilePathExempt, isLinkScanned } from "../../beebox/src/dev/doc-check/scan-scope.js";
 
 export const PRIVATE_PREFIX = "private-issues/";
 
@@ -144,9 +144,16 @@ export function planDocMove({ from, to, sources, read, exists, editMoved }: {
   return { from, to, moved, files, notices };
 }
 
+// A reference-style definition line (`[label]: target`).
+const DEFINITION_RE = /^\s{0,3}\[[^\]]+]:\s/;
+
+// Code, YAML, and shell sources whose `.md` mentions a move rewrites; doc-check
+// itself does not scan shell.
+const MOVE_MENTION_RE = /\.(?:ts|tsx|mts|yaml|yml|sh)$/;
+
 // Markdown whose links doc-check maintains, and whose backticked paths too.
 function pathsMaintained(rel: string, markdown: boolean): boolean {
-  return (markdown || MENTION_SOURCE_RE.test(rel)) && !isFilePathExempt(rel) && !rel.startsWith(AGENT_DOCS_PREFIX);
+  return (markdown || MOVE_MENTION_RE.test(rel)) && !isFilePathExempt(rel) && !rel.startsWith(AGENT_DOCS_PREFIX);
 }
 
 // References in one file that resolve to `from`, rewritten to `to`.
@@ -173,6 +180,9 @@ function rewriteReferences({ rel, content, from, to, exists }: {
     out = repairFilePaths({ content: out, problems: moved, bare });
     rewrites.push(...moved.map((m) => ({ line: m.line, from: m.token, to: m.suggestion ?? m.token, kind: "path" as const })));
     if (!markdown || linksMaintained) notices.push(...residualReferences({ rel, content: out, from }));
+  } else if (linksMaintained) {
+    // A historical record keeps its backticked paths, but its links follow.
+    notices.push(...residualReferences({ rel, content: out, from, linkFormsOnly: true }));
   }
   return { content: out, rewrites: rewrites.toSorted((a, b) => a.line - b.line), notices };
 }
@@ -193,11 +203,15 @@ function tokensEndingWith(line: string, basename: string): string[] {
 // Tokens left in a maintained file that still name `from`: a path ending in
 // its basename that resolves to it from the file's directory, its package
 // root, beebox/, or the repo root. A bare basename is a name, not a path.
-function residualReferences({ rel, content, from }: { rel: string; content: string; from: string }): DocMoveNotice[] {
+// With `linkFormsOnly`, only reference definitions and HTML `href`s count.
+function residualReferences({ rel, content, from, linkFormsOnly }: {
+  rel: string; content: string; from: string; linkFormsOnly?: boolean;
+}): DocMoveNotice[] {
   const basename = path.posix.basename(from);
   const bases = [...new Set([path.posix.dirname(rel), rel.split("/")[0] ?? ".", "beebox", "."])];
   const notices: DocMoveNotice[] = [];
   for (const [i, line] of content.split("\n").entries()) {
+    if (linkFormsOnly === true && !DEFINITION_RE.test(line) && !line.includes("href=")) continue;
     for (const token of tokensEndingWith(line, basename)) {
       if (!token.includes("/")) continue;
       if (!bases.some((base) => path.posix.normalize(path.posix.join(base, token)) === from)) continue;
@@ -209,7 +223,7 @@ function residualReferences({ rel, content, from }: { rel: string; content: stri
 
 // ─── I/O ─────────────────────────────────────────────────────────────────────
 
-const SOURCE_RE = /\.(?:md|ts|tsx|mts|yaml|yml)$/;
+const SOURCE_RE = /\.(?:md|ts|tsx|mts|yaml|yml|sh)$/;
 
 // Tracked and untracked-not-ignored files under `cwd`, relative to it.
 function listFiles(cwd: string): string[] {

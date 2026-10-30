@@ -316,5 +316,29 @@ export function relocateLinks({ resolveFrom, writeFrom, content, relocate }: {
   };
   const frontmatter = mapFrontmatterPaths(content, decide);
   const links = mapLinks(frontmatter.content, decide);
-  return { content: links.content, rewrites: [...frontmatter.rewrites, ...links.rewrites] };
+  const definitions = mapDefinitions(links.content, decide);
+  return {
+    content: definitions.content,
+    rewrites: [...frontmatter.rewrites, ...links.rewrites, ...definitions.rewrites].toSorted((a, b) => a.line - b.line),
+  };
+}
+
+// Reference-style link definitions (`[label]: target "title"`), outside
+// fenced code blocks.
+const DEFINITION_RE = /^(\s{0,3}\[[^\]]+]:\s*)(\S+)(.*)$/;
+
+function mapDefinitions(content: string, decide: TargetDecision): { content: string; rewrites: LinkRewrite[] } {
+  const rewrites: LinkRewrite[] = [];
+  let inFence = false;
+  const lines = content.split("\n").map((line, i) => {
+    if (/^\s*(```+|~~~+)/.test(line)) inFence = !inFence;
+    const m = inFence ? null : DEFINITION_RE.exec(line);
+    const target = m?.[2];
+    if (!m || target === undefined) return line;
+    const decision = decide(target);
+    if (decision.kind !== "rewrite") return line;
+    rewrites.push({ line: i + 1, from: target, to: decision.to });
+    return `${m[1] ?? ""}${decision.to}${m[3] ?? ""}`;
+  });
+  return { content: lines.join("\n"), rewrites };
 }

@@ -28,3 +28,21 @@ rank order, each with its adjudication.
    predicates separate; the plan text now says so. The budget stays.
 7. **Untracked files cannot be moved with `git mv`.** *Accepted.* The
    ontology now says tracked only; the code refuses an untracked source.
+
+## Diff review
+
+Reviewer: codex gpt-6-sol, review mode, 2026-10-30.
+
+1. **Reference-style definitions in the moved file keep the old depth.**
+   *Accepted.* `relocateLinks` now rewrites `[label]: target` definitions,
+   for own links and inbound links.
+2. **Shell comments that name a moved plan are not scanned.** *Accepted.*
+   The move reads `.sh` files for `.md` mentions.
+3. **A public close's note can link into `private-issues/`.** *Accepted.* The
+   note goes through the private-link guard before the move.
+4. **Historical docs with maintained links skip the residual check.**
+   *Accepted.* Path-exempt Markdown is checked for HTML `href` and definition
+   lines that still name the old path.
+5. **`repairFilePaths` replaces a detected token inside a double-backtick
+   span on the same line.** *Rejected as rare*: the same behavior as
+   `doc-check --fix`, and every rewrite is printed.

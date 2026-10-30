@@ -22,11 +22,14 @@ design: ../../beebox/docs/plans/p.md
 
 See [b](../bugs/b.md), [sibling](c.md), [self](a.md#top), and [gone](../bugs/gone.md).
 Quoted syntax stays: \`[q](../bugs/b.md)\`.
+
+[defined]: ../bugs/b.md
 `,
   "issues/features/c.md": "Related: [a](a.md).\n",
   "issues/bugs/b.md": "Moved from [a](../features/a.md#sec); not [the watch one](../watch/a.md).\n",
   "issues/watch/a.md": "A different file with the same basename.\n",
   "beebox/test/x.test.ts": "// Fixture from issues/features/a.md:L3, and issues/watch/a.md stays.\n",
+  "bin/lib/x.sh": "# Background: issues/features/a.md\n",
   "beebox/docs/plans/p.md": `---
 title: P
 status: draft
@@ -38,7 +41,7 @@ Backticked \`issues/features/a.md\`.
 
 [ref]: ../../../issues/features/a.md
 `,
-  "beebox/docs/implemented-plans/old.md": "Historical `issues/features/a.md`, linked [here](../../../issues/features/a.md).\n",
+  "beebox/docs/implemented-plans/old.md": "Historical `issues/features/a.md`, linked [here](../../../issues/features/a.md).\n<a href=\"../../../issues/features/a.md\">a</a>\n",
   "private-issues/bugs/q.md": "Public context: [a](../../issues/features/a.md).\n",
 };
 
@@ -63,14 +66,18 @@ design: ../../../beebox/docs/plans/p.md
 
 See [b](../../bugs/b.md), [sibling](../../features/c.md), [self](a.md#top), and [gone](../../bugs/gone.md).
 Quoted syntax stays: \`[q](../bugs/b.md)\`.
+
+[defined]: ../../bugs/b.md
 `);
   t.check(p.files.map((f) => [f.path, f.repository, f.rewrites.map((r) => `L${String(r.line)} ${r.kind} ${r.from} -> ${r.to}`)]), [
     ["issues/features/c.md", "public", ["L1 link a.md -> ../closed/features/a.md"]],
     ["issues/bugs/b.md", "public", ["L1 link ../features/a.md#sec -> ../closed/features/a.md#sec"]],
     ["beebox/test/x.test.ts", "public", ["L1 path issues/features/a.md:L3 -> issues/closed/features/a.md:L3"]],
+    ["bin/lib/x.sh", "public", ["L1 path issues/features/a.md -> issues/closed/features/a.md"]],
     ["beebox/docs/plans/p.md", "public", [
       "L6 link ../../../issues/features/a.md -> ../../../issues/closed/features/a.md",
       "L8 path issues/features/a.md -> issues/closed/features/a.md",
+      "L10 link ../../../issues/features/a.md -> ../../../issues/closed/features/a.md",
     ]],
     // Historical records keep their backticked paths; their links still follow.
     ["beebox/docs/implemented-plans/old.md", "public", ["L1 link ../../../issues/features/a.md -> ../../../issues/closed/features/a.md"]],
@@ -78,10 +85,10 @@ Quoted syntax stays: \`[q](../bugs/b.md)\`.
   ]);
   t.check(p.files.find((f) => f.path === "beebox/test/x.test.ts")?.content,
     "// Fixture from issues/closed/features/a.md:L3, and issues/watch/a.md stays.\n");
-  // A reference-style link is not parsed; it is reported, never silently left.
+  // An HTML href is not parsed; it is reported, never silently left.
   t.check(p.notices, [
     { path: "issues/closed/features/a.md", line: null, message: "own link to a missing file: issues/bugs/gone.md" },
-    { path: "beebox/docs/plans/p.md", line: 10, message: "still names the old path: ../../../issues/features/a.md" },
+    { path: "beebox/docs/implemented-plans/old.md", line: 2, message: "still names the old path: ../../../issues/features/a.md" },
   ]);
 });
 
