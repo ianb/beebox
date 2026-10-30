@@ -37,4 +37,12 @@ fi
 export BROWSE_WORKTREE="$worktree"
 
 CLI="$REPO_DIR/beebox/test/tours/tour-lib/cli.ts"
+
+# Every checkpoint takes a screenshot, and on macOS a capture stalls while the
+# display is asleep: the weekly unattended run aborted at its first capture
+# (issues/bugs/2026-10-14-workspace-panes-tour-aborts-after-floating-restore.md).
+# `-u` turns a dark display on; `-d` keeps it on until the tours finish.
+if [[ $# -gt 0 && "$1" != "--list" ]] && command -v caffeinate >/dev/null; then
+  exec caffeinate -u -d "$TSX" "$CLI" "$@"
+fi
 exec "$TSX" "$CLI" "$@"
