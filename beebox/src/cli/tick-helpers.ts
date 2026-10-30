@@ -209,7 +209,7 @@ interface PostSuccessArgs {
 async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
   const { boxRoot, parsed, scriptName, cardPath, file, preRunMtimeMs, options } = args;
 
-  await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
+  await handleCreateAfterSuccess({ boxRoot, parsed, scriptName, quiet: options.quiet === true });
 
   if (parsed.once) await deleteOnceCard(cardPath, { file, preRunMtimeMs, quiet: options.quiet === true });
 
