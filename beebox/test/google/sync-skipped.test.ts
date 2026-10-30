@@ -41,7 +41,7 @@ async function setPolicy(box: TmpBox, googleServices: Record<string, boolean>) {
 // ## The policy switch: `not-allowed`
 //
 // A box with the service off has no credential problem at all, so the detail names
-// the setting rather than sending anyone to `bbx google-auth`. All three connectors
+// the setting rather than sending anyone to reconnect Google. All three connectors
 // answer the same way.
 void test("A box with the service off has no credential problem at all, so the detail na...", async (t) => {
   t.teardown(async () => {

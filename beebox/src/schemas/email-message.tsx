@@ -32,7 +32,7 @@
  * For OUTBOUND email (drafts the agent authors), see `email-outbound.tsx`.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, opaqueContentRef, type InferCardFields } from "../exports/cards.js";
 

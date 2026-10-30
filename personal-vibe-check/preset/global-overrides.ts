@@ -5,52 +5,11 @@ import { disabledRules } from "./disabled-rules.ts";
 // independent of its options. Order matters: each overrides what precedes it.
 export const globalOverrides: Linter.Config[] = [
   {
-    // Optional chaining (?.) is allowed — this rule is retired. Reviewed
-    // 2026-05-30 on a real codebase: `a?.b ?? default` and optional calls
-    // read clearly, and forcing explicit null checks made nested chains
-    // (`x?.[0]?.y`, `find()?.z`) demonstrably worse. The clarity win didn't
-    // materialize. Disabled here (not in disabledRules) with no `files` key so
-    // it applies to every file — the base config enables the rule and matches
-    // .tsx even when react:false, which disabledRules wouldn't reach.
-    rules: { "no-optional-chaining/no-optional-chaining": "off" },
-  },
-  {
-    // error/no-throw-literal is retired — replaced by the type-aware rule in
-    // the next entry. Reviewed 2026-06-09 on a real codebase: the rule is
-    // purely syntactic, so it flagged EVERY `throw identifier` — including
-    // Error-typed variables and rethrows of caught errors — while missing
-    // `throw new NotAnError()` and `throw nonErrorCall()` entirely. It
-    // trained code into unsound `throw e as Error` casts (29 sites) and
-    // catch-everything fallbacks instead of the narrow "recover from one
-    // error type, rethrow the rest" style we actually want. Disabled with no
-    // `files` key because eslint-config-agent enables it globally (all file
-    // types, all directories), which the main block's allRulesOff can't reach.
-    rules: { "error/no-throw-literal": "off" },
-  },
-  {
-    // single-export (one export per file) is retired — boxholder decision
-    // 2026-07-15. One function/class per file is a fine constraint, but the
-    // rule counts EVERY export toward its limit — including `export interface`,
-    // `export type`, and `export const` — so a cohesive unit and its supporting
-    // types can't share a file. That fights how modules actually cluster here
-    // (a value plus its `Props`/`Options` type, a fixture plus the error it
-    // throws). The "only export what's needed" convention (code-style.md) plus
-    // review covers the real concern; the automated one-per-file nudge cost more
-    // than it bought. Disabled with no `files` key because eslint-config-agent
-    // enables it globally — the main block's allRulesOff/disabledRules only
-    // reach root-scoped files (src/, scripts/), leaving it live on the
-    // fall-through base for everything else (test/, etc.). Same shape as the
-    // no-optional-chaining / no-throw-literal retirements above.
-    rules: { "single-export/single-export": "off" },
-  },
-  {
     // disabledRules are rules reviewed and rejected, each with its reason.
     // The main block reaches only root-scoped files, so a package whose
-    // test/ is not in its file patterns (browse, tap-check) still had
-    // them from eslint-config-agent's base: a converted test exported its
-    // stub classes for class-export, and a fixture-writing test met
-    // detect-non-literal-fs-filename on every fs call (boxholder,
-    // 2026-10-18). Applied with no `files` key, as the retirements above.
+    // test/ is not in its file patterns (browse, tap-check) would not get
+    // them there; applied with no `files` key so every file agrees
+    // (boxholder, 2026-10-18).
     rules: disabledRules,
   },
   {

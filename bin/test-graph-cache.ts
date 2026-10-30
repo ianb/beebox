@@ -33,9 +33,10 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { TestGraph } from "./test-graph-query.js";
+import { writeFileAtomicSync } from "../beebox/src/lib/atomic-write.js";
 
 /** The parse boundary: a cache file or a package.json may hold anything. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -250,11 +251,8 @@ export function writeCachedGraph(input: { path: string; key: string; graph: Test
     buildMs: input.graph.buildMs,
   };
   try {
-    mkdirSync(dirname(input.path), { recursive: true });
-    // Rename so a concurrent reader never sees a half-written file.
-    const temporary = `${input.path}.${process.pid}.tmp`;
-    writeFileSync(temporary, JSON.stringify(stored));
-    renameSync(temporary, input.path);
+    // A concurrent reader never sees a half-written file.
+    writeFileAtomicSync(input.path, { content: JSON.stringify(stored) });
   } catch (_e) {
     // A cache that cannot be written is a slow run, not a failed one.
   }

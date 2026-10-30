@@ -11,12 +11,10 @@
  */
 
 import { useCallback } from "react";
-import { apiRawFileUrl, getApiBase } from "../api";
 import { Markdown } from "./Markdown/body";
 import { Text } from "./ui/Text";
-import { FriendlyDate } from "./ui/FriendlyDate";
+import { CapturedPageMeta, frozenSnapshotUrl } from "./CapturedPageMeta";
 import { type RendererProps } from "../file-type-registry";
-import { resolveRelativePath } from "../lib/view-url";
 import { isRecord } from "@shared/is-record";
 
 export function CommentaryView({ data, onNavigate }: RendererProps) {
@@ -31,18 +29,7 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
   const captured = isRecord(about) ? about["retrieved"] : undefined;
   const frozen = frontmatter["frozen"];
   const sourceUrl = isRecord(about) && typeof about["href"] === "string" && about["href"] !== "" ? about["href"] : null;
-  // `frozen` is a card ref stored as `{ ref: <path> }`; pull the path off it.
-  const frozenPath =
-    typeof frozen === "object" && frozen !== null && "ref" in frozen && typeof frozen.ref === "string"
-      ? frozen.ref
-      : null;
-  // A `frozen` ref that escapes the box root resolves to null and is treated as
-  // absent — no snapshot link, rather than a link to a clamped-to-root file.
-  // The broken ref itself is reported where refs are checked (`bbx validate`),
-  // not re-reported on every render here.
-  const frozenRelative =
-    frozenPath !== null && frozenPath !== "" ? resolveRelativePath(data.path, frozenPath) : null;
-  const frozenUrl = frozenRelative === null ? null : apiRawFileUrl(getApiBase(), frozenRelative);
+  const frozenUrl = frozenSnapshotUrl(data.path, frozen);
   const capturedAt = typeof captured === "string" && captured !== "" ? captured : null;
 
   const onJumpToQuote = useCallback((quoteText: string): Promise<boolean> => {
@@ -52,28 +39,12 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
     return Promise.resolve(true);
   }, [frozenUrl]);
 
-  const meta =
-    sourceUrl !== null || frozenUrl !== null ? (
-      <Text as="div" size="sm" tone="subtle" className="mb-3">
-        {sourceUrl !== null ? (
-          <a href={sourceUrl} target="_blank" rel="noreferrer" className="underline">Original page</a>
-        ) : null}
-        {frozenUrl !== null ? (
-          <>
-            {sourceUrl !== null ? " · " : ""}
-            <a href={frozenUrl} target="_blank" rel="noreferrer" className="underline">Frozen snapshot ↗</a>
-          </>
-        ) : null}
-        {capturedAt !== null ? <> · captured <FriendlyDate iso={capturedAt} /></> : null}
-      </Text>
-    ) : null;
-
   return (
     <div className="p-4">
       {typeof title === "string" && title !== "" ? (
         <Text as="h1" size="lg" weight="semibold" className="mb-1">{title}</Text>
       ) : null}
-      {meta}
+      <CapturedPageMeta sourceUrl={sourceUrl} frozenUrl={frozenUrl} capturedAt={capturedAt} />
       <div className="min-w-0" data-card-section="body">
         {body !== undefined && body.trim() !== "" ? (
           <Markdown prose="block" onNavigate={onNavigate} onJumpToQuote={onJumpToQuote} basePath={data.path}>{body}</Markdown>

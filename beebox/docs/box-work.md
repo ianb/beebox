@@ -77,6 +77,10 @@ the real `HOME` and only the two file overrides. Tests already do all of
 this (`makeTmpBox()` and the test preloads; see [testing](testing.md)); prefer
 a test when the bug fits one.
 
+Run later commands from inside the box as `<worktree>/beebox/bin/bbx <verb>`,
+which rebuilds a stale bundle. `pnpm --dir` changes the working directory, so
+box detection fails, and not every verb takes `--box`.
+
 ## Auditing what a box agent knows
 
 Use the knowledge-audit skill and [knowledge audits](testing/knowledge-audits.md#running-it).
@@ -94,9 +98,10 @@ around the guard.
   ([deploy README](../deploy/README.md#checking-deploy-state)).
 - **The server** is reached with `deploy/prod-ssh`, which works from a worktree
   by reading the main checkout's `deploy/target.env`. Box data is at
-  `/home/beebox/boxes/<box>/`; run `bbx` there as the `beebox` user so file
-  ownership stays correct ([operations](server/operations.md#connecting-for-debugging-and-inspection)).
-- **Source `/home/beebox/.env` before env-dependent commands.** Ad-hoc SSH does
+  `/var/lib/beebox/<box>/box/`, owned by the box's own user `bbx-<box>`; run
+  `bbx` there as that user so file ownership stays correct
+  ([operations](server/operations.md#connecting-for-debugging-and-inspection)).
+- **Source `/etc/beebox/box.env` before box commands.** Ad-hoc SSH does
   not inherit the services' environment, so a bare `bbx health` reports
   connectors missing that are syncing. Suspect the diagnostic before the box.
 - **The authenticated app** is reached with `deploy/prod-curl` and

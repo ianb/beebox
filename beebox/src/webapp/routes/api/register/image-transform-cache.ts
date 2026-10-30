@@ -1,7 +1,7 @@
-import { randomBytes } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../../../../shared/error-guards.js";
+import { writeFileAtomic } from "../../../../lib/atomic-write.js";
 
 const MAX_CACHE_BYTES = 512 * 1024 * 1024;
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -108,7 +108,7 @@ export class ImageTransformCache {
         if (errnoCode(error) !== "ENOENT") throw error;
       }
       const content = await generate();
-      await this.writeAtomic(target, content);
+      await writeFileAtomic(target, { content });
       await this.sweepIfDue(content.length);
       return content;
     });
@@ -117,26 +117,6 @@ export class ImageTransformCache {
       return await pending;
     } finally {
       if (this.inFlight.get(target) === pending) this.inFlight.delete(target);
-    }
-  }
-
-  private async writeAtomic(target: string, content: Buffer): Promise<void> {
-    await fs.mkdir(this.root, { recursive: true });
-    const temporary = `${target}.tmp-${String(process.pid)}-${randomBytes(6).toString("hex")}`;
-    try {
-      const handle = await fs.open(temporary, "wx");
-      try {
-        await handle.writeFile(content);
-        await handle.sync();
-      } finally {
-        await handle.close();
-      }
-      await fs.rename(temporary, target);
-    } catch (error) {
-      await fs.unlink(temporary).catch((unlinkError: unknown) => {
-        if (errnoCode(unlinkError) !== "ENOENT") console.warn(`[image-cache] could not remove ${temporary}:`, unlinkError);
-      });
-      throw error;
     }
   }
 

@@ -11,6 +11,7 @@
 // `ctx.services` — so no procedure here reaches Google.
 
 import { test } from "tap";
+import { execSync } from "node:child_process";
 import "@ianbicking/tap-check/tap";
 import { containing, isoDate } from "@ianbicking/tap-check/check";
 import { TRPCError } from "@trpc/server";
@@ -86,7 +87,9 @@ const RECIPES_MOUNTED = {
     "_content/drive/recipes/Budget_2026.gsheet.card",
     "_content/drive/recipes/Scanpdf.glink.card",
   ],
-  updated: ["_content/drive/recipes/Recipes.gfolder.card"],
+  // The mount wrote the card with Drive's name and link already; the first
+  // pass finds nothing on it to change.
+  updated: [],
   pushed: [],
   failures: [],
   notes: [],
@@ -165,7 +168,7 @@ void test("mount writes the .gfolder.card and runs one mirror pass, so by the ti
         driveId: "folder-1",
         name: "Recipes",
         link: "https://drive.google.com/file/d/folder-1/view",
-        // Stamped, so the row can say when Drive was last heard from.
+        // From Drive state, so the row can say when Drive was last heard from.
         lastSync: isoDate(),
         error: null,
         children: { files: 1, links: 1 },
@@ -177,13 +180,16 @@ void test("mount writes the .gfolder.card and runs one mirror pass, so by the ti
   // An injected service is a connected one: the page shows the mount manager, not
   // the connect-Google prompt.
 
-  // `syncFolder` mirrors that same mount again on demand. Nothing changed upstream,
-  // so the pass creates nothing and re-stamps the card.
+  // `syncFolder` mirrors that same mount again on demand ("Sync now"). Nothing
+  // changed upstream, so the pass changes no file and makes no commit.
 
+  const head = () => execSync("git rev-parse HEAD", { cwd: box.root, encoding: "utf-8" });
+  const beforeSync = head();
   const synced = await c.drive.syncFolder({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
+  t.check(head(), beforeSync);
   t.check(synced, {
     created: [],
-    updated: ["_content/drive/recipes/Recipes.gfolder.card"],
+    updated: [],
     pushed: [],
     failures: [],
     notes: [],

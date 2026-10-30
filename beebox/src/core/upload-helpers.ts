@@ -13,6 +13,7 @@ import { invariant } from "../shared/invariant.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { withCardLock } from "../lib/card-lock.js";
+import { writeFileAtomic } from "../lib/atomic-write.js";
 
 export const SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".avif"];
 export const PDF_EXTENSION = ".pdf";
@@ -184,15 +185,11 @@ export async function loadLedger(boxRoot: string): Promise<UploadLedger> {
 
 export async function saveLedger(boxRoot: string, ledger: UploadLedger): Promise<void> {
   const ledgerPath = path.join(boxRoot, LEDGER_REL_PATH);
-  await fs.mkdir(path.dirname(ledgerPath), { recursive: true });
-  // tmp + rename for atomicity — a crash mid-write can't leave a corrupted
-  // ledger. The temp name is per-process-and-call so two writers (which the
-  // lock below should prevent, but which a `--force` CLI run beside the promote
-  // worker could still produce on a stale lock) cannot clobber each other's
-  // half-written file.
-  const tmp = `${ledgerPath}.tmp-${process.pid}-${crypto.randomUUID()}`;
-  await fs.writeFile(tmp, `${JSON.stringify(ledger, null, 2)}\n`);
-  await fs.rename(tmp, ledgerPath);
+  // A crash mid-write can't leave a corrupted ledger, and two writers (which
+  // the lock below should prevent, but which a `--force` CLI run beside the
+  // promote worker could still produce on a stale lock) each write their own
+  // temp file.
+  await writeFileAtomic(ledgerPath, { content: `${JSON.stringify(ledger, null, 2)}\n` });
 }
 
 /** How long a ledger writer waits for a contending one before failing loudly. */

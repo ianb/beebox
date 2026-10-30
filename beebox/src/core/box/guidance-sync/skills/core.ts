@@ -32,6 +32,8 @@ import {
 import { BEEBOX_SYSTEM_FEEDBACK_SKILL } from "./content-beebox-system-feedback.js";
 import { BROWSER_TASK_SKILL } from "./content-browser-task.js";
 import { WHAT_CAN_YOU_DO_SKILL } from "./content-what-can-you-do.js";
+import { FIGURE_IT_OUT_SKILL } from "./content-figure-it-out.js";
+import { SIMPLIFY_QUESTION_SKILL } from "./content-simplify-question.js";
 import { getBoxShape } from "../../../../lib/box-shape.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { readDocId, withDocId } from "../../../docs-gen/shared.js";
@@ -79,8 +81,10 @@ function buildBoxSkills(plugins: readonly PluginDefinition[]): BoxSkill[] {
     { name: "calendar", content: CALENDAR_SKILL },
     { name: "drive", content: DRIVE_SKILL },
     { name: "email", content: EMAIL_SKILL },
+    { name: "figure-it-out", content: FIGURE_IT_OUT_SKILL },
     { name: "location", content: LOCATION_SKILL },
     { name: "schedules", content: SCHEDULES_SKILL },
+    { name: "simplify-question", content: SIMPLIFY_QUESTION_SKILL },
     { name: "tricks", content: TRICKS_SKILL },
     { name: "views", content: VIEWS_SKILL },
     { name: "what-can-you-do", content: WHAT_CAN_YOU_DO_SKILL },

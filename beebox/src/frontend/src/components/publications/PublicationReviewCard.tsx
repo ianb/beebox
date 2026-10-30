@@ -15,6 +15,7 @@ import { Stack } from "../ui/Stack";
 import { StatusMessage } from "../ui/StatusMessage";
 import { Pre } from "../ui/Pre";
 import { Text } from "../ui/Text";
+import { humanBytes } from "@shared/human-bytes";
 import { publicationUrl as buildPublicationUrl, samePublicationAudience } from "@shared/publication-url";
 
 type Publication = RouterOutput["publications"]["list"]["sites"][number];
@@ -207,7 +208,7 @@ function CandidateDetails({ candidate, pubId }: { candidate: Candidate; pubId: s
         {candidate.preview.map((file) => (
           <Row key={file.path} gap="sm" wrap>
             <Text size="xs" breakAll><Text mono breakAll>{file.path}</Text></Text>
-            <Text size="xs" tone="muted">· {formatBytes(file.bytes)}</Text>
+            <Text size="xs" tone="muted">· {humanBytes(file.bytes)}</Text>
             <Button id={`bbx-publication-preview-${pubId}-${encodeURIComponent(file.path)}`} size="sm" intent="ghost" onClick={() => setSelectedPath(file.path)}>Inspect text</Button>
           </Row>
         ))}
@@ -241,11 +242,11 @@ function FilePreview({ path, error, loading, result }: { path: string; error: st
   if (loading) return <StatusMessage>Loading text preview…</StatusMessage>;
   const preview = result;
   if (preview === undefined) return null;
-  if (preview.kind === "binary") return <Hint>{path} is a binary file ({formatBytes(preview.bytes)}); its contents are not previewed.</Hint>;
-  if (preview.kind === "too-large") return <Hint>{path} is too large to inspect here ({formatBytes(preview.bytes)}; limit {formatBytes(preview.limit)}).</Hint>;
+  if (preview.kind === "binary") return <Hint>{path} is a binary file ({humanBytes(preview.bytes)}); its contents are not previewed.</Hint>;
+  if (preview.kind === "too-large") return <Hint>{path} is too large to inspect here ({humanBytes(preview.bytes)}; limit {humanBytes(preview.limit)}).</Hint>;
   return (
     <Stack gap="xs">
-      <Text size="xs" tone="muted">Plain text · {preview.contentType} · {formatBytes(preview.bytes)}</Text>
+      <Text size="xs" tone="muted">Plain text · {preview.contentType} · {humanBytes(preview.bytes)}</Text>
       <Pre boxed scroll="lg">{preview.text}</Pre>
     </Stack>
   );
@@ -275,12 +276,6 @@ function RemoteState({ reason }: { reason: RemoteUnavailable["reason"] }) {
     "cloudflare-unavailable": "Cloudflare could not be reached, so the current serving state could not be checked.",
   }[reason];
   return <div role="alert"><Badge tone="danger">Remote state unavailable</Badge><Text size="sm"> {message} Mutations are disabled until the site state can be checked.</Text></div>;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function publicationCustomHostname(value: object | null): string | undefined {

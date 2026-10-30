@@ -14,7 +14,7 @@ import {
   type Excerpt,
 } from "../../src/components/chat/ChatMessages/activity-wording.js";
 import type { SessionContentBlock } from "../../src/api-chat.js";
-import type { ActivityPart } from "../../src/components/chat/message-parsing.js";
+import type { ActivityPart } from "../../src/components/chat/assistant-parts.js";
 
 function tool(toolName: string, input: Record<string, unknown>): SessionContentBlock {
   return { type: "tool_use", toolName, input };
@@ -49,6 +49,12 @@ void test("Tools fall into groups, and TodoWrite is not counted.", async (t) => 
   t.check(summarizeActivity([tools(tool("WebSearch", {}), tool("WebSearch", {}), tool("WebFetch", {}), tool("WebFetch", {}), tool("Read", {}))]), "searched the web 2 times, read 2 web pages, checked something in your box");
 
   t.check(summarizeActivity([tools(tool("TodoWrite", {}), tool("TodoWrite", {}))]), "working");
+});
+
+// Folded notes are not steps: they name the row only when it holds nothing else.
+void test("Folded notes are not steps.", async (t) => {
+  t.check(summarizeActivity([{ type: "note", text: "Checking." }, tools(tool("Edit", {}))]), "made a change");
+  t.check(summarizeActivity([{ type: "note", text: "Checking." }]), "noted progress");
 });
 
 // ## Card paths
@@ -400,5 +406,20 @@ void test("A step with nothing plain to add has no excerpt:", async (t) => {
     null,
     null,
   ],
+  );
+});
+
+// ## Card paths with hyphens, dots and no name
+//
+// The title reads like the card's name everywhere else: `-` runs become spaces
+// too, a dotted name keeps its dots, and a positional card reads as its type.
+void test("Card titles read hyphens as spaces, keep dotted names, and name a positional card by its type", async (t) => {
+  t.check(
+    [
+      say("Read", { file_path: "_content/Lemon-Chicken.recipe.card" }),
+      say("Read", { file_path: "_content/Foo.v2.doc.card" }),
+      say("Read", { file_path: "_content/nav.card" }),
+    ],
+    ["Looked at Lemon Chicken", "Looked at Foo.v2", "Looked at nav"],
   );
 });

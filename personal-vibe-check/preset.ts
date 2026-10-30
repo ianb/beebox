@@ -1,6 +1,6 @@
 import type { Linter } from "eslint";
 import type { VibeCheckOptions, vibeCheck as DeclaredVibeCheck } from "./types";
-import { allRulesOffFrom, baseConfig } from "./preset/base-config.ts";
+import { baseConfig } from "./preset/base-config.ts";
 import { disabledRules } from "./preset/disabled-rules.ts";
 import { enabledRules } from "./preset/enabled-rules.ts";
 import { globalOverrides } from "./preset/global-overrides.ts";
@@ -27,8 +27,6 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
   const roots = options?.roots ?? ["src"];
   const restrictClassesOptions = options?.restrictComponentClasses ?? null;
 
-  const allRulesOff = allRulesOffFrom(baseConfig);
-
   const exts = "{ts,tsx,js,jsx}";
   const filePatterns = roots.map((r) => `${r}/**/*.${exts}`);
 
@@ -42,7 +40,6 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
       plugins: mainPlugins(react),
       settings: react ? { react: { version: "detect" } } : {},
       rules: {
-        ...allRulesOff,
         ...enabledRules,
         ...(react ? reactRules : {}),
         ...disabledRules,

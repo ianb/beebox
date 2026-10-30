@@ -21,6 +21,4 @@ export interface ComposerRowProps {
   onVoiceSegmentSend: VoiceSegmentSend;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
-  /** Replaces "Type a message..." while the chat is asking a question (its prompt). */
-  placeholder?: string | undefined;
 }

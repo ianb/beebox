@@ -18,13 +18,15 @@ nothing, and every script below refuses with the setup steps.
 | File | What it is |
 |---|---|
 | `deploy.sh` | Deploy a commit: build in the persistent detached checkout, stage on the server, activate under the maintenance controller, converge boxes, health-check. [Deploying](../docs/server/deploying.md). |
-| `hetzner/create-server.sh`, `hetzner/setup-server.sh` | Example provisioners for the one host shape `deploy.sh` ships to. Neither runs on deploy. [Provisioning](../docs/server/provisioning.md). |
+| `hetzner/create-server.sh`, `hetzner/cloud-init.yaml`, `hetzner/provision.sh` | Example provisioners for the one host shape `deploy.sh` ships to: create the VPS, cloud-init installs packages and users, `provision.sh` does the remaining root steps. None runs on deploy. (`hetzner/setup-server.sh` is a retired stub.) [Provisioning](../docs/server/provisioning.md). |
 | `add-box.sh` | Add a box to the live server in one command. [Boxes](../docs/server/boxes.md). |
 | `prod-ssh`, `prod-curl`, `prod-browse` | Reach the production server and the authenticated app as the owner. [Operations](../docs/server/operations.md). |
 | `deploy-target.sh`, `target.env.example` | Load the deploy target; the template for it. |
 | `deploy-outcome.sh`, `notify-macos` | Record a deploy's outcome; the macOS notifier `BBX_DEPLOY_NOTIFY` can name. |
 | `claude-update.sh` | The nightly Claude Code updater the server's timer runs. |
-| `nginx/`, `systemd/`, `server-bin/` | The nginx site, the unit drop-ins, and the root helpers a deploy installs. |
+| `install-restic.sh` | Installs the pinned restic release after verifying the upstream SHA-256 checksum. Deploy refreshes it when the pinned version changes. |
+| `launchd/` | LaunchAgent template for daily backups of a local Mac box; see its README for path substitution and bootstrap commands. |
+| `nginx/`, `systemd/`, `server-bin/` | The nginx site, unit drop-ins, and root helpers a deploy installs. Each registered box has a `beebox-backup@.timer`; scheduled capture waits for the owner to enable Daily in Admin. |
 
 ## Checking deploy state
 
@@ -34,5 +36,6 @@ prod healthy, are migrations pending, how full is the disk". It reads the main
 checkout's `.deploy-logs/deploys.jsonl`, `.last-deployed-sha`, and
 `.deploy-checkout.lock`, then makes one SSH call for the server's
 `deploy-info.json`, `df`, unit states, the hub's passive `/healthz`, and each
-box's `bbx engine migrate --status --json` with `/home/beebox/.env` sourced.
+box's `bbx engine migrate --status --json`, run as the box's own user with
+`/etc/beebox/box.env` sourced.
 Each section reports its own reason when it cannot run.

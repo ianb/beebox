@@ -1,5 +1,4 @@
 import type { useWorkspace } from "../../workspace/WorkspaceProvider/provider";
-import type { OpenQuestion } from "../../open-question";
 /**
  * The props interface shared by `InteractiveChatBody` and its region
  * sub-components in `InteractiveChat-view.tsx` — pulled into its own module
@@ -107,18 +106,6 @@ export interface ChatBodyProps {
    * a resumed session and for a place that lists none.
    */
   openers: string[];
-  /**
-   * The pending question the empty root chat asks as the agent's opening line
-   * (docs/implemented-plans/front-door.md, Track A); null for a place chat, a started chat,
-   * and a box with nothing pending. The composer's placeholder is its prompt.
-   */
-  openQuestion: OpenQuestion | null;
-  /** "Not now" on the shown question: dismisses the card (`actions.dismiss`). */
-  onQuestionNotNow: (path: string) => void;
-  /** Open the Questions page beside the chat ("and N more"). */
-  onOpenQuestions: () => void;
-  /** Put the cursor in the composer: clicking the question is an invitation to answer it. */
-  onFocusComposer: () => void;
   /** The conversation was created for this tab and has no committed turn (`ResolvedConversation.unstarted`). */
   unstarted: boolean;
 }

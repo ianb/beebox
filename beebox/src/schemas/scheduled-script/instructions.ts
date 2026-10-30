@@ -1,9 +1,13 @@
-import { section } from "../../core/agent-guide/sections.js";
-
 /**
  * The `instructions` prose for scheduled-script cards (agent-facing prompt
  * surface). Split out of scheduled-script.tsx to keep that file under the
  * line limit.
+ *
+ * The section handle below is written out rather than checked with
+ * `section()`: this string is built when the schema registry loads, in every
+ * `bbx` verb, and `section()` parses all of `ledger.yaml`. The registry lists
+ * this file as a referrer of the handle, so the referrer test in
+ * `test/core/agent-guide/ledger-schema.test.ts` fails if the name goes stale.
  */
 
 export const SCHEDULED_SCRIPT_INSTRUCTIONS = `# Scheduled Script Cards
@@ -13,7 +17,7 @@ Scheduled scripts define a command to run, or a notification to send, on a sched
 ## Schedule Types (mutually exclusive)
 - **cron**: Standard cron expression (e.g., \`0 6 * * *\` for 6am daily)
 - **at**: ISO datetime for a one-shot future execution
-- **rrule**: iCalendar RRULE for complex recurrence patterns
+- **rrule**: iCalendar RRULE for complex recurrence patterns. Always give it a start in UTC: \`FREQ=WEEKLY;BYDAY=MO;DTSTART=20261102T140000Z\` is Mondays at 14:00 UTC. An rrule is evaluated in UTC (cron uses the server's clock), so convert the boxholder's time from the box timezone (\`timezone\` in \`_config/box.json\`). Without a \`DTSTART\`, \`bbx validate\` warns, and the rule runs at midnight UTC on matching days
 
 ## Frontmatter Fields
 - **not-before**: Minimum time since last run. Prevents running more often than this interval even if the schedule says otherwise. Use duration strings: \`5m\`, \`1h\`, \`4h\`, \`1d\`.
@@ -80,7 +84,7 @@ runs: >
   && bbx notify --loudness loud --target chat:new "The contractor's quote is in"
 \`\`\`
 
-\`--cat --all\` gives the judge every matching card whenever anything changed. When the notification needs wording from what was found, \`runs:\` is \`bbx procedure run <name>\` and an agent step writes it; the ${section("REACHING_THE_BOXHOLDER")} section of the agent guide has that example, and the judgment card instructions say how to write the judgment. For newly matching Gmail, a rule in \`_config/connectors/gmail.json\` can request the procedure after each sync instead (\`card-email-thread.md\`).
+\`--cat --all\` gives the judge every matching card whenever anything changed. When the notification needs wording from what was found, \`runs:\` is \`bbx procedure run <name>\` and an agent step writes it; the REACHING_THE_BOXHOLDER section of the agent guide has that example, and the judgment card instructions say how to write the judgment. For newly matching Gmail, a rule in \`_config/connectors/gmail.json\` can request the procedure after each sync instead (\`card-email-thread.md\`).
 
 ## Testing a schedule
 - \`bbx notify --dry-run\` prints what a notification would do (the audience per channel, the presence reading, the channels tried) and sends nothing; with no \`--target\` it previews \`chat:new\`.

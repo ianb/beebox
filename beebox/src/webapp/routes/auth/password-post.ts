@@ -33,6 +33,7 @@ import { AuthStoreUnavailableError, OwnerEmailMismatchError, UserExistsError } f
 import { CONCURRENCY_RETRY_MS, loginThrottle } from "./login-throttle.js";
 import { checkSetupToken, clearSetupToken } from "../../setup-token.js";
 import { sanitizeReturnTo, type SetupErrorKind } from "./login-page.js";
+import { truncateTitle } from "../../../core/file-summary.js";
 
 // Bounded inputs (FIX 4 — DoS): email at the RFC-max 254, password 1024, name
 // 200, token 256. Caps the parsed fields on top of the raw-body cap below.
@@ -57,7 +58,7 @@ const MAX_AUTH_BODY_READ_MS = 10_000;
 /** Truncate a user-supplied string before logging so a failed/throttled attempt
  *  can't amplify log volume with a giant "email" (FIX 4). */
 function forLog(value: string): string {
-  return value.length > 128 ? `${value.slice(0, 128)}…` : value;
+  return truncateTitle(value, 128);
 }
 
 class AuthBodyTooLargeError extends Error {

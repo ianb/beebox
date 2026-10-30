@@ -65,7 +65,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BBX_USER="beebox"
 BBX_HOME="/home/$BBX_USER"
-BOXES_DIR="$BBX_HOME/boxes"
 
 # ── Parse arguments ─────────────────────────────────────────────────
 REPO=""
@@ -140,7 +139,16 @@ if [[ "$REPO" =~ ^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$ ]]; then
 fi
 
 [[ -n "$BOX_NAME" ]] || BOX_NAME=$(basename "$REPO" .git)
-BOX_PATH="$BOXES_DIR/$BOX_NAME"
+# Each box is its own user, bbx-<slug>, at /var/lib/beebox/<slug>/box, served by
+# a systemd socket unit (docs/plans/per-box-units.md). $BBX_USER is the hub.
+BOX_HOME="/var/lib/beebox/$BOX_NAME"
+BOX_PATH="$BOX_HOME/box"
+BOX_OWNER="bbx-$BOX_NAME"
+# A box user name is `bbx-<slug>`, capped by useradd at 32 characters.
+if [[ ${#BOX_NAME} -gt 28 ]]; then
+  echo "Error: box name '$BOX_NAME' is longer than 28 characters; its user name bbx-$BOX_NAME would not fit."
+  exit 1
+fi
 
 # ── Push credential naming ──────────────────────────────────────────
 # A GitHub deploy key attaches to exactly ONE repo, so every box needs its own,
@@ -149,7 +157,7 @@ BOX_PATH="$BOXES_DIR/$BOX_NAME"
 # limit). Key filenames take underscores because that is the existing
 # convention on the server; the host alias keeps the box's own hyphens.
 SSH_ALIAS="github.com-box-$BOX_NAME"
-KEY_PATH="$BBX_HOME/.ssh/id_ed25519_box_${BOX_NAME//-/_}"
+KEY_PATH="$BOX_HOME/.ssh/id_ed25519_box_${BOX_NAME//-/_}"
 
 # Only a GitHub remote gets this treatment: the alias trick exists to select
 # among per-repo deploy keys, which is a GitHub concept. Rewriting a GitLab or
@@ -218,6 +226,14 @@ SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
 
 SSH_OPTS=(-A -o StrictHostKeyChecking=no)
 
+# The per-box layout is the only server shape this script provisions.
+if ! ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "id beebox-sched >/dev/null 2>&1 && test -d /var/lib/beebox && getent group beebox-boxes >/dev/null"; then
+  echo "Error: This host predates the per-box layout (one user and unit per box)."
+  echo "       Provision a new host from deploy/hetzner/cloud-init.yaml; the one-time migration script was removed after the last host migrated (2026-10-25)."
+  exit 1
+fi
+echo "Server layout: one user and unit per box ($BOX_PATH as $BOX_OWNER)."
+
 # ── Preflight (read-only on the server) ─────────────────────────────
 # `bbx engine hub add-box --dry-run` validates the slug against the LIVE hub.json:
 # reserved names, slug already taken by another box, and a config the hub
@@ -228,7 +244,7 @@ SSH_OPTS=(-A -o StrictHostKeyChecking=no)
 echo "Preflight: validating slug '$BOX_NAME' against the live hub config..."
 # shellcheck disable=SC2029
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
-  "su - $BBX_USER -c \"bbx engine hub add-box '$BOX_NAME' '$BOX_PATH' --dry-run\""
+  "su - $BBX_USER -c \"bbx engine hub add-box '$BOX_NAME' '$BOX_PATH' --socket --dry-run\""
 
 # ── Preflight for --create (local + GitHub, still no mutation) ──────
 # Deliberately after the hub preflight: a name the hub would refuse must never
@@ -265,16 +281,19 @@ if [[ -n "$DRY_RUN" ]]; then
     echo ""
   fi
   echo "[dry-run] Would then, on the server:"
+  echo "  - create user $BOX_OWNER with home $BOX_HOME (0751), in group beebox-boxes"
   echo "  - clone $REPO to $BOX_PATH (or pull, if it exists)"
-  echo "  - run 'bbx engine init' in it as $BBX_USER"
+  echo "  - run 'bbx engine init' in it as $BOX_OWNER"
   if [[ -n "$ALLOW_CSV" ]]; then
     echo "  - write _config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
   fi
   if [[ -n "$SECRETS_FROM" ]]; then
     echo "  - copy box '$SECRETS_FROM's secret grants (bbx engine secrets copy-grants; no files move)"
   fi
-  echo "  - register with the hub (bbx engine hub add-box, per the plan above)"
-  echo "  - register with the scheduler manifest (bbx engine boxes add)"
+  echo "  - copy the box's grants into its own secret store and verify the copy"
+  echo "  - systemctl enable --now beebox-box@$BOX_NAME.socket"
+  echo "  - register with the hub (bbx engine hub add-box --socket, per the plan above)"
+  echo "  - register with the scheduler manifest (bbx engine boxes add, in beebox-sched's home)"
   echo "  - systemctl restart beebox-hub beebox-scheduler"
   echo "  - verify with the hub's canary for this box"
   if [[ -z "$PUSH_REMOTE" ]]; then
@@ -339,17 +358,40 @@ echo "Adding box '$BOX_NAME' from $REPO..."
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s <<REMOTE
 set -euo pipefail
 
-# Clone/pull as root (su drops the SSH agent socket, breaking agent
-# forwarding), then chown to the Bee Box user.
-# Mark as safe.directory so root can operate on Bee Box-owned repos.
-git config --global --add safe.directory "$BOX_PATH"
+# The box gets its own user first (docs/plans/per-box-units.md): bbx-<slug>,
+# a UID from 2000-2999, home /var/lib/beebox/<slug> at 0751 so the hub can
+# reach the one file the box publishes, in the shared-cache group.
+if ! id "$BOX_OWNER" >/dev/null 2>&1; then
+  # A run that failed between groupadd and useradd left the group: reuse its id.
+  if getent group "$BOX_OWNER" >/dev/null; then
+    uid=\$(getent group "$BOX_OWNER" | cut -d: -f3)
+  else
+    uid=""
+    for candidate in \$(seq 2000 2999); do
+      if ! getent passwd "\$candidate" >/dev/null && ! getent group "\$candidate" >/dev/null; then uid="\$candidate"; break; fi
+    done
+    [[ -n "\$uid" ]] || { echo "no free UID in 2000-2999"; exit 1; }
+    groupadd -g "\$uid" "$BOX_OWNER"
+  fi
+  useradd -u "\$uid" -g "$BOX_OWNER" -G beebox-boxes -d "$BOX_HOME" -M -s /bin/bash "$BOX_OWNER"
+  echo "Created user $BOX_OWNER (uid \$uid)."
+fi
+install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0751 "$BOX_HOME"
+for d in .claude .codex .config .local .cache .ssh; do
+  install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0700 "$BOX_HOME/\$d"
+done
+su - "$BOX_OWNER" -c 'git config --global user.email beebox@box.example.com && git config --global user.name "Bee Box"'
 
+# Clone/pull as root (su drops the SSH agent socket, breaking agent
+# forwarding), then chown to the box's owner. The pull names the owner's
+# repository safe for this one command; root keeps no standing safe.directory
+# grant for a box (the deploy's controller no longer runs git in a box).
 if [[ -d "$BOX_PATH" ]]; then
   echo "Box already exists at $BOX_PATH, pulling latest..."
-  cd "$BOX_PATH" && git pull --ff-only
+  git -c "safe.directory=$BOX_PATH" -C "$BOX_PATH" pull --ff-only
 else
   echo "Cloning $REPO to $BOX_PATH..."
-  mkdir -p "$BOXES_DIR"
+  mkdir -p "$(dirname "$BOX_PATH")"
   git clone "$REPO" "$BOX_PATH"
 fi
 
@@ -360,13 +402,16 @@ fi
 # A failure here is fatal: everything below (access config, secrets, both
 # manifest registrations, the restart) would otherwise register a box whose
 # structure is not known-good, and the restart would put it in front of users.
-chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
+chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
+# Every file a box owns is private to it (the unit's UMask=0077); the engine
+# opens the root, .beebox/ and hub-meta.json for the hub itself.
+chmod -R go-rwx "$BOX_PATH"
 # No --skip-git flag: it is gone (a box is always a git repo), and this is an
 # EXISTING box, so bbx engine init re-inits in place and makes no initial commit of
 # its own. It does bring the box git-annex configuration up to spec, which is
 # the point of running it here.
 echo "Running bbx engine init to update box structure..."
-if ! su - $BBX_USER -c "cd '$BOX_PATH' && bbx engine init ." 2>&1; then
+if ! su - $BOX_OWNER -c "umask 007; cd '$BOX_PATH' && BBX_UNIT_HOST=1 bbx engine init ." 2>&1; then
   echo "bbx engine init FAILED for $BOX_PATH — stopping before the box is registered."
   echo "The repo is cloned; fix the box and re-run this script."
   exit 1
@@ -422,7 +467,44 @@ if [[ -n "$SECRETS_FROM" ]]; then
 fi
 
 # Re-chown everything (bbx engine init / the writes above ran as root in places).
-chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
+chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
+# The box's own secret store: its share of the hub user's master, verified.
+  # Grants are still made on the master (bbx engine secrets grant as beebox);
+  # this copies the result (per-box-units.subplan.md).
+  store="$BOX_HOME/.config/beebox/secrets.json"
+  install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0700 "$BOX_HOME/.config/beebox"
+  master_store=\$(grep -E '^BBX_SECRETS_FILE=' $BBX_HOME/.env 2>/dev/null | cut -d= -f2- || true)
+  master_store="\${master_store:-$BBX_HOME/.config/beebox/secrets.json}"
+  # A re-run must not silently drop what the box saved on its own Admin page
+  # (a value or grant the master never received; per-box-units.md question
+  # 10): stop and name them, so the operator adds them to the master first.
+  if [[ -f "\$store" ]]; then
+    extra=\$(node -e 'const f=require("fs");const load=(p)=>f.existsSync(p)?JSON.parse(f.readFileSync(p,"utf8")):{secrets:{},grants:{}};const [m,c,slug]=process.argv.slice(1);const M=load(m),C=load(c);const extra=[...Object.keys(C.secrets??{}).filter((n)=>!(n in (M.secrets??{}))),...Object.keys(C.grants?.[slug]??{}).filter((n)=>!(n in (M.grants?.[slug]??{}))).map((n)=>"grant:"+n)];process.stdout.write(extra.join(" "))' "\$master_store" "\$store" "$BOX_NAME")
+    if [[ -n "\$extra" ]]; then
+      echo "Secrets: the box's own store holds entries the master does not (\$extra); re-exporting would drop them."
+      echo "  Add them to the master as $BBX_USER (bbx engine secrets set / grant $BOX_NAME) and re-run."
+      exit 1
+    fi
+  fi
+  su - $BBX_USER -c "bbx engine secrets export-box '$BOX_NAME' --agent-confirmed" > "\$store.tmp"
+  install -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0600 "\$store.tmp" "\$store"
+  rm -f "\$store.tmp"
+  # Verify against the master file itself (root reads both): the copy's grant
+  # names for this box equal the master's. A missing store reads as empty, so
+  # a copy that lost a grant is exactly what this catches.
+  names() { node -e 'const f=require("fs");const s=f.existsSync(process.argv[1])?JSON.parse(f.readFileSync(process.argv[1],"utf8")):{grants:{}};process.stdout.write(Object.keys(s.grants[process.argv[2]]??{}).sort().join(","))' "\$1" "$BOX_NAME"; }
+  master=\$(names "\$master_store"); copy=\$(names "\$store")
+  if [[ "\$master" != "\$copy" ]]; then
+    echo "Secrets: the box's store (\$copy) does not match the master's grants (\$master) — stopping before the box is registered."
+    exit 1
+  fi
+  echo "Secrets: \$store holds the box's grants (\${copy:-none})."
+# The engine link and node_modules are the deploy's job; the socket unit
+# serves the box on its first request.
+systemctl enable --now "beebox-box@$BOX_NAME.socket"
+# The system timer is always present for a registered server box. The backup
+# command checks the box's explicit server-automatic opt-in before doing work.
+systemctl enable --now "beebox-backup@$BOX_NAME.timer"
 
 # ── Register the box with both manifests ────────────────────────────
 # They are separate on purpose, BOTH are live, and they take DIFFERENT paths:
@@ -441,8 +523,14 @@ chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
 # The hub goes first: it is the step with real validation behind it, so if
 # anything is going to be refused it is refused while boxes.json is still
 # untouched. Both commands are idempotent and print what they did.
-su - $BBX_USER -c "bbx engine hub add-box '$BOX_NAME' '$BOX_PATH'"
-su - $BBX_USER -c "bbx engine boxes add '\$CONTENT_DIR'"
+su - $BBX_USER -c "bbx engine hub add-box '$BOX_NAME' '$BOX_PATH' --socket"
+# The scheduler runs as its own user and its manifest lives under that home,
+# but that user cannot read the box (0751 root, private contents), and
+# 'bbx engine boxes add' validates the box before writing. So root writes the
+# manifest into the scheduler user's home and hands it over (cross-model
+# review round 2, codex gpt-6-sol, 2026-10-24).
+HOME=/var/lib/beebox-sched bbx engine boxes add "\$CONTENT_DIR"
+chown -R beebox-sched:beebox-sched /var/lib/beebox-sched/.config
 
 # Restart both services LAST, so they pick up the box, its access config,
 # and its secrets in a single restart.
@@ -470,8 +558,8 @@ else
   PUBKEY=$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s <<REMOTE
 set -euo pipefail
 
-# Everything here belongs to the service account, which is what actually pushes.
-su - $BBX_USER -s /bin/bash <<'INNER'
+# Everything here belongs to the account that pushes: the box's owner.
+su - $BOX_OWNER -s /bin/bash <<'INNER'
 set -euo pipefail
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
 
@@ -501,10 +589,11 @@ fi
 # an earlier setup can name a different IdentityFile, and origin is about to
 # point at this alias regardless — so ask ssh what the alias actually resolves
 # to rather than trusting the grep.
-RESOLVED=$(ssh -G "$SSH_ALIAS" 2>/dev/null | awk '$1 == "identityfile" { print $2 }' | head -1)
-RESOLVED="${RESOLVED/#\~/$HOME}"
-if [[ "$RESOLVED" != "$KEY_PATH" ]]; then
-  echo "ERROR: ssh resolves $SSH_ALIAS to identity '$RESOLVED', not '$KEY_PATH'." >&2
+# Escaped: the outer heredoc is unquoted, so these must expand on the server.
+RESOLVED=\$(ssh -G "$SSH_ALIAS" 2>/dev/null | awk '\$1 == "identityfile" { print \$2 }' | head -1)
+RESOLVED="\${RESOLVED/#\~/\$HOME}"
+if [[ "\$RESOLVED" != "$KEY_PATH" ]]; then
+  echo "ERROR: ssh resolves $SSH_ALIAS to identity '\$RESOLVED', not '$KEY_PATH'." >&2
   echo "  An existing ssh config stanza is claiming this alias. Fix it by hand:" >&2
   echo "  pointing the box's origin at an alias that uses another key would fail" >&2
   echo "  to push in a way nothing reports." >&2
@@ -514,8 +603,8 @@ fi
 cat "$KEY_PATH.pub"
 INNER
 
-# The remote lives in the box repo, which the service account owns.
-su - $BBX_USER -c "git -C '$BOX_PATH' remote set-url origin '$PUSH_REMOTE'"
+# The remote lives in the box repo, which its owner owns.
+su - $BOX_OWNER -c "git -C '$BOX_PATH' remote set-url origin '$PUSH_REMOTE'"
 echo "  origin -> $PUSH_REMOTE" >&2
 REMOTE
   )
@@ -651,7 +740,7 @@ fi
 if [[ -n "$REGISTERED" ]]; then
   echo ""
   echo "Push credential is set up and registered. Confirm with:"
-  echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+  echo "  deploy/prod-ssh \"sudo -u $BOX_OWNER -H git -C '$BOX_PATH' push origin main\""
 elif [[ -n "$PUBKEY" && -n "$CREATE" ]]; then
   # --create promises a box that can push. If registration did not happen, the
   # box is built and serving but cannot reach its remote, and exiting 0 here
@@ -666,7 +755,7 @@ elif [[ -n "$PUBKEY" && -n "$CREATE" ]]; then
   echo "     $PUBKEY"
   echo ""
   echo "Then confirm with:"
-  echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+  echo "  deploy/prod-ssh \"sudo -u $BOX_OWNER -H git -C '$BOX_PATH' push origin main\""
   exit 1
 elif [[ -n "$PUBKEY" ]]; then
   echo ""
@@ -680,5 +769,5 @@ elif [[ -n "$PUBKEY" ]]; then
   echo "     push, which looks identical to everything working."
   echo ""
   echo "Then confirm with:"
-  echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+  echo "  deploy/prod-ssh \"sudo -u $BOX_OWNER -H git -C '$BOX_PATH' push origin main\""
 fi

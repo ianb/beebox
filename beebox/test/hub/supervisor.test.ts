@@ -22,49 +22,9 @@ import { test } from "tap";
 import { any, eventually, isoDate, uuid } from "@ianbicking/tap-check/check";
 import "@ianbicking/tap-check/tap";
 import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
-import type { ChildProc } from "../../src/hub/supervisor/child-spawn.js";
+import { makeFakeChild, type FakeChild } from "./support/fake-child.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
-
-/** A fake `ChildProc`: just enough surface for `Supervisor.launch()` to use
- *  (`pid`, `on("exit", ...)`, `catch()`) plus a way for the test to fire the
- *  "exit" event itself, standing in for the real process death that a real
- *  `killGroup()` would eventually cause. No real process is ever spawned. */
-type ChildEventHandler = (...args: Array<number | string | null | { type: string }>) => void;
-type FakeChild = ChildProc & {
-  fireMessage(message: { type: string }): void;
-  fireExit(code: number | null, signal: NodeJS.Signals | null): void;
-  /** What the child does on receiving "reload-now"; a test replaces it. */
-  reloadNow: () => void;
-};
-
-function makeFakeChild(pid: number): FakeChild {
-  const exitHandlers: ChildEventHandler[] = [];
-  const messageHandlers: ChildEventHandler[] = [];
-  // Deliberately partial fake: the supervisor reads only pid, on(), catch() and send() of a ChildProc,
-  // and the full execa ResultPromise type cannot be built without spawning a process. Built on
-  // Promise.prototype like server.router.test.ts's fake child.
-  const child: FakeChild = Object.assign(Object.create(Promise.prototype), {
-    pid,
-    on(event: string, bbx: ChildEventHandler) {
-      if (event === "exit") exitHandlers.push(bbx);
-      if (event === "message") messageHandlers.push(bbx);
-    },
-    catch() {},
-    send(message: { type: string }, callback?: (error: Error | null) => void) {
-      callback?.(null);
-      if (message.type === "reload-now") child.reloadNow();
-    },
-    reloadNow() { setImmediate(() => { child.fireExit(75, null); }); },
-    fireMessage(message: { type: string }) {
-      for (const handler of messageHandlers) handler(message);
-    },
-    fireExit(code: number | null, signal: NodeJS.Signals | null) {
-      for (const bbx of exitHandlers) bbx(code, signal);
-    },
-  });
-  return child;
-}
 
 const validEntry = {
   id: "sch_1",
@@ -253,6 +213,7 @@ void test("A development reload exit restarts cleanly without consuming crash bu
     hubSecret: "test-hub-secret",
     spawnChild: reloadSpawnChild,
     checkReady: () => rejectReloadReady ? Promise.reject(new Error("replacement failed")) : Promise.resolve(),
+    unhealthyRetryMs: 20,
   });
   await reloadSupervisor.startAll();
   const acceptedReloadWork = await acquireBoxWork(reloadFixture.root, { reason: "test" });
@@ -303,6 +264,11 @@ void test("A development reload exit restarts cleanly without consuming crash bu
 
   const afterFailedReload = await acquireBoxWork(reloadFixture.root, { reason: "test" });
   await afterFailedReload.release();
+
+  // A failed reload is retried on the slow timer once its owner lock is
+  // released, so the box comes back without a SIGHUP.
+  rejectReloadReady = false;
+  await eventually(() => reloadSupervisor.getStatuses()[0]?.status === "running", { label: "box restarted after a failed reload", timeoutMs: 30_000 });
 });
 
 // ## Stopping after the reload acknowledgment leaves a stopped box open

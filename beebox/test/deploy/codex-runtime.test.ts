@@ -13,7 +13,6 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { codexBinaryPath } from "../../src/services/codex-binary.js";
 
-const setup = await readFile("deploy/hetzner/setup-server.sh", "utf8");
 const deploy = await readFile("deploy/deploy.sh", "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const execFileAsync = promisify(execFile);
@@ -29,11 +28,9 @@ void test("The CLI and SDK versions are one lockstep contract.", async (t) => {
   const result = await execFileAsync(codexBinaryPath(), ["--version"]);
   t.check(result.stdout.trim(), `codex-cli ${packageJson.dependencies["@openai/codex"]}`);
 
-  // Both provisioning paths refresh the operator command from that dependency.
+  // The deploy refreshes the operator command from that dependency.
 
-  // `setup` and `deploy` are whole shell scripts: a narrow check on the one line under test.
-  t.check(setup, any(String).includes('ln -sf "$INSTALL_DIR/beebox/node_modules/.bin/codex" /usr/local/bin/codex'));
-
+  // `deploy` is a whole shell script: a narrow check on the one line under test.
   t.check(deploy, any(String).includes("ln -sf /opt/beebox/node_modules/.bin/codex /usr/local/bin/codex"));
 
   // The deployment gate uses a scratch home and checks plugin-command

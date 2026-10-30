@@ -33,6 +33,7 @@ import * as path from "node:path";
 import { randomBytes } from "node:crypto";
 import { isRecord } from "../../../shared/is-record.js";
 import { setTimeout as sleep } from "node:timers/promises";
+import { writeFileAtomicSync } from "../../../lib/atomic-write.js";
 
 /** Env var carrying the session id directly, when known at spawn (resumes). */
 export const BBX_CHAT_SESSION_ID_ENV = "BBX_CHAT_SESSION_ID";
@@ -65,9 +66,7 @@ export function allocateSessionIdFilePath(): string {
  * observes a half-written id.
  */
 export function writeSessionIdFile(filePath: string, sessionId: string): void {
-  const tmp = `${filePath}.${randomBytes(4).toString("hex")}.tmp`;
-  fs.writeFileSync(tmp, sessionId, "utf8");
-  fs.renameSync(tmp, filePath);
+  writeFileAtomicSync(filePath, { content: sessionId, createDir: false });
 }
 
 /**

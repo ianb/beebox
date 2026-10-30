@@ -15,6 +15,7 @@
  * are exported for the test; the DOM capture/upload can't run under Node.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useCallback, useEffect, useReducer } from "react";
 import { getApiBase } from "../../../../api-core";
 import { base64ToBlob, processImageBlob } from "../../../../lib/image-paste";
@@ -64,7 +65,7 @@ async function postJson(requestId: string, { body, label }: { body: object; labe
       console.warn(`[screenshot] ${label} rejected: HTTP ${res.status}`);
     }
   } catch (e) {
-    console.warn(`[screenshot] ${label} failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[screenshot] ${label} failed: ${errorMessage(e)}`);
   }
 }
 
@@ -108,7 +109,7 @@ async function uploadScreenshot(
     if (res.status !== 404) console.warn(`[screenshot] upload rejected: HTTP ${res.status}`);
     return classifyUploadResponse({ kind: "http", status: res.status, errorField: await readErrorField(res) });
   } catch (e) {
-    console.warn(`[screenshot] upload failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[screenshot] upload failed: ${errorMessage(e)}`);
     return classifyUploadResponse({ kind: "network" });
   }
 }
@@ -147,7 +148,7 @@ async function answerWithCapture(
         processed = await processImageBlob(plan.blob);
       } catch (e) {
         await postJson(request.requestId, {
-          body: { failed: e instanceof Error ? e.message : String(e) },
+          body: { failed: errorMessage(e) },
           label: "failure",
         });
         return null;
@@ -241,7 +242,7 @@ export function useScreenshotRequests(sessionId: string | null): ScreenshotReque
       if (!matchesRequestSession(request.session, sessionId)) return;
       if (isRequestExpired(request.expiresAt, Date.now())) return;
       void handleMatchedRequest(request, dispatch).catch((e) => {
-        console.warn(`[screenshot] request handling failed: ${e instanceof Error ? e.message : String(e)}`);
+        console.warn(`[screenshot] request handling failed: ${errorMessage(e)}`);
       });
     },
     [sessionId],

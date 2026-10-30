@@ -15,18 +15,18 @@
  * resume semantics live one level up in `ChatSession`.
  */
 
-import {
-  query,
-  startup,
-  type Options,
-  type Query,
-  type SDKMessage,
-  type SDKUserMessage,
-  type WarmQuery,
+import type {
+  Options,
+  Query,
+  SDKMessage,
+  SDKUserMessage,
+  WarmQuery,
 } from "@anthropic-ai/claude-agent-sdk";
+import type * as AgentSdkModule from "@anthropic-ai/claude-agent-sdk";
 import { gitMvNudgeHook } from "../../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../../core/sdk-binary-path.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
+import { invariant } from "../../shared/invariant.js";
 import { createAsyncIterableQueue } from "../claude-chat-queue.js";
 import {
   allocateSessionIdFilePath,
@@ -37,6 +37,9 @@ import { toSdkUserContent } from "../claude-chat-content.js";
 import { resolveHarnessPluginPath } from "../../core/agent/plugin-paths.js";
 import { boxSessionSettings } from "../../core/agent/box-session-settings.js";
 import { createCodexChatBackend } from "./codex-chat.js";
+import { createPiChatBackend } from "./pi-chat.js";
+import type { AgentEngine } from "../../shared/agent-models.js";
+import { injectedCredentials } from "../../lib/credential-env.js";
 import type {
   ChatBackend,
   ChatBackendRun,
@@ -67,6 +70,9 @@ export {
   type FakeChatBackendRun,
 } from "./fake.js";
 
+// For the pi live smoke (`src/dev/pi-smoke.ts`), which passes pi's runtime seam.
+export { createPiChatBackend } from "./pi-chat.js";
+
 // ─── Real implementation ─────────────────────────────────────────────────────
 
 /** Pull a string `session_id` off a raw SDK message, or null if absent. */
@@ -75,6 +81,19 @@ function messageSessionId(msg: SDKMessage): string | null {
     return msg.session_id;
   }
   return null;
+}
+
+type AgentSdk = typeof AgentSdkModule;
+let agentSdk: AgentSdk | undefined;
+
+/**
+ * The Agent SDK, loaded by the first warm-up or by `load()` before a chat
+ * starts. Every `bbx` verb loads this module, and the SDK costs about 30 ms to
+ * import.
+ */
+async function loadAgentSdk(): Promise<AgentSdk> {
+  agentSdk ??= await import("@anthropic-ai/claude-agent-sdk");
+  return agentSdk;
 }
 
 /**
@@ -129,9 +148,7 @@ export function buildQueryOptions(
   if (opts.model !== undefined) {
     queryOptions.model = opts.model;
   }
-  if (opts.tools !== undefined) {
-    queryOptions.tools = opts.tools;
-  }
+  if (opts.tools !== undefined) queryOptions.tools = opts.tools;
   queryOptions.hooks = { PreToolUse: [gitMvNudgeHook()] };
   queryOptions.plugins = [{
     type: "local",
@@ -145,13 +162,13 @@ export function buildQueryOptions(
 }
 
 /**
- * Provider credentials are baked into a warm subprocess's env, and a consumed
- * slot's env wins over the caller's — so a key rotation between prewarm and
- * send must invalidate the slot rather than silently keep the old credential.
- * The telemetry flags ride the same way: a box that turns telemetry off must
- * not be served a slot warmed while it was on.
+ * Provider credentials (the `claudeEngine` injections, `lib/credential-env.ts`)
+ * are baked into a warm subprocess's env, and a consumed slot's env wins over the
+ * caller's — so a key rotation between prewarm and send must invalidate the slot
+ * rather than silently keep the old credential. The telemetry flags ride the same
+ * way: a box that turns telemetry off must not reuse a slot warmed while it was on.
  */
-const PROVIDER_ENV_KEYS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "API_TIMEOUT_MS", "DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] as const;
+const PROVIDER_ENV_KEYS: readonly string[] = [...injectedCredentials("claudeEngine"), "API_TIMEOUT_MS", "DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"];
 
 function providerEnvMatches(warm: Record<string, string | undefined>, next: Record<string, string | undefined>): boolean {
   return PROVIDER_ENV_KEYS.every((key) => (warm[key] ?? null) === (next[key] ?? null));
@@ -247,6 +264,7 @@ function createClaudeChatBackend(): ChatBackend {
     const pending = (async (): Promise<void> => {
       try {
         const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
+        const { startup } = await loadAgentSdk();
         const wq = await startup({ options: { ...queryOptions, abortController: controller } });
         if (warmEpoch !== epochAtStart) {
           // closeWarm() ran while we were warming — abandon this slot rather
@@ -345,6 +363,7 @@ function createClaudeChatBackend(): ChatBackend {
     async prewarm(opts: ChatBackendStartOptions): Promise<void> {
       await startWarming(opts);
     },
+    async load(): Promise<void> { await loadAgentSdk(); },
     closeWarmFor(sessionId: string): void {
       const slot = warmSlots.get(sessionId);
       if (slot === undefined) return;
@@ -405,10 +424,8 @@ function createClaudeChatBackend(): ChatBackend {
       }
 
       const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
-      const q: Query = query({
-        prompt: inputQueue.iterable,
-        options: queryOptions,
-      });
+      invariant(agentSdk !== undefined, "the chat backend's load() must finish before a cold start()");
+      const q: Query = agentSdk.query({ prompt: inputQueue.iterable, options: queryOptions });
       return buildRunFromQuery({ q, opts, inputQueue, messageQueue, sessionIdFilePath });
     },
   };
@@ -418,13 +435,16 @@ function createClaudeChatBackend(): ChatBackend {
 export function createChatBackend(): ChatBackend {
   const claude = createClaudeChatBackend();
   const codex = createCodexChatBackend();
+  const pi = createPiChatBackend();
   return {
     requiresClaudeAuth: true,
     requiresCodexAuth: true,
-    start: (opts) => opts.engine === "codex" ? codex.start(opts) : claude.start(opts),
-    prewarm: async (opts) => {
-      if (opts.engine !== "codex") await claude.prewarm?.(opts);
-    },
+    start: (opts) => ({
+      claude: () => claude.start(opts), codex: () => codex.start(opts), pi: () => pi.start(opts),
+    } satisfies Record<AgentEngine, () => ChatBackendRun>)[opts.engine ?? "claude"](),
+    // Only the Claude backend keeps warm processes; the others have nothing to prewarm or load.
+    prewarm: async (opts) => { if ((opts.engine ?? "claude") === "claude") await claude.prewarm?.(opts); },
+    load: async (engine) => { if ((engine ?? "claude") === "claude") await claude.load?.(engine); },
     closeWarm: async () => { await claude.closeWarm?.(); },
     closeWarmFor: (sessionId) => claude.closeWarmFor?.(sessionId),
     hasWarm: () => claude.hasWarm?.() ?? false,

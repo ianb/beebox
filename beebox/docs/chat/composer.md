@@ -105,7 +105,7 @@ view has not yet been wired to read it.
 voice, HQ, and keyboard transitions. The React wiring lives in
 `src/frontend/src/components/chat/everywhere/InteractiveChat/voice.ts`, and the
 remaining component-owned keyboard state lives in `InteractiveChat/shell.tsx`
-and `InteractiveChat-layout/view.tsx`.
+and `InteractiveChat-layout/view/ChatComposerSection.tsx`.
 
 ## States
 

@@ -8,8 +8,9 @@ import { isRecord } from "../../shared/is-record.js";
 import { BOX_DIRS, getBoxDir } from "../../lib/paths/core.js";
 import { invariant } from "../../shared/invariant.js";
 import { getAllDriveHandlers } from "./handlers.js";
+import { nonEmptyString } from "../../shared/optional-string.js";
 
-const DRIVE_CARD_IGNORE = [
+export const DRIVE_CARD_IGNORE = [
   "node_modules/**",
   ".git/**",
   `${BOX_DIRS.tmp}/**`,
@@ -195,8 +196,6 @@ export interface DriveCardSummary {
   title: string | null;
   /** When the file last changed on Drive (a synced file's `drive.modified`). */
   driveModified: string | null;
-  /** When the box last synced it (a folder mount's `last-sync`). */
-  lastSync: string | null;
   /** A synced file's last push was refused; its `.remote.md` awaits a merge. */
   conflict: boolean;
   /** Why a folder mount's last sync failed; null when it did not. */
@@ -223,16 +222,11 @@ function xmlSummary(content: string): DriveCardSummary {
   return {
     title: titleMatch?.[1] ?? null,
     driveModified: modifiedMatch?.[1] ?? null,
-    lastSync: null,
     conflict: statusMatch?.[1] === "conflict",
     error: null,
     tabs,
     lossy,
   };
-}
-
-function optionalString(value: unknown): string | null {
-  return typeof value === "string" && value !== "" ? value : null;
 }
 
 /**
@@ -251,7 +245,7 @@ export function driveCardSummary(content: string): DriveCardSummary {
   if (Array.isArray(sheets)) {
     for (const sheet of sheets) {
       if (!isRecord(sheet)) continue;
-      const title = optionalString(sheet["title"]);
+      const title = nonEmptyString(sheet["title"]);
       if (title !== null) tabs.push(title);
     }
   }
@@ -261,7 +255,7 @@ export function driveCardSummary(content: string): DriveCardSummary {
   if (Array.isArray(lossyField)) {
     for (const item of lossyField) {
       if (!isRecord(item)) continue;
-      const type = optionalString(item["type"]);
+      const type = nonEmptyString(item["type"]);
       const count = item["count"];
       if (type === null || typeof count !== "number") continue;
       lossy.push({ type, count });
@@ -270,13 +264,12 @@ export function driveCardSummary(content: string): DriveCardSummary {
 
   const drive = fields["drive"];
   return {
-    // Every Drive card type carries the Drive name as `title`. A synced file
-    // carries Drive's last-modified time; a folder mount, when it last synced.
-    title: optionalString(fields["title"]),
-    driveModified: isRecord(drive) ? optionalString(drive["modified"]) : null,
-    lastSync: optionalString(fields["last-sync"]),
+    // Every Drive card type carries the Drive name as `title`, and a synced
+    // file Drive's last-modified time.
+    title: nonEmptyString(fields["title"]),
+    driveModified: isRecord(drive) ? nonEmptyString(drive["modified"]) : null,
     conflict: fields["conflict"] === true,
-    error: optionalString(fields["error"]),
+    error: nonEmptyString(fields["error"]),
     tabs,
     lossy,
   };

@@ -144,6 +144,7 @@ export function mergeSeedFeatures(input: {
  */
 const READ_ONLY_ATTRS = new Set([
   "local-time",
+  "clock",
   "channel",
   "last-activity",
   "health",
@@ -152,6 +153,14 @@ const READ_ONLY_ATTRS = new Set([
   "surface",
   "transcript",
 ]);
+
+/**
+ * The `clock` attribute's value on a box whose clock is shifted from the host's
+ * (a journey walk box; docs/implemented-plans/walk-simulated-time.md). It carries its own
+ * instruction, so the always-loaded prompt needs none; probed with Haiku and
+ * Sonnet, which used `local-time` and did not mention the host's date.
+ */
+export const SIMULATED_CLOCK_NOTE = "simulated: local-time is the date; the date in your system context is the host's; do not mention the difference";
 
 /**
  * Serialize the system → agent snapshot: the optional read-only context
@@ -168,13 +177,13 @@ const READ_ONLY_ATTRS = new Set([
 export function composeChatAppSnapshot(input: {
   features?: FeatureMap;
   localTime?: string;
+  /** Present while the box clock is shifted from the host's: the note itself, so real boxes' prompts carry no text for it. */
+  clock?: typeof SIMULATED_CLOCK_NOTE;
   channel?: ChatChannel;
   lastActivity?: string;
   health?: string;
   todos?: string;
   openCard?: string;
-  /** The pending question card the root chat is asking (`open-question`). */
-  openQuestion?: string;
   viewContext?: AttentionSnapshot;
   /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
   activityChildren?: string;
@@ -190,12 +199,12 @@ export function composeChatAppSnapshot(input: {
   }
   const contextAttrs: Array<[string, string | undefined]> = [
     ["local-time", input.localTime],
+    ["clock", input.clock],
     ["channel", input.channel],
     ["last-activity", input.lastActivity],
     ["health", input.health],
     ["todos", input.todos],
     ["open-card", input.openCard],
-    ["open-question", input.openQuestion],
     ["surface", input.viewContext?.surface],
     ["transcript", input.viewContext?.transcript],
   ];

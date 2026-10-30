@@ -36,6 +36,7 @@ import {
   type EmbeddingsService,
 } from "../../../../beebox/src/services/openai-embeddings.js";
 import type { IndexDocument } from "./issue-index-documents.js";
+import { writeFileAtomic } from "../../../../beebox/src/lib/atomic-write.js";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -161,10 +162,7 @@ function tempName(filePath: string): string {
 }
 
 async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const tmp = tempName(filePath);
-  await fs.writeFile(tmp, `${JSON.stringify(value)}\n`);
-  await fs.rename(tmp, filePath);
+  await writeFileAtomic(filePath, { content: `${JSON.stringify(value)}\n` });
 }
 
 // ─── Embeddings service resolution ───────────────────────────────────────────

@@ -23,6 +23,7 @@ import { FrontmatterFields } from "./FrontmatterFields";
 import { cardTitle } from "../../lib/card-title";
 import { withoutHeaderName } from "../../lib/readable-fields";
 import { CardBody } from "./CardBody";
+import { cardTypeMarkdown } from "./type-markdown";
 import { bodyHeadingField, bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../lib/card-field-faces";
 import type { FileData, RendererProps } from "../../file-type-registry";
 
@@ -71,6 +72,7 @@ export function MarkdownCardView(props: RendererProps & { hideEmptyBody?: boolea
         title={title}
         onNavigate={onNavigate}
         hideEmptyBody={hideEmptyBody}
+        markdown={cardTypeMarkdown(data.type)}
       />
 
       {embed ? fields : null}

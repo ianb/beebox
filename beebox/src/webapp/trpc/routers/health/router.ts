@@ -338,7 +338,7 @@ export async function runHealthChecks(
   // the old file-peek skipped macOS entirely (where credentials live in the
   // Keychain), leaving local dev with no signal. The CLI reads whichever store
   // this platform uses.
-  checks.push(await claudeAuthCheck(options?.claudeCli));
+  checks.push(await claudeAuthCheck(boxRoot, options?.claudeCli));
 
   checks.push(...(await googleAuthHealthChecks(boxRoot, { now: getBoxTime(boxRoot) })));
   checks.push(...(await googleDocsApiHealthChecks(boxRoot)));

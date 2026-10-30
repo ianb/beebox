@@ -29,7 +29,7 @@ function makeScript(overrides: Partial<ParsedScheduledScript>): ParsedScheduledS
 }
 
 /** Run the chain handler with console output captured instead of printed. */
-async function runChain(box: TmpBox, createAfterSuccess: ParsedScheduledScript["createAfterSuccess"]) {
+async function runChainWith(box: TmpBox, { createAfterSuccess, quiet }: { createAfterSuccess: ParsedScheduledScript["createAfterSuccess"]; quiet: boolean }) {
   const errors: unknown[] = [];
   const logs: unknown[] = [];
   const realError = console.error;
@@ -41,6 +41,7 @@ async function runChain(box: TmpBox, createAfterSuccess: ParsedScheduledScript["
       boxRoot: box.root,
       scriptName: "nightly-notes",
       parsed: makeScript({ createAfterSuccess }),
+      quiet,
     });
   } finally {
     console.error = realError;
@@ -48,6 +49,8 @@ async function runChain(box: TmpBox, createAfterSuccess: ParsedScheduledScript["
   }
   return { errors, logs };
 }
+
+const runChain = (box: TmpBox, createAfterSuccess: ParsedScheduledScript["createAfterSuccess"]) => runChainWith(box, { createAfterSuccess, quiet: false });
 
 // ## A `../` chain path is refused and writes nothing outside the box
 //
@@ -100,4 +103,23 @@ void test("The escaping entry is skipped with an error naming the script and the
   t.check(third.logs, [
     "  Chain: /_content/kept/Weekly.doc.card already exists, skipping",
   ]);
+});
+
+// ## A quiet chain prints nothing to stdout
+//
+// `bbx tick --json` keeps stdout to one JSON object, so creating a chained card
+// and skipping an existing one must not log.
+void test("A quiet chain prints nothing to stdout", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const chain = [{ path: "_content/notes/Daily.doc.card", args: { title: "Daily", body: "ok" } }];
+  t.check((await runChainWith(box, { createAfterSuccess: chain, quiet: true })).logs, []);
+
+  t.check((await runChainWith(box, { createAfterSuccess: chain, quiet: true })).logs, []);
 });

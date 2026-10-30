@@ -5,7 +5,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { activeCategoryAtOffset, issueCategoryId } from "../../../src/frontend/lib/issue-category-nav.js";
+import { activeCategoryAtOffset } from "../../../src/frontend/lib/issue-category-nav.js";
 
 const categories = [
   { name: "features", top: 48 },
@@ -27,8 +27,4 @@ void test("line 26", async (t) => {
 
 void test("line 31", async (t) => {
   t.check(activeCategoryAtOffset(categories, { offset: 700, atEnd: true }), "decisions");
-});
-
-void test("line 36", async (t) => {
-  t.check(issueCategoryId("docs & chores"), "issue-category-docs%20%26%20chores");
 });

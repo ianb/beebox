@@ -122,7 +122,7 @@ export async function runRetroScan(
 
   const state = await loadRetroState(boxRoot);
   const discovery = await discoverSessions(boxRoot, {
-    now,
+    now: new Date(), // real clock: compared with transcript mtimes
     quiescenceMs: QUIESCENCE_MS,
     state,
   });

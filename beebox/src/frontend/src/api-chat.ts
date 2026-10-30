@@ -1,3 +1,4 @@
+import { errorMessage } from "@shared/error-guards";
 import { startAwakeTimeout } from "@shared/awake-timeout.js";
 import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
 /**
@@ -27,6 +28,7 @@ import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
 import { z } from "zod";
 import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
+import { newMessageId } from "./components/chat/InteractiveChat-helpers";
 import { trpcClient } from "./lib/trpc/client";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ChatSendContext } from "@core/chat/card-activity.js";
@@ -60,6 +62,11 @@ export interface SessionContentBlock {
   imageRef?: string;
   /** For thinking blocks: the text is a progress update written for the user. */
   progressUpdate?: true;
+  /**
+   * Live stream only: the length of `streamText` when this block arrived, so
+   * `buildStreamEntry` can put text written before a tool call ahead of it.
+   */
+  streamTextOffset?: number;
 }
 
 /**
@@ -104,6 +111,30 @@ export interface SessionEntry {
    * send. Kept on the entry so later snapshots retain the original baseline.
    */
   reconcileKnownUuids?: string[];
+  /**
+   * Client-only: transcript turns that echoed sends made before this one but
+   * written after its baseline was taken. Placement only (`placePending` in
+   * chatMachine); kept apart from the baseline, which would stop a merged
+   * queued turn from confirming this send too.
+   */
+  sentAfterEchoes?: string[];
+  /**
+   * Client-only, on an undelivered entry: transcript turns a later send not
+   * marked undelivered already retired against. Matching only; placement
+   * never reads it, so the bubble stays where it was sent.
+   */
+  claimedEchoes?: string[];
+  /** The client's id for the send, on the box's record of an accepted message (`chat.bootstrap`'s `pending`). */
+  messageId?: string;
+  /** The box accepted this message and the agent will never receive it (a queue dropped by a restart). */
+  undelivered?: true;
+  /** The send carried images, whose bytes the box's record does not keep. */
+  hadImages?: true;
+  /**
+   * Client-only: the box refused this queued send, so it recorded nothing.
+   * Discarding it is local; there is no marker on the box to discard.
+   */
+  sendRefused?: true;
 }
 
 /** A client-created entry tracked until authoritative history echoes it. */
@@ -344,9 +375,9 @@ export async function startChatTurn(params: {
   engine?: string;
   model?: string;
 } & ChatSendContext): Promise<ChatTurnStart> {
-  const { session, message, images, contextDir, seedFeatures, engine, model, openCard, openQuestion, cardActivity, cardState } = params;
+  const { session, message, images, contextDir, seedFeatures, engine, model, openCard, cardActivity, cardState } = params;
   const apiBase = getApiBase();
-  const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const messageId = params.messageId ?? newMessageId();
 
   let attemptNumber = 0;
   const attempt = async (): Promise<Response> => {
@@ -367,7 +398,6 @@ export async function startChatTurn(params: {
         ...(engine !== undefined ? { engine } : {}),
         ...(model !== undefined ? { model } : {}),
         ...(openCard !== undefined ? { openCard } : {}),
-        ...(openQuestion !== undefined ? { openQuestion } : {}),
         ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
         ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
         // Ambient, not a caller-supplied field: only the browser can tell the
@@ -403,7 +433,7 @@ export async function startChatTurn(params: {
       await new Promise((r) => setTimeout(r, 2000));
       response = await attempt();
     } else {
-      const reason = err instanceof Error ? err.message : String(err);
+      const reason = errorMessage(err);
       recordChatSendEvent(messageId, { event: "post-error", detail: { reasonKind: chatSendReasonKind(reason) } });
       throw err instanceof Error ? err : new RequestError(String(err));
     }

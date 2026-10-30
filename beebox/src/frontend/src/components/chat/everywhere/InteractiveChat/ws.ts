@@ -8,6 +8,7 @@
  * dispatcher.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -168,7 +169,7 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     // No popup and no state, so it is called directly rather than through a
     // controller — same shape as `fulfillLastAudioRequest` above.
     void fulfillUiScanRequest(uiScan, sessionId).catch((e) => {
-      console.warn(`[ui-scan] request handling failed: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[ui-scan] request handling failed: ${errorMessage(e)}`);
     });
     return;
   }
@@ -238,7 +239,8 @@ export function useChatWs(opts: {
   }, [send, sessionId, ensureReservation]));
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
-  // chat-history, chat-complete, chat-user-message, and the secondary events.
+  // chat-history, chat-complete, chat-user-message (and its undelivered and
+  // discarded markers), and the secondary events.
   // Events tagged with a sessionId are filtered to this view's session only.
   useBusSubscription({
     onConnect: useCallback(() => {
@@ -258,6 +260,8 @@ export function useChatWs(opts: {
       const history = busEventData(event, "chat-history");
       const complete = busEventData(event, "chat-complete");
       const userMessage = busEventData(event, "chat-user-message");
+      const undelivered = busEventData(event, "chat-user-message-undelivered");
+      const discarded = busEventData(event, "chat-user-message-discarded");
       if (scheduleFired) {
         if (scheduleFired.alarm) {
           alarm.play();
@@ -299,8 +303,15 @@ export function useChatWs(opts: {
             message: userMessage.message,
             userName: userMessage.user.name,
             timestamp: userMessage.timestamp,
+            ...(userMessage.messageId !== undefined ? { messageId: userMessage.messageId } : {}),
           });
         }
+      } else if (undelivered) {
+        if (!forSession(undelivered.sessionId, sessionId)) return;
+        send({ type: "MESSAGE_UNDELIVERED", messageId: undelivered.messageId });
+      } else if (discarded) {
+        if (!forSession(discarded.sessionId, sessionId)) return;
+        send({ type: "MESSAGE_DISCARDED", messageId: discarded.messageId });
       } else {
         handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onTaskLevel, onCaptureStatus, onScreenshotRequest, audioOverlayStore });
       }

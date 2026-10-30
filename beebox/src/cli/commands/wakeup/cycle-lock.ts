@@ -23,7 +23,7 @@
 
 import * as path from "node:path";
 import { acquireLock, releaseLock, LockHeldError } from "../../../lib/file-lock.js";
-import { reportWakeupOutcome } from "../../wakeup-outcome.js";
+import { reportCycleAcquired, reportWakeupOutcome } from "../../wakeup-outcome.js";
 
 /** Printed by the cycle that found the lock held. One line, on purpose. */
 export const WAKEUP_ALREADY_RUNNING = "Wakeup already running for this box; skipping.";
@@ -61,6 +61,7 @@ export async function runUnderWakeupCycleLock(
     });
     return false;
   }
+  reportCycleAcquired();
   try {
     await runCycle();
   } finally {

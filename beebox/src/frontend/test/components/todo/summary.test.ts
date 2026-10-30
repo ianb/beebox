@@ -37,10 +37,10 @@ void test("No todos, no line", async (t) => {
 
 // ## All done
 //
-// The card is finished; the line still says so, and "0 now" is not a
+// The card is finished; the line still says so, and "0 todos now" is not a
 // control.
 void test("The card is finished; the line still says so, and \"0 on your plate\" is not a...", async (t) => {
-  t.check(text(line({ done: 2 }, noop)), "0 now · 2 done");
+  t.check(text(line({ done: 2 }, noop)), "0 todos now · 2 done");
 });
 
 // ## Overdue
@@ -49,18 +49,18 @@ void test("The card is finished; the line still says so, and \"0 on your plate\"
 // With an open todo rendered below, the first count is a button that scrolls
 // to it.
 void test("escalated is the server's word for past due; the line calls it overdue.", async (t) => {
-  await t.checkText(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 }, noop)), "[3 now] · 1 overdue · 2 done");
+  await t.checkText(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 }, noop)), "[3 todos now] · 1 overdue · 2 done");
 });
 
 // In a box view nothing is drawn to scroll to, so the same counts are plain
 // text rather than a button that does nothing:
 void test("In a box view nothing is drawn to scroll to, so the same counts are plain tex...", async (t) => {
-  t.check(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 })), "3 now · 1 overdue · 2 done");
+  t.check(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 })), "3 todos now · 1 overdue · 2 done");
 });
 
 // Parked todos are named when there are any:
 void test("Parked todos are named when there are any:", async (t) => {
-  t.check(text(line({ open: 1, onPlate: 1, parked: 2 })), "1 now · 2 parked");
+  t.check(text(line({ open: 1, onPlate: 1, parked: 2 })), "1 todo now · 2 parked");
 });
 
 // ## Later
@@ -69,9 +69,9 @@ void test("Parked todos are named when there are any:", async (t) => {
 // names it "later", as the plate's headline does. The control is the count
 // of the todos it goes to: "now" when any are, else "later".
 void test("An open todo whose start has not come yet is not due now; the line names...", async (t) => {
-  await t.checkText(text(line({ open: 3, onPlate: 2 }, noop)), "[2 now] · 1 later");
+  await t.checkText(text(line({ open: 3, onPlate: 2 }, noop)), "[2 todos now] · 1 later");
 
-  t.check(text(line({ open: 1, onPlate: 0 }, noop)), "0 now · [1 later]");
+  t.check(text(line({ open: 1, onPlate: 0 }, noop)), "0 todos now · [1 later]");
 });
 
 // On a card, the control scrolls to the first todo in the set it names. A todo
@@ -114,11 +114,11 @@ void test("A directory's browse page shows the same line for every card under it
 // waiting". It never says "plate". `rootLineParts` builds it; `CountsLine`
 // draws it, with the todo count and the questions count as controls that open
 // their surfaces beside the chat.
-function rootLine(counts: { onPlateTodos?: number; escalatedTodos?: number; pendingQuestions?: number }) {
-  const parts = rootLineParts({ onPlateTodos: 0, escalatedTodos: 0, pendingQuestions: 0, ...counts });
+function rootLine(counts: { onPlateTodos?: number; escalatedTodos?: number; laterTodos?: number; pendingQuestions?: number }) {
+  const parts = rootLineParts({ onPlateTodos: 0, escalatedTodos: 0, laterTodos: 0, pendingQuestions: 0, ...counts });
   if (parts === null) return null;
   const action = { onClick: noop, title: "Open" };
-  return text(renderToStaticMarkup(React.createElement(CountsLine, { parts, actions: { open: action, overdue: action, questions: action } })));
+  return text(renderToStaticMarkup(React.createElement(CountsLine, { parts, actions: { open: action, overdue: action, later: action, questions: action } })));
 }
 
 // Nothing to do and nothing asked: no line at all.
@@ -146,4 +146,22 @@ void test("Questions only: the line does not vanish when nothing is to do.", asy
 // Both:
 void test("Both:", async (t) => {
   t.check(rootLine({ onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 }), "[3 to do] · [1 overdue] · [2 questions waiting]");
+});
+
+// Todos dated for later are named, so the Box page does not say "1 to do" when
+// five more start later. The badge keeps counting only what is due now, so
+// "to do" still agrees with it. With nothing to do now, "later" is the control.
+void test("Todos dated for later are named after the ones due now.", async (t) => {
+  t.check(
+    [
+      rootLine({ onPlateTodos: 1, laterTodos: 5 }),
+      rootLine({ onPlateTodos: 3, escalatedTodos: 1, laterTodos: 2, pendingQuestions: 1 }),
+      rootLine({ laterTodos: 4 }),
+    ],
+    [
+      "[1 to do] · 5 later",
+      "[3 to do] · [1 overdue] · 2 later · [1 question waiting]",
+      "[4 later]",
+    ],
+  );
 });

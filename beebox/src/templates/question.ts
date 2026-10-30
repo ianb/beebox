@@ -16,7 +16,6 @@ import {
   IsoDuration,
   type QuestionLearningFields,
 } from "../schemas/question.js";
-import { getBoxTimeISO } from "../lib/time.js";
 import { eraseTemplateArgs, type TemplateDefinition } from "../templates-shape.js";
 
 // The optional answer-contract fields every question template accepts, passed
@@ -64,7 +63,7 @@ export const QUESTION_TEMPLATES: TemplateDefinition[] = [
         .describe("Answer options (at least 2)"),
       ...questionContractArgs,
     }),
-    generate: (args) =>
+    generate: (args, ctx) =>
       createSelectQuestionTemplate({
         memo: args.memo,
         prompt: args.prompt,
@@ -72,7 +71,7 @@ export const QUESTION_TEMPLATES: TemplateDefinition[] = [
           id: String.fromCodePoint(97 + i),
           label: opt,
         })),
-        askedAt: getBoxTimeISO(),
+        askedAt: ctx.now.toISOString(),
         ...questionContractParams(args),
       }),
   }),
@@ -86,11 +85,11 @@ export const QUESTION_TEMPLATES: TemplateDefinition[] = [
       prompt: z.string().describe("The question to ask"),
       ...questionContractArgs,
     }),
-    generate: (args) =>
+    generate: (args, ctx) =>
       createTextQuestionTemplate({
         memo: args.memo,
         prompt: args.prompt,
-        askedAt: getBoxTimeISO(),
+        askedAt: ctx.now.toISOString(),
         ...questionContractParams(args),
       }),
   }),
@@ -104,11 +103,11 @@ export const QUESTION_TEMPLATES: TemplateDefinition[] = [
       prompt: z.string().describe("The question to ask"),
       ...questionContractArgs,
     }),
-    generate: (args) =>
+    generate: (args, ctx) =>
       createConfirmQuestionTemplate({
         memo: args.memo,
         prompt: args.prompt,
-        askedAt: getBoxTimeISO(),
+        askedAt: ctx.now.toISOString(),
         ...questionContractParams(args),
       }),
   }),

@@ -14,6 +14,7 @@
 
 import * as path from "node:path";
 import { glob } from "glob";
+import { isWithin } from "../../lib/box-containment.js";
 
 // Same non-content dirs `list-cards.ts` prunes; kept local rather than
 // importing that module's private constant (a one-line list, not worth a
@@ -69,8 +70,7 @@ export async function listScopedCardPaths(boxRoot: string, pattern: string): Pro
   // read, rather than trusting the pattern alone.
   const absPaths = rawAbsPaths.filter((absPath) => {
     const resolved = path.resolve(absPath);
-    const rel = path.relative(boxRootResolved, resolved);
-    const contained = rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+    const contained = resolved !== boxRootResolved && isWithin(boxRootResolved, resolved);
     if (!contained) {
       console.warn(`[card-scope] dropping out-of-box glob match for pattern "${pattern}": ${absPath}`);
     }

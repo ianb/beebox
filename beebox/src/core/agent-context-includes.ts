@@ -3,6 +3,7 @@
 import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
+import { isWithin } from "../lib/box-containment.js";
 
 const INCLUDE_PATTERN = /^@(.+\.md)\s*$/gm;
 
@@ -34,11 +35,6 @@ async function realpathIfPresent(path: string): Promise<string | null> {
   }
 }
 
-function isInside(root: string, path: string): boolean {
-  const rel = relative(root, path);
-  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
-}
-
 /**
  * The real directories an include may resolve into: the box itself, and the
  * installed engine package (`node_modules/beebox`), whose reference docs a box
@@ -51,13 +47,28 @@ async function allowedRealRoots(boxRoot: string): Promise<string[]> {
   return roots;
 }
 
+/** An instruction file's text without its include-only lines, which {@link expandInstructionIncludes} expands. */
+export function withoutIncludeLines(content: string): string {
+  return content.replaceAll(INCLUDE_PATTERN, "").replaceAll(/\n{3,}/gu, "\n\n").trim();
+}
+
+/** Whether an instruction file has include-only lines for {@link expandInstructionIncludes} to expand. */
+export function hasIncludeLines(content: string): boolean {
+  return content.match(INCLUDE_PATTERN) !== null;
+}
+
 /** Expand include-only lines recursively, bounded to the box package. */
 export async function expandInstructionIncludes(options: {
   /** The root instruction file (`instructionFilePath(boxRoot, "")`, made absolute). */
   instructionPath: string;
   boxRoot: string;
+  /**
+   * Include targets already in the agent's context, skipped and added to. A
+   * caller that expands several instruction files into one context shares it.
+   */
+  seen?: Set<string> | undefined;
 }): Promise<string> {
-  const seen = new Set<string>();
+  const seen = options.seen ?? new Set<string>();
   const sections: string[] = [];
   const realRoots = await allowedRealRoots(options.boxRoot);
   const visit = async (path: string): Promise<void> => {
@@ -69,14 +80,14 @@ export async function expandInstructionIncludes(options: {
       if (isAbsolute(specifier)) throw new UnsafeAgentContextIncludeError(specifier);
       const included = resolve(dirname(path), specifier);
       const rel = relative(options.boxRoot, included);
-      if (rel.startsWith("..") || isAbsolute(rel)) throw new UnsafeAgentContextIncludeError(specifier);
+      if (!isWithin(options.boxRoot, included)) throw new UnsafeAgentContextIncludeError(specifier);
       if (seen.has(included)) continue;
       seen.add(included);
       // The lexical check above does not see symlinks; the real path must
       // stay inside the box (or its engine package) too.
       const real = await realpathIfPresent(included);
       if (real === null) continue;
-      if (!realRoots.some((root) => isInside(root, real))) throw new UnsafeAgentContextIncludeError(specifier);
+      if (!realRoots.some((root) => isWithin(root, real))) throw new UnsafeAgentContextIncludeError(specifier);
       // Read the path that was checked, so a swapped link cannot redirect the read.
       const includedContent = await readIfPresent(real);
       if (includedContent === null) continue;

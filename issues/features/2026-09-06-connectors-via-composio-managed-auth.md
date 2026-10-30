@@ -1,6 +1,6 @@
 ---
 title: "Set up connectors through Composio's managed auth — connect Google in two clicks instead of a Cloud Console afternoon"
-workstream: unattached
+workstream: google-connect-options
 area: beebox
 priority: normal
 labels: [connectors, google, auth]
@@ -110,3 +110,19 @@ and Raindrop now, and the second group as the connectors it unlocks.
 > ([research](../../research/imbue-studio/comparison.md), section 2); the
 > forwarding path for the read half is
 > [gmail-forwarding-as-the-read-path](2026-10-08-gmail-forwarding-as-the-read-path.md).
+
+> 2026-10-24 (google-connect-options): researched, no live test
+> ([note](../../research/google-connect-options-2026-10.md)). No broker states
+> that its shared Google app is verified for Gmail and Drive except Truto
+> (B2B-priced and gated). Composio and Pipedream evidently are: both grant
+> restricted Gmail scopes to strangers at scale. Both also withhold the raw
+> Google token on the shared app (Composio since its May 2026 incident, which
+> leaked Gmail connections), so the "token source, not tool layer" shape above
+> is not available; the only shape is Composio as a proxy for every Google
+> call, and its managed Drive app is `drive.file`, which cannot sync Drive
+> files by URL. Nango still has no shared Google app
+> ([July record, now in the tree](../closed/decisions/2026-07-28-nango-google-auth-broker.md)).
+> Arcade's default app requires every end user to hold an arcade.dev account.
+> The fifteen-minute throwaway-account test is written in the note; the
+> no-OAuth Gmail paths (IMAP app password, forwarding) and the secret iCal
+> address cover the family read cases without any broker.

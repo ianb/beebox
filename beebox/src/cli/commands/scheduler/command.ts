@@ -12,6 +12,7 @@ import {
   boxEntryProblem,
   isBox,
   runScheduler,
+  runSchedulerPass,
   type LogEntry,
 } from "../../../core/schedule/scheduler/core.js";
 import { BBX_STATE_DIR } from "../../../lib/state-dir.js";
@@ -45,6 +46,20 @@ schedulerCommand
   .option("--interval <seconds>", "Poll interval in seconds", "60")
   .action(async (options: { interval: string }) => {
     await runScheduler({ intervalSeconds: parseInt(options.interval, 10) });
+  });
+
+// One box, one pass, as whoever runs it: on a unit host, systemd runs this as
+// the box's user inside the box sandbox (deploy/systemd/beebox-pass@.service),
+// started by the daemon through bbx-box-run. Exit 0 whether the pass ran or
+// was deferred by maintenance; 1 when the path is not a box.
+schedulerCommand
+  .command("pass")
+  .description("Run one scheduler pass over one box (what the daemon does per box)")
+  .argument("<boxRoot>", "The box root")
+  .action(async (boxRoot: string) => {
+    const outcome = await runSchedulerPass(path.resolve(boxRoot));
+    if (outcome === "not-a-box") process.exit(1);
+    if (outcome === "maintenance") console.log("Box is closed for maintenance; the pass was deferred.");
   });
 
 // `bbx scheduler {add,remove,list}` are deprecated aliases — the box

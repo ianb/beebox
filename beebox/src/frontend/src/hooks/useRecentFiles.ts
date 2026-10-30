@@ -13,7 +13,7 @@ import { trpc } from "../lib/trpc/client";
 import type { FileSummary } from "@core/file-summary";
 import { parseAcks } from "../lib/structured-output-parsing";
 import { boxRelativePath } from "@shared/box-path.js";
-import { isExternalUrl } from "../lib/view-url";
+import { isUrlRef } from "@shared/ref-path/core";
 
 // Tool-input keys we treat as "agent touched this file". Deliberately
 // excludes generic `path` (used by Grep/Glob/LS for the search *scope*,
@@ -45,7 +45,7 @@ function extractFromText(text: string, out: string[]): void {
   MD_TARGET_RE.lastIndex = 0;
   while ((m = MD_TARGET_RE.exec(text)) !== null) {
     const target = m[1];
-    if (!target || isExternalUrl(target) || target.startsWith("#")) continue;
+    if (!target || isUrlRef(target) || target.startsWith("#")) continue;
     const [clean = ""] = target.split(/[#?]/, 1);
     out.push(boxRelativePath(clean));
   }

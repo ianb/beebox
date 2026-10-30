@@ -7,6 +7,7 @@
 
 import type { ExhibitBoot } from "../../../shared/exhibits.js";
 import type { ExhibitListing } from "../store.js";
+import { escapeHtml } from "../../../../../beebox/src/lib/escape-html.js";
 
 const STYLE = `
 :root { color-scheme: light; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -23,14 +24,6 @@ pre { padding: 1rem; overflow: auto; border: 1px solid #e4c5bd; border-radius: .
 code { font-size: .95em; }
 pre.command { border-color: #d8d3cc; background: #f4f2ee; color: #292724; user-select: all; }
 `;
-
-export function escapeHtml(value: string): string {
-  return value
-    .replace(/&/gu, "&amp;")
-    .replace(/</gu, "&lt;")
-    .replace(/>/gu, "&gt;")
-    .replace(/"/gu, "&quot;");
-}
 
 function layout(title: string, body: string): string {
   return `<!doctype html>

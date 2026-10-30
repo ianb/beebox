@@ -9,13 +9,13 @@
  */
 
 import * as fs from "node:fs/promises";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../../exports/cards.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { createGlinkTemplate, type GlinkOriginType } from "../../schemas/glink.js";
 import { createGfolderTemplate } from "../../schemas/gfolder.js";
 import type { DriveFile } from "../../services/google-drive/core.js";
 import type { FolderProblemCounts } from "./folder-types.js";
+import { readCardFrontmatter } from "../../core/card-io.js";
 
 /** Existing frontmatter as a mutable bag, plus the body to write back. */
 interface CardParts {
@@ -23,11 +23,21 @@ interface CardParts {
   body: string;
 }
 
+/** A Drive card whose frontmatter cannot be read back; stamping it would replace its fields. */
+export class UnreadableDriveCardError extends Error {
+  constructor(readonly cardPath: string) {
+    super(`${cardPath}: frontmatter does not parse as a YAML mapping; fix it before Drive can update this card`);
+    this.name = "UnreadableDriveCardError";
+  }
+}
+
 async function readCardParts(cardPath: string): Promise<CardParts> {
   const content = await fs.readFile(cardPath, "utf-8");
   const split = splitCardContent(content);
-  const parsed: unknown = split.frontmatterText === "" ? {} : parseYaml(split.frontmatterText);
-  return { fields: isRecord(parsed) ? { ...parsed } : {}, body: split.body };
+  if (!split.hasFrontmatter) return { fields: {}, body: split.body };
+  const fields = readCardFrontmatter(content);
+  if (fields === null) throw new UnreadableDriveCardError(cardPath);
+  return { fields: { ...fields }, body: split.body };
 }
 
 /**
@@ -40,14 +50,17 @@ function driveMap(parts: CardParts): Record<string, unknown> {
 }
 
 async function writeCardParts(cardPath: string, parts: CardParts): Promise<void> {
-  await fs.writeFile(cardPath, `---\n${stringifyYaml(parts.fields)}---\n${parts.body}`);
+  await fs.writeFile(cardPath, renderFrontmatterBlock(parts.fields, parts.body));
 }
 
-/** The outcome the folder card reports after a sync pass. */
+/**
+ * The outcome the folder card reports after a sync pass. No time: when the
+ * pass ran is Drive state (`folders` in `state.ts`), so a pass that found
+ * nothing new leaves the card's bytes alone.
+ */
 export interface FolderStamp {
   name: string | null;
   link: string | null;
-  lastSync: string;
   error: string | null;
   /**
    * Children the pass could not account for. A pass that listed the folder
@@ -58,12 +71,12 @@ export interface FolderStamp {
   problems: FolderProblemCounts | null;
 }
 
-/** Re-stamp a folder card's Drive metadata and last-sync outcome. */
-export async function stampGfolderCard(cardPath: string, stamp: FolderStamp): Promise<void> {
+/** Re-stamp a folder card's Drive metadata and outcome; false when nothing differed. */
+export async function stampGfolderCard(cardPath: string, stamp: FolderStamp): Promise<boolean> {
   const parts = await readCardParts(cardPath);
+  const before = JSON.stringify(parts.fields);
   if (stamp.link !== null) parts.fields["drive"] = { ...driveMap(parts), link: stamp.link };
   if (stamp.name !== null) parts.fields["title"] = stamp.name;
-  parts.fields["last-sync"] = stamp.lastSync;
   if (stamp.problems !== null) {
     stampCount(parts.fields, { key: "not-in-folder", count: stamp.problems.notInFolder });
     stampCount(parts.fields, { key: "unknown", count: stamp.problems.unknown });
@@ -72,7 +85,9 @@ export async function stampGfolderCard(cardPath: string, stamp: FolderStamp): Pr
   // no message still writes one.
   if (stamp.error === null) delete parts.fields["error"];
   else parts.fields["error"] = stamp.error === "" ? "Sync failed without a message" : stamp.error;
+  if (JSON.stringify(parts.fields) === before) return false;
   await writeCardParts(cardPath, parts);
+  return true;
 }
 
 /** A count worth reporting is written; zero removes the field entirely. */

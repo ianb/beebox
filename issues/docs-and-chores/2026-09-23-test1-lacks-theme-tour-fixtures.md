@@ -101,3 +101,16 @@ Tours that miss for this reason, at both viewports:
 Artifacts: `beebox/test/tours/.artifacts/<tour>/2026-10-22T03-*` and
 `2026-10-22T04-*`. The priority may be stale: this issue now blocks about
 half of the tours.
+
+## Re-encounter, 2026-10-28 - weekly tour check run 20261028-161719
+
+The box clone now has the `.doc.card` comparison set, so `card-themes`,
+`card-theme-interface` and `card-theme-previews` walk their cards. Still
+missing: `markdown-note.md` (404 at `card-themes` `markdown-file` and
+`markdown-workspace`), `bloom-inherited.doc.card` and
+`bloom-explicit.doc.card` ("Card not found" in `bloom-theme`, `deck-theme`,
+`ribbon-theme`: the "A little room to grow" and "A note on blue paper"
+headings and both claims miss; `deck-theme` aborts at `deck-composer-menu`),
+and `Theme_Tour.landmark.card` (`system-themes` aborts at "Properties").
+Every expectation miss in this run has this cause. Artifacts:
+`beebox/test/tours/.artifacts/<tour>/2026-10-28T2*`.

@@ -32,6 +32,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { gitTopLevel } from "./lib/git.js";
 
 // The contract doc that a contract-surface change must co-stage, repo-relative.
 const CONTRACT_DOC = "beebox/docs/mobile-contract.md";
@@ -142,10 +143,6 @@ function gitPath(root: string, relative: string): string {
   return out.startsWith("/") ? out : join(root, out);
 }
 
-function repoRoot(): string {
-  return execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
-}
-
 function changedFromIndex(root: string, commit: string): string[] {
   // No --diff-filter: deletions count too (removing an anchor is a contract change).
   const out = execFileSync("git", ["diff", "--cached", "--name-only", commit], {
@@ -233,7 +230,7 @@ function runCommitMsg(statePath: string, messageFile: string): void {
 
 function main(): void {
   const args = process.argv.slice(2);
-  const root = repoRoot();
+  const root = gitTopLevel();
   const statePath = gitPath(root, STATE_FILE_NAME);
 
   try {

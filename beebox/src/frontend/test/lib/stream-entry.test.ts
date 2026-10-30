@@ -3,7 +3,8 @@
 // `buildStreamEntry` turns the in-flight chat stream buffers (`streamText` +
 // `streamTools`) into an assistant `SessionEntry`. Both the live message list (the
 // provisional streaming bubble) and the chat machine's "new"-session rollup use it,
-// so they agree on shape: tools first, then the text block.
+// so they agree on shape: each tool after the text written before it, then the
+// rest of the text.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -34,6 +35,21 @@ void test("Tools come before the text block:", async (t) => {
   t.check(e.content.map((b) => b.type), [
     "tool_use",
     "text",
+  ]);
+});
+
+// Text written before a tool call goes ahead of it. Each tool carries the length
+// the streamed text had when it arrived; the offset itself is not kept.
+void test("Text written before a tool call goes ahead of it.", async (t) => {
+  const e = buildStreamEntry({
+    uuid: "live-jkl",
+    streamText: "Looking.\n\nFound it.",
+    streamTools: [{ type: "tool_use", toolName: "Read", toolId: "t1", input: {}, streamTextOffset: 8 }],
+  });
+  t.check(e.content, [
+    { type: "text", text: "Looking." },
+    { type: "tool_use", toolName: "Read", toolId: "t1", input: {} },
+    { type: "text", text: "\n\nFound it." },
   ]);
 });
 

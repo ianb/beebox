@@ -27,4 +27,15 @@ docker compose up -d
 open http://localhost:3210/box/
 ```
 
+When Daily is on in Admin, the running `box` service checks for an overdue
+backup every fifteen minutes and catches up after restart. The box must be
+running for this schedule. A NAS host job may also run `docker compose run
+--rm box bbx engine backup run /data/box --scheduled` from this directory;
+the CLI due check avoids duplicate snapshots. Build or pull the image after
+updating it.
+The backup repository and password file must be configured for the box first,
+and must be reachable from the container. The command holds box admission for
+capture and runs retention after a successful capture; scheduler logs carry
+the stage when it fails.
+
 Verify changes to this packaging with `./smoke-docker.sh`.

@@ -11,7 +11,7 @@
  */
 
 import { useEffect } from "react";
-import { Image } from "../../../ui/Image";
+import { Image } from "../../../ui/Image/view";
 import { Text } from "../../../ui/Text";
 import type { ScreenshotIndicator } from "./screenshot-request-handler";
 

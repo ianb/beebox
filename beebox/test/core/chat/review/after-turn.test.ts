@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { eventually } from "@ianbicking/tap-check/check";
+import { eventually, oneOf } from "@ianbicking/tap-check/check";
 import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { once } from "node:events";
@@ -27,6 +27,7 @@ import {
   titleChatAfterTurn,
   wireAfterTurnTitling,
 } from "../../../../src/core/chat/review/after-turn.js";
+import { acquireChatReviewLease } from "../../../../src/core/chat/review/lock.js";
 import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { loadReviewState } from "../../../../src/core/chat/review/state.js";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
@@ -66,7 +67,9 @@ async function seed(box: TmpBox, { sessionId, entries }: { sessionId: string; en
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
   // The transcript is newer than the review's quiescence window would allow.
-  await utimes(logPath, NOW, NOW);
+  // File times are real, and the quiescence check reads the real clock.
+  const justNow = new Date();
+  await utimes(logPath, justNow, justNow);
   return huskPath;
 }
 
@@ -208,8 +211,8 @@ first-message: Help me plan a birthday dinner for Saturday, eight people, one ve
 // to stay dirty after every chat's first title, until an unrelated commit swept
 // it in under that commit's name
 // (`issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md`).
-// The after-turn path now commits the manifest alone; the husk and the
-// transcript are not part of that commit. The commit names the file
+// The after-turn path now commits the manifest with the session's husk (which
+// no one else commits); the transcript is not part of that commit. The commit names the file
 // (`Commit-Source: usage-manifest`), since the manifest can also hold lines that
 // other runs appended at the same time.
 void test("A real title pass is a model session, and every model session appends a line...", async (t) => {
@@ -243,13 +246,16 @@ void test("A real title pass is a model session, and every model session appends
       source: git("log", "-1", "--format=%(trailers:key=Commit-Source,valueonly)"),
       files: git("show", "--name-only", "--format=", "HEAD").split("\n"),
       manifestDirty: git("status", "--porcelain", "--", "_bookkeeping/usage/session-manifest.jsonl"),
+      huskDirty: git("status", "--porcelain", "--", "_content/chat/web"),
     }),
     {
     subject: "Usage: record agent sessions",
     source: "usage-manifest",
     files: [
       "_bookkeeping/usage/session-manifest.jsonl",
+      `_content/chat/web/2026-07-28_${A}.chat.card`,
     ],
+    huskDirty: "",
     manifestDirty: "",
   },
   );
@@ -272,8 +278,14 @@ void test("The nightly run calls the same title pass, so a chat it titles append
   const box = await freshBox();
   const talk = "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4);
   await seed(box, { sessionId: A, entries: [user("n1", talk), agent("n2", REPLY), user("n3", talk), agent("n4", REPLY)] });
-  const quiet = new Date(NOW.getTime() - 5 * 60 * 60 * 1000);
+  const quiet = new Date(Date.now() - 5 * 60 * 60 * 1000);
   await utimes(getSessionLogPath(box.root, A), quiet, quiet);
+  // A husk with no transcript (so the run does not review it), edited by someone else, stays out of the commit.
+  const otherHusk = `_content/chat/web/2026-07-28_${B}.chat.card`;
+  await box.write(otherHusk, `---\nsession: ${B}\n---\n\n`);
+  execFileSync("git", ["add", otherHusk], { cwd: box.root });
+  execFileSync("git", ["commit", "-m", "other husk"], { cwd: box.root });
+  await box.write(otherHusk, `---\nsession: ${B}\ntitle: Edited by hand\n---\n\n`);
   const reviewer = {
     async review() { throw new Error("unused"); },
     async title(args: TitleArgs) {
@@ -293,7 +305,7 @@ void test("The nightly run calls the same title pass, so a chat it titles append
     sessionErrors: 0,
     exhausted: 0,
     rejected: [],
-    missingTranscripts: 0,
+    missingTranscripts: 1,
     deferredActive: 0,
     belowThreshold: 1,
     belowTitleThreshold: 0,
@@ -309,16 +321,92 @@ void test("The nightly run calls the same title pass, so a chat it titles append
       source: git("log", "-1", "--format=%(trailers:key=Commit-Source,valueonly)"),
       files: git("show", "--name-only", "--format=", "HEAD").split("\n"),
       manifestDirty: git("status", "--porcelain", "--", "_bookkeeping/usage/session-manifest.jsonl"),
+      huskDirty: git("status", "--porcelain", "--", "_content/chat/web"),
     }),
     {
     subject: "Usage: record agent sessions",
     source: "usage-manifest",
     files: [
       "_bookkeeping/usage/session-manifest.jsonl",
+      `_content/chat/web/2026-07-28_${A}.chat.card`,
     ],
+    huskDirty: `M ${otherHusk}`,
     manifestDirty: "",
   },
   );
+});
+
+// ## A busy review lock does not leave the husk uncommitted
+//
+// The nightly run commits only the husks of sessions it reviewed, so a short
+// chat whose only turn finished while the lock was held would stay dirty. The
+// husk commit takes the box git lock, not the review lock, so it runs anyway.
+void test("The husk of a chat is committed even when the review lock is held.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await freshBox();
+  const huskPath = await seed(box, { sessionId: A, entries: [user("b1", "hi there"), agent("b2", "Hello!")] });
+  const release = await acquireChatReviewLease(box.root, "nightly");
+  let outcome;
+  try {
+    outcome = await titleChatAfterTurn(box.root, { sessionId: A, reviewer: fakeReviewer("unused"), now: NOW, ownerEmail: null });
+  } finally {
+    await release();
+  }
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
+  t.check({
+    outcome,
+    files: git("show", "--name-only", "--format=", "HEAD").split("\n"),
+    huskDirty: git("status", "--porcelain", "--", "_content/chat/web"),
+  }, {
+    outcome: { kind: "skipped", reason: "busy" },
+    files: [huskPath],
+    huskDirty: "",
+  });
+});
+
+// ## The nightly run commits only the husks it reviewed
+//
+// A session that goes active again between discovery and its turn is deferred.
+// Its husk stays out of the run's commit.
+void test("A session deferred mid-run keeps its husk out of the run's commit.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await freshBox();
+  const talk = "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4);
+  const entries = [user("n1", talk), agent("n2", REPLY), user("n3", talk), agent("n4", REPLY)];
+  const huskA = await seed(box, { sessionId: A, entries });
+  const huskB = await seed(box, { sessionId: B, entries });
+  const quiet = new Date(Date.now() - 5 * 60 * 60 * 1000);
+  for (const id of [A, B]) await utimes(getSessionLogPath(box.root, id), quiet, quiet);
+  const reviewer = {
+    async review() { throw new Error("unused"); },
+    async title(args: TitleArgs) {
+      // Whichever session is titled first, the other becomes active again.
+      const other = args.sessionId === A ? B : A;
+      await utimes(getSessionLogPath(box.root, other), new Date(), new Date());
+      return { title: "Saturday birthday dinner for eight" };
+    },
+  };
+
+  const summary = await runChatReview(box.root, { reviewer, maxSessions: 10, now: NOW, ownerEmail: null });
+
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
+  const committed = git("show", "--name-only", "--format=", "HEAD").split("\n");
+  t.check({ titled: summary.titled, deferredActive: summary.deferredActive }, { titled: 1, deferredActive: 1 });
+  // Whichever session the reviewer titled first is the one committed; the
+  // reactivated one is deferred and its husk stays out of the commit.
+  t.check([huskA, huskB].filter((h) => committed.includes(h)), [oneOf(huskA, huskB)]);
 });
 
 // ## A greeting waits for the second exchange
@@ -343,6 +431,20 @@ void test("A first message of \"hi there\" names nothing, so the first turn is s
     kind: "skipped",
     reason: "below-gate",
   });
+
+  // The new husk is committed even though no title was written, and a later
+  // below-gate turn with nothing changed adds no commit.
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
+  const afterFirst = git("rev-parse", "HEAD");
+  t.check({
+    files: git("show", "--name-only", "--format=", "HEAD").split("\n"),
+    huskDirty: git("status", "--porcelain", "--", "_content/chat/web"),
+  }, {
+    files: [`_content/chat/web/2026-07-28_${A}.chat.card`],
+    huskDirty: "",
+  });
+  await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null });
+  t.check(git("rev-parse", "HEAD"), afterFirst);
 
   await seed(box, { sessionId: A, entries: [...entries, user("g3", "help me plan dinner"), agent("g4", "What day?")] });
   t.check(await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null }), {

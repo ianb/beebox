@@ -32,7 +32,10 @@ A user has answered a question. Your job has up to three steps — do all that a
    to the original question, and (when the question declared one) the
    \`learning:\` the answer is meant to teach.
 2. Read the referenced question card (\`question-ref.ref:\`) for full
-   context (memo, prompt, options, evidence).
+   context (memo, prompt, options, evidence). When the card carries
+   \`provisional:\`, compare it with the answer; where they differ, reverse
+   what the box did as far as its \`undo\` text and the git history allow,
+   and say in the commit what was and was not reversed.
 3. **Execute the directive.** The \`directive:\` tells you what to do with
    the answer — do that work using the \`answer:\` text to guide it.
 4. **If \`learning:\` is present, record it.** \`learning.proposal\` is the

@@ -2,7 +2,7 @@
    lazy-loaded styles remain loaded after navigating away from the studio. */
 .bbx-theme-studio .bbx-box-presentation[data-chrome-theme="draft"] {
   --bbx-desk-background: #e9ede5;
-  --bbx-bar-paper: #335b52;
+  --bbx-bar-paper: #2a4c44;
   --bbx-bar-edge: #28483f;
   --bbx-chat-user-paper: #335b52;
   --bbx-chat-user-ink: #fff;

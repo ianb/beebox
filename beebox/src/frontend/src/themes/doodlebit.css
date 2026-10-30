@@ -87,6 +87,7 @@
 .bbx-card-theme[data-card-theme="doodlebit"] {
   --bbx-paper: #fff;
   --bbx-ink: #202020;
+  --bbx-danger: #b73b55;
   --bbx-ink-soft: #565656;
   --bbx-pen: #5c42b5;
   --bbx-edge: #202020;

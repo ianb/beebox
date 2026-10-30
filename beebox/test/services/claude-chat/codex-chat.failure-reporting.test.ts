@@ -101,13 +101,14 @@ void test("The frame carries a message only, so the stack — the part that loca
 });
 
 // A non-`Error` throw has no stack to print, and says so instead of printing
-// `undefined`:
+// `undefined`. Its message is the thrown value's JSON (`errorMessage`), not
+// `[object Object]`:
 void test("A non-Error throw has no stack to print, and says so instead of printing unde...", async (t) => {
   const nonError = captured("error", () => {
     codexFailureEvent({ phase: "session-start", sessionId: "", error: { code: 7 } });
   });
   t.check(nonError, [
-    `[codex-chat] session-start failure: [object Object]
+    `[codex-chat] session-start failure: {"code":7}
 non-Error throw: [object Object]`,
   ]);
 });

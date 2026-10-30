@@ -47,15 +47,15 @@ class UnreadableDurationError extends ScheduleError {
 
 // ─── Durations ────────────────────────────────────────────────────────────
 
-const DURATION_PATTERN = /^([1-9]\d*)([dhw])$/;
+const SCHEDULE_DURATION_PATTERN = /^([1-9]\d*)([dhw])$/;
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const WEEK_MS = 7 * DAY_MS;
 
 /** `<n>h | <n>d | <n>w` to milliseconds. No cron syntax: a laptop that sleeps
  *  gains nothing from wall-clock expressions (the plan's "not added" list). */
-export function parseDuration(text: string): number {
-  const match = DURATION_PATTERN.exec(text);
+export function parseScheduleDuration(text: string): number {
+  const match = SCHEDULE_DURATION_PATTERN.exec(text);
   if (match === null) throw new NotADurationError(text);
   const [, count, unit] = match;
   if (count === undefined || unit === undefined) throw new UnreadableDurationError(text);
@@ -75,8 +75,8 @@ export function formatDuration(ms: number): string {
 
 const durationSchema = z
   .string()
-  .regex(DURATION_PATTERN, "must be <n>h, <n>d or <n>w (e.g. 7d)")
-  .transform((text) => parseDuration(text));
+  .regex(SCHEDULE_DURATION_PATTERN, "must be <n>h, <n>d or <n>w (e.g. 7d)")
+  .transform((text) => parseScheduleDuration(text));
 
 // ─── schedule.yaml ────────────────────────────────────────────────────────
 

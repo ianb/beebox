@@ -17,6 +17,7 @@
 
 import { withBase } from "../../api";
 import { logSpeechEvent } from "./speech-test-log";
+import { isIOS } from "../push-support";
 
 class BufferedSpeechPlaybackError extends Error {
   constructor() {
@@ -79,10 +80,6 @@ export function formatPlaybackRejection(operation: MediaOperation, error: unknow
 
 export function formatThrownError(error: unknown): string {
   return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-}
-
-function isIOS(): boolean {
-  return /iP(ad|hone|od)/.test(navigator.userAgent);
 }
 
 /**

@@ -296,7 +296,7 @@ void test("containing: these items among others", async (t) => {
   t.notOk(passes([1], containing([1, 1])));
   t.notOk(passes("1", containing(["1"])));
   // Nothing to keep: the suggestion is the empty array itself, not containing([]).
-  t.match(report([], containing([2])), /suggested:\n\[\]$/);
+  t.match(report([], containing([2])), /suggested:\n\[]$/);
   t.checkText(report([1, 4], containing([2])), `check failed: 1 mismatch
 mismatches:
 $: containing: no actual item matches this expected item
@@ -424,7 +424,7 @@ void test("review findings: no silent passes", async (t) => {
   t.notOk(passes({ [Symbol("id")]: 1 }, {}));
   // Values with hidden state fail rather than match {}.
   t.notOk(passes(/a/, {}));
-  t.notOk(passes(Object(1), {}));
+  t.notOk(passes(new Object(1), {}));
   t.notOk(passes(new ArrayBuffer(2), {}));
   class Secret {
     readonly #value = 1;

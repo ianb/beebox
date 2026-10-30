@@ -19,10 +19,11 @@ import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../cli/lib/session.j
 import { resolveSessionLogPath } from "../../../core/chat/session/history.js";
 import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
 import { resolveChatEngine } from "../../../core/chat/session/engine.js";
-import { codexSessionExists } from "../../../core/chat/session/codex-transcript/core.js";
+import { SESSION_STORES } from "../../../core/chat/session/native-store.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import * as path from "node:path";
+import { isWithin } from "../../../lib/box-containment.js";
 
 /**
  * Compose the list of `--grep` regexes that express the selected filter.
@@ -118,7 +119,7 @@ export const historyRouter = router({
         const candidate = normalizeHistoryPath(boxRelativePath(input.filter.path), ctx.boxRoot);
         const root = path.resolve(ctx.boxRoot);
         const resolved = path.resolve(root, candidate);
-        if (candidate.startsWith(":") || (resolved !== root && !resolved.startsWith(root + path.sep))) {
+        if (candidate.startsWith(":") || !isWithin(root, resolved)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid history path" });
         }
         historyPath = path.relative(root, resolved).split(path.sep).join("/");
@@ -162,8 +163,11 @@ export const historyRouter = router({
       })
     )
     .query(async ({ input, ctx }) => {
-      if (await resolveChatEngine(ctx.boxRoot, { sessionId: input.sessionId }) === "codex") {
-        const found = await codexSessionExists(ctx.boxRoot, input.sessionId);
+      const engine = await resolveChatEngine(ctx.boxRoot, { sessionId: input.sessionId });
+      // Claude's transcript file is paged directly below; every other engine
+      // is read through its native session store.
+      if (engine !== "claude") {
+        const found = await SESSION_STORES[engine].exists(ctx.boxRoot, input.sessionId);
         if (!found) {
           return {
             sessionId: input.sessionId,

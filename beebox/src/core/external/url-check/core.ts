@@ -22,6 +22,7 @@ import { checkUrls, extractExternalUrls, isCheckableUrl, type UrlVerdict } from 
 import { errnoCode } from "../../../shared/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { acquireLock, LockHeldError, releaseLock, type LockHolder } from "../../../lib/file-lock.js";
+import { writeFileAtomic } from "../../../lib/atomic-write.js";
 
 const execFileP = promisify(execFile);
 
@@ -104,16 +105,13 @@ async function loadCache(boxRoot: string): Promise<UrlCheckCache> {
 
 async function saveCache(boxRoot: string, cache: UrlCheckCache): Promise<void> {
   const filePath = path.join(boxRoot, CACHE_REL);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
   const sortKeys = (rec: Record<string, unknown>): Record<string, unknown> => {
     const out: Record<string, unknown> = {};
     for (const key of Object.keys(rec).toSorted()) out[key] = rec[key];
     return out;
   };
   const ordered = { version: cache.version, broken: sortKeys(cache.broken), pending: sortKeys(cache.pending) };
-  const tmp = `${filePath}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(ordered, null, 2) + "\n");
-  await fs.rename(tmp, filePath);
+  await writeFileAtomic(filePath, { content: JSON.stringify(ordered, null, 2) + "\n" });
 }
 
 /** Run `git grep` for URLs at a ref / the index / the working tree. */
@@ -294,18 +292,15 @@ async function checkExternalUrlsLocked(
 }
 
 /** Render a report as the human-readable warning block (or null when clean). */
-export function formatUrlReport(report: UrlCheckReport, { colors }: { colors: boolean }): string | null {
+export function formatUrlReport(report: UrlCheckReport): string | null {
   if (report.broken.length === 0 && report.transient.length === 0) return null;
-  const ESC = "";
-  const red = colors ? (s: string) => `${ESC}[31m${s}${ESC}[0m` : (s: string) => s;
-  const dim = colors ? (s: string) => `${ESC}[2m${s}${ESC}[0m` : (s: string) => s;
   const lines: string[] = [];
   for (const b of report.broken) {
-    const where = b.referrers.length > 0 ? `  ${dim(`(${b.referrers.join(", ")})`)}` : "";
-    lines.push(`${red("broken")}  ${b.url}  [${b.detail}]${where}`);
+    const where = b.referrers.length > 0 ? `  (${b.referrers.join(", ")})` : "";
+    lines.push(`broken  ${b.url}  [${b.detail}]${where}`);
   }
   for (const url of report.transient) {
-    lines.push(`${dim("transient")}  ${url}  ${dim("(unreachable this run — will retry)")}`);
+    lines.push(`transient  ${url}  (unreachable this run — will retry)`);
   }
   if (report.broken.length > 0) {
     const word = report.broken.length === 1 ? "URL" : "URLs";

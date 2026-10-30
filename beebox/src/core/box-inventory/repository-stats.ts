@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { isAnnexInitialized } from "../annex/is-annex-box.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 const execFileAsync = promisify(execFile);
 const annexFindLine = z.object({ file: z.string(), bytesize: z.string().optional() });
@@ -86,8 +87,9 @@ async function annexedFiles(boxRoot: string): Promise<{
       }
       const parsed = annexFindLine.safeParse(json);
       if (!parsed.success) continue;
-      const relativePath = path.relative(boxRoot, path.resolve(boxRoot, parsed.data.file));
-      if (!relativePath.startsWith(`..${path.sep}`) && relativePath !== "..") {
+      const absolutePath = path.resolve(boxRoot, parsed.data.file);
+      if (isWithin(boxRoot, absolutePath)) {
+        const relativePath = path.relative(boxRoot, absolutePath);
         const bytes = parsed.data.bytesize === undefined ? undefined : Number(parsed.data.bytesize);
         result.set(relativePath, bytes !== undefined && Number.isFinite(bytes) ? { bytes } : {});
       }

@@ -18,7 +18,7 @@ import { notifyFakeMode } from "../../core/notification/fake-mode.js";
 
 /** Why this box must not get a fake device, or null when it may. */
 function refusal(boxRoot: string): string | null {
-  if (apnsConfigFromEnv() !== null && !notifyFakeMode()) {
+  if (apnsConfigFromEnv() !== null && !notifyFakeMode(boxRoot)) {
     return "APNs keys are configured (BBX_APNS_*), so a push to a fake device would go to Apple. Run with BBX_NOTIFY_FAKE=1, or on a box without the keys.";
   }
   const production = devicePushRegistrations(boxRoot).find((d) => d.environment === "production");

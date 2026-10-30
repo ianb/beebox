@@ -17,6 +17,7 @@
  *   await releaseWakeLock();
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useCallback, useEffect, useRef } from "react";
 
 export interface WakeLockApi {
@@ -86,7 +87,7 @@ function useWakeLock(): WakeLockApi {
       });
       return true;
     } catch (e) {
-      console.warn(`[wakelock] request failed: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[wakelock] request failed: ${errorMessage(e)}`);
       return false;
     }
   }, []);
@@ -100,7 +101,7 @@ function useWakeLock(): WakeLockApi {
       console.debug("[wakelock] released by app");
       return true;
     } catch (e) {
-      console.warn(`[wakelock] release failed: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[wakelock] release failed: ${errorMessage(e)}`);
       return false;
     }
   }, []);

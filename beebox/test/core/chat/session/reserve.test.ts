@@ -40,7 +40,7 @@ async function makeChat(opts?: ChatSessionRegistryOptions) {
   const registry = new ChatSessionRegistry(box.root, {
     backend,
     buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
-    ...(opts ?? {}),
+    ...opts,
   });
   return {
     box, backend, registry,

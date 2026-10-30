@@ -80,8 +80,25 @@ struct QuickChatShortcut: Codable, Equatable, Sendable {
 
 /// The `quickChat.home` answer: what the box screen shows.
 struct QuickChatHome: Codable, Equatable, Sendable {
+    /// Set only by the hub, answering from a sleeping box's snapshot
+    /// (contract §5.11): the box's own last answer, as of `savedAt`.
+    struct Asleep: Codable, Equatable, Sendable {
+        var savedAt: String
+
+        var savedDate: Date? {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatter.date(from: savedAt) {
+                return date
+            }
+            formatter.formatOptions = [.withInternetDateTime]
+            return formatter.date(from: savedAt)
+        }
+    }
+
     var open: [QuickChatView]
     var recentlySent: [QuickChatView]
     var recentChats: [QuickChatRecentChat]
     var shortcuts: [QuickChatShortcut]
+    var asleep: Asleep?
 }

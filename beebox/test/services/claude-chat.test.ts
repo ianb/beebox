@@ -58,6 +58,7 @@ void test("A chat session loads the box's project settings (AGENTS.md, rules, sk
       "/.claude/AGENTS.md",
       "/.claude/rules/**",
     ],
+    attribution: { commit: "", pr: "", sessionUrl: false },
   });
 
   // Claude Code's built-ins that act through the host's Claude account are off in

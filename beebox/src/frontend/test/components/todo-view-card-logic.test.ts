@@ -56,7 +56,7 @@ function at(line: number): TodoRowItem["locator"] {
 }
 
 function reduction(extra?: Partial<TodoReduction>): TodoReduction {
-  return { open: 0, done: 0, dropped: 0, parked: 0, onPlate: 0, escalated: 0, next: null, ...(extra ?? {}) };
+  return { open: 0, done: 0, dropped: 0, parked: 0, onPlate: 0, escalated: 0, next: null, ...extra };
 }
 
 /** Nested `text > child, child` for a forest. */
@@ -309,7 +309,7 @@ void test("later is open minus onPlate — the reduction carries no separate qui
   t.check(matchingItemCount(agentResult), 2);
 });
 
-// ## The dated strip
+// ## The dated todos
 //
 // Every open matching item that carries a date, across every row, in date order.
 // `due` wins over `start` because it is the harder of the two, and the strip

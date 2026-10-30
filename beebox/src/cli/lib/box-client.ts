@@ -40,20 +40,22 @@ export interface BoxClientUnavailable {
  * or the reason one cannot be built.
  *
  * Deliberately no fallback: a client that guessed at `localhost:3210` would
- * reach whichever box answered there.
+ * reach whichever box answered there. `env` defaults to this process's; the
+ * scheduler pass passes the values `boxServerEnv` computed for the box.
  */
-export function boxClient(): Result<TRPCClient<AppRouter>, BoxClientUnavailable> {
+export function boxClient(env?: Partial<Record<(typeof REQUIRED_VARS)[number], string | undefined>>): Result<TRPCClient<AppRouter>, BoxClientUnavailable> {
+  const source = env ?? process.env;
   const missing = REQUIRED_VARS.find((name) => {
-    const value = process.env[name];
+    const value = source[name];
     return value === undefined || value === "";
   });
   if (missing !== undefined) return err(unavailable(missing));
 
   // Re-read rather than carry them out of the loop: the check above is the
   // only place that decides a name is present, so there is one rule, not two.
-  const serverUrl = (process.env.BBX_SERVER_URL ?? "").replace(/\/+$/, "");
-  const boxName = process.env.BBX_BOX_NAME ?? "";
-  const token = process.env.BBX_AGENT_TOKEN ?? "";
+  const serverUrl = (source.BBX_SERVER_URL ?? "").replace(/\/+$/, "");
+  const boxName = source.BBX_BOX_NAME ?? "";
+  const token = source.BBX_AGENT_TOKEN ?? "";
   return ok(
     createTRPCClient<AppRouter>({
       links: [

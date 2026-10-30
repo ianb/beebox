@@ -37,8 +37,8 @@
  */
 
 import { promises as fs } from "node:fs";
+import { boxRelativeDoc } from "../lib/box-containment.js";
 import {
-  boxRelativeDoc,
   cardRefProbe,
   dossierLinkProbe,
   planCanonicalRef,
@@ -56,6 +56,7 @@ import { assertNever } from "../shared/invariant.js";
 import { isTrashedCard } from "../lib/paths/core.js";
 import type { ValidationIgnore } from "./validation-ignore.js";
 import { formatLinkDestination } from "./body-refs.js";
+import { plural } from "../shared/plural.js";
 
 export interface CanonicalizeReport {
   /** Card/view refs rewritten to their box-root form, same target as before. */
@@ -295,11 +296,6 @@ function spliceUrl(
   const replacement = angled ? newUrl : formatLinkDestination(newUrl, { angled: false });
   const newSpan = span.slice(0, at) + replacement + span.slice(at + link.url.length);
   return line.slice(0, link.index) + newSpan + line.slice(link.index + link.length);
-}
-
-/** `n thing` / `n things`. */
-function plural(count: number, noun: string): string {
-  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 /**

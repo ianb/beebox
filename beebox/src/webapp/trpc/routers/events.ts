@@ -21,6 +21,7 @@ import { ensureBoxWatcher } from "../../../core/box/file-watcher.js";
 import { resolveViewsDir } from "../../views/compiler/compile.js";
 import { getTurnBuffer } from "../../../core/chat/turn-buffer.js";
 import { router, publicProcedure } from "../procedures.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 /**
  * The bus payload type map, surfaced at the `@backend` boundary for the
@@ -66,7 +67,7 @@ export const eventsRouter = router({
       let additionalRoots: Array<{ path: string; eventPathPrefix: string }> = [];
       try {
         const { viewsDir } = await resolveViewsDir(opts.ctx.boxRoot);
-        const viewsOutsideBoxRoot = path.relative(opts.ctx.boxRoot, viewsDir).startsWith(`..${path.sep}`);
+        const viewsOutsideBoxRoot = !isWithin(opts.ctx.boxRoot, viewsDir);
         if (viewsOutsideBoxRoot) {
           additionalRoots = [{ path: path.dirname(viewsDir), eventPathPrefix: "src" }];
         }

@@ -9,10 +9,12 @@
  * `.beebox/quick-chat/<id>.json.lock`, whatever the state.
  */
 
-import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { withFileLock } from "../../../lib/file-lock.js";
+import { readJsonIfPresent } from "../../../lib/json-state.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { invariant } from "../../../shared/invariant.js";
 import { parseQuickChatRecord, type QuickChatRecord } from "./quick-chat-record.js";
@@ -39,11 +41,6 @@ function isOpen(record: QuickChatRecord): boolean {
   return record.state === "needs-choice" || record.state === "sending";
 }
 
-async function readJson(file: string): Promise<unknown> {
-  try { return JSON.parse(await readFile(file, "utf8")); }
-  catch (error) { if (errnoCode(error) === "ENOENT") return undefined; throw error; }
-}
-
 /**
  * Read one record. A closed record that is final wins: a crash between
  * writing it and removing the open copy must not revive the open one. An
@@ -51,10 +48,10 @@ async function readJson(file: string): Promise<unknown> {
  * open copy written since.
  */
 export async function readQuickChatRecord(boxRoot: string, id: string): Promise<QuickChatRecord | null> {
-  const closedRaw = await readJson(closedRecordPath(boxRoot, id));
+  const closedRaw = await readJsonIfPresent(closedRecordPath(boxRoot, id), z.unknown());
   const closed = closedRaw === undefined ? null : parseQuickChatRecord(closedRaw);
   if (closed !== null && !isOpen(closed)) return closed;
-  const openRaw = await readJson(openRecordPath(boxRoot, id));
+  const openRaw = await readJsonIfPresent(openRecordPath(boxRoot, id), z.unknown());
   return openRaw === undefined ? closed : parseQuickChatRecord(openRaw);
 }
 

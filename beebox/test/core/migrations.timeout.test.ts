@@ -16,11 +16,13 @@ import type { Agent, AgentInvokeOptions, StructuredAgentResult } from "../../src
 import { errnoCode } from "../../src/shared/error-guards.js";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
+import { NOOP_MIGRATION, registerNoopMigration } from "./noop-migration.js";
 import { sweepMigrations } from "../../src/core/migration-sweep.js";
 import { runMigrationProcess } from "../../src/core/migration-process.js";
 import { boxMaintenanceStatus, acquireBoxWork } from "../../src/lib/box-maintenance/admission.js";
 
-const PROBE = "annex-config-2026-08";
+registerNoopMigration();
+const PROBE = NOOP_MIGRATION;
 async function preparedBox() {
   const box = await makeTmpBox({ git: true });
   await box.write(MANIFEST_PATH, MIGRATIONS.filter((m) => m.name !== PROBE).map((m) => JSON.stringify({ name: m.name, "applied-at": "2026-01-01T00:00:00Z" })).join("\n") + "\n");

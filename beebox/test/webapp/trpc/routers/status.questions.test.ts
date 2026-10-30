@@ -77,6 +77,7 @@ void test("line 46", async (t) => {
       options: undefined,
       learning: undefined,
       answer: undefined,
+      provisional: undefined,
       askedAt: undefined,
     },
   ]);
@@ -85,4 +86,56 @@ void test("line 46", async (t) => {
   // for a caller to link to it — even though none of the typed question fields
   // resolved:
 
+});
+
+// ## A decided question carries its `provisional` decision
+//
+// `provisional` is what the box decided in place of an answer; the list passes it
+// through so the Questions page can label the card "The box decided for now".
+void test("A decided question carries its `provisional` decision", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.write("_bookkeeping/questions/Receipt.question.card", `---
+prompt: Where does this receipt go?
+input:
+  type: text
+dismissed-at: 2026-10-01T09:00:00-07:00
+provisional:
+  decision: Filed it under Taxes
+  reasoning: Same vendor as last year
+  undo: Move it back to the inbox
+  decided-at: 2026-10-01T09:00:00-07:00
+---
+`);
+
+  const { items } = await contextFor(box).questions();
+  t.check(items, [
+    {
+      path: `${box.root}/_bookkeeping/questions/Receipt.question.card`,
+      relativePath: "_bookkeeping/questions/Receipt.question.card",
+      name: "Receipt",
+      type: "question",
+      subdir: undefined,
+      state: "dismissed",
+      prompt: "Where does this receipt go?",
+      memo: undefined,
+      inputType: "text",
+      options: undefined,
+      learning: undefined,
+      answer: undefined,
+      provisional: {
+        decision: "Filed it under Taxes",
+        reasoning: "Same vendor as last year",
+        undo: "Move it back to the inbox",
+        "decided-at": "2026-10-01T09:00:00-07:00",
+      },
+      askedAt: undefined,
+    },
+  ]);
 });

@@ -35,6 +35,7 @@ where new material goes and how it is named.
 | Box work: running against the test box, throwaway boxes, and production from the dev repo | [box-work](box-work.md) |
 | Agent guide: the always-loaded guide, its ledger of rules, and the bin test | [agent-guide](agent-guide.md) |
 | Secrets: the machine-level store and grants | [secrets](secrets.md) |
+| Encrypted box backups and recovery | [backups](backups.md) |
 | Procedures: multi-step workflows as cards | [procedure-implementation](procedure-implementation.md) |
 | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
 | Notifications, reminders, and watches (`bbx notify`, `notify:` schedules, `bbx changes`, `bbx judge`) | [notifications](notifications.md) |
@@ -43,6 +44,7 @@ where new material goes and how it is named.
 | Questions: the question subsystem | [questions](questions.md) |
 | Landmarks: the navigation surface | [landmarks](landmarks.md) |
 | Model policy: which engine and model a box thinks with | [model-policy](model-policy.md) |
+| The pi engine: open-source harness on added OpenRouter models | [pi-engine](pi-engine.md) |
 | Publishing: the managed static-site publisher, operator side | [publishing](publishing.md) |
 | Client debug log | [client-debug-log](client-debug-log.md) |
 | Data-source tagging in the UI | [data-source-tagging](data-source-tagging.md) |

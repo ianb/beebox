@@ -13,7 +13,7 @@ import { getChatRuntime, type ChatRuntime } from "../../../chat-runtime.js";
 import { chatModelFileForSession, loadCurrentModel } from "../../../../core/chat/session/state.js";
 import { loadBoxModel } from "../../../../core/box/config.js";
 import { boxDefaultModel, liveModelState, resolveEffectiveModel, type ModelSource } from "../../../../core/model-policy.js";
-import { updateBoxConfigFields } from "../../../box-config-write.js";
+import { PiDefaultModelRequiredError, updateBoxConfigFields } from "../../../box-config-write.js";
 import { resolveChatEngine, resolveRecordedChatEngine } from "../../../../core/chat/session/engine.js";
 import { glmKeyUsable } from "../../../../core/glm-key.js";
 import { loadAddedModels, loadAgentEngine, loadEnabledEngines } from "../../../../core/box/config.js";
@@ -22,7 +22,7 @@ import type { AgentEngine } from "../../../../core/box/config.js";
 import { isChatModelAllowed, type AddedModel } from "../../../../shared/chat-models.js";
 import { openRouterKeyUsable } from "../../../../core/openrouter.js";
 import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMismatchError } from "../../../../core/chat/session/delete/apply/core.js";
-import { setChatHuskStatus } from "../../../../core/chat/husk.js";
+import { commitChatHusk, setChatHuskStatus } from "../../../../core/chat/husk.js";
 import { sdkSessionIdSchema } from "../../../../core/chat/session/id.js";
 import { archiveChatSession } from "../../../../core/chat/session/archive.js";
 import { SessionDeletingError } from "../../../../core/chat/session/registry/core.js";
@@ -226,6 +226,11 @@ export const chatControlProcedures = {
       if (huskPath === null) {
         throw new TRPCError({ code: "NOT_FOUND", message: "This chat has no card to mark" });
       }
+      try {
+        await commitChatHusk(ctx.boxRoot, huskPath);
+      } catch (e) {
+        console.warn(`chat-mark-done: could not commit ${huskPath}:`, e);
+      }
       return { huskPath, done: input.done };
     } catch (error) {
       if (error instanceof TRPCError) throw error;
@@ -314,7 +319,11 @@ export const chatControlProcedures = {
         message: `Model ${input.model} is unavailable for ${engine} chats`,
       });
     }
-    const result = await updateBoxConfigFields({ boxRoot: ctx.boxRoot, agentModel: input.model });
+    // A pi box cannot clear its default: pi has no model of its own.
+    const result = await updateBoxConfigFields({ boxRoot: ctx.boxRoot, agentModel: input.model }).catch((e: unknown) => {
+      if (e instanceof PiDefaultModelRequiredError) throw new TRPCError({ code: "BAD_REQUEST", message: e.message, cause: e });
+      throw e;
+    });
     if (result.commitError) {
       console.error(`[chat] the box model was saved but its Git commit failed for ${ctx.boxRoot}:`, result.commitError);
     }

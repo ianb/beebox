@@ -5,7 +5,7 @@
  */
 
 import { useRef } from "react";
-import TextareaAutosize from "react-textarea-autosize";
+import { CloseButton } from "../ui/CloseButton";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
@@ -21,7 +21,7 @@ export function MobileTextareaRow({
   isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend,
-  onPaste, onDrop, includeControlIds, placeholder,
+  onPaste, onDrop, includeControlIds,
 }: ComposerRowProps & {
   /** Omit authored addresses when rendered repeatedly in a development gallery. */
   includeControlIds?: boolean;
@@ -36,9 +36,10 @@ export function MobileTextareaRow({
   const noteTyped = useComposerCaret({ textareaRef, text: input });
   useTranscriptAutoscroll({ isTranscribing, textareaRef, transcriptTick: transcription.transcript });
 
+  const sendLabel = isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)";
   return (
     <div className="flex gap-2 items-center">
-      <TextareaAutosize
+      <textarea
         // `-mobile`, not the desktop row's address: this row and the button
         // bar's row can be in the DOM at the same time (the bar stays mounted
         // under `hidden sm:block` while typing), so they cannot share one id.
@@ -51,24 +52,19 @@ export function MobileTextareaRow({
         onDrop={onDrop}
         readOnly={isTranscribing}
         enterKeyHint="enter"
-        placeholder={isTranscribing ? "Listening..." : placeholder ?? "Type a message..."}
+        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: true, isTranscribing })}
-        minRows={2}
-        maxRows={8}
         autoFocus
       />
       {isTranscribing ? (
         <>
-          <button
+          <CloseButton
             id={hasControlIds ? "bbx-composer-dictation-cancel-mobile" : undefined}
             onClick={handleCancelTranscription}
-            className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
-            title="Cancel (Esc)"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            label="Cancel dictation (Esc)"
+            ink
+            className="flex-shrink-0"
+          />
           <button
             id={hasControlIds ? "bbx-composer-dictation-edit-mobile" : undefined}
             onClick={() => {
@@ -83,6 +79,7 @@ export function MobileTextareaRow({
               clearDraft();
             }}
             className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+            aria-label="Edit before sending"
             title="Edit before sending"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,7 +111,8 @@ export function MobileTextareaRow({
         }}
         // A live segment can always be sent (live text may be paused; HQ supplies the words).
         disabled={sendDisabledReason !== undefined || !(segmentCapturing(transcription.state) || (isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim())}
-        title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
+        label={sendLabel}
+        title={sendDisabledReason ?? sendLabel}
       />
     </div>
   );

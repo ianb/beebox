@@ -25,6 +25,7 @@ import { lintSchedules, shebangKind, shebangProblem, type LintFinding } from "./
 import { INVALID_SCHEDULE_ALERT_TITLE, tick } from "./lib/schedules-tick.js";
 import { readAlerts, writeAlert } from "./lib/schedules-store.js";
 import type { DesktopNotification, RunnerDeps } from "./lib/schedules-alerts.js";
+import { binTsArgs } from "./lib/bin-ts.js";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -249,7 +250,7 @@ test("a TypeScript script that lives under the repo's own schedules/ is linted b
 const CLI = path.resolve(import.meta.dirname, "schedules.ts");
 
 async function runLint(input: { schedulesRoot: string; args: string[] }): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  const result = await execa("node", ["--import", "tsx", CLI, "lint", ...input.args], {
+  const result = await execa(process.execPath, binTsArgs(CLI, ["lint", ...input.args]), {
     reject: false,
     cwd: REPO_ROOT,
     env: { ...process.env, BBX_SCHEDULES_DIR: input.schedulesRoot },

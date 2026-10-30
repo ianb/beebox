@@ -330,11 +330,11 @@ final class PushNotificationTests: XCTestCase {
         XCTAssertEqual(render("chat:new"), "/family/chat?new=1&notification=n7Qx")
         XCTAssertEqual(
             render("card:_content/pets/pepper-shots.todo.card"),
-            "/family/browse/_content/pets/pepper-shots.todo.card"
+            "/family/views/_content/pets/pepper-shots.todo.card"
         )
         XCTAssertEqual(
             render("question:_bookkeeping/questions/Color.question.card"),
-            "/family/browse/_bookkeeping/questions/Color.question.card"
+            "/family/views/_bookkeeping/questions/Color.question.card"
         )
         XCTAssertEqual(
             render("admin:google-services"),
@@ -346,7 +346,14 @@ final class PushNotificationTests: XCTestCase {
     func testCardPathNormalizesFromTheBoxRoot() {
         XCTAssertEqual(
             render("card:/_content/./notes/Plan.doc.card"),
-            "/family/browse/_content/notes/Plan.doc.card"
+            "/family/views/_content/notes/Plan.doc.card"
+        )
+    }
+
+    func testCardPathSegmentsAreEncoded() {
+        XCTAssertEqual(
+            render("card:_content/notes/Soup #2.doc.card"),
+            "/family/views/_content/notes/Soup%20%232.doc.card"
         )
     }
 
@@ -378,8 +385,8 @@ final class PushNotificationTests: XCTestCase {
             "https://box.example.com/family/chat?nativeComposer=1&session=8f2c-41aa"
         )
         XCTAssertEqual(
-            box.url(forBoxPath: "browse/_content/notes/Plan.doc.card")?.absoluteString,
-            "https://box.example.com/family/browse/_content/notes/Plan.doc.card"
+            box.url(forBoxPath: "views/_content/notes/Plan.doc.card")?.absoluteString,
+            "https://box.example.com/family/views/_content/notes/Plan.doc.card"
         )
         XCTAssertEqual(box.url(forBoxPath: "")?.absoluteString, "https://box.example.com/family/")
     }

@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../../shared/error-guards.js";
 import { StagingSessionSchema, stagingSessionDir, type StagingSession } from "./staging-schema.js";
+import { writeFileAtomic } from "../../lib/atomic-write.js";
 
 function sessionJsonPath(boxRoot: string, id: string): string {
   return path.join(stagingSessionDir(boxRoot, id), "session.json");
@@ -62,7 +63,5 @@ export async function writeStagingSession(opts: {
 }): Promise<void> {
   const { boxRoot, session } = opts;
   const jsonPath = sessionJsonPath(boxRoot, session.id);
-  const tmpPath = path.join(path.dirname(jsonPath), `session.json.tmp-${process.pid}-${crypto.randomUUID()}`);
-  await fs.writeFile(tmpPath, JSON.stringify(session, null, 2));
-  await fs.rename(tmpPath, jsonPath);
+  await writeFileAtomic(jsonPath, { content: JSON.stringify(session, null, 2), createDir: false });
 }

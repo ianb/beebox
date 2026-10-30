@@ -27,6 +27,8 @@ void test("getCommand/listCommands read commands.ts's registry directly, and com
     "connector-sync",
     "answer",
     "dismiss",
+    "question-decide",
+    "question-reraise",
     "trash",
     "move",
     "procedure-run",

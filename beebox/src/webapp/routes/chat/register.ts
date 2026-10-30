@@ -23,7 +23,7 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { type ChatSession, type TaskEvent } from "../../../core/chat/session/run/core.js";
+import { type ChatSendInput, type ChatSession, type TaskEvent } from "../../../core/chat/session/run/core.js";
 import type { LiveTaskEntry } from "../../../core/chat/message-types.js";
 import { ChatSessionRegistry } from "../../../core/chat/session/registry/core.js";
 import type { ChatBackend } from "../../../services/claude-chat-types.js";
@@ -34,7 +34,7 @@ import type { EventBus } from "../../../core/event-bus/core.js";
 import type { TtsService } from "../../../services/tts.js";
 import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../../core/chat/schedules/core.js";
 import { fireChatSchedule } from "./schedule-fire.js";
-import { escapeXmlAttr } from "./helpers.js";
+import { escapeXmlAttr } from "../../../shared/self-note.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { notifyTurnCallouts } from "../../../core/chat/callout-tags.js";
 import { registerChatUploadRoutes } from "./uploads.js";
@@ -171,6 +171,20 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
         sessionId: session.getSessionId(),
         timestamp: new Date().toISOString(),
       });
+    });
+
+    // A stop dropped queued messages the box had accepted: record each one the
+    // client can name, so the chat shows it as not delivered instead of queued.
+    // Self-notes carry no id and drop unrecorded, as nobody is waiting on them.
+    session.on("queue-dropped", (dropped: ChatSendInput[]) => {
+      for (const { messageId } of dropped) {
+        if (messageId === undefined) continue;
+        eventBus.emit("chat-user-message-undelivered", {
+          sessionId: session.getSessionId(),
+          messageId,
+          timestamp: new Date().toISOString(),
+        });
+      }
     });
 
     // Title the chat once its first exchange or two say what it is about,

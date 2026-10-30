@@ -1,3 +1,4 @@
+import BeeBoxMacCore
 import Containerization
 import ContainerizationExtras
 import Foundation
@@ -20,11 +21,15 @@ final class BoxRuntime: ObservableObject {
         let startedAt: Date
     }
 
-    @Published private(set) var phase: Phase = .stopped
+    /// Set here and by BoxRuntime+Engine (the update steps and rollback).
+    @Published var phase: Phase = .stopped
     @Published private(set) var memorySummary = ""
     @Published private(set) var progress: Progress?
     /// The last completed start or stop and how long it took.
     @Published private(set) var lastCompleted: (operation: TimedOperation, seconds: TimeInterval)?
+    /// The engine image in use and what the last channel check said
+    /// (written by BoxRuntime+Engine).
+    @Published var engine = EngineStatus()
     /// Ticks once a second while an operation is in progress, so the menu's
     /// elapsed time moves.
     @Published private(set) var now = Date()
@@ -44,9 +49,10 @@ final class BoxRuntime: ObservableObject {
         return 3280
     }()
 
-    private var manager: ContainerManager?
+    var manager: ContainerManager?
     private var container: LinuxContainer?
-    private var log: LogWriter?
+    private var backupTask: Task<Void, Never>?
+    var log: LogWriter?
     private var statsTask: Task<Void, Never>?
     private var forwarder: PortForwarder?
     /// Set when the current container's main process exits.
@@ -65,14 +71,33 @@ final class BoxRuntime: ObservableObject {
     var isWanted: () -> Bool = { true }
     private var startTask: Task<Void, Never>?
 
-    func start() {
+    /// - Parameter checkByRequest: the person asked for an engine check; an
+    ///   image that failed here before is tried again.
+    func start(checkByRequest: Bool = false) {
         guard phase == .stopped || isFailed else { return }
-        startTask = Task { await run() }
+        startTask = Task { await run(checkByRequest: checkByRequest) }
+    }
+
+    /// "Check for Engine Updates…": a running box stops first, since the
+    /// image can only change at a start.
+    func checkForEngineUpdate() {
+        Task {
+            if isRunning || progress != nil { await stop() }
+            start(checkByRequest: true)
+        }
     }
 
     func stop() async {
         startTask?.cancel()
         startTask = nil
+        backupTask?.cancel()
+        backupTask = nil
+        await teardown()
+    }
+
+    /// Stop the container and release the forwarder, without cancelling the
+    /// start task that may be calling this (a rollback restarts in place).
+    private func teardown() async {
         statsTask?.cancel()
         statsTask = nil
         // The forwarder stays up until the server has exited: the server's
@@ -147,7 +172,7 @@ final class BoxRuntime: ObservableObject {
         return false
     }
 
-    private func run() async {
+    private func run(checkByRequest: Bool, afterRollback: Bool = false) async {
         do {
             let started = Date()
             begin(.start)
@@ -169,17 +194,29 @@ final class BoxRuntime: ObservableObject {
                 network: try VmnetNetwork()
             )
             try BundleConfig.vminit.write(to: Paths.initfsSource, atomically: true, encoding: .utf8)
+            // Held from here so a failure at any later step can roll an
+            // update back (BoxRuntime+Engine) and stop() can clean up.
+            self.manager = manager
             let source = ImageSource(store: manager.imageStore) { [weak self] line in
                 await MainActor.run { self?.phase = .working(line) }
             }
             try proceed()
-            let (image, _) = try await source.image()
-            try proceed()
-            // Only creating the box makes a first start; an app update's image
-            // download is slow too, but it is still an ordinary start.
-            if !boxIsInitialized() { progress?.operation = .firstStart }
             let log = try LogWriter(url: Paths.log)
             self.log = log
+            // An update left unfinished by an earlier start is settled before
+            // anything else runs on the box.
+            try await recoverUnfinishedUpdate(&manager, source: source, log: log)
+            let selection = try await source.select(byRequest: checkByRequest, offline: afterRollback)
+            try proceed()
+            var image = selection.image
+            if let candidate = selection.candidate {
+                image = try await beginUpdate(&manager, source: source, from: image, to: candidate, log: log) ?? image
+            }
+            await noteEngine(source: source, image: image, selection: selection)
+            try proceed()
+            // Only creating the box makes a first start; an engine download is
+            // slow too, but it is still an ordinary start.
+            if !boxIsInitialized() { progress?.operation = .firstStart }
 
             if !boxIsInitialized() {
                 phase = .working("Creating your box…")
@@ -223,10 +260,12 @@ final class BoxRuntime: ObservableObject {
             let base = URL(string: "http://localhost:\(Self.localPort)/")!
             phase = .working("Waiting for the server…")
             try await waitForServer(base)
+            try await finishUpdate(base)
             appLog("ready in \(String(format: "%.1f", Date().timeIntervalSince(started)))s at \(base)")
             phase = .running(base.appending(path: "box/"))
             finish(succeeded: true)
             watch(container, exit: exit)
+            backupTask = Task { await backupLoop(container, log: log) }
         } catch is StartAbandoned {
             appLog("start abandoned: hosting was turned off or the box was stopped")
             finish(succeeded: false)
@@ -238,6 +277,12 @@ final class BoxRuntime: ObservableObject {
         } catch {
             appLog("start failed: \(error)")
             finish(succeeded: false)
+            if !afterRollback, let rolledBack = await rollBackUpdate(after: error) {
+                appLog("engine update failed; restarting on \(rolledBack)")
+                await teardown()
+                await run(checkByRequest: false, afterRollback: true)
+                return
+            }
             phase = .failed(String(describing: error))
         }
     }
@@ -270,7 +315,7 @@ final class BoxRuntime: ObservableObject {
         }
     }
 
-    private func boxIsInitialized() -> Bool {
+    func boxIsInitialized() -> Bool {
         FileManager.default.fileExists(atPath: Paths.box.appending(path: ".beebox/box.json").path)
     }
 
@@ -284,11 +329,12 @@ final class BoxRuntime: ObservableObject {
         return min(max(quarter, 2.gib()), 4.gib())
     }
 
-    private func create(
+    func create(
         _ manager: inout ContainerManager,
         image: Image,
         log: LogWriter,
-        arguments: [String]?
+        arguments: [String]?,
+        stdout: (any Writer)? = nil
     ) async throws -> LinuxContainer {
         let memory = Self.boxMemory
         return try await manager.create(
@@ -313,8 +359,11 @@ final class BoxRuntime: ObservableObject {
             config.process.environmentVariables += [
                 // Claude writes transcripts under CLAUDE_CONFIG_DIR, not ~/.claude.
                 "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
+                // This VM's home and Claude volume belong to this one box.
+                "BBX_BACKUP_DEDICATED_HOME=1",
+                "BBX_INSTALL_KIND=mac-app",
             ]
-            config.process.stdout = log
+            config.process.stdout = stdout ?? log
             config.process.stderr = log
             if let arguments {
                 config.process.arguments = ["/app/entrypoint.sh"] + arguments
@@ -322,7 +371,7 @@ final class BoxRuntime: ObservableObject {
         }
     }
 
-    private func runOnce(_ manager: inout ContainerManager, image: Image, log: LogWriter, arguments: [String]) async throws {
+    func runOnce(_ manager: inout ContainerManager, image: Image, log: LogWriter, arguments: [String]) async throws {
         try? manager.delete(Self.containerID)
         let container = try await create(&manager, image: image, log: log, arguments: arguments)
         try await container.create()
@@ -356,6 +405,73 @@ final class BoxRuntime: ObservableObject {
         }
         try await relay.start()
         return relay
+    }
+
+    /// Catch up an overdue configured backup while this app hosts the box.
+    /// The CLI checks due state and waits for a quiet box before capture.
+    private func backupLoop(_ container: LinuxContainer, log: LogWriter) async {
+        let statusInterval: Duration = .seconds(900)
+        while !Task.isCancelled, self.container === container {
+            do {
+                let backup = try await runInVM(container, arguments: ["bbx", "engine", "backup", "run", "/data/box", "--scheduled"], log: log, logOutput: false)
+                if backup.exitCode != 0 {
+                    appLog("backup failed (exit \(backup.exitCode)); it will be retried while the app remains open")
+                }
+                try await Task.sleep(for: statusInterval)
+            } catch is CancellationError {
+                return
+            } catch {
+                appLog("backup scheduler probe failed: \(error); see \(Paths.log.path)")
+                do { try await Task.sleep(for: statusInterval) } catch { return }
+            }
+        }
+    }
+
+    private struct VMCommandResult {
+        let exitCode: Int32
+        let stdout: Data
+        let stderr: Data
+    }
+
+    func runBackupCommand(_ command: BackupCommand) async -> BackupCommandResponse {
+        guard let container else {
+            return BackupCommandResponse(exitCode: 1, stdout: "", stderr: "The Bee Box VM is not running. Open Bee Box Desktop and start the box, then retry.\n")
+        }
+        do {
+            let commandLog: LogWriter
+            if let log { commandLog = log }
+            else { commandLog = try LogWriter(url: Paths.log) }
+            let result = try await runInVM(container, arguments: command.engineArguments, log: commandLog, logOutput: true)
+            return BackupCommandResponse(exitCode: result.exitCode, stdout: String(decoding: result.stdout, as: UTF8.self), stderr: String(decoding: result.stderr, as: UTF8.self))
+        } catch {
+            return BackupCommandResponse(exitCode: 1, stdout: "", stderr: "Backup command failed: \(error.localizedDescription)\n")
+        }
+    }
+
+    private func runInVM(_ container: LinuxContainer, arguments: [String], log: LogWriter, logOutput: Bool) async throws -> VMCommandResult {
+        let capture = CaptureWriter(also: logOutput ? log : nil)
+        let errorCapture = CaptureWriter(also: log)
+        let process = try await container.exec("backup-\(UUID().uuidString)") { config in
+            config.arguments = arguments
+            config.user = .init(uid: 1000, gid: 1000, username: "node")
+            config.workingDirectory = "/data/box"
+            config.environmentVariables = [
+                "PATH=\(BackupCommand.guestHome)/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "HOME=\(BackupCommand.guestHome)",
+                "CLAUDE_CONFIG_DIR=/app/claude-config",
+                "BBX_CLAUDE_PROJECTS_DIR=/app/claude-config/projects",
+                "BBX_BACKUP_DEDICATED_HOME=1",
+                "BBX_INSTALL_KIND=mac-app",
+                "BBX_CLI_PREBUILT=1",
+                "COREPACK_ENABLE_DOWNLOAD_PROMPT=0",
+                "COREPACK_HOME=/opt/corepack",
+            ]
+            config.stdout = capture
+            config.stderr = errorCapture
+        }
+        try await process.start()
+        let status = try await process.wait()
+        return VMCommandResult(exitCode: status.exitCode, stdout: Data(capture.text.utf8), stderr: Data(errorCapture.text.utf8))
     }
 
     private func waitForServer(_ base: URL) async throws {
@@ -397,6 +513,8 @@ final class BoxRuntime: ObservableObject {
             let code = await exit.value
             guard let self, self.container === container else { return }
             self.statsTask?.cancel()
+            self.backupTask?.cancel()
+            self.backupTask = nil
             self.container = nil
             self.phase = .failed("the box exited (\(code.map { String($0) } ?? "unknown")); see \(Paths.log.path)")
         }

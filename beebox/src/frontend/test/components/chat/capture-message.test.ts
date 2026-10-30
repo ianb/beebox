@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { parseCaptureWrapper, captureChipLabel } from "../../../src/components/chat/capture-message.js";
+import { parseCaptureWrapper, captureChipLabel, summarizeCaptureContents } from "../../../src/components/chat/capture-message.js";
 import { buildCaptureWrapper } from "../../../../core/capture/prepare/deliver.js";
 import assert from "node:assert/strict";
 
@@ -119,5 +119,33 @@ void test("The compatibility helper returns one model or null, so surrounding wh
     // Neither can trailing prose.
     parseCaptureWrapper(wrapper + " what do you think?"),
     null,
+  );
+});
+
+// ## One wording for a capture's contents
+//
+// The pending bubble, the resume dialog and the delivered chip describe a
+// capture the same way: photos, recordings, files, in that order, and
+// "nothing yet" when empty.
+void test("One wording for a capture's contents", async (t) => {
+  t.check(
+    [
+      summarizeCaptureContents({ photos: 2, audioSegments: 1, files: 0 }),
+      summarizeCaptureContents({ photos: 0, audioSegments: 1, files: 0 }),
+      summarizeCaptureContents({ photos: 0, audioSegments: 0, files: 3 }),
+      summarizeCaptureContents({ photos: 0, audioSegments: 0, files: 0 }),
+    ],
+    ["2 photos, 1 recording", "1 recording", "3 files", "nothing yet"],
+  );
+
+  // The chip knows the recording length, not a count; the length stays in the
+  // recordings' place.
+  t.check(
+    [
+      captureChipLabel({ doc: "x.capture-session.card", images: 2, audio: "0:42", summary: "", partial: false, transcriptionFailed: false }),
+      captureChipLabel({ doc: "x.capture-session.card", images: 0, audio: "0:42", summary: "", partial: false, transcriptionFailed: false }),
+      captureChipLabel({ doc: "x.capture-session.card", images: 0, audio: "0:00", summary: "", partial: false, transcriptionFailed: false }),
+    ],
+    ["Capture — 2 photos, 0:42 audio", "Capture — 0:42 audio", "Capture — nothing yet"],
   );
 });

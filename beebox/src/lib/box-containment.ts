@@ -62,6 +62,27 @@ export function containWithinBox(boxRoot: string, absPath: string): BoxRelativeP
 }
 
 /**
+ * A document's path as the ref algebra wants its `fromPath`: box-relative,
+ * forward slashes. `null` when the path is outside the box or is the box root
+ * itself (a document is never the root).
+ */
+export function boxRelativeDoc(boxRoot: string, absPath: string): string | null {
+  const rel = path.relative(path.resolve(boxRoot), path.resolve(absPath));
+  if (rel === "" || rel === ".." || rel.startsWith(".." + path.sep)) return null;
+  return rel.split(path.sep).join("/");
+}
+
+/**
+ * Whether `child` is `parent` or lies under it. Compares the paths as given
+ * (resolve or realpath them first as the caller needs). A child whose name
+ * starts with two dots (`..notes`) is inside.
+ */
+export function isWithin(parent: string, child: string): boolean {
+  const rel = path.relative(parent, child);
+  return rel !== ".." && !rel.startsWith(".." + path.sep) && !path.isAbsolute(rel);
+}
+
+/**
  * Resolve a box-root-relative ref (`_content/inbox/x`, or the equivalent
  * leading-slash `/_content/inbox/x`) against `boxRoot` and contain it. For sites
  * whose refs are always box-relative (reactor jobs, nav, stale-job cleanup) —

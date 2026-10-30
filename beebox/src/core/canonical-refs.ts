@@ -39,6 +39,7 @@ import { resolveRefExists } from "./ref-exists.js";
 import { extractViewRefs } from "./views/refs.js";
 import { fileExists } from "../lib/file-exists.js";
 import { assertNever } from "../shared/invariant.js";
+import { boxRelativeDoc } from "../lib/box-containment.js";
 
 /**
  * The verdict on one ref:
@@ -194,16 +195,6 @@ export function canonicalIssueMessage(
 }
 
 /**
- * The referring document's path as the shared algebra wants its `fromPath`:
- * box-relative, forward slashes. `null` when the document lies outside the box.
- */
-export function boxRelativeDoc(boxRoot: string, absPath: string): string | null {
-  const rel = path.relative(path.resolve(boxRoot), path.resolve(absPath));
-  if (rel === "" || rel === ".." || rel.startsWith(".." + path.sep)) return null;
-  return rel.split(path.sep).join("/");
-}
-
-/**
  * Non-canonical `cardRef="…"` findings across box-authored views, each prefixed
  * with the view's box-relative path. Views aren't cards, but their refs are
  * resolved as card refs (`views/refs.ts`), so they are classified the same way
@@ -278,20 +269,15 @@ export async function collectDossierCanonicalWarnings(
  * they are different surfaces with different fixers, and collapsing them would
  * hide which one a box's drift lives in.
  */
-export function formatCanonicalSummary(
-  counts: { refs: number; dossierLinks: number },
-  { colors }: { colors: boolean }
-): string {
+export function formatCanonicalSummary(counts: { refs: number; dossierLinks: number }): string {
   const { refs, dossierLinks } = counts;
-  const ESC = "";
-  const yellow = colors ? (s: string) => `${ESC}[33m${s}${ESC}[0m` : (s: string) => s;
   if (refs === 0 && dossierLinks === 0) {
     return "Canonical refs: all refs are box-root-canonical.";
   }
   const refPart = `${String(refs)} non-canonical ref${refs === 1 ? "" : "s"}`;
   const linkPart = `${String(dossierLinks)} non-canonical dossier link${dossierLinks === 1 ? "" : "s"}`;
   return (
-    `Canonical refs: ${yellow(refPart)}, ${yellow(linkPart)} ` +
+    `Canonical refs: ${refPart}, ${linkPart} ` +
     "— rerun with `--canonical --fix` to rewrite the ones whose target exists"
   );
 }

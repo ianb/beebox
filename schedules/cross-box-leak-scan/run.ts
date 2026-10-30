@@ -39,8 +39,8 @@ import { runStaticSweep } from "./static-sweep.js";
 
 const SCHEDULE_DIR = import.meta.dirname;
 const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
-/** The audit and its only local import — everything the prod leg needs. */
-const PROD_AUDIT_FILES = ["host-audit.ts", "box-manifest.ts"] as const;
+/** The audit and its local imports — everything the prod leg needs. */
+const PROD_AUDIT_FILES = ["host-audit.ts", "host-audit-users.ts", "box-manifest.ts"] as const;
 const SCHEDULES_CLI = path.join(REPO_ROOT, "bin", "schedules");
 const DRY_RUN = process.env["SCHEDULE_DRY_RUN"] === "1";
 const PROBE_TEST = path.join(REPO_ROOT, "beebox", "test", "scenarios", "cross-box-probe.test.ts");
@@ -109,7 +109,10 @@ async function runProdHostAudit(): Promise<string[]> {
   const remoteScript = [
     `printf '{"type":"module"}' > ${remoteDir}/package.json`,
     `chown -R ${target.serviceUser} ${remoteDir}`,
-    `sudo -u ${target.serviceUser} -H bash -lc 'cd ${target.installDir} && node --import tsx ${remoteDir}/host-audit.ts'`,
+    // A unit host keeps each box home 0751 and private, so only root can
+    // inspect the layout the per-user checks assert (host-audit-users.ts);
+    // the service user still audits its own home on a host without units.
+    `if [ -d /var/lib/beebox ]; then (cd ${target.installDir} && node --import tsx ${remoteDir}/host-audit.ts --home /home/${target.serviceUser}); else sudo -u ${target.serviceUser} -H bash -lc 'cd ${target.installDir} && node --import tsx ${remoteDir}/host-audit.ts'; fi`,
     "status=$?",
     `rm -rf ${remoteDir}`,
     "exit $status",

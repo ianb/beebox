@@ -14,10 +14,11 @@
  * prefix.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, type InferCardFields, type SummaryAttrs } from "../../exports/cards.js";
-import { titleFromFilename, truncateTitle } from "../../core/file-summary.js";
+import { truncateTitle } from "../../core/file-summary.js";
+import { titleFromFilename } from "../../shared/card-name.js";
 import { mediaVia } from "../../cards/media-via.js";
 
 /** How an image came into the box: `filename.via.channel`. */

@@ -134,8 +134,8 @@ const OUTSIDE_VITE_SHARED_RAW = [
 export default [
   // `test` in roots (boxholder decision, 2026-10-16): test/ is held to the same
   // reviewed ruleset as src/, matching ../../eslint.config.ts. Outside the
-  // roots, files fall through to eslint-config-agent's unreviewed base, whose
-  // extra bans (`??`, inline unions, fs-filename) are not house style.
+  // roots, files get none of the reviewed ruleset (they once fell through to an
+  // unreviewed base with bans that are not house style: `??`, inline unions, fs-filename).
   ...vibeCheck({ react: true, roots: ["src", "test"] }),
   // Base import-boundary ban: every frontend source file. no-restricted-imports
   // does NOT merge across flat configs (last match wins), so any later block
@@ -243,6 +243,8 @@ export default [
       "tap-check/check-whole-value": "error",
       "tap-check/no-voided-check": "error",
       "tap-check/no-tap-assert": "error",
+      // Find controls by id or role + accessible name (docs/testing/check.md, "DOM tests").
+      "tap-check/no-text-locator": "error",
     },
   },
 ];

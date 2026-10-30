@@ -6,8 +6,8 @@
  * callbacks come in as props.
  */
 
-import TextareaAutosize from "react-textarea-autosize";
 import { Dropdown } from "../../ui/Dropdown";
+import { CloseButton } from "../../ui/CloseButton";
 import { MenuItem } from "../../ui/dropdown-menu-item";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
@@ -55,11 +55,14 @@ const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
  * DOM, so the mobile row passes its own address.
  */
 export function ComposerSendButton({
-  id, onClick, disabled, title, size,
+  id, onClick, disabled, label, title, size,
 }: {
   id?: string;
   onClick: () => void;
   disabled: boolean;
+  /** Accessible name: the action ("Send"), never the disabled reason. */
+  label: string;
+  /** Tooltip; the disabled reason when there is one. */
   title: string;
   /** `lg` on the button bar (matches the circle controls), `md` on the mobile drop-up row. */
   size: "lg" | "md";
@@ -71,6 +74,7 @@ export function ComposerSendButton({
       onClick={onClick}
       disabled={disabled}
       className={`flex items-center justify-center ${dim} rounded-full flex-shrink-0 bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
+      aria-label={label}
       title={title}
     >
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,7 +91,7 @@ export function ComposerSendButton({
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds, placeholder,
+  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds,
 }: ComposerRowProps & {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -96,9 +100,10 @@ function DesktopComposerRow({
   includeControlIds: boolean;
 }) {
   const noteTyped = useComposerCaret({ textareaRef, text: input });
+  const sendLabel = isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)";
   return (
     <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
-      <TextareaAutosize
+      <textarea
         id={includeControlIds ? "bbx-composer-input" : undefined}
         ref={textareaRef}
         autoFocus
@@ -109,23 +114,18 @@ function DesktopComposerRow({
         onPaste={onPaste}
         onDrop={onDrop}
         readOnly={isTranscribing}
-        placeholder={isTranscribing ? "Listening..." : placeholder ?? "Type a message..."}
+        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: false, isTranscribing })}
-        minRows={1}
-        maxRows={8}
       />
       {isTranscribing ? (
         <>
-          <button
+          <CloseButton
             id={includeControlIds ? "bbx-composer-dictation-cancel" : undefined}
             onClick={handleCancelTranscription}
-            className="p-2 text-danger hover:text-danger-dark rounded-lg hover:bg-danger-50 flex-shrink-0"
-            title="Cancel (Esc)"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            label="Cancel dictation (Esc)"
+            ink
+            className="flex-shrink-0"
+          />
           <button
             id={includeControlIds ? "bbx-composer-dictation-edit" : undefined}
             onClick={() => {
@@ -137,6 +137,7 @@ function DesktopComposerRow({
               clearDraft();
             }}
             className="p-2 text-coral hover:text-coral-dark rounded-lg hover:bg-coral-50 flex-shrink-0"
+            aria-label="Edit before sending"
             title="Edit before sending"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,7 +172,8 @@ function DesktopComposerRow({
         // A live segment can always be sent: with live text paused its words
         // arrive only from the HQ pass (docs/implemented-plans/resilient-voice-recording.md).
         disabled={sendDisabledReason !== undefined || !(segmentCapturing(transcription.state) || (isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim())}
-        title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
+        label={sendLabel}
+        title={sendDisabledReason ?? sendLabel}
       />
     </div>
   );
@@ -188,7 +190,7 @@ export function ChatInputArea({
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  narrationEnabled, includeControlIds, placeholder,
+  narrationEnabled, includeControlIds, label,
 }: ComposerRowProps & {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   handleKeyDown: (e: React.KeyboardEvent) => void;
@@ -210,6 +212,8 @@ export function ChatInputArea({
   narrationEnabled: boolean;
   /** Omit authored addresses when rendered repeatedly in a development gallery. */
   includeControlIds?: boolean;
+  /** The landmark's name; a gallery showing several composers names each one. */
+  label?: string;
 }) {
   const hasControlIds = includeControlIds !== false;
   // The product composer only: the dev gallery renders many without control ids.
@@ -219,7 +223,7 @@ export function ChatInputArea({
   const input = useInputValue();
   const setInput = useInputStore().set;
   return (
-    <section aria-label="Compose message" className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
+    <section aria-label={label ?? "Compose message"} className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
       <div className="relative flex items-center gap-2">
         {/* Floats above the voice button at the bar's right edge — anchored
             here (not in the textarea rows) so it rides the record/stop
@@ -308,7 +312,6 @@ export function ChatInputArea({
           onPaste={onPaste}
           onDrop={onDrop}
           includeControlIds={hasControlIds}
-          placeholder={placeholder}
         />
 
         {/* Mobile: spacer */}
@@ -319,6 +322,7 @@ export function ChatInputArea({
           id={hasControlIds ? "bbx-composer-keyboard" : undefined}
           onClick={onKeyboard}
           className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
+          aria-label="Type a message"
           title="Type a message"
         >
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">

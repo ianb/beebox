@@ -33,13 +33,14 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "briefing-seed": {
-    current: "e37db1ad67890028e14afab88a5a5f956f64f8123fddee9894e9a66aa971e435",
+    current: "05a9669e0156e6d7160e69222034ac3e9c4154cddee5b50a5ead8e38cea6c6b8",
     superseded: [
       "4e5fc48a9fe8a7e100201b1a3b9efad33fccc1c204334af2543282e13d3bbcfe",
       "ef850476650452469d989cb94c85d1d8b1fa10eee32d3568930cbb12d15489cc",
       "0bd4ee1cba5fbdab3a9ecc2ebedc1fc7ce99577cc77928a5e094d8164de73055",
       "41b51d86bb5d6c4fd789abaa3c124d3afd945c52dc56e262a109ab18d57b72d6",
       "a8e063c6f349a9fffa155d36d4756a81371c2265e63dd2bccfb0e1186aeb0f70",
+      "e37db1ad67890028e14afab88a5a5f956f64f8123fddee9894e9a66aa971e435",
     ],
   },
   "schemas-guide-v2": {

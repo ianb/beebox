@@ -35,6 +35,19 @@ export interface SecretGuide {
 }
 
 const guides: Record<string, SecretGuide> = {
+  "claude-oauth-token": {
+    title: "Claude Code long-lived token",
+    what:
+      "A sign-in for the box's Claude agent that lasts about a year and never refreshes, in place of a `claude auth login` "
+      + "for the box's own user. One token serves every box on a host; a box signed in this way shows the auth method "
+      + "`oauth_token`. The token acts as your Claude subscription, so treat it like a password.",
+    obtainUrl: "https://code.claude.com/docs/en/authentication#generate-a-long-lived-token",
+    obtainSteps: [
+      "On a machine with a browser where Claude Code is installed, run `claude setup-token`",
+      "Approve the sign-in in the browser; the terminal prints the token once, and each box that should run the Claude agent with it needs a grant",
+      "Paste it below",
+    ],
+  },
   glm: {
     title: "Z.ai (GLM) API key",
     what:

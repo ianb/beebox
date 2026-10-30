@@ -29,12 +29,13 @@ bin/browse snapshot -i
   looks wrong.
 - **App actions have checks.** Missing, hidden, zero-size, off-screen, disabled,
   pointer-events-none, or covered targets are refused. A ref that changed hands
-  between the last two snapshots gets a warning, not a refusal; refs on controls
+  between the last two snapshots gets a warning; a `@eN` ref is refused (`stale-ref`) once a click, fill, press, open, or other page-changing command has run since the latest snapshot, so snapshot again first; refs on controls
   without a `bbx-` id get geometry checks only. Other origins pass through to
   upstream without these checks; upstream 0.27.0 reported `✓ Done` even when
   a click reached no actionable target. Verify the resulting state. Report
   refused/covered controls as evidence
   rather than bypassing the obstruction.
+- **Scrolling a pane:** `scroll --selector` uses the first visible match and refuses when all are hidden. `mouse wheel` ignores an earlier `mouse move` (upstream sends it to 0,0); use `scroll --selector`.
 - **Transient state needs a different read.** Default `snapshot` waits for app
   readiness and can miss loading. Before testing loading/optimistic states or
   timing behavior, read [timing and recovery](references/timing-and-recovery.md).

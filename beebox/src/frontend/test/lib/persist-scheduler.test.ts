@@ -31,6 +31,7 @@ function fakeTimers(): SchedulerTimers & { tick(ms: number): void; count(): numb
     },
     tick(ms) {
       now += ms;
+      // oxlint-disable-next-line unicorn/no-useless-spread -- snapshot: a fired fn may re-arm, and Map iteration would visit the new entry
       for (const [id, timer] of [...timers]) {
         if (timer.due <= now) {
           timers.delete(id);

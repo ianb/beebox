@@ -138,8 +138,9 @@ exposes no detach with which to close it.
 ## 5. A completed startup must re-check it's still the current generation before publishing
 
 **Where:** `startWorktree`'s terminal sites in `workstreams-app/src/router/core/worktree-start.ts` —
-`publishGeneration` (the `ready` transition) and `failStart` (the `failed`
-transition) — guarded by `worktrees.get(name) === handle`. (Moved to
+`publishGeneration` (the `ready` transition) and `failStart` and
+`failBeforeSpawn` (the `failed` transition) — guarded by
+`worktrees.get(name) === handle`. (Moved to
 `router-core.ts` from `router.ts` in Phase B, 2026-07-11, then here in the
 2026-08-28 size split.)
 

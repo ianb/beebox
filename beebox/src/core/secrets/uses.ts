@@ -74,6 +74,9 @@ const builtinUses: Record<string, string[]> = {
   anthropic: [
     "Anthropic API calls from box views, through the server-side adapter (the agent itself uses subscription auth, not this key)",
   ],
+  "claude-oauth-token": [
+    "signing the box's Claude agent in — chat, reactor jobs, procedures and scan import on first-party models — in place of a `claude auth login` for the box's user",
+  ],
   replicate: ["Replicate model calls from box views, through the server-side adapter"],
   openrouter: [
     "chat and agent turns on OpenRouter models the owner added in admin (never without that step) — the full conversation, sent to hosts your OpenRouter privacy settings allow",

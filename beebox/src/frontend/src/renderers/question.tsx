@@ -1,6 +1,6 @@
 /**
  * Question card renderer — registers the QuestionCardView component for
- * question cards, so a `/browse/<path>` deep link lands on an answerable
+ * question cards, so a card link (`/views/<path>`) lands on an answerable
  * form (or the recorded answer) instead of the generic frontmatter table.
  */
 

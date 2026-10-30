@@ -15,6 +15,7 @@ import { appendSessionManifest } from "../manifest.js";
 import { runAgent, type RunAgentOptions } from "./run.js";
 import { createCarrier } from "../model-carry.js";
 import { createCodexAgent } from "../codex-agent.js";
+import { createPiAgent } from "./pi-agent.js";
 import { loadAgentEngine } from "../../box/config.js";
 import type {
   AgentInvokeOptions,
@@ -22,6 +23,8 @@ import type {
   StructuredAgentResult,
   AgentResult,
 } from "../types.js";
+import type { AgentEngine } from "../../../shared/agent-models.js";
+import { assertNever } from "../../../shared/invariant.js";
 
 export type {
   AgentInvokeOptions,
@@ -37,6 +40,9 @@ export {
   ensureAgentCommitted,
   type EnsureCommittedOptions,
 } from "./commit.js";
+
+// For the pi live smoke (`src/dev/pi-smoke.ts`), which passes pi's runtime seam.
+export { createPiAgent } from "./pi-agent.js";
 
 // ─── Agent interface ─────────────────────────────────────────────────
 
@@ -156,6 +162,20 @@ export function createClaudeAgent(options: {
   };
 }
 
+/** The batch agent of one engine. */
+function agentFor(engine: AgentEngine, options: Parameters<typeof createAgent>[0]): Agent {
+  switch (engine) {
+    case "claude":
+      return createClaudeAgent(options);
+    case "codex":
+      return createCodexAgent(options);
+    case "pi":
+      return createPiAgent(options);
+    default:
+      return assertNever(engine);
+  }
+}
+
 /**
  * Create an agent that selects the box's configured native harness on first
  * invocation. The selected delegate remains fixed for this Agent instance.
@@ -172,9 +192,7 @@ export function createAgent(options: {
   const resolve = (boxRoot: string): Promise<Agent> => {
     if (delegate !== null) return Promise.resolve(delegate);
     resolving ??= loadAgentEngine(boxRoot).then((engine) => {
-      delegate = engine === "codex"
-        ? createCodexAgent(options)
-        : createClaudeAgent(options);
+      delegate = agentFor(engine, options);
       return delegate;
     });
     return resolving;

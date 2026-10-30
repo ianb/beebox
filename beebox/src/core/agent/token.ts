@@ -22,8 +22,10 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../shared/error-guards.js";
+import { refreshHubMeta } from "../hub-meta.js";
+import { AGENT_TOKEN_RELATIVE_PATH } from "../token-files.js";
 
-const TOKEN_RELATIVE_PATH = ".beebox/agent-token";
+const TOKEN_RELATIVE_PATH = AGENT_TOKEN_RELATIVE_PATH;
 const MIN_TOKEN_LENGTH = 32;
 
 function tokenPath(boxRoot: string): string {
@@ -44,6 +46,8 @@ export function getOrCreateAgentToken(boxRoot: string): string {
   const token = crypto.randomBytes(32).toString("hex");
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${token}\n`, { mode: 0o600 });
+  // The hub accepts this bearer by its hash (`core/hub-meta.ts`).
+  refreshHubMeta(boxRoot);
   return token;
 }
 

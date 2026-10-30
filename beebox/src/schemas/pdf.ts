@@ -24,9 +24,8 @@
  * Existing cards may still have `.avif` page and figure images.
  */
 
-import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
+import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { MediaViaSchema, type MediaVia } from "../cards/media-via.js";
 
 /** Same shape as `file.card`'s `filename:` entry — a pdf card is a superset. */
@@ -190,5 +189,5 @@ export function createPdfTemplate(options: PdfTemplateOptions): string {
   if (Object.keys(metadata).length > 0) fields["metadata"] = metadata;
   if (options.error !== undefined) fields["error"] = options.error;
 
-  return `---\n${stringifyYaml(fields)}---\n${options.body}`;
+  return renderFrontmatterBlock(fields, options.body);
 }

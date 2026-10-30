@@ -12,6 +12,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { makeTestServer } from "../../../../helpers/test-route-server.js";
 import { TEST_SLUG } from "../../../../helpers/test-server.js";
 import { getSessionLogPath } from "../../../../../src/core/chat/session/transcript-paths.js";
+import { SESSION_STORES } from "../../../../../src/core/chat/session/native-store.js";
+import { piSessionsDir } from "../../../../../src/core/pi-sessions.js";
 
 const app = await makeTestServer();
 
@@ -108,4 +110,30 @@ void test("The photograph comes back", async (t) => {
     status(`${SESSION}/entry-1`),
   ]);
   t.check(rejected, [400, 400, 400]);
+
+  // ## A pi chat's photo
+  //
+  // pi keeps its session file under the box and keys entries by `id`, with the
+  // image's bytes and type on the block itself. History hands back a reference
+  // for the stripped photo, and the reference serves it:
+
+  const piSession = "22222222-3333-4444-8555-666666666666";
+  const piFile = path.join(piSessionsDir(app.boxRoot), `2026-10-29T21-33-48-061Z_${piSession}.jsonl`);
+  await mkdir(path.dirname(piFile), { recursive: true });
+  await writeFile(piFile, `${[
+    { type: "session", version: 3, id: piSession, timestamp: "2026-10-29T21:33:48.061Z", cwd: app.boxRoot },
+    { type: "message", id: "a1b2c3d4", parentId: null, timestamp: "2026-10-29T21:33:49.000Z", message: {
+      role: "user", timestamp: 1, content: [{ type: "text", text: "the drawer" }, { type: "image", mimeType: "image/png", data: photoBytes.toString("base64") }],
+    } },
+  ].map((entry) => JSON.stringify(entry)).join("\n")}\n`, "utf-8");
+  const history = await SESSION_STORES.pi.readHistory(app.boxRoot, { sessionId: piSession, slice: { mode: "tail", tail: 5 } });
+  const imageRef = `${piSession}/a1b2c3d4/0`;
+  t.check(history?.entries.map((entry) => entry.content), [[
+    { type: "text", text: "the drawer" }, { type: "image", imageRef, mediaType: "image/png" },
+  ]]);
+  const piPhoto = await fetchMedia(imageRef);
+  t.check(
+    { status: piPhoto.statusCode, contentType: piPhoto.headers["content-type"], bytesMatch: piPhoto.rawPayload.equals(photoBytes) },
+    { status: 200, contentType: "image/png", bytesMatch: true },
+  );
 });

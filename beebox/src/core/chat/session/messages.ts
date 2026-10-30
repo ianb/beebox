@@ -95,7 +95,7 @@ export interface ChatSendInput extends ChatSendContext {
    * Omitted when the transport doesn't know.
    */
   channel?: ChatChannel;
-  // `openCard`, `openQuestion`, `cardActivity`, `cardState`: `ChatSendContext`
+  // `openCard`, `cardActivity`, `cardState`: `ChatSendContext`
   // (`core/chat/card-activity.ts`), the one list of per-send context fields.
   /**
    * The turn carries text the person at the composer did not type (a script's
@@ -104,6 +104,13 @@ export interface ChatSendInput extends ChatSendContext {
    * Sticky across queued sends: one composed input marks the combined turn.
    */
   clientComposed?: true;
+  /**
+   * The client's id for this send (the send body's `messageId`), set on a
+   * queued input so `stop()` can name each message it drops. Not carried into
+   * a combined drain turn (`combineQueuedInputs`); the drain keeps the queued
+   * inputs themselves.
+   */
+  messageId?: string;
 }
 
 /**
@@ -302,10 +309,12 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
  * `total_cost_usd`: the SDK prices every turn as Claude, which overstated
  * OpenRouter spend 5–20× when measured (`docs/implemented-plans/openrouter-chat-models.md`,
  * Track 1 (h)). No figure is better than a wrong one; the real spend is the
- * provider's own.
+ * provider's own. A native backend's result (pi) carries its own harness's
+ * figure and keeps it.
  */
 export function adaptBackendMessage(msg: ChatBackendMessage, { model }: { model: string | null | undefined }): ChatMessage | null {
-  const adapted = "provider" in msg ? msg.message : adaptSdkMessage(msg);
+  if ("provider" in msg) return msg.message;
+  const adapted = adaptSdkMessage(msg);
   if (adapted?.type !== "result" || !isThirdPartyModel(model)) return adapted;
   const { total_cost_usd: _misreported, ...rest } = adapted;
   return rest;

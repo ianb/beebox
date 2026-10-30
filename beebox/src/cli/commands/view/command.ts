@@ -1,7 +1,8 @@
 /**
- * bbx view test - Render an agent-authored view in Node and report.
+ * bbx view check - Render every agent-authored view in Node and report.
  *
- * Compiles the view for the node target (real React, not the browser
+ * Each view renders in a killable child (the hidden `bbx view render-one`),
+ * which compiles the view for the node target (real React, not the browser
  * window-shim), loads the same cards the running app would pass it, renders it
  * once with renderToString, and prints the output — or, on failure, the error
  * with a source-mapped stack. Runs in-process: no server, and it spawns nothing
@@ -11,10 +12,8 @@
  * Note: this executes the box-authored view code in the bbx process (the same
  * code the browser would run). That's acceptable under the box trust model — a
  * box agent already has a shell — but it does mean a pathological view (an
- * infinite loop in the render body, or a stray setInterval) can hang this
- * foreground command. That's a killable hang, not a background orphan; the
- * caller (the agent) interrupts it. v1 deliberately stays in-process rather than
- * isolating the render in a killable child + timeout.
+ * infinite loop in the render body, or a stray setInterval) can hang the
+ * child; `bbx view check` kills it at its timeout.
  *
  * v1 is a synchronous render: renderToString runs the component body once and
  * does NOT run effects. It catches syntax/JSX errors, undefined.map, bad prop
@@ -28,9 +27,7 @@ import * as path from "node:path";
 import { boxSlug as resolveBoxSlug } from "../../../lib/box-slug.js";
 import { promises as fs } from "node:fs";
 import { spawn } from "node:child_process";
-import * as esbuild from "esbuild";
 import { createElement, type ComponentType } from "react";
-import { renderToString } from "react-dom/server";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { compileView, listViews, resolveViewsDir } from "../../../webapp/views/compiler/compile.js";
 import { writeNodeViewModule, boxPackageHost } from "../../../webapp/views/node-view-runtime.js";
@@ -51,14 +48,14 @@ class ViewNotFoundError extends Error {
 
 /**
  * An async ViewProps helper was called during synchronous render. These run
- * only in effects/handlers, which `bbx view test` (v1) does not execute — so a
+ * only in effects/handlers, which the render check (v1) does not execute — so a
  * render-time call is a view bug. Thrown loudly rather than returning empty.
  */
 class ViewHelperDuringRenderError extends Error {
   constructor(helper: string) {
     super(
       `${helper}() was called during render — async helpers only run in effects/handlers, ` +
-        "which 'bbx view test' does not execute (v1 renders the component body once)."
+        "which 'bbx view check' does not execute (v1 renders the component body once)."
     );
     this.name = "ViewHelperDuringRenderError";
   }
@@ -73,7 +70,7 @@ interface LoadedViewModule {
  * mock policy (see file header). The async helpers throw; fileUrl/navigate/
  * reportActivity are synchronous no-ops/strings safe to call during render.
  */
-/** The props `bbx view test` renders a view with; also what view tests render with. */
+/** The props `bbx view check` renders a view with; also what view tests render with. */
 export function buildProps(opts: {
   cards: ViewProps["cards"];
   files: ViewProps["files"];
@@ -113,21 +110,9 @@ export function buildProps(opts: {
   };
 }
 
-/** Strip <script>/<style> from rendered HTML; --raw keeps them. */
-async function postProcess(html: string, { raw }: { raw: boolean }): Promise<string> {
-  if (raw) return html;
-  const { load: cheerioLoad } = await import("cheerio");
-  const $ = cheerioLoad(html);
-  $("script").remove();
-  $("style").remove();
-  return $.html();
-}
-
 interface RenderViewOptions {
   boxRoot: string;
   slug: string;
-  focusPath: string | undefined;
-  raw: boolean;
   allowInvalidCards: boolean;
 }
 
@@ -137,7 +122,7 @@ interface RenderViewOptions {
  * finally. Diagnostics go to stderr, the rendered output to stdout.
  */
 async function renderView(options: RenderViewOptions): Promise<number> {
-  const { boxRoot, slug, focusPath, raw, allowInvalidCards } = options;
+  const { boxRoot, slug, allowInvalidCards } = options;
   const { viewsDir, boxShape } = await resolveViewsDir(boxRoot);
   const viewHost = boxPackageHost(boxShape);
   const viewPath = path.join(viewsDir, `${slug}.tsx`);
@@ -151,19 +136,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
   const { output, meta } = await compileView(viewPath, { target: "node", viewHost });
   const { cards, files, skipped } = await loadViewCards(boxRoot, meta.dependencies);
 
-  // --path sets params.path (it does NOT filter cards — the running app
-  // doesn't either; card-bound views self-filter). Warn if the path isn't among
-  // the loaded cards, since that means the view's globs don't select it.
   const params: Record<string, string> = {};
-  if (focusPath !== undefined) {
-    params.path = focusPath;
-    if (!cards.some((c) => c.path === focusPath)) {
-      process.stderr.write(
-        `Warning: --path ${focusPath} is not among the ${String(cards.length)} card(s) this view's ` +
-          "dependencies select; the view will render without it.\n"
-      );
-    }
-  }
 
   // The compiled module imports `react`/`react/jsx-runtime` as bare specifiers
   // and must resolve them to the SAME instance the host react-dom/server uses
@@ -178,7 +151,6 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     // Import (module evaluation) and render share one diagnostic block so a
     // top-level throw in the view gets the same source-mapped stack a render
     // throw does — both are the same class of authoring bug.
-    let html: string;
     try {
       // eslint-disable-next-line no-restricted-syntax -- dynamic import of a runtime-computed module URL yields an untyped namespace; cast to the known compiled-view contract (validated by the render call that follows)
       const viewMod = (await import(mod.moduleUrl)) as LoadedViewModule;
@@ -189,7 +161,8 @@ async function renderView(options: RenderViewOptions): Promise<number> {
       // dist/view-widgets bundle the view's widgets do (view.ts self-references
       // the package's exports map), so the ViewHostContext identity matches.
       const { NodeViewHostProvider } = await import("beebox/view-widgets");
-      html = renderToString(
+      const { renderToString } = await import("react-dom/server");
+      renderToString(
         createElement(NodeViewHostProvider, { boxSlug, children: createElement(viewMod.default, props) }),
       );
     } catch (e) {
@@ -199,10 +172,8 @@ async function renderView(options: RenderViewOptions): Promise<number> {
       return 1;
     }
 
-    process.stdout.write(await postProcess(html, { raw }) + "\n");
-
     // Cards that matched a dependency glob but failed to load. The live app
-    // omits them silently; a test tool surfaces them as author feedback.
+    // omits them silently; the check surfaces them as author feedback.
     if (skipped.length > 0) {
       process.stderr.write(`\n${String(skipped.length)} card(s) selected by dependencies failed to load:\n`);
       for (const s of skipped) process.stderr.write(`  ${s.path}: ${s.error}\n`);
@@ -230,7 +201,7 @@ export interface ViewCheckResult {
 const DEFAULT_VIEW_CHECK_TIMEOUT_MS = 30_000;
 
 /**
- * Render one view in a killable child process (`bbx view test <slug>`) with a
+ * Render one view in a killable child process (the hidden `bbx view render-one <slug>`) with a
  * hard timeout. A child is the only way to interrupt a pathological view whose
  * render body loops synchronously — an in-process timeout can't fire while the
  * event loop is blocked. SIGKILL guarantees the hang dies. Never rejects:
@@ -245,10 +216,11 @@ function checkOneView(args: {
 }): Promise<ViewCheckResult> {
   const { boxRoot, slug, timeoutMs, allowInvalidCards } = args;
   const bbxBin = path.join(PACKAGE_ROOT, "bin", "bbx");
-  const testArgs = ["view", "test", slug, ...(allowInvalidCards ? ["--allow-invalid-cards"] : [])];
+  const testArgs = ["view", "render-one", slug, ...(allowInvalidCards ? ["--allow-invalid-cards"] : [])];
   return new Promise((resolve) => {
     const child = spawn(bbxBin, testArgs, {
       cwd: boxRoot,
+      stdio: ["ignore", "ignore", "pipe"],
       timeout: timeoutMs,
       killSignal: "SIGKILL",
     });
@@ -257,7 +229,7 @@ function checkOneView(args: {
       stderr += chunk.toString();
     });
     child.on("error", (e) => {
-      resolve({ slug, ok: false, error: `could not run bbx view test: ${e.message}` });
+      resolve({ slug, ok: false, error: `could not run bbx view render-one: ${e.message}` });
     });
     child.on("close", (code, signal) => {
       if (code === 0) {
@@ -267,7 +239,7 @@ function checkOneView(args: {
       const timedOut = signal === "SIGKILL";
       const error = timedOut
         ? `render timed out after ${String(timeoutMs)}ms`
-        : stderr.trim() || `bbx view test exited with code ${String(code ?? "null")}`;
+        : stderr.trim() || `bbx view render-one exited with code ${String(code ?? "null")}`;
       resolve({ slug, ok: false, ...(timedOut ? { timedOut: true } : {}), error });
     });
   });
@@ -364,24 +336,20 @@ const viewCheckCommand = new Command("check")
     }
   });
 
-const viewTestCommand = new Command("test")
-  .description("Render a view in Node and print its output (or the error)")
+const viewRenderOneCommand = new Command("render-one")
+  .description("Internal: render one view for `view check` (exit non-zero on failure)")
   .argument("<slug>", "View slug (the views/<slug>.tsx basename)")
-  .option("--path <cardPath>", "Set params.path (box-relative card path) for a card-bound view")
-  .option("--raw", "Keep <script>/<style> in the rendered HTML")
   .option("--allow-invalid-cards", "Exit 0 even if some selected cards failed to load")
   .action(
     async (
       slug: string,
-      options: { path?: string; raw?: boolean; allowInvalidCards?: boolean }
+      options: { allowInvalidCards?: boolean }
     ) => {
       try {
         const boxRoot = await requireBoxRoot();
         const code = await renderView({
           boxRoot,
           slug,
-          focusPath: options.path,
-          raw: options.raw === true,
           allowInvalidCards: options.allowInvalidCards === true,
         });
         process.exitCode = code;
@@ -391,14 +359,14 @@ const viewTestCommand = new Command("test")
       } finally {
         // Tear down esbuild's service child deterministically — nothing
         // long-lived survives this command.
-        await esbuild.stop();
+        await (await import("esbuild")).stop();
       }
     }
   );
 
 export const viewCommand = new Command("view")
   .description("Work with agent-authored views")
-  .addCommand(viewTestCommand)
+  .addCommand(viewRenderOneCommand, { hidden: true })
   .addCommand(viewCheckCommand)
   .addCommand(viewTypecheckCommand)
   .addCommand(viewLintCommand);

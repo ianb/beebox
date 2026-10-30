@@ -22,6 +22,19 @@ const BINARY_EXTS = new Set<string>([
   ".exe", ".dmg", ".iso", ".bin", ".so", ".dylib",
 ]);
 
+const IMAGE_EXTS = new Set<string>([".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".bmp", ".svg", ".ico"]);
+
+/**
+ * Whether a file name has an image extension. Takes a name as stored, so `?`
+ * and `#` are literal filename characters (`photo#1.png` is an image); callers
+ * that hold a URL strip its query and hash first.
+ */
+export function isImageFileName(name: string): boolean {
+  const dot = name.lastIndexOf(".");
+  if (dot <= 0) return false;
+  return IMAGE_EXTS.has(name.slice(dot).toLowerCase());
+}
+
 export function pathExt(path: string): string {
   const base = path.split("/").pop();
   if (!base) return "";

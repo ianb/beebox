@@ -74,7 +74,7 @@
   background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
   color: #e0f5e9;
 }
-.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material textarea::placeholder { color: #bfe2d8; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material textarea::placeholder { color: #74a29e; }
 /* Enabled sends and the idle mic only; preserve recording and disabled cues. */
 .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
 .bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-composer-mic[data-mic="idle"] {
@@ -164,6 +164,7 @@
    Raw tool details are light plates (chrome.css, .bbx-chat-plate). */
 .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
   --bbx-ink: #e0f5e9;
+  --bbx-danger: #fddadd;
   --bbx-ink-soft: #bfe2d8;
   --bbx-pen: #ffd38b;
 }
@@ -198,6 +199,7 @@
   --bbx-code-ink: #e0f5e9;
   --bbx-paper: #124e53;
   --bbx-ink: #e0f5e9;
+  --bbx-danger: #fddadd;
   --bbx-ink-soft: #bfe2d8;
   --bbx-pen: #ffd38b;
   --bbx-edge: #5caaa4;

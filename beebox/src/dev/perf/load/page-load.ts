@@ -11,6 +11,7 @@ import { z } from "zod";
 import { CdpPage, type CdpConnection } from "./cdp.js";
 import { NetworkLog, type RequestTiming } from "./network-log.js";
 import { OBSERVER_SCRIPT, collectPageMetrics, hasAppMarks, readMark, type PageMetrics } from "./page-metrics.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
 export interface NetworkProfile {
   latencyMs: number;
@@ -62,8 +63,6 @@ class LoginRedirectError extends Error {
     this.name = "LoginRedirectError";
   }
 }
-
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 async function openPage(cdp: CdpConnection): Promise<{ page: CdpPage; dispose: () => Promise<void> }> {
   const { browserContextId } = z.object({ browserContextId: z.string() }).parse(await cdp.send("Target.createBrowserContext", { params: { disposeOnDetach: true } }));

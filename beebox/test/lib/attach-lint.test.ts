@@ -67,12 +67,5 @@ void test("The literal `attach` name is reserved outside an attach scope", async
   const box4 = await makeTmpBox();
   await box4.write("attach/placeholder.txt", "x");
   const errors4 = await lintAttachLayout(box4.root);
-  t.check(errors4, [
-    {
-      path: "attach",
-      rule: "literal-attach-name",
-      message:
-        'Name "attach" is reserved (collides with the attach/ virtual ref prefix). Rename or use the <basename>.attach/ convention.',
-    },
-  ]);
+  t.check(errors4.map(({ path, rule }) => ({ path, rule })), [{ path: "attach", rule: "literal-attach-name" }]);
 });

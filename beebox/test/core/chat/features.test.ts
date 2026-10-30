@@ -13,11 +13,6 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import {
   composeChatAppSnapshot,
-  getDefaults,
-  getFeature,
-  isKnownFeature,
-  isValidValue,
-  listFeatures,
   mergeSeedFeatures,
   parseChatAppDeltas,
   resolveFeatures,
@@ -28,39 +23,8 @@ import {
 // here so they don't pollute test output.
 console.warn = () => {};
 
-// ## Registry lookups
-//
-// The initial registry has three features. All are toggle-shaped with
-// `on`/`off` values.
-void test("The initial registry has three features.", async (t) => {
-  t.check(listFeatures(), [
-    { name: "narration", allowedValues: ["on", "off"], default: "off", uiKind: "toggle", label: "Narration mode" },
-    { name: "prose", allowedValues: ["on", "off"], default: "on", uiKind: "toggle", label: "Show agent prose" },
-  ]);
-
-  t.check(getFeature("nope"), null);
-
-  t.check(isKnownFeature("narration"), true);
-
-  t.check(isKnownFeature("nope"), false);
-
-  t.check(isValidValue("narration", "on"), true);
-
-  t.check(isValidValue("narration", "maybe"), false);
-
-  t.check(isValidValue("nope", "on"), false);
-});
-
 // ## Defaults
 //
-// `getDefaults()` returns the registry's baseline.
-void test("getDefaults() returns the registry's baseline.", async (t) => {
-  t.check(getDefaults(), {
-    narration: "off",
-    prose: "on",
-  });
-});
-
 // `resolveFeatures()` merges stored values over defaults, dropping
 // unknown keys and invalid values silently (with a console warning the
 // caller can ignore).

@@ -164,11 +164,11 @@ async function importPdfSession(
     trailers: { "Created-By": "scan-import" },
   });
 
-  const intakeJobPath = await queueCommittedSessionIntake(ctx.boxRoot, {
+  const intakeJobPaths = await queueCommittedSessionIntake(ctx.boxRoot, {
     items: [sessionCardRelPath],
     description: `Pdf: ${path.basename(args.pdfPath)}`,
   });
-  ctx.writeLine(`\nIntake job: ${intakeJobPath ?? "not created; the next wakeup queues it"}`);
+  ctx.writeLine(`\nIntake jobs: ${intakeJobPaths?.join(", ") ?? "not created; the next wakeup queues it"}`);
   ctx.writeLine(`Session: ${sessionCardRelPath}`);
 
   return {
@@ -179,7 +179,7 @@ async function importPdfSession(
       sessionCardPath: sessionCardRelPath,
       pdfCardPath: `${sessionAttachRelDir}/${cardFilename}`,
       extracted: extraction.ok,
-      intakeJobPath,
+      intakeJobPaths,
     },
   };
 }

@@ -8,6 +8,7 @@
 import type { RouterOutput } from "../../../lib/trpc/client";
 import { cn } from "../../../lib/cn";
 import { idleLabel } from "./idle";
+import { friendlyDate } from "../../ui/FriendlyDate";
 
 type StripRun = RouterOutput["scheduler"]["schedules"]["schedules"][number]["runStrip"][number];
 
@@ -32,7 +33,7 @@ export function RunStrip({ runs }: { runs: StripRun[] }) {
       {described.map(({ run, label, dot }) => (
         <span
           key={run.ts}
-          title={`${new Date(run.ts).toLocaleString()}: ${label}${run.attention ? ", attention" : ""}`}
+          title={`${friendlyDate(run.ts)}: ${label}${run.attention ? ", attention" : ""}`}
           className={cn("inline-block rounded-full", dot, run.attention && "ring-1 ring-warning ring-offset-1")}
         />
       ))}

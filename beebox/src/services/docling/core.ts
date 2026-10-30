@@ -22,6 +22,7 @@ import { err, ok, okVoid, type Result } from "../../shared/result.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import { startAwakeTimeout } from "../../shared/awake-timeout.js";
 import { DOCLING_VERSION } from "./version.js";
+import { truncateTitle } from "../../core/file-summary.js";
 
 /**
  * Docling's own per-document budget, passed as `--document-timeout` (D6). It
@@ -115,7 +116,7 @@ export interface DoclingService {
 
 function condense(text: string): string {
   const flat = text.replaceAll(/\s+/gu, " ").trim();
-  return flat.length > ERROR_DETAIL_LIMIT ? `${flat.slice(0, ERROR_DETAIL_LIMIT)}…` : flat;
+  return truncateTitle(flat, ERROR_DETAIL_LIMIT);
 }
 
 /**

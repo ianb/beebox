@@ -13,6 +13,7 @@ import { trpc } from "../../../lib/trpc/client";
 import { fromDisplayPath, toDisplayPath } from "@shared/display-path";
 import { Button } from "../../ui/Button";
 import { Row } from "../../ui/Row";
+import { Notice } from "../../ui/Notice";
 import { Stack } from "../../ui/Stack";
 import { Hint } from "../../ui/Hint";
 import { Heading } from "../../ui/Heading";
@@ -21,9 +22,7 @@ import { TextField } from "../../ui/fields/field";
 function MutationError({ message }: { message: string | null }) {
   if (message === null) return null;
   return (
-    <div className="p-2 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
-      {message}
-    </div>
+    <Notice tone="warning">{message}</Notice>
   );
 }
 

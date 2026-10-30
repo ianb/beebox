@@ -27,7 +27,8 @@ already owns the subject under another name, and resume that one instead with
 The human's explicit choice or standing preference always wins. With none
 expressed, the executable's bare default applies (`--agent claude`; see
 `--help` for each agent's default model). Ask when the choice is materially
-ambiguous; it affects capability and quota.
+ambiguous; it affects capability and quota (`bin/quota-room` shows each weekly
+window's use against the clock).
 
 - `--agent claude --model claude-opus-5-5`: most implementation and
   well-scoped design work. Whenever Opus is chosen, use 5.5.

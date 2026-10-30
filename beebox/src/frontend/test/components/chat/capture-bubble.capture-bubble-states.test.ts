@@ -16,8 +16,8 @@ import {
   captureBubblePhase,
   captureBubbleCaption,
   captureBubbleAgeMs,
-  captureMediaSummary,
 } from "../../../src/components/chat/capture-bubble.js";
+import { summarizeCaptureContents } from "../../../src/components/chat/capture-message.js";
 
 const NOW = Date.parse("2026-08-21T12:00:00Z");
 const agesAgo = (ms: number) => new Date(NOW - ms).toISOString();
@@ -33,7 +33,7 @@ const bubble = (state: string, ms: number): CaptureBubbleModel => ({
 });
 const faceOf = (model: CaptureBubbleModel) => {
   const age = captureBubbleAgeMs(model, NOW);
-  return `${captureBubblePhase(model, age)}: ${captureBubbleCaption(model, age)}`;
+  return `${captureBubblePhase(model, age)}: ${captureBubbleCaption(model, NOW)}`;
 };
 
 // ## A working capture names its step, and eventually its age
@@ -48,7 +48,7 @@ void test("Preparation takes about a minute.", async (t) => {
 
   t.check(faceOf(bubble("delivering", 5_000)), "working: queued…");
 
-  t.check(faceOf(bubble("preparing", 4 * MINUTE)), "working: still preparing — 4 min");
+  t.check(faceOf(bubble("preparing", 4 * MINUTE)), "working: still preparing — 4m");
 });
 
 // ## Success has a face of its own
@@ -71,11 +71,11 @@ void test("Delivery used to be rendered as the row vanishing, which is indisting
 void test("The abandonment sweep already draws this line:", async (t) => {
   t.check(faceOf(bubble("failed:deliver", 10_000)), "failed-fresh: failed just now");
 
-  t.check(faceOf(bubble("failed:deliver", 20 * MINUTE)), "failed-fresh: failed 20 min ago");
+  t.check(faceOf(bubble("failed:deliver", 20 * MINUTE)), "failed-fresh: failed 20m ago");
 
-  t.check(faceOf(bubble("failed:prepare", 90 * MINUTE)), "failed-aged: failed 2 hr ago");
+  t.check(faceOf(bubble("failed:prepare", 90 * MINUTE)), "failed-aged: failed 1h ago");
 
-  t.check(faceOf(bubble("failed:prepare", 16 * DAY)), "failed-aged: failed 16 days ago");
+  t.check(faceOf(bubble("failed:prepare", 16 * DAY)), "failed-aged: failed Aug 5");
 });
 
 // A failure ages from `lastActivityAt`, not from when the capture was created —
@@ -83,13 +83,13 @@ void test("The abandonment sweep already draws this line:", async (t) => {
 // emphasized for discard on the strength of its age alone, and a retry that just
 // failed would report the age of the original attempt:
 void test("A failure ages from lastActivityAt, not from when the capture was created — o...", async (t) => {
-  t.check(faceOf({ ...bubble("failed:deliver", 20 * DAY), lastActivityAt: agesAgo(2 * MINUTE) }), "failed-fresh: failed 2 min ago");
+  t.check(faceOf({ ...bubble("failed:deliver", 20 * DAY), lastActivityAt: agesAgo(2 * MINUTE) }), "failed-fresh: failed 2m ago");
 });
 
 // A live `failed` event counts as failure even while the query still says the
 // capture is preparing:
 void test("A live failed event counts as failure even while the query still says the cap...", async (t) => {
-  t.check(faceOf({ ...bubble("preparing", 10 * MINUTE), liveStatus: "failed" }), "failed-fresh: failed 10 min ago");
+  t.check(faceOf({ ...bubble("preparing", 10 * MINUTE), liveStatus: "failed" }), "failed-fresh: failed 10m ago");
 });
 
 // ## Without a clock, nothing is claimed
@@ -100,7 +100,7 @@ void test("A live failed event counts as failure even while the query still says
 // discard is a judgement that needs the age to support it.
 void test("The first frame renders before the wall clock is read (and startedAt could in...", async (t) => {
   const noClock = bubble("failed:prepare", 16 * DAY);
-  t.check(`${captureBubblePhase(noClock, null)}: ${captureBubbleCaption(noClock, null)}`, "failed-fresh: failed");
+  t.check(`${captureBubblePhase(noClock, null)}: ${captureBubbleCaption(noClock, 0)}`, "failed-fresh: failed");
 
   t.check(captureBubbleAgeMs({ ...noClock, lastActivityAt: "not a date" }, NOW), null);
 
@@ -122,9 +122,5 @@ void test("A retry or discard that came back with an error takes over the captio
 // Discard deletes staged media that reached no other surface, so the confirmation
 // has to say what it is deleting:
 void test("Discard deletes staged media that reached no other surface, so the confirmati...", async (t) => {
-  t.check(captureMediaSummary(COUNTS), "2 photos, 3 clips, 1 file");
-
-  t.check(captureMediaSummary({ photos: 7, files: 0, audioSegments: 1 }), "7 photos, 1 clip");
-
-  t.check(captureMediaSummary({ photos: 0, files: 0, audioSegments: 0 }), "capture");
+  t.check(summarizeCaptureContents(COUNTS), "2 photos, 3 recordings, 1 file");
 });

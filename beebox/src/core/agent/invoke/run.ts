@@ -7,8 +7,7 @@
  * and translates the outcome into the public `AgentResult` shape.
  */
 
-import { fmt } from "../../../lib/format.js";
-import { buildTimezoneContext } from "../../box/config.js";
+import { buildAgentTimeContext } from "./simulated-clock.js";
 import { buildScriptEnv } from "../../script-env/core.js";
 import { gitMvNudgeHook } from "../../sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../../sdk-binary-path.js";
@@ -190,17 +189,14 @@ function emitRunBanner(
   const { onOutput } = options;
   const { isResume, maxTurns, systemPrompt, tzContext } = context;
   onOutput?.(
-    fmt.dim("$ ") +
-      fmt.cmd("claude-agent-sdk query") +
-      fmt.dim(
-        ` (model=${options.model ?? "default"} maxTurns=${maxTurns}${isResume ? ` resume=${options.resumeSessionId}` : ""})`,
-      ) +
+    "$ claude-agent-sdk query" +
+      ` (model=${options.model ?? "default"} maxTurns=${maxTurns}${isResume ? ` resume=${options.resumeSessionId}` : ""})` +
       "\n",
   );
   if (systemPrompt || tzContext) {
-    onOutput?.(`\n${fmt.dim("System prompt:")}\n${fmt.dim("─".repeat(40))}\n${systemPrompt}${tzContext}\n${fmt.dim("─".repeat(40))}\n\n`);
+    onOutput?.(`\nSystem prompt:\n${"─".repeat(40)}\n${systemPrompt}${tzContext}\n${"─".repeat(40)}\n\n`);
   }
-  onOutput?.(`${fmt.dim("User prompt:")}\n${fmt.dim("─".repeat(40))}\n${options.prompt}\n${fmt.dim("─".repeat(40))}\n\n`);
+  onOutput?.(`User prompt:\n${"─".repeat(40)}\n${options.prompt}\n${"─".repeat(40)}\n\n`);
 }
 
 /**
@@ -257,7 +253,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   const isResume = options.resumeSessionId !== undefined;
   // Sent on resume too: a resumed session must not depend on the SDK having
   // recorded the first run's append.
-  const tzContext = await buildTimezoneContext(boxRoot);
+  const tzContext = await buildAgentTimeContext(boxRoot);
 
   if (dryRun) {
     return {
@@ -280,7 +276,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     if (isThirdPartyModel(options.model)) {
       await providerEnvAdditions({ boxRoot, model: options.model, purpose: "agent-run" });
     } else {
-      await checkClaudeAuth();
+      await checkClaudeAuth({ boxRoot });
     }
   } catch (e) {
     if (e instanceof ClaudeAuthError || e instanceof ProviderSetupError) {

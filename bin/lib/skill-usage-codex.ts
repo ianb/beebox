@@ -22,7 +22,8 @@ import { canonical } from "./skill-usage-catalog.ts";
 import { FAILURE_PATTERNS, HUMAN_PATTERNS, matchingLabels } from "./skill-usage-patterns.ts";
 import { inWindow, recordBriefing, textOf, type ScanContext } from "./skill-usage-scan.ts";
 import { LoadTracker } from "./skill-usage-stats.ts";
-import { codexDayDirs, inRepo, isRecord, readJsonl, str, type Json } from "./transcripts.ts";
+import { isRecord } from "../../beebox/src/shared/is-record.ts";
+import { codexDayDirs, inRepo, readJsonl, str, type Json } from "./transcripts.ts";
 
 const BRIEFING_START = /^(Workstream:|Continue workstream)/;
 const FAILED_OUTPUT = /process exited with code [1-9]|script failed|exit code:? [1-9]|"exit_code":\s*[1-9]/i;

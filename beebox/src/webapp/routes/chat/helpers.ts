@@ -17,7 +17,8 @@ import {
   SUPPORTED_IMAGE_MEDIA_TYPES,
   isSupportedImageMediaType,
 } from "../../../services/claude-chat-content.js";
-import { isActivityKind, type CardStateDetails, type ChatSendContextWithView } from "../../../core/chat/card-activity.js";
+import { isActivityKind, type CardStateDetails } from "../../../core/chat/card-activity.js";
+import type { ChatSendContextWithView } from "../../chat-runtime.js";
 import type { ChatSendInput } from "../../../core/chat/session/run/core.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../../shared/image-orientation.js";
 import { CHAT_CHANNELS, type ChatChannel } from "../../../shared/chat-channel.js";
@@ -90,13 +91,6 @@ export const sendBodySchema = z.object({
    * attribute. Omitted when no card is open.
    */
   openCard: z.string().optional(),
-  /**
-   * Box-relative path of the pending question card the root chat is showing
-   * (its empty state asks it), sent on every message while it is pending and
-   * surfaced to the agent as the `open-question` snapshot attribute. Omitted
-   * when the chat shows none.
-   */
-  openQuestion: z.string().optional(),
   /** Frozen content attention at the send gesture; never a session target. */
   viewContext: attentionSnapshotSchema.optional(),
   /**
@@ -177,15 +171,14 @@ export function resolveChannel(
 
 /**
  * Normalize the companion-pane fields off a send body into the shape
- * `ChatSendInput` wants: `openCard` and `openQuestion` (non-empty paths),
+ * `ChatSendInput` wants: `openCard` (a non-empty path),
  * `cardActivity` (valid kinds only), `cardState` (per-kind detail strings). Everything is filtered
  * defensively at this parse boundary; absent/invalid fields are simply omitted.
  */
 export function extractCardFields(
-  body: Pick<SendBody, "openCard" | "openQuestion" | "cardActivity" | "cardState" | "viewContext">,
+  body: Pick<SendBody, "openCard" | "cardActivity" | "cardState" | "viewContext">,
 ): SendCardFields {
   const out: SendCardFields = {};
-  if (typeof body.openQuestion === "string" && body.openQuestion !== "") out.openQuestion = body.openQuestion;
   if (body.viewContext !== undefined) {
     out.viewContext = body.viewContext;
     if (body.viewContext.focusedRef !== undefined) out.openCard = parseRef(body.viewContext.focusedRef).path;
@@ -222,14 +215,6 @@ export function buildSendInput(
     ...(channel !== undefined ? { channel } : {}),
     ...cardFields,
   };
-}
-
-export function escapeXmlAttr(v: string): string {
-  return v
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }
 
 /**

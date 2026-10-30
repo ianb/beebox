@@ -4,6 +4,7 @@
  */
 
 import type { DropdownTriggerProps } from "../ui/Dropdown";
+import { CaretIcon } from "./PlacePillFace";
 
 /**
  * Chat properties. From `sm:` up the adjacent "Chat" label supplies the
@@ -38,15 +39,6 @@ function ModelGaugeIcon({ drift, offEngine }: { drift: "above" | "below" | "same
         </g>
       )}
       {offEngine ? <path d="m23 1 1.2 3.8L28 6l-3.8 1.2L23 11l-1.2-3.8L18 6l3.8-1.2Z" fill="currentColor" stroke="none" /> : null}
-    </svg>
-  );
-}
-
-/** Menu-opens-here caret, matching the place pill's. */
-function CaretIcon() {
-  return (
-    <svg className="hidden sm:block w-3 h-3 shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
     </svg>
   );
 }

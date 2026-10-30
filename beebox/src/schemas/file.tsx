@@ -11,7 +11,7 @@
  *   inbox/scan-XX.attach/source.attach/tax-return.pdf
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../exports/cards.js";
 import { MediaViaSchema, type MediaVia } from "../cards/media-via.js";

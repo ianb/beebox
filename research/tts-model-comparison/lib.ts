@@ -31,6 +31,8 @@ const modelSchema = z.strictObject({
   id: z.string(),
   /** Display name on the page. */
   name: z.string(),
+  /** The model's part of a take reference (`S-plain-gemini38lite`): lowercase letters and digits. */
+  short: z.string().regex(/^[\da-z]+$/),
   /** Selects the pill color on the page; must be a vendor site/evaluation-tags.ts knows. */
   vendor: z.enum(VENDORS),
   /** The model id sent to the API. */
@@ -44,60 +46,101 @@ const modelSchema = z.strictObject({
 });
 export type Model = z.infer<typeof modelSchema>;
 
+/**
+ * Fixed values a provider documents but does not check: Cartesia answers 200
+ * to any emotion, so a typo would pass silently. Listed at
+ * docs.cartesia.ai/build-with-cartesia/sonic-3/volume-speed-emotion.
+ */
+const CARTESIA_EMOTIONS = [
+  "neutral", "happy", "excited", "enthusiastic", "elated", "euphoric", "triumphant", "amazed", "surprised", "flirtatious", "curious",
+  "content", "peaceful", "serene", "calm", "grateful", "affectionate", "trust", "sympathetic", "anticipation", "mysterious", "angry",
+  "mad", "outraged", "frustrated", "agitated", "threatened", "disgusted", "contempt", "envious", "sarcastic", "ironic", "sad",
+  "dejected", "melancholic", "disappointed", "hurt", "guilty", "bored", "tired", "rejected", "nostalgic", "wistful", "apologetic",
+  "hesitant", "insecure", "confused", "resigned", "anxious", "panicked", "alarmed", "scared", "proud", "confident", "distant",
+  "skeptical", "contemplative", "determined",
+] as const;
+/** MAI styles OpenRouter accepted for the Harper voice (probed 2026-10-24); any other answers 400. */
+const AZURE_STYLES = ["angry", "sad", "excited", "hopeful", "shouting", "whispering", "relieved", "embarrassed", "confused", "determined", "happy", "neutral", "joyful"] as const;
+/** MiniMax's documented emotions (platform.minimax.io, speech-t2a-http). OpenRouter accepts any value. */
+const MINIMAX_EMOTIONS = ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent", "whisper"] as const;
+
+/** One delivery request, in every form a channel takes. A form left out means that channel cannot carry it. */
 const directionSchema = z.strictObject({
+  /** For an instruction field, and as a prose prefix in front of the text. */
   prose: z.string(),
-  tagged: z.string(),
-  emotion: z.record(z.string(), z.string()).optional(),
+  /** The text with free-form bracket tags. */
+  tagged: z.string().optional(),
+  cartesia: z.strictObject({ emotion: z.enum(CARTESIA_EMOTIONS), speed: z.number().optional(), volume: z.number().optional() }).optional(),
+  azure: z.enum(AZURE_STYLES).optional(),
+  minimax: z.enum(MINIMAX_EMOTIONS).optional(),
+  /** The text with Grok's events and spans. */
   grok: z.string().optional(),
-  markup: z.record(z.string(), z.string()).optional(),
+  /** The text with Voxtral's [emotion=…] and [pace=…] tags. */
+  voxtral: z.string().optional(),
 });
+export type Direction = z.infer<typeof directionSchema>;
+
+/** One way to read a clip. Without a direction it is a text variant, which every model reads. */
+const variantSchema = z.strictObject({
+  id: z.string().regex(/^[a-z][\da-z-]*$/),
+  label: z.string(),
+  /** Replaces the clip's text, as when the variant adds Markdown. */
+  text: z.string().optional(),
+  direction: directionSchema.optional(),
+  /** Words that mean Markdown was read aloud ("dash", "asterisk"). */
+  formatting: z.array(z.string()).optional(),
+});
+export type Variant = z.infer<typeof variantSchema>;
 
 const clipSchema = z.strictObject({
+  /** `<code>-<name>`, used in file names. */
   id: z.string(),
+  /** One capital letter, the clip's part of a take reference. */
+  code: z.string().regex(/^[A-Z]$/),
   title: z.string(),
   listenFor: z.string(),
   text: z.string(),
   /** How the non-English words sound, in English spelling, with a gloss. */
   pronounce: z.string().optional(),
-  direction: directionSchema.optional(),
+  variants: z.array(variantSchema).min(1),
 });
 export type Clip = z.infer<typeof clipSchema>;
 
-export const VARIANTS = ["plain", "directed", "markup"] as const;
-export type Variant = (typeof VARIANTS)[number];
+/** The channel of a directed take a model has no channel for: a row with no file. */
+export const NO_CHANNEL = "none available";
 
 const renderSchema = z.strictObject({
   model: z.string(),
   clip: z.string(),
-  variant: z.enum(VARIANTS),
-  repeat: z.number().int().nonnegative(),
-  /** How direction reached the model; "none" for a plain take. */
+  variant: z.string(),
+  /** How direction reached the model; "none" for a text variant, NO_CHANNEL when nothing was sent. */
   channel: z.string(),
-  /** The exact direction-bearing request fields, for directed and markup takes. */
+  /** The exact direction-bearing request fields, " | " between fields. */
   sent: z.string().optional(),
-  /** HTTP status; 0 when the request never completed. */
-  status: z.number().int(),
+  /** HTTP status; 0 when the request never completed. Absent when nothing was sent. */
+  status: z.number().int().optional(),
   error: z.string().optional(),
   ttfbMs: z.number().optional(),
   totalMs: z.number().optional(),
   generationId: z.string().optional(),
   /** Token counts a provider reported (Gemini direct). */
   usage: z.record(z.string(), z.number()).optional(),
-  /** File name in audioDir(). Absent when the render failed. */
+  /** File name in audioDir(). Absent when nothing was sent. */
   file: z.string().optional(),
   audioSec: z.number().optional(),
   rtf: z.number().optional(),
   costUsd: z.number().optional(),
-  /** True when costUsd is list price × characters, not a billed amount. */
+  /** True when costUsd is list price × characters or tokens, not a billed amount. */
   costEstimated: z.boolean().optional(),
   /**
-   * Only the first successful take of each model/clip/variant is transcribed.
-   * The page shows only leakedWords: the other differences were mostly the
-   * transcriber's (numbers as digits, foreign phrases respelled).
+   * The page shows only leakedWords and formattingWords: the other
+   * differences were mostly the transcriber's (numbers as digits, foreign
+   * phrases respelled).
    */
   transcript: z.string().optional(),
   extraWords: z.array(z.string()).optional(),
   leakedWords: z.array(z.string()).optional(),
+  formattingWords: z.array(z.string()).optional(),
   missingWords: z.array(z.string()).optional(),
 });
 export type Render = z.infer<typeof renderSchema>;
@@ -112,17 +155,52 @@ const resultsSchema = z.strictObject({
 });
 export type Results = z.infer<typeof resultsSchema>;
 
+/** The words a variant reads. */
+export function variantText(clip: Clip, variant: Variant): string {
+  return variant.text ?? clip.text;
+}
+
+/** A take's reference on the page and its anchor: `<clip code>-<variant>-<model short name>`. */
+export function reference(params: { clip: Clip; variant: string; model: Model }): string {
+  return `${params.clip.code}-${params.variant}-${params.model.short}`;
+}
+
+/** The source file name of a take, before its extension. */
+export function takeKey(r: Pick<Render, "model" | "clip" | "variant">): string {
+  return `${r.model}__${r.clip}__${r.variant}`;
+}
+
+function unique(values: readonly string[], what: string): void {
+  const seen = new Set<string>();
+  for (const v of values) {
+    if (seen.has(v)) throw new Error(`${what} ${v} appears twice`);
+    seen.add(v);
+  }
+}
+
 export function loadResults(): Results {
   const results = resultsSchema.parse(JSON.parse(readFileSync(RESULTS_PATH, "utf8")));
+  unique(results.models.map((m) => m.id), "model");
+  unique(results.models.map((m) => m.short), "model short name");
+  unique(results.clips.map((c) => c.id), "clip");
+  unique(results.clips.map((c) => c.code), "clip code");
   const models = new Set(results.models.map((m) => m.id));
-  const clips = new Set(results.clips.map((c) => c.id));
+  const clips = new Map(results.clips.map((c) => [c.id, c]));
+  for (const c of results.clips) {
+    if (!c.id.startsWith(`${c.code}-`)) throw new Error(`clip ${c.id} must start with its code ${c.code}-`);
+    unique(c.variants.map((v) => `${c.id} ${v.id}`), "variant");
+  }
   const keys = new Set<string>();
   for (const r of results.renders) {
-    const key = `${r.model}__${r.clip}__${r.variant}__${r.repeat}`;
+    const key = takeKey(r);
     if (!models.has(r.model)) throw new Error(`render ${key} names an unknown model`);
-    if (!clips.has(r.clip)) throw new Error(`render ${key} names an unknown clip`);
+    const clip = clips.get(r.clip);
+    if (clip === undefined) throw new Error(`render ${key} names an unknown clip`);
+    if (!clip.variants.some((v) => v.id === r.variant)) throw new Error(`render ${key} names variant ${r.variant}, which clip ${r.clip} does not have`);
     if (keys.has(key)) throw new Error(`render ${key} appears twice`);
     keys.add(key);
+    if (r.channel === NO_CHANNEL && (r.file !== undefined || r.status !== undefined)) throw new Error(`render ${key} has no channel but has a file or status`);
+    if (r.channel !== NO_CHANNEL && r.status === undefined) throw new Error(`render ${key} has a channel but no status`);
     if (r.file !== undefined && !new RegExp(`^${escapeRegExp(key)}\\.(mp3|wav)$`).test(r.file)) throw new Error(`render ${key} has file ${r.file}`);
   }
   return results;
@@ -160,16 +238,23 @@ function unmatched(a: readonly string[], b: readonly string[]): string[] {
 }
 
 /**
- * Compare a transcript of a take with the clip's text. An extra word that
+ * Compare a transcript of a take with the text it read. An extra word that
  * occurs in the sent direction but not in the text (a tag, a prose prefix)
- * counts as direction that may have been read aloud.
+ * counts as direction that may have been read aloud; an extra word from
+ * `formatting` ("dash", "asterisk") as Markdown read aloud.
  */
-export function transcriptCheck(params: { text: string; transcript: string; sent?: string }): Pick<Render, "extraWords" | "missingWords" | "leakedWords"> {
+export function transcriptCheck(params: { text: string; transcript: string; sent?: string; formatting?: readonly string[] }): Pick<Render, "extraWords" | "missingWords" | "leakedWords" | "formattingWords"> {
   const reference = words(params.text);
   const heard = words(params.transcript);
   const extraWords = unmatched(reference, heard);
   const directionWords = new Set(unmatched(reference, words(params.sent ?? "")));
-  return { extraWords, missingWords: unmatched(heard, reference), leakedWords: extraWords.filter((w) => directionWords.has(w)) };
+  const formatting = new Set((params.formatting ?? []).flatMap(words));
+  return {
+    extraWords,
+    missingWords: unmatched(heard, reference),
+    leakedWords: extraWords.filter((w) => directionWords.has(w)),
+    formattingWords: extraWords.filter((w) => formatting.has(w)),
+  };
 }
 
 /**

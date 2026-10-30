@@ -11,7 +11,7 @@
  *
  * Navigation goes through the view host's `openCard`, as `CardLink` does, so
  * a link opens in whatever surface shows the view (and does nothing in
- * `bbx view test`).
+ * `bbx view check`).
  */
 
 import { useCallback } from "react";

@@ -32,6 +32,7 @@ import { checkBoxRoot } from "../../lib/box-root-check.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
 import { isBoxRootVocabularyName } from "../../shared/box-root-vocabulary.js";
 import { recordHookWarning } from "./warning-cache.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 /**
  * The npm-namespace entries `bbx validate --hook` treats as "editing the
@@ -65,7 +66,7 @@ const NPM_NAMESPACE_ENTRIES = new Set(["package.json", "pnpm-lock.yaml", "packag
  */
 async function checkPackageSurfaceEdit(fp: string, boxRoot: string): Promise<HookValidationResult | null> {
   const rel = path.relative(boxRoot, fp);
-  if (rel === "" || rel.startsWith("..")) return null;
+  if (rel === "" || !isWithin(boxRoot, fp)) return null;
   const relativePath = rel.split(path.sep).join("/");
   const reserved = findReservedNestedSegment(relativePath);
   if (reserved !== null) {
@@ -202,7 +203,7 @@ async function validateHookPathResult(fp: string, sessionId: string | null): Pro
     if ((await loadValidationIgnore(boxRoot)).isIgnored(fp)) return CLEAN_HOOK_VALIDATION;
     const summary = await lintMarkdownFiles([fp], { boxRoot });
     return {
-      feedback: summary.totalErrors === 0 ? null : formatMarkdownResults(summary, { colors: false }),
+      feedback: summary.totalErrors === 0 ? null : formatMarkdownResults(summary),
       hasErrors: summary.totalErrors > 0,
     };
   }
@@ -218,7 +219,7 @@ async function validateHookPathResult(fp: string, sessionId: string | null): Pro
   });
   const parts: string[] = [];
   if (summary.totalErrors > 0 || summary.totalWarnings > 0) {
-    parts.push(formatLintResults(summary, { colors: false }));
+    parts.push(formatLintResults(summary));
   }
   if (stale !== null) parts.push(stale);
   return { feedback: parts.length === 0 ? null : parts.join("\n"), hasErrors: summary.totalErrors > 0 };

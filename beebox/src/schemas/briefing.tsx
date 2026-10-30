@@ -237,7 +237,9 @@ asked for. When I ask for a reminder or to be told when something happens,
 make sure it reaches me wherever I am.`;
 
 /**
- * Seed briefing template for a new box: the stub purpose and the default
+ * Seed briefing template for a new box: the person-facing title (the root
+ * page tile and the card heading show it, not the filename), the stub purpose,
+ * and the default
  * "Reaching me" section. The stock openers a fresh box's empty chat offers
  * are on the root landmark (`STOCK_ROOT_OPENERS` in `landmark.ts`).
  *
@@ -248,6 +250,7 @@ make sure it reaches me wherever I am.`;
 export function createBriefingTemplate(): string {
   return `---
 type: briefing
+title: About this box
 purpose: What this box is for.
 ---
 ${REACHING_ME_DEFAULT}

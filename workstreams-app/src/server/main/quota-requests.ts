@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
 import readline from "node:readline";
 
+import { isRecord } from "../../../../beebox/src/shared/is-record.js";
 import {
   codexRateLimitResult,
-  isRecord,
   type ClaudeUsageResult,
   type CodexRateLimitResult,
 } from "./quota-parse.js";

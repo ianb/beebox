@@ -23,7 +23,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../shared/error-guards.js";
-import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
+import { writeFileAtomicSync } from "../lib/atomic-write.js";
+import { requestScopedLock, withFileLock } from "../lib/file-lock.js";
 import { currentScryptParams, deriveKey, dummyVerify, hashPassword, type StoredScrypt } from "./local-users-scrypt.js";
 import {
   AuthFileCorruptError,
@@ -139,33 +140,14 @@ function serialize(file: AuthFile): string {
   return `${JSON.stringify(file, null, 2)}\n`;
 }
 
-function writeAndSync(opts: { path: string; flags: string; data: string }): void {
-  const fd = fs.openSync(opts.path, opts.flags, 0o600);
-  try {
-    fs.writeSync(fd, opts.data);
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
-  }
-}
-
-/** Crash-safe replace: write a temp sibling, fsync, atomically rename over the target. */
+/** Crash-safe replace (`writeFileAtomicSync`), mode 0600. */
 function writeAuthFile(file: AuthFile): void {
-  const target = authFilePath();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  const tmp = `${target}.tmp-${process.pid}-${crypto.randomBytes(6).toString("hex")}`;
-  writeAndSync({ path: tmp, flags: "w", data: serialize(file) });
-  fs.renameSync(tmp, target);
+  writeFileAtomicSync(authFilePath(), { content: serialize(file), mode: 0o600 });
 }
 
 // --- cross-process lock -----------------------------------------------------
 
-const LOCK_RETRIES = 50;
-const LOCK_RETRY_MS = 100;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const LOCK_WAIT_MS = 5_000;
 
 /**
  * Run a read-modify-write of the auth file under the cross-process lock,
@@ -176,25 +158,16 @@ async function withAuthFileLock<T>(fn: (file: AuthFile | null) => Promise<T> | T
   const lockPath = `${authFilePath()}.lock`;
   // Request-scoped: a short critical section whose callers fail fast (~5 s
   // retry budget), so a crashed holder must clear in seconds, not minutes.
-  const lock = requestScopedLock(lockPath);
   fs.mkdirSync(path.dirname(lockPath), { recursive: true });
-  for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-    try {
-      await acquireLock(lock, { purpose: "local-users" });
-    } catch (e) {
-      if (e instanceof LockHeldError) {
-        await delay(LOCK_RETRY_MS);
-        continue;
-      }
-      throw e;
-    }
-    try {
-      return await fn(loadAuthFile());
-    } finally {
-      await releaseLock(lock);
-    }
-  }
-  throw new AuthFileLockError(lockPath);
+  return withFileLock(
+    {
+      lockPath: requestScopedLock(lockPath),
+      metadata: { purpose: "local-users" },
+      waitMs: LOCK_WAIT_MS,
+      timeoutError: () => new AuthFileLockError(lockPath),
+    },
+    () => fn(loadAuthFile()),
+  );
 }
 
 // --- public API -------------------------------------------------------------

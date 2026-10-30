@@ -26,6 +26,7 @@ import {
   type LogLine,
   type NotificationIntent,
 } from "./intent.js";
+import { truncateTitle } from "../file-summary.js";
 
 const LOG_FILE = "notifications.jsonl";
 const ROTATED_FILE = "notifications.1.jsonl";
@@ -67,10 +68,6 @@ function rotatedLogPath(boxRoot: string): string {
   return path.join(boxRoot, ".beebox", ROTATED_FILE);
 }
 
-function clip(text: string, max: number): string {
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
-}
-
 /**
  * Serialize, shortening the body until the line fits one atomic append. The
  * other fields are bounded when the line is built; a line that still does not
@@ -81,7 +78,7 @@ function serialize(line: LogLine): string {
   let text = JSON.stringify(current);
   while (Buffer.byteLength(text) >= MAX_LINE_BYTES && current.kind === "intent" && current.body.length > 0) {
     const keep = Math.floor(current.body.length * 0.75);
-    current = { ...current, body: keep < 2 ? "" : clip(current.body, keep) };
+    current = { ...current, body: keep < 2 ? "" : truncateTitle(current.body, keep) };
     text = JSON.stringify(current);
   }
   const bytes = Buffer.byteLength(text);
@@ -112,12 +109,12 @@ export function appendIntent(boxRoot: string, opts: { intent: NotificationIntent
     kind: "intent",
     at: now.toISOString(),
     id: intent.id,
-    title: clip(intent.title, MAX_TITLE_CHARS),
+    title: truncateTitle(intent.title, MAX_TITLE_CHARS),
     body: intent.body,
     target: formatTarget(intent.target),
     loudness: intent.loudness,
-    ...(intent.tag === undefined ? {} : { tag: clip(intent.tag, MAX_TAG_CHARS) }),
-    source: clip(intent.source, MAX_SOURCE_CHARS),
+    ...(intent.tag === undefined ? {} : { tag: truncateTitle(intent.tag, MAX_TAG_CHARS) }),
+    source: truncateTitle(intent.source, MAX_SOURCE_CHARS),
   });
 }
 
@@ -132,7 +129,7 @@ export function appendDelivery(
     notificationId,
     channel: delivery.channel,
     status: delivery.status,
-    ...(delivery.detail === undefined ? {} : { detail: clip(delivery.detail, MAX_DETAIL_CHARS) }),
+    ...(delivery.detail === undefined ? {} : { detail: truncateTitle(delivery.detail, MAX_DETAIL_CHARS) }),
   });
 }
 

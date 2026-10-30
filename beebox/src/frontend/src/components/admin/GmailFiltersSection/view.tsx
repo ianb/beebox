@@ -12,6 +12,7 @@ import { SelectField, TextField } from "../../ui/fields/field";
 import { Button } from "../../ui/Button";
 import { AdminSectionCard } from "../AdminSectionCard";
 import { Hint } from "../../ui/Hint";
+import { Notice } from "../../ui/Notice";
 import { ErrorText } from "../../ui/ErrorText";
 import { GmailLabelList } from "./views";
 
@@ -70,9 +71,7 @@ export function GmailFiltersSection() {
     return (
       <AdminSectionCard id="gmail-filters" description={<Description />}>
         {initialError ? (
-          <div className="p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
-            {initialError}
-          </div>
+          <Notice tone="error">{initialError}</Notice>
         ) : null}
       </AdminSectionCard>
     );
@@ -224,9 +223,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
       </div>
 
       {error ? (
-        <div className="mt-3 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">
-          {error}
-        </div>
+        <Notice tone="error" className="mt-3">{error}</Notice>
       ) : null}
     </AdminSectionCard>
   );

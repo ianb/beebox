@@ -12,6 +12,10 @@ final class BoxScreenStoreTests: XCTestCase {
         var lastError: String?
         var homeAnswer = QuickChatHome(open: [], recentlySent: [], recentChats: [], shortcuts: [])
         var homeFails = false
+        var homeError: Error = URLError(.timedOut)
+        var homeCalls = 0
+        /// Thrown by the next calls of `home`, one each, before `homeFails` applies.
+        var nextHomeErrors: [Error] = []
         var submitted: [(UUID, String)] = []
         var submittedOrigins: [QuickChatOrigin?] = []
         var submittedSources: [String?] = []
@@ -70,9 +74,13 @@ final class BoxScreenStoreTests: XCTestCase {
         }
 
         func home() async throws -> QuickChatHome {
+            homeCalls += 1
             await duringHome?()
+            if nextHomeErrors.isEmpty == false {
+                throw nextHomeErrors.removeFirst()
+            }
             if homeFails {
-                throw URLError(.timedOut)
+                throw homeError
             }
             return homeAnswer
         }
@@ -88,7 +96,11 @@ final class BoxScreenStoreTests: XCTestCase {
         requiresDeviceUnlock: false
     )
 
+    /// What the store told the log upload, in order.
+    private var asleepReports: [Bool] = []
+
     override func setUpWithError() throws {
+        asleepReports = []
         rootURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     }
 
@@ -96,9 +108,17 @@ final class BoxScreenStoreTests: XCTestCase {
         try? FileManager.default.removeItem(at: rootURL)
     }
 
-    private func makeStore(_ client: FakeClient) -> (BoxScreenStore, ComposerDraftRepository) {
+    private func makeStore(
+        _ client: FakeClient,
+        retryDelays: [TimeInterval] = BoxScreenStore.homeRetryDelays,
+        asleepRecheckDelay: TimeInterval = BoxScreenStore.asleepRecheckDelay
+    ) -> (BoxScreenStore, ComposerDraftRepository) {
         let repository = ComposerDraftRepository(rootURL: rootURL)
-        let store = BoxScreenStore(repository: repository, client: { _ in client })
+        let store = BoxScreenStore(
+            repository: repository, retryDelays: retryDelays, asleepRecheckDelay: asleepRecheckDelay,
+            reportAsleep: { [weak self] _, asleep in self?.asleepReports.append(asleep) },
+            client: { _ in client }
+        )
         store.updateBoxes([box])
         return (store, repository)
     }
@@ -270,14 +290,189 @@ final class BoxScreenStoreTests: XCTestCase {
 
         await store.refresh(boxID: box.id)
 
-        XCTAssertEqual(store.refreshes[box.id], .failed)
+        XCTAssertEqual(store.refreshes[box.id], .failed(.unreachable))
         XCTAssertEqual(store.homes[box.id]?.recentChats.map(\.label), ["Plan the week", "Trip planning"])
 
-        let relaunched = BoxScreenStore(repository: repository, client: { _ in client })
+        let relaunched = BoxScreenStore(repository: repository, reportAsleep: { _, _ in }, client: { _ in client })
         relaunched.updateBoxes([box])
         await relaunched.loadCachedHome(boxID: box.id)
         XCTAssertEqual(relaunched.homes[box.id]?.recentChats.map(\.label), ["Plan the week", "Trip planning"])
         XCTAssertNil(relaunched.homes[box.id]?.recentChats.first?.landmark)
+        // The cache is not the box's answer: it carries its age and is not confirmed.
+        let savedAt = try XCTUnwrap(relaunched.homeDates[box.id])
+        XCTAssertLessThan(abs(savedAt.timeIntervalSinceNow), 60)
+        XCTAssertFalse(relaunched.confirmedBoxIDs.contains(box.id))
+    }
+
+    /// The reported bug: the box screen kept a list from before the app went
+    /// to the background, because only a launch or box switch refreshed it.
+    func testAReturnToTheForegroundRechecksTheShownBox() async throws {
+        let client = FakeClient()
+        let (store, _) = makeStore(client)
+        store.setForeground(true)
+        store.setShownBox(box.id)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        XCTAssertEqual(client.homeCalls, 1)
+
+        // Showing again in the same stay does not ask again.
+        store.setShownBox(nil)
+        store.setShownBox(box.id)
+        store.setForeground(true)
+        await Task.yield()
+        XCTAssertEqual(client.homeCalls, 1)
+
+        store.setForeground(false)
+        XCTAssertFalse(store.confirmedBoxIDs.contains(box.id))
+        client.homeAnswer.recentChats = [.init(sessionId: "s9", label: "Fix the bike", lastActivity: "t", landmark: nil)]
+        store.setForeground(true)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        XCTAssertEqual(client.homeCalls, 2)
+        XCTAssertEqual(store.homes[box.id]?.recentChats.map(\.label), ["Fix the bike"])
+    }
+
+    func testAnAnswerFromBeforeTheBackgroundDoesNotConfirm() async {
+        let client = FakeClient()
+        let (store, _) = makeStore(client)
+        store.setForeground(true)
+        client.duringHome = { store.setForeground(false) }
+
+        await store.refresh(boxID: box.id)
+
+        XCTAssertNotNil(store.homes[box.id])
+        XCTAssertEqual(store.refreshes[box.id], .idle)
+        XCTAssertFalse(store.confirmedBoxIDs.contains(box.id))
+    }
+
+    func testAFailedRefreshSaysWhyAndRetriesUntilTheBoxAnswers() async throws {
+        let client = FakeClient()
+        client.homeFails = true
+        client.homeError = QuickChatAPI.APIError.closed(reason: "docs refresh")
+        let (store, _) = makeStore(client, retryDelays: [0.01])
+        store.setForeground(true)
+        store.setShownBox(box.id)
+        try await waitUntil { store.refreshes[self.box.id] == .failed(.closed(reason: "docs refresh")) }
+
+        client.homeFails = false
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        XCTAssertEqual(store.refreshes[box.id], .idle)
+        XCTAssertGreaterThanOrEqual(client.homeCalls, 2)
+    }
+
+    func testRetriesStopInTheBackgroundAndOffTheBoxScreen() async throws {
+        let client = FakeClient()
+        client.homeFails = true
+        let (store, _) = makeStore(client, retryDelays: [0.05])
+        store.setForeground(true)
+        store.setShownBox(box.id)
+        try await waitUntil { store.refreshes[self.box.id] == .failed(.unreachable) }
+        store.setForeground(false)
+        let calls = client.homeCalls
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(client.homeCalls, calls)
+
+        store.setForeground(true)
+        try await waitUntil { client.homeCalls > calls }
+        store.setShownBox(nil)
+        let shownCalls = client.homeCalls
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(client.homeCalls, shownCalls)
+    }
+
+    /// The hub answers for a sleeping box with its last list (contract §5.11):
+    /// current, dated from when the box went to sleep, and asked again while
+    /// shown so the live list replaces it once the box wakes.
+    func testAnAsleepAnswerIsCurrentAndIsAskedAgainUntilTheBoxWakes() async throws {
+        let client = FakeClient()
+        client.homeAnswer.recentChats = [.init(sessionId: "s9", label: "Fix the bike", lastActivity: "t", landmark: nil)]
+        client.homeAnswer.asleep = .init(savedAt: "2026-10-26T15:12:00.000Z")
+        let (store, repository) = makeStore(client, asleepRecheckDelay: 0.01)
+        store.setForeground(true)
+        store.setShownBox(box.id)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        XCTAssertEqual(store.homeDates[box.id], Date(timeIntervalSince1970: 1_793_027_520))
+
+        // A relaunch draws the cached snapshot with its own age, not the file's.
+        let relaunched = BoxScreenStore(repository: repository, reportAsleep: { _, _ in }, client: { _ in client })
+        relaunched.updateBoxes([box])
+        await relaunched.loadCachedHome(boxID: box.id)
+        XCTAssertEqual(relaunched.homeDates[box.id], Date(timeIntervalSince1970: 1_793_027_520))
+
+        client.homeAnswer.asleep = nil
+        try await waitUntil { store.homes[self.box.id]?.asleep == nil }
+        let calls = client.homeCalls
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(client.homeCalls, calls, "a live answer is not asked again")
+        // The log upload held off while the box slept and resumes once it answers awake.
+        XCTAssertEqual(asleepReports.first, true)
+        XCTAssertEqual(asleepReports.last, false)
+    }
+
+    /// Opening a chat and coming back to the same box screen cancels the
+    /// sleeping box's check; showing the screen again re-arms it.
+    func testShowingASleepingBoxAgainResumesItsCheck() async throws {
+        let client = FakeClient()
+        client.homeAnswer.asleep = .init(savedAt: "2026-10-26T15:12:00.000Z")
+        let (store, _) = makeStore(client, asleepRecheckDelay: 0.05)
+        store.setForeground(true)
+        store.setShownBox(box.id)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        store.setShownBox(nil)
+        client.homeAnswer.asleep = nil
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertNotNil(store.homes[box.id]?.asleep, "no check while the screen is not shown")
+
+        store.setShownBox(box.id)
+        try await waitUntil { store.homes[self.box.id]?.asleep == nil }
+    }
+
+    /// A failed check of a sleeping box says so, rather than keeping its
+    /// earlier answer styled as current.
+    func testAFailedCheckUnconfirmsTheHome() async throws {
+        let client = FakeClient()
+        client.homeAnswer.asleep = .init(savedAt: "2026-10-26T15:12:00.000Z")
+        let (store, _) = makeStore(client, retryDelays: [10], asleepRecheckDelay: 0.01)
+        store.setForeground(true)
+        store.setShownBox(box.id)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        client.homeFails = true
+        try await waitUntil { store.refreshes[self.box.id] == .failed(.unreachable) }
+        XCTAssertFalse(store.confirmedBoxIDs.contains(box.id))
+    }
+
+    /// Switching away and back while a refresh runs finds it still running;
+    /// when it then ends cancelled, the shown box asks again.
+    func testACancelledRefreshOfAShownBoxIsReplaced() async throws {
+        let client = FakeClient()
+        let (store, _) = makeStore(client)
+        store.setForeground(true)
+        client.nextHomeErrors = [URLError(.cancelled)]
+        client.duringHome = {
+            client.duringHome = nil
+            store.setShownBox(nil)
+            store.setShownBox(self.box.id)
+        }
+        await store.refresh(boxID: box.id)
+        try await waitUntil { store.confirmedBoxIDs.contains(self.box.id) }
+        XCTAssertEqual(client.homeCalls, 2)
+    }
+
+    /// Cancellations one after another do not ask again at once each time.
+    func testRepeatedCancellationsWaitOnTheBackoff() async throws {
+        let client = FakeClient()
+        let (store, _) = makeStore(client, retryDelays: [10])
+        store.setForeground(true)
+        client.nextHomeErrors = [URLError(.cancelled), URLError(.cancelled), URLError(.cancelled)]
+        store.setShownBox(box.id)
+        try await waitUntil { client.homeCalls == 2 }
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(client.homeCalls, 2)
+    }
+
+    func testRefreshFailureKinds() {
+        XCTAssertEqual(BoxScreenStore.RefreshFailure(URLError(.cannotConnectToHost)), .unreachable)
+        XCTAssertEqual(BoxScreenStore.RefreshFailure(QuickChatAPI.APIError.notOpen), .notOpen)
+        XCTAssertEqual(BoxScreenStore.RefreshFailure(QuickChatAPI.APIError.closed(reason: nil)), .closed(reason: nil))
+        XCTAssertEqual(BoxScreenStore.RefreshFailure(QuickChatAPI.APIError.server(status: 500, message: "x")), .other)
     }
 
     func testRemovingABoxDropsItsOutboxEntries() async throws {
@@ -415,7 +610,7 @@ final class BoxScreenStoreTests: XCTestCase {
         client.offline = false
         client.submitAnswer = .sent
         client.destination = .init(label: "Trip planning", sessionId: "s1")
-        let relaunched = BoxScreenStore(repository: repository, client: { _ in client })
+        let relaunched = BoxScreenStore(repository: repository, reportAsleep: { _, _ in }, client: { _ in client })
         relaunched.updateBoxes([box])
         relaunched.setShownBox(box.id)
         await relaunched.start()

@@ -16,9 +16,9 @@
  */
 
 import { access } from "node:fs/promises";
-import { relative, resolve, sep } from "node:path";
+import { resolve } from "node:path";
 import { parseRef, resolveRefPath } from "../shared/ref-path/core.js";
-import { containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
+import { boxRelativeDoc, containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { BOX_ROOT_VOCABULARY } from "../shared/box-root-vocabulary.js";
 
@@ -40,21 +40,10 @@ interface RefExistsInput {
  * is dropped: it addresses a location *within* the target, not a different file.
  */
 function resolveRefToPath(input: RefExistsInput): string | null {
-  const fromPath = input.fromPath === "" ? "" : boxRelativeFrom(input.boxRoot, input.fromPath);
+  const fromPath = input.fromPath === "" ? "" : boxRelativeDoc(input.boxRoot, input.fromPath);
   if (fromPath === null) return null;
   const resolved = resolveRefPath({ fromPath, ref: parseRef(input.ref).path, kind: "card" });
   return resolved === null ? null : resolve(input.boxRoot, resolved);
-}
-
-/**
- * The referring card's path as the shared algebra wants it: box-relative,
- * forward slashes. A card outside the box has no in-box refs to resolve, so it
- * fails closed like an escaping ref.
- */
-function boxRelativeFrom(boxRoot: string, absFromPath: string): string | null {
-  const rel = relative(resolve(boxRoot), resolve(absFromPath));
-  if (rel === "" || rel === ".." || rel.startsWith(".." + sep)) return null;
-  return rel.split(sep).join("/");
 }
 
 /**

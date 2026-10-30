@@ -9,6 +9,10 @@ title: Holding the fort with someone else's lists
 
 box:
   base: empty
+  # The root landmark's name, as Tomas would have called it.
+  label: House
+  # Before the setup's first commit (24 August, 20:15), so `git log` reads in order.
+  init_date: "2026-08-24T19:30:00"
   # The only journey that arrives at a box with a past. Tomas has kept the
   # household's open loops here for about five weeks; the setup writes his
   # cards and commits them on backdated days, so the box history reads like

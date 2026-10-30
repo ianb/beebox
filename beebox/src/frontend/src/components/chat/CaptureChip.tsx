@@ -9,8 +9,9 @@ import { useParams } from "@tanstack/react-router";
 import { withBase } from "../../api";
 import type { CaptureChipModel } from "./capture-message";
 import { captureChipLabel } from "./capture-message";
+import { cardUrl } from "@shared/card-url";
 
-function CaptureBadge({ label }: { label: string }) {
+export function CaptureBadge({ label }: { label: string }) {
   return (
     <span className="bbx-chat-user-attachment-badge inline-flex items-center rounded-full bg-black/25 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
       {label}
@@ -20,7 +21,7 @@ function CaptureBadge({ label }: { label: string }) {
 
 export function CaptureChip({ model }: { model: CaptureChipModel }) {
   const { boxSlug } = useParams({ strict: false });
-  const href = withBase(`/${boxSlug ?? ""}/browse/${model.doc}`);
+  const href = withBase(cardUrl(boxSlug ?? "", model.doc));
   return (
     <a href={href} className="bbx-chat-user-attachment block rounded-lg bg-black/15 px-3 py-2 hover:bg-black/25">
       <div className="flex items-center gap-1.5 text-sm font-medium">

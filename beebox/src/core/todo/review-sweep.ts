@@ -27,7 +27,7 @@
  */
 
 import { getBoxTime } from "../../lib/time.js";
-import { loadBoxTimezone } from "../box/config.js";
+import { boxTimeZoneOrHost } from "../box/config.js";
 import { runTodoQuery } from "./query.js";
 import { summaryText } from "../file-summary.js";
 import { formatTodoLocation } from "./collect-types.js";
@@ -41,7 +41,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** The box-local calendar date today, as the UTC-midnight epoch `start`/`due`/`recheck` parse to. */
 export async function boxTodayEpoch(boxRoot: string): Promise<number> {
-  const timeZone = (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const timeZone = await boxTimeZoneOrHost(boxRoot);
   return boxLocalDateEpoch(getBoxTime(boxRoot), timeZone);
 }
 

@@ -10,4 +10,4 @@
  *   import { body, cardSchema } from "beebox/cards";
  */
 export { z } from "zod";
-export { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+export { parse as parseYaml, stringify as stringifyYaml } from "../lib/yaml-package.js";

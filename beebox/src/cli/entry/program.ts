@@ -10,9 +10,10 @@
 
 import { Command } from "commander";
 import { buildSurface } from "./surface-build.js";
+import type { LoadedCommands } from "./load-commands.js";
 
-/** The `bbx` command tree, assembled but not parsed. */
-export function buildProgram(): Command {
+/** The `bbx` command tree for the loaded commands, assembled but not parsed. */
+export function buildProgram(commands: LoadedCommands): Command {
   const program = new Command();
 
   program
@@ -23,7 +24,7 @@ export function buildProgram(): Command {
     )
     .version("0.1.0");
 
-  buildSurface(program);
+  buildSurface(program, commands);
 
   return program;
 }

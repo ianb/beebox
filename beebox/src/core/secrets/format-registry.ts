@@ -58,6 +58,12 @@ const secretFormats: Record<string, SecretFormat> = {
     maxLength: 300,
   },
   anthropic: { hint: "An Anthropic API key, starting with `sk-ant-`.", prefix: "sk-ant-", minLength: 20, maxLength: 300 },
+  "claude-oauth-token": {
+    hint: "A long-lived Claude Code token from `claude setup-token`, starting with `sk-ant-oat`.",
+    prefix: "sk-ant-oat",
+    minLength: 40,
+    maxLength: 300,
+  },
   gemini: { hint: "A Google AI Studio key, usually starting with `AIza`.", prefix: "AIza", minLength: 20, maxLength: 200 },
   openrouter: { hint: "An OpenRouter API key, starting with `sk-or-v1-`.", prefix: "sk-or-v1-", minLength: 40, maxLength: 200 },
   deepgram: {

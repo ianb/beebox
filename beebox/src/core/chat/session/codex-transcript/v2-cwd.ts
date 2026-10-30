@@ -12,6 +12,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { mapV2Path, v2ContentPathsFor } from "../../../migrations/one-root-mapping.js";
+import { isWithin } from "../../../../lib/box-containment.js";
 
 /**
  * Finding 4 (round 5 hardening): a Codex thread recorded BEFORE the one-root
@@ -38,7 +39,7 @@ function translateRetiredV2ContentCwd(boxRoot: string, threadCwd: string): strin
   // (e.g. macOS's `/var` -> `/private/var`); the result is realpath'd by the
   // caller once it's built.
   const v2ContentRoot = path.join(boxRoot, "content");
-  if (threadCwd !== v2ContentRoot && !threadCwd.startsWith(v2ContentRoot + path.sep)) return null;
+  if (!isWithin(v2ContentRoot, threadCwd)) return null;
   if (threadCwd === v2ContentRoot) return boxRoot;
   const contentRelPath = path.relative(v2ContentRoot, threadCwd).split(path.sep).join("/");
   const mapped = mapV2Path(contentRelPath);
@@ -69,8 +70,8 @@ export function realpathThreadCwd(boxRoot: string, threadCwd: string): string {
  * one-root migration lists only under its old `content/...` path.
  */
 export function retiredV2ContentCwds(boxRoot: string, cwd: string): string[] {
+  if (!isWithin(boxRoot, cwd)) return [];
   const relative = path.relative(boxRoot, cwd);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) return [];
   const v2ContentRoot = path.join(boxRoot, "content");
   if (relative === "") return [v2ContentRoot];
   const v3RelPath = relative.split(path.sep).join("/");

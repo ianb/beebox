@@ -43,3 +43,40 @@ export function cardTypeFromName(pathOrRef: string): string | undefined {
   const base = noQuery.split("/").pop() ?? noQuery;
   return parseCardFileName(base)?.type;
 }
+
+/**
+ * Human-readable name for a card path, or null when the basename isn't
+ * card-shaped. The path is a filename, not a ref: `#` and `?` are part of the
+ * name, so a caller holding a ref strips its fragment or query first.
+ *
+ * - nominal `Meeting_Notes.doc.card` → "Meeting Notes" (runs of `_`/`-` read as
+ *   one space; the First_Last authoring convention)
+ * - positional `nav.card` → the type, "nav"
+ * - `Foo.v2.doc.card` → "Foo.v2"
+ * - `x.report.job.card` → "x" (job grammar: kind `report`)
+ */
+export function cardDisplayName(path: string): string | null {
+  const base = path.split("/").pop() ?? path;
+  const parsed = parseCardFileName(base);
+  if (parsed === null) return null;
+  const raw = parsed.name ?? parsed.type;
+  const name = parsed.name === null ? raw : raw.replace(/[_-]+/g, " ");
+  const trimmed = name.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+/**
+ * Readable title from a path: the card display name, else the file stem up to
+ * its first dot with `_` and `-` read as spaces.
+ * "Meeting_Notes.doc.card" → "Meeting Notes"
+ * "photo-001.jpg" → "photo 001"
+ */
+export function titleFromFilename(filePath: string): string {
+  const named = cardDisplayName(filePath);
+  if (named !== null) return named;
+  const slash = filePath.lastIndexOf("/");
+  const base = slash === -1 ? filePath : filePath.slice(slash + 1);
+  const dot = base.indexOf(".");
+  const stem = dot === -1 ? base : base.slice(0, dot);
+  return stem.replaceAll("_", " ").replaceAll("-", " ");
+}

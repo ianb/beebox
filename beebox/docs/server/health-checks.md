@@ -6,9 +6,9 @@ Manual runbooks for periodic checks on the deployed beebox server. Each section 
 
 The hub exposes two diagnostic endpoints, both requiring the `BBX_DIAG_API_KEY` bearer token (`Authorization: Bearer <key>`). An unauthenticated caller gets 401 — the endpoints used to be open and leaked slugs/PIDs/ports, so they're now gated like the box server's own `/healthz`. Both run on the server's localhost (`http://localhost:3210`); externally they're reachable at `https://box.example.com/...` with the same key.
 
-**`GET /healthz` — passive verdict.** Reports `status: "ok"` (HTTP 200) or `status: "unhealthy"` (HTTP 503), plus per-box supervisor state. The verdict is **liveness**, not readiness: it's `unhealthy` only if a box is *broken* — crash-looping (`starting` with `consecutiveFailures > 0`) or crash-budget-latched (`unhealthy`). A `stopped` box is a lazy hub's normal resting state and is **not** a fault, so an idle fleet reads `ok`. `restarts` is a lifetime counter shown for information; the verdict never keys on it (a box that blipped once long ago would otherwise pin the hub red forever). Derivation lives in `src/hub/health.ts`. This endpoint has no side effects — safe for an uptime monitor to poll.
+**`GET /healthz` — passive verdict.** Reports `status: "ok"` (HTTP 200) or `status: "unhealthy"` (HTTP 503), plus a state per box. On the server that state is read from the box's systemd unit (`src/hub/socket-provider.ts`): an idle box's service is inactive and reads `stopped`, which is its normal resting state and **not** a fault, so an idle fleet reads `ok`. The verdict is **liveness**, not readiness: it's `unhealthy` only if a box is *broken* — crash-looping (`starting` with `consecutiveFailures > 0`) or crash-budget-latched (`unhealthy`). `restarts` is a lifetime counter shown for information; the verdict never keys on it (a box that blipped once long ago would otherwise pin the hub red forever). Derivation lives in `src/hub/health.ts`. This endpoint has no side effects — safe for an uptime monitor to poll.
 
-**`GET /healthz/canary` — active child check.** Cold-starts one box (via the supervisor's `ensureRunning`), then fetches that box's *own* root `/healthz` (authenticated) and returns 200 only if the box answers 200 — otherwise 503, naming the slug. The box-healthz step matters: the supervisor's readiness probe treats *any* HTTP response as "ready", so a child that opens its port but whose health handler is broken would pass a socket-only check; requiring the box's healthz 200 makes "canary ok" mean the box actually answered. This is what catches a **fleet-wide startup break** — e.g. a native-module ABI mismatch after a Node major bump — that the passive verdict can't see, because on a lazy hub most boxes rest `stopped` and report nothing. `?box=<slug>` names the box to canary; unset picks the first configured slug. **It wakes a box** (leaving it resident for `idleMs`), so it's a deploy-time / on-demand check, not something a monitor should poll. The deploy runs it automatically ([deploying](deploying.md)).
+**`GET /healthz/canary` — active box check.** Cold-starts one box (a connection to its socket starts the unit), then fetches that box's *own* root `/healthz` (authenticated) and returns 200 only if the box answers 200 — otherwise 503, naming the slug. The box-healthz step matters: a box that accepts the connection but whose health handler is broken would pass a socket-only check; requiring the box's healthz 200 makes "canary ok" mean the box actually answered. This is what catches a **fleet-wide startup break** — e.g. a native-module ABI mismatch after a Node major bump — that the passive verdict can't see, because most boxes rest `stopped` and report nothing. `?box=<slug>` names the box to canary; unset picks the first configured slug. **It wakes a box** (leaving it resident until its idle exit, thirty minutes), so it's a deploy-time / on-demand check, not something a monitor should poll. The deploy runs it automatically ([deploying](deploying.md)).
 
 Why the canary exists at all: during the 2026-07-16 Node 22→24 upgrade every box child crash-looped on a better-sqlite3 ABI mismatch while the old `/healthz` returned a constant 200 — the deploy verified "healthy" while no box could serve a request. The passive verdict now catches a crash-looping box; the canary catches a break on boxes that were never started.
 
@@ -56,7 +56,7 @@ Anything that must not be stale asks for a live run:
 - `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the snapshot. Use this in any post-deploy or post-fix verification. Curl form in [`server-operations.md`](operations.md#diagnostic-endpoints-behind-auth).
 - `bbx health` and the box server's `/api/health` route call `runHealthChecks` directly and never touch the cache — they are always fresh.
 
-A hub restart (every deploy restarts the children) empties the cache, so a deploy never serves a pre-deploy verdict.
+Every deploy restarts the box units, which empties the cache, so a deploy never serves a pre-deploy verdict.
 
 ## Box growth (files, directories, and Git history)
 
@@ -192,7 +192,7 @@ A box with no scheduler running will show a stale `last verified` rather than a
 wrong verdict.
 
 On a flip to broken, the boxholder gets one notification per breakage over
-the iPhone app and Web Push. Reconnecting (admin page, or `bbx google-auth --reauth`) clears
+the iPhone app and Web Push. Reconnecting (admin page, Google Services section) clears
 the state and re-arms the alert for a future relapse. Operator-facing detail is
 in [`google-setup.md`](../connectors/google-auth.md#token-expired--invalid_grant); design
 notes in [`implemented-plans/google-auth-reauth-health.md`](../implemented-plans/google-auth-reauth-health.md).
@@ -275,7 +275,7 @@ The server runs `claude update` nightly via `claude-update.timer` → `claude-up
 ```bash
 deploy/prod-ssh 'bash -s' <<'EOF'
   echo "=== wrapper log (last 40 lines) ==="
-  tail -n 40 /home/beebox/claude-update.log
+  tail -n 40 /var/log/beebox/claude-update.log
   echo
   echo "=== timer ==="
   systemctl list-timers claude-update.timer --no-pager
@@ -316,6 +316,6 @@ If the check is unhealthy, try these in order:
 
 1. **Force a run:** `ssh root@<ip> systemctl start claude-update.service` — then re-inspect the wrapper log and `journalctl -u claude-update.service -n 50`.
 2. **Look for auth failure:** Claude Code credentials can expire if the user logged out locally (see `server-operations.md` → "Claude Code credentials"). If `claude update` itself is failing, re-transfer credentials from macOS keychain.
-3. **Look for a moved/missing wrapper:** `ls -la /opt/beebox/beebox/deploy/claude-update.sh` — should be executable and owned so the beebox user can read+execute. `setup-server.sh` handles this but a bad deploy could leave it wrong.
+3. **Look for a moved/missing wrapper:** `ls -la /opt/beebox/beebox/deploy/claude-update.sh` — should be executable and owned so root can execute it. `deploy.sh` handles this but a bad deploy could leave it wrong.
 4. **Look for a disabled timer:** `systemctl is-enabled claude-update.timer` — should be `enabled`. If someone disabled it, `systemctl enable --now claude-update.timer`.
-5. **Check disk space** on `/home/beebox` — a full disk would prevent the log from being written, which would silently mask failures.
+5. **Check disk space** on `/var/log/beebox` — a full disk would prevent the log from being written, which would silently mask failures.

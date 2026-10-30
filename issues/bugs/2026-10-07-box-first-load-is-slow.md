@@ -114,7 +114,11 @@ Production effect is unmeasured until deploy; `pnpm perf:load --target prod
   every start (`lineLengths` over the 4.5 MB bundle). Decided: keep source
   maps on (debugging matters more than speed at this phase); not pursued. Lazy imports of rarely used server dependencies
   (claude-agent-sdk, google-auth-library, grammy, node-apn, react-dom) may
-  save another 50–80 ms (`pnpm perf:serve-start --cpu-prof`).
+  save another 50–80 ms (`pnpm perf:serve-start --cpu-prof`). Done for
+  google-auth-library and node-apn (315fd1ab4, 2026-10-23): about 40 ms off
+  every load of `dist/cli.mjs`, measured on `bbx --version` (570 → 530 ms);
+  the same module load comes before `bbx serve` listens. The Agent SDK
+  remains: see `issues/closed/code-quality/2026-10-23-bbx-verb-loads-the-whole-cli.md`.
 - **Entry script.** The capture overlay and image lightbox now load when opened (initial JS 555 -> 533 KB gzip). It is still 533 KB gzip, most of it the chat shell.
   Smaller candidates are capture, voice and transcription, the lightbox,
   and the theme picker, each a few KB to 15 KB gzip.

@@ -52,7 +52,7 @@ void test("Logged out → the check fails fast with the actionable message", asy
   resetClaudeAuthCache();
   const claudeCli = createFakeClaudeCli({ loggedIn: false });
   const thrown = await checkClaudeAuth({ claudeCli }).then(() => "no throw").catch((e) => `${e.name}: ${e.message}`);
-  t.check(thrown, "ClaudeAuthError: Claude Code is not logged in — run `claude auth login` on this machine");
+  t.check(thrown, "ClaudeAuthError: Claude Code is not logged in — run `claude auth login` on this machine, or grant the `claude-oauth-token` secret to this box");
 });
 
 // ## Logged in → the preflight passes through
@@ -94,11 +94,11 @@ void test("A fake chat backend leaves requiresClaudeAuth unset, so it always pro
     events: [
       [
         "error",
-        "Claude Code is not logged in — run `claude auth login` on this machine",
+        "Claude Code is not logged in — run `claude auth login` on this machine, or grant the `claude-oauth-token` secret to this box",
       ],
     ],
     logged: [
-      "[chat-preflight] run refused: Claude Code is not logged in — run `claude auth login` on this machine",
+      "[chat-preflight] run refused: Claude Code is not logged in — run `claude auth login` on this machine, or grant the `claude-oauth-token` secret to this box",
     ],
   });
 });

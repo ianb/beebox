@@ -21,6 +21,8 @@ export interface TextRun {
    */
   group: { opacity: number; bg: [number, number, number] } | null;
   large: boolean;
+  /** An empty field's placeholder, which is held to the large-text ratio. */
+  placeholder: boolean;
   /**
    * Index into `materials` of the themed card this text sits in, or -1.
    * Controls draw their own surfaces by design, so they get -1 too.
@@ -58,6 +60,17 @@ export interface PageRuns {
   lines: RunLines[];
   /** Run ids the capture cannot score: in a faded group over an image, or partly covered by another element. */
   unmeasured: number[];
+  /** The `::selection` colors of each element the theme studio paints as selected. */
+  selections: Selection[];
+}
+
+/** Selected text's ink and background, as `::selection` resolves them where the text sits. */
+export interface Selection {
+  selector: string;
+  text: string;
+  fg: Rgba;
+  bg: Rgba;
+  rects: Rect[];
 }
 
 /**
@@ -84,6 +97,9 @@ export interface PageRuns {
  * - Text shadows stay in the capture: a halo is part of what is read against.
  * - Controls draw their own surfaces by design, and a region that sets its
  *   own `--bbx-ink` declares its own material, so neither gets a surface check.
+ * - Selection: the theme studio paints sample text with the
+ *   `bbx-selection-preview` highlight; each such element's `::selection`
+ *   colors are read, and the highlight is hidden for the capture.
  */
 export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
@@ -107,6 +123,9 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     ["ink", "sheet"],
     ["ink-soft", "sheet"],
     ["ink", "tint"],
+    ["danger", "paper"],
+    ["danger", "sheet"],
+    ["danger", "tint"],
     ["ink", "quote-paper"],
     ["ink", "quote-layer-paper"],
     ["ink", "blockquote-paper"],
@@ -245,7 +264,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   const byElement = new Map();
   const linesOf = new Map();
   const unmeasurable = new Set();
-  const add = (el, { text, color, boxes }) => {
+  const add = (el, { text, color, boxes, placeholder = false }) => {
     const cs = getComputedStyle(el);
     if (cs.visibility !== "visible" || !el.checkVisibility() || el.closest(":disabled, [aria-disabled='true'], [inert], .bbx-contrast-overlay") !== null) return;
     const own = el.getBoundingClientRect();
@@ -293,6 +312,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
         fg: [raw[0], raw[1], raw[2], raw[3] * below],
         group,
         large: size >= 24 || Number(cs.fontWeight) >= 700 && size >= 18.66,
+        placeholder,
         material: card === null ? -1 : materialOf.get(card) ?? -1,
         rects: []
       };
@@ -319,14 +339,25 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     const px = (p) => Number.parseFloat(cs.getPropertyValue(p));
     const l = px("border-left-width") + px("padding-left");
     const t = px("border-top-width") + px("padding-top");
-    add(input, { text: showing, color, boxes: [new DOMRect(box.left + l, box.top + t, box.width - l - px("border-right-width") - px("padding-right"), box.height - t - px("border-bottom-width") - px("padding-bottom"))] });
+    add(input, { text: showing, color, placeholder: input.value === "", boxes: [new DOMRect(box.left + l, box.top + t, box.width - l - px("border-right-width") - px("padding-right"), box.height - t - px("border-bottom-width") - px("padding-bottom"))] });
   }
   hitAll.remove();
+  const selections = [];
+  for (const range of CSS.highlights?.get("bbx-selection-preview") ?? []) {
+    const el = range.startContainer.parentElement;
+    if (el === null) continue;
+    const cs = getComputedStyle(el, "::selection");
+    const fg = parse(cs.color);
+    const bg = parse(cs.backgroundColor);
+    const rects = [...range.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }));
+    // A range in hidden text (a card's other face) renders nothing to read.
+    if (fg !== null && bg !== null && rects.some((r) => r.w > 0 && r.h > 0)) selections.push({ selector: describe(el), text: range.toString().trim(), fg, bg, rects });
+  }
   const style = document.createElement("style");
   style.id = "bbx-contrast-hide-text";
-  style.textContent = "*, *::before, *::after, ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; caret-color: transparent !important; }";
+  style.textContent = "*, *::before, *::after, ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; caret-color: transparent !important; } ::highlight(bbx-selection-preview) { color: transparent !important; background-color: transparent !important; }";
   document.head.append(style);
-  return { width: vw, height: vh, runs: [...byElement.values()], materials, lines: [...linesOf.values()], unmeasured: [...unmeasurable] };
+  return { width: vw, height: vh, runs: [...byElement.values()], materials, lines: [...linesOf.values()], unmeasured: [...unmeasurable], selections };
 })())`;
 
 export interface OverlayMark {

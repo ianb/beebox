@@ -166,7 +166,7 @@ void test("The esbuild plugin turns import \"x.css\" into JavaScript that append
 
   t.check(PLUGIN_CSS_ATTRIBUTE, "data-bbx-plugin-css");
 
-  // Without a `document` (Node, or `bbx view test` rendering on the server) the
+  // Without a `document` (Node, or `bbx view check` rendering on the server) the
   // module loads and appends nothing.
 
   new Function("document", oneJs)(undefined);

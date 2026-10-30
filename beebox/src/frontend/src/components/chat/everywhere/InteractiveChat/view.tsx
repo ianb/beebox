@@ -11,7 +11,7 @@ import { WorkspaceCanvas } from "../../workspace/WorkspaceCanvas/view";
 import { MessageList } from "./messages";
 import {
   ChatView, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
-} from "../../InteractiveChat-layout/view";
+} from "../../InteractiveChat-layout/view/ChatComposerSection";
 import { ChatBarChrome } from "./ChatBarChrome";
 import { TargetStrip } from "../../TargetStrip";
 import { chatTargetStatus } from "../../../../input/targets/chat-target";
@@ -135,7 +135,7 @@ function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
     debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, sendSignal, captureSignal, liveTurnId,
-    captureBubbles, captureVerbs, audioOverlayStore, openers, openQuestion, onFocusComposer, onQuestionNotNow, onOpenQuestions,
+    captureBubbles, captureVerbs, audioOverlayStore, openers,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHq, sendHqLive } = voice;
@@ -172,10 +172,7 @@ function MessageListRegion(props: ChatBodyProps) {
       audioOverlayStore={audioOverlayStore}
       openers={openers}
       onSendOpener={actions.handleSendOpener}
-      openQuestion={openQuestion}
-      onFocusComposer={onFocusComposer}
-      onQuestionNotNow={onQuestionNotNow}
-      onOpenQuestions={onOpenQuestions}
+      undeliveredVerbs={actions.undeliveredVerbs}
       />
     </ChatRenderProfiler>
   );
@@ -218,7 +215,6 @@ function ComposerRegion(props: ChatBodyProps) {
       inputArea={
         <ChatInputArea
           hideMobile={typingMode}
-          placeholder={props.openQuestion?.prompt}
           textareaRef={textareaRef}
           isTranscribing={isTranscribing}
           transcription={transcription}
@@ -246,7 +242,6 @@ function ComposerRegion(props: ChatBodyProps) {
       }
       mobileRow={
         <MobileTextareaRow
-          placeholder={props.openQuestion?.prompt}
           isTranscribing={isTranscribing}
           transcription={transcription}
           targetBusy={targetBusy}

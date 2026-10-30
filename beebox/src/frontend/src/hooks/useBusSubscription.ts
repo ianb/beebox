@@ -9,7 +9,10 @@
  *
  * `onConnect` fires when the subscription (re)starts — callers use it to force a
  * full resync (the chat FSM's REFRESH), a belt over the automatic replay for
- * gaps that exceed the bus retention window.
+ * gaps that exceed the bus retention window. `onReconnect` fires on every start
+ * after the first: for a caller whose queries already load on mount, so only a
+ * reconnect (when transient `file-change` events may have been missed) needs a
+ * resync.
  */
 
 import { useEffect, useRef, useCallback } from "react";
@@ -26,6 +29,7 @@ export interface RealtimeEvent {
 export interface UseBusSubscriptionOptions {
   onEvent: (event: RealtimeEvent) => void;
   onConnect?: () => void;
+  onReconnect?: () => void;
   onError?: () => void;
 }
 
@@ -35,9 +39,12 @@ export function useBusSubscription(options: UseBusSubscriptionOptions): { connec
     optionsRef.current = options;
   });
 
+  const startedRef = useRef(false);
   const sub = trpc.events.subscribe.useSubscription(undefined, {
     onStarted: useCallback(() => {
       optionsRef.current.onConnect?.();
+      if (startedRef.current) optionsRef.current.onReconnect?.();
+      startedRef.current = true;
     }, []),
     onData: useCallback((data: WireBusEvent) => {
       optionsRef.current.onEvent(unwrapBusEvent(data));

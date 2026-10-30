@@ -21,7 +21,7 @@ void test("an include outside the viewable areas reads 'not viewable here'", asy
   // The root AGENTS.md's guide include: `.beebox/` is outside the box namespace.
   t.check(
     render("/AGENTS.md", "@.beebox/agent-guide.md\n"),
-    '<div class="bbx-include-file my-1 text-sm text-warm-700" title="This file is outside the parts of the box this app shows">includes <code>.beebox/agent-guide.md</code> <span class="text-warm-400">(not viewable here)</span></div>',
+    '<div class="bbx-include-file my-1 text-sm text-card-soft" title="This file is outside the parts of the box this app shows">includes <code>.beebox/agent-guide.md</code> <span class="text-card-soft">(not viewable here)</span></div>',
   );
 });
 

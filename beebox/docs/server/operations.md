@@ -57,46 +57,73 @@ deploy/prod-ssh
 ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST)
 ```
 
-**Do not pass `-o StrictHostKeyChecking=no`.** That flag belongs in first-contact provisioning scripts (`add-box.sh`, `setup-server.sh`) where the host hasn't been seen yet. For ad-hoc work the host is already in `~/.ssh/known_hosts` and disabling the check just removes a real safety. If you get a host-key error, investigate it — don't suppress it.
+**Do not pass `-o StrictHostKeyChecking=no`.** That flag belongs in first-contact provisioning scripts (`add-box.sh`, `hetzner/provision.sh`) where the host hasn't been seen yet. For ad-hoc work the host is already in `~/.ssh/known_hosts` and disabling the check just removes a real safety. If you get a host-key error, investigate it — don't suppress it.
 
 **Common inspection targets** (run via `deploy/prod-ssh '<cmd>'`):
 
 | What | Where |
 |------|-------|
-| Box data | `/home/beebox/boxes/<box>/` |
+| Box data | `/var/lib/beebox/<box>/box/`, owned by the box's own user `bbx-<box>` ([provisioning](provisioning.md#server-layout)) |
 | Hub routing table (which boxes `bbx hub` serves, and at what slug) | `/home/beebox/.config/beebox/hub.json` |
-| Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/beebox/.config/beebox/boxes.json` |
-| Service logs | `journalctl -u beebox-hub -n 200 --no-pager` / `journalctl -u beebox-scheduler -n 200 --no-pager` |
+| Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/var/lib/beebox-sched/.config/beebox/boxes.json` (the scheduler's own user) |
+| Service logs | `journalctl -u beebox-hub -n 200 --no-pager` / `journalctl -u beebox-scheduler -n 200 --no-pager`; a box's own engine: `journalctl -u beebox-box@<box> -n 200 --no-pager`; one scheduler pass: `journalctl -u beebox-pass@<box>` |
+| Box unit state | `systemctl list-units 'beebox-box@*'`; a box that keeps crashing restarts itself with a delay that grows to 5 min: `systemctl status beebox-box@<box>`, then `systemctl restart beebox-box@<box>` once fixed to skip the wait |
 | Service status | `systemctl status beebox-hub beebox-scheduler --no-pager` |
-| Client debug log per box | `/home/beebox/boxes/<box>/.beebox/client-debug.log` |
-| Procedure runs | `/home/beebox/boxes/<box>/_bookkeeping/procedure/runs/` |
-| Claude Code update log | `/home/beebox/claude-update.log` |
+| Client debug log per box | `/var/lib/beebox/<box>/box/.beebox/client-debug.log` |
+| Procedure runs | `/var/lib/beebox/<box>/box/_bookkeeping/procedure/runs/` |
+| Claude Code update log | `/var/log/beebox/claude-update.log` |
 | Source the server is actually running | `/opt/beebox/beebox/src/` (rsynced `.ts`, no `dist/`) |
 
-**Running `bbx` commands on the server** — must be as the `beebox` user so file ownership stays correct:
+**Running `bbx` commands on the server** — as the box's own user, so file
+ownership stays correct and the command sees the box's own secret store:
 
 ```bash
-deploy/prod-ssh "su - beebox -c 'bbx boxes list'"
-# or after sshing in as root:
-su - beebox -c "cd /home/beebox/boxes/<box> && bbx validate"
+# after sshing in as root: the box's user, with the units' environment
+su - bbx-<box> -c "set -a; . /etc/beebox/box.env; set +a; cd /var/lib/beebox/<box>/box && bbx validate"
+# hub-side commands run as the hub user
+deploy/prod-ssh "su - beebox -c 'bbx engine hub add-box --help'"
 ```
 
-> ⚠️ **Source `/home/beebox/.env` for env-dependent commands.** The systemd
-> services load it via `EnvironmentFile=/home/beebox/.env`, but an ad-hoc SSH
-> invocation does **not** inherit it. Most visibly, `bbx health`'s connector-presence
-> probe reads `BBX_GOOGLE_TOKENS_FILE` (the centralized Google-OAuth token path) from
-> that env; without it the probe falls back to a legacy `google.secret.json` that
-> prod doesn't use and reports a **false** `blocked: missing connectors` for
-> `google`/`gmail` — even when both are syncing fine. Always source it so an ad-hoc
-> check sees what the services see:
+> ⚠️ **Source `/etc/beebox/box.env` for box commands.** The box units load it
+> (`EnvironmentFile=`), but an ad-hoc SSH invocation does **not** inherit it.
+> Most visibly, `BBX_UNIT_HOST=1` from that file is what points Google at the
+> box user's own token file (`~/.config/beebox/google-tokens.json`); without
+> it `bbx health`'s connector-presence probe looks only for a legacy
+> `google.secret.json` and reports a **false** `blocked: missing connectors`
+> for `google`/`gmail` — even when both are syncing fine. Always source it so an
+> ad-hoc check sees what the services see:
 >
 > ```bash
 > deploy/prod-ssh \
->   "su - beebox -c 'set -a; . /home/beebox/.env; bbx health --box /home/beebox/boxes/<box>'"
+>   "su - bbx-<box> -c 'set -a; . /etc/beebox/box.env; set +a; bbx health --box /var/lib/beebox/<box>/box'"
 > ```
 >
+> `/home/beebox/.env` is the hub's own file; the hub derives `box.env` from it
+> at each start, so edit the former and restart the hub.
 > (This produced a bogus "two boxes have missing connectors" health report on
 > 2026-07-14 — the connectors were healthy; the bare invocation was the bug.)
+
+**Memory probe.** Every `bbx engine serve` process records its memory in
+each served box's `.beebox/memory/` (`src/webapp/server/memory-probe.ts`):
+
+- `samples.jsonl`: one line a minute with RSS, used and total heap, the heap
+  limit, `external` and `arrayBuffers` memory, and the count of live handles
+  (all in MB). It rotates to `samples.1.jsonl` at 1 MiB, about three days.
+- `<time>-pid<pid>-<pct>.heapprofile`: the V8 sampling heap profile, written
+  the first time in a process the heap passes 50%, 70%, or 85% of its limit.
+  The server log gets one `[memory] heap passed …` line naming the file. Open
+  it in Chrome DevTools (Memory tab, Load) and read the bottom-up view: it
+  shows the allocation stacks of the live JavaScript heap. The newest six
+  profiles, at most 64 MiB, are kept.
+
+After an OOM, read the last samples (how fast the heap climbed, and whether
+`external` or RSS outside the heap grew instead) and the newest profile. A
+box engine's crash output is in its unit's journal
+(`journalctl -u beebox-box@<box>`); a unit that will not start shows in
+`systemctl status beebox-box@<box>`. For a full
+heap snapshot at the moment of an OOM, start the process with
+`NODE_OPTIONS=--heapsnapshot-near-heap-limit=1` and a `--diagnostic-dir` with
+free disk about twice the heap size; it is off by default for that cost.
 
 **Live memory inspection.** `kill -USR1 <node-pid>` opens the inspector on
 `127.0.0.1:9229` without a restart. A heap snapshot forces a full GC and needs
@@ -126,17 +153,19 @@ restart, not just a config edit. To *add* a box, run `deploy/add-box.sh` rather 
 Ad-hoc shell as above is fine, but **scripts** (anything in this repo that
 shells out to the server programmatically) should go through the single
 chokepoint at [`feedback-review/run-on-server.ts`](../../../feedback-review/run-on-server.ts).
-`runOnServer({ script, asUser, host })` SSHes in as `root` (the entry point
-key auth is set up for), then immediately `su - beebox` before running the
+`runOnServer({ script, asUser, sshTarget })` SSHes in as `root` (the entry point
+key auth is set up for), then immediately `su - <asUser>` before running the
 script, with the script piped via stdin so multi-line content and quotes work
-without escaping. `asUser` defaults to `beebox`; only set `asUser: "root"`
-for operations that genuinely require root (systemctl, chown, package
-installs) and leave a comment saying why.
+without escaping. Each box is private to its own user, so anything that reads
+or writes a box runs as `asUser: boxUser(slug)` (`bbx-<slug>`). `asUser` defaults to
+`beebox`, the hub, which can read `hub.json` and no box. Only set
+`asUser: "root"` for operations that genuinely require root (systemctl,
+chown, package installs) and leave a comment saying why.
 
 Why this matters — historical bug: an earlier feedback-resolver script SSHed
-as root and ran `git commit` directly. That created objects under
-`/home/beebox/boxes/<box>/.git/objects/<prefix>/` owned by root, and the
-next `beebox`-user commit that happened to hash into one of those prefixes
+as root and ran `git commit` directly. That created objects under the box's
+`.git/objects/<prefix>/` owned by root, and the
+next box-user commit that happened to hash into one of those prefixes
 failed with `insufficient permission for adding an object to repository
 database`. Same shape for the `mv` into `config/feedback/resolved/` — that
 directory ended up root-owned too, blocking beebox writes. The failures
@@ -155,7 +184,7 @@ callers. Don't write a fresh `ssh root@... 'command'` line.
 
 In production, `/api/trpc/debugLog.get` and `/api/trpc/health.check` sit behind the Google OAuth cookie gate — `curl` without a browser cookie gets rejected.
 
-**Bypass** for machine access: if `BBX_DIAG_API_KEY` is set in `/home/beebox/.env`, GET requests to those two endpoints are allowed with an `Authorization: Bearer <key>` header. The debug log returns the tRPC envelope (`{"result":{"data":{"entries":[…]}}}`):
+**Bypass** for machine access: if `BBX_DIAG_API_KEY` is set in `/home/beebox/.env`, GET requests to those two endpoints (and `chat.statusAll`) are allowed with an `Authorization: Bearer <key>` header. The hub passes such a request through without identity, and the box checks the key again against its own copy (`/etc/beebox/box.env`). The debug log returns the tRPC envelope (`{"result":{"data":{"entries":[…]}}}`):
 
 ```bash
 curl -H "Authorization: Bearer $BBX_DIAG_API_KEY" \
@@ -173,19 +202,19 @@ curl -H "Authorization: Bearer $BBX_DIAG_API_KEY" \
 
 On localhost/dev (no `GOOGLE_OAUTH_CLIENT_ID` set), auth is disabled entirely — curl works without the header.
 
-For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-log.md`](../client-debug-log.md) for the log file format.
+For SSH-only debugging: `ssh root@<server> tail /var/lib/beebox/<box>/box/.beebox/client-debug.log`. See [`client-debug-log.md`](../client-debug-log.md) for the log file format.
 
 ## Nightly Claude Code updates
 
-Claude Code's built-in auto-updater only fires reliably during long-running interactive sessions — server-side short-lived invocations drift behind. A systemd timer runs `claude update` as the `callback` user nightly around 04:00 UTC (with up to 30m jitter).
+Claude Code's built-in auto-updater only fires reliably during long-running interactive sessions — server-side short-lived invocations drift behind. A systemd timer runs `claude update` as root nightly around 04:00 UTC (with up to 30m jitter).
 
-**Units** (installed by `setup-server.sh`):
+**Units** (installed by `hetzner/provision.sh`; they run as root, since the wrapper re-copies the update to `/usr/local/bin/claude`):
 - `claude-update.timer` — schedule (`OnCalendar=*-*-* 04:00:00`, `Persistent=true` so missed runs catch up at boot).
 - `claude-update.service` — oneshot that invokes the wrapper below.
 - `claude-update-failure.service` — triggered via `OnFailure=` if the wrapper can't record its own failure (e.g. script missing / disk full); logs to syslog `daemon.err`.
 
 **Wrapper**: `deploy/claude-update.sh` (served from the checked-out tree at `/opt/beebox/beebox/deploy/claude-update.sh`, so `deploy.sh` rsync picks up edits). It:
-- Appends `starting:` / `ok:` or `FAIL:` lines with UTC timestamps to `/home/beebox/claude-update.log`.
+- Appends `starting:` / `ok:` or `FAIL:` lines with UTC timestamps to `/var/log/beebox/claude-update.log`.
 - Also writes failures to syslog via `logger -t claude-update -p daemon.err`.
 - Exits with claude's exit code so systemd marks the unit failed (triggering the belt-and-suspenders `OnFailure` unit).
 
@@ -193,7 +222,7 @@ Claude Code's built-in auto-updater only fires reliably during long-running inte
 
 ```bash
 # The wrapper's own log (every run appends a line)
-ssh root@<server> tail -50 /home/beebox/claude-update.log
+ssh root@<server> tail -50 /var/log/beebox/claude-update.log
 
 # Systemd view (last run, next run, last 20 journal lines)
 ssh root@<server> 'systemctl list-timers claude-update.timer --no-pager; \

@@ -4,10 +4,10 @@
  * affordance, so a section's collapsed parts read as one kind of thing.
  */
 
-export function ChevronIcon({ open }: { open: boolean }) {
+export function ChevronIcon({ open, className }: { open: boolean; className?: string }) {
   return (
     <svg
-      className={`w-4 h-4 transition-transform ${open ? "rotate-90" : ""}`}
+      className={`w-4 h-4 ${className === undefined ? "" : `${className} `}transition-transform ${open ? "rotate-90" : ""}`}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

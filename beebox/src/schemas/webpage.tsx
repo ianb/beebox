@@ -14,7 +14,7 @@
  * page at capture time — edit it sparingly.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 import { SourcesEntrySchema } from "../cards/sources-entry.js";

@@ -14,7 +14,7 @@
  *   _content/drive/Budget.attach/Expenses.json
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../exports/cards.js";
 

@@ -10,9 +10,12 @@
 
 import { Link } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
+import { agoOnClock } from "../../lib/relative-time";
+import { useNow } from "../../lib/use-now";
 import { Text } from "../ui/Text";
 import type { RouterOutput } from "../../lib/trpc/client";
 import { DeleteChatAction } from "../chat-delete/DeleteChatDialog";
+import { cardUrl } from "@shared/card-url";
 
 /** A session as `chat.byLandmark` reports it under a landmark. */
 type PickerSession = RouterOutput["chat"]["byLandmark"]["landmarks"][number]["sessions"][number];
@@ -26,18 +29,6 @@ type UnassignedSession = RouterOutput["chat"]["byLandmark"]["unassigned"]["sessi
 /** Either kind of row; the unassigned one shows its binding under the label. */
 export type SessionRowItem = PickerSession | UnassignedSession;
 
-function formatRelativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  const ms = Date.now() - then;
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
-  return `${days}d ago`;
-}
-
 /**
  * A row carrying a `contextDir` (an unassigned-bucket session) shows its
  * binding under the label; a row listed under its own landmark doesn't
@@ -45,6 +36,8 @@ function formatRelativeTime(iso: string): string {
  */
 export function SessionRow({ session, boxSlug }: { session: SessionRowItem; boxSlug: string }) {
   const contextDir = "contextDir" in session ? session.contextDir : null;
+  // Re-render each minute so the age stays current.
+  useNow(60_000);
 
   return (
     <div className="flex items-stretch gap-1">
@@ -65,13 +58,13 @@ export function SessionRow({ session, boxSlug }: { session: SessionRowItem; boxS
             ) : null}
           </div>
           <Text as="span" size="xs" tone="muted" className="flex-shrink-0">
-            {formatRelativeTime(session.lastActivity)}
+            {agoOnClock(session.lastActivity, "real")}
           </Text>
         </div>
       </Link>
       {/* The session's husk card — the durable, editable face of this chat. */}
       <Link
-        to={href(`/${boxSlug}/browse/${session.huskPath}`)}
+        to={href(cardUrl(boxSlug, session.huskPath))}
         title="Open this chat's card"
         aria-label="Open this chat's card"
         className="flex items-center px-2 rounded border border-subtle text-warm-400 hover:text-info-dark hover:border-info-400 transition-colors"

@@ -15,7 +15,8 @@ import { runPreActions } from "../../../core/preactions.js";
 import { getSystemState } from "../../../core/state.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
-import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
+import { createOrAppendIntakeJob, INTAKE_JOB_MAX_ITEMS, splitOversizedIntakeJobs } from "../../../job-cards/intake-utils.js";
+import { restoreJobsToHead } from "../../../job-cards/restore-to-head.js";
 import { collectExistingJobRefs, releaseTakenItems } from "./job-refs.js";
 import { createContainsBackfillJobTemplate } from "../../../schemas/contains-backfill-job.js";
 import { readCardFrontmatter, collectRefs } from "../../../core/card-io.js";
@@ -182,6 +183,38 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
 }
 
 /**
+ * Step 4a, continued: split intake jobs over the item cap (written before it, or edited
+ * by hand) into capped jobs, one commit per split job. Runs before step 4b and
+ * the reactor, so neither sees an oversized job. Returns how many splits were
+ * committed and how many were refused and put back; after a refused one the
+ * wakeup skips its reactor step, which would otherwise be sent the restored
+ * oversized job.
+ */
+export async function splitOversizedJobs(boxRoot: string): Promise<{ committed: number; refused: number }> {
+  const splits = await splitOversizedIntakeJobs(boxRoot);
+  let committed = 0;
+  for (const { original, chunks } of splits) {
+    try {
+      await stageAndCommitPaths(boxRoot, {
+        paths: [original, ...chunks],
+        message: `Split intake job ${path.basename(original)} into ${chunks.length} jobs of at most ${INTAKE_JOB_MAX_ITEMS} items`,
+        trailers: { "Triggered-By": "bbx wakeup", Phase: "intake-split" },
+      });
+    } catch (error) {
+      // Uncommitted chunks would hold the items while the job check skips
+      // them. Put the original back and the chunks away, so the next wakeup
+      // finds the oversized job and splits it again.
+      console.warn(`  Split of ${original} was not committed; restoring it for the next wakeup: ${errorMessage(error)}`);
+      await restoreJobsToHead(boxRoot, { jobs: [original, ...chunks], label: "intake-split" });
+      continue;
+    }
+    committed += 1;
+    console.log(`  Split ${original} into ${chunks.length} jobs`);
+  }
+  return { committed, refused: splits.length - committed };
+}
+
+/**
  * Scan inbox for items not referenced by any pending job and create
  * intake jobs for them. Returns the number of items covered.
  *
@@ -327,27 +360,23 @@ async function findUnjobbedInboxItems(
 }
 
 /**
- * Create batched intake job files (each batch its own file so the agent
- * can finish each within its turn limit) and append their paths to
- * `jobPaths`.
+ * Queue `items` as intake work and append the job paths written to
+ * `jobPaths`. The writer caps each job at `INTAKE_JOB_MAX_ITEMS` and starts
+ * new jobs past it, so the agent can finish each within its turn limit.
  */
 async function createBatchedIntakeJobs(
   boxRoot: string,
   opts: { items: string[]; connector: string | undefined; priority: "normal" | "low"; label: string; jobPaths: string[] }
 ): Promise<void> {
   const { items } = opts;
-  const INTAKE_BATCH_SIZE = 10;
-  for (let i = 0; i < items.length; i += INTAKE_BATCH_SIZE) {
-    const batch = items.slice(i, i + INTAKE_BATCH_SIZE);
-    const jobPath = await createOrAppendIntakeJob({
-      boxRoot,
-      connector: opts.connector,
-      items: batch,
-      priority: opts.priority,
-      description: `Triage ${batch.length} ${opts.label}${batch.length === 1 ? "" : "s"}`,
-    });
-    opts.jobPaths.push(jobPath);
-  }
+  const written = await createOrAppendIntakeJob({
+    boxRoot,
+    connector: opts.connector,
+    items,
+    priority: opts.priority,
+    description: `Triage ${items.length} ${opts.label}${items.length === 1 ? "" : "s"}`,
+  });
+  opts.jobPaths.push(...written);
 }
 
 /** Cards per contains-backfill job; the next wakeup queues the next batch. */

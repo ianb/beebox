@@ -1,25 +1,17 @@
-/** @public Imported by `workstreams-app/src/shared/documents.ts`, outside this package. */
-export const DOCUMENT_ROLES = [
-  "reference",
-  "proposal",
-  "shipped-history",
-  "past-proposal",
-  "report",
-  "design-rationale",
-] as const;
+/** @public Imported by `workstreams-app/src/server/`, outside this package. */
+/**
+ * Classify documentation by its monorepo-relative location. These labels
+ * describe a document's role; they do not claim every sentence was reverified.
+ */
 
-export type DocumentRole = (typeof DOCUMENT_ROLES)[number];
+import { frontmatterFence } from "../../cards/frontmatter.js";
+import type { DocumentRole } from "./document-roles.js";
 
 export interface DocumentLifecycle {
   role: DocumentRole;
   label: string;
   status: string | null;
 }
-
-/**
- * Classify documentation by its monorepo-relative location. These labels
- * describe a document's role; they do not claim every sentence was reverified.
- */
 export function documentLifecycle(relPath: string, status: string | null): DocumentLifecycle | null {
   if (!relPath.startsWith("beebox/docs/")) return null;
   const local = relPath.slice("beebox/".length);
@@ -49,8 +41,7 @@ export function documentLifecycle(relPath: string, status: string | null): Docum
 
 /** Read only the existing plan status field; malformed metadata remains visible as unknown. */
 export function planStatusFromSource(source: string): string | null {
-  if (!source.startsWith("---\n")) return null;
-  const end = source.indexOf("\n---", 4);
-  if (end === -1) return null;
-  return /^status:\s*["']?([^\s"']+)["']?\s*$/mu.exec(source.slice(4, end))?.[1] ?? null;
+  const fence = frontmatterFence(source);
+  if (fence === null) return null;
+  return /^status:\s*["']?([^\s"']+)["']?\s*$/mu.exec(source.slice(fence.textStart, fence.textEnd))?.[1] ?? null;
 }

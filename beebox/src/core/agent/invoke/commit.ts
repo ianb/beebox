@@ -6,7 +6,6 @@
  * still fails — creates a fallback commit marked `Fallback: true`.
  */
 
-import { fmt } from "../../../lib/format.js";
 import { getStatus, stageAll, commit, withBoxGitLock, type GitStatus } from "../../../lib/git/core/operations.js";
 import type { Agent } from "../types.js";
 
@@ -65,7 +64,7 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
   if (!hasNewChanges(status, baseline)) return;
 
   // Retry: resume the same session with a nudge to commit
-  onOutput?.(fmt.dim("  (Agent didn't commit — resuming session to request commit...)\n"));
+  onOutput?.("  (Agent didn't commit — resuming session to request commit...)\n");
   await agent.invoke({
     boxRoot,
     prompt: COMMIT_NUDGE_PROMPT,
@@ -74,12 +73,12 @@ export async function ensureAgentCommitted(options: EnsureCommittedOptions): Pro
 
   const retryStatus = await getStatus(boxRoot);
   if (!hasNewChanges(retryStatus, baseline)) {
-    onOutput?.(fmt.ok("  Agent committed on retry\n"));
+    onOutput?.("✓   Agent committed on retry\n");
     return;
   }
 
   // Final fallback: commit with Fallback trailer
-  onOutput?.(fmt.warn("  Agent failed to commit after retry — creating fallback commit\n"));
+  onOutput?.("  Agent failed to commit after retry — creating fallback commit\n");
   // Only the stage+commit tail goes inside the lock. The span above it
   // contains `agent.invoke`, and holding the box's git lock across a whole
   // agent turn would block every other writer for minutes — the one thing

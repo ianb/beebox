@@ -49,6 +49,10 @@ import type { Place } from "../../lib/place-label";
 import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
 import { useLazyMenuOpen } from "../../hooks/useLazyMenuOpen";
 import { useIdlePrefetch } from "../../hooks/useIdlePrefetch";
+import type { RealtimeEvent } from "../../hooks/useBusSubscription";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { busEventData } from "../../lib/bus-events";
+import { landmarkDirOfChange } from "./landmark-change";
 import { SwitchMenuBody, type SwitchLandmark } from "./PlacePill-panels";
 import { HereMenuBody } from "./PlacePill-here";
 import { AppBarHereSlot, useAppBarHereMenuClaimed } from "../app-bar-chrome";
@@ -78,6 +82,20 @@ export function PlacePill({
     { enabled: place.dir !== null },
   );
   const landmark = place.dir === null ? null : identityQuery.data?.identity ?? null;
+
+  // A renamed landmark (its `navigation.label`, symbol) must reach the face
+  // without a reload. A landmark-card change, or a reconnect (file-change
+  // events are not replayed), marks every cached identity stale; only the
+  // mounted place's query refetches now, other places on their next visit.
+  // Same bus feed that refreshes an open card (`useCardIdentities` does this
+  // for the sidecar's tabs).
+  useLiveRefresh({
+    when: (event: RealtimeEvent) => {
+      const fileChange = busEventData(event, "file-change");
+      return fileChange !== null && landmarkDirOfChange(fileChange.path) !== null;
+    },
+    refresh: () => { void utils.landmarks.identity.invalidate(); },
+  });
 
   // Open-path latches (see file header + `useLazyMenuOpen`'s doc comment):
   // the here menu's full link list (listed + derived + expand) and the

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
+import { useDismiss } from "../../hooks/useDismiss";
 import { MaterialContext } from "./material";
 
 // The "first focusable menu item" the open/close focus management below
@@ -277,25 +278,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
     // right-aligned menu grows past the viewport edge.
   }, [open, align, vertical, width]);
 
-  useEffect(() => {
-    if (!open) return;
-    function handlePointer(e: MouseEvent) {
-      if (!(e.target instanceof Node)) return;
-      const target = e.target;
-      const inRoot = rootRef.current !== null && rootRef.current.contains(target);
-      const inMenu = menuRef.current !== null && menuRef.current.contains(target);
-      if (!inRoot && !inMenu) closeMenu();
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && !e.defaultPrevented) closeMenu();
-    }
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open, closeMenu]);
+  useDismiss({ root: rootRef, portal: menuRef, open, onDismiss: closeMenu });
 
   const currentPanelIndex = panelIndex ?? 0;
   const direction = usePanelSlideDirection({ open, panelIndex: currentPanelIndex });

@@ -12,14 +12,14 @@ npm run lint         # ESLint errors
 npm run format:check # Prettier formatting check (or `npm run format` to auto-fix)
 npm run lint:oxlint  # Supplemental linter (fast, catches patterns ESLint misses)
 npm run lint:knip    # Dead code detector (unused files, exports, dependencies)
-npm run lint:circular  # Circular dependency detector (madge)
+npm run lint:circular  # Circular dependency detector (oxlint import/no-cycle)
 ```
 
 - The tsconfig is strict — no implicit `any` allowed
 - ESLint config is in `eslint.config.ts` with rules reviewed individually
 - oxlint provides supplemental checks (ambiguous constructors, useless spreads, identical ternary branches, etc.) — run periodically, not in pre-commit
 - knip detects unused files, exports, and dependencies — run periodically to catch dead code
-- madge detects circular dependencies — type-only cycles (`import type`) are acceptable, value import cycles are not
+- `lint:circular` detects circular dependencies — type-only cycles (`import type`) are acceptable, value import cycles are not
 
 ## Error Handling
 

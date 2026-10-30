@@ -21,8 +21,6 @@ const config: KnipConfig = {
     ".": {
       entry: ["bin/*.ts", "bin/**/*.test.ts"],
       project: ["bin/**/*.ts"],
-      // Invoked through bin/browse, a shell script knip does not read.
-      ignoreDependencies: ["agent-browser"],
     },
     "beebox": {
       entry: [
@@ -56,11 +54,8 @@ const config: KnipConfig = {
       ],
       ignoreDependencies: [
         // Resolved dynamically, so no static import exists to find:
-        // gmail-gws.ts does createRequire().resolve("@googleworkspace/cli/run.js"),
-        // and the two ansi packages are require()d only when rendering fails.
+        // gmail-gws.ts does createRequire().resolve("@googleworkspace/cli/run.js").
         "@googleworkspace/cli",
-        "@parcel/markdown-ansi",
-        "ansi-to-html",
         // lib/twemoji.ts does require_.resolve("@twemoji/svg/package.json")
         // to find the asset directory; there is no import of the package.
         "@twemoji/svg",
@@ -87,8 +82,6 @@ const config: KnipConfig = {
         // 19 ships its own).
         "babel-plugin-react-compiler",
         "react-compiler-runtime",
-        // Config block lives here, runner is the root .husky/pre-commit.
-        "lint-staged",
         // Never imported: test/helpers/dom-globals.ts imports
         // @happy-dom/global-registrator, which takes happy-dom as ^20.14.6.
         // Listing it here pins the shim itself (docs/implemented-plans/frontend-dom-harness.md).

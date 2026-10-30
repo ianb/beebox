@@ -33,7 +33,7 @@ const DEFAULT_MAX_SESSIONS = 20;
 async function discover(boxRoot: string): Promise<DiscoveryResult> {
   const state = await loadReviewState(boxRoot);
   return discoverSessions(boxRoot, {
-    now: getBoxTime(boxRoot),
+    now: new Date(), // real clock: compared with transcript mtimes
     quiescenceMs: QUIESCENCE_MS,
     state,
   });

@@ -112,8 +112,11 @@ fi
 if [ -f "$BUNDLE" ]; then
   # Packed/prod paths returned above. Only a dev invocation identifies the
   # exact artifact it loaded so supervised long-lived processes can notice a
-  # replacement (identity, not mtime ordering) at a safe boundary.
-  if [ "$1" = "serve" ] || { [ "$1" = "scheduler" ] && [ "$2" = "start" ]; }; then
+  # replacement (identity, not mtime ordering) at a safe boundary. Since the
+  # verb split these run as `bbx engine serve` and `bbx engine scheduler
+  # start`; the bare spellings are kept for an older engine's handoff.
+  if [ "$1" = "serve" ] || { [ "$1" = "scheduler" ] && [ "$2" = "start" ]; } \
+    || { [ "$1" = "engine" ] && { [ "$2" = "serve" ] || { [ "$2" = "scheduler" ] && [ "$3" = "start" ]; }; }; }; then
     stamp_dev_bundle
   fi
   run_bundle "$@"

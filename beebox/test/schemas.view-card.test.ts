@@ -42,7 +42,10 @@ void test("An unknown view name fails with the valid set enumerated", async (t) 
   t.check(tryParse("---\nview: dashbord\n---\n", "Oops.view.card"), `Oops.view.card: invalid view frontmatter:
   - view: view must be one of: landmarks, chat-picker, questions, history`);
 
-  t.check(tryParse("---\n---\n", "Empty.view.card"), "Empty.view.card: missing frontmatter block");
+  // An empty block is a block with no fields (cards/frontmatter.ts fence rule),
+  // so the missing `view` field is what fails.
+  t.check(tryParse("---\n---\n", "Empty.view.card"), `Empty.view.card: invalid view frontmatter:
+  - view: required (expected string)`);
 });
 
 // ## `params` configure the view — validated against the view's declared shape

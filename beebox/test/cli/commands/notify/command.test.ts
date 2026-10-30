@@ -111,7 +111,7 @@ exit 0`);
   const slug = await boxSlug(box.root);
   t.check([push.sent.at(-1)?.payload.body, push.sent.at(-1)?.payload.url.replace(slug, "<box>"), push.sent.at(-1)?.payload.silent], [
     "Sign it by Friday.",
-    "/<box>/browse/_content/inbox/field-trip.email.card",
+    "/<box>/views/_content/inbox/field-trip.email.card",
     false,
   ]);
 });

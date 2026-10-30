@@ -1,9 +1,9 @@
 import AppKit
 import BeeBoxMacCore
 import BeeBoxShared
+import Darwin
 import SwiftUI
 
-@main
 struct BeeBoxMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
@@ -22,6 +22,24 @@ struct BeeBoxMacApp: App {
         } label: {
             BoxIcon(runtime: delegate.runtime, uploads: delegate.uploads)
         }
+    }
+}
+
+/// Dispatch command-line operations before SwiftUI constructs the app, app
+/// delegate, or Sparkle update controller.
+@main
+enum BeeBoxMacMain {
+    static func main() {
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        guard arguments.first == "backup" else {
+            BeeBoxMacApp.main()
+            return
+        }
+        let code = BackupControlClient.run(
+            arguments: Array(arguments.dropFirst()),
+            socketPath: Paths.run.appending(path: "backup-control.sock").path
+        )
+        exit(code)
     }
 }
 
@@ -80,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var termSource: DispatchSourceSignal?
+    private var backupControl: BackupControlServer?
 
     override init() {
         MacLog.setFileSink { line in AppLogFile.shared.append(line) }
@@ -97,6 +116,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         source.setEventHandler { [weak self] in self?.stopAndExit() }
         source.resume()
         termSource = source
+        do {
+            backupControl = try BackupControlServer(path: Paths.run.appending(path: "backup-control.sock").path) { [runtime] command in
+                await runtime.runBackupCommand(command)
+            }
+        } catch {
+            appLog("backup control socket failed: \(error)")
+        }
         appLog("launch version=\(BundleConfig.version) hosting=\(hosting.enabled ? "on" : "off") boxes=\(boxStore.boxes.count) watched=\(uploadFolders.folders.count)")
         hosting.startIfEnabled()
         if !uploadFolders.folders.isEmpty { UploadNotifications.requestPermission() }

@@ -45,6 +45,7 @@ import {
 } from "../../../core/pending-browser-request.js";
 import { MAX_IMAGE_BYTES } from "./helpers.js";
 import type { ChatRoutesContext } from "./context.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 /**
@@ -179,7 +180,7 @@ async function respondToScreenshotFulfillment(opts: {
       // Defense in depth: `requestId` is a server-minted UUID, so this can't
       // escape — but confirm the resolved path stays inside _tmp/ before writing,
       // so no future change to how the id is produced can silently open a traversal.
-      if (absPath !== path.join(dir, fileName) || !absPath.startsWith(dir + path.sep)) {
+      if (absPath !== path.join(dir, fileName) || !isWithin(dir, absPath)) {
         return reply.status(400).send({ error: "bad-request-id" });
       }
       await fs.mkdir(dir, { recursive: true });

@@ -3,8 +3,9 @@
 // Use real Git boxes and a real child process. The child sees both boxes closed,
 // can join only its own fleet permits, and declares readiness without reopening.
 // Only the controller reopens after the trusted verification command succeeds.
-// This exercises the current-user path; production's temporary root privilege
-// restoration needs a Linux root fixture as well.
+// The controller starts one holder per box owner (`hold.ts`); here one, as the
+// test's own user. Root on a host whose boxes have several owners is exercised
+// by deploy.sh on the per-box-units VM, not here.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -16,7 +17,7 @@ import { mkdir, writeFile, rm } from "node:fs/promises";
 import { defaultHubConfigPath } from "../../../src/hub/config.js";
 import { pathToFileURL } from "node:url";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
-import { runMaintenance } from "../../../src/cli/commands/maintenance.js";
+import { runMaintenance } from "../../../src/cli/commands/maintenance/command.js";
 import { boxMaintenanceStatus } from "../../../src/lib/box-maintenance/admission.js";
 
 const library = pathToFileURL(join(import.meta.dirname, "../../../src/lib/box-maintenance/admission.ts")).href;
@@ -58,11 +59,15 @@ void test("line 37", async (t) => {
   await two.write("input.txt", "another draft");
   two.commitAll("initial");
   await one.write("input.txt", "dirty valuable draft");
+  const cli = [process.execPath, "--import", "tsx", join(import.meta.dirname, "../../../src/cli/entry/run.ts")];
   const invoke = (script: string, verifyHub?: string) => runMaintenance([two.root, one.root], {
     command: process.execPath,
+    cli,
     ...(verifyHub ? { verifyHub } : {}),
     args: ["--import", "tsx", "--input-type=module", "-e", script],
   });
+  // A host with no box (a freshly provisioned server) runs the command and nothing else.
+  t.check(await runMaintenance([], { command: process.execPath, cli, args: ["-e", "process.exitCode = 3"] }), 3);
   t.check(await invoke(readyScript), 0);
 
   t.check(await boxMaintenanceStatus(one.root), null);
@@ -107,4 +112,31 @@ void test("line 37", async (t) => {
     "one",
     "two",
   ]);
+});
+
+// # The controller runs no git command in a box
+//
+// On the server the controller is root and git refuses a repository another
+// user owns, so the production deploy of 2026-10-25 failed every box's
+// verification. The controller reads the directory the holder's permit names.
+// Here the controller's own git is broken by a bogus GIT_DIR; the holder gets
+// an allowlisted environment without it, and the command script unsets it.
+void test("line 124", async (t) => {
+  const previousGitDir = process.env.GIT_DIR;
+  const box = await makeTmpBox({ git: true });
+  t.teardown(async () => {
+    if (previousGitDir === undefined) delete process.env.GIT_DIR;
+    else process.env.GIT_DIR = previousGitDir;
+    await box.cleanup();
+  });
+  await box.write("input.txt", "draft");
+  box.commitAll("initial");
+  const cli = [process.execPath, "--import", "tsx", join(import.meta.dirname, "../../../src/cli/entry/run.ts")];
+  process.env.GIT_DIR = join(box.root, "no-such-git-dir");
+  t.check(
+    await runMaintenance([box.root], { command: process.execPath, cli, args: ["--import", "tsx", "--input-type=module", "-e", `delete process.env.GIT_DIR;\n${readyScript}`] }),
+    0,
+  );
+  delete process.env.GIT_DIR;
+  t.check(await boxMaintenanceStatus(box.root), null);
 });

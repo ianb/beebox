@@ -1,6 +1,5 @@
-import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSubmissionInput, type CardSubmissionResult, type LintIssue } from "../exports/cards.js";
+import { body, cardSchema, renderFrontmatterBlock, type CardSubmissionInput, type CardSubmissionResult, type LintIssue } from "../exports/cards.js";
 import { validateBatch, COVERAGE_REASONS } from "../shared/browser-task-batch.js";
 import { IsoDuration } from "../shared/iso-duration.js";
 
@@ -282,5 +281,5 @@ export function createBrowserTaskTemplate(options: { title: string; start: strin
     start: { href: options.start },
   };
   const bodyText = options.prompt ?? BROWSER_TASK_BODY_SCAFFOLD;
-  return `---\n${stringifyYaml(fields)}---\n${bodyText.endsWith("\n") ? bodyText : `${bodyText}\n`}`;
+  return renderFrontmatterBlock(fields, bodyText.endsWith("\n") ? bodyText : `${bodyText}\n`);
 }

@@ -12,6 +12,7 @@ import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { withFileLock } from "../../../lib/file-lock.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 export class TriageReceiptError extends Error {
   constructor({ detail }: { detail: string }) { super(`Triage receipt: ${detail}`); this.name = "TriageReceiptError"; }
@@ -52,8 +53,7 @@ export async function assertContained(boxRoot: string, file: string): Promise<vo
   for (;;) {
     try {
       const actual = await fs.realpath(ancestor);
-      const rel = path.relative(root, actual);
-      if (rel.startsWith(`..${path.sep}`) || rel === ".." || path.isAbsolute(rel)) throw new TriageReceiptError({ detail: "Ref resolves through a symlink outside the box" });
+      if (!isWithin(root, actual)) throw new TriageReceiptError({ detail: "Ref resolves through a symlink outside the box" });
       return;
     } catch (error) {
       if (errnoCode(error) !== "ENOENT") throw error;

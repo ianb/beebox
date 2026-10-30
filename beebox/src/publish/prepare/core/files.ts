@@ -12,6 +12,7 @@ import { isAnnexPointer } from "../../../lib/annex-pointer.js";
 import { bundlePolicyError } from "./errors.js";
 import { renderMarkdownSources } from "./markdown.js";
 import type { PreparedFile } from "./types.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 /** Hard bounds for a single prepared site release; intentionally no config surface in v1. */
 export const PUBLICATION_FILE_LIMITS = {
@@ -38,7 +39,7 @@ export interface CollectedPublicationFiles {
 
 function relativeBundlePath(root: string, absolute: string): string {
   const relative = path.relative(root, absolute);
-  if (relative === "" || path.isAbsolute(relative) || relative === ".." || relative.startsWith(`..${path.sep}`)) {
+  if (relative === "" || !isWithin(root, absolute)) {
     throw bundlePolicyError(`output path escapes the selected publication root: ${absolute}`);
   }
   const normalized = relative.split(path.sep).join("/");

@@ -24,7 +24,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { signalNumber, terminateChild } from "./child-signals.js";
 import { availableParallelism } from "node:os";
 import { currentHostBlockers, pressureDecision, readMemoryPressure } from "./host-pressure.js";
-import { changedPaths, git, gitCommonDir } from "./test-git.js";
+import { gitBranch, gitCommonDir } from "./lib/git.js";
+import { changedPaths } from "./test-git.js";
 import { renderReport } from "./test-ledger-report.js";
 import {
   computeGraph,
@@ -94,12 +95,14 @@ let heldFullRun: Held | null = null;
  * be used, like the slots. A parent that already holds the lock (the
  * full-suite schedule) says so in the environment and is not queued behind.
  */
+/** Where this checkout's test locks live, and which branch is asking. */
+const lockPlace = (): { dir: string; branch: string } => ({ dir: lockDir(gitCommonDir()), branch: gitBranch() });
+
 async function holdFullRun(): Promise<boolean> {
   if (process.env[FULL_RUN_HELD_ENV] === "1") return true;
   try {
     const claim = await acquireFullRun({
-      dir: lockDir(gitCommonDir()),
-      branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
+      ...lockPlace(),
       waitMs: FULL_RUN_WAIT_MS,
     });
     if (claim.held === null) {
@@ -126,9 +129,8 @@ function releaseHeld(held: Held | null): void {
 async function holdSlot(tier: Tier): Promise<Held | null> {
   try {
     const held = await acquire({
-      dir: lockDir(gitCommonDir()),
+      ...lockPlace(),
       tier,
-      branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
     });
     heldSlot = held;
     return held;

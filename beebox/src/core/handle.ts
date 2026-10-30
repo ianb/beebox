@@ -82,9 +82,9 @@ function describeInconclusiveSteps(items: ProcedureInconclusive[]): string {
 
 /**
  * Live procedure runner: sets TRIAGE_ITEMS in the process env, calls
- * the procedure engine, restores the prior value. The engine forwards
- * process.env into shell steps, so setting it here is the simplest
- * plumbing path.
+ * the procedure engine, restores the prior value. Shell steps receive it by
+ * name (`PROCEDURE_RUN_ENV` in `procedure/shell.ts`); nothing else in this
+ * process's env reaches them unless the agent allowlist names it.
  */
 const liveRunProcedure: ProcedureRunner = async ({ procedurePath, triageItems, ctx }) => {
   // One path per line. Not NUL: an environment variable ends at its first NUL

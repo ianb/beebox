@@ -17,6 +17,7 @@ import {
   removeBoxFromManifest,
 } from "../../core/box/boxes-config.js";
 import { boxEntryProblem, isBox } from "../../core/schedule/scheduler/core.js";
+import { exportBoxSubscriptions } from "../../core/push-subscriptions.js";
 
 export const boxesCommand = new Command("boxes")
   .description("Manage the box manifest used by serve and scheduler");
@@ -67,4 +68,16 @@ boxesCommand
       const problem = await boxEntryProblem(box);
       console.log(problem === null ? `  ${box}` : `! ${box} (${problem})`);
     }
+  });
+
+// The unit-host migration splits the machine's push-subscription store per
+// box (per-box-units.subplan.md): this prints one box's share, which the
+// migration writes into the box user's own `BBX_PUSH_STORE_DIR`. Subscriptions
+// hold no credential of the person's; a browser endpoint and its keys only.
+boxesCommand
+  .command("export-push")
+  .description("Print the push subscriptions opted into one box, as a store of their own")
+  .argument("<slug>", "Box slug")
+  .action(async (slug: string) => {
+    process.stdout.write(`${JSON.stringify(await exportBoxSubscriptions(slug), null, 2)}\n`);
   });

@@ -15,11 +15,11 @@ export function projectAmbientReply(sessionId: string, { entries, total, running
   const truncated = total > entries.length;
   const unsafe = !first?.uuid || (truncated && groups.length === 1);
   const identity = complete && !unsafe ? `${sessionId}:${first.uuid}` : null;
-  return {
-    identity, complete, earlier: truncated || (complete && unsafe),
-    callouts: identity ? parseCallouts(text) : [],
-    acks: identity ? parseAcks(text) : [],
-  };
+  const callouts = identity ? parseCallouts(text) : [];
+  const acks = identity ? parseAcks(text) : [];
+  // A reply without callouts or acks shows its own persisted text.
+  const preview = identity && callouts.length === 0 && acks.length === 0 ? text.trim() : "";
+  return { identity, complete, earlier: truncated || (complete && unsafe), callouts, acks, preview };
 }
 
 export interface AmbientAttention {
@@ -52,4 +52,16 @@ export function recordAmbientCompletion(previous: AmbientAttention, token: strin
 /** A retained old transcript during target resolution has not been inspected. */
 export function canAcknowledgeAmbientReply(transcriptVisible: boolean, selectionKind: string): boolean {
   return transcriptVisible && selectionKind === "ready";
+}
+
+/**
+ * Whether a conversation's ambient panel stays out of the way. The selected
+ * conversation shows its transcript when `transcriptVisible`; with the
+ * transcript off screen (focus layout, cards in both panes) its panel shows the
+ * reply like any other conversation's.
+ */
+export function ambientPanelHidden({ selected, transcriptVisible, attention, busy, error }: {
+  selected: boolean; transcriptVisible: boolean; attention: boolean; busy: boolean; error: boolean;
+}): boolean {
+  return (selected && transcriptVisible) || (!attention && !busy && !error);
 }

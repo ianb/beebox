@@ -8,10 +8,10 @@
  * (and reported as such).
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "../../shared/error-guards.js";
+import { loadJsonStateOrFresh } from "../../lib/json-state.js";
+import { writeFileAtomic } from "../../lib/atomic-write.js";
 
 const STATE_FILE = ".beebox/retro/state.json";
 
@@ -54,35 +54,15 @@ export function isSessionSettled(state: RetroState, sessionId: string): boolean 
  * evidence-hash dedupe absorbs.
  */
 export async function loadRetroState(boxRoot: string): Promise<RetroState> {
-  const filePath = path.join(boxRoot, STATE_FILE);
-  let text: string;
-  try {
-    text = await fs.readFile(filePath, "utf-8");
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`retro: could not read ${STATE_FILE}, starting fresh:`, e);
-    }
-    return emptyRetroState();
-  }
-
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch (e) {
-    console.warn(`retro: ${STATE_FILE} is not valid JSON, starting fresh:`, e);
-    return emptyRetroState();
-  }
-
-  const parsed = RetroStateSchema.safeParse(raw);
-  if (!parsed.success) {
-    console.warn(`retro: ${STATE_FILE} did not match the expected shape, starting fresh`);
-    return emptyRetroState();
-  }
-  return parsed.data;
+  return loadJsonStateOrFresh({
+    filePath: path.join(boxRoot, STATE_FILE),
+    name: STATE_FILE,
+    label: "retro",
+    schema: RetroStateSchema,
+    fresh: emptyRetroState,
+  });
 }
 
 export async function saveRetroState(boxRoot: string, state: RetroState): Promise<void> {
-  const filePath = path.join(boxRoot, STATE_FILE);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
+  await writeFileAtomic(path.join(boxRoot, STATE_FILE), { content: JSON.stringify(state, null, 2) + "\n" });
 }

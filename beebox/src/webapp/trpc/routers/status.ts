@@ -31,6 +31,7 @@ import {
 } from "../../../core/landmark/browse-prominence.js";
 import type { EffectiveLevel } from "../../../shared/prominence.js";
 import type { CardSchema } from "../../../cards/schema.js";
+import { stringOrNull } from "../../../shared/optional-string.js";
 
 /** A question card's answerable/archive-relevant fields, layered onto its listing entry. */
 export interface QuestionInfo extends QuestionCardInfo {
@@ -40,6 +41,8 @@ export interface QuestionInfo extends QuestionCardInfo {
   options?: string[] | undefined;
   learning?: QuestionFields["learning"] | undefined;
   answer?: QuestionFields["answer"] | undefined;
+  /** What the box decided in place of an answer (`bbx question decide`); not the person's answer. */
+  provisional?: QuestionFields["provisional"] | undefined;
   /** The card's `asked-at`, so a caller can order pending questions by when the box asked them. */
   askedAt?: string | undefined;
   /**
@@ -170,10 +173,7 @@ async function buildBrowseCard(
     // Card failed to parse — still list it (as unknown) so the UI shows it.
     return { relativePath, name: parsed.name, type: parsed.type, hasAttachments, prominence };
   }
-  const str = (key: string): string | undefined => {
-    const value = fm[key];
-    return typeof value === "string" ? value : undefined;
-  };
+  const str = (key: string): string | undefined => stringOrNull(fm[key]) ?? undefined;
   return {
     relativePath,
     name: parsed.name,
@@ -240,6 +240,7 @@ export const statusRouter = router({
             options: fields.input.options?.map((o) => o.label),
             learning: fields.learning,
             answer: fields.answer,
+            provisional: fields.provisional,
             askedAt: fields["asked-at"],
           };
         } catch (e) {

@@ -32,11 +32,8 @@ import type { Socket } from "node:net";
 import fs from "node:fs";
 import path from "node:path";
 import { isRecord } from "../../shared/is-record.js";
-import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
-import fastifyCookie from "@fastify/cookie";
-import fastifyStatic from "@fastify/static";
-import httpProxy from "http-proxy-3";
-import type { Endpoint, EndpointProvider } from "../endpoints.js";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { proxyTarget, type Endpoint, type EndpointProvider } from "../endpoints.js";
 import type { BoxRuntimeStatus } from "../box-status.js";
 import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../../webapp/routes/auth/register.js";
@@ -46,14 +43,14 @@ import { listAccessibleBoxes, describeBoxes, type BoxListing } from "../../webap
 import { canAccessBox } from "../../webapp/box-access.js";
 import { HASHED_ASSET_STATIC_OPTIONS } from "../../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../../webapp/base-prefix.js";
-import { verifyMobileRequest } from "../../core/mobile/request-auth.js";
 import { hasScanAuth } from "./scan-gate.js";
-import { verifyAgentBearer } from "../../core/agent/token.js";
+import { agentAuthed, mobileAuthed as boxMobileAuthed, mobileBearerAuthed } from "./box-credentials.js";
 import { verifyBrowseKey } from "../../core/browse-key.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import {
   resolveRequestIdentity,
+  isDiagnosticBypassRequest,
   getOwnerEmail,
   HUB_SECRET_HEADER,
   HUB_EMAIL_HEADER,
@@ -63,6 +60,7 @@ import { invariant } from "../../shared/invariant.js";
 import type { HubVerdict } from "../health.js";
 import { registerHealthRoutes } from "./health-routes.js";
 import { registerHubErrorHandler } from "./http-error.js";
+import { sendAsleepHome } from "./home-snapshot-route.js";
 import { replyNoEndpoint } from "./box-unavailable.js";
 import type { DiskHealth } from "../disk-health.js";
 
@@ -75,10 +73,11 @@ export interface HubServerOptions {
   endpoints: EndpointProvider;
   getHealth: () => HubHealth;
   getDiskHealth?: () => DiskHealth;
-  /** Per-boot secret (see `cli/commands/hub.ts`), shared with every
-   *  supervised child's env -- the gate a box uses to trust the identity
-   *  headers this module injects. See `src/webapp/auth.ts`'s `isHubMode`. */
-  hubSecret: string;
+  /** Per-boot secret (see `cli/commands/hub.ts`) -- the gate a box uses to
+   *  trust the identity headers this module injects (`src/webapp/auth.ts`'s
+   *  `isHubMode`). One string shared by every spawned child, or, on a unit
+   *  host, a function giving each slug its own (`hub/secrets.ts`). */
+  hubSecret: string | ((slug: string | null) => string);
   /** Slug -> resolved box root, for the login surface's `/auth/me`
    *  accessible-boxes list and the box picker (D3). */
   boxes: BoxSpec[];
@@ -98,6 +97,13 @@ export interface HubServerOptions {
    * `x-bbx-hub-auth: off` to its children.
    */
   openAccess?: boolean | undefined;
+  /**
+   * The built frontend to serve. Defaults to `src/frontend/dist`, a gitignored
+   * build artifact; a test points this at `test/fixtures/frontend-dist` so the
+   * box picker and static mounts do not depend on what the checkout has built
+   * (as `frontendPath` does for the box server, `server-types.ts`).
+   */
+  frontendPath?: string | undefined;
 }
 
 /** First path segment, e.g. `/test1/browse/x` -> `test1`. Mirrors the dev
@@ -120,13 +126,30 @@ function parseSlug(reqPath: string): string | null {
  * `docs/mobile-contract.md`). Verifying here is affordable because the cookie
  * path is pure HMAC with no filesystem access.
  */
-async function hasMobileAuth(opts: { boxRoot: string | undefined; headers: http.IncomingHttpHeaders }): Promise<boolean> {
+async function hasMobileAuth(opts: { boxRoot: string | undefined; hubSecret: string; headers: http.IncomingHttpHeaders }): Promise<boolean> {
   if (opts.boxRoot === undefined) return false;
-  return verifyMobileRequest(opts.boxRoot, opts.headers);
+  return boxMobileAuthed({ boxRoot: opts.boxRoot, hubSecret: opts.hubSecret }, opts.headers);
+}
+
+/** A machine bearer that clears the hub's wall for this box and path without a session. */
+async function hasBearerAuth(request: FastifyRequest, opts: { slug: string; reqPath: string; boxRoot: string | undefined }): Promise<boolean> {
+  const { slug, reqPath, boxRoot } = opts;
+  // A scan-upload bearer authorizes ONLY `/<slug>/api/scan/…` (see
+  // ./scan-gate.ts); on any other path this is false and the request falls
+  // through to the wall, which 401s it.
+  return await hasScanAuth({ boxRoot, headers: request.headers, reqPath, slug })
+    // The diagnostic bearer on its whitelisted GET reads (`webapp/auth.ts`):
+    // passed through without identity, and the box checks the key again
+    // against its own copy (`docs/server/operations.md`).
+    || isDiagnosticBypassRequest(request)
+    // The box's own agent token (`core/agent/token.ts`), verified against that
+    // box: a `bbx` command pointed at the hub URL instead of the child's port.
+    || (boxRoot !== undefined && agentAuthed(boxRoot, request.headers.authorization));
 }
 
 async function listMobileAuthorizedBoxes(opts: { boxes: BoxSpec[]; headers: http.IncomingHttpHeaders }): Promise<BoxListing[]> {
-  const checked = await Promise.all(opts.boxes.map(async (box) => ({ box, ok: await verifyMobileRequest(box.boxRoot, opts.headers) })));
+  // Verified credentials only: this listing is the hub's own answer, not proxied.
+  const checked = await Promise.all(opts.boxes.map(async (box) => ({ box, ok: await mobileBearerAuthed(box.boxRoot, opts.headers) })));
   return describeBoxes(checked.filter((c) => c.ok).map(({ box }) => box));
 }
 
@@ -248,6 +271,12 @@ function decideHubAuth({
   return { authorized: false, headersToSet: {} };
 }
 
+/** The hub's server packages, loaded when a hub starts: every `bbx` verb loads this module. */
+async function loadHubPackages() {
+  const [fastify, cookie, staticFiles, proxy] = await Promise.all([import("fastify"), import("@fastify/cookie"), import("@fastify/static"), import("http-proxy-3")]);
+  return { Fastify: fastify.default, fastifyCookie: cookie.default, fastifyStatic: staticFiles.default, httpProxy: proxy.default };
+}
+
 /**
  * Build the hub's Fastify app, register its own surface (health, login,
  * box picker), then hijack every other request into the endpoint proxy.
@@ -256,7 +285,9 @@ function decideHubAuth({
  * `.on("upgrade")`) `cli/commands/hub.ts` and the tests already use.
  */
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
-  const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false } = options;
+  const { endpoints, getHealth, getDiskHealth, hubSecret, boxes, baseUrl, openAccess = false, frontendPath } = options;
+  const secretFor = typeof hubSecret === "string" ? (): string => hubSecret : hubSecret;
+  const { Fastify, fastifyCookie, fastifyStatic, httpProxy } = await loadHubPackages();
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
 
@@ -291,7 +322,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
 
   // The box picker at "/" — serves the SPA's styled box-selection page (with a
   // minimal server-rendered fallback when the bundle isn't built).
-  const frontendDist = path.join(PACKAGE_ROOT, "src/frontend/dist");
+  const frontendDist = frontendPath ?? path.join(PACKAGE_ROOT, "src/frontend/dist");
   registerBoxPicker(app, { boxes, frontendDist });
 
   // The frontend's box switcher calls /api/boxes on whatever server it's
@@ -395,7 +426,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     // first: an unauthenticated request redirects to login regardless of slug,
     // so it neither wakes a box nor reveals whether the slug is configured.
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: verifyBrowseKey(request.headers), hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: verifyBrowseKey(request.headers), hubSecret: secretFor(boxSlug || null), openAccess });
     if (!decision.authorized) {
       return loginRedirect(request, reply);
     }
@@ -430,14 +461,16 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     try {
       endpoint = boxSlug ? await resolveEndpoint(boxSlug, endpoints) : undefined;
     } catch (e) {
-      return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
+      // A client-facing body (pairing redemption reaches it unauthenticated):
+      // an Error's message only, never the fields of some other thrown value.
+      return reply.status(502).send({ error: "bad_gateway", message: e instanceof Error ? e.message : String(e) });
     }
     if (!endpoint) {
       return reply.status(400).send({ error: "unknown_box", message: `Unknown box in OAuth state: ${JSON.stringify(boxSlug)}` });
     }
 
     reply.hijack();
-    proxy.web(request.raw, reply.raw, { target: endpoint.origin });
+    proxy.web(request.raw, reply.raw, { target: proxyTarget(endpoint) });
   });
 
   // Everything else: gate on identity, then proxy to the box's own Fastify
@@ -447,19 +480,12 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
     const slug = parseSlug(reqPath);
     const mobileAuthed = slug !== null
-      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers });
-    // A scan-upload bearer authorizes ONLY `/<slug>/api/scan/…` (see
-    // ./scan-gate.ts); on any other path this is false and the request falls
-    // through to the wall below, which 401s it.
-    const scanAuthed = slug !== null
-      && await hasScanAuth({ boxRoot: boxRootBySlug.get(slug), headers: request.headers, reqPath, slug });
-    // The box's own agent token (`core/agent/token.ts`), verified against that
-    // box: a `bbx` command pointed at the hub URL instead of the child's port.
-    const agentBoxRoot = slug === null ? undefined : boxRootBySlug.get(slug);
-    const perBoxAuthed = mobileAuthed || scanAuthed || (agentBoxRoot !== undefined && verifyAgentBearer(agentBoxRoot, request.headers.authorization));
+      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), hubSecret: secretFor(slug), headers: request.headers });
+    const perBoxAuthed = mobileAuthed
+      || (slug !== null && await hasBearerAuth(request, { slug, reqPath, boxRoot: boxRootBySlug.get(slug) }));
 
     stripHubHeaders(request.raw.headers);
-    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(request.headers), hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(request.headers), hubSecret: secretFor(slug), openAccess });
     if (!isMobilePairingRedeem && !perBoxAuthed && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
@@ -476,6 +502,9 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       if (slug !== null) injectBasePrefix(request.raw.headers, `/${slug}`);
     }
 
+    // The phone's box screen gets a sleeping box's last home without waking it.
+    if (sendAsleepHome(reply, { mobileAuthed, authorization: request.headers.authorization, method: request.method, reqPath, slug, boxRootBySlug, secretFor, endpoints })) return reply;
+
     // A lazy hub's box may be "stopped" (idle-collected or never yet
     // requested) — ensureRunning cold-starts it and waits for readiness,
     // same as workstreams-app/src/router/server/listener.ts's ensureRunning does for a whole worktree, AND
@@ -489,13 +518,15 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     try {
       endpoint = slug ? await resolveEndpoint(slug, endpoints) : undefined;
     } catch (e) {
-      return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
+      // A client-facing body (pairing redemption reaches it unauthenticated):
+      // an Error's message only, never the fields of some other thrown value.
+      return reply.status(502).send({ error: "bad_gateway", message: e instanceof Error ? e.message : String(e) });
     }
     // Pairing redemption passed the wall unauthenticated; it gets no owner detail.
     if (!endpoint) return replyNoEndpoint(reply, { slug, reqPath, method: request.method, accept: request.headers.accept, boxRoot: slug === null ? undefined : boxRootBySlug.get(slug), endpoints, detailed: perBoxAuthed || decision.authorized });
 
     reply.hijack();
-    proxy.web(request.raw, reply.raw, { target: endpoint.origin });
+    proxy.web(request.raw, reply.raw, { target: proxyTarget(endpoint) });
   });
 
   await app.ready();
@@ -511,10 +542,10 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const reqPath = req.url ?? "/";
     const slug = parseSlug(reqPath);
     const mobileAuthed = slug !== null
-      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), headers: req.headers });
+      && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), hubSecret: secretFor(slug), headers: req.headers });
 
     stripHubHeaders(req.headers);
-    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(req.headers), hubSecret, openAccess });
+    const decision = decideHubAuth({ cookieHeader: req.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(req.headers), hubSecret: secretFor(slug), openAccess });
     if (!mobileAuthed && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
@@ -540,7 +571,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       socket.destroy();
       return;
     }
-    proxy.ws(req, socket, head, { target: endpoint.origin }, () => {
+    proxy.ws(req, socket, head, { target: proxyTarget(endpoint) }, () => {
       // This callback fires only from http-proxy's error path (see
       // ws-incoming.js's onOutgoingError) -- never on success -- so an
       // invocation always means the upgrade failed.
@@ -560,8 +591,4 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   });
 
   return server;
-}
-
-function describeHubError(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }

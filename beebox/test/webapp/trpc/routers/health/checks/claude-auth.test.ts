@@ -50,7 +50,7 @@ void test("Logged out → the check fails with an actionable message (on every p
   t.check(claudeCheck(checks), {
     name: "claude-credentials",
     ok: false,
-    message: "The assistant engine (Claude Code) isn't signed in on this server — chat and background processing (reactor, procedures) will not work. Run `claude auth login` on this machine",
+    message: "The assistant engine (Claude Code) isn't signed in on this server — chat and background processing (reactor, procedures) will not work. Run `claude auth login` on this machine, or grant the `claude-oauth-token` secret to this box",
     severity: "error",
   });
 });

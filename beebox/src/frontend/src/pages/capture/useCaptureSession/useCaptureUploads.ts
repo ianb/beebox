@@ -7,6 +7,7 @@
  * in `useUploadRunner`, which this hook feeds.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useState, useRef, useCallback } from "react";
 import { sanitizeFilename } from "@shared/filename";
 import { type UploadState } from "../api";
@@ -332,6 +333,6 @@ function logUploadFailure(opts: { filename: string; error: unknown }): void {
     console.warn(`[capture] Upload of ${filename} abandoned before it finished`);
     return;
   }
-  const msg = error instanceof Error ? error.message : String(error);
+  const msg = errorMessage(error);
   console.error(`[capture] Upload failed (${filename}): ${msg}`);
 }

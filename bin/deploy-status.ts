@@ -48,12 +48,15 @@ import {
   type Section,
 } from "./deploy-status-lib.js";
 import { renderText } from "./deploy-status-render.js";
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
+import { pidAlive } from "../beebox/src/hub/child-process-utils.js";
+import { gitOrNull } from "./lib/git.js";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
 /**
- * Runs on the server as root. Every step is a read; the per-box status runs as
- * `beebox` so nothing it might touch changes owner. Prints `@@section` markers
+ * Runs on the server as root. Every step is a read; each box's status runs as
+ * its own user, `bbx-<slug>`, so nothing it might touch changes owner. Prints `@@section` markers
  * the local side splits on. The diag key goes to curl on stdin, not argv.
  */
 const REMOTE_SCRIPT = String.raw`
@@ -73,27 +76,23 @@ else
 fi
 unset KEY
 echo "@@section migrations"
-for boxdir in /home/beebox/boxes/*/; do
+for boxdir in /var/lib/beebox/*/box/; do
   [ -e "$boxdir/.git" ] || continue
-  echo "@@box $(basename "$boxdir")"
-  sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 60 bbx engine migrate --status --json' bbx-status "$boxdir" 2>&1 | tail -n 3
+  slug=$(basename "$(dirname "$boxdir")")
+  echo "@@box $slug"
+  sudo -u "bbx-$slug" -H bash -lc 'set -a; source /etc/beebox/box.env 2>/dev/null; set +a; cd "$1" && timeout 60 bbx engine migrate --status --json' bbx-status "$boxdir" 2>&1 | tail -n 3
   echo "@@rc $?"
 done
 echo "@@section end"
 `;
 
 function git(args: string[]): string | null {
-  const result = spawnSync("git", ["-C", REPO_ROOT, ...args], { encoding: "utf8" });
-  return result.status === 0 ? result.stdout.trim() : null;
+  return gitOrNull(args, { cwd: REPO_ROOT })?.trim() ?? null;
 }
 
 function mainCheckout(): string | null {
   const common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   return common === null ? null : path.dirname(common);
-}
-
-function isEnoent(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
 
 // A deploy can take or drop the lock between any two reads; a vanished file
@@ -102,23 +101,13 @@ function readIfPresent(file: string): string | null {
   try {
     return readFileSync(file, "utf8");
   } catch (error) {
-    if (isEnoent(error)) return null;
+    if (errnoCode(error) === "ENOENT") return null;
     throw error;
   }
 }
 
 function lastNonEmptyLine(text: string | null): string | null {
   return text?.split("\n").findLast((entry) => entry.trim() !== "")?.trim() ?? null;
-}
-
-function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    // EPERM: the process exists but is not ours to signal — still alive.
-    return e instanceof Error && "code" in e && e.code === "EPERM";
-  }
 }
 
 function lockState(mainRoot: string): LockState {
@@ -138,7 +127,7 @@ function lockState(mainRoot: string): LockState {
   try {
     since = statSync(lockDir).mtime.toISOString();
   } catch (error) {
-    if (!isEnoent(error)) throw error;
+    if (errnoCode(error) !== "ENOENT") throw error;
     return { state: "free", requestedSha: lastNonEmptyLine(readIfPresent(path.join(mainRoot, ".deploy-requested"))) };
   }
   return { state: "held", pid, alive: true, since, logTail };

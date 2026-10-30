@@ -32,10 +32,14 @@ export function appendSessionManifest(boxRoot: string, entry: ManifestEntry): vo
  * this commit, so the file can also hold lines from other runs; the subject and
  * trailer therefore name the file, not the caller. A no-op when the manifest is
  * unchanged.
+ *
+ * `alsoPaths` are chat cards (or the directory holding them) the run wrote
+ * beside the manifest line; they land in the same commit, so a web chat's husk
+ * is never left untracked.
  */
-export async function commitSessionManifest(boxRoot: string): Promise<void> {
+export async function commitSessionManifest(boxRoot: string, alsoPaths?: readonly string[]): Promise<void> {
   await stageAndCommitPaths(boxRoot, {
-    paths: [MANIFEST_REL_PATH],
+    paths: [MANIFEST_REL_PATH, ...(alsoPaths ?? [])],
     message: "Usage: record agent sessions",
     trailers: { "Commit-Source": "usage-manifest" },
   });

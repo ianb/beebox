@@ -1,9 +1,15 @@
 import { MODEL_ID } from "./model-ids.js";
-import { invariant } from "./invariant.js";
+import { assertNever, invariant } from "./invariant.js";
 
 /** Agent-engine names shared by box config, chat, and procedure model policy. */
-export const AGENT_ENGINES = ["claude", "codex"] as const;
+export const AGENT_ENGINES = ["claude", "codex", "pi"] as const;
 export type AgentEngine = (typeof AGENT_ENGINES)[number];
+
+/** Narrow an untrusted value (config, URL, CLI flag) to an engine name. */
+export function isAgentEngine(value: unknown): value is AgentEngine {
+  const engines: readonly unknown[] = AGENT_ENGINES;
+  return engines.includes(value);
+}
 
 /**
  * Portable procedure tiers, followed by the provider-shaped legacy aliases
@@ -41,6 +47,8 @@ export type ModelProvider = "anthropic" | "glm" | "openai" | "openrouter";
 const ENGINE_DEFAULT_PROVIDER: Record<AgentEngine, ModelProvider> = {
   claude: "anthropic",
   codex: "openai",
+  // pi runs only owner-added OpenRouter models and has no tier table.
+  pi: "openrouter",
 };
 
 /**
@@ -103,7 +111,27 @@ const PROCEDURE_MODELS: Record<AgentEngine, Partial<Record<ModelProvider, Record
       strongest: MODEL_ID.astra,
     },
   },
+  // Empty on purpose: any built-in pi default would spend without the owner
+  // adding the model (docs/implemented-plans/pi-box-engine.md, Track 2).
+  pi: {},
 };
+
+/**
+ * Whether an engine has a procedure tier table. pi does not: it runs only the
+ * box's added OpenRouter models, so its default and small slots stand in for
+ * tiers (docs/implemented-plans/pi-box-engine.md, Track 2).
+ */
+export function hasProcedureTiers(engine: AgentEngine): boolean {
+  switch (engine) {
+    case "claude":
+    case "codex":
+      return true;
+    case "pi":
+      return false;
+    default:
+      return assertNever(engine);
+  }
+}
 
 /** Narrow an untrusted string to a portable tier (or legacy alias). */
 export function isProcedureModelName(value: string): value is ProcedureModelName {
@@ -130,6 +158,7 @@ export function resolveProcedureModel(params: {
   /** Tier column — first-party vs GLM on claude. Missing means the engine's own provider. */
   provider?: ModelProvider;
 }): string {
+  invariant(hasProcedureTiers(params.engine), `${params.engine} has no procedure tiers; its models come from the box's added OpenRouter list`);
   const columns = PROCEDURE_MODELS[params.engine];
   const own = ENGINE_DEFAULT_PROVIDER[params.engine];
   const fallback = columns[own];

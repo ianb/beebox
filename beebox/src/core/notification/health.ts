@@ -1,7 +1,7 @@
 /**
  * Health checks over the notification log: notifications that failed on a
  * channel, notifications no channel could carry, and whether the log itself
- * can be appended to. The first two read the last 24 hours of the log; the
+ * can be appended to, and whether the box's notifications are fake. The first two read the last 24 hours of the log; the
  * third probes by opening the file for append, so an unwritable log is
  * reported by a check that does not depend on reading it. The Jev budget
  * check rides along: a judgment deferred for budget is a check that did not
@@ -14,6 +14,10 @@ import * as path from "node:path";
 import { errorMessage } from "../../shared/error-guards.js";
 import { notificationLogPath, readRecent, type LoggedNotification } from "./log.js";
 import { jevBudgetHealthCheck } from "../judgment/budget.js";
+import { notifyFakeMode } from "./fake-mode.js";
+import { isWalkFixture } from "../../lib/box-fixture.js";
+import { storedClockOffsetMs } from "../../lib/time.js";
+import { formatDuration } from "../../shared/relative-time.js";
 
 /** Structurally a `HealthCheck` (`webapp/trpc/routers/health.ts`). */
 interface NotificationHealthCheck {
@@ -85,11 +89,37 @@ async function logWritableCheck(boxRoot: string): Promise<NotificationHealthChec
   }
 }
 
+/** A box whose notifications are fake reaches nobody; a fixture says so, a person's box must not be one. */
+function fakeModeCheck(boxRoot: string): NotificationHealthCheck {
+  const fake = notifyFakeMode(boxRoot);
+  return {
+    name: "notifications-fake",
+    ok: !fake,
+    message: fake
+      ? "Notifications on this box are fake (BBX_NOTIFY_FAKE, or fakeNotifications in _config/box.json); nothing reaches a phone"
+      : "Notifications on this box send for real",
+    severity: "warning",
+  };
+}
+
+/** A walk fixture's clock may run ahead; any other box with an offset file ignores it, and says so. */
+function clockOffsetCheck(boxRoot: string): NotificationHealthCheck {
+  const offsetMs = storedClockOffsetMs(boxRoot);
+  const message = offsetMs === 0
+    ? "This box's clock is real time"
+    : isWalkFixture(boxRoot)
+      ? `This box's clock runs ${formatDuration(offsetMs)} ahead (.beebox/clock-offset.json)`
+      : `.beebox/clock-offset.json (${formatDuration(offsetMs)}) is ignored: this box is not a walk fixture`;
+  return { name: "box-clock-offset", ok: offsetMs === 0, message, severity: "warning" };
+}
+
 export async function notificationHealthChecks(
   boxRoot: string,
   opts: { now: Date },
 ): Promise<NotificationHealthCheck[]> {
   const writable = await logWritableCheck(boxRoot);
+  const fake = fakeModeCheck(boxRoot);
+  const clock = clockOffsetCheck(boxRoot);
   const budget = await jevBudgetHealthCheck(boxRoot, opts);
   let recent: LoggedNotification[];
   try {
@@ -97,6 +127,8 @@ export async function notificationHealthChecks(
   } catch (e) {
     return [
       writable,
+      fake,
+      clock,
       budget,
       {
         name: "notification-log-readable",
@@ -106,5 +138,5 @@ export async function notificationHealthChecks(
       },
     ];
   }
-  return [undeliveredCheck(recent), noChannelCheck(recent), writable, budget];
+  return [undeliveredCheck(recent), noChannelCheck(recent), writable, fake, clock, budget];
 }

@@ -1,6 +1,5 @@
-import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type LintIssue } from "../exports/cards.js";
+import { body, cardSchema, renderFrontmatterBlock, type LintIssue } from "../exports/cards.js";
 import {
   capturedTabSet,
   tabArrangementProposal,
@@ -128,12 +127,15 @@ export function createTabArrangementCard(input: {
   source: z.infer<typeof capturedTabSet>;
   proposal: z.infer<typeof tabArrangementProposal>;
 }): string {
-  const frontmatter = stringifyYaml({
+  const fields = {
     "transfer-id": input.transferId,
     scope: input.scope,
     "captured-at": input.capturedAt,
     "captured-tabs": input.source,
     proposal: input.proposal,
-  });
-  return `---\n${frontmatter}---\n\nCaptured by Bee Box Clerk. Revise the proposal with the boxholder before applying.\n`;
+  };
+  return renderFrontmatterBlock(
+    fields,
+    "\nCaptured by Bee Box Clerk. Revise the proposal with the boxholder before applying.\n",
+  );
 }

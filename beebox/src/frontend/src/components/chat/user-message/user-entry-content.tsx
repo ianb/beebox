@@ -11,7 +11,7 @@ import {
   parseDeliveredUserMessageParts,
   type DeliveredUserMessagePart,
 } from "@shared/delivered-user-message";
-import { Image } from "../../ui/Image";
+import { Image } from "../../ui/Image/view";
 import { Pre } from "../../ui/Pre";
 import type { SessionEntry } from "../../../api";
 import type { AudioOverlayEntry } from "../audio-overlay-store";

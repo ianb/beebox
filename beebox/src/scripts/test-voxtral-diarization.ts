@@ -12,12 +12,13 @@
  * keep hitting OpenAI. Delete that file to regenerate.
  */
 
-import { writeFile, readFile, access, mkdir } from "node:fs/promises";
+import { writeFile, readFile, mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 import { errorMessage } from "../shared/error-guards.js";
 import { isRecord } from "../shared/is-record.js";
+import { fileExists } from "../lib/file-exists.js";
 
 class TtsRequestError extends Error {
   readonly voice: string;
@@ -77,15 +78,6 @@ const SAMPLE_PATH = path.join(
   path.dirname(new URL(import.meta.url).pathname),
   ".voxtral-sample.wav",
 );
-
-async function fileExists(p: string): Promise<boolean> {
-  try {
-    await access(p);
-    return true;
-  } catch (_e) {
-    return false;
-  }
-}
 
 async function ttsToMp3(voice: string, text: string): Promise<Buffer> {
   const res = await fetch("https://api.openai.com/v1/audio/speech", {

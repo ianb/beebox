@@ -204,8 +204,8 @@ export function deleteSessionFile(boxRoot: string, sessionFile: string | null): 
 /**
  * Combine several queued sends into one turn: text joined with blank lines,
  * image attachments concatenated with per-message id offsets so `[imageN]`
- * tokens from different messages don't collide. The latest queued `channel`,
- * `openCard` and `openQuestion` win — they reflect where the user is now — but
+ * tokens from different messages don't collide. The latest queued `channel`
+ * and `openCard` win — they reflect where the user is now — but
  * `cardActivity` is unioned for that subject. With captured attention, only
  * sends about the latest focused ref participate; activity on another card
  * must not be attributed to it. Legacy clients retain their batch union.
@@ -215,12 +215,10 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   const combinedTextParts: string[] = [];
   let channel: ChatChannel | undefined;
   let openCard: string | undefined;
-  let openQuestion: string | undefined;
   let idOffset = 0;
   for (const q of queued) {
     if (q.channel !== undefined) channel = q.channel;
     if (q.openCard !== undefined) openCard = q.openCard;
-    if (q.openQuestion !== undefined) openQuestion = q.openQuestion;
     const imgs = q.images ?? [];
     let text = q.text;
     if (imgs.length > 0 && idOffset > 0) {
@@ -253,33 +251,50 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     ...(channel !== undefined ? { channel } : {}),
     ...(viewContext !== undefined ? { viewContext } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
-    ...(openQuestion !== undefined ? { openQuestion } : {}),
     ...(cardActivity.length > 0 ? { cardActivity } : {}),
     ...(Object.keys(cardState).length > 0 ? { cardState } : {}),
     ...(queued.some((q) => q.clientComposed === true) ? { clientComposed: true as const } : {}),
   };
 }
 
+/** A drain's inputs were taken by `stop()` before its send was admitted. */
+class DrainTakenError extends Error {
+  constructor() { super("The session stopped and took this drain's queued messages"); this.name = "DrainTakenError"; }
+}
+
+/**
+ * A drain's `onAdmitted` check: throw when `stop()` has emptied `queued`, so
+ * the send is abandoned before it delivers a message already marked undelivered.
+ */
+export function assertDrainHeld(queued: ChatSendInput[]): void {
+  if (queued.length === 0) throw new DrainTakenError();
+}
+
 /**
  * A queued turn is a new root operation. Its input goes back to the front of
  * the queue when the send is refused, when admission closes, or when the run
  * start throws, so the next drain (a turn result, a run close, or the end of
- * maintenance) can deliver it.
+ * maintenance) can deliver it. `send` also gets the queued inputs themselves:
+ * they are out of the queue until the send settles, and a `stop()` in that
+ * time must still be able to name them. A stop takes them by emptying that
+ * same array, so a drain it took requeues nothing, and the send is abandoned
+ * at admission ({@link assertDrainHeld}) rather than delivering them.
  */
 export function drainSessionQueue(opts: {
   queue: ChatSendInput[];
   paused: boolean;
-  send: (input: ChatSendInput) => Promise<boolean>;
+  send: (input: ChatSendInput, queued: ChatSendInput[]) => Promise<boolean>;
   onError: (error: Error) => void;
 }): void {
   if (opts.paused || opts.queue.length === 0) return;
   const queued = opts.queue.splice(0);
-  void opts.send(combineQueuedInputs(queued)).then((sent) => {
+  void opts.send(combineQueuedInputs(queued), queued).then((sent) => {
     if (!sent) opts.queue.unshift(...queued);
   }).catch((error: unknown) => {
     opts.queue.unshift(...queued);
-    if (error instanceof BoxMaintenanceError) return;
+    if (error instanceof BoxMaintenanceError || error instanceof DrainTakenError) return;
     log("drain", `Draining queued messages failed; ${queued.length} message(s) kept in the queue: ${errorMessage(error)}`);
     opts.onError(error instanceof Error ? error : new Error(String(error)));
   });
 }
+

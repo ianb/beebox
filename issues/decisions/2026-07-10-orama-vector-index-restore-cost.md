@@ -76,3 +76,19 @@ regardless as a low-effort issue filing. Content-embedding ambitions
 ## Discussion note (2026-10-06)
 
 Proposed: cache the restored index in memory in the long-running server, and wait on upstream for the CLI. The developer is not sure about the caching. Still open.
+
+## Re-encounter (2026-10-25): memory, not only time
+
+Found while investigating a `bbx serve` heap OOM on a local real box (worktree
+`box-memory-and-crash-recovery`). That box's card index is now 320 MB of JSON,
+about ten times the 34.5 MB measured above. The web search route also restores
+it per query inside the serve process (`src/webapp/trpc/routers/search.ts` →
+`searchBox` → `openSearchIndex`, `src/core/search/refresh/core.ts:94,121`).
+One standalone restore of that index measured 464 MB of retained heap, 1.4 GB
+peak RSS, and about 2.2 s. Concurrent queries stack, so a few searches at once
+can reach the serve process's heap limit, and on the unit host the cgroup's
+2 GB `MemoryMax`. This was not the cause of that OOM (no search ran), but it
+adds a memory cost to option 1. It is also near the ~512 MB string ceiling
+noted above, beyond which a restore fails. Option 3 (a cached index in the
+resident process) would hold about 0.5 GB permanently for this box, so it
+would trade the per-query spike for a fixed cost.

@@ -19,6 +19,7 @@
 
 import type { Node } from "@markdoc/markdoc";
 import { isExternalRef, parseRef, resolveRefPath } from "./ref-path/core.js";
+import { stringOrNull } from "./optional-string.js";
 
 /** A `{% see-also %}` reference, from either capture form. */
 export interface TodoSeeAlso {
@@ -121,7 +122,7 @@ export function resolveTodoRefs(relPath: string, candidates: string[]): string[]
 }
 
 function stringAttr(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
+  return stringOrNull(value) ?? undefined;
 }
 
 function joinParts(parts: string[]): string {

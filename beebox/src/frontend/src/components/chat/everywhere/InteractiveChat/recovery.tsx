@@ -10,7 +10,7 @@ import { useCallback, useEffect, type MutableRefObject } from "react";
 import { useDictationDraft } from "../../../../hooks/useDictationDraft";
 import { RecoveredDictation } from "./RecoveredDictation";
 import { joinTranscript } from "../../InteractiveChat-helpers";
-import { ExpiredAttachmentsNotice } from "../../InteractiveChat-layout/view";
+import { ExpiredAttachmentsNotice } from "../../InteractiveChat-layout/view/ChatComposerSection";
 import type { InputStore } from "../../input-store";
 
 export const RECOVERED_DICTATION_MIN_CHARACTERS = 20;

@@ -6,16 +6,14 @@
 
 import { z } from "zod";
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure } from "../../procedures.js";
 import { getBoxGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES } from "../../../../google/auth.js";
-import { loadGoogleTokens } from "../../../../google/token-store.js";
+import { centralTokenPath, legacySecretPath, loadGoogleTokens } from "../../../../google/token-store.js";
 import { createGoogleOAuthState } from "../../../../google/oauth-state.js";
 import { loadBoxConfig } from "../../../../core/box/config.js";
 import { baseServerUrl } from "../../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../../lib/public-url.js";
-import { getBoxDir } from "../../../../lib/paths/core.js";
 import { readDocsApiDiagnosis, renderDocsApiProblem } from "../../../../connectors/google-drive/docs-api-status.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
 
@@ -84,7 +82,7 @@ export const googleAdminProcedures = {
       const publicUrl =
         input.origin || (await resolveBoxPublicUrl(ctx.boxRoot, { fallback: "http://localhost:3210" })) || "http://localhost:3210";
       const redirectUri = `${baseServerUrl(publicUrl)}/auth/google-services/callback`;
-      const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
+      const oauth2Client = await createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
       // Mint a one-time nonce (behind this owner wall) that the callback must
       // present back — the callback is reachable outside the auth wall, so the
       // nonce is what proves an owner initiated the grant. The returnPath rides
@@ -105,8 +103,9 @@ export const googleAdminProcedures = {
     }),
 
   googleDisconnect: ownerProcedure.mutation(async ({ ctx }) => {
-    // Removes the centralized token — affects ALL boxes.
-    const central = process.env.BBX_GOOGLE_TOKENS_FILE;
+    // Removes the token file outside the box tree: with BBX_GOOGLE_TOKENS_FILE,
+    // every box that names it loses Google; on a unit host, only this box.
+    const central = centralTokenPath();
     if (central) {
       try {
         await fs.unlink(central);
@@ -116,7 +115,7 @@ export const googleAdminProcedures = {
     }
     // Also clean up a legacy per-box token file if present.
     try {
-      await fs.unlink(path.join(getBoxDir(ctx.boxRoot, "connectors"), "google.secret.json"));
+      await fs.unlink(legacySecretPath(ctx.boxRoot));
     } catch (_e) {
       // Already gone.
     }

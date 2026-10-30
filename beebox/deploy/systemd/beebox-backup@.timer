@@ -1,0 +1,11 @@
+[Unit]
+Description=Bee Box %i daily backup check
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=10m
+Persistent=true
+Unit=beebox-backup@%i.service
+
+[Install]
+WantedBy=timers.target

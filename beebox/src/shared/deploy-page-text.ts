@@ -10,6 +10,8 @@
  * and past PROBABLY_FAILED_MS it says something has likely gone wrong.
  */
 
+import { plural } from "./plural.js";
+
 const OVERRUN_MS = 10 * 60_000;
 const PROBABLY_FAILED_MS = 60 * 60_000;
 
@@ -64,8 +66,4 @@ function ago(ms: number): string {
   if (minutes < 60) return seconds === 0 ? `${plural(minutes, "minute")} ago` : `${plural(minutes, "minute")} ${plural(seconds, "second")} ago`;
   if (minutes < 120) return `${plural(minutes, "minute")} ago`;
   return `${plural(Math.floor(minutes / 60), "hour")} ago`;
-}
-
-function plural(n: number, unit: string): string {
-  return `${n} ${unit}${n === 1 ? "" : "s"}`;
 }

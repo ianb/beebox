@@ -114,21 +114,19 @@ export async function boxWideLinkWarnings(boxRoot: string): Promise<string | nul
   if (summary.totalErrors === 0) return null;
   const fileWord = summary.filesWithErrors === 1 ? "file" : "files";
   return (
-    `${formatMarkdownResults(summary, { colors: false })}\n\n` +
+    `${formatMarkdownResults(summary)}\n\n` +
     `${summary.totalErrors} broken internal link(s) in ${summary.filesWithErrors} ${fileWord} ` +
     "(warning — not blocking the commit; fix with `bbx mv` or by correcting the link)"
   );
 }
 
-export function formatMarkdownResults(summary: MarkdownLintSummary, { colors }: { colors: boolean }): string {
+export function formatMarkdownResults(summary: MarkdownLintSummary): string {
   const lines: string[] = [];
-  const ESC = "";
-  const red = colors ? (s: string) => `${ESC}[31m${s}${ESC}[0m` : (s: string) => s;
   for (const [file, fileErrors] of Object.entries(summary.errors)) {
     for (const e of fileErrors) {
       const rule = e.ruleNames[0] ?? "unknown";
       const detail = e.errorDetail ? ` (${e.errorDetail})` : "";
-      lines.push(`${red("error")}  ${file}:${e.lineNumber}  [${rule}] ${e.ruleDescription}${detail}`);
+      lines.push(`error  ${file}:${e.lineNumber}  [${rule}] ${e.ruleDescription}${detail}`);
     }
   }
   return lines.join("\n");

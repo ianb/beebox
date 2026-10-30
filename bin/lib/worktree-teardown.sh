@@ -473,6 +473,15 @@ wt_remove_satellites() {
   [ -f "$log_file" ]   && rm -f  "$log_file"   && wt_say "removed $log_file"
   [ -f "$pid_file" ]   && rm -f  "$pid_file"   && wt_say "removed $pid_file"
 
+  # The pre-commit hook's staged snapshot for this checkout, named
+  # <name>-<sha1 of the checkout path, 8 hex> by bin/staged-snapshot.ts.
+  local snapshot_dir
+  snapshot_dir="$WT_STATE_DIR/staged-snapshots/$name-$(printf '%s' "$WT_ROOT/$name" | shasum -a 1 | cut -c1-8)"
+  if [ -d "$snapshot_dir" ]; then
+    mv "$snapshot_dir" "$WT_TRASH/snapshot-$name-$ts"
+    wt_say "trashed $snapshot_dir"
+  fi
+
   return 0
 }
 

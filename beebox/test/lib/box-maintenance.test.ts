@@ -7,13 +7,14 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { isoDate, str } from "@ianbicking/tap-check/check";
+import { isoDate, str, uuid } from "@ianbicking/tap-check/check";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/test-helpers.js";
-import { acquireLock, forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
+import { acquireLock, forceAcquireLock, LOCK_STALE_MS, releaseLock, requestScopedLock } from "../../src/lib/file-lock.js";
+import { lockGuardPath } from "../../src/shared/lock-guard.js";
 import { acquireBoxWork, closeBoxMaintenance, acquireBoxMaintenance, acquireBoxStartup, withoutBoxWork, boxWorkEnvironment, boxMaintenanceStatus, boxWorkHolders } from "../../src/lib/box-maintenance/admission.js";
 
 const delay = () => new Promise((resolve) => setTimeout(resolve, 10));
@@ -48,7 +49,7 @@ void test("line 19", async (t) => {
   await maintenance.beginChanges();
   await maintenance.release();
   const record = await boxMaintenanceStatus(box.root);
-  t.check(`${record?.phase} owner=${String(record?.owner)} since=${typeof record?.since}`, "exclusive owner=null since=string");
+  t.check(record, { id: uuid(), reason: "fixture", phase: "exclusive", since: isoDate(), owner: null, step: undefined });
 
   // Unfinished maintenance refuses nothing once its owner is gone.
   const reopened = await acquireBoxWork(box.root, { reason: "test" });
@@ -58,7 +59,7 @@ void test("line 19", async (t) => {
   // clears the record when it completes.
   const recovery = await acquireBoxMaintenance(box.root, { reason: "recover" });
   const retried = await boxMaintenanceStatus(box.root);
-  t.check(`${retried?.reason} owner=${retried?.owner?.reason} carried=${String(retried?.since === record?.since)}`, "recover owner=recover carried=true");
+  t.check({ reason: retried?.reason, owner: retried?.owner?.reason, since: retried?.since }, { reason: "recover", owner: "recover", since: record?.since });
 
   await t.checkThrows(async () => (await acquireBoxWork(box.root, { reason: "test" })), "BoxMaintenanceError");
 
@@ -172,7 +173,7 @@ void test("The admission lock protects the gap before a writer publishes its sid
     }
   });
   const barrierBox = await makeTmpBox({ git: true });
-  const admissionPath = join(barrierBox.root, ".git/bbx-maintenance/admission.lock");
+  const admissionPath = requestScopedLock(join(barrierBox.root, ".git/bbx-maintenance/admission.lock"));
   await acquireLock(admissionPath, {});
   const barrier = await closeBoxMaintenance(barrierBox.root, { reason: "publication barrier" });
   const drained = barrier.drain().then(() => true);
@@ -183,6 +184,25 @@ void test("The admission lock protects the gap before a writer publishes its sid
 
   await barrier.complete();
   t.check(await boxMaintenanceStatus(barrierBox.root), null);
+});
+
+// ## A dead admission holder clears in seconds
+//
+// On 2026-10-25 a box child ran out of memory while it held the admission lock,
+// and left its guard directory with no holder file. Every restart then failed
+// on "Lock held by pid -1" until the hub gave up. Admission takes the request
+// profile, so a guard older than its 15 s stale window is reclaimed at startup.
+void test("A dead admission holder clears in seconds", async (t) => {
+  const deadBox = await makeTmpBox({ git: true });
+  t.teardown(() => deadBox.cleanup());
+  const guard = lockGuardPath(join(deadBox.root, ".git/bbx-maintenance/admission.lock"));
+  await mkdir(guard, { recursive: true });
+  const lastRefresh = new Date(Date.now() - LOCK_STALE_MS.request - 5_000);
+  await utimes(guard, lastRefresh, lastRefresh);
+
+  const startup = await acquireBoxStartup(deadBox.root);
+  await startup.release();
+  t.check(await readdir(join(deadBox.root, ".git/bbx-maintenance")), ["work"]);
 });
 
 // ## The owner names its current step

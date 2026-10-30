@@ -44,7 +44,6 @@ export function BrowseLandmarkHeader({
             group={group}
             boxSlug={boxSlug}
             onNavigate={onNavigate}
-            compact
           />
         ))}
       </Stack>

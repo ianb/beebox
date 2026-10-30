@@ -43,6 +43,7 @@ export function TargetStrip(props: {
           id={includeControlIds ? "bbx-chat-stop-speech" : undefined}
           onClick={onStopSpeech}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
+          aria-label="Stop speaking"
           title="Stop speaking"
         >
           {/* Speaker-x (audio), not the stop circle — that one stops the agent. */}
@@ -56,7 +57,8 @@ export function TargetStrip(props: {
           id={includeControlIds ? "bbx-chat-stop-agent" : undefined}
           onClick={onInterrupt}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
-          title="Stop"
+          aria-label="Stop the agent"
+          title="Stop the agent"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

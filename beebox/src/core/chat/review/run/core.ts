@@ -24,9 +24,7 @@
  * See docs/implemented-plans/chat-review.md § Track C.
  */
 
-import * as fs from "node:fs/promises";
-import { errnoCode } from "../../../../shared/error-guards.js";
-import { discoverSessions, QUIESCENCE_MS, type QualifiedSession } from "../discovery.js";
+import { discoverSessions, QUIESCENCE_MS, transcriptUpdatedAt, type QualifiedSession } from "../discovery.js";
 import { reviewMetadataSpan } from "./metadata.js";
 import { reviewTitleSpan, type TitleRunContext } from "./title.js";
 import { readHuskFields } from "./husk-write.js";
@@ -34,7 +32,6 @@ import type { ChatReviewer } from "../reviewer.js";
 import type { TitleFreshnessChecker } from "../freshness.js";
 import { loadReviewState, saveReviewState, type ReviewState } from "../state.js";
 import { LockHeldError, withChatReviewLock } from "../lock.js";
-import { readCodexSessionUpdatedAt } from "../../session/codex-transcript/core.js";
 import { commitSessionManifest } from "../../../agent/manifest.js";
 
 export interface RunOptions {
@@ -107,7 +104,9 @@ function emptySummary(): RunSummary {
 
 /**
  * Review one session: re-check quiescence, then dispatch to the pass its
- * growth qualified it for.
+ * growth qualified it for. Returns whether the session was reviewed (and so
+ * its husk may have been written), false when it was deferred or its
+ * transcript is missing.
  */
 async function reviewOne(
   session: QualifiedSession,
@@ -117,7 +116,7 @@ async function reviewOne(
     state: ReviewState;
     summary: RunSummary;
   },
-): Promise<void> {
+): Promise<boolean> {
   const { boxRoot, options, state, summary } = args;
 
   // A run spans many model calls, so a session that was quiet at discovery can
@@ -125,24 +124,20 @@ async function reviewOne(
   // longer covers the material actually reviewed — the transcript is re-read
   // inside each pass — so re-check it against the file as it stands now, and
   // defer rather than summarize a conversation back in progress.
-  let mtime: Date;
-  try {
-    mtime = session.engine === "codex"
-      ? await readCodexSessionUpdatedAt(boxRoot, session.sessionId)
-      : (await fs.stat(session.logPath)).mtime;
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") throw e;
+  const mtime = await transcriptUpdatedAt(boxRoot, { ...session, engine: session.engine ?? "claude" });
+  if (mtime === null) {
     summary.missingTranscripts += 1;
-    return;
+    return false;
   }
-  if (options.now.getTime() - mtime.getTime() < QUIESCENCE_MS) {
+  // File times are real, so compare with the real clock, not box time.
+  if (Date.now() - mtime.getTime() < QUIESCENCE_MS) {
     summary.deferredActive += 1;
-    return;
+    return false;
   }
 
   if (session.needsMetadata) {
     await reviewMetadataSpan(session, { boxRoot, options, state, summary });
-    return;
+    return true;
   }
   await reviewTitleSpan(session, {
     boxRoot,
@@ -153,6 +148,7 @@ async function reviewOne(
     ownerEmail: options.ownerEmail,
     ...(options.freshness === undefined ? {} : { freshness: options.freshness }),
   });
+  return true;
 }
 
 /**
@@ -179,12 +175,13 @@ export async function titleOneSession(
  * thrown away.
  */
 export async function runChatReview(boxRoot: string, options: RunOptions): Promise<RunSummary> {
+  const huskPaths: string[] = [];
   const result = await withChatReviewLock(boxRoot, {
     holder: "chat-review",
     fn: async () => {
       const state = await loadReviewState(boxRoot);
       const discovery = await discoverSessions(boxRoot, {
-        now: options.now,
+        now: new Date(), // real clock: compared with transcript mtimes
         quiescenceMs: QUIESCENCE_MS,
         state,
       });
@@ -205,7 +202,7 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
       // other sessions, nor the journal advances already earned.
       for (const session of planned) {
         try {
-          await reviewOne(session, { boxRoot, options, state, summary });
+          if (await reviewOne(session, { boxRoot, options, state, summary })) huskPaths.push(session.huskPath);
         } catch (e) {
           console.error(`chat-review: session ${session.sessionId} failed:`, e);
           summary.sessionErrors += 1;
@@ -226,10 +223,10 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
     },
   });
   // Each model pass appended its session to the tracked usage manifest, and the
-  // husk writes are not committed here, so the run commits that file itself —
-  // after the review lock is released, since the commit takes the box git lock.
+  // run wrote the husks of the sessions it reviewed (an unchanged one commits nothing), so the run commits both itself — after the review lock is
+  // released, since the commit takes the box git lock.
   try {
-    await commitSessionManifest(boxRoot);
+    await commitSessionManifest(boxRoot, huskPaths);
   } catch (e) {
     console.warn("chat-review: could not commit the usage manifest after the run:", e);
   }

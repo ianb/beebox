@@ -85,7 +85,7 @@
         },
         {
           "label": "Garden plan",
-          "to": "/browse/_content/garden/Garden.landmark.card"
+          "to": "/views/_content/garden/Garden.landmark.card"
         }
       ]
     }

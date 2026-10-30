@@ -27,6 +27,7 @@
  * renderings.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BrokenLink } from "../ui/BrokenLink";
 import { ControlRing } from "../ui/ControlRing";
@@ -278,7 +279,7 @@ export function ControlPointer({ id, action, description, unknownAction, childre
       .catch((e: unknown) => {
         // `requestNativePointAtControl` never rejects; a throw here is the
         // bridge itself failing, which is still a user-visible dead tap.
-        const reason = e instanceof Error ? e.message : String(e);
+        const reason = errorMessage(e);
         console.warn(`[control-pointer] native point failed: ${reason}`);
         if (requestGeneration.current !== generation) return;
         setAwaitingNative(false);

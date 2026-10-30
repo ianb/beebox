@@ -19,7 +19,7 @@
  * would otherwise reach for a plain `.md` file.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../exports/cards.js";
 

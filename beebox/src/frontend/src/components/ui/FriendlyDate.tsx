@@ -25,16 +25,22 @@ export function formatOptions({ iso, mode }: FriendlyDateProps): Intl.DateTimeFo
   return { dateStyle: "medium", timeStyle: "short" };
 }
 
+/**
+ * The text {@link FriendlyDate} shows, for places that need a string (titles,
+ * sentences). Takes an ISO string or epoch milliseconds. A value that does not
+ * parse comes back as written rather than "Invalid Date".
+ */
+export function friendlyDate(value: string | number, mode?: "datetime" | "date"): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  const iso = typeof value === "string" ? value : parsed.toISOString();
+  return parsed.toLocaleString(undefined, formatOptions({ iso, mode }));
+}
+
 export function FriendlyDate({ iso, mode }: FriendlyDateProps) {
-  const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) {
+  if (Number.isNaN(new Date(iso).getTime())) {
     // Not a parseable timestamp — show the raw value rather than "Invalid Date".
     return <span>{iso}</span>;
   }
-  const options = formatOptions({ iso, mode });
-  return (
-    <time dateTime={iso}>
-      {parsed.toLocaleString(undefined, options)}
-    </time>
-  );
+  return <time dateTime={iso}>{friendlyDate(iso, mode)}</time>;
 }

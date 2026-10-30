@@ -120,6 +120,7 @@ export default {
           soft: `var(--bbx-ink-soft, ${palette.warm[700]})`,
           pen: `var(--bbx-pen, ${palette.plum.DEFAULT})`,
           rule: `var(--bbx-rule, ${palette.warm[300]})`,
+          danger: `var(--bbx-danger, ${palette.rose.dark})`,
         },
       },
       // ─── Dropdown sub-panel transitions ─────────────────────────

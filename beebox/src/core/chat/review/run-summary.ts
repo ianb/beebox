@@ -8,10 +8,7 @@
 import type { RunSummary as ScheduledRunSummary } from "../../schedule/summary.js";
 import { TITLE_CHAR_THRESHOLD } from "./discovery.js";
 import type { RunSummary } from "./run/core.js";
-
-function plural(count: number, noun: string): string {
-  return `${String(count)} ${noun}${count === 1 ? "" : "s"}`;
-}
+import { plural } from "../../../shared/plural.js";
 
 /** Count lines in the order the boxholder reads them; zero counts are left out. */
 function lines(entries: Array<[number, string]>): string[] {

@@ -2,11 +2,13 @@
 #
 # bbx-host-apt — the one root code path that lets a box install distro packages.
 #
-#   sudo /usr/local/sbin/bbx-host-apt install --box <slug> -- <pkg> [<pkg> ...]
+#   /usr/local/sbin/bbx-host-apt install --box <slug> -- <pkg> [<pkg> ...]
 #
-# The box OS user (shared by every box on the host) may run this through a
-# NOPASSWD sudoers entry with ANY arguments, so this script is the whole
-# privilege boundary. It installs only packages that:
+# On the server only root runs it: deploy.sh's `bbx host sync` step installs
+# what each box recorded. No user holds a sudoers grant for it. Its arguments
+# still come from box-recorded data, so this script is the whole policy
+# boundary (the smoke test drives it through a sudo grant as a stand-in for
+# an untrusted caller). It installs only packages that:
 #   - are exact package names in the DISTRO sources (a private apt config
 #     hides third-party sources such as NodeSource);
 #   - add packages without upgrading or removing any installed one;
@@ -17,7 +19,7 @@
 # root, and a postinst `setcap` is not detected.
 #
 # Installed root:root 0755 by deploy/deploy.sh from the deploying checkout —
-# never copied out of /opt/beebox, which the box user owns. Plain bash on
+# never copied out of /opt/beebox, which the hub user owns. Plain bash on
 # purpose: root must execute only root-owned system binaries.
 #
 # Exit codes: 0 installed or already present · 1 apt/system error ·

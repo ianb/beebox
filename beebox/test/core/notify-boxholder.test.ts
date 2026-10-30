@@ -88,7 +88,7 @@ web-push sent`);
       icon: `${slug}/icon-192.png`,
       title: "Field trip form due Friday",
       body: "The school emailed: the form is due Friday.",
-      url: `/${slug}/browse/_content/inbox/field-trip.email.card`,
+      url: `/${slug}/views/_content/inbox/field-trip.email.card`,
       tag: undefined,
       silent: false,
     },
@@ -119,7 +119,7 @@ web-push sent`);
     target: "card:_content/inbox/field-trip.email.card",
     loudness: "loud",
     source: "notify-test",
-    url: `/${slug}/browse/_content/inbox/field-trip.email.card`,
+    url: `/${slug}/views/_content/inbox/field-trip.email.card`,
   }]);
 
   t.check(await failing(box), "all ok");
@@ -157,7 +157,7 @@ web-push skipped: present`);
       icon: `${quietSlug}/icon-192.png`,
       title: "Field trip form due Friday",
       body: "The school emailed: the form is due Friday.",
-      url: `/${quietSlug}/browse/_content/inbox/field-trip.email.card`,
+      url: `/${quietSlug}/views/_content/inbox/field-trip.email.card`,
       tag: undefined,
       silent: true,
     },
@@ -304,7 +304,7 @@ void test("bbx notify --channel uses this to test one channel.", async (t) => {
       icon: `${channelSlug}/icon-192.png`,
       title: "Field trip form due Friday",
       body: "The school emailed: the form is due Friday.",
-      url: `/${channelSlug}/browse/_content/inbox/field-trip.email.card`,
+      url: `/${channelSlug}/views/_content/inbox/field-trip.email.card`,
       tag: undefined,
       silent: false,
     },
@@ -337,6 +337,8 @@ web-push failed: no device received the push (sent 0, pruned 0, failed 1)`);
     { name: "notifications-undelivered", ok: true, message: "No notification failed to deliver in the last 24 hours", severity: "warning" },
     { name: "notifications-no-channel", ok: true, message: "Every notification in the last 24 hours had a channel to reach the boxholder", severity: "warning" },
     { name: "notification-log-writable", ok: true, message: "The notification log is writable", severity: "warning" },
+    { name: "notifications-fake", ok: true, message: "Notifications on this box send for real", severity: "warning" },
+    { name: "box-clock-offset", ok: true, message: "This box's clock is real time", severity: "warning" },
     { name: "jev-budget", ok: true, message: "No judgment deferred for the daily Jev budget in the last 24 hours", severity: "warning" },
   ]);
 });

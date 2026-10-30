@@ -1,9 +1,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml, YAMLParseError } from "yaml";
+import { isYamlParseError } from "../../../../lib/yaml-package.js";
+import { parseYaml } from "../../../../lib/read-yaml.js";
 import { z } from "zod";
 import { errnoCode } from "../../../../shared/error-guards.js";
-import { getBoxTime } from "../../../../lib/time.js";
 import type { SessionEntry } from "../../../../cli/lib/session-entry.js";
 import { isRealUserMessage } from "../../../../cli/lib/session-real-user.js";
 import { isCompactionSummary, isPlumbingMessage, stripSpeechWrappers } from "../../../../cli/lib/session-text.js";
@@ -48,7 +48,7 @@ export async function loadRoutingRubric(boxRoot: string): Promise<RoutingRubric>
   }
   try { return RubricSchema.parse(parseYaml(content)); }
   catch (error) {
-    if (error instanceof YAMLParseError || error instanceof z.ZodError) {
+    if (isYamlParseError(error) || error instanceof z.ZodError) {
       throw new RoutingCatalogError({ reason: "rubric" });
     }
     throw error;
@@ -77,6 +77,7 @@ function resolveRules(args: {
 /** Membership comes from current session owners, not a parallel permanent registry. */
 export function buildRoutingCandidates(args: {
   sessions: Pick<ChatSessionRow, "sessionId" | "contextDir" | "mtime" | "huskPath" | "label">[];
+  // Real epoch ms: compared with session file mtimes, which are real.
   landmarks: LandmarkSummary[]; rubric: RoutingRubric; now: number;
 }): RoutingCandidate[] {
   const { rules, retained } = resolveRules(args);
@@ -219,7 +220,7 @@ export async function loadRoutingCandidates(boxRoot: string): Promise<RoutingCan
     loadAllSessions(boxRoot), loadLandmarkSummaries(boxRoot), loadRoutingRubric(boxRoot),
   ]);
   if (problems.length > 0) throw new RoutingCatalogError({ reason: "landmarks" });
-  const candidates = buildRoutingCandidates({ sessions, landmarks: summaries, rubric, now: getBoxTime(boxRoot).getTime() });
+  const candidates = buildRoutingCandidates({ sessions, landmarks: summaries, rubric, now: Date.now() });
   boundRoutingContexts(candidates); // Reject oversized metadata before reading transcripts.
   // Provider-owned histories may use RPC. Bound the evidence sent to Jev.
   for (const candidate of candidates) {

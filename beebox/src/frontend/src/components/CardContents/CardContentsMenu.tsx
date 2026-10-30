@@ -11,8 +11,9 @@
  * Headings come from the rendered DOM: the document renderers mark their
  * prose wrapper `data-card-outline` (`Markdown`'s `outline` prop), and the
  * heading node gives each heading a stable id (`makeHeadingNode`). Only
- * headings of the first outline root count, so a card embedded in the body
- * does not add its own headings.
+ * headings of the first outline root count, and none inside an embed
+ * (`data-card-embed`), so a card or figure embedded in the body does not add
+ * its own headings.
  */
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
@@ -33,12 +34,18 @@ export function readOutline(front: HTMLElement): { items: OutlineItem[]; heading
   const headings = new Map<string, HTMLElement>();
   const entries: OutlineEntry[] = [];
   for (const heading of root.querySelectorAll<HTMLElement>("h1[id], h2[id], h3[id]")) {
-    if (heading.closest("[data-card-outline]") !== root) continue;
+    if (heading.closest("[data-card-outline]") !== root || insideEmbed(heading)) continue;
     headings.set(heading.id, heading);
     entries.push({ id: heading.id, level: Number(heading.tagName.slice(1)), text: heading.textContent });
   }
   const items = buildOutline(entries);
   return items === null ? null : { items, headings };
+}
+
+/** Inside an embed in the card body (`FigureEmbed.tsx`), whose own DOM changes are not the card's. */
+function insideEmbed(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  return element !== null && element.closest("[data-card-embed]") !== null;
 }
 
 /** Same headings in the same order, so the menu need not change. */
@@ -86,8 +93,11 @@ export function CardContentsMenu({ id, frontRef }: { id: string; frontRef: RefOb
       return sameOutline(previous, next) ? previous : next;
     });
     read();
-    // Bodies render late (lazy renderers, edits arriving over the bus).
-    const observer = new MutationObserver(read);
+    // Bodies render late (lazy renderers, edits arriving over the bus). An
+    // embed's own DOM activity (a figure redrawing) is not the card's outline.
+    const observer = new MutationObserver((records) => {
+      if (records.some((record) => !insideEmbed(record.target))) read();
+    });
     observer.observe(front, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();
   }, [frontRef]);

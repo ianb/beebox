@@ -43,6 +43,8 @@ export {
 export {
   splitCardContent,
   renderFrontmatterBlock,
+  renderFrontmatterDocument,
+  editableFrontmatterDocument,
   parseFrontmatterObject,
   type SplitCardContent,
 } from "../cards/frontmatter.js";

@@ -1,5 +1,7 @@
 import path from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
+import { isRecord } from "../../shared/is-record.js";
+import { frontmatterFence } from "../../cards/frontmatter.js";
 
 const PLAN_RE = /^beebox\/docs\/(plans|implemented-plans|unimplemented-plans)\/([^/]+\.md)$/;
 const ISSUE_CATEGORIES = ["bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch"] as const;
@@ -23,18 +25,13 @@ export interface FrontmatterDocument {
   lines: number;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 export function splitFrontmatter(source: string): FrontmatterDocument | null {
-  if (!source.startsWith("---\n")) return null;
-  const end = source.indexOf("\n---", 4);
-  if (end === -1) return null;
-  const yaml = source.slice(4, end);
+  const fence = frontmatterFence(source);
+  if (fence === null) return null;
+  const yaml = source.slice(fence.textStart, fence.textEnd);
   const parsed: unknown = parseYaml(yaml);
   if (!isRecord(parsed)) return null;
-  return { data: parsed, body: source.slice(end + 4).replace(/^\n/, ""), lines: yaml.split("\n").length + 2 };
+  return { data: parsed, body: source.slice(fence.bodyStart), lines: fence.closingLine + 1 };
 }
 
 function strings(value: unknown): value is string[] {

@@ -12,22 +12,12 @@
  * what it reports.
  */
 
+import { humanBytes } from "@shared/human-bytes";
 import { trpc } from "../../lib/trpc/client";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION =
-  "Where copies of this box exist besides this machine. Its history and its attachments travel separately, so they are reported separately.";
-
-/** Bytes as a short human string. Binary units, matching git's own `-H` output. */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / 1024 ** exponent;
-  // One decimal below 10 (9.4 GB reads better than 9 GB); none above, where
-  // the extra digit is noise.
-  return `${value < 10 ? value.toFixed(1) : Math.round(value).toString()} ${units[exponent]}`;
-}
+  "Git and git-annex copies of this box. History and attachments travel separately. This section does not check encrypted backups.";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -52,7 +42,7 @@ export function BackupSection() {
 
       {query.data != null && status == null ? (
         <p className="text-sm text-warm-700">
-          This box is not a git repository, so nothing about it is versioned or backed up.
+          This box is not a git repository, so this section cannot report Git copies or history.
         </p>
       ) : null}
 
@@ -60,7 +50,7 @@ export function BackupSection() {
         <div>
           <Row label="Git remote">
             {status.remote === null ? (
-              <span className="text-danger">none configured — this box is nowhere else</span>
+              <span className="text-danger">none configured — no Git remote copy</span>
             ) : (
               <>
                 <span className="font-mono text-xs">{status.remote.url}</span>
@@ -88,20 +78,20 @@ export function BackupSection() {
             )}
           </Row>
 
-          <Row label="Repository">{formatBytes(status.repoBytes)}</Row>
+          <Row label="Repository">{humanBytes(status.repoBytes)}</Row>
 
           <Row label="Attachments">
             {status.annex === null
               ? "not tracked by git-annex"
-              : `${status.annex.fileCount} file${status.annex.fileCount === 1 ? "" : "s"} · ${formatBytes(status.annex.bytes)}`}
+              : `${status.annex.fileCount} file${status.annex.fileCount === 1 ? "" : "s"} · ${humanBytes(status.annex.bytes)}`}
           </Row>
 
           {status.assetRisk !== null ? (
             <div className="mt-3 text-sm text-warning-dark bg-warning-50 rounded p-3">
               <p className="font-semibold mb-1">
                 {status.assetRisk.fileCount} file
-                {status.assetRisk.fileCount === 1 ? "" : "s"} ({formatBytes(status.assetRisk.bytes)}) exist only on
-                this machine.
+                {status.assetRisk.fileCount === 1 ? "" : "s"} ({humanBytes(status.assetRisk.bytes)}) have no
+                git-annex remote copy.
               </p>
               {status.assetRisk.reason === "no-annex-remote" ? (
                 <p>

@@ -23,7 +23,13 @@ Create `test/<name>.test.ts`, mirroring the `src/` path. A good model:
   re-proves another test's branch, is a defect. Exploration keeps only the
   cases that failed ([testing](../../../beebox/docs/testing.md)).
 - **Check the whole value.** Write objects as literals. Do not check a length,
-  a boolean, or `JSON.stringify(x)`; lint rejects them.
+  a boolean, `.success`, `.code`, `includes`, or `JSON.stringify(x)`; lint
+  rejects some of these and the rest pass when the behavior is wrong.
+- **Not a generated set.** Do not paste a listing, a package file list, an
+  id table, rendered HTML, or a helper's whole output as the expected value,
+  and do not mirror a catalog or registry row by row. These fail on every
+  intended change and have caught nothing on `main`. Pin the rows the claim
+  names ([a strong test](../../../beebox/docs/testing/check.md#a-strong-test)).
 - **Unknown or varying value:** leave the expected value out, run, and paste the
   `suggested:` value once you can say why that exact value is right. Use a
   pattern only where the value varies between runs; better, pass a fixed clock
@@ -34,9 +40,9 @@ Create `test/<name>.test.ts`, mirroring the `src/` path. A good model:
 
 ## Running
 
-- One file, **from the package directory**: `cd beebox && pnpm exec tap test/<path>.test.ts`
-- What your diff implicates: `pnpm test:changed`. The full suite runs hourly on
-  `main`. Rule out contention with `-j1`.
+- One file, **from the package directory** (`beebox/` for frontend tests too): `pnpm exec tap test/<path>.test.ts` or `src/frontend/test/<path>.test.ts`
+- What your diff implicates: `pnpm test:changed`; `-j1` rules out contention. The full
+  suite runs hourly on `main`. After a URL shape or class string changes, grep tests for the old literal.
 - If tap cannot start (a missing module under `node_modules/@tapjs`), stop and
   report it. Do not reinstall or delete `node_modules`; other sessions share it.
 
@@ -53,8 +59,10 @@ checks test files with the rest of the code.
 ## Flake triage
 
 The suite runs 6 files in parallel (`beebox/.taprc`); not every red run is your
-bug. Rerun the file alone first. A failure that reproduces alone, even on the
-unmodified tree, is a real bug however long it has been red. Most past flakes
+bug. Rerun the file alone first. A failure that reproduces alone is a real bug,
+even when it predates your change. A check that went red right after an
+intended change to a scaffold, a fixture, or a catalog is neither: it is a snapshot of a generated set. Narrow it to the
+rows the claim names; do not paste the new `suggested:` value and move on. Most past flakes
 were test-caused: a fixed sleep or unsettled wait (use `eventually`), a budget
 sized for an idle machine, or a resource a failed test left open (use
 `t.teardown`). The full protocol is in `.claude/agents/finish.md`; file new

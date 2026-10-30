@@ -5,9 +5,10 @@ import { ScheduledScriptSchema } from "../schemas/scheduled-script/schema.js";
 import { parseCard } from "./template-merge.js";
 import {
   parkedUpdatePath, readVersions, writeVersions, removeParkedMirror,
-  sha256, stripBoxOwnedFields, TEMPLATE_UPDATES_DIR,
+  stripBoxOwnedFields, TEMPLATE_UPDATES_DIR,
 } from "./install-template-file.js";
 import { existingSiblingPath, ledgerKey } from "./template-sibling-key.js";
+import { sha256Hex } from "../lib/content-hash.js";
 
 class InvalidTemplatePathError extends Error {
   constructor() {
@@ -72,7 +73,7 @@ export async function resolveTemplateUpdate({ boxRoot, relPath, accept }: { boxR
   const versions = await readVersions(boxRoot);
   const key = ledgerKey(versions, relPath);
   const fields = ownedFieldsForPath(relPath);
-  const parkedHash = sha256(stripBoxOwnedFields(upstream, fields));
+  const parkedHash = sha256Hex(stripBoxOwnedFields(upstream, fields));
   const pending = versions[key]?.pending;
   if (pending !== undefined && pending !== parkedHash) throw new ParkedTemplateChangedError();
   const hash = pending ?? parkedHash;
@@ -90,9 +91,9 @@ export async function recordAutomatedTemplateRewrite({ boxRoot, relPath, before,
   const previous = versions[key];
   if (previous?.sha256 === undefined) return;
   const fields = ownedFieldsForPath(relPath);
-  if (sha256(stripBoxOwnedFields(before, fields)) !== previous.sha256) return;
+  if (sha256Hex(stripBoxOwnedFields(before, fields)) !== previous.sha256) return;
   versions[key] = {
-    sha256: sha256(stripBoxOwnedFields(after, fields)),
+    sha256: sha256Hex(stripBoxOwnedFields(after, fields)),
     "installed-at": new Date().toISOString(),
     stock: after,
   };

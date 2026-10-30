@@ -8,15 +8,21 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { makeQuoteComponents } from "../../../src/components/Markdown/Quote.js";
+import { QuoteBlock, QuoteInline } from "../../../src/components/Markdown/Quote.js";
+import { MarkdownRenderContext, type MarkdownRender } from "../../../src/lib/markdown-render.js";
 
 globalThis.React = React;
 
-const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: () => {} });
+const render: MarkdownRender = { onNavigate: () => {}, basePath: undefined, boxSlug: undefined, onJumpToQuote: undefined, openImageLink: undefined, cardPath: null };
+
+/** Static markup of `element` inside a Markdown body's render context. */
+function markup(element: React.ReactElement): string {
+  return renderToStaticMarkup(React.createElement(MarkdownRenderContext.Provider, { value: render }, element));
+}
 
 // ## Inline quotes preserve punctuation, attribution, and inline markup
 void test("Inline quotes preserve punctuation, attribution, and inline markup", async (t) => {
-  const inline = renderToStaticMarkup(React.createElement(
+  const inline = markup(React.createElement(
     QuoteInline,
     { from: "A participant" },
     React.createElement("em", null, "exact words"),
@@ -26,7 +32,7 @@ void test("Inline quotes preserve punctuation, attribution, and inline markup", 
 
 // ## Block treatment and provenance stay on the quote figure
 void test("Block treatment and provenance stay on the quote figure", async (t) => {
-  const block = renderToStaticMarkup(React.createElement(
+  const block = markup(React.createElement(
     QuoteBlock,
     { from: "A participant", treatment: "layered" },
     React.createElement("p", null, "Keep the example close."),
@@ -36,7 +42,7 @@ void test("Block treatment and provenance stay on the quote figure", async (t) =
 
 // ## Person refs preserve navigation and take the themed link role
 void test("Person refs preserve navigation and take the themed link role", async (t) => {
-  const linked = renderToStaticMarkup(React.createElement(
+  const linked = markup(React.createElement(
     QuoteBlock,
     { from: "people/rina" },
     "Exact words.",
@@ -46,6 +52,6 @@ void test("Person refs preserve navigation and take the themed link role", async
 
 // ## Omitted treatment leaves the theme default in control
 void test("Omitted treatment leaves the theme default in control", async (t) => {
-  const defaulted = renderToStaticMarkup(React.createElement(QuoteBlock, null, "Theme default."));
+  const defaulted = markup(React.createElement(QuoteBlock, null, "Theme default."));
   t.check(defaulted, "<figure class=\"bbx-quote bbx-quote-block\"><blockquote class=\"bbx-quote-body\">Theme default.</blockquote></figure>");
 });

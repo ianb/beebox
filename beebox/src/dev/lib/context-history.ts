@@ -12,6 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import YAML from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
 import { z } from "zod";
 import type { ContextStats } from "./context-usage.js";
 import { errnoCode } from "../../shared/error-guards.js";
@@ -123,7 +124,7 @@ export function parseHistoryText(text: string): ContextHistory {
   // Parse boundary: this is a committed, tool-maintained ledger, so a
   // present-but-malformed file is a real bug — `.parse()` throws rather
   // than casting past it. An empty/all-comments file parses to `null`.
-  const parsed: unknown = YAML.parse(text);
+  const parsed: unknown = parseYaml(text);
   return parsed === null ? {} : parseContextHistory(parsed);
 }
 

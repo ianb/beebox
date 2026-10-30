@@ -87,6 +87,28 @@ void test("A record form, `entry` absent defaults to null, `ordered` absent defa
   ]);
 });
 
+// ## A loader member reads its source from its dynamic import
+//
+// A lazy registry lists `() => import("...")` loaders instead of imported
+// values. The member's source is that dynamic import's resolved target, so the
+// set checks see the same member file a static import would name. A loader
+// with no `import()`, or with two, has no single source.
+void test("A loader member's source is the resolved target of its one dynamic import", async (t) => {
+  const source = `${registryImportLine}export const verbs = defineRegistry<Loader>({\n  directory: "./commands",\n  entry: "command",\n  ordered: false,\n  members: {\n    ls: async () => (await import("./commands/ls.js")).lsCommand,\n    agentContext: () => import("./commands/agent-context.js").then((m) => m.agentContextCommand),\n    none: async () => lsCommand,\n  },\n});\n`;
+  const dynamicEdge = (specifier: string, target: string): ImportEdge => ({ ...edge({ specifier, names: [], target }), dynamic: true });
+  const result = registriesOf(source, [
+    registryEdge,
+    dynamicEdge("./commands/ls.js", "pkg/src/commands/ls.ts"),
+    dynamicEdge("./commands/agent-context.js", "pkg/src/commands/agent-context.ts"),
+  ]);
+  t.check(result.registries.flatMap((r) => r.members), [
+    { expression: "async () => (await import(\"./commands/ls.js\")).lsCommand", source: "pkg/src/commands/ls.ts", key: "ls" },
+    { expression: "() => import(\"./commands/agent-context.js\").then((m) => m.agentContextCommand)", source: "pkg/src/commands/agent-context.ts", key: "agentContext" },
+    { expression: "async () => lsCommand", source: null, key: "none" },
+  ]);
+  t.check(result.findings, []);
+});
+
 // ## A non-literal `directory` is a scan finding, not a registry
 void test("A non-literal `directory` is a scan finding, not a registry", async (t) => {
   const source3 = `${registryImportLine}defineRegistry({\n  directory: computeDir(),\n  ordered: false,\n  members: [],\n});\n`;

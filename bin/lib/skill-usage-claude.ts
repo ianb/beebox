@@ -20,7 +20,8 @@ import { canonical, categoryOf } from "./skill-usage-catalog.ts";
 import { FAILURE_PATTERNS, HUMAN_PATTERNS, matchingLabels } from "./skill-usage-patterns.ts";
 import { commandNames, NAME_SHAPE, inWindow, recentJsonl, recordBriefing, textOf, type ScanContext } from "./skill-usage-scan.ts";
 import { LoadTracker } from "./skill-usage-stats.ts";
-import { claudeProjectDirs, inRepo, isRecord, readJsonl, str, type Json } from "./transcripts.ts";
+import { isRecord } from "../../beebox/src/shared/is-record.ts";
+import { claudeProjectDirs, inRepo, readJsonl, str, type Json } from "./transcripts.ts";
 
 const LOAD_PREFIX = "Base directory for this skill:";
 const BRIEFING_START = /^(Workstream:|Continue workstream)/;

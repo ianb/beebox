@@ -91,6 +91,7 @@ void test("A flagged bundle emits a review question with a scan-guide learning b
 
   const fields = await readQuestionFields(session.boxRoot, questionPaths[0]);
   t.check(fields, {
+    title: "Check scanned photo 001",
     memo: `Photo 001 (page 1) needs review:
 - Name on back is ambiguous`,
     prompt: "Review photo-001: confirm description and back-of-photo text are accurate.",

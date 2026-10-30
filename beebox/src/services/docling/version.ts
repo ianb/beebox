@@ -2,7 +2,7 @@
  * The pinned Docling release (D3) — the single source of truth for it.
  *
  * It lives alone in this file because two non-TypeScript readers need it and
- * must not carry their own copy: `deploy/setup-server.sh` (the model pre-fetch)
+ * must not carry their own copy: `deploy/hetzner/provision.sh` (the model pre-fetch)
  * and `schedules/docling-update/run.ts` (the currency watch). Both parse this file
  * for the literal pattern `DOCLING_VERSION = "<version>"`, so keep the
  * declaration on one line and quoted.

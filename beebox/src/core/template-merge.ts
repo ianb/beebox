@@ -5,7 +5,7 @@ import * as os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { isRecord } from "./card-io.js";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../lib/read-yaml.js";
 import { splitCardContent } from "../exports/cards.js";
 
 /** Parse a card's frontmatter into an object + body, or null if it isn't a card. */

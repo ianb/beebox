@@ -9,6 +9,7 @@
 
 import { EXTRACTED_REANALYZE_COMMAND } from "../../lib/pdf-card";
 import { Pre } from "../ui/Pre";
+import { Notice } from "../ui/Notice";
 import { Text } from "../ui/Text";
 
 /**
@@ -38,15 +39,15 @@ export function PdfStatusNotice({
   }
   if (error !== null) {
     return (
-      <div className="p-3 bg-warning-50 border border-warning-100 rounded" role="status">
-        <Text as="p" size="sm" weight="medium" className="text-warning-dark">
+      <Notice tone="warning">
+        <Text as="p" size="sm" weight="medium">
           Text extraction failed — the original file is still attached.
         </Text>
         <div className="mt-2"><Pre size="sm">{error}</Pre></div>
-        <Text as="p" size="sm" className="mt-2 text-warning-dark">
+        <Text as="p" size="sm" className="mt-2">
           Re-run it with <code>{EXTRACTED_REANALYZE_COMMAND} {cardPath}</code>.
         </Text>
-      </div>
+      </Notice>
     );
   }
   if (extracted && !hasBody) {

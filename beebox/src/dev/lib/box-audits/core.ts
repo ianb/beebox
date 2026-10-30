@@ -10,6 +10,7 @@
 
 import { generateDocs } from "../../../core/docs-gen/generate/core.js";
 import type { AgentEngine } from "../../../core/box/config.js";
+import type { PiSessionDeps } from "../../../core/agent/pi-run/session/core.js";
 import { execSync } from "node:child_process";
 import { activateAuditPlugins, assertAuditPluginsReady, resetAuditBoxCaches } from "./plugins.js";
 import { assertCleanAuditBox, assertStandaloneBox, auditBoxStatus } from "../box-guard.js";
@@ -19,12 +20,14 @@ export interface BoxAuditRunOptions {
   tests: AuditTest[];
   boxRoot: string;
   engine: AgentEngine | undefined;
+  /** As `RunTestOptions.piDeps`. */
+  piDeps?: PiSessionDeps | undefined;
   onTestStart?: (test: AuditTest) => void;
   onTestDone?: (result: TestResult) => void;
 }
 
 export async function runBoxAudits(options: BoxAuditRunOptions): Promise<TestResult[]> {
-  const { tests, boxRoot, engine, onTestStart, onTestDone } = options;
+  const { tests, boxRoot, engine, piDeps, onTestStart, onTestDone } = options;
   const results: TestResult[] = [];
   // Audit setup writes into the box before runTest's own guard runs.
   await assertStandaloneBox(boxRoot);
@@ -46,6 +49,7 @@ export async function runBoxAudits(options: BoxAuditRunOptions): Promise<TestRes
         test,
         boxRoot,
         ...(engine !== undefined && { engine }),
+        ...(piDeps !== undefined && { piDeps }),
         ...(setupStatus !== "" && { cliSetupStatus: setupStatus }),
       });
       results.push(result);

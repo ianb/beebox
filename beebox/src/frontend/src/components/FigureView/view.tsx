@@ -9,18 +9,21 @@
  * error boundary is only a backstop for synchronous render throws).
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { isRecord } from "@shared/is-record";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getApiBase } from "../../api";
 import { resolveRelativePath } from "../../lib/view-url";
 import { useViewFileHelpers } from "../../hooks/useViewFileHelpers";
-import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
-import { busEventData } from "../../lib/bus-events";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { fileChangeAt } from "../../lib/live-refresh";
 import { coerceFigureParams, parseDeclaredParams } from "../../lib/figure-params";
 import { ViewErrorBoundary } from "../ViewErrorBoundary";
 import { Markdown } from "../Markdown/body";
 import { Pre } from "../ui/Pre";
+import { Notice } from "../ui/Notice";
 import type { RendererProps } from "../../file-type-registry";
+import { StatusMessage } from "../ui/StatusMessage";
 import {
   FigureMount,
   type FigureContext,
@@ -78,7 +81,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
       setMod(imported);
       setError(imported.figureError ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -88,13 +91,8 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     void loadModule();
   }, [loadModule]);
 
-  // Live reload: recompile when the entry source changes on disk.
-  useBusSubscription({
-    onEvent: useCallback((event: RealtimeEvent) => {
-      const fileChange = busEventData(event, "file-change");
-      if (fileChange && fileChange.path === entryPath) void loadModule();
-    }, [entryPath, loadModule]),
-  });
+  // Live reload: recompile when the entry source changes on disk, or on a reconnect.
+  useLiveRefresh({ when: fileChangeAt(entryPath), refresh: () => { void loadModule(); } });
 
   const fileHelpers = useViewFileHelpers(apiBase);
   // Built inline (not memoized): FigureMount reads it via a ref and remounts on
@@ -114,7 +112,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     return <FigureError message={error} />;
   }
   if (loading || mod === null) {
-    return <div className="p-4 text-warm-700">Loading figure…</div>;
+    return <StatusMessage className="p-4">Loading figure…</StatusMessage>;
   }
   const sketch = mod.default;
   if (typeof sketch !== "function") {
@@ -137,7 +135,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
       <div className="p-4">
         {figureEl}
         {description.trim() !== "" ? (
-          <div className="mt-3 max-w-2xl text-warm-700">
+          <div className="mt-3 max-w-2xl text-card-soft">
             <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{description}</Markdown>
           </div>
         ) : null}
@@ -145,21 +143,26 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     );
   }
   if (caption !== undefined && caption.trim() !== "") {
-    return (
-      <figure className="my-2">
-        {figureEl}
-        <figcaption className="text-xs text-warm-700 mt-1 text-center">{caption}</figcaption>
-      </figure>
-    );
+    return <CaptionedFigure caption={caption}>{figureEl}</CaptionedFigure>;
   }
   return figureEl;
 }
 
+/** An embedded figure with its `![caption]` beneath, in the surrounding material's soft ink. */
+export function CaptionedFigure({ caption, children }: { caption: string; children: ReactNode }) {
+  return (
+    <figure className="my-2">
+      {children}
+      <figcaption className="text-xs text-card-soft mt-1 text-center">{caption}</figcaption>
+    </figure>
+  );
+}
+
 function FigureError({ message }: { message: string }) {
   return (
-    <div className="border border-danger-light bg-danger-50 rounded-lg p-4">
+    <Notice tone="error">
       <h3 className="text-danger-dark font-medium mb-2">Figure error</h3>
       <Pre size="sm" error>{message}</Pre>
-    </div>
+    </Notice>
   );
 }

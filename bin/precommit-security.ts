@@ -69,6 +69,10 @@ const shellFiles = staged.filter((file) => {
   return /^#!.*\b(?:ba|z|k)?sh\b/u.test(content);
 });
 if (shellFiles.length > 0) {
-  const result = spawnSync("pnpm", ["exec", "shellcheck", "-x", "-P", "bin/lib", "--", ...shellFiles], { cwd: repoRoot, stdio: "inherit" });
+  const result = spawnSync("shellcheck", ["-x", "-P", "bin/lib", "--", ...shellFiles], { cwd: repoRoot, stdio: "inherit" });
+  if (result.error) {
+    console.error(`shellcheck could not run (${result.error.message}); install it (brew install shellcheck / apt-get install shellcheck)`);
+    process.exit(1);
+  }
   if (result.status !== 0) process.exit(result.status ?? 1);
 }

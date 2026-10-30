@@ -18,6 +18,7 @@
  */
 
 import { startScrollObservation } from "./scroll-observation";
+import { readStoredFlag, writeStoredFlag, type StoredFlag } from "../stored-flag";
 
 const MAX_EVENTS = 600;
 const FLUSH_INTERVAL_MS = 2000;
@@ -35,21 +36,12 @@ export type TraceSubscriber = (event: Record<string, TraceValue>) => void;
  * The flag survives a reload — the load itself is what the trace most often
  * needs to see — but not a new tab: sessionStorage, read once at module load.
  */
-const STORAGE_KEY = "bbx-scroll-trace";
+const TRACE_FLAG: StoredFlag = { storage: () => window.sessionStorage, key: "bbx-scroll-trace" };
 function readPersisted(): boolean {
-  try {
-    return window.sessionStorage.getItem(STORAGE_KEY) === "1";
-  } catch (e: unknown) {
-    void e; // storage unavailable (private mode, blocked): the flag is off
-    return false;
-  }
+  return readStoredFlag(TRACE_FLAG);
 }
 function writePersisted(on: boolean): void {
-  try {
-    window.sessionStorage.setItem(STORAGE_KEY, on ? "1" : "0");
-  } catch (e: unknown) {
-    void e; // storage unavailable: the flag lives for this load only
-  }
+  writeStoredFlag(TRACE_FLAG, on);
 }
 
 let enabled = false;

@@ -27,8 +27,10 @@ import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
 import { ErrorText } from "../../ui/ErrorText";
 import { Hint } from "../../ui/Hint";
+import { Notice } from "../../ui/Notice";
 import { bbxSource } from "../../../lib/source-tag";
 import { controlAddress } from "@shared/ui-scan/control-address";
+import { cardUrl } from "@shared/card-url";
 
 export type DriveMount = RouterOutput["drive"]["mounts"]["mounts"][number];
 
@@ -180,7 +182,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
       <Row gap="sm" align="center" wrap>
         <Link
           id={driveControlId("open", mount.driveId)}
-          to={href(`/${boxSlug}/browse/${mount.cardPath}`)}
+          to={href(cardUrl(boxSlug ?? "", mount.cardPath))}
           className="text-sm text-primary hover:text-primary-dark underline"
         >
           Open
@@ -208,9 +210,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
       </Row>
 
       {error === null ? null : (
-        <div className="p-2 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
-          {error}
-        </div>
+        <Notice tone="warning">{error}</Notice>
       )}
     </Stack>
   );

@@ -1,3 +1,4 @@
+import { storageScopeFor } from "../../../../lib/storage-scope";
 import { sidecarTabsKey } from "../sidecar-tabs-storage";
 import { createEmptyWorkspaceState } from "../state-model.js";
 import { reduceWorkspace } from "../state-reducer.js";
@@ -33,7 +34,7 @@ function browserStorage(): WorkspaceStorage | null {
 }
 
 function trustsLegacyKey(apiBase: string, boxSlug: string): boolean {
-  const scope = apiBase.replace(/^\//, "").replace(/\/api\/?$/, "");
+  const scope = storageScopeFor(apiBase);
   const [worktree] = scope.split("/");
   return !scope.includes("/") || (worktree !== undefined && worktree !== "" && boxSlug.includes(worktree));
 }

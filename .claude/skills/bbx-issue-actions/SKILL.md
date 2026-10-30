@@ -181,8 +181,8 @@ investigated twice with no note is worse than one nobody touched.
 
 ## Closing mechanics
 
-Close per `issues/AGENTS.md` ("Closed items"), run
-`pnpm --dir beebox doc-check --fix`, and commit the move with its link repairs.
+Close with `bin/issues close` (`issues/AGENTS.md`, "Closed items") and commit
+the move with the files it printed.
 
 ## Fixing in place
 

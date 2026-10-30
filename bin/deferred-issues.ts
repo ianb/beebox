@@ -13,6 +13,7 @@ import {
   repairLinks,
 } from "../beebox/src/dev/doc-check/link-repair.js";
 import { errnoCode } from "../beebox/src/shared/error-guards.js";
+import { frontmatterFence } from "../beebox/src/cards/frontmatter.js";
 
 const DATE_RE = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/u;
 
@@ -97,8 +98,9 @@ export function parseDeferredIssue(file: string, source: string): DeferredIssue 
 export function activatedSource(source: string): string {
   const lines = source.split("\n");
   if ((lines[0] ?? "").trim() !== "---") throw new MissingDeferredFrontmatterError();
-  const end = lines.findIndex((line, index) => index > 0 && line.trim() === "---");
-  if (end === -1) throw new UnterminatedDeferredFrontmatterError();
+  const fence = frontmatterFence(source);
+  if (fence === null) throw new UnterminatedDeferredFrontmatterError();
+  const end = fence.closingLine;
   const kept = lines.filter((line, index) =>
     index > end || !/^(?:activate-on|category):/u.test(line));
   return kept.join("\n");

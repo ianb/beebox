@@ -66,6 +66,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { resolveGitDir, withBoxGitLock } from "./git-lock.js";
 import { isRecord } from "../shared/is-record.js";
+import { errorMessage } from "../shared/error-guards.js";
+import { setTimeout as delay } from "node:timers/promises";
+import { isWithin } from "./box-containment.js";
+import { formatDuration } from "../shared/relative-time.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -236,7 +240,7 @@ async function isGitInRepo(pid: string, repoRoot: string): Promise<boolean> {
     // could be a git; not being able to place it is a reason to be careful.
     return true;
   }
-  return cwd === repoRoot || cwd.startsWith(`${repoRoot}${path.sep}`);
+  return isWithin(repoRoot, cwd);
 }
 
 /**
@@ -349,7 +353,7 @@ export async function recoverStaleIndexLock(dir: string): Promise<IndexLockStatu
       await fs.unlink(lockPath);
     } catch (e) {
       if (isErrnoCode(e, "ENOENT")) return { state: "absent", lockPath, ageMs: null };
-      console.error(`[git-stale-lock] could not remove abandoned ${lockPath}: ${describe(e)}`);
+      console.error(`[git-stale-lock] could not remove abandoned ${lockPath}: ${errorMessage(e)}`);
       return { state: "unknown-holder", lockPath, ageMs: second.ageMs };
     }
     console.error(
@@ -375,7 +379,7 @@ export async function sweepStaleIndexLock(dir: string): Promise<void> {
   try {
     status = await recoverStaleIndexLock(dir);
   } catch (e) {
-    console.warn(`[git-stale-lock] sweep of ${dir} failed (continuing): ${describe(e)}`);
+    console.warn(`[git-stale-lock] sweep of ${dir} failed (continuing): ${errorMessage(e)}`);
     return;
   }
   if (status.state === "unknown-holder" && status.lockPath !== null) {
@@ -388,18 +392,5 @@ export async function sweepStaleIndexLock(dir: string): Promise<void> {
 
 /** Human-readable age for log and health-check text. */
 export function formatAge(ageMs: number | null): string {
-  if (ageMs === null) return "unknown age";
-  const minutes = Math.round(ageMs / 60_000);
-  if (minutes < 90) return `${String(minutes)}m`;
-  const hours = Math.round(ageMs / 3_600_000);
-  if (hours < 48) return `${String(hours)}h`;
-  return `${String(Math.round(ageMs / 86_400_000))}d`;
-}
-
-function describe(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return ageMs === null ? "unknown age" : formatDuration(ageMs);
 }

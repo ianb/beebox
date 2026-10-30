@@ -4,19 +4,16 @@
  * its line budget.
  */
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { formatLintResults } from "../../../exports/cards.js";
 import { formatMarkdownResults } from "../../validate-markdown.js";
 import { formatAttachLintErrors } from "../../../lib/attach-lint.js";
 import { formatProminenceLintWarnings } from "../../../core/lint-prominence/core.js";
 import { formatCanonicalReport, type CanonicalBuckets } from "./canonical.js";
 import { getStatus } from "../../../lib/git/core/operations.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import type { ValidationResults } from "./command.js";
-
-/**
- * Color only for a real terminal, and never under NO_COLOR: the common case
- * is output being piped or pasted, where escape codes are noise.
- */
-export const useColor = (): boolean => process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
 
 export function canonicalBuckets(results: ValidationResults): CanonicalBuckets {
   return {
@@ -29,13 +26,12 @@ export function canonicalBuckets(results: ValidationResults): CanonicalBuckets {
 /** Print human-readable card/markdown/attach/legacy-schema-path results to stdout. */
 export function printTextResults(results: ValidationResults): void {
   const { cardSummary, mdSummary, attachErrors, instructionFileWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, legacyInstructionErrors } = results;
-  const colors = useColor();
   if (cardSummary !== null) {
-    const output = formatLintResults(cardSummary, { colors });
+    const output = formatLintResults(cardSummary);
     if (output) console.log(output);
   }
   if (mdSummary !== null) {
-    const output = formatMarkdownResults(mdSummary, { colors });
+    const output = formatMarkdownResults(mdSummary);
     if (output) console.log(`\n${output}`);
     if (mdSummary.totalErrors > 0) {
       const fileWord = mdSummary.filesWithErrors === 1 ? "file" : "files";
@@ -47,12 +43,12 @@ export function printTextResults(results: ValidationResults): void {
     }
   }
   if (attachErrors.length > 0) {
-    const output = formatAttachLintErrors(attachErrors, { colors });
+    const output = formatAttachLintErrors(attachErrors);
     console.log(`\n${output}`);
     console.log(`\nAttach layout: ${attachErrors.length} issue(s)`);
   }
   if (results.prominenceWarnings !== undefined && results.prominenceWarnings.length > 0) {
-    console.log(`\n${formatProminenceLintWarnings(results.prominenceWarnings, { colors })}`);
+    console.log(`\n${formatProminenceLintWarnings(results.prominenceWarnings)}`);
   }
   if (results.boxSchemaFields !== undefined && results.boxSchemaFields.length > 0) {
     console.log(`\nBox-local schemas declare reserved field names (rename them with a field map and \`bbx migrate-fields\`; see the box schema doc):\n${results.boxSchemaFields.map((w) => `  ${w}`).join("\n")}`);
@@ -66,7 +62,7 @@ export function printTextResults(results: ValidationResults): void {
   const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors, ...reservedSegmentErrors, ...presentationErrors, ...legacyInstructionErrors, ...results.systemCardErrors];
   if (boxWideErrors.length > 0) console.log(`\n${boxWideErrors.join("\n")}`);
   if (results.canonical) {
-    console.log(`\n${formatCanonicalReport(canonicalBuckets(results), { colors })}`);
+    console.log(`\n${formatCanonicalReport(canonicalBuckets(results))}`);
   }
 }
 
@@ -99,4 +95,21 @@ export function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacyS
     reservedSegmentErrors.length +
     presentationErrors.length + legacyInstructionErrors.length + systemCardErrors.length
   );
+}
+
+/**
+ * The post-commit hook's background URL check (`bbx validate --urls`) writes
+ * its report to `.beebox/url-check.log`, where nothing else reads it. Show
+ * its broken links on the next validate so the agent that cited them sees it.
+ */
+export async function printLastUrlCheck(boxRoot: string): Promise<void> {
+  let text: string;
+  try {
+    text = await readFile(path.join(boxRoot, ".beebox", "url-check.log"), "utf8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return;
+    throw e;
+  }
+  if (!/^broken\b/m.test(text)) return;
+  console.log(`\nThe URL check of the last commit found broken links (.beebox/url-check.log):\n${text.trimEnd()}`);
 }

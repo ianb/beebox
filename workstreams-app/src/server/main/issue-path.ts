@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { issueRelPathSchema } from "../../shared/documents.js";
+import { isWithin } from "../../../../beebox/src/lib/box-containment.js";
 
 export class InvalidIssuePathError extends Error {
   constructor(relPath: string) {
@@ -12,8 +13,7 @@ export class InvalidIssuePathError extends Error {
 
 function assertContained(options: { root: string; target: string; relPath: string }): void {
   const { root, target, relPath } = options;
-  const relative = path.relative(root, target);
-  if (relative === "" || relative.startsWith(`..${path.sep}`) || relative === ".." || path.isAbsolute(relative)) {
+  if (path.relative(root, target) === "" || !isWithin(root, target)) {
     throw new InvalidIssuePathError(relPath);
   }
 }

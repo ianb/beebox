@@ -23,6 +23,7 @@
  * the relay was never seen (extension installed mid-session).
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { isRecord } from "@shared/is-record";
 import { base64ToBlob } from "../../../../lib/image-paste";
 import type { CaptureOutcome } from "../../screenshot-capture";
@@ -154,7 +155,7 @@ function dataUrlToBlob(dataUrl: string): Blob | null {
   try {
     return base64ToBlob(dataUrl.slice(comma + 1), mimeType);
   } catch (e) {
-    console.warn(`[screenshot] relay dataUrl decode failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[screenshot] relay dataUrl decode failed: ${errorMessage(e)}`);
     return null;
   }
 }

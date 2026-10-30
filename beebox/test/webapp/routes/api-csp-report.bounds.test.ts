@@ -53,8 +53,8 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
 
   const lines = logLines();
   const parsed = JSON.parse(lines[lines.length - 1] ?? "");
-  // Field is capped well under its original 5021 chars (2048 + ellipsis).
-  t.check(parsed, { ts: isoDate(), directive: "img-src", blocked: "https://x/y", doc: bigDoc.slice(0, 2048) + "…" });
+  // Field is capped well under its original 5021 chars: 2048 including the ellipsis (truncateTitle).
+  t.check(parsed, { ts: isoDate(), directive: "img-src", blocked: "https://x/y", doc: bigDoc.slice(0, 2047) + "…" });
 
   // ## A body over the small dedicated limit is rejected (413), nothing logged
 

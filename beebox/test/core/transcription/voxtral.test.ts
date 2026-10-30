@@ -17,6 +17,7 @@ import {
   nextSpeakerLetter,
   relabelDiarizedSpeakers,
 } from "../../../src/core/transcription/voxtral/core.js";
+import { voxtralContextBias } from "../../../src/core/transcription/voxtral/request.js";
 
 // ## joinSegmentTexts — rebuild from segments
 //
@@ -105,4 +106,24 @@ void test("Per-recording speaker letter (line 123)", async (t) => {
 Speaker 2B: bye`);
 
   t.check(relabelDiarizedSpeakers("Speaker 0: solo", "A"), "Speaker 1A: solo");
+});
+
+// ## voxtralContextBias — the prompt in the shape the API accepts
+//
+// voxtral-mini-latest takes `context_bias` as comma-separated single words and
+// answers 400 for an entry with whitespace (issue
+// 2026-10-23-voxtral-context-bias-rejects-multi-word-prompt). Re-transcription
+// sends a card's whole earlier transcript as the prompt.
+
+void test("A transcript prompt becomes unique single words", async (t) => {
+  t.check(
+    voxtralContextBias("Thanks, Brian. We're making solid strides on Monro Forward — thanks, Brian!"),
+    "Thanks,Brian,We're,making,solid,strides,on,Monro,Forward,thanks",
+  );
+});
+
+void test("Inner punctuation stays; edge punctuation and empty input go", async (t) => {
+  t.check(voxtralContextBias("Brian D'Ambrosia, re-image (Kraków) 3rd."), "Brian,D'Ambrosia,re-image,Kraków,3rd");
+
+  t.check(voxtralContextBias(" , — ... "), "");
 });

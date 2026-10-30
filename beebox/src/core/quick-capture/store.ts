@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { withFileLock } from "../../lib/file-lock.js";
+import { readJsonIfPresent } from "../../lib/json-state.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { quickCaptureDeclarationSchema, quickCaptureDeclarationFieldsSchema, QUICK_CAPTURE_STATES, type QuickCaptureDeclaration } from "../../shared/quick-capture.js";
 import { invariant } from "../../shared/invariant.js";
@@ -43,8 +44,7 @@ export function captureDigest(declaration: QuickCaptureDeclaration): string {
   return createHash("sha256").update(JSON.stringify(quickCaptureDeclarationSchema.parse(declaration))).digest("hex");
 }
 export async function readCapture(boxRoot: string, id: string): Promise<CaptureRecord | null> {
-  try { return captureRecordSchema.parse(JSON.parse(await fs.readFile(path.join(captureDirectory(boxRoot, id), "record.json"), "utf8"))); }
-  catch (error) { if (errnoCode(error) === "ENOENT") return null; throw error; }
+  return (await readJsonIfPresent(path.join(captureDirectory(boxRoot, id), "record.json"), captureRecordSchema)) ?? null;
 }
 export async function writeCapture(boxRoot: string, record: CaptureRecord): Promise<void> {
   if (record.state === "gone") {

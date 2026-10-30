@@ -285,7 +285,6 @@ export const streamActor = fromCallback(
       ...(input.engine !== undefined ? { engine: input.engine } : {}),
       ...(input.model !== undefined ? { model: input.model } : {}),
       ...(input.openCard !== undefined ? { openCard: input.openCard } : {}),
-      ...(input.openQuestion !== undefined ? { openQuestion: input.openQuestion } : {}),
       ...(input.cardActivity && input.cardActivity.length > 0 ? { cardActivity: input.cardActivity } : {}),
       ...(input.cardState && Object.keys(input.cardState).length > 0 ? { cardState: input.cardState } : {}),
       ...boundTurnFields(input.binding),
@@ -391,21 +390,22 @@ export function rollupStreamToEntry(
 }
 
 /**
- * Fire-and-forget AT THE MACHINE LEVEL: no new machine events come out of
- * this — the backend enqueues the turn and the chat-complete event triggers
- * a history refresh when it finishes. The send OUTCOME is still reported to
- * the receipt registry so the dispatcher's `Promise<Receipt>` settles for a
- * mid-turn queued send, same as the idle-path send in `streamActor`.
+ * Fire-and-forget AT THE MACHINE LEVEL: the backend enqueues the turn and the
+ * chat-complete event triggers a history refresh when it finishes. The send
+ * OUTCOME is still reported to the receipt registry so the dispatcher's
+ * `Promise<Receipt>` settles for a mid-turn queued send, same as the idle-path
+ * send in `streamActor`. The one outcome the machine hears is a definitive
+ * refusal (`onRefused`): the box recorded nothing, so the message will never
+ * arrive. A network failure may have reached the box, so it is not one.
  */
-export function queueMessageToBackend(opts: { binding?: SendBinding; startup?: boolean; session: string; message: string; messageId: string; images?: ChatImageAttachment[] } & ChatSendContext): void {
-  const { session, message, messageId, images, openCard, openQuestion, cardActivity, cardState } = opts;
+export function queueMessageToBackend(opts: { binding?: SendBinding; startup?: boolean; session: string; message: string; messageId: string; images?: ChatImageAttachment[]; onRefused?: () => void } & ChatSendContext): void {
+  const { session, message, messageId, images, openCard, cardActivity, cardState, onRefused } = opts;
   startChatTurn({
     session,
     message,
     messageId,
     ...(images && images.length > 0 ? { images } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
-    ...(openQuestion !== undefined ? { openQuestion } : {}),
     ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
     ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
     ...boundTurnFields(opts.binding),
@@ -414,6 +414,8 @@ export function queueMessageToBackend(opts: { binding?: SendBinding; startup?: b
     .then((result) => settleFromTurnStart({ messageId, result }))
     .catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : "Send failed";
-      settleRejectedTurnStart({ messageId, reason: msg, definitive: err instanceof ChatSendRejectedError });
+      const definitive = err instanceof ChatSendRejectedError;
+      settleRejectedTurnStart({ messageId, reason: msg, definitive });
+      if (definitive) onRefused?.();
     });
 }

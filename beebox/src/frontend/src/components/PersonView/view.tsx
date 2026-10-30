@@ -22,10 +22,10 @@ import { withoutHeaderName } from "../../lib/readable-fields";
 import { bodyHeadingTitle, isCardBodyEmpty, splitCardFields } from "../../lib/card-field-faces";
 import type { RendererProps } from "../../file-type-registry";
 import type { ReactNode } from "react";
+import { nonBlankString } from "@shared/optional-string";
 
 function stringField(frontmatter: Record<string, unknown>, key: string): string | undefined {
-  const value = frontmatter[key];
-  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+  return nonBlankString(frontmatter[key]) ?? undefined;
 }
 
 function stringList(value: unknown): string[] | undefined {

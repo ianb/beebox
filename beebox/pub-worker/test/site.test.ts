@@ -16,14 +16,14 @@ const deps: WorkerDeps = {
   jwksFor: () => async () => null,
 };
 
-function workerEnv(pubId = SITE_ID, hostHandle = HOST_HANDLE): Env {
+function workerEnv(): Env {
   return {
     PUB_STORE: env.PUB_STORE,
     ACCESS_TEAM_DOMAIN: undefined,
     ACCESS_AUD: undefined,
     PUB_WORKER_VERSION: undefined,
-    PUB_ID: pubId,
-    HOST_HANDLE: hostHandle,
+    PUB_ID: SITE_ID,
+    HOST_HANDLE,
   };
 }
 
@@ -49,23 +49,28 @@ async function seed(manifest: SiteEdgeManifest, bodies: Record<string, Record<st
   }
 }
 
-function request(path: string, requestInit?: RequestInit, bindings?: Pick<Env, "PUB_ID" | "HOST_HANDLE">): Promise<Response> {
+interface RequestOptions {
+  init?: RequestInit;
+  bindings?: Pick<Env, "PUB_ID" | "HOST_HANDLE">;
+}
+
+function request(path: string, opts?: RequestOptions): Promise<Response> {
   return handle({
-    request: new Request(`https://published.example.com${path}`, requestInit),
-    env: { ...workerEnv(), ...bindings },
+    request: new Request(`https://published.example.com${path}`, opts?.init),
+    env: { ...workerEnv(), ...opts?.bindings },
     deps,
   });
 }
 
-function secretManifest(fields: Partial<Extract<SiteEdgeManifest, { tier: "secret" }>> = {}) {
+function secretManifest(fields?: Partial<Extract<SiteEdgeManifest, { tier: "secret" }>>) {
   return siteEdgeManifestSchema.parse({
     kind: "site",
     hostHandle: HOST_HANDLE,
     tier: "secret",
     status: "live",
     expiresAt: null,
-    activeRelease: fields.activeRelease,
-    ...(fields.previousRelease === undefined ? {} : { previousRelease: fields.previousRelease }),
+    activeRelease: fields?.activeRelease,
+    ...(fields?.previousRelease === undefined ? {} : { previousRelease: fields.previousRelease }),
   });
 }
 
@@ -109,7 +114,7 @@ describe("pinned site Worker", () => {
     expect(nestedWithoutSlash.status).toBe(308);
     expect(nestedWithoutSlash.headers.get("Location")).toBe(`https://published.example.com/s/${SITE_ID}/docs/`);
     expect((await request(`/s/${SITE_ID}/about.html`)).status).toBe(200);
-    const head = await request(`/s/${SITE_ID}/?version=latest`, { method: "HEAD" });
+    const head = await request(`/s/${SITE_ID}/?version=latest`, { init: { method: "HEAD" } });
     expect(head.status).toBe(200);
     expect(await head.text()).toBe("");
   });
@@ -161,9 +166,9 @@ describe("pinned site Worker", () => {
   });
 
   it("fails closed for wrong host handles, mismatched PubIds, and incomplete pinned bindings", async () => {
-    expect((await request(`/s/${SITE_ID}/`, undefined, { HOST_HANDLE: "other-host" })).status).toBe(404);
+    expect((await request(`/s/${SITE_ID}/`, { bindings: { HOST_HANDLE: "other-host" } })).status).toBe(404);
     expect((await request(`/s/${"j".repeat(26)}/`)).status).toBe(404);
-    expect((await request(`/s/${SITE_ID}/`, undefined, { HOST_HANDLE: "" })).status).toBe(404);
+    expect((await request(`/s/${SITE_ID}/`, { bindings: { HOST_HANDLE: "" } })).status).toBe(404);
   });
 
   it("fails closed when a release id does not match its file inventory hash", async () => {

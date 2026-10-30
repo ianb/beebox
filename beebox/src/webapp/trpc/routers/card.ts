@@ -2,13 +2,13 @@ import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, authedProcedure } from "../procedures.js";
-import { splitCardContent, type CardSchema } from "../../../exports/cards.js";
+import { editableFrontmatterDocument, renderFrontmatterDocument, splitCardContent, type CardSchema } from "../../../exports/cards.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { summarize } from "../../../core/loader-registry.js";
 import { resolveCardPath } from "../card-path.js";
-import { Document, isMap, parse as parseYaml, parseDocument } from "yaml";
+import { parseYaml } from "../../../lib/read-yaml.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { findInboundCardRefs } from "../../../core/find-inbound-card-refs.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash/command.js";
@@ -21,6 +21,8 @@ import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { MovedCardRecoveryCauseError } from "../../../core/moved-card-recovery.js";
 import { resolveMovedCardPath } from "../../../core/moved-card-forwarding.js";
 import type { EffectiveLevel } from "../../../shared/prominence.js";
+import type { BoxNamespaceAccessMode } from "../../../lib/box-namespace-resolve.js";
+import { readCompositionFile, writeCompositionFile } from "../../../core/composition-file.js";
 
 /**
  * The two schema facts the card faces need: whether the type has a body field
@@ -108,6 +110,25 @@ function loadFrontmatterCard(input: {
     schema,
     ...(detail === undefined ? {} : { detail }),
   };
+}
+
+/** A doc card's resolved path; compositions live only in doc cards. */
+async function resolveDocCardPath(input: { boxRoot: string; inputPath: string; mode: BoxNamespaceAccessMode }) {
+  const resolved = await resolveCardPath(input);
+  if (typeFromFilename(resolved.relPath) !== "doc") {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "A composition can only be in a doc card" });
+  }
+  return resolved;
+}
+
+/** Runs a read of the card file, turning a missing file into `NOT_FOUND`. */
+async function onCardFile<T>(relPath: string, read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (errorMessage(error).includes("ENOENT")) throw new TRPCError({ code: "NOT_FOUND", message: `Card not found: ${relPath}` });
+    throw error;
+  }
 }
 
 export const cardRouter = router({
@@ -212,16 +233,13 @@ export const cardRouter = router({
         if (!split.hasFrontmatter) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Card has no frontmatter block" });
         }
-        const document = split.frontmatterText.trim() === ""
-          ? new Document({})
-          : parseDocument(split.frontmatterText);
-        if (document.errors.length > 0 || !isMap(document.contents)) {
+        const document = editableFrontmatterDocument(split.frontmatterText);
+        if (document === null) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Card frontmatter is not a valid YAML mapping" });
         }
         if (input.theme === null) document.delete("theme");
         else document.set("theme", input.theme);
-        const yaml = String(document);
-        const content = `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${split.body}`;
+        const content = renderFrontmatterDocument(document, split.body);
         await writeFileAtomic(fullPath, { content });
         try {
           const commit = await stageAndCommitPaths(ctx.boxRoot, {
@@ -240,6 +258,53 @@ export const cardRouter = router({
         timestamp: new Date().toISOString(),
       });
       return { theme: input.theme, ...saved };
+    }),
+
+  readComposition: publicProcedure
+    .input(z.object({ path: z.string().min(1) }))
+    .query(async ({ input, ctx }) => {
+      const { relPath, fullPath } = await resolveDocCardPath({ boxRoot: ctx.boxRoot, inputPath: input.path, mode: "read" });
+      return onCardFile(relPath, () => readCompositionFile(fullPath));
+    }),
+
+  /**
+   * Autosave (`commit: false`) and Save (`commit: true`) of the composition
+   * text. A stale `baseRegionHash` returns `status: "conflict"` with the
+   * current region so the editor can merge; nothing is written.
+   */
+  writeComposition: authedProcedure
+    .input(z.object({ path: z.string().min(1), baseRegionHash: z.string().min(1), text: z.string(), commit: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      const { relPath, fullPath } = await resolveDocCardPath({ boxRoot: ctx.boxRoot, inputPath: input.path, mode: "write" });
+      const result = await withCardLock(fullPath, async () => {
+        const written = await onCardFile(relPath, () => writeCompositionFile(fullPath, input));
+        if (written.status !== "written" || !input.commit) return { ...written, commit: null, commitWarning: null };
+        // Commits whatever of this card differs from HEAD, so a Save after an
+        // autosave of the same text still commits; `null` when nothing differs.
+        try {
+          const commit = await stageAndCommitPaths(ctx.boxRoot, {
+            paths: [relPath],
+            message: `Save composition: ${relPath}`,
+            trailers: { "Source": "webapp", "Endpoint": "card.writeComposition", "Composition-Save": "person" },
+          });
+          return { ...written, commit, commitWarning: null };
+        } catch (_error) {
+          return { ...written, commit: null, commitWarning: "Saved, but the Git commit failed." };
+        }
+      });
+      if (result.status === "problem") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: result.where === "file"
+            ? `The card's composition cannot be edited (${result.problem})`
+            : `The text would break the composition (${result.problem}); nothing was written`,
+        });
+      }
+      if (result.status === "conflict") return { status: result.status, text: result.text, regionHash: result.regionHash };
+      if (result.changed) {
+        ctx.eventBus.emitTransient("file-change", { event: "change", path: relPath, timestamp: new Date().toISOString() });
+      }
+      return { status: result.status, regionHash: result.regionHash, commit: result.commit, commitWarning: result.commitWarning };
     }),
 
   trash: publicProcedure

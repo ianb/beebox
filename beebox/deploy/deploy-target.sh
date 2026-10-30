@@ -86,7 +86,7 @@ load_deploy_target() {
                BBX_DEPLOY_SERVICE_HOME BBX_DEPLOY_HUB_PORT; do
     if LC_ALL=C grep -qE "^[[:space:]]*(export[[:space:]]+)?$fixed=" "$target_file"; then
       echo "deploy: $target_file sets $fixed, which is not configurable." >&2
-      echo "  The server layout is fixed at what deploy/hetzner/setup-server.sh" >&2
+      echo "  The server layout is fixed at what deploy/hetzner/cloud-init.yaml" >&2
       echo "  builds — /opt/beebox, /home/beebox, the 'beebox' account, port 3210" >&2
       echo "  — because the deploy's remote steps name those literally. Setting it" >&2
       echo "  here would change where files are sent and nothing else. Remove the" >&2

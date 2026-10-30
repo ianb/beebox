@@ -15,8 +15,9 @@ Key files:
   the new slug. Preflight-validates the slug before it clones; `--dry-run`
   prints the plan without touching anything.
 - `hetzner/` — example provisioners for the one server shape `deploy.sh` ships
-  to: `create-server.sh` (Hetzner VPS + Cloudflare DNS) and `setup-server.sh`
-  (Ubuntu packages, `beebox` user, units, nginx). Neither runs on deploy.
+  to: `create-server.sh` (Hetzner VPS + Cloudflare DNS), `cloud-init.yaml`
+  (Ubuntu packages, toolchain, users) and `provision.sh` (the root steps after
+  cloud-init). None runs on deploy; `deploy.sh` installs units, sudoers and nginx.
 - `target.env` — the deploy target: which server, which paths, how to notify
   (gitignored, per-operator). Its PRESENCE is what makes a checkout one that
   deploys — without it the commit hooks skip silently and deploy.sh refuses.
@@ -24,6 +25,16 @@ Key files:
   callers that aren't bash). Template: `target.env.example`.
 - `prod-ssh` — SSH to prod as root for diagnostics and administration
 - `prod-curl` / `prod-browse` — inspect the authenticated production app
+
+## Which account runs a step
+
+Each box runs as its own user ([provisioning](../docs/server/provisioning.md)).
+For each step a script adds, name the account that runs it and the layout it
+runs against, both layouts while a migration is in progress. Root passes every
+permission check, so a step that works as root proves nothing for a box user.
+An environment value that names a file must be readable by the account that
+reads it: a shared file such as a push-signing key by every box user, a box's
+own file by that box's user only.
 
 ## Rollback
 

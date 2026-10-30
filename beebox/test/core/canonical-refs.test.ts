@@ -172,7 +172,7 @@ _content/docs/guide.md: Non-canonical ref at line 4: ../../escape.md escapes the
     dossierLinks: 3,
   });
 
-  t.check(formatCanonicalReport({ ...buckets, dossierWarnings: [] }, { colors: false }), "Canonical refs: 3 non-canonical refs, 0 non-canonical dossier links — rerun with `--canonical --fix` to rewrite the ones whose target exists");
+  t.check(formatCanonicalReport({ ...buckets, dossierWarnings: [] }), "Canonical refs: 3 non-canonical refs, 0 non-canonical dossier links — rerun with `--canonical --fix` to rewrite the ones whose target exists");
 
   await box.cleanup();
 });

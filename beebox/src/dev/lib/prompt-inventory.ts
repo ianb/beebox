@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { cardSchemas } from "../../schemas.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "../../core/reactor/prompts.js";
-import { CHAT_SYSTEM_PROMPT } from "../../core/chat/session/run/core.js";
+import { chatSystemPrompt } from "../../core/chat/session/run/core.js";
 import { COMMIT_NUDGE_PROMPT } from "../../core/agent/invoke/core.js";
 import { OBSERVER_SYSTEM_PROMPT } from "../../core/retro/observer.js";
 import { buildJudgePrompt } from "../../core/procedure/engine-validate-model.js";
@@ -54,9 +54,9 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
 
   entries.push({
     title: "Chat System Prompt",
-    source: "src/core/chat/session/run/core.ts → CHAT_SYSTEM_PROMPT",
+    source: "src/core/chat/session/run/core.ts → chatSystemPrompt()",
     scope: "System prompt for the persistent web UI chat session. Active whenever the user is chatting via the main chat page.",
-    text: CHAT_SYSTEM_PROMPT,
+    text: chatSystemPrompt(),
   });
 
   entries.push({

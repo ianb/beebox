@@ -31,7 +31,6 @@
  * boxholder's customization would overwrite their edit on the next `bbx init`.
  */
 
-import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import { MANAGED_STOCK_TEMPLATES } from "../core/box/templates.js";
@@ -40,6 +39,7 @@ import {
   TEMPLATE_STOCK_HASHES,
   type TemplateStockEntry,
 } from "../core/template-stock-hashes.js";
+import { sha256Hex } from "../lib/content-hash.js";
 
 const LEDGER_PATH = path.join(
   import.meta.dirname,
@@ -73,10 +73,6 @@ export interface TemplateStockEntry {
   superseded: string[];
 }
 `;
-
-function sha256(s: string): string {
-  return createHash("sha256").update(s).digest("hex");
-}
 
 /** Serialize the ledger to the canonical file text (stable key + array order). */
 function render(ledger: Record<string, TemplateStockEntry>): string {
@@ -153,7 +149,7 @@ async function main(): Promise<void> {
 
   const changed: string[] = [];
   for (const tpl of MANAGED_STOCK_TEMPLATES) {
-    const hash = sha256(tpl.content);
+    const hash = sha256Hex(tpl.content);
     const entry = next[tpl.name] ?? { current: "", superseded: [] };
     if (Object.is(entry.current, hash)) {
       next[tpl.name] = entry;

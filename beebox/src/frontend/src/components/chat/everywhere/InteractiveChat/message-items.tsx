@@ -14,9 +14,10 @@ import { isNoResponseOnly, parseAcks, parseCallouts, type AckIndication } from "
 import { hasAssistantSpeech } from "../../../../lib/audio/speech-parsing/parse";
 import type { SessionContentBlock, SessionEntry } from "../../../../api";
 import { buildStreamEntry } from "../../../../lib/stream-entry";
-import { hasProgressUpdate, hasRenderableAssistantContent } from "../../message-parsing";
+import { hasProgressUpdate, hasRenderableAssistantContent } from "../../assistant-parts";
 import type { ModelMarker } from "../../InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureVerbs } from "../../capture-bubble";
+import type { UndeliveredVerbs } from "../../user-message/view";
 import { invariant } from "@shared/invariant";
 import type { SpeechSegmentState } from "../../../../machines/speech-segment-states";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
@@ -180,9 +181,11 @@ export function buildTailItems(opts: TailItemsInput): DataItem[] {
     // GroupItem/AssistantMessage path as the finalized turn, keyed by liveTurnId
     // so finalize is an in-place update (no remount/flash). chunkOnParagraphs
     // trims to the last safe boundary so half-typed structured tags don't leak.
+    // Text written before a tool call is complete, so it is never trimmed.
+    const done = Math.max(0, ...streamTools.map((tool) => tool.streamTextOffset ?? 0));
     const entry = buildStreamEntry({
       uuid: `live-${liveTurnId ?? "tail"}`,
-      streamText: chunkOnParagraphs(streamText),
+      streamText: streamText.slice(0, done) + chunkOnParagraphs(streamText.slice(done)),
       streamTools,
     });
     if (hasAssistantSurface([entry], { debugView, proseEnabled })) {
@@ -212,6 +215,8 @@ export interface RenderItemContext {
   audioOverlayStore: AudioOverlayStore;
   /** A pending voice message's "Send live text now" control. */
   onHqSendLive: (id: string) => void;
+  /** Resend and Discard on an undelivered message of the person's own. */
+  undeliveredVerbs: UndeliveredVerbs;
 }
 
 /**
@@ -222,10 +227,10 @@ export interface RenderItemContext {
  * row re-rendered per token (`test/…/messages.streaming-renders.test.ts`).
  */
 export function useRenderItemContext(fields: RenderItemContext): RenderItemContext {
-  const { debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive } = fields;
+  const { debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive, undeliveredVerbs } = fields;
   return useMemo(
-    () => ({ debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive }),
-    [debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive],
+    () => ({ debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive, undeliveredVerbs }),
+    [debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, captureVerbs, audioOverlayStore, onHqSendLive, undeliveredVerbs],
   );
 }
 
@@ -245,7 +250,7 @@ function GroupItemInner({
   /** This is the newest assistant group, which auto-played speech highlights. */
   latestAssistant: boolean;
 }) {
-  const { debugView, currentUserEmail, currentUserName, speechPlayback, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled, audioOverlayStore } = ctx;
+  const { debugView, currentUserEmail, currentUserName, speechPlayback, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled, audioOverlayStore, undeliveredVerbs } = ctx;
   const boundaryLabel = `${group.type}#${groupIndex}:${group.entries[0]?.uuid ?? ""}`;
   let body: ReactNode;
   if (group.type === "compaction") {
@@ -261,7 +266,7 @@ function GroupItemInner({
       </div>
     );
   } else if (group.type === "user") {
-    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} currentUserName={currentUserName} acks={acks} onZoomView={onZoomView} audioOverlayStore={audioOverlayStore} /></div>;
+    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} currentUserName={currentUserName} acks={acks} onZoomView={onZoomView} audioOverlayStore={audioOverlayStore} undeliveredVerbs={undeliveredVerbs} /></div>;
   } else {
     // "This message is playing" matches either an explicit replay
     // (playingMessageId is this group's uuid) or auto-played speech

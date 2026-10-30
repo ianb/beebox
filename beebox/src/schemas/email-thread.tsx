@@ -29,7 +29,7 @@
  * and Gmail's labels. `messages` points into the box and stays top-level.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { cardSchema, type InferCardFields } from "../exports/cards.js";
 

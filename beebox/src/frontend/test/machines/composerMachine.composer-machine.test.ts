@@ -32,11 +32,11 @@ void test("STARTDICTATION marks a turn active and commands the mic.", async (t) 
   const { actor, calls } = mk();
   actor.send({ type: "START_DICTATION" });
   const s = actor.getSnapshot();
-  t.check(s.matches({ voice: "idle" }), true);
-
-  t.check(s.context.turnTaking, true);
-
-  t.check(calls.join(","), "startMic");
+  t.check({ value: s.value, turnTaking: s.context.turnTaking, calls }, {
+    value: { voice: "idle", hq: "idle", keyboard: "closed" },
+    turnTaking: true,
+    calls: ["startMic"],
+  });
 });
 
 // ## Speech while recording holds the mic (playback → recording)
@@ -47,14 +47,14 @@ void test("With the mic recording (empty transcript), a queued segment holds the
   const { actor, calls } = mk();
   actor.send({ type: "RECORDING", value: true });
   actor.send(queued);
-  t.check(actor.getSnapshot().matches({ voice: "pausedForSpeech" }), true);
+  t.check(actor.getSnapshot().value, { voice: "pausedForSpeech", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "holdMic,playSpeech");
 
   // When playback finishes, the mic auto-resumes (the whole point of `voicePaused`):
 
   actor.send({ type: "SPEECH_DONE" });
-  t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "holdMic,playSpeech,resumeMic");
 });
@@ -68,7 +68,7 @@ void test("STOPSPEECH (e.g.", async (t) => {
   actor.send({ type: "RECORDING", value: true });
   actor.send(queued);
   actor.send({ type: "STOP_SPEECH" });
-  t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "holdMic,playSpeech,stopSpeech,resumeMic");
 });
@@ -79,7 +79,7 @@ void test("RESUME (tapping the pulsing mic) does the same:", async (t) => {
   actor.send({ type: "RECORDING", value: true });
   actor.send(queued);
   actor.send({ type: "RESUME" });
-  t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "holdMic,playSpeech,stopSpeech,resumeMic");
 });
@@ -93,7 +93,7 @@ void test("If the transcript already has text when speech is queued, it is marke
   actor.send({ type: "RECORDING", value: true });
   actor.send({ type: "TRANSCRIPT", nonEmpty: true });
   actor.send(queued);
-  t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "markPlayed");
 });
@@ -103,7 +103,7 @@ void test("Muted speech never plays", async (t) => {
   const { actor, calls } = mk();
   actor.send({ type: "SET_MUTE", value: true });
   actor.send(queued);
-  t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "markPlayed");
 });
@@ -112,12 +112,12 @@ void test("Muted speech never plays", async (t) => {
 void test("Speech with the mic idle plays, then returns to idle", async (t) => {
   const { actor, calls } = mk();
   actor.send(queued);
-  t.check(actor.getSnapshot().matches({ voice: "speaking" }), true);
+  t.check(actor.getSnapshot().value, { voice: "speaking", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "playSpeech");
 
   actor.send({ type: "SPEECH_DONE" });
-  t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 });
 
 // ## Speech during an active turn reopens the mic on completion
@@ -128,10 +128,10 @@ void test("turnTaking (set by STARTDICTATION) makes a completed speaking reopen 
   const { actor, calls } = mk();
   actor.send({ type: "START_DICTATION" });
   actor.send(queued);
-  t.check(actor.getSnapshot().matches({ voice: "speaking" }), true);
+  t.check(actor.getSnapshot().value, { voice: "speaking", hq: "idle", keyboard: "closed" });
 
   actor.send({ type: "SPEECH_DONE" });
-  t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "startMic,playSpeech,startMic");
 });
@@ -144,7 +144,7 @@ void test("Closes the latent \"recording while speech still playing\" edge:", as
   const { actor, calls } = mk();
   actor.send(queued);
   actor.send({ type: "START_DICTATION" });
-  t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "playSpeech,stopSpeech,startMic");
 });
@@ -161,11 +161,11 @@ void test("The iOS record button opens the native microphone itself and asks thi
   actor.send(queued);
   actor.send({ type: "STOP_SPEECH" });
   const s = actor.getSnapshot();
-  t.check(s.matches({ voice: "idle" }), true);
-
-  t.check(s.context.turnTaking, false);
-
-  t.check(calls.join(","), "playSpeech,stopSpeech");
+  t.check({ value: s.value, turnTaking: s.context.turnTaking, calls }, {
+    value: { voice: "idle", hq: "idle", keyboard: "closed" },
+    turnTaking: false,
+    calls: ["playSpeech", "stopSpeech"],
+  });
 });
 
 // ## Manual stop ends the turn
@@ -193,7 +193,7 @@ void test("SPEECHEXTERNAL (the SpeechMenu Replay, which plays on its own) holds 
   const { actor, calls } = mk();
   actor.send({ type: "RECORDING", value: true });
   actor.send({ type: "SPEECH_EXTERNAL" });
-  t.check(actor.getSnapshot().matches({ voice: "pausedForSpeech" }), true);
+  t.check(actor.getSnapshot().value, { voice: "pausedForSpeech", hq: "idle", keyboard: "closed" });
 
   t.check(calls.join(","), "holdMic");
 });
@@ -205,7 +205,7 @@ void test("A replay over a non-empty transcript holds the mic, then releases it.
   actor.send({ type: "RECORDING", value: true });
   actor.send({ type: "TRANSCRIPT", nonEmpty: true });
   actor.send({ type: "SPEECH_EXTERNAL" });
-  t.check(actor.getSnapshot().matches({ voice: "pausedForSpeech" }), true);
+  t.check(actor.getSnapshot().value, { voice: "pausedForSpeech", hq: "idle", keyboard: "closed" });
 
   actor.send({ type: "SPEECH_DONE" });
   t.check(calls.join(","), "holdMic,resumeMic");
@@ -215,7 +215,7 @@ void test("A replay over a non-empty transcript holds the mic, then releases it.
 void test("From an idle mic it just reflects that speech is playing:", async (t) => {
   const { actor, calls } = mk();
   actor.send({ type: "SPEECH_EXTERNAL" });
-  t.check(actor.getSnapshot().matches({ voice: "speaking" }), true);
+  t.check(actor.getSnapshot().value, { voice: "speaking", hq: "idle", keyboard: "closed" });
 
   t.check(calls, []);
 });
@@ -232,7 +232,7 @@ void test("Each voice send that waits for its HQ transcript is a pending bubble 
   actor.send({ type: "START_HQ", id: "m2", text: "second draft" });
   actor.send({ type: "HQ_STATUS", id: "m1", status: "Transcribing part 2 of 3" });
   const s = actor.getSnapshot();
-  t.check(s.matches({ hq: "inFlight" }), true);
+  t.check(s.value, { voice: "idle", hq: "inFlight", keyboard: "closed" });
 
   t.check(s.context.pendingHq, [
     {
@@ -262,15 +262,15 @@ void test("Each voice send that waits for its HQ transcript is a pending bubble 
 
   actor.send({ type: "HQ_DONE", id: "m1" });
   const s2 = actor.getSnapshot();
-  t.check({ inFlight: s2.matches({ hq: "inFlight" }), ids: s2.context.pendingHq.map((p) => p.id) }, {
-    inFlight: true,
+  t.check({ value: s2.value, ids: s2.context.pendingHq.map((p) => p.id) }, {
+    value: { voice: "idle", hq: "inFlight", keyboard: "closed" },
     ids: [
       "m2",
     ],
   });
 
   actor.send({ type: "HQ_DONE", id: "m2" });
-  t.check(actor.getSnapshot().matches({ hq: "idle" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 });
 
 // ## Mobile keyboard region
@@ -279,12 +279,12 @@ void test("Each voice send that waits for its HQ transcript is a pending bubble 
 void test("Opens, locks, and auto-closes on send only when unlocked.", async (t) => {
   const { actor } = mk();
   actor.send({ type: "OPEN_KEYBOARD" });
-  t.check(actor.getSnapshot().matches({ keyboard: { open: "unlocked" } }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: { open: "unlocked" } });
 
   // An unlocked keyboard closes when a message is sent:
 
   actor.send({ type: "MESSAGE_SENT" });
-  t.check(actor.getSnapshot().matches({ keyboard: "closed" }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: "closed" });
 });
 
 // A locked keyboard stays open across a send:
@@ -293,7 +293,7 @@ void test("A locked keyboard stays open across a send:", async (t) => {
   actor.send({ type: "OPEN_KEYBOARD" });
   actor.send({ type: "TOGGLE_LOCK" });
   actor.send({ type: "MESSAGE_SENT" });
-  t.check(actor.getSnapshot().matches({ keyboard: { open: "locked" } }), true);
+  t.check(actor.getSnapshot().value, { voice: "idle", hq: "idle", keyboard: { open: "locked" } });
 });
 
 // ## A send always ends the turn (region runs alongside the keyboard)
@@ -306,7 +306,8 @@ void test("MESSAGESENT resets turnTaking via the voice region even as the keyboa
   actor.send({ type: "OPEN_KEYBOARD" });
   actor.send({ type: "MESSAGE_SENT" });
   const s = actor.getSnapshot();
-  t.check(s.context.turnTaking, false);
-
-  t.check(s.matches({ keyboard: "closed" }), true);
+  t.check({ value: s.value, turnTaking: s.context.turnTaking }, {
+    value: { voice: "idle", hq: "idle", keyboard: "closed" },
+    turnTaking: false,
+  });
 });

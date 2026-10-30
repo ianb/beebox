@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import { readFile } from "node:fs/promises";
 import { clearOpenRouterCatalogCache, lookupOpenRouterModel, readOpenRouterKeyUsage } from "../../src/core/openrouter-catalog.js";
 
@@ -29,9 +30,13 @@ void test("A :variant suffix is a routing choice on the same model, so it looks 
     ok: true,
     found: true,
     model: {
+      id: "qwen/qwen3-coder:exacto",
       name: "Qwen: Qwen3 Coder 480B A35B",
       contextLength: 262144,
+      maxCompletionTokens: 65536,
       supportsTools: true,
+      supportedParameters: containing<string>(["tools"]),
+      inputModalities: ["text"],
       pricing: {
         promptPerMTok: 0.3,
         completionPerMTok: 1,
@@ -49,9 +54,17 @@ void test("A model with no cache pricing reports null there, not zero.", async (
     ok: true,
     found: true,
     model: {
+      id: "moonshotai/kimi-k2-0905",
       name: "MoonshotAI: Kimi K2 0905",
       contextLength: 262144,
+      maxCompletionTokens: 98304,
       supportsTools: true,
+      // What a pi run reads `reasoning` from: Kimi K2 0905 lists none.
+      supportedParameters: [
+        "frequency_penalty", "max_tokens", "presence_penalty", "repetition_penalty", "response_format", "seed",
+        "stop", "structured_outputs", "temperature", "tool_choice", "tools", "top_k", "top_p",
+      ],
+      inputModalities: ["text"],
       pricing: {
         promptPerMTok: 0.6,
         completionPerMTok: 2.5,

@@ -18,7 +18,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot, getBoxDir } from "../../lib/paths/core.js";
+import { requireBoxRoot } from "../../lib/paths/core.js";
 import {
   availableCalendarsWithSyncing,
   loadCalendarConfig,
@@ -37,14 +37,14 @@ import {
   jsonFlag,
   runCredentialedVerb,
 } from "../lib/credentialed-verb.js";
+import { loadBoxEvents } from "../../connectors/google-calendar/calendar-folders.js";
 import {
-  loadAllEvents,
   filterByDateRange,
   formatEvent,
   parseTimespan,
 } from "../../connectors/google-calendar/utils.js";
 import { vtimezoneBlock } from "../../connectors/google-calendar/ics.js";
-import { loadBoxTimezone } from "../../core/box/config.js";
+import { boxTimeZoneOrHost } from "../../core/box/config.js";
 
 /** The Calendar client for an in-process run; the two gates throw as one refusal. */
 export async function localCalendarService(boxRoot: string): Promise<GoogleCalendarService> {
@@ -67,10 +67,9 @@ function endOfDay(date: Date): Date {
 
 export const calendarCommand = new Command("calendar")
   .description("View calendar events (default: next 7 days)")
-  .argument("[timespan]", 'Time range: "today", "3d", "2w", "1m" (default: 7d)')
+  .argument("[timespan]", 'Time range: "today", "3d" (days), "2w" (weeks), "1m" (months) (default: 7d)')
   .action(async (timespan?: string) => {
     const boxRoot = await requireBoxRoot();
-    const calDir = getBoxDir(boxRoot, "calendar");
     const now = new Date();
 
     let from: Date;
@@ -88,8 +87,8 @@ export const calendarCommand = new Command("calendar")
       label = `next ${timespan || "7d"}`;
     }
 
-    // Pass range to loadAllEvents so recurring events get expanded
-    const events = await loadAllEvents(calDir, { from, to });
+    // Pass the range so recurring events get expanded
+    const events = await loadBoxEvents(boxRoot, { from, to });
     const filtered = filterByDateRange(events, { from, to });
 
     if (filtered.length === 0) {
@@ -107,8 +106,7 @@ calendarCommand
   .description("Print this box's VTIMEZONE block (paste into an .ics event)")
   .action(async (): Promise<void> => {
     const boxRoot = await requireBoxRoot();
-    const timezone =
-      (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const timezone = await boxTimeZoneOrHost(boxRoot);
     console.log(vtimezoneBlock(timezone).trim());
   });
 

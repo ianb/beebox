@@ -251,6 +251,14 @@
   --tw-prose-quote-borders: var(--bbx-edge, #dedbd6);
   color: var(--bbx-ink, #6b5d4b);
 }
+/* A long unbroken token in a cell (inline code, a URL) would otherwise set the
+   table's minimum width and push it past the card edge. `anywhere`, unlike
+   `break-word`, lowers the token's min-content width, so the auto layout fits.
+   Scoped to code and links: on every cell it lets the layout squeeze a short
+   column (a date, a "Last tried" header) to a few characters. */
+.bbx-theme-prose :where(td, th) :where(code, a) {
+  overflow-wrap: anywhere;
+}
 .bbx-card-theme .bbx-theme-prose {
   --tw-prose-bullets: var(--bbx-bullet);
   --tw-prose-counters: var(--bbx-counter);

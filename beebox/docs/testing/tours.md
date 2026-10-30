@@ -18,9 +18,10 @@ of reinventing it. That value lasts only while the walk still runs, so
 (`schedules/tour-check/`). When a tour misses because the app changed
 deliberately — a landing on `main`, a plan, or a filed issue explains
 the new label or structure — the session edits the tour to describe the
-app as it now is. Anything else it finds (a miss nothing explains, an
-axe violation, a page error, visible breakage in a screenshot) it files
-as an issue and reports. Its report is the one thing that has to be
+app as it now is. It fixes missing or ambiguous control names itself.
+Anything else it finds (a miss nothing explains, another axe violation,
+a page error, visible breakage in a screenshot) it files as an issue and
+reports. Its report is the one thing that has to be
 read: a walk nobody runs rots, and a report nobody reads is the same
 failure one level up (three of five tours had been silently failing
 for months before this existed — 2026-08-26). That asymmetry with the
@@ -147,6 +148,11 @@ Each run writes `test/tours/.artifacts/<tour>/<runId>/` (gitignored):
   material audit (`tour-lib/contrast.ts`, also behind `bin/theme-check`).
   Misses become one ❌ finding per checkpoint. Theme artwork that repeats or
   stops short at the viewport (`tour-lib/backdrop.ts`) becomes another.
+- `<checkpoint>.<viewport>.labels.json` — controls the box agent cannot tell
+  apart: the same role and accessible name in the same named container, read
+  from the app's own UI scan (`tour-lib/labels.ts`). Any become one ❌
+  finding per checkpoint. Fix them by the
+  [accessible-name rule](../../frontend.md#frontend-ui-primitives).
 
 A capture-time degradation (page-readiness timeout, axe crash) is
 recorded as a ⚠️ finding rather than silently producing a

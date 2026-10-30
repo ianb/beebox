@@ -8,7 +8,6 @@
  * duplicated here.
  */
 
-import getPorts from "get-port";
 import { acquireBoxStartup } from "../../lib/box-maintenance/admission.js";
 import { buildChildEnv } from "./child-env.js";
 import * as path from "node:path";
@@ -17,6 +16,7 @@ import { type BoxShape, getBoxShape, requireBoxRoot } from "../../lib/box-shape.
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { resolveBoxEngineBbx } from "../../lib/box-engine-bin.js";
 import { waitForHttp } from "../child-process-utils.js";
+import { freePort } from "../../lib/free-port.js";
 
 export type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
 
@@ -82,7 +82,7 @@ export async function spawnBoxChild(args: {
   finally { await startup.release(); }
   const shape = await getBoxShape(boxRoot);
   const bbxBinary = await resolveBbxBinary(shape);
-  const port = await getPorts();
+  const port = await freePort();
   const env = buildChildEnv({
     sourceEnv: process.env,
     hubExtras: {

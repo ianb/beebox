@@ -159,18 +159,23 @@ void test("An image's description doubles as its contains fallback; OCR text ind
 });
 
 // ## Long bodies split into per-section documents; the preamble stays on the card
+//
+// The card document carries the title and `contains`. A section document
+// carries only its own text: copying the card's title and summary into each
+// section made a title query return every section and every section preview
+// repeat the summary (`issues/closed/bugs/2026-09-21-search-sections-repeat-the-card-summary.md`).
 void test("Long bodies split into per-section documents; the preamble stays on the card", async (t) => {
   const section = "words ".repeat(Math.ceil(SECTION_SPLIT_THRESHOLD / 12));
   const bodyText = `Intro before any heading.\n\n# Mill\n${section}\n\n## Gears\n${section}\n\n# Store\n${section}\n`;
   const docs = await docsFor(
     "box/examples/Engine.doc.card",
-    `---\ntitle: The Analytical Engine\n---\n${bodyText}`
+    `---\ntitle: The Analytical Engine\ncontains: Babbage's design for a general-purpose computer\n---\n${bodyText}`
   );
   const engineDoc = (fragment: string, content: string) => ({
     path: "box/examples/Engine.doc.card",
     kind: "doc",
-    title: "The Analytical Engine",
-    contains: "",
+    title: fragment === "" ? "The Analytical Engine" : "",
+    contains: fragment === "" ? "Babbage's design for a general-purpose computer" : "",
     contentHash: "hash0",
     id: `box/examples/Engine.doc.card#${fragment}`,
     fragment,

@@ -11,7 +11,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun, type ProcedureRunFields } from "../../../schemas/procedure-run.js";
 import { stageAll, commit, withBoxGitLock } from "../../../lib/git/core/operations.js";
-import { fmt } from "../../../lib/format.js";
 import { getBoxTime, getBoxTimeISO } from "../../../lib/time.js";
 import { ok, err, type Result } from "../../../shared/result.js";
 import type { CommandContext } from "../../command-runner.js";
@@ -76,10 +75,10 @@ function printDryRun(args: {
   directive: string | undefined;
 }): void {
   const { ctx, procedure, directive } = args;
-  ctx.writeLine(fmt.header(`Procedure: ${procedure.name}`));
-  ctx.writeLine(fmt.dim(procedure.description));
+  ctx.writeLine(`Procedure: ${procedure.name}`);
+  ctx.writeLine(procedure.description);
   if (directive) {
-    ctx.writeLine(fmt.kv("Directive", directive));
+    ctx.writeLine(`Directive: ${directive}`);
   }
   ctx.writeLine("");
   for (const step of procedure.steps) {
@@ -91,7 +90,7 @@ function printDryRun(args: {
         ? "shell"
         : "none";
     ctx.writeLine(
-      `  ${fmt.strong(step.id)}: ${step.description} ${fmt.dim(`[${runType}${hasPrecheck ? ", precheck" : ""}${hasValidate ? ", validate" : ""}]`)}`
+      `  ${step.id}: ${step.description} [${runType}${hasPrecheck ? ", precheck" : ""}${hasValidate ? ", validate" : ""}]`
     );
   }
 }
@@ -177,8 +176,8 @@ export async function startProcedure(
     });
   };
 
-  ctx.writeLine(fmt.header(`Starting procedure: ${procedure.name}`));
-  ctx.writeLine(fmt.dim(`Run: ${path.relative(boxRoot, runDir)}`));
+  ctx.writeLine(`Starting procedure: ${procedure.name}`);
+  ctx.writeLine(`Run: ${path.relative(boxRoot, runDir)}`);
   ctx.writeLine("");
 
   // Execute steps (optionally filtered to a single step)
@@ -235,12 +234,10 @@ function reportStandingInconclusive(args: {
   const { ctx, run, relRunDir } = args;
   const inconclusive = recordedInconclusive(run);
   ctx.writeLine(
-    fmt.warn(
-      `Run completed with no verdict: ${relRunDir} — nothing to resume (resume does not re-judge)`
-    )
+    `Run completed with no verdict: ${relRunDir} — nothing to resume (resume does not re-judge)`
   );
   for (const item of inconclusive) {
-    ctx.writeLine(fmt.dim(`  Review of ${item.stepId} ${item.detail} — the work is unjudged, not rejected.`));
+    ctx.writeLine(`  Review of ${item.stepId} ${item.detail} — the work is unjudged, not rejected.`);
   }
   return ok({ status: "inconclusive", procedure: run.procedure, inconclusive });
 }
@@ -276,7 +273,7 @@ export async function resumeProcedure(params: {
 
   const relRunDir = path.relative(boxRoot, runDir);
   if (run.outcome === "completed") {
-    ctx.writeLine(fmt.ok(`Run already completed: ${relRunDir} — nothing to resume`));
+    ctx.writeLine(`✓ Run already completed: ${relRunDir} — nothing to resume`);
     return ok({ status: "completed", procedure: run.procedure, inconclusive: [] });
   }
   // An inconclusive run has nothing to resume — every step's work finished —
@@ -295,7 +292,7 @@ export async function resumeProcedure(params: {
     if (recordedInconclusive(run).length > 0) {
       return reportStandingInconclusive({ ctx, run, relRunDir });
     }
-    ctx.writeLine(fmt.ok(`All steps already completed: ${relRunDir} — nothing to resume`));
+    ctx.writeLine(`✓ All steps already completed: ${relRunDir} — nothing to resume`);
     return ok({ status: "completed", procedure: run.procedure, inconclusive: [] });
   }
 
@@ -322,9 +319,9 @@ export async function resumeProcedure(params: {
   // Re-open the run: no outcome is the on-disk "not finished" signal.
   await reopenRunCard(runCardPath);
 
-  ctx.writeLine(fmt.header(`Resuming procedure: ${procedure.name}`));
-  ctx.writeLine(fmt.dim(`Run: ${relRunDir}`));
-  ctx.writeLine(fmt.dim(`From step: ${resumeStep.id}`));
+  ctx.writeLine(`Resuming procedure: ${procedure.name}`);
+  ctx.writeLine(`Run: ${relRunDir}`);
+  ctx.writeLine(`From step: ${resumeStep.id}`);
   ctx.writeLine("");
 
   // The run dir already has commits, so materialization is a no-op.

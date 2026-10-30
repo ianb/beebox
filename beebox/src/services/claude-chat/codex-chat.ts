@@ -33,13 +33,10 @@ import {
   type CodexSdkSessionLike,
 } from "../codex-sdk-session/core.js";
 import type { ChatResultPhase } from "../../core/chat/message-types.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 function event(message: NativeChatBackendMessage["message"]): NativeChatBackendMessage {
   return { provider: "codex", message };
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 const FAILURE_PREFIX: Record<ChatResultPhase, string> = {
@@ -63,7 +60,7 @@ export function codexFailureEvent(
   const trace = error instanceof Error
     ? error.stack ?? `${error.name}: ${error.message} (no stack)`
     : `non-Error throw: ${String(error)}`;
-  console.error(`[codex-chat] ${phase} failure: ${errorText(error)}\n${trace}`);
+  console.error(`[codex-chat] ${phase} failure: ${errorMessage(error)}\n${trace}`);
   return event({
     type: "result",
     subtype: "failed",
@@ -72,7 +69,7 @@ export function codexFailureEvent(
     phase,
     duration_ms: 0,
     num_turns: 0,
-    result: `${FAILURE_PREFIX[phase]}: ${errorText(error)}`,
+    result: `${FAILURE_PREFIX[phase]}: ${errorMessage(error)}`,
   });
 }
 
@@ -197,7 +194,7 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
               usage: codexUsageDelta(codexSdkUsage(completed.usage), previous),
             });
           } catch (error) {
-            console.warn(`[CodexChat:usage] Could not record token usage: ${errorText(error)}`);
+            console.warn(`[CodexChat:usage] Could not record token usage: ${errorMessage(error)}`);
           }
         }
         let turnError = completed.error;

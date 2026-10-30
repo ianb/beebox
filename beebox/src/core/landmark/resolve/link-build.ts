@@ -10,7 +10,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
-import { titleFromFilename } from "../../file-summary.js";
+import { titleFromFilename } from "../../../shared/card-name.js";
 import { summarize } from "../../loader-registry.js";
 import { typeFromFilename } from "../../card-io.js";
 import { isCardFile } from "../../../lib/paths/core.js";

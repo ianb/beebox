@@ -16,8 +16,10 @@ import {
   MOBILE_COOKIE_NAME,
   MOBILE_SESSION_TTL_MS,
   clearMobileSessionSecretCache,
+  deriveMobileSessionKey,
   signMobileSession,
   verifyMobileSession,
+  verifyMobileSessionWithKey,
 } from "../../../src/core/mobile/session.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
@@ -108,4 +110,44 @@ void test("every forged, expired, or malformed cookie is null", async (t) => {
   });
   t.check(verifyMobileSession(otherBox.root, cookie), null);
   t.check(verifyMobileSession(otherBox.root, sign(otherBox.root, {})), { deviceId: "device-1", createdBy: null, exp: any(Number).int() });
+});
+
+// On a unit host (docs/plans/per-box-units.md, question 7) the key is derived
+// from the box's per-boot hub secret, so the hub, which holds that secret, can
+// verify a cookie without reading anything a box owns; no secret file is made.
+void test("on a unit host the key derives from the hub secret and no secret file is written", async (t) => {
+  const box = await makeTmpBox();
+  const env = { unitHost: process.env.BBX_UNIT_HOST, hubSecret: process.env.BBX_HUB_SECRET };
+  t.teardown(async () => {
+    await box.cleanup();
+    if (env.unitHost === undefined) delete process.env.BBX_UNIT_HOST; else process.env.BBX_UNIT_HOST = env.unitHost;
+    if (env.hubSecret === undefined) delete process.env.BBX_HUB_SECRET; else process.env.BBX_HUB_SECRET = env.hubSecret;
+    clearMobileSessionSecretCache();
+  });
+  const hubSecret = "c".repeat(64);
+  process.env.BBX_UNIT_HOST = "1";
+  process.env.BBX_HUB_SECRET = hubSecret;
+  clearMobileSessionSecretCache();
+  const cookie = signMobileSession(box.root, { deviceId: "device-1", createdBy: null, ttlMs: 60_000 });
+  t.check({
+    box: verifyMobileSession(box.root, cookie),
+    hub: verifyMobileSessionWithKey(deriveMobileSessionKey(hubSecret), cookie),
+    otherSecret: verifyMobileSessionWithKey(deriveMobileSessionKey("d".repeat(64)), cookie),
+    noKey: verifyMobileSessionWithKey(null, cookie),
+    secretFile: fs.existsSync(path.join(box.root, ".beebox/mobile-session.secret")),
+    // The key is a stable function of the secret, not the raw secret.
+    derived: { stable: deriveMobileSessionKey(hubSecret) === deriveMobileSessionKey(hubSecret), raw: deriveMobileSessionKey(hubSecret) === hubSecret },
+  }, {
+    box: { deviceId: "device-1", createdBy: null, exp: any(Number).int() },
+    hub: { deviceId: "device-1", createdBy: null, exp: any(Number).int() },
+    otherSecret: null,
+    noKey: null,
+    secretFile: false,
+    derived: { stable: true, raw: false },
+  });
+
+  // After a reboot the hub mints a new secret: yesterday's cookie is dead on both sides.
+  process.env.BBX_HUB_SECRET = "e".repeat(64);
+  clearMobileSessionSecretCache();
+  t.check(verifyMobileSession(box.root, cookie), null);
 });

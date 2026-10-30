@@ -18,6 +18,9 @@ import { migrateUserState } from "../../lib/state-migration.js";
 import { LEGACY_CONFIG_DIR, LEGACY_STATE_DIR, BBX_CONFIG_DIR, BBX_STATE_DIR } from "../../lib/state-dir.js";
 import { buildProgram } from "./program.js";
 import { rewriteLegacyHandoff, legacyHandoffNotice } from "./legacy-argv.js";
+import { loadCommands } from "./load-commands.js";
+import { selectVerb, surfaceKeys } from "./select-verb.js";
+import { SURFACE } from "./surface-data.js";
 
 // Validate the environment before any command runs (Track D.8). The CLI
 // schema is permissive (every field optional) — this only rejects a genuinely
@@ -27,12 +30,14 @@ loadEnv(cliEnvSchema);
 await migrateUserState(LEGACY_STATE_DIR, BBX_STATE_DIR);
 await migrateUserState(LEGACY_CONFIG_DIR, BBX_CONFIG_DIR);
 
-const program = buildProgram();
-
 // An older engine's `bbx upgrade` spawns this binary with the pre-split verb
 // names; accept them so a box can actually cross the split (legacy-argv.ts).
 const handoff = rewriteLegacyHandoff(process.argv);
 if (handoff.rewrote !== null) console.error(legacyHandoffNotice(handoff.rewrote));
+
+// Load only the command this run names (select-verb.ts).
+const selection = selectVerb(handoff.argv.slice(2), surfaceKeys(SURFACE));
+const program = buildProgram(await loadCommands(selection));
 
 const releaseAdmission = installBoxAdmission(program);
 try {

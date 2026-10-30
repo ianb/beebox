@@ -3,7 +3,7 @@
 // `loadViewCards(boxRoot, dependencies)` resolves a view's dependency globs to the
 // cards and files it renders — the same data the `/api/views/:slug/cards` route
 // serves. It additionally reports cards that matched a glob but failed to load
-// (`skipped`), which the route drops but `bbx view test` surfaces.
+// (`skipped`), which the route drops but `bbx view check` surfaces.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

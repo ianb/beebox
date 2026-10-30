@@ -4,6 +4,7 @@
  * sibling so the component file stays small and rule-clean.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useState, useEffect, useCallback } from "react";
 import { trpc, trpcClient } from "../../../lib/trpc/client";
 import { getQueryKey } from "@trpc/react-query";
@@ -39,10 +40,6 @@ export interface GoogleServicesState {
   handleDisconnect: () => Promise<void>;
   handleServiceToggle: (service: string, enabled: boolean) => Promise<void>;
   refreshStatus: () => Promise<GoogleStatus | null>;
-}
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export function useGoogleServices(): GoogleServicesState {

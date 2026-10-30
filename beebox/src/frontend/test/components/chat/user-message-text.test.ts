@@ -75,3 +75,15 @@ void test("Multiple marks in one message — each word wraps independently", asy
 void test("stt is absent whenever Deepgram confidence wasn't captured or applied (Voxtra...", async (t) => {
   t.check(render('<speech diarized="1" local-time="14:23">speaker A and speaker B</speech>'), "speaker A and speaker B");
 });
+
+// ## A selection pill names its document like the rest of the app
+//
+// The tooltip reads the card's name (no `.card`, no type suffix); a ref to
+// another file keeps its name as written, and a selection from the chat
+// transcript says "chat".
+void test("A selection pill names its document like the rest of the app", async (t) => {
+  const pillTitle = (html: string): string | undefined => /title="([^"]*)"/.exec(html)?.[1];
+  t.check(pillTitle(render('<user-selection ref="_content/people/Ana_Reyes.person.card" pos="p1">quoted</user-selection>')), "&quot;quoted&quot; — Ana Reyes — p1");
+  t.check(pillTitle(render('<user-selection ref="notes/my_file.pdf" pos="p1">quoted</user-selection>')), "&quot;quoted&quot; — my_file.pdf — p1");
+  t.check(pillTitle(render('<user-selection pos="p1">quoted</user-selection>')), "&quot;quoted&quot; — chat — p1");
+});

@@ -16,6 +16,7 @@
 
 import { Command } from "commander";
 import { copyBoxGrants } from "../../../core/secrets/lifecycle.js";
+import { exportBoxStore } from "../../../core/secrets/export-box.js";
 import {
   applySecretMigration,
   enumerateLegacySecrets,
@@ -148,4 +149,24 @@ export const copyGrantsCommand = new Command("copy-grants")
 
 copyGrantsCommand.action(async (fromBoxOrRoot: string, toBoxOrRoot: string) => {
   await runCopyGrants({ fromBoxOrRoot, toBoxOrRoot, ...copyGrantsCommand.opts<{ agentConfirmed?: boolean }>() });
+});
+
+/**
+ * `bbx engine secrets export-box <slug>` — one box's share of the store, as a
+ * store of its own, on stdout. The ONE verb that prints values: it exists for
+ * the unit-host migration and `deploy/add-box.sh`, which redirect it into the
+ * box user's 0600 store (`core/secrets/export-box.ts`). Refused in an agent
+ * session without `--agent-confirmed`, like every other verb that moves a
+ * credential.
+ */
+export const exportBoxCommand = new Command("export-box")
+  .description("Print one box's granted secrets and publish records as a store of its own (values included)")
+  .argument("<slug>", "Box slug")
+  .option("--agent-confirmed", AGENT_CONFIRMED_HELP);
+
+exportBoxCommand.action(async (slug: string) => {
+  const { agentConfirmed } = exportBoxCommand.opts<{ agentConfirmed?: boolean }>();
+  refuseIfUnconfirmedAgent({ action: `export box "${slug}"'s secrets`, agentConfirmed });
+  const share = await exportBoxStore(slug);
+  process.stdout.write(`${JSON.stringify(share, null, 2)}\n`);
 });

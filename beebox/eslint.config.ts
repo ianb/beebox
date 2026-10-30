@@ -88,15 +88,14 @@ const NODE_BUILTIN_PATTERNS = ["node:*", ...builtinModules.filter((name) => !nam
 
 export default [
   // `roots` extends the reviewed ruleset to first-party tooling under scripts/
-  // (migrators etc.), which otherwise falls through to eslint-config-agent's
-  // harsher global base — same rules as src/, not a weakening. See the per-edit
+  // (migrators etc.), which otherwise gets none of the reviewed ruleset —
+  // same rules as src/, not a weakening. See the per-edit
   // lint hook: this is what stops it flagging scripts with rules src/ is held to
   // deliberately (and `lint` below now covers scripts/ too).
   // `test` in roots (added 2026-07-15): test/ is held to the same reviewed
-  // ruleset as src/ — previously it fell through to eslint-config-agent's
-  // harsher unreviewed base, whose extra bans (`??`, inline unions,
-  // process.env["X"], fs-filename) are NOT house style and made per-edit hook
-  // reports on test files misleading. `pnpm lint` and lint-staged enforce it.
+  // ruleset as src/ — previously it fell through to an unreviewed base,
+  // whose extra bans (`??`, inline unions, process.env["X"], fs-filename) were
+  // NOT house style and made per-edit hook reports on test files misleading. `pnpm lint` and lint-staged enforce it.
   ...vibeCheck({ react: false, roots: ["src", "test"], ignores: ["src/frontend/**", "**/*.mjs"] }),
   // The React profile, scoped to list components (see LIST_ENTRY_GLOB above).
   // Every entry is re-scoped to the glob so nothing else in this package picks
@@ -122,7 +121,6 @@ export default [
       // "nonsensical" (requires className on every JSX element), but its preset
       // re-enables it for .tsx/JSX files — where our schema files (e.g.
       // capture-session.tsx) legitimately render className-free elements.
-      "custom/jsx-classname-required": "off",
     },
   },
   // NOTE: The block above once also turned off 16 more rules, added when

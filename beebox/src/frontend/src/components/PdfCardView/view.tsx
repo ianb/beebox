@@ -39,26 +39,18 @@ import type { RendererProps } from "../../file-type-registry";
 import { PdfPageStrip } from "./PdfPageStrip";
 import { PdfPageMarkers, type PageMarker } from "./PdfPageMarkers";
 import { PdfStatusNotice } from "./PdfStatusNotice";
-import { makeEmbedComponents } from "../FigureEmbed";
+import { CARD_EMBED_COMPONENTS } from "../FigureEmbed";
 import { Markdown } from "../Markdown/body";
 import { AttachedComments } from "../AttachedComments";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { MetaItem } from "../ui/MetaItem";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { FriendlyDate } from "../ui/FriendlyDate";
 import { Button } from "../ui/Button";
-
-function MetaItem({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <Text size="xs" tone="muted">
-      <span className="uppercase tracking-wide">{label}</span>{" "}
-      <span className="text-warm-700">{children}</span>
-    </Text>
-  );
-}
 
 function DocumentHeader({ fields, fallbackName }: { fields: ExtractedDocumentFields; fallbackName: string }) {
   const { title, author, pages, format, acquired, channel, description, originalName } = fields;
@@ -184,11 +176,6 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
     pagesErrored: pagesError !== null,
   });
 
-  const components = useMemo(
-    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined, openImageLink: undefined }),
-    [onNavigate, data.path, boxSlug],
-  );
-
   const showOriginal = () => {
     onNavigate({ path: data.path, viewer: ORIGINAL_RENDERER_NAME, params: {}, viewState: null });
   };
@@ -237,7 +224,7 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
             data-card-section="body"
             className={markers.length > 0 ? "relative pl-12" : "relative"}
           >
-            <Markdown prose="block" onNavigate={onNavigate} basePath={data.path} components={components}>
+            <Markdown prose="block" onNavigate={onNavigate} basePath={data.path} components={CARD_EMBED_COMPONENTS}>
               {body}
             </Markdown>
             <PdfPageMarkers markers={markers} activePage={activePage} onSelect={setPickedPage} />

@@ -43,8 +43,12 @@ export type { IndexPersisted } from "./index-store.js";
  * v3: standalone .md files index as kind "markdown".
  * v4: embedding vector field.
  * v5: no `created` field; titles come from the card summary (`cardTitle`).
+ * v6: filename titles use the shared card display name (`Foo.v2.doc.card` → "Foo.v2").
+ * v7: a .md file's title is its frontmatter `title:`, else its first `#` heading
+ *     outside fenced code (`markdownTitle`), else the filename.
+ * v8: a section document carries no title or `contains`; only its own text.
  */
-export const SEARCH_SCHEMA_VERSION = 5;
+export const SEARCH_SCHEMA_VERSION = 8;
 
 const searchOramaSchema = {
   path: "string",

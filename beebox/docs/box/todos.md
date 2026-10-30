@@ -22,6 +22,16 @@ A bare `{% todo %}…{% /todo %}` with no attributes is a valid, honest open
 todo — it just means "due now, no date opinion." Absence of an
 attribute is never a fabrication; only set what you actually know.
 
+`due` is the last day the action still counts. "Before 7 November" is due
+6 November; "by 7 November" is due 7 November. Say the date back the way the
+paper words it ("before 7 Nov"), never as the bare due date.
+
+A recurring task with a real cadence ("renew every March") is a todo with a
+`start` date.
+
+A standalone todo goes in a `.doc.card` under `_content/todos/`. Never title
+a card "Todos": the box's todo view already has that name.
+
 Attributes, all optional: `id` (a short slug for `{% see-also %}` cross-
 reference — never a UUID), `status` (`open`/`done`/`dropped`/`parked`;
 absent = `open`), `assigned` (absent = the boxholder; `"agent"` = yours to

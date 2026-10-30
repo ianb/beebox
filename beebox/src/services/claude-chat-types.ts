@@ -15,7 +15,7 @@ import type { ChatMessage } from "../core/chat/message-types.js";
 
 /** A provider-normalized event emitted by a non-Claude chat backend. */
 export interface NativeChatBackendMessage {
-  provider: "codex";
+  provider: "codex" | "pi";
   message: ChatMessage;
 }
 
@@ -140,6 +140,12 @@ export interface ChatBackend {
    * have to implement it.
    */
   prewarm?(opts: ChatBackendStartOptions): Promise<void>;
+  /**
+   * Load what `start()` needs, so `start()` can stay synchronous and throw its
+   * own failures directly. A caller awaits it before the first `start()` for
+   * that engine. Optional — fakes have nothing to load.
+   */
+  load?(engine: AgentEngine | undefined): Promise<void>;
   /**
    * Close the held warm slot, if any, and abandon any in-flight warm-up: if a
    * `startup()` is still resolving, its eventual `WarmQuery` must NOT be

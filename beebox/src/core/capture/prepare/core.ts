@@ -59,6 +59,7 @@ import {
 import { notifyCaptureFailed } from "../failure-notice.js";
 import { landmarkScanRelDir } from "../../landmark/root-dir.js";
 import type { NotifyServices } from "../../notify-boxholder.js";
+import { fileExists } from "../../../lib/file-exists.js";
 
 /**
  * Record a capture preparation failure AND emit the `capture-status`
@@ -429,13 +430,4 @@ async function discardWrittenDocument(opts: {
 }): Promise<void> {
   await fs.rm(opts.sessionCardAbsPath, { force: true });
   await fs.rm(opts.sessionAttachAbsDir, { recursive: true, force: true });
-}
-
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    return false;
-  }
 }

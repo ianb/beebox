@@ -15,7 +15,7 @@ import type { ChatBackend } from "../../../services/claude-chat/core.js";
  * defaults match the pre-existing "main chat" behavior.
  */
 export interface ChatSessionOptions {
-  /** Resolves the system prompt at process-start. Default: CHAT_SYSTEM_PROMPT + tzContext. */
+  /** Resolves the system prompt at process-start. Default: chatSystemPrompt() + tzContext. */
   systemPrompt?: (boxRoot: string) => Promise<string>;
   /**
    * Path to the current-session-id pointer, relative to boxRoot.

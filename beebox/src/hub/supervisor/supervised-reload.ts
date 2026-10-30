@@ -2,11 +2,14 @@
 import { acquireBoxMaintenance, type BoxMaintenance } from "../../lib/box-maintenance/admission.js";
 import { DEV_BUNDLE_RELOAD_REQUEST, DEV_BUNDLE_RELOAD_NOW, DEV_BUNDLE_RELOAD_ABORTED, DEV_BUNDLE_RELOAD_EXIT_CODE } from "../../lib/dev-bundle-reload.js";
 import { invariant } from "../../shared/invariant.js";
-import { BOX_KILL_GRACE_MS, describeError } from "../child-process-utils.js";
+import { BOX_KILL_GRACE_MS } from "../child-process-utils.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import type { ManagedBox } from "./core.js";
 
 interface ReloadOptions {
   box: ManagedBox; launch: () => Promise<void>; isStopped: () => boolean; isReady: () => boolean;
+  /** Arm the supervisor's slow retry; a failed reload must not need a human. */
+  retryLater: () => void;
 }
 
 export function installReloadHandler(options: ReloadOptions & { generation: number }): void {
@@ -21,14 +24,15 @@ export function installReloadHandler(options: ReloadOptions & { generation: numb
   };
   box.child?.on("message", (message: unknown) => {
     if (typeof message !== "object" || message === null || !("type" in message) || message.type !== DEV_BUNDLE_RELOAD_REQUEST) return;
-    void request().catch((error: unknown) => { console.error(`[hub] reload cleanup failed: ${describeError(error)}`); });
+    void request().catch((error: unknown) => { console.error(`[hub] reload cleanup failed: ${errorMessage(error)}`); });
   });
 }
 
-async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOptions): Promise<void> {
+async function reloadSupervisedBox({ box, launch, isStopped, isReady, retryLater }: ReloadOptions): Promise<void> {
   const child = box.child;
   if (!child) return;
   let changing = false;
+  let failedChanging = false;
   let maintenance: BoxMaintenance | undefined;
   try {
     maintenance = await acquireBoxMaintenance(box.entry.path, { reason: "development reload" });
@@ -54,9 +58,14 @@ async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOp
     if (isReady()) await maintenance.complete();
     else throw new BoxReloadError({ reason: "not-ready" });
   } catch (error) {
-    box.lastError = describeError(error);
+    box.lastError = errorMessage(error);
     console.error(`[hub] ${box.slug} reload: ${box.lastError}`);
-    if (changing) {
+    if (changing && isStopped()) {
+      // The hub is stopping: leave the box stopped and schedule nothing.
+      await maintenance?.beginChanges();
+    } else if (changing) {
+      // A retry now would be refused by this owner's closure; retry once it is released.
+      failedChanging = true;
       if (box.restartTimer) clearTimeout(box.restartTimer);
       box.status = "unhealthy";
       box.consecutiveFailures += 1;
@@ -65,7 +74,8 @@ async function reloadSupervisedBox({ box, launch, isStopped, isReady }: ReloadOp
       child.send({ type: DEV_BUNDLE_RELOAD_ABORTED }, () => {});
     }
   } finally {
-    await maintenance?.release();
+    try { await maintenance?.release(); }
+    finally { if (failedChanging && !isStopped()) retryLater(); }
   }
 }
 

@@ -18,6 +18,7 @@ import path from "node:path";
 import type { IssueNextActionState } from "../../shared/documents.js";
 import { listIssues, type IssueRecord, type ResearchState, type Visibility } from "./issue-domain.js";
 import { nextActionKey, nextActionsRoot, readNextActions } from "./issue-next-actions.js";
+import { frontmatterFence } from "../../../../beebox/src/cards/frontmatter.js";
 
 /** Monorepo root, resolved from this file rather than the cwd (callers are location-independent). */
 export const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..", "..");
@@ -91,7 +92,7 @@ async function toEntry(options: {
   const { record, issuesDir, rootLabel, nextAction } = options;
   const absPath = path.join(issuesDir, record.relPath);
   const source = await fs.readFile(absPath, "utf8");
-  const bodyStart = /^---[ \t]*\r?\n[\s\S]*?^---[ \t]*\r?\n/mu.exec(source);
+  const fence = frontmatterFence(source);
   const { frontmatter } = record;
   return {
     path: `${rootLabel}/${record.relPath}`,
@@ -116,7 +117,7 @@ async function toEntry(options: {
     discoveredBy: optional(frontmatter.discoveredBy),
     filedBy: optional(frontmatter.filedBy),
     resolution: optional(frontmatter.resolution),
-    body: bodyStart ? source.slice(bodyStart[0].length) : source,
+    body: fence === null ? source : source.slice(fence.bodyStart),
   };
 }
 

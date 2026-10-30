@@ -11,13 +11,11 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../../exports/cards.js";
 import { errnoCode, errorMessage } from "../../shared/error-guards.js";
-import { isRecord } from "../card-io.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { AGENT_ENGINES, type AgentEngine } from "../../shared/agent-models.js";
 import { BOX_DIRS } from "../../lib/paths/core.js";
+import { parseFrontmatterObject } from "../../cards/frontmatter.js";
 
 /** Husk cards read at once — see {@link mapInBatchesSettled}. */
 const READ_CONCURRENCY = 64;
@@ -47,20 +45,6 @@ async function findHuskBySuffix(boxRoot: string, sessionId: string): Promise<str
   }
   const match = names.find((n) => n.endsWith(suffix));
   return match === undefined ? null : `${CHAT_HUSK_DIR}/${match}`;
-}
-
-/** Frontmatter mapping from a husk file, or null when the shape is wrong. */
-export function parseHuskFrontmatter(content: string): Record<string, unknown> | null {
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return null;
-  let parsed: unknown;
-  try {
-    parsed = parseYaml(split.frontmatterText);
-  } catch (_e) {
-    // Malformed YAML — reported by the caller as a skipped husk.
-    return null;
-  }
-  return isRecord(parsed) ? parsed : null;
 }
 
 export interface ChatHuskEntry {
@@ -210,7 +194,7 @@ async function readChatHusk(boxRoot: string, relPath: string): Promise<ChatHuskE
     console.warn(`chat-husk: skipping unreadable ${relPath}: ${errorMessage(e)}`);
     return null;
   }
-  const fm = parseHuskFrontmatter(content);
+  const fm = parseFrontmatterObject(content);
   if (fm === null) {
     console.warn(`chat-husk: skipping ${relPath}: no frontmatter mapping`);
     return null;

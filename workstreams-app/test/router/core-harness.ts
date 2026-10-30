@@ -10,6 +10,7 @@
 // file-length limit. Log output is silenced by default (a no-op `log`) so a
 // passing run is quiet; flip `LOG` below to debug.
 
+import { createWriteStream, type WriteStream } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -51,6 +52,14 @@ export class FakeDiskFullError extends Error {
   constructor() {
     super("ENOSPC: no space left on device");
     this.name = "FakeDiskFullError";
+  }
+}
+
+/** A box entry that does not resolve (a missing or unreadable box directory). */
+export class FakeBoxResolutionError extends Error {
+  constructor() {
+    super("ENOENT: no box at /boxes/gone");
+    this.name = "FakeBoxResolutionError";
   }
 }
 
@@ -231,6 +240,11 @@ export interface Harness {
   failNextPidWrite: { value: unknown | undefined };
   /** The backend-source token the effects report; assign to simulate a rebuild. */
   sourceToken: { value: string | null };
+  /** Every log stream the core opened, in order (real streams in the tmp dir). */
+  logStreams: WriteStream[];
+  /** When set, `resolveBoxEntries` rejects with this (a box entry that does
+   *  not resolve, e.g. a missing or unreadable box directory). */
+  failBoxResolution: { value: unknown | undefined };
   /** Every `writeHubConfig` call, in order. */
   hubConfigs: Parameters<RouterEffects["writeHubConfig"]>[0][];
   cleanup(): Promise<void>;
@@ -244,6 +258,8 @@ export async function makeHarness(options?: { devNoHub?: boolean; boxes?: string
   const killCalls: KillCall[] = [];
   const removeCalls: Harness["removeCalls"] = [];
   const unknownNames = new Set<string>();
+  const logStreams: WriteStream[] = [];
+  const failBoxResolution: { value: unknown | undefined } = { value: undefined };
 
   let probeMode: "auto" | "manual" = "auto";
   let pendingProbes: Deferred[] = [];
@@ -299,7 +315,15 @@ export async function makeHarness(options?: { devNoHub?: boolean; boxes?: string
       return { name, root: tmp, backendCwd: tmp, frontendCwd: tmp, viteBin: path.join(tmp, "frontend-vite"), boxes: options?.boxes ?? [], testBoxes: options?.testBoxes ?? [] };
     },
     // An entry is its own content dir; its slug is the last path segment.
-    resolveBoxEntries: async (entries) => entries.map((entry) => ({ contentDir: entry, slug: path.basename(entry) })),
+    resolveBoxEntries: async (entries) => {
+      if (failBoxResolution.value !== undefined) throw failBoxResolution.value;
+      return entries.map((entry) => ({ contentDir: entry, slug: path.basename(entry) }));
+    },
+    openLog: (file) => {
+      const stream = createWriteStream(file, { flags: "a" });
+      logStreams.push(stream);
+      return stream;
+    },
     // Current-layout candidates always "exist" so tests exercise the same
     // spawn args as production's normal (non-fallback) path; backend-entry
     // resolution itself is unit-tested in backend-entry.test.ts.
@@ -319,6 +343,8 @@ export async function makeHarness(options?: { devNoHub?: boolean; boxes?: string
 
   return {
     hubConfigs,
+    logStreams,
+    failBoxResolution,
     core,
     clock,
     spawner,

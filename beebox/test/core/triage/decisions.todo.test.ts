@@ -20,7 +20,8 @@ import { applyTriage } from "../../../src/core/triage/run/routing.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { parseCardText, serializeCardText } from "../../../src/core/card-io.js";
 import { movePathPreservingAnnexSymlink } from "../../../src/core/card-files/move-phase2.js";
-import { getTriageTodoDate, planTriageTodoAnnotation } from "../../../src/core/triage/todo.js";
+import { planTriageTodoAnnotation } from "../../../src/core/triage/todo.js";
+import { boxLocalDay } from "../../../src/core/box/local-day.js";
 import type { TodoStatus } from "../../../src/shared/todo-model.js";
 import { invariant } from "../../../src/shared/invariant.js";
 
@@ -74,7 +75,7 @@ function replayResult(recorded: number) {
       todoAnswers: { [OPTION]: 1 },
       outcome: "destination",
       destinationRef: "/_content/bills/Bills.landmark.card",
-      requestHash: "8c8534b159375c598c79b3a3f07d713ee0700788d5fbe8a85224499592d2c18c",
+      requestHash: "f952fcf7dbb321fd055327246e67362521498554788da642379d2927f99a1a89",
       requestedModel: "fake-jev",
       returnedModel: "fake-jev",
       answer: { type: "choice", choice: OPTION, confidence: 1, probabilities: { [OPTION]: 1, "no-match": 0, unclear: 0 } },
@@ -131,7 +132,7 @@ void test("line 64", async (t) => {
 
   const target = box.path("_content/inbox/triaged/bills/Paper.doc.card");
   const annotated = await fs.readFile(target, "utf8");
-  const created = await getTriageTodoDate(box.root);
+  const created = await boxLocalDay(box.root);
   t.check(annotated, `---
 # preserve this note
 title: Paper
@@ -195,9 +196,9 @@ void test("line 137", async (t) => {
   const from = box.path("_content/inbox/staged/Paper.doc.card");
   const to = box.path("_content/inbox/triaged/bills/Paper.doc.card");
   invariant(destination.todoQuestion, "Fixture destination has a todo question");
-  const plan = await planTriageTodoAnnotation({ file: from, boxRoot: box.root, destinationRef: destination.ref, question: destination.todoQuestion, created: await getTriageTodoDate(box.root) });
+  const plan = await planTriageTodoAnnotation({ file: from, boxRoot: box.root, destinationRef: destination.ref, question: destination.todoQuestion, created: await boxLocalDay(box.root) });
   receipt.application.state = "applied";
-  receipt.application.todoAnnotation = { state: "pending", todoId: plan.todoId, beforeDigest: plan.beforeDigest, afterDigest: plan.afterDigest, created: await getTriageTodoDate(box.root) };
+  receipt.application.todoAnnotation = { state: "pending", todoId: plan.todoId, beforeDigest: plan.beforeDigest, afterDigest: plan.afterDigest, created: await boxLocalDay(box.root) };
   await saveDecisionReceipt(box.root, receipt);
   await movePathPreservingAnnexSymlink(from, to);
   const git = simpleGit(box.root);
@@ -258,7 +259,7 @@ void test("line 207", async (t) => {
   t.check(await fs.readFile(box.path("_content/inbox/triaged/bills/Legacy.doc.card"), "utf8"), `---
 title: Legacy
 todos:
-${todoEntry(await getTriageTodoDate(box.root), "")}---
+${todoEntry(await boxLocalDay(box.root), "")}---
 Bill.`);
 
   await box.write("_content/inbox/staged/No.doc.card", "---\ntitle: No\n---\nBill.");
@@ -274,7 +275,7 @@ void test("line 227", async (t) => {
   const original = await fs.readFile(file, "utf8");
   await fs.writeFile(file, original.replace("title: Paper", "title: Paper\ntodos:\n  - id: existing\n    text: Keep this task\n    status: done\n    recheck: never\n    unknown: keep-this-too # task note"));
   invariant(destination.todoQuestion, "Fixture destination has a todo question");
-  const addition = await planTriageTodoAnnotation({ file, boxRoot: box.root, destinationRef: destination.ref, question: destination.todoQuestion, created: await getTriageTodoDate(box.root) });
+  const addition = await planTriageTodoAnnotation({ file, boxRoot: box.root, destinationRef: destination.ref, question: destination.todoQuestion, created: await boxLocalDay(box.root) });
   t.check(addition.after, `---
 # preserve this note
 title: Paper
@@ -284,7 +285,7 @@ todos:
     status: done
     recheck: never
     unknown: keep-this-too # task note
-${todoEntry(await getTriageTodoDate(box.root), "")}undeclared: keep-me
+${todoEntry(await boxLocalDay(box.root), "")}undeclared: keep-me
 ---
 A bill requiring review.`);
 

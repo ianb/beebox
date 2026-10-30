@@ -28,5 +28,5 @@ void test("a LAN origin prints a QR code; localhost prints the path alone", asyn
 });
 
 void test("the QR address encodes the path so a # stays part of the filename", async (t) => {
-  t.check(cardAddress("http://192.168.1.20:3000", { boxSlug: "kitchen", path: "/_content/recipes/Soup #2.recipe.card" }), "http://192.168.1.20:3000/kitchen/browse/_content/recipes/Soup%20%232.recipe.card");
+  t.check(cardAddress("http://192.168.1.20:3000", { boxSlug: "kitchen", path: "/_content/recipes/Soup #2.recipe.card" }), "http://192.168.1.20:3000/kitchen/views/_content/recipes/Soup%20%232.recipe.card");
 });

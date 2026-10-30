@@ -14,6 +14,7 @@
 
 import { homedir } from "node:os";
 import { parseTapFiles, type LedgerRecord } from "../../bin/test-ledger-lib.js";
+import { asciiSlug } from "../../beebox/src/shared/ascii-slug.js";
 
 /** The `--source` value this schedule stamps on every record it produces. */
 export const LEDGER_SOURCE = "full-suite";
@@ -370,7 +371,7 @@ export function unstageIssueArgs(paths: string[]): string[] {
 }
 
 function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "");
+  return asciiSlug(text);
 }
 
 /**

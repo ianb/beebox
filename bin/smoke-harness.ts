@@ -9,7 +9,6 @@
  */
 
 import { appendFileSync, readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { basename, join } from "node:path";
 import { homedir } from "node:os";
 import { parseEnv } from "node:util";
@@ -44,11 +43,26 @@ import {
   type SmokeSummary,
   type StepStats,
 } from "./smoke-lib.js";
+import { setTimeout as sleep } from "node:timers/promises";
+import { gitCommonDir } from "./lib/git.js";
 
 export const REPO_ROOT = join(import.meta.dirname, "..");
 
-/** Hard wall-clock ceiling. A walk that has not finished by here is a failure. */
+/**
+ * The walk's wall-clock budget on a host running at its usual speed. A walk
+ * that has not finished by here, with its steps at their usual times, is a
+ * failure.
+ */
 export const BUDGET_MS = 120_000;
+
+/**
+ * The most the budget grows when the finished steps ran slower than usual, so
+ * {@link BUDGET_MS} times this is the hard ceiling. Load reds in the run log
+ * (issues/closed/bugs/2026-10-25-smoke-walk-budget-fails-under-host-load.md)
+ * ran 1.5 to 5 times their usual step times; the walk's medians sum to about
+ * 55 s, so 3 times 120 s covers that.
+ */
+export const MAX_SLOWDOWN = 3;
 
 /** How long the box gets to answer its first request after the restart. */
 export const COLD_START_MS = 90_000;
@@ -75,10 +89,6 @@ export function parseArgs(argv: readonly string[]): Options {
   };
 }
 
-export function git(args: string[]): string {
-  const result = spawnSync("git", args, { cwd: REPO_ROOT, encoding: "utf-8" });
-  return result.status === 0 ? (result.stdout ?? "").trim() : "";
-}
 
 /**
  * The reason this run was deliberately broken, if it was.
@@ -91,13 +101,6 @@ export function faultInjection(): string | null {
   return reason === undefined || reason.trim() === "" ? null : reason.trim();
 }
 
-function gitCommonDir(): string {
-  const common = git(["rev-parse", "--git-common-dir"]);
-  // A path relative to the checkout is what `--git-common-dir` returns in the
-  // main checkout (a bare `.git`); resolve it so every worktree appends to the
-  // same file rather than to one of its own.
-  return common.startsWith("/") ? common : join(REPO_ROOT, common);
-}
 
 /**
  * Append this run to the shared log.
@@ -108,7 +111,7 @@ function gitCommonDir(): string {
  */
 export function record(entry: SmokeRunRecord): void {
   try {
-    appendFileSync(smokeLogPath(gitCommonDir()), `${JSON.stringify(entry)}\n`);
+    appendFileSync(smokeLogPath(gitCommonDir(REPO_ROOT)), `${JSON.stringify(entry)}\n`);
   } catch (e) {
     process.stdout.write(
       `smoke: could not append to the run log (${e instanceof Error ? e.message : String(e)})\n`,
@@ -117,7 +120,7 @@ export function record(entry: SmokeRunRecord): void {
 }
 
 function logSummary(): SmokeSummary {
-  const texts = smokeLogReadPaths(gitCommonDir()).map((path) => {
+  const texts = smokeLogReadPaths(gitCommonDir(REPO_ROOT)).map((path) => {
     try {
       return readFileSync(path, "utf-8");
     } catch (_e) {
@@ -218,23 +221,51 @@ function control(input: {
   });
 }
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** A deadline shared by every step, so one slow step cannot eat the whole budget. */
+/**
+ * A deadline shared by every step, so one slow step cannot eat the whole budget.
+ *
+ * The deadline grows with {@link scaleTo} when the steps that finished ran
+ * slower than usual: on a loaded host every step slows by a similar factor, and
+ * a fixed budget then fails whichever step happens to run last. It never grows
+ * past {@link MAX_SLOWDOWN} times the base, and a step that hangs on a healthy
+ * host gets no extension, because the steps before it ran at their usual speed.
+ */
 export class Budget {
-  private readonly endsAt: number;
+  private readonly startedAt = Date.now();
+  private slowdown = 1;
 
-  constructor(ms: number) {
-    this.endsAt = Date.now() + ms;
+  constructor(private readonly baseMs: number) {}
+
+  /** The budget's current total, base times the slowdown so far. */
+  totalMs(): number {
+    return this.baseMs * this.slowdown;
+  }
+
+  /** The slowdown the budget is scaled by, from 1 to {@link MAX_SLOWDOWN}. */
+  factor(): number {
+    return this.slowdown;
   }
 
   remaining(): number {
-    return this.endsAt - Date.now();
+    return this.startedAt + this.totalMs() - Date.now();
+  }
+
+  /**
+   * Grow the budget to `slowdown` times its base, capped. It never shrinks: a
+   * fast step after slow ones must not end the walk at a deadline already
+   * passed.
+   */
+  scaleTo(slowdown: number): void {
+    this.slowdown = Math.min(Math.max(this.slowdown, slowdown), MAX_SLOWDOWN);
+  }
+
+  private seconds(): string {
+    return (this.totalMs() / 1000).toFixed(0);
   }
 
   check(step: string): void {
     if (this.remaining() <= 0) {
-      throw new BudgetExhaustedError({ step, budgetSeconds: String(BUDGET_MS / 1000) });
+      throw new BudgetExhaustedError({ step, budgetSeconds: this.seconds() });
     }
   }
 
@@ -251,7 +282,7 @@ export class Budget {
     let timer: NodeJS.Timeout | undefined;
     const expiry = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(() => {
-        reject(new StepOverBudgetError({ step, budgetSeconds: String(BUDGET_MS / 1000) }));
+        reject(new StepOverBudgetError({ step, budgetSeconds: this.seconds() }));
       }, Math.max(this.remaining(), 0));
     });
     try {
@@ -348,6 +379,8 @@ export async function waitForBox(input: {
   budget: Budget;
 }): Promise<void> {
   const { url, key, budget } = input;
+  // Scaled like the walk's budget: a slow restart step means a slow host.
+  const coldStartMs = COLD_START_MS * budget.factor();
   let refused: SmokeFailureError | null = null;
   let lastBody = "";
   const { verdict, timedOut } = await pollUntilReady({
@@ -361,7 +394,7 @@ export async function waitForBox(input: {
         return null;
       }
     },
-    until: Date.now() + Math.min(COLD_START_MS, budget.remaining()),
+    until: Date.now() + Math.min(coldStartMs, budget.remaining()),
     now: Date.now,
     sleep,
     pollMs: POLL_MS,
@@ -377,11 +410,11 @@ export async function waitForBox(input: {
     throw new StillFailingAfterRestartError({
       message: failure.message,
       detail: failure.detail,
-      coldStartSeconds: String(COLD_START_MS / 1000),
+      coldStartSeconds: (coldStartMs / 1000).toFixed(0),
     });
   }
   throw (
     refused ??
-    new NoAnswerAfterRestartError({ url, coldStartSeconds: String(COLD_START_MS / 1000) })
+    new NoAnswerAfterRestartError({ url, coldStartSeconds: (coldStartMs / 1000).toFixed(0) })
   );
 }

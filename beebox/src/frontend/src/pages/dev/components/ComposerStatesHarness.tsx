@@ -26,7 +26,7 @@
 import { useRef } from "react";
 import { ChatInputArea, type TranscriptionHandle } from "../../../components/chat/InteractiveChat-composer/view";
 import { MobileTextareaRow } from "../../../components/chat/InteractiveChat-mobile-row";
-import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout/view";
+import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout/view/ChatComposerSection";
 import { VoiceChipFace } from "../../../components/chat/VoiceChip/view";
 import { TargetStrip } from "../../../components/chat/TargetStrip";
 import { chatTargetStatus } from "../../../input/targets/chat-target";
@@ -129,7 +129,7 @@ type Spec = ReturnType<typeof specFor>;
 
 function noop() {}
 
-export function ComposerSpecimen({ spec, includeControlIds, showHeader, material }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean }) {
+export function ComposerSpecimen({ spec, includeControlIds, showHeader, material, label }: { spec: Spec; includeControlIds: boolean; showHeader?: boolean; material?: boolean; label?: string }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Static store for the gallery: the value never changes (set is a no-op,
@@ -168,6 +168,7 @@ export function ComposerSpecimen({ spec, includeControlIds, showHeader, material
       captureEnabled
       narrationEnabled={spec.narrationEnabled}
       includeControlIds={includeControlIds}
+      label={label}
     />
   );
   const mobileRow = (

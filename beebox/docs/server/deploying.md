@@ -18,6 +18,11 @@ restarts services, and checks readiness. Ordinary requests do not acquire the
 controller's maintenance permissions. `deploy-info.json` records the shipped
 commit; final deployment success is written only after the checks finish.
 
+The controller runs as root and holds no gate file itself: it groups the boxes
+by owner and starts one holder (`bbx engine maintenance hold`) per owner, as
+that owner, which closes and later reopens its boxes: one holder per box
+user. A host with no box runs the activation alone.
+
 Per-box convergence invokes `bbx migrate --sweep --within-maintenance --json`
 under the existing controller. That single operation handles deterministic
 migrations and generated guidance with snapshots and changed-path commits.
@@ -28,7 +33,10 @@ When convergence fails, the deploy then runs the same bounded repair the hourly
 `box-convergence` schedule runs (`bbx engine migrate --sweep --repair`, 25-minute
 limit) for each box that still has a pending migration, after the other boxes
 are serving again, and still reports the deploy as failed. A chained deploy waits
-for it. The hourly schedule retries anything the repair leaves. See
+for it. The repair runs only when the activation reached its restart and both
+services are up. A failure before the restart starts the services again on the live tree as it
+stands (new code, possibly old dependencies), skips the repair, and fails the
+deploy at once. The hourly schedule retries anything the repair leaves. See
 [migrations](../cards/migrations.md) for recovery, questions, and timeout limits.
 
 The shared drain accounts for gate-aware writers. The first rollout from older
@@ -78,6 +86,31 @@ The hook records its requested SHA synchronously before launching through
 `bin/lib/detach.ts`, so an agent command ending cannot kill the deploy by
 process group. That ordered hook request stays authoritative: a late-starting
 older child cannot overwrite newer intent.
+
+## The box units
+
+Each box is its own user and its own socket-activated units
+([per-box units](../implemented-plans/per-box-units.md); the layout is in
+[provisioning](provisioning.md#server-layout)). The deploy first checks that
+the host has that layout (the `beebox-sched` user, `/var/lib/beebox`, the
+`beebox-boxes` group) and refuses otherwise, before building anything. It
+then: stops every `beebox-box@*` socket and service with the hub and
+scheduler, so a request during the window cannot wake a box onto a
+half-copied tree; installs the versioned units (`deploy/systemd/`: the hub,
+the scheduler, `beebox-box@.socket`, `beebox-box@.service`,
+`beebox-pass@.service`, and the `box-sandbox.conf` drop-in both templates
+include); installs `bbx-box-run` and the one sudoers file on the host,
+`/etc/sudoers.d/beebox-sched`; converges each box as its own user with the
+units' `/etc/beebox/box.env`; runs `bbx host sync` for each box as root,
+installing the distro packages the box recorded since the last deploy (a box
+cannot install, it records); reconciles each box's `node_modules` as its
+owner; and starts the sockets again after the services.
+
+Production keeps the boxes on a separate volume mounted at `/var/lib/beebox`.
+A Hetzner snapshot covers the server's own disk and not a volume, so the
+boxes are backed up only by a copy taken elsewhere. Box users have no login
+file: the agents sign in with the long-lived token granted to every box
+([configuration](configuration.md), "The long-lived token").
 
 ## The maintenance boundary
 

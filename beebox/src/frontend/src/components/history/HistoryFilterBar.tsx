@@ -6,7 +6,8 @@
  * chip that can be dismissed to drop the session filter.
  */
 
-import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
+import { useState, useRef, useCallback, useMemo, type ReactNode } from "react";
+import { useDismiss } from "../../hooks/useDismiss";
 import {
   TRIGGER_KINDS,
   TRIGGER_KIND_LABELS,
@@ -167,23 +168,8 @@ function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    function handlePointer(e: MouseEvent) {
-      if (rootRef.current !== null && e.target instanceof Node && !rootRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", handlePointer);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handlePointer);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss({ root: rootRef, open, onDismiss: close });
 
   const hasSelection = selected.length > 0;
   const firstLabel = options.find((o) => o.value === selected[0])?.label ?? selected[0];

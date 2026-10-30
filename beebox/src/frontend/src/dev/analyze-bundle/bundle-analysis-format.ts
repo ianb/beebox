@@ -4,7 +4,7 @@
  * "run the build, read the JSON, print this" shell.
  */
 
-import { formatBytes } from "../../lib/format-bytes";
+import { humanBytes } from "@shared/human-bytes";
 import type { BundleReport } from "../bundle-analysis-types";
 
 /** Heavy/notable deps the load-time investigation cares about — reported by
@@ -43,11 +43,11 @@ function formatTotalsSection(report: BundleReport): string {
   const { totals } = report;
   const lines = [
     "== Initial load (raw / gzip) ==",
-    `JS:  ${formatBytes(totals.initialJsRawBytes)} / ${formatBytes(totals.initialJsGzipBytes)}`,
-    `CSS: ${formatBytes(totals.initialCssRawBytes)} / ${formatBytes(totals.initialCssGzipBytes)}`,
-    `Total: ${formatBytes(totals.initialJsRawBytes + totals.initialCssRawBytes)} / ${formatBytes(totals.initialJsGzipBytes + totals.initialCssGzipBytes)}`,
+    `JS:  ${humanBytes(totals.initialJsRawBytes)} / ${humanBytes(totals.initialJsGzipBytes)}`,
+    `CSS: ${humanBytes(totals.initialCssRawBytes)} / ${humanBytes(totals.initialCssGzipBytes)}`,
+    `Total: ${humanBytes(totals.initialJsRawBytes + totals.initialCssRawBytes)} / ${humanBytes(totals.initialJsGzipBytes + totals.initialCssGzipBytes)}`,
     "",
-    `Async (code-split) JS: ${formatBytes(totals.asyncJsRawBytes)} / ${formatBytes(totals.asyncJsGzipBytes)}`,
+    `Async (code-split) JS: ${humanBytes(totals.asyncJsRawBytes)} / ${humanBytes(totals.asyncJsGzipBytes)}`,
   ];
   return lines.join("\n");
 }
@@ -57,8 +57,8 @@ function formatChunksSection(report: BundleReport): string {
   const rows = report.chunks.map((chunk) => [
     chunk.fileName,
     chunk.isInitial ? "initial" : "async",
-    formatBytes(chunk.rawBytes),
-    formatBytes(chunk.gzipBytes),
+    humanBytes(chunk.rawBytes),
+    humanBytes(chunk.gzipBytes),
   ]);
   return [
     `== Chunks (${report.chunks.length} total, ${asyncCount} async / code-split) ==`,
@@ -69,8 +69,8 @@ function formatChunksSection(report: BundleReport): string {
 function formatPackagesSection(report: BundleReport, limit: number): string {
   const rows = report.packages.slice(0, limit).map((pkg) => [
     pkg.package,
-    formatBytes(pkg.rawBytes),
-    formatBytes(pkg.gzipBytes),
+    humanBytes(pkg.rawBytes),
+    humanBytes(pkg.gzipBytes),
     pkg.initialRawBytes > 0 ? "initial" : "async-only",
   ]);
   return [
@@ -84,7 +84,7 @@ function formatWatchedPackagesSection(report: BundleReport): string {
     const pkg = report.packages.find((candidate) => candidate.package === packageName);
     if (pkg === undefined) return [packageName, "absent", "-", "-"];
     const chunkList = [...new Set(pkg.chunkFileNames)].join(", ");
-    return [packageName, pkg.initialRawBytes > 0 ? "initial" : "async", formatBytes(pkg.rawBytes), chunkList];
+    return [packageName, pkg.initialRawBytes > 0 ? "initial" : "async", humanBytes(pkg.rawBytes), chunkList];
   });
   return [
     "== Watched heavy dependencies ==",
@@ -117,6 +117,6 @@ export function formatInitialSourceTree(report: BundleReport, options: { depth: 
       byPrefix.set(prefix, (byPrefix.get(prefix) ?? 0) + file.rawBytes);
     }
   }
-  const rows = [...byPrefix].toSorted((a, b) => b[1] - a[1]).slice(0, options.top).map(([prefix, bytes]) => [prefix, formatBytes(bytes)]);
+  const rows = [...byPrefix].toSorted((a, b) => b[1] - a[1]).slice(0, options.top).map(([prefix, bytes]) => [prefix, humanBytes(bytes)]);
   return `== Initial-load app source by directory (depth ${options.depth}, top ${options.top}) ==\n${renderTable({ headers: ["path", "raw"], rows })}`;
 }

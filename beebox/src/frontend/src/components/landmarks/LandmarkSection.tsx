@@ -11,10 +11,11 @@
  * the chat/directory association model.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
-import { isExternalUrl, type ViewTarget } from "../../lib/view-url";
+import { type ViewTarget } from "../../lib/view-url";
+import { isUrlRef } from "@shared/ref-path/core";
 import { CardMark } from "../ui/CardMark";
 import { resolveContentTarget } from "../../lib/view-url";
 import { toDisplayPath } from "@shared/display-path";
@@ -23,10 +24,11 @@ import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
-import { InlineAction } from "../ui/InlineAction";
 import { ChevronIcon } from "./ChevronIcon";
+import { LandmarkGroupRows, useLandmarkRowInk } from "./LandmarkGroupRows";
 import { LandmarkSessions } from "./LandmarkSessions";
 import type { CardSymbolData } from "@shared/card-symbol";
+import { cardUrl } from "@shared/card-url";
 
 export interface ResolvedLink {
   ref: string;
@@ -63,7 +65,7 @@ interface Landmark {
  */
 const INDENT_CLASSES = ["", "ml-2 sm:ml-8", "ml-4 sm:ml-16", "ml-6 sm:ml-24", "ml-8 sm:ml-32"];
 
-function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
+function PathLink({ dir, cardPath, boxSlug }: { dir: string; cardPath: string; boxSlug: string }) {
   // The root landmark has no meaningful path — a bare "/" under its title
   // reads as leftover plumbing (a field-test operator stared at it and
   // guessed "a separator with the parts missing"). The tile's label carries
@@ -71,7 +73,7 @@ function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
   if (dir === "") return null;
   return (
     <Link
-      to={href(`/${boxSlug}/browse/${dir}`)}
+      to={href(cardUrl(boxSlug, cardPath))}
       className="inline-block self-start min-w-0 max-w-full px-2 py-0.5 -mx-2 rounded hover:bg-warm-100"
     >
       {/*
@@ -106,17 +108,19 @@ export function LandmarkSection({
 }) {
   const labelText = landmark.label || toDisplayPath(landmark.path);
   const indentClass = INDENT_CLASSES[Math.min(landmark.depth, INDENT_CLASSES.length - 1)];
+  // The title names the card, so each landmark's "New chat" is that landmark's.
+  const headingId = useId();
 
   return (
-    <Card padding="md" border="subtle" shadow className={indentClass}>
+    <Card padding="md" border="subtle" shadow className={indentClass} role="group" aria-labelledby={headingId}>
       <Stack gap="md">
         <div className="flex items-center gap-3">
           <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
           {/* min-w-0 flex-1: the path below wraps break-all, so a shrink-to-fit
               header column would break a short path mid-word. */}
           <Stack gap="xs" className="min-w-0 flex-1">
-            <Heading level={2}>{labelText}</Heading>
-            <PathLink dir={landmark.dir} boxSlug={boxSlug} />
+            <Heading level={2} id={headingId}>{labelText}</Heading>
+            <PathLink dir={landmark.dir} cardPath={landmark.path} boxSlug={boxSlug} />
           </Stack>
         </div>
 
@@ -188,7 +192,6 @@ export function LandmarkGroup({
   group,
   boxSlug,
   onNavigate,
-  compact,
   defaultOpen,
   hidePath,
   onMore,
@@ -196,7 +199,6 @@ export function LandmarkGroup({
   group: ResolvedGroup;
   boxSlug: string;
   onNavigate?: (target: ViewTarget) => void;
-  compact?: boolean;
   /** Title only, no file path under it (the place page). */
   hidePath?: boolean;
   /** Start expanded (the place page); menus and the Landmarks page start collapsed. */
@@ -204,37 +206,15 @@ export function LandmarkGroup({
   /** Makes the "+N more" count an action (the place page opens the folder in Browse); plain text without it. */
   onMore?: () => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen === true);
-  const overflow = group.count - group.children.length;
-
   return (
-    <Stack gap="xs">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex items-center gap-2 px-2 py-1 -mx-2 rounded text-left hover:bg-warm-100"
-      >
-        <ChevronIcon open={open} />
-        <Text as="span" size="sm" weight="medium">{group.label}</Text>
-        <Text as="span" size="xs" tone="muted">{group.count}</Text>
-      </button>
-      {open ? (
-        <div className={`ml-6 grid grid-cols-1 gap-2 ${compact === true ? "" : "sm:grid-cols-2"}`}>
-          {group.count === 0 ? <Text as="div" size="sm" tone="muted">None yet</Text> : null}
-          {group.children.map((link) => (
-            <LinkTile key={link.ref} link={link} boxSlug={boxSlug} onNavigate={onNavigate} hidePath={hidePath} />
-          ))}
-          {overflow > 0 ? (
-            <Text as="div" size="xs" tone="muted" className="self-center">
-              {onMore === undefined ? `+${overflow} more` : (
-                <InlineAction intent="subtle" onClick={onMore}>{`+${overflow} more`}</InlineAction>
-              )}
-            </Text>
-          ) : null}
-        </div>
-      ) : null}
-    </Stack>
+    <LandmarkGroupRows
+      group={group}
+      className="text-sm"
+      emptyText="None yet"
+      renderChild={(link) => <LinkRow link={link} boxSlug={boxSlug} onNavigate={onNavigate} hidePath={hidePath} />}
+      {...(defaultOpen === undefined ? {} : { defaultOpen })}
+      {...(onMore === undefined ? {} : { onMore })}
+    />
   );
 }
 
@@ -278,9 +258,9 @@ function LinkTile({
   // and external URLs (handled separately below) pass through as-is.
   const refDisplay = link.ref.startsWith("/") ? toDisplayPath(link.ref) : link.ref;
 
-  if (isExternalUrl(link.ref)) {
+  if (isUrlRef(link.ref)) {
     return (
-      <a href={link.ref} target="_blank" rel="noopener noreferrer" className="block">
+      <a href={link.ref} target="_blank" rel="noopener noreferrer" aria-label={display} className="block">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
           <Text as="div" size="xs" tone="muted" truncate>{link.ref}</Text>
@@ -302,7 +282,7 @@ function LinkTile({
   const target = resolveContentTarget(undefined, link.ref);
   if (onNavigate !== undefined && target !== null) {
     return (
-      <button type="button" onClick={() => onNavigate(target)} className="block w-full text-left">
+      <button type="button" onClick={() => onNavigate(target)} aria-label={display} className="block w-full text-left">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
           <TileDetail detail={link.detail} />
@@ -313,7 +293,7 @@ function LinkTile({
   }
 
   return (
-    <Link to={href(`/${boxSlug}/views/${link.ref}`)} className="block">
+    <Link to={href(`/${boxSlug}/views/${link.ref}`)} aria-label={display} className="block">
       <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
         <Text as="div" size="sm" weight="medium">{display}</Text>
         <TileDetail detail={link.detail} />
@@ -321,4 +301,54 @@ function LinkTile({
       </Card>
     </Link>
   );
+}
+
+/** A group member as a menu-style row: the same four cases as `LinkTile`, in the `LandmarkGroupRows` look. */
+function LinkRow({
+  link,
+  boxSlug,
+  onNavigate,
+  hidePath,
+}: {
+  link: ResolvedLink;
+  boxSlug: string;
+  onNavigate?: (target: ViewTarget) => void;
+  hidePath?: boolean;
+}) {
+  const display = link.label !== null && link.label.length > 0 ? link.label : link.title;
+  const refDisplay = link.ref.startsWith("/") ? toDisplayPath(link.ref) : link.ref;
+  const { ink, soft, alert, hover } = useLandmarkRowInk();
+  const rowClasses = `block w-full text-left px-3 py-2 ${hover}`;
+
+  if (isUrlRef(link.ref)) {
+    return (
+      <a href={link.ref} target="_blank" rel="noopener noreferrer" aria-label={display} className={rowClasses}>
+        <div className={`font-medium ${ink} truncate`}>{display}</div>
+        <div className={`text-xs ${soft} truncate`}>{link.ref}</div>
+      </a>
+    );
+  }
+
+  if (!link.exists) {
+    return (
+      <div className={`flex items-center gap-2 px-3 py-2 ${soft}`}>
+        {/* Struck through: the row stays so the place does not silently shrink. */}
+        <s className="min-w-0 truncate font-medium">{display}</s>
+        <span className={`ml-auto shrink-0 text-xs ${alert}`}>Missing</span>
+      </div>
+    );
+  }
+
+  const body = (
+    <>
+      <div className={`font-medium ${ink} truncate`}>{display}</div>
+      <TileDetail detail={link.detail} />
+      {hidePath === true ? null : <div className={`text-xs ${soft} truncate`}>{refDisplay}</div>}
+    </>
+  );
+  const target = resolveContentTarget(undefined, link.ref);
+  if (onNavigate !== undefined && target !== null) {
+    return <button type="button" onClick={() => onNavigate(target)} aria-label={display} className={rowClasses}>{body}</button>;
+  }
+  return <Link to={href(`/${boxSlug}/views/${link.ref}`)} aria-label={display} className={rowClasses}>{body}</Link>;
 }

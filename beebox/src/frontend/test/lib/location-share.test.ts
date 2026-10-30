@@ -8,6 +8,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import {
   locationShareKey,
+  locationShareKeyFor,
   parseLocationShareState,
   serializeLocationShareState,
   shouldRefresh,
@@ -19,6 +20,17 @@ void test("Key is scoped by box; missing slug falls back to a default", async (t
   t.check(locationShareKey("test1"), "bbx-location-share:test1");
 
   t.check(locationShareKey(undefined), "bbx-location-share:default");
+});
+
+// ## Behind the dev router the scope names the instance
+//
+// Slug alone let two checkouts' `test1` share a toggle. An empty scope (all of
+// production) leaves the key byte-identical to the one written before.
+void test("A dev scope replaces the slug; an empty scope keeps the old key", async (t) => {
+  t.check(
+    [locationShareKeyFor({ boxSlug: "test1", scope: "" }), locationShareKeyFor({ boxSlug: "test1", scope: "main/test1" }), locationShareKeyFor({ boxSlug: undefined, scope: "worktree-foo/test1" })],
+    ["bbx-location-share:test1", "bbx-location-share:main/test1", "bbx-location-share:worktree-foo/test1"],
+  );
 });
 
 // ## Parse defaults to disabled for absent / malformed / invalid

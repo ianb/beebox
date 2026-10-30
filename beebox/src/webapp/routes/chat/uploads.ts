@@ -26,6 +26,7 @@ import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { chatUploadBatchesDir, ensureBoxTmpDir } from "../../../lib/box-tmp.js";
 import { errnoCode } from "../../../shared/error-guards.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 interface RegisterChatUploadRoutesOptions {
   server: FastifyInstance;
@@ -116,10 +117,7 @@ export async function registerChatUploadRoutes(
     // (the sanitized name has no separators, so the file does too).
     const resolved = path.resolve(dir);
     const tmpResolved = path.resolve(tmpDir);
-    if (
-      resolved !== tmpResolved &&
-      !resolved.startsWith(tmpResolved + path.sep)
-    ) {
+    if (!isWithin(tmpResolved, resolved)) {
       return reply.status(400).send({ error: "Invalid filename" });
     }
 

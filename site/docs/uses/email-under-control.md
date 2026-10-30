@@ -29,8 +29,8 @@ yourself, called the hardest part of installing today.
 
 **Where it is still rough.** Untracked mail is absent from box search and the
 agent's context; a command searches Gmail directly when a question needs it.
-Sync happens on a wakeup rather than on a schedule, and on a fresh box scheduled
-runs are off until you turn them on. Category rules do not rewrite themselves
+Sync happens on a wakeup rather than on a schedule, and on a fresh box the
+scheduled mail sync is off until you turn it on. Category rules do not rewrite themselves
 from one answer. The whole Gmail path is verified in the code and has not been
 watched working against a live Google account in the project's own checks.
 

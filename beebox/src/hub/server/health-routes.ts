@@ -30,6 +30,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { verifyDiagBearerKey } from "../../webapp/auth.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import type { Endpoint, EndpointProvider } from "../endpoints.js";
+import { fetchEndpoint } from "../endpoint-fetch.js";
 import type { HubHealth } from "./core.js";
 import type { DiskHealth } from "../disk-health.js";
 
@@ -92,9 +93,10 @@ export function registerHealthRoutes(
     // 200. `requireDiagKey` above guarantees the key is set, so forward it.
     let boxStatus: number;
     try {
-      const res = await fetch(`${endpoint.origin}/healthz`, {
+      const res = await fetchEndpoint(endpoint, {
+        path: "/healthz",
         headers: { authorization: `Bearer ${process.env.BBX_DIAG_API_KEY ?? ""}` },
-        signal: AbortSignal.timeout(CANARY_BOX_HEALTHZ_TIMEOUT_MS),
+        timeoutMs: CANARY_BOX_HEALTHZ_TIMEOUT_MS,
       });
       boxStatus = res.status;
     } catch (e) {

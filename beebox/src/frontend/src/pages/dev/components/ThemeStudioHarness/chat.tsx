@@ -36,11 +36,6 @@ const COMPOSER_STATES = [
   { ...RESTING, typingMode: true },
 ];
 
-const OPEN_QUESTION = {
-  path: "_content/questions/seed-table.question.card", prompt: "Should the welcome table go by the door or the window?",
-  memo: "The hall opens at ten.", inputType: "select" as const, options: ["Door", "Window"], optionsBeyond: 0, more: 2,
-};
-
 /** No such card: a swatch click reports that it could not save, and changes nothing. */
 const WELCOME_PATH = "_theme-studio/Welcome table.doc.card";
 
@@ -64,7 +59,7 @@ const REPLY: SessionEntry[] = [{
     { type: "tool_result", toolUseId: "studio-read", resultSummary: "Before Saturday: choose three seed varieties…" },
     { type: "tool_use", toolName: "Grep", toolId: "studio-grep", input: { pattern: "envelope", path: "notes" } },
     { type: "tool_result", toolUseId: "studio-grep", resultSummary: "notes/Seed exchange.doc.card: Label each envelope clearly" },
-    { type: "text", text: "Start with labeled envelopes and a small welcome table. **Keep the instructions short** so everyone can join in. See [before Saturday](#before-saturday)." },
+    { type: "text", text: "Start with labeled envelopes and a small welcome table. **Keep the instructions short** so everyone can join in. See [before Saturday](#before-saturday). Last year it {% source ref=\"../outside-the-box.md\" %}ran out by eleven{% /source %}." },
   ],
 }];
 const COMPACTED = entry({ uuid: "studio-compacted", type: "compaction" }, "Earlier: the hall, the date and who brings tape.");
@@ -75,7 +70,7 @@ function ChatCard({ card, cardStock }: { card: string; cardStock: string }) {
     title="Welcome table" detail="Seed exchange · in chat" symbol={{ glyph: "🌱" }} boxSlug={undefined} mode="chat" initialSide="back"
     actions={<CardSurfaceActions mode="chat" path={WELCOME_PATH} />}
     properties={<><h2>Properties</h2><p>The back of a card shown in chat, with its appearance swatches.</p>
-      <ThemeSwatchPicker path={WELCOME_PATH} choice={{ name: card, stock: cardStock }} hasOverride /></>}>
+      <h3>Appearance</h3><ThemeSwatchPicker path={WELCOME_PATH} choice={{ name: card, stock: cardStock }} hasOverride /></>}>
     <div className="bbx-card-content"><Markdown prose="block" onNavigate={noop}>{"A card shown in the conversation: **by the door**, with name tags."}</Markdown></div>
   </CardThemeSurface>;
 }
@@ -83,8 +78,7 @@ function ChatCard({ card, cardStock }: { card: string; cardStock: string }) {
 export function StudioConversation({ card, cardStock }: { card: string; cardStock: string }) {
   return <section aria-label="Conversation styling sample" className="min-w-0">
     <div className="flex py-4">
-      <EmptyChat openers={["Plan the seed exchange"]} onSendOpener={() => "accepted"} openQuestion={OPEN_QUESTION}
-        onFocusComposer={noop} onQuestionNotNow={noop} onOpenQuestions={noop} />
+      <EmptyChat openers={["Plan the seed exchange"]} onSendOpener={() => "accepted"} />
     </div>
     <div className="space-y-2 pb-4">
       <LoadOlderHeader hasOlder loadingOlder={false} onLoadOlder={noop} />
@@ -99,7 +93,9 @@ export function StudioConversation({ card, cardStock }: { card: string; cardStoc
     </div>
     {/* Each state keeps the composer's ids, which theme rules key on, so the ids repeat. */}
     <div className="space-y-3">
-      {[RESTING, ...COMPOSER_STATES].map((spec, i) => <ComposerSpecimen key={i} spec={spec} includeControlIds showHeader={false} material />)}
+      {[RESTING, ...COMPOSER_STATES].map((spec, i) => <div key={i} role="group" aria-label={`Composer state ${i + 1}`}>
+        <ComposerSpecimen spec={spec} includeControlIds showHeader={false} material label={`Compose message, state ${i + 1}`} />
+      </div>)}
     </div>
   </section>;
 }

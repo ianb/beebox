@@ -15,8 +15,8 @@ import { readGoogleAuthStatus } from "../../../../../google/auth-status.js";
 import { readDocsApiDiagnosis, renderDocsApiProblem } from "../../../../../connectors/google-drive/docs-api-status.js";
 import { errorMessage } from "../../../../../shared/error-guards.js";
 import { boxSlug } from "../../../../../lib/box-slug.js";
-import { formatDurationShort } from "../../../../../core/schedule/health-box.js";
 import type { HealthCheck } from "../router.js";
+import { formatAgoMs } from "../../../../../shared/relative-time.js";
 
 /** Where the admin page's Google Services section lives, ready to reconnect. */
 function reauthorizeUrl(slug: string): string {
@@ -39,14 +39,14 @@ export async function googleAuthHealthChecks(
 
   if (status.needsReauthSince) {
     const since = new Date(status.needsReauthSince).getTime();
-    const age = Number.isNaN(since) ? null : formatDurationShort(now.getTime() - since);
+    const age = Number.isNaN(since) ? null : formatAgoMs(now.getTime() - since);
     const reason = status.reauthReason ? ` (${status.reauthReason.split("\n")[0]})` : "";
     const slug = await boxSlug(boxRoot);
     return [{
       name: "google-auth",
       ok: false,
       message:
-        `Google authorization expired or was revoked${age ? ` ${age} ago` : ""}${reason}`
+        `Google authorization expired or was revoked${age ? ` ${age}` : ""}${reason}`
         + " — Gmail, Calendar and Drive sync are paused."
         + ` Reconnect at ${reauthorizeUrl(slug)}`,
       severity: "warning",
@@ -56,7 +56,7 @@ export async function googleAuthHealthChecks(
   const checked = status.authCheckedAt ? new Date(status.authCheckedAt).getTime() : null;
   const verified =
     checked !== null && !Number.isNaN(checked)
-      ? `last verified ${formatDurationShort(now.getTime() - checked)} ago`
+      ? `last verified ${formatAgoMs(now.getTime() - checked)}`
       : "not verified yet";
   return [{
     name: "google-auth",

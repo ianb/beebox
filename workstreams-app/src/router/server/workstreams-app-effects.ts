@@ -11,7 +11,6 @@ import http from "node:http";
 import path from "node:path";
 import { parseEnv } from "node:util";
 import { execa } from "execa";
-import getPorts from "get-port";
 import { createPidStore, type PidStore } from "../pidfile.js";
 import {
   WORKSTREAMS_APP_BASE_PATH,
@@ -24,6 +23,7 @@ import {
 } from "./workstreams-app-contract.js";
 import { holdExhibitsPort } from "./workstreams-app-exhibits.js";
 import { createRealWatcher, fingerprintWorkstreamsApp } from "./workstreams-app-sources.js";
+import { freePort } from "../../../../beebox/src/lib/free-port.js";
 
 /** The health endpoint answered, but not with a 200. */
 class HealthStatusError extends Error {
@@ -292,7 +292,7 @@ export function createRealWorkstreamsAppEffects(stateDir: string): WorkstreamsAp
       await fs.mkdir(path.dirname(logPath), { recursive: true });
       await fs.appendFile(logPath, `\n=== router start ${new Date().toISOString()} ===\n`);
     },
-    getPort: () => getPorts(),
+    getPort: () => freePort(),
     randomCapability: () => randomBytes(32).toString("base64url"),
     randomBuildId: () => randomBytes(12).toString("hex"),
     spawnBackend: (options) => spawnAppChild("dev:server", options),

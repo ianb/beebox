@@ -380,10 +380,17 @@ export interface SkipInput {
    * Every merge on the branch's first-parent line (`main..HEAD`), with the
    * paths each brought onto the branch — this run's merge and every earlier
    * one. A fast-forward has no merge commit; the shell lists it here too.
+   * `edited` is where the merge's result differs from the side it merged in
+   * (`git diff M^2 M`): the branch's own content plus any conflict resolution
+   * or evil-merge edit. A fast-forward edits nothing.
    */
-  merges: { sha: string; paths: string[] }[];
+  merges: { sha: string; paths: string[]; edited: string[] }[];
   /** Uncommitted paths — never verified by any earlier commit's pre-commit. */
   stragglers: string[];
+  /** Paths any non-merge commit in `main..HEAD` touched, even if a later commit reverted it. */
+  ownCommits: string[];
+  /** Paths where HEAD's committed tree differs from main's (`git diff main HEAD`, main merged in). */
+  vsMain: string[];
 }
 
 /**
@@ -393,7 +400,8 @@ export interface SkipInput {
  * is the one that holds without it. Pre-commit runs typecheck and lint on
  * every worktree commit, so the branch's own commits are already covered — a
  * finish needs them again only when something arrived that pre-commit never
- * saw: code from a merge, or an uncommitted straggler.
+ * saw: a non-`.md` path from a merge (tests included: they are typechecked),
+ * or an uncommitted straggler.
  *
  * Every merge counts, not just this run's. A first preflight run that merged
  * code from main and then stopped leaves a merge commit that a clean merge's
@@ -403,22 +411,45 @@ export interface SkipInput {
  * No later commit counts as evidence that the merged tree was checked:
  * pre-commit skips docs-only commits, and on any commit (a conflicted merge's
  * included) it typechecks only the packages that commit stages.
+ *
+ * A merge's code goes unchecked only when it meets code of the branch's own.
+ * When the branch's own commits, every merge's edits, and HEAD's diff against
+ * main all touch only `.md` files, the merged code is main's code, which
+ * main's own landings checked. A non-`.md` path in any of the three (a branch
+ * commit, even one later reverted; a conflict resolved in code; an evil merge)
+ * still forces both checks.
  */
 export function skipTypecheckLintDecision(input: SkipInput): { value: boolean; reason: string } {
   if (input.stragglers.length > 0) {
     return { value: false, reason: "uncommitted paths never ran pre-commit" };
   }
-  const codeMerge = input.merges.find((merge) => hasCodeChange(merge.paths));
-  if (codeMerge !== undefined) {
+  const codeMerge = input.merges.find((merge) => merge.paths.some((path) => !isDocPath(path)));
+  if (codeMerge === undefined) {
+    if (input.merges.length === 0) {
+      return { value: true, reason: "no merge on this branch; pre-commit covered every commit" };
+    }
+    return { value: true, reason: "no merge on this branch brought code; pre-commit covered every commit" };
+  }
+  const merge = `merge ${codeMerge.sha.slice(0, 9)}`;
+  const code = (paths: string[]): string[] => paths.filter((path) => !isDocPath(path));
+  const evidence: [string, string[]][] = [
+    ["a branch commit touched code", code(input.ownCommits)],
+    ...input.merges.map((m): [string, string[]] => [`merge ${m.sha.slice(0, 9)} edited code`, code(m.edited)]),
+    ["HEAD differs from main in code", code(input.vsMain)],
+  ];
+  const forced = evidence.find(([, paths]) => paths.length > 0);
+  if (forced === undefined) {
     return {
-      value: false,
-      reason: `merge ${codeMerge.sha.slice(0, 9)} brought code in; no hook typechecked the merged tree`,
+      value: true,
+      reason: `${merge} brought code, but the branch changed only .md files; main's landings checked that code`,
     };
   }
-  if (input.merges.length === 0) {
-    return { value: true, reason: "no merge on this branch; pre-commit covered every commit" };
-  }
-  return { value: true, reason: "no merge on this branch brought code; pre-commit covered every commit" };
+  const [what, paths] = forced;
+  const more = paths.length > 1 ? ` +${String(paths.length - 1)}` : "";
+  return {
+    value: false,
+    reason: `${merge} brought code in and ${what} (${paths[0] ?? ""}${more}); no hook typechecked the merged tree`,
+  };
 }
 
 /** Below this many changed source lines a diff review finds nothing lint didn't. */

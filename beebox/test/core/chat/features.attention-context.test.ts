@@ -42,26 +42,16 @@ void test("line 12", async (t) => {
   t.check(parseChatAppDeltas('<chat-app surface="card" transcript="visible"/>'), { deltas: [], cleaned: "" });
 });
 
-// The pending question the root chat is asking rides every send as
-// `openQuestion` and surfaces as `open-question`, next to `open-card`
-// (docs/implemented-plans/front-door.md, Track A). It survives a captured attention
-// snapshot without a focused card (the branch that drops activity fields),
-// an empty string is dropped, and across queued sends the latest wins while
-// a later send without it keeps the earlier one: the client sends it on
-// every message while the card is pending, so a queued pair never loses it.
-void test("The open question rides every send as openQuestion and surfaces as open-question", async (t) => {
+// A question beside the chat reaches the agent as the open card, like any
+// card (docs/implemented-plans/questions-beside-the-chat.md, Track C). A tab from before
+// that change may still send `openQuestion`; the send schema strips the
+// unknown key, so the message parses and carries only `open-card`.
+void test("A question beside the chat rides as open-card; a stale openQuestion is dropped", async (t) => {
   const Q = "_bookkeeping/questions/what-to-keep-track-of.question.card";
-  const asked = extractCardFields({ openQuestion: Q, openCard: "_content/Box.landmark.card" });
-  t.check(asked, { openCard: "_content/Box.landmark.card", openQuestion: Q });
-  t.check(composeChatAppSnapshot(asked), `<chat-app open-card="_content/Box.landmark.card" open-question="${Q}"/>`);
-  t.check(extractCardFields({ openQuestion: Q, viewContext: { surface: "dashboard", transcript: "hidden" } }), {
-    openQuestion: Q,
-    viewContext: { surface: "dashboard", transcript: "hidden" },
-  });
-  t.check(extractCardFields({ openQuestion: "" }), {});
-  const first = buildSendInput({ text: "lending", images: undefined, channel: undefined, cardFields: asked });
-  t.check(combineQueuedInputs([first, { text: "and money" }]), { text: "lending\n\nand money", images: [], openCard: "_content/Box.landmark.card", openQuestion: Q });
-  t.check(combineQueuedInputs([first, { text: "other", openQuestion: "_bookkeeping/questions/Other.question.card" }]).openQuestion, "_bookkeeping/questions/Other.question.card");
+  const parsed = sendBodySchema.parse({ message: "lending", session: "new", openCard: Q, openQuestion: Q });
+  const fields = extractCardFields(parsed);
+  t.check(fields, { openCard: Q });
+  t.check(composeChatAppSnapshot(fields), `<chat-app open-card="${Q}"/>`);
 });
 
 // Invalid URLs and hidden form data cannot become implicit context at the HTTP

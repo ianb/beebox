@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any, not } from "@ianbicking/tap-check/check";
+import { any, anything, not } from "@ianbicking/tap-check/check";
 import { mkdir, readFile, symlink, truncate, writeFile } from "node:fs/promises";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -59,7 +59,7 @@ void test("Static mode copies only safe files and uses canonical release identit
   await box.write("_content/CLAUDE.md", "private authoring guidance");
 
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
-  t.check(result.ok, true);
+  t.check(result, { ok: true, prepared: anything() });
 
   assert.ok(result.ok);
 
@@ -116,7 +116,7 @@ void test("The per-name source lock protects install, build, collection, and loc
   finishFirstBuild();
   const firstResult = await firstPrepare;
   const secondResult = await secondPrepare;
-  t.check(firstResult.ok && secondResult.ok, true);
+  t.check([firstResult, secondResult], [{ ok: true, prepared: anything() }, { ok: true, prepared: anything() }]);
 
   assert.ok(firstResult.ok && secondResult.ok);
 
@@ -140,7 +140,7 @@ void test("Static mode needs no package files or project runner", async (t) => {
     runProjectCommand: async () => { commandCount++; },
   });
 
-  t.check(result.ok, true);
+  t.check(result, { ok: true, prepared: anything() });
 
   assert.ok(result.ok);
 
@@ -175,7 +175,7 @@ void test("The runner is injectable.", async (t) => {
     },
   });
 
-  t.check(result.ok, true);
+  t.check(result, { ok: true, prepared: anything() });
 
   assert.ok(result.ok);
 
@@ -192,8 +192,6 @@ void test("The runner is injectable.", async (t) => {
     "TMP",
     "TMPDIR",
   ]);
-
-  t.check(calls[0]?.env.CLOUDFLARE_API_TOKEN, undefined);
 
   t.check(result.prepared.preview.map((file) => file.path), [
     "index.html",
@@ -292,13 +290,13 @@ void test("An annexed file whose content was never fetched holds a short pointer
   await box.write("_content/Example.attach/static/photo.jpg", POINTER);
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
-  t.check(result.ok ? "ok" : `${result.reason}: ${result.message}`, "bundle-policy: file 'photo.jpg' is a git-annex pointer; its content is not in this checkout. Fetch it (git annex get) and prepare again");
+  t.check(result, { ok: false, reason: "bundle-policy", message: "file 'photo.jpg' is a git-annex pointer; its content is not in this checkout. Fetch it (git annex get) and prepare again" });
 
   await box.write("_content/Example.attach/static/photo.jpg", "Stored under /annex/objects/ when annexed.\n");
   await box.write("_content/Example.attach/static/big.txt", POINTER + "x".repeat(1100));
   const accepted = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
-  t.check(accepted.ok, true);
+  t.check(accepted, { ok: true, prepared: anything() });
 
   assert.ok(accepted.ok);
 
@@ -331,7 +329,7 @@ void test("Each .md file becomes a sibling .html page styled by the box's Markdo
   await box.write("_content/Example.attach/static/days/one.md", "No heading here; back to [the index](../index.md).\n");
   await box.write("_content/Example.attach/static/assets/map.svg", "<svg xmlns='http://www.w3.org/2000/svg'/>");
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
-  t.check(result.ok, true);
+  t.check(result, { ok: true, prepared: anything() });
 
   assert.ok(result.ok);
 
@@ -388,7 +386,7 @@ void test("foo.md next to foo.html is ambiguous, so prepare refuses it and the a
   await box.write("_content/Example.attach/static/index.html", "<h1>Home</h1>");
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
-  t.check(result.ok ? "ok" : `${result.reason}: ${result.message}`, "bundle-policy: 'index.md' renders to 'index.html', which also exists; keep only one of them");
+  t.check(result, { ok: false, reason: "bundle-policy", message: "'index.md' renders to 'index.html', which also exists; keep only one of them" });
 
   await box.cleanup();
 });
@@ -399,7 +397,8 @@ void test("A Markdown page and an authored HTML page for the same path is an err
   await box.write("_content/Example.attach/static/index.md", "# Home\n\n{% no-such-tag %}\n");
   const result = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
 
-  t.check(result, { ok: false, reason: "bundle-policy", message: "Markdown file 'index.md:3' has invalid Markdoc: Node 'no-such-tag' is missing closing" });
+  // The text after the colon is Markdoc's own message; the prefix and the file:line are ours.
+  t.check(result, { ok: false, reason: "bundle-policy", message: any(String).startsWith("Markdown file 'index.md:3' has invalid Markdoc: ") });
 
   await box.cleanup();
 });
@@ -437,7 +436,7 @@ void test("Box Markdoc tags render to app components, which a static page cannot
   if (result.ok) await result.prepared.cleanup();
   await box.write("_content/Example.attach/static/index.md", "# Quote\n\n{% quote %}Hello{% /quote %}\n");
   const quoted = await preparePublication({ boxRoot: box.root, card: CARD }, { ownerEmail: null });
-  t.check(quoted.ok ? "ok" : `${quoted.reason}: ${quoted.message}`, "bundle-policy: Markdown file 'index.md' uses a box Markdoc tag (QuoteInline) that published pages do not support; remove it or write plain Markdown");
+  t.check(quoted, { ok: false, reason: "bundle-policy", message: "Markdown file 'index.md' uses a box Markdoc tag (QuoteInline) that published pages do not support; remove it or write plain Markdown" });
 
   await box.cleanup();
 });

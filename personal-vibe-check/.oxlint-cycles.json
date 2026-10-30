@@ -1,0 +1,7 @@
+{
+  // `npm run lint:circular`: only import/no-cycle runs, and type-only cycles
+  // are allowed (conventions.md).
+  "plugins": ["import"],
+  "categories": { "correctness": "off" },
+  "rules": { "import/no-cycle": ["error", { "ignoreTypes": true }] }
+}

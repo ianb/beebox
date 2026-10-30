@@ -108,19 +108,9 @@ function ViewChooser({ data, renderers, active, hasExplicitView, onSelect, qrRea
   );
 }
 
-type CopyState = "idle" | "copied" | "failed";
-
 /** One copy button; says "Copied" or "Copy failed" for two seconds after a click. */
 function CopyButton({ label, copy }: { label: string; copy: () => Promise<void> }) {
-  const [state, setState] = useState<CopyState>("idle");
-  function handleClick() {
-    copy().then(() => setState("copied"), () => setState("failed")).finally(() => {
-      setTimeout(() => setState("idle"), 2000);
-    });
-  }
-  return <Button size="sm" intent="ghost" onClick={handleClick} aria-live="polite">
-    {state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : label}
-  </Button>;
+  return <Button size="sm" intent="ghost" onClick={copy} flash={{ label: "Copied", failLabel: "Copy failed" }}>{label}</Button>;
 }
 
 /** The image file an image card points at, resolved against the card's path. */

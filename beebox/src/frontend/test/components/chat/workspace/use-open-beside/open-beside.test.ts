@@ -38,9 +38,9 @@ void test("On a phone there is one pane; the workspace's own mobile rule places 
 // Outside a workspace pane (no workspace, or a surface no pane provides), the
 // link keeps its plain `href`:
 void test("Outside a workspace pane (no workspace, or a surface no pane provides), the l...", async (t) => {
-  t.check(listLinkRoute({ workspace: true, mobile: false, pane: null }).kind, "href");
+  t.check(listLinkRoute({ workspace: true, mobile: false, pane: null }), { kind: "href" });
 
-  t.check(listLinkRoute({ workspace: false, mobile: false, pane: null }).kind, "href");
+  t.check(listLinkRoute({ workspace: false, mobile: false, pane: null }), { kind: "href" });
 });
 
 // ## The workspace honours it

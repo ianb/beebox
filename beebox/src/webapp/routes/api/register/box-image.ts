@@ -1,13 +1,14 @@
 import * as fs from "node:fs/promises";
 import type { Stats } from "node:fs";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
 import { probePointer } from "../../../../lib/asset-content.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { isRecord } from "../../../../shared/is-record.js";
 import { isInBoxNamespace } from "../../../../shared/ref-path/box-namespace.js";
 import { resolveAttachRef } from "../../../../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk, verifyBoxNamespaceOnDisk } from "../../../../lib/box-namespace-resolve.js";
+import { isWithin } from "../../../../lib/box-containment.js";
+import { parseFrontmatterObject, splitCardContent } from "../../../../cards/frontmatter.js";
 
 const BOX_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".svg"]);
 
@@ -31,18 +32,10 @@ async function resolveImageCard(cardAbs: string): Promise<string | null> {
     return null;
   }
   let ref: string | null = null;
-  if (text.startsWith("---")) {
-    const match = /^---\r?\n([\S\s]*?)\r?\n---/.exec(text);
-    if (match) {
-      let fields: unknown;
-      try {
-        fields = parseYaml(match[1] ?? "");
-      } catch (_error) {
-        fields = null;
-      }
-      if (isRecord(fields) && isRecord(fields.filename) && typeof fields.filename.ref === "string") {
-        ref = fields.filename.ref.startsWith("attach/") ? fields.filename.ref : null;
-      }
+  if (splitCardContent(text).hasFrontmatter) {
+    const fields = parseFrontmatterObject(text);
+    if (fields !== null && isRecord(fields.filename) && typeof fields.filename.ref === "string") {
+      ref = fields.filename.ref.startsWith("attach/") ? fields.filename.ref : null;
     }
   } else {
     ref = /<filename\b[^>]*\bref="(attach\/[^"]+)"/.exec(text)?.[1] ?? null;
@@ -85,7 +78,7 @@ export async function resolveBoxImage(boxRoot: string, requestedPath: string): P
   // namespace can't be used to walk the fence either.
   const imageRoot = path.resolve(boxRoot);
   const imageRelativePath = path.relative(imageRoot, absolutePath).split(path.sep).join("/");
-  const imageContained = absolutePath === imageRoot || absolutePath.startsWith(imageRoot + path.sep);
+  const imageContained = isWithin(imageRoot, absolutePath);
   if (!imageContained || !isInBoxNamespace(imageRelativePath)) {
     throw new BoxImageError(403, { error: "Access denied" });
   }

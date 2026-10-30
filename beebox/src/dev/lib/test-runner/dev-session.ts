@@ -162,7 +162,7 @@ function recordToolResults(blocks: StreamBlock[], state: { pendingReads: Map<str
  */
 export function devBehaviorFromStreamJson(lines: string[], repoRoot: string): DevSessionTrace {
   const behavior: AgentBehavior = {
-    filesRead: [], searches: [], bashCommands: [], bashRawCommands: [], responseText: "", responseLength: 0, context: null,
+    filesRead: [], searches: [], bashCommands: [], bashRawCommands: [], responseText: "", replyText: "", responseLength: 0, context: null,
   };
   const chunks: string[] = [];
   const usageByMessage = new Map<string, TurnUsage>();
@@ -189,6 +189,8 @@ export function devBehaviorFromStreamJson(lines: string[], repoRoot: string): De
     }
   }
   behavior.responseText = chunks.join("\n").trim();
+  // Dev audits have no chat surface; the whole response is the reply.
+  behavior.replyText = behavior.responseText;
   behavior.responseLength = behavior.responseText.split(/\s+/).filter(Boolean).length;
   behavior.context = summarizeContextUsage([...usageByMessage.values()]);
   return { behavior, sessionId, resultSubtype };

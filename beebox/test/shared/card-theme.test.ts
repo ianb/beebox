@@ -30,9 +30,9 @@ function invalidSchemaThrows() {
       fields: { title: z.string() },
       theme: "velvet",
     }]);
-    return false;
+    return "did not throw";
   } catch (error) {
-    return String(error).includes("must be an object");
+    return String(error);
   }
 }
 
@@ -243,10 +243,25 @@ void test("Presentation config is one validated unit.", async (t) => {
     default: { name: "unknown" },
     rules: [{ match: "/absolute/**", theme: { name: "paper" } }],
   });
-  t.check([badConfig.status, badConfig.status === "invalid" ? badConfig.problems.length : 0], [
-    "invalid",
-    1,
-  ]);
+  t.check(badConfig, {
+    status: "invalid",
+    problems: [
+      "presentation.rules.0.match: pattern must be box-relative (no leading slash)",
+    ],
+    requested: {
+      default: {
+        name: "unknown",
+      },
+      rules: [
+        {
+          match: "/absolute/**",
+          theme: {
+            name: "paper",
+          },
+        },
+      ],
+    },
+  });
 
   const degraded = resolveCardTheme({
     path: "_content/One.doc.card",
@@ -403,20 +418,30 @@ void test("The global field validates the persisted selector's shape, and a sche
       type: "theme-example",
       body: "ignored",
       theme: { name: "post-it", stock: "rose" },
-    }).success],
+    })],
     [
-    {
-      name: "paper",
-      stock: "cream",
-    },
-    true,
-  ],
+      {
+        name: "paper",
+        stock: "cream",
+      },
+      {
+        success: true,
+        data: {
+          type: "theme-example",
+          body: "ignored",
+          theme: {
+            name: "post-it",
+            stock: "rose",
+          },
+        },
+      },
+    ],
   );
 });
 
 // An engine schema may publish any theme name; only a malformed choice throws.
 void test("An engine schema may publish any theme name; only a malformed choice throws.", async (t) => {
-  t.check(invalidSchemaThrows(), true);
+  t.check(invalidSchemaThrows(), "CardSchemaDeclarationError: cardSchema(bad-theme-example): cardSchema(bad-theme-example) theme must be an object with a string name and optional string stock");
 });
 
 // Card lint accepts a stock the catalog does not list — the box may have authored
@@ -443,16 +468,12 @@ void test("Card lint accepts a stock the catalog does not list — the box may h
     [lintBox.path("_content/Own.doc.card"), lintBox.path("_content/Bad.doc.card")],
     { boxRoot: lintBox.root, ctx: await buildLoadContext(lintBox.root) },
   );
-  t.check(
+  t.check(lintResult.results.map((r) => r.errors.map((e) => e.message)), [
+    [],
     [
-      lintResult.totalErrors,
-      lintResult.results.flatMap((r) => r.errors).some((e) => e.message.includes("theme: expected object, got string")),
+      "invalid doc frontmatter:\n  - theme: expected object, got string",
     ],
-    [
-    1,
-    true,
-  ],
-  );
+  ]);
 });
 
 // Bloom is both a system and card material. Choosing it supplies the approved
@@ -488,175 +509,4 @@ void test("Bloom is both a system and card material.", async (t) => {
     name: "paper",
     stock: "blue",
   });
-});
-
-// Ribbon supplies the flow stock to unthemed cards while retaining explicit choices.
-// Its paired card list puts its own material first.
-void test("Ribbon supplies the flow stock to unthemed cards while retaining explicit cho...", async (t) => {
-  t.check(validateSystemThemeChoice({ name: "ribbon" }), {
-    choice: {
-      name: "ribbon",
-      stock: "flow",
-    },
-    problem: null,
-  });
-
-  t.check(systemCardThemes("ribbon"), [
-    "ribbon",
-    "paper",
-    "post-it",
-  ]);
-
-  t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "ribbon" }), {
-    choice: {
-      name: "ribbon",
-      stock: "flow",
-    },
-    problem: null,
-    origin: {
-      kind: "system",
-      theme: "ribbon",
-    },
-  });
-
-  t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "ribbon", cardChoice: { name: "paper", stock: "blue" } }).choice, {
-    name: "paper",
-    stock: "blue",
-  });
-});
-
-// Deck provides the panels stock as both chrome and inherited card material. Its
-// paired set starts with Deck; an explicitly blue Paper card remains blue Paper.
-void test("Deck provides the panels stock as both chrome and inherited card material.", async (t) => {
-  t.check(validateSystemThemeChoice({ name: "deck" }), {
-    choice: {
-      name: "deck",
-      stock: "panels",
-    },
-    problem: null,
-  });
-
-  t.check(systemCardThemes("deck"), [
-    "deck",
-    "paper",
-    "post-it",
-  ]);
-
-  t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "deck" }), {
-    choice: {
-      name: "deck",
-      stock: "panels",
-    },
-    problem: null,
-    origin: {
-      kind: "system",
-      theme: "deck",
-    },
-  });
-
-  t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "deck", cardChoice: { name: "paper", stock: "blue" } }).choice, {
-    name: "paper",
-    stock: "blue",
-  });
-
-  t.check(validateSystemThemeChoice({ name: "rose-trellis" }), {
-    choice: {
-      name: "rose-trellis",
-      stock: "textile",
-    },
-    problem: null,
-  });
-
-  t.check(systemCardThemes("rose-trellis"), [
-    "rose-trellis",
-    "paper",
-    "post-it",
-  ]);
-
-  t.check(validateSystemThemeChoice({ name: "gold-thread" }), {
-    choice: {
-      name: "gold-thread",
-      stock: "textile",
-    },
-    problem: null,
-  });
-
-  t.check(systemCardThemes("gold-thread"), [
-    "gold-thread",
-    "paper",
-    "post-it",
-  ]);
-
-  t.check(validateSystemThemeChoice({ name: "goldfish" }), {
-    choice: {
-      name: "goldfish",
-      stock: "water",
-    },
-    problem: null,
-  });
-
-  t.check(systemCardThemes("goldfish"), [
-    "goldfish",
-    "paper",
-    "post-it",
-  ]);
-
-  t.check(validateSystemThemeChoice({ name: "doodlebit" }), {
-    choice: {
-      name: "doodlebit",
-      stock: "ink",
-    },
-    problem: null,
-  });
-
-  t.check(systemCardThemes("doodlebit"), [
-    "doodlebit",
-    "paper",
-    "post-it",
-  ]);
-});
-
-// ## Painted and gilded themes
-void test("Painted and gilded themes", async (t) => {
-  t.check(validateSystemThemeChoice({ name: "tempest" }), {
-    choice: {
-      name: "tempest",
-      stock: "water",
-    },
-    problem: null,
-  });
-
-  t.check(systemCardThemes("tempest"), [
-    "tempest",
-    "paper",
-    "post-it",
-  ]);
-
-  t.check(validateSystemThemeChoice({ name: "veil" }), {
-    choice: {
-      name: "veil",
-      stock: "pigment",
-    },
-    problem: null,
-  });
-
-  t.check(systemCardThemes("veil"), [
-    "veil",
-    "paper",
-    "post-it",
-  ]);
-
-  t.check(validateSystemThemeChoice({ name: "gilt" }), {
-    choice: {
-      name: "gilt",
-      stock: "leaf",
-    },
-    problem: null,
-  });
-
-  t.check(systemCardThemes("gilt"), [
-    "gilt",
-    "paper",
-    "post-it",
-  ]);
 });

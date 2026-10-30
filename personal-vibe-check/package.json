@@ -32,32 +32,24 @@
     "rules/"
   ],
   "peerDependencies": {
-    "typescript": ">=5"
+    "eslint": "^9.39.2"
   },
   "dependencies": {
-    "@eslint/eslintrc": "^3.3.3",
-    "@eslint/js": "^9.39.2",
-    "@typescript-eslint/eslint-plugin": "^8.55.0",
-    "@typescript-eslint/parser": "^8.55.0",
-    "eslint": "^9.39.2",
-    "eslint-config-agent": "^1.9.3",
-    "eslint-plugin-class-export": "^1.0.1",
-    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-default": "^1.1.0",
+    "eslint-plugin-error": "^1.3.0",
     "eslint-plugin-import-x": "^4.16.1",
     "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-n": "^17.23.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-unicorn": "^63.0.0",
-    "patch-package": "^8.0.0",
     "prettier": "^3.5.3",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.55.0"
   },
   "devDependencies": {
     "@typescript/native": "npm:typescript@7.0.2",
-    "husky": "^9.1.7"
+    "eslint": "^9.39.2"
   },
   "license": "MIT",
   "author": "Ian Bicking",
@@ -67,7 +59,7 @@
     "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/ .",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
-    "lint:circular": "madge --circular --extensions ts --ts-config tsconfig.json preset.ts plugin.ts preset/ rules/ bin/",
+    "lint:circular": "oxlint -f default -c .oxlint-cycles.json preset.ts plugin.ts preset/ rules/ bin/",
     "test": "node --test rules/test/*.test.ts",
     "typecheck": "tsc --noEmit"
   }

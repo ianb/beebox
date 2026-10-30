@@ -79,8 +79,11 @@ command design.
 
 `collect.ts` reads/resolves feedback from boxes on `box.example.com` as
 well as local boxes. All remote ops go through `runOnServer()` in
-`run-on-server.ts` (the single chokepoint). If you're touching the remote
-path here, read [`beebox/docs/server/operations.md`](../beebox/docs/server/operations.md#writing-scripts-that-run-on-the-server)
+`run-on-server.ts` (the single chokepoint). It lists the server's boxes from
+the hub's `hub.json` as `beebox`, then scans, reads and resolves each box as
+that box's own user, `bbx-<slug>`, since no single account can read every
+box. If you're touching the remote path here, read
+[`beebox/docs/server/operations.md`](../beebox/docs/server/operations.md#writing-scripts-that-run-on-the-server)
 for the rationale and the rule — short version: never SSH as root and write
-inside `/home/beebox/` directly; always drop to the `beebox` user first.
-`runOnServer` defaults to that.
+inside a box directly; drop to the box's user first. `--ssh-target` points
+the collector at a server other than the deploy target.

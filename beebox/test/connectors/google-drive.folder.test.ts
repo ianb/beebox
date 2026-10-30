@@ -27,7 +27,9 @@ import {
 import { extractDriveFileId } from "../../src/connectors/google-drive/types.js";
 import { createGfolderTemplate } from "../../src/schemas/gfolder.js";
 import ky from "ky";
-import { any } from "@ianbicking/tap-check/check";
+import { execSync } from "node:child_process";
+import { loadDriveState } from "../../src/connectors/google-drive/state.js";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import {
   loadDocsApiDiagnosis,
   recordDocsApiDiagnosis,
@@ -120,10 +122,6 @@ function documentFor(opts: { id: string; name: string }): FakeDocument {
     exports: new Map([["text/markdown", `# ${opts.name}\n`]]),
     comments: [],
   };
-}
-
-function cardsIn(listing: string, dir: string): string[] {
-  return listing.split("\n").filter((p) => p.startsWith(dir) && p.endsWith(".card"));
 }
 
 // ## The plan — syncable children become cards, everything else becomes a pointer
@@ -465,13 +463,6 @@ void test("End to end — a mount discovers its children and points at the rest"
     updated: ["_content/drive/recipes/Recipes.gfolder.card"],
   });
 
-  t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
-    "_content/drive/recipes/Bake_Times.gsheet.card",
-    "_content/drive/recipes/Recipes.gfolder.card",
-    "_content/drive/recipes/Scan_2024pdf.glink.card",
-    "_content/drive/recipes/Sourdough.gdoc.card",
-  ]);
-
   // The pointer carries what the item is and where — and an empty body, because
   // the purpose notes are the boxholder's to write. (The card name comes from
   // `safeFilename`, which drops the dot in `Scan 2024.pdf`.)
@@ -485,21 +476,27 @@ title: Scan 2024.pdf
 origin: mirror
 ---`);
 
-  // The folder card is re-stamped with the Drive name, link, and the last outcome.
+  // The folder card is re-stamped with the Drive name and link. When the pass
+  // ran goes to the gitignored Drive state, keyed by the folder's Drive ID.
 
-  const folderCard = await box.read("_content/drive/recipes/Recipes.gfolder.card");
-  await t.checkText(folderCard.replace(/last-sync: .*/, "last-sync: «stamped»"), `---
+  await t.checkText(await box.read("_content/drive/recipes/Recipes.gfolder.card"), `---
 drive:
   id: folder-1
   link: https://drive.google.com/file/d/folder-1/view
 title: Recipes
-last-sync: «stamped»
 ---`);
+  const firstSync = (await loadDriveState(box.root)).folders["folder-1"]?.lastSync;
+  t.check(firstSync, isoDate());
 
-  // A second pass with nothing changed creates nothing and rewrites no pointer.
+  // A second pass with nothing changed on Drive changes no tracked file, so it
+  // reports nothing and makes no commit; only the state's sync time moves.
 
+  const head = () => execSync("git rev-parse HEAD", { cwd: box.root, encoding: "utf-8" });
+  const before = head();
   const again = await connector.sync();
-  t.check(again, { success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] });
+  t.check(again, { success: true, created: [], updated: [] });
+  t.check(head(), before);
+  t.check((await loadDriveState(box.root)).folders["folder-1"], { lastSync: isoDate() });
 });
 
 // ## Docs API diagnosis — folder discovery counts, and a capped pass clears only on evidence
@@ -634,9 +631,14 @@ void test("A Drive file that fails every pass does not keep the diagnosis once a
     return realExport(id, mime);
   };
 
-  const result = await createGoogleDriveConnector(box.root, drive).sync();
-  // The oversized Doc fails this pass, and would fail every pass.
-  t.check(result.success, false);
+  // The oversized Doc fails this pass, and would fail every pass; the pass
+  // stops there, so nothing is created, but the first Doc had already been read.
+  t.check(await createGoogleDriveConnector(box.root, drive).sync(), {
+    success: false,
+    created: [],
+    updated: [],
+    error: "Folder sync failed for _content/drive/notes/Notes.gfolder.card: This file is too large to be exported.",
+  });
   // A Doc reached the Docs API, so the box-wide problem is gone.
   t.check(await loadDocsApiDiagnosis(box.root), null);
 });

@@ -11,10 +11,7 @@ import { planNotification, type ChannelFlags, type NotifyPlan, type NotifyServic
 import { formatTarget } from "../../../core/notification/target.js";
 import { CHANNELS, type ChannelName } from "../../../core/notification/intent.js";
 import type { NotifyRequestParsed } from "./command.js";
-
-function plural(n: number, word: string): string {
-  return `${n} ${word}${n === 1 ? "" : "s"}`;
-}
+import { plural } from "../../../shared/plural.js";
 
 function audienceLines(plan: NotifyPlan): string[] {
   const { audience, configured } = plan;

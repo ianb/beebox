@@ -5,6 +5,7 @@ Stand-alone CLI tools that aren't part of the running app. Each is run manually 
 | Script | What it does | Full doc |
 |--------|--------------|----------|
 | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent, or (`--dev`) a headless Claude Code session in this checkout | `docs/testing/knowledge-audits.md` |
+| `pi-smoke.ts` | Live smoke for the pi engine on real OpenRouter models, in a throwaway box; rerun on each pi upgrade (`pnpm pi-smoke [model ...]`) | `docs/pi-engine.md` |
 | `prompt-report.ts` | Generates `src/dev/reports/prompt-report.md` (system-wide prompt inventory, gitignored) | `docs/development/maintenance.md` |
 | `prompt-viewer.ts` | Generates data for the `dev/prompts/` browser page: static inventory + assembled situations + duplication scan + a tracked size ledger. Shares `lib/prompt-inventory.ts` with `prompt-report.ts` (`pnpm prompt-viewer --box <path>`) | `docs/development/maintenance.md` |
 | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reactor), layer by layer with word counts (`pnpm agent-context chat --box <path>`) | `docs/prompts/review.md` |
@@ -14,6 +15,6 @@ Stand-alone CLI tools that aren't part of the running app. Each is run manually 
 | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/AGENTS.md` |
 | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy.md`, `docs/scheduled/csp-violation-review.md` |
 | `csp-report.ts` | Local macOS runner: gathers CSP logs (all local boxes + prod over SSH), writes+opens an HTML report every run, notifies only on new violations or newly-clean/harden-ready. Runner-owned state in `scratch/csp-report-state.json` (separate from csp-digest's cursors) | `docs/scheduled/csp-violation-review.md` |
-| `perf/` | Page-load and box-start measurement: `pnpm perf:hub` (local production-shaped hub + edge stand-in), `perf:load` (CDP browser runs, milestones, waterfalls), `perf:compare`, `perf:serve-start` (cold `bbx serve` phases, CPU profile by source owner) | `docs/development/performance.md` |
+| `perf/` | Page-load and box-start measurement: `pnpm perf:hub` (local production-shaped hub + edge stand-in), `perf:load` (CDP browser runs, milestones, waterfalls), `perf:compare`, `perf:serve-start` (cold `bbx serve` phases, CPU profile by source owner), `perf:test-floor` (per-test-process cost by layer), `perf:cli-start` (`bbx` verb load time) | `docs/development/performance.md` |
 
 To add a new script here: register it as a `scripts` entry in `package.json` (invoke via `pnpm <name>`) so knip recognizes it as an entry point, and document it in the table above.

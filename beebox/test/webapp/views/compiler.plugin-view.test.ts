@@ -16,7 +16,7 @@
 //   portals import it), and the `react` shim must carry the whole public
 //   surface: `useSyncExternalStore`, `useLayoutEffect`, `useId` and
 //   `useImperativeHandle` were missing from the hand list before.
-// - The node compile (`bbx view test`, metadata import) must leave `react-dom`
+// - The node compile (`bbx view check`, metadata import) must leave `react-dom`
 //   external so the box's copy is used, not a second one bundled in.
 
 import { test } from "tap";
@@ -84,7 +84,7 @@ concepts:
 Fractions name parts of a whole; this map orders what to learn first.
 `;
 
-// What `bbx view test` does (src/cli/commands/view/command.ts): compile for
+// What `bbx view check` does (src/cli/commands/view/command.ts): compile for
 // Node, write the module beside the box's node_modules, import it, load the
 // cards its metadata selects, render inside the node view host.
 async function renderThroughCompiler(box: TmpBox, params: Record<string, string>) {

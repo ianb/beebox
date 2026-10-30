@@ -19,6 +19,7 @@ import { Text } from "./ui/Text";
 import { Badge } from "./ui/Badge";
 import { Avatar } from "./ui/Avatar";
 import { FriendlyDate } from "./ui/FriendlyDate";
+import { nonEmptyString, stringOrNull } from "@shared/optional-string";
 
 // ─── Types + parsing (the JSON arrives untyped at this boundary) ──────────────
 
@@ -37,15 +38,12 @@ export interface ThreadComment extends ThreadReply {
 }
 
 function str(v: unknown): string {
-  return typeof v === "string" ? v : "";
-}
-function strOrNull(v: unknown): string | null {
-  return typeof v === "string" && v !== "" ? v : null;
+  return stringOrNull(v) ?? "";
 }
 
 function parseAuthor(v: unknown): { name: string | null; email: string | null } {
   if (!isRecord(v)) return { name: null, email: null };
-  return { name: strOrNull(v.displayName), email: strOrNull(v.emailAddress) };
+  return { name: nonEmptyString(v.displayName), email: nonEmptyString(v.emailAddress) };
 }
 
 function parseReply(v: unknown): ThreadReply {
@@ -56,7 +54,7 @@ function parseReply(v: unknown): ThreadReply {
     content: str(rec.content),
     authorName: author.name,
     authorEmail: author.email,
-    time: strOrNull(rec.modifiedTime) ?? strOrNull(rec.createdTime),
+    time: nonEmptyString(rec.modifiedTime) ?? nonEmptyString(rec.createdTime),
   };
 }
 
@@ -71,7 +69,7 @@ export function parseComments(value: unknown): ThreadComment[] {
     const rec = isRecord(raw) ? raw : {};
     const reply = parseReply(rec);
     const quotedContent = isRecord(rec.quotedFileContent)
-      ? strOrNull(rec.quotedFileContent.value)
+      ? nonEmptyString(rec.quotedFileContent.value)
       : null;
     return {
       ...reply,

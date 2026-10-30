@@ -41,6 +41,7 @@ import { findReservedNestedSegment } from "./box-reserved-segments.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { invariant } from "../shared/invariant.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
+import { isWithin } from "./box-containment.js";
 
 export interface BoxNamespacePath {
   /** Absolute, normalized filesystem path (symlinks unresolved). */
@@ -115,7 +116,7 @@ export function resolveBoxNamespacePath(boxRoot: string, rawPath: string): BoxNa
   }
   const root = path.resolve(boxRoot);
   const resolved = path.resolve(path.join(root, rawPath));
-  if (resolved !== root && !resolved.startsWith(root + path.sep)) return { ok: false, reason: "escaped" };
+  if (!isWithin(root, resolved)) return { ok: false, reason: "escaped" };
   const relativePath = path.relative(root, resolved).split(path.sep).join("/");
   if (!isInBoxNamespace(relativePath)) return { ok: false, reason: "escaped" };
   // Below-root reserved names (box-reserved-segments.ts): a nested area name
@@ -166,7 +167,7 @@ async function checkRealNamespace(lexicalTarget: string, realRoot: string): Prom
   }
   const remainder = path.relative(ancestorLexical, lexicalTarget);
   const realFull = remainder === "" ? realAncestor : path.join(realAncestor, remainder);
-  if (!(realFull === realRoot || realFull.startsWith(realRoot + path.sep))) return false;
+  if (!isWithin(realRoot, realFull)) return false;
   return isInBoxNamespace(toRelative(realRoot, realFull));
 }
 
@@ -281,12 +282,12 @@ export async function verifyBoxNamespaceOnDisk({
     const leafTargetIsDirectory =
       (await lstat(resolvedTarget).catch(() => null))?.isDirectory() ?? false;
     if (!leafTargetIsDirectory) {
-      const targetInsideBox = resolvedTarget === realRoot || resolvedTarget.startsWith(realRoot + path.sep);
+      const targetInsideBox = isWithin(realRoot, resolvedTarget);
       const targetInsideNamespace = targetInsideBox && isInBoxNamespace(toRelative(realRoot, resolvedTarget));
       if (!targetInsideNamespace) {
         const annexRoot = await realAnnexRoot(realRoot);
         const targetUnderAnnex =
-          annexRoot !== null && (resolvedTarget === annexRoot || resolvedTarget.startsWith(annexRoot + path.sep));
+          annexRoot !== null && isWithin(annexRoot, resolvedTarget);
         if (!targetUnderAnnex) return false;
       }
       // Only the WALK to the leaf's containing directory needs to stay

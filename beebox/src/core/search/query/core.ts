@@ -4,7 +4,7 @@
  * filtering, and bounded results with a narrowing hint.
  */
 
-import { search, type TypedDocument } from "@orama/orama";
+import { getByID, search, type TypedDocument } from "@orama/orama";
 import { getSearchableTypes } from "../../../schemas.js";
 import { invariant } from "../../../shared/invariant.js";
 import { getOpenAiEmbeddingsKey } from "../embeddings-key.js";
@@ -17,7 +17,7 @@ import {
 import { openSearchIndex, type OpenSearchIndexOptions } from "../refresh/core.js";
 import type { SearchIndex } from "../store/core.js";
 import { generateExcerpt } from "./excerpt.js";
-import { ENGINE_DOC_KIND, MARKDOWN_KIND, type SearchDoc } from "../extract/core.js";
+import { cardDocId, ENGINE_DOC_KIND, MARKDOWN_KIND, type SearchDoc } from "../extract/core.js";
 
 /** Search-time field weights: `contains` is the prime retrieval field. */
 const BOOST = { contains: 3, title: 2 } as const;
@@ -206,13 +206,16 @@ export async function searchBox(
 
   const results = hits.map((h): SearchHit => {
     const doc = hitDoc(h);
+    // A section is indexed with its own text only; it is shown under its
+    // card's title, and its preview is that text, not the card's summary.
+    const card = doc.fragment === "" ? doc : getByID(db, cardDocId(doc.path));
     return {
       path: doc.path,
       fragment: doc.fragment,
       kind: doc.kind,
-      title: doc.title,
-      contains: doc.contains,
-      excerpt: generateExcerpt(doc.contains !== "" ? doc.contains : doc.content, query),
+      title: card?.title ?? "",
+      contains: card?.contains ?? "",
+      excerpt: generateExcerpt(doc.fragment === "" && doc.contains !== "" ? doc.contains : doc.content, query),
       score: h.score,
     };
   });

@@ -10,13 +10,13 @@ import { formatRetryAt } from "../../../../../core/agent/engine-unavailability.j
 import {
   describeParkedUpdates,
   describeUnhealthyTask,
-  formatDurationShort,
   selectAlertableTasks,
   type BoxScheduleHealth,
 } from "../../../../../core/schedule/health-box.js";
 import { conciseScheduleError, type TaskHealth } from "../../../../../core/schedule/health.js";
 import type { StoredEngineUnavailability } from "../../../../../core/agent/engine-availability-store.js";
 import type { HealthCheck } from "../router.js";
+import { formatAgoMs, formatDuration } from "../../../../../shared/relative-time.js";
 
 function taskLine(task: TaskHealth, now: Date): string {
   let line = describeUnhealthyTask(task, now);
@@ -39,7 +39,7 @@ export function scheduledTasksCheck(health: BoxScheduleHealth, now: Date): Healt
   const unhealthy = selectAlertableTasks(health).filter((t) => t.status !== "overdue" || health.scheduler.status === "running");
   const { scheduler } = health;
   if (scheduler.status === "stale") {
-    const age = scheduler.ageMs === null ? "" : ` (${formatDurationShort(scheduler.ageMs)} ago)`;
+    const age = scheduler.ageMs === null ? "" : ` (${formatAgoMs(scheduler.ageMs)})`;
     const tasks = unhealthy.length === 0 ? "" : `; ${unhealthy.map((t) => taskLine(t, now)).join("; ")}`;
     return {
       name: "scheduled-tasks",
@@ -64,7 +64,7 @@ export function scheduledTasksCheck(health: BoxScheduleHealth, now: Date): Healt
 /** `engine-quota`: the box's engine is out of usage quota; scheduled work waits. None when it is available. */
 export function engineQuotaChecks(live: StoredEngineUnavailability | null, now: Date): HealthCheck[] {
   if (live === null) return [];
-  const since = formatDurationShort(now.getTime() - new Date(live.episodeStartedAt).getTime());
+  const since = formatDuration(now.getTime() - new Date(live.episodeStartedAt).getTime());
   return [{
     name: "engine-quota",
     ok: false,

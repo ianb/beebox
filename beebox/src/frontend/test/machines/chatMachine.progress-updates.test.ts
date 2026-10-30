@@ -1,16 +1,19 @@
-// # Progress updates render as visible lines
+// # Lines between steps fold into the activity row
 //
 // Claude 5-family models can write a *progress update* before a tool call: a
 // line meant for the user. The API returns it as a `thinking` block with text.
 // Claude Code requests `thinking.display: "updates"` for these models, so their
 // reasoning blocks come back empty. Any thinking text from them is an update,
-// and the API hands back only a summary of it.
+// and the API hands back only a summary of it. A model can also write plain
+// text before a tool call ("Let me read how schemas work here first").
 //
-// A model sometimes puts its whole answer in an update and ends the turn with a
-// tool call and an `<ack>`. When the chat UI filed updates under the collapsed
-// "thinking" row, the user saw nothing at all. Now an update renders as its own
-// visible line, in order between the tool groups. This holds on the history
-// path (the session transcript) and on the live stream.
+// Both kinds describe the work, not the result, so they fold into the activity
+// row as notes; the reply is the text after the last tool call. A model
+// sometimes puts its whole answer in an update and ends the turn with a tool
+// call and an `<ack>`, so a turn with no visible reply keeps its last line
+// visible. While a turn streams, the same rule shows the newest line until the
+// next step folds it. This holds on the history path (the session transcript)
+// and on the live stream.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -20,8 +23,8 @@ import { tmpdir } from "node:os";
 import { parseSessionLog, type SessionLogSlice } from "../../../cli/lib/session.js";
 import { writesProgressUpdates } from "../../../shared/model-ids.js";
 import { handleTurnMessage } from "../../src/machines/chatMachine/chat-actors.js";
-import { groupIntoParts, hasProgressUpdate } from "../../src/components/chat/message-parsing.js";
-import { buildStreamEntry } from "../../src/lib/stream-entry.js";
+import { groupIntoParts, hasProgressUpdate } from "../../src/components/chat/assistant-parts.js";
+import { buildTailItems } from "../../src/components/chat/everywhere/InteractiveChat/message-items.js";
 import type { ChatMessage, ChatMessageContent } from "../../../core/chat/session/messages.js";
 import type { ChatEvent } from "../../src/machines/chat-types.js";
 import type { SessionContentBlock, SessionEntry } from "../../src/api-chat.js";
@@ -67,11 +70,18 @@ function failingTurn(model: string): string[] {
 }
 
 // One line per rendered group: text and updates show their text, an activity
-// group shows its parts (thinking rows that would render, and tool counts).
+// group shows its parts (notes, thinking rows that would render, tool counts).
 function describe(entries: SessionEntry[]): string[] {
   return groupIntoParts(entries).map((g) => {
-    if (g.kind !== "activity") return `${g.kind}: ${g.text}`;
-    const parts = g.parts.map((p) => p.type === "tools" ? `tools(${p.tools.length})` : p.text?.trim() ? `thinking(${p.text})` : "thinking(empty)");
+    if (g.kind === "text") return `${g.proseHidden ? "callouts only" : "text"}: ${g.text}`;
+    if (g.kind === "update") return `update: ${g.text}`;
+    const parts = g.parts.map((p) => {
+      switch (p.type) {
+        case "tools": return `tools(${p.tools.length})`;
+        case "note": return `note(${p.text})`;
+        case "thinking": return p.text?.trim() ? `thinking(${p.text})` : "thinking(empty)";
+      }
+    });
     return `activity: ${parts.join(", ")}`;
   });
 }
@@ -84,20 +94,26 @@ async function historyOf(lines: string[]): Promise<SessionEntry[]> {
 }
 
 // Drive the live handler with one assistant frame per block and build the
-// provisional entry the chat renders during the turn.
+// provisional entry the chat renders during the turn, through the message
+// list's tail. The sink records each tool's text offset as the chat machine's
+// STREAM_TOOL handler does.
 function liveOf(model: string, blocks: ChatMessageContent[]): SessionEntry[] {
   const state = { sawTextPartial: false };
   let streamText = "";
   const streamTools: SessionContentBlock[] = [];
   const sink = (e: ChatEvent): void => {
     if (e.type === "STREAM_TEXT") streamText += e.text;
-    if (e.type === "STREAM_TOOL") streamTools.push(e.tool);
+    if (e.type === "STREAM_TOOL") streamTools.push({ ...e.tool, streamTextOffset: streamText.length });
   };
   for (const block of blocks) {
     const msg: ChatMessage = { type: "assistant", session_id: "s", message: { role: "assistant", model, content: [block] } };
     handleTurnMessage(msg, { sessionInput: "s", sendBack: sink, terminal: sink, state });
   }
-  return [buildStreamEntry({ uuid: "live", streamText, streamTools })];
+  const [item] = buildTailItems({
+    groupCount: 0, streamingShown: true, streamText, streamTools, liveTurnId: "t",
+    pendingHq: [], captureBubbles: [], debugView: false, proseEnabled: true,
+  });
+  return item?.kind === "group" ? item.group.entries : [];
 }
 
 // ## Which models write progress updates
@@ -117,15 +133,14 @@ void test("Claude 5 and later do.", async (t) => {
   ]);
 });
 
-// ## History: the failing turn now shows both updates
+// ## History: a turn with no visible reply keeps its last update
 //
-// Each update is a visible line before the tool call it introduces. The empty
-// reasoning blocks do not enter activity groups. The bare ack is
-// the only text; the chat hangs it on the user's message as a badge.
-void test("Each update is a visible line before the tool call it introduces.", async (t) => {
+// The bare ack is the only text; the chat hangs it on the user's message as a
+// badge. So the last update stays a visible line, and the earlier one folds.
+// The empty reasoning blocks do not enter activity groups.
+void test("A turn with no visible reply keeps its last update.", async (t) => {
   t.check(describe(await historyOf(failingTurn("claude-fable-5-1"))), [
-    "update: I've laid out the setup.",
-    "activity: tools(1)",
+    "activity: note(I've laid out the setup.), tools(1)",
     "update: I've resent the summary.",
     "activity: tools(1)",
     'text: <ack kind="appended" ref="/_content/plan.doc.card"/>',
@@ -148,21 +163,92 @@ void test("Sonnet 4.6 returns summarized reasoning in the same field.", async (t
   );
 });
 
-// ## Live stream: updates keep their place between tool calls
+// ## History: text before a later tool call folds with the updates
+//
+// The opening text and the update describe the build; the reply is the text
+// after the last tool call. Everything before it folds into one activity row.
+void test("Text before a later tool call folds with the updates.", async (t) => {
+  t.check(
+    describe(await historyOf([
+      assistantLine("claude-opus-5-5", text("I'll build a loan card type. Let me read how schemas work first.")),
+      assistantLine("claude-opus-5-5", bash("t4")),
+      toolResultLine("t4"),
+      assistantLine("claude-opus-5-5", update("Logging the drill.")),
+      assistantLine("claude-opus-5-5", bash("t5")),
+      toolResultLine("t5"),
+      assistantLine("claude-opus-5-5", text("You now have a Loans page.")),
+    ])),
+    [
+      "activity: note(I'll build a loan card type. Let me read how schemas work first.), tools(1), note(Logging the drill.), tools(1)",
+      "text: You now have a Loans page.",
+    ],
+  );
+});
+
+// ## Live stream: the newest line shows until the next step folds it
 //
 // The live turn gets the same groups as the reloaded history. An update rides
-// the stream's tool list, so it keeps its position between tool calls. An older
-// model's reasoning is not surfaced live at all.
+// the stream's tool list, and each tool records where the streamed text stood,
+// so text written before a tool call keeps its place. Mid-turn, the newest line
+// is the visible status line. Streaming text waits for a paragraph break or a
+// following tool call before it shows. An older model's reasoning is not
+// surfaced live.
 void test("The live turn gets the same groups as the reloaded history.", async (t) => {
-  const blocks = [reasoning, update("Checking DNS."), bash("t1"), reasoning, update("Writing the plan."), bash("t2"), text("All set.")];
+  const opening = text("I'll check DNS first.");
+  const blocks = [opening, bash("t0"), reasoning, update("Checking DNS."), bash("t1"), reasoning, update("Writing the plan."), bash("t2"), text("All set.")];
+  // "All set." has no paragraph break yet, so the last update still shows.
   t.check(describe(liveOf("claude-fable-5-1", blocks)), [
-    "update: Checking DNS.",
-    "activity: tools(1)",
+    "activity: note(I'll check DNS first.), tools(1), note(Checking DNS.), tools(1)",
     "update: Writing the plan.",
     "activity: tools(1)",
+  ]);
+  t.check(describe(liveOf("claude-fable-5-1", [...blocks, text("\n\n")])), [
+    "activity: note(I'll check DNS first.), tools(1), note(Checking DNS.), tools(1), note(Writing the plan.), tools(1)",
     "text: All set.",
   ]);
-  t.check(describe(liveOf("claude-sonnet-4-6", blocks)), ["activity: tools(2)", "text: All set."]);
+  t.check(describe(liveOf("claude-fable-5-1", blocks.slice(0, 5))), [
+    "activity: note(I'll check DNS first.), tools(1)",
+    "update: Checking DNS.",
+    "activity: tools(1)",
+  ]);
+  // Text still streaming with no paragraph break waits; once a tool call
+  // follows it, it is complete and shows.
+  t.check(describe(liveOf("claude-fable-5-1", blocks.slice(0, 1))), []);
+  t.check(describe(liveOf("claude-fable-5-1", blocks.slice(0, 2))), [
+    "text: I'll check DNS first.",
+    "activity: tools(1)",
+  ]);
+  t.check(describe(liveOf("claude-sonnet-4-6", blocks)), [
+    "text: I'll check DNS first.",
+    "activity: tools(3)",
+  ]);
+});
+
+// ## What stays visible in folded text
+//
+// A callout is meant to reach the person, so a folded text's callouts still
+// render in place. Text with a `<speech>` tag is read aloud, so it stays as
+// written. A note keeps its raw text; the renderer strips the tags.
+void test("A folded text keeps its callouts; spoken text does not fold.", async (t) => {
+  const callout = '<callout context="/loans/drill.card">Your drill is due back Friday.</callout>';
+  t.check(
+    describe(await historyOf([
+      assistantLine("claude-opus-5-5", text(`Checking the loans. ${callout}`)),
+      assistantLine("claude-opus-5-5", bash("t6")),
+      toolResultLine("t6"),
+      assistantLine("claude-opus-5-5", text("<speech>One moment.</speech>")),
+      assistantLine("claude-opus-5-5", bash("t7")),
+      toolResultLine("t7"),
+      assistantLine("claude-opus-5-5", text("Done.")),
+    ])),
+    [
+      `callouts only: Checking the loans. ${callout}`,
+      `activity: note(Checking the loans. ${callout}), tools(1)`,
+      "text: <speech>One moment.</speech>",
+      "activity: tools(1)",
+      "text: Done.",
+    ],
+  );
 });
 
 // ## A no-response ack does not hide the updates

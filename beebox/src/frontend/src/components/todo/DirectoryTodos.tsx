@@ -1,6 +1,6 @@
 /**
  * A directory's todo line on its browse page (`docs/implemented-plans/todos-ui.md`,
- * Track 4): "3 now · 1 later · 2 done" for every card under it.
+ * Track 4): "3 todos now · 1 later · 2 done" for every card under it.
  * The list it opens can count more: it also shows todos elsewhere that link
  * into the folder, which this line skips (below), so the hover text says so.
  *
@@ -16,10 +16,12 @@
  * boxholder todos, or while the query is loading or has failed (logged).
  */
 
-import { useCallback, useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { trpc } from "../../lib/trpc/client";
+import { boxRelativePath } from "@shared/box-path";
 import { busEventData } from "../../lib/bus-events";
-import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import type { RealtimeEvent } from "../../hooks/useBusSubscription";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hook";
 import { TodoSummaryLine } from "./TodoSummaryLine";
 import { directoryListPath } from "./summary";
@@ -41,15 +43,16 @@ export function DirectoryTodos({ dir, cards }: {
   const query = trpc.collections.query.useQuery(directoryTodosInput(dir), { enabled });
   const openBeside = useOpenBeside();
 
-  useBusSubscription({
-    onEvent: useCallback(
-      (event: RealtimeEvent) => {
-        const change = busEventData(event, "file-change");
-        if (!enabled || !change || !change.path.endsWith(".card") || !change.path.startsWith(`${dir}/`)) return;
-        void utils.collections.query.invalidate(directoryTodosInput(dir));
-      },
-      [utils, dir, enabled],
-    ),
+  // A card anywhere under `dir`, both sides compared box-relative.
+  const dirPrefix = `${boxRelativePath(dir)}/`;
+  useLiveRefresh({
+    when: (event: RealtimeEvent) => {
+      const change = busEventData(event, "file-change");
+      if (!enabled || !change) return false;
+      const changed = boxRelativePath(change.path);
+      return changed.endsWith(".card") && changed.startsWith(dirPrefix);
+    },
+    refresh: () => { if (enabled) void utils.collections.query.invalidate(directoryTodosInput(dir)); },
   });
 
   useEffect(() => {

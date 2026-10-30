@@ -10,7 +10,7 @@ import { any, instanceOf, str } from "@ianbicking/tap-check/check";
 import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { loadHubConfig, HubConfigError, type HubConfig } from "../../src/hub/config.js";
+import { loadHubConfig, isUnitHostConfig, HubConfigError, type HubConfig } from "../../src/hub/config.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
 async function writeConfig(dir: string, obj: object): Promise<string> {
@@ -71,14 +71,15 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   const badConfig = await writeConfig(box.root, { boxes: {}, extraKey: true });
   const err = await loadRejected(badConfig);
   t.check(err, instanceOf(HubConfigError));
-  t.check(err.message, `Hub config at ${badConfig} is invalid:\n  - (root): Unrecognized key: "extraKey"`);
+  // The text after the path is zod's; the check keeps our prefix, the path, and the key it names.
+  t.check(err.message, str`Hub config at ${badConfig} is invalid:\n  - (root): ${any(String).includes('"extraKey"')}`);
 
   // ## An unknown key inside a box entry is rejected
 
   const badEntry = await writeConfig(box.root, { boxes: { test1: { path: "./boxes/test1", port: 1234 } } });
   const badEntryErr = await loadRejected(badEntry);
   t.check(badEntryErr, instanceOf(HubConfigError));
-  t.check(badEntryErr.message, `Hub config at ${badEntry} is invalid:\n  - boxes.test1: Unrecognized key: "port"`);
+  t.check(badEntryErr.message, str`Hub config at ${badEntry} is invalid:\n  - boxes.test1: ${any(String).includes('"port"')}`);
 
   // ## A reserved slug is rejected
   //
@@ -101,7 +102,7 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   const badSlug = await writeConfig(box.root, { boxes: { "Test-1": { path: "./boxes/test1" } } });
   const badSlugErr = await loadRejected(badSlug);
   t.check(badSlugErr, instanceOf(HubConfigError));
-  t.check(badSlugErr.message, `Hub config at ${badSlug} is invalid:\n  - boxes.Test-1: Invalid key in record`);
+  t.check(badSlugErr.message, str`Hub config at ${badSlug} is invalid:\n  - boxes.Test-1: ${any(String)}`);
 
   // ## Two slugs claiming the same resolved box path is rejected
   //
@@ -170,9 +171,7 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
     keepRecent: 0,
   });
 
-  t.check(await fs.access(legacyState).then(() => true), true);
-
-  t.check(await fs.access(path.join(box.root, "boxes/legacy/content/.beebox")).then(() => false, () => true), true);
+  t.check(await fs.readdir(path.join(box.root, "boxes/legacy/content")), [path.basename(legacyState)]);
 
   // A box path that doesn't resolve at all (no `.beebox/box.json` anywhere) still loads
   // successfully -- canonicalization failures don't block config load, only the
@@ -202,7 +201,8 @@ void test("Missing config file, invalid JSON", async (t) => {
   });
   const missing = await loadRejected("/nonexistent/hub.json");
   t.check(missing, instanceOf(HubConfigError));
-  t.check(missing.message, "Cannot read hub config at /nonexistent/hub.json: ENOENT: no such file or directory, open '/nonexistent/hub.json'");
+  // The cause text after the path is Node's; ENOENT is the part the message must carry.
+  t.check(missing.message, str`Cannot read hub config at /nonexistent/hub.json: ${any(String).startsWith("ENOENT")}`);
 
   const box2 = await makeTmpBox();
   const notJson = path.join(box2.root, "hub.json");
@@ -300,5 +300,29 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
   });
   const keepNegPathErr = await loadRejected(keepNegPath);
   t.check(keepNegPathErr, instanceOf(HubConfigError));
-  t.check(keepNegPathErr.message, `Hub config at ${keepNegPath} is invalid:\n  - keepRecent: Too small: expected number to be >=0`);
+  t.check(keepNegPathErr.message, str`Hub config at ${keepNegPath} is invalid:\n  - keepRecent: ${any(String)}`);
+});
+
+// ## Socket entries (a unit host) are all or nothing, and own the idle rules
+//
+// docs/plans/per-box-units.md, Track D: a hub routes either to systemd socket
+// units or to children it spawns; a half-migrated file must not load, and
+// `lazy`/`idleMs`/`keepRecent` have no process to act on when systemd owns them.
+void test("Socket entries are all or nothing, and refuse the hub's own idle rules", async (t) => {
+  t.teardown(() => box.cleanup());
+  const box = await makeTmpBox();
+  await box.write("boxes/a/.beebox/box.json", "");
+  await box.write("boxes/b/.beebox/box.json", "");
+
+  const unitHost = await writeConfig(box.root, { boxes: { a: { path: "./boxes/a", socket: "/run/beebox/a.sock" }, b: { path: "./boxes/b", socket: "/run/beebox/b.sock" } } });
+  const config = await loadOk(unitHost);
+  t.check(config.boxes, { a: { path: path.join(box.root, "boxes/a"), socket: "/run/beebox/a.sock" }, b: { path: path.join(box.root, "boxes/b"), socket: "/run/beebox/b.sock" } });
+  t.check(isUnitHostConfig(config), true);
+  t.check(isUnitHostConfig({ boxes: { a: { path: "/x" } } }), false);
+
+  const mixed = await writeConfig(box.root, { boxes: { a: { path: "./boxes/a", socket: "/run/beebox/a.sock" }, b: { path: "./boxes/b" } } });
+  t.check((await loadRejected(mixed)).message, `Hub config at ${mixed}: some boxes name a socket and some do not (without: b). A hub routes either to systemd socket units or to children it spawns, never both; give every box a socket or none.`);
+
+  const idle = await writeConfig(box.root, { lazy: true, idleMs: 60_000, boxes: { a: { path: "./boxes/a", socket: "/run/beebox/a.sock" } } });
+  t.check((await loadRejected(idle)).message, `Hub config at ${idle}: lazy, idleMs cannot be set when boxes name sockets. systemd starts a box on its first connection and the engine exits itself when idle (bbx engine serve --idle-exit, set in the unit); the hub has no process to stop.`);
 });

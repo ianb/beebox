@@ -16,6 +16,7 @@ import { SheetTable, type CellValue } from "../components/SheetTable";
 import { AttachedComments } from "../components/AttachedComments";
 import { resolveRelativePath } from "../lib/view-url";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
+import { friendlyDate } from "../components/ui/FriendlyDate";
 
 // ─── Parsing ────────────────────────────────────────────────────────────────
 
@@ -116,7 +117,7 @@ function SheetView({ data }: RendererProps) {
           <Heading level={2}>{sheet.title}</Heading>
           {sheet.modified ? (
             <Text as="p" size="xs" tone="muted">
-              Modified on Drive: {new Date(sheet.modified).toLocaleString()}
+              Modified on Drive: {friendlyDate(sheet.modified)}
             </Text>
           ) : null}
         </div>

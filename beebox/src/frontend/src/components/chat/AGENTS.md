@@ -156,6 +156,13 @@ The React Compiler handles memoization; do not pass composer text into this
 subtree. FileView's data subscription can update a card independently. Use a
 DOM identity probe and a stateful view to check move/focus/restore retention.
 
+The card body must survive too. Callbacks such as `onNavigate` change on every
+workspace change, so a card body re-renders often. That re-render must stay in
+place: declare every `Markdown` component and override map once at module
+scope, and read per-render values from `MarkdownRenderContext`
+(`lib/markdown-render.ts`). A component made per render remounts an
+embedded figure and resets it (`Markdown/body.stable-body.test.ts`).
+
 The workspace may project a card URL, but never chooses the conversation's
 session. Wait for the conversation route's confirmed binding before adopting an
 incoming URL. Focus inside content updates attention without navigating: a route

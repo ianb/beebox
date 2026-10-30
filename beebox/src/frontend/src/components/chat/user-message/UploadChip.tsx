@@ -12,10 +12,12 @@
 import { useParams } from "@tanstack/react-router";
 import { withBase } from "../../../api";
 import type { UploadChipModel } from "./upload-message";
+import { CaptureBadge } from "../CaptureChip";
+import { cardUrl } from "@shared/card-url";
 
 export function UploadChip({ model }: { model: UploadChipModel }) {
   const { boxSlug } = useParams({ strict: false });
-  const href = withBase(`/${boxSlug ?? ""}/browse/${model.doc}`);
+  const href = withBase(cardUrl(boxSlug ?? "", model.doc));
   const fileLabel = `${String(model.files)} file${model.files === 1 ? "" : "s"}`;
   const sizeLabel = model.bytes === "" ? "" : ` · ${model.bytes}`;
   return (
@@ -33,9 +35,7 @@ export function UploadChip({ model }: { model: UploadChipModel }) {
         {model.summary !== "" ? <div className="bbx-chat-user-attachment-summary mt-0.5 text-xs text-white/85">{model.summary}</div> : null}
         {model.failed > 0 ? (
           <div className="mt-1">
-            <span className="bbx-chat-user-attachment-badge inline-flex items-center rounded-full bg-black/25 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-              {model.failed} failed
-            </span>
+            <CaptureBadge label={`${String(model.failed)} failed`} />
           </div>
         ) : null}
       </a>

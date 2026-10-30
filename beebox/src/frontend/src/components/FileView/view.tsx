@@ -23,7 +23,7 @@ import { ThemedFileCard } from "../themes/ThemedFileCard/view/ThemedFileCard";
 import { useVisibleCardSelectionSink, selectionReceiver } from "../chat/everywhere/card-context/context";
 import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
-import { displayName } from "../../lib/display-name";
+import { cardTitle } from "../../lib/card-title";
 import { useFileData, isCardPath, isMarkdownPath, isMissingCardFailure } from "../file-view-data";
 import type { LoadFailure } from "../../lib/file-load-state";
 import { withBase } from "../../api";
@@ -51,12 +51,6 @@ import { useFragmentJump } from "../../hooks/useFragmentJump";
 export type { FileViewMode } from "../file-view-types";
 
 /* ---------- chrome helpers ---------- */
-
-/** The card's own display title, when its frontmatter carries one. */
-function cardTitle(data: FileData): string | null {
-  const title = data.frontmatter?.title;
-  return typeof title === "string" && title.trim() !== "" ? title : null;
-}
 
 function RendererToggle({ renderers, active, onSelect, compact, path }: {
   renderers: FileRenderer[];
@@ -90,8 +84,8 @@ function ChatHeader({
   target, title, detail, renderers, active, onSelect, onOpenInPanel, onTrashed,
 }: {
   target: ViewTarget;
-  /** The card's frontmatter title, when it has one — wins over the filename. */
-  title: string | null;
+  /** The card's header title (`cardTitle`). */
+  title: string;
   /** The card type's summary line (`card.get` `detail`), under the title. */
   detail: string | undefined;
   renderers: FileRenderer[];
@@ -105,7 +99,7 @@ function ChatHeader({
   return (
     <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">{title ?? displayName(path)}</div>
+        <div className="text-sm font-medium truncate">{title}</div>
         {detail === undefined ? null : <div className="text-xs text-warm-700 truncate" title={detail}>{detail}</div>}
         <div className="text-xs text-warm-700 truncate" title={toDisplayPath(path)}>{toDisplayPath(path)}</div>
       </div>

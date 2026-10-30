@@ -8,7 +8,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getStatus, stageAll, commit, getHead, withBoxGitLock } from "../../../lib/git/core/operations.js";
 import { getRangeDiff } from "../../../lib/git-range.js";
-import { fmt } from "../../../lib/format.js";
 import { getBoxTime } from "../../../lib/time.js";
 import { runShell, CHECK_SKIP_CODE } from "../shell.js";
 import { evaluateInstructions } from "../engine-validate-model.js";
@@ -125,11 +124,11 @@ export async function executeValidation(
       status = failStatus(severity);
       ctx.writeLine(
         severity === "warn"
-          ? fmt.warn(`  Validation warning: ${stdout || shellResult.stderr}`)
-          : fmt.fail(`  Validation failed: ${stdout || shellResult.stderr}`)
+          ? `  Validation warning: ${stdout || shellResult.stderr}`
+          : `✗   Validation failed: ${stdout || shellResult.stderr}`
       );
     } else {
-      ctx.writeLine(fmt.ok(`Validation passed${stdout ? `: ${stdout}` : ""}`));
+      ctx.writeLine(`✓ Validation passed${stdout ? `: ${stdout}` : ""}`);
     }
   }
 
@@ -155,23 +154,23 @@ export async function executeValidation(
       case "invocation-failure":
         invocationFailure = verdict.error;
         status = failStatus(severity);
-        ctx.writeLine(fmt.fail(`  Instruction check could not run: ${verdict.error}`));
+        ctx.writeLine(`✗   Instruction check could not run: ${verdict.error}`);
         break;
       case "inconclusive":
         status = "inconclusive";
         inconclusiveReason = verdict.reason;
         inconclusiveDetail = verdict.detail;
-        ctx.writeLine(fmt.warn(`  Instruction check inconclusive: ${verdict.review}`));
+        ctx.writeLine(`  Instruction check inconclusive: ${verdict.review}`);
         break;
       case "verdict":
         if (verdict.passed) {
-          ctx.writeLine(fmt.ok(`Instruction check passed: ${verdict.review}`));
+          ctx.writeLine(`✓ Instruction check passed: ${verdict.review}`);
         } else {
           status = failStatus(severity);
           ctx.writeLine(
             severity === "warn"
-              ? fmt.warn(`  Instruction check warning: ${verdict.review}`)
-              : fmt.fail(`  Instruction check failed: ${verdict.review}`)
+              ? `  Instruction check warning: ${verdict.review}`
+              : `✗   Instruction check failed: ${verdict.review}`
           );
         }
         break;

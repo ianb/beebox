@@ -1,4 +1,4 @@
-import { formatAgo } from "./relative-time";
+import { formatAgo } from "@shared/relative-time";
 
 /**
  * The Properties "Changed" line for a card's newest commit: "3 days ago ·
@@ -9,6 +9,6 @@ import { formatAgo } from "./relative-time";
  */
 export function lastChangeLine(commit: { date: string; subject: string }, now: number | null): { text: string; title: string } {
   const at = Date.parse(commit.date);
-  const when = now === null || Number.isNaN(at) ? commit.date : formatAgo(now - at);
+  const when = now === null || Number.isNaN(at) ? commit.date : formatAgo(at, now);
   return { text: `${when} · ${commit.subject}`, title: commit.date };
 }

@@ -18,18 +18,40 @@ import { mapInBatches } from "../lib/map-batched.js";
 import { loadCardFrontmatter } from "./frontmatter-field.js";
 import { countPlateTodos } from "./todo/count.js";
 import { questionState } from "../schemas/question.js";
+import { ROOT_QUESTION_PATH } from "./box/root-question-path.js";
+import { CHAT_HUSK_DIR } from "./chat/husk-read.js";
 
 export interface NavCounts {
-  /** Question cards still awaiting an answer (pending per `questionState`). */
+  /**
+   * Question cards still awaiting an answer (pending per `questionState`),
+   * except the root question while the box has no chat yet: the empty chat
+   * shows it as its opening line, so counting it would announce a question the
+   * person is looking at. Once a chat exists and the question is still pending,
+   * it counts.
+   */
   pendingQuestions: number;
   /** Open todos on the plate now — `escalated` (past due) plus `on-plate`. */
   onPlateTodos: number;
   /** Of `onPlateTodos`, how many are past `due` — what puts a dot on the nav badge. */
   escalatedTodos: number;
+  /** Open todos waiting for a `start` date — the todo page's "later". Not in the badge. */
+  laterTodos: number;
 }
 
 /** Question cards read at once — see {@link mapInBatches}. */
 const READ_CONCURRENCY = 64;
+
+/** Whether the box has any chat husk — the cheap sign that the person has started a chat. */
+async function hasChat(boxRoot: string): Promise<boolean> {
+  try {
+    return (await fs.readdir(path.join(boxRoot, CHAT_HUSK_DIR))).some((name) => name.endsWith(".chat.card"));
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`nav-counts: could not read ${CHAT_HUSK_DIR}, treating the box as having no chat:`, e);
+    }
+    return false;
+  }
+}
 
 /**
  * Counts a question as pending from its raw frontmatter (`questionState`),
@@ -52,8 +74,11 @@ async function countPendingQuestions(boxRoot: string): Promise<number> {
     return 0;
   }
 
+  // Left out only while the empty chat is showing it.
+  const rootQuestionFile = path.join(boxRoot, ROOT_QUESTION_PATH);
+  const hideRoot = !(await hasChat(boxRoot));
   const frontmatters = await mapInBatches(
-    names.filter((name) => name.endsWith(".card")),
+    names.filter((name) => name.endsWith(".card") && !(hideRoot && path.join(dir, name) === rootQuestionFile)),
     { size: READ_CONCURRENCY, map: (name) => loadCardFrontmatter(path.join(dir, name)) },
   );
   // A question whose frontmatter won't parse at all can't claim to be pending;
@@ -67,5 +92,5 @@ export async function getNavCounts(boxRoot: string): Promise<NavCounts> {
     countPendingQuestions(boxRoot),
     countPlateTodos(boxRoot),
   ]);
-  return { pendingQuestions, onPlateTodos: plate.onPlate, escalatedTodos: plate.escalated };
+  return { pendingQuestions, onPlateTodos: plate.onPlate, escalatedTodos: plate.escalated, laterTodos: plate.later };
 }

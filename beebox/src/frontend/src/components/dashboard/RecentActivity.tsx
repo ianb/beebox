@@ -9,7 +9,13 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import type { RouterOutput } from "../../lib/trpc/client";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
+import { Badge } from "../ui/Badge";
+import { StatusMessage } from "../ui/StatusMessage";
+import { phaseTone } from "../history/phase-tone";
 import { tickHadActivity } from "./ScheduleTicks";
+import { agoOnClock } from "../../lib/relative-time";
+import { formatDuration } from "@shared/relative-time";
+import { useBoxNow } from "../../lib/box-clock";
 
 type LogEntry = RouterOutput["status"]["activity"]["entries"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -25,18 +31,6 @@ type ActivityItem =
   | { type: "commit"; ts: number; data: LogEntry }
   | { type: "tick"; ts: number; data: SchedulerLogEntry };
 
-function timeAgo(ts: string | number): string {
-  const elapsed = Date.now() - (typeof ts === "number" ? ts : new Date(ts).getTime());
-  const seconds = Math.floor(elapsed / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 function CommitRow({ commit }: { commit: LogEntry }) {
   const { boxSlug } = useParams({ strict: false });
   const phase = commit.trailers?.["Phase"];
@@ -44,7 +38,9 @@ function CommitRow({ commit }: { commit: LogEntry }) {
     <div className="py-2 flex items-start justify-between gap-2" {...bbxSource("commit", commit.hash)}>
       <div className="min-w-0">
         <div className="text-sm text-warm-900 truncate">
-          <Link to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.history}`)} search={toSearch({ viewState: { commit: commit.hash } })} className="hover:text-primary">
+          {/* Box commits repeat subjects ("Set box system theme"); the hash shown below tells them apart. */}
+          <Link to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.history}`)} search={toSearch({ viewState: { commit: commit.hash } })} className="hover:text-primary"
+            aria-label={`${commit.subject} (${commit.hash.substring(0, 7)})`}>
             {commit.subject}
           </Link>
         </div>
@@ -53,14 +49,12 @@ function CommitRow({ commit }: { commit: LogEntry }) {
             {commit.hash.substring(0, 7)}
           </span>
           {phase ? (
-            <span className="text-xs bg-warm-100 text-warm-700 px-1.5 py-0.5 rounded">
-              {phase}
-            </span>
+            <Badge tone={phaseTone(phase)} size="sm">{phase}</Badge>
           ) : null}
         </div>
       </div>
       <span className="text-xs text-warm-700 whitespace-nowrap">
-        {timeAgo(commit.date)}
+        {agoOnClock(commit.date, "box")}
       </span>
     </div>
   );
@@ -94,9 +88,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
     <div className="py-2 flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-sm text-warm-700">
-          <span className="text-xs bg-info-50 text-primary px-1.5 py-0.5 rounded mr-1">
-            tick
-          </span>
+          <Badge tone="info" size="sm" className="mr-1">tick</Badge>
           {scripts.map((s, si) => {
             const style = scriptStatusStyle(s.status);
             return (
@@ -109,7 +101,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
                 {s.name}
                 {s.durationMs != null ? (
                   <span className="text-warm-700 ml-0.5">
-                    {s.durationMs < 1000 ? `${s.durationMs}ms` : `${(s.durationMs / 1000).toFixed(1)}s`}
+                    {formatDuration(s.durationMs)}
                   </span>
                 ) : null}
               </span>
@@ -118,7 +110,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
         </div>
       </div>
       <span className="text-xs text-warm-700 whitespace-nowrap">
-        {timeAgo(tick.ts)}
+        {agoOnClock(tick.ts, "real")}
       </span>
     </div>
   );
@@ -126,6 +118,8 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
 
 export function RecentActivity({ commits, ticks, loading, error }: RecentActivityProps) {
   const { boxSlug } = useParams({ strict: false });
+  // Re-render each minute so the ages in the rows stay current.
+  useBoxNow(60_000);
   // Only include ticks that had activity — an unjudged run is activity.
   const activeTicks = ticks.filter(tickHadActivity);
 
@@ -157,7 +151,7 @@ export function RecentActivity({ commits, ticks, loading, error }: RecentActivit
       </div>
 
       {loading ? (
-        <p className="text-sm text-warm-700 animate-pulse">Loading...</p>
+        <StatusMessage>Loading...</StatusMessage>
       ) : error ? (
         <p className="text-sm text-danger-dark">Failed to load: {error.message}</p>
       ) : display.length === 0 ? (

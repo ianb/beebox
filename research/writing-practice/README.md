@@ -11,12 +11,14 @@ journalism, thesis editing, and the screenwriting tools that handle cut
 material. The premise is that several professions have worked this exact problem
 for decades and we should steal from them rather than invent.
 
-Snapshots, both 2026-07-20.
+Snapshots: the first two documents 2026-07-20; the product and UI survey and the Proof deep-dive 2026-10-27.
 
 | Document | Covers |
 |---|---|
 | [Authentic AI-assisted writing](authentic-ai-writing.md) | Process and provenance — elicitation craft, oral-history fidelity norms, ghostwriting ethics, thesis-editing's editing/authoring line, provenance formats, HCI evidence on AI drafts and authorial ownership. ~68 cited sources, labeled empirical / practice / opinion. |
 | [Boneyards and cut material](boneyards-and-cut-material.md) | The keep-don't-delete drafting habit: what it's actually called, how practitioners organize it, and how shipping tools (Final Draft, Highland 2, WriterDuet, Scrivener, Ulysses) implement it. |
+| [AI writing products and their UI](ai-writing-products-ui.md) | Shipped products and research prototypes where AI helps with the person's own writing: margin editors, feedback-only tools, provenance displays, voice-to-text tools. Ten deep dives, a catalog of about 45 more, a taxonomy of interaction patterns, and gaps. |
+| [Proof (Every)](proof-every.md) | Every's agent-native editor with provenance tracking (the "ProofEditor" in the questions-as-annotations issue), its draft origin/basis/review/`typed_by` spec, and the related Roughdraft. |
 
 Deliberately **out of scope**: style cloning / "write like me" fine-tuning and
 prompting. Boxholder finds it unimpressive and it's a well-covered dead end for
@@ -43,6 +45,14 @@ this purpose.
 | Span-level provenance standards (C2PA, academic AI-disclosure policy) | **reject for now** | C2PA handles text but whole-file only; academic policies are document-level; detection fails on hybrid text. Superseded by process capture above. |
 | Style cloning / voice mimicry | **reject** | Out of scope by boxholder direction. |
 | Naming the practice ("AI assembles the human's words" has no term of art) | **later** | Nearest anchors: "as told to," centaur, Sarkar's "provocateur, not assistant." Open ground. |
+| Margin comment with a reason and at most one example edit; accept applies the edit (Sudowrite Feedback, Writor) | **adopt** | [Products survey](ai-writing-products-ui.md) §7. The IPEd rule in product form; feeds [suggested edits](../../issues/features/2026-10-13-suggested-edits-tracked-changes.md). |
+| Source tracing from an output line to its quote (Granola "Zoom In") | **adopt** | Products survey §2.3. Every assembled line opens its source utterance. |
+| Verbatim transcript kept as version zero (Letterly, Cleft) | **adopt** | Products survey §2.9. Same rule as "archive the raw". |
+| Origin / review / `typed_by` split; human-only approval that goes stale on edit (Proof) | **adapt** | [Proof deep-dive](proof-every.md). `typed_by` names "the agent typed the person's words". |
+| Permission switch with the conservative side as default (Sudowrite Chat-only, Notion propose) | **adapt** | Products survey §4.2. Makes the governing rule a visible setting. |
+| A stated rule for when marked AI text becomes the person's (products disagree: any edit, per word, per line) | **investigate** | Products survey §6 gap 5. A boxholder decision. |
+| Hide AI wording until the person has said their own version (Reactive Writers' missing UI) | **investigate** | Products survey §6 gap 7. |
+| Inline ghost text, alternatives pickers, rewrite-in-place dictation, third-party process replay | **reject** | Products survey §5. Each undercuts "conservative in the artifact" or serves another audience. |
 
 ## Known gaps
 

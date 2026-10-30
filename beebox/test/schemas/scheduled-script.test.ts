@@ -12,6 +12,7 @@ import {
   ScheduledScriptSchema,
   type ParsedScheduledScript,
 } from "../../src/schemas/scheduled-script/schema.js";
+import { any, str } from "@ianbicking/tap-check/check";
 import { isDue, isDueForWakeup, isWithinBudget } from "../../src/schemas/scheduled-script/due.js";
 
 function baseCardFields(overrides?: Record<string, unknown>): Record<string, unknown> {
@@ -43,6 +44,16 @@ function makeScript(overrides: Partial<ParsedScheduledScript>): ParsedScheduledS
     requires: undefined,
     ...overrides,
   };
+}
+
+/**
+ * The parse outcome as a card author sees it: `valid`, or each issue as
+ * `path: message`. Where the message is zod's own wording, a check pins only
+ * the path, since that wording changes between zod releases.
+ */
+function issues(fields: Record<string, unknown>): string {
+  const parsed = ScheduledScriptSchema.frontmatterSchema.safeParse({ type: "scheduled-script", ...fields });
+  return parsed.success ? "valid" : parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
 }
 
 // ## parseDuration
@@ -85,60 +96,45 @@ void test("The optional timeout field caps a single run's awake runtime, as a du
 //
 // A malformed date used to pass validation and then silently never fire at
 // runtime (see issues/bugs/2026-08-10-invalid-schedule-dates-silently-inert.md).
-// Now it's a card validation error.
+// Now it's a card validation error, and the error names the expected form.
 void test("A malformed date used to pass validation and then silently never fire at runt...", async (t) => {
-  t.check(ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "not-a-date" })).success, false);
+  t.check(issues(baseCardFields({ until: "not-a-date" })), "until: must be an ISO 8601 datetime (e.g. 2026-09-01T14:30:00)");
 
-  t.check(ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "2026-09-01T14:30:00Z" })).success, true);
+  t.check(issues(baseCardFields({ at: "not-a-date" })), "at: must be an ISO 8601 datetime (e.g. 2026-09-01T14:30:00)");
 
-  t.check(ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "2026-09-01T14:30:00Z" })).success, true);
+  t.check(issues(baseCardFields({ at: "2026-09-01T14:30:00Z" })), "valid");
+
+  t.check(issues(baseCardFields({ until: "2026-09-01T14:30:00Z" })), "valid");
 });
 
 // `new Date()` alone would accept strings like "5" (May 2001) or "0" (Jan
 // 2000) — the ISO-shape requirement rejects those:
 void test("new Date() alone would accept strings like \"5\" (May 2001) or \"0\" (Jan 2000) —...", async (t) => {
-  t.check(ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "5" })).success, false);
+  t.check(issues(baseCardFields({ at: "5" })), "at: must be an ISO 8601 datetime (e.g. 2026-09-01T14:30:00)");
 
-  t.check(ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "2026-13-45" })).success, false);
+  t.check(issues(baseCardFields({ until: "2026-13-45" })), "until: must be an ISO 8601 datetime (e.g. 2026-09-01T14:30:00)");
 
-  t.check(ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ until: "2026-12-31" })).success, true);
-});
-
-// The error names the expected form:
-void test("The error names the expected form:", async (t) => {
-  const badAt = ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ at: "not-a-date" }));
-  t.check(badAt.success ? undefined : badAt.error.issues[0]?.message, "must be an ISO 8601 datetime (e.g. 2026-09-01T14:30:00)");
+  t.check(issues(baseCardFields({ until: "2026-12-31" })), "valid");
 });
 
 // ## Schema: `cron` must be a valid cron expression
 void test("Schema: `cron` must be a valid cron expression", async (t) => {
-  t.check(ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "0 6 * * *" })).success, true);
+  t.check(issues(baseCardFields({ cron: "0 6 * * *" })), "valid");
 
-  const badCron = ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ cron: "not a cron" }));
-  t.check(badCron.success ? undefined : badCron.error.issues[0]?.message, "invalid cron expression");
+  t.check(issues(baseCardFields({ cron: "not a cron" })), "cron: invalid cron expression");
 });
 
 // ## Schema: `rrule` must be a valid RRULE
 void test("Schema: `rrule` must be a valid RRULE", async (t) => {
-  t.check(
-    ScheduledScriptSchema.frontmatterSchema.safeParse(
-      baseCardFields({ rrule: "FREQ=WEEKLY;BYDAY=MO" })
-    ).success,
-    true,
-  );
+  t.check(issues(baseCardFields({ rrule: "FREQ=WEEKLY;BYDAY=MO" })), "valid");
 
-  const badRrule = ScheduledScriptSchema.frontmatterSchema.safeParse(baseCardFields({ rrule: "not an rrule" }));
-  t.check(badRrule.success ? undefined : badRrule.error.issues[0]?.message, "invalid RRULE");
+  t.check(issues(baseCardFields({ rrule: "not an rrule" })), "rrule: invalid RRULE");
 });
 
 // ## Schema: cron/at/rrule are mutually exclusive
 void test("Schema: cron/at/rrule are mutually exclusive", async (t) => {
-  t.check(
-    ScheduledScriptSchema.frontmatterSchema.safeParse(
-      baseCardFields({ cron: "0 6 * * *", at: "2026-09-01T14:30:00Z" })
-    ).success,
-    false,
-  );
+  t.check(issues(baseCardFields({ cron: "0 6 * * *", at: "2026-09-01T14:30:00Z" })), `cron: cron, at, and rrule are mutually exclusive — specify at most one
+at: cron, at, and rrule are mutually exclusive — specify at most one`);
 });
 
 // ## Schema: exactly one of `runs` and `notify`
@@ -146,10 +142,6 @@ void test("Schema: cron/at/rrule are mutually exclusive", async (t) => {
 // A reminder carries `notify:` in place of `runs:`. A card with both, or with
 // neither, fails validation with a message that names the rule.
 void test("A reminder carries notify: in place of runs:.", async (t) => {
-  const issues = (fields: Record<string, unknown>) => {
-    const parsed = ScheduledScriptSchema.frontmatterSchema.safeParse({ type: "scheduled-script", ...fields });
-    return parsed.success ? "valid" : parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
-  };
   t.check(issues({ at: "2026-10-02T08:30", notify: { title: "Call the vet" } }), "valid");
 
   t.check(issues({ at: "2026-10-02T08:30", runs: "echo hi", notify: { title: "Call the vet" } }), "notify: a scheduled script needs exactly one of runs (a command) and notify (a notification)");
@@ -169,13 +161,13 @@ void test("A reminder carries notify: in place of runs:.", async (t) => {
 
   t.check(issues({ at: "2026-10-02T08:30", notify: { title: "x", context: "../outside.todo.card" } }), "notify.context: must be a card path inside the box (e.g. _content/pets/pepper-shots.todo.card)");
 
-  t.check(issues({ at: "2026-10-02T08:30", notify: { title: "x", loudness: "shout" } }), "notify.loudness: Invalid option: expected one of \"dot\"|\"quiet\"|\"loud\"");
+  t.check(issues({ at: "2026-10-02T08:30", notify: { title: "x", loudness: "shout" } }), str`notify.loudness: ${any(String)}`);
 
   t.check(issues({ at: "2026-10-02T08:30", notify: { title: " " } }), "notify.title: a notification needs a title");
 
-  t.check(issues({ at: "2026-10-02T08:30", notify: { title: "x", sound: "chime" } }), "notify: Unrecognized key: \"sound\"");
+  t.check(issues({ at: "2026-10-02T08:30", notify: { title: "x", sound: "chime" } }), str`notify: ${any(String)}`);
 
-  t.check(issues({ at: "2026-10-02T08:30", notify: { title: "x" }, "requested-by": "agent" }), "requested-by: Invalid input: expected \"boxholder\"");
+  t.check(issues({ at: "2026-10-02T08:30", notify: { title: "x" }, "requested-by": "agent" }), str`requested-by: ${any(String)}`);
 
   // `parseScheduledScript` turns the pair into one `action`:
 

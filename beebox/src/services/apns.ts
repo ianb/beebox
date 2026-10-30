@@ -14,7 +14,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { Notification, Provider } from "@parse/node-apn";
+import type { Provider } from "@parse/node-apn";
 import { isRecord } from "../shared/is-record.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -89,10 +89,14 @@ export function classifyApnsFailure(failure: unknown): { gone: true; reason: str
   return new ApnsSendError({ status, reason: reason ?? (error instanceof Error ? error.message : undefined), cause: error });
 }
 
+// Loaded on first send: the library and its crypto dependencies cost about
+// 35 ms to import, and most processes that build this service never push.
+const loadNodeApn = () => import("@parse/node-apn");
+
 export function createApnsService(config: ApnsConfig): ApnsService {
   const providers = new Map<ApnsEnvironment, Provider>();
 
-  function provider(environment: ApnsEnvironment): Provider {
+  function provider(environment: ApnsEnvironment, { Provider }: Awaited<ReturnType<typeof loadNodeApn>>): Provider {
     const existing = providers.get(environment);
     if (existing !== undefined) return existing;
     const created = new Provider({
@@ -105,14 +109,15 @@ export function createApnsService(config: ApnsConfig): ApnsService {
 
   return {
     async send(request) {
-      const notification = new Notification();
+      const apn = await loadNodeApn();
+      const notification = new apn.Notification();
       notification.rawPayload = request.payload;
       notification.topic = request.headers["apns-topic"];
       notification.pushType = request.headers["apns-push-type"];
       const collapseId = request.headers["apns-collapse-id"];
       if (collapseId !== undefined) notification.collapseId = collapseId;
 
-      const result = await provider(request.environment).send(notification, request.token);
+      const result = await provider(request.environment, apn).send(notification, request.token);
       if (result.sent.length > 0) return { ok: true };
       const failure = classifyApnsFailure(result.failed[0]);
       if (failure instanceof ApnsSendError) throw failure;

@@ -46,7 +46,11 @@ import { useDropdownClose } from "../../../ui/Dropdown";
 import { TextField } from "../../../ui/fields/field";
 import { MenuItem } from "../../../ui/dropdown-menu-item";
 import { layoutSessionList, sessionIdHint } from "./session-list-grouping";
-import { relativeTime, useChatSearch, ChatSearchRows } from "./session-search";
+import { agoOnClock } from "../../../../lib/relative-time";
+import { useNow } from "../../../../lib/use-now";
+import { useChatSearch, ChatSearchRows } from "./session-search";
+import { StatusMessage } from "../../../ui/StatusMessage";
+import { cardUrl } from "@shared/card-url";
 
 type LoadState =
   | { kind: "loading" }
@@ -130,7 +134,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
   onToggleAll: () => void;
 }) {
   if (state.kind === "loading") {
-    return <div className="px-3 py-2 text-sm text-warm-700">Loading...</div>;
+    return <StatusMessage variant="menu">Loading...</StatusMessage>;
   }
   if (state.kind === "error") {
     return (
@@ -219,7 +223,7 @@ function DeadSessionGroups({ dead, boxSlug, allRows }: { dead: DeadChatInfo[]; b
               <Link
                 key={s.sessionId}
                 role="menuitem"
-                to={href(`/${boxSlug}/browse/${s.huskPath}`)}
+                to={href(cardUrl(boxSlug, s.huskPath))}
                 onClick={close}
                 title={`Session ${s.sessionId}`}
                 className="block px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
@@ -274,6 +278,8 @@ function SessionRows({
   muted: boolean;
 }) {
   const close = useDropdownClose();
+  // Re-render each minute so the ages stay current.
+  useNow(60_000);
   return (
     <>
       {sessions.map((s) => {
@@ -300,7 +306,7 @@ function SessionRows({
               {s.isActive ? (
                 <span className="text-xs text-success-dark">active</span>
               ) : null}
-              <span className="text-xs text-warm-700">{relativeTime(s.lastUsedAt)}</span>
+              <span className="text-xs text-warm-700">{agoOnClock(s.lastUsedAt, "real")}</span>
               {showLandmark ? (
                 <span className="text-xs text-warm-700 truncate">in {s.landmarkLabel}</span>
               ) : null}

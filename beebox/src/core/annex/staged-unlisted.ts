@@ -17,6 +17,7 @@
 
 import { spawn } from "node:child_process";
 import * as path from "node:path";
+import { errnoCode } from "../../shared/error-guards.js";
 import { isAssetExtension } from "../../lib/asset-extensions.js";
 import { isInAttachScope } from "../../lib/attach-scopes.js";
 import { listStagedRelPaths } from "../../lib/staged-files.js";
@@ -128,6 +129,8 @@ function batchCheck(boxRoot: string, input: string): Promise<string> {
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk: string) => { err += chunk; });
     child.on("error", (e) => { reject(new StagedBlobSizeError(e.message)); });
+    // An early git exit is reported by its exit code below; an unhandled EPIPE would crash the process.
+    child.stdin.on("error", (e) => { if (errnoCode(e) !== "EPIPE") reject(new StagedBlobSizeError(e.message)); });
     child.on("close", (code) => {
       if (code === 0) {
         resolve(out);

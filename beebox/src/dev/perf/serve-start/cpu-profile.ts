@@ -2,14 +2,17 @@
  * Summarizes a V8 `.cpuprofile` by self time, grouped by where the code came
  * from.
  *
- * `dist/cli.mjs` is one bundled file, so a raw profile attributes most time to
- * "cli.mjs:<line>". Its source map (`dist/cli.mjs.map`) maps each frame back
- * to the original file, which this groups by owner: a package under
- * node_modules, or a source directory under src/. Node's own frames (module
- * compilation, file reads) and V8's (GC) are grouped as such.
+ * The CLI bundle is `dist/cli.mjs` plus its code-split `dist/cli-*.mjs`
+ * chunks, so a raw profile attributes most time to "cli-<name>-<hash>.mjs:<line>".
+ * Their source maps map each frame back to the original file, which this
+ * groups by owner: a package under node_modules, or a source directory under
+ * src/. Node's own frames (module compilation, file reads) and V8's (GC) are
+ * grouped as such.
  */
 import * as fs from "node:fs/promises";
 import { SourceMap } from "node:module";
+import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import { z } from "zod";
 
 const profileSchema = z.object({
@@ -52,6 +55,18 @@ function frameOwner(frame: { url: string; lineNumber: number; columnNumber: numb
   const original = entry && "originalSource" in entry ? entry.originalSource : undefined;
   const file = original ?? frame.url.replace(/^file:\/\//, "");
   return { owner: ownerOf(file), name: `${frame.functionName || "(anonymous)"} ${file.split("/").slice(-2).join("/")}` };
+}
+
+/** File URL → source map path for `dist/cli.mjs` and each chunk beside it that has a map. */
+export async function cliBundleSourceMaps(distDir: string): Promise<Record<string, string>> {
+  const names = await fs.readdir(distDir);
+  const maps: Record<string, string> = {};
+  for (const name of names) {
+    if ((name === "cli.mjs" || /^cli-.+\.mjs$/.test(name)) && names.includes(`${name}.map`)) {
+      maps[pathToFileURL(path.join(distDir, name)).href] = path.join(distDir, `${name}.map`);
+    }
+  }
+  return maps;
 }
 
 /** `maps`: bundle file URL → its source map file path. */

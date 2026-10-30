@@ -9,14 +9,12 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { computeRenamesFromGit } from "../../../../src/dev/layout/move/git-renames.js";
-import { computeMentionRewrite } from "../../../../src/dev/layout/move/mention-rewrite.js";
-import { scanRoots } from "../../../../src/dev/layout/move/roots.js";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = await mkdtemp(join(tmpdir(), "layout-move-git-renames-"));
@@ -24,9 +22,6 @@ async function write(rel: string, content: string) {
   const full = join(repoRoot, rel);
   await mkdir(full.slice(0, full.lastIndexOf("/")), { recursive: true });
   await writeFile(full, content);
-}
-async function read(rel: string): Promise<string> {
-  return readFile(join(repoRoot, rel), "utf8");
 }
 async function git(args: string[]) {
   await execFileAsync("git", args, { cwd: repoRoot });
@@ -37,9 +32,6 @@ await git(["config", "user.name", "Test"]);
 
 await write("pkg/package.json", JSON.stringify({ name: "pkg" }));
 await write("pkg/src/a.ts", "export const a = 1;\n");
-// A doc mentioning the file's original path, to be rewritten once the
-// composed mapping is known.
-await write("docs/note.md", "See pkg/src/a.ts for details.\n");
 await git(["add", "-A"]);
 await git(["commit", "-q", "-m", "base"]);
 const base = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoRoot })).stdout.trim();
@@ -61,14 +53,6 @@ void test("A file moved twice across two commits composes into one old->new mapp
   ]);
 
   t.check(rejected, []);
-
-  // ## The composed mapping rewrites the doc's mention
-
-  const roots = scanRoots(repoRoot);
-  const result = computeMentionRewrite({ repoRoot, moves, roots, rewrittenFiles: new Set() });
-  t.check(result.fileEdits.get("docs/note.md"), "See pkg/src/sub/renamed.ts for details.\n");
-
-  await t.checkText(await read("docs/note.md"), "See pkg/src/a.ts for details.");
 });
 
 // ## A detected rename is rejected when the working tree contradicts it: new path missing

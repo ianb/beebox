@@ -18,7 +18,7 @@ import {
   wakeupCycleLockPath,
   WAKEUP_ALREADY_RUNNING,
 } from "../../../../src/cli/commands/wakeup/cycle-lock.js";
-import { parseWakeupOutcome, WAKEUP_OUTCOME_ENV } from "../../../../src/cli/wakeup-outcome.js";
+import { parseWakeupOutcome, WAKEUP_CYCLE_ACQUIRED, WAKEUP_OUTCOME_ENV } from "../../../../src/cli/wakeup-outcome.js";
 import { inspectLock } from "../../../../src/lib/file-lock.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
@@ -65,7 +65,11 @@ void test("The outer call models a wakeup that is mid-cycle; the inner one is a 
   // It is one visible line, not a silent no-op — a skipped cycle that printed
   // nothing would read as a cycle that found nothing to do:
 
+  // The outer cycle took the lock, so it printed the acquired line (the caller
+  // asked for the outcome); the inner one skipped and printed no such line.
+
   t.check(printed, [
+    WAKEUP_CYCLE_ACQUIRED,
     WAKEUP_ALREADY_RUNNING,
     '[wakeup-outcome] {"connectorErrors":0,"connectors":[],"reactorOk":true,"reactorSkipped":false,"jobsProcessed":0,"jobsRemaining":0,"skipped":"wakeup-running"}',
   ]);
@@ -100,4 +104,30 @@ void test("The outer call models a wakeup that is mid-cycle; the inner one is a 
   t.check(await runUnderWakeupCycleLock(box.root, async () => { thirdCycleDidWork = true; }), true);
 
   t.check(thirdCycleDidWork, true);
+});
+
+// ## The acquired line is for a caller that asked
+//
+// `startBbxWakeup` answers on `[wakeup-cycle] acquired`, which is printed once
+// the lock is held and before the cycle's work. A person's own `bbx engine
+// wakeup` sets no outcome variable and prints nothing extra.
+void test("The acquired line is for a caller that asked", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(async () => {
+    delete process.env[WAKEUP_OUTCOME_ENV];
+    await box.cleanup();
+  });
+
+  const quiet = await capture(() => runUnderWakeupCycleLock(box.root, async () => {
+    console.log("cycle work");
+  }));
+  process.env[WAKEUP_OUTCOME_ENV] = "1";
+  const asked = await capture(() => runUnderWakeupCycleLock(box.root, async () => {
+    const holder = await inspectLock(wakeupCycleLockPath(box.root));
+    console.log(`cycle work, lock held by ${String(holder?.metadata.purpose)}`);
+  }));
+  t.check({ quiet, asked }, {
+    quiet: ["cycle work"],
+    asked: [WAKEUP_CYCLE_ACQUIRED, "cycle work, lock held by wakeup-cycle"],
+  });
 });

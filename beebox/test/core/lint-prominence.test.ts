@@ -9,15 +9,23 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { lintProminenceBudget } from "../../src/core/lint-prominence/core.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
+import { lintCardsDispatch } from "../../src/core/card-lint/core/lint-cards.js";
+import { listBoxCardFiles } from "../../src/core/list-cards.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
-/** Build a throwaway box from a path -> content map and return its warnings as "rule: path: message" lines. */
-async function warningsFor(files: Record<string, string>) {
+/**
+ * Build a throwaway box from a path -> content map and return its warnings as
+ * "rule: path: message" lines. With `viaCardLint`, the card lint parses the
+ * cards first and the budget lint reuses its frontmatter, as `bbx validate` does.
+ */
+async function warningsFor(files: Record<string, string>, options?: { viaCardLint: boolean }) {
   const box = await makeTmpBox();
   try {
     for (const [file, content] of Object.entries(files)) await box.write(file, content);
     const ctx = await buildLoadContext(box.root);
-    const warnings = await lintProminenceBudget(box.root, ctx);
+    const frontmatterByPath = new Map<string, Record<string, unknown>>();
+    if (options?.viaCardLint === true) await lintCardsDispatch(await listBoxCardFiles(box.root), { boxRoot: box.root, ctx, frontmatterByPath });
+    const warnings = await lintProminenceBudget(box.root, { ctx, frontmatterByPath });
     return warnings.map((w) => `${w.rule}: ${w.path}: ${w.message}`).join("\n");
   } finally {
     await box.cleanup();
@@ -57,6 +65,25 @@ void test("MAXENTRYPOINTSPERDIR is 2; a third is the exceptional case the lint w
       "_content/notes/B.doc.card": marked("entry-point"),
       "_content/notes/C.doc.card": marked("entry-point"),
     }),
+    "too-many-entry-points: _content/notes: 3 entry points in one directory; an entry point is where a newcomer starts, and a directory usually has one",
+  );
+});
+
+// ## In `bbx validate`, the budget lint reuses the card lint's frontmatter
+//
+// The card lint hands over the frontmatter of each card it parsed; a card it
+// rejects (here C, whose title is not a string) is read by the budget lint
+// itself, so it still counts.
+void test("The budget lint gives the same warnings with frontmatter from the card lint", async (t) => {
+  t.check(
+    await warningsFor(
+      {
+        "_content/notes/A.doc.card": marked("entry-point"),
+        "_content/notes/B.doc.card": marked("entry-point"),
+        "_content/notes/C.doc.card": "---\nprominence: entry-point\ntitle: [1, 2]\n---\n",
+      },
+      { viaCardLint: true },
+    ),
     "too-many-entry-points: _content/notes: 3 entry points in one directory; an entry point is where a newcomer starts, and a directory usually has one",
   );
 });

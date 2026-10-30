@@ -26,7 +26,7 @@ import {
   selectScanVisionBackend,
   type ScanVisionService,
 } from "../../../services/scan-vision.js";
-import { createClaudeScanVision } from "../../../services/scan-vision-claude.js";
+import { createClaudeScanVision } from "../../../services/scan-vision-claude/core.js";
 import { getGeminiApiKey } from "../../gemini-key.js";
 import { routeVia } from "../../openrouter.js";
 import { checkClaudeAuth, ClaudeAuthError } from "../../agent/auth-preflight.js";
@@ -170,7 +170,7 @@ export async function resolveScanVision(
     return { vision: createGeminiScanVision({ route: selection.value.route }) };
   }
   try {
-    await checkClaudeAuth();
+    await checkClaudeAuth({ boxRoot });
   } catch (e) {
     if (e instanceof ClaudeAuthError) return { error: e.message };
     throw e;

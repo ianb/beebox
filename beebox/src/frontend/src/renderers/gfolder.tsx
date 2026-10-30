@@ -31,6 +31,7 @@ import { Heading } from "../components/ui/Heading";
 import { DRIVE_CHILD_BADGES, driveChildState } from "../lib/drive-card-display";
 import { DirectoryListing, useDirectoryListing, type BrowseCardEntry } from "../directory-listing";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
+import { parentDir } from "../lib/parent-dir";
 
 /** The frontmatter field, when it is a non-empty string. */
 function field(fm: Record<string, unknown>, key: string): string | null {
@@ -57,16 +58,30 @@ function problemSummary(frontmatter: Record<string, unknown>): string | null {
   return parts.length === 0 ? null : parts.join(", ");
 }
 
-/** The box-relative directory a card sits in ("" at the box root). */
-function dirOf(cardPath: string): string {
-  const cut = cardPath.lastIndexOf("/");
-  return cut === -1 ? "" : cardPath.slice(0, cut);
-}
-
 /** The Drive state column for one child of the mirrored directory. */
 function ChildState({ card }: { card: BrowseCardEntry }) {
   const badge = DRIVE_CHILD_BADGES[driveChildState(card)];
   return <Badge size="sm" tone={badge.tone} title={badge.title}>{badge.label}</Badge>;
+}
+
+type LastSync =
+  | { kind: "loading" }
+  | { kind: "unavailable" }
+  | { kind: "known"; at: string | null };
+
+/**
+ * When the last mirror pass over this mount ran. The card holds no time (a
+ * time on the card made every pass a commit); Drive state does, and the mount
+ * list carries it.
+ */
+function useLastSync(cardPath: string): LastSync {
+  const mounts = trpc.drive.mounts.useQuery();
+  if (mounts.error !== null) return { kind: "unavailable" };
+  if (mounts.data === undefined) return { kind: "loading" };
+  // A card missing from the list is one the mirror does not run (two cards
+  // claiming one Drive folder are both left out), so its time is not known.
+  const mount = mounts.data.mounts.find((entry) => entry.cardPath === cardPath);
+  return mount === undefined ? { kind: "unavailable" } : { kind: "known", at: mount.lastSync };
 }
 
 /** Name, Drive link, and the outcome of the last mirror pass. */
@@ -74,7 +89,9 @@ function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<
   const drive = isRecord(frontmatter["drive"]) ? frontmatter["drive"] : {};
   const name = field(frontmatter, "title");
   const link = field(drive, "link");
-  const lastSync = field(frontmatter, "last-sync");
+  const syncState = useLastSync(path);
+  // Neither badge until the time is known: "never synced" while loading would be false.
+  const lastSync = syncState.kind === "known" ? syncState.at : undefined;
   const error = field(frontmatter, "error");
   const driveId = field(drive, "id");
 
@@ -83,16 +100,17 @@ function MountHeader({ path, frontmatter }: { path: string; frontmatter: Record<
       <Row gap="sm" align="center" wrap>
         <Heading level={2}>{name ?? "Drive folder"}</Heading>
         {error !== null ? <Badge tone="danger">error</Badge> : null}
-        {error === null && lastSync !== null ? <Badge tone="success">mirrored</Badge> : null}
+        {error === null && typeof lastSync === "string" ? <Badge tone="success">mirrored</Badge> : null}
         {error === null && lastSync === null ? <Badge tone="neutral">never synced</Badge> : null}
         {link === null ? null : (
           <ExternalLink href={link} id="bbx-gfolder-open-in-drive">Open in Drive</ExternalLink>
         )}
       </Row>
       <Hint>
-        mirrors into {dirOf(path) === "" ? "the box root" : dirOf(path)}
+        mirrors into {parentDir(path) === "" ? "the box root" : parentDir(path)}
         {problemSummary(frontmatter) === null ? null : <>{" · "}{problemSummary(frontmatter)}</>}
-        {lastSync === null ? null : <>{" · last sync "}<FriendlyDate iso={lastSync} /></>}
+        {typeof lastSync === "string" ? <>{" · last sync "}<FriendlyDate iso={lastSync} /></> : null}
+        {syncState.kind === "unavailable" ? " · sync status unavailable" : null}
         {driveId === null ? null : <>{" · "}<Text size="xs" mono tone="muted">{driveId}</Text></>}
       </Hint>
       {error === null ? null : <ErrorText>{error}</ErrorText>}
@@ -128,7 +146,7 @@ function SyncOutcome({ result }: {
 function GfolderView({ data, onNavigate }: RendererProps) {
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
-  const dirPath = dirOf(data.path);
+  const dirPath = parentDir(data.path);
   const listing = useDirectoryListing(dirPath);
   const syncMutation = trpc.drive.syncFolder.useMutation();
 

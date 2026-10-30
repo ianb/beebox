@@ -23,7 +23,8 @@ import {
   type CodexCliService,
 } from "../../services/codex-cli/core.js";
 import { providerEnvAdditions } from "../provider-env/core.js";
-import { isThirdPartyModel } from "../../shared/agent-models.js";
+import { addedModelKey, piModelMissing } from "../provider-env/openrouter-chat.js";
+import { isThirdPartyModel, type AgentEngine } from "../../shared/agent-models.js";
 import { ProviderSetupError } from "../provider-setup-error.js";
 import { invariant } from "../../shared/invariant.js";
 
@@ -31,7 +32,7 @@ export { redactCodexCliDetail as redactCodexAuthDetail } from "../../services/co
 
 /** The single actionable message shown when Claude Code has no active login. */
 const CLAUDE_NOT_LOGGED_IN_MESSAGE =
-  "Claude Code is not logged in — run `claude auth login` on this machine";
+  "Claude Code is not logged in — run `claude auth login` on this machine, or grant the `claude-oauth-token` secret to this box";
 
 /** Thrown by {@link checkClaudeAuth} when the CLI reports no active login. */
 export class ClaudeAuthError extends Error {
@@ -74,7 +75,10 @@ class CodexCliUnavailableError extends CodexReadinessError {
 // logout promptly. This cache only exists to keep run-path probes cheap.
 const POSITIVE_TTL_MS = 10 * 60 * 1000;
 
-let cachedOkAt: number | null = null;
+// Keyed by box root: a process that runs several boxes (the scheduler daemon
+// on a single-user host) must not let one box's token answer for another
+// (review round 7, codex gpt-6-sol, 2026-10-25). No box root is its own key.
+const cachedOkAt = new Map<string, number>();
 let cachedCodexOkAt: number | null = null;
 
 /**
@@ -95,13 +99,15 @@ export interface CheckClaudeAuthOptions {
    * `createClaudeCliService()` is constructed. Tests inject a fake.
    */
   claudeCli?: ClaudeCliService | undefined;
+  /** The box whose long-lived token, when granted, the probe runs with (`core/claude-oauth-token.ts`). */
+  boxRoot?: string | undefined;
   /** Injectable clock (ms). Defaults to `Date.now`; tests override for TTL. */
   now?: (() => number) | undefined;
 }
 
 /** Clear the positive-result cache. Tests only. */
 export function resetClaudeAuthCache(): void {
-  cachedOkAt = null;
+  cachedOkAt.clear();
 }
 
 export function resetCodexAuthCache(): void {
@@ -143,12 +149,14 @@ export async function checkCodexAuth(options?: {
 export async function checkClaudeAuth(options?: CheckClaudeAuthOptions): Promise<void> {
   const now = options?.now ?? Date.now;
   const at = now();
-  if (cachedOkAt !== null && at - cachedOkAt < POSITIVE_TTL_MS) return;
+  const cacheKey = options?.boxRoot ?? "";
+  const okAt = cachedOkAt.get(cacheKey);
+  if (okAt !== undefined && at - okAt < POSITIVE_TTL_MS) return;
 
-  const claudeCli = options?.claudeCli ?? createClaudeCliService();
+  const claudeCli = options?.claudeCli ?? createClaudeCliService({ boxRoot: options?.boxRoot });
   const status = await probeAuth(claudeCli);
   if (status["loggedIn"] === true) {
-    cachedOkAt = at;
+    cachedOkAt.set(cacheKey, at);
     return;
   }
   if (status[AUTH_PROBE_INCONCLUSIVE] === true) {
@@ -185,12 +193,28 @@ function refuse(session: { emit(event: "error", error: Error): boolean }, error:
   return false;
 }
 
+/**
+ * A pi chat's setup: a model from the added list and a usable OpenRouter key,
+ * the two things pi readiness reports as `needs-default-model` and `needs-key`.
+ */
+async function piSetupRefusal(params: { boxRoot?: string | undefined; model?: string | undefined }): Promise<ProviderSetupError | null> {
+  invariant(params.boxRoot !== undefined, "preflightChatBackend: a pi chat requires boxRoot");
+  if (params.model === undefined) return piModelMissing();
+  try {
+    await addedModelKey({ boxRoot: params.boxRoot, model: params.model, purpose: "chat-preflight" });
+    return null;
+  } catch (e) {
+    if (e instanceof ProviderSetupError) return e;
+    throw e;
+  }
+}
+
 export async function preflightChatBackend(params: {
   backend: {
     requiresClaudeAuth?: boolean | undefined;
     requiresCodexAuth?: boolean | undefined;
   };
-  engine?: "claude" | "codex" | undefined;
+  engine?: AgentEngine | undefined;
   /** The model this turn will run — a third-party model is gated on its provider setup. */
   model?: string | undefined;
   /** Box root for the provider check. Required when `model` is a third-party id. */
@@ -200,6 +224,10 @@ export async function preflightChatBackend(params: {
   claudeCli?: ClaudeCliService | undefined;
   codexCli?: CodexCliService | undefined;
 }): Promise<boolean> {
+  if (params.engine === "pi") {
+    const refusal = await piSetupRefusal(params);
+    return refusal === null || refuse(params.session, refusal);
+  }
   if (params.engine === "codex") {
     if (params.backend.requiresCodexAuth !== true) return true;
     try {
@@ -225,7 +253,7 @@ export async function preflightChatBackend(params: {
   }
   if (params.backend.requiresClaudeAuth !== true) return true;
   try {
-    await checkClaudeAuth({ claudeCli: params.claudeCli });
+    await checkClaudeAuth({ claudeCli: params.claudeCli, boxRoot: params.boxRoot });
     return true;
   } catch (e) {
     if (e instanceof ClaudeAuthError) return refuse(params.session, e);

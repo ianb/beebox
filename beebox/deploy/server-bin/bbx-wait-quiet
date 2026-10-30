@@ -10,7 +10,7 @@
 # kill grace cover a restart that lands mid-write; this keeps the restart from
 # landing there in the first place.
 #
-# Installed by deploy.sh on every deploy and by setup-server.sh at provision
+# Installed by deploy.sh on every deploy and by cloud-init.yaml at provision
 # time. Shared by both, plus the quiet-hour recycle timer.
 set -u
 BBX_USER="${BBX_USER:-beebox}"

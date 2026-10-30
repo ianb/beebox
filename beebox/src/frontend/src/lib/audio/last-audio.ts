@@ -22,6 +22,7 @@
  * (`native-last-audio-request.ts`, docs/mobile-contract.md §4.8).
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { getApiBase } from "../../api-core";
 import {
   createNativeLastAudioRequest,
@@ -113,6 +114,6 @@ export async function fulfillLastAudioRequest(
       console.warn(`[last-audio] answer rejected: HTTP ${res.status}`);
     }
   } catch (e) {
-    console.warn(`[last-audio] answer failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[last-audio] answer failed: ${errorMessage(e)}`);
   }
 }

@@ -26,6 +26,7 @@ import {
 } from "../../shared/display-path.js";
 import { BOX_ROOT_VOCABULARY } from "../../shared/box-root-vocabulary.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 const AREA_NAMES: ReadonlySet<string> = new Set(
   BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area").map((entry): string => entry.name)
@@ -87,7 +88,7 @@ export function resolveCliTargetPath({
       ? raw
       : path.join(relativeTo, raw);
   const boxRelative = path.relative(path.resolve(boxRoot), resolved);
-  if (!boxRelative.startsWith("..") && !path.isAbsolute(boxRelative)) {
+  if (isWithin(path.resolve(boxRoot), resolved)) {
     const relativePath = boxRelative.split(path.sep).join("/");
     const segment = findReservedNestedSegment(relativePath);
     if (segment !== null) throw new ReservedSegmentPathArgError(relativePath, segment);

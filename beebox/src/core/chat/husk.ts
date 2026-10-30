@@ -15,24 +15,25 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
-import { loadHistoryEntries, resolveSessionLogPath, type SessionHistoryEntry } from "./session/history.js";
+import { loadHistoryEntries, type SessionHistoryEntry } from "./session/history.js";
 import { localOrigin, type LocalOrigin } from "./session/origin.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { loadAgentEngine, type AgentEngine } from "../box/config.js";
 import { extractSnippet } from "../../cli/lib/session-text.js";
 import { errnoCode } from "../../shared/error-guards.js";
-import { readCodexSessionUpdatedAt } from "./session/codex-transcript/core.js";
+import { SESSION_STORES } from "./session/native-store.js";
 import { loadSessionHistory } from "./session/load-history.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
+import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import {
   CHAT_HUSK_DIR,
   findChatHuskEntry,
   groupHusksBySession,
   listChatHusks,
-  parseHuskFrontmatter,
   shortId,
   type ChatHuskEntry,
 } from "./husk-read.js";
+import { parseFrontmatterObject } from "../../cards/frontmatter.js";
 
 /** Keep husk titles bookmark-sized, not transcript-sized. */
 const TITLE_MAX_LEN = 80;
@@ -135,7 +136,7 @@ export async function setChatHuskStatus(boxRoot: string, opts: { sessionId: stri
   await withCardLock(absPath, async () => {
     const content = await fs.readFile(absPath, "utf-8");
     const split = splitCardContent(content);
-    const fields = parseHuskFrontmatter(content);
+    const fields = parseFrontmatterObject(content);
     // Unreadable frontmatter: the lists already warned about it; a rewrite
     // would be guessing at what the file meant.
     if (!split.hasFrontmatter || fields === null) return;
@@ -147,6 +148,19 @@ export async function setChatHuskStatus(boxRoot: string, opts: { sessionId: stri
 }
 
 /**
+ * Commit a husk on its own. Used after a status change the boxholder made,
+ * which no title or review run follows; the husk would otherwise stay untracked
+ * until a broad `git add`. A no-op when the husk is unchanged.
+ */
+export async function commitChatHusk(boxRoot: string, huskPath: string): Promise<void> {
+  await stageAndCommitPaths(boxRoot, {
+    paths: [huskPath],
+    message: "Chat: update chat card",
+    trailers: { "Commit-Source": "chat-husk" },
+  });
+}
+
+/**
  * When this machine's copy of a session's transcript was last written, or null
  * when it holds none. The one "is the transcript here?" check: reconcile skips
  * ghost history entries with it, and the provenance backfill uses the same
@@ -154,11 +168,9 @@ export async function setChatHuskStatus(boxRoot: string, opts: { sessionId: stri
  */
 async function transcriptMtime(boxRoot: string, opts: { sessionId: string; engine: AgentEngine }): Promise<Date | null> {
   try {
-    return opts.engine === "codex"
-      ? await readCodexSessionUpdatedAt(boxRoot, opts.sessionId)
-      : (await fs.stat(await resolveSessionLogPath(boxRoot, opts.sessionId))).mtime;
+    return await SESSION_STORES[opts.engine].updatedAt(boxRoot, opts.sessionId);
   } catch (_e) {
-    // Absent (or unreadable) transcript — the caller's whole question.
+    // Unreadable transcript — treated as absent, the caller's whole question.
     return null;
   }
 }
@@ -184,7 +196,7 @@ async function stampHuskProvenance(absPath: string, args: { engine: AgentEngine;
   return withCardLock(absPath, async () => {
     const content = await fs.readFile(absPath, "utf-8");
     const split = splitCardContent(content);
-    const fields = parseHuskFrontmatter(content);
+    const fields = parseFrontmatterObject(content);
     // Unreadable frontmatter: `listChatHusks` already warned about it, and a
     // rewrite would be guessing at what the file meant.
     if (!split.hasFrontmatter || fields === null) return false;

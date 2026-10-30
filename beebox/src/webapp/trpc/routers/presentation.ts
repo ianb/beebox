@@ -1,7 +1,6 @@
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
-import { Document, isMap, parseDocument } from "yaml";
 import {
   THEME_CATALOG,
   SystemThemeChoiceSchema,
@@ -13,7 +12,7 @@ import { resolveSystemTheme } from "../../../core/system-theme.js";
 import { boxRelativePathSchema } from "../../../core/landmark/nearest.js";
 import { updateBoxSystemTheme } from "../../box-config-write.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
-import { splitCardContent } from "../../../exports/cards.js";
+import { editableFrontmatterDocument, renderFrontmatterDocument, splitCardContent } from "../../../exports/cards.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
@@ -91,12 +90,11 @@ export const presentationRouter = router({
         }
         const split = splitCardContent(raw);
         if (!split.hasFrontmatter) throw new TRPCError({ code: "BAD_REQUEST", message: "Landmark has no frontmatter block" });
-        const document = split.frontmatterText.trim() === "" ? new Document({}) : parseDocument(split.frontmatterText);
-        if (document.errors.length > 0 || !isMap(document.contents)) throw new TRPCError({ code: "BAD_REQUEST", message: "Landmark frontmatter is not a valid YAML mapping" });
+        const document = editableFrontmatterDocument(split.frontmatterText);
+        if (document === null) throw new TRPCError({ code: "BAD_REQUEST", message: "Landmark frontmatter is not a valid YAML mapping" });
         if (input.theme === null) document.delete("system-theme");
         else document.set("system-theme", input.theme);
-        const yaml = String(document);
-        await writeFileAtomic(resolved.resolved, { content: `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${split.body}` });
+        await writeFileAtomic(resolved.resolved, { content: renderFrontmatterDocument(document, split.body) });
         try {
           const commit = await stageAndCommitPaths(ctx.boxRoot, { paths: [resolved.relativePath],
             message: input.theme === null ? `Clear landmark system theme: ${resolved.relativePath}` : `Set landmark system theme: ${resolved.relativePath}` });

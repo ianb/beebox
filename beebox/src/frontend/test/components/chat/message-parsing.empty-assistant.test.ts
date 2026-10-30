@@ -5,7 +5,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { isoDate } from "@ianbicking/tap-check/check";
-import { groupIntoParts, hasRenderableAssistantContent } from "../../../src/components/chat/message-parsing.js";
+import { groupIntoParts, hasRenderableAssistantContent } from "../../../src/components/chat/assistant-parts.js";
 import { buildDataItems } from "../../../src/components/chat/everywhere/InteractiveChat/message-items.js";
 import type { SessionEntry, SessionContentBlock } from "../../../src/api.js";
 

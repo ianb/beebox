@@ -134,3 +134,23 @@ Weak tests to fix or drop (they pass if the behavior is a no-op):
 Gap found: `core/chat/review/state.doctest.md` had a give-up-per-span test
 that computed its own condition; it is removed and the `failedSpanId` rule
 now has no test.
+
+## Note (2026-10-23)
+
+[research/test-value/README.md](../../research/test-value/README.md) tested
+these criteria against run history, git history and a 54-file read. C1, C2
+and C4 hold; C2 is mostly cross-file, which a per-file sweep misses. C3 and
+C5 are refuted: never-changed is an age effect (37% of tests under 30 days,
+7% over 180) and 68% of files never failed in 959 full runs. The keep list
+holds, with one correction: "failed on its own" is usually a stale snapshot
+of a generated set and is a rewrite signal, not a keep signal.
+
+## Application (2026-10-23)
+
+[research/test-value/application/README.md](../../research/test-value/application/README.md)
+applied the revised criteria to 60 files (1,338 checks) on the research
+branch: 4% of checks removed, 12% rewritten, narrowed or merged, the rest
+kept. The removal rate was the same in flagged and unflagged files, so the
+suite-wide removal is about 500 checks, mostly catalog rows restated as
+expected values. The mechanical flags rank files well and name checks
+badly; the sweep should hand a reader whole files ranked by flag density.

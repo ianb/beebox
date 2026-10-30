@@ -1,0 +1,26 @@
+# The hub: routes /<slug>/... to each box and owns login. On a unit host it
+# spawns nothing (src/hub/AGENTS.md, "A unit host"); elsewhere it supervises
+# per-box children. Installed whole by deploy.sh on every deploy, so the file
+# in the repository is the unit (the old provisioner wrote it once).
+#
+# KillMode=mixed and the stop timeout: the hub tears its own children down
+# and drains git writes before systemd's cgroup kill (deploy/systemd/all/git-drain.conf
+# says why). /run/beebox (sockets, per-box hub secrets) comes from tmpfiles.d.
+[Unit]
+Description=Bee Box Hub (per-box supervisor + router)
+After=network.target
+
+[Service]
+Type=simple
+User=beebox
+Group=beebox
+ExecStart=/usr/local/bin/bbx engine hub
+WorkingDirectory=/home/beebox
+EnvironmentFile=/home/beebox/.env
+KillMode=mixed
+TimeoutStopSec=60
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

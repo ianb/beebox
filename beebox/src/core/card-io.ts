@@ -16,7 +16,7 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../lib/read-yaml.js";
 import { renderFrontmatterBlock, splitCardContent, type CardSchema, type InferCardFields } from "../exports/cards.js";
 import { parseCardFileName } from "../shared/card-name.js";
 import { errorMessage } from "../shared/error-guards.js";
@@ -92,6 +92,11 @@ export interface ParsedCard<TFields extends Record<string, unknown> = Record<str
   fields: TFields;
   /** Body text exactly as it appeared in the file (empty string if none). */
   rawBody: string;
+  /**
+   * The frontmatter mapping as written, before schema validation: it keeps
+   * keys the schema does not declare, which `fields` drops.
+   */
+  frontmatter: Record<string, unknown>;
 }
 
 /**
@@ -150,6 +155,7 @@ export function parseCardText(
     schema,
     fields,
     rawBody: split.body,
+    frontmatter: fm,
   };
 }
 

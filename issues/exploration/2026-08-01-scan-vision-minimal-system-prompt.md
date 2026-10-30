@@ -4,7 +4,7 @@ workstream: unknown
 priority: normal
 ---
 
-`ClaudeScanVision` (`beebox/src/services/scan-vision-claude.ts`) uses
+`ClaudeScanVision` (`beebox/src/services/scan-vision-claude/core.ts`) uses
 `systemPrompt: { type: "preset", preset: "claude_code" }` because that is the
 configuration every model-comparison experiment ran
 (`scratch/model-comparison/REPORT.md`). The preset costs roughly 15k input

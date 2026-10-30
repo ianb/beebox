@@ -12,7 +12,7 @@ gitignored `deploy/target.env` names a server.
 | Member | What it covers |
 |---|---|
 | [Provisioning](server/provisioning.md) | Creating and setting up the host: prerequisites, the provisioners, server layout, systemd units, DNS and HTTPS. |
-| [Configuration](server/configuration.md) | `/home/beebox/.env`, the service user's Claude and Codex logins, box login and invites, per-box access control. |
+| [Configuration](server/configuration.md) | `/home/beebox/.env`, the boxes' Claude token and Codex logins, box login and invites, per-box access control. |
 | [Deploying](server/deploying.md) | `deploy.sh`, the maintenance boundary, the deploy page, rollback, what production actually executes. |
 | [Boxes](server/boxes.md) | Adding a box to the hub, by hand or with `add-box.sh`; the box's push credential; troubleshooting. |
 | [Operations](server/operations.md) | Connecting, running `bbx` on the server, scripts that run there, diagnostics, the nightly Claude Code update. |

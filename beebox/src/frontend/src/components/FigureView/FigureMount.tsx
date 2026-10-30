@@ -9,6 +9,7 @@
  * path (p5 touches `window` at import time).
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useEffect, useRef } from "react";
 import type { ViewFileHelpers } from "../../hooks/useViewFileHelpers";
 
@@ -113,7 +114,7 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
           if (w > 0 && h > 0) svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
         }
       } catch (e) {
-        if (!state.cancelled) onError(e instanceof Error ? e.message : String(e));
+        if (!state.cancelled) onError(errorMessage(e));
       }
     })();
 

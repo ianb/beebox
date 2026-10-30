@@ -24,6 +24,18 @@ import { useCompanionMaterial } from "../../../../hooks/useCompanionMaterial";
 import { PaneControls } from "../../../../components/chat/workspace/PaneControls";
 import { useMobileChatViewport } from "../../../../components/chat/everywhere/use-mobile-card-navigation";
 import { Pre } from "../../../../components/ui/Pre";
+import { Image } from "../../../../components/ui/Image/view";
+import { Row } from "../../../../components/ui/Row";
+import { CaptionedFigure } from "../../../../components/FigureView/view";
+import { MaterialContext } from "../../../../components/ui/material";
+
+/**
+ * Stands in for an embedded figure, which paints its own light panel whatever
+ * the card theme; shapes only, since the figure's own text is not themed.
+ */
+const WIDGET_ART = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120"><rect width="320" height="120" fill="#fafafa"/><rect x="16" y="14" width="288" height="6" rx="3" fill="#ddd"/><rect x="16" y="14" width="90" height="6" rx="3" fill="#8ab4f8"/><circle cx="106" cy="17" r="7" fill="#8ab4f8"/>${[0, 1, 2, 3, 4].map((i) => `<circle cx="${60 + i * 50}" cy="${80 - (i % 2) * 14}" r="11" fill="${i % 2 === 0 ? "#7cbf72" : "#d9534f"}"/>`).join("")}</svg>`,
+)}`;
 
 function noop() { /* The specimen never opens, pins or closes a card. */ }
 
@@ -63,6 +75,16 @@ doors open: 10:00
 bring: seeds + curiosity
 \`\`\`
 
+## Sources
+
+The hall is free {% source href="https://example.org/hall-hours" retrieved="2026-10-01" %}until noon on Saturdays{% /source %}.
+
+{% source href="https://example.org/seed-saving" %}
+Dry seeds for a week before you seal the envelope.
+{% /source %}
+
+Last year's list {% source ref="../../../outside-the-box.md" %}ran out by eleven{% /source %}. {% todo %}Order envelopes {% see-also ref="../../../outside-the-box.md" %}the old supplier{% /see-also %}{% /todo %}
+
 This sample includes **bold**, *italic*, ~~retired text~~ and a [sample link](#before-saturday).`;
 
 const READING_PATH = "notes/Seed exchange.doc.card";
@@ -78,8 +100,10 @@ function tab(path: string, { label, pinned }: { label: string; pinned: boolean }
  * the desk's direct child. A card is themed (`data-active-card`); any other
  * file sits on a neutral desk.
  */
-function CompanionDesk({ id, tabs, active, identities, content, children }: {
+function CompanionDesk({ id, label, tabs, active, identities, content, children }: {
   id: string;
+  /** Names the desk, as the workspace names a pane, so each desk's pane controls are its own. */
+  label: string;
   tabs: PanelTab[];
   active: string;
   identities: Map<string, CardIdentity>;
@@ -88,14 +112,15 @@ function CompanionDesk({ id, tabs, active, identities, content, children }: {
 }) {
   const material = useCompanionMaterial(active);
   const mobile = useMobileChatViewport();
-  return <div ref={material} data-active-card={content === "card" || undefined} className="bbx-companion-desk relative flex flex-col min-w-0 min-h-0">
+  return <div ref={material} data-active-card={content === "card" || undefined} className="bbx-companion-desk relative flex flex-col min-w-0 min-h-0"
+    role="group" aria-label={label}>
     <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
       <SidecarTabStrip id={id} tabs={tabs} activePath={active} identities={identities} boxSlug={undefined}
         onSelectTab={noop} onCloseTab={noop} onTogglePin={noop} />
       <PaneControls pane="left" mobile={mobile} focused={false} pdfMenu={null} onAction={noop} />
     </div>
     <div role="tabpanel" id={workspacePanelId(active)} aria-hidden={false} data-card-content={content} className="bbx-interface-card-desk flex-1 min-h-0">
-      {children}
+      <MaterialContext.Provider value={content === "neutral"}>{children}</MaterialContext.Provider>
     </div>
   </div>;
 }
@@ -110,6 +135,14 @@ function ReadingCard({ theme }: { theme: Theme }) {
       path: READING_PATH, kind: "frontmatter", type: "doc", schema: null, body: SAMPLE,
       frontmatter: { status: "planning", hall: "Grange hall", volunteers: ["Dana", "Lee"], host: { ref: "people/Dana.person.card" } },
     }} />
+    <div className="bbx-card-content">
+      <CaptionedFigure caption="Drag the slider to warm the seed tray: germination starts near 20 °C">
+        <img src={WIDGET_ART} alt="" className="block w-full" />
+      </CaptionedFigure>
+      <Row justify="center" className="my-2">
+        <Image src={WIDGET_ART} alt="Seed tray sketch" size="chat" caption="An image embed shows its caption beneath" />
+      </Row>
+    </div>
     <div className="bbx-card-content flex flex-wrap items-center gap-3 mt-3">
       <label className="flex items-center gap-2 text-sm"><input id="bbx-studio-check" type="checkbox" /> Bring spare envelopes</label>
       <Button id="bbx-studio-action" size="sm" onClick={noop}>Sample action</Button>
@@ -131,6 +164,7 @@ function SystemThemePanel() {
     <Hint>Choose the toolbar and workspace surface for this box.</Hint>
     <SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled={false} idPrefix="bbx-studio-system-theme" onSelect={noop} />
     <Text size="xs" tone="muted">This box has its own system theme.</Text>
+    <Text size="xs" tone="danger">The last change could not be saved.</Text>
   </Stack></Card>;
 }
 
@@ -145,15 +179,15 @@ export function StudioCards({ name, stock }: { name: string; stock: string }) {
     ["notes/Volunteers.doc.card", identity("Volunteers", "🙋")],
   ]);
   return <div className="min-w-0 space-y-4">
-    <CompanionDesk id="bbx-studio-tabs-reading" active={READING_PATH} identities={identities} content="card"
+    <CompanionDesk id="bbx-studio-tabs-reading" label="Reading card" active={READING_PATH} identities={identities} content="card"
       tabs={[tab(READING_PATH, { label: "Seed exchange", pinned: true }), tab("notes/Welcome table.doc.card", { label: "Welcome table", pinned: false })]}>
       <ReadingCard theme={theme} />
     </CompanionDesk>
-    <CompanionDesk id="bbx-studio-tabs-settings" active={SETTINGS_PATH} identities={identities} content="card"
+    <CompanionDesk id="bbx-studio-tabs-settings" label="Settings card" active={SETTINGS_PATH} identities={identities} content="card"
       tabs={[tab(SETTINGS_PATH, { label: "Settings", pinned: false }), tab("notes/Volunteers.doc.card", { label: "Volunteers", pinned: false })]}>
       <SettingsCard theme={theme} />
     </CompanionDesk>
-    <CompanionDesk id="bbx-studio-tabs-file" active={FILE_PATH} identities={identities} content="neutral"
+    <CompanionDesk id="bbx-studio-tabs-file" label="Plain file" active={FILE_PATH} identities={identities} content="neutral"
       tabs={[tab(FILE_PATH, { label: "packing-list.txt", pinned: false })]}>
       <Pre className="m-4">{"envelopes  40\nlabels     2 sheets\ntape       1 roll\npens       6"}</Pre>
     </CompanionDesk>

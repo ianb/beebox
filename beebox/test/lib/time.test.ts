@@ -133,3 +133,52 @@ void test("clearTimeCache resets the cache", async (t) => {
   clearTimeCache();
   t.check([first, getBoxTimeISO(box.root)], ["2025-03-01T00:00:00.000Z", "2025-09-01T00:00:00.000Z"]);
 });
+
+// ## The box clock offset
+//
+// A journey walk fixture (any `fakeNotifications` key in `_config/box.json`)
+// with `.beebox/clock-offset.json` runs ahead of real time by `offsetMs`. On any
+// other box the file is ignored, `BBX_TIME` still wins, and a malformed file
+// reads as no offset. Both files are re-read when they change, with no restart.
+void test("The box clock offset", async (t) => {
+  const { boxClockShiftMs, storedClockOffsetMs } = await import("../../src/lib/time.js");
+  const fixture = await makeTmpBox({ git: false });
+  const plain = await makeTmpBox({ git: false });
+  t.teardown(async () => {
+    delete process.env.BBX_TIME;
+    clearTimeCache();
+    await fixture.cleanup();
+    await plain.cleanup();
+  });
+  const week = 7 * 24 * 60 * 60 * 1000;
+  const write = (root: string, { rel, value }: { rel: string; value: unknown }) => {
+    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+    fs.writeFileSync(path.join(root, rel), typeof value === "string" ? value : JSON.stringify(value));
+  };
+  write(fixture.root, { rel: "_config/box.json", value: { fakeNotifications: true } });
+  write(fixture.root, { rel: ".beebox/clock-offset.json", value: { offsetMs: week, setAt: "2026-10-23T00:00:00Z" } });
+  write(plain.root, { rel: ".beebox/clock-offset.json", value: { offsetMs: week } });
+  // `+ 0` turns -0 into 0: with no offset, `Date.now()` can run a millisecond
+  // after `getBoxTime`, and `Math.round` of that tiny negative is -0.
+  const ahead = (root: string) => Math.round((getBoxTime(root).getTime() - Date.now()) / 60_000) + 0;
+  const warnings: string[] = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => { warnings.push(args.map(String).join(" ")); };
+
+  const before = { fixture: ahead(fixture.root), plain: ahead(plain.root), shift: Math.round(boxClockShiftMs(fixture.root) / 60_000), plainShift: boxClockShiftMs(plain.root), stored: storedClockOffsetMs(plain.root) };
+  process.env.BBX_TIME = "2026-01-01T00:00:00Z";
+  const frozen = getBoxTime(fixture.root).toISOString();
+  delete process.env.BBX_TIME;
+  // A later mtime, so the cache sees the change.
+  write(fixture.root, { rel: ".beebox/clock-offset.json", value: "{ not json" });
+  fs.utimesSync(path.join(fixture.root, ".beebox/clock-offset.json"), new Date(), new Date(Date.now() + 5000));
+  const malformed = ahead(fixture.root);
+  console.warn = origWarn;
+
+  t.check({ before, frozen, malformed, warned: warnings.filter((w) => w.includes("clock-offset.json")).map((w) => w.replace(fixture.root, "<box>").split(":")[0]) }, {
+    before: { fixture: 7 * 24 * 60, plain: 0, shift: 7 * 24 * 60, plainShift: 0, stored: week },
+    frozen: "2026-01-01T00:00:00.000Z",
+    malformed: 0,
+    warned: ["[time] could not read <box>/.beebox/clock-offset.json; using no offset"],
+  });
+});

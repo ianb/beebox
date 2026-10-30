@@ -10,6 +10,7 @@ import { REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION } from ".
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_DIRS, boxPath } from "../../../lib/paths/core.js";
+import { refreshHubMeta } from "../../hub-meta.js";
 import { BOX_MARKER, isBoxRoot, recordedShapeSource, writeShapeBlock } from "../../../lib/box-identity.js";
 import { MissingShapeRecordError } from "../../../lib/box-shape-errors.js";
 import { hasCommits, initRepo, isRepo } from "../../../lib/git/core/operations.js";
@@ -224,6 +225,10 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
     }
   }
 
+  // The file the hub reads instead of the box's own (`core/hub-meta.ts`):
+  // written here so a box registered by add-box.sh is readable by the hub
+  // before it ever serves.
+  refreshHubMeta(resolvedRoot);
   return { isUpdate };
 }
 

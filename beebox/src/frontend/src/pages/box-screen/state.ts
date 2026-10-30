@@ -27,6 +27,7 @@
 import { z } from "zod";
 import { errorMessage } from "@shared/error-guards";
 import type { RouterOutput } from "../../lib/trpc/client";
+import { boxInstanceKey } from "../../lib/storage-scope";
 
 export type QuickChatView = RouterOutput["quickChat"]["submit"];
 type QuickChatChoice = NonNullable<QuickChatView["choices"]>[number];
@@ -79,7 +80,7 @@ export type BoxScreenAction =
 
 /** The storage key: one per box instance (`storageScopeFor`), apart from the composer's `bbx-input-emission`. */
 export function boxScreenStorageKey(input: { boxSlug: string; scope: string }): string {
-  return `bbx-box-screen:${input.scope === "" ? input.boxSlug : input.scope}`;
+  return `bbx-box-screen:${boxInstanceKey(input)}`;
 }
 
 /** Read what a previous visit stored. Storage is untrusted: a malformed value is reported and dropped. */

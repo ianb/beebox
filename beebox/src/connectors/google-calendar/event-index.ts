@@ -47,11 +47,16 @@ const EVENT_KEY_SEPARATOR = " ";
  */
 const LEGACY_CALENDAR_ID = "(legacy)";
 
+/** Whether a calendar id is the legacy sentinel rather than a real calendar. */
+export function isLegacyCalendarId(calendarId: string): boolean {
+  return calendarId === LEGACY_CALENDAR_ID;
+}
+
 export interface EventFileEntry {
   filename: string;
   calendarId: string;
   /** Hash of the ICS content last written by the connector (for detecting local edits) */
-  contentHash?: string;
+  contentHash?: string | undefined;
   /** Google event `updated` timestamp captured at the last pull, for remote-change detection */
   remoteUpdated?: string | undefined;
   /**
@@ -70,6 +75,16 @@ export interface EventFileEntry {
  * skips it or reads only its filename.
  */
 export type EventFileIndex = Record<string, string | EventFileEntry>;
+
+/** The calendar an entry belongs to: its recorded one, or its key's for a legacy string entry. */
+export function entryCalendarId(key: string, entry: string | EventFileEntry): string {
+  return typeof entry === "string" ? parseEventKey(key).calendarId : entry.calendarId;
+}
+
+/** The entries of one calendar — the scope every "is this name taken" check runs in. */
+export function calendarEntries(index: EventFileIndex, calendarId: string): EventFileIndex {
+  return Object.fromEntries(Object.entries(index).filter(([key, entry]) => entryCalendarId(key, entry) === calendarId));
+}
 
 /** Get filename from an index entry (handles the legacy string format). */
 export function getFilename(entry: string | EventFileEntry): string {
@@ -231,19 +246,24 @@ export function uniqueEventFilename(opts: {
  */
 export async function dropDuplicateFilenames(opts: {
   index: EventFileIndex;
-  calDir: string;
+  /** Calendar id → its folder; entries of a calendar with no folder are left alone. */
+  folders: ReadonlyMap<string, string>;
 }): Promise<Array<{ key: string; calendarId: string; filename: string }>> {
-  const { index, calDir } = opts;
-  const byFilename = new Map<string, string[]>();
+  const { index, folders } = opts;
+  // One file is one (folder, name): two calendars may hold the same basename.
+  const byFile = new Map<string, { calDir: string; filename: string; keys: string[] }>();
   for (const [key, entry] of Object.entries(index)) {
+    const calDir = folders.get(entryCalendarId(key, entry));
+    if (calDir === undefined) continue;
     const filename = getFilename(entry);
-    const keys = byFilename.get(filename);
-    if (keys) keys.push(key);
-    else byFilename.set(filename, [key]);
+    const file = path.join(calDir, filename);
+    const group = byFile.get(file);
+    if (group) group.keys.push(key);
+    else byFile.set(file, { calDir, filename, keys: [key] });
   }
 
   const dropped: Array<{ key: string; calendarId: string; filename: string }> = [];
-  for (const [filename, keys] of byFilename) {
+  for (const { calDir, filename, keys } of byFile.values()) {
     const first = keys[0];
     if (keys.length < 2 || first === undefined) continue;
     const keeper = await chooseKeeper({ index, calDir, filename, keys }) ?? first;

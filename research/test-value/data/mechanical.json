@@ -1,0 +1,512 @@
+{
+ "bbcbde1c4188741e0844ec151f48f4d6ed0a4d26": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 215,
+  "subject": "Purge the word \"doctest\" from live code; naming notes; skills review (purge-agent-doctest track 5)"
+ },
+ "49ecd0cfc37be0496dc5a9f6d7135a38ad7bf88c": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 985,
+  "subject": "Drop doctest leftovers: line markers, bbx-doctest- temp prefix, printed() (purge-agent-doctest track 2)"
+ },
+ "bdcb8b9ea9de81e9988835ccbb7dabf9c4b2878a": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 1116,
+  "subject": "Rename agent-doctest to tap-check (purge-agent-doctest tracks 1, 3, 4)"
+ },
+ "5360df84dd3762b381e8de3845219c75a5d8a84e": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 111,
+  "subject": "Strengthen test checks: webapp, bin, scan-uploader, workstreams-app, browse (retire-doctest track 5)"
+ },
+ "2b1e611854048d8ef1e8dd7c13e9cd3f1f658713": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 91,
+  "subject": "Strengthen test checks: dev, field-test, google, hub, publish, schemas, services, shared (retire-doctest track 5)"
+ },
+ "0385c716e24a3fa17755df2d00e2f80c698a51e2": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 84,
+  "subject": "Strengthen test checks: core procedure through triage, deploy, dev (retire-doctest track 5)"
+ },
+ "94badfee58c9604dc1f137bdde2235f6963f9d10": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 110,
+  "subject": "Strengthen test checks: core cards, chat, commands, docs, maps (retire-doctest track 5)"
+ },
+ "8e6e6a9ad5bda0d3c690da3200d952f09e5f7157": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 99,
+  "subject": "Strengthen test checks: cli, connectors, core agent and box (retire-doctest track 5)"
+ },
+ "508e06ffe027a45f6dacf18bf11094fa7b5ac8a6": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 115,
+  "subject": "Strengthen test checks: beebox/test/lib and frontend tests (retire-doctest track 5)"
+ },
+ "39c85fece40c89c8865d1cf437947770c72ed61d": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 520,
+  "subject": "Remove the doctest format and its tools (retire-doctest track 6)"
+ },
+ "d321dc022a9c4f73947f2bf3913eadc91744a07d": {
+  "why": "sweep subject",
+  "date": "2026-10-18",
+  "ntest": 4,
+  "subject": "Typecheck two tests through the TS 7 boundary; convert them (track 4)"
+ },
+ "8b0dbf0a1ab0ae5adaf573a277d45e834696702e": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 68,
+  "subject": "Convert the remaining hand-work doctests (track 4)"
+ },
+ "237583a61efd6a8929c3b6f79b244de8e132d5e6": {
+  "why": "sweep subject",
+  "date": "2026-10-18",
+  "ntest": 28,
+  "subject": "Convert the 14 renamed-fixture doctests to .test.ts (track 4)"
+ },
+ "5aed4c0caa7a5d017010d5a565fc9025d65aa86e": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 1525,
+  "subject": "Convert beebox/test doctests to .test.ts (track 4)"
+ },
+ "53a66f57dabd1f595a27f1c790b5f55ea60e0d17": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 389,
+  "subject": "Convert beebox/src/frontend doctests to .test.ts (track 4)"
+ },
+ "06e15925c2316d5a490422daedaabd52d6aad345": {
+  "why": "sweep subject",
+  "date": "2026-10-18",
+  "ntest": 0,
+  "subject": "Point browse and workstreams-app tap at the converted .test.ts files"
+ },
+ "811da4a204eab3f6b8455c8702c35c057640fc1e": {
+  "why": ">50 test files",
+  "date": "2026-10-18",
+  "ntest": 170,
+  "subject": "Convert scan-uploader, agent-doctest, workstreams-app, and bin doctests (track 4)"
+ },
+ "245b2d098ff8108a580f537b3856cc55a1ec37f1": {
+  "why": "sweep subject",
+  "date": "2026-10-18",
+  "ntest": 12,
+  "subject": "Convert browse/ doctests to .test.ts (track 4)"
+ },
+ "f608ac9be8b49b5b301cd1b2832aab56c1cb8e08": {
+  "why": ">50 test files",
+  "date": "2026-10-16",
+  "ntest": 72,
+  "subject": "Fix the three doctest-typecheck follow-up issues (first pass)"
+ },
+ "326c07df318f8333b8bb32068a9c09ecd37ed4cb": {
+  "why": ">50 test files",
+  "date": "2026-10-16",
+  "ntest": 136,
+  "subject": "Retire the memo card type"
+ },
+ "e99e75a249b301841a0e8d527751dce9208df3fb": {
+  "why": "sweep subject",
+  "date": "2026-10-16",
+  "ntest": 43,
+  "subject": "Typecheck doctests: frontend lib, machines, pages, input"
+ },
+ "06dc527708cf1688b37374baa966986d965c6ccf": {
+  "why": "sweep subject",
+  "date": "2026-10-16",
+  "ntest": 45,
+  "subject": "Typecheck doctests: beebox lib, publications, publish, shared, schemas, cards"
+ },
+ "3f0c5be552b152a1d8914c52809e1e3bdeec2582": {
+  "why": ">50 test files",
+  "date": "2026-10-16",
+  "ntest": 66,
+  "subject": "Typecheck doctests: beebox test/webapp routes, views, and server"
+ },
+ "7ba8671fab2d65f1f115f7bed616c48591b1b29f": {
+  "why": "sweep subject",
+  "date": "2026-10-16",
+  "ntest": 34,
+  "subject": "Typecheck doctests: hub, services, connectors, google"
+ },
+ "95448d569b84fcfc4e496e8c9e59902e81755348": {
+  "why": "sweep subject",
+  "date": "2026-10-16",
+  "ntest": 45,
+  "subject": "Typecheck doctests: core triage, voice, schedule, notification, and more"
+ },
+ "8a34c0aeaa738862fcb111db6c5a3272e75b4abc": {
+  "why": ">50 test files",
+  "date": "2026-10-16",
+  "ntest": 54,
+  "subject": "Typecheck doctests: core chat, chat-search, collection, box, agent"
+ },
+ "9916b0ea365e260f16c9f7b50ffad1950bbde2a1": {
+  "why": ">50 test files",
+  "date": "2026-10-16",
+  "ntest": 61,
+  "subject": "Typecheck doctests: beebox test/webapp/trpc"
+ },
+ "0b2026b685897bbb86e6e8437c83e4277de60559": {
+  "why": "sweep subject",
+  "date": "2026-10-16",
+  "ntest": 41,
+  "subject": "Typecheck doctests: core procedure, commands, and small core dirs"
+ },
+ "8b96727e8b5514fe6dd37898a76842023107138b": {
+  "why": "sweep subject",
+  "date": "2026-10-16",
+  "ntest": 42,
+  "subject": "Typecheck doctests: beebox test/core top level"
+ },
+ "28bfdd47d2f520e0749a5ff79116c05e43182232": {
+  "why": "sweep subject",
+  "date": "2026-10-16",
+  "ntest": 35,
+  "subject": "Typecheck doctests: beebox test/cli/commands"
+ },
+ "0bcfd233c2fb8fb7e04e7a4ecfa47ac6c2f1ffb8": {
+  "why": ">50 test files",
+  "date": "2026-10-16",
+  "ntest": 72,
+  "subject": "Typecheck doctests: core capture/scan and frontend components"
+ },
+ "392c81001e3e046cc162424018e4b810aed37314": {
+  "why": ">50 test files",
+  "date": "2026-10-16",
+  "ntest": 57,
+  "subject": "Typecheck doctests: workstreams-app, bin, agent-doctest, and small beebox dirs"
+ },
+ "d6d046edb1f2af7ab7f2a28717f51bdc441aee0c": {
+  "why": "sweep subject",
+  "date": "2026-10-09",
+  "ntest": 28,
+  "subject": "Retire stale CLAUDE.md mentions; naming note on historical documents"
+ },
+ "5d476d983eb0baef10ee0f554ebfe8f538c932bd": {
+  "why": "sweep subject",
+  "date": "2026-10-09",
+  "ntest": 25,
+  "subject": "Rename dev-repo CLAUDE.md files to AGENTS.md; drop the Codex instruction mirror"
+ },
+ "267d11d1ae18fc9f296901bd0ff3a7a318aa2cf0": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 0,
+  "subject": "Test cleanup issue: record round 3; only the recurring sweep remains"
+ },
+ "cbc9b1b2e839a0a0667b7b5bd516e82e32900257": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 4,
+  "subject": "Test cleanup: restore four checks round-3 review showed were load-bearing"
+ },
+ "0c6df3dd6f5369e089501ed7aa0389a24433aa85": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 4,
+  "subject": "Test cleanup: fold one-gate auth examples into per-file tables"
+ },
+ "e69365cdbc32c08c13f66f6fd347791e1db55c51": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 9,
+  "subject": "Test cleanup: trim zod shape probes"
+ },
+ "9aaf7df0f9c41c7b1840a6506a60bf12654d5ea1": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 6,
+  "subject": "Test cleanup: assert the claim, not the whole text"
+ },
+ "633157e958aa4c1b8ea2e1f4e151ce6a4bc5c177": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 8,
+  "subject": "Test cleanup: fix tests that passed with a no-op; test the per-span review give-up"
+ },
+ "001b12fbf66033823d10107d83a8fe52f3fa9862": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 0,
+  "subject": "Test cleanup issue: record round 2 status"
+ },
+ "338544fd99c947713f4d25ef01064d7aa57bc39e": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 38,
+  "subject": "Test cleanup: drop static markup/prose checks; unpin model ids"
+ },
+ "ccbe5dde60db71f3763b0b52081bfae0ba1c56c8": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 35,
+  "subject": "Test cleanup: consolidate repeated setup in the largest doctests"
+ },
+ "a056a2c39b0490facf93ad51fcc4f2a5e0a09c98": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 13,
+  "subject": "Test cleanup: drop tests of in-memory fakes"
+ },
+ "bb9c22df77d5a0e9760195a062fffc7ad433b708": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 1,
+  "subject": "Test cleanup: restore bulk-upload sweep batch identity checks"
+ },
+ "b005e362b8cfbedaf689b8225c450628601d5e40": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 0,
+  "subject": "Test cleanup issue: record further-trim ideas from the sweep"
+ },
+ "9dc16a125e4a67034f13e6619f86b8c7e1c8d85d": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 4,
+  "subject": "Test cleanup: restore four examples cross-model review showed were distinct"
+ },
+ "ba8abebe1cab65fb92902717bdf9bf810aeb3b64": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 42,
+  "subject": "Test cleanup: lib, shared, schema, publish and other doctests"
+ },
+ "9435acb77426034b515ada2212c3ecd423e0315a": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 16,
+  "subject": "Test cleanup: webapp doctests"
+ },
+ "3574d9a322cbff9aa90860283ded53caed82d48f": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 15,
+  "subject": "Test cleanup: connector, service and hub doctests"
+ },
+ "59942b7377ab75b174284c00e098644fffabba5d": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 29,
+  "subject": "Test cleanup: core doctests, second half"
+ },
+ "15de04fbcb728171ec9965e692b8d4f6aebe24df": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 42,
+  "subject": "Test cleanup: core doctests, first half"
+ },
+ "86114081a3f46d9b756621e333a1f5d78447d8cd": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 16,
+  "subject": "Test cleanup: CLI doctests"
+ },
+ "781a77d483c34a700438c90bf6e22cd44d1578c9": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 10,
+  "subject": "Test cleanup: core chat doctests"
+ },
+ "e2574c545d86622a2358dddb019d58a4c02da6ad": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 16,
+  "subject": "Test cleanup batch 3: dev tooling and scripts doctests"
+ },
+ "6cb86ff3976a916a4dc153d020a548849e621bb2": {
+  "why": ">50 test files",
+  "date": "2026-10-08",
+  "ntest": 62,
+  "subject": "Test cleanup batch 2: frontend doctests"
+ },
+ "ddff00d5b4d1c10a5f5e8a63757c71d6322b3326": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 16,
+  "subject": "Test cleanup batch 1: trim duplicate and restating examples (sampled files)"
+ },
+ "0ccb8497e5ec59d49183d97b5c84b8742d68a444": {
+  "why": "sweep subject",
+  "date": "2026-10-08",
+  "ntest": 0,
+  "subject": "Test cleanup: agreed removal criteria; guidance against duplicate examples"
+ },
+ "8e8099de7946ede3bb975e3243f70c0c49e8a9ac": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 0,
+  "subject": "Layout moves: annotate old-path mentions, round 2 (cross-package + directories)"
+ },
+ "29532938ce4fef28dbaa5a907c2f95a0eac0c3ea": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 0,
+  "subject": "Layout moves: annotate old-path mentions with their new location"
+ },
+ "881eb9dab4264cc54be33014be7b21d23ec00889": {
+  "why": ">50 test files",
+  "date": "2026-09-27",
+  "ntest": 89,
+  "subject": "Rewrite pre-move path mentions across the repo (mentions-from-git)"
+ },
+ "ad6ec4f7ef81a420775c7583b923ebf9d76a3542": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 13,
+  "subject": "Layout moves: test-naming and unit-directory findings"
+ },
+ "b70dedfa81d0809bf9bf93316da9061a0d6a3376": {
+  "why": ">50 test files",
+  "date": "2026-09-27",
+  "ntest": 150,
+  "subject": "Layout moves: webapp"
+ },
+ "6a0a14f4f0f47c5516f947de3935eccc8c00c311": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 0,
+  "subject": "Layout moves: cli (open-issue path mentions)"
+ },
+ "3b5d64ca08b5cc25bc7c89388b86c16027622510": {
+  "why": ">50 test files",
+  "date": "2026-09-27",
+  "ntest": 64,
+  "subject": "Layout moves: cli (source moves)"
+ },
+ "65e6a5d17e4956aa7b89e8c91f70b8d0726fc494": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 47,
+  "subject": "Layout moves: core (cross-area import fixups)"
+ },
+ "2558bb3c08beb24ffc498898cc296c6d54f4b314": {
+  "why": ">50 test files",
+  "date": "2026-09-27",
+  "ntest": 214,
+  "subject": "Layout moves: core"
+ },
+ "3f19358400aadf09e72e33c4514d076ce746cc1b": {
+  "why": ">50 test files",
+  "date": "2026-09-27",
+  "ntest": 144,
+  "subject": "Layout moves: integrations"
+ },
+ "69414cfbec9be1042e128eb3dd7b5956c9849a9d": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 3,
+  "subject": "Layout moves: fix stale scripts/ paths surfaced by test:changed"
+ },
+ "604b058cda331ad82d1be8b23b893694b5db87fb": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 0,
+  "subject": "Layout moves: fix user-stories docs and .gitignore for the three-way split"
+ },
+ "ccf9bd5e2367b7ad6fe7795f4944bc93b115028c": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 4,
+  "subject": "Layout moves: fix import depth for relocated tests"
+ },
+ "7a097d90d516153e6dfdee9080b14cf4a117495f": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 0,
+  "subject": "Layout moves: fix layout-check script path after check/cli move"
+ },
+ "cfb4bc2f8954368f69e8a1fdbd0c4039ceaeb59e": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 2,
+  "subject": "Layout moves: image schema becomes a directory member"
+ },
+ "f672bf8ae6f657e492f484035a27b8fa0c64e164": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 6,
+  "subject": "Layout moves: extract shared guide/question enums out of the schema set"
+ },
+ "1985a36d04128dc68efa8634c3e83a20037781fb": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 0,
+  "subject": "Layout moves: fix runtime path computations broken by scripts/ and user-stories/ fold"
+ },
+ "3462d6f8842dc5819658eb619d08fb3b870c0868": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 0,
+  "subject": "Layout moves: fix migrations.ts script paths after scripts/ fold"
+ },
+ "079410e97e9b3c5670e96052dbd43e3ae8dfeefd": {
+  "why": ">50 test files",
+  "date": "2026-09-27",
+  "ntest": 162,
+  "subject": "Layout moves: foundation (code changes, registries, cleanup)"
+ },
+ "14d93deb00731768e86c2468a5a793f1b43fb0ff": {
+  "why": "sweep subject",
+  "date": "2026-09-27",
+  "ntest": 2,
+  "subject": "Layout moves: repair pub-worker entry path and renderer test; plan text"
+ },
+ "efb613eb9515daddbe0ad4b0ee379557be293d68": {
+  "why": ">50 test files",
+  "date": "2026-09-27",
+  "ntest": 171,
+  "subject": "Layout moves: frontend"
+ },
+ "ceaf0cd5791534ffb60a7e4c9a81f8f5923c89a4": {
+  "why": ">50 test files",
+  "date": "2026-09-27",
+  "ntest": 102,
+  "subject": "Layout moves: packages"
+ },
+ "b51f0675a496d8c8a6c878cdc18f678e2058eba2": {
+  "why": ">50 test files",
+  "date": "2026-09-04",
+  "ntest": 252,
+  "subject": "One-root consumer sweep: retire packageRoot, re-point every v2 path (Track A2)"
+ },
+ "dab8348112af602951639dcc6c0d4df01e4c678c": {
+  "why": ">50 test files",
+  "date": "2026-08-30",
+  "ntest": 733,
+  "subject": "feat!: the 2026-08-30 product rename"
+ },
+ "daf89db2c27e542f0507bfbdbd33462055bead32": {
+  "why": ">50 test files",
+  "date": "2026-06-21",
+  "ntest": 144,
+  "subject": "test(doctest): group doctests into subdirs mirroring src/"
+ },
+ "d7a1251dd9494788a5b4547fd7e49a11620c100e": {
+  "why": ">50 test files",
+  "date": "2026-06-21",
+  "ntest": 147,
+  "subject": "test(doctest): declare `ts` on every doctest fence"
+ },
+ "c06abc116bd3b934336a1a4665b2b71651bb33fd": {
+  "why": "sweep subject",
+  "date": "2026-03-03",
+  "ntest": 13,
+  "subject": "Convert traditional tests to doctests with cleanup block support"
+ }
+}

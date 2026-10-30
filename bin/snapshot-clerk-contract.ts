@@ -32,6 +32,7 @@ import {
   sendInput,
   sendOutput,
 } from "../beebox/src/webapp/trpc/clerk-contract.js";
+import { isRecord } from "../beebox/src/shared/is-record.js";
 
 /**
  * A construct outside the printer's whitelist — fail generation loudly. Kept as
@@ -106,13 +107,9 @@ const CONTRACT: { schema: z.ZodType; io: "input" | "output"; name: string; doc: 
 
 const INDENT = "  ";
 
-function isObj(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 /** Render one JSON-Schema node to a TS type, throwing outside the whitelist. */
 function printType(node: unknown, depth: number): string {
-  if (!isObj(node)) throw new NotASchemaObjectError(node);
+  if (!isRecord(node)) throw new NotASchemaObjectError(node);
 
   // Nullable and any other union arrive as anyOf — render each member.
   const anyOf = node["anyOf"];
@@ -154,7 +151,7 @@ function propertyKey(key: string): string {
 /** Render an object node to a `{ … }` type literal. */
 function printObject(node: Record<string, unknown>, depth: number): string {
   const properties = node["properties"];
-  if (!isObj(properties)) throw new MissingPropertiesMapError();
+  if (!isRecord(properties)) throw new MissingPropertiesMapError();
   // Reject open objects (`.catchall`/`.passthrough` → an additionalProperties
   // schema). Absent (input side) or `false` (output-side strip) is the only
   // shape the whitelist supports — anything else would need an index signature

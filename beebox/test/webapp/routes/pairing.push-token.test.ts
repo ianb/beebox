@@ -25,6 +25,8 @@ const Fixture = z.object({ input: z.record(z.string(), z.unknown()), expected: z
 const fixture = (name: string) => Fixture.parse(JSON.parse(readFileSync(join(FIXTURES, name), "utf-8")));
 
 const ctx = await makeTestServer({ openAccess: false });
+// A paired phone works only while its pairer can open the box.
+await ctx.seed("_config/box.json", JSON.stringify({ allowedEmails: ["owner@example.com"] }));
 
 async function pair(label: string) {
   const ticket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "owner@example.com" });

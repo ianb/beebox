@@ -78,7 +78,7 @@ The agent's context is built in layers, each corresponding to a knowledge level:
 ## Running it
 
 ```bash
-npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or-id>] [--engine claude|codex]
+npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or-id>] [--engine claude|codex|pi]
 npx tsx src/dev/knowledge-audit.ts list
 ```
 
@@ -115,6 +115,16 @@ from the validated live app-server event stream; private rollout files are not
 parsed. Codex does not expose Claude-equivalent per-turn context snapshots on
 that surface, so Codex reports deliberately omit the context baseline rather
 than presenting incomparable usage as parity.
+
+A pi audit reads the pi session file under `.beebox/pi/sessions/` after the
+run (`src/dev/lib/test-runner/runner/pi-audit.ts`). pi's `read` counts as a
+file read, `ls` as a search, and `bash` as a command, classified as for Codex.
+The context baseline comes from the usage on each assistant message. pi needs
+an OpenRouter key granted to the box. To audit a copy of a box that has no
+grant, point `BBX_SECRETS_FILE` at a scratch store that grants the copy the
+placeholder `pi-dev-placeholder` as `openrouter`, and pass `--pi-dev-key`. The
+runner then gives pi `BBX_OPENROUTER_API_KEY` (environment or `beebox/.env`)
+in memory, in place of the placeholder (`src/dev/lib/openrouter-dev-key.ts`).
 
 ## Dev-guidance audits
 
@@ -160,15 +170,22 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `correct_contains` / `correct_contains_any` — strings that must appear in the response.
   Keep a literal only for a term the guide itself teaches; grade a free-text
   answer with `correct_matches`, and a box audit's card write with `cards_contain`.
-- `correct_matches` — case-insensitive regexes that must match the response; use
-  when the required relationship has legitimate wording variation that a list
-  of exact substrings would overfit.
+- `correct_matches` — JavaScript regexes, run with the `i` flag, that must match
+  the response (an inline flag such as `(?i)` is a syntax error); use when the
+  required relationship has legitimate wording variation that a list of exact
+  substrings would overfit. Explain-only answers often describe a command
+  without naming it.
 - `cards_contain` — strings that must appear in card files created by the agent.
 - `cards_not_under` — box-relative directory prefixes (`_tmp/`) no card the agent created or modified may sit under.
 - `should_read` — files the agent should read before answering.
 - `should_read_any` — alternative files, at least one of which the agent should
   read. Use this when generated guidance and its installed skill are equivalent
   navigation outcomes.
+- `read_before_edit` — files the agent must read before its first edit or
+  write. Only pi's reader records edits, so on Claude and Codex the check
+  fails. pi counts a nested `AGENTS.md` that a file tool delivered as a read.
+  A read counts only from an earlier message than the edit (pi runs one
+  message's tool calls in parallel) and only when it did not fail.
 - `should_search` — `web`, `box`, or `any`: the agent must look something up
   before answering. `web` is a WebSearch or WebFetch (a Codex provider search
   counts), `box` a `bbx search` command, `any` either. Use it for the laws
@@ -179,8 +196,10 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `additionalDirectories`, mirroring how a chat session bound to a landmark is spawned. Use to audit that the subdirectory's `AGENTS.md` (and its `@MAP.md` import) actually load into the agent's context at session start.
 - `fixture` — map of box-relative path → file content, written before the test and removed afterward. Used to stage an `AGENTS.md` (or any other file) without checking it into the box. Combined with `context_dir`, this lets a single audit set up its own landmark-style scratch directory.
 - `plugins` — plugin names the box must have active for this audit. Before docs generation the runner adds them to `_config/box.json` and writes each missing schema stub; after the audit it resets the box. A fixture cannot do this, because fixtures are written after docs generation. View stubs are not written, so a plugin's card docs and skill load but its views do not render. Mechanics: `src/dev/lib/box-audits/plugins.ts`.
-- `chat_mode` — when true, the agent runs with `CHAT_SYSTEM_PROMPT` instead of the default working-directory prompt. Use for tests that audit chat-mode knowledge — the agent in a chat session sees the chat prompt's tag descriptions (`<speech>`, `<chat-app>`, `<ack>`, `<callout>`, `<schedule>`, etc.), so a non-chat-mode audit can't legitimately expect direct knowledge of those. If the test prompt declares `narration="on"` via a `<chat-app>` snapshot, `NARRATION_OVERLAY` is also appended — mirroring what `ChatSession.resolveSystemPrompt` does when narration is enabled on the session.
+- `final_reply` — when true, the text checks run on the text the chat shows: the reply after the last tool call, earlier text with `<speech>`, a folded text's callouts, and the last earlier line (text or progress update) when the reply is only acks. The chat folds other text written before a later tool call into the activity row. Use it for audits about how the reply reads.
+- `chat_mode` — when true, the agent runs with `chatSystemPrompt()` instead of the default working-directory prompt. Use for tests that audit chat-mode knowledge — the agent in a chat session sees the chat prompt's tag descriptions (`<speech>`, `<chat-app>`, `<ack>`, `<callout>`, `<schedule>`, etc.), so a non-chat-mode audit can't legitimately expect direct knowledge of those. If the test prompt declares `narration="on"` via a `<chat-app>` snapshot, `NARRATION_OVERLAY` is also appended — mirroring what `ChatSession.resolveSystemPrompt` does when narration is enabled on the session.
 - `response_not_contains` — list of substrings that must NOT appear in the agent's response. Useful for testing prompt overrides: e.g. the narration overlay tells the agent not to emit `<speech>` even when the user spoke; the audit can assert this directly.
+- `response_not_matches` — regexes, as in `correct_matches`, that must NOT match the response. Match the command form (`bbx answer <`), not a bare name, or a correct negation ("No `bbx answer`") fails.
 
 Example:
 

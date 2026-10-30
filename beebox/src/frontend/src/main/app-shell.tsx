@@ -39,6 +39,7 @@ import { BoxSlugProvider } from "../lib/box-slug";
 import { QuickSearchOverlay } from "../components/search/QuickSearchOverlay";
 import { NotificationBanner } from "../components/notifications/NotificationBanner";
 import { usePresenceHeartbeat } from "../hooks/usePresenceHeartbeat";
+import { useBoxClockSync } from "../hooks/useBoxClockSync";
 import { AgentReadinessGuard } from "../components/agents/AgentReadiness";
 import { useFirstLoadMark } from "../lib/first-load-marks";
 import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
@@ -68,7 +69,7 @@ startVoiceStagingDrainer();
  */
 export function RootLayout() {
   // Every page gets the route's slug as context, so `Markdown` reads it
-  // without depending on the router (it also renders in `bbx view test`).
+  // without depending on the router (it also renders in `bbx view check`).
   const { boxSlug } = useParams({ strict: false });
   return (
     <BoxSlugProvider boxSlug={boxSlug}>
@@ -116,6 +117,7 @@ export function ProductLayout() {
   usePresenceHeartbeat();
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
+  useBoxClockSync(boxSlug);
   const standalonePage = useStandalonePage();
   const handleToggleSourceView = sourceView.toggle;
   const handleCloseSourceView = sourceView.toggle;
@@ -158,7 +160,7 @@ function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: R
 function WorkspaceShellProvider({ children }: { children: ReactNode }) {
   const conversation = useBoxConversation();
   invariant(conversation, "WorkspaceShellProvider requires BoxConversationProvider");
-  return <WorkspaceProvider target={conversation.rendered?.target}>{children}</WorkspaceProvider>;
+  return <WorkspaceProvider target={conversation.rendered?.target} unstarted={conversation.unstarted}>{children}</WorkspaceProvider>;
 }
 
 /**

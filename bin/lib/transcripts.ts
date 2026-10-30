@@ -18,15 +18,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
+import { isRecord } from "../../beebox/src/shared/is-record.ts";
+import { stringOrNull } from "../../beebox/src/shared/optional-string.ts";
 
 export type Json = Record<string, unknown>;
 
-export function isRecord(value: unknown): value is Json {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 export function str(value: unknown): string {
-  return typeof value === "string" ? value : "";
+  return stringOrNull(value) ?? "";
 }
 
 /** True when `cwd` is one of `roots` or below one. */

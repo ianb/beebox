@@ -1,5 +1,6 @@
 /** Small per-tab metadata only. Transcript content stays in chat.history. */
 import { z } from "zod";
+import { readSessionJson, writeSessionJson } from "../../../../lib/session-json";
 import { EMPTY_ATTENTION, type AmbientAttention } from "../projection";
 
 // Keep projection.ts dependency-free for its pure test; this annotation
@@ -8,21 +9,12 @@ const attentionSchema: z.ZodType<AmbientAttention> = z.object({
   initialized: z.boolean(), lastCompletion: z.string().nullable().default(null), lastReply: z.string().nullable(),
   attention: z.boolean(), dismissedReply: z.string().nullable(),
 });
+const WHAT = "Ambient reply attention";
 
 export function readAttention(key: string): AmbientAttention {
-  try {
-    const parsed = attentionSchema.safeParse(JSON.parse(sessionStorage.getItem(key) ?? "null"));
-    return parsed.success ? parsed.data : EMPTY_ATTENTION;
-  } catch (error) {
-    console.warn("Ambient reply attention could not be loaded", error);
-    return EMPTY_ATTENTION;
-  }
+  return readSessionJson({ key, schema: attentionSchema, fallback: EMPTY_ATTENTION, what: WHAT });
 }
 
 export function writeAttention(key: string, state: AmbientAttention): void {
-  try {
-    sessionStorage.setItem(key, JSON.stringify(state));
-  } catch (error) {
-    console.warn("Ambient reply attention could not be saved for reload", error);
-  }
+  writeSessionJson({ key, value: state, what: WHAT });
 }

@@ -55,10 +55,46 @@ function SegmentDivider() {
 // in the shared chip pill switched to `ring-inset`.
 const SEGMENT = "flex items-center gap-1 px-1 sm:px-1.5 py-0.5 hover:bg-white/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40";
 
+/**
+ * The questions count: in a chat it shows and hides the question beside the
+ * chat, elsewhere it links to the Questions page. One control in two modes, so
+ * it carries one id.
+ */
+function QuestionsSegment({ id, count, toggle, path }: {
+  id: string;
+  count: number;
+  toggle: { label: string; onToggle: () => void } | undefined;
+  path: string;
+}) {
+  if (toggle !== undefined) {
+    const handleToggle = toggle.onToggle;
+    const label = `${toggle.label} (${count} waiting)`;
+    return (
+      <button type="button" id={id} onClick={handleToggle} className={SEGMENT} title={label} aria-label={label}>
+        <QuestionIcon />
+        {count}
+      </button>
+    );
+  }
+  const label = `${count} question${count !== 1 ? "s" : ""} waiting for you`;
+  return (
+    <Link id={id} to={href(path)} className={SEGMENT} title={label} aria-label={label}>
+      <QuestionIcon />
+      {count}
+    </Link>
+  );
+}
+
 /** The badges as drawn, from counts; the theme studio renders them with fixed ones. */
-export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, escalatedTodos, errorCount, onOpenErrors }: {
+export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, escalatedTodos, errorCount, onOpenErrors, questionToggle }: {
   base: string;
   pendingQuestions: number;
+  /**
+   * In a chat, the questions segment shows and hides the question beside the
+   * chat (docs/implemented-plans/questions-later-and-figure-it-out.md, Track B); absent, it
+   * links to the Questions page.
+   */
+  questionToggle?: { label: string; onToggle: () => void } | undefined;
   onPlateTodos: number;
   /** Of `onPlateTodos`, how many are past due — draws a small dot on the plate segment. */
   escalatedTodos: number;
@@ -70,17 +106,13 @@ export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, esca
 
   const segments = [
     pendingQuestions > 0 ? (
-      <Link
+      <QuestionsSegment
         key="questions"
         id="bbx-nav-questions"
-        to={href(`${base}/questions`)}
-        className={SEGMENT}
-        title={`${pendingQuestions} question${pendingQuestions !== 1 ? "s" : ""} waiting for you`}
-        aria-label={`${pendingQuestions} question${pendingQuestions !== 1 ? "s" : ""} waiting for you`}
-      >
-        <QuestionIcon />
-        {pendingQuestions}
-      </Link>
+        count={pendingQuestions}
+        toggle={questionToggle}
+        path={`${base}/questions`}
+      />
     ) : null,
     onPlateTodos > 0 ? (
       <Link

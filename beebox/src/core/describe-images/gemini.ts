@@ -8,6 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
+import { generateContent, type GeminiRequestPart } from "../../services/gemini-rest.js";
 import { getMimeType, GeminiEmptyResponseError, parseGeminiJsonArray } from "./helpers.js";
 import { readScanVisionImage } from "./image-input.js";
 
@@ -219,10 +220,7 @@ export async function analyzeScanBatchWithGemini(
     boxholderContext,
   }: { imagePaths: string[]; thinkingBudget?: number; boxholderContext?: string | null }
 ): Promise<{ analyses: RawScanAnalysis[]; usage: BatchUsage | null }> {
-  const { GoogleGenAI } = await import("@google/genai");
-  const ai = new GoogleGenAI({ apiKey });
-
-  const imageParts = [];
+  const imageParts: GeminiRequestPart[] = [];
   for (const imgPath of imagePaths) {
     const imgData = await readGeminiScanImage(imgPath);
     imageParts.push({
@@ -234,10 +232,11 @@ export async function analyzeScanBatchWithGemini(
   }
 
   const prompt = buildScanPrompt(boxholderContext ?? null);
-  const response = await ai.models.generateContent({
+  const response = await generateContent({
+    apiKey,
     model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }, ...imageParts] }],
-    config: {
+    parts: [{ text: prompt }, ...imageParts],
+    generationConfig: {
       thinkingConfig: { thinkingBudget: thinkingBudget ?? 2048 },
       responseMimeType: "application/json",
       responseSchema: SCAN_RESPONSE_SCHEMA,

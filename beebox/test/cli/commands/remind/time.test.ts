@@ -47,7 +47,7 @@ void test("a wall time the clocks skip or repeat is refused", async (t) => {
 });
 
 void test("a box with no timezone refuses an offset-less --at and echoes in UTC", async (t) => {
-  t.check(at("2026-11-18T09:00", null), "This box has no timezone set, so --at \"2026-11-18T09:00\" is ambiguous; add an offset (2026-11-18T09:00Z for UTC, or 2026-11-18T09:00-06:00)");
+  t.check(at("2026-11-18T09:00", null), "This box has no timezone set, so --at \"2026-11-18T09:00\" is ambiguous; add the person's own UTC offset (Z for UTC, or ±HH:MM after the time), or set \"timezone\" in _config/box.json");
   t.check(at("2026-11-18T09:00Z", null), { at: "2026-11-18T09:00:00Z", echo: "Wed 2026-11-18 09:00 UTC" });
 });
 
@@ -63,8 +63,8 @@ void test("malformed, impossible, past, and missing times are refused", async (t
       resolveReminderTime({ in: undefined, at: undefined, now, zone: CHICAGO }),
     ],
     [
-      "--at \"next tuesday\" is not a datetime; use YYYY-MM-DDTHH:MM in the box's timezone, or add an offset (2026-11-18T09:00-06:00)",
-      "--at \"2026-02-30T09:00\" is not a real date and time; use YYYY-MM-DDTHH:MM in the box's timezone, or add an offset (2026-11-18T09:00-06:00)",
+      "--at \"next tuesday\" is not a datetime; use YYYY-MM-DDTHH:MM in the box's timezone, or add the person's UTC offset (Z for UTC, or ±HH:MM after the time)",
+      "--at \"2026-02-30T09:00\" is not a real date and time; use YYYY-MM-DDTHH:MM in the box's timezone, or add the person's UTC offset (Z for UTC, or ±HH:MM after the time)",
       "Sun 2026-10-18 08:00 CDT is not in the future (now Sun 2026-10-18 09:00 CDT); pick a later time",
       { ok: false, error: "--in \"soon\" is not a duration; use a number and a unit s, m, h, d, or w (20m, 30d)" },
       { ok: false, error: "Sun 2026-10-18 09:00 CDT is not in the future (now Sun 2026-10-18 09:00 CDT); pick a later time" },
@@ -82,7 +82,7 @@ void test("the clock and date helpers use the box zone", async (t) => {
 // `Date.UTC(2026, 12, 18)` is 2027-01-18, which is not what was asked for.
 void test("a month or offset out of range is refused", async (t) => {
   t.check([at("2026-13-18T09:00Z", CHICAGO), at("2026-11-18T09:00+15:00", CHICAGO)], [
-    "--at \"2026-13-18T09:00Z\" is not a real date and time; use YYYY-MM-DDTHH:MM in the box's timezone, or add an offset (2026-11-18T09:00-06:00)",
-    "--at \"2026-11-18T09:00+15:00\" has an offset past ±14:00; use YYYY-MM-DDTHH:MM in the box's timezone, or add an offset (2026-11-18T09:00-06:00)",
+    "--at \"2026-13-18T09:00Z\" is not a real date and time; use YYYY-MM-DDTHH:MM in the box's timezone, or add the person's UTC offset (Z for UTC, or ±HH:MM after the time)",
+    "--at \"2026-11-18T09:00+15:00\" has an offset past ±14:00; use YYYY-MM-DDTHH:MM in the box's timezone, or add the person's UTC offset (Z for UTC, or ±HH:MM after the time)",
   ]);
 });

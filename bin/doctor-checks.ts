@@ -84,6 +84,7 @@ interface BinaryCheckSpec {
 const EXTERNAL_TOOL_CHECKS: BinaryCheckSpec[] = [
   { displayName: "pandoc", binary: "pandoc", versionArgs: ["--version"], remedy: "install pandoc (brew install pandoc / apt-get install pandoc)" },
   { displayName: "magick", binary: "magick", versionArgs: ["-version"], remedy: "install ImageMagick (brew install imagemagick / apt-get install imagemagick)" },
+  { displayName: "shellcheck", binary: "shellcheck", versionArgs: ["--version"], remedy: "install shellcheck (brew install shellcheck / apt-get install shellcheck)" },
   { displayName: "pdftotext", binary: "pdftotext", versionArgs: ["-v"], remedy: "install poppler-utils (brew install poppler / apt-get install poppler-utils)" },
 ];
 
@@ -146,21 +147,6 @@ export async function checkClaudeAuth(deps: Pick<DoctorDeps, "run">): Promise<Ch
     return pass(name, email !== undefined ? `logged in as ${email}` : "logged in");
   }
   return fail(name, { detail: "not logged in", remedy: "run `claude auth login`" });
-}
-
-export async function checkNativeSqlite(deps: Pick<DoctorDeps, "loadBetterSqlite3">): Promise<CheckResult> {
-  const name = "Native modules (better-sqlite3)";
-  try {
-    const detail = await deps.loadBetterSqlite3();
-    return pass(name, detail);
-  } catch (e) {
-    const firstLine = (e instanceof Error ? e.message : String(e)).split("\n")[0] ?? "";
-    return fail(name, {
-      detail: `better-sqlite3 failed to load: ${firstLine}`,
-      remedy:
-        "the compiled binary doesn't match this Node (ABI drift) — run `pnpm install` (or `pnpm rebuild better-sqlite3`) under the pinned Node version",
-    });
-  }
 }
 
 export function checkSdkBinary(deps: Pick<DoctorDeps, "resolveSdkBinary">): CheckResult {

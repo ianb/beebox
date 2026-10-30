@@ -15,15 +15,10 @@
  * {@link loadSessionHistory}.
  */
 
-import { resolveSessionLogPath } from "./history.js";
-import {
-  parseSessionLog,
-  type SessionEntry,
-  type SessionLogSlice,
-} from "../../../cli/lib/session.js";
-import { errnoCode } from "../../../shared/error-guards.js";
+import type { SessionEntry, SessionLogSlice } from "../../../cli/lib/session.js";
 import { resolveRecordedChatEngine } from "./engine.js";
-import { readCodexSessionHistoryIfPresent } from "./codex-transcript/core.js";
+import { SESSION_STORES } from "./native-store.js";
+import type { AgentEngine } from "../../../shared/agent-models.js";
 
 // Re-exported so callers of the loader name their slice from the same module.
 export type { SessionLogSlice } from "../../../cli/lib/session.js";
@@ -50,11 +45,11 @@ export interface SessionHistoryResult {
 }
 
 /**
- * Reads currently in flight, keyed by the file and slice they are reading.
+ * Reads currently in flight, keyed by the store, session and slice they read.
  *
- * The key is `(logPath, slice)` and not the session id: a page-mode request
- * and the chat page's tail request read the same file into *different* answers,
- * so sharing across slices would hand a caller someone else's window.
+ * The key includes the slice: a page-mode request and the chat page's tail
+ * request read the same transcript into *different* answers, so sharing across
+ * slices would hand a caller someone else's window.
  *
  * Entries are removed as soon as their read settles (success or failure), so
  * this is a coalescing window and NOT a cache: a caller arriving after the
@@ -89,27 +84,22 @@ function sliceKey(slice: SessionLogSlice): string {
 
 /** The actual read. One of these runs per in-flight key. */
 async function readHistory(args: {
+  boxRoot: string;
+  engine: AgentEngine;
   sessionId: string;
-  logPath: string;
   slice: SessionLogSlice;
 }): Promise<SessionHistoryResult> {
-  const { sessionId, logPath, slice } = args;
+  const { boxRoot, engine, sessionId, slice } = args;
   underlyingReads += 1;
-  try {
-    const { entries, total } = await parseSessionLog({ logPath, slice });
-    // Shared between coalesced callers — frozen so a future caller that starts
-    // mutating the window fails loudly here instead of corrupting a peer's
-    // answer. Shallow on purpose: the array is the shared handle callers hold.
-    Object.freeze(entries);
-    return { sessionId, entries, total };
-  } catch (e) {
-    if (errnoCode(e) === "ENOENT") {
-      const entries: SessionEntry[] = [];
-      Object.freeze(entries);
-      return { sessionId, entries, total: 0 };
-    }
-    throw e;
-  }
+  // A store without the session (a missing transcript file, an expired or
+  // deleted Codex thread) reads as empty — see the ENOENT note below.
+  const history = await SESSION_STORES[engine].readHistory(boxRoot, { sessionId, slice });
+  const entries: SessionEntry[] = history?.entries ?? [];
+  // Shared between coalesced callers — frozen so a future caller that starts
+  // mutating the window fails loudly here instead of corrupting a peer's
+  // answer. Shallow on purpose: the array is the shared handle callers hold.
+  Object.freeze(entries);
+  return { sessionId, entries, total: history?.total ?? 0 };
 }
 
 /**
@@ -121,7 +111,7 @@ async function readHistory(args: {
  * per request on prod's 15.5 MB session, stacking linearly to the 1.9 GB V8
  * cap and killing `bbx serve` four times (2026-08-03/04,
  * `issues/closed/bugs/2026-08-04-chat-history-parse-transient-oom.md`). Callers that
- * arrive while a read of the same `(logPath, slice)` is running now await that
+ * arrive while a read of the same `(session, slice)` is running now await that
  * read instead of starting their own.
  *
  * **The returned result is therefore shared, and must not be mutated.** The
@@ -160,9 +150,8 @@ export async function loadSessionHistory(
     return { sessionId: null, entries: [], total: 0 };
   }
 
-  // The RECORDED engine, never the box default — and an unrecorded id falls
-  // through to the transcript-file branch below rather than being guessed into
-  // one store or the other.
+  // The RECORDED engine, never the box default — and an unrecorded id reads the
+  // Claude transcript file rather than being guessed into one store or the other.
   //
   // Reading history is the case where guessing costs the most. The two branches
   // are not symmetric in what a wrong guess does: the transcript-file read
@@ -173,33 +162,23 @@ export async function loadSessionHistory(
   // is what put "Codex history request failed" on a live chat after a
   // `git reset --hard` rewound the box's chat registry and husk card
   // (2026-09-03). Only a RECORDED `codex` reaches the RPC now.
-  const engine = await resolveRecordedChatEngine(boxRoot, { sessionId });
-
-  if (engine === "codex") {
-    const history = await readCodexSessionHistoryIfPresent({ boxRoot, sessionId, slice });
-    // Codex knows the engine but not the thread: the transcript expired or was
-    // deleted out from under the record. Empty, same as a missing Claude log.
-    if (history === null) return { sessionId, entries: [], total: 0 };
-    Object.freeze(history.entries);
-    return { sessionId, entries: history.entries, total: history.total };
-  }
-
-  const logPath = await resolveSessionLogPath(boxRoot, sessionId);
+  const engine = (await resolveRecordedChatEngine(boxRoot, { sessionId })) ?? "claude";
+  const read = { boxRoot, engine, sessionId, slice };
   if (fresh) {
-    return readHistory({ sessionId, logPath, slice });
+    return readHistory(read);
   }
 
   // The separator is NUL, spelled as an escape and never a literal (a raw NUL
-  // in the source makes git treat the whole file as binary): it is the one byte
-  // a path cannot contain, so no path/slice pair can spell another pair's key.
-  const key = `${logPath}\u0000${sliceKey(slice)}`;
+  // in the source makes git treat the whole file as binary): it is a byte no
+  // path, engine name or session id contains, so no read can spell another's key.
+  const key = [boxRoot, engine, sessionId, sliceKey(slice)].join("\u0000");
   const running = inFlight.get(key);
   if (running) return running;
 
   // `.finally` before the map write, so the entry is gone the moment the read
   // settles — including when it throws. A read that failed must not be handed
   // to the next caller.
-  const pending = readHistory({ sessionId, logPath, slice }).finally(() => {
+  const pending = readHistory(read).finally(() => {
     inFlight.delete(key);
   });
   inFlight.set(key, pending);

@@ -248,7 +248,7 @@ error: docling exited 1 — no text layer found
     cardPath: CARD_PATH,
   }));
 
-  t.check(html, "<div class=\"p-3 bg-warning-50 border border-warning-100 rounded\" role=\"status\"><p class=\"text-sm font-medium text-warning-dark\">Text extraction failed — the original file is still attached.</p><div class=\"mt-2\"><pre class=\"font-mono whitespace-pre-wrap break-words text-sm text-warm-800\">docling exited 1 — no text layer found</pre></div><p class=\"text-sm mt-2 text-warning-dark\">Re-run it with <code>bbx pdf reanalyze inbox/Handbook.pdf.card</code>.</p></div>");
+  t.check(html, "<div role=\"status\" class=\"rounded-lg border px-4 py-3 text-sm bg-warning-50 border-warning-light text-warm-800\"><p class=\"text-warm-900 text-sm font-medium\">Text extraction failed — the original file is still attached.</p><div class=\"mt-2\"><pre class=\"font-mono whitespace-pre-wrap break-words text-sm text-warm-800\">docling exited 1 — no text layer found</pre></div><p class=\"text-warm-900 text-sm mt-2\">Re-run it with <code>bbx pdf reanalyze inbox/Handbook.pdf.card</code>.</p></div>");
 });
 
 // `unusable: true` is a judgement someone made, and it outranks a failed

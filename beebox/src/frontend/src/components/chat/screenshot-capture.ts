@@ -13,6 +13,8 @@
  * the intended second — hence the enumerable {@link CaptureOutcome}.
  */
 
+import { errorMessage } from "@shared/error-guards";
+
 /** The outcome of a capture attempt — every degraded path is named, never a silent blank. */
 export type CaptureOutcome =
   | { kind: "image"; blob: Blob; viewport: { cssWidth: number; cssHeight: number; dpr: number } }
@@ -77,7 +79,7 @@ export function classifyGetDisplayMediaError(error: unknown): CaptureOutcome {
   if (error instanceof Error && error.name === "NotAllowedError") {
     return { kind: "declined" };
   }
-  return { kind: "error", message: error instanceof Error ? error.message : String(error) };
+  return { kind: "error", message: errorMessage(error) };
 }
 
 /** Stop every track so the capture indicator drops immediately (success and failure alike). */
@@ -216,7 +218,7 @@ export async function captureTabScreenshot(): Promise<CaptureOutcome> {
       viewport: { cssWidth: Math.round(width / dpr), cssHeight: Math.round(height / dpr), dpr },
     };
   } catch (e) {
-    return { kind: "error", message: e instanceof Error ? e.message : String(e) };
+    return { kind: "error", message: errorMessage(e) };
   } finally {
     // Every exit path: stop the timer, cancel any pending frame-wait (abort is a
     // no-op once the wait resolved), drop the stream so the capture indicator

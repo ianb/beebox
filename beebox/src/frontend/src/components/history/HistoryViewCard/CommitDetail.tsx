@@ -9,6 +9,7 @@ import { trpc } from "../../../lib/trpc/client";
 import { bbxSource } from "../../../lib/source-tag";
 import { SessionLog } from "./SessionLog";
 import { MobileBackButton } from "../../ui/MobileBackButton";
+import { StatusMessage } from "../../ui/StatusMessage";
 import { parseDiff } from "./CommitDetail-diff";
 import { stripTrailers, trailerString } from "@shared/commit-trailers";
 import { CommitTab } from "./CommitDetail-commit";
@@ -109,7 +110,7 @@ export function CommitDetail({
 
       {/* Files */}
       {diffLoading ? (
-        <div className="text-sm text-warm-700 italic p-4">Loading diff...</div>
+        <StatusMessage>Loading diff...</StatusMessage>
       ) : null}
 
       {newFiles.length > 0 ? (

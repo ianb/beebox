@@ -29,6 +29,8 @@ export interface CardProps {
   as?: "div" | "section" | "article";
   /** Stable `bbx-` address for a landmark card (see lib/ui-scan). */
   id?: string;
+  /** `"group"` (with `aria-labelledby`) names one of a repeated set of cards, so its controls are told apart by it rather than becoming another landmark. */
+  role?: "group";
   "aria-label"?: string;
   "aria-labelledby"?: string;
   /** Marks the card as busy (e.g. still loading) for assistive tech. */
@@ -87,6 +89,7 @@ export function Card({
   className,
   as: asArg,
   id,
+  role,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
   "aria-busy": ariaBusy,
@@ -107,7 +110,7 @@ export function Card({
     muted ? "opacity-60" : "",
     className,
   );
-  return <Tag id={id} className={classes} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} aria-busy={ariaBusy}>
+  return <Tag id={id} role={role} className={classes} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} aria-busy={ariaBusy}>
     <MaterialContext.Provider value={material === true}>{children}</MaterialContext.Provider>
   </Tag>;
 }

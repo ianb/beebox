@@ -8,12 +8,13 @@
 
 import { applySelections, type SelectionItem } from "../../lib/selection/serialize";
 import type { FinalWord } from "../../machines/transcription-events";
+import { boxNow } from "../../lib/box-clock";
 
 /**
- * Format the current local time as HH:MM for the typed/speech tag.
+ * Format the box's current local time as HH:MM for the typed/speech tag.
  */
 export function localTime(): string {
-  const now = new Date();
+  const now = new Date(boxNow());
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
@@ -102,11 +103,14 @@ export function newMessageId(): string {
 }
 
 export function composerTextareaClasses({ mobile, isTranscribing }: { mobile: boolean; isTranscribing: boolean }): string {
-  const sizeClass = mobile ? "text-base" : "text-sm min-w-0";
+  // Grows with its text (CSS field-sizing, which replaced react-textarea-autosize):
+  // at least 1 line (2 on the phone), at most 8, then it scrolls. `box-content`
+  // keeps padding and the theme's border out of those line counts.
+  const sizeClass = mobile ? "text-base min-h-[2lh]" : "text-sm min-w-0 min-h-[1lh]";
   const stateClass = isTranscribing
     ? "bg-white text-warm-800 border-primary/40 shadow-[0_0_0_1px_rgba(56,149,211,0.08)]"
     : "bg-white border-warm-400";
-  return `flex-1 resize-none rounded-lg px-3 py-2 ${sizeClass} ${stateClass} focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-warm-700`;
+  return `flex-1 resize-none box-content [field-sizing:content] max-h-[8lh] rounded-lg px-3 py-2 ${sizeClass} ${stateClass} focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-warm-600`;
 }
 
 /**

@@ -13,9 +13,19 @@ const now = Date.parse("2026-10-06T12:00:00Z");
 
 void test("line 14", async (t) => {
   t.check(lastChangeLine({ date: "2026-10-03T09:30:00Z", subject: "Add porch quotes" }, now), {
-    text: "3 days ago · Add porch quotes",
+    text: "3d ago · Add porch quotes",
     title: "2026-10-03T09:30:00Z",
   });
+});
+
+// From a week on the line gives the date, with the year when it differs:
+void test("A commit a week or more old shows its date.", async (t) => {
+  const local = (y: number, d: number) => new Date(y, 8, d, 12).toISOString();
+  t.check(
+    [lastChangeLine({ date: local(2026, 15), subject: "Old" }, now).text,
+     lastChangeLine({ date: local(2025, 15), subject: "Older" }, now).text],
+    ["Sep 15 · Old", "Sep 15, 2025 · Older"],
+  );
 });
 
 // A commit seconds old reads "just now", and so does a commit dated slightly

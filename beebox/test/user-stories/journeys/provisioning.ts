@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { readJson } from "../../../src/scripts/user-stories/json-io.ts";
 import { claudeProjectsRoot, encodeProjectDir } from "../../../src/core/chat/session/transcript-paths.ts";
 
 /**
@@ -51,4 +52,22 @@ export function allocateRun({ work, boxes, id, date }: { work: string; boxes: st
     const transcripts = join(projects, encodeProjectDir(boxDir));
     if (!existsSync(runDir) && !existsSync(boxDir) && !existsSync(transcripts)) return { runDir, boxDir, boxSlug };
   }
+}
+
+/** A run started this recently with no after.json is taken to be live (a walk is hours at most). */
+const LIVE_RUN_WINDOW_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * Journey runs prepared and not yet collected, started within the last 12 hours.
+ * Walks sharing one server slow each other down, so a run records how many ran
+ * beside it; timings from rounds with different counts are not comparable.
+ */
+export function liveRuns({ work, now }: { work: string; now: number }): string[] {
+  if (!existsSync(work)) return [];
+  return readdirSync(work).filter((name) => {
+    const before = join(work, name, "before.json");
+    if (!existsSync(before) || existsSync(join(work, name, "after.json"))) return false;
+    const started = Date.parse(readJson<{ startedIso: string }>(before).startedIso);
+    return now - started <= LIVE_RUN_WINDOW_MS;
+  });
 }

@@ -160,6 +160,7 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
     failure = attempted.failure ?? failure;
   }
   const content = createTextQuestionTemplate({
+    title: `Migration ${opts.name} needs a decision`,
     memo: `Migration ${opts.name} needs attention`, askedAt: getBoxTimeISO(opts.boxRoot),
     // Failure output names host paths; the box commit lint refuses them in a card.
     prompt: redactAbsoluteMachinePaths(`${reason}\nMigration: ${opts.name}\nRecovery: ${recoveryRef}\n${failure}`),
@@ -210,5 +211,21 @@ export function runProcedureMigration(opts: {
     boxRoot: opts.boxRoot, name: opts.name, recoveryRef: opts.recoveryRef, signal: opts.signal, code: 1, failure: "",
     directive: `Migration ${opts.name} is a procedure that an agent applies. Its last run failed; the output is in this question. Fix what blocked it, then answer: the answer authorizes the next scheduled pass to run the procedure once more.`,
     attempt: async () => ({ code: await opts.run(), reason: "The procedure exited nonzero; its output follows.", failure: opts.output() }),
+  });
+}
+
+/**
+ * A retired migration that failed: the box never applied it, and the migrator
+ * is in git history. No agent attempt can succeed, so the question goes to the
+ * boxholder at once; an answer authorizes the next pass to ask again.
+ */
+export function runRetiredMigration(opts: {
+  boxRoot: string; name: string; recoveryRef: string; signal?: AbortSignal | undefined;
+  code: number; failure: string;
+}): ReturnType<typeof runBoundedAttempt> {
+  return runBoundedAttempt({
+    ...opts,
+    directive: `Migration ${opts.name} was retired and this box never applied it. Restore its migrator from git history, run it by hand, and record it in the manifest; no agent attempt is made.`,
+    attempt: () => Promise.resolve({ code: opts.code, reason: "The migration is retired and needs a human; no agent repair was attempted.", failure: opts.failure }),
   });
 }

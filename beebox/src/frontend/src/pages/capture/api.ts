@@ -27,6 +27,8 @@
  * call, not part of this inventory.
  */
 
+import { z } from "zod";
+import { errorMessage } from "@shared/error-guards";
 import { getApiBase } from "../../api";
 import { RequestError } from "../../lib/errors";
 import { withMobileAuth, mobileAuthHeaders } from "../../lib/mobile-auth";
@@ -105,18 +107,29 @@ export interface DevicePrefs {
   audioDeviceId: string | null;
 }
 
+const devicePrefsSchema = z.object({
+  videoDeviceId: z.string().nullable(),
+  audioDeviceId: z.string().nullable(),
+});
+
+/** Stored prefs, or empty prefs when nothing valid is stored (corrupt or unreadable storage). */
 export function loadDevicePrefs(): DevicePrefs {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (_e) {
-    // corrupt data
+    if (raw) return devicePrefsSchema.parse(JSON.parse(raw));
+  } catch (e) {
+    console.warn(`[capture] ignoring stored device preferences: ${errorMessage(e)}`);
   }
   return { videoDeviceId: null, audioDeviceId: null };
 }
 
+/** Best-effort: a storage failure (quota, private mode) loses the preference, not the capture. */
 export function saveDevicePrefs(prefs: DevicePrefs): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  } catch (e) {
+    console.warn(`[capture] could not store device preferences: ${errorMessage(e)}`);
+  }
 }
 
 // --- Capture API helpers ---
@@ -235,10 +248,6 @@ export function classifyUploadFailure(error: unknown): UploadFailureVerdict {
   return "retry";
 }
 
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export async function uploadCaptureFile(options: UploadFileOptions): Promise<void> {
   const { sessionId, kind, filename, blob, startedAt, source } = options;
   const { segmentId, segmentStartedAt, originalName, mimeType, signal, onProgress } = options;
@@ -280,8 +289,8 @@ export async function uploadCaptureFile(options: UploadFileOptions): Promise<voi
       // A deliberate abort is the caller's decision, not a transport failure —
       // retrying it would defeat the very cancel it came from.
       if (verdict === "abort") throw e;
-      if (verdict === "fatal") throw new RequestError(errorText(e));
-      lastFailure = errorText(e);
+      if (verdict === "fatal") throw new RequestError(errorMessage(e));
+      lastFailure = errorMessage(e);
       if (attempt < MAX_UPLOAD_RETRIES) continue;
       throw new CaptureUploadError({
         filename,

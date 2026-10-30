@@ -18,8 +18,8 @@
 # ─────────────────────────────────────────────────────────────────────────
 FROM node:24-bookworm-slim AS build
 
-# Native modules (better-sqlite3, etc.) may compile if no prebuilt binary is
-# available for this arch — give the throwaway build stage the toolchain.
+# Native modules may compile if no prebuilt binary is available for this
+# arch — give the throwaway build stage the toolchain.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
   && rm -rf /var/lib/apt/lists/*
@@ -33,10 +33,18 @@ RUN corepack enable
 WORKDIR /src
 COPY . .
 
+# The engine's version: the image workflow passes the tag (1.2.3) or a
+# pre-release stamp for a build from main (1.2.4-main.20261024.abc1234).
+# Written into beebox/package.json before the pack, so `bbx status`, /healthz
+# and the Mac app's engine line report this build, not the checked-in
+# placeholder. A local build keeps the placeholder.
+ARG BEEBOX_VERSION=0.0.0-dev
+
 # Frozen install of the whole workspace (the lockfile is committed), then the
 # release build. `pnpm pack` respects beebox's `files` allowlist; the
 # resulting dist-release/*.tgz is the only artifact the runtime stage needs.
 RUN pnpm install --frozen-lockfile \
+  && if [ "$BEEBOX_VERSION" != "0.0.0-dev" ]; then (cd beebox && npm pkg set version="$BEEBOX_VERSION"); fi \
   && pnpm --dir beebox release \
   && cp beebox/dist-release/*.tgz /beebox.tgz \
   && sed -n 's/^export const DOCLING_VERSION = "\([^"]*\)";$/\1/p' beebox/src/services/docling/version.ts > /docling-version \
@@ -53,6 +61,24 @@ FROM node:24-bookworm-slim
 # BBX_GIT_NAME / BBX_GIT_EMAIL at runtime if they are set.
 ARG BBX_GIT_NAME="Bee Box"
 ARG BBX_GIT_EMAIL="beebox@box.example.com"
+
+# What the Mac app (mac-app/) reads before it downloads this image.
+#
+# MIN_APP_VERSION is the oldest Bee Box Desktop that can run this image. Bump
+# it BY HAND whenever the contract between the app and the image changes:
+# the mounts (/data/box, /app/claude-config, /home/node), the server port
+# (3210), the entrypoint's argument form, environment the app sets
+# (BBX_CLAUDE_PROJECTS_DIR), or the in-VM relay (`node` on PATH, the socket
+# the app creates). The app side of that contract is the `create` block in
+# mac-app/Sources/BeeBoxMac/BoxRuntime.swift. The value only ever goes up: an
+# app older than it keeps its current image and shows that it needs updating.
+# The release check in mac-app/scripts/release.sh refuses an app release below
+# this value.
+ARG BEEBOX_VERSION=0.0.0-dev
+ARG MIN_APP_VERSION=0.1.6
+LABEL org.opencontainers.image.version=$BEEBOX_VERSION \
+      org.opencontainers.image.source=https://github.com/ianb/beebox \
+      run.beebox.min-app-version=$MIN_APP_VERSION
 
 # System binaries the agent is promised as "always available on the box host"
 # (src/core/agent-guide/chat.ts): pandoc, imagemagick (magick), poppler-utils
@@ -71,20 +97,28 @@ ARG BBX_GIT_EMAIL="beebox@box.example.com"
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
        pandoc imagemagick poppler-utils python3-openpyxl xlsx2csv qpdf ffmpeg git git-lfs git-annex curl ca-certificates \
-       sudo systemd dbus procps \
+       sudo systemd dbus procps bzip2 \
   && rm -rf /var/lib/apt/lists/* \
   # Debian ships ImageMagick 6 (`convert`); the agent contract and our scripts
-  # call `magick` (IM7). Symlink so both names work (same as setup-server.sh).
+  # call `magick` (IM7). Symlink so both names work (same as cloud-init.yaml).
   && if ! command -v magick >/dev/null 2>&1 && command -v convert >/dev/null 2>&1; then \
        ln -sf "$(command -v convert)" /usr/local/bin/magick; \
      fi
+
+# The engine invokes restic as a host tool. Pin the upstream release and
+# verify its published checksum before installing it; TARGETARCH selects the
+# image's actual Linux binary, including Apple Silicon Mac VMs.
+COPY beebox/deploy/install-restic.sh /usr/local/sbin/install-restic
+COPY beebox/deploy/restic-LICENSE /usr/local/sbin/restic-LICENSE
+RUN chmod 0755 /usr/local/sbin/install-restic \
+  && /usr/local/sbin/install-restic /usr/local/bin/restic
 
 # uv runs Docling (`uvx docling`, scan-import's document mode), as on the
 # server. Installed system-wide; its cache and Docling's model weights live in
 # the persistent home volume (see the entrypoint's first-start prefetch).
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh
 
-# fclones (duplicate-file finder, same promise as setup-server.sh). Upstream
+# fclones (duplicate-file finder, same promise as cloud-init.yaml). Upstream
 # ships an amd64 .deb only; on other architectures the image simply lacks it.
 ARG FCLONES_VERSION=0.35.0
 RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
@@ -105,7 +139,7 @@ RUN mkdir -p /opt/corepack /opt/claude && chown node:node /opt/corepack /opt/cla
 # home). The base image's `node` user is UID 1000 — reuse it. It owns /app
 # (the engine) and /data (the box volume).
 # A system-path `bbx` (resolvable even in a login shell) — same as
-# deploy/setup-server.sh. The target is populated by the engine install below;
+# deploy/deploy.sh. The target is populated by the engine install below;
 # a dangling symlink until then is fine. claude-config/ is Claude's relocated
 # state dir (see CLAUDE_CONFIG_DIR below); pre-created and node-owned so the
 # named volume mounted there inherits the right ownership.
@@ -170,8 +204,7 @@ RUN HOME=/opt/claude bash -c 'curl -fsSL https://claude.ai/install.sh | bash' \
   && /usr/local/bin/claude --version
 
 # Install the engine into /app from the baked tarball. --allow-build lets
-# better-sqlite3 (event-bus storage) and the other native/generated deps run
-# their install scripts — pnpm 10 blocks them by default (and, non-interactive,
+# the native/generated deps run their install scripts — pnpm 10 blocks them by default (and, non-interactive,
 # a blocked build is a hard error, not a warning). The flag form is the same
 # one src/scripts/smoke-external-box.ts uses; a package.json `pnpm` field is no
 # longer read by pnpm 10.26.
@@ -182,10 +215,7 @@ RUN printf '%s\n' \
       '  "type": "module"' \
       '}' > /app/package.json \
   && pnpm add \
-       --allow-build=better-sqlite3 \
        --allow-build=esbuild \
-       --allow-build=@google/genai \
-       --allow-build=protobufjs \
        --allow-build=@googleworkspace/cli \
        /app/beebox.tgz
 

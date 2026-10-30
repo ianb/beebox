@@ -20,14 +20,17 @@ import type { HealthCheck } from "../router.js";
  * and naming the wrong remedy sends someone to re-authenticate for a problem
  * they do not have.
  */
-export async function claudeAuthCheck(injected?: ClaudeCliService): Promise<HealthCheck> {
-  const claudeCli = injected ?? createClaudeCliService();
+export async function claudeAuthCheck(boxRoot: string, injected?: ClaudeCliService): Promise<HealthCheck> {
+  const claudeCli = injected ?? createClaudeCliService({ boxRoot });
   const authStatus = await claudeCli.authStatus();
   if (authStatus["loggedIn"] === true) {
     return {
       name: "claude-credentials",
       ok: true,
-      message: "Claude Code is logged in",
+      // `oauth_token`: the box's long-lived token (`core/claude-oauth-token.ts`), not a login file.
+      message: authStatus["authMethod"] === "oauth_token"
+        ? "Claude Code is signed in with the box's long-lived token (its validity is not checked here; a run reports an expired one)"
+        : "Claude Code is logged in",
       severity: "error",
     };
   }
@@ -46,7 +49,7 @@ export async function claudeAuthCheck(injected?: ClaudeCliService): Promise<Heal
     ok: false,
     message:
       "The assistant engine (Claude Code) isn't signed in on this server — chat and " +
-      "background processing (reactor, procedures) will not work. Run `claude auth login` on this machine",
+      "background processing (reactor, procedures) will not work. Run `claude auth login` on this machine, or grant the `claude-oauth-token` secret to this box",
     severity: "error",
   };
 }

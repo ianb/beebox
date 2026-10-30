@@ -10,6 +10,7 @@
 import { resolveRefPath } from "../../shared/ref-path/core.js";
 import { assertNever } from "../../shared/invariant.js";
 import { SYSTEM_CARD_PATHS } from "../../shared/system-card-paths.js";
+import { cardUrl } from "../../shared/card-url.js";
 
 export type Target =
   | { kind: "chat"; sessionId: string }
@@ -105,7 +106,8 @@ export function targetUrl(target: Target, opts: { boxSlug: string; notificationI
       return `/${boxSlug}/chat?new=1&notification=${encodeURIComponent(notificationId)}`;
     case "card":
     case "question":
-      return `/${boxSlug}/browse/${target.path}`;
+      // A question opens as its stub card beside the chat, like the app-bar counter.
+      return cardUrl(boxSlug, target.path);
     case "admin":
       // The Admin card's `section` view state opens the section's tab and scrolls to it.
       return `/${boxSlug}/views/${SYSTEM_CARD_PATHS.admin}?viewState=${encodeURIComponent(JSON.stringify({ section: target.section }))}`;

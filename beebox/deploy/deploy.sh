@@ -318,6 +318,19 @@ fi
 
 step "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 
+# The per-box layout (one Linux user and socket unit per box) is the only
+# server shape this script ships to. Refuse a host that predates it before
+# anything is built, uploaded or stopped.
+step "Checking server layout..."
+ssh "$SSH_TARGET" bash -s <<'LAYOUTCHECK'
+set -euo pipefail
+if ! id beebox-sched >/dev/null 2>&1 || [[ ! -d /var/lib/beebox ]] || ! getent group beebox-boxes >/dev/null; then
+  echo "  FAILED: This host predates the per-box layout (one user and unit per box)." >&2
+  echo "  Provision a new host from deploy/hetzner/cloud-init.yaml; the one-time migration script was removed after the last host migrated (2026-10-25)." >&2
+  exit 1
+fi
+LAYOUTCHECK
+
 # First reclaim deploy-owned caches so a previous accumulation cannot lock out
 # the cleanup that repairs it. Best-effort here: the hard post-install prune
 # below is authoritative, while this recovery pass may be running on a full
@@ -538,7 +551,12 @@ rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "$SSH_TARGET:$STAG
 step "Fixing ownership..."
 # INSTALL_DIR must expand locally before the remote command runs.
 # shellcheck disable=SC2029
-ssh "$SSH_TARGET" "chown -R beebox:beebox $STAGE_DIR"
+# The install tree is code every box user reads. rsync -a carries the laptop's
+# directory modes (the build checkout's box-docs/ was 0700), and a chmod that
+# followed a box's .beebox/engine link once made /opt/beebox/beebox 0700 on the
+# probe VM (2026-10-24), locking every box user out of `bbx` until the next
+# deploy. Open the whole staged tree to read and traverse, every deploy.
+ssh "$SSH_TARGET" "chown -R beebox:beebox $STAGE_DIR && chmod -R a+rX $STAGE_DIR"
 
 if [[ "$SKIP_RESTART" == true ]]; then
   echo "Deploy staged at $STAGE_DIR; --skip-restart leaves the running installation unchanged."
@@ -590,8 +608,16 @@ REMOTE
 # strand the page. PIPE is the one that matters there: when the laptop's ssh
 # drops, this script's output pipe closes and its next write raises SIGPIPE,
 # whose default action would skip the EXIT trap.
+#
+# The trap also restarts the services when the script exits non-zero between
+# the stop and the normal restart. SERVICES_STOPPED is 1 only in that span, so a
+# failure before the stop or after the restart never starts anything here. The
+# restart is guarded so a failure to start cannot replace the original exit
+# code, and it leaves a marker next to this script ("$0") so the controller
+# knows the services came back from the trap, not from a finished activation.
 cat >> "$REMOTE_SCRIPT" <<'WINDOW'
-trap 'rc=$?; /usr/local/sbin/bbx-deploy-window close "$rc" || echo "  WARNING: could not close the deploy window" >&2' EXIT
+SERVICES_STOPPED=0
+trap 'rc=$?; if [ "$SERVICES_STOPPED" = 1 ] && [ "$rc" -ne 0 ]; then echo "  Activation failed (exit $rc) after the services stopped; starting them again on the live tree as it stands..." >&2; if systemctl start beebox-hub beebox-scheduler && { socks=$(systemctl list-units "beebox-box@*.socket" --all --plain --no-legend 2>/dev/null | awk "{print \$1}"); [ -z "$socks" ] || systemctl start $socks; }; then : > "$0.services-restarted-by-trap"; else echo "  WARNING: could not restart beebox-hub/beebox-scheduler; production is down until a restart or a successful deploy" >&2; fi; fi; /usr/local/sbin/bbx-deploy-window close "$rc" || echo "  WARNING: could not close the deploy window" >&2' EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 141' PIPE
@@ -599,7 +625,19 @@ trap 'exit 143' TERM
 WINDOW
 queue_remote command /usr/local/sbin/bbx-deploy-window open "$STAGE_DIR/beebox/dist/deploy-page.html"
 queue_remote command /usr/local/sbin/bbx-deploy-window down
-queue_remote command systemctl stop beebox-hub beebox-scheduler
+# From here until the restart, the EXIT trap starts the services on a failure.
+# Set before the stop: a stop that fails halfway has already taken one down.
+printf 'SERVICES_STOPPED=1\n' >> "$REMOTE_SCRIPT"
+# A freshly provisioned host has neither unit yet (this activation installs
+# them), so stop only the units that exist; a stop that fails is still fatal.
+# shellcheck disable=SC2016 # the remote bash expands these, by design
+queue_remote command bash -c 'for u in beebox-hub beebox-scheduler; do [ -e "/etc/systemd/system/$u.service" ] && systemctl stop "$u"; done; :'
+# Every box is a socket unit (docs/plans/per-box-units.md). The sockets stop
+# too, so a request arriving during the window cannot wake a box onto a
+# half-copied tree; they start again after the units are reinstalled. A host
+# with no box yet has no such unit and the glob matches nothing.
+# shellcheck disable=SC2016 # the remote bash expands these, by design
+queue_remote command bash -c 'units=$(systemctl list-units "beebox-box@*" --all --plain --no-legend 2>/dev/null | awk "{print \$1}"); [ -z "$units" ] || systemctl stop $units'
 queue_remote command rsync "${RSYNC_OPTS[@]}" --exclude '.activate-deploy.sh' "$STAGE_DIR/" "$INSTALL_DIR/"
 queue_remote command chown -R beebox:beebox "$INSTALL_DIR"
 
@@ -656,7 +694,7 @@ queue_remote stdin bash -s <<'REMOTE'
   # dev byte-for-byte (and fails loudly if the lockfile is stale rather than
   # silently resolving something new). HUSKY=0 skips husky's hook install (no
   # .git on the server) so it doesn't print a spurious ".git can't be found".
-  # patch-package still runs via the root postinstall to patch eslint-config-agent.
+  # patch-package still runs via the root postinstall to patch @typescript-eslint/eslint-plugin.
   cd /opt/beebox
   echo "  Reconciling workspace deps (frozen)..."
   # The install competes for RAM with every running box's `bbx engine serve` +
@@ -692,75 +730,28 @@ queue_remote stdin bash -s <<'REMOTE'
   # Refresh the operator-facing command after every dependency reconciliation.
   # Internal callers resolve this same direct package dependency themselves.
   ln -sf /opt/beebox/node_modules/.bin/codex /usr/local/bin/codex
-  # Native-module ABI guard. pnpm's side-effects cache keys build artifacts by
-  # dependency graph, NOT by Node ABI — after a Node major upgrade, a "clean"
-  # reinstall can silently restore a binary compiled for the old ABI (this
-  # broke every box child on the 22→24 upgrade, 2026-07-16, while the hub's
-  # /healthz stayed green). Load the module with the runtime that will serve
-  # traffic; on mismatch, force a real prebuild fetch/compile and re-verify —
-  # a second failure fails the deploy.
-  if ! node -e 'require("better-sqlite3")' 2>/dev/null; then
-    echo "  better-sqlite3 ABI mismatch — forcing rebuild for $(node -v)..."
-    (cd node_modules/better-sqlite3 && rm -rf build \
-      && { npx --no-install prebuild-install || npx --no-install node-gyp rebuild --release; })
-    node -e 'require("better-sqlite3")'
-  fi
 REMOTE
 
-# Reconcile each v2-shape (package-layout) box's own node_modules against its
-# package.json. `bbx engine init`/`box-packageify` scaffold a package.json declaring
-# react/react-dom/typescript direct deps (view-metadata compilation needs a
-# real, box-owned react — see src/webapp/views/compiler/compile.ts and
-# src/core/box/package.ts) but deliberately don't install them (Track F of
-# docs/implemented-plans/boxes-as-packages-v2.md has no real registry yet for
-# the `beebox` dependency itself). Left uninstalled, every view in the
-# box silently degrades to a "Failed to compile" stub with no bound card
-# type and no visible error — see the box-family incident this fixed.
-# Runs after every deploy (not just once) because a box's package.json can
-# change independently — an agent `pnpm add`s a view dependency, or a fresh
-# `box-packageify` runs — between deploys.
+# Reconcile each package-layout box's own node_modules against its manifest
+# (deploy/server-bin/bbx-box-install: what a box declares, why, and when it is
+# reinstalled). Runs after every deploy because a box's package.json changes
+# independently: an agent `pnpm add`s a view dependency, a migration rewrites
+# the manifest, a fresh `box-packageify` runs. The helper's bytes come from the
+# build checkout through stdin, as bbx-host-apt's do.
 queue_step "Reconciling box package installs..."
-queue_remote stdin bash -s <<'REMOTE'
-  set -e
-  for box in /home/beebox/boxes/*/; do
-    pj="$box/package.json"
-    [[ -f "$pj" ]] || continue   # shapeVersion 1 (legacy) boxes have none — skip
-    name=$(basename "$box")
-
-    # The box commits the portable `"beebox": "link:.beebox/engine"`; the
-    # gitignored `.beebox/engine` link holds this server's engine path, so no
-    # deploy writes a tracked file (docs/implemented-plans/portable-engine-dependency.md).
-    # A box not yet migrated still names /opt/beebox/beebox directly; the
-    # link is harmless there. A failed box prints ERROR and the deploy moves
-    # on to the next box, as the converge step does.
-    link_check=/opt/beebox/beebox/bin/box-engine-link
-    if ! sudo -u beebox -H bash -lc '"$0" link "$1" /opt/beebox/beebox' "$link_check" "$box"; then
-      echo "  ERROR $name: could not link .beebox/engine; skipping its install." >&2
-      continue
-    fi
-
-    marker="$box/node_modules/react"
-    # Reinstall too when the box shows no completed install: the engine-link
-    # migration changes the spec without reinstalling, so a node_modules/beebox
-    # that does not go through the link is stale.
-    if [[ ! -e "$marker" || "$pj" -nt "$marker" ]] || ! "$link_check" verify "$box" 2>/dev/null; then
-      echo "  $name: installing (package.json newer than last install, or never installed)..."
-      if ! sudo -u beebox -H bash -lc "cd '$box' && pnpm install"; then
-        echo "  $name: pnpm install exited nonzero — check for real dependency errors above" \
-             "(a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else isn't)"
-      fi
-    fi
-    if ! "$link_check" verify "$box"; then
-      echo "  ERROR $name: the box has no usable engine after install." >&2
-    fi
-  done
-REMOTE
+# Each box is /var/lib/beebox/<slug>/box, installed as its own user.
+queue_remote stdin bash -s /var/lib/beebox /opt/beebox/beebox \
+  < "$CHECKOUT/beebox/deploy/server-bin/bbx-box-install"
 
 # Deploy installs are what grow both caches. Prune only after the root workspace
 # and Bee Box-owned box installs have finished, so this cannot evict entries a
 # later install in the same deploy still needs. Start Bee Box-user cleanup in
 # its home so upward config discovery cannot reach /root/uv.toml; `-H`
 # separately gives HOME-based tools the Bee Box user's home.
+# pnpm 10's `store prune` also deletes every cached registry metadata file, so
+# after this step the server has no warm metadata cache. A migration that runs
+# pnpm on the server must not assume one: use `--prefer-offline`, never
+# `--offline`.
 queue_step "Pruning deploy package caches..."
 queue_remote stdin bash -s <<'CACHECLEAN'
 set -euo pipefail
@@ -825,58 +816,133 @@ HISTEOF
 # INSTALL_DIR is the locally configured remote deployment path.
 # shellcheck disable=SC2029
 queue_remote command ln -sf "$INSTALL_DIR/beebox/bin/cb" /usr/local/bin/cb
+# Every unit's ExecStart is /usr/local/bin/bbx, the installed engine's CLI. The
+# old provisioner made that link once; a host from hetzner/cloud-init.yaml and
+# provision.sh has none until its first deploy, so the deploy owns it (found on
+# the per-box-units VM, 2026-10-24: hub and scheduler crash-looped on 203/EXEC).
+# shellcheck disable=SC2029
+queue_remote command ln -sfn "$INSTALL_DIR/beebox/bin/bbx" /usr/local/bin/bbx
 
-# Box package installs: the root wrapper and the one sudoers entry that lets the
-# box user run it (docs/plans/box-host-packages.md). The wrapper's bytes come
-# from the build checkout through stdin, never from $INSTALL_DIR: the box user
+# Root helpers and the one sudoers entry. bbx-host-apt installs the distro
+# packages boxes record; only root runs it, through `bbx host sync` after the
+# controller below (docs/plans/box-host-packages.md). The helpers' bytes come
+# from the build checkout through stdin, never from $INSTALL_DIR: the hub user
 # owns that tree, and rsync's size+mtime check can keep an edited file, which
 # this step would then install as root. visudo validates the entry before it
 # goes live; a bad entry fails the deploy rather than breaking sudo.
 queue_remote stdin install -o root -g root -m 0755 /dev/stdin /usr/local/sbin/bbx-host-apt \
   < "$CHECKOUT/beebox/deploy/server-bin/bbx-host-apt"
+# The scheduler's one root path, `bbx-box-run <slug>
+# scheduler-pass` (docs/plans/per-box-units.md, Track C), installed the same way.
+queue_remote stdin install -o root -g root -m 0755 /dev/stdin /usr/local/sbin/bbx-box-run \
+  < "$CHECKOUT/beebox/deploy/server-bin/bbx-box-run"
 queue_remote stdin bash -s <<'SUDOERS'
   set -euo pipefail
   tmp=$(mktemp)
   trap 'rm -f "$tmp"' EXIT
-  echo 'beebox ALL=(root) NOPASSWD: /usr/local/sbin/bbx-host-apt' > "$tmp"
+  # The scheduler user's one root path. Box users and the hub user hold no
+  # sudo grant.
+  echo 'beebox-sched ALL=(root) NOPASSWD: /usr/local/sbin/bbx-box-run' > "$tmp"
   # Absolute path: this runs after `source /home/beebox/.env` (deploy.sh's
   # CONTROL block), whose PATH=/home/beebox/.local/bin:/usr/local/bin:/usr/bin:/bin
   # omits /usr/sbin, so a bare `visudo` fails with "command not found".
   /usr/sbin/visudo -cqf "$tmp"
-  install -o root -g root -m 0440 "$tmp" /etc/sudoers.d/beebox-host-apt
+  install -o root -g root -m 0440 "$tmp" /etc/sudoers.d/beebox-sched
+  # The file's name from before every host held this one entry.
+  rm -f /etc/sudoers.d/beebox-host-apt
 SUDOERS
 
 # Restart services
 if [[ "$SKIP_RESTART" != true ]]; then
   queue_step "Converging boxes under maintenance..."
   queue_remote stdin bash -s <<'REMOTE'
-    for boxdir in /home/beebox/boxes/*/; do
-      [[ -e "$boxdir/.git" ]] || continue
+    # Each box is /var/lib/beebox/<slug>/box owned by bbx-<slug>; the converge
+    # runs as that user with the units' env (docs/plans/per-box-units.md).
+    converge() { # converge <user> <envfile> <boxdir>
+      local user="$1" envfile="$2" boxdir="$3"
       # sudo normally drops this environment. Pass only the explicit fleet
       # permits into the trusted nested migration command; no repair agents run.
-      sudo -u beebox -H env BBX_MAINTENANCE_PERMITS="$BBX_MAINTENANCE_PERMITS" bash -lc \
-        'set -a; source /home/beebox/.env 2>/dev/null; set +a; cd "$1" && timeout 600 bbx engine migrate --sweep --within-maintenance --prepare --json' \
-        bbx-sweep "$boxdir" || echo "  $boxdir: convergence incomplete; the box reopens when maintenance releases it, with the record in its health check" >&2
+      sudo -u "$user" -H env BBX_MAINTENANCE_PERMITS="$BBX_MAINTENANCE_PERMITS" bash -lc \
+        'set -a; source "$1" 2>/dev/null; set +a; cd "$2" && timeout 600 bbx engine migrate --sweep --within-maintenance --prepare --json' \
+        bbx-sweep "$envfile" "$boxdir" || echo "  $boxdir: convergence incomplete; the box reopens when maintenance releases it, with the record in its health check" >&2
+    }
+    for home in /var/lib/beebox/*/; do
+      [[ -e "$home/box/.git" ]] || continue
+      slug=$(basename "$home")
+      converge "bbx-$slug" /etc/beebox/box.env "$home/box"
     done
 REMOTE
 
   # Reconfirm the systemd drop-ins before restarting.
   #
-  # The units themselves are NOT regenerated by this script (setup-server.sh
-  # owns them, and it still emits the pre-hub shape — see deploy/README.md's
-  # "Known gap"), so a setting the running code depends on would otherwise have
-  # to be installed by hand once and then silently drift. The drop-in directory
-  # is the seam that lets a deploy own such a setting without owning the unit:
-  # anything in deploy/systemd/ is reinstalled on every deploy, and the file
-  # itself documents what it is for.
+  # The hub and scheduler units were written by the old provisioner and are
+  # not regenerated here; their drop-ins are, so a setting the running code
+  # depends on cannot drift. The per-box units are whole files this deploy
+  # installs (below). Anything in deploy/systemd/ is reinstalled on every
+  # deploy, and each file documents what it is for.
   #
   # daemon-reload only when something actually changed, so an unchanged deploy
   # stays quiet. The restart below then picks up whatever was reloaded.
-  queue_step "Reconfirming systemd drop-ins..."
+  queue_step "Reconfirming systemd units and drop-ins..."
   queue_remote stdin bash -s "$INSTALL_DIR" <<'REMOTE'
 set -euo pipefail
 install_dir="$1"
 changed=0
+backup_timer_changed=0
+# Keep existing unit hosts current with the engine's pinned restic contract.
+# The installer is version-aware and downloads only when the binary is absent
+# or older than the release this checkout requires.
+bash "$install_dir/beebox/deploy/install-restic.sh" /usr/local/bin/restic
+# The per-box units (docs/plans/per-box-units.md, Track C) are versioned
+# files, installed whole: a template socket and service, the pass service, and
+# the sandbox drop-in both templates include. The hub and scheduler units are
+# installed whole too; the scheduler runs as the scheduler user.
+units=(beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-backup@.service beebox-backup@.timer beebox-hub.service beebox-scheduler.service)
+for unit in "${units[@]}"; do
+  src="$install_dir/beebox/deploy/systemd/$unit"
+  dest="/etc/systemd/system/$unit"
+  if ! cmp -s "$src" "$dest"; then
+    install -o root -g root -m 0644 "$src" "$dest"
+    echo "  installed $unit"
+    changed=1
+    if [[ "$unit" == beebox-backup@.timer ]]; then
+      backup_timer_changed=1
+    fi
+  fi
+done
+# A fresh host has never enabled the hub; an existing one is a no-op.
+systemctl enable beebox-hub.service >/dev/null 2>&1 || true
+# cloud-init makes a system user without a home; the unit's WorkingDirectory
+# and the scheduler's manifest (~/.config/beebox/boxes.json) live there.
+install -d -o beebox-sched -g beebox-sched -m 0750 /var/lib/beebox-sched
+systemctl enable beebox-scheduler.service >/dev/null 2>&1 || true
+# The units' environment directory: the hub owns and writes it, box users read
+# it through the group and may not replace it. Reasserted every deploy so a
+# host provisioned under the earlier group-writable rule is repaired (review
+# round 5, codex gpt-6-sol, 2026-10-24). cloud-init's tmpfiles entry creates it
+# with the same owner and mode; the layout preflight guarantees the group.
+install -d -o beebox -g beebox-boxes -m 2755 /etc/beebox
+# Box users push over ssh with only GitHub's host key in the system file;
+# cloud-init writes it on new hosts. A host provisioned before that line had
+# it only in ~beebox/.ssh/known_hosts, and every box push failed host-key
+# verification once boxes moved to their own users. Keep in step with
+# hetzner/cloud-init.yaml.
+github_host_key='github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl'
+if ! grep -qxF "$github_host_key" /etc/ssh/ssh_known_hosts 2>/dev/null; then
+  printf '%s\n' "$github_host_key" >> /etc/ssh/ssh_known_hosts
+  chmod 0644 /etc/ssh/ssh_known_hosts
+  echo "  added GitHub's host key to /etc/ssh/ssh_known_hosts"
+fi
+for unit in beebox-box@.service beebox-pass@.service beebox-backup@.service; do
+  dir="/etc/systemd/system/$unit.d"
+  mkdir -p "$dir"
+  dest="$dir/box-sandbox.conf"
+  if ! cmp -s "$install_dir/beebox/deploy/systemd/box-sandbox.conf" "$dest"; then
+    install -o root -g root -m 0644 "$install_dir/beebox/deploy/systemd/box-sandbox.conf" "$dest"
+    echo "  $unit: installed box-sandbox.conf"
+    changed=1
+  fi
+done
 # `all/` goes to every unit; `<unit>/` only to that one. The per-unit split
 # exists because ExecStart overrides are necessarily unit-specific — the hub and
 # the scheduler run different commands — and the old flat layout copied every
@@ -900,6 +966,19 @@ if [[ $changed -eq 1 ]]; then
   systemctl daemon-reload
   echo "  daemon-reload done"
 fi
+# Existing boxes predate the timer guarantee. Converge a timer for every
+# enabled per-box socket; the CLI's server-automatic opt-in keeps legacy boxes
+# and boxes with backups switched off from taking snapshots.
+for home in /var/lib/beebox/*/; do
+  [[ -e "$home/box/.git" ]] || continue
+  slug=$(basename "$home")
+  [[ "$slug" =~ ^[a-z0-9][a-z0-9-]{0,27}$ ]] || continue
+  systemctl is-enabled --quiet "beebox-box@$slug.socket" || continue
+  systemctl enable --now "beebox-backup@$slug.timer"
+  if [[ $backup_timer_changed -eq 1 ]]; then
+    systemctl restart "beebox-backup@$slug.timer"
+  fi
+done
 REMOTE
 
   # Web push needs one server-wide VAPID keypair. It is self-generated (no
@@ -921,7 +1000,8 @@ const k = webPush.generateVAPIDKeys();
 process.stdout.write(`BBX_VAPID_PUBLIC_KEY=${k.publicKey}\nBBX_VAPID_PRIVATE_KEY=${k.privateKey}\n`);
 ')
   umask 077
-  printf '\n# Web push (VAPID) keypair, generated by deploy on %s. Do not regenerate.\n%s' \
+  # A trailing newline: a later append to the file must not glue onto the key.
+  printf '\n# Web push (VAPID) keypair, generated by deploy on %s. Do not regenerate.\n%s\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$keys" >> "$env_file"
   chown beebox:beebox "$env_file"
   echo "  VAPID keys generated and written to $env_file"
@@ -929,7 +1009,11 @@ fi
 REMOTE
 
   queue_step "Restarting services..."
-  queue_remote command bash -c 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"'
+  # shellcheck disable=SC2016 # the remote bash expands these, by design
+  queue_remote command bash -c 'systemctl restart beebox-hub beebox-scheduler || exit 1; echo "Services restarted"; socks=$(systemctl list-units "beebox-box@*.socket" --all --plain --no-legend 2>/dev/null | awk "{print \$1}"); [ -z "$socks" ] || { systemctl start $socks && echo "Box sockets started"; }'
+  # The restart succeeded (set -e would have exited above otherwise): the EXIT
+  # trap must not start the services a second time if a later check fails.
+  printf 'SERVICES_STOPPED=0\n' >> "$REMOTE_SCRIPT"
 
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
@@ -945,7 +1029,7 @@ REMOTE
   #      module ABI mismatch) makes this 503. Parsed with node (jq isn't on the
   #      server); the box slug + error land in the log on failure.
   # Verify the runtime tools the box shells out to are actually installed.
-  # These are declared in setup-server.sh, but a box provisioned before a tool
+  # These are declared in hetzner/cloud-init.yaml, but a box provisioned before a tool
   # was added silently 503s the upload/processing path that needs it (qpdf → PDF
   # scan uploads; poppler pdfinfo/pdftoppm → PDF intake; pandoc → doc convert;
   # imagemagick convert → image ops; openpyxl/xlsx2csv → spreadsheet reads;
@@ -963,11 +1047,14 @@ REMOTE
     python3 -c "import openpyxl" >/dev/null 2>&1 || missing="$missing python3-openpyxl"
     if [ -n "$missing" ]; then
       echo "  FAILED: required runtime tools missing on the server:$missing"
-      echo "  Fix: re-run deploy/setup-server.sh on the server (or apt-get install the"
-      echo "  missing packages), then redeploy. See setup-server.sh for the package list."
+      echo "  Fix: apt-get install the missing packages on the server (the list is in"
+      echo "  deploy/hetzner/cloud-init.yaml), then redeploy."
       exit 1
     fi
-    codex_check_home=$(mktemp -d)
+    # Codex refuses to put its helper binaries under a temporary directory and
+    # warns on every run, so the throwaway CODEX_HOME lives in root's cache.
+    mkdir -p "$HOME/.cache"
+    codex_check_home=$(mktemp -d "$HOME/.cache/bbx-codex-check.XXXXXX")
     trap 'rm -rf "$codex_check_home"' EXIT
     if ! CODEX_HOME="$codex_check_home" codex plugin --help >/dev/null; then
       echo "  FAILED: package-pinned Codex CLI does not support plugins"
@@ -1029,6 +1116,12 @@ TOOLCHECK
       -H "Authorization: Bearer $KEY" \
       http://localhost:3210/healthz/canary 2>/dev/null || echo "000")
     cstatus=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync("/tmp/canary.out","utf8")).status)' 2>/dev/null || echo "unparseable")
+    # A host with no box yet (freshly provisioned; add-box.sh adds the first)
+    # has nothing to cold-start: the hub says so, and only then is that a pass.
+    if [ "$cstatus" = "no-boxes" ] && ! ls -d /var/lib/beebox/*/box/ >/dev/null 2>&1; then
+      echo "  Box canary skipped: no box on this host yet"
+      cstatus=ok; ccode=200
+    fi
     if [ "$ccode" != "200" ] || [ "$cstatus" != "ok" ]; then
       echo "  Box canary FAILED (code: $ccode, status: $cstatus) — a box could not start and serve:"
       [ -f /tmp/canary.out ] && cat /tmp/canary.out
@@ -1136,14 +1229,36 @@ if ! "$stage_dir/node_modules/.bin/tsc" --version >/dev/null; then
   exit 1
 fi
 boxes=()
-for box in /home/beebox/boxes/*/; do
+for box in /var/lib/beebox/*/box/; do
   [[ -e "$box/.git" ]] && boxes+=(--box "$box")
 done
 set -a
 source /home/beebox/.env
 set +a
 maintenance_rc=0
-node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh" || maintenance_rc=$?
+trap_marker="$stage_dir/.activate-deploy.sh.services-restarted-by-trap"
+rm -f "$trap_marker"
+node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://localhost:3210 --hub-config /home/beebox/.config/beebox/hub.json "${boxes[@]}" -- bash "$stage_dir/.activate-deploy.sh" || maintenance_rc=$?
+# The distro packages each box recorded since the last deploy (bbx host
+# install records them; a sandboxed box cannot install). After the
+# controller has reopened the boxes: `bbx host sync` takes ordinary box
+# admission, which a closed box refuses (it did, silently, on every deploy to
+# the probe VM, 2026-10-24). As root, straight to the wrapper; one refusal
+# does not block the others, and apt touches no box state.
+#
+# Admission resolves the box's Git directory with `git rev-parse`, and root
+# holds no `safe.directory` for a box (the box user owns it; git refuses the
+# "dubious ownership" otherwise, and admission then reports "requires a Git
+# repository", as it did on every production box 2026-10-25). The allowance
+# is scoped to this one command through git's environment, never written to
+# root's config.
+for box in /var/lib/beebox/*/box/; do
+  [[ -e "$box/.git" ]] || continue
+  box="${box%/}"
+  env BBX_UNIT_HOST= GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$box" \
+    bash -c 'cd "$1" && timeout 900 bbx host sync --box "$1"' bbx-host-sync "$box" \
+    || echo "  $box: some recorded host packages did not install; see the lines above" >&2
+done
 # A box whose convergence failed stays closed for recovery. Repair it now
 # instead of waiting for the hourly box-convergence pass: the same bounded
 # `--sweep --repair` and 25-minute limit that pass uses, run only for boxes that
@@ -1153,12 +1268,24 @@ node "$stage_dir/beebox/dist/cli.mjs" engine maintenance --verify-hub http://loc
 # held. No `--yield`: the box is closed, and the bounded drain covers work that
 # entered since. The deploy still reports its failure.
 if [[ $maintenance_rc -ne 0 ]]; then
-  for box in /home/beebox/boxes/*/; do
+  # The repair needs a finished activation with the services up. If activation
+  # failed before the restart, the activation script's EXIT trap started the
+  # services on the live tree as it stands (marker), or they are still stopped. Either
+  # way the engine is half-activated: skip the repair and fail at once.
+  if [[ -e "$trap_marker" ]] || ! systemctl is-active -q beebox-hub || ! systemctl is-active -q beebox-scheduler; then
+    echo "Activation failed before the services restarted (exit $maintenance_rc); skipping the migration repair." >&2
+    exit "$maintenance_rc"
+  fi
+  for box in /var/lib/beebox/*/box/; do
     [[ -e "$box/.git" ]] || continue
-    status=$(sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; cd "$1" && timeout 60 node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$box" 2>/dev/null) || continue
+    # The box's own user runs its repair, with the units' env.
+    slug=$(basename "$(dirname "$box")")
+    owner="bbx-$slug"
+    envfile=/etc/beebox/box.env
+    status=$(sudo -u "$owner" -H bash -lc 'set -a; source "$1"; set +a; cd "$2" && timeout 60 node node_modules/beebox/dist/cli.mjs engine migrate --status --json' bbx-status "$envfile" "$box" 2>/dev/null) || { echo "  $box: engine could not report migration status; skipping its repair check" >&2; continue; }
     [[ "$status" == *'"pending":[]'* ]] && continue
     echo "  $box: migration pending after a failed convergence; running bounded repair now..."
-    sudo -u beebox -H bash -lc 'set -a; source /home/beebox/.env; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd "$1" && timeout --kill-after=5s 1500s node node_modules/beebox/dist/cli.mjs engine migrate --sweep --repair --json' bbx-repair "$box" \
+    sudo -u "$owner" -H bash -lc 'set -a; source "$1"; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd "$2" && timeout --kill-after=5s 1500s node node_modules/beebox/dist/cli.mjs engine migrate --sweep --repair --json' bbx-repair "$envfile" "$box" \
       || echo "  $box: repair did not converge; the hourly box-convergence pass retries" >&2
   done
 fi

@@ -20,12 +20,11 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "../../shared/error-guards.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
-import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
-import { setTimeout as sleep } from "node:timers/promises";
+import { withFileLock } from "../../lib/file-lock.js";
 import { TodoLocatorSchema } from "../../shared/todo-locators.js";
 import { TodoSnapshotSchema } from "./review-snapshot.js";
+import { loadJsonStateOrFresh } from "../../lib/json-state.js";
 
 const SWEEP_STATE_PATH = ".beebox/todo-review-sweep.json";
 const SWEEP_LOCK_PATH = ".beebox/todo-review-sweep.lock";
@@ -33,8 +32,7 @@ const SWEEP_LOCK_PATH = ".beebox/todo-review-sweep.lock";
 // manual run) — generous enough to outlast a normal sweep's own runtime (a
 // collector pass + one state write), short enough that a genuinely stuck
 // holder fails loud rather than wedging the caller indefinitely.
-const LOCK_RETRIES = 20;
-const LOCK_RETRY_MS = 250;
+const LOCK_WAIT_MS = 5_000;
 
 /** Thrown when the sweep's cross-process lock stays held by another process for the whole retry budget. */
 class TodoReviewSweepLockError extends Error {
@@ -128,28 +126,13 @@ export function recheckKeyParts(key: string): { path: string; text: string } | n
 }
 
 export async function loadSweepState(boxRoot: string): Promise<SweepState> {
-  let raw: string;
-  try {
-    raw = await fs.readFile(path.join(boxRoot, SWEEP_STATE_PATH), "utf-8");
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn("Could not read todo-review sweep state, treating as first run:", e);
-    }
-    return { lastSweepDateEpoch: null, review: null, rechecks: {} };
-  }
-  let json: unknown;
-  try {
-    json = JSON.parse(raw);
-  } catch (e) {
-    console.warn("todo-review sweep state is not JSON, treating as first run:", e);
-    return { lastSweepDateEpoch: null, review: null, rechecks: {} };
-  }
-  const parsed = SweepStateSchema.safeParse(json);
-  if (!parsed.success) {
-    console.warn(`todo-review sweep state has an unexpected shape, treating as first run: ${parsed.error.message}`);
-    return { lastSweepDateEpoch: null, review: null, rechecks: {} };
-  }
-  const data = parsed.data;
+  const data = await loadJsonStateOrFresh({
+    filePath: path.join(boxRoot, SWEEP_STATE_PATH),
+    name: SWEEP_STATE_PATH,
+    label: "todo-review sweep",
+    schema: SweepStateSchema,
+    fresh: (): z.infer<typeof SweepStateSchema> => ({}),
+  });
   return { lastSweepDateEpoch: data.lastSweepDateEpoch ?? null, review: data.review ?? null, rechecks: data.rechecks ?? {} };
 }
 
@@ -167,31 +150,21 @@ export async function saveSweepState(boxRoot: string, state: SweepState): Promis
 /**
  * Run `fn` holding the standard cross-process lock (`file-lock.ts`) over the
  * sweep state, so two concurrent runs can't both load the same state, each
- * compute, and step on each other's write. Bounded retry against a live
- * holder, same shape as `withQuestionTransition`'s lock loop
- * (`core/commands/question-transition.ts`) — a genuinely stuck holder fails
- * loud rather than blocking the caller forever. Not reentrant: `fn` must not
- * call it again.
+ * compute, and step on each other's write. The wait for a live holder is
+ * bounded, so a stuck holder fails loud rather than blocking the caller
+ * forever. Not reentrant: `fn` must not call it again.
  */
 export async function withSweepLock<T>(boxRoot: string, fn: () => Promise<T>): Promise<T> {
   const lockPath = path.join(boxRoot, SWEEP_LOCK_PATH);
   await fs.mkdir(path.dirname(lockPath), { recursive: true });
 
-  for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-    try {
-      await acquireLock(lockPath, { purpose: "todo-review-sweep" });
-    } catch (e) {
-      if (e instanceof LockHeldError) {
-        await sleep(LOCK_RETRY_MS);
-        continue;
-      }
-      throw e;
-    }
-    try {
-      return await fn();
-    } finally {
-      await releaseLock(lockPath);
-    }
-  }
-  throw new TodoReviewSweepLockError(lockPath);
+  return withFileLock(
+    {
+      lockPath,
+      metadata: { purpose: "todo-review-sweep" },
+      waitMs: LOCK_WAIT_MS,
+      timeoutError: () => new TodoReviewSweepLockError(lockPath),
+    },
+    fn,
+  );
 }

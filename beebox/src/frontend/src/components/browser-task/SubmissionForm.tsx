@@ -13,9 +13,11 @@
  * which runs the same function the server will run at the boundary.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { getApiBase } from "../../api";
 import { withMobileAuth } from "../../lib/mobile-auth";
+import { humanBytes } from "@shared/human-bytes";
 import { isRecord } from "@shared/is-record";
 import { MANIFEST_SHAPE_HINT } from "@shared/browser-task-batch";
 import { Button } from "../ui/Button";
@@ -90,7 +92,7 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
       try {
         manifest = JSON.parse(text);
       } catch (e: unknown) {
-        if (!cancelled) setValidation({ ok: false, issues: [{ path: MANIFEST_FILE, message: `not valid JSON: ${e instanceof Error ? e.message : String(e)}` }] });
+        if (!cancelled) setValidation({ ok: false, issues: [{ path: MANIFEST_FILE, message: `not valid JSON: ${errorMessage(e)}` }] });
         return;
       }
       const result = await validate({ manifest, fileNames: files.filter((f) => f.name !== MANIFEST_FILE).map((f) => f.name) });
@@ -145,12 +147,12 @@ export function SubmissionForm({ cardPath, validate, disabledReason, onAccepted 
               <li key={f.name}>
                 <Row gap="sm" align="center">
                   <Text as="span" mono>{f.name}</Text>
-                  <Text as="span" tone="subtle">{formatBytes(f.size)}</Text>
+                  <Text as="span" tone="subtle">{humanBytes(f.size)}</Text>
                   <InlineAction intent="subtle" onClick={() => remove(f.name)}>remove</InlineAction>
                 </Row>
               </li>
             ))}
-            <li><Text as="span" tone="subtle" size="sm">{String(files.length)} files, {formatBytes(total)}</Text></li>
+            <li><Text as="span" tone="subtle" size="sm">{String(files.length)} files, {humanBytes(total)}</Text></li>
           </ul>
         ) : null}
         {validation !== null && !validation.ok ? <IssueList heading="Not ready to submit" issues={validation.issues} /> : null}
@@ -191,12 +193,6 @@ function IssueList({ heading, issues }: { heading: string; issues: SubmissionIss
       </ul>
     </div>
   );
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${String(n)} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /** POST the multipart body with upload progress; never throws, always resolves to a terminal state. */

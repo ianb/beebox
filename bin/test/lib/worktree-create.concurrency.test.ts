@@ -132,7 +132,7 @@ async function writePnpm(wait: boolean): Promise<void> {
   await fs.chmod(pnpm, 0o755);
 }
 
-async function runBurst(): Promise<number> {
+async function runBurst(): Promise<void> {
   await writePnpm(false);
   const burstNames = Array.from({ length: 24 }, (_, index) => `burst-${index + 1}`);
   const burst = burstNames.map((name) => create(name));
@@ -145,7 +145,6 @@ async function runBurst(): Promise<number> {
   for (const name of burstNames) {
     assert.ok(registeredOn(porcelain, name), `${name} is not registered on its branch`);
   }
-  return burstNames.length;
 }
 
 async function repairInterruptedSetup(): Promise<{ code: number | null; setupRan: boolean; stateReady: boolean }> {
@@ -327,7 +326,7 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
   // add fail while trying to create main. A burst against a minimal real
   // repository checks every registration, not merely each process exit.
 
-  t.check(await runBurst(), 24);
+  await runBurst();
 
   // ## Registration without readiness is repaired
   //

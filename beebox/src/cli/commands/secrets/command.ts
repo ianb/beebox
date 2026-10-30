@@ -50,7 +50,7 @@ import {
   refuseIfUnconfirmedAgent,
   resolveSlugArgument,
 } from "../../lib/secrets-guard.js";
-import { copyGrantsCommand, migrateCommand } from "./migrate.js";
+import { copyGrantsCommand, exportBoxCommand, migrateCommand } from "./migrate.js";
 
 /** Read a piped value from stdin (everything up to EOF, one trailing newline stripped). */
 async function readStdinValue(): Promise<string> {
@@ -364,4 +364,5 @@ secretsCommand
 // rule, and they share only the guards in `cli/lib/secrets-guard.ts`).
 secretsCommand.addCommand(describeCommand);
 secretsCommand.addCommand(copyGrantsCommand);
+secretsCommand.addCommand(exportBoxCommand);
 secretsCommand.addCommand(migrateCommand);

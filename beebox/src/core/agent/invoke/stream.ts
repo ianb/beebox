@@ -11,7 +11,6 @@
  */
 
 import type { Query, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { fmt } from "../../../lib/format.js";
 import { renderSdkMessage } from "./render.js";
 import { stopPromptLogger, type PromptLogger } from "./prompt-logger.js";
 
@@ -127,9 +126,7 @@ export async function consumeAgentStream(
           ? await iterator.next()
           : await withDeadline(iterator.next(), STREAM_END_GRACE_MS);
       if (next === DEADLINE) {
-        onOutput?.(fmt.dim(
-          `(claude did not exit within ${String(STREAM_END_GRACE_MS / 1000)}s of its result — terminating it)\n`,
-        ));
+        onOutput?.(`(claude did not exit within ${String(STREAM_END_GRACE_MS / 1000)}s of its result — terminating it)\n`);
         await disposeQuery(q);
         break;
       }

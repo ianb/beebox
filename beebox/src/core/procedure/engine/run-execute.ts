@@ -4,7 +4,6 @@ import * as path from "node:path";
 import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../../agent/invoke/core.js";
 import { invariant } from "../../../shared/invariant.js";
 import { MEMORY_ENV } from "../../schedule/memory.js";
-import { fmt } from "../../../lib/format.js";
 import { loadEffectiveBoxModel, loadTierResolver } from "../../model-policy.js";
 import type { ProcedureModelName } from "../../../shared/agent-models.js";
 import type { ExecuteStepParams } from "./step.js";
@@ -87,7 +86,7 @@ async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
   // Same model rule as the main pass: the retry resumes the same step.
   const modelId = await stepModel(boxRoot, agentDef.model);
   const agentFactory = params.createAgent ?? realCreateAgent;
-  ctx.writeLine(fmt.dim("  Re-running agent with validation feedback..."));
+  ctx.writeLine("  Re-running agent with validation feedback...");
   const agent = agentFactory({
     name: `procedure-${procedure.name}-${step.id}`,
     sessionId: params.retry.sessionId,
@@ -106,7 +105,7 @@ async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
   const result = await agent.invoke(invokeOpts);
   const sessionId = agent.sessionId ?? params.retry.sessionId;
   if (result.success) return { sessionId };
-  ctx.writeLine(fmt.fail(`Agent failed: ${result.error}`));
+  ctx.writeLine(`✗ Agent failed: ${result.error}`);
   return failedAgentOutcome(sessionId, result);
 }
 
@@ -121,7 +120,7 @@ export async function runRunAgents(params: RunPhaseParams): Promise<RunAgentOutc
   for (const agentDef of step.run.agents) {
     const modelId = await stepModel(boxRoot, agentDef.model);
     ctx.writeLine(
-      fmt.dim(`  Running agent${modelId === undefined ? "" : ` (${agentDef.model ?? "box default"} → ${modelId})`}...`),
+      `  Running agent${modelId === undefined ? "" : ` (${agentDef.model ?? "box default"} → ${modelId})`}...`,
     );
     const agent = agentFactory({
       name: `procedure-${procedure.name}-${step.id}`,
@@ -136,7 +135,7 @@ export async function runRunAgents(params: RunPhaseParams): Promise<RunAgentOutc
     });
     sessionId = agent.sessionId ?? undefined;
     if (!result.success) {
-      ctx.writeLine(fmt.fail(`Agent failed: ${result.error}`));
+      ctx.writeLine(`✗ Agent failed: ${result.error}`);
       const failure = failedAgentOutcome(sessionId, result);
       if (failure.engineUnavailable !== undefined || failure.invocationFailure !== undefined) {
         return failure;
@@ -155,17 +154,17 @@ export async function runRunShells(
   if (step.run.shells.length === 0) {
     return { runStdout: undefined, runFailure: undefined };
   }
-  ctx.writeLine(fmt.dim("  Running shell command..."));
+  ctx.writeLine("  Running shell command...");
   const result = await executePhaseShells(boxRoot, step.run);
   const runStdout = result.stdout || undefined;
   if (result.exitCode !== 0 && !result.skipped) {
-    ctx.writeLine(fmt.fail(`Shell command failed (exit ${result.exitCode})`));
-    if (result.stderr) ctx.writeLine(fmt.dim(`  ${result.stderr}`));
+    ctx.writeLine(`✗ Shell command failed (exit ${result.exitCode})`);
+    if (result.stderr) ctx.writeLine(`  ${result.stderr}`);
     return {
       runStdout,
       runFailure: { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr },
     };
   }
-  if (result.stdout) ctx.writeLine(fmt.dim(`  ${result.stdout}`));
+  if (result.stdout) ctx.writeLine(`  ${result.stdout}`);
   return { runStdout, runFailure: undefined };
 }

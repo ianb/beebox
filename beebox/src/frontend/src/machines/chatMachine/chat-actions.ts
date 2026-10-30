@@ -12,6 +12,7 @@ import type { OutputFrom } from "xstate";
 import { queueMessageToBackend, rollupStreamToEntry, type fetchHistoryActor } from "./chat-actors";
 import { toastError } from "../../components/ui/toast-store";
 import { MAX_RETAINED_MESSAGES, type ChatContext, type ChatEvent } from "../chat-types";
+import { boxNow } from "../../lib/box-clock";
 import { observeChatSendHistory } from "../../lib/chat-send-diagnostics";
 import type { ChatSendContext } from "@core/chat/card-activity.js";
 
@@ -38,7 +39,6 @@ export function cardFieldsFromEvent(event: SendEvent): ChatSendContext & Pick<Se
     ...(event.startup !== undefined ? { startup: event.startup } : {}),
     ...(event.binding !== undefined ? { binding: event.binding } : {}),
     ...(event.openCard !== undefined ? { openCard: event.openCard } : {}),
-    ...(event.openQuestion !== undefined ? { openQuestion: event.openQuestion } : {}),
     ...(event.cardActivity && event.cardActivity.length > 0 ? { cardActivity: event.cardActivity } : {}),
     ...(event.cardState && Object.keys(event.cardState).length > 0 ? { cardState: event.cardState } : {}),
   };
@@ -49,7 +49,7 @@ function buildPendingEntry(event: SendEvent, knownMessages: SessionEntry[]): Pen
   return {
     uuid: event.messageId,
     type: "user",
-    timestamp: new Date().toISOString(),
+    timestamp: new Date(boxNow()).toISOString(),
     content: buildOptimisticContent(event.message, event.images),
     pending: true,
     reconcileKnownUuids: knownMessages.map((message) => message.uuid),
@@ -70,9 +70,13 @@ export function appendQueuedSend(
   };
 }
 
-/** Fire the queued message at the backend; the chat-complete SSE triggers refresh. */
+/**
+ * Fire the queued message at the backend; the chat-complete SSE triggers
+ * refresh. A refusal comes back as SEND_REFUSED, so the optimistic entry says
+ * it was not delivered instead of looking queued until it ages out.
+ */
 export function dispatchQueuedSend(
-  { context, event }: { context: ChatContext; event: SendEvent },
+  { context, event, self }: { context: ChatContext; event: SendEvent; self: { send: (event: ChatEvent) => void } },
 ): void {
   queueMessageToBackend({
     session: context.sessionInput,
@@ -80,6 +84,7 @@ export function dispatchQueuedSend(
     messageId: event.messageId,
     ...(event.images ? { images: event.images } : {}),
     ...cardFieldsFromEvent(event),
+    onRefused: () => self.send({ type: "SEND_REFUSED", messageId: event.messageId }),
   });
 }
 
@@ -96,6 +101,7 @@ export function appendOtherUserMessage(
         timestamp: event.timestamp,
         content: [{ type: "text", text: event.message }],
         user: event.userName,
+        ...(event.messageId !== undefined ? { messageId: event.messageId } : {}),
       },
     ],
   };

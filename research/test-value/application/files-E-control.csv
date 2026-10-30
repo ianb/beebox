@@ -1,0 +1,17 @@
+file,minutes,checks_before,checks_after,lines_before,lines_after,test_result,obstacle
+beebox/test/core/chat/husk-transcript.test.ts,0.3,3,3,45,45,pass,-
+workstreams-app/test/frontend/lib/issue-category-nav.test.ts,0.2,5,4,34,30,pass,-
+beebox/src/frontend/test/lib/place-label.test.ts,0.4,12,12,131,131,pass,-
+beebox/test/core/folder-instructions.test.ts,0.3,6,6,70,70,pass,-
+beebox/test/scenarios/cross-box-probe.test.ts,1.0,23,23,366,366,pass,"366 lines, most of it commentary naming sibling files; the file runs 23 seconds."
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission-redelivery.test.ts,0.3,4,4,96,96,pass,-
+beebox/src/frontend/test/components/chat/workspace/use-open-beside/open-beside.test.ts,0.4,6,6,63,63,pass,"Had to grep the workspace tests to see whether the reducer's destinationPane proof lived elsewhere."
+beebox/test/webapp/trpc/routers/card.get-body-offset.test.ts,0.3,4,4,85,85,pass,-
+beebox/test/dev/layout/move/git-renames.pipeline.test.ts,0.5,8,6,125,109,pass,"Checked mention-rewrite.pipeline.test.ts to confirm the second proof's home; the removal also dropped three imports and a helper."
+beebox/src/frontend/test/components/ui/Stack.stack-and-roles.test.ts,0.5,8,8,63,63,pass,"Full-markup checks pin sibling components' classes; narrowing needs markup parsing, so none was done."
+beebox/test/core/commands/dismiss.test.ts,0.3,4,4,75,75,pass,-
+beebox/test/lib/attach-lint.test.ts,0.3,3,3,78,71,pass,-
+beebox/src/frontend/test/components/chat/message-parsing.test.ts,0.3,9,9,82,82,pass,-
+bin/test/lib/worktree-create.concurrency.test.ts,0.8,10,9,425,424,pass,"No tap config under bin; bin/AGENTS.md says to run it as `cd beebox && pnpm exec tap ../bin/test/<path>`, which is what was run (37 s)."
+beebox/test/core/tts/voices.test.ts,0.3,8,8,81,81,pass,-
+beebox/test/cli/commands/serve.dev-args.test.ts,0.3,4,4,91,91,pass,-

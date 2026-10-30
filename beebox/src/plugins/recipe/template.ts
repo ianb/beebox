@@ -3,8 +3,8 @@
  * default; a box's `src/schemas/recipe.ts` stub re-exports it, and the box
  * schema loader registers it.
  */
-import type { TemplateDefinition } from "../../exports/cards.js";
-import { stringifyYaml, z } from "../../exports/schema.js";
+import { renderFrontmatterBlock, type TemplateDefinition } from "../../exports/cards.js";
+import { z } from "../../exports/schema.js";
 
 /**
  * Template for creating a recipe card. Seeds yield + headings + a
@@ -20,7 +20,6 @@ function createRecipeTemplate(options: {
     fields["description"] = options.description;
   }
   const servings = options.servings ?? 4;
-  const yamlText = stringifyYaml(fields);
   const bodyText = `{% yield amount="${servings}" %}${servings} servings{% /yield %}
 
 ## Ingredients
@@ -31,7 +30,7 @@ function createRecipeTemplate(options: {
 
 {% step %}First step here.{% /step %}
 `;
-  return `---\n${yamlText}---\n${bodyText}`;
+  return renderFrontmatterBlock(fields, bodyText);
 }
 
 const argsSchema = z.object({

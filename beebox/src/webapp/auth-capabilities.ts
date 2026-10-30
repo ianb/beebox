@@ -9,6 +9,7 @@ import { errnoCode } from "../shared/error-guards.js";
 import { requestScopedLock, withFileLock } from "../lib/file-lock.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { authFilePath, canonicalizeEmail } from "./local-users.js";
+import { hashToken } from "../core/token-store.js";
 
 const TOKEN_BYTES = 32;
 const CAPABILITY_TTL_MS = 15 * 60 * 1_000;
@@ -113,10 +114,6 @@ export class AuthCapabilityCapacityError extends Error {
 /** Keep the shipped filename so deployment and backup configuration do not move secret state. */
 export function authCapabilityStorePath(): string {
   return `${authFilePath()}.invites.json`;
-}
-
-function hashToken(token: string): string {
-  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 function hashesEqual(first: string, second: string): boolean {

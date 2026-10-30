@@ -13,11 +13,12 @@ import { parseCommandArgs, type CommandContext, type CommandDefinition, type Com
 import { getBoxDir, isCardFile, parseCardName } from "../../../lib/paths/core.js";
 import { BoxPathArgError, resolveCliTargetPath } from "../../../cli/lib/cli-target-path.js";
 import { getStatus, stageAndCommitPaths } from "../../../lib/git/core/operations.js";
-import { attachDirFor } from "../../../shared/attach-path.js";
+import { attachDirFor, cardBasename } from "../../../shared/attach-path.js";
 import { NotFoundError } from "../../../lib/errors.js";
-import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { assertSafeTrashDestination } from "./namespace-guard.js";
 import { findInboundCardRefs, type InboundCardRef } from "../../find-inbound-card-refs.js";
+import { pathExistsStrict } from "../../../lib/file-exists.js";
 
 class NotACardFileError extends Error {
   readonly cardPath: string;
@@ -85,18 +86,6 @@ async function reportInboundRefs(
   return inboundRefs;
 }
 
-async function pathExists(target: string): Promise<boolean> {
-  // Deliberately stricter than lib/file-exists: an unreadable destination
-  // cannot safely be treated as absent before a destructive rename.
-  try {
-    await fs.access(target);
-    return true;
-  } catch (error) {
-    if (errnoCode(error) === "ENOENT") return false;
-    throw error;
-  }
-}
-
 /**
  * Trash a single card and its attachments. Returns info about what was moved.
  */
@@ -140,10 +129,9 @@ async function trashOne(
 
   // Check if destination already exists (add timestamp if so)
   let finalDestPath = destPath;
-  if (await pathExists(destPath)) {
+  if (await pathExistsStrict(destPath, { followLinks: true })) {
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
-    const newName = `${parsed.name}_${timestamp}.${parsed.type}.card`;
-    finalDestPath = path.join(trashDir, newName);
+    finalDestPath = path.join(trashDir, withCollisionStamp(basename, timestamp));
   }
 
   // Ensure trash directory exists
@@ -151,9 +139,9 @@ async function trashOne(
 
   const sourceAttachDir = attachDirFor(sourcePath);
   const destAttachDir = attachDirFor(finalDestPath);
-  const hasAttachments = await pathExists(sourceAttachDir);
+  const hasAttachments = await pathExistsStrict(sourceAttachDir, { followLinks: true });
   let finalAttachDest = destAttachDir;
-  if (hasAttachments && (await pathExists(destAttachDir))) {
+  if (hasAttachments && (await pathExistsStrict(destAttachDir, { followLinks: true }))) {
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
     finalAttachDest = `${destAttachDir}_${timestamp}`;
   }
@@ -211,12 +199,13 @@ export async function moveCardsToTrash(ctx: CommandContext, cardPaths: string[])
   return { moves, gitPaths };
 }
 
-/** Commit one completed trash move receipt with standard attribution. */
-export async function commitTrashReceipt(boxRoot: string, options: { receipt: TrashReceipt; reason?: string | undefined; actor?: string | undefined }): Promise<string | null> {
+/** Commit one completed trash move receipt with standard attribution; `trailers` add to or override it. */
+export async function commitTrashReceipt(boxRoot: string, options: { receipt: TrashReceipt; reason?: string | undefined; actor?: string | undefined; trailers?: Record<string, string> }): Promise<string | null> {
   const { receipt, reason } = options;
   const suffix = reason === undefined ? "" : `: ${reason}`;
+  const single = receipt.moves[0]?.sourcePath;
   const message =
-    receipt.moves.length === 1 ? `Trash card: ${path.basename(receipt.moves[0]?.sourcePath ?? "card")}${suffix}` : `Trash ${String(receipt.moves.length)} cards${suffix}`;
+    receipt.moves.length === 1 && single !== undefined ? `Trash ${isCardFile(single) ? "card" : "file"}: ${path.basename(single)}${suffix}` : `Trash ${String(receipt.moves.length)} cards${suffix}`;
   const status = await getStatus(boxRoot);
   const changedPaths = new Set([...status.staged, ...status.modified, ...status.untracked]);
   const paths = [...new Set(receipt.gitPaths.filter((gitPath) => changedPaths.has(gitPath) || [...changedPaths].some((changed) => changed.startsWith(`${gitPath}/`))))];
@@ -224,7 +213,7 @@ export async function commitTrashReceipt(boxRoot: string, options: { receipt: Tr
   return stageAndCommitPaths(boxRoot, {
     paths,
     message,
-    trailers: { "Trashed-By": "bbx rm", ...triggeredByTrailer(options.actor) },
+    trailers: { "Trashed-By": "bbx rm", ...triggeredByTrailer(options.actor), ...options.trailers },
   });
 }
 
@@ -377,3 +366,17 @@ export const trashCommand: CommandDefinition = {
 };
 
 export { executeTrash };
+
+/**
+ * The trash name for a card whose name is taken: `_<stamp>` after the attach
+ * stem, the rest of the filename kept, so a job card keeps its `.job.card`
+ * ending and its attach directory stays `<stem>_<stamp>.attach`. A
+ * positional card (`doc.card`) becomes `doc_<stamp>.doc.card`, keeping its
+ * type, since `doc_<stamp>.card` would be a different positional type.
+ */
+export function withCollisionStamp(fileName: string, stamp: string): string {
+  const stem = cardBasename(fileName);
+  const rest = fileName.slice(stem.length);
+  return rest === ".card" ? `${stem}_${stamp}.${stem}.card` : `${stem}_${stamp}${rest}`;
+}
+

@@ -11,6 +11,7 @@ import { linkTarget, matchReferenceDefinitionAt } from "./body-refs.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
+import { isWithin } from "../lib/box-containment.js";
 
 // The retired `view:` scheme in any markdown link/image. Cards/files are now
 // referenced by a plain box path; a `view:` prefix produces a dead link. Forms
@@ -228,8 +229,9 @@ export function resolveInternalLink(
  * it has no in-box links to resolve.
  */
 function boxRelativeDir(root: string, fileDir: string): string | null {
-  const rel = path.relative(root, path.resolve(fileDir));
-  if (rel === ".." || rel.startsWith(".." + path.sep)) return null;
+  const dir = path.resolve(fileDir);
+  if (!isWithin(root, dir)) return null;
+  const rel = path.relative(root, dir);
   return rel === "" ? "" : rel.split(path.sep).join("/") + "/";
 }
 

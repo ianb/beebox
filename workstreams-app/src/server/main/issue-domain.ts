@@ -2,6 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { resolveIssuePath } from "./issue-path.js";
+import { frontmatterFence } from "../../../../beebox/src/cards/frontmatter.js";
+import { markdownTitle } from "../../../../beebox/src/shared/leading-title-heading.js";
 
 export const ISSUE_CATEGORIES = [
   "bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch",
@@ -61,10 +63,8 @@ export function parseFrontmatter(source: string): {
   data: Record<string, string | string[]>;
   body: string;
 } {
-  const lines = source.split("\n");
-  if ((lines[0] ?? "").trim() !== "---") return { data: {}, body: source };
-  const end = lines.findIndex((line, index) => index > 0 && line.trim() === "---");
-  if (end === -1) return { data: {}, body: source };
+  const fence = frontmatterFence(source);
+  if (fence === null) return { data: {}, body: source };
   const data: Record<string, string | string[]> = {};
   let blockKey: string | null = null;
   let blockItems: string[] | null = null;
@@ -73,7 +73,7 @@ export function parseFrontmatter(source: string): {
     blockKey = null;
     blockItems = null;
   };
-  for (const line of lines.slice(1, end)) {
+  for (const line of source.slice(fence.textStart, fence.textEnd).split("\n")) {
     const listMatch = /^\s*-\s+(.*)$/u.exec(line);
     if (listMatch && blockKey !== null && blockItems !== null) {
       blockItems.push(unquote((listMatch[1] ?? "").trim()));
@@ -95,7 +95,7 @@ export function parseFrontmatter(source: string): {
     }
   }
   flush();
-  return { data, body: lines.slice(end + 1).join("\n") };
+  return { data, body: source.slice(fence.bodyStart) };
 }
 
 function scalar(value: string | string[] | undefined): string | undefined {
@@ -151,7 +151,7 @@ export function parseIssueFile(options: {
     closed,
     slug,
     frontmatter: {
-      title: scalar(data.title) ?? /^#\s+(.+)$/mu.exec(body)?.[1]?.trim() ?? slug,
+      title: (scalar(data.title)?.trim() || null) ?? markdownTitle(body) ?? slug,
       workstream: scalar(data.workstream) ?? "unknown",
       needs: list(data.needs), labels: list(data.labels), priority,
       ...Object.fromEntries(Object.entries(optional).filter((entry) => entry[1] !== undefined)),
@@ -202,14 +202,14 @@ class UnwritableIssueError extends Error {
   }
 }
 
+/** Where the closing fence line starts, and the file's newline style, so a
+ *  key line can be added just before the closing fence. */
 function frontmatterEnd(source: string): { end: number; newline: string } {
-  const opening = /^(?:\uFEFF)?---[ \t]*(\r?\n)/u.exec(source);
-  if (!opening) throw new UnwritableIssueError();
-  const closing = /^---[ \t]*\r?$/gmu;
-  closing.lastIndex = opening[0].length;
-  const end = closing.exec(source)?.index;
-  if (end === undefined) throw new UnwritableIssueError();
-  return { end, newline: opening[1] ?? "\n" };
+  const fence = frontmatterFence(source);
+  if (fence === null) throw new UnwritableIssueError();
+  const newline = source.slice(0, fence.textStart).endsWith("\r\n") ? "\r\n" : "\n";
+  const end = fence.textEnd === fence.textStart ? fence.textStart : fence.textEnd + (source[fence.textEnd] === "\r" ? 2 : 1);
+  return { end, newline };
 }
 
 export function setIssuePriority(source: string, priority: IssuePriority): string {

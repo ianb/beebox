@@ -8,20 +8,19 @@
  * away. See `lib/file-load-state.ts` for the decision itself.
  */
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc/client";
 import { ATTACH_SUFFIX } from "@shared/attach-path";
 import { apiRawFileUrl, getApiBase } from "../api";
-import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
-import { useDeferredResync } from "../hooks/useDeferredResync";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { RequestError } from "../lib/errors";
 import { resolveLoadState, type LoadFailure } from "../lib/file-load-state";
 import { fetchFromBox, MAX_RETRIES, retryDelayMs, unreachableCause } from "../lib/trpc/transient";
-import { busEventData } from "../lib/bus-events";
+import { fileChangeAt } from "../lib/live-refresh";
 import type { FileData } from "../file-type-registry";
-import { cardLoadRecovery, fileChangeAffectsPath, type CardLoadRecovery } from "../lib/moved-card-recovery";
+import { cardLoadRecovery, type CardLoadRecovery } from "../lib/moved-card-recovery";
 
 /* ---------- path classification ---------- */
 
@@ -111,10 +110,8 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
     retryDelay: (count) => retryDelayMs(count + 1),
   });
 
-  // Live reload via the box event stream. Resync this file's data on a matching
-  // `file-change`, and also on a *re*connect: file-change events are transient
-  // and not replayed, so a change that landed while the socket was dropped would
-  // otherwise leave the view stale until a manual reload.
+  // Live reload via the box event stream: resync this file's data on a matching
+  // `file-change` and on a reconnect (`useLiveRefresh`).
   const utils = trpc.useUtils();
   const resync = useCallback(() => {
     // Fire-and-forget: both are react-query refresh triggers whose failure
@@ -134,31 +131,11 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
       void textQuery.refetch();
     }
   }, [isCard, fetchText, cardQuery, textQuery]);
-  // Skip the very first connect — the queries already load on mount, so a resync
-  // there is a redundant refetch (and FileView is mounted many-at-once in chat).
-  const connectedOnceRef = useRef(false);
-  // Reconnect-driven resync is per-instance (one per mounted FileView, i.e.
-  // per path), coalesced same-tick and deferred while the tab is hidden — a
-  // chat with many embedded files all reconnecting at once shouldn't each
-  // fire their own refetch, and a backgrounded tab shouldn't fetch at all.
-  const triggerResync = useDeferredResync(resync);
-  useBusSubscription({
-    onEvent: useCallback((event: RealtimeEvent) => {
-      const fileChange = busEventData(event, "file-change");
-      if (!fileChange) return;
-      // Tolerant compare: normalize both sides so a stray leading slash on this
-      // view's path can't silently drop the event (the original refresh bug).
-      if (!fileChangeAffectsPath(fileChange, path)) return;
-      resync();
-    }, [path, resync]),
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
-      triggerResync();
-    }, [triggerResync]),
-  });
+  // Per mounted FileView (one per path): a chat with many embedded files that
+  // all reconnect at once coalesces, and a backgrounded tab does not fetch.
+  // `fileChangeAt` compares box-relative, so a stray leading slash on this
+  // view's path cannot drop the event (the original refresh bug).
+  useLiveRefresh({ when: fileChangeAt(path), refresh: resync });
 
   const cardState = resolveLoadState(cardQuery);
   const textState = resolveLoadState(textQuery);

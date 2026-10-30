@@ -6,7 +6,7 @@
 
 import { readFile } from "node:fs/promises";
 import { Command } from "commander";
-import { parse as parseYaml } from "yaml";
+import { parseYaml } from "../../lib/read-yaml.js";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { applyFieldMap } from "../../core/card-fields/apply.js";
 import { parseFieldMap } from "../../core/card-fields/map.js";

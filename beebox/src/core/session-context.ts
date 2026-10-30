@@ -14,10 +14,10 @@
  */
 
 import type { AttentionSnapshot } from "../shared/chat-composer-binding.js";
-import { getBoxTime } from "../lib/time.js";
+import { boxClockShiftMs, getBoxTime } from "../lib/time.js";
 import { loadBoxTimezone } from "./box/config.js";
 import { getMostActiveSavedAt } from "./chat/session/history.js";
-import { composeChatAppSnapshot, type FeatureMap } from "./chat/features.js";
+import { SIMULATED_CLOCK_NOTE, composeChatAppSnapshot, type FeatureMap } from "./chat/features.js";
 import type { ChatChannel } from "../shared/chat-channel.js";
 import {
   loadScheduleHealth,
@@ -25,6 +25,7 @@ import {
 } from "./schedule/health-box.js";
 import { computeTodoAmbientLine } from "./todo/ambient-summary.js";
 import { docsApiChatLine, readDocsApiDiagnosis } from "../connectors/google-drive/docs-api-status.js";
+import { plural } from "../shared/plural.js";
 
 function phaseOfDay(hour: number): string {
   if (hour >= 5 && hour < 12) return "morning";
@@ -120,13 +121,10 @@ export function describeElapsed(ms: number): string {
   return plural(Math.round(days / 7), "week");
 }
 
-function plural(n: number, unit: string): string {
-  return `${n} ${unit}${n === 1 ? "" : "s"}`;
-}
-
 /** Snapshot attribute values computed per send. */
 interface SnapshotContext {
   localTime: string;
+  clock?: typeof SIMULATED_CLOCK_NOTE;
   lastActivity?: string;
   health?: string;
   todos?: string;
@@ -197,12 +195,11 @@ export function admitHealth(
  */
 export async function composeSendSnapshot(
   boxRoot: string,
-  { features, sessionStart, channel, openCard, openQuestion, viewContext, activityChildren, healthGate, lastActivityAt }: {
+  { features, sessionStart, channel, openCard, viewContext, activityChildren, healthGate, lastActivityAt }: {
     features?: FeatureMap;
     sessionStart: boolean;
     channel?: ChatChannel;
     openCard?: string;
-    openQuestion?: string;
     viewContext?: AttentionSnapshot;
     activityChildren?: string;
     healthGate?: HealthGate;
@@ -226,7 +223,6 @@ export async function composeSendSnapshot(
     ...context,
     ...(channel !== undefined ? { channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
-    ...(openQuestion !== undefined ? { openQuestion } : {}),
     ...(viewContext !== undefined ? { viewContext } : {}),
     ...(activityChildren !== undefined ? { activityChildren } : {}),
   });
@@ -253,6 +249,7 @@ export async function buildSnapshotContext(
 ): Promise<SnapshotContext> {
   const timezone = await loadBoxTimezone(boxRoot);
   const out: SnapshotContext = { localTime: formatLocalTime(now, { timezone }) };
+  if (boxClockShiftMs(boxRoot) !== 0) out.clock = SIMULATED_CLOCK_NOTE;
 
   if (healthGate !== undefined || sessionStart) {
     try {

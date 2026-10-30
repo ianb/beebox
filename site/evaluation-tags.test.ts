@@ -55,3 +55,14 @@ test("an audio source off the site fails the build", () => {
   assert.throws(() => renderBody('{% audio src="/assets/../index.site-page.card" /%}', context), /malformed markup/);
   assert.throws(() => renderBody('{% audio src="/assets/tts/../../x.webm" /%}', context), /malformed markup/);
 });
+
+test("a take reference labels the player and becomes its id, so a link can name the take", () => {
+  const html = renderBody('{% audio src="/assets/tts/a.webm" ref="X-she-gemini38lite" /%}', context).html;
+  assert.match(html, /<span class="take-player"><span class="take-ref">X-she-gemini38lite<\/span><audio id="X-she-gemini38lite" controls="" preload="none" src="\/assets\/tts\/a\.webm" aria-label="X-she-gemini38lite"><\/audio><\/span>/);
+});
+
+test("a take reference outside letters, digits, and hyphens fails the build", () => {
+  assert.throws(() => renderBody('{% audio src="/assets/tts/a.webm" ref="X she" /%}', context), /malformed markup/);
+  assert.throws(() => renderBody('{% audio src="/assets/tts/a.webm" ref="<b>" /%}', context), /malformed markup/);
+  assert.throws(() => renderBody('{% audio src="/assets/tts/a.webm" ref="" /%}', context), /malformed markup/);
+});

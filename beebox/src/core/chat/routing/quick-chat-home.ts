@@ -4,14 +4,16 @@
  * shortcut links from `nav.card`.
  */
 
+import { z } from "zod";
 import { getBoxTime } from "../../../lib/time.js";
 import { navRouteFor } from "../../../shared/nav-routes.js";
 import { resolveNav, type NavEntryResolved } from "../../nav.js";
 import { loadLandmarkSummaries } from "../../landmark/summaries.js";
 import { loadAllSessions } from "../session/list/core.js";
 import { chatLandmark, recentLandmarkChatsFrom, type RecentLandmarkChat } from "../session/recent-landmark.js";
-import { quickChatView, type QuickChatView } from "./quick-chat-record.js";
+import { quickChatView, quickChatViewSchema, type QuickChatView } from "./quick-chat-record.js";
 import { listOpenQuickChatRecords, listRecentlySentQuickChatRecords } from "./quick-chat-store.js";
+import { boxCardPath } from "../../../shared/card-url.js";
 
 const RECENTLY_SENT_LIMIT = 5;
 const RECENT_CHATS_LIMIT = 5;
@@ -29,10 +31,22 @@ export interface QuickChatHome {
   shortcuts: { label: string; to: string }[];
 }
 
+const recentChatSchema = z.object({ sessionId: z.string(), label: z.string(), lastActivity: z.string(),
+  landmark: z.object({ dir: z.string(), label: z.string(), symbol: z.string().nullable() }).nullable() });
+/**
+ * The `quickChat.home` answer on the wire. `asleep` is set only by the hub,
+ * answering from a sleeping box's snapshot (`home-snapshot.ts`); the box never sends it.
+ */
+export const quickChatHomeSchema = z.object({
+  open: z.array(quickChatViewSchema), recentlySent: z.array(quickChatViewSchema),
+  recentChats: z.array(recentChatSchema), shortcuts: z.array(z.object({ label: z.string(), to: z.string() })),
+  asleep: z.object({ savedAt: z.string() }).optional(),
+});
+
 /** Project `nav.card` entries onto links; an absent or invalid card has none, as in the menu. */
 function shortcutsFrom(entries: NavEntryResolved[]): QuickChatHome["shortcuts"] {
   return entries.flatMap((entry) => {
-    if (entry.kind === "ref") return [{ label: entry.label === "" ? entry.target : entry.label, to: `/browse/${entry.target}` }];
+    if (entry.kind === "ref") return [{ label: entry.label === "" ? entry.target : entry.label, to: boxCardPath(entry.target) }];
     if (BOX_SCREEN_ROUTES.has(entry.target)) return [];
     return [{ label: entry.label === "" ? navRouteFor(entry.target)?.label ?? entry.target : entry.label, to: entry.target }];
   });
@@ -59,7 +73,7 @@ export async function quickChatHome(boxRoot: string): Promise<QuickChatHome> {
   const [open, recentlySent, recentChats, nav] = await Promise.all([
     listOpenQuickChatRecords(boxRoot),
     listRecentlySentQuickChatRecords(boxRoot, { now, limit: RECENTLY_SENT_LIMIT }),
-    boxScreenRecentChats(boxRoot, now),
+    boxScreenRecentChats(boxRoot, Date.now()), // session mtimes are real
     resolveNav(boxRoot),
   ]);
   return {

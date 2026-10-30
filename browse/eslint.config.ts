@@ -1,6 +1,6 @@
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 export default [
-  ...vibeCheck({ react: false, ignores: ["**/*.mjs", "node_modules/**", "packages/*/node_modules/**"] }),
+  ...vibeCheck({ react: false, roots: ["src", "test", "packages/agent-browser-typed/src", "packages/agent-browser-typed/test"], ignores: ["**/*.mjs", "node_modules/**", "packages/*/node_modules/**"] }),
   {
     rules: {
       "max-params": ["error", 2],
@@ -14,12 +14,9 @@ export default [
       "security/detect-bidi-characters": "off",
       "security/detect-non-literal-fs-filename": "off",
       "default/no-hardcoded-urls": "off",
-      "custom/jsx-classname-required": "off",
       "no-restricted-syntax": "off",
       "complexity": "off",
       "@typescript-eslint/no-this-alias": "off",
-      "single-export/single-export": "off",
-      "ddd/require-spec-file": "off",
     },
   },
 ];

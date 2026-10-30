@@ -10,7 +10,6 @@
 
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, memo } from "react";
 import { EmptyChat } from "../../EmptyChat";
-import type { OpenQuestion } from "../../open-question";
 import type { OpenerSendOutcome } from "../../../openers/opener-send";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../../../api";
@@ -31,6 +30,7 @@ import { useRevealAnchor } from "./reveal-anchor";
 import { TranscriptSelection } from "./TranscriptSelection";
 import { useCaptureAnchor } from "./use-capture-anchor";
 import type { CaptureBubbleModel, CaptureVerbs } from "../../capture-bubble";
+import type { UndeliveredVerbs } from "../../user-message/view";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
 import { LoadOlderHeader } from "../../LoadOlderHeader";
@@ -128,8 +128,7 @@ function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, sendSignal, captureSignal, liveTurnId, proseEnabled, pendingHq, onHqSendLive,
-  captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener,
-  openQuestion, onFocusComposer, onQuestionNotNow, onOpenQuestions,
+  captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener, undeliveredVerbs,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -169,9 +168,8 @@ function MessageListInner({
   openers: string[];
   /** Send an opener as the person's message — the typed-and-entered path. */
   onSendOpener: (text: string) => OpenerSendOutcome;
-  /** The pending question the empty root chat asks; null elsewhere (see `OpenQuestionLine`). */
-  openQuestion: OpenQuestion | null;
-  onFocusComposer: () => void; onQuestionNotNow: (path: string) => void; onOpenQuestions: () => void;
+  /** Resend and Discard on an undelivered message of the person's own. */
+  undeliveredVerbs: UndeliveredVerbs;
 }) {
   const { boxSlug } = useParams({ strict: false });
   // Also gated on the retained-window ceiling: past it the machine drops what
@@ -272,14 +270,13 @@ function MessageListInner({
     onZoomView,
     proseEnabled,
     captureVerbs,
-    audioOverlayStore, onHqSendLive,
+    audioOverlayStore, onHqSendLive, undeliveredVerbs,
   });
 
   // A first capture into an empty chat still shows its pending bubble.
   if (messages.length === 0 && !isStreaming && captureBubbles.length === 0) {
     return (
-      <EmptyChat openers={openers} onSendOpener={onSendOpener} openQuestion={openQuestion}
-        onFocusComposer={onFocusComposer} onQuestionNotNow={onQuestionNotNow} onOpenQuestions={onOpenQuestions} />
+      <EmptyChat openers={openers} onSendOpener={onSendOpener} />
     );
   }
 

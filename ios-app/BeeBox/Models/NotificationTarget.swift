@@ -76,7 +76,7 @@ enum NotificationTarget: Equatable {
         case .chatNew:
             "chat?new=1&notification=\(Self.encodeURIComponent(notificationID))"
         case .card(let path), .question(let path):
-            "browse/\(path)"
+            "views/" + path.split(separator: "/", omittingEmptySubsequences: false).map { Self.encodeURIComponent(String($0)) }.joined(separator: "/")
         case .admin(let section):
             // JSON.stringify({ section }) — the section id is [0-9a-z-], so no escaping.
             "views/\(Self.adminCardPath)?viewState=\(Self.encodeURIComponent("{\"section\":\"\(section)\"}"))"

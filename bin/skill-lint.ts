@@ -25,6 +25,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { REPO_PATH_DIRS } from "../beebox/src/dev/doc-check/file-paths.js";
+import { isRecord } from "../beebox/src/shared/is-record.js";
+import { frontmatterFence } from "../beebox/src/cards/frontmatter.js";
 
 type Severity = "error" | "info";
 
@@ -52,16 +54,12 @@ interface ParsedDoc {
   error?: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 function parseDoc(text: string): ParsedDoc {
   const lines = text.split("\n");
-  if (lines[0] !== "---") {
+  if (!/^\uFEFF?---[\t ]*\r?$/.test(lines[0] ?? "")) {
     return { frontmatter: undefined, body: text, bodyStart: 1, error: "file does not start with a --- frontmatter fence" };
   }
-  const close = lines.indexOf("---", 1);
+  const close = frontmatterFence(text)?.closingLine ?? -1;
   if (close === -1) {
     return { frontmatter: undefined, body: text, bodyStart: 1, error: "frontmatter has no closing --- fence" };
   }

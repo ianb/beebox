@@ -7,10 +7,8 @@
  * Caches compiled output keyed by file mtime.
  */
 
-import * as esbuild from "esbuild";
+import type * as esbuild from "esbuild";
 import React from "react";
-import ReactDOM from "react-dom";
-import ReactDOMClient from "react-dom/client";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
@@ -26,7 +24,7 @@ import { boxPackageHost, type ViewHostContext } from "../node-view-runtime.js";
  *   `window.__bbxReact`/`window.__bbxReactDOM` shims, as the running app's
  *   frontend dynamically imports it.
  * - "node" — React and `react-dom` externalized to the bare specifiers so a Node
- *   renderer (`bbx view test`) resolves the real React from node_modules and
+ *   renderer (`bbx view check`) resolves the real React from node_modules and
  *   shares one instance with `react-dom/server`. Emits an inline
  *   source map and a box-relative source name so render-time stack traces map
  *   back to the `.tsx`.
@@ -91,10 +89,22 @@ function hostGlobalShim(global: string, names: string[]): string {
 }
 
 const REACT_SHIM = hostGlobalShim("__bbxReact", hostExportNames(React));
-const REACT_DOM_SHIM = hostGlobalShim("__bbxReactDOM", hostExportNames(ReactDOM));
-// Under React 18 the `react-dom` object carries `createRoot`/`hydrateRoot`
-// too, so one host global serves both specifiers.
-const REACT_DOM_CLIENT_SHIM = hostGlobalShim("__bbxReactDOM", hostExportNames(ReactDOMClient));
+
+let reactDomShims: Promise<{ reactDom: string; reactDomClient: string }> | undefined;
+
+/**
+ * The `react-dom` shims, built on the first compile that needs them: every
+ * `bbx` verb loads this module, and `react-dom` costs about 15 ms to import.
+ * Under React 18 the `react-dom` object carries `createRoot`/`hydrateRoot`
+ * too, so one host global serves both specifiers.
+ */
+function loadReactDomShims(): Promise<{ reactDom: string; reactDomClient: string }> {
+  reactDomShims ??= Promise.all([import("react-dom"), import("react-dom/client")]).then(([dom, client]) => ({
+    reactDom: hostGlobalShim("__bbxReactDOM", hostExportNames(dom.default)),
+    reactDomClient: hostGlobalShim("__bbxReactDOM", hostExportNames(client.default)),
+  }));
+  return reactDomShims;
+}
 
 const JSX_RUNTIME_SHIM = `const React = window.__bbxReact;
 function jsx(type, props, key) {
@@ -126,7 +136,7 @@ const reactExternalPlugin: esbuild.Plugin = {
       path: args.path,
       namespace: "react-shim",
     }));
-    build.onLoad({ filter: /.*/, namespace: "react-shim" }, (args) => {
+    build.onLoad({ filter: /.*/, namespace: "react-shim" }, async (args) => {
       switch (args.path) {
         case "react":
           return { contents: REACT_SHIM, loader: "js" };
@@ -141,9 +151,9 @@ const reactExternalPlugin: esbuild.Plugin = {
           // `key`. Spreading the children array as positional args restores both.
           return { contents: JSX_RUNTIME_SHIM, loader: "js" };
         case "react-dom":
-          return { contents: REACT_DOM_SHIM, loader: "js" };
+          return { contents: (await loadReactDomShims()).reactDom, loader: "js" };
         case "react-dom/client":
-          return { contents: REACT_DOM_CLIENT_SHIM, loader: "js" };
+          return { contents: (await loadReactDomShims()).reactDomClient, loader: "js" };
         default:
           return {
             errors: [{ text: `${args.path} is not available to a view; views import react, react/jsx-runtime, react-dom and react-dom/client` }],
@@ -158,7 +168,7 @@ const reactExternalPlugin: esbuild.Plugin = {
  * to the host's `window.__bbxViewWidgets` registry, mirroring the React shim.
  * The host (ViewRenderer) installs that global before any view loads. Node
  * builds externalize the bare specifier instead (resolved via the package
- * `exports` map — see compileView and `bbx view test`).
+ * `exports` map — see compileView and `bbx view check`).
  */
 const viewWidgetsExternalPlugin: esbuild.Plugin = {
   name: "view-widgets-external",
@@ -251,7 +261,8 @@ export async function bundleView(
       : { plugins: [reactExternalPlugin, viewWidgetsExternalPlugin], external: extraExternal };
   const sourcefile = target === "node" ? path.join("views", path.basename(viewPath)) : path.basename(viewPath);
 
-  const result = await esbuild.build({
+  const { build } = await import("esbuild");
+  const result = await build({
     stdin: {
       contents: source,
       loader: "tsx",
@@ -378,7 +389,7 @@ export async function compileView(
 /**
  * Edit-time compile check for the validation hooks: returns null if the view
  * compiles, or a human-readable error message otherwise. Compile only — no
- * execution, no type-check (the deeper signal is `bbx view test`), and no
+ * execution, no type-check (the deeper signal is `bbx view check`), and no
  * metadata import (a syntax-checking hook shouldn't pay for a subprocess
  * import). Shared by the shell `bbx validate --hook` and the in-process
  * `cardValidatorHook` so both surface the same error. Uses the default

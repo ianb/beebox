@@ -38,7 +38,7 @@ function payload(dir: string, path: string): PlacePayload {
   };
 }
 
-type NavAnswer = { counts: { onPlateTodos: number; escalatedTodos: number; pendingQuestions: number } } | "fail";
+type NavAnswer = { counts: { onPlateTodos: number; escalatedTodos: number; laterTodos: number; pendingQuestions: number } } | "fail";
 
 /** Mount `PlaceView` for `place`'s card, answering the place query and `status.navStatus` with `nav`. */
 async function render({ place, nav }: { place: PlacePayload; nav: NavAnswer }) {
@@ -85,7 +85,7 @@ function counts(view: Mounted) {
 }
 
 const root = payload("", "_content/test1.landmark.card");
-const someCounts: NavAnswer = { counts: { onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 } };
+const someCounts: NavAnswer = { counts: { onPlateTodos: 3, escalatedTodos: 1, laterTodos: 0, pendingQuestions: 2 } };
 
 // ## The root place shows the line
 //
@@ -99,7 +99,7 @@ void test("The root place shows the line", async (t) => {
 
 // Nothing to do and nothing asked: no line.
 void test("Nothing to do and nothing asked: no line.", async (t) => {
-  const { view } = await render({ place: root, nav: { counts: { onPlateTodos: 0, escalatedTodos: 0, pendingQuestions: 0 } } });
+  const { view } = await render({ place: root, nav: { counts: { onPlateTodos: 0, escalatedTodos: 0, laterTodos: 0, pendingQuestions: 0 } } });
   t.check(counts(view), null);
   await view.unmount();
 });

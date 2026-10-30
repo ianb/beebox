@@ -29,18 +29,16 @@ import type {
   FieldRunResult,
   ItemResult,
 } from "./results.js";
+import { formatDuration } from "../shared/relative-time.js";
 
 /** Filename of the rendered report inside the run directory. */
 export const REPORT_FILENAME = "report.md";
 
-function formatDuration(startedAt: string, finishedAt: string | null): string {
+function runDuration(startedAt: string, finishedAt: string | null): string {
   if (finishedAt === null) return "(run did not finish)";
   const ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
   if (!Number.isFinite(ms) || ms < 0) return "(unknown)";
-  const totalMinutes = Math.round(ms / 60_000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return hours > 0 ? `${String(hours)}h ${String(minutes)}m` : `${String(minutes)}m`;
+  return formatDuration(ms);
 }
 
 function questionnaireLink(itemId: string): string {
@@ -71,7 +69,7 @@ function renderHeader(result: FieldRunResult): string[] {
     `- **Reactor model:** ${result.models.chat} — the box model policy pins chat` +
       " and reactor work alike",
     `- **Started:** ${result.startedAt} (box clock ${result.boxTimeStart} → ${result.boxTimeEnd})`,
-    `- **Wall time:** ${formatDuration(result.startedAt, result.finishedAt)}`,
+    `- **Wall time:** ${runDuration(result.startedAt, result.finishedAt)}`,
     `- **Run directory:** \`${result.runDir}\``,
     `- **Scenario source:** \`${result.scenarioDir}\``,
     result.aborted !== null

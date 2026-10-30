@@ -135,6 +135,12 @@ actor LogForwarder {
     private var inFlightIDs: [UUID: Set<UUID>] = [:]
     private var isActive = true
     private var debounceTask: Task<Void, Never>?
+    /// Boxes whose last box-screen answer came from the hub for a sleeping box
+    /// (mobile-contract §5.11). A flush skips them, because a POST would wake
+    /// the box. Kept on disk beside the queue, so the launch flush, which runs
+    /// before the box screen asks, knows too.
+    private var asleepBoxIDs: Set<UUID>
+    private let asleepURL: URL
 
     init(
         storageURL: URL? = nil,
@@ -152,6 +158,8 @@ actor LogForwarder {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         timestampFormatter = formatter
         entries = Self.loadEntries(url: self.storageURL, fileManager: fileManager)
+        asleepURL = self.storageURL.deletingLastPathComponent().appendingPathComponent("asleep-boxes.json")
+        asleepBoxIDs = (try? JSONDecoder().decode(Set<UUID>.self, from: Data(contentsOf: asleepURL))) ?? []
     }
 
     // MARK: - Recording
@@ -208,6 +216,10 @@ actor LogForwarder {
         self.boxes = Dictionary(uniqueKeysWithValues: boxes.map { ($0.id, $0) })
         self.selectedBoxID = selectedBoxID
         let known = Set(self.boxes.keys)
+        if asleepBoxIDs.isSubset(of: known) == false {
+            asleepBoxIDs.formIntersection(known)
+            persistAsleep()
+        }
         let before = entries.count
         entries.removeAll { known.contains($0.boxID) == false }
         guard entries.count != before else {
@@ -224,6 +236,19 @@ actor LogForwarder {
         isActive = active
     }
 
+    /// Record whether the box screen's last answer said the box is asleep. A
+    /// box that answers awake gets its held lines at once.
+    func setAsleep(_ asleep: Bool, boxID: UUID) async {
+        let changed = asleep ? asleepBoxIDs.insert(boxID).inserted : asleepBoxIDs.remove(boxID) != nil
+        guard changed else {
+            return
+        }
+        persistAsleep()
+        if asleep == false {
+            await flushBox(boxID)
+        }
+    }
+
     // MARK: - Flushing
 
     func flush() async {
@@ -234,7 +259,7 @@ actor LogForwarder {
     }
 
     private func flushBox(_ boxID: UUID) async {
-        guard let box = boxes[boxID] else {
+        guard let box = boxes[boxID], asleepBoxIDs.contains(boxID) == false else {
             return
         }
         // Actors are reentrant across the transport `await`, so overlapping
@@ -502,6 +527,16 @@ actor LogForwarder {
             // Never forwarded: a persistence failure that enqueued an entry
             // would try to persist again to report it.
             Self.log.error("could not persist the log queue: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Best effort, as `persist` is: a lost file means one launch flush may wake a sleeping box.
+    private func persistAsleep() {
+        do {
+            try fileManager.createDirectory(at: asleepURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONEncoder().encode(asleepBoxIDs).write(to: asleepURL, options: .atomic)
+        } catch {
+            Self.log.error("could not persist the asleep boxes: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

@@ -13,7 +13,7 @@ import { TabBar } from "../ui/TabBar";
 import { plateHeadline, scopeLineText, type TodoResult } from "../todo-view-card-logic";
 import type { RendererProps } from "../../file-type-registry";
 
-export type Grouping = "place" | "status";
+export type Grouping = "place" | "status" | "date";
 /**
  * Which slice of `assigned` this render is showing. `boxholder` is the
  * default every card with no `assigned` field starts on; `agent` is what "K
@@ -32,7 +32,7 @@ export interface ViewOptions {
 export function optionsFrom(viewState: RendererProps["viewState"]): ViewOptions {
   const view = viewState ?? {};
   return {
-    group: view["group"] === "status" ? "status" : "place",
+    group: view["group"] === "status" ? "status" : view["group"] === "date" ? "date" : "place",
     showFinished: view["showFinished"] === true,
     assignedView: view["assignedView"] === "agent" ? "agent" : "boxholder",
   };
@@ -77,6 +77,7 @@ export function Controls({ options, onChange }: { options: ViewOptions; onChange
         tabs={[
           { value: "place", label: "By place" },
           { value: "status", label: "By status" },
+          { value: "date", label: "By date" },
         ]}
       />
     </Row>

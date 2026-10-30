@@ -12,8 +12,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { simpleGit } from "simple-git";
-import { hasCommits, unstageFiles } from "../../../lib/git/core/operations.js";
+import { hasCommits, stageAndCommitPaths, unstageFiles } from "../../../lib/git/core/operations.js";
+import { committedPaths, restoreJobsToHead } from "../../../job-cards/restore-to-head.js";
 import type { CommandResult } from "../../command-types.js";
 import { createOrAppendIntakeJob } from "../../../job-cards/intake-utils.js";
 import type { SessionLayout } from "./session.js";
@@ -71,27 +71,36 @@ async function discardUncommittedSession(
   for (const p of paths) await fs.rm(path.join(boxRoot, p), { recursive: true, force: true });
 }
 
-/** The files under `relPaths` that HEAD tracks; empty before the first commit. */
-async function committedPaths(boxRoot: string, relPaths: string[]): Promise<string[]> {
-  if (!(await hasCommits(boxRoot))) return [];
-  const listed = await simpleGit(boxRoot).raw(["ls-tree", "-r", "--name-only", "HEAD", "--", ...relPaths]);
-  return listed.split("\n").filter((line) => line !== "");
-}
-
 /**
- * Queue a committed session for triage. The import has already landed, so a
- * failure here must not fail it: the ledger would never record the hash, and a
- * retry would import a second copy. Wakeup jobs any inbox card that no job
- * references, so the session is still triaged. Returns null when queuing failed.
+ * Queue a committed session for triage and commit the job paths written, so
+ * the scheduler pass's job check (which counts only committed jobs) starts a
+ * run for them. The import has already landed, so a failure here must not fail
+ * it: the ledger would never record the hash, and a retry would import a
+ * second copy. Wakeup jobs any inbox card that no job references, so the
+ * session is still triaged. Returns the committed job paths, or null when
+ * queuing or committing failed.
  */
 export async function queueCommittedSessionIntake(
   boxRoot: string,
   { items, description }: { items: string[]; description: string },
-): Promise<string | null> {
+): Promise<string[] | null> {
+  let jobs: string[];
   try {
-    return await createOrAppendIntakeJob({ boxRoot, items, description });
+    jobs = await createOrAppendIntakeJob({ boxRoot, items, description });
   } catch (error) {
     console.warn(`[scan-import] Intake job for ${items[0] ?? "a scan session"} was not created; the next wakeup queues it:`, error);
+    return null;
+  }
+  try {
+    await stageAndCommitPaths(boxRoot, {
+      paths: jobs,
+      message: `Queue scan intake: ${jobs.length} job(s)`,
+      trailers: { "Created-By": "scan-import" },
+    });
+    return jobs;
+  } catch (error) {
+    console.warn(`[scan-import] Intake jobs ${jobs.join(", ")} were not committed; restoring them so the next wakeup queues the items:`, error);
+    await restoreJobsToHead(boxRoot, { jobs, label: "scan-import" });
     return null;
   }
 }

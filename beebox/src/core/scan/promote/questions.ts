@@ -39,6 +39,7 @@ function questionContent(entry: ScanQuarantineEntry, askedAt: string): string {
     "The bytes are held in the box's scan quarantine and the sending machine still has its copy — the uploader never disposes of a rejected file.",
   ].join("\n");
   return createTextQuestionTemplate({
+    title: `Rejected scan: ${entry.originalFilename}`,
     memo,
     prompt: `What should happen with the rejected scan \`${entry.originalFilename}\`?`,
     directive:

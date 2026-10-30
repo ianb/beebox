@@ -21,7 +21,7 @@ import * as path from "node:path";
 
 import {
   loadSchedule,
-  parseDuration,
+  parseScheduleDuration,
   resolveScheduleConfig,
   scheduleYamlSchema,
 } from "./lib/schedules.js";
@@ -58,11 +58,11 @@ after(cleanupTempDirs);
 // ─── Track A: schema + loader ─────────────────────────────────────────────
 
 test("cadence parsing accepts <n>h|d|w and refuses everything else", () => {
-  assert.equal(parseDuration("2h"), 2 * HOUR);
-  assert.equal(parseDuration("7d"), 7 * DAY);
-  assert.equal(parseDuration("1w"), 7 * DAY);
+  assert.equal(parseScheduleDuration("2h"), 2 * HOUR);
+  assert.equal(parseScheduleDuration("7d"), 7 * DAY);
+  assert.equal(parseScheduleDuration("1w"), 7 * DAY);
   for (const bad of ["7days", "0d", "d", "1m", "-1d", "1.5d", ""]) {
-    assert.throws(() => parseDuration(bad), /not a duration/, `expected '${bad}' to be refused`);
+    assert.throws(() => parseScheduleDuration(bad), /not a duration/, `expected '${bad}' to be refused`);
   }
 });
 

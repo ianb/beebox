@@ -12,6 +12,8 @@
 
 import { useSyncExternalStore } from "react";
 import { subscribeToasts, getToasts, dismissToast, type Toast } from "./toast-store";
+import { cn } from "../../lib/cn";
+import { NOTICE_TONE_CLASSES } from "./Notice";
 
 export function ToastViewport() {
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, getToasts);
@@ -31,7 +33,7 @@ function ToastCard(props: { toast: Toast }) {
     <div
       role="alert"
       aria-live="assertive"
-      className="bg-danger-50 border border-danger-light text-danger-dark rounded-lg shadow-lg px-4 py-3 flex items-start gap-3 text-sm"
+      className={cn("rounded-lg border px-4 py-3 text-sm shadow-lg flex items-start gap-3", NOTICE_TONE_CLASSES.error)}
     >
       <div className="flex-1 min-w-0">
         <div className="font-medium">

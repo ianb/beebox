@@ -177,21 +177,30 @@ private final class CaptureListModel: ObservableObject {
     }
 }
 
+private struct RemoteListKey: Equatable {
+    var boxID: UUID
+    var boxAwake: Bool
+}
+
 struct QuickCaptureSection: View {
     let box: PairedBox
     let boxes: [PairedBox]
+    /// The box screen's check since the app came forward found the box awake.
+    /// Until then the list shows this phone's captures only: asking the box
+    /// would wake a sleeping one (mobile-contract §5.11).
+    var boxAwake: Bool
     var onOpen: (String) -> Void
     @StateObject private var model: CaptureListModel
     @State private var captureDefault: UUID?
 
-    init(box: PairedBox, boxes: [PairedBox], onOpen: @escaping (String) -> Void) {
-        self.box = box; self.boxes = boxes; self.onOpen = onOpen
+    init(box: PairedBox, boxes: [PairedBox], boxAwake: Bool, onOpen: @escaping (String) -> Void) {
+        self.box = box; self.boxes = boxes; self.boxAwake = boxAwake; self.onOpen = onOpen
         _model = StateObject(wrappedValue: CaptureListModel())
         _captureDefault = State(initialValue: CaptureDestinationStore().defaultBoxID)
     }
     #if DEBUG
     fileprivate init(box: PairedBox, boxes: [PairedBox], model: CaptureListModel, captureDefault: UUID?) {
-        self.box = box; self.boxes = boxes; self.onOpen = { _ in }
+        self.box = box; self.boxes = boxes; self.boxAwake = true; self.onOpen = { _ in }
         _model = StateObject(wrappedValue: model)
         _captureDefault = State(initialValue: captureDefault)
     }
@@ -230,9 +239,13 @@ struct QuickCaptureSection: View {
                 }
             }
         }
-        .task(id: box.id) {
+        .task(id: RemoteListKey(boxID: box.id, boxAwake: boxAwake)) {
             if !model.isFixture { captureDefault = CaptureDestinationStore().defaultBoxID }
-            await model.refresh(box: box)
+            if boxAwake {
+                await model.refresh(box: box)
+            } else {
+                model.localRefresh(box: box)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: QuickCaptureStore.didChange).receive(on: DispatchQueue.main)) { _ in
             if !model.isFixture { captureDefault = CaptureDestinationStore().defaultBoxID }

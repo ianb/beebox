@@ -49,6 +49,8 @@ export interface FolderSyncDeps {
   trashCard(card: { cardPath: string; driveId: string }): Promise<string[]>;
   /** This ID has a card again: it is no longer connector-trashed. */
   forgetDriveTrash(driveId: string): void;
+  /** A mirror pass over this folder ran at `at`, whatever its outcome. */
+  recordFolderSync(driveId: string, at: string): void;
 }
 
 /**

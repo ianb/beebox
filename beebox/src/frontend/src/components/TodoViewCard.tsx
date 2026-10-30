@@ -16,10 +16,12 @@
  *
  * `place` is the default because in a working box almost nothing is dated:
  * the heading a todo sits under and the todo it nests beneath are what make
- * it mean anything. `status` is there for the days when dates are the question.
+ * it mean anything. `status` and `date` are there for the days when plate
+ * state or dates are the question. `date` is a flat list in date order, not a
+ * query grouping: it reads the same result as `place`, so no todo is listed
+ * twice on one page.
  */
 
-import { useCallback } from "react";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../lib/trpc/client";
 import { Card } from "./ui/Card";
@@ -31,9 +33,10 @@ import { Stack } from "./ui/Stack";
 import { InlineAction } from "./ui/InlineAction";
 import { bbxSource } from "../lib/source-tag";
 import { busEventData } from "../lib/bus-events";
-import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import type { RealtimeEvent } from "../hooks/useBusSubscription";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import { CardRow } from "./todo-view/CardRow/view";
-import { DatedStrip } from "./todo-view/DatedStrip";
+import { DatedList } from "./todo-view/DatedList";
 import {
   Controls,
   IssuesSection,
@@ -51,10 +54,10 @@ import {
   type TodoResult,
 } from "./todo-view-card-logic";
 import type { RendererProps } from "../file-type-registry";
+import { stringOrNull } from "@shared/optional-string";
 
 function stringField(fm: Record<string, unknown>, key: string): string | undefined {
-  const value = fm[key];
-  return typeof value === "string" ? value : undefined;
+  return stringOrNull(fm[key]) ?? undefined;
 }
 
 function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChange }: {
@@ -83,11 +86,11 @@ function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChang
 
           <Controls options={options} onChange={onChange} />
 
-          <DatedStrip dated={datedTodos(result)} boxSlug={boxSlug} />
+          {options.group === "date" ? <DatedList dated={datedTodos(result)} boxSlug={boxSlug} /> : null}
 
-          {hasRows ? null : <Text material as="div" tone="subtle">No todos in scope.</Text>}
+          {options.group !== "date" && !hasRows ? <Text material as="div" tone="subtle">No todos in scope.</Text> : null}
 
-          {result.groups.map((group) => (
+          {options.group === "date" ? null : result.groups.map((group) => (
             <Stack key={group.key} gap="sm">
               {/* `place` is a single group whose label would only repeat the
                   control above it; `status` names a real distinction. */}
@@ -108,7 +111,7 @@ function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChang
           {/* A text button, not a switch: it reveals finished items in place
               (still view state in the URL) rather than a persistent control
               for a state the boxholder wants hidden by default. */}
-          {options.showFinished || finished === 0 ? null : (
+          {options.group === "date" || options.showFinished || finished === 0 ? null : (
             <InlineAction material
               id="bbx-todo-view-show-finished"
               intent="subtle"
@@ -152,7 +155,7 @@ export function TodoViewCard(props: RendererProps) {
     query: {
       here,
       ...(glob !== undefined && { glob }),
-      group: options.group,
+      group: options.group === "status" ? "status" : "place",
       params: {
         status: statusFilterWithFinished(resolveTodoViewStatusFilter(fm), options.showFinished),
         ...scopeParams,
@@ -182,15 +185,9 @@ export function TodoViewCard(props: RendererProps) {
 
   // A todo lives in an ordinary card, so any card edit can change this list.
   // The scope is a glob rather than one path, so every `.card` write counts.
-  useBusSubscription({
-    onEvent: useCallback(
-      (event: RealtimeEvent) => {
-        const change = busEventData(event, "file-change");
-        if (!change || !change.path.endsWith(".card")) return;
-        void utils.collections.query.invalidate();
-      },
-      [utils],
-    ),
+  useLiveRefresh({
+    when: (event: RealtimeEvent) => busEventData(event, "file-change")?.path.endsWith(".card") === true,
+    refresh: () => { void utils.collections.query.invalidate(); },
   });
 
   const change = (next: Partial<ViewOptions>): void => {

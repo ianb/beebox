@@ -37,7 +37,10 @@ hand.
 `Supervisor.ensureRunning()` cold-starts a box on its first proxied request
 and idle-stops it after `idleMs` — the same semantics `workstreams-app/src/router/server/listener.ts` uses
 for dev worktrees. Non-lazy (the default) starts every box resident at hub
-boot and never idle-stops them.
+boot and never idle-stops them. The server no longer uses the `Supervisor` at
+all (every production box is a socket unit, below); the spawning path stays
+because the dev router runs on it, so do not retire it as server-only
+leftovers.
 
 `keepRecent: N` (lazy-only; a positive value on a resident hub is a config
 error) keeps the N most-recently-used boxes alive instead of idle-stopping
@@ -60,6 +63,32 @@ alarm is unacceptable. `evaluateIdle` checks the box's on-disk
 (`kept-schedule`) even outside the keep-set, re-checking each idle cycle until
 the file empties. `startAll` also pre-starts every schedule-holding box at
 boot, independent of `keepRecent`, so schedules fire on time after a restart.
+
+## A unit host: the hub only routes
+
+When every `hub.json` entry names a `socket` (`isUnitHostConfig`), systemd owns
+the box processes (`deploy/systemd/beebox-box@.*`, docs/plans/per-box-units.md)
+and `bbx engine hub` builds a `SocketProvider` (`socket-provider.ts`) instead of
+the `Supervisor`. It polls `systemctl list-units beebox-box@*` every two seconds
+into a map; `get()` answers from the map (a WebSocket reconnect never wakes a
+box), `ensureRunning()` connects to the socket, which starts the unit, and waits
+for readiness; a failed unit's last journal line rides the 503. `lazy`, `idleMs`
+and `keepRecent` are config errors there: the engine exits itself when idle
+(`bbx engine serve --idle-exit`, in the unit).
+
+The hub runs as `beebox`, in no box group, and reads one file per box:
+`<box>/.beebox/hub-meta.json` (`core/hub-meta.ts`), behind the process-wide
+switch `enableHubMetaReads()`. It carries `allowedEmails`, a pending-schedule
+flag, SHA-256 hashes of the agent, mobile and scan tokens, and the box's
+display identity (name and symbol, for the picker); `canAccessBox`, the gates
+in `server/box-credentials.ts` and `describeBoxes` consult it, so a junk
+bearer is refused without waking a box. The mobile session cookie is verified
+too: on a unit host its key derives from the box's hub secret
+(`core/mobile/session.ts`, `deriveMobileSessionKey`), which the hub holds for
+that box. One hub secret per box per boot lives in
+`/run/beebox/<slug>.hub-secret` (`secrets.ts`), read by the unit as a systemd
+credential; `/etc/beebox/box.env` is rewritten at each start from the child
+env allowlist (`box-env-file.ts`).
 
 ## SIGHUP only clears the crash-loop latch
 

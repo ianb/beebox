@@ -73,6 +73,7 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
   const skip = await evaluateSkip(makeCtx());
   t.check(skip, {
     line: str`  Skipping test-script: waiting on claude quota until ${any(String)}`,
+    reason: str`waiting on claude quota until ${any(String)}`,
     cause: {
       reason: "engine-quota",
       live: {

@@ -228,9 +228,11 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
   const { boxSlug } = useParams({ strict: false });
+  // pi has no "Default (…)" row, so a chat following the box default names
+  // the default model itself.
   const currentModelLabel = agentEngine === null
     ? "Unavailable"
-    : chatModelLabel(agentEngine, { model: modelInForce, added: addedModels }) ?? "Unavailable";
+    : chatModelLabel(agentEngine, { model: modelInForce ?? (agentEngine === "pi" ? boxDefault : null), added: addedModels }) ?? "Unavailable";
   // `modelInForce` is null for a chat that FOLLOWS the box default — that is
   // what makes the label read "Default (Opus)" rather than naming the model —
   // so the drift comparison resolves it first. Without this the gauge was blank

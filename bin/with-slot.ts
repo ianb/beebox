@@ -19,7 +19,7 @@
 
 import { spawn, type ChildProcess } from "node:child_process";
 import { signalNumber, terminateChild } from "./child-signals.js";
-import { git, gitCommonDir } from "./test-git.js";
+import { gitBranch, gitCommonDir } from "./lib/git.js";
 import { acquire, lockDir, type Held, type Tier } from "./test-locks.js";
 
 export interface Args {
@@ -92,7 +92,7 @@ async function holdSlot(tier: Tier): Promise<Held | null> {
     const held = await acquire({
       dir: lockDir(gitCommonDir()),
       tier,
-      branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
+      branch: gitBranch(),
       label: "with-slot",
     });
     heldSlot = held;

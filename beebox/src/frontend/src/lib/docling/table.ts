@@ -10,10 +10,7 @@
 
 import { isRecord } from "@shared/is-record";
 import type { DoclingTableCell } from "./parse";
-
-function str(value: unknown): string | null {
-  return typeof value === "string" && value.trim() !== "" ? value : null;
-}
+import { nonBlankString } from "@shared/optional-string";
 
 function int(value: unknown): number | null {
   return typeof value === "number" && Number.isInteger(value) ? value : null;
@@ -57,7 +54,7 @@ export function readTableRows(data: unknown): DoclingTableCell[][] | "too-large"
       row,
       col,
       cell: {
-        text: str(cell["text"]) ?? "",
+        text: nonBlankString(cell["text"]) ?? "",
         rowSpan: Math.max(1, endRow - row),
         colSpan: Math.max(1, endCol - col),
         header: cell["column_header"] === true || cell["row_header"] === true,

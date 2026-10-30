@@ -27,15 +27,12 @@ import { isImageStep, runImageStep } from "./chat-scroll-images";
 import { isWidthStep, resizeHarnessWidth } from "./chat-scroll-width";
 import type { RunSummary } from "./chat-scroll-steps";
 import type { Scenario, Step } from "./chat-scroll-scenarios";
+import { delay } from "@shared/backoff";
 import { Sampler, fromBottomOf, type RunContext } from "./chat-scroll-sampler";
 import { runExpectedResizeRace } from "./chat-scroll-expected-diagnostic";
 
 export type { RunSummary } from "./chat-scroll-steps";
 export type { RunContext } from "./chat-scroll-sampler";
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
 
 function frame(): Promise<void> {
   return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));

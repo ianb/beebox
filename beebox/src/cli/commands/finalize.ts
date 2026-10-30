@@ -19,15 +19,18 @@ import { getBoxTime } from "../../lib/time.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import { syncConnector } from "../../connector-activity/core.js";
 import type { PushService } from "../../services/push.js";
+import type { NotifySender } from "../../core/notify-boxholder.js";
+import { routedSender } from "../lib/notify-route.js";
 
 /**
  * Age pending questions (nudge, then expire), then notify about the ones
  * newly pending. Aging runs first so a question about to expire is never
  * announced: an old box's first finalize would otherwise send a notice for
  * questions it expires a moment later. Aging never depends on a notification
- * channel; only the nudge's delivery does. `push` is injected in tests.
+ * channel; only the nudge's delivery does. `push` is injected in tests;
+ * `sender` is where both go out from (the box server, from `bbx finalize`).
  */
-export async function finalizeQuestions(boxRoot: string, services: { push?: PushService }): Promise<void> {
+export async function finalizeQuestions(boxRoot: string, services: { push?: PushService; sender?: NotifySender }): Promise<void> {
   try {
     const aging = await ageQuestions(boxRoot, services);
     if (aging.nudged.length > 0 || aging.expired.length > 0) {
@@ -53,7 +56,8 @@ export const finalizeCommand = new Command("finalize")
     console.log("[Finalize: running outbound connectors]");
 
     if (!options.connector) {
-      await finalizeQuestions(boxRoot, {});
+      // A tooling child holds no channel keys: send through the box server.
+      await finalizeQuestions(boxRoot, { sender: routedSender(boxRoot) });
       // Rotate the notification log at 30 days or 8 MB (log.ts owns the rule).
       try {
         if (await rotateIfNeeded(boxRoot, { now: getBoxTime(boxRoot) })) console.log("  Notification log rotated");

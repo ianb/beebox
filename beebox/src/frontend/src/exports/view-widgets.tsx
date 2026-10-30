@@ -1,11 +1,11 @@
 /**
  * Node entry for the `beebox/view-widgets` bundle (dist/view-widgets).
  *
- * `bbx view test` renders a view to a string in Node, with no browser app around
+ * `bbx view check` renders a view to a string in Node, with no browser app around
  * it: no Router, no tRPC, no QueryClient. So the same widget components consume
  * a *node* view host here — `useResolvedRef` derives a title from the ref's
  * filename (no fetch), `renderInline` emits a minimal block, `openCard` is a
- * no-op (there is no surface to navigate). `bbx view test` wraps the rendered
+ * no-op (there is no surface to navigate). `bbx view check` wraps the rendered
  * view in `NodeViewHostProvider` (see src/cli/commands/view/command.ts), and the view's
  * own `import … from "beebox/view-widgets"` resolves CardLink/CardRef/Markdown
  * here via the package `exports` map.
@@ -18,7 +18,7 @@ import { useMemo, type ReactNode } from "react";
 // Relative (not `@shared/…`): this file is also the dist/view-widgets node
 // bundle entry, built with `packages: "external"`, which would leave the
 // aliased specifier unresolved at runtime. Relative paths bundle inline.
-import { cardTypeFromName } from "../../../shared/card-name";
+import { cardTypeFromName, titleFromFilename } from "../../../shared/card-name";
 import { ViewHostProvider, type ViewHost, type ResolvedRef } from "../lib/view-host";
 import { BoxSlugProvider } from "../lib/box-slug";
 import { LightboxProvider } from "../components/LightboxProvider";
@@ -29,14 +29,9 @@ import { Text } from "../components/ui/Text";
 
 export { CardLink, CardRef, ViewMarkdown as Markdown };
 
-/** Filename-derived title (mirrors core/file-summary titleFromFilename — kept
- *  local so the node bundle doesn't pull in backend-only modules). */
+/** Filename-derived title; a `?query` suffix on the ref is ignored. */
 function filenameTitle(ref: string): string {
-  const noQuery = ref.split("?")[0] ?? ref;
-  const base = noQuery.split("/").pop() ?? noQuery;
-  const dot = base.indexOf(".");
-  const stem = dot === -1 ? base : base.slice(0, dot);
-  return stem.replaceAll("_", " ").replaceAll("-", " ");
+  return titleFromFilename(ref.split("?")[0] ?? ref);
 }
 
 /** Card type from a card ref (nominal or positional naming), or "". */
@@ -45,7 +40,7 @@ function typeFromRef(ref: string): string {
 }
 
 function useNodeResolvedRef(cardRef: string): ResolvedRef {
-  // No filesystem access from the rendered component; `bbx view test` is a smoke
+  // No filesystem access from the rendered component; `bbx view check` is a smoke
   // render, so existence is assumed and the title is filename-derived.
   return { path: cardRef, title: filenameTitle(cardRef), type: typeFromRef(cardRef), exists: true };
 }

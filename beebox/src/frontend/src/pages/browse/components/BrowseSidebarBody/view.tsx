@@ -62,7 +62,7 @@ export function BrowseSidebarBody(props: Props) {
             id="bbx-browse-listing-mode"
             checked={listingMode === "raw"}
             onChange={(raw) => setListingMode(raw ? "raw" : "compact")}
-            label={listingMode === "raw" ? "Showing raw listing — switch to compact" : "Showing compact listing — switch to raw"}
+            label="Raw listing"
           />
           <Text as="span" size="xs" tone="muted">Raw</Text>
         </Row>

@@ -1,6 +1,6 @@
 /** Automated knowledge-audit checks over normalized agent behavior. */
 
-import type { AgentBehavior, AutomatedChecks, AuditTest } from "./test-runner/runner/run-test.js";
+import type { AgentBehavior, AutomatedChecks, AuditTest, ReadBeforeEditOutcome } from "./test-runner/runner/run-test.js";
 import type { SearchWhere } from "./test-suite-schema.js";
 
 const ASSIGNMENT = /(?:^|[;&|]\s*)(?:export\s+)?([A-Za-z_]\w*)=("[^"]*"|'[^']*'|[^\s;&|]+)/gu;
@@ -29,6 +29,14 @@ function readMentionsFile(read: string, file: string): boolean {
   return cd[2].split(/[\s;&|]+/u).some((word) => word !== "" && `${dir}/${unquote(word)}`.includes(file));
 }
 
+function readBeforeEdit(file: string, behavior: AgentBehavior): ReadBeforeEditOutcome {
+  const before = behavior.readsBeforeFirstEdit;
+  if (before === undefined) return "not-recorded";
+  const reads = (from: number, to: number | undefined) => behavior.filesRead.slice(from, to).some((read) => readMentionsFile(read, file));
+  if (reads(0, before ?? undefined)) return "read-first";
+  return before !== null && reads(before, undefined) ? "read-after" : "not-read";
+}
+
 interface RunChecksContext {
   behavior: AgentBehavior;
   newOrModifiedCards: Map<string, string>;
@@ -38,27 +46,28 @@ export function runChecks(
   test: AuditTest,
   { behavior, newOrModifiedCards }: RunChecksContext,
 ): AutomatedChecks {
+  const text = test.final_reply === true ? behavior.replyText : behavior.responseText;
   const containsChecks = (test.correct_contains ?? []).map((expected) => ({
     expected,
-    found: behavior.responseText.toLowerCase().includes(expected.toLowerCase()),
+    found: text.toLowerCase().includes(expected.toLowerCase()),
   }));
   const matchesChecks = (test.correct_matches ?? []).map((pattern) => {
     // eslint-disable-next-line security/detect-non-literal-regexp -- authored in committed audit YAML
-    const match = new RegExp(pattern, "i").exec(behavior.responseText);
+    const match = new RegExp(pattern, "i").exec(text);
     return { pattern, found: match !== null, ...(match && { matched: match[0] }) };
   });
   const notContainsChecks = (test.response_not_contains ?? []).map((forbidden) => ({
     forbidden,
-    found: behavior.responseText.toLowerCase().includes(forbidden.toLowerCase()),
+    found: text.toLowerCase().includes(forbidden.toLowerCase()),
   }));
   const notMatchesChecks = (test.response_not_matches ?? []).map((pattern) => {
     // eslint-disable-next-line security/detect-non-literal-regexp -- authored in committed audit YAML
-    const match = new RegExp(pattern, "i").exec(behavior.responseText);
+    const match = new RegExp(pattern, "i").exec(text);
     return { pattern, found: match !== null, ...(match && { matched: match[0] }) };
   });
   let containsAnyCheck: AutomatedChecks["containsAnyCheck"];
   if (test.correct_contains_any) {
-    const lowerText = behavior.responseText.toLowerCase();
+    const lowerText = text.toLowerCase();
     const matched = test.correct_contains_any.find((opt) => lowerText.includes(opt.toLowerCase()));
     containsAnyCheck = { options: test.correct_contains_any, found: !!matched, matched: matched ?? undefined };
   }
@@ -89,6 +98,7 @@ export function runChecks(
     file,
     wasRead: behavior.filesRead.some((read) => readMentionsFile(read, file)),
   }));
+  const readBeforeEditChecks = (test.read_before_edit ?? []).map((file) => ({ file, outcome: readBeforeEdit(file, behavior) }));
   const bashContainsChecks = (test.bash_contains ?? []).map((expected) => {
     const matched = behavior.bashRawCommands.find((command) =>
       command.toLowerCase().includes(expected.toLowerCase()));
@@ -106,6 +116,7 @@ export function runChecks(
     shouldReadChecks,
     shouldReadAnyCheck,
     shouldNotReadChecks,
+    readBeforeEditChecks,
     bashContainsChecks,
   };
 }
@@ -121,6 +132,7 @@ export function automatedChecksPassed(checks: AutomatedChecks): boolean {
     checks.shouldReadChecks.every((check) => check.wasRead) &&
     (checks.shouldReadAnyCheck?.wasRead ?? true) &&
     checks.shouldNotReadChecks.every((check) => !check.wasRead) &&
+    checks.readBeforeEditChecks.every((check) => check.outcome === "read-first") &&
     checks.bashContainsChecks.every((check) => check.found) &&
     (checks.shouldSearchCheck?.found ?? true) &&
     checks.agentStopped === undefined;

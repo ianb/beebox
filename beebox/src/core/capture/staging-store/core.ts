@@ -27,6 +27,7 @@ import {
   type StagingPhoto, type StagingFile, type StagingBulkItem, type StagingBulkFailedItem,
   type StagingVoice, type VoiceHqState, type VoiceHandoff, type HqFailure, type VoiceHqResult,
 } from "../staging-schema.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 export {
   readStagingSession, writeStagingSession, stagingBaseDir, stagingSessionDir,
@@ -61,7 +62,7 @@ export function resolveStagedFile(opts: { boxRoot: string; id: string; filename:
   assertStagingFilename(opts.filename);
   const dir = path.resolve(stagingSessionDir(opts.boxRoot, opts.id));
   const resolved = path.resolve(dir, opts.filename);
-  if (resolved !== dir && !resolved.startsWith(dir + path.sep)) {
+  if (!isWithin(dir, resolved)) {
     throw new StagingPathError(opts.filename);
   }
   return resolved;

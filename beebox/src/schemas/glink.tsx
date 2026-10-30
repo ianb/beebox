@@ -11,7 +11,7 @@
  * is for.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
 

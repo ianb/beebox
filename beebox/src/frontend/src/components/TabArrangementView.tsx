@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isRecord } from "@shared/is-record";
 import type { RendererProps } from "../file-type-registry";
 import { bbxSource } from "../lib/source-tag";
 import { requestTabArrangement, type ArrangementRelayResult } from "../lib/tab-arrangement-relay";
@@ -266,13 +267,13 @@ function parseArrangement(frontmatter: Record<string, unknown> | undefined): Arr
 }
 
 function parseCapturedTabs(value: unknown): ArrangementData["capturedTabs"] | null {
-  if (!isObject(value) || !Array.isArray(value.windows)) return null;
+  if (!isRecord(value) || !Array.isArray(value.windows)) return null;
   const windows: ArrangementData["capturedTabs"]["windows"] = [];
   for (const rawWindow of value.windows) {
-    if (!isObject(rawWindow) || typeof rawWindow.id !== "string" || !Array.isArray(rawWindow.tabs)) return null;
+    if (!isRecord(rawWindow) || typeof rawWindow.id !== "string" || !Array.isArray(rawWindow.tabs)) return null;
     const tabs: CapturedTab[] = [];
     for (const rawTab of rawWindow.tabs) {
-      if (!isObject(rawTab)) return null;
+      if (!isRecord(rawTab)) return null;
       if (typeof rawTab.id !== "string" || typeof rawTab.title !== "string" || typeof rawTab.url !== "string" || typeof rawTab.pinned !== "boolean") return null;
       tabs.push({ id: rawTab.id, title: rawTab.title, url: rawTab.url, pinned: rawTab.pinned });
     }
@@ -282,17 +283,14 @@ function parseCapturedTabs(value: unknown): ArrangementData["capturedTabs"] | nu
 }
 
 function parseProposal(value: unknown): ArrangementData["proposal"] | null {
-  if (!isObject(value) || !Array.isArray(value.windows) || !Array.isArray(value.close)) return null;
+  if (!isRecord(value) || !Array.isArray(value.windows) || !Array.isArray(value.close)) return null;
   if (!value.close.every((id) => typeof id === "string")) return null;
   const windows: ArrangementData["proposal"]["windows"] = [];
   for (const raw of value.windows) {
-    if (!isObject(raw) || typeof raw.id !== "string" || !Array.isArray(raw.tabs)) return null;
+    if (!isRecord(raw) || typeof raw.id !== "string" || !Array.isArray(raw.tabs)) return null;
     if (!raw.tabs.every((id) => typeof id === "string")) return null;
     windows.push({ id: raw.id, tabs: raw.tabs });
   }
   return { windows, close: value.close };
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}

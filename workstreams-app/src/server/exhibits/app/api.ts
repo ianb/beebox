@@ -20,13 +20,13 @@
 // store/apps/<name>/: their code is tracked, their runtime data is not, so
 // using an app can never dirty a checkout.
 
-import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
 import type { FastifyError, FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 
+import { writeFileAtomic } from "../../../../../beebox/src/lib/atomic-write.js";
 import { exhibitSegmentSchema } from "../../../shared/exhibits.js";
 import { exhibitCommentRoutes, type ExhibitCommentOptions } from "./api-comments.js";
 import {
@@ -108,21 +108,6 @@ function describeLimit(bytes: number): string {
   return `${String(Math.round(bytes / (1024 * 1024)))} MB`;
 }
 
-/**
- * Replace a whole file without ever exposing a partial read: write a sibling
- * temp file, then rename (atomic within a directory). Concurrent writers each
- * rename their own complete file, so a reader always parses.
- */
-async function writeFileAtomic(file: string, content: string | Buffer): Promise<void> {
-  const temp = path.join(path.dirname(file), `.tmp-${path.basename(file)}-${crypto.randomUUID()}`);
-  await fs.writeFile(temp, content);
-  try {
-    await fs.rename(temp, file);
-  } catch (error) {
-    await fs.rm(temp, { force: true });
-    throw error;
-  }
-}
 
 /**
  * Create `segments` under `root` one level at a time, re-checking containment
@@ -311,7 +296,7 @@ export const exhibitsApiPlugin: FastifyPluginAsync<ExhibitsApiOptions> = async (
         const file = documentFile(request.params.key);
         parseJsonBody(request.body, "document");
         const dataDir = await ensureDirUnderRoot(dir, [DATA_DIR]);
-        await writeFileAtomic(path.join(dataDir, file), request.body);
+        await writeFileAtomic(path.join(dataDir, file), { content: request.body, createDir: false });
         return reply.code(200).send({ ok: true, key: request.params.key });
       },
     );

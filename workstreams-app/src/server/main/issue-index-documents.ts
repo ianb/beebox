@@ -11,10 +11,12 @@
  */
 
 import { promises as fs } from "node:fs";
-import crypto from "node:crypto";
 import path from "node:path";
 
 import type { IssueEntry } from "./issue-search-model.js";
+import { sha256Hex } from "../../../../beebox/src/lib/content-hash.js";
+import { markdownTitle } from "../../../../beebox/src/shared/leading-title-heading.js";
+import { parseFrontmatterObject, splitCardContent } from "../../../../beebox/src/cards/frontmatter.js";
 
 /** Documents come from two corpora: the issue queue, and (opt-in) design docs. */
 export type IndexKind = "issue" | "doc";
@@ -58,8 +60,8 @@ type IndexFields = Omit<IndexDocument, "indexHash" | "embedHash" | "embedText">;
 function withHashes(fields: IndexFields, embedText: string): IndexDocument {
   return {
     ...fields,
-    indexHash: hash(JSON.stringify(Object.entries(fields).toSorted())),
-    embedHash: hash(embedText),
+    indexHash: sha256Hex(JSON.stringify(Object.entries(fields).toSorted())),
+    embedHash: sha256Hex(embedText),
     embedText,
   };
 }
@@ -73,10 +75,6 @@ function embedTextFor(options: { title: string; labels: string[]; area: string; 
     options.labels.length > 0 ? `labels: ${options.labels.join(", ")}` : "",
   ].filter((line) => line !== "").join("\n");
   return `${facets}\n\n${options.body}`.slice(0, EMBED_TEXT_LIMIT);
-}
-
-function hash(text: string): string {
-  return crypto.createHash("sha256").update(text).digest("hex");
 }
 
 export function issueDocument(entry: IssueEntry): IndexDocument {
@@ -105,7 +103,9 @@ export function issueDocument(entry: IssueEntry): IndexDocument {
 
 function docDocument(options: { relPath: string; source: string }): IndexDocument {
   const { relPath, source } = options;
-  const title = /^#\s+(?<heading>.+)$/mu.exec(source)?.groups?.["heading"]?.trim()
+  const declared = parseFrontmatterObject(source)?.["title"];
+  const title = (typeof declared === "string" && declared.trim() !== "" ? declared.trim() : null)
+    ?? markdownTitle(splitCardContent(source).body)
     ?? path.basename(relPath, ".md");
   const embedText = embedTextFor({ title, labels: [], area: "", body: source });
   return withHashes({

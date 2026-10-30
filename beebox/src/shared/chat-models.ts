@@ -1,5 +1,6 @@
 import { MODEL_ID } from "./model-ids.js";
-import type { AgentEngine } from "./agent-models.js";
+import { isAgentEngine, type AgentEngine } from "./agent-models.js";
+import { assertNever } from "./invariant.js";
 
 export type ChatAgentEngine = AgentEngine;
 
@@ -37,7 +38,7 @@ export function isOpenRouterModelId(model: string): boolean {
 
 /** Validate an engine value crossing a runtime/API boundary. */
 export function parseChatAgentEngine(value: unknown): ChatAgentEngine | null {
-  return value === "claude" || value === "codex" ? value : null;
+  return isAgentEngine(value) ? value : null;
 }
 
 const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
@@ -62,17 +63,33 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
     { label: "Terra", model: MODEL_ID.terra },
     { label: "Luna", model: MODEL_ID.luna },
   ],
+  // pi has no models of its own: only the box's added OpenRouter models, and
+  // no "Default" row (docs/implemented-plans/pi-box-engine.md, Track 2).
+  pi: [],
 };
+
+/** Whether this engine runs the box's added OpenRouter models. */
+export function runsAddedModels(engine: ChatAgentEngine): boolean {
+  switch (engine) {
+    case "claude":
+    case "pi":
+      return true;
+    case "codex":
+      return false;
+    default:
+      return assertNever(engine);
+  }
+}
 
 /**
  * The models a chat on this engine may pick: the static menu, then the box's
- * added OpenRouter models (claude engine only — they ride its Anthropic-shaped
- * transport). `added` is required so no caller can forget the box's list and
- * silently refuse a model the owner added.
+ * added OpenRouter models (claude, where they ride its Anthropic-shaped
+ * transport, and pi, which runs nothing else). `added` is required so no
+ * caller can forget the box's list and silently refuse a model the owner added.
  */
 export function chatModelOptions(engine: ChatAgentEngine, added: readonly AddedModel[]): readonly ChatModelOption[] {
-  if (engine !== "claude" || added.length === 0) return OPTIONS[engine];
-  return [...OPTIONS.claude, ...added.map((m) => ({ label: m.label, model: m.id }))];
+  if (!runsAddedModels(engine) || added.length === 0) return OPTIONS[engine];
+  return [...OPTIONS[engine], ...added.map((m) => ({ label: m.label, model: m.id }))];
 }
 
 export function isChatModelAllowed(
@@ -94,19 +111,19 @@ export function chatModelLabel(
 ): string | null {
   const label = chatModelOptions(engine, added).find((o) => o.model === model)?.label;
   if (label !== undefined) return label;
-  if (model !== null && engine === "claude" && isOpenRouterModelId(model)) return `${model} (removed in admin)`;
+  if (model !== null && runsAddedModels(engine) && isOpenRouterModelId(model)) return `${model} (removed in admin)`;
   return null;
 }
 
 /**
  * Ignore a persisted model that belongs to a different native harness.
  *
- * An OpenRouter pick on a claude chat is kept even when the owner has since
+ * An OpenRouter pick on a claude or pi chat is kept even when the owner has since
  * removed it from admin: the chat asked for that model, and quietly following
  * the box default instead would change who answers. The spawn refuses it with
  * a message naming the fix (`core/provider-env.ts`).
  */
 export function chatModelForEngine(engine: ChatAgentEngine, model: string | null): string | null {
-  if (model !== null && engine === "claude" && isOpenRouterModelId(model)) return model;
+  if (model !== null && runsAddedModels(engine) && isOpenRouterModelId(model)) return model;
   return isChatModelAllowed(engine, { model, added: [] }) ? model : null;
 }

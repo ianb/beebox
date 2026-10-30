@@ -56,6 +56,8 @@ export interface AgentInvokeOptions {
   /**
    * Hard cost ceiling in USD. The SDK stops with `error_max_budget_usd`
    * if exceeded — surfaced here as `success: false` with a budget error.
+   * On pi the ceiling is approximate: pi sums its cost estimate from listed
+   * prices, and a model with an unlisted price refuses a budgeted run.
    */
   maxBudgetUsd?: number;
   /** Whether to run in dry-run mode (no side effects). */

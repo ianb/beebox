@@ -28,6 +28,8 @@ export function codexBehaviorFromActivity(
     bashCommands: commands,
     bashRawCommands: commands,
     responseText,
+    // Codex's final message is its reply; no earlier text is recorded apart.
+    replyText: responseText,
     responseLength: responseText.split(/\s+/).filter(Boolean).length,
     // Codex does not expose Claude-equivalent per-turn context snapshots.
     // transcript-derived initial/peak measurements.

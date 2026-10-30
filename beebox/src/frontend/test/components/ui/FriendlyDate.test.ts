@@ -8,7 +8,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { formatOptions } from "../../../src/components/ui/FriendlyDate.js";
+import { formatOptions, friendlyDate } from "../../../src/components/ui/FriendlyDate.js";
 
 // A date-only string formats in UTC regardless of `mode`, so the rendered day
 // matches the written day in every runner timezone:
@@ -27,4 +27,14 @@ void test("Full timestamps are instants and keep the viewer's local zone (no tim
   t.check(full, { dateStyle: "medium", timeStyle: "short" });
 
   t.check(formatOptions({ iso: "2026-08-14T10:00:00Z", mode: "date" }), { dateStyle: "medium" });
+});
+
+// `friendlyDate` is the text the component shows, for sentences and titles. It
+// takes epoch milliseconds too, and an unparseable value comes back as written
+// instead of "Invalid Date":
+void test("friendlyDate formats strings and epochs, and returns bad input as written", async (t) => {
+  t.check(friendlyDate("2026-08-14", "date"), "Aug 14, 2026");
+  t.check(friendlyDate("2026-08-14"), "Aug 14, 2026");
+  t.check(friendlyDate(Date.UTC(2026, 7, 14, 12)), friendlyDate(new Date(Date.UTC(2026, 7, 14, 12)).toISOString()));
+  t.check(friendlyDate("sometime"), "sometime");
 });

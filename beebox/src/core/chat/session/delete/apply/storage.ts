@@ -1,9 +1,10 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { errnoCode } from "../../../../../shared/error-guards.js";
 import { encodeProjectDir } from "../../transcript-paths.js";
 import { parseSdkSessionId } from "../../id.js";
+import { isWithin } from "../../../../../lib/box-containment.js";
+import { pathExistsStrict } from "../../../../../lib/file-exists.js";
 
 export type SessionStorageState = "present" | "partial" | "absent";
 
@@ -40,18 +41,6 @@ export interface SessionStoragePresence {
   state: SessionStorageState;
 }
 
-async function exists(target: string): Promise<boolean> {
-  // Deliberately stricter than lib/file-exists: permission and I/O failures
-  // must abort a destructive postcheck, not look like successful deletion.
-  try {
-    await fs.access(target);
-    return true;
-  } catch (error) {
-    if (errnoCode(error) === "ENOENT") return false;
-    throw error;
-  }
-}
-
 function projectsRoot(): string {
   // TODO(env-migration): test/storage-path override is intentionally lazy.
   const callbackOverride = process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -66,11 +55,11 @@ export async function resolveSessionStorageTargets(args: { boxRoot: string; cont
   const sessionId = parseSdkSessionId(args.sessionId);
   const lexicalRoot = path.resolve(args.boxRoot);
   const lexicalCwd = path.resolve(lexicalRoot, args.contextDir ?? "");
-  if (lexicalCwd !== lexicalRoot && !lexicalCwd.startsWith(`${lexicalRoot}${path.sep}`)) {
+  if (!isWithin(lexicalRoot, lexicalCwd)) {
     throw new LexicallyUnsafeSessionContextError();
   }
   const [realRoot, realCwd] = await Promise.all([fs.realpath(lexicalRoot), fs.realpath(lexicalCwd)]);
-  if (realCwd !== realRoot && !realCwd.startsWith(`${realRoot}${path.sep}`)) {
+  if (!isWithin(realRoot, realCwd)) {
     throw new ResolvedUnsafeSessionContextError();
   }
   const projectDir = path.join(projectsRoot(), encodeProjectDir(realCwd));
@@ -86,7 +75,7 @@ async function inspectSessionStorage(targets: SessionStorageTargets): Promise<Se
 }
 
 export async function inspectSessionStoragePresence(targets: SessionStorageTargets): Promise<SessionStoragePresence> {
-  const [jsonl, sidecar] = await Promise.all([exists(targets.jsonlPath), exists(targets.sidecarPath)]);
+  const [jsonl, sidecar] = await Promise.all([pathExistsStrict(targets.jsonlPath, { followLinks: true }), pathExistsStrict(targets.sidecarPath, { followLinks: true })]);
   const state = jsonl && sidecar ? "present" : jsonl || sidecar ? "partial" : "absent";
   return { jsonl, sidecar, state };
 }
@@ -104,7 +93,7 @@ export async function deleteSdkSessionStorage(options: DeleteStorageOptions): Pr
   if (before.state === "absent") return "absent";
 
   let sdkError: unknown;
-  const jsonlExists = await exists(options.targets.jsonlPath);
+  const jsonlExists = await pathExistsStrict(options.targets.jsonlPath, { followLinks: true });
   const jsonlSize = jsonlExists ? (await fs.stat(options.targets.jsonlPath)).size : 0;
   if (jsonlSize > 0) {
     try {

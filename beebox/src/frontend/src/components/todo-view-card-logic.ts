@@ -21,6 +21,7 @@ import type { TodoStatus } from "../../../shared/todo-model.js";
 // JSON, where an `x: string | undefined` field becomes `x?: string`.
 import type { RouterOutput } from "../lib/trpc/client";
 import type { TodoLocator } from "@core/todo/collect-types";
+import { parentDir } from "../lib/parent-dir";
 
 export type TodoResult = RouterOutput["collections"]["query"];
 export type TodoReduction = TodoResult["reduction"];
@@ -70,8 +71,7 @@ export function statusFilterWithFinished(base: TodoStatus[], showFinished: boole
  * old `cardPath`-to-glob rule computed.
  */
 export function hereForCard(cardPath: string): string {
-  const slash = cardPath.lastIndexOf("/");
-  return slash === -1 ? "" : cardPath.slice(0, slash);
+  return parentDir(cardPath);
 }
 
 /**

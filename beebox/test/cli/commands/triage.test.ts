@@ -11,6 +11,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { createTriageCommand, triageCommand } from "../../../src/cli/commands/triage/command.js";
 import { buildProgram } from "../../../src/cli/entry/program.js";
+import { loadCommands } from "../../../src/cli/entry/load-commands.js";
 import { triageCommand as engineTriageCommand } from "../../../src/core/commands/triage.js";
 import { output, withInheritedJson } from "../../../src/cli/commands/triage/io.js";
 
@@ -31,7 +32,7 @@ async function quietly<T>(action: () => Promise<T>): Promise<T> {
 }
 
 async function dispatchProbe(): Promise<{ parentCalls: number; childCalls: number; json: boolean; out: string }> {
-  const root = buildProgram();
+  const root = buildProgram(await loadCommands({ kind: "verb", key: "triage" }));
   const parser = root.commands.find((command) => command.name() === "triage")!;
   const child = parser.commands.find((command) => command.name() === "judge")!;
   let parentCalls = 0;
@@ -56,9 +57,11 @@ void test("line 55", async (t) => {
   const childNames = triageCommand.commands.map((command) => command.name()).toSorted();
   t.check(childNames, [
     "apply",
+    "compile",
     "confirm",
     "correct",
     "decisions",
+    "duplicates",
     "instructions",
     "judge",
     "prepare",

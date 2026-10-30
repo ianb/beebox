@@ -10,7 +10,8 @@
  */
 
 import { appendFileSync, readFileSync, existsSync } from "node:fs";
-import { git, gitCommonDir, treeHash } from "./test-git.js";
+import { git, gitBranch, gitCommonDir } from "./lib/git.js";
+import { treeHash } from "./test-git.js";
 import { buildGraph } from "./test-graph.js";
 import { implicatedTests, isAccounted } from "./test-graph-query.js";
 import type { Tier } from "./test-locks.js";
@@ -117,8 +118,8 @@ export function recordRun(input: {
 
   const record: LedgerRecord = {
     ts: new Date().toISOString(),
-    commit: git(["rev-parse", "HEAD"]),
-    branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit: git(["rev-parse", "HEAD"], { onError: "throw" }),
+    branch: gitBranch(),
     treeHash: treeHash(),
     mode: input.context.mode,
     ...(input.context.source === null ? {} : { source: input.context.source }),

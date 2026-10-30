@@ -109,10 +109,10 @@ export function computePending(applied: ManifestEntry[]): Migration[] {
  * docs/cards/migrations.md. Anything else is a hard failure that stops the
  * queue.
  */
-export function runMigrationScript(args: { script: string; boxRoot: string; signal?: AbortSignal | undefined; diagnosticsToStderr?: boolean | undefined; onOutput?: (text: string) => void }): Promise<number> {
+export function runMigrationScript(args: { script: string; name?: string | undefined; boxRoot: string; signal?: AbortSignal | undefined; diagnosticsToStderr?: boolean | undefined; onOutput?: (text: string) => void }): Promise<number> {
   return runMigrationProcess({
     file: process.execPath, args: ["--import", "tsx", path.join(PACKAGE_ROOT, args.script), args.boxRoot, "--apply"],
-    cwd: PACKAGE_ROOT, env: { ...process.env, ...boxWorkEnvironment() },
+    cwd: PACKAGE_ROOT, env: { ...process.env, ...boxWorkEnvironment(), ...(args.name === undefined ? {} : { BBX_MIGRATION_NAME: args.name }) },
     signal: args.signal, diagnosticsToStderr: args.diagnosticsToStderr, onOutput: args.onOutput,
   });
 }

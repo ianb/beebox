@@ -22,6 +22,7 @@
  * rather than a hook.
  */
 
+import { errorMessage } from "@shared/error-guards";
 import { getApiBase } from "../../../../api-core";
 import { scanLiveDocument } from "../../../../lib/ui-scan/live-dom/dom";
 import { currentChatChannel } from "../../../../lib/chat-channel";
@@ -73,7 +74,7 @@ async function postJson(requestId: string, { body, label }: { body: object; labe
     console.warn(`[ui-scan] ${label} rejected: HTTP ${res.status}`);
     return "rejected";
   } catch (e) {
-    console.warn(`[ui-scan] ${label} failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.warn(`[ui-scan] ${label} failed: ${errorMessage(e)}`);
     return "rejected";
   }
 }
@@ -163,7 +164,7 @@ export async function fulfillUiScanRequest(
   try {
     payload = buildPayload(native);
   } catch (e) {
-    const reason = e instanceof Error ? e.message : String(e);
+    const reason = errorMessage(e);
     console.warn(`[ui-scan] scan failed: ${reason}`);
     await postJson(request.requestId, { body: { failed: reason }, label: "failure" });
     return;

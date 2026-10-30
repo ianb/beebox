@@ -29,6 +29,7 @@ import { requestScopedLock, withFileLock } from "../../../../beebox/src/lib/file
 import { errnoCode } from "../../../../beebox/src/shared/error-guards.js";
 import { issueNextActionStateSchema, type IssueNextAction, type IssueNextActionState } from "../../shared/documents.js";
 import type { Visibility } from "./issue-domain.js";
+import { writeFileAtomic } from "../../../../beebox/src/lib/atomic-write.js";
 
 /** Written when the store root is created; nothing writes to an unmarked directory. */
 export const NEXT_ACTIONS_MARKER = ".dev-issue-actions";
@@ -165,9 +166,10 @@ export async function writeNextAction(input: {
       actions.set(input.key, stored);
     }
     const sorted = Object.fromEntries([...actions.entries()].toSorted(([a], [b]) => a.localeCompare(b)));
-    const temporary = `${file}.${String(process.pid)}.${String(Date.now())}.tmp`;
-    await fs.writeFile(temporary, `${JSON.stringify({ version: STORE_VERSION, actions: sorted }, null, 2)}\n`, "utf8");
-    await fs.rename(temporary, file);
+    await writeFileAtomic(file, {
+      content: `${JSON.stringify({ version: STORE_VERSION, actions: sorted }, null, 2)}\n`,
+      createDir: false,
+    });
     return stored;
   });
 }

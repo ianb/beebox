@@ -1,16 +1,15 @@
 onlyBuiltDependencies:
-  - "@google/genai"
   - "@googleworkspace/cli"
   - agent-browser
-  - better-sqlite3
   - esbuild
-  - protobufjs
   - sharp
   - unrs-resolver
   - workerd
 
 ignoredBuiltDependencies:
+  - "@google/genai"
   - "@ianbicking/personal-vibe-check"
+  - protobufjs
   - spawn-sync
 
 packages:

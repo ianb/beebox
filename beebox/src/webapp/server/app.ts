@@ -4,11 +4,7 @@
  * Supports serving multiple boxes, each at its own URL prefix (slug).
  */
 
-import Fastify, { type FastifyInstance, type FastifyError } from "fastify";
-import fastifyStatic from "@fastify/static";
-import fastifyMultipart from "@fastify/multipart";
-import fastifyWebsocket from "@fastify/websocket";
-import fastifyCookie from "@fastify/cookie";
+import type { FastifyInstance, FastifyError } from "fastify";
 import { registerBoxAdmission, boxRequestsAreIdle } from "./box-admission.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
@@ -17,8 +13,8 @@ import { registerAuthSurface } from "../routes/auth/register.js";
 import { registerGoogleServicesCallback } from "../routes/admin.js";
 import { isHubMode } from "../auth.js";
 import { maybeArmFirstRunSetup } from "../setup-token.js";
-import { registerBoxPublicUrl } from "../../core/script-env/core.js";
-import { removeServeEndpoint, writeServeEndpoint } from "../../core/serve-endpoint.js";
+import { removeServeEndpoint } from "../../core/serve-endpoint.js";
+import { refreshHubMeta } from "../../core/hub-meta.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { sweepStaleIndexLock } from "../../lib/git-stale-lock.js";
@@ -50,6 +46,13 @@ import { getChatRuntime } from "../chat-runtime.js";
 import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance/admission.js";
 import { TRPC_MAX_URL_LENGTH } from "../../shared/trpc-url-limit.js";
 import { markStartupPhase } from "../../lib/startup-timing.js";
+import { listenOn, resolveListenTarget } from "./listen-target.js";
+import { listenBaseUrl, publishServeEndpoints } from "./serve-publish.js";
+import { installIdleExit } from "./idle-exit.js";
+import { removeHomeSnapshot, writeHomeSnapshotsAtShutdown } from "../../core/chat/routing/home-snapshot.js";
+import { startServeMemoryProbe } from "./memory-probe.js";
+import { onUnitHost } from "../../lib/unit-host.js";
+import { startLocalBackupRunnerForServer, stopLocalBackupRunnerForServer } from "../../core/box-backup/local-runner.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "../server-types.js";
@@ -91,6 +94,15 @@ export function assertOpenAccessNotListening(options: InternalServerOptions): vo
  */
 export async function createServer(options?: InternalServerOptions, startup?: ReadonlyMap<string, BoxWork>): Promise<FastifyInstance> {
   options = options ?? {};
+  // The server's packages load here, not at module load: every `bbx` verb
+  // loads this module, and only `serve` builds a server (about 60 ms).
+  const [{ default: Fastify }, { default: fastifyStatic }, { default: fastifyMultipart }, { default: fastifyWebsocket }, { default: fastifyCookie }] = await Promise.all([
+    import("fastify"),
+    import("@fastify/static"),
+    import("@fastify/multipart"),
+    import("@fastify/websocket"),
+    import("@fastify/cookie"),
+  ]);
   const boxes = await resolveBoxes(options);
 
   const server = Fastify({
@@ -272,15 +284,24 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // server or writes a pid file.
   assertOpenAccessNotListening(options);
   markStartupPhase("cli-loaded");
-  const port = options.port ?? DEFAULT_PORT;
-  const host = options.host ?? "localhost";
+  // Decided before any side effect: a misconfigured unit (a passed socket with
+  // no path, or two of them) must fail here, not after the previous server
+  // was killed. Reads and clears `LISTEN_FDS` from this process's env.
+  const target = resolveListenTarget({
+    port: options.port ?? DEFAULT_PORT,
+    host: options.host ?? "localhost",
+    socket: options.socket,
+    env: process.env,
+    pid: process.pid,
+  });
+  const baseUrl = listenBaseUrl(target);
 
   // First-run setup: with auth required and zero local users, arm a one-time
   // setup token and print its claim link. No-op once a user exists. Auth is
   // always on here (open access can't reach this path — guarded above), so
   // `openAccess: false`. (At listen time — never at createServer, so injected
   // test servers stay quiet.)
-  maybeArmFirstRunSetup({ publicUrl: getPublicUrl(`http://${host}:${port}`), openAccess: false });
+  maybeArmFirstRunSetup({ publicUrl: getPublicUrl(baseUrl ?? "http://localhost"), openAccess: false });
 
   const boxes = await resolveBoxes(options);
   // An older engine must refuse a box a newer engine wrote before it takes the
@@ -307,9 +328,10 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // one moment we know no write of ours is in flight — the same habit the dev
   // router has of reclaiming orphaned state on start. Best-effort and never
   // fatal: a box that cannot commit should still serve reads.
-  for (const box of boxes) {
-    await sweepStaleIndexLock(box.boxRoot);
-  }
+  // Also publish the file the hub reads instead of this box's own
+  // (`core/hub-meta.ts`): a hand edit while the box slept is out before the first request.
+  // A sleeping box's snapshot for the hub goes before anything here can change its chats.
+  for (const box of boxes) { removeHomeSnapshot(box.boxRoot); await sweepStaleIndexLock(box.boxRoot); refreshHubMeta(box.boxRoot); }
   markStartupPhase("box-checks");
 
   let server: FastifyInstance;
@@ -327,32 +349,29 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // Write PID file to each box
   const pidFiles: string[] = [];
   for (const box of boxes) {
-    const pidFile = path.join(box.boxRoot, ".bbx-serve.pid");
-    await fs.promises.writeFile(pidFile, String(process.pid));
-    pidFiles.push(pidFile);
+    const pidFile = path.join(box.boxRoot, ".bbx-serve.pid"); await fs.promises.writeFile(pidFile, String(process.pid)); pidFiles.push(pidFile);
   }
 
   let maintenanceCheck: ReturnType<typeof setInterval> | undefined;
+  const memoryProbe = startServeMemoryProbe(boxes.map((box) => box.boxRoot));
 
   // Shutdown handler — force-close all connections immediately so
   // --watch restarts don't hang on open WebSocket sockets.
   const shutdown = async (signal: string, exitCode?: number) => {
     console.log(`\nReceived ${signal}, shutting down...`);
-    clearInterval(maintenanceCheck);
-    for (const pf of pidFiles) {
-      await fs.promises.unlink(pf).catch(() => {});
-    }
+    clearInterval(maintenanceCheck); await (await memoryProbe).stop();
+    await stopLocalBackupRunnerForServer();
     for (const box of boxes) await removeServeEndpoint(box.boxRoot);
     server.server.closeAllConnections();
     await server.close();
+    await writeHomeSnapshotsAtShutdown(boxes, process.env.BBX_HUB_SECRET);
+    for (const pf of pidFiles) await fs.promises.unlink(pf).catch(() => {});
     // Let any git write we started finish before we go. Exiting on top of one
     // orphans it into whatever SIGKILL follows (the hub's escalation, or
     // systemd's cgroup teardown), and a git killed mid-index-write leaves a
     // `.git/index.lock` that blocks every writer in the box until a human
     // removes it. Bounded — a stuck span must not hold the process open.
-    if (!(await drainBoxGitLocks(GIT_DRAIN_MS))) {
-      console.warn("Git writes were still in flight at shutdown; exiting anyway.");
-    }
+    if (!(await drainBoxGitLocks(GIT_DRAIN_MS))) console.warn("Git writes were still in flight at shutdown; exiting anyway.");
     console.log("Server closed.");
     process.exit(exitCode ?? 0);
   };
@@ -383,19 +402,17 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   try {
     // Publish HTTP readiness only after startup has relinquished its work.
     for (const lease of startup.values()) await lease.release();
-    await withoutBoxWork(() => server.listen({ port, host }));
+    await withoutBoxWork(() => listenOn(server, target));
     markStartupPhase("listening");
-    // Register live public URLs for each served box so subprocess spawns
-    // pick up BBX_BOX_NAME / BBX_SERVER_URL via buildScriptEnv without
-    // requiring publicUrl to be set in _config/box.json.
-    for (const box of boxes) {
-      const publicUrl = `http://${host}:${port}/${box.slug}`;
-      await writeServeEndpoint(box.boxRoot, { pid: process.pid, publicUrl });
-      registerBoxPublicUrl(box.boxRoot, publicUrl);
-    }
-    console.log(`Server running at http://${host}:${port}`);
-    for (const box of boxes) {
-      console.log(`  ${box.slug}: http://${host}:${port}/${box.slug}/`);
+    await publishServeEndpoints({ boxes, target, baseUrl });
+    // Server boxes use their host's systemd timer; the Mac app has its own
+    // lifecycle-aware loop. Direct local and Docker installs catch up while
+    // this server is running, outside HTTP request work leases.
+    // TODO(env-migration): install kind is launch-time runtime context; keep
+    // this direct read until it is added to serverEnvSchema.
+    startLocalBackupRunnerForServer({ boxRoots: boxes.map((box) => box.boxRoot), unitHost: onUnitHost(), installKind: process.env.BBX_INSTALL_KIND });
+    if (options.idleExitMs !== undefined) {
+      installIdleExit({ server, boxes, idleMs: options.idleExitMs, onIdle: () => fireShutdown("idle") });
     }
 
     // The same poll quiesces chat for CLI maintenance and supervised reload.
@@ -449,9 +466,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
 
   } catch (err) {
     for (const lease of startup.values()) await lease.release();
-    for (const pf of pidFiles) {
-      await fs.promises.unlink(pf).catch(() => {});
-    }
+    for (const pf of pidFiles) await fs.promises.unlink(pf).catch(() => {});
     server.log.error(err);
     process.exit(1);
   }

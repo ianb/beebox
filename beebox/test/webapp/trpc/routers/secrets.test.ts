@@ -349,7 +349,7 @@ void test("A box member who is not the owner gets nothing, not even the list of 
   });
 
   const machine = await owner.secrets.machineView();
-  t.check(machine, { thisBox: slug, boxes: [slug, "otherbox"], secrets: [openaiRow(slug), OTHERBOX_ROW] });
+  t.check(machine, { thisBox: slug, boxes: [slug, "otherbox"], secrets: [openaiRow(slug), OTHERBOX_ROW], scope: "machine" });
 
   t.check(await attempt(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })), "BAD_REQUEST");
   t.checkText(await explain(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })), "The secret \"publish-token/otherbox\" is marked single-box (it belongs to \"otherbox\") and cannot also be granted to \"«*»\". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.");
@@ -392,7 +392,7 @@ void test("A box member who is not the owner gets nothing, not even the list of 
 
   await owner.secrets.setValue({ name: "weatherapi", value: "placeholder-weather-key-2", uses: ["tide times"] });
   const machine2 = await owner.secrets.machineView();
-  t.check(machine2, { thisBox: slug, boxes: [slug, "otherbox"], secrets: [mistralRow(slug), OTHERBOX_ROW, weatherRow(slug)] });
+  t.check(machine2, { thisBox: slug, boxes: [slug, "otherbox"], secrets: [mistralRow(slug), OTHERBOX_ROW, weatherRow(slug)], scope: "machine" });
 
   // ## Open access: the refusal and the surfaces it still reaches
   //
@@ -474,4 +474,46 @@ void test("Explicit reveal is owner-gated and audited", async (t) => {
   await rm(logPath, { recursive: true, force: true });
   await writeFile(logPath, "not a directory");
   t.check(await attempt(ownerForReveal.secrets.revealValue({ name: "z-reveal-test" })), "INTERNAL_SERVER_ERROR");
+});
+
+// ## A unit host: the page reaches only this box's copy of the store
+//
+// There each box reads its own export of the operator's master store
+// (docs/plans/per-box-units.md, question 9), so a grant to another box made
+// from this box's Admin page would report success and change nothing that box
+// reads. The router refuses with the operator's command and tells the page
+// which scope it is showing.
+void test("on a unit host the secrets surface is box-scoped", async (t) => {
+  const box = await makeTmpBox();
+  const previous = process.env.BBX_UNIT_HOST;
+  t.teardown(async () => {
+    await box.cleanup();
+    if (previous === undefined) delete process.env.BBX_UNIT_HOST; else process.env.BBX_UNIT_HOST = previous;
+  });
+  process.env.BBX_UNIT_HOST = "1";
+  const owner = caller(box.root);
+  const slug = await boxSlug(box.root);
+  await owner.secrets.setValue({ name: "mistral", value: "placeholder-mistral-key" });
+
+  // This box's own grants work as before.
+  await owner.secrets.grant({ box: slug, name: "mistral", access: "server" });
+  t.check((await owner.secrets.boxStatus()).granted.map((grant) => grant.name), ["mistral"]);
+  t.check((await owner.secrets.machineView()).scope, "box");
+
+  const refused: Record<string, () => Promise<unknown>> = {
+    grant: () => owner.secrets.grant({ box: "otherbox", name: "mistral", access: "server" }),
+    setAccess: () => owner.secrets.setAccess({ box: "otherbox", name: "mistral", access: "agent" }),
+    revoke: () => owner.secrets.revoke({ box: "otherbox", name: "mistral" }),
+    setValueGranting: () => owner.secrets.setValue({ name: "openai", value: "x", grant: { box: "otherbox", access: "server" } }),
+    remove: () => owner.secrets.remove({ name: "mistral" }),
+  };
+  const codes: Record<string, string> = {};
+  for (const [name, call] of Object.entries(refused)) codes[name] = await attempt(call());
+  t.check(codes, { grant: "BAD_REQUEST", setAccess: "BAD_REQUEST", revoke: "BAD_REQUEST", setValueGranting: "BAD_REQUEST", remove: "BAD_REQUEST" });
+  t.checkText(
+    await explain(owner.secrets.grant({ box: "otherbox", name: "mistral", access: "server" })),
+    `On this host each box holds its own copy of the secret store, so this page reaches only "${slug}". Grant to "otherbox" on the host instead: bbx engine secrets grant otherbox <name>, then bbx engine secrets export-box otherbox.`,
+  );
+  // Nothing was written by the refused calls: the other box has no grant and the value is still here.
+  t.check((await owner.secrets.machineView()).boxes, [slug]);
 });

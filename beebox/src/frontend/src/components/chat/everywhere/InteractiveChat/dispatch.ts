@@ -26,6 +26,7 @@ import { localTime, formatTimePassed, joinTranscript, type VoiceSegmentMeta } fr
 import type { ChatEvent } from "../../../../machines/chat-types";
 import type { CardSendFields } from "../../InteractiveChat-card-hooks";
 import type { ViewTarget } from "../../../../lib/view-url";
+import { boxNow } from "../../../../lib/box-clock";
 import { clearOpenedNotification, getOpenedNotification } from "../../../notifications/opened-notification-store";
 
 export function useEmissionDispatch(opts: {
@@ -36,8 +37,6 @@ export function useEmissionDispatch(opts: {
   send: (event: ChatEvent) => void;
   captureCardSend: () => CardSendFields;
   acceptCardSend?: (fields: CardSendFields) => void;
-  /** The pending question the root chat is asking, sent with every message while pending. */
-  openQuestion?: string;
   boxSlug: string | undefined;
   activeView: { target: ViewTarget } | null;
   messages: SessionEntry[];
@@ -62,7 +61,7 @@ export function useEmissionDispatch(opts: {
     let timePassed: string | null = null;
     const last = messages.at(-1);
     if (last !== undefined) {
-      timePassed = formatTimePassed(Date.now() - new Date(last.timestamp).getTime());
+      timePassed = formatTimePassed(boxNow() - new Date(last.timestamp).getTime());
     }
     const notificationOpened = getOpenedNotification() ?? undefined;
     return {
@@ -84,7 +83,6 @@ export function useEmissionDispatch(opts: {
   const { captureEmissionDispatch, dispatchNativeEmission, failedRegion } = useBoundEmission({
     pool: opts.pool, target: opts.target, selection: opts.selection, attention: opts.attention,
     emissionStore, captureCardSend, acceptCardSend: opts.acceptCardSend, getWitness,
-    ...(opts.openQuestion === undefined ? {} : { openQuestion: opts.openQuestion }),
     // A `chat:new` notification rides along with the first message only.
     onSent: () => { clearOpenedNotification(); onSent(); },
   });

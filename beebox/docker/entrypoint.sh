@@ -92,16 +92,13 @@ box_install() {
     return 0
   fi
   echo "beebox: installing box dependencies..." >&2
-  # --allow-build approves the box's native/generated deps (better-sqlite3 et
-  # al.) to run their install scripts. pnpm 10 blocks them by default, and
+  # --allow-build approves the box's native/generated deps (esbuild et al.)
+  # to run their install scripts. pnpm 10 blocks them by default, and
   # non-interactively a blocked build is a hard error — the box package.json's
   # `pnpm.onlyBuiltDependencies` is no longer read by pnpm 10.26, so the
   # approval has to come from the flags (same set as the engine install).
   ( cd "$BOX_ROOT" && pnpm install \
-      --allow-build=better-sqlite3 \
       --allow-build=esbuild \
-      --allow-build=@google/genai \
-      --allow-build=protobufjs \
       --allow-build=@googleworkspace/cli )
   /app/node_modules/beebox/bin/box-engine-link verify "$BOX_ROOT"
 }
@@ -133,7 +130,7 @@ fi
 
 # Fetch the pinned Docling's model weights once, in the background, so the
 # first scanned PDF does not spend minutes downloading them inside its 10-minute
-# budget (deploy/hetzner/setup-server.sh does the same at provisioning). They
+# budget (deploy/hetzner/provision.sh does the same at provisioning). They
 # land in the persistent home volume; the marker records the version fetched.
 DOCLING_VERSION="$(cat /app/docling-version)"
 DOCLING_MARKER="$HOME/.cache/beebox/docling-models-$DOCLING_VERSION"

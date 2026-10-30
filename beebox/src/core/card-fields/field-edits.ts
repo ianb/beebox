@@ -5,7 +5,8 @@
  */
 
 import { readFile, writeFile } from "node:fs/promises";
-import { isMap, isScalar, parse as parseYaml, parseDocument, type Document } from "yaml";
+import type { Document } from "yaml";
+import { isMap, isScalar, parse as parseYaml, parseDocument } from "../../lib/yaml-package.js";
 import { splitCardContent } from "../../cards/frontmatter.js";
 import { typeFromFilename } from "../card-io.js";
 import { isRecord } from "../../shared/is-record.js";

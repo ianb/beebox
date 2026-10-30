@@ -8,29 +8,28 @@
 import { useEffect, useState } from "react";
 import { trpc } from "../../../lib/trpc/client";
 import { errorMessage } from "@shared/error-guards";
+import { detectPushSupport } from "../../../lib/push-support";
 import type { AdminSectionId } from "../sections";
 import { useIsLoopback } from "../TailscaleSection";
 import {
   claudeEnabled, fromQuery, ready, summarizeAgentEngine, summarizeAllowedUsers, summarizeBackup, summarizeClaude,
-  summarizeCloudflare, summarizeCodex, summarizeGmailFilters, summarizeGoogle, summarizeOpenRouter, summarizeSecrets,
+  summarizeCloudflare, summarizeCodex, summarizeEncryptedBackup, summarizeGmailFilters, summarizeGoogle, summarizeOpenRouter, summarizeSecrets,
   summarizeTailscale, type AdminSectionStatus,
 } from "./admin-overview-summaries";
 
 export type { AdminSectionStatus } from "./admin-overview-summaries";
 
 /**
- * This device's push state. Mirrors NotificationsSection's support check; it
+ * This device's push state. Uses the same support check as NotificationsSection; it
  * reads the existing registration rather than waiting on `serviceWorker.ready`,
  * which never settles on a page with no service worker.
  */
 function useNotificationStatus(): AdminSectionStatus {
   const [status, setStatus] = useState<AdminSectionStatus>({ state: "loading" });
   useEffect(() => {
-    const hasPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    if (!hasPush) {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-      setStatus(isIOS && !standalone ? ready("Add to Home Screen first", "neutral") : ready("Not supported in this browser", "neutral"));
+    const support = detectPushSupport();
+    if (support.kind !== "supported") {
+      setStatus(support.kind === "needs-install" ? ready("Add to Home Screen first", "neutral") : ready("Not supported in this browser", "neutral"));
       return;
     }
     if (Notification.permission === "denied") {
@@ -67,6 +66,7 @@ export function useAdminOverview(): Record<AdminSectionId, AdminSectionStatus> {
   const loopback = useIsLoopback();
   const tailscale = trpc.admin.tailscaleBaseUrl.useQuery(undefined, { enabled: loopback });
   const backup = trpc.admin.backupStatus.useQuery();
+  const encryptedBackup = trpc.admin.encryptedBackupStatus.useQuery();
   const notifications = useNotificationStatus();
 
   return {
@@ -86,6 +86,7 @@ export function useAdminOverview(): Record<AdminSectionId, AdminSectionStatus> {
     "cloudflare-publishing": fromQuery(cloudflare, summarizeCloudflare),
     "tailscale": loopback ? fromQuery(tailscale, summarizeTailscale) : ready("Managed on the host", "neutral"),
     "backup": fromQuery(backup, summarizeBackup),
+    "encrypted-backups": fromQuery(encryptedBackup, summarizeEncryptedBackup),
     "notifications": notifications,
   };
 }

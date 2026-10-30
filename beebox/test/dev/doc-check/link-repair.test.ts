@@ -164,3 +164,28 @@ void test("A moved file's own links to non-.md files are re-depthed by their pat
     { content: "[x](../../beebox/src/core/x.ts)", rewrites: [], unfixable: [] },
   );
 });
+
+// ## A single-segment suffix needs a second segment or a ../ hop to count as a match
+void test("A single-segment suffix needs a second segment or a ../ hop to count as a match", async (t) => {
+  const fix = (content: string, tracked: string[]) =>
+    repairLinks({ fromRel: "docs/a/b/page.md", content, fileExists: (p) => tracked.includes(p), basenameLookup: buildBasenameLookup(tracked), suffixMatches: buildSuffixMatcher(tracked) });
+  const rootOnly = ["foo.json", "docs/a/b/page.md"];
+
+  t.check(
+    // A bare ./foo.json must not jump to the unrelated repo-root foo.json.
+    fix("[x](./foo.json)", rootOnly),
+    { content: "[x](./foo.json)", rewrites: [], unfixable: [{ line: 1, target: "./foo.json", reason: "no-basename-match" }] },
+  );
+
+  t.check(
+    // Two segments still match: sub/foo.json lives at the repo root's sub/.
+    fix("[x](./sub/foo.json)", ["sub/foo.json", "docs/a/b/page.md"]),
+    { content: "[x](../../../sub/foo.json)", rewrites: [{ line: 1, from: "./sub/foo.json", to: "../../../sub/foo.json" }], unfixable: [] },
+  );
+
+  t.check(
+    // A ../ hop in the original link still counts.
+    fix("[x](../foo.json)", rootOnly),
+    { content: "[x](../../../foo.json)", rewrites: [{ line: 1, from: "../foo.json", to: "../../../foo.json" }], unfixable: [] },
+  );
+});

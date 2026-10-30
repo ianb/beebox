@@ -31,7 +31,7 @@ export type AuditSurface = z.infer<typeof auditSurfaceSchema>;
 
 /** Fields that need a box, card files, Bash, or web tools — none exist in a dev audit. */
 const BOX_ONLY_FIELDS = [
-  "cards_contain", "cards_not_under", "bash_contains", "should_search", "context_dir", "fixture", "chat_mode", "plugins",
+  "cards_contain", "cards_not_under", "bash_contains", "read_before_edit", "should_search", "context_dir", "fixture", "chat_mode", "final_reply", "plugins",
 ] as const;
 
 const auditTestObjectSchema = z.object({
@@ -59,6 +59,12 @@ const auditTestObjectSchema = z.object({
   /** At least one path fragment must appear in observed reads. */
   should_read_any: z.array(z.string()).min(1).optional(),
   should_not_read: z.array(z.string()).optional(),
+  /**
+   * Each path fragment must appear in a read before the agent's first edit or
+   * write. pi's reader counts an instruction file a file tool delivered as a
+   * read; other engines' readers do not record edits, so the check fails there.
+   */
+  read_before_edit: z.array(z.string()).optional(),
   bash_contains: z.array(z.string()).optional(),
   /**
    * The agent must have looked something up before answering: `web` a web
@@ -85,13 +91,19 @@ const auditTestObjectSchema = z.object({
    */
   fixture: z.record(z.string(), z.string()).optional(),
   /**
-   * Run the agent with `CHAT_SYSTEM_PROMPT` instead of the default
+   * Run the agent with `chatSystemPrompt()` instead of the default
    * working-directory prompt. Use for tests that audit chat-mode knowledge
    * (e.g. the `<chat-app>`, `<ack>`, `<callout>` tags) — the agent in a chat
    * session sees these via the chat prompt, so the audit has to load them
    * too.
    */
   chat_mode: z.boolean().optional(),
+  /**
+   * Run the text checks on the text the chat shows: the reply after the last
+   * tool call, plus earlier text the chat keeps (`visibleReplyText`). Other
+   * text written before a later tool call folds into the activity row.
+   */
+  final_reply: z.boolean().optional(),
   /**
    * Plugins the box must have active for this audit. The runner activates
    * them before docs generation and resets the box after (`box-audits/plugins.ts`).

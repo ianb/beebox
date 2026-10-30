@@ -36,14 +36,18 @@ import { LandmarkGroup, LandmarkLinks, LandmarkSymbol } from "../landmarks/Landm
 import { ChatOpeners } from "../openers/ChatOpeners";
 import { Markdown } from "../Markdown/body";
 import { bbxSource } from "../../lib/source-tag";
-import { useRefetchOnFileChange } from "../../hooks/useRefetchOnFileChange";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { anyFileChange } from "../../lib/live-refresh";
 import { placeSections, type PlacePayload, type PlaceTier } from "./sections";
 import { PlaceChatContext, startSomething } from "../openers/place-chat";
 import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hook";
 import { CountsLine } from "../todo/TodoSummaryLine";
 import { rootLineParts } from "../todo/summary";
 import type { RendererProps } from "../../file-type-registry";
+import type { ViewState } from "@shared/view-state";
 import type { ViewTarget } from "../../lib/view-url";
+import { parentDir } from "../../lib/parent-dir";
+import { MaterialContext, useMaterial } from "../ui/material";
 
 const TIER_HEADINGS: Record<PlaceTier, string> = {
   "entry-point": "Start here",
@@ -51,12 +55,6 @@ const TIER_HEADINGS: Record<PlaceTier, string> = {
   places: "Places inside",
   pinned: "Pinned",
 };
-
-/** The folder a card sits in, box-relative ("" at the box root). */
-function parentDir(cardPath: string): string {
-  const slash = cardPath.lastIndexOf("/");
-  return slash === -1 ? "" : cardPath.slice(0, slash);
-}
 
 function SectionHeading({ children }: { children: ReactNode }) {
   return <Text as="h3" size="xs" weight="medium" tone="muted" uppercase>{children}</Text>;
@@ -68,11 +66,12 @@ function SectionHeading({ children }: { children: ReactNode }) {
  * types, so the folder may still hold files (docs/implemented-plans/front-door.md, Track E).
  */
 function EmptyPlace({ folder, label, onNavigate }: { folder: string; label: string; onNavigate: (target: ViewTarget) => void }) {
+  const material = useMaterial(undefined);
   return (
     <div className="flex flex-col gap-1" data-place-section="empty">
       <Text as="p">Nothing to show here yet. Tell me about something in the chat and I&apos;ll keep it here.</Text>
       <Text as="p" size="sm" tone="subtle">
-        <InlineAction intent="subtle" onClick={() => onNavigate(browseCardTarget({ directory: folder }))}>{`Open ${label} in Browse`}</InlineAction>
+        <InlineAction intent="subtle" material={material} onClick={() => onNavigate(browseCardTarget({ directory: folder }))}>{`Open ${label} in Browse`}</InlineAction>
       </Text>
     </div>
   );
@@ -85,28 +84,33 @@ function EmptyPlace({ folder, label, onNavigate }: { folder: string; label: stri
  */
 function RootCounts({ counts, onRetry }: { counts: NavCounts | "unavailable"; onRetry: (() => void) | undefined }) {
   const openBeside = useOpenBeside();
+  const material = useMaterial(undefined);
   if (counts === "unavailable") {
     return (
       <div data-place-section="counts">
         <Text as="p" size="sm" tone="subtle">
           {"Counts unavailable. "}
-          {onRetry === undefined ? null : <InlineAction intent="subtle" onClick={onRetry}>Retry</InlineAction>}
+          {onRetry === undefined ? null : <InlineAction intent="subtle" material={material} onClick={onRetry}>Retry</InlineAction>}
         </Text>
       </div>
     );
   }
   const parts = rootLineParts(counts);
   if (parts === null) return null;
-  const open = (path: string, title: string) => (openBeside === null ? null : { onClick: () => openBeside(cardTarget(path)), title });
+  const open = (path: string, { title, viewState }: { title: string; viewState: ViewState | null }) =>
+    (openBeside === null ? null : { onClick: () => openBeside({ ...cardTarget(path), viewState }), title });
   return (
     <div data-place-section="counts">
       <Text as="p" size="sm" tone="subtle">
         <CountsLine
           parts={parts}
+          material={material}
           actions={{
-            open: open(PLATE_CARD_PATH, "Open your todo list"),
-            overdue: open(PLATE_CARD_PATH, "Open your todo list"),
-            questions: open(SYSTEM_CARD_PATHS.questions, "Open the questions waiting for you"),
+            open: open(PLATE_CARD_PATH, { title: "Open your todo list", viewState: null }),
+            // Date order puts the oldest deadlines, the overdue ones, first.
+            overdue: open(PLATE_CARD_PATH, { title: "Open your todo list by date", viewState: { group: "date" } }),
+            later: open(PLATE_CARD_PATH, { title: "Open your todo list", viewState: null }),
+            questions: open(SYSTEM_CARD_PATHS.questions, { title: "Open the questions waiting for you", viewState: null }),
           }}
         />
       </Text>
@@ -192,7 +196,6 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
               group={section.group}
               boxSlug={boxSlug}
               onNavigate={onNavigate}
-              compact
               defaultOpen
               hidePath
               // "Also here" lists the folder's cards, so its overflow opens the folder.
@@ -207,8 +210,10 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
 
 export function PlaceView({ data, onNavigate, mode }: RendererProps) {
   const cardPath = data.path.replace(/^\//, "");
-  const query = trpc.landmarks.forDir.useQuery({ dir: parentDir(cardPath), expandsAsGroups: true });
-  useRefetchOnFileChange(query.refetch);
+  // Mounted only while shown, so a change made while closed was never seen:
+  // fetch on every open rather than trust the cache.
+  const query = trpc.landmarks.forDir.useQuery({ dir: parentDir(cardPath), expandsAsGroups: true }, { refetchOnMount: "always" });
+  useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const boxSlug = useBoxSlug();
   const openLandmarkChat = useOpenLandmarkChat(boxSlug ?? "");
   const landmark = query.data?.landmark;
@@ -244,5 +249,6 @@ export function PlaceView({ data, onNavigate, mode }: RendererProps) {
       />
     );
   }
-  return <div className="bbx-card-content">{content}</div>;
+  // The page draws on the card itself (or, embedded, on the enclosing card), so its text takes the card's ink.
+  return <div className="bbx-card-content"><MaterialContext.Provider value>{content}</MaterialContext.Provider></div>;
 }

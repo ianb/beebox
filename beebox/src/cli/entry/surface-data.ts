@@ -74,6 +74,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   // ---- Questions and jobs ----------------------------------------------
   { name: "answer", audience: "agent", smoke: MUTATES },
   { name: "dismiss", audience: "agent", smoke: MUTATES },
+  { name: "question", audience: "agent", smoke: MUTATES },
   { name: "finish", audience: "agent", smoke: { skip: "deletes the job card it is given" } },
   { name: "intake", audience: "agent", smoke: MUTATES },
   { name: "triage", audience: "agent", smoke: { run: ["triage", "decisions", "--json"] } },
@@ -140,7 +141,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   },
   {
     name: "scheduler",
-    subcommands: ["start", "install", "uninstall"],
+    subcommands: ["start", "pass", "install", "uninstall"],
     audience: "engine",
     reason: "daemon lifecycle: `start` is a systemd and launchd ExecStart, `install` writes the launchd plist",
   },
@@ -158,12 +159,13 @@ export const SURFACE: readonly SurfaceEntry[] = [
   },
   {
     name: "secrets",
-    subcommands: ["set", "rm", "grant", "revoke", "list", "copy-grants", "migrate"],
+    subcommands: ["set", "rm", "grant", "revoke", "list", "copy-grants", "export-box", "migrate"],
     audience: "engine",
     reason: "mutations refuse an agent session without --agent-confirmed; `list` and `copy-grants` span the machine",
   },
 
   // ---- Engine: no agent-reachable form ----------------------------------
+  { name: "backup", audience: "engine", reason: "operator-configured encrypted snapshots and restore of machine-owned box state" },
   { name: "maintenance", audience: "engine", reason: "deploy holds box ownership across activation; runs as root and spans the fleet" },
   { name: "serve", audience: "engine", reason: "the hub spawns one per box (src/hub/supervisor/core.ts:441)" },
   { name: "hub", audience: "engine", reason: "a systemd ExecStart, and the dev router's backend spawn" },
@@ -171,7 +173,6 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "activity", audience: "engine", reason: "reports across every box; the deploy's at-rest gate" },
   { name: "wakeup", audience: "engine", reason: "tooling profile only; `force-wakeup` is the agent's counterpart" },
   { name: "tailscale", audience: "engine", reason: "machine networking, outside any box" },
-  { name: "google-auth", audience: "engine", reason: "an interactive browser OAuth flow" },
   { name: "auth", audience: "engine", reason: "local accounts; every verb refuses an agent session without --agent-confirmed" },
   { name: "init", audience: "engine", reason: "scaffolds the box installation rather than its content" },
   { name: "upgrade", audience: "engine", reason: "bumps the box's engine dependency; an installation act" },
@@ -180,6 +181,11 @@ export const SURFACE: readonly SurfaceEntry[] = [
     name: "todo-review",
     audience: "engine",
     reason: "the stock todo-review procedure's precheck and validate; `verify` retires todos and commits, and the agent's side is the brief `check` prints",
+  },
+  {
+    name: "question-review",
+    audience: "engine",
+    reason: "the stock question-review procedure's precheck and validate; `verify` writes the review latch, and the agent's side is the brief `check` prints",
   },
   { name: "field-test", audience: "engine", reason: "the agent field-test harness, run by a developer in this repo" },
 ];
