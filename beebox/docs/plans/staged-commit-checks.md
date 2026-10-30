@@ -1,9 +1,9 @@
 ---
 title: "Pre-commit checks run against the staged index"
-status: draft
+status: active
 workstream: tooling-burndown
 issues:
-  - ../../../issues/code-quality/2026-10-10-pre-commit-checks-read-the-working-tree.md
+  - ../../../issues/closed/code-quality/2026-10-10-pre-commit-checks-read-the-working-tree.md
   - ../../../issues/closed/code-quality/2026-10-25-layout-check-unit-directory-finding-found-late.md
 ---
 # Pre-commit checks run against the staged index
@@ -14,7 +14,7 @@ This plan runs those checks inside a persistent snapshot of the commit's index,
 and makes the layout check's rule-5 finding name the import edges.
 
 **Issues addressed:**
-[pre-commit checks read the working tree](../../../issues/code-quality/2026-10-10-pre-commit-checks-read-the-working-tree.md);
+[pre-commit checks read the working tree](../../../issues/closed/code-quality/2026-10-10-pre-commit-checks-read-the-working-tree.md);
 [layout-check unit-directory finding found late](../../../issues/closed/code-quality/2026-10-25-layout-check-unit-directory-finding-found-late.md).
 Closed siblings checked with `bin/issues similar --closed`:
 `issues/closed/bugs/2026-07-10-pathspec-commit-lint-staged-clobber.md` (the
