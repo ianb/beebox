@@ -114,6 +114,7 @@ none
 | `abort` kills a Bash child mid-`git` and leaves `index.lock` | Existing stale-lock tests | Recovery is conditional and delayed: `git-stale-lock.ts` needs a lock 15 minutes old. A direct `git` call fails visibly until then | Clear |
 | A server stop removes a task from the strip with no immediate notice | No | The parent learns on its next turn. There is no immediate notice to the person | Silent until the next turn: accepted, reported to the boxholder |
 | `abort` during a parent turn loses that turn's final text | No | Only with live tasks, and only cap or sweep after stall, or maintenance when not busy | Clear on resume |
+| A `task-level` frame is queued but not handled when a cap stop runs, so `stop()` picks `close` | No | Accepted. The turn that starts a task holds a pin until its `result`, and the frame comes first, so the gap is at most the `result` durability wait on an unpinned chat | Silent, near-nil reach |
 | Live state survives a closed run | Named: run-close test | Cleared at close and start | Would be silent; the test covers it |
 
 No critical gap.
