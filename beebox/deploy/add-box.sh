@@ -380,7 +380,9 @@ install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0751 "$BOX_HOME"
 for d in .claude .codex .config .local .cache .ssh; do
   install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0700 "$BOX_HOME/\$d"
 done
-su - "$BOX_OWNER" -c 'git config --global user.email beebox@box.example.com && git config --global user.name "Bee Box"'
+# umask 077: a login shell's 002 left .gitconfig 0664, readable by path
+# through the 0751 home.
+su - "$BOX_OWNER" -c 'umask 077; git config --global user.email beebox@box.example.com && git config --global user.name "Bee Box"'
 
 # Clone/pull as root (su drops the SSH agent socket, breaking agent
 # forwarding), then chown to the box's owner. The pull names the owner's
