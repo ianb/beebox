@@ -5,6 +5,8 @@
  * with the same fail-closed posture).
  */
 
+import { inheritedCredentials } from "../../lib/credential-env.js";
+
 /**
  * Env vars a box-spawned subprocess may inherit from the spawning server
  * process. Fail-closed ALLOWLIST, mirroring `src/hub/supervisor/child-env.ts`'s
@@ -23,30 +25,12 @@
  * Widen this list only by adding a named entry with a reasoned comment — never
  * by reverting to a spread.
  *
- * The names deliberately NOT here, and why (the old strip-list's rationale,
- * now the exclusion rationale):
+ * Credential values are not listed here. `lib/credential-env.ts` holds every
+ * credential name with its `agent` and `tooling` visibility and the reason;
+ * today neither profile inherits any, and `script-env/core.ts` injects `BBX_AGENT_TOKEN`.
  *
- * - `ANTHROPIC_API_KEY` — the Claude Agent SDK and CLI both pick it up if
- *   present and silently bill it instead of the boxholder's subscription.
- *   Agents authenticate through `~/.claude/` (reached via `HOME` /
- *   `CLAUDE_CONFIG_DIR` below), never an API key.
- * - `BBX_HUB_SECRET`, `BBX_DIAG_API_KEY` — the hub's cross-box trust secrets. A
- *   `bbx serve` child needs them to verify hub-proxied requests; an agent under
- *   that child must not inherit them, or it could forge
- *   `x-bbx-hub-authenticated-email: <anyone>` (or `x-bbx-hub-auth: off`) straight
- *   at a sibling box's loopback port and bypass identity + box ACLs, or forge
- *   the diagnostic bearer the same way. Agents authenticate to their OWN box
- *   via `BBX_AGENT_TOKEN` (set below), never these.
- * - `BBX_SESSION_SECRET` — the symmetric session-cookie signing key (verify ==
- *   forge, see `webapp/auth.ts`), so an agent holding it could mint a valid
- *   `bbx_session` for ANY user on ANY box. (Partial, as ever: a same-user agent
- *   can still read the 0600 `~/.bbx-session-secret` file — containment is
- *   Track 4's problem — but the trivial-inheritance path closes here.)
- * - `BBX_BROWSE_API_KEY` — the browse-service bearer; same don't-inherit-power
- *   reason, and no box-spawned subprocess reads it.
- * - Every connector credential — see `CONNECTOR_ENV_ALLOWLIST` below: they are
- *   withheld from agents and reach only the `bbx`-tooling spawn profile, until
- *   Track 3 retires the env-var credential path entirely.
+ * Other names deliberately NOT here, and why:
+ *
  * - `BBX_SERVER_URL` / `BBX_BOX_NAME` — not inherited because they are always
  *   *derived* below from this box's own live endpoint registration or
  *   `publicUrl`; inheriting a parent's copy could point a subprocess at the
@@ -56,7 +40,7 @@
  *   tooling parent hand its `tooling` marker to an agent child, which is
  *   exactly the local-credential-use case the marker exists to prevent.
  */
-const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
+const SCRIPT_ENV_PLAIN: readonly string[] = [
   // --- OS/runtime basics ---
   "PATH",
   "HOME",
@@ -150,6 +134,12 @@ const CONNECTOR_ENV_ALLOWLIST: readonly string[] = [
   "BBX_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path. Tooling ONLY: a spawned `bbx wakeup` runs the connectors, which resolve their keys from the store. Deliberately absent from the agent profile -- an agent has no store interface yet, and pointing it at the file is the opposite of what the store is for.
 ];
 
+/** What the agent profile inherits. Exported for `test/lib/credential-env.test.ts`. */
+export const SCRIPT_ENV_ALLOWLIST: readonly string[] = [...SCRIPT_ENV_PLAIN, ...inheritedCredentials("agent")];
+
+/** What the `bbx`-tooling profile inherits. Exported for `test/lib/credential-env.test.ts`. */
+export const TOOLING_ENV_ALLOWLIST: readonly string[] = [...SCRIPT_ENV_PLAIN, ...CONNECTOR_ENV_ALLOWLIST, ...inheritedCredentials("tooling")];
+
 /** Copy the allowed names out of `sourceEnv` into a fresh env. */
 function pickAllowed(sourceEnv: NodeJS.ProcessEnv, names: readonly string[]): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
@@ -170,8 +160,5 @@ export function pickBoxSubprocessEnv(
   sourceEnv: NodeJS.ProcessEnv,
   { connectorCreds }: { connectorCreds: boolean }
 ): NodeJS.ProcessEnv {
-  return pickAllowed(
-    sourceEnv,
-    connectorCreds ? [...SCRIPT_ENV_ALLOWLIST, ...CONNECTOR_ENV_ALLOWLIST] : SCRIPT_ENV_ALLOWLIST,
-  );
+  return pickAllowed(sourceEnv, connectorCreds ? TOOLING_ENV_ALLOWLIST : SCRIPT_ENV_ALLOWLIST);
 }

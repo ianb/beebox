@@ -52,6 +52,9 @@ export async function runShell(
     const { stdout, stderr } = await execa("bash", ["-c", wrappedScript], {
       cwd: boxRoot,
       env,
+      // execa merges process.env under `env` by default, which would hand the
+      // script every server credential the allowlist withheld.
+      extendEnv: false,
       maxBuffer: 1024 * 1024, // 1MB
     });
 
