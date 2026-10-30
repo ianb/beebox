@@ -25,10 +25,13 @@ import { buildScriptEnv } from "../../../script-env/core.js";
 import type { FetchLike } from "../../../secrets/probe-registry.js";
 import { piResources } from "./context.js";
 import { resolvePiModel } from "./model.js";
+import { piGuidedFileTools } from "./nested-guidance.js";
 import { piBashTool, piToolAllowlist } from "./tools.js";
 
 // Admin warns about an added model through the run's own lookup.
 export { lookupPiModel, piBundledCatalog } from "./model.js";
+// The knowledge audit reads delivered guidance back from session files.
+export { deliveredGuidancePaths } from "./nested-guidance.js";
 
 export interface PiSessionOptions {
   boxRoot: string;
@@ -123,7 +126,7 @@ export async function openPiSession(options: PiSessionOptions, deps?: PiSessionD
     { fetch: deps?.fetch ?? fetch, now: (deps?.now ?? Date.now)() },
   );
   if (options.requireKnownPrices === true && !pricesKnown) throw piModelUnpriced(options.model);
-  const { settingsManager, resourceLoader } = await piResources({
+  const { settingsManager, resourceLoader, guidance } = await piResources({
     boxRoot,
     cwd,
     agentDir,
@@ -131,6 +134,7 @@ export async function openPiSession(options: PiSessionOptions, deps?: PiSessionD
     loadBoxContext: options.loadBoxContext !== false,
   });
   const bash = piBashTool(cwd, await buildScriptEnv(boxRoot, options.env));
+  const fileTools = guidance === null ? [] : piGuidedFileTools(guidance, { autoResizeImages: settingsManager.getImageAutoResize() });
   const { session } = await createAgentSession({
     cwd,
     agentDir,
@@ -139,8 +143,8 @@ export async function openPiSession(options: PiSessionOptions, deps?: PiSessionD
     sessionManager: sessionManagerFor({ boxRoot, cwd, resumeSessionId: options.resumeSessionId, newSessionId: options.newSessionId }),
     settingsManager,
     resourceLoader,
-    // A custom tool named `bash` replaces the built-in one; the allowlist decides whether it is active.
-    customTools: [bash, ...customTools],
+    // A custom tool named `bash`, `read`, `edit` or `write` replaces the built-in one; the allowlist decides whether it is active.
+    customTools: [bash, ...fileTools, ...customTools],
     tools,
   });
   return { kind: "session", session, sessionId: session.sessionId, tools };

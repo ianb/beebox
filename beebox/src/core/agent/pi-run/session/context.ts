@@ -2,20 +2,21 @@
  * The box guidance a pi run starts with.
  *
  * pi loads the walk-up `AGENTS.md` (or `CLAUDE.md`) and `.agents/skills` on
- * its own. It does not expand `@file` includes and does not load an
- * `AGENTS.md` below its working directory, so the host appends the expanded
- * includes, as for Codex, and one instruction to read nested files.
+ * its own. It does not expand `@file` includes, so the host appends them, as
+ * for Codex. It does not load an `AGENTS.md` below its working directory; the
+ * file tools deliver those (`nested-guidance.ts`), and one line says so.
  */
 
 import { join } from "node:path";
 import { DefaultResourceLoader, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { expandInstructionIncludes } from "../../../agent-context-includes.js";
 import { instructionFilePath } from "../../../agent-instruction-files.js";
+import { nestedGuidance, type NestedGuidance } from "./nested-guidance.js";
 
-/** pi has no harness rule for scoped guidance files; Codex's built-in prompt has one, pi's does not. */
+/** Tells the model what a `<nested-agents-md>` block in a tool result is. */
 export const NESTED_AGENTS_LINE =
-  "Directories below the box root may contain their own AGENTS.md. Before you read or change files in a directory, "
-  + "read the AGENTS.md files on the path from the box root to it and follow them.";
+  "A directory's own AGENTS.md arrives in a <nested-agents-md> block the first time read, edit or write touches a file "
+  + "there. Follow it, and check an edit you already made against it.";
 
 export interface PiContextOptions {
   boxRoot: string;
@@ -27,17 +28,19 @@ export interface PiContextOptions {
 }
 
 /**
- * pi's settings and resource loader for one run. Settings are in memory, so
+ * pi's settings and resource loader for one run, and the nested-guidance
+ * state its file tools share (null without box context). Settings are in memory, so
  * a box's `.pi/settings.json` cannot enable packages. No extension loads:
  * pi extensions are code, and here they would run inside the box server.
  * pi's base prompt always applies; no box file replaces it.
  */
 export async function piResources(
   options: PiContextOptions,
-): Promise<{ settingsManager: SettingsManager; resourceLoader: DefaultResourceLoader }> {
+): Promise<{ settingsManager: SettingsManager; resourceLoader: DefaultResourceLoader; guidance: NestedGuidance | null }> {
   const { boxRoot, cwd, agentDir, loadBoxContext } = options;
+  const includesSeen = new Set<string>();
   const included = loadBoxContext
-    ? await expandInstructionIncludes({ instructionPath: join(boxRoot, await instructionFilePath(boxRoot, "")), boxRoot })
+    ? await expandInstructionIncludes({ instructionPath: join(boxRoot, await instructionFilePath(boxRoot, "")), boxRoot, seen: includesSeen })
     : "";
   const append = [options.systemPrompt ?? "", included, loadBoxContext ? NESTED_AGENTS_LINE : ""].filter((part) => part !== "");
   const settingsManager = SettingsManager.inMemory();
@@ -55,5 +58,8 @@ export async function piResources(
     appendSystemPromptOverride: () => append,
   });
   await resourceLoader.reload();
-  return { settingsManager, resourceLoader };
+  const guidance = loadBoxContext
+    ? await nestedGuidance({ boxRoot, cwd, preloaded: resourceLoader.getAgentsFiles().agentsFiles.map((file) => file.path), includesSeen })
+    : null;
+  return { settingsManager, resourceLoader, guidance };
 }

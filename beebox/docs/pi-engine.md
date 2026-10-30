@@ -48,6 +48,30 @@ says so. The admin note and the run use the same lookup (`lookupPiModel`,
 - Tools: `read`, `bash`, `edit`, `write`, `ls`. The box validator checks each
   `edit` and `write` and sends findings back to the model in the same turn.
 
+## Nested AGENTS.md
+
+pi loads the `AGENTS.md` of the working directory and its ancestors when the
+session opens. Claude Code also loads a deeper directory's `AGENTS.md` when a
+tool touches a file there; pi does not, so Bee Box's `read`, `edit` and
+`write` tools do it (`src/core/agent/pi-run/session/nested-guidance.ts`).
+They are pi's own tool definitions, registered as custom tools of the same
+names; no extension runs.
+
+After one of these tools runs on a file in the box, each instruction file
+(`AGENTS.md`, else `CLAUDE.md`) between the working directory and the file's
+directory is appended to the tool result in a `<nested-agents-md path="...">`
+block, with its `@` includes expanded. A file goes in once per session; a
+resumed session can deliver it again. Reading the instruction file itself
+counts as delivery. An include the root file already expanded is not
+repeated. One file adds at most 12,000 characters. bash and `ls` deliver
+nothing.
+
+A box agent can write a symlink. An instruction file whose real path is
+outside the box is not read, and the server logs a warning. On an `edit` or
+`write` the guidance arrives after the change, so the model may need a second
+edit; the knowledge audit `pi-nested-agents-before-edit` checks the order with
+`read_before_edit`.
+
 ## Choices that close pi off from the box
 
 A box agent can write files under the box, including `.pi/` and
@@ -67,8 +91,8 @@ server, so pi ignores them:
 - **No `models.json`.** It could point the OpenRouter provider, and the key,
   at another host.
 - **No `SYSTEM.md`.** It would replace pi's base prompt. The box's guidance
-  reaches pi through `AGENTS.md`, `.agents/skills` and the appended system
-  prompt.
+  reaches pi through `AGENTS.md` (nested ones through the file tools),
+  `.agents/skills` and the appended system prompt.
 
 ## What it cannot do
 

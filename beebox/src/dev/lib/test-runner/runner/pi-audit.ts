@@ -2,12 +2,15 @@
  * Knowledge-audit behavior from a pi session file (JSONL version 3, read by
  * `piLines`). pi's tools are lowercase and take a `path`; they map onto the
  * audit vocabulary: `read` is a file read, `ls` a search, `bash` a command
- * (and a read or search when it runs one, as for Claude and Codex). `edit` and
- * `write` are not recorded, as Claude's `Edit` and `Write` are not. pi has no
- * sub-agents. Each assistant message's usage gives one turn's loaded context.
+ * (and a read or search when it runs one, as for Claude and Codex). An
+ * instruction file a tool result delivered (`<nested-agents-md>`) counts as a
+ * read at that result. `edit` and `write` are recorded only as the point of
+ * the first edit, for `read_before_edit`. pi has no sub-agents. Each assistant
+ * message's usage gives one turn's loaded context.
  */
 
 import { z } from "zod";
+import { deliveredGuidancePaths } from "../../../../core/agent/pi-run/session/core.js";
 import { findPiSessionFile, piLines } from "../../../../core/chat/session/pi-transcript.js";
 import { piSessionsDir } from "../../../../core/pi-sessions.js";
 import { summarizeContextUsage, type TurnUsage } from "../../context-usage.js";
@@ -31,6 +34,20 @@ const assistantRecordSchema = z.object({
     usage: z.object({ input: z.number(), cacheRead: z.number(), cacheWrite: z.number() }).optional(),
   }),
 });
+
+const toolResultRecordSchema = z.object({
+  type: z.literal("message"),
+  message: z.object({ role: z.literal("toolResult"), content: z.array(blockSchema) }),
+});
+
+const EDIT_TOOLS = new Set(["edit", "write"]);
+
+/** Instruction files delivered in a tool result record, or none for any other record. */
+function deliveredIn(record: Record<string, unknown>): string[] {
+  const parsed = toolResultRecordSchema.safeParse(record);
+  if (!parsed.success) return [];
+  return parsed.data.message.content.flatMap((block) => ("text" in block ? deliveredGuidancePaths(block.text) : []));
+}
 
 function stringArg(args: Record<string, unknown>, name: string): string {
   const value = args[name];
@@ -60,7 +77,9 @@ export function piBehaviorFromRecords(records: Iterable<Record<string, unknown>>
   const replyBlocks: ReplyBlock[] = [];
   const turns: TurnUsage[] = [];
   let replyStart = 0;
+  let readsBeforeFirstEdit: number | null = null;
   for (const record of records) {
+    acc.filesRead.push(...deliveredIn(record));
     const parsed = assistantRecordSchema.safeParse(record);
     if (!parsed.success) continue;
     const { content, usage } = parsed.data.message;
@@ -71,6 +90,7 @@ export function piBehaviorFromRecords(records: Iterable<Record<string, unknown>>
         replyBlocks.push({ text: block.text, update: false });
       }
       if ("arguments" in block) {
+        if (EDIT_TOOLS.has(block.name)) readsBeforeFirstEdit ??= acc.filesRead.length;
         PI_TOOL_CATEGORIZERS[block.name]?.(block.arguments, acc);
         replyStart = replyBlocks.length;
       }
@@ -83,6 +103,7 @@ export function piBehaviorFromRecords(records: Iterable<Record<string, unknown>>
     replyText: visibleReplyText(replyBlocks, replyStart),
     responseLength: responseText.split(/\s+/).filter(Boolean).length,
     context: summarizeContextUsage(turns),
+    readsBeforeFirstEdit,
   };
 }
 

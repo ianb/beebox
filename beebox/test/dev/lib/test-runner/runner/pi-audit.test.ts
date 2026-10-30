@@ -72,10 +72,43 @@ void test("a pi audit reads pi's tool calls, reply and usage from its session fi
     replyText: "Added cumin.",
     responseLength: 6,
     context: { initialTokens: any(Number), peakTokens: any(Number), addedTokens: any(Number), turnCount: 3 },
+    readsBeforeFirstEdit: null,
   });
   t.check(result.checks.shouldReadChecks, [{ file: "_content/recipes/AGENTS.md", wasRead: true }]);
   t.check(result.checks.shouldNotReadChecks, [{ file: "_content/inbox/AGENTS.md", wasRead: false }]);
   t.check(result.checks.bashContainsChecks, [{ expected: "rg -l soup", found: true, matchedCommand: "rg -l soup _content" }]);
+});
+
+// The read tool delivers the folder's AGENTS.md with the card; the audit
+// counts that as a read, and `read_before_edit` sees whether it came first.
+void test("delivered guidance counts as a read, in order with the edits", async (t) => {
+  const box = await piBox(t);
+  const card = "_content/recipes/Soup.recipe.card";
+  await writeFile(join(box.root, card), "Soup\n");
+  execSync("git add -A && git commit -qm soup", { cwd: box.root });
+  const ordered: AuditTest = { ...audit, should_not_read: [], bash_contains: [], read_before_edit: ["_content/recipes/AGENTS.md"] };
+  const run = async (first: "read" | "edit") => {
+    const read = fauxToolCall("read", { path: card });
+    const edit = fauxToolCall("edit", { path: card, edits: [{ oldText: "Soup", newText: "Cumin soup" }] });
+    faux.setResponses([
+      fauxAssistantMessage(first === "read" ? read : edit),
+      fauxAssistantMessage(first === "read" ? edit : read),
+      fauxAssistantMessage("Added cumin."),
+    ]);
+    const { behavior, checks } = await runTest({ test: ordered, boxRoot: box.root, piDeps });
+    return { filesRead: behavior.filesRead, readsBeforeFirstEdit: behavior.readsBeforeFirstEdit, order: checks.readBeforeEditChecks };
+  };
+  t.check(await run("read"), {
+    filesRead: [card, "_content/recipes/AGENTS.md"],
+    readsBeforeFirstEdit: 2,
+    order: [{ file: "_content/recipes/AGENTS.md", outcome: "read-first" }],
+  });
+  // The edit's own result delivers the file, after the edit.
+  t.check(await run("edit"), {
+    filesRead: ["_content/recipes/AGENTS.md", card],
+    readsBeforeFirstEdit: 0,
+    order: [{ file: "_content/recipes/AGENTS.md", outcome: "read-after" }],
+  });
 });
 
 void test("a pi session with no file is a missing transcript, not an empty audit", async (t) => {

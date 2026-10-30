@@ -37,7 +37,16 @@ export interface AgentBehavior {
   responseLength: number;
   /** Loaded-context size of this run (null if the session had no turns). */
   context: ContextStats | null;
+  /**
+   * How many `filesRead` entries came before the first edit or write; null
+   * when the agent made none. Absent when the engine's reader does not record
+   * edits (only pi's does).
+   */
+  readsBeforeFirstEdit?: number | null | undefined;
 }
+
+/** `read_before_edit`: only `read-first` passes; `read-first` also covers a run with no edit. */
+export type ReadBeforeEditOutcome = "read-first" | "read-after" | "not-read" | "not-recorded";
 
 export interface AutomatedChecks {
   containsChecks: Array<{ expected: string; found: boolean }>;
@@ -50,6 +59,7 @@ export interface AutomatedChecks {
   shouldReadChecks: Array<{ file: string; wasRead: boolean }>;
   shouldReadAnyCheck?: { files: string[]; wasRead: boolean; matched?: string | undefined } | undefined;
   shouldNotReadChecks: Array<{ file: string; wasRead: boolean }>;
+  readBeforeEditChecks: Array<{ file: string; outcome: ReadBeforeEditOutcome }>;
   bashContainsChecks: Array<{ expected: string; found: boolean; matchedCommand?: string }>;
   shouldSearchCheck?: { where: SearchWhere; found: boolean; matched?: string | undefined } | undefined;
   /** The agent stopped at its turn or budget limit; the audit fails on it. */

@@ -181,6 +181,9 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `should_read_any` — alternative files, at least one of which the agent should
   read. Use this when generated guidance and its installed skill are equivalent
   navigation outcomes.
+- `read_before_edit` — files the agent must read before its first edit or
+  write. Only pi's reader records edits, so on Claude and Codex the check
+  fails. pi counts a nested `AGENTS.md` that a file tool delivered as a read.
 - `should_search` — `web`, `box`, or `any`: the agent must look something up
   before answering. `web` is a WebSearch or WebFetch (a Codex provider search
   counts), `box` a `bbx search` command, `any` either. Use it for the laws
