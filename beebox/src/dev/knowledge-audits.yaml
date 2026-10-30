@@ -599,7 +599,10 @@ tests:
 
   # TOOLS, the box browser (docs/plans/shared-browser.md, chunk 11): the guide's
   # pointer carries the handoff; the `browser` skill carries the mechanics.
-  # Status: not yet run.
+  # Status (2026-10-30, Claude): pass on a committed scratch copy of the
+  # worktree's test1 clone, 0 reads, 0 searches, 44k ctx; first run. Asked the
+  # person to open Browser from the profile menu on a computer and say when
+  # done; said it never asks for or types the password.
   - id: browser-login-needed
     prompt: >
       You are partway through a task and a site you need is asking for a
@@ -614,7 +617,9 @@ tests:
     correct_contains_any: ["Browser", "bbx browser"]
     tags: [browser, behavioral]
 
-  # Status: not yet run.
+  # Status (2026-10-30, Claude): pass on the same copy, 0 reads, 0 searches,
+  # 34k ctx; first run. WebFetch for public pages, bbx browser for the
+  # person's account, the person logs in via Browser.
   - id: browser-vs-webfetch
     prompt: >
       How do you read a page that needs the person's account, and how is that
