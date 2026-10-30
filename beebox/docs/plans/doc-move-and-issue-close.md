@@ -3,8 +3,8 @@ title: "Move a tracked doc and rewrite every reference to it; close issues with 
 status: draft
 workstream: tooling-burndown
 issues:
-  - ../../../issues/features/2026-10-19-issue-close-is-manual-and-fix-rewrites-unrelated-files.md
-  - ../../../issues/code-quality/2026-10-25-plan-move-leaves-stale-paths-in-test-comments.md
+  - ../../../issues/closed/features/2026-10-19-issue-close-is-manual-and-fix-rewrites-unrelated-files.md
+  - ../../../issues/closed/code-quality/2026-10-25-plan-move-leaves-stale-paths-in-test-comments.md
 ---
 # Move a tracked doc and rewrite every reference to it; close issues with one verb
 
@@ -16,8 +16,8 @@ the moved file, a `bin/doc-move` entry for plans, and a `bin/issues close`
 verb built on it.
 
 **Issues addressed:**
-[issue close is manual and --fix rewrites unrelated files](../../../issues/features/2026-10-19-issue-close-is-manual-and-fix-rewrites-unrelated-files.md),
-[plan move leaves stale paths in test comments](../../../issues/code-quality/2026-10-25-plan-move-leaves-stale-paths-in-test-comments.md).
+[issue close is manual and --fix rewrites unrelated files](../../../issues/closed/features/2026-10-19-issue-close-is-manual-and-fix-rewrites-unrelated-files.md),
+[plan move leaves stale paths in test comments](../../../issues/closed/code-quality/2026-10-25-plan-move-leaves-stale-paths-in-test-comments.md).
 Searched (`bin/issues similar <path> --all` for both): the nearest closed
 sibling is
 [doc-check --fix misses moved file paths](../../../issues/closed/code-quality/2026-10-10-doc-check-fix-misses-moved-file-paths.md),
