@@ -14,10 +14,10 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { type GoogleCalendarService } from "../../services/google-calendar/core.js";
 import {
   eventToIcs,
-  eventFilename,
   isInWindow,
   type GoogleCalendarEvent,
 } from "./ics.js";
+import { eventFilename } from "./event-filename.js";
 import {
   formatEventDate,
   describeChanges,
@@ -30,6 +30,7 @@ import {
   type IcsOptions,
 } from "./state.js";
 import {
+  calendarEntries,
   eventKey,
   getFilename,
   lookupEventEntry,
@@ -201,10 +202,10 @@ async function reconcileEvent(
   const existingEntry = tracked?.entry;
   const oldName = existingEntry ? getFilename(existingEntry) : undefined;
 
-  // The natural name carries no calendar, so the same event id on two calendars
-  // on the same date would land on one file — see uniqueEventFilename.
+  // `calDir` is this calendar's own folder, so only its entries can hold a
+  // name there; another calendar's file of the same name is no clash.
   const filename = uniqueEventFilename({
-    index: state.eventFiles,
+    index: calendarEntries(state.eventFiles, calendarId),
     ownKeys: tracked && tracked.key !== key ? [key, tracked.key] : [key],
     calendarId, filename: eventFilename(event), current: oldName,
   });

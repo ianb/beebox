@@ -17,7 +17,7 @@ where the next reader looks, plus the small finds the sizing turned up.
 
 **Issues addressed:** none resolved. Related, found by grepping the queue for
 `connector`, `plugin`, `telegram`:
-[a calendar is a card with its events under it](../../../issues/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md)
+[a calendar is a card with its events under it](../../../issues/closed/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md)
 (not needed by this slice either way);
 [connectors via Composio managed auth](../../../issues/features/2026-09-06-connectors-via-composio-managed-auth.md)
 (auth stays core under every option here);

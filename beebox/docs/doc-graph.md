@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-29T18:45:32Z
-Total documents: 596
+Generated: 2026-10-29T23:46:43Z
+Total documents: 598
 
 ## Issues
 
@@ -1497,6 +1497,7 @@ Referenced by:
 - docs/design/representation.md:63 (link) — holds those terms ([`../glossary.md`](../glossary.md#user-facing-register)).
 - docs/design/trust.md:77 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/guides.md:57 (link) — | Glossary | [glossary](glossary.md) |
+- docs/implemented-plans/calendar-cards.md:59 (mention) — calendar folder is the existing attach scope (`docs/glossary.md:40`:
 - docs/implemented-plans/design-reconciliation.md:28 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/implemented-plans/docs-reorg.gap-analysis.md:149 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
 - docs/implemented-plans/docs-reorg.md:92 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
@@ -2866,6 +2867,7 @@ Referenced by:
 - docs/implemented-plans/box-agents-md.md:70 (mention) — - **Migration conventions** (`docs/cards/migrations.md` "Writing a new
 - docs/implemented-plans/box-migration.subplan.md:54 (mention) — - **`docs/cards/migrations.md`** — the established migration framework: `bbx migrate`
 - docs/implemented-plans/boxes-as-packages-v2.md:70 (mention) — | `bbx migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/cards/m
+- docs/implemented-plans/calendar-cards.md:210 (mention) — (`docs/cards/migrations.md`, "Admission, snapshots, and failures"). Crash
 - docs/implemented-plans/capture-mode.md:448 (mention) — wakeup-time failure). Migration (per `docs/cards/migrations.md` runbook
 - docs/implemented-plans/card-prominence.md:898 (mention) — (`docs/cards/migrations.md`). No mid-way state exists because nothing is removed.
 - docs/implemented-plans/card-self-refs.md:45 (mention) — docs (the `docs/cards/migrations.md` table entry, this plan) are about 60 lines on
@@ -3133,21 +3135,23 @@ References:
 
 #### docs/connectors/calendar.md
 
-Title: "Calendar" | 138 lines | current reference
+Title: "Calendar" | 177 lines | current reference
 
 Referenced by:
 - docs/connectors.md:35 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | [Calendar](connectors/calendar.md) |
 - docs/connectors/google-auth.md:95 (link) — is the [calendar pull](calendar.md#verify).
 - docs/design/README.md:34 (link) — [`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:45 (link) — calendar, a prime early integration, is [`../connectors/calendar.md`](../connectors/calendar.md).
+- docs/implemented-plans/calendar-cards.md:50 (mention) — continuing. Authored docs (calendar.md, this plan excluded): about 120 lines.
 - docs/implemented-plans/doc-structure-connectors.md:49 (mention) — | calendar.md "Config and state" | state in `_config/connectors/google-calendar-state.json`; tokens in `_config/connecto
 - docs/implemented-plans/dup-sweep-backend-final.md:183 (mention) — and the same unit names go in `docs/connectors/calendar.md:84`,
 - docs/implemented-plans/mvp-implementation-guide.md:695 (mention) — calendar.md          # Rules for calendar operations
 - docs/implemented-plans/user-story-audit-followups.md:37 (mention) — `docs/connectors/calendar.md` updated ([46]).
 - docs/plans/agent-docs.md:374 (mention) — `calendar.md`.
 - docs/user-stories/catalog/2026-06-26.md:2281 (mention) — Key limitation from docs/connectors/calendar.md (line 77): "One-way only. Local .ics edits are not detected or pushed ba
-- ../issues/exploration/2026-09-17-caldir-calendar-as-a-directory.md:21 (mention) — (`beebox/docs/connectors/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
-- ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:62 (mention) — `beebox/docs/connectors/calendar.md`: **no existing file is ever renamed, so no rename
+- ../issues/closed/exploration/2026-09-17-caldir-calendar-as-a-directory.md:24 (mention) — (`beebox/docs/connectors/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
+- ../issues/closed/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:65 (mention) — `beebox/docs/connectors/calendar.md`: **no existing file is ever renamed, so no rename
+- ../issues/closed/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md:12 (mention) — > **Closed:** Closed by the calendar-cards workstream (merged to main). Each synced calendar is a `calendar` card with i
 
 References:
 - → docs/connectors/google-auth.md (link)
@@ -3192,7 +3196,7 @@ Title: "Google auth" | 139 lines | current reference
 
 Referenced by:
 - docs/connectors.md:31 (link) — authorization for the three Google connectors: [Google auth](connectors/google-auth.md).
-- docs/connectors/calendar.md:113 (link) — [Google auth](google-auth.md#where-tokens-live) grant and refresh on demand
+- docs/connectors/calendar.md:152 (link) — [Google auth](google-auth.md#where-tokens-live) grant and refresh on demand
 - docs/connectors/drive.md:20 (link) — 1. **Google OAuth** configured (see [Google auth](google-auth.md))
 - docs/connectors/gmail.md:15 (link) — in [Google auth](google-auth.md).
 - docs/implemented-plans/doc-structure-connectors.md:58 (mention) — | `google-setup.md` | `connectors/google-auth.md` |
@@ -4170,6 +4174,35 @@ References:
 - → docs/implemented-plans/capture-mode.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/mobile-parity.md (mention)
+
+#### docs/implemented-plans/calendar-cards.design.md
+
+Title: "Calendar cards: design" | 131 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/calendar-cards.md:24 (link) — [calendar-cards.design.md](calendar-cards.design.md). Boxholder decisions
+
+References:
+- → ../issues/closed/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md (frontmatter)
+- → ../issues/closed/features/2026-09-17-calendar-ics-filenames-carry-the-title.md (frontmatter)
+- → docs/implemented-plans/calendar-cards.md (link)
+
+#### docs/implemented-plans/calendar-cards.md
+
+Title: "Calendar cards and readable event filenames" | 430 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/calendar-cards.design.md:11 (link) — **Parent plan:** [calendar-cards](calendar-cards.md)
+
+References:
+- → ../issues/closed/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md (frontmatter)
+- → ../issues/closed/features/2026-09-17-calendar-ics-filenames-carry-the-title.md (frontmatter)
+- → ../issues/closed/exploration/2026-09-17-caldir-calendar-as-a-directory.md (frontmatter)
+- → ../issues/features/2026-10-15-connectors-as-plugins.md (link)
+- → docs/implemented-plans/calendar-cards.design.md (link)
+- → docs/connectors/calendar.md (mention)
+- → docs/glossary.md (mention)
+- → docs/cards/migrations.md (mention)
 
 #### docs/implemented-plans/canvas-loop-figure.md
 
@@ -6490,7 +6523,7 @@ Referenced by:
 - ../issues/features/2026-10-15-connectors-as-plugins.md:13 (link) — [the slice 3 plan](../../beebox/docs/implemented-plans/plugins-slice-3.md),
 
 References:
-- → ../issues/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md (link)
+- → ../issues/closed/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md (link)
 - → ../issues/features/2026-09-06-connectors-via-composio-managed-auth.md (link)
 - → ../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md (link)
 - → docs/plugins.md (mention)
@@ -7162,6 +7195,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:12 (mention) — Superseded by the opposite decision: `beebox/docs/implemented-plans/retire-doctest.md` converted every doctest to a `.te
 - ../issues/closed/code-quality/2026-10-08-landmark-menu-ssr-layout-effect-warning.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/closed/decisions/2026-07-29-manual-testing-flag-overuse.md:15 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/closed/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:15 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-06-26-model-switch-verification-deferred.md:7 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-08-09-src-untested-by-import.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
@@ -7191,7 +7225,6 @@ Referenced by:
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/features/2026-07-28-google-auth-policy-proxy.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/features/2026-09-04-cross-box-filesystem-isolation.md:14 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
-- ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/features/2026-09-23-smoke-gate-skipped-by-scheduled-and-direct-landings.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/features/2026-09-25-notifications-and-proactive-design.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/watch/2026-10-17-move-typescript-eslint-to-typescript-7.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory

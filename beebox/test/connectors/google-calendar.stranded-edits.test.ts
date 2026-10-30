@@ -35,7 +35,7 @@ async function throwCalendarHttpError(status: number, url: string): Promise<neve
 
 const PRIMARY = { id: "primary", summary: "Main", primary: true, accessRole: "owner" };
 
-const CAL_DIR = "_content/calendar";
+const CAL_DIR = "_content/calendar/Main.attach";
 
 // Boxes made by examples; the teardown removes them all.
 const boxes: Awaited<ReturnType<typeof makeTmpBox>>[] = [];
@@ -130,7 +130,7 @@ after(async () => {
 // A patch that comes back 404 is definitive: there is no event on Google to
 // patch, and no number of retries changes that. The edit used to sit in the
 // retry queue forever, re-patched and re-reported on every wakeup. Now the file
-// is stranded — moved to `_content/calendar/stranded/`, untracked, reported once.
+// is stranded — moved to `_content/calendar/Main.attach/stranded/`, untracked, reported once.
 void test("A patch that comes back 404 is definitive:", async (t) => {
   const box = await newBox();
   const inner = primaryCalendar([
@@ -165,7 +165,7 @@ void test("A patch that comes back 404 is definitive:", async (t) => {
     ({
       success: strandRun.success,
       patchCalls,
-      blamed: strandRun.error?.includes(`_content/calendar/${file} (local-push, local: stranded — deleted on Google (HTTP 404))`),
+      blamed: strandRun.error?.includes(`_content/calendar/Main.attach/${file} (local-push, local: stranded — deleted on Google (HTTP 404))`),
       gone: (await icsNames(box)).includes(file),
       kept: (await readFile(join(dir, "stranded", file), "utf-8")).includes("MINE now"),
     }),
@@ -188,12 +188,12 @@ void test("A patch that comes back 404 is definitive:", async (t) => {
   // Columns are status, path(s) — and the box package puts the box under
   // content/, so match by suffix rather than by a whole path.
   const rows = nameStatus.trim().split("\n").filter(Boolean).map((line) => line.split("\t"));
-  const vacated = rows.find((row) => row[1]?.endsWith(`_content/calendar/${file}`));
+  const vacated = rows.find((row) => row[1]?.endsWith(`_content/calendar/Main.attach/${file}`));
   // Git may record the move as a rename (R) or as a delete plus an add.
   const renamed = vacated?.[0]?.startsWith("R") === true
-    && vacated[2]?.endsWith(`_content/calendar/stranded/${file}`) === true;
+    && vacated[2]?.endsWith(`_content/calendar/Main.attach/stranded/${file}`) === true;
   const deletedAndAdded = vacated?.[0] === "D"
-    && rows.some((row) => row[0] === "A" && row[1]?.endsWith(`_content/calendar/stranded/${file}`));
+    && rows.some((row) => row[0] === "A" && row[1]?.endsWith(`_content/calendar/Main.attach/stranded/${file}`));
   t.check(
     ({
       tracked: Object.keys((await loadCalendarState(box.root)).eventFiles),
@@ -502,7 +502,7 @@ void test("Pushing a locally-created .ics is two steps:", async (t) => {
   const afterFirst = {
     success: first.success,
     pushed: first.pushed?.length,
-    blamed: first.error?.includes("_content/calendar/annotated.ics (local-push, error)"),
+    blamed: first.error?.includes("_content/calendar/Main.attach/annotated.ics (local-push, error)"),
     remote: inner.events.map((e) => e.summary),
     tracked: {
       ids: Object.keys(state.eventFiles).length,
@@ -587,7 +587,7 @@ void test("The pending-edit pass patches Google and then rewrites the local file
   const entry = state.eventFiles["evt-review primary"];
   const afterFailure = {
     success: rewriteFailed.success,
-    blamed: rewriteFailed.error?.includes(`_content/calendar/${file} (local-push, error)`),
+    blamed: rewriteFailed.error?.includes(`_content/calendar/Main.attach/${file} (local-push, error)`),
     remote: inner.events.map((e) => e.summary),
     tracked: {
       ids: Object.keys(state.eventFiles).length,
@@ -617,7 +617,7 @@ void test("The pending-edit pass patches Google and then rewrites the local file
       ],
       tracked: {
         ids: 1,
-        filename: "2026-06-05_t-review.ics",
+        filename: "2026-06-05_Review_t-review.ics",
         pending: true,
       },
     },
