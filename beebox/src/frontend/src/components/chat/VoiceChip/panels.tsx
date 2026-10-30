@@ -10,6 +10,7 @@
  */
 
 import { MenuItem, MenuDivider } from "../../ui/dropdown-menu-item";
+import { BrowserSpeechRow } from "./browser-speech-row";
 import type { RouterOutput } from "../../../lib/trpc/client";
 import type { HqTranscriptionService, TranscriptionService } from "@shared/transcription-services.js";
 import type { TtsBackend } from "@shared/tts-backends.js";
@@ -148,6 +149,7 @@ export function VoicePanel({
           {currentService === opt.service ? "✓ " : "  "}{opt.label}
         </MenuItem>
       ))}
+      <BrowserSpeechRow />
       <MenuDivider />
       <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">Final transcript (after recording)</div>
       {HQ_TRANSCRIPTION_OPTIONS.map((opt) => {
