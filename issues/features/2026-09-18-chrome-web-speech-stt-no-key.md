@@ -106,3 +106,24 @@ offline only for English.
 Chrome desktop's on-device recognizer works for live text alongside the HQ
 recording, and a flagged prototype runs end to end. Safari cannot require
 on-device recognition, which revises the 2026-10-06 decision to include it.
+
+## Decisions and remaining work (2026-10-30)
+
+Partly resolved; this issue stays open.
+
+Decisions:
+
+- A device that opted in but has no language pack records the audio with no
+  live text, shows a notice, and offers a download in Voice settings. It does
+  not fall back to the box's provider.
+- "Local" covers live text only. The HQ pass is unchanged.
+
+Remaining before any default or visible opt-in:
+
+- A check with a real voice on a real microphone (so far only synthetic speech
+  through a fake mic device).
+- A settings choice to replace the `localStorage["bbx:live-engine"]` flag.
+- `liveService` provenance for browser-recognized live text.
+- A guard for the recognizer's intermittent silent failure.
+- Not exercised: a successful HQ pass after browser live text (the test box
+  has no key), and Safari recognition.
