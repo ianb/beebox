@@ -28,3 +28,7 @@ Boxholder direction (2026-10-29): desktop only, no beebox-built viewer, no
 image per box, no input arbitration. The agent drives an agent-browser session
 through `bbx browser`; the person uses agent-browser's dashboard on the same
 session to log in and get past blocks.
+
+## Status 2026-10-30 (shared-browser landing)
+
+Partly resolved. Done: the box has one browser the agent drives with `bbx browser` and the person opens from the avatar menu ([plan](../../beebox/docs/plans/shared-browser.md)). Still open: the self-view half above, where the agent loads its own box's pages at the boxholder's permissions. The shared browser carries no box credential, so the agent cannot yet open authenticated box pages in it. Needs the box-scoped credential design named under "NOT in scope" in the plan.

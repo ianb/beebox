@@ -1,10 +1,12 @@
 ---
 title: "Shared browser: one web browser per box that the agent and the person both use"
-status: active
+status: partial
 workstream: shared-browser
 issues: []
 ---
 # Shared browser
+
+Built and landed 2026-10-30. Not yet confirmed: the install helper `deploy/server-bin/bbx-browser-install` has not run on the production server (it ran only on a throwaway VM), memory during a real agent turn is unmeasured, and G2 (the boxholder logs in to a real site, then the agent continues) is only partly exercised. The plan stays here until the boxholder confirms G2.
 
 Each box gets one web browser session. The box agent drives it with `bbx browser`. The person opens the same session on a desktop through a "Browser" menu item and uses it to log in, set up accounts, and get past checks that stop the agent. The browser is the upstream `agent-browser` tool (Apache-2.0) and its bundled dashboard; beebox builds no viewer. Research and the decisions that led here: [research/embedded-browser/](../../../research/embedded-browser/README.md).
 
