@@ -700,3 +700,33 @@ an added cheap model (paid, authorized 2026-10-29).
   models, and the knowledge audit has run.
 - No data migration. pi state is new and lives in `.beebox/pi/`.
 - Rollback: set `agentEngine` back. pi chats remain readable.
+
+## Implementation record
+
+All seven tracks and step 9 are implemented on `worktree-pi-engine`
+(2026-10-29). Changes from the plan:
+
+- Size: about 5,500 changed source and test lines, plus about 170 doc lines,
+  against the approved 2,900. The scope is unchanged; the growth is guard
+  sites, doc comments, the knowledge-audit reader for pi, and nested
+  AGENTS.md delivery.
+- pi reads credentials from an in-memory store. A box-written
+  `.beebox/pi/agent/auth.json` would otherwise run `!command` keys as shell
+  commands with the server environment (cross-model review, round 1).
+- Box `SYSTEM.md`, `models.json`, settings and extensions are not loaded.
+- A send during a running chat turn is its own turn, as on Codex; the
+  plan's `followUp` folded two sends into one result.
+- A run that ends with no reply text fails; a run that only reasoned is a
+  model failure.
+- Nested AGENTS.md: the appended prompt line did not work on
+  `deepseek/deepseek-v3.2` (the agent edited first). Bee Box now appends a
+  directory's AGENTS.md to the first read, edit or write there. The audit
+  `pi-nested-agents-before-edit` passes 3 of 3 with the new
+  `read_before_edit` check.
+- pi's tools run as the server's OS user, so the shell environment filter
+  is not a wall against reading the server environment; the boundary is the
+  per-box OS user (`docs/pi-engine.md`).
+- Chat shows no cost line on any engine, so pi's estimated cost appears only
+  in batch output.
+- `deepseek/deepseek-chat-v3.1` does not work on pi (tool calls inside its
+  reasoning).
