@@ -517,6 +517,8 @@ RSYNC_OPTS=(-az --delete
 # install is non-prod because the runtime uses tsx, itself a devDep).
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
+# The agent-browser package itself is a beebox dependency (the box browser,
+# docs/plans/shared-browser.md), so it installs with beebox.
 for repo in personal-vibe-check tap-check beebox; do
   local_path="$CHECKOUT/$repo/"
   if [[ ! -d "$local_path" ]]; then

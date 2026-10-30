@@ -131,7 +131,7 @@ What the fuller design buys over the smallest fix: a same-origin path through be
 
 - **What:** make `agent-browser` a runtime dependency of `beebox/` at one exact version, and bump `agent-browser-typed` to the same version.
 - **Why:** the box needs the binary in production; the rewrite in Track C depends on the bundle's exact shape, so a floating range would break it silently on install.
-- **Direction:** `beebox/package.json` `"agent-browser": "0.41.0"` (exact; the version current on 2026-10-29). `browse/packages/agent-browser-typed/package.json` to `"0.41.0"`; run its `verify-help` and refresh the help snapshots. `deploy/deploy.sh:518-519` comment updated: agent-browser now ships with beebox; `browse/` stays dev-only. `ACKNOWLEDGEMENTS.md` entry for agent-browser.
+- **Direction:** `beebox/package.json` `"agent-browser": "0.39.2"` (exact: the newest release past the 7-day `minimumReleaseAge` in `pnpm-workspace.yaml:49`; 0.41.0 was one day old on 2026-10-29). `browse/packages/agent-browser-typed/package.json` to `"0.39.2"`; run its `verify-help` and refresh the help snapshots. `deploy/deploy.sh:518-519` comment updated: agent-browser now ships with beebox; `browse/` stays dev-only. `ACKNOWLEDGEMENTS.md` entry for agent-browser.
 - **Vocabulary lock-ins:** the pinned version is named once, in `beebox/package.json`; `src/core/browser/upstream.ts` exports `AGENT_BROWSER_VERSION` read from the installed package, and the contract test compares them.
 - **First implementation chunk:** the version bump in both packages, refreshed help snapshots, `pnpm install`, `bin/browse` smoke (`bin/browse open /` and `snapshot -i`) still passes, the acknowledgement. Commit.
 
@@ -160,7 +160,7 @@ What the fuller design buys over the smallest fix: a same-origin path through be
     - `POST /api/browser/exec`: agent bearer only. Validates `args` with Zod (array of strings, 1-64 items, each under 8 KB). Refuses global flags that change what browser or profile is used: `--session`, `--session-name`, `--profile`, `--cdp`, `--auto-connect`, `--provider`, `-p`, `--engine`, `--executable-path`, `--args`, `--state`, `--restore`, `--config`, `--headed`, `--extension`, and the `connect`, `dashboard`, `install`, `upgrade`, `plugin`, `mcp` subcommands. The 400 reply names the refused flag and says the box browser's settings are fixed. Calls `ensureBrowserHost`, then the dashboard's `POST /api/exec` with `{ args }` through the relay, and returns its `{ exit_code, stdout, stderr }` as `{ exitCode, stdout, stderr }`. Timeout 120 s.
     - When `resolveBrowserExecutable()` fails, the HTML route serves a plain page with the reason, and exec returns 503 with the same reason.
 - **Vocabulary lock-ins:** path `/<slug>/browser/`; route `POST /<slug>/api/browser/exec` and its body and reply shapes; the refused-flag list lives in `src/core/browser/exec-args.ts` as one exported constant.
-- **First implementation chunk:** `rewrite.ts` and `exec-args.ts` as pure functions with tests, including the contract test against the real 0.41.0 bundle (Track A must be in). No routes yet.
+- **First implementation chunk:** `rewrite.ts` and `exec-args.ts` as pure functions with tests, including the contract test against the real pinned bundle (Track A must be in). No routes yet.
 
 ### Track D. `bbx browser`
 

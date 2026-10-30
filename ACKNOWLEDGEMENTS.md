@@ -10,6 +10,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 ## Ideas we adopted
 
+### agent-browser, by Vercel Labs
+
+- **Source:** [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser) (Apache-2.0).
+- **What we took:** The browser automation CLI and its dashboard as the box browser that the box agent and the person share; beebox runs it unmodified and proxies the dashboard.
+- **Where it landed:** `beebox/package.json` (pinned dependency); the box browser per `beebox/docs/plans/shared-browser.md`.
+
 ### restic, by the restic contributors
 
 - **Source:** [restic](https://github.com/restic/restic) (BSD 2-Clause; [licence](beebox/deploy/restic-LICENSE)).
