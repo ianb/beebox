@@ -285,7 +285,16 @@ Then delete the local copy of the key. A missing or mismatched file fails `nginx
 
 **The firewall** is `hetzner/origin-firewall.sh <server>`, where `<server>` is the name `hcloud server list` shows. It keeps SSH open to everyone and limits 443 to Cloudflare's published ranges. `--allow-http` also allows 80 from Cloudflare. It replaces the firewall's rules on every run, so edit the script, not the Hetzner console. Re-run it when Cloudflare announces a range change; until then, visitors routed through a new range get a 522.
 
-**Cloudflare must redirect HTTP visitors.** Full (strict) follows the visitor's scheme: a plain HTTP visitor produces a plain HTTP request to the origin unless the edge redirects first. Check that `curl -I http://box.example.com/` returns a 301 to HTTPS.
+**Cutover order from plain HTTP.** Each step leaves the site up:
+
+1. Record the zone's SSL mode and any rule that matches the hostname. That is the state to return to.
+2. Install the certificate as above.
+3. Optional: run `origin-firewall.sh <server> --allow-http`. Do not omit the flag here: without it, port 80 closes while Cloudflare still uses it, and the site goes down.
+4. Deploy a commit with the 443 listener. Verify with the `curl` below.
+5. Add a Configuration Rule, last in the list: SSL set to Full (strict), for this hostname and the path `/__origin_tls_probe`. Request that path through the public URL. The hub's 404 proves Cloudflare reached 443. A 521, 522, 525, or 526 means it did not, and only that path is affected.
+6. Widen the rule to the whole hostname. Until this step, production traffic is still in plaintext. Verify that the app loads, that chat connects, that a fresh login sets a `Secure` cookie, and that `ss -tn sport = :443` shows connections.
+7. Check the edge redirect. Full (strict) follows the visitor's scheme, so a plain HTTP visitor produces a plain HTTP request to the origin unless the edge redirects first. `curl -I http://box.example.com/` must return a 301 to HTTPS.
+8. Optional: after the next deploy has ended old connections and `ss -tn sport = :80` shows none, run `origin-firewall.sh <server>` without the flag.
 
 **To return to plain HTTP in an incident:** run `origin-firewall.sh <server> --allow-http` if 80 is closed, then delete the Configuration Rule. A deploy of a ref with no 443 listener is refused unless `BBX_DEPLOY_ALLOW_NO_ORIGIN_TLS=1` is set; set it only after the rule is gone.
 

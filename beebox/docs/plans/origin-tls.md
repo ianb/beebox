@@ -1,6 +1,6 @@
 ---
 title: "Encrypt the Cloudflare-to-origin leg on the production server"
-status: draft
+status: active
 workstream: origin-tls
 issues:
   - ../../../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md

@@ -45,11 +45,11 @@ void test("the rollback guard reads the site of the ref being deployed", async (
   await mkdir(join(repo, "beebox/deploy/nginx"), { recursive: true });
   const site = join(repo, "beebox/deploy/nginx/beebox.conf");
   await git(repo, "init", "-q");
-  await writeFile(site, "server { listen 80; }\n");
+  await writeFile(site, "server {\n  listen 80;\n  # listen 443 ssl;\n}\n");
   await git(repo, "add", ".");
   await git(repo, "commit", "-qm", "port 80 only");
   const old = await git(repo, "rev-parse", "HEAD");
-  await writeFile(site, "server { listen 80; listen 443 ssl default_server; }\n");
+  await writeFile(site, "server {\n  listen 80;\n  listen 443 ssl default_server;\n}\n");
   await git(repo, "commit", "-qam", "adds tls");
   const current = await git(repo, "rev-parse", "HEAD");
 
