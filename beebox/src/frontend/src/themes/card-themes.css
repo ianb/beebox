@@ -251,6 +251,12 @@
   --tw-prose-quote-borders: var(--bbx-edge, #dedbd6);
   color: var(--bbx-ink, #6b5d4b);
 }
+/* Long unbroken cell content (inline code, URLs) would otherwise set the
+   table's minimum width and push it past the card edge. `anywhere`, unlike
+   `break-word`, lowers the cell's min-content width, so the auto layout fits. */
+.bbx-theme-prose :where(td, th) {
+  overflow-wrap: anywhere;
+}
 .bbx-card-theme .bbx-theme-prose {
   --tw-prose-bullets: var(--bbx-bullet);
   --tw-prose-counters: var(--bbx-counter);
