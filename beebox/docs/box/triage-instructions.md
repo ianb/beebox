@@ -21,6 +21,31 @@ catalog. User-stated rules outrank feedback, inferred rules and defaults, in tha
 order. A missing guide uses a visible conservative policy. An invalid guide is
 an error. Unresolved conflicts require research.
 
+### Defaults, tie-breaks and the compiled file
+
+When more than one destination's rule covers an item, default principles break
+the tie, in order: the more specific destination wins; a destination with
+pending work beats an archival one; the more consequential obligation (court,
+tax, legal deadline) wins. They rank as `basis: default`, so any guide rule and
+any stated destination exception outranks them.
+
+`bbx triage compile` runs one bounded agent pass over the guide and landmark
+rules. It adds each destination's role, boundary text naming who wins each
+overlap, and identifying facts quoted from box cards. The result is
+`_bookkeeping/triage/compiled-instructions.json`. Canonical rule text is always
+kept; compiled text is appended after it. An overlap that neither rules nor
+principles settle becomes a question for the boxholder, and Jev marks such
+items unclear until it is answered. A recompile that no longer finds the conflict
+removes its unanswered question. The file is generated: never edit it. Edit
+the guide or a landmark instead. Any change to them, or to a cited card, makes
+the file stale, and the next non-dry-run `bbx triage --engine jev` recompiles.
+`bbx triage instructions` reports whether it is current, stale, absent or invalid.
+
+`bbx triage duplicates [<ref>...] [--apply]` reports inbox items whose original
+bytes are already filed, or repeat an earlier item. Only bare files and unedited
+scan-import sessions are removed with `--apply`; other matches are for review.
+Rescans are never byte-identical, so they are never duplicates.
+
 A destination may also have an optional `todo-question`, such as
 `todo-question: "Does this require follow-up?"`. Jev evaluates each configured
 question in the same classification call; a yes probability above 0.5 creates
@@ -64,8 +89,11 @@ Inspect evidence status, parts, methods and omissions before interpreting a
 judgment. Unsupported attachments, broken text layers and failed extraction are
 missing evidence, not proof that the item is irrelevant. Raw image/PDF bytes are
 not Jev input. Preparation performs extraction in temporary space and cleans it.
-It does not silently truncate. Agent interpretations must identify their source
-and uncertainty; never substitute a guessed transcription for missing text.
+It does not silently truncate: a part too large for the budget sends a leading
+excerpt and records what was left out. Word, ODT, RTF and EPUB files convert
+through pandoc. Jev receives only parts with text, plus a reason for each
+unread part. Agent interpretations must identify their source and uncertainty;
+never substitute a guessed transcription for missing text.
 
 A failure is an opportunity to improve rules scientifically:
 

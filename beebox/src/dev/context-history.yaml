@@ -2657,13 +2657,6 @@ test1:
       peak: 43055
       added: 1874
       turns: 8
-    - date: 2026-09-27T01:50:02.598Z
-      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
-      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
-      initial: 41172
-      peak: 50951
-      added: 9779
-      turns: 11
     - date: 2026-09-26T23:29:18.686Z
       boxCommit: 6b56590e67c0f3fa3b2ec4e9bad8e55496588802
       repoCommit: 63ab2f15373ef7b9a252c8eb6ad565bc8b6e2680
@@ -2678,6 +2671,13 @@ test1:
       peak: 55998
       added: 4983
       turns: 6
+    - date: 2026-09-27T01:50:02.598Z
+      boxCommit: fc352282b35ea924a73662ee644167e4f44bddf6
+      repoCommit: 7ab23b85075c78790b5f3d74cfb3c869abefc4a9
+      initial: 41172
+      peak: 50951
+      added: 9779
+      turns: 11
     - date: 2026-10-22T22:09:50.319Z
       boxCommit: d56d16d7a8cebec1d03d1cff0474c6c5cf95790d
       repoCommit: 798b6e39b02b944ea7e38fc5ba28ccb0b16fc3b7
@@ -11421,6 +11421,14 @@ test1:
       peak: 37650
       added: 3899
       turns: 7
+  triage-compiled-is-generated:
+    - date: 2026-10-29T22:20:49.388Z
+      boxCommit: d3cfa06eb6134047b440027792168c780de9fbe4
+      repoCommit: 0db9942d8022cd77e3c21d78a79ab12310cb75e7
+      initial: 33694
+      peak: 33694
+      added: 0
+      turns: 2
   calendar-folder-picks-calendar:
     - date: 2026-10-29T22:39:44.235Z
       boxCommit: fcaac6b54b800b67b1561893f627b18a3426e6e6

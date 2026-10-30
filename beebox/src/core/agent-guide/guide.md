@@ -419,7 +419,8 @@ or a captured page holds is in its type's doc (`card-capture-session.md`,
 <!-- rules: intake.triage-replay -->
 Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
 Replay never applies or researches. Intake policy permits explicit best effort;
-landmarks define destinations. Missing evidence means unclear; silence is not confirmation.
+landmarks define destinations; compiled triage instructions are generated, never edited.
+Missing evidence means unclear; silence is not confirmation.
 
 ## COMMANDS — Key Commands
 
