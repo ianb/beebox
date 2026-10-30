@@ -13,6 +13,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { binTsArgs } from "../lib/bin-ts.js";
 
 const repo = path.resolve(process.cwd(), "..");
 const verify = path.join(repo, "bin/finish-verify.ts");
@@ -38,7 +39,7 @@ const sheetFile = (script: string, kind?: string): string => {
   return file;
 };
 const cli = (...args: string[]) =>
-  spawnSync(process.execPath, ["--import", import.meta.resolve("tsx"), verify, ...args], {
+  spawnSync(process.execPath, binTsArgs(verify, args), {
     cwd: root,
     encoding: "utf8",
   });
@@ -97,7 +98,7 @@ void test("An agent harness stops a command by signalling its pid alone.", async
   const pidFile = path.join(root, "grandchild.pid");
   const child = spawn(
     process.execPath,
-    ["--import", import.meta.resolve("tsx"), verify, "--sheet", sheetFile(`sleep 60 & echo $! > ${pidFile}; wait`)],
+    binTsArgs(verify, ["--sheet", sheetFile(`sleep 60 & echo $! > ${pidFile}; wait`)]),
     { cwd: root, stdio: "ignore" },
   );
   const exited = new Promise<number | null>((resolve) => child.on("exit", (code) => resolve(code)));
@@ -126,7 +127,7 @@ void test("Without --sheet, finish-verify first runs preflight, which merges mai
   const preflightPid = path.join(branchRepo, "sleep.pid");
   fs.mkdirSync(path.join(branchRepo, "bin"));
   fs.writeFileSync(path.join(branchRepo, "bin/private-issues"), `#!/bin/sh\nsleep 60 & echo $! > ${preflightPid}; wait\n`, { mode: 0o755 });
-  const waiting = spawn(process.execPath, ["--import", import.meta.resolve("tsx"), verify], { cwd: branchRepo, stdio: "ignore" });
+  const waiting = spawn(process.execPath, binTsArgs(verify, []), { cwd: branchRepo, stdio: "ignore" });
   const waitingExit = new Promise<number | null>((resolve) => waiting.on("exit", (code) => resolve(code)));
   const sleeper = await eventually(
     () => fs.existsSync(preflightPid) && Number(fs.readFileSync(preflightPid, "utf8")) > 0 && Number(fs.readFileSync(preflightPid, "utf8")),

@@ -20,6 +20,7 @@ import { execa } from "execa";
 import { loadSchedules, type LoadedSchedule, type ScheduleConfig } from "./lib/schedules.js";
 import type { DesktopNotification, RunnerDeps } from "./lib/schedules-alerts.js";
 import { errnoCode } from "../beebox/src/shared/error-guards.js";
+import { binTsArgs } from "./lib/bin-ts.js";
 
 const tempDirs: string[] = [];
 
@@ -152,7 +153,7 @@ export interface CliRun {
 }
 
 export async function runCli(args: string[], options: { env: NodeJS.ProcessEnv; input?: string }): Promise<CliRun> {
-  const result = await execa("node", ["--import", "tsx", CLI, ...args], {
+  const result = await execa(process.execPath, binTsArgs(CLI, args), {
     reject: false,
     env: { ...process.env, SCHEDULE_NOTIFY: "0", ...options.env },
     cwd: path.dirname(path.dirname(CLI)),
