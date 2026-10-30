@@ -59,7 +59,7 @@ test("checkBoxUserLayout: reports each deviation with its path", async () => {
   await fs.chmod(home, 0o755);
   await fs.chmod(path.join(root, ".beebox"), 0o700);
   await fs.chmod(path.join(root, "card.md"), 0o644);
-  await fs.chmod(path.join(home, ".profile"), 0o640);
+  await fs.chmod(path.join(home, ".profile"), 0o604);
   await fs.chmod(path.join(root, ".beebox", "state.json"), 0o604);
   await fs.chmod(path.join(root, ".beebox", "hub-meta.json"), 0o600);
   await fs.chmod(path.join(f.secrets, "a.hub-secret"), 0o640);
@@ -67,11 +67,33 @@ test("checkBoxUserLayout: reports each deviation with its path", async () => {
   assert.deepEqual(findings, [
     { path: home, message: "mode 0755, expected 0751" },
     { path: path.join(root, ".beebox"), message: "mode 0700, expected 0751" },
-    { path: path.join(home, ".profile"), message: "mode 0640, expected 0600 (group/other accessible)" },
+    { path: path.join(home, ".profile"), message: "mode 0604, expected 0600 (group/other accessible)" },
     { path: path.join(root, "card.md"), message: "mode 0644, expected 0600 (group/other accessible)" },
     { path: path.join(root, ".beebox", "hub-meta.json"), message: "mode 0600, expected 0644" },
-    { path: path.join(root, ".beebox", "state.json"), message: "mode 0604, group/other readable; only hub-meta.json may be" },
+    { path: path.join(root, ".beebox", "state.json"), message: "mode 0604, group/other readable; only hub-meta.json and quick-chat-home.snapshot.json may be" },
     { path: path.join(f.secrets, "a.hub-secret"), message: "mode 0640, expected 0600" },
+  ]);
+});
+
+test("checkBoxUserLayout: group bits pass for the box's sole-member group, and the home snapshot may be 0644", async () => {
+  const f = await fixture();
+  const home = path.join(f.homeRoot, "a");
+  const root = path.join(home, "box");
+  await fs.chmod(path.join(home, ".profile"), 0o660);
+  await fs.chmod(path.join(root, "notes"), 0o770);
+  await fs.chmod(path.join(root, ".beebox", "state.json"), 0o660);
+  await fs.writeFile(path.join(root, ".beebox", "quick-chat-home.snapshot.json"), "{}", { mode: 0o644 });
+  await fs.chmod(path.join(root, ".beebox", "quick-chat-home.snapshot.json"), 0o644);
+  const opts = { passwd, homeRoot: f.homeRoot, hubSecretDir: f.secrets };
+  assert.deepEqual(await checkBoxUserLayout(f.boxes, { ...opts, group }), []);
+  assert.deepEqual(await checkBoxUserLayout(f.boxes, { ...opts, group: `bbx-a:x:${gid}:bbx-a\n` }), []);
+
+  // A second member of the group makes the same group bits a leak.
+  const findings = await checkBoxUserLayout(f.boxes, { ...opts, group: `bbx-a:x:${gid}:bbx-b\n` });
+  assert.deepEqual(findings, [
+    { path: path.join(home, ".profile"), message: "mode 0660, expected 0600 (group/other accessible)" },
+    { path: path.join(root, "notes"), message: "mode 0770, expected 0700 (group/other accessible)" },
+    { path: path.join(root, ".beebox", "state.json"), message: "mode 0660, group/other readable; only hub-meta.json and quick-chat-home.snapshot.json may be" },
   ]);
 });
 
