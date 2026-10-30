@@ -6,8 +6,20 @@ labels: [finish, testing]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261016-225122
-design: ../../beebox/docs/plans/change-based-test-selection.md
+design: ../../../beebox/docs/plans/change-based-test-selection.md
+resolution: implemented
 ---
+
+**Closed 2026-10-29 (tooling-burndown).** `selectTests` now returns
+`reasons`: each selected test grouped by the changed path that reached it
+(`imports <path>`, `spawns a child that runs <path>`) or a category (`the test
+itself changed`, `graph cannot resolve its imports (always runs)`), largest
+group first. `bin/test-select.ts --why` prints every group with its tests;
+the list form adds a `by reason:` line with the three largest groups on
+stderr; `--json` prints `{ files, reasons }`. On `--base HEAD~4` (760 files)
+the line read `742 imports beebox/src/shared/agent-models.ts; 702 imports
+beebox/src/shared/chat-models.ts; 618 imports beebox/src/lib/git/internal.ts;
+147 more reasons`. Test: `bin/test-select.test.ts`.
 
 `bin/test-select.ts` prints the selected test paths and a size estimate. It
 does not print which changed path pulled each test in. A change to one widely

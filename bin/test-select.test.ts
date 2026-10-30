@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { buildGraphFrom, testEntrypoints, REPO_ROOT } from "./test-graph.js";
 import type { TestGraph } from "./test-graph-query.js";
-import { selectTests, spawnedSourceRefs, spawnerEdges } from "./test-select-lib.js";
+import { reasonSummary, selectTests, spawnedSourceRefs, spawnerEdges } from "./test-select-lib.js";
 import { packageRelative } from "./test-ledger-lib.js";
 import { emptyRunLines } from "./test-select.js";
 
@@ -174,6 +174,44 @@ test("an excluded (careful-tier) test is dropped unless it is what changed", () 
   assert.deepEqual(
     selectTests({ graph, changed: [`${BOX}test/lib/git-lock.test.ts`], exclude }).selected,
     [`${BOX}test/lib/git-lock.test.ts`],
+  );
+});
+
+test("reasons group the selection by the changed path that reached each test, largest first", () => {
+  const graph = graphOf({
+    tests: {
+      [`${BOX}test/a.test.ts`]: [`${BOX}src/theme.ts`, `${BOX}src/a.ts`],
+      [`${BOX}test/b.test.ts`]: [`${BOX}src/theme.ts`],
+      [`${BOX}test/c.test.ts`]: [`${BOX}src/theme.ts`],
+      [`${BOX}test/lib/git-lock.test.ts`]: [`${BOX}src/theme.ts`],
+      "bin/test/x.test.ts": ["bin/lib/x.ts"],
+    },
+    unresolved: [`${BOX}test/broken.test.ts`],
+  });
+  const selection = selectTests({
+    graph,
+    changed: [`${BOX}src/theme.ts`, `${BOX}src/a.ts`, `${BOX}test/c.test.ts`, "bin/lib/x.ts"],
+    spawnEdges: new Map([[`${BOX}test/spawn.test.ts`, new Set(["src/a.ts"])]]),
+    exclude: [`${BOX}test/lib/git-lock.test.ts`],
+  });
+  assert.deepEqual(
+    selection.reasons.map((group) => [group.tests.length, group.reason]),
+    [
+      // The excluded careful test is not counted: it is not selected.
+      [3, `imports ${BOX}src/theme.ts`],
+      [1, "graph cannot resolve its imports (always runs)"],
+      [1, `imports ${BOX}src/a.ts`],
+      [1, "imports bin/lib/x.ts"],
+      [1, `spawns a child that runs ${BOX}src/a.ts`],
+      [1, "the test itself changed"],
+    ],
+  );
+  // Every selected test has at least one reason.
+  const explained = new Set(selection.reasons.flatMap((group) => group.tests));
+  assert.deepEqual([...explained].toSorted(), selection.selected);
+  assert.equal(
+    reasonSummary(selection.reasons, 2),
+    `3 imports ${BOX}src/theme.ts; 1 graph cannot resolve its imports (always runs); 4 more reasons`,
   );
 });
 

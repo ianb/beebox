@@ -24,6 +24,39 @@ export interface Selection {
   implicated: string[];
   /** The changed paths that could affect this suite at all. */
   scoped: string[];
+  /**
+   * Why each selected test was selected, grouped: the changed path that
+   * reached it, or a category. Largest group first. A test reached by two
+   * paths is in both groups, so the counts can sum past `selected.length`.
+   */
+  reasons: { reason: string; tests: string[] }[];
+}
+
+/** The reason for a selected test that is itself among the changed paths. */
+export const CHANGED_TEST_REASON = "the test itself changed";
+/** The reason for an entrypoint in `graph.unresolved`, selected on every change. */
+export const UNRESOLVED_REASON = "graph cannot resolve its imports (always runs)";
+
+/** The reasons, largest group first; ties by reason text. */
+function groupReasons(why: Map<string, Set<string>>, selected: Set<string>): Selection["reasons"] {
+  const groups = new Map<string, string[]>();
+  for (const [test, reasons] of why) {
+    if (!selected.has(test)) continue;
+    for (const reason of reasons) groups.set(reason, [...(groups.get(reason) ?? []), test]);
+  }
+  return [...groups]
+    .map(([reason, tests]) => ({ reason, tests: tests.toSorted() }))
+    .toSorted((a, b) => b.tests.length - a.tests.length || a.reason.localeCompare(b.reason));
+}
+
+/**
+ * One line naming the largest reason groups, for a summary that cannot list
+ * every test: `547 imports beebox/src/x.ts; 12 graph cannot resolve …`.
+ */
+export function reasonSummary(reasons: Selection["reasons"], limit: number): string {
+  const shown = reasons.slice(0, limit).map((group) => `${String(group.tests.length)} ${group.reason}`);
+  const rest = reasons.length - shown.length;
+  return [...shown, ...(rest > 0 ? [`${String(rest)} more reason${rest === 1 ? "" : "s"}`] : [])].join("; ");
 }
 
 export function selectTests(input: {
@@ -67,12 +100,12 @@ export function selectTests(input: {
   // 2026-08-25, mechanism B — `alwaysRun` was a set, it is now edges).
   const spawners = matchedSpawners({
     edges: input.spawnEdges,
-    scoped,
-    binUnits: changedBinUnits(input.changed),
+    scopedSet,
+    changed: input.changed,
     cliBundleInputs: input.cliBundleInputs ?? null,
   });
   const selected = new Set<string>([
-    ...spawners,
+    ...spawners.keys(),
     ...graph.unresolved,
     ...changedTests,
     ...implicated,
@@ -86,7 +119,42 @@ export function selectTests(input: {
     selected: [...selected].toSorted(),
     implicated: [...implicated].toSorted(),
     scoped,
+    reasons: groupReasons(
+      whySelected({ graph, reachable: [...scoped, ...binChanged], spawners }),
+      selected,
+    ),
   };
+}
+
+/**
+ * Test -> the reasons it is selected. Mirrors the union in
+ * {@link selectTests}: a changed test, an import of a changed path (scoped or
+ * `bin/`), a spawner whose ref a changed path matches, an unresolved entry.
+ */
+function whySelected(input: {
+  graph: TestGraph;
+  /** Changed paths an import or a changed test can match. */
+  reachable: string[];
+  spawners: Map<string, string[]>;
+}): Map<string, Set<string>> {
+  const why = new Map<string, Set<string>>();
+  const add = (test: string, reason: string): void => {
+    why.set(test, (why.get(test) ?? new Set()).add(reason));
+  };
+  const reachable = new Set(input.reachable);
+  for (const [entry, deps] of input.graph.tests) {
+    if (reachable.has(entry)) add(entry, CHANGED_TEST_REASON);
+    // A graph entry's deps can include the entry itself; that is "changed", not an import.
+    for (const path of reachable) if (path !== entry && deps.has(path)) add(entry, `imports ${path}`);
+  }
+  for (const entry of input.graph.unresolved) {
+    add(entry, UNRESOLVED_REASON);
+    if (reachable.has(entry)) add(entry, CHANGED_TEST_REASON);
+  }
+  for (const [entry, paths] of input.spawners) {
+    for (const path of paths) add(entry, `spawns a child that runs ${path}`);
+  }
+  return why;
 }
 
 // ── spawner edges: the imports the graph cannot see ─────────────────────────
@@ -209,24 +277,30 @@ export function spawnerEdges(input: {
   return edges;
 }
 
-/** The spawners whose refs one of the changed paths matches. */
+/**
+ * The spawners whose refs a changed path matches, each with the changed paths
+ * that match. Matching one path at a time gives the same set as matching all
+ * of them at once: every clause of {@link refMatchesChange} is an "any path".
+ */
 function matchedSpawners(input: {
   edges: Map<string, Set<string>> | undefined;
-  scoped: string[];
-  binUnits: Set<string>;
+  scopedSet: Set<string>;
+  changed: string[];
   cliBundleInputs: Set<string> | null;
-}): string[] {
-  const matched: string[] = [];
+}): Map<string, string[]> {
+  const matched = new Map<string, string[]>();
   for (const [entry, refs] of input.edges ?? []) {
-    const hit = [...refs].some((ref) =>
-      refMatchesChange({
-        ref,
-        scoped: input.scoped,
-        binUnits: input.binUnits,
-        cliBundleInputs: input.cliBundleInputs,
-      }),
+    const paths = input.changed.filter((path) =>
+      [...refs].some((ref) =>
+        refMatchesChange({
+          ref,
+          scoped: input.scopedSet.has(path) ? [path] : [],
+          binUnits: changedBinUnits([path]),
+          cliBundleInputs: input.cliBundleInputs,
+        }),
+      ),
     );
-    if (hit) matched.push(entry);
+    if (paths.length > 0) matched.set(entry, paths);
   }
   return matched;
 }
