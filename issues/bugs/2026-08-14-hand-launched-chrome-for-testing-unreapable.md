@@ -75,7 +75,7 @@ session reached it. Worth checking whether
 `/workstreams/issues?needs=manual-testing` has something that never settles: a
 perpetual animation, a render loop, or a subscription that retries forever.
 Compare
-[browse daemon wedges on animated canvas](2026-07-14-browse-daemon-wedges-on-animated-canvas.md)
+[browse daemon wedges on animated canvas](../closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md)
 — same family, and if the cause is "an animation keeps the page from ever
 reaching a quiet state," it is the same bug wearing different clothes.
 

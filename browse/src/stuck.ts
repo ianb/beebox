@@ -8,7 +8,7 @@
  * makes several upstream calls, so the probe below still saves most of that
  * wait and names the cause.
  *
- * Repro and measurements: issues/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md.
+ * Repro and measurements: issues/closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md.
  */
 import { AgentBrowserError } from "agent-browser-typed";
 

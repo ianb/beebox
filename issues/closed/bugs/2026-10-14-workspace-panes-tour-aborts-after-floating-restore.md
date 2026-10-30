@@ -30,7 +30,7 @@ On 2026-10-07 the cause was a different error (`Page.captureScreenshot`
 timeouts). The `restored-after-reload` checkpoint and the four
 `expect.custom` claims after it are not being checked.
 
-Related: [browse daemon wedges (os error 35) on animated canvas](../../bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md)
+Related: [browse daemon wedges (os error 35) on animated canvas](2026-07-14-browse-daemon-wedges-on-animated-canvas.md)
 has the same error text and the same symptom. This page has no canvas.
 
 ## Evidence
@@ -78,4 +78,4 @@ The display was asleep. Solo `bin/tour workspace-panes` runs tonight:
 | woken, then `caffeinate -d` | 3fe63cc70 | 3 checkpoints, 0 findings |
 | asleep at start | ea3502dff (`bin/tour` runs under `caffeinate -u -d`) | display turned on; 3 checkpoints, 0 findings, 3 m 11 s |
 
-The page does not trigger the abort. The earlier `Page.captureScreenshot` and `DOM.enable` timeouts and the 27-minute run are what a stalled capture looks like on agent-browser 0.27.0 ([daemon wedge issue](../../bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md)). Artifacts: `beebox/test/tours/.artifacts/workspace-panes/2026-10-30T08-32-16-506Z/` (asleep) and `2026-10-30T08-39-28-542Z/` (fixed).
+The page does not trigger the abort. The earlier `Page.captureScreenshot` and `DOM.enable` timeouts and the 27-minute run are what a stalled capture looks like on agent-browser 0.27.0 ([daemon wedge issue](2026-07-14-browse-daemon-wedges-on-animated-canvas.md)). Artifacts: `beebox/test/tours/.artifacts/workspace-panes/2026-10-30T08-32-16-506Z/` (asleep) and `2026-10-30T08-39-28-542Z/` (fixed).

@@ -85,7 +85,7 @@ Seen again in the evening: `/turn-feedback/test1/chats` screenshots timed out wh
 
 ## Mechanism and wrapper change, 2026-10-30 (browse-wedge)
 
-Reproduced without a sleeping display by pausing (SIGSTOP) the session Chrome's GPU process: the capture waits for a frame that never comes. On agent-browser 0.27.0 the client re-sends the capture five times and fails after 152 s, while `eval` and `snapshot` keep working, the same as every report above. Details and a version comparison are in the [daemon wedge issue](2026-07-14-browse-daemon-wedges-on-animated-canvas.md).
+Reproduced without a sleeping display by pausing (SIGSTOP) the session Chrome's GPU process: the capture waits for a frame that never comes. On agent-browser 0.27.0 the client re-sends the capture five times and fails after 152 s, while `eval` and `snapshot` keep working, the same as every report above. Details and a version comparison are in the [daemon wedge issue](../closed/bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md).
 
 `bin/browse screenshot` now stops after 45 s and prints "On macOS a stuck capture usually means the display is asleep: `caffeinate -u -t 2` wakes it" (713bf637e). The display could not be held asleep long enough tonight to test the real case: another app's wake lock turned it back on within seconds. Open question for the boxholder: should `bin/browse screenshot` wake the display itself (`caffeinate -u`) before capturing? That fixes unattended runs but turns the screen on.
 
