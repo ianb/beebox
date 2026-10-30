@@ -6,7 +6,15 @@ labels: [finish, tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261019-230412
+resolution: implemented
 ---
+
+**Closed 2026-10-29 (tooling-burndown).** `formatSheet` now prints the merge
+result, the verification block, and `skipTypecheckLint` right after the
+worktree line. The selected tests come last: the count, a `by reason:` line
+with the three largest reason groups from `bin/test-select.ts --json`, the
+first five files, and a pointer to `--json` (every file) and
+`bin/test-select.ts --why`. Test: `bin/finish-preflight.test.ts`.
 
 `formatSheet` in `bin/finish-preflight.ts` writes one line per selected test
 file, then the `verification:` block and `skipTypecheckLint`. On a large diff

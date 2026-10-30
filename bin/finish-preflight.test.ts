@@ -20,6 +20,7 @@ import {
   trackORecommendation,
   verificationCommands,
 } from "./finish-preflight-lib.js";
+import { formatSheet, type Sheet } from "./finish-preflight.js";
 
 const PACKAGES = new Set([
   "beebox",
@@ -331,5 +332,47 @@ test("the canonical site build runs for site/ or any markdown change, and is nev
     skipTypecheckLint: NO_SKIP,
   });
   assert.equal(code.some((c) => c.kind === "site"), false);
+});
+
+test("the text sheet puts the decision fields first and shortens the test list", () => {
+  const files = Array.from({ length: 40 }, (_, i) => `test/t${String(i)}.test.ts`);
+  const sheet: Sheet = {
+    worktree: "demo",
+    branch: "worktree-demo",
+    repoRoot: "/repo",
+    privateLeg: { active: false, state: "no-repo", repo: null },
+    stragglers: [],
+    merge: { status: "merged", broughtPaths: ["beebox/src/x.ts"], resolved: [] },
+    changed: { all: ["beebox/src/y.ts"], byGroup: { beebox: ["beebox/src/y.ts"] }, unknownGroups: [] },
+    docsOnly: false,
+    codeChanged: true,
+    selectedTests: {
+      files,
+      reasons: [
+        { reason: "imports beebox/src/y.ts", count: 38 },
+        { reason: "the test itself changed", count: 2 },
+      ],
+      note: "40 selected",
+    },
+    verification: [{ kind: "tests", command: "pnpm --dir beebox test:changed", cwd: ".", argv: [] }],
+    skipTypecheckLint: { value: false, reason: "merge abc brought code in", rule: "" },
+    plan: { attached: false, docs: [], trailers: [] },
+    issues: [],
+    diff: { lines: 10, sourceLines: 10 },
+    trackO: { recommended: false, reason: "small" },
+  };
+  const lines = formatSheet(sheet).split("\n");
+  const at = (prefix: string): number => lines.findIndex((line) => line.startsWith(prefix));
+  assert.deepEqual([at("merge main:"), at("verification:"), at("skipTypecheckLint:")], [1, 2, 4]);
+  assert.ok(at("selected tests: 40 selected") > at("skipTypecheckLint:"));
+  assert.deepEqual(lines.slice(at("selected tests:") + 1), [
+    "  by reason: 38 imports beebox/src/y.ts; 2 the test itself changed",
+    "  test/t0.test.ts",
+    "  test/t1.test.ts",
+    "  test/t2.test.ts",
+    "  test/t3.test.ts",
+    "  test/t4.test.ts",
+    "  … 35 more (--json lists all; bin/test-select.ts --why groups them)",
+  ]);
 });
 
