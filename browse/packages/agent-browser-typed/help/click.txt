@@ -1,23 +1,13 @@
 agent-browser click - Click an element
 
-Usage: agent-browser click <selector> [--new-tab] [--human]
+Usage: agent-browser click <selector> [--new-tab]
 
 Clicks on the specified element. The selector can be a CSS selector,
 XPath, or an element reference from snapshot (e.g., @e1).
 
-If another element covers the click point, agent-browser reports the
-covering element instead of dispatching a click to the wrong target.
-
-Click and dblclick fail, instead of reporting success, when the element
-is hidden, disabled, or outside the viewport. With --new-tab, click opens
-the link's URL directly, so these checks do not apply.
-
 Options:
-  --new-tab            Open link in a new tab instead of navigating current tab.
-                       The new tab inherits session setup before its first load.
-                       Only works on elements with an href attribute.
-  --human              Approach along a reproducible eased curve
-                       Starts at the last pointer or element interaction
+  --new-tab            Open link in a new tab instead of navigating current tab
+                       (only works on elements with href attribute)
 
 Global Options:
   --json               Output as JSON
@@ -29,4 +19,3 @@ Examples:
   agent-browser click "button.primary"
   agent-browser click "//button[@type='submit']"
   agent-browser click @e3 --new-tab
-  agent-browser click @e3 --human

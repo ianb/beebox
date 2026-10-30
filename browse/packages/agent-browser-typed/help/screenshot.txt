@@ -4,14 +4,9 @@ Usage: agent-browser screenshot [selector] [path]
 
 Captures a screenshot of the current page. If no path is provided,
 saves to a temporary directory with a generated filename.
-Headless Chromium screenshots hide native scrollbars for consistent image output.
-Pass --hide-scrollbars false when launching to keep native scrollbars visible.
 
 Options:
   --full, -f           Capture full page (not just viewport)
-  --if-changed         Recommended: skip unchanged images to save tokens
-  --threshold <0-1>    Maximum changed-pixel ratio treated as unchanged
-                       (implies --if-changed, default: 0)
   --annotate           Overlay numbered labels on interactive elements.
                        Each label [N] corresponds to ref @eN from snapshot.
                        Prints a legend mapping labels to element roles/names.
@@ -32,8 +27,6 @@ Examples:
   agent-browser screenshot
   agent-browser screenshot ./screenshot.png
   agent-browser screenshot --full ./full-page.png
-  agent-browser screenshot --if-changed
-  agent-browser screenshot --if-changed --threshold 0.01
   agent-browser screenshot --annotate              # Labeled screenshot + legend
   agent-browser screenshot --annotate ./page.png   # Save annotated screenshot
   agent-browser screenshot --annotate --json       # JSON output with annotations

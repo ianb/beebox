@@ -130,9 +130,9 @@ What the fuller design buys over the smallest fix: a same-origin path through be
 
 ### Track A. Dependency and pinned upstream contract
 
-- **What:** make `agent-browser` a runtime dependency of `beebox/` at one exact version, and bump `agent-browser-typed` to the same version.
+- **What:** make `agent-browser` a runtime dependency of `beebox/` at one exact version. `agent-browser-typed` (the dev `bin/browse` tool) stays on `^0.27.0` (locked 0.27.0) in its own copy.
 - **Why:** the box needs the binary in production; the rewrite in Track C depends on the bundle's exact shape, so a floating range would break it silently on install.
-- **Direction:** `beebox/package.json` `"agent-browser": "0.39.2"` (exact: the newest release past the 7-day `minimumReleaseAge` in `pnpm-workspace.yaml:49`; 0.41.0 was one day old on 2026-10-29). `browse/packages/agent-browser-typed/package.json` to `"0.39.2"`; run its `verify-help` and refresh the help snapshots. `deploy/deploy.sh:518-519` comment updated: agent-browser now ships with beebox; `browse/` stays dev-only. `ACKNOWLEDGEMENTS.md` entry for agent-browser.
+- **Direction:** `beebox/package.json` `"agent-browser": "0.39.2"` (exact: the newest release past the 7-day `minimumReleaseAge` in `pnpm-workspace.yaml:49`; 0.41.0 was one day old on 2026-10-29). `agent-browser-typed` was first bumped to 0.39.2 too, then put back: with 0.39.2 under `bin/browse`, `bin/smoke`'s chat-shell and place-menu steps failed in 6 of 7 runs and passed 3 of 3 with 0.27.0 (finish, 2026-10-30). Moving `bin/browse` to a newer agent-browser is its own change. `deploy/deploy.sh:518-519` comment updated: agent-browser now ships with beebox; `browse/` stays dev-only. `ACKNOWLEDGEMENTS.md` entry for agent-browser.
 - **Vocabulary lock-ins:** the pinned version is named once, in `beebox/package.json`; `src/core/browser/upstream.ts` exports `AGENT_BROWSER_VERSION` read from the installed package, and the contract test compares them.
 - **First implementation chunk:** the version bump in both packages, refreshed help snapshots, `pnpm install`, `bin/browse` smoke (`bin/browse open /` and `snapshot -i`) still passes, the acknowledgement. Commit.
 

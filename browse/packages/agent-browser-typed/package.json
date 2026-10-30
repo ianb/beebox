@@ -10,6 +10,6 @@
     ".": "./src/exports/agent-browser-typed.ts"
   },
   "dependencies": {
-    "agent-browser": "0.39.2"
+    "agent-browser": "^0.27.0"
   }
 }

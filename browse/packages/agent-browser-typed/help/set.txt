@@ -8,9 +8,9 @@ Settings:
   viewport <w> <h> [scale]   Set viewport size (scale = deviceScaleFactor, e.g. 2 for retina)
   device <name>              Emulate device (e.g., "iPhone 12")
   geo <lat> <lng>            Set geolocation
-  offline [on|off]           Toggle offline mode; off restores the new-tab default
-  headers <json>             Set extra HTTP headers; use {} to clear them for new tabs
-  credentials <user> <pass>  Set HTTP authentication for current and future tabs
+  offline [on|off]           Toggle offline mode
+  headers <json>             Set extra HTTP headers
+  credentials <user> <pass>  Set HTTP authentication
   media [dark|light]         Set color scheme preference
         [reduced-motion]     Enable reduced motion
 
