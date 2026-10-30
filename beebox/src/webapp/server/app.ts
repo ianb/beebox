@@ -17,6 +17,7 @@ import { removeServeEndpoint } from "../../core/serve-endpoint.js";
 import { refreshHubMeta } from "../../core/hub-meta.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { sealServerSecrets } from "../../lib/server-secrets.js";
 import { sweepStaleIndexLock } from "../../lib/git-stale-lock.js";
 import { drainBoxGitLocks, GIT_DRAIN_MS } from "../../lib/git-lock.js";
 import type { InternalServerOptions } from "../server-types.js";
@@ -33,14 +34,7 @@ import { registerCspReportRoute } from "../routes/api-csp-report.js";
 import { HASHED_ASSET_STATIC_OPTIONS } from "../static-cache.js";
 import { invariant } from "../../shared/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../../lib/csp.js";
-import {
-  DEV_BUNDLE_RELOAD_EXIT_CODE,
-  abandonDevBundleDrain,
-  devBundleWasReplaced,
-  DEV_BUNDLE_RELOAD_REQUEST,
-  DEV_BUNDLE_RELOAD_NOW,
-  DEV_BUNDLE_RELOAD_ABORTED,
-} from "../../lib/dev-bundle-reload.js";
+import { DEV_BUNDLE_RELOAD_EXIT_CODE, abandonDevBundleDrain, devBundleWasReplaced, DEV_BUNDLE_RELOAD_REQUEST, DEV_BUNDLE_RELOAD_NOW, DEV_BUNDLE_RELOAD_ABORTED } from "../../lib/dev-bundle-reload.js";
 import { pauseBoxChatSchedules, resumeBoxChatSchedules, boxChatScheduleDeliveriesAreIdle } from "../../core/chat/schedules/core.js";
 import { getChatRuntime } from "../chat-runtime.js";
 import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance/admission.js";
@@ -284,6 +278,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // the socket bind so a smuggled `openAccess: true` never kills the previous
   // server or writes a pid file.
   assertOpenAccessNotListening(options);
+  sealServerSecrets(process.env);
   markStartupPhase("cli-loaded");
   // Decided before any side effect: a misconfigured unit (a passed socket with
   // no path, or two of them) must fail here, not after the previous server

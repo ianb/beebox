@@ -23,7 +23,6 @@ import { boxSlug } from "../../lib/box-slug.js";
 import { findBoxRoot } from "../../lib/paths/core.js";
 import { requireBoxRoot, BoxShapeError } from "../../lib/box-shape.js";
 import { loadEnv, serverEnvSchema } from "../../lib/env.js";
-import { sealServerSecrets } from "../../lib/server-secrets.js";
 import { adoptSystemdCredentials } from "../../lib/systemd-credentials.js";
 
 /**
@@ -211,9 +210,6 @@ export const serveCommand = new Command("serve")
       return;
     }
 
-    // The `--dev` branch above hands the secrets to its watched child, whose
-    // entry point (`webapp/server-main.ts`) seals them itself.
-    sealServerSecrets(process.env);
     await startServer({
       port,
       host: options.host,

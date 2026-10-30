@@ -10,14 +10,15 @@
  * `/proc/<pid>/environ` and `$CREDENTIALS_DIRECTORY`.
  *
  * Before sealing, and in processes that never seal (the hub, the CLI, tests),
- * reads are live from `process.env`. After sealing, `process.env` is ignored, so
- * a schema cannot set `BBX_HUB_SECRET` to switch the server into hub mode.
+ * reads are live from `process.env`. `startServer` seals; `createServer` alone,
+ * as tests use it, does not. After sealing, `process.env` is ignored, so a schema cannot set `BBX_HUB_SECRET` to switch the server into hub mode.
  */
 
 const SERVER_SECRET_NAMES = [
   "BBX_SESSION_SECRET",
   "BBX_HUB_SECRET",
   "BBX_DIAG_API_KEY",
+  "BBX_BROWSE_API_KEY",
   "BBX_VAPID_PRIVATE_KEY",
   "GOOGLE_OAUTH_CLIENT_SECRET",
 ] as const;

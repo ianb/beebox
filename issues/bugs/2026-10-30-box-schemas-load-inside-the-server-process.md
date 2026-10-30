@@ -19,7 +19,7 @@ sibling box's port (`src/lib/credential-env.ts`).
 This comes from reading the source; no exploit was run. It is an execution
 boundary, so an environment allowlist cannot close it.
 
-Update 2026-10-30, boxholder decision: `bbx serve` now moves its credentials out
+Update 2026-10-30, boxholder decision: The server now moves its credentials out
 of `process.env` at startup (`src/lib/server-secrets.ts`).
 `test/hub.e2e.test.ts` runs a real hub and box, and a schema there finds neither
 `BBX_HUB_SECRET` nor `BBX_DIAG_API_KEY` in the environment.

@@ -96,7 +96,7 @@ export const CREDENTIAL_ENV: Readonly<Record<string, CredentialRule>> = {
   },
   BBX_BROWSE_API_KEY: {
     visibility: DENY_ALL,
-    why: "The dev browse-service bearer: full app access machine-wide. No box process reads it.",
+    why: "The dev browse-service bearer: full app access machine-wide. A dev box server verifies it in process (core/browse-key.ts); no box subprocess reads it.",
   },
   BBX_AGENT_TOKEN: {
     visibility: { ...DENY_ALL, agent: "inject", tooling: "inject" },

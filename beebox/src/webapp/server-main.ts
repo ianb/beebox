@@ -19,13 +19,11 @@ import path from "node:path";
 import { startServer, type BoxSpec } from "./server/app.js";
 import { loadEnv, serverEnvSchema } from "../lib/env.js";
 import { boxSlug } from "../lib/box-slug.js";
-import { sealServerSecrets } from "../lib/server-secrets.js";
 
 // Validate + type the environment before anything reads it (Track D.8): a
 // malformed PORT/HOST/secret fails here, loudly and all-at-once, with secret
 // values redacted — not as a confusing downstream error.
 const env = loadEnv(serverEnvSchema);
-sealServerSecrets(process.env);
 
 const boxArgs = process.argv.slice(2);
 const port = env.PORT;
