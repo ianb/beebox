@@ -72,37 +72,3 @@ void test("A Claude run never inherits a credential", async (t) => {
 void test("Every name the startup validator redacts is in the table", async (t) => {
   t.check([...SECRET_ENV_NAMES].filter((name) => !(name in CREDENTIAL_ENV)), []);
 });
-
-// ## The table's rows
-//
-// A new row also needs a line in the matrix of
-// `test/credential-visibility/every-consumer.test.ts`, so the processes'
-// actual environments are checked for it.
-void test("The table's rows", async (t) => {
-  t.check(Object.keys(CREDENTIAL_ENV), [
-    "CLAUDE_CODE_OAUTH_TOKEN",
-    "ANTHROPIC_API_KEY",
-    "ANTHROPIC_AUTH_TOKEN",
-    "ANTHROPIC_BASE_URL",
-    "BBX_SESSION_SECRET",
-    "BBX_HUB_SECRET",
-    "BBX_DIAG_API_KEY",
-    "BBX_BROWSE_API_KEY",
-    "BBX_AGENT_TOKEN",
-    "BBX_VAPID_PRIVATE_KEY",
-    "BBX_VAPID_PUBLIC_KEY",
-    "GOOGLE_OAUTH_CLIENT_ID",
-    "GOOGLE_OAUTH_CLIENT_SECRET",
-    "GOOGLE_WORKSPACE_CLI_TOKEN",
-    "BBX_MISTRAL_API_KEY",
-    "BBX_DEEPGRAM_API_KEY",
-    "BBX_DEEPGRAM_PROJECT",
-    "BBX_OPENAI_API_KEY",
-    "THINKING_OPENAI_API_KEY",
-    "GEMINI_KEY",
-    "SKE_GEMINI_API_KEY",
-    "BBX_OPENROUTER_API_KEY",
-    "OPENAI_API_KEY",
-    "CODEX_API_KEY",
-  ]);
-});

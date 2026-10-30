@@ -7,13 +7,17 @@
 // its own environment). A cell reads:
 //
 // - `I` inherited: the ambient value came through.
-// - `J` injected: present with a value beebox set (a token from the store, a
-//   provider endpoint, a minted secret).
+// - `J` injected: present with the value beebox is expected to set (this box's
+//   token from the store, a provider's key or endpoint, a minted secret).
+// - `?` present with any other value: a stale, foreign, or wrong credential.
 // - `B` blanked: set to the empty string.
 // - `-` absent.
 //
 // The warm-slot column reads `c` when a change in that variable alone stops a
 // warm subprocess from serving the next chat, else `-`.
+//
+// The table in `lib/credential-env.ts` is checked against these observed cells
+// at the end, so a table row cannot claim a visibility the code does not have.
 //
 // This test pins the current answers. A refactor of where the lists live must
 // leave every cell as it is; a change to a cell is a policy change and gets its
@@ -40,6 +44,11 @@ import { resolveProcedureModel } from "../../src/shared/agent-models.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import type { ConsumeStreamOptions } from "../../src/core/agent/invoke/stream.js";
 import * as auth from "../../src/core/agent/auth-preflight.js";
+import { runShell } from "../../src/core/procedure/shell.js";
+import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
+import { glmEnvAdditions } from "../../src/core/glm-key.js";
+import { openRouterChatEnv } from "../../src/core/provider-env/openrouter-chat.js";
+import { CREDENTIAL_ENV, type CredentialConsumer, type CredentialVisibility } from "../../src/lib/credential-env.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
 /** Every credential name in the matrix. The last is listed nowhere in `src/`. */
@@ -82,11 +91,12 @@ function asEnv(value: unknown): Env {
   return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
 }
 
-function cell(env: Env | null | undefined, name: string): string {
-  const value = env?.[name];
+function cell(env: Env | null | undefined, cellOf: { name: string; injected: ReadonlyMap<string, readonly string[]> }): string {
+  const value = env?.[cellOf.name];
   if (value === undefined) return "-";
   if (value === "") return "B";
-  return value === ambient(name) ? "I" : "J";
+  if (value === ambient(cellOf.name)) return "I";
+  return cellOf.injected.get(cellOf.name)?.includes(value) === true ? "J" : "?";
 }
 
 const COLUMNS = [
@@ -99,6 +109,8 @@ const COLUMNS = [
   // Whole environments at the spawn sites: a first-party Claude agent run, scan
   // vision's SDK call, a real Codex CLI with and without explicit additions.
   "runClaude", "scan", "codexNoEnv", "codexEnv",
+  // A procedure's shell step (`core/procedure/shell.ts`), which runs box-authored scripts.
+  "procShell",
   // The `claude` CLI's own commands: status with and without a box, login, logout.
   "status", "statusNoBox", "login", "logout",
   // The gws connector CLI.
@@ -109,6 +121,46 @@ type Column = (typeof COLUMNS)[number];
 
 function render(columns: Record<Column, (name: string) => string>): string[] {
   return NAMES.map((name) => `${name.padEnd(33)}${COLUMNS.map((column) => columns[column](name).padEnd(2)).join("").trimEnd()}`);
+}
+
+/** The values beebox is expected to inject, by name: the fixtures set up below, and the providers' endpoints. */
+function expectedInjections(boxRoot: string): ReadonlyMap<string, readonly string[]> {
+  return new Map<string, readonly string[]>([
+    ["CLAUDE_CODE_OAUTH_TOKEN", ["sk-ant-oat01-fixture-token-of-sufficient-length-00"]],
+    ["ANTHROPIC_AUTH_TOKEN", ["placeholder-glm-key-of-sufficient-length", "placeholder-openrouter-key"]],
+    ["ANTHROPIC_BASE_URL", [glmEnvAdditions("k").ANTHROPIC_BASE_URL, openRouterChatEnv({ key: "k", model: "m" }).ANTHROPIC_BASE_URL ?? ""]],
+    ["BBX_HUB_SECRET", ["minted-hub-secret"]],
+    ["BBX_AGENT_TOKEN", [getOrCreateAgentToken(boxRoot)]],
+    ["GOOGLE_WORKSPACE_CLI_TOKEN", ["minted-google-token"]],
+  ]);
+}
+
+const CODE_VISIBILITY = new Map<string, CredentialVisibility>([["I", "inherit"], ["J", "inject"], ["B", "blank"]]);
+
+function tableCells(): Record<string, Readonly<Record<CredentialConsumer, CredentialVisibility>>> {
+  return Object.fromEntries(Object.entries(CREDENTIAL_ENV).map(([name, rule]) => [name, rule.visibility]));
+}
+
+/**
+ * The table, read back from observed environments: the hub child, the two
+ * profiles, and a Claude run's additions (injected by any provider, else
+ * blanked by any, else absent). Every matrix name but the unlisted sentinel.
+ */
+function observedTable(seen: {
+  of: (env: Env | null | undefined) => (name: string) => string;
+  hubChild: Env; agent: Env; tooling: Env; additions: Array<Env | null>;
+}): Record<string, Record<CredentialConsumer, CredentialVisibility>> {
+  const visibility = (code: string): CredentialVisibility => CODE_VISIBILITY.get(code) ?? "deny";
+  const claudeAdded = (name: string): CredentialVisibility => {
+    const codes = seen.additions.map((env) => seen.of(env)(name));
+    return codes.includes("J") ? "inject" : codes.includes("B") ? "blank" : "deny";
+  };
+  return Object.fromEntries(NAMES.filter((name) => name !== "BBX_UNLISTED_CREDENTIAL_SENTINEL").map((name) => [name, {
+    hubChild: visibility(seen.of(seen.hubChild)(name)),
+    agent: visibility(seen.of(seen.agent)(name)),
+    tooling: visibility(seen.of(seen.tooling)(name)),
+    claudeEngine: claudeAdded(name),
+  }]));
 }
 
 /** A script that writes its environment to `<dir>/<label>.json`; `label` is its argument after `auth`, else its own name. */
@@ -218,6 +270,10 @@ void test("Which process sees which credential variable", async (t) => {
   await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "", env: {} });
   const codexEnv = await recorded(bin, "codex");
 
+  // --- A procedure shell step printing its own environment. ---
+  const shell = await runShell(box.root, `"${process.execPath}" -e 'process.stdout.write(JSON.stringify(process.env))'`);
+  const procShell = asEnv(JSON.parse(shell.stdout));
+
   // --- The `claude` CLI's own commands, through a recorder named `claude` first on PATH. ---
   await envRecorder(bin, { name: "claude", extra: `
 if (process.argv[3] === "status") process.stdout.write("{}");
@@ -250,41 +306,45 @@ if (process.argv[3] === "login") { process.stdout.write("https://claude.ai/oauth
     return warmCompatible({ ...base, env: { [name]: "a" } }, { ...base, env: { [name]: "b" } }) ? "-" : "c";
   };
 
-  const of = (env: Env | null | undefined) => (name: string) => cell(env, name);
+  const injected = expectedInjections(box.root);
+  const of = (env: Env | null | undefined) => (name: string) => cell(env, { name, injected });
   t.check(render({
     hubAllow: of(hubAllow), hubChild: of(hubChild), boxEnv: of(boxEnv),
     agent: of(agent), tooling: of(tooling),
     addFirst: of(addFirst), addGlm: of(addGlm), addOR: of(addOR), addCodex: of(addCodex), addPi: of(addPi),
-    runClaude: of(runClaude), scan: of(scan), codexNoEnv: of(codexNoEnv), codexEnv: of(codexEnv),
+    runClaude: of(runClaude), scan: of(scan), codexNoEnv: of(codexNoEnv), codexEnv: of(codexEnv), procShell: of(procShell),
     status: of(status), statusNoBox: of(statusNoBox), login: of(login), logout: of(logout),
     gws: of(gws),
     warm,
   }), [
-    // hubAllow hubChild boxEnv | agent tooling | addFirst addGlm addOR addCodex addPi | runClaude scan codexNoEnv codexEnv | status statusNoBox login logout | gws | warm
-    "CLAUDE_CODE_OAUTH_TOKEN          - - - - - J - - - - J J - - J - I I I c",
-    "ANTHROPIC_API_KEY                - - - - - - - B - - - - - - I I I I I -",
-    "ANTHROPIC_AUTH_TOKEN             - - - - - - J J - - - - - - I I I I I c",
-    "ANTHROPIC_BASE_URL               - - - - - - J J - - - - - - I I I I I c",
-    "BBX_SESSION_SECRET               - - - - - - - - - - - - - - I I I I I -",
-    "BBX_HUB_SECRET                   - J - - - - - - - - - - - - I I I I I -",
-    "BBX_DIAG_API_KEY                 I I I - - - - - - - - - - - I I I I I -",
-    "BBX_BROWSE_API_KEY               - - - - - - - - - - - - - - I I I I I -",
-    "BBX_AGENT_TOKEN                  - - - J J - - - - - J J J J I I I I I -",
-    "BBX_VAPID_PRIVATE_KEY            I I I - - - - - - - - - - - I I I I I -",
-    "BBX_VAPID_PUBLIC_KEY             I I I - - - - - - - - - - - I I I I I -",
-    "GOOGLE_OAUTH_CLIENT_ID           - - - - - - - - - - - - - - I I I I I -",
-    "GOOGLE_OAUTH_CLIENT_SECRET       - - - - - - - - - - - - - - I I I I I -",
-    "GOOGLE_WORKSPACE_CLI_TOKEN       - - - - - - - - - - - - - - I I I I J -",
-    "BBX_MISTRAL_API_KEY              - - - - - - - - - - - - - - I I I I I -",
-    "BBX_DEEPGRAM_API_KEY             - - - - - - - - - - - - - - I I I I I -",
-    "BBX_DEEPGRAM_PROJECT             - - - - - - - - - - - - - - I I I I I -",
-    "BBX_OPENAI_API_KEY               - - - - - - - - - - - - - - I I I I I -",
-    "THINKING_OPENAI_API_KEY          - - - - - - - - - - - - - - I I I I I -",
-    "GEMINI_KEY                       - - - - - - - - - - - - - - I I I I I -",
-    "SKE_GEMINI_API_KEY               - - - - - - - - - - - - - - I I I I I -",
-    "BBX_OPENROUTER_API_KEY           - - - - - - - - - - - - - - I I I I I -",
-    "OPENAI_API_KEY                   - - - - - - - - - - - - - - I I I I I -",
-    "CODEX_API_KEY                    - - - - - - - - - - - - - - I I I I I -",
-    "BBX_UNLISTED_CREDENTIAL_SENTINEL - - - - - - - - - - - - - - I I I I I -",
+    // hubAllow hubChild boxEnv | agent tooling | addFirst addGlm addOR addCodex addPi | runClaude scan codexNoEnv codexEnv procShell | status statusNoBox login logout | gws | warm
+    "CLAUDE_CODE_OAUTH_TOKEN          - - - - - J - - - - J J - - I J - I I I c",
+    "ANTHROPIC_API_KEY                - - - - - - - B - - - - - - I I I I I I -",
+    "ANTHROPIC_AUTH_TOKEN             - - - - - - J J - - - - - - I I I I I I c",
+    "ANTHROPIC_BASE_URL               - - - - - - J J - - - - - - I I I I I I c",
+    "BBX_SESSION_SECRET               - - - - - - - - - - - - - - I I I I I I -",
+    "BBX_HUB_SECRET                   - J - - - - - - - - - - - - I I I I I I -",
+    "BBX_DIAG_API_KEY                 I I I - - - - - - - - - - - I I I I I I -",
+    "BBX_BROWSE_API_KEY               - - - - - - - - - - - - - - I I I I I I -",
+    "BBX_AGENT_TOKEN                  - - - J J - - - - - J J J J J I I I I I -",
+    "BBX_VAPID_PRIVATE_KEY            I I I - - - - - - - - - - - I I I I I I -",
+    "BBX_VAPID_PUBLIC_KEY             I I I - - - - - - - - - - - I I I I I I -",
+    "GOOGLE_OAUTH_CLIENT_ID           - - - - - - - - - - - - - - I I I I I I -",
+    "GOOGLE_OAUTH_CLIENT_SECRET       - - - - - - - - - - - - - - I I I I I I -",
+    "GOOGLE_WORKSPACE_CLI_TOKEN       - - - - - - - - - - - - - - I I I I I J -",
+    "BBX_MISTRAL_API_KEY              - - - - - - - - - - - - - - I I I I I I -",
+    "BBX_DEEPGRAM_API_KEY             - - - - - - - - - - - - - - I I I I I I -",
+    "BBX_DEEPGRAM_PROJECT             - - - - - - - - - - - - - - I I I I I I -",
+    "BBX_OPENAI_API_KEY               - - - - - - - - - - - - - - I I I I I I -",
+    "THINKING_OPENAI_API_KEY          - - - - - - - - - - - - - - I I I I I I -",
+    "GEMINI_KEY                       - - - - - - - - - - - - - - I I I I I I -",
+    "SKE_GEMINI_API_KEY               - - - - - - - - - - - - - - I I I I I I -",
+    "BBX_OPENROUTER_API_KEY           - - - - - - - - - - - - - - I I I I I I -",
+    "OPENAI_API_KEY                   - - - - - - - - - - - - - - I I I I I I -",
+    "CODEX_API_KEY                    - - - - - - - - - - - - - - I I I I I I -",
+    "BBX_UNLISTED_CREDENTIAL_SENTINEL - - - - - - - - - - - - - - I I I I I I -",
   ]);
+
+  // The table in `lib/credential-env.ts` says what these processes do.
+  t.check(tableCells(), observedTable({ of, hubChild, agent, tooling, additions: [addFirst, addGlm, addOR] }));
 });
