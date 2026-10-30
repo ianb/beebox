@@ -1,6 +1,6 @@
 ---
 title: "Pre-commit checks read the working tree, so another agent's unstaged edits fail a path-scoped commit"
-workstream: unattached
+workstream: tooling-burndown
 area: bin
 labels: [hooks, worktrees]
 filed-by: agent
