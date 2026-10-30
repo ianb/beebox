@@ -264,6 +264,7 @@ void test("Which process sees which credential variable", async (t) => {
     scan = asEnv(params.options?.env);
     throw new Error("recorded");
   };
+  // The recorder throws on purpose after capturing the env; the rejection is expected.
   await runClaudeQuery({ boxRoot: box.root, content: [], model: "m", schema: {}, query }).catch(() => {});
 
   // --- Codex agent runs through the real Codex SDK, whose CLI is a recorder. ---
