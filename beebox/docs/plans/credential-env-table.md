@@ -1,9 +1,9 @@
 ---
 title: "One table of credential environment variables"
-status: draft
+status: active
 workstream: unattached
 issues:
-  - ../../../issues/code-quality/2026-10-25-credential-env-keys-listed-in-several-allowlists.md
+  - ../../../issues/closed/code-quality/2026-10-25-credential-env-keys-listed-in-several-allowlists.md
 ---
 # One table of credential environment variables
 
@@ -15,7 +15,7 @@ characterization test fixes the current answers first, so the refactor cannot
 change any process's environment.
 
 **Issues addressed:**
-`issues/code-quality/2026-10-25-credential-env-keys-listed-in-several-allowlists.md`.
+`issues/closed/code-quality/2026-10-25-credential-env-keys-listed-in-several-allowlists.md`.
 Related, closed: `issues/closed/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md`
 (states the ambient `CLAUDE_CODE_OAUTH_TOKEN` exclusion as policy). Searched the
 open queue for `allowlist`, `CLAUDE_CODE_OAUTH_TOKEN`, `child-env`, `script-env`:
@@ -269,6 +269,16 @@ Skip: no agent-facing concept; this is infrastructure.
 
 The Track 1 matrix (unit tier, fast) and the guard test. Both run in
 change-selected tests for any edit to the table or a list site.
+
+## Implementation notes
+
+The cross-model diff review (codex gpt-6-astra) found a third leak: procedure
+shell steps (`core/procedure/shell.ts`) passed the agent env to execa without
+`extendEnv: false`, so execa merged `process.env` underneath. Pinned in the
+matrix, then fixed in its own commit. The review's other new sites (view
+metadata import, Codex CLI auth and plugin commands, the prompt logger,
+Docling) are filed as issues. The matrix also now requires each injected value
+to be the expected one, and checks the table against the observed cells.
 
 ## Implementation order
 
