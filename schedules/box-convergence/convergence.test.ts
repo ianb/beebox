@@ -5,29 +5,29 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { execa } from "execa";
 import { execChild } from "../../bin/lib/schedules-exec.js";
-import { connectorWarnings, reportPlan, resultDetail, RESULT_PREFIX, framedCommand, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
+import { checkFailure, connectorWarnings, prodBoxCommand, reportPlan, resultDetail, RESULT_PREFIX, framedCommand, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 import { configuredBoxes, localTargets, registryPaths } from "./targets.js";
 
 const report = (value: unknown): string => RESULT_PREFIX + JSON.stringify(value);
 
 test("findings are one standing condition whatever boxes they name", () => {
-  const first = reportPlan({ findings: ["local /a: needs-procedure"], unreachableDetail: null, prodChecked: true, connectorFindings: [], connectorCoverage: true });
-  const second = reportPlan({ findings: ["local /a: needs-procedure", "prod /b: needs-procedure"], unreachableDetail: null, prodChecked: true, connectorFindings: [], connectorCoverage: true });
+  const first = reportPlan({ checkFailures: [], findings: ["local /a: needs-procedure"], unreachableDetail: null, convergenceCoverage: true, connectorFindings: [], connectorCoverage: true });
+  const second = reportPlan({ checkFailures: [], findings: ["local /a: needs-procedure", "prod /b: needs-procedure"], unreachableDetail: null, convergenceCoverage: true, connectorFindings: [], connectorCoverage: true });
   assert.deepEqual(first.alerts.map((alert) => alert.condition), ["unconverged"]);
   assert.deepEqual(second.alerts.map((alert) => alert.condition), ["unconverged"]);
   assert.equal(second.alerts[0]?.message, "- local /a: needs-procedure\n- prod /b: needs-procedure");
   assert.deepEqual(first.keep, ["unconverged"]);
 });
 test("a clean run resolves everything, but not when production went unchecked", () => {
-  assert.deepEqual(reportPlan({ findings: [], unreachableDetail: null, prodChecked: true, connectorFindings: [], connectorCoverage: true }), { alerts: [], keep: [] });
-  const offline = reportPlan({ findings: [], unreachableDetail: null, prodChecked: false, connectorFindings: [], connectorCoverage: false });
+  assert.deepEqual(reportPlan({ checkFailures: [], findings: [], unreachableDetail: null, convergenceCoverage: true, connectorFindings: [], connectorCoverage: true }), { alerts: [], keep: [] });
+  const offline = reportPlan({ checkFailures: [], findings: [], unreachableDetail: null, convergenceCoverage: false, connectorFindings: [], connectorCoverage: false });
   assert.deepEqual(offline, { alerts: [], keep: ["unconverged", "prod-connector-activity"] });
-  const longOffline = reportPlan({ findings: [], unreachableDetail: "Production unreachable for 25h: line", prodChecked: false, connectorFindings: [], connectorCoverage: false });
+  const longOffline = reportPlan({ checkFailures: [], findings: [], unreachableDetail: "Production unreachable for 25h: line", convergenceCoverage: false, connectorFindings: [], connectorCoverage: false });
   assert.deepEqual(longOffline.alerts.map((alert) => alert.condition), ["prod-unreachable"]);
   assert.deepEqual(longOffline.keep, ["prod-unreachable", "unconverged", "prod-connector-activity"]);
 });
 test("production connector warnings are one standing condition, resolved only by complete coverage", () => {
-  const warned = reportPlan({ findings: [], unreachableDetail: null, prodChecked: true,
+  const warned = reportPlan({ checkFailures: [], findings: [], unreachableDetail: null, convergenceCoverage: true,
     connectorFindings: ["/boxes/a: gmail has failed every sync on its last 2 days of running, since 2026-10-09: 404"], connectorCoverage: true });
   assert.deepEqual(warned, {
     alerts: [{
@@ -37,12 +37,11 @@ test("production connector warnings are one standing condition, resolved only by
     }],
     keep: ["prod-connector-activity"],
   });
-  assert.deepEqual(reportPlan({ findings: [], unreachableDetail: null, prodChecked: true, connectorFindings: [], connectorCoverage: true }),
+  assert.deepEqual(reportPlan({ checkFailures: [], findings: [], unreachableDetail: null, convergenceCoverage: true, connectorFindings: [], connectorCoverage: true }),
     { alerts: [], keep: [] });
-  // A failed inventory leaves production "checked" for convergence, but no
-  // health was read, so the connector condition stays open:
-  assert.deepEqual(reportPlan({ findings: ["Production coverage unavailable: boom"], unreachableDetail: null, prodChecked: true,
-    connectorFindings: [], connectorCoverage: false }).keep, ["unconverged", "prod-connector-activity"]);
+  // One unreadable box leaves convergence covered, but the connector condition stays open:
+  assert.deepEqual(reportPlan({ checkFailures: ["prod /b: health unreadable"], findings: [], unreachableDetail: null, convergenceCoverage: true,
+    connectorFindings: [], connectorCoverage: false }).keep, ["check-failed", "prod-connector-activity"]);
 });
 test("connector warnings are read from health JSON whatever the exit code", () => {
   const health = JSON.stringify({
@@ -71,6 +70,47 @@ test("JSON outcomes preserve questions and refuse unknown or failed coverage", (
   assert.equal(resultDetail(report({ status: "status", manifest: true, pending: [], questions: [] }), 0), null);
   assert.match(resultDetail(report({ status: "status" }), 0) ?? "", /Incomplete/u);
   assert.match(resultDetail(report({ status: "no-manifest" }), 0) ?? "", /no-manifest/u);
+});
+
+// Replays the 2026-10-25 regression: the check ran as the shared user after boxes
+// moved to per-box users, and every box reported "unconverged" with a node stack.
+test("a check that produced no result is a check failure; a box that answered is not", async () => {
+  const noEngine = await execa("bash", ["-c", framedCommand("node /no/such/cli.mjs")], { reject: false, all: true });
+  assert.match(checkFailure(noEngine.all, noEngine.exitCode ?? null) ?? "", /^Unknown result \(exit 1\): .*Cannot find module/su);
+  // sudo and cd fail before the frame is printed.
+  assert.equal(checkFailure("sudo: unknown user bbx-gone", 1), "Unknown result (exit 1): sudo: unknown user bbx-gone");
+  assert.equal(checkFailure(report({ status: "failed", failed: "some-migration" }), 1), null);
+});
+
+test("a check that could not run alerts on its own and holds unconverged open", () => {
+  assert.deepEqual(reportPlan({ checkFailures: ["prod /a: Unknown result (exit 1): boom"], findings: [], unreachableDetail: null,
+    convergenceCoverage: false, connectorFindings: [], connectorCoverage: true }), {
+    alerts: [{
+      condition: "check-failed",
+      title: "Box convergence: 1 check could not run",
+      message: "- prod /a: Unknown result (exit 1): boom",
+    }],
+    keep: ["check-failed", "unconverged"],
+  });
+});
+
+// Runs the command through a stub sudo, so the argv is what the server would receive.
+test("production commands run as the box's own user with the units' env", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "convergence-sudo-"));
+  try {
+    await fs.writeFile(path.join(dir, "sudo"), '#!/bin/bash\nprintf \'%s\\n\' "$@"\n', { mode: 0o755 });
+    const command = prodBoxCommand("/var/lib/beebox/my-box/box", { cliArgs: ["health", "--json"], timeoutSeconds: 100 });
+    const { stdout } = await execa("bash", ["-c", command], { env: { PATH: `${dir}:${process.env.PATH ?? ""}` } });
+    const [sudoFlags, remote] = [stdout.split("\n").slice(0, 6), stdout.split("\n").slice(6).join("\n")];
+    assert.deepEqual(sudoFlags, ["-n", "-u", "bbx-my-box", "-H", "bash", "-lc"]);
+    const framed = shellQuote(framedCommand("'node' 'node_modules/beebox/dist/cli.mjs' 'health' '--json'"));
+    assert.equal(remote, `set -a; source /etc/beebox/box.env || exit; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; umask 0007; cd '/var/lib/beebox/my-box/box' || exit; timeout --kill-after=5s 100s bash -c ${framed}`);
+  } finally { await fs.rm(dir, { recursive: true, force: true }); }
+});
+
+test("a production root outside the per-box layout has no user to run as", () => {
+  assert.throws(() => prodBoxCommand("/home/beebox/boxes/old", { cliArgs: ["health"], timeoutSeconds: 100 }), /Not a production box root/u);
+  assert.throws(() => prodBoxCommand("/var/lib/beebox/a/../b/box", { cliArgs: ["health"], timeoutSeconds: 100 }), /Not a production box root/u);
 });
 
 test("a deferred pass is quiet until the box has held work for a day", () => {
