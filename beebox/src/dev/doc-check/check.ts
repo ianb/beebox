@@ -32,16 +32,9 @@ import { findPrivateLinkViolations, PRIVATE_LINK_REASON } from "./private-link.j
 import { frontmatterProblems } from "./frontmatter.js";
 import { describeFilePathProblem, findFilePathProblems, findMovedPathMentions, repairFilePaths, type BasenameLookup, type FilePathProblem } from "./file-paths.js";
 import { findSiteReferenceLinkProblems, referencePublishPath, SITE_DOCS_PREFIX } from "./site-reference-links.js";
+import { AGENT_DOCS_PREFIX, GENERATED_NO_SCAN, MENTION_SOURCE_RE, isFilePathExempt, isLinkScanned } from "./scan-scope.js";
 
 const MONO_ROOT = path.dirname(ROOT);
-
-// Frozen point-in-time snapshots: their broken/example links are intentional,
-// so --fix must not rewrite them (monorepo-relative prefixes).
-const FROZEN_SCAN_PREFIXES = ["beebox/docs/reports/", "beebox/docs/user-stories/catalog/"];
-
-// Generated emitter outputs quote other files' links verbatim (regenerate with
-// pnpm doc-graph / prompt-report); --fix must not touch them.
-const GENERATED_NO_SCAN = new Set(["beebox/docs/doc-graph.md", "beebox/docs/prompts.md"]);
 
 // Example-syntax lines the extractor can't distinguish from real refs.
 // Format: "<from> -> <target>". Keep each entry justified.
@@ -83,22 +76,15 @@ function allMarkdownFiles(): string[] {
   return stdout.split("\0").filter((p) => p.length > 0 && fs.existsSync(path.join(MONO_ROOT, p)));
 }
 
-// `site/docs/` is the public agent-docs corpus: its links are relative to the
-// PUBLISHED tree (`concepts/glossary.md`), not the repo, and the site build
-// validates them. Scanning them here reports phantom breaks, and `--fix` once
-// rewrote them into repo paths (2026-09-12).
-const AGENT_DOCS_PREFIX = SITE_DOCS_PREFIX;
-
 // Every tracked file (repo-relative POSIX paths).
 function trackedFiles(): string[] {
   const stdout = execFileSync("git", ["ls-files", "-z"], { cwd: MONO_ROOT, encoding: "utf8" });
   return stdout.split("\0").filter((p) => p.length > 0 && fs.existsSync(path.join(MONO_ROOT, p)));
 }
 
-// Code and YAML files whose plan and issue mentions (source comments,
-// schedule configs, knowledge-audits.yaml) follow moves. Tests are skipped:
-// their fixtures name paths that must stay as written.
-const MENTION_SOURCE_RE = /\.(?:ts|tsx|mts|yaml|yml)$/;
+// --fix relocates by basename, a guess: tests are skipped because their
+// fixtures name paths that must stay as written. `bin/doc-move` rewrites tests
+// too, since it matches only the moved file's exact path.
 
 function mentionSourceFiles(tracked: string[]): string[] {
   return tracked.filter((p) => MENTION_SOURCE_RE.test(p) && !p.endsWith(".test.ts") && !p.startsWith(AGENT_DOCS_PREFIX));
@@ -181,28 +167,6 @@ function privateLinkProblems(): string[] {
     }
   }
   return problems;
-}
-
-// Historical records whose backticked paths were accurate when written and are
-// not maintained (monorepo-relative prefixes). Generated outputs
-// (GENERATED_NO_SCAN) are skipped too.
-const FILE_PATH_EXEMPT_PREFIXES = [
-  "beebox/docs/implemented-plans/",
-  "beebox/docs/unimplemented-plans/",
-  "beebox/docs/reports/",
-  "beebox/docs/user-stories/catalog/",
-  "issues/closed/",
-  "research/",
-  // Cumulative release log: each entry quotes paths as of its release.
-  "schedules/sdk-update/agent-sdk-notes.md",
-];
-
-function isFilePathExempt(rel: string): boolean {
-  return GENERATED_NO_SCAN.has(rel)
-    || FILE_PATH_EXEMPT_PREFIXES.some((p) => rel.startsWith(p))
-    // Changelogs and dated reports (docs/reports/, user-story journey reports).
-    || path.posix.basename(rel) === "CHANGELOG.md"
-    || rel.includes("/reports/");
 }
 
 class GitCheckIgnoreError extends Error {
@@ -351,9 +315,7 @@ function runFix(): void {
   const everyTracked = trackedFiles();
   const suffixMatches = buildSuffixMatcher(everyTracked);
 
-  const scanSources = all.filter((p) =>
-    !GENERATED_NO_SCAN.has(p) && !FROZEN_SCAN_PREFIXES.some((prefix) => p.startsWith(prefix)),
-  );
+  const scanSources = all.filter(isLinkScanned);
 
   let filesChanged = 0;
   let totalRewrites = 0;

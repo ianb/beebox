@@ -233,6 +233,47 @@ export function findMovedPathMentions({
   return problems;
 }
 
+// Path tokens in one file that name `target` (repo-relative) — backticked
+// spans in Markdown, or bare and backticked `.md` mentions in code and YAML
+// (`bare`) — as `moved` findings whose suggestion names `newPath`. A token
+// names `target` when `target` is its only resolution candidate that exists;
+// when another candidate exists too, the token is an `ambiguous` finding and
+// is never rewritten. Used by a targeted move (bin/lib/doc-move.ts), which knows the
+// file and so never guesses by basename.
+export function findMentionsOf({ docRel, content, target, newPath, bare, fileExists }: {
+  docRel: string;
+  content: string;
+  target: string;
+  newPath: string;
+  bare: boolean;
+  fileExists: (repoRel: string) => boolean;
+}): FilePathProblem[] {
+  const tokens: Array<{ text: string; line: number }> = [];
+  if (bare) {
+    for (const [i, line] of content.split("\n").entries()) {
+      for (const m of line.matchAll(MENTION_RE)) tokens.push({ text: m[1] ?? "", line: i + 1 });
+    }
+  } else {
+    for (const block of inlineBlocks(content.split("\n"))) {
+      for (const span of singleBacktickSpans(block.text)) tokens.push({ text: span.text, line: block.start + span.line + 1 });
+    }
+  }
+  const problems: FilePathProblem[] = [];
+  for (const { text, line } of tokens) {
+    const file = candidatePath(text, docRel);
+    if (file === undefined) continue;
+    const tried = resolutionCandidates(file, docRel);
+    const existing = tried.filter(fileExists);
+    if (!existing.includes(target)) continue;
+    if (existing.length > 1) {
+      problems.push({ line, token: text, kind: "ambiguous", candidates: existing, tried });
+      continue;
+    }
+    problems.push({ line, token: text, kind: "moved", suggestion: text.replace(file, rewrittenFile({ file, newPath, docRel })), tried });
+  }
+  return problems;
+}
+
 // Characters that continue a path on either side of a bare token.
 const PATH_CHAR_BEFORE = /[\w./:@-]/;
 const PATH_CHAR_AFTER = /[\w/-]/;
