@@ -1017,6 +1017,16 @@ REMOTE
   # trap must not start the services a second time if a later check fails.
   printf 'SERVICES_STOPPED=0\n' >> "$REMOTE_SCRIPT"
 
+  # The box browser's host pieces: passt, Chrome for Testing, the launcher's
+  # unshare copy and its AppArmor profiles, then a check that Chrome keeps its
+  # sandbox (docs/plans/shared-browser.md, Track F). After the restart, so a
+  # first install's download does not lengthen the downtime window; a failure
+  # here fails the deploy with the services up. Bytes from the build checkout
+  # through stdin, as for the other root helpers.
+  queue_step "Installing the box browser..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-browser-install"
+
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
   #      crash-looping. The hub blocks on startAll() before it listens, and a
