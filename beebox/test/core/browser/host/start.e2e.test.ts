@@ -146,7 +146,7 @@ void test("A real browser host starts, serves the dashboard through the relay, a
   });
   // A stale dev bundle is rebuilt on first run; do that outside the host's 20 s start window.
   await execFileAsync(path.join(PACKAGE_ROOT, "bin", "bbx"), ["--version"]);
-  const box = { boxRoot, slug: "e2e", stateDir };
+  const box = { boxRoot, stateDir };
 
   // First run: open a page, log in, stop gracefully.
   const first = await ensureBrowserHost(box);
@@ -223,7 +223,7 @@ void test("A host whose engine is already gone stops by itself", { skip: chrome 
   const gone = spawn("true");
   const deadPid = gone.pid ?? 0;
   await new Promise((resolve) => gone.once("exit", resolve));
-  const host = spawn(path.join(PACKAGE_ROOT, "bin", "bbx"), ["engine", "browser-host", "--box", boxRoot, "--slug", "orphan", "--state-dir", stateDir, "--engine-pid", String(deadPid)], { stdio: "ignore" });
+  const host = spawn(path.join(PACKAGE_ROOT, "bin", "bbx"), ["engine", "browser-host", "--box", boxRoot, "--state-dir", stateDir, "--engine-pid", String(deadPid)], { stdio: "ignore" });
   t.teardown(() => {
     if (host.exitCode === null && host.signalCode === null) host.kill("SIGKILL");
   });

@@ -1,5 +1,5 @@
 /**
- * `bbx engine browser-host --box <root> --slug <slug> --engine-pid <pid>`: the
+ * `bbx engine browser-host --box <root> --engine-pid <pid>`: the
  * box browser host (docs/plans/shared-browser.md, Track B). The engine spawns
  * one per box (`src/core/browser/host/start.ts`); nothing else should run it.
  * It runs the agent-browser dashboard and the relay socket until SIGTERM or
@@ -22,7 +22,6 @@ import { BBX_STATE_DIR } from "../../lib/state-dir.js";
 
 interface BrowserHostOptions {
   readonly box?: string;
-  readonly slug?: string;
   readonly stateDir: string;
   readonly enginePid?: string;
   readonly checkSandbox?: boolean;
@@ -31,7 +30,6 @@ interface BrowserHostOptions {
 export const browserHostCommand = new Command("browser-host")
   .description("Run one box's browser host (the engine starts it; not for direct use)")
   .option("--box <root>", "The box root directory")
-  .option("--slug <slug>", "The box's URL slug")
   .option("--state-dir <dir>", "The state directory holding the browser profile", BBX_STATE_DIR)
   .option("--engine-pid <pid>", "The engine that started the host; the host stops when it is gone")
   .option("--check-sandbox", "Check once that Chrome keeps its sandbox inside the private network (the deploy runs this)")
@@ -45,13 +43,13 @@ export const browserHostCommand = new Command("browser-host")
       process.stderr.write(`Chrome is NOT sandboxed (or the check failed). chrome://sandbox and agent-browser said:\n${result.output}\n`);
       process.exit(1);
     }
-    const { box, slug } = opts;
+    const { box } = opts;
     const enginePid = Number(opts.enginePid);
-    if (box === undefined || slug === undefined || !Number.isInteger(enginePid) || enginePid <= 1) {
-      process.stderr.write("error: --box, --slug and --engine-pid are required unless --check-sandbox is given\n");
+    if (box === undefined || !Number.isInteger(enginePid) || enginePid <= 1) {
+      process.stderr.write("error: --box and --engine-pid are required unless --check-sandbox is given\n");
       process.exit(64);
     }
-    await runBrowserHost({ boxRoot: path.resolve(box), slug, stateDir: path.resolve(opts.stateDir) }, { enginePid });
+    await runBrowserHost({ boxRoot: path.resolve(box), stateDir: path.resolve(opts.stateDir) }, { enginePid });
     // A dashboard or relay handle left open must not keep a stopped host alive.
     process.exit(0);
   });

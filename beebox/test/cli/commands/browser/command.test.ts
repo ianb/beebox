@@ -50,7 +50,7 @@ async function boxServer(t: Test): Promise<void> {
       },
     },
   });
-  const closeSocket = await echoCommandSocket(browserPaths({ boxRoot: ctx.boxRoot, slug: TEST_SLUG, stateDir }));
+  const closeSocket = await echoCommandSocket(browserPaths({ boxRoot: ctx.boxRoot, stateDir }));
   process.env.BBX_SERVER_URL = await ctx.server.listen({ port: 0, host: "127.0.0.1" });
   process.env.BBX_BOX_NAME = TEST_SLUG;
   process.env.BBX_AGENT_TOKEN = getOrCreateAgentToken(ctx.boxRoot);
