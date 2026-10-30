@@ -1,6 +1,6 @@
 /**
  * Make a pi `AgentSession` for a box, an added OpenRouter model and a session
- * id (docs/plans/pi-box-engine.md, Track 3). The batch agent and the chat
+ * id (docs/implemented-plans/pi-box-engine.md, Track 3). The batch agent and the chat
  * backend both start here; neither prompts the model before this returns.
  *
  * State lives in the box under `.beebox/pi/`: pi's `agentDir` in `agent/` and

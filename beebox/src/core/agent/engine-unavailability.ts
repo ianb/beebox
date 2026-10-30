@@ -16,7 +16,7 @@ import { assertNever } from "../../shared/invariant.js";
 
 /** The machine-wide accounts whose quota this store tracks. Unavailability is
  * account-scoped, not box-scoped, so pi is absent: it runs on a key granted
- * per box (docs/plans/pi-box-engine.md, Track 4). */
+ * per box (docs/implemented-plans/pi-box-engine.md, Track 4). */
 export const ENGINE_PROVIDERS = ["claude", "codex"] as const satisfies readonly AgentEngine[];
 export type EngineProvider = (typeof ENGINE_PROVIDERS)[number];
 

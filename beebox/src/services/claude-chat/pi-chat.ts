@@ -1,6 +1,6 @@
 /**
  * Interactive box chat through an in-process pi session
- * (docs/plans/pi-box-engine.md, Track 6), shaped like the Codex chat backend.
+ * (docs/implemented-plans/pi-box-engine.md, Track 6), shaped like the Codex chat backend.
  * Each finished assistant message carries its pi session entry id as `uuid`,
  * the id the pi session store reads back, so the turn's durability wait and an
  * immediate history read find it. Usage needs no step here: `syncUsage` reads

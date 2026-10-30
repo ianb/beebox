@@ -20,7 +20,7 @@ Three request paths are affected, and each sets headers differently:
   (`beebox/src/core/provider-env/openrouter-chat.ts`) goes through Claude
   Code, which sends its own headers. The child environment may not reach them.
 - The planned pi engine
-  ([pi third engine](2026-10-18-pi-third-engine.md)) sends pi's attribution
+  ([pi third engine](../closed/features/2026-10-18-pi-third-engine.md)) sends pi's attribution
   headers. pi 1.4.0 moved them into pi-ai's client identity; an extension
   `before_provider_headers` handler can remove them but no longer sees them.
 

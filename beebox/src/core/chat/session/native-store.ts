@@ -1,6 +1,6 @@
 /**
  * The native session store: per-engine reads of a chat's transcript where the
- * engine keeps it (`docs/plans/pi-box-engine.md`, Track 5).
+ * engine keeps it (`docs/implemented-plans/pi-box-engine.md`, Track 5).
  *
  * Each engine owns its transcript format and location — Claude Code's JSONL
  * under `~/.claude/projects/`, Codex's threads behind its app-server, pi's

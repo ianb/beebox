@@ -2,7 +2,7 @@
  * How a pi run ended, and the run's limits.
  *
  * `agent_settled` is only where pi stops; the outcome is recorded here
- * (docs/plans/pi-box-engine.md, Track 4): `completed`, `interrupted` (the
+ * (docs/implemented-plans/pi-box-engine.md, Track 4): `completed`, `interrupted` (the
  * caller's signal), `limit` (`maxTurns` or `maxBudgetUsd`), or `failed` (a
  * provider error on the last assistant message, or a thrown `prompt()`). It
  * maps to `AgentResult` as `codex-run/result.ts` does for Codex.

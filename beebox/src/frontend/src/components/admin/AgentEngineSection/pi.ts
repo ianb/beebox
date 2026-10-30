@@ -1,7 +1,7 @@
 /**
  * What the admin engine section says about pi. pi runs only models added under
  * OpenRouter models, with the box's `openrouter` key, so it can be chosen only
- * once both exist (docs/plans/pi-box-engine.md, Track 7). The checks follow
+ * once both exist (docs/implemented-plans/pi-box-engine.md, Track 7). The checks follow
  * `piReadiness` (core/agent/readiness.ts): the default model, then the key.
  */
 

@@ -7,10 +7,13 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-research-pi — is plain pi enough without oh-my-pi
 priority: backlog
+resolution: implemented
 ---
 
+> Closed 2026-10-29 as `implemented` on branch `worktree-pi-engine` (plan [pi-box-engine](../../../beebox/docs/implemented-plans/pi-box-engine.md), reference [pi-engine](../../../beebox/docs/pi-engine.md)). Divergence: pi runs only owner-added OpenRouter models, not API keys of other vendors; credentials sit in an in-memory store. Not covered: a scheduled procedure on pi, and `deepseek/deepseek-chat-v3.1` does not work.
+
 Reviewed 2026-10-18:
-[research/backend-alternatives/2026-10-18-pi.md](../../research/backend-alternatives/2026-10-18-pi.md).
+[research/backend-alternatives/2026-10-18-pi.md](../../../research/backend-alternatives/2026-10-18-pi.md).
 
 Plain pi (earendil-works/pi 1.3.0) meets the boxholder's bar on its own: it
 reads walk-up `AGENTS.md` (with `CLAUDE.md` fallback) and `.agents/skills`,
@@ -28,7 +31,7 @@ Codex engine's generated surfaces.
 **Re-check triggers** (any one):
 - A user asks for a provider neither the Claude nor Codex engine reaches.
 - The Shape A spike
-  ([provider-endpoint-config](../features/2026-07-18-provider-endpoint-config.md))
+  ([provider-endpoint-config](../../features/2026-07-18-provider-endpoint-config.md))
   shows the Agent SDK loop does not survive a non-Anthropic endpoint.
 - pi adds a top-level output schema (removes the one missing item).
 - pi publishes an API-stability policy, or its SDK session surface breaks

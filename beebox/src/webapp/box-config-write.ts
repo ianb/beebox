@@ -30,7 +30,7 @@ class BoxConfigWriteError extends Error {
 
 /**
  * pi runs only the box's added OpenRouter models and has no default of its
- * own, so a pi box must name one of them (docs/plans/pi-box-engine.md, Track 2).
+ * own, so a pi box must name one of them (docs/implemented-plans/pi-box-engine.md, Track 2).
  */
 export class PiDefaultModelRequiredError extends Error {
   constructor() {

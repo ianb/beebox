@@ -64,7 +64,7 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
     { label: "Luna", model: MODEL_ID.luna },
   ],
   // pi has no models of its own: only the box's added OpenRouter models, and
-  // no "Default" row (docs/plans/pi-box-engine.md, Track 2).
+  // no "Default" row (docs/implemented-plans/pi-box-engine.md, Track 2).
   pi: [],
 };
 

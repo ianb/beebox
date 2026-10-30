@@ -4,7 +4,7 @@
 harness. A box can use it as its engine, beside Claude Code and Codex. pi runs
 inside the box server process as a TypeScript library. It runs only OpenRouter
 models that the owner added in admin. Plan and probe results:
-[pi-box-engine](plans/pi-box-engine.md). Model policy for all engines:
+[pi-box-engine](implemented-plans/pi-box-engine.md). Model policy for all engines:
 [model-policy](model-policy.md).
 
 ## Turn it on

@@ -112,14 +112,14 @@ const PROCEDURE_MODELS: Record<AgentEngine, Partial<Record<ModelProvider, Record
     },
   },
   // Empty on purpose: any built-in pi default would spend without the owner
-  // adding the model (docs/plans/pi-box-engine.md, Track 2).
+  // adding the model (docs/implemented-plans/pi-box-engine.md, Track 2).
   pi: {},
 };
 
 /**
  * Whether an engine has a procedure tier table. pi does not: it runs only the
  * box's added OpenRouter models, so its default and small slots stand in for
- * tiers (docs/plans/pi-box-engine.md, Track 2).
+ * tiers (docs/implemented-plans/pi-box-engine.md, Track 2).
  */
 export function hasProcedureTiers(engine: AgentEngine): boolean {
   switch (engine) {

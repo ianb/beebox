@@ -49,7 +49,7 @@ const UNPINNED_DEFAULT_TIER = "strong";
  * and read as "no policy".
  *
  * pi has no tiers to translate by, so on pi only an added OpenRouter pin runs
- * and any other pin reads as none (docs/plans/pi-box-engine.md, Track 2).
+ * and any other pin reads as none (docs/implemented-plans/pi-box-engine.md, Track 2).
  *
  * `null` means the box pinned nothing — this function translates a pin, it does
  * not invent one. What an unpinned box actually runs is {@link boxDefaultModel},

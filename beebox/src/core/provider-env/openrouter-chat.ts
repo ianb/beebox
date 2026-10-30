@@ -65,7 +65,7 @@ class OpenRouterSetupError extends ProviderSetupError {
 
 /**
  * A pi run with no model to run. pi has no default of its own: the box must
- * choose one of its added models (docs/plans/pi-box-engine.md, Track 2).
+ * choose one of its added models (docs/implemented-plans/pi-box-engine.md, Track 2).
  */
 export function piModelMissing(): ProviderSetupError {
   return new OpenRouterSetupError(

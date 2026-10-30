@@ -1,6 +1,6 @@
 /**
  * Box validation for the files a pi run edits, shared by the batch agent and
- * the chat backend (docs/plans/pi-box-engine.md, Track 4).
+ * the chat backend (docs/implemented-plans/pi-box-engine.md, Track 4).
  *
  * The scope is Claude's PostToolUse hook (`plugins/beebox-claude/hooks/hooks.json`,
  * `Write|Edit|MultiEdit`) and the check is the same one

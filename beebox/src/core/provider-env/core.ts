@@ -38,7 +38,7 @@ export async function providerEnvAdditions(params: {
   const { boxRoot, model, purpose } = params;
   switch (params.engine) {
     // pi takes its OpenRouter key directly, never the Claude CLI's env
-    // (docs/plans/pi-box-engine.md, Track 3).
+    // (docs/implemented-plans/pi-box-engine.md, Track 3).
     case "codex":
     case "pi":
       return null;

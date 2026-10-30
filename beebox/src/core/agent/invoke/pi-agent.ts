@@ -1,4 +1,4 @@
-/** pi implementation of the batch Agent contract (docs/plans/pi-box-engine.md, Track 4). */
+/** pi implementation of the batch Agent contract (docs/implemented-plans/pi-box-engine.md, Track 4). */
 
 import type { z } from "zod";
 import { validateStructuredResult } from "../json.js";

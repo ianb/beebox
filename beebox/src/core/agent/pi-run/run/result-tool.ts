@@ -4,7 +4,7 @@
  * pi 1.4.0 has no top-level output schema. A `submit_result` tool whose
  * parameters are the caller's schema does the same job: pi validates the
  * arguments against the schema before `execute`, and `terminate` ends the run
- * with no further model call (docs/plans/pi-box-engine.md, Track 4).
+ * with no further model call (docs/implemented-plans/pi-box-engine.md, Track 4).
  */
 
 import { defineTool, type ToolDefinition } from "@earendil-works/pi-coding-agent";

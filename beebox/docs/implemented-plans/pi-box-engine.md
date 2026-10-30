@@ -1,9 +1,9 @@
 ---
 title: "pi as a third box engine, on OpenRouter models"
-status: active
+status: implemented
 workstream: pi-engine
 issues:
-  - ../../../issues/features/2026-10-18-pi-third-engine.md
+  - ../../../issues/closed/features/2026-10-18-pi-third-engine.md
 ---
 # pi as a third box engine, on OpenRouter models
 
@@ -15,7 +15,7 @@ no Anthropic or OpenAI harness in the loop (boxholder, 2026-10-29: *"The
 reason for pi is mostly to support a more fully open stack"*).
 
 **Issues addressed:** resolves
-[pi third engine](../../../issues/features/2026-10-18-pi-third-engine.md).
+[pi third engine](../../../issues/closed/features/2026-10-18-pi-third-engine.md).
 Related, not resolved:
 [provider-endpoint-config](../../../issues/features/2026-07-18-provider-endpoint-config.md)
 (this is another answer to "choose your model provider", at the harness
