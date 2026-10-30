@@ -205,7 +205,13 @@ async function main(): Promise<number> {
     throw new BrowseConfigError(`${launch.flags.join(", ")} apply when the browser starts, and it is running: run bin/browse close first`);
   }
 
-  // `close` is the recovery for a wedged session, so it is never refused.
+  // `close` is the recovery for a wedged session, so it is never refused;
+  // help needs no browser.
+  const wantsHelp = PASSTHROUGH_LEADING_FLAGS.has(sub) || args.includes("--help") || args.includes("-h");
+  if (wantsHelp) {
+    if (sub === "screenshot") { process.stdout.write(SCREENSHOT_USAGE); return 0; }
+    return runPassthrough(args);
+  }
   if (sub !== "close" && !(await daemonAnswers(socketDir, session))) {
     process.stderr.write(wedgedMessage());
     return 1;

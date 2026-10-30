@@ -141,8 +141,8 @@ async function stopTrace(page: CdpPage, tracePath: string): Promise<void> {
       resolve(z.object({ stream: z.string() }).parse(event.params).stream);
     });
   });
-  await page.send("Tracing.end");
-  const stream = await complete;
+  // Awaited together, so whichever fails first is observed and reported.
+  const [, stream] = await Promise.all([page.send("Tracing.end"), complete]);
   const chunks: string[] = [];
   for (;;) {
     const chunk = z.object({ data: z.string(), eof: z.boolean() }).parse(await page.send("IO.read", { handle: stream }));

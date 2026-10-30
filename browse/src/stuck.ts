@@ -34,23 +34,23 @@ function closeCommand(): string {
 
 /** What to tell the caller when the probe got no answer. */
 export function wedgedMessage(): string {
-  return `browse: the browser did not answer within ${String(PROBE_TIMEOUT_MS / 1000)} s, so this session is wedged `
-    + "(a page that stopped responding, or a stuck command still holding the daemon). "
-    + `Run \`${closeCommand()}\`, then open the page again.\n`;
+  return `browse: the browser did not answer within ${String(PROBE_TIMEOUT_MS / 1000)} s. `
+    + "Its page stopped responding, or another command in this session is stuck or still running. "
+    + `If no other command is running, run \`${closeCommand()}\`, then open the page again.\n`;
 }
 
 /**
  * What to tell the caller when `snapshot` or `screenshot` hit
  * `CAPTURE_TIMEOUT_MS`. Upstream may already have re-sent the command, so the
  * daemon can stay busy after the client is stopped; the next command's probe
- * then reports the session wedged.
+ * then reports no answer.
  */
 export function stuckCaptureMessage(command: "snapshot" | "screenshot"): string {
   const cause = command === "screenshot"
     ? "On macOS a stuck capture usually means the display is asleep: `caffeinate -u -t 2` wakes it."
     : "The page or the snapshot of it is stuck.";
   return `browse: ${command} did not finish within ${String(CAPTURE_TIMEOUT_MS / 1000)} s and was stopped. ${cause} `
-    + `If the next command reports the session wedged, run \`${closeCommand()}\` and open the page again.\n`;
+    + `If the next command reports no answer, run \`${closeCommand()}\` and open the page again.\n`;
 }
 
 /** True when `e` is this wrapper's own ceiling firing, not an upstream failure. */

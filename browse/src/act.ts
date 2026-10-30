@@ -163,9 +163,7 @@ async function liveRefId(ref: string): Promise<string | null> {
  * untouched (its consumers parse upstream's shape).
  */
 export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeContext): Promise<number> {
-  if (!(await onOwnPage(ctx))) {
-    return runPassthrough(["snapshot", ...args]);
-  }
+  const ownPage = await onOwnPage(ctx);
   let text: string;
   try {
     ({ stdout: text } = await run(["snapshot", ...args], { timeoutMs: CAPTURE_TIMEOUT_MS }));
@@ -179,6 +177,11 @@ export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeCo
       return e.code === -1 ? 1 : e.code;
     }
     throw e;
+  }
+  if (!ownPage) {
+    // Another origin has no ids to add: upstream's text as it printed it.
+    process.stdout.write(text);
+    return 0;
   }
   if (args.includes("--json")) {
     // Upstream's shape is passed through untouched (its consumers parse it);
