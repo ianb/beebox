@@ -23,16 +23,16 @@ bin/browse snapshot -i
   `http://localhost:3210/<worktree>/<box>/chats`. `/test1/chats` doubles the box
   and can silently redirect to the wrong page. Absolute URLs pass unchanged.
 - **Prefer the snapshot's `bbx-…` id.** It resolves with `getElementById` at
-  action time. Use `@eN` only when no id is shown; refs renumber on snapshots,
-  are not in document order, and can silently identify another control after
-  a re-render. Re-snapshot after page changes; check `get url` if navigation
+  action time. Use `@eN` only when no id is shown: refs are not in document
+  order, and after a re-render upstream moves a ref to another element with
+  the same role and name, which can be a different control. Re-snapshot after page changes; check `get url` if navigation
   looks wrong.
 - **App actions have checks.** Missing, hidden, zero-size, off-screen, disabled,
   pointer-events-none, or covered targets are refused. A ref that changed hands
   between the last two snapshots gets a warning; a `@eN` ref is refused (`stale-ref`) once a click, fill, press, open, or other page-changing command has run since the latest snapshot, so snapshot again first; refs on controls
   without a `bbx-` id get geometry checks only. Other origins pass through to
-  upstream without these checks; upstream 0.27.0 reported `✓ Done` even when
-  a click reached no actionable target. Verify the resulting state. Report
+  upstream, which checks only visibility, enabled state, and what covers the
+  click point. Verify the resulting state. Report
   refused/covered controls as evidence
   rather than bypassing the obstruction.
 - **Scrolling a pane:** `scroll --selector` uses the first visible match and refuses when all are hidden. `mouse wheel` ignores an earlier `mouse move` (upstream sends it to 0,0); use `scroll --selector`.

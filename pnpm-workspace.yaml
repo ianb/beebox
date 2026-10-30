@@ -61,3 +61,8 @@ minimumReleaseAgeExclude:
   # server's `codex` symlink run, and a model or protocol change lands there
   # within days. Both `@openai/codex` and `@openai/codex-sdk` (pinned together).
   - "@openai/codex*"
+  # One release, by name: the boxholder approved 0.41.0 on 2026-10-30, a day
+  # inside the gate, for its stuck-tab recovery (issue
+  # 2026-07-14-browse-daemon-wedges-on-animated-canvas). Remove this line at
+  # the next agent-browser bump; later releases wait the full seven days.
+  - "agent-browser@0.41.0"

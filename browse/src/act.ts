@@ -15,7 +15,7 @@ import {
   isInteractiveRole, judgeBox, parseCheckResult, parseTarget, refAfterActionDetail, refRenumbered, upstreamSelector,
 } from "./controls.js";
 import type { Box, CheckResult, Locator, RefRecord, RefTable, ScanEntry, Target } from "./controls.js";
-import { CAPTURE_TIMEOUT_MS, isStuck, stuckCaptureMessage } from "./stuck.js";
+import { CAPTURE_TIMEOUT_MS, noAnswer, stuckCaptureMessage } from "./stuck.js";
 import { isOwnOrigin } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -169,7 +169,7 @@ export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeCo
   try {
     ({ stdout: text, stderr: warnings } = await run(["snapshot", ...args], { timeoutMs: CAPTURE_TIMEOUT_MS }));
   } catch (e) {
-    if (isStuck(e)) {
+    if (noAnswer(e)) {
       process.stderr.write(stuckCaptureMessage("snapshot"));
       return 1;
     }
@@ -359,7 +359,7 @@ export async function checkedAction({ sub, args, ctx }: { sub: string; args: rea
         break;
       case "opaque":
         // XPath / `text=`: upstream's CDP engine reports "Element not found"
-        // for these itself (measured 0.27.0), and `get box` cannot resolve
+        // for these itself (measured 0.27.0 and 0.41.0), and `get box` cannot resolve
         // them, so there is nothing to check — hand them over and say so.
         process.stderr.write(`browse: ${raw} is not a form the precondition check can resolve; passing it to upstream unchecked\n`);
         return runPassthrough([sub, target.selector, ...rest]);

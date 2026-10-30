@@ -51,4 +51,10 @@ A continuously animating canvas, repeated `mouse wheel`, and `reload` on a 60 fp
 
 **Mitigation in bin/browse (713bf637e).** A running daemon gets a 10 s `get url` probe before each command; with no answer, the command fails at once with "the browser did not answer within 10 s … run `bin/browse close`". `close` clears it in about 30 s. `snapshot` and `screenshot` stop at 45 s and name the likely cause. Measured on the stuck-tab repro: 10.3 s per command, against about 152 s per upstream call before.
 
-**Remaining.** Upgrade to agent-browser ≥ 0.39.4 once the release-age gate allows it, and re-measure.
+**Upgrade to 0.41.0, 2026-10-30.** The boxholder approved 0.41.0 inside the release-age gate; `pnpm-workspace.yaml` excludes that one version by name. Measured through `bin/browse`:
+
+- Tab stopped responding: each command fails at the 10 s probe; upstream replaces the tab with `about:blank` after about 80 s, and `close` now clears it at once (was about 30 s).
+- Capture stalled: `screenshot` fails at 30 s with upstream's os error 35, which the wrapper now reports with the display-asleep hint; `get url` and `snapshot` keep working, and captures work again once the display wakes.
+- `mouse wheel` also fails at 30 s while the display is asleep, and works at once when it is awake.
+
+The upgrade exposed an upstream regression: a command sent with a different `AGENT_BROWSER_DEFAULT_TIMEOUT` makes the 0.41.0 daemon restart its background state (`restartedBackground: true` in `snapshot --json`), and `snapshot` then returns the tree from before any later change the page makes by itself. The wrapper set that variable on every page-ready wait, so on the app every snapshot showed the "Starting your box…" splash. 0.41.0 honors `wait --timeout` (default 25 s), so the wrapper now passes `--timeout` and no longer varies the env. Repro (bare agent-browser 0.41.0): `open` a page that replaces its content by `setTimeout` after 1.5 s, run `AGENT_BROWSER_DEFAULT_TIMEOUT=5000 agent-browser wait 2500`, then `snapshot`: it shows the old content.

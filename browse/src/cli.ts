@@ -7,10 +7,10 @@ import { annotatedSnapshot, checkedAction, getWithTarget, noteAction } from "./a
 import { scrollWithSelector } from "./scroll-target.js";
 import { TARGET_COMMANDS } from "./controls.js";
 import { runEnhancedScreenshot } from "./screenshot.js";
-import { openClerkPopup, waitTimeoutMs } from "./clerk-popup.js";
+import { openClerkPopup } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
 import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit } from "./launch-options.js";
-import { isStuck, PROBE_TIMEOUT_MS, stuckCaptureMessage, wedgedMessage } from "./stuck.js";
+import { isStuck, noAnswer, PROBE_TIMEOUT_MS, stuckCaptureMessage, wedgedMessage } from "./stuck.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -20,14 +20,9 @@ import type { WorktreeContext } from "./worktree.js";
 // (and any mutations) have settled. See beebox trpc-provider.tsx.
 const READY_FN = "document.body.dataset.bbxLoading === 'false'";
 
-// Ceiling on the settle wait. `wait --fn` polls forever on agent-browser
-// 0.27.0: its own `--timeout` flag is parsed only in `--download` mode, and
-// the documented 25s default action timeout is not applied unless
-// AGENT_BROWSER_DEFAULT_TIMEOUT is set explicitly. Unset, a page that never
-// sets the marker — about:blank, any non-app site, the login wall — hangs the
-// wrapper indefinitely, which is what broke `screenshot`, `snapshot`, and
-// `open` for every agent that ran them (issue 2026-08-15). Overridable for a
-// genuinely slow page.
+// Ceiling on the settle wait, for a page that never sets the marker (the
+// login wall, an app that failed to load). Overridable for a genuinely slow
+// page.
 const READY_TIMEOUT_MS_DEFAULT = 15_000;
 
 function readyTimeoutMs(): number {
@@ -115,13 +110,11 @@ async function waitForReady(ctx: WorktreeContext): Promise<void> {
   if (!isOwnOrigin(target, ctx)) return;
   const timeout = readyTimeoutMs();
   try {
-    // The env var is what actually bounds the poll; timeoutMs is the backstop
-    // for the day upstream stops honoring it — the failure it prevents is an
-    // unkillable hang, so it is worth carrying both.
-    await run(["wait", "--fn", READY_FN], {
-      env: { AGENT_BROWSER_DEFAULT_TIMEOUT: String(timeout) },
-      timeoutMs: timeout + 5_000,
-    });
+    // `--timeout`, not AGENT_BROWSER_DEFAULT_TIMEOUT: on 0.41.0 a command
+    // whose env differs from the daemon's restarts its background state, and
+    // every later `snapshot` then returns the tree from before the change.
+    // timeoutMs is the backstop against an unkillable hang.
+    await run(["wait", "--fn", READY_FN, "--timeout", String(timeout)], { timeoutMs: timeout + 5_000 });
   } catch (e) {
     const msg = e instanceof AgentBrowserError ? e.message : String(e);
     process.stderr.write(`browse: page-ready wait timed out (${msg.trim().split("\n")[0]}); proceeding anyway\n`);
@@ -247,7 +240,7 @@ async function main(): Promise<number> {
     try {
       result = await runEnhancedScreenshot(shot.invocation, ctx);
     } catch (e) {
-      if (!isStuck(e)) throw e;
+      if (!noAnswer(e)) throw e;
       process.stderr.write(stuckCaptureMessage("screenshot"));
       return 1;
     }
@@ -264,15 +257,6 @@ async function main(): Promise<number> {
 
   if (sub === "clerk-popup") {
     return openClerkPopup(args[1]);
-  }
-
-  if (sub === "wait") {
-    // Upstream parses `wait --timeout` only in `--download` mode and otherwise
-    // polls forever (0.27.0), and the daemon runs one command at a time: a
-    // `wait --text` for text that never appears wedged every later command
-    // until the daemon was killed (clerk-quick-send, 2026-10-15). The default
-    // action timeout is what bounds it, so derive that from `--timeout`.
-    process.env["AGENT_BROWSER_DEFAULT_TIMEOUT"] = String(waitTimeoutMs(args.slice(1)));
   }
 
   if (sub === "upload") {

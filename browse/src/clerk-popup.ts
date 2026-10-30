@@ -82,13 +82,3 @@ export async function openClerkPopup(target: string | undefined): Promise<number
   return 0;
 }
 
-const WAIT_TIMEOUT_MS_DEFAULT = 30_000;
-
-/** The `--timeout <ms>` a `wait` names, else 30 s: a wait always ends. */
-export function waitTimeoutMs(args: readonly string[]): number {
-  const index = args.indexOf("--timeout");
-  const raw = index === -1 ? undefined : args[index + 1];
-  if (raw === undefined) return WAIT_TIMEOUT_MS_DEFAULT;
-  if (!/^\d+$/.test(raw) || Number.parseInt(raw, 10) <= 0) throw new BrowseConfigError(`wait --timeout is not a positive integer: ${raw}`);
-  return Number.parseInt(raw, 10);
-}
