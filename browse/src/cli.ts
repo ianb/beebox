@@ -6,11 +6,11 @@ import { reclaimWorktreeBrowsers } from "../../bin/process-cleanup.js";
 import { annotatedSnapshot, checkedAction, getWithTarget, noteAction } from "./act.js";
 import { scrollWithSelector } from "./scroll-target.js";
 import { TARGET_COMMANDS } from "./controls.js";
-import { runEnhancedScreenshot } from "./screenshot.js";
+import { CaptureNoAnswerError, runEnhancedScreenshot } from "./screenshot.js";
 import { openClerkPopup } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
 import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit } from "./launch-options.js";
-import { isStuck, noAnswer, PROBE_TIMEOUT_MS, stuckCaptureMessage, wedgedMessage } from "./stuck.js";
+import { isStuck, PROBE_TIMEOUT_MS, stuckCaptureMessage, wedgedMessage } from "./stuck.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -138,6 +138,11 @@ async function reapSupersededDaemons(): Promise<void> {
 }
 
 async function main(): Promise<number> {
+  if (process.env["AGENT_BROWSER_DEFAULT_TIMEOUT"] !== undefined) {
+    // On 0.41.0 a command whose value differs from the daemon's restarts its
+    // background state, and later snapshots silently show stale content.
+    throw new BrowseConfigError("unset AGENT_BROWSER_DEFAULT_TIMEOUT: a value that differs between commands makes later snapshots stale; bound a wait with `wait --timeout <ms>`");
+  }
   await reapSupersededDaemons();
   let args = process.argv.slice(2);
   // `--session <name>` is agent-browser's global session selector, and callers
@@ -240,7 +245,7 @@ async function main(): Promise<number> {
     try {
       result = await runEnhancedScreenshot(shot.invocation, ctx);
     } catch (e) {
-      if (!noAnswer(e)) throw e;
+      if (!(e instanceof CaptureNoAnswerError)) throw e;
       process.stderr.write(stuckCaptureMessage("screenshot"));
       return 1;
     }
