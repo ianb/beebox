@@ -2,8 +2,6 @@
 title: "Review how the pre-finish test review step was applied in its first week"
 workstream: test-value-research
 area: testing
-activate-on: 2026-10-30
-category: docs-and-chores
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-test-value-research — after designing the finish test-review step (2026-10-23)
