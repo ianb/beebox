@@ -380,15 +380,16 @@ export interface SkipInput {
    * Every merge on the branch's first-parent line (`main..HEAD`), with the
    * paths each brought onto the branch — this run's merge and every earlier
    * one. A fast-forward has no merge commit; the shell lists it here too.
+   * `edited` is where the merge's result differs from the side it merged in
+   * (`git diff M^2 M`): the branch's own content plus any conflict resolution
+   * or evil-merge edit. A fast-forward edits nothing.
    */
-  merges: { sha: string; paths: string[] }[];
+  merges: { sha: string; paths: string[]; edited: string[] }[];
   /** Uncommitted paths — never verified by any earlier commit's pre-commit. */
   stragglers: string[];
-  /**
-   * Paths where HEAD's committed tree differs from main's (`git diff main
-   * HEAD`, with main merged in): the branch's own commits plus whatever any
-   * merge resolved or otherwise changed.
-   */
+  /** Paths any non-merge commit in `main..HEAD` touched, even if a later commit reverted it. */
+  ownCommits: string[];
+  /** Paths where HEAD's committed tree differs from main's (`git diff main HEAD`, main merged in). */
   vsMain: string[];
 }
 
@@ -412,10 +413,11 @@ export interface SkipInput {
  * included) it typechecks only the packages that commit stages.
  *
  * A merge's code goes unchecked only when it meets code of the branch's own.
- * When HEAD's tree differs from main's only in `.md` files, the merged code is
- * main's code, which main's own landings checked. Any other path in that diff
- * (a branch commit, a conflict resolved in code, an evil merge) still forces
- * both checks.
+ * When the branch's own commits, every merge's edits, and HEAD's diff against
+ * main all touch only `.md` files, the merged code is main's code, which
+ * main's own landings checked. A non-`.md` path in any of the three (a branch
+ * commit, even one later reverted; a conflict resolved in code; an evil merge)
+ * still forces both checks.
  */
 export function skipTypecheckLintDecision(input: SkipInput): { value: boolean; reason: string } {
   if (input.stragglers.length > 0) {
@@ -429,17 +431,24 @@ export function skipTypecheckLintDecision(input: SkipInput): { value: boolean; r
     return { value: true, reason: "no merge on this branch brought code; pre-commit covered every commit" };
   }
   const merge = `merge ${codeMerge.sha.slice(0, 9)}`;
-  const ownCode = input.vsMain.filter((path) => !isDocPath(path));
-  if (ownCode.length === 0) {
+  const code = (paths: string[]): string[] => paths.filter((path) => !isDocPath(path));
+  const evidence: [string, string[]][] = [
+    ["a branch commit touched code", code(input.ownCommits)],
+    ...input.merges.map((m): [string, string[]] => [`merge ${m.sha.slice(0, 9)} edited code`, code(m.edited)]),
+    ["HEAD differs from main in code", code(input.vsMain)],
+  ];
+  const forced = evidence.find(([, paths]) => paths.length > 0);
+  if (forced === undefined) {
     return {
       value: true,
-      reason: `${merge} brought code, but HEAD differs from main only in .md files; main's landings checked that code`,
+      reason: `${merge} brought code, but the branch changed only .md files; main's landings checked that code`,
     };
   }
-  const more = ownCode.length > 1 ? ` +${String(ownCode.length - 1)}` : "";
+  const [what, paths] = forced;
+  const more = paths.length > 1 ? ` +${String(paths.length - 1)}` : "";
   return {
     value: false,
-    reason: `${merge} brought code in and HEAD differs from main in code (${ownCode[0] ?? ""}${more}); no hook typechecked the merged tree`,
+    reason: `${merge} brought code in and ${what} (${paths[0] ?? ""}${more}); no hook typechecked the merged tree`,
   };
 }
 

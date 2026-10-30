@@ -152,7 +152,12 @@ function whySelected(input: {
     if (reachable.has(entry)) add(entry, CHANGED_TEST_REASON);
   }
   for (const [entry, paths] of input.spawners) {
-    for (const path of paths) add(entry, `spawns a child that runs ${path}`);
+    for (const path of paths) {
+      // A shared-unit change matches every bin/ spawner without evidence that this one sources it.
+      const unit = binUnit(path);
+      const shared = unit !== null && BIN_SHARED_UNITS.has(unit);
+      add(entry, shared ? `spawns a bin/ script, which may source ${path}` : `spawns a child that runs ${path}`);
+    }
   }
   return why;
 }

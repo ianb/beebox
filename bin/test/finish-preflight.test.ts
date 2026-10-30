@@ -131,7 +131,7 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
   commit("bin/main-code.ts", "export const d = 1;\n");
   git("checkout", "-q", "worktree-notes");
   const notes = preflight();
-  t.check([notes.merge.status, notes.skipTypecheckLint.value, notes.skipTypecheckLint.reason.includes("only in .md files")], [
+  t.check([notes.merge.status, notes.skipTypecheckLint.value, notes.skipTypecheckLint.reason.includes("the branch changed only .md files")], [
     "merged",
     true,
     true,

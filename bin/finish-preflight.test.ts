@@ -17,6 +17,7 @@ import {
   isDocsOnly,
   parseTrailers,
   skipTypecheckLintDecision,
+  type SkipInput,
   trackORecommendation,
   verificationCommands,
 } from "./finish-preflight-lib.js";
@@ -214,40 +215,49 @@ test("a docs-only diff names every command as skipped rather than hiding it", ()
   assert.equal(commands.find((c) => c.kind === "site")?.skip, undefined);
 });
 
+type Merge = SkipInput["merges"][number];
+const merged = (sha: string, paths: string[]): Merge => ({ sha, paths, edited: [] });
+
 test("skipTypecheckLint keys on what pre-commit never saw", () => {
   // The branch has code of its own, so every merge's code meets it.
-  const skip = (merges: { sha: string; paths: string[] }[], stragglers: string[]): boolean =>
-    skipTypecheckLintDecision({ merges, stragglers, vsMain: ["beebox/src/mine.ts"] }).value;
+  const skip = (merges: Merge[], stragglers: string[]): boolean =>
+    skipTypecheckLintDecision({ merges, stragglers, ownCommits: ["beebox/src/mine.ts"], vsMain: ["beebox/src/mine.ts"] }).value;
   assert.equal(skip([], []), true);
-  assert.equal(skip([{ sha: "a", paths: ["issues/bugs/x.md", "beebox/docs/a.md"] }], []), true);
-  assert.equal(skip([{ sha: "a", paths: ["beebox/src/x.ts"] }], []), false);
+  assert.equal(skip([merged("a", ["issues/bugs/x.md", "beebox/docs/a.md"])], []), true);
+  assert.equal(skip([merged("a", ["beebox/src/x.ts"])], []), false);
   // Tests are typechecked, so a merge that brought only a test still counts.
-  assert.equal(skip([{ sha: "a", paths: ["beebox/src/x.test.ts"] }], []), false);
+  assert.equal(skip([merged("a", ["beebox/src/x.test.ts"])], []), false);
   // An older merge's code is still unchecked when the newest merge brought only docs.
-  const merges = [
-    { sha: "new", paths: ["beebox/docs/a.md"] },
-    { sha: "old", paths: ["beebox/src/x.ts"] },
-  ];
-  assert.equal(skip(merges, []), false);
+  assert.equal(skip([merged("new", ["beebox/docs/a.md"]), merged("old", ["beebox/src/x.ts"])], []), false);
   // An uncommitted file ran no pre-commit at all, whatever the merges did.
   assert.equal(skip([], ["a.ts"]), false);
-  assert.equal(skipTypecheckLintDecision({ merges: [], stragglers: ["a.ts"], vsMain: [] }).value, false);
+  assert.equal(skipTypecheckLintDecision({ merges: [], stragglers: ["a.ts"], ownCommits: [], vsMain: [] }).value, false);
 });
 
-test("skipTypecheckLint skips a merge of code into a branch whose tree differs from main only in docs", () => {
-  const merges = [{ sha: "abcdef0123", paths: ["beebox/src/x.ts"] }];
-  const decide = (vsMain: string[]) => skipTypecheckLintDecision({ merges, stragglers: [], vsMain });
-  const docsOnly = decide(["issues/bugs/x.md", "beebox/docs/a.md"]);
+test("skipTypecheckLint skips a merge of code into a branch that changed only docs", () => {
+  const decide = (input: { ownCommits?: string[]; edited?: string[]; vsMain?: string[] }) =>
+    skipTypecheckLintDecision({
+      merges: [{ sha: "abcdef0123", paths: ["beebox/src/x.ts"], edited: input.edited ?? ["notes/a.md"] }],
+      stragglers: [],
+      ownCommits: input.ownCommits ?? ["notes/a.md"],
+      vsMain: input.vsMain ?? ["notes/a.md"],
+    });
+  const docsOnly = decide({});
   assert.equal(docsOnly.value, true);
-  assert.match(docsOnly.reason, /^merge abcdef012 brought code, but HEAD differs from main only in \.md files/);
-  assert.equal(decide([]).value, true);
-  // Any non-.md path forces the checks: a branch test, a doc asset under docs/
-  // (a .ts there is typechecked), or a conflict resolved in code, which shows
-  // up in the same tree diff.
-  for (const path of ["beebox/src/x.test.ts", "beebox/docs/example.ts", "beebox/src/x.ts"]) {
-    const decision = decide(["beebox/docs/a.md", path]);
-    assert.equal(decision.value, false, path);
-    assert.ok(decision.reason.includes(path), decision.reason);
+  assert.match(docsOnly.reason, /^merge abcdef012 brought code, but the branch changed only \.md files/);
+  // Any non-.md path in any of the three forces the checks. A branch commit
+  // counts even when a later commit reverted it (HEAD equals main); a merge
+  // that resolved a conflict in code counts even when HEAD's tree matches main.
+  const cases: [Parameters<typeof decide>[0], string][] = [
+    [{ ownCommits: ["notes/a.md", "beebox/src/reverted.ts"] }, "a branch commit touched code (beebox/src/reverted.ts)"],
+    [{ ownCommits: ["beebox/docs/example.ts"] }, "a branch commit touched code (beebox/docs/example.ts)"],
+    [{ edited: ["beebox/src/x.ts"] }, "merge abcdef012 edited code (beebox/src/x.ts)"],
+    [{ vsMain: ["beebox/src/x.test.ts", "bin/y.ts"] }, "HEAD differs from main in code (beebox/src/x.test.ts +1)"],
+  ];
+  for (const [input, why] of cases) {
+    const decision = decide(input);
+    assert.equal(decision.value, false, why);
+    assert.ok(decision.reason.includes(why), decision.reason);
   }
 });
 

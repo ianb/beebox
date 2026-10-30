@@ -38,6 +38,7 @@ import {
   groupPaths,
   parseTrailers,
   skipTypecheckLintDecision,
+  type SkipInput,
   trackORecommendation,
   verificationCommands,
   type VerificationCommand,
@@ -65,8 +66,8 @@ export interface Sheet {
 
 const SKIP_RULE =
   "pre-commit typechecks and lints what each worktree commit stages, so a finish needs them again " +
-  "only for an uncommitted straggler, or when a merge brought code and HEAD's tree differs from main's " +
-  "outside .md files. " +
+  "only for an uncommitted straggler, or when a merge brought code and the branch has code of its own " +
+  "(a non-.md path in a branch commit, a merge edit, or HEAD vs main). " +
   "`--no-verify` leaves no git evidence and is not detectable.";
 
 function hasScriptIn(root: string): (pkg: string, script: string) => boolean {
@@ -110,21 +111,25 @@ function privateLeg(root: string): Sheet["privateLeg"] {
  * Every merge on the branch's own line and what it brought, newest first,
  * plus this run's merge when it fast-forwarded and left no merge commit.
  */
-function branchMerges(root: string, current: Sheet["merge"]): { sha: string; paths: string[] }[] {
-  const shas = git(["log", "--merges", "--first-parent", "--format=%H", "main..HEAD"], { cwd: root, onError: "throw" })
-    .split("\n")
-    .filter((sha) => sha !== "");
-  const merges = shas.map((sha) => ({
+function branchMerges(root: string, current: Sheet["merge"]): SkipInput["merges"] {
+  const merges = gitLines(root, ["log", "--merges", "--first-parent", "--format=%H", "main..HEAD"]).map((sha) => ({
     sha,
-    paths: git(["diff", "--name-only", `${sha}^1`, sha], { cwd: root, onError: "throw" })
-      .split("\n")
-      .filter((path) => path !== ""),
+    paths: gitLines(root, ["diff", "--name-only", `${sha}^1`, sha]),
+    edited: gitLines(root, ["diff", "--name-only", `${sha}^2`, sha]),
   }));
   const head = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
   if (current.status === "merged" && !merges.some((merge) => merge.sha === head)) {
-    merges.unshift({ sha: head, paths: current.broughtPaths });
+    // A fast-forward: HEAD is main's commit, so it edited nothing.
+    merges.unshift({ sha: head, paths: current.broughtPaths, edited: [] });
   }
   return merges;
+}
+
+/** A git command's output lines, empty ones dropped. */
+function gitLines(root: string, args: string[]): string[] {
+  return git(args, { cwd: root, onError: "throw" })
+    .split("\n")
+    .filter((line) => line !== "");
 }
 
 /** Added+deleted lines vs main, total and restricted to non-doc, non-test files. */
@@ -190,9 +195,8 @@ export function buildSheet(input: { merge: boolean }): Sheet {
     : skipTypecheckLintDecision({
         merges: branchMerges(root, merge),
         stragglers,
-        vsMain: git(["diff", "--name-only", "main", "HEAD"], { cwd: root, onError: "throw" })
-          .split("\n")
-          .filter((path) => path !== ""),
+        ownCommits: gitLines(root, ["log", "--no-merges", "--format=", "--name-only", "main..HEAD"]),
+        vsMain: gitLines(root, ["diff", "--name-only", "main", "HEAD"]),
       });
   // Selected BEFORE the verification list is built: a selector that failed
   // changes which test command the sheet names (the full suite, not the

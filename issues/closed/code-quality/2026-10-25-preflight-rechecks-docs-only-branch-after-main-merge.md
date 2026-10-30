@@ -10,10 +10,12 @@ resolution: implemented
 ---
 
 **Closed 2026-10-29 (tooling-burndown).** `skipTypecheckLintDecision` now
-also takes `vsMain`, the paths where HEAD's tree differs from main's. When a
-merge brought code but `vsMain` holds only `.md` files, the sheet skips both
-checks and says why. The tree diff also catches a merge commit that edited
-code (a conflict resolution or an evil merge), so that case still runs them.
+also takes the paths the branch's non-merge commits touched, each merge's
+edits against the side it merged in (`git diff M^2 M`), and HEAD's diff
+against main. When a merge brought code but all three hold only `.md` files,
+the sheet skips both checks and says why. A code path in any of them (a
+branch commit, even one later reverted; a conflict resolution; an evil
+merge) still runs them.
 A merge that brought only test files now counts as bringing code, since tests
 are typechecked. Tests: `bin/finish-preflight.test.ts`,
 `bin/test/finish-preflight.test.ts`.
