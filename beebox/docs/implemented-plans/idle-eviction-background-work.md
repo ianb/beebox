@@ -1,15 +1,15 @@
 ---
 title: "Keep live background work through idle eviction, and end it honestly when the server must stop it"
-status: draft
+status: implemented
 workstream: idle-eviction
 issues:
-  - ../../../issues/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md
+  - ../../../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md
 ---
 # Keep live background work through idle eviction
 
 A box chat's background subagent keeps working after the chat's turn ends. The registry treats that chat as idle and closes its input. The subagent's Bash calls then fail with text that says a user declined them. This plan stops the registry from closing a chat that has live background work, and ends the run outright when the server must stop such a chat, so nothing runs on in a state that produces false denials.
 
-**Issues addressed:** [idle eviction stops a running background subagent](../../../issues/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md). Related, not closed: [done-but-still-working state](../../../issues/features/2026-09-11-done-but-still-working-state.md), [chat stop and background subagents](../../../issues/decisions/2026-08-25-chat-stop-and-background-subagents.md). `bin/issues similar` printed no other match.
+**Issues addressed:** [idle eviction stops a running background subagent](../../../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md). Related, not closed: [done-but-still-working state](../../../issues/features/2026-09-11-done-but-still-working-state.md), [chat stop and background subagents](../../../issues/decisions/2026-08-25-chat-stop-and-background-subagents.md). `bin/issues similar` printed no other match.
 
 ## Design
 
