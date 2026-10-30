@@ -67,9 +67,10 @@ export const calendarRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // Copy only present keys so an omitted field stays absent rather than
-      // becoming an explicit `undefined` (exactOptionalPropertyTypes).
-      const config: CalendarConfig = {};
+      // Start from the stored config so the names and roles the sync caches
+      // there survive a settings save, then copy only present keys so an
+      // omitted field keeps its stored value (exactOptionalPropertyTypes).
+      const config: CalendarConfig = { ...await loadCalendarConfig(ctx.boxRoot) };
       if (input.calendars !== undefined) config.calendars = input.calendars;
       if (input.syncDaysBack !== undefined) config.syncDaysBack = input.syncDaysBack;
       if (input.syncDaysForward !== undefined) config.syncDaysForward = input.syncDaysForward;

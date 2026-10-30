@@ -44,11 +44,11 @@ async function code(p: Promise<unknown>) {
 
 // ## calendar.updateConfig writes the sync config and commits it
 //
-// Only the provided keys are persisted (an omitted field stays absent), and the
-// commit is scoped to the calendar config file — an unrelated dirty file is left
-// uncommitted, proving the `stageAndCommitPaths` scoping the other config
-// mutations share.
-void test("Only the provided keys are persisted (an omitted field stays absent), and the...", async (t) => {
+// Only the provided keys change (an omitted field keeps what was stored, here
+// nothing), and the commit is scoped to the calendar config file — an unrelated
+// dirty file is left uncommitted, proving the `stageAndCommitPaths` scoping the
+// other config mutations share.
+void test("Only the provided keys change (an omitted field keeps what was stored), and the...", async (t) => {
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -85,6 +85,19 @@ void test("Only the provided keys are persisted (an omitted field stays absent),
   // `status` porcelain paths are repo-root-relative; under the one-root layout
   // that's the same box root the decoy was written into.
   t.check((await simpleGit(box.root).status()).not_added, ["_content/decoy.md"]);
+
+  // The calendar names and roles the sync caches in the same file survive a
+  // settings save; the calendar-folders migration and `bbx calendar calendars`
+  // read them.
+  await box.write("_config/connectors/google-calendar.json", JSON.stringify({
+    calendars: ["primary"], calendarNames: { primary: "Family" }, calendarRoles: { primary: "owner" },
+  }));
+  await caller(box.root).calendar.updateConfig({ calendars: ["primary", "school@example.com"] });
+  t.check(await readJson(box, "_config/connectors/google-calendar.json"), {
+    calendars: ["primary", "school@example.com"],
+    calendarNames: { primary: "Family" },
+    calendarRoles: { primary: "owner" },
+  });
 });
 
 // ## drive has a config reader and no config writer
