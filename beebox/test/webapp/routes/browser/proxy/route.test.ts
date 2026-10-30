@@ -180,10 +180,14 @@ void t.test("Agents and other origins are refused", async (st) => {
   st.check(seen, []);
 });
 
-// ## `/browser` without the slash redirects, keeping the base prefix
-void t.test("`/browser` without the slash redirects, keeping the base prefix", async (st) => {
-  const res = await ctx.response({ method: "GET", url: "/browser?x=1", headers: { cookie: SESSION, "x-bbx-base-prefix": "/shared-browser" } });
-  st.check(res, { status: 302, headers: { location: `/shared-browser${PREFIX}/?x=1`, [others]: any(String) }, body: "" });
+// ## `/browser` without the slash redirects relatively, so any outer prefix is kept
+//
+// The box cannot see a dev router's outer segment (the hub replaces the
+// base-prefix header with `/<slug>`), and `browser/` from `.../<slug>/browser`
+// is `.../<slug>/browser/` whatever comes before.
+void t.test("`/browser` without the slash redirects relatively", async (st) => {
+  const res = await ctx.response({ method: "GET", url: "/browser?x=1", headers: { cookie: SESSION } });
+  st.check(res, { status: 302, headers: { location: "browser/?x=1", [others]: any(String) }, body: "" });
 });
 
 // ## The live view's WebSocket is bridged to the dashboard's session stream
@@ -203,6 +207,33 @@ void t.test("The live view's WebSocket is bridged to the dashboard's session str
     socket.on("error", reject);
   });
   st.check(received, ["hello /api/session/9222/stream from origin http://localhost", "echo click"]);
+});
+
+// ## A WebSocket from the page carries Origin but no fetch metadata
+//
+// Chrome sends no Sec-Fetch-Site on WebSocket handshakes, and the box cannot
+// rebuild the browser's origin behind the router and hub (dev smoke run,
+// 2026-10-30), so a handshake with the person's SameSite=Lax session cookie
+// and an unmatched Origin is bridged. One that says it is cross-site is not.
+void t.test("A page's WebSocket is bridged on the session cookie; a cross-site one is refused", async (st) => {
+  // The server is already listening from the bridge test above.
+  const bound = ctx.server.server.address();
+  const address = typeof bound === "object" && bound !== null ? `http://127.0.0.1:${String(bound.port)}` : "";
+  const url = `${address.replace("http", "ws")}${PREFIX}/api/session/9222/stream`;
+  const first = await new Promise<string>((resolve, reject) => {
+    const socket = new WebSocket(url, { headers: { cookie: SESSION, origin: "http://localhost:3210" } });
+    st.teardown(() => socket.terminate());
+    socket.on("message", (data) => resolve(String(data)));
+    socket.on("error", reject);
+  });
+  st.check(first, "hello /api/session/9222/stream from origin http://localhost");
+  const refused = await new Promise<number>((resolve) => {
+    const socket = new WebSocket(url, { headers: { cookie: SESSION, origin: "https://evil.example", "sec-fetch-site": "cross-site" } });
+    st.teardown(() => socket.terminate());
+    socket.on("unexpected-response", (_req, res) => resolve(res.statusCode ?? 0));
+    socket.on("error", () => resolve(-1));
+  });
+  st.check(refused, 403);
 });
 
 // ## No browser installed: a page that says why

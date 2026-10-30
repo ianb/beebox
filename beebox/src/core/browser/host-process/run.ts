@@ -31,6 +31,9 @@ import { BOX_BROWSER_SESSION, browserPaths, type BrowserBox, type BrowserPaths }
 import { startCommandServer } from "./command-server.js";
 import { startRelay } from "./relay.js";
 
+/** The deploy's sandbox check (`../host/sandbox-check.ts`) runs the same binary. */
+export { agentBrowserBinary } from "./agent-browser.js";
+
 const execFileAsync = promisify(execFile);
 
 /** The dashboard's port inside a private namespace, where nothing else listens. */

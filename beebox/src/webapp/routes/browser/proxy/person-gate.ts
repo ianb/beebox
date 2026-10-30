@@ -50,10 +50,26 @@ function originOf(url: string): string | null {
 }
 
 /** True when the request names no `Origin`, or names this box's own. */
+/**
+ * A WebSocket handshake with no fetch metadata. Chrome sends no
+ * `Sec-Fetch-Site` on WebSocket handshakes, and the box cannot rebuild the
+ * browser's origin to compare with `Origin`: the dev router, Vite and the hub
+ * each rewrite `Host`, and none forwards the original (found in the dev smoke
+ * run, 2026-10-30). Such a handshake is accepted on the session cookie alone,
+ * which is `SameSite=Lax` (`routes/auth/password-post.ts`), so a cross-site
+ * page's handshake does not carry it and fails the person check.
+ */
+function isUnlabelledWebSocket(request: FastifyRequest): boolean {
+  return (request.headers.upgrade ?? "").toLowerCase() === "websocket" && request.headers["sec-fetch-site"] === undefined;
+}
+
 export async function isSameOrigin(ctx: PersonGateContext, request: FastifyRequest): Promise<boolean> {
   const origin = request.headers.origin;
   if (origin === undefined) return true;
-  if (request.headers["sec-fetch-site"] === "same-origin") return true;
+  const site = request.headers["sec-fetch-site"];
+  if (site === "same-origin") return true;
+  if (site !== undefined) return false;
+  if (isUnlabelledWebSocket(request)) return true;
   if (origin === `${request.protocol}://${request.host}`) return true;
   const publicUrl = await resolveBoxPublicUrl(ctx.boxRoot);
   return publicUrl !== undefined && originOf(publicUrl) === origin;
@@ -73,7 +89,8 @@ export async function checkPerson(ctx: PersonGateContext, request: FastifyReques
   if (!(await isSameOrigin(ctx, request))) {
     return { status: 403, error: "the browser page only accepts requests from its own origin" };
   }
-  if ((await resolveMobileRequestAuth(boxRoot, request.headers)) !== null) return null;
+  // The mobile cookie is not SameSite-protected the way the session cookie is, so an unlabelled WebSocket needs the session.
+  if (!isUnlabelledWebSocket(request) && (await resolveMobileRequestAuth(boxRoot, request.headers)) !== null) return null;
   const identity = await resolveBoxIdentity({ boxRoot, request, openAccess: ctx.openAccess });
   switch (identity.source) {
     case "unavailable":

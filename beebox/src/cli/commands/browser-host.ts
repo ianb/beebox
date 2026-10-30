@@ -6,20 +6,48 @@
  *
  * `--state-dir` exists for tests, whose temporary home gives a socket path
  * over the Unix limit; the engine passes its own state directory.
+ *
+ * `--check-sandbox` is the deploy's post-install check (Track F): it opens
+ * `chrome://sandbox` once through the namespace launcher with a throwaway
+ * profile, prints the page only on failure, and exits 1 unless Chrome is
+ * sandboxed. It needs no box.
  */
 
 import * as path from "node:path";
 import { Command } from "commander";
 import { runBrowserHost } from "../../core/browser/host-process/run.js";
+import { checkBrowserSandbox } from "../../core/browser/host/sandbox-check.js";
 import { BBX_STATE_DIR } from "../../lib/state-dir.js";
+
+interface BrowserHostOptions {
+  readonly box?: string;
+  readonly slug?: string;
+  readonly stateDir: string;
+  readonly checkSandbox?: boolean;
+}
 
 export const browserHostCommand = new Command("browser-host")
   .description("Run one box's browser host (the engine starts it; not for direct use)")
-  .requiredOption("--box <root>", "The box root directory")
-  .requiredOption("--slug <slug>", "The box's URL slug")
+  .option("--box <root>", "The box root directory")
+  .option("--slug <slug>", "The box's URL slug")
   .option("--state-dir <dir>", "The state directory holding the browser profile", BBX_STATE_DIR)
-  .action(async (opts: { box: string; slug: string; stateDir: string }) => {
-    await runBrowserHost({ boxRoot: path.resolve(opts.box), slug: opts.slug, stateDir: path.resolve(opts.stateDir) });
+  .option("--check-sandbox", "Check once that Chrome keeps its sandbox inside the private network (the deploy runs this)")
+  .action(async (opts: BrowserHostOptions) => {
+    if (opts.checkSandbox === true) {
+      const result = await checkBrowserSandbox();
+      if (result.ok) {
+        process.stdout.write("Chrome is sandboxed inside the box browser's network namespace.\n");
+        process.exit(0);
+      }
+      process.stderr.write(`Chrome is NOT sandboxed (or the check failed). chrome://sandbox and agent-browser said:\n${result.output}\n`);
+      process.exit(1);
+    }
+    const { box, slug } = opts;
+    if (box === undefined || slug === undefined) {
+      process.stderr.write("error: --box and --slug are required unless --check-sandbox is given\n");
+      process.exit(64);
+    }
+    await runBrowserHost({ boxRoot: path.resolve(box), slug, stateDir: path.resolve(opts.stateDir) });
     // A dashboard or relay handle left open must not keep a stopped host alive.
     process.exit(0);
   });

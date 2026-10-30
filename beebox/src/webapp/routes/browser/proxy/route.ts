@@ -29,7 +29,7 @@ import { BrowserHostFailedError, BrowserNotInstalledError, ensureBrowserHost, ty
 import { isRewritableType, rewriteDashboardBody } from "../../../../core/browser/rewrite.js";
 import { ensureBoxSession } from "../../../../core/browser/session.js";
 import type { Services } from "../../../../services/container.js";
-import { readBasePrefix } from "../../../base-prefix.js";
+import { browserPrefix } from "./prefix.js";
 import { checkPerson, sendRefusal } from "./person-gate.js";
 import { BROWSER_PAGE_CSP, decodeBody, messagePage, responseHeaders, withNotice } from "./response.js";
 import { bridgeStream } from "./stream-bridge.js";
@@ -145,8 +145,9 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
     });
 
     scope.all("/browser", (request, reply) => {
+      // Relative, so it works under any outer prefix: from `.../<slug>/browser`, `browser/` is `.../<slug>/browser/`.
       const query = request.url.indexOf("?");
-      return reply.redirect(`${readBasePrefix(request.headers)}${marker}/${query === -1 ? "" : request.url.slice(query)}`);
+      return reply.redirect(`browser/${query === -1 ? "" : request.url.slice(query)}`);
     });
 
     scope.get<{ Params: { port: string } }>("/browser/api/session/:port/stream", { websocket: true }, (socket, request) => {
@@ -161,7 +162,7 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
     scope.all("/browser/*", async (request, reply) => {
       if (!request.url.startsWith(`${marker}/`)) return reply.status(404).send({ error: "Not found" });
       const path = request.url.slice(marker.length);
-      const prefix = `${readBasePrefix(request.headers)}${marker}`;
+      const prefix = browserPrefix({ slug: boxSlug, referer: request.headers.referer });
       let host: BrowserHostHandle;
       try {
         host = await ensureHost({ boxRoot, slug: boxSlug });
@@ -185,9 +186,11 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
       if (!rewritten) return reply.send(upstream);
       const isHtml = (contentType ?? "").toLowerCase().startsWith("text/html");
       let body = rewriteDashboardBody(await decodeBody(await readAll(upstream), upstream.headers["content-encoding"]), prefix);
+      // The prefix depends on the Referer, so no rewritten response may be cached.
+      reply.header("cache-control", "no-store").header("vary", "Referer");
       if (isHtml) {
         if (notice !== null) body = withNotice(body, notice);
-        reply.header("content-security-policy", BROWSER_PAGE_CSP).header("cache-control", "no-store");
+        reply.header("content-security-policy", BROWSER_PAGE_CSP).header("referrer-policy", "same-origin");
       }
       return reply.send(body);
     });

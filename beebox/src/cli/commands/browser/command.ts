@@ -36,6 +36,9 @@ Take a new snapshot after the page changes, or after the person has used the
 browser. Not available: batch, connect, and flags that pick another profile,
 session or browser (--profile, --session, --cdp, ...); the box browser's
 settings are fixed.
+
+When to ask the person to log in or pass a check: the browser skill
+(.claude/skills/browser/SKILL.md).
 `;
 
 const ERROR_BODY = z.object({ error: z.string() });

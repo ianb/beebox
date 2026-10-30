@@ -106,6 +106,13 @@ function killGroup(pid: number, sig: NodeJS.Signals): void {
 
 async function spawnHost(paths: BrowserPaths, input: Required<EnsureBrowserHostInput>): Promise<ChildProcess> {
   await fs.promises.mkdir(paths.root, { recursive: true, mode: 0o700 });
+  // A host left by a previous engine (a restart, a reload) may still be
+  // listening on these paths until it notices and exits. Unlinked, its
+  // sockets are unreachable, so the readiness check below can only connect
+  // to the new host (seen in the dev smoke run, 2026-10-30: the first
+  // request after an engine reload reached the old host as it exited).
+  await fs.promises.rm(paths.relaySocket, { force: true });
+  await fs.promises.rm(paths.cliSocket, { force: true });
   const logFd = fs.openSync(paths.log, "w", 0o600);
   try {
     const command = [
