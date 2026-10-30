@@ -20,6 +20,12 @@ const HUB_USER = "beebox";
 const HUB_SECRET_DIR = "/run/beebox";
 const BOX_ENV_FILE = "/etc/beebox/box.env";
 const HUB_META = "hub-meta.json";
+/**
+ * The `.beebox/` files the hub reads by path, each 0644: the metadata file,
+ * and the sleeping box's encrypted home list
+ * (`beebox/src/core/chat/routing/home-snapshot.ts`).
+ */
+const HUB_READABLE = [HUB_META, "quick-chat-home.snapshot.json"];
 
 export interface UnitAuditOptions {
   /** Text of `/etc/passwd`; read from disk when omitted. */
@@ -37,11 +43,14 @@ export interface UnitAuditOptions {
 interface IdTable {
   users: Map<string, { uid: number; gid: number }>;
   groups: Map<string, number>;
+  /** Each group's supplementary members (the fourth `/etc/group` field). */
+  members: Map<string, string[]>;
 }
 
 function parseIds(passwd: string, group: string): IdTable {
   const users = new Map<string, { uid: number; gid: number }>();
   const groups = new Map<string, number>();
+  const members = new Map<string, string[]>();
   for (const line of passwd.split("\n")) {
     const [name, , uid, gid] = line.split(":");
     if (name !== undefined && uid !== undefined && gid !== undefined && /^\d+$/u.test(uid) && /^\d+$/u.test(gid)) {
@@ -49,10 +58,13 @@ function parseIds(passwd: string, group: string): IdTable {
     }
   }
   for (const line of group.split("\n")) {
-    const [name, , gid] = line.split(":");
-    if (name !== undefined && gid !== undefined && /^\d+$/u.test(gid)) groups.set(name, Number(gid));
+    const [name, , gid, list] = line.split(":");
+    if (name !== undefined && gid !== undefined && /^\d+$/u.test(gid)) {
+      groups.set(name, Number(gid));
+      members.set(name, (list ?? "").split(",").filter((m) => m !== ""));
+    }
   }
-  return { users, groups };
+  return { users, groups, members };
 }
 
 async function readText(file: string): Promise<string> {
@@ -87,6 +99,23 @@ async function entryNames(dir: string): Promise<{ names: string[]; unreadable?: 
   }
 }
 
+/**
+ * The gid whose group bits are harmless: `bbx-<slug>`'s own group, when no
+ * account other than `bbx-<slug>` is in it. The box unit's `UMask=0007`
+ * leaves group bits open on purpose (per-box-units.md, "UMask=0007"), so a
+ * group-readable file is private exactly when its group has that one member.
+ */
+function soleGroupGid(slug: string, ids: IdTable): number | undefined {
+  const name = `bbx-${slug}`;
+  const others = (ids.members.get(name) ?? []).filter((m) => m !== name);
+  return others.length === 0 ? ids.groups.get(name) : undefined;
+}
+
+/** The access bits that reach someone other than the box user. */
+function foreignBits(stat: Stats, bits: { group: number; other: number; soleGid: number | undefined }): number {
+  return (stat.mode & bits.other) | (stat.gid === bits.soleGid ? 0 : stat.mode & bits.group);
+}
+
 function octal(stat: Stats): string {
   return (stat.mode & 0o777).toString(8).padStart(4, "0");
 }
@@ -118,8 +147,9 @@ async function checkDirLayout(dir: string, owner: { slug: string; ids: IdTable }
   return findings;
 }
 
-/** Direct entries of `dir` (other than `skip`) must be owner-only. */
-async function checkPrivateEntries(dir: string, skip: string): Promise<HostFinding[]> {
+/** Direct entries of `dir` (other than `skip`) must be reachable by the box user alone. */
+async function checkPrivateEntries(dir: string, opts: { skip: string; soleGid: number | undefined }): Promise<HostFinding[]> {
+  const { skip, soleGid } = opts;
   const findings: HostFinding[] = [];
   const listing = await entryNames(dir);
   if (listing.unreadable !== undefined) return [{ path: dir, message: listing.unreadable }];
@@ -129,7 +159,7 @@ async function checkPrivateEntries(dir: string, skip: string): Promise<HostFindi
     const stat = await lstatOrNull(full);
     // A symlink's own mode is meaningless on Linux; access follows the target.
     if (stat === null || stat.isSymbolicLink()) continue;
-    if ((stat.mode & 0o077) !== 0) {
+    if (foreignBits(stat, { group: 0o070, other: 0o007, soleGid }) !== 0) {
       const expected = stat.isDirectory() ? "0700" : "0600";
       findings.push({ path: full, message: `mode ${octal(stat)}, expected ${expected} (group/other accessible)` });
     }
@@ -137,7 +167,7 @@ async function checkPrivateEntries(dir: string, skip: string): Promise<HostFindi
   return findings;
 }
 
-async function checkBeeboxDir(dir: string): Promise<HostFinding[]> {
+async function checkBeeboxDir(dir: string, soleGid: number | undefined): Promise<HostFinding[]> {
   const findings: HostFinding[] = [];
   const walk = async (current: string): Promise<void> => {
     const listing = await entryNames(current);
@@ -151,10 +181,10 @@ async function checkBeeboxDir(dir: string): Promise<HostFinding[]> {
       if (stat === null || stat.isSymbolicLink()) continue;
       if (stat.isDirectory()) {
         await walk(full);
-      } else if (full === path.join(dir, HUB_META)) {
+      } else if (HUB_READABLE.some((readable) => full === path.join(dir, readable))) {
         if ((stat.mode & 0o777) !== 0o644) findings.push({ path: full, message: `mode ${octal(stat)}, expected 0644` });
-      } else if ((stat.mode & 0o044) !== 0) {
-        findings.push({ path: full, message: `mode ${octal(stat)}, group/other readable; only ${HUB_META} may be` });
+      } else if (foreignBits(stat, { group: 0o044, other: 0o004, soleGid }) !== 0) {
+        findings.push({ path: full, message: `mode ${octal(stat)}, group/other readable; only ${HUB_READABLE.join(" and ")} may be` });
       }
     }
   };
@@ -197,9 +227,9 @@ export async function checkBoxUserLayout(boxes: BoxRoot[], options?: UnitAuditOp
       ...(await checkDirLayout(home, owner)),
       ...(await checkDirLayout(root, owner)),
       ...(await checkDirLayout(path.join(root, ".beebox"), owner)),
-      ...(await checkPrivateEntries(home, "box")),
-      ...(await checkPrivateEntries(root, ".beebox")),
-      ...(await checkBeeboxDir(path.join(root, ".beebox"))),
+      ...(await checkPrivateEntries(home, { skip: "box", soleGid: soleGroupGid(slug, ids) })),
+      ...(await checkPrivateEntries(root, { skip: ".beebox", soleGid: soleGroupGid(slug, ids) })),
+      ...(await checkBeeboxDir(path.join(root, ".beebox"), soleGroupGid(slug, ids))),
       ...(await checkHubSecret(slug, { ids, opts })),
     );
   }
