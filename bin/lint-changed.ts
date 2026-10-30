@@ -108,6 +108,8 @@ export interface DispatchInput {
   packageDirs: string[];
   /** Does `<dir>/package.json` define this script? */
   hasScript: (dir: string, script: string) => boolean;
+  /** `--base` given to the root run; beebox's child `lint:changed` must diff against the same ref. */
+  base?: string;
 }
 
 /**
@@ -153,10 +155,11 @@ export function dispatchPlan(input: DispatchInput): LintCommand[] {
   for (const dir of [...packages].toSorted()) {
     const script = dir === "beebox" ? "lint:changed" : "lint";
     if (!input.hasScript(dir, script)) continue;
+    const baseArgs = script === "lint:changed" && input.base !== undefined ? ["--base", input.base] : [];
     commands.push({
       label: `pnpm --dir ${dir} ${script}`,
       cwd: ".",
-      argv: ["pnpm", "--dir", dir, script],
+      argv: ["pnpm", "--dir", dir, script, ...baseArgs],
     });
   }
   if (schedules) {
@@ -293,7 +296,9 @@ function main(argv: string[]): number {
   const changed = changedPaths({ base: args.base, cwd: REPO_ROOT });
   const paths = existing(changed);
   const commands = withLayoutCheck(
-    args.root ? dispatchPlan({ paths, packageDirs: packageOwnerDirs(REPO_ROOT), hasScript }) : beeboxCommands(paths),
+    args.root
+      ? dispatchPlan({ paths, packageDirs: packageOwnerDirs(REPO_ROOT), hasScript, base: args.base })
+      : beeboxCommands(paths),
     changed,
   );
   if (commands.length === 0) {

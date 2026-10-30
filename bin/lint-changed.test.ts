@@ -147,4 +147,12 @@ test("the layout check runs once, on code or package.json changes, deletions inc
     "pnpm --dir site lint",
   ]);
   assert.deepEqual(labels(["beebox/docs/README.md"]), ["pnpm --dir beebox lint:changed"]);
+  // That child diffs against the root run's --base, so it sees the same change.
+  const [child] = dispatchPlan({
+    paths: ["beebox/src/core/box.ts"],
+    packageDirs: PACKAGE_DIRS,
+    hasScript: () => true,
+    base: "HEAD~1",
+  });
+  assert.deepEqual(child?.argv, ["pnpm", "--dir", "beebox", "lint:changed", "--base", "HEAD~1"]);
 });

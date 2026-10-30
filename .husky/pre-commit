@@ -22,20 +22,13 @@ case "${GIT_INDEX_FILE:-}" in
   *) GIT_INDEX_FILE="$REPO_DIR/$GIT_INDEX_FILE" ;;
 esac
 export GIT_INDEX_FILE
-staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMR)"
-
-# The personal commit-blocklist guard reads the gitignored .commit-blocklist,
-# so it runs in the checkout; it reads only staged additions. A no-op unless the
-# committer has that file. Blocks staged additions that re-introduce purged
-# strings (a domain, an IP, names).
-echo "[pre-commit] .: pnpm commit-blocklist-check"
-(cd "$REPO_DIR" && pnpm commit-blocklist-check)
 
 # Every check below runs in the staged snapshot (bin/staged-snapshot.ts): the
 # commit index's files and nothing else from the working tree but node_modules,
 # so another agent's unstaged deletion, rename, half-written file, or new doc
 # neither fails nor passes this commit. The EXIT trap fails a passing hook if the
-# commit index or the snapshot changed while the checks ran.
+# commit index or the snapshot changed while the checks ran. Every staged-path
+# decision reads the snapshot index, so it matches the captured tree.
 CHECKOUT_DIR="$REPO_DIR"
 COMMIT_INDEX="$GIT_INDEX_FILE"
 snapshot="$(cd "$CHECKOUT_DIR" && node --import tsx bin/staged-snapshot.ts sync --owner $$)"
@@ -51,6 +44,15 @@ export GIT_INDEX_FILE="$SNAPSHOT_INDEX" GIT_OPTIONAL_LOCKS=0
 unset GIT_DIR GIT_WORK_TREE
 REPO_DIR="$SNAPSHOT_TREE"
 echo "[pre-commit] checking the staged snapshot at $REPO_DIR"
+staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMR)"
+
+# The personal commit-blocklist guard reads the gitignored .commit-blocklist,
+# so it runs from the checkout (the snapshot's copy of the script, against the
+# snapshot index); it reads only staged additions. A no-op unless the committer
+# has that file. Blocks staged additions that re-introduce purged strings (a
+# domain, an IP, names).
+echo "[pre-commit] .: commit-blocklist-check"
+(cd "$CHECKOUT_DIR" && node --import tsx "$REPO_DIR/bin/commit-blocklist-check.ts")
 
 # Block retired product vocabulary outside the exact historical and migration
 # allowlist. The checker is silent when the baseline is clean.
@@ -179,13 +181,13 @@ fi
 # --fix). --quiet: suppress lint-staged's own progress/warning chatter; task
 # output (eslint errors) still prints on failure.
 #
-# Generated inputs are rebuilt in the snapshot first: type-aware eslint resolves
+# Generated inputs come from the snapshot: type-aware eslint resolves
 # `beebox/plugins/*` through dist/ declarations (beebox/package.json exports),
-# which the typecheck would otherwise be writing at the same time, and the clerk
-# tsconfig extends .wxt/tsconfig.json.
+# which `pnpm typecheck` builds, so beebox lints after its typecheck rather than
+# beside it; the clerk tsconfig extends .wxt/tsconfig.json.
 if echo "$staged" | grep -q '^beebox/'; then
-  run_in beebox pnpm --silent build:declarations
-  run_pair beebox "pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet" "pnpm typecheck"
+  run_in beebox pnpm typecheck
+  run_in beebox pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet
 fi
 
 if echo "$staged" | grep -q '^beebox-clerk/'; then

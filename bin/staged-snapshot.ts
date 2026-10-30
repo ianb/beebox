@@ -33,6 +33,7 @@ import {
   readFileSync,
   readdirSync,
   readlinkSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -162,12 +163,18 @@ function sleep(ms: number): void {
 function acquireLock(lockDir: string, self: number): void {
   const deadline = Date.now() + LOCK_WAIT_MS;
   for (;;) {
+    // Publish the lock with its owner already inside: rename onto an absent
+    // path is atomic, so no reader ever sees an ownerless lock it may take over.
+    const pending = `${lockDir}.${self}`;
+    rmSync(pending, { recursive: true, force: true });
+    mkdirSync(pending);
+    writeFileSync(join(pending, "owner"), `${self}\n`);
     try {
-      mkdirSync(lockDir);
-      writeFileSync(join(lockDir, "owner"), `${self}\n`);
+      renameSync(pending, lockDir);
       return;
     } catch (e) {
-      if (!(e instanceof Error && "code" in e && e.code === "EEXIST")) throw e;
+      rmSync(pending, { recursive: true, force: true });
+      if (!(e instanceof Error && "code" in e && (e.code === "EEXIST" || e.code === "ENOTEMPTY"))) throw e;
     }
     const owner = readOwner(lockDir);
     const step = lockStep({ owner, ownerAlive: owner !== null && pidAlive(owner), self });
@@ -267,6 +274,10 @@ function sync(owner: number): void {
     rmSync(snap.index, { force: true });
     writeFileSync(marker, toplevel);
   }
+  // `read-tree -u` and `clean -ffdqx` below rewrite and delete files under
+  // `tree/`; refuse anything there but a plain directory, so they can never
+  // reach the checkout through a link.
+  if (lstatSync(snap.tree, { throwIfNoEntry: false })?.isDirectory() === false) rmSync(snap.tree, { force: true });
   mkdirSync(snap.tree, { recursive: true });
   const inSnap = (args: string[]): string =>
     gitOk({ args: [`--git-dir=${gitDir}`, `--work-tree=${snap.tree}`, ...args], cwd: snap.tree, index: snap.index });

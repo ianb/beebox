@@ -168,6 +168,18 @@ test("a resync undoes what a check left behind: edits, new files, build output",
     assert.equal(existsSync(join(second.tree, "dist")), false);
     assert.equal(readlinkSync(join(second.tree, "pkg/node_modules/@scope/lib")), join(second.tree, "lib"));
     assert.equal(finish({ repo, state, captured: second.captured }).status, 0);
+
+    // A link in place of tree/ is replaced, never followed: the clean step
+    // would otherwise delete the target's untracked files.
+    const outside = join(repo, "..", "outside");
+    mkdirSync(outside);
+    writeFileSync(join(outside, "keep.txt"), "keep\n");
+    rmSync(second.tree, { recursive: true, force: true });
+    symlinkSync(outside, second.tree);
+    const third = sync(repo, state);
+    assert.equal(readFileSync(join(outside, "keep.txt"), "utf8"), "keep\n");
+    assert.equal(readFileSync(join(third.tree, "staged.ts"), "utf8"), "export const a = 2;\n");
+    assert.equal(finish({ repo, state, captured: third.captured }).status, 0);
   } finally {
     rmSync(join(repo, ".."), { recursive: true, force: true });
   }

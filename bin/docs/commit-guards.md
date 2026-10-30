@@ -9,10 +9,11 @@ shared working tree. `bin/staged-snapshot.ts sync` updates
 index, removes every untracked and ignored file except `node_modules/`, and
 mirrors each package's `node_modules/` as symlinks, with workspace links
 pointed back into the snapshot. A `tree/.git` file names the checkout's git
-dir; the hook exports `GIT_INDEX_FILE` as the snapshot index. Only the
-personal blocklist check runs in the checkout, because it reads the gitignored
-list; it reads staged additions only. The beebox and clerk branches rebuild
-`dist/` declarations and `.wxt/` in the snapshot before linting.
+dir; the hook exports `GIT_INDEX_FILE` as the snapshot index. The personal
+blocklist check runs from the checkout, which holds its gitignored list, but
+reads the snapshot index. Beebox lints after its typecheck, which builds the
+`dist/` declarations type-aware lint resolves; clerk runs `wxt prepare` first.
+The hook and `bin/staged-snapshot.ts` themselves run from the working tree.
 
 The snapshot lock spans the hook. On exit, `finish` fails a passing hook when
 the commit index, the snapshot index, or the snapshot files differ from the

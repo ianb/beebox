@@ -205,17 +205,17 @@ directory, and the lock decision — are exported for the test.
 
 - Resolve `GIT_INDEX_FILE` to an absolute path relative to the top level
   before anything else.
-- Compute `staged`, `layout_staged`, `staged_schedules`, `staged_claude`
-  from the commit index as today.
-- Run `commit-blocklist-check` in the real checkout.
 - Sync; install the EXIT trap; export the snapshot environment; set
-  `REPO_DIR` to the snapshot. Every remaining check runs unchanged except two
-  generated-input steps: the beebox branch runs `build:declarations` before
-  the lint/typecheck pair (type-aware eslint resolves `beebox/plugins/*`
-  through `dist/`, `beebox/package.json:24`, and would otherwise race the
-  typecheck's own build), and the clerk branch runs `wxt prepare` before its
-  pair (`beebox-clerk/tsconfig.json` extends `.wxt/tsconfig.json`).
-  Measured: `build:declarations` 2.8s, `wxt prepare` 1.2s.
+  `REPO_DIR` to the snapshot. Then compute `staged` and the other path lists
+  from the snapshot index, so every decision matches the captured tree.
+- Run the snapshot's `commit-blocklist-check.ts` from the real checkout (which
+  holds the gitignored list) against the snapshot index.
+- Every remaining check runs unchanged except two generated-input steps: the
+  beebox branch runs lint-staged after `pnpm typecheck` rather than beside it
+  (type-aware eslint resolves `beebox/plugins/*` through `dist/`,
+  `beebox/package.json:24`, which the typecheck builds), and the clerk branch
+  runs `wxt prepare` before its pair (`beebox-clerk/tsconfig.json` extends
+  `.wxt/tsconfig.json`). Measured: `wxt prepare` 1.2s.
 - The clerk gate's `git diff --exit-code` then compares the regenerated file in
   the snapshot with the snapshot index, which equals the commit index.
 - `schedules/*/local.yaml` overrides are gitignored and absent from the
@@ -366,3 +366,16 @@ install links is cleaned each sync, and declarations and `.wxt` are rebuilt in
 the snapshot (5); layout selection uses the unfiltered changed list and one
 layer owns it (6); optional ignored inputs are listed (7); the retired-name
 citation is corrected (8).
+
+## Diff review (codex gpt-6-astra, 2026-10-30)
+
+Fixed: staged-path decisions and the blocklist check now read the snapshot
+index after capture (1); a non-directory `tree/` is removed, never followed
+(2); the lock is published by an atomic rename with its owner inside (3);
+beebox lints after its typecheck, removing the declaration-build overlap (5);
+the root `lint:changed` forwards `--base` to beebox's child (6). Accepted: the
+hook and `bin/staged-snapshot.ts` run from the working tree (4, partly: the
+blocklist script now runs from the snapshot); a lock whose dead owner's pid
+was reused waits 120s and fails (7); two hooks taking over the same dead lock
+at once can still both proceed (narrow, needs two simultaneous commits after a
+killed hook).
