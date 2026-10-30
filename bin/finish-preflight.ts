@@ -114,8 +114,8 @@ function privateLeg(root: string): Sheet["privateLeg"] {
 function branchMerges(root: string, current: Sheet["merge"]): SkipInput["merges"] {
   const merges = gitLines(root, ["log", "--merges", "--first-parent", "--format=%H", "main..HEAD"]).map((sha) => ({
     sha,
-    paths: gitLines(root, ["diff", "--name-only", `${sha}^1`, sha]),
-    edited: gitLines(root, ["diff", "--name-only", `${sha}^2`, sha]),
+    paths: gitLines(root, ["diff", "--name-only", "--no-renames", `${sha}^1`, sha]),
+    edited: gitLines(root, ["diff", "--name-only", "--no-renames", `${sha}^2`, sha]),
   }));
   const head = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
   if (current.status === "merged" && !merges.some((merge) => merge.sha === head)) {
@@ -195,8 +195,8 @@ export function buildSheet(input: { merge: boolean }): Sheet {
     : skipTypecheckLintDecision({
         merges: branchMerges(root, merge),
         stragglers,
-        ownCommits: gitLines(root, ["log", "--no-merges", "--format=", "--name-only", "main..HEAD"]),
-        vsMain: gitLines(root, ["diff", "--name-only", "main", "HEAD"]),
+        ownCommits: gitLines(root, ["log", "--no-merges", "--format=", "--name-only", "--no-renames", "main..HEAD"]),
+        vsMain: gitLines(root, ["diff", "--name-only", "--no-renames", "main", "HEAD"]),
       });
   // Selected BEFORE the verification list is built: a selector that failed
   // changes which test command the sheet names (the full suite, not the

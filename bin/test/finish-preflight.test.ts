@@ -153,6 +153,18 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
   t.check([resolved.skipTypecheckLint.value, typecheck(resolved)], [false, "runs"]);
   assert.ok(resolved.skipTypecheckLint.reason.includes("bin/main-code.ts"));
 
+  // A branch commit that renames code to Markdown touched code too: git's
+  // rename detection would list only the `.md` side.
+
+  git("checkout", "-q", "-b", "worktree-rename", "main");
+  git("mv", "bin/main-code.ts", "notes/main-code.md");
+  git("commit", "-qm", "rename");
+  git("checkout", "-q", "main");
+  commit("bin/later-code.ts", "export const e = 1;\n");
+  git("checkout", "-q", "worktree-rename");
+  const renamed = preflight();
+  t.check([renamed.skipTypecheckLint.value, renamed.skipTypecheckLint.reason.includes("bin/main-code.ts")], [false, true]);
+
   // ## Arguments
   //
   // `--help` prints the usage. It must not merge main: main gains a commit here,

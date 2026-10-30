@@ -120,7 +120,7 @@ export function selectTests(input: {
     implicated: [...implicated].toSorted(),
     scoped,
     reasons: groupReasons(
-      whySelected({ graph, reachable: [...scoped, ...binChanged], spawners }),
+      whySelected({ graph, reachable: [...scoped, ...binChanged], spawners, spawnEdges: input.spawnEdges }),
       selected,
     ),
   };
@@ -136,6 +136,7 @@ function whySelected(input: {
   /** Changed paths an import or a changed test can match. */
   reachable: string[];
   spawners: Map<string, string[]>;
+  spawnEdges: Map<string, Set<string>> | undefined;
 }): Map<string, Set<string>> {
   const why = new Map<string, Set<string>>();
   const add = (test: string, reason: string): void => {
@@ -152,14 +153,22 @@ function whySelected(input: {
     if (reachable.has(entry)) add(entry, CHANGED_TEST_REASON);
   }
   for (const [entry, paths] of input.spawners) {
-    for (const path of paths) {
-      // A shared-unit change matches every bin/ spawner without evidence that this one sources it.
-      const unit = binUnit(path);
-      const shared = unit !== null && BIN_SHARED_UNITS.has(unit);
-      add(entry, shared ? `spawns a bin/ script, which may source ${path}` : `spawns a child that runs ${path}`);
-    }
+    const refs = input.spawnEdges?.get(entry) ?? new Set<string>();
+    for (const path of paths) add(entry, spawnReason(path, refs));
   }
   return why;
+}
+
+/**
+ * A `bin/` path matches by unit, so only a ref naming the path itself shows
+ * the child runs it; a source path matches a ref by its tail, which does.
+ */
+function spawnReason(path: string, refs: Set<string>): string {
+  const unit = binUnit(path);
+  if (unit === null || refs.has(path)) return `spawns a child that runs ${path}`;
+  // A shared-unit change matches every bin/ spawner without evidence that this one sources it.
+  if (BIN_SHARED_UNITS.has(unit)) return `spawns a bin/ script, which may source ${path}`;
+  return `spawns a bin/${unit} script; ${path} is in that unit`;
 }
 
 // ── spawner edges: the imports the graph cannot see ─────────────────────────
