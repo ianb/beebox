@@ -158,7 +158,7 @@ async function currentDaemonPids(worktree: string): Promise<Set<number>> {
 }
 
 /**
- * Box browsers' socket dirs, `<BBX_STATE_DIR>/browser/<slug>-<key>/sock`
+ * Box browsers' socket dirs, `<BBX_STATE_DIR>/browser/<key>/sock`
  * (beebox/src/core/browser/paths.ts). A box engine's browser host runs its
  * daemon from the same `node_modules/agent-browser` as `bin/browse`, so
  * without these pid files every `bin/browse` call killed the box browser
