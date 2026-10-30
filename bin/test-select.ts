@@ -106,7 +106,7 @@ function parseArgs(argv: string[]): Args {
 }
 
 /** `--why`: each reason with its count, then its tests. */
-export function whyLines(reasons: { reason: string; tests: string[] }[]): string[] {
+function whyLines(reasons: { reason: string; tests: string[] }[]): string[] {
   return reasons.flatMap((group) => [
     `${String(group.tests.length).padStart(5)}  ${group.reason}`,
     ...group.tests.map((test) => `         ${packageRelative(test)}`),

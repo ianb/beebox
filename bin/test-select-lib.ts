@@ -33,9 +33,9 @@ export interface Selection {
 }
 
 /** The reason for a selected test that is itself among the changed paths. */
-export const CHANGED_TEST_REASON = "the test itself changed";
+const CHANGED_TEST_REASON = "the test itself changed";
 /** The reason for an entrypoint in `graph.unresolved`, selected on every change. */
-export const UNRESOLVED_REASON = "graph cannot resolve its imports (always runs)";
+const UNRESOLVED_REASON = "graph cannot resolve its imports (always runs)";
 
 /** The reasons, largest group first; ties by reason text. */
 function groupReasons(why: Map<string, Set<string>>, selected: Set<string>): Selection["reasons"] {
