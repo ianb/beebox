@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { dispatchPlan, packageOf, splitBeeBoxTargets } from "./lint-changed.js";
+import { dispatchPlan, packageOf, splitBeeBoxTargets, withLayoutCheck } from "./lint-changed.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
 
 // What `packageOwnerDirs` returns for this repo: workspace packages minus the
@@ -127,4 +127,24 @@ test("a package with no lint script contributes nothing", () => {
     hasScript: () => false,
   });
   assert.deepEqual(plan, []);
+});
+
+test("the layout check runs once, on code or package.json changes, deletions included", () => {
+  const labels = (changed: string[]): string[] =>
+    withLayoutCheck(dispatchPlan({ paths: changed, packageDirs: PACKAGE_DIRS, hasScript: () => true }), changed).map(
+      (c) => c.label,
+    );
+  // A deleted module never reaches eslint (main() filters it out of `paths`),
+  // but it can strand a registry, so the check still runs on it.
+  assert.deepEqual(
+    withLayoutCheck([], ["workstreams-app/src/gone.ts"]).map((c) => c.label),
+    ["pnpm layout-check"],
+  );
+  assert.deepEqual(labels(["site/package.json"]), ["pnpm --dir site lint", "pnpm layout-check"]);
+  // beebox's own lint:changed adds the check in its child run, so the root plan does not.
+  assert.deepEqual(labels(["beebox/src/core/box.ts", "site/src/index.ts"]), [
+    "pnpm --dir beebox lint:changed",
+    "pnpm --dir site lint",
+  ]);
+  assert.deepEqual(labels(["beebox/docs/README.md"]), ["pnpm --dir beebox lint:changed"]);
 });
