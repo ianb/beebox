@@ -1,7 +1,8 @@
 /**
  * The browser host process, `bbx engine browser-host` (docs/plans/shared-browser.md,
- * Track B): it runs the agent-browser dashboard for one box and the relay
- * socket in front of it, and stops both when told to.
+ * Track B): it runs the agent-browser dashboard for one box, the relay
+ * socket in front of it, and the command socket that runs the agent's
+ * commands, and stops them when told to.
  *
  * The engine starts one per box (`../host/start.ts`), on a unit host inside the box's
  * private network namespace. agent-browser starts its daemon on first use
@@ -27,6 +28,7 @@ import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { dashboardEnv, runAgentBrowser } from "./agent-browser.js";
 import { resolveBrowserExecutable } from "../install.js";
 import { BOX_BROWSER_SESSION, browserPaths, type BrowserBox, type BrowserPaths } from "../paths.js";
+import { startCommandServer } from "./command-server.js";
 import { startRelay } from "./relay.js";
 
 const execFileAsync = promisify(execFile);
@@ -176,10 +178,15 @@ export async function runBrowserHost(box: BrowserBox): Promise<void> {
     await stopBrowser(paths, env);
     throw new BrowserHostStartError({ step: "dashboard-port", detail: `nothing listens on 127.0.0.1:${String(port)}` });
   }
+  // Before the relay: the engine takes a connectable relay to mean the host is ready.
+  const commands = await startCommandServer({ socketPath: paths.cliSocket, env, cwd: paths.root });
+  log(`command socket ${paths.cliSocket}`);
   const relay = await startRelay({ socketPath: paths.relaySocket, port });
   log(`relay ${paths.relaySocket} -> 127.0.0.1:${String(port)}`);
 
   log(`stopping: ${await untilStopped()}`);
+  // First, so no new command starts a daemon while the browser stops.
+  await commands.close();
   try {
     await stopBrowser(paths, env);
   } catch (e) {

@@ -7,7 +7,8 @@
 // dashboard, daemon and Chrome pids and checks that none survives a graceful
 // stop, nor a SIGKILL of the host followed by a new start: `dashboard start`
 // and the daemon detach, so only the next host's stale cleanup reaches them.
-// A login cookie set by a local page must survive both restarts.
+// A login cookie set by a local page must survive both restarts. The
+// command socket answers the agent's commands with agent-browser's text output.
 //
 // Skips, saying why, when no Chrome is installed for agent-browser.
 
@@ -24,6 +25,7 @@ import { promisify } from "node:util";
 import { PACKAGE_ROOT } from "../../../../src/lib/package-root.js";
 import { ensureBrowserHost, stopBrowserHosts, type BrowserHostHandle } from "../../../../src/core/browser/host/start.js";
 import { pidsNaming, processTable } from "../../../../src/core/browser/host-process/run.js";
+import { sendBrowserCommand } from "../../../../src/core/browser/command-socket.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -151,13 +153,22 @@ void test("A real browser host starts, serves the dashboard through the relay, a
     exitCode: 0, success: true, title: "hi", url: "data:text/html,<title>hi</title><h1>hi</h1>",
   });
   t.check(await title(first), "hi");
+  // The command socket runs the agent's commands with agent-browser's text output.
+  t.check(await sendBrowserCommand(first.paths.cliSocket, ["open", "data:text/html,<title>hi</title>"]), {
+    exitCode: 0, stdout: "✓ hi\n  data:text/html,<title>hi</title>\n", stderr: "",
+  });
+  t.check(await sendBrowserCommand(first.paths.cliSocket, ["get", "title"]), { exitCode: 0, stdout: "hi\n", stderr: "" });
+  // The host checks the arguments again, whatever the engine did.
+  t.check(await sendBrowserCommand(first.paths.cliSocket, ["--profile", "/tmp/other", "open", "about:blank"]), {
+    exitCode: 2, stdout: "", stderr: "bbx browser: --profile is fixed for the box browser; the box uses one browser profile\n",
+  });
   await run(first, ["open", `${siteUrl}/login`]);
   t.check(await title(first), "logged in");
   const firstPids = await recordPids(first);
   await stopBrowserHosts();
   t.check(await eventually(() => survivors(firstPids).length === 0 && "gone", { label: "first run's processes exit", timeoutMs: 10_000 }), "gone");
-  // The relay socket is removed.
-  t.check(existsSync(first.paths.relaySocket), false);
+  // The relay and command sockets are removed.
+  t.check([existsSync(first.paths.relaySocket), existsSync(first.paths.cliSocket)], [false, false]);
 
   // Second run: the login survived; then the host is killed outright.
   const second = await ensureBrowserHost(box);

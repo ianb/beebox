@@ -168,6 +168,15 @@ export default defineConfig({
         ws: true,
         rewrite: stripBase,
       },
+      // Per-box browser page and its live-view WebSocket: /<base>/<box>/browser
+      // and below (docs/plans/shared-browser.md). The engine serves it; Vite
+      // would otherwise answer with the SPA document.
+      [`^${BASE_PREFIX}/[^/]+/browser(/|$)`]: {
+        target: backendTarget,
+        changeOrigin: true,
+        ws: true,
+        rewrite: stripBase,
+      },
       // Per-box auth: /<base>/<box>/auth/...
       [`^${BASE_PREFIX}/[^/]+/auth/`]: {
         target: backendTarget,

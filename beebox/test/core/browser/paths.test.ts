@@ -21,6 +21,7 @@ void test("Each box gets its own directory under the state directory", (t) => {
     profile: `${STATE}/browser/kitchen-${key}/profile`,
     socketDir: `${STATE}/browser/kitchen-${key}/sock`,
     relaySocket: `${STATE}/browser/kitchen-${key}/dashboard.sock`,
+    cliSocket: `${STATE}/browser/kitchen-${key}/cli.sock`,
     downloads: `${STATE}/browser/kitchen-${key}/downloads`,
     log: `${STATE}/browser/kitchen-${key}/host.log`,
     config: `${STATE}/browser/kitchen-${key}/agent-browser.json`,

@@ -38,6 +38,8 @@ export interface BrowserPaths {
   readonly socketDir: string;
   /** The dashboard relay socket the engine proxies to. */
   readonly relaySocket: string;
+  /** The command socket the exec route sends the agent's commands to. */
+  readonly cliSocket: string;
   /** Where downloads land. */
   readonly downloads: string;
   /** The browser host's log, read back when it fails to start. */
@@ -74,7 +76,8 @@ export function browserPaths({ boxRoot, slug, stateDir }: BrowserBox): BrowserPa
   const root = path.join(stateDir, "browser", `${slug}-${boxRootKey(boxRoot)}`);
   const socketDir = path.join(root, "sock");
   const relaySocket = path.join(root, "dashboard.sock");
-  for (const socketPath of [path.join(socketDir, `${BOX_BROWSER_SESSION}.sock`), relaySocket]) {
+  const cliSocket = path.join(root, "cli.sock");
+  for (const socketPath of [path.join(socketDir, `${BOX_BROWSER_SESSION}.sock`), relaySocket, cliSocket]) {
     if (Buffer.byteLength(socketPath) > MAX_SOCKET_PATH_BYTES) throw new BrowserPathTooLongError(socketPath);
   }
   return {
@@ -82,6 +85,7 @@ export function browserPaths({ boxRoot, slug, stateDir }: BrowserBox): BrowserPa
     profile: path.join(root, "profile"),
     socketDir,
     relaySocket,
+    cliSocket,
     downloads: path.join(root, "downloads"),
     log: path.join(root, "host.log"),
     config: path.join(root, "agent-browser.json"),
