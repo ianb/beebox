@@ -140,7 +140,8 @@ async function reapSupersededDaemons(): Promise<void> {
 async function main(): Promise<number> {
   if (process.env["AGENT_BROWSER_DEFAULT_TIMEOUT"] !== undefined) {
     // On 0.41.0 a command whose value differs from the daemon's restarts its
-    // background state, and later snapshots silently show stale content.
+    // background state, and later snapshots silently show stale content
+    // (vercel-labs/agent-browser#2280).
     throw new BrowseConfigError("unset AGENT_BROWSER_DEFAULT_TIMEOUT: a value that differs between commands makes later snapshots stale; bound a wait with `wait --timeout <ms>`");
   }
   await reapSupersededDaemons();
