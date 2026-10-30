@@ -31,6 +31,7 @@ import { readFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { estimateLines, estimateSeconds } from "./test-estimate.js";
+import { binTsArgs } from "./lib/bin-ts.js";
 import { git, gitBranch, gitCommonDir } from "./lib/git.js";
 import { changedPaths, treeHash } from "./test-git.js";
 import { buildGraph, cliBundleInputs, REPO_ROOT } from "./test-graph.js";
@@ -169,19 +170,7 @@ function runSelected(files: string[]): number {
   const binDir = join(REPO_ROOT, "node_modules/.bin");
   const result = spawnSync(
     process.execPath,
-    [
-      "--import",
-      "tsx",
-      join(REPO_ROOT, "bin/test-ledger.ts"),
-      "run",
-      "--tier",
-      "ordinary",
-      "--mode",
-      "selected",
-      "--",
-      "tap",
-      ...files,
-    ],
+    binTsArgs("bin/test-ledger.ts", ["run", "--tier", "ordinary", "--mode", "selected", "--", "tap", ...files]),
     {
       cwd: PACKAGE_ROOT,
       stdio: "inherit",

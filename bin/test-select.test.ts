@@ -17,6 +17,7 @@ import type { TestGraph } from "./test-graph-query.js";
 import { reasonSummary, selectTests, spawnedSourceRefs, spawnerEdges } from "./test-select-lib.js";
 import { packageRelative } from "./test-ledger-lib.js";
 import { emptyRunLines } from "./test-select.js";
+import { binTsArgs } from "./lib/bin-ts.js";
 
 /** A graph stated directly, so the rule is tested without an esbuild pass. */
 function graphOf(input: {
@@ -305,7 +306,7 @@ test("an empty selection prints the reason and a summary line finish can parse",
 test("an internal error exits non-zero — callers read that as 'run pnpm test'", () => {
   const result = spawnSync(
     process.execPath,
-    ["--import", "tsx", join(REPO_ROOT, "bin/test-select.ts"), "--base", "no-such-ref-here"],
+    binTsArgs("bin/test-select.ts", ["--base", "no-such-ref-here"]),
     { encoding: "utf-8", cwd: REPO_ROOT },
   );
   assert.notEqual(result.status, 0);

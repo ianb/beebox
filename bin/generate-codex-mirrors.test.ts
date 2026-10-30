@@ -18,6 +18,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
 import { DOCS_SENTINEL, codexPreamble } from "./codex-preamble.js";
+import { binTsArgs } from "./lib/bin-ts.js";
 import {
   buildCodexAgentToml,
   generateCodexAgents,
@@ -44,7 +45,7 @@ test("worktree name parameterizes the orientation block", () => {
 test("CLI prints the preamble as one TOML basic string", () => {
   const printed = execFileSync(
     process.execPath,
-    ["--import", "tsx", join(import.meta.dirname, "codex-preamble.ts"), "--worktree-name", "wt1"],
+    binTsArgs("bin/codex-preamble.ts", ["--worktree-name", "wt1"]),
     { encoding: "utf8" },
   ).trim();
   assert.ok(printed.startsWith('"') && printed.endsWith('"'));

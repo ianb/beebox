@@ -15,8 +15,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { appendBranchMigrations, mergeLedger } from "../finish-preflight-merge.js";
+import { binTsArgs } from "../lib/bin-ts.js";
 
-const repo = path.resolve(process.cwd(), "..");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "finish-preflight-merge-"));
 const git = (...args: string[]): string =>
   execFileSync("git", args, { cwd: root, encoding: "utf8", env: { ...process.env, GIT_MERGE_AUTOEDIT: "no" } }).trim();
@@ -29,7 +29,7 @@ const commitAll = (message: string): void => {
   git("commit", "-qm", message);
 };
 const preflight = () =>
-  spawnSync(process.execPath, ["--import", import.meta.resolve("tsx"), path.join(repo, "bin/finish-preflight.ts"), "--json"], {
+  spawnSync(process.execPath, binTsArgs("bin/finish-preflight.ts", ["--json"]), {
     cwd: root,
     encoding: "utf8",
     env: { ...process.env, GIT_MERGE_AUTOEDIT: "no" },

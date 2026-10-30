@@ -6,6 +6,7 @@
 
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { binTsArgs } from "./lib/bin-ts.js";
 
 export interface SelectedTests {
   files: string[];
@@ -51,7 +52,7 @@ const failed = (why: string): SelectedTests => ({
  */
 export function selection(root: string, packages: string[]): SelectedTests | null {
   if (!packages.includes("beebox")) return null;
-  const result = spawnSync(process.execPath, ["--import", "tsx", join(root, "bin/test-select.ts"), "--json"], {
+  const result = spawnSync(process.execPath, binTsArgs(join(root, "bin/test-select.ts"), ["--json"]), {
     cwd: root,
     encoding: "utf-8",
   });

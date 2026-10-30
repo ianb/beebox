@@ -21,6 +21,7 @@ import { execa } from "execa";
 import { raiseAlert, type DesktopNotification, type RunnerDeps } from "../../lib/schedules-alerts.js";
 import { migrateAlerts, resolveConditions } from "../../lib/schedules-alert-lifecycle.js";
 import { readAlerts } from "../../lib/schedules-store.js";
+import { binTsArgs } from "../../lib/bin-ts.js";
 
 const storeRoot = join(await mkdtemp(join(tmpdir(), "alert-conditions-")), "store");
 await mkdir(storeRoot, { recursive: true });
@@ -161,7 +162,7 @@ void test("Only important pops up", async (t) => {
 
   const env = { ...process.env, BBX_SCHEDULES_ROOT: storeRoot, SCHEDULE_NAME: "full-suite", SCHEDULE_NOTIFY: "0" };
   await raise({ condition: "flakes", priority: "fyi" });
-  await execa("node", ["--import", "tsx", "../bin/schedules.ts", "resolve", "--except", "timeout", "--except", "flakes"], { env });
+  await execa(process.execPath, binTsArgs("bin/schedules.ts", ["resolve", "--except", "timeout", "--except", "flakes"]), { env });
   const openConditions = (await readAlerts(storeRoot, "full-suite")).filter((alert) => alert.state === "open" && alert.condition !== null);
   t.check(openConditions.map((alert) => alert.condition).toSorted(), [
     "flakes",
@@ -170,7 +171,7 @@ void test("Only important pops up", async (t) => {
 
   // `--priority backlog` is refused by name: the scale lost that level.
 
-  const refused = await execa("node", ["--import", "tsx", "../bin/schedules.ts", "alert", "--title", "t", "--message", "m", "--run", "20260918-000000", "--priority", "backlog"], { env, reject: false });
+  const refused = await execa(process.execPath, binTsArgs("bin/schedules.ts", ["alert", "--title", "t", "--message", "m", "--run", "20260918-000000", "--priority", "backlog"]), { env, reject: false });
   t.check(refused.stderr, "schedules: --priority must be important|normal|fyi, got 'backlog'");
 
   // ## Migration rewrites legacy records and closes the open ones

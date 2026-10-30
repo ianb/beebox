@@ -12,8 +12,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { binTsArgs } from "../lib/bin-ts.js";
 
-const repo = path.resolve(process.cwd(), "..");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "finish-preflight-"));
 
 const git = (...args: string[]): string =>
@@ -38,7 +38,7 @@ const preflight = (): {
   verification: { command: string; skip?: string }[];
 } =>
   JSON.parse(
-    execFileSync(process.execPath, ["--import", import.meta.resolve("tsx"), path.join(repo, "bin/finish-preflight.ts"), "--json"], {
+    execFileSync(process.execPath, binTsArgs("bin/finish-preflight.ts", ["--json"]), {
       cwd: root,
       encoding: "utf8",
       env: { ...process.env, GIT_MERGE_AUTOEDIT: "no" },
@@ -164,7 +164,7 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
   git("checkout", "-q", "worktree-docs");
   const before = git("rev-parse", "HEAD");
   const cli = (arg: string) =>
-    spawnSync(process.execPath, ["--import", import.meta.resolve("tsx"), path.join(repo, "bin/finish-preflight.ts"), arg], {
+    spawnSync(process.execPath, binTsArgs("bin/finish-preflight.ts", [arg]), {
       cwd: root,
       encoding: "utf8",
     });
