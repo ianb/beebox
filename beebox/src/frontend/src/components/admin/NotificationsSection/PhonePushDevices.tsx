@@ -20,7 +20,7 @@ export function PhonePushDevices() {
   const devices = trpc.pairing.devices.useQuery();
   const apns = trpc.notifications.apnsStatus.useQuery();
   const registered = (devices.data?.devices ?? []).flatMap((d) =>
-    d.push === null || d.revokedAt !== undefined ? [] : [{ id: d.id, label: d.label, push: d.push }],
+    d.push === null || d.revokedAt !== undefined ? [] : [{ id: d.id, label: d.label, push: d.push, off: d.notificationsOff }],
   );
   return (
     <Stack gap="sm">
@@ -38,6 +38,7 @@ export function PhonePushDevices() {
                 <Row gap="sm" align="baseline" wrap>
                   <Text size="sm" weight="semibold">{d.label}</Text>
                   <Badge tone={d.push.environment === "production" ? "success" : "neutral"} size="sm">{d.push.environment}</Badge>
+                  {d.off ? <Badge tone="neutral" size="sm">turned off on this phone</Badge> : null}
                   <Text size="xs" tone="muted">registered <FriendlyDate iso={d.push.registeredAt} /></Text>
                 </Row>
               </li>
