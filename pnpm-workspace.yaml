@@ -32,7 +32,6 @@ packages:
   - personal-vibe-check
   - tap-check
   - canvas-loop
-  - scan-uploader
   - workstreams-app
   - site
   - browse

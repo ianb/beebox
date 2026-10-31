@@ -628,39 +628,6 @@ importers:
         specifier: ^9.39.2
         version: 9.39.4(jiti@2.7.0)
 
-  scan-uploader:
-    devDependencies:
-      '@ianbicking/personal-vibe-check':
-        specifier: workspace:*
-        version: link:../personal-vibe-check
-      '@ianbicking/tap-check':
-        specifier: workspace:*
-        version: link:../tap-check
-      '@tapjs/core':
-        specifier: ^4.0.0
-        version: 4.5.8(@types/node@24.13.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.13.3
-      '@typescript/native':
-        specifier: npm:typescript@7.0.2
-        version: typescript@7.0.2
-      esbuild:
-        specifier: ^0.25.12
-        version: 0.25.12
-      eslint:
-        specifier: ^9.39.2
-        version: 9.39.4(jiti@2.7.0)
-      tap:
-        specifier: ^21.0.0
-        version: 21.7.4(@types/node@24.13.3)(@types/react@18.3.29)(@typescript/typescript6@6.0.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      tsx:
-        specifier: ^4.23.15
-        version: 4.23.15
-      typescript:
-        specifier: npm:@typescript/typescript6@^6.0.2
-        version: '@typescript/typescript6@6.0.2'
-
   site:
     dependencies:
       '@markdoc/markdoc':
@@ -4277,13 +4244,13 @@ packages:
     resolution: {integrity: sha512-TQf59BsZnytt8GdJKLPfUZ54g/iaUL2OWDSFCCvMOhsHduDQxO8xC4PNeyIkVcA5KwL2phPSv0douC0fgWzmnA==}
     engines: {node: '>= 20'}
 
-  agent-browser@0.41.0:
-    resolution: {integrity: sha512-XJtBouE5+gGUKyZU1COSmnxU6MKIlmLE2oEyHzl0ohLVOhuRjx9kqQ9vOqxiiW/Gbvi4JPF4Oz777Mn3FGiHAA==}
+  agent-browser@0.39.2:
+    resolution: {integrity: sha512-8zh5Dj4r/Lo14nDw+8jUViTlmZV5ON3qmrGp1wppmB87NhMqmSXUqVIeNith9xjIJNr/00wHxhCqH/2lATezYQ==}
     engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
     hasBin: true
 
-  agent-browser@0.39.2:
-    resolution: {integrity: sha512-8zh5Dj4r/Lo14nDw+8jUViTlmZV5ON3qmrGp1wppmB87NhMqmSXUqVIeNith9xjIJNr/00wHxhCqH/2lATezYQ==}
+  agent-browser@0.41.0:
+    resolution: {integrity: sha512-XJtBouE5+gGUKyZU1COSmnxU6MKIlmLE2oEyHzl0ohLVOhuRjx9kqQ9vOqxiiW/Gbvi4JPF4Oz777Mn3FGiHAA==}
     engines: {node: '>=24.0.0', pnpm: '>=11.0.0'}
     hasBin: true
 
@@ -12309,9 +12276,9 @@ snapshots:
 
   agent-base@9.0.0: {}
 
-  agent-browser@0.41.0: {}
-
   agent-browser@0.39.2(patch_hash=46f9468903775f0f7cd6b4c306f17f32011bbfab4b8ea77ec6b144db0b22af01): {}
+
+  agent-browser@0.41.0: {}
 
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
