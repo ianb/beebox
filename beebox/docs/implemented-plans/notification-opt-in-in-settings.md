@@ -1,15 +1,15 @@
 ---
 title: "Notification opt-in in Settings"
-status: draft
+status: implemented
 workstream: notify-settings
 issues:
-  - ../../../issues/features/2026-10-30-notification-opt-in-belongs-in-settings.md
+  - ../../../issues/closed/features/2026-10-30-notification-opt-in-belongs-in-settings.md
 ---
 # Notification opt-in in Settings
 
 Move "notify me here" from Admin to Settings, where people look for it, and show a paired phone its own registration state. Admin keeps the box-wide view.
 
-**Issues addressed:** [opt-in belongs in Settings](../../../issues/features/2026-10-30-notification-opt-in-belongs-in-settings.md). Neighbors left open: [no recipient](../../../issues/features/2026-10-30-notifications-have-no-recipient.md), [push token 401](../../../issues/bugs/2026-10-30-push-token-post-right-after-pairing-gets-401.md).
+**Issues addressed:** [opt-in belongs in Settings](../../../issues/closed/features/2026-10-30-notification-opt-in-belongs-in-settings.md). Neighbors left open: [no recipient](../../../issues/features/2026-10-30-notifications-have-no-recipient.md), [push token 401](../../../issues/bugs/2026-10-30-push-token-post-right-after-pairing-gets-401.md).
 
 ## Design
 

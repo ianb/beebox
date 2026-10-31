@@ -26,4 +26,4 @@ Direction to weigh:
 This matters only for shared boxes. A single-person box behaves the same
 either way. Decide when shared boxes are in active use.
 
-Neighbor: [notification opt-in belongs in Settings](2026-10-30-notification-opt-in-belongs-in-settings.md).
+Neighbor: [notification opt-in belongs in Settings](../closed/features/2026-10-30-notification-opt-in-belongs-in-settings.md).
