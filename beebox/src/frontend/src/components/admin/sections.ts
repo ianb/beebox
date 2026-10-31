@@ -32,7 +32,7 @@ export type AdminSectionId =
   | "notifications";
 
 /** Where a section's settings live. Shown beside the section on the overview. */
-export type AdminScope = "box" | "host" | "device" | "mixed";
+export type AdminScope = "box" | "host" | "mixed";
 
 export interface AdminSectionDef {
   /** The section's heading and landmark name. */
@@ -56,7 +56,7 @@ export const ADMIN_SECTIONS: Record<AdminSectionId, AdminSectionDef> = {
   "tailscale": { title: "Tailscale", blurb: "Reaching this host from your other devices over Tailscale.", scope: "host" },
   "backup": { title: "Backup", blurb: "Whether this box's git history and media are backed up off this host.", scope: "box" },
   "encrypted-backups": { title: "Encrypted backups", blurb: "Restic snapshots encrypted with a recovery password and stored outside this host.", scope: "host" },
-  "notifications": { title: "Notifications", blurb: "Push notifications from this box on the device you are using now.", scope: "device" },
+  "notifications": { title: "Notifications", blurb: "Which phones and browsers this box can reach, and what it recently sent.", scope: "box" },
 };
 
 export function isAdminSectionId(value: unknown): value is AdminSectionId {
@@ -76,7 +76,7 @@ export const ADMIN_GROUPS: readonly AdminGroupDef[] = [
   { tab: "people", label: "People", description: "Who can sign in to this box.", sections: ["allowed-users", "invite"] },
   { tab: "connections", label: "Connections", description: "Outside services this box talks to.", sections: ["google-services", "gmail-filters", "cloudflare-publishing"] },
   { tab: "secrets", label: "Secrets", description: "API keys this box can use, and the keys shared across boxes on this host.", sections: ["secrets"] },
-  { tab: "host", label: "Host", description: "The machine this box runs on and the device you are using.", sections: ["tailscale", "backup", "encrypted-backups", "notifications"] },
+  { tab: "host", label: "Host", description: "The machine this box runs on, and how it reaches you.", sections: ["tailscale", "backup", "encrypted-backups", "notifications"] },
 ];
 
 export const ADMIN_TAB_LABELS: Record<AdminTab, string> = {
@@ -106,6 +106,5 @@ export function adminTabForSection(id: AdminSectionId): Exclude<AdminTab, "overv
 export const ADMIN_SCOPE_LABELS: Record<AdminScope, string> = {
   box: "This box",
   host: "Whole host",
-  device: "This device",
   mixed: "Host and box",
 };

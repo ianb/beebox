@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-30T18:05:23Z
-Total documents: 608
+Generated: 2026-10-31T02:38:45Z
+Total documents: 610
 
 ## Issues
 
@@ -49,6 +49,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/named-places.md** — "Named Places (`place` cards + `bbx location mark`)" (474 lines) · shipped history · implemented
 - **docs/implemented-plans/native-hq-fallback-resilience.md** — "Native HQ fallback resilience" (193 lines) · shipped history · implemented
 - **docs/implemented-plans/normalize-chat-links.md** — "Normalize chat/card links" (707 lines) · shipped history · implemented
+- **docs/implemented-plans/notification-opt-in-in-settings.md** — "Notification opt-in in Settings" (150 lines) · shipped history · implemented
 - **docs/implemented-plans/on-demand-image-thumbnails.md** — "On-demand image thumbnails" (254 lines) · shipped history · implemented
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (343 lines) · shipped history · implemented
 - **docs/implemented-plans/place-shows-cards.review.md** — "A place shows the person's cards: plan review" (64 lines) · implementation review
@@ -829,6 +830,7 @@ Referenced by:
 - docs/implemented-plans/deploy-maintenance-page.md:213 (mention) — keeping the `Deploy failed` prefix that `deploy/AGENTS.md`'s poll matches —
 - docs/implemented-plans/doc-structure-install-server.md:114 (mention) — setup docs (next cluster). The scripts themselves. `deploy/AGENTS.md`.
 - docs/server/deploying.md:67 (mention) — (see `deploy/AGENTS.md` for the wait/poll pattern).
+- docs/unimplemented-plans/origin-tls.md:29 (mention) — 3. Update the two nginx deploy tests for the new listeners and certificate paths, and restore the rollback notes in `dep
 
 References:
 - → docs/install/docker.md (mention)
@@ -837,7 +839,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 42 lines
+Title: "Deploy" | 44 lines
 
 Referenced by:
 - deploy/AGENTS.md:5 (mention) — — so don't send anyone here to set up a Bee Box. See `deploy/README.md`.
@@ -1700,7 +1702,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1928 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1938 lines | current reference
 
 Referenced by:
 - AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1847,7 +1849,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 - docs/implemented-plans/model-engine-policy.md:48 (mention) — passes. The reference doc is `docs/model-policy.md`.
 - docs/implemented-plans/openrouter-chat-models.md:389 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
-- docs/mobile-contract.md:992 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/mobile-contract.md:1001 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 - docs/pi-engine.md:8 (link) — [model-policy](model-policy.md).
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/box-glm-provider.md:78 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
@@ -2023,7 +2025,7 @@ Referenced by:
 - docs/implemented-plans/questions-later-and-figure-it-out.md:519 (mention) — 7. Docs: `docs/questions.md` (Later, provisional, the review),
 - docs/implemented-plans/todo-annotation.md:68 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
 - docs/landmarks.md:74 (mention) — **`openers`** (zero or more strings) — one-line first moves, phrased from the person's side. They show as buttons on an
-- docs/mobile-contract.md:1001 (mention) — A question beside the chat travels as `openCard`, like any card (`docs/questions.md`, "Surfacing");
+- docs/mobile-contract.md:1010 (mention) — A question beside the chat travels as `openCard`, like any card (`docs/questions.md`, "Surfacing");
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/plans/shared-browser.md:52 (mention) — - Acting in a logged-in account (send, post, buy, delete, change settings) starts as **confirmation**: box guidance tell
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
@@ -3081,7 +3083,7 @@ Referenced by:
 - docs/design/trust.md:53 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
 - docs/implemented-plans/clerk-quick-send.md:54 (mention) — today (`docs/chat/quick-chat.md`, "The box screen"). The page toast says
 - docs/landmarks.md:235 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
-- docs/mobile-contract.md:1309 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
+- docs/mobile-contract.md:1319 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
 - docs/plans/box-screen.md:376 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - docs/plans/chat-routing.md:20 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
 - docs/plans/gmail-admission-and-preparation.md:26 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
@@ -4021,7 +4023,7 @@ Title: "Box agents install distro packages on their host" | 579 lines | shipped 
 Referenced by:
 - docs/implemented-plans/per-box-units.md:197 (mention) — anywhere (`docs/implemented-plans/box-host-packages.md:141-143`).
 - docs/security-report.md:467 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
-- docs/server/provisioning.md:164 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
+- docs/server/provisioning.md:163 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 - ../research/embedded-browser/beebox-today.md:58 (mention) — - Docker image (`beebox/docker/Dockerfile`): `node:24-bookworm-slim`; apt installs pandoc, imagemagick, poppler, ffmpeg,
 
@@ -4164,7 +4166,7 @@ Referenced by:
 - docs/plans/source-available-release.md:395 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server/boxes.md:8 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](../implemented-plans/boxes-as-packages-v2.md)
 - docs/server/operations.md:68 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
-- docs/server/provisioning.md:210 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
+- docs/server/provisioning.md:209 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/user-stories/catalog/2026-08-21.md:9058 (mention) — - **Keep the box I have open from being stopped underneath me** — Code is fine; the story's scope is wrong. The server h
 - ../issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md:25 (mention) — `boxes-as-packages-v2.md` accepted.
@@ -4225,7 +4227,7 @@ Title: "Bulk file upload" | 468 lines | shipped history | implemented
 
 Referenced by:
 - docs/box-layout.md:159 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:1024 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:1033 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:36 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -5787,7 +5789,7 @@ Title: "HQ transcription for every dictated message" | 109 lines | shipped histo
 Referenced by:
 - docs/chat/composer.md:72 (mention) — Every voice send with a recording requests the HQ pass (`docs/implemented-plans/hq-always.md`);
 - docs/implemented-plans/ios-quick-chat-hq.md:11 (link) — ([hq-always](hq-always.md)). The iOS box-screen quick chat composer is the one
-- docs/mobile-contract.md:416 (mention) — `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
+- docs/mobile-contract.md:425 (mention) — `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:4 (frontmatter) — superseded-by: ../implemented-plans/hq-always.md
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:11 (link) — > **Superseded 2026-10-09** by [hq-always](../implemented-plans/hq-always.md): every
 - ../issues/bugs/2026-09-21-typed-text-lost-when-hq-lands-after-a-recording-error.md:13 (mention) — > the HQ pass (`beebox/docs/implemented-plans/hq-always.md`), so the HQ wait this bug lives
@@ -5831,11 +5833,12 @@ References:
 Title: "Keep live background work through idle eviction, and end it honestly when the server must stop it" | 169 lines | shipped history | implemented
 
 Referenced by:
-- ../issues/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md:62 (link) — Fix and evidence: [plan](../../beebox/docs/implemented-plans/idle-eviction-background-work.md).
+- ../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md:12 (mention) — **Closed (implemented, 2026-10-30):** Fixed by 29403d204 under beebox/docs/implemented-plans/idle-eviction-background-wo
+- ../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md:65 (link) — Fix and evidence: [plan](../../../beebox/docs/implemented-plans/idle-eviction-background-work.md).
 
 References:
-- → ../issues/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md (frontmatter)
-- → ../issues/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md (link)
+- → ../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md (frontmatter)
+- → ../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md (link)
 - → ../issues/features/2026-09-11-done-but-still-working-state.md (link)
 - → ../issues/decisions/2026-08-25-chat-stop-and-background-subagents.md (link)
 - → docs/chat.md (mention)
@@ -5865,7 +5868,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:774 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:783 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../beebox/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../beebox/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -5894,7 +5897,7 @@ References:
 Title: "iOS box screen: an accurate chat list while the box sleeps, and an honest one when it cannot answer" | 242 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1343 (mention) — (`docs/implemented-plans/ios-box-screen-stale-list.md`).
+- docs/mobile-contract.md:1353 (mention) — (`docs/implemented-plans/ios-box-screen-stale-list.md`).
 - ../issues/bugs/2026-10-26-ios-shows-stale-chat-when-box-is-asleep.md:42 (mention) — Plan: `beebox/docs/implemented-plans/ios-box-screen-stale-list.md`. The box screen
 
 References:
@@ -5951,7 +5954,7 @@ Title: "On-device HQ for iOS quick chat thoughts" | 236 lines | shipped history 
 
 Referenced by:
 - docs/implemented-plans/hq-always.md:83 (link) — | iOS quick chat (box screen) | on-device HQ, else live (`<speech source="box-screen" stt="live">`); no recording reache
-- docs/mobile-contract.md:1300 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
+- docs/mobile-contract.md:1310 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
 - ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:40 (link) — should use it." Built per [the plan](../../beebox/docs/implemented-plans/ios-quick-chat-hq.md):
 
 References:
@@ -6248,7 +6251,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1749 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1759 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -6375,6 +6378,16 @@ References:
 - → docs/implemented-plans/box-root-paths.md (mention)
 - → code-style.md (mention)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/notification-opt-in-in-settings.md **[ORPHAN]**
+
+Title: "Notification opt-in in Settings" | 150 lines | shipped history | implemented
+
+References:
+- → ../issues/features/2026-10-30-notification-opt-in-belongs-in-settings.md (frontmatter)
+- → ../issues/features/2026-10-30-notification-opt-in-belongs-in-settings.md (link)
+- → ../issues/features/2026-10-30-notifications-have-no-recipient.md (link)
+- → ../issues/bugs/2026-10-30-push-token-post-right-after-pairing-gets-401.md (link)
 
 #### docs/implemented-plans/notifications-design-notes.md
 
@@ -6526,7 +6539,7 @@ Referenced by:
 - docs/plans/per-box-units.subplan.md:9 (link) — Subplan of [per-box-units.md](../implemented-plans/per-box-units.md), Track B. Today every box
 - docs/scheduler.md:171 (mention) — runs it in process. On a unit host (docs/plans/per-box-units.md) the daemon runs
 - docs/server/deploying.md:93 (link) — ([per-box units](../implemented-plans/per-box-units.md); the layout is in
-- docs/server/provisioning.md:99 (link) — ([design](../implemented-plans/per-box-units.md)). Nothing runs as root except the deploy,
+- docs/server/provisioning.md:98 (link) — ([design](../implemented-plans/per-box-units.md)). Nothing runs as root except the deploy,
 - src/hub/AGENTS.md:70 (mention) — the box processes (`deploy/systemd/beebox-box@.*`, docs/plans/per-box-units.md)
 - ../issues/closed/bugs/2026-10-25-failed-box-unit-stays-failed-until-reset.md:8 (frontmatter) — design: ../../../beebox/docs/implemented-plans/per-box-units.md
 - ../issues/closed/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:11 (mention) — **Closed:** resolved by the box-isolation branch (per-box-units, `beebox/docs/plans/per-box-units.md`). `deploy/deploy.s
@@ -8479,6 +8492,7 @@ Referenced by:
 - docs/server.md:6 (link) — shape; the supported install is [Docker](install/docker.md). The scripts live
 - docs/server/configuration.md:170 (link) — [box login](../install/docker.md#box-login-on-by-default); owner recovery is
 - docs/server/provisioning.md:9 (link) — > [`../docs/docker-install.md`](../install/docker.md). Read that one.
+- docs/unimplemented-plans/origin-tls.md:174 (mention) — - The container install path. It has its own TLS story (`docs/install/docker.md`).
 - ../issues/closed/bugs/2026-09-30-container-loses-machine-state-on-recreate.md:24 (mention) — > in the old container layer). `beebox/docs/install/docker.md` "Updating"
 - ../issues/closed/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md:17 (mention) — `beebox/docs/install/docker.md` ("token fallback") and `beebox/docker/compose.yaml`
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:41 (mention) — as a variant in `beebox/docs/install/docker.md` (keep loopback mapping,
@@ -8615,7 +8629,7 @@ References:
 Title: "The agent sees the interface and points at controls in it" | 1308 lines | proposal | partial
 
 Referenced by:
-- docs/mobile-contract.md:658 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
+- docs/mobile-contract.md:667 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/closed/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:18 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:25 (link) — [agent-points-at-ui](../../../beebox/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/bugs/2026-10-26-duplicate-bbx-nav-questions-id.md:22 (mention) — fails two examples ("The table in docs/plans/agent-points-at-ui.md (Track 4) is
@@ -8639,7 +8653,7 @@ Title: "Native Android companion app" | 763 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/mobile-token-handshake.md:349 (mention) — - **Android.** No Android client exists yet; `docs/plans/android-companion-app.md` describes
-- docs/mobile-contract.md:272 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
+- docs/mobile-contract.md:281 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
 - docs/mobile-parity.md:9 (mention) — Android columns reflect `docs/plans/android-companion-app.md` — a plan, not
 - docs/plans/agent-points-at-ui.md:157 (mention) — cross-platform shape (`docs/plans/android-companion-app.md`, Track 0).
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:7 (mention) — `beebox/docs/plans/android-companion-app.md` is build-ready and its
@@ -8871,7 +8885,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 515 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1023 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:1032 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/closed/bugs/2026-07-30-capture-teardown-race.md:15 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
@@ -9453,7 +9467,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 157 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1743 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1753 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:40 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:11 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -9560,7 +9574,7 @@ Referenced by:
 - docs/implemented-plans/mac-app-engine-channel.md:154 (mention) — client sends it as `x-scan-contract`, `mac-app-shell.md:388-389`). This plan
 - docs/plans/mac-app-shell.design.md:9 (link) — **Parent plan:** [mac-app-shell.md](mac-app-shell.md), Tracks D–G.
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:10 (link) — **2026-10-17 note (partly resolved):** iOS pairing now goes through the shared `apple-shared` package: one redeem per ti
-- ../issues/code-quality/2026-10-17-ios-bridge-message-routing-untested.md:8 (mention) — discovered-in: worktree-app-shell — iOS testing review for beebox/docs/plans/mac-app-shell.md
+- ../issues/closed/code-quality/2026-10-17-ios-bridge-message-routing-untested.md:8 (mention) — discovered-in: worktree-app-shell — iOS testing review for beebox/docs/plans/mac-app-shell.md
 - ../issues/features/2026-10-07-mac-companion-app.md:12 (link) — **2026-10-17 note (partly resolved):** the Mac app now pairs through a `beebox://pair` link, has a Preferences window, o
 
 References:
@@ -9986,7 +10000,7 @@ Title: "Shared browser: one web browser per box that the agent and the person bo
 
 Referenced by:
 - docs/security-report.md:12 (link) — shared box browser ([plan](plans/shared-browser.md)): the person's
-- docs/server/provisioning.md:169 (link) — Each box's browser ([plan](../plans/shared-browser.md)) runs in its own network
+- docs/server/provisioning.md:168 (link) — Each box's browser ([plan](../plans/shared-browser.md)) runs in its own network
 - ../issues/features/2026-06-12-agent-browser-scoped-to-box.md:34 (link) — Partly resolved. Done: the box has one browser the agent drives with `bbx browser` and the person opens from the avatar
 - ../research/embedded-browser/acceptance-walkthrough.md:3 (link) — Gate G1 of [the shared-browser plan](../../beebox/docs/plans/shared-browser.md#implementation-order). Question: with the
 - ../research/embedded-browser/linux-verification.md:3 (link) — Chunk F0 of [the shared-browser plan](../../beebox/docs/plans/shared-browser.md). A throwaway Hetzner cpx21 (Ubuntu 24.0
@@ -10490,7 +10504,7 @@ Title: "Boxes on the server" | 306 lines | current reference
 
 Referenced by:
 - README.md:106 (link) — - [`docs/server/boxes.md`](docs/server/boxes.md) — provisioning a box behind a multi-box hub
-- deploy/README.md:22 (link) — | `add-box.sh` | Add a box to the live server in one command. [Boxes](../docs/server/boxes.md). |
+- deploy/README.md:24 (link) — | `add-box.sh` | Add a box to the live server in one command. [Boxes](../docs/server/boxes.md). |
 - docs/implemented-plans/boxes-as-packages-v2.md:501 (mention) — (a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
 - docs/implemented-plans/doc-structure-connectors.md:127 (mention) — | 2 | yes | 13 | server/boxes.md#Connector secrets (the carve-out sentence) | 2; the home, google-setup.md#5, has no hea
 - docs/implemented-plans/doc-structure-install-server.md:83 (mention) — | `adding-a-box.md` (rest); `deploy/README.md` add-box.sh, Adding connector secrets | `server/boxes.md` |
@@ -10552,7 +10566,8 @@ Referenced by:
 - docs/implemented-plans/retire-type-specific-core-tags.md:86 (mention) — - Migration runner: `src/core/migrations.ts` (append-only `MIGRATIONS`, manifest `_config/migrations.jsonl`), `bbx engin
 - docs/server.md:16 (link) — | [Deploying](server/deploying.md) | `deploy.sh`, the maintenance boundary, the deploy page, rollback, what production a
 - docs/server/health-checks.md:11 (link) — **`GET /healthz/canary` — active box check.** Cold-starts one box (a connection to its socket starts the unit), then fet
-- docs/server/provisioning.md:147 (link) — copy taken elsewhere ([deploying](deploying.md#the-box-units)).
+- docs/server/provisioning.md:146 (link) — copy taken elsewhere ([deploying](deploying.md#the-box-units)).
+- docs/unimplemented-plans/origin-tls.md:29 (mention) — 3. Update the two nginx deploy tests for the new listeners and certificate paths, and restore the rollback notes in `dep
 - ../issues/closed/bugs/2026-10-22-deploy-failure-after-stop-leaves-services-down.md:18 (mention) — `beebox/docs/server/deploying.md` now matches. The per-box reinstall marker was
 
 References:
@@ -10606,7 +10621,7 @@ References:
 Title: "Server operations" | 248 lines | current reference
 
 Referenced by:
-- deploy/README.md:23 (link) — | `prod-ssh`, `prod-curl`, `prod-browse` | Reach the production server and the authenticated app as the owner. [Operatio
+- deploy/README.md:25 (link) — | `prod-ssh`, `prod-curl`, `prod-browse` | Reach the production server and the authenticated app as the owner. [Operatio
 - docs/box-layout.md:258 (mention) — | `memory/` | The serve process's memory samples and threshold heap profiles, size-capped. See `docs/server/operations.m
 - docs/box-work.md:103 (link) — ([operations](server/operations.md#connecting-for-debugging-and-inspection)).
 - docs/implemented-plans/box-memory-and-crash-recovery.md:39 (mention) — Docs: about 30 lines in `docs/server/operations.md`. Total about 520 lines.
@@ -10622,7 +10637,7 @@ Referenced by:
 - docs/server/boxes.md:305 (link) — and run box commands as that user next time ([operations](operations.md)).
 - docs/server/health-checks.md:56 (link) — - `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the s
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
-- ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:14 (mention) — only and proxies to `127.0.0.1:3210` (`deploy/` + `docs/server/operations.md`).
+- ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:15 (mention) — only and proxies to `127.0.0.1:3210` (`deploy/` + `docs/server/operations.md`).
 - ../issues/closed/bugs/2026-10-25-diag-bearer-health-check-401.md:21 (mention) — `docs/server/operations.md` ("Live health") tells a machine caller to run
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:19 (mention) — rollback runbook: `docs/server/operations.md`. A Codex adversarial review
 - ../issues/closed/decisions/2026-08-07-server-backup-story.md:19 (mention) — `docs/server/operations.md` defers to "whatever backup mechanism is
@@ -10638,7 +10653,7 @@ References:
 
 #### docs/server/provisioning.md
 
-Title: "Server provisioning" | 272 lines | current reference
+Title: "Server provisioning" | 310 lines | current reference
 
 Referenced by:
 - deploy/AGENTS.md:31 (link) — Each box runs as its own user ([provisioning](../docs/server/provisioning.md)).
@@ -10650,6 +10665,7 @@ Referenced by:
 - docs/server/boxes.md:142 (link) — by its own user `bbx-<name>` ([provisioning](provisioning.md#server-layout)).
 - docs/server/deploying.md:94 (link) — [provisioning](provisioning.md#server-layout)). The deploy first checks that
 - docs/server/operations.md:7 (link) — Reference for the running beebox server (production at `box.example.com`). Provisioning is [its own page](provisioning.m
+- docs/unimplemented-plans/origin-tls.md:109 (mention) — - **What:** remove the zone-wide `flexible` PATCH from `create-server.sh` and print the certificate step. Update `provis
 - ../issues/closed/bugs/2026-10-25-feedback-review-collect-reads-the-retired-box-path.md:33 (mention) — `feedback-review/run-on-server.ts`; the layout is `docs/server/provisioning.md`
 - ../issues/closed/decisions/2026-08-07-server-backup-story.md:82 (mention) — excluded from Hetzner server snapshots (`beebox/docs/server/provisioning.md`);
 - ../research/box-backups/2026-10-25-portable-encrypted-backup.md:20 (mention) — | Hub routing config and scheduler manifest | Host rebuild material | `hub.json` and `boxes.json` register boxes on a mu
@@ -10663,6 +10679,7 @@ References:
 - → docs/plans/shared-browser.md (link)
 - → ../research/embedded-browser/linux-verification.md (link)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
+- → docs/unimplemented-plans/origin-tls.md (link)
 
 ### docs/testing/
 
@@ -10923,6 +10940,23 @@ References:
 - → docs/plans/email-tracking.md (link)
 - → docs/connectors.md (mention)
 - → docs/plans/interface-as-cards.md (mention)
+
+#### docs/unimplemented-plans/origin-tls.md
+
+Title: "Encrypt the Cloudflare-to-origin leg on the production server" | 204 lines | past proposal | parked
+
+Referenced by:
+- docs/server/provisioning.md:274 (link) — **Not active.** Production still uses Flexible, and `nginx/beebox.conf` has no 443 listener. To activate this, first app
+- ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:9 (frontmatter) — design: ../../beebox/docs/unimplemented-plans/origin-tls.md
+- ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:31 (link) — Paused 2026-10-30 by the boxholder. The fix is prepared but not active: see [Activation in the origin-tls plan](../../be
+
+References:
+- → ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md (frontmatter)
+- → ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md (link)
+- → deploy/AGENTS.md (mention)
+- → docs/server/deploying.md (mention)
+- → docs/server/provisioning.md (mention)
+- → docs/install/docker.md (mention)
 
 #### docs/unimplemented-plans/publish-custom-domain-admin.md
 

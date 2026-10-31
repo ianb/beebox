@@ -1,145 +1,75 @@
 /**
- * Web Push enable/disable for this box, plus iOS install coaching.
- *
- * Web Push needs a secure context + service worker. On iOS it works ONLY for a
- * Home-Screen-installed PWA (never a Safari tab), and permission must be
- * requested on a user gesture after install — so on iOS Safari we coach
- * Add-to-Home-Screen instead of showing a dead button. We never call
- * subscription.unsubscribe() to disable (it traps Safari into refusing a new
- * subscribe without a fresh gesture) — disabling removes the endpoint
- * server-side only. See docs/implemented-plans/web-push-notifications.md (Track E).
+ * The box-wide view of notifications: who the box can reach, what it recently
+ * sent, and a test send. Turning notifications on for a browser or checking a
+ * phone is in Settings (components/settings/NotificationsSection.tsx).
  */
 
-import { useState, useEffect } from "react";
+import { useParams } from "@tanstack/react-router";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { href } from "../../../lib/routing";
 import { trpc } from "../../../lib/trpc/client";
-import { Stack } from "../../ui/Stack";
-import { Row } from "../../ui/Row";
-import { Text } from "../../ui/Text";
-import { Hint } from "../../ui/Hint";
-import { Notice } from "../../ui/Notice";
 import { Button } from "../../ui/Button";
-import { errorMessage } from "@shared/error-guards";
-import { detectPushSupport, type PushSupport } from "../../../lib/push-support";
+import { ErrorText } from "../../ui/ErrorText";
+import { Heading } from "../../ui/Heading";
+import { Hint } from "../../ui/Hint";
+import { Stack } from "../../ui/Stack";
+import { Text } from "../../ui/Text";
+import { TextLink } from "../../ui/TextLink";
 import { AdminSectionCard } from "../AdminSectionCard";
 import { RecentNotifications } from "./RecentNotifications";
 import { PhonePushDevices } from "./PhonePushDevices";
 
-const DESCRIPTION =
-  "Get a push notification on this device when the box needs you — reminders, notes from the agent, health alerts, and questions waiting for an answer.";
+const DESCRIPTION = "Which phones and browsers this box can reach, and what it recently sent.";
+
+function BrowserCount() {
+  const subscribers = trpc.push.subscriberCount.useQuery();
+  const { boxSlug } = useParams({ strict: false });
+  const count = subscribers.data?.count;
+  return (
+    <Stack gap="sm">
+      <Heading level={3}>Browsers</Heading>
+      {subscribers.error ? <ErrorText>Could not load browsers: {subscribers.error.message}</ErrorText>
+        : count === undefined ? null
+        : <Text as="p" size="sm">{count === 1 ? "1 browser is" : `${count} browsers are`} registered for this box.</Text>}
+      <Hint>
+        To turn notifications on for the browser you are using, go to{" "}
+        <TextLink id="bbx-admin-notifications-settings" to={href(`/${boxSlug ?? ""}/views/${SYSTEM_CARD_PATHS.settings}`)}>Settings</TextLink>.
+      </Hint>
+    </Stack>
+  );
+}
+
+function TestSend() {
+  const utils = trpc.useUtils();
+  const send = trpc.notifications.send.useMutation({
+    onSuccess: () => { void utils.notifications.recent.invalidate(); },
+  });
+  return (
+    <Stack gap="xs">
+      <Button
+        id="bbx-admin-notifications-test"
+        className="self-start"
+        intent="secondary"
+        loading={send.isPending}
+        loadingLabel="Sending…"
+        onClick={() => send.mutate({
+          intent: { title: "Test notification", body: "Sent from Admin.", target: "admin:notifications", loudness: "loud", source: "admin-test" },
+        })}
+      >
+        Send a test notification
+      </Button>
+      {send.error ? <ErrorText>Could not send: {send.error.message}</ErrorText> : null}
+    </Stack>
+  );
+}
 
 export function NotificationsSection() {
-  const [support, setSupport] = useState<PushSupport | null>(null);
-  const [permission, setPermission] = useState<NotificationPermission>("default");
-  const [endpoint, setEndpoint] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const vapidQuery = trpc.push.vapidPublicKey.useQuery(undefined, {
-    enabled: support?.kind === "supported",
-  });
-  const subscribeMutation = trpc.push.subscribe.useMutation();
-  const disableMutation = trpc.push.disable.useMutation();
-
-  useEffect(() => {
-    const s = detectPushSupport();
-    setSupport(s);
-    if (s.kind !== "supported") return;
-    setPermission(Notification.permission);
-    navigator.serviceWorker.ready
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => setEndpoint(sub?.endpoint ?? null))
-      .catch((e) => setError(errorMessage(e)));
-  }, []);
-
-  const enable = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await Notification.requestPermission();
-      setPermission(result);
-      if (result !== "granted") return;
-
-      const publicKey = vapidQuery.data?.publicKey;
-      if (!publicKey) {
-        setError("Push is not configured on the server (no VAPID key).");
-        return;
-      }
-      const reg = await navigator.serviceWorker.ready;
-      // Modern browsers accept the base64url VAPID key as a string directly.
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: publicKey,
-      });
-      const json = sub.toJSON();
-      if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) {
-        setError("Subscription was missing keys; try again.");
-        return;
-      }
-      await subscribeMutation.mutateAsync({
-        endpoint: json.endpoint,
-        keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-        ua: navigator.userAgent,
-      });
-      setEndpoint(json.endpoint);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const disable = async () => {
-    if (!endpoint) return;
-    setBusy(true);
-    setError(null);
-    try {
-      // Server-side only — never sub.unsubscribe() (iOS re-subscribe trap).
-      await disableMutation.mutateAsync({ endpoint });
-      setEndpoint(null);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <AdminSectionCard id="notifications" description={DESCRIPTION}>
-      <Stack gap="sm">
-        {support === null ? null : support.kind === "unsupported" ? (
-          <Hint>
-            This browser doesn&apos;t support web push notifications.
-          </Hint>
-        ) : support.kind === "needs-install" ? (
-          <Text as="p" size="sm">
-            On iPhone or iPad, add this app to your Home Screen first: tap the Share button,
-            then &ldquo;Add to Home Screen.&rdquo; Open it from the Home Screen icon, then come
-            back here to enable notifications.
-          </Text>
-        ) : endpoint ? (
-          <Row gap="sm" align="center">
-            <Text as="p" size="sm">Notifications are on for this device.</Text>
-            <Button id="bbx-admin-notifications-disable" className="self-start" intent="secondary" onClick={disable} loading={busy} loadingLabel="Disabling…">
-              Disable
-            </Button>
-          </Row>
-        ) : permission === "denied" ? (
-          <Text as="p" size="sm">
-            Notifications are blocked for this site. Re-enable them in your browser&apos;s site
-            settings, then reload.
-          </Text>
-        ) : (
-          <Button id="bbx-admin-notifications-enable" className="self-start" intent="primary" onClick={enable} loading={busy} loadingLabel="Enabling…">
-            Enable notifications
-          </Button>
-        )}
-
-        {error ? (
-          <Notice tone="error">{error}</Notice>
-        ) : null}
-
+      <Stack gap="md">
         <PhonePushDevices />
-
+        <BrowserCount />
+        <TestSend />
         <RecentNotifications />
       </Stack>
     </AdminSectionCard>

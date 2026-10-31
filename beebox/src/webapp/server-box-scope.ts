@@ -294,6 +294,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
           user,
           open: identityIsOpen,
         }),
+        mobileDeviceId: mobileAuth?.deviceId ?? null,
         eventBus,
         services: options.services ?? {},
         user,
