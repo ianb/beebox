@@ -7,7 +7,7 @@
 import { assertNever } from "@shared/invariant";
 import { useBoxName } from "../../hooks/useBoxName";
 import { useBrowserPush } from "../../hooks/useBrowserPush";
-import { phonePushState } from "../../lib/push-support";
+import { phonePushState, type PhonePushState } from "../../lib/push-support";
 import { trpc } from "../../lib/trpc/client";
 import { isNativeShell } from "../chat/native-post";
 import { Button } from "../ui/Button";
@@ -54,29 +54,49 @@ function BrowserSwitch({ boxName }: { boxName: string }) {
   );
 }
 
+const PHONE_MESSAGES: Record<PhonePushState, string> = {
+  "not-paired": "This app is not paired with this box, so this phone gets no notifications from it. Pair it under Companion Apps on this page.",
+  "no-server-key": "The server is not set up to send phone notifications. Tell whoever runs this box.",
+  "turned-off": "Off. This phone gets no notifications from this box.",
+  "registered": "This phone is registered for notifications from this box. If none appear, check that notifications are on for Bee Box in iPhone Settings.",
+  "unregistered": "This phone is paired but not registered for notifications. Switch away from the Bee Box app and come back. If this message stays, check that notifications are on for Bee Box in iPhone Settings.",
+  "unregistered-no-server-key": "This phone is paired but not registered for notifications, and the server is not set up to send phone notifications. Tell whoever runs this box.",
+};
+
 function PhoneState() {
+  const utils = trpc.useUtils();
   const thisDevice = trpc.pairing.thisDevice.useQuery();
+  const setOff = trpc.pairing.setThisDeviceNotificationsOff.useMutation({
+    onSuccess: () => { void utils.pairing.thisDevice.invalidate(); },
+  });
   const apns = trpc.notifications.apnsStatus.useQuery();
   const failure = thisDevice.error ?? apns.error;
   if (failure) return <ErrorText>Could not check this phone: {failure.message}</ErrorText>;
   if (thisDevice.data === undefined || apns.data === undefined) return <StatusMessage>Checking this phone…</StatusMessage>;
   const state = phonePushState({
     paired: thisDevice.data.device !== null,
+    turnedOff: thisDevice.data.device?.notificationsOff === true,
     registered: thisDevice.data.device?.push != null,
     apnsConfigured: apns.data.configured,
   });
-  switch (state) {
-    case "not-paired": return <Text as="p" size="sm">This app is not paired with this box, so this phone gets no notifications from it. Pair it under Companion Apps on this page.</Text>;
-    case "no-server-key": return <Text as="p" size="sm">The server is not set up to send phone notifications. Tell whoever runs this box.</Text>;
-    case "registered": return <Text as="p" size="sm">This phone is registered for notifications from this box. If none appear, check that notifications are on for Bee Box in iPhone Settings.</Text>;
-    case "unregistered": return (
-      <Text as="p" size="sm">
-        This phone is paired but not registered for notifications. Switch away from the Bee Box app and come back. If this message stays, check that notifications are on for Bee Box in iPhone Settings.
-      </Text>
-    );
-    case "unregistered-no-server-key": return <Text as="p" size="sm">This phone is paired but not registered for notifications, and the server is not set up to send phone notifications. Tell whoever runs this box.</Text>;
-    default: return assertNever(state);
-  }
+  return (
+    <Stack gap="sm">
+      <Text as="p" size="sm">{PHONE_MESSAGES[state]}</Text>
+      {state === "not-paired" ? null : (
+        <Button
+          id="bbx-settings-notifications-phone-toggle"
+          className="self-start"
+          intent={state === "turned-off" ? "primary" : "secondary"}
+          loading={setOff.isPending}
+          loadingLabel="Saving…"
+          onClick={() => setOff.mutate({ off: state !== "turned-off" })}
+        >
+          {state === "turned-off" ? "Notify me on this phone" : "Turn off for this phone"}
+        </Button>
+      )}
+      {setOff.error ? <ErrorText>Could not save: {setOff.error.message}</ErrorText> : null}
+    </Stack>
+  );
 }
 
 export function NotificationsSection() {

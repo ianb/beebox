@@ -34,6 +34,8 @@ const MobileDeviceSchema = z.object({
   lastUsedAt: z.string().optional(),
   revokedAt: z.string().optional(),
   apns: ApnsRegistrationSchema.optional(),
+  /** The person turned notifications off for this phone on this box. Kept apart from `apns`, which the phone rewrites on launch. */
+  notificationsOff: z.boolean().optional(),
 });
 
 /**
@@ -54,8 +56,9 @@ function parseDevice(value: unknown): MobileDevice | null {
 export type MobileDevice = z.infer<typeof MobileDeviceSchema>;
 
 /** A device as it leaves this module: no token hash, and its push registration without the APNs token. */
-export type MobileDeviceView = Omit<MobileDevice, "tokenHash" | "apns"> & {
+export type MobileDeviceView = Omit<MobileDevice, "tokenHash" | "apns" | "notificationsOff"> & {
   push: { environment: ApnsEnvironment; registeredAt: string } | null;
+  notificationsOff: boolean;
 };
 
 export interface PairingTicket {
@@ -129,9 +132,10 @@ export function createMobilePairingTicket(
 }
 
 export function listMobileDevices(boxRoot: string): MobileDeviceView[] {
-  return deviceStore.read(boxRoot).map(({ tokenHash: _tokenHash, apns, ...device }) => ({
+  return deviceStore.read(boxRoot).map(({ tokenHash: _tokenHash, apns, notificationsOff, ...device }) => ({
     ...device,
     push: apns === undefined ? null : { environment: apns.environment, registeredAt: apns.registeredAt },
+    notificationsOff: notificationsOff === true,
   }));
 }
 
@@ -279,6 +283,20 @@ export async function registerDevicePush(
   });
 }
 
+/** Turn notifications off or on for one phone on this box. False when the device is unknown or revoked. */
+export async function setDeviceNotificationsOff(
+  boxRoot: string,
+  opts: { deviceId: string; off: boolean },
+): Promise<boolean> {
+  return deviceStore.withLock(boxRoot, ({ records, save }) => {
+    const device = records.find((item) => item.id === opts.deviceId);
+    if (device === undefined || device.revokedAt !== undefined) return false;
+    device.notificationsOff = opts.off;
+    save();
+    return true;
+  });
+}
+
 /**
  * Drop a device's APNs registration after APNs reported the token dead. Only
  * the token that failed is removed: a phone that re-registered a new token
@@ -306,7 +324,7 @@ export function devicePushRegistrations(boxRoot: string): DevicePushRegistration
   return deviceStore
     .read(boxRoot)
     .flatMap((device) =>
-      device.apns === undefined || device.revokedAt !== undefined
+      device.apns === undefined || device.revokedAt !== undefined || device.notificationsOff === true
         ? []
         : [{ deviceId: device.id, label: device.label, token: device.apns.token, environment: device.apns.environment }],
     );
