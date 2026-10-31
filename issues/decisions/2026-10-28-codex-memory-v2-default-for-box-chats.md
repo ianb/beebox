@@ -1,6 +1,7 @@
 ---
 title: "Codex 0.165.0 turns memory v2 on for fresh profiles; should box Codex chats keep Codex's own memory?"
 workstream: unattached
+needs: [decision]
 area: beebox
 filed-by: agent
 discovered-by: agent

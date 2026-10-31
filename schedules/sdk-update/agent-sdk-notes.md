@@ -38,10 +38,11 @@ Codex entries here are labeled as such; they carry their own pin.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.314` (SDK), `2.1.314` (Claude Code), `0.166.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.316` (SDK), `2.1.316` (Claude Code), `0.166.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.312` on 2026-10-30.
-  Next: `0.3.314` (settles 2026-11-01T00:14Z). While Codex is held,
+  Next: `0.3.314` (settles 2026-11-01T00:14Z), `0.3.315` (2026-11-01T21:04Z),
+  `0.3.316` (2026-11-02T00:39Z). While Codex is held,
   `pnpm update-agent-sdk` would also move Codex, so set the SDK pins in
   `beebox/package.json` and `workstreams-app/package.json` by hand.
   **Codex `0.165.0` is held** until
@@ -76,6 +77,22 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.315 / 0.3.316 / Claude Code 2.1.315 / 2.1.316 — pending (published 2026-10-30T21:04Z and 2026-10-31T00:39Z)
+
+0.3.315 is parity-only, and 2.1.315 has no changelog section. 0.3.316 adds
+`permissions.blockReadsExemptPaths` to `Settings` (beebox sets none). 2.1.316:
+- **RUNTIME:** shell commands no longer stay running when Claude Code exits by
+  itself (refused credentials); network requests no longer hang on a cut-off
+  compressed response; sub-agents keep an inherited model when a background job
+  wakes them; `CLAUDE_CODE_SUBAGENT_EFFORT` is new.
+- **HARNESS:** Bash-tool scripts no longer stop after their first command when
+  `SHELLOPTS` is exported (relevant to strict shell setups); multi-line bash
+  aliases survive; a resumed conversation restores its plan after `/clear`.
+- **Deprecation:** fast mode on Opus 4.8 ends 2026-11-30. Checked:
+  `shared/model-ids.ts` only maps the old `claude-opus-4-8` name to current Opus.
+- **Action:** Settled path; takeable 2026-11-01T21:04Z and 2026-11-02T00:39Z.
+- **Sources:** [SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md), [Claude Code 2.1.316](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21316)
 
 ### Codex 0.166.0 — HELD with 0.165.0 (published 2026-10-29T19:47Z)
 
