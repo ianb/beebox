@@ -328,7 +328,7 @@ The ones you should actually weigh:
   ([direction](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md)).
 - **CSP is report-only** so far; enforcement is a staged flip.
 - **The box browser's page runs third-party script on the box's origin**:
-  the Browser item shows agent-browser's own dashboard, and its script can do
+  the Web browser item shows agent-browser's own dashboard, and its script can do
   anything the signed-in person can do in that box. A bug in it that rendered
   a browsed page as HTML would reach the box. The version is pinned and
   reviewed at each bump, and the page's CSP keeps script to the dashboard's

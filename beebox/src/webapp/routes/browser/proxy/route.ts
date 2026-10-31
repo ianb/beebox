@@ -33,10 +33,11 @@ import { BrowserPathTooLongError } from "../../../../core/browser/paths.js";
 import { isRewritableType, rewriteDashboardBody } from "../../../../core/browser/rewrite.js";
 import { SESSION_PROBLEM_PREFIX } from "../../../../core/browser/session.js";
 import type { Services } from "../../../../services/container.js";
-import { checkDashboardPost, DASHBOARD_POST_CAP_BYTES, isCheckedDashboardPost } from "./dashboard-post.js";
+import { checkDashboardPost, DASHBOARD_POST_CAP_BYTES, isCheckedDashboardPost, readCapped } from "./dashboard-post.js";
 import { browserPrefix } from "./prefix.js";
 import { checkPerson, sendRefusal } from "./person-gate.js";
 import { BROWSER_PAGE_CSP, decodeBody, messagePage, responseHeaders, withNotice } from "./response.js";
+import { reopenAskedPage, registerBrowserQuestionRoutes, withQuestionBar } from "./question-routes.js";
 import { bridgeStream } from "./stream-bridge.js";
 
 export interface BrowserProxyContext {
@@ -125,18 +126,6 @@ async function readAll(stream: IncomingMessage): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-/** The request body, or null when it is over `cap` bytes (the rest is still read and dropped). */
-async function readCapped(stream: IncomingMessage, cap: number): Promise<Buffer | null> {
-  const chunks: Buffer[] = [];
-  let bytes = 0;
-  for await (const chunk of stream) {
-    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
-    bytes += buffer.length;
-    if (bytes <= cap) chunks.push(buffer);
-  }
-  return bytes > cap ? null : Buffer.concat(chunks);
-}
-
 /** True for the path of the dashboard's top page, `/` with or without a query. */
 function isTopPage(path: string): boolean {
   return path === "/" || path.startsWith("/?");
@@ -203,6 +192,8 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
       bridgeStream(socket, { relaySocket: ensureHost({ boxRoot }).then((host) => host.paths.relaySocket), port });
     });
 
+    registerBrowserQuestionRoutes(scope, { boxRoot, ensureHost });
+
     scope.all("/browser/*", async (request, reply) => {
       if (!request.url.startsWith(`${marker}/`)) return reply.status(404).send({ error: "Not found" });
       const path = request.url.slice(marker.length);
@@ -223,7 +214,12 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
         if (page === null) throw e;
         return sendPage(reply, page);
       }
-      const notice = request.method === "GET" && isTopPage(path) ? await sessionNotice(host) : null;
+      const isPage = request.method === "GET" && isTopPage(path);
+      let notice: string | null = null;
+      if (isPage) {
+        notice = await sessionNotice(host);
+        if (notice === null) await reopenAskedPage(host);
+      }
       let upstream: IncomingMessage;
       try {
         upstream = await forward(request, { reply, relaySocket: host.paths.relaySocket, path, body: requestBody, createProxy });
@@ -242,6 +238,7 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
       reply.header("cache-control", "no-store").header("vary", "X-Forwarded-Prefix");
       if (isHtml) {
         if (notice !== null) body = withNotice(body, notice);
+        if (isPage) body = withQuestionBar(body);
         reply.header("content-security-policy", BROWSER_PAGE_CSP).header("referrer-policy", "same-origin");
       }
       return reply.send(body);

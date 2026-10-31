@@ -76,6 +76,8 @@ interface RegisterChatRoutesOptions {
 /**
  * Register chat routes on the Fastify server.
  */
+export { resolveMobileSender } from "./helpers.js";
+
 export async function registerChatRoutes(options: RegisterChatRoutesOptions): Promise<void> {
   const { server, boxRoot, eventBus, openaiAudio, prewarmChat, chatBackend } = options;
   const devSurfaces = options.devSurfaces === true;

@@ -18,6 +18,7 @@
  * is dropped first, which can only check more requests.
  */
 
+import type { IncomingMessage } from "node:http";
 import { z } from "zod";
 import { checkDashboardExecArgs, ONE_SESSION_MESSAGE } from "../../../../core/browser/exec-args.js";
 import { BOX_BROWSER_SESSION } from "../../../../core/browser/paths.js";
@@ -60,4 +61,16 @@ export function checkDashboardPost(path: string, body: Buffer): DashboardPostChe
   if (!session.success) return { ok: false, status: 400, error: "the request body must be { session: string }" };
   if (session.data.session !== BOX_BROWSER_SESSION) return { ok: false, status: 403, error: ONE_SESSION_MESSAGE };
   return { ok: true };
+}
+
+/** The request body, or null when it is over `cap` bytes (the rest is still read and dropped). */
+export async function readCapped(stream: IncomingMessage, cap: number): Promise<Buffer | null> {
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  for await (const chunk of stream) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+    bytes += buffer.length;
+    if (bytes <= cap) chunks.push(buffer);
+  }
+  return bytes > cap ? null : Buffer.concat(chunks);
 }

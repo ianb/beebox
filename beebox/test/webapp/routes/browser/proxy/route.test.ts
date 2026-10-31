@@ -9,9 +9,10 @@
 // stream), not this route's logic.
 
 import t from "tap";
+import type { Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, others } from "@ianbicking/tap-check/check";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import http from "node:http";
 import net from "node:net";
 import { tmpdir } from "node:os";
@@ -23,6 +24,9 @@ import { browserPaths } from "../../../../../src/core/browser/paths.js";
 import { EXEC_BODY } from "../../../../../src/core/browser/exec-args.js";
 import { SESSION_PROBLEM_PREFIX } from "../../../../../src/core/browser/session.js";
 import { withNotice } from "../../../../../src/webapp/routes/browser/proxy/response.js";
+import { withQuestionBar } from "../../../../../src/webapp/routes/browser/proxy/question-routes.js";
+import { askBrowserQuestion, readBrowserQuestions } from "../../../../../src/core/browser/question.js";
+import { clearChatRuntime, setChatRuntime, type ChatRuntime, type SendOutcome, type SendTargetResult } from "../../../../../src/webapp/chat-runtime.js";
 import { signSession } from "../../../../../src/webapp/auth.js";
 import { makeTestServer, TEST_SLUG } from "../../../../helpers/test-route-server.js";
 
@@ -126,7 +130,7 @@ void t.test("A signed-in person gets the dashboard, rewritten under the prefix",
       "cache-control": "no-store",
       [others]: any(String),
     },
-    body: `<!DOCTYPE html><html><head><script src="${PREFIX}/_next/static/app.js"></script></head><body><main>dashboard</main></body></html>`,
+    body: withQuestionBar(`<!DOCTYPE html><html><head><script src="${PREFIX}/_next/static/app.js"></script></head><body><main>dashboard</main></body></html>`),
   });
   st.check(page.headers["set-cookie"], undefined);
   st.check(seen, [{ method: "GET", url: "/", host: "localhost", origin: "http://localhost", cookie: undefined, authorization: undefined, body: "" }]);
@@ -148,9 +152,9 @@ void t.test("A box session that could not be started is a notice on the page", a
   st.teardown(() => { cliStderr = ""; });
   const html = `<!DOCTYPE html><html><head><script src="${PREFIX}/_next/static/app.js"></script></head><body><main>dashboard</main></body></html>`;
   cliStderr = "[agent-browser] launched browser\n";
-  st.check((await ctx.response({ method: "GET", url: "/browser/", headers: { cookie: SESSION } })).body, html);
+  st.check((await ctx.response({ method: "GET", url: "/browser/", headers: { cookie: SESSION } })).body, withQuestionBar(html));
   cliStderr = `[agent-browser] launched browser\n${SESSION_PROBLEM_PREFIX}Could not set the box browser's viewport: no page\n`;
-  st.check((await ctx.response({ method: "GET", url: "/browser/", headers: { cookie: SESSION } })).body, withNotice(html, "Could not set the box browser's viewport: no page"));
+  st.check((await ctx.response({ method: "GET", url: "/browser/", headers: { cookie: SESSION } })).body, withQuestionBar(withNotice(html, "Could not set the box browser's viewport: no page")));
 });
 
 // ## A JSON POST reaches the dashboard byte for byte
@@ -313,4 +317,186 @@ void t.test("No browser installed: a page that says why", async (st) => {
 <body><h1>No browser installed</h1><pre>no Chrome found under ~/.agent-browser/browsers</pre></body>
 </html>
 ` });
+});
+
+// # The question bar: the agent's question, the person's answer
+//
+// docs/plans/shared-browser-ask.subplan.md. The chat is substituted at its one
+// seam, the box's chat runtime, which records what would reach the chat.
+
+interface FakeChat {
+  readonly sent: { message: string; messageId: string | undefined; user: unknown; session: string }[];
+  target: SendTargetResult | "throw";
+  outcome: SendOutcome;
+}
+
+function fakeChat(st: Test): FakeChat {
+  const chat: FakeChat = { sent: [], target: { ok: true, target: { session: stubSession, id: "chat-a" } }, outcome: { status: 200, body: { turnId: "t" } } };
+  // eslint-disable-next-line no-restricted-syntax -- the routes use only these two members of the runtime
+  const runtime = {
+    resolveSendTarget: async (args: { sessionParam: string }) => {
+      lastSession = args.sessionParam;
+      if (chat.target === "throw") throw new Error("target exploded");
+      return chat.target;
+    },
+    sendUserMessage: async ({ message, messageId, user }: { message: string; messageId?: string | undefined; user: unknown }) => {
+      chat.sent.push({ message, messageId, user, session: lastSession });
+      return chat.outcome;
+    },
+  } as unknown as ChatRuntime;
+  setChatRuntime(ctx.boxRoot, runtime);
+  st.teardown(() => clearChatRuntime(ctx.boxRoot));
+  return chat;
+}
+let lastSession = "";
+// eslint-disable-next-line no-restricted-syntax -- the fake runtime passes this through untouched
+const stubSession = {} as never;
+
+const now = new Date("2026-10-31T12:00:00Z");
+const JSON_POST = { cookie: SESSION, "content-type": "application/json" };
+
+function ask(question: string, sessionId: string): string {
+  askBrowserQuestion(paths.root, { question, sessionId, pageUrl: "https://shop.example/check", now });
+  const saved = readBrowserQuestions(paths.root).find((q) => q.sessionId === sessionId);
+  if (saved === undefined) throw new Error("not saved");
+  return saved.id;
+}
+
+async function emptyQuestions(): Promise<void> {
+  await writeFile(join(paths.root, "questions.json"), "[]\n");
+}
+
+function answerAs(headers: Record<string, string>, body: unknown) {
+  return ctx.response({ method: "POST", url: "/browser/_box/answer", headers, payload: JSON.stringify(body) });
+}
+
+function answer(body: unknown) {
+  return answerAs(JSON_POST, body);
+}
+
+// Done reaches the chat that asked, in that person's name, and the question is gone.
+void t.test("An answer reaches the chat that asked, and the question clears", async (st) => {
+  await emptyQuestions();
+  const chat = fakeChat(st);
+  const first = ask("Solve the check", "chat-a");
+  ask("Log in please", "chat-b");
+  const listed = await ctx.response({ method: "GET", url: "/browser/_box/question", headers: { cookie: SESSION } });
+  st.check(listed.body, { questions: [{ id: first, text: "Solve the check" }, { id: any(String), text: "Log in please" }] });
+
+  st.check((await answer({ id: first, outcome: "not-done", text: "it keeps looping" })).status, 200);
+  st.check(chat.sent, [{
+    message: '<typed source="browser-tab">Not done: it keeps looping</typed>',
+    messageId: first,
+    user: { email: "priya@example.com", name: "Priya" },
+    session: "chat-a",
+  }]);
+  st.check(readBrowserQuestions(paths.root).map((q) => q.sessionId), ["chat-b"]);
+});
+
+// Two presses on one question send one message: Done and Not done cannot both
+// claim success, and the later one is told.
+void t.test("Two presses send one message, and the later one is refused", async (st) => {
+  await emptyQuestions();
+  const chat = fakeChat(st);
+  const id = ask("q", "chat-a");
+  const [a, b] = await Promise.all([answer({ id, outcome: "done" }), answer({ id, outcome: "not-done" })]);
+  st.check([a.status, b.status].toSorted(), [200, 409]);
+  st.check(chat.sent.length, 1);
+});
+
+void t.test("A queued answer counts as delivered", async (st) => {
+  await emptyQuestions();
+  const chat = fakeChat(st);
+  chat.outcome = { status: 200, body: { queued: true } };
+  st.check((await answer({ id: ask("q", "chat-a"), outcome: "done" })).status, 200);
+  st.check(readBrowserQuestions(paths.root), []);
+});
+
+// A chat that is gone answers 410 whichever way the target says it, and the
+// question goes with it: there is nothing to retry.
+void t.test("A deleted chat: 410, and the question goes", async (st) => {
+  const gone: SendTargetResult[] = [
+    { ok: false, status: 410, error: "deleted", code: "CHAT_SESSION_UNAVAILABLE" },
+    { ok: false, status: 404, error: "no such session" },
+  ];
+  for (const target of gone) {
+    await emptyQuestions();
+    const chat = fakeChat(st);
+    chat.target = target;
+    st.check((await answer({ id: ask("q", "chat-a"), outcome: "done" })).status, 410);
+    st.check(chat.sent, []);
+    st.check(readBrowserQuestions(paths.root), []);
+  }
+});
+
+// A failure the person can retry keeps the question: a send that reports an
+// error, a target that fails some other way, and one that throws.
+void t.test("A failed send keeps the question", async (st) => {
+  await emptyQuestions();
+  const chat = fakeChat(st);
+  const id = ask("q", "chat-a");
+  chat.outcome = { status: 500, body: { error: "run failed" } };
+  const failed = await answer({ id, outcome: "done" });
+  st.check(failed.status, 502);
+  st.check(failed.body, { error: "The answer did not reach the chat: run failed" });
+  st.check(readBrowserQuestions(paths.root).map((q) => q.id), [id]);
+
+  chat.target = { ok: false, status: 400, error: "bad target" };
+  st.check((await answer({ id, outcome: "done" })).status, 502);
+  st.check(readBrowserQuestions(paths.root).map((q) => q.id), [id]);
+
+  chat.target = "throw";
+  st.check((await answer({ id, outcome: "done" })).status, 502);
+  st.check(readBrowserQuestions(paths.root).map((q) => q.id), [id]);
+});
+
+// The same chat asked again while the bar showed the old question: the old
+// answer sends nothing, and the reply carries the new question.
+void t.test("An answer to a replaced question sends nothing", async (st) => {
+  await emptyQuestions();
+  const chat = fakeChat(st);
+  const old = ask("old", "chat-a");
+  const current = ask("new", "chat-a");
+  const res = await answer({ id: old, outcome: "done" });
+  st.check(res.status, 409);
+  st.check(res.body, { error: any(String), questions: [{ id: current, text: "new" }] });
+  st.check(chat.sent, []);
+});
+
+// The agent cannot answer its own question, and another site cannot post one.
+void t.test("Only a person on this origin can answer", async (st) => {
+  await emptyQuestions();
+  const chat = fakeChat(st);
+  const id = ask("q", "chat-a");
+  const agent = { authorization: `Bearer ${getOrCreateAgentToken(ctx.boxRoot)}`, "content-type": "application/json" };
+  st.check((await answerAs(agent, { id, outcome: "done" })).status, 403);
+  st.check((await answerAs({ ...JSON_POST, origin: "https://evil.example", "sec-fetch-site": "cross-site" }, { id, outcome: "done" })).status, 403);
+  st.check((await answerAs({ "content-type": "application/json" }, { id, outcome: "done" })).status, 302);
+  st.check(chat.sent, []);
+  st.check(readBrowserQuestions(paths.root).map((q) => q.id), [id]);
+});
+
+void t.test("A malformed or oversized answer is refused and keeps the question", async (st) => {
+  await emptyQuestions();
+  fakeChat(st);
+  const id = ask("q", "chat-a");
+  st.check((await answer({ id, outcome: "maybe" })).status, 400);
+  st.check((await ctx.response({ method: "POST", url: "/browser/_box/answer", headers: JSON_POST, payload: "{not json" })).status, 400);
+  st.check((await answer({ id, outcome: "done", text: "x".repeat(9000) })).status, 413);
+  st.check(readBrowserQuestions(paths.root).map((q) => q.id), [id]);
+});
+
+// The browser idled out while the question waited: it came back blank, so the
+// page reopens. The fake command socket reports about:blank for every `get url`.
+void t.test("Opening the page reopens the asked page when the browser came back blank", async (st) => {
+  await emptyQuestions();
+  commands.length = 0;
+  ask("q", "chat-a");
+  await ctx.response({ method: "GET", url: "/browser/", headers: { cookie: SESSION, accept: "text/html" } });
+  st.check(commands, [["get", "url"], ["get", "url"], ["open", "https://shop.example/check"]]);
+  // A sub-resource does not touch the browser.
+  commands.length = 0;
+  await ctx.response({ method: "GET", url: "/browser/_next/static/app.js", headers: { cookie: SESSION } });
+  st.check(commands, []);
+  await emptyQuestions();
 });

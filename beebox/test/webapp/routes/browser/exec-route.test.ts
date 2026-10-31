@@ -15,24 +15,30 @@ import net from "node:net";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 import { signSession } from "../../../../src/webapp/auth.js";
+import { readBrowserQuestions } from "../../../../src/core/browser/question.js";
 import { BrowserPathTooLongError, browserPaths, type BrowserPaths } from "../../../../src/core/browser/paths.js";
 import { BrowserNotInstalledError, type BrowserHostHandle, type EnsureBrowserHostInput } from "../../../../src/core/browser/host/start.js";
 
 /** A command socket that records each request and answers with `reply`. */
-async function fakeCommandSocket(paths: BrowserPaths): Promise<{ requests: unknown[]; close: () => Promise<void> }> {
+async function fakeCommandSocket(paths: BrowserPaths): Promise<{ requests: unknown[]; reply: unknown; close: () => Promise<void> }> {
   await fs.mkdir(paths.root, { recursive: true });
   const requests: unknown[] = [];
+  const fake: { requests: unknown[]; reply: unknown; close: () => Promise<void> } = {
+    requests,
+    reply: { exitCode: 0, stdout: "Example Domain\n", stderr: "" },
+    close: () => new Promise((resolve) => server.close(() => resolve())),
+  };
   const server = net.createServer({ allowHalfOpen: true }, (conn) => {
     let text = "";
     conn.setEncoding("utf8");
     conn.on("data", (chunk: string) => (text += chunk));
     conn.on("end", () => {
       requests.push(JSON.parse(text));
-      conn.end(`${JSON.stringify({ exitCode: 0, stdout: "Example Domain\n", stderr: "" })}\n`);
+      conn.end(`${JSON.stringify(fake.reply)}\n`);
     });
   });
   await new Promise<void>((resolve) => server.listen(paths.cliSocket, resolve));
-  return { requests, close: () => new Promise((resolve) => server.close(() => resolve())) };
+  return fake;
 }
 
 async function setup(t: Test) {
@@ -66,6 +72,7 @@ async function setup(t: Test) {
   const exec = (args: unknown, headers: Record<string, string>) => ctx.request({ method: "POST", url: "/api/browser/exec", payload: { args }, headers });
   return {
     ctx, socket, hostCalls, exec,
+    browserRoot: browserPaths({ boxRoot: ctx.boxRoot, stateDir }).root,
     agent: { authorization: `Bearer ${getOrCreateAgentToken(ctx.boxRoot)}` },
     uninstall: () => (installed = false),
     failHost: (e: Error) => (hostError = e),
@@ -87,7 +94,7 @@ void test("A person's session cookie is refused", async (t) => {
   const cookie = `bbx_session=${signSession({ email: "owner@example.com", name: "Owner" })}`;
   t.check(await exec(["get", "title"], { cookie }), {
     statusCode: 403,
-    body: { error: "The browser exec route is for the box's agent (bbx browser); people open the browser from the profile menu's Browser item" },
+    body: { error: "The browser exec route is for the box's agent (bbx browser); people open the browser from the profile menu's Web browser item" },
   });
   t.check({ hostCalls, requests: socket.requests }, { hostCalls: [], requests: [] });
 });
@@ -123,4 +130,21 @@ void test("A box with no browser installed answers 503 with the reason", async (
     body: { error: "This box has no browser installed: the server has no browser installed (/opt/beebox-browser/chrome is missing; the deploy installs it)" },
   });
   t.check(socket.requests, []);
+});
+
+// `bbx browser ask` is the agent's, like exec: a person's cookie is refused. A
+// browser that cannot say what page it is on saves nothing, because the person
+// would be asked about a page nobody can name.
+void test("The ask route is the agent's, and a failed page read saves nothing", async (t) => {
+  const { ctx, agent, socket, browserRoot } = await setup(t);
+  const ask = (headers: Record<string, string>, payload: Record<string, string>) => ctx.response({ method: "POST", url: "/api/browser/ask", payload, headers });
+  const body = { question: "Solve the check", sessionId: "chat-a" };
+  t.check((await ask({ cookie: `bbx_session=${signSession({ email: "owner@example.com", name: "Owner" })}` }, body)).status, 403);
+  t.check((await ask(agent, { question: " ", sessionId: "chat-a" })).status, 400);
+  socket.reply = { exitCode: 1, stdout: "", stderr: "no page\n" };
+  t.check((await ask(agent, body)).status, 502);
+  t.check(readBrowserQuestions(browserRoot), []);
+  socket.reply = { exitCode: 0, stdout: "https://shop.example/check\n", stderr: "" };
+  t.check((await ask(agent, body)).status, 200);
+  t.check(readBrowserQuestions(browserRoot).map((q) => [q.sessionId, q.question, q.pageUrl]), [["chat-a", "Solve the check", "https://shop.example/check"]]);
 });

@@ -73,6 +73,12 @@ export function Link({ href, title, children }: { href?: string; title?: string;
           {children}
         </ControlPointer>
       );
+    case "box-browser":
+      return (
+        <a className="bbx-theme-link" href={withBase(`/${ctx.boxSlug ?? ""}/browser/`)} title={title} target="_blank" rel="noopener noreferrer">
+          {children}
+        </a>
+      );
     case "relative": {
       const target = resolveContentTarget(ctx.basePath, classified.path);
       if (target === null) {
