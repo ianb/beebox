@@ -55,6 +55,13 @@ export const pairingRouter = router({
     return { scope: who.isOwner ? ("box" as const) : ("own" as const), devices };
   }),
 
+  // The phone this request came from, so Settings in the app can say whether
+  // this phone is registered for notifications. Null for a request with no
+  // device credential, such as a browser or a password session in the app.
+  thisDevice: authedProcedure.query(({ ctx }) => ({
+    device: listMobileDevices(ctx.boxRoot).find((item) => item.id === ctx.mobileDeviceId) ?? null,
+  })),
+
   revokeDevice: authedProcedure
     .input(z.object({ deviceId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {

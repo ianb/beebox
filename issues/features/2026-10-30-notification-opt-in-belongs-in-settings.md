@@ -1,6 +1,6 @@
 ---
 title: "Turning on notifications for this browser lives in Admin; it is a personal choice and belongs in Settings"
-workstream: unattached
+workstream: notify-settings
 area: beebox
 labels: [notifications, settings, admin, ui]
 filed-by: agent

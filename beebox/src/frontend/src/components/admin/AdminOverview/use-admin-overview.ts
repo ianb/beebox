@@ -5,51 +5,16 @@
  * overview and the open tab share one fetch.
  */
 
-import { useEffect, useState } from "react";
 import { trpc } from "../../../lib/trpc/client";
-import { errorMessage } from "@shared/error-guards";
-import { detectPushSupport } from "../../../lib/push-support";
 import type { AdminSectionId } from "../sections";
 import { useIsLoopback } from "../TailscaleSection";
 import {
   claudeEnabled, fromQuery, ready, summarizeAgentEngine, summarizeAllowedUsers, summarizeBackup, summarizeClaude,
   summarizeCloudflare, summarizeCodex, summarizeEncryptedBackup, summarizeGmailFilters, summarizeGoogle, summarizeOpenRouter, summarizeSecrets,
-  summarizeTailscale, type AdminSectionStatus,
+  summarizeNotifications, summarizeTailscale, type AdminSectionStatus,
 } from "./admin-overview-summaries";
 
 export type { AdminSectionStatus } from "./admin-overview-summaries";
-
-/**
- * This device's push state. Uses the same support check as NotificationsSection; it
- * reads the existing registration rather than waiting on `serviceWorker.ready`,
- * which never settles on a page with no service worker.
- */
-function useNotificationStatus(): AdminSectionStatus {
-  const [status, setStatus] = useState<AdminSectionStatus>({ state: "loading" });
-  useEffect(() => {
-    const support = detectPushSupport();
-    if (support.kind !== "supported") {
-      setStatus(support.kind === "needs-install" ? ready("Add to Home Screen first", "neutral") : ready("Not supported in this browser", "neutral"));
-      return;
-    }
-    if (Notification.permission === "denied") {
-      setStatus(ready("Blocked in this browser", "warning"));
-      return;
-    }
-    let live = true;
-    navigator.serviceWorker.getRegistration()
-      .then(async registration => registration === undefined ? null : registration.pushManager.getSubscription())
-      .then(subscription => {
-        if (live) setStatus(subscription !== null && Notification.permission === "granted" ? ready("On for this device", "success") : ready("Off for this device", "neutral"));
-      })
-      .catch((e: unknown) => {
-        console.warn("[admin overview] could not read the push subscription:", e);
-        if (live) setStatus({ state: "error", message: errorMessage(e) });
-      });
-    return () => { live = false; };
-  }, []);
-  return status;
-}
 
 export function useAdminOverview(): Record<AdminSectionId, AdminSectionStatus> {
   const config = trpc.admin.boxConfig.useQuery();
@@ -67,7 +32,8 @@ export function useAdminOverview(): Record<AdminSectionId, AdminSectionStatus> {
   const tailscale = trpc.admin.tailscaleBaseUrl.useQuery(undefined, { enabled: loopback });
   const backup = trpc.admin.backupStatus.useQuery();
   const encryptedBackup = trpc.admin.encryptedBackupStatus.useQuery();
-  const notifications = useNotificationStatus();
+  const devices = trpc.pairing.devices.useQuery();
+  const subscribers = trpc.push.subscriberCount.useQuery();
 
   return {
     "agent-engine": fromQuery(config, summarizeAgentEngine),
@@ -87,6 +53,6 @@ export function useAdminOverview(): Record<AdminSectionId, AdminSectionStatus> {
     "tailscale": loopback ? fromQuery(tailscale, summarizeTailscale) : ready("Managed on the host", "neutral"),
     "backup": fromQuery(backup, summarizeBackup),
     "encrypted-backups": fromQuery(encryptedBackup, summarizeEncryptedBackup),
-    "notifications": notifications,
+    "notifications": fromQuery(devices, data => fromQuery(subscribers, ({ count }) => summarizeNotifications({ devices: data.devices, browsers: count }))),
   };
 }

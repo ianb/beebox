@@ -60,4 +60,6 @@ export interface TrpcContext {
    * settings page made without a second record of it.
    */
   actor: TrpcActor;
+  /** The paired device this request authenticated as, or null when no device credential came with it. */
+  mobileDeviceId: string | null;
 }

@@ -12,7 +12,7 @@ import { ADMIN_SCOPE_LABELS, ADMIN_SECTIONS, adminSectionElementId, adminSection
  * with the section's `bbx-admin-<id>` address. The heading text comes from
  * the registry so the name on the page, in the overview, and in the
  * accessibility tree is the same string. The scope badge (this box, whole
- * host, this device) comes from the registry too.
+ * host) comes from the registry too.
  */
 export function AdminSectionCard({ id, description, busy, children }: { id: AdminSectionId; description?: ReactNode; busy?: boolean; children: ReactNode }) {
   const headingId = adminSectionHeadingId(id);

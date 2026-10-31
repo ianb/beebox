@@ -1246,7 +1246,8 @@ See §1.3 (full request/response/errors).
   `test/webapp/routes/pairing.push-token.test.ts`, and matched against the request iOS builds by
   `ios-app/BeeBoxTests/PushNotificationTests.swift`.
 - **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the
-  Admin Notifications section shows (no device listed under Phones).
+  Admin Notifications section shows (no device listed under Phones) and Settings shows in the app
+  (`pairing.thisDevice`).
 
 ### 5.10 APNs notification payload (box → Apple → native)
 
