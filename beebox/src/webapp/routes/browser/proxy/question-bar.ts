@@ -10,7 +10,7 @@
  * `textContent`: a question can quote a page.
  */
 
-const QUESTION_BAR_SCRIPT = `(function () {
+export const QUESTION_BAR_SCRIPT = `(function () {
   var base = new URL("_box/", location.href).href;
   var bar = document.createElement("div");
   bar.id = "bbx-question-bar";
@@ -71,7 +71,7 @@ const QUESTION_BAR_SCRIPT = `(function () {
     el("p", node, q.text);
     var text = el("textarea", node);
     text.rows = 1;
-    text.placeholder = "Anything to add? This goes to the chat. Passwords belong in the page.";
+    text.placeholder = "Note for the chat (no passwords)";
     text.setAttribute("aria-label", "Your answer");
     var done = el("button", node, "Done");
     var notDone = el("button", node, "Not done");

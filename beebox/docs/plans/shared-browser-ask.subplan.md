@@ -1,6 +1,6 @@
 ---
 title: "Shared browser: the agent asks in the Browser tab, and the answer returns to chat"
-status: draft
+status: partial
 workstream: shared-browser
 issues: []
 ---
@@ -8,7 +8,7 @@ issues: []
 
 The agent often needs the person to do a step in the box browser, such as a captcha. Today the person finds the menu item, does the step, returns to chat, and types "done". This plan puts the question and the answer in the Browser tab. The answer arrives in the chat as a message from the person.
 
-**Parent plan:** [shared-browser.md](shared-browser.md). That plan's NOT-in-scope line "A beebox viewer, input arbitration, a handoff command: ruled out by the boxholder" changes here: the boxholder asked for this flow on 2026-10-30 ("a URL, a question, a response (optional text, 'done', maybe 'not done' or something), and it gets routed back to the chat"). A beebox viewer and input arbitration stay out.
+**Parent plan:** [shared-browser.md](shared-browser.md). That plan's NOT-in-scope line "A beebox viewer, input arbitration, a handoff command: ruled out by the boxholder" changes here: the boxholder asked for this flow on 2026-10-31 ("a URL, a question, a response (optional text, 'done', maybe 'not done' or something), and it gets routed back to the chat"). A beebox viewer and input arbitration stay out.
 
 **Issues addressed:** none filed. Searched the queue for `captcha`, `handoff`, `browser`: `issues/features/2026-06-12-agent-browser-scoped-to-box.md` and `issues/exploration/2026-10-29-shared-browser-site-probe.md` are related and stay open.
 
@@ -142,7 +142,7 @@ none
 | Old questions build up | None | Not done clears one; the list scrolls | Clear: visible on the bar |
 | Keystrokes in the box reach the remote page | Real-browser test: type in the bar on the served page, and a page-level listener and the real dashboard see nothing | Bar stops key events | Silent if broken, so tested |
 | Page text in a question injects markup | Pure/DOM test with `<img onerror>` text | `textContent` only | Clear |
-| Bar breaks the dashboard's layout or click mapping | Real-browser check: click lands on the aimed element with the bar shown | Decided in chunk 3 by measurement: in flow if the dashboard resizes, else a fixed bar with the dashboard offset | Silent if broken, so tested |
+| Bar breaks the dashboard's layout or click mapping | Real-browser check: click lands on the aimed element with the bar shown | Decided by measurement: a fixed bar at the bottom. The page keeps its size. It can cover the bottom of the page in a short window; the person can resize | Silent if broken, so tested |
 | Agent bearer posts an answer to itself | Route test: 403 | Person gate | Clear |
 | Cross-site page posts an answer | Route test: other `Origin` gets 403 | Person gate | Clear |
 | Corrupt `questions.json` | Unit test | Reads as none, warning logged; next ask overwrites | Clear in the log |
@@ -186,7 +186,7 @@ No critical gaps.
 
 - Route tests in `test/webapp/routes/browser/proxy/route.test.ts` run the real server with the fake dashboard and a fake chat runtime; they reach every branch of the answer route.
 - `answerMessage` and the record functions are pure enough for unit tests.
-- A real-browser test types in the bar and asserts that a page-level listener sees no key. Click mapping and key isolation against the real dashboard are confirmed once through `bin/browse`, because that needs a live browser host.
+- A DOM test runs the bar's script: keys typed in it reach no page listener, a question with markup shows as text, and typed words survive a poll. Key isolation and click mapping against the real dashboard were confirmed once through `bin/browse` on 2026-10-31. The bar floats at the bottom and changes no layout, so the dashboard's click mapping is untouched.
 - No new test tier.
 
 ## Implementation order

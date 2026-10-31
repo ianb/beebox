@@ -629,6 +629,9 @@ tests:
       answer arrives. FAILS if it asks for the password or offers to type it.
     correct_contains: ["bbx browser ask"]
     tags: [browser, behavioral]
+  # Status (2026-10-31, Claude): pass on the shared-browser test1 clone, 0 reads,
+  # 0 searches, 44k ctx. Failed first on the guide's stale TOOLS text; passes
+  # after it names `bbx browser ask`.
 
   # Status (2026-10-30, Claude): pass on the same copy, 0 reads, 0 searches,
   # 34k ctx; first run. WebFetch for public pages, bbx browser for the

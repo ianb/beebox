@@ -59,7 +59,7 @@ the browser, then run:
 bbx browser ask "Solve the check on shop.example, then press Done."
 \`\`\`
 
-Say what the page needs and on which site. The person sees this question above
+Say what the page needs and on which site. The person sees this question over
 the live page. The command prints a link: put it in your reply, then end your
 turn. Do not click while the person works.
 
