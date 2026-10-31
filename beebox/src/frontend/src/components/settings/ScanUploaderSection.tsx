@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { getApiBase } from "../../api";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -11,28 +9,8 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
-import { TextField } from "../ui/fields/field";
 
 type UploaderToken = RouterOutput["scanTokens"]["list"][number];
-type MintedToken = RouterOutput["scanTokens"]["create"];
-
-const NAME_PATTERN = /^[\dA-Za-z][\w.-]{0,63}$/;
-
-function boxBaseUrl(): string {
-  const apiBase = getApiBase();
-  const boxPath = apiBase.endsWith("/api") ? apiBase.slice(0, -"/api".length) : apiBase;
-  return new URL(boxPath, window.location.origin).toString().replace(/\/$/, "");
-}
-
-function defaultName(): string {
-  const today = new Date().toISOString().slice(0, 10);
-  return `uploader-${today}`;
-}
-
-function configureCommand(name: string): string {
-  return `bin/scan-uploader configure ${boxBaseUrl()} --name ${name} --folder <your-scan-folder>`;
-}
-
 function UploaderRow({ uploader }: { uploader: UploaderToken }) {
   const utils = trpc.useUtils();
   const revokeMutation = trpc.scanTokens.revoke.useMutation({
@@ -58,14 +36,17 @@ function UploaderRow({ uploader }: { uploader: UploaderToken }) {
         {uploader.revoked ? <Badge tone="neutral" size="sm" className="ml-2">revoked</Badge> : null}
       </Text>
       {!uploader.revoked ? (
-        <Button
-          intent="destructive"
-          size="sm"
-          loading={revokeMutation.isPending}
-          onClick={() => revokeMutation.mutate({ name: uploader.name })}
-        >
-          Revoke
-        </Button>
+        <Stack gap="xs" align="end">
+          <Button
+            intent="destructive"
+            size="sm"
+            loading={revokeMutation.isPending}
+            onClick={() => revokeMutation.mutate({ name: uploader.name })}
+          >
+            Revoke
+          </Button>
+          {revokeMutation.error ? <ErrorText>{revokeMutation.error.message}</ErrorText> : null}
+        </Stack>
       ) : null}
     </Row>
   );
@@ -73,37 +54,6 @@ function UploaderRow({ uploader }: { uploader: UploaderToken }) {
 
 export function ScanUploaderSection() {
   const listQuery = trpc.scanTokens.list.useQuery();
-  const utils = trpc.useUtils();
-  const createMutation = trpc.scanTokens.create.useMutation({
-    onSuccess: () => {
-      void utils.scanTokens.list.invalidate();
-    },
-  });
-  const [name, setName] = useState(defaultName());
-  const [minted, setMinted] = useState<MintedToken | null>(null);
-  const [copyError, setCopyError] = useState(false);
-
-  const nameError = name.length > 0 && !NAME_PATTERN.test(name)
-    ? "Use letters, digits, underscore, dot, or hyphen, starting with a letter or digit (max 64 chars)."
-    : undefined;
-
-  const mint = async () => {
-    if (nameError) return;
-    const next = await createMutation.mutateAsync({ name });
-    setMinted(next);
-    setCopyError(false);
-  };
-
-  const copyToken = async () => {
-    if (!minted) return;
-    try {
-      await navigator.clipboard.writeText(minted.token);
-      setCopyError(false);
-    } catch (e) {
-      setCopyError(true);
-      throw e;
-    }
-  };
 
   return (
     <Card as="section" aria-label="Scan uploaders" shadow material>
@@ -113,85 +63,23 @@ export function ScanUploaderSection() {
             Scan uploaders
           </Heading>
           <Hint>
-            Connect a computer that runs the scan uploader: mint a token here, then run the setup command it shows on that computer.
+            Credentials that let a Mac send files to this box. Bee Box Desktop creates one when you add a watched folder. Revoke one to stop it working.
           </Hint>
         </Stack>
 
-        <Row gap="sm" wrap align="end">
-          <TextField
-            id="bbx-settings-scan-token-name"
-            label="Token name"
-            value={name}
-            onChange={setName}
-            error={nameError}
-            className="w-64"
-          />
-          <Button
-            id="bbx-settings-scan-mint"
-            intent="primary"
-            loading={createMutation.isPending}
-            loadingLabel="Minting..."
-            disabled={nameError !== undefined}
-            onClick={mint}
-          >
-            Mint token
-          </Button>
-        </Row>
-
-        {createMutation.error ? (
-          <ErrorText>
-            {createMutation.error.data?.code === "CONFLICT"
-              ? `A token named "${name}" already exists — choose another name.`
-              : createMutation.error.message}
-          </ErrorText>
-        ) : null}
-
-        {minted ? (
-          <Stack gap="sm">
-            <Hint>
-              This token is shown once — copy it now. It won't be shown again.
-            </Hint>
-            <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-900">
-              {minted.token}
-            </code>
-            <Row gap="sm" wrap>
-              <Button id="bbx-settings-scan-copy-token" onClick={copyToken} flash={{ label: "Copied" }}>
-                Copy token
-              </Button>
-              <Button id="bbx-settings-scan-hide-token" onClick={() => setMinted(null)}>Done — hide token</Button>
-            </Row>
-            {copyError ? (
-              <ErrorText>
-                Copy failed — select the token text manually.
-              </ErrorText>
-            ) : null}
-            <Stack gap="xs">
-              <Hint>Paste-ready setup command:</Hint>
-              <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-900 whitespace-pre">
-                {configureCommand(minted.name)}
-              </code>
-              <Hint>then paste the token when prompted</Hint>
-            </Stack>
-          </Stack>
-        ) : null}
-
-        <Stack gap="xs">
-          <Heading level={3}>Uploaders</Heading>
-          {listQuery.isLoading ? (
-            <Hint>Loading uploaders...</Hint>
-          ) : listQuery.error ? (
-            <ErrorText>{listQuery.error.message}</ErrorText>
-          ) : listQuery.data && listQuery.data.length > 0 ? (
-            <div className="divide-y divide-warm-100">
-              {listQuery.data.map((uploader) => (
-                <UploaderRow key={uploader.name} uploader={uploader} />
-              ))}
-            </div>
-          ) : (
-            <Hint>No uploaders yet.</Hint>
-          )}
-        </Stack>
-
+        {listQuery.isLoading ? (
+          <Hint>Loading uploaders...</Hint>
+        ) : listQuery.error ? (
+          <ErrorText>{listQuery.error.message}</ErrorText>
+        ) : listQuery.data && listQuery.data.length > 0 ? (
+          <div className="divide-y divide-warm-100">
+            {listQuery.data.map((uploader) => (
+              <UploaderRow key={uploader.name} uploader={uploader} />
+            ))}
+          </div>
+        ) : (
+          <Hint>No uploaders yet.</Hint>
+        )}
       </Stack>
     </Card>
   );

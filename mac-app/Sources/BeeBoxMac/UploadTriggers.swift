@@ -7,8 +7,7 @@ import UserNotifications
 
 /// When to sweep: a change in any upload folder (FSEvents), every 15 minutes
 /// as the backstop for missed events and scans that landed while asleep, on
-/// wake, and at launch. The old launchd agent used the same two triggers
-/// (`scan-uploader/README.md`, "Scheduling the sweep").
+/// wake, and at launch.
 @MainActor
 final class UploadTriggers {
     private let coordinator: UploadCoordinator
@@ -79,8 +78,8 @@ final class UploadTriggers {
     }
 }
 
-/// One notification per sweep that sent or was refused something
-/// (`scan-uploader/src/cli/notify.ts`: silent on a quiet sweep, only new events).
+/// One notification per sweep that sent or was refused something: silent on a
+/// quiet sweep, only new events.
 enum UploadNotifications {
     static func requestPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in

@@ -117,32 +117,3 @@ public final class UploadFolderStore: ObservableObject {
         var scanTokenNames: [UUID: String]
     }
 }
-
-/// Whether the old command-line uploader's launchd agent already watches a
-/// folder. Two uploaders on one folder race to move the same files.
-public enum OldUploaderCheck {
-    public static let label = "org.beebox.scan-uploader"
-
-    public static func plistURL(home: URL) -> URL {
-        home.appending(path: "Library/LaunchAgents/\(label).plist")
-    }
-
-    /// The folders the agent's plist watches (`WatchPaths`): [] when there is
-    /// no agent, nil when a plist exists but cannot be read.
-    public static func watchedFolders(plistURL: URL) -> [String]? {
-        guard FileManager.default.fileExists(atPath: plistURL.path) else { return [] }
-        guard let data = try? Data(contentsOf: plistURL),
-              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else {
-            return nil
-        }
-        return plist["WatchPaths"] as? [String] ?? []
-    }
-
-    /// True when the agent watches this folder, or when its plist exists but
-    /// cannot be read (fail closed: two uploaders on one folder race).
-    public static func conflicts(folderPath: String, plistURL: URL) -> Bool {
-        guard let watched = watchedFolders(plistURL: plistURL) else { return true }
-        let wanted = URL(filePath: folderPath).standardizedFileURL.path
-        return watched.contains { URL(filePath: $0).standardizedFileURL.path == wanted }
-    }
-}

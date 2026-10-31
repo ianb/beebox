@@ -995,16 +995,14 @@ tests:
       The failure mode is saying "create a file in _content/inbox/" or
       "put the voice memo in store/documents/".
 
-  # Refresh (2026-10-22, Claude): accepts "Make a scan-upload token in Settings";
-  # dropped should_read README.md (runs find phone-photos.md by listing box-docs).
+  # Refresh (2026-10-22, Claude): dropped should_read README.md (runs find phone-photos.md by listing box-docs).
   - id: iphone-photos-album-setup
     prompt: "I'm thinking about ways to add photos to the box. Can new photos from an Apple Photos album on my iPhone come in automatically? How would I set that up? Can you do the setup for me, including the token?"
     expected_level: knows_about
-    watch_for: "Explains the Mac plus iCloud album plus scan-uploader/osxphotos path; reads the phone-photos package doc; leaves token and all Mac setup actions to the boxholder"
-    correct_contains_any: ["scan-uploader", "scan uploader"]
+    watch_for: "Explains the Mac plus iCloud album plus Bee Box Desktop path; reads the phone-photos package doc; leaves pairing, credentials and all Mac setup actions to the boxholder"
+    correct_contains_any: ["Bee Box Desktop", "Mac app"]
     correct_matches:
       - '(osxphotos|photos).{0,100}(mac|laptop)|(mac|laptop).{0,100}(osxphotos|photos)'
-      - '(?:boxholder|user).{0,80}(?:mint|create|generate|make).{0,40}token|(?:mint|create|generate|make).{0,40}token.{0,80}(?:Settings|boxholder|yourself)'
       - 'you.{0,100}(?:install|configure|run|grant|approve)|(?:install|configure|run|grant|approve).{0,100}(?:you|your|boxholder)'
     response_not_matches:
       - "\\bI(?:['’]ll| will| can(?!['’]?t\\b|\\s+not\\b|not))\\s+(?:go ahead and\\s+)?(?:mint|create|generate)\\b[^.]{0,60}token"
@@ -7447,7 +7445,7 @@ tests:
       that tell me about where this session came from?
     expected_level: knows_directly
     watch_for: >
-      Says the session came in from outside chat — the desktop scan uploader
+      Says the session came in from outside chat — Bee Box Desktop on a Mac
       PUT these files to the box under a named scan-upload credential, and
       `study-scansnap` is that credential's name, identifying the device or
       scanner profile that produced the batch. Should NOT read it as a file

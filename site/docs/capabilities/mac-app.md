@@ -83,8 +83,7 @@ logins, logs) is in `~/Library/Application Support/Bee Box/`. Pairing
 exchanges a one-time link for a device credential, the same way the iOS app
 pairs; the credential is kept in the Mac's Keychain. For watched folders, the
 app asks the box for a separate upload credential and sends files to the
-box's scan upload endpoint, the same one the command-line `scan-uploader`
-script uses; a record on the Mac keeps a file from being sent twice. The app
+box's scan upload endpoint; a record on the Mac keeps a file from being sent twice. The app
 keeps a log at `~/Library/Application Support/Bee Box/logs/app.log`.
 
 **Engine updates**

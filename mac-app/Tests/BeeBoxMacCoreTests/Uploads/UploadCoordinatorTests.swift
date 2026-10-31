@@ -26,7 +26,7 @@ final class UploadCoordinatorTests: XCTestCase {
         let box: PairedBox
     }
 
-    private func makeRig(oldUploaderPlist: URL? = nil) async throws -> Rig {
+    private func makeRig() async throws -> Rig {
         let deviceTokens = FakeCredentials()
         let boxes = BoxStore(
             storageURL: directory.appendingPathComponent("boxes.json"),
@@ -48,7 +48,6 @@ final class UploadCoordinatorTests: XCTestCase {
             sweeper: sweeper,
             photos: nil,
             hostName: "Test Mac",
-            oldUploaderPlist: oldUploaderPlist ?? directory.appendingPathComponent("no-agent.plist"),
             now: { Date(timeIntervalSince1970: 1_792_195_200) },
             notify: { notices.items.append($0) }
         )
@@ -112,27 +111,6 @@ final class UploadCoordinatorTests: XCTestCase {
         XCTAssertEqual(problem, .credentialNotSaved)
         XCTAssertEqual(rig.tokenTransport.requests.compactMap(\.url?.lastPathComponent), ["scanTokens.create", "scanTokens.revoke"])
         XCTAssertTrue(rig.folders.folders.isEmpty)
-    }
-
-    func testTheOldUploadersFolderIsRefused() async throws {
-        let plist = directory.appendingPathComponent("agent.plist")
-        let data = try PropertyListSerialization.data(fromPropertyList: ["Label": OldUploaderCheck.label, "WatchPaths": [directory.path + "/"]], format: .xml, options: 0)
-        try data.write(to: plist)
-        let rig = try await makeRig(oldUploaderPlist: plist)
-
-        let problem = await rig.coordinator.addFolder(path: directory.path, box: rig.box, disposition: .keep)
-
-        await rig.coordinator.sweepAll()
-
-        XCTAssertEqual(problem, .oldUploaderWatching)
-        XCTAssertTrue(rig.tokenTransport.requests.isEmpty)
-    }
-
-    func testAnUnreadableAgentPlistFailsClosed() throws {
-        let plist = directory.appendingPathComponent("agent.plist")
-        try Data("not a plist".utf8).write(to: plist)
-        XCTAssertTrue(OldUploaderCheck.conflicts(folderPath: directory.path, plistURL: plist))
-        XCTAssertFalse(OldUploaderCheck.conflicts(folderPath: directory.path, plistURL: directory.appendingPathComponent("none.plist")))
     }
 
     func testAStandingProblemStaysUntilASweepClearsIt() async throws {
@@ -225,7 +203,6 @@ final class UploadReviewFixTests: XCTestCase {
             folders: folders, boxes: boxes, scanTokens: FakeCredentials(),
             tokenClient: ScanTokenClient(transport: tokens, userAgent: "ua"),
             sweeper: sweeper, photos: nil, hostName: "Test Mac",
-            oldUploaderPlist: directory.appendingPathComponent("none.plist"),
             now: { clock.now }, notify: { _ in }
         )
         return (coordinator, folders, box)
