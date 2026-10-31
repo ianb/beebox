@@ -13,9 +13,7 @@
  * client cannot observe, and not for additive fields an older client correctly
  * ignores.
  *
- * Nothing can test that a human bumped it, which makes a missed bump the one
- * failure worse than having no mechanism: a client would be told it is
- * current when it is stale. The mitigation is that the bump rides the
- * contract's existing change discipline rather than being a new obligation.
+ * Nothing can test that a human bumped it. The bump rides the contract's
+ * existing change discipline rather than being a new obligation.
  */
 export const SCAN_CONTRACT_VERSION = 1;
