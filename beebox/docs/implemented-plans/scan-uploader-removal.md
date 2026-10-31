@@ -1,6 +1,6 @@
 ---
 title: "Remove the command-line scan uploader; keep what Bee Box Desktop needs"
-status: active
+status: implemented
 workstream: scan-uploader-removal
 issues: []
 ---

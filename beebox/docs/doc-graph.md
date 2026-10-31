@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-31T02:38:45Z
-Total documents: 610
+Generated: 2026-10-31T03:23:33Z
+Total documents: 611
 
 ## Issues
 
@@ -68,6 +68,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (412 lines) · shipped history · implemented
 - **docs/implemented-plans/retire-type-specific-core-tags.review.md** — "Plan Engineering Review — retire-type-specific-core-tags" (66 lines) · implementation review
 - **docs/implemented-plans/ribbon-theme.md** — "Ribbon system and card theme" (214 lines) · shipped history · implemented
+- **docs/implemented-plans/scan-uploader-removal.md** — "Remove the command-line scan uploader; keep what Bee Box Desktop needs" (129 lines) · shipped history · implemented
 - **docs/implemented-plans/scan-uploader-version-drift.md** — "The scan uploader learns when it has drifted from the box" (587 lines) · shipped history · implemented
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (382 lines) · shipped history · implemented
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
@@ -248,6 +249,7 @@ Referenced by:
 - docs/implemented-plans/rest-to-trpc-consolidation.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/retire-doctest.md:108 (mention) — the boxholder (repo `AGENTS.md`, "Do not disable or weaken lint rules").
 - docs/implemented-plans/retire-type-specific-core-tags.md:110 (mention) — **Why.** The two tags exist only to be compiled into AGENTS.md and styled on the card page. A frontmatter string and a m
+- docs/implemented-plans/scan-uploader-removal.md:64 (mention) — - Root `AGENTS.md`: remove the uploader bullet; the Mac bullet names the contract.
 - docs/implemented-plans/scanner-ingest.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/scheduled-workstreams.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/schema-validate-hook.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -867,7 +869,7 @@ Referenced by:
 - docs/security-report.md:469 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
-- ../AGENTS.md:73 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
+- ../AGENTS.md:72 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
 - ../bin/AGENTS.md:199 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
 - ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:40 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
@@ -1113,7 +1115,7 @@ Referenced by:
 - docs/testing.md:106 (link) — each lives and what not to touch: [box work](box-work.md).
 - docs/testing/knowledge-audits.md:150 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
 - ../.claude/skills/box-work/SKILL.md:8 (mention) — Read `beebox/docs/box-work.md` for the task at hand. Three rules apply before anything runs:
-- ../AGENTS.md:20 (link) — Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo instructions. The primary test box is `~/
+- ../AGENTS.md:19 (link) — Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo instructions. The primary test box is `~/
 - ../dev/devprocess-talk/reports/sweep-parallel-work.md:39 (mention) — - **Lives in:** `bin/lib/worktree-create.sh`, `bin/workstreams reset-test`, root `CLAUDE.md`, `beebox/docs/box-work.md`,
 - ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:59 (mention) — - **Lives in:** `beebox/docs/box-work.md:51-55`; boxholder memory note.
 - ../issues/closed/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md:46 (mention) — blocks the case `beebox/docs/box-work.md` names first ("the worktree's
@@ -1790,7 +1792,7 @@ Referenced by:
 - ../issues/features/2026-09-28-private-chat-sessions-search-gating.md:21 (mention) — (`docs/mobile-contract.md` §2.3), so shared boxes with distinct identities
 - ../issues/features/2026-09-29-tailscale-onboarding-without-auth-key.md:41 (mention) — (`beebox/docs/mobile-contract.md` §1.1).
 - ../issues/features/2026-10-06-ios-on-device-hq-transcription.md:16 (mention) — (`POST /api/chat/transcribe-audio`, `beebox/docs/mobile-contract.md` §5.2), and
-- ../issues/features/2026-10-07-mac-companion-app.md:30 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
+- ../issues/features/2026-10-07-mac-companion-app.md:31 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
 - ../issues/features/2026-10-08-web-warns-when-ios-app-is-out-of-date.md:35 (mention) — (`beebox/docs/mobile-contract.md`) should also count, since a contract change
 - ../research/embedded-browser/beebox-today.md:83 (mention) — - Mobile: the iOS app is a WKWebView of the web app (`ios-app/BeeBox/Views/ChatWebView.swift`); contract in `beebox/docs
 - ../research/installable-app/tailscale.md:103 (mention) — (`beebox/docs/mobile-contract.md` §1.1). A box-owned node gives that URL a
@@ -2073,7 +2075,7 @@ Referenced by:
 - docs/plugins.md:45 (mention) — README.md     What it is · Setup · Conventions · Migration · Uninstall
 - src/dev/AGENTS.md:13 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
 - ../.claude/agents/finish.md:97 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. Move with
-- ../AGENTS.md:69 (link) — Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is t
+- ../AGENTS.md:68 (link) — Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is t
 - ../dev/devprocess-talk/reports/sweep-instructions.md:322 (mention) — - **Lives in:** `beebox/src/dev/doc-check/` (check.ts, file-paths.ts, frontmatter.ts, link-repair.ts, private-link.ts) +
 - ../dev/devprocess-talk/reports/sweep-quality.md:227 (mention) — - **Lives in:** `beebox/src/dev/doc-check/`, `.husky/pre-commit` ("Any commit touching markdown runs the fast doc refere
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:27 (mention) — - **`docs/README.md` is deleted.** It is a documentation map that mostly
@@ -2094,23 +2096,24 @@ References:
 
 #### docs/scan-upload-contract.md
 
-Title: "Scan Upload Wire Contract" | 272 lines | current reference
+Title: "Scan Upload Wire Contract" | 246 lines | current reference
 
 Referenced by:
 - docs/guides.md:55 (link) — | Scan upload wire contract | [scan-upload-contract](scan-upload-contract.md) |
 - docs/implemented-plans/annex-at-init.md:222 (mention) — `docs/scan-upload-contract.md:71-78`). Track 2 is making the CLI agree with two
 - docs/implemented-plans/mac-app-engine-channel.md:153 (mention) — `SCAN_CONTRACT_VERSION` (`beebox/docs/scan-upload-contract.md`; the Mac
 - docs/implemented-plans/scan-uploader-pairing.md:54 (mention) — (`docs/scan-upload-contract.md`); the installation-story plan's
+- docs/implemented-plans/scan-uploader-removal.md:65 (mention) — - `scan-upload-contract.md`: one client, two spellings of the version, remove bundle-copy text and `X-Scan-Client-Built-
 - docs/implemented-plans/scan-uploader-version-drift.md:42 (mention) — Docs reported separately: `docs/scan-upload-contract.md` (the version's
 - docs/implemented-plans/scanner-ingest.md:280 (mention) — `docs/scan-upload-contract.md`, the single coordination point named in
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
 - docs/plans/mac-app-shell.md:636 (mention) — 10. Docs: `mac-app/README.md`, `ios-app/AGENTS.md`, `scan-uploader/README.md`, `scan-upload-contract.md`; ACKNOWLEDGEMEN
 - docs/plans/pdf-intake-design.md:23 (link) — [scan-upload contract](../scan-upload-contract.md) covers scanner clients. The sections below
 - docs/plans/scan-guide-card.md:186 (mention) — - `buildScanPrompt` and the wire contract (`docs/scan-upload-contract.md`)
-- docs/scan-upload-contract.md:10 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
-- ../AGENTS.md:10 (link) — - **Stand-alone scan uploader (laptop client):** [scan-uploader/AGENTS.md](scan-uploader/AGENTS.md). Zero runtime depend
+- docs/scan-upload-contract.md:9 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
+- ../AGENTS.md:12 (link) — - **Experimental Mac app (spike):** [mac-app/README.md](mac-app/README.md) — a menu-bar app that runs the beebox image i
 - ../dev/devprocess-talk/reports/sweep-quality.md:286 (mention) — - **Lives in:** `scan-uploader/src/cli/contract-version.ts`, `beebox/src/core/scan/contract-version.ts`, `beebox/docs/sc
-- ../issues/features/2026-10-07-mac-companion-app.md:34 (mention) — `beebox/docs/scan-upload-contract.md`), so it is part of the app instead of
+- ../issues/features/2026-10-07-mac-companion-app.md:35 (mention) — `beebox/docs/scan-upload-contract.md`), so it is part of the app instead of
 
 References:
 - → docs/scan-upload-contract.md (mention)
@@ -2707,11 +2710,12 @@ Referenced by:
 
 #### docs/box/phone-photos.md
 
-Title: "Add iPhone photos through an Apple Photos album" | 55 lines | current reference
+Title: "Add iPhone photos through an Apple Photos album" | 28 lines | current reference
 
 Referenced by:
-- docs/box/what-you-could-do.md:46 (mention) — setup](phone-photos.md).
+- docs/box/what-you-could-do.md:44 (mention) — setup](phone-photos.md).
 - docs/implemented-plans/doc-structure-media.md:72 (mention) — `docs/box/phone-photos.md` (box-facing), the card format's attachment rules.
+- docs/implemented-plans/scan-uploader-removal.md:66 (mention) — - `docs/box/phone-photos.md`, `what-you-could-do.md`: use Bee Box Desktop's Watched Folders (osxphotos and token steps g
 - docs/media.md:18 (link) — - Getting phone photos into a box, for box agents: [phone photos](box/phone-photos.md).
 
 #### docs/box/prominence.md
@@ -2845,12 +2849,13 @@ Referenced by:
 
 #### docs/box/what-you-could-do.md
 
-Title: "What you could do with your box" | 221 lines | current reference
+Title: "What you could do with your box" | 219 lines | current reference
 
 Referenced by:
 - docs/README.md:40 (link) — [what you could do with your box](box/what-you-could-do.md) and
 - docs/implemented-plans/front-door.md:96 (mention) — | Empty-box suggestions lead with hobby collections, nothing about reminders (F row 7) | By design today: the `what-can-
 - docs/implemented-plans/retire-type-specific-core-tags.md:65 (mention) — Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `
+- docs/implemented-plans/scan-uploader-removal.md:66 (mention) — - `docs/box/phone-photos.md`, `what-you-could-do.md`: use Bee Box Desktop's Watched Folders (osxphotos and token steps g
 - docs/plans/publish-shared-host-per-box.md:155 (mention) — Update `beebox/docs/box/publishing.md` and the relevant `beebox/docs/box/what-you-could-do.md` entry to teach agents tha
 - test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md:69 (mention) — | 6 | Note 1: three suggestions; "a class you're taking" felt like an invitation; "Once Google is connected …". | P+ | T
 - test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md:62 (mention) — | 9 | Note 1: three suggestions; mentions web research and "Google calendar/email". | P+ | Transcript 05:45:37: "Once Go
@@ -6384,8 +6389,8 @@ References:
 Title: "Notification opt-in in Settings" | 150 lines | shipped history | implemented
 
 References:
-- → ../issues/features/2026-10-30-notification-opt-in-belongs-in-settings.md (frontmatter)
-- → ../issues/features/2026-10-30-notification-opt-in-belongs-in-settings.md (link)
+- → ../issues/closed/features/2026-10-30-notification-opt-in-belongs-in-settings.md (frontmatter)
+- → ../issues/closed/features/2026-10-30-notification-opt-in-belongs-in-settings.md (link)
 - → ../issues/features/2026-10-30-notifications-have-no-recipient.md (link)
 - → ../issues/bugs/2026-10-30-push-token-post-right-after-pairing-gets-401.md (link)
 
@@ -7514,6 +7519,17 @@ Title: "Codex cross-model review — scan-uploader-pairing (2026-08-01)" | 87 li
 Referenced by:
 - docs/implemented-plans/scan-uploader-pairing.md:16 (mention) — (`scan-uploader-pairing.review.md`): the original unauthenticated
 
+#### docs/implemented-plans/scan-uploader-removal.md **[ORPHAN]**
+
+Title: "Remove the command-line scan uploader; keep what Bee Box Desktop needs" | 129 lines | shipped history | implemented
+
+References:
+- → docs/plans/mac-app-shell.md (mention)
+- → AGENTS.md (mention)
+- → docs/scan-upload-contract.md (mention)
+- → docs/box/phone-photos.md (mention)
+- → docs/box/what-you-could-do.md (mention)
+
 #### docs/implemented-plans/scan-uploader-version-drift.md **[ORPHAN]**
 
 Title: "The scan uploader learns when it has drifted from the box" | 587 lines | shipped history | implemented
@@ -7537,7 +7553,7 @@ Referenced by:
 - docs/plans/scan-retry-and-document-route.md:112 (link) — [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md), because Track 3 depends on them.
 - docs/plans/scan-vision-claude.md:445 (mention) — scan section of `docs/implemented-plans/scanner-ingest.md`.
 - docs/plans/scanner-ingest-docling-decisions.md:13 (link) — decision changes. Parent plan: [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md).
-- docs/scan-upload-contract.md:19 (link) — history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
+- docs/scan-upload-contract.md:18 (link) — history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:8 (mention) — Resolved by `e09cd6d23` ("pdf: judge the text layer, and stop OCRing at weak defaults"): added `assessTextLayer`/`PdfPro
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:96 (link) — [`implemented-plans/scanner-ingest.md`](../../../beebox/docs/implemented-plans/scanner-ingest.md) records
 - ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:34 (mention) — > `docs/plans/scanner-ingest.md`'s Track 4 already carries the dated note
@@ -9572,10 +9588,11 @@ Title: "Bee Box for Mac as a shell around a box" | 665 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/mac-app-engine-channel.md:154 (mention) — client sends it as `x-scan-contract`, `mac-app-shell.md:388-389`). This plan
+- docs/implemented-plans/scan-uploader-removal.md:31 (mention) — - `beebox/docs/plans/mac-app-shell.md:566` kept the script because *"it still serves machines without the app"*. The box
 - docs/plans/mac-app-shell.design.md:9 (link) — **Parent plan:** [mac-app-shell.md](mac-app-shell.md), Tracks D–G.
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:10 (link) — **2026-10-17 note (partly resolved):** iOS pairing now goes through the shared `apple-shared` package: one redeem per ti
 - ../issues/closed/code-quality/2026-10-17-ios-bridge-message-routing-untested.md:8 (mention) — discovered-in: worktree-app-shell — iOS testing review for beebox/docs/plans/mac-app-shell.md
-- ../issues/features/2026-10-07-mac-companion-app.md:12 (link) — **2026-10-17 note (partly resolved):** the Mac app now pairs through a `beebox://pair` link, has a Preferences window, o
+- ../issues/features/2026-10-07-mac-companion-app.md:14 (link) — **2026-10-17 note (partly resolved):** the Mac app now pairs through a `beebox://pair` link, has a Preferences window, o
 
 References:
 - → ../issues/features/2026-10-07-mac-companion-app.md (frontmatter)
@@ -10695,7 +10712,7 @@ Referenced by:
 - docs/testing/tap-tests.md:4 (mention) — `t.check`](check.md). This page covers how the runner is set up.
 - docs/testing/tours.md:36 (link) — [tests](check.md); "does the app boot at all" is the
 - ../.claude/skills/tests/SKILL.md:8 (link) — The reference is [testing with t.check](../../../beebox/docs/testing/check.md):
-- ../AGENTS.md:12 (link) — - **Tests:** `.test.ts` files with `t.check` ([reference](beebox/docs/testing/check.md)); [tap-check/README.md](tap-chec
+- ../AGENTS.md:11 (link) — - **Tests:** `.test.ts` files with `t.check` ([reference](beebox/docs/testing/check.md)); [tap-check/README.md](tap-chec
 - ../bin/AGENTS.md:9 (link) — ([reference](../beebox/docs/testing/check.md)) under `bin/test/`, mirroring the
 - ../dev/devprocess-talk/inventory.md:373 (mention) — - **Where:** `agent-doctest/`, the `doctest` skill, and the doctests testing page (the skill and page were replaced by `
 - ../issues/closed/bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md:13 (mention) — Closed 2026-10-19 (flaky-tests): every recurring victim file is fixed, deleted, already fixed, or shown not test-caused
@@ -10789,7 +10806,7 @@ Title: "Real model calls" | 56 lines | current reference
 Referenced by:
 - docs/box-work.md:56 (mention) — calls](testing/real-models.md#where-the-keys-are). Frontend and iOS evidence
 - docs/testing.md:47 (link) — | [Real model calls](testing/real-models.md) | How does the real model or API behave, beyond what a fake shows? Experime
-- ../AGENTS.md:47 (link) — Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys
+- ../AGENTS.md:46 (link) — Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys
 - ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:385 (mention) — - **Lives in:** `beebox/docs/testing/real-models.md`; root `CLAUDE.md` ("Real model and API calls are allowed ... Jev an
 
 References:
