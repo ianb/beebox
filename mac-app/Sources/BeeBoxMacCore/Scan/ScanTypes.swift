@@ -83,7 +83,7 @@ public struct SweepSummary: Equatable, Sendable {
         self.standingProblem = standingProblem
     }
 
-    /// Sums two rounds the way `run-all.ts` does: counts add, the contract
+    /// Sums two rounds: counts add, the contract
     /// version is the later observation unless that round made no request.
     /// Combines a settle-retry round with the rounds before it. Each round
     /// re-walks the whole folder, so what happened (uploads, new refusals)

@@ -3,8 +3,7 @@ import XCTest
 
 @testable import BeeBoxMacCore
 
-/// Ports of `hash.test.ts`, `settle.identity.test.ts` and the parse
-/// parts of `wire-client.test.ts`.
+/// Hashing, settle identity, and response parsing.
 final class ScanFilesAndWireTests: ScanTestCase {
     // MARK: hash
 

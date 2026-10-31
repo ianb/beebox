@@ -2,7 +2,7 @@ import BeeBoxShared
 import Foundation
 
 /// A fake implementation of the server half of the scan-upload wire contract
-/// (docs/scan-upload-contract.md), mirroring `scan-uploader/test/cli/fake-scan-server.ts`.
+/// (docs/scan-upload-contract.md).
 /// It answers in-process, so tests need no network and no ports.
 final class FakeScanServer: HTTPTransport, @unchecked Sendable {
     enum CheckState: Sendable {

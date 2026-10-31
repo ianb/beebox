@@ -7,10 +7,9 @@ Use the guidance for the area you are changing:
 - **Main system:** [beebox/AGENTS.md](beebox/AGENTS.md).
 - **Chrome extension:** [beebox-clerk/AGENTS.md](beebox-clerk/AGENTS.md).
 - **Native iOS companion:** [ios-app/AGENTS.md](ios-app/AGENTS.md). It shares an [HTTP/bridge contract](beebox/docs/mobile-contract.md) with the web/backend; use [bbx-ios-overlap](.claude/skills/bbx-ios-overlap/SKILL.md) when changing those shared surfaces.
-- **Stand-alone scan uploader (laptop client):** [scan-uploader/AGENTS.md](scan-uploader/AGENTS.md). Zero runtime dependencies and copied as one file; it shares a [wire contract](beebox/docs/scan-upload-contract.md) with beebox's scan routes, versioned by a hand-bumped `SCAN_CONTRACT_VERSION`.
 - **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/AGENTS.md](personal-vibe-check/AGENTS.md). Edit it here; the old standalone checkout is stale.
 - **Tests:** `.test.ts` files with `t.check` ([reference](beebox/docs/testing/check.md)); [tap-check/README.md](tap-check/README.md) covers the plugin and its lint rules. Application tests live in their packages.
-- **Experimental Mac app (spike):** [mac-app/README.md](mac-app/README.md) — a menu-bar app that runs the beebox image in a VM via Apple's Containerization; findings in [research/installable-app/](research/installable-app/README.md).
+- **Experimental Mac app (spike):** [mac-app/README.md](mac-app/README.md) — a menu-bar app that runs the beebox image in a VM via Apple's Containerization; findings in [research/installable-app/](research/installable-app/README.md). It shares a [wire contract](beebox/docs/scan-upload-contract.md) with beebox's scan routes, versioned by a hand-bumped `SCAN_CONTRACT_VERSION`.
 - **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](canvas-loop/README.md); [canvas-loop/AGENTS.md](canvas-loop/AGENTS.md) covers the sketch and gallery loop.
 - **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/AGENTS.md](bin/AGENTS.md) documents their mechanics.
 - **External-tool research:** [research/AGENTS.md](research/AGENTS.md).

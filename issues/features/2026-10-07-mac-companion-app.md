@@ -9,14 +9,15 @@ discovered-by: Ian
 discovered-in: main — follow-on from the installable-app research
 ---
 
-**2026-10-17 note (partly resolved):** the Mac app now pairs through a `beebox://pair` link, has a Preferences window, opens boxes in the browser, uploads a folder (Swift port of `scan-uploader`) and a Photos album, and can host a local box (off by default); see [the plan](../../beebox/docs/plans/mac-app-shell.md). Still open: input (global shortcut, voice, selections) and the quick-drop entry. Not yet exercised by hand: minting a scan token from a device paired by a real owner, the Uploads tab end to end, a PhotoKit export on a real library, Open at Login, notifications, and local hosting start/stop.
+**2026-10-30:** the stand-alone `scan-uploader` script was removed; the Mac app is the only scan-upload client.
+
+**2026-10-17 note (partly resolved):** the Mac app now pairs through a `beebox://pair` link, has a Preferences window, opens boxes in the browser, uploads a folder and a Photos album, and can host a local box (off by default); see [the plan](../../beebox/docs/plans/mac-app-shell.md). Still open: input (global shortcut, voice, selections) and the quick-drop entry. Not yet exercised by hand: minting a scan token from a device paired by a real owner, the Uploads tab end to end, a PhotoKit export on a real library, Open at Login, notifications, and local hosting start/stop.
 
 The iOS app (`ios-app/`) gives the phone a native front door to a box: fast
 input (native composer, voice with Apple's speech recognition, capture),
 pairing, and selections. The Mac has nothing equivalent. On the desktop a
 boxholder uses the web app in a browser, the Clerk Chrome extension for
-page captures, and the stand-alone `scan-uploader` script for ScanSnap
-output. The boxholder wants one Mac app that plays the iOS app's role.
+page captures. The boxholder wants one Mac app that plays the iOS app's role.
 
 ## Scope (boxholder, 2026-10-07)
 
@@ -29,7 +30,7 @@ output. The boxholder wants one Mac app that plays the iOS app's role.
   Finder, an image) to the box with its source, the desktop counterpart of
   the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
   `Emission.selections`).
-- **Scanner upload:** fold in what `scan-uploader` does today (watch the
+- **Scanner upload:** watch the
   ScanSnap output folder and upload to the box's scan route,
   `beebox/docs/scan-upload-contract.md`), so it is part of the app instead of
   a separately copied script.

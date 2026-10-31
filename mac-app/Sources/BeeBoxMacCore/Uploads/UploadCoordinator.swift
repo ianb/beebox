@@ -31,7 +31,6 @@ public enum FolderProblem: Error, Equatable, Sendable {
     case pairedByNobody
     case scanTokenUnavailable(String)
     case credentialNotSaved
-    case oldUploaderWatching
     case photos(PhotosExportProblem)
 
     public var message: String {
@@ -47,7 +46,6 @@ public enum FolderProblem: Error, Equatable, Sendable {
         case .pairedByNobody: "The box does not know who paired this Mac. Remove the box, then pair again."
         case .scanTokenUnavailable(let detail): "Could not set up the scanner credential: \(detail)"
         case .credentialNotSaved: "Could not save the scanner credential in the Keychain."
-        case .oldUploaderWatching: "The command-line uploader already watches this folder. Remove it with `bin/scan-uploader schedule uninstall` first."
         case .photos(.accessDenied): "Bee Box Desktop has no access to Photos. Allow it in System Settings → Privacy & Security → Photos."
         case .photos(.albumMissing): "The Photos album is gone."
         case .photos(.failed(let detail)): "Photos export failed: \(detail)"
@@ -100,7 +98,6 @@ public final class UploadCoordinator: ObservableObject {
     private let sweeper: any FolderSweeping
     private let photos: (any PhotosExporting)?
     private let hostName: String
-    private let oldUploaderPlist: URL
     private let now: () -> Date
     private let notify: (UploadNotice) -> Void
     private var sweepAgain = false
@@ -117,7 +114,6 @@ public final class UploadCoordinator: ObservableObject {
         sweeper: any FolderSweeping,
         photos: (any PhotosExporting)?,
         hostName: String,
-        oldUploaderPlist: URL,
         now: @escaping () -> Date,
         notify: @escaping (UploadNotice) -> Void
     ) {
@@ -128,7 +124,6 @@ public final class UploadCoordinator: ObservableObject {
         self.sweeper = sweeper
         self.photos = photos
         self.hostName = hostName
-        self.oldUploaderPlist = oldUploaderPlist
         self.now = now
         self.notify = notify
     }
@@ -154,7 +149,7 @@ public final class UploadCoordinator: ObservableObject {
         } while sweepAgain
     }
 
-    /// Adds a folder after checking for the old uploader, and sets up the box's
+    /// Adds a folder and sets up the box's
     /// scan token if it has none. It does not send anything: the caller starts
     /// a sweep, so the add sheet can close before a full folder uploads.
     public func addFolder(
@@ -163,10 +158,6 @@ public final class UploadCoordinator: ObservableObject {
         disposition: UploadDisposition,
         photosAlbum: PhotosAlbumRef? = nil
     ) async -> FolderProblem? {
-        if OldUploaderCheck.conflicts(folderPath: path, plistURL: oldUploaderPlist) {
-            log.warning("watched folder refused reason=old-uploader folder=\(URL(filePath: path).lastPathComponent)")
-            return .oldUploaderWatching
-        }
         if case .failure(let problem) = await ensureScanToken(for: box) {
             return problem
         }

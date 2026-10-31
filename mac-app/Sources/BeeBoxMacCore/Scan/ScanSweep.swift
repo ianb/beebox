@@ -3,9 +3,8 @@ import Foundation
 
 /// One sweep of one upload folder, including the settle-retry rounds.
 ///
-/// Ports `run-target.ts` (walk, settle gate, identity snapshot, hash, batch
-/// check, PUT unknowns, restat before disposition) and the retry policy in
-/// `run-all.ts`. See "Client obligations" in docs/scan-upload-contract.md.
+/// Walk, settle gate, identity snapshot, hash, batch check, PUT unknowns,
+/// restat before disposition, and the retry policy. See "Client obligations" in docs/scan-upload-contract.md.
 public struct ScanSweep: Sendable {
     // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
     /// A run comes back for files the settle gate skipped: up to three more

@@ -1,19 +1,13 @@
 /**
  * The auth gate for the scan upload routes (`/api/scan/…`, Track 2).
  *
- * Two credentials, and nothing else, reach these routes:
- *
- * - `Authorization: Bearer <scan-token>` — the uploader's dedicated credential,
- *   verified against the box's OWN scan-token store (`core/scan/tokens.ts`).
- *   Any member may mint one; it is valid only while its creator can still
- *   open the box (`canAccessBox`, checked on every request).
- *   The hub verifies the same bearer against the same on-disk store before
- *   proxying, and additionally refuses to proxy it anywhere but `/api/scan/…`;
- *   neither process trusts the other's verdict.
- * - A full owner identity — the boxholder's browser session, so these routes can
- *   be exercised by hand. Resolved through `resolveRequestIdentity`, the SAME
- *   resolver the box auth preHandler and the tRPC context use, so ownership
- *   can't drift into a second, independently-computed answer.
+ * One credential reaches these routes: `Authorization: Bearer <scan-token>`,
+ * verified against the box's OWN scan-token store (`core/scan/tokens.ts`). Any
+ * member may mint one; it is valid only while its creator can still open the
+ * box (`canAccessBox`, checked on every request). The hub verifies the same
+ * bearer against the same on-disk store before proxying, and additionally
+ * refuses to proxy it anywhere but `/api/scan/…`; neither process trusts the
+ * other's verdict.
  *
  * The scan routes register this preHandler in ADDITION to the box's general
  * auth hook, which runs first and does not know scan tokens exist. So the scan
@@ -24,11 +18,11 @@
 
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { resolveScanRequestAuth } from "../../../core/scan/tokens.js";
-import { getOwnerEmail, resolveRequestIdentity } from "../../auth.js";
+import { getOwnerEmail } from "../../auth.js";
 import { canAccessBox } from "../../box-access.js";
 
 /** Who a scan route is acting for — Track 2 records `tokenName` as provenance
- *  (`scan-upload/<tokenName>`); an owner-driven request has none. */
+ *  (`scan-upload/<tokenName>`); a request on an auth-off test server has none. */
 export interface ScanAuth {
   source: "scan-token" | "owner";
   tokenName: string | null;
@@ -68,15 +62,10 @@ async function resolveScanAuth(request: FastifyRequest, opts: { boxRoot: string 
     return { source: "scan-token", tokenName: scanToken.name, email: null };
   }
 
-  const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
-  // `source: "open"` is the test-only auth-off construction option, which the
-  // tRPC context also treats as owner. Everything else must BE the owner: a
-  // member drives these routes through a scan token, not a browser session.
-  if (identity.source === "open") return { source: "owner", tokenName: null, email: identity.email };
-  const ownerEmail = getOwnerEmail();
-  if (identity.email !== null && ownerEmail !== null && identity.email === ownerEmail) {
-    return { source: "owner", tokenName: null, email: identity.email };
-  }
+  // The auth-off construction option route tests use. Decided by the server
+  // itself, not by identity: a hub's auth-off header reaches this box on a browse
+  // key too, and that is not a scan credential.
+  if (request.server.openAccess) return { source: "owner", tokenName: null, email: null };
   return null;
 }
 

@@ -47,7 +47,7 @@ void test("create returns the secret once, and it really authenticates", async (
 
   const listed = await owner.scanTokens.list();
   t.check(listed, [
-    { name: "laptop-scansnap", createdAt: isoDate(), createdBy: "owner@example.com", lastUsedAt: isoDate(), revoked: false, lastClient: null },
+    { name: "laptop-scansnap", createdAt: isoDate(), createdBy: "owner@example.com", lastUsedAt: isoDate(), revoked: false },
   ]);
 
   // ## revoke kills the credential; a second revoke reports NOT_FOUND
