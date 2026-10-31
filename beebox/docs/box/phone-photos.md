@@ -15,7 +15,8 @@ To set it up, the boxholder needs to:
 1. Install Bee Box Desktop on the Mac and pair it with this box: **Settings →
    Companion Apps → Copy Link (Mac)**, then **Pair with a Box…** in the app.
 2. In the app, open **Preferences → Watched Folders**, choose **Add Photos
-   Album…**, and choose this box. Approve the macOS Photos permission prompt.
+   Album…**, approve the macOS Photos permission prompt, and choose the album and
+   this box.
 
 The app creates its own upload credential on the box. It is listed by name under
 **Settings → Scan uploaders**, where the person who set it up or the box owner

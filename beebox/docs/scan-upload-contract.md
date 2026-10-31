@@ -21,14 +21,14 @@ history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-inges
 
 Every request: `Authorization: Bearer <scan-token>`.
 
-Scan tokens are per-box credentials minted by the boxholder (`scanTokens`
-tRPC procedures), stored hashed in `.beebox/scan-tokens.secret.json`.
+Scan tokens are per-box credentials the Mac app mints over its device token
+(`scanTokens` tRPC procedures), stored hashed in `.beebox/scan-tokens.secret.json`.
 They authorize **only** the two routes below — verified independently by the
 hub (which also requires the path to be exactly one of those two routes under
 `/<slug>/`, hash form included; nothing else in the `/api/scan/` subtree is
 reachable with a scan token) and by the box child. They are not mobile device tokens; they cannot mint session
-cookies, open WebSockets, or reach any other surface. A full owner identity
-(browser session) is also accepted on these routes.
+cookies, open WebSockets, or reach any other surface. A browser session
+is not accepted on these routes, not even the owner's.
 
 Failures: `401` invalid/revoked token; `401` from the hub for a scan token on
 any non-scan path.
@@ -196,25 +196,20 @@ reading goes wrong: the question is never "does this touch a limit or a header
 the contract mentions", it is **"can a client built before this change still do
 the right thing"**. Go and read the client's handling before deciding.
 
-**When it is genuinely unclear, bump.** The cost of a needless bump is one
-spurious "out of date" line telling someone to re-copy a file they could have
-kept. The cost of a missed bump is a stale client reported as current, which is
-worse than having no version at all, because it answers the question wrongly
-rather than not at all. Nothing can test that a human bumped this, so the bump
-is part of the change discipline below rather than a separate obligation.
+**When it is genuinely unclear, bump.** A needless bump costs nothing today, and
+a missed bump makes the number wrong for any later client that compares it.
+Nothing can test that a human bumped this, so the bump is part of the change
+discipline below rather than a separate obligation.
 
-Mechanically, a bump is: `+1` to **all three** constants in the same change (they
-are three spellings of one number, never per-side versions), this document, and
-the route tests. Bumping does not refuse anything — an old client keeps
-uploading and starts being reported. And never bump the build stamp: it is a
-build artifact, not a hand-maintained number.
+Mechanically, a bump is: `+1` to **both** constants in the same change (they are
+two spellings of one number, never per-side versions), this document, and the
+route tests. Bumping does not refuse anything: an old client keeps uploading.
 
 ### Adding something the client must now send
 
-A bump reports; it never refuses. But a change that makes the server **require**
-something new — a new mandatory header, a stricter body shape — refuses on its
-own, and every copied bundle in the field fails until somebody walks to that
-machine and copies a new file over. Nothing here auto-updates. So a bump is not
+A bump never refuses. But a change that makes the server **require** something
+new — a new mandatory header, a stricter body shape — refuses on its own, and
+every Mac app that has not updated fails. So a bump is not
 sufficient for this shape of change, and the ordering is part of the change:
 
 1. Ship the server side **accepting but not requiring** it, and the client side

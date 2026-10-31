@@ -18,7 +18,7 @@
 
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { resolveScanRequestAuth } from "../../../core/scan/tokens.js";
-import { getOwnerEmail, resolveRequestIdentity } from "../../auth.js";
+import { getOwnerEmail } from "../../auth.js";
 import { canAccessBox } from "../../box-access.js";
 
 /** Who a scan route is acting for — Track 2 records `tokenName` as provenance
@@ -62,10 +62,10 @@ async function resolveScanAuth(request: FastifyRequest, opts: { boxRoot: string 
     return { source: "scan-token", tokenName: scanToken.name, email: null };
   }
 
-  const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
-  // `source: "open"` is the test-only auth-off construction option, which the
-  // tRPC context also treats as owner.
-  if (identity.source === "open") return { source: "owner", tokenName: null, email: identity.email };
+  // The auth-off construction option route tests use. Decided by the server
+  // itself, not by identity: a hub's auth-off header reaches this box on a browse
+  // key too, and that is not a scan credential.
+  if (request.server.openAccess) return { source: "owner", tokenName: null, email: null };
   return null;
 }
 

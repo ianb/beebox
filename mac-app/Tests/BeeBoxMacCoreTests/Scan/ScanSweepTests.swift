@@ -3,10 +3,9 @@ import XCTest
 
 @testable import BeeBoxMacCore
 
-/// Ports of `run-target.test.ts`, `settle.retry.test.ts` and the folder
-/// parts of `disposition.test.ts`.
+/// The sweep, settle retries, and folder dispositions.
 final class ScanSweepTests: ScanTestCase {
-    // MARK: run-target
+    // MARK: sweep
 
     func testUnknownFileUploadsThenArchives() async throws {
         try writeFile("scan1.pdf", "brand new scan")

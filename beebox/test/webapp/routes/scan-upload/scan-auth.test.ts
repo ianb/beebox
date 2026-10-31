@@ -126,6 +126,14 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
 
   const asMember = await server.inject({ method: "GET", url: "/api/scan/whoami", headers: hubHeaders("guest@example.com") });
   t.check(asMember.statusCode, 401);
+
+  // A hub's auth-off header, which a browse key earns, is not a scan credential either.
+  const asBrowseKey = await server.inject({
+    method: "GET",
+    url: "/api/scan/whoami",
+    headers: { "x-bbx-hub-secret": "scan-auth-test-hub-secret", "x-bbx-hub-auth": "off" },
+  });
+  t.check(asBrowseKey.statusCode, 401);
 });
 
 // ## A scan token cannot mint a session cookie
