@@ -153,3 +153,9 @@ export function summarizeEncryptedBackup(result: Admin["encryptedBackupStatus"])
   }
   return ready("Verified snapshot available", "success");
 }
+
+export function summarizeNotifications(input: { devices: RouterOutput["pairing"]["devices"]["devices"]; browsers: number }): AdminSectionStatus {
+  const phones = input.devices.filter((device) => device.push !== null && device.revokedAt === undefined).length;
+  if (phones === 0 && input.browsers === 0) return ready("Nobody registered", "warning");
+  return ready(`${plural(phones, "phone")} · ${plural(input.browsers, "browser")}`, "success");
+}
