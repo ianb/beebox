@@ -56,3 +56,12 @@ void test("isSubscribed and subscriberCount follow this box's list", async (t) =
   await push.disable({ endpoint });
   t.check(await state(), { subscribed: false, count: 0 });
 });
+
+// ## Admin's test send is a valid notification for the signed-in owner
+void test("the test send's intent passes the send route and reports its deliveries", async (t) => {
+  const owner = appRouter.createCaller(trpcContext({ boxRoot: box.root, boxSlug: "alpha", isAuthenticatedOwner: true }));
+  const { deliveries } = await owner.notifications.send({
+    intent: { title: "Test notification", body: "Sent from Admin.", target: "admin:notifications", loudness: "loud", source: "admin-test" },
+  });
+  t.check(deliveries.map((d) => d.channel).toSorted(), ["apns", "web-push"]);
+});
