@@ -66,11 +66,12 @@ export function browserPushState(input: {
   return subscribed ? "on" : "off";
 }
 
-export type PhonePushState = "not-paired" | "no-server-key" | "registered" | "unregistered" | "unregistered-no-server-key";
+export type PhonePushState = "not-paired" | "no-server-key" | "turned-off" | "registered" | "unregistered" | "unregistered-no-server-key";
 
 /** What to show for this phone, in the app. A paired phone with no registration gets no push. */
-export function phonePushState(input: { paired: boolean; registered: boolean; apnsConfigured: boolean }): PhonePushState {
+export function phonePushState(input: { paired: boolean; turnedOff: boolean; registered: boolean; apnsConfigured: boolean }): PhonePushState {
   if (!input.paired) return "not-paired";
+  if (input.turnedOff) return "turned-off";
   if (input.registered) return input.apnsConfigured ? "registered" : "no-server-key";
   return input.apnsConfigured ? "unregistered" : "unregistered-no-server-key";
 }

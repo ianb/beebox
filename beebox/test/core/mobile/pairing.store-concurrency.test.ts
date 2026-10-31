@@ -81,6 +81,7 @@ void test("Verification returns the device identity and no longer un-revokes any
     lastUsedAt: optional(isoDate()),
     revokedAt: isoDate(),
     push: null,
+      notificationsOff: false,
   }]);
 
   // The device no longer authenticates, and never will again from this token.

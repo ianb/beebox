@@ -125,7 +125,9 @@ composer not suppressed, wrong attribution — with no error surfaced).
   for somebody else's device: a distinct refusal would confirm the id exists on this box.
 - **Projection:** `listMobileDevices` strips `tokenHash` and the APNs token. A device's push
   registration (§5.9) appears as `push: { environment, registeredAt } | null`; the raw APNs token
-  never leaves the server process.
+  never leaves the server process. `notificationsOff` is the person's per-box switch, set from
+  Settings in the app by `pairing.setThisDeviceNotificationsOff`. It survives re-registration, and
+  the box skips the phone while it is on. The native app does not read it.
 
 ---
 

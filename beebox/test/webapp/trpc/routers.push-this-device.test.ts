@@ -11,10 +11,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { trpcContext } from "../../helpers/trpc-context.js";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
-import { createMobilePairingTicket, redeemMobilePairingTicket, registerDevicePush } from "../../../src/core/mobile/pairing.js";
+import { createMobilePairingTicket, devicePushRegistrations, redeemMobilePairingTicket, registerDevicePush } from "../../../src/core/mobile/pairing.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-push-this-device-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
@@ -80,4 +81,29 @@ void test("subscribe records the signed-in person", async (t) => {
     .parse(JSON.parse(await fs.readFile(path.join(storeDir, "push-subscriptions.json"), "utf-8")));
   t.check(store[endpoint]?.subscribedBy, "tomas@example.com");
   await signedIn.push.disable({ endpoint });
+});
+
+// ## A phone turned off stays off when it posts its token again
+//
+// The app posts on launch and has no idea about the switch, so the box must keep
+// the two apart. Only this phone changes, and a browser has no phone to change.
+void test("the per-box phone switch survives re-registration and skips delivery", async (t) => {
+  const phone = await pair("switch phone");
+  const other = await pair("other phone");
+  await registerDevicePush(box.root, { deviceId: phone, token: "aaa111", environment: "sandbox" });
+  await registerDevicePush(box.root, { deviceId: other, token: "bbb222", environment: "sandbox" });
+  const reachable = () => devicePushRegistrations(box.root).map((d) => d.label).filter((label) => label === "switch phone" || label === "other phone").toSorted();
+  t.check(reachable(), ["other phone", "switch phone"]);
+
+  await caller(phone).pairing.setThisDeviceNotificationsOff({ off: true });
+  await registerDevicePush(box.root, { deviceId: phone, token: "aaa111", environment: "sandbox" });
+  t.check(reachable(), ["other phone"]);
+  const { device } = await caller(phone).pairing.thisDevice();
+  t.check([device?.notificationsOff, device?.push?.environment], [true, "sandbox"]);
+
+  await caller(phone).pairing.setThisDeviceNotificationsOff({ off: false });
+  t.check(reachable(), ["other phone", "switch phone"]);
+
+  const refused = await caller(null).pairing.setThisDeviceNotificationsOff({ off: true }).then(() => "saved", (e: unknown) => e instanceof TRPCError ? e.code : "other");
+  t.check(refused, "NOT_FOUND");
 });
