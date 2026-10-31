@@ -39,7 +39,7 @@ function BrowserSwitch({ boxName }: { boxName: string }) {
       );
       case "off": return (
         <Stack gap="sm">
-          <Text as="p" size="sm">Off. Your browser will ask you to allow notifications when you turn this on.</Text>
+          <Text as="p" size="sm">Off. This browser shows no notifications from {boxName}.</Text>
           <Button id="bbx-settings-notifications-enable" className="self-start" intent="primary" onClick={() => { void push.enable(); }} loading={push.busy} loadingLabel="Turning on…">Notify me in this browser</Button>
         </Stack>
       );
@@ -68,12 +68,13 @@ function PhoneState() {
   switch (state) {
     case "not-paired": return <Text as="p" size="sm">This app is not paired with this box, so this phone gets no notifications from it. Pair it under Companion Apps on this page.</Text>;
     case "no-server-key": return <Text as="p" size="sm">The server is not set up to send phone notifications. Tell whoever runs this box.</Text>;
-    case "registered": return <Text as="p" size="sm">This phone gets notifications from this box.</Text>;
+    case "registered": return <Text as="p" size="sm">This phone is registered for notifications from this box. If none appear, check that notifications are on for Bee Box in iPhone Settings.</Text>;
     case "unregistered": return (
       <Text as="p" size="sm">
         This phone is paired but not registered for notifications. Switch away from the Bee Box app and come back. If this message stays, check that notifications are on for Bee Box in iPhone Settings.
       </Text>
     );
+    case "unregistered-no-server-key": return <Text as="p" size="sm">This phone is paired but not registered for notifications, and the server is not set up to send phone notifications. Tell whoever runs this box.</Text>;
     default: return assertNever(state);
   }
 }

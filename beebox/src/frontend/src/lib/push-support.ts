@@ -43,8 +43,9 @@ export type BrowserPushState = "checking" | "unsupported" | "needs-install" | "n
 
 /**
  * What to show for this browser. Blocked comes before on: a browser that blocks
- * this site shows nothing, whatever the box holds. On means the box holds the
- * endpoint, since the browser's own subscription outlives a server-side disable.
+ * this site shows nothing, whatever the box holds. A server with no key sends
+ * nothing either. On means the box holds the endpoint, since the browser's own
+ * subscription outlives a server-side disable.
  */
 export function browserPushState(input: {
   support: PushSupport | null;
@@ -60,16 +61,16 @@ export function browserPushState(input: {
   if (support.kind === "needs-install") return "needs-install";
   if (permission === "denied") return "blocked";
   if (subscribed === null) return "checking";
-  if (subscribed) return "on";
   if (publicKey === undefined) return "checking";
-  return publicKey === null ? "no-server-key" : "off";
+  if (publicKey === null) return "no-server-key";
+  return subscribed ? "on" : "off";
 }
 
-export type PhonePushState = "not-paired" | "no-server-key" | "registered" | "unregistered";
+export type PhonePushState = "not-paired" | "no-server-key" | "registered" | "unregistered" | "unregistered-no-server-key";
 
 /** What to show for this phone, in the app. A paired phone with no registration gets no push. */
 export function phonePushState(input: { paired: boolean; registered: boolean; apnsConfigured: boolean }): PhonePushState {
   if (!input.paired) return "not-paired";
-  if (!input.apnsConfigured) return "no-server-key";
-  return input.registered ? "registered" : "unregistered";
+  if (input.registered) return input.apnsConfigured ? "registered" : "no-server-key";
+  return input.apnsConfigured ? "unregistered" : "unregistered-no-server-key";
 }

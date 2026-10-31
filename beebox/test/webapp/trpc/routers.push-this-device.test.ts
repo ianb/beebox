@@ -9,12 +9,15 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import * as path from "node:path";
+import * as fs from "node:fs/promises";
+import { z } from "zod";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { trpcContext } from "../../helpers/trpc-context.js";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket, registerDevicePush } from "../../../src/core/mobile/pairing.js";
 
-process.env.BBX_PUSH_STORE_DIR = path.join(os.tmpdir(), `bbx-push-this-device-${process.pid}-${Date.now()}`);
+const storeDir = path.join(os.tmpdir(), `bbx-push-this-device-${process.pid}-${Date.now()}`);
+process.env.BBX_PUSH_STORE_DIR = storeDir;
 
 const box = await makeTmpBox({ git: true });
 
@@ -64,4 +67,17 @@ void test("the test send's intent passes the send route and reports its deliveri
     intent: { title: "Test notification", body: "Sent from Admin.", target: "admin:notifications", loudness: "loud", source: "admin-test" },
   });
   t.check(deliveries.map((d) => d.channel).toSorted(), ["apns", "web-push"]);
+});
+
+// ## A browser records who turned it on; a phone already does (`createdBy`)
+void test("subscribe records the signed-in person", async (t) => {
+  const endpoint = "https://push.example/person";
+  const signedIn = appRouter.createCaller(trpcContext({
+    boxRoot: box.root, boxSlug: "alpha", user: { email: "tomas@example.com", name: "Tomas" },
+  }));
+  await signedIn.push.subscribe({ endpoint, keys: { p256dh: "p", auth: "a" } });
+  const store = z.record(z.string(), z.looseObject({ subscribedBy: z.string().optional() }))
+    .parse(JSON.parse(await fs.readFile(path.join(storeDir, "push-subscriptions.json"), "utf-8")));
+  t.check(store[endpoint]?.subscribedBy, "tomas@example.com");
+  await signedIn.push.disable({ endpoint });
 });

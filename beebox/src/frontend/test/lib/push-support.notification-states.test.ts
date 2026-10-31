@@ -21,13 +21,15 @@ void test("browser states", (t) => {
   t.check(browserPushState({ ...base, permission: "granted" }), "off");
   t.check(browserPushState({ ...base, publicKey: undefined }), "checking");
   t.check(browserPushState({ ...base, publicKey: null }), "no-server-key");
+  t.check(browserPushState({ ...base, subscribed: true, publicKey: null }), "no-server-key");
   t.end();
 });
 
 void test("phone states", (t) => {
   const phone = { paired: true, registered: false, apnsConfigured: true };
   t.check(phonePushState({ ...phone, paired: false }), "not-paired");
-  t.check(phonePushState({ ...phone, apnsConfigured: false }), "no-server-key");
+  t.check(phonePushState({ ...phone, apnsConfigured: false }), "unregistered-no-server-key");
+  t.check(phonePushState({ ...phone, registered: true, apnsConfigured: false }), "no-server-key");
   t.check(phonePushState(phone), "unregistered");
   t.check(phonePushState({ ...phone, registered: true }), "registered");
   t.end();

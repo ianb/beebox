@@ -48,11 +48,13 @@ The browser switch acts only on a click, and the browser's own prompt confirms i
 - **Server has no key:** says the server is not set up to send to browsers, or to phones; asks the person to tell whoever runs the box.
 - **Phone unregistered:** "This phone is paired but not registered for notifications. Switch away from the Bee Box app and come back. If this stays, check that notifications are on for Bee Box in iPhone Settings."
 - **App session has no device behind it** (signed in with a password inside the app): says this app is not paired with this box, and to pair from this page's Companion section.
+- **Phone unregistered and server has no key:** says both, and to tell whoever runs the box; reopening would not help.
+- **Registered phone with iOS permission later denied:** the box cannot see this, so the registered line says to check iPhone Settings if nothing appears.
 - **Enable fails:** the error appears in place.
 
 ### Walkthrough
 
-Diana's phone pairs; its first push-token post fails. She opens Settings in the app. The page sees the native shell, asks `pairing.thisDevice`, and shows the unregistered line. She switches away and back. `PushRegistrar.sceneDidBecomeActive` posts again, the query refetches on focus, and the line reads "This phone gets notifications from this box."
+Diana's phone pairs; its first push-token post fails. She opens Settings in the app. The page sees the native shell, asks `pairing.thisDevice`, and shows the unregistered line. She switches away and back. `PushRegistrar.sceneDidBecomeActive` posts again, the query refetches on focus, and the line reads "This phone is registered for notifications from this box."
 
 ## Smallest fix and budget
 
@@ -82,7 +84,7 @@ No decision depends on a new external premise; the Safari re-subscribe trap is a
 
 ## Ontology
 
-Adds no card or shared vocabulary. `TrpcContext.mobileDeviceId`: the paired device behind this request, or null. `BrowserPushState` and `PhonePushState`: closed frontend unions naming what Settings shows.
+Adds no card or shared vocabulary. `subscribedBy` on a browser subscription: the signed-in person who turned it on, the counterpart of a phone's `createdBy` (boxholder, 2026-10-30: keep track of which person is on which channel, with routing still out of scope). `TrpcContext.mobileDeviceId`: the paired device behind this request, or null. `BrowserPushState` and `PhonePushState`: closed frontend unions naming what Settings shows.
 
 ## Tracks / scope
 

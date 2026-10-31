@@ -37,6 +37,7 @@ export const pushRouter = router({
       boxSlug: ctx.boxSlug,
       subscription: { endpoint: input.endpoint, keys: input.keys },
       ua: input.ua,
+      subscribedBy: ctx.user?.email,
       now: new Date(),
     });
     return { ok: true };
