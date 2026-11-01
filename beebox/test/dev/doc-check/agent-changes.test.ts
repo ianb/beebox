@@ -21,6 +21,7 @@ void test("Well-formed entries pass; text that is not an entry is ignored", asyn
 void test("A line that is not an entry is named", async (t) => {
   t.check(check("- 2026-10-29: no hash"), ['line 1 is not "- YYYY-MM-DD (hash): text"']);
   t.check(check("- 2026-02-30 (abc1234): not a real day"), ['line 1 is not "- YYYY-MM-DD (hash): text"']);
+  t.check(check("-2026-10-29 (abc1234): no space"), ['line 1 is not "- YYYY-MM-DD (hash): text"']);
 });
 
 void test("Thirty words pass and thirty-one fail", async (t) => {

@@ -1,6 +1,6 @@
 ---
 title: "A changelog for the box agent, written by a curator and kept short"
-status: draft
+status: active
 workstream: agent-changelog
 issues:
   - ../../../issues/features/2026-11-01-box-agent-changelog.md
@@ -127,7 +127,7 @@ No design decision depends on an external premise.
   ```
 
 - `docs/agent-guide.md` gains a Markdown link to `docs/box/agent-changes.md`, so `doc-check` fails if the doc is removed. The bare name in the guide does not give that protection, because the plan shares the basename (`src/dev/doc-graph-data/data.ts:201`).
-- `budget.guide_words` and `budget.always_loaded_words` rise once for this passage, with the reason in the ledger comment.
+- `budget.always_loaded_words` rises by 27 for this passage, with the reason in the ledger comment. `budget.guide_words` did not need to move: the fresh-box guide measures 5,693 words against a ceiling of 5,743.
 - `doc-check` gains `checkAgentChanges(text)`, a pure function: each entry matches `- YYYY-MM-DD (hash): text`; dates are newest first; each text has at most 30 words; no 10-day span holds more than 6 entries; the doc holds at most 40 entries; each `**HANDLE**` is in the registry. No check reads the clock, so an old checkout cannot start failing with age.
 
 **Vocabulary lock-ins.** Doc `agent-changes.md`; row `docs.changes`; entry line format.
@@ -182,7 +182,7 @@ None.
 |---|---|---|---|
 | A malformed entry line lands | `checkAgentChanges` example | `doc-check` rejects the commit; at runtime it is only text | Clear |
 | The doc loses its `read-when:` | Existing throw | `ProseDocFrontmatterError` (`package-docs/core.ts:75`); `doc-check` also requires it, so it fails at commit and not in a box | Clear |
-| An entry is true when written, a later landing changes it, and the agent "corrects" a good note from the old entry | No | Curator's supersession step; the doc's header says to check current docs or the command first; audit `change-note-disagrees` tests this | Silent if both miss it. Accepted: the agent's check is the second barrier |
+| An entry is true when written, a later landing changes it, and the agent "corrects" a good note from the old entry | No | Curator's supersession step; the doc's header says to check current docs or the command first; audit `change-note-right` tests this | Silent if both miss it. Accepted: the agent's check is the second barrier |
 | Curator writes a false entry | No | Same two barriers; the hash allows a check | Silent until seen. Accepted: same trust level as a guide edit |
 | Curator writes too many entries | Rehearsal in A1 | Commit fails; prompt says merge or drop, and push back | Clear |
 | Curator sends pushback on every run | No | Prompt requires concrete evidence; alerts are visible, so the boxholder sees the noise | Clear |
@@ -227,7 +227,8 @@ None remain for the boxholder. The limits start at 30 words, 6 entries in 10 day
 
 Add to `src/dev/knowledge-audits.yaml`, and run before landing:
 
-- `change-note-disagrees` (`knows_directly`): with a seeded entry and a memory note that disagrees, the agent checks the current docs or command before it fixes the note. Run it both ways: the note is stale, and the entry is superseded and the note is right.
+- `change-note-stale` (`knows_about`): a note names a removed command, and the agent finds the current one by looking it up.
+- `change-note-right` (`knows_about`): told a changelog entry contradicts a correct note, the agent checks the current command and keeps the note.
 - `change-doc-before-cannot` (`knows_about`): told by an old note that something cannot be done, and asked to do it, the agent opens `box-docs/agent-changes.md` or the current docs before refusing.
 
 The `docs.changes` ledger row names both audits. These audits are the measure of whether a pointer alone is enough.
@@ -255,5 +256,7 @@ Tests first: the tests above are done when they pass, along with `pnpm lint:guid
 **Migration: none (`bbx-migration` considered).** No card or tracked box file changes. `.beebox/agent-guide.md` is generated and untracked (`src/core/box/guidance-surfaces.ts:88`: *"gitTracked: false"*), and `box-docs/` lives in the package. Existing boxes get the pointer at their next regeneration after the deploy.
 
 Cross-model plan review: Codex `gpt-6-astra`, 2026-11-01. Round 1 had six findings, all verified and folded in. Round 2, Codex `gpt-6-sol`, covered this pointer-only revision: three findings, all folded in (a shorter pointer, a checked link, wider pushback).
+
+Results, 2026-11-01: all three audits passed, and each agent opened `agent-changes.md` by itself. A read-only rehearsal of the curator over 2026-10-25 to 2026-11-01 picked the walk's entries for that week plus one for questions, and proposed raising the span limit to 8. It stands in for the `--force` run, which would land to production before this merges; the first real run is the check on the live path. Code review: Codex `gpt-6-sol`, four findings. Fixed: an invalid flag in a seed entry; near-miss entry lines. Accepted, both needing long absence from the machine: an issue closed and deleted within one range is missed; a range of months can pass the handoff size limit, and that fails loudly because `run.ts` exits non-zero.
 
 The plan ships as one piece, when the boxholder says so. The schedule starts on the first tick after landing.

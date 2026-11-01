@@ -12,6 +12,7 @@ const MAX_IN_SPAN = 6;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ENTRY_LINE = /^- (\d{4}-\d{2}-\d{2}) \([\da-f]{7,40}\): (\S.*)$/;
+const ENTRY_LIKE = /^(?:-(?!--)|\*|\d{4}-\d{2}-\d{2})/;
 const HANDLE = /\*\*([A-Z][A-Z_]+)\*\*/g;
 
 interface Entry {
@@ -52,7 +53,7 @@ export function agentChangesProblems(params: { text: string; handles: ReadonlySe
   const problems: string[] = [];
   const entries: Entry[] = [];
   for (const [index, raw] of text.split("\n").entries()) {
-    if (!raw.startsWith("- ")) continue;
+    if (!ENTRY_LIKE.test(raw)) continue;
     const line = index + 1;
     const match = ENTRY_LINE.exec(raw);
     const date = match?.[1];

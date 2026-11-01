@@ -33,10 +33,11 @@ dependency updates, dev tooling, and tests. If you are unsure, leave it out.
 2. **Fix what went stale.** Read the existing entries against the range. If a
    later landing changed or undid an entry, rewrite it to the current behavior
    or remove it. No entry may describe behavior that is no longer true.
-3. **Write entries**, newest first, as `- YYYY-MM-DD (hash): text`, using the
-   landing's date and hash. One entry per workstream change. Say what changed
-   and name the guide section (`**TOOLS**`) or box doc that has the details. Do
-   not explain what the docs already explain.
+3. **Write entries**, newest first, as `- YYYY-MM-DD (hash): text`. One entry per
+   workstream change, with its newest landing's date and hash. Say what changed
+   and name the guide section (`**TOOLS**`) or the file in `box-docs/` that has
+   the details, after checking that it exists. Run each command and flag you name
+   with `--help`. Do not explain what the docs already explain.
 4. **Keep the limits.** `pnpm --dir beebox doc-check` enforces at most 30 words
    an entry, 6 entries in any 10 days, and 40 in the file. Past 40, delete the
    oldest. Past the 10-day limit, merge entries or drop the weakest.

@@ -12,7 +12,7 @@ then fix what is out of date.
 - 2026-10-30 (4a541cf78): `scan-uploader` is gone. Photos albums and scans go through Bee Box Desktop, paired in Settings. See `phone-photos.md`.
 - 2026-10-29 (53362e5ee): Each synced calendar is a `.calendar.card`. Write new events as `.ics` in its attach folder; a file directly in `_content/calendar/` is not pushed.
 - 2026-10-27 (ca4699775): `bbx view test` is gone. Use `bbx view check`. See `bbx-commands.md`.
-- 2026-10-20 (b28d11ae2): `bbx todos` takes `--now` and `--group status`. `--on-plate` and `--group plate` are gone. See `todos.md`.
+- 2026-10-20 (b28d11ae2): `bbx todos --now` replaces `--on-plate`, and `bbx query todos --group status` replaces `--group plate`. See `todos.md`.
 - 2026-10-18 (7256fd038): The chat `<schedule>` tag is gone. `bbx remind --here 20m "..."` sets a check-in in this chat; `--in` and `--at` make a reminder that reaches the person.
 - 2026-10-16 (0f0aa9e85): The `memo` card type is gone. Captured notes and voice notes are `.doc.card`.
 - 2026-10-11 (1db131732): Telegram is gone: `bbx notify --channel telegram` is invalid. Channels are apns and web-push. See **REACHING_THE_BOXHOLDER**.
