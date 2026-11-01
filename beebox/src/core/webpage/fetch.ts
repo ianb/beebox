@@ -10,7 +10,11 @@
  * the agent acts for a person, as a browser does.
  */
 
+import { createHash } from "node:crypto";
 import type { CapturedResponse } from "./response.js";
+
+/** Recorded on each card, so a later block investigation can see what was sent. */
+export const REQUEST_HEADERS_NAME = "desktop-chrome-142";
 
 const BROWSER_HEADERS = {
   "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
@@ -42,8 +46,19 @@ function pageForm(url: URL): string {
   return `${host}${url.port === "" ? "" : `:${url.port}`}${path}${url.search}`;
 }
 
-/** True for `http:` to `https:`, adding or removing `www.`, or a trailing slash: one page, another form. */
+/** The archived address in a Wayback URL, or null. The archive redirects to its nearest capture's timestamp. */
+function waybackPage(url: URL): string | null {
+  if (url.hostname !== "web.archive.org") return null;
+  return /^\/web\/\d+[_a-z]*\/(.+)$/.exec(url.pathname)?.[1] ?? null;
+}
+
+/**
+ * True for `http:` to `https:`, adding or removing `www.`, a trailing slash, or
+ * another Wayback capture of one address: one page, another form.
+ */
 export function isSamePageForm(from: URL, to: URL): boolean {
+  const archived = waybackPage(from);
+  if (archived !== null && archived === waybackPage(to)) return true;
   if (from.protocol === "https:" && to.protocol !== "https:") return false;
   return pageForm(from) === pageForm(to);
 }
@@ -128,6 +143,7 @@ export async function fetchPage({ url, from, fetchImpl }: FetchInput): Promise<F
         headers: Object.fromEntries(res.headers.entries()),
         contentType,
         html: decode(body, contentType),
+        sha256: createHash("sha256").update(body).digest("hex"),
         via: "http",
       },
     };

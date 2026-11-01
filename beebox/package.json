@@ -150,6 +150,7 @@
     "@fastify/static": "^9.0.0",
     "@fastify/websocket": "^11.2.0",
     "@googleworkspace/cli": "0.22.5",
+    "@joplin/turndown-plugin-gfm": "^1.0.68",
     "@markdoc/markdoc": "^0.5.7",
     "@openai/codex": "0.164.0",
     "@openai/codex-sdk": "0.164.0",

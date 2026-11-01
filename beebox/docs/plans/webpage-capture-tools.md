@@ -17,6 +17,18 @@ Boxholder, 2026-11-01: "bbx webpage is too brief, I like bbx webpage save or som
 
 Boxholder decisions, 2026-11-01: "I don't like fetch/save/extract, too many names for the same thing! Maybe also a trick to detect bad pages (login, blocked, etc), so the agent can start to automatically filter out cases it regularly discovers (on sites with bad error codes). We should specifically try not to get login redirects, and/or not follow redirects and let the agent do that. HTML-only is quite okay, Clerk's copies are pretty heavy. Fetches should look like a normal browser."
 
+## Later decisions
+
+Added 2026-11-01 from the boxholder and from feedback by the `mn-social-services` box:
+
+- **`--update <card>`:** the path, other frontmatter, and other attachments stay. With no source it gets the address the card records. A refusal, a redirect, a failure, or a page with under a tenth of the text leaves the card unchanged. No change means no commit. No update history: git holds it.
+- **Cleanup of saved pages:** `--update <card> --html <its page.frozen>` re-reads a card from its own copy and leaves that copy as it was. `--html` takes gzip, up to 64 MB. `--meta <json>` keeps the original fetch's provenance, and its `retrieved` is the capture time.
+- **`--json` and `--no-commit`:** for a caller that keeps results elsewhere or commits in batches. A box that wants no card per page uses `--json`.
+- **Block check:** keyed to title and visible text, never to script. Radware titles added. A bare 403 says it may be a missing page.
+- **Wayback:** another capture timestamp of one address is the same page.
+- **Fidelity:** `capture.sha256` holds the hash of the original bytes, because the saved HTML adds `<base>`. `capture.requestHeaders` names the header set. `meta` from the box function or `Last-Modified` goes in `capture.meta`.
+- **Not taken now:** server bytes through an in-page fetch for `--browser`, and non-HTML pages such as PDFs. Both need their own design; see `issues/features/2026-11-01-webpage-save-server-bytes-and-pdfs.md`.
+
 ## Design
 
 ### Situations
@@ -117,7 +129,7 @@ Chosen design: tracks A to C. Estimate: about 650 lines of source and 450 of tes
   - `src/core/webpage/extract.ts`: `standard`, Clerk's pipeline over jsdom, loaded by dynamic import. The pipeline is one shared function that takes a document and a URL: `beebox-clerk/src/platform/extract-readable.ts` moves its body there and keeps a thin caller. The function lives in `beebox/src/shared/webpage-readable.ts`, and Clerk imports it by relative path. A new workspace package would also need deploy changes.
   - `src/core/webpage/write.ts`: moved writer; adds `capture`. The default destination is `_content/inbox`, the folder the schema's own layout names. `--to <dir>` picks another inside the box. The CLI commits the returned paths before it prints `Saved`. A second capture of one URL makes a new card: each is a dated copy. Clerk's name has second precision and its write replaces, so the writer adds a short unique suffix and creates the card exclusively, retrying on a collision.
   - **Snapshot (boxholder decision, 2026-11-01: "HTML-only is quite okay"):** `attach/page.frozen` holds the HTML as received, with a `<base href>` added. `capture.snapshot: "html-only"` marks it. `CapturedPageMeta` labels such a snapshot "Saved HTML" with the note that images and styles still load from the site, and keeps "Frozen snapshot" for Clerk's. The schema's text changes to match. The file name stays, so the sandboxed serving rule for it stays.
-  - `src/cli/commands/webpage.ts`: `bbx webpage save <url> [--from <url>] [--to <dir>]` and `bbx webpage save --browser [--to <dir>]`. It runs in the agent's shell, with the same network reach as `curl`. Exit 0 saved, 1 failed, 3 refused, 4 redirect not followed. Stdout: the card path, one `Redirected:` line when any hop happened, any note.
+  - `src/cli/commands/webpage/command.ts`: `bbx webpage save <url> [--from <url>] [--to <dir>]` and `bbx webpage save --browser [--to <dir>]`. It runs in the agent's shell, with the same network reach as `curl`. Exit 0 saved, 1 failed, 3 refused, 4 redirect not followed. Stdout: the card path, one `Redirected:` line when any hop happened, any note.
   - `CapturedPageMeta`: shows "Redirected from <first URL>", "Saved by the box browser", and the note.
 - **Vocabulary lock-ins:** `bbx webpage save`, `capture:`, exit 3 refused, exit 4 redirect.
 - **First implementation chunk:** `detect-block.ts`, `fetch.ts`, and `extract.ts`, with tests. Defuddle on jsdom is run on a saved fixture in the first test. No open questions.

@@ -29,6 +29,8 @@ void test("Same page, another form", (t) => {
   t.check(same("https://a.example/x", "https://a.example/login"), false);
   t.check(same("https://a.example/x?a=1", "https://a.example/x?a=2"), false);
   t.check(same("https://t.example/x", "https://news.example/x"), false);
+  t.check(same("https://web.archive.org/web/2020id_/https://a.example/x", "https://web.archive.org/web/20200102030405id_/https://a.example/x"), true);
+  t.check(same("https://web.archive.org/web/2020id_/https://a.example/x", "https://web.archive.org/web/2020id_/https://a.example/y"), false);
   t.end();
 });
 

@@ -2,7 +2,7 @@
  * Webpage card schema — a captured external web page, stored in-box.
  *
  * The card *is* the page: its markdown body is the readable rendering (Defuddle
- * extraction), and a frozen, self-contained HTML snapshot rides alongside in
+ * extraction), and a frozen HTML snapshot, self-contained when Clerk made it, rides alongside in
  * the card's `.attach/` scope. Frontmatter carries capture provenance — the
  * original URL and when it was retrieved (the card's one `sources` entry), and
  * a ref to the frozen snapshot.
@@ -39,13 +39,19 @@ const WebpageSources = z
  * saved HTML is the page's own, so its images and styles still load from the
  * site. `redirectedFrom`: every earlier address, oldest first. `function: box`:
  * the box's `webpage.ts` made this card. `note`: anything else worth knowing.
+ * `sha256`: of the bytes as received; the saved HTML adds a `<base>` tag.
+ * `requestHeaders`: the name of the header set sent. `meta`: what the box or the
+ * caller kept, such as the original fetch's provenance or dates the page states.
  */
 const WebpageCapture = z.object({
   via: z.enum(["http", "browser", "file"]),
-  snapshot: z.literal("html-only"),
+  snapshot: z.literal("html-only").optional(),
   redirectedFrom: z.array(z.string()).optional(),
   function: z.literal("box").optional(),
   note: z.string().optional(),
+  sha256: z.string().optional(),
+  requestHeaders: z.string().optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
 });
 export type WebpageCaptureFields = z.infer<typeof WebpageCapture>;
 
@@ -59,7 +65,7 @@ export const WebpageSchema = cardSchema("webpage", {
     siteName: z.string().optional(),
     byline: z.string().optional(),
     excerpt: z.string().optional(),
-    // In-box ref to the frozen, self-contained snapshot (attach/page.frozen),
+    // In-box ref to the frozen snapshot (attach/page.frozen),
     // stored under a `ref` key like every other card reference.
     frozen: z.object({ ref: z.string() }).optional(),
     // How `bbx webpage` got the page. Absent on a Clerk or share card.
@@ -74,8 +80,9 @@ export const WebpageSchema = cardSchema("webpage", {
   instructions: `# Webpage Cards
 
 A webpage card is a **captured external web page**, stored in the box. The
-card's body is the readable markdown rendering of the page; a frozen,
-self-contained HTML snapshot lives beside it in the card's attach scope. It is
+card's body is the readable markdown rendering of the page; a frozen HTML
+snapshot lives beside it in the card's attach scope, self-contained unless
+\`capture.snapshot\` is \`html-only\`. It is
 a snapshot taken at capture time — treat the body as a record of what the page
 said, and edit it only to fix capture artifacts, not to rewrite the page.
 
@@ -88,6 +95,8 @@ said, and edit it only to fix capture artifacts, not to rewrite the page.
 - \`capture:\` — written by \`bbx webpage\`: how the page was got, any redirect,
   and whether the box's \`webpage.ts\` made the card. Its \`snapshot: html-only\`
   means the saved HTML still loads its images and styles from the site.
+  \`capture.meta\` holds kept provenance; when it is present, trust it over the
+  \`retrieved\` time only if \`retrieved\` is missing.
 - \`frozen:\` — optional in-box ref (\`attach/page.frozen\`) to the frozen
   snapshot of the page, served sandboxed.
 - \`title:\` — optional human label; defaults to the captured page title.

@@ -22,13 +22,22 @@ const SHORT_PAGE_PHRASES = [
   "enable javascript and cookies",
 ];
 
-const CHALLENGE_MARKERS: readonly { marker: string; detail: string }[] = [
-  { marker: "cf-chl", detail: "a Cloudflare challenge" },
-  { marker: "<title>just a moment", detail: "a Cloudflare challenge" },
-  { marker: "<title>attention required", detail: "a Cloudflare block page" },
-  { marker: "captcha-delivery.com", detail: "a DataDome challenge" },
-  { marker: "/_incapsula_resource", detail: "an Imperva challenge" },
+/**
+ * Keyed to the title, never to a script: real pages on protected sites carry the
+ * vendor's script too, and a small one would be refused (found on a Minnesota
+ * state site by a box that made that mistake).
+ */
+const CHALLENGE_TITLES: readonly { title: string; detail: string }[] = [
+  { title: "just a moment", detail: "a Cloudflare challenge" },
+  { title: "attention required", detail: "a Cloudflare block page" },
+  { title: "radware captcha page", detail: "a Radware challenge" },
+  { title: "radware bot manager captcha", detail: "a Radware challenge" },
 ];
+
+/** The page's words: a phrase inside a script or a style is not on the page. */
+function visibleText(html: string): string {
+  return html.replace(/<(script|style)\b[\S\s]*?<\/\1\s*>/gi, " ");
+}
 
 export interface BlockInput {
   /** Null when the source does not report one (the box browser). */
@@ -39,15 +48,16 @@ export interface BlockInput {
 
 /** Why this looks refused, or null. */
 export function detectBlock({ status, headers, html }: BlockInput): string | null {
-  if (status !== null && BLOCK_STATUSES.has(status)) return `the site answered HTTP ${String(status)}`;
   if (headers["cf-mitigated"] === "challenge") return "a Cloudflare challenge (cf-mitigated header)";
   if (headers["x-datadome"] !== undefined) return "a DataDome challenge (x-datadome header)";
-  const lower = html.toLowerCase();
-  const isShort = Buffer.byteLength(html) < SHORT_PAGE_BYTES;
-  if (!isShort) return null;
-  for (const { marker, detail } of CHALLENGE_MARKERS) {
-    if (lower.includes(marker)) return `the page is ${detail}`;
-  }
-  const phrase = SHORT_PAGE_PHRASES.find((candidate) => lower.includes(candidate));
-  return phrase === undefined ? null : `a short page that says "${phrase}"`;
+  const title = /<title[^>]*>([^<]*)/i.exec(html)?.[1]?.trim().toLowerCase() ?? "";
+  const challenge = CHALLENGE_TITLES.find((candidate) => title.startsWith(candidate.title));
+  if (challenge !== undefined) return `the page is ${challenge.detail}`;
+  const lower = visibleText(html).toLowerCase();
+  const isShort = Buffer.byteLength(lower) < SHORT_PAGE_BYTES;
+  const phrase = isShort ? SHORT_PAGE_PHRASES.find((candidate) => lower.includes(candidate)) : undefined;
+  if (phrase !== undefined) return `a short page that says "${phrase}"`;
+  // A status alone may be a block or a page that is gone, so the reason says so.
+  if (status !== null && BLOCK_STATUSES.has(status)) return `the site answered HTTP ${String(status)}, with no challenge page seen: it may be blocking the box, or the page may not exist`;
+  return null;
 }

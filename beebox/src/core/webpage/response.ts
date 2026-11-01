@@ -17,6 +17,8 @@ export const CAPTURED_RESPONSE = z.object({
   headers: z.record(z.string(), z.string()),
   contentType: z.string().nullable(),
   html: z.string(),
+  /** Of the bytes as received, before decoding; null when the source gives only text. */
+  sha256: z.string().nullable(),
   via: z.enum(["http", "browser", "file"]),
 });
 export type CapturedResponse = z.infer<typeof CAPTURED_RESPONSE>;
@@ -29,6 +31,8 @@ const PAGE_RESULT = z.object({
   excerpt: z.string().nullish(),
   /** Shown on the card and in stdout. */
   note: z.string().nullish(),
+  /** Anything the box wants kept on the card, such as dates the page states. Goes in `capture.meta`. */
+  meta: z.record(z.string(), z.unknown()).nullish(),
 });
 
 const REFUSAL = z.object({ refuse: z.string().min(1) });

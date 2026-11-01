@@ -27,9 +27,11 @@ export function standard(response: CapturedResponse): WebpageResult {
     const page = extractReadablePage({ window, document: window.document, url: response.url });
     const title = page.title === "" ? response.url : page.title;
     const isNearEmpty = page.markdown.trim().length < NEAR_EMPTY_CHARS;
+    const lastModified = response.headers["last-modified"];
     return {
       ...page,
       title,
+      ...(lastModified === undefined ? {} : { meta: { lastModified } }),
       ...(isNearEmpty ? { note: "Almost no text was found. The page may need scripts to show its content." } : {}),
     };
   } finally {

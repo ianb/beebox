@@ -14,14 +14,22 @@ const check = (over: { status?: number | null; headers?: Record<string, string>;
 
 void test("Each signal names itself", (t) => {
   t.check(check({}), null);
-  t.check(check({ status: 403 }), "the site answered HTTP 403");
-  t.check(check({ status: 429 }), "the site answered HTTP 429");
+  t.check(check({ status: 403 }), "the site answered HTTP 403, with no challenge page seen: it may be blocking the box, or the page may not exist");
+  t.check(check({ status: 403, html: "<title>Just a moment...</title>" }), "the page is a Cloudflare challenge");
   t.check(check({ status: 404 }), null);
   t.check(check({ headers: { "cf-mitigated": "challenge" } }), "a Cloudflare challenge (cf-mitigated header)");
   t.check(check({ headers: { "x-datadome": "protected" } }), "a DataDome challenge (x-datadome header)");
   t.check(check({ html: "<title>Just a moment...</title>" }), "the page is a Cloudflare challenge");
-  t.check(check({ html: "<script src='https://geo.captcha-delivery.com/x.js'></script>" }), "the page is a DataDome challenge");
+  t.check(check({ html: "<title>Radware Captcha Page</title>" }), "the page is a Radware challenge");
+  t.check(check({ html: "<title>Radware Bot Manager Captcha</title>" }), "the page is a Radware challenge");
   t.check(check({ html: "<p>Please verify you are human</p>" }), 'a short page that says "verify you are human"');
+  t.end();
+});
+
+// Real small pages on protected sites carry the vendor's script.
+void test("A script is not a challenge", (t) => {
+  t.check(check({ html: "<title>Manual</title><script src='https://x.perfdrive.com/stormcaster.js'></script><p>hello</p>" }), null);
+  t.check(check({ html: "<title>Manual</title><script>var m = 'verify you are human';</script><p>hello</p>" }), null);
   t.end();
 });
 

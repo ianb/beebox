@@ -4,8 +4,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { renderFrontmatterBlock } from "../../cards/frontmatter.js";
 import { createWebpageTemplate, type WebpageCaptureFields } from "../../schemas/webpage.js";
 import { attachmentPath } from "../../shared/attach-path.js";
+import { errnoCode } from "../../shared/error-guards.js";
 import { neutralizeIngestedMarkdown } from "../../shared/markdoc-config/ingest.js";
 
 export async function writeCard(filePath: string, content: string): Promise<void> {
@@ -66,4 +68,62 @@ export async function writeWebpageCard(opts: {
   }
   await write(path.join(opts.boxRoot, opts.cardRel), card);
   return created;
+}
+
+/**
+ * Replace what `bbx webpage save` owns in an existing card, in place. Other
+ * frontmatter (a hand-added field, a capture id) and other attachments stay;
+ * git holds the old copy. Returns the paths written, or an empty list when
+ * nothing changed. `frozenHtml` undefined leaves the saved HTML as it is.
+ */
+export async function updateWebpageCard(opts: {
+  boxRoot: string;
+  cardRel: string;
+  current: Record<string, unknown>;
+  currentBody: string;
+  title: string;
+  url: string;
+  capturedAt: string;
+  markdown: string;
+  siteName?: string | undefined;
+  byline?: string | undefined;
+  excerpt?: string | undefined;
+  frozenHtml?: string | undefined;
+  capture: WebpageCaptureFields;
+}): Promise<string[]> {
+  const { boxRoot, cardRel, current, frozenHtml } = opts;
+  const body = neutralizeIngestedMarkdown(opts.markdown);
+  const frozenRel = attachmentPath(cardRel, "page.frozen");
+  const frozenPath = path.join(boxRoot, frozenRel);
+  const htmlChanged = frozenHtml !== undefined && (await readIfPresent(frozenPath)) !== frozenHtml;
+  if (body.trim() === opts.currentBody.trim() && !htmlChanged) return [];
+  const paths: string[] = [];
+  if (frozenHtml !== undefined && htmlChanged) {
+    // Replaced, not written through: a locked annex file is a link to read-only content.
+    await fs.rm(frozenPath, { force: true });
+    await writeCard(frozenPath, frozenHtml);
+    paths.push(frozenRel);
+  }
+  const { siteName: _site, byline: _byline, excerpt: _excerpt, ...kept } = current;
+  const fields = {
+    ...kept,
+    title: opts.title,
+    sources: [{ href: opts.url, retrieved: opts.capturedAt }],
+    ...(opts.siteName === undefined ? {} : { siteName: opts.siteName }),
+    ...(opts.byline === undefined ? {} : { byline: opts.byline }),
+    ...(opts.excerpt === undefined ? {} : { excerpt: opts.excerpt }),
+    ...(frozenHtml === undefined ? {} : { frozen: { ref: "attach/page.frozen" } }),
+    capture: opts.capture,
+  };
+  await writeCard(path.join(boxRoot, cardRel), renderFrontmatterBlock(fields, body));
+  return [cardRel, ...paths];
+}
+
+async function readIfPresent(file: string): Promise<string | null> {
+  try {
+    return await fs.readFile(file, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return null;
+    throw e;
+  }
 }

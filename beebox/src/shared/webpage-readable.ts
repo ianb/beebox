@@ -16,6 +16,7 @@
 import { DefuddleClass } from "defuddle/node";
 import purify, { type WindowLike } from "dompurify";
 import TurndownService from "turndown";
+import { tables } from "@joplin/turndown-plugin-gfm";
 
 export interface ReadablePageFields {
   title: string;
@@ -59,6 +60,8 @@ export function extractReadablePage({ window, document, url }: { window: WindowL
       headingStyle: "atx",
       codeBlockStyle: "fenced",
     });
+    // Income tables, benefit tables: a page's table is often why it was kept.
+    turndown.use(tables);
     markdown = turndown.turndown(absolutizeUrls(cleanHtml, { document, baseUrl: url }));
   }
 
