@@ -11,7 +11,7 @@
  */
 
 import { createHash } from "node:crypto";
-import type { CapturedResponse } from "./response.js";
+import { decodeHtml, type ReceivedPage } from "./response.js";
 
 /** Recorded on each card, so a later block investigation can see what was sent. */
 export const REQUEST_HEADERS_NAME = "desktop-chrome-142";
@@ -27,7 +27,7 @@ const BODY_CAP_BYTES = 10 * 1024 * 1024;
 const MAX_SAME_PAGE_HOPS = 5;
 
 export type FetchOutcome =
-  | { kind: "page"; response: CapturedResponse }
+  | ({ kind: "page" } & ReceivedPage)
   | { kind: "redirect"; status: number; target: string; chain: string[] }
   | { kind: "failed"; message: string };
 
@@ -73,15 +73,6 @@ async function readCapped(res: Response): Promise<Uint8Array | null> {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
-}
-
-function decode(body: Uint8Array, contentType: string | null): string {
-  const charset = /charset=["']?([\w-]+)/i.exec(contentType ?? "")?.[1] ?? "utf-8";
-  try {
-    return new TextDecoder(charset).decode(body);
-  } catch (_e) {
-    return new TextDecoder().decode(body);
-  }
 }
 
 export interface FetchInput {
@@ -135,6 +126,7 @@ export async function fetchPage({ url, from, fetchImpl }: FetchInput): Promise<F
     if (body === null) return { kind: "failed", message: `${current.href} is over the ${String(BODY_CAP_BYTES / (1024 * 1024))} MB limit` };
     return {
       kind: "page",
+      body,
       response: {
         url: current.href,
         requestedUrl: from[0] ?? url,
@@ -142,7 +134,7 @@ export async function fetchPage({ url, from, fetchImpl }: FetchInput): Promise<F
         status: res.status,
         headers: Object.fromEntries(res.headers.entries()),
         contentType,
-        html: decode(body, contentType),
+        html: decodeHtml(body, contentType),
         sha256: createHash("sha256").update(body).digest("hex"),
         via: "http",
       },

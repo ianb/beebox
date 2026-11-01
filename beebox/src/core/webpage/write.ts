@@ -11,15 +11,15 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { neutralizeIngestedMarkdown } from "../../shared/markdoc-config/ingest.js";
 
-export async function writeCard(filePath: string, content: string): Promise<void> {
+export async function writeCard(filePath: string, content: string | Uint8Array): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, content, "utf-8");
+  await fs.writeFile(filePath, content);
 }
 
 /** The same, but an existing file is an EEXIST error and nothing replaces it. */
-async function writeNewCard(filePath: string, content: string): Promise<void> {
+async function writeNewCard(filePath: string, content: string | Uint8Array): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, content, { encoding: "utf-8", flag: "wx" });
+  await fs.writeFile(filePath, content, { flag: "wx" });
 }
 
 /**
@@ -38,13 +38,13 @@ export async function writeWebpageCard(opts: {
   siteName?: string | undefined;
   byline?: string | undefined;
   excerpt?: string | undefined;
-  frozenHtml?: string | undefined;
+  frozenHtml?: string | Uint8Array | undefined;
   captureId?: string | undefined;
   capture?: WebpageCaptureFields | undefined;
   exclusive?: boolean | undefined;
 }): Promise<string[]> {
   const frozen = opts.frozenHtml;
-  const hasFrozen = typeof frozen === "string" && frozen !== "";
+  const hasFrozen = frozen !== undefined && frozen.length > 0;
   const write = opts.exclusive === true ? writeNewCard : writeCard;
   const card = createWebpageTemplate({
     title: opts.title,
@@ -89,14 +89,15 @@ export async function updateWebpageCard(opts: {
   siteName?: string | undefined;
   byline?: string | undefined;
   excerpt?: string | undefined;
-  frozenHtml?: string | undefined;
+  frozenHtml?: Uint8Array | undefined;
   capture: WebpageCaptureFields;
 }): Promise<string[]> {
   const { boxRoot, cardRel, current, frozenHtml } = opts;
   const body = neutralizeIngestedMarkdown(opts.markdown);
   const frozenRel = attachmentPath(cardRel, "page.frozen");
   const frozenPath = path.join(boxRoot, frozenRel);
-  const htmlChanged = frozenHtml !== undefined && (await readIfPresent(frozenPath)) !== frozenHtml;
+  const saved = frozenHtml === undefined ? null : await readIfPresent(frozenPath);
+  const htmlChanged = frozenHtml !== undefined && (saved === null || !saved.equals(frozenHtml));
   if (body.trim() === opts.currentBody.trim() && !htmlChanged && current["title"] === opts.title) return [];
   const paths: string[] = [];
   if (frozenHtml !== undefined && htmlChanged) {
@@ -126,9 +127,9 @@ function firstSource(sources: unknown): Record<string, unknown> {
   return isRecord(first) ? first : {};
 }
 
-async function readIfPresent(file: string): Promise<string | null> {
+async function readIfPresent(file: string): Promise<Buffer | null> {
   try {
-    return await fs.readFile(file, "utf-8");
+    return await fs.readFile(file);
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return null;
     throw e;

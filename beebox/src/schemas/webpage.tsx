@@ -39,7 +39,9 @@ const WebpageSources = z
  * saved HTML is the page's own, so its images and styles still load from the
  * site. `redirectedFrom`: every earlier address, oldest first. `function: box`:
  * the box's `webpage.ts` made this card. `note`: anything else worth knowing.
- * `sha256`: of the bytes as received; the saved HTML adds a `<base>` tag.
+ * `sha256`: of the bytes as received. The saved HTML is those bytes, unless the
+ * page was not UTF-8 or the card is older (a `<base>` tag added). `charset`: the
+ * page's encoding when it was not UTF-8; the saved HTML was converted to UTF-8.
  * `requestHeaders`: the name of the header set sent. `meta`: what the box or the
  * caller kept, such as the original fetch's provenance or dates the page states.
  */
@@ -50,6 +52,7 @@ const WebpageCapture = z.object({
   function: z.literal("box").optional(),
   note: z.string().optional(),
   sha256: z.string().optional(),
+  charset: z.string().optional(),
   requestHeaders: z.string().optional(),
   meta: z.record(z.string(), z.unknown()).optional(),
 });

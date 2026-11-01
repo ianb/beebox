@@ -24,7 +24,7 @@ import {
   rewriteViewRefs,
   type Remap,
 } from "../../rewrite-card-refs/core.js";
-import { movePhase2CardFiles } from "../../card-files/move-phase2.js";
+import { inNewDestination, movePhase2CardFiles } from "../../card-files/move-phase2.js";
 
 export interface MoveOneResult {
   from: string;
@@ -85,8 +85,7 @@ export async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
   const relDestPath = path.relative(ctx.boxRoot, destPath);
 
   // Move the directory
-  await fs.mkdir(path.dirname(destPath), { recursive: true });
-  await fs.rename(sourcePath, destPath);
+  await inNewDestination(destPath, () => fs.rename(sourcePath, destPath));
   ctx.writeLine(`Moved directory: ${relSourcePath} → ${relDestPath}`);
 
   const filesToStage: string[] = [];

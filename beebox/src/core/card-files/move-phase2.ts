@@ -128,6 +128,30 @@ class AttachDirRenameError extends Error {
 }
 
 /**
+ * Make `destPath`'s parent and run `move`. If the move fails, the directories
+ * made for it are removed again, so a failed move leaves nothing behind.
+ */
+export async function inNewDestination<T>(destPath: string, move: () => Promise<T>): Promise<T> {
+  const parent = path.dirname(destPath);
+  const firstCreated = await fs.mkdir(parent, { recursive: true });
+  try {
+    return await move();
+  } catch (error) {
+    if (firstCreated !== undefined) {
+      // Deepest first; a directory something else has since used stops the walk.
+      for (let dir = parent; dir.length >= firstCreated.length; dir = path.dirname(dir)) {
+        try {
+          await fs.rmdir(dir);
+        } catch (_e) {
+          break;
+        }
+      }
+    }
+    throw error;
+  }
+}
+
+/**
  * Rename a file and (if present) its sibling `<basename>.attach/`
  * directory in separate renames — the Phase-2 analogue of what cardworks'
  * `loader.move()` does for XML cards. Returns the list of moved
@@ -138,8 +162,7 @@ export async function movePhase2CardFiles(
   destPath: string,
 ): Promise<Array<{ from: string; to: string }>> {
   const moved: Array<{ from: string; to: string }> = [];
-  await fs.mkdir(path.dirname(destPath), { recursive: true });
-  await movePathPreservingAnnexSymlink(sourcePath, destPath);
+  await inNewDestination(destPath, () => movePathPreservingAnnexSymlink(sourcePath, destPath));
   moved.push({ from: sourcePath, to: destPath });
   // Only a card has an attach scope; a plain `.md` file moves alone.
   if (!isCardFile(sourcePath)) return moved;
