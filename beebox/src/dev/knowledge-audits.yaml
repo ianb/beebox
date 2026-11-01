@@ -1,5 +1,7 @@
 tests:
   # === The box agent changelog (docs/plans/agent-changes.md) ===
+  # Status (2026-11-01, Claude): all three passed on the agent-changelog test1
+  # clone; each agent opened box-docs/agent-changes.md by itself.
   - id: change-note-stale
     prompt: >
       A note I saved months ago says to run `bbx view test <slug>` to check a

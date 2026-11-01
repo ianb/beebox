@@ -53,6 +53,9 @@ direction), and your evidence: what you had to merge or drop, with its text, or
 a reading of the doc that shows a limit is too loose. Do not edit the check or
 the schedule. Without concrete evidence, do not send one.
 
+If you find a guide or box doc that contradicts current behavior, name it in the
+same kind of alert. You do not fix it.
+
 ## Authority
 
 You may edit only `beebox/docs/box/agent-changes.md`, commit it, and land it.
