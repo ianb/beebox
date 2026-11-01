@@ -7,7 +7,7 @@ discovered-by: agent
 discovered-in: "worktree-retrospective — retrospective 20261031-234313"
 ---
 
-Two faults in `browse/src/runner.ts` needed a real browser to find: the ceiling
+Two faults in `browse/packages/agent-browser-typed/src/runner.ts` needed a real browser to find: the ceiling
 killed only the node shim while a child held the pipes, and a process-group fix
 broke Ctrl-C. A per-command `AGENT_BROWSER_*` value made the daemon restart its
 background state, which took about 15 bisect steps to find.

@@ -61,7 +61,7 @@ credentials or opt a real box into owner browsing to bypass a refusal.
 
 ## Screenshots — what the sidecar buys
 
-On macOS a sleeping display stalls captures: run `caffeinate -u -t 2` first. `bin/browse screenshot` saves an indexed `.claude/screenshots/NNNN-<slug>.png`
+`bin/browse screenshot` saves an indexed `.claude/screenshots/NNNN-<slug>.png`
 and a JSON sidecar with URL/title/time/worktree. Report the URL for visible
 failures. Package useful UI evidence as one labeled exhibit and share its URL;
 an incidental diagnostic screenshot needs no exhibit. Commands and sidecar

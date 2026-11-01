@@ -24,8 +24,3 @@ the summary (or build `verifiedAt` relative to the clock), so the
 over-36-hours branch is tested on purpose instead of by the calendar.
 
 Reproduce: `pnpm -C beebox test` (2026-10-29: 13,464 pass, 1 fail, 2 skip).
-
-2026-10-31 (retrospective 20261031-234313): a second test failed for the same
-class of cause: `test/core/secrets/access-log.test.ts` mixed the real clock with
-a fixed date. Evidence: `shared-browser/20261101T005213Z-landed.md`
-and `notify-settings/20261031T032238Z-landed.md` both ask for a clock seam.

@@ -33,8 +33,9 @@ hand.
 
 ## Base prefix behind the hub
 
-The hub sets `x-bbx-base-prefix` to `/<slug>` (`server/core.ts`), replacing the
-dev router's segment. A box never learns the router's outer path, so a box route
+On a proxied request without a valid mobile bearer, the hub sets
+`x-bbx-base-prefix` to `/<slug>` (`server/core.ts`), replacing the dev router's
+segment; with a valid bearer it strips the header. A box never learns the router's outer path, so a box route
 must not prepend the header's value to a request path.
 
 ## Lazy mode
