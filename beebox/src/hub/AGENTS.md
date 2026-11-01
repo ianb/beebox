@@ -31,6 +31,12 @@ The same posture applies one level down: what a box's *own* subprocesses
 every connector credential. Keep the two lists' overlapping entries in sync by
 hand.
 
+## Base prefix behind the hub
+
+The hub sets `x-bbx-base-prefix` to `/<slug>` (`server/core.ts`), replacing the
+dev router's segment. A box never learns the router's outer path, so a box route
+must not prepend the header's value to a request path.
+
 ## Lazy mode
 
 `hub.json`'s `lazy: true` flag makes every configured box start "stopped";

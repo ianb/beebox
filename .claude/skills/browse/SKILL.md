@@ -27,14 +27,8 @@ bin/browse snapshot -i
   order, and after a re-render upstream moves a ref to another element with
   the same role and name, which can be a different control. Re-snapshot after page changes; check `get url` if navigation
   looks wrong.
-- **App actions have checks.** Missing, hidden, zero-size, off-screen, disabled,
-  pointer-events-none, or covered targets are refused. A ref that changed hands
-  between the last two snapshots gets a warning; a `@eN` ref is refused (`stale-ref`) once a click, fill, press, open, or other page-changing command has run since the latest snapshot, so snapshot again first; refs on controls
-  without a `bbx-` id get geometry checks only. Other origins pass through to
-  upstream, which checks only visibility, enabled state, and what covers the
-  click point. Verify the resulting state. Report
-  refused/covered controls as evidence
-  rather than bypassing the obstruction.
+- **App actions have checks.** Missing, hidden, zero-size, off-screen, disabled, pointer-events-none, or covered targets are refused. A ref that changed hands between the last two snapshots gets a warning; a `@eN` ref is refused (`stale-ref`) once a click, fill, press, open, or other page-changing command has run since the latest snapshot, so snapshot again first; refs on controls
+  without a `bbx-` id get geometry checks only. Other origins pass through to upstream, which checks only visibility, enabled state, and what covers the click point. Verify the resulting state. Report refused/covered controls as evidence rather than bypassing the obstruction.
 - **Scrolling a pane:** `scroll --selector` uses the first visible match and refuses when all are hidden. `mouse wheel` ignores an earlier `mouse move` (upstream sends it to 0,0); use `scroll --selector`.
 - **Transient state needs a different read.** Default `snapshot` waits for app
   readiness and can miss loading. Before testing loading/optimistic states or
@@ -67,7 +61,7 @@ credentials or opt a real box into owner browsing to bypass a refusal.
 
 ## Screenshots — what the sidecar buys
 
-`bin/browse screenshot` saves an indexed `.claude/screenshots/NNNN-<slug>.png`
+On macOS a sleeping display stalls captures: run `caffeinate -u -t 2` first. `bin/browse screenshot` saves an indexed `.claude/screenshots/NNNN-<slug>.png`
 and a JSON sidecar with URL/title/time/worktree. Report the URL for visible
 failures. Package useful UI evidence as one labeled exhibit and share its URL;
 an incidental diagnostic screenshot needs no exhibit. Commands and sidecar
