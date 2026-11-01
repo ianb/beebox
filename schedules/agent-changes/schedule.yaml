@@ -3,7 +3,7 @@
 #
 # Handoff shape: `run` gathers the candidates and hands off only when some
 # exist. Which of them earn an entry is the session's judgment. Plan:
-# beebox/docs/plans/agent-changes.md.
+# beebox/docs/implemented-plans/agent-changes.md.
 description: "Box agent changelog: turn what landed into a few short entries"
 cadence: 3d
 workstream:

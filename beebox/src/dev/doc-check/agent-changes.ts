@@ -2,7 +2,7 @@
  * The limits on `docs/box/agent-changes.md`, the box agent's changelog. A
  * scheduled curator lands entries with no human reading them first, so these
  * limits are what keep the doc short. Nothing here reads the clock: an old
- * checkout cannot start failing with age. Plan: docs/plans/agent-changes.md.
+ * checkout cannot start failing with age. Plan: docs/implemented-plans/agent-changes.md.
  */
 
 const MAX_WORDS = 30;

@@ -1,13 +1,16 @@
 ---
 title: "Keep a changelog for the box agent: what changed in its own behavior and tools"
 workstream: agent-changelog
-design: ../../beebox/docs/plans/agent-changes.md
+design: ../../../beebox/docs/implemented-plans/agent-changes.md
 area: beebox
 labels: [agent, agent-guide, updates]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder conversation, 2026-11-01"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-01):** Landed on worktree-agent-changelog: box doc, doc-check limits, guide pointer, curator schedule. The curator has not run a real session; its first tick records a baseline.
 
 After a deploy, a box agent reads the regenerated agent guide
 (`beebox/src/core/agent-guide/`, written into the box by `bbx docs refresh`).

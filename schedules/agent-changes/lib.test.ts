@@ -9,7 +9,7 @@ test("isAgentSurface: a generator outside docs-gen counts", () => {
 
 test("isAgentSurface: internal code and the frontend do not count", () => {
   assert.equal(isAgentSurface("beebox/src/frontend/src/App.tsx"), false);
-  assert.equal(isAgentSurface("beebox/docs/plans/agent-changes.md"), false);
+  assert.equal(isAgentSurface("beebox/docs/implemented-plans/agent-changes.md"), false);
 });
 
 test("isAgentSurface: the curator's own doc does not wake it, though its neighbors do", () => {

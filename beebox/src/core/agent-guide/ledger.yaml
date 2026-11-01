@@ -44,7 +44,7 @@ budget:
   # Raised 2026-11-01 (always_loaded_words +20) for SEARCHING's held-back-area
   # line (docs/plans/knowledge-base-tools.md).
   # Raised 2026-11-01 (+27 always-loaded, +26 guide_words) for DOCS' pointer to the box
-  # agent changelog; the entries stay in the doc (docs/plans/agent-changes.md).
+  # agent changelog; the entries stay in the doc (docs/implemented-plans/agent-changes.md).
   guide_words: 5769
   always_loaded_words: 11248
   uncited_words_per_section: 60

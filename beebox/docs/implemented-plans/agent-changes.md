@@ -1,15 +1,15 @@
 ---
 title: "A changelog for the box agent, written by a curator and kept short"
-status: active
+status: implemented
 workstream: agent-changelog
 issues:
-  - ../../../issues/features/2026-11-01-box-agent-changelog.md
+  - ../../../issues/closed/features/2026-11-01-box-agent-changelog.md
 ---
 # A changelog for the box agent
 
 The box agent reads a guide that describes the current system. Nothing tells it what changed, so a note, procedure, or resumed chat that predates a change stays wrong. This plan adds one box doc listing what changed and one pointer to it in the guide. A scheduled curator writes the entries, and checked limits keep the list small.
 
-**Issues addressed:** [box agent changelog](../../../issues/features/2026-11-01-box-agent-changelog.md). Related and left open: [release discipline and update story](../../../issues/decisions/2026-07-20-release-discipline-and-update-story.md), which covers the operator and person. `bin/issues similar` and `bin/issues search --all "changelog"` found no duplicate.
+**Issues addressed:** [box agent changelog](../../../issues/closed/features/2026-11-01-box-agent-changelog.md). Related and left open: [release discipline and update story](../../../issues/decisions/2026-07-20-release-discipline-and-update-story.md), which covers the operator and person. `bin/issues similar` and `bin/issues search --all "changelog"` found no duplicate.
 
 ## Design
 
