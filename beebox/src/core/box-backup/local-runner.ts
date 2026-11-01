@@ -87,7 +87,7 @@ export function startLocalBackupRunner(options: {
       stopped = true;
       if (timeout) clearTimeout(timeout);
       controller.abort();
-      await Promise.all([...activeRuns]);
+      await Promise.all(activeRuns);
       activeRunners -= 1;
     },
   };
