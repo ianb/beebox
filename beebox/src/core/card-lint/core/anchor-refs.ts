@@ -16,6 +16,8 @@ import { errnoCode } from "../../../shared/error-guards.js";
 import { resolveContainedRef } from "../../ref-exists.js";
 
 const ID_FRAGMENT = /^[\dA-Za-z][\w-]*$/;
+/** Footnote markers the renderer numbers (`html-schema.ts`); a body does not name them. */
+const FOOTNOTE_FRAGMENT = /^(?:fn|fnref)-\d/;
 
 /** Target path (absolute) → its anchor ids, or null when there is nothing to check against. */
 const runAnchors = new WeakMap<object, Map<string, Promise<ReadonlySet<string> | null>>>();
@@ -51,7 +53,7 @@ export async function brokenAnchorMessage(input: {
   run: object;
 }): Promise<string | null> {
   const { fragment, path: refTarget } = parseRef(input.ref);
-  if (fragment === undefined || !ID_FRAGMENT.test(fragment) || !refTarget.endsWith(".card")) return null;
+  if (fragment === undefined || !ID_FRAGMENT.test(fragment) || FOOTNOTE_FRAGMENT.test(fragment) || !refTarget.endsWith(".card")) return null;
   const contained = resolveContainedRef({ ref: input.ref, fromPath: input.fromPath, boxRoot: input.boxRoot });
   if (contained === null) return null;
   const anchors = await targetAnchors({ target: path.resolve(input.boxRoot, contained), run: input.run });

@@ -68,13 +68,24 @@ export async function writePdfCard(input: WritePdfCardInput): Promise<WrittenPdf
   const attachRelDir = attachDirFor(cardRel);
   const attachAbsDir = path.join(boxRoot, attachRelDir);
   const cardAbsPath = path.join(boxRoot, cardRel);
-  await fs.mkdir(attachAbsDir, { recursive: true });
-  // An exclusive write claims the card's name first, so a taken name fails before anything is copied.
-  if (exclusive === true) await fs.writeFile(cardAbsPath, "", { flag: "wx" });
+  // An exclusive write claims the card's name and its attach folder first, so
+  // a taken name, or a folder another type of card owns, fails before anything is copied.
+  await fs.mkdir(path.dirname(attachAbsDir), { recursive: true });
+  if (exclusive === true) await fs.mkdir(attachAbsDir);
+  else await fs.mkdir(attachAbsDir, { recursive: true });
+  try {
+    if (exclusive === true) await fs.writeFile(cardAbsPath, "", { flag: "wx" });
+  } catch (e) {
+    await fs.rmdir(attachAbsDir);
+    throw e;
+  }
   try {
     return await writeFiles(input, { attachRelDir, attachAbsDir, cardAbsPath });
   } catch (e) {
-    if (exclusive === true) await fs.rm(cardAbsPath, { force: true });
+    if (exclusive === true) {
+      await fs.rm(cardAbsPath, { force: true });
+      await fs.rm(attachAbsDir, { recursive: true, force: true });
+    }
     throw e;
   }
 }

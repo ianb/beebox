@@ -24,7 +24,7 @@ import { BOX_DIRS, requireBoxRoot } from "../../../lib/paths/core.js";
 import { safeFilename } from "../../../lib/safe-filename.js";
 import { insideBox, parseMeta, shellWord } from "../../lib/save-command.js";
 import type { WebpageCaptureFields } from "../../../schemas/webpage.js";
-import { attachmentPath } from "../../../shared/attach-path.js";
+import { attachDirFor, attachmentPath } from "../../../shared/attach-path.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { browserResponse, fileResponse, WebpageSaveError } from "./sources.js";
 
@@ -112,6 +112,7 @@ async function saveNewCard(input: SaveInput & { dir: string; name: string | unde
       } catch (e) {
         // A failed save leaves nothing for a later sweep to commit.
         for (const rel of paths) await fs.rm(path.join(boxRoot, rel), { force: true });
+        await fs.rm(path.join(boxRoot, attachDirFor(cardRel)), { recursive: true, force: true });
         throw e;
       }
     }

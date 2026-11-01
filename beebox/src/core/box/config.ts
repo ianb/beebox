@@ -122,7 +122,7 @@ const searchPrefix = z
 const searchConfigSchema = z
   .object({
     /** Area name to the box-relative prefixes it covers. */
-    areas: z.record(z.string().min(1), z.array(searchPrefix).min(1)).default({}),
+    areas: z.record(z.string().min(1).refine((name) => name !== "all", "`all` means every area in --area"), z.array(searchPrefix).min(1)).default({}),
     /** Card type to a score multiplier. */
     kindWeights: z.record(z.string().min(1), z.number().positive().finite()).default({}),
   })

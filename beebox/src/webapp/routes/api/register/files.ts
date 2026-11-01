@@ -195,7 +195,8 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
           typeof ifModifiedSince === "string" &&
           Number.isFinite(Date.parse(ifModifiedSince)) &&
           Math.floor(Date.parse(ifModifiedSince) / 1000) >= Math.floor(stat.mtimeMs / 1000);
-        if (etagMatches || mtimeMatches) {
+        // A frozen page's body also depends on its card, which these do not cover.
+        if (!isFrozen && (etagMatches || mtimeMatches)) {
           const notModifiedReply = applyServingSecurityHeaders(
             reply.header("ETag", etag).header("Last-Modified", lastModified).header("Cache-Control", "no-cache"),
             { isFrozen, contentDisposition }

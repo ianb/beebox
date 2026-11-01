@@ -151,7 +151,7 @@ const PARA_ALIGN_CLASSES: Record<string, string> = {
 
 /** `align`, `title`, `lang` and `dir` arrive only from an HTML `<p>` (see `makeHtmlTag`); `id` from a `{% #id %}` annotation. */
 function Para({ children, align, title, lang, dir, id }: { children?: ReactNode; align?: string; title?: string; lang?: string; dir?: string; id?: string }) {
-  if (isLoneImageReactChildren(children)) {
+  if (isLoneImageReactChildren(children) && id === undefined) {
     return children;
   }
   // A <div>, not a <p>: paragraphs routinely wrap block-level content here

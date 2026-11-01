@@ -266,3 +266,13 @@ void test("A page that is not UTF-8 is saved as UTF-8", async (t) => {
   // Its own copy reads as UTF-8 though its `<meta>` says otherwise, and stays as it was.
   t.check((await save(["--update", rel, "--html", copy])).stdout.split("\n")[0], `Unchanged ${rel}`);
 });
+
+// A name whose attach folder another type of card owns is taken.
+void test("--name refuses an attach folder another card owns, and leaves it alone", async (t) => {
+  const { root, base, save } = await setup(t);
+  await fs.mkdir(path.join(root, "_content/inbox/Beds.attach"), { recursive: true });
+  await fs.writeFile(path.join(root, "_content/inbox/Beds.attach/photo.jpg"), "photo");
+  t.check((await save([`${base}/article`, "--name", "Beds"])).exitCode, 1);
+  t.check(await fs.readdir(path.join(root, "_content/inbox/Beds.attach")), ["photo.jpg"]);
+  t.check(await cardsIn(root), []);
+});

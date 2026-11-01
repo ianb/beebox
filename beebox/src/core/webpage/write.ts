@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { renderFrontmatterBlock } from "../../cards/frontmatter.js";
 import { createWebpageTemplate, type WebpageCaptureFields } from "../../schemas/webpage.js";
-import { attachmentPath } from "../../shared/attach-path.js";
+import { attachDirFor, attachmentPath } from "../../shared/attach-path.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { anchorsIn } from "../../shared/markdoc-config/anchors.js";
@@ -114,12 +114,23 @@ export async function writeWebpageCard(opts: {
   // The snapshot first: a crash between the writes must not leave a card,
   // found later by its capture id, that names a snapshot never written.
   const created = [opts.cardRel];
+  const attachDir = path.join(opts.boxRoot, attachDirFor(opts.cardRel));
   if (hasFrozen) {
     const frozenRel = attachmentPath(opts.cardRel, "page.frozen");
+    // An exclusive save also claims the folder, which another type of card may own.
+    if (opts.exclusive === true) {
+      await fs.mkdir(path.dirname(attachDir), { recursive: true });
+      await fs.mkdir(attachDir);
+    }
     await write(path.join(opts.boxRoot, frozenRel), frozen);
     created.push(frozenRel);
   }
-  await write(path.join(opts.boxRoot, opts.cardRel), card);
+  try {
+    await write(path.join(opts.boxRoot, opts.cardRel), card);
+  } catch (e) {
+    if (opts.exclusive === true && hasFrozen) await fs.rm(attachDir, { recursive: true, force: true });
+    throw e;
+  }
   return created;
 }
 

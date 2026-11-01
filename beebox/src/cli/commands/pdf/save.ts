@@ -197,7 +197,8 @@ async function urlSource({ url, options, deps, scratch }: { url: string; options
     process.exitCode = EXIT_REDIRECT;
     return null;
   }
-  const refused = notPdf({ bytes: fetched.body, what: fetched.url, contentType: fetched.contentType });
+  const what = fetched.status >= 400 ? `${fetched.url}, which answered HTTP ${String(fetched.status)},` : fetched.url;
+  const refused = notPdf({ bytes: fetched.body, what, contentType: fetched.contentType });
   if (refused !== null) return refused;
   await fs.writeFile(scratch, fetched.body);
   return { file: scratch, sha256: fetched.sha256, href: fetched.url, originalName: lastSegment(fetched.url) || "document.pdf", capture: httpCapture(fetched) };

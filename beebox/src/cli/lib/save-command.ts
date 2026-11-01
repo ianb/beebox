@@ -19,7 +19,7 @@ export class SaveError extends Error {
 
 /** One shell word: a redirect target is the site's text, and the agent may paste this line. */
 export function shellWord(text: string): string {
-  return /^[\w%&+,./:=?@-]+$/.test(text) ? text : `'${text.replaceAll("'", "'\\''")}'`;
+  return /^[\w%+,./:=@-]+$/.test(text) ? text : `'${text.replaceAll("'", "'\\''")}'`;
 }
 
 /** `target` relative to the box root, or an error when it leaves the box, by path or through a link. */
