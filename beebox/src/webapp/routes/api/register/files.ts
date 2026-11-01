@@ -13,6 +13,8 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
+import { z } from "zod";
+import { parseFrontmatterObject } from "../../../../cards/frontmatter.js";
 import { commitPaths, pathsHaveChanges, stageFiles } from "../../../../lib/git/core/operations.js";
 import type { EventBus } from "../../../../core/event-bus/core.js";
 import { fileEtag } from "../../../file-etag.js";
@@ -62,11 +64,38 @@ function applyServingSecurityHeaders(
   return reply;
 }
 
-/** Insert the fallback script just before </body> (or append if absent). */
-function injectFrozenFallback(html: string): string {
-  const tag = `<script>${FROZEN_FALLBACK_SCRIPT}</script>`;
+const FROZEN_CARD = z.object({
+  capture: z.looseObject({ snapshot: z.literal("html-only").optional() }).optional(),
+  sources: z.array(z.looseObject({ href: z.url({ protocol: /^https?$/ }).optional() })).optional(),
+});
+
+/** Where an HTML-only copy's relative images and styles resolve: the address on its card. A self-contained copy has none. */
+async function frozenBase(frozenPath: string): Promise<string | undefined> {
+  const attachDir = path.dirname(frozenPath);
+  if (path.basename(frozenPath) !== "page.frozen" || !attachDir.endsWith(".attach")) return undefined;
+  let text: string;
+  try {
+    text = await fs.readFile(`${attachDir.slice(0, -".attach".length)}.webpage.card`, "utf8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return undefined;
+    throw e;
+  }
+  const card = FROZEN_CARD.safeParse(parseFrontmatterObject(text));
+  return card.data?.capture?.snapshot === "html-only" ? card.data.sources?.[0]?.href : undefined;
+}
+
+/** The page as served: a `<base>` when it needs one, and the fallback script just before </body> (or appended if absent). */
+function frozenPageForServing(stored: string, base: string | undefined): string {
+  let html = stored;
+  if (base !== undefined && !/<base\b/i.test(html)) {
+    const tag = `<base href="${base.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">`;
+    const head = /<head\b[^>]*>/i.exec(html);
+    const at = head === null ? 0 : head.index + head[0].length;
+    html = html.slice(0, at) + tag + html.slice(at);
+  }
+  const script = `<script>${FROZEN_FALLBACK_SCRIPT}</script>`;
   const idx = html.lastIndexOf("</body>");
-  return idx === -1 ? html + tag : html.slice(0, idx) + tag + html.slice(idx);
+  return idx === -1 ? html + script : html.slice(0, idx) + script + html.slice(idx);
 }
 
 interface RegisterApiFilesRoutesOptions {
@@ -166,7 +195,8 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
           typeof ifModifiedSince === "string" &&
           Number.isFinite(Date.parse(ifModifiedSince)) &&
           Math.floor(Date.parse(ifModifiedSince) / 1000) >= Math.floor(stat.mtimeMs / 1000);
-        if (etagMatches || mtimeMatches) {
+        // A frozen page's body also depends on its card, which these do not cover.
+        if (!isFrozen && (etagMatches || mtimeMatches)) {
           const notModifiedReply = applyServingSecurityHeaders(
             reply.header("ETag", etag).header("Last-Modified", lastModified).header("Cache-Control", "no-cache"),
             { isFrozen, contentDisposition }
@@ -208,10 +238,10 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         }
 
         if (isFrozen) {
-          const html = injectFrozenFallback((await fs.readFile(resolved)).toString("utf8"));
+          const html = frozenPageForServing((await fs.readFile(resolved)).toString("utf8"), await frozenBase(resolved));
           const frozenReply = applyServingSecurityHeaders(
             reply
-              .header("Content-Type", contentType)
+              .header("Content-Type", `${contentType}; charset=utf-8`)
               .header("Cache-Control", "no-cache")
               .header("ETag", etag)
               .header("Last-Modified", lastModified),

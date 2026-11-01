@@ -8,6 +8,7 @@
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
@@ -88,7 +89,7 @@ void test("A page becomes one commit: the card and its saved HTML", async (t) =>
   const text = await fs.readFile(path.join(root, "_content/inbox", card), "utf8");
   t.check(fields(text, /^\s+(via|snapshot):/), ["  via: http", "  snapshot: html-only"]);
   const frozen = path.join("_content/inbox", card.replace(".webpage.card", ".attach"), "page.frozen");
-  t.check((await fs.readFile(path.join(root, frozen), "utf8")).split("<title>")[0], `<!DOCTYPE html><html><head><base href="${base}/article">`);
+  t.check((await fs.readFile(path.join(root, frozen), "utf8")).split("<title>")[0], "<!DOCTYPE html><html><head>");
   const { stdout } = await execFileAsync("git", ["show", "--name-only", "--format=%s", "HEAD"], { cwd: root });
   t.check(stdout.trim().split("\n").filter((line) => line !== ""), ['Save web page: "Raised beds"', `_content/inbox/${card}`, frozen].toSorted((a, b) => (a.startsWith("Save") ? -1 : b.startsWith("Save") ? 1 : a.localeCompare(b))));
 });
@@ -233,4 +234,45 @@ void test("HTML on disk goes the same way, with its address", async (t) => {
   t.check((await save([])).exitCode, 1);
   t.check((await save(["https://a.example/", "--browser"])).exitCode, 1);
   t.check((await save(["https://a.example/", "--to", "../outside"])).exitCode, 1);
+});
+
+// A card can be given a stable name, and the saved copy is the bytes the server sent.
+void test("--name sets the card's name, and the saved HTML is what the server sent", async (t) => {
+  const { root, base, save } = await setup(t);
+  t.check((await save([`${base}/article`, "--name", "Raised_beds"])).stdout, "Saved _content/inbox/Raised_beds.webpage.card\n");
+  const repeat = await save([`${base}/article`, "--name", "Raised_beds"]);
+  t.check([repeat.exitCode, repeat.stderr], [1, "bbx webpage save: _content/inbox/Raised_beds.webpage.card already exists; replace it with --update\n"]);
+  t.check((await save([`${base}/article`, "--name", "a/b"])).exitCode, 1);
+  t.check((await save([`${base}/article`, "--name", "x.webpage.card"])).exitCode, 1);
+
+  const saved = await fs.readFile(path.join(root, "_content/inbox/Raised_beds.attach/page.frozen"));
+  const sent = Buffer.from(await (await fetch(`${base}/article`)).arrayBuffer());
+  t.check(saved.toString("hex"), sent.toString("hex"));
+  const card = await fs.readFile(path.join(root, "_content/inbox/Raised_beds.webpage.card"), "utf8");
+  const hash = createHash("sha256").update(saved).digest("hex");
+  t.check(fields(card, /^\s+sha256:/), [`  sha256: ${hash}`]);
+});
+
+// A page in another encoding is saved as UTF-8, and its card says so.
+void test("A page that is not UTF-8 is saved as UTF-8", async (t) => {
+  const { root, save } = await setup(t);
+  await fs.writeFile(path.join(root, "latin.html"), Buffer.from('<html><head><meta charset="iso-8859-1"><title>Caf\u00E9</title></head><body><p>Caf\u00E9 menu</p></body></html>', "latin1"));
+  await save(["--html", "latin.html", "--url", "https://garden.example/menu", "--name", "Menu"]);
+  const copy = "_content/inbox/Menu.attach/page.frozen";
+  t.check(/<title>.*<\/title>/.exec(await fs.readFile(path.join(root, copy), "utf8"))?.[0], "<title>Caf\u00E9</title>");
+  const rel = "_content/inbox/Menu.webpage.card";
+  t.check(fields(await fs.readFile(path.join(root, rel), "utf8"), /^\s+charset:/), ["  charset: windows-1252"]);
+
+  // Its own copy reads as UTF-8 though its `<meta>` says otherwise, and stays as it was.
+  t.check((await save(["--update", rel, "--html", copy])).stdout.split("\n")[0], `Unchanged ${rel}`);
+});
+
+// A name whose attach folder another type of card owns is taken.
+void test("--name refuses an attach folder another card owns, and leaves it alone", async (t) => {
+  const { root, base, save } = await setup(t);
+  await fs.mkdir(path.join(root, "_content/inbox/Beds.attach"), { recursive: true });
+  await fs.writeFile(path.join(root, "_content/inbox/Beds.attach/photo.jpg"), "photo");
+  t.check((await save([`${base}/article`, "--name", "Beds"])).exitCode, 1);
+  t.check(await fs.readdir(path.join(root, "_content/inbox/Beds.attach")), ["photo.jpg"]);
+  t.check(await cardsIn(root), []);
 });

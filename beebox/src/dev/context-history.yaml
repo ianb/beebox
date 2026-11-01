@@ -11494,6 +11494,22 @@ test1:
       peak: 33710
       added: 0
       turns: 2
+  refs-who-cites-this:
+    - date: 2026-11-01T13:44:18.110Z
+      boxCommit: 6b0e5deef8670219a3dec193100f4cd861699fc2
+      repoCommit: a1cb1857afec93e1b8362c941f0c357e43da4d2f
+      initial: 34117
+      peak: 34117
+      added: 0
+      turns: 2
+  pdf-save-keep-a-pdf:
+    - date: 2026-11-01T13:44:26.763Z
+      boxCommit: ca3fc2c977851b6fd2abfabf70c4657d16377ee5
+      repoCommit: a1cb1857afec93e1b8362c941f0c357e43da4d2f
+      initial: 34114
+      peak: 34114
+      added: 0
+      turns: 1
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

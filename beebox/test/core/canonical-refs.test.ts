@@ -67,7 +67,7 @@ const GUIDE =
 /** A box holding one referring card, its target, and one dossier. */
 async function seedBox() {
   const box = await makeTmpBox();
-  await box.write("_content/store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nThe plan.\n");
+  await box.write("_content/store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\n## Risks\n\nThe plan.\n");
   await box.write("_content/store/notes/Meeting.doc.card", MEETING);
   await box.write("_content/store/notes/Meeting.attach/photo.jpg", "IMG");
   await box.write("_content/docs/guide.md", GUIDE);
@@ -253,7 +253,7 @@ Also [missing](../store/notes/Gone.doc.card) and [outside](../../escape.md).`);
 // of scannable lines, so both agree on the set.
 void test("inlineLinkPattern's label class matches newlines, so validate — which runs it...", async (t) => {
   const box = await makeTmpBox();
-  await box.write("_content/store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nThe plan.\n");
+  await box.write("_content/store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\n## Risks\n\nThe plan.\n");
   await box.write(
     "_content/store/notes/Wrapped.doc.card",
     "---\ntype: doc\ntitle: Wrapped\n---\nSee [the long-awaited\nplan](Plan.doc.card) for details.\n",
@@ -298,7 +298,7 @@ plan](/_content/store/notes/Plan.doc.card) for details.`);
 void test("The fixer shares bbx mv's text-surgical scan but not all of its posture.", async (t) => {
   const FENCE = "`".repeat(3);
   const box = await makeTmpBox();
-  await box.write("_content/store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nThe plan.\n");
+  await box.write("_content/store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\n## Risks\n\nThe plan.\n");
   await box.write(
     "_content/store/notes/Notes.doc.card",
     "---\ntype: doc\ntitle: Notes\nref: Plan.doc.card  # the plan\nrefs:\n  - Plan.doc.card # also\n" +
@@ -393,7 +393,7 @@ void test("ref:", async (t) => {
 // special except at the root.
 void test("Old code wrote bare refs meaning them from the box root — under v3 that means...", async (t) => {
   const box = await makeTmpBox();
-  await box.write("_content/people/Dana.person.card", "---\ntype: person\nname: Dana\n---\nDana.\n");
+  await box.write("_content/people/Dana.person.card", "---\ntype: person\nname: Dana\n---\n## Bio\n\nDana.\n");
   await box.write("_content/team/Ops.doc.card", "---\ntype: doc\ntitle: Ops\n---\nOps.\n");
   await box.write(
     "_content/store/notes/_content/team/Ops.doc.card",

@@ -90,13 +90,13 @@ Chosen design: tracks A to C. Estimate: about 650 lines of source and 450 of tes
 ## Stated preferences this plan trades against
 
 - **`docs/engineering-principles.md` 8 (one way to do each thing):** the issue names a second extractor as the failure to avoid, so both packages call one shared function. The box function is a deliberate exception, asked for by the boxholder.
-- **The schema's "self-contained" snapshot promise (`src/schemas/webpage.tsx`):** these commands do not inline assets. See Track A.
+- **The schema's "self-contained" snapshot promise (`src/schemas/webpage.ts`):** these commands do not inline assets. See Track A.
 - **Earlier "no stealth" line:** the boxholder withdrew it (2026-10-31, 2026-11-01). The commands send a browser's headers and nothing further.
 
 ## What already exists
 
 - **Card writer, move and reuse:** `writeWebpageCard` in `src/webapp/trpc/routers/clerk.ts:311`, which neutralizes third-party markdown: *"Clipped page text is third-party: escape its raw HTML and Markdoc tags."* It moves to `src/core/webpage/write.ts`.
-- **Template, extend:** `createWebpageTemplate`, `src/schemas/webpage.tsx:108`.
+- **Template, extend:** `createWebpageTemplate`, `src/schemas/webpage.ts:108`.
 - **Pipeline, copy the steps:** `beebox-clerk/src/platform/extract-readable.ts`: Defuddle, DOMPurify, absolutize, Turndown with `headingStyle: "atx"`, `codeBlockStyle: "fenced"`.
 - **Snapshot serving, reuse:** `WebpageView.tsx`: *"served sandboxed through /api/files"*, so saved page script does not run on the box origin. To confirm in review.
 - **Box code, reuse:** `src/cli/commands/trick.ts` runs TypeScript under `boxCodePaths(shape).tricksDir` through tsx in a subprocess with `buildScriptEnv`, and commits what changed.
@@ -111,7 +111,7 @@ Chosen design: tracks A to C. Estimate: about 650 lines of source and 450 of tes
 
 ## Ontology
 
-- **Webpage card** (existing, `src/schemas/webpage.tsx`).
+- **Webpage card** (existing, `src/schemas/webpage.ts`).
 - **Captured response** (new): what the function receives. `{ url, requestedUrl, redirectedFrom, status, headers, contentType, html, via: "http" | "browser" }`. `status` is null for the browser, which does not report one.
 - **Result** (new): what the function returns: a card's content `{ title, markdown, siteName?, byline?, excerpt? }`, or a refusal `{ refuse: "<reason>" }`.
 - **`standard`** (new): the built-in function: it runs the block check, then Clerk's extraction. Exported from `beebox/server`.

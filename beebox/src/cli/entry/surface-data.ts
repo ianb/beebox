@@ -59,6 +59,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "mv", audience: "agent", smoke: MUTATES },
   { name: "ls", audience: "agent", smoke: { run: ["ls", "."] } },
   { name: "search", audience: "agent", smoke: { run: ["search", "zqxjkv"] } },
+  { name: "refs", audience: "agent", smoke: { skip: "needs an existing card to list the references to" } },
   { name: "contains", audience: "agent", smoke: { run: ["contains", "list"] } },
   { name: "todos", audience: "agent", smoke: { run: ["todos"] } },
   { name: "query", audience: "agent", smoke: { run: ["query", "todos"] } },

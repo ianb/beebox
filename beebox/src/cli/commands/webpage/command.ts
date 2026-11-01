@@ -17,13 +17,14 @@ import { frontmatterFence, parseFrontmatterObject } from "../../../cards/frontma
 import { assertAnnexBox } from "../../../core/annex/assert-annex-box.js";
 import { runWebpageFunction } from "../../../core/webpage/box-function/core.js";
 import { fetchPage, REQUEST_HEADERS_NAME } from "../../../core/webpage/fetch.js";
-import { isRefusal, type CapturedResponse, type PageResult } from "../../../core/webpage/response.js";
-import { updateWebpageCard, writeWebpageCard } from "../../../core/webpage/write.js";
+import { isRefusal, pageCharset, type CapturedResponse, type PageResult, type ReceivedPage } from "../../../core/webpage/response.js";
+import { AnchorError, updateWebpageCard, writeWebpageCard } from "../../../core/webpage/write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { BOX_DIRS, requireBoxRoot } from "../../../lib/paths/core.js";
 import { safeFilename } from "../../../lib/safe-filename.js";
+import { insideBox, parseMeta, shellWord } from "../../lib/save-command.js";
 import type { WebpageCaptureFields } from "../../../schemas/webpage.js";
-import { attachmentPath } from "../../../shared/attach-path.js";
+import { attachDirFor, attachmentPath } from "../../../shared/attach-path.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { browserResponse, fileResponse, WebpageSaveError } from "./sources.js";
 
@@ -41,58 +42,22 @@ interface WebpageOptions {
   url?: string;
   from: string[];
   to?: string;
+  name?: string;
   update?: string;
   meta?: string;
   json?: boolean;
   commit: boolean;
 }
 
-/** What `--meta` holds: `retrieved` is the capture time, the rest is kept on the card. */
-const META = z.looseObject({ retrieved: z.iso.datetime({ offset: true }).optional() });
-
 function fail(message: string): void {
   console.error(message);
   process.exitCode = 1;
 }
 
-/** One shell word: a redirect target is the site's text, and the agent may paste this line. */
-function shellWord(text: string): string {
-  return /^[\w%&+,./:=?@-]+$/.test(text) ? text : `'${text.replaceAll("'", "'\\''")}'`;
-}
-
-/** `target` relative to the box root, or an error when it leaves the box, by path or through a link. */
-async function insideBox({ boxRoot, target, flag }: { boxRoot: string; target: string; flag: string }): Promise<string> {
-  const refused = new WebpageSaveError({ detail: `bbx webpage save: ${flag} must be inside the box: ${target}` });
-  const absolute = path.resolve(boxRoot, target);
-  const relative = path.relative(boxRoot, absolute);
-  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) throw refused;
-  const realRoot = await fs.realpath(boxRoot);
-  let existing = absolute;
-  for (;;) {
-    try {
-      existing = await fs.realpath(existing);
-      break;
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") throw e;
-      existing = path.dirname(existing);
-    }
-  }
-  if (existing !== realRoot && !existing.startsWith(`${realRoot}${path.sep}`)) throw refused;
-  return relative;
-}
-
-/** The HTML as saved: a `<base>` so its relative images and styles still resolve. `capture.sha256` keeps the original's hash. */
-function savedHtml(html: string, url: string): string {
-  const base = `<base href="${url.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">`;
-  const head = /<head\b[^>]*>/i.exec(html);
-  if (head === null) return base + html;
-  const end = head.index + head[0].length;
-  return html.slice(0, end) + base + html.slice(end);
-}
-
 interface SaveInput {
   boxRoot: string;
   response: CapturedResponse;
+  body: Uint8Array;
   page: PageResult;
   usedBoxFunction: boolean;
   meta: Record<string, unknown>;
@@ -100,8 +65,9 @@ interface SaveInput {
   commit: boolean;
 }
 
-function captureFields({ response, page, usedBoxFunction, meta }: SaveInput): WebpageCaptureFields {
+function captureFields({ response, body, page, usedBoxFunction, meta }: SaveInput): WebpageCaptureFields {
   const kept = { ...page.meta, ...meta };
+  const charset = pageCharset(body, response.contentType);
   return {
     via: response.via,
     snapshot: "html-only",
@@ -109,6 +75,7 @@ function captureFields({ response, page, usedBoxFunction, meta }: SaveInput): We
     ...(usedBoxFunction ? { function: "box" as const } : {}),
     ...(page.note === null || page.note === undefined ? {} : { note: page.note }),
     ...(response.sha256 === null ? {} : { sha256: response.sha256 }),
+    ...(charset === "utf-8" ? {} : { charset }),
     ...(response.via === "http" ? { requestHeaders: REQUEST_HEADERS_NAME } : {}),
     ...(Object.keys(kept).length === 0 ? {} : { meta: kept }),
   };
@@ -116,20 +83,26 @@ function captureFields({ response, page, usedBoxFunction, meta }: SaveInput): We
 
 const optional = (value: string | null | undefined): string | undefined => value ?? undefined;
 
+/** The HTML to save: the page's own bytes when they are UTF-8, else the page converted to it. */
+function savedHtml({ response, body }: ReceivedPage): Uint8Array {
+  return pageCharset(body, response.contentType) === "utf-8" ? body : Buffer.from(response.html);
+}
+
 /** Write a new card under a name no other capture holds, and commit it unless told not to. */
-async function saveNewCard(input: SaveInput & { dir: string }): Promise<string> {
-  const { boxRoot, dir, response, page, capturedAt, commit } = input;
+async function saveNewCard(input: SaveInput & { dir: string; name: string | undefined }): Promise<string> {
+  const { boxRoot, dir, name, response, body, page, capturedAt, commit } = input;
   const stamp = capturedAt.replace(/[.:]/g, "-").slice(0, 19);
   for (let attempt = 1; ; attempt += 1) {
-    const cardRel = path.join(dir, `${safeFilename(page.title, "Page")}_${stamp}_${randomBytes(2).toString("hex")}${WEBPAGE_SUFFIX}`);
+    const cardRel = path.join(dir, `${name ?? `${safeFilename(page.title, "Page")}_${stamp}_${randomBytes(2).toString("hex")}`}${WEBPAGE_SUFFIX}`);
     let paths: string[];
     try {
       paths = await writeWebpageCard({
-        boxRoot, cardRel, title: page.title, url: response.url, capturedAt, markdown: page.markdown,
+        boxRoot, cardRel, title: page.title, url: response.url, capturedAt, markdown: page.markdown, anchors: page.anchors ?? undefined,
         siteName: optional(page.siteName), byline: optional(page.byline), excerpt: optional(page.excerpt),
-        frozenHtml: savedHtml(response.html, response.url), exclusive: true, capture: captureFields(input),
+        frozenHtml: savedHtml({ response, body }), exclusive: true, capture: captureFields(input),
       });
     } catch (e) {
+      if (errnoCode(e) === "EEXIST" && name !== undefined) throw new WebpageSaveError({ detail: `bbx webpage save: ${cardRel} already exists; replace it with --update` });
       if (errnoCode(e) !== "EEXIST" || attempt >= NAME_ATTEMPTS) throw e;
       continue;
     }
@@ -139,6 +112,7 @@ async function saveNewCard(input: SaveInput & { dir: string }): Promise<string> 
       } catch (e) {
         // A failed save leaves nothing for a later sweep to commit.
         for (const rel of paths) await fs.rm(path.join(boxRoot, rel), { force: true });
+        await fs.rm(path.join(boxRoot, attachDirFor(cardRel)), { recursive: true, force: true });
         throw e;
       }
     }
@@ -155,7 +129,7 @@ interface ExistingCard {
 }
 
 async function readExistingCard({ boxRoot, card }: { boxRoot: string; card: string }): Promise<ExistingCard> {
-  const rel = await insideBox({ boxRoot, target: card, flag: "--update" });
+  const rel = await insideBox({ boxRoot, target: card, flag: "--update", command: "bbx webpage save" });
   if (!rel.endsWith(WEBPAGE_SUFFIX)) throw new WebpageSaveError({ detail: `bbx webpage save: --update takes a ${WEBPAGE_SUFFIX} file: ${card}` });
   let text: string;
   try {
@@ -171,20 +145,6 @@ async function readExistingCard({ boxRoot, card }: { boxRoot: string; card: stri
   return { rel, fields, body: text.slice(fence.bodyStart), href: sources.success ? sources.data[0]?.href : undefined };
 }
 
-function parseMeta(text: string | undefined): { retrieved: string | undefined; meta: Record<string, unknown> } {
-  if (text === undefined) return { retrieved: undefined, meta: {} };
-  let json: unknown;
-  try {
-    json = JSON.parse(text);
-  } catch (e) {
-    throw new WebpageSaveError({ detail: `bbx webpage save: --meta is not JSON: ${e instanceof Error ? e.message : String(e)}` });
-  }
-  const parsed = META.safeParse(json);
-  if (!parsed.success) throw new WebpageSaveError({ detail: `bbx webpage save: --meta: ${z.prettifyError(parsed.error)}` });
-  const { retrieved, ...meta } = parsed.data;
-  return { retrieved, meta };
-}
-
 function checkFlags(url: string | undefined, options: WebpageOptions): void {
   const sources = [url !== undefined, options.browser === true, options.html !== undefined].filter(Boolean).length;
   if (sources > 1 || (sources === 0 && options.update === undefined)) {
@@ -192,34 +152,36 @@ function checkFlags(url: string | undefined, options: WebpageOptions): void {
   }
   if (options.html === undefined && options.url !== undefined) throw new WebpageSaveError({ detail: "bbx webpage save: --url goes with --html" });
   if (options.html !== undefined && options.url === undefined && options.update === undefined) throw new WebpageSaveError({ detail: "bbx webpage save: --html needs --url, unless --update names a card with an address" });
+  if (options.update !== undefined && options.name !== undefined) throw new WebpageSaveError({ detail: "bbx webpage save: --name does not go with --update; the card keeps its name" });
+  if (options.name !== undefined && (options.name.endsWith(WEBPAGE_SUFFIX) || safeFilename(options.name) !== options.name)) throw new WebpageSaveError({ detail: `bbx webpage save: --name takes a plain name, with no folder or ${WEBPAGE_SUFFIX}: ${options.name}` });
   if (options.update !== undefined && options.to !== undefined) throw new WebpageSaveError({ detail: "bbx webpage save: --to does not go with --update; the card stays where it is" });
 }
 
-/** The saved HTML to write on an update, or undefined to leave it: re-reading a card's own copy leaves that copy alone. */
-async function updatedHtml({ boxRoot, cardRel, options, response }: { boxRoot: string; cardRel: string; options: WebpageOptions; response: CapturedResponse }): Promise<string | undefined> {
-  if (options.html !== undefined && path.resolve(boxRoot, options.html) === path.resolve(boxRoot, attachmentPath(cardRel, "page.frozen"))) return undefined;
-  return savedHtml(response.html, response.url);
+/** Re-reading a card's own copy leaves that copy alone. */
+function isOwnCopy({ boxRoot, card, html }: { boxRoot: string; card: string | undefined; html: string | undefined }): boolean {
+  return card !== undefined && html !== undefined && path.resolve(boxRoot, html) === path.resolve(boxRoot, attachmentPath(card, "page.frozen"));
 }
 
 async function updateCard(input: SaveInput & { card: ExistingCard; options: WebpageOptions }): Promise<void> {
-  const { boxRoot, card, response, page, capturedAt, commit, options } = input;
+  const { boxRoot, card, response, body, page, capturedAt, commit, options } = input;
   const before = card.body.trim().length;
   if (before >= SHRINK_CHECK_MIN_CHARS && page.markdown.trim().length < before * SHRINK_FLOOR) {
     console.log(`Refused to update ${card.rel}: the new text has ${String(page.markdown.trim().length)} characters where the card has ${String(before)}, so this is probably not the same page. The card is unchanged.`);
     process.exitCode = EXIT_REFUSED;
     return;
   }
-  const frozenHtml = await updatedHtml({ boxRoot, cardRel: card.rel, options, response });
+  const frozenHtml = isOwnCopy({ boxRoot, card: card.rel, html: options.html }) ? undefined : savedHtml({ response, body });
   // A card's own copy stays what it was, which may be Clerk's self-contained one.
   const { snapshot: _snapshot, ...withoutSnapshot } = captureFields(input);
-  const previous = z.looseObject({ snapshot: z.literal("html-only").optional(), sha256: z.string().optional() }).safeParse(card.fields["capture"]);
+  const previous = z.looseObject({ snapshot: z.literal("html-only").optional(), sha256: z.string().optional(), charset: z.string().optional() }).safeParse(card.fields["capture"]);
   const keepsHtmlOnly = frozenHtml !== undefined || previous.data?.snapshot !== undefined;
-  // The hash is of the bytes as first received; a card's own copy has had a `<base>` added since.
+  // The hash is of the bytes as first received; an older card's copy has had a `<base>` added since.
   const { sha256: _sha256, ...withoutHash } = withoutSnapshot;
   const previousHash = previous.data?.sha256;
-  const hashed = frozenHtml !== undefined ? withoutSnapshot : previousHash === undefined ? withoutHash : { ...withoutHash, sha256: previousHash };
+  const previousCharset = previous.data?.charset;
+  const hashed = frozenHtml !== undefined ? withoutSnapshot : { ...withoutHash, ...(previousHash === undefined ? {} : { sha256: previousHash }), ...(previousCharset === undefined ? {} : { charset: previousCharset }) };
   const paths = await updateWebpageCard({
-    boxRoot, cardRel: card.rel, current: card.fields, currentBody: card.body, title: page.title, url: response.url, capturedAt, markdown: page.markdown,
+    boxRoot, cardRel: card.rel, current: card.fields, currentBody: card.body, title: page.title, url: response.url, capturedAt, markdown: page.markdown, anchors: page.anchors ?? undefined,
     siteName: optional(page.siteName), byline: optional(page.byline), excerpt: optional(page.excerpt), frozenHtml,
     capture: keepsHtmlOnly ? { ...hashed, snapshot: "html-only" } : hashed,
   });
@@ -231,18 +193,18 @@ async function updateCard(input: SaveInput & { card: ExistingCard; options: Webp
   console.log(`Updated ${card.rel}${commit ? "" : " (not committed)"}`);
 }
 
-async function getResponse({ url, options, boxRoot, card }: { url: string | undefined; options: WebpageOptions; boxRoot: string; card: ExistingCard | null }): Promise<CapturedResponse | null> {
+async function getResponse({ url, options, boxRoot, card }: { url: string | undefined; options: WebpageOptions; boxRoot: string; card: ExistingCard | null }): Promise<ReceivedPage | null> {
   if (options.browser === true) return browserResponse();
   if (options.html !== undefined) {
     const address = options.url ?? card?.href;
     if (address === undefined) throw new WebpageSaveError({ detail: "bbx webpage save: the card records no address; give --url" });
-    return fileResponse({ file: options.html, url: address, boxRoot });
+    return fileResponse({ file: options.html, url: address, boxRoot, ownCopy: isOwnCopy({ boxRoot, card: card?.rel, html: options.html }) });
   }
   const address = url ?? card?.href;
   if (address === undefined) throw new WebpageSaveError({ detail: "bbx webpage save: the card records no address; give a URL" });
   const fetched = await fetchPage({ url: address, from: options.from });
   if (fetched.kind === "failed") throw new WebpageSaveError({ detail: fetched.message });
-  if (fetched.kind === "page") return fetched.response;
+  if (fetched.kind === "page") return fetched;
   const words = ["bbx webpage save", shellWord(fetched.target), ...fetched.chain.flatMap((earlier) => ["--from", shellWord(earlier)])];
   if (card !== null) words.push("--update", shellWord(card.rel));
   console.log(`Redirects to ${fetched.target} (${String(fetched.status)}). Nothing was saved. Read the address; if it is a sign-in page, use the box browser. To follow:`);
@@ -253,13 +215,14 @@ async function getResponse({ url, options, boxRoot, card }: { url: string | unde
 
 async function run(url: string | undefined, options: WebpageOptions): Promise<void> {
   checkFlags(url, options);
-  const { retrieved, meta } = parseMeta(options.meta);
+  const { retrieved, meta } = parseMeta({ text: options.meta, command: "bbx webpage save" });
   const boxRoot = await requireBoxRoot();
   const card = options.update === undefined ? null : await readExistingCard({ boxRoot, card: options.update });
-  const dir = await insideBox({ boxRoot, target: options.to ?? BOX_DIRS.inbox, flag: "--to" });
+  const dir = await insideBox({ boxRoot, target: options.to ?? BOX_DIRS.inbox, flag: "--to", command: "bbx webpage save" });
   if (options.json !== true) await assertAnnexBox(boxRoot, "bbx webpage save");
-  const response = await getResponse({ url, options, boxRoot, card });
-  if (response === null) return;
+  const received = await getResponse({ url, options, boxRoot, card });
+  if (received === null) return;
+  const { response, body } = received;
   const outcome = await runWebpageFunction({ boxRoot, response });
   if (!outcome.ok) throw new WebpageSaveError({ detail: outcome.message });
   const { result } = outcome;
@@ -276,11 +239,11 @@ async function run(url: string | undefined, options: WebpageOptions): Promise<vo
     process.exitCode = EXIT_REFUSED;
     return;
   }
-  const input: SaveInput = { boxRoot, response, page: result, usedBoxFunction: outcome.usedBoxFunction, meta, capturedAt: retrieved ?? new Date().toISOString(), commit: options.commit };
+  const input: SaveInput = { boxRoot, response, body, page: result, usedBoxFunction: outcome.usedBoxFunction, meta, capturedAt: retrieved ?? new Date().toISOString(), commit: options.commit };
   if (card !== null) {
     await updateCard({ ...input, card, options });
   } else {
-    console.log(`Saved ${await saveNewCard({ ...input, dir })}${options.commit ? "" : " (not committed)"}`);
+    console.log(`Saved ${await saveNewCard({ ...input, dir, name: options.name })}${options.commit ? "" : " (not committed)"}`);
   }
   if (process.exitCode !== undefined) return;
   if (response.redirectedFrom.length > 0) console.log(`Redirected: ${[...response.redirectedFrom, response.url].join(" -> ")}`);
@@ -299,6 +262,7 @@ const saveCommand = new Command("save")
   .option("--url <address>", "Where the --html page came from")
   .option("--from <url>", "An earlier address, when following a redirect (repeat for each)", collect, [])
   .option("--to <dir>", "The folder for a new card (default: the inbox)")
+  .option("--name <name>", "The new card's file name, without .webpage.card (default: the title and time)")
   .option("--update <card>", "Replace this card's page in place; with no source, get the address it records")
   .option("--meta <json>", 'Provenance to keep in capture.meta; "retrieved" (ISO time) becomes the capture time')
   .option("--json", "Print the result and write nothing, for a caller that stores it another way")
@@ -307,7 +271,7 @@ const saveCommand = new Command("save")
 Exit codes: 0 saved, 1 failed, 3 refused, 4 a redirect to read first.
 
 A box can add src/tricks/webpage.ts. Every page goes through its default export,
-which returns { title, markdown, meta? }, { refuse: "why" }, or what standard returns:
+which returns { title, markdown, meta?, anchors? }, { refuse: "why" }, or what standard returns:
 
   export default async function (response, { standard }) {
     if (response.url.includes("forum.example") && response.html.includes("Please sign in")) {
@@ -315,6 +279,11 @@ which returns { title, markdown, meta? }, { refuse: "why" }, or what standard re
     }
     return standard(response);
   }
+
+anchors: [{ id, line }] puts {% #id %} at the end of that 0-based line of markdown, so a
+citation can name the block ([text](card#id)). An id is a-z, 0-9 and -; the line is a
+heading or the last line of a paragraph. A bad anchor saves nothing and names the id.
+The page's own text stays escaped.
 
 response: url, requestedUrl, redirectedFrom, status (null from the browser or a
 file), headers, contentType, html, sha256, via. If the function fails, nothing is saved.
@@ -326,8 +295,9 @@ Re-read a card from its own saved copy, with no network:
     try {
       await run(url, options);
     } catch (e) {
-      if (!(e instanceof WebpageSaveError)) throw e;
-      fail(e.message);
+      if (e instanceof AnchorError) fail(`bbx webpage save: ${e.message}. Nothing was saved.`);
+      else if (e instanceof WebpageSaveError) fail(e.message);
+      else throw e;
     }
   });
 
