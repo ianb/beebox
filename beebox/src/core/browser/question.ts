@@ -104,7 +104,8 @@ export function claimBrowserQuestion(browserRoot: string, id: string): BrowserQu
 export function restoreBrowserQuestion(browserRoot: string, question: BrowserQuestion): void {
   const questions = readBrowserQuestions(browserRoot);
   if (questions.some((q) => q.sessionId === question.sessionId)) return;
-  writeQuestions(browserRoot, [...questions, question]);
+  // In its place by age: the newest question's page is the one to reopen.
+  writeQuestions(browserRoot, [...questions, question].toSorted((a, b) => a.askedAt.localeCompare(b.askedAt)));
 }
 
 /** The chat message for an answer: the person's words, after what they pressed. */

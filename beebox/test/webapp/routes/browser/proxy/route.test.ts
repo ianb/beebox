@@ -88,6 +88,7 @@ await new Promise<void>((resolve) => dashboard.listen(paths.relaySocket, resolve
 
 /** The command socket: every request is recorded and answered with `cliStderr`. */
 let cliStderr = "";
+let cliFailOpen = false;
 const commands: string[][] = [];
 const cli = net.createServer((conn) => {
   let text = "";
@@ -95,7 +96,8 @@ const cli = net.createServer((conn) => {
   conn.on("end", () => {
     const { args } = EXEC_BODY.parse(JSON.parse(text));
     commands.push(args);
-    conn.end(`${JSON.stringify({ exitCode: 0, stdout: "about:blank\n", stderr: cliStderr })}\n`);
+    const failing = cliFailOpen && args[0] === "open";
+    conn.end(`${JSON.stringify(failing ? { exitCode: 1, stdout: "", stderr: "site down\n" } : { exitCode: 0, stdout: "about:blank\n", stderr: cliStderr })}\n`);
   });
 });
 await new Promise<void>((resolve) => cli.listen(paths.cliSocket, resolve));
@@ -381,7 +383,7 @@ void t.test("An answer reaches the chat that asked, and the question clears", as
   const first = ask("Solve the check", "chat-a");
   ask("Log in please", "chat-b");
   const listed = await ctx.response({ method: "GET", url: "/browser/_box/question", headers: { cookie: SESSION } });
-  st.check(listed.body, { questions: [{ id: first, text: "Solve the check" }, { id: any(String), text: "Log in please" }] });
+  st.check(listed.body, { questions: [{ id: first, text: "Solve the check", pageUrl: "https://shop.example/check" }, { id: any(String), text: "Log in please", pageUrl: "https://shop.example/check" }] });
 
   st.check((await answer({ id: first, outcome: "not-done", text: "it keeps looping" })).status, 200);
   st.check(chat.sent, [{
@@ -459,7 +461,7 @@ void t.test("An answer to a replaced question sends nothing", async (st) => {
   const current = ask("new", "chat-a");
   const res = await answer({ id: old, outcome: "done" });
   st.check(res.status, 409);
-  st.check(res.body, { error: any(String), questions: [{ id: current, text: "new" }] });
+  st.check(res.body, { error: any(String), questions: [{ id: current, text: "new", pageUrl: "https://shop.example/check" }] });
   st.check(chat.sent, []);
 });
 
@@ -498,5 +500,17 @@ void t.test("Opening the page reopens the asked page when the browser came back 
   commands.length = 0;
   await ctx.response({ method: "GET", url: "/browser/_next/static/app.js", headers: { cookie: SESSION } });
   st.check(commands, []);
+  await emptyQuestions();
+});
+
+// A reopen that fails is said on the page: the person would otherwise face a
+// blank browser and a question about a page that is not there.
+void t.test("A failed reopen is a notice on the page", async (st) => {
+  await emptyQuestions();
+  ask("q", "chat-a");
+  cliFailOpen = true;
+  st.teardown(() => { cliFailOpen = false; });
+  const page = await ctx.response({ method: "GET", url: "/browser/", headers: { cookie: SESSION, accept: "text/html" } });
+  st.check(page.body, withQuestionBar(withNotice(`<!DOCTYPE html><html><head><script src="${PREFIX}/_next/static/app.js"></script></head><body><main>dashboard</main></body></html>`, "Could not reopen https://shop.example/check: site down")));
   await emptyQuestions();
 });

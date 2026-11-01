@@ -18,10 +18,12 @@ interface Call { url: string; body: unknown }
 const calls: Call[] = [];
 let questions = [{ id: "q1", text: 'Solve <img src=x onerror="boom()"> please' }];
 let answerStatus = 200;
+let answerHold: Promise<void> | null = null;
 
 Reflect.set(globalThis, "fetch", async (url: string, init?: RequestInit) => {
   calls.push({ url, body: typeof init?.body === "string" ? JSON.parse(init.body) : null });
   const isAnswer = url.endsWith("/answer");
+  if (isAnswer && answerHold !== null) await answerHold;
   return new Response(JSON.stringify(isAnswer ? { error: "gone" } : { questions }), { status: isAnswer ? answerStatus : 200 });
 });
 
@@ -91,13 +93,27 @@ void test("Typed words survive a poll, and a new question joins without a redraw
   t.check(shown(), ['Solve <img src=x onerror="boom()"> please']);
 });
 
-void test("A failed send keeps the words and lets the person press again", async (t) => {
-  calls.length = 0;
+// The route takes the question off the list while it sends, so a poll sees it gone.
+void test("A poll during a send does not drop the words", async (t) => {
+  const saved = questions;
+  questions = [];
   answerStatus = 502;
+  let release: () => void = () => {};
+  answerHold = new Promise((resolve) => { release = resolve; });
   press("Not done");
+  poll();
   await settle();
+  t.check(bar().querySelector("textarea")?.value, "it keeps looping");
+  questions = saved;
+  answerHold = null;
+  release();
+  await settle();
+});
+
+void test("A failed send keeps the words and lets the person press again", async (t) => {
   t.check(calls.find((c) => c.url.endsWith("/answer"))?.body, { id: "q1", outcome: "not-done", text: "it keeps looping" });
   t.check(bar().querySelector("[role=status]")?.textContent, "gone");
+  t.check(bar().querySelector("textarea")?.value, "it keeps looping");
   t.check(buttons(), ["Done", "Not done"]);
   t.check(bar().querySelector("button")?.disabled, false);
 });

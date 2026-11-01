@@ -218,7 +218,7 @@ export async function registerBrowserProxyRoutes(ctx: BrowserProxyContext): Prom
       let notice: string | null = null;
       if (isPage) {
         notice = await sessionNotice(host);
-        if (notice === null) await reopenAskedPage(host);
+        notice ??= await reopenAskedPage(host);
       }
       let upstream: IncomingMessage;
       try {

@@ -39,18 +39,19 @@ export function withQuestionBar(html: string): string {
  * Reopen the page a waiting question is about, when the browser idled out and
  * came back on a blank page. Any other page is left alone: it is one the person
  * or the agent chose. The check on the page may start again; that is the site's.
+ * Answers a notice for the page when the reopen failed.
  */
-export async function reopenAskedPage(host: BrowserHostHandle): Promise<void> {
+export async function reopenAskedPage(host: BrowserHostHandle): Promise<string | null> {
   const pageUrl = readBrowserQuestions(host.paths.root).findLast((q) => q.pageUrl !== null)?.pageUrl;
-  if (pageUrl === undefined || pageUrl === null) return;
+  if (pageUrl === undefined || pageUrl === null) return null;
   const current = await sendBrowserCommand(host.paths.cliSocket, ["get", "url"]);
-  if (current.exitCode === 0 && current.stdout.trim() === "about:blank") {
-    await sendBrowserCommand(host.paths.cliSocket, ["open", pageUrl]);
-  }
+  if (current.exitCode !== 0 || current.stdout.trim() !== "about:blank") return null;
+  const opened = await sendBrowserCommand(host.paths.cliSocket, ["open", pageUrl]);
+  return opened.exitCode === 0 ? null : `Could not reopen ${pageUrl}: ${opened.stderr.trim() || `exit code ${String(opened.exitCode)}`}`;
 }
 
-function questionList(host: BrowserHostHandle): { id: string; text: string }[] {
-  return readBrowserQuestions(host.paths.root).map((q) => ({ id: q.id, text: q.question }));
+function questionList(host: BrowserHostHandle): { id: string; text: string; pageUrl: string | null }[] {
+  return readBrowserQuestions(host.paths.root).map((q) => ({ id: q.id, text: q.question, pageUrl: q.pageUrl }));
 }
 
 function failedSend(reply: FastifyReply, error: string): FastifyReply {

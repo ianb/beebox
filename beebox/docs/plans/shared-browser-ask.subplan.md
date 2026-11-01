@@ -171,7 +171,7 @@ No critical gaps.
 - **Headed Chrome, Camoufox, and the stealth policy:** a separate decision, measured through the site probe.
 - **Questions from scheduled runs:** no chat to return to. Needs a destination decision.
 - **A history page:** the chat holds the history.
-- **An explicit URL on `ask`:** the saved URL is the active tab's, which is also what the person sees. A review proposed `--url`; the skill's instruction covers the case at less cost.
+- **An explicit URL on `ask`, or navigating when the bar opens:** the saved URL is the active tab's. The bar shows it ("About <url>"), so a person on another page can see the mismatch. Navigating would take the page away from whoever is using it.
 - **The iOS app's markdown renderer:** the Browser page is for a computer. Verified in chunk 4 only that the web chat renders the link.
 
 ## Open design questions

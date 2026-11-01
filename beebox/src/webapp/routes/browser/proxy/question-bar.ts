@@ -48,12 +48,15 @@ export const QUESTION_BAR_SCRIPT = `(function () {
     var row = rows[id];
     row.done.disabled = row.notDone.disabled = true;
     row.status.textContent = "Sending...";
+    // The route takes the question off the list while it sends: a poll must not drop the words.
+    row.sending = true;
     fetch(base + "answer", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ id: id, outcome: outcome, text: row.text.value }),
     }).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (body) {
+        row.sending = false;
         if (res.ok) { removeRow(id); return; }
         row.status.textContent = body.error || ("The answer was not sent (" + res.status + ")");
         // Nothing left to press: keep the words on screen to copy until the person closes it.
@@ -61,6 +64,7 @@ export const QUESTION_BAR_SCRIPT = `(function () {
         row.done.disabled = row.notDone.disabled = false;
       });
     }).catch(function () {
+      row.sending = false;
       row.status.textContent = "The answer was not sent: the box did not respond";
       row.done.disabled = row.notDone.disabled = false;
     });
@@ -69,6 +73,7 @@ export const QUESTION_BAR_SCRIPT = `(function () {
     var node = el("div", bar);
     node.className = "bbx-q";
     el("p", node, q.text);
+    if (q.pageUrl) el("small", node, "About " + q.pageUrl);
     var text = el("textarea", node);
     text.rows = 1;
     text.placeholder = "Note for the chat (no passwords)";
@@ -78,7 +83,7 @@ export const QUESTION_BAR_SCRIPT = `(function () {
     done.type = notDone.type = "button";
     var status = el("span", node);
     status.setAttribute("role", "status");
-    rows[q.id] = { node: node, text: text, done: done, notDone: notDone, status: status, stuck: false };
+    rows[q.id] = { node: node, text: text, done: done, notDone: notDone, status: status, stuck: false, sending: false };
     done.addEventListener("click", function () { answer(q.id, "done"); });
     notDone.addEventListener("click", function () { answer(q.id, "not-done"); });
   }
@@ -89,7 +94,7 @@ export const QUESTION_BAR_SCRIPT = `(function () {
       if (!rows[q.id]) addRow(q);
     });
     Object.keys(rows).forEach(function (id) {
-      if (!waiting[id] && !rows[id].stuck) removeRow(id);
+      if (!waiting[id] && !rows[id].stuck && !rows[id].sending) removeRow(id);
     });
     bar.hidden = Object.keys(rows).length === 0;
   }
@@ -118,6 +123,7 @@ const QUESTION_BAR_STYLE = `#bbx-question-bar{position:fixed;left:50%;bottom:12p
 #bbx-question-bar textarea{flex:1 1 240px;font:inherit;padding:4px 6px;background:#fff;color:inherit;border:1px solid #b9a982;border-radius:4px;resize:vertical}
 #bbx-question-bar button{font:inherit;padding:4px 12px;background:#f1e8d3;color:inherit;border:1px solid #b9a982;border-radius:4px;cursor:pointer}
 #bbx-question-bar button:disabled{opacity:.5;cursor:default}
+#bbx-question-bar small{flex:1 0 100%;overflow-wrap:anywhere;color:#6b5f45}
 #bbx-question-bar span{flex:1 0 100%}
 #bbx-question-bar span:empty{display:none}`;
 

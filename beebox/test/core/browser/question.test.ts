@@ -51,6 +51,13 @@ void t.test("A question is claimed once, and a failed answer puts it back", asyn
   askBrowserQuestion(dir, { question: "newer", sessionId: "a", pageUrl: "about:blank", now });
   restoreBrowserQuestion(dir, claimed);
   st.check(readBrowserQuestions(dir).map((q) => q.question), ["newer"]);
+
+  // Put back between two others, it keeps its place by age.
+  const older = claimBrowserQuestion(dir, readBrowserQuestions(dir)[0]?.id ?? "");
+  if (older === null) return;
+  askBrowserQuestion(dir, { question: "later", sessionId: "b", pageUrl: "about:blank", now: new Date("2026-10-31T13:00:00Z") });
+  restoreBrowserQuestion(dir, older);
+  st.check(readBrowserQuestions(dir).map((q) => q.question), ["newer", "later"]);
 });
 
 void t.test("A corrupt file reads as nothing waiting, and the next ask overwrites it", async (st) => {
