@@ -8,7 +8,7 @@ issues:
 ---
 # Search areas, bbx pdf save, trusted anchors, and bbx refs
 
-**Status:** built on the `worktree-shared-browser` branch, not merged. Run for real on a test box with a small PDF through Docling; not run on production or at scale.
+**Status:** built and merged to `main` (all four changes plus Track E, `webpageBase`/`pdfBase` exports); see accepted residuals. Run for real on a test box with a small PDF through Docling; not run on production or at scale.
 
 **Accepted residuals:** a commit-hook rejection in `bbx pdf save` or `bbx webpage save` can leave entries staged after the files are removed (same as the earlier webpage residual). A `<base` string inside a saved page's comment or script stops the served `<base>` being added. The Search card says "all paths" when an area held no hits for that query, which is true of those results.
 

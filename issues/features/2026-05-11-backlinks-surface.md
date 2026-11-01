@@ -33,3 +33,7 @@ The code pointer is stale. `findIncomingRefs` and `findOutgoingRefs` no longer e
 Re-reviewed 2026-10-30: the core surface shipped: a 'Mentioned by' list in card Properties, an inbound-ref report on trash and the delete confirm, and an inventory filter by incoming refs. Still open: a bbx refs CLI, version-pin display, structural location per ref, and unlinked mentions.
 
 Out of date in the body above: Replace the 2026-10-22 audit with a status section citing find-inbound-card-refs.ts, card.inboundRefs, CardMentions in CardProperties.tsx, and the trash inbound report; narrow the remaining scope to bbx refs --incoming/--outgoing, showing the pinned version and fragment per ref, grouping by source kind, and unlinked mentions. Consider closing if those are not wanted.
+
+## Status 2026-11-01
+
+`bbx refs <card> --incoming` is built (`knowledge-base-tools` plan): it lists referrers, with the fragments and anchors they name. Remaining: `--outgoing`, grouping by source kind, showing the pinned version per ref, markdown-link extraction, and unlinked mentions.

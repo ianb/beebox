@@ -21,3 +21,7 @@ fetches while page loads still worked.
 fails on any type that is not HTML or XML. Options: let the box function receive
 any type, or add a standard PDF path. The card type and its saved copy also need
 a decision for a PDF.
+
+## Status 2026-11-01
+
+Non-HTML pages: built as `bbx pdf save` (a standard PDF path with its own card type, saved copy, and `capture` fields); see `beebox/docs/plans/knowledge-base-tools.md`. Still open: server bytes from the browser. `bbx webpage save --browser` should try an in-page `fetch(location.href)` first, fall back to the rendered page, and record which one in `capture`. Other document types (not HTML, not PDF) stay unhandled.
