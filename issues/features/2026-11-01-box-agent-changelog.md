@@ -1,6 +1,7 @@
 ---
 title: "Keep a changelog for the box agent: what changed in its own behavior and tools"
-workstream: unattached
+workstream: agent-changelog
+design: ../../beebox/docs/plans/agent-changes.md
 area: beebox
 labels: [agent, agent-guide, updates]
 filed-by: agent
