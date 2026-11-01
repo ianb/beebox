@@ -8,7 +8,7 @@
  * a ref to the frozen snapshot.
  *
  * Produced by the clerk browser extension ("Comment on this page" and "Save
- * page") and rendered by `WebpageView`. Commentary *about* a captured page is
+ * page") and by `bbx webpage`, and rendered by `WebpageView`. Commentary *about* a captured page is
  * a separate `.commentary.card` living inside this card's attach scope; the
  * webpage view surfaces it inline. A webpage card is a snapshot of an external
  * page at capture time — edit it sparingly.
@@ -34,6 +34,21 @@ const WebpageSources = z
     }
   });
 
+/**
+ * `via`: over plain HTTP, from the box browser, or from HTML already on disk. `snapshot: html-only`: the
+ * saved HTML is the page's own, so its images and styles still load from the
+ * site. `redirectedFrom`: every earlier address, oldest first. `function: box`:
+ * the box's `webpage.ts` made this card. `note`: anything else worth knowing.
+ */
+const WebpageCapture = z.object({
+  via: z.enum(["http", "browser", "file"]),
+  snapshot: z.literal("html-only"),
+  redirectedFrom: z.array(z.string()).optional(),
+  function: z.literal("box").optional(),
+  note: z.string().optional(),
+});
+export type WebpageCaptureFields = z.infer<typeof WebpageCapture>;
+
 export const WebpageSchema = cardSchema("webpage", {
   brief: "A captured web page",
   description: "A captured external web page — readable markdown body plus a frozen HTML snapshot in the attach scope",
@@ -47,6 +62,8 @@ export const WebpageSchema = cardSchema("webpage", {
     // In-box ref to the frozen, self-contained snapshot (attach/page.frozen),
     // stored under a `ref` key like every other card reference.
     frozen: z.object({ ref: z.string() }).optional(),
+    // How `bbx webpage` got the page. Absent on a Clerk or share card.
+    capture: WebpageCapture.optional(),
     /** Stable id supplied by an external share operation for retry deduplication. */
     "share-id": z.string().uuid().optional(),
     /** Stable id supplied by a Clerk capture for retry deduplication. */
@@ -68,6 +85,9 @@ said, and edit it only to fix capture artifacts, not to rewrite the page.
   \`href\` is the original page URL; \`retrieved\` is the full ISO instant
   of capture, rendered in the viewer's local timezone.
 - \`siteName:\` / \`byline:\` / \`excerpt:\` — optional capture metadata.
+- \`capture:\` — written by \`bbx webpage\`: how the page was got, any redirect,
+  and whether the box's \`webpage.ts\` made the card. Its \`snapshot: html-only\`
+  means the saved HTML still loads its images and styles from the site.
 - \`frozen:\` — optional in-box ref (\`attach/page.frozen\`) to the frozen
   snapshot of the page, served sandboxed.
 - \`title:\` — optional human label; defaults to the captured page title.
@@ -116,6 +136,7 @@ export function createWebpageTemplate(options: {
   frozenRef?: string | undefined;
   shareId?: string | undefined;
   captureId?: string | undefined;
+  capture?: WebpageCaptureFields | undefined;
 }): string {
   const fields: Record<string, unknown> = {
     title: options.title,
@@ -142,6 +163,9 @@ export function createWebpageTemplate(options: {
   }
   if (options.captureId !== undefined && options.captureId !== "") {
     fields["capture-id"] = options.captureId;
+  }
+  if (options.capture !== undefined) {
+    fields["capture"] = options.capture;
   }
   const yamlText = stringifyYaml(fields);
   const bodyText = options.content;

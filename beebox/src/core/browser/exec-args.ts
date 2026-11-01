@@ -22,7 +22,11 @@ import { z } from "zod";
 import { BOX_BROWSER_SESSION } from "./paths.js";
 
 /** Shape of the exec route's request body. */
-export const EXEC_BODY = z.object({ args: z.array(z.string().max(8192)).min(1).max(64) });
+export const EXEC_BODY = z.object({
+  args: z.array(z.string().max(8192)).min(1).max(64),
+  /** Whole output, no content boundaries: set only by the engine's page read, never from an agent's request. */
+  fullOutput: z.literal(true).optional(),
+});
 
 /** Global flags that change which browser, profile, session or state is used. */
 export const REFUSED_FLAGS = [

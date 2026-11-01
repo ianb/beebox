@@ -29,6 +29,8 @@ import { agentBrowserBinary } from "./agent-browser.js";
 
 /** Each of stdout and stderr is kept up to this many bytes. */
 const OUTPUT_CAP_BYTES = 2 * 1024 * 1024;
+/** The cap for the engine's page read, which needs a whole page. */
+const FULL_OUTPUT_CAP_BYTES = 20 * 1024 * 1024;
 /** 64 arguments of 8 KB each, with room for JSON escaping. */
 const REQUEST_CAP_BYTES = 1024 * 1024;
 /** The exit code for a request the host refused before running anything (a usage error). */
@@ -54,8 +56,10 @@ class CappedOutput {
   private bytes = 0;
   private truncated = false;
 
+  constructor(private readonly cap: number) {}
+
   add(chunk: Buffer): void {
-    const room = OUTPUT_CAP_BYTES - this.bytes;
+    const room = this.cap - this.bytes;
     if (chunk.length > room) this.truncated = true;
     if (room <= 0) return;
     const kept = chunk.subarray(0, room);
@@ -65,7 +69,7 @@ class CappedOutput {
 
   text(name: string): string {
     const text = Buffer.concat(this.chunks).toString("utf8");
-    return this.truncated ? `${text}\n[bbx browser: ${name} truncated at 2 MB]\n` : text;
+    return this.truncated ? `${text}\n[bbx browser: ${name} truncated at ${String(this.cap / (1024 * 1024))} MB]\n` : text;
   }
 }
 
@@ -74,7 +78,7 @@ function refused(stderr: string): ExecReply {
 }
 
 /** The request's arguments, or the reply that refuses it. */
-function parseRequest(text: string): { ok: true; args: string[] } | { ok: false; reply: ExecReply } {
+function parseRequest(text: string): { ok: true; args: string[]; fullOutput: boolean } | { ok: false; reply: ExecReply } {
   let json: unknown;
   try {
     json = JSON.parse(text);
@@ -85,11 +89,11 @@ function parseRequest(text: string): { ok: true; args: string[] } | { ok: false;
   if (!body.success) return { ok: false, reply: refused(`bbx browser: ${z.prettifyError(body.error)}`) };
   const check = checkExecArgs(body.data.args);
   if (!check.ok) return { ok: false, reply: refused(check.message) };
-  return { ok: true, args: body.data.args };
+  return { ok: true, args: body.data.args, fullOutput: body.data.fullOutput === true };
 }
 
 /** Run agent-browser once; `onSpawn` receives the child so a dropped connection can kill it. */
-function runCommand(input: CommandServerInput & { readonly args: readonly string[] }, onSpawn: (kill: () => void) => void): Promise<ExecReply> {
+function runCommand(input: CommandServerInput & { readonly args: readonly string[]; readonly fullOutput?: boolean }, onSpawn: (kill: () => void) => void): Promise<ExecReply> {
   return new Promise((resolve) => {
     let binary: string;
     try {
@@ -98,9 +102,12 @@ function runCommand(input: CommandServerInput & { readonly args: readonly string
       resolve({ exitCode: 1, stdout: "", stderr: `${errorMessage(e)}\n` });
       return;
     }
-    const child = spawn(binary, [...input.args], { env: input.env, cwd: input.cwd, stdio: ["ignore", "pipe", "pipe"] });
-    const stdout = new CappedOutput();
-    const stderr = new CappedOutput();
+    const env = input.fullOutput === true
+      ? { ...input.env, AGENT_BROWSER_MAX_OUTPUT: String(FULL_OUTPUT_CAP_BYTES), AGENT_BROWSER_CONTENT_BOUNDARIES: "0" }
+      : input.env;
+    const child = spawn(binary, [...input.args], { env, cwd: input.cwd, stdio: ["ignore", "pipe", "pipe"] });
+    const stdout = new CappedOutput(input.fullOutput === true ? FULL_OUTPUT_CAP_BYTES : OUTPUT_CAP_BYTES);
+    const stderr = new CappedOutput(OUTPUT_CAP_BYTES);
     child.stdout.on("data", (chunk: Buffer) => stdout.add(chunk));
     child.stderr.on("data", (chunk: Buffer) => stderr.add(chunk));
     let timedOut = false;
@@ -175,7 +182,7 @@ function handleConnection(input: CommandServerInput, open: Set<net.Socket>): (co
       void startSession(request.args).then(async (problem) => {
         if (gone) return;
         // The command still runs: it launches the browser without the box viewport, and says so.
-        const reply = await runCommand({ ...input, args: request.args }, (k) => (kill = k));
+        const reply = await runCommand({ ...input, args: request.args, fullOutput: request.fullOutput }, (k) => (kill = k));
         answer(problem === null ? reply : { ...reply, stderr: `${SESSION_PROBLEM_PREFIX}${problem}\n${reply.stderr}` });
       });
     };

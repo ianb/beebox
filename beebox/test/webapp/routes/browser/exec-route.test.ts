@@ -15,6 +15,7 @@ import net from "node:net";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 import { signSession } from "../../../../src/webapp/auth.js";
+import { PAGE_READ_ARGS } from "../../../../src/core/browser/page-read.js";
 import { readBrowserQuestions } from "../../../../src/core/browser/question.js";
 import { BrowserPathTooLongError, browserPaths, type BrowserPaths } from "../../../../src/core/browser/paths.js";
 import { BrowserNotInstalledError, type BrowserHostHandle, type EnsureBrowserHostInput } from "../../../../src/core/browser/host/start.js";
@@ -147,4 +148,17 @@ void test("The ask route is the agent's, and a failed page read saves nothing", 
   socket.reply = { exitCode: 0, stdout: "https://shop.example/check\n", stderr: "" };
   t.check((await ask(agent, body)).status, 200);
   t.check(readBrowserQuestions(browserRoot).map((q) => [q.sessionId, q.question, q.pageUrl]), [["chat-a", "Solve the check", "https://shop.example/check"]]);
+});
+
+// `bbx webpage save --browser`: the agent's only, and output that was cut off is never a page.
+void test("The page route is the agent's, and reads the whole page in one evaluation", async (t) => {
+  const { ctx, agent, socket } = await setup(t);
+  const read = (headers: Record<string, string>) => ctx.response({ method: "POST", url: "/api/browser/page", payload: {}, headers });
+  t.check((await read({ cookie: `bbx_session=${signSession({ email: "owner@example.com", name: "Owner" })}` })).status, 403);
+  socket.reply = { exitCode: 0, stdout: `${JSON.stringify(JSON.stringify({ url: "https://a.example/", html: "<html></html>" }))}\n`, stderr: "" };
+  const ok = await read(agent);
+  t.check([ok.status, ok.body], [200, { url: "https://a.example/", html: "<html></html>" }]);
+  t.check(socket.requests.at(-1), { args: PAGE_READ_ARGS, fullOutput: true });
+  socket.reply = { exitCode: 0, stdout: '"cut off\n[bbx browser: stdout truncated at 20 MB]\n', stderr: "" };
+  t.check((await read(agent)).status, 502);
 });

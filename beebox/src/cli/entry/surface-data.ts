@@ -129,6 +129,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "force-wakeup", audience: "agent", smoke: { skip: "runs a real wakeup cycle on the server" } },
   // Runs agent-browser inside the engine's browser host (`POST /api/browser/exec`).
   { name: "browser", audience: "agent", smoke: { skip: "starts a real browser" } },
+  { name: "webpage", audience: "agent", smoke: { skip: "fetches a real page" } },
 
   // ---- Ingestion --------------------------------------------------------
   { name: "scan-import", audience: "agent", smoke: { skip: "needs input files to import" } },
