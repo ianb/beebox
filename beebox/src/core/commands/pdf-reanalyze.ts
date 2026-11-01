@@ -8,7 +8,8 @@
  * a newer Docling. Nothing automated calls it.
  *
  * The card's authored content survives: `description`, `title`, `contains`,
- * and every other field are read and written back untouched. Only the
+ * and every other field (`sources` and `capture` from `bbx pdf save` too) are
+ * read and written back untouched. Only the
  * extraction-derived parts — the body, `docling`, `metadata.pages`, and
  * `error` — are replaced, along with the page/figure assets in the attach
  * scope (stale ones from the previous run are removed first, so a re-run that
@@ -33,6 +34,7 @@ import { stageAndCommitPaths } from "../../lib/git/core/operations.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { createDoclingService, type DoclingService } from "../../services/docling/core.js";
 import { clearExtractionAssets, extractPdf } from "../pdf/extract.js";
+import { pdfCardBody } from "../pdf/write-card.js";
 
 const PdfReanalyzeArgsSchema = z.object({
   card: z.string(),
@@ -159,7 +161,7 @@ export async function runPdfReanalyze(
     metadata["pages"] = extraction.value.pageCount;
     fields["metadata"] = metadata;
     delete fields["error"];
-    body = extraction.value.body;
+    body = pdfCardBody(extraction.value.body);
     for (const name of extraction.value.assetNames) paths.push(`${attachRelDir}/${name}`);
     ctx.writeLine(`Extracted ${String(extraction.value.pageCount)} page(s)`);
   } else {

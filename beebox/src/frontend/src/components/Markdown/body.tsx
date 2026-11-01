@@ -149,9 +149,9 @@ const PARA_ALIGN_CLASSES: Record<string, string> = {
   justify: "text-justify",
 };
 
-/** `align`, `title`, `lang` and `dir` arrive only from an HTML `<p>` (see `makeHtmlTag`). */
-function Para({ children, align, title, lang, dir }: { children?: ReactNode; align?: string; title?: string; lang?: string; dir?: string }) {
-  if (isLoneImageReactChildren(children)) {
+/** `align`, `title`, `lang` and `dir` arrive only from an HTML `<p>` (see `makeHtmlTag`); `id` from a `{% #id %}` annotation. */
+function Para({ children, align, title, lang, dir, id }: { children?: ReactNode; align?: string; title?: string; lang?: string; dir?: string; id?: string }) {
+  if (isLoneImageReactChildren(children) && id === undefined) {
     return children;
   }
   // A <div>, not a <p>: paragraphs routinely wrap block-level content here
@@ -160,7 +160,7 @@ function Para({ children, align, title, lang, dir }: { children?: ReactNode; ali
   // restores the prose paragraph spacing.
   const alignClass = align === undefined ? undefined : PARA_ALIGN_CLASSES[align];
   return (
-    <div className={alignClass === undefined ? "bbx-paragraph" : `bbx-paragraph ${alignClass}`} title={title} lang={lang} dir={dir}>
+    <div className={alignClass === undefined ? "bbx-paragraph" : `bbx-paragraph ${alignClass}`} title={title} lang={lang} dir={dir} id={id}>
       {children}
     </div>
   );
@@ -207,7 +207,7 @@ function buildRenderConfig({ tags, includes }: { tags: Readonly<Record<string, S
       document: { render: "Fragment" },
       // Fresh per render config so the duplicate-slug set is scoped to this pass.
       heading: makeHeadingNode(),
-      paragraph: { render: "Para", children: ["inline"] },
+      paragraph: { render: "Para", children: ["inline"], attributes: { id: { type: String } } },
       // Markdoc's own fence transform hardcodes `pre`; this one emits `Fence`.
       fence: {
         ...markdocNodes.fence,

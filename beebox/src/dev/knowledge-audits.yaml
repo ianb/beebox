@@ -699,6 +699,26 @@ tests:
     correct_contains: ["bbx browser"]
     tags: [browser, webpage]
 
+  - id: refs-who-cites-this
+    prompt: >
+      A source card was just re-saved and its text changed. How do you find
+      which other cards cite it, and which block of it each one cites? Explain
+      only; do not use tools or change anything.
+    expected_level: knows_directly
+    watch_for: Uses bbx refs, not grep, so relative links are found too.
+    correct_contains: ["bbx refs"]
+    tags: [refs]
+
+  - id: pdf-save-keep-a-pdf
+    prompt: >
+      You found a PDF at a government web address and want to keep it in the
+      box with its address and a hash. What command do you run? Explain only;
+      do not use tools or change anything.
+    expected_level: knows_directly
+    watch_for: Uses bbx pdf save, not a download followed by scan-import.
+    correct_contains: ["bbx pdf save"]
+    tags: [pdf]
+
   - id: browser-vs-webfetch
     prompt: >
       How do you read a page that needs the person's account, and how is that

@@ -231,7 +231,7 @@ Mostly hand-edited by humans, but `bbx init` installs templates.
 
 | Path | What it holds |
 |------|---------------|
-| `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md`), etc. |
+| `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md`), `search.areas` and `search.kindWeights` (folders held back from default `bbx search`, and card-type rank weights; see `box-docs/bbx-commands.md`), etc. |
 | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`docs/secrets.md`), not in the box; the connectors not yet moved there still keep a gitignored `<name>.secret.json`, as do Google/Gmail OAuth token records. Sync state lives separately, in `_bookkeeping/connectors/`. |
 | `_config/schemas/` | Legacy-location check only: schemas live at `src/schemas/` now. A `.ts` file left in `_config/schemas/` is invisible to the loader — `findLegacySchemaFiles` flags it. |
 | `_config/procedures/` | Procedure cards (`*.procedure.card`). `bbx init` installs default templates. |

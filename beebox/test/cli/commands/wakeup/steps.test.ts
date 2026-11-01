@@ -52,6 +52,30 @@ items:
   t.check(await createContainsBackfillJob(box.root), 0);
 });
 
+// ## A held-back search area is not queued
+//
+// A research box holds thousands of saved sources in a `search.areas` area.
+// Queueing them would hand a background agent thousands of summaries nobody
+// asked for (`docs/plans/knowledge-base-tools.md`, Track A).
+void test("cards in a held-back search area are not queued for contains", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await box.write("_config/box.json", JSON.stringify({ search: { areas: { archive: ["_content/archive"] } } }));
+  await box.write("_content/notes/A.doc.card", DOC("A", "alpha notes"));
+  await box.write("_content/archive/Saved.doc.card", DOC("Saved", "a saved page"));
+  box.commitAll("seed cards");
+  await refreshSearchIndex(box.root);
+  t.check(await createContainsBackfillJob(box.root), 1);
+  const jobFile = (await box.list("_bookkeeping/jobs")).split("\n").find((f) => f.includes("contains-backfill.job.card"));
+  t.check(await box.read(jobFile ?? ""), `---
+priority: low
+description: "Write the contains: field for 1 cards missing it."
+items:
+  - ref: _content/notes/A.doc.card
+---
+`);
+});
+
 // ## Nothing missing → nothing queued
 void test("Nothing missing → nothing queued", async (t) => {
   t.teardown(async () => {
@@ -112,6 +136,7 @@ void test("refreshSearchIndex is the box's only scheduled reconciliation of the 
       },
     ],
     total: 1,
+    heldBack: [],
     truncated: false,
     warnings: [],
     stale: false,

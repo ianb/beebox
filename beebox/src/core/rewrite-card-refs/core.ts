@@ -53,6 +53,9 @@ import { frontmatterFence } from "../../cards/frontmatter.js";
  */
 export type Remap = (resolvedAbsPath: string) => string | null;
 
+/** Called once per ref token whose target `remap` selected, with the token's `#fragment` (undefined when it has none). */
+export type OnMatchedRef = (fragment: string | undefined) => void;
+
 /**
  * Resolve a ref's path part to an absolute filesystem path via the shared ref
  * algebra (`src/shared/ref-path/core.ts`). Returns `null` for refs that name nothing
@@ -114,6 +117,7 @@ function transformForReferrer(params: {
   remap: Remap;
   fromPath?: string;
   relativeBase?: string;
+  onMatch?: OnMatchedRef;
 }): RefTransform {
   const { boxRoot, cardAbsPath, remap } = params;
   return (rawRef) => {
@@ -127,6 +131,7 @@ function transformForReferrer(params: {
     if (abs === null) return rawRef;
     const newAbs = remap(abs);
     if (newAbs === null) return rawRef;
+    params.onMatch?.(parsed.fragment);
     return restyleRef({
       boxRoot,
       cardAbsPath,
@@ -331,11 +336,13 @@ export function countReferrerRefs(params: {
   text: string;
   remap: Remap;
   skipFencedCode: boolean;
+  onMatch?: OnMatchedRef;
 }): number {
   const transform = transformForReferrer({
     boxRoot: params.boxRoot,
     cardAbsPath: params.cardAbsPath,
     remap: params.remap,
+    ...(params.onMatch === undefined ? {} : { onMatch: params.onMatch }),
   });
   return applyTransform(params.text, { transform, skipFencedCode: params.skipFencedCode }).count;
 }
@@ -351,6 +358,7 @@ export function rewriteViewRefs(params: {
   viewAbsPath: string;
   text: string;
   remap: Remap;
+  onMatch?: OnMatchedRef;
 }): { text: string; count: number } {
   const transform = transformForReferrer({
     boxRoot: params.boxRoot,
@@ -358,6 +366,7 @@ export function rewriteViewRefs(params: {
     remap: params.remap,
     fromPath: "",
     relativeBase: params.boxRoot,
+    ...(params.onMatch === undefined ? {} : { onMatch: params.onMatch }),
   });
   return applyViewTransform(params.text, transform);
 }

@@ -18,6 +18,7 @@ import { errorMessage } from "../../shared/error-guards.js";
 interface SearchCliOptions {
   kind?: string[];
   path?: string;
+  area?: string;
   limit?: string;
   json?: boolean;
   rebuild?: boolean;
@@ -29,6 +30,7 @@ export const searchCommand = new Command("search")
   .argument("<query>", "Search terms")
   .option("--kind <type...>", "Restrict to one or more card types")
   .option("--path <prefix>", "Restrict to a box-relative path prefix")
+  .option("--area <name>", "Search one configured area (search.areas), or `all` to include held-back areas")
   .option("--limit <n>", "Maximum results (default 10)")
   .option("--json", "Output the structured result envelope as JSON")
   .option("--rebuild", "Rebuild the index from scratch before searching")
@@ -46,6 +48,7 @@ export const searchCommand = new Command("search")
         query,
         kinds: options.kind,
         path: options.path,
+        area: options.area,
         limit,
         rebuild: options.rebuild,
         mode: options.mode,

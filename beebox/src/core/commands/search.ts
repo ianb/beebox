@@ -15,6 +15,7 @@ import {
 import {
   searchBox,
   UnknownKindError,
+  UnknownAreaError,
   HybridUnavailableError,
   type SearchBoxOptions,
 } from "../search/query/core.js";
@@ -32,6 +33,8 @@ const SearchArgsSchema = z.object({
   kinds: z.array(z.string()).optional(),
   /** Restrict to paths starting with this box-relative prefix */
   path: z.string().optional(),
+  /** A configured search area to search alone, or `all` */
+  area: z.string().min(1).optional(),
   /** Maximum results to return */
   limit: z.number().optional(),
   /** Discard and rebuild the index before searching */
@@ -56,6 +59,7 @@ async function executeSearch(
   };
   if (parsed.kinds !== undefined) options.kinds = parsed.kinds;
   if (parsed.path !== undefined && parsed.path !== "") options.pathPrefix = parsed.path;
+  if (parsed.area !== undefined) options.area = parsed.area;
   if (parsed.limit !== undefined) options.limit = parsed.limit;
   if (parsed.rebuild === true) options.rebuild = true;
   if (parsed.mode !== undefined) options.mode = parsed.mode;
@@ -69,6 +73,9 @@ async function executeSearch(
         success: false,
         error: `${e.message}\n  e.g. bbx search "${query}" --kind ${e.validKinds[0] ?? "doc"}`,
       };
+    }
+    if (e instanceof UnknownAreaError) {
+      return { success: false, error: `${e.message}\n  e.g. bbx search "${query}" --area ${e.validAreas[0] ?? "all"}` };
     }
     // Config/mode errors surface as clean CLI errors, not stack traces.
     if (e instanceof HybridUnavailableError) {
@@ -92,6 +99,9 @@ async function executeSearch(
   if (result.truncated) {
     ctx.writeLine(`(${String(result.results.length)} of ${String(result.total)} — ${result.hint ?? ""})`);
   }
+  for (const { area, count } of result.heldBack) {
+    ctx.writeLine(`(${String(count)} more in ${area}: --area ${area})`);
+  }
 
   return { success: true, data: result };
 }
@@ -103,6 +113,7 @@ export const searchCommand: CommandDefinition = {
     { name: "query", description: "Search terms", required: true, type: "string" },
     { name: "kinds", description: "Restrict to card types", required: false, type: "string[]" },
     { name: "path", description: "Restrict to a box-relative path prefix", required: false, type: "string" },
+    { name: "area", description: "Search one configured area, or `all` (default: configured areas are held back)", required: false, type: "string" },
     { name: "limit", description: "Maximum results (default 10)", required: false, type: "number" },
     { name: "rebuild", description: "Rebuild the index from scratch", required: false, type: "boolean" },
     { name: "mode", description: "Ranking mode: hybrid or text (default auto)", required: false, type: "string" },

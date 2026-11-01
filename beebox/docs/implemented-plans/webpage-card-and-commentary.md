@@ -151,7 +151,7 @@ loses validation of those fields and the distinct rendering (readable body +
 "original page" / "frozen snapshot" affordances). This is the one place the
 "don't add ideas" rule is overridden, and it's overridden deliberately.
 
-**Direction.** `src/schemas/webpage.tsx`:
+**Direction.** `src/schemas/webpage.ts`:
 
 ```ts
 export const WebpageSchema: CardSchema = cardSchema("webpage", {

@@ -507,7 +507,9 @@ numbers, IDs); for an exact identifier the bare token works. Quoting a phrase
 does not force an exact match.
 
 <!-- rules: search.examples-filters-results -->
-Filters, examples, and how to read a result: the `bbx search` entry in
+A line like `(38 more in archive: --area archive)` means default search held
+back that area; `--area <name>` searches it. Filters, examples, and how to read
+a result: the `bbx search` entry in
 `node_modules/beebox/box-docs/bbx-commands.md`.
 
 ## PROCEDURES — Procedures
@@ -578,6 +580,14 @@ To keep a copy of a page, run `bbx webpage save <url>`, or `--browser` for the
 page open in the box browser. Exit 3 means refused; exit 4 is a redirect to read
 first. When a saved or refused page was wrong, add the case to `webpage.ts` in the
 box's tricks folder (`bbx webpage save --help`).
+
+<!-- rules: tools.pdf-save -->
+To keep a copy of a PDF, run `bbx pdf save <url> --to <folder>`; it records the
+address and hash on the card. Exit 3 means the reply was not a PDF.
+
+<!-- rules: tools.refs -->
+To find what cites a card, and which block, run `bbx refs <card>[#anchor]`, not
+grep: it resolves relative links the way `bbx mv` does.
 
 ## PROVENANCE — `{% quote %}` and `{% source %}`
 

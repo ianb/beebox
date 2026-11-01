@@ -18,6 +18,8 @@ import {
   updateContainsField,
   ContainsUpdateError,
 } from "../../core/search/contains-update.js";
+import { areaPrefixes } from "../../core/search/areas.js";
+import { loadSearchConfig } from "../../core/box/config.js";
 import { errorMessage } from "../../shared/error-guards.js";
 
 /** Human output cap per group; --json is always complete. */
@@ -36,7 +38,9 @@ async function runList(options: ListOptions): Promise<void> {
   const state = await loadContainsState(boxRoot);
   const wantMissing = options.missing === true || options.stale !== true;
   const wantStale = options.stale === true || options.missing !== true;
-  const missing = wantMissing ? listMissing(state) : [];
+  // Held-back search areas are not on the worklist (the backfill job drains it).
+  const skipPrefixes = areaPrefixes(await loadSearchConfig(boxRoot));
+  const missing = wantMissing ? listMissing(state, { skipPrefixes }) : [];
   const stale = wantStale ? listStale(state) : [];
 
   if (options.json === true) {
@@ -48,6 +52,8 @@ async function runList(options: ListOptions): Promise<void> {
   }
 
   printGroup("missing contains:", { paths: missing, enabled: wantMissing });
+  const skipped = wantMissing ? listMissing(state).length - missing.length : 0;
+  if (skipped > 0) console.log(`  (${String(skipped)} more in held-back search areas are not listed)`);
   printGroup("stale contains (content changed since written):", { paths: stale, enabled: wantStale });
 }
 

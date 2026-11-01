@@ -5,6 +5,7 @@ import { ErrorText } from "../ui/ErrorText";
 import { ModalCard } from "../ui/ModalCard";
 import { SearchResults, type SearchResult } from "./SearchResults";
 import { searchResultTarget } from "./target";
+import { heldBackText } from "./held-back";
 import { trpc } from "../../lib/trpc/client";
 import { useWorkspace } from "../chat/workspace/WorkspaceProvider/provider";
 import { isComposing } from "../../lib/ime";
@@ -40,6 +41,7 @@ export function QuickSearchOverlay() {
     close();
   };
   const list = results.data?.results ?? [];
+  const heldNote = results.data ? heldBackText(results.data.heldBack) : null;
   const onInputKey = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (isComposing(event.nativeEvent)) return;
     if (event.key === "ArrowDown") { event.preventDefault(); setActive((value) => Math.min(value + 1, Math.max(0, list.length - 1))); }
@@ -55,5 +57,6 @@ export function QuickSearchOverlay() {
     {results.isLoading ? <Text tone="muted" className="pt-3">Searching…</Text> : null}
     {results.error ? <ErrorText className="pt-3">Could not search: {results.error.message}</ErrorText> : null}
     {results.data ? <div className="-mx-5 -mb-5 mt-3 max-h-[65vh] overflow-y-auto"><SearchResults results={list} activeIndex={active} query={query} onOpen={(item) => { void openResult(item); }} /></div> : null}
+    {heldNote ? <Text tone="muted" size="sm" className="pt-3">{heldNote}</Text> : null}
   </ModalCard>;
 }

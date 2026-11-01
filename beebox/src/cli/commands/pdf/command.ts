@@ -1,12 +1,13 @@
 /**
- * bbx pdf — operations on `pdf.card`s. Today one subcommand:
- * `reanalyze`, a thin wrapper around the core `pdf-reanalyze` command.
+ * bbx pdf — operations on `pdf.card`s: `save` (save.ts) and `reanalyze`, a
+ * thin wrapper around the core `pdf-reanalyze` command.
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths/core.js";
-import { runCommand, createCliContext } from "../../core/command-runner.js";
-import { errorMessage } from "../../shared/error-guards.js";
+import { requireBoxRoot } from "../../../lib/paths/core.js";
+import { runCommand, createCliContext } from "../../../core/command-runner.js";
+import { errorMessage } from "../../../shared/error-guards.js";
+import { makePdfSaveCommand } from "./save.js";
 
 const reanalyzeCommand = new Command("reanalyze")
   .description("Re-run extraction over a pdf card's original file")
@@ -35,4 +36,5 @@ const reanalyzeCommand = new Command("reanalyze")
 
 export const pdfCommand = new Command("pdf")
   .description("Work with pdf cards (extracted PDFs)")
+  .addCommand(makePdfSaveCommand({}))
   .addCommand(reanalyzeCommand);

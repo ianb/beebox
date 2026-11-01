@@ -46,6 +46,7 @@ import {
 } from "../../../exports/cards.js";
 import { parseCardText, typeFromFilename, type LoadCardContext } from "../../card-io.js";
 import { symbolIssues } from "./symbol.js";
+import { brokenAnchorMessage } from "./anchor-refs.js";
 import { bodyTitleWarnings } from "./body-title.js";
 import { extractBodyLinks, extractBodyRefs } from "../../body-refs.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
@@ -258,6 +259,9 @@ async function lintFrontmatterCard(input: {
           severity: "warning",
           message: `Broken reference at ${refPath}: ${ref} ${brokenRefReason({ ref, fromPath: path, boxRoot: options.boxRoot })}${suffix}`,
         });
+      } else {
+        const anchorMessage = await brokenAnchorMessage({ ref, refPath, fromPath: path, boxRoot: options.boxRoot, run: options });
+        if (anchorMessage !== null) warnings.push({ type: "reference", severity: "warning", message: anchorMessage });
       }
     } catch (e) {
       warnings.push({
