@@ -46,6 +46,9 @@ packages:
   # Track F). The deploy installs it too, with Chrome for Testing, the launcher's
   # unshare copy and the AppArmor profiles (deploy/server-bin/bbx-browser-install).
   - passt
+  # Codex's sandbox (deploy/server-bin/bbx-codex-sandbox-install, which also
+  # restricts it to box users and adds its AppArmor grant).
+  - bubblewrap
 
 groups:
   - beebox-boxes

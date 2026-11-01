@@ -188,6 +188,20 @@ runs `server-bin/bbx-browser-install` as root, after the services restart:
 `cloud-init.yaml` installs `passt` too. The setup was verified on a throwaway
 Ubuntu 24.04 host: [linux-verification.md](../../../research/embedded-browser/linux-verification.md).
 
+### Codex sandbox
+
+Codex runs prompt-only procedures and read-only runs in its own sandbox, which
+uses bubblewrap. Every deploy runs `server-bin/bbx-codex-sandbox-install` as
+root, after the box browser:
+
+- `bubblewrap`, with `/usr/bin/bwrap` set to 0750 `root:beebox-boxes` by
+  `dpkg-statoverride`. Codex runs the `bwrap` on PATH before its bundled copy.
+- `apparmor/beebox-codex` in `/etc/apparmor.d/`, which grants that `bwrap`
+  user namespaces. Without it the sandbox fails on
+  `loopback: Failed RTM_NEWADDR: Operation not permitted`.
+- A check, as one box user under the box sandbox, that `codex sandbox --
+  /bin/true` succeeds. A host with no box yet skips it.
+
 ## Systemd units
 
 Every file under `deploy/systemd/` is installed whole on every deploy.

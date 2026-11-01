@@ -1027,6 +1027,13 @@ REMOTE
   queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
     < "$CHECKOUT/beebox/deploy/server-bin/bbx-browser-install"
 
+  # Codex's sandbox: bubblewrap, limited to box users, and the AppArmor grant
+  # that lets it create user namespaces on Ubuntu 24.04, then a check as a box
+  # user. Without it prompt-only Codex runs fail before running anything.
+  queue_step "Installing Codex's sandbox..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-codex-sandbox-install"
+
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
   #      crash-looping. The hub blocks on startAll() before it listens, and a
