@@ -8,7 +8,7 @@
 const MAX_WORDS = 30;
 const MAX_ENTRIES = 40;
 const SPAN_DAYS = 10;
-const MAX_IN_SPAN = 6;
+const MAX_IN_SPAN = 10;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ENTRY_LINE = /^- (\d{4}-\d{2}-\d{2}) \([\da-f]{7,40}\): (\S.*)$/;

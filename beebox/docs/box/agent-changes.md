@@ -4,10 +4,14 @@ read-when: Something you remember fails, a note or procedure of yours disagrees 
 
 # What changed for box agents
 
+This list started on 2026-11-01. Its first entries were gathered from the
+month before that, so older changes are not here.
+
 Newest first. Each line says what changed; the doc it names has the details.
 If an entry and a note of yours disagree, check the current docs or command,
 then fix what is out of date.
 
+- 2026-11-01 (6a7be17bc): `bbx search` skips `_tmp/` and areas set in `_config/box.json`, so a miss may not mean absent. `--area all` includes them. See **SEARCHING**.
 - 2026-11-01 (6a7be17bc): New: `bbx browser` for pages needing a login, `bbx webpage save`, `bbx pdf save`, and `bbx refs` to find what cites a card. See **TOOLS**.
 - 2026-10-30 (4a541cf78): `scan-uploader` is gone. Photos albums and scans go through Bee Box Desktop, paired in Settings. See `phone-photos.md`.
 - 2026-10-29 (53362e5ee): Each synced calendar is a `.calendar.card`. Write new events as `.ics` in its attach folder; a file directly in `_content/calendar/` is not pushed.

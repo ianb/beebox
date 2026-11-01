@@ -39,7 +39,7 @@ dependency updates, dev tooling, and tests. If you are unsure, leave it out.
    the details, after checking that it exists. Run each command and flag you name
    with `--help`. Do not explain what the docs already explain.
 4. **Keep the limits.** `pnpm --dir beebox doc-check` enforces at most 30 words
-   an entry, 6 entries in any 10 days, and 40 in the file. Past 40, delete the
+   an entry, 10 entries in any 10 days, and 40 in the file. Past 40, delete the
    oldest. Past the 10-day limit, merge entries or drop the weakest.
 5. **Commit** only that file, then land with `bin/land`. `bin/land` lands commits
    inherited from earlier runs too. If it refuses, the commit is safe on this

@@ -128,11 +128,11 @@ No design decision depends on an external premise.
 
 - `docs/agent-guide.md` gains a Markdown link to `docs/box/agent-changes.md`, so `doc-check` fails if the doc is removed. The bare name in the guide does not give that protection, because the plan shares the basename (`src/dev/doc-graph-data/data.ts:201`).
 - `budget.always_loaded_words` rises by 27 for this passage, with the reason in the ledger comment. `budget.guide_words` did not need to move: the fresh-box guide measures 5,693 words against a ceiling of 5,743.
-- `doc-check` gains `checkAgentChanges(text)`, a pure function: each entry matches `- YYYY-MM-DD (hash): text`; dates are newest first; each text has at most 30 words; no 10-day span holds more than 6 entries; the doc holds at most 40 entries; each `**HANDLE**` is in the registry. No check reads the clock, so an old checkout cannot start failing with age.
+- `doc-check` gains `checkAgentChanges(text)`, a pure function: each entry matches `- YYYY-MM-DD (hash): text`; dates are newest first; each text has at most 30 words; no 10-day span holds more than 10 entries; the doc holds at most 40 entries; each `**HANDLE**` is in the registry. No check reads the clock, so an old checkout cannot start failing with age.
 
 **Vocabulary lock-ins.** Doc `agent-changes.md`; row `docs.changes`; entry line format.
 
-**First implementation chunk.** `checkAgentChanges`, its test, and its `doc-check` wiring, with a doc holding no entries. Done includes one rehearsed rejection: a docs-only commit with seven entries in 10 days fails.
+**First implementation chunk.** `checkAgentChanges`, its test, and its `doc-check` wiring, with a doc holding no entries. Done includes one rehearsed rejection: a docs-only commit with eleven entries in 10 days fails.
 
 ### Track B: the curator
 
@@ -221,7 +221,7 @@ No critical gap remains: each silent row is accepted above with its reason.
 
 ## Open design questions
 
-None remain for the boxholder. The limits start at 30 words, 6 entries in 10 days, 40 in the doc, and a 3-day cadence. The boxholder is unsure of them, so the curator's pushback alert is how they get revised.
+None remain for the boxholder. The limits start at 30 words, 10 entries in 10 days (raised from 6 by the boxholder after the rehearsal: "6 seems too low"), 40 in the doc, and a 3-day cadence. The boxholder is unsure of them, so the curator's pushback alert is how they get revised.
 
 ## Knowledge audits
 

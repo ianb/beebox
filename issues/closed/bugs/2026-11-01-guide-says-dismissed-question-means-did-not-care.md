@@ -1,11 +1,14 @@
 ---
 title: "The agent guide says a dismissed question means the boxholder didn't care; the question card says it was put away for now"
-workstream: unattached
+workstream: agent-changelog
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-agent-changelog — a curator rehearsal over the week's landings
+resolution: wontfix
 ---
+
+**Closed (wontfix, 2026-11-01):** Boxholder, 2026-11-01: "Often questions I don't answer are ones I don't care about." The guide's reading stands beside the card's.
 
 `beebox/src/core/agent-guide/guide.md:299` says: "A dismissal or expiry means the
 boxholder didn't care to answer that, so raise the bar before asking again."

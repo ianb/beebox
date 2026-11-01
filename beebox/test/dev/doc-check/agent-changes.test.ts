@@ -37,12 +37,12 @@ void test("A guide section that does not exist is named", async (t) => {
   t.check(check(entry("2026-10-29", "See **GONE**.")), ["line 1 names **GONE**, which is not a guide section"]);
 });
 
-// The span includes both ends: the seventh entry fails at exactly ten days,
+// The span includes both ends: the eleventh entry fails at exactly ten days,
 // and passes at eleven.
-void test("At most six entries in ten days", async (t) => {
-  const six = ["2026-10-30", "2026-10-29", "2026-10-28", "2026-10-27", "2026-10-26", "2026-10-25"].map((d) => entry(d));
-  t.check(check(...six, entry("2026-10-19")), []);
-  t.check(check(...six, entry("2026-10-20")), ["7 entries in the 10 days up to 2026-10-30; the limit is 6"]);
+void test("At most ten entries in ten days", async (t) => {
+  const ten = [30, 29, 28, 27, 26, 25, 24, 23, 22, 21].map((day) => entry(`2026-10-${String(day)}`));
+  t.check(check(...ten, entry("2026-10-19")), []);
+  t.check(check(...ten, entry("2026-10-20")), ["11 entries in the 10 days up to 2026-10-30; the limit is 10"]);
 });
 
 void test("At most forty entries", async (t) => {
