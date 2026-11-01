@@ -1,15 +1,17 @@
 ---
 title: "bbx webpage save: make a webpage card from a URL or from the box browser"
-status: draft
+status: partial
 workstream: shared-browser
 issues:
-  - ../../../issues/features/2026-09-11-server-side-webpage-capture.md
+  - ../../../issues/closed/features/2026-09-11-server-side-webpage-capture.md
 ---
 # bbx webpage save
 
+**Status:** built in this branch and merged to `main`. Not run on production, not tried at 5,000-file scale, and the Clerk extension (whose extraction code moved to `beebox/src/shared/webpage-readable.ts`) was not tried in a browser. `--update` replacing a changed page is covered by automated tests only, not a real box run. The plan stays here until a production run.
+
 An agent can save a page as a webpage card only by writing its own script. This plan adds one command with two sources. `bbx webpage save <url>` gets the page over plain HTTP. `bbx webpage save --browser` takes the page open in the box browser. Both pass the page through one box function, `src/tricks/webpage.ts` when the box has one, which turns a page into a card or refuses it.
 
-**Issues addressed:** `issues/features/2026-09-11-server-side-webpage-capture.md` (resolved). Related, stays open: `issues/features/2026-10-04-fetch-blocked-pages.md` (this notices blocks and does not get past them); `issues/features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md`.
+**Issues addressed:** `issues/closed/features/2026-09-11-server-side-webpage-capture.md` (resolved). Related, stays open: `issues/features/2026-10-04-fetch-blocked-pages.md` (this notices blocks and does not get past them); `issues/features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md`.
 
 Boxholder request, 2026-11-01: "a tool to both fetch pages into the webpage format (using a normal fetch), one that ideally notices blocked conditions. It should follow redirects, but make it clear in both the card and stdout that it did so. And for the agent-browser we should also have something that makes a webpage card." And: "let the box customize the text extraction. Use a standard one ... a function that takes the response (URL, etc) and by default just passes it directly to the default extractor, but can do anything."
 

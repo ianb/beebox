@@ -41,7 +41,7 @@ notices and hand-fills it (one observed case sat for 2+ weeks before a
 session doing unrelated work in the box noticed and fetched it by hand).
 
 This is not fully covered by
-[server-side webpage capture](../features/2026-09-11-server-side-webpage-capture.md),
+[server-side webpage capture](../closed/features/2026-09-11-server-side-webpage-capture.md),
 which frames the gap as "nothing writes a webpage card outside Clerk" — that
 premise is already out of date, since `share.ts` does write one, just an
 inert one. The fix likely lives in the same place: once a real server-side
