@@ -10,17 +10,12 @@ import { gunzipSync } from "node:zlib";
 import { PAGE_READ } from "../../../core/browser/page-read.js";
 import { decodeHtml, type ReceivedPage } from "../../../core/webpage/response.js";
 import { postToBox } from "../../lib/browser-post.js";
+import { SaveError as WebpageSaveError } from "../../lib/save-command.js";
 
 /** Clerk snapshots reach 41 MB; the DOM for one takes far more than that. */
 const HTML_FILE_CAP_BYTES = 64 * 1024 * 1024;
 
-/** A failure to report to the agent as one line. */
-export class WebpageSaveError extends Error {
-  override name = "WebpageSaveError";
-  constructor(what: { readonly detail: string }) {
-    super(what.detail);
-  }
-}
+export { WebpageSaveError };
 
 export async function browserResponse(): Promise<ReceivedPage> {
   const posted = await postToBox("page", {});

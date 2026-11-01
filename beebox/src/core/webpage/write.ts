@@ -9,7 +9,58 @@ import { createWebpageTemplate, type WebpageCaptureFields } from "../../schemas/
 import { attachmentPath } from "../../shared/attach-path.js";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
+import { anchorsIn } from "../../shared/markdoc-config/anchors.js";
 import { neutralizeIngestedMarkdown } from "../../shared/markdoc-config/ingest.js";
+import { parseMarkdown } from "../../shared/markdoc-config/parse/core.js";
+
+/** An anchor a box function asked for cannot be placed; nothing is saved. */
+export class AnchorError extends Error {
+  override name = "AnchorError";
+  constructor(what: { readonly detail: string }) {
+    super(what.detail);
+  }
+}
+
+export interface PageAnchor {
+  id: string;
+  /** 0-based line of the escaped text. */
+  line: number;
+}
+
+const ANCHOR_ID = /^[\da-z][\da-z-]*$/;
+
+/**
+ * Put ` {% #id %}` at the end of each anchored line of an already-escaped
+ * body. This is the one place page-derived markdown gains a real Markdoc
+ * annotation, and only an id, written by box code. Each id must land on a
+ * heading or paragraph, and must not equal a heading id the body already has,
+ * or a citation could reach the wrong element. Throws `AnchorError`.
+ */
+export function applyAnchors(body: string, anchors: readonly PageAnchor[] | undefined): string {
+  if (anchors === undefined || anchors.length === 0) return body;
+  const lines = body.split("\n");
+  const headingIds = new Set(anchorsIn(body).filter((a) => a.kind === "heading").map((a) => a.id));
+  const used = new Set<string>();
+  for (const { id, line } of anchors) {
+    if (!ANCHOR_ID.test(id)) throw new AnchorError({ detail: `anchor "${id}": an id uses a-z, 0-9 and -, and starts with a letter or digit` });
+    if (used.has(id)) throw new AnchorError({ detail: `anchor "${id}": given twice` });
+    used.add(id);
+    const text = lines[line];
+    if (text === undefined || text.trim() === "") throw new AnchorError({ detail: `anchor "${id}": line ${String(line)} is ${text === undefined ? "past the end of" : "blank in"} the markdown (lines count from 0)` });
+    if (headingIds.has(id)) throw new AnchorError({ detail: `anchor "${id}": a heading in the page already has that id; choose another` });
+    lines[line] = `${text.trimEnd()} {% #${id} %}`;
+  }
+  const result = lines.join("\n");
+  const landed = new Set<string>();
+  for (const node of parseMarkdown(result).walk()) {
+    const id: unknown = node.attributes["id"];
+    if ((node.type === "heading" || node.type === "paragraph") && typeof id === "string") landed.add(id);
+  }
+  for (const { id, line } of anchors) {
+    if (!landed.has(id)) throw new AnchorError({ detail: `anchor "${id}": line ${String(line)} is not a heading or the end of a paragraph (a list item or table cell cannot carry an id)` });
+  }
+  return result;
+}
 
 export async function writeCard(filePath: string, content: string | Uint8Array): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -41,6 +92,7 @@ export async function writeWebpageCard(opts: {
   frozenHtml?: string | Uint8Array | undefined;
   captureId?: string | undefined;
   capture?: WebpageCaptureFields | undefined;
+  anchors?: readonly PageAnchor[] | undefined;
   exclusive?: boolean | undefined;
 }): Promise<string[]> {
   const frozen = opts.frozenHtml;
@@ -51,7 +103,7 @@ export async function writeWebpageCard(opts: {
     url: opts.url,
     capturedAt: opts.capturedAt,
     // Clipped page text is third-party: escape its raw HTML and Markdoc tags.
-    content: neutralizeIngestedMarkdown(opts.markdown),
+    content: applyAnchors(neutralizeIngestedMarkdown(opts.markdown), opts.anchors),
     siteName: opts.siteName,
     byline: opts.byline,
     excerpt: opts.excerpt,
@@ -91,9 +143,10 @@ export async function updateWebpageCard(opts: {
   excerpt?: string | undefined;
   frozenHtml?: Uint8Array | undefined;
   capture: WebpageCaptureFields;
+  anchors?: readonly PageAnchor[] | undefined;
 }): Promise<string[]> {
   const { boxRoot, cardRel, current, frozenHtml } = opts;
-  const body = neutralizeIngestedMarkdown(opts.markdown);
+  const body = applyAnchors(neutralizeIngestedMarkdown(opts.markdown), opts.anchors);
   const frozenRel = attachmentPath(cardRel, "page.frozen");
   const frozenPath = path.join(boxRoot, frozenRel);
   const saved = frozenHtml === undefined ? null : await readIfPresent(frozenPath);

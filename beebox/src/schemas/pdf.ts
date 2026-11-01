@@ -27,6 +27,7 @@
 import { z } from "zod";
 import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 import { MediaViaSchema, type MediaVia } from "../cards/media-via.js";
+import { SourcesEntrySchema, type SourcesEntry } from "../cards/sources-entry.js";
 
 /** Same shape as `file.card`'s `filename:` entry — a pdf card is a superset. */
 const FilenameEntry = z.object({
@@ -49,6 +50,20 @@ const PdfMetadata = z.object({
   author: z.string().optional(),
 });
 
+/**
+ * How `bbx pdf save` got the file. `sha256`: of the bytes as received.
+ * `redirectedFrom`: every earlier address, oldest first. `requestHeaders`: the
+ * name of the header set sent. `meta`: what the caller kept.
+ */
+const PdfCapture = z.object({
+  via: z.enum(["http", "file"]),
+  sha256: z.string().optional(),
+  redirectedFrom: z.array(z.string()).optional(),
+  requestHeaders: z.string().optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
+});
+export type PdfCaptureFields = z.infer<typeof PdfCapture>;
+
 export const PdfSchema = cardSchema("pdf", {
   brief: "An extracted PDF",
   description: "An extracted PDF — rendered text as the body, original bytes and page/figure renders in the attach scope",
@@ -58,6 +73,10 @@ export const PdfSchema = cardSchema("pdf", {
     /** Source document type, e.g. `pdf`. Records what the file was — the pipeline currently only reads PDFs. */
     format: z.string(),
     filename: FilenameEntry,
+    /** Where the document came from, when it has an address: one `href` entry with `retrieved`. */
+    sources: z.array(SourcesEntrySchema).optional(),
+    /** Written by `bbx pdf save`; absent on a scanned PDF. */
+    capture: PdfCapture.optional(),
     docling: DoclingEntry.optional(),
     metadata: PdfMetadata.optional(),
     /**
@@ -76,7 +95,8 @@ export const PdfSchema = cardSchema("pdf", {
 A pdf card is a document whose text has been **extracted** — the rendered
 markdown is the card body, and the original bytes stay attached beside it. It
 is what \`bbx scan-import\` writes for a scanned PDF that already carries a text
-layer (a scanner's own OCR, or a born-digital PDF).
+layer (a scanner's own OCR, or a born-digital PDF), and what
+\`bbx pdf save <url>\` writes for a PDF kept from the web, at a path you choose.
 
 ## Where the bytes live
 
@@ -128,6 +148,14 @@ provider accepts every attached image format directly.
   date when known, \`YYYY\`, \`YYYY-MM\`, or \`YYYY-MM-DD\` — and \`note\`,
   how or why in prose), and optionally \`original-name\`, \`mime-type\`,
   \`size\`.
+- \`sources\` — present on a card saved from the web: \`[{ href, retrieved }]\`,
+  the address and the capture time.
+- \`capture\` — written by \`bbx pdf save\`: \`via\` (\`http\` or \`file\`),
+  \`sha256\` of the bytes as received, any \`redirectedFrom\`, \`requestHeaders\`
+  (the name of the header set sent), and \`meta\`, which the caller kept.
+  \`bbx pdf reanalyze\` leaves both fields alone. To save a PDF from the web,
+  run \`bbx pdf save <url> --to <folder>\`; exit 3 means the reply was not a
+  PDF (often a sign-in page), exit 4 a redirect to read first (\`--help\`).
 - \`docling\` — \`ref\` to the gzipped extraction JSON, plus the \`version\` of
   the extractor that produced it.
 - \`metadata\` — \`pages\`, \`title\`, \`author\` read from the document itself.
@@ -154,6 +182,8 @@ export interface PdfTemplateOptions {
   originalName?: string;
   mimeType?: string;
   size?: number;
+  sources?: SourcesEntry[];
+  capture?: PdfCaptureFields;
   /** Name of the gzipped DoclingDocument JSON in the attach scope, when present. */
   doclingFilename?: string;
   doclingVersion?: string;
@@ -177,6 +207,8 @@ export function createPdfTemplate(options: PdfTemplateOptions): string {
     format: options.format,
     filename,
   };
+  if (options.sources !== undefined) fields["sources"] = options.sources;
+  if (options.capture !== undefined) fields["capture"] = options.capture;
   if (options.doclingFilename !== undefined) {
     const docling: Record<string, unknown> = { ref: `attach/${options.doclingFilename}` };
     if (options.doclingVersion !== undefined) docling["version"] = options.doclingVersion;

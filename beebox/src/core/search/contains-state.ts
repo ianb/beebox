@@ -186,10 +186,21 @@ export function listStale(state: ContainsState): string[] {
     .toSorted();
 }
 
-/** Searchable frontmatter cards with no `contains` yet, sorted. */
-export function listMissing(state: ContainsState): string[] {
+/**
+ * Searchable frontmatter cards with no `contains` yet, sorted. Cards under a
+ * `skipPrefixes` entry (by path segment) are left out: a held-back search area
+ * holds thousands of sources that no one writes summaries for.
+ */
+export function listMissing(
+  state: ContainsState,
+  options?: { skipPrefixes: string[] }
+): string[] {
+  const skipPrefixes = options?.skipPrefixes ?? [];
   return Object.entries(state.cards)
-    .filter(([, entry]) => entry.containsText === "")
+    .filter(([cardPath, entry]) =>
+      entry.containsText === "" &&
+      !skipPrefixes.some((prefix) => cardPath === prefix || cardPath.startsWith(`${prefix}/`))
+    )
     .map(([cardPath]) => cardPath)
     .toSorted();
 }

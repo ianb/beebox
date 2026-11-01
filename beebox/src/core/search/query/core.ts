@@ -4,7 +4,7 @@
  * filtering, and bounded results with a narrowing hint.
  */
 
-import { getByID, search, type TypedDocument } from "@orama/orama";
+import { count, getByID, search, type TypedDocument } from "@orama/orama";
 import { getSearchableTypes } from "../../../schemas.js";
 import { invariant } from "../../../shared/invariant.js";
 import { getOpenAiEmbeddingsKey } from "../embeddings-key.js";
@@ -16,6 +16,8 @@ import {
 } from "../../../services/openai-embeddings.js";
 import { openSearchIndex, type OpenSearchIndexOptions } from "../refresh/core.js";
 import type { SearchIndex } from "../store/core.js";
+import { loadSearchConfig } from "../../box/config.js";
+import { applyAreas, buildAreaFilter, needsFullFetch } from "../areas.js";
 import { generateExcerpt } from "./excerpt.js";
 import { cardDocId, ENGINE_DOC_KIND, MARKDOWN_KIND, type SearchDoc } from "../extract/core.js";
 
@@ -37,8 +39,6 @@ const BOOST = { contains: 3, title: 2 } as const;
 const SIMILARITY = 0.35;
 
 const DEFAULT_LIMIT = 10;
-/** Fetch budget when a post-search path filter needs headroom. */
-const PATH_FILTER_FETCH = 1000;
 
 /** Full-text properties searched (the text half of hybrid, and the text mode). */
 const TEXT_PROPERTIES = ["title", "contains", "content"] as const;
@@ -78,9 +78,13 @@ export class HybridUnavailableError extends Error {
   }
 }
 
+export { UnknownAreaError } from "../areas.js";
+
 export interface SearchBoxResult {
   results: SearchHit[];
   total: number;
+  /** Matches that default search held back, per configured area (`search.areas`). Empty when none. */
+  heldBack: { area: string; count: number }[];
   truncated: boolean;
   hint?: string;
   warnings: string[];
@@ -100,6 +104,12 @@ export interface SearchBoxOptions {
   pathPrefix?: string;
   /** Restrict to paths starting with any of these box-relative prefixes. */
   pathPrefixes?: string[];
+  /**
+   * A configured search area (`search.areas` in `_config/box.json`) to search
+   * alone, or `all` to hold nothing back. Omitted: configured areas and
+   * `_tmp/` are held back and counted in `heldBack`.
+   */
+  area?: string | undefined;
   limit?: number;
   rebuild?: boolean;
   onProgress?: OpenSearchIndexOptions["onProgress"];
@@ -127,12 +137,17 @@ export async function searchBox(
   const limit = options.limit ?? DEFAULT_LIMIT;
 
   // Validate kinds before the refresh touches anything on disk.
-  if (kinds !== undefined && kinds.length > 0) {
-    const valid = [...(await getSearchableTypes(boxRoot)), MARKDOWN_KIND, ENGINE_DOC_KIND];
-    for (const kind of kinds) {
-      if (!valid.includes(kind)) throw new UnknownKindError(kind, valid.toSorted());
-    }
-  }
+  await validateKinds(boxRoot, kinds);
+
+  // Same for the area: an unknown name must fail before the refresh.
+  const searchConfig = await loadSearchConfig(boxRoot);
+  const prefixes = options.pathPrefixes ?? (pathPrefix === undefined ? undefined : [pathPrefix]);
+  const areaFilter = buildAreaFilter({
+    area: options.area,
+    config: searchConfig,
+    callerPrefixes: prefixes ?? [],
+    configWarning: searchConfig.warning,
+  });
 
   // Resolve the embeddings service: the injected one, or one built from the
   // box's configured key. `--mode text` skips ALL of this: no key resolution,
@@ -155,6 +170,7 @@ export async function searchBox(
   if (options.lockRetryMs !== undefined) openOpts.lockRetryMs = options.lockRetryMs;
   if (service !== undefined) openOpts.embeddings = service;
   const { db, warnings, stale, embeddingsReady } = await openSearchIndex(boxRoot, openOpts);
+  if (searchConfig.warning !== null) warnings.push(searchConfig.warning);
 
   // Decide the ranking and, when hybrid, embed the query. Orama throws a raw
   // TypeError if `mode: "hybrid"` runs without a vector, so the branch is
@@ -169,43 +185,30 @@ export async function searchBox(
 
   const where =
     kinds !== undefined && kinds.length > 0 ? { where: { kind: { in: kinds } } } : {};
-  const prefixes = options.pathPrefixes ?? (pathPrefix === undefined ? undefined : [pathPrefix]);
-  const fetchLimit = prefixes !== undefined ? PATH_FILTER_FETCH : limit;
-  const raw =
-    searchMode === "hybrid" && queryVector !== undefined
-      ? await search(db, {
-          mode: "hybrid",
-          term: query,
-          vector: { value: queryVector, property: "embedding" },
-          similarity: SIMILARITY,
-          properties: [...TEXT_PROPERTIES],
-          boost: BOOST,
-          limit: fetchLimit,
-          ...where,
-        })
-      : await search(db, {
-          term: query,
-          properties: [...TEXT_PROPERTIES],
-          boost: BOOST,
-          limit: fetchLimit,
-          ...where,
-        });
+  // A filter or weight can drop or reorder any hit, so it needs every match,
+  // not the top `limit`.
+  const fetchAll = prefixes !== undefined || needsFullFetch({ area: options.area, config: searchConfig });
+  const fetchLimit = fetchAll ? Math.max(1, count(db)) : limit;
+  const raw = await runSearch(db, { searchMode, queryVector, query, fetchLimit, where });
 
-  let hits = raw.hits;
-  let total = raw.count;
-  if (prefixes !== undefined) {
-    hits = hits.filter((h) => prefixes.some((prefix) => hitDoc(h).path.startsWith(prefix)));
-    total = hits.length;
-  }
-  hits.sort((a, b) => {
-    const aContent = hitDoc(a).path.startsWith("_content/") ? 1 : 0;
-    const bContent = hitDoc(b).path.startsWith("_content/") ? 1 : 0;
+  const matches = prefixes === undefined
+    ? raw.hits
+    : raw.hits.filter((h) => matchesPrefix(hitDoc(h).path, prefixes));
+  const { kept, heldBack } = applyAreas({
+    items: matches,
+    filter: areaFilter,
+    config: searchConfig,
+    describe: (h) => ({ path: hitDoc(h).path, kind: hitDoc(h).kind, score: h.score }),
+  });
+  const total = fetchAll ? kept.length : raw.count;
+  kept.sort((a, b) => {
+    const aContent = hitDoc(a.item).path.startsWith("_content/") ? 1 : 0;
+    const bContent = hitDoc(b.item).path.startsWith("_content/") ? 1 : 0;
     return bContent - aContent || b.score - a.score;
   });
-  hits = hits.slice(0, limit);
 
-  const results = hits.map((h): SearchHit => {
-    const doc = hitDoc(h);
+  const results = kept.slice(0, limit).map(({ item, score }): SearchHit => {
+    const doc = hitDoc(item);
     // A section is indexed with its own text only; it is shown under its
     // card's title, and its preview is that text, not the card's summary.
     const card = doc.fragment === "" ? doc : getByID(db, cardDocId(doc.path));
@@ -216,7 +219,7 @@ export async function searchBox(
       title: card?.title ?? "",
       contains: card?.contains ?? "",
       excerpt: generateExcerpt(doc.fragment === "" && doc.contains !== "" ? doc.contains : doc.content, query),
-      score: h.score,
+      score,
     };
   });
 
@@ -224,6 +227,7 @@ export async function searchBox(
   const result: SearchBoxResult = {
     results,
     total,
+    heldBack,
     truncated,
     warnings,
     stale,
@@ -234,6 +238,51 @@ export async function searchBox(
     result.hint = "narrow with --kind <type> or --path <prefix>, or raise --limit";
   }
   return result;
+}
+
+/** Throws UnknownKindError for a kind that no card type, markdown, or engine doc has. */
+async function validateKinds(boxRoot: string, kinds: string[] | undefined): Promise<void> {
+  if (kinds === undefined || kinds.length === 0) return;
+  const valid = [...(await getSearchableTypes(boxRoot)), MARKDOWN_KIND, ENGINE_DOC_KIND];
+  for (const kind of kinds) {
+    if (!valid.includes(kind)) throw new UnknownKindError(kind, valid.toSorted());
+  }
+}
+
+/** Whether a path starts with any of the caller's prefixes (a plain string prefix). */
+function matchesPrefix(path: string, prefixes: string[]): boolean {
+  return prefixes.some((prefix) => path.startsWith(prefix));
+}
+
+/** One Orama query: hybrid when a query vector exists, else text. */
+async function runSearch(
+  db: SearchIndex,
+  { searchMode, queryVector, query, fetchLimit, where }: {
+    searchMode: "hybrid" | "text";
+    queryVector: number[] | undefined;
+    query: string;
+    fetchLimit: number;
+    where: { where?: { kind: { in: string[] } } };
+  }
+) {
+  return searchMode === "hybrid" && queryVector !== undefined
+    ? search(db, {
+        mode: "hybrid",
+        term: query,
+        vector: { value: queryVector, property: "embedding" },
+        similarity: SIMILARITY,
+        properties: [...TEXT_PROPERTIES],
+        boost: BOOST,
+        limit: fetchLimit,
+        ...where,
+      })
+    : search(db, {
+        term: query,
+        properties: [...TEXT_PROPERTIES],
+        boost: BOOST,
+        limit: fetchLimit,
+        ...where,
+      });
 }
 
 /**

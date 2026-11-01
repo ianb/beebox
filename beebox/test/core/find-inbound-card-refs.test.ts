@@ -27,7 +27,26 @@ void test("Read failures accompany the references that could be scanned", async 
     },
   });
   t.check(result, {
-    referrers: [{ path: "_content/box/notes/Readable.md", refs: 1 }],
+    referrers: [{ path: "_content/box/notes/Readable.md", refs: 1, fragments: [] }],
     errors: ["_content/box/notes/Unreadable.md: Error: fixture read failure"],
+  });
+});
+
+// ## Each ref's #fragment is reported with the referrer
+//
+// `bbx refs` (docs/plans/knowledge-base-tools.md, Track D). Relative and
+// box-absolute refs both resolve to the target; the count is unchanged by the
+// observation, and a ref with no fragment counts without listing one.
+void test("Each ref's #fragment is reported with the referrer", async (t) => {
+  const box = await makeTmpBox();
+  await box.write("_content/box/notes/Target.doc.card", "---\ntype: doc\ntitle: Target\n---\n## Risks\n");
+  await box.write(
+    "_content/box/notes/Citer.md",
+    "[a](Target.doc.card#risks) and [b](/_content/box/notes/Target.doc.card#c1), [c](Target.doc.card), [d](Other.doc.card#x)\n",
+  );
+  const result = await findInboundCardRefs({ boxRoot: box.root, cardPath: "_content/box/notes/Target.doc.card" });
+  t.check(result, {
+    referrers: [{ path: "_content/box/notes/Citer.md", refs: 3, fragments: ["risks", "c1"] }],
+    errors: [],
   });
 });

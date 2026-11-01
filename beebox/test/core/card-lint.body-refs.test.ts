@@ -519,3 +519,32 @@ void test("card-lint no longer hardcodes which types get extra validation — it
   });
 
 });
+
+// ## A ref's #anchor must exist in its target
+//
+// docs/plans/knowledge-base-tools.md, Track D. An id fragment on a `.card` with
+// a body must name a heading (slug, either duplicate) or a `{% #id %}`
+// annotation; a warning, never an error. Other fragments, and targets with no
+// body, are not checked.
+void test("A ref's #anchor must exist in its target", async (t) => {
+  const box = await makeTmpBox();
+  await box.write("_content/box/notes/Target.doc.card", "---\ntype: doc\ntitle: Target\n---\n## Risks\n\n## Risks\n\nA claim. {% #c1 %}\n");
+  await box.write("_content/box/notes/Empty.doc.card", "---\ntype: doc\ntitle: Empty\n---\n");
+  await box.write(
+    "_content/box/notes/Citer.doc.card",
+    "---\ntype: doc\ntitle: Citer\n---\n" +
+      "[ok](/_content/box/notes/Target.doc.card#risks) [ok](/_content/box/notes/Target.doc.card#risks-1) [ok](/_content/box/notes/Target.doc.card#c1) " +
+      "[bad](/_content/box/notes/Target.doc.card#c2) [case](/_content/box/notes/Target.doc.card#Risks) " +
+      "[page](/_content/box/notes/Target.doc.card#page=3) [section](/_content/box/notes/Target.doc.card#/Risks) " +
+      "[empty](/_content/box/notes/Empty.doc.card#x)\n",
+  );
+  const result = await lintCardsDispatch([box.path("_content/box/notes/Citer.doc.card")], { boxRoot: box.root, ctx });
+  t.check(result.results, [{
+    path: box.path("_content/box/notes/Citer.doc.card"),
+    errors: [],
+    warnings: [
+      { type: "reference", severity: "warning", message: "Broken anchor at body:1:link: /_content/box/notes/Target.doc.card#c2 — _content/box/notes/Target.doc.card has no heading or {% #id %} named \"c2\"" },
+      { type: "reference", severity: "warning", message: "Broken anchor at body:1:link: /_content/box/notes/Target.doc.card#Risks — _content/box/notes/Target.doc.card has no heading or {% #id %} named \"Risks\"" },
+    ],
+  }]);
+});

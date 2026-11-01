@@ -24,12 +24,30 @@ const BROWSER_HEADERS = {
 
 const TIMEOUT_MS = 30_000;
 const BODY_CAP_BYTES = 10 * 1024 * 1024;
+const PDF_TIMEOUT_MS = 120_000;
+const PDF_CAP_BYTES = 200 * 1024 * 1024;
 const MAX_SAME_PAGE_HOPS = 5;
 
-export type FetchOutcome =
-  | ({ kind: "page" } & ReceivedPage)
+type FetchFailure =
   | { kind: "redirect"; status: number; target: string; chain: string[] }
   | { kind: "failed"; message: string };
+
+export type FetchOutcome = ({ kind: "page" } & ReceivedPage) | FetchFailure;
+
+/** What came back for a request, with the body as received and nothing decoded. */
+export interface FetchedResource {
+  body: Uint8Array;
+  /** The address the bytes came from, after same-page redirects. */
+  url: string;
+  requestedUrl: string;
+  redirectedFrom: string[];
+  status: number;
+  headers: Record<string, string>;
+  contentType: string | null;
+  sha256: string;
+}
+
+export type ResourceOutcome = ({ kind: "resource" } & FetchedResource) | FetchFailure;
 
 function webUrl(text: string): URL | null {
   try {
@@ -63,13 +81,13 @@ export function isSamePageForm(from: URL, to: URL): boolean {
   return pageForm(from) === pageForm(to);
 }
 
-async function readCapped(res: Response): Promise<Uint8Array | null> {
+async function readCapped(res: Response, capBytes: number): Promise<Uint8Array | null> {
   if (res.body === null) return new Uint8Array();
   const chunks: Uint8Array[] = [];
   let bytes = 0;
   for await (const chunk of res.body) {
     bytes += chunk.length;
-    if (bytes > BODY_CAP_BYTES) return null;
+    if (bytes > capBytes) return null;
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
@@ -83,16 +101,28 @@ export interface FetchInput {
   readonly fetchImpl?: typeof fetch;
 }
 
-export async function fetchPage({ url, from, fetchImpl }: FetchInput): Promise<FetchOutcome> {
+interface ResourceInput extends FetchInput {
+  /** The `accept` request header. */
+  readonly accept: string;
+  /** A response type that matches this is taken; any other is a failure. A response with no type is taken. */
+  readonly accepts: RegExp;
+  /** What the failure message calls a response of another type: "a web page". */
+  readonly noun: string;
+  readonly capBytes: number;
+  readonly timeoutMs: number;
+}
+
+/** Get bytes over HTTP, following only same-page redirects. The caller decodes. */
+export async function fetchResource({ url, from, fetchImpl, accept, accepts, noun, capBytes, timeoutMs }: ResourceInput): Promise<ResourceOutcome> {
   const request = fetchImpl ?? fetch;
   let current = webUrl(url);
   if (current === null) return { kind: "failed", message: `Not a web address: ${url}` };
-  const signal = AbortSignal.timeout(TIMEOUT_MS);
+  const signal = AbortSignal.timeout(timeoutMs);
   const hops: string[] = [];
   for (;;) {
     let res: Response;
     try {
-      res = await request(current, { redirect: "manual", headers: BROWSER_HEADERS, signal });
+      res = await request(current, { redirect: "manual", headers: { ...BROWSER_HEADERS, accept }, signal });
     } catch (e) {
       return { kind: "failed", message: `Could not get ${current.href}: ${e instanceof Error ? e.message : String(e)}` };
     }
@@ -118,26 +148,51 @@ export async function fetchPage({ url, from, fetchImpl }: FetchInput): Promise<F
       continue;
     }
     const contentType = res.headers.get("content-type");
-    if (contentType !== null && !/html|xml/i.test(contentType)) {
+    if (contentType !== null && !accepts.test(contentType)) {
       await res.body?.cancel();
-      return { kind: "failed", message: `${current.href} is not a web page: its type is ${contentType}` };
+      return { kind: "failed", message: `${current.href} is not ${noun}: its type is ${contentType}` };
     }
-    const body = await readCapped(res);
-    if (body === null) return { kind: "failed", message: `${current.href} is over the ${String(BODY_CAP_BYTES / (1024 * 1024))} MB limit` };
+    const body = await readCapped(res, capBytes);
+    if (body === null) return { kind: "failed", message: `${current.href} is over the ${String(capBytes / (1024 * 1024))} MB limit` };
     return {
-      kind: "page",
+      kind: "resource",
       body,
-      response: {
-        url: current.href,
-        requestedUrl: from[0] ?? url,
-        redirectedFrom: [...from, ...hops],
-        status: res.status,
-        headers: Object.fromEntries(res.headers.entries()),
-        contentType,
-        html: decodeHtml(body, contentType),
-        sha256: createHash("sha256").update(body).digest("hex"),
-        via: "http",
-      },
+      url: current.href,
+      requestedUrl: from[0] ?? url,
+      redirectedFrom: [...from, ...hops],
+      status: res.status,
+      headers: Object.fromEntries(res.headers.entries()),
+      contentType,
+      sha256: createHash("sha256").update(body).digest("hex"),
     };
   }
+}
+
+export async function fetchPage(input: FetchInput): Promise<FetchOutcome> {
+  const got = await fetchResource({ ...input, accept: BROWSER_HEADERS.accept, accepts: /html|xml/i, noun: "a web page", capBytes: BODY_CAP_BYTES, timeoutMs: TIMEOUT_MS });
+  if (got.kind !== "resource") return got;
+  const { body, contentType, ...about } = got;
+  return {
+    kind: "page",
+    body,
+    response: {
+      url: about.url,
+      requestedUrl: about.requestedUrl,
+      redirectedFrom: about.redirectedFrom,
+      status: about.status,
+      headers: about.headers,
+      contentType,
+      html: decodeHtml(body, contentType),
+      sha256: about.sha256,
+      via: "http",
+    },
+  };
+}
+
+/**
+ * Get a PDF. Any response type is taken, because servers send PDFs as
+ * `application/octet-stream`; the caller checks the bytes for `%PDF-`.
+ */
+export function fetchPdf(input: FetchInput): Promise<ResourceOutcome> {
+  return fetchResource({ ...input, accept: "application/pdf,*/*;q=0.8", accepts: /./, noun: "a PDF", capBytes: PDF_CAP_BYTES, timeoutMs: PDF_TIMEOUT_MS });
 }

@@ -37,8 +37,14 @@ budget:
   # (docs/plans/shared-browser.md, chunk 11).
   # Raised 2026-11-01 for TOOLS' `tools.webpage` pointer
   # (docs/plans/webpage-capture-tools.md).
+  # Raised 2026-11-01 (always_loaded_words +24) for TOOLS' `bbx refs` sentence
+  # (docs/plans/knowledge-base-tools.md).
+  # Raised 2026-11-01 (always_loaded_words +32) for TOOLS' `bbx pdf save` sentence
+  # (docs/plans/knowledge-base-tools.md).
+  # Raised 2026-11-01 (always_loaded_words +20) for SEARCHING's held-back-area
+  # line (docs/plans/knowledge-base-tools.md).
   guide_words: 5743
-  always_loaded_words: 11145
+  always_loaded_words: 11221
   uncited_words_per_section: 60
 
 lint:
@@ -958,7 +964,7 @@ rows:
     reason: Search is frequent and the phrasing decides whether it finds anything; an agent without it types two guessed keywords or quotes a phrase. Cut to two sentences; the embeddings explanation moved with the examples.
     audits: [search-query-phrasing, search-exact-identifier]
   - id: search.examples-filters-results
-    rule: The embeddings explanation, the four example queries, the filter flags, and the result format (a `#fragment` locator, the `contains:` line, an excerpt, "N of total").
+    rule: The embeddings explanation, the four example queries, the filter flags, the area setting (`search.areas` in box.json, `--area`), and the result format (a `#fragment` locator, the `contains:` line, an excerpt, "N of total"). Only the held-back line stays in the guide.
     handle: SEARCHING
     bin: indirect
     reason: Usage detail of one command, needed when narrowing a search or reading a truncated result. Moved verbatim to a new `bbx search` entry in bbx-commands.md, whose read-when now names it; the `--path people` example was corrected to `--path _content/people`, since the filter is a prefix of the box-relative path.
@@ -1038,6 +1044,20 @@ rows:
     reason: The options and the function's shape are mechanics, so they live in the command's help.
     audits: [webpage-keep-a-page, webpage-bad-page, webpage-redirect]
     mechanics: bbx webpage save --help
+  - id: tools.pdf-save
+    rule: "To keep a copy of a PDF, use `bbx pdf save <url>`, not `curl` into a folder; it records the address and hash on the card, and a reply that is not a PDF is refused."
+    handle: TOOLS
+    bin: indirect
+    reason: Without the pointer an agent downloads the file and files it by hand, losing the address and hash. The options and exit codes are mechanics, so they live in the command's help.
+    audits: [pdf-save-keep-a-pdf]
+    mechanics: bbx pdf save --help
+  - id: tools.refs
+    rule: "To find what cites a card, and which block, run `bbx refs <card>[#anchor]`, not grep: it resolves relative links the way `bbx mv` does."
+    handle: TOOLS
+    bin: indirect
+    reason: Change propagation needs the citing cards and the anchors they name, and a grep misses relative refs, which the reflex reaches for first. The output format and --json are mechanics, so they live in the command's help; the guide keeps one sentence (docs/plans/knowledge-base-tools.md, Track D).
+    audits: [refs-who-cites-this]
+    mechanics: bbx refs --help
   - id: tools.browser
     rule: "A page that needs a login, scripts, or the person's help is read with `bbx browser` (public pages with WebFetch first); at a login or human check, ask the person to open Browser from the profile menu on a computer and say when done, never ask for or type their password."
     handle: TOOLS

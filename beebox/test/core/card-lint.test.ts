@@ -317,7 +317,8 @@ void test("An attach/… ref never gets the content-form suggestion — it's a l
 // whole string to the filesystem used to report these documented refs as broken.
 void test("feedback.target.ref is documented as path#fragment.", async (t) => {
   const box = await makeTmpBox();
-  await box.write("_content/box/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nBody.\n");
+  // The target has the anchor, so only the file question is under test (a missing one warns: card-lint.body-refs.test.ts).
+  await box.write("_content/box/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\n## Risks\n");
   await box.write(
     "_content/box/notes/Meeting.doc.card",
     "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"/_content/box/notes/Plan.doc.card#risks\" usage=\"verbatim\" %}{% /source %}\n",

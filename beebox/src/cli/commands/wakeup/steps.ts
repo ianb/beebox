@@ -23,6 +23,8 @@ import { readCardFrontmatter, collectRefs } from "../../../core/card-io.js";
 import { resolveBoxRelativeRef, realpathContained } from "../../../lib/box-containment.js";
 import { findJobCards } from "../../../core/reactor/job-discovery.js";
 import { openSearchIndex } from "../../../core/search/refresh/core.js";
+import { areaPrefixes } from "../../../core/search/areas.js";
+import { loadSearchConfig } from "../../../core/box/config.js";
 import { loadContainsState, listMissing } from "../../../core/search/contains-state.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
@@ -435,7 +437,11 @@ export async function createContainsBackfillJob(boxRoot: string): Promise<number
   const pending = await findJobCards(jobsDir, { typeFilter: "contains-backfill" });
   if (pending.length > 0) return 0;
 
-  const missing = listMissing(await loadContainsState(boxRoot));
+  // Held-back search areas (the saved-source archive) are not queued: the
+  // worklist would otherwise hold thousands of cards for agent-written summaries.
+  const missing = listMissing(await loadContainsState(boxRoot), {
+    skipPrefixes: areaPrefixes(await loadSearchConfig(boxRoot)),
+  });
   if (missing.length === 0) return 0;
 
   const batch = missing.slice(0, CONTAINS_BACKFILL_BATCH);

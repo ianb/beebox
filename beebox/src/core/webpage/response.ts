@@ -33,6 +33,11 @@ const PAGE_RESULT = z.object({
   note: z.string().nullish(),
   /** Anything the box wants kept on the card, such as dates the page states. Goes in `capture.meta`. */
   meta: z.record(z.string(), z.unknown()).nullish(),
+  /**
+   * Ids to put on lines of `markdown` (0-based), so a citation can name a block. The engine writes
+   * them after escaping the page text; a box function cannot write the annotation itself.
+   */
+  anchors: z.array(z.object({ id: z.string(), line: z.number().int().min(0) })).nullish(),
 });
 
 const REFUSAL = z.object({ refuse: z.string().min(1) });

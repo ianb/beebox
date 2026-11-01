@@ -18,10 +18,11 @@ import { assertAnnexBox } from "../../../core/annex/assert-annex-box.js";
 import { runWebpageFunction } from "../../../core/webpage/box-function/core.js";
 import { fetchPage, REQUEST_HEADERS_NAME } from "../../../core/webpage/fetch.js";
 import { isRefusal, pageCharset, type CapturedResponse, type PageResult, type ReceivedPage } from "../../../core/webpage/response.js";
-import { updateWebpageCard, writeWebpageCard } from "../../../core/webpage/write.js";
+import { AnchorError, updateWebpageCard, writeWebpageCard } from "../../../core/webpage/write.js";
 import { stageAndCommitPaths } from "../../../lib/git/core/operations.js";
 import { BOX_DIRS, requireBoxRoot } from "../../../lib/paths/core.js";
 import { safeFilename } from "../../../lib/safe-filename.js";
+import { insideBox, parseMeta, shellWord } from "../../lib/save-command.js";
 import type { WebpageCaptureFields } from "../../../schemas/webpage.js";
 import { attachmentPath } from "../../../shared/attach-path.js";
 import { errnoCode } from "../../../shared/error-guards.js";
@@ -48,38 +49,9 @@ interface WebpageOptions {
   commit: boolean;
 }
 
-/** What `--meta` holds: `retrieved` is the capture time, the rest is kept on the card. */
-const META = z.looseObject({ retrieved: z.iso.datetime({ offset: true }).optional() });
-
 function fail(message: string): void {
   console.error(message);
   process.exitCode = 1;
-}
-
-/** One shell word: a redirect target is the site's text, and the agent may paste this line. */
-function shellWord(text: string): string {
-  return /^[\w%&+,./:=?@-]+$/.test(text) ? text : `'${text.replaceAll("'", "'\\''")}'`;
-}
-
-/** `target` relative to the box root, or an error when it leaves the box, by path or through a link. */
-async function insideBox({ boxRoot, target, flag }: { boxRoot: string; target: string; flag: string }): Promise<string> {
-  const refused = new WebpageSaveError({ detail: `bbx webpage save: ${flag} must be inside the box: ${target}` });
-  const absolute = path.resolve(boxRoot, target);
-  const relative = path.relative(boxRoot, absolute);
-  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) throw refused;
-  const realRoot = await fs.realpath(boxRoot);
-  let existing = absolute;
-  for (;;) {
-    try {
-      existing = await fs.realpath(existing);
-      break;
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") throw e;
-      existing = path.dirname(existing);
-    }
-  }
-  if (existing !== realRoot && !existing.startsWith(`${realRoot}${path.sep}`)) throw refused;
-  return relative;
 }
 
 interface SaveInput {
@@ -125,7 +97,7 @@ async function saveNewCard(input: SaveInput & { dir: string; name: string | unde
     let paths: string[];
     try {
       paths = await writeWebpageCard({
-        boxRoot, cardRel, title: page.title, url: response.url, capturedAt, markdown: page.markdown,
+        boxRoot, cardRel, title: page.title, url: response.url, capturedAt, markdown: page.markdown, anchors: page.anchors ?? undefined,
         siteName: optional(page.siteName), byline: optional(page.byline), excerpt: optional(page.excerpt),
         frozenHtml: savedHtml({ response, body }), exclusive: true, capture: captureFields(input),
       });
@@ -156,7 +128,7 @@ interface ExistingCard {
 }
 
 async function readExistingCard({ boxRoot, card }: { boxRoot: string; card: string }): Promise<ExistingCard> {
-  const rel = await insideBox({ boxRoot, target: card, flag: "--update" });
+  const rel = await insideBox({ boxRoot, target: card, flag: "--update", command: "bbx webpage save" });
   if (!rel.endsWith(WEBPAGE_SUFFIX)) throw new WebpageSaveError({ detail: `bbx webpage save: --update takes a ${WEBPAGE_SUFFIX} file: ${card}` });
   let text: string;
   try {
@@ -170,20 +142,6 @@ async function readExistingCard({ boxRoot, card }: { boxRoot: string; card: stri
   if (fields === null || fence === null) throw new WebpageSaveError({ detail: `bbx webpage save: ${card} has no readable frontmatter` });
   const sources = z.array(z.looseObject({ href: z.string().optional() })).safeParse(fields["sources"]);
   return { rel, fields, body: text.slice(fence.bodyStart), href: sources.success ? sources.data[0]?.href : undefined };
-}
-
-function parseMeta(text: string | undefined): { retrieved: string | undefined; meta: Record<string, unknown> } {
-  if (text === undefined) return { retrieved: undefined, meta: {} };
-  let json: unknown;
-  try {
-    json = JSON.parse(text);
-  } catch (e) {
-    throw new WebpageSaveError({ detail: `bbx webpage save: --meta is not JSON: ${e instanceof Error ? e.message : String(e)}` });
-  }
-  const parsed = META.safeParse(json);
-  if (!parsed.success) throw new WebpageSaveError({ detail: `bbx webpage save: --meta: ${z.prettifyError(parsed.error)}` });
-  const { retrieved, ...meta } = parsed.data;
-  return { retrieved, meta };
 }
 
 function checkFlags(url: string | undefined, options: WebpageOptions): void {
@@ -222,7 +180,7 @@ async function updateCard(input: SaveInput & { card: ExistingCard; options: Webp
   const previousCharset = previous.data?.charset;
   const hashed = frozenHtml !== undefined ? withoutSnapshot : { ...withoutHash, ...(previousHash === undefined ? {} : { sha256: previousHash }), ...(previousCharset === undefined ? {} : { charset: previousCharset }) };
   const paths = await updateWebpageCard({
-    boxRoot, cardRel: card.rel, current: card.fields, currentBody: card.body, title: page.title, url: response.url, capturedAt, markdown: page.markdown,
+    boxRoot, cardRel: card.rel, current: card.fields, currentBody: card.body, title: page.title, url: response.url, capturedAt, markdown: page.markdown, anchors: page.anchors ?? undefined,
     siteName: optional(page.siteName), byline: optional(page.byline), excerpt: optional(page.excerpt), frozenHtml,
     capture: keepsHtmlOnly ? { ...hashed, snapshot: "html-only" } : hashed,
   });
@@ -256,10 +214,10 @@ async function getResponse({ url, options, boxRoot, card }: { url: string | unde
 
 async function run(url: string | undefined, options: WebpageOptions): Promise<void> {
   checkFlags(url, options);
-  const { retrieved, meta } = parseMeta(options.meta);
+  const { retrieved, meta } = parseMeta({ text: options.meta, command: "bbx webpage save" });
   const boxRoot = await requireBoxRoot();
   const card = options.update === undefined ? null : await readExistingCard({ boxRoot, card: options.update });
-  const dir = await insideBox({ boxRoot, target: options.to ?? BOX_DIRS.inbox, flag: "--to" });
+  const dir = await insideBox({ boxRoot, target: options.to ?? BOX_DIRS.inbox, flag: "--to", command: "bbx webpage save" });
   if (options.json !== true) await assertAnnexBox(boxRoot, "bbx webpage save");
   const received = await getResponse({ url, options, boxRoot, card });
   if (received === null) return;
@@ -312,7 +270,7 @@ const saveCommand = new Command("save")
 Exit codes: 0 saved, 1 failed, 3 refused, 4 a redirect to read first.
 
 A box can add src/tricks/webpage.ts. Every page goes through its default export,
-which returns { title, markdown, meta? }, { refuse: "why" }, or what standard returns:
+which returns { title, markdown, meta?, anchors? }, { refuse: "why" }, or what standard returns:
 
   export default async function (response, { standard }) {
     if (response.url.includes("forum.example") && response.html.includes("Please sign in")) {
@@ -320,6 +278,11 @@ which returns { title, markdown, meta? }, { refuse: "why" }, or what standard re
     }
     return standard(response);
   }
+
+anchors: [{ id, line }] puts {% #id %} at the end of that 0-based line of markdown, so a
+citation can name the block ([text](card#id)). An id is a-z, 0-9 and -; the line is a
+heading or the last line of a paragraph. A bad anchor saves nothing and names the id.
+The page's own text stays escaped.
 
 response: url, requestedUrl, redirectedFrom, status (null from the browser or a
 file), headers, contentType, html, sha256, via. If the function fails, nothing is saved.
@@ -331,8 +294,9 @@ Re-read a card from its own saved copy, with no network:
     try {
       await run(url, options);
     } catch (e) {
-      if (!(e instanceof WebpageSaveError)) throw e;
-      fail(e.message);
+      if (e instanceof AnchorError) fail(`bbx webpage save: ${e.message}. Nothing was saved.`);
+      else if (e instanceof WebpageSaveError) fail(e.message);
+      else throw e;
     }
   });
 
