@@ -1,0 +1,17 @@
+# Every three days: read what landed on the surfaces a box agent sees, and add
+# the few changes that would catch out an agent working from habit.
+#
+# Handoff shape: `run` gathers the candidates and hands off only when some
+# exist. Which of them earn an entry is the session's judgment. Plan:
+# beebox/docs/plans/agent-changes.md.
+description: "Box agent changelog: turn what landed into a few short entries"
+cadence: 3d
+workstream:
+  agent: claude
+  model: sonnet
+  effort: high
+  worktree: true
+  # The baseline sha in the store and the doc itself are the memory.
+  session: fresh
+  permissionMode: bypassPermissions
+  maxBudgetUsd: 5

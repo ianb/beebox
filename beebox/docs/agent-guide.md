@@ -137,6 +137,13 @@ come down as sections are binned. `pnpm lint:guide` asserts both ceilings in
 about a second: run it after an edit to always-loaded prompt text, or a merge
 that touches one, rather than waiting for `test:changed`.
 
+## What changed
+
+The guide states only the present. What changed lives in
+[agent-changes.md](box/agent-changes.md), a box doc the `agent-changes` schedule
+writes and lands, and the guide keeps one pointer to it (row `docs.changes`).
+Entries never enter the guide. `pnpm doc-check` enforces the doc's limits.
+
 ## Changing it
 
 ### Adding a rule

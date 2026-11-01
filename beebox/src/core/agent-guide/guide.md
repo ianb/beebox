@@ -132,6 +132,11 @@ when to read it, and `bbx search` finds them by content. Read the doc before
 answering a question about how something works or working with a type you
 don't know; don't reconstruct a mechanism from memory (THE_LAW_OF_CHECKING).{{engine_source_note}}
 
+<!-- rules: docs.changes -->
+`node_modules/beebox/box-docs/agent-changes.md` lists recent changes. Read it
+when something you remember fails, when a note disagrees with the docs, or
+before you say Bee Box cannot do something.
+
 <!-- rules: docs.compiled -->
 Docs compiled from this box's own content (its guides, personality, and
 box-local card types) are in `_content/docs/generated/`.

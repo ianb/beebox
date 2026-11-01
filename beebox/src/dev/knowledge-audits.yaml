@@ -1,4 +1,34 @@
 tests:
+  # === The box agent changelog (docs/plans/agent-changes.md) ===
+  - id: change-note-stale
+    prompt: >
+      A note I saved months ago says to run `bbx view test <slug>` to check a
+      view. I want to check my views now. What command do I run? Explain only;
+      do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/agent-changes.md", "node_modules/beebox/box-docs/bbx-commands.md"]
+    watch_for: "Does not repeat the note: finds the command is gone by looking it up, not from memory, and says the note is out of date."
+    correct_contains: ["bbx view check"]
+    tags: [agent-changes]
+  - id: change-note-right
+    prompt: >
+      My note says `bbx todos --now` lists what is due now. Someone told me a
+      changelog entry said that flag was removed, so I should delete the note.
+      Should I? Explain only; do not change files.
+    expected_level: knows_about
+    watch_for: "Checks the current command (`bbx todos --help`, the changelog, or todos.md) before answering, and keeps the note because the flag exists; the removed flag is `--on-plate`."
+    correct_contains: ["--now"]
+    tags: [agent-changes]
+  - id: change-doc-before-cannot
+    prompt: >
+      My old note says Bee Box has no way to keep a copy of a web page except
+      pasting it into a card by hand. Is that still true? Explain only; do not
+      change files.
+    expected_level: knows_about
+    watch_for: "Checks instead of agreeing with the note, and says the note is out of date."
+    correct_contains: ["bbx webpage save"]
+    tags: [agent-changes]
+
   # Status (2026-10-06, Codex): passed on a disposable standalone clone;
   # 2 files read, 1 search. Configured Claude transcript was unavailable.
   - id: parked-template-resolution
