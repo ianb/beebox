@@ -25,7 +25,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { sectionHandles } from "../../core/agent-guide/sections.js";
 import { engineDocEntries } from "../../core/docs-gen/package-docs/core.js";
+import { agentChangesProblems } from "./agent-changes.js";
 import { buildGraphExtended, ROOT } from "../doc-graph-data/data.js";
 import { duplicateBasenames, buildBasenameLookup, buildSuffixMatcher, repairFrontmatterPaths, repairLinks, type UnfixableLink } from "./link-repair.js";
 import { findPrivateLinkViolations, PRIVATE_LINK_REASON } from "./private-link.js";
@@ -269,6 +271,13 @@ function siteReferenceProblems(): string[] {
   );
 }
 
+// Reads the doc unconditionally: removing it should fail here too.
+function agentChangesDocProblems(): string[] {
+  const rel = "docs/box/agent-changes.md";
+  const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
+  return agentChangesProblems({ text, handles: new Set(sectionHandles()) }).map((p) => `${rel}: ${p}`);
+}
+
 function reportAndExit(problems: string[]): void {
   if (problems.length === 0) return;
   console.error("doc-check failed:");
@@ -280,7 +289,7 @@ function reportAndExit(problems: string[]): void {
 function runDefaultCheck(): void {
   const tracked = trackedMarkdownFiles();
   const all = markdownFiles();
-  const problems = [...claudeMdProblems(), ...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all), ...filePathProblems(all), ...siteReferenceProblems()];
+  const problems = [...claudeMdProblems(), ...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all), ...filePathProblems(all), ...siteReferenceProblems(), ...agentChangesDocProblems()];
   reportAndExit(problems);
 }
 

@@ -43,8 +43,10 @@ budget:
   # (docs/plans/knowledge-base-tools.md).
   # Raised 2026-11-01 (always_loaded_words +20) for SEARCHING's held-back-area
   # line (docs/plans/knowledge-base-tools.md).
-  guide_words: 5743
-  always_loaded_words: 11221
+  # Raised 2026-11-01 (+27 always-loaded, +26 guide_words) for DOCS' pointer to the box
+  # agent changelog; the entries stay in the doc (docs/implemented-plans/agent-changes.md).
+  guide_words: 5769
+  always_loaded_words: 11248
   uncited_words_per_section: 60
 
 lint:
@@ -812,6 +814,12 @@ rows:
     reason: Every pointer in the guide names a doc there, and an agent that does not know the index exists opens docs at random or not at all.
     audits: [search-finds-engine-doc]
     mechanics: box-docs/README.md
+  - id: docs.changes
+    rule: "`box-docs/agent-changes.md` lists recent changes; read it when something remembered fails, a note disagrees with the docs, or before saying Bee Box cannot do something."
+    handle: DOCS
+    bin: core
+    reason: The guide describes only the present, so an agent working from a saved note or a resumed chat has no sign that the note went stale. The entries stay in the doc so they add nothing here (boxholder, 2026-11-01).
+    audits: [change-note-stale, change-note-right, change-doc-before-cannot]
   - id: docs.read-first
     rule: Read the doc before answering how something works or working with an unfamiliar type; don't reconstruct a mechanism from memory.
     handle: DOCS
