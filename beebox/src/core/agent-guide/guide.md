@@ -564,7 +564,7 @@ entry in `bbx-commands.md`.
 <!-- rules: tools.browser -->
 Read public pages with WebFetch. A page that needs a login, scripts, or the
 person's help goes through `bbx browser`, the box's shared browser (the
-`browser` skill). At a login or a "verify you are human" check, run `bbx browser
+`browser` skill). At a login or "verify you are human" check, run `bbx browser
 ask "<what to do>"`, put the link it prints in your reply, and end your turn; the
 answer arrives in chat. Never ask for or type their password.
 
