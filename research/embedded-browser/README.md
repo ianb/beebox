@@ -59,7 +59,7 @@ Integration work, none of it a viewer:
 | Steel Browser, Kernel images, Skyvern | **reject** | Second viewer to run, a privileged image, or AGPL |
 | chrome-devtools-mcp attached to the same browser | **later** | Console and network debugging by the agent; telemetry defaults must be turned off |
 | Hosted browser services as the runtime | **reject** | Logins and screen data held by a third party; per-hour cost |
-| Rotating residential proxies, captcha solvers, stealth-patched browser binaries | **reject** | Vendor sees logged-in traffic; the person solves captchas; repo policy excludes evasion ([research/AGENTS.md](../AGENTS.md)) |
+| Rotating residential proxies, captcha solvers, stealth-patched browser binaries | **reject** | Vendor sees logged-in traffic; the person solves captchas. The "no evasion" reason is withdrawn: the boxholder never decided it ([input of 2026-10-31](../web-search-fetch/README.md#the-no-stealth-or-proxy-line)); stealth binaries stay rejected for now on practical grounds |
 | Running the browser on the person's network (Mac app VM, home relay) | **later** | Removes datacenter-IP blocks; the Mac sleeps. Decide after the site probe |
 | Patchright-style `Runtime.enable` patches | **later** | One-target gain in the only published test; revisit for a named failing site |
 

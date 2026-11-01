@@ -73,7 +73,7 @@ export function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceVie
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
       <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/views/${SYSTEM_CARD_PATHS.admin}`)} active={isOnAdmin}>Admin</MenuItem>
       {/* The box browser the agent also drives, in its own tab (docs/plans/shared-browser.md, Track E). */}
-      <MenuItem id="bbx-profile-menu-browser" href={withBase(`/${boxSlug}/browser/`)} target="_blank">Browser</MenuItem>
+      <MenuItem id="bbx-profile-menu-browser" href={withBase(`/${boxSlug}/browser/`)} target="_blank">Web browser</MenuItem>
       <MenuDivider />
       <BoxPageMenuItems boxSlug={boxSlug} />
       <MenuDivider />

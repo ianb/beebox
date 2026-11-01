@@ -29,7 +29,9 @@ async function echoCommandSocket(paths: BrowserPaths): Promise<() => Promise<voi
     conn.on("end", () => {
       // eslint-disable-next-line no-restricted-syntax -- the test's own client wrote this request
       const { args } = JSON.parse(text) as { args: string[] };
-      conn.end(`${JSON.stringify({ exitCode: 3, stdout: `${args.join(" ")}\n`, stderr: "warning\n" })}\n`);
+      // `bbx browser ask` reads the page first.
+      const isPageRead = args.join(" ") === "get url";
+      conn.end(`${JSON.stringify({ exitCode: isPageRead ? 0 : 3, stdout: isPageRead ? "https://shop.example/\n" : `${args.join(" ")}\n`, stderr: "warning\n" })}\n`);
     });
   });
   await new Promise<void>((resolve) => server.listen(paths.cliSocket, resolve));
@@ -116,4 +118,28 @@ void test("A refusal from the server goes to stderr with exit code 1", async (t)
 
 void test("With no arguments it prints the short help", async (t) => {
   t.check(await runBrowser([]), { stdout: BROWSER_USAGE, stderr: "", exitCode: undefined });
+});
+
+// `bbx browser ask` saves the question with the page the agent is on, for the
+// chat this run belongs to, and prints the link to put in the reply. A run with
+// no chat is refused: the answer would have nowhere to go.
+void test("`bbx browser ask` saves the question and prints the link", async (t) => {
+  await boxServer(t);
+  const saved = process.env.BBX_CHAT_SESSION_ID;
+  t.teardown(() => {
+    if (saved === undefined) delete process.env.BBX_CHAT_SESSION_ID;
+    else process.env.BBX_CHAT_SESSION_ID = saved;
+  });
+  process.env.BBX_CHAT_SESSION_ID = "chat-a";
+  const asked = await runBrowser(["ask", "Solve the check"]);
+  t.check(asked.exitCode, undefined);
+  t.check(asked.stdout, 'Saved. Put this link in your reply, then end your turn:\n\n[Open the web browser](box-browser:)\n\nThe person\'s answer arrives as a chat message: "Done" or "Not done", maybe with their words.\n');
+  t.check((await runBrowser(["ask", "Now the login"])).stdout.split(" Put")[0], "Saved, replacing this chat's earlier question.");
+
+  t.check((await runBrowser(["ask"])).exitCode, 1);
+  t.check((await runBrowser(["ask", "two", "words"])).exitCode, 1);
+  t.check((await runBrowser(["ask", "   "])).exitCode, 1);
+
+  delete process.env.BBX_CHAT_SESSION_ID;
+  t.check(await runBrowser(["ask", "Solve the check"]), { stdout: "", stderr: "bbx browser ask needs a chat to send the answer to; this run has none\n", exitCode: 1 });
 });

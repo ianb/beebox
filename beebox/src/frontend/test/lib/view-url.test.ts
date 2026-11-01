@@ -171,6 +171,15 @@ void test("An image in that same chat message resolves the same way — basePath
 
 // ## classifyMarkdownHref
 //
+// `box-browser:` is the Browser page; only the exact form, so nothing else with
+// that prefix is taken for it.
+void test("`box-browser:` is the Browser page", (t) => {
+  t.check(classifyMarkdownHref("box-browser:"), { kind: "box-browser" });
+  t.check(classifyMarkdownHref("box-browser:x"), { kind: "external" });
+  t.end();
+});
+
+//
 // Splits an href into the cases the Markdown renderer cares about. A plain relative/absolute path is a box reference; anything with a scheme or anchor is external; the retired `view:` scheme is `legacy-view` so renderers can draw a visibly-broken marker:
 void test("Splits an href into the cases the Markdown renderer cares about.", async (t) => {
   t.check(classifyMarkdownHref("view:_content/a.md"), {

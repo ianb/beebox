@@ -63,7 +63,7 @@ Reddit announced on 2026-09-30 that RSS support ends 2026-11-13 and that public 
 
 ## The "no stealth or proxy" line
 
-The anchor issue and [research/AGENTS.md](../AGENTS.md#fetching-sources) say not to use stealth-browser or residential-proxy fetchers. An agent wrote that line; the boxholder did not decide it. Facts for the decision ([fetch-services.md](fetch-services.md#tos-and-legal-posture)):
+The anchor issue and [research/AGENTS.md](../AGENTS.md#fetching-sources) say not to use stealth-browser or residential-proxy fetchers. An agent wrote that line; the boxholder did not decide it. Boxholder input (2026-10-31): "no, I never decided against a stealth browser... This isn't mass sucking-in-everything scraping, this is user-led careful fetching, like the agent is a user agent in the browser-user-agent sense of the word." So a stealth browser is not ruled out on principle; each tool is judged on its merits, and the principles are still to be written down. Facts for the decision ([fetch-services.md](fetch-services.md#tos-and-legal-posture)):
 
 - **What it would add:** NYT, WSJ, FT, Quora, Cloudflare-challenged sites, live Reddit comment trees, and probably datacenter-IP access in general. Nothing else in this survey reaches those.
 - **Cost:** cents to a few dollars a month at 300 pages. Bright Data has a 5,000-request free tier. All need an account and most need a card.

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-31T03:23:33Z
-Total documents: 611
+Generated: 2026-11-01T00:51:44Z
+Total documents: 612
 
 ## Issues
 
@@ -1458,6 +1458,7 @@ Referenced by:
 - docs/plans/scan-guide-card.md:23 (mention) — - `docs/engineering-principles.md` — traced by number below:
 - docs/plans/scan-retry-and-document-route.md:33 (mention) — (`docs/engineering-principles.md:49`): *"Degradation is allowed for failures
 - docs/plans/scan-vision-claude.md:27 (mention) — - `beebox/docs/engineering-principles.md` — especially
+- docs/plans/shared-browser-ask.subplan.md:71 (mention) — - **`docs/engineering-principles.md` 6 (right-sized defensiveness):** the parent plan cites it for "no arbitration, no h
 - docs/plans/shared-browser.md:90 (mention) — - **Engineering principles** (`docs/engineering-principles.md`): **3** (validate at boundaries: the exec route filters a
 - docs/plans/tts-backend-selection.md:33 (mention) — - **Principle 4, resilient AND never silent** (`docs/engineering-principles.md:49`):
 - docs/plans/workspace-pane-controls.md:48 (link) — applications. [Engineering principles](../engineering-principles.md) supply the
@@ -1704,7 +1705,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1938 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1940 lines | current reference
 
 Referenced by:
 - AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
@@ -1851,7 +1852,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 - docs/implemented-plans/model-engine-policy.md:48 (mention) — passes. The reference doc is `docs/model-policy.md`.
 - docs/implemented-plans/openrouter-chat-models.md:389 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
-- docs/mobile-contract.md:1001 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/mobile-contract.md:1003 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 - docs/pi-engine.md:8 (link) — [model-policy](model-policy.md).
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
 - docs/plans/box-glm-provider.md:78 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
@@ -2027,8 +2028,9 @@ Referenced by:
 - docs/implemented-plans/questions-later-and-figure-it-out.md:519 (mention) — 7. Docs: `docs/questions.md` (Later, provisional, the review),
 - docs/implemented-plans/todo-annotation.md:68 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
 - docs/landmarks.md:74 (mention) — **`openers`** (zero or more strings) — one-line first moves, phrased from the person's side. They show as buttons on an
-- docs/mobile-contract.md:1010 (mention) — A question beside the chat travels as `openCard`, like any card (`docs/questions.md`, "Surfacing");
+- docs/mobile-contract.md:1012 (mention) — A question beside the chat travels as `openCard`, like any card (`docs/questions.md`, "Surfacing");
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
+- docs/plans/shared-browser-ask.subplan.md:86 (mention) — - **Rejected reuse: question cards** (`docs/questions.md`). They are for durable decisions with learning, in a queue. Th
 - docs/plans/shared-browser.md:52 (mention) — - Acting in a logged-in account (send, post, buy, delete, change settings) starts as **confirmation**: box guidance tell
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:21 (mention) — dismissed questions are not re-asked (`docs/questions.md`).
@@ -2639,6 +2641,7 @@ Referenced by:
 - docs/implemented-plans/questions-later-and-figure-it-out.md:66 (mention) — rather than nagging forever" (`docs/architecture/spirit.md`).
 - docs/plans/admin-encrypted-backups.md:35 (mention) — - **Serves:** `docs/architecture/spirit.md`, “You should be able to see the gears”: the section names the snapshot, when
 - docs/plans/ios-app-intent-capture.md:46 (mention) — - **Serves:** `architecture/spirit.md`, “The best stuff comes from the people”: “The box's job is to collect, preserve,
+- docs/plans/shared-browser-ask.subplan.md:73 (mention) — - **`docs/architecture/spirit.md`, open-ended input:** Done and Not done are buttons, which is a structured reply. The t
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:15 (mention) — `outline.md`, `spirit.md`, and `writing-style.md`: capture pages became the
@@ -3088,7 +3091,7 @@ Referenced by:
 - docs/design/trust.md:53 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
 - docs/implemented-plans/clerk-quick-send.md:54 (mention) — today (`docs/chat/quick-chat.md`, "The box screen"). The page toast says
 - docs/landmarks.md:235 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
-- docs/mobile-contract.md:1319 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
+- docs/mobile-contract.md:1321 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
 - docs/plans/box-screen.md:376 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - docs/plans/chat-routing.md:20 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
 - docs/plans/gmail-admission-and-preparation.md:26 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
@@ -4232,7 +4235,7 @@ Title: "Bulk file upload" | 468 lines | shipped history | implemented
 
 Referenced by:
 - docs/box-layout.md:159 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:1033 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:1035 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:36 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -5794,7 +5797,7 @@ Title: "HQ transcription for every dictated message" | 109 lines | shipped histo
 Referenced by:
 - docs/chat/composer.md:72 (mention) — Every voice send with a recording requests the HQ pass (`docs/implemented-plans/hq-always.md`);
 - docs/implemented-plans/ios-quick-chat-hq.md:11 (link) — ([hq-always](hq-always.md)). The iOS box-screen quick chat composer is the one
-- docs/mobile-contract.md:425 (mention) — `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
+- docs/mobile-contract.md:427 (mention) — `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:4 (frontmatter) — superseded-by: ../implemented-plans/hq-always.md
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:11 (link) — > **Superseded 2026-10-09** by [hq-always](../implemented-plans/hq-always.md): every
 - ../issues/bugs/2026-09-21-typed-text-lost-when-hq-lands-after-a-recording-error.md:13 (mention) — > the HQ pass (`beebox/docs/implemented-plans/hq-always.md`), so the HQ wait this bug lives
@@ -5873,7 +5876,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:783 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:785 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../beebox/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../beebox/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -5902,7 +5905,7 @@ References:
 Title: "iOS box screen: an accurate chat list while the box sleeps, and an honest one when it cannot answer" | 242 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1353 (mention) — (`docs/implemented-plans/ios-box-screen-stale-list.md`).
+- docs/mobile-contract.md:1355 (mention) — (`docs/implemented-plans/ios-box-screen-stale-list.md`).
 - ../issues/bugs/2026-10-26-ios-shows-stale-chat-when-box-is-asleep.md:42 (mention) — Plan: `beebox/docs/implemented-plans/ios-box-screen-stale-list.md`. The box screen
 
 References:
@@ -5959,7 +5962,7 @@ Title: "On-device HQ for iOS quick chat thoughts" | 236 lines | shipped history 
 
 Referenced by:
 - docs/implemented-plans/hq-always.md:83 (link) — | iOS quick chat (box screen) | on-device HQ, else live (`<speech source="box-screen" stt="live">`); no recording reache
-- docs/mobile-contract.md:1310 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
+- docs/mobile-contract.md:1312 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
 - ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:40 (link) — should use it." Built per [the plan](../../beebox/docs/implemented-plans/ios-quick-chat-hq.md):
 
 References:
@@ -6256,7 +6259,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1759 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1761 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -8645,7 +8648,7 @@ References:
 Title: "The agent sees the interface and points at controls in it" | 1308 lines | proposal | partial
 
 Referenced by:
-- docs/mobile-contract.md:667 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
+- docs/mobile-contract.md:669 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/closed/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:18 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:25 (link) — [agent-points-at-ui](../../../beebox/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/bugs/2026-10-26-duplicate-bbx-nav-questions-id.md:22 (mention) — fails two examples ("The table in docs/plans/agent-points-at-ui.md (Track 4) is
@@ -8669,7 +8672,7 @@ Title: "Native Android companion app" | 763 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/mobile-token-handshake.md:349 (mention) — - **Android.** No Android client exists yet; `docs/plans/android-companion-app.md` describes
-- docs/mobile-contract.md:281 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
+- docs/mobile-contract.md:283 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
 - docs/mobile-parity.md:9 (mention) — Android columns reflect `docs/plans/android-companion-app.md` — a plan, not
 - docs/plans/agent-points-at-ui.md:157 (mention) — cross-platform shape (`docs/plans/android-companion-app.md`, Track 0).
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:7 (mention) — `beebox/docs/plans/android-companion-app.md` is build-ready and its
@@ -8901,7 +8904,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 515 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1032 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:1034 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/closed/bugs/2026-07-30-capture-teardown-race.md:15 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
@@ -9483,7 +9486,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 157 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1753 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1755 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:40 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:11 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -10011,11 +10014,25 @@ References:
 - → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/adding-api-endpoints.md (mention)
 
+#### docs/plans/shared-browser-ask.subplan.md
+
+Title: "Shared browser: the agent asks in the Browser tab, and the answer returns to chat" | 203 lines | proposal | partial
+
+Referenced by:
+- docs/plans/shared-browser.md:260 (link) — - **A beebox viewer, input arbitration:** ruled out by the boxholder. A handoff command, also ruled out at first, was ad
+
+References:
+- → docs/plans/shared-browser.md (link)
+- → docs/engineering-principles.md (mention)
+- → docs/architecture/spirit.md (mention)
+- → docs/questions.md (mention)
+
 #### docs/plans/shared-browser.md
 
 Title: "Shared browser: one web browser per box that the agent and the person both use" | 316 lines | proposal | partial
 
 Referenced by:
+- docs/plans/shared-browser-ask.subplan.md:11 (link) — **Parent plan:** [shared-browser.md](shared-browser.md). That plan's NOT-in-scope line "A beebox viewer, input arbitrati
 - docs/security-report.md:12 (link) — shared box browser ([plan](plans/shared-browser.md)): the person's
 - docs/server/provisioning.md:168 (link) — Each box's browser ([plan](../plans/shared-browser.md)) runs in its own network
 - ../issues/features/2026-06-12-agent-browser-scoped-to-box.md:34 (link) — Partly resolved. Done: the box has one browser the agent drives with `bbx browser` and the person opens from the avatar
@@ -10033,6 +10050,7 @@ References:
 - → ../research/embedded-browser/agent-browser-platforms.md (link)
 - → docs/server/provisioning.md (mention)
 - → ../research/embedded-browser/linux-verification.md (link)
+- → docs/plans/shared-browser-ask.subplan.md (link)
 - → ../research/embedded-browser/acceptance-walkthrough.md (link)
 
 #### docs/plans/source-available-release.md

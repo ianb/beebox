@@ -10,8 +10,11 @@
  *
  * Auth: the box auth wall admits five credentials; this route accepts only
  * the per-box agent bearer. People reach the same browser through the
- * Browser item in the profile menu, and a page with the person's cookie must
+ * Web browser item in the profile menu, and a page with the person's cookie must
  * not be able to drive it.
+ *
+ * `POST /<slug>/api/browser/ask` is `bbx browser ask`, under the same rule
+ * (docs/plans/shared-browser-ask.subplan.md).
  */
 
 import type { FastifyInstance } from "fastify";
@@ -21,6 +24,7 @@ import { sendBrowserCommand, BrowserCommandSocketError } from "../../../core/bro
 import { checkExecArgs, EXEC_BODY } from "../../../core/browser/exec-args.js";
 import { BrowserHostFailedError, BrowserNotInstalledError, ensureBrowserHost } from "../../../core/browser/host/start.js";
 import { BrowserPathTooLongError } from "../../../core/browser/paths.js";
+import { ASK_BODY, askBrowserQuestion } from "../../../core/browser/question.js";
 import type { Services } from "../../../services/container.js";
 
 export interface BrowserExecRouteContext {
@@ -43,7 +47,7 @@ export function registerBrowserExecRoute(ctx: BrowserExecRouteContext): void {
   server.post<{ Body: unknown }>("/api/browser/exec", async (request, reply) => {
     if (!verifyAgentBearer(boxRoot, request.headers["authorization"])) {
       return reply.status(403).send({
-        error: "The browser exec route is for the box's agent (bbx browser); people open the browser from the profile menu's Browser item",
+        error: "The browser exec route is for the box's agent (bbx browser); people open the browser from the profile menu's Web browser item",
       });
     }
     const body = EXEC_BODY.safeParse(request.body);
@@ -55,6 +59,29 @@ export function registerBrowserExecRoute(ctx: BrowserExecRouteContext): void {
     try {
       const host = await ensureHost({ boxRoot });
       return reply.status(200).send(await sendBrowserCommand(host.paths.cliSocket, body.data.args));
+    } catch (e) {
+      const failure = hostFailure(e);
+      if (failure === null) throw e;
+      return reply.status(failure.status).send({ error: failure.error });
+    }
+  });
+
+  // `bbx browser ask`: save a question for the person, with the page it is about.
+  server.post<{ Body: unknown }>("/api/browser/ask", async (request, reply) => {
+    if (!verifyAgentBearer(boxRoot, request.headers["authorization"])) {
+      return reply.status(403).send({ error: "The browser ask route is for the box's agent (bbx browser ask)" });
+    }
+    const body = ASK_BODY.safeParse(request.body);
+    if (!body.success) {
+      return reply.status(400).send({ error: `bbx browser ask: ${z.prettifyError(body.error)}` });
+    }
+    try {
+      const host = await ensureHost({ boxRoot });
+      const page = await sendBrowserCommand(host.paths.cliSocket, ["get", "url"]);
+      if (page.exitCode !== 0) {
+        return reply.status(502).send({ error: `bbx browser ask: could not read the current page: ${page.stderr.trim() || `exit code ${String(page.exitCode)}`}` });
+      }
+      return reply.status(200).send(askBrowserQuestion(host.paths.root, { ...body.data, pageUrl: page.stdout.trim(), now: new Date() }));
     } catch (e) {
       const failure = hostFailure(e);
       if (failure === null) throw e;

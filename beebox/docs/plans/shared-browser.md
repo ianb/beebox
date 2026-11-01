@@ -257,7 +257,7 @@ None. Chunk F0 is a verification step inside Track F: each outcome has its actio
 ## NOT in scope
 
 - **Phones and the iOS app:** desktop only (boxholder, 2026-10-29).
-- **A beebox viewer, input arbitration, a handoff command:** ruled out by the boxholder. Handoff is conversational.
+- **A beebox viewer, input arbitration:** ruled out by the boxholder. A handoff command, also ruled out at first, was added at the boxholder's request on 2026-10-31: [shared-browser-ask.subplan.md](shared-browser-ask.subplan.md).
 - **Paste into the remote page:** upstream patch to agent-browser's `viewport.tsx`; a separate contribution, not this plan.
 - **Upstream base-path support:** would remove the rewrite; a separate contribution.
 - **Hiding the dashboard's developer panes:** the person is the boxholder and sees their own data; revisit if boxes get other members.
