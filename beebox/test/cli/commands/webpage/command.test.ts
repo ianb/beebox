@@ -150,7 +150,7 @@ void test("--update replaces the page in place, keeps what it does not own, and 
   const file = path.join(root, rel);
   const attach = path.join(root, "_content/inbox", name.replace(".webpage.card", ".attach"));
   await fs.writeFile(attach + "/remarks.commentary.card", "---\ntitle: mine\n---\n");
-  await fs.writeFile(file, (await fs.readFile(file, "utf8")).replace("---\n", "---\nmyField: kept\n"));
+  await fs.writeFile(file, (await fs.readFile(file, "utf8")).replace("---\n", "---\nmyField: kept\n").replace("  - href:", "  - label: mine\n    href:"));
   await execFileAsync("git", ["add", "-A"], { cwd: root });
   await execFileAsync("git", ["commit", "-qm", "edit"], { cwd: root });
   const head = async (): Promise<string> => (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: root })).stdout;
@@ -170,7 +170,7 @@ void test("--update replaces the page in place, keeps what it does not own, and 
   t.check((await save([`${base}/changed`, "--update", rel])).stdout.split("\n")[0], `Updated ${rel}`);
   t.check(await cardsIn(root), [name]);
   const text = await fs.readFile(file, "utf8");
-  t.check(fields(text, /^myField:|^title:|^\s+- href:/), ["myField: kept", "title: Sunken beds", `  - href: ${base}/changed`]);
+  t.check(fields(text, /^myField:|^title:|^\s+(- )?(href|label):/), ["myField: kept", "title: Sunken beds", "  - label: mine", `    href: ${base}/changed`]);
   t.check(await fs.readdir(attach), ["page.frozen", "remarks.commentary.card"]);
   t.check((await execFileAsync("git", ["log", "-1", "--format=%s"], { cwd: root })).stdout, 'Update web page: "Sunken beds"\n');
 
@@ -196,6 +196,11 @@ void test("--update --html re-reads a card from its own saved copy; --meta keeps
   t.check((await save(["--update", rel, "--html", copy])).stdout, `Updated ${rel}\n`);
   t.check(await fs.readFile(path.join(root, copy), "utf8"), before);
   t.check((await save(["--update", rel, "--html", copy])).stdout, `Unchanged ${rel}\n`);
+
+  // The hash stays that of the bytes first received, and a corrected title is a change.
+  t.check(fields(await fs.readFile(path.join(root, rel), "utf8"), /^\s+sha256:/), fields(text, /^\s+sha256:/));
+  await writeBoxFunction(root, 'export default async (r, { standard }) => ({ ...(await standard({ ...r, html: r.html.replaceAll("Raised beds", "Sunken beds") })), title: "Corrected" });\n');
+  t.check((await save(["--update", rel, "--html", copy])).stdout, `Updated ${rel}\n`);
   t.check((await save(["--meta", "{not json", "https://a.example/"])).exitCode, 1);
   t.check((await save(["--meta", '{"retrieved":"yesterday"}', "https://a.example/"])).exitCode, 1);
 });

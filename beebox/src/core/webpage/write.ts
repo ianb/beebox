@@ -8,6 +8,7 @@ import { renderFrontmatterBlock } from "../../cards/frontmatter.js";
 import { createWebpageTemplate, type WebpageCaptureFields } from "../../schemas/webpage.js";
 import { attachmentPath } from "../../shared/attach-path.js";
 import { errnoCode } from "../../shared/error-guards.js";
+import { isRecord } from "../../shared/is-record.js";
 import { neutralizeIngestedMarkdown } from "../../shared/markdoc-config/ingest.js";
 
 export async function writeCard(filePath: string, content: string): Promise<void> {
@@ -96,7 +97,7 @@ export async function updateWebpageCard(opts: {
   const frozenRel = attachmentPath(cardRel, "page.frozen");
   const frozenPath = path.join(boxRoot, frozenRel);
   const htmlChanged = frozenHtml !== undefined && (await readIfPresent(frozenPath)) !== frozenHtml;
-  if (body.trim() === opts.currentBody.trim() && !htmlChanged) return [];
+  if (body.trim() === opts.currentBody.trim() && !htmlChanged && current["title"] === opts.title) return [];
   const paths: string[] = [];
   if (frozenHtml !== undefined && htmlChanged) {
     // Replaced, not written through: a locked annex file is a link to read-only content.
@@ -108,7 +109,8 @@ export async function updateWebpageCard(opts: {
   const fields = {
     ...kept,
     title: opts.title,
-    sources: [{ href: opts.url, retrieved: opts.capturedAt }],
+    // A hand-added label or note on the source stays.
+    sources: [{ ...firstSource(current["sources"]), href: opts.url, retrieved: opts.capturedAt }],
     ...(opts.siteName === undefined ? {} : { siteName: opts.siteName }),
     ...(opts.byline === undefined ? {} : { byline: opts.byline }),
     ...(opts.excerpt === undefined ? {} : { excerpt: opts.excerpt }),
@@ -117,6 +119,11 @@ export async function updateWebpageCard(opts: {
   };
   await writeCard(path.join(boxRoot, cardRel), renderFrontmatterBlock(fields, body));
   return [cardRel, ...paths];
+}
+
+function firstSource(sources: unknown): Record<string, unknown> {
+  const first: unknown = Array.isArray(sources) ? sources[0] : undefined;
+  return isRecord(first) ? first : {};
 }
 
 async function readIfPresent(file: string): Promise<string | null> {

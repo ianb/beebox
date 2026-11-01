@@ -33,7 +33,7 @@ const NAME_ATTEMPTS = 5;
 const WEBPAGE_SUFFIX = ".webpage.card";
 /** An update that keeps less than this share of a card's text is probably a wrong page. */
 const SHRINK_FLOOR = 0.1;
-const SHRINK_CHECK_MIN_CHARS = 1000;
+const SHRINK_CHECK_MIN_CHARS = 200;
 
 interface WebpageOptions {
   browser?: boolean;
@@ -212,12 +212,16 @@ async function updateCard(input: SaveInput & { card: ExistingCard; options: Webp
   const frozenHtml = await updatedHtml({ boxRoot, cardRel: card.rel, options, response });
   // A card's own copy stays what it was, which may be Clerk's self-contained one.
   const { snapshot: _snapshot, ...withoutSnapshot } = captureFields(input);
-  const previous = z.looseObject({ snapshot: z.literal("html-only").optional() }).safeParse(card.fields["capture"]);
+  const previous = z.looseObject({ snapshot: z.literal("html-only").optional(), sha256: z.string().optional() }).safeParse(card.fields["capture"]);
   const keepsHtmlOnly = frozenHtml !== undefined || previous.data?.snapshot !== undefined;
+  // The hash is of the bytes as first received; a card's own copy has had a `<base>` added since.
+  const { sha256: _sha256, ...withoutHash } = withoutSnapshot;
+  const previousHash = previous.data?.sha256;
+  const hashed = frozenHtml !== undefined ? withoutSnapshot : previousHash === undefined ? withoutHash : { ...withoutHash, sha256: previousHash };
   const paths = await updateWebpageCard({
     boxRoot, cardRel: card.rel, current: card.fields, currentBody: card.body, title: page.title, url: response.url, capturedAt, markdown: page.markdown,
     siteName: optional(page.siteName), byline: optional(page.byline), excerpt: optional(page.excerpt), frozenHtml,
-    capture: keepsHtmlOnly ? { ...withoutSnapshot, snapshot: "html-only" } : withoutSnapshot,
+    capture: keepsHtmlOnly ? { ...hashed, snapshot: "html-only" } : hashed,
   });
   if (paths.length === 0) {
     console.log(`Unchanged ${card.rel}`);
