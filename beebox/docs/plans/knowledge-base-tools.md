@@ -67,7 +67,7 @@ No external premise. Markdoc's annotation syntax is already in use.
 - **Kind weight** (new): a multiplier on a card type's search score. Not a tier: a strong archive hit can still beat a weak knowledge hit.
 - **Anchor** (new word, existing mechanism): an id on a heading or paragraph in a card body, written as a Markdoc annotation `{% #id %}`. Named by a ref's `#id`. Not a search section path (`/Components/Programs`, `src/shared/markdown-sections.ts`).
 - **Referrer** (existing, `InboundCardRef`): a file with a ref to a card. Gains `fragments`.
-- `capture` on a pdf card: same meaning as on a webpage card (`src/schemas/webpage.tsx`); `sources` is the shared entry (`src/cards/sources-entry.ts`).
+- `capture` on a pdf card: same meaning as on a webpage card (`src/schemas/webpage.ts`); `sources` is the shared entry (`src/cards/sources-entry.ts`).
 
 ## Tracks / scope
 
@@ -124,6 +124,10 @@ No external premise. Markdoc's annotation syntax is already in use.
 **Lock-ins.** Verb `refs`, audience agent, in `surface-data.ts`.
 
 **First chunk.** Add `fragments` to the scan, then the command.
+
+### Track E: declared fields on captured cards
+
+The feedback asked for declared extra fields on webpage and pdf cards, kept across `--update`. Both writers already kept unknown keys, but `bbx validate` told the box to remove them. `src/schemas/webpage.ts` and `src/schemas/pdf.ts` now export `webpageBase` and `pdfBase` through `beebox/cards`. A box stub declares its fields with the existing `extendSchema`; it replaces the built-in type by name, and the built-in view still renders it. No new configuration concept. Both schema files import from `../cards/` so `beebox/cards` can re-export them without an import cycle.
 
 ## Could this be simpler?
 

@@ -25,7 +25,8 @@
  */
 
 import { z } from "zod";
-import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
+import { body, cardSchema, type CardSchemaConfig, type InferCardFields } from "../cards/schema.js";
+import { renderFrontmatterBlock } from "../cards/frontmatter.js";
 import { MediaViaSchema, type MediaVia } from "../cards/media-via.js";
 import { SourcesEntrySchema, type SourcesEntry } from "../cards/sources-entry.js";
 
@@ -64,32 +65,35 @@ const PdfCapture = z.object({
 });
 export type PdfCaptureFields = z.infer<typeof PdfCapture>;
 
-export const PdfSchema = cardSchema("pdf", {
+const pdfFields = {
+  /** Source document type, e.g. `pdf`. Records what the file was — the pipeline currently only reads PDFs. */
+  format: z.string(),
+  filename: FilenameEntry,
+  /** Where the document came from, when it has an address: one `href` entry with `retrieved`. */
+  sources: z.array(SourcesEntrySchema).optional(),
+  /** Written by `bbx pdf save`; absent on a scanned PDF. */
+  capture: PdfCapture.optional(),
+  docling: DoclingEntry.optional(),
+  metadata: PdfMetadata.optional(),
+  /**
+   * Why extraction failed; the original bytes are still attached. Absent on
+   * a clean extraction, which instead has `docling` (an empty body then means
+   * "no readable content", a real answer, not a failure).
+   */
+  error: z.string().optional(),
+  /** An agent judged the document unusable; the pdf view says so. */
+  unusable: z.boolean().optional(),
+  description: z.string().optional(),
+  body: body(z.string()),
+};
+
+/** The built-in type as a base: a box adds its own fields with `extendSchema` (docs/box/schemas.md). */
+export const pdfBase: CardSchemaConfig<string, typeof pdfFields> = {
   brief: "An extracted PDF",
   description: "An extracted PDF — rendered text as the body, original bytes and page/figure renders in the attach scope",
   category: "synced",
   searchable: true,
-  fields: {
-    /** Source document type, e.g. `pdf`. Records what the file was — the pipeline currently only reads PDFs. */
-    format: z.string(),
-    filename: FilenameEntry,
-    /** Where the document came from, when it has an address: one `href` entry with `retrieved`. */
-    sources: z.array(SourcesEntrySchema).optional(),
-    /** Written by `bbx pdf save`; absent on a scanned PDF. */
-    capture: PdfCapture.optional(),
-    docling: DoclingEntry.optional(),
-    metadata: PdfMetadata.optional(),
-    /**
-     * Why extraction failed; the original bytes are still attached. Absent on
-     * a clean extraction, which instead has `docling` (an empty body then means
-     * "no readable content", a real answer, not a failure).
-     */
-    error: z.string().optional(),
-    /** An agent judged the document unusable; the pdf view says so. */
-    unusable: z.boolean().optional(),
-    description: z.string().optional(),
-    body: body(z.string()),
-  },
+  fields: pdfFields,
   instructions: `# PDF Cards
 
 A pdf card is a document whose text has been **extracted** — the rendered
@@ -170,7 +174,9 @@ markdown tables. Figures appear as inline image references into the attach
 scope. Treat it as a faithful-but-lossy view: it is the right thing to read,
 search, and quote, and the original plus the page renders are there when it is
 not enough.`,
-});
+};
+
+export const PdfSchema = cardSchema("pdf", pdfBase);
 
 export type PdfFields = InferCardFields<typeof PdfSchema>;
 

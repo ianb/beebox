@@ -69,7 +69,7 @@ each `commentary` card via `defaultHref`.
 ## What already exists
 
 - **`webpage` card — the analog WITH snapshot. MIRROR-MINUS.**
-  `src/schemas/webpage.tsx:20-75` is body-bearing (`body: body(z.string())`,
+  `src/schemas/webpage.ts:20-75` is body-bearing (`body: body(z.string())`,
   line 34) and carries snapshot provenance (`frozen`, `source`, `captured`,
   `siteName`, `byline`, `excerpt`). `extfile` strips the body and the snapshot
   fields, keeping only the pointer + drift metadata. Rebuild (new schema), not

@@ -16,7 +16,7 @@
 
 import { stringify as stringifyYaml } from "../lib/yaml-package.js";
 import { z } from "zod";
-import { body, cardSchema, type InferCardFields } from "../exports/cards.js";
+import { body, cardSchema, type CardSchemaConfig, type InferCardFields } from "../cards/schema.js";
 import { SourcesEntrySchema } from "../cards/sources-entry.js";
 
 /**
@@ -58,28 +58,31 @@ const WebpageCapture = z.object({
 });
 export type WebpageCaptureFields = z.infer<typeof WebpageCapture>;
 
-export const WebpageSchema = cardSchema("webpage", {
+const webpageFields = {
+  // The original page URL and when it was captured.
+  sources: WebpageSources,
+  siteName: z.string().optional(),
+  byline: z.string().optional(),
+  excerpt: z.string().optional(),
+  // In-box ref to the frozen snapshot (attach/page.frozen),
+  // stored under a `ref` key like every other card reference.
+  frozen: z.object({ ref: z.string() }).optional(),
+  // How `bbx webpage` got the page. Absent on a Clerk or share card.
+  capture: WebpageCapture.optional(),
+  /** Stable id supplied by an external share operation for retry deduplication. */
+  "share-id": z.string().uuid().optional(),
+  /** Stable id supplied by a Clerk capture for retry deduplication. */
+  "capture-id": z.string().uuid().optional(),
+  // The readable markdown rendering of the page. The card IS the document.
+  body: body(z.string()),
+};
+
+/** The built-in type as a base: a box adds its own fields with `extendSchema` (docs/box/schemas.md). */
+export const webpageBase: CardSchemaConfig<string, typeof webpageFields> = {
   brief: "A captured web page",
   description: "A captured external web page — readable markdown body plus a frozen HTML snapshot in the attach scope",
   category: "synced",
-  fields: {
-    // The original page URL and when it was captured.
-    sources: WebpageSources,
-    siteName: z.string().optional(),
-    byline: z.string().optional(),
-    excerpt: z.string().optional(),
-    // In-box ref to the frozen snapshot (attach/page.frozen),
-    // stored under a `ref` key like every other card reference.
-    frozen: z.object({ ref: z.string() }).optional(),
-    // How `bbx webpage` got the page. Absent on a Clerk or share card.
-    capture: WebpageCapture.optional(),
-    /** Stable id supplied by an external share operation for retry deduplication. */
-    "share-id": z.string().uuid().optional(),
-    /** Stable id supplied by a Clerk capture for retry deduplication. */
-    "capture-id": z.string().uuid().optional(),
-    // The readable markdown rendering of the page. The card IS the document.
-    body: body(z.string()),
-  },
+  fields: webpageFields,
   instructions: `# Webpage Cards
 
 A webpage card is a **captured external web page**, stored in the box. The
@@ -133,7 +136,9 @@ _content/inbox/My_Page.webpage.card          # readable body + provenance
 _content/inbox/My_Page.attach/page.frozen    # frozen snapshot
 _content/inbox/My_Page.attach/My_Page.commentary.card   # remarks (optional)
 \`\`\``,
-});
+};
+
+export const WebpageSchema = cardSchema("webpage", webpageBase);
 
 export type WebpageFields = InferCardFields<typeof WebpageSchema>;
 
