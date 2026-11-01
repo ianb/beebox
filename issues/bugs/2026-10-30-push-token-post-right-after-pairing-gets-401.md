@@ -43,3 +43,9 @@ Fix directions:
   waiting for the next launch.
 - In Settings, say "your phone is paired but not registered for
   notifications" instead of the generic cannot-notify text.
+
+2026-10-31 (retrospective 20261031-234313): prevention is part of the fix.
+`beebox/test/webapp/routes/pairing.push-token.test.ts` redeems through
+`redeemMobilePairingTicket` directly, so it skips the HTTP path. Add a test that
+calls `POST /api/pairing/redeem`, posts a push token at once with the returned
+bearer, and asserts 204.

@@ -96,3 +96,9 @@ On agent-browser 0.41.0 (2026-10-30), a stalled capture fails after 30 s, other 
 Re-reviewed 2026-10-30: the hang is explained and bounded (30 s failure with a display-asleep hint; tours hold the display awake). What remains is the boxholder's choice whether bin/browse screenshot should wake the display itself.
 
 Out of date in the body above: Retitle from 'hangs' to the remaining decision: should bin/browse screenshot wake the display (caffeinate -u) before capturing.
+
+2026-10-31 (retrospective 20261031-234313): two more sessions hit this. A
+screenshot hung until `caffeinate -u` ran (`calendar-cards/20261029T223918Z-implemented.md`),
+and a tour run stalled on a sleeping display (`browse-wedge/20261030T084348Z-review-adjudicated.md`).
+The retrospective left the skill's recovery wording in place, because a routine
+wake-up turns the display on and that choice is still open in this issue.

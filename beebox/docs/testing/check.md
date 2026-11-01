@@ -295,6 +295,9 @@ registered in `.taprc`). Memoization in a test therefore matches the browser.
 `REACT_COMPILER=0` turns it off for debugging. Compiled modules are cached in
 `src/frontend/node_modules/.cache/`.
 
+- Backend tests cannot import the harness: it type-checks only under the
+  frontend tsconfig. A test of a script the server serves to a page goes in
+  `src/frontend/test/` too.
 - Import `dom-harness.js` first. React DOM reads the window and the
   render-count hook when it loads. `mount()` throws `HarnessLoadOrderError` if
   React DOM loaded first.
