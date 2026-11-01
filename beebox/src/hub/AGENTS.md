@@ -34,9 +34,8 @@ hand.
 ## Base prefix behind the hub
 
 The hub strips `x-bbx-base-prefix` from every request. It sets the header to
-`/<slug>` (`server/core.ts`) only for a request authorized by session or browse
-key, so this value replaces the dev router's segment; a bearer-authorized
-request and a pairing redeem get no header. A box never learns the router's outer path, so a box route
+`/<slug>` (`server/core.ts`), replacing the dev router's segment, on every
+authorized request except a bearer-authorized one or a pairing redeem. A box never learns the router's outer path, so a box route
 must not prepend the header's value to a request path.
 
 ## Lazy mode
