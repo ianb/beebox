@@ -25,9 +25,9 @@ async function root(st: Test): Promise<string> {
 void t.test("A chat's new ask replaces only its own", async (st) => {
   const dir = await root(st);
   st.check(readBrowserQuestions(dir), []);
-  st.check(askBrowserQuestion(dir, { question: "first", sessionId: "a", pageUrl: "https://shop.example/x", now }), { replaced: false });
-  st.check(askBrowserQuestion(dir, { question: "other", sessionId: "b", pageUrl: "about:blank", now }), { replaced: false });
-  st.check(askBrowserQuestion(dir, { question: "second", sessionId: "a", pageUrl: "https://shop.example/y", now }), { replaced: true });
+  st.check(askBrowserQuestion(dir, { question: "first", sessionId: "a", pageUrl: "https://shop.example/x", now }), { replaced: false, pageUrl: "https://shop.example/x" });
+  st.check(askBrowserQuestion(dir, { question: "other", sessionId: "b", pageUrl: "about:blank", now }), { replaced: false, pageUrl: null });
+  st.check(askBrowserQuestion(dir, { question: "second", sessionId: "a", pageUrl: "https://shop.example/y", now }), { replaced: true, pageUrl: "https://shop.example/y" });
   // about:blank is not a page to reopen.
   st.check(readBrowserQuestions(dir).map((q) => [q.sessionId, q.question, q.pageUrl]), [
     ["b", "other", null],

@@ -31,7 +31,7 @@ async function echoCommandSocket(paths: BrowserPaths): Promise<() => Promise<voi
       const { args } = JSON.parse(text) as { args: string[] };
       // `bbx browser ask` reads the page first.
       const isPageRead = args.join(" ") === "get url";
-      conn.end(`${JSON.stringify({ exitCode: isPageRead ? 0 : 3, stdout: `${args.join(" ")}\n`, stderr: "warning\n" })}\n`);
+      conn.end(`${JSON.stringify({ exitCode: isPageRead ? 0 : 3, stdout: isPageRead ? "https://shop.example/\n" : `${args.join(" ")}\n`, stderr: "warning\n" })}\n`);
     });
   });
   await new Promise<void>((resolve) => server.listen(paths.cliSocket, resolve));

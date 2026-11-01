@@ -16,7 +16,7 @@ import { QUESTION_BAR_SCRIPT } from "../../../webapp/routes/browser/proxy/questi
 interface Call { url: string; body: unknown }
 
 const calls: Call[] = [];
-let questions = [{ id: "q1", text: 'Solve <img src=x onerror="boom()"> please' }];
+let questions: { id: string; text: string; pageUrl?: string }[] = [{ id: "q1", text: 'Solve <img src=x onerror="boom()"> please', pageUrl: "https://shop.example/check" }];
 let answerStatus = 200;
 let answerHold: Promise<void> | null = null;
 
@@ -66,6 +66,7 @@ void test("The bar shows the question as text, hanging from <html>", async (t) =
   t.check(bar().hidden, false);
   t.check(bar().querySelector("p")?.textContent, 'Solve <img src=x onerror="boom()"> please');
   t.check(bar().querySelector("img"), null);
+  t.check(bar().querySelector("small")?.textContent, "About https://shop.example/check");
 });
 
 void test("Keys typed in the bar reach no page listener; keys elsewhere do", (t) => {

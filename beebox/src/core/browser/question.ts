@@ -74,21 +74,22 @@ function reopenableUrl(url: string): string | null {
   return /^https?:\/\//i.test(url) ? url : null;
 }
 
-/** Save a question for the person. Answers whether it replaced this chat's earlier one. */
+/** Save a question for the person. Answers whether it replaced this chat's earlier one, and the page it is about. */
 export function askBrowserQuestion(
   browserRoot: string,
   input: { question: string; sessionId: string; pageUrl: string; now: Date },
-): { replaced: boolean } {
+): { replaced: boolean; pageUrl: string | null } {
   const questions = readBrowserQuestions(browserRoot);
   const others = questions.filter((q) => q.sessionId !== input.sessionId);
+  const pageUrl = reopenableUrl(input.pageUrl);
   writeQuestions(browserRoot, [...others, {
     id: randomUUID(),
     question: input.question,
     sessionId: input.sessionId,
-    pageUrl: reopenableUrl(input.pageUrl),
+    pageUrl,
     askedAt: input.now.toISOString(),
   }]);
-  return { replaced: others.length !== questions.length };
+  return { replaced: others.length !== questions.length, pageUrl };
 }
 
 /** Remove the question `id` and return it, or null when it is no longer waiting. */

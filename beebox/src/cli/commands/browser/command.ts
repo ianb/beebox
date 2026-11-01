@@ -87,7 +87,7 @@ export async function browserExec(args: readonly string[]): Promise<BrowserExecO
   return { ok: true, reply: reply.data };
 }
 
-const ASK_REPLY = z.object({ replaced: z.boolean() });
+const ASK_REPLY = z.object({ replaced: z.boolean(), pageUrl: z.string().nullable() });
 
 /** `bbx browser ask`: what to print, or why it failed. */
 async function browserAsk(args: readonly string[]): Promise<{ ok: true; output: string } | { ok: false; message: string }> {
@@ -106,7 +106,7 @@ async function browserAsk(args: readonly string[]): Promise<{ ok: true; output: 
 [Open the web browser](box-browser:)
 
 The person's answer arrives as a chat message: "Done" or "Not done", maybe with their words.
-`,
+${reply.data.pageUrl === null ? "\nThe browser is on no web page now (it may have restarted). If the question is about a page, open it with bbx browser open and ask again.\n" : ""}`,
   };
 }
 
