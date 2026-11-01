@@ -78,6 +78,9 @@ void test("A mint appends one line naming the box, the secret, and the purpose",
   // `lastUsed` on the store entry is untouched, so "is this still in use" survives
   // the deletion of the segment that recorded the use.
 
+  // A directory of its own: the mints above wrote this month's segment by the real
+  // clock, and this checks a fixed list of names against a fixed date.
+  process.env.BBX_SECRETS_FILE = join(dir, "prune", "secrets.json");
   const logDir = secretsLogDir();
   await mkdir(logDir, { recursive: true });
   for (const name of ["2025-08.jsonl", "2025-09.jsonl", "2025-10.jsonl", "2026-10.jsonl", "notes.txt", "2024-01.jsonl.bak", "2024-13.jsonl"]) {

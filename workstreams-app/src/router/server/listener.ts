@@ -61,6 +61,7 @@ import { isBenignSocketError } from "./proxy.js";
 import { dispatchRouterRequest, type DispatchContext } from "./dispatch.js";
 import { handleRouterUpgrade, type UpgradeState } from "./upgrade.js";
 import { routerLogPath, startRouterLogFile, stopRouterLogFile } from "./log-file.js";
+import { startTerminalWriter, writeToTerminal } from "./terminal-writer.js";
 import { formatDenial, writeDeny, UpgradeDenialThrottle } from "./deny-log.js";
 import {
   WORKTREE_UNAVAILABLE,
@@ -258,7 +259,7 @@ async function listenUnixSocket(server: http.Server, sockPath: string): Promise<
 
 function setTabTitle(title: string): void {
   if (!process.stdout.isTTY) return;
-  process.stdout.write(`\u001B]0;${title}\u0007`);
+  writeToTerminal(`\u001B]0;${title}\u0007`);
 }
 
 function updateTabTitle(core: RouterCore): void {
@@ -407,6 +408,7 @@ async function main(): Promise<void> {
 
   // Before the sweep, so everything boot does is in the durable record — the
   // sweep's own kill lines are exactly what a post-mortem of a bad restart wants.
+  startTerminalWriter();
   await startRouterLogFile(LOG_DIR);
   log(`durable log: ${routerLogPath() ?? "unavailable"}`);
   await acquireRouterPidFile();

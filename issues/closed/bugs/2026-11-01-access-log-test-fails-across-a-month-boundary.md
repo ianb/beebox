@@ -6,7 +6,10 @@ priority: normal
 filed-by: agent
 discovered-by: agent
 discovered-in: shared-browser landing, 2026-11-01
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-31):** Fixed in the access-log test: the prune check uses its own directory, so a month boundary no longer changes the result.
 
 `test/core/secrets/access-log.test.ts` failed in `pnpm test:changed` on
 2026-11-01 UTC: it found `2026-11.jsonl` in the log directory where it expects
