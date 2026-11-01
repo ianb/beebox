@@ -268,7 +268,7 @@ void test("Same-second names stay distinct", async (t) => {
   const names = new Set(written);
   const found = await findJobCards(`${box.root}/_bookkeeping/jobs`);
   t.check(
-    { counts, distinct: [...names].length, ages: found.map((job) => job.createdAt?.toISOString()) },
+    { counts, distinct: names.size, ages: found.map((job) => job.createdAt?.toISOString()) },
     { counts: [10, 10, 10, 10, 10, 10], distinct: 6, ages: Array.from({ length: 6 }, () => "2026-10-27T12:00:00.000Z") },
   );
 });
