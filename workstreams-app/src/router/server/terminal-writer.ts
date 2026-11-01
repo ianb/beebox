@@ -3,7 +3,7 @@
 // Node writes to a TTY synchronously, so a terminal that has stopped reading
 // (a full buffer, a paused or slow tab) stops the whole router on one log line.
 // A sampled 3 s stall had the main thread in `write` to the terminal
-// (issues/bugs/2026-10-30-dev-router-stalls-writing-to-its-terminal.md). Here a
+// (issues/closed/bugs/2026-10-30-dev-router-stalls-writing-to-its-terminal.md). Here a
 // worker thread does the writes, so only the worker waits. The durable log is
 // the record, so past a bound the terminal loses lines and is told how many.
 
