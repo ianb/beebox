@@ -1,13 +1,16 @@
 ---
 title: "Capture a web page into a webpage card without a browser — the server-side equivalent of what Clerk does"
-workstream: unattached
+workstream: shared-browser
 area: beebox
 priority: normal
 labels: [capture, webpage-card, agent-tools, clerk]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — noticing a box had grown its own `capture-page` trick, and asking whether there was a better way
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-10-31):** Resolved by bbx webpage save (commits e3c9bf6d6, 1590a1823, 0f7df9d9a). Diverges from the issue: HTML-only copy, not a self-contained freeze (boxholder relaxed this 2026-11-01). Not run on production.
 
 `webpage` is a first-class card type (`beebox/src/schemas/webpage.tsx`): a
 readable markdown body, plus a **frozen, self-contained HTML snapshot** in the
@@ -72,14 +75,14 @@ of each agent inventing its own.
 
 ## Related
 
-- [webpage card and commentary](../../beebox/docs/implemented-plans/webpage-card-and-commentary.md)
+- [webpage card and commentary](../../../beebox/docs/implemented-plans/webpage-card-and-commentary.md)
   — the design the clerk path implements.
-- [Fetching full pages: blocked hosts and rendered pages](2026-10-04-fetch-blocked-pages.md)
+- [Fetching full pages: blocked hosts and rendered pages](../../features/2026-10-04-fetch-blocked-pages.md)
   — the fetch capability this depends on. Capture is extract-and-freeze over
   a fetched document; whether that document is the pre-JavaScript HTML or a
   rendered page, and whether a hostile host can be read at all, is that
   issue's problem. Added 2026-10-09 at the boxholder's request.
-- [Citation conventions and kept copies](2026-10-09-citation-conventions-and-kept-copies-of-sources.md)
+- [Citation conventions and kept copies](../../features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md)
   — the convention that makes a captured page a citable copy.
 
 Re-reviewed 2026-10-30: still no server-side capture. Clerk is no longer the only producer: the iOS share extension writes a link-only webpage card (share/router.ts:47-60) with no body or frozen snapshot, which a server capture could fill in.

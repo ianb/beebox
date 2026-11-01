@@ -4,6 +4,7 @@
  * turns a card's `frozen` ref into the snapshot's raw-file URL.
  */
 
+import { isRecord } from "@shared/is-record";
 import { apiRawFileUrl, getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
 import { Text } from "./ui/Text";
@@ -27,10 +28,32 @@ export function frozenSnapshotUrl(cardPath: string, frozen: unknown): string | n
   return frozenRelative === null ? null : apiRawFileUrl(getApiBase(), frozenRelative);
 }
 
-export function CapturedPageMeta({ sourceUrl, frozenUrl, capturedAt }: {
+/** How `bbx webpage` got the page: the card's `capture` field, or null for a Clerk or share card. */
+export interface PageCapture {
+  via: string | null;
+  redirectedFrom: string | null;
+  isHtmlOnly: boolean;
+  note: string | null;
+}
+
+/** Read a card's `capture` field; anything unexpected in it is left out. */
+export function pageCapture(raw: unknown): PageCapture | null {
+  if (!isRecord(raw)) return null;
+  const { via, snapshot, redirectedFrom, note } = raw;
+  const first = Array.isArray(redirectedFrom) ? redirectedFrom[0] : undefined;
+  return {
+    via: typeof via === "string" ? via : null,
+    redirectedFrom: typeof first === "string" ? first : null,
+    isHtmlOnly: snapshot === "html-only",
+    note: typeof note === "string" ? note : null,
+  };
+}
+
+export function CapturedPageMeta({ sourceUrl, frozenUrl, capturedAt, capture }: {
   sourceUrl: string | null;
   frozenUrl: string | null;
   capturedAt: string | null;
+  capture?: PageCapture | null;
 }) {
   if (sourceUrl === null && frozenUrl === null) return null;
   return (
@@ -41,10 +64,13 @@ export function CapturedPageMeta({ sourceUrl, frozenUrl, capturedAt }: {
       {frozenUrl !== null ? (
         <>
           {sourceUrl !== null ? " · " : ""}
-          <a href={frozenUrl} target="_blank" rel="noreferrer" className="underline">Frozen snapshot ↗</a>
+          <a href={frozenUrl} target="_blank" rel="noreferrer" className="underline" title={capture?.isHtmlOnly === true ? "The page's HTML. Its images and styles still load from the site." : undefined}>{capture?.isHtmlOnly === true ? "Saved HTML" : "Frozen snapshot"} ↗</a>
         </>
       ) : null}
       {capturedAt !== null ? <> · captured <FriendlyDate iso={capturedAt} /></> : null}
+      {capture?.via === "browser" ? <> · from the box browser</> : null}
+      {capture?.redirectedFrom !== null && capture?.redirectedFrom !== undefined ? <div>Redirected from {capture.redirectedFrom}</div> : null}
+      {capture?.note !== null && capture?.note !== undefined ? <div>{capture.note}</div> : null}
     </Text>
   );
 }

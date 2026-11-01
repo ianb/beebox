@@ -63,7 +63,7 @@ it.
 
 The boxholder asked that this cover the box as well as dev tooling: an agent
 inside a box has the same fetch problem, and
-[server-side webpage capture](2026-09-11-server-side-webpage-capture.md)
+[server-side webpage capture](../closed/features/2026-09-11-server-side-webpage-capture.md)
 depends on it. Two capabilities belong here, both ahead of any per-host
 adapter: **getting the rendered page** (script-rendered sites give a plain
 `fetch` an empty shell; the box ships `agent-browser` and the dev repo has

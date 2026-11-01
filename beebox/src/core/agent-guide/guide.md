@@ -568,6 +568,12 @@ person's help goes through `bbx browser`, the box's shared browser (the
 ask "<what to do>"`, put the link it prints in your reply, and end your turn; the
 answer arrives in chat. Never ask for or type their password.
 
+<!-- rules: tools.webpage -->
+To keep a copy of a page, run `bbx webpage save <url>`, or `--browser` for the
+page open in the box browser. Exit 3 means refused; exit 4 is a redirect to read
+first. When a saved or refused page was wrong, add the case to `webpage.ts` in the
+box's tricks folder (`bbx webpage save --help`).
+
 ## PROVENANCE — `{% quote %}` and `{% source %}`
 
 <!-- rules: provenance.two-tags -->

@@ -636,6 +636,37 @@ tests:
   # Status (2026-10-30, Claude): pass on the same copy, 0 reads, 0 searches,
   # 34k ctx; first run. WebFetch for public pages, bbx browser for the
   # person's account, the person logs in via Browser.
+  - id: webpage-keep-a-page
+    prompt: >
+      Someone asks you to keep a copy of an article at a URL. What do you run?
+      Explain only; do not use tools or change anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: Runs bbx webpage save with the URL.
+    correct_contains: ["bbx webpage save"]
+    tags: [browser, webpage]
+
+  - id: webpage-bad-page
+    prompt: >
+      A forum answers 200 with a sign-in page, and bbx webpage save saved it as
+      a card. How do you stop that happening again on this box? Explain only;
+      do not use tools or change anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: Adds a refusal for that site to src/tricks/webpage.ts.
+    correct_contains: ["webpage.ts"]
+    tags: [browser, webpage]
+
+  - id: webpage-redirect
+    prompt: >
+      bbx webpage save stops, exit 4, and says the URL redirects to a sign-in
+      page. What do you do? Explain only; do not use tools or change anything.
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: Does not follow it. Uses the box browser, or asks the person to log in.
+    correct_contains: ["bbx browser"]
+    tags: [browser, webpage]
+
   - id: browser-vs-webfetch
     prompt: >
       How do you read a page that needs the person's account, and how is that

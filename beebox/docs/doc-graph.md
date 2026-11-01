@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-01T00:51:44Z
-Total documents: 612
+Generated: 2026-11-01T02:39:03Z
+Total documents: 613
 
 ## Issues
 
@@ -97,6 +97,7 @@ These documents are not referenced by any other document.
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (434 lines) · proposal · partial
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (142 lines) · plan review
+- **docs/plans/webpage-capture-tools.md** — "bbx webpage save: make a webpage card from a URL or from the box browser" (249 lines) · proposal · partial
 - **docs/plans/workspace-pane-controls.review.md** — "Plan Engineering Review — workspace pane controls" (235 lines) · plan review
 - **docs/unimplemented-plans/sticky-hq-ios-parity.md** — "Sticky HQ dictation on iOS" (105 lines) · past proposal · superseded
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
@@ -1461,6 +1462,7 @@ Referenced by:
 - docs/plans/shared-browser-ask.subplan.md:71 (mention) — - **`docs/engineering-principles.md` 6 (right-sized defensiveness):** the parent plan cites it for "no arbitration, no h
 - docs/plans/shared-browser.md:90 (mention) — - **Engineering principles** (`docs/engineering-principles.md`): **3** (validate at boundaries: the exec route filters a
 - docs/plans/tts-backend-selection.md:33 (mention) — - **Principle 4, resilient AND never silent** (`docs/engineering-principles.md:49`):
+- docs/plans/webpage-capture-tools.md:92 (mention) — - **`docs/engineering-principles.md` 8 (one way to do each thing):** the issue names a second extractor as the failure t
 - docs/plans/workspace-pane-controls.md:48 (link) — applications. [Engineering principles](../engineering-principles.md) supply the
 - docs/plans/workstreams-app.md:46 (mention) — (`docs/engineering-principles.md:37-47`): validate every app API input and
 - docs/plans/worktree-control-surface.md:113 (mention) — - `beebox/docs/engineering-principles.md` §7 *Hierarchy is a
@@ -8321,7 +8323,7 @@ Title: "`.webpage.card` + commentary-as-attachment" | 464 lines | shipped histor
 
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:209 (mention) — - `webpage-card-and-commentary.md` (implemented) vs `web-page-commentary.md`
-- ../issues/features/2026-09-11-server-side-webpage-capture.md:75 (link) — - [webpage card and commentary](../../beebox/docs/implemented-plans/webpage-card-and-commentary.md)
+- ../issues/closed/features/2026-09-11-server-side-webpage-capture.md:78 (link) — - [webpage card and commentary](../../../beebox/docs/implemented-plans/webpage-card-and-commentary.md)
 
 References:
 - → docs/implemented-plans/clerk-webpage-capture.md (link)
@@ -10139,6 +10141,14 @@ References:
 - → docs/user-stories/catalog/2026-08-21.md (link)
 - → test/plugins/courseware/journeys/D-chemistry/README.md (link)
 
+#### docs/plans/webpage-capture-tools.md **[ORPHAN]**
+
+Title: "bbx webpage save: make a webpage card from a URL or from the box browser" | 249 lines | proposal | partial
+
+References:
+- → ../issues/closed/features/2026-09-11-server-side-webpage-capture.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+
 #### docs/plans/workspace-pane-controls.md
 
 Title: "Workspace panes, focus, and conversation" | 582 lines | proposal | partial
@@ -11253,7 +11263,7 @@ References:
 
 #### src/core/agent-guide/guide.md
 
-Title: "Bee Box Agent Guide" | 638 lines
+Title: "Bee Box Agent Guide" | 644 lines
 
 Referenced by:
 - docs/agent-guide.md:19 (mention) — - `guide.md` holds the text, written by hand as one document. Its header

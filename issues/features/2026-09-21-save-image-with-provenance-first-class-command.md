@@ -32,7 +32,7 @@ Nothing under `beebox/src/core/commands` or `webapp/routes` currently offers
 "fetch a URL into an attach scope with recorded provenance" as a primitive —
 only the human-driven clerk-extension save path exists for images (see the
 related, already-filed
-`issues/features/2026-09-11-server-side-webpage-capture.md`, which covers the
+`issues/closed/features/2026-09-11-server-side-webpage-capture.md`, which covers the
 sibling case of capturing a whole page). Any box that gathers images or files
 from external sources — which "any research- or catalog-flavored box" covers
 broadly — will reinvent this exact trick: fetch, place, and stamp provenance.

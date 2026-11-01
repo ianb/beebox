@@ -35,8 +35,10 @@ budget:
   # Raised 2026-10-30 (+90) for the box browser: TOOLS' `tools.browser`
   # pointer (+67) and the `browser` box skill's description
   # (docs/plans/shared-browser.md, chunk 11).
+  # Raised 2026-11-01 for TOOLS' `tools.webpage` pointer
+  # (docs/plans/webpage-capture-tools.md).
   guide_words: 5743
-  always_loaded_words: 11089
+  always_loaded_words: 11145
   uncited_words_per_section: 60
 
 lint:
@@ -1029,6 +1031,13 @@ rows:
     reason: Rare, and needed only when a tool is missing. Moved verbatim to a new `bbx host install` entry in bbx-commands.md; the guide keeps one pointer sentence carrying the command and the `sudo apt` prohibition, since the reflex fires before any doc is open.
     audits: [host-package-install]
     mechanics: box-docs/bbx-commands.md
+  - id: tools.webpage
+    rule: "To keep a copy of a page, use `bbx webpage save`; a saved or refused page that was wrong becomes a case in the tricks folder's `webpage.ts`."
+    handle: TOOLS
+    bin: indirect
+    reason: The options and the function's shape are mechanics, so they live in the command's help.
+    audits: [webpage-keep-a-page, webpage-bad-page, webpage-redirect]
+    mechanics: bbx webpage save --help
   - id: tools.browser
     rule: "A page that needs a login, scripts, or the person's help is read with `bbx browser` (public pages with WebFetch first); at a login or human check, ask the person to open Browser from the profile menu on a computer and say when done, never ask for or type their password."
     handle: TOOLS

@@ -20,10 +20,11 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { verifyAgentBearer } from "../../../core/agent/token.js";
-import { sendBrowserCommand, BrowserCommandSocketError } from "../../../core/browser/command-socket.js";
+import { sendBrowserCommand, sendFullOutputCommand, BrowserCommandSocketError } from "../../../core/browser/command-socket.js";
 import { checkExecArgs, EXEC_BODY } from "../../../core/browser/exec-args.js";
 import { BrowserHostFailedError, BrowserNotInstalledError, ensureBrowserHost } from "../../../core/browser/host/start.js";
 import { BrowserPathTooLongError } from "../../../core/browser/paths.js";
+import { PAGE_READ_ARGS, parsePageRead } from "../../../core/browser/page-read.js";
 import { ASK_BODY, askBrowserQuestion } from "../../../core/browser/question.js";
 import type { Services } from "../../../services/container.js";
 
@@ -59,6 +60,27 @@ export function registerBrowserExecRoute(ctx: BrowserExecRouteContext): void {
     try {
       const host = await ensureHost({ boxRoot });
       return reply.status(200).send(await sendBrowserCommand(host.paths.cliSocket, body.data.args));
+    } catch (e) {
+      const failure = hostFailure(e);
+      if (failure === null) throw e;
+      return reply.status(failure.status).send({ error: failure.error });
+    }
+  });
+
+  // `bbx webpage --browser`: the whole page open in the box browser.
+  server.post("/api/browser/page", async (request, reply) => {
+    if (!verifyAgentBearer(boxRoot, request.headers["authorization"])) {
+      return reply.status(403).send({ error: "The browser page route is for the box's agent (bbx webpage --browser)" });
+    }
+    try {
+      const host = await ensureHost({ boxRoot });
+      const read = await sendFullOutputCommand(host.paths.cliSocket, PAGE_READ_ARGS);
+      if (read.exitCode !== 0) {
+        return reply.status(502).send({ error: `Could not read the browser's page: ${read.stderr.trim() || `exit code ${String(read.exitCode)}`}` });
+      }
+      const page = parsePageRead(read.stdout);
+      if (page === null) return reply.status(502).send({ error: "Could not read the browser's page: it is over the 20 MB limit, or the browser's answer was not readable" });
+      return reply.status(200).send(page);
     } catch (e) {
       const failure = hostFailure(e);
       if (failure === null) throw e;

@@ -36,6 +36,15 @@ export class BrowserCommandSocketError extends Error {
 
 /** Send `args` to the browser host's command socket and wait for the CLI's result. */
 export function sendBrowserCommand(socketPath: string, args: readonly string[]): Promise<ExecReply> {
+  return sendRequest(socketPath, { args });
+}
+
+/** The same, for the engine's page read: whole output, with no content boundaries. */
+export function sendFullOutputCommand(socketPath: string, args: readonly string[]): Promise<ExecReply> {
+  return sendRequest(socketPath, { args, fullOutput: true });
+}
+
+function sendRequest(socketPath: string, request: { args: readonly string[]; fullOutput?: true }): Promise<ExecReply> {
   return new Promise((resolve, reject) => {
     const fail = (detail: string): void => {
       socket.destroy();
@@ -63,6 +72,6 @@ export function sendBrowserCommand(socketPath: string, args: readonly string[]):
       socket.destroy();
       resolve(parsed.data);
     });
-    socket.end(`${JSON.stringify({ args })}\n`);
+    socket.end(`${JSON.stringify(request)}\n`);
   });
 }

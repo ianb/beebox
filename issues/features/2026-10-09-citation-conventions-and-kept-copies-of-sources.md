@@ -33,7 +33,7 @@ vanish with only a `version` hash to say so.
 - A `webpage` card: readable Markdown body, one `sources` entry with the URL
   and `retrieved`, and a frozen self-contained HTML snapshot at
   `attach/page.frozen` served sandboxed. Only the Chrome clerk produces one
-  ([server-side capture](2026-09-11-server-side-webpage-capture.md) is open).
+  ([server-side capture](../closed/features/2026-09-11-server-side-webpage-capture.md) is open).
 - `pdf`, `file`, `image` cards for other material; courses keep theirs in a
   `material/` directory and the build-course skill tells the tutor to bring
   material in and cite it.
