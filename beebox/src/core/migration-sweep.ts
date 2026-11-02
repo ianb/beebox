@@ -3,7 +3,7 @@ import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { startAwakeTimeout } from "../shared/awake-timeout.js";
-import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
+import { refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
 import { repairMigration, runProcedureMigration, runRetiredMigration, finishMigrationRepair, migrationQuestions, redactMigrationQuestions, supersededMigrationQuestions } from "./migration-repair.js";
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
@@ -87,13 +87,17 @@ interface SweepOptions {
   repairAgent?: Agent;
 }
 
-/** The sweep's outcome when nothing needs the gate, or null when something does. */
+/**
+ * The sweep's outcome when nothing needs the gate, or null when something
+ * does. Stale docs never need it: the refresh is ordinary box work, run here
+ * with the box open.
+ */
 async function sweepWithoutWork(opts: SweepOptions): Promise<SweepResult | null> {
   const manifest = await readManifest(opts.boxRoot);
   if (manifest === null) return { status: "no-manifest" };
   if (computePending(manifest).length > 0) return null;
   if ((await migrationQuestions(opts.boxRoot)).length > 0) return null;
-  if (opts.refresh && await docsRefreshHasWork(opts.boxRoot)) return null;
+  if (opts.refresh) await refreshGeneratedDocs({ boxRoot: opts.boxRoot });
   return { status: "current" };
 }
 
@@ -133,7 +137,7 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
       const outcome = await sweepUnderMaintenance(bounded, maintenance);
       signal.throwIfAborted();
       if (opts.refresh && ["current", "applied", "attention"].includes(outcome.status)) {
-        await refreshGeneratedDocs({ boxRoot: opts.boxRoot, withinMaintenance: true });
+        await refreshGeneratedDocs({ boxRoot: opts.boxRoot });
       }
       signal.throwIfAborted();
       if (outcome.status !== "current") {

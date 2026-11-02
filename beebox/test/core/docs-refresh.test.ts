@@ -1,9 +1,11 @@
 // # The unattended generated-docs refresh
 //
-// `refreshGeneratedDocs` is what `deploy.sh` runs per box after `bbx migrate --sweep`
-// (as `bbx docs refresh`): regenerate the box's agent docs, card rules, and managed
-// skills if the engine that wrote them has moved on, commit the result, and leave
-// a box that needs a human alone. See `src/core/docs-refresh.ts`.
+// `refreshGeneratedDocs` is what `bbx migrate --sweep` and `bbx docs refresh` run:
+// regenerate the box's agent docs, card rules, and managed skills if the engine
+// that wrote them has moved on, and commit the result. It is ordinary box work,
+// never box maintenance (`docs/plans/maintenance-live-tasks.md`, Track 1), and it
+// commits with the same scope as the generator's own commit at chat start.
+// See `src/core/docs-refresh.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -68,11 +70,14 @@ void test("The first run on a box that has never generated:", async (t) => {
       result: { status: "refreshed" },
       rules: containing<string>([".claude/rules/card-pdf.md"]),
       skills: containing<string>([".claude/skills/views/SKILL.md"]),
-      status: "",
+      // The box's own AGENTS.md gains the generator's includes but is the
+      // box's file: the commit leaves it, as the chat-start commit does
+      // (`isAuthoredAgentsMd`, docs-gen/generate/core.ts).
+      status: "M AGENTS.md",
     },
   );
 
-  // One measured output commit carries the refresh attribution.
+  // One output commit carries the refresh attribution.
 
   t.check(git(box, "log", "-1", "--format=%s|%(trailers:key=Created-By,valueonly)"), "Refresh generated docs|docs-refresh");
 });
@@ -198,11 +203,16 @@ void test("Dirty input remains outside the generated-output commit", async (t) =
   });
 });
 
-// ## Rejected output invalidates the cache and retains its original recovery baseline
+// ## A rejected commit invalidates the cache, and the retry commits the output
 //
-// The failed generation has already written files. Retrying must commit those
-// files, rather than treating them as unrelated dirt in a fresh snapshot.
-void test("The failed generation has already written files.", async (t) => {
+// The failed run has already written generated files, which are now dirty,
+// and its staging is undone. Generated surfaces (rules, skills) are engine
+// output, so the retry commits them even though they were dirty before it
+// started. Tracked templates the failed run installed stay uncommitted on the
+// retry: they read as edits, and the next housekeeping commit takes them, as
+// for the chat-start commit. No recovery ref is kept: the output is
+// reproducible from its inputs.
+void test("A rejected commit invalidates the cache, and the retry commits the output", async (t) => {
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -219,16 +229,38 @@ void test("The failed generation has already written files.", async (t) => {
   await t.checkThrows(async () => (await refreshGeneratedDocs({ boxRoot: box.root })), "DocsRefreshError");
 
   await t.checkThrows(async () => (await access(box.path(GENERATE_MARKER))), "Error");
-
-  const pending = git(box, "rev-parse", "refs/bbx/migrations/docs-refresh/pending");
-  t.check(pending, any(String).matches(/^[\da-f]{40,64}$/));
+  t.check(git(box, "diff", "--cached", "--name-only"), "");
 
   git(box, "config", "--unset", "core.hooksPath");
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
-  t.check({ result, rules: git(box, "ls-files", ".claude/rules").split("\n"), pending: git(box, "for-each-ref", "--format=%(objectname)", "refs/bbx/migrations/docs-refresh/pending"), status: git(box, "status", "--porcelain") }, {
+  t.check({ result, rules: git(box, "ls-files", ".claude/rules").split("\n"), refs: git(box, "for-each-ref", "refs/bbx"), staged: git(box, "diff", "--cached", "--name-only") }, {
     result: { status: "refreshed" },
     rules: containing<string>([".claude/rules/card-pdf.md"]),
-    pending: "",
-    status: "",
+    refs: "",
+    staged: "",
   });
+});
+
+// ## A stale refresh never closes the box
+//
+// The hourly sweep's refresh closed a box with a running chat and ended its
+// background tasks (`docs/plans/maintenance-live-tasks.md`). Now a refresh with
+// real work runs beside live box work: it finishes while the work is still held
+// and writes no maintenance record.
+void test("A stale refresh never closes the box", async (t) => {
+  t.teardown(async () => {
+    try {
+      await busy.release();
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeCleanBox();
+  const busy = await acquireBoxWork(box.root, { reason: "live chat run" });
+  const statuses: unknown[] = [];
+  const refresh = refreshGeneratedDocs({ boxRoot: box.root }).then((outcome) => outcome.status);
+  const watch = setInterval(() => { void boxMaintenanceStatus(box.root).then((status) => { if (status) statuses.push(status.reason); }); }, 50);
+  t.teardown(() => { clearInterval(watch); });
+  t.check({ result: await Promise.race([refresh, new Promise((resolve) => setTimeout(() => resolve("still draining"), 20_000))]), statuses }, { result: "refreshed", statuses: [] });
 });

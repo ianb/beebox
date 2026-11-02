@@ -6,7 +6,7 @@ import { acquireBoxWork, boxWorkEnvironment, type BoxWork } from "../../lib/box-
 // `browser-host` lives as long as the engine that spawned it and writes
 // nothing in the box; holding box work would stall maintenance's drain.
 const independentlyOwned = new Set([
-  "browser-host", "answer", "maintenance", "migrate", "docs", "upgrade", "serve", "hub", "scheduler",
+  "browser-host", "answer", "maintenance", "migrate", "upgrade", "serve", "hub", "scheduler",
   "auth", "secrets", "boxes", "tailscale", "field-test", "backup",
 ]);
 // Read-only commands: they mutate nothing, so there is nothing to admit. Some
