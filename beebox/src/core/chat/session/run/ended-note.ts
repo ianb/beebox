@@ -1,6 +1,6 @@
 /**
  * The run-ended note: a chat's next turn learns why and when its background
- * tasks were cut off (docs/plans/chat-termination-notes.md).
+ * tasks were cut off (docs/implemented-plans/chat-termination-notes.md).
  *
  * While a run has live background tasks, `.beebox/chat-run-ended/<session>.json`
  * holds them, when the run was last seen working, and which server process

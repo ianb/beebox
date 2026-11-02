@@ -1,6 +1,6 @@
 ---
 title: "A chat learns why and when its background tasks were cut off"
-status: draft
+status: implemented
 workstream: maintenance-live-tasks
 issues: []
 ---

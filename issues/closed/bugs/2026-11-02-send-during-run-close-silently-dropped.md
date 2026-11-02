@@ -1,12 +1,15 @@
 ---
 title: "A chat message sent while a restart is closing the run is silently dropped"
-workstream: unattached
+workstream: maintenance-live-tasks
 area: beebox
 labels: [chat, message-loss]
 filed-by: agent
 discovered-by: agent
 discovered-in: "maintenance-live-tasks / chat-termination-notes diff review (Codex), 2026-11-02"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-02):** Fixed in bab148302: isBusy() includes liveTasks.ending(), so sends during a restart close queue and drain into the fresh run. Differs from the proposed closing state on ChatBackendRun.
 
 `ChatSession.restart()` (and `stop()` with no tasks) calls `endRun`, which
 calls `run.close()` or `run.abort()` and leaves the session in `ready`

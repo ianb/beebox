@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-02T20:02:23Z
-Total documents: 617
+Generated: 2026-11-02T21:29:13Z
+Total documents: 618
 
 ## Issues
 
@@ -3214,6 +3214,7 @@ Referenced by:
 - docs/glossary.md:75 (mention) — **session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/
 - docs/implemented-plans/architectural-review-followups.md:272 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat/sessions.md`
 - docs/implemented-plans/architectural-review.md:713 (mention) — then a `docs/chat/sessions.md` protocol doc for the
+- docs/implemented-plans/chat-termination-notes.md:192 (mention) — 3. Docs (`docs/chat/sessions.md`).
 - docs/implemented-plans/doc-structure-chat.md:68 (mention) — | `chat-session-lifecycle.md` "Phases", "The contract", "Shared code" | `chat/sessions.md` | |
 - docs/implemented-plans/top-nav-ia.md:420 (mention) — bar). `docs/chat/sessions.md` if it references the Chats page.
 - docs/implemented-plans/workstreams.md:123 (mention) — full conversation (v2.1.223+; code.claude.com/docs/en/sessions.md). Codex
@@ -3225,6 +3226,7 @@ Referenced by:
 
 References:
 - → docs/chat/composer.md (link)
+- → docs/implemented-plans/chat-termination-notes.md (link)
 - → docs/implemented-plans/maintenance-live-tasks.md (link)
 - → ../issues/closed/code-quality/2026-07-06-chat-session-shared-core.md (link)
 
@@ -4674,6 +4676,17 @@ References:
 - → src/frontend/src/components/chat/AGENTS.md (mention)
 - → docs/chat/scroll.md (mention)
 
+#### docs/implemented-plans/chat-termination-notes.md
+
+Title: "A chat learns why and when its background tasks were cut off" | 199 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat/sessions.md:60 (link) — - **Evict.** Registry eviction calls `stop()`. The sweep and the live cap skip a chat with a live background task until
+
+References:
+- → docs/implemented-plans/maintenance-live-tasks.md (mention)
+- → docs/chat/sessions.md (mention)
+
 #### docs/implemented-plans/chat-titles.md
 
 Title: "Chat titles for every chat, kept fresh cheaply" | 658 lines | shipped history | implemented
@@ -5896,9 +5909,9 @@ Title: "Keep live background work through idle eviction, and end it honestly whe
 
 Referenced by:
 - docs/implemented-plans/maintenance-live-tasks.md:19 (mention) — (the sweep and live-cap paths, `docs/implemented-plans/idle-eviction-background-work.md`).
-- ../issues/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md:45 (mention) — The idle-eviction fix (`docs/implemented-plans/idle-eviction-background-work.md`)
 - ../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md:12 (mention) — **Closed (implemented, 2026-10-30):** Fixed by 29403d204 under beebox/docs/implemented-plans/idle-eviction-background-wo
 - ../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md:65 (link) — Fix and evidence: [plan](../../../beebox/docs/implemented-plans/idle-eviction-background-work.md).
+- ../issues/closed/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md:48 (mention) — The idle-eviction fix (`docs/implemented-plans/idle-eviction-background-work.md`)
 
 References:
 - → ../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md (frontmatter)
@@ -6242,10 +6255,11 @@ Title: "Box maintenance waits for chats with live background tasks" | 400 lines 
 
 Referenced by:
 - docs/chat/sessions.md:60 (link) — - **Evict.** Registry eviction calls `stop()`. The sweep and the live cap skip a chat with a live background task until
-- ../issues/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md:98 (mention) — ## Done (worktree `maintenance-live-tasks`, plan `beebox/docs/implemented-plans/maintenance-live-tasks.md`)
+- docs/implemented-plans/chat-termination-notes.md:17 (mention) — `docs/implemented-plans/maintenance-live-tasks.md` (Track 3) and the
+- ../issues/closed/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md:12 (mention) — **Closed (implemented, 2026-11-02):** Fix directions 1-3 landed on this branch (see plan in docs/implemented-plans/maint
 
 References:
-- → ../issues/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md (frontmatter)
+- → ../issues/closed/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md (frontmatter)
 - → docs/implemented-plans/idle-eviction-background-work.md (mention)
 - → docs/implemented-plans/box-maintenance-no-wedge.md (mention)
 - → AGENTS.md (mention)

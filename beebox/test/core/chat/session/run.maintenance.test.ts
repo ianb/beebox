@@ -73,7 +73,7 @@ third queued before closure` }],
 // `.beebox/chat-run-ended/`; the server stamps a cause when it ends the run.
 // The next turn carries a `<run-ended>` element inside the `<chat-app>`
 // snapshot, which the person's message display strips
-// (`docs/plans/chat-termination-notes.md`). A turn that fails to start keeps the
+// (`docs/implemented-plans/chat-termination-notes.md`). A turn that fails to start keeps the
 // note for the one after it; a dispatched turn removes it.
 
 const NOTE = ".beebox/chat-run-ended/sess-1.json";
@@ -237,7 +237,7 @@ void test("A task update in flight after the server ends a run keeps the cause",
 //
 // `restart()` closes the run's input at once, but the run reads as gone only
 // when its close handler runs. A send in between used to go into the closed
-// input and vanish (`issues/bugs/2026-11-02-send-during-run-close-silently-dropped.md`).
+// input and vanish (`issues/closed/bugs/2026-11-02-send-during-run-close-silently-dropped.md`).
 // The session now reads as busy until the close, so the sender queues the
 // message, and the close handler drains it into a fresh run.
 void test("A message sent while a restart closes the run reaches the fresh run", async (t) => {
