@@ -362,7 +362,6 @@ export class ChatSession extends EventEmitter {
     this.turnText = "";
     try {
       run.send(content, { clientComposed: rawInput.clientComposed === true });
-      dispatched();
     } catch (e) {
       // The dispatch itself failed. Step back to `ready` before rethrowing:
       // left in `streaming` the session reads as busy forever, with no result
@@ -371,6 +370,7 @@ export class ChatSession extends EventEmitter {
       log("send", `Dispatch failed, turn abandoned: ${errorMessage(e)}`);
       throw e;
     }
+    dispatched();
     return true;
     } finally { this.preparingTurn = false; }
   }

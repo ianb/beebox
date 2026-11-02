@@ -258,6 +258,8 @@ void test("A development reload exit restarts cleanly without consuming crash bu
     reason: "development reload",
     phase: "exclusive",
     since: isoDate(),
+    // A reload cannot defer, so it records when it ends live background tasks.
+    endsBackgroundTasksAt: isoDate(),
     owner: null,
     step: undefined,
   });

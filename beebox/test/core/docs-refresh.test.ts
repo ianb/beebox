@@ -195,8 +195,11 @@ void test("Dirty input remains outside the generated-output commit", async (t) =
   const box = await makeCleanBox();
   await box.write("_content/notes.md", "work in progress\n");
   git(box, "add", "_content/notes.md");
+  // A box's own skill sits in a generated surface's path but has no DOCID
+  // marker: an unfinished one is the author's, never engine output.
+  await box.write(".claude/skills/my-research/SKILL.md", "# My research\nhalf written\n");
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
-  t.check({ result, staged: git(box, "diff", "--cached", "--name-only"), committed: git(box, "ls-tree", "--name-only", "HEAD", "_content/notes.md") }, {
+  t.check({ result, staged: git(box, "diff", "--cached", "--name-only"), committed: git(box, "ls-tree", "-r", "--name-only", "HEAD", "_content/notes.md", ".claude/skills/my-research") }, {
     result: { status: "refreshed" },
     staged: "_content/notes.md",
     committed: "",

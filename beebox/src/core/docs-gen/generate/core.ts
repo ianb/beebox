@@ -39,7 +39,7 @@ import { installValidationHooks } from "../../install-validation-hooks.js";
 import { boxCodePaths, getBoxShape, getBoxShapeIfPresent, type BoxShape } from "../../../lib/box-shape.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
 import { isRepo, hasCommits, getStatus, stageFiles, unstageFiles, commitPaths, withBoxGitLock } from "../../../lib/git/core/operations.js";
-import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "../shared.js";
+import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, readDocId, withDocId } from "../shared.js";
 import { getTemplatesOwnedBy, type TemplateDefinition } from "../../../templates-registry.js";
 import { ensureEngineDocs, writeBoxCardDocs } from "../box-docs.js";
 import {
@@ -282,9 +282,17 @@ export async function commitTemplateSyncChanges(
   options?: { keepUncommitted?: ReadonlySet<string>; message?: string; trailers?: Record<string, string> },
 ): Promise<void> {
   const keep = options?.keepUncommitted ?? new Set<string>();
-  // A `generated` surface is engine output rewritten whole on every run, never
-  // someone's edit: a dirty one is an earlier run's uncommitted output.
-  const kept = (p: string): boolean => keep.has(p) && guidanceSurfaceFor(p)?.class !== "generated";
+  // A dirty file in a `generated` surface that carries the engine's DOCID
+  // marker is an earlier run's uncommitted output, not someone's edit; an
+  // unmarked one (a box's own skill) stays kept.
+  const engineOutput = async (p: string): Promise<boolean> => {
+    if (guidanceSurfaceFor(p)?.class !== "generated") return false;
+    try { return readDocId(await readFile(join(boxRoot, p), "utf8")) === p; }
+    catch (error) {
+      if (errnoCode(error) === "ENOENT" || errnoCode(error) === "EISDIR") return false; // a deletion or a directory entry
+      throw error;
+    }
+  };
   const shape = await getBoxShape(boxRoot);
   const { boxRoot: repoRoot } = shape;
   if (!(await isRepo(repoRoot))) return;
@@ -293,7 +301,8 @@ export async function commitTemplateSyncChanges(
   await withBoxGitLock(repoRoot, async () => {
     const status = await getStatus(repoRoot);
     const candidates = [...status.staged, ...status.modified, ...status.untracked];
-    const managed = candidates.filter((p) => isTemplateManagedPath(p) && !kept(p));
+    const kept = await Promise.all(candidates.map(async (p) => keep.has(p) && !(await engineOutput(p))));
+    const managed = candidates.filter((p, i) => isTemplateManagedPath(p) && kept[i] !== true);
     const authored = await Promise.all(managed.map((p) => isAuthoredAgentsMd(repoRoot, p)));
     const toCommit = managed.filter((_p, i) => authored[i] !== true);
     if (toCommit.length === 0) return;

@@ -46,7 +46,11 @@ export function pendingRunEndedNote(boxRoot: string, sessionId: string | null): 
   const none = { element: undefined, clear: () => {} };
   if (sessionId === null) return none;
   const file = notePath(boxRoot, sessionId);
-  const remove = (): void => { fs.rmSync(file, { force: true }); };
+  // Never throws: a note that cannot be removed must not undo a dispatched turn.
+  const remove = (): void => {
+    try { fs.rmSync(file, { force: true }); }
+    catch (error) { console.error(`[ChatSession] Run-ended note for ${sessionId} was not removed: ${errorMessage(error)}`); }
+  };
   let parsed: ReturnType<typeof noteSchema.safeParse>;
   try { parsed = noteSchema.safeParse(JSON.parse(fs.readFileSync(file, "utf8"))); }
   catch (error) {
