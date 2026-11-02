@@ -15,9 +15,9 @@ import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
-import { writeFileAtomicSync } from "../../../../lib/atomic-write.js";
-import { escapeXmlAttr } from "../../../../shared/self-note.js";
-import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
+import { writeFileAtomicSync } from "../../../lib/atomic-write.js";
+import { escapeXmlAttr } from "../../../shared/self-note.js";
+import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 
 /** This server process. A record another process wrote is from a run this one never saw end. */
 const WRITER = randomUUID();
@@ -30,13 +30,33 @@ const recordSchema = z.object({
   /** When the run ended, with `cause`; also the field the first notes (maintenance only) wrote. */
   at: z.string().optional(),
   cause: z.string().optional(),
+  /** Whether the cause was an interruption from outside, so the server wakes the chat (`./interrupted-wake.ts`). */
+  wake: z.boolean().optional(),
+  /** When the server woke the chat for this note; it wakes once per note. */
+  wokenAt: z.string().optional(),
   /** First notes only: the maintenance owner's reason. */
   reason: z.string().optional(),
 });
-type TaskRecord = z.infer<typeof recordSchema>;
+export type TaskRecord = z.infer<typeof recordSchema>;
 
-function recordPath(boxRoot: string, sessionId: string): string {
-  return path.join(boxRoot, ".beebox", "chat-run-ended", `${encodeURIComponent(sessionId)}.json`);
+/** Why the server ended a run: the agent-facing text, and whether it was an interruption the chat should wake for. */
+export interface EndCause { readonly text: string; readonly wake: boolean }
+
+export const END_CAUSES = {
+  shutdown: { text: "the Bee Box server shut down", wake: true },
+  processEnded: { text: "the agent process ended on its own", wake: true },
+  hung: { text: "it had produced no output for 4 hours and was treated as hung", wake: false },
+  restartRequested: { text: "a restart was requested", wake: false },
+  modelChange: { text: "a model change was requested", wake: false },
+  providerChanged: { text: "its provider setup changed", wake: false },
+} as const satisfies Record<string, EndCause>;
+
+export function maintenanceCause(reason: string): EndCause { return { text: `box maintenance (${reason})`, wake: true }; }
+
+export const RECORD_DIR = path.join(".beebox", "chat-run-ended");
+
+export function recordPath(boxRoot: string, sessionId: string): string {
+  return path.join(boxRoot, RECORD_DIR, `${encodeURIComponent(sessionId)}.json`);
 }
 
 function write(file: string, { sessionId, record }: { sessionId: string; record: TaskRecord }): void {
@@ -56,7 +76,7 @@ export interface TaskRecorder {
   /** The run produced a message; refresh `lastSeenAt` at most once a minute. */
   heartbeat(tasks: string[], now: Date): void;
   /** The server ended the run while `tasks` were live, for `cause`. */
-  ended(end: { tasks: string[]; cause: string; now: Date }): void;
+  ended(end: { tasks: string[]; cause: EndCause; now: Date }): void;
 }
 
 const HEARTBEAT_MS = 60_000;
@@ -83,12 +103,12 @@ export function createTaskRecorder(boxRoot: string, sessionId: () => string | nu
       if (tasks.length > 0 && now.getTime() - lastWrite >= HEARTBEAT_MS) put({ tasks, lastSeenAt: now.toISOString() }, now);
     },
     ended({ tasks, cause, now }) {
-      put({ tasks, lastSeenAt: now.toISOString(), at: now.toISOString(), cause }, now);
+      put({ tasks, lastSeenAt: now.toISOString(), at: now.toISOString(), cause: cause.text, wake: cause.wake }, now);
     },
   };
 }
 
-function readRecord(file: string, sessionId: string): TaskRecord | null {
+export function readRecord(file: string, sessionId: string): TaskRecord | null {
   let raw: unknown;
   try { raw = JSON.parse(fs.readFileSync(file, "utf8")); }
   catch (error) {
@@ -105,7 +125,10 @@ function readRecord(file: string, sessionId: string): TaskRecord | null {
   return null;
 }
 
-function render(record: TaskRecord): string | undefined {
+/** Whether this process wrote the record (an unstamped one is then live, or about to be stamped). */
+export function writtenHere(record: TaskRecord): boolean { return record.writer === WRITER; }
+
+export function render(record: TaskRecord): string | undefined {
   const count = record.tasks.length === 1 ? "1 background task was" : `${String(record.tasks.length)} background tasks were`;
   const listed = record.tasks.map((task) => `- ${escapeXmlAttr(task)}`).join("\n");
   const cause = record.cause ?? (record.reason === undefined ? undefined : `box maintenance (${record.reason})`);
@@ -133,13 +156,15 @@ export function pendingRunEndedNote(boxRoot: string, sessionId: string | null): 
   const file = recordPath(boxRoot, sessionId);
   const record = readRecord(file, sessionId);
   const element = record === null ? undefined : render(record);
-  if (element === undefined) return none;
-  const read = JSON.stringify(record);
+  if (record === null || element === undefined) return none;
+  // The wake's claim (`wokenAt`) lands just before dispatch; it is the same note.
+  const sameNote = (other: TaskRecord): string => JSON.stringify({ ...other, wokenAt: undefined });
+  const read = sameNote(record);
   return {
     element,
     clear: () => {
       const now = readRecord(file, sessionId);
-      if (now !== null && JSON.stringify(now) === read) remove(file, sessionId);
+      if (now !== null && sameNote(now) === read) remove(file, sessionId);
     },
   };
 }

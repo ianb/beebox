@@ -56,10 +56,11 @@ function buildFiredMessage(schedule: ChatSchedule): string {
  * different model in a fresh chat would change who answers (boxholder,
  * 2026-09-19: "if the model is removed the message goes nowhere").
  */
-type FiredTurnOutcome = "delivered" | "failed" | "refused";
+export type FiredTurnOutcome = "delivered" | "failed" | "refused";
 
-function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMessage: string }): Promise<FiredTurnOutcome> {
-  const { session, eventBus, firedMessage } = deps;
+/** Send a server-started turn and settle when it ends; also the interrupted-chat wake's path (`./interrupted-wake.ts`). */
+export function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMessage: string; onDispatch?: () => void }): Promise<FiredTurnOutcome> {
+  const { session, eventBus, firedMessage, onDispatch } = deps;
   return new Promise<FiredTurnOutcome>((resolve, reject) => {
     let settled = false;
     const finish = (ok: FiredTurnOutcome): void => {
@@ -96,7 +97,7 @@ function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMe
     session.once("done", onDone);
     session.once("close", onFail);
     session.once("error", onFail);
-    void session.send({ text: firedMessage, clientComposed: true }).then((sent) => {
+    void session.send({ text: firedMessage, clientComposed: true }, onDispatch === undefined ? undefined : { onDispatch }).then((sent) => {
       if (!sent) finish("failed");
     }).catch((error: unknown) => {
       if (error instanceof BoxMaintenanceError) reject(error);

@@ -32,6 +32,8 @@ import { pinEntry, pinSessionObject } from "./pins.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./options.js";
 import { stopChatSessionsAndWait } from "./shutdown.js";
 
+export { END_CAUSES } from "../ended-note.js";
+
 export { SessionDeletingError } from "../delete/deletion-state.js"; export type { ChatSessionRegistryOptions } from "./options.js";
 
 const DEFAULT_MAX_LIVE = 2;
