@@ -1,6 +1,6 @@
 ---
 title: "The once-a-second maintenance check closes a chat that has live background subagents, because it counts only a running turn as busy"
-workstream: unattached
+workstream: maintenance-live-tasks
 area: beebox
 labels: [chat, background-tasks, maintenance, prod]
 filed-by: agent
@@ -47,26 +47,20 @@ made the sweep and the live cap skip chats with live tasks. This maintenance
 path was not covered. The sweep line after it is the normal follow-up once the
 run is gone.
 
-## Not yet found: what took the maintenance lock
+## What took the maintenance lock (verified 2026-11-02)
 
-Owners in the code: `src/core/docs-refresh.ts` (docs refresh, also run by the
-reactor cycle's `refreshDocsStage`), `src/core/migration-sweep.ts`,
-`src/core/box-backup/run/backup.ts`, `src/cli/commands/upgrade.ts`, and
-`src/hub/supervisor/supervised-reload.ts`.
+The hourly `box-convergence` schedule, run from the dev machine
+(`schedules/box-convergence/run.ts:56`), SSHes
+`bbx engine migrate --sweep --repair --yield --json` into every production
+box. On the affected box its session opened at 14:07:12 and 18:12:13 UTC, one
+second before each set of restarts. No migration was pending and no question
+was open; the sweep's peek closed the box because `docsRefreshHasWork` was true
+(mtime-based, so the subagents' card edits made it true). The box's
+`.beebox/docs-generated-at` marker was rewritten at 18:12:18, just after the
+third restart, and no docs commit followed: the regeneration changed nothing.
 
-- Backup: ruled out. The box's hourly backup ran at 14:09:52 and 18:01:10 and
-  skipped ("backups are not configured").
-- The box's scheduler pass (`beebox-pass@<box>`) runs about once a minute and
-  takes about one second. One started at 18:11:45, 30 seconds before the
-  stop. Check whether the pass or the reactor cycle it starts can run a docs
-  refresh or migration sweep that takes the lock. The subagents were
-  committing card edits in both windows, and a schema or guidance change in
-  those commits could make the generated docs stale.
-- The chat and its subagents ran no `bbx docs refresh`, `bbx migrate`, or
-  `bbx upgrade` in either window (checked from the session transcripts).
-- The lock record under the box's `.git/bbx-maintenance/` is cleared when the
-  owner finishes. Logging the owner's reason when quiescing would make the
-  next incident self-explaining.
+The same box's journal shows the pattern four more times that day: 03:37,
+04:38, 05:43 UTC (convergence runs) and 08:10 UTC (the morning deploy).
 
 ## Fix directions
 
@@ -100,3 +94,47 @@ is a separate question; see
   with live background tasks as busy: wait for it with a bound, never close it
   while idle-with-tasks. On a bound miss, maintenance is deferred; an operation
   that cannot defer (deploy) tells the chat why it stopped.
+
+## Done (worktree `maintenance-live-tasks`, plan `beebox/docs/plans/maintenance-live-tasks.md`)
+
+- Docs refresh is ordinary box work and never takes box maintenance. The
+  sweep runs it in its open peek; only a pending migration or question closes
+  the box now. The snapshot/pending-ref/index-rollback machinery is removed: it
+  is only correct under exclusivity, and generated output is reproducible. A
+  rejected template commit now unstages what it staged.
+- The server's poll does not close chat runs while any run has live
+  background tasks, stalled or not. A deferrable owner (sweep, upgrade,
+  backup) times out its drain and defers. A deployment or development reload
+  writes `endsBackgroundTasksAt` (a minute after closing) and then ends those
+  runs. The poll logs the owner once per attempt:
+  `[maintenance] Closing idle chat runs for <reason> (pid, since)` or
+  `[maintenance] <owner> waits for N chat(s) with live background tasks`.
+- A run ended that way leaves `.beebox/chat-run-ended/<session>.json`; the next
+  turn reads it as a `<run-ended reason="deployment">` element inside its
+  `<chat-app>` snapshot, and it is removed once that turn is dispatched.
+
+Findings from the report's checks:
+
+- The live-task set includes nested subagents and `run_in_background` Bash
+  commands: it is every non-ambient entry of the SDK's
+  `background_tasks_changed` signal, which the SDK documents as every live
+  task, with `parent_task_id` for tasks a subagent launched.
+- A subagent waiting on its own child does not read as quiet: the stall clock
+  resets on every message the run emits, including a nested task's
+  `task_progress`. Only a whole run silent for 4 h (for example one silent
+  background shell) reads as stalled, and maintenance no longer uses the stall
+  rule at all.
+
+Left open:
+
+- The deploy that ships this fix still runs on the old server, which quiesces
+  on `busy` only; that one deploy behaves as before.
+- When the last background task finishes during a drain and the CLI answers
+  its notification without a `send`, it is unverified whether the session
+  reads as busy; pre-existing for any idle run.
+- A run ended by a non-maintenance shutdown (OOM, manual restart) gets no
+  cause note: the cause is not known in-process.
+- Out of scope, noted only: a detached runner for multi-hour work that
+  survives deploys (fix direction 4); host memory sizing
+  ([large box mode](../features/2026-11-01-large-box-mode.md)).
+- Filed: [template sync read-then-write race](../code-quality/2026-11-02-template-sync-read-then-write-race-with-chat-edits.md).
