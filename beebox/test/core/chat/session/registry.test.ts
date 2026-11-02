@@ -499,7 +499,7 @@ void test("the sweep keeps a chat with a live background task until it settles o
 
   // Maintenance reads the set itself, not the stall rule: a run quiet past the
   // limit still reports its task, so a deferrable owner never closes it
-  // (`docs/plans/maintenance-live-tasks.md`).
+  // (`docs/implemented-plans/maintenance-live-tasks.md`).
   const quiet = registry.getOrCreate("s-quiet");
   await quiet.send("go");
   await tick();

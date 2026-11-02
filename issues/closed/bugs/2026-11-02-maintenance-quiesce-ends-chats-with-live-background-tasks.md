@@ -6,7 +6,10 @@ labels: [chat, background-tasks, maintenance, prod]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — box-agent report from a hosted box, 2026-11-02"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-02):** Fix directions 1-3 landed on this branch (see plan in docs/implemented-plans/maintenance-live-tasks.md). Direction 4 (detached long-job runner) and host memory sizing left open as out of scope; remaining items are listed in the issue's Left open section.
 
 A chat on a hosted box runs multi-hour research as background subagents
 (Agent tool, `run_in_background`). When the chat's Claude process ends, the
@@ -75,15 +78,15 @@ The same box's journal shows the pattern four more times that day: 03:37,
    maintenance lock while chats are active.
 4. Larger: a supported way to run multi-hour work outside the chat process
    (a detached job that survives chat restarts and deploys). Related:
-   [done-but-still-working state](../features/2026-09-11-done-but-still-working-state.md)
-   and [stop button and background subagents](../decisions/2026-08-25-chat-stop-and-background-subagents.md).
+   [done-but-still-working state](../../features/2026-09-11-done-but-still-working-state.md)
+   and [stop button and background subagents](../../decisions/2026-08-25-chat-stop-and-background-subagents.md).
 
 Still to check from the report: whether the live-task set includes nested
 subagents and `run_in_background` Bash commands, and whether a subagent
 waiting on its own child reads as quiet to the stall computation
 (`BACKGROUND_STALL_MS`, `run/live-tasks.ts`). Host memory on the 3.8 GB host
 is a separate question; see
-[large box mode](../features/2026-11-01-large-box-mode.md) for the OOM history.
+[large box mode](../../features/2026-11-01-large-box-mode.md) for the OOM history.
 
 ## Direction (boxholder, 2026-11-02)
 
@@ -95,7 +98,7 @@ is a separate question; see
   while idle-with-tasks. On a bound miss, maintenance is deferred; an operation
   that cannot defer (deploy) tells the chat why it stopped.
 
-## Done (worktree `maintenance-live-tasks`, plan `beebox/docs/plans/maintenance-live-tasks.md`)
+## Done (worktree `maintenance-live-tasks`, plan `beebox/docs/implemented-plans/maintenance-live-tasks.md`)
 
 - Docs refresh is ordinary box work and never takes box maintenance. The
   sweep runs it in its open peek; only a pending migration or question closes
@@ -136,5 +139,5 @@ Left open:
   cause note: the cause is not known in-process.
 - Out of scope, noted only: a detached runner for multi-hour work that
   survives deploys (fix direction 4); host memory sizing
-  ([large box mode](../features/2026-11-01-large-box-mode.md)).
-- Accepted by the boxholder ("Agents can handle the occasional collision"), closed wontfix: [template sync read-then-write race](../closed/code-quality/2026-11-02-template-sync-read-then-write-race-with-chat-edits.md).
+  ([large box mode](../../features/2026-11-01-large-box-mode.md)).
+- Accepted by the boxholder ("Agents can handle the occasional collision"), closed wontfix: [template sync read-then-write race](../code-quality/2026-11-02-template-sync-read-then-write-race-with-chat-edits.md).

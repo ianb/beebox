@@ -2,7 +2,7 @@
  * Refresh generated docs as ordinary box work. Docs refresh never takes box
  * maintenance: it writes engine output that chat agents do not edit, the same
  * generator runs unguarded at every chat start, and closing the box for it
- * ended running chats (docs/plans/maintenance-live-tasks.md, Track 1).
+ * ended running chats (docs/implemented-plans/maintenance-live-tasks.md, Track 1).
  */
 import { rm } from "node:fs/promises";
 import { join } from "node:path";

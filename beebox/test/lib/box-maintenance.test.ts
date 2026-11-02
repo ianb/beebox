@@ -435,7 +435,7 @@ void test("The per-process lease sidecar lists the live reasons.", async (t) => 
 //
 // The deployment holder and the development reload pass
 // `endsBackgroundTasksAt`; the server's poll reads the time from the phase
-// record (`docs/plans/maintenance-live-tasks.md`, Track 2). The time is fixed
+// record (`docs/implemented-plans/maintenance-live-tasks.md`, Track 2). The time is fixed
 // when the box closes and survives the move to the exclusive phase. A
 // deferrable owner writes none, so its drain times out instead.
 void test("An owner that cannot defer records when it ends live background tasks", async (t) => {

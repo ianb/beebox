@@ -3,7 +3,7 @@
 // `refreshGeneratedDocs` is what `bbx migrate --sweep` and `bbx docs refresh` run:
 // regenerate the box's agent docs, card rules, and managed skills if the engine
 // that wrote them has moved on, and commit the result. It is ordinary box work,
-// never box maintenance (`docs/plans/maintenance-live-tasks.md`, Track 1), and it
+// never box maintenance (`docs/implemented-plans/maintenance-live-tasks.md`, Track 1), and it
 // commits with the same scope as the generator's own commit at chat start.
 // See `src/core/docs-refresh.ts`.
 
@@ -247,7 +247,7 @@ void test("A rejected commit invalidates the cache, and the retry commits the ou
 // ## A stale refresh never closes the box
 //
 // The hourly sweep's refresh closed a box with a running chat and ended its
-// background tasks (`docs/plans/maintenance-live-tasks.md`). Now a refresh with
+// background tasks (`docs/implemented-plans/maintenance-live-tasks.md`). Now a refresh with
 // real work runs beside live box work: it finishes while the work is still held
 // and writes no maintenance record.
 void test("A stale refresh never closes the box", async (t) => {

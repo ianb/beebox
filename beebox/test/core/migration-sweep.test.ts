@@ -109,7 +109,7 @@ void test("The common case — this runs against every box on every deploy, so t
 //
 // The hourly pass sweeps with `refresh`. Stale generated docs used to send it
 // through box maintenance, which ended a running chat's background tasks
-// (`docs/plans/maintenance-live-tasks.md`). Now the refresh runs as ordinary
+// (`docs/implemented-plans/maintenance-live-tasks.md`). Now the refresh runs as ordinary
 // box work in the open peek: with live work held, the pass refreshes and
 // answers `current`, and no maintenance phase is ever written.
 void test("Stale docs alone never close the box", async (t) => {

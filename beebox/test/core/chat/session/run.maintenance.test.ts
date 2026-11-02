@@ -68,7 +68,7 @@ third queued before closure` }],
 // ## Maintenance that cannot wait tells the chat why its tasks ended
 //
 // A deployment ends a chat that sits between turns with live background tasks
-// (`docs/plans/maintenance-live-tasks.md`, Tracks 2–3). The run ends outright,
+// (`docs/implemented-plans/maintenance-live-tasks.md`, Tracks 2–3). The run ends outright,
 // and the next turn carries a `<run-ended>` element inside the `<chat-app>`
 // snapshot, which the person's message display strips. A turn that fails to
 // start keeps the note for the one after it; a dispatched turn removes it.

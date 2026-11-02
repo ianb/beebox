@@ -4,7 +4,7 @@
 // one-second poll's rule. A turn always waits. A chat between turns with live
 // background tasks waits too, unless the owner cannot defer and its wait has run
 // out. The hourly sweep used to close such a chat and kill its subagents
-// (`docs/plans/maintenance-live-tasks.md`).
+// (`docs/implemented-plans/maintenance-live-tasks.md`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

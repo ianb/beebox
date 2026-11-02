@@ -5,7 +5,7 @@
  * not finish; this note adds the cause. One small file per session under
  * `.beebox/`, read into the next turn's `<chat-app>` snapshot (hidden from the
  * person's message) and removed once that turn is dispatched
- * (docs/plans/maintenance-live-tasks.md, Track 3).
+ * (docs/implemented-plans/maintenance-live-tasks.md, Track 3).
  */
 import fs from "node:fs";
 import path from "node:path";

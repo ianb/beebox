@@ -1,9 +1,9 @@
 ---
 title: "Box maintenance waits for chats with live background tasks"
-status: draft
+status: implemented
 workstream: maintenance-live-tasks
 issues:
-  - ../../../issues/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md
+  - ../../../issues/closed/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md
 ---
 # Box maintenance waits for chats with live background tasks
 

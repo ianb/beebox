@@ -3,7 +3,7 @@
  * A turn in progress always waits. A run between turns with live background
  * tasks also waits, unless the owner cannot defer and its wait has run out
  * (`endsBackgroundTasksAt` on the phase record). A deferrable owner's drain
- * then times out and it defers (docs/plans/maintenance-live-tasks.md).
+ * then times out and it defers (docs/implemented-plans/maintenance-live-tasks.md).
  */
 
 import { pauseBoxChatSchedules, resumeBoxChatSchedules, boxChatScheduleDeliveriesAreIdle } from "../../core/chat/schedules/core.js";
