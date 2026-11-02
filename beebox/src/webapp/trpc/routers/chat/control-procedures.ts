@@ -289,10 +289,10 @@ export const chatControlProcedures = {
       if (target.isBusy()) {
         // Mid-turn — defer restart to the turn's end so the response isn't lost.
         target.once("done", () => {
-          if (target.isRunning()) target.restart();
+          if (target.isRunning()) target.restart({ cause: "a model change was requested" });
         });
       } else {
-        target.restart();
+        target.restart({ cause: "a model change was requested" });
         restarted = true;
       }
     }
@@ -430,7 +430,7 @@ export const chatControlProcedures = {
     const { registry } = requireRuntime(ctx.boxRoot);
     const target = registry.get(input.session);
     if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "session not live" });
-    target.restart();
+    target.restart({ cause: "a restart was requested" });
     return { ok: true };
   }),
 

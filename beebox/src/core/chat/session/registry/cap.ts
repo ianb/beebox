@@ -13,6 +13,8 @@ import { makeLog } from "../log.js";
 import type { RegistryEntry } from "./options.js";
 
 const log = makeLog("ChatSessionRegistry");
+/** What a hung chat's next turn hears; a working chat is held (`isHeld`), so only a stalled one ends here. */
+const HUNG_CAUSE = "it had produced no output for 4 hours and was treated as hung";
 
 /** Whether anything still needs this entry's subprocess: a listener or background work. */
 function isHeld(entry: RegistryEntry): boolean {
@@ -24,7 +26,7 @@ export function evictIdleEntries(entries: Map<string, RegistryEntry>, cutoff: nu
   for (const [id, entry] of entries) {
     if (entry.lastActivity > cutoff || isHeld(entry)) continue;
     log("sweep", `Idle eviction of ${id}`);
-    entry.session.stop();
+    entry.session.stop(HUNG_CAUSE);
     entries.delete(id);
   }
 }
@@ -49,7 +51,7 @@ export function enforceLiveCap(
     if (candidate.id === opts.currentSessionId) continue;
     if (isHeld(candidate.entry)) continue;
     log("evict", `Stopping subprocess for ${candidate.id} (LRU under cap)`);
-    candidate.entry.session.stop();
+    candidate.entry.session.stop(HUNG_CAUSE);
     return;
   }
   log("evict", `Live cap reached but no evictable candidate (refcounts: ${live.map((l) => `${l.id}=${l.entry.refCount}`).join(", ")})`);

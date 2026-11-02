@@ -1,8 +1,8 @@
-// # A persistent SDK run retains admission across turns
+// # A persistent SDK run retains admission across turns, and a chat learns why its background tasks were cut off
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any, isoDate, str } from "@ianbicking/tap-check/check";
+import { any, isoDate, str, uuid } from "@ianbicking/tap-check/check";
 import { once } from "node:events";
 import assert from "node:assert/strict";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
@@ -10,6 +10,7 @@ import { createFakeChatBackend } from "../../../../src/services/claude-chat/core
 import { acquireBoxWork, closeBoxMaintenance } from "../../../../src/lib/box-maintenance/admission.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { waitForRuns } from "../../../helpers/chat-session-spawner-helpers.js";
+import { createTaskRecorder, pendingRunEndedNote } from "../../../../src/core/chat/session/run/ended-note.js";
 
 void test("line 13", async (t) => {
   t.teardown(async () => {
@@ -65,25 +66,23 @@ third queued before closure` }],
   ]);
 });
 
-// ## Maintenance that cannot wait tells the chat why its tasks ended
+// ## A chat learns why and when its background tasks were cut off
 //
-// A deployment ends a chat that sits between turns with live background tasks
-// (`docs/implemented-plans/maintenance-live-tasks.md`, Tracks 2–3). The run ends outright,
-// and the next turn carries a `<run-ended>` element inside the `<chat-app>`
-// snapshot, which the person's message display strips. A turn that fails to
-// start keeps the note for the one after it; a dispatched turn removes it.
-void test("Maintenance that cannot wait tells the chat why its tasks ended", async (t) => {
-  t.teardown(async () => {
-    try {
-      session.stop();
-      await box.cleanup();
-    } catch (error) {
-      t.error(error);
-    }
-  });
+// While a run has live background tasks, the session keeps a record under
+// `.beebox/chat-run-ended/`; the server stamps a cause when it ends the run.
+// The next turn carries a `<run-ended>` element inside the `<chat-app>`
+// snapshot, which the person's message display strips
+// (`docs/plans/chat-termination-notes.md`). A turn that fails to start keeps the
+// note for the one after it; a dispatched turn removes it.
+
+const NOTE = ".beebox/chat-run-ended/sess-1.json";
+
+/** A session whose first run has one live background task, between turns. */
+async function researchingSession(t: { teardown(fn: () => Promise<void>): void }) {
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true, systemPrompt: async () => "test", initialSessionId: "sess-1" });
+  t.teardown(async () => { session.stop(); await box.cleanup(); });
   await session.send("research this");
   const run = backend.lastRun();
   assert.ok(run);
@@ -91,27 +90,118 @@ void test("Maintenance that cannot wait tells the chat why its tasks ended", asy
   const done = once(session, "done");
   run.emitResult();
   await done;
+  return { box, backend, session, run };
+}
+
+void test("Maintenance that cannot wait tells the chat why its tasks ended", async (t) => {
+  const { box, backend, session, run } = await researchingSession(t);
+
+  // While the task is live the record holds it; an ordinary turn now carries no note.
+  t.check(JSON.parse(await box.read(NOTE)), { tasks: ["collect sources"], lastSeenAt: isoDate(), writer: uuid() });
+  await session.send("how is it going?");
+  t.check(run.sent.at(-1), [{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>
+how is it going?` }]);
+  const busy = once(session, "done");
+  run.emitResult();
+  await busy;
 
   session.pauseForMaintenance("deployment");
-  t.check({ aborted: run.aborted, note: JSON.parse(await box.read(".beebox/chat-run-ended/sess-1.json")) }, {
+  t.check({ aborted: run.aborted, note: JSON.parse(await box.read(NOTE)) }, {
     aborted: true,
-    note: { at: isoDate(), reason: "deployment", tasks: ["collect sources"] },
+    note: { tasks: ["collect sources"], lastSeenAt: isoDate(), writer: uuid(), at: isoDate(), cause: "box maintenance (deployment)" },
   });
   session.resumeAfterMaintenance();
 
   backend.failNextStart = new Error("provider down");
   await t.checkThrows(async () => session.send("did it finish?"), "Error");
-  t.check(await box.list(".beebox/chat-run-ended"), ".beebox/chat-run-ended/sess-1.json");
+  t.check(await box.list(".beebox/chat-run-ended"), NOTE);
 
   await session.send("did it finish?");
   t.check({ sent: backend.lastRun()?.sent, notes: await box.list(".beebox/chat-run-ended") }, {
     sent: [[{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}">
-<run-ended at="${isoDate()}" reason="deployment">
-Box maintenance (deployment) ended your previous run while 1 background task was still running. They did not finish; restart any that are still needed.
+<run-ended at="${isoDate()}" cause="box maintenance (deployment)">
+Your previous run ended at ${isoDate()} while 1 background task was still running, because box maintenance (deployment). They did not finish; restart any that are still needed.
 - collect sources
 </run-ended>
 </chat-app>
 did it finish?` }]],
     notes: "",
   });
+});
+
+// ## A run that ends on its own says so
+//
+// The agent process can exit without the server ending it (a crash, or the
+// kernel killing just that process). The close handler sees live tasks and no
+// recorded end.
+void test("A run that ends on its own says so", async (t) => {
+  const { box, backend, session, run } = await researchingSession(t);
+  const closed = once(session, "close");
+  await run.close();
+  await closed;
+  await session.send("did it finish?");
+  t.check(backend.lastRun()?.sent, [[{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}">
+<run-ended at="${isoDate()}" cause="the agent process ended on its own">
+Your previous run ended at ${isoDate()} while 1 background task was still running, because the agent process ended on its own. They did not finish; restart any that are still needed.
+- collect sources
+</run-ended>
+</chat-app>
+did it finish?` }]]);
+  t.check(await box.list(".beebox/chat-run-ended"), "");
+});
+
+// ## A record no process stamped means the server itself stopped
+//
+// A record another server process wrote and never stamped is from a run this
+// process never saw end: the server crashed or was killed (out of memory, most
+// often). The note gives the last time the run was seen working. Notes the
+// first, maintenance-only version wrote (`{ at, reason, tasks }`) still read.
+void test("A record no process stamped means the server itself stopped", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  const backend = createFakeChatBackend();
+  const session = new ChatSession(box.root, { backend, skipBootstrap: true, systemPrompt: async () => "test", initialSessionId: "sess-1" });
+  t.teardown(async () => { session.stop(); await box.cleanup(); });
+  await box.write(NOTE, JSON.stringify({ tasks: ["collect sources", "draft summary"], lastSeenAt: "2026-11-02T14:06:00.000Z", writer: "an-earlier-server" }));
+  await session.send("did it finish?");
+  t.check(backend.lastRun()?.sent, [[{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}">
+<run-ended last-seen="2026-11-02T14:06:00.000Z" cause="unknown">
+Your previous run ended while 2 background tasks were running; it was last seen working at 2026-11-02T14:06:00.000Z. No cause was recorded, and the Bee Box server restarted since (at ${isoDate()}), so the server most likely crashed or was killed, for example for running out of memory. They did not finish; restart any that are still needed.
+- collect sources
+- draft summary
+</run-ended>
+</chat-app>
+did it finish?` }]]);
+
+  const done = once(session, "done");
+  backend.lastRun()?.emitResult();
+  await done;
+  await box.write(NOTE, JSON.stringify({ at: "2026-11-02T20:05:00.000Z", reason: "deployment", tasks: ["collect sources"] }));
+  await session.send("and now?");
+  t.check(backend.lastRun()?.sent.at(-1), [{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}">
+<run-ended at="2026-11-02T20:05:00.000Z" cause="box maintenance (deployment)">
+Your previous run ended at 2026-11-02T20:05:00.000Z while 1 background task was still running, because box maintenance (deployment). They did not finish; restart any that are still needed.
+- collect sources
+</run-ended>
+</chat-app>
+and now?` }]);
+});
+
+// ## Clearing a delivered note keeps a record written since
+//
+// The turn that carries a note may start a run whose own tasks write a fresh
+// record before the note is cleared. Clearing removes the file only if it still
+// holds what was read.
+void test("Clearing a delivered note keeps a record written since", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(async () => { await box.cleanup(); });
+  const recorder = createTaskRecorder(box.root, () => "sess-1");
+  recorder.ended({ tasks: ["old task"], cause: "the Bee Box server shut down", now: new Date("2026-11-02T20:00:00.000Z") });
+  const pending = pendingRunEndedNote(box.root, "sess-1");
+  recorder.observe(["new task"], new Date("2026-11-02T20:01:00.000Z"));
+  pending.clear();
+  t.check(JSON.parse(await box.read(NOTE)), { tasks: ["new task"], lastSeenAt: "2026-11-02T20:01:00.000Z", writer: uuid() });
+
+  // The new tasks settle: their unstamped record goes. A stamped one waiting for its turn would stay.
+  recorder.observe([], new Date("2026-11-02T20:02:00.000Z"));
+  t.check(await box.list(".beebox/chat-run-ended"), "");
 });
