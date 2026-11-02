@@ -313,7 +313,7 @@ unfinished skill stays out (2); run-ended note cleanup never throws and runs
 after dispatch (3). Sent to the boxholder: `generateDocs` also installs
 templates and rewrites the box's `AGENTS.md` includes, so refresh is not
 generated-output-only (1); recorded in
-`issues/code-quality/2026-11-02-template-sync-read-then-write-race-with-chat-edits.md`.
+`issues/closed/code-quality/2026-11-02-template-sync-read-then-write-race-with-chat-edits.md`.
 
 ## Subplans
 

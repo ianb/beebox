@@ -1,12 +1,15 @@
 ---
 title: "Docs generation reads box files chats edit (templates, root AGENTS.md), then rewrites them, with no guard against an edit in between"
-workstream: unattached
+workstream: maintenance-live-tasks
 area: beebox
 labels: [templates, concurrency, docs-gen]
 filed-by: agent
 discovered-by: agent
 discovered-in: "maintenance-live-tasks plan review (Codex), 2026-11-02"
+resolution: wontfix
 ---
+
+**Closed (wontfix, 2026-11-02):** Boxholder, 2026-11-02: "Agents can handle the occasional collision." The millisecond window is accepted; no guard added.
 
 `generateDocs` runs template sync (`syncTemplatesFromSource`) at every chat
 start (`src/core/chat/session/run/start-run.ts:117`), every reactor cycle

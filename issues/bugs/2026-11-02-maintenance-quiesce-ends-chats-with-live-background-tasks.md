@@ -137,4 +137,4 @@ Left open:
 - Out of scope, noted only: a detached runner for multi-hour work that
   survives deploys (fix direction 4); host memory sizing
   ([large box mode](../features/2026-11-01-large-box-mode.md)).
-- Filed: [template sync read-then-write race](../code-quality/2026-11-02-template-sync-read-then-write-race-with-chat-edits.md).
+- Accepted by the boxholder ("Agents can handle the occasional collision"), closed wontfix: [template sync read-then-write race](../closed/code-quality/2026-11-02-template-sync-read-then-write-race-with-chat-edits.md).
