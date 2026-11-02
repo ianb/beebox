@@ -2,7 +2,7 @@
 title: "On return to a chat, the old transcript shows with no sign that newer history is loading"
 workstream: unattached
 area: beebox
-labels: [chat, ux]
+labels: [chat, ux, ios]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder report, 2026-11-01"
@@ -32,9 +32,11 @@ Leads, to check while fixing:
   Reconnecting the WebSocket after a long background adds to it.
 - The chat machine (`machines/chatMachine/`) may already have a state for an
   in-flight refresh that the transcript does not render.
-- Not confirmed which client this was (desktop web, mobile web, or the iOS
-  app's web view). The iOS app suspends the web view in the background, so
-  the wait is probably longest there.
+- Seen in the iOS app (boxholder, 2026-11-02). iOS suspends the app's web
+  view in the background, so on return the WebSocket reconnects and the
+  deferred refresh runs only after the view resumes. Check whether the native
+  side (`ios-app/`) shows its own state before the web view repaints, and use
+  the bbx-ios-overlap skill if the fix touches the bridge.
 
 Related: [iOS chat list stale while the box is asleep](2026-10-26-ios-shows-stale-chat-when-box-is-asleep.md)
 (the same "old state with no sign it is old" problem for the chat list) and
