@@ -336,7 +336,7 @@ export class ChatSession extends EventEmitter {
     // before run creation: observers of "a run exists" (drain-path tests,
     // callers polling the backend) expect run.send to follow run creation
     // with no awaits in between.
-    const content = await composeTurnContent(this.boxRoot, {
+    const { content, dispatched } = await composeTurnContent(this.boxRoot, {
       rawInput,
       features: this.features,
       // "First message of this conversation", not "no id yet": a coined chat
@@ -344,6 +344,7 @@ export class ChatSession extends EventEmitter {
       // first-message-only context (last activity, calendar, health).
       sessionStart: this.sessionId === null || this.coined.pending,
       healthGate: this.healthGate,
+      sessionId: this.sessionId,
     });
 
     if (this.liveRun() === null) {
@@ -369,13 +370,14 @@ export class ChatSession extends EventEmitter {
       log("send", `Dispatch failed, turn abandoned: ${errorMessage(e)}`);
       throw e;
     }
+    dispatched();
     return true;
     } finally { this.preparingTurn = false; }
   }
 
-  /** Close an idle subprocess for maintenance without discarding its queued input. */
-  pauseForMaintenance(): void { this.maintenancePaused = true;
-    if (!this.isBusy()) this.restart();
+  /** Close an idle subprocess for maintenance without discarding its queued input; `reason` names the owner. */
+  pauseForMaintenance(reason?: string): void { this.maintenancePaused = true;
+    if (!this.isBusy()) this.restart(reason === undefined ? undefined : { endedFor: reason });
   }
 
   resumeAfterMaintenance(): void { this.maintenancePaused = false;
@@ -443,6 +445,9 @@ export class ChatSession extends EventEmitter {
   /** A background task is live and the run has not gone quiet (`./live-tasks.ts`). */
   isWorkingInBackground(): boolean { return this.isRunning() && this.liveTasks.isWorking(); }
 
+  /** Live background tasks of the current run, stalled or not; 0 with no run. */
+  liveTaskCount(): number { return this.isRunning() ? this.liveTasks.count() : 0; }
+
   /**
    * Stop the current run gracefully. Clears the pending queue so the
    * close handler won't auto-drain into a fresh run.
@@ -472,7 +477,7 @@ export class ChatSession extends EventEmitter {
    * drains the queue into the fresh run so wedged sessions recover
    * without losing in-flight user messages.
    */
-  restart(): void {
+  restart(opts?: { endedFor?: string }): void {
     const run = this.liveRun();
     if (run === null) {
       log("restart", "No run to restart");
@@ -481,7 +486,7 @@ export class ChatSession extends EventEmitter {
     // Leave the phase as-is (ready/streaming): the close handler sees it's not
     // "stopping" and drains the queue into a fresh run.
     log("restart", "Closing run — close handler will drain any queued messages");
-    endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId });
+    endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId, ...(opts?.endedFor === undefined ? {} : { endedFor: { boxRoot: this.boxRoot, reason: opts.endedFor } }) });
   }
 
   /**

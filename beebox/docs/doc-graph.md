@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-01T18:17:32Z
-Total documents: 616
+Generated: 2026-11-02T20:02:23Z
+Total documents: 617
 
 ## Issues
 
@@ -216,6 +216,7 @@ Referenced by:
 - docs/implemented-plans/knowledge-audit-plugins.md:43 (mention) — - Root `AGENTS.md`, knowledge-audit guidance: "When fixing failures, prefer
 - docs/implemented-plans/link-validation-fix.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/local-password-auth.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/maintenance-live-tasks.md:191 (mention) — paths that pass `isTemplateManagedPath`, minus authored `AGENTS.md`
 - docs/implemented-plans/markdoc-tags-plan.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/markdoc-tags-plan.review.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -378,6 +379,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:14 (mention) — Doctests are this repository's default test form (`beebox/AGENTS.md`), and
 - ../issues/closed/code-quality/2026-10-10-pre-commit-checks-read-the-working-tree.md:40 (mention) — turn-feedback/20261019T010859Z-implemented.md. Root `AGENTS.md` "Commit and
 - ../issues/closed/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md:65 (mention) — boxholder's approval (root `AGENTS.md` on lint changes).
+- ../issues/closed/code-quality/2026-11-02-template-sync-read-then-write-race-with-chat-edits.md:2 (mention) — title: "Docs generation reads box files chats edit (templates, root AGENTS.md), then rewrites them, with no guard agains
 - ../issues/closed/decisions/2026-05-27-bin-browse-wrapper-future.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md:8 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -869,7 +871,7 @@ Referenced by:
 - docs/plans/installation-story.md:287 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:762 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:491 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:469 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:470 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:72 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -991,7 +993,7 @@ Referenced by:
 - README.md:92 (link) — [encrypted backups](docs/backups.md), scheduled restic snapshots send the
 - docs/guides.md:38 (link) — | Encrypted box backups and recovery | [backups](backups.md) |
 - docs/implemented-plans/box-backups.md:16 (link) — implemented; see the [backup guide](../backups.md) and
-- docs/security-report.md:470 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
+- docs/security-report.md:471 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
 
 References:
 - → ../mac-app/README.md (link)
@@ -1009,6 +1011,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:515 (mention) — - The weekly review line added to `docs/box-guidance.md` in phase two, which
 - docs/implemented-plans/box-agents-md.md:160 (mention) — `CLAUDE.md`"*), the four template texts, `docs/box-guidance.md`,
 - docs/implemented-plans/doc-structure-box-guidance.md:647 (mention) — 4. **Where `docs/box-guidance.md` sits in the developer docs.** Lean: a new
+- docs/implemented-plans/maintenance-live-tasks.md:392 (mention) — 4. Issue update; docs touch-ups (`docs/box-guidance.md` or wherever
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
 - docs/prompts/logging.md:131 (link) — nothing to enable. [Box guidance](../box-guidance.md) says which files carry
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:55 (mention) — - **Lives in:** `.claude/skills/bbx-context/SKILL.md`, `beebox/src/core/init-rules.ts`, `beebox/docs/box-guidance.md` (r
@@ -2253,7 +2256,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 724 lines | current reference
+Title: "Security report — structured version" | 725 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:285 (link) — page's title, site, and URL, but not its text. See [security report §3](../security-report.md#3-data-egress).
@@ -3222,6 +3225,7 @@ Referenced by:
 
 References:
 - → docs/chat/composer.md (link)
+- → docs/implemented-plans/maintenance-live-tasks.md (link)
 - → ../issues/closed/code-quality/2026-07-06-chat-session-shared-core.md (link)
 
 ### docs/connectors/
@@ -4079,7 +4083,7 @@ Title: "Box agents install distro packages on their host" | 579 lines | shipped 
 
 Referenced by:
 - docs/implemented-plans/per-box-units.md:197 (mention) — anywhere (`docs/implemented-plans/box-host-packages.md:141-143`).
-- docs/security-report.md:467 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:468 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:163 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 - ../research/embedded-browser/beebox-today.md:58 (mention) — - Docker image (`beebox/docker/Dockerfile`): `node:24-bookworm-slim`; apt installs pandoc, imagemagick, poppler, ffmpeg,
@@ -4095,6 +4099,7 @@ References:
 Title: "A box closure cannot outlive its maintenance owner" | 342 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/maintenance-live-tasks.md:84 (mention) — - `docs/implemented-plans/box-maintenance-no-wedge.md`: closure is bounded by
 - docs/plans/migration-reliability.md:238 (link) — [box-maintenance-no-wedge.md](../implemented-plans/box-maintenance-no-wedge.md):** a phase record
 - ../issues/closed/bugs/2026-09-17-ios-app-503-box-closed-rendering-unverified.md:30 (mention) — `beebox/docs/implemented-plans/box-maintenance-no-wedge.md`), a closed box
 
@@ -4223,7 +4228,7 @@ Referenced by:
 - docs/plans/source-available-release.md:395 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server/boxes.md:8 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](../implemented-plans/boxes-as-packages-v2.md)
 - docs/server/operations.md:68 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
-- docs/server/provisioning.md:209 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
+- docs/server/provisioning.md:223 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/user-stories/catalog/2026-08-21.md:9058 (mention) — - **Keep the box I have open from being stopped underneath me** — Code is fine; the story's scope is wrong. The server h
 - ../issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md:25 (mention) — `boxes-as-packages-v2.md` accepted.
@@ -5890,6 +5895,8 @@ References:
 Title: "Keep live background work through idle eviction, and end it honestly when the server must stop it" | 169 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/maintenance-live-tasks.md:19 (mention) — (the sweep and live-cap paths, `docs/implemented-plans/idle-eviction-background-work.md`).
+- ../issues/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md:45 (mention) — The idle-eviction fix (`docs/implemented-plans/idle-eviction-background-work.md`)
 - ../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md:12 (mention) — **Closed (implemented, 2026-10-30):** Fixed by 29403d204 under beebox/docs/implemented-plans/idle-eviction-background-wo
 - ../issues/closed/bugs/2026-10-30-idle-eviction-kills-running-background-subagent.md:65 (link) — Fix and evidence: [plan](../../../beebox/docs/implemented-plans/idle-eviction-background-work.md).
 
@@ -6228,6 +6235,21 @@ References:
 - → docs/scan-upload-contract.md (mention)
 - → docs/plans/mac-app-shell.md (mention)
 - → docs/architecture/spirit.md (mention)
+
+#### docs/implemented-plans/maintenance-live-tasks.md
+
+Title: "Box maintenance waits for chats with live background tasks" | 400 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat/sessions.md:60 (link) — - **Evict.** Registry eviction calls `stop()`. The sweep and the live cap skip a chat with a live background task until
+- ../issues/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md:98 (mention) — ## Done (worktree `maintenance-live-tasks`, plan `beebox/docs/implemented-plans/maintenance-live-tasks.md`)
+
+References:
+- → ../issues/bugs/2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md (frontmatter)
+- → docs/implemented-plans/idle-eviction-background-work.md (mention)
+- → docs/implemented-plans/box-maintenance-no-wedge.md (mention)
+- → AGENTS.md (mention)
+- → docs/box-guidance.md (mention)
 
 #### docs/implemented-plans/markdoc-format-investigation.md
 
@@ -9211,6 +9233,7 @@ Referenced by:
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:19 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) writes
 - ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:14 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) is
 - ../issues/features/2026-10-13-suggested-edits-tracked-changes.md:80 (link) — - [Document comments](../../beebox/docs/plans/document-comments.md) is the
+- ../issues/features/2026-11-01-point-to-comment.md:45 (mention) — `beebox/docs/plans/document-comments.md` (the comment store and its anchors).
 
 References:
 - → ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md (frontmatter)
@@ -9899,7 +9922,7 @@ References:
 Title: "Serve box publications from one shared hostname" | 172 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:707 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:708 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
@@ -9919,7 +9942,7 @@ Title: "Static site publishing with admin setup and human approval" | 296 lines 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:168 (mention) — - Mark `publish-sites-admin.md` and `publication-approval-card.md` with a note that this plan supersedes their source an
 - docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:700 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/security-report.md:701 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 - docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
@@ -10756,7 +10779,7 @@ References:
 
 #### docs/server/provisioning.md
 
-Title: "Server provisioning" | 310 lines | current reference
+Title: "Server provisioning" | 324 lines | current reference
 
 Referenced by:
 - deploy/AGENTS.md:31 (link) — Each box runs as its own user ([provisioning](../docs/server/provisioning.md)).
@@ -11049,7 +11072,7 @@ References:
 Title: "Encrypt the Cloudflare-to-origin leg on the production server" | 204 lines | past proposal | parked
 
 Referenced by:
-- docs/server/provisioning.md:274 (link) — **Not active.** Production still uses Flexible, and `nginx/beebox.conf` has no 443 listener. To activate this, first app
+- docs/server/provisioning.md:288 (link) — **Not active.** Production still uses Flexible, and `nginx/beebox.conf` has no 443 listener. To activate this, first app
 - ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:9 (frontmatter) — design: ../../beebox/docs/unimplemented-plans/origin-tls.md
 - ../issues/bugs/2026-08-07-cloudflare-flexible-ssl-origin-plaintext.md:31 (link) — Paused 2026-10-30 by the boxholder. The fix is prepared but not active: see [Activation in the origin-tls plan](../../be
 

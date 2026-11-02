@@ -21,6 +21,7 @@ import { fileExists } from "../../../lib/file-exists.js";
 import { promisify } from "node:util";
 import { lstat, mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { z } from "zod";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { cardSchemas, loadBoxSchemas } from "../../../schemas.js";
 import type { CardSchema } from "../../../exports/cards.js";
 import { generateAgentGuide } from "../../agent-guide/guide/core.js";
@@ -37,8 +38,8 @@ import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../../install-
 import { installValidationHooks } from "../../install-validation-hooks.js";
 import { boxCodePaths, getBoxShape, getBoxShapeIfPresent, type BoxShape } from "../../../lib/box-shape.js";
 import { getBoxDir } from "../../../lib/paths/core.js";
-import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../../lib/git/core/operations.js";
-import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "../shared.js";
+import { isRepo, hasCommits, getStatus, stageFiles, unstageFiles, commitPaths, withBoxGitLock } from "../../../lib/git/core/operations.js";
+import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, readDocId, withDocId } from "../shared.js";
 import { getTemplatesOwnedBy, type TemplateDefinition } from "../../../templates-registry.js";
 import { ensureEngineDocs, writeBoxCardDocs } from "../box-docs.js";
 import {
@@ -79,6 +80,15 @@ const DeployInfoSchema = z.object({
  * was current" from "docs were regenerated".
  */
 export const GENERATE_MARKER = ".beebox/docs-generated-at";
+
+/** The marker's text, or null when no run has written one. */
+export async function readGenerateMarker(boxRoot: string): Promise<string | null> {
+  try { return await readFile(join(boxRoot, GENERATE_MARKER), "utf8"); }
+  catch (error) {
+    if (errnoCode(error) === "ENOENT") return null;
+    throw error;
+  }
+}
 
 /**
  * Version signal for the running beebox code, used to invalidate the
@@ -122,8 +132,8 @@ async function getBeeBoxVersion(): Promise<string | null> {
 }
 
 export interface GenerateDocsOptions {
-  /** Let the maintenance controller commit only measured output paths. */
-  commit?: boolean | undefined;
+  /** False leaves output uncommitted (dev lint); an object names the commit (docs refresh). */
+  commit?: boolean | { message: string; trailers: Record<string, string> } | undefined;
   /** Bypass the input-mtime / source-commit cache and regenerate everything.
    *  Use during dev when source has uncommitted changes that affect output,
    *  or in test infrastructure where stale docs would invalidate results. */
@@ -269,9 +279,20 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
  */
 export async function commitTemplateSyncChanges(
   boxRoot: string,
-  options?: { keepUncommitted?: ReadonlySet<string> },
+  options?: { keepUncommitted?: ReadonlySet<string>; message?: string; trailers?: Record<string, string> },
 ): Promise<void> {
   const keep = options?.keepUncommitted ?? new Set<string>();
+  // A dirty file in a `generated` surface that carries the engine's DOCID
+  // marker is an earlier run's uncommitted output, not someone's edit; an
+  // unmarked one (a box's own skill) stays kept.
+  const engineOutput = async (p: string): Promise<boolean> => {
+    if (guidanceSurfaceFor(p)?.class !== "generated") return false;
+    try { return readDocId(await readFile(join(boxRoot, p), "utf8")) === p; }
+    catch (error) {
+      if (errnoCode(error) === "ENOENT" || errnoCode(error) === "EISDIR") return false; // a deletion or a directory entry
+      throw error;
+    }
+  };
   const shape = await getBoxShape(boxRoot);
   const { boxRoot: repoRoot } = shape;
   if (!(await isRepo(repoRoot))) return;
@@ -280,18 +301,27 @@ export async function commitTemplateSyncChanges(
   await withBoxGitLock(repoRoot, async () => {
     const status = await getStatus(repoRoot);
     const candidates = [...status.staged, ...status.modified, ...status.untracked];
-    const managed = candidates.filter((p) => isTemplateManagedPath(p) && !keep.has(p));
+    const kept = await Promise.all(candidates.map(async (p) => keep.has(p) && !(await engineOutput(p))));
+    const managed = candidates.filter((p, i) => isTemplateManagedPath(p) && kept[i] !== true);
     const authored = await Promise.all(managed.map((p) => isAuthoredAgentsMd(repoRoot, p)));
     const toCommit = managed.filter((_p, i) => authored[i] !== true);
     if (toCommit.length === 0) return;
 
     // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
     await stageFiles(repoRoot, toCommit);
-    await commitPaths(repoRoot, {
-      paths: toCommit,
-      message: "Sync templates from upstream",
-      trailers: { "Triggered-By": "generateDocs" },
-    });
+    try {
+      await commitPaths(repoRoot, {
+        paths: toCommit,
+        message: options?.message ?? "Sync templates from upstream",
+        trailers: options?.trailers ?? { "Triggered-By": "generateDocs" },
+      });
+    } catch (error) {
+      // A rejected commit (a hook) must not leave its staging behind. Still
+      // under the git lock, so no other commit can land in between.
+      const staged = new Set(status.staged);
+      await unstageFiles(repoRoot, toCommit.filter((p) => !staged.has(p)));
+      throw error;
+    }
   });
 }
 
@@ -463,7 +493,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   await ensureAgentContext(boxRoot, briefingPaths);
 
   // Every tracked output above lands in one commit, after the last writer.
-  if (shouldCommit) await commitTemplateSyncChanges(boxRoot, { keepUncommitted: dirtyBefore });
+  if (shouldCommit) await commitTemplateSyncChanges(boxRoot, { keepUncommitted: dirtyBefore, ...(typeof options.commit === "object" ? options.commit : {}) });
 
   // Write marker so next call can skip if nothing changed
   const commitLine = currentCommit ? `\n${currentCommit}` : "";

@@ -6,6 +6,7 @@
 
 import type { ChatBackendRun } from "../../../../services/claude-chat/core.js";
 import type { LiveTaskEntry } from "../messages.js";
+import { recordRunEnded } from "./ended-note.js";
 
 /**
  * How long a run with live tasks may produce no message before the registry
@@ -20,6 +21,7 @@ export interface LiveTasks {
   /** Record that the run produced a message, surfaced to consumers or not. */
   noteRunMessage(): void;
   count(): number;
+  descriptions(): string[];
   isWorking(): boolean;
 }
 
@@ -30,6 +32,7 @@ export function createLiveTasks(now: () => number): LiveTasks {
     set(next) { tasks = next; },
     noteRunMessage() { lastRunMessageAt = now(); },
     count: () => tasks.length,
+    descriptions: () => tasks.map((task) => task.description),
     isWorking: () => tasks.length > 0 && now() - lastRunMessageAt < BACKGROUND_STALL_MS,
   };
 }
@@ -40,8 +43,10 @@ export function createLiveTasks(now: () => number): LiveTasks {
  * refusal, and the parent would report that refusal. The CLI tells the next
  * turn they did not finish.
  */
-export function endRun(run: ChatBackendRun, { tasks, sessionId }: { tasks: LiveTasks; sessionId: string | null }): void {
+export function endRun(run: ChatBackendRun, { tasks, sessionId, endedFor }: { tasks: LiveTasks; sessionId: string | null; endedFor?: { boxRoot: string; reason: string } }): void {
   if (tasks.count() === 0) { void run.close(); return; }
-  console.warn(`[ChatSession] Ending run ${sessionId ?? "new"} with ${tasks.count()} live background task(s)`);
+  console.warn(`[ChatSession] Ending run ${sessionId ?? "new"} with ${tasks.count()} live background task(s)${endedFor === undefined ? "" : ` for ${endedFor.reason}`}`);
+  // Maintenance that cannot wait tells the next turn why (`./ended-note.ts`).
+  if (endedFor !== undefined && sessionId !== null) recordRunEnded(endedFor.boxRoot, { sessionId, reason: endedFor.reason, tasks: tasks.descriptions(), now: new Date() });
   void run.abort();
 }

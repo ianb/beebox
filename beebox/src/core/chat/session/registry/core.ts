@@ -199,9 +199,9 @@ export class ChatSessionRegistry extends EventEmitter {
   /** Running/busy snapshot of every session held — entries plus the pre-id
    *  `pending` ones, which a single-session `status` query cannot name. Touches
    *  nothing: an observer that kept sessions warm would change what it measures. */
-  snapshotAll(): { sessionId: string | null; running: boolean; busy: boolean }[] {
+  snapshotAll(): { sessionId: string | null; running: boolean; busy: boolean; liveTasks: number }[] {
     const held = [...[...this.entries.values()].map((e) => e.session), ...this.pending];
-    return held.map((s) => ({ sessionId: s.getSessionId(), running: s.isRunning(), busy: s.isBusy() }));
+    return held.map((s) => ({ sessionId: s.getSessionId(), running: s.isRunning(), busy: s.isBusy(), liveTasks: s.liveTaskCount() }));
   }
 
   /** Number of entries with a live subprocess. */
@@ -471,8 +471,8 @@ export class ChatSessionRegistry extends EventEmitter {
 
   /** Preserve entries/queued input while closing idle SDK runs for maintenance.
    *  closeWarm never rejects (see ChatBackend.closeWarm); quiescing does not wait on it. */
-  quiesceForMaintenance(): void { this.maintenance.paused = true; this.stopCleanup(); void this.backend.closeWarm?.();
-    for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.pauseForMaintenance(); }
+  quiesceForMaintenance(reason: string): void { this.maintenance.paused = true; this.stopCleanup(); void this.backend.closeWarm?.();
+    for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.pauseForMaintenance(reason); }
 
   resumeAfterMaintenance(): void { this.maintenance.paused = false; for (const session of [...this.entries.values()].map((entry) => entry.session).concat([...this.pending])) session.resumeAfterMaintenance(); this.startCleanup(); }
 

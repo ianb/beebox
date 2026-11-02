@@ -105,6 +105,39 @@ void test("The common case — this runs against every box on every deploy, so t
   await busy.release();
 });
 
+// ## Stale docs alone never close the box
+//
+// The hourly pass sweeps with `refresh`. Stale generated docs used to send it
+// through box maintenance, which ended a running chat's background tasks
+// (`docs/implemented-plans/maintenance-live-tasks.md`). Now the refresh runs as ordinary
+// box work in the open peek: with live work held, the pass refreshes and
+// answers `current`, and no maintenance phase is ever written.
+void test("Stale docs alone never close the box", async (t) => {
+  t.teardown(async () => {
+    try {
+      clearInterval(watch);
+      await busy.release();
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.write(".gitignore", ".beebox/\n_content/docs/generated/\n");
+  await box.write("AGENTS.md", "# Box\n");
+  await seedManifest(box, { pending: [] });
+  await box.commitAll("seed box");
+  const busy = await acquireBoxWork(box.root, { reason: "live chat run" });
+  const phases: string[] = [];
+  const watch = setInterval(() => { void boxMaintenanceStatus(box.root).then((status) => { if (status) phases.push(status.reason); }); }, 50);
+  const sweep = sweepMigrations({ boxRoot: box.root, yield: true, refresh: true }).then((outcome) => outcome.status);
+  t.check({
+    status: await Promise.race([sweep, new Promise((resolve) => setTimeout(() => resolve("still draining"), 20_000))]),
+    refreshed: git(box, "log", "-1", "--format=%s"),
+    phases,
+  }, { status: "current", refreshed: "Refresh generated docs", phases: [] });
+});
+
 // ## A pending script migration is applied and committed as one unit
 //
 // The manifest entry and the changes it describes land in the **same** commit, so

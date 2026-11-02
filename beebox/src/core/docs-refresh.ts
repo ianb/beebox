@@ -1,114 +1,47 @@
-/** Refresh under the same admission boundary as migrations, preserving dirty input in Git. */
-import { readFile, rm } from "node:fs/promises";
+/**
+ * Refresh generated docs as ordinary box work. Docs refresh never takes box
+ * maintenance: it writes engine output that chat agents do not edit, the same
+ * generator runs unguarded at every chat start, and closing the box for it
+ * ended running chats (docs/implemented-plans/maintenance-live-tasks.md, Track 1).
+ */
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { simpleGit } from "simple-git";
-import { stageAndCommitPaths } from "../lib/git/core/operations.js";
-import { acquireBoxMaintenance, peekBoxWork } from "../lib/box-maintenance/admission.js";
+import { withBoxWork } from "../lib/box-maintenance/admission.js";
 import { getBoxShape } from "../lib/box-shape.js";
-import { errnoCode, errorMessage } from "../shared/error-guards.js";
-import {
-  generateDocs,
-  generatedDocsAreCurrent,
-  GENERATE_MARKER,
-} from "./docs-gen/generate/core.js";
+import { errorMessage } from "../shared/error-guards.js";
+import { generateDocs, generatedDocsAreCurrent, GENERATE_MARKER, readGenerateMarker } from "./docs-gen/generate/core.js";
 import { ensureEngineDocs } from "./docs-gen/box-docs.js";
-import {
-  captureMigrationSnapshot,
-  changedMigrationPaths,
-  restoreMigrationIndex,
-  migrationOutputBaseline,
-  finishMigrationOutput,
-} from "./migration-recovery.js";
 
 export interface DocsRefreshResult { readonly status: "current" | "refreshed" }
 class DocsRefreshError extends Error {
-  constructor(ref: string, cause: unknown) {
-    super(`Docs refresh failed: ${errorMessage(cause)}. Recovery: ${ref}; restore selected input with git restore --source=${ref} -- path/to/file`, { cause });
+  constructor(cause: unknown) {
+    super(`Docs refresh failed: ${errorMessage(cause)}. Generated output is left uncommitted; the next refresh regenerates and commits it.`, { cause });
     this.name = "DocsRefreshError";
   }
 }
 
-const PENDING_REF = "refs/bbx/migrations/docs-refresh/pending";
-
-async function readMarker(boxRoot: string): Promise<string | null> {
-  try {
-    return await readFile(join(boxRoot, GENERATE_MARKER), "utf8");
-  } catch (error) {
-    if (errnoCode(error) === "ENOENT") return null;
-    throw error;
-  }
-}
-
-/** A read, not a decision: an unfinished retry or stale generated output means work. */
+/** A read, not a decision: stale generated output means work. */
 export async function docsRefreshHasWork(boxRoot: string): Promise<boolean> {
-  const pending = (await simpleGit(boxRoot).raw(["for-each-ref", "--format=%(objectname)", PENDING_REF])).trim();
-  return pending !== "" || !(await generatedDocsAreCurrent(boxRoot));
+  return !(await generatedDocsAreCurrent(boxRoot));
 }
 
-/** Retain the original baseline across a rejected commit: its output is still ours on retry. */
-async function refreshSnapshot(boxRoot: string) {
-  if (!(await docsRefreshHasWork(boxRoot))) return null;
-  const snapshot = await captureMigrationSnapshot(boxRoot, "docs-refresh");
-  return { snapshot, baseline: await migrationOutputBaseline(boxRoot, snapshot) };
-}
-
-export async function refreshGeneratedDocs(opts: {
-  boxRoot: string;
-  withinMaintenance?: boolean;
-}): Promise<DocsRefreshResult> {
+/**
+ * Admitted as box work, so a caller inside maintenance (the sweep's
+ * `maintenance.run`, deploy's `BBX_BOX_WORK`) joins its owner's permit.
+ */
+export async function refreshGeneratedDocs(opts: { boxRoot: string }): Promise<DocsRefreshResult> {
   const shape = await getBoxShape(opts.boxRoot);
   await ensureEngineDocs();
-  // Closing admission costs the box its live work. Look first; a refused look
-  // means maintenance is already under way and the ordinary path handles it.
-  if (opts.withinMaintenance !== true) {
-    const peek = await peekBoxWork({ boxRoot: shape.boxRoot, reason: "docs refresh peek" }, () => docsRefreshHasWork(shape.boxRoot));
-    if (peek.admitted && !peek.value) return { status: "current" };
-  }
-  const maintenance = await acquireBoxMaintenance(shape.boxRoot, {
-    reason: "docs refresh",
-    join: opts.withinMaintenance === true,
+  return withBoxWork({ boxRoot: shape.boxRoot, reason: "docs refresh" }, async (): Promise<DocsRefreshResult> => {
+    if (!(await docsRefreshHasWork(shape.boxRoot))) return { status: "current" };
+    const before = await readGenerateMarker(opts.boxRoot);
+    try {
+      await generateDocs(opts.boxRoot, { commit: { message: "Refresh generated docs", trailers: { "Created-By": "docs-refresh" } } });
+    } catch (error) {
+      // A missing marker keeps the box stale, so the next refresh retries.
+      await rm(join(opts.boxRoot, GENERATE_MARKER), { force: true });
+      throw new DocsRefreshError(error);
+    }
+    return { status: (await readGenerateMarker(opts.boxRoot)) === before ? "current" : "refreshed" };
   });
-  try {
-    const result = await maintenance.run(
-      async (): Promise<DocsRefreshResult> => {
-        const before = await readMarker(opts.boxRoot);
-        await maintenance.step("saving current files");
-        const input = await refreshSnapshot(shape.boxRoot);
-        if (!input) return { status: "current" };
-        const { snapshot, baseline } = input;
-        let paths: string[] = [];
-        await maintenance.beginChanges();
-        try {
-          await maintenance.step("generating docs");
-          await generateDocs(opts.boxRoot, { commit: false });
-          await maintenance.step("finding changed files");
-          paths = await changedMigrationPaths(shape.boxRoot, baseline);
-          await maintenance.step("committing");
-          await stageAndCommitPaths(shape.boxRoot, {
-            paths,
-            message: "Refresh generated docs",
-            trailers: {
-              "Created-By": "docs-refresh",
-              "Migration-Recovery": snapshot.ref,
-            },
-          });
-          await finishMigrationOutput(shape.boxRoot, snapshot);
-        } catch (error) {
-          await rm(join(opts.boxRoot, GENERATE_MARKER), { force: true });
-          await restoreMigrationIndex(shape.boxRoot, { snapshot, paths });
-          throw new DocsRefreshError(snapshot.ref, error);
-        }
-        return {
-          status:
-            (await readMarker(opts.boxRoot)) === before
-              ? "current"
-              : "refreshed",
-        };
-      },
-    );
-    await maintenance.complete();
-    return result;
-  } finally {
-    await maintenance.release();
-  }
 }
