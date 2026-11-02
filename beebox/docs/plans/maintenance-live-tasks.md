@@ -304,6 +304,17 @@ of the stall predicate (3), note removed only after dispatch (5), rollout row
 corrected (6). Rejected: development reload should defer (4); see Track 2 for
 the retry loop that makes deferral close the box repeatedly.
 
+## Diff review
+
+Codex `gpt-6-astra`, 2026-11-02, three findings; round 2 (`gpt-6-sol`)
+confirmed the two fixes. Fixed: a dirty file in a generated surface is
+committed only when it carries the engine's DOCID marker, so a box's own
+unfinished skill stays out (2); run-ended note cleanup never throws and runs
+after dispatch (3). Sent to the boxholder: `generateDocs` also installs
+templates and rewrites the box's `AGENTS.md` includes, so refresh is not
+generated-output-only (1); recorded in
+`issues/code-quality/2026-11-02-template-sync-read-then-write-race-with-chat-edits.md`.
+
 ## Subplans
 
 None.
