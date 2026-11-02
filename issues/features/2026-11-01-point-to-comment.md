@@ -44,3 +44,45 @@ Neighbors: `issues/features/2026-10-09-mobile-long-press-paragraph-to-comment.md
 (the same problem on box pages, through a long-press) and
 `beebox/docs/plans/document-comments.md` (the comment store and its anchors).
 The box app's selection-to-chat flow could use the same picker later.
+
+## How Claude's own comments work (looked up 2026-11-01)
+
+From Anthropic's documentation. Neither source describes the touch gestures
+on mobile, so check those by hand.
+
+Claude.ai artifacts (decks and designs), per
+[Use artifacts with a keyboard or screen reader](https://support.claude.com/en/articles/17457950):
+
+- A **Comment** button in the panel header turns on comment mode. Its label
+  then reads "Done commenting", and it shows the open count ("3 open
+  comments").
+- In comment mode, the pickable targets are a slide and each object on it, or
+  each artboard in a design. Picking one opens an "Add a comment" box next to
+  it. Escape closes the box, and a second Escape leaves comment mode.
+- Each comment has a **marker** on the artifact, labeled with its author.
+  Markers show only while comment mode is on, and opening one shows the
+  comment and a reply field.
+- "More comment options" → "Show all comments" lists them, and choosing a row
+  goes to that comment.
+- A "Send to Claude" checkbox decides whether a comment is also a request to
+  Claude. Comments without it stay as notes between people.
+- In a doc, the header button shows or hides the comment list instead.
+  Commenting on text there starts from a selection.
+
+Claude Science, per [Comments](https://claude.com/docs/claude-science/comments.md):
+
+- You can comment on selected text in text, code, or PDF files, a clicked
+  point on an image (shown as a numbered pin), or a clicked element in a
+  rendered HTML report while Comment is on.
+- Saving a comment does not send it. Saved comments wait above the message
+  box and go to Claude with the next message, so several can go together.
+  Claude gets the filename, the quoted text or marked image, and the note.
+  Once sent, a comment leaves the artifact and shows as a card on the message.
+- There are no threads and no resolve state, and a comment is capped at 1,000
+  characters.
+
+What fits here: the mode button with an open count, element picking, markers
+shown only in comment mode, and a list view. Our comments go to an agent by
+workstream, so a "send" step or checkbox has no equivalent. A Science-style
+point pin on an image would answer the "anchors for non-text targets"
+question above.
