@@ -11,6 +11,7 @@ import { acquireBoxWork, closeBoxMaintenance } from "../../../../src/lib/box-mai
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { waitForRuns } from "../../../helpers/chat-session-spawner-helpers.js";
 import { createTaskRecorder, pendingRunEndedNote } from "../../../../src/core/chat/session/run/ended-note.js";
+import { createLiveTasks } from "../../../../src/core/chat/session/run/live-tasks.js";
 
 void test("line 13", async (t) => {
   t.teardown(async () => {
@@ -204,4 +205,30 @@ void test("Clearing a delivered note keeps a record written since", async (t) =>
   // The new tasks settle: their unstamped record goes. A stamped one waiting for its turn would stay.
   recorder.observe([], new Date("2026-11-02T20:02:00.000Z"));
   t.check(await box.list(".beebox/chat-run-ended"), "");
+});
+
+// ## A task update in flight after the server ends a run keeps the cause
+//
+// The SDK may deliver one more task update between the server stamping a cause
+// and the run closing. It must not overwrite the stamped record, and the note
+// is held back (`ending()`) until the run has closed, so a send in that gap does
+// not deliver it into a run that is still closing.
+void test("A task update in flight after the server ends a run keeps the cause", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(async () => { await box.cleanup(); });
+  let clock = Date.parse("2026-11-02T20:00:00.000Z");
+  const tasks = createLiveTasks(() => clock, { boxRoot: box.root, sessionId: () => "sess-1" });
+  tasks.observe([{ taskId: "a", description: "collect sources" }]);
+  clock += 1_000;
+  tasks.recordEnd("a restart was requested");
+  clock += 1_000;
+  tasks.observe([{ taskId: "a", description: "collect sources" }, { taskId: "b", description: "draft summary" }]);
+  tasks.noteRunMessage();
+  const ending = tasks.ending();
+  tasks.closed();
+  t.check({ ending, after: tasks.ending(), note: JSON.parse(await box.read(NOTE)) }, {
+    ending: true,
+    after: false,
+    note: { tasks: ["collect sources"], lastSeenAt: "2026-11-02T20:00:01.000Z", writer: uuid(), at: "2026-11-02T20:00:01.000Z", cause: "a restart was requested" },
+  });
 });

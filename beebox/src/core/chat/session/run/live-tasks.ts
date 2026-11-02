@@ -26,6 +26,8 @@ export interface LiveTasks {
   recordEnd(cause: string | undefined): void;
   /** The run closed. With tasks live and no end recorded, it ended on its own. */
   closed(): void;
+  /** An end is recorded and the run has not closed yet: its note is not ready for a turn. */
+  ending(): boolean;
   count(): number;
   isWorking(): boolean;
 }
@@ -39,8 +41,9 @@ export function createLiveTasks(now: () => number, record?: { boxRoot: string; s
   const descriptions = (): string[] => tasks.map((task) => task.description);
   return {
     set(next) { tasks = next; endRecorded = false; },
-    observe(next) { tasks = next; recorder?.observe(descriptions(), new Date(now())); },
-    noteRunMessage() { lastRunMessageAt = now(); recorder?.heartbeat(descriptions(), new Date(now())); },
+    // Once an end is stamped, a task update still in flight must not overwrite the cause.
+    observe(next) { tasks = next; if (!endRecorded) recorder?.observe(descriptions(), new Date(now())); },
+    noteRunMessage() { lastRunMessageAt = now(); if (!endRecorded) recorder?.heartbeat(descriptions(), new Date(now())); },
     recordEnd(cause) {
       endRecorded = true;
       if (cause !== undefined && tasks.length > 0) recorder?.ended({ tasks: descriptions(), cause, now: new Date(now()) });
@@ -48,7 +51,9 @@ export function createLiveTasks(now: () => number, record?: { boxRoot: string; s
     closed() {
       if (!endRecorded && tasks.length > 0) recorder?.ended({ tasks: descriptions(), cause: "the agent process ended on its own", now: new Date(now()) });
       tasks = [];
+      endRecorded = false;
     },
+    ending: () => endRecorded,
     count: () => tasks.length,
     isWorking: () => tasks.length > 0 && now() - lastRunMessageAt < BACKGROUND_STALL_MS,
   };
