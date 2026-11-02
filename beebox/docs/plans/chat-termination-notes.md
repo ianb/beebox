@@ -132,6 +132,15 @@ best-effort delivery stated (3); no invented exit code (4); per-run reset of
 the end flag (5); model-change wording (6); a random writer id replaces the
 pid (7, partly: the id is still needed for 1).
 
+## Diff review
+
+Codex `gpt-6-sol`, 2026-11-02, two findings, both fixed and confirmed in a
+verification round: a task update or heartbeat after a stamped end no longer
+overwrites the cause; a turn composed while the ended run is still closing
+does not take its note (`LiveTasks.ending()`). The underlying silent drop of a
+send into a closing run predates this work:
+`issues/bugs/2026-11-02-send-during-run-close-silently-dropped.md`.
+
 ## Subplans
 
 None.
