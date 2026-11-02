@@ -1,43 +1,128 @@
 /**
- * The run-ended note: when box maintenance ends a chat's run while background
- * tasks are live (a deployment or development reload that cannot wait), the
- * chat's next turn is told why. The CLI already tells that turn the tasks did
- * not finish; this note adds the cause. One small file per session under
- * `.beebox/`, read into the next turn's `<chat-app>` snapshot (hidden from the
- * person's message) and removed once that turn is dispatched
- * (docs/implemented-plans/maintenance-live-tasks.md, Track 3).
+ * The run-ended note: a chat's next turn learns why and when its background
+ * tasks were cut off (docs/implemented-plans/chat-termination-notes.md).
+ *
+ * While a run has live background tasks, `.beebox/chat-run-ended/<session>.json`
+ * holds them, when the run was last seen working, and which server process
+ * wrote it. When the server ends such a run it stamps a cause. The next turn
+ * reads a stamped record, or an unstamped one another server process wrote
+ * (this process never saw that run end: the server crashed or was killed), into
+ * its `<chat-app>` snapshot (hidden from the person's message), and removes it
+ * once the turn is dispatched. Delivery is best effort: a crash between that
+ * removal and the agent reading its input loses the note.
  */
 import fs from "node:fs";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
 import { writeFileAtomicSync } from "../../../../lib/atomic-write.js";
 import { escapeXmlAttr } from "../../../../shared/self-note.js";
 import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
 
-const noteSchema = z.object({ at: z.string(), reason: z.string(), tasks: z.array(z.string()) });
-type RunEndedNote = z.infer<typeof noteSchema>;
+/** This server process. A record another process wrote is from a run this one never saw end. */
+const WRITER = randomUUID();
+const SERVER_STARTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
 
-function notePath(boxRoot: string, sessionId: string): string {
+const recordSchema = z.object({
+  tasks: z.array(z.string()),
+  lastSeenAt: z.string().optional(),
+  writer: z.string().optional(),
+  /** When the run ended, with `cause`; also the field the first notes (maintenance only) wrote. */
+  at: z.string().optional(),
+  cause: z.string().optional(),
+  /** First notes only: the maintenance owner's reason. */
+  reason: z.string().optional(),
+});
+type TaskRecord = z.infer<typeof recordSchema>;
+
+function recordPath(boxRoot: string, sessionId: string): string {
   return path.join(boxRoot, ".beebox", "chat-run-ended", `${encodeURIComponent(sessionId)}.json`);
 }
 
-/** Record why a run with live tasks ended. Synchronous: the process may be about to stop. */
-export function recordRunEnded(boxRoot: string, { sessionId, reason, tasks, now }: { sessionId: string; reason: string; tasks: string[]; now: Date }): void {
-  const note: RunEndedNote = { at: now.toISOString(), reason, tasks };
-  try { writeFileAtomicSync(notePath(boxRoot, sessionId), { content: JSON.stringify(note) }); }
-  catch (error) { console.error(`[ChatSession] Run-ended note for ${sessionId} was not written: ${errorMessage(error)}`); }
+function write(file: string, { sessionId, record }: { sessionId: string; record: TaskRecord }): void {
+  try { writeFileAtomicSync(file, { content: JSON.stringify(record) }); }
+  catch (error) { console.error(`[ChatSession] Background-task record for ${sessionId} was not written: ${errorMessage(error)}`); }
 }
 
-function render(note: RunEndedNote): string {
-  const count = note.tasks.length === 1 ? "1 background task was" : `${String(note.tasks.length)} background tasks were`;
-  const listed = note.tasks.map((task) => `- ${escapeXmlAttr(task)}`).join("\n");
-  return `<run-ended at="${escapeXmlAttr(note.at)}" reason="${escapeXmlAttr(note.reason)}">\nBox maintenance (${escapeXmlAttr(note.reason)}) ended your previous run while ${count} still running. They did not finish; restart any that are still needed.\n${listed}\n</run-ended>`;
+function remove(file: string, sessionId: string): void {
+  try { fs.rmSync(file, { force: true }); }
+  catch (error) { console.error(`[ChatSession] Background-task record for ${sessionId} was not removed: ${errorMessage(error)}`); }
+}
+
+/** The record one session's live tasks keep current, from the SDK's task updates and run messages. */
+export interface TaskRecorder {
+  /** Tasks now live (empty: they settled, and an unstamped record goes). */
+  observe(tasks: string[], now: Date): void;
+  /** The run produced a message; refresh `lastSeenAt` at most once a minute. */
+  heartbeat(tasks: string[], now: Date): void;
+  /** The server ended the run while `tasks` were live, for `cause`. */
+  ended(end: { tasks: string[]; cause: string; now: Date }): void;
+}
+
+const HEARTBEAT_MS = 60_000;
+
+export function createTaskRecorder(boxRoot: string, sessionId: () => string | null): TaskRecorder {
+  let lastWrite = 0;
+  const put = (record: Omit<TaskRecord, "writer">, now: Date): void => {
+    const id = sessionId();
+    if (id === null) return;
+    lastWrite = now.getTime();
+    write(recordPath(boxRoot, id), { sessionId: id, record: { ...record, writer: WRITER } });
+  };
+  return {
+    observe(tasks, now) {
+      const id = sessionId();
+      if (id === null) return;
+      if (tasks.length > 0) { put({ tasks, lastSeenAt: now.toISOString() }, now); return; }
+      const file = recordPath(boxRoot, id);
+      const current = readRecord(file, id);
+      // A stamped record is the previous run's note, still waiting for its turn.
+      if (current !== null && current.cause === undefined && current.reason === undefined) remove(file, id);
+    },
+    heartbeat(tasks, now) {
+      if (tasks.length > 0 && now.getTime() - lastWrite >= HEARTBEAT_MS) put({ tasks, lastSeenAt: now.toISOString() }, now);
+    },
+    ended({ tasks, cause, now }) {
+      put({ tasks, lastSeenAt: now.toISOString(), at: now.toISOString(), cause }, now);
+    },
+  };
+}
+
+function readRecord(file: string, sessionId: string): TaskRecord | null {
+  let raw: unknown;
+  try { raw = JSON.parse(fs.readFileSync(file, "utf8")); }
+  catch (error) {
+    if (errnoCode(error) === "ENOENT") return null;
+    // An unreadable record must not block the chat's turn; say so and drop it.
+    console.error(`[ChatSession] Background-task record for ${sessionId} is unreadable: ${errorMessage(error)}`);
+    remove(file, sessionId);
+    return null;
+  }
+  const parsed = recordSchema.safeParse(raw);
+  if (parsed.success) return parsed.data;
+  console.error(`[ChatSession] Background-task record for ${sessionId} is malformed; dropped`);
+  remove(file, sessionId);
+  return null;
+}
+
+function render(record: TaskRecord): string | undefined {
+  const count = record.tasks.length === 1 ? "1 background task was" : `${String(record.tasks.length)} background tasks were`;
+  const listed = record.tasks.map((task) => `- ${escapeXmlAttr(task)}`).join("\n");
+  const cause = record.cause ?? (record.reason === undefined ? undefined : `box maintenance (${record.reason})`);
+  if (cause !== undefined) {
+    const at = record.at ?? record.lastSeenAt ?? "an unknown time";
+    return `<run-ended at="${escapeXmlAttr(at)}" cause="${escapeXmlAttr(cause)}">\nYour previous run ended at ${escapeXmlAttr(at)} while ${count} still running, because ${escapeXmlAttr(cause)}. They did not finish; restart any that are still needed.\n${listed}\n</run-ended>`;
+  }
+  // Unstamped and written by this process: the run is live, or its close has not been stamped yet.
+  if (record.writer === WRITER) return undefined;
+  const seen = record.lastSeenAt ?? "an unknown time";
+  return `<run-ended last-seen="${escapeXmlAttr(seen)}" cause="unknown">\nYour previous run ended while ${count} running; it was last seen working at ${escapeXmlAttr(seen)}. No cause was recorded, and the Bee Box server restarted since (at ${SERVER_STARTED_AT}), so the server most likely crashed or was killed, for example for running out of memory. They did not finish; restart any that are still needed.\n${listed}\n</run-ended>`;
 }
 
 export interface PendingRunEndedNote {
   /** The `<run-ended>` element for the snapshot, or undefined when there is none. */
   readonly element: string | undefined;
-  /** Remove the note; call once the turn carrying it is dispatched. */
+  /** Remove the note once the turn carrying it is dispatched; a record rewritten since the read stays. */
   clear(): void;
 }
 
@@ -45,25 +130,16 @@ export interface PendingRunEndedNote {
 export function pendingRunEndedNote(boxRoot: string, sessionId: string | null): PendingRunEndedNote {
   const none = { element: undefined, clear: () => {} };
   if (sessionId === null) return none;
-  const file = notePath(boxRoot, sessionId);
-  // Never throws: a note that cannot be removed must not undo a dispatched turn.
-  const remove = (): void => {
-    try { fs.rmSync(file, { force: true }); }
-    catch (error) { console.error(`[ChatSession] Run-ended note for ${sessionId} was not removed: ${errorMessage(error)}`); }
+  const file = recordPath(boxRoot, sessionId);
+  const record = readRecord(file, sessionId);
+  const element = record === null ? undefined : render(record);
+  if (element === undefined) return none;
+  const read = JSON.stringify(record);
+  return {
+    element,
+    clear: () => {
+      const now = readRecord(file, sessionId);
+      if (now !== null && JSON.stringify(now) === read) remove(file, sessionId);
+    },
   };
-  let parsed: ReturnType<typeof noteSchema.safeParse>;
-  try { parsed = noteSchema.safeParse(JSON.parse(fs.readFileSync(file, "utf8"))); }
-  catch (error) {
-    if (errnoCode(error) === "ENOENT") return none;
-    // An unreadable note must not block the chat's turn; say so and drop it.
-    console.error(`[ChatSession] Run-ended note for ${sessionId} is unreadable: ${errorMessage(error)}`);
-    remove();
-    return none;
-  }
-  if (!parsed.success) {
-    console.error(`[ChatSession] Run-ended note for ${sessionId} is malformed; dropped`);
-    remove();
-    return none;
-  }
-  return { element: render(parsed.data), clear: remove };
 }

@@ -10,7 +10,7 @@ export interface ShutdownChatSession {
   /** Settles when a run start in flight has finished or failed; at once when none is. */
   whenStarted(): Promise<unknown>;
   once(event: "close", listener: () => void): unknown;
-  stop(): void;
+  stop(cause?: string): void;
 }
 
 /**
@@ -48,7 +48,7 @@ export async function stopChatSessionsAndWait(
       closes.push(new Promise<void>((resolve) => {
         session.once("close", () => { unfinished.delete(session); resolve(); });
       }));
-      session.stop();
+      session.stop("the Bee Box server shut down");
     }
   };
   try {
@@ -64,6 +64,6 @@ export async function stopChatSessionsAndWait(
     return [...unfinished].map(label);
   } finally {
     timeout.stop();
-    for (const session of sessions) session.stop();
+    for (const session of sessions) session.stop("the Bee Box server shut down");
   }
 }

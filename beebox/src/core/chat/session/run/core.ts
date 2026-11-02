@@ -92,7 +92,7 @@ export class ChatSession extends EventEmitter {
     options = options ?? {};
     this.boxRoot = boxRoot;
     this.options = options;
-    this.liveTasks = createLiveTasks(options.now ?? Date.now);
+    this.liveTasks = createLiveTasks(options.now ?? Date.now, { boxRoot, sessionId: () => this.sessionId });
     this.coined = createCoinedRunState(options);
     this.sessionFile = options.sessionFile === undefined ? DEFAULT_SESSION_FILE : options.sessionFile;
     this.modelFile = options.modelFile ?? null;
@@ -234,7 +234,7 @@ export class ChatSession extends EventEmitter {
       toIdle: () => { if (this.state.phase !== "idle") this.transition({ phase: "idle" }); },
       releaseRunLock: () => this.runLock.release(),
       emitError: (err) => { this.emit("error", err); },
-      emitClose: (code) => { this.liveTasks.set([]); this.emit("task-level", []); this.emit("close", code); }, // its tasks ended with it
+      emitClose: (code) => { this.liveTasks.closed(); this.emit("task-level", []); this.emit("close", code); }, // its tasks ended with it
       queueLength: () => this.messageQueue.length,
       drainQueue: () => this.drainQueue(),
       log,
@@ -255,7 +255,7 @@ export class ChatSession extends EventEmitter {
     // Background-task events fire between turns (no per-turn SSE attached), so
     // wireSession bridges them to the global event bus, not the per-turn stream.
     if (msg.type === "task") { this.emit("task", msg.task); return; }
-    if (msg.type === "task-level") { this.liveTasks.set(msg.tasks); this.emit("task-level", msg.tasks); return; }
+    if (msg.type === "task-level") { this.liveTasks.observe(msg.tasks); this.emit("task-level", msg.tasks); return; }
     // Accumulate assistant text for schedule parsing
     this.turnText = accumulateAssistantText(this.turnText, msg);
 
@@ -327,7 +327,7 @@ export class ChatSession extends EventEmitter {
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
     // A run that cannot start, or a live one whose provider setup is gone, is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
     const live = this.liveRun() !== null;
-    if (!(await sendReadiness({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, liveModel: live ? this.resolvedModel : null, startOptions: live ? null : await this.buildBackendStartOptions(), session: this, onRefused }))) { if (live) this.restart(); return false; }
+    if (!(await sendReadiness({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, liveModel: live ? this.resolvedModel : null, startOptions: live ? null : await this.buildBackendStartOptions(), session: this, onRefused }))) { if (live) this.restart({ cause: "its provider setup changed" }); return false; }
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
 
     const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try { onAdmitted?.();
@@ -344,7 +344,7 @@ export class ChatSession extends EventEmitter {
       // first-message-only context (last activity, calendar, health).
       sessionStart: this.sessionId === null || this.coined.pending,
       healthGate: this.healthGate,
-      sessionId: this.sessionId,
+      sessionId: this.liveTasks.ending() ? null : this.sessionId, // a run still closing has not finished its note
     });
 
     if (this.liveRun() === null) {
@@ -377,7 +377,7 @@ export class ChatSession extends EventEmitter {
 
   /** Close an idle subprocess for maintenance without discarding its queued input; `reason` names the owner. */
   pauseForMaintenance(reason?: string): void { this.maintenancePaused = true;
-    if (!this.isBusy()) this.restart(reason === undefined ? undefined : { endedFor: reason });
+    if (!this.isBusy()) this.restart({ cause: `box maintenance (${reason ?? "unnamed"})` });
   }
 
   resumeAfterMaintenance(): void { this.maintenancePaused = false;
@@ -440,7 +440,9 @@ export class ChatSession extends EventEmitter {
 
   isRunning(): boolean { return this.liveRun() !== null; }
 
-  isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state); }
+  /** A run the server is ending (`restart`, `stop`) stays busy until its close handler runs: its input is already closed,
+   *  so a send then would be dropped; callers queue instead, and the close handler drains the queue into a fresh run. */
+  isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state) || this.liveTasks.ending(); }
 
   /** A background task is live and the run has not gone quiet (`./live-tasks.ts`). */
   isWorkingInBackground(): boolean { return this.isRunning() && this.liveTasks.isWorking(); }
@@ -458,7 +460,7 @@ export class ChatSession extends EventEmitter {
    * as "queue-dropped", which the route layer records as undelivered. An
    * in-flight drain may still deliver; the client reconciles that case.
    */
-  stop(): void {
+  stop(cause?: string): void {
     const dropped = [...(this.draining?.splice(0) ?? []), ...this.messageQueue]; this.messageQueue = []; // the splice empties the drain's own list
     const run = this.liveRun();
     if (run !== null && (this.state.phase === "ready" || this.state.phase === "streaming")) {
@@ -466,7 +468,7 @@ export class ChatSession extends EventEmitter {
       // → stopping: the close handler reads this phase as the intentional-stop
       // signal and won't drain the queue.
       this.transition({ phase: "stopping", run, wasBusy: lifecycleBusy(this.state) });
-      endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId });
+      endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId, cause });
     }
     if (dropped.length > 0) this.emit("queue-dropped", dropped);
   }
@@ -477,7 +479,7 @@ export class ChatSession extends EventEmitter {
    * drains the queue into the fresh run so wedged sessions recover
    * without losing in-flight user messages.
    */
-  restart(opts?: { endedFor?: string }): void {
+  restart(opts?: { cause?: string }): void {
     const run = this.liveRun();
     if (run === null) {
       log("restart", "No run to restart");
@@ -486,7 +488,7 @@ export class ChatSession extends EventEmitter {
     // Leave the phase as-is (ready/streaming): the close handler sees it's not
     // "stopping" and drains the queue into a fresh run.
     log("restart", "Closing run — close handler will drain any queued messages");
-    endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId, ...(opts?.endedFor === undefined ? {} : { endedFor: { boxRoot: this.boxRoot, reason: opts.endedFor } }) });
+    endRun(run, { tasks: this.liveTasks, sessionId: this.sessionId, cause: opts?.cause });
   }
 
   /**
