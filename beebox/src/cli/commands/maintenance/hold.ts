@@ -25,6 +25,7 @@ import { z } from "zod";
 import { captureMigrationSnapshot } from "../../../core/migration-recovery.js";
 import { boxMaintenanceStatus, boxWorkEnvironment, closeBoxMaintenance, type BoxMaintenance } from "../../../lib/box-maintenance/admission.js";
 import { errorMessage } from "../../../shared/error-guards.js";
+import { backgroundTasksDeadline } from "../../../lib/box-maintenance-deadline.js";
 
 export const holderReportSchema = z.object({ permits: z.record(z.string(), z.string()) });
 export const holderVerdictSchema = z.object({ complete: z.array(z.string()) });
@@ -45,7 +46,8 @@ export async function holdBoxes(roots: readonly string[], opts: { reason: string
   const held: { root: string; handle: BoxMaintenance }[] = [];
   const completed = new Set<string>();
   try {
-    for (const root of roots) held.push({ root, handle: await closeBoxMaintenance(root, { reason: opts.reason }) });
+    // A deployment cannot defer: after a short wait it ends chats whose background tasks are still live.
+    for (const root of roots) held.push({ root, handle: await closeBoxMaintenance(root, { reason: opts.reason, endsBackgroundTasksAt: backgroundTasksDeadline() }) });
     for (const { handle } of held) await handle.drain();
     for (const { root, handle } of held) {
       const snapshot = await handle.run(() => captureMigrationSnapshot(root, opts.reason));

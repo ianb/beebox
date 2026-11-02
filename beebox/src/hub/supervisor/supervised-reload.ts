@@ -5,6 +5,7 @@ import { invariant } from "../../shared/invariant.js";
 import { BOX_KILL_GRACE_MS } from "../child-process-utils.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import type { ManagedBox } from "./core.js";
+import { backgroundTasksDeadline } from "../../lib/box-maintenance-deadline.js";
 
 interface ReloadOptions {
   box: ManagedBox; launch: () => Promise<void>; isStopped: () => boolean; isReady: () => boolean;
@@ -35,7 +36,10 @@ async function reloadSupervisedBox({ box, launch, isStopped, isReady, retryLater
   let failedChanging = false;
   let maintenance: BoxMaintenance | undefined;
   try {
-    maintenance = await acquireBoxMaintenance(box.entry.path, { reason: "development reload" });
+    // A deferred reload is asked for again on the box's next poll tick, closing
+    // the box drain after drain; so a reload ends live background tasks after a
+    // short wait, as a deployment does.
+    maintenance = await acquireBoxMaintenance(box.entry.path, { reason: "development reload", endsBackgroundTasksAt: backgroundTasksDeadline() });
     if (box.child !== child || box.status !== "running") return;
     await maintenance.beginChanges();
     changing = true;

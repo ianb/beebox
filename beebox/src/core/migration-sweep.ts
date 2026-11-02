@@ -116,7 +116,8 @@ export async function sweepMigrations(opts: SweepOptions): Promise<SweepResult> 
     // An idle chat run holds a lease until the server sees a phase and closes
     // it, so a yielding pass cannot judge "in use" from the leases alone: it
     // closes, waits briefly, and treats work that outlasts the wait as the
-    // box being in use.
+    // box being in use. A run with live background tasks is never closed for
+    // this owner, so its lease outlasts the wait and the pass defers.
     maintenance = await acquireBoxMaintenance(opts.boxRoot, { reason: "migration", join: opts.withinMaintenance === true, ...(yielding ? { drainMs: YIELD_DRAIN_MS } : {}) });
   } catch (error) {
     // Live work outlasted the wait, or another maintenance owner (a deploy)

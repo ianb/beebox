@@ -5,7 +5,8 @@
  */
 
 import type { FastifyInstance, FastifyError } from "fastify";
-import { registerBoxAdmission, boxRequestsAreIdle } from "./box-admission.js";
+import { registerBoxAdmission } from "./box-admission.js";
+import { createMaintenanceChatCheck } from "./maintenance-quiesce.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { assertEventSchemaNotNewer, createEventBus } from "../../core/event-bus/core.js";
@@ -35,9 +36,8 @@ import { HASHED_ASSET_STATIC_OPTIONS } from "../static-cache.js";
 import { invariant } from "../../shared/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../../lib/csp.js";
 import { DEV_BUNDLE_RELOAD_EXIT_CODE, abandonDevBundleDrain, devBundleWasReplaced, DEV_BUNDLE_RELOAD_REQUEST, DEV_BUNDLE_RELOAD_NOW, DEV_BUNDLE_RELOAD_ABORTED } from "../../lib/dev-bundle-reload.js";
-import { pauseBoxChatSchedules, resumeBoxChatSchedules, boxChatScheduleDeliveriesAreIdle } from "../../core/chat/schedules/core.js";
 import { getChatRuntime } from "../chat-runtime.js";
-import { acquireBoxStartup, boxMaintenanceStatus, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance/admission.js";
+import { acquireBoxStartup, withoutBoxWork, type BoxWork } from "../../lib/box-maintenance/admission.js";
 import { TRPC_MAX_URL_LENGTH } from "../../shared/trpc-url-limit.js";
 import { markStartupPhase } from "../../lib/startup-timing.js";
 import { listenOn, resolveListenTarget } from "./listen-target.js";
@@ -414,7 +414,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
 
     // The same poll quiesces chat for CLI maintenance and supervised reload.
     // The supervisor owns reload admission across both child generations.
-    const paused = new Set<string>();
+    const checkBoxChat = createMaintenanceChatCheck();
     let checking = false;
     let reloadRequested = false;
     let warned = false;
@@ -436,18 +436,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
       void withoutBoxWork(async () => {
         for (const box of boxes) {
           const runtime = getChatRuntime(box.boxRoot);
-          if (!runtime) continue;
-          // Only a live owner pauses chat; a record without one is unfinished maintenance, not closure.
-          if ((await boxMaintenanceStatus(box.boxRoot))?.owner) {
-            pauseBoxChatSchedules(box.boxRoot);
-            paused.add(box.boxRoot);
-            if (boxRequestsAreIdle(box.boxRoot) && !runtime.registry.snapshotAll().some((session) => session.busy) && boxChatScheduleDeliveriesAreIdle(box.boxRoot)) {
-              runtime.registry.quiesceForMaintenance();
-            }
-          } else if (paused.delete(box.boxRoot)) {
-            runtime.registry.resumeAfterMaintenance();
-            resumeBoxChatSchedules(box.boxRoot);
-          }
+          if (runtime) await checkBoxChat(box.boxRoot, runtime.registry);
         }
         if (reloadRequested || warned || !(await devBundleWasReplaced())) return;
         if (isHubMode() && process.send) {

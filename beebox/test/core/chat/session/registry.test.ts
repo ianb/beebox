@@ -11,6 +11,7 @@
 // `isRunning()` reflects which sessions hold a live subprocess.
 
 import { test } from "tap";
+import { once } from "node:events";
 import "@ianbicking/tap-check/tap";
 import { any, is, str } from "@ianbicking/tap-check/check";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
@@ -434,7 +435,7 @@ void test("Maintenance cannot be undone by a read warming a session", async (t) 
   const backend = createFakeChatBackend();
   const registry = new ChatSessionRegistry(box.root, { backend });
   await registry.prewarm();
-  registry.quiesceForMaintenance();
+  registry.quiesceForMaintenance("fixture");
   registry.getOrCreate("maintenance-read");
   await registry.prewarm();
   t.check({ warm: backend.hasWarm(), starts: backend.prewarmCount }, {
@@ -495,6 +496,24 @@ void test("the sweep keeps a chat with a live background task until it settles o
   registry.sweepIdle();
   await tick();
   t.check({ size: registry.size(), running: session.isRunning(), aborted: run?.aborted }, { size: 0, running: false, aborted: false });
+
+  // Maintenance reads the set itself, not the stall rule: a run quiet past the
+  // limit still reports its task, so a deferrable owner never closes it
+  // (`docs/plans/maintenance-live-tasks.md`).
+  const quiet = registry.getOrCreate("s-quiet");
+  await quiet.send("go");
+  await tick();
+  backend.lastRun()?.emitBackgroundTasks(["silent shell"]);
+  const quietDone = once(quiet, "done");
+  backend.lastRun()?.emitResult();
+  await quietDone;
+  clock += BACKGROUND_STALL_MS;
+  t.check({ working: quiet.isWorkingInBackground(), snapshot: registry.snapshotAll().find((entry) => entry.sessionId === "s-quiet") }, {
+    working: false,
+    snapshot: { sessionId: "s-quiet", running: true, busy: false, liveTasks: 1 },
+  });
+  quiet.stop();
+  await tick();
 
   // A run that has gone quiet past the limit is hung. It goes, and ends outright.
   const hung = registry.getOrCreate("s2");

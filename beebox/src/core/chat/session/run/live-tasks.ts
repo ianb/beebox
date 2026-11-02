@@ -40,8 +40,8 @@ export function createLiveTasks(now: () => number): LiveTasks {
  * refusal, and the parent would report that refusal. The CLI tells the next
  * turn they did not finish.
  */
-export function endRun(run: ChatBackendRun, { tasks, sessionId }: { tasks: LiveTasks; sessionId: string | null }): void {
+export function endRun(run: ChatBackendRun, { tasks, sessionId, endedFor }: { tasks: LiveTasks; sessionId: string | null; endedFor?: string }): void {
   if (tasks.count() === 0) { void run.close(); return; }
-  console.warn(`[ChatSession] Ending run ${sessionId ?? "new"} with ${tasks.count()} live background task(s)`);
+  console.warn(`[ChatSession] Ending run ${sessionId ?? "new"} with ${tasks.count()} live background task(s)${endedFor === undefined ? "" : ` for ${endedFor}`}`);
   void run.abort();
 }
