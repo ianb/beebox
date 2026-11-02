@@ -26,7 +26,7 @@ export interface LiveTasks {
   recordEnd(cause: string | undefined): void;
   /** The run closed. With tasks live and no end recorded, it ended on its own. */
   closed(): void;
-  /** An end is recorded and the run has not closed yet: its note is not ready for a turn. */
+  /** The server ended the run and its close handler has not run: the run's input is closed and its note is not ready. */
   ending(): boolean;
   count(): number;
   isWorking(): boolean;

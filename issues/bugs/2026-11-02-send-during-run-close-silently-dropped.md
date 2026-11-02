@@ -30,3 +30,12 @@ Smallest fix direction: give `ChatBackendRun` a synchronous "closing" state
 (set in `close`/`abort`) that `liveRun()` treats as not live, and make a send
 during it enqueue for the close handler's drain, as a send during
 `starting`/`streaming` already does.
+
+## Fixed (worktree `maintenance-live-tasks`)
+
+`ChatSession.isBusy()` now also reads true while the server is ending the run
+(`liveTasks.ending()`: set by `endRun` in `restart`/`stop`, cleared when the
+close handler runs). Every sender already queues for a busy session, and the
+close handler drains the queue into a fresh run, as `restart()` promises.
+Test: `test/core/chat/session/run.maintenance.test.ts`, "A message sent while a
+restart closes the run reaches the fresh run".

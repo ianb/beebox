@@ -232,3 +232,37 @@ void test("A task update in flight after the server ends a run keeps the cause",
     note: { tasks: ["collect sources"], lastSeenAt: "2026-11-02T20:00:01.000Z", writer: uuid(), at: "2026-11-02T20:00:01.000Z", cause: "a restart was requested" },
   });
 });
+
+// ## A message sent while a restart closes the run reaches the fresh run
+//
+// `restart()` closes the run's input at once, but the run reads as gone only
+// when its close handler runs. A send in between used to go into the closed
+// input and vanish (`issues/bugs/2026-11-02-send-during-run-close-silently-dropped.md`).
+// The session now reads as busy until the close, so the sender queues the
+// message, and the close handler drains it into a fresh run.
+void test("A message sent while a restart closes the run reaches the fresh run", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  const backend = createFakeChatBackend();
+  const session = new ChatSession(box.root, { backend, skipBootstrap: true, systemPrompt: async () => "test", initialSessionId: "sess-1" });
+  t.teardown(async () => { session.stop(); await box.cleanup(); });
+  await session.send("first");
+  const first = backend.lastRun();
+  assert.ok(first);
+  const done = once(session, "done");
+  first.emitResult();
+  await done;
+
+  const closed = once(session, "close");
+  session.restart({ cause: "a restart was requested" });
+  const busyWhileClosing = session.isBusy();
+  // What every sender does with a busy session.
+  if (busyWhileClosing) session.enqueue("sent during the restart");
+  await closed;
+  await waitForRuns(backend, { count: 2, timeoutMs: 3000 });
+  t.check({ busyWhileClosing, firstRun: first.sent.length, fresh: backend.lastRun()?.sent }, {
+    busyWhileClosing: true,
+    firstRun: 1,
+    fresh: [[{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>
+sent during the restart` }]],
+  });
+});

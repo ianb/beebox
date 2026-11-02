@@ -440,7 +440,9 @@ export class ChatSession extends EventEmitter {
 
   isRunning(): boolean { return this.liveRun() !== null; }
 
-  isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state); }
+  /** A run the server is ending (`restart`, `stop`) stays busy until its close handler runs: its input is already closed,
+   *  so a send then would be dropped; callers queue instead, and the close handler drains the queue into a fresh run. */
+  isBusy(): boolean { return this.preparingTurn || lifecycleBusy(this.state) || this.liveTasks.ending(); }
 
   /** A background task is live and the run has not gone quiet (`./live-tasks.ts`). */
   isWorkingInBackground(): boolean { return this.isRunning() && this.liveTasks.isWorking(); }
