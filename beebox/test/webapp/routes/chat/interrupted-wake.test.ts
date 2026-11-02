@@ -37,8 +37,11 @@ async function setup(t: { teardown(fn: () => Promise<void> | void): void }) {
   const logPath = getSessionLogPath(box.root, SESSION);
   await fs.mkdir(path.dirname(logPath), { recursive: true });
   await fs.writeFile(logPath, "{}\n");
-  const pass = createInterruptedWakePass({ boxRoot: box.root, registry, eventBus, wireSession: () => {} });
-  return { box, backend, pass };
+  const wakes = createInterruptedWakePass({ boxRoot: box.root, registry, eventBus, wireSession: () => {} });
+  t.teardown(() => { wakes.stop(); });
+  /** One pass, settled: the wakes it started have finished. */
+  const pass = async (): Promise<void> => { await wakes.pass(); await wakes.whenIdle(); };
+  return { box, backend, pass, wakes };
 }
 
 async function notes(box: TmpBox): Promise<unknown> {
@@ -119,4 +122,27 @@ void test("A server crash wakes the chat", async (t) => {
   backend.runs[0]?.emitResult();
   await passing;
   t.check({ resumed: backend.runs[0]?.startOptions.resumeSessionId, note: await notes(box) }, { resumed: SESSION, note: null });
+});
+
+// ## One chat's slow wake does not hold up another's, and a stop ends the polling
+void test("One chat's slow wake does not hold up another's, and a stop ends the polling", async (t) => {
+  const { box, backend, wakes } = await setup(t);
+  const other = "22222222-2222-4222-8222-222222222222";
+  const logPath = getSessionLogPath(box.root, other);
+  await fs.mkdir(path.dirname(logPath), { recursive: true });
+  await fs.writeFile(logPath, "{}\n");
+  await box.write(NOTE, JSON.stringify(MAINTENANCE));
+  await box.write(`.beebox/chat-run-ended/${other}.json`, JSON.stringify(MAINTENANCE));
+  // Neither turn finishes; both chats are still woken.
+  await wakes.pass();
+  await waitForRuns(backend, { count: 2, timeoutMs: 3000 });
+  t.check(backend.runs.map((run) => run.startOptions.resumeSessionId).toSorted(), [SESSION, other]);
+  for (const run of backend.runs) run.emitResult();
+  await wakes.whenIdle();
+
+  wakes.stop();
+  await box.write(NOTE, JSON.stringify({ ...MAINTENANCE, at: "2026-11-02T21:00:00.000Z" }));
+  await wakes.pass();
+  // No third run: the stopped poller wakes nothing.
+  t.check(backend.runs.map((run) => run.startOptions.resumeSessionId).toSorted(), [SESSION, other]);
 });

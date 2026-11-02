@@ -33,6 +33,8 @@ export interface WakeCandidate {
   readonly sessionId: string;
   /** No cause was stamped: the caller must first check the run is not still live. */
   readonly unstamped: boolean;
+  /** The record as selected; the claim refuses a record replaced since (`claimWake`). */
+  readonly selected: string;
 }
 
 /** Sessions whose run-ended note is for an interruption and has not woken the chat yet. */
@@ -48,7 +50,7 @@ export function wakeCandidates(boxRoot: string): WakeCandidate[] {
     const sessionId = decodeURIComponent(name.slice(0, -".json".length));
     const record = readRecord(recordPath(boxRoot, sessionId), sessionId);
     if (record === null || record.wokenAt !== undefined || render(record) === undefined || !isInterruption(record)) continue;
-    candidates.push({ sessionId, unstamped: record.cause === undefined && record.reason === undefined });
+    candidates.push({ sessionId, unstamped: record.cause === undefined && record.reason === undefined, selected: JSON.stringify(record) });
   }
   return candidates;
 }
@@ -75,15 +77,17 @@ export function wakeAllowed(boxRoot: string, { sessionId, now }: { sessionId: st
 }
 
 /**
- * Mark the note woken. With `count`, the wake is also logged against the daily
+ * Mark the selected note woken, unless it was replaced since. With `count`, the wake is also logged against the daily
  * limit, refused when the limit is spent. True only when everything was
  * written: a wake that cannot be recorded must not be sent, or a crash loop
  * could repeat it.
  */
-export function claimWake(boxRoot: string, { sessionId, now, count }: { sessionId: string; now: Date; count: boolean }): boolean {
+export function claimWake(boxRoot: string, { candidate, now, count }: { candidate: WakeCandidate; now: Date; count: boolean }): boolean {
+  const { sessionId } = candidate;
   const file = recordPath(boxRoot, sessionId);
   const record = readRecord(file, sessionId);
-  if (record === null || record.wokenAt !== undefined) return false;
+  // Replaced since selection (the person's turn took the note and new work began): not this wake's note.
+  if (record === null || JSON.stringify(record) !== candidate.selected) return false;
   try {
     if (count) {
       const log = readWakeLog(boxRoot, now);

@@ -117,6 +117,15 @@ Rejected: concurrent pollers (4), since one server serves a box; replacing
 the poll with events (6): one 30 s pass over a small directory covers
 startup, maintenance end and in-process ends with one code path.
 
+## Diff review
+
+Codex `gpt-6-astra`, 2026-11-02, five findings, all fixed: the claim
+refuses a record replaced since selection (1); shutdown or deletion during a
+wake's admission abandons it (`onAdmitted`/`onDispatch` checks) (2, 4); the
+wake turn is pinned like a person's send (3); each wake runs on its own, so a
+stuck turn holds up no other chat (5). Findings 2, 3 and 5 also apply to the
+existing check-in path (`fireChatSchedule`), which is unchanged.
+
 ## Subplans
 
 None.
