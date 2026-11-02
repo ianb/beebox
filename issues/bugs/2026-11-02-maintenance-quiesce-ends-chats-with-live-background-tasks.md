@@ -90,3 +90,13 @@ waiting on its own child reads as quiet to the stall computation
 (`BACKGROUND_STALL_MS`, `run/live-tasks.ts`). Host memory on the 3.8 GB host
 is a separate question; see
 [large box mode](../features/2026-11-01-large-box-mode.md) for the OOM history.
+
+## Direction (boxholder, 2026-11-02)
+
+- Docs refresh stops taking box maintenance. It takes only a light lock (the
+  git lock around its commit). It writes only generated files that chat agents
+  do not edit, and running chats need not restart to see new docs.
+- Migrations and other exclusive maintenance keep the lock, but count a chat
+  with live background tasks as busy: wait for it with a bound, never close it
+  while idle-with-tasks. On a bound miss, maintenance is deferred; an operation
+  that cannot defer (deploy) tells the chat why it stopped.
