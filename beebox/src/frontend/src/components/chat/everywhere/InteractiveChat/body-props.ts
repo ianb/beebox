@@ -53,6 +53,8 @@ export interface ChatBodyProps {
   processBusy: boolean;
   /** Confirmed display state; raw processBusy still owns queue affordances. */
   showAgentWorking: boolean;
+  /** Back after a long hide and fresh history has not landed yet (`catch-up.ts`). */
+  catchingUp: boolean;
   processRunning: boolean;
   sessionId: string | null; totalEntries: number;
   pendingCount: number; error: string | null | undefined;

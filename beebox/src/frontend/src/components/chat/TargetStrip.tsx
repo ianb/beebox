@@ -21,19 +21,21 @@ export function TargetStrip(props: {
   status: ChatTargetStatus;
   pendingCount: number;
   isStreaming: boolean;
+  /** Shown in place of "Thinking…": the transcript may be stale after a long hide. */
+  catchingUp: boolean;
   onInterrupt: () => void;
   speechPlaying: boolean;
   onStopSpeech: () => void;
   includeControlIds?: boolean;
 }) {
-  const { status, pendingCount, isStreaming, onInterrupt, speechPlaying, onStopSpeech, includeControlIds = true } = props;
-  const hasContent = status.state === "busy" || pendingCount > 0 || isStreaming || speechPlaying;
+  const { status, pendingCount, isStreaming, catchingUp, onInterrupt, speechPlaying, onStopSpeech, includeControlIds = true } = props;
+  const hasContent = catchingUp || status.state === "busy" || pendingCount > 0 || isStreaming || speechPlaying;
   if (!hasContent) return null;
 
   return (
     <div className="bbx-chat-target-strip px-4 py-1.5 border-t border-info-light bg-info-50 text-info-dark text-xs flex items-center gap-3">
       <div className="flex-1 flex items-center gap-3">
-        {status.state === "busy" ? <span>Thinking…</span> : null}
+        {catchingUp ? <span role="status">Catching up…</span> : status.state === "busy" ? <span>Thinking…</span> : null}
         {pendingCount > 0 ? (
           <span>{pendingCount === 1 ? "1 message queued" : `${pendingCount} messages queued`}</span>
         ) : null}

@@ -1,6 +1,6 @@
 ---
 title: "On return to a chat, the old transcript shows with no sign that newer history is loading"
-workstream: unattached
+workstream: chat-catching-up
 area: beebox
 labels: [chat, ux, ios]
 filed-by: agent
