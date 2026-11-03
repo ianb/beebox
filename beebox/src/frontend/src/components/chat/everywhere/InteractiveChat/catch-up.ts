@@ -9,12 +9,14 @@
  * which on iOS takes seconds. Until then the chat reads as "the agent did
  * nothing" (issues/bugs/2026-11-01-chat-return-shows-old-transcript-with-no-loading-sign.md).
  *
- * On a return after at least {@link CATCH_UP_MIN_HIDDEN_MS} hidden, the chat
- * refreshes history over HTTP at once, without waiting for the socket, and
- * marks itself catching up until fresh data lands: a history fetch finishes,
- * or a live stream delivers new output. The strip shows the label only after
- * {@link CATCH_UP_SHOW_DELAY_MS}, so a near-instant refresh never flashes it,
- * and drops it after {@link CATCH_UP_MAX_MS} whatever happened.
+ * On a return after at least {@link CATCH_UP_MIN_HIDDEN_MS} hidden, an idle
+ * chat refreshes history over HTTP at once, without waiting for the socket,
+ * and marks itself catching up until history lands (the machine's
+ * `historySyncs` counts only successful loads, so a failed fetch does not end
+ * it) or a live stream shows new output. The strip shows the label only after
+ * {@link CATCH_UP_SHOW_DELAY_MS}, so a near-instant refresh never flashes it.
+ * After {@link CATCH_UP_MAX_MS} it ends at the first moment no fetch is in
+ * flight.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -25,28 +27,50 @@ import { chatDisplayPhase, type ChatMachineDisplayPhase, type ChatSnapshotLike }
 export const CATCH_UP_MIN_HIDDEN_MS = 10_000;
 /** A refresh that lands sooner than this shows no label. */
 export const CATCH_UP_SHOW_DELAY_MS = 400;
-/** Never claim to be catching up for longer than this. */
+/** After this, stop claiming to catch up once no fetch is in flight. */
 export const CATCH_UP_MAX_MS = 20_000;
 
 export interface CatchUpState {
   /** When the page was last hidden; null while visible. */
   hiddenAt: number | null;
-  /** Fresh data has not landed since the last long-hidden return. */
+  /** History has not landed since the last long-hidden return. */
   active: boolean;
-  /** A history fetch (loading or refreshing) ran since the return. */
-  sawFetch: boolean;
+  /** CATCH_UP_MAX_MS has passed; end as soon as no fetch is in flight. */
+  expired: boolean;
+  /** `historySyncs` at the return; a change means history landed. */
+  syncsAtReturn: number;
   /** Stream output size at the return; a change means the live stream delivered. */
   progressAtReturn: number;
 }
 
-export const initialCatchUpState: CatchUpState = { hiddenAt: null, active: false, sawFetch: false, progressAtReturn: 0 };
+export const initialCatchUpState: CatchUpState = { hiddenAt: null, active: false, expired: false, syncsAtReturn: 0, progressAtReturn: 0 };
+
+/** What the policy reads from the chat machine. */
+export interface CatchUpChat {
+  phase: ChatMachineDisplayPhase;
+  /** Stream text length plus tool count. */
+  progress: number;
+  /** The machine's count of successful history loads. */
+  syncs: number;
+  /** The chat has a session or a turn in flight, so it has history to fall behind on. */
+  tracked: boolean;
+}
 
 export type CatchUpInput =
   | { type: "hidden"; at: number }
-  /** `tracked`: the chat has a session or a turn in flight, so it has history to fall behind on. */
-  | { type: "visible"; at: number; phase: ChatMachineDisplayPhase; progress: number; tracked: boolean }
-  | { type: "observe"; phase: ChatMachineDisplayPhase; progress: number }
-  | { type: "expire" };
+  | { type: "visible"; at: number; chat: CatchUpChat }
+  | { type: "observe"; chat: CatchUpChat }
+  | { type: "expire"; chat: CatchUpChat };
+
+function fetching(phase: ChatMachineDisplayPhase): boolean {
+  return phase === "loading" || phase === "refreshing-turn" || phase === "refreshing-resync";
+}
+
+function caughtUp(state: CatchUpState, chat: CatchUpChat): boolean {
+  if (chat.syncs !== state.syncsAtReturn) return true;
+  if (chat.phase === "streaming" && chat.progress !== state.progressAtReturn) return true;
+  return state.expired && !fetching(chat.phase);
+}
 
 /**
  * One step of the catch-up policy. `refresh` asks the caller to send REFRESH:
@@ -60,38 +84,35 @@ export function advanceCatchUp(state: CatchUpState, input: CatchUpInput): { stat
     case "visible": {
       if (state.hiddenAt === null) return { state, refresh: false };
       const longHide = input.at - state.hiddenAt >= CATCH_UP_MIN_HIDDEN_MS;
-      if (!longHide || !input.tracked) return { state: { ...state, hiddenAt: null }, refresh: false };
+      if (!longHide || !input.chat.tracked) return { state: { ...state, hiddenAt: null }, refresh: false };
       return {
-        state: { hiddenAt: null, active: true, sawFetch: input.phase !== "idle" && input.phase !== "streaming", progressAtReturn: input.progress },
-        refresh: input.phase === "idle",
+        state: { hiddenAt: null, active: true, expired: false, syncsAtReturn: input.chat.syncs, progressAtReturn: input.chat.progress },
+        refresh: input.chat.phase === "idle",
       };
     }
-    case "observe": {
+    case "observe":
+    case "expire": {
       if (!state.active) return { state, refresh: false };
-      if (input.phase === "idle" && state.sawFetch) return { state: { ...state, active: false }, refresh: false };
-      if (input.phase === "streaming" && input.progress !== state.progressAtReturn) return { state: { ...state, active: false }, refresh: false };
-      if (input.phase !== "idle" && input.phase !== "streaming" && !state.sawFetch) return { state: { ...state, sawFetch: true }, refresh: false };
-      return { state, refresh: false };
+      const next = input.type === "expire" ? { ...state, expired: true } : state;
+      return { state: caughtUp(next, input.chat) ? { ...next, active: false } : next, refresh: false };
     }
-    case "expire":
-      return { state: { ...state, active: false }, refresh: false };
   }
 }
 
 /** True while the chat should show "Catching up…". */
-export function useCatchUp(opts: { phase: ChatMachineDisplayPhase; progress: number; tracked: boolean; send: (event: ChatEvent) => void }): boolean {
-  const { phase, progress, tracked, send } = opts;
+export function useCatchUp(chat: CatchUpChat & { send: (event: ChatEvent) => void }): boolean {
+  const { phase, progress, syncs, tracked, send } = chat;
   const stateRef = useRef<CatchUpState>(initialCatchUpState);
-  const latestRef = useRef({ phase, progress, tracked, send });
+  const latestRef = useRef({ chat: { phase, progress, syncs, tracked }, send });
   const [active, setActive] = useState(false);
   const [shown, setShown] = useState(false);
 
   useEffect(() => {
-    latestRef.current = { phase, progress, tracked, send };
-    const step = advanceCatchUp(stateRef.current, { type: "observe", phase, progress });
-    stateRef.current = step.state;
-    setActive(step.state.active);
-  }, [phase, progress, tracked, send]);
+    const current = { phase, progress, syncs, tracked };
+    latestRef.current = { chat: current, send };
+    stateRef.current = advanceCatchUp(stateRef.current, { type: "observe", chat: current }).state;
+    setActive(stateRef.current.active);
+  }, [phase, progress, syncs, tracked, send]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -99,7 +120,7 @@ export function useCatchUp(opts: { phase: ChatMachineDisplayPhase; progress: num
       const latest = latestRef.current;
       const step = advanceCatchUp(stateRef.current, document.visibilityState === "hidden"
         ? { type: "hidden", at: Date.now() }
-        : { type: "visible", at: Date.now(), phase: latest.phase, progress: latest.progress, tracked: latest.tracked });
+        : { type: "visible", at: Date.now(), chat: latest.chat });
       stateRef.current = step.state;
       setActive(step.state.active);
       if (step.refresh) latest.send({ type: "REFRESH" });
@@ -114,8 +135,8 @@ export function useCatchUp(opts: { phase: ChatMachineDisplayPhase; progress: num
     if (!active) return;
     const showId = setTimeout(() => setShown(true), CATCH_UP_SHOW_DELAY_MS);
     const expireId = setTimeout(() => {
-      stateRef.current = advanceCatchUp(stateRef.current, { type: "expire" }).state;
-      setActive(false);
+      stateRef.current = advanceCatchUp(stateRef.current, { type: "expire", chat: latestRef.current.chat }).state;
+      setActive(stateRef.current.active);
     }, CATCH_UP_MAX_MS);
     return () => {
       clearTimeout(showId);
@@ -128,7 +149,7 @@ export function useCatchUp(opts: { phase: ChatMachineDisplayPhase; progress: num
 
 /** {@link useCatchUp} fed from the chat machine's snapshot. */
 export function useChatCatchUp(opts: {
-  snapshot: ChatSnapshotLike & { context: { sessionId: string | null; streamText: string; streamTools: readonly unknown[] } };
+  snapshot: ChatSnapshotLike & { context: { sessionId: string | null; streamText: string; streamTools: readonly unknown[]; historySyncs: number } };
   send: (event: ChatEvent) => void;
 }): boolean {
   const { context } = opts.snapshot;
@@ -136,6 +157,7 @@ export function useChatCatchUp(opts: {
   return useCatchUp({
     phase,
     progress: context.streamText.length + context.streamTools.length,
+    syncs: context.historySyncs,
     tracked: context.sessionId !== null || phase !== "idle",
     send: opts.send,
   });
