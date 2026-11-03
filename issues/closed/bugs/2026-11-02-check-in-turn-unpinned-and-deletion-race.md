@@ -1,12 +1,15 @@
 ---
 title: "A fired chat check-in turn is not pinned against live-cap eviction, and deletion can overtake its admission"
-workstream: unattached
+workstream: maintenance-live-tasks
 area: beebox
 labels: [chat, schedules]
 filed-by: agent
 discovered-by: agent
 discovered-in: "maintenance-live-tasks / interrupted-chat-wake diff review (Codex), 2026-11-02"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-02):** Fixed in fireChatSchedule: the turn is pinned, and sendFiredTurn's onAdmitted/onDispatch checks abandon it when deletion began (FiredTurnCancelledError). Test in test/webapp/routes/chat/schedule-fire.test.ts.
 
 `fireChatSchedule` (`src/webapp/routes/chat/schedule-fire.ts`) starts a turn
 in the check-in's conversation the way the interrupted-chat wake does, but
