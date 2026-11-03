@@ -189,6 +189,7 @@ export function ComposerSpecimen({ spec, includeControlIds, showHeader, material
       status={chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false })}
       pendingCount={0}
       isStreaming={spec.isStreaming}
+      catchingUp={false}
       onInterrupt={noop}
       speechPlaying={spec.speechPlaying}
       onStopSpeech={noop}

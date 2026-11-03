@@ -50,6 +50,15 @@ function chunkOnParagraphs(text: string): string {
   return text.slice(0, cut);
 }
 
+/**
+ * The part of the stream buffer the live bubble shows. Text written before a
+ * tool call is complete, so it is never trimmed; the rest is cut to the last
+ * safe boundary (`chunkOnParagraphs`).
+ */
+export function visibleStreamText({ streamText, streamTools }: { streamText: string; streamTools: readonly SessionContentBlock[] }): string {
+  const done = Math.max(0, ...streamTools.map((tool) => tool.streamTextOffset ?? 0));
+  return streamText.slice(0, done) + chunkOnParagraphs(streamText.slice(done));
+}
 
 export type DataItem =
   | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[] }
@@ -181,11 +190,9 @@ export function buildTailItems(opts: TailItemsInput): DataItem[] {
     // GroupItem/AssistantMessage path as the finalized turn, keyed by liveTurnId
     // so finalize is an in-place update (no remount/flash). chunkOnParagraphs
     // trims to the last safe boundary so half-typed structured tags don't leak.
-    // Text written before a tool call is complete, so it is never trimmed.
-    const done = Math.max(0, ...streamTools.map((tool) => tool.streamTextOffset ?? 0));
     const entry = buildStreamEntry({
       uuid: `live-${liveTurnId ?? "tail"}`,
-      streamText: streamText.slice(0, done) + chunkOnParagraphs(streamText.slice(done)),
+      streamText: visibleStreamText({ streamText, streamTools }),
       streamTools,
     });
     if (hasAssistantSurface([entry], { debugView, proseEnabled })) {

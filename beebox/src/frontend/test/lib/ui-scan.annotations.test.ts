@@ -254,7 +254,7 @@ void test("The exploded composer gallery and capture-mode gallery render reusabl
       React.createElement("button", { id: includeControlIds ? "bbx-composer-keyboard-close" : undefined }),
       React.createElement(TargetStrip, {
         status: busy ? { state: "busy", disposition: "will-queue" } : { state: "ready" },
-        pendingCount: 0, isStreaming: busy, speechPlaying: false,
+        pendingCount: 0, isStreaming: busy, catchingUp: false, speechPlaying: false,
         onInterrupt: () => {}, onStopSpeech: () => {}, includeControlIds,
       }),
     );

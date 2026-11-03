@@ -29,6 +29,7 @@ import { useRecoveryWidgets } from "./recovery";
 import { useChatMute, useChatSchedules, usePendingMessagePoll } from "./hooks";
 import { useChatModelFeatures } from "./use-chat-model";
 import { useProcessingStatusPoll } from "./processing-status-display";
+import { useChatCatchUp } from "./catch-up";
 import { useCompanionCard } from "../../InteractiveChat-card-hooks";
 import { useChatAttachments, useEnsureComposerVisible } from "../../InteractiveChat-attachments/attachments";
 import { useChatSelections } from "./selections";
@@ -239,6 +240,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const queuedCount = pendingMessages.filter((entry) => entry.pending === true && entry.undelivered !== true).length;
   usePendingMessagePoll({ pendingCount: queuedCount, sessionId, send });
   const showAgentWorking = useProcessingStatusPoll({ processBusy: Boolean(processBusy), snapshot, sessionId, send });
+  const catchingUp = useChatCatchUp({ snapshot, send });
 
   // The one user-send funnel: every send site builds an Emission and lands
   // in dispatchEmission (docs/implemented-plans/input-extraction.md chunk 1); assembly
@@ -341,7 +343,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       isStreaming={isStreaming}
       streamText={streamText}
       streamTools={streamTools}
-      processBusy={Boolean(processBusy)} showAgentWorking={showAgentWorking}
+      processBusy={Boolean(processBusy)} showAgentWorking={showAgentWorking} catchingUp={catchingUp}
       processRunning={processRunning}
       sessionId={sessionId}
       totalEntries={totalEntries}

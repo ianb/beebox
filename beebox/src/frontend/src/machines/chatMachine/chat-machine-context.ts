@@ -34,6 +34,7 @@ export function initialChatContext(input: ChatMachineInput): ChatContext {
     processBusy: false,
     totalEntries: 0,
     refreshCause: "resync" as const,
+    historySyncs: 0,
     liveTurnId: null,
     // Consumed by `loading` below and cleared on the way out, so nothing can
     // replay a stale preload if `loading` is ever re-entered.
