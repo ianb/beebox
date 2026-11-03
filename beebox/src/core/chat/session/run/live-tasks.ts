@@ -31,6 +31,8 @@ export interface LiveTasks {
   /** The server ended the run and its close handler has not run: the run's input is closed and its note is not ready. */
   ending(): boolean;
   count(): number;
+  /** The live set as last reported. */
+  list(): readonly LiveTaskEntry[];
   isWorking(): boolean;
 }
 
@@ -57,6 +59,7 @@ export function createLiveTasks(now: () => number, record?: { boxRoot: string; s
     },
     ending: () => endRecorded,
     count: () => tasks.length,
+    list: () => tasks,
     isWorking: () => tasks.length > 0 && now() - lastRunMessageAt < BACKGROUND_STALL_MS,
   };
 }
