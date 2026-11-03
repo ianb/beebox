@@ -38,10 +38,10 @@ Codex entries here are labeled as such; they carry their own pin.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.316` (SDK), `2.1.316` (Claude Code), `0.166.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.317` (SDK), `2.1.317` (Claude Code), `0.166.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.316` on 2026-11-02
-  (taking `0.3.315`); nothing newer is published. While Codex is held,
+  (taking `0.3.315`). Next: `0.3.317` (settles 2026-11-05T00:02Z). While Codex is held,
   `pnpm update-agent-sdk` would also move Codex, so set the SDK pins in
   `beebox/package.json` and `workstreams-app/package.json` by hand.
   **Codex `0.165.0` is held** until
@@ -76,6 +76,29 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.317 / Claude Code 2.1.317 — pending (published 2026-11-03T00:02Z)
+
+- **SDK:** hook matchers gain `onFailure: "block"`, so a callback that throws
+  or returns invalid output blocks the action. Checked: beebox's two SDK hooks
+  (`core/sdk-hooks.ts`) are a PostToolUse card validator and a PreToolUse
+  `git mv` nudge, both advisory; blocking on their failure would turn a hook
+  bug into blocked work, so neither adopts it. Also new: a
+  `session_writes_lost` system message after the result when a full disk kept
+  the CLI from saving the transcript; `file_unchanged` removed from
+  `FileReadOutput` (beebox does not reference it).
+- **RUNTIME:** `claude -p` exits 1 when a full disk lost transcript writes;
+  very long conversations no longer lose their earlier summary when compaction
+  shortens its own request; partial Grep/Glob results at the time limit are no
+  longer treated as complete; SendMessage to a running background agent moves
+  its command to the background instead of waiting; lower memory in headless
+  sessions with many plugin commands.
+- **HARNESS:** a new check asks before a web or shell call sends the account
+  email address to the network; subagents on a different model use that
+  model's effort; Ctrl+C no longer stops all background agents when clearing
+  typed text.
+- **Action:** Settled path; takeable 2026-11-05T00:02Z.
+- **Sources:** [SDK 0.3.317](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03317), [Claude Code 2.1.317](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21317)
 
 ### 0.3.315 / 0.3.316 / Claude Code 2.1.315 / 2.1.316 — APPLIED 2026-11-02 (published 2026-10-30T21:04Z and 2026-10-31T00:39Z)
 
