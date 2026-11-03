@@ -1,6 +1,7 @@
 ---
 title: "On return to a chat, the old transcript shows with no sign that newer history is loading"
 workstream: chat-catching-up
+needs: [manual-testing]
 area: beebox
 labels: [chat, ux, ios]
 filed-by: agent
@@ -42,3 +43,47 @@ Related: [iOS chat list stale while the box is asleep](2026-10-26-ios-shows-stal
 (the same "old state with no sign it is old" problem for the chat list) and
 [sent message disappears then reappears](2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md)
 (the same deferred-resync path).
+
+## What was done
+
+Branch `worktree-chat-catching-up` (not merged).
+
+- On a return after the page was hidden for 10 seconds or more, a chat that
+  has a session and is idle refreshes its history over HTTP at once instead of
+  waiting for the WebSocket to reconnect
+  (`components/chat/everywhere/InteractiveChat/catch-up.ts`). A chat that was
+  streaming is not refreshed (`streaming` ignores REFRESH); its stream resume
+  or the stream watchdog brings it up to date.
+- The status strip above the composer (`TargetStrip`) says "Catching up…"
+  in place of "Thinking…" until history lands or the live stream shows new
+  output. The chat machine counts successful history loads in
+  `historySyncs`, so a failed fetch does not end the label. The label waits
+  400 ms before it shows, so a fast refresh never flashes it. After 20 s it
+  ends at the first moment no fetch is in flight.
+- A brief switch away (under 10 s) changes nothing: no extra fetch, no label.
+- iOS needs no native change: when the web content survives the background,
+  the resumed page gets `visibilitychange` like a browser tab; when it died,
+  the app reloads the page and the normal loading state covers it.
+
+Verified in a local browser by faking a 30 s hide with history requests slowed
+to 3 s (label shown, then cleared on arrival), a failed history request (label
+kept), and a brief hide (nothing). Not verified on a device or in the iOS
+simulator.
+
+## Manual testing
+
+On the iPhone app:
+
+1. Open a chat and send a message that makes the agent work for a while (for
+   example, ask it to research something and write a card).
+2. Leave the app at once (home screen, or switch to another app) for a minute
+   or more, until the agent has finished.
+3. Come back to the app.
+
+Expected: right after returning, the strip above the message box reads
+"Catching up…" while the chat still shows the old transcript; the agent's
+work and replies then appear and the strip goes away. If the reply arrives
+almost at once, the strip may not show at all, which is also correct.
+
+Also check that switching away for a few seconds and back shows no
+"Catching up…".
