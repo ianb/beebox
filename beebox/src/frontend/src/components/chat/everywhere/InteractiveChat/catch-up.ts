@@ -13,7 +13,8 @@
  * chat refreshes history over HTTP at once, without waiting for the socket,
  * and marks itself catching up until history lands (the machine's
  * `historySyncs` counts only successful loads, so a failed fetch does not end
- * it) or a live stream shows new output. The strip shows the label only after
+ * it) or the live bubble shows new output (trailing half-typed text it
+ * hides does not count). The strip shows the label only after
  * {@link CATCH_UP_SHOW_DELAY_MS}, so a near-instant refresh never flashes it.
  * After {@link CATCH_UP_MAX_MS} it ends at the first moment no fetch is in
  * flight.
@@ -21,6 +22,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChatEvent } from "../../../../machines/chat-types";
+import type { SessionContentBlock } from "../../../../api";
+import { visibleStreamText } from "./message-items";
 import { chatDisplayPhase, type ChatMachineDisplayPhase, type ChatSnapshotLike } from "./processing-status-display";
 
 /** A hide shorter than this keeps its socket and misses nothing worth a refresh. */
@@ -48,7 +51,7 @@ export const initialCatchUpState: CatchUpState = { hiddenAt: null, active: false
 /** What the policy reads from the chat machine. */
 export interface CatchUpChat {
   phase: ChatMachineDisplayPhase;
-  /** Stream text length plus tool count. */
+  /** Visible live-bubble text length plus tool count: what the person can see of the stream. */
   progress: number;
   /** The machine's count of successful history loads. */
   syncs: number;
@@ -149,14 +152,14 @@ export function useCatchUp(chat: CatchUpChat & { send: (event: ChatEvent) => voi
 
 /** {@link useCatchUp} fed from the chat machine's snapshot. */
 export function useChatCatchUp(opts: {
-  snapshot: ChatSnapshotLike & { context: { sessionId: string | null; streamText: string; streamTools: readonly unknown[]; historySyncs: number } };
+  snapshot: ChatSnapshotLike & { context: { sessionId: string | null; streamText: string; streamTools: readonly SessionContentBlock[]; historySyncs: number } };
   send: (event: ChatEvent) => void;
 }): boolean {
   const { context } = opts.snapshot;
   const phase = chatDisplayPhase(opts.snapshot);
   return useCatchUp({
     phase,
-    progress: context.streamText.length + context.streamTools.length,
+    progress: visibleStreamText(context).length + context.streamTools.length,
     syncs: context.historySyncs,
     tracked: context.sessionId !== null || phase !== "idle",
     send: opts.send,
