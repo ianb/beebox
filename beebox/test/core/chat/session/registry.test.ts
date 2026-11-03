@@ -475,6 +475,8 @@ void test("the sweep keeps a chat with a live background task until it settles o
   const run = backend.lastRun();
   run?.emitBackgroundTasks(["collect sources"]);
   await tick();
+  // The set as last reported, for a page that opens after the signal (the `chat.liveTasks` query).
+  t.check(session.liveTaskList(), [{ taskId: "task-0", description: "collect sources" }]);
 
   // Past the idle timeout with a live task: it stays, and its run stays open.
   clock += 60_000;
@@ -492,7 +494,7 @@ void test("the sweep keeps a chat with a live background task until it settles o
   // The task settles: the ordinary idle rule applies, and input closes gently.
   run?.emitBackgroundTasks([]);
   await tick();
-  t.check(session.isWorkingInBackground(), false);
+  t.check({ working: session.isWorkingInBackground(), tasks: session.liveTaskList() }, { working: false, tasks: [] });
   registry.sweepIdle();
   await tick();
   t.check({ size: registry.size(), running: session.isRunning(), aborted: run?.aborted }, { size: 0, running: false, aborted: false });

@@ -210,7 +210,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   // publishes once per turn rather than once per streamed token.
   useWorking(isStreaming);
   const currentUser = useCurrentUser();
-  const backgroundTasks = useBackgroundTasks(); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts
+  const backgroundTasks = useBackgroundTasks(sessionId); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts
   // Composer text lives outside React state, so keystrokes re-render only its textareas.
   // The full emission store is a prop (see above); this derives the
   // text-only view every render — cheap, and stable in identity as long as
@@ -296,6 +296,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,
     onTaskLevel: backgroundTasks.onTaskLevel,
+    resyncTasks: backgroundTasks.resync,
     onCaptureStatus: applyCaptureStatus,
     onScreenshotRequest: screenshots.onScreenshotRequest,
     shellManaged: true,

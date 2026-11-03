@@ -174,4 +174,12 @@ export const chatSessionProcedures = {
     if (live !== null && live !== undefined) return { features: live.getFeatures() };
     return { features: resolveFeatures(stored) };
   }),
+
+  // The chat's live background tasks now. The `chat-task-level` event only
+  // carries changes, so a page that opens or reconnects later reads the set
+  // here. A non-touching lookup keeps the read from extending the chat's life.
+  liveTasks: publicProcedure.input(z.object({ session: z.string() })).query(({ input, ctx }) => {
+    const live = getChatRuntime(ctx.boxRoot)?.registry.peek(input.session);
+    return { tasks: live?.liveTaskList().map(({ taskId, description }) => ({ taskId, description })) ?? [] };
+  }),
 };

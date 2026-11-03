@@ -194,6 +194,8 @@ export function useChatWs(opts: {
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
   onTaskLevel: (tasks: LiveTaskEntry[]) => void;
+  /** Re-read the live background-task set: level signals sent while the socket was down are not replayed. */
+  resyncTasks: () => void;
   onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
   onScreenshotRequest: (request: ScreenshotRequest) => void;
   /** Called immediately before assignment rewrites the fresh-chat URL. */
@@ -201,7 +203,7 @@ export function useChatWs(opts: {
   /** Written by the two audio-review events; read by `UserMessage`'s badges. */
   audioOverlayStore: AudioOverlayStore;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onTaskLevel, onCaptureStatus, onScreenshotRequest, onSessionAssignment, audioOverlayStore } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onTaskLevel, resyncTasks, onCaptureStatus, onScreenshotRequest, onSessionAssignment, audioOverlayStore } = opts;
   const ensureReservation = useBoxConversation()?.ensureReservation;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
@@ -253,7 +255,8 @@ export function useChatWs(opts: {
       // reconnect inside the gate's window isn't dropped — the gate arms a
       // trailing timer so it's still eventually serviced.
       refreshGateRef.current?.notifyReconnect(triggerRefresh);
-    }, [triggerRefresh]),
+      resyncTasks();
+    }, [triggerRefresh, resyncTasks]),
     onError: useCallback(() => { recordChatSendEnvironmentEvent("bus-ws-error"); }, []),
     onEvent: useCallback((event: RealtimeEvent) => {
       const scheduleFired = busEventData(event, "schedule-fired");

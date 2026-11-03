@@ -21,7 +21,7 @@ import { createChatBackend, type ChatBackend, type ChatBackendRun, type ChatBack
 import { chatSystemPrompt, NARRATION_OVERLAY } from "../prompts.js";
 import {
   accumulateAssistantText, buildContentBlocks, warnErroredTurn,
-  type ChatImage, type ChatMessage, type ChatMessageContent, type ChatSendInput, type TaskEvent,
+  type ChatImage, type ChatMessage, type ChatMessageContent, type ChatSendInput, type LiveTaskEntry, type TaskEvent,
 } from "../messages.js";
 import { createTurnDurabilityGate } from "./transcript-sync.js";
 import { recordTurnMarkerForSession } from "../../turn-marker.js";
@@ -447,8 +447,8 @@ export class ChatSession extends EventEmitter {
   /** A background task is live and the run has not gone quiet (`./live-tasks.ts`). */
   isWorkingInBackground(): boolean { return this.isRunning() && this.liveTasks.isWorking(); }
 
-  /** Live background tasks of the current run, stalled or not; 0 with no run. */
-  liveTaskCount(): number { return this.isRunning() ? this.liveTasks.count() : 0; }
+  /** Live background tasks of the current run, stalled or not; none with no run. Maintenance counts them; a page that opens late reads them. */
+  liveTaskList(): readonly LiveTaskEntry[] { return this.isRunning() ? this.liveTasks.list() : []; }
 
   /**
    * Stop the current run gracefully. Clears the pending queue so the
