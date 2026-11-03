@@ -166,3 +166,34 @@ void test("A chat that explicitly picked an OpenRouter model the owner has since
   );
   t.check(backend4.runs.map((run) => run.startOptions.resumeSessionId), []);
 });
+
+// ## A check-in turn is pinned, and a deletion during its start abandons it
+//
+// The turn holds a pin, as a person's send does, so the live cap cannot evict
+// the chat mid-turn. A deletion that begins after the first check, while the
+// send awaits admission, is caught by the send's checks: nothing is sent and
+// no "failed" drop is logged for a chat being deleted.
+void test("A check-in turn is pinned, and a deletion during its start abandons it", async (t) => {
+  const box5 = await makeTmpBox({ git: true });
+  const backend5 = createFakeChatBackend();
+  const registry5 = makeRegistry(box5.root, backend5);
+  const eventBus5 = createEventBus(box5.root);
+  t.teardown(() => { registry5.shutdown(); eventBus5.close(); });
+  await makeTranscript(box5.root, SESSION_A);
+  let deleting = false;
+  const pins: string[] = [];
+  const realIsBlocked = registry5.deletion.isBlocked.bind(registry5.deletion);
+  registry5.deletion.isBlocked = (id: string) => deleting || realIsBlocked(id);
+  const realPin = registry5.pinSession.bind(registry5);
+  registry5.pinSession = (session) => {
+    pins.push("pinned");
+    deleting = true; // the deletion starts once the fire has passed its first check
+    const release = realPin(session);
+    return () => { pins.push("released"); release(); };
+  };
+  await fireChatSchedule(
+    { boxRoot: box5.root, registry: registry5, eventBus: eventBus5, wireSession: noopWire },
+    makeSchedule({ sessionId: SESSION_A }),
+  );
+  t.check({ pins, sent: backend5.runs.flatMap((run) => run.sentClientComposed) }, { pins: ["pinned", "released"], sent: [] });
+});

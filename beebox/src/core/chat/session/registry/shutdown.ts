@@ -1,6 +1,7 @@
 /** Bounded graceful-close boundary for registry-owned chat sessions. */
 
 import { startAwakeTimeout } from "../../../../shared/awake-timeout.js";
+import { END_CAUSES, type EndCause } from "../ended-note.js";
 
 const CHAT_SHUTDOWN_GRACE_MS = 10_000;
 
@@ -10,7 +11,7 @@ export interface ShutdownChatSession {
   /** Settles when a run start in flight has finished or failed; at once when none is. */
   whenStarted(): Promise<unknown>;
   once(event: "close", listener: () => void): unknown;
-  stop(cause?: string): void;
+  stop(cause?: EndCause): void;
 }
 
 /**
@@ -48,7 +49,7 @@ export async function stopChatSessionsAndWait(
       closes.push(new Promise<void>((resolve) => {
         session.once("close", () => { unfinished.delete(session); resolve(); });
       }));
-      session.stop("the Bee Box server shut down");
+      session.stop(END_CAUSES.shutdown);
     }
   };
   try {
@@ -64,6 +65,6 @@ export async function stopChatSessionsAndWait(
     return [...unfinished].map(label);
   } finally {
     timeout.stop();
-    for (const session of sessions) session.stop("the Bee Box server shut down");
+    for (const session of sessions) session.stop(END_CAUSES.shutdown);
   }
 }

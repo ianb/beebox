@@ -40,7 +40,7 @@ import {
 } from "./start.js";
 import type { ChatSessionOptions } from "../options.js";
 import { createHealthGate } from "../../../session-context.js";
-import { createLiveTasks, endRun } from "./live-tasks.js";
+import { createLiveTasks, endRun, END_CAUSES, maintenanceCause, type EndCause } from "./live-tasks.js";
 import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
 export { chatSystemPrompt, NARRATION_OVERLAY, buildContentBlocks };
@@ -327,7 +327,7 @@ export class ChatSession extends EventEmitter {
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
     // A run that cannot start, or a live one whose provider setup is gone, is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
     const live = this.liveRun() !== null;
-    if (!(await sendReadiness({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, liveModel: live ? this.resolvedModel : null, startOptions: live ? null : await this.buildBackendStartOptions(), session: this, onRefused }))) { if (live) this.restart({ cause: "its provider setup changed" }); return false; }
+    if (!(await sendReadiness({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, liveModel: live ? this.resolvedModel : null, startOptions: live ? null : await this.buildBackendStartOptions(), session: this, onRefused }))) { if (live) this.restart({ cause: END_CAUSES.providerChanged }); return false; }
     if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
 
     const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try { onAdmitted?.();
@@ -377,7 +377,7 @@ export class ChatSession extends EventEmitter {
 
   /** Close an idle subprocess for maintenance without discarding its queued input; `reason` names the owner. */
   pauseForMaintenance(reason?: string): void { this.maintenancePaused = true;
-    if (!this.isBusy()) this.restart({ cause: `box maintenance (${reason ?? "unnamed"})` });
+    if (!this.isBusy()) this.restart({ cause: maintenanceCause(reason ?? "unnamed") });
   }
 
   resumeAfterMaintenance(): void { this.maintenancePaused = false;
@@ -460,7 +460,7 @@ export class ChatSession extends EventEmitter {
    * as "queue-dropped", which the route layer records as undelivered. An
    * in-flight drain may still deliver; the client reconciles that case.
    */
-  stop(cause?: string): void {
+  stop(cause?: EndCause): void {
     const dropped = [...(this.draining?.splice(0) ?? []), ...this.messageQueue]; this.messageQueue = []; // the splice empties the drain's own list
     const run = this.liveRun();
     if (run !== null && (this.state.phase === "ready" || this.state.phase === "streaming")) {
@@ -479,7 +479,7 @@ export class ChatSession extends EventEmitter {
    * drains the queue into the fresh run so wedged sessions recover
    * without losing in-flight user messages.
    */
-  restart(opts?: { cause?: string }): void {
+  restart(opts?: { cause?: EndCause }): void {
     const run = this.liveRun();
     if (run === null) {
       log("restart", "No run to restart");

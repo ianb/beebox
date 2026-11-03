@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-02T21:29:13Z
-Total documents: 618
+Generated: 2026-11-03T00:33:34Z
+Total documents: 619
 
 ## Issues
 
@@ -42,6 +42,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/file-layout.check.subplan.md** — "Layout check: the script that enforces the file-layout rules" (184 lines) · shipped history · implemented
 - **docs/implemented-plans/file-layout.moves.subplan.md** — "Layout moves: bring the tree to zero layout-check findings" (149 lines) · shipped history · implemented
 - **docs/implemented-plans/input-extraction.review.md** — "Plan Engineering Review — input-extraction (codex cross-model pass)" (86 lines) · implementation review
+- **docs/implemented-plans/interrupted-chat-wake.md** — "An interrupted chat wakes itself to decide about its unfinished work" (180 lines) · shipped history · implemented
 - **docs/implemented-plans/local-password-auth.review.md** — "Cross-model review — local-password-auth (Codex, 2026-07-19)" (81 lines) · implementation review
 - **docs/implemented-plans/markdoc-tags-plan.review-adapted-trial.md** — "Plan Engineering Review — Markdoc Tags Design" (138 lines) · shipped history · implemented
 - **docs/implemented-plans/markdoc-tags-plan.review.md** — "Plan Engineering Review — Markdoc Tags Design" (508 lines) · implementation review
@@ -4682,6 +4683,7 @@ Title: "A chat learns why and when its background tasks were cut off" | 199 line
 
 Referenced by:
 - docs/chat/sessions.md:60 (link) — - **Evict.** Registry eviction calls `stop()`. The sweep and the live cap skip a chat with a live background task until
+- docs/implemented-plans/interrupted-chat-wake.md:10 (mention) — (`docs/implemented-plans/chat-termination-notes.md`). That turn comes only
 
 References:
 - → docs/implemented-plans/maintenance-live-tasks.md (mention)
@@ -5939,6 +5941,13 @@ References:
 Title: "Plan Engineering Review — input-extraction (codex cross-model pass)" | 86 lines | implementation review
 
 No references in or out.
+
+#### docs/implemented-plans/interrupted-chat-wake.md **[ORPHAN]**
+
+Title: "An interrupted chat wakes itself to decide about its unfinished work" | 180 lines | shipped history | implemented
+
+References:
+- → docs/implemented-plans/chat-termination-notes.md (mention)
 
 #### docs/implemented-plans/ios-audio-retranscription.md
 
