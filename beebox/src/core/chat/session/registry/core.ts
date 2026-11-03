@@ -32,6 +32,8 @@ import { pinEntry, pinSessionObject } from "./pins.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./options.js";
 import { stopChatSessionsAndWait } from "./shutdown.js";
 
+export { END_CAUSES } from "../ended-note.js";
+
 export { SessionDeletingError } from "../delete/deletion-state.js"; export type { ChatSessionRegistryOptions } from "./options.js";
 
 const DEFAULT_MAX_LIVE = 2;
@@ -201,7 +203,7 @@ export class ChatSessionRegistry extends EventEmitter {
    *  nothing: an observer that kept sessions warm would change what it measures. */
   snapshotAll(): { sessionId: string | null; running: boolean; busy: boolean; liveTasks: number }[] {
     const held = [...[...this.entries.values()].map((e) => e.session), ...this.pending];
-    return held.map((s) => ({ sessionId: s.getSessionId(), running: s.isRunning(), busy: s.isBusy(), liveTasks: s.liveTaskCount() }));
+    return held.map((s) => ({ sessionId: s.getSessionId(), running: s.isRunning(), busy: s.isBusy(), liveTasks: s.liveTaskList().length }));
   }
 
   /** Number of entries with a live subprocess. */

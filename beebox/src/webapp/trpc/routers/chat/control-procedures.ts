@@ -25,7 +25,7 @@ import { deleteChatSession, ChatSessionNotFoundError, SessionStorageContextMisma
 import { commitChatHusk, setChatHuskStatus } from "../../../../core/chat/husk.js";
 import { sdkSessionIdSchema } from "../../../../core/chat/session/id.js";
 import { archiveChatSession } from "../../../../core/chat/session/archive.js";
-import { SessionDeletingError } from "../../../../core/chat/session/registry/core.js";
+import { SessionDeletingError, END_CAUSES } from "../../../../core/chat/session/registry/core.js";
 import { LockHeldError } from "../../../../core/chat/review/lock.js";
 import { resolveSessionAvailability } from "../../../../core/chat/session/availability.js";
 import type { ReserveResult } from "../../../../core/chat/session/reserve.js";
@@ -289,10 +289,10 @@ export const chatControlProcedures = {
       if (target.isBusy()) {
         // Mid-turn — defer restart to the turn's end so the response isn't lost.
         target.once("done", () => {
-          if (target.isRunning()) target.restart({ cause: "a model change was requested" });
+          if (target.isRunning()) target.restart({ cause: END_CAUSES.modelChange });
         });
       } else {
-        target.restart({ cause: "a model change was requested" });
+        target.restart({ cause: END_CAUSES.modelChange });
         restarted = true;
       }
     }
@@ -430,7 +430,7 @@ export const chatControlProcedures = {
     const { registry } = requireRuntime(ctx.boxRoot);
     const target = registry.get(input.session);
     if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "session not live" });
-    target.restart({ cause: "a restart was requested" });
+    target.restart({ cause: END_CAUSES.restartRequested });
     return { ok: true };
   }),
 

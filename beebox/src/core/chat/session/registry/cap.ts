@@ -11,10 +11,11 @@
 
 import { makeLog } from "../log.js";
 import type { RegistryEntry } from "./options.js";
+import { END_CAUSES } from "../ended-note.js";
 
 const log = makeLog("ChatSessionRegistry");
-/** What a hung chat's next turn hears; a working chat is held (`isHeld`), so only a stalled one ends here. */
-const HUNG_CAUSE = "it had produced no output for 4 hours and was treated as hung";
+// A working chat is held (`isHeld`), so only a stalled one ends here with live tasks.
+const HUNG_CAUSE = END_CAUSES.hung;
 
 /** Whether anything still needs this entry's subprocess: a listener or background work. */
 function isHeld(entry: RegistryEntry): boolean {

@@ -32,7 +32,7 @@ import type { ChatBackendStartOptions, ChatContentBlock } from "../../../../serv
 import type { ChatSessionOptions } from "../options.js";
 import { buildLandmarkBoxContext } from "../landmark-context.js";
 import { UnsafeAgentContextIncludeError } from "../../../agent-context-includes.js";
-import { pendingRunEndedNote } from "./ended-note.js";
+import { pendingRunEndedNote } from "../ended-note.js";
 
 const log = makeLog("ChatSession");
 
@@ -198,7 +198,7 @@ export async function composeTurnContent(
     features: FeatureStore;
     sessionStart: boolean;
     healthGate?: HealthGate;
-    /** Whose run-ended note (`./ended-note.ts`) to carry; it rides inside the snapshot so the person's message stays clean. */
+    /** Whose run-ended note (`../ended-note.ts`) to carry; it rides inside the snapshot so the person's message stays clean. */
     sessionId: string | null;
   },
 ): Promise<{ content: ChatContentBlock[]; dispatched: () => void }> {

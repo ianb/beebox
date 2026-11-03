@@ -6,28 +6,47 @@
  * task's result then shows as a permanent marker in the transcript.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { trpcClient } from "../../../../lib/trpc/client";
 import { formatDuration } from "@shared/relative-time";
 import { applyTaskEvent, applyTaskLevel, type LiveTask, type LiveTaskEntry, type TaskEvent } from "./background-tasks";
 
 /**
  * Hold the live-task list for one chat session. Returns the current tasks plus
  * the handlers that fold in the level signal (membership) and edge events
- * (detail) arriving over the event bus.
+ * (detail) arriving over the event bus. The bus carries only changes, so the
+ * set is also read from the server when the session opens and on `resync`
+ * (a reconnect): a page opened while tasks run shows them.
  */
-export function useBackgroundTasks(): {
+export function useBackgroundTasks(sessionId: string | null): {
   tasks: LiveTask[];
   onTaskEvent: (event: TaskEvent) => void;
   onTaskLevel: (level: LiveTaskEntry[]) => void;
+  resync: () => void;
 } {
   const [tasks, setTasks] = useState<LiveTask[]>([]);
+  // Bumped by each level signal and session change: a read that started before one is stale and dropped.
+  const generation = useRef(0);
   const onTaskEvent = useCallback((event: TaskEvent) => {
     setTasks((prev) => applyTaskEvent(prev, event));
   }, []);
   const onTaskLevel = useCallback((level: LiveTaskEntry[]) => {
+    generation.current += 1;
     setTasks((prev) => applyTaskLevel(prev, level));
   }, []);
-  return { tasks, onTaskEvent, onTaskLevel };
+  const resync = useCallback(() => {
+    if (sessionId === null) return;
+    const started = generation.current;
+    trpcClient.chat.liveTasks.query({ session: sessionId }).then(({ tasks: level }) => {
+      if (generation.current === started) setTasks((prev) => applyTaskLevel(prev, level));
+    }).catch((error: unknown) => { console.warn("[chat] Live background tasks could not be read", error); });
+  }, [sessionId]);
+  useEffect(() => {
+    generation.current += 1;
+    setTasks([]);
+    resync();
+  }, [resync]);
+  return { tasks, onTaskEvent, onTaskLevel, resync };
 }
 
 function TaskPill({ task }: { task: LiveTask }) {

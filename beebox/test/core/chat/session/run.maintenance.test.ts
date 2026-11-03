@@ -10,7 +10,7 @@ import { createFakeChatBackend } from "../../../../src/services/claude-chat/core
 import { acquireBoxWork, closeBoxMaintenance } from "../../../../src/lib/box-maintenance/admission.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { waitForRuns } from "../../../helpers/chat-session-spawner-helpers.js";
-import { createTaskRecorder, pendingRunEndedNote } from "../../../../src/core/chat/session/run/ended-note.js";
+import { createTaskRecorder, END_CAUSES, pendingRunEndedNote } from "../../../../src/core/chat/session/ended-note.js";
 import { createLiveTasks } from "../../../../src/core/chat/session/run/live-tasks.js";
 
 void test("line 13", async (t) => {
@@ -109,7 +109,7 @@ how is it going?` }]);
   session.pauseForMaintenance("deployment");
   t.check({ aborted: run.aborted, note: JSON.parse(await box.read(NOTE)) }, {
     aborted: true,
-    note: { tasks: ["collect sources"], lastSeenAt: isoDate(), writer: uuid(), at: isoDate(), cause: "box maintenance (deployment)" },
+    note: { tasks: ["collect sources"], lastSeenAt: isoDate(), writer: uuid(), at: isoDate(), cause: "box maintenance (deployment)", wake: true },
   });
   session.resumeAfterMaintenance();
 
@@ -196,7 +196,7 @@ void test("Clearing a delivered note keeps a record written since", async (t) =>
   const box = await makeTmpBox({ git: true });
   t.teardown(async () => { await box.cleanup(); });
   const recorder = createTaskRecorder(box.root, () => "sess-1");
-  recorder.ended({ tasks: ["old task"], cause: "the Bee Box server shut down", now: new Date("2026-11-02T20:00:00.000Z") });
+  recorder.ended({ tasks: ["old task"], cause: END_CAUSES.shutdown, now: new Date("2026-11-02T20:00:00.000Z") });
   const pending = pendingRunEndedNote(box.root, "sess-1");
   recorder.observe(["new task"], new Date("2026-11-02T20:01:00.000Z"));
   pending.clear();
@@ -220,7 +220,7 @@ void test("A task update in flight after the server ends a run keeps the cause",
   const tasks = createLiveTasks(() => clock, { boxRoot: box.root, sessionId: () => "sess-1" });
   tasks.observe([{ taskId: "a", description: "collect sources" }]);
   clock += 1_000;
-  tasks.recordEnd("a restart was requested");
+  tasks.recordEnd(END_CAUSES.restartRequested);
   clock += 1_000;
   tasks.observe([{ taskId: "a", description: "collect sources" }, { taskId: "b", description: "draft summary" }]);
   tasks.noteRunMessage();
@@ -229,7 +229,7 @@ void test("A task update in flight after the server ends a run keeps the cause",
   t.check({ ending, after: tasks.ending(), note: JSON.parse(await box.read(NOTE)) }, {
     ending: true,
     after: false,
-    note: { tasks: ["collect sources"], lastSeenAt: "2026-11-02T20:00:01.000Z", writer: uuid(), at: "2026-11-02T20:00:01.000Z", cause: "a restart was requested" },
+    note: { tasks: ["collect sources"], lastSeenAt: "2026-11-02T20:00:01.000Z", writer: uuid(), at: "2026-11-02T20:00:01.000Z", cause: "a restart was requested", wake: false },
   });
 });
 
@@ -253,7 +253,7 @@ void test("A message sent while a restart closes the run reaches the fresh run",
   await done;
 
   const closed = once(session, "close");
-  session.restart({ cause: "a restart was requested" });
+  session.restart({ cause: END_CAUSES.restartRequested });
   const busyWhileClosing = session.isBusy();
   // What every sender does with a busy session.
   if (busyWhileClosing) session.enqueue("sent during the restart");
