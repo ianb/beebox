@@ -1,7 +1,7 @@
 /**
  * Wake a chat whose run was interrupted while background tasks were live, so
  * the agent decides about its unfinished work without waiting for the person
- * (docs/plans/interrupted-chat-wake.md). The turn goes the way a chat check-in
+ * (docs/implemented-plans/interrupted-chat-wake.md). The turn goes the way a chat check-in
  * does (`./schedule-fire.ts`); the `<run-ended>` note rides in its snapshot.
  */
 import { claimWake, wakeAllowed, wakeCandidates, type WakeCandidate } from "../../../core/chat/session/interrupted-wake.js";

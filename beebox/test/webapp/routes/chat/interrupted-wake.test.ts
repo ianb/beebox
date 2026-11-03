@@ -3,7 +3,7 @@
 // When a chat's run was interrupted from outside while background tasks were
 // live (box maintenance, a server shutdown or crash, the agent process dying),
 // the server starts one turn in that chat so the agent decides about the
-// unfinished work (`docs/plans/interrupted-chat-wake.md`). A hung run or an
+// unfinished work (`docs/implemented-plans/interrupted-chat-wake.md`). A hung run or an
 // ending someone asked for does not wake; neither does a chat with no wake left
 // today, a chat whose run is still live, or any chat while maintenance holds
 // the box. `createInterruptedWakePass` is one poll pass

@@ -1,6 +1,6 @@
 ---
 title: "An interrupted chat wakes itself to decide about its unfinished work"
-status: draft
+status: implemented
 workstream: maintenance-live-tasks
 issues: []
 ---

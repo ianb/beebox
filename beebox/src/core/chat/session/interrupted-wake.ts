@@ -1,6 +1,6 @@
 /**
  * Which interrupted chats the server wakes, and the claim that keeps each wake
- * to once per note and twice per chat a day (docs/plans/interrupted-chat-wake.md).
+ * to once per note and twice per chat a day (docs/implemented-plans/interrupted-chat-wake.md).
  *
  * A chat is interrupted when its run with live background tasks ended from
  * outside: box maintenance, a server shutdown or crash, or the agent process

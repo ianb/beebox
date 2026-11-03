@@ -1,6 +1,6 @@
 // # Which interrupted chats wake, and the claim that limits each wake
 //
-// `src/core/chat/session/interrupted-wake.ts` (docs/plans/interrupted-chat-wake.md).
+// `src/core/chat/session/interrupted-wake.ts` (docs/implemented-plans/interrupted-chat-wake.md).
 // Records from earlier versions map by their cause; a claim refuses a record
 // replaced since it was selected, so a stale selection cannot wake new work.
 

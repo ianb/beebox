@@ -83,7 +83,7 @@ void test("A declared token takes its surrounding spaces with it — no stranded
 
 // ## A wake the server started itself shows nothing
 //
-// An interrupted chat's wake turn (`docs/plans/interrupted-chat-wake.md`) is
+// An interrupted chat's wake turn (`docs/implemented-plans/interrupted-chat-wake.md`) is
 // system-injected, like `<schedule-fired>`; the agent's reply is what the person
 // sees.
 void test("A wake the server started itself shows nothing", async (t) => {
