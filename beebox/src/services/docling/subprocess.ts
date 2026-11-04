@@ -142,14 +142,16 @@ export function doclingFailureMessage(failure: {
   }
 }
 
+const DRIVER_ERROR_PREFIX = "bbx-docling: error: ";
+
 /**
- * Prefer the driver's own reason (`bbx-docling: …`, its last such line) over
- * the raw output tail, which is mostly model-loading progress.
+ * Prefer the driver's own failure reason (its last `bbx-docling: error:` line)
+ * over the raw output tail, which is mostly model-loading progress. Progress
+ * lines (waiting, lock acquired) are never a reason.
  */
 export function driverReason(outputTail: string): string | null {
-  const lines = outputTail.split("\n").filter((line) => line.startsWith("bbx-docling: ") && !line.startsWith(LOCK_ACQUIRED_MARKER));
-  const last = lines.at(-1);
-  return last === undefined ? null : last.slice("bbx-docling: ".length);
+  const last = outputTail.split("\n").findLast((line) => line.startsWith(DRIVER_ERROR_PREFIX));
+  return last === undefined ? null : last.slice(DRIVER_ERROR_PREFIX.length);
 }
 
 /**

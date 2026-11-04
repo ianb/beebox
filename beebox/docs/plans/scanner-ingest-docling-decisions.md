@@ -339,6 +339,22 @@ Deliberate difference: when Docling ends with a status other than
 success, the CLI exits 0 with no files; the driver exits 1 with the status and
 Docling's errors.
 
+**Acceptance, beside a box.** One cgroup with `memory.high` 2G and
+`memory.max` 2560M, 3 GB of swap, a 550 MB stand-in for the box server and a
+chat (it touches all its memory every 200 ms and records each pass), and the
+driver:
+
+| PDF | Cgroup peak | Swap | Memory stall (full) | Time | Stand-in p99 / worst pass |
+|---|---:|---:|---:|---:|---:|
+| 333-page digital manual | 1,593 MB | 0 | 0 s | 539 s | 939 ms / 4.1 s |
+| 16-page scan, OCR `regions` | 2,051 MB | 220 MB | about 1 s, 63 throttle events | 100 s | 601 ms / 0.8 s |
+
+The stand-in alone passes in 189 ms p99, 239 ms worst. Its slower passes
+during the manual came with zero memory pressure, so they are CPU contention:
+Docling runs four inference threads on three cores. Fewer threads might help
+co-tenants (two threads measured slightly faster on the 56-page report) but
+can change floating-point results, so it needs its own output comparison.
+
 **Limits.** 2 GiB per box (`MemoryHigh=2G`; with it, proposed `MemoryMax=2560M`
 and `OOMPolicy=continue`) fits one conversion beside the box server and a chat
 (about 550 MB). If the OOM killer picks the `bbx` process that waits on Docling

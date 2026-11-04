@@ -21,6 +21,9 @@ Exclusion: before importing Docling, the driver takes each lock in
 The kernel releases them when this process ends, however it ends, so a lock
 can never outlive the conversion or expire while it runs.
 
+Progress goes to stderr as `bbx-docling: <message>`; a failure reason as
+`bbx-docling: error: <message>`.
+
 Exit codes: 0 converted; 1 failed (reason on stderr); 70 parent gone;
 75 a lock wait ran out.
 """
@@ -46,8 +49,19 @@ IMAGE_SCALE = 2.0
 
 
 def say(message: str) -> None:
-    """One `bbx-docling:` line on stderr; core.ts reads these."""
+    """One `bbx-docling:` progress line on stderr."""
     print(f"bbx-docling: {message}", file=sys.stderr, flush=True)
+
+
+def fail(message: str) -> None:
+    """The run's failure reason; core.ts puts the last one on the card."""
+    say(f"error: {message}")
+
+
+# The lock files, open for the life of the process. Never closed by hand: the
+# kernel releases them at exit, after any Docling stage thread still running
+# (they are non-daemon threads) has finished with its memory.
+HELD_LOCKS: list[IO[str]] = []
 
 
 def watch_parent(pid: int) -> None:
@@ -61,16 +75,19 @@ def watch_parent(pid: int) -> None:
         try:
             os.kill(pid, 0)
         except ProcessLookupError:
-            say(f"the process that started this conversion ({pid}) is gone; stopping")
-            os._exit(EXIT_ORPHANED)
+            try:
+                say(f"the process that started this conversion ({pid}) is gone; stopping")
+            except Exception:  # noqa: BLE001 (its stderr reader is usually gone too)
+                pass
+            finally:
+                os._exit(EXIT_ORPHANED)
         except PermissionError:
             pass  # Alive, and owned by another user.
         time.sleep(2)
 
 
-def acquire_locks(paths: list[str], wait_seconds: float) -> list[IO[str]]:
+def acquire_locks(paths: list[str], wait_seconds: float) -> None:
     deadline = time.monotonic() + wait_seconds
-    held: list[IO[str]] = []
     announced = False
     for lock_path in paths:
         Path(lock_path).parent.mkdir(parents=True, exist_ok=True)
@@ -84,12 +101,11 @@ def acquire_locks(paths: list[str], wait_seconds: float) -> list[IO[str]]:
                     say("waiting for another Docling conversion to finish")
                     announced = True
                 if time.monotonic() >= deadline:
-                    say(f"another Docling conversion held {lock_path} for over {int(wait_seconds)} seconds")
+                    fail(f"another Docling conversion held {lock_path} for over {int(wait_seconds)} seconds")
                     sys.exit(EXIT_BUSY)
                 time.sleep(1)
-        held.append(handle)
+        HELD_LOCKS.append(handle)
     say("lock acquired")
-    return held
 
 
 def convert(req: dict[str, Any]) -> int:
@@ -144,7 +160,7 @@ def convert(req: dict[str, Any]) -> int:
     result = converter.convert(source, raises_on_error=False)
     if result.status != ConversionStatus.SUCCESS:
         details = "; ".join(str(error.error_message) for error in result.errors)
-        say(f"conversion ended with status {result.status.value}: {details or 'no details'}"[:400])
+        fail(f"conversion ended with status {result.status.value}: {details or 'no details'}"[:400])
         return EXIT_FAILED
     doc = result.document
     del result, converter
@@ -209,12 +225,16 @@ def main() -> int:
     parent = req.get("parentPid")
     if isinstance(parent, int) and parent > 0:
         threading.Thread(target=watch_parent, args=(parent,), daemon=True).start()
-    held = acquire_locks(list(req["lockPaths"]), float(req["lockWaitSeconds"]))
+    acquire_locks(list(req["lockPaths"]), float(req["lockWaitSeconds"]))
     try:
         return convert(req)
-    finally:
-        for handle in held:
-            handle.close()
+    except Exception as error:
+        # One line for the card; the traceback above it stays in the output tail.
+        import traceback
+
+        traceback.print_exc()
+        fail(f"{type(error).__name__}: {error}"[:400])
+        return EXIT_FAILED
 
 
 if __name__ == "__main__":

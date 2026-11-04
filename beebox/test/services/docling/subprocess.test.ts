@@ -128,9 +128,10 @@ void test("Failure messages name the cause and what not to do", (t) => {
   t.check(doclingFailureMessage({ outcome: { kind: "timeout", phase: "waiting" }, budgets, detail: "" }), "Docling did not start converting within 25 minutes and was stopped");
   t.check(doclingFailureMessage({ outcome: { kind: "failed", exitCode: 1 }, budgets, detail: "conversion ended with status failure: bad xref" }), "Docling exited 1: conversion ended with status failure: bad xref");
 
-  const tail = "Loading weights: 100%\nbbx-docling: lock acquired\nwarning: something\nbbx-docling: conversion ended with status failure: bad xref\n";
+  const tail = "bbx-docling: waiting for another Docling conversion to finish\nbbx-docling: lock acquired\nwarning: something\nbbx-docling: error: conversion ended with status failure: bad xref\n";
   t.check(driverReason(tail), "conversion ended with status failure: bad xref");
-  t.check(driverReason("bbx-docling: lock acquired\nTraceback ..."), null);
+  // A waiting line is progress, not the reason a later step failed.
+  t.check(driverReason("bbx-docling: waiting for another Docling conversion to finish\nbbx-docling: lock acquired\nTraceback ..."), null);
   t.end();
 });
 
@@ -191,11 +192,15 @@ void test("A driver whose parent is gone stops with exit 70", { skip: pythonSkip
   const deadPid = Number(gone.stdout.trim());
   const holder = execa("python3", ["-I", "-c", "import fcntl,sys,time\nf=open(sys.argv[1],'a')\nfcntl.flock(f, fcntl.LOCK_EX)\nprint('held', flush=True)\ntime.sleep(30)", lockPath]);
   await heldBy(holder);
-  // It would wait 60 s for the lock; the parent check ends it first.
-  const orphan = await execa("python3", ["-I", DOCLING_DRIVER_PATH, JSON.stringify({
+  // It would wait 60 s for the lock; the parent check ends it first. Its
+  // stderr reader is gone, as it is when the parent dies: the stop message
+  // then cannot be written, and the driver must still stop.
+  const orphanRun = execa("python3", ["-I", DOCLING_DRIVER_PATH, JSON.stringify({
     source: "x.pdf", outputDir: dir, ocr: "off", languages: null, documentTimeoutSeconds: 10,
     lockPaths: [lockPath], lockWaitSeconds: 60, parentPid: deadPid,
-  })], { reject: false, timeout: 20_000 });
+  })], { reject: false, timeout: 20_000, stdout: "ignore" });
+  orphanRun.stderr?.destroy();
+  const orphan = await orphanRun;
   holder.kill();
   await holder.catch(() => null);
   t.check(orphan.exitCode, 70);
