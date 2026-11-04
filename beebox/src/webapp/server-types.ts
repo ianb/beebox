@@ -72,6 +72,11 @@ export interface InternalServerOptions extends ServerOptions {
    */
   devSurfaces?: boolean | undefined;
   /**
+   * Keep the frontend's runtime-lint records (`debugLog.submit` with source
+   * `runtime-lint`) in client-debug.log. Always on with `devSurfaces`.
+   */
+  runtimeLint?: boolean | undefined;
+  /**
    * Chat backend for every session this server creates. The same test-only
    * spirit as `openAccess`: no CLI path sets it, and production falls through
    * to `createChatBackend()`. It exists so a route test can exercise the

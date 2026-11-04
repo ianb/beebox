@@ -47,6 +47,7 @@ import type { FileViewProps } from "../file-view-types";
 import type { ViewTarget } from "../../lib/view-url";
 import { FRAGMENT_ROOT_ATTRIBUTE } from "../../lib/fragment-target";
 import { useFragmentJump } from "../../hooks/useFragmentJump";
+import { RuntimeLintViewScope } from "../../lib/runtime-lint/watched-content";
 
 export type { FileViewMode } from "../file-view-types";
 
@@ -181,11 +182,14 @@ function fragmentRootFor({ mode, workspacePdf, onRoot }: {
   return <div ref={onRoot} {...attribute} className={workspacePdf ? "h-full" : undefined}>{content}</div>;
 }
 
-/** One-line markers above the body: a stale load, a section that could not be found. */
-function withBodyNotices({ stale, onRefresh, sectionMissed }: {
+/**
+ * One-line markers above the body: a stale load, a section that could not be
+ * found. Always the same shape, so the body keeps its place in the tree, and
+ * stays mounted, while a marker comes and goes.
+ */
+export function withBodyNotices({ stale, onRefresh, sectionMissed }: {
   stale: LoadFailure | null; onRefresh: () => void; sectionMissed: boolean;
 }, content: ReactNode): ReactNode {
-  if (stale === null && !sectionMissed) return content;
   return (
     <>
       {stale === null ? null : <FileStaleNotice failure={stale} onRefresh={onRefresh} />}
@@ -217,7 +221,16 @@ function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
   return enabled ? <SelectionCapture onCapture={onCapture} extract={extractSelection} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
 }
 
-export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
+/**
+ * One file's view. Its runtime-lint view scope lives exactly as long as the
+ * view, so content replaced inside it is reported and navigation is not
+ * (`lib/runtime-lint/watched-content.tsx`).
+ */
+export function FileView(props: FileViewProps) {
+  return <RuntimeLintViewScope><FileViewContent {...props} /></RuntimeLintViewScope>;
+}
+
+function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
   const mode = modeProp ?? "companion";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const visibleSelectionSink = useVisibleCardSelectionSink();

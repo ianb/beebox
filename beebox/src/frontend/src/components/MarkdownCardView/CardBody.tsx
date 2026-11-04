@@ -20,6 +20,7 @@ import { CompositionCardContext, useComposeSession, type CompositionCard } from 
 import type { CardTypeMarkdown } from "./type-markdown";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { StatusMessage } from "../ui/StatusMessage";
+import { useWatchedContent } from "../../lib/runtime-lint/watched-content";
 
 /**
  * Subtle "Direct quotes from: …" subtitle when the doc body contains one
@@ -94,6 +95,8 @@ export function CardBody({
   markdown?: CardTypeMarkdown | undefined;
 }): ReactNode {
   const body = shownCardBody(data.body, title);
+  // Runtime lint: this body must stay mounted while its card's view is open.
+  useWatchedContent("card-body", data.path);
   const composeEditor = markdown?.composeEditor ?? null;
   // Owned here, above the parsed body, so a remounted composition block keeps its editor.
   const compose = useComposeSession({ body: data.body ?? "", cardPath: data.path, composeEditor });

@@ -16,6 +16,7 @@ import {
 } from "./controls.js";
 import type { Box, CheckResult, Locator, RefRecord, RefTable, ScanEntry, Target } from "./controls.js";
 import { CAPTURE_TIMEOUT_MS, noAnswer, stuckCaptureMessage } from "./stuck.js";
+import { noteWedged } from "./runtime-lint-drain.js";
 import { isOwnOrigin } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -170,6 +171,7 @@ export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeCo
     ({ stdout: text, stderr: warnings } = await run(["snapshot", ...args], { timeoutMs: CAPTURE_TIMEOUT_MS }));
   } catch (e) {
     if (noAnswer(e)) {
+      noteWedged();
       process.stderr.write(stuckCaptureMessage("snapshot"));
       return 1;
     }
