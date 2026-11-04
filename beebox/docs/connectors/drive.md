@@ -201,9 +201,11 @@ PDFs, Slides, images -- becomes a `.glink.card` **pointer**: its Drive name as `
 `drive:` with its id, link and mime type, with nothing copied and a body for whoever wants to write down what it
 is for. Recursion is bounded (8 levels, 500 folders per pass) and the folder
 card carries its Drive name as `title`, `drive:` with the folder's id and link,
-`last-sync` from the last pass, plus `error` when that pass failed. `bbx drive
-status` prints a synced file's `drive.modified` as "Modified on Drive" and a
-folder's `last-sync` as "Last synced".
+plus `error` when the last pass failed. When each pass ran is kept in the
+gitignored Drive state (`folders` in `_bookkeeping/connectors/google-drive.state.json`),
+not on the card, so a pass that found nothing new changes no tracked file and
+makes no commit. `bbx drive status` prints a synced file's `drive.modified` as
+"Modified on Drive" and a folder's last pass as "Last synced".
 
 **Pointers on their own.** `bbx drive link <url> <path>` writes a pointer to any
 Drive item -- folders included -- with `origin: manual` (a mirror's pointers

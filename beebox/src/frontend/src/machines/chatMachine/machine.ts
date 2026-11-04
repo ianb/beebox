@@ -84,7 +84,7 @@ export const chatMachine = setup({
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
     SET_MESSAGES: {
-      actions: assign(applyServerMessages),
+      actions: assign((args) => ({ ...applyServerMessages(args), historySyncs: args.context.historySyncs + 1 })),
     },
     // Global handler: refresh history from any state (e.g., after SSE chat-complete)
     REFRESH: {
@@ -182,7 +182,7 @@ export const chatMachine = setup({
             return {
               messages, pendingMessages, sessionId: event.output.sessionId,
               processRunning: event.output.running, processBusy: event.output.busy,
-              totalEntries: event.output.total, initial: undefined,
+              totalEntries: event.output.total, initial: undefined, historySyncs: context.historySyncs + 1,
             };
           }),
         },
@@ -379,7 +379,7 @@ export const chatMachine = setup({
         input: ({ context }) => ({ sessionInput: context.sessionInput, turnId: context.newChatTurnId }),
         onDone: {
           target: "idle",
-          actions: assign(({ context, event }) => applyRefreshedHistory({ context, output: event.output })),
+          actions: assign(({ context, event }) => ({ ...applyRefreshedHistory({ context, output: event.output }), historySyncs: context.historySyncs + 1 })),
         },
         onError: {
           target: "idle",

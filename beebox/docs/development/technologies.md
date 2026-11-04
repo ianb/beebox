@@ -40,5 +40,7 @@ an R2 publish target are connector credentials rather than model services. The
 repository configures image generation only for its own architecture
 illustrations; it is not a product feature.
 
-The box's own agent runs on one of two engines, Claude or Codex, pinned per box.
-The model provider behind the coding agent therefore sees every agent turn.
+The box's own agent runs on one of three engines, Claude, Codex or pi, pinned
+per box. The model provider behind the coding agent therefore sees every agent
+turn. pi sends turns only to OpenRouter, for models the owner added; see
+[the pi engine](../pi-engine.md).

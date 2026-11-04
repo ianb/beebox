@@ -59,6 +59,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "mv", audience: "agent", smoke: MUTATES },
   { name: "ls", audience: "agent", smoke: { run: ["ls", "."] } },
   { name: "search", audience: "agent", smoke: { run: ["search", "zqxjkv"] } },
+  { name: "refs", audience: "agent", smoke: { skip: "needs an existing card to list the references to" } },
   { name: "contains", audience: "agent", smoke: { run: ["contains", "list"] } },
   { name: "todos", audience: "agent", smoke: { run: ["todos"] } },
   { name: "query", audience: "agent", smoke: { run: ["query", "todos"] } },
@@ -127,6 +128,9 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "drive", audience: "agent", smoke: { run: ["drive", "status"] } },
   { name: "connector", audience: "agent", smoke: { run: ["connector", "gmail", "pending"] } },
   { name: "force-wakeup", audience: "agent", smoke: { skip: "runs a real wakeup cycle on the server" } },
+  // Runs agent-browser inside the engine's browser host (`POST /api/browser/exec`).
+  { name: "browser", audience: "agent", smoke: { skip: "starts a real browser" } },
+  { name: "webpage", audience: "agent", smoke: { skip: "fetches a real page" } },
 
   // ---- Ingestion --------------------------------------------------------
   { name: "scan-import", audience: "agent", smoke: { skip: "needs input files to import" } },
@@ -168,6 +172,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "backup", audience: "engine", reason: "operator-configured encrypted snapshots and restore of machine-owned box state" },
   { name: "maintenance", audience: "engine", reason: "deploy holds box ownership across activation; runs as root and spans the fleet" },
   { name: "serve", audience: "engine", reason: "the hub spawns one per box (src/hub/supervisor/core.ts:441)" },
+  { name: "browser-host", audience: "engine", reason: "the engine spawns one per box (src/core/browser/host/start.ts)" },
   { name: "hub", audience: "engine", reason: "a systemd ExecStart, and the dev router's backend spawn" },
   { name: "boxes", audience: "engine", reason: "the machine-wide box manifest; an agent has no second box" },
   { name: "activity", audience: "engine", reason: "reports across every box; the deploy's at-rest gate" },

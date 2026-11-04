@@ -31,3 +31,5 @@ questions go well can make general questions go badly.
 - A knowledge audit can test this: a general brainstorm prompt, with a check
   on read count or elapsed tool calls. See
   [knowledge-audit-scores-wasted-reads](../features/2026-09-23-knowledge-audit-scores-wasted-reads.md).
+
+Re-reviewed 2026-10-30: Still open. THE_LAW_OF_CHECKING and the SEARCHING section both push the agent to search the box before answering, and nothing carves out general questions.

@@ -36,7 +36,8 @@ bespoke framework. `bbx` is the agent's own tool, not a user surface.
 with one exercised alternative, not a plugin interface. The engine process is also
 not silent by itself: Claude Code sends its own usage metrics unless the owner
 turns that off per box, and the page on data says so. Claude requires a
-subscription login, not an API key. The Claude engine can also be pointed at
+subscription login, not an API key; a machine with no browser uses a
+year-long token from `claude setup-token` held in the secret store. The Claude engine can also be pointed at
 other vendors' models (GLM through Z.ai, and OpenRouter models the owner adds
 one by one), which loosens the tie to one model vendor. It is pay-per-use, only
 three OpenRouter models are recorded as tested through a full agent turn, and
@@ -83,7 +84,11 @@ the directory, not a separate store.
 
 **Where it is thin.** There is per-machine state outside a box (the
 credential store, caches, the scheduler's records). Say so where it matters
-rather than claiming everything lives in the box.
+rather than claiming everything lives in the box. The encrypted-backup feature
+(October 2026) is the plainest evidence: it has to collect that outside state
+(secrets, agent logins, conversation files, a Google grant on some installs)
+beside the box and its git history, and a git push alone does not carry the
+annex object bytes. A restore is only proven by trying one.
 
 **Pages.** `07-how-it-works.md`, `contracts/box-layout.md`,
 `capabilities/shape-it-later.md`.
@@ -116,11 +121,16 @@ of every accumulating assistant.
 carrying the origin (in the box or outside it) and how the material was used:
 verbatim, summarized, inferred. Spoken words kept as a quote when a memo
 becomes a record. Personality beliefs carrying `source: user-stated` or
-`inferred`.
+`inferred`. A document card can mark one region as a composition, the piece the
+person is writing: text inside it is the person's by default, and the agent's
+contributions carry a mark.
 
 **Where it is thin.** The design docs call full provenance an aspiration and
 these the partial attempts. Naming the speaker is an agent convention that
-the system does not enforce.
+the system does not enforce. The composition editor's Save commits the whole
+card, so the agent's uncommitted edits outside the region go into the person's
+commit under a trailer that names the button press, not the content (the
+plan records this as the boxholder's open decision).
 
 **Pages.** `capabilities/provenance.md`, `concepts/enriched-markdown.md`,
 `design/durability-and-provenance.md`.
@@ -235,12 +245,19 @@ than the placement: a question answered becomes a rule it reads next time.
 to an agent. A confidence vocabulary in triage that decides what a level
 permits. Corrections that become rules, guides, and beliefs.
 A new box starts with one pending question ("What do you want to keep track of
-here?"), which the empty first chat shows as the agent's opening line.
+here?"), which opens beside the first new chat as a card; the empty chat says to
+answer it there or start something else.
 How loudly the box reaches you is itself a rule it reads: a question is a
 badge unless it is time-bound, and the "Reaching me" section of the root
 briefing says when to push (`capabilities/notifications.md`).
 
-**Where it is thin.** Rewriting a rule from a single low-confidence answer is
+**Where it is thin.** The theme is no longer absolute. "Decide for me" hands a
+question to an agent, and a daily review (on by default, running an agent only
+when a question qualifies) settles questions put away three days or pending
+fourteen. It chooses the reversible option that changes least, records it as a
+provisional decision with its reasoning and an undo, and learns from it only as
+inferred; it never writes the person's answer. Pages should say that the box can
+decide, not only ask. Rewriting a rule from a single low-confidence answer is
 future work. The nav bar badges the question count and the count of todos due now; the
 badge is a bare number beside an icon and can read as a wrong total, though
 the Todos page's headline now states what it counts.
@@ -277,7 +294,10 @@ list, one hub running many boxes on one machine, the web chat
 as the shared surface, a calendar and lists everyone sees. The identity
 design ruling: shared boxes, one sharing granularity each.
 
-**Where it is thin.** No per-person areas or permissions inside a box;
+**Where it is thin.** In the maintainer's own server pipeline (not a supported
+install path) each box now runs as its own OS user behind a service sandbox, but
+the security overview still says boxes share a user; the sharing granularity
+inside a box is unchanged. No per-person areas or permissions inside a box;
 per-member identity beyond the login list is not designed yet; the household narrative describes an aspiration in places.
 
 **Pages.** `04-who-it-is-for.md`, `design/identity.md`, `architecture/01-what-is-this.md`.

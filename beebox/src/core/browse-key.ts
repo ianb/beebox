@@ -47,6 +47,7 @@
 
 import * as crypto from "node:crypto";
 import { parseCookieHeaderAll } from "../lib/cookies.js";
+import { serverSecret } from "../lib/server-secrets.js";
 
 /** The cookie `bin/browse` installs so subresources and the WS carry the key. */
 export const BROWSE_KEY_COOKIE = "bbx_browse_key";
@@ -92,7 +93,7 @@ function matchesKey(supplied: string, key: string): boolean {
  * `parseCookieHeaderAll`.
  */
 export function verifyBrowseKey(headers: BrowseKeyHeaders): boolean {
-  const key = process.env.BBX_BROWSE_API_KEY;
+  const key = serverSecret("BBX_BROWSE_API_KEY");
   if (!key) return false;
 
   const auth = single(headers.authorization);

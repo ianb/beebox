@@ -39,7 +39,7 @@ function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
-const ENGINE_LABELS = { claude: "Claude Code", codex: "Codex" } as const;
+const ENGINE_LABELS = { claude: "Claude Code", codex: "Codex", pi: "pi" } as const;
 
 export function summarizeAgentEngine(config: BoxConfig): AdminSectionStatus {
   const engine = ENGINE_LABELS[config.agentEngine];
@@ -152,4 +152,10 @@ export function summarizeEncryptedBackup(result: Admin["encryptedBackupStatus"])
     return ready("Latest verified snapshot is over 36 hours old", "warning");
   }
   return ready("Verified snapshot available", "success");
+}
+
+export function summarizeNotifications(input: { devices: RouterOutput["pairing"]["devices"]["devices"]; browsers: number }): AdminSectionStatus {
+  const phones = input.devices.filter((device) => device.push !== null && device.revokedAt === undefined && !device.notificationsOff).length;
+  if (phones === 0 && input.browsers === 0) return ready("No phone or browser to reach", "warning");
+  return ready(`${plural(phones, "phone")} · ${plural(input.browsers, "browser")}`, "success");
 }

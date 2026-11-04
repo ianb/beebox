@@ -35,6 +35,8 @@
   font-size: 1.5rem;
   line-height: 1.3;
   font-weight: 500;
+  /* A path or ref in the question is one long word; it wraps inside the patch. */
+  overflow-wrap: anywhere;
 }
 
 [data-question-beside] .bbx-question-choices {
@@ -42,22 +44,27 @@
 }
 
 /* The row stays in view however long the question is; the patch's color
-   paints over the text that scrolls under it. */
+   paints over the text that scrolls under it. A sticky box stops at the
+   scroller's padding, so the row sits that far below the stop and pads it back
+   out: the text that would show in the desk's padding is under the row. */
 [data-question-beside] .bbx-question-row {
+  --bbx-question-row-tail: var(--bbx-card-desk-padding, 0px);
   position: sticky;
-  bottom: 0;
+  bottom: calc(-1 * var(--bbx-question-row-tail));
+  margin-bottom: calc(-1 * var(--bbx-question-row-tail));
+  padding-bottom: var(--bbx-question-row-tail);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0 0;
+  padding-top: 0.5rem;
   background: var(--bbx-question-patch);
 }
 
 [data-question-beside] .bbx-question-row::after {
   content: "";
   position: absolute;
-  top: 50%;
+  top: calc(50% - var(--bbx-question-row-tail) / 2);
   border: 14px solid transparent;
   transform: translateY(-50%);
 }
@@ -76,7 +83,7 @@
 
 [data-question-beside][data-chat-side="below"] .bbx-question-row::after {
   top: auto;
-  bottom: -34px;
+  bottom: calc(var(--bbx-question-row-tail) - 34px);
   left: 50%;
   transform: translateX(-50%);
   border-bottom: 0;

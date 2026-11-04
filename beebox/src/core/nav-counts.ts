@@ -87,10 +87,47 @@ async function countPendingQuestions(boxRoot: string): Promise<number> {
 }
 
 /** Both nav badge counts, computed concurrently. */
-export async function getNavCounts(boxRoot: string): Promise<NavCounts> {
+async function computeNavCounts(boxRoot: string): Promise<NavCounts> {
   const [pendingQuestions, plate] = await Promise.all([
     countPendingQuestions(boxRoot),
     countPlateTodos(boxRoot),
   ]);
   return { pendingQuestions, onPlateTodos: plate.onPlate, escalatedTodos: plate.escalated, laterTodos: plate.later };
+}
+
+interface CountRun {
+  running: Promise<NavCounts>;
+  /** One run after `running`, shared by every request that arrived during it. */
+  queued: Promise<NavCounts> | null;
+}
+
+/** The count in progress for each box root. */
+const runs = new Map<string, CountRun>();
+
+function startRun(boxRoot: string): Promise<NavCounts> {
+  const run: CountRun = { running: computeNavCounts(boxRoot), queued: null };
+  runs.set(boxRoot, run);
+  const clear = () => {
+    if (runs.get(boxRoot) === run) runs.delete(boxRoot);
+  };
+  run.running.then(clear, clear);
+  return run.running;
+}
+
+/**
+ * The nav badge counts, at most one count per box at a time.
+ *
+ * The plate count walks the whole box, and every open tab asks again after
+ * each burst of file changes. On a box with tens of thousands of files,
+ * overlapping walks ran the engine out of heap. A request that arrives while
+ * a count runs waits for one follow-up count, shared by every request that
+ * arrived meanwhile, so it still sees changes made after the running count
+ * started.
+ */
+export function getNavCounts(boxRoot: string): Promise<NavCounts> {
+  const run = runs.get(boxRoot);
+  if (run === undefined) return startRun(boxRoot);
+  // The follow-up runs whether the running count succeeded or failed.
+  run.queued ??= run.running.catch(() => null).then(() => startRun(boxRoot));
+  return run.queued;
 }

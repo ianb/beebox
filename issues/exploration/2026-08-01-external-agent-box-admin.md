@@ -96,3 +96,7 @@ Two hard constraints shape every option:
 - Which hosts can execute locally (Claude Desktop / Claude Code / ChatGPT MCP) and
   what each can and cannot reach, so the mechanism matches the host.
 </content>
+
+Re-reviewed 2026-10-30: beebox/docs/install/agent.md already addresses the user's own agent for installation, which is option 3 in this issue's range for one task. Admin, connector, and repair tasks still have nothing.
+
+Out of date in the body above: Add beebox/docs/install/agent.md to 'Overlaps with existing work' as a precedent for option 3 (instructions for the user's agent) limited to installation, and scope the remaining work to post-install admin tasks.

@@ -127,6 +127,12 @@ export interface ChatContext {
    */
   refreshCause: "turn" | "resync";
   /**
+   * Counts history that landed from the box: a load or refresh that succeeded,
+   * or a server-pushed history. A failed fetch leaves it unchanged. The
+   * "Catching up…" label reads it (`InteractiveChat/catch-up.ts`).
+   */
+  historySyncs: number;
+  /**
    * What to address backend chat calls by — either an existing session id
    * or `"new"` to start a fresh conversation. Held alongside `sessionId`
    * because for a freshly-created chat the server-assigned id arrives

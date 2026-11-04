@@ -68,8 +68,7 @@ What it does:
 2. Ensures your SSH key is registered with Hetzner
 3. Creates a cpx21 (3 vCPU, 4GB RAM) in Ashburn
 4. Updates Cloudflare DNS for `box.example.com` (if token provided)
-5. Sets Cloudflare SSL to Flexible
-6. Passes `hetzner/cloud-init.yaml` as user data, waits for cloud-init to finish, then uploads and runs `hetzner/provision.sh`
+5. Passes `hetzner/cloud-init.yaml` as user data, waits for cloud-init to finish, then uploads and runs `hetzner/provision.sh`
 
 Then run `deploy/deploy.sh` from a checkout whose `target.env` names the server, and `deploy/add-box.sh` for each box.
 
@@ -164,6 +163,45 @@ recorded. Policy and threat model: `server-bin/bbx-host-apt` and
 `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 `server-bin/bbx-host-apt.smoke.sh`.
 
+### Box browser
+
+Each box's browser ([plan](../plans/shared-browser.md)) runs in its own network
+namespace, so other box users on the host cannot reach its dashboard, stream or
+Chrome debugging port, and the browser cannot reach host loopback. Every deploy
+runs `server-bin/bbx-browser-install` as root, after the services restart:
+
+- `passt`, for `pasta`, which gives the namespace outbound network only.
+- Chrome for Testing under `/opt/beebox-browser/.agent-browser/browsers/`,
+  installed by the pinned agent-browser (`install --with-deps`,
+  `HOME=/opt/beebox-browser`), and the link `/opt/beebox-browser/chrome` the
+  engine reads. It reinstalls when the agent-browser version changes or after 7
+  days, and keeps the previous Chrome for a browser still running from it.
+- `/opt/beebox-browser/bin/unshare`, a copy of `/usr/bin/unshare` that only
+  group `beebox-boxes` may run, and `apparmor/beebox-browser` in
+  `/etc/apparmor.d/`. Ubuntu 24.04 lets a program create a user namespace only
+  under a profile that grants it; these two profiles grant it to that copy and
+  to Chrome, whose own sandbox needs it.
+- A check, as one box user under the box sandbox, that `chrome://sandbox` says
+  "adequately sandboxed". Chrome without its sandbox runs anyway, so the check
+  fails the deploy instead. A host with no box yet skips it.
+
+`cloud-init.yaml` installs `passt` too. The setup was verified on a throwaway
+Ubuntu 24.04 host: [linux-verification.md](../../../research/embedded-browser/linux-verification.md).
+
+### Codex sandbox
+
+Codex runs prompt-only procedures and read-only runs in its own sandbox, which
+uses bubblewrap. Every deploy runs `server-bin/bbx-codex-sandbox-install` as
+root, after the box browser:
+
+- `bubblewrap`, with `/usr/bin/bwrap` set to 0750 `root:beebox-boxes` by
+  `dpkg-statoverride`. Codex runs the `bwrap` on PATH before its bundled copy.
+- `apparmor/beebox-codex` in `/etc/apparmor.d/`, which grants that `bwrap`
+  user namespaces. Without it the sandbox fails on
+  `loopback: Failed RTM_NEWADDR: Operation not permitted`.
+- A check, as one box user under the box sandbox, that `codex sandbox --
+  /bin/true` succeeds. A host with no box yet skips it.
+
 ## Systemd units
 
 Every file under `deploy/systemd/` is installed whole on every deploy.
@@ -243,4 +281,43 @@ end.
 ## DNS and HTTPS
 
 - DNS: `box.example.com` → server IP (Cloudflare proxied, auto-managed by `hetzner/create-server.sh`)
-- HTTPS: Handled by Cloudflare (SSL mode: Flexible — HTTPS to Cloudflare, HTTP to origin)
+- HTTPS: Handled by Cloudflare (SSL mode: Flexible — HTTPS to Cloudflare, HTTP to origin). [Origin TLS](#origin-tls) is the prepared fix and is not active.
+
+## Origin TLS
+
+**Not active.** Production still uses Flexible, and `nginx/beebox.conf` has no 443 listener. To activate this, first apply the changes in [the plan](../unimplemented-plans/origin-tls.md#activation). Install the certificate before the listener lands, or every deploy fails.
+
+When active, Cloudflare connects to nginx on 443 and validates its certificate, set by a Configuration Rule for this hostname. The SSL mode of the zone is not used, because it covers every hostname in the zone.
+
+**The certificate** lives on the server at `/etc/nginx/beebox-tls/origin.pem` and `origin.key`. It is not in git and no deploy writes it. Create it in the Cloudflare dashboard under SSL/TLS, Origin Server, for the production hostname only. The dashboard shows the key once. To install it from the laptop:
+
+```bash
+deploy/prod-ssh 'install -d -m 0700 /etc/nginx/beebox-tls'
+deploy/prod-ssh 'install -m 0644 /dev/stdin /etc/nginx/beebox-tls/origin.pem' < origin.pem
+deploy/prod-ssh 'install -m 0600 /dev/stdin /etc/nginx/beebox-tls/origin.key' < origin.key
+```
+
+Then delete the local copy of the key. A missing or mismatched file fails `nginx -t` at the next deploy, before anything stops.
+
+**The firewall** is `hetzner/origin-firewall.sh <server>`, where `<server>` is the name `hcloud server list` shows. It keeps SSH open to everyone and limits 443 to Cloudflare's published ranges. `--allow-http` also allows 80 from Cloudflare. It replaces the firewall's rules on every run, so edit the script, not the Hetzner console. Re-run it when Cloudflare announces a range change; until then, visitors routed through a new range get a 522.
+
+**Cutover order from plain HTTP.** Each step leaves the site up:
+
+1. Record the zone's SSL mode and any rule that matches the hostname. That is the state to return to.
+2. Install the certificate as above.
+3. Optional: run `origin-firewall.sh <server> --allow-http`. Do not omit the flag here: without it, port 80 closes while Cloudflare still uses it, and the site goes down.
+4. Apply the plan's activation changes and deploy them. Verify with the `curl` below.
+5. Add a Configuration Rule, last in the list: SSL set to Full (strict), for this hostname and the path `/__origin_tls_probe`. Request that path through the public URL. The hub's 404 proves Cloudflare reached 443. A 521, 522, 525, or 526 means it did not, and only that path is affected.
+6. Widen the rule to the whole hostname. Until this step, production traffic is still in plaintext. Verify that the app loads, that chat connects, that a fresh login sets a `Secure` cookie, and that `ss -tn sport = :443` shows connections.
+7. Check the edge redirect. Full (strict) follows the visitor's scheme, so a plain HTTP visitor produces a plain HTTP request to the origin unless the edge redirects first. `curl -I http://box.example.com/` must return a 301 to HTTPS.
+8. Optional: after the next deploy has ended old connections and `ss -tn sport = :80` shows none, run `origin-firewall.sh <server>` without the flag.
+
+**To return to plain HTTP in an incident:** run `origin-firewall.sh <server> --allow-http` if 80 is closed, then delete the Configuration Rule. A deploy of a ref with no 443 listener is refused unless `BBX_DEPLOY_ALLOW_NO_ORIGIN_TLS=1` is set; set it only after the rule is gone.
+
+To verify the listener, use `curl` on the server. `prod-curl` talks to the hub directly and skips nginx:
+
+```bash
+deploy/prod-ssh 'curl -sS -o /dev/null -w "%{http_code}\n" --cacert origin_ca_root.pem --resolve box.example.com:443:127.0.0.1 https://box.example.com/auth/login'
+```
+
+Download `origin_ca_root.pem`, [Cloudflare's published root](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/), to the server first; it matches the certificate's key type. `ss -tn sport = :443` shows Cloudflare's connections, and `ss -tn sport = :80` shows any that remain in plaintext.

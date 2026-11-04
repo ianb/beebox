@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { z } from "zod";
 import { conversationSelectionSchema, type ConversationSelection, type AttentionSnapshot } from "@shared/chat-composer-binding";
-import { routeConversationRequest } from "../conversation-intent";
+import { routeConversationRequest, routeSelectionUpdate } from "../conversation-intent";
 import { workspaceRouteTarget, systemCardEntryContext } from "../../../../lib/system-card-navigation";
 import { href, toSearch } from "../../../../lib/routing";
 import type { ConversationContextValue } from "../conversation-context/context";
@@ -52,13 +52,12 @@ export function useConversationRoute(conversation: ConversationContextValue) {
   // the exact conversation without deriving recipient identity from card state.
   useEffect(() => {
     if (!routeReady || resolvingRoute.current || selection.kind !== "ready") return;
-    const search = chatSearch.parse(location.search);
-    const canonicalSession = chatPage && selection.target.kind === "session" && search.session !== selection.target.sessionId ? selection.target.sessionId : null;
-    const consumeCapture = chatPage && "capture" in location.search;
-    if (!canonicalSession && !consumeCapture && JSON.stringify(selection) === JSON.stringify(location.state.bbxConversation)) return;
+    const update = routeSelectionUpdate({ chatPage, search: chatSearch.parse(location.search), capture: "capture" in location.search,
+      selection, saved: location.state.bbxConversation });
+    if (!update) return;
     const nextSearch = { ...location.search };
-    if (canonicalSession) nextSearch.session = canonicalSession;
-    if (consumeCapture) delete nextSearch.capture;
+    if (update.session !== null) nextSearch.session = update.session;
+    if (update.consumeCapture) delete nextSearch.capture;
     void navigate({ to: href(location.pathname), search: toSearch(nextSearch), replace: true,
       state: (old) => ({ ...old, bbxConversation: selection }) });
   }, [routeReady, selection, location.state.bbxConversation, location.pathname, location.search, navigate, routeRevision, chatPage]);

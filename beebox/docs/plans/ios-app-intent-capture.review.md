@@ -75,7 +75,7 @@ A saved screenshot can be inert material. Words supplied later refer to its expl
 ### New source fields duplicated existing conventions
 
 **Location in plan:** Ontology, Track 3 source lookup.
-**Citation:** `beebox/src/schemas/webpage.tsx:53`: `"capture-id": z.string().uuid().optional()` belongs to Clerk; memo context already supports URL/title/text and an attach scope.
+**Citation:** `beebox/src/schemas/webpage.ts:53`: `"capture-id": z.string().uuid().optional()` belongs to Clerk; memo context already supports URL/title/text and an attach scope.
 **Issue:** Generic lookup by capture-id could match a different integration; a new material array on cards duplicated the canonical manifest.
 **Why it matters:** Wrong original-item lookup or unnecessary schema growth.
 **Suggested action/adjudication:** **Accepted and corrected:** optional memo share-id, typed memo-only ownership lookup, existing context/attachments, canonical role manifest read by detail and dispatch. No capture-materials field.

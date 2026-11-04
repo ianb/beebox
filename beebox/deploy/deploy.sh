@@ -517,6 +517,8 @@ RSYNC_OPTS=(-az --delete
 # install is non-prod because the runtime uses tsx, itself a devDep).
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
+# The agent-browser package itself is a beebox dependency (the box browser,
+# docs/plans/shared-browser.md), so it installs with beebox.
 for repo in personal-vibe-check tap-check beebox; do
   local_path="$CHECKOUT/$repo/"
   if [[ ! -d "$local_path" ]]; then
@@ -694,7 +696,7 @@ queue_remote stdin bash -s <<'REMOTE'
   # dev byte-for-byte (and fails loudly if the lockfile is stale rather than
   # silently resolving something new). HUSKY=0 skips husky's hook install (no
   # .git on the server) so it doesn't print a spurious ".git can't be found".
-  # patch-package still runs via the root postinstall to patch @typescript-eslint/eslint-plugin.
+  # pnpm applies the patches in pnpm-workspace.yaml's patchedDependencies.
   cd /opt/beebox
   echo "  Reconciling workspace deps (frozen)..."
   # The install competes for RAM with every running box's `bbx engine serve` +
@@ -922,6 +924,17 @@ systemctl enable beebox-scheduler.service >/dev/null 2>&1 || true
 # round 5, codex gpt-6-sol, 2026-10-24). cloud-init's tmpfiles entry creates it
 # with the same owner and mode; the layout preflight guarantees the group.
 install -d -o beebox -g beebox-boxes -m 2755 /etc/beebox
+# Box users push over ssh with only GitHub's host key in the system file;
+# cloud-init writes it on new hosts. A host provisioned before that line had
+# it only in ~beebox/.ssh/known_hosts, and every box push failed host-key
+# verification once boxes moved to their own users. Keep in step with
+# hetzner/cloud-init.yaml.
+github_host_key='github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl'
+if ! grep -qxF "$github_host_key" /etc/ssh/ssh_known_hosts 2>/dev/null; then
+  printf '%s\n' "$github_host_key" >> /etc/ssh/ssh_known_hosts
+  chmod 0644 /etc/ssh/ssh_known_hosts
+  echo "  added GitHub's host key to /etc/ssh/ssh_known_hosts"
+fi
 for unit in beebox-box@.service beebox-pass@.service beebox-backup@.service; do
   dir="/etc/systemd/system/$unit.d"
   mkdir -p "$dir"
@@ -1003,6 +1016,23 @@ REMOTE
   # The restart succeeded (set -e would have exited above otherwise): the EXIT
   # trap must not start the services a second time if a later check fails.
   printf 'SERVICES_STOPPED=0\n' >> "$REMOTE_SCRIPT"
+
+  # The box browser's host pieces: passt, Chrome for Testing, the launcher's
+  # unshare copy and its AppArmor profiles, then a check that Chrome keeps its
+  # sandbox (docs/plans/shared-browser.md, Track F). After the restart, so a
+  # first install's download does not lengthen the downtime window; a failure
+  # here fails the deploy with the services up. Bytes from the build checkout
+  # through stdin, as for the other root helpers.
+  queue_step "Installing the box browser..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-browser-install"
+
+  # Codex's sandbox: bubblewrap, limited to box users, and the AppArmor grant
+  # that lets it create user namespaces on Ubuntu 24.04, then a check as a box
+  # user. Without it prompt-only Codex runs fail before running anything.
+  queue_step "Installing Codex's sandbox..."
+  queue_remote stdin bash -s "$INSTALL_DIR/beebox" \
+    < "$CHECKOUT/beebox/deploy/server-bin/bbx-codex-sandbox-install"
 
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is

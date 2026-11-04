@@ -18,6 +18,7 @@ const phaseSchema = z.object({
   until: z.string().datetime().optional(),
   /** When the maintenance attempt that wrote this record began; carried across a retry. */
   since: z.string().datetime().optional(),
+  endsBackgroundTasksAt: z.string().datetime().optional(), // when an owner that cannot defer ends idle chats with live background tasks
 });
 type Phase = z.infer<typeof phaseSchema>;
 const permitSchema = z.object({ directory: z.string(), id: z.string().uuid(), maintenance: z.boolean() });
@@ -251,7 +252,7 @@ export interface BoxMaintenance extends BoxWork {
  */
 export async function closeBoxMaintenance(
   boxRoot: string,
-  opts: { reason: string; drainMs?: number; join?: boolean },
+  opts: { reason: string; drainMs?: number; join?: boolean; endsBackgroundTasksAt?: string },
 ): Promise<BoxMaintenance> {
   const directory = await directoryFor(boxRoot);
   if (opts.join) {
@@ -265,8 +266,8 @@ export async function closeBoxMaintenance(
     const delegatedWork = await acquireBoxWork(boxRoot, { reason: `delegated ${opts.reason}`, inherited: JSON.stringify(parent) });
     const phase = async (value: Phase["phase"]): Promise<void> => {
       await validPermit(directory, JSON.stringify(parent));
-      const since = (await readPhase(directory))?.since;
-      await writeFileAtomic(join(directory, "phase.json"), { content: JSON.stringify({ id: parent.id, reason: opts.reason, phase: value, ...(since === undefined ? {} : { since }) }) });
+      const { since, endsBackgroundTasksAt } = (await readPhase(directory)) ?? {};
+      await writeFileAtomic(join(directory, "phase.json"), { content: JSON.stringify({ id: parent.id, reason: opts.reason, phase: value, since, endsBackgroundTasksAt }) });
       await clearMaintenanceStep(directory, parent.id);
     };
     // Delegates only declare startup readiness explicitly; intermediate completion changes no phase.
@@ -297,7 +298,7 @@ export async function closeBoxMaintenance(
   const writePhase = async (phase: Phase["phase"]): Promise<void> => {
     if (released || !(await ownsLock())) throw new BoxMaintenanceError({ reason: "expired" });
     await writeFileAtomic(join(directory, "phase.json"), {
-      content: JSON.stringify({ id: permit.id, reason: opts.reason, phase, since, ...(phase === "draining" ? { until: new Date(Date.now() + drainMs).toISOString() } : {}) }),
+      content: JSON.stringify({ id: permit.id, reason: opts.reason, phase, since, ...(phase === "draining" ? { until: new Date(Date.now() + drainMs).toISOString() } : {}), endsBackgroundTasksAt: opts.endsBackgroundTasksAt }),
     });
     await clearMaintenanceStep(directory, permit.id);
   };

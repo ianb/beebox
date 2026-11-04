@@ -32,6 +32,7 @@ export function trpcContext(input: Pick<TrpcContext, "boxRoot"> & Partial<TrpcCo
     isOwner: true,
     isAuthenticatedOwner: false,
     actor: "user",
+    mobileDeviceId: null,
     ...input,
   };
 }

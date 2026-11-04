@@ -218,5 +218,6 @@ export const serveCommand = new Command("serve")
       boxes,
       prewarmChat: true,
       devSurfaces: devSurfacesEnabled(envConfig),
+      runtimeLint: envConfig.BBX_RUNTIME_LINT === "1",
     });
   });

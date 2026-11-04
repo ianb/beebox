@@ -1,5 +1,5 @@
 /**
- * Scan upload routes — the server half of the scan-uploader wire contract.
+ * Scan upload routes — the server half of the scan-upload wire contract.
  *
  * `POST /api/scan/check` answers a batch of hashes with per-hash state so the
  * laptop uploader knows what to send and what it may safely dispose of;

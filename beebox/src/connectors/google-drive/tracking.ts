@@ -10,7 +10,7 @@ import { invariant } from "../../shared/invariant.js";
 import { getAllDriveHandlers } from "./handlers.js";
 import { nonEmptyString } from "../../shared/optional-string.js";
 
-const DRIVE_CARD_IGNORE = [
+export const DRIVE_CARD_IGNORE = [
   "node_modules/**",
   ".git/**",
   `${BOX_DIRS.tmp}/**`,
@@ -196,8 +196,6 @@ export interface DriveCardSummary {
   title: string | null;
   /** When the file last changed on Drive (a synced file's `drive.modified`). */
   driveModified: string | null;
-  /** When the box last synced it (a folder mount's `last-sync`). */
-  lastSync: string | null;
   /** A synced file's last push was refused; its `.remote.md` awaits a merge. */
   conflict: boolean;
   /** Why a folder mount's last sync failed; null when it did not. */
@@ -224,7 +222,6 @@ function xmlSummary(content: string): DriveCardSummary {
   return {
     title: titleMatch?.[1] ?? null,
     driveModified: modifiedMatch?.[1] ?? null,
-    lastSync: null,
     conflict: statusMatch?.[1] === "conflict",
     error: null,
     tabs,
@@ -267,11 +264,10 @@ export function driveCardSummary(content: string): DriveCardSummary {
 
   const drive = fields["drive"];
   return {
-    // Every Drive card type carries the Drive name as `title`. A synced file
-    // carries Drive's last-modified time; a folder mount, when it last synced.
+    // Every Drive card type carries the Drive name as `title`, and a synced
+    // file Drive's last-modified time.
     title: nonEmptyString(fields["title"]),
     driveModified: isRecord(drive) ? nonEmptyString(drive["modified"]) : null,
-    lastSync: nonEmptyString(fields["last-sync"]),
     conflict: fields["conflict"] === true,
     error: nonEmptyString(fields["error"]),
     tabs,

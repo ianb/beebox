@@ -2,7 +2,7 @@
  * Question card renderer — shows an embedded answer form when the question
  * is answerable (pending/expired/dismissed), or the recorded answer +
  * learning outcome once it's answered. Registered for the `question` file
- * type (Track C) so `/browse/<path>` deep links (notifications, dashboard,
+ * type (Track C) so card links (notifications, dashboard,
  * `context:` refs) always land on something actionable instead of the
  * generic frontmatter table.
  *

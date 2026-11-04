@@ -17,13 +17,17 @@ so.
 **License.** GPLv3 covers Bee Box, the Chrome extension, and the browse
 wrapper. Two parts of the same source code are MIT-licensed for standalone
 reuse: the `t.check` test plugin and the shared lint preset. The engine is
-internally tracked as version 0.1.0.
+internally tracked as version 0.1.0 in source; published container images carry
+a stamped version (tagged releases, plus a daily image built from `main`).
 
 **How updates work.** There is only one continuously updated version of the
-software; every change is shipped as soon as it's made, with no version
-numbers or list of what changed in each update, today. Updating means
-fetching the latest version of the project and rebuilding the container, or
-reinstalling from source. Your **box**, the directory holding your data, is
+software; every change is shipped as soon as it's made, with no list of what
+changed in each update, today. Updating means fetching the latest version of
+the project and rebuilding the container, or reinstalling from source. The Mac
+app is the exception: each time the box starts it checks the daily published image, confirms
+the image and the app can run together, starts the new engine only when the
+box has no uncommitted edits, and goes back to the previous engine if the new
+one fails to start. Your **box**, the directory holding your data, is
 untouched by a rebuild. When it starts, the container automatically updates
 your existing cards (the files that hold your data) to match any changes in what a card type expects and refreshes the
 reference material generated for the agent, recording each of those updates
@@ -32,6 +36,12 @@ needs a decision only you can make. The project's own records name the
 missing part: nothing tells an operator that an update exists or what
 changed in it. Release discipline and an update story are recorded as open
 work rather than shipped behavior.
+
+**Backups are new.** Encrypted, restic-based backups of a box arrived in late
+October 2026. Their tests pass, but the Admin setup form has not been walked end
+to end in a browser as a signed-in owner, and the documentation itself says only
+a test restore proves an installation can recover. Until you have tried a restore,
+keep another copy of anything you cannot lose.
 
 **Security posture is documented rather than assumed.** The security overview
 is agent-maintained and human-reviewed, with the rubric that generates it

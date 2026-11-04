@@ -144,7 +144,8 @@ const GUIDE_DOMAINS = ["intake", "calendar"];
 /**
  * Earlier stock guide hashes, keyed by filename: from before experiments lost
  * `status`, and (intake, the one with triage rules) from before a rule's
- * `source` became `basis` (both 2026-09), and before memo cards (2026-10). A tracked box needs none of these:
+ * `source` became `basis` (both 2026-09), before memo cards (2026-10), and (calendar)
+ * before events moved into calendar card folders (2026-10). A tracked box needs none of these:
  * its recorded hash already marks an old stock copy as ours, and the
  * `status-fields-2026-09` and `source-fields-2026-09` migrations turn an old
  * stock copy into exactly the current template. They cover an untracked box
@@ -157,7 +158,11 @@ const PRIOR_STOCK_GUIDE_HASHES: Readonly<Record<string, string[]>> = {
     "02e0c866f365c6898d4983851492fa1573c9bbd9a91503c3d31078cca541e30a",
     "1e172c1d28b95e21c2a3fd721b87f5fe51f459fb2125356540064f1c09a3cb42", "0bfc5cf3eb2d0539f24ed7932d7a9be76386a41223bac285d0986a823e629eff",
   ],
-  "calendar.guide.card": ["cba0c1ae68ff656611b5b9b6b3be9ca65233b1bf1c913b3ce62d395bf234da99", "d6a4c6698da5ccf977f361f71a2841b81e7e2cb044ace795aa72359e32633412"],
+  "calendar.guide.card": [
+    "cba0c1ae68ff656611b5b9b6b3be9ca65233b1bf1c913b3ce62d395bf234da99", "d6a4c6698da5ccf977f361f71a2841b81e7e2cb044ace795aa72359e32633412",
+    // Before events moved into calendar card folders (2026-10-29).
+    "24d59ed4a00b9b62aad8759f43f24e814cf74b02ceebd814cf111b7264e6be03",
+  ],
 };
 
 /**

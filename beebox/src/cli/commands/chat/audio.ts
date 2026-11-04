@@ -43,7 +43,7 @@ import {
   postAudioReviewReport,
 } from "./audio-report.js";
 
-export { loopbackHeaders, audioMimeType, missingMessageIdError } from "./audio-fetch.js";
+export { audioMimeType, missingMessageIdError } from "./audio-fetch.js";
 
 const HQ_SERVICE_SET = new Set<string>(HQ_TRANSCRIPTION_SERVICES);
 /** Type guard for the `--service` option against the known HQ services. */

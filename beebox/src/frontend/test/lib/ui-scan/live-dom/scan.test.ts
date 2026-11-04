@@ -186,6 +186,33 @@ void test("The unnamed <main> is in that count:", async (t) => {
   );
 });
 
+// A named `group` heads its controls the way a landmark does, so a "Later" on
+// each of two questions is told apart by the question. An unnamed group is a
+// box, like a bare `<section>`, and is not counted as a missing name.
+void test("A named group is the container of its controls; an unnamed one is not counted.", async (t) => {
+  t.check(scan(`
+    <div role="group" aria-label="What is this photo?"><button>Later</button></div>
+    <div role="group"><button>Later</button></div>
+  `), {
+    entries: [
+      entry({ kind: "landmark", role: "group", name: "What is this photo?" }),
+      entry({ role: "button", name: "Later", container: "What is this photo?" }),
+      entry({ role: "button", name: "Later" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  });
+});
+
+// A name longer than the boundary accepts is shortened, so one long card title
+// costs its own tail rather than the whole scan.
+void test("A name past the boundary's limit is shortened to fit.", async (t) => {
+  const found = scan(`<button>${"a".repeat(320)}</button>`).entries[0];
+  t.check({ length: found?.name.length, end: found?.name.slice(-2) }, { length: 300, end: "a…" });
+});
+
 // ## An id outside the grammar is not an address
 //
 // The scan reports an `id` only when it is a well-formed address
@@ -471,9 +498,9 @@ void test("Resolution cannot see it — getElementById returns the first in docu
   const many = Array.from({ length: MAX_ENTRIES + 50 }, (_, i) => `<button title="Item ${i}">x</button>`).join("");
   const capped = scan(`<main aria-label="Everything">${many}</main>`);
   t.check({ entries: capped.entries.map((found) => found.name), truncated: capped.truncated, cap: MAX_ENTRIES }, {
-    entries: ["Everything", ...Array.from({ length: 199 }, () => "x")],
+    entries: ["Everything", ...Array.from({ length: 299 }, () => "x")],
     truncated: true,
-    cap: 200,
+    cap: 300,
   });
 
   // A document that fits reports `truncated: false`:

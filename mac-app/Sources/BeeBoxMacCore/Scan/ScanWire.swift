@@ -4,7 +4,7 @@ import Foundation
 // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
 //
 // The client half of the contract: request shapes, headers, the status
-// vocabulary and the response parse. Ports `wire-client.ts`.
+// vocabulary and the response parse.
 
 /// Per-hash state from `POST /api/scan/check`.
 enum CheckState: String {
@@ -41,8 +41,7 @@ enum WireFailure: Error, Equatable {
     /// 503 on the check route.
     case unavailable
     case rateLimited(retryAfterSeconds: Double)
-    /// A status or body outside the contract. The Node client throws
-    /// `ProtocolError`, which abandons the run.
+    /// A status or body outside the contract, which abandons the run.
     case protocolViolation(String)
 }
 
@@ -87,7 +86,7 @@ struct ScanWire: Sendable {
     }
 
     // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
-    /// `X-Scan-Profile` is not sent: the Node client never sends it either.
+    /// `X-Scan-Profile` is not sent.
     func put(hash: String, filename: String, body: Data) async throws(WireFailure) -> PutResult {
         var request = makeRequest(path: "api/scan/files/\(hash)", method: "PUT")
         request.setValue("application/octet-stream", forHTTPHeaderField: "content-type")
@@ -127,9 +126,8 @@ struct ScanWire: Sendable {
     }
 
     // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
-    /// Who this client is, on every request. `x-scan-client-built-at` is left
-    /// out on purpose so the box's freshness check applies the contract test
-    /// only. Never an `x-bbx-` name: the hub strips that namespace.
+    /// Who this client is, on every request. The box ignores these; they are
+    /// advisory. Never an `x-bbx-` name: the hub strips that namespace.
     private func makeRequest(path: String, method: String) -> URLRequest {
         var request = URLRequest(url: routeURL(path))
         request.httpMethod = method
@@ -175,7 +173,7 @@ struct ScanWire: Sendable {
     }
 
     /// Seconds, defaulting to 5 when the header is absent, unparseable or
-    /// negative, like `parseRetryAfter` in `wire-client.ts`.
+    /// negative.
     static func parseRetryAfter(_ header: String?) -> Double {
         guard let header else { return defaultRetryAfterSeconds }
         let trimmed = header.trimmingCharacters(in: .whitespacesAndNewlines)

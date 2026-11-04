@@ -1,15 +1,28 @@
 /* Card preview framing and optional box-scoped chrome. */
-/* Selection colors are optional theme tokens, set in pairs. A card theme's
-   pair overrides the system theme's through the cascade; with neither, the
-   fallback here applies. A theme whose selection is dark adds a code pair
-   that stays visible on dark code blocks. */
+/* Selection colors are optional theme tokens, set in pairs: a rule that sets
+   a background sets its ink (test/tours/selection-pairs.test.ts). A card
+   theme's pair overrides the system theme's through the cascade; with
+   neither, the fallback here applies. A theme whose selection is dark adds a
+   code pair that stays visible on dark code blocks. A background without an
+   ink gets black or white by its relative luminance: below 0.1791, where
+   both read equally (4.58:1), white reads better. The theme studio previews
+   selection with the same declarations under ::highlight(), kept in separate
+   rules so a browser without ::highlight() keeps ::selection. */
 ::selection {
   background-color: var(--bbx-selection, #bcd4f6);
-  color: var(--bbx-selection-ink, #14202e);
+  color: var(--bbx-selection-ink, color(from var(--bbx-selection, #bcd4f6) srgb-linear clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1)));
 }
 :is(pre, pre *)::selection {
   background-color: var(--bbx-selection-code, var(--bbx-selection, #bcd4f6));
-  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, #14202e));
+  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, color(from var(--bbx-selection-code, var(--bbx-selection, #bcd4f6)) srgb-linear clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1))));
+}
+::highlight(bbx-selection-preview) {
+  background-color: var(--bbx-selection, #bcd4f6);
+  color: var(--bbx-selection-ink, color(from var(--bbx-selection, #bcd4f6) srgb-linear clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1)));
+}
+:is(pre, pre *)::highlight(bbx-selection-preview) {
+  background-color: var(--bbx-selection-code, var(--bbx-selection, #bcd4f6));
+  color: var(--bbx-selection-code-ink, var(--bbx-selection-ink, color(from var(--bbx-selection-code, var(--bbx-selection, #bcd4f6)) srgb-linear clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1) clamp(0, sign(0.1791 - (0.2126 * r + 0.7152 * g + 0.0722 * b)), 1))));
 }
 /* Chrome owns the common desk and its saturated material palette. */
 .bbx-box-presentation {

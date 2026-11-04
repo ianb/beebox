@@ -241,8 +241,9 @@ export async function deleteOnceCard(
  * only that chain (matching the per-entry error posture of the rest of the loop).
  */
 export async function handleCreateAfterSuccess(
-  { boxRoot, parsed, scriptName }: { boxRoot: string; parsed: ParsedScheduledScript; scriptName: string },
+  { boxRoot, parsed, scriptName, quiet }: { boxRoot: string; parsed: ParsedScheduledScript; scriptName: string; quiet?: boolean },
 ): Promise<void> {
+  const silent = quiet === true;
   for (const chain of parsed.createAfterSuccess) {
     const contained = resolveRefPath({ fromPath: undefined, ref: chain.path, kind: "write-target" });
     if (contained === null || contained === "") {
@@ -254,7 +255,7 @@ export async function handleCreateAfterSuccess(
     // Skip if already exists (idempotent)
     try {
       await fs.access(fullPath);
-      console.log(`  Chain: ${chain.path} already exists, skipping`);
+      if (!silent) console.log(`  Chain: ${chain.path} already exists, skipping`);
       continue;
     } catch (_e) {
       // access throws when the file doesn't exist — the expected case; proceed to create it
@@ -281,6 +282,6 @@ export async function handleCreateAfterSuccess(
 
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, template.generate(parseResult.data, { now: getBoxTime(boxRoot) }));
-    console.log(`  Chain: created ${chain.path} (from ${scriptName})`);
+    if (!silent) console.log(`  Chain: created ${chain.path} (from ${scriptName})`);
   }
 }

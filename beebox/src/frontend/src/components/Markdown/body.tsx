@@ -29,10 +29,13 @@
  * real browser; `body.stable-body.test.ts` holds the rule.
  */
 
-import { Fragment, useMemo, useRef } from "react";
+import { Fragment, useContext, useMemo, useRef } from "react";
 import * as React from "react";
-import Markdoc, { type Config, type Schema } from "@markdoc/markdoc";
+import Markdoc, { type Config, type RenderableTreeNode, type Schema } from "@markdoc/markdoc";
 import { makeHeadingNode } from "@shared/markdoc-config/tags/core";
+import { CardOutlineContext } from "../CardContents/CardOutlineContext";
+import { useIsomorphicLayoutEffect } from "../../hooks/use-isomorphic-layout-effect";
+import { outlineEntries } from "../CardContents/outline";
 import { withScopedTags, rewriteUnknownTags } from "@shared/markdoc-config/scoped";
 import { UnknownTagInline, UnknownTagBlock } from "./UnknownTag";
 import { makeHtmlTag } from "@shared/markdoc-config/tags/html-schema";
@@ -149,9 +152,9 @@ const PARA_ALIGN_CLASSES: Record<string, string> = {
   justify: "text-justify",
 };
 
-/** `align`, `title`, `lang` and `dir` arrive only from an HTML `<p>` (see `makeHtmlTag`). */
-function Para({ children, align, title, lang, dir }: { children?: ReactNode; align?: string; title?: string; lang?: string; dir?: string }) {
-  if (isLoneImageReactChildren(children)) {
+/** `align`, `title`, `lang` and `dir` arrive only from an HTML `<p>` (see `makeHtmlTag`); `id` from a `{% #id %}` annotation. */
+function Para({ children, align, title, lang, dir, id }: { children?: ReactNode; align?: string; title?: string; lang?: string; dir?: string; id?: string }) {
+  if (isLoneImageReactChildren(children) && id === undefined) {
     return children;
   }
   // A <div>, not a <p>: paragraphs routinely wrap block-level content here
@@ -160,7 +163,7 @@ function Para({ children, align, title, lang, dir }: { children?: ReactNode; ali
   // restores the prose paragraph spacing.
   const alignClass = align === undefined ? undefined : PARA_ALIGN_CLASSES[align];
   return (
-    <div className={alignClass === undefined ? "bbx-paragraph" : `bbx-paragraph ${alignClass}`} title={title} lang={lang} dir={dir}>
+    <div className={alignClass === undefined ? "bbx-paragraph" : `bbx-paragraph ${alignClass}`} title={title} lang={lang} dir={dir} id={id}>
       {children}
     </div>
   );
@@ -207,7 +210,7 @@ function buildRenderConfig({ tags, includes }: { tags: Readonly<Record<string, S
       document: { render: "Fragment" },
       // Fresh per render config so the duplicate-slug set is scoped to this pass.
       heading: makeHeadingNode(),
-      paragraph: { render: "Para", children: ["inline"] },
+      paragraph: { render: "Para", children: ["inline"], attributes: { id: { type: String } } },
       // Markdoc's own fence transform hardcodes `pre`; this one emits `Fence`.
       fence: {
         ...markdocNodes.fence,
@@ -327,9 +330,31 @@ interface MarkdownProps {
   card?: { path: string; bodyLineOffset: number };
   /**
    * This Markdown is the card's document, so its headings fill the card's
-   * contents menu (`CardContents/CardContentsMenu.tsx`). Needs `prose="block"`.
+   * contents menu (`CardContents/CardContentsMenu.tsx`), through
+   * `CardOutlineContext`. Needs `prose="block"`.
    */
   outline?: boolean;
+}
+
+/**
+ * Hand the tree's headings to the enclosing card's contents menu. Layout
+ * effects, both: when one body replaces another in one commit, React runs the
+ * old body's layout cleanup before the new body's layout effect, so the old
+ * body's `null` cannot clear the new outline. Publishing on a change does not
+ * pass through `null`. On the server (a view rendered to HTML) they are plain
+ * effects, which do not run there.
+ */
+function usePublishOutline(tree: RenderableTreeNode | null): void {
+  const publish = useContext(CardOutlineContext);
+  const entries = useMemo(() => (tree === null ? null : outlineEntries(tree)), [tree]);
+  useIsomorphicLayoutEffect(() => {
+    if (publish !== null && entries !== null) publish(entries);
+  }, [publish, entries]);
+  const publishes = entries !== null;
+  useIsomorphicLayoutEffect(() => {
+    if (publish === null || !publishes) return;
+    return () => publish(null);
+  }, [publish, publishes]);
 }
 
 export function Markdown({
@@ -376,9 +401,14 @@ export function Markdown({
     [onNavigate, basePath, boxSlug, onJumpToQuote, openImageLink, cardPath],
   );
 
+  usePublishOutline(outline === true ? tree : null);
+
   const rendered = (
     <MarkdownRenderContext.Provider value={render}>
-      {renderers.react(tree, React, { components: mergedComponents })}
+      {/* An embedded card's own document is not this card's outline. */}
+      <CardOutlineContext.Provider value={null}>
+        {renderers.react(tree, React, { components: mergedComponents })}
+      </CardOutlineContext.Provider>
     </MarkdownRenderContext.Provider>
   );
 

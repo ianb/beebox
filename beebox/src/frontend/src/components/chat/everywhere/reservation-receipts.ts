@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { AGENT_ENGINES } from "@shared/agent-models.js";
 
 const receiptSchema = z.object({
   sessionId: z.string().min(1),
   contextDir: z.string(),
-  engine: z.enum(["claude", "codex"]),
+  engine: z.enum(AGENT_ENGINES),
   model: z.string().optional(),
 });
 export type ReservationReceipt = z.infer<typeof receiptSchema>;

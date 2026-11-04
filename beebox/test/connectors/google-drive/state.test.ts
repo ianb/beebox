@@ -25,12 +25,13 @@ function fileState(lastModified: string): ReturnType<typeof emptyFileState> {
   return s;
 }
 
-/** State with both fields present, the way every load hands it out. */
+/** State with every field present, the way every load hands it out. */
 function driveState(opts: {
   files: Record<string, ReturnType<typeof emptyFileState>>;
   driveTrashed?: string[];
+  folders?: DriveTransientState["folders"];
 }): DriveTransientState {
-  return { files: opts.files, driveTrashed: opts.driveTrashed ?? [] };
+  return { files: opts.files, driveTrashed: opts.driveTrashed ?? [], folders: opts.folders ?? {} };
 }
 
 // ## mergeDriveState — per-key resolution
@@ -79,6 +80,22 @@ void test("A sync that updated file A and discovered new file C, merged against 
     "gone",
     "newly-trashed",
   ]);
+
+  // ## mergeDriveState — `folders` resolves per key, like `files`
+  //
+  // "Sync now" mirrored folder F1 while a wakeup sync in another process
+  // mirrored F2 and saved first: each pass's own time lands, and F3, which this
+  // writer only read, keeps the time the other writer gave it.
+
+  const at = (lastSync: string) => ({ lastSync });
+  const snap4 = driveState({ files: {}, folders: { F1: at("t0"), F3: at("t0") } });
+  const fresh4 = driveState({ files: {}, folders: { F1: at("t0"), F2: at("t2"), F3: at("t3") } });
+  const working4 = driveState({ files: {}, folders: { F1: at("t1"), F3: at("t0") } });
+  t.check(mergeDriveState({ fresh: fresh4, snapshot: snap4, working: working4 }).folders, {
+    F1: at("t1"),
+    F2: at("t2"),
+    F3: at("t3"),
+  });
 });
 
 // ## End-to-end — concurrent CLI add survives the server sync's delta save
@@ -129,4 +146,23 @@ void test("The server loads { A }, snapshots it, then does its work.", async (t)
     C: "new",
   },
   );
+});
+
+// ## A box with no state file gets its own empty state
+//
+// A missing file loads the shared default, and a sync writes into the loaded
+// maps in place. Without fresh containers, one box's folder sync time would
+// show up in the next box that has no state file, in the same server process.
+void test("Two boxes with no state file do not share what one of them records", async (t) => {
+  const one = await makeTmpBox();
+  const two = await makeTmpBox();
+  t.teardown(async () => {
+    await one.cleanup();
+    await two.cleanup();
+  });
+  const first = await loadDriveState(one.root);
+  first.folders["folder-1"] = { lastSync: "2026-10-29T12:00:00.000Z" };
+  first.files["doc-1"] = emptyFileState();
+  first.driveTrashed.push("gone");
+  t.check(await loadDriveState(two.root), { files: {}, driveTrashed: [], folders: {} });
 });

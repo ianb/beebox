@@ -57,3 +57,7 @@ Related: `2026-07-28-directories-as-viewable-things` (in-place lenses, same
 instinct — the view comes to the content), `2026-07-29-verify-todo-annotation-rendering`
 (the manual-testing gate on current rendering — still the developer's),
 `2026-07-30-plans-as-execution-state` (what a todo IS in a plan doc).
+
+Re-reviewed 2026-10-30: Only ask 2 remains, and its target surface (a card companion panel) is not defined anywhere; the related landmark-context issue is closed.
+
+Out of date in the body above: State what the card companion panel is relative to the existing beside-the-chat pane, or close ask 2 into the directories/collection-views design; drop the closed chat-card-panel issue as the design partner.

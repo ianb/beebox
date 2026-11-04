@@ -2,7 +2,7 @@
 // the lightbox knows which card each image came from so it can offer "Open
 // card". Issue: issues/features/2026-10-07-image-card-link-opens-lightbox.md.
 // First, and bare: React DOM must load after the happy-dom window exists.
-import { mount } from "../../helpers/dom-harness.js";
+import { byRole, mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -52,12 +52,11 @@ void test("clicking an image-card link opens the lightbox, not the card", async 
   const navigated: ViewTarget[] = [];
   const view = await mount(render(navigated, true));
   t.teardown(() => view.unmount());
-  const links = [...view.container.querySelectorAll("a")];
-  const byText = (text: string) => links.find((a) => a.textContent === text);
-  await view.act(() => { byText("the bike")?.click(); });
+  const link = (name: string) => byRole(view.container, { role: "link", name });
+  await view.act(() => { link("the bike").click(); });
   t.check(navigated, []);
   // An ordinary link still navigates.
-  await view.act(() => { byText("notes")?.click(); });
+  await view.act(() => { link("notes").click(); });
   t.check(navigated, [{ path: "_content/trips/Notes.md", viewer: null, params: {}, viewState: null }]);
 });
 
@@ -65,7 +64,7 @@ void test("without a lightbox the link navigates as before", async (t) => {
   const navigated: ViewTarget[] = [];
   const view = await mount(render(navigated, false));
   t.teardown(() => view.unmount());
-  const bike = [...view.container.querySelectorAll("a")].find((a) => a.textContent === "the bike");
-  await view.act(() => { bike?.click(); });
+  const bike = byRole(view.container, { role: "link", name: "the bike" });
+  await view.act(() => { bike.click(); });
   t.check(navigated.map((target) => target.path), ["_content/pics/Bike.image.card"]);
 });

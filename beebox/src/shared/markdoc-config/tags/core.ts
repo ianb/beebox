@@ -56,7 +56,7 @@
  */
 
 import Markdoc from "@markdoc/markdoc";
-import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc";
+import type { Config, RenderableTreeNode, Schema } from "@markdoc/markdoc";
 import { QUOTE_TREATMENTS, validateQuoteTreatment } from "./quote-treatment.js";
 import { validateSourceAttributes } from "./source-model.js";
 import { TODO_STATUSES, todoAssignedWarning, validateTodoAttributes } from "../../todo-model.js";
@@ -65,7 +65,7 @@ import { flattenNodes } from "../../todo-text.js";
 import { unknownTag } from "./unknown-tag.js";
 import { footnoteTags, imageNode, makeHtmlTag } from "./html-schema.js";
 import { stringOrNull } from "../../optional-string.js";
-import { asciiSlug } from "../../ascii-slug.js";
+import { HeadingIds } from "../heading-ids.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
 // module under Node's ESM loader (used by the test runner); the frontend
@@ -76,28 +76,8 @@ import { asciiSlug } from "../../ascii-slug.js";
 const { Tag, nodes: baseNodes } = Markdoc;
 
 /**
- * Slug for a heading's `id` anchor: lowercase, runs of non-alphanumerics
- * collapsed to a single `-`, leading/trailing `-` trimmed. Empty input (a
- * heading with no word characters — e.g. just an emoji) yields `""`; the
- * caller substitutes a fallback.
- */
-function slugifyHeading(text: string): string {
-  return asciiSlug(text);
-}
-
-/** Concatenated plain text of a heading node's inline children (text + inline code). */
-function headingText(node: Node): string {
-  let out = "";
-  for (const child of node.walk()) {
-    if (child.type !== "text" && child.type !== "code") continue;
-    const content: unknown = child.attributes["content"];
-    if (typeof content === "string") out += content;
-  }
-  return out;
-}
-
-/**
- * Heading node with a stable `id` anchor (slug of the heading text) and a
+ * Heading node with a stable `id` anchor (an explicit `{% #id %}` annotation,
+ * else the slug of the heading text) and a
  * `data-line` carrying the 1-indexed source line from `node.lines`. The id
  * gives rendered Markdown headings anchors (none by default) and is the most
  * stable signal the selection-commentary position locator anchors to.
@@ -108,21 +88,13 @@ function headingText(node: Node): string {
  * `renderers.html`; the React render config (`Markdown.tsx`) installs it.
  */
 export function makeHeadingNode(): Schema {
-  const seen = new Set<string>();
+  const ids = new HeadingIds();
   return {
     children: ["inline"],
     attributes: { level: { type: Number, required: true, render: false } },
     transform(node, config) {
       const level = node.attributes["level"];
-      const base = slugifyHeading(headingText(node));
-      const slug = base === "" ? "section" : base;
-      let id = slug;
-      let n = 1;
-      while (seen.has(id)) {
-        id = `${slug}-${n}`;
-        n += 1;
-      }
-      seen.add(id);
+      const id = ids.next(node);
       const lines = node.lines;
       const startLine = Array.isArray(lines) && typeof lines[0] === "number" ? lines[0] : null;
       const children = node.transformChildren(config);

@@ -16,7 +16,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import Sharp from "sharp";
-import { COLLECT_SCRIPT, restoreAndMarkScript, type Material, type OverlayMark, type PageRuns, type RunLines, type TextRun } from "./contrast-page.js";
+import { COLLECT_SCRIPT, restoreAndMarkScript, type Material, type OverlayMark, type PageRuns, type RunLines, type Selection, type TextRun } from "./contrast-page.js";
 
 export interface ContrastPage {
   eval(expression: string): Promise<string>;
@@ -38,7 +38,9 @@ export type ContrastFailure =
   /** A token pair the theme's components render together. */
   | { kind: "token"; material: number; theme: string; fg: string; bg: string; ratio: number; required: number }
   /** Text in a card on an undeclared surface on the other side of light/dark from the paper. */
-  | { kind: "surface"; run: number; selector: string; text: string; theme: string; bg: string; paper: string; ratio: number; required: number };
+  | { kind: "surface"; run: number; selector: string; text: string; theme: string; bg: string; paper: string; ratio: number; required: number }
+  /** Selected text: the `::selection` ink on its background. */
+  | { kind: "selection"; selector: string; text: string; fg: string; bg: string; ratio: number; required: number; rects: Selection["rects"] };
 
 /**
  * WCAG AA. Large text is 24px, or 18.66px bold. A placeholder gets the large
@@ -177,12 +179,28 @@ export function scoreMaterials(materials: readonly Material[]): ContrastFailure[
   }));
 }
 
+/**
+ * Selected text below AA. A translucent selection background is scored over
+ * white; shipped selection colors are opaque.
+ */
+export function scoreSelections(selections: readonly Selection[]): ContrastFailure[] {
+  return selections.flatMap((s) => {
+    const [br, bgG, bb, ba] = s.bg;
+    const bg: Rgb = [br * ba + 255 * (1 - ba), bgG * ba + 255 * (1 - ba), bb * ba + 255 * (1 - ba)];
+    const [r, g, b, a] = s.fg;
+    const fg: Rgb = [r * a + bg[0] * (1 - a), g * a + bg[1] * (1 - a), b * a + bg[2] * (1 - a)];
+    const ratio = contrastRatio(fg, bg);
+    return ratio >= NORMAL ? [] : [{ kind: "selection" as const, selector: s.selector, text: s.text, fg: hex(fg), bg: hex(bg), ratio: round(ratio), required: NORMAL, rects: s.rects }];
+  });
+}
+
 /** One line per miss: ratio, what, colors, where. */
 export function describeContrastFailure(f: ContrastFailure): string {
   const ratio = `${f.ratio.toFixed(2)}:1 < ${String(f.required)}`;
   switch (f.kind) {
     case "text": return `${ratio}  "${f.text}"  ${f.fg} on ${f.bg}  ${f.selector}`;
     case "token": return `${ratio}  ${f.theme}: ${f.fg} on ${f.bg} (material tokens)`;
+    case "selection": return `${ratio}  selected "${f.text}"  ${f.fg} on ${f.bg}  ${f.selector}`;
     case "surface": return `surface ${f.bg} is not part of ${f.theme} (paper ${f.paper}) and inverts it ${f.ratio.toFixed(1)}:1  "${f.text}"  ${f.selector}`;
   }
 }
@@ -197,6 +215,7 @@ function parseEval(stdout: string): PageRuns {
 function marksFor(failures: readonly ContrastFailure[], page: PageRuns): OverlayMark[] {
   const perMaterial = new Map<number, number>();
   return failures.map((f) => {
+    if (f.kind === "selection") return { rects: f.rects, label: `selection ${f.ratio.toFixed(1)}:1` };
     if (f.kind !== "token") return { rects: page.runs.find((run) => run.id === f.run)?.rects ?? [], label: f.kind === "text" ? `${f.ratio.toFixed(1)}:1` : `surface ${f.bg}` };
     const n = (perMaterial.get(f.material) ?? 0) + 1;
     perMaterial.set(f.material, n);
@@ -224,7 +243,10 @@ export interface ContrastResult {
 }
 
 function failureKey(f: ContrastFailure): string {
-  return f.kind === "token" ? `token ${f.theme} ${f.fg} ${f.bg}` : `${f.kind} ${String(f.run)}`;
+  if (f.kind === "token") return `token ${f.theme} ${f.fg} ${f.bg}`;
+  // Scrolling moves the rects; the element and its colors name the miss.
+  if (f.kind === "selection") return `selection ${f.selector} ${f.fg} ${f.bg}`;
+  return `${f.kind} ${String(f.run)}`;
 }
 
 /**
@@ -281,7 +303,7 @@ export async function auditContrast(page: ContrastPage, { outline, before }: {
     if (Math.abs(info.height / info.width - runs.height / runs.width) > 0.01) {
       throw new Error(`contrast audit: capture is ${String(info.width)}×${String(info.height)} but the viewport is ${String(runs.width)}×${String(runs.height)}`);
     }
-    const failures = [...scoreRuns({ data, width: info.width, height: info.height, channels: info.channels }, runs), ...scoreMaterials(runs.materials)];
+    const failures = [...scoreRuns({ data, width: info.width, height: info.height, channels: info.channels }, runs), ...scoreMaterials(runs.materials), ...scoreSelections(runs.selections)];
     if (outline) marks = marksFor(failures, runs);
     return { failures, runs: runs.runs.map(({ id }) => id), lines: runs.lines, unmeasured: runs.unmeasured };
   } finally {

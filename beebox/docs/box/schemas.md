@@ -227,6 +227,24 @@ and your `validate` run. The field lives in your stub, never under
 `node_modules`, which an upgrade replaces. The plugin's README under
 `node_modules/beebox/src/plugins/<name>/README.md` shows every stub it needs.
 
+**Adding fields to a captured page or PDF.** `webpageBase` and `pdfBase` from
+`beebox/cards` work the same way. Put the stub at `src/schemas/webpage.ts` or
+`src/schemas/pdf.ts`; it replaces the built-in type in this box, with the same
+view:
+
+```ts
+import { cardSchema, extendSchema, webpageBase } from "beebox/cards";
+import { z } from "beebox/schema";
+
+export default cardSchema("webpage", extendSchema(webpageBase, {
+  fields: { topics: z.array(z.string()).optional() },
+  instructions: "`topics:` lists the subjects the page covers.",
+}));
+```
+
+`bbx webpage save --update` and `bbx pdf reanalyze` keep these fields. `bbx
+validate` checks them, and they no longer draw an unknown-key warning.
+
 **Imports.** Schema and view code (a trick keeps its own packages; see `tricks.md`) may only import from the beebox library surface: `beebox/cards` (card/schema primitives), `beebox/schema` (Zod and YAML, version-pinned to the engine), `beebox/view-widgets` (view components), and `beebox/plugins/<name>` or `beebox/plugins/<name>/view` for a plugin this box has activated (`bbx plugins list`; the plugin's README shows the stub). Don't add other dependencies to `package.json` — that file isn't yours to edit.
 
 From `beebox/cards` (`validate` and `summarize` are config hooks on `cardSchema`, not imports):

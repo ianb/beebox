@@ -28,9 +28,12 @@ due work.
 [timers set from chat](../concepts/chat-schedules.md),
 [what it requires](../08-what-it-requires.md).
 
-**Where it is still rough.** On a fresh box scheduled runs are off until you turn
-them on, and the routines that ship with a box (the nightly pass that titles and
-summarizes the day's chats, the weekly retrospective) are seeded disabled. Out of
+**Where it is still rough.** On a fresh box the scheduled connector syncs and the
+nightly pass that titles and summarizes the day's chats are off until you turn
+them on. The housekeeping routines that ship with a box are on: map refresh,
+cleanup of old procedure runs, the weekly retrospective, the daily todo review,
+and the daily question review. The last three start an agent only when a chat
+has gone quiet, a todo needs review, or a question has waited. Out of
 model quota, a due script is marked waiting rather than failing, and you are told
 once per episode. A hung script is killed with its process tree. Finished
 procedure runs expire after thirty days unless pinned. There is no visual editor

@@ -6,11 +6,17 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { z } from "zod";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
 import { getBoxDir } from "../../lib/paths/core.js";
 import { pluginNames } from "../../plugins.js";
-import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
+import {
+  AGENT_ENGINES,
+  isAgentEngine,
+  modelTier,
+  type AgentEngine,
+} from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 import { ADDED_MODEL_LABEL_MAX, isOpenRouterModelId, type AddedModel } from "../../shared/chat-models.js";
 import type { PresentationConfig } from "../../shared/card-theme/core.js";
@@ -97,6 +103,56 @@ export interface BoxConfig {
    * {@link activePluginNames}, which rejects entries that name no plugin.
    */
   plugins?: string[];
+  /**
+   * Search areas and kind weights, as hand-written JSON. Read through
+   * {@link loadSearchConfig}, which validates it (`box-docs/bbx-commands.md`, "Areas").
+   */
+  search?: unknown;
+}
+
+/** A box-relative path prefix: no leading slash, no `..`, no empty segment. A trailing slash is dropped. */
+const searchPrefix = z
+  .string()
+  .transform((value) => value.replace(/\/+$/, ""))
+  .refine(
+    (value) => value !== "" && !value.startsWith("/") && value.split("/").every((seg) => seg !== "" && seg !== ".."),
+    "must be a box-relative path"
+  );
+
+const searchConfigSchema = z
+  .object({
+    /** Area name to the box-relative prefixes it covers. */
+    areas: z.record(z.string().min(1).refine((name) => name !== "all", "`all` means every area in --area"), z.array(searchPrefix).min(1)).default({}),
+    /** Card type to a score multiplier. */
+    kindWeights: z.record(z.string().min(1), z.number().positive().finite()).default({}),
+  })
+  .strict();
+
+export interface SearchConfig {
+  areas: Record<string, string[]>;
+  kindWeights: Record<string, number>;
+}
+
+/**
+ * The box's `search` settings. Missing means no areas and no weights. A
+ * malformed value gives the same empty settings plus a `warning`: a typo in
+ * hand-edited JSON must not stop search, and the caller shows the warning.
+ */
+export async function loadSearchConfig(boxRoot: string): Promise<SearchConfig & { warning: string | null }> {
+  const raw = (await loadBoxConfig(boxRoot)).search;
+  if (raw === undefined) return { areas: {}, kindWeights: {}, warning: null };
+  const parsed = searchConfigSchema.safeParse(raw);
+  if (!parsed.success) {
+    const problem = parsed.error.issues
+      .map((issue) => `${["search", ...issue.path.map(String)].join(".")}: ${issue.message}`)
+      .join("; ");
+    return {
+      areas: {},
+      kindWeights: {},
+      warning: `_config/box.json search settings ignored, searching everything (${problem})`,
+    };
+  }
+  return { ...parsed.data, warning: null };
 }
 
 /** Validated Claude Code telemetry setting for first-party runs. An invalid value reads as off. */
@@ -119,7 +175,7 @@ class InvalidAgentEngineError extends Error {
   readonly value: unknown;
 
   constructor(value: unknown) {
-    super("Box config agentEngine must be either claude or codex");
+    super(`Box config agentEngine must be one of ${AGENT_ENGINES.join(", ")}`);
     this.name = "InvalidAgentEngineError";
     this.value = value;
   }
@@ -204,8 +260,8 @@ export async function loadAgentEngine(boxRoot: string): Promise<AgentEngine> {
   const config = await loadBoxConfig(boxRoot);
   const engine: unknown = config.agentEngine;
   if (engine === undefined) return "claude";
-  if (engine === "claude" || engine === "codex") return engine;
-  throw new InvalidAgentEngineError(engine);
+  if (!isAgentEngine(engine)) throw new InvalidAgentEngineError(engine);
+  return engine;
 }
 
 /** Why a `plugins` entry activates nothing; worded by `describeInvalidPluginEntries` (`core/plugins/active.ts`). */
@@ -355,7 +411,8 @@ export async function loadEnabledEngines(boxRoot: string): Promise<AgentEngine[]
       `Box config disables its own default engine (${fallback}); treating it as enabled, since nothing could run otherwise.`,
     );
   }
-  return AGENT_ENGINES.filter((engine) => engine === fallback || config.engines?.[engine] === true);
+  return AGENT_ENGINES.filter((engine) =>
+    engine === fallback || config.engines?.[engine] === true);
 }
 
 /**

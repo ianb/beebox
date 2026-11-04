@@ -24,6 +24,8 @@ async function harnessBox(extension: string) {
   box.commitAll("synthetic triage fixture");
   return box;
 }
+/** These tests cover item handling; compile behavior has its own test. */
+const skipCompile = async () => ({ status: "superseded" as const });
 async function withoutConsoleError<T>(action: () => Promise<T>): Promise<T> {
   const original = console.error;
   console.error = () => {};
@@ -43,7 +45,7 @@ function destinationJudgment({ evidence, instructions, outcome }: { evidence: Ev
 void test("Dry run does not research or move", async (t) => {
   const box = await harnessBox("txt");
   let researchCalls = 0;
-  const result = await runJevTriage({ boxRoot: box.root, dryRun: true,
+  const result = await runJevTriage({ boxRoot: box.root, compile: skipCompile, dryRun: true,
     prepare: prepareItem,
     judge: async (_root, input) => destinationJudgment({ evidence: input.evidence, instructions: input.instructions, outcome: "destination" }),
     research: async () => { researchCalls += 1; return null; },
@@ -67,7 +69,7 @@ void test("The harness recompiles both inputs after research, judges once more, 
   const box = await harnessBox("txt");
   const judged: Array<{ text: string; rules: string }> = [];
   let researchCalls = 0;
-  const result = await runJevTriage({ boxRoot: box.root,
+  const result = await runJevTriage({ boxRoot: box.root, compile: skipCompile,
     prepare: prepareItem,
     judge: async (_root, input) => {
       judged.push({ text: input.evidence.parts[0]?.text ?? "", rules: input.instructions.destinations[0]?.rules ?? "" });
@@ -111,7 +113,7 @@ void test("A deterministic item failure is recorded and the next item still runs
   const box = await harnessBox("txt");
   await box.write("_content/inbox/staged/Later.txt", "Later synthetic evidence.");
   box.commitAll("second staged item");
-  const result = await withoutConsoleError(() => runJevTriage({ boxRoot: box.root,
+  const result = await withoutConsoleError(() => runJevTriage({ boxRoot: box.root, compile: skipCompile,
     prepare: async (input) => {
       if (input.sourceRef.endsWith("Document.txt")) throw new InvariantError("synthetic stranded attachment scope");
       return prepareItem(input);
@@ -146,7 +148,7 @@ void test("Wholly unavailable evidence skips Jev and remains held", async (t) =>
   const box = await harnessBox("bin");
   let judgeCalls = 0;
   let researchCalls = 0;
-  const result = await runJevTriage({ boxRoot: box.root,
+  const result = await runJevTriage({ boxRoot: box.root, compile: skipCompile,
     prepare: prepareItem,
     judge: async () => { judgeCalls += 1; throw new Error("unavailable evidence must skip Jev"); },
     research: async () => { researchCalls += 1; return null; },
@@ -171,7 +173,7 @@ void test("Wholly unavailable evidence skips Jev and remains held", async (t) =>
 // ## Only quota failures defer; operational errors remain visible
 void test("Only quota failures defer; operational errors remain visible", async (t) => {
   const quotaBox = await harnessBox("txt");
-  const quota = await runJevTriage({ boxRoot: quotaBox.root, prepare: prepareItem,
+  const quota = await runJevTriage({ boxRoot: quotaBox.root, compile: skipCompile, prepare: prepareItem,
     judge: async () => { throw new TriageBudgetError(); }, research: async () => null,
   });
   const quotaState = { deferred: quota.deferred.length, decisions: quota.decisions.length,
@@ -179,7 +181,7 @@ void test("Only quota failures defer; operational errors remain visible", async 
   await quotaBox.cleanup();
 
   const errorBox = await harnessBox("txt");
-  const operational = await runJevTriage({ boxRoot: errorBox.root, prepare: prepareItem,
+  const operational = await runJevTriage({ boxRoot: errorBox.root, compile: skipCompile, prepare: prepareItem,
     judge: async () => { throw new Error("provider unavailable"); }, research: async () => null,
   }).then(() => "unexpected success", (error: Error) => error.message);
   const errorSourceRemains = await fs.readFile(errorBox.path("_content/inbox/staged/Document.txt"), "utf8");
@@ -193,4 +195,36 @@ void test("Only quota failures defer; operational errors remain visible", async 
     operational: "provider unavailable",
     errorSourceRemains: "Initial synthetic evidence.",
   });
+});
+
+// ## Run order: exact duplicates leave first, then compile, then judgment
+//
+// A staged byte copy of a filed document is trashed without a model call. The
+// compile pass runs once because the compiled file is absent. A dry run does
+// neither: it reports the duplicate and the staleness and judges the rest.
+void test("Exact duplicates leave before compile and judgment; dry run moves and compiles nothing", async (t) => {
+  const pdf = `%PDF-1.4 synthetic statement ${"x".repeat(2048)}`;
+  for (const dryRun of [true, false]) {
+    const box = await harnessBox("txt");
+    await box.write("_content/records/Statement.pdf", pdf);
+    await box.write("_content/inbox/staged/Copy.pdf", pdf);
+    box.commitAll("filed statement and a staged copy");
+    const judged: string[] = [];
+    let compileCalls = 0;
+    const result = await runJevTriage({ boxRoot: box.root, dryRun, prepare: prepareItem,
+      compile: async () => { compileCalls += 1; return { status: "superseded" }; },
+      judge: async (_root, input) => { judged.push(input.evidence.source.ref); return destinationJudgment({ evidence: input.evidence, instructions: input.instructions, outcome: "destination" }); },
+      research: async () => null,
+    });
+    const copyRemains = await fs.access(box.path("_content/inbox/staged/Copy.pdf")).then(() => true, () => false);
+    t.check({ dryRun, duplicates: result.duplicates.map((finding) => [finding.sourceRef, finding.disposition, finding.originals[0]?.copyOf]), compiled: result.compiled, compileCalls, judged, copyRemains }, {
+      dryRun,
+      duplicates: [["/_content/inbox/staged/Copy.pdf", "removable", "/_content/records/Statement.pdf"]],
+      compiled: dryRun ? "absent" : "superseded",
+      compileCalls: dryRun ? 0 : 1,
+      judged: ["/_content/inbox/staged/Document.txt"],
+      copyRemains: dryRun,
+    });
+    await box.cleanup();
+  }
 });

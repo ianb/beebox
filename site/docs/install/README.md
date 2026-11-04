@@ -21,5 +21,9 @@ way to run a box: it runs one in a virtual machine on that Mac, with no
 Docker, reachable from that Mac only. The same app connects a Mac to boxes
 running elsewhere. See [../capabilities/mac-app.md](../capabilities/mac-app.md).
 
+Backups are optional and off until set up. [backups.md](backups.md) covers
+encrypted backups of a box with restic, how each kind of install schedules them,
+and restoring onto another machine.
+
 Every page below is listed with one line on what it covers. Cite the page
 you drew on, and say when a page does not cover something.

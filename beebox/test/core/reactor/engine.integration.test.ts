@@ -83,10 +83,12 @@ void test("Single batch job processed by agent", async (t) => {
 });
 
 // ### Multiple batch jobs in one session
+//
+// A batch carries one intake job, so the second job is another type.
 void test("Multiple batch jobs in one session", async (t) => {
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/jobs/task1.intake.job.card", intakeJob("Task one"));
-  await box.write("_bookkeeping/jobs/task2.intake.job.card", intakeJob("Task two"));
+  await box.write("_bookkeeping/jobs/task2.question-followup.job.card", intakeJob("Task two"));
   box.commitAll("Add jobs");
 
   const created: FakeAgent[] = [];
@@ -96,7 +98,7 @@ void test("Multiple batch jobs in one session", async (t) => {
       act: async ({ boxRoot }) => {
         // Finish both jobs
         await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/task1.intake.job.card" });
-        await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/task2.intake.job.card" });
+        await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/task2.question-followup.job.card" });
         return { success: true };
       },
     });
@@ -262,7 +264,7 @@ void test("The reactor loops when jobs remain after a cycle.", async (t) => {
   const box = await makeTmpBox({ git: true });
   const large = (description: string) => `${intakeJob(description)}${"x".repeat(100 * 1024)}\n`;
   await box.write("_bookkeeping/jobs/task1.intake.job.card", large("First task"));
-  await box.write("_bookkeeping/jobs/task2.intake.job.card", large("Second task"));
+  await box.write("_bookkeeping/jobs/task2.question-followup.job.card", large("Second task"));
   box.commitAll("Add jobs");
 
   let cycle = 0;
@@ -272,7 +274,7 @@ void test("The reactor loops when jobs remain after a cycle.", async (t) => {
       name: opts.name,
       act: async ({ boxRoot }) => {
         // Each cycle finishes only one job
-        const jobFile = currentCycle === 0 ? "task1.intake.job.card" : "task2.intake.job.card";
+        const jobFile = currentCycle === 0 ? "task1.intake.job.card" : "task2.question-followup.job.card";
         await finishJob({ boxRoot, jobRelPath: `_bookkeeping/jobs/${jobFile}` });
         return { success: true };
       },

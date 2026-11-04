@@ -34,7 +34,9 @@ hundreds of tests import selects about half the suite, which takes about
 first, from the ledger's per-file times. At 5 minutes or more it says to run
 the command in the background, because load can make the run pass an agent
 shell's 10-minute foreground limit. `node --import tsx ../bin/test-select.ts`
-prints the same line and the selection without running it.
+prints the same line and the selection without running it, plus the largest
+reason groups (`547 imports beebox/src/x.ts; …`). Add `--why` to list every
+reason with its tests.
 
 ## Instruments
 

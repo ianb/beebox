@@ -18,6 +18,8 @@ import { loadValidationIgnore } from "./validation-ignore.js";
 export interface InboundCardRef {
   path: string;
   refs: number;
+  /** The `#fragment` of each ref that has one, in the order found; repeats stay. */
+  fragments: string[];
 }
 
 export interface InboundCardRefScan {
@@ -131,11 +133,15 @@ export async function findInboundCardRefs(params: {
     if (isTrashedCard(relPath) || ignore.isIgnored(referrerPath)) continue;
     try {
       const text = await readText(referrerPath);
+      const fragments: string[] = [];
+      const onMatch = (fragment: string | undefined): void => {
+        if (fragment !== undefined) fragments.push(fragment);
+      };
       const count = referrerPath.endsWith(".tsx")
-        ? rewriteViewRefs({ boxRoot, viewAbsPath: referrerPath, text, remap }).count
-        : countReferrerRefs({ boxRoot, cardAbsPath: referrerPath, text, remap, skipFencedCode: true });
+        ? rewriteViewRefs({ boxRoot, viewAbsPath: referrerPath, text, remap, onMatch }).count
+        : countReferrerRefs({ boxRoot, cardAbsPath: referrerPath, text, remap, skipFencedCode: true, onMatch });
       if (count > 0) {
-        found.push({ path: relPath, refs: count });
+        found.push({ path: relPath, refs: count, fragments });
       }
     } catch (error) {
       errors.push(`${relPath}: ${String(error).replaceAll(referrerPath, relPath)}`);

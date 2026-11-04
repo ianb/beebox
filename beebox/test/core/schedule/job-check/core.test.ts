@@ -148,6 +148,7 @@ void test("A running wakeup holds the check off", async (t) => {
 //
 // A manual pass beside the daemon's: both see the job, one holds the check's
 // lock while its starter waits, and the run is started and counted once.
+// Either pass may win, so the results are compared in kind order.
 void test("Two passes at once start one run", async (t) => {
   const box = await committedJobBox(t);
   const answer = Promise.withResolvers<JobCheckStart>();
@@ -158,9 +159,9 @@ void test("Two passes at once start one run", async (t) => {
   };
   const both = Promise.all([checkWaitingJobs(box.root, { start }), checkWaitingJobs(box.root, { start })]);
   setTimeout(() => answer.resolve({ state: "started", detail: "" }), 50);
-  const results = await both;
+  const results = (await both).toSorted((a, b) => a.kind.localeCompare(b.kind));
   t.check({ results, calls, runsToday: (await readJobCheckState(box.root)).state.runsToday }, {
-    results: [{ kind: "started", files: [FILE] }, { kind: "none-due" }],
+    results: [{ kind: "none-due" }, { kind: "started", files: [FILE] }],
     calls: 1,
     runsToday: 1,
   });

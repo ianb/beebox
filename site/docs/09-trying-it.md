@@ -8,7 +8,9 @@ create a **box**: your own directory, kept under version control with git,
 holding the cards the system works with.
 
 **The container path is the primary one.** Docker with Compose v2 plus a
-clone of the repository, since no image is published yet. The sequence is
+clone of the repository, because the guide builds the image from that clone (a
+prebuilt image is published daily to GitHub's container registry, and the guide
+does not yet cover pulling it). The sequence is
 four steps: create the box in a directory you choose, sign in to the coding
 agent, start the container, then open the printed local URL (the guide gives
 the exact commands). By default the box listens only on your own
@@ -33,13 +35,16 @@ data, or your accounts. Four decisions are yours: run it or hack on it,
 where the box lives, your own agent login, and whether the box is exposed
 beyond loopback.
 
-**The first hour.** A new box opens on a chat that asks one question, "What do
-you want to keep track of here?" Answering it in your own words is how the box
-learns what it is for; "Not now" skips it, and the question stays pending until
-you answer or dismiss it. Then start with the inputs that need no external account:
+**The first hour.** A new box opens on a chat with one question beside it,
+"What do you want to keep track of here?" Answering it in your own words is how
+the box learns what it is for; "Later" puts it away, and the question stays
+answerable until you answer it. Then start with the inputs that need no external account:
 type into chat, record a voice memo, photograph things and talk about them.
-Scheduled processing is off on a fresh box, so nothing runs on its own until
-you turn it on. Connecting Google, which unlocks Gmail and Calendar, is the
+Scheduled syncing of email, calendar, and Drive is off on a fresh box, so no
+outside content arrives until you turn it on. A few housekeeping routines are
+on, and the three that run an agent (weekly retrospective, daily todo review,
+daily question review) start one only when a quiet chat, an overdue todo, or a
+waiting question gives it something to do. Connecting Google, which unlocks Gmail and Calendar, is the
 slower step; the documentation suggests leaving it for later.
 
 **Updating** means fetching the latest version of the project and rebuilding. On start, the

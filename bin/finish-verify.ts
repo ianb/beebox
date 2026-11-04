@@ -26,6 +26,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
+import { binTsArgs } from "./lib/bin-ts.js";
 import { killChildrenOnSignal, registerRun, run } from "./finish-verify-process.js";
 import type { Sheet } from "./finish-preflight.js";
 import type { VerificationCommand } from "./finish-preflight-lib.js";
@@ -219,13 +220,7 @@ async function readSheet(path: string | undefined): Promise<Sheet> {
     return parsed;
   }
   const preflight = await run({
-    argv: [
-      process.execPath,
-      "--import",
-      import.meta.resolve("tsx"),
-      join(import.meta.dirname, "finish-preflight.ts"),
-      "--json",
-    ],
+    argv: [process.execPath, ...binTsArgs(join(import.meta.dirname, "finish-preflight.ts"), ["--json"])],
     cwd: process.cwd(),
   });
   if (preflight.status !== 0) {

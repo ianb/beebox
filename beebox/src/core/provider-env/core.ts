@@ -36,7 +36,18 @@ export async function providerEnvAdditions(params: {
   env?: Record<string, string | undefined>;
 }): Promise<Record<string, string> | null> {
   const { boxRoot, model, purpose } = params;
-  if (params.engine === "codex") return null;
+  switch (params.engine) {
+    // pi takes its OpenRouter key directly, never the Claude CLI's env
+    // (docs/implemented-plans/pi-box-engine.md, Track 3).
+    case "codex":
+    case "pi":
+      return null;
+    case "claude":
+    case undefined:
+      break;
+    default:
+      return assertNever(params.engine);
+  }
   const additions = model === null || model === undefined
     ? await firstPartyAdditions(boxRoot, purpose)
     : await additionsFor({ boxRoot, model, purpose });

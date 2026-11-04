@@ -2,7 +2,7 @@
 // tolerates texture but not a band, faded groups, and material surfaces.
 
 import { test } from "tap";
-import { composite, contrastRatio, mergeContrastSteps, scoreMaterials, scoreRuns, type ContrastFailure, type RawImage } from "./tour-lib/contrast.js";
+import { composite, contrastRatio, mergeContrastSteps, scoreMaterials, scoreRuns, scoreSelections, type ContrastFailure, type RawImage } from "./tour-lib/contrast.js";
 import type { Material, TextRun } from "./tour-lib/contrast-page.js";
 
 type Rgb = [number, number, number];
@@ -90,6 +90,19 @@ void test("readable text on an undeclared surface that inverts the paper is a su
 
 void test("token pairs below AA are named by token", (t) => {
   t.check(scoreMaterials([dark]).map((f) => f.kind === "token" && `${f.fg} on ${f.bg} ${String(f.ratio)}`), ["--bbx-ink on --bbx-sheet 2.68"]);
+  t.end();
+});
+
+// A translucent selection background is scored over white: half-black is gray
+// 127.5, which white text reads on at 3.98:1 and black at 5.28:1.
+void test("selected text below AA fails; a translucent background is scored over white", (t) => {
+  const at = [{ x: 0, y: 0, w: 40, h: 10 }];
+  t.check(scoreSelections([
+    { selector: "pre", text: "doors open", fg: [0, 0, 0, 1], bg: [0, 0, 0, 0.5], rects: at },
+    { selector: "p", text: "Sample", fg: [255, 255, 255, 1], bg: [0, 0, 0, 0.5], rects: at },
+  ]), [
+    { kind: "selection", selector: "p", text: "Sample", fg: "#ffffff", bg: "#808080", ratio: 3.98, required: 4.5, rects: at },
+  ]);
   t.end();
 });
 

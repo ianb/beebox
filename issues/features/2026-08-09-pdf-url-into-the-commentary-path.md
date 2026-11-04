@@ -106,3 +106,7 @@ Extraction quality on a dense academic PDF — two-column layouts, footnotes,
 figures, references — is the thing that decides whether the result is actually
 readable or a mess. Worth testing docling against a real paper before committing
 to the workflow.
+
+Re-reviewed 2026-10-30: Still no path from a PDF URL into the box. The card type is now `pdf` and the command `bbx pdf reanalyze`.
+
+Out of date in the body above: Rename document card / `src/schemas/document.ts` / `bbx document reanalyze` to pdf card / beebox/src/schemas/pdf.ts / `bbx pdf reanalyze`; update the local-bytes intake list to core/commands/scan-import/; commentBlockedReason is now around commentary.ts:83.

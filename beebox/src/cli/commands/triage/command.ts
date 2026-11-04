@@ -4,11 +4,13 @@ import { z } from "zod";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { runCommand, createCliContext } from "../../../core/command-runner.js";
 import { prepareItem, evidenceSchema } from "../../../core/triage/evidence/core.js";
-import { compileInstructionSnapshot, instructionSnapshotSchema } from "../../../core/triage/snapshot.js";
+import { compileInstructionSnapshot, compileInstructionSnapshotWithStatus, instructionSnapshotSchema } from "../../../core/triage/snapshot.js";
+import { compileTriageInstructions } from "../../../core/triage/compile.js";
 import { judgeItem } from "../../../core/triage/judge.js";
 import { createDecisionReceipt } from "../../../core/triage/decisions/storage.js";
 import { output, readJson, cliAction, withInheritedJson, type OutputOptions } from "./io.js";
 import { registerDecisionCommands } from "./decisions.js";
+import { registerDuplicatesCommand } from "./duplicates.js";
 
 function reporting(command: Command): Command {
   return command.option("--out <file>", "Write versioned JSON to a new caller-owned file")
@@ -58,11 +60,12 @@ export function createTriageCommand(): Command {
     .option("--overlay <file>", "Trial guide, including explicit hypotheses")
     .option("--landmarks <file>", "JSON map of canonical landmark refs to trial files"))
     .action((options: OutputOptions & {overlay?: string; landmarks?: string}) => cliAction(async () => {
-    const instructions = await compileInstructionSnapshot(await requireBoxRoot(), {
+    const { snapshot: instructions, compiled } = await compileInstructionSnapshotWithStatus(await requireBoxRoot(), {
       ...(options.overlay === undefined ? {} : { guideOverlay: options.overlay }),
       ...(options.landmarks === undefined ? {} : { landmarkOverlays: await readJson(options.landmarks, z.record(z.string(), z.string())) }),
     });
-    await output(instructions, { ...withInheritedJson(triageCommand, options), summary: `${instructions.trial ? "Trial" : "Canonical"} instructions: ${instructions.destinations.length} destination(s), ${instructions.sources.length} source(s).` });
+    const compiledNote = compiled.status === "invalid" ? `compiled: invalid (${compiled.error})` : `compiled: ${compiled.status}`;
+    await output(instructions, { ...withInheritedJson(triageCommand, options), summary: `${instructions.trial ? "Trial" : "Canonical"} instructions: ${instructions.destinations.length} destination(s), ${instructions.sources.length} source(s); ${compiledNote}.` });
     }));
 
   reporting(triageCommand.command("judge").description("One Jev call; no research, question or file moves")
@@ -78,7 +81,20 @@ export function createTriageCommand(): Command {
     await output(decision, { ...withInheritedJson(triageCommand, options), summary: `${decision.id}: ${judgment.outcome} ${judgment.destinationRef ?? ""}. ${judgment.reason.text}` });
     }));
 
+  triageCommand.command("compile").description("One bounded agent pass that adds tie-breaks between destinations; writes and commits the compiled instructions")
+    .option("--json", "Print the complete result")
+    .action((options: { json?: boolean }) => cliAction(async () => {
+    const result = await compileTriageInstructions({ boxRoot: await requireBoxRoot() });
+    const summary = result.status === "compiled" ? `Compiled: ${String(result.compiled.tieBreaks.length)} tie-break(s), ${String(result.compiled.conflicts.length)} conflict question(s).`
+      : result.status === "invalid" ? `Agent output rejected; nothing written:\n${result.errors.join("\n")}`
+      : result.status === "failed" ? `Compile failed; nothing written: ${result.error}` : "Superseded: sources or the compiled file changed during the pass; nothing written.";
+    if (options.json === true || triageCommand.opts<{ json?: boolean }>().json === true) console.log(JSON.stringify(result, null, 2));
+    else console.log(summary);
+    if (result.status !== "compiled") process.exitCode = 1;
+    }));
+
   registerDecisionCommands(triageCommand, reporting);
+  registerDuplicatesCommand(triageCommand, reporting);
   return triageCommand;
 }
 

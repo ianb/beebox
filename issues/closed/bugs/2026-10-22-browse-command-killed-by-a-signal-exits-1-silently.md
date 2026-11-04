@@ -23,4 +23,4 @@ Reports: [G-paperwork](../../../beebox/test/user-stories/journeys/G-paperwork/re
 - Never produce an empty exit 1 from the runner; name the cause or say that upstream gave none.
 - Bound `snapshot` with a timeout and name the commands that still work (`eval`, `screenshot`) in the error.
 
-The upstream hang that made these snapshots slow enough to be reaped is recorded in [browse daemon wedges](../../bugs/2026-07-14-browse-daemon-wedges-on-animated-canvas.md).
+The upstream hang that made these snapshots slow enough to be reaped is recorded in [browse daemon wedges](2026-07-14-browse-daemon-wedges-on-animated-canvas.md).

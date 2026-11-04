@@ -1,5 +1,5 @@
 /**
- * Usage tracking — aggregate token usage from Claude Code sessions into SQLite.
+ * Usage tracking — aggregate token usage from Claude Code and pi sessions into SQLite.
  *
  * Data flow:
  *   1. createAgent() appends to _bookkeeping/usage/session-manifest.jsonl (task attribution)
@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { errnoCode } from "../shared/error-guards.js";
 import { listSessions } from "../cli/lib/session.js";
 import { CODEX_USAGE_REL_PATH, readCodexTurnUsage } from "./codex-usage.js";
+import { listPiSessionFiles, readPiSessionUsage } from "./pi-sessions.js";
 import { BOX_DIRS } from "../lib/paths/core.js";
 import { jsonlLines } from "../lib/jsonl-lines.js";
 import { openSqlite, type SqliteDb } from "./sqlite.js";
@@ -232,12 +233,14 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
   // roots is only counted once (the fresher copy wins).
   const allSessions = await listSessions(boxRoot);
   const seenIds = new Set<string>();
-  const sessionFiles: Array<{ sessionId: string; path: string }> = [];
+  const sessionFiles: Array<{ sessionId: string; path: string; read: typeof parseSessionUsage }> = [];
   for (const s of allSessions) {
     if (seenIds.has(s.sessionId)) continue;
     seenIds.add(s.sessionId);
-    sessionFiles.push({ sessionId: s.sessionId, path: s.path });
+    sessionFiles.push({ sessionId: s.sessionId, path: s.path, read: parseSessionUsage });
   }
+  // pi's session files carry their own usage and are read in place, as Claude's are.
+  for (const s of await listPiSessionFiles(boxRoot)) sessionFiles.push({ ...s, read: readPiSessionUsage });
 
   const getSyncState = db.prepare(
     "SELECT file_size FROM sync_state WHERE session_id = ?"
@@ -260,7 +263,7 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
 
   const result: SyncResult = { sessionsProcessed: 0, sessionsSkipped: 0, sessionsMissing: 0 };
 
-  for (const { sessionId, path: filePath } of sessionFiles) {
+  for (const { sessionId, path: filePath, read } of sessionFiles) {
     let stat: fs.Stats;
     try {
       stat = fs.statSync(filePath);
@@ -283,7 +286,7 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
     }
 
     // Parse and aggregate
-    const buckets = await parseSessionUsage(filePath);
+    const buckets = await read(filePath);
 
     // Upsert within a transaction
     db.transaction(() => {

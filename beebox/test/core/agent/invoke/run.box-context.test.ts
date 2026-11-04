@@ -65,6 +65,7 @@ void test("The server's Claude login can carry claude.ai connectors (Gmail, Cale
       "/.claude/AGENTS.md",
       "/.claude/rules/**",
     ],
+    attribution: { commit: "", pr: "", sessionUrl: false },
   });
 
   t.check(settingsFor({ loadBoxContext: false }).disableClaudeAiConnectors, true);

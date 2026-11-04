@@ -430,3 +430,30 @@ void test("The per-process lease sidecar lists the live reasons.", async (t) => 
   await once(namedChild, "exit");
   t.check(await boxWorkHolders(namedBox.root), []);
 });
+
+// ## An owner that cannot defer records when it ends live background tasks
+//
+// The deployment holder and the development reload pass
+// `endsBackgroundTasksAt`; the server's poll reads the time from the phase
+// record (`docs/implemented-plans/maintenance-live-tasks.md`, Track 2). The time is fixed
+// when the box closes and survives the move to the exclusive phase. A
+// deferrable owner writes none, so its drain times out instead.
+void test("An owner that cannot defer records when it ends live background tasks", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  const deploy = await closeBoxMaintenance(box.root, { reason: "deployment", endsBackgroundTasksAt: "2026-11-02T18:13:15.000Z" });
+  const draining = (await boxMaintenanceStatus(box.root))?.endsBackgroundTasksAt;
+  await deploy.beginChanges();
+  const exclusive = (await boxMaintenanceStatus(box.root))?.endsBackgroundTasksAt;
+  await deploy.complete();
+  const sweep = await closeBoxMaintenance(box.root, { reason: "migration" });
+  const deferrable = (await boxMaintenanceStatus(box.root))?.endsBackgroundTasksAt;
+  await sweep.release();
+  t.check({ draining, exclusive, deferrable }, { draining: "2026-11-02T18:13:15.000Z", exclusive: "2026-11-02T18:13:15.000Z", deferrable: undefined });
+});

@@ -101,7 +101,7 @@ export async function reviewTitleSpan(
     logPath: session.logPath,
     state,
     consumer: TITLE_CONSUMER,
-    ...(session.engine === "codex" ? { boxRoot } : {}),
+    ...(session.engine === undefined || session.engine === "claude" ? {} : { boxRoot }),
   });
   if (span === null) {
     summary.missingTranscripts += 1;

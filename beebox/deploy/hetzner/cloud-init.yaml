@@ -42,6 +42,13 @@ packages:
   - bzip2
   # Lints shell scripts; the planned box-card shell linting runs it here.
   - shellcheck
+  # pasta gives each box browser its private network (docs/plans/shared-browser.md,
+  # Track F). The deploy installs it too, with Chrome for Testing, the launcher's
+  # unshare copy and the AppArmor profiles (deploy/server-bin/bbx-browser-install).
+  - passt
+  # Codex's sandbox (deploy/server-bin/bbx-codex-sandbox-install, which also
+  # restricts it to box users and adds its AppArmor grant).
+  - bubblewrap
 
 groups:
   - beebox-boxes
@@ -91,7 +98,8 @@ write_files:
       HF_HOME=/var/cache/beebox/hf
       UV_TORCH_BACKEND=cpu
   # Private key material for GitHub pushes lives per box; the host only needs
-  # GitHub's host key so the first clone does not prompt.
+  # GitHub's host key so the first clone does not prompt. deploy.sh writes the
+  # same line on hosts provisioned before it was here.
   - path: /etc/ssh/ssh_known_hosts
     append: true
     content: |

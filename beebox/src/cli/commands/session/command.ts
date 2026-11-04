@@ -35,12 +35,12 @@ import {
   transcriptPrintable,
   type SinceWindow,
 } from "./modes.js";
-import { invariant } from "../../../shared/invariant.js";
-import { readCodexSessionHistory } from "../../../core/chat/session/codex-transcript/core.js";
+import { assertNever, invariant } from "../../../shared/invariant.js";
+import { SESSION_STORES } from "../../../core/chat/session/native-store.js";
 import {
   parseDiagnosticEngine,
   resolveDiagnosticEngine,
-  validateCodexSessionMode,
+  validateNativeSessionMode,
 } from "../../lib/diagnostic-session.js";
 import type { AgentEngine } from "../../../core/box/config.js";
 import { isWithin } from "../../../lib/box-containment.js";
@@ -66,7 +66,7 @@ function requestedSessionEngine(value: string | undefined): AgentEngine | undefi
   }
 }
 
-async function explicitSessionLogPath(options: {
+interface ExplicitSessionOptions {
   boxRoot: string;
   sessionId: string;
   requestedEngine: AgentEngine | undefined;
@@ -75,7 +75,9 @@ async function explicitSessionLogPath(options: {
   full: boolean;
   allowHuge: boolean;
   renderOptions: RenderOptions;
-}): Promise<string | null> {
+}
+
+async function explicitSessionLogPath(options: ExplicitSessionOptions): Promise<string | null> {
   const engine = await resolveDiagnosticEngine({
     boxRoot: options.boxRoot,
     sessionId: options.sessionId,
@@ -83,17 +85,31 @@ async function explicitSessionLogPath(options: {
     // TODO(env-migration): native harness identity inherited only by this command path.
     codexThreadId: process.env["CODEX_THREAD_ID"],
   });
-  if (engine === "claude") {
-    const found = await findSessionLog(options.boxRoot, options.sessionId);
-    if (found.ok) return found.value;
-    console.error(`Session log not found for id: ${options.sessionId}`);
-    console.error("Searched:");
-    for (const dir of found.error) console.error(`  ${dir}`);
-    process.exit(1);
+  switch (engine) {
+    case "claude":
+      return claudeSessionLogPath(options);
+    case "codex":
+    case "pi":
+      await printNativeSession(engine, options);
+      return null;
+    default:
+      return assertNever(engine);
   }
+}
 
+async function claudeSessionLogPath(options: ExplicitSessionOptions): Promise<string> {
+  const found = await findSessionLog(options.boxRoot, options.sessionId);
+  if (found.ok) return found.value;
+  console.error(`Session log not found for id: ${options.sessionId}`);
+  console.error("Searched:");
+  for (const dir of found.error) console.error(`  ${dir}`);
+  process.exit(1);
+}
+
+/** Render a Codex thread or pi session here, as readable dialogue through the native store. */
+async function printNativeSession(engine: "codex" | "pi", options: ExplicitSessionOptions): Promise<void> {
   try {
-    validateCodexSessionMode({
+    validateNativeSessionMode(engine, {
       raw: options.raw,
       toolReport: options.toolReport,
       full: options.full,
@@ -102,17 +118,21 @@ async function explicitSessionLogPath(options: {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
-  const { entries, total } = await readCodexSessionHistory({
-    boxRoot: options.boxRoot,
+  const history = await SESSION_STORES[engine].readHistory(options.boxRoot, {
     sessionId: options.sessionId,
     slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
   });
+  if (history === null) {
+    console.error(`No ${engine} session ${options.sessionId} in this box.`);
+    process.exit(1);
+  }
+  const { entries, total } = history;
   if (!sessionEntriesPrintable({
     entries,
     sessionId: options.sessionId,
     allowHuge: options.allowHuge,
   })) process.exit(1);
-  console.log(`Session: ${options.sessionId} (codex)\n`);
+  console.log(`Session: ${options.sessionId} (${engine})\n`);
   if (entries.length < total) {
     console.warn(
       `Note: this session has ${String(total)} entries; showing the first ${String(entries.length)}.`,
@@ -120,7 +140,6 @@ async function explicitSessionLogPath(options: {
   }
   if (entries.length === 0) console.log("(empty session)");
   else renderEntries(entries, options.renderOptions);
-  return null;
 }
 
 function validateSessionOptions(options: {
@@ -130,8 +149,8 @@ function validateSessionOptions(options: {
   list: boolean;
   since: string | undefined;
 }): void {
-  if (options.requestedEngine === "codex" && (options.list || options.latest || options.since)) {
-    console.error("--engine codex currently requires an explicit session ID.");
+  if (options.requestedEngine !== undefined && options.requestedEngine !== "claude" && (options.list || options.latest || options.since)) {
+    console.error(`--engine ${options.requestedEngine} currently requires an explicit session ID.`);
     process.exit(1);
   }
   if (options.since && options.latest) {

@@ -1,8 +1,7 @@
 # Scan Upload Wire Contract
 
-The HTTP contract between beebox's scan routes (server) and its two clients:
-the stand-alone `scan-uploader/` package (laptop client) and the Mac app's
-upload client (`mac-app/Sources/BeeBoxMacCore/Scan/`). The sides share **no
+The HTTP contract between beebox's scan routes (server) and its client, the Mac
+app's upload client (`mac-app/Sources/BeeBoxMacCore/Scan/`). The sides share **no
 code** — this document is the single coordination point. Every implementation
 site that encodes part of this contract carries the breadcrumb comment:
 
@@ -11,7 +10,7 @@ site that encodes part of this contract carries the breadcrumb comment:
 ```
 
 Breadcrumbed sites: the server routes (`src/webapp/routes/scan-upload/*.ts`),
-the Node client's HTTP layer (`scan-uploader/src/`), the Mac client
+the Mac client
 (`mac-app/Sources/BeeBoxMacCore/Scan/ScanWire.swift`, `ScanSweep.swift`,
 `ScanFiles.swift` and `ContractVersion.swift`), and the server route tests
 (`test/webapp/routes/scan-upload.test.ts`) — the tests exercise this
@@ -22,14 +21,14 @@ history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-inges
 
 Every request: `Authorization: Bearer <scan-token>`.
 
-Scan tokens are per-box credentials minted by the boxholder (`scanTokens`
-tRPC procedures), stored hashed in `.beebox/scan-tokens.secret.json`.
+Scan tokens are per-box credentials the Mac app mints over its device token
+(`scanTokens` tRPC procedures), stored hashed in `.beebox/scan-tokens.secret.json`.
 They authorize **only** the two routes below — verified independently by the
 hub (which also requires the path to be exactly one of those two routes under
 `/<slug>/`, hash form included; nothing else in the `/api/scan/` subtree is
 reachable with a scan token) and by the box child. They are not mobile device tokens; they cannot mint session
-cookies, open WebSockets, or reach any other surface. A full owner identity
-(browser session) is also accepted on these routes.
+cookies, open WebSockets, or reach any other surface. A browser session
+is not accepted on these routes, not even the owner's.
 
 Failures: `401` invalid/revoked token; `401` from the hub for a scan token on
 any non-scan path.
@@ -90,9 +89,8 @@ Headers:
 |---|---|---|
 | `X-Upload-Filename` | yes | original filename (basename only; server sanitizes) |
 | `X-Scan-Profile` | no | free-text scanner profile name (≤200 chars), recorded as provenance |
-| `X-Scan-Contract` | no | the client's contract version (integer) — see "Client identity" |
-| `X-Scan-Client-Build` | no | the client's build revision, or `source` for a checkout |
-| `X-Scan-Client-Built-At` | no | ISO 8601 time the client bundle was built |
+| `X-Scan-Contract` | no | the client's contract version (integer); the box ignores it — see "Client identity" |
+| `X-Scan-Client-Build` | no | the client's build revision; the box ignores it |
 
 Server behavior: streams to quarantine while metering bytes (over-limit →
 `413`, partial file deleted), re-hashes, then validates (magic-byte sniff vs
@@ -146,7 +144,7 @@ is deliberate, and far enough out that re-sending deserves fresh validation.
 
 ## Client obligations
 
-The uploader must: apply a settle gate (skip files modified <10 s ago),
+The client must: apply a settle gate (skip files modified <10 s ago),
 snapshot file identity (dev, inode, size, mtime-ns) before hashing, and
 **restat before any disposition** (archive/trash), skipping the disposition
 if identity changed. Disposition only after `accepted`/`duplicate` on PUT or
@@ -155,19 +153,14 @@ deleted.
 
 ## Client identity
 
-The uploader is a stand-alone package that never updates itself: a copied
-`dist/scan-uploader.mjs` sits at whatever revision it was built from until
-somebody copies a new one over it. So it volunteers who it is, and the box
-reports an uploader that has fallen behind.
-
-**`SCAN_CONTRACT_VERSION`** is one monotonic integer with three spellings: the
-box (`beebox/src/core/scan/contract-version.ts`), the Node uploader
-(`scan-uploader/src/cli/contract-version.ts`) and the Mac app
+**`SCAN_CONTRACT_VERSION`** is one monotonic integer with two spellings: the
+box (`beebox/src/core/scan/contract-version.ts`) and the Mac app
 (`mac-app/Sources/BeeBoxMacCore/Scan/ContractVersion.swift`, as
-`scanContractVersion`). Each client sends it as
-`X-Scan-Contract`; the box returns its own as `contractVersion` on the check
-response; the client compares them every sweep and reports which side is
-behind.
+`scanContractVersion`). The Mac app sends it as `X-Scan-Contract` and its build as
+`X-Scan-Client-Build`. The box returns its own version as `contractVersion` on the
+check response. Today neither side acts on these values: they are advisory, and
+the box does not record them. The numbers exist so a later client can compare
+them, so bump them under the rules below.
 
 ### When to bump `SCAN_CONTRACT_VERSION`
 
@@ -196,39 +189,33 @@ Do **not** bump for:
 | Error-message or `reason` text | The client reports `reason` verbatim and never branches on it. |
 | Box-side surfaces — health checks, tRPC procedures, UI | Not on this wire. |
 | A fix that makes the server match what this document already said | The contract did not change; the implementation caught up. |
-| Relaxing a requirement, or dropping a response detail the client already copes with — making `X-Upload-Filename` optional, or omitting `Retry-After` on a `429` | The old client's behaviour is already correct. Check the client before deciding: `parseRetryAfter` (`scan-uploader/src/cli/wire-client.ts`) already defaults when the header is absent, so that one is a non-event. |
+| Relaxing a requirement, or dropping a response detail the client already copes with — making `X-Upload-Filename` optional, or omitting `Retry-After` on a `429` | The old client's behaviour is already correct. Check the client before deciding: `parseRetryAfter` (`mac-app/Sources/BeeBoxMacCore/Scan/ScanWire.swift`) already defaults when the header is absent, so that one is a non-event. |
 
 The row above is the one to read carefully, because it is where a plausible
 reading goes wrong: the question is never "does this touch a limit or a header
 the contract mentions", it is **"can a client built before this change still do
 the right thing"**. Go and read the client's handling before deciding.
 
-**When it is genuinely unclear, bump.** The cost of a needless bump is one
-spurious "out of date" line telling someone to re-copy a file they could have
-kept. The cost of a missed bump is a stale client reported as current, which is
-worse than having no version at all, because it answers the question wrongly
-rather than not at all. Nothing can test that a human bumped this, so the bump
-is part of the change discipline below rather than a separate obligation.
+**When it is genuinely unclear, bump.** A needless bump costs nothing today, and
+a missed bump makes the number wrong for any later client that compares it.
+Nothing can test that a human bumped this, so the bump is part of the change
+discipline below rather than a separate obligation.
 
-Mechanically, a bump is: `+1` to **all three** constants in the same change (they
-are three spellings of one number, never per-side versions), this document, and
-the route tests. Bumping does not refuse anything — an old client keeps
-uploading and starts being reported. And never bump the build stamp: it is a
-build artifact, not a hand-maintained number.
+Mechanically, a bump is: `+1` to **both** constants in the same change (they are
+two spellings of one number, never per-side versions), this document, and the
+route tests. Bumping does not refuse anything: an old client keeps uploading.
 
 ### Adding something the client must now send
 
-A bump reports; it never refuses. But a change that makes the server **require**
-something new — a new mandatory header, a stricter body shape — refuses on its
-own, and every copied bundle in the field fails until somebody walks to that
-machine and copies a new file over. Nothing here auto-updates. So a bump is not
+A bump never refuses. But a change that makes the server **require** something
+new — a new mandatory header, a stricter body shape — refuses on its own, and
+every Mac app that has not updated fails. So a bump is not
 sufficient for this shape of change, and the ordering is part of the change:
 
 1. Ship the server side **accepting but not requiring** it, and the client side
    sending it. Verify-if-present; a missing value stays legal.
-2. Wait until every uploader has actually been re-copied. The box can tell you:
-   the `scan-uploaders` health check reports each uploader's build, so "have
-   they all been updated" is a question with an answer rather than a guess.
+2. Wait until installed Mac apps have updated. The box does not record client
+   versions, so confirm this with the people who run them.
 3. Only then make it mandatory — and bump again, because *that* is the change
    that alters what a correct client must do.
 
@@ -236,20 +223,7 @@ Collapsing this into one step is the mistake, and it fails in the field rather
 than in a test: the tests exercise a current client against a current box,
 which is the one pairing that cannot show the breakage.
 
-**The build stamp** (`X-Scan-Client-Build`, `X-Scan-Client-Built-At`) answers a
-different question: not "does this client still speak the protocol" but "how
-old is it". A client can be current on the contract and still be missing
-features. A checkout sends `source`, because it runs current source on every
-sweep and cannot drift; only a copied bundle can. The box records both on the
-scan token's record and compares the build time against its own deploy time —
-two timestamps from the same monorepo, which is ordered in a way comparing git
-revisions could not be.
-
-All three request headers ride **both** routes (the table above lists them
-under PUT, but the check request sends them too), so a box that only ever sees
-uploads still learns what is talking to it.
-
-**Neither is a credential and neither gates anything.** The box never refuses
+**These headers are not credentials and gate nothing.** The box never refuses
 an old client: a contract change that genuinely breaks a client already fails
 loudly at parse (an unknown `state` or an unexpected status is a protocol
 error), and refusing a client that still works would strand scans on the
@@ -265,7 +239,7 @@ wall), so such a header would silently never arrive.
 ## Change discipline
 
 Any change to routes, headers, states, statuses, limits, or hashing updates
-this doc, every breadcrumbed implementation (box, Node client, Mac client), and the route tests in the
+this doc, every breadcrumbed implementation (box, Mac client), and the route tests in the
 same change. A change that alters the client obligations, the state vocabulary,
-or a route's shape also bumps `SCAN_CONTRACT_VERSION` in all three spellings (see
+or a route's shape also bumps `SCAN_CONTRACT_VERSION` in both spellings (see
 "Client identity") — that bump is part of this same change, not a follow-up.

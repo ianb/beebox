@@ -132,6 +132,11 @@ when to read it, and `bbx search` finds them by content. Read the doc before
 answering a question about how something works or working with a type you
 don't know; don't reconstruct a mechanism from memory (THE_LAW_OF_CHECKING).{{engine_source_note}}
 
+<!-- rules: docs.changes -->
+`node_modules/beebox/box-docs/agent-changes.md` lists recent changes. Read it
+when something you remember fails, when a note disagrees with the docs, or
+before you say Bee Box cannot do something.
+
 <!-- rules: docs.compiled -->
 Docs compiled from this box's own content (its guides, personality, and
 box-local card types) are in `_content/docs/generated/`.
@@ -417,9 +422,9 @@ or a captured page holds is in its type's doc (`card-capture-session.md`,
 `card-webpage.md`).
 
 <!-- rules: intake.triage-replay -->
-Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
-Replay never applies or researches. Intake policy permits explicit best effort;
-landmarks define destinations. Missing evidence means unclear; silence is not confirmation.
+[Triage repair](../../../docs/box/triage-instructions.md): replay never applies or researches. Intake policy permits explicit best effort;
+landmarks define destinations; compiled instructions are generated.
+Missing evidence means unclear; silence never confirms.
 
 ## COMMANDS — Key Commands
 
@@ -502,7 +507,9 @@ numbers, IDs); for an exact identifier the bare token works. Quoting a phrase
 does not force an exact match.
 
 <!-- rules: search.examples-filters-results -->
-Filters, examples, and how to read a result: the `bbx search` entry in
+A line like `(38 more in archive: --area archive)` means default search held
+back that area; `--area <name>` searches it. Filters, examples, and how to read
+a result: the `bbx search` entry in
 `node_modules/beebox/box-docs/bbx-commands.md`.
 
 ## PROCEDURES — Procedures
@@ -560,6 +567,27 @@ nothing). Box-specific Python CLIs: `node_modules/beebox/box-docs/python-tools.m
 A missing Debian/Ubuntu command-line tool is installed with `bbx host
 install`, never `sudo apt`; how, and what to do when it is refused, is its
 entry in `bbx-commands.md`.
+
+<!-- rules: tools.browser -->
+Read public pages with WebFetch. A page that needs a login, scripts, or the
+person's help goes through `bbx browser`, the box's shared browser (the
+`browser` skill). At a login or "verify you are human" check, run `bbx browser
+ask "<what to do>"`, put the link it prints in your reply, and end your turn; the
+answer arrives in chat. Never ask for or type their password.
+
+<!-- rules: tools.webpage -->
+To keep a copy of a page, run `bbx webpage save <url>`, or `--browser` for the
+page open in the box browser. Exit 3 means refused; exit 4 is a redirect to read
+first. When a saved or refused page was wrong, add the case to `webpage.ts` in the
+box's tricks folder (`bbx webpage save --help`).
+
+<!-- rules: tools.pdf-save -->
+To keep a copy of a PDF, run `bbx pdf save <url> --to <folder>`; it records the
+address and hash on the card. Exit 3 means the reply was not a PDF.
+
+<!-- rules: tools.refs -->
+To find what cites a card, and which block, run `bbx refs <card>[#anchor]`, not
+grep: it resolves relative links the way `bbx mv` does.
 
 ## PROVENANCE — `{% quote %}` and `{% source %}`
 

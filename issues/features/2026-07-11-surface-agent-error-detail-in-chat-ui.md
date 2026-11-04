@@ -55,3 +55,5 @@ render it collapsed/expandable in the error bubble.
 ## Audit 2026-10-22
 
 Still true. Pointers moved. The `result` case in `adaptSdkMessage` is now `beebox/src/core/chat/session/messages.ts:261-273`, and it still copies `msg.result` only when `subtype === "success"`. `ChatMessageResult` is at `beebox/src/core/chat/message-types.ts:147` and has no `errors` field.
+
+Re-reviewed 2026-10-30: unchanged; result case at messages.ts:268-280 and the generic message at chat-actors.ts:217.

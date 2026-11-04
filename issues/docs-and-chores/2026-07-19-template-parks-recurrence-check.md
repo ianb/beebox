@@ -85,3 +85,4 @@ planted MAP-include shims over four guides
 The guide parks were accepted by hand; the content-bearing parks above were
 left alone, per the distinction in the previous section.
 
+Re-reviewed 2026-10-30: test1 has two parks (main.personality.card, intake.guide.card), both with tracker entries, so they look like real divergence. The baseline-seeding decision is still open.

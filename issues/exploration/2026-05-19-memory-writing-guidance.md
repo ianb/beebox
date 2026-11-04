@@ -16,3 +16,7 @@ Dimensions guidance should cover:
 5. **Freshness and decay.** Notes about state (mood, plans, current projects) go stale fast; notes about traits decay slowly. The agent should know which kind it's writing and verify volatile notes before acting on them.
 6. **Linking.** A note naming another entity should link to it. Without this, retrieval misses related context.
 7. **Why, not just what.** "User prefers terse responses — they read the diff themselves" generalizes to edge cases. "User prefers terse responses" doesn't.
+
+Re-reviewed 2026-10-30: The agent guide now has a routing table for where facts go (guide.md RECORDING) and a law that says 'Err toward saving', which directly contradicts this issue's point 1 ('Default to nothing'). Update-vs-create, decay, and what-not-to-write are still absent.
+
+Out of date in the body above: Record that dimension 4 (domain separation / where) is covered by the RECORDING routing in beebox/src/core/agent-guide/guide.md, and that point 1 conflicts with THE_LAW_OF_SAVING ('Err toward saving'); reframe the remaining work as update-vs-create, freshness, and what-not-to-record within that law. Remove the reference to ~/.claude/CLAUDE.md auto-memory as a template.

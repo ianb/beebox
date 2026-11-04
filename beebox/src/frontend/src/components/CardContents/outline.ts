@@ -4,12 +4,60 @@
  * which section the reader is in.
  */
 
+import Markdoc, { type RenderableTreeNode } from "@markdoc/markdoc";
+
+// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
+const { Tag } = Markdoc;
+
 /** One heading of the card's document, as the Markdown renderer emitted it. */
 export interface OutlineEntry {
   id: string;
   /** 1–6, from the heading tag. */
   level: number;
   text: string;
+}
+
+const HEADING_TAG = /^h([1-6])$/;
+
+/**
+ * The headings of a transformed Markdoc tree, in document order: each
+ * `h1`–`h6` tag with an id (`makeHeadingNode` gives every heading one), with
+ * the text under it.
+ */
+export function outlineEntries(tree: RenderableTreeNode | readonly RenderableTreeNode[]): OutlineEntry[] {
+  const entries: OutlineEntry[] = [];
+  const visit = (node: RenderableTreeNode | readonly RenderableTreeNode[]): void => {
+    if (Array.isArray(node)) {
+      for (const child of node) visit(child);
+      return;
+    }
+    if (!Tag.isTag(node)) return;
+    const level = HEADING_TAG.exec(node.name)?.[1];
+    const id: unknown = node.attributes["id"];
+    if (level !== undefined && typeof id === "string") {
+      entries.push({ id, level: Number(level), text: textOf(node.children) });
+      return;
+    }
+    for (const child of node.children) visit(child);
+  };
+  visit(tree);
+  return entries;
+}
+
+function textOf(nodes: readonly RenderableTreeNode[]): string {
+  return nodes.map((node) => {
+    if (typeof node === "string" || typeof node === "number") return String(node);
+    if (Array.isArray(node)) return textOf(node);
+    return Tag.isTag(node) ? textOf(node.children) : "";
+  }).join("");
+}
+
+/** Same headings in the same order. */
+export function sameEntries(a: readonly OutlineEntry[], b: readonly OutlineEntry[]): boolean {
+  return a.length === b.length && a.every((entry, i) => {
+    const other = b.at(i);
+    return other !== undefined && entry.id === other.id && entry.level === other.level && entry.text === other.text;
+  });
 }
 
 /** An entry with its indent: 0 for the shallowest level the document uses. */

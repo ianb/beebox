@@ -27,7 +27,7 @@ import { submitQuickChat } from "../../../core/chat/routing/quick-chat-submit/su
 import type { QuickChatView } from "../../../core/chat/routing/quick-chat-record.js";
 import { quickChatContext, quickChatRecordView, quickChatRequestFailure } from "../quick-chat-delivery.js";
 import type { TrpcContext } from "../context.js";
-import { createWebpageTemplate } from "../../../schemas/webpage.js";
+import { writeCard, writeWebpageCard } from "../../../core/webpage/write.js";
 import { createCommentaryTemplate } from "../../../schemas/commentary.js";
 import { attachmentPath } from "../../../shared/attach-path.js";
 import { listDestinations } from "../../../core/landmark/list-destinations.js";
@@ -39,7 +39,6 @@ import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { isRecord } from "../../../shared/is-record.js";
 import { BOX_DIRS } from "../../../lib/paths/core.js";
-import { neutralizeIngestedMarkdown } from "../../../shared/markdoc-config/ingest.js";
 
 /** Default filing spot when no commentary destination is chosen. */
 const DEFAULT_COMMENTARY_DIR = BOX_DIRS.inbox;
@@ -289,11 +288,6 @@ function buildFilename(title: string, fallback: string): string {
   return `${safe}_${suffix}`;
 }
 
-async function writeCard(filePath: string, content: string): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, content, "utf-8");
-}
-
 async function readIfPresent(filePath: string): Promise<string | undefined> {
   try {
     return await fs.readFile(filePath, "utf-8");
@@ -301,48 +295,4 @@ async function readIfPresent(filePath: string): Promise<string | undefined> {
     if (errnoCode(error) === "ENOENT") return undefined;
     throw error;
   }
-}
-
-/**
- * Write a `.webpage.card` (readable body + capture provenance) and, when a
- * frozen snapshot is provided, `<card>.attach/page.frozen` beside it. Returns
- * the box-relative paths written, in commit order.
- */
-async function writeWebpageCard(opts: {
-  boxRoot: string;
-  cardRel: string;
-  title: string;
-  url: string;
-  capturedAt: string;
-  markdown: string;
-  siteName?: string | undefined;
-  byline?: string | undefined;
-  excerpt?: string | undefined;
-  frozenHtml?: string | undefined;
-  captureId?: string | undefined;
-}): Promise<string[]> {
-  const frozen = opts.frozenHtml;
-  const hasFrozen = typeof frozen === "string" && frozen !== "";
-  const card = createWebpageTemplate({
-    title: opts.title,
-    url: opts.url,
-    capturedAt: opts.capturedAt,
-    // Clipped page text is third-party: escape its raw HTML and Markdoc tags.
-    content: neutralizeIngestedMarkdown(opts.markdown),
-    siteName: opts.siteName,
-    byline: opts.byline,
-    excerpt: opts.excerpt,
-    frozenRef: hasFrozen ? "attach/page.frozen" : undefined,
-    captureId: opts.captureId,
-  });
-  // The snapshot first: a crash between the writes must not leave a card,
-  // found later by its capture id, that names a snapshot never written.
-  const created = [opts.cardRel];
-  if (hasFrozen) {
-    const frozenRel = attachmentPath(opts.cardRel, "page.frozen");
-    await writeCard(path.join(opts.boxRoot, frozenRel), frozen);
-    created.push(frozenRel);
-  }
-  await writeCard(path.join(opts.boxRoot, opts.cardRel), card);
-  return created;
 }

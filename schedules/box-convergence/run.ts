@@ -6,7 +6,7 @@ import { execa } from "execa";
 import { z } from "zod";
 import { execChild } from "../../bin/lib/schedules-exec.js";
 import { localTargets, optionalText } from "./targets.js";
-import { connectorWarnings, framedCommand, reportPlan, resultDetail, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
+import { checkFailure, connectorWarnings, framedCommand, prodBoxCommand, reportPlan, resultDetail, shellQuote, sshUnreachable, unreachableDetail } from "./results.js";
 
 class ConvergenceScheduleError extends Error {
   constructor() {
@@ -22,6 +22,10 @@ const BOX_TIMEOUT_MS = 25 * 60_000; // ten-minute drain plus fifteen-minute exec
 const SSH_TIMEOUT_MS = 26 * 60_000;
 const deadline = Date.now() + 4 * 60 * 60_000 - 30_000;
 const findings: string[] = [];
+/** Checks that could not run, as distinct from boxes that answered unconverged. */
+const checkFailures: string[] = [];
+/** Whether every box's convergence check ran. */
+let convergenceCoverage = true;
 /** Quiet or failing connectors on production boxes, one line each. */
 const connectorFindings: string[] = [];
 const HEALTH_TIMEOUT_MS = 2 * 60_000;
@@ -30,6 +34,11 @@ delete env.NODE_COMPILE_CACHE;
 delete env.BBX_BOX_WORK; // A periodic pass is independent work, never a descendant.
 const ssh = path.join(REPO_ROOT, "beebox/deploy/prod-ssh");
 
+function convergenceCheckFailed(line: string): void {
+  checkFailures.push(line);
+  convergenceCoverage = false;
+}
+
 async function git(args: string[]): Promise<string> {
   return (await execa("git", ["-C", REPO_ROOT, ...args], { timeout: 30_000 })).stdout.trim();
 }
@@ -37,7 +46,7 @@ async function git(args: string[]): Promise<string> {
 /** Returns the ssh diagnostic when production could not be reached, else null. */
 async function inspectOrApply(root: string, where: "local" | "prod"): Promise<string | null> {
   if (deadline - Date.now() < SSH_TIMEOUT_MS) {
-    findings.push(`${where} ${root}: unchecked; whole-run time budget exhausted`);
+    convergenceCheckFailed(`${where} ${root}: unchecked; whole-run time budget exhausted`);
     return null;
   }
   // `migrate` lives under `bbx engine` (beebox/src/cli/entry/surface-data.ts): it acts
@@ -45,23 +54,28 @@ async function inspectOrApply(root: string, where: "local" | "prod"): Promise<st
   const args = dryRun
     ? ["engine", "migrate", "--status", "--json"]
     : ["engine", "migrate", "--sweep", "--repair", "--yield", "--json"];
-  // Direct entrypoints avoid the CLI launcher's rebuild and compile-cache writes
-  // during dry-run. Production always uses this box's installed engine registry.
-  const command = where === "local"
-    ? [process.execPath, "--import", import.meta.resolve("tsx"), path.join(REPO_ROOT, "beebox/src/cli/entry/run.ts"), ...args].map(shellQuote).join(" ")
-    : ["node", path.join(root, "node_modules/beebox/dist/cli.mjs"), ...args].map(shellQuote).join(" ");
-  const script = framedCommand(command);
-  const remote = `set -a; source /home/beebox/.env || exit; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd ${shellQuote(root)} || exit; timeout --kill-after=5s 1500s bash -c ${shellQuote(script)}`;
+  // Direct entrypoint avoids the CLI launcher's rebuild and compile-cache writes
+  // during dry-run.
+  const local = [process.execPath, "--import", import.meta.resolve("tsx"), path.join(REPO_ROOT, "beebox/src/cli/entry/run.ts"), ...args].map(shellQuote).join(" ");
   const outcome = await execChild(where === "local"
-    ? { file: "bash", args: ["-c", script] }
-    : { file: ssh, args: [`sudo -u beebox -H bash -lc ${shellQuote(remote)}`] }, {
+    ? { file: "bash", args: ["-c", framedCommand(local)] }
+    : { file: ssh, args: [prodBoxCommand(root, { cliArgs: args, timeoutSeconds: 1500 })] }, {
     cwd: where === "local" ? root : REPO_ROOT, env,
     timeoutMs: where === "local" ? BOX_TIMEOUT_MS : SSH_TIMEOUT_MS,
     input: null, logFile: null,
   });
   const unreachable = where === "prod" ? sshUnreachable(outcome.exitCode, outcome.output) : null;
   if (unreachable !== null) return unreachable;
-  const detail = outcome.timedOut ? "Timed out; migration remains incomplete" : resultDetail(outcome.output, outcome.exitCode);
+  if (outcome.timedOut) {
+    convergenceCheckFailed(`${where} ${root}: Timed out; migration remains incomplete`);
+    return null;
+  }
+  const failure = checkFailure(outcome.output, outcome.exitCode);
+  if (failure !== null) {
+    convergenceCheckFailed(`${where} ${root}: ${failure}`);
+    return null;
+  }
+  const detail = resultDetail(outcome.output, outcome.exitCode);
   if (detail !== null) findings.push(`${where} ${root}: ${detail}`);
   return null;
 }
@@ -110,14 +124,14 @@ process.stdout.write(JSON.stringify([...new Set(roots)]));`;
 async function readConnectorHealth(root: string): Promise<boolean> {
   // The convergence pass already reports an exhausted budget; unread health just keeps the condition.
   if (deadline - Date.now() < HEALTH_TIMEOUT_MS) return false;
-  const command = ["node", path.join(root, "node_modules/beebox/dist/cli.mjs"), "health", "--json", "--box", root].map(shellQuote).join(" ");
-  const remote = `set -a; source /home/beebox/.env || exit; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; cd ${shellQuote(root)} || exit; timeout --kill-after=5s 100s bash -c ${shellQuote(framedCommand(command))}`;
-  const outcome = await execChild({ file: ssh, args: [`sudo -u beebox -H bash -lc ${shellQuote(remote)}`] }, {
+  const outcome = await execChild({ file: ssh, args: [prodBoxCommand(root, { cliArgs: ["health", "--json", "--box", root], timeoutSeconds: 100 })] }, {
     cwd: REPO_ROOT, env, timeoutMs: HEALTH_TIMEOUT_MS, input: null, logFile: null,
   });
+  const unreachable = sshUnreachable(outcome.exitCode, outcome.output);
+  if (unreachable !== null) throw new ProdUnreachableError(unreachable);
   const warnings = connectorWarnings(outcome.output);
   if (warnings === null) {
-    connectorFindings.push(`${root}: health unreadable (exit ${String(outcome.exitCode)}${outcome.timedOut ? ", timed out" : ""}): ${outcome.output.slice(-300)}`);
+    checkFailures.push(`prod ${root}: health unreadable (exit ${String(outcome.exitCode)}${outcome.timedOut ? ", timed out" : ""}): ${outcome.output.slice(-300)}`);
     return false;
   }
   connectorFindings.push(...warnings.map((warning) => `${root}: ${warning}`));
@@ -150,10 +164,9 @@ async function trackReachability(unreachable: string | null): Promise<string | n
  *  here. */
 async function report(input: {
   unreachableDetail: string | null;
-  prodChecked: boolean;
   connectorCoverage: boolean;
 }): Promise<void> {
-  const plan = reportPlan({ findings, connectorFindings, ...input });
+  const plan = reportPlan({ findings, checkFailures, convergenceCoverage, connectorFindings, ...input });
   const logged = plan.alerts.map((alert) => alert.message).join("\n");
   if (logged) process.stdout.write(`[box-convergence] ${dryRun ? "status only" : "report"}\n${logged}\n`);
   if (dryRun || !scheduled) return;
@@ -178,13 +191,13 @@ async function main(): Promise<void> {
     const targets = await localTargets({ mainRoot, worktrees, home: os.homedir(),
       clonesRoot: path.join(os.homedir(), "src/box-worktrees"),
       configDir: path.join(process.env.BBX_STATE_DIR ?? path.join(os.homedir(), ".cache/beebox"), "hub-configs") });
-    for (const detail of targets.unreadable) findings.push(`Local box unreadable: ${detail}`);
+    for (const detail of targets.unreadable) convergenceCheckFailed(`Local box unreadable: ${detail}`);
     for (const root of targets.excluded) findings.push(`local ${root}: excluded; owned by a worktree`);
     for (const root of targets.eligible) {
       try { await inspectOrApply(root, "local"); }
-      catch (error) { findings.push(`local ${root}: ${String(error)}`); }
+      catch (error) { convergenceCheckFailed(`local ${root}: ${String(error)}`); }
     }
-  } catch (error) { findings.push(`Local coverage unavailable: ${String(error)}`); }
+  } catch (error) { convergenceCheckFailed(`Local coverage unavailable: ${String(error)}`); }
   let unreachable: string | null = null;
   // Complete only when the inventory and every box's health read succeeded.
   let connectorCoverage = false;
@@ -192,20 +205,24 @@ async function main(): Promise<void> {
     connectorCoverage = true;
     for (const root of await prodTargets()) {
       try { unreachable = await inspectOrApply(root, "prod"); }
-      catch (error) { findings.push(`prod ${root}: ${String(error)}`); }
+      catch (error) { convergenceCheckFailed(`prod ${root}: ${String(error)}`); }
       if (unreachable !== null) break;
       try { if (!await readConnectorHealth(root)) connectorCoverage = false; }
       catch (error) {
+        if (error instanceof ProdUnreachableError) throw error;
         connectorCoverage = false;
-        connectorFindings.push(`${root}: health unreadable: ${String(error)}`);
+        checkFailures.push(`prod ${root}: health unreadable: ${String(error)}`);
       }
     }
   } catch (error) {
     connectorCoverage = false;
     if (error instanceof ProdUnreachableError) unreachable = error.line;
-    else findings.push(`Production coverage unavailable: ${String(error)}`);
+    else convergenceCheckFailed(`Production coverage unavailable: ${String(error)}`);
   }
-  if (unreachable !== null) connectorCoverage = false;
-  await report({ unreachableDetail: await trackReachability(unreachable), prodChecked: unreachable === null, connectorCoverage });
+  if (unreachable !== null) {
+    connectorCoverage = false;
+    convergenceCoverage = false;
+  }
+  await report({ unreachableDetail: await trackReachability(unreachable), connectorCoverage });
 }
 await main();

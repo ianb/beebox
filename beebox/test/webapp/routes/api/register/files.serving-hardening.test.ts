@@ -49,7 +49,7 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
 
   await server.seed("_content/snapshot.frozen", "<html><body>captured page</body></html>");
   const frozen = await server.rawRequest({ method: "GET", url: "/api/files/_content/snapshot.frozen" });
-  t.check(`${frozen.statusCode} ${frozen.headers["content-type"]} ${JSON.stringify(frozen.headers["content-disposition"] ?? null)} ${frozen.headers["x-content-type-options"]} ${frozen.headers["content-security-policy"]}`, str`200 text/html null nosniff sandbox allow-scripts; script-src '${any(String)}'`);
+  t.check(`${frozen.statusCode} ${frozen.headers["content-type"]} ${JSON.stringify(frozen.headers["content-disposition"] ?? null)} ${frozen.headers["x-content-type-options"]} ${frozen.headers["content-security-policy"]}`, str`200 text/html; charset=utf-8 null nosniff sandbox allow-scripts; script-src '${any(String)}'`);
 
   // A `304 Not Modified` revalidation repeats the same hardening headers as the
   // original `200` — a client that cached the file before this fix landed (or
@@ -143,4 +143,27 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
     escapeBrowse,
     { path: `../${boxDirName}-other`, dirs: [], cards: [], files: [], background: false },
   );
+});
+
+// A saved page's `<base>` is added when it is served, and only when it needs one.
+void test("A saved HTML-only page gets its base when served", async (t) => {
+  const pages = await makeTestServer();
+  t.teardown(() => pages.cleanup());
+  const card = "---\nsources:\n  - href: https://garden.example/beds?a=1&b=2\ncapture:\n  via: http\n  snapshot: html-only\n---\nBody\n";
+  const served = async (name: string): Promise<string> => (await pages.rawRequest({ method: "GET", url: `/api/files/_content/${name}.attach/page.frozen` })).payload.split("<script>")[0] ?? "";
+  await pages.seed("_content/Beds.webpage.card", card);
+  await pages.seed("_content/Beds.attach/page.frozen", "<html><head><title>caf\u00E9</title></head><body></body></html>");
+  t.check(await served("Beds"), '<html><head><base href="https://garden.example/beds?a=1&amp;b=2"><title>caf\u00E9</title></head><body>');
+  const page = await pages.rawRequest({ method: "GET", url: "/api/files/_content/Beds.attach/page.frozen" });
+  t.check(page.headers["content-type"], "text/html; charset=utf-8");
+
+  // An older card's copy, which has its `<base>` already, gets no second one.
+  await pages.seed("_content/Old.webpage.card", card);
+  await pages.seed("_content/Old.attach/page.frozen", '<html><head><base href="https://garden.example/old"></head></html>');
+  t.check(await served("Old"), '<html><head><base href="https://garden.example/old"></head></html>');
+
+  // A self-contained copy from Clerk gets none.
+  await pages.seed("_content/Clerk.webpage.card", "---\nsources:\n  - href: https://garden.example/\n---\nBody\n");
+  await pages.seed("_content/Clerk.attach/page.frozen", "<html><head></head></html>");
+  t.check(await served("Clerk"), "<html><head></head></html>");
 });

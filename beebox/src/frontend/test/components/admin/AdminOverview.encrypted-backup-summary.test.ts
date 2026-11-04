@@ -35,7 +35,7 @@ void test("summarizes encrypted backup lifecycle", async (t) => {
   };
   t.check(summarizeEncryptedBackup(unconfigured), { state: "ready", summary: "Not configured", tone: "warning" });
   t.check(summarizeEncryptedBackup(status({})), { state: "ready", summary: "No local snapshot record; inspect repository", tone: "warning" });
-  t.check(summarizeEncryptedBackup(status({ newestVerified: { snapshotId: "abc", verifiedAt: "2026-10-26T12:00:00.000Z" } })), { state: "ready", summary: "Verified snapshot available", tone: "success" });
+  t.check(summarizeEncryptedBackup(status({ newestVerified: { snapshotId: "abc", verifiedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString() } })), { state: "ready", summary: "Verified snapshot available", tone: "success" });
   t.check(summarizeEncryptedBackup(status({
     newestVerified: { snapshotId: "abc", verifiedAt: "2026-10-26T12:00:00.000Z" },
     lastAttempt: { startedAt: "2026-10-26T12:00:00.000Z", completedAt: "2026-10-26T12:01:00.000Z", outcome: "failed", error: "safe summary" },

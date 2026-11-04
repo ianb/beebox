@@ -55,8 +55,13 @@ function invocationSignal(signal: AbortSignal | undefined, limit: AbortSignal): 
   return signal ? AbortSignal.any([signal, limit]) : limit;
 }
 
-async function invocationEnv(options: CodexRunOptions): Promise<NodeJS.ProcessEnv | undefined> {
-  return options.env === undefined ? undefined : buildScriptEnv(options.boxRoot, options.env);
+/**
+ * Always the agent profile. With no `env` option the Codex SDK copies all of
+ * `process.env` into the CLI, which handed a Codex job the server's
+ * credentials (`lib/credential-env.ts`).
+ */
+async function invocationEnv(options: CodexRunOptions): Promise<NodeJS.ProcessEnv> {
+  return buildScriptEnv(options.boxRoot, options.env);
 }
 
 /** The box guidance Codex does not load itself (`@` includes), or nothing for a run without box context. */

@@ -38,7 +38,9 @@ function CommitRow({ commit }: { commit: LogEntry }) {
     <div className="py-2 flex items-start justify-between gap-2" {...bbxSource("commit", commit.hash)}>
       <div className="min-w-0">
         <div className="text-sm text-warm-900 truncate">
-          <Link to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.history}`)} search={toSearch({ viewState: { commit: commit.hash } })} className="hover:text-primary">
+          {/* Box commits repeat subjects ("Set box system theme"); the hash shown below tells them apart. */}
+          <Link to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.history}`)} search={toSearch({ viewState: { commit: commit.hash } })} className="hover:text-primary"
+            aria-label={`${commit.subject} (${commit.hash.substring(0, 7)})`}>
             {commit.subject}
           </Link>
         </div>

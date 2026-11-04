@@ -9,8 +9,12 @@ export interface ToggleProps {
   onChange: (checked: boolean) => void;
   /** Visually dim + block interaction (e.g. while a mutation is in flight). */
   disabled?: boolean;
-  /** Tooltip / aria-label. Pass different text for the on/off states if useful. */
-  label?: string;
+  /**
+   * Tooltip and accessible name: the setting the switch controls, the same
+   * text in both states ("Raw listing", not "Switch to raw"). The on/off
+   * state is announced from `aria-checked`.
+   */
+  label: string;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
 }

@@ -39,7 +39,7 @@ const captureSessionFields = {
   "audio-clips": z.array(z.string()).optional(),
   /** Manifest of child uploaded-file cards. */
   files: z.array(z.string()).optional(),
-  /** The scan uploader that sent the session's files, as
+  /** The upload client that sent the session's files, as
    *  `scan-upload/<token-name>`. Absent for a session captured in chat. */
   uploader: z.string().optional(),
   /** Recording was cut off unexpectedly; the final seconds may be missing. */
@@ -70,7 +70,7 @@ Frontmatter:
 - \`session-id\` — links back to the capture session.
 - \`time\` — \`{ start, end?, duration? }\`.
 - \`images\` / \`audio-clips\` / \`files\` — manifests of the child card refs.
-- \`uploader\` — present when the scan uploader sent the files: \`scan-upload/<token-name>\` means the desktop scan uploader sent them under that named credential. It tells you which device/profile produced the scan when a batch looks wrong.
+- \`uploader\` — present when an upload client sent the files: \`scan-upload/<token-name>\` means a Mac sent them under that named credential. It tells you which device/profile produced the scan when a batch looks wrong.
 - \`partial\` — the recording cut off unexpectedly (crash, disconnect, abandonment). Treat the final seconds of transcript as possibly mid-thought — the tail may be missing, not the person trailing off.
 - \`transcription-failed\` — one or more clips still need transcription (the transcription provider was unavailable when this was prepared). The capture was still delivered rather than held hostage to the outage; a later \`bbx transcribe\`/HQ pass can fill in the missing text.
 
@@ -144,7 +144,7 @@ export function createCaptureSessionTemplate(options: {
   imageRefs: string[];
   audioRefs: string[];
   fileRefs?: string[];
-  /** The scan uploader that sent the files (`scan-upload/<token-name>`). */
+  /** The upload client that sent the files (`scan-upload/<token-name>`). */
   uploader?: string | undefined;
   /** True when the abandonment sweep finalized an unfinished capture. */
   partial?: boolean;

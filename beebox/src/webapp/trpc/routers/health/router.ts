@@ -37,8 +37,6 @@ import { annexHealthChecks } from "./checks/annex.js";
 import { unfiledCapturesCheck, stalledJobsCheck } from "./checks/stale.js";
 import { unreviewedTodosCheck } from "./checks/todos.js";
 import { staleIndexLockCheck } from "./checks/git-lock.js";
-import { SCAN_CONTRACT_VERSION } from "../../../../core/scan/contract-version.js";
-import { scanUploaderFreshnessCheck } from "./checks/scan-uploaders.js";
 import { templateUpdatesCheck } from "./checks/templates.js";
 import { pluginHealthChecks } from "./checks/plugins/core.js";
 import type { PluginDefinition } from "../../../../cards/plugin-definition.js";
@@ -232,17 +230,6 @@ export async function runHealthChecks(
   checks.push(await stalledJobsCheck(boxRoot));
   checks.push(await unreviewedTodosCheck(boxRoot));
   const now = getBoxTime(boxRoot);
-  // Needs the box's own deploy time to judge an uploader's build against (the
-  // same `deploy-info.json` the version panel reads), and box time to catch a
-  // build stamp claiming the future.
-  const version = await readVersionInfo();
-  checks.push(
-    scanUploaderFreshnessCheck(boxRoot, {
-      deployedAt: version.deployedAt,
-      contractVersion: SCAN_CONTRACT_VERSION,
-      now,
-    }),
-  );
   const scheduler = await checkSchedulerHeartbeat(boxRoot, now);
   checks.push(await boxGrowthHealthCheck(boxRoot, { now, schedulerStatus: scheduler.status }));
   checks.push(...watchLimitHealthChecks(boxRoot));

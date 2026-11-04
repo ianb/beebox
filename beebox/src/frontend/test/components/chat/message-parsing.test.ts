@@ -80,3 +80,12 @@ void test("A declared token takes its surrounding spaces with it — no stranded
 
   t.check(stripUserDisplayTags("[file1] is attached", declared), "is attached");
 });
+
+// ## A wake the server started itself shows nothing
+//
+// An interrupted chat's wake turn (`docs/implemented-plans/interrupted-chat-wake.md`) is
+// system-injected, like `<schedule-fired>`; the agent's reply is what the person
+// sees.
+void test("A wake the server started itself shows nothing", async (t) => {
+  t.check(stripUserDisplayTags('<chat-app narration="off"/>\n<interrupted-wake at="2026-11-02T20:00:00.000Z">The Bee Box started this turn by itself.</interrupted-wake>').trim(), "");
+});

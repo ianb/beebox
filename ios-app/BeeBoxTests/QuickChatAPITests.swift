@@ -126,7 +126,7 @@ final class QuickChatAPITests: XCTestCase {
         XCTAssertEqual(home.recentChats[1].landmark?.symbol, "✈️")
         XCTAssertNotNil(home.recentChats.last?.landmark)
         XCTAssertNil(home.recentChats.last?.landmark?.symbol)
-        XCTAssertEqual(home.shortcuts.map(\.to), ["/questions", "/browse/_content/garden/Garden.landmark.card"])
+        XCTAssertEqual(home.shortcuts.map(\.to), ["/questions", "/views/_content/garden/Garden.landmark.card"])
     }
 
     func testAnUnknownStateFailsToDecode() {

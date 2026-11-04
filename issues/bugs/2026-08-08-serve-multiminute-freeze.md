@@ -121,3 +121,5 @@ that's the next step when this recurs):
   synchronously.
 - `src/core/commands/wakeup.ts` — `execSync("which bbx", ...)`, a synchronous
   subprocess spawn; check reachability from any route handler.
+
+Re-reviewed 2026-10-30: no recurrence since 2026-08-09, and the web upload panel the second run correlated with no longer exists. Consider closing as not reproducible if it does not recur.

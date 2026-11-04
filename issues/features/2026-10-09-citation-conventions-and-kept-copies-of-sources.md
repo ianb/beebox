@@ -33,7 +33,7 @@ vanish with only a `version` hash to say so.
 - A `webpage` card: readable Markdown body, one `sources` entry with the URL
   and `retrieved`, and a frozen self-contained HTML snapshot at
   `attach/page.frozen` served sandboxed. Only the Chrome clerk produces one
-  ([server-side capture](2026-09-11-server-side-webpage-capture.md) is open).
+  ([server-side capture](../closed/features/2026-09-11-server-side-webpage-capture.md) is open).
 - `pdf`, `file`, `image` cards for other material; courses keep theirs in a
   `material/` directory and the build-course skill tells the tutor to bring
   material in and cite it.
@@ -112,3 +112,7 @@ provenance primitive would make step 4 one command.
 ## Re-encounter 2026-10-22 (journey walks)
 
 [I-deciding](../../beebox/test/user-stories/journeys/I-deciding/reports/2026-10-22.md) (R16): a web research task produced no `{% source %}` tags and no `retrieved=` dates, only a link list at the end of the notes. One cited URL returned 404 within minutes, and the product page of the recommended model no longer resolves. A kept copy would have held the evidence for the recommended price. The agent also recorded search-tool summaries as facts from pages it did not open: [filed](../closed/bugs/2026-10-22-box-agent-records-search-summaries-as-sourced-facts.md).
+
+Re-reviewed 2026-10-30: Guidance still unwritten. Chat and search links now honor the #fragment, so that gap in 'What exists' is closed.
+
+Out of date in the body above: In 'What exists', replace the bullet ending 'chat links do not honor the fragment (view-url.ts:137-144)' with: search hits' section-path fragments now open the card at that section (lib/fragment-target.ts, commit 48dcb3f39). Step 5's 'carry the hit's #fragment in ref' is therefore usable now.

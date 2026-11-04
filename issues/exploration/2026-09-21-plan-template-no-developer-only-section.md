@@ -30,3 +30,5 @@ an executing agent should skip it by convention or whether it needs enforcement
 [work-summary-for-the-boxholder](../docs-and-chores/2026-08-12-work-summary-for-the-boxholder.md)
 idea of a boxholder-facing summary at completion, or is a distinct need for
 notes written *during* planning rather than at the end.
+
+Re-reviewed 2026-10-30: Still open. The work-summary issue this asks about is open in docs-and-chores, not closed as the body says.

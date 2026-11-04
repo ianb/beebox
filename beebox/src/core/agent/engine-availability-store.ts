@@ -21,7 +21,7 @@ import { z } from "zod";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { BBX_STATE_DIR } from "../../lib/state-dir.js";
 import { errnoCode } from "../../shared/error-guards.js";
-import type { EngineProvider, EngineUnavailability } from "./engine-unavailability.js";
+import { ENGINE_PROVIDERS, type EngineProvider, type EngineUnavailability } from "./engine-unavailability.js";
 
 export interface StoredEngineUnavailability extends EngineUnavailability {
   /** ISO. When the current episode of continuous unavailability began. */
@@ -29,7 +29,7 @@ export interface StoredEngineUnavailability extends EngineUnavailability {
 }
 
 const StoredSchema = z.object({
-  provider: z.enum(["codex", "claude"]),
+  provider: z.enum(ENGINE_PROVIDERS),
   reason: z.literal("quota-exhausted"),
   retryAt: z.string(),
   retryAtSource: z.enum(["parsed", "fallback"]),
@@ -41,7 +41,7 @@ const StoredSchema = z.object({
 const FileSchema = z.object({
   codex: StoredSchema.optional(),
   claude: StoredSchema.optional(),
-});
+} satisfies Record<EngineProvider, z.ZodOptional<typeof StoredSchema>>);
 
 type AvailabilityFile = z.infer<typeof FileSchema>;
 

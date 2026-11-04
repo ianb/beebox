@@ -233,6 +233,8 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
       run.closed = true;
       queue.end();
     },
+    // Codex reports no background tasks, so there is nothing to outlive `close()`.
+    abort: () => run.close(),
   };
   return run;
 }

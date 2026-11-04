@@ -45,3 +45,14 @@ void test("Inline code contributes to the slug", async (t) => {
 void test("A heading with no word characters falls back to `section`", async (t) => {
   t.check(render("# 🎉"), "<article><h1 id=\"section\" data-line=\"1\">🎉</h1></article>");
 });
+
+// ## An explicit id wins over the slug and is taken
+//
+// `{% #id %}` on a heading is the id (trusted anchors, docs/plans/knowledge-base-tools.md).
+// A later heading whose slug equals it is numbered, so no two elements share an id.
+void test("An explicit id wins over the slug and is taken", async (t) => {
+  t.check(
+    render("## Notes {% #notes %}\n\n## Other {% #x %}\n\n## Notes\n"),
+    "<article><h2 id=\"notes\" data-line=\"1\">Notes </h2><h2 id=\"x\" data-line=\"3\">Other </h2><h2 id=\"notes-1\" data-line=\"5\">Notes</h2></article>",
+  );
+});

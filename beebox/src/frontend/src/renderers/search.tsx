@@ -10,6 +10,7 @@ import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { SearchResults, type SearchResult } from "../components/search/SearchResults";
 import { searchResultTarget } from "../components/search/target";
+import { heldBackText, pathsBadgeText } from "../components/search/held-back";
 import { trpc } from "../lib/trpc/client";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 
@@ -34,15 +35,16 @@ function SearchCardBody(props: RendererProps) {
   const [term, setTerm] = useState(state.query);
   useEffect(() => { const id = window.setTimeout(() => setTerm(state.query), 180); return () => window.clearTimeout(id); }, [state.query]);
   const result = trpc.search.query.useQuery({ query: term, ...(state.paths.length > 0 ? { pathPrefixes: state.paths } : {}), ...(state.types.length > 0 ? { kinds: state.types } : {}), limit: state.limit, mode: "text" }, { enabled: term.trim().length > 0 });
+  const heldNote = result.data ? heldBackText(result.data.heldBack) : null;
   const change = (next: Partial<SearchState>) => props.onViewStateChange?.({ ...state, ...next }, "replace");
   const open = (item: SearchResult) => props.onNavigate(searchResultTarget(item), { label: item.path });
   return <Stack gap="none" overflow="auto" className="mx-auto max-h-full max-w-3xl p-4">
     <Text as="h1" size="xl" weight="bold" className="mb-4">Search</Text>
     <TextField label="Search this box" type="search" hideLabel value={state.query} onChange={(query) => change({ query })} placeholder="Search cards and markdown…" autoFocus />
-    <Row className="mt-2"><Badge tone="neutral">{state.paths.length > 0 ? `paths: ${state.paths.join(", ")}` : "all paths"}</Badge><Badge tone="neutral">{state.types.length > 0 ? `types: ${state.types.join(", ")}` : "all types"}</Badge></Row>
+    <Row className="mt-2"><Badge tone="neutral">{pathsBadgeText({ paths: state.paths, heldBack: result.data?.heldBack ?? [] })}</Badge><Badge tone="neutral">{state.types.length > 0 ? `types: ${state.types.join(", ")}` : "all types"}</Badge></Row>
     {result.isLoading ? <Text tone="muted" className="py-6">Searching…</Text> : null}
     {result.error ? <ErrorText className="py-6">Could not search: {result.error.message}</ErrorText> : null}
-    {result.data ? <><div className="mt-4"><SearchResults results={result.data.results} onOpen={open} query={term} /></div>{result.data.truncated ? <Hint className="mt-3">Showing {result.data.results.length} of {result.data.total}; narrow the search to see more.</Hint> : null}{result.data.warnings.map((warning) => <Text key={warning} size="sm" tone="muted" className="mt-2">{warning}</Text>)}</> : null}
+    {result.data ? <><div className="mt-4"><SearchResults results={result.data.results} onOpen={open} query={term} /></div>{result.data.truncated ? <Hint className="mt-3">Showing {result.data.results.length} of {result.data.total}; narrow the search to see more.</Hint> : null}{heldNote ? <Hint className="mt-2">{heldNote}. Add its folder under paths to search it.</Hint> : null}{result.data.warnings.map((warning) => <Text key={warning} size="sm" tone="muted" className="mt-2">{warning}</Text>)}</> : null}
   </Stack>;
 }
 

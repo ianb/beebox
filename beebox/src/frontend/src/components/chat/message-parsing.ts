@@ -57,6 +57,7 @@ export function stripUserDisplayTags(
     .replace(/<\/external-input>/gi, "")
     .replace(/<pending-schedules>[\S\s]*?<\/pending-schedules>/gi, "")
     .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "")
+    .replace(/<interrupted-wake[\S\s]*?<\/interrupted-wake>/gi, "")
     .replace(/<notification-opened[\S\s]*?<\/notification-opened>/gi, "")
     .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "")
     // A declared token takes its surrounding spaces with it: both neighbors

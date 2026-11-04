@@ -23,6 +23,7 @@ import { git, gitBranch, gitTopLevel } from "./lib/git.js";
 import { changedPaths } from "./test-git.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
 import { mergeMain, type MergeResult } from "./finish-preflight-merge.js";
+import { selection, type SelectedTests } from "./finish-preflight-select.js";
 import {
   NotAWorktreeBranchError,
   PreflightError,
@@ -37,6 +38,7 @@ import {
   groupPaths,
   parseTrailers,
   skipTypecheckLintDecision,
+  type SkipInput,
   trackORecommendation,
   verificationCommands,
   type VerificationCommand,
@@ -52,8 +54,8 @@ export interface Sheet {
   changed: { all: string[]; byGroup: Record<string, string[]>; unknownGroups: string[] };
   docsOnly: boolean;
   codeChanged: boolean;
-  /** `failed` distinguishes a selector that errored from one that selected nothing. */
-  selectedTests: { files: string[]; note: string; failed?: true } | null;
+  /** Null when beebox is untouched. */
+  selectedTests: SelectedTests | null;
   verification: VerificationCommand[];
   skipTypecheckLint: { value: boolean; reason: string; rule: string };
   plan: { attached: boolean; docs: string[]; trailers: string[] };
@@ -64,7 +66,8 @@ export interface Sheet {
 
 const SKIP_RULE =
   "pre-commit typechecks and lints what each worktree commit stages, so a finish needs them again " +
-  "only when code arrived outside those commits (any merge on the branch, or a straggler). " +
+  "only for an uncommitted straggler, or when a merge brought code and the branch has code of its own " +
+  "(a non-.md path in a branch commit, a merge edit, or HEAD vs main). " +
   "`--no-verify` leaves no git evidence and is not detectable.";
 
 function hasScriptIn(root: string): (pkg: string, script: string) => boolean {
@@ -108,21 +111,25 @@ function privateLeg(root: string): Sheet["privateLeg"] {
  * Every merge on the branch's own line and what it brought, newest first,
  * plus this run's merge when it fast-forwarded and left no merge commit.
  */
-function branchMerges(root: string, current: Sheet["merge"]): { sha: string; paths: string[] }[] {
-  const shas = git(["log", "--merges", "--first-parent", "--format=%H", "main..HEAD"], { cwd: root, onError: "throw" })
-    .split("\n")
-    .filter((sha) => sha !== "");
-  const merges = shas.map((sha) => ({
+function branchMerges(root: string, current: Sheet["merge"]): SkipInput["merges"] {
+  const merges = gitLines(root, ["log", "--merges", "--first-parent", "--format=%H", "main..HEAD"]).map((sha) => ({
     sha,
-    paths: git(["diff", "--name-only", `${sha}^1`, sha], { cwd: root, onError: "throw" })
-      .split("\n")
-      .filter((path) => path !== ""),
+    paths: gitLines(root, ["diff", "--name-only", "--no-renames", `${sha}^1`, sha]),
+    edited: gitLines(root, ["diff", "--name-only", "--no-renames", `${sha}^2`, sha]),
   }));
   const head = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
   if (current.status === "merged" && !merges.some((merge) => merge.sha === head)) {
-    merges.unshift({ sha: head, paths: current.broughtPaths });
+    // A fast-forward: HEAD is main's commit, so it edited nothing.
+    merges.unshift({ sha: head, paths: current.broughtPaths, edited: [] });
   }
   return merges;
+}
+
+/** A git command's output lines, empty ones dropped. */
+function gitLines(root: string, args: string[]): string[] {
+  return git(args, { cwd: root, onError: "throw" })
+    .split("\n")
+    .filter((line) => line !== "");
 }
 
 /** Added+deleted lines vs main, total and restricted to non-doc, non-test files. */
@@ -158,28 +165,6 @@ function planDocs(root: string, workstream: string): string[] {
   });
 }
 
-/**
- * The selected test set. Only asked for when beebox is in the diff — the
- * selector's esbuild pass costs seconds and selects nothing otherwise.
- */
-function selection(root: string, packages: string[]): Sheet["selectedTests"] {
-  if (!packages.includes("beebox")) return null;
-  const result = spawnSync(process.execPath, ["--import", "tsx", join(root, "bin/test-select.ts")], {
-    cwd: root,
-    encoding: "utf-8",
-  });
-  if (result.status !== 0) {
-    return { files: [], failed: true, note: `selector failed (${result.stderr.trim()}) — run pnpm test` };
-  }
-  const files = result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line !== "" && !line.startsWith("#") && line.includes("/"));
-  return files.length === 0
-    ? { files: [], note: "no test imports the changed paths" }
-    : { files, note: `${files.length} selected` };
-}
-
 export function buildSheet(input: { merge: boolean }): Sheet {
   const root = gitTopLevel();
   const branch = gitBranch(root);
@@ -207,7 +192,12 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   const grouped = groupPaths(changed, packages);
   const skip = mergeSkipped
     ? { value: false, reason: "main was not merged in (--no-merge) and is not contained" }
-    : skipTypecheckLintDecision({ merges: branchMerges(root, merge), stragglers });
+    : skipTypecheckLintDecision({
+        merges: branchMerges(root, merge),
+        stragglers,
+        ownCommits: gitLines(root, ["log", "--no-merges", "--format=", "--name-only", "--no-renames", "main..HEAD"]),
+        vsMain: gitLines(root, ["diff", "--name-only", "--no-renames", "main", "HEAD"]),
+      });
   // Selected BEFORE the verification list is built: a selector that failed
   // changes which test command the sheet names (the full suite, not the
   // selected set), so the two cannot disagree.
@@ -245,34 +235,26 @@ export function buildSheet(input: { merge: boolean }): Sheet {
   };
 }
 
+/** Selected files the text sheet names; `--json` has them all. */
+const SHOWN_TESTS = 5;
+const SHOWN_REASONS = 3;
+
+/**
+ * The text sheet. The decision fields come first (merge, verification, the
+ * typecheck/lint skip), so reading only the head of the output is enough; the
+ * test selection comes last as a count, its largest reasons, and a few files.
+ */
 export function formatSheet(sheet: Sheet): string {
   const lines: string[] = [];
   const list = (label: string, values: string[]): void => {
     lines.push(`${label}: ${values.length === 0 ? "none" : values.join(", ")}`);
   };
   lines.push(`worktree ${sheet.worktree} (${sheet.branch})`);
-  lines.push(
-    `private leg: ${sheet.privateLeg.active ? `ACTIVE (${sheet.privateLeg.repo ?? "?"})` : "not opted in — skip every private step"}`,
-  );
-  list("stragglers (never commit these blind)", sheet.stragglers);
-  lines.push(
-    `merge main: ${sheet.merge.status}${sheet.merge.broughtPaths.length > 0 ? ` (+${sheet.merge.broughtPaths.length} paths)` : ""}`,
-  );
+  const brought = sheet.merge.broughtPaths.length;
+  lines.push(`merge main: ${sheet.merge.status}${brought > 0 ? ` (+${String(brought)} paths)` : ""}`);
   if (sheet.merge.resolved.length > 0) {
     list("  conflicts resolved by rule (check them in the diff review)", sheet.merge.resolved);
   }
-  lines.push(`changed (${sheet.changed.all.length} paths):`);
-  for (const [group, paths] of Object.entries(sheet.changed.byGroup)) {
-    lines.push(`  ${group}: ${paths.length}`);
-  }
-  if (sheet.changed.unknownGroups.length > 0) {
-    list("  UNCLASSIFIED (verified as root)", sheet.changed.unknownGroups);
-  }
-  lines.push(`docsOnly: ${String(sheet.docsOnly)}   codeChanged: ${String(sheet.codeChanged)}`);
-  lines.push(
-    `selected tests: ${sheet.selectedTests === null ? "n/a (beebox untouched)" : sheet.selectedTests.note}`,
-  );
-  for (const file of sheet.selectedTests?.files ?? []) lines.push(`  ${file}`);
   lines.push("verification:");
   for (const command of sheet.verification) {
     lines.push(`  ${command.skip === undefined ? "run " : "skip"} ${command.command}${command.skip === undefined ? "" : `  (${command.skip})`}`);
@@ -280,11 +262,32 @@ export function formatSheet(sheet: Sheet): string {
   if (sheet.verification.length === 0) lines.push("  nothing to verify");
   lines.push(`skipTypecheckLint: ${String(sheet.skipTypecheckLint.value)} — ${sheet.skipTypecheckLint.reason}`);
   lines.push(`  rule: ${SKIP_RULE}`);
+  list("stragglers (never commit these blind)", sheet.stragglers);
+  lines.push(
+    `private leg: ${sheet.privateLeg.active ? `ACTIVE (${sheet.privateLeg.repo ?? "?"})` : "not opted in — skip every private step"}`,
+  );
+  lines.push(`docsOnly: ${String(sheet.docsOnly)}   codeChanged: ${String(sheet.codeChanged)}`);
+  lines.push(`changed (${String(sheet.changed.all.length)} paths):`);
+  for (const [group, paths] of Object.entries(sheet.changed.byGroup)) {
+    lines.push(`  ${group}: ${String(paths.length)}`);
+  }
+  if (sheet.changed.unknownGroups.length > 0) {
+    list("  UNCLASSIFIED (verified as root)", sheet.changed.unknownGroups);
+  }
   list("plan", sheet.plan.docs.length > 0 ? sheet.plan.docs : sheet.plan.trailers);
   list("issues named in trailers", sheet.issues);
   lines.push(
-    `diff: ${sheet.diff.lines} lines (${sheet.diff.sourceLines} source)   trackO: ${sheet.trackO.recommended ? "review" : "skip"} — ${sheet.trackO.reason}`,
+    `diff: ${String(sheet.diff.lines)} lines (${String(sheet.diff.sourceLines)} source)   trackO: ${sheet.trackO.recommended ? "review" : "skip"} — ${sheet.trackO.reason}`,
   );
+  const tests = sheet.selectedTests;
+  lines.push(`selected tests: ${tests === null ? "n/a (beebox untouched)" : tests.note}`);
+  if (tests !== null && tests.files.length > 0) {
+    const reasons = tests.reasons.slice(0, SHOWN_REASONS).map((group) => `${String(group.count)} ${group.reason}`);
+    lines.push(`  by reason: ${reasons.join("; ")}${tests.reasons.length > SHOWN_REASONS ? "; …" : ""}`);
+    for (const file of tests.files.slice(0, SHOWN_TESTS)) lines.push(`  ${file}`);
+    const rest = tests.files.length - SHOWN_TESTS;
+    if (rest > 0) lines.push(`  … ${String(rest)} more (--json lists all; bin/test-select.ts --why groups them)`);
+  }
   return lines.join("\n");
 }
 

@@ -1,0 +1,109 @@
+<!doctype html><meta charset=utf-8><title>run</title>
+<script type=module>
+const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+
+/** Feed a wav (optionally looped, with silence after) into a MediaStreamTrack in real time. */
+window.feed = async function (src, { loop = false, startDelay = 0.2, silenceFirst = 0 } = {}) {
+  const ctx = new AudioContext({ sampleRate: 16000 });
+  await ctx.resume();
+  const buf = await ctx.decodeAudioData(await (await fetch(src)).arrayBuffer());
+  const dest = ctx.createMediaStreamDestination();
+  const node = ctx.createBufferSource();
+  node.buffer = buf; node.loop = loop; node.connect(dest);
+  const at = ctx.currentTime + startDelay + silenceFirst;
+  node.start(at);
+  return { track: dest.stream.getAudioTracks()[0], ctx, duration: buf.duration, started: performance.now() + (startDelay + silenceFirst) * 1000, node };
+};
+
+/**
+ * One logical live session over successive recognizer instances: restart on
+ * `end`, keeping a final-text list. Events carry ms since audio start.
+ */
+window.session = function ({ track, processLocally = true, interim = true, lang = "en-US", clock, restart = true, phrases }) {
+  const s = { events: [], finals: [], interim: "", restarts: 0, wanted: true, instances: 0, gaps: [] };
+  const now = () => Math.round(performance.now() - clock);
+  const ev = (type, data = {}) => s.events.push({ t: now(), type, ...data });
+  let lastEnd = null;
+  const spawn = () => {
+    const r = new SR();
+    r.lang = lang; r.continuous = true; r.interimResults = interim; r.processLocally = processLocally;
+    if (phrases) r.phrases = phrases;
+    s.instances++; s.current = r;
+    for (const n of ["audiostart", "soundstart", "speechstart", "speechend", "soundend", "audioend", "nomatch"]) r.addEventListener(n, () => ev(n));
+    r.onstart = () => { ev("start"); if (lastEnd !== null) { s.gaps.push(now() - lastEnd); lastEnd = null; } };
+    r.onerror = (e) => ev("error", { error: e.error, message: e.message });
+    r.onresult = (e) => {
+      let interimText = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i];
+        if (res.isFinal) { s.finals.push(res[0].transcript); ev("final", { text: res[0].transcript, conf: res[0].confidence, idx: i }); }
+        else interimText += res[0].transcript;
+      }
+      s.interim = interimText;
+      if (interimText) ev("interim", { text: interimText });
+    };
+    r.onend = () => {
+      if (s.interim) { s.finals.push(s.interim); ev("final", { text: s.interim, promoted: true }); s.interim = ""; }
+      ev("end"); lastEnd = now();
+      if (s.wanted && restart) { s.restarts++; try { spawn(); } catch (e) { ev("restart-fail", { message: String(e) }); } }
+    };
+    if (track) r.start(track); else r.start();
+  };
+  spawn();
+  s.stop = () => { s.wanted = false; s.current.stop(); };
+  return s;
+};
+
+window.sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Standard run: feed a file, wait to its end + tail, return events. */
+window.runFile = async function ({ src, tailMs = 6000, processLocally = true, loop = false, durationMs, phrases }) {
+  const f = await feed(src, { loop });
+  const s = session({ track: f.track, processLocally, clock: f.started, phrases });
+  await sleep(durationMs ?? f.duration * 1000 + tailMs);
+  s.stop(); await sleep(1500);
+  const stats = { duration: f.duration, instances: s.instances, restarts: s.restarts, gaps: s.gaps, sampleRate: f.ctx.sampleRate };
+  f.ctx.close();
+  return { stats, finals: s.finals, events: s.events };
+};
+/**
+ * One mic, two consumers, the way the composer would run it: the app's PCM
+ * worklet (the HQ recording) plus a recognizer on the same capture.
+ *  - "same-track": recognizer gets the getUserMedia track itself.
+ *  - "own-capture": recognizer runs start() with no track (browser's own mic).
+ *  - "graph-track": recognizer gets a MediaStreamDestination fed through a gain node,
+ *    so hold-for-speech and mic swaps happen upstream of it. holdAtMs mutes for holdMs.
+ */
+window.twoConsumers = async function ({ mode, seconds = 45, holdAtMs, holdMs = 8000, swapAtMs }) {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const ctx = new AudioContext();
+  await ctx.resume();
+  await ctx.audioWorklet.addModule("/pcm-processor.worklet.js");
+  let source = ctx.createMediaStreamSource(stream);
+  const worklet = new AudioWorkletNode(ctx, "pcm-processor");
+  source.connect(worklet);
+  let frames = 0, bytes = 0, peak = 0;
+  worklet.port.onmessage = (e) => { if (e.data.type !== "pcm") return; frames++; bytes += e.data.samples.byteLength; for (const v of new Int16Array(e.data.samples)) peak = Math.max(peak, Math.abs(v)); };
+  const gain = ctx.createGain();
+  const dest = ctx.createMediaStreamDestination();
+  source.connect(gain).connect(dest);
+  const track = mode === "same-track" ? stream.getAudioTracks()[0] : dest.stream.getAudioTracks()[0]; // never null: start() with no track opens the real mic, ignoring the fake device
+  const clock = performance.now();
+  const s = session({ track, clock });
+  const notes = [];
+  if (holdAtMs !== undefined) { setTimeout(() => { gain.gain.value = 0; notes.push(["hold on", Math.round(performance.now() - clock)]); }, holdAtMs); setTimeout(() => { gain.gain.value = 1; notes.push(["hold off", Math.round(performance.now() - clock)]); }, holdAtMs + holdMs); }
+  if (swapAtMs !== undefined) setTimeout(async () => {
+    const fresh = await navigator.mediaDevices.getUserMedia({ audio: true });
+    source.disconnect(); for (const t of stream.getTracks()) t.stop();
+    source = ctx.createMediaStreamSource(fresh); source.connect(worklet); source.connect(gain);
+    notes.push(["swapped", Math.round(performance.now() - clock)]);
+  }, swapAtMs);
+  await sleep(seconds * 1000);
+  s.stop(); await sleep(1500);
+  const pcmSeconds = bytes / 32000;
+  for (const t of stream.getTracks()) t.stop();
+  ctx.close();
+  return { mode, ctxRate: ctx.sampleRate, frames, pcmSeconds, peak, notes, instances: s.instances, errors: s.events.filter((e) => e.type === "error"), finals: s.finals, events: s.events.filter((e) => e.type !== "interim").slice(0, 30), interimTimes: s.events.filter((e) => e.type === "interim").map((e) => [e.t, e.text.length]).filter((_, i) => i % 15 === 0) };
+};
+window.ready = true;
+</script>

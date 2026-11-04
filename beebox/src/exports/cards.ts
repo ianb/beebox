@@ -65,3 +65,6 @@ export {
   IsoDateValueSchema,
   type DateEntry,
 } from "../cards/date-entry.js";
+
+export { webpageBase } from "../schemas/webpage.js";
+export { pdfBase } from "../schemas/pdf.js";

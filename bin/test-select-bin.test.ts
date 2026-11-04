@@ -56,6 +56,13 @@ test("a change inside a spawned directory selects that spawner", () => {
 
 test("a change to shared bin/lib code selects every bin spawner", () => {
   assert.deepEqual(select("bin/lib/session-registry.sh"), ["beebox/test/sched.test.ts", "bin/test/ws.test.ts"]);
+  // The reason says the match is a guess; a direct ref match says what the child runs.
+  const reasons = (changed: string) =>
+    selectTests({ graph, changed: [changed], spawnEdges }).reasons.map((group) => group.reason);
+  assert.deepEqual(reasons("bin/lib/session-registry.sh"), ["spawns a bin/ script, which may source bin/lib/session-registry.sh"]);
+  assert.deepEqual(reasons("bin/workstreams"), ["spawns a child that runs bin/workstreams"]);
+  // The child runs bin/schedules/run.ts; the changed file only shares its unit.
+  assert.deepEqual(reasons("bin/schedules/other.ts"), ["spawns a bin/schedules script; bin/schedules/other.ts is in that unit"]);
 });
 
 test("a change to an unrelated bin script selects nothing", () => {

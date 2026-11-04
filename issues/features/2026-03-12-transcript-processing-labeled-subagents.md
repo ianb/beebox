@@ -14,3 +14,7 @@ Two levels of transcript processing that map to different agent types:
 The cleanup sub-agent could be used directly by the inbox processor. The restructure step would be set up by the user as a procedure, possibly chained: raw transcript → cleanup sub-agent → restructure procedure → finished piece.
 
 Key principle: the procedure should show its work. For restructuring, that means demonstrating which words are original vs. edited, with a well-aligned comparison between source and output. This makes the AI's edits auditable and keeps the result grounded in the original language.
+
+Re-reviewed 2026-10-30: transcript cleanup now happens inline under the narration-mode capture rules, not as a sub-agent. The restructure step overlaps the writing-practice issue and the shipped composition editor.
+
+Out of date in the body above: Add a status section: level 1 is partly met by narration-mode capture rules (narration-mode-doc.ts); decide whether a separate cleanup sub-agent is still wanted. Point level 2 at features/2026-07-05-writing-skill.md (fidelity spectrum, marked agent text). Replace the personal name in level 2 with 'the boxholder'.

@@ -13,7 +13,7 @@
  * single, reversible tap: dismissed questions stay answerable.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { trpc } from "../../../lib/trpc/client";
 import { bbxSource } from "../../../lib/source-tag";
 import { RadioGroup, TextareaField } from "../../ui/fields/field";
@@ -57,12 +57,12 @@ interface QuestionFormProps extends FormPlace {
  * silently breaking the questions loop. So the prompt leads (it's the
  * question), the context scrolls, and the answer never hides.
  */
-export function QuestionContext({ question }: { question: QuestionInfo }) {
+export function QuestionContext({ question, headingId }: { question: QuestionInfo; headingId?: string }) {
   const hasMemo = question.memo !== undefined && question.memo !== "";
   const hasLearning = question.learning?.proposal !== undefined;
   return (
     <>
-      <Heading level={2} className="mb-2">
+      <Heading level={2} id={headingId} className="mb-2">
         {question.prompt}
       </Heading>
       {hasMemo || hasLearning ? (
@@ -272,10 +272,12 @@ function TextForm({ question, onAnswered, place }: { question: QuestionInfo; onA
 
 export function QuestionForm({ question, onAnswered, sourcePath, ...place }: QuestionFormProps) {
   const inputType = question.inputType;
+  // The prompt names the card, so each question's "Later" is that question's.
+  const headingId = useId();
 
   return (
-    <Card padding="md" {...(sourcePath ? bbxSource("card", sourcePath) : {})}>
-      <QuestionContext question={question} />
+    <Card padding="md" role="group" aria-labelledby={headingId} {...(sourcePath ? bbxSource("card", sourcePath) : {})}>
+      <QuestionContext question={question} headingId={headingId} />
       {(() => {
         switch (inputType) {
           case "confirm":

@@ -140,14 +140,16 @@ void test("A prompt over the budget starts no session", async (t) => {
 // ## Dry run prints the selection
 //
 // It names how many jobs it would send, the prompt's size, and the deferred
-// jobs, each on a `deferred (prompt budget)` line.
+// jobs, each on a `deferred to a later cycle` line. The second job is not an
+// intake job, so the prompt budget alone defers it.
 void test("Dry run prints the selection", async (t) => {
   const box = await makeTmpBox({ git: true });
   t.teardown(() => box.cleanup());
-  const big = (name: string) => job(`_bookkeeping/jobs/${name}.intake.job.card`, `${createIntakeJobTemplate({ description: name, items: [] })}${"w".repeat(100 * KB)}\n`);
+  const big = (name: string, type: "intake" | "question-followup") =>
+    job(`_bookkeeping/jobs/${name}.${type}.job.card`, `${createIntakeJobTemplate({ description: name, items: [] })}${"w".repeat(100 * KB)}\n`);
   const log: string[] = [];
   const outcome = await processBatchJobs({
-    jobs: [big("first"), big("second")],
+    jobs: [big("first", "intake"), big("second", "question-followup")],
     boxRoot: box.root,
     dryRun: true,
     onLog: (text) => log.push(text),
@@ -156,10 +158,33 @@ void test("Dry run prints the selection", async (t) => {
   t.check({ outcome, lines: log.slice(0, 2) }, {
     outcome: { success: true, selected: ["_bookkeeping/jobs/first.intake.job.card"] },
     lines: [
-      "  deferred (prompt budget): _bookkeeping/jobs/second.intake.job.card\n",
+      "  deferred to a later cycle: _bookkeeping/jobs/second.question-followup.job.card\n",
       "\n[DRY RUN] Would send 1 job(s), 100 KB prompt; 1 deferred.\n",
     ],
   });
+});
+
+// ## A batch carries at most one intake job
+//
+// Jobs are intake A, question-followup B, intake C, all small enough to fit the
+// byte budget together. The budget counts bytes, but a session runs out of
+// turns first, so A and B are sent and the later intake job C waits.
+void test("A batch carries at most one intake job", async (t) => {
+  const forms = (relPath: string): JobForms => ({ relPath, full: "d", listed: "d", byPath: relPath });
+  const plain = (selected: { description: string }[]) => selected.map((s) => s.description).join("\n\n");
+  t.check(
+    selectBatch(
+      [forms("_bookkeeping/jobs/a.intake.job.card"), forms("_bookkeeping/jobs/b.question-followup.job.card"), forms("_bookkeeping/jobs/c.intake.job.card")],
+      { assemble: plain, budget: 160 * KB },
+    ),
+    {
+      selected: [
+        { relPath: "_bookkeeping/jobs/a.intake.job.card", description: "d" },
+        { relPath: "_bookkeeping/jobs/b.question-followup.job.card", description: "d" },
+      ],
+      deferred: ["_bookkeeping/jobs/c.intake.job.card"],
+    },
+  );
 });
 
 // ## What the agent is told

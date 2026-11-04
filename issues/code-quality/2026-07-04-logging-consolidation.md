@@ -27,3 +27,5 @@ logs rather than convert them.
 ## Next-action check (2026-09-24)
 
 Reconfirmed 2026-09-24: still open, and larger. `makeLog` is still chat-local (`beebox/src/core/chat/session/log.ts`, 15 users). Raw `console.*` calls in `beebox/src` are now about 1,788 (about 900 at filing). No `no-console` rule exists in `beebox/eslint.config.ts` or the preset. None of the three steps has happened.
+
+Re-reviewed 2026-10-30: none of the three steps has started; raw console.* calls in beebox/src now number about 2,300 by a simple rg count.

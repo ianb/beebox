@@ -234,6 +234,17 @@ export async function buildScriptEnv(
 }
 
 /**
+ * The agent profile's inherited allowlist with `BBX_SPAWN_PROFILE=agent`, and
+ * nothing `buildScriptEnv` injects: no server URL, agent token, or `bbx` on
+ * PATH. For a child that runs box-authored code but needs no way back to the
+ * box's server, such as the view metadata import, which also has no box when
+ * the engine hosts the compile.
+ */
+export function agentAllowlistEnv(): NodeJS.ProcessEnv {
+  return { ...pickBoxSubprocessEnv(process.env, { connectorCreds: false }), BBX_SPAWN_PROFILE: "agent" };
+}
+
+/**
  * `buildScriptEnv` plus `CONNECTOR_ENV_ALLOWLIST` — for spawn sites that run
  * the box's own tooling (`bbx wakeup`, `bbx finalize`, scheduled `runs:`
  * commands, which are overwhelmingly `bbx` invocations). Those children run the

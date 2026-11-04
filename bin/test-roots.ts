@@ -37,7 +37,6 @@ export const TEST_ROOTS: readonly TestRoot[] = [
   { dir: "bin/test/", runFrom: "beebox", typecheck: { dir: ".", script: "typecheck" }, lintFrom: "." },
   { dir: "workstreams-app/test/frontend/", runFrom: "workstreams-app", typecheck: { dir: "workstreams-app", script: "typecheck:frontend" }, lintFrom: "workstreams-app" },
   { dir: "workstreams-app/test/", runFrom: "workstreams-app", typecheck: { dir: "workstreams-app", script: "typecheck:backend" }, lintFrom: "workstreams-app" },
-  { dir: "scan-uploader/test/", runFrom: "scan-uploader", typecheck: { dir: "scan-uploader", script: "typecheck" }, lintFrom: "scan-uploader" },
   { dir: "browse/packages/agent-browser-typed/test/", runFrom: "browse", typecheck: { dir: "browse", script: "typecheck" }, lintFrom: "browse" },
   { dir: "browse/test/", runFrom: "browse", typecheck: { dir: "browse", script: "typecheck" }, lintFrom: "browse" },
   { dir: "tap-check/test/", runFrom: "tap-check", typecheck: { dir: "tap-check", script: "typecheck" }, lintFrom: "tap-check" },

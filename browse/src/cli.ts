@@ -6,9 +6,12 @@ import { reclaimWorktreeBrowsers } from "../../bin/process-cleanup.js";
 import { annotatedSnapshot, checkedAction, getWithTarget, noteAction } from "./act.js";
 import { scrollWithSelector } from "./scroll-target.js";
 import { TARGET_COMMANDS } from "./controls.js";
-import { runEnhancedScreenshot } from "./screenshot.js";
-import { openClerkPopup, waitTimeoutMs } from "./clerk-popup.js";
+import { CaptureNoAnswerError, runEnhancedScreenshot } from "./screenshot.js";
+import { drainPlan, drainRuntimeLint, noteWedged } from "./runtime-lint-drain.js";
+import { openClerkPopup } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
+import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit } from "./launch-options.js";
+import { isStuck, PROBE_TIMEOUT_MS, stuckCaptureMessage, wedgedMessage } from "./stuck.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
@@ -18,14 +21,9 @@ import type { WorktreeContext } from "./worktree.js";
 // (and any mutations) have settled. See beebox trpc-provider.tsx.
 const READY_FN = "document.body.dataset.bbxLoading === 'false'";
 
-// Ceiling on the settle wait. `wait --fn` polls forever on agent-browser
-// 0.27.0: its own `--timeout` flag is parsed only in `--download` mode, and
-// the documented 25s default action timeout is not applied unless
-// AGENT_BROWSER_DEFAULT_TIMEOUT is set explicitly. Unset, a page that never
-// sets the marker — about:blank, any non-app site, the login wall — hangs the
-// wrapper indefinitely, which is what broke `screenshot`, `snapshot`, and
-// `open` for every agent that ran them (issue 2026-08-15). Overridable for a
-// genuinely slow page.
+// Ceiling on the settle wait, for a page that never sets the marker (the
+// login wall, an app that failed to load). Overridable for a genuinely slow
+// page.
 const READY_TIMEOUT_MS_DEFAULT = 15_000;
 
 function readyTimeoutMs(): number {
@@ -49,6 +47,9 @@ function readyTimeoutMs(): number {
 // and `screenshot` wait BEFORE reading so they capture the settled state.
 const WAIT_AFTER = new Set(["open"]);
 const WAIT_BEFORE = new Set(["snapshot", "screenshot"]);
+
+// Leading flags upstream answers on its own, with no page or subcommand.
+const PASSTHROUGH_LEADING_FLAGS = new Set(["--help", "-h", "--version", "-V"]);
 
 // Commands that can change the page under a snapshot's refs. After one runs, a
 // `@eN` ref is refused until the next snapshot (`noteAction`).
@@ -83,6 +84,23 @@ async function refreshAuthCookie(ctx: WorktreeContext): Promise<void> {
   if (isOwnOrigin(current, ctx)) await run(authCookieArgs(current, ctx));
 }
 
+/**
+ * Whether a running daemon still answers. A wedged one fails every later
+ * upstream call after 152 s, and a `bin/browse` command makes several, so the
+ * caller learns nothing for minutes. No daemon yet means nothing to probe: the
+ * command will start one, and a cold launch must not count against the probe.
+ */
+async function daemonAnswers(socketDir: string, session: string): Promise<boolean> {
+  if (!daemonRunning(socketDir, session)) return true;
+  try {
+    await run(["get", "url"], { timeoutMs: PROBE_TIMEOUT_MS });
+  } catch (e) {
+    if (isStuck(e)) return false;
+    // Any answer, even an error (no page yet), means the daemon is serving.
+  }
+  return true;
+}
+
 async function waitForReady(ctx: WorktreeContext): Promise<void> {
   let target: string;
   try {
@@ -93,13 +111,11 @@ async function waitForReady(ctx: WorktreeContext): Promise<void> {
   if (!isOwnOrigin(target, ctx)) return;
   const timeout = readyTimeoutMs();
   try {
-    // The env var is what actually bounds the poll; timeoutMs is the backstop
-    // for the day upstream stops honoring it — the failure it prevents is an
-    // unkillable hang, so it is worth carrying both.
-    await run(["wait", "--fn", READY_FN], {
-      env: { AGENT_BROWSER_DEFAULT_TIMEOUT: String(timeout) },
-      timeoutMs: timeout + 5_000,
-    });
+    // `--timeout`, not AGENT_BROWSER_DEFAULT_TIMEOUT: on 0.41.0 a command
+    // whose env differs from the daemon's restarts its background state, and
+    // every later `snapshot` then returns the tree from before the change.
+    // timeoutMs is the backstop against an unkillable hang.
+    await run(["wait", "--fn", READY_FN, "--timeout", String(timeout)], { timeoutMs: timeout + 5_000 });
   } catch (e) {
     const msg = e instanceof AgentBrowserError ? e.message : String(e);
     process.stderr.write(`browse: page-ready wait timed out (${msg.trim().split("\n")[0]}); proceeding anyway\n`);
@@ -123,6 +139,12 @@ async function reapSupersededDaemons(): Promise<void> {
 }
 
 async function main(): Promise<number> {
+  if (process.env["AGENT_BROWSER_DEFAULT_TIMEOUT"] !== undefined) {
+    // On 0.41.0 a command whose value differs from the daemon's restarts its
+    // background state, and later snapshots silently show stale content
+    // (vercel-labs/agent-browser#2280).
+    throw new BrowseConfigError("unset AGENT_BROWSER_DEFAULT_TIMEOUT: a value that differs between commands makes later snapshots stale; bound a wait with `wait --timeout <ms>`");
+  }
   await reapSupersededDaemons();
   let args = process.argv.slice(2);
   // `--session <name>` is agent-browser's global session selector, and callers
@@ -155,6 +177,11 @@ async function main(): Promise<number> {
     process.env["AGENT_BROWSER_PROFILE"] = await sessionProfileDir(name);
     args = [...args.slice(0, sessionIndex), ...args.slice(sessionIndex + 2)];
   }
+  // Launch options (`--args`, `--headed`, …) go to every child through their
+  // env vars, so the cookie step that starts the browser has them too.
+  const launch = hoistLaunchOptions(args, process.env);
+  args = launch.args;
+  Object.assign(process.env, launch.env);
   const noWaitIdx = args.indexOf("--no-wait");
   const skipWait = noWaitIdx !== -1;
   if (skipWait) args = [...args.slice(0, noWaitIdx), ...args.slice(noWaitIdx + 1)];
@@ -164,7 +191,60 @@ async function main(): Promise<number> {
   }
   const ctx = detectWorktreeContext();
   const sub = args[0] === undefined ? "" : args[0];
+  // Any other flag before the subcommand would be taken for the subcommand,
+  // skipping the open rewrite and the cookie (upstream then gets a bare path).
+  if (sub.startsWith("-") && !PASSTHROUGH_LEADING_FLAGS.has(sub)) {
+    throw new BrowseConfigError(`put ${sub} after the subcommand (e.g. bin/browse open /chats ${sub} …)`);
+  }
 
+  // A running browser keeps the options it started with; upstream would
+  // ignore the new ones without a word.
+  const socketDir = process.env["AGENT_BROWSER_SOCKET_DIR"] ?? "";
+  const session = process.env["AGENT_BROWSER_SESSION"] ?? "default";
+  if (launch.flags.length > 0 && sub !== "close" && daemonRunning(socketDir, session)) {
+    throw new BrowseConfigError(`${launch.flags.join(", ")} apply when the browser starts, and it is running: run bin/browse close first`);
+  }
+
+  // `close` is the recovery for a wedged session, so it is never refused;
+  // help needs no browser.
+  // Screenshot arguments are this wrapper's own, so their usage errors and
+  // help come first too.
+  const shot = sub === "screenshot" ? parseScreenshotArgs(args.slice(1)) : null;
+  if (shot?.kind === "help") { process.stdout.write(SCREENSHOT_USAGE); return 0; }
+  if (shot?.kind === "error") { process.stderr.write(`browse screenshot: ${shot.message}\n${SCREENSHOT_USAGE}`); return 2; }
+  if (shot === null && (PASSTHROUGH_LEADING_FLAGS.has(sub) || args.includes("--help") || args.includes("-h"))) {
+    return runPassthrough(args);
+  }
+  if (sub !== "close" && !(await daemonAnswers(socketDir, session))) {
+    process.stderr.write(wedgedMessage());
+    return 1;
+  }
+
+  // Records the app page wrote since the last command, printed to stderr. Only
+  // while a browser is running: a drain must never start one. The exit code is
+  // the command's own.
+  const plan = drainPlan(sub);
+  if (plan.before && daemonRunning(socketDir, session)) await drainRuntimeLint(ctx);
+  try {
+    return await dispatch({ args, sub, ctx, skipWait, socketDir, shot: shot?.kind === "run" ? shot.invocation : null });
+  } finally {
+    if (plan.after && daemonRunning(socketDir, session)) await drainRuntimeLint(ctx);
+  }
+}
+
+interface DispatchInput {
+  args: string[];
+  sub: string;
+  ctx: WorktreeContext;
+  skipWait: boolean;
+  socketDir: string;
+  shot: ScreenshotInvocation | null;
+}
+
+async function dispatch(input: DispatchInput): Promise<number> {
+  const { sub, ctx, skipWait, socketDir, shot } = input;
+  const session = process.env["AGENT_BROWSER_SESSION"] ?? "default";
+  let args = input.args;
   if (sub !== "open" && sub !== "close") {
     await refreshAuthCookie(ctx);
   }
@@ -187,11 +267,16 @@ async function main(): Promise<number> {
     return code;
   }
 
-  if (sub === "screenshot") {
-    const parsed = parseScreenshotArgs(args.slice(1));
-    if (parsed.kind === "help") { process.stdout.write(SCREENSHOT_USAGE); return 0; }
-    if (parsed.kind === "error") { process.stderr.write(`browse screenshot: ${parsed.message}\n${SCREENSHOT_USAGE}`); return 2; }
-    const result = await runEnhancedScreenshot(parsed.invocation, ctx);
+  if (shot !== null) {
+    let result;
+    try {
+      result = await runEnhancedScreenshot(shot, ctx);
+    } catch (e) {
+      if (!(e instanceof CaptureNoAnswerError)) throw e;
+      noteWedged();
+      process.stderr.write(stuckCaptureMessage("screenshot"));
+      return 1;
+    }
     process.stdout.write(`${result.imagePath}\n`);
     process.stdout.write(`url: ${result.sidecar.url}\n`);
     process.stdout.write(`title: ${result.sidecar.title}\n`);
@@ -205,15 +290,6 @@ async function main(): Promise<number> {
 
   if (sub === "clerk-popup") {
     return openClerkPopup(args[1]);
-  }
-
-  if (sub === "wait") {
-    // Upstream parses `wait --timeout` only in `--download` mode and otherwise
-    // polls forever (0.27.0), and the daemon runs one command at a time: a
-    // `wait --text` for text that never appears wedged every later command
-    // until the daemon was killed (clerk-quick-send, 2026-10-15). The default
-    // action timeout is what bounds it, so derive that from `--timeout`.
-    process.env["AGENT_BROWSER_DEFAULT_TIMEOUT"] = String(waitTimeoutMs(args.slice(1)));
   }
 
   if (sub === "upload") {
@@ -236,6 +312,9 @@ async function main(): Promise<number> {
 
   const code = await runPassthrough(args);
   if (code === 0 && PAGE_CHANGING.has(sub)) await noteAction(sub);
+  if (code === 0 && sub === "close") {
+    await waitForDaemonExit(socketDir, args.includes("--all") ? knownSessions(socketDir) : [session]);
+  }
   return code;
 }
 

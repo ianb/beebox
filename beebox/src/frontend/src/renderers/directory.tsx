@@ -11,6 +11,7 @@ import { ErrorText } from "../components/ui/ErrorText";
 import { DirectoryListing, useDirectoryListing } from "../directory-listing";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 import { StatusMessage } from "../components/ui/StatusMessage";
+import { isAttachDirName } from "@shared/attach-path";
 
 function DirectoryRenderer({ data, onNavigate }: RendererProps) {
   const dirPath = data.path.replace(/\/$/, "");
@@ -38,10 +39,12 @@ export const directoryRenderer: RendererEntry = {
   selector: {
     match: (path) => {
       // Directories: no file extension on the last segment, or trailing slash.
+      // A card's attach folder (`Name.attach`) is the one directory with a
+      // suffix; `file-view-data.ts` loads it as a directory too.
       if (path.endsWith("/")) return true;
       const base = path.split("/").pop();
       if (!base) return true; // empty path = box root
-      return !base.includes(".");
+      return !base.includes(".") || isAttachDirName(base);
     },
   },
   renderer: { name: "Directory", Component: DirectoryRenderer, priority: 60 },

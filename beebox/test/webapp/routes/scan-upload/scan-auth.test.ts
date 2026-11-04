@@ -1,7 +1,7 @@
 // # The scan preHandler accepts exactly two credentials — and nothing else accepts it
 //
 // `makeScanAuthPreHandler` is the child-side gate for the `/api/scan/…` upload
-// routes (Track 2). It accepts a scan-upload bearer or a full owner identity. The
+// routes (Track 2). It accepts a scan-upload bearer and nothing else. The
 // point of the dedicated store is what this file spends most of its space proving:
 // a scan token gets through NOTHING else — not the box's general auth preHandler,
 // not a tRPC procedure, not `/api/pairing/session` — and a mobile device token
@@ -109,12 +109,10 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
     401,
   );
 
-  // ## A full owner identity also passes — the boxholder can drive these routes by hand
+  // ## A person's browser identity does not pass, not even the owner's
   //
-  // Identity comes from `resolveRequestIdentity`, the same resolver the box auth
-  // preHandler and the tRPC context use, so ownership can't drift into a second
-  // answer. Here it arrives the way a hub-fronted request does; a box member who
-  // isn't the owner is not enough.
+  // A scan token is the only credential here. Identity arrives the way a
+  // hub-fronted request does.
 
   process.env.BBX_HUB_SECRET = "scan-auth-test-hub-secret";
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
@@ -124,12 +122,18 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
   });
 
   const asOwner = await server.inject({ method: "GET", url: "/api/scan/whoami", headers: hubHeaders("owner@example.com") });
-  t.check(asOwner.statusCode, 200);
-
-  await t.checkText(asOwner.payload, "{\"source\":\"owner\",\"tokenName\":null,\"email\":\"owner@example.com\"}");
+  t.check(asOwner.statusCode, 401);
 
   const asMember = await server.inject({ method: "GET", url: "/api/scan/whoami", headers: hubHeaders("guest@example.com") });
   t.check(asMember.statusCode, 401);
+
+  // A hub's auth-off header, which a browse key earns, is not a scan credential either.
+  const asBrowseKey = await server.inject({
+    method: "GET",
+    url: "/api/scan/whoami",
+    headers: { "x-bbx-hub-secret": "scan-auth-test-hub-secret", "x-bbx-hub-auth": "off" },
+  });
+  t.check(asBrowseKey.statusCode, 401);
 });
 
 // ## A scan token cannot mint a session cookie

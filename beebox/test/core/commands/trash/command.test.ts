@@ -113,10 +113,12 @@ void test("The report comes from the same scanner as bbx mv, so relative refs an
       {
         path: "_content/box/Index.md",
         refs: 1,
+        fragments: [],
       },
       {
         path: "_content/box/notes/Source.doc.card",
         refs: 2,
+        fragments: [],
       },
     ],
   });

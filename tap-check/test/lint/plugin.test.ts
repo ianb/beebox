@@ -64,3 +64,38 @@ void test("no-tap-assert flags tap's own asserts", async (t) => {
     ],
   });
 });
+
+void test("no-text-locator flags finding an element by its text", async (t) => {
+  tester(t).run("no-text-locator", plugin.rules["no-text-locator"], {
+    valid: [
+      // Checking the copy is allowed.
+      "t.check(button.textContent, 'Save');",
+      "t.check([...el.querySelectorAll('button')].map((b) => b.textContent), ['Save']);",
+      "const text = el.querySelector('p')?.textContent;",
+      // A search by something other than the text.
+      "[...el.querySelectorAll('button')].find((b) => b.id === 'bbx-save');",
+      // Text read in a nested non-search callback.
+      "items.find((x) => x.parts.map((p) => p.textContent).length > 0);",
+      // A computed property is not a known text read.
+      "items.find((x) => x[key] === 'Save');",
+    ],
+    invalid: [
+      {
+        code: "[...el.querySelectorAll('button')].find((b) => b.textContent === 'Save');",
+        errors: [{ messageId: "textLocator", data: { property: "textContent", method: "find" } }],
+      },
+      {
+        code: "buttons.filter((b) => b.textContent?.startsWith('Soup')).length;",
+        errors: [{ messageId: "textLocator", data: { property: "textContent", method: "filter" } }],
+      },
+      {
+        code: "links.some(function (a) { return a.innerText.trim() === 'notes'; });",
+        errors: [{ messageId: "textLocator", data: { property: "innerText", method: "some" } }],
+      },
+      {
+        code: "rows.findIndex((r) => r.textContent.includes('x'));",
+        errors: [{ messageId: "textLocator", data: { property: "textContent", method: "findIndex" } }],
+      },
+    ],
+  });
+});

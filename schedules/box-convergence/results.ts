@@ -31,12 +31,27 @@ function deferredDetail(holders: { pid: number; reason: string; since: string }[
 }
 
 /** Diagnostics precede the final framed stdout JSON. Invalid output is unknown. */
-export function resultDetail(output: string, exitCode: number | null): string | null {
+function parseFramed(output: string, exitCode: number | null): z.infer<typeof resultSchema> | string {
   const line = output.trimEnd().split("\n").at(-1);
   if (!line?.startsWith(RESULT_PREFIX)) return `Unknown result (exit ${String(exitCode)}): ${output.slice(-1500)}`;
-  let result: z.infer<typeof resultSchema>;
-  try { result = resultSchema.parse(JSON.parse(line.slice(RESULT_PREFIX.length))); }
+  try { return resultSchema.parse(JSON.parse(line.slice(RESULT_PREFIX.length))); }
   catch (error) { return `Invalid convergence JSON: ${String(error).slice(0, 500)}`; }
+}
+
+/**
+ * Why the check never produced a result (sudo refused, no engine, an env file
+ * gone), else null. Null says only that the box answered; `resultDetail` reads
+ * what it said. Reporting these as unconverged hid a check broken for every
+ * production box for days behind real local findings.
+ */
+export function checkFailure(output: string, exitCode: number | null): string | null {
+  const parsed = parseFramed(output, exitCode);
+  return typeof parsed === "string" ? parsed : null;
+}
+
+export function resultDetail(output: string, exitCode: number | null): string | null {
+  const result = parseFramed(output, exitCode);
+  if (typeof result === "string") return result;
   if (result.status === "status") return statusDetail(result, exitCode);
   if (result.status === "deferred") return deferredDetail(result.holders, exitCode);
   const partial = result.applied?.filter((entry) => entry.partial) ?? [];
@@ -92,7 +107,7 @@ export function connectorWarnings(output: string): string[] | null {
 }
 
 export interface ConvergenceAlert {
-  condition: "unconverged" | "prod-unreachable" | "prod-connector-activity";
+  condition: "unconverged" | "check-failed" | "prod-unreachable" | "prod-connector-activity";
   title: string;
   message: string;
 }
@@ -105,8 +120,13 @@ export interface ConvergenceAlert {
  * for one `needs-procedure` condition in two days.
  *
  * `keep` is every condition that stays open; the run resolves the rest. A run
- * that could not reach production has not checked the prod boxes, so it keeps
- * `unconverged` open even when every local box is clean.
+ * that did not check every box (`convergenceCoverage`) keeps `unconverged` open
+ * even when every box it did check is clean.
+ *
+ * `check-failed` carries checks that could not run. It says nothing about the
+ * box, so it is separate from `unconverged` and from connector warnings. It
+ * resolves only on a run with complete coverage: a run that skipped a box has
+ * not shown that its check recovered.
  *
  * `prod-connector-activity` carries production connectors that are quiet or
  * failing (`connectorFindings`). It resolves only on a run that read every
@@ -115,8 +135,9 @@ export interface ConvergenceAlert {
  */
 export function reportPlan(input: {
   findings: readonly string[];
+  checkFailures: readonly string[];
   unreachableDetail: string | null;
-  prodChecked: boolean;
+  convergenceCoverage: boolean;
   connectorFindings: readonly string[];
   connectorCoverage: boolean;
 }): { alerts: ConvergenceAlert[]; keep: string[] } {
@@ -126,6 +147,14 @@ export function reportPlan(input: {
       condition: "unconverged",
       title: `Box convergence: ${String(input.findings.length)} finding${input.findings.length === 1 ? "" : "s"}`,
       message: input.findings.map((finding) => `- ${finding}`).join("\n"),
+    });
+  }
+  if (input.checkFailures.length > 0) {
+    const count = input.checkFailures.length;
+    alerts.push({
+      condition: "check-failed",
+      title: `Box convergence: ${String(count)} check${count === 1 ? "" : "s"} could not run`,
+      message: input.checkFailures.map((failure) => `- ${failure}`).join("\n"),
     });
   }
   if (input.unreachableDetail !== null) {
@@ -140,9 +169,34 @@ export function reportPlan(input: {
     });
   }
   const keep: string[] = alerts.map((alert) => alert.condition);
-  if (!input.prodChecked && !keep.includes("unconverged")) keep.push("unconverged");
+  if (!input.convergenceCoverage && !keep.includes("unconverged")) keep.push("unconverged");
+  if ((!input.convergenceCoverage || !input.connectorCoverage) && !keep.includes("check-failed")) keep.push("check-failed");
   if (!input.connectorCoverage && !keep.includes("prod-connector-activity")) keep.push("prod-connector-activity");
   return { alerts, keep };
+}
+
+/** A production box is /var/lib/beebox/<slug>/box, owned by bbx-<slug>. */
+const PROD_BOX_ROOT = /^\/var\/lib\/beebox\/([a-z0-9][a-z0-9-]{0,27})\/box$/u;
+
+class NotProdBoxRootError extends Error {
+  constructor() {
+    super("Not a production box root");
+    this.name = "NotProdBoxRootError";
+  }
+}
+
+/**
+ * The remote command that runs the box's installed CLI as the box's own user
+ * with the units' env and umask, framed for `checkFailure` and `resultDetail`.
+ * Same invocation as the deploy's repair (deploy/deploy.sh). A root outside the
+ * layout throws: there is no user to run it as.
+ */
+export function prodBoxCommand(root: string, run: { cliArgs: readonly string[]; timeoutSeconds: number }): string {
+  const slug = PROD_BOX_ROOT.exec(root)?.[1];
+  if (slug === undefined) throw new NotProdBoxRootError();
+  const command = ["node", "node_modules/beebox/dist/cli.mjs", ...run.cliArgs].map(shellQuote).join(" ");
+  const remote = `set -a; source /etc/beebox/box.env || exit; set +a; unset BBX_BOX_WORK NODE_COMPILE_CACHE; export NODE_DISABLE_COMPILE_CACHE=1; umask 0007; cd ${shellQuote(root)} || exit; timeout --kill-after=5s ${String(run.timeoutSeconds)}s bash -c ${shellQuote(framedCommand(command))}`;
+  return `sudo -n -u bbx-${slug} -H bash -lc ${shellQuote(remote)}`;
 }
 
 /** Shell arguments are data, including paths read from the remote registry. */

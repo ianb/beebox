@@ -314,6 +314,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             status={chatTargetStatus({ isStreaming: showAgentWorking, processBusy: false })}
             pendingCount={pendingCount}
             isStreaming={showAgentWorking}
+            catchingUp={props.catchingUp}
             onInterrupt={actions.handleInterrupt}
             speechPlaying={voice.speechPlayback.isPlaying}
             onStopSpeech={voice.handleStopSpeech}

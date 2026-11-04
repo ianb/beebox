@@ -380,7 +380,9 @@ install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0751 "$BOX_HOME"
 for d in .claude .codex .config .local .cache .ssh; do
   install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0700 "$BOX_HOME/\$d"
 done
-su - "$BOX_OWNER" -c 'git config --global user.email beebox@box.example.com && git config --global user.name "Bee Box"'
+# umask 077: a login shell's 002 left .gitconfig 0664, readable by path
+# through the 0751 home.
+su - "$BOX_OWNER" -c 'umask 077; git config --global user.email beebox@box.example.com && git config --global user.name "Bee Box"'
 
 # Clone/pull as root (su drops the SSH agent socket, breaking agent
 # forwarding), then chown to the box's owner. The pull names the owner's
@@ -589,10 +591,11 @@ fi
 # an earlier setup can name a different IdentityFile, and origin is about to
 # point at this alias regardless — so ask ssh what the alias actually resolves
 # to rather than trusting the grep.
-RESOLVED=$(ssh -G "$SSH_ALIAS" 2>/dev/null | awk '$1 == "identityfile" { print $2 }' | head -1)
-RESOLVED="${RESOLVED/#\~/$HOME}"
-if [[ "$RESOLVED" != "$KEY_PATH" ]]; then
-  echo "ERROR: ssh resolves $SSH_ALIAS to identity '$RESOLVED', not '$KEY_PATH'." >&2
+# Escaped: the outer heredoc is unquoted, so these must expand on the server.
+RESOLVED=\$(ssh -G "$SSH_ALIAS" 2>/dev/null | awk '\$1 == "identityfile" { print \$2 }' | head -1)
+RESOLVED="\${RESOLVED/#\~/\$HOME}"
+if [[ "\$RESOLVED" != "$KEY_PATH" ]]; then
+  echo "ERROR: ssh resolves $SSH_ALIAS to identity '\$RESOLVED', not '$KEY_PATH'." >&2
   echo "  An existing ssh config stanza is claiming this alias. Fix it by hand:" >&2
   echo "  pointing the box's origin at an alias that uses another key would fail" >&2
   echo "  to push in a way nothing reports." >&2

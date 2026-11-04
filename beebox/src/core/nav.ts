@@ -98,7 +98,7 @@ export async function resolveNav(boxRoot: string): Promise<NavResolution> {
     entries.push({
       kind: "ref",
       // The normalized box-relative form, not the raw ref: the shell builds
-      // `/<box>/browse/<target>` from it, so a leading-`/` ref must arrive
+      // `/<box>/views/<target>` from it, so a leading-`/` ref must arrive
       // resolved (both authored forms yield the same target).
       target: safe,
       label: entry.label ?? title ?? titleFromFilename(safe),

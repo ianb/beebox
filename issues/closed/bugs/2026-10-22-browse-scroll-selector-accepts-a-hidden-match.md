@@ -19,4 +19,4 @@ Report: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecti
 
 ## Fix direction
 
-Make `scroll --selector` refuse a zero-size match, or use the first visible match, as clicks do. Make `mouse wheel` dispatch at the last `mouse move` position, or document that it does not. Related: [agent-browser wheel dispatch is flaky](../../bugs/2026-08-09-agent-browser-wheel-dispatch-flaky.md) (a different wheel failure).
+Make `scroll --selector` refuse a zero-size match, or use the first visible match, as clicks do. Make `mouse wheel` dispatch at the last `mouse move` position, or document that it does not. Related: [agent-browser wheel dispatch is flaky](2026-08-09-agent-browser-wheel-dispatch-flaky.md) (a different wheel failure).

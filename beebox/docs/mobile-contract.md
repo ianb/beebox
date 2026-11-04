@@ -125,7 +125,9 @@ composer not suppressed, wrong attribution — with no error surfaced).
   for somebody else's device: a distinct refusal would confirm the id exists on this box.
 - **Projection:** `listMobileDevices` strips `tokenHash` and the APNs token. A device's push
   registration (§5.9) appears as `push: { environment, registeredAt } | null`; the raw APNs token
-  never leaves the server process.
+  never leaves the server process. `notificationsOff` is the person's per-box switch, set from
+  Settings in the app by `pairing.setThisDeviceNotificationsOff`. It survives re-registration, and
+  the box skips the phone while it is on. The native app does not read it.
 
 ---
 
@@ -264,7 +266,16 @@ the contract.
 | `beeboxComposerCommand` | V1 or V2 composer command (§4.7, §4.8) | → `receiveComposerCommand` |
 | `beeboxLastAudioRequest` | V1 last-audio request (§4.9) | → `receiveLastAudioRequest` |
 
-- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)`).
+- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)`, one per
+  `NativeBridgeChannel`).
+- **Every channel accepts only the box's own main frame.** WebKit exposes `webkit.messageHandlers` to
+  every frame, so `Coordinator.receiveBridgeMessage` refuses a message unless the frame is the main
+  frame and its `frameInfo.securityOrigin` equals the box's origin. A sandboxed page (opaque origin) is
+  refused even when its URL is on the box. Web code must post from the top document. Handlers stay in
+  the page content world because the web app runs there; a dedicated `WKContentWorld` would hide them
+  from the app. An app page with the box's real origin (including the shared-browser dashboard, if
+  opened in the webview) passes this guard; the guard separates frames, and same-origin script is
+  inside the box's trust boundary.
 - Session reporting: the native-authored startup script wraps `history.pushState`/`replaceState` +
   `popstate` and posts `location.href` on every nav; native extracts `?session=` via
   `visibleSessionID`. Origin-checked at both post and receipt time.
@@ -1237,7 +1248,8 @@ See §1.3 (full request/response/errors).
   `test/webapp/routes/pairing.push-token.test.ts`, and matched against the request iOS builds by
   `ios-app/BeeBoxTests/PushNotificationTests.swift`.
 - **Drift:** LOUD server-side (400/401); a phone that never registers gets no push, which the
-  Admin Notifications section shows (no device listed under Phones).
+  Admin Notifications section shows (no device listed under Phones) and Settings shows in the app
+  (`pairing.thisDevice`).
 
 ### 5.10 APNs notification payload (box → Apple → native)
 
@@ -1262,7 +1274,9 @@ See §1.3 (full request/response/errors).
   and badge; `quiet`, `dot` (no `loudness` key), and an unknown value present nothing, because the
   webview shows its own banner. A tap (`didReceive`) renders `target` with `notificationId` to a
   box-relative path by `NotificationTarget`, the Swift mirror of `target.ts`'s `parseTarget` and
-  `targetUrl`, and loads it in the chat webview (§3.1). A missing or unreadable target opens
+  `targetUrl`, and loads it in the chat webview (§3.1). A `card:` or `question:` target renders
+  to `views/<path>`, each path segment `encodeURIComponent`-encoded, which opens the card beside the chat; boxes before 2026-10-28 rendered
+  `browse/<path>`, which still redirects. A missing or unreadable target opens
   nothing new and logs a warning. On every foreground the app clears the badge and removes
   delivered `dot` notifications.
 - **Box identity.** The payload names the box in `box`. A tap opens on the paired box whose slug
@@ -1909,7 +1923,7 @@ waiting in `PendingEmissionStore`, open the web app instead. The rule is
 
 The box screen mounts no web content. Its composer sends through `quickChat.submit` (§5.11) with a
 new-thought draft stored apart from the chat draft. Its links (recent chats, "All chats", the
-box's `nav.card` shortcuts) show the web app at a box-relative path through the same
+box's `nav.card` shortcuts, whose card refs arrive as `/views/<path>`) show the web app at a box-relative path through the same
 `ChatWebView.NavigationRequest` a notification tap uses (§3.1). The web app returns to the box
 screen through the navigation in §3.5. The web view, once created, stays mounted and hidden behind
 the box screen. No emission version, native target type, or binding JSON changes for the box screen.

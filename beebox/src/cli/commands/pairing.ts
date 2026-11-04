@@ -12,7 +12,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths/core.js";
 import { errorMessage } from "../../shared/error-guards.js";
-import { devicePushRegistrations, pairFakePushDevice } from "../../core/mobile/pairing.js";
+import { listMobileDevices, pairFakePushDevice } from "../../core/mobile/pairing.js";
 import { apnsConfigFromEnv } from "../../core/notification/apns-channel/core.js";
 import { notifyFakeMode } from "../../core/notification/fake-mode.js";
 
@@ -21,7 +21,7 @@ function refusal(boxRoot: string): string | null {
   if (apnsConfigFromEnv() !== null && !notifyFakeMode(boxRoot)) {
     return "APNs keys are configured (BBX_APNS_*), so a push to a fake device would go to Apple. Run with BBX_NOTIFY_FAKE=1, or on a box without the keys.";
   }
-  const production = devicePushRegistrations(boxRoot).find((d) => d.environment === "production");
+  const production = listMobileDevices(boxRoot).find((d) => d.revokedAt === undefined && d.push?.environment === "production");
   if (production !== undefined) {
     return `this box has a phone registered for production APNs ("${production.label}"); fake devices are for dev boxes.`;
   }

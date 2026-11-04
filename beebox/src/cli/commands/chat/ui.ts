@@ -14,7 +14,7 @@ import { Command } from "commander";
 
 import { isRecord } from "../../../shared/is-record.js";
 import { resolveChatSessionId } from "../../../core/chat/session/id-file.js";
-import { loopbackHeaders } from "./audio.js";
+import { loopbackHeaders } from "../../lib/loopback-headers.js";
 import { formatUiDump } from "../../../core/chat/ui-dump.js";
 import { uiScanPayloadSchema } from "../../../shared/ui-scan/core.js";
 

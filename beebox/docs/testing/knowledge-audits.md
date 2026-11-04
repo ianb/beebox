@@ -78,7 +78,7 @@ The agent's context is built in layers, each corresponding to a knowledge level:
 ## Running it
 
 ```bash
-npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or-id>] [--engine claude|codex]
+npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or-id>] [--engine claude|codex|pi]
 npx tsx src/dev/knowledge-audit.ts list
 ```
 
@@ -115,6 +115,16 @@ from the validated live app-server event stream; private rollout files are not
 parsed. Codex does not expose Claude-equivalent per-turn context snapshots on
 that surface, so Codex reports deliberately omit the context baseline rather
 than presenting incomparable usage as parity.
+
+A pi audit reads the pi session file under `.beebox/pi/sessions/` after the
+run (`src/dev/lib/test-runner/runner/pi-audit.ts`). pi's `read` counts as a
+file read, `ls` as a search, and `bash` as a command, classified as for Codex.
+The context baseline comes from the usage on each assistant message. pi needs
+an OpenRouter key granted to the box. To audit a copy of a box that has no
+grant, point `BBX_SECRETS_FILE` at a scratch store that grants the copy the
+placeholder `pi-dev-placeholder` as `openrouter`, and pass `--pi-dev-key`. The
+runner then gives pi `BBX_OPENROUTER_API_KEY` (environment or `beebox/.env`)
+in memory, in place of the placeholder (`src/dev/lib/openrouter-dev-key.ts`).
 
 ## Dev-guidance audits
 
@@ -171,6 +181,11 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `should_read_any` — alternative files, at least one of which the agent should
   read. Use this when generated guidance and its installed skill are equivalent
   navigation outcomes.
+- `read_before_edit` — files the agent must read before its first edit or
+  write. Only pi's reader records edits, so on Claude and Codex the check
+  fails. pi counts a nested `AGENTS.md` that a file tool delivered as a read.
+  A read counts only from an earlier message than the edit (pi runs one
+  message's tool calls in parallel) and only when it did not fail.
 - `should_search` — `web`, `box`, or `any`: the agent must look something up
   before answering. `web` is a WebSearch or WebFetch (a Codex provider search
   counts), `box` a `bbx search` command, `any` either. Use it for the laws

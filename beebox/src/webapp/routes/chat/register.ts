@@ -34,6 +34,7 @@ import type { EventBus } from "../../../core/event-bus/core.js";
 import type { TtsService } from "../../../services/tts.js";
 import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../../core/chat/schedules/core.js";
 import { fireChatSchedule } from "./schedule-fire.js";
+import { startInterruptedWakes } from "./interrupted-wake.js";
 import { escapeXmlAttr } from "../../../shared/self-note.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import { notifyTurnCallouts } from "../../../core/chat/callout-tags.js";
@@ -76,6 +77,8 @@ interface RegisterChatRoutesOptions {
 /**
  * Register chat routes on the Fastify server.
  */
+export { resolveMobileSender } from "./helpers.js";
+
 export async function registerChatRoutes(options: RegisterChatRoutesOptions): Promise<void> {
   const { server, boxRoot, eventBus, openaiAudio, prewarmChat, chatBackend } = options;
   const devSurfaces = options.devSurfaces === true;
@@ -236,6 +239,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   const scheduleManager = new ChatScheduleManager(boxRoot, {
     onFire: ({ schedule }) => fireChatSchedule({ boxRoot, registry, eventBus, wireSession }, schedule),
   });
+  const stopInterruptedWakes = startInterruptedWakes({ boxRoot, registry, eventBus, wireSession });
 
   // Shared context handed to each route module.
   const ctx: ChatRoutesContext = {
@@ -300,6 +304,7 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   // Tear down the registry on server close so subprocesses don't linger.
   server.addHook("onClose", async () => {
     clearChatRuntime(boxRoot);
+    stopInterruptedWakes();
     await registry.shutdown();
   });
 }

@@ -1,5 +1,5 @@
 /* A23: keep the painterly backdrop bold; give controls a quiet hand-drawn frame. */
-:is([data-chrome-theme="posy"],.bbx-card-theme[data-card-theme="posy"]){--posy-art:url("./posy-paisley.webp");--posy-frame:url("./posy-quiet-frame.svg");--posy-ink:#201525;--bbx-selection:#f01978;--bbx-selection-ink:#fff7ed;--bbx-focus-ring:#201525;}
+:is([data-chrome-theme="posy"],.bbx-card-theme[data-card-theme="posy"]){--posy-art:url("./posy-paisley.webp");--posy-frame:url("./posy-quiet-frame.svg");--posy-ink:#201525;--bbx-selection:#d4136a;--bbx-selection-ink:#fff7ed;--bbx-focus-ring:#201525;}
 .bbx-box-presentation[data-chrome-theme="posy"]{--bbx-desk-background:#f8e4e8;--bbx-desk-pattern:none;--bbx-desk-edge:#c7b6cf;--bbx-bar-paper:#ffe2e9;--bbx-bar-edge:#c7b6cf;color:var(--posy-ink);background-color:#ef3b82;background-image:linear-gradient(125deg,#f0197840,transparent 48%,#63d0ae38),var(--posy-art);background-size:auto,cover;background-position:center;background-blend-mode:normal;}
 [data-chrome-theme="posy"] :is(.bbx-conversation-desk,.bbx-companion-desk[data-active-card],.bbx-interface-card-desk[data-card-content="card"],.bbx-interface-tabstrip > [role="none"]::before,.bbx-interface-tabstrip > [role="none"]::after,.bbx-app-nav > div){background:transparent;}
 [data-chrome-theme="posy"] .bbx-interface-card-desk[data-card-content="neutral"]{background:#f8e4e8;}

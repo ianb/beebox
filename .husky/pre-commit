@@ -14,7 +14,45 @@
 set -e
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# The commit index: what this commit records. git hands a plain commit a
+# relative `.git/index`, and the checks below change directory.
+case "${GIT_INDEX_FILE:-}" in
+  "") GIT_INDEX_FILE="$(git -C "$REPO_DIR" rev-parse --path-format=absolute --git-path index)" ;;
+  /*) ;;
+  *) GIT_INDEX_FILE="$REPO_DIR/$GIT_INDEX_FILE" ;;
+esac
+export GIT_INDEX_FILE
+
+# Every check below runs in the staged snapshot (bin/staged-snapshot.ts): the
+# commit index's files and nothing else from the working tree but node_modules,
+# so another agent's unstaged deletion, rename, half-written file, or new doc
+# neither fails nor passes this commit. The EXIT trap fails a passing hook if the
+# commit index or the snapshot changed while the checks ran. Every staged-path
+# decision reads the snapshot index, so it matches the captured tree.
+CHECKOUT_DIR="$REPO_DIR"
+COMMIT_INDEX="$GIT_INDEX_FILE"
+snapshot="$(cd "$CHECKOUT_DIR" && node --import tsx bin/staged-snapshot.ts sync --owner $$)"
+IFS=$'\t' read -r SNAPSHOT_TREE SNAPSHOT_INDEX CAPTURED_TREE <<<"$snapshot"
+finish_snapshot() {
+  local rc=$?
+  (cd "$CHECKOUT_DIR" && GIT_INDEX_FILE="$COMMIT_INDEX" node --import tsx bin/staged-snapshot.ts finish \
+    --owner $$ --tree "$CAPTURED_TREE" --index "$COMMIT_INDEX" --status "$rc") || rc=1
+  exit "$rc"
+}
+trap finish_snapshot EXIT
+export GIT_INDEX_FILE="$SNAPSHOT_INDEX" GIT_OPTIONAL_LOCKS=0
+unset GIT_DIR GIT_WORK_TREE
+REPO_DIR="$SNAPSHOT_TREE"
+echo "[pre-commit] checking the staged snapshot at $REPO_DIR"
 staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMR)"
+
+# The personal commit-blocklist guard reads the gitignored .commit-blocklist,
+# so it runs from the checkout (the snapshot's copy of the script, against the
+# snapshot index); it reads only staged additions. A no-op unless the committer
+# has that file. Blocks staged additions that re-introduce purged strings (a
+# domain, an IP, names).
+echo "[pre-commit] .: commit-blocklist-check"
+(cd "$CHECKOUT_DIR" && node --import tsx "$REPO_DIR/bin/commit-blocklist-check.ts")
 
 # Block retired product vocabulary outside the exact historical and migration
 # allowlist. The checker is silent when the baseline is clean.
@@ -52,13 +90,6 @@ run_pair() {
 # Before the docs-only early-exit below: docs are the main leak surface.
 echo "[pre-commit] .: pnpm path-leak-check"
 (cd "$REPO_DIR" && pnpm path-leak-check)
-
-# Every commit also runs the personal commit-blocklist guard: a no-op unless the
-# committer has a gitignored .commit-blocklist. Blocks staged additions that
-# re-introduce purged strings (a domain, an IP, names). Before the docs-only
-# exit — the blocked strings are just as likely in docs as in code.
-echo "[pre-commit] .: pnpm commit-blocklist-check"
-(cd "$REPO_DIR" && pnpm commit-blocklist-check)
 
 # Mobile-contract tripwire (pre-commit half): records a pending violation when a
 # contract-surface anchor file is staged without a docs/mobile-contract.md
@@ -144,23 +175,25 @@ if echo "$staged" | grep -qE '^(beebox/src/webapp/trpc/clerk-contract\.ts|bin/sn
   fi
 fi
 
-# --no-stash: lint-staged's default failure path does `git reset --hard HEAD`
-# then reapplies only its own stash, clobbering concurrent agents' uncommitted
-# edits elsewhere in the worktree. Safe here because both lint-staged configs
-# are check-only eslint (no --fix), so there's nothing for the stash to protect.
-# --no-hide-partially-staged: with --no-stash, a task failure skips restoring
-# the unstaged hunks lint-staged hid from partially-staged files (upstream bug:
-# a missing `return` in restoreUnstagedChangesSkipped, lib/state.js) — so don't
-# hide them at all. Means eslint sees working-tree content for a partially
-# staged file, same as the typecheck step already does.
-# --quiet: suppress lint-staged's own progress/warning chatter (STARTED/
-# COMPLETED lines, the --no-stash banner) — task output (eslint errors) still
-# prints on failure.
+# --no-stash and --no-hide-partially-staged: the snapshot has no unstaged
+# hunks, so lint-staged has nothing to hide or stash; its stash path also does
+# `git reset --hard HEAD` on failure. Both configs are check-only eslint (no
+# --fix). --quiet: suppress lint-staged's own progress/warning chatter; task
+# output (eslint errors) still prints on failure.
+#
+# Generated inputs come from the snapshot: type-aware eslint resolves
+# `beebox/plugins/*` through dist/ declarations (beebox/package.json exports),
+# which `pnpm typecheck` builds, so beebox lints after its typecheck rather than
+# beside it; the clerk tsconfig extends .wxt/tsconfig.json.
 if echo "$staged" | grep -q '^beebox/'; then
-  run_pair beebox "pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet" "pnpm typecheck"
+  run_in beebox pnpm typecheck
+  run_in beebox pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet
 fi
 
 if echo "$staged" | grep -q '^beebox-clerk/'; then
+  # wxt prints progress on success; show it only when it fails.
+  echo "[pre-commit] beebox-clerk: wxt prepare"
+  wxt_out="$(cd "$REPO_DIR/beebox-clerk" && pnpm exec wxt prepare 2>&1)" || { echo "$wxt_out"; exit 1; }
   run_pair beebox-clerk "pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet" "pnpm typecheck"
 fi
 

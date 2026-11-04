@@ -134,7 +134,7 @@ A second-order bug rides along: `chat.lastSessionForDirectory` ignores
 reservations too, so switching to a landmark whose only chat is
 reserved-not-yet-started coins a *fresh* chat every time rather than returning
 to the one you just left. That is the same complaint as
-[no consistent way back to chat](../../bugs/2026-08-23-no-consistent-way-back-to-chat.md).
+[no consistent way back to chat](2026-08-23-no-consistent-way-back-to-chat.md).
 
 Both are fixed on `worktree-chat-wayfinding`: the two procedures consult the
 reservation store, `""` (the box-root landmark) is kept distinct from `null`

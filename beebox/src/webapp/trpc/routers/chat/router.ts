@@ -14,7 +14,7 @@ import { chatBootstrapProcedure, sessionContextDir } from "./bootstrap-procedure
 import { chatPlaceMenuProcedure } from "./place-menu-procedure.js";
 import { chatUndeliveredProcedures } from "./undelivered-procedure.js";
 import { chatSearchProcedures } from "./search.js";
-import { getLastSessionForDirectory } from "../../../../core/chat/session/history.js";
+import { getLastSessionForDirectory } from "../../../../core/chat/session/last-session.js";
 import { nearestLandmarkDir, boxRelativePathSchema } from "../../../../core/landmark/nearest.js";
 import { getChatRuntime } from "../../../chat-runtime.js";
 import { loadChatLists, deadHuskLabel, type ChatSessionRow } from "../../../../core/chat/session/list/core.js";

@@ -36,7 +36,7 @@ export function bbxCommandsScheduling(): string[] {
     "Evaluate scheduled scripts and run any that are due.",
     "",
     "```",
-    "bbx tick [--dry-run] [--script <name>] [--force] [--box <path>]",
+    "bbx tick [--dry-run] [--script <name>] [--force] [--json] [--box <path>]",
     "```",
     "",
     "Checks all `_config/schedules/*.scheduled-script.card` files against their cron/at/rrule schedules.",
@@ -46,6 +46,7 @@ export function bbxCommandsScheduling(): string[] {
     "- `--dry-run` — Show which scripts would run without executing them",
     "- `--script <name>` — Only evaluate a specific script (by filename stem)",
     "- `--force` — Run the `--script` now, bypassing schedule, budget, and active-chat checks. Use this when the boxholder asks for a run from chat — a plain tick defers on the chat session itself. Running scripts/procedures and live lock-group holders still defer; force never preempts running work.",
+    "- `--json` — Print one JSON object instead of text: `dryRun`, the counts, and a `scripts` list with one record per script: `status` `ran`, `skipped` (with `reason`: not due, disabled, budget exceeded, system busy, a deferral), `error` (with `error`), or `inconclusive`. The exit status stays 0 when a script errored, so read `errorCount` or the `error` records.",
     "- `--box <path>` — Target a specific box instead of the current directory",
     "",
     "Note: scripts with `on-wakeup=\"true\"` also run during `bbx engine wakeup`, subject to their `not-before` interval.",
@@ -122,6 +123,7 @@ export function bbxCommandsScheduling(): string[] {
     "",
     ...bbxCommandsNotify(),
     ...bbxCommandsChat(),
+    ...bbxCommandsBrowser(),
   ];
 }
 
@@ -216,6 +218,24 @@ function bbxCommandsChat(): string[] {
     "which recording you mean. The recording is available only while the chat",
     "tab that recorded it is open, and only for the last few voice messages",
     "(the retention window).",
+    "",
+  ];
+}
+
+/** The `## bbx browser` section: the box's shared browser; the how-to is the `browser` skill. */
+function bbxCommandsBrowser(): string[] {
+  return [
+    "## bbx browser",
+    "",
+    "- `bbx browser <agent-browser command>` — Drive the box's one shared",
+    "  browser: `open <url>`, `snapshot -i` (interactive elements with refs",
+    "  such as `@e3`), `click @e3`, `fill @e4 \"text\"`, `get text @e5`, `wait`,",
+    "  `tab list`, `screenshot` (saved under `_tmp/browser/`). Logins persist.",
+    "  The person opens the same live browser from the profile menu's Browser",
+    "  item on a computer. Use WebFetch for public pages; use this for a page",
+    "  that needs a login, scripts, or the person's help. `bbx browser` with no",
+    "  arguments prints the short help. When to stop and ask the person, and",
+    "  what it refuses: the `browser` skill (`.claude/skills/browser/SKILL.md`).",
     "",
   ];
 }

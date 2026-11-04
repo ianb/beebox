@@ -65,3 +65,5 @@ judgment.
   to know what the box thinks of them.
 - Whether "explicit" requires authorship (the boxholder wrote it) or only
   visibility (the agent wrote it, he can read and edit it).
+
+Re-reviewed 2026-10-30: Still open. This issue frames the older user-model, hypothesis, and confidence explorations, and could become their parent if they are consolidated.

@@ -9,7 +9,7 @@
 // ink; in a white panel they keep app ink.
 
 // First, and bare: React DOM must load after the happy-dom window exists.
-import { mount } from "../../helpers/dom-harness.js";
+import { allByRole, byRole, mount } from "../../helpers/dom-harness.js";
 import { createElement as h, type ReactElement } from "react";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -85,8 +85,8 @@ void test("with onNavigate a link opens in the pane instead of navigating", asyn
   const targets: ViewTarget[] = [];
   const view = await render(h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true, onNavigate: (target) => { targets.push(target); } }));
   t.teardown(() => view.unmount());
-  const soup = [...view.container.querySelectorAll("button")].find((b) => b.textContent?.startsWith("Soup"));
-  await view.act(() => { soup?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+  const soup = byRole(view.container, { role: "button", name: "Soup" });
+  await view.act(() => { soup.click(); });
   t.check({ clicked: targets.length, internalAnchors: view.container.querySelectorAll('a[href^="/test1"]').length }, {
     clicked: 1,
     internalAnchors: 0,
@@ -96,14 +96,14 @@ void test("with onNavigate a link opens in the pane instead of navigating", asyn
 void test("+N more is text without onMore and an action with it", async (t) => {
   const plain = await render(h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true }));
   t.teardown(() => plain.unmount());
-  const moreButtons = (c: HTMLElement) => [...c.querySelectorAll("button")].filter((b) => b.textContent === "+2 more").length;
+  const moreButtons = (c: HTMLElement) => allByRole(c, { role: "button", name: "+2 more" }).length;
   t.check({ buttons: moreButtons(plain.container), shown: plain.container.textContent?.includes("+2 more") }, { buttons: 0, shown: true });
 
   let more = 0;
   const live = await render(h(LandmarkGroup, { group, boxSlug: "test1", defaultOpen: true, onMore: () => { more += 1; } }));
   t.teardown(() => live.unmount());
-  const button = [...live.container.querySelectorAll("button")].find((b) => b.textContent === "+2 more");
-  await live.act(() => { button?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+  const button = byRole(live.container, { role: "button", name: "+2 more" });
+  await live.act(() => { button.click(); });
   t.check(more, 1);
 });
 
@@ -121,8 +121,8 @@ function inkClasses(container: Element) {
     count: colour(container.querySelector("button[aria-expanded] span:last-child")),
     title: colour(container.querySelector('a[target="_blank"] div')),
     path: colour(container.querySelector('a[target="_blank"] div:last-child')),
-    missing: colour([...container.querySelectorAll("span")].find((el) => el.textContent === "Missing") ?? null),
-    more: colour([...container.querySelectorAll("button")].find((el) => el.textContent === "+2 more") ?? null),
+    missing: colour(container.querySelector("s")?.nextElementSibling ?? null),
+    more: colour(byRole(container, { role: "button", name: "+2 more" })),
   };
 }
 

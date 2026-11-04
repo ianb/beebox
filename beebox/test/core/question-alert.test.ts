@@ -100,7 +100,7 @@ web-push sent`);
         icon: `${slug}/icon-192.png`,
         title: "❓ A question needs an answer",
         body: "- Sign the form by Friday?",
-        url: `/${slug}/browse/_bookkeeping/questions/Form.question.card`,
+        url: `/${slug}/views/_bookkeeping/questions/Form.question.card`,
         tag: undefined,
         silent: true,
       },

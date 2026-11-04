@@ -11,6 +11,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { binTsArgs } from "../lib/bin-ts.js";
 
 const MONO_ROOT = resolve(import.meta.dirname, "../..");
 const CHECK = join(MONO_ROOT, "bin/doc-lifecycle-check.ts");
@@ -39,7 +40,7 @@ function fixture() {
 }
 
 function runCheck(repo: string, ...args: string[]) {
-  return spawnSync("node", ["--import", "tsx", CHECK, "--repo", repo, ...args], {
+  return spawnSync(process.execPath, binTsArgs(CHECK, ["--repo", repo, ...args]), {
     cwd: MONO_ROOT,
     encoding: "utf8",
   });

@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { findSkillSigils } from "../../lib/briefing-sigils.ts";
+import { binTsArgs } from "../../lib/bin-ts.js";
 
 const execFileAsync = promisify(execFile);
 const skills = new Set(["finish", "browse", "cross-model", "issues"]);
@@ -117,7 +118,7 @@ void test("workstreamcheckbriefingsigils reads skill names from each checkout's 
   );
 
   const empty = await mkdtemp(join(tmpdir(), "briefing-sigils-empty-"));
-  const { code, stderr } = await execFileAsync("node", ["--import", "tsx", "bin/briefing-sigils.ts", join(empty, "none")], { cwd: repo }).then(() => ({ code: 0, stderr: "" }), failureDetails);
+  const { code, stderr } = await execFileAsync(process.execPath, binTsArgs("bin/briefing-sigils.ts", [join(empty, "none")]), { cwd: repo }).then(() => ({ code: 0, stderr: "" }), failureDetails);
   t.check([code, stderr.trim().replace(empty, "<empty>")], [
     2,
     "briefing-sigils: no skill directories found under <empty>/none",

@@ -37,3 +37,7 @@ argv/env; and either scope the header by URL path-prefix (`/<worktree>/`) rather
 than origin, or document that dev tokens are per-user-machine and the cross-
 worktree bleed is acceptable. See the Track E section of
 `../../beebox/docs/implemented-plans/local-password-auth.md`.
+
+Re-reviewed 2026-10-30: the box agent token no longer goes to the browser; bin/browse now seeds a dev-only BBX_BROWSE_API_KEY as an origin-wide HttpOnly cookie, and that key still passes through argv.
+
+Out of date in the body above: Rewrite both points for the cookie mechanism: (1) BBX_BROWSE_API_KEY, not the agent token, appears in `agent-browser cookies set` argv and in env; (2) the cookie is set for the router origin at path `/` with a 30-minute expiry, which worktree.ts:150-157 documents as accepted. Decide whether any of this is still worth fixing, or close as accepted.

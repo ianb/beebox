@@ -384,12 +384,12 @@ void test("--max-cycles reaches the reactor", async (t) => {
   );
 });
 
-// ### Sixty items make three capped jobs in one commit
+// ### Sixty items make six capped jobs in one commit
 //
 // Step 4b hands every unjobbed item to the intake writer at once; the writer
-// caps each job at 25 (`INTAKE_JOB_MAX_ITEMS`), so 60 items become jobs of 25,
-// 25, and 10, all committed together.
-void test("Sixty items make three capped jobs in one commit", async (t) => {
+// caps each job at 10 (`INTAKE_JOB_MAX_ITEMS`), so 60 items become six jobs
+// of 10, all committed together.
+void test("Sixty items make six capped jobs in one commit", async (t) => {
   const box = await makeTmpBox({ git: true });
   t.teardown(() => box.cleanup());
   await initBox(box.root);
@@ -406,6 +406,6 @@ void test("Sixty items make three capped jobs in one commit", async (t) => {
       lastCommit: execSync("git log -1 --format=%s", { cwd: box.root }).toString().trim(),
       status: execSync("git status --porcelain", { cwd: box.root }).toString().trim(),
     },
-    { sizes: [25, 25, 10], lastCommit: "Create intake jobs for 60 unjobbed inbox item(s)", status: "" },
+    { sizes: [10, 10, 10, 10, 10, 10], lastCommit: "Create intake jobs for 60 unjobbed inbox item(s)", status: "" },
   );
 });

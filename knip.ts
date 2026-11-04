@@ -103,7 +103,6 @@ const config: KnipConfig = {
     "beebox-clerk",
     "canvas-loop",
     "personal-vibe-check",
-    "scan-uploader",
     "site",
     "workstreams-app",
   ],

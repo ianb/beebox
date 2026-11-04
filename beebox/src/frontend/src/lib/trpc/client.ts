@@ -7,6 +7,7 @@ import { getMobileAuthToken, isMobileAuthenticated, refreshMobileSession, withMo
 import { toastError } from "../../components/ui/toast-store";
 import { fetchFromBox, retryDelayMs, shouldRetryOperation } from "./transient";
 import { TRPC_MAX_URL_LENGTH } from "@shared/trpc-url-limit";
+import { runtimeLintLink } from "../runtime-lint/fetch-storm";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -197,5 +198,6 @@ function buildTrpcLink(): TRPCLink<AppRouter> {
  * page, invisibly to every log. (Found the hard way, 2026-06.)
  */
 export const trpcClient = createTRPCClient<AppRouter>({
-  links: [buildTrpcLink()],
+  // Runtime lint counts each query once, ahead of the retry link (`lib/runtime-lint/fetch-storm.ts`).
+  links: [runtimeLintLink<AppRouter>(), buildTrpcLink()],
 });

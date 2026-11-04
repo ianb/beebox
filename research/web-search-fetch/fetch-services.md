@@ -2,7 +2,7 @@
 
 Research date: 2026-10-15. Desk research plus a few unauthenticated GET requests. No sign-ups, no spend, no code changes.
 
-Question: how can an agent (Claude Code in the dev repo, or inside a box on a Hetzner server) get the content of a known URL when plain fetch fails? Sources: [fetch-blocked-pages issue](../../issues/features/2026-10-04-fetch-blocked-pages.md), [server-side capture issue](../../issues/features/2026-09-11-server-side-webpage-capture.md). A sibling report covers search APIs.
+Question: how can an agent (Claude Code in the dev repo, or inside a box on a Hetzner server) get the content of a known URL when plain fetch fails? Sources: [fetch-blocked-pages issue](../../issues/features/2026-10-04-fetch-blocked-pages.md), [server-side capture issue](../../issues/closed/features/2026-09-11-server-side-webpage-capture.md). A sibling report covers search APIs.
 
 How to read the evidence:
 

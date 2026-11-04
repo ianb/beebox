@@ -162,7 +162,9 @@ function objectLevelRefinementFollows(content: string, fieldIndex: number): bool
  * elsewhere): `clerk-contract.ts` `destinationDir` and `share-contract.ts`
  * `dir` are checked against a destination allowlist by their caller;
  * `views.ts` `basePath` goes through `resolveContainedRef`; `admin-google.ts`
- * `returnPath` is an OAuth redirect path, not a filesystem path.
+ * `returnPath` is an OAuth redirect path, not a filesystem path;
+ * `status.ts` `browse.path` goes through `containWithinBox`, the
+ * box-namespace fence, and `verifyBoxNamespaceOnDisk` in the handler body.
  */
 export function scanZodStringFields(content: string, filePath: string): StaticFinding[] {
   const findings: StaticFinding[] = [];

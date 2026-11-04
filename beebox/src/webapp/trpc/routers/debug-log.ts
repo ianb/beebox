@@ -59,6 +59,21 @@ function renderTag(opts: { source: string | undefined; at: string | undefined; r
   return `[${source}] `;
 }
 
+/**
+ * The source the frontend's runtime checks submit under
+ * (`frontend/src/lib/runtime-lint/`). Its entries are kept only on a server
+ * that turned them on: every dev box (`devSurfaces`) and a hosted deployment
+ * with `BBX_RUNTIME_LINT=1`. Elsewhere they are accepted and dropped, so the
+ * client needs no setting of its own.
+ */
+export const RUNTIME_LINT_SOURCE = "runtime-lint";
+let runtimeLintWriting = false;
+
+/** Called once at server start (`startServer`). */
+export function setRuntimeLintWriting(on: boolean): void {
+  runtimeLintWriting = on;
+}
+
 /** Append lines to the box's rolling client-debug.log, truncating when large. */
 async function appendToLogFile(boxRoot: string, lines: string[]): Promise<void> {
   const logFile = path.join(boxRoot, ".beebox", "client-debug.log");
@@ -92,6 +107,7 @@ export const debugLogRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      if (input.source === RUNTIME_LINT_SOURCE && !runtimeLintWriting) return { ok: true };
       const lines: string[] = [];
       const received: Array<{ ts: string; level: string; message: string }> = [];
       for (const entry of input.entries) {

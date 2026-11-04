@@ -38,7 +38,7 @@ async function throwCalendarHttpError(status: number, url: string): Promise<neve
 
 const PRIMARY = { id: "primary", summary: "Main", primary: true, accessRole: "owner" };
 
-const CAL_DIR = "_content/calendar";
+const CAL_DIR = "_content/calendar/Main.attach";
 
 // Boxes made by examples; the teardown removes them all.
 const boxes: Awaited<ReturnType<typeof makeTmpBox>>[] = [];
@@ -149,8 +149,8 @@ void test("Seed the fake with a single recurring weekly event in America/NewYork
   ]);
   const result = await connect(box, calendar).sync();
   const files = await icsNames(box);
-  t.check(result, { success: true, created: ["_content/calendar/2026-06-01_-meeting.ics"], updated: [] });
-  t.check(files, ["2026-06-01_-meeting.ics"]);
+  t.check(result, { success: true, created: ["_content/calendar/Main.attach/2026-06-01_Weekly_sync_-meeting.ics"], updated: [] });
+  t.check(files, ["2026-06-01_Weekly_sync_-meeting.ics"]);
   t.check(await icsLines(box, files[0] ?? ""), syncedIcs(true, [
     "UID:evt-meeting",
     "SUMMARY:Weekly sync",
@@ -195,7 +195,7 @@ void test("Drop an unrecognized .ics into content/calendar/.", async (t) => {
 
   const calendar = primaryCalendar();
   const result = await connect(box, calendar).sync();
-  t.check(result, { success: true, created: [], updated: [], pushed: ["_content/calendar/local-new.ics"] });
+  t.check(result, { success: true, created: [], updated: [], pushed: ["_content/calendar/Main.attach/local-new.ics"] });
   t.check(calendar.events, [
     { id: "evt-1", status: "confirmed", summary: "Locally created", start: { date: "2026-06-01" }, end: { date: "2026-06-02" } },
   ]);
@@ -238,7 +238,7 @@ void test("Sync an event, edit the local .ics, then sync again with Google's upd
 // different `updated` timestamp. Both sides changed since the last pull, so the
 // conflict resolves in Google's favor: the local edit is discarded, the file is
 // overwritten with Google's version, and the change is recorded as a normal
-// update (never a push).
+// update (never a push). The new title renames the file: names follow titles.
 void test("Sync an event, edit the local .ics, and also change Google's copy with a diff...", async (t) => {
   const box = await newBox();
   const calendar = primaryCalendar([
@@ -246,15 +246,16 @@ void test("Sync an event, edit the local .ics, and also change Google's copy wit
   ]);
   const connector = connect(box, calendar);
   await connector.sync();
-  const file = await editFirst(box, { from: "Standup", to: "Standup MINE" });
+  await editFirst(box, { from: "Standup", to: "Standup MINE" });
 
   // A concurrent remote change with a newer `updated` timestamp.
   calendar.events[0]!.summary = "Standup (rescheduled)";
   calendar.events[0]!.updated = "2026-06-02T10:00:00Z";
 
   const result = await connector.sync();
-  const rewritten = await readIcs(box, file);
-  t.check(result, { success: true, created: [], updated: ["_content/calendar/2026-06-02_-standup.ics"] });
+  t.check(result, { success: true, created: [], updated: ["_content/calendar/Main.attach/2026-06-02_Standup_rescheduled_-standup.ics"] });
+  t.check(await icsNames(box), ["2026-06-02_Standup_rescheduled_-standup.ics"]);
+  const rewritten = await readIcs(box, "2026-06-02_Standup_rescheduled_-standup.ics");
   t.check(rewritten.split("\r\n"), syncedIcs(true, [
     "UID:evt-standup",
     "SUMMARY:Standup (rescheduled)",
@@ -299,8 +300,8 @@ void test("Incremental syncs pass Google the stored sync token; when Google repo
   // The second presents the stored token, gets the 410, and falls back to a full sync in the same run.
   const first = await connector.sync();
   const second = await connector.sync();
-  t.check(first, { success: true, created: ["_content/calendar/2026-06-03_evt-1.ics"], updated: [] });
-  t.check(second, { success: true, created: [], updated: ["_content/calendar/2026-06-03_evt-1.ics"] });
+  t.check(first, { success: true, created: ["_content/calendar/Main.attach/2026-06-03_Planning_evt-1.ics"], updated: [] });
+  t.check(second, { success: true, created: [], updated: ["_content/calendar/Main.attach/2026-06-03_Planning_evt-1.ics"] });
   t.check(tokenRejections, 1);
   t.check((await loadCalendarState(box.root)).syncTokens.primary, "fake-sync-token");
 });
@@ -354,7 +355,7 @@ void test("Each calendar is an independent member of the configured working set.
   const connector = connect(box, calendar);
   await connector.sync();
 
-  await box.seed(`${CAL_DIR}/local-new.ics`, localIcs("local-after-failure", { summary: "Push after pull failure", date: "20260613" }));
+  await box.seed("_content/calendar/Good.attach/local-new.ics", localIcs("local-after-failure", { summary: "Push after pull failure", date: "20260613" }));
   box.commitAll("seed local orphan");
 
   exerciseFailure = true;
@@ -365,9 +366,13 @@ void test("Each calendar is an independent member of the configured working set.
   const createdContents = await Promise.all(result.created.map((file) => readFile(join(box.root, file), "utf-8")));
   t.check(result, {
     success: false,
-    created: ["_content/calendar/2026-06-10_ad-first.ics", "_content/calendar/2026-06-12_evt-good.ics"],
+    created: [
+      "_content/calendar/Bad.attach/2026-06-10_Written_before_failure_ad-first.ics",
+      "_content/calendar/Good.attach/2026-06-12_Later_calendar_still_runs_evt-good.ics",
+    ],
     updated: [],
-    pushed: ["_content/calendar/local-new.ics"],
+    // The folder decides the calendar: a file in Good's folder goes to Good.
+    pushed: ["_content/calendar/Good.attach/local-new.ics"],
     error: "Calendar sync failed for bad (incremental-sync, error)",
   });
   t.check(state.syncTokens, { bad: "old-bad", good: "advanced-good-token" });
@@ -381,8 +386,8 @@ void test("Each calendar is an independent member of the configured working set.
     `Sync calendar: partial (3 changed, 1 failed)
 
 New:
-- Written before failure («*», Bad) [ref: _content/calendar/2026-06-10_ad-first.ics]
-- Later calendar still runs («*», Good) [ref: _content/calendar/2026-06-12_evt-good.ics]
+- Written before failure («*», Bad) [ref: _content/calendar/Bad.attach/2026-06-10_Written_before_failure_ad-first.ics]
+- Later calendar still runs («*», Good) [ref: _content/calendar/Good.attach/2026-06-12_Later_calendar_still_runs_evt-good.ics]
 
 Pushed:
 - Push after pull failure (Sat, Jun 13)
@@ -420,8 +425,8 @@ Pulled-By: google-calendar-connector`,
   t.checkText(
     committed,
     `_bookkeeping/connectors/google-calendar-state.json
-_content/calendar/2026-06-10_ad-first.ics
-_content/calendar/2026-06-12_evt-good.ics`,
+_content/calendar/Bad.attach/2026-06-10_Written_before_failure_ad-first.ics
+_content/calendar/Good.attach/2026-06-12_Later_calendar_still_runs_evt-good.ics`,
   );
 });
 
@@ -465,7 +470,7 @@ void test("A real 410 clears the stale token and triggers a full retry.", async 
   const state = await loadCalendarState(box.root);
   t.check(result, {
     success: false,
-    created: ["_content/calendar/2026-06-12_-healthy.ics"],
+    created: ["_content/calendar/Healthy.attach/2026-06-12_Healthy_calendar_-healthy.ics"],
     updated: [],
     error: "Calendar sync failed for expired (full-sync, HTTP 503)",
   });
@@ -495,7 +500,8 @@ void test("The connector builds an EXPLICIT changed-file list and commits exactl
     committedFiles(box),
     `_bookkeeping/connectors/google-calendar-state.json
 _config/connectors/google-calendar.json
-_content/calendar/2026-06-04_t-review.ics`,
+_content/calendar/Main.attach/2026-06-04_Review_t-review.ics
+_content/calendar/Main.calendar.card`,
   );
   t.checkText(execSync("git diff --cached --name-only --relative", { cwd: box.root, encoding: "utf-8" }), "notes.md");
 });
@@ -514,7 +520,7 @@ void test("bookkeeping/connectors/google-calendar-state.json is the index of whi
   const reviewEvent: CalendarEvent = { id: "evt-review", status: "confirmed", summary: "Review", start: { dateTime: "2026-06-04T09:00:00Z" }, end: { dateTime: "2026-06-04T10:00:00Z" } };
   const connector = connect(box, calendar);
   const first = await connector.sync();
-  t.check(first, { success: true, created: ["_content/calendar/2026-06-04_t-review.ics"], updated: [] });
+  t.check(first, { success: true, created: ["_content/calendar/Main.attach/2026-06-04_Review_t-review.ics"], updated: [] });
   t.check(calendar.events, [reviewEvent]);
 
   // Truncate the state file the way an interrupted write would, then sync again.
@@ -536,7 +542,7 @@ void test("bookkeeping/connectors/google-calendar-state.json is the index of whi
   });
   t.check(calendar.events, [reviewEvent]);
   t.checkText(await readFile(statePath, "utf-8"), '{"syncTokens": {}, "eventFiles": {"evt-rev');
-  t.check(await icsNames(box), ["2026-06-04_t-review.ics"]);
+  t.check(await icsNames(box), ["2026-06-04_Review_t-review.ics"]);
 });
 
 // ## A rejected local push fails the sync and keeps the file
@@ -561,7 +567,7 @@ void test("An untracked .ics that Google refuses used to warn and continue, so t
     success: false,
     created: [],
     updated: [],
-    error: "Calendar sync failed for primary _content/calendar/local-new.ics (local-push, HTTP 503)",
+    error: "Calendar sync failed for primary _content/calendar/Main.attach/local-new.ics (local-push, HTTP 503)",
   });
   t.check(inner.events, []);
   t.check(await icsLines(box, "local-new.ics"), [

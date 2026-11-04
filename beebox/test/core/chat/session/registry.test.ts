@@ -11,6 +11,7 @@
 // `isRunning()` reflects which sessions hold a live subprocess.
 
 import { test } from "tap";
+import { once } from "node:events";
 import "@ianbicking/tap-check/tap";
 import { any, is, str } from "@ianbicking/tap-check/check";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
@@ -18,6 +19,11 @@ import { createFakeChatBackend } from "../../../../src/services/claude-chat/core
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { tick, plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
 import { stopChatSessionsAndWait } from "../../../../src/core/chat/session/registry/shutdown.js";
+import { BACKGROUND_STALL_MS } from "../../../../src/core/chat/session/run/live-tasks.js";
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+
+// eslint-disable-next-line no-restricted-syntax -- test-only: the one frame field the pump reads, of the SDK's large union
+const toolProgress = { type: "tool_progress" } as unknown as SDKMessage;
 
 // Hand-advanced deadline clock.
 let clock = 1_000;
@@ -429,7 +435,7 @@ void test("Maintenance cannot be undone by a read warming a session", async (t) 
   const backend = createFakeChatBackend();
   const registry = new ChatSessionRegistry(box.root, { backend });
   await registry.prewarm();
-  registry.quiesceForMaintenance();
+  registry.quiesceForMaintenance("fixture");
   registry.getOrCreate("maintenance-read");
   await registry.prewarm();
   t.check({ warm: backend.hasWarm(), starts: backend.prewarmCount }, {
@@ -443,6 +449,181 @@ void test("Maintenance cannot be undone by a read warming a session", async (t) 
     warm: true,
     starts: 2,
   });
+});
+
+// ## A chat with live background work is not idle
+//
+// A background subagent outlives its parent's turn and touches neither
+// `lastActivity` nor `refCount`, so without this the sweep and the cap both read
+// a working chat as abandoned. Production lost subagent runs this way.
+void test("the sweep keeps a chat with a live background task until it settles or stalls", async (t) => {
+  t.teardown(async () => {
+    try {
+      await registry.shutdown();
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const backend = createFakeChatBackend();
+  const registry = makeRegistry(box, backend);
+  clock = 1_000;
+  const session = registry.getOrCreate("s1");
+  await session.send("go");
+  await tick();
+  const run = backend.lastRun();
+  run?.emitBackgroundTasks(["collect sources"]);
+  await tick();
+  // The set as last reported, for a page that opens after the signal (the `chat.liveTasks` query).
+  t.check(session.liveTaskList(), [{ taskId: "task-0", description: "collect sources" }]);
+
+  // Past the idle timeout with a live task: it stays, and its run stays open.
+  clock += 60_000;
+  registry.sweepIdle();
+  t.check({ size: registry.size(), running: session.isRunning(), aborted: run?.aborted }, { size: 1, running: true, aborted: false });
+
+  // A progress frame the adapter drops still counts as the run being alive.
+  clock += BACKGROUND_STALL_MS - 1_000;
+  run?.emitMessage(toolProgress);
+  await tick();
+  clock += 2_000;
+  registry.sweepIdle();
+  t.check(registry.size(), 1);
+
+  // The task settles: the ordinary idle rule applies, and input closes gently.
+  run?.emitBackgroundTasks([]);
+  await tick();
+  t.check({ working: session.isWorkingInBackground(), tasks: session.liveTaskList() }, { working: false, tasks: [] });
+  registry.sweepIdle();
+  await tick();
+  t.check({ size: registry.size(), running: session.isRunning(), aborted: run?.aborted }, { size: 0, running: false, aborted: false });
+
+  // Maintenance reads the set itself, not the stall rule: a run quiet past the
+  // limit still reports its task, so a deferrable owner never closes it
+  // (`docs/implemented-plans/maintenance-live-tasks.md`).
+  const quiet = registry.getOrCreate("s-quiet");
+  await quiet.send("go");
+  await tick();
+  backend.lastRun()?.emitBackgroundTasks(["silent shell"]);
+  const quietDone = once(quiet, "done");
+  backend.lastRun()?.emitResult();
+  await quietDone;
+  clock += BACKGROUND_STALL_MS;
+  t.check({ working: quiet.isWorkingInBackground(), snapshot: registry.snapshotAll().find((entry) => entry.sessionId === "s-quiet") }, {
+    working: false,
+    snapshot: { sessionId: "s-quiet", running: true, busy: false, liveTasks: 1 },
+  });
+  quiet.stop();
+  await tick();
+
+  // A run that has gone quiet past the limit is hung. It goes, and ends outright.
+  const hung = registry.getOrCreate("s2");
+  await hung.send("go");
+  await tick();
+  const hungRun = backend.lastRun();
+  hungRun?.emitBackgroundTasks(["stuck"]);
+  await tick();
+  clock += BACKGROUND_STALL_MS;
+  registry.sweepIdle();
+  await tick();
+  t.check({ size: registry.size(), running: hung.isRunning(), aborted: hungRun?.aborted }, { size: 0, running: false, aborted: true });
+
+  // A later run on the same session starts with no live tasks: the last run's
+  // set must not pin it. The fake's fresh run reports none.
+  const again = registry.getOrCreate("s3");
+  await again.send("go");
+  await tick();
+  backend.lastRun()?.emitBackgroundTasks(["a"]);
+  await tick();
+  again.restart();
+  await tick();
+  t.check(again.isWorkingInBackground(), false);
+  await again.send("again");
+  await tick();
+  t.check(again.isWorkingInBackground(), false);
+});
+
+void test("the live cap passes over a chat with background work", async (t) => {
+  t.teardown(async () => {
+    try {
+      await registry.shutdown();
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const backend = createFakeChatBackend();
+  const registry = makeRegistry(box, backend);
+  clock = 1_000;
+  const working = registry.getOrCreate("working");
+  await working.send("go");
+  await tick();
+  const workingRun = backend.lastRun();
+  workingRun?.emitBackgroundTasks(["collect sources"]);
+  await tick();
+  registry.touch("working", { subprocessUse: true });
+  clock = 2_000;
+  const plain = registry.getOrCreate("plain");
+  await plain.send("go");
+  await tick();
+  registry.touch("plain", { subprocessUse: true });
+  clock = 3_000;
+  registry.getOrCreate("third");
+
+  // `working` is the least recently used, and `plain` gives its process up instead.
+  registry.enforceLiveCap("third");
+  await tick();
+  t.check({ working: working.isRunning(), plain: plain.isRunning() }, { working: true, plain: false });
+
+  // With only working chats left to choose from, the cap declines.
+  const quiet = registry.getOrCreate("quiet");
+  await quiet.send("go");
+  await tick();
+  backend.lastRun()?.emitBackgroundTasks(["more"]);
+  await tick();
+  registry.enforceLiveCap("third");
+  await tick();
+  t.check({ working: working.isRunning(), quiet: quiet.isRunning() }, { working: true, quiet: true });
+});
+
+// ## Ending a run with tasks live
+//
+// `close()` only ends input, and a subagent carries on with its Bash calls
+// refused in a user's name. So stop and restart end the process when tasks are
+// live, and stay gentle otherwise.
+void test("stop and restart abort a run only while tasks are live", async (t) => {
+  t.teardown(async () => {
+    try {
+      await registry.shutdown();
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const backend = createFakeChatBackend();
+  const registry = makeRegistry(box, backend);
+  const session = registry.getOrCreate("s1");
+  const cases: [string, () => void, string[]][] = [
+    ["stop, no tasks", () => { session.stop(); }, []],
+    ["stop, live task", () => { session.stop(); }, ["x"]],
+    ["restart, no tasks", () => { session.restart(); }, []],
+    ["restart, live task", () => { session.restart(); }, ["x"]],
+  ];
+  const seen: Record<string, boolean | undefined> = {};
+  for (const [name, act, tasks] of cases) {
+    await session.send("go");
+    await tick();
+    const run = backend.lastRun();
+    run?.emitBackgroundTasks(tasks);
+    await tick();
+    act();
+    await tick();
+    seen[name] = run?.aborted;
+  }
+  t.check(seen, { "stop, no tasks": false, "stop, live task": true, "restart, no tasks": false, "restart, live task": true });
 });
 
 // ## Shutdown during a prewarm's probe spawns nothing
