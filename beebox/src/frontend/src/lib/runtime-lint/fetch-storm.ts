@@ -9,7 +9,7 @@
  * `fetchStatus` is not the counting point: invalidating an active query
  * cancels and restarts it while the status stays "fetching".
  *
- * Plan: `docs/plans/runtime-lint.md`, Track 2.
+ * Plan: `docs/implemented-plans/runtime-lint.md`, Track 2.
  */
 
 import type { TRPCLink } from "@trpc/client";

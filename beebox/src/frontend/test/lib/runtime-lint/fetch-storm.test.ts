@@ -1,6 +1,6 @@
 // Runtime lint `fetch-storm`: one request (procedure and input) starting more
 // than 8 times in 10 s is reported, counted at the tRPC link above the retry
-// link, so a transport retry does not count. Plan: docs/plans/runtime-lint.md,
+// link, so a transport retry does not count. Plan: docs/implemented-plans/runtime-lint.md,
 // Track 2.
 // First, and bare: the page buffer lives on the happy-dom window.
 import "../../helpers/dom-globals.js";

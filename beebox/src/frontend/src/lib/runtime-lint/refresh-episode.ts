@@ -5,7 +5,7 @@
  * A path change or unmount ends the episode with no record: that is the view
  * moving on, not a recovery.
  *
- * Plan: `docs/plans/runtime-lint.md`, Track 2.
+ * Plan: `docs/implemented-plans/runtime-lint.md`, Track 2.
  */
 
 import { useEffect, useRef } from "react";

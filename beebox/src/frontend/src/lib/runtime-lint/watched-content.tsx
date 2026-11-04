@@ -12,7 +12,7 @@
  * mounted component whose key changes is not an unmount. Closing a tab or navigating unmounts the `FileView`, which
  * discards its scope, so navigation is never counted.
  *
- * Plan: `docs/plans/runtime-lint.md`, Track 2.
+ * Plan: `docs/implemented-plans/runtime-lint.md`, Track 2.
  */
 
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from "react";

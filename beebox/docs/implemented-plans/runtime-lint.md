@@ -1,6 +1,6 @@
 ---
 title: "Runtime lint: the frontend reports problem React behavior to the box log"
-status: partial
+status: implemented
 workstream: contents-menu-stable
 issues: []
 ---
@@ -302,9 +302,12 @@ motivation only.
 
 ### Track 4 — Hosted activation
 
-- **Status:** not part of the merge. The session performs it right after
-  landing, with the boxholder's yes ("turn it on ... after you land").
-  Tracks 1 to 3 are implemented and merged.
+- **Status:** done 2026-11-04, with the boxholder's yes ("turn it on ...
+  after you land"). `BBX_RUNTIME_LINT=1` was added to the hub's
+  `/home/beebox/.env` and applied by a controller redeploy of `c71b2406b`.
+  The hub wrote it into `/etc/beebox/box.env`, and all seven box units
+  run with it. A test `debugLog.submit` entry with source `runtime-lint`
+  was written to a box's `client-debug.log`.
 - **What:** set `BBX_RUNTIME_LINT=1` in the hosted deployment's box server
   environment, and confirm a test line arrives in a box's `client-debug.log`.
 - **Why:** the boxholder asked for it on for the hosted deployment. Until

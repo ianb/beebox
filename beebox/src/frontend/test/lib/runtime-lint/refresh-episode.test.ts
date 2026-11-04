@@ -1,7 +1,7 @@
 // Runtime lint `refresh-failed`: an open card whose refresh fails reports the
 // failure and its kind, then the recovery with how long it lasted. Moving to
 // another path ends the episode with no recovery record.
-// Plan: docs/plans/runtime-lint.md, Track 2.
+// Plan: docs/implemented-plans/runtime-lint.md, Track 2.
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
