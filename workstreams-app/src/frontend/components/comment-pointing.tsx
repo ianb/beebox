@@ -147,6 +147,7 @@ export function CommentOverlay({ hovered, anchored, layoutKey, onMarker }: {
 }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [layoutTick, setLayoutTick] = useState(0);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const update = (): void => {
       setRect(hovered?.getBoundingClientRect() ?? null);
@@ -154,25 +155,39 @@ export function CommentOverlay({ hovered, anchored, layoutKey, onMarker }: {
       // Repaint markers after layout even when there is no hovered element.
       setLayoutTick((value) => value + 1);
     };
-    const frame = requestAnimationFrame(update);
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    window.visualViewport?.addEventListener("scroll", update);
-    window.visualViewport?.addEventListener("resize", update);
+    let frame: number | null = null;
+    const schedule = (): void => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => { frame = null; update(); });
+    };
+    schedule();
+    const parent = overlayRef.current?.parentElement;
+    const root = overlayRef.current?.getRootNode();
+    const shadowHost = root instanceof ShadowRoot ? root.host : null;
+    const observer = new ResizeObserver(schedule);
+    for (const element of new Set([parent, parent?.parentElement, shadowHost])) {
+      if (element !== null && element !== undefined) observer.observe(element);
+    }
+    window.addEventListener("scroll", schedule, true);
+    window.addEventListener("resize", schedule);
+    window.visualViewport?.addEventListener("scroll", schedule);
+    window.visualViewport?.addEventListener("resize", schedule);
     return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-      window.visualViewport?.removeEventListener("scroll", update);
-      window.visualViewport?.removeEventListener("resize", update);
+      if (frame !== null) cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("resize", schedule);
+      window.visualViewport?.removeEventListener("scroll", schedule);
+      window.visualViewport?.removeEventListener("resize", schedule);
     };
   }, [hovered, layoutKey]);
+  const topInset = Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
   return (
-    <div className="comment-overlay" aria-hidden={false} data-layout-tick={layoutTick}>
+    <div className="comment-overlay" aria-hidden={false} data-layout-tick={layoutTick} ref={overlayRef}>
       {rect === null ? null : <div className="comment-target-outline" style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }} />}
       {anchored.map(({ comment, location }) => {
         const marker = bounds(location);
-        if (marker.bottom <= 0 || marker.top >= window.innerHeight || marker.right <= 0 || marker.left >= window.innerWidth) return null;
+        if (marker.bottom <= 0 || marker.top < topInset || marker.top >= window.innerHeight || marker.right <= 0 || marker.left >= window.innerWidth) return null;
         return <button
           key={comment.id}
           className="comment-marker"

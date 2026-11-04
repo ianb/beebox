@@ -101,6 +101,12 @@ to enlarge the picked target. The raw-page strip reserves its changing height
 so content stays visible on a phone. Desktop, phone, touch, raw-page link,
 image-target, and saved-marker checks used a local worktree app instance;
 temporary comments were cleared.
+The revised UI's Claude Opus 5.5 review led to markers being repainted after
+header size changes, short editable context for very long element descriptions,
+raw-page scroll clearance, and a fallback for standalone links and icon-only
+controls. Browser checks confirmed that a marker stayed aligned after resizing
+the draft, an icon-only control quoted its label, and a link worked again after
+leaving comment mode.
 The branch is not merged.
 Claude Opus 5.5 reviewed the implementation in two rounds. Its findings led
 to marker matching for nested wrappers, stable drag tracking, persistent read

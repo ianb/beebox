@@ -41,6 +41,17 @@ export function commentTarget(node: Element | null, root: HTMLElement): Element 
     if (!(current instanceof HTMLElement) && !(current instanceof SVGElement)) continue;
     if (!current.matches(TARGET_SELECTOR) && !current.matches("a, button")) continue;
     if (current.getBoundingClientRect().width === 0 || current.getBoundingClientRect().height === 0) continue;
+    const control = current.closest("a, button");
+    const caption = current.closest("figure")?.querySelector("figcaption")?.textContent.trim();
+    const unnamedVisual = current.matches("svg, img")
+      && !current.getAttribute("aria-label")?.trim()
+      && !(current instanceof HTMLImageElement && current.alt.trim())
+      && !current.textContent.trim()
+      && !caption;
+    if (unnamedVisual && control !== null && root.contains(control)) {
+      fallback ??= control;
+      continue;
+    }
     if (current.matches(TARGET_SELECTOR)) return current;
     fallback ??= current;
   }
@@ -53,9 +64,9 @@ function descriptionFor(element: Element): string {
     const source = element.getAttribute("src") ?? "";
     return (caption || element.alt.trim() || (source.startsWith("data:") ? "Inline image" : source) || "Image").slice(0, 10_000);
   }
-  const label = element.getAttribute("aria-label")?.trim();
+  const label = element.getAttribute("aria-label")?.trim() || element.getAttribute("title")?.trim();
   const text = element.textContent.replace(/\s+/gu, " ").trim();
-  return (label || text || caption || element.getAttribute("src") || element.tagName.toLowerCase()).slice(0, 10_000);
+  return (label || text || caption || element.getAttribute("href") || element.getAttribute("src") || element.tagName.toLowerCase()).slice(0, 10_000);
 }
 
 /** An element path is checked against its tag and quote when read back. */

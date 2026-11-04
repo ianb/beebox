@@ -218,10 +218,10 @@ A person reading an exhibit can leave a remark on it, typed or spoken, from
 the page. **Comment** turns on pointing mode and shows the open count. Hovering
 outlines a target; clicking or tapping a block, image, or chart puts its
 description into the comment input in the page header. A link inside a text
-block picks that block; a standalone link or button can be picked directly. Selecting text puts that
-span into the same input. The picked context is editable; **Cancel** lets the
-person point again. While the mode
-is on, a tap on a link picks it instead of following it. **Done commenting**
+block picks that block; a standalone link or button can be picked directly.
+Selecting text puts that span into the same input. The picked context is
+editable; **Cancel** lets the person point again. While the mode is on, a tap
+on a link does not follow it. **Done commenting**
 restores normal page actions. The mode also shows markers for saved comments;
 **Show all comments** lists them and can return to a target. Existing text
 highlights remain visible when the mode is off. "Comment on the whole exhibit"
