@@ -20,6 +20,17 @@ import { opaqueId, reportRuntimeLint, type Surface } from "./report";
 /** How soon a return counts as a replacement: a same-commit swap or a short loading flash. */
 const REPLACED_WITHIN_MS = 2000;
 
+/**
+ * Development only: a hot update remounts components on purpose. A return
+ * within the window after the last update is not reported.
+ */
+let lastHotUpdate = Number.NEGATIVE_INFINITY;
+if (import.meta.hot) {
+  import.meta.hot.on("vite:beforeUpdate", () => {
+    lastHotUpdate = performance.now();
+  });
+}
+
 interface Watched {
   count: number;
   /** Set when the count dropped and has not come back yet. */
@@ -44,7 +55,8 @@ export function createViewScope(now: () => number): ViewScope {
       if (drop !== null && watched.count >= drop.level) {
         watched.drop = null;
         const gapMs = Math.round(now() - drop.at);
-        if (gapMs <= REPLACED_WITHIN_MS) reportRuntimeLint({ check: "content-replaced", surface, content: opaqueId(key), gapMs });
+        const hotReload = performance.now() - lastHotUpdate <= REPLACED_WITHIN_MS;
+        if (gapMs <= REPLACED_WITHIN_MS && !hotReload) reportRuntimeLint({ check: "content-replaced", surface, content: opaqueId(key), gapMs });
       }
       return () => {
         watched.count -= 1;
