@@ -59,6 +59,8 @@ const SCRIPT_ENV_PLAIN: readonly string[] = [
   "LC_CTYPE",
   "LC_MESSAGES",
   "UV_TORCH_BACKEND", // `uvx docling` (services/docling/core.ts) must resolve the same PyTorch build the host prefetched; the container image sets cpu.
+  "UV_CACHE_DIR", // the host's shared uv cache (hub/box-env-file.ts); without it an agent-run conversion builds a private multi-GB environment and misses the host Docling lock (services/docling/subprocess.ts).
+  "HF_HOME", // the host's shared Docling model cache (hub/box-env-file.ts); without it each box downloads the weights again.
 
   // --- Claude Agent SDK / codex config knobs (not credentials) ---
   "CODEX_HOME", // Keep explicit agent env aligned with auth preflight and plugin installation.

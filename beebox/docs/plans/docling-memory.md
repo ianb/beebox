@@ -9,9 +9,9 @@ issues:
 
 On 2026-11-03 two concurrent Docling conversions pushed a hosted box past its
 1 GiB `MemoryHigh` and stalled the box server and chat. This plan cuts one
-conversion's peak memory by about half and makes it independent of page count.
-It also runs one conversion at a time per host, reports a memory kill clearly,
-and gives each box a 2 GiB limit.
+conversion's peak memory by about half and stops it holding every page's
+render until the end. It also runs one conversion at a time per box and per
+host, reports a memory kill clearly, and gives each box a 2 GiB limit.
 
 **Issues addressed:** `issues/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md`.
 Searched the queue for `docling`, `UV_CACHE_DIR`, `HF_HOME`, `uv cache`: no
@@ -36,7 +36,7 @@ Chosen design, four tracks:
 
 1. A Python conversion driver replaces the `docling convert` CLI call (about
    170 lines of Python, 60 changed lines in `services/docling/core.ts`).
-2. One conversion at a time per host (about 30 lines).
+2. One conversion at a time per box and per host (about 50 lines).
 3. A clear error when a conversion is killed for memory (about 40 lines).
 4. Deploy and env: `MemoryHigh=2G`, `MemoryMax=2560M`, `OOMPolicy=continue`,
    and `UV_CACHE_DIR`/`HF_HOME` reach agent subprocesses (about 10 lines).
@@ -58,8 +58,14 @@ docs (decisions-log D18, the issue). Not a BIG CHANGE.
   Kept in spirit: still one `uvx` subprocess per document, no resident service.
   Only the entry point changes, from `docling convert` to `python -I convert.py`.
 - **One lock primitive** (`src/lib/file-lock.ts:9-10`: *"Don't add a new lock
-  surface elsewhere — extend or wrap this instead."*). Kept: the host lock is
-  `withFileLock`.
+  surface elsewhere — extend or wrap this instead."*). Traded against. The
+  Docling locks are kernel `flock` locks held by the Python driver.
+  `withFileLock` is only fresh while Node's event loop refreshes it
+  (`file-lock.ts`, staleness section), and the stall this plan fixes is memory
+  pressure, which can pause that loop past the 5-minute stale window while
+  Docling keeps running. A kernel lock lives exactly as long as the process
+  that uses the memory. `file-lock.ts`'s header gains a line naming this
+  exception and why.
 - **Engineering principle 4, resilient and never silent.** A memory kill
   becomes a named failure on the card, never a stall.
 - **Boxholder decision 2026-11-03**: give every box 2 GiB rather than move
@@ -71,8 +77,8 @@ docs (decisions-log D18, the issue). Not a BIG CHANGE.
   (`doclingArgs`, `createDoclingService`). Reuse: keep the `DoclingService`
   interface, `collectOutputs`, `checkExtractionBounds`, `captureTail`, and the
   awake timeout. Only the argv, env, and failure classification change.
-- `src/lib/file-lock.ts` — `withFileLock({ lockPath, metadata, waitMs }, fn)`;
-  throws `LockHeldError` when the budget runs out. Reuse for the host lock.
+- `src/lib/file-lock.ts` — `withFileLock`. Evaluated, not used: see the
+  lock-primitive preference above.
 - `src/shared/awake-timeout.ts` — `startAwakeTimeout`. Reuse as is.
 - `src/lib/package-root.ts` `PACKAGE_ROOT`, and the shipped-asset pattern
   `src/core/agent-guide/guide/core.ts:28`: *`join(PACKAGE_ROOT, "src", "core", "agent-guide", "guide.md")`*
@@ -114,14 +120,20 @@ No new nouns in the box's vocabulary. Code-level names:
   argv; writes `<stem>.md`, `<stem>.json`, `<stem>_artifacts/page_NNNNNN_<sha>.png`
   and `image_NNNNNN_<sha>.png`, the same layout the CLI writes and
   `collectOutputs` reads (D5). It is not a service or a daemon.
-- **Host Docling lock** — `<uv cache dir>/bbx-docling.lock`, a `withFileLock`
-  lock. The uv cache dir is `UV_CACHE_DIR`, else `$XDG_CACHE_HOME/uv`, else
-  `~/.cache/uv`: the directory every box on a host already shares for Docling.
-  It is not a per-box lock: one host-wide lock covers per-box exclusion too.
-- **Memory kill** — the Docling process ended by `SIGKILL` (or exit 137 from
-  `uv`) while the cgroup's `memory.events` `oom_kill` count rose. On a host
-  without cgroup v2 (macOS), a `SIGKILL` we did not send is reported as a
-  probable memory kill.
+- **Box Docling lock** — `$HOME/.cache/bbx-docling.lock`, a kernel `flock`
+  the driver holds for its whole run. On a hosted host each box is its own user
+  with its own `HOME`, so this is per box; on a laptop it is per user, which is
+  stricter. Taken first.
+- **Host Docling lock** — `$UV_CACHE_DIR/bbx-docling.lock`, taken second, only
+  when `UV_CACHE_DIR` is set (prod sets it for every box,
+  `src/hub/box-env-file.ts:32`). Without it there is no shared directory to
+  name, and the box lock is the only one.
+- **Docling exit outcome** — one of: `ok`; `timeout` (our awake budget fired);
+  `busy` (driver exit 75, lock wait ran out); `oom` (SIGKILL or exit 137 and
+  this cgroup's `memory.events` `oom_kill` count rose during the run);
+  `killed` (SIGKILL or 137 with no such evidence, including where the counter
+  is unreadable); `failed` (any other non-zero exit). `uv` reports a SIGKILLed
+  child as exit 137 (measured).
 
 ## Tracks / scope
 
@@ -136,7 +148,10 @@ No new nouns in the box's vocabulary. Code-level names:
   `standard_pdf_pipeline.py:1075-1104` does, and frees the render. It writes
   JSON in placeholder mode (URIs already set) and markdown in referenced mode.
   It writes output only on `ConversionStatus.SUCCESS`, as the CLI does
-  (`cli/main.py:481`).
+  (`cli/main.py:481`). Deliberate difference: on another status the CLI exits 0
+  with no files, and the driver exits 1 with the status and Docling's errors.
+  Empty markdown stays a success with an empty body, as today: the CLI marks it
+  failed (`cli/main.py:554-568`) but still exits 0 with both files written.
 - **Why:** the CLI's memory grows about 14 MB per page and peaks at a fixed
   ~1.4 GB even on 9 pages (table below).
 - **Direction:** `core.ts` runs
@@ -153,17 +168,21 @@ No new nouns in the box's vocabulary. Code-level names:
 
 ### Track 2: one conversion at a time per host
 
-- **What:** `extract` takes the host Docling lock before it spawns `uvx`, and
-  starts the 10-minute awake budget only after the lock is held.
+- **What:** the driver takes the box lock, then the host lock, before it
+  imports Docling (a waiting driver costs about 10 MB, not 550). It prints
+  `bbx-docling: lock acquired` on stderr. `core.ts` runs a 30-minute awake
+  budget from spawn and replaces it with the 10-minute conversion budget when
+  that line appears.
 - **Why:** the incident was two concurrent conversions. Seven boxes share one
   3.8 GB host, so per-box exclusion alone still allows seven at once.
-- **Direction:** `withFileLock({ lockPath: hostDoclingLockPath(env), metadata: { purpose: "docling", source }, waitMs: 20 * 60_000 }, run)`.
-  On `LockHeldError` the failure reads: *"Another Docling conversion on this
-  host ran for over 20 minutes; this PDF was not converted. Retry later; do not
-  start conversions in parallel."* `createDoclingService({ lockDir? })` takes
-  an override so tests do not touch the real uv cache.
-- **First chunk:** lock path function, the wrapper, and a test that two
-  concurrent `extract` calls against a fake `uvx` never overlap.
+- **Direction:** request fields `lockPaths: string[]` (from a pure
+  `doclingLockPaths(env, homedir)`) and `lockWaitSeconds: 1200`. Exit 75 when
+  the wait runs out. The failure reads: *"Another Docling conversion on this
+  box or host ran for over 20 minutes; this PDF was not converted. Retry later,
+  one at a time."* The driver also watches `parentPid` and exits within 2 s
+  when Node is gone, so an orphan cannot keep the lock and the memory.
+- **First chunk:** lock-path function and its test; driver locking checked in
+  the VM with two concurrent runs and a SIGSTOPped holder.
 
 ### Track 3: a clear reason for a memory kill
 
@@ -171,18 +190,26 @@ No new nouns in the box's vocabulary. Code-level names:
   cause becomes a memory failure.
 - **Why:** today the card says `Docling exited 137: <tail>` or nothing useful,
   and the agent retries.
-- **Direction:** a pure `classifyDoclingExit({ exitCode, signal, aborted, oomKillsBefore, oomKillsAfter })`.
-  Read `oom_kill` from `/sys/fs/cgroup/<path from /proc/self/cgroup>/memory.events`
-  before and after; `null` where unreadable. Message: *"Docling ran out of
-  memory and was stopped (the box's memory limit). Do not retry in parallel;
-  retry once when nothing else is converting, or use a smaller PDF."*
+- **Direction:** a pure `classifyDoclingExit({ exitCode, signal, timedOut, oomKillsBefore, oomKillsAfter })`
+  returning the outcome above. Read `oom_kill` from
+  `/sys/fs/cgroup/<path from /proc/self/cgroup>/memory.events` before and
+  after; `null` where unreadable. `oom` reads: *"Docling was killed during an
+  out-of-memory event in this box. Do not retry in parallel; retry once when
+  nothing else is converting, or use a smaller PDF."* `killed` says it was
+  killed by a signal beebox did not send and that memory is the usual cause.
+- **Limit:** if the OOM killer picks the `bbx` process that waits on Docling
+  instead, nothing is left to write the card error. The box journal records the
+  kill. Accepted: making the error survive its caller needs durable job state,
+  which this plan does not add.
 - **First chunk:** the classifier and its table test.
 
 ### Track 4: deploy limits and env
 
-- `deploy/systemd/box-sandbox.conf`: `MemoryHigh=2G`, `MemoryMax=2560M`,
-  `OOMPolicy=continue` (an OOM kill ends the killed process, not the box), and
-  the comment rewritten with the measurements.
+- `deploy/systemd/box-sandbox.conf`: `MemoryHigh=2G` (boxholder decision).
+  Proposed with it, for the boxholder's yes before deploy: `MemoryMax=2560M`
+  (today `MemoryMax=2G`, which would leave no throttle band above the new
+  `MemoryHigh`) and `OOMPolicy=continue` (today an OOM kill of any process
+  stops the whole unit). The comment is rewritten with the measurements.
 - `src/core/script-env/allowlist.ts`: add `UV_CACHE_DIR` and `HF_HOME`, so
   agent-started conversions use the host caches and the host lock.
 - Lands with the code. Takes effect on deploy (a separate yes).
@@ -210,12 +237,12 @@ none
 |---|---|---|---|
 | A driver option drifts from the CLI's, so output changes | Integration test (real Docling, skips without it) plus the D18 byte comparison | Options mirror `cli/main.py`; comparison recorded | Clear on comparison; silent in prod. Revisit on every Docling upgrade (D3) |
 | `convert.py` missing from a published package | New test asserts `package.json` `files` lists it | `extract` fails with "Docling could not be run" | Clear on the card |
-| The host lock is held by a SIGKILLed `bbx` | file-lock's stale reclaim (5 min) | Waiters wait up to 5 min, then proceed | Clear (delay only) |
-| The Node parent is killed mid-conversion | Driver unit check (parent PID gone, driver exits 70) | Watch thread, 2 s poll | Silent but bounded to 2 s of overlap |
-| The OOM killer picks the box server, not Docling | Not testable locally | `OOMPolicy=continue`; Docling is the largest process at ~1.1 GB | Clear: unit restart in the journal |
-| `memory.events` unreadable (macOS, cgroup v1) | Classifier table test | Falls back to "probable memory kill" on SIGKILL | Clear |
-| Lock dir not writable | Test with a read-only dir | `extract` returns err "could not take the host Docling lock" | Clear |
-| The 20-minute wait expires | Test with a short `waitMs` | Named failure on the card | Clear |
+| The lock holder's Node process stalls under memory pressure | VM check: SIGSTOP the parent | Kernel `flock` held by the driver; no staleness | Clear (others wait) |
+| The Node parent is killed mid-conversion | VM check: kill the parent, driver exits within 2 s | Watch thread, 2 s poll; kernel releases the lock on exit | Clear (lock frees on exit) |
+| The OOM killer picks the `bbx` caller or the server, not Docling | VM check: which process the OOM killer picks with a server-sized neighbour | Docling is the largest process (~1.1 GB); `OOMPolicy=continue` if approved | Clear in the journal; no card error (accepted, Track 3) |
+| `memory.events` unreadable (macOS, cgroup v1) | Classifier table test | Outcome `killed`, never `oom` | Clear |
+| A lock file cannot be opened | Driver exits 1 with the path | `failed` with the `bbx-docling:` reason | Clear |
+| The 20-minute wait expires | Classifier test for exit 75 | `busy` message on the card | Clear |
 
 No critical gaps.
 
@@ -223,16 +250,17 @@ No critical gaps.
 
 - **Wrong tag / wrong field:** no new vocabulary. ADDRESSED.
 - **Stale ref:** none introduced. ADDRESSED.
-- **Two agents touching the same card:** two reanalyses of the same PDF now
-  serialize on the host lock; each writes its own work dir. ADDRESSED (Track 2).
+- **Two agents touching the same card:** two reanalyses of the same PDF
+  serialize their conversions, but `extractPdf` writes the card's attach
+  directory after the lock is released (`src/core/pdf/extract.ts:143-159`).
+  GAP, out of scope: same-card write serialization is not a memory problem.
 - **Hand-edit drift:** none. ADDRESSED.
 - **Fabricated free-form value:** none. ADDRESSED.
 - **Validation error UX:** the busy and memory messages say what happened and
   what not to do. ADDRESSED (Tracks 2, 3).
 - **Agent Bash timeout:** an agent's tool timeout can kill `bbx` while it waits
-  or converts. The driver exits within 2 s, the lock is released (or reclaimed
-  after 5 min on SIGKILL), and a retry waits its turn rather than doubling
-  memory. ADDRESSED.
+  or converts. The driver exits within 2 s, the kernel releases the locks, and a
+  retry waits its turn rather than doubling memory. ADDRESSED.
 - **Partial rollout:** code without the systemd change keeps the 1 GiB limit.
   Conversions then still exceed it, one at a time instead of two. The deploy
   carries both together.
@@ -267,7 +295,13 @@ explain themselves on the card.
   table, and serialization of two concurrent `extract` calls through a fake
   `uvx` on `PATH`.
 - `test/core/pdf/extract.integration.test.ts` (existing): real Docling through
-  the new driver; it skips loudly where Docling is not installed.
+  the new driver on a one-page text PDF; it skips loudly where Docling is not
+  installed. It catches a broken driver, not option drift: it checks no
+  figures and no OCR.
+- The byte comparison in D18, which is what covers option drift: six PDFs
+  (9 to 333 pages, digital and scanned), OCR `off`, `regions` and `replace`
+  with a language override, tables and figures. Repeat it on each Docling
+  upgrade.
 - `package.json` `files` check for `convert.py`.
 - D18 in the decisions log records the measurement method, so the next
   Docling upgrade can repeat it.
@@ -284,7 +318,10 @@ explain themselves on the card.
 ## Rollout shape
 
 Done when the new unit tests, the existing PDF tests, typecheck, layout-check,
-and lint pass, and the driver's output matches the CLI's on the six test PDFs
-(page and figure file hashes, markdown, JSON apart from paths). No data
+and lint pass; the driver's output matches the CLI's on the six test PDFs
+(page and figure file hashes, markdown, JSON apart from paths); and an
+acceptance run in a 2 GiB cgroup beside a 550 MB stand-in for the server and
+chat converts the 333-page manual and the scanned PDF, with total memory,
+swap, pressure, time, and the stand-in's worst stall recorded in D18. No data
 migration: cards keep their format; `bbx pdf reanalyze` produces identical
 assets. Deploy is a separate yes; it installs the drop-in and restarts boxes.
