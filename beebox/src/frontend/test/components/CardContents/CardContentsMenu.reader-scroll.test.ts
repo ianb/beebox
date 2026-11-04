@@ -59,3 +59,17 @@ void test("the open list leaves out a heading that is not on screen", async (t) 
   await view.act(() => { button?.click(); });
   t.check([...document.querySelectorAll("[role=menuitem]")].map((item) => item.textContent), SECTIONS);
 });
+
+void test("when the page itself scrolls, Page Down on a control in the card makes it full", async (t) => {
+  const front = createRef<HTMLDivElement>();
+  const view = await mount(h("div", { ref: front },
+    h(CardContentsMenu, { id: "contents", frontRef: front, entries }),
+    h("button", { id: "in-card" }, "A control in the card"),
+    h("div", { "data-card-outline": "" }, ...SECTIONS.map((text) => h("h2", { key: text, id: text.toLowerCase() }, text)))));
+  t.teardown(() => view.unmount());
+  await view.act(() => {
+    view.container.querySelector("#in-card")?.dispatchEvent(new KeyboardEvent("keydown", { key: "PageDown", bubbles: true }));
+    window.dispatchEvent(new Event("scroll"));
+  });
+  t.check(view.container.querySelector(".bbx-card-contents")?.hasAttribute("data-scrolling"), true);
+});

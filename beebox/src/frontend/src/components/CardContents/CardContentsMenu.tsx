@@ -136,13 +136,16 @@ export function CardContentsMenu({ id, frontRef, entries }: {
     const input = () => {
       lastInput.current = performance.now();
     };
-    // A drag on the scroller's own scrollbar; a press on the text selects it.
+    // A drag on the scroller's own scrollbar (the page's, when the window
+    // scrolls); a press on the text selects it.
+    const scrollbarOwner = scroller ?? document.documentElement;
     const onPointerDown = (event: Event) => {
-      if (event.target === scroller) input();
+      if (event.target === scrollbarOwner) input();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (!SCROLL_KEYS.has(event.key) || isEditable(event.target)) return;
-      const inCard = event.target === document.body || (event.target instanceof Node && scroller?.contains(event.target) === true);
+      const within = scroller ?? front;
+      const inCard = event.target === document.body || (event.target instanceof Node && within.contains(event.target));
       if (inCard) input();
     };
     const onScroll = () => {
@@ -166,7 +169,17 @@ export function CardContentsMenu({ id, frontRef, entries }: {
     target.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     target.addEventListener("scroll", onScroll, { passive: true });
+    // Text added or removed above a heading moves it without a scroll event
+    // (at the top of the card, nothing anchors the reader's place).
+    const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => {
+      if (frame === 0) frame = requestAnimationFrame(() => {
+        frame = 0;
+        findCurrent();
+      });
+    });
+    resize?.observe(front);
     return () => {
+      resize?.disconnect();
       target.removeEventListener("wheel", input);
       target.removeEventListener("touchstart", input);
       target.removeEventListener("touchmove", input);
