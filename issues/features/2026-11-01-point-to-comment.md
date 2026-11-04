@@ -16,9 +16,9 @@ selection made during transcription is placed in the spoken message. This
 works on a desktop but text selection is slow on a phone and cannot directly
 choose a whole image, chart, or table.
 
-The boxholder wants a visible Comment mode in the document's top bar. In that
-mode, a tap or click selects the block under the pointer. The existing `+`
-attaches that selection to chat. The person can then type or dictate in the
+The boxholder wants a visible Select mode in the document's top bar. On
+desktop, hover shows what would be selected and click attaches it immediately.
+On mobile, tap chooses a block and a nearby `+` confirms it. The person can then type or dictate in the
 ordinary composer. The selection pill, source ref, and chat serialization stay
 the same. There is no separate comment input or way to enlarge the target.
 Outside the mode, text selection, links, and other document controls work as
@@ -42,18 +42,20 @@ existing box selection-to-chat flow.
 
 ## Implementation (2026-11-04)
 
-The box companion now shows Comment for rendered `.doc.card` and Markdown
-documents. While it is on, choosing a semantic block shows
-the existing floating `+`; pressing `+` adds the existing selection pill and
-`[selection#N]` to the ordinary chat draft. A link tap chooses its paragraph
+The box companion now shows Select for rendered `.doc.card` and Markdown
+documents. On desktop, hover outlines a semantic block and click adds the
+existing selection pill and `[selection#N]` to the ordinary chat draft. On
+touch, tapping outlines the block and shows the existing floating `+` beside
+it; pressing `+` attaches it. A link tap chooses its paragraph
 without navigating. Outside the mode, precise text selection and its `+`
 remain. Code indentation and line breaks are preserved in quoted blocks; a
 pending pick is discarded if its content changes, and its `+` hides when the
 block scrolls out of view.
 
-Desktop and phone-width Chromium checks show the flow. The phone-width browser
-profile did not produce actual touch events, so a physical touch gesture
-remains unverified. The first pass uses image alt, caption, or source text.
+Desktop Chromium checks show hover and one-click attachment. At phone width,
+synthetic touch events exercised tap then `+`, but the browser profile did not
+produce native touch events, so a physical touch gesture remains unverified.
+The first pass uses image alt, caption, or source text.
 A point pin, screenshot, standalone browse control, and embedded PDF support
 remain design questions; lean toward keeping them out until this chat
 attachment flow is used.

@@ -40,8 +40,8 @@ function PointModeBar({ visible, enabled, active, onToggle }: {
   if (!visible || !enabled) return null;
   return <div className="bbx-companion-comment flex shrink-0 items-center gap-3 border-b border-warm-200 bg-warm-50 px-3 py-1.5 print:hidden">
     <Button id="bbx-point-comment" size="sm" intent={active ? "primary" : "secondary"} aria-pressed={active}
-      onClick={onToggle}>{active ? "Done commenting" : "Comment"}</Button>
-    {active ? <span className="text-xs text-warm-700">Tap a part, then + to add it to chat</span> : null}
+      onClick={onToggle}>{active ? "Done selecting" : "Select"}</Button>
+    {active ? <span className="text-xs text-warm-700">Click to add; on touch, tap then +</span> : null}
   </div>;
 }
 

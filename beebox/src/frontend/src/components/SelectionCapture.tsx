@@ -45,7 +45,7 @@ interface SelectionCaptureProps {
   extract: (selection: Selection, container: Element) => ExtractedSelection | null;
   children: ReactNode;
   className?: string;
-  /** A tap chooses a block; the existing + still confirms attachment. */
+  /** A click attaches a block; a touch tap previews it for confirmation. */
   pointMode?: boolean;
   onExitPointMode?: () => void;
   /** Forwarded to the wrapper, so the wrapper itself can be the `bbx chat ui` scan boundary. */
@@ -78,15 +78,48 @@ function validPoint({ button, point, container }: { button: FloatingButton; poin
   return current !== null && current.text === button.text && current.position === button.position;
 }
 
-function usePointSelection({ containerRef, pointMode, onExitPointMode, setButton }: {
+function usePointSelection({ containerRef, pointMode, onExitPointMode, setButton, onCapture }: {
   containerRef: React.RefObject<HTMLDivElement | null>;
   pointMode: boolean;
   onExitPointMode: (() => void) | undefined;
   setButton: React.Dispatch<React.SetStateAction<FloatingButton | null>>;
+  onCapture: SelectionCaptureProps["onCapture"];
 }) {
   const [point, setPoint] = useState<PendingPoint | null>(null);
   const [hovered, setHovered] = useState<Element | null>(null);
   const [outline, setOutline] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const pointerTypeRef = useRef<string | null>(null);
+
+  const choosePoint = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (!pointMode) return;
+    const needsConfirmation = pointerTypeRef.current === "touch";
+    pointerTypeRef.current = null;
+    if (event.target instanceof Element && event.target.closest("#bbx-selection-add") !== null) return;
+    const container = containerRef.current;
+    if (container === null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const target = pointTarget(event.target, container);
+    const extracted = target === null ? null : extractPointSelection(target, container);
+    if (target === null || extracted === null) {
+      setPoint(null);
+      setButton(null);
+      return;
+    }
+    window.getSelection()?.removeAllRanges();
+    if (!needsConfirmation) {
+      onCapture(extracted);
+      setPoint(null);
+      setHovered(null);
+      setOutline(null);
+      setButton(null);
+      return;
+    }
+    setPoint({ element: target, ...extracted });
+    setHovered(null);
+    const rect = target.getBoundingClientRect();
+    setButton({ left: rect.right, top: rect.top, text: extracted.text, position: extracted.position, kind: "point" });
+  }, [containerRef, pointMode, onCapture, setButton]);
 
   const syncPoint = useCallback(() => {
     const container = containerRef.current;
@@ -142,14 +175,15 @@ function usePointSelection({ containerRef, pointMode, onExitPointMode, setButton
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
   }, [pointMode, point, onExitPointMode, setButton]);
-  return { point, setPoint, hovered, setHovered, outline, setOutline, syncPoint };
+  return { point, setPoint, hovered, setHovered, outline, setOutline, syncPoint, choosePoint, pointerTypeRef };
 }
 
 export function SelectionCapture({ onCapture, extract, children, className, pointMode: pointModeProp, onExitPointMode, "data-bbx-scan": scan }: SelectionCaptureProps) {
   const pointMode = pointModeProp === true;
   const containerRef = useRef<HTMLDivElement>(null);
   const [button, setButton] = useState<FloatingButton | null>(null);
-  const { point, setPoint, setHovered, outline, setOutline, syncPoint } = usePointSelection({ containerRef, pointMode, onExitPointMode, setButton });
+  const buttonSize = button?.kind === "point" ? "2.75rem" : "1.75rem";
+  const { point, setPoint, setHovered, outline, setOutline, syncPoint, choosePoint, pointerTypeRef } = usePointSelection({ containerRef, pointMode, onExitPointMode, setButton, onCapture });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -234,26 +268,6 @@ export function SelectionCapture({ onCapture, extract, children, className, poin
     window.setTimeout(refresh, 0);
   }, [pointMode, refresh]);
 
-  const choosePoint = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (!pointMode || (event.target instanceof Element && event.target.closest("#bbx-selection-add") !== null)) return;
-    const container = containerRef.current;
-    if (container === null) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const target = pointTarget(event.target, container);
-    const extracted = target === null ? null : extractPointSelection(target, container);
-    if (target === null || extracted === null) {
-      setPoint(null);
-      setButton(null);
-      return;
-    }
-    window.getSelection()?.removeAllRanges();
-    setPoint({ element: target, ...extracted });
-    setHovered(null);
-    const rect = target.getBoundingClientRect();
-    setButton({ left: rect.right, top: rect.top, text: extracted.text, position: extracted.position, kind: "point" });
-  }, [pointMode, setPoint, setHovered]);
-
   return (
     <div
       ref={containerRef}
@@ -265,6 +279,8 @@ export function SelectionCapture({ onCapture, extract, children, className, poin
       role="none"
       style={pointMode ? { userSelect: "none" } : undefined}
       onClickCapture={choosePoint}
+      onPointerDownCapture={(event) => { pointerTypeRef.current = event.pointerType; }}
+      onTouchStartCapture={() => { pointerTypeRef.current = "touch"; }}
       onContextMenuCapture={(event) => { if (pointMode) event.preventDefault(); }}
       onPointerMove={(event) => {
         if (!pointMode || event.pointerType !== "mouse") return;
@@ -305,11 +321,11 @@ export function SelectionCapture({ onCapture, extract, children, className, poin
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onMouseUp={(e) => e.stopPropagation()}
           onClick={handleClick}
-          className="bbx-system-control flex items-center justify-center w-7 h-7 rounded-full bg-accent text-white shadow-md hover:bg-accent-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-accent z-50"
+          className={`bbx-system-control flex items-center justify-center ${button.kind === "point" ? "w-11 h-11" : "w-7 h-7"} rounded-full bg-accent text-white shadow-md hover:bg-accent-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-accent z-50`}
           style={{
             position: "fixed",
-            left: `clamp(8px, ${button.left + 6}px, calc(100% - 1.75rem - 8px))`,
-            top: `clamp(8px, ${button.top - 6}px, calc(100% - 1.75rem - 8px))`,
+            left: `clamp(8px, ${button.left + 6}px, calc(100% - ${buttonSize} - 8px))`,
+            top: `clamp(8px, ${button.top - 6}px, calc(100% - ${buttonSize} - 8px))`,
           }}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

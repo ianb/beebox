@@ -7,7 +7,7 @@ issues:
 ---
 # Point at a box document to attach it to chat
 
-The box already lets a person select document text and press `+` to attach it to chat. Add a visible Comment mode for choosing a whole document block by tapping it; the existing `+` then attaches that block to the same draft. Remove this branch's workstreams-app implementation, which serves a different comment system.
+The box already lets a person select document text and press `+` to attach it to chat. Add a visible Select mode: desktop hover previews a document block and click attaches it immediately; a touch tap previews the block and the nearby `+` confirms it. Remove this branch's workstreams-app implementation, which serves a different comment system.
 
 **Issues addressed:** `2026-11-01-point-to-comment`, corrected by the boxholder's box screenshots. The related mobile text-selection problem is in `2026-10-09-mobile-long-press-paragraph-to-comment`; its tentative long-press gesture is outside this plan.
 
@@ -23,7 +23,8 @@ The box already lets a person select document text and press `+` to attach it to
 
 | Situation | Behavior | Surface and attention |
 |---|---|---|
-| Phone or desk document | Show Comment in the companion top row; point mode outlines a tapped block and shows the existing `+` | Box chat companion, findable |
+| Desktop document | Show Select in the companion top row; hover outlines a block and click attaches it | Box chat companion, findable |
+| Touch document | Tap outlines a block and shows `+` beside it; `+` attaches it | Box chat companion, deliberate |
 | Ordinary reading | Mode starts off; existing text selection and `+` remain | Box chat companion, quiet |
 
 ### Spirit
@@ -33,19 +34,19 @@ The box already lets a person select document text and press `+` to attach it to
 
 ### Trust
 
-Pointing chooses a target but does not change the draft. Pressing the existing `+` adds the reference. Sending remains the person's explicit step; neither step authorizes agent action.
+On desktop, clicking the previewed target adds its reference to the draft. On touch, tapping previews it and pressing the nearby `+` adds its reference. Sending remains the person's explicit step; selecting does not authorize agent action.
 
 ### When it goes wrong or does nothing
 
-The mode control appears only for rendered `.doc.card` and Markdown documents with a chat selection sink. Embedded PDFs, independent images, and opaque view frames are outside this first pass. Empty decorative targets do not show `+`. Escape or Done commenting exits. A link cannot navigate while the mode picks it; after leaving, it works normally. A wrong attachment can be removed with the existing selection pill. For a narrower text span, leave mode and use the existing text selection and `+`.
+The mode control appears only for rendered `.doc.card` and Markdown documents with a chat selection sink. Embedded PDFs, independent images, and opaque view frames are outside this first pass. Empty decorative targets do nothing. Escape or Done selecting exits. A link cannot navigate while the mode picks it; after leaving, it works normally. A wrong attachment can be removed with the existing selection pill. For a narrower text span, leave mode and use the existing text selection and `+`.
 
 ### Walkthrough
 
-The person opens a document beside chat, presses Comment, taps a paragraph, sees it outlined and the existing `+` beside it, then presses `+`. They see the existing selection pill and `[selection#N]` token in the ordinary chat draft. They type or dictate a thought and send it. The existing serializer writes `<user-selection>` with source and position. During transcription the existing companion path places the pick at the speech position. No new composer or stored comment is created.
+The person opens a document beside chat and presses Select. On desktop, hovering a paragraph outlines it; clicking adds the existing selection pill and `[selection#N]` token to the ordinary chat draft. On touch, tapping a paragraph outlines it and shows `+`; pressing `+` adds that same pill and token. They type or dictate a thought and send it. The existing serializer writes `<user-selection>` with source and position. During transcription the existing companion path places the pick at the speech position. No new composer or stored comment is created.
 
 ## Smallest fix and budget
 
-Add a mode toggle and a picker that produces the existing floating `+`; its click calls `FileView`'s existing `handleCapture`. Also restore the workstreams-app files changed earlier on this branch. Estimate 350–600 changed source/test lines for the box picker, plus mechanical removal of the mistaken branch changes. Authored docs: plan and issue correction. Generated output: none. The intended new work is below 2,000 changed lines.
+Add a mode toggle and a picker that calls `FileView`'s existing `handleCapture` on desktop click or touch confirmation. Also restore the workstreams-app files changed earlier on this branch. Estimate 350–600 changed source/test lines for the box picker, plus mechanical removal of the mistaken branch changes. Authored docs: plan and issue correction. Generated output: none. The intended new work is below 2,000 changed lines.
 
 ## Stated preferences this plan trades against
 
@@ -68,7 +69,7 @@ No external premise is needed. The user's screenshots and shipped box flow deter
 ## Ontology
 
 - **Selection:** existing `AddSelectionInput` (`position.ts:36-47`): a chat attachment with source ref, text, and rough position; it is not a workstreams document comment.
-- **Comment mode:** ephemeral view state that changes what a tap on document content selects; it is not saved comment state.
+- **Select mode:** ephemeral view state that changes what a click or tap on document content selects; it is not saved comment state.
 - **Target:** visible semantic block in the rendered document, producing one Selection.
 - **Draft:** existing chat composer and selection list. No new data format.
 
@@ -80,7 +81,7 @@ Restore workstreams-app code and tests to the branch base and correct the issue'
 
 ### Track 2: Box picker
 
-Add a labeled Comment/Done commenting control just below the companion tabs for `.doc.card` and Markdown with a chat selection sink. Keep mode with its card and reset when the card hides. Pass mode into `FileView` and `SelectionCapture`. Target paragraphs including `.bbx-paragraph`, headings, list items, table cells/rows, figures/images, code blocks, and blockquotes. Nearest meaningful block wins; no widening control. Mouse hover previews the block; click/tap selects it and positions the existing `+`. The `+` alone calls the existing `onCapture` path. Capture-phase click handling suppresses the underlying link or control while in mode. Touch mode disables native text selection while preserving scrolling. Outside mode, `+` behaves as before. Extract document text without nested interface controls: a code fence containing `hello` must attach `hello`, not `Copy hello`. Visual targets use caption, alt, or short source description; `position` carries a rough location. Empty/decorative targets are skipped. Keyboard text selection and `+` remain the precise keyboard path; no focus highlight is promised for unfocusable paragraphs. First chunk: extraction and interaction, then header wiring.
+Add a labeled Select/Done selecting control just below the companion tabs for `.doc.card` and Markdown with a chat selection sink. Keep mode with its card and reset when the card hides. Pass mode into `FileView` and `SelectionCapture`. Target paragraphs including `.bbx-paragraph`, headings, list items, table cells/rows, figures/images, code blocks, and blockquotes. Nearest meaningful block wins; no widening control. Mouse hover previews the block; click calls existing `onCapture` immediately. Touch tap previews the block and positions the existing `+`; its click calls `onCapture`. Capture-phase click handling suppresses the underlying link or control while in mode. Touch mode disables native text selection while preserving scrolling. Outside mode, `+` behaves as before. Extract document text without nested interface controls: a code fence containing `hello` must attach `hello`, not `Copy hello`. Visual targets use caption, alt, or short source description; `position` carries a rough location. Empty/decorative targets are skipped. Keyboard text selection and `+` remain the precise keyboard path; no focus highlight is promised for unfocusable paragraphs. First chunk: extraction and interaction, then header wiring.
 
 ## Could this be simpler?
 
@@ -103,7 +104,7 @@ None. The source and destination already exist in code.
 
 ## Agent-flow / user-flow edge cases
 
-- **ADDRESSED:** Wrong target can be changed before pressing `+`, or removed afterward by the existing selection pill (`ChatSelections.tsx:59`).
+- **ADDRESSED:** A touch target can be changed before pressing `+`; any attached target can be removed afterward by the existing selection pill (`ChatSelections.tsx:59`).
 - **ADDRESSED:** No migration: existing `applySelections` serializes the same input (`serialize.ts:167-215`).
 - **ADDRESSED:** Missing or moved source retains existing ref and quote; no claim of a canonical anchor.
 - **DEFERRED:** Canonical anchors belong to `issues/features/2026-07-08-selection-provenance-canonical-anchors.md`.
@@ -127,7 +128,7 @@ No new agent-facing format or instruction. Existing `<user-selection>` serializa
 
 ## What will hold this after it ships
 
-A focused extraction test covers blocks, visual descriptions, and excluding a code fence's Copy control. Browser checks cover mouse/touch target selection, the `+` attachment step, link suppression, draft token/pill, voice placement, keyboard selection, and normal selection after exit. Existing serializer tests cover message format. No new test tier.
+Focused tests cover block extraction, nested controls, desktop immediate attachment, and touch confirmation. Browser checks cover hover preview, click attachment, phone-width confirmation, link suppression, and draft token/pill. Existing serializer tests cover message format. No new test tier.
 
 ## Implementation order
 
@@ -139,4 +140,4 @@ A focused extraction test covers blocks, visual descriptions, and excluding a co
 
 ## Rollout shape
 
-No data migration or deployment. Done when `+` attaches a tapped block to the existing chat draft, text selection still works, taps do not navigate in mode, checks and browser evidence pass, and Codex review findings are resolved or reported.
+No data migration or deployment. Done when desktop click attaches a hovered block immediately, a touch tap waits for `+`, text selection still works, taps do not navigate in mode, checks and browser evidence pass, and Codex review findings are resolved or reported.
