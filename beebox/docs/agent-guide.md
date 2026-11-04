@@ -133,9 +133,11 @@ The ledger header holds two ceilings, `guide_words` (the rendered guide,
 counted by `wc -w`) and `always_loaded_words` (the `pnpm agent-context chat`
 total), and `uncited_words_per_section`, the allowance for framing text. The
 ceilings started at the numbers measured on the test1 clone on 2026-09-26 and
-come down as sections are binned. `pnpm lint:guide` asserts both ceilings in
-about a second: run it after an edit to always-loaded prompt text, or a merge
-that touches one, rather than waiting for `test:changed`.
+come down as sections are binned. Bare `pnpm lint:guide` (the fresh-box
+render) is the gate; a clone measures higher and does not count. A new guide
+pointer usually moves both ceilings. The commit hook does not run
+`pnpm lint:guide`: run it after an edit to always-loaded prompt text, or a
+merge that touches one, rather than waiting for `test:changed`.
 
 ## What changed
 

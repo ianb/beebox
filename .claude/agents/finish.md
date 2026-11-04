@@ -37,13 +37,13 @@ still lists it. Test selection describes coverage, not invalidation of a pass.
 
 Before retesting, inspect the delta since the tested revision. Documentation, issue
 close-out, audit/history records, and independent merged work preserve prior passes.
-Name a concrete interaction before rerunning: conflict resolution, overlapping
-behavior, or changes to a shared dependency, schema, build configuration, or test
-fixture that affect this work; mere possibility is not a reason to rerun.
+Rerun only for a concrete interaction: conflict resolution, overlapping behavior, or a
+shared dependency, schema, build configuration, or test fixture this work uses.
 
 Run only affected checks: save a `bin/finish-preflight --json --no-merge` sheet
 (re-save after any edit), pass it to each `bin/finish-verify --sheet <file> --only
-tests|typecheck|lint|smoke|site` one at a time (parallel preflights contend), or named tests.
+tests|typecheck|lint|smoke|site` one at a time (parallel preflights contend), or named
+tests. Wait on a backgrounded run's PID; `pgrep -f` loops match themselves.
 Report which evidence was reused, the intervening delta, and why it still applies.
 
 The verifier reruns failing test files once in isolation. Green proceeds; a named flake (passes alone at the same
@@ -105,8 +105,7 @@ and issues added on this branch. Follow concrete sibling/duplicate links from
 those candidates, and search each candidate's slug in `issues/` for inbound
 references. Expand beyond those links only when the work or a candidate gives
 specific evidence of a missing related issue; search that symptom or identifier,
-not every file and symbol in the diff. Do not re-search candidates already
-reconciled in this work unit unless later changes affect their resolution.
+not every file and symbol in the diff, nor a candidate already reconciled here.
 For each issue this work **actually resolves**: `bin/issues close <issue>
 --resolution implemented|wontfix|superseded --workstream <name> --note "<resolving
 commit; any divergence from what the issue proposed>"`; fix any `check by hand` line.
