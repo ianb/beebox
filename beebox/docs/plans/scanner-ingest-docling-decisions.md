@@ -276,7 +276,7 @@ original document and Docling coordinates.
 
 Supersedes the CLI half of D2 and the argv of D3, D4, and D7; their choices
 (pinned version, rapidocr, fast tables, CPU, 144-dpi page renders, figures on,
-OCR modes) are kept unchanged. Plan: [`docling-memory.md`](docling-memory.md).
+OCR modes) are kept unchanged. Plan: [`docling-memory.md`](../implemented-plans/docling-memory.md).
 
 **Problem.** Two concurrent conversions stalled a hosted box at its 1 GiB
 `MemoryHigh`. Measured alone, one CLI conversion did not fit either. With

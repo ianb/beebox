@@ -6,7 +6,10 @@ labels: [pdf, docling, memory, prod]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — hosted box reported down, 2026-11-03"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-03):** Landed on branch worktree-docling-memory (memory-bounded driver c09eb0eb7, one conversion at a time, MemoryHigh=2G/MemoryMax=2560M/OOMPolicy=continue); RapidOCR spike and uv warning filed separately.
 
 On 2026-11-03 a hosted box looked down from the iOS app. `bbx serve` was
 running, but requests timed out or returned 500 ("Could not acquire the
@@ -43,7 +46,7 @@ Fix directions:
   clear reason, so the agent retries later or splits the PDF instead of
   retrying in parallel.
 
-Related: [large box mode](../features/2026-11-01-large-box-mode.md) (the same
+Related: [large box mode](../../features/2026-11-01-large-box-mode.md) (the same
 box's earlier heap OOMs) and
 [maintenance closes chats with live background tasks](2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md)
 (the same long research runs).

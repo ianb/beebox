@@ -1,9 +1,9 @@
 ---
 title: "Docling conversions that fit a box's memory"
-status: active
+status: implemented
 workstream: docling-memory
 issues:
-  - ../../../issues/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md
+  - ../../../issues/closed/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md
 ---
 # Docling conversions that fit a box's memory
 
