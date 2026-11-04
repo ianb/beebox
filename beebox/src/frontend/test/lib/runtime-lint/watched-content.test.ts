@@ -83,13 +83,38 @@ void test("one of two equal embeds replaced is reported", async (t) => {
 });
 
 void test("content that stays gone, or comes back after 2 s, is not reported", async (t) => {
-  setup(t);
+  const records = setup(t);
   let now = 0;
   const scope = createViewScope(() => now);
-  const releaseA = scope.register("card-embed", "a");
-  releaseA();
+  const first = scope.open();
+  first.watch("card-embed", "a");
+  first.close();
   now = 60_000;
   // A region the person hid for editing and showed again a minute later.
-  scope.register("card-embed", "a");
-  t.check(window.__bbxRuntimeLint?.take().records ?? [], []);
+  scope.open().watch("card-embed", "a");
+  t.check(records(), []);
+});
+
+void test("removing one of two equal embeds does not hide a later replacement of the other", async (t) => {
+  const records = setup(t);
+  let now = 0;
+  const scope = createViewScope(() => now);
+  const [one, two] = [scope.open(), scope.open()];
+  one.watch("card-embed", "same");
+  two.watch("card-embed", "same");
+  one.close();
+  now = 3000;
+  two.close();
+  scope.open().watch("card-embed", "same");
+  t.check(records(), ["content-replaced card-embed"]);
+});
+
+void test("a mounted embed whose source changes and changes back is not a remount", async (t) => {
+  const records = setup(t);
+  const card = (src: string) => h(RuntimeLintViewScope, null, h(Embed, { src }));
+  const page = await mount(card("_content/figures/a.figure.card"));
+  t.teardown(() => page.unmount());
+  await page.rerender(card("_content/figures/b.figure.card"));
+  await page.rerender(card("_content/figures/a.figure.card"));
+  t.check(records(), []);
 });
