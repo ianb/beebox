@@ -181,11 +181,14 @@ function fragmentRootFor({ mode, workspacePdf, onRoot }: {
   return <div ref={onRoot} {...attribute} className={workspacePdf ? "h-full" : undefined}>{content}</div>;
 }
 
-/** One-line markers above the body: a stale load, a section that could not be found. */
-function withBodyNotices({ stale, onRefresh, sectionMissed }: {
+/**
+ * One-line markers above the body: a stale load, a section that could not be
+ * found. Always the same shape, so the body keeps its place in the tree, and
+ * stays mounted, while a marker comes and goes.
+ */
+export function withBodyNotices({ stale, onRefresh, sectionMissed }: {
   stale: LoadFailure | null; onRefresh: () => void; sectionMissed: boolean;
 }, content: ReactNode): ReactNode {
-  if (stale === null && !sectionMissed) return content;
   return (
     <>
       {stale === null ? null : <FileStaleNotice failure={stale} onRefresh={onRefresh} />}

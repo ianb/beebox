@@ -9,12 +9,19 @@
  * fails if the figure's picker, its drawing, or a citation is a new DOM node
  * afterwards, or if the scroller moved without the reader scrolling.
  *
+ * Then two changes to the card itself, as an agent working in the box makes
+ * them: text added above the reader, and the file missing for a moment (a
+ * failed re-read shows an "out of date" notice). Neither may replace those
+ * nodes, and the added text must not make the contents button go full: the
+ * browser moves the scroller to keep the reader's place, which is not the
+ * reader scrolling. The fixture file is restored afterwards.
+ *
  * Usage: bin/card-remount-check [--box-dir <dir>]   (default: this worktree's test1 clone)
  * Issue: issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
@@ -158,7 +165,13 @@ const INSTALL = `(() => {
   scroller.scrollTop = Math.max(0, select.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 120);
   const before = nodes();
   const scrollTop = scroller.scrollTop;
-  window.__remount = { scroller, nodes, before, scrollTop };
+  const state = { scroller, nodes, before, scrollTop, fullButton: 0 };
+  // What the reader sees: the button at rest is faint (card-themes.css).
+  setInterval(() => {
+    const button = article.querySelector(".bbx-card-contents");
+    if (button && Number(getComputedStyle(button).opacity) > 0.9) state.fullButton += 1;
+  }, 50);
+  window.__remount = state;
   return "ready";
 })()`;
 
@@ -170,10 +183,19 @@ const PIN = `(() => {
 })()`;
 
 const REPORT = `(() => {
-  const { scroller, nodes, before, scrollTop } = window.__remount;
+  const { scroller, nodes, before, scrollTop, fullButton } = window.__remount;
   const now = nodes();
-  return { replaced: Object.keys(before).filter((k) => before[k] !== now[k]), scrollTop: [scrollTop, scroller.scrollTop] };
+  return { replaced: Object.keys(before).filter((k) => before[k] !== now[k]), scrollTop: [scrollTop, scroller.scrollTop], fullButton };
 })()`;
+
+interface Report { replaced: string[]; scrollTop: unknown[]; fullButton: number }
+
+function report(): Report {
+  const result = evalJson(REPORT);
+  if (typeof result !== "object" || result === null || !("replaced" in result) || !("scrollTop" in result) || !("fullButton" in result)
+    || !isStrings(result.replaced) || !Array.isArray(result.scrollTop) || typeof result.fullButton !== "number") throw new PageResultError(result);
+  return { replaced: result.replaced, scrollTop: result.scrollTop, fullButton: result.fullButton };
+}
 
 function waitUntilReady(): void {
   const deadline = Date.now() + 30_000;
@@ -189,31 +211,61 @@ function isStrings(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
-function main(): number {
-  writeFixture(boxDir(process.argv.slice(2)));
-  browse("set", "viewport", "1440", "900");
-  browse("open", `/chat?card=${encodeURIComponent(CARD)}`);
-  waitUntilReady();
-  // Pin, then unpin: two workspace changes that leave the card as it was.
+/** Pin, then unpin: two workspace changes that leave the card as it was. Fails on a remount or a scroll jump. */
+function pinCheck(): string | null {
   // Read after each, so a scroll jump that the second change undoes still fails.
   const replaced = new Set<string>();
   const scrollTops: unknown[] = [];
   for (let i = 0; i < 2; i++) {
     if (evalJson(PIN) !== "clicked") throw new PinButtonMissingError();
     browse("wait", "1500");
-    const result = evalJson(REPORT);
-    if (typeof result !== "object" || result === null || !("replaced" in result) || !("scrollTop" in result)
-      || !isStrings(result.replaced) || !Array.isArray(result.scrollTop)) throw new PageResultError(result);
-    const [start, now]: unknown[] = result.scrollTop;
+    const result = report();
+    const [start, now] = result.scrollTop;
     if (i === 0) scrollTops.push(start);
     scrollTops.push(now);
     for (const name of result.replaced) replaced.add(name);
   }
-  if (replaced.size === 0 && scrollTops.every((top) => top === scrollTops[0])) {
-    console.log("ok: pinning the tab left the card body in place");
+  if (replaced.size === 0 && scrollTops.every((top) => top === scrollTops[0])) return null;
+  return `pinning the tab remounted ${[...replaced].join(", ") || "nothing"}; scroll went ${scrollTops.join(" -> ")} with no reader scroll`;
+}
+
+/** Text added above the reader, then the file missing for a moment. Fails on a remount or a full contents button. */
+function editCheck(cardFile: string, original: string): string | null {
+  writeFileSync(cardFile, original.replace("Intro.", `Intro. ${"An agent added this sentence above the reader. ".repeat(12)}`));
+  browse("wait", "2500");
+  const added = report();
+  rmSync(cardFile);
+  browse("wait", "2500");
+  writeFileSync(cardFile, original);
+  browse("wait", "2500");
+  const restored = report();
+  const failures = [
+    ...(added.replaced.length > 0 ? [`added text remounted ${added.replaced.join(", ")}`] : []),
+    ...(added.fullButton > 0 ? ["added text made the contents button full with no reader scroll"] : []),
+    ...(restored.replaced.length > 0 ? [`a failed re-read remounted ${restored.replaced.join(", ")}`] : []),
+  ];
+  return failures.length === 0 ? null : failures.join("; ");
+}
+
+function main(): number {
+  const box = boxDir(process.argv.slice(2));
+  writeFixture(box);
+  const cardFile = join(box, CARD);
+  const original = readFileSync(cardFile, "utf8");
+  browse("set", "viewport", "1440", "900");
+  browse("open", `/chat?card=${encodeURIComponent(`/${CARD}`)}`);
+  waitUntilReady();
+  let failures: string[];
+  try {
+    failures = [pinCheck(), editCheck(cardFile, original)].filter((failure) => failure !== null);
+  } finally {
+    writeFileSync(cardFile, original);
+  }
+  if (failures.length === 0) {
+    console.log("ok: pinning the tab, text added above the reader, and a failed re-read left the card body in place");
     return 0;
   }
-  console.error(`FAIL: pinning the tab remounted ${[...replaced].join(", ") || "nothing"}; scroll went ${scrollTops.join(" -> ")} with no reader scroll`);
+  console.error(`FAIL: ${failures.join("; ")}`);
   return 1;
 }
 

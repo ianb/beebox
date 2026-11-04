@@ -1,12 +1,15 @@
 ---
 title: "A long card's contents menu collapses and reappears while the reader looks at it; its collapse is driven by React state and the menu remounts"
-workstream: unattached
+workstream: contents-menu-stable
 area: beebox
 labels: [frontend, cards, contents-menu]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder report, 2026-11-03"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-03):** Resolved on branch worktree-contents-menu-stable (59fad7aac): menu goes full only for the reader's scroll, outline taken from the Markdown. Hosted-box remount not reproduced as seen; the reproduced path is a failed re-read (stale notice).
 
 Seen on a hosted box: a long `.doc.card` report open beside a chat
 (`/chat?card=<path>&session=<id>`). The card's contents menu (the "Contents"
@@ -50,3 +53,36 @@ Leads, to verify:
 
 Reproduce locally: open a long Markdown card beside a chat, edit the card file
 repeatedly (or create cards in a loop) and watch the menu.
+
+## Research (2026-11-03)
+
+Plan: `beebox/docs/implemented-plans/contents-menu-stable.md`. Reproduced on the
+worktree's test1 clone, in the chat side panel, with a probe that watched the
+card front, the outline root, the headings, and the menu element.
+
+- **Main cause: scrolls the reader did not make.** With the reader in the
+  middle of the card, each edit that grows the text above them made the
+  browser's scroll anchoring move the scroller to keep their place. Each
+  move is a `scroll` event, and the menu counted every scroll event as the
+  reader scrolling. 4 edits gave 4 expand/collapse cycles, with no remount.
+  Fixed: only a scroll with recent reader input (wheel, touch, scroll keys
+  outside a field, a scrollbar drag) or an ongoing reader scroll makes the
+  button full. The full look is a `data-scrolling` attribute set on the
+  element, with no React render; at rest is the CSS default.
+- **Remount: a failed re-read.** In-place, atomic-rename, frontmatter, git
+  commit, card-creation, and real chat-agent edits did not remount anything.
+  A re-read that fails (the file briefly missing, the box restarting) showed
+  the "Not up to date" notice. The notice wrapped the body in a Fragment,
+  which remounted the whole card body when the notice appeared and again
+  when it went away (`components/FileView/view.tsx`, `withBodyNotices`).
+  Fixed: the wrapper always has the same shape.
+- **Outline.** It now comes from the Markdown tree the card renders, through
+  `CardOutlineContext`, not a MutationObserver over the card front. A
+  text-only edit keeps the same outline. An embedded card cannot publish
+  its headings into the outer card.
+- `bin/card-remount-check` had stopped working (card path without the
+  leading `/`). It is fixed, and it now also checks text added above the
+  reader and a failed re-read. On the old code it fails on both. On the new
+  code it passes.
+- Not fixed here: a re-read that lands on a half-written file. Filed as
+  [its own issue](../../bugs/2026-11-03-card-reread-of-a-half-written-file-reshapes-the-open-card.md).
