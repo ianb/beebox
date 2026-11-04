@@ -1,7 +1,7 @@
 /**
  * Runtime lint: the frontend's record of a broken runtime invariant (content
  * replaced while its view is open, a request storm, an open card that could
- * not refresh). Plan: `docs/plans/runtime-lint.md`.
+ * not refresh). Plan: `docs/implemented-plans/runtime-lint.md`.
  *
  * A record carries only check names, numbers, closed enums, and page-local
  * opaque ids (`c1`, `c2`, …) for content and request inputs. Card paths, text,

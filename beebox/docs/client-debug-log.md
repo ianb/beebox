@@ -109,7 +109,7 @@ tRPC procedures (from the app or a tRPC client), not a raw HTTP endpoint.
 
 The frontend checks a few runtime invariants and reports a broken one as a
 `[runtime-lint]` line (`src/frontend/src/lib/runtime-lint/`). Plan:
-`docs/plans/runtime-lint.md`.
+`docs/implemented-plans/runtime-lint.md`.
 
 | Check | The invariant it reports broken |
 |---|---|

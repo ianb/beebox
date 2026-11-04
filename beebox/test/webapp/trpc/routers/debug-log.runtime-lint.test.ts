@@ -3,7 +3,7 @@
 // (`devSurfaces`) and a hosted deployment with BBX_RUNTIME_LINT=1
 // (`startServer` calls setRuntimeLintWriting). Elsewhere it accepts and drops
 // them, so the client needs no setting of its own. Other sources are written
-// either way. Plan: docs/plans/runtime-lint.md, Track 1.
+// either way. Plan: docs/implemented-plans/runtime-lint.md, Track 1.
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -5,7 +5,7 @@
 // (issues/closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md)
 // and the per-render embed component
 // (issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md).
-// Plan: docs/plans/runtime-lint.md, Track 2.
+// Plan: docs/implemented-plans/runtime-lint.md, Track 2.
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, Fragment, type ReactNode } from "react";

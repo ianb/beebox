@@ -1,7 +1,7 @@
 // Runtime lint records: the budget (one per subject a minute, 20 a minute in
 // all, failure and recovery keyed apart), the suppressed count, the page buffer
 // that bin/browse takes, the log line, and the privacy shape (no raw string in
-// a record). Plan: docs/plans/runtime-lint.md, Track 1.
+// a record). Plan: docs/implemented-plans/runtime-lint.md, Track 1.
 // First, and bare: the page buffer lives on the happy-dom window.
 import "../../helpers/dom-globals.js";
 import { test, type Test } from "tap";
