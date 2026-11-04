@@ -28,8 +28,29 @@ const EXIT_SIGKILL = 137;
  */
 export const LOCK_ACQUIRED_MARKER = "bbx-docling: lock acquired";
 
-/** How long a driver waits for another conversion before it gives up (exit 75). */
-export const LOCK_WAIT_SECONDS = 20 * 60;
+/**
+ * Docling's own conversion budget (`document_timeout`, D6), scaled by page
+ * count (D19). A flat 10 minutes stopped a 333-page manual and an 84-page
+ * report on prod. Measured in the D18 VM: about 2-3.5 s a page for digital
+ * PDFs, 9 s a page with OCR; prod shares three cores across boxes, so the
+ * per-page figures carry about 3x headroom. Unknown page count gets the cap.
+ */
+const BUDGET_BASE_SECONDS = 5 * 60;
+const BUDGET_SECONDS_PER_PAGE = { text: 10, ocr: 30 } as const;
+export const MAX_CONVERSION_SECONDS = 90 * 60;
+
+export function conversionBudgetSeconds(pages: number | null, ocr: DoclingExtractOptions["ocr"]): number {
+  if (pages === null) return MAX_CONVERSION_SECONDS;
+  const perPage = ocr === "off" ? BUDGET_SECONDS_PER_PAGE.text : BUDGET_SECONDS_PER_PAGE.ocr;
+  return Math.min(MAX_CONVERSION_SECONDS, BUDGET_BASE_SECONDS + perPage * pages);
+}
+
+/**
+ * How long a driver waits for other conversions before it gives up (exit 75):
+ * the longest conversion, its 5-minute render slack (`core.ts`), and a margin.
+ * One long conversion ahead never refuses a queued PDF; two at the cap can.
+ */
+export const LOCK_WAIT_SECONDS = MAX_CONVERSION_SECONDS + 30 * 60;
 
 /** The JSON request `convert.py` reads from its one argument. */
 export interface DoclingRequest {
@@ -69,6 +90,10 @@ export function doclingLockPaths(env: NodeJS.ProcessEnv, homeDir: string): strin
 /** The `uvx` argv that runs the driver at the pinned Docling version. */
 export function doclingArgs(request: DoclingRequest): string[] {
   return [
+    // uv's own routine output off. With UV_TORCH_BACKEND set (prod), uv warns
+    // on every run that the option is experimental; that line would otherwise
+    // lead every failure tail. uv errors still print under --quiet (measured).
+    "--quiet",
     "--from", `docling==${DOCLING_VERSION}`,
     // rapidocr, not Docling's easyocr default (scored on a notarized form:
     // 6/6 handwritten fields against 5/6). `--with` keeps it in uv's
@@ -132,7 +157,7 @@ export function doclingFailureMessage(failure: {
         ? `Docling did not finish within ${String(budgets.convertMinutes)} minutes and was stopped`
         : `Docling did not start converting within ${String(budgets.waitMinutes)} minutes and was stopped`;
     case "busy":
-      return `Another Docling conversion on this box or host ran for over ${String(LOCK_WAIT_SECONDS / 60)} minutes; this PDF was not converted. Retry later, one at a time.`;
+      return `Other Docling conversions on this box or host kept this one waiting for over ${String(LOCK_WAIT_SECONDS / 60)} minutes; this PDF was not converted. Retry later, one at a time.`;
     case "oom":
       return "Docling was killed during an out-of-memory event in this box. Do not retry in parallel; retry once when nothing else is converting, or use a smaller PDF.";
     case "killed":

@@ -95,6 +95,11 @@ async function readPdfInfo(pdfPath: string): Promise<{ pages?: number; title?: s
   return out;
 }
 
+/** The PDF's page count from `pdfinfo`, or null when poppler cannot say. */
+export async function readPdfPageCount(pdfPath: string): Promise<number | null> {
+  return (await readPdfInfo(pdfPath)).pages ?? null;
+}
+
 /**
  * Run `pdftotext` to stdout over a page range (`lastPage: null` = to the end).
  *

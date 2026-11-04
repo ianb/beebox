@@ -135,6 +135,12 @@ def convert(req: dict[str, Any]) -> int:
     languages = req.get("languages")
     if languages:
         ocr_options.lang = list(languages)
+    # RapidOCR's text detector by default enlarges every input until its short
+    # side is 736 px, so a full-width one-line region (about 2000 x 32 px) is
+    # detected at about 46,000 x 736. Limit the detector's long side instead,
+    # at the 2000 px RapidOCR already caps every input to: recognition and
+    # large regions are unchanged, small regions are not enlarged (D20).
+    ocr_options.rapidocr_params = {"Det.limit_type": "max", "Det.limit_side_len": 2000}
     options = PdfPipelineOptions(
         accelerator_options=AcceleratorOptions(num_threads=4, device="cpu"),
         do_ocr=ocr != "off",
