@@ -47,7 +47,7 @@ void test("The box lock lives under HOME; the host lock in the shared uv cache w
 //
 // Languages travel only with OCR on, where they mean something. The argv runs
 // the driver with an isolated interpreter at the pinned version, with the OCR
-// engine in uv's throwaway environment.
+// engine in uv's throwaway environment, and with uv's own warnings off.
 void test("The request carries OCR intent, locks, and the parent PID; the argv runs the driver", (t) => {
   const context = { pages: 12, env: { UV_CACHE_DIR: "/cache/uv" }, homeDir: "/var/lib/beebox/box", parentPid: 4242 };
   const request = doclingRequest("/scan/source.pdf", { workDir: "/work", ocr: "replace", languages: ["en", "de"], ...context });
@@ -66,6 +66,7 @@ void test("The request carries OCR intent, locks, and the parent PID; the argv r
 
   const argv = doclingArgs(request);
   t.check(argv.slice(0, -1), [
+    "--quiet",
     "--from", `docling==${DOCLING_VERSION}`,
     "--with", "onnxruntime",
     "--with", "rapidocr",

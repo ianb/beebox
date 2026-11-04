@@ -90,6 +90,10 @@ export function doclingLockPaths(env: NodeJS.ProcessEnv, homeDir: string): strin
 /** The `uvx` argv that runs the driver at the pinned Docling version. */
 export function doclingArgs(request: DoclingRequest): string[] {
   return [
+    // uv's own routine output off. With UV_TORCH_BACKEND set (prod), uv warns
+    // on every run that the option is experimental; that line would otherwise
+    // lead every failure tail. uv errors still print under --quiet (measured).
+    "--quiet",
     "--from", `docling==${DOCLING_VERSION}`,
     // rapidocr, not Docling's easyocr default (scored on a notarized form:
     // 6/6 handwritten fields against 5/6). `--with` keeps it in uv's
