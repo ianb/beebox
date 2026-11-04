@@ -25,11 +25,10 @@ bin/browse snapshot -i
 - **Prefer the snapshot's `bbx-…` id.** It resolves with `getElementById` at
   action time. Use `@eN` only when no id is shown: refs are not in document
   order, and after a re-render upstream moves a ref to another element with
-  the same role and name, which can be a different control. Re-snapshot after page changes; check `get url` if navigation
-  looks wrong.
+  the same role and name. Re-snapshot after page changes; check `get url` if navigation looks wrong.
 - **App actions have checks.** Missing, hidden, zero-size, off-screen, disabled, pointer-events-none, or covered targets are refused. A ref that changed hands between the last two snapshots gets a warning; a `@eN` ref is refused (`stale-ref`) once a click, fill, press, open, or other page-changing command has run since the latest snapshot, so snapshot again first; refs on controls
   without a `bbx-` id get geometry checks only. Other origins pass through to upstream, which checks only visibility, enabled state, and what covers the click point. Verify the resulting state. Report refused/covered controls as evidence rather than bypassing the obstruction.
-- **Scrolling a pane:** `scroll --selector` uses the first visible match and refuses when all are hidden. `mouse wheel` ignores an earlier `mouse move` (upstream sends it to 0,0); use `scroll --selector`.
+- **Scrolling a pane:** `scroll --selector` uses the first visible match and refuses when all are hidden. `mouse wheel` ignores an earlier `mouse move` (upstream sends it to 0,0); use `scroll --selector`. `scroll` is programmatic, so it does not fire wheel-based reader-scroll detection; scrollbars are overlay (width 0), so scrollbar drags cannot be tested here.
 - **Transient state needs a different read.** Default `snapshot` waits for app
   readiness and can miss loading. Before testing loading/optimistic states or
   timing behavior, read [timing and recovery](references/timing-and-recovery.md).
