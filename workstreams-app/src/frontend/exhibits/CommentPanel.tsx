@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 
 import { MAX_AUDIO_BYTES } from "../../server/transcribe-contract.js";
+import { appendCommentTranscript, commentBody, commentDraftText } from "../lib/comment-draft.js";
 import { recorderAvailability, startRecording } from "../lib/recorder.js";
-import { captureElement, highlightRanges, largerCommentTarget, type SelectionAnchor } from "../lib/selection-anchor.js";
-import { CommentOverlay, commentComposerStyle, scrollToComment, useCommentPicker, useCommentPositions, type CommentLocation } from "../components/comment-pointing.js";
+import { highlightRanges, type SelectionAnchor } from "../lib/selection-anchor.js";
+import { CommentOverlay, scrollToComment, useCommentPicker, useCommentPositions, type CommentLocation } from "../components/comment-pointing.js";
 import { commentSchema, type Comment } from "../../shared/comments.js";
 import {
-  appendTranscript,
   commentRequest,
   responseProblem,
   savedMessage,
@@ -43,8 +43,8 @@ async function postJson(url: string, payload: unknown): Promise<{ ok: boolean; s
 }
 
 /**
- * The draft: quoted text (or the whole exhibit), a textarea, Speak, Comment,
- * Cancel. Speech is appended to whatever is typed, and the origin records how
+ * The draft: selected context inside the textarea, Speak, Comment, Cancel.
+ * Speech is appended to whatever is typed, and the origin records how
  * the text ARRIVED, not that it is verbatim — the boxholder may fix the
  * transcript before sending.
  */
@@ -54,7 +54,7 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
   onSubmit: (body: string, origin: CommentOrigin) => void;
   pending: boolean;
 }): ReactNode {
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(() => commentDraftText(anchor));
   const [origin, setOrigin] = useState<CommentOrigin>("typed");
   const [session, setSession] = useState<Session | null>(null);
   // Between the Speak click and the permission answer: a second click must not
@@ -68,8 +68,11 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
   // on arrival rather than left recording with no owner.
   const wanted = useRef(true);
   const live = useRef<Session | null>(null);
+  const textarea = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     wanted.current = true;
+    textarea.current?.focus();
+    textarea.current?.scrollIntoView({ block: "nearest" });
     return () => {
       wanted.current = false;
       live.current?.cancel();
@@ -92,7 +95,7 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
         const text = typeof result.body === "object" && result.body !== null && "text" in result.body && typeof result.body.text === "string"
           ? result.body.text
           : "";
-        setBody((current) => appendTranscript(current, text));
+        setBody((current) => appendCommentTranscript(current, text));
         setOrigin("voice");
       } catch (error) {
         setProblem(error instanceof Error ? error.message : String(error));
@@ -123,27 +126,20 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
       className="flex flex-col gap-2 rounded-lg border border-stone-300 bg-stone-50 p-3"
       onSubmit={(event) => {
         event.preventDefault();
-        if (body.trim() !== "") onSubmit(body, origin);
+        const message = commentBody(body, anchor);
+        if (message !== "") onSubmit(message, origin);
       }}
     >
-      {anchor === null
-        ? <p className="m-0 text-sm text-stone-600">Commenting on the whole exhibit.</p>
-        : (
-          <blockquote className="m-0 border-l-4 border-stone-400 pl-3 text-sm text-stone-700">
-            {anchor.section === undefined ? null : <span className="mr-2 font-semibold">{anchor.section}:</span>}
-            {anchor.quoted.slice(0, 220)}{anchor.quoted.length > 220 ? "…" : ""}
-          </blockquote>
-        )}
       <textarea
-        autoFocus
         className="min-h-20 w-full rounded-md border border-stone-300 p-2 text-sm"
         onChange={(event) => { setBody(event.target.value); }}
         placeholder="What about it?"
+        ref={textarea}
         rows={3}
         value={body}
       />
       <p className="m-0 flex flex-wrap items-center gap-2">
-        <button className={BUTTON_ON} disabled={pending || body.trim() === ""} type="submit">
+        <button className={BUTTON_ON} disabled={pending || commentBody(body, anchor) === ""} type="submit">
           {pending ? "Saving…" : "Comment"}
         </button>
         {mic.available
@@ -169,8 +165,8 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
 /**
  * Commenting on an exhibit page (`docs/implemented-plans/exhibit-comments.md`). Off by
  * default, because selecting text is ordinary reading. On, a selection inside
- * `contentRef` opens the composer with the quoted text and the heading above
- * it; "the whole exhibit" opens it with no anchor. The comment goes to the
+ * `contentRef` fills the header textarea with the picked context;
+ * "the whole exhibit" opens an empty draft. The comment goes to the
  * exhibit's workstream through the exhibits origin, and the agent reads it with
  * `bin/comments` — nothing is read back here.
  */
@@ -195,19 +191,13 @@ export function CommentPanel({ scope, contentRef }: {
     composing: draft !== null,
     onPick: (anchor, target) => { setNotice(null); setDraft({ anchor }); setLocation(target); },
   });
-  const handleWidenDraft = (): void => {
-    const root = contentRef.current;
-    if (root === null || !(location instanceof Element)) return;
-    const larger = largerCommentTarget(location, root);
-    if (larger === null) return;
-    setLocation(larger);
-    setDraft({ anchor: captureElement(root, larger) });
-  };
-
   useEffect(() => {
-    highlightRanges(positions.anchored.flatMap(({ location: target }) => target instanceof Range ? [target] : []));
+    highlightRanges([
+      ...positions.anchored.flatMap(({ location: target }) => target instanceof Range ? [target] : []),
+      ...(draft !== null && location instanceof Range ? [location] : []),
+    ]);
     return () => { highlightRanges([]); };
-  }, [positions.anchored]);
+  }, [positions.anchored, draft, location]);
 
   useEffect(() => {
     let current = true;
@@ -237,7 +227,7 @@ export function CommentPanel({ scope, contentRef }: {
     if (!active) return;
     const onKey = (event: KeyboardEvent): void => {
       if (event.key !== "Escape") return;
-      if (draft !== null) setDraft(null);
+      if (draft !== null) { setDraft(null); setLocation(null); }
       else setActive(false);
     };
     document.addEventListener("keydown", onKey);
@@ -302,10 +292,7 @@ export function CommentPanel({ scope, contentRef }: {
       {active ? <CommentOverlay hovered={picker.hovered ?? (draft !== null && location instanceof Element ? location : null)} anchored={positions.anchored} layoutKey={`${String(draft !== null)}:${String(listOpen)}`} onMarker={(comment) => { setFocusedId(comment.id); setListOpen(true); }} /> : null}
       {draft === null
         ? null
-        : <div className="comment-draft-position" style={commentComposerStyle(location)}>
-          {location instanceof Element ? <button className={BUTTON} onClick={handleWidenDraft} type="button">Larger target</button> : null}
-          <Composer anchor={draft.anchor} onCancel={() => { setDraft(null); }} onSubmit={(body, origin) => void submit(body, origin)} pending={pending} />
-        </div>}
+        : <Composer anchor={draft.anchor} onCancel={() => { setDraft(null); setLocation(null); }} onSubmit={(body, origin) => void submit(body, origin)} pending={pending} />}
       {listOpen ? <div className="comment-all-list" aria-label="All comments" ref={listRef}>
         <p className="m-0 text-sm text-stone-600">{String(positions.unresolved)} without a current marker</p>
         {items.map((comment) => <div className={focusedId === comment.id ? "comment-focused" : undefined} data-comment-id={comment.id} key={comment.id}>

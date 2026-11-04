@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { captureElement, highlightRanges, largerCommentTarget, type SelectionAnchor } from "../lib/selection-anchor.js";
-import { CommentOverlay, commentComposerStyle, scrollToComment, useCommentPicker, useCommentPositions, type CommentLocation } from "./comment-pointing.js";
+import { highlightRanges, type SelectionAnchor } from "../lib/selection-anchor.js";
+import { appendCommentTranscript, commentBody, commentDraftText } from "../lib/comment-draft.js";
+import { CommentOverlay, scrollToComment, useCommentPicker, useCommentPositions, type CommentLocation } from "./comment-pointing.js";
 import { recorderAvailability, startRecording } from "../lib/recorder.js";
 import { MAX_AUDIO_BYTES } from "../../server/transcribe-contract.js";
 import { Button, Pill } from "./ui.js";
@@ -44,12 +45,13 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
   onSubmit: (body: string, origin: "typed" | "voice") => void;
   pending: boolean;
 }) {
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(() => commentDraftText(anchor));
   // `origin` records how the text ARRIVED, not that it is verbatim — the
   // boxholder may correct the transcript, which is the point of the split.
   const [origin, setOrigin] = useState<"typed" | "voice">("typed");
   const [session, setSession] = useState<Awaited<ReturnType<typeof startRecording>> | null>(null);
   const [recordingProblem, setRecordingProblem] = useState<string | null>(null);
+  const textarea = useRef<HTMLTextAreaElement | null>(null);
   const mic = recorderAvailability();
   const transcribe = trpc.comments.transcribe.useMutation();
 
@@ -58,6 +60,10 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
   // text, toggling commenting off, navigating away — unmounts this component,
   // so releasing here covers all of them.
   useEffect(() => () => { session?.cancel(); }, [session]);
+  useEffect(() => {
+    textarea.current?.focus();
+    textarea.current?.scrollIntoView({ block: "nearest" });
+  }, []);
 
   async function toggleRecording(): Promise<void> {
     setRecordingProblem(null);
@@ -71,7 +77,7 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
         });
         // Appended, not replaced: a second take adds to what is there rather
         // than discarding a correction already made.
-        setBody((current) => (current === "" ? result.text : `${current} ${result.text}`));
+        setBody((current) => appendCommentTranscript(current, result.text));
         setOrigin("voice");
       } catch (e) {
         // The recording is gone but the composer is not — say so, and let the
@@ -92,22 +98,19 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
       className="comment-composer"
       onSubmit={(event) => {
         event.preventDefault();
-        if (body.trim() !== "") onSubmit(body.trim(), origin);
+        if (commentBody(body, anchor) !== "") onSubmit(commentBody(body, anchor), origin);
       }}
     >
-      {anchor === null
-        ? <p className="muted">Commenting on the whole document.</p>
-        : <blockquote className="comment-quote">{anchor.quoted.slice(0, 220)}{anchor.quoted.length > 220 ? "…" : ""}</blockquote>}
       <textarea
         className="comment-input"
-        autoFocus
         rows={3}
         value={body}
         placeholder="What about it?"
+        ref={textarea}
         onChange={(event) => { setBody(event.target.value); }}
       />
       <p className="comment-actions">
-        <Button type="submit" intent="primary" disabled={pending || body.trim() === ""}>
+        <Button type="submit" intent="primary" disabled={pending || commentBody(body, anchor) === ""}>
           {pending ? "Saving…" : "Comment"}
         </Button>
         {mic.available
@@ -185,16 +188,19 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
   useEffect(() => {
     const root = contentRef.current;
     if (root === null) return;
-    const ranges = positions.anchored.flatMap(({ location: target }) => target instanceof Range ? [target] : []);
+    const ranges = [
+      ...positions.anchored.flatMap(({ location: target }) => target instanceof Range ? [target] : []),
+      ...(composing && location instanceof Range ? [location] : []),
+    ];
     highlightRanges(ranges);
     return () => { highlightRanges([]); };
-  }, [positions.anchored, contentRef]);
+  }, [positions.anchored, contentRef, composing, location]);
 
   useEffect(() => {
     if (!active) return;
     const onKey = (event: KeyboardEvent): void => {
       if (event.key !== "Escape") return;
-      if (composing) setComposing(false);
+      if (composing) { setComposing(false); setAnchor(null); setLocation(null); }
       else setActive(false);
     };
     document.addEventListener("keydown", onKey);
@@ -223,15 +229,6 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
   }
 
   const unresolved = positions.unresolved;
-  const handleWidenDraft = (): void => {
-    const root = contentRef.current;
-    if (root === null || !(location instanceof Element)) return;
-    const larger = largerCommentTarget(location, root);
-    if (larger === null) return;
-    setLocation(larger);
-    setAnchor(captureElement(root, larger));
-  };
-
   useEffect(() => {
     if (focusedId !== null && showList) document.getElementById(`comment-${focusedId}`)?.scrollIntoView({ block: "nearest" });
   }, [focusedId, showList]);
@@ -262,12 +259,7 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
         setShowList(true);
       }} /> : null}
 
-      {composing
-        ? <div className="comment-draft-position" style={commentComposerStyle(location)}>
-          {location instanceof Element ? <Button intent="quiet" onClick={handleWidenDraft}>Larger target</Button> : null}
-          <Composer anchor={anchor} pending={add.isPending} onCancel={() => { setComposing(false); }} onSubmit={submit} />
-        </div>
-        : null}
+      {composing ? <Composer anchor={anchor} pending={add.isPending} onCancel={() => { setComposing(false); setAnchor(null); setLocation(null); }} onSubmit={submit} /> : null}
       {add.isError ? <p className="action-error" role="alert">Couldn’t save: {add.error.message}</p> : null}
       {comments.isError ? <p className="action-error" role="alert">Couldn’t read comments: {comments.error.message}</p> : null}
 

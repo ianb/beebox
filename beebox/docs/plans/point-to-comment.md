@@ -21,7 +21,7 @@ Comment mode lets a person pick a visible part of a document or exhibit with a c
 
 ### Right place, right time
 
-The Comment control is visible with the document or exhibit. Picking happens only after the person enables it. A draft opens next to the selected content; the list waits behind a control in the same toolbar. Leaving the mode restores normal page gestures.
+The Comment control is visible in the document or exhibit header. Picking happens only after the person enables it. The picked text appears inside the existing comment textarea as quoted lines, where the person can edit it or add speech. The list waits behind a control in the same header. Leaving the mode restores normal page gestures. Raw exhibits have a compact fixed control strip because they have no shared page header.
 
 ### Spirit, trust, and failure
 
@@ -29,23 +29,23 @@ This is a developer feedback surface, not a box behavior. Saving requires an exp
 
 ### Walkthrough
 
-The person enables Comment, hovers or taps an image, sees its outline, writes a note in the nearby composer, and saves it. The comment gains a marker. The agent sees the quote and note through `bin/comments`; clearing it removes the marker after refresh.
+The person enables Comment, hovers or taps an image, sees its outline, and sees its description inserted into the comment input. They type or dictate a note and save it. The comment gains a marker. The agent sees the quote and note through `bin/comments`; clearing it removes the marker after refresh.
 
 ## Smallest fix and budget
 
-The smallest plausible change picks a block and opens the existing composer. The chosen version also adds a persistent element anchor, markers, and an exhibit read path so saved comments stay findable. Estimate: 650–1000 changed source/test lines across the app, plus this plan and a short exhibit-doc update. No generated output.
+The initial implementation picks a block, adds a persistent element anchor and markers, and reads exhibit comments. This revision changes only the draft presentation and target set. Estimate: 180–300 changed source/test lines across the app, plus plan, issue, and exhibit-doc updates. No generated output.
 
 ## Stated preferences this plan trades against
 
-The issue says “Keep what exists” and “Text selection stays available”; retain the current fields, always-on text highlights, and selection path. The human handoff requires desktop and mobile verification. Screenshots remain optional because they require an attachment store beyond the existing comment fields.
+The issue says “Keep what exists” and “Text selection stays available”; retain the current fields, always-on text highlights, and selection path. The boxholder then required the picked selection inside the existing comment textarea, with speech in the same draft, no separate input, no target-widening control, and a visible top-bar button. They confirmed the workstreams comment textarea is the destination. Desktop and mobile verification remain required. Screenshots remain optional because they require an attachment store beyond the existing comment fields.
 
 ## What already exists
 
-- `workstreams-app/src/frontend/components/CommentLayer.tsx:194`: `captureSelection(root)` opens the document composer. Reuse it for precise text.
-- `workstreams-app/src/frontend/exhibits/CommentPanel.tsx:181`: exhibits also capture selections and save via their own API. Reuse the composer and request path.
-- `workstreams-app/src/frontend/lib/selection-anchor.ts:84`: the anchor holds `quoted`, optional `section`, and optional `fragment`; `:140` resolves text fragments. Extend the fragment interpretation for elements.
+- `workstreams-app/src/frontend/components/CommentLayer.tsx`: the current document draft floats beside the target and renders a separate blockquote. Move that existing textarea into the page header and put the picked quote inside its value.
+- `workstreams-app/src/frontend/exhibits/CommentPanel.tsx`: exhibits use the same floating draft. Keep their request path and place the textarea in their existing top controls.
+- `workstreams-app/src/frontend/lib/selection-anchor.ts`: element fragments and text fragments already resolve. Remove the target-widening helper and use semantic blocks as tap targets.
 - `workstreams-app/src/shared/comments.ts:17`: the wire schema already permits string fragments and quotes. No store migration is needed.
-- `workstreams-app/src/server/comments-service.ts:109`: the CLI can read a target, but the service currently exposes only document reads. Add an exhibit read method.
+- `workstreams-app/src/server/comments-service.ts`: the exhibit read path is already implemented in this branch; retain it.
 
 ## Prior art (external)
 
@@ -60,13 +60,13 @@ The issue records Claude artifact and Science behavior with source links. Adopt 
 
 ## Tracks / scope
 
-1. **Anchor and picker:** Choose semantic blocks (`p`, headings, list items, table cells/rows/table, figure, image, pre, blockquote, and document sections). The closest eligible ancestor wins. An explicit “Larger target” control walks eligible ancestors. A typed element fragment records the element-child path plus tag and descriptive quote. Resolution verifies tag and quote; a moved or changed target is unresolved rather than pinned to a wrong element. An element's text, caption, alt, or image source becomes `quoted`. A text selection still uses the existing text fragment. First chunk: anchor utilities; browser verification supplies the DOM environment.
-2. **Document UI:** Add pointer hover and tap picking, a nearby composer, mode button with open count, mode-only pins, and a list that can navigate to a comment. Existing text highlights stay always visible. A non-collapsed selection wins over picking. A drag never picks. Capture clicks before links activate while mode is on; leave native text selection enabled, including touch long press. Use a fixed overlay to outline targets and place pins without mutating rendered React DOM. First chunk: document component and CSS.
-3. **Exhibit UI and read path:** Use the same picker and fixed overlay, including raw pages with a shadow-root toolbar. On desktop the raw-page composer sits beside the target; on a phone it is a bottom sheet. A text-highlight style is installed in the document head. Extend the exhibit API and comment service to read existing comments by exhibit target. First chunk: API read and tests, then panel and CSS.
+1. **Anchor and picker:** Keep semantic blocks and visual elements (`p`, headings, list items, table cells/rows/table, figure, image, pre, blockquote, svg, canvas). Remove generic `div`, `section`, `article`, links, and buttons from automatic targets. Keep `[data-comment-target]` for an authored page override. Remove `largerCommentTarget`; a text selection still identifies a smaller span.
+2. **Document UI:** Move the Comment control and existing textarea above the document body. Picking fills the textarea with `> ` quoted lines followed by a blank line and focuses it, bringing the input into view on a phone. Speech appends after the quote. Save strips the unchanged leading quote block from the body; the original anchor remains in `quoted` and `fragment`, so editing the draft text cannot move an existing marker. If the person changes the quote block, those changed lines become part of the body. Keep the chosen target outlined until save or cancel. Remove the floating card, separate quote block, and target-widening control.
+3. **Exhibit UI:** Apply the same draft behavior to the container's existing top controls. Raw pages have no common header; move their fixed control strip to the top and keep it compact. Retain the existing read API, pins, list, and highlights.
 
 ## Could this be simpler?
 
-Block picking alone would let the person write a note, but a saved image comment would have no in-page target, and an exhibit could not show existing comments. The additional read path and element fragment deliver the issue's markers and list while keeping the store shape.
+Block picking alone would let the person write a note, but a saved image comment would have no in-page target, and an exhibit could not show existing comments. The additional read path and element fragment deliver the issue's markers and list while keeping the store shape. The header input needs no separate quote display or target-size control.
 
 ## Subplans
 
@@ -81,6 +81,9 @@ None; both surfaces share the picker and anchor rules.
 | Tap on a link navigates | Browser touch check | Capture and prevent default | Clear |
 | Exhibit read fails | New API test | Panel error while comments remain stored | Clear |
 | Comment save fails | Existing API test | Draft and error remain | Clear |
+| A phone tap updates an offscreen input | Browser touch check | Focus brings the header input into view; chosen target stays outlined | Clear |
+| Quote repeats in the agent's note | New pure helper test | Strip the unchanged quote prefix from the saved body | Clear |
+| Dictation joins the quote line | New pure helper test | Preserve the blank line before appending speech | Clear |
 
 ## Agent-flow / user-flow edge cases
 
@@ -93,6 +96,7 @@ None; both surfaces share the picker and anchor rules.
 
 - Box-page commenting and long press gestures belong to the neighboring issue.
 - Screenshot capture, uploads, and image point pins would add an attachment lifecycle without a settled need.
+- A control for widening the picked target was explicitly rejected by the boxholder.
 - Replies, threads, send-to-agent checkbox, and resolution state do not match the present comment workflow.
 
 ## Open design questions
@@ -109,10 +113,9 @@ Pure fragment-format tests cover the new encoding. Browser checks exercise DOM t
 
 ## Implementation order
 
-1. Anchor utility and focused tests.
-2. Exhibit read API and tests.
-3. Both comment UIs and styles.
-4. Browser checks, exhibit, cross-model diff review, and corrections.
+1. Keep the implemented anchor and read API; narrow automatic targets and remove widening.
+2. Put the selected quote into the existing document and exhibit textareas, remove floating drafts, and put Comment at the top of each page.
+3. Check desktop, phone, and touch behavior, then update the exhibit and get cross-model diff review.
 
 ## Rollout shape
 

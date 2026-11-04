@@ -110,9 +110,9 @@ h2 small { color: #827d75; font-size: .78em; font-weight: 500; }
 
 /* Comments: a communication medium on a rendered document. */
 ::highlight(bbx-comment-anchor) { background: #fde68a; color: inherit; }
-.comment-layer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e1ddd7; }
+.comment-layer { margin: .8rem 0 1.5rem; padding: .6rem .8rem; border: 1px solid #e1ddd7; border-radius: 8px; background: #fffdfa; }
 .comment-toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
-.comment-composer { display: grid; gap: .5rem; margin: .8rem 0; }
+.comment-composer { display: grid; gap: .5rem; max-width: 42rem; margin: .8rem 0; }
 .comment-input { width: 100%; padding: .5rem .6rem; border: 1px solid #d9d3ca; border-radius: 6px; font: inherit; }
 .comment-actions { display: flex; gap: .5rem; margin: 0; }
 .comment-heading { font-size: 1rem; margin: 1.2rem 0 .4rem; }
@@ -124,6 +124,4 @@ h2 small { color: #827d75; font-size: .78em; font-weight: 500; }
 .comment-overlay { position: fixed; inset: 0; z-index: 2147482999; pointer-events: none; }
 .comment-target-outline { position: fixed; border: 3px solid #2d6caa; border-radius: 5px; background: #2d6caa18; pointer-events: none; }
 .comment-marker { position: fixed; pointer-events: auto; border: 2px solid white; border-radius: 50%; width: 26px; height: 26px; background: #284c79; color: white; box-shadow: 0 1px 5px #0008; cursor: pointer; }
-.comment-draft-position { background: #fffdf9; border: 1px solid #d9d3ca; border-radius: 8px; padding: .6rem; box-shadow: 0 3px 14px #0003; max-height: calc(100dvh - 24px); overflow-y: auto; }
 .comment-focused { outline: 2px solid #2d6caa; border-radius: 6px; }
-@media (max-width: 639px) { .comment-draft-position { position: fixed; z-index: 2147483001; left: 8px; right: 8px; bottom: 8px; max-height: 75dvh; overflow-y: auto; } }

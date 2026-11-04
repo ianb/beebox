@@ -31,9 +31,9 @@ export interface SelectionAnchor {
 }
 
 const ELEMENT_PREFIX = ":~:element=";
-const TARGET_SELECTOR = "[data-comment-target], img, svg, canvas, a, button, p, h1, h2, h3, h4, h5, h6, li, pre, blockquote, figure, figcaption, table, tr, td, th, section, article, div";
+const TARGET_SELECTOR = "[data-comment-target], img, svg, canvas, p, h1, h2, h3, h4, h5, h6, li, pre, blockquote, figure, figcaption, table, tr, td, th";
 
-/** Closest visible block or visual element. Parent targets remain available to widen a pick. */
+/** Closest visible block or visual element. Authored targets can override it. */
 export function commentTarget(node: Element | null, root: HTMLElement): Element | null {
   if (node !== null && !root.contains(node)) return null;
   for (let current = node; current !== null && current !== root; current = current.parentElement) {
@@ -43,14 +43,6 @@ export function commentTarget(node: Element | null, root: HTMLElement): Element 
     return current;
   }
   return null;
-}
-
-export function largerCommentTarget(target: Element, root: HTMLElement): Element | null {
-  const parent = target.parentElement;
-  // The exhibit image's enlarge button wraps the picture. Widen to the figure,
-  // not to a button whose label only describes its action.
-  const start = target.matches("img, svg, canvas") && parent?.matches("button, a") ? parent.parentElement : parent;
-  return commentTarget(start, root);
 }
 
 function descriptionFor(element: Element): string {

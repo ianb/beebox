@@ -180,18 +180,6 @@ export function CommentOverlay({ hovered, anchored, layoutKey, onMarker }: {
   );
 }
 
-export function commentComposerStyle(location: CommentLocation | null): React.CSSProperties | undefined {
-  if (location === null) return undefined;
-  const rect = bounds(location);
-  if (window.innerWidth < 640) return undefined;
-  const top = Math.max(12, Math.min(rect.top, window.innerHeight - 270));
-  return {
-    position: "fixed", zIndex: 2147483001, width: Math.min(360, window.innerWidth - 24),
-    left: Math.min(rect.right + 10, window.innerWidth - Math.min(360, window.innerWidth - 24) - 12),
-    top, maxHeight: window.innerHeight - top - 12,
-  };
-}
-
 export function scrollToComment(location: CommentLocation): void {
   if (location instanceof Element) location.scrollIntoView({ block: "center", behavior: "smooth" });
   else location.startContainer.parentElement?.scrollIntoView({ block: "center", behavior: "smooth" });

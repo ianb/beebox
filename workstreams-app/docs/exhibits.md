@@ -119,10 +119,10 @@ container by referencing one module:
 <script type="module" src="/controls.ts"></script>
 ```
 
-The bar is fixed to the bottom of the window, 48px tall when idle, and grows
-upward when the composer opens. Leave `padding-bottom: 48px` on the page's
-scrolling element so the bar never covers the last line, and keep the page's
-own fixed elements out of the bottom 48px: the bar sits above everything. The
+The bar is fixed to the top of the window, 48px tall when idle, and grows
+downward when the comment input opens. It reserves its current height above
+the page automatically, including when its controls wrap on a phone. Keep the page's
+own fixed elements out of that top area: the bar sits above everything. The
 bar renders in a shadow root with its own stylesheet, so the page's styles and
 the bar's do not touch; the page itself is not edited. Commenting reads
 selections in ordinary text in the page's body (not inside an iframe or a
@@ -216,10 +216,10 @@ page may also call the route itself.
 
 A person reading an exhibit can leave a remark on it, typed or spoken, from
 the page. **Comment** turns on pointing mode and shows the open count. Hovering
-outlines a target; clicking or tapping a block, link, image, or chart opens a
-composer beside it (at the bottom of the screen on a phone). **Larger target**
-widens the choice to its parent; Cancel lets the person point again to choose a
-smaller part. Selecting text still comments on the selected span. While the mode
+outlines a target; clicking or tapping a block, link, image, or chart puts its
+description into the comment input in the page header. Selecting text puts that
+span into the same input. The picked context is editable; **Cancel** lets the
+person point again. While the mode
 is on, a tap on a link picks it instead of following it. **Done commenting**
 restores normal page actions. The mode also shows markers for saved comments;
 **Show all comments** lists them and can return to a target. Existing text

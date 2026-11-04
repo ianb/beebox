@@ -90,12 +90,17 @@ question above.
 
 ## Work in point-to-comment
 
-The worktree implementation adds the mode button with an open count, pointing
-at blocks and visual elements, a way to widen the target, a nearby composer,
-and a list and markers for existing comments. Text selection and the existing
-comment fields remain. Exhibit pages now read their saved comments through the
-same CLI-backed service. Desktop, phone, touch, raw-page link, and image-target
-checks used a local worktree app instance; temporary comments were cleared.
+The worktree implementation adds a visible mode button with an open count,
+pointing at blocks and visual elements, and a list and markers for existing
+comments. Text selection and the existing comment fields remain. Exhibit
+pages read their saved comments through the same CLI-backed service. The
+boxholder then clarified that a pick should place its context inside the
+existing comment textarea, including before dictation. The controls now sit
+at the top of document and exhibit pages; there is no floating draft or way
+to enlarge the picked target. The raw-page strip reserves its changing height
+so content stays visible on a phone. Desktop, phone, touch, raw-page link,
+image-target, and saved-marker checks used a local worktree app instance;
+temporary comments were cleared.
 The branch is not merged.
 Claude Opus 5.5 reviewed the implementation in two rounds. Its findings led
 to marker matching for nested wrappers, stable drag tracking, persistent read
