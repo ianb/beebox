@@ -10,7 +10,7 @@ import { createTRPCUntypedClient, retryLink, TRPCClientError, type TRPCLink } fr
 import type { AnyRouter } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { countRequestStart, resetFetchStormForTest, runtimeLintLink } from "../../../src/lib/runtime-lint/fetch-storm.js";
-import { opaqueId, procedureName, resetRuntimeLintForTest } from "../../../src/lib/runtime-lint/report.js";
+import { formatRecord, resetRuntimeLintForTest } from "../../../src/lib/runtime-lint/report.js";
 
 function setup(t: Test) {
   resetRuntimeLintForTest(() => 0);
@@ -45,9 +45,10 @@ void test("ten starts of one query are reported once; retries do not count", asy
     links: [runtimeLintLink(), retryLink({ retry: ({ attempts }) => attempts < 2 }), transport.link],
   });
   for (let i = 0; i < 10; i++) await client.query("card.get", { path: "_content/report.doc.card" });
-  t.check({ attempts: transport.attempts(), records: records() }, {
+  // The input is the page's first opaque id; the record carries no path.
+  t.check({ attempts: transport.attempts(), lines: records().map(formatRecord) }, {
     attempts: 20,
-    records: [{ check: "fetch-storm", procedure: procedureName("card.get"), input: opaqueId(`card.get|${JSON.stringify({ path: "_content/report.doc.card" })}`), starts: 9, windowMs: 10_000, seq: 1 }],
+    lines: ["[runtime-lint] fetch-storm procedure=card.get input=c1 starts=9 windowMs=10000"],
   });
 });
 

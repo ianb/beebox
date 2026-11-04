@@ -22,10 +22,24 @@ const MAX_TRACKED = 500;
 
 const startsByRequest = new Map<string, number[]>();
 
+/**
+ * FNV-1a over the input's JSON: a short key, so a large input (a path list)
+ * is not kept in the maps. A collision only merges two requests' counts.
+ */
+function inputHash(input: unknown): string {
+  if (input === undefined) return "";
+  const text = JSON.stringify(input);
+  let hash = 0x81_1c_9d_c5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.codePointAt(i) ?? 0;
+    hash = Math.imul(hash, 0x01_00_01_93) >>> 0;
+  }
+  return hash.toString(36);
+}
+
 /** Count one start at time `now`; reports when the window holds more than the limit. */
 export function countRequestStart({ procedure, input, now }: { procedure: string; input: unknown; now: number }): void {
-  const inputKey = input === undefined ? "" : JSON.stringify(input);
-  const key = `${procedure}|${inputKey}`;
+  const key = `${procedure}|${inputHash(input)}`;
   const starts = (startsByRequest.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
   starts.push(now);
   startsByRequest.delete(key);
