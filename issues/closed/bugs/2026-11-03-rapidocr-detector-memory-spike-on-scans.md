@@ -1,12 +1,15 @@
 ---
 title: "RapidOCR's text detector adds about 900 MB at its peak on a scanned PDF"
-workstream: unattached
+workstream: docling-memory
 area: beebox
 labels: [pdf, docling, ocr, memory]
 filed-by: agent
 discovered-by: agent
 discovered-in: "docling-memory workstream, 2026-11-03"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-03):** D20: RapidOCR max side 1280 px; the remaining scan cost is TableFormer, filed as 2026-11-03-tableformer-memory-on-scanned-tables
 
 After the Docling memory changes (D18 in
 `beebox/docs/plans/scanner-ingest-docling-decisions.md`), a digital PDF of any
@@ -32,3 +35,13 @@ comparison first (D7 and D15 record how the current modes were scored):
 At 1.56 GB beside a box server and chat (about 550 MB) a scan conversion
 reaches about 2.1 GB, slightly over the box's 2 GiB `MemoryHigh`: the box is
 throttled for the length of the OCR, not killed.
+
+## Findings (2026-11-03)
+
+Measured and fixed in D20 (`beebox/docs/plans/scanner-ingest-docling-decisions.md`).
+RapidOCR already caps its input at 2000 px a side (`Global.max_side_len`), so
+the hypothesis above was only partly right. Lowering the cap to 1280 px cut the
+real scan's peak from 1,562 MB to 1,406 MB and its time by half, and improved
+OCR on degraded scans with known text (fewer run-together words, higher
+recall). The larger remaining cost on table-heavy scans is TableFormer, not
+OCR: `2026-11-03-tableformer-memory-on-scanned-tables.md`.

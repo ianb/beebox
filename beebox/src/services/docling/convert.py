@@ -135,6 +135,10 @@ def convert(req: dict[str, Any]) -> int:
     languages = req.get("languages")
     if languages:
         ocr_options.lang = list(languages)
+    # Cap the side of each image RapidOCR reads at 1280 px (default 2000).
+    # On degraded test scans with known text this raised word recall and cut
+    # run-together words from 29 to 4, with less memory and time (D20).
+    ocr_options.rapidocr_params = {"Global.max_side_len": 1280}
     options = PdfPipelineOptions(
         accelerator_options=AcceleratorOptions(num_threads=4, device="cpu"),
         do_ocr=ocr != "off",

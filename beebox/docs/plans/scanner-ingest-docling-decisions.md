@@ -388,3 +388,35 @@ page with OCR, on three cores to itself. Prod shares three cores across seven
 boxes, so the per-page figures carry about 3x headroom. **Revisit:** when a
 prod conversion's real duration is known (the card records none today), or if
 a legitimate document hits the cap.
+
+## D20. RapidOCR reads images at most 1280 px on a side (2026-11-03)
+
+The driver passes `rapidocr_params = {"Global.max_side_len": 1280}` (RapidOCR's
+default is 2000). Docling renders OCR regions at 3x (216 dpi), so a full-page
+region from a letter-size scan is about 1840 x 2380 px before RapidOCR scales
+it down. OCR modes (D7) and the engine are unchanged.
+
+Scored on two degraded scans made from digital government reports, whose text
+layer is the reference: ten prose pages and ten table pages, rendered at
+200 dpi, tilted under a degree, blurred, noised, and JPEG-compressed. Recall is
+the share of reference words found; run-together words are output tokens that
+split into two reference words (D7's measure).
+
+| Setting | Prose recall | Prose run-together | Table recall | Real 16-page scan: peak, time |
+|---|---:|---:|---:|---:|
+| Default (2000 px, 3x) | 0.951 | 29 | 0.921 | 1,558 MB, 78 s |
+| 1600 px | 0.961 | 13 | 0.921 | 1,376 MB, 73 s |
+| **1280 px** | **0.964** | **4** | **0.933** | **1,369 MB, 66 s** |
+| OCR render at 2x | 0.971 | 1 | 0.916 | 1,250 MB, 67 s |
+
+1280 px is better than or equal to the default on every measure. Rendering at
+2x saves more memory but lost table recall, so it was not taken. The two
+synthetic fixtures (`scan-financial`, `junk-layer-legal`) scored 1.000 under
+every setting. On the real 16-page scan, where there is no reference, the new
+output shares 97.7% of its words with the old.
+
+Through the driver, that scan now peaks at 1,406 MB (was 1,562 MB) and takes
+71 s (was 141 s). The rest of a scan's peak is not OCR: on the table scan,
+turning OCR off left 1,622 MB, and turning table structure off as well left
+660 MB. TableFormer on image-only table pages is the remaining cost.
+**Revisit:** with real scan volume, or if text from small print goes missing.

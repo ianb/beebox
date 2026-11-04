@@ -1,12 +1,15 @@
 ---
 title: "uv prints an experimental --torch-backend warning on every Docling run"
-workstream: unattached
+workstream: docling-memory
 area: beebox
 labels: [docling, noise]
 filed-by: agent
 discovered-by: agent
 discovered-in: "docling-memory workstream, 2026-11-03"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-03):** uvx --quiet in services/docling/subprocess.ts (commit 9c2fb96a6); uv errors still print
 
 Every `uvx` call for Docling with `UV_TORCH_BACKEND=cpu` set (hosted boxes set
 it in `/etc/beebox/box.env`; `src/core/script-env/allowlist.ts` passes it to
