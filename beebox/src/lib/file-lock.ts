@@ -1,7 +1,10 @@
 /**
  * Machine-local cross-process file lock primitive.
  *
- * This is the canonical lock for the project. All cross-process locks
+ * This is the canonical lock for the project. One deliberate exception: the
+ * Docling conversion locks are kernel `flock`s held by the Python driver
+ * (`services/docling/convert.py`), because they must last exactly as long as
+ * the conversion's memory does, even while this process is stalled or gone. All cross-process locks
  * (the wakeup cycle lock in cli/commands/wakeup-cycle-lock.ts,
  * scheduled-script + lock-group locks
  * in core/schedule/state.ts, reactor mutex in core/reactor/engine.ts, the

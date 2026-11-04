@@ -52,6 +52,7 @@
     "src/shared/card-activity-kinds.ts",
     "src/core/agent-guide/ledger.yaml",
     "src/core/agent-guide/guide.md",
+    "src/services/docling/convert.py",
     "tsconfig.json",
     "tsconfig.base.json"
   ],

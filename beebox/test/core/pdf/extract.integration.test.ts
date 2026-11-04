@@ -1,9 +1,10 @@
 // # Real Docling — the one gated integration test
 //
 // Everything else about pdf mode is tested against a fake. This file runs
-// the **real** `uvx docling` at the pinned version over a real PDF, because the
-// fake cannot catch the things that actually break: a renamed CLI flag, a moved
-// output path, an upstream change to where artifacts land.
+// the **real** Docling driver (`convert.py`, through `uvx` at the pinned
+// version) over a real PDF, because the fake cannot catch the things that
+// actually break: a renamed option, a moved output path, an upstream change to
+// where artifacts land.
 //
 // It is **skipped** — loudly, with a reason on stderr — wherever Docling cannot
 // run: no `uv` installed, no network for the first environment build, a sandbox
@@ -28,8 +29,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any, oneOf, str } from "@ianbicking/tap-check/check";
-import { createDoclingService, doclingArgs } from "../../../src/services/docling/core.js";
+import { oneOf } from "@ianbicking/tap-check/check";
+import { createDoclingService } from "../../../src/services/docling/core.js";
 import type { DoclingExtraction } from "../../../src/services/docling/core.js";
 import type { Result } from "../../../src/shared/result.js";
 import { DOCLING_VERSION } from "../../../src/services/docling/version.js";
@@ -67,23 +68,8 @@ function weightsMissing(result: Result<DoclingExtraction>) {
   return !result.ok && result.error.includes("huggingface_hub") && /snapshot_download|offline/i.test(result.error);
 }
 
-// ## The argv we send is the argv we mean
-//
-// This part runs everywhere — it is a pure function, and it is the thing most
-// likely to rot when Docling changes its CLI.
-void test("This part runs everywhere — it is a pure function, and it is the thing most l...", async (t) => {
-  t.check(doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "off", languages: null }).join(" "), str`--from docling==${any(String)} --with onnxruntime --with rapidocr docling convert /scan/source.pdf --to md --to json --image-export-mode referenced --table-mode fast --device cpu --document-timeout 600 --output /work -q --no-ocr`);
-
-  // `--force-ocr` is deprecated upstream; `--ocr-mode` is the supported spelling.
-  // A junk text layer must be replaced wholesale, so it gets `full_page`:
-
-  t.check(doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "replace", languages: ["en", "de"] }).slice(-7).join(" "), "--ocr --ocr-mode full_page --ocr-engine rapidocr --ocr-lang en,de");
-
-  // A PDF with no text layer instead gets `layout_regions`, which measured better
-  // on dense scanned forms:
-
-  t.check(doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "regions", languages: null }).slice(-5).join(" "), "--ocr --ocr-mode layout_regions --ocr-engine rapidocr");
-});
+// The request and argv are checked without Docling in
+// `test/services/docling/subprocess.test.ts`.
 
 // ## A real extraction over a real PDF
 void test("A real extraction over a real PDF", async (t) => {

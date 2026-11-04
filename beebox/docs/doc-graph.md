@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-04T04:24:43Z
-Total documents: 621
+Generated: 2026-11-04T05:02:36Z
+Total documents: 622
 
 ## Issues
 
@@ -197,6 +197,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-cards.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doc-structure-chat.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doc-structure.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/docling-memory.md:49 (mention) — - **Write code in TypeScript** (`AGENTS.md`: *"Write code in TypeScript; a `.js`
 - docs/implemented-plans/docs-reorg.gap-analysis.md:6 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/docs-reorg.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/doctest-usability.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -1196,7 +1197,7 @@ Referenced by:
 - docs/guides.md:49 (link) — | Client debug log | [client-debug-log](client-debug-log.md) |
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:555 (mention) — errors (`docs/client-debug-log.md`).
-- docs/plans/runtime-lint.md:45 (mention) — | Docs (`docs/client-debug-log.md`, browse command reference) | ~50 |
+- docs/implemented-plans/runtime-lint.md:45 (mention) — | Docs (`docs/client-debug-log.md`, browse command reference) | ~50 |
 - docs/server/operations.md:205 (link) — For SSH-only debugging: `ssh root@<server> tail /var/lib/beebox/<box>/box/.beebox/client-debug.log`. See [`client-debug-
 - docs/testing.md:97 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
 - frontend.md:150 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
@@ -1207,7 +1208,7 @@ Referenced by:
 References:
 - → docs/mobile-contract.md (mention)
 - → docs/implemented-plans/ios-log-forwarding.md (mention)
-- → docs/plans/runtime-lint.md (mention)
+- → docs/implemented-plans/runtime-lint.md (mention)
 
 #### docs/connectors.md
 
@@ -5329,6 +5330,18 @@ References:
 - → docs/questions.md (mention)
 - → docs/implemented-plans/chat-review.md (mention)
 
+#### docs/implemented-plans/docling-memory.md
+
+Title: "Docling conversions that fit a box's memory" | 328 lines | shipped history | implemented
+
+Referenced by:
+- docs/plans/scanner-ingest-docling-decisions.md:279 (link) — OCR modes) are kept unchanged. Plan: [`docling-memory.md`](../implemented-plans/docling-memory.md).
+
+References:
+- → ../issues/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md (frontmatter)
+- → AGENTS.md (mention)
+- → docs/plans/scanner-ingest-docling-decisions.md (mention)
+
 #### docs/implemented-plans/docs-reorg.gap-analysis.md
 
 Title: "Docs-reorg companion: gap analysis — non-obvious, undocumented conventions" | 169 lines | shipped history
@@ -7608,6 +7621,17 @@ References:
 - → docs/mobile-contract.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/runtime-lint.md
+
+Title: "Runtime lint: the frontend reports problem React behavior to the box log" | 427 lines | shipped history | implemented
+
+Referenced by:
+- docs/client-debug-log.md:112 (mention) — `docs/implemented-plans/runtime-lint.md`.
+
+References:
+- → docs/client-debug-log.md (mention)
+- → docs/implemented-plans/stable-card-body.md (mention)
+
 #### docs/implemented-plans/scan-uploader-pairing.md
 
 Title: "Scan-uploader setup UI + minimal install story" | 341 lines | shipped history | implemented
@@ -7955,7 +7979,7 @@ Title: "A card body does not remount when only its surroundings change" | 370 li
 Referenced by:
 - docs/implemented-plans/composition-editor.md:150 (mention) — - **Shipped precedent: stable card body** (`docs/implemented-plans/stable-card-body.md`):
 - docs/implemented-plans/contents-menu-stable.md:19 (mention) — `beebox/docs/implemented-plans/stable-card-body.md`). Searched open `issues/`
-- docs/plans/runtime-lint.md:108 (mention) — `useMemo` (the 10-26 cause, `stable-card-body.md`) slip past it.
+- docs/implemented-plans/runtime-lint.md:108 (mention) — `useMemo` (the 10-26 cause, `stable-card-body.md`) slip past it.
 - ../issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md:13 (mention) — **Closed 2026-10-27:** fixed on branch worktree-card-remount (fff864dbb, 82206ada5): the shared Markdown renderer now us
 
 References:
@@ -10045,17 +10069,6 @@ Title: "Route-level code splitting — plan and cost/benefit" | 193 lines | prop
 Referenced by:
 - ../issues/closed/decisions/2026-08-01-route-splitting-wontfix.md:13 (mention) — `../../../beebox/docs/plans/route-splitting.md`. Summary of the call:
 
-#### docs/plans/runtime-lint.md
-
-Title: "Runtime lint: the frontend reports problem React behavior to the box log" | 424 lines | proposal | partial
-
-Referenced by:
-- docs/client-debug-log.md:112 (mention) — `docs/plans/runtime-lint.md`.
-
-References:
-- → docs/client-debug-log.md (mention)
-- → docs/implemented-plans/stable-card-body.md (mention)
-
 #### docs/plans/scan-guide-card.md
 
 Title: "Scan Guide Card — scanner priors via the guide system" | 395 lines | proposal | active
@@ -10126,13 +10139,17 @@ References:
 
 #### docs/plans/scanner-ingest-docling-decisions.md
 
-Title: "Docling Decisions Log — scanner-ingest" | 274 lines | proposal | active
+Title: "Docling Decisions Log — scanner-ingest" | 369 lines | proposal | active
 
 Referenced by:
+- docs/implemented-plans/docling-memory.md:57 (mention) — - **D2: invoke the CLI, not docling-serve** (`docs/plans/scanner-ingest-docling-decisions.md`, D2).
 - docs/plans/scan-vision-claude.md:466 (mention) — `scanner-ingest-docling-decisions.md`.
+- ../issues/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md:54 (mention) — `beebox/docs/plans/scanner-ingest-docling-decisions.md` has the method and
+- ../issues/bugs/2026-11-03-rapidocr-detector-memory-spike-on-scans.md:12 (mention) — `beebox/docs/plans/scanner-ingest-docling-decisions.md`), a digital PDF of any
 
 References:
 - → docs/implemented-plans/scanner-ingest.md (link)
+- → docs/implemented-plans/docling-memory.md (link)
 
 #### docs/plans/search-card.md
 
