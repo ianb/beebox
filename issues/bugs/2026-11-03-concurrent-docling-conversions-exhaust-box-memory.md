@@ -47,3 +47,36 @@ Related: [large box mode](../features/2026-11-01-large-box-mode.md) (the same
 box's earlier heap OOMs) and
 [maintenance closes chats with live background tasks](2026-11-02-maintenance-quiesce-ends-chats-with-live-background-tasks.md)
 (the same long research runs).
+
+## Findings and fix (docling-memory workstream, 2026-11-03)
+
+Measured in a Linux cgroup (D18 in
+`beebox/docs/plans/scanner-ingest-docling-decisions.md` has the method and
+every number). One conversion with the old CLI argv did not fit a 1 GiB box on
+its own: 1.4 GB peak on a 9-page PDF, 2.3 GB on a 56-page report, and an OOM
+kill at 3.5 GB on a 333-page manual. The prod RSS figures above were low
+because most of each process had been swapped out.
+
+The fix, on branch `worktree-docling-memory`:
+
+- A Python driver replaces the `docling convert` call. It keeps page images
+  out of the pipeline and uses batches of one, then renders pages and figures
+  one at a time. Peak is about 1.0-1.1 GB for any digital PDF measured
+  (333 pages included), 1.56 GB for a 16-page scan with OCR. Output is
+  byte-identical to the CLI's.
+- One conversion at a time per box and per host: kernel locks held by the
+  driver for its whole run, released when it exits; the driver stops if its
+  `bbx` parent dies.
+- Failure reasons on the card for a lock wait over 20 minutes and for an
+  out-of-memory kill (from the cgroup's `oom_kill` counter).
+- Agent subprocesses now inherit `UV_CACHE_DIR` and `HF_HOME`. Before this,
+  conversions started by the chat built a private uv environment and model
+  cache under the box's home (6.4 GB and 506 MB on this box), while the
+  host's shared caches stayed empty.
+- Box units: `MemoryHigh=2G` (boxholder decision), proposed with it
+  `MemoryMax=2560M` and `OOMPolicy=continue`. With `OOMPolicy=stop`, the
+  current setting, an OOM kill of Docling stops the whole box unit.
+
+Not done here: a host-wide memory limit across boxes; removing the per-box
+caches already on prod; the OCR detector spike
+(`2026-11-03-rapidocr-detector-memory-spike-on-scans.md`).

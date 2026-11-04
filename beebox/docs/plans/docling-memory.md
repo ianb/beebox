@@ -1,6 +1,6 @@
 ---
 title: "Docling conversions that fit a box's memory"
-status: draft
+status: active
 workstream: docling-memory
 issues:
   - ../../../issues/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md
@@ -239,7 +239,7 @@ none
 | `convert.py` missing from a published package | New test asserts `package.json` `files` lists it | `extract` fails with "Docling could not be run" | Clear on the card |
 | The lock holder's Node process stalls under memory pressure | VM check: SIGSTOP the parent | Kernel `flock` held by the driver; no staleness | Clear (others wait) |
 | The Node parent is killed mid-conversion | VM check: kill the parent, driver exits within 2 s | Watch thread, 2 s poll; kernel releases the lock on exit | Clear (lock frees on exit) |
-| The OOM killer picks the `bbx` caller or the server, not Docling | VM check: which process the OOM killer picks with a server-sized neighbour | Docling is the largest process (~1.1 GB); `OOMPolicy=continue` if approved | Clear in the journal; no card error (accepted, Track 3) |
+| The OOM killer picks the `bbx` caller or the server, not Docling | VM check run: at a 1.3 GB cap the kernel killed Docling (714 MB anon), the 550 MB neighbour survived, `uv` exited 137, `oom_kill` rose by 1 | Docling is the largest process (~1.1 GB); `OOMPolicy=continue` if approved | Clear in the journal; no card error (accepted, Track 3) |
 | `memory.events` unreadable (macOS, cgroup v1) | Classifier table test | Outcome `killed`, never `oom` | Clear |
 | A lock file cannot be opened | Driver exits 1 with the path | `failed` with the `bbx-docling:` reason | Clear |
 | The 20-minute wait expires | Classifier test for exit 75 | `busy` message on the card | Clear |
