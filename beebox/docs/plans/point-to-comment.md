@@ -1,6 +1,6 @@
 ---
 title: "Point at a box document to attach it to chat"
-status: draft
+status: active
 workstream: point-to-comment
 issues:
   - ../../../issues/features/2026-11-01-point-to-comment.md
@@ -37,7 +37,7 @@ Pointing chooses a target but does not change the draft. Pressing the existing `
 
 ### When it goes wrong or does nothing
 
-The mode control appears only for rendered card and Markdown documents with a chat selection sink. Embedded PDFs, independent images, and opaque view frames are outside this first pass. Empty decorative targets do not show `+`. Escape or Done commenting exits. A link cannot navigate while the mode picks it; after leaving, it works normally. A wrong attachment can be removed with the existing selection pill. For a narrower text span, leave mode and use the existing text selection and `+`.
+The mode control appears only for rendered `.doc.card` and Markdown documents with a chat selection sink. Embedded PDFs, independent images, and opaque view frames are outside this first pass. Empty decorative targets do not show `+`. Escape or Done commenting exits. A link cannot navigate while the mode picks it; after leaving, it works normally. A wrong attachment can be removed with the existing selection pill. For a narrower text span, leave mode and use the existing text selection and `+`.
 
 ### Walkthrough
 
@@ -80,7 +80,7 @@ Restore workstreams-app code and tests to the branch base and correct the issue'
 
 ### Track 2: Box picker
 
-Add a labeled Comment/Done commenting control just below the companion tabs for rendered cards and Markdown with a chat selection sink. Keep mode with its card and reset when the card hides. Pass mode into `FileView` and `SelectionCapture`. Target paragraphs including `.bbx-paragraph`, headings, list items, table cells/rows, figures/images, code blocks, and blockquotes. Nearest meaningful block wins; no widening control. Mouse hover previews the block; click/tap selects it and positions the existing `+`. The `+` alone calls the existing `onCapture` path. Capture-phase click handling suppresses the underlying link or control while in mode. Touch mode disables native text selection while preserving scrolling. Outside mode, `+` behaves as before. Extract document text without nested interface controls: a code fence containing `hello` must attach `hello`, not `Copy hello`. Visual targets use caption, alt, or short source description; `position` carries a rough location. Empty/decorative targets are skipped. Keyboard text selection and `+` remain the precise keyboard path; no focus highlight is promised for unfocusable paragraphs. First chunk: extraction and interaction, then header wiring.
+Add a labeled Comment/Done commenting control just below the companion tabs for `.doc.card` and Markdown with a chat selection sink. Keep mode with its card and reset when the card hides. Pass mode into `FileView` and `SelectionCapture`. Target paragraphs including `.bbx-paragraph`, headings, list items, table cells/rows, figures/images, code blocks, and blockquotes. Nearest meaningful block wins; no widening control. Mouse hover previews the block; click/tap selects it and positions the existing `+`. The `+` alone calls the existing `onCapture` path. Capture-phase click handling suppresses the underlying link or control while in mode. Touch mode disables native text selection while preserving scrolling. Outside mode, `+` behaves as before. Extract document text without nested interface controls: a code fence containing `hello` must attach `hello`, not `Copy hello`. Visual targets use caption, alt, or short source description; `position` carries a rough location. Empty/decorative targets are skipped. Keyboard text selection and `+` remain the precise keyboard path; no focus highlight is promised for unfocusable paragraphs. First chunk: extraction and interaction, then header wiring.
 
 ## Could this be simpler?
 
@@ -98,7 +98,7 @@ None. The source and destination already exist in code.
 | Inline span gives too narrow a target | Extraction test planned | Ascend to semantic block | Clear |
 | Image has no text | Extraction test planned | Alt/caption/source fallback or skip | Clear |
 | Switching cards leaves mode active | Browser check planned | Reset when card hides | Clear |
-| Stale text selection is attached | Browser check planned | Point mode ignores floating `+` | Clear |
+| A picked block changes before `+` | Browser check planned | Confirm the quote and position still match the visible target | Clear |
 | Code fence includes its Copy button label | Extraction test planned | Exclude nested controls | Clear |
 
 ## Agent-flow / user-flow edge cases
@@ -131,11 +131,11 @@ A focused extraction test covers blocks, visual descriptions, and excluding a co
 
 ## Implementation order
 
-1. Correct plan and issue; obtain Claude cross-model plan review.
+1. Correct plan and issue; obtain Codex Astra plan review, per the boxholder's quota constraint.
 2. Restore workstreams changes; commit correction.
 3. Implement box picker, tests, typecheck, lint, layout check.
-4. Verify with `bin/browse` against isolated test box at desktop and phone widths with touch emulation; present one exhibit.
-5. Obtain Claude cross-model diff review, adjudicate, commit. Do not merge.
+4. Verify with `bin/browse` against isolated test box at desktop and phone widths; present one exhibit. Actual touch gesture verification remains for a device.
+5. Obtain Codex Astra diff review, adjudicate, commit. Do not merge.
 
 ## Rollout shape
 

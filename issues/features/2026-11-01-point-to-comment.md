@@ -25,7 +25,7 @@ Outside the mode, text selection, links, and other document controls work as
 before. A tap in mode must choose the target without following a link or
 starting native selection.
 
-The first implementation covers rendered cards and Markdown in the companion
+The first implementation covers rendered `.doc.card` and Markdown in the companion
 pane. Embedded PDFs and opaque frames do not expose their content as DOM
 blocks. A visual block can use its caption, alt text, or source description
 as the quoted selection. A point pin or cropped screenshot would require a
@@ -39,6 +39,24 @@ the box app's floating `+` and the resulting selection in the chat draft.
 The workstreams implementation made in this branch is being removed. The
 revised [plan](../../beebox/docs/plans/point-to-comment.md) follows the
 existing box selection-to-chat flow.
+
+## Implementation (2026-11-04)
+
+The box companion now shows Comment for rendered `.doc.card` and Markdown
+documents. While it is on, choosing a semantic block shows
+the existing floating `+`; pressing `+` adds the existing selection pill and
+`[selection#N]` to the ordinary chat draft. A link tap chooses its paragraph
+without navigating. Outside the mode, precise text selection and its `+`
+remain. Code indentation and line breaks are preserved in quoted blocks; a
+pending pick is discarded if its content changes, and its `+` hides when the
+block scrolls out of view.
+
+Desktop and phone-width Chromium checks show the flow. The phone-width browser
+profile did not produce actual touch events, so a physical touch gesture
+remains unverified. The first pass uses image alt, caption, or source text.
+A point pin, screenshot, standalone browse control, and embedded PDF support
+remain design questions; lean toward keeping them out until this chat
+attachment flow is used.
 
 Related: [mobile paragraph capture](2026-10-09-mobile-long-press-paragraph-to-comment.md)
 proposed a long press tentatively; the visible mode here avoids the conflict
