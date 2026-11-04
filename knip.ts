@@ -63,6 +63,10 @@ const config: KnipConfig = {
         // is the monorepo-root .husky/pre-commit — knip sees neither end.
         "lint-staged",
         "markdown-it",
+        // core/browser/host-process/agent-browser.ts resolves
+        // "agent-browser/package.json" with createRequire to find the pinned
+        // native binary; nothing imports the package.
+        "agent-browser",
       ],
     },
     "beebox/src/frontend": {
@@ -127,6 +131,13 @@ const config: KnipConfig = {
     // bin/precommit-security.ts and bin/lib/schedules-lint.ts run the system
     // shellcheck (the npm wrapper was dropped in 792b4cb69).
     "shellcheck",
+    // triage/evidence/core.ts converts documents with the box-host pandoc
+    // (docker/Dockerfile); its test runs it too.
+    "pandoc",
+    // .husky/pre-commit runs `pnpm exec wxt prepare` inside beebox-clerk,
+    // which declares wxt; beebox-clerk is in ignoreWorkspaces, so knip
+    // attributes the call to the root.
+    "wxt",
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
     // beebox package scripts, invoked across the workspace boundary:
