@@ -199,14 +199,21 @@ motivation only.
   - Budget, in the page: per budget key at most one record per 60 s, and at
     most 20 records per 60 s in total. The budget key is (check, surface,
     content) plus `phase` for `refresh-failed`, so a recovery is never eaten
-    by its own failure. The key map is bounded (200 entries, oldest dropped).
+    by its own failure. `refresh-failed` records are outside the global cap
+    (each is bounded by its per-key budget). A card that fails and recovers
+    several times within a minute reports the first episode; the next
+    records for it carry the suppressed count. The key map is bounded (200 entries, oldest dropped).
     Dropped records are counted; the next record that passes carries
     `suppressed=n`, and a 60 s timer sends one `suppressed` record if any
     remain. Each serialized line is under 300 characters.
-  - Delivery: records go into the `DebugLog` send queue as entries with
-    `source: "runtime-lint"` (one more parameter on `queueForServer`). In the
-    development build they also go to `console.warn`, tagged; in a
-    production build they do not, so a person's browser console stays quiet.
+  - Delivery: `source` is per batch in `debugLog.submit`
+    (`debug-log.ts:79-89`), so records get their own queue in `DebugLog.tsx`,
+    flushed as their own batches with `source: "runtime-lint"`. In the
+    development build they are also printed with the unpatched
+    `console.warn` (the reference `DebugLog.tsx` keeps before patching), so
+    the console copy is not captured and forwarded a second time. A
+    production build does not print them, so a person's browser console stays
+    quiet.
   - The switch is on the server. `debugLog.submit` writes `runtime-lint`
     entries only when the box server runs with `devSurfaces` (every dev box)
     or `BBX_RUNTIME_LINT=1`; otherwise it drops them and writes nothing. The
@@ -287,8 +294,9 @@ motivation only.
     (a wedged page), or when the page is not on the router's origin.
   - The page owns the cursor: `take()` clears what it returns, so separate
     CLI processes need no shared state. A reload or a new tab has its own
-    buffer; records from before a reload were taken by the command before
-    it.
+    buffer. Commands that leave the page (`open`, `reload`, `back`,
+    `forward`, `close`) also drain before they run, so records written since
+    the last command are not lost with the old page.
   - The command's exit status does not change.
 - **First chunk:** after Track 2. No open questions.
 
