@@ -146,8 +146,14 @@ export function CommentOverlay({ hovered, anchored, layoutKey, onMarker }: {
   onMarker: (comment: Comment) => void;
 }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [layoutTick, setLayoutTick] = useState(0);
   useEffect(() => {
-    const update = (): void => { setRect(hovered?.getBoundingClientRect() ?? null); };
+    const update = (): void => {
+      setRect(hovered?.getBoundingClientRect() ?? null);
+      // The header can grow in the same commit that mounts this overlay.
+      // Repaint markers after layout even when there is no hovered element.
+      setLayoutTick((value) => value + 1);
+    };
     const frame = requestAnimationFrame(update);
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
@@ -162,7 +168,7 @@ export function CommentOverlay({ hovered, anchored, layoutKey, onMarker }: {
     };
   }, [hovered, layoutKey]);
   return (
-    <div className="comment-overlay" aria-hidden={false}>
+    <div className="comment-overlay" aria-hidden={false} data-layout-tick={layoutTick}>
       {rect === null ? null : <div className="comment-target-outline" style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }} />}
       {anchored.map(({ comment, location }) => {
         const marker = bounds(location);

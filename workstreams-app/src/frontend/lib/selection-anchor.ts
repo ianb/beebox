@@ -31,18 +31,20 @@ export interface SelectionAnchor {
 }
 
 const ELEMENT_PREFIX = ":~:element=";
-const TARGET_SELECTOR = "[data-comment-target], img, svg, canvas, p, h1, h2, h3, h4, h5, h6, li, pre, blockquote, figure, figcaption, table, tr, td, th";
+const TARGET_SELECTOR = "[data-comment-target], [role=img], img, svg, canvas, p, h1, h2, h3, h4, h5, h6, li, pre, blockquote, figure, figcaption, table, tr, td, th";
 
-/** Closest visible block or visual element. Authored targets can override it. */
+/** Closest visible block or visual element, with a standalone control fallback. */
 export function commentTarget(node: Element | null, root: HTMLElement): Element | null {
   if (node !== null && !root.contains(node)) return null;
+  let fallback: Element | null = null;
   for (let current = node; current !== null && current !== root; current = current.parentElement) {
     if (!(current instanceof HTMLElement) && !(current instanceof SVGElement)) continue;
-    if (!current.matches(TARGET_SELECTOR)) continue;
+    if (!current.matches(TARGET_SELECTOR) && !current.matches("a, button")) continue;
     if (current.getBoundingClientRect().width === 0 || current.getBoundingClientRect().height === 0) continue;
-    return current;
+    if (current.matches(TARGET_SELECTOR)) return current;
+    fallback ??= current;
   }
-  return null;
+  return fallback;
 }
 
 function descriptionFor(element: Element): string {

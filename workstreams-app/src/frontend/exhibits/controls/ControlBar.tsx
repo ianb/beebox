@@ -14,9 +14,9 @@ export function ControlBar({ scope, contentRef }: {
   contentRef: RefObject<HTMLElement | null>;
 }): ReactNode {
   return (
-    <div className="flex min-h-12 max-h-[50dvh] flex-col gap-2 overflow-y-auto border-b border-stone-300 bg-stone-50 px-4 py-1.5">
+    <div className="flex min-h-12 max-h-[50dvh] flex-col gap-2 overflow-y-auto border-b border-stone-300 bg-stone-50 px-4 py-1.5 sm:flex-row sm:items-start sm:gap-x-6">
       <ReplyInSessionButton scope={scope} />
-      <div className="min-w-0 w-full">
+      <div className="min-w-0 w-full sm:flex-1">
         <CommentPanel scope={scope} contentRef={contentRef} />
       </div>
     </div>

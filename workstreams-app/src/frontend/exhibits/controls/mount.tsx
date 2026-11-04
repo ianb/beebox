@@ -17,7 +17,6 @@ export const CONTROLS_HEIGHT_PX = 48;
 // styles.css styles :root and body, neither of which exists inside a shadow
 // tree, so the bar would inherit the page's font, colour, and colour scheme.
 const HOST_BASELINE = ":host { display: block; font: 14px/1.4 system-ui, -apple-system, sans-serif; color: #292724; color-scheme: light; }";
-const activeObservers = new Set<MutationObserver>();
 
 /** Appends the bar to the page. Nothing to do on a path with no store exhibit. */
 export function mountControls(): void {
@@ -33,8 +32,11 @@ export function mountControls(): void {
   // above the page, including pages whose scripts replace <body> later.
   const html = document.documentElement;
   const pageTop = Number.parseFloat(getComputedStyle(html).paddingTop) || 0;
+  const pageScrollTop = Number.parseFloat(getComputedStyle(html).scrollPaddingTop) || 0;
   const reserveTop = (): void => {
-    html.style.paddingTop = `${String(pageTop + host.getBoundingClientRect().height)}px`;
+    const height = host.getBoundingClientRect().height;
+    html.style.paddingTop = `${String(pageTop + height)}px`;
+    html.style.scrollPaddingTop = `${String(pageScrollTop + height)}px`;
   };
   // A click inside the bar must not reach the comment panel's selection
   // listener on the body and be read as a selection on the page.
@@ -55,7 +57,9 @@ export function mountControls(): void {
   html.append(host);
   const sizeObserver = new MutationObserver(reserveTop);
   sizeObserver.observe(mount, { childList: true, subtree: true, characterData: true });
-  activeObservers.add(sizeObserver);
+  // Native textarea resizing changes layout without a DOM mutation.
+  const resizeObserver = new ResizeObserver(reserveTop);
+  resizeObserver.observe(host);
   window.addEventListener("resize", reserveTop);
   reserveTop();
   const body = { get current(): HTMLElement { return document.body; } };
