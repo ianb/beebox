@@ -19,6 +19,9 @@ export interface FileViewProps {
   onMoved?: (path: string) => void;
   /** Surface selected text to a surrounding chat composer. */
   onAddSelection?: (selection: AddSelectionInput) => void;
+  /** Companion-pane point mode; capture still goes through onAddSelection. */
+  pointMode?: boolean;
+  onExitPointMode?: () => void;
   /** Report companion-pane activity; absent elsewhere. */
   reportActivity?: (kind: ActivityKind, detail?: string) => void;
   onOpenInPanel?: () => void;

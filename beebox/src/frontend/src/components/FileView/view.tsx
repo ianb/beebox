@@ -214,11 +214,12 @@ function withCardTodos({ mode, path, onAddSelection }: { mode: FileViewProps["mo
   return <TodoActionsProvider onAddSelection={onAddSelection}><CardTodos path={path}>{content}</CardTodos></TodoActionsProvider>;
 }
 
-function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
+function captureFileContent({ enabled, onCapture, rendered, workspacePdf, pointMode, onExitPointMode }: {
   enabled: boolean; onCapture: (selection: { text: string; position: string }) => void;
   rendered: ReactNode; workspacePdf: boolean | undefined;
+  pointMode: boolean; onExitPointMode: (() => void) | undefined;
 }) {
-  return enabled ? <SelectionCapture onCapture={onCapture} extract={extractSelection} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
+  return enabled ? <SelectionCapture onCapture={onCapture} extract={extractSelection} pointMode={pointMode} onExitPointMode={onExitPointMode} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
 }
 
 /**
@@ -230,7 +231,7 @@ export function FileView(props: FileViewProps) {
   return <RuntimeLintViewScope><FileViewContent {...props} /></RuntimeLintViewScope>;
 }
 
-function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
+function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, pointMode, onExitPointMode, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
   const mode = modeProp ?? "companion";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const visibleSelectionSink = useVisibleCardSelectionSink();
@@ -305,7 +306,7 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
       )}
     />
   );
-  const selectable = captureFileContent({ enabled: onAddSelection !== undefined, onCapture: handleCapture, rendered, workspacePdf });
+  const selectable = captureFileContent({ enabled: onAddSelection !== undefined, onCapture: handleCapture, rendered, workspacePdf, pointMode: pointMode === true, onExitPointMode });
   const captured = fragmentRootFor({ mode, workspacePdf, onRoot: setFragmentRoot }, withCardTodos({ mode, path: data.path, onAddSelection }, selectable));
   // The markers ride with the body rather than with each mode's chrome, so a
   // card reports the same state wherever it renders — in chat, in the sidecar,

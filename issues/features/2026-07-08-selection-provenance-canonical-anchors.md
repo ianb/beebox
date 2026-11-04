@@ -34,6 +34,11 @@ better); how an anchor degrades if the underlying card changed between capture a
 resolution (stale-ref handling); and whether hover-capture and selection-capture share
 one "grab provenance" path or stay separate affordances.
 
+**Related implementation (2026-11-04):** The companion picker now captures a
+rendered document block as a chat selection using its text and rough position.
+It does not attach `data-bbx-source` / `data-bbx-source-item` or provide a
+canonical re-resolvable anchor, so the provenance work remains open.
+
 Explicitly NOT in scope: HoverSource's literal code `file:line:col` mapping — wrong
 altitude (our agents operate on cards, not the frontend source; that's `bin/browse`
 territory at most).

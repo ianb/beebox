@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-04T05:02:36Z
-Total documents: 622
+Generated: 2026-11-04T23:20:28Z
+Total documents: 623
 
 ## Issues
 
@@ -707,6 +707,7 @@ Referenced by:
 - docs/implemented-plans/landmark-arrival.md:83 (mention) — as a side effect of a click (frontend.md, "Workspace presentation").
 - docs/implemented-plans/local-password-auth.md:528 (mention) — precedent but non-dismissible. Per bbx-frontend conventions (frontend.md
 - docs/implemented-plans/open-chat-from-card.md:61 (mention) — - `beebox/frontend.md` — UI primitives + semantic palette, `className` only for
+- docs/implemented-plans/point-to-comment.md:53 (mention) — The boxholder's screenshots show selected text and `+` becoming `[selection#1]` in the chat draft, with selection placed
 - docs/implemented-plans/remove-bbx-render.md:293 (mention) — plus its description in `frontend.md:60`.
 - docs/implemented-plans/responsive-figures.md:43 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:112 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
@@ -941,7 +942,7 @@ References:
 
 #### docs/agent-guide.md
 
-Title: "Agent guide" | 201 lines | current reference
+Title: "Agent guide" | 203 lines | current reference
 
 Referenced by:
 - docs/agent-guide.md:3 (mention) — The always-loaded agent guide (`.beebox/agent-guide.md` in every box), the
@@ -2650,6 +2651,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.md:335 (mention) — `docs/design/` (8 topic files + README acknowledging spirit.md),
 - docs/implemented-plans/live-gap-marker.md:56 (mention) — (`docs/architecture/spirit.md:79`) by sending a known hole as unsure.
 - docs/implemented-plans/mac-app-engine-channel.md:632 (mention) — is the paperwork spirit.md argues against.
+- docs/implemented-plans/point-to-comment.md:32 (mention) — - **Serves:** `spirit.md`, “Feedback is everywhere, and it's not all commands”: a person points, then says anything in c
 - docs/implemented-plans/questions-beside-the-chat.md:69 (mention) — (`docs/architecture/spirit.md`): the person answers in their own words in the
 - docs/implemented-plans/questions-end-to-end.md:376 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
 - docs/implemented-plans/questions-later-and-figure-it-out.md:66 (mention) — rather than nagging forever" (`docs/architecture/spirit.md`).
@@ -2680,7 +2682,7 @@ References:
 Title: "What changed for box agents" | 27 lines | current reference
 
 Referenced by:
-- docs/agent-guide.md:143 (link) — [agent-changes.md](box/agent-changes.md), a box doc the `agent-changes` schedule
+- docs/agent-guide.md:145 (link) — [agent-changes.md](box/agent-changes.md), a box doc the `agent-changes` schedule
 - docs/implemented-plans/agent-changes.md:88 (mention) — - **`agent-changes.md`:** `docs/box/agent-changes.md`, a prose box doc holding every entry. Existing kind.
 
 References:
@@ -2886,7 +2888,7 @@ Referenced by:
 
 #### docs/box/what-you-could-do.md
 
-Title: "What you could do with your box" | 219 lines | current reference
+Title: "What you could do with your box" | 222 lines | current reference
 
 Referenced by:
 - docs/README.md:40 (link) — [what you could do with your box](box/what-you-could-do.md) and
@@ -5338,7 +5340,7 @@ Referenced by:
 - docs/plans/scanner-ingest-docling-decisions.md:279 (link) — OCR modes) are kept unchanged. Plan: [`docling-memory.md`](../implemented-plans/docling-memory.md).
 
 References:
-- → ../issues/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md (frontmatter)
+- → ../issues/closed/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md (frontmatter)
 - → AGENTS.md (mention)
 - → docs/plans/scanner-ingest-docling-decisions.md (mention)
 
@@ -6889,6 +6891,19 @@ References:
 - → docs/implemented-plans/plugins.md (mention)
 - → docs/implemented-plans/plugins.design.md (mention)
 - → AGENTS.md (mention)
+
+#### docs/implemented-plans/point-to-comment.md
+
+Title: "Point at a box document to attach it to chat" | 144 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/features/2026-11-01-point-to-comment.md:4 (frontmatter) — design: ../../../beebox/docs/implemented-plans/point-to-comment.md
+- ../issues/closed/features/2026-11-01-point-to-comment.md:43 (link) — revised [plan](../../../beebox/docs/implemented-plans/point-to-comment.md) follows the
+
+References:
+- → ../issues/closed/features/2026-11-01-point-to-comment.md (frontmatter)
+- → docs/architecture/spirit.md (mention)
+- → frontend.md (mention)
 
 #### docs/implemented-plans/portable-engine-dependency.md
 
@@ -9295,7 +9310,6 @@ Referenced by:
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:19 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) writes
 - ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:14 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) is
 - ../issues/features/2026-10-13-suggested-edits-tracked-changes.md:80 (link) — - [Document comments](../../beebox/docs/plans/document-comments.md) is the
-- ../issues/features/2026-11-01-point-to-comment.md:45 (mention) — `beebox/docs/plans/document-comments.md` (the comment store and its anchors).
 
 References:
 - → ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md (frontmatter)
@@ -10139,13 +10153,14 @@ References:
 
 #### docs/plans/scanner-ingest-docling-decisions.md
 
-Title: "Docling Decisions Log — scanner-ingest" | 369 lines | proposal | active
+Title: "Docling Decisions Log — scanner-ingest" | 440 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/docling-memory.md:57 (mention) — - **D2: invoke the CLI, not docling-serve** (`docs/plans/scanner-ingest-docling-decisions.md`, D2).
 - docs/plans/scan-vision-claude.md:466 (mention) — `scanner-ingest-docling-decisions.md`.
-- ../issues/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md:54 (mention) — `beebox/docs/plans/scanner-ingest-docling-decisions.md` has the method and
-- ../issues/bugs/2026-11-03-rapidocr-detector-memory-spike-on-scans.md:12 (mention) — `beebox/docs/plans/scanner-ingest-docling-decisions.md`), a digital PDF of any
+- ../issues/bugs/2026-11-03-rapidocr-detector-memory-spike-on-scans.md:13 (mention) — `beebox/docs/plans/scanner-ingest-docling-decisions.md`), a digital PDF of any
+- ../issues/bugs/2026-11-03-tableformer-memory-on-scanned-tables.md:16 (mention) — `beebox/docs/plans/scanner-ingest-docling-decisions.md`). So on image-only
+- ../issues/closed/bugs/2026-11-03-concurrent-docling-conversions-exhaust-box-memory.md:57 (mention) — `beebox/docs/plans/scanner-ingest-docling-decisions.md` has the method and
 
 References:
 - → docs/implemented-plans/scanner-ingest.md (link)

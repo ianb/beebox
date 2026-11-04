@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useQuestionCloseLabel } from "../../../questions/question-tab";
 import { useParams } from "@tanstack/react-router";
 import { VisuallyHidden } from "../../../ui/VisuallyHidden";
+import { Button } from "../../../ui/Button";
 import { MaterialContext } from "../../../ui/material";
 import { FileView } from "../../../FileView/view";
 import { SidecarTabStrip } from "../SidecarTabStrip/view";
@@ -28,7 +29,25 @@ interface CardCallbacks {
   onAddSelection?: (selection: AddSelectionInput) => void;
   reportActivity: (kind: ActivityKind, detail?: string) => void;
 }
+
+function supportsPointMode({ path, workspacePdf, hasSelectionSink }: { path: string; workspacePdf: boolean; hasSelectionSink: boolean }): boolean {
+  return !workspacePdf && hasSelectionSink && (cardTypeFromName(path) === "doc" || isMarkdownPath(path));
+}
+
+function PointModeBar({ visible, enabled, active, onToggle }: {
+  visible: boolean; enabled: boolean; active: boolean; onToggle: () => void;
+}) {
+  if (!visible || !enabled) return null;
+  return <div className="bbx-companion-comment flex shrink-0 items-center gap-3 border-b border-warm-200 bg-warm-50 px-3 py-1.5 print:hidden">
+    <Button id="bbx-point-comment" size="sm" intent={active ? "primary" : "secondary"} aria-pressed={active}
+      onClick={onToggle}>{active ? "Done selecting" : "Select"}</Button>
+    {active ? <span className="text-xs text-warm-700">Click to add; on touch, tap then +</span> : null}
+  </div>;
+}
+
 function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActivity }: CardCallbacks & { tab: SidecarTab; pane: PaneId; visible: boolean; editing: boolean }) {
+  const [pointMode, setPointMode] = useState(false);
+  useEffect(() => { if (!visible) setPointMode(false); }, [visible]);
   const workspace = useWorkspace();
   const material = useCompanionMaterial(tab.target.path);
   const { boxSlug } = useParams({ strict: false });
@@ -39,7 +58,9 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
   const { onSelectTab: handleSelectTab, onCloseTab: handleCloseTab, onTogglePin: handleTogglePin } = workspace;
   const workspacePdf = isWorkspacePdf(tab.target.path, tab.target.viewer);
   const themedSurface = cardTypeFromName(tab.target.path) !== undefined || isMarkdownPath(tab.target.path);
+  const canPoint = supportsPointMode({ path: tab.target.path, workspacePdf, hasSelectionSink: onAddSelection !== undefined });
   const fileView = <FileView path={tab.target.path} mode="companion" workspacePdf={workspacePdf} rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState} fragment={tab.target.fragment}
+    pointMode={canPoint ? pointMode : false} onExitPointMode={() => setPointMode(false)}
     canPushViewState={visible}
     onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
     onSelectRenderer={(viewer) => workspace.updateTarget({ ...withoutFragment(tab.target), viewer, viewState: null })}
@@ -56,6 +77,7 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
         onSelectTab={handleSelectTab} onCloseTab={handleCloseTab} onTogglePin={handleTogglePin} closeLabel={closeLabel} />
       <WorkspaceControls pane={pane} pdfPath={workspacePdf ? tab.target.path : undefined} />
     </div> : null}
+    <PointModeBar visible={visible} enabled={canPoint} active={pointMode} onToggle={() => setPointMode((current) => !current)} />
     <div role="tabpanel" id={workspacePanelId(tab.target.path)} aria-labelledby={visible ? workspaceTabId(tab.target.path) : undefined} tabIndex={0} aria-hidden={!visible} aria-busy={editing || undefined} data-bbx-scan="exclude"
       data-card-content={themedSurface ? "card" : "neutral"}
       className="bbx-interface-card-desk flex-1 min-h-0 overflow-auto"

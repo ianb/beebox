@@ -126,7 +126,11 @@ export function extractSelection(selection: Selection, container: Element): Extr
     return null;
   }
   const range = selection.getRangeAt(0);
-  const anchorNode = range.startContainer;
+  return { text, position: positionAt(range.startContainer, container) };
+}
+
+/** A point selection uses the same rough locator as a text selection. */
+function positionAt(anchorNode: Node, container: Element): string {
   const anchorEl = nodeToElement(anchorNode);
 
   let section: string | null = null;
@@ -160,7 +164,7 @@ export function extractSelection(selection: Selection, container: Element): Extr
   }
 
   let paragraph: number | null = null;
-  const paras = container.querySelectorAll("p");
+  const paras = container.querySelectorAll("p, .bbx-paragraph");
   let count = 0;
   for (const p of paras) {
     if (nearestHeading !== null && !nodeFollows(nearestHeading, p)) {
@@ -173,5 +177,57 @@ export function extractSelection(selection: Selection, container: Element): Extr
     }
   }
 
-  return { text, position: formatPosition({ section, heading, paragraph, line }) };
+  return formatPosition({ section, heading, paragraph, line });
+}
+
+// Markdown paragraphs are divs because they may contain embedded block views.
+const POINT_BLOCKS = ".bbx-paragraph, p, li, td, th, tr, figure, img, canvas, svg, [role='img'], pre, blockquote, h1, h2, h3, h4, h5, h6";
+const POINT_CONTROLS = "a, button";
+const EXCLUDED_CONTENT = "button, input, textarea, select, [role='button'], [data-bbx-scan='exclude']";
+
+/** The closest document block wins. A standalone link or control is a fallback. */
+export function pointTarget(node: EventTarget | null, container: Element): Element | null {
+  const element = node instanceof Element ? node : node instanceof Node ? node.parentElement : null;
+  if (element === null || !container.contains(element)) return null;
+  const block = element.closest(POINT_BLOCKS);
+  if (block !== null && container.contains(block)) {
+    // An icon inside a link describes the link, not the SVG's paths.
+    const control = element.closest(POINT_CONTROLS);
+    if (block.tagName.toLowerCase() === "svg" && control !== null && container.contains(control)) return control;
+    return block;
+  }
+  const control = element.closest(POINT_CONTROLS);
+  return control !== null && container.contains(control) ? control : null;
+}
+
+function visualDescription(target: Element): string {
+  const caption = target.closest("figure")?.querySelector("figcaption")?.textContent.trim();
+  const label = target.getAttribute("alt")?.trim() || target.getAttribute("aria-label")?.trim() || target.querySelector("title")?.textContent.trim() || caption;
+  const source = target.getAttribute("src") ?? target.getAttribute("data-bbx-source");
+  const description = label || (source?.startsWith("data:") ? "" : source?.trim()) || "";
+  return description === "" ? "" : `Image: ${description.slice(0, 300)}`;
+}
+
+/** Extract document content, not nested interface controls such as Copy. */
+export function extractPointSelection(target: Element, container: Element): ExtractedSelection | null {
+  if (!container.contains(target)) return null;
+  const tag = target.tagName.toLowerCase();
+  let text: string;
+  if (tag === "img" || tag === "canvas" || tag === "svg" || target.getAttribute("role") === "img") {
+    text = visualDescription(target);
+  } else {
+    const clone = target.cloneNode(true);
+    if (!(clone instanceof Element)) return null;
+    for (const control of clone.querySelectorAll(EXCLUDED_CONTENT)) control.remove();
+    for (const lineBreak of clone.querySelectorAll("br")) lineBreak.replaceWith("\n");
+    // Code spacing is part of the quote; ordinary prose can collapse inline space.
+    text = tag === "pre" ? clone.textContent : clone.textContent.replace(/[\t ]+/g, " ").trim();
+    if (text === "" && target.matches(POINT_CONTROLS)) {
+      text = target.getAttribute("aria-label")?.trim() ?? "";
+    }
+  }
+  if (text === "") return null;
+  const location = positionAt(target, container);
+  const detail = tag === "img" || tag === "canvas" || tag === "svg" ? `element: ${tag}` : "";
+  return { text, position: [location, detail].filter(Boolean).join("; ") };
 }
