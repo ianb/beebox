@@ -246,6 +246,20 @@ none
 | A failed re-read (stale notice) remounts the body | new test | stable Fragment shape | was silent: embeds reset, outline rebuilt |
 | The body unmounts and remounts in one commit | covered by React batching of the two setter calls | yes | n/a |
 
+Residual risks after cross-model diff review (codex gpt-6-sol), accepted:
+
+- A scrollbar drag may not reach the page as a `pointerdown` (Chromium can
+  handle scrollbar input on the compositor). Then the button stays at rest
+  during the drag; the label still follows the section. Not testable here:
+  the test browser uses overlay scrollbars of width 0.
+- The section label recomputes on scroll and on a size change of the card
+  front (`ResizeObserver`). An edit that moves headings but leaves the
+  front's height the same leaves the label stale until the next scroll.
+- While a card composes, headings inside the composition region are not on
+  screen and drop out of the open list. If every heading is in that region,
+  the list opens empty. Which headings to show while composing is a product
+  decision for the boxholder.
+
 ## Agent-flow / user-flow edge cases
 
 - Two agents touching the same card: ADDRESSED. Edits change the text; the
