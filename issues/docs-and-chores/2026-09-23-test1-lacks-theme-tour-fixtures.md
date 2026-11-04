@@ -116,3 +116,13 @@ Every expectation miss in this run has this cause. Artifacts:
 `beebox/test/tours/.artifacts/<tour>/2026-10-28T2*`.
 
 Re-reviewed 2026-10-30: stock test1 still lacks markdown-note.md, Theme_Tour.landmark.card, and both bloom fixtures; the fix (install fixtures before a tour run) has not been made.
+
+## Re-encounter, 2026-11-04 - weekly tour check run 20261104-152444
+
+Same four fixtures missing, same misses: `card-themes` `markdown-file` and
+`markdown-workspace` (404); `bloom-theme`, `deck-theme`, `ribbon-theme`
+("Card not found"; `deck-theme` aborts at `deck-composer-menu`);
+`system-themes` aborts at "Properties" (the button still exists in
+`CardThemeSurface.tsx`; the landmark card does not). On Deck and Ribbon the
+"Card not found" text sits on the workspace art at 1.0-2.1:1 contrast.
+Artifacts: `beebox/test/tours/.artifacts/<tour>/2026-11-04T21-*`.
