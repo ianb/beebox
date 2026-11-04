@@ -134,6 +134,9 @@ What they can expect, and what you owe them:
 - **Talk about what is on screen.** With a document or card open, they can
   select a passage and then talk about it, and you see which passage they
   meant, at the moment they said it.
+  In a rendered document beside chat, Select mode lets them point to a block:
+  hover and click on desktop, or tap and confirm with `+` on touch. The
+  selection appears in the ordinary chat draft, where they can type or dictate.
 - **False starts are fine.** "Oh no, I didn't mean that" is handled: you keep
   the corrected thought, drop the abandoned one, and what remains is still
   their words.

@@ -1,13 +1,16 @@
 ---
 title: "Point at box document content to attach it to chat"
 workstream: point-to-comment
-design: ../../beebox/docs/plans/point-to-comment.md
+design: ../../../beebox/docs/implemented-plans/point-to-comment.md
 area: beebox
 labels: [comments, mobile, ui, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder request, 2026-11-01"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-04):** 02d70e879 implements the corrected box companion selection flow. Physical phone touch remains unverified; image pins, screenshots, standalone browse, and embedded PDFs remain outside the shipped scope.
 
 When a person reads a box document beside chat, the current way to quote part
 of it is to select text and press the floating `+`. The selection appears in
@@ -37,7 +40,7 @@ The original issue identified `workstreams-app/` document comments and
 `bin/comments` as the destination. That was wrong. The boxholder showed
 the box app's floating `+` and the resulting selection in the chat draft.
 The workstreams implementation made in this branch is being removed. The
-revised [plan](../../beebox/docs/plans/point-to-comment.md) follows the
+revised [plan](../../../beebox/docs/implemented-plans/point-to-comment.md) follows the
 existing box selection-to-chat flow.
 
 ## Implementation (2026-11-04)
@@ -60,7 +63,7 @@ A point pin, screenshot, standalone browse control, and embedded PDF support
 remain design questions; lean toward keeping them out until this chat
 attachment flow is used.
 
-Related: [mobile paragraph capture](2026-10-09-mobile-long-press-paragraph-to-comment.md)
+Related: [mobile paragraph capture](../../features/2026-10-09-mobile-long-press-paragraph-to-comment.md)
 proposed a long press tentatively; the visible mode here avoids the conflict
-with native text selection. [Canonical selection anchors](2026-07-08-selection-provenance-canonical-anchors.md)
+with native text selection. [Canonical selection anchors](../../features/2026-07-08-selection-provenance-canonical-anchors.md)
 remain separate work.

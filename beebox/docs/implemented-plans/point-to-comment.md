@@ -1,13 +1,13 @@
 ---
 title: "Point at a box document to attach it to chat"
-status: active
+status: implemented
 workstream: point-to-comment
 issues:
-  - ../../../issues/features/2026-11-01-point-to-comment.md
+  - ../../../issues/closed/features/2026-11-01-point-to-comment.md
 ---
 # Point at a box document to attach it to chat
 
-The box already lets a person select document text and press `+` to attach it to chat. Add a visible Select mode: desktop hover previews a document block and click attaches it immediately; a touch tap previews the block and the nearby `+` confirms it. Remove this branch's workstreams-app implementation, which serves a different comment system.
+The box lets a person select document text and press `+` to attach it to chat. The companion Select mode previews a document block on desktop hover and attaches it on click; on touch, a tap previews the block and the nearby `+` confirms it. This workstream initially changed the workstreams-app comment system by mistake; that implementation was removed after the boxholder clarified the destination.
 
 **Issues addressed:** `2026-11-01-point-to-comment`, corrected by the boxholder's box screenshots. The related mobile text-selection problem is in `2026-10-09-mobile-long-press-paragraph-to-comment`; its tentative long-press gesture is outside this plan.
 
