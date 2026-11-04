@@ -15,12 +15,6 @@
 body { margin: 0; }
 * { box-sizing: border-box; }
 button, input, select, textarea { font: inherit; }
-.comment-overlay { position: fixed; inset: 0; z-index: 2147482999; pointer-events: none; }
-.comment-target-outline { position: fixed; border: 3px solid #2d6caa; border-radius: 5px; background: #2d6caa18; pointer-events: none; }
-.comment-marker { position: fixed; pointer-events: auto; border: 2px solid white; border-radius: 50%; width: 26px; height: 26px; background: #284c79; color: white; box-shadow: 0 1px 5px #0008; cursor: pointer; }
-.comment-all-list { display: grid; gap: .6rem; max-height: 35vh; overflow: auto; padding: .6rem; border: 1px solid #d6d3d1; border-radius: 8px; }
-.comment-focused { outline: 2px solid #2d6caa; border-radius: 6px; }
-::highlight(bbx-comment-anchor) { background: #fde68a; color: inherit; }
 
 /* Tailwind Typography decorates inline code with visual backticks by default. */
 .prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,

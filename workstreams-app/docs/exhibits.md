@@ -119,10 +119,10 @@ container by referencing one module:
 <script type="module" src="/controls.ts"></script>
 ```
 
-The bar is fixed to the top of the window, 48px tall when idle at desktop width;
-its controls may stack on a phone, and it grows downward when the comment input opens. It reserves its current height above
-the page automatically, including when its controls wrap on a phone. Keep the page's
-own fixed elements out of that top area: the bar sits above everything. The
+The bar is fixed to the bottom of the window, 48px tall when idle, and grows
+upward when the composer opens. Leave `padding-bottom: 48px` on the page's
+scrolling element so the bar never covers the last line, and keep the page's
+own fixed elements out of the bottom 48px: the bar sits above everything. The
 bar renders in a shadow root with its own stylesheet, so the page's styles and
 the bar's do not touch; the page itself is not edited. Commenting reads
 selections in ordinary text in the page's body (not inside an iframe or a
@@ -215,17 +215,10 @@ page may also call the route itself.
 ## Comments
 
 A person reading an exhibit can leave a remark on it, typed or spoken, from
-the page. **Comment** turns on pointing mode and shows the open count. Hovering
-outlines a target; clicking or tapping a block, image, or chart puts its
-description into the comment input in the page header. A link inside a text
-block picks that block; a standalone link or button can be picked directly.
-Selecting text puts that span into the same input. The picked context is
-editable; **Cancel** lets the person point again. While the mode is on, a tap
-on a link does not follow it. **Done commenting**
-restores normal page actions. The mode also shows markers for saved comments;
-**Show all comments** lists them and can return to a target. Existing text
-highlights remain visible when the mode is off. "Comment on the whole exhibit"
-opens a draft with no target. **Speak** records a short dictation and
+the page: the **Comment** control above the title turns commenting on; a
+selection anywhere in the title, prose, or page opens a composer carrying the
+selected text and the nearest heading above it, and "comment on the whole
+exhibit" opens one with no selection. **Speak** records a short dictation and
 transcribes it into the box (it needs `BBX_OPENAI_API_KEY` in the app's
 environment; without it the page says so and the remark can still be typed).
 
@@ -240,17 +233,12 @@ bin/comments clear exhibit:<workstream>/<exhibit> [--id <id>]
 ```
 
 `exhibit:<workstream>/<exhibit>` is the address `bin/comments` prints and
-accepts for an exhibit wherever it takes a path. The page reads saved comments
-to show the count, markers, and list. An agent still reads and clears each
-message with `bin/comments`. Element targets keep a descriptive quote (text,
-caption, alt text, or image source) and an element fragment in the existing
-comment fields; a changed target stays in the list without a misplaced marker.
+accepts for an exhibit wherever it takes a path. Nothing is read back on the
+page: a comment is a message, and the agent clears it.
 
 The control appears on the default and `index.tsx` tiers, which the container
 renders, and on a raw `index.html` page that opts into the control bar
-("Controls on a raw page" above). A raw page may also call the routes directly:
-`GET /api/<ws>/<exhibit>/comments` returns `{ comments }`;
-`POST /api/<ws>/<exhibit>/comments` with
+("Controls on a raw page" above). A raw page may also call the routes directly: `POST /api/<ws>/<exhibit>/comments` with
 `{ body, origin?, quoted?, section?, fragment? }` answers 201 `{ id, workstream }`,
 and `POST /api/transcribe` with `{ audio: <base64>, mimeType? }` answers
 `{ text }`. Committed apps have no workstream and are refused with 409.

@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { highlightRanges, type SelectionAnchor } from "../lib/selection-anchor.js";
-import { appendCommentTranscript, commentBody, commentDraftText } from "../lib/comment-draft.js";
-import { CommentOverlay, scrollToComment, useCommentPicker, useCommentPositions, type CommentLocation } from "./comment-pointing.js";
+import { captureSelection, findAnchoredRange, highlightRanges, type SelectionAnchor } from "../lib/selection-anchor.js";
 import { recorderAvailability, startRecording } from "../lib/recorder.js";
 import { MAX_AUDIO_BYTES } from "../../server/transcribe-contract.js";
 import { Button, Pill } from "./ui.js";
@@ -21,16 +19,15 @@ import type { Comment } from "../types.js";
  * to every selection would fight ordinary reading and copying. Off is the
  * default; on, a selection opens the composer.
  */
-function CommentBody({ comment, onClear, onGo, focused }: { comment: Comment; onClear: () => void; onGo: (() => void) | null; focused: boolean }) {
+function CommentBody({ comment, onClear }: { comment: Comment; onClear: () => void }) {
   return (
-    <li id={`comment-${comment.id}`} className={`comment-item${focused ? " comment-focused" : ""}`}>
+    <li className="comment-item">
       <p className="comment-meta">
         <Pill tone={comment.origin === "voice" ? "accent" : "neutral"}>{comment.origin}</Pill>
         {comment.workstream === null
           ? <Pill tone="warning">unrouted</Pill>
           : <Pill tone="info">{comment.workstream}</Pill>}
         <span className="muted">{comment.at.slice(0, 16).replace("T", " ")}</span>
-        {onGo === null ? null : <Button intent="quiet" onClick={onGo}>Go to target</Button>}
         <Button intent="quiet" onClick={onClear}>clear</Button>
       </p>
       {comment.quoted === undefined ? null : <blockquote className="comment-quote">{comment.quoted}</blockquote>}
@@ -45,13 +42,12 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
   onSubmit: (body: string, origin: "typed" | "voice") => void;
   pending: boolean;
 }) {
-  const [body, setBody] = useState(() => commentDraftText(anchor));
+  const [body, setBody] = useState("");
   // `origin` records how the text ARRIVED, not that it is verbatim — the
   // boxholder may correct the transcript, which is the point of the split.
   const [origin, setOrigin] = useState<"typed" | "voice">("typed");
   const [session, setSession] = useState<Awaited<ReturnType<typeof startRecording>> | null>(null);
   const [recordingProblem, setRecordingProblem] = useState<string | null>(null);
-  const textarea = useRef<HTMLTextAreaElement | null>(null);
   const mic = recorderAvailability();
   const transcribe = trpc.comments.transcribe.useMutation();
 
@@ -60,10 +56,6 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
   // text, toggling commenting off, navigating away — unmounts this component,
   // so releasing here covers all of them.
   useEffect(() => () => { session?.cancel(); }, [session]);
-  useEffect(() => {
-    textarea.current?.focus();
-    textarea.current?.scrollIntoView({ block: "nearest" });
-  }, []);
 
   async function toggleRecording(): Promise<void> {
     setRecordingProblem(null);
@@ -77,7 +69,7 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
         });
         // Appended, not replaced: a second take adds to what is there rather
         // than discarding a correction already made.
-        setBody((current) => appendCommentTranscript(current, result.text));
+        setBody((current) => (current === "" ? result.text : `${current} ${result.text}`));
         setOrigin("voice");
       } catch (e) {
         // The recording is gone but the composer is not — say so, and let the
@@ -98,19 +90,22 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
       className="comment-composer"
       onSubmit={(event) => {
         event.preventDefault();
-        if (commentBody(body, anchor) !== "") onSubmit(commentBody(body, anchor), origin);
+        if (body.trim() !== "") onSubmit(body.trim(), origin);
       }}
     >
+      {anchor === null
+        ? <p className="muted">Commenting on the whole document.</p>
+        : <blockquote className="comment-quote">{anchor.quoted}</blockquote>}
       <textarea
         className="comment-input"
+        autoFocus
         rows={3}
         value={body}
         placeholder="What about it?"
-        ref={textarea}
         onChange={(event) => { setBody(event.target.value); }}
       />
       <p className="comment-actions">
-        <Button type="submit" intent="primary" disabled={pending || commentBody(body, anchor) === ""}>
+        <Button type="submit" intent="primary" disabled={pending || body.trim() === ""}>
           {pending ? "Saving…" : "Comment"}
         </Button>
         {mic.available
@@ -149,9 +144,6 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
   const [active, setActive] = useState(false);
   const [anchor, setAnchor] = useState<SelectionAnchor | null>(null);
   const [composing, setComposing] = useState(false);
-  const [location, setLocation] = useState<CommentLocation | null>(null);
-  const [showList, setShowList] = useState(false);
-  const [focusedId, setFocusedId] = useState<string | null>(null);
   const utils = trpc.useUtils();
   // `worktree` is the lens being read; `workstream` below is who the remark is
   // for. Usually the same name, but not always, and conflating them files a
@@ -161,7 +153,6 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
     onSuccess: async () => {
       setComposing(false);
       setAnchor(null);
-      setLocation(null);
       await utils.comments.forDocument.invalidate({ relPath, worktree: workstream });
     },
   });
@@ -174,13 +165,6 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
   // Memoized because the highlight effect depends on it: a fresh `[]` every
   // render would re-run the effect forever.
   const items = useMemo(() => comments.data?.comments ?? [], [comments.data]);
-  const positions = useCommentPositions({ rootRef: contentRef, items, active });
-  const picker = useCommentPicker({
-    rootRef: contentRef,
-    active,
-    composing,
-    onPick: (picked, target) => { setAnchor(picked); setLocation(target); setComposing(true); },
-  });
   // Highlight whatever still resolves. What does not resolve is NOT dropped —
   // it is counted below and listed with its quoted text, because an anchoring
   // system whose failure mode is a silently vanished annotation is the bug this
@@ -188,24 +172,34 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
   useEffect(() => {
     const root = contentRef.current;
     if (root === null) return;
-    const ranges = [
-      ...positions.anchored.flatMap(({ location: target }) => target instanceof Range ? [target] : []),
-      ...(composing && location instanceof Range ? [location] : []),
-    ];
+    const ranges: Range[] = [];
+    for (const comment of items) {
+      if (comment.fragment === undefined) continue;
+      const range = findAnchoredRange(root, comment.fragment);
+      if (range !== null) ranges.push(range);
+    }
     highlightRanges(ranges);
     return () => { highlightRanges([]); };
-  }, [positions.anchored, contentRef, composing, location]);
+  }, [items, contentRef]);
 
   useEffect(() => {
     if (!active) return;
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key !== "Escape") return;
-      if (composing) { setComposing(false); setAnchor(null); setLocation(null); }
-      else setActive(false);
+    const root = contentRef.current;
+    if (root === null) return;
+    const onMouseUp = (): void => {
+      // NOT while a draft is open. Selecting again mid-sentence would silently
+      // re-point the text already typed at a different span — the comment would
+      // be attached to something the boxholder never meant.
+      if (composing) return;
+      const captured = captureSelection(root);
+      if (captured !== null) {
+        setAnchor(captured);
+        setComposing(true);
+      }
     };
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("keydown", onKey); };
-  }, [active, composing]);
+    root.addEventListener("mouseup", onMouseUp);
+    return () => { root.removeEventListener("mouseup", onMouseUp); };
+  }, [active, composing, contentRef]);
 
   /**
    * The routing ladder (`document-comments.md`, Track 4a), which never guesses
@@ -228,42 +222,34 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
     });
   }
 
-  const unresolved = positions.unresolved;
-  useEffect(() => {
-    if (focusedId !== null && showList) document.getElementById(`comment-${focusedId}`)?.scrollIntoView({ block: "nearest" });
-  }, [focusedId, showList]);
+  const unresolved = items.filter((comment) => comment.fragment === undefined).length;
 
   return (
     <aside className="comment-layer" aria-label="Comments">
       <p className="comment-toolbar">
         <Button
           intent={active ? "primary" : "secondary"}
-          onClick={() => { setActive((current) => !current); setComposing(false); setLocation(null); }}
+          onClick={() => { setActive((current) => !current); setComposing(false); }}
         >
-          {active ? `Done commenting · ${comments.isError ? "count unavailable" : `${String(items.length)} open`}` : `Comment · ${comments.isError ? "count unavailable" : `${String(items.length)} open`}`}
+          {active ? "Commenting on" : "Comment"}
         </Button>
-        {active ? <span className="muted">Point to a part, or select text.</span> : null}
+        {active ? <span className="muted">Select text to comment on it.</span> : null}
         {active && !composing
-          ? <Button intent="quiet" onClick={() => { setAnchor(null); setLocation(null); setComposing(true); }}>
+          ? <Button intent="quiet" onClick={() => { setAnchor(null); setComposing(true); }}>
               On the whole document
             </Button>
           : null}
         {routed === null
           ? <span className="muted">unrouted — no workstream has changed this file</span>
           : <span className="muted">→ {routed}</span>}
-        {items.length > 0 ? <Button intent="quiet" onClick={() => { setShowList((value) => !value); }}>{showList ? "Hide comments" : "Show all comments"}</Button> : null}
       </p>
 
-      {active ? <CommentOverlay hovered={picker.hovered ?? (composing && location instanceof Element ? location : null)} anchored={positions.anchored} layoutKey={`${String(composing)}:${String(showList)}`} onMarker={(comment) => {
-        setFocusedId(comment.id);
-        setShowList(true);
-      }} /> : null}
-
-      {composing ? <Composer anchor={anchor} pending={add.isPending} onCancel={() => { setComposing(false); setAnchor(null); setLocation(null); }} onSubmit={submit} /> : null}
+      {composing
+        ? <Composer anchor={anchor} pending={add.isPending} onCancel={() => { setComposing(false); }} onSubmit={submit} />
+        : null}
       {add.isError ? <p className="action-error" role="alert">Couldn’t save: {add.error.message}</p> : null}
-      {comments.isError ? <p className="action-error" role="alert">Couldn’t read comments: {comments.error.message}</p> : null}
 
-      {items.length === 0 || !showList ? null : (
+      {items.length === 0 ? null : (
         <>
           <h2 className="comment-heading">
             comments <small>{items.length}</small>
@@ -273,12 +259,13 @@ export function CommentLayer({ relPath, workstream, changedIn, contentRef }: {
             )}
           </h2>
           <ul className="comment-list">
-            {items.map((comment) => {
-              const target = positions.anchored.find((entry) => entry.comment.id === comment.id)?.location ?? null;
-              return <CommentBody key={comment.id} comment={comment} focused={focusedId === comment.id}
-                onGo={target === null ? null : () => { scrollToComment(target); setFocusedId(comment.id); }}
-                onClear={() => { clear.mutate({ relPath, worktree: workstream, id: comment.id }); }} />;
-            })}
+            {items.map((comment) => (
+              <CommentBody
+                key={comment.id}
+                comment={comment}
+                onClear={() => { clear.mutate({ relPath, worktree: workstream, id: comment.id }); }}
+              />
+            ))}
           </ul>
         </>
       )}

@@ -8,15 +8,15 @@ import type { ReactNode, RefObject } from "react";
 import { CommentPanel } from "../CommentPanel.js";
 import { ReplyInSessionButton } from "../Container.js";
 
-/** Reply then Comment in the raw page's top strip. */
+/** Reply then Comment; the composer opens inside the strip and grows it upward. */
 export function ControlBar({ scope, contentRef }: {
   scope: string;
   contentRef: RefObject<HTMLElement | null>;
 }): ReactNode {
   return (
-    <div className="flex min-h-12 max-h-[50dvh] flex-col gap-2 overflow-y-auto border-b border-stone-300 bg-stone-50 px-4 py-1.5 sm:flex-row sm:items-start sm:gap-x-6">
+    <div className="flex min-h-12 flex-wrap items-start gap-x-6 gap-y-2 border-t border-stone-300 bg-stone-50 px-4 py-1.5">
       <ReplyInSessionButton scope={scope} />
-      <div className="min-w-0 w-full sm:flex-1">
+      <div className="min-w-0 flex-1">
         <CommentPanel scope={scope} contentRef={contentRef} />
       </div>
     </div>

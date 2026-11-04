@@ -101,11 +101,11 @@ void test("A store exhibit carries the \"Reply in the session\" button and the C
       appButton: committed.includes("Reply in the session"),
       // The refusal (and its link to the dashboard) renders only after a click.
       idleRefusal: store.includes("Open the workstream list"),
-      storeComment: store.includes(">Comment · 0 open</button>"),
-      appComment: committed.includes(">Comment · 0 open</button>"),
+      storeComment: store.includes(">Comment</button>"),
+      appComment: committed.includes(">Comment</button>"),
       idleComposer: store.includes("What about it?"),
       // The title sits inside the commentable content, below the controls.
-      controlsBeforeTitle: store.indexOf(">Comment · 0 open</button>") < store.indexOf("Threshold tuner"),
+      controlsBeforeTitle: store.indexOf(">Comment</button>") < store.indexOf("Threshold tuner"),
     },
     {
     storeButton: true,
@@ -174,8 +174,8 @@ void test("A raw index.html page that references /controls.ts gets the same two 
   t.check(
     {
       reply: bar.includes("Reply in the session"),
-      comment: bar.includes(">Comment · 0 open</button>"),
-      replyFirst: bar.indexOf("Reply in the session") < bar.indexOf(">Comment · 0 open</button>"),
+      comment: bar.includes(">Comment</button>"),
+      replyFirst: bar.indexOf("Reply in the session") < bar.indexOf(">Comment</button>"),
       noBreadcrumb: !bar.includes("←"),
     },
     {

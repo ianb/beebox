@@ -1,122 +1,142 @@
 ---
-title: "Point to comment in documents and exhibits"
-status: active
+title: "Point at a box document to attach it to chat"
+status: draft
 workstream: point-to-comment
 issues:
   - ../../../issues/features/2026-11-01-point-to-comment.md
 ---
-# Point to comment in documents and exhibits
+# Point at a box document to attach it to chat
 
-Comment mode lets a person pick a visible part of a document or exhibit with a click or tap. It preserves text selection for precise comments and the existing comment store.
+The box already lets a person select document text and press `+` to attach it to chat. Add a visible Comment mode for choosing a whole document block by tapping it; the existing `+` then attaches that block to the same draft. Remove this branch's workstreams-app implementation, which serves a different comment system.
 
-**Issues addressed:** `2026-11-01-point-to-comment`. The related box-page long-press issue is a different surface.
+**Issues addressed:** `2026-11-01-point-to-comment`, corrected by the boxholder's box screenshots. The related mobile text-selection problem is in `2026-10-09-mobile-long-press-paragraph-to-comment`; its tentative long-press gesture is outside this plan.
 
 ## Design
 
 ### Situations
 
-- When viewing an exhibit screenshot on a phone, I want to tap the picture, so I can describe the visual problem without selecting text.
-- When reading a paragraph, I want to select a few words, so I can make a precise comment.
-- When following a link in an exhibit, I want normal navigation when I am done commenting.
+- When reading a document beside chat on a phone, I want to tap its paragraph, so I can refer to it without selection handles.
+- When a document shows an image or table, I want to point to it, so I can talk about that part with the box.
+- When I only want to follow a link or copy a few words, I want ordinary gestures, so reading stays easy.
 
 ### Right place, right time
 
-The Comment control is visible in the document or exhibit header. Picking happens only after the person enables it. The picked text appears inside the existing comment textarea as quoted lines, where the person can edit it or add speech. The list waits behind a control in the same header. Leaving the mode restores normal page gestures. Raw exhibits have a compact fixed control strip because they have no shared page header.
+| Situation | Behavior | Surface and attention |
+|---|---|---|
+| Phone or desk document | Show Comment in the companion top row; point mode outlines a tapped block and shows the existing `+` | Box chat companion, findable |
+| Ordinary reading | Mode starts off; existing text selection and `+` remain | Box chat companion, quiet |
 
-### Spirit, trust, and failure
+### Spirit
 
-This is a developer feedback surface, not a box behavior. Saving requires an explicit Comment press. A failed save leaves the draft and reports the error. A target that no longer resolves remains in the list with its quote.
+- **Serves:** `spirit.md`, “Feedback is everywhere, and it's not all commands”: a person points, then says anything in chat.
+- **Risks:** “You should be able to see the gears”: the existing selection pill and inline token keep the attached reference visible and removable.
+
+### Trust
+
+Pointing chooses a target but does not change the draft. Pressing the existing `+` adds the reference. Sending remains the person's explicit step; neither step authorizes agent action.
+
+### When it goes wrong or does nothing
+
+The mode control appears only for rendered card and Markdown documents with a chat selection sink. Embedded PDFs, independent images, and opaque view frames are outside this first pass. Empty decorative targets do not show `+`. Escape or Done commenting exits. A link cannot navigate while the mode picks it; after leaving, it works normally. A wrong attachment can be removed with the existing selection pill. For a narrower text span, leave mode and use the existing text selection and `+`.
 
 ### Walkthrough
 
-The person enables Comment, hovers or taps an image, sees its outline, and sees its description inserted into the comment input. They type or dictate a note and save it. The comment gains a marker. The agent sees the quote and note through `bin/comments`; clearing it removes the marker after refresh.
+The person opens a document beside chat, presses Comment, taps a paragraph, sees it outlined and the existing `+` beside it, then presses `+`. They see the existing selection pill and `[selection#N]` token in the ordinary chat draft. They type or dictate a thought and send it. The existing serializer writes `<user-selection>` with source and position. During transcription the existing companion path places the pick at the speech position. No new composer or stored comment is created.
 
 ## Smallest fix and budget
 
-The initial implementation picks a block, adds a persistent element anchor and markers, and reads exhibit comments. This revision changes only the draft presentation and target set. Estimate: 180–300 changed source/test lines across the app, plus plan, issue, and exhibit-doc updates. No generated output.
+Add a mode toggle and a picker that produces the existing floating `+`; its click calls `FileView`'s existing `handleCapture`. Also restore the workstreams-app files changed earlier on this branch. Estimate 350–600 changed source/test lines for the box picker, plus mechanical removal of the mistaken branch changes. Authored docs: plan and issue correction. Generated output: none. The intended new work is below 2,000 changed lines.
 
 ## Stated preferences this plan trades against
 
-The issue says “Keep what exists” and “Text selection stays available”; retain the current fields, always-on text highlights, and selection path. The boxholder then required the picked selection inside the existing comment textarea, with speech in the same draft, no separate input, no target-widening control, and a visible top-bar button. They confirmed the workstreams comment textarea is the destination. Desktop and mobile verification remain required. Screenshots remain optional because they require an attachment store beyond the existing comment fields.
+The boxholder's screenshots show selected text and `+` becoming `[selection#1]` in the chat draft, with selection placed in transcription. They rejected a special input and target-enlarging control. `beebox/AGENTS.md` says “Work only on the requested problem”; this excludes a second composer and the workstreams comment store. `beebox/frontend.md` says ordinary cards render in the workspace, so the mode control belongs with the existing companion document.
 
 ## What already exists
 
-- `workstreams-app/src/frontend/components/CommentLayer.tsx`: the current document draft floats beside the target and renders a separate blockquote. Move that existing textarea into the page header and put the picked quote inside its value.
-- `workstreams-app/src/frontend/exhibits/CommentPanel.tsx`: exhibits use the same floating draft. Keep their request path and place the textarea in their existing top controls.
-- `workstreams-app/src/frontend/lib/selection-anchor.ts`: element fragments and text fragments already resolve. Remove the target-widening helper and use semantic blocks as tap targets.
-- `workstreams-app/src/shared/comments.ts:17`: the wire schema already permits string fragments and quotes. No store migration is needed.
-- `workstreams-app/src/server/comments-service.ts`: the exhibit read path is already implemented in this branch; retain it.
+- `beebox/src/frontend/src/components/FileView/view.tsx:237-249`: `selectionReceiver(...)` resolves the sink and `handleCapture` sends `onAddSelection({ ref, text: selection.text, position: selection.position })`. Reuse.
+- `beebox/src/frontend/src/components/SelectionCapture.tsx:49-151`: a text selection displays `+` and calls `onCapture`. Preserve.
+- `beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/use-companion-selection.ts:39-54`: typed selection enters chat; transcription records `lastWords` and `countWords`. Reuse.
+- `beebox/src/frontend/src/components/chat/everywhere/InteractiveChat/selections.ts:32-45`: typed picks insert `[selectionN]`; voice picks use a speech anchor. Reuse.
+- `beebox/src/frontend/src/components/chat/workspace/WorkspaceCanvas/view.tsx:42-58`: the stable companion card has the chat sink and a header row. Add mode there, below the tabs to preserve mobile width.
+- `beebox/src/frontend/src/lib/selection/position.ts:36-47`: `AddSelectionInput` carries `ref`, `text`, and a freeform `position`. Keep that shape.
+- `beebox/src/frontend/src/components/Markdown/body.tsx:155-167`: prose paragraphs use `.bbx-paragraph` divs, so the picker must include them.
 
 ## Prior art (external)
 
-The issue records Claude artifact and Science behavior with source links. Adopt the mode toggle, target highlight, markers, and list. Do not adopt send-to-Claude, threads, or image pins: this app routes saved notes through workstreams. No other external premise determines the design.
+No external premise is needed. The user's screenshots and shipped box flow determine the destination. The original issue's Claude artifact analogy does not govern draft behavior.
 
 ## Ontology
 
-- **Comment:** existing record in `src/shared/comments.ts:17`, identified by `id`; points to a document or exhibit and may carry a fragment.
-- **Selection anchor:** existing `SelectionAnchor` in `src/frontend/lib/selection-anchor.ts:24`; identifies quoted text.
-- **Element anchor:** same fields, with a typed element fragment and descriptive quote; identifies one rendered element without adding a stored field.
-- **Target:** a rendered block or image within the content root. It is not the toolbar or composer.
+- **Selection:** existing `AddSelectionInput` (`position.ts:36-47`): a chat attachment with source ref, text, and rough position; it is not a workstreams document comment.
+- **Comment mode:** ephemeral view state that changes what a tap on document content selects; it is not saved comment state.
+- **Target:** visible semantic block in the rendered document, producing one Selection.
+- **Draft:** existing chat composer and selection list. No new data format.
 
 ## Tracks / scope
 
-1. **Anchor and picker:** Keep semantic blocks and visual elements (`p`, headings, list items, table cells/rows/table, figure, image, pre, blockquote, svg, canvas, and `[role=img]`). Remove generic `div`, `section`, and `article` from automatic targets. A link or button is a fallback only when no enclosing block can be picked, so comment mode never swallows its click without a target. Keep `[data-comment-target]` for an authored page override. Remove `largerCommentTarget`; a text selection still identifies a smaller span.
-2. **Document UI:** Move the Comment control and existing textarea above the document body. Picking fills the textarea with `> ` quoted lines followed by a blank line and focuses it, bringing the input into view on a phone. A very long element description is shortened in the input; the stored anchor remains complete. Speech appends after the quote. Save strips the unchanged leading quote block from the body, including if the person removes the blank line; the original anchor remains in `quoted` and `fragment`, so editing the draft text cannot move an existing marker. If the person changes the quote block, those changed lines become part of the body. Keep the chosen target outlined until save or cancel. Remove the floating card, separate quote block, and target-widening control.
-3. **Exhibit UI:** Apply the same draft behavior to the container's existing top controls. Raw pages have no common header; move their fixed control strip to the top and keep it compact. Retain the existing read API, pins, list, and highlights.
+### Track 1: Restore the wrong branch change
+
+Restore workstreams-app code and tests to the branch base and correct the issue's scope/status. Retain unrelated mainline changes. First chunk: mechanical restoration and issue correction, then a checkpoint commit.
+
+### Track 2: Box picker
+
+Add a labeled Comment/Done commenting control just below the companion tabs for rendered cards and Markdown with a chat selection sink. Keep mode with its card and reset when the card hides. Pass mode into `FileView` and `SelectionCapture`. Target paragraphs including `.bbx-paragraph`, headings, list items, table cells/rows, figures/images, code blocks, and blockquotes. Nearest meaningful block wins; no widening control. Mouse hover previews the block; click/tap selects it and positions the existing `+`. The `+` alone calls the existing `onCapture` path. Capture-phase click handling suppresses the underlying link or control while in mode. Touch mode disables native text selection while preserving scrolling. Outside mode, `+` behaves as before. Extract document text without nested interface controls: a code fence containing `hello` must attach `hello`, not `Copy hello`. Visual targets use caption, alt, or short source description; `position` carries a rough location. Empty/decorative targets are skipped. Keyboard text selection and `+` remain the precise keyboard path; no focus highlight is promised for unfocusable paragraphs. First chunk: extraction and interaction, then header wiring.
 
 ## Could this be simpler?
 
-Block picking alone would let the person write a note, but a saved image comment would have no in-page target, and an exhibit could not show existing comments. The additional read path and element fragment deliver the issue's markers and list while keeping the store shape. The header input needs no separate quote display or target-size control.
+A double tap without a mode would avoid a button, but conflicts with ordinary links and text selection on a phone. The explicit mode makes changed tap behavior visible and reversible. Calling `onAddSelection` avoids a second persistence path, following the engineering principle of one way to do each thing.
 
 ## Subplans
 
-None; both surfaces share the picker and anchor rules.
+None. The source and destination already exist in code.
 
 ## Failure modes
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Text fragment cannot resolve after an edit | Existing coverage | Existing list remains | Clear |
-| Element path points at changed markup | Browser check | Tag and quote verification; list retains quote; marker omitted | Clear |
-| Tap on a link navigates | Browser touch check | Capture and prevent default | Clear |
-| Exhibit read fails | New API test | Panel error while comments remain stored | Clear |
-| Comment save fails | Existing API test | Draft and error remain | Clear |
-| A phone tap updates an offscreen input | Browser touch check | Focus brings the header input into view; chosen target stays outlined | Clear |
-| Quote repeats in the agent's note | New pure helper test | Strip the unchanged quote prefix from the saved body | Clear |
-| Dictation joins the quote line | New pure helper test | Preserve the blank line before appending speech | Clear |
+| Link activates instead of being picked | Browser check planned | Capture-phase click suppression | Clear |
+| Inline span gives too narrow a target | Extraction test planned | Ascend to semantic block | Clear |
+| Image has no text | Extraction test planned | Alt/caption/source fallback or skip | Clear |
+| Switching cards leaves mode active | Browser check planned | Reset when card hides | Clear |
+| Stale text selection is attached | Browser check planned | Point mode ignores floating `+` | Clear |
+| Code fence includes its Copy button label | Extraction test planned | Exclude nested controls | Clear |
 
 ## Agent-flow / user-flow edge cases
 
-- **ADDRESSED:** Existing `bin/comments` presents the quote even if a target moves; no new field is required.
-- **ADDRESSED:** The picker is confined to a content root so controls do not become targets.
-- **ADDRESSED:** Existing workstream routing and CLI remain the only writer.
-- **DEFERRED:** Screenshot attachment and image point pins need storage and a distinct presentation decision.
+- **ADDRESSED:** Wrong target can be changed before pressing `+`, or removed afterward by the existing selection pill (`ChatSelections.tsx:59`).
+- **ADDRESSED:** No migration: existing `applySelections` serializes the same input (`serialize.ts:167-215`).
+- **ADDRESSED:** Missing or moved source retains existing ref and quote; no claim of a canonical anchor.
+- **DEFERRED:** Canonical anchors belong to `issues/features/2026-07-08-selection-provenance-canonical-anchors.md`.
+- **DEFERRED:** Physical iOS WebView behavior requires device verification beyond Chromium touch emulation.
 
 ## NOT in scope
 
-- Box-page commenting and long press gestures belong to the neighboring issue.
-- Screenshot capture, uploads, and image point pins would add an attachment lifecycle without a settled need.
-- A control for widening the picked target was explicitly rejected by the boxholder.
-- Replies, threads, send-to-agent checkbox, and resolution state do not match the present comment workflow.
+- Workstreams-app exhibits and `bin/comments`: the boxholder identified box chat.
+- Embedded PDFs, independent image files, and opaque view frames: their content is not inspectable by the DOM block picker. Images inside rendered documents remain eligible.
+- New comment store, markers, threads, or all-comments list: selections enter a chat draft.
+- Screenshots, image point pins, and canonical anchors: they need new representation.
+- Long press: its conflict with native selection motivated the explicit mode.
 
 ## Open design questions
 
-Would cropped screenshots improve visual exhibit comments enough to justify an attachment store? Lean: try element quoting and location first, then decide from use. Would a point pin be more useful than selecting an image? Lean: image selection is sufficient for this pass.
+An image point or screenshot may later be worthwhile; lean toward first using alt/caption and source. Standalone browse may later need a control; lean toward companion only, where the chat draft is visible.
 
 ## Knowledge audits
 
-No new box-agent guidance. The agent still reads the same `bin/comments` records.
+No new agent-facing format or instruction. Existing `<user-selection>` serialization remains.
 
 ## What will hold this after it ships
 
-Pure fragment-format tests cover the new encoding. Browser checks exercise DOM target choice and resolution without introducing a DOM test dependency. App API tests cover exhibit reads. Desktop, phone, and touch checks cover the interaction. No new test tier.
+A focused extraction test covers blocks, visual descriptions, and excluding a code fence's Copy control. Browser checks cover mouse/touch target selection, the `+` attachment step, link suppression, draft token/pill, voice placement, keyboard selection, and normal selection after exit. Existing serializer tests cover message format. No new test tier.
 
 ## Implementation order
 
-1. Keep the implemented anchor and read API; narrow automatic targets and remove widening.
-2. Put the selected quote into the existing document and exhibit textareas, remove floating drafts, and put Comment at the top of each page.
-3. Check desktop, phone, and touch behavior, then update the exhibit and get cross-model diff review.
+1. Correct plan and issue; obtain Claude cross-model plan review.
+2. Restore workstreams changes; commit correction.
+3. Implement box picker, tests, typecheck, lint, layout check.
+4. Verify with `bin/browse` against isolated test box at desktop and phone widths with touch emulation; present one exhibit.
+5. Obtain Claude cross-model diff review, adjudicate, commit. Do not merge.
 
 ## Rollout shape
 
-Run workstreams-app tests, typecheck, and lint. No migration: old text fragments and whole-document comments continue to parse. Ship as one worktree change after all tracks are complete; merging requires the boxholder's finish request.
+No data migration or deployment. Done when `+` attaches a tapped block to the existing chat draft, text selection still works, taps do not navigate in mode, checks and browser evidence pass, and Codex review findings are resolved or reported.

@@ -102,14 +102,3 @@ screenshot hung until `caffeinate -u` ran (`calendar-cards/20261029T223918Z-impl
 and a tour run stalled on a sleeping display (`browse-wedge/20261030T084348Z-review-adjudicated.md`).
 The retrospective left the skill's recovery wording in place, because a routine
 wake-up turns the display on and that choice is still open in this issue.
-
-## Re-encounter 2026-11-04 (point-to-comment)
-
-`bin/browse screenshot --slug` failed on both the local workstreams document
-page and an exhibit page with "got no answer from the browser". `snapshot`,
-`click`, and `eval` still worked. `caffeinate -u -t 2` and closing and reopening
-the browser session did not restore capture. A separate headless Chrome CDP
-session captured the same pages, so the visual exhibit used that fallback.
-The shared router was not restarted. The priority may be stale given another
-repeat; the open choice above remains whether `bin/browse` should wake the
-display before capture.

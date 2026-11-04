@@ -73,7 +73,6 @@ export interface CommentsService {
    * sought under `main` and the agent who needs it would never see it.
    */
   forDocument(input: { relPath: string; worktree: string | null }): Promise<Comment[]>;
-  forExhibit(input: { workstream: string; exhibit: string }): Promise<Comment[]>;
   /** Everything waiting, optionally narrowed to what is addressed to one workstream. */
   waiting(workstream: string | null): Promise<Array<{ relPath: string; comments: Comment[] }>>;
   add(input: {
@@ -110,10 +109,6 @@ export function createCommentsService(options: { repoRoot: string }): CommentsSe
     async forDocument({ relPath, worktree }): Promise<Comment[]> {
       const args = ["show", relPath, "--json", ...optional("worktree", worktree ?? undefined)];
       const parsed = cliOutputSchema.parse(JSON.parse(await run(args)));
-      return parsed.entries.flatMap((entry) => entry.comments);
-    },
-    async forExhibit({ workstream, exhibit }): Promise<Comment[]> {
-      const parsed = cliOutputSchema.parse(JSON.parse(await run(["show", `exhibit:${workstream}/${exhibit}`, "--json"])));
       return parsed.entries.flatMap((entry) => entry.comments);
     },
     async waiting(workstream): Promise<Array<{ relPath: string; comments: Comment[] }>> {

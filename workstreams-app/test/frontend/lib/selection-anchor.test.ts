@@ -12,7 +12,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { parseElementFragment, parseFragment, serializeElementFragment, serializeFragment } from "../../../src/frontend/lib/selection-anchor.js";
+import { parseFragment, serializeFragment } from "../../../src/frontend/lib/selection-anchor.js";
 
 // Key ORDER is an artifact of how the parser builds its object; the contract is
 // the values. Normalize so a reordering does not read as a regression.
@@ -114,20 +114,4 @@ void test("A fragment that decodes to nothing usable returns null, so the caller
     null,
     null,
   ]);
-});
-
-// An element marker must retain its child path and tag across the store's
-// string field. A malformed path is refused before it can name a wrong block.
-void test("element fragments round-trip and refuse malformed paths", async (t) => {
-  t.check({
-    image: parseElementFragment(serializeElementFragment({ path: [1, 0, 3], tag: "img" })),
-    empty: parseElementFragment(serializeElementFragment({ path: [], tag: "img" })),
-    negative: parseElementFragment(serializeElementFragment({ path: [-1], tag: "p" })),
-    malformed: parseElementFragment(":~:element=%7Bbad"),
-  }, {
-    image: { path: [1, 0, 3], tag: "img" },
-    empty: null,
-    negative: null,
-    malformed: null,
-  });
 });

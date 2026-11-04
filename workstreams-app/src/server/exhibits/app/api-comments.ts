@@ -23,7 +23,6 @@ import {
 import { APPS_SEGMENT } from "../store.js";
 import { CommentsCliError, type CommentsService } from "../../comments-service.js";
 import type { TranscribeService } from "../../services.js";
-import { commentSchema } from "../../../shared/comments.js";
 import {
   MAX_AUDIO_BYTES,
   TranscriptionNotConfiguredError,
@@ -35,7 +34,7 @@ import {
 export interface ExhibitCommentOptions {
   storeRoot: string;
   /** Writes through `bin/comments`; the exhibits origin is one more caller of that CLI. */
-  comments: Pick<CommentsService, "add" | "forExhibit">;
+  comments: Pick<CommentsService, "add">;
   transcribe: TranscribeService;
 }
 
@@ -54,20 +53,6 @@ function issuesOf(error: z.ZodError): string[] {
 
 export const exhibitCommentRoutes: FastifyPluginAsync<ExhibitCommentOptions> = async (json, options) => {
   const { storeRoot, comments, transcribe } = options;
-
-  json.get<{ Params: ScopeParams }>("/:ws/:exhibit/comments", async (request, reply) => {
-    const workstream = requireSegment(request.params.ws, "workstream");
-    const exhibit = requireSegment(request.params.exhibit, "exhibit name");
-    if (workstream === APPS_SEGMENT) return reply.code(409).send({ message: "Apps have no comments." });
-    await scopeDir(storeRoot, request.params);
-    try {
-      const found = await comments.forExhibit({ workstream, exhibit });
-      return await reply.send({ comments: commentSchema.array().parse(found) });
-    } catch (error) {
-      if (!(error instanceof CommentsCliError)) throw error;
-      return reply.code(409).send({ message: "Could not read comments.", detail: lastLine(error.message) });
-    }
-  });
 
   json.post<{ Params: ScopeParams; Body: string }>(
     "/:ws/:exhibit/comments",

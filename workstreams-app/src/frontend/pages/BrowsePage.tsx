@@ -128,6 +128,7 @@ export function BrowseView({ document }: { document: BrowsedDocument }) {
         <p className="issue-meta"><KindPill document={document} /></p>
         <ChangedIn document={document} />
       </header>
+      <div ref={contentRef}><DocumentBody document={document} /></div>
       {/* A directory has no text to anchor to, and nothing to say about it. */}
       {document.kind === "directory" ? null : (
         <CommentLayer
@@ -137,7 +138,6 @@ export function BrowseView({ document }: { document: BrowsedDocument }) {
           contentRef={contentRef}
         />
       )}
-      <div ref={contentRef}><DocumentBody document={document} /></div>
     </main>
   );
 }
