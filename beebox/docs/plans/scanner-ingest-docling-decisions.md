@@ -271,3 +271,82 @@ WebP has a [16,383-pixel side limit](https://developers.google.com/speed/webp/fa
 Bound generated images proportionally to that limit without enlarging smaller
 images. This keeps unusually tall PDF pages extractable while retaining the
 original document and Docling coordinates.
+
+## D18. A Python driver bounds memory; one conversion at a time (2026-11-03)
+
+Supersedes the CLI half of D2 and the argv of D3, D4, and D7; their choices
+(pinned version, rapidocr, fast tables, CPU, 144-dpi page renders, figures on,
+OCR modes) are kept unchanged. Plan: [`docling-memory.md`](docling-memory.md).
+
+**Problem.** Two concurrent conversions stalled a hosted box at its 1 GiB
+`MemoryHigh`. Measured alone, one CLI conversion did not fit either. With
+`--image-export-mode referenced` the CLI turns on page and picture images,
+which makes the pipeline keep every page's 2x render until the document is
+assembled (`standard_pdf_pipeline.py:598`, about 14 MB a page). Batches of four
+pages and 100-page queues between stages add a spike on top.
+
+**Decision.** `core.ts` runs `convert.py` (beside it) through the same `uvx`
+environment. The driver builds the CLI's options for our flags, then changes
+only these: no page or picture images in the pipeline; layout, table and OCR
+batches of 1; `queue_max_size` 4; `MALLOC_ARENA_MAX=2`. After conversion it
+renders each page with the same backend call the pipeline uses, crops that
+page's figures, writes them, and frees the render. It saves JSON in placeholder
+mode with the file URIs already set, because referenced mode deep-copies the
+document and loads every image back in. The CLI exposes none of the batch or
+queue settings (`--page-batch-size` measured no effect).
+
+Before importing Docling, the driver takes a kernel `flock` on
+`$HOME/.cache/bbx-docling.lock` (per box on a hosted host, per user on a
+laptop), then on `$UV_CACHE_DIR/bbx-docling.lock` (host-wide). The kernel
+releases both when the driver exits, so a lock cannot expire while Docling
+runs or outlive it. The driver exits when its Node parent is gone. A wait over
+20 minutes fails as "another conversion ran too long". A SIGKILL is reported as
+an out-of-memory kill only when the cgroup's `oom_kill` count rose.
+
+**Measurements.** Ubuntu 24.04 arm64 VM, 3 CPUs (prod is x86_64, 3 CPUs), each
+run in a fresh cgroup v2 child, peak anonymous memory sampled from
+`memory.stat`. Six public PDFs from a hosted box, described by shape:
+
+| PDF | CLI peak | Driver peak | CLI time | Driver time |
+|---|---:|---:|---:|---:|
+| 9-page digital, 1 figure | 1,398 MB | 851 MB | 19 s | 19 s |
+| 56-page digital, mostly tables, 31 figures | 2,320 MB | 1,125 MB | 176 s | 216 s |
+| 85-page digital, tables | 2,518 MB | 1,107 MB | 264 s | 285 s |
+| 122-page digital report | 3,398 MB | 1,025 MB | 457 s | 268 s |
+| 333-page digital manual | OOM-killed at a 3.5 GB cap after 110 s | 1,041 MB | — | 652 s |
+| 16-page 200-dpi scan, OCR `regions` | 2,048 MB | 1,562 MB | 135 s | 141 s |
+
+Where the driver's memory goes (56-page report): Python and Docling imports
+about 256 MB; layout and table models about 290 MB more; then a spike during
+inference. The table model accounts for about 370 MB of the spike and most of
+the time; with tables off the peak was 716 MB. On scans, RapidOCR's text
+detector adds about 900 MB at its peak: Docling OCRs at 3x, and the detector's
+`limit_type: min` never shrinks a large input. Changing that changes OCR output,
+so it waits for a quality comparison (D7, D15).
+
+Tried and not adopted: one inference thread or two (under 5%); chunking a
+large PDF with `page_range` and `DoclingDocument.concatenate` (no gain once
+page images leave the pipeline, and it changed text at 2 of 6 chunk boundaries,
+where Docling joins paragraphs across pages); the pypdfium2 backend and
+disabling torch compile (no measurable gain).
+
+**Output.** Byte-identical to the CLI for the same options on every PDF above
+that the CLI could finish: the same page and figure file names, which carry a
+SHA-256 of the pixels, the same markdown, and the same JSON apart from file
+paths. On macOS, where the CLI has the memory to finish, the 333-page manual
+and the scan with OCR `replace` and a language override were identical too.
+Deliberate difference: when Docling ends with a status other than
+success, the CLI exits 0 with no files; the driver exits 1 with the status and
+Docling's errors.
+
+**Limits.** 2 GiB per box (`MemoryHigh=2G`; with it, proposed `MemoryMax=2560M`
+and `OOMPolicy=continue`) fits one conversion beside the box server and a chat
+(about 550 MB). If the OOM killer picks the `bbx` process that waits on Docling
+rather than Docling itself, no card error is written; the journal has the kill.
+Agent subprocesses now inherit `UV_CACHE_DIR` and `HF_HOME`: before this they
+built a private uv environment and model cache per box (6.4 GB and 506 MB on
+one box) and would have missed the host lock.
+
+**Revisit:** on every Docling upgrade, repeat the comparison: run the CLI and
+the driver on the same PDFs and compare artifact names, markdown, and JSON. If
+upstream exposes batch and queue sizes on the CLI, the driver can go.
