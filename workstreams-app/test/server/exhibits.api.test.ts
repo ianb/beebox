@@ -46,7 +46,7 @@ const focusCalls: string[] = [];
 let focusFailure: string | null = null;
 
 /** So are the comment writer and the transcriber; these record and fail on demand. */
-const commentAdds: unknown[] = [];
+const commentAdds: unknown[] = [], commentReads: unknown[] = [];
 let commentFailure: string | null = null;
 let transcribeFailure: Error | null = null;
 
@@ -61,6 +61,7 @@ async function makeApp(storeRoot: string) {
       if (focusFailure !== null) throw new Error(focusFailure);
     },
     comments: {
+      forExhibit: async (input) => { commentReads.push(input); return [{ id: "saved-1", at: "2026-11-04T10:00:00Z", origin: "typed", body: "Image is clipped", quoted: "Chart A", section: "Results", workstream: "demo-ws", worktree: "demo-ws", fragment: ":~:element=chart" }]; },
       add: async (input) => {
         if (commentFailure !== null) throw new CommentsCliError(commentFailure);
         commentAdds.push(input);
@@ -274,6 +275,7 @@ async function checkComments(t: Test): Promise<void> {
     headers: json,
     payload: { body: "The caption is wrong.", origin: "voice", quoted: "A1 shows", section: "Figures" },
   });
+  const listed = await app.inject({ method: "GET", url: `${scope}/comments`, headers: authorized });
   await fs.mkdir(path.join(store, "main/notes"), { recursive: true });
   const onMain = await app.inject({ method: "POST", url: "/api/main/notes/comments", headers: json, payload: { body: "ok" } });
   const appsComment = await app.inject({ method: "POST", url: "/api/apps/story-eval/comments", headers: json, payload: { body: "x" } });
@@ -292,6 +294,7 @@ async function checkComments(t: Test): Promise<void> {
   t.check(
     {
       remark: [remark.statusCode, remark.json()],
+      listed: [listed.statusCode, listed.json(), commentReads.at(-1)],
       recorded: commentAdds[0],
       onMain: [onMain.statusCode, commentAdds[1]],
       apps: [appsComment.statusCode, appsComment.json().message],
@@ -311,6 +314,7 @@ async function checkComments(t: Test): Promise<void> {
         workstream: "demo-ws",
       },
     ],
+    listed: [200, { comments: [{ id: "saved-1", at: "2026-11-04T10:00:00Z", origin: "typed", body: "Image is clipped", quoted: "Chart A", section: "Results", workstream: "demo-ws", worktree: "demo-ws", fragment: ":~:element=chart" }] }, { workstream: "demo-ws", exhibit: "instrument" }],
     recorded: {
       target: {
         exhibit: {

@@ -1,6 +1,7 @@
 ---
 title: "Comment by pointing: tap a comment button, then tap the thing to comment on"
-workstream: unattached
+workstream: point-to-comment
+design: ../../beebox/docs/plans/point-to-comment.md
 area: workstreams-app
 labels: [comments, exhibits, mobile, ui]
 filed-by: agent
@@ -86,3 +87,24 @@ shown only in comment mode, and a list view. Our comments go to an agent by
 workstream, so a "send" step or checkbox has no equivalent. A Science-style
 point pin on an image would answer the "anchors for non-text targets"
 question above.
+
+## Work in point-to-comment
+
+The worktree implementation adds the mode button with an open count, pointing
+at blocks and visual elements, a way to widen the target, a nearby composer,
+and a list and markers for existing comments. Text selection and the existing
+comment fields remain. Exhibit pages now read their saved comments through the
+same CLI-backed service. Desktop, phone, touch, raw-page link, and image-target
+checks used a local worktree app instance; temporary comments were cleared.
+The branch is not merged.
+Claude Opus 5.5 reviewed the implementation in two rounds. Its findings led
+to marker matching for nested wrappers, stable drag tracking, persistent read
+errors, bounded image quotes, and focused API and fragment checks. The second
+round found two further silent cases, now handled: failed document reads show
+an unavailable count, and changed image attributes recheck their markers.
+
+Two optional choices remain for the boxholder. A cropped screenshot would need
+an attachment store and a way for `bin/comments` to present it; the lean is to
+try descriptive image anchors first. A point pin within an image would be more
+precise than choosing the whole image; the lean is to add it only if image
+comments prove too broad.

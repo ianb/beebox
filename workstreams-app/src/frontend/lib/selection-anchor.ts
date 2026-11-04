@@ -30,6 +30,105 @@ export interface SelectionAnchor {
   section?: string;
 }
 
+const ELEMENT_PREFIX = ":~:element=";
+const TARGET_SELECTOR = "[data-comment-target], img, svg, canvas, a, button, p, h1, h2, h3, h4, h5, h6, li, pre, blockquote, figure, figcaption, table, tr, td, th, section, article, div";
+
+/** Closest visible block or visual element. Parent targets remain available to widen a pick. */
+export function commentTarget(node: Element | null, root: HTMLElement): Element | null {
+  if (node !== null && !root.contains(node)) return null;
+  for (let current = node; current !== null && current !== root; current = current.parentElement) {
+    if (!(current instanceof HTMLElement) && !(current instanceof SVGElement)) continue;
+    if (!current.matches(TARGET_SELECTOR)) continue;
+    if (current.getBoundingClientRect().width === 0 || current.getBoundingClientRect().height === 0) continue;
+    return current;
+  }
+  return null;
+}
+
+export function largerCommentTarget(target: Element, root: HTMLElement): Element | null {
+  const parent = target.parentElement;
+  // The exhibit image's enlarge button wraps the picture. Widen to the figure,
+  // not to a button whose label only describes its action.
+  const start = target.matches("img, svg, canvas") && parent?.matches("button, a") ? parent.parentElement : parent;
+  return commentTarget(start, root);
+}
+
+function descriptionFor(element: Element): string {
+  const caption = element.closest("figure")?.querySelector("figcaption")?.textContent.trim();
+  if (element instanceof HTMLImageElement) {
+    const source = element.getAttribute("src") ?? "";
+    return (caption || element.alt.trim() || (source.startsWith("data:") ? "Inline image" : source) || "Image").slice(0, 10_000);
+  }
+  const label = element.getAttribute("aria-label")?.trim();
+  const text = element.textContent.replace(/\s+/gu, " ").trim();
+  return (label || text || caption || element.getAttribute("src") || element.tagName.toLowerCase()).slice(0, 10_000);
+}
+
+/** An element path is checked against its tag and quote when read back. */
+export function captureElement(root: HTMLElement, element: Element): SelectionAnchor {
+  const path: number[] = [];
+  let current: Element = element;
+  while (current !== root) {
+    const parent = current.parentElement;
+    if (parent === null) break;
+    path.unshift(Array.from(parent.children).indexOf(current));
+    current = parent;
+  }
+  const quoted = descriptionFor(element);
+  const anchor: SelectionAnchor = {
+    quoted,
+    fragment: serializeElementFragment({ path, tag: element.tagName.toLowerCase() }),
+  };
+  const section = sectionFor(element, root);
+  if (section !== undefined) anchor.section = section;
+  return anchor;
+}
+
+export function serializeElementFragment(input: { path: number[]; tag: string }): string {
+  return `${ELEMENT_PREFIX}${encodeURIComponent(JSON.stringify(input))}`;
+}
+
+export function parseElementFragment(fragment: string): { path: number[]; tag: string } | null {
+  if (!fragment.startsWith(ELEMENT_PREFIX)) return null;
+  try {
+    const parsed: unknown = JSON.parse(decodeURIComponent(fragment.slice(ELEMENT_PREFIX.length)));
+    if (typeof parsed !== "object" || parsed === null || !("path" in parsed) || !("tag" in parsed)) return null;
+    const path: unknown = parsed.path;
+    const tag: unknown = parsed.tag;
+    if (!Array.isArray(path) || typeof tag !== "string" || path.length === 0 || path.length > 100) return null;
+    if (!path.every((index: unknown) => typeof index === "number" && Number.isInteger(index) && index >= 0)) return null;
+    return { path: path.filter((index): index is number => typeof index === "number"), tag };
+  } catch (_error) {
+    return null;
+  }
+}
+
+export function findAnchoredElement(input: { root: HTMLElement; fragment: string; quoted: string }): Element | null {
+  const { root, fragment, quoted } = input;
+  const parsed = parseElementFragment(fragment);
+  if (parsed === null) return null;
+  try {
+    let current: Element = root;
+    for (const index of parsed.path) {
+      if (!Number.isInteger(index) || index < 0 || index >= current.children.length) return null;
+      const child = current.children.item(index);
+      if (child === null) return null;
+      current = child;
+    }
+    if (!(current instanceof HTMLElement) && !(current instanceof SVGElement)) return null;
+    if (current.tagName.toLowerCase() !== parsed.tag || descriptionFor(current) !== quoted) return null;
+    // A shifted path to an identical sibling is indistinguishable from the
+    // original. Withhold its marker rather than point at the wrong copy.
+    const otherMatches = Array.from(root.querySelectorAll(parsed.tag)).filter((element) =>
+      element !== current && !element.contains(current) && !current.contains(element) && descriptionFor(element) === quoted);
+    return otherMatches.length === 0 ? current : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+export function isElementFragment(fragment: string): boolean { return fragment.startsWith(ELEMENT_PREFIX); }
+
 /** `#:~:text=` payload shape, as the generator returns it. */
 export interface GeneratedFragment {
   prefix?: string;

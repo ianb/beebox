@@ -32,6 +32,11 @@ export function mountControls(): void {
   // listener on the body and be read as a selection on the page.
   host.addEventListener("mouseup", (event) => { event.stopPropagation(); });
   const shadow = host.attachShadow({ mode: "open" });
+  // Custom Highlights paint in the document tree, outside this control bar's
+  // shadow root. Keep their style with the page they highlight.
+  const highlightStyle = document.createElement("style");
+  highlightStyle.textContent = "::highlight(bbx-comment-anchor) { background: #fde68a; color: inherit; }";
+  document.head.append(highlightStyle);
   const style = document.createElement("style");
   style.textContent = `${HOST_BASELINE}\n${sheet}`;
   const mount = document.createElement("div");

@@ -66,7 +66,7 @@ function fakeServices(workstreams?: WorkstreamSummary[]): AppServices {
       recentFiles: unconfigured,
       pathIndex: unconfigured,
     },
-    comments: { forDocument: unconfigured, waiting: unconfigured, add: unconfigured, clear: unconfigured },
+    comments: { forDocument: unconfigured, forExhibit: unconfigured, waiting: unconfigured, add: unconfigured, clear: unconfigured },
     transcribe: { transcribe: unconfigured },
     quotas: { get: async () => [] },
     exhibits: {

@@ -215,10 +215,16 @@ page may also call the route itself.
 ## Comments
 
 A person reading an exhibit can leave a remark on it, typed or spoken, from
-the page: the **Comment** control above the title turns commenting on; a
-selection anywhere in the title, prose, or page opens a composer carrying the
-selected text and the nearest heading above it, and "comment on the whole
-exhibit" opens one with no selection. **Speak** records a short dictation and
+the page. **Comment** turns on pointing mode and shows the open count. Hovering
+outlines a target; clicking or tapping a block, link, image, or chart opens a
+composer beside it (at the bottom of the screen on a phone). **Larger target**
+widens the choice to its parent; Cancel lets the person point again to choose a
+smaller part. Selecting text still comments on the selected span. While the mode
+is on, a tap on a link picks it instead of following it. **Done commenting**
+restores normal page actions. The mode also shows markers for saved comments;
+**Show all comments** lists them and can return to a target. Existing text
+highlights remain visible when the mode is off. "Comment on the whole exhibit"
+opens a draft with no target. **Speak** records a short dictation and
 transcribes it into the box (it needs `BBX_OPENAI_API_KEY` in the app's
 environment; without it the page says so and the remark can still be typed).
 
@@ -233,12 +239,17 @@ bin/comments clear exhibit:<workstream>/<exhibit> [--id <id>]
 ```
 
 `exhibit:<workstream>/<exhibit>` is the address `bin/comments` prints and
-accepts for an exhibit wherever it takes a path. Nothing is read back on the
-page: a comment is a message, and the agent clears it.
+accepts for an exhibit wherever it takes a path. The page reads saved comments
+to show the count, markers, and list. An agent still reads and clears each
+message with `bin/comments`. Element targets keep a descriptive quote (text,
+caption, alt text, or image source) and an element fragment in the existing
+comment fields; a changed target stays in the list without a misplaced marker.
 
 The control appears on the default and `index.tsx` tiers, which the container
 renders, and on a raw `index.html` page that opts into the control bar
-("Controls on a raw page" above). A raw page may also call the routes directly: `POST /api/<ws>/<exhibit>/comments` with
+("Controls on a raw page" above). A raw page may also call the routes directly:
+`GET /api/<ws>/<exhibit>/comments` returns `{ comments }`;
+`POST /api/<ws>/<exhibit>/comments` with
 `{ body, origin?, quoted?, section?, fragment? }` answers 201 `{ id, workstream }`,
 and `POST /api/transcribe` with `{ audio: <base64>, mimeType? }` answers
 `{ text }`. Committed apps have no workstream and are refused with 409.

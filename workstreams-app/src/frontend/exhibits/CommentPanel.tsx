@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from "rea
 
 import { MAX_AUDIO_BYTES } from "../../server/transcribe-contract.js";
 import { recorderAvailability, startRecording } from "../lib/recorder.js";
-import { captureSelection, type SelectionAnchor } from "../lib/selection-anchor.js";
+import { captureElement, highlightRanges, largerCommentTarget, type SelectionAnchor } from "../lib/selection-anchor.js";
+import { CommentOverlay, commentComposerStyle, scrollToComment, useCommentPicker, useCommentPositions, type CommentLocation } from "../components/comment-pointing.js";
+import { commentSchema, type Comment } from "../../shared/comments.js";
 import {
   appendTranscript,
   commentRequest,
@@ -12,6 +14,15 @@ import {
 } from "./comment-requests.js";
 
 type Session = Awaited<ReturnType<typeof startRecording>>;
+
+function useFocusComment(input: { listRef: RefObject<HTMLDivElement | null>; focusedId: string | null; listOpen: boolean }): void {
+  const { listRef, focusedId, listOpen } = input;
+  useEffect(() => {
+    if (!listOpen || focusedId === null) return;
+    const row = Array.from(listRef.current?.children ?? []).find((child) => child.getAttribute("data-comment-id") === focusedId);
+    row?.scrollIntoView({ block: "center" });
+  }, [listRef, listOpen, focusedId]);
+}
 
 const BUTTON = "rounded-md border border-stone-400 bg-white px-3 py-1.5 text-sm font-semibold text-stone-800 hover:bg-stone-100 disabled:opacity-60";
 const BUTTON_ON = "rounded-md border border-stone-800 bg-stone-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-stone-700";
@@ -120,7 +131,7 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
         : (
           <blockquote className="m-0 border-l-4 border-stone-400 pl-3 text-sm text-stone-700">
             {anchor.section === undefined ? null : <span className="mr-2 font-semibold">{anchor.section}:</span>}
-            {anchor.quoted}
+            {anchor.quoted.slice(0, 220)}{anchor.quoted.length > 220 ? "…" : ""}
           </blockquote>
         )}
       <textarea
@@ -169,26 +180,69 @@ export function CommentPanel({ scope, contentRef }: {
 }): ReactNode {
   const [active, setActive] = useState(false);
   const [draft, setDraft] = useState<{ anchor: SelectionAnchor | null } | null>(null);
-  const [pending, setPending] = useState(false);
-  const [notice, setNotice] = useState<{ kind: "saved" | "problem"; text: string } | null>(null);
+  const [pending, setPending] = useState(false), [notice, setNotice] = useState<{ kind: "saved" | "problem"; text: string } | null>(null);
+  const [readProblem, setReadProblem] = useState<string | null>(null);
+  const [items, setItems] = useState<Comment[]>([]);
+  const [listOpen, setListOpen] = useState(false);
+  const [location, setLocation] = useState<CommentLocation | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  useFocusComment({ listRef, focusedId, listOpen });
+  const positions = useCommentPositions({ rootRef: contentRef, items, active });
+  const picker = useCommentPicker({
+    rootRef: contentRef,
+    active,
+    composing: draft !== null,
+    onPick: (anchor, target) => { setNotice(null); setDraft({ anchor }); setLocation(target); },
+  });
+  const handleWidenDraft = (): void => {
+    const root = contentRef.current;
+    if (root === null || !(location instanceof Element)) return;
+    const larger = largerCommentTarget(location, root);
+    if (larger === null) return;
+    setLocation(larger);
+    setDraft({ anchor: captureElement(root, larger) });
+  };
+
+  useEffect(() => {
+    highlightRanges(positions.anchored.flatMap(({ location: target }) => target instanceof Range ? [target] : []));
+    return () => { highlightRanges([]); };
+  }, [positions.anchored]);
+
+  useEffect(() => {
+    let current = true;
+    const read = async (): Promise<void> => {
+      try {
+        const response = await fetch(`/api/${scope}/comments`);
+        const body: unknown = await response.json();
+        if (!response.ok) {
+          if (current) setReadProblem(responseProblem({ status: response.status, body }));
+          return;
+        }
+        const parsed = commentSchema.array().safeParse(typeof body === "object" && body !== null && "comments" in body ? body.comments : null);
+        if (!parsed.success) {
+          if (current) setReadProblem("The comment list was invalid.");
+          return;
+        }
+        if (current) { setItems(parsed.data); setReadProblem(null); }
+      } catch (error) {
+        if (current) setReadProblem(error instanceof Error ? error.message : String(error));
+      }
+    };
+    void read();
+    return () => { current = false; };
+  }, [scope]);
 
   useEffect(() => {
     if (!active) return;
-    const root = contentRef.current;
-    if (root === null) return;
-    const onMouseUp = (): void => {
-      // Not while a draft is open: selecting again mid-sentence would silently
-      // re-point the text already typed at a different span.
-      if (draft !== null) return;
-      const captured = captureSelection(root);
-      if (captured !== null) {
-        setNotice(null);
-        setDraft({ anchor: captured });
-      }
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") return;
+      if (draft !== null) setDraft(null);
+      else setActive(false);
     };
-    root.addEventListener("mouseup", onMouseUp);
-    return () => { root.removeEventListener("mouseup", onMouseUp); };
-  }, [active, draft, contentRef]);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); };
+  }, [active, draft]);
 
   async function submit(body: string, origin: CommentOrigin): Promise<void> {
     setPending(true);
@@ -202,7 +256,20 @@ export function CommentPanel({ scope, contentRef }: {
         ? result.body.workstream
         : scope.split("/")[0] ?? scope;
       setDraft(null);
+      setLocation(null);
       setNotice({ kind: "saved", text: savedMessage(workstream) });
+      try {
+        const updated = await fetch(`/api/${scope}/comments`);
+        const data: unknown = await updated.json();
+        if (!updated.ok) setReadProblem(responseProblem({ status: updated.status, body: data }));
+        else {
+          const parsed = commentSchema.array().safeParse(typeof data === "object" && data !== null && "comments" in data ? data.comments : null);
+          if (parsed.success) { setItems(parsed.data); setReadProblem(null); }
+          else setReadProblem("The comment list was invalid.");
+        }
+      } catch (error) {
+        setReadProblem(error instanceof Error ? error.message : String(error));
+      }
     } catch (error) {
       setNotice({ kind: "problem", text: error instanceof Error ? error.message : String(error) });
     } finally {
@@ -215,25 +282,42 @@ export function CommentPanel({ scope, contentRef }: {
       <p className="m-0 flex flex-wrap items-center gap-2">
         <button
           className={active ? BUTTON_ON : BUTTON}
-          onClick={() => { setActive((current) => !current); setDraft(null); setNotice(null); }}
+          onClick={() => { setActive((current) => !current); setDraft(null); setLocation(null); setNotice(null); }}
           type="button"
         >
-          {active ? "Commenting on" : "Comment"}
+          {active ? `Done commenting · ${readProblem === null ? `${String(items.length)} open` : "count unavailable"}` : `Comment · ${readProblem === null ? `${String(items.length)} open` : "count unavailable"}`}
         </button>
         {active && draft === null
           ? (
             <>
-              <span className="text-sm text-stone-600">Select text to comment on it, or</span>
+              <span className="text-sm text-stone-600">Point to a part, or select text.</span>
               <button className={BUTTON} onClick={() => { setNotice(null); setDraft({ anchor: null }); }} type="button">
                 comment on the whole exhibit
               </button>
             </>
           )
           : null}
+        {items.length > 0 ? <button className={BUTTON} onClick={() => { setListOpen((value) => !value); }} type="button">{listOpen ? "Hide comments" : "Show all comments"}</button> : null}
       </p>
+      {active ? <CommentOverlay hovered={picker.hovered ?? (draft !== null && location instanceof Element ? location : null)} anchored={positions.anchored} layoutKey={`${String(draft !== null)}:${String(listOpen)}`} onMarker={(comment) => { setFocusedId(comment.id); setListOpen(true); }} /> : null}
       {draft === null
         ? null
-        : <Composer anchor={draft.anchor} onCancel={() => { setDraft(null); }} onSubmit={(body, origin) => void submit(body, origin)} pending={pending} />}
+        : <div className="comment-draft-position" style={commentComposerStyle(location)}>
+          {location instanceof Element ? <button className={BUTTON} onClick={handleWidenDraft} type="button">Larger target</button> : null}
+          <Composer anchor={draft.anchor} onCancel={() => { setDraft(null); }} onSubmit={(body, origin) => void submit(body, origin)} pending={pending} />
+        </div>}
+      {listOpen ? <div className="comment-all-list" aria-label="All comments" ref={listRef}>
+        <p className="m-0 text-sm text-stone-600">{String(positions.unresolved)} without a current marker</p>
+        {items.map((comment) => <div className={focusedId === comment.id ? "comment-focused" : undefined} data-comment-id={comment.id} key={comment.id}>
+          {positions.anchored.find((entry) => entry.comment.id === comment.id)?.location === undefined ? null : <button className={BUTTON} onClick={() => {
+            const target = positions.anchored.find((entry) => entry.comment.id === comment.id)?.location;
+            if (target !== undefined) scrollToComment(target);
+            setFocusedId(comment.id);
+          }} type="button">Go to target</button>}
+          {comment.quoted === undefined ? null : <blockquote className="m-0 text-sm text-stone-600">{comment.quoted}</blockquote>}
+          <p className="m-0 text-sm">{comment.body}</p>
+        </div>)}
+      </div> : null}
       {notice === null
         ? null
         : (
@@ -241,6 +325,7 @@ export function CommentPanel({ scope, contentRef }: {
             {notice.text}
           </p>
         )}
+      {readProblem === null ? null : <p className="m-0 text-sm text-red-900" role="alert">Couldn’t read comments: {readProblem}</p>}
     </div>
   );
 }

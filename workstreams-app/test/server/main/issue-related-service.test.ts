@@ -199,7 +199,7 @@ void test("The queried issue never ranks against itself, a closed neighbour is m
         recentFiles: unconfigured,
         pathIndex: unconfigured,
       },
-      comments: { forDocument: unconfigured, waiting: unconfigured, add: unconfigured, clear: unconfigured },
+      comments: { forDocument: unconfigured, forExhibit: unconfigured, waiting: unconfigured, add: unconfigured, clear: unconfigured },
       transcribe: { transcribe: unconfigured },
       quotas: { get: async () => [] },
       exhibits: { inventory: async () => ({ origin: "", storeProblem: null, entries: [] }) },
