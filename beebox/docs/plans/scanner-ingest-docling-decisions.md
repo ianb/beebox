@@ -426,6 +426,12 @@ page is read at about 75 dpi, and a full-width region under about 23 px tall
 resizes to zero height and raises an error (cross-model review). A detector
 cap of 1280 lost table recall. Rendering at 2x lost table recall.
 
+Accepted edge: a region about 15 px wide and 2000 px tall (at 216 dpi, a
+5-pt-wide vertical strip) now resizes to zero width in the detector and yields
+no text. Before, the same strip was enlarged to about 92,000 x 736 px, the
+pattern this entry removes. At most it holds a single column of tiny vertical
+text (cross-model review, round 2).
+
 Still open: the real scan's peak stays near 1.6 GB, from the detector on large
 full-page regions; see `issues/bugs/2026-11-03-rapidocr-detector-memory-spike-on-scans.md`.
 On table-heavy scans the larger cost is TableFormer: turning OCR off left
