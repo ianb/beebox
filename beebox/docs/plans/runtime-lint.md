@@ -1,6 +1,6 @@
 ---
 title: "Runtime lint: the frontend reports problem React behavior to the box log"
-status: draft
+status: partial
 workstream: contents-menu-stable
 issues: []
 ---
@@ -302,6 +302,9 @@ motivation only.
 
 ### Track 4 — Hosted activation
 
+- **Status:** not part of the merge. The session performs it right after
+  landing, with the boxholder's yes ("turn it on ... after you land").
+  Tracks 1 to 3 are implemented and merged.
 - **What:** set `BBX_RUNTIME_LINT=1` in the hosted deployment's box server
   environment, and confirm a test line arrives in a box's `client-debug.log`.
 - **Why:** the boxholder asked for it on for the hosted deployment. Until

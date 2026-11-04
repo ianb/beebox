@@ -133,6 +133,7 @@ export function enableDebugLogCapture() {
   patchConsole();
   setRuntimeLintSink((lines) => {
     const entries = lines.map((message) => ({ level: "warn" as const, message: truncateForServer(message) }));
+    // Diagnostics only: a failed submit must not raise its own errors (they would feed back into the log).
     trpcClient.debugLog.submit.mutate({ source: "runtime-lint", entries }).catch(() => {});
   });
 }
