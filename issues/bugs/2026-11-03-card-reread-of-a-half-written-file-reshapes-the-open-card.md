@@ -26,7 +26,7 @@ Not reproduced. In-place `sed -i`, `mv` over the file, and a real chat agent's
 edits on the dev box did not show it. The window depends on how the writer
 writes (truncate, then write) and on disk speed.
 
-Related: [the contents-menu issue](2026-11-03-card-contents-menu-collapses-and-reappears.md),
+Related: [the contents-menu issue](../closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md),
 where a failed re-read (file missing) caused the same remount. That case is
 fixed because the "out of date" notice now keeps the body in place.
 

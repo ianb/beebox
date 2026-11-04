@@ -1,7 +1,7 @@
 // A card's document hands its headings to the card's contents menu from the
 // tree it renders. A text-only edit keeps the same outline, so the menu does
 // not rebuild; a card embedded in the body does not add its own headings.
-// Issue: issues/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md
+// Issue: issues/closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, type ReactNode } from "react";

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-03T00:33:34Z
-Total documents: 619
+Generated: 2026-11-04T03:03:52Z
+Total documents: 620
 
 ## Issues
 
@@ -4948,6 +4948,17 @@ References:
 - → code-style.md (mention)
 - → docs/connectors/drive.md (mention)
 
+#### docs/implemented-plans/contents-menu-stable.md
+
+Title: "A card's contents menu stays still while the card changes under the reader" | 322 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md:59 (mention) — Plan: `beebox/docs/implemented-plans/contents-menu-stable.md`. Reproduced on the
+
+References:
+- → ../issues/closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md (frontmatter)
+- → docs/implemented-plans/stable-card-body.md (mention)
+
 #### docs/implemented-plans/courseware-lesson-plan.md **[ORPHAN]**
 
 Title: "Courseware: the `lesson-plan` card" | 351 lines | shipped history | implemented
@@ -7941,6 +7952,7 @@ Title: "A card body does not remount when only its surroundings change" | 370 li
 
 Referenced by:
 - docs/implemented-plans/composition-editor.md:150 (mention) — - **Shipped precedent: stable card body** (`docs/implemented-plans/stable-card-body.md`):
+- docs/implemented-plans/contents-menu-stable.md:19 (mention) — `beebox/docs/implemented-plans/stable-card-body.md`). Searched open `issues/`
 - ../issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md:13 (mention) — **Closed 2026-10-27:** fixed on branch worktree-card-remount (fff864dbb, 82206ada5): the shared Markdown renderer now us
 
 References:

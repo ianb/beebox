@@ -6,7 +6,10 @@ labels: [frontend, cards, contents-menu]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder report, 2026-11-03"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-03):** Resolved on branch worktree-contents-menu-stable (59fad7aac): menu goes full only for the reader's scroll, outline taken from the Markdown. Hosted-box remount not reproduced as seen; the reproduced path is a failed re-read (stale notice).
 
 Seen on a hosted box: a long `.doc.card` report open beside a chat
 (`/chat?card=<path>&session=<id>`). The card's contents menu (the "Contents"
@@ -53,7 +56,7 @@ repeatedly (or create cards in a loop) and watch the menu.
 
 ## Research (2026-11-03)
 
-Plan: `beebox/docs/plans/contents-menu-stable.md`. Reproduced on the
+Plan: `beebox/docs/implemented-plans/contents-menu-stable.md`. Reproduced on the
 worktree's test1 clone, in the chat side panel, with a probe that watched the
 card front, the outline root, the headings, and the menu element.
 
@@ -82,4 +85,4 @@ card front, the outline root, the headings, and the menu element.
   reader and a failed re-read. On the old code it fails on both. On the new
   code it passes.
 - Not fixed here: a re-read that lands on a half-written file. Filed as
-  [its own issue](2026-11-03-card-reread-of-a-half-written-file-reshapes-the-open-card.md).
+  [its own issue](../../bugs/2026-11-03-card-reread-of-a-half-written-file-reshapes-the-open-card.md).

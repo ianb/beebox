@@ -1,7 +1,7 @@
 // A card body stays mounted while an "out of date" or "section not found"
 // marker comes and goes above it. A failed re-read (the file briefly missing,
 // the box restarting) must not reset the body under the reader. Issue:
-// issues/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md
+// issues/closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, useEffect } from "react";

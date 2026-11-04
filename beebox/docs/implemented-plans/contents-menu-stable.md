@@ -1,9 +1,9 @@
 ---
 title: "A card's contents menu stays still while the card changes under the reader"
-status: draft
+status: implemented
 workstream: contents-menu-stable
 issues:
-  - ../../../issues/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md
+  - ../../../issues/closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md
 ---
 # A card's contents menu stays still while the card changes under the reader
 

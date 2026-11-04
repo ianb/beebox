@@ -2,7 +2,7 @@
 // rest when the card scrolls on its own: the browser keeping the reader's
 // place while an agent's edit grows the text above. The full look is an
 // attribute set without a React render.
-// Issue: issues/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md
+// Issue: issues/closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md
 // First, and bare: React DOM must load after the happy-dom window exists.
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h, createRef } from "react";
