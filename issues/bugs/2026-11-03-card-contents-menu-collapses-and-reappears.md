@@ -1,6 +1,6 @@
 ---
 title: "A long card's contents menu collapses and reappears while the reader looks at it; its collapse is driven by React state and the menu remounts"
-workstream: unattached
+workstream: contents-menu-stable
 area: beebox
 labels: [frontend, cards, contents-menu]
 filed-by: agent

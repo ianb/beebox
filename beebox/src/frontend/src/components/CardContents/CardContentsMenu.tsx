@@ -5,57 +5,50 @@
  * list of the document's headings. Choosing one scrolls to it.
  *
  * Scrolling is when the reader wants to know where they are, so the button is
- * full while the card scrolls. When scrolling stops it rests: icon only and
- * faint, over the text being read, until hovered, focused, or opened.
+ * full while the reader scrolls the card. Otherwise it rests: icon only and
+ * faint, over the text being read, until hovered, focused, or opened. The
+ * full look is the `data-scrolling` attribute, set and cleared on the element
+ * directly, so scrolling renders nothing. A scroll the reader did not start
+ * (the browser keeping the reader's place while text above grows or shrinks,
+ * as when an agent edits the card) leaves the button at rest.
  *
- * Headings come from the rendered DOM: the document renderers mark their
- * prose wrapper `data-card-outline` (`Markdown`'s `outline` prop), and the
- * heading node gives each heading a stable id (`makeHeadingNode`). Only
- * headings of the first outline root count, and none inside an embed
- * (`data-card-embed`), so a card or figure embedded in the body does not add
- * its own headings.
+ * Headings come from the card's document (`CardOutlineContext`, published by
+ * `Markdown`'s `outline` prop). The DOM is read only to find where each
+ * heading is: for the current-section label, a jump, and which headings are
+ * on screen when the list opens.
  */
 
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { MenuItem } from "../ui/dropdown-menu-item";
 import { Button } from "../ui/Button";
 import { buildOutline, currentSection, type OutlineEntry, type OutlineItem } from "./outline";
 
-/** How long after the last scroll the button rests. */
+/** How long after the reader's last scroll the button rests. */
 const REST_AFTER_MS = 1200;
+
+/** How recent the reader's input must be for a scroll to be theirs. */
+const INPUT_MS = 500;
 
 /** Space between the scroller's top and a heading the menu scrolled to; matches `scroll-margin-top` in card-themes.css. */
 const READING_LINE_PX = 48;
 
-export function readOutline(front: HTMLElement): { items: OutlineItem[]; headings: Map<string, HTMLElement> } | null {
-  const root = front.querySelector<HTMLElement>("[data-card-outline]");
-  if (root === null) return null;
+const SCROLL_KEYS: ReadonlySet<string> = new Set([" ", "PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown"]);
+
+/**
+ * The card document's heading elements by id: those of the first outline
+ * root, none inside an embed (`data-card-embed`) or an embedded card's own
+ * outline root.
+ */
+export function headingElements(front: HTMLElement): Map<string, HTMLElement> {
   const headings = new Map<string, HTMLElement>();
-  const entries: OutlineEntry[] = [];
+  const root = front.querySelector<HTMLElement>("[data-card-outline]");
+  if (root === null) return headings;
   for (const heading of root.querySelectorAll<HTMLElement>("h1[id], h2[id], h3[id]")) {
-    if (heading.closest("[data-card-outline]") !== root || insideEmbed(heading)) continue;
-    headings.set(heading.id, heading);
-    entries.push({ id: heading.id, level: Number(heading.tagName.slice(1)), text: heading.textContent });
+    if (heading.closest("[data-card-outline]") !== root || heading.closest("[data-card-embed]") !== null) continue;
+    if (!headings.has(heading.id)) headings.set(heading.id, heading);
   }
-  const items = buildOutline(entries);
-  return items === null ? null : { items, headings };
-}
-
-/** Inside an embed in the card body (`FigureEmbed.tsx`), whose own DOM changes are not the card's. */
-function insideEmbed(node: Node): boolean {
-  const element = node instanceof Element ? node : node.parentElement;
-  return element !== null && element.closest("[data-card-embed]") !== null;
-}
-
-/** Same headings in the same order, so the menu need not change. */
-function sameOutline(a: ReturnType<typeof readOutline>, b: ReturnType<typeof readOutline>): boolean {
-  if (a === null || b === null) return a === b;
-  return a.items.length === b.items.length && a.items.every((item, i) => {
-    const other = b.items.at(i);
-    return other !== undefined && item.id === other.id && item.text === other.text && item.depth === other.depth
-      && a.headings.get(item.id) === b.headings.get(item.id);
-  });
+  return headings;
 }
 
 /** The nearest element that scrolls: the card desk, or a chat card's own front. */
@@ -67,6 +60,11 @@ function scrollerOf(element: HTMLElement): HTMLElement | null {
   return null;
 }
 
+/** A key typed into a field edits it; it does not scroll the card. */
+function isEditable(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && (target.isContentEditable || target.closest("input, textarea, select, [contenteditable]") !== null);
+}
+
 function ContentsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
@@ -75,85 +73,129 @@ function ContentsIcon() {
   );
 }
 
-export function CardContentsMenu({ id, frontRef }: { id: string; frontRef: RefObject<HTMLElement | null> }) {
-  const [outline, setOutline] = useState<ReturnType<typeof readOutline>>(null);
+/** The open list: only headings on screen (a composing body hides its region's headings). */
+function ContentsList({ items, current, frontRef, onJump }: {
+  items: readonly OutlineItem[];
+  current: string | null;
+  frontRef: RefObject<HTMLElement | null>;
+  onJump: (id: string) => void;
+}) {
+  const [shown, setShown] = useState<readonly OutlineItem[]>(items);
+  useLayoutEffect(() => {
+    const front = frontRef.current;
+    if (front === null) return;
+    const headings = headingElements(front);
+    setShown(items.filter((item) => headings.has(item.id)));
+  }, [items, frontRef]);
+  return (
+    <div className="max-h-[min(24rem,70vh)] overflow-y-auto">
+      {shown.map((item) => (
+        <MenuItem key={item.id} active={item.id === current} onClick={() => onJump(item.id)}>
+          <span className="block truncate" style={{ paddingLeft: `${item.depth}rem` }} title={item.text}>{item.text}</span>
+        </MenuItem>
+      ))}
+    </div>
+  );
+}
+
+export function CardContentsMenu({ id, frontRef, entries }: {
+  id: string;
+  frontRef: RefObject<HTMLElement | null>;
+  /** The card document's headings (`useCardOutline`); `null` before it renders. */
+  entries: readonly OutlineEntry[] | null;
+}) {
+  const items = useMemo(() => (entries === null ? null : buildOutline(entries)), [entries]);
   const [current, setCurrent] = useState<string | null>(null);
-  const [scrolling, setScrolling] = useState(false);
+  const wrapper = useRef<HTMLDivElement>(null);
+  const lastInput = useRef(Number.NEGATIVE_INFINITY);
   const restTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(restTimer.current), []);
 
-  useEffect(() => {
-    const front = frontRef.current;
-    if (front === null) return;
-    // Keep the same outline while its headings are unchanged: the menu's own
-    // label changes as the reader scrolls, and that must not restart the
-    // scroll tracking below.
-    const read = () => setOutline((previous) => {
-      const next = readOutline(front);
-      return sameOutline(previous, next) ? previous : next;
-    });
-    read();
-    // Bodies render late (lazy renderers, edits arriving over the bus). An
-    // embed's own DOM activity (a figure redrawing) is not the card's outline.
-    const observer = new MutationObserver((records) => {
-      if (records.some((record) => !insideEmbed(record.target))) read();
-    });
-    observer.observe(front, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, [frontRef]);
-
   const findCurrent = useCallback(() => {
     const front = frontRef.current;
-    if (front === null || outline === null) return;
+    if (front === null || items === null) return;
     const scroller = scrollerOf(front);
     const line = (scroller?.getBoundingClientRect().top ?? 0) + READING_LINE_PX;
-    const tops = outline.items.flatMap((item) => {
-      const heading = outline.headings.get(item.id);
+    const headings = headingElements(front);
+    const tops = items.flatMap((item) => {
+      const heading = headings.get(item.id);
       return heading === undefined ? [] : [{ id: item.id, top: heading.getBoundingClientRect().top }];
     });
     setCurrent(currentSection(tops, line));
-  }, [frontRef, outline]);
+  }, [frontRef, items]);
 
-  // Follow the reader: recompute on the card's own scroll, once per frame.
+  // Follow the reader: recompute on the card's own scroll, once per frame,
+  // and show the full button while the reader is the one scrolling.
   useEffect(() => {
     const front = frontRef.current;
-    if (front === null || outline === null) return;
+    if (front === null || items === null) return;
     findCurrent();
-    const scroller = scrollerOf(front) ?? window;
+    const scroller = scrollerOf(front);
+    const target: HTMLElement | Window = scroller ?? window;
     let frame = 0;
+    const input = () => {
+      lastInput.current = performance.now();
+    };
+    // A drag on the scroller's own scrollbar; a press on the text selects it.
+    const onPointerDown = (event: Event) => {
+      if (event.target === scroller) input();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!SCROLL_KEYS.has(event.key) || isEditable(event.target)) return;
+      const inCard = event.target === document.body || (event.target instanceof Node && scroller?.contains(event.target) === true);
+      if (inCard) input();
+    };
     const onScroll = () => {
-      setScrolling(true);
-      window.clearTimeout(restTimer.current);
-      restTimer.current = window.setTimeout(() => setScrolling(false), REST_AFTER_MS);
+      const element = wrapper.current;
+      // A fling keeps scrolling after the finger lifts: an ongoing reader
+      // scroll continues while scroll events keep coming.
+      if (element !== null && (performance.now() - lastInput.current < INPUT_MS || element.hasAttribute("data-scrolling"))) {
+        element.setAttribute("data-scrolling", "");
+        window.clearTimeout(restTimer.current);
+        restTimer.current = window.setTimeout(() => element.removeAttribute("data-scrolling"), REST_AFTER_MS);
+      }
       if (frame !== 0) return;
       frame = requestAnimationFrame(() => {
         frame = 0;
         findCurrent();
       });
     };
-    scroller.addEventListener("scroll", onScroll, { passive: true });
+    target.addEventListener("wheel", input, { passive: true });
+    target.addEventListener("touchstart", input, { passive: true });
+    target.addEventListener("touchmove", input, { passive: true });
+    target.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    target.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      scroller.removeEventListener("scroll", onScroll);
+      target.removeEventListener("wheel", input);
+      target.removeEventListener("touchstart", input);
+      target.removeEventListener("touchmove", input);
+      target.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      target.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(frame);
     };
-  }, [frontRef, outline, findCurrent]);
+  }, [frontRef, items, findCurrent]);
 
-  if (outline === null) return null;
-  const currentText = outline.items.find((item) => item.id === current)?.text;
-
-  function jump(headingId: string) {
-    const heading = outline?.headings.get(headingId);
+  const jump = useCallback((headingId: string) => {
+    const front = frontRef.current;
+    const heading = front === null ? undefined : headingElements(front).get(headingId);
     if (heading === undefined) return;
     // After the menu closes and returns focus to its button.
     requestAnimationFrame(() => {
+      // The reader asked for this scroll: the button shows where it landed.
+      lastInput.current = performance.now();
       heading.scrollIntoView({ block: "start" });
       if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
       heading.focus({ preventScroll: true });
     });
-  }
+  }, [frontRef]);
+
+  if (items === null) return null;
+  const currentText = items.find((item) => item.id === current)?.text;
 
   return (
-    <div className="bbx-card-contents print:hidden" data-resting={scrolling ? undefined : ""}>
+    <div ref={wrapper} className="bbx-card-contents print:hidden">
       <Dropdown
         align="right"
         width="w-72 max-w-[calc(100vw-2rem)]"
@@ -174,13 +216,7 @@ export function CardContentsMenu({ id, frontRef }: { id: string; frontRef: RefOb
           </Button>
         )}
       >
-        <div className="max-h-[min(24rem,70vh)] overflow-y-auto">
-          {outline.items.map((item) => (
-            <MenuItem key={item.id} active={item.id === current} onClick={() => jump(item.id)}>
-              <span className="block truncate" style={{ paddingLeft: `${item.depth}rem` }} title={item.text}>{item.text}</span>
-            </MenuItem>
-          ))}
-        </div>
+        <ContentsList items={items} current={current} frontRef={frontRef} onJump={jump} />
       </Dropdown>
     </div>
   );
