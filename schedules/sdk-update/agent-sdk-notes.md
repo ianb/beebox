@@ -38,10 +38,11 @@ Codex entries here are labeled as such; they carry their own pin.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.317` (SDK), `2.1.317` (Claude Code), `0.166.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.318` (SDK), `2.1.318` (Claude Code), `0.166.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.316` on 2026-11-02
-  (taking `0.3.315`). Next: `0.3.317` (settles 2026-11-05T00:02Z). While Codex is held,
+  (taking `0.3.315`). Next: `0.3.317` (settles 2026-11-05T00:02Z), `0.3.318`
+  (2026-11-05T21:55Z). While Codex is held,
   `pnpm update-agent-sdk` would also move Codex, so set the SDK pins in
   `beebox/package.json` and `workstreams-app/package.json` by hand.
   **Codex `0.165.0` is held** until
@@ -76,6 +77,30 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.318 / Claude Code 2.1.318 — pending (published 2026-11-03T21:55Z)
+
+- **SDK, worth adopting:** result messages gain optional
+  `credential_expires_at`, when the stored claude.ai sign-in ends. Each
+  production box runs on its own long-lived Claude token, and an expired
+  sign-in stopped this schedule on 2026-10-20. Filed:
+  `issues/features/2026-11-04-warn-before-box-claude-login-expires.md`.
+  Also: `config_file_invalid` startup failure reason; an interrupt now lists a
+  message held behind a model change.
+- **RUNTIME:** custom slash commands that fail no longer print nothing in SDK
+  sessions; a message sent right after a model change is cancelled by Stop in
+  headless sessions; non-interactive launches no longer replace an invalid
+  `~/.claude.json` with defaults; unattended runs stop rewriting
+  `~/.claude.json` on every run; `--continue` no longer loses the earlier
+  conversation after a malformed tool call's retries run out (a 2.1.314
+  regression, which the current pin `0.3.316` carries).
+- **HARNESS:** macOS sessions with many running Bash commands no longer stall
+  while memory grows; jobs no longer exit `Not logged in` when another terminal
+  signs in again to the same account; version cleanup no longer deletes the
+  binary of a process owned by another user; background subagents move shell
+  commands to the background after 3 minutes.
+- **Action:** Settled path; takeable 2026-11-05T21:55Z.
+- **Sources:** [SDK 0.3.318](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03318), [Claude Code 2.1.318](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21318)
 
 ### 0.3.317 / Claude Code 2.1.317 — pending (published 2026-11-03T00:02Z)
 
