@@ -309,6 +309,7 @@ export function createDoclingService(): DoclingService {
       let budget = startBudget(WAIT_TIMEOUT_MS);
       try {
         const oomKillsBefore = await readOomKillCount();
+        // process.env is read only to find the uv/HF cache dirs for the lock paths; the child gets DOCLING_ENV.
         const request = doclingRequest(sourcePath, { ...options, env: process.env, homeDir: os.homedir(), parentPid: process.pid });
         const subprocess = execa("uvx", doclingArgs(request), {
           cancelSignal: controller.signal,
