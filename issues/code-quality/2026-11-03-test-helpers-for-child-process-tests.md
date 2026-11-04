@@ -12,8 +12,9 @@ Two sessions in one workstream hit the same gap in `beebox/test/helpers/`,
 which has per-case child scripts (`file-lock-child.ts`,
 `box-git-lock-child.ts`, ...) but no shared spawn helper:
 
-- A lock test hung 30 s: execa's line iterator yielded bytes, so a string
-  comparison against the first stdout line never matched.
+- A lock test hung 30 s: by the session's report, the stdout iteration it
+  used yielded bytes, so a string comparison against the first line never
+  matched.
   (`docling-memory/20261104T044651Z-implemented.md`)
 - An orphan test passed while the code had a BrokenPipe defect, because the
   test kept the child's stderr reader alive; a dying parent drops its pipes.

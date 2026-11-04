@@ -44,7 +44,7 @@ Run only affected checks: save a `bin/finish-preflight --json --no-merge` sheet
 (re-save after any edit), pass it to each `bin/finish-verify --sheet <file> --only
 tests|typecheck|lint|smoke|site` one at a time (parallel preflights contend), or named
 tests. Wait on a backgrounded run's PID; `pgrep -f` loops match themselves.
-Report which evidence was reused, the intervening delta, and why it still applies.
+Report the reused evidence, the intervening delta, and why it still applies.
 
 The verifier reruns failing test files once in isolation. Green proceeds; a named flake (passes alone at the same
 content hash) is green: report it, no flake issue (`beebox/test/careful.txt` owns
@@ -105,8 +105,8 @@ and issues added on this branch. Follow concrete sibling/duplicate links from
 those candidates, and search each candidate's slug in `issues/` for inbound
 references. Expand beyond those links only when the work or a candidate gives
 specific evidence of a missing related issue; search that symptom or identifier,
-not every file and symbol in the diff, nor a candidate already reconciled here.
-For each issue this work **actually resolves**: `bin/issues close <issue>
+not every file and symbol in the diff, nor a reconciled candidate unless later work
+affects it. For each issue this work **actually resolves**: `bin/issues close <issue>
 --resolution implemented|wontfix|superseded --workstream <name> --note "<resolving
 commit; any divergence from what the issue proposed>"`; fix any `check by hand` line.
 Never close an issue with `needs: [manual-testing]` — only the boxholder clears
