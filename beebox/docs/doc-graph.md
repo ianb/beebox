@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-04T03:03:52Z
-Total documents: 620
+Generated: 2026-11-04T04:24:43Z
+Total documents: 621
 
 ## Issues
 
@@ -1187,7 +1187,7 @@ References:
 
 #### docs/client-debug-log.md
 
-Title: "Client Debug Log" | 107 lines | current reference
+Title: "Client Debug Log" | 133 lines | current reference
 
 Referenced by:
 - AGENTS.md:60 (link) — - For frontend or iOS failures, inspect the box's `.beebox/client-debug.log`; `[ios]` identifies native entries. See the
@@ -1196,6 +1196,7 @@ Referenced by:
 - docs/guides.md:49 (link) — | Client debug log | [client-debug-log](client-debug-log.md) |
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:555 (mention) — errors (`docs/client-debug-log.md`).
+- docs/plans/runtime-lint.md:45 (mention) — | Docs (`docs/client-debug-log.md`, browse command reference) | ~50 |
 - docs/server/operations.md:205 (link) — For SSH-only debugging: `ssh root@<server> tail /var/lib/beebox/<box>/box/.beebox/client-debug.log`. See [`client-debug-
 - docs/testing.md:97 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
 - frontend.md:150 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
@@ -1206,6 +1207,7 @@ Referenced by:
 References:
 - → docs/mobile-contract.md (mention)
 - → docs/implemented-plans/ios-log-forwarding.md (mention)
+- → docs/plans/runtime-lint.md (mention)
 
 #### docs/connectors.md
 
@@ -7953,6 +7955,7 @@ Title: "A card body does not remount when only its surroundings change" | 370 li
 Referenced by:
 - docs/implemented-plans/composition-editor.md:150 (mention) — - **Shipped precedent: stable card body** (`docs/implemented-plans/stable-card-body.md`):
 - docs/implemented-plans/contents-menu-stable.md:19 (mention) — `beebox/docs/implemented-plans/stable-card-body.md`). Searched open `issues/`
+- docs/plans/runtime-lint.md:108 (mention) — `useMemo` (the 10-26 cause, `stable-card-body.md`) slip past it.
 - ../issues/closed/bugs/2026-10-26-card-contents-button-flickers-on-a-card-with-an-embedded-widget.md:13 (mention) — **Closed 2026-10-27:** fixed on branch worktree-card-remount (fff864dbb, 82206ada5): the shared Markdown renderer now us
 
 References:
@@ -10041,6 +10044,17 @@ Title: "Route-level code splitting — plan and cost/benefit" | 193 lines | prop
 
 Referenced by:
 - ../issues/closed/decisions/2026-08-01-route-splitting-wontfix.md:13 (mention) — `../../../beebox/docs/plans/route-splitting.md`. Summary of the call:
+
+#### docs/plans/runtime-lint.md
+
+Title: "Runtime lint: the frontend reports problem React behavior to the box log" | 424 lines | proposal | partial
+
+Referenced by:
+- docs/client-debug-log.md:112 (mention) — `docs/plans/runtime-lint.md`.
+
+References:
+- → docs/client-debug-log.md (mention)
+- → docs/implemented-plans/stable-card-body.md (mention)
 
 #### docs/plans/scan-guide-card.md
 

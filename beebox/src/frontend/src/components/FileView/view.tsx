@@ -47,6 +47,7 @@ import type { FileViewProps } from "../file-view-types";
 import type { ViewTarget } from "../../lib/view-url";
 import { FRAGMENT_ROOT_ATTRIBUTE } from "../../lib/fragment-target";
 import { useFragmentJump } from "../../hooks/useFragmentJump";
+import { RuntimeLintViewScope } from "../../lib/runtime-lint/watched-content";
 
 export type { FileViewMode } from "../file-view-types";
 
@@ -220,7 +221,16 @@ function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
   return enabled ? <SelectionCapture onCapture={onCapture} extract={extractSelection} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
 }
 
-export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
+/**
+ * One file's view. Its runtime-lint view scope lives exactly as long as the
+ * view, so content replaced inside it is reported and navigation is not
+ * (`lib/runtime-lint/watched-content.tsx`).
+ */
+export function FileView(props: FileViewProps) {
+  return <RuntimeLintViewScope><FileViewContent {...props} /></RuntimeLintViewScope>;
+}
+
+function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
   const mode = modeProp ?? "companion";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const visibleSelectionSink = useVisibleCardSelectionSink();

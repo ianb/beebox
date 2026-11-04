@@ -48,6 +48,7 @@ import { startServeMemoryProbe } from "./memory-probe.js";
 import { onUnitHost } from "../../lib/unit-host.js";
 import { startLocalBackupRunnerForServer, stopLocalBackupRunnerForServer } from "../../core/box-backup/local-runner.js";
 import { stopBrowserHosts } from "../../core/browser/host/start.js";
+import { setRuntimeLintWriting } from "../trpc/routers/debug-log.js";
 
 
 export type { BoxSpec, ServerOptions, ServerContext } from "../server-types.js";
@@ -279,6 +280,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   // server or writes a pid file.
   assertOpenAccessNotListening(options);
   sealServerSecrets(process.env);
+  setRuntimeLintWriting(options.devSurfaces === true || options.runtimeLint === true);
   markStartupPhase("cli-loaded");
   // Decided before any side effect: a misconfigured unit (a passed socket with
   // no path, or two of them) must fail here, not after the previous server

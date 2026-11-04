@@ -53,6 +53,7 @@ const CHILD_ENV_PLAIN: readonly string[] = [
   "TEMP",
   "TMP",
   "BBX_DEV_SURFACES", // Explicit local-only route/test-facility opt-in.
+  "BBX_RUNTIME_LINT", // Keep frontend runtime-lint records in client-debug.log (webapp/trpc/routers/debug-log.ts).
   "TZ",
   "LANG",
   "LC_ALL",

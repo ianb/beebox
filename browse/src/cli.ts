@@ -7,6 +7,7 @@ import { annotatedSnapshot, checkedAction, getWithTarget, noteAction } from "./a
 import { scrollWithSelector } from "./scroll-target.js";
 import { TARGET_COMMANDS } from "./controls.js";
 import { CaptureNoAnswerError, runEnhancedScreenshot } from "./screenshot.js";
+import { drainPlan, drainRuntimeLint, noteWedged } from "./runtime-lint-drain.js";
 import { openClerkPopup } from "./clerk-popup.js";
 import type { ScreenshotInvocation } from "./screenshot.js";
 import { daemonRunning, hoistLaunchOptions, knownSessions, waitForDaemonExit } from "./launch-options.js";
@@ -219,6 +220,31 @@ async function main(): Promise<number> {
     return 1;
   }
 
+  // Records the app page wrote since the last command, printed to stderr. Only
+  // while a browser is running: a drain must never start one. The exit code is
+  // the command's own.
+  const plan = drainPlan(sub);
+  if (plan.before && daemonRunning(socketDir, session)) await drainRuntimeLint(ctx);
+  try {
+    return await dispatch({ args, sub, ctx, skipWait, socketDir, shot: shot?.kind === "run" ? shot.invocation : null });
+  } finally {
+    if (plan.after && daemonRunning(socketDir, session)) await drainRuntimeLint(ctx);
+  }
+}
+
+interface DispatchInput {
+  args: string[];
+  sub: string;
+  ctx: WorktreeContext;
+  skipWait: boolean;
+  socketDir: string;
+  shot: ScreenshotInvocation | null;
+}
+
+async function dispatch(input: DispatchInput): Promise<number> {
+  const { sub, ctx, skipWait, socketDir, shot } = input;
+  const session = process.env["AGENT_BROWSER_SESSION"] ?? "default";
+  let args = input.args;
   if (sub !== "open" && sub !== "close") {
     await refreshAuthCookie(ctx);
   }
@@ -244,9 +270,10 @@ async function main(): Promise<number> {
   if (shot !== null) {
     let result;
     try {
-      result = await runEnhancedScreenshot(shot.invocation, ctx);
+      result = await runEnhancedScreenshot(shot, ctx);
     } catch (e) {
       if (!(e instanceof CaptureNoAnswerError)) throw e;
+      noteWedged();
       process.stderr.write(stuckCaptureMessage("screenshot"));
       return 1;
     }

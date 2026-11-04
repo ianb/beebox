@@ -129,6 +129,8 @@ const baseEnvSchema = z.object({
  */
 export const serverEnvSchema = baseEnvSchema.extend({
   BBX_DEV_SURFACES: optionalDevSurfaces,
+  /** Keep the frontend's runtime-lint records in client-debug.log on a box that is not a dev box. */
+  BBX_RUNTIME_LINT: z.literal("1").optional(),
   BBX_PUBLIC_URL: optionalUrl,
   PUBLIC_URL: optionalUrl,
   PORT: optionalPort,
