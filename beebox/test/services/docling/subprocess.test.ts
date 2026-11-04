@@ -59,7 +59,7 @@ void test("The request carries OCR intent, locks, and the parent PID; the argv r
     // 5 minutes plus 30 s for each of 12 OCR pages.
     documentTimeoutSeconds: 660,
     lockPaths: ["/var/lib/beebox/box/.cache/bbx-docling.lock", "/cache/uv/bbx-docling.lock"],
-    lockWaitSeconds: 5400,
+    lockWaitSeconds: 7200,
     parentPid: 4242,
   });
   t.check(doclingRequest("/scan/source.pdf", { workDir: "/work", ocr: "off", languages: ["en"], ...context }).languages, null);
@@ -144,7 +144,7 @@ void test("A run's end is classified by our timeout, the signal, and OOM evidenc
 // failure carries the driver's own reason, not the model-loading noise around it.
 void test("Failure messages name the cause and what not to do", (t) => {
   const budgets = { waitMinutes: 25, convertMinutes: 10 };
-  t.check(doclingFailureMessage({ outcome: { kind: "busy" }, budgets, detail: "" }), "Another Docling conversion on this box or host ran for over 90 minutes; this PDF was not converted. Retry later, one at a time.");
+  t.check(doclingFailureMessage({ outcome: { kind: "busy" }, budgets, detail: "" }), "Other Docling conversions on this box or host kept this one waiting for over 120 minutes; this PDF was not converted. Retry later, one at a time.");
   t.check(doclingFailureMessage({ outcome: { kind: "oom" }, budgets, detail: "" }), "Docling was killed during an out-of-memory event in this box. Do not retry in parallel; retry once when nothing else is converting, or use a smaller PDF.");
   t.check(doclingFailureMessage({ outcome: { kind: "timeout", phase: "converting" }, budgets, detail: "" }), "Docling did not finish within 10 minutes and was stopped");
   t.check(doclingFailureMessage({ outcome: { kind: "timeout", phase: "waiting" }, budgets, detail: "" }), "Docling did not start converting within 25 minutes and was stopped");

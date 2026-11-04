@@ -46,11 +46,11 @@ export function conversionBudgetSeconds(pages: number | null, ocr: DoclingExtrac
 }
 
 /**
- * How long a driver waits for another conversion before it gives up (exit 75):
- * as long as the longest conversion may legitimately run, so a queued PDF is
- * refused only when the one ahead of it is stuck.
+ * How long a driver waits for other conversions before it gives up (exit 75):
+ * the longest conversion, its 5-minute render slack (`core.ts`), and a margin.
+ * One long conversion ahead never refuses a queued PDF; two at the cap can.
  */
-export const LOCK_WAIT_SECONDS = MAX_CONVERSION_SECONDS;
+export const LOCK_WAIT_SECONDS = MAX_CONVERSION_SECONDS + 30 * 60;
 
 /** The JSON request `convert.py` reads from its one argument. */
 export interface DoclingRequest {
@@ -157,7 +157,7 @@ export function doclingFailureMessage(failure: {
         ? `Docling did not finish within ${String(budgets.convertMinutes)} minutes and was stopped`
         : `Docling did not start converting within ${String(budgets.waitMinutes)} minutes and was stopped`;
     case "busy":
-      return `Another Docling conversion on this box or host ran for over ${String(LOCK_WAIT_SECONDS / 60)} minutes; this PDF was not converted. Retry later, one at a time.`;
+      return `Other Docling conversions on this box or host kept this one waiting for over ${String(LOCK_WAIT_SECONDS / 60)} minutes; this PDF was not converted. Retry later, one at a time.`;
     case "oom":
       return "Docling was killed during an out-of-memory event in this box. Do not retry in parallel; retry once when nothing else is converting, or use a smaller PDF.";
     case "killed":

@@ -380,8 +380,9 @@ capped at 90 minutes; an unknown count gets the cap
 (`conversionBudgetSeconds` in `services/docling/subprocess.ts`). The outer
 kill is that budget plus 5 minutes for interpreter start, model load, and the
 page renders written after conversion, and starts when the driver holds its
-locks. The lock wait is the 90-minute cap, so a queued PDF is refused only when
-the conversion ahead of it is stuck rather than long.
+locks. The lock wait is 2 hours: the cap, that slack, and a margin. One long
+conversion ahead never refuses a queued PDF; two at the cap can, and the card
+then says it waited too long.
 
 Basis: the D18 VM measured about 2-3.5 s a page for digital PDFs and 9 s a
 page with OCR, on three cores to itself. Prod shares three cores across seven
@@ -389,34 +390,44 @@ boxes, so the per-page figures carry about 3x headroom. **Revisit:** when a
 prod conversion's real duration is known (the card records none today), or if
 a legitimate document hits the cap.
 
-## D20. RapidOCR reads images at most 1280 px on a side (2026-11-03)
+## D20. RapidOCR's detector no longer enlarges small regions (2026-11-03)
 
-The driver passes `rapidocr_params = {"Global.max_side_len": 1280}` (RapidOCR's
-default is 2000). Docling renders OCR regions at 3x (216 dpi), so a full-page
-region from a letter-size scan is about 1840 x 2380 px before RapidOCR scales
-it down. OCR modes (D7) and the engine are unchanged.
+The driver passes `rapidocr_params = {"Det.limit_type": "max",
+"Det.limit_side_len": 2000}`. RapidOCR's default (`limit_type: min`, 736)
+enlarges every image until its short side is 736 px before text detection. A
+full-width one-line layout region, which RapidOCR's preprocessing makes about
+2000 x 32 px, was therefore detected at about 46,000 x 736 px. With the new
+setting the detector reads at most 2000 px a side, which is the cap RapidOCR
+already applies to every input (`Global.max_side_len`), so large regions and
+the images recognition reads are unchanged. OCR modes (D7) and the engine are
+unchanged.
 
 Scored on two degraded scans made from digital government reports, whose text
 layer is the reference: ten prose pages and ten table pages, rendered at
 200 dpi, tilted under a degree, blurred, noised, and JPEG-compressed. Recall is
 the share of reference words found; run-together words are output tokens that
-split into two reference words (D7's measure).
+split into two reference words (D7's measure). The real scan has no reference;
+its column is the share of words shared with the old output.
 
-| Setting | Prose recall | Prose run-together | Table recall | Real 16-page scan: peak, time |
+| Setting | Prose recall, run-together | Table recall | Real 16-page scan | Peak: prose scan / real scan |
 |---|---:|---:|---:|---:|
-| Default (2000 px, 3x) | 0.951 | 29 | 0.921 | 1,558 MB, 78 s |
-| 1600 px | 0.961 | 13 | 0.921 | 1,376 MB, 73 s |
-| **1280 px** | **0.964** | **4** | **0.933** | **1,369 MB, 66 s** |
-| OCR render at 2x | 0.971 | 1 | 0.916 | 1,250 MB, 67 s |
+| Default | 0.951, 29 | 0.921 | (reference) | 1,634 / 1,558 MB |
+| **Detector max 2000** | **0.953, 26** | **0.922** | **99.6%** | **1,218 / 1,555 MB** |
+| Detector max 1280 | 0.948, 24 | 0.900 | 97.2% | 1,173 / 1,342 MB |
+| Global max 1280 | 0.964, 4 | 0.933 | 97.7% | 1,514 / 1,369 MB |
+| OCR render at 2x | 0.971, 1 | 0.916 | 97.2% | 1,603 / 1,250 MB |
 
-1280 px is better than or equal to the default on every measure. Rendering at
-2x saves more memory but lost table recall, so it was not taken. The two
-synthetic fixtures (`scan-financial`, `junk-layer-legal`) scored 1.000 under
-every setting. On the real 16-page scan, where there is no reference, the new
-output shares 97.7% of its words with the old.
+The two synthetic fixtures (`scan-financial`, `junk-layer-legal`) scored 1.000
+under every setting. OCR time fell about 20%.
 
-Through the driver, that scan now peaks at 1,406 MB (was 1,562 MB) and takes
-71 s (was 141 s). The rest of a scan's peak is not OCR: on the table scan,
-turning OCR off left 1,622 MB, and turning table structure off as well left
-660 MB. TableFormer on image-only table pages is the remaining cost.
-**Revisit:** with real scan volume, or if text from small print goes missing.
+Not taken: a global cap of 1280 scored best on these letter-size scans, but
+RapidOCR's recognizer then reads the shrunken image too, so a large-format
+page is read at about 75 dpi, and a full-width region under about 23 px tall
+resizes to zero height and raises an error (cross-model review). A detector
+cap of 1280 lost table recall. Rendering at 2x lost table recall.
+
+Still open: the real scan's peak stays near 1.6 GB, from the detector on large
+full-page regions; see `issues/bugs/2026-11-03-rapidocr-detector-memory-spike-on-scans.md`.
+On table-heavy scans the larger cost is TableFormer: turning OCR off left
+1,622 MB on the table scan, and turning table structure off as well left
+660 MB (`issues/bugs/2026-11-03-tableformer-memory-on-scanned-tables.md`).

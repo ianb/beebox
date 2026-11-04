@@ -6,10 +6,8 @@ labels: [pdf, docling, ocr, memory]
 filed-by: agent
 discovered-by: agent
 discovered-in: "docling-memory workstream, 2026-11-03"
-resolution: implemented
 ---
 
-**Closed (implemented, 2026-11-03):** D20: RapidOCR max side 1280 px; the remaining scan cost is TableFormer, filed as 2026-11-03-tableformer-memory-on-scanned-tables
 
 After the Docling memory changes (D18 in
 `beebox/docs/plans/scanner-ingest-docling-decisions.md`), a digital PDF of any
@@ -38,10 +36,23 @@ throttled for the length of the OCR, not killed.
 
 ## Findings (2026-11-03)
 
-Measured and fixed in D20 (`beebox/docs/plans/scanner-ingest-docling-decisions.md`).
-RapidOCR already caps its input at 2000 px a side (`Global.max_side_len`), so
-the hypothesis above was only partly right. Lowering the cap to 1280 px cut the
-real scan's peak from 1,562 MB to 1,406 MB and its time by half, and improved
-OCR on degraded scans with known text (fewer run-together words, higher
-recall). The larger remaining cost on table-heavy scans is TableFormer, not
-OCR: `2026-11-03-tableformer-memory-on-scanned-tables.md`.
+D20 in `beebox/docs/plans/scanner-ingest-docling-decisions.md` has the method
+and numbers. RapidOCR already caps every input at 2000 px a side
+(`Global.max_side_len`), so the hypothesis above was wrong. What the detector
+did do: `limit_type: min` enlarged every region until its short side was
+736 px, so a full-width one-line region was detected at about 46,000 x 736 px.
+The driver now caps the detector's long side at 2000 instead
+(`Det.limit_type: max`). OCR output is unchanged within noise; a degraded
+prose scan dropped from 1,634 MB to 1,226 MB and OCR runs about 20% faster.
+
+Still open: on the real 16-page scan the peak stays near 1.6 GB. There the
+cost is the detector on large full-page regions at up to 2000 px. A detector
+cap of 1280 brought that scan to 1,342 MB but lost table recall (0.921 to
+0.900 on a degraded table scan). Lowering RapidOCR's global cap to 1280 kept
+quality on letter-size scans but fails on thin full-width regions (they
+resize to zero height and raise) and reads large-format pages at about 75 dpi.
+So the next step is a boxholder call on memory versus table recall, or a
+detector cap that applies only to full-page regions.
+
+The larger cost on table-heavy scans is TableFormer:
+`2026-11-03-tableformer-memory-on-scanned-tables.md`.
