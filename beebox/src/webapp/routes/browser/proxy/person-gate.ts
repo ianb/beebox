@@ -31,7 +31,7 @@ import { loginRedirect } from "../../../base-prefix.js";
 import { canAccessBox } from "../../../box-access.js";
 import { resolveBoxIdentity } from "../../../box-identity.js";
 
-export const AGENTS_REFUSED = "the browser page is for people; agents use bbx browser";
+const AGENTS_REFUSED = "the browser page is for people; agents use bbx browser";
 
 export interface PersonGateContext {
   readonly boxRoot: string;
@@ -69,7 +69,7 @@ function isUnlabelledWebSocket(request: FastifyRequest): boolean {
  * still receives, being same-site, so the cookie alone is not enough there.
  * With no public URL (dev) the handshake is accepted on the cookie alone.
  */
-export async function isSameOrigin(ctx: PersonGateContext, request: FastifyRequest): Promise<boolean> {
+async function isSameOrigin(ctx: PersonGateContext, request: FastifyRequest): Promise<boolean> {
   const origin = request.headers.origin;
   if (origin === undefined) return true;
   const site = request.headers["sec-fetch-site"];

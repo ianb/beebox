@@ -9,7 +9,7 @@ import type { Node } from "@markdoc/markdoc";
 import { asciiSlug } from "../ascii-slug.js";
 
 /** Concatenated plain text of a heading node's inline children (text + inline code). */
-export function headingText(node: Node): string {
+function headingText(node: Node): string {
   let out = "";
   for (const child of node.walk()) {
     if (child.type !== "text" && child.type !== "code") continue;

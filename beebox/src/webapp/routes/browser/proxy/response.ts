@@ -50,7 +50,7 @@ export function responseHeaders(upstream: IncomingHttpHeaders, rewritten: boolea
 }
 
 /** An upstream `Content-Encoding` the proxy cannot decode. */
-export class UnknownContentEncodingError extends Error {
+class UnknownContentEncodingError extends Error {
   override name = "UnknownContentEncodingError";
   constructor(readonly encoding: string) {
     super(`The browser dashboard sent a body in an encoding the proxy cannot decode: ${encoding}`);

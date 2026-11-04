@@ -44,7 +44,7 @@ interface DigestContext { boxRoot: string; wanted: (size: number) => boolean }
 const toRef = (rel: string): string => `/${rel.split(path.sep).join("/")}`;
 
 /** Box-relative path of a file ref, failing closed on escapes. */
-export function itemPath(sourceRef: string): string {
+function itemPath(sourceRef: string): string {
   const parsed = parseRef(sourceRef);
   invariant(parsed.fragment === undefined && parsed.query === undefined, `Duplicate check needs a file ref: ${sourceRef}`);
   const relative = resolveRefPath({ fromPath: undefined, ref: parsed.path, kind: "write-target" });

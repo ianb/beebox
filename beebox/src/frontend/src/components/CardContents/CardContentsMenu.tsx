@@ -40,7 +40,7 @@ const SCROLL_KEYS: ReadonlySet<string> = new Set([" ", "PageUp", "PageDown", "Ho
  * root, none inside an embed (`data-card-embed`) or an embedded card's own
  * outline root.
  */
-export function headingElements(front: HTMLElement): Map<string, HTMLElement> {
+function headingElements(front: HTMLElement): Map<string, HTMLElement> {
   const headings = new Map<string, HTMLElement>();
   const root = front.querySelector<HTMLElement>("[data-card-outline]");
   if (root === null) return headings;

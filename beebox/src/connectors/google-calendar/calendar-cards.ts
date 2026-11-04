@@ -76,7 +76,7 @@ function restampCard(text: string, stamp: { title: string | undefined; id: strin
  * creates to `folders.byId`. Returns the box-relative paths it wrote and the
  * calendars it could not give a folder.
  */
-export async function upkeepCalendarCards(opts: {
+async function upkeepCalendarCards(opts: {
   boxRoot: string;
   calRoot: string;
   folders: CalendarFolders;

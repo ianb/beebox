@@ -30,7 +30,7 @@ const require = createRequire(import.meta.url);
 const BOX_FUNCTION_TIMEOUT_MS = 60_000;
 
 /** The box function's name under the tricks directory. */
-export const BOX_FUNCTION_FILE = "webpage.ts";
+const BOX_FUNCTION_FILE = "webpage.ts";
 
 const RUNNER = `
 const entry = process.env.BBX_WEBPAGE_FUNCTION;

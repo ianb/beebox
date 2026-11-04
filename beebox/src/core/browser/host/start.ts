@@ -87,7 +87,7 @@ function hasExited(child: ChildProcess): boolean {
 }
 
 /** The last `LOG_TAIL_LINES` lines of the host log. */
-export function logTail(logFile: string): string {
+function logTail(logFile: string): string {
   try {
     return fs.readFileSync(logFile, "utf8").trimEnd().split("\n").slice(-LOG_TAIL_LINES).join("\n");
   } catch (e) {

@@ -33,7 +33,7 @@ import { relocateLinks, type LinkRewrite } from "../../beebox/src/dev/doc-check/
 import { findMentionsOf, repairFilePaths } from "../../beebox/src/dev/doc-check/file-paths.js";
 import { AGENT_DOCS_PREFIX, isFilePathExempt, isLinkScanned } from "../../beebox/src/dev/doc-check/scan-scope.js";
 
-export const PRIVATE_PREFIX = "private-issues/";
+const PRIVATE_PREFIX = "private-issues/";
 
 export type Repository = "public" | "private";
 
@@ -93,7 +93,7 @@ class OutsideRepositoryError extends DocMoveError {
   constructor(p: string) { super(`${p}: path is outside the repository`); this.name = "OutsideRepositoryError"; }
 }
 
-export function repositoryOf(rel: string): Repository {
+function repositoryOf(rel: string): Repository {
   return rel.startsWith(PRIVATE_PREFIX) ? "private" : "public";
 }
 
@@ -248,7 +248,7 @@ function normalizeRel(repoRoot: string, p: string): string {
  * Resolve and validate a move. `to` naming a directory (an existing one, or
  * ending in `/`) means `to/<basename>`. Paths are relative to `repoRoot`.
  */
-export function resolveMove({ repoRoot, from: fromArg, to: toArg }: { repoRoot: string; from: string; to: string }): { from: string; to: string } {
+function resolveMove({ repoRoot, from: fromArg, to: toArg }: { repoRoot: string; from: string; to: string }): { from: string; to: string } {
   const from = normalizeRel(repoRoot, fromArg);
   const intoDir = toArg.endsWith("/") || fs.statSync(path.join(repoRoot, toArg), { throwIfNoEntry: false })?.isDirectory() === true;
   const to = normalizeRel(repoRoot, intoDir ? path.posix.join(toArg, path.posix.basename(from)) : toArg);

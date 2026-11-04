@@ -66,7 +66,7 @@ function renderTag(opts: { source: string | undefined; at: string | undefined; r
  * with `BBX_RUNTIME_LINT=1`. Elsewhere they are accepted and dropped, so the
  * client needs no setting of its own.
  */
-export const RUNTIME_LINT_SOURCE = "runtime-lint";
+const RUNTIME_LINT_SOURCE = "runtime-lint";
 let runtimeLintWriting = false;
 
 /** Called once at server start (`startServer`). */

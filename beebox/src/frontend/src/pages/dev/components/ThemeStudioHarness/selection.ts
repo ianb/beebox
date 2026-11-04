@@ -9,7 +9,7 @@
 
 import { useEffect, type RefObject } from "react";
 
-export const SELECTION_PREVIEW = "bbx-selection-preview";
+const SELECTION_PREVIEW = "bbx-selection-preview";
 
 /** Where the preview selects, as selectors under the studio's scroller. */
 const SCOPES = [
