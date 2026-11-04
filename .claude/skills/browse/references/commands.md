@@ -119,3 +119,5 @@ an exclusive lock on a profile and refuses to open one another instance owns.
 A new session therefore starts with an empty cookie jar; the browse key is
 re-seeded on its first own-origin `open`, but any login or app state you set up
 in one session is not visible in another.
+
+Page commands print `runtime-lint: <check> k=v …` lines to stderr when the app reports a broken runtime invariant; treat them as findings, not noise.

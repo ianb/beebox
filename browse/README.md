@@ -27,6 +27,10 @@ when the document itself has no scroll range.
 
 **`BROWSE_BASE_URL`** overrides the router-derived base for a driver that owns its own server instead of going through the shared dev router (beebox's field-test harness starts a dedicated `bbx serve` on a free port). It moves both the `/`-leading path rewrite and the browse-key cookie's host, so `BROWSE_BASE_URL=http://127.0.0.1:4711/box bin/browse open /` drives that server's box and authenticates it with the short-lived cookie in this worktree's isolated profile. Unset (normal use) changes nothing.
 
+### `runtime-lint:` lines
+
+After a page command (and before `open`, `reload`, `back`, `forward`, `close`, which leave the page), `bin/browse` takes the app page's runtime-lint buffer and prints each record to stderr as `runtime-lint: <check> k=v …`, plus `runtime-lint: <n> dropped` if the buffer overflowed. They report a broken runtime invariant the app detected (for example a card body replaced while shown); see [client debug log](../beebox/docs/client-debug-log.md). Nothing prints when the app has no lint installed, the page is off this worktree's origin, or the browser did not answer. The drain does not change the exit code.
+
 ## Layout
 
 ```

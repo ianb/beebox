@@ -17,6 +17,7 @@ import { resolveContentTarget } from "../lib/view-url";
 import { isUrlRef } from "@shared/ref-path/core";
 import { isImagePath } from "./chat/message-parsing";
 import { FileView } from "./FileView/view";
+import { useWatchedContent } from "../lib/runtime-lint/watched-content";
 import { Img as DefaultImg, type MarkdownComponentOverrides } from "./Markdown/body";
 import { useMarkdownRender } from "../lib/markdown-render";
 
@@ -47,6 +48,9 @@ function Img({ src, alt, title, width }: { src?: string; alt?: string; title?: s
     typeof src === "string" && src !== "" && !isUrlRef(src) && !isImagePath(src)
       ? resolveContentTarget(basePath, src)
       : null;
+  // Runtime lint: an embed must stay mounted while the card around it is open.
+  // Registered in the outer card's view scope; the embed's own FileView is inside.
+  useWatchedContent("card-embed", target?.path ?? null);
   if (target !== null) {
     // Frameless embed: the renderer owns its own appearance and the caption
     // (a media renderer shows it beneath, so an image card reads like a plain

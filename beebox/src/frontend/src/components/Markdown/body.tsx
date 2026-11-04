@@ -29,11 +29,12 @@
  * real browser; `body.stable-body.test.ts` holds the rule.
  */
 
-import { Fragment, useContext, useLayoutEffect, useMemo, useRef } from "react";
+import { Fragment, useContext, useMemo, useRef } from "react";
 import * as React from "react";
 import Markdoc, { type Config, type RenderableTreeNode, type Schema } from "@markdoc/markdoc";
 import { makeHeadingNode } from "@shared/markdoc-config/tags/core";
 import { CardOutlineContext } from "../CardContents/CardOutlineContext";
+import { useIsomorphicLayoutEffect } from "../../hooks/use-isomorphic-layout-effect";
 import { outlineEntries } from "../CardContents/outline";
 import { withScopedTags, rewriteUnknownTags } from "@shared/markdoc-config/scoped";
 import { UnknownTagInline, UnknownTagBlock } from "./UnknownTag";
@@ -340,16 +341,17 @@ interface MarkdownProps {
  * effects, both: when one body replaces another in one commit, React runs the
  * old body's layout cleanup before the new body's layout effect, so the old
  * body's `null` cannot clear the new outline. Publishing on a change does not
- * pass through `null`.
+ * pass through `null`. On the server (a view rendered to HTML) they are plain
+ * effects, which do not run there.
  */
 function usePublishOutline(tree: RenderableTreeNode | null): void {
   const publish = useContext(CardOutlineContext);
   const entries = useMemo(() => (tree === null ? null : outlineEntries(tree)), [tree]);
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (publish !== null && entries !== null) publish(entries);
   }, [publish, entries]);
   const publishes = entries !== null;
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (publish === null || !publishes) return;
     return () => publish(null);
   }, [publish, publishes]);
