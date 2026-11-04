@@ -1,6 +1,6 @@
 ---
 title: "Concurrent Docling PDF conversions push a box past its memory limit and stall the whole box"
-workstream: unattached
+workstream: docling-memory
 area: beebox
 labels: [pdf, docling, memory, prod]
 filed-by: agent
