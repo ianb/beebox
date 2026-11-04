@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { doclingRequest } from "../../../src/services/docling/core.js";
 import {
   classifyDoclingExit,
+  conversionBudgetSeconds,
   DOCLING_DRIVER_PATH,
   doclingArgs,
   doclingFailureMessage,
@@ -48,16 +49,17 @@ void test("The box lock lives under HOME; the host lock in the shared uv cache w
 // the driver with an isolated interpreter at the pinned version, with the OCR
 // engine in uv's throwaway environment.
 void test("The request carries OCR intent, locks, and the parent PID; the argv runs the driver", (t) => {
-  const context = { env: { UV_CACHE_DIR: "/cache/uv" }, homeDir: "/var/lib/beebox/box", parentPid: 4242 };
+  const context = { pages: 12, env: { UV_CACHE_DIR: "/cache/uv" }, homeDir: "/var/lib/beebox/box", parentPid: 4242 };
   const request = doclingRequest("/scan/source.pdf", { workDir: "/work", ocr: "replace", languages: ["en", "de"], ...context });
   t.check(request, {
     source: "/scan/source.pdf",
     outputDir: "/work",
     ocr: "replace",
     languages: ["en", "de"],
-    documentTimeoutSeconds: 600,
+    // 5 minutes plus 30 s for each of 12 OCR pages.
+    documentTimeoutSeconds: 660,
     lockPaths: ["/var/lib/beebox/box/.cache/bbx-docling.lock", "/cache/uv/bbx-docling.lock"],
-    lockWaitSeconds: 1200,
+    lockWaitSeconds: 5400,
     parentPid: 4242,
   });
   t.check(doclingRequest("/scan/source.pdf", { workDir: "/work", ocr: "off", languages: ["en"], ...context }).languages, null);
@@ -70,6 +72,25 @@ void test("The request carries OCR intent, locks, and the parent PID; the argv r
     "python", "-I", DOCLING_DRIVER_PATH,
   ]);
   t.check(JSON.parse(argv.at(-1) ?? "null"), request);
+  t.end();
+});
+
+// ## Conversion budget
+//
+// Docling's budget is 5 minutes plus a per-page allowance, more with OCR,
+// capped at 90 minutes; an unknown page count gets the cap. The two prod
+// documents a flat 10 minutes stopped (333 and 84 pages, no OCR) now get 60
+// and 19 minutes.
+void test("The conversion budget scales with pages and OCR, up to 90 minutes", (t) => {
+  const cases: Array<[number | null, "off" | "regions"]> = [[1, "off"], [84, "off"], [333, "off"], [16, "regions"], [400, "regions"], [null, "off"]];
+  t.check(cases.map(([pages, ocr]) => [pages, ocr, conversionBudgetSeconds(pages, ocr) / 60]), [
+    [1, "off", 5 + 1 / 6],
+    [84, "off", 19],
+    [333, "off", 60.5],
+    [16, "regions", 13],
+    [400, "regions", 90],
+    [null, "off", 90],
+  ]);
   t.end();
 });
 
@@ -122,7 +143,7 @@ void test("A run's end is classified by our timeout, the signal, and OOM evidenc
 // failure carries the driver's own reason, not the model-loading noise around it.
 void test("Failure messages name the cause and what not to do", (t) => {
   const budgets = { waitMinutes: 25, convertMinutes: 10 };
-  t.check(doclingFailureMessage({ outcome: { kind: "busy" }, budgets, detail: "" }), "Another Docling conversion on this box or host ran for over 20 minutes; this PDF was not converted. Retry later, one at a time.");
+  t.check(doclingFailureMessage({ outcome: { kind: "busy" }, budgets, detail: "" }), "Another Docling conversion on this box or host ran for over 90 minutes; this PDF was not converted. Retry later, one at a time.");
   t.check(doclingFailureMessage({ outcome: { kind: "oom" }, budgets, detail: "" }), "Docling was killed during an out-of-memory event in this box. Do not retry in parallel; retry once when nothing else is converting, or use a smaller PDF.");
   t.check(doclingFailureMessage({ outcome: { kind: "timeout", phase: "converting" }, budgets, detail: "" }), "Docling did not finish within 10 minutes and was stopped");
   t.check(doclingFailureMessage({ outcome: { kind: "timeout", phase: "waiting" }, budgets, detail: "" }), "Docling did not start converting within 25 minutes and was stopped");

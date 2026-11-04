@@ -35,24 +35,18 @@ import {
   LOCK_ACQUIRED_MARKER,
   LOCK_WAIT_SECONDS,
   readOomKillCount,
+  conversionBudgetSeconds,
   type DoclingRequest,
 } from "./subprocess.js";
+import { readPdfPageCount } from "../../core/pdf/probe.js";
 
 /**
- * Docling's own per-document budget, passed as `--document-timeout` (D6). It
- * covers conversion only, so the outer kill below is the one that also covers
- * model load and interpreter start.
+ * The outer kill, counted in *awake* time (D6), is Docling's own budget plus
+ * this slack: its `document_timeout` covers conversion only, not interpreter
+ * start, model load, or the page renders written afterwards. It starts when the
+ * driver holds its locks (D18); waiting has its own budget.
  */
-const DOCUMENT_TIMEOUT_SECONDS = 600;
-
-/**
- * Outer kill, counted in *awake* time (D6). Larger than the inner budget
- * because a cold host still has to build the uv environment and load model
- * weights before conversion starts — but only by a few minutes: a run that has
- * not finished by then is stuck, not slow (boxholder review 2026-08-02).
- * It starts when the driver holds its locks (D18); waiting has its own budget.
- */
-const PROCESS_TIMEOUT_MS = 10 * 60 * 1000;
+const PROCESS_SLACK_MS = 5 * 60 * 1000;
 
 /**
  * Budget from spawn until the driver holds its locks: its own lock wait plus a
@@ -159,14 +153,14 @@ function condense(text: string): string {
  */
 export function doclingRequest(
   sourcePath: string,
-  options: DoclingExtractOptions & { env: NodeJS.ProcessEnv; homeDir: string; parentPid: number },
+  options: DoclingExtractOptions & { pages: number | null; env: NodeJS.ProcessEnv; homeDir: string; parentPid: number },
 ): DoclingRequest {
   return {
     source: sourcePath,
     outputDir: options.workDir,
     ocr: options.ocr,
     languages: options.ocr === "off" ? null : options.languages,
-    documentTimeoutSeconds: DOCUMENT_TIMEOUT_SECONDS,
+    documentTimeoutSeconds: conversionBudgetSeconds(options.pages, options.ocr),
     lockPaths: doclingLockPaths(options.env, options.homeDir),
     lockWaitSeconds: LOCK_WAIT_SECONDS,
     parentPid: options.parentPid,
@@ -310,7 +304,9 @@ export function createDoclingService(): DoclingService {
       try {
         const oomKillsBefore = await readOomKillCount();
         // process.env is read only to find the uv/HF cache dirs for the lock paths; the child gets DOCLING_ENV.
-        const request = doclingRequest(sourcePath, { ...options, env: process.env, homeDir: os.homedir(), parentPid: process.pid });
+        const pages = await readPdfPageCount(sourcePath);
+        const request = doclingRequest(sourcePath, { ...options, pages, env: process.env, homeDir: os.homedir(), parentPid: process.pid });
+        const processTimeoutMs = request.documentTimeoutSeconds * 1000 + PROCESS_SLACK_MS;
         const subprocess = execa("uvx", doclingArgs(request), {
           cancelSignal: controller.signal,
           reject: false,
@@ -324,7 +320,7 @@ export function createDoclingService(): DoclingService {
         const outputTail = watchOutput(subprocess.all, () => {
           budget.stop();
           phase = "converting";
-          budget = startBudget(PROCESS_TIMEOUT_MS);
+          budget = startBudget(processTimeoutMs);
         });
         const result = await subprocess;
         const output = await outputTail;
@@ -338,7 +334,7 @@ export function createDoclingService(): DoclingService {
         if (outcome.kind !== "ok") {
           return err(doclingFailureMessage({
             outcome,
-            budgets: { waitMinutes: WAIT_TIMEOUT_MS / 60_000, convertMinutes: PROCESS_TIMEOUT_MS / 60_000 },
+            budgets: { waitMinutes: WAIT_TIMEOUT_MS / 60_000, convertMinutes: Math.round(processTimeoutMs / 60_000) },
             detail: condense(driverReason(output) ?? output),
           }));
         }

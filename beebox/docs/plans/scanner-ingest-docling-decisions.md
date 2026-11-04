@@ -300,7 +300,7 @@ Before importing Docling, the driver takes a kernel `flock` on
 laptop), then on `$UV_CACHE_DIR/bbx-docling.lock` (host-wide). The kernel
 releases both when the driver exits, so a lock cannot expire while Docling
 runs or outlive it. The driver exits when its Node parent is gone. A wait over
-20 minutes fails as "another conversion ran too long". A SIGKILL is reported as
+the longest conversion budget fails as "another conversion ran too long" (D19). A SIGKILL is reported as
 an out-of-memory kill only when the cgroup's `oom_kill` count rose.
 
 **Measurements.** Ubuntu 24.04 arm64 VM, 3 CPUs (prod is x86_64, 3 CPUs), each
@@ -366,3 +366,25 @@ one box) and would have missed the host lock.
 **Revisit:** on every Docling upgrade, repeat the comparison: run the CLI and
 the driver on the same PDFs and compare artifact names, markdown, and JSON. If
 upstream exposes batch and queue sizes on the CLI, the driver can go.
+
+## D19. Conversion budgets scale with page count (2026-11-03)
+
+Supersedes D6's numbers; its two-timeout shape is kept. A flat 10 minutes
+(Docling's `document_timeout` 600 s and the outer awake kill) stopped three
+prod conversions, including a 333-page manual and an 84-page report. D18's
+batches of one also made table-heavy PDFs 10-20% slower.
+
+Now `core.ts` reads the page count with `pdfinfo` before it starts the driver
+and sets Docling's budget to 5 minutes plus 10 s a page (30 s a page with OCR),
+capped at 90 minutes; an unknown count gets the cap
+(`conversionBudgetSeconds` in `services/docling/subprocess.ts`). The outer
+kill is that budget plus 5 minutes for interpreter start, model load, and the
+page renders written after conversion, and starts when the driver holds its
+locks. The lock wait is the 90-minute cap, so a queued PDF is refused only when
+the conversion ahead of it is stuck rather than long.
+
+Basis: the D18 VM measured about 2-3.5 s a page for digital PDFs and 9 s a
+page with OCR, on three cores to itself. Prod shares three cores across seven
+boxes, so the per-page figures carry about 3x headroom. **Revisit:** when a
+prod conversion's real duration is known (the card records none today), or if
+a legitimate document hits the cap.

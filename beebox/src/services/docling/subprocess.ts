@@ -28,8 +28,29 @@ const EXIT_SIGKILL = 137;
  */
 export const LOCK_ACQUIRED_MARKER = "bbx-docling: lock acquired";
 
-/** How long a driver waits for another conversion before it gives up (exit 75). */
-export const LOCK_WAIT_SECONDS = 20 * 60;
+/**
+ * Docling's own conversion budget (`document_timeout`, D6), scaled by page
+ * count (D19). A flat 10 minutes stopped a 333-page manual and an 84-page
+ * report on prod. Measured in the D18 VM: about 2-3.5 s a page for digital
+ * PDFs, 9 s a page with OCR; prod shares three cores across boxes, so the
+ * per-page figures carry about 3x headroom. Unknown page count gets the cap.
+ */
+const BUDGET_BASE_SECONDS = 5 * 60;
+const BUDGET_SECONDS_PER_PAGE = { text: 10, ocr: 30 } as const;
+export const MAX_CONVERSION_SECONDS = 90 * 60;
+
+export function conversionBudgetSeconds(pages: number | null, ocr: DoclingExtractOptions["ocr"]): number {
+  if (pages === null) return MAX_CONVERSION_SECONDS;
+  const perPage = ocr === "off" ? BUDGET_SECONDS_PER_PAGE.text : BUDGET_SECONDS_PER_PAGE.ocr;
+  return Math.min(MAX_CONVERSION_SECONDS, BUDGET_BASE_SECONDS + perPage * pages);
+}
+
+/**
+ * How long a driver waits for another conversion before it gives up (exit 75):
+ * as long as the longest conversion may legitimately run, so a queued PDF is
+ * refused only when the one ahead of it is stuck.
+ */
+export const LOCK_WAIT_SECONDS = MAX_CONVERSION_SECONDS;
 
 /** The JSON request `convert.py` reads from its one argument. */
 export interface DoclingRequest {
