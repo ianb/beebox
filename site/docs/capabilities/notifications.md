@@ -14,8 +14,11 @@ open, and how it stays quiet when you do.
 - Reaches you three ways, by how much the thing matters: a badge only, a quiet
   notification with no sound, or a loud one with sound. A tap opens the
   matching place in the box: a chat, a card, a question, or the dashboard.
-- Delivers to the paired iPhone app, to a browser that has allowed web push,
-  Each message goes only to the channels that fit its loudness.
+- Delivers to the paired iPhone app and to a browser that has allowed web push.
+  A person turns a browser on in Settings, which acts only on a click and says
+  plainly when the browser is blocking it; the same section shows whether a
+  paired phone is registered and lets the person turn that phone's
+  notifications off for one box. Each message goes only to the channels that fit its loudness.
 - Stays silent while you are looking at the box: if a web session of yours was
   active in the last two minutes, a quiet or loud message shows as a banner in
   the open app instead of being pushed.

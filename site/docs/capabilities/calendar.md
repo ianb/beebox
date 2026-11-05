@@ -12,7 +12,11 @@ calendar files.
 **What it does for you**
 
 - Pulls your Google Calendar events into the box as individual `.ics` files,
-  one per event, readable and editable as plain text.
+  one per event, readable and editable as plain text. Each calendar you sync
+  is a card of its own, and its events sit in a folder beside it; the card's
+  page lists the next thirty days by day, each title opening its event file.
+  The files are named by date and title (`2026-06-25_Dentist_a1b2c3d4.ics`),
+  so a folder sorts by date and reads in a listing.
 - Lets the agent read your agenda from the box's own copy instead of calling
   Google every time.
 - Supports creating, editing, and deleting events by editing files, which
@@ -27,8 +31,11 @@ one-time setup, shared with the Gmail and Drive connectors. See the install dire
 
 **How it works, briefly**
 
-Events are stored in the box as individual `.ics` files (kept in
-`_content/calendar/`, for the curious). Pull is the well-exercised direction:
+Each synced calendar is a calendar card in `_content/calendar/`, and its
+events are individual `.ics` files in the folder beside that card (for the
+curious). The folder decides which Google calendar an event belongs to. A file
+is renamed when its event's date or title changes, and a box that synced
+before this layout was converted once by a migration. Pull is the well-exercised direction:
 sync brings Google's events into the box. Local edits, locally-created
 events, and deletions are pushed back to Google during sync, but this push
 path and automatic scheduled sync are both less exercised than the pull

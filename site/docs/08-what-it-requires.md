@@ -20,7 +20,15 @@ browser to sign in from, a long-lived token created with `claude setup-token`
 models on the Claude side instead: GLM models through a Z.ai key, or models the
 owner adds through an OpenRouter key (billed per use). Only three OpenRouter
 models are recorded as tested through a full agent turn, and the documentation
-warns that others may fail turns that need tools.
+warns that others may fail turns that need tools. A third engine, called pi, is
+an open-source coding-agent library that runs inside the box's server and uses
+only OpenRouter models the owner has added, so it needs an OpenRouter key and no
+Claude or ChatGPT subscription. It is billed per use, and its cost figures are
+estimates. Its documentation records live runs on a few models (DeepSeek, Qwen,
+Kimi) and names one DeepSeek model that does not work. It cannot be steered
+mid-turn from the chat, and it runs as the same operating-system user as the
+server, so the outer boundary is the same as for the other engines
+([the pi engine](concepts/pi-engine.md)).
 
 **Accounts, per connector, all optional.** A Google account, plus signing in
 with it and a one-time setup, for Gmail, Calendar, and Drive; the
