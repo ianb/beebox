@@ -22,6 +22,7 @@ import { invariant } from "@shared/invariant";
 import { BoxPresentationProvider, PresentationNotice } from "../components/themes/BoxPresentationProvider";
 import { AppNav } from "../components/AppNav/nav";
 import { AppBarChromeProvider } from "../components/app-bar-chrome";
+import { PointSelectionProvider } from "../components/point-selection-context";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { StatusMessage } from "../components/ui/StatusMessage";
@@ -129,6 +130,7 @@ export function ProductLayout() {
         <DocumentPlace />
         <Stack gap="none" className="h-app">
           <AppNav
+            standalone={standalonePage}
             onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
             onToggleSourceView={handleToggleSourceView}
           />
@@ -153,8 +155,12 @@ export function DevHarnessLayout() {
 /** Providers retain their children identity when a chat publishes chrome. */
 function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
   return <BoxConversationProvider boxSlug={boxSlug}><BoxPresentationProvider boxSlug={boxSlug}>
-    <WorkspaceShellProvider><AppBarChromeProvider><ConversationCardProvider>{children}</ConversationCardProvider></AppBarChromeProvider></WorkspaceShellProvider>
+    <WorkspaceShellProvider><AppBarChromeProvider><PointAndCardProviders>{children}</PointAndCardProviders></AppBarChromeProvider></WorkspaceShellProvider>
   </BoxPresentationProvider></BoxConversationProvider>;
+}
+
+function PointAndCardProviders({ children }: { children: ReactNode }) {
+  return <ConversationCardProvider><PointSelectionProvider>{children}</PointSelectionProvider></ConversationCardProvider>;
 }
 
 function WorkspaceShellProvider({ children }: { children: ReactNode }) {

@@ -54,7 +54,7 @@ function DeliveredMessagePart({ part, attachedFileIds }: { part: DeliveredUserMe
     case "text":
       if (stripUserDisplayTags(part.text, { attachedFileIds }).trim() === "") return null;
       return (
-        <div className="text-sm whitespace-pre-wrap">
+        <div className="text-sm whitespace-pre-wrap" data-point-block="">
           <UserMessageText text={part.text} attachedFileIds={attachedFileIds} />
         </div>
       );
