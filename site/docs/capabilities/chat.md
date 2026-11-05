@@ -17,6 +17,13 @@ box. Chat is the everyday way you talk to it.
 - Scopes a chat to wherever you started it: a card you were reading, a
   directory ("place") in the box, or a page you just clipped from the web.
 - Lets you quote a passage out of any card into what you're typing.
+- Lets you point at part of a document open beside the chat. Select mode, in
+  the chat's top row, outlines a block as you hover (on desktop) and attaches
+  it to your draft when you click; on a touch screen a tap outlines the block
+  and the `+` beside it attaches it. The attached block shows as a removable
+  mark in the draft, and you can type or dictate around it. It applies to
+  rendered document cards, not to PDFs or images, and selecting does not
+  authorize the agent to act.
 - Recovers a message that failed to send instead of losing it, offering to
   retry it, put it back in the box as a draft, or discard it, and keeps an
   unfinished draft across reloads.
@@ -32,6 +39,16 @@ box. Chat is the everyday way you talk to it.
   Deleting a chat is a separate, permanent act: the transcript and the chat's
   card are removed, while cards and files the conversation produced, and
   earlier committed versions in git, stay.
+- Tells a chat when its background work was cut off. The agent can leave
+  helpers running after a turn ends, and a deploy, a reload, or a server
+  shutdown ends them. The box now waits for chats with live background work
+  before routine maintenance, and when an interruption does happen the chat
+  is told why and when on its next turn. A chat interrupted from outside also
+  wakes itself once (at most twice a day) so the agent can restart, drop, or
+  ask about the unfinished work without waiting for you to write first. A
+  message you send while the box restarts is queued, not dropped, and a chat
+  you return to after a long absence says "Catching up…" until its history
+  loads.
 - Titles chats for you, starting right after the first exchange or two
   rather than overnight, retitling as they grow, and keeps a title you set by
   hand.

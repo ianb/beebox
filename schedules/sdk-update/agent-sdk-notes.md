@@ -33,16 +33,15 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.316`, Codex `0.164.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.317`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
 - **Latest reviewed upstream version:** `0.3.318` (SDK), `2.1.318` (Claude Code), `0.166.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.316` on 2026-11-02
-  (taking `0.3.315`). Next: `0.3.317` (settles 2026-11-05T00:02Z), `0.3.318`
-  (2026-11-05T21:55Z). While Codex is held,
+- **Current recommendation:** Agent SDK moved to `0.3.317` on 2026-11-05.
+  Next: `0.3.318` (settles 2026-11-05T21:55Z). While Codex is held,
   `pnpm update-agent-sdk` would also move Codex, so set the SDK pins in
   `beebox/package.json` and `workstreams-app/package.json` by hand.
   **Codex `0.165.0` is held** until
@@ -102,7 +101,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 - **Action:** Settled path; takeable 2026-11-05T21:55Z.
 - **Sources:** [SDK 0.3.318](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03318), [Claude Code 2.1.318](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21318)
 
-### 0.3.317 / Claude Code 2.1.317 — pending (published 2026-11-03T00:02Z)
+### 0.3.317 / Claude Code 2.1.317 — APPLIED 2026-11-05 (published 2026-11-03T00:02Z)
 
 - **SDK:** hook matchers gain `onFailure: "block"`, so a callback that throws
   or returns invalid output blocks the action. Checked: beebox's two SDK hooks
@@ -122,7 +121,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   email address to the network; subagents on a different model use that
   model's effort; Ctrl+C no longer stops all background agents when clearing
   typed text.
-- **Action:** Settled path; takeable 2026-11-05T00:02Z.
+- **Action:** Applied 2026-11-05, SDK pins only, so Codex stayed held. Verified: typecheck (beebox and workstreams-app), steering probe (4/4) on bundled CLI 2.1.317, `pnpm -C beebox test` (14,356 pass, 1 fail, 2 skip; the known `issues/bugs/2026-10-30-codex-boundary-test-red-after-native-store.md`).
 - **Sources:** [SDK 0.3.317](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03317), [Claude Code 2.1.317](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21317)
 
 ### 0.3.315 / 0.3.316 / Claude Code 2.1.315 / 2.1.316 — APPLIED 2026-11-02 (published 2026-10-30T21:04Z and 2026-10-31T00:39Z)
