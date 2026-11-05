@@ -31,7 +31,6 @@ import { getRenderers, type FileData, type FileRenderer } from "../../file-type-
 import { rendererDisplayLabel } from "../../lib/renderer-display-label";
 import { toDisplayPath } from "@shared/display-path";
 import { SelectionCapture } from "../SelectionCapture";
-import { extractSelection } from "../../lib/selection/position";
 import { Pre } from "../ui/Pre";
 import { Button } from "../ui/Button";
 import { ActiveFileRenderer, AuthoredRendererMarker } from "./ActiveFileRenderer";
@@ -48,6 +47,7 @@ import type { ViewTarget } from "../../lib/view-url";
 import { FRAGMENT_ROOT_ATTRIBUTE } from "../../lib/fragment-target";
 import { useFragmentJump } from "../../hooks/useFragmentJump";
 import { RuntimeLintViewScope } from "../../lib/runtime-lint/watched-content";
+import { usePointSelection } from "../point-selection-context";
 
 export type { FileViewMode } from "../file-view-types";
 
@@ -219,7 +219,7 @@ function captureFileContent({ enabled, onCapture, rendered, workspacePdf, pointM
   rendered: ReactNode; workspacePdf: boolean | undefined;
   pointMode: boolean; onExitPointMode: (() => void) | undefined;
 }) {
-  return enabled ? <SelectionCapture onCapture={onCapture} extract={extractSelection} pointMode={pointMode} onExitPointMode={onExitPointMode} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
+  return enabled ? <SelectionCapture onCapture={onCapture} pointMode={pointMode} onExitPointMode={onExitPointMode} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
 }
 
 /**
@@ -228,7 +228,10 @@ function captureFileContent({ enabled, onCapture, rendered, workspacePdf, pointM
  * (`lib/runtime-lint/watched-content.tsx`).
  */
 export function FileView(props: FileViewProps) {
-  return <RuntimeLintViewScope><FileViewContent {...props} /></RuntimeLintViewScope>;
+  const globalPoint = usePointSelection();
+  const pointMode = !props.workspacePdf && (props.pointMode === true || globalPoint?.active === true);
+  const onExitPointMode = props.onExitPointMode ?? (globalPoint ? () => globalPoint.setActive(false) : undefined);
+  return <RuntimeLintViewScope><FileViewContent {...props} pointMode={pointMode} onExitPointMode={onExitPointMode} /></RuntimeLintViewScope>;
 }
 
 function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, pointMode, onExitPointMode, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
@@ -302,6 +305,7 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
           params={inlineTarget.params}
           viewState={inlineTarget.viewState}
           onNavigate={onNavigate}
+          onAddSelection={onAddSelection}
         />
       )}
     />

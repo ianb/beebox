@@ -3,7 +3,7 @@ title: "Point at a box document to attach it to chat"
 status: implemented
 workstream: point-to-comment
 issues:
-  - ../../../issues/closed/features/2026-11-01-point-to-comment.md
+  - ../../../issues/features/2026-11-01-point-to-comment.md
 ---
 # Point at a box document to attach it to chat
 

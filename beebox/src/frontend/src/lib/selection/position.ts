@@ -8,12 +8,8 @@
  * line. Nothing parses it rigidly, so its shape can evolve without a
  * vocabulary migration.
  *
- * Split in two: `formatPosition` is pure (string in, string out — unit
- * tested) and `extractSelection` walks the live DOM (verified in the
- * browser, since the tree-walk depends on the real rendered document).
- * `extractSelection` depends only on the DOM tree + attributes, never on
- * geometry, so the geometry-only concern (placing the "+") stays isolated in
- * the capture component.
+ * Point extraction reads DOM content and source attributes; geometry stays
+ * in SelectionCapture.
  */
 
 export interface SelectionParts {
@@ -100,35 +96,6 @@ function transcriptRole(node: Node, container: Element): string | null {
   return item.getAttribute("data-role");
 }
 
-/**
- * `extractSelection` for the chat transcript (container = the message list).
- * Headings and paragraphs mean nothing across a transcript, so the position
- * only names the source and speaker.
- */
-export function extractTranscriptSelection(selection: Selection, container: Element): ExtractedSelection | null {
-  const text = selection.toString().trim();
-  if (text === "" || selection.rangeCount === 0) {
-    return null;
-  }
-  const range = selection.getRangeAt(0);
-  const position = formatTranscriptPosition(transcriptRole(range.startContainer, container), transcriptRole(range.endContainer, container));
-  return { text, position };
-}
-
-/**
- * Compute `{ text, position }` for the current `selection` within
- * `container` (the rendered-document root). Returns null for an empty /
- * whitespace-only selection so the caller can suppress the "+".
- */
-export function extractSelection(selection: Selection, container: Element): ExtractedSelection | null {
-  const text = selection.toString().trim();
-  if (text === "" || selection.rangeCount === 0) {
-    return null;
-  }
-  const range = selection.getRangeAt(0);
-  return { text, position: positionAt(range.startContainer, container) };
-}
-
 /** A point selection uses the same rough locator as a text selection. */
 function positionAt(anchorNode: Node, container: Element): string {
   const anchorEl = nodeToElement(anchorNode);
@@ -181,14 +148,18 @@ function positionAt(anchorNode: Node, container: Element): string {
 }
 
 // Markdown paragraphs are divs because they may contain embedded block views.
-const POINT_BLOCKS = ".bbx-paragraph, p, li, td, th, tr, figure, img, canvas, svg, [role='img'], pre, blockquote, h1, h2, h3, h4, h5, h6";
-const POINT_CONTROLS = "a, button";
-const EXCLUDED_CONTENT = "button, input, textarea, select, [role='button'], [data-bbx-scan='exclude']";
+const POINT_BLOCKS = "[data-point-block], .bbx-paragraph, p, li, td, th, tr, figure, img, canvas, svg, [role='img'], pre, blockquote, h1, h2, h3, h4, h5, h6";
+const POINT_CONTROLS = "a";
+const EXCLUDED_CONTENT = "button, input, textarea, select, [role='button'], [role='menuitem'], [contenteditable='true'], .bbx-system-control, [data-bbx-scan='exclude']";
 
 /** The closest document block wins. A standalone link or control is a fallback. */
 export function pointTarget(node: EventTarget | null, container: Element): Element | null {
   const element = node instanceof Element ? node : node instanceof Node ? node.parentElement : null;
   if (element === null || !container.contains(element)) return null;
+  const excluded = element.closest(EXCLUDED_CONTENT);
+  // A zoomable image is wrapped in a button; the image itself remains content.
+  const lightboxImage = element.matches("img[data-image-src]") && excluded?.tagName === "BUTTON";
+  if (excluded !== null && excluded !== container && container.contains(excluded) && !lightboxImage) return null;
   const block = element.closest(POINT_BLOCKS);
   if (block !== null && container.contains(block)) {
     // An icon inside a link describes the link, not the SVG's paths.
@@ -230,4 +201,12 @@ export function extractPointSelection(target: Element, container: Element): Extr
   const location = positionAt(target, container);
   const detail = tag === "img" || tag === "canvas" || tag === "svg" ? `element: ${tag}` : "";
   return { text, position: [location, detail].filter(Boolean).join("; ") };
+}
+
+/** Quote a transcript block with its message speaker as the locator. */
+export function extractTranscriptPointSelection(target: Element, container: Element): ExtractedSelection | null {
+  const extracted = extractPointSelection(target, container);
+  if (extracted === null) return null;
+  const role = transcriptRole(target, container);
+  return { text: extracted.text, position: formatTranscriptPosition(role, role) };
 }

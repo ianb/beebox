@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-04T23:20:28Z
-Total documents: 623
+Generated: 2026-11-05T21:36:24Z
+Total documents: 624
 
 ## Issues
 
@@ -2649,6 +2649,7 @@ Referenced by:
 - docs/implemented-plans/chat-not-delivered.md:66 (mention) — - **Serves:** "You should be able to see the gears" (`docs/architecture/spirit.md`)
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/implemented-plans/docs-reorg.md:335 (mention) — `docs/design/` (8 topic files + README acknowledging spirit.md),
+- docs/implemented-plans/global-point-selection.md:32 (mention) — “Feedback is everywhere, and it's not all commands” in `docs/architecture/spirit.md` supports pointing to a thing and sp
 - docs/implemented-plans/live-gap-marker.md:56 (mention) — (`docs/architecture/spirit.md:79`) by sending a known hole as unsure.
 - docs/implemented-plans/mac-app-engine-channel.md:632 (mention) — is the paperwork spirit.md argues against.
 - docs/implemented-plans/point-to-comment.md:32 (mention) — - **Serves:** `spirit.md`, “Feedback is everywhere, and it's not all commands”: a person points, then says anything in c
@@ -5842,6 +5843,18 @@ References:
 - → ../issues/code-quality/2026-10-23-frontend-smaller-near-duplicates.md (frontmatter)
 - → AGENTS.md (mention)
 
+#### docs/implemented-plans/global-point-selection.md
+
+Title: "Select card and chat content from the top bar" | 151 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/features/2026-11-01-point-to-comment.md:5 (frontmatter) — design: ../../beebox/docs/implemented-plans/global-point-selection.md
+- ../issues/features/2026-11-01-point-to-comment.md:20 (link) — [plan](../../beebox/docs/implemented-plans/global-point-selection.md).
+
+References:
+- → ../issues/features/2026-11-01-point-to-comment.md (frontmatter)
+- → docs/architecture/spirit.md (mention)
+
 #### docs/implemented-plans/gmail-explicit-action.md
 
 Title: "Gmail config: explicit action, no implicit tracking" | 165 lines | shipped history | implemented
@@ -6897,11 +6910,10 @@ References:
 Title: "Point at a box document to attach it to chat" | 144 lines | shipped history | implemented
 
 Referenced by:
-- ../issues/closed/features/2026-11-01-point-to-comment.md:4 (frontmatter) — design: ../../../beebox/docs/implemented-plans/point-to-comment.md
-- ../issues/closed/features/2026-11-01-point-to-comment.md:43 (link) — revised [plan](../../../beebox/docs/implemented-plans/point-to-comment.md) follows the
+- ../issues/features/2026-11-01-point-to-comment.md:52 (link) — revised [plan](../../beebox/docs/implemented-plans/point-to-comment.md) follows the
 
 References:
-- → ../issues/closed/features/2026-11-01-point-to-comment.md (frontmatter)
+- → ../issues/features/2026-11-01-point-to-comment.md (frontmatter)
 - → docs/architecture/spirit.md (mention)
 - → frontend.md (mention)
 
