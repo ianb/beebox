@@ -5,7 +5,8 @@ description: "What Bee Box is: a self-hosted assistant with a full web app, a ch
 
 Bee Box is a personal assistant system that runs on a computer you control. A
 coding agent operates it. The supported agents today are Claude Code
-(Anthropic) and Codex (OpenAI). You feed the system inputs: voice memos,
+(Anthropic) and Codex (OpenAI), plus an optional third, pi, that runs only
+OpenRouter models the owner adds. You feed the system inputs: voice memos,
 emails, photographs, web clippings, chat messages. The agent turns those
 inputs into **cards**, takes the actions it understands, and asks you a
 question when it does not understand.

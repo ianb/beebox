@@ -22,7 +22,10 @@ a stamped version (tagged releases, plus a daily image built from `main`).
 
 **How updates work.** There is only one continuously updated version of the
 software; every change is shipped as soon as it's made, with no list of what
-changed in each update, today. Updating means fetching the latest version of
+changed in each update for people, today. The box's own agent does get one: a
+short dated list of engine changes that affect it (a removed command, a moved
+file), begun on 2026-11-01 and kept by a scheduled job, which the agent is
+told to check when something it remembers fails. Updating means fetching the latest version of
 the project and rebuilding the container, or reinstalling from source. The Mac
 app is the exception: each time the box starts it checks the daily published image, confirms
 the image and the app can run together, starts the new engine only when the

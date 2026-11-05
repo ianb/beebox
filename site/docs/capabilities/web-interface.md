@@ -28,6 +28,13 @@ desktop and phone.
   (Dashboard, Browse, History, Storage) sit in the avatar menu.
 - **Browse** — a file-and-card browser over the whole box, with a workspace of tabs so several things stay open at once.
 - **Todos**: a todo shows a live checkbox on its card and in lists, so you can tick it where you read it (any member of the box can) or add it to the chat you are typing. A card and a directory each show a one-line count of what is open there. Todos assigned to the agent stay out of your default view, and a daily review the box runs proposes changes to your todos and makes none itself.
+- **Web browser**: a menu item, desktop only, that opens one live web
+  browser per box in its own tab. The agent drives it for pages that need a
+  login or a human check; you open the same browser to log in, click through the
+  check, or correct a form while it works, and tell the agent in chat to
+  continue. The agent can also ask a question in the browser tab, and your
+  Done or Not done answer returns to the chat that asked. The agent does not
+  type your passwords. See the limits below.
 - **Questions** — the queue of things the agent is asking you.
 - **Landmarks** — a curated map of the box's notable places. Opening a place
   shows a place page: a few lines the agent keeps current on where things stand
@@ -35,8 +42,8 @@ desktop and phone.
   tiers, and an "Also here" list of its other recent cards.
 - **History** — every change, drawn from git, with diffs and the files touched.
 - **Storage** — how much space the box is using and where.
-- **Settings** — pairing a phone, connectors, and other account controls.
-- **Admin**: host-wide controls, owner only, in six tabs: an overview of each section's state, agents (which agent is running and which extra OpenRouter models a box may run), people (allowed users and invites), connections, secrets (each key a collapsed row showing what uses it), and the host, which holds notifications (browser push on or off, a three-day list of what each channel did, and the paired phones) and encrypted backups of the box (see [backups](../install/backups.md) and [your data and safety](../10-your-data-and-safety.md)).
+- **Settings**: pairing a phone, connectors, notifications for this browser and this phone, and other account controls.
+- **Admin**: host-wide controls, owner only, in six tabs: an overview of each section's state, agents (which agent is running and which extra OpenRouter models a box may run), people (allowed users and invites), connections, secrets (each key a collapsed row showing what uses it), and the host, which holds notifications (how many phones and browsers the box can reach, a three-day list of what each channel did, the paired phones, and a test send) and encrypted backups of the box (see [backups](../install/backups.md) and [your data and safety](../10-your-data-and-safety.md)).
 
 Each kind of card gets its own display: a recipe with scalable amounts, a
 dashboard or a todo list, a document, a spreadsheet, a PDF, a photo, a person,
@@ -94,7 +101,19 @@ the upright copy; if that check fails, the first guess is kept and the page is
 flagged for review, so a photo can occasionally still come out turned. The
 composition editor has had no pass on a phone or in dark mode, and Save commits
 the whole card, so the agent's uncommitted edits outside the composition go
-into the same commit.
+into the same commit. The web browser was built on 2026-10-30 and is only partly proven: its
+install on the maintainer's server had not run when it landed, memory during a
+real agent turn was not measured, and the log-in-then-agent-continues walk is
+only partly exercised. A box has a browser only where a Chrome can be found; the
+container image does not bundle one, and the item then says none is installed.
+The browser is an open-source tool's own dashboard, and its script runs under
+the box's address with the reach of the person signed in, so the project pins
+and reviews its version; its cookies are stored unencrypted in the box user's
+state directory, outside git and backups. The counts in the navigation bar walk
+the whole box; on a box of about twenty thousand files, overlapping walks ran
+the engine out of memory, and they now run one at a time. Boxes with tens of
+thousands of files are not what the project has tuned for, and a filed issue
+lists what such a box would need.
 
 **Go deeper**
 

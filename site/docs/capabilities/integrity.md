@@ -22,6 +22,8 @@ a pile of files that only look organized.
 - A card is checked against its type on read, again right after an agent
   edit, and again before a commit, so a broken card cannot quietly enter
   the history.
+- The agent can ask what refers to a card, or to one heading inside it, and
+  the box warns about a link to a heading the target does not have.
 - Attachments live beside their card and travel with it.
 - Filenames say what a thing is, so the folder tree itself reads as a map,
   with curated landmarks on top for the spots worth bookmarking.
