@@ -1,7 +1,8 @@
 ---
 title: "Point at box document content to attach it to chat"
 workstream: point-to-comment
-design: ../../beebox/docs/plans/global-point-selection.md
+needs: [manual-testing]
+design: ../../beebox/docs/implemented-plans/global-point-selection.md
 area: beebox
 labels: [comments, mobile, ui, chat]
 filed-by: agent
@@ -9,14 +10,16 @@ discovered-by: Ian
 discovered-in: "main session — boxholder request, 2026-11-01"
 ---
 
+> **⏳ Awaiting manual testing** — fix landed in branch commit `92c67aa48`; on a physical phone, select a paragraph in a card and a chat message, confirm each with `+`, and verify each appears in the chat draft. Only the developer clears this.
+
 **Reopened (2026-11-04):** The shipped Select control is in the card toolbar
 and works only in companion documents. The boxholder wants an icon in the
 global top toolbar, covering card content and chat messages. The top-bar
 button must be the only way into this flow: selecting text for ordinary copy
 must no longer surface the attachment `+`. See the new
-[plan](../../beebox/docs/plans/global-point-selection.md).
+[plan](../../beebox/docs/implemented-plans/global-point-selection.md).
 
-**Closed (implemented, 2026-11-04):** 02d70e879 implements the corrected box companion selection flow. Physical phone touch remains unverified; image pins, screenshots, standalone browse, and embedded PDFs remain outside the shipped scope.
+The corrected box selection flow is implemented. Physical phone touch remains unverified; image pins, screenshots, standalone browse, and embedded PDFs remain outside the shipped scope.
 
 When a person reads a box document beside chat, the current way to quote part
 of it is to select text and press the floating `+`. The selection appears in
@@ -51,15 +54,15 @@ existing box selection-to-chat flow.
 
 ## Implementation (2026-11-04)
 
-The box companion now shows Select for rendered `.doc.card` and Markdown
-documents. On desktop, hover outlines a semantic block and click adds the
-existing selection pill and `[selection#N]` to the ordinary chat draft. On
-touch, tapping outlines the block and shows the existing floating `+` beside
-it; pressing `+` attaches it. A link tap chooses its paragraph
-without navigating. Outside the mode, precise text selection and its `+`
-remain. Code indentation and line breaks are preserved in quoted blocks; a
-pending pick is discarded if its content changes, and its `+` hides when the
-block scrolls out of view.
+The box app now shows one Select icon in the global top bar for chat views. On
+desktop, hover outlines a semantic block and click adds the existing selection
+pill and `[selection#N]` to the ordinary chat draft. On touch, tapping outlines
+the block and shows the existing floating `+` beside it; pressing `+` attaches
+it. A link tap chooses its paragraph without navigating. Outside the mode,
+text selection supports copy and does not open an attachment `+`. Code
+indentation and line breaks are preserved in quoted blocks; a pending pick is
+discarded if its content changes, and its `+` hides when the block scrolls out
+of view.
 
 Desktop Chromium checks show hover and one-click attachment. At phone width,
 synthetic touch events exercised tap then `+`, but the browser profile did not
@@ -76,12 +79,19 @@ remain separate work.
 
 ## Global top-bar follow-up (2026-11-04)
 
-The new worktree change moves Select to one icon in the box's global top bar
-and removes the card toolbar. The mode covers card content and chat messages,
-including ordinary user messages and images that open a lightbox. It keeps the
-existing selection pill, source ref, and inline composer token. Selecting text
-outside the mode still supports copy but no longer opens an attachment `+`.
-Desktop click attaches a previewed block immediately. At phone width, a
-synthetic touch tap previews the block and a nearby `+` confirms it. A physical
-phone gesture remains unverified. The issue stays open until this follow-up
-lands; the code and review are in the point-to-comment worktree.
+The follow-up moves Select to one icon in the global top bar and removes the
+card toolbar. The mode covers card content and chat messages, including
+ordinary user messages and images that open a lightbox. It keeps the existing
+selection pill, source ref, and inline composer token. Selecting text outside
+the mode supports copy and no longer opens an attachment `+`. Desktop click
+attaches a previewed block immediately. At phone width, a synthetic touch tap
+previews the block and a nearby `+` confirms it. A physical phone gesture
+remains unverified; see the manual-testing section.
+
+## Manual testing
+
+On a physical phone, open a chat with a card and a chat message visible. Turn on
+Select in the top bar, tap a paragraph in the card, then press the nearby `+`.
+Repeat with a chat message. Each selection should appear in the ordinary chat
+draft with the correct source and quote, and neither tap should navigate or
+start native text selection. The phone's touch behavior has not been verified.

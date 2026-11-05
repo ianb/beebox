@@ -1,6 +1,6 @@
 ---
 title: "Select card and chat content from the top bar"
-status: active
+status: implemented
 workstream: point-to-comment
 issues:
   - ../../../issues/features/2026-11-01-point-to-comment.md
