@@ -109,6 +109,9 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
       resumeSessionId: opts.resumeSessionId,
       additionalDirectories: opts.additionalDirectories,
       env: opts.env,
+      // A chat turn has no wall-clock cap: a person is watching it and ends it
+      // with the stop button (`interrupt`). Long tool-heavy turns are normal.
+      turnTimeoutMs: null,
       // Outside a box there is no setting to read, so analytics stay off.
       analytics: boxRoot !== null && (await loadCodexTelemetry(boxRoot)) === "on",
     });

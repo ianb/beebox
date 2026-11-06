@@ -60,6 +60,8 @@ void test("The session options become Codex settings", async (t) => {
 
 // ## The batch agent passes the request through
 //
+// Unattended runs keep a ten-minute turn cap; nobody is there to stop them.
+//
 // The box's instruction file includes a guide with a marker line. Codex does
 // not follow `@` includes, so Bee Box expands them into the system prompt: a
 // pass with box context sees the marker, a prompt-only pass does not.
@@ -79,13 +81,14 @@ void test("The batch agent passes the request through", async (t) => {
             guidance: options.systemPrompt.includes("BOX-GUIDANCE-MARKER"),
             loadProjectDocs: options.loadProjectDocs,
             readOnly: options.readOnly,
+            turnTimeoutMs: options.turnTimeoutMs,
           });
           return { id: null, run: async () => fakeTurn };
         },
       },
     }),
   });
-  const seen: Array<{ guidance: boolean; loadProjectDocs: boolean | undefined; readOnly: boolean | undefined }> = [];
+  const seen: Array<{ guidance: boolean; loadProjectDocs: boolean | undefined; readOnly: boolean | undefined; turnTimeoutMs: number | null }> = [];
   const agent = createCodexAgent({ name: "chat-title:test" });
   await agent.invoke({ boxRoot: box.root, prompt: "name it", systemPrompt: "title", loadBoxContext: false, tools: [] });
   await agent.invoke({ boxRoot: box.root, prompt: "do work", systemPrompt: "work" });
@@ -94,11 +97,13 @@ void test("The batch agent passes the request through", async (t) => {
       guidance: false,
       loadProjectDocs: false,
       readOnly: true,
+      turnTimeoutMs: 600_000,
     },
     {
       guidance: true,
       loadProjectDocs: true,
       readOnly: false,
+      turnTimeoutMs: 600_000,
     },
   ]);
 });
