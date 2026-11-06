@@ -96,6 +96,24 @@ function transcriptRole(node: Node, container: Element): string | null {
   return item.getAttribute("data-role");
 }
 
+/** Preserve the browser's exact text range while using the source's existing locator. */
+export function extractTextSelection(selection: Selection, container: Element): ExtractedSelection | null {
+  if (selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  const text = selection.toString();
+  return range.collapsed || text.trim() === "" ? null : { text, position: positionAt(range.startContainer, container) };
+}
+
+export function extractTranscriptTextSelection(selection: Selection, container: Element): ExtractedSelection | null {
+  if (selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  const text = selection.toString();
+  return range.collapsed || text.trim() === "" ? null : {
+    text,
+    position: formatTranscriptPosition(transcriptRole(range.startContainer, container), transcriptRole(range.endContainer, container)),
+  };
+}
+
 /** A point selection uses the same rough locator as a text selection. */
 function positionAt(anchorNode: Node, container: Element): string {
   const anchorEl = nodeToElement(anchorNode);

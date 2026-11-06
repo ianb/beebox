@@ -30,7 +30,7 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
  */
 
 import { useParams, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useCurrentUser, type CurrentUser } from "../../hooks/useCurrentUser";
 import { useBoxName } from "../../hooks/useBoxName";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
@@ -48,14 +48,26 @@ import { AttentionBadges } from "./app-nav-badges";
 import { AppBarChipSlot, useAppBarPublishedPlace } from "../app-bar-chrome";
 import { placeLabel } from "../../lib/place-label";
 import { usePointSelection } from "../point-selection-context";
+import { captureSelectedText } from "../SelectionCapture";
 
 function PointSelectionButton({ standalone }: { standalone: boolean }) {
   const mode = usePointSelection();
+  const capturedOnPress = useRef(false);
   useEffect(() => { if (standalone) mode?.setActive(false); }, [standalone, mode]);
   if (standalone || !mode) return null;
   return <button id="bbx-point-select" type="button" aria-label={mode.active ? "Done selecting" : "Select content"}
     title={mode.active ? "Done selecting" : "Select content"} aria-pressed={mode.active}
-    onClick={() => mode.setActive(!mode.active)}
+    onPointerDown={(event) => {
+      if (event.pointerType === "mouse" && !mode.active && captureSelectedText()) {
+        event.preventDefault();
+        capturedOnPress.current = true;
+      }
+    }}
+    onClick={(event) => {
+      if (capturedOnPress.current) { capturedOnPress.current = false; return; }
+      if (event.detail === 0 && !mode.active && captureSelectedText()) return;
+      mode.setActive(!mode.active);
+    }}
     className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${mode.active ? "bg-white/30" : "hover:bg-white/20"}`}>
     <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="m5 3 12 9-5.7.8-2.6 5.1L5 3Z" />

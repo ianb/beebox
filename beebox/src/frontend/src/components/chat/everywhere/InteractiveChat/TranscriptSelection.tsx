@@ -8,7 +8,7 @@
 import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { SelectionCapture } from "../../../SelectionCapture";
-import { extractTranscriptPointSelection } from "../../../../lib/selection/position";
+import { extractTranscriptPointSelection, extractTranscriptTextSelection } from "../../../../lib/selection/position";
 import { useConversationSelectionCapture } from "../card-context/context";
 import { usePointSelection } from "../../../point-selection-context";
 
@@ -24,6 +24,6 @@ export function TranscriptSelection({ children }: { children: ReactNode }) {
   }, [capture]);
   // The wrapper is also the transcript's scan boundary (see MessageList): one
   // element, so message rows stay at the depth chat-scroll-anchor.ts searches.
-  return <SelectionCapture onCapture={handleCapture} extractPoint={extractTranscriptPointSelection}
+  return <SelectionCapture onCapture={handleCapture} extractPoint={extractTranscriptPointSelection} extractText={extractTranscriptTextSelection}
     pointMode={point?.active === true} onExitPointMode={() => point?.setActive(false)} data-bbx-scan="exclude">{children}</SelectionCapture>;
 }

@@ -88,6 +88,15 @@ attaches a previewed block immediately. At phone width, a synthetic touch tap
 previews the block and a nearby `+` confirms it. A physical phone gesture
 remains unverified; see the manual-testing section.
 
+## One-shot selection follow-up (2026-11-05)
+
+Select now turns off after one card or chat attachment, including after the
+phone's nearby `+` confirmation. A person presses the top-bar icon again to
+choose another item. On desktop, they can instead highlight an exact span of
+text first and press the same icon to attach that span immediately. Native text
+selection alone still only selects text for copy. The attachment uses the
+existing chat draft pill and source locator.
+
 ## Manual testing
 
 On a physical phone, open a chat with a card and a chat message visible. Turn on

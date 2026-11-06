@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { extractPointSelection, pointTarget, type ExtractedSelection } from "../lib/selection/position";
+import { extractPointSelection, extractTextSelection, pointTarget, type ExtractedSelection } from "../lib/selection/position";
 
 // Mounted capture roots. Captures nest — a card embedded in a chat message
 // sits inside the transcript's capture — and the innermost root containing
 // the selection owns it, so exactly one "+" appears, carrying that source.
 const captureRoots = new WeakSet<Element>();
+const textCaptures = new Map<Element, { extract: (selection: Selection, container: Element) => ExtractedSelection | null; capture: (selection: ExtractedSelection) => void }>();
 const pendingListeners = new Set<() => void>();
 const pendingRoots = new Set<Element>();
 
@@ -16,6 +17,23 @@ function ownsSelection(container: Element, node: Node): boolean {
     el = el.parentElement;
   }
   return el === container;
+}
+
+/** Called by the top-bar button before its press can collapse a native desktop range. */
+export function captureSelectedText(): boolean {
+  const selection = window.getSelection();
+  if (selection === null || selection.rangeCount === 0 || selection.isCollapsed) return false;
+  const range = selection.getRangeAt(0);
+  for (const [container, handler] of textCaptures) {
+    if (!container.isConnected || !ownsSelection(container, range.startContainer) || !ownsSelection(container, range.endContainer)) continue;
+    if ([...textCaptures.keys()].some((other) => other !== container && container.contains(other) && range.intersectsNode(other))) return false;
+    const extracted = handler.extract(selection, container);
+    if (extracted === null) return false;
+    handler.capture(extracted);
+    selection.removeAllRanges();
+    return true;
+  }
+  return false;
 }
 
 interface FloatingButton {
@@ -31,6 +49,7 @@ interface SelectionCaptureProps {
   onCapture: (selection: { text: string; position: string }) => void;
   /** Each source supplies its own locator while sharing point geometry. */
   extractPoint?: (target: Element, container: Element) => ExtractedSelection | null;
+  extractText?: (selection: Selection, container: Element) => ExtractedSelection | null;
   children: ReactNode;
   className?: string;
   /** A click attaches a block; a touch tap previews it for confirmation. */
@@ -97,6 +116,7 @@ function usePointSelection({ containerRef, pointMode, onExitPointMode, setButton
     window.getSelection()?.removeAllRanges();
     if (!needsConfirmation) {
       onCapture(extracted);
+      onExitPointMode?.();
       setPoint(null);
       setHovered(null);
       setOutline(null);
@@ -108,7 +128,7 @@ function usePointSelection({ containerRef, pointMode, onExitPointMode, setButton
     setPoint({ element: target, ...extracted, offsetY });
     setHovered(null);
     setButton({ left: rect.right, top: event.clientY, text: extracted.text, position: extracted.position });
-  }, [containerRef, pointMode, onCapture, setButton, extractPoint]);
+  }, [containerRef, pointMode, onCapture, onExitPointMode, setButton, extractPoint]);
 
   const syncPoint = useCallback(() => {
     const container = containerRef.current;
@@ -180,9 +200,10 @@ function usePointSelection({ containerRef, pointMode, onExitPointMode, setButton
   return { point, setPoint, hovered, setHovered, outline, setOutline, syncPoint, choosePoint, pointerTypeRef };
 }
 
-export function SelectionCapture({ onCapture, extractPoint: extractPointProp, children, className, pointMode: pointModeProp, onExitPointMode, "data-bbx-scan": scan }: SelectionCaptureProps) {
+export function SelectionCapture({ onCapture, extractPoint: extractPointProp, extractText: extractTextProp, children, className, pointMode: pointModeProp, onExitPointMode, "data-bbx-scan": scan }: SelectionCaptureProps) {
   const pointMode = pointModeProp === true;
   const extractPoint = extractPointProp ?? extractPointSelection;
+  const extractText = extractTextProp ?? extractTextSelection;
   const containerRef = useRef<HTMLDivElement>(null);
   const [button, setButton] = useState<FloatingButton | null>(null);
   const { point, setPoint, setHovered, outline, setOutline, syncPoint, choosePoint, pointerTypeRef } = usePointSelection({ containerRef, pointMode, onExitPointMode, setButton, onCapture, extractPoint });
@@ -199,6 +220,13 @@ export function SelectionCapture({ onCapture, extractPoint: extractPointProp, ch
     captureRoots.add(container);
     return () => { captureRoots.delete(container); };
   }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container === null) return;
+    textCaptures.set(container, { extract: extractText, capture: onCapture });
+    return () => { textCaptures.delete(container); };
+  }, [extractText, onCapture]);
 
   useEffect(() => {
     let frame = 0;
@@ -226,6 +254,7 @@ export function SelectionCapture({ onCapture, extractPoint: extractPointProp, ch
       return;
     }
     onCapture({ text: button.text, position: button.position });
+    onExitPointMode?.();
     setButton(null);
     setPoint(null);
     setOutline(null);
@@ -233,7 +262,7 @@ export function SelectionCapture({ onCapture, extractPoint: extractPointProp, ch
     if (selection !== null) {
       selection.removeAllRanges();
     }
-  }, [button, onCapture, point, pointMode, extractPoint, setPoint, setOutline]);
+  }, [button, onCapture, onExitPointMode, point, pointMode, extractPoint, setPoint, setOutline]);
 
   return (
     <div

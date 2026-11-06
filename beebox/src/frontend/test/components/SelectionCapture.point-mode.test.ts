@@ -2,7 +2,7 @@ import { mount } from "../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { SelectionCapture } from "../../src/components/SelectionCapture.js";
+import { SelectionCapture, captureSelectedText } from "../../src/components/SelectionCapture.js";
 
 function pointerDown(target: Element, pointerType: string): void {
   target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType }));
@@ -10,9 +10,11 @@ function pointerDown(target: Element, pointerType: string): void {
 
 void test("desktop click attaches the previewed block without a second confirmation", async (t) => {
   const captured: string[] = [];
+  const exits: string[] = [];
   const view = await mount(h(SelectionCapture, {
     pointMode: true,
     onCapture: ({ text }: { text: string }) => { captured.push(text); },
+    onExitPointMode: () => { exits.push("exit"); },
     children: h("p", { className: "bbx-paragraph" }, "The quoted paragraph."),
   }));
   t.teardown(() => view.unmount());
@@ -20,14 +22,17 @@ void test("desktop click attaches the previewed block without a second confirmat
   if (paragraph === null) throw new Error("paragraph missing");
   await view.act(() => { pointerDown(paragraph, "mouse"); paragraph.click(); });
   t.check(captured, ["The quoted paragraph."]);
+  t.check(exits, ["exit"]);
   t.check(view.container.querySelector("#bbx-selection-add"), null);
 });
 
 void test("touch tap previews a block until the nearby plus is pressed", async (t) => {
   const captured: string[] = [];
+  const exits: string[] = [];
   const view = await mount(h(SelectionCapture, {
     pointMode: true,
     onCapture: ({ text }: { text: string }) => { captured.push(text); },
+    onExitPointMode: () => { exits.push("exit"); },
     children: h("p", { className: "bbx-paragraph" }, "The quoted paragraph."),
   }));
   t.teardown(() => view.unmount());
@@ -40,6 +45,7 @@ void test("touch tap previews a block until the nearby plus is pressed", async (
   t.check(add?.getAttribute("aria-label"), "Add selection to message");
   await view.act(() => { add?.click(); });
   t.check(captured, ["The quoted paragraph."]);
+  t.check(exits, ["exit"]);
 });
 
 // Embedded document capture owns its events before the transcript can consume them.
@@ -137,4 +143,27 @@ void test("Escape clears pending confirmation before exiting shared mode", async
   t.check(view.container.querySelector("#bbx-selection-add"), null);
   await view.act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true })); });
   t.check(exits, ["First"]);
+});
+
+// A native range only enters the draft through the top-bar action, with the inner card's source.
+void test("a desktop text range attaches its exact quote through the innermost capture", async (t) => {
+  const captured: Array<{ source: string; text: string; position: string }> = [];
+  const view = await mount(h(SelectionCapture, {
+    onCapture: (selection: { text: string; position: string }) => { captured.push({ source: "chat", ...selection }); },
+    children: h(SelectionCapture, {
+      onCapture: (selection: { text: string; position: string }) => { captured.push({ source: "card", ...selection }); },
+      children: h("p", { "data-card-section": "body" }, "Before exact words after"),
+    }),
+  }));
+  t.teardown(() => { window.getSelection()?.removeAllRanges(); view.unmount(); });
+  const text = view.container.querySelector("p")?.firstChild;
+  if (text === null || text === undefined) throw new Error("text missing");
+  const range = document.createRange();
+  range.setStart(text, 6);
+  range.setEnd(text, 19);
+  window.getSelection()?.addRange(range);
+  t.check(captured, []);
+  await view.act(() => { captureSelectedText(); });
+  t.check(captured, [{ source: "card", text: " exact words ", position: "body; paragraph 1" }]);
+  t.check(window.getSelection()?.toString(), "");
 });
