@@ -51,6 +51,8 @@ import { appRouter } from "../../src/webapp/trpc/routers.js";
 import { setAndGrantSecret } from "../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import type { EventBus } from "../../src/core/event-bus/core.js";
+import { addSubscription } from "../../src/core/push-subscriptions.js";
+import { saveQuestionLatch } from "../../src/core/question-alert.js";
 
 const BETA_MARKER = "BETA-SECRET-MARKER-9f3c1a";
 
@@ -363,4 +365,42 @@ void test("A card with a unique marker string, a landmark card (with a distincti
       createdAt: any(String).matches(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
     },
   ]);
+});
+
+// ## 11. Shared-host state files stay owner-only, whatever the umask
+//
+// The push store (`keys.auth` per endpoint, every box's opt-ins in one file)
+// and a box's question latch (pending card paths) are written 0600 even from
+// a process whose umask is 002, and a rewrite tightens a file an older build
+// left 0664 (the 2026-11-06 leak-scan finding on both).
+
+void test("shared-host state files are written 0600", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "bbx-probe-modes-"));
+  const priorStoreDir = process.env.BBX_PUSH_STORE_DIR;
+  const priorUmask = process.umask(0o002);
+  process.env.BBX_PUSH_STORE_DIR = dir;
+  t.teardown(async () => {
+    process.umask(priorUmask);
+    if (priorStoreDir === undefined) delete process.env.BBX_PUSH_STORE_DIR;
+    else process.env.BBX_PUSH_STORE_DIR = priorStoreDir;
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+  const modeOf = async (file: string) => ((await fs.stat(file)).mode & 0o777).toString(8);
+
+  const storeFile = join(dir, "push-subscriptions.json");
+  await fs.writeFile(storeFile, "{}\n", { mode: 0o664 });
+  await fs.chmod(storeFile, 0o664);
+  await addSubscription({
+    boxSlug: "alpha",
+    subscription: { endpoint: "https://push.example/1", keys: { p256dh: "p", auth: "a" } },
+    now: new Date("2026-11-06T00:00:00.000Z"),
+  });
+
+  const latchFile = join(dir, "box", ".beebox", "notified-questions.json");
+  await fs.mkdir(path.dirname(latchFile), { recursive: true });
+  await fs.writeFile(latchFile, "{}\n");
+  await fs.chmod(latchFile, 0o664);
+  await saveQuestionLatch(join(dir, "box"), { paths: ["_content/Q.question.card"], nudged: {} });
+
+  t.check({ store: await modeOf(storeFile), latch: await modeOf(latchFile) }, { store: "600", latch: "600" });
 });
