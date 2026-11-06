@@ -28,6 +28,7 @@ import { Image } from "../../../../components/ui/Image/view";
 import { Row } from "../../../../components/ui/Row";
 import { CaptionedFigure } from "../../../../components/FigureView/view";
 import { MaterialContext } from "../../../../components/ui/material";
+import { SelectField } from "../../../../components/ui/fields/field";
 
 /**
  * Stands in for an embedded figure, which paints its own light panel whatever
@@ -163,6 +164,8 @@ function SystemThemePanel() {
     <Heading level={2}>System theme</Heading>
     <Hint>Choose the toolbar and workspace surface for this box.</Hint>
     <SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled={false} idPrefix="bbx-studio-system-theme" onSelect={noop} />
+    <SelectField id="bbx-studio-select" label="Toolbar size" value="regular" onChange={noop}
+      options={[{ value: "compact", label: "Compact" }, { value: "regular", label: "Regular" }, { value: "large", label: "Large" }]} />
     <Text size="xs" tone="muted">This box has its own system theme.</Text>
     <Text size="xs" tone="danger">The last change could not be saved.</Text>
   </Stack></Card>;
