@@ -33,15 +33,16 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.317`, Codex `0.164.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.318`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.318` (SDK), `2.1.318` (Claude Code), `0.166.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.319` (SDK), `2.1.319` (Claude Code), `0.167.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.317` on 2026-11-05.
-  Next: `0.3.318` (settles 2026-11-05T21:55Z). While Codex is held,
+- **Current recommendation:** Agent SDK moved to `0.3.318` on 2026-11-07 (the
+  2026-11-06 run stopped on the weekly usage limit before committing). Next:
+  `0.3.319` (settles 2026-11-08T00:59Z). While Codex is held,
   `pnpm update-agent-sdk` would also move Codex, so set the SDK pins in
   `beebox/package.json` and `workstreams-app/package.json` by hand.
   **Codex `0.165.0` is held** until
@@ -77,7 +78,39 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.318 / Claude Code 2.1.318 — pending (published 2026-11-03T21:55Z)
+### Codex 0.167.0 — HELD with 0.165.0 / 0.166.0 (published 2026-11-06T01:40Z)
+
+Saved chats stay visible after switching model providers, and a chat that
+cannot resume offers its transcript; automatic compaction accounts for output
+retained from failed responses; network approval prompts close when their
+requests end. New: `codex agents --no-daemon`, backend switching in the
+session picker, image previews, opt-in system proxy settings. No change to
+memory. Settles 2026-11-08T01:40Z; held behind
+`issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
+- **Sources:** [rust-v0.167.0](https://github.com/openai/codex/releases/tag/rust-v0.167.0)
+
+### 0.3.319 / Claude Code 2.1.319 — pending (published 2026-11-06T00:59Z)
+
+- **HARNESS, security:** fixed a sandbox escape when creating a worktree, a
+  Bash permission bypass through a crafted environment prefix, Bash deny/ask
+  rules missing quoted words, and a `sed` command skipping the permission check
+  in accept-edits and auto mode. The laptop already runs 2.1.319. beebox's
+  runtime uses `bypassPermissions` with no sandbox, so none is act-now there.
+- **Changed:** self-paced `/loop` now ends when a turn finishes without
+  rescheduling (`CLAUDE_CODE_LOOP_KEEPALIVE=1` restores the old behavior);
+  PostToolUse hooks run on tool calls that finish after an interrupt;
+  `permissions.denyInsteadOfPrompting` is new; auto mode with feature flags off
+  no longer falls back to the built-in classifier.
+- **RUNTIME:** background Bash commands that finish almost instantly no longer
+  lose their output; Write no longer ends the turn as a refusal when it cannot
+  read the file; failed SDK runs on a full disk report their own error. SDK:
+  MCP task support (opt-in, `CLAUDE_AUTO_BACKGROUND_TASKS=1`);
+  `session_writes_lost` only on exit 0; `deleteSession()` rejects with
+  `ENOTEMPTY` when the folder remains.
+- **Action:** Settled path; takeable 2026-11-08T00:59Z.
+- **Sources:** [SDK 0.3.319](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03319), [Claude Code 2.1.319](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21319)
+
+### 0.3.318 / Claude Code 2.1.318 — APPLIED 2026-11-07 (published 2026-11-03T21:55Z)
 
 - **SDK, worth adopting:** result messages gain optional
   `credential_expires_at`, when the stored claude.ai sign-in ends. Each
@@ -98,7 +131,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   signs in again to the same account; version cleanup no longer deletes the
   binary of a process owned by another user; background subagents move shell
   commands to the background after 3 minutes.
-- **Action:** Settled path; takeable 2026-11-05T21:55Z.
+- **Action:** Applied 2026-11-07, SDK pins only, so Codex stayed held. Verified: typecheck (beebox and workstreams-app), steering probe (4/4) on bundled CLI 2.1.318, `pnpm -C beebox test` (14,383 pass, 3 fail, 2 skip; run with `BBX_TEST_IGNORE_LOAD=1` under memory-pressure level 2 at low load; failures: the known `issues/bugs/2026-10-30-codex-boundary-test-red-after-native-store.md` and the new `issues/bugs/2026-11-07-codex-turn-timeout-test-red.md`, neither SDK-related). An earlier full run stalled six unrelated files for ~655 s together; they pass on their own.
 - **Sources:** [SDK 0.3.318](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03318), [Claude Code 2.1.318](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21318)
 
 ### 0.3.317 / Claude Code 2.1.317 — APPLIED 2026-11-05 (published 2026-11-03T00:02Z)
