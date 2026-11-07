@@ -62,6 +62,23 @@ export interface PageRuns {
   unmeasured: number[];
   /** The `::selection` colors of each element the theme studio paints as selected. */
   selections: Selection[];
+  /** Each select in view: its shown value's ink, its field and its border. */
+  fields: Field[];
+}
+
+/**
+ * A select's colors as computed. Its shown value is not a text node, so the
+ * text audit does not see it; its edge is scored against the capture around it.
+ */
+export interface Field {
+  selector: string;
+  text: string;
+  fg: Rgba;
+  /** Null when the field paints nothing. */
+  field: Rgba | null;
+  /** Null without a visible border. */
+  border: Rgba | null;
+  rect: Rect;
 }
 
 /** Selected text's ink and background, as `::selection` resolves them where the text sits. */
@@ -97,6 +114,8 @@ export interface Selection {
  * - Text shadows stay in the capture: a halo is part of what is read against.
  * - Controls draw their own surfaces by design, and a region that sets its
  *   own `--bbx-ink` declares its own material, so neither gets a surface check.
+ * - Selects: the shown value's ink and the field's own colors, for a pass
+ *   that scores the field's edge against the pixels around it.
  * - Selection: the theme studio paints sample text with the
  *   `bbx-selection-preview` highlight; each such element's `::selection`
  *   colors are read, and the highlight is hidden for the capture.
@@ -353,11 +372,19 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     // A range in hidden text (a card's other face) renders nothing to read.
     if (fg !== null && bg !== null && rects.some((r) => r.w > 0 && r.h > 0)) selections.push({ selector: describe(el), text: range.toString().trim(), fg, bg, rects });
   }
+  const fields = [];
+  for (const el of document.querySelectorAll("select")) {
+    const r = el.getBoundingClientRect();
+    if (!el.checkVisibility() || el.disabled || r.width < 2 || r.top < 0 || r.bottom > vh) continue;
+    const cs = getComputedStyle(el);
+    const border = Number.parseFloat(cs.borderTopWidth) >= 1 ? parse(cs.borderTopColor) : null;
+    fields.push({ selector: describe(el), text: el.selectedOptions[0]?.text ?? "", fg: parse(cs.color) ?? [0, 0, 0, 0], field: parse(cs.backgroundColor), border, rect: { x: r.left, y: r.top, w: r.width, h: r.height } });
+  }
   const style = document.createElement("style");
   style.id = "bbx-contrast-hide-text";
   style.textContent = "*, *::before, *::after, ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; caret-color: transparent !important; } ::highlight(bbx-selection-preview) { color: transparent !important; background-color: transparent !important; }";
   document.head.append(style);
-  return { width: vw, height: vh, runs: [...byElement.values()], materials, lines: [...linesOf.values()], unmeasured: [...unmeasurable], selections };
+  return { width: vw, height: vh, runs: [...byElement.values()], materials, lines: [...linesOf.values()], unmeasured: [...unmeasurable], selections, fields };
 })())`;
 
 export interface OverlayMark {

@@ -26,7 +26,7 @@ export function DeviceSettings(props: DeviceSettingsProps) {
           id={props.includeControlIds === false ? undefined : "bbx-capture-camera-select"}
           value={props.devicePrefs.videoDeviceId ?? ""}
           onChange={(e) => props.onUpdate("videoDeviceId", e.target.value || null)}
-          className="bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 text-sm"
+          className="bg-gray-800 text-white border border-gray-400 rounded px-2 py-1 text-sm [color-scheme:dark]"
         >
           <option value="">Default</option>
           {props.videoDevices.map((d) => (
@@ -40,7 +40,7 @@ export function DeviceSettings(props: DeviceSettingsProps) {
           id={props.includeControlIds === false ? undefined : "bbx-capture-mic-select"}
           value={props.devicePrefs.audioDeviceId ?? ""}
           onChange={(e) => props.onUpdate("audioDeviceId", e.target.value || null)}
-          className="bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 text-sm"
+          className="bg-gray-800 text-white border border-gray-400 rounded px-2 py-1 text-sm [color-scheme:dark]"
         >
           <option value="">Default</option>
           {props.audioDevices.map((d) => (

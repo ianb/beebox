@@ -3,11 +3,14 @@ import { cn } from "../../../lib/cn";
 import { useMaterial } from "../material";
 
 // An input paints its own field and ink, like any control, so it reads the
-// same on every card material.
-const INPUT_BASE = "w-full border rounded px-3 py-2 bg-white text-warm-900 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed";
+// same on every card material. Its edge is a border at 6.4:1 on the field,
+// so it shows on light paper too; the light color scheme draws a select's
+// arrow and menu for the white field on a dark theme. The gold focus ring is
+// faint on white, so focus also darkens the border.
+const INPUT_BASE = "w-full border rounded px-3 py-2 bg-white text-warm-900 [color-scheme:light] focus:outline-none focus:ring-2 focus:ring-accent focus:border-warm-900 disabled:opacity-50 disabled:cursor-not-allowed";
 
 export function inputClasses(error: boolean, extra?: string): string {
-  const border = error ? "border-danger" : "border-warm-400";
+  const border = error ? "border-danger" : "border-warm-700";
   return cn(INPUT_BASE, border, extra);
 }
 

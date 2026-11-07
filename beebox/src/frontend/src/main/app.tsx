@@ -7,6 +7,7 @@ import { ToastViewport } from "../components/ui/ToastViewport";
 import "../index.css";
 import "../themes/materials.css";
 import "../themes/card-themes.css";
+import "../themes/figure-controls.css";
 import "../themes/quote-sheets.css";
 import "../themes/card-turn.css";
 import "../themes/question-beside.css";

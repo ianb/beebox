@@ -2,8 +2,8 @@
 // tolerates texture but not a band, faded groups, and material surfaces.
 
 import { test } from "tap";
-import { composite, contrastRatio, mergeContrastSteps, scoreMaterials, scoreRuns, scoreSelections, type ContrastFailure, type RawImage } from "./tour-lib/contrast.js";
-import type { Material, TextRun } from "./tour-lib/contrast-page.js";
+import { composite, contrastRatio, mergeContrastSteps, scoreMaterials, scoreFields, scoreRuns, scoreSelections, type ContrastFailure, type RawImage } from "./tour-lib/contrast.js";
+import type { Field, Material, TextRun } from "./tour-lib/contrast-page.js";
 
 type Rgb = [number, number, number];
 
@@ -103,6 +103,28 @@ void test("selected text below AA fails; a translucent background is scored over
   ]), [
     { kind: "selection", selector: "p", text: "Sample", fg: "#ffffff", bg: "#808080", ratio: 3.98, required: 4.5, rects: at },
   ]);
+  t.end();
+});
+
+// The field's edge passes when the field, or its border, stands 3:1 off the
+// surface around it, or the border off the field (WCAG 1.4.11).
+void test("a select's edge is scored against the pixels around it; its value against its field", (t) => {
+  const rect = { x: 20, y: 4, w: 60, h: 2 };
+  const field = (over: Partial<Field>): Field => ({ selector: "select", text: "Regular", fg: [46, 39, 32, 1], field: [255, 255, 255, 1], border: null, rect, ...over });
+  const paper = image({ left: [245, 239, 226] });
+  t.check(scoreFields(paper, { width: 100, fields: [
+    // The old warm-400 border: 1.55:1 on the white field.
+    field({ border: [217, 206, 189, 1] }),
+    // warm-700: 6.38:1 on the field.
+    field({ border: [107, 93, 75, 1] }),
+    // A pale value on its field.
+    field({ border: [107, 93, 75, 1], fg: [170, 170, 170, 1] }),
+  ] }).map((f) => f.kind === "field" && `${f.part} ${f.fg} ${f.bg} ${String(f.ratio)}`), [
+    "edge #d9cebd #f5efe2 1.55",
+    "text #aaaaaa #ffffff 2.32",
+  ]);
+  // A white field on a dark card needs no border.
+  t.check(scoreFields(image({ left: [35, 102, 106] }), { width: 100, fields: [field({ border: null })] }), []);
   t.end();
 });
 

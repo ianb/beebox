@@ -147,7 +147,7 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
   return (
     <div
       ref={mountRef}
-      className="w-full [&_canvas]:!max-w-full [&_canvas]:!h-auto [&_svg]:!max-w-full [&_svg]:!h-auto [&_input]:!max-w-full"
+      className="bbx-figure-mount w-full [&_canvas]:!max-w-full [&_canvas]:!h-auto [&_svg]:!max-w-full [&_svg]:!h-auto [&_input]:!max-w-full"
     />
   );
 }
