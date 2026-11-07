@@ -29,7 +29,12 @@ export interface CodexSdkSessionOptions {
   resumeSessionId?: string | undefined;
   additionalDirectories?: string[] | undefined;
   env?: Record<string, string | undefined> | undefined;
-  turnTimeoutMs?: number | undefined;
+  /**
+   * Wall-clock cap on one turn, from its start. `null` arms no timer: the
+   * caller's `signal` is then the only way to end a running turn. Required so
+   * each caller states its choice.
+   */
+  turnTimeoutMs: number | null;
   /** The box's `codexTelemetry` choice. Required so no caller forgets it. */
   analytics: boolean;
   /**
@@ -156,7 +161,9 @@ function failedTurnMessage(event: Extract<ThreadEvent, { type: "turn.failed" }>)
   return declaredPresent(failure.message) ?? "Codex SDK reported turn.failed with an empty error message";
 }
 
-export function codexSdkThreadOptions(options: CodexSdkSessionOptions): ThreadOptions {
+export function codexSdkThreadOptions(
+  options: Omit<CodexSdkSessionOptions, "turnTimeoutMs">,
+): ThreadOptions {
   return {
     workingDirectory: options.cwd,
     sandboxMode: options.readOnly === true ? "read-only" : CODEX_BOX_SANDBOX,
@@ -230,10 +237,13 @@ async function materializeInput(
   };
 }
 
+/** The part of the SDK's `Thread` a turn uses. */
+export type CodexSdkThreadLike = Pick<Thread, "id" | "runStreamed">;
+
 /** One native Codex thread. The SDK owns CLI spawning, protocol parsing, and resume. */
 class CodexSdkSession {
   private readonly thread: Thread;
-  private readonly turnTimeoutMs: number;
+  private readonly turnTimeoutMs: number | null;
 
   constructor(options: CodexSdkSessionOptions) {
     const env = definedEnv(options.env);
@@ -250,89 +260,103 @@ class CodexSdkSession {
       : codex.resumeThread(options.resumeSessionId, threadOptions));
     if (started === null) throw new CodexSdkNoThreadError(options.resumeSessionId !== undefined);
     this.thread = started;
-    this.turnTimeoutMs = options.turnTimeoutMs ?? 600_000;
+    this.turnTimeoutMs = options.turnTimeoutMs;
   }
 
   get id(): string | null {
     return this.thread.id;
   }
 
-  async run(options: CodexSdkTurnOptions): Promise<CodexSdkTurnResult> {
-    const materialized = await materializeInput(options.input);
-    const startedAt = performance.now();
-    const output: string[] = [];
-    const items: ThreadItem[] = [];
-    let usage: Usage | null = null;
-    let status: CodexSdkTurnResult["status"] = "failed";
-    let error: string | null = null;
-    let sessionId = this.thread.id ?? "";
-    const timeoutController = new AbortController();
-    const timeout = setTimeout(() => timeoutController.abort(), this.turnTimeoutMs);
-    timeout.unref();
-    const signal = options.signal === undefined
-      ? timeoutController.signal
-      : AbortSignal.any([options.signal, timeoutController.signal]);
-    try {
-      const streamed = await this.thread.runStreamed(materialized.input, {
-        ...(options.outputSchema === undefined ? {} : { outputSchema: options.outputSchema }),
-        signal,
-      });
-      for await (const event of streamed.events) {
-        options.onEvent?.(event);
-        if (event.type === "thread.started") {
-          sessionId = event.thread_id;
-          options.onSessionId?.(sessionId);
-        } else if (event.type === "item.completed") {
-          const item = declaredPresent(event.item);
-          if (item === null) {
-            console.warn("[codex-sdk-session] codex SDK emitted item.completed with no item; dropping the event");
-          } else {
-            items.push(item);
-            if (item.type === "agent_message") output.push(item.text);
-          }
-        } else if (event.type === "turn.completed") {
-          usage = declaredPresent(event.usage);
-          status = "completed";
-        } else if (event.type === "turn.failed") {
-          error = failedTurnMessage(event);
-        } else if (event.type === "error") {
-          error = event.message;
-        }
-      }
-      const aborted = status === "completed" ? null : abortOutcome({
-        timedOut: timeoutController.signal.aborted,
-        interrupted: options.signal?.aborted === true,
-      });
-      if (aborted !== null) {
-        ({ status, error } = aborted);
-      }
-    } catch (cause) {
-      ({ status, error } = settleStreamThrow({
-        cause,
-        timedOut: timeoutController.signal.aborted,
-        interrupted: options.signal?.aborted === true,
-        capturedError: error,
-        status,
-      }));
-    } finally {
-      clearTimeout(timeout);
-      await materialized.cleanup();
-    }
-    sessionId = this.thread.id ?? sessionId;
-    if (sessionId === "") throw new CodexSdkMissingThreadIdError();
-    if (status === "failed" && error === null) error = "Codex SDK stream ended without a completion event";
-    const resultText = output.toReversed().find((text) => text !== "") ?? "";
-    return {
-      sessionId,
-      output: output.join("\n"),
-      resultText,
-      durationMs: Math.round(performance.now() - startedAt),
-      status,
-      error,
-      usage,
-      items,
-    };
+  run(options: CodexSdkTurnOptions): Promise<CodexSdkTurnResult> {
+    return runCodexSdkTurn(this.thread, { ...options, turnTimeoutMs: this.turnTimeoutMs });
   }
+}
+
+/** A controller that aborts after `turnTimeoutMs`, or never when it is `null`. */
+function armTurnTimeout(turnTimeoutMs: number | null): { controller: AbortController; clear(): void } {
+  const controller = new AbortController();
+  if (turnTimeoutMs === null) return { controller, clear: () => {} };
+  const timeout = setTimeout(() => controller.abort(), turnTimeoutMs).unref();
+  return { controller, clear: () => clearTimeout(timeout) };
+}
+
+/** Run one turn on `thread`; with no timeout, only `options.signal` ends it early. */
+export async function runCodexSdkTurn(
+  thread: CodexSdkThreadLike,
+  options: CodexSdkTurnOptions & Pick<CodexSdkSessionOptions, "turnTimeoutMs">,
+): Promise<CodexSdkTurnResult> {
+  const materialized = await materializeInput(options.input);
+  const startedAt = performance.now();
+  const output: string[] = [];
+  const items: ThreadItem[] = [];
+  let usage: Usage | null = null;
+  let status: CodexSdkTurnResult["status"] = "failed";
+  let error: string | null = null;
+  let sessionId = thread.id ?? "";
+  const turnTimeout = armTurnTimeout(options.turnTimeoutMs);
+  const signal = options.signal === undefined
+    ? turnTimeout.controller.signal
+    : AbortSignal.any([options.signal, turnTimeout.controller.signal]);
+  try {
+    const streamed = await thread.runStreamed(materialized.input, {
+      ...(options.outputSchema === undefined ? {} : { outputSchema: options.outputSchema }),
+      signal,
+    });
+    for await (const event of streamed.events) {
+      options.onEvent?.(event);
+      if (event.type === "thread.started") {
+        sessionId = event.thread_id;
+        options.onSessionId?.(sessionId);
+      } else if (event.type === "item.completed") {
+        const item = declaredPresent(event.item);
+        if (item === null) {
+          console.warn("[codex-sdk-session] codex SDK emitted item.completed with no item; dropping the event");
+        } else {
+          items.push(item);
+          if (item.type === "agent_message") output.push(item.text);
+        }
+      } else if (event.type === "turn.completed") {
+        usage = declaredPresent(event.usage);
+        status = "completed";
+      } else if (event.type === "turn.failed") {
+        error = failedTurnMessage(event);
+      } else if (event.type === "error") {
+        error = event.message;
+      }
+    }
+    const aborted = status === "completed" ? null : abortOutcome({
+      timedOut: turnTimeout.controller.signal.aborted,
+      interrupted: options.signal?.aborted === true,
+    });
+    if (aborted !== null) {
+      ({ status, error } = aborted);
+    }
+  } catch (cause) {
+    ({ status, error } = settleStreamThrow({
+      cause,
+      timedOut: turnTimeout.controller.signal.aborted,
+      interrupted: options.signal?.aborted === true,
+      capturedError: error,
+      status,
+    }));
+  } finally {
+    turnTimeout.clear();
+    await materialized.cleanup();
+  }
+  sessionId = thread.id ?? sessionId;
+  if (sessionId === "") throw new CodexSdkMissingThreadIdError();
+  if (status === "failed" && error === null) error = "Codex SDK stream ended without a completion event";
+  const resultText = output.toReversed().find((text) => text !== "") ?? "";
+  return {
+    sessionId,
+    output: output.join("\n"),
+    resultText,
+    durationMs: Math.round(performance.now() - startedAt),
+    status,
+    error,
+    usage,
+    items,
+  };
 }
 
 export const createCodexSdkSession: CodexSdkSessionFactory = (options) => new CodexSdkSession(options);

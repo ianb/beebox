@@ -73,6 +73,9 @@ async function includedBoxContext(boxRoot: string, loadBoxContext: boolean): Pro
   });
 }
 
+/** An unattended run has nobody to press stop, so its turn ends after ten minutes. */
+const CODEX_AGENT_TURN_TIMEOUT_MS = 600_000;
+
 /** Codex cannot list tools, so only an empty list (a prompt-only pass) changes the run. */
 function isPromptOnly(tools: string[] | undefined): boolean {
   return tools !== undefined && tools.length === 0;
@@ -118,6 +121,7 @@ export async function runCodexAgent(
       analytics: (await loadCodexTelemetry(options.boxRoot)) === "on",
       loadProjectDocs: loadBoxContext,
       readOnly,
+      turnTimeoutMs: CODEX_AGENT_TURN_TIMEOUT_MS,
     });
     const changedPaths = new Set<string>();
     let toolCount = 0;
