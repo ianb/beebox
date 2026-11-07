@@ -34,6 +34,11 @@ const fixtures = {
     note: "Reference documents.",
     summary: "3 files uploaded (2 KB).",
   },
+  "question-handoff": {
+    kind: "question-handoff",
+    doc: "_bookkeeping/questions/Talks_Guide.question.card",
+    title: "Which talks go in the \"guide\" & <why>?",
+  },
 } satisfies { [K in DeliveredUserMessageKind]: Extract<DeliveredUserMessage, { kind: K }> };
 
 const captureWire = serializeDeliveredUserMessage(fixtures.capture);
@@ -88,6 +93,9 @@ Reference documents.
 
 3 files uploaded (2 KB).
 </upload>`,
+    "question-handoff": `<question-handoff doc="_bookkeeping/questions/Talks_Guide.question.card" title="Which talks go in the &quot;guide&quot; &amp; &lt;why&gt;?">
+Figure out the question at _bookkeeping/questions/Talks_Guide.question.card, which the person handed to you from the question card. Use the figure-it-out skill.
+</question-handoff>`,
   });
 
   t.check(parsedFixtures(), {
@@ -111,6 +119,13 @@ Reference documents.
         failed: 0,
         note: "Reference documents.",
         summary: "3 files uploaded (2 KB).",
+      },
+    ],
+    "question-handoff": [
+      {
+        kind: "question-handoff",
+        doc: "_bookkeeping/questions/Talks_Guide.question.card",
+        title: "Which talks go in the \"guide\" & <why>?",
       },
     ],
   });
