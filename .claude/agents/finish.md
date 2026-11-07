@@ -123,8 +123,8 @@ under step 3 (recheck only affected coverage); and, private leg only,
 empty (deletions count) plus the private PRIMARY checkout (`repo=` in the sheet)
 clean and on `main`. Any failure → BLOCKED, nothing merged.
 Then run `bin/land` bare — no `$(…)`; it prints the hash and log the report quotes.
-A refusal is BLOCKED, except: dirty main checkout → rerun once with `--allow-dirty-main`
-(it checks overlap); `main` moved → step 1, assess only the delta under step 3, retry.
+A refusal is BLOCKED, except: main has only unstaged or untracked changes → rerun once
+with `--allow-dirty-main` (it checks overlap); `main` moved → step 1, step 3 on the delta, then here.
 
 **Private leg**, right after the public merge (skip when the private branch has no
 commits beyond private main → `PRIVATE: no changes`):
