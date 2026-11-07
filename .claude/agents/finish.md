@@ -122,10 +122,9 @@ under step 3 (recheck only affected coverage); and, private leg only,
 `git -C private-issues status --porcelain`
 empty (deletions count) plus the private PRIMARY checkout (`repo=` in the sheet)
 clean and on `main`. Any failure → BLOCKED, nothing merged.
-Then run `bin/land` bare — no `$(…)`. It enforces the main-checkout preflight and
-refuses with a precise message; treat a refusal as the BLOCKED reason (refused
-because `main` moved → step 1, assess the delta under step 3, then return here;
-no automatic full rerun). It prints the hash and log the report quotes.
+Then run `bin/land` bare — no `$(…)`; it prints the hash and log the report quotes.
+A refusal is BLOCKED, except: dirty main checkout → rerun once with `--allow-dirty-main`
+(it checks overlap); `main` moved → step 1, assess only the delta under step 3, retry.
 
 **Private leg**, right after the public merge (skip when the private branch has no
 commits beyond private main → `PRIVATE: no changes`):
