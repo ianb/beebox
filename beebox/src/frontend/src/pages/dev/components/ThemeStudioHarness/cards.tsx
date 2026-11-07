@@ -29,6 +29,7 @@ import { Row } from "../../../../components/ui/Row";
 import { CaptionedFigure } from "../../../../components/FigureView/view";
 import { MaterialContext } from "../../../../components/ui/material";
 import { SelectField } from "../../../../components/ui/fields/field";
+import { StudioFigure } from "./figure";
 
 /**
  * Stands in for an embedded figure, which paints its own light panel whatever
@@ -137,6 +138,7 @@ function ReadingCard({ theme }: { theme: Theme }) {
       frontmatter: { status: "planning", hall: "Grange hall", volunteers: ["Dana", "Lee"], host: { ref: "people/Dana.person.card" } },
     }} />
     <div className="bbx-card-content">
+      <StudioFigure />
       <CaptionedFigure caption="Drag the slider to warm the seed tray: germination starts near 20 °C">
         <img src={WIDGET_ART} alt="" className="block w-full" />
       </CaptionedFigure>

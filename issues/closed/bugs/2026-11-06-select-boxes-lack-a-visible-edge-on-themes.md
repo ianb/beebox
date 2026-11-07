@@ -21,6 +21,17 @@ the surrounding pixels at 3:1. `--all` reports no select misses. Not
 checked: the native option menu itself, which screenshots do not capture,
 and browsers other than Chromium.
 
+The first fix missed the selects in embedded figures; the boxholder saw
+light-on-light text there. canvas-loop's `figure.css` colors a figure's
+controls by the operating system's dark mode, and the select has no colors
+of its own, so on a dark-mode Mac a light card showed the select's text,
+the control labels and the number readout at about 1.2 to 1.3:1, and on a
+light-mode Mac a dark card showed them dark on dark. Fixed in beebox's own
+`themes/figure-controls.css`: unpainted figure text takes the material's
+ink, and buttons and the select are the app's white field with the 6.4:1
+border, whatever the OS mode. The theme studio's reading card now mounts a
+real canvas-loop figure, so theme-check measures its controls.
+
 The boxholder's report: select boxes are not good in some themes; their
 text does not contrast and/or their border is missing, and any select box
 should look clearly like one.
