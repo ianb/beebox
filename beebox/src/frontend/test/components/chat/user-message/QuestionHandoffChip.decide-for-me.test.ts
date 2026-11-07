@@ -49,20 +49,22 @@ void test("The stored message renders as the title, not the instruction", async 
   });
 });
 
-// ## A message the box announces with no session id stays out of open chats
+// ## A message the box injects shows only in the chat it was delivered to
 //
 // Before, a null id matched every open chat, so the instruction appeared in
 // the chat beside the question card as the person's own message.
-void test("A message the box announces with no session id stays out of open chats", async (t) => {
+void test("A message the box injects shows only in the chat it was delivered to", async (t) => {
   t.check({
     newBackgroundChatInAnOpenChat: holdsInjectedMessage(null, "session-open"),
     newBackgroundChatInAnEmptyChat: holdsInjectedMessage(null, null),
     thisChat: holdsInjectedMessage("session-open", "session-open"),
     anotherChat: holdsInjectedMessage("session-other", "session-open"),
+    anotherChatInAnEmptyChat: holdsInjectedMessage("session-other", null),
   }, {
     newBackgroundChatInAnOpenChat: false,
     newBackgroundChatInAnEmptyChat: false,
     thisChat: true,
     anotherChat: false,
+    anotherChatInAnEmptyChat: false,
   });
 });

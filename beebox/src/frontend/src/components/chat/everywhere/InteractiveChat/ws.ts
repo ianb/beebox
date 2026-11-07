@@ -68,14 +68,15 @@ function forSession(dataSessionId: string | null, sessionId: string | null): boo
 }
 
 /**
- * Whether this view shows a message the box injected (`user: null`). One with
- * no session id started a new chat that no view is showing ("Decide for me"
- * starts one in the background). {@link forSession} matches a null id in every
- * open chat, so that message appeared in whatever chat was open, as the
- * person's own, and stayed there.
+ * Whether this view shows a message the box injected (`user: null`): only the
+ * chat it was delivered to. One with no session id started a new chat that no
+ * view is showing ("Decide for me" starts one in the background), and a chat
+ * with no id yet is not the chat any delivery named. {@link forSession}
+ * matches a null id on either side, so such a message appeared in whatever
+ * chat was open, as the person's own, and stayed there until a reload.
  */
 export function holdsInjectedMessage(eventSessionId: string | null, sessionId: string | null): boolean {
-  return eventSessionId !== null && forSession(eventSessionId, sessionId);
+  return eventSessionId !== null && sessionId === eventSessionId;
 }
 
 /**
