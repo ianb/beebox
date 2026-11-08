@@ -33,25 +33,18 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.318`, Codex `0.164.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.319`, Codex `0.164.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
 - **Latest reviewed upstream version:** `0.3.319` (SDK), `2.1.319` (Claude Code), `0.167.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Agent SDK moved to `0.3.318` on 2026-11-07 (the
-  2026-11-06 run stopped on the weekly usage limit before committing). Next:
-  `0.3.319` (settles 2026-11-08T00:59Z). While Codex is held,
-  `pnpm update-agent-sdk` would also move Codex, so set the SDK pins in
-  `beebox/package.json` and `workstreams-app/package.json` by hand.
-  **Codex `0.165.0` is held** until
-  `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md` is
-  decided (memory v2 on by default for fresh profiles). Production deploys recovered after
-  the per-box-user migration (2026-10-25). The suite has 2 SDK-unrelated
-  failures: `issues/bugs/2026-10-26-duplicate-bbx-nav-questions-id.md`
-  (`box-install.test.ts` passes again). Open:
-  `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
+- **Current recommendation:** Agent SDK moved to `0.3.319` on 2026-11-08;
+  nothing newer is published. The 2026-11-07 commit (`0.3.318`) could not land
+  because the main checkout held someone's uncommitted work; it lands with
+  this one. Codex stays held at `0.164.0` (0.165.0–0.167.0) on
+  `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
   issue moved without `doc-check --fix`
@@ -89,7 +82,7 @@ memory. Settles 2026-11-08T01:40Z; held behind
 `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
 - **Sources:** [rust-v0.167.0](https://github.com/openai/codex/releases/tag/rust-v0.167.0)
 
-### 0.3.319 / Claude Code 2.1.319 — pending (published 2026-11-06T00:59Z)
+### 0.3.319 / Claude Code 2.1.319 — APPLIED 2026-11-08 (published 2026-11-06T00:59Z)
 
 - **HARNESS, security:** fixed a sandbox escape when creating a worktree, a
   Bash permission bypass through a crafted environment prefix, Bash deny/ask
@@ -107,7 +100,7 @@ memory. Settles 2026-11-08T01:40Z; held behind
   MCP task support (opt-in, `CLAUDE_AUTO_BACKGROUND_TASKS=1`);
   `session_writes_lost` only on exit 0; `deleteSession()` rejects with
   `ENOTEMPTY` when the folder remains.
-- **Action:** Settled path; takeable 2026-11-08T00:59Z.
+- **Action:** Applied 2026-11-08, SDK pins only. Verified: typecheck (beebox and workstreams-app), steering probe (4/4) on bundled CLI 2.1.319, `pnpm -C beebox test` (14,383 pass, 3 fail, 2 skip; the two known Codex test failures, `issues/bugs/2026-10-30-codex-boundary-test-red-after-native-store.md` and `issues/bugs/2026-11-07-codex-turn-timeout-test-red.md`).
 - **Sources:** [SDK 0.3.319](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03319), [Claude Code 2.1.319](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21319)
 
 ### 0.3.318 / Claude Code 2.1.318 — APPLIED 2026-11-07 (published 2026-11-03T21:55Z)
