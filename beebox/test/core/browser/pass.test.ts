@@ -51,9 +51,11 @@ void test("a tampered pass, junk, and a pass from another box are refused", asyn
   const forged = `${Buffer.from(JSON.stringify({ exp: NOW + 10_000_000 })).toString("base64url")}.${sig ?? ""}`;
   const verify = (value: string): boolean =>
     verifyBrowserPass(root, { appOrigin: APP, headers: { ...SAME_ORIGIN, cookie: cookie(value) }, now: NOW });
+  // 64 characters that are 128 bytes: timingSafeEqual would throw on them.
+  const wide = `${payload ?? ""}.${"é".repeat(64)}`;
   t.check(
-    { forged: verify(forged), noDot: verify(payload ?? ""), junk: verify("x.y"), foreign: verify(foreign), good: verify(good) },
-    { forged: false, noDot: false, junk: false, foreign: false, good: true },
+    { forged: verify(forged), noDot: verify(payload ?? ""), junk: verify("x.y"), wide: verify(wide), foreign: verify(foreign), good: verify(good) },
+    { forged: false, noDot: false, junk: false, wide: false, foreign: false, good: true },
   );
 });
 

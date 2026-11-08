@@ -12,7 +12,7 @@ import { resolveAppUrl } from "../app-url.js";
 import { resolveBoxPaths } from "./box-path.js";
 import { captureCard, type CardShotIo } from "../card-shot/run.js";
 import { nextPositional } from "../exec-args.js";
-import { ensureBrowserPass } from "./pass-install.js";
+import { ensureBrowserPass, forgetBrowserPass } from "./pass-install.js";
 
 export interface AgentCommandContext extends CardShotIo {
   /** The running host's handle: the pass is installed once per host. */
@@ -48,11 +48,14 @@ export async function runAgentCommand(ctx: AgentCommandContext, args: readonly s
     result = refused("bbx browser: --card takes no other screenshot arguments; it captures the open card to _tmp/browser/ and prints the path");
   } else if (card === "ok") {
     if (!app.ok) return refused(`bbx browser: --card needs this box's pages: ${app.reason}`);
-    const shot = await captureCard(io, { base: app.base, slug: box.slug, outDir: path.join(box.boxRoot, "_tmp", "browser") });
+    const shot = await captureCard(io, { base: app.base, slug: box.slug, outDir: path.join(box.boxRoot, "_tmp", "browser"), now: new Date(io.now) });
     result = shot.ok ? { exitCode: 0, stdout: shot.output, stderr: "" } : refused(shot.message);
   } else {
     const resolved = resolveBoxPaths(args, { app, slug: box.slug });
     result = resolved.ok ? await io.send(resolved.args) : refused(resolved.message);
+    // A cookie command may have removed the pass: install it again next time.
+    const command = nextPositional(args, 0);
+    if (command !== null && args[command] === "cookies") forgetBrowserPass(box.host);
   }
   if (pass.status !== "failed") return result;
   return { ...result, stderr: `${result.stderr}note: could not refresh the box browser's pass, so this box's own pages may ask for a login: ${pass.reason}\n` };

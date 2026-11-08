@@ -32,6 +32,14 @@ export type PassInstall =
   | { status: "installed" | "current" }
   | { status: "no-app-url" | "failed"; reason: string };
 
+/**
+ * Forget a host's installed pass, so the next command installs one again. For
+ * after a command that may have removed it (`cookies clear`).
+ */
+export function forgetBrowserPass(host: object): void {
+  installedExp.delete(host);
+}
+
 /** The `cookies set` arguments for a pass at an app URL. Pure, for the test. */
 export function passCookieArgs(base: URL, pass: { value: string; exp: number }): string[] {
   return [

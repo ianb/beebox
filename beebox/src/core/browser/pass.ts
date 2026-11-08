@@ -65,8 +65,13 @@ function signature(key: string, payload: string): string {
   return crypto.createHmac("sha256", key).update(payload).digest("hex");
 }
 
+/** A SHA-256 HMAC in hex; anything else is refused before comparing. */
+const HEX_SIGNATURE = /^[\da-f]{64}$/;
+
 function signaturesEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
+  // Lengths in characters can match while bytes differ (`é` is two bytes), and
+  // `timingSafeEqual` throws on unequal byte lengths: check the format first.
+  if (!HEX_SIGNATURE.test(a) || a.length !== b.length) return false;
   return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 

@@ -380,6 +380,12 @@ export function registerSpaFallback(
       if (verifyBrowseKey(request.headers)) {
         return reply.type("text/html").send(await spaDocument(url));
       }
+      // The box's own browser, with its pass for the box this URL names
+      // (core/browser/pass.ts): the page's API calls then act as the agent.
+      const passBox = boxForUrl(request.url, opts.boxes);
+      if (passBox !== undefined && requestHasBrowserPass(passBox.boxRoot, request.headers)) {
+        return reply.type("text/html").send(await spaDocument(url));
+      }
       const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
       if (identity.source === "unavailable") {
         // Credential store corrupt/unreadable: fail closed and distinctly (503),

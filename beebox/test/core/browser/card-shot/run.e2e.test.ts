@@ -90,7 +90,7 @@ void test("A card in a scrolling panel is captured whole at both widths; a card 
     send: (args: readonly string[]) => sendBrowserCommand(host.paths.cliSocket, args),
     sendFull: (args: readonly string[]) => sendFullOutputCommand(host.paths.cliSocket, args),
   };
-  const box = { base: new URL(`${origin}/wt`), slug: "test1", outDir: path.join(boxRoot, "_tmp", "browser") };
+  const box = { base: new URL(`${origin}/wt`), slug: "test1", outDir: path.join(boxRoot, "_tmp", "browser"), now: new Date() };
 
   const results: Record<string, unknown> = {};
   for (const width of [390, 1280]) {

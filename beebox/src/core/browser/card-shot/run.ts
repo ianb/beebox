@@ -98,7 +98,7 @@ function wholeCard(m: FoundMeasure): boolean {
 }
 
 /** Capture the open card. `outDir` is where the image goes. */
-export async function captureCard(io: CardShotIo, box: { base: URL; slug: string; outDir: string }): Promise<CardShotResult> {
+export async function captureCard(io: CardShotIo, box: { base: URL; slug: string; outDir: string; now: Date }): Promise<CardShotResult> {
   const urlReply = await io.send(["get", "url"]);
   const pageUrl = urlReply.stdout.trim();
   const cardPath = cardPathFromUrl(pageUrl, box);
@@ -127,7 +127,9 @@ export async function captureCard(io: CardShotIo, box: { base: URL; slug: string
     }
     await fs.mkdir(box.outDir, { recursive: true });
     const stem = path.basename(cardPath).replace(/[^\w.-]/g, "_").slice(0, 60);
-    const imagePath = path.join(box.outDir, `card-${stem}-${String(viewport.width)}px.png`);
+    // A new name each time: a "before" capture must survive the "after" one.
+    const stamp = box.now.toISOString().replace(/[:-]/g, "").replace(/\.\d+Z$/, "").replace("T", "-");
+    const imagePath = path.join(box.outDir, `card-${stem}-${String(viewport.width)}px-${stamp}.png`);
     const failed = await command(io, ["screenshot", `#${panelId} > article`, imagePath]);
     if (failed !== null) return { ok: false, message: failed };
     if (!wholeCard(m)) await cropToPainted(imagePath, m);

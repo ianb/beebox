@@ -55,7 +55,7 @@ void test("a card taller than its panel: grow, measure, capture, restore", async
       return Promise.resolve(measures.shift() ?? { exitCode: 1, stdout: "", stderr: "no more" });
     },
   };
-  const result = await captureCard(io, { ...DEV, outDir });
+  const result = await captureCard(io, { ...DEV, outDir, now: new Date("2026-11-08T17:53:01.250Z") });
   t.check(sent, [
     ["get", "url"],
     ["--timeout", "15000", "wait", "--fn", any(String)],
@@ -63,10 +63,10 @@ void test("a card taller than its panel: grow, measure, capture, restore", async
     // 844 + (2027 - 671) missing + 40 margin.
     ["set", "viewport", "390", "2240"],
     ["eval"],
-    ["screenshot", `#${cardPanelId("a.card")} > article`, path.join(outDir, "card-a.card-390px.png")],
+    ["screenshot", `#${cardPanelId("a.card")} > article`, path.join(outDir, "card-a.card-390px-20261108-175301.png")],
     ["set", "viewport", "390", "844"],
   ]);
-  t.check(result.ok ? result.output : result.message, `✓ Screenshot saved to ${path.join(outDir, "card-a.card-390px.png")}\ncard: a.card at 390px wide — whole card (366×2027)\n`);
+  t.check(result.ok ? result.output : result.message, `✓ Screenshot saved to ${path.join(outDir, "card-a.card-390px-20261108-175301.png")}\ncard: a.card at 390px wide — whole card (366×2027)\n`);
 });
 
 void test("a page with no card says how to open one", async (t) => {
@@ -74,7 +74,7 @@ void test("a page with no card says how to open one", async (t) => {
     send: (): Promise<ExecReply> => Promise.resolve({ exitCode: 0, stdout: "https://example.com/\n", stderr: "" }),
     sendFull: (): Promise<ExecReply> => Promise.resolve({ exitCode: 1, stdout: "", stderr: "" }),
   };
-  t.check(await captureCard(io, { ...DEV, outDir: "/nonexistent" }), {
+  t.check(await captureCard(io, { ...DEV, outDir: "/nonexistent", now: new Date(0) }), {
     ok: false,
     message: "bbx browser: --card works on this box's card pages; the browser is on https://example.com/. Open one with bbx browser open /views/<card path>",
   });
