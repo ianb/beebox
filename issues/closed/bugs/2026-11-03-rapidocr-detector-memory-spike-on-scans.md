@@ -6,8 +6,10 @@ labels: [pdf, docling, ocr, memory]
 filed-by: agent
 discovered-by: agent
 discovered-in: "docling-memory workstream, 2026-11-03"
+resolution: wontfix
 ---
 
+**Closed (wontfix, 2026-11-08):** Boxholder decision 2026-11-08: the remaining memory gain from a lower OCR cap (about 1.6 to 1.34 GB on a 16-page scan) is not worth the table-recall loss; the detector fix in D20 stays. TableFormer cost is tracked in 2026-11-03-tableformer-memory-on-scanned-tables.
 
 After the Docling memory changes (D18 in
 `beebox/docs/plans/scanner-ingest-docling-decisions.md`), a digital PDF of any
