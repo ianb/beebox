@@ -4,9 +4,9 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import type { ExecReply } from "../../../src/core/browser/command-socket.js";
-import { ensureBrowserPass, passCookieArgs } from "../../../src/core/browser/pass-install.js";
-import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { ExecReply } from "../../../../src/core/browser/command-socket.js";
+import { ensureBrowserPass, passCookieArgs } from "../../../../src/core/browser/agent-command/pass-install.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
 
 const NOW = 1_800_000_000_000;
 const MINUTE = 60_000;

@@ -135,9 +135,15 @@ function checkArgs(args: readonly string[], allowed: ReadonlySet<string>): ExecA
 
 /** The subcommand: the first argument that is not a flag or a flag's value; null when there is none. */
 export function execSubcommand(args: readonly string[]): string | null {
-  for (let i = 0; i < args.length; i++) {
+  const index = nextPositional(args, 0);
+  return index === null ? null : (args[index] ?? null);
+}
+
+/** The index of the first argument at or after `from` that is not a flag or a flag's value. */
+export function nextPositional(args: readonly string[], from: number): number | null {
+  for (let i = from; i < args.length; i++) {
     const token = args[i] ?? "";
-    if (!token.startsWith("-")) return token;
+    if (!token.startsWith("-")) return i;
     if (VALUE_FLAGS.has(token)) i++;
   }
   return null;

@@ -13,7 +13,7 @@ import "@ianbicking/tap-check/tap";
 import { any } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import net from "node:net";
-import { makeTestServer } from "../../../helpers/test-route-server.js";
+import { makeTestServer, TEST_SLUG } from "../../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 import { signSession } from "../../../../src/webapp/auth.js";
 import { PAGE_READ_ARGS } from "../../../../src/core/browser/page-read.js";
@@ -193,5 +193,22 @@ void test("A pass the browser refuses is a note after the command's own output",
   t.check(await exec(["get", "url"], agent), {
     statusCode: 200,
     body: { exitCode: 1, stdout: "", stderr: "✗ failed\nnote: could not refresh the box browser's pass, so this box's own pages may ask for a login: the browser refused the box's pass: ✗ failed\n" },
+  });
+});
+
+// docs/plans/agent-self-view.md, Track C: a path starting with / is a page of this box.
+void test("A box path is opened as this box's page; --card refuses other screenshot arguments", async (t) => {
+  const prior = process.env.BBX_DEV_APP_URL;
+  process.env.BBX_DEV_APP_URL = "http://localhost:3210/wt";
+  t.teardown(() => {
+    if (prior === undefined) delete process.env.BBX_DEV_APP_URL;
+    else process.env.BBX_DEV_APP_URL = prior;
+  });
+  const { socket, exec, agent } = await setup(t);
+  await exec(["open", "/views/_content/a.card"], agent);
+  t.check(socket.requests.slice(1), [{ args: ["open", `http://localhost:3210/wt/${TEST_SLUG}/views/_content/a.card`] }]);
+  t.check(await exec(["screenshot", "--card", "--full"], agent), {
+    statusCode: 200,
+    body: { exitCode: 1, stdout: "", stderr: "bbx browser: --card takes no other screenshot arguments; it captures the open card to _tmp/browser/ and prints the path\n" },
   });
 });

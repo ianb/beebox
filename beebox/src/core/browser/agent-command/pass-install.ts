@@ -9,9 +9,9 @@
  * itself. The engine logs no command arguments, so the value reaches no box log.
  */
 
-import type { ExecReply } from "./command-socket.js";
-import { appBasePath, resolveAppUrl } from "./app-url.js";
-import { BROWSER_PASS_COOKIE, BROWSER_PASS_TTL_MS, signBrowserPass } from "./pass.js";
+import type { ExecReply } from "../command-socket.js";
+import { appBasePath, resolveAppUrl } from "../app-url.js";
+import { BROWSER_PASS_COOKIE, BROWSER_PASS_TTL_MS, signBrowserPass } from "../pass.js";
 
 /** Refresh when less than this is left, so no command meets an expired pass. */
 export const REFRESH_BELOW_MS = 30 * 60 * 1000;
