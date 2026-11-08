@@ -79,7 +79,13 @@ void test("The stop signal ends an uncapped turn", async (t) => {
 });
 
 // ## A capped turn still times out
+//
+// The cap's timer is unref'd so it never holds a process open, and the turn
+// waits on nothing else; a ref'd interval keeps the test process alive until
+// the timer fires.
 void test("A capped turn still times out", async (t) => {
+  const keepAlive = setInterval(() => {}, 1000);
+  t.teardown(() => clearInterval(keepAlive));
   const { result, delays } = await armedTimers(t, () => runCodexSdkTurn(runningThread(), { input: "work", turnTimeoutMs: 20 }));
   t.check(delays, [20]);
   t.check(result, {
