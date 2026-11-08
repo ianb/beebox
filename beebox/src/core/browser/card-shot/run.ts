@@ -13,6 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { boxRelativePath } from "../../../shared/box-path.js";
+import { errnoCode } from "../../../shared/error-guards.js";
 import { controlAddress } from "../../../shared/ui-scan/control-address.js";
 import type { ExecReply } from "../command-socket.js";
 import { appBasePath } from "../app-url.js";
@@ -97,15 +98,19 @@ function timeStamp(now: Date): string {
   return now.toISOString().replace(/[:-]/g, "").replace(/\.\d+Z$/, "").replace("T", "-");
 }
 
-/** A path no earlier capture used: a "before" image must survive the "after" one. */
+/**
+ * A path no other capture uses: a "before" image must survive the "after" one.
+ * The name is reserved by creating the file exclusively, so two overlapping
+ * captures cannot both pick it; the screenshot then overwrites the empty file.
+ */
 async function freshImagePath(dir: string, base: string): Promise<string> {
   for (let n = 1; ; n++) {
     const candidate = path.join(dir, n === 1 ? `${base}.png` : `${base}-${String(n)}.png`);
     try {
-      await fs.access(candidate);
-    } catch (_e) {
-      // Absent: this name is free.
+      await fs.writeFile(candidate, "", { flag: "wx" });
       return candidate;
+    } catch (e) {
+      if (errnoCode(e) !== "EEXIST") throw e;
     }
   }
 }
