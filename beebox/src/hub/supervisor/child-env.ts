@@ -64,6 +64,7 @@ const CHILD_ENV_PLAIN: readonly string[] = [
   // --- Box-legitimate config/secrets a `bbx serve` child reads directly ---
   "PUBLIC_URL", // src/lib/public-url.ts, script-env.ts fallback.
   "BBX_PUBLIC_URL", // src/lib/public-url.ts -- preferred over PUBLIC_URL when set.
+  "BBX_DEV_APP_URL", // src/core/browser/app-url.ts -- the dev router's URL for this worktree, where the box browser opens the box's pages.
   "BBX_OWNER_EMAIL", // src/webapp/auth.ts getOwnerEmail() -- fleet owner identity, not a secret.
   "BBX_AUTH_FILE", // src/webapp/local-users.ts + auth-capabilities.ts -- shared credential/capability store path, not a credential.
   "BBX_GOOGLE_TOKENS_FILE", // src/google/auth.ts, requirements.ts -- a path, not a credential.

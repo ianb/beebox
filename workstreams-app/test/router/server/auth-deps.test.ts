@@ -20,6 +20,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import type { ResolvedBoxEntry } from "../../../src/router/box-entry.js";
 import type { RouterHeaders } from "../../../src/router/server/auth.js";
+import type { RouterAuthDepsConfig } from "../../../src/router/server/auth-deps.js";
 
 const OWNER = "owner@example.com";
 process.env.BBX_OWNER_EMAIL = OWNER;
@@ -40,15 +41,14 @@ const { signSession } = await import("../../../../beebox/src/webapp/auth.js");
 const { signMobileSession, MOBILE_SESSION_TTL_MS } = await import(
   "../../../../beebox/src/core/mobile/session.js"
 );
+const { signBrowserPass, BROWSER_PASS_COOKIE } = await import("../../../../beebox/src/core/browser/pass.js");
 
 /** A fake worktree/box map: worktree name → its box entries (or null = unknown). */
-function fakeConfig(map: Record<string, ResolvedBoxEntry[] | null>): {
-  resolveWorktree(name: string): Promise<{ boxes: string[] } | null>;
-  resolveBoxEntries(entries: string[]): Promise<ResolvedBoxEntry[]>;
-} {
+function fakeConfig(map: Record<string, ResolvedBoxEntry[] | null>): RouterAuthDepsConfig {
   return {
     resolveWorktree: (name) => Promise.resolve(map[name] === null || map[name] === undefined ? null : { boxes: [name] }),
     resolveBoxEntries: (entries) => Promise.resolve(map[entries[0]!] ?? []),
+    appOrigin: "http://localhost:3210",
   };
 }
 
@@ -218,5 +218,32 @@ test("hasBrowseKey: the configured key in the cookie → true; a wrong value →
   } finally {
     if (prior === undefined) delete process.env.BBX_BROWSE_API_KEY;
     else process.env.BBX_BROWSE_API_KEY = prior;
+  }
+});
+
+test("box browser pass: admits its own box and the worktree's assets, from same-origin only", async () => {
+  const own = await fs.mkdtemp(path.join(os.tmpdir(), "router-pass-own-"));
+  const other = await fs.mkdtemp(path.join(os.tmpdir(), "router-pass-other-"));
+  try {
+    const pass = signBrowserPass(own, { ttlMs: 60_000, now: Date.now() }).value;
+    const cookie = `${BROWSER_PASS_COOKIE}=${pass}`;
+    const sameOrigin: RouterHeaders = { cookie, "sec-fetch-site": "same-origin" };
+    const sameSite: RouterHeaders = { cookie, "sec-fetch-site": "same-site" };
+    const deps = createRouterAuthDeps(fakeConfig({ main: [entry("own", own), entry("other", other)] }));
+    assert.deepEqual(
+      {
+        ownBox: await deps.resolveMobileForBox(sameOrigin, own),
+        otherBox: await deps.resolveMobileForBox(sameOrigin, other),
+        sameSite: await deps.resolveMobileForBox(sameSite, own),
+        assets: await deps.resolveWorktreeAsset(sameOrigin, "main"),
+        // The handshake carries no fetch metadata; the Origin must be the router's.
+        wsOwnOrigin: await deps.resolveMobileForBox({ cookie, upgrade: "websocket", origin: "http://localhost:3210" }, own),
+        wsOtherOrigin: await deps.resolveMobileForBox({ cookie, upgrade: "websocket", origin: "http://localhost:9999" }, own),
+      },
+      { ownBox: true, otherBox: false, sameSite: false, assets: true, wsOwnOrigin: true, wsOtherOrigin: false },
+    );
+  } finally {
+    await fs.rm(own, { recursive: true, force: true });
+    await fs.rm(other, { recursive: true, force: true });
   }
 });
