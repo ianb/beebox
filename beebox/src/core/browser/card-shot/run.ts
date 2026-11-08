@@ -93,6 +93,23 @@ async function cropToPainted(imagePath: string, m: FoundMeasure): Promise<void> 
   await fs.writeFile(imagePath, await image.extract({ left, top, width, height }).png().toBuffer());
 }
 
+function timeStamp(now: Date): string {
+  return now.toISOString().replace(/[:-]/g, "").replace(/\.\d+Z$/, "").replace("T", "-");
+}
+
+/** A path no earlier capture used: a "before" image must survive the "after" one. */
+async function freshImagePath(dir: string, base: string): Promise<string> {
+  for (let n = 1; ; n++) {
+    const candidate = path.join(dir, n === 1 ? `${base}.png` : `${base}-${String(n)}.png`);
+    try {
+      await fs.access(candidate);
+    } catch (_e) {
+      // Absent: this name is free.
+      return candidate;
+    }
+  }
+}
+
 function wholeCard(m: FoundMeasure): boolean {
   return m.painted.x <= 0.5 && m.painted.y <= 0.5 && m.painted.width >= m.card.width - 0.5 && m.painted.height >= m.card.height - 0.5;
 }
@@ -106,9 +123,13 @@ export async function captureCard(io: CardShotIo, box: { base: URL; slug: string
     return { ok: false, message: `bbx browser: --card works on this box's card pages; the browser is on ${pageUrl || "no page"}. Open one with bbx browser open /views/<card path>` };
   }
   const panelId = cardPanelId(cardPath);
-  // A card opened a moment ago may still be loading its view. Waiting is best
-  // effort: on a timeout the measure below still runs and reports `busy`.
-  await io.send(["--timeout", String(READY_TIMEOUT_MS), "wait", "--fn", readyExpression(panelId)]);
+  // A card opened a moment ago may still be loading its view. A timeout is
+  // expected and not an error: the measure below still runs and reports `busy`
+  // (or no card). Any other failure of the wait is reported.
+  const waited = await io.send(["wait", "--fn", readyExpression(panelId), "--timeout", String(READY_TIMEOUT_MS)]);
+  if (waited.exitCode !== 0 && !/timed out/i.test(waited.stderr)) {
+    return { ok: false, message: `bbx browser: could not wait for the card to load: ${waited.stderr.trim() || `exit code ${String(waited.exitCode)}`}` };
+  }
   const first = await measure(io, panelId);
   if (!first.ok) return first;
   const { viewport } = first.m;
@@ -127,9 +148,7 @@ export async function captureCard(io: CardShotIo, box: { base: URL; slug: string
     }
     await fs.mkdir(box.outDir, { recursive: true });
     const stem = path.basename(cardPath).replace(/[^\w.-]/g, "_").slice(0, 60);
-    // A new name each time: a "before" capture must survive the "after" one.
-    const stamp = box.now.toISOString().replace(/[:-]/g, "").replace(/\.\d+Z$/, "").replace("T", "-");
-    const imagePath = path.join(box.outDir, `card-${stem}-${String(viewport.width)}px-${stamp}.png`);
+    const imagePath = await freshImagePath(box.outDir, `card-${stem}-${String(viewport.width)}px-${timeStamp(box.now)}`);
     const failed = await command(io, ["screenshot", `#${panelId} > article`, imagePath]);
     if (failed !== null) return { ok: false, message: failed };
     if (!wholeCard(m)) await cropToPainted(imagePath, m);

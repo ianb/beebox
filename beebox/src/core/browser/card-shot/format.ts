@@ -37,7 +37,7 @@ export function formatCardShot(shot: CardShot): string {
     `card: ${shot.cardPath} at ${px(m.viewport.width)} wide — ${fitLine(m)}`,
     ...m.overflow.map((o) => `overflow: <${o.tag}> "${o.text}" is ${px(o.excess)} wider than its box`),
     ...(m.errorText === null ? [] : [`view error: ${m.errorText}`]),
-    ...(m.busy ? ["still loading: part of the card was still loading after 15 s; this image may not show the finished view"] : []),
+    ...(m.busy ? ["still loading: part of the card was still loading when it was captured; this image may not show the finished view"] : []),
   ];
   return `${lines.join("\n")}\n`;
 }

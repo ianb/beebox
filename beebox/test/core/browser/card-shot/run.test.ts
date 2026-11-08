@@ -58,7 +58,7 @@ void test("a card taller than its panel: grow, measure, capture, restore", async
   const result = await captureCard(io, { ...DEV, outDir, now: new Date("2026-11-08T17:53:01.250Z") });
   t.check(sent, [
     ["get", "url"],
-    ["--timeout", "15000", "wait", "--fn", any(String)],
+    ["wait", "--fn", any(String), "--timeout", "15000"],
     ["eval"],
     // 844 + (2027 - 671) missing + 40 margin.
     ["set", "viewport", "390", "2240"],

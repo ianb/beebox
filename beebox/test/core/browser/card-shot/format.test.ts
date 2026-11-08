@@ -34,7 +34,7 @@ void test("a card taller than the capture and wider than its panel says what is 
     "✓ Screenshot saved to /i.png",
     "card: _content/a.card at 390px wide — partial: the image shows 7900px of the card's 12000px height, from 0px down; it shows 366px of the card's 500px width",
     "view error: View Error TypeError: x is undefined",
-    "still loading: part of the card was still loading after 15 s; this image may not show the finished view",
+    "still loading: part of the card was still loading when it was captured; this image may not show the finished view",
     "",
   ].join("\n"));
   t.end();
