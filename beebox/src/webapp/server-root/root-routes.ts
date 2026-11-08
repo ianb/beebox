@@ -5,6 +5,7 @@
  * file under its line budget.
  */
 
+import { requestHasBrowserPass } from "../browser-pass-request.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { IncomingHttpHeaders } from "node:http";
 import * as path from "node:path";
@@ -298,6 +299,10 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
       if (verifyBrowseKey(request.headers)) {
         return { boxes: await describeBoxes(boxes) };
       }
+      // A box's own browser sees that box only (core/browser/pass.ts), ahead of
+      // any session it also holds, as at the hub.
+      const passBoxes = boxes.filter((box) => requestHasBrowserPass(box.boxRoot, request.headers));
+      if (passBoxes.length > 0) return { boxes: await describeBoxes(passBoxes) };
       const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
       if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       // Through the shared resolver (FIX 1): a corrupt store answers 503, and a

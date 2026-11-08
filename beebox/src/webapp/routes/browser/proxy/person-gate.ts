@@ -3,7 +3,7 @@
  * (docs/plans/shared-browser.md, Track C, `ALL /browser`).
  *
  * The page is for the person. The box auth hook in front of it admits the
- * agent bearer and the browse key too, and lets any path with an asset
+ * agent bearer, the box browser pass and the browse key too, and lets any path with an asset
  * extension through unauthenticated, so this gate runs its own check on every
  * request under `/browser`, including the dashboard's scripts and the
  * WebSocket upgrade. An agent that reached the page could read the profile's
@@ -30,6 +30,7 @@ import { getOwnerEmail, isHubMode } from "../../../auth.js";
 import { loginRedirect } from "../../../base-prefix.js";
 import { canAccessBox } from "../../../box-access.js";
 import { resolveBoxIdentity } from "../../../box-identity.js";
+import { requestHasBrowserPass } from "../../../browser-pass-request.js";
 
 export const AGENTS_REFUSED = "the browser page is for people; agents use bbx browser";
 
@@ -89,7 +90,9 @@ function isNavigation(request: FastifyRequest): boolean {
 /** Decide whether a request under `/browser` is from a person allowed into this box. */
 export async function checkPerson(ctx: PersonGateContext, request: FastifyRequest): Promise<GateRefusal | null> {
   const { boxRoot } = ctx;
-  if (verifyAgentBearer(boxRoot, request.headers.authorization) || verifyBrowseKey(request.headers)) {
+  // The box browser's own pass is the agent too: the box browser must not
+  // open its own dashboard (core/browser/pass.ts).
+  if (verifyAgentBearer(boxRoot, request.headers.authorization) || verifyBrowseKey(request.headers) || requestHasBrowserPass(boxRoot, request.headers)) {
     return { status: 403, error: AGENTS_REFUSED };
   }
   if (!(await isSameOrigin(ctx, request))) {

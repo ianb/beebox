@@ -20,9 +20,10 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { verifyAgentBearer } from "../../../core/agent/token.js";
-import { sendBrowserCommand, sendFullOutputCommand, BrowserCommandSocketError } from "../../../core/browser/command-socket.js";
+import { sendBrowserCommand, sendFullOutputCommand, BrowserCommandSocketError, type ExecReply } from "../../../core/browser/command-socket.js";
+import { ensureBrowserPass } from "../../../core/browser/pass-install.js";
 import { checkExecArgs, EXEC_BODY } from "../../../core/browser/exec-args.js";
-import { BrowserHostFailedError, BrowserNotInstalledError, ensureBrowserHost } from "../../../core/browser/host/start.js";
+import { BrowserHostFailedError, BrowserNotInstalledError, ensureBrowserHost, type BrowserHostHandle } from "../../../core/browser/host/start.js";
 import { BrowserPathTooLongError } from "../../../core/browser/paths.js";
 import { PAGE_READ_ARGS, parsePageRead } from "../../../core/browser/page-read.js";
 import { ASK_BODY, askBrowserQuestion } from "../../../core/browser/question.js";
@@ -39,6 +40,21 @@ function hostFailure(e: unknown): { status: number; error: string } | null {
   if (e instanceof BrowserNotInstalledError || e instanceof BrowserPathTooLongError) return { status: 503, error: e.message };
   if (e instanceof BrowserHostFailedError || e instanceof BrowserCommandSocketError) return { status: 502, error: e.message };
   return null;
+}
+
+/**
+ * Run one agent command on the box browser, with the box's pass refreshed
+ * first so the agent can open its own box's pages
+ * (docs/plans/agent-self-view.md, Track B). A pass the browser refused is a
+ * note on stderr, not a failure: other sites still work.
+ */
+async function runWithPass(on: { host: BrowserHostHandle; boxRoot: string }, args: readonly string[]): Promise<ExecReply> {
+  const { host, boxRoot } = on;
+  const send = (cmd: readonly string[]): Promise<ExecReply> => sendBrowserCommand(host.paths.cliSocket, cmd);
+  const pass = await ensureBrowserPass({ host, boxRoot, send, env: process.env, now: Date.now() });
+  const result = await send(args);
+  if (pass.status !== "failed") return result;
+  return { ...result, stderr: `${result.stderr}note: could not refresh the box browser's pass, so this box's own pages may ask for a login: ${pass.reason}\n` };
 }
 
 export function registerBrowserExecRoute(ctx: BrowserExecRouteContext): void {
@@ -59,7 +75,7 @@ export function registerBrowserExecRoute(ctx: BrowserExecRouteContext): void {
     if (!check.ok) return reply.status(400).send({ error: check.message });
     try {
       const host = await ensureHost({ boxRoot });
-      return reply.status(200).send(await sendBrowserCommand(host.paths.cliSocket, body.data.args));
+      return reply.status(200).send(await runWithPass({ host, boxRoot }, body.data.args));
     } catch (e) {
       const failure = hostFailure(e);
       if (failure === null) throw e;

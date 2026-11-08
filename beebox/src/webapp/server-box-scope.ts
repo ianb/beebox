@@ -35,6 +35,7 @@ import {
 import { resolveBoxIdentity } from "./box-identity.js";
 import { verifyAgentBearer } from "../core/agent/token.js";
 import { verifyBrowseKey } from "../core/browse-key.js";
+import { requestHasBrowserPass } from "./browser-pass-request.js";
 import { resolveMobileRequestAuth } from "../core/mobile/request-auth.js";
 import { renewMobileSessionCookie } from "./mobile-cookie.js";
 import { canAccessBox } from "./box-access.js";
@@ -94,6 +95,11 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     // with the per-box loopback token from their env — box-scoped auth, same
     // trust as the box user they run as. See core/agent-token.ts.
     if (verifyAgentBearer(box.boxRoot, request.headers["authorization"])) {
+      return;
+    }
+    // The box's own browser, holding its short-lived pass (core/browser/pass.ts):
+    // the agent's authority, from the box's own pages or a typed navigation.
+    if (requestHasBrowserPass(box.boxRoot, request.headers)) {
       return;
     }
     // An agent driving a real browser, when the operator has opted in by
@@ -174,6 +180,24 @@ function actorFor(options: {
   return "none";
 }
 
+/**
+ * The machine credentials on a request, for the tRPC context. The box browser
+ * pass is the agent: it counts as the bearer, and it shuts out the mobile
+ * credential so nothing else on the same request lends it a person
+ * (core/browser/pass.ts; the identity resolver already returned nobody for it).
+ * A mobile auth is kept whole, not as a boolean: a paired device records WHO
+ * paired it (`createdBy`), and that person is who the device acts as.
+ */
+async function machineCredentials(boxRoot: string, headers: CreateFastifyContextOptions["req"]["headers"]): Promise<{
+  passOk: boolean;
+  bearerOk: boolean;
+  mobileAuth: Awaited<ReturnType<typeof resolveMobileRequestAuth>>;
+}> {
+  const passOk = requestHasBrowserPass(boxRoot, headers);
+  const bearerOk = passOk || verifyAgentBearer(boxRoot, headers["authorization"]);
+  return { passOk, bearerOk, mobileAuth: passOk ? null : await resolveMobileRequestAuth(boxRoot, headers) };
+}
+
 interface BoxScopeDeps {
   box: BoxSpec;
   eventBus: EventBus;
@@ -245,10 +269,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         request: req,
         openAccess: instance.openAccess,
       });
-      const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
-      // Keep the resolved auth, not just a boolean: a paired device records WHO
-      // paired it (`createdBy`), and that person is who the device acts as.
-      const mobileAuth = await resolveMobileRequestAuth(box.boxRoot, req.headers);
+      const { passOk, bearerOk, mobileAuth } = await machineCredentials(box.boxRoot, req.headers);
       const mobileOk = mobileAuth !== null;
       // The browse key must be recognized HERE too, not only in the preHandler:
       // a request it let through would otherwise reach a protected procedure
@@ -258,7 +279,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       // resolver above already turned it into a `user`; this flag is what keeps
       // the OTHER box — the one that never opted in — reaching `authed`, and
       // what carries it past a credential-store outage below.
-      const browseOk = verifyBrowseKey(req.headers);
+      const browseOk = !passOk && verifyBrowseKey(req.headers);
       // Fail closed on a corrupt/unreadable credential store (Track D): never
       // build an authed context off an auth store we couldn't verify against.
       // For HTTP the box preHandler already answered 503 before this ran; this
