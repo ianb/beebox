@@ -46,6 +46,29 @@ const GIT_NETWORK: readonly string[] = [
   "SSH_AUTH_SOCK", "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy",
 ];
 
+/**
+ * The `safe.directory` entries of a parent's `GIT_CONFIG_COUNT`/`_KEY_n`/
+ * `_VALUE_n` list, renumbered. The deploy runs `bbx host sync` as root with the
+ * box's directory trusted this way (deploy/deploy.sh); root keeps no standing
+ * `safe.directory`. Other entries are dropped: a config value can carry a
+ * credential (`http.extraheader`).
+ */
+function safeDirectoryConfig(): Record<string, string> {
+  const count = Number(process.env.GIT_CONFIG_COUNT ?? "0");
+  const values: string[] = [];
+  for (let i = 0; Number.isInteger(count) && i < count; i++) {
+    const value = process.env[`GIT_CONFIG_VALUE_${String(i)}`];
+    if (process.env[`GIT_CONFIG_KEY_${String(i)}`]?.toLowerCase() === "safe.directory" && value !== undefined) values.push(value);
+  }
+  if (values.length === 0) return {};
+  const env: Record<string, string> = { GIT_CONFIG_COUNT: String(values.length) };
+  for (const [i, value] of values.entries()) {
+    env[`GIT_CONFIG_KEY_${String(i)}`] = "safe.directory";
+    env[`GIT_CONFIG_VALUE_${String(i)}`] = value;
+  }
+  return env;
+}
+
 export interface GitEnvironmentOptions {
   /** Add the transport variables a push or fetch needs. */
   network?: boolean;
@@ -57,7 +80,7 @@ export interface GitEnvironmentOptions {
 
 /** The environment for a Git child process. */
 export function gitEnvironment(options?: GitEnvironmentOptions): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...agentAllowlistEnv(), ...boxWorkEnvironment() };
+  const env: NodeJS.ProcessEnv = { ...agentAllowlistEnv(), ...boxWorkEnvironment(), ...safeDirectoryConfig() };
   const names = [
     ...GIT_PASS_THROUGH,
     ...(options?.repository === "isolated" ? [] : GIT_REPOSITORY),

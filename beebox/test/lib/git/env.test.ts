@@ -66,6 +66,38 @@ void test("What a Git child keeps", async (t) => {
   });
 });
 
+// ## Only `safe.directory` passes through Git's config-entry variables
+//
+// The deploy trusts a box's directory for one root-run command with
+// `GIT_CONFIG_COUNT`/`_KEY_n`/`_VALUE_n` (deploy/deploy.sh). Those entries pass
+// through, renumbered; any other entry is dropped, since a config value such
+// as `http.extraheader` can carry a credential.
+void test("Only safe.directory passes through Git's config-entry variables", async (t) => {
+  const entries = {
+    GIT_CONFIG_COUNT: "2",
+    GIT_CONFIG_KEY_0: "http.extraheader",
+    GIT_CONFIG_VALUE_0: "Authorization: Bearer ambient",
+    GIT_CONFIG_KEY_1: "safe.directory",
+    GIT_CONFIG_VALUE_1: "/var/lib/beebox/test1/box",
+  };
+  const saved = Object.fromEntries(Object.keys(entries).map((name) => [name, process.env[name]]));
+  t.teardown(() => {
+    for (const [name, value] of Object.entries(saved)) {
+      if (value === undefined) Reflect.deleteProperty(process.env, name);
+      else process.env[name] = value;
+    }
+  });
+  Object.assign(process.env, entries);
+  const env = gitEnvironment();
+  t.check(Object.fromEntries(Object.keys(entries).map((name) => [name, env[name]])), {
+    GIT_CONFIG_COUNT: "1",
+    GIT_CONFIG_KEY_0: "safe.directory",
+    GIT_CONFIG_VALUE_0: "/var/lib/beebox/test1/box",
+    GIT_CONFIG_KEY_1: undefined,
+    GIT_CONFIG_VALUE_1: undefined,
+  });
+});
+
 function git(box: TmpBox, ...args: string[]): string {
   return execFileSync("git", args, { cwd: box.root }).toString().trim();
 }

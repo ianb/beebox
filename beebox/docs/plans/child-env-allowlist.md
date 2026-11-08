@@ -171,7 +171,7 @@ and an agent cannot set the server's env.
 Guards: an ESLint `no-restricted-imports` entry for `simple-git` outside
 `src/lib/git/env.ts` (type-only imports allowed). Raw `"git"` spawns
 (`execFile`, `spawn`, and their sync forms) get a source scan in
-`test/lib/git-env.test.ts` instead of a lint selector. The scan fails on a
+`test/lib/git/env.test.ts` instead of a lint selector. The scan fails on a
 `"git"` spawn in `src/` whose call does not contain `gitEnvironment(`.
 
 **Vocabulary lock-ins.** `gitEnvironment`, `boxGit`, `src/lib/git/env.ts`.
@@ -283,6 +283,23 @@ Five findings, all accepted except part of the last:
    was judged not worth its test code. The raw-`git` source scan and the ESLint
    fence cover the Git sites.
 
+## Diff review (codex gpt-6-astra, 2026-11-08)
+
+1. The deploy runs `bbx host sync` as root with `safe.directory` set through
+   `GIT_CONFIG_COUNT`/`_KEY_0`/`_VALUE_0` (`deploy/deploy.sh:1277`); the Git
+   environment dropped it, so admission would refuse every box. Fixed: the
+   `safe.directory` entries pass through, renumbered; other config entries
+   stay out, since a value can carry a credential (`http.extraheader`).
+2. `git lfs smudge` in the history route can download an object, so it takes
+   `network: true`. No annex command in `src/` talks to a remote.
+3. The `pkgMgr` and `engine` matrix columns call the builders, not the spawn
+   sites in `upgrade.ts`, `migrate.ts`, `migration-run.ts`, `engine-link-spec`,
+   and the prompt logger. Accepted as a residual risk: those sites are operator
+   or debug paths, and each is a one-line `env:` argument in this diff.
+
+Found in passing and filed:
+`issues/bugs/2026-11-08-browser-host-and-maintenance-command-spread-the-callers-env.md`.
+
 ## Could this be simpler?
 
 The simplest version is the commit-only `commitEnvironment` fix plus the four
@@ -367,7 +384,7 @@ Skip: purely infrastructural. No agent-facing concept changes.
 - `every-consumer.test.ts` pins every new column, and its table check ties
   `credential-env.ts` to observed cells. A spread reintroduced at any of these
   sites turns its column to `I`.
-- `test/lib/git-env.test.ts`: the pass-through decision and the network
+- `test/lib/git/env.test.ts`: the pass-through decision and the network
   extras as a pure function; the path-commit index case through a real hook.
 - The ESLint import restriction holds the `boxGit` boundary.
 
@@ -386,7 +403,7 @@ Skip: purely infrastructural. No agent-facing concept changes.
 ## Rollout shape
 
 Done when these pass: `every-consumer.test.ts` with the new columns,
-`test/lib/git-env.test.ts`, change-selected tests for every converted file,
+`test/lib/git/env.test.ts`, change-selected tests for every converted file,
 `pnpm typecheck`, `pnpm lint`, and `pnpm layout-check`. A real commit goes
 through the box's installed pre-commit hook in a `makeTmpBox` box. No data
 migration and no knowledge audit.

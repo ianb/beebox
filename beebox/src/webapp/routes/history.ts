@@ -66,7 +66,7 @@ export async function registerHistoryRoutes(
       if (buffer.length < 200 && buffer.toString("utf-8").startsWith(LFS_PREFIX)) {
         buffer = execFileSync(
           "git", ["lfs", "smudge"],
-          { cwd: boxRoot, input: buffer, maxBuffer: 50 * 1024 * 1024, env: gitEnvironment() }
+          { cwd: boxRoot, input: buffer, maxBuffer: 50 * 1024 * 1024, env: gitEnvironment({ network: true }) }
         );
       }
 
