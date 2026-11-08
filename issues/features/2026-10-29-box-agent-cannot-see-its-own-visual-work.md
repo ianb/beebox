@@ -1,6 +1,6 @@
 ---
 title: "The box agent has no reliable way to see a view or card it built; the screenshot only shows the user's viewport"
-workstream: unattached
+workstream: agent-self-view
 area: beebox
 labels: [agent, views, screenshots, verification]
 filed-by: agent

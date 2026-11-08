@@ -1,6 +1,6 @@
 ---
 title: "Box agents use `bbx chat screenshot` to check their own visual work; narrow it to \"what the person sees right now\" and route self-checks elsewhere"
-workstream: unattached
+workstream: agent-self-view
 area: beebox
 labels: [agent, screenshots, guidance, verification]
 filed-by: agent
