@@ -18,7 +18,7 @@ into a child:
 - `src/cli/commands/maintenance/controller.ts:147` runs the maintained command
   with `{ ...process.env, BBX_MAINTENANCE_PERMITS }`. It runs from an operator
   shell or the deploy, like the `bbx upgrade`/`bbx migrate` children fixed in
-  `docs/plans/child-env-allowlist.md`.
+  `docs/implemented-plans/child-env-allowlist.md`.
 
 The server seals its own named secrets out of `process.env` at startup
 (`src/lib/server-secrets.ts`), so what leaks is provider API keys and any

@@ -6,7 +6,10 @@ labels: [security, env]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-agent-ad8cceee119235ca5 — cross-model security review (codex gpt-6-astra) of the view metadata env fix
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-08):** Resolved by 4450a9311 and 0163b6e58: Git, CLI, and engine children get allowlisted environments (plan child-env-allowlist).
 
 `src/lib/git/core/commit-env.ts` `commitEnvironment` starts from `process.env`
 and removes only Git override keys. `commitPaths`
@@ -25,7 +28,7 @@ environment. Those that fire hooks need the same audit.
 This comes from reading the source; no exploit was run. The fix was left out of
 the view metadata work for two reasons: the hook environment must keep what the
 validation hook needs (`src/core/install-validation-hooks.ts`), and
-[box schemas load inside the server](2026-10-30-box-schemas-load-inside-the-server-process.md)
+[box schemas load inside the server](../../bugs/2026-10-30-box-schemas-load-inside-the-server-process.md)
 gives box code the same values until that is decided.
 
 Direction: build the commit environment from an allowlist, keep the Git variables

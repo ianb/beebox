@@ -1,11 +1,11 @@
 ---
 title: "Allowlisted environments for Git, CLI, and engine children"
-status: active
+status: implemented
 workstream: child-env-allowlist
 issues:
-  - ../../../issues/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md
-  - ../../../issues/bugs/2026-10-30-upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env.md
-  - ../../../issues/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md
+  - ../../../issues/closed/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md
+  - ../../../issues/closed/bugs/2026-10-30-upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env.md
+  - ../../../issues/closed/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md
 ---
 # Allowlisted environments for Git, CLI, and engine children
 

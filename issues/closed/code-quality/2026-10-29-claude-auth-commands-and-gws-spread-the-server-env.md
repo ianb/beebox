@@ -1,12 +1,15 @@
 ---
 title: "The `claude auth` commands and the gws CLI start with the server's whole environment"
-workstream: unattached
+workstream: child-env-allowlist
 area: beebox
 labels: [security, env]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-agent-a80db54b588f8698c — characterizing credential visibility for the credential table
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-08):** Resolved by 4450a9311 and 0163b6e58: Git, CLI, and engine children get allowlisted environments (plan child-env-allowlist).
 
 Four spawn sites copy all of `process.env` into a CLI instead of building an
 allowlisted environment, so the server's credentials and every unlisted

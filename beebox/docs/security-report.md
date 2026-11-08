@@ -394,14 +394,14 @@ values, and the `bbx view check` render child gets the agent profile
 (`lib/git/env.ts`: the agent list plus Git's identity and repository
 variables), so a hook, `core.fsmonitor` command, or filter an agent writes into
 `.git/` no longer runs with the server's environment
-([server-commits-run-box-hooks-with-the-server-env](../../issues/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md));
+([server-commits-run-box-hooks-with-the-server-env](../../issues/closed/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md));
 an ESLint fence on `simpleGit` and a source scan of raw `git` spawns
 (`test/lib/git/env.test.ts`) keep it so. The `claude auth` and Codex CLI
 commands and gws take the agent list
-([claude-auth-commands-and-gws-spread-the-server-env](../../issues/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md)),
+([claude-auth-commands-and-gws-spread-the-server-env](../../issues/closed/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md)),
 and `bbx upgrade`/`bbx migrate` children take a package-manager list or the
 tooling list
-([upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env](../../issues/bugs/2026-10-30-upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env.md)).
+([upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env](../../issues/closed/bugs/2026-10-30-upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env.md)).
 **Open gap, high:** box card schemas load inside the server process
 ([box-schemas-load-inside-the-server-process](../../issues/bugs/2026-10-30-box-schemas-load-inside-the-server-process.md)).
 The standard trick runner is a deliberate exception by declaration: it resolves
