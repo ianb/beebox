@@ -315,7 +315,22 @@ helpers (\`readFile\`, \`writeFile\`, \`adapterFetch\`, …) — those run only 
 effects/handlers in the real app. Calling an async helper directly in the render
 body is a bug, and the check throws to tell you so (\`fileUrl\` is synchronous and
 fine to call in render). It does not print the rendered HTML, so look at the view
-in the app to confirm it shows the right thing.`;
+in the box browser to confirm it shows the right thing:
+
+\`\`\`
+bbx browser set viewport 390 844
+bbx browser open /views/<path of a card this view renders>
+bbx browser screenshot --card
+bbx browser set viewport 1280 900
+bbx browser screenshot --card
+\`\`\`
+
+A path that starts with \`/\` is a page of this box. \`screenshot --card\`
+captures the whole card, not the window, and says \`whole card\` or
+\`partial\` (and what is missing). It prints an \`overflow:\` line for each
+part that is wider than its box: at phone width that usually means a row that
+needs to wrap. To test the view's controls, run \`bbx browser snapshot -i\`,
+then \`click\` or \`fill\` a ref, and capture again.`;
 
 const stylingAndErrorsSection = `## Styling
 

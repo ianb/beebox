@@ -6134,20 +6134,51 @@ tests:
   - id: chat-screenshot-when
     prompt: >
       A user in chat says a custom view they have open "looks broken — the
-      layout is all wrong." You can read the view's source, but you'd like to
-      see what they actually see rendered on their screen right now. Is there
-      a way to do that, and what should you expect to get back?
+      layout is all wrong" on their phone. You can read the view's source,
+      but you want to see it rendered at phone width. How do you look at it?
     expected_level: knows_directly
     chat_mode: true
     watch_for: >
-      Names `bbx chat screenshot` as the way to get a real screenshot of what
-      the user currently sees (the right reach for a visual/layout question,
-      as opposed to whats-changed for content or just reading source), and
-      knows it asks the user's browser — so it may come back declined or
-      unavailable rather than always returning an image.
+      Opens the card in the box browser with a box path (`bbx browser open
+      /views/<card path>`), sets a phone viewport, and captures it with
+      `bbx browser screenshot --card`, reading the fit and overflow lines.
+      Does NOT reach for `bbx chat screenshot`, which shows only what is on
+      the user's screen and is not a way to look at a card or view.
+    correct_contains: ["bbx browser", "--card"]
+    correct_contains_any: ["/views/", "set viewport", "390"]
+    tags: [chat, screenshot, browser, views, see-as-the-user]
+
+  - id: chat-screenshot-person-screen
+    prompt: >
+      A user in chat writes: "what's that red badge up here? I don't know
+      what it means." The open-card snapshot says which card is open but
+      nothing about a badge. How do you find out what they are seeing?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Uses `bbx chat screenshot` to see the user's own screen, since the
+      user refers to what they are looking at and the snapshot does not say
+      enough, and knows it may come back declined or unavailable.
     correct_contains: ["bbx chat screenshot"]
     correct_contains_any: ["declin", "unavailable", "no-client", "no client", "may not"]
     tags: [chat, screenshot, see-as-the-user]
+
+  - id: box-page-interaction
+    prompt: >
+      You just added tabs ("Week" and "Month") and a "Mark done" button to
+      the habit-tracker view. bbx view check passes. How do you check that
+      switching to the Month tab works, the way a person would use it?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Opens a card the view renders in the box browser (`bbx browser open
+      /views/<card path>`), takes `bbx browser snapshot -i` to find the tab's
+      ref, clicks it with `bbx browser click @eN`, then checks the result
+      (`screenshot --card`, `get text`, or a new snapshot). Knows that
+      pressing "Mark done" changes the card's data, as an edit would.
+    correct_contains: ["bbx browser", "click"]
+    correct_contains_any: ["snapshot -i", "snapshot"]
+    tags: [browser, views, interaction]
 
   - id: views-write-conflict-safe
     prompt: >
