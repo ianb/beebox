@@ -35,6 +35,10 @@ Commands you will use:
   bbx browser tab list            list the open tabs
   bbx browser ask "<question>"    ask the person to do a step in the browser
 
+This box's own pages (as the agent, not the person):
+  bbx browser open /views/<card path>   a path starting with / is a page of this box
+  bbx browser screenshot --card         capture the open card whole; says if it fit
+
 Take a new snapshot after the page changes, or after the person has used the
 browser. Not available: batch, connect, and flags that pick another profile,
 session or browser (--profile, --session, --cdp, ...); the box browser's

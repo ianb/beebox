@@ -52,7 +52,7 @@ export class ViewErrorBoundary extends React.Component<Props, State> {
   render(): React.ReactNode {
     if (this.state.error) {
       return (
-        <div className="border border-danger-light bg-danger-50 rounded-lg p-4">
+        <div role="alert" className="border border-danger-light bg-danger-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-danger-dark font-medium">View Error</h3>
             <button

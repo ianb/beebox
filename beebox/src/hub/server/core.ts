@@ -44,7 +44,7 @@ import { canAccessBox } from "../../webapp/box-access.js";
 import { HASHED_ASSET_STATIC_OPTIONS } from "../../webapp/static-cache.js";
 import { loginRedirect, injectBasePrefix } from "../../webapp/base-prefix.js";
 import { hasScanAuth } from "./scan-gate.js";
-import { agentAuthed, mobileAuthed as boxMobileAuthed, mobileBearerAuthed } from "./box-credentials.js";
+import { agentAuthed, browserPassAuthed, mobileAuthed as boxMobileAuthed, mobileBearerAuthed, passBoxLookup, stripForeignPasses, takeBrowserPass } from "./box-credentials.js";
 import { verifyBrowseKey } from "../../core/browse-key.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -162,8 +162,9 @@ async function respondHubBoxes(opts: {
   boxes: BoxSpec[];
   request: FastifyRequest;
   reply: FastifyReply;
+  secretFor: (slug: string) => string;
 }): Promise<{ boxes: BoxListing[]; authRequired?: boolean } | FastifyReply> {
-  const { boxes, request, reply } = opts;
+  const { boxes, request, reply, secretFor } = opts;
   if (request.server.openAccess) return { boxes: await describeBoxes(boxes) };
   // The local-dev browse key is machine-level rather than per-box (one dev
   // router fronts every box), so it lists them all. This gate is separate from
@@ -173,6 +174,11 @@ async function respondHubBoxes(opts: {
   if (verifyBrowseKey(request.headers)) {
     return { boxes: await describeBoxes(boxes) };
   }
+  // A box's own browser sees that box only, ahead of any session it also holds
+  // (the pass acts as the agent; core/browser/pass.ts). Hub-verified, like the
+  // mobile listing below, so a made-up cookie lists nothing.
+  const passBoxes = boxes.filter((box) => browserPassAuthed({ boxRoot: box.boxRoot, hubSecret: secretFor(box.slug) }, request.headers));
+  if (passBoxes.length > 0) return { boxes: await describeBoxes(passBoxes) };
   const mobileBoxes = await listMobileAuthorizedBoxes({ boxes, headers: request.headers });
   if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
   const identity = resolveRequestIdentity(request, { openAccess: request.server.openAccess });
@@ -290,6 +296,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   const { Fastify, fastifyCookie, fastifyStatic, httpProxy } = await loadHubPackages();
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
+  const passBoxFor = passBoxLookup(boxRootBySlug, secretFor);
 
   // Hub-owned routes consult this per-instance flag; no CLI path sets it.
   app.decorate("openAccess", openAccess);
@@ -332,7 +339,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // can't match to a box). Own it here with the SAME shape and the SAME
   // filter (`listAccessibleBoxes`, which shares `canAccessBox` with the box
   // picker) so the two never drift into different box lists.
-  app.get("/api/boxes", (request, reply) => respondHubBoxes({ boxes, request, reply }));
+  app.get("/api/boxes", (request, reply) => respondHubBoxes({ boxes, request, reply, secretFor }));
 
   // Shared frontend static, served at the ROOT for the whole fleet. The built
   // SPA references its bundles by ABSOLUTE path (`/assets/...`, `/icons/...`,
@@ -426,6 +433,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     // first: an unauthenticated request redirects to login regardless of slug,
     // so it neither wakes a box nor reveals whether the slug is configured.
     stripHubHeaders(request.raw.headers);
+    stripForeignPasses(request.raw.headers, passBoxFor(boxSlug || null));
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, browseAuthed: verifyBrowseKey(request.headers), hubSecret: secretFor(boxSlug || null), openAccess });
     if (!decision.authorized) {
       return loginRedirect(request, reply);
@@ -481,7 +489,11 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const slug = parseSlug(reqPath);
     const mobileAuthed = slug !== null
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), hubSecret: secretFor(slug), headers: request.headers });
-    const perBoxAuthed = mobileAuthed
+    // The box's own browser pass passes like the agent bearer, and a request
+    // carrying it gets no identity headers even when a session cookie rides
+    // along: the box browser acts as the agent (core/browser/pass.ts).
+    // The pass check goes first so it always runs: it also strips foreign passes.
+    const perBoxAuthed = takeBrowserPass(request.raw.headers, passBoxFor(slug)) || mobileAuthed
       || (slug !== null && await hasBearerAuth(request, { slug, reqPath, boxRoot: boxRootBySlug.get(slug) }));
 
     stripHubHeaders(request.raw.headers);
@@ -543,15 +555,17 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const slug = parseSlug(reqPath);
     const mobileAuthed = slug !== null
       && await hasMobileAuth({ boxRoot: boxRootBySlug.get(slug), hubSecret: secretFor(slug), headers: req.headers });
+    // First, so it always runs: it also strips foreign passes.
+    const machineAuthed = takeBrowserPass(req.headers, passBoxFor(slug)) || mobileAuthed;
 
     stripHubHeaders(req.headers);
     const decision = decideHubAuth({ cookieHeader: req.headers.cookie, browseAuthed: slug !== null && verifyBrowseKey(req.headers), hubSecret: secretFor(slug), openAccess });
-    if (!mobileAuthed && !decision.authorized) {
+    if (!machineAuthed && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
-    if (!mobileAuthed) {
+    if (!machineAuthed) {
       Object.assign(req.headers, decision.headersToSet);
     }
 

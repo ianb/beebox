@@ -1,12 +1,15 @@
 ---
 title: "The box agent has no reliable way to see a view or card it built; the screenshot only shows the user's viewport"
-workstream: unattached
+workstream: agent-self-view
 area: beebox
 labels: [agent, views, screenshots, verification]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder report, 2026-10-29"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-08):** Resolved on branch worktree-agent-self-view (plan implemented-plans/agent-self-view.md). Diverges from the proposal: no server-side render command; the box browser gets a one-hour box pass so bbx browser opens the box's own pages, and screenshot --card captures a card whole.
 
 When the box agent builds or changes a visualization (a view, a widget, a
 card's rendering), it sometimes checks its work with `bbx chat screenshot`.

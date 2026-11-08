@@ -128,6 +128,10 @@ export interface RouterCoreConfig {
   devNoHub: boolean;
   /** This router process's pid, stamped into pidfile records. */
   routerPid: number;
+  /** The origin a browser on this machine opens the router at
+   *  (`http://localhost:<port>`). A worktree's box browser opens its box pages
+   *  under it (`BBX_DEV_APP_URL`, beebox/src/core/browser/app-url.ts). */
+  appOrigin: string;
   log: (msg: string) => void;
   /** Called after every state change (touch / stop / child-exit) so router.ts
    *  can refresh the terminal tab title. Replaces the old let-rebinding hack. */
