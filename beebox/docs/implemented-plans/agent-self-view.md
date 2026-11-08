@@ -253,6 +253,8 @@ none
 
 ## NOT in scope
 
+The residual risks below (an open WebSocket outliving its pass, bounded by Chrome's 30-minute idle exit; the pass in the dashboard's activity feed; other `localhost` ports in dev) were accepted by the boxholder on 2026-11-08 and are in `docs/security-report.md` §8, item 17.
+
 - **Acting as the owner in the box browser.** Considered (browse-key precedent); not now: it widens the agent's authority. Owner pages stay uncheckable by the agent.
 - **Element-scoped capture in the person's tab** (issue direction 2). Not now: the box browser covers self-checks, and the person's screen keeps its one purpose.
 - **Removing `bbx chat screenshot`.** Not now: Open design questions.
