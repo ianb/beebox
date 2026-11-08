@@ -15,6 +15,7 @@ const WHOLE: FoundMeasure = {
   dpr: 1,
   overflow: [{ tag: "div", text: "Scale: 0.5x 1x 1.5x 2x 3x", excess: 25 }],
   errorText: null,
+  busy: false,
 };
 
 void test("a whole card, with an overflow finding", (t) => {
@@ -28,11 +29,12 @@ void test("a whole card, with an overflow finding", (t) => {
 });
 
 void test("a card taller than the capture and wider than its panel says what is missing", (t) => {
-  const partial: FoundMeasure = { ...WHOLE, card: { width: 500, height: 12000 }, painted: { x: 0, y: 0, width: 366, height: 7900 }, overflow: [], errorText: "View Error TypeError: x is undefined" };
+  const partial: FoundMeasure = { ...WHOLE, card: { width: 500, height: 12000 }, painted: { x: 0, y: 0, width: 366, height: 7900 }, overflow: [], errorText: "View Error TypeError: x is undefined", busy: true };
   t.check(formatCardShot({ cardPath: "_content/a.card", imagePath: "/i.png", measure: partial }), [
     "✓ Screenshot saved to /i.png",
     "card: _content/a.card at 390px wide — partial: the image shows 7900px of the card's 12000px height, from 0px down; it shows 366px of the card's 500px width",
     "view error: View Error TypeError: x is undefined",
+    "still loading: part of the card was still loading after 15 s; this image may not show the finished view",
     "",
   ].join("\n"));
   t.end();

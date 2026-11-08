@@ -347,7 +347,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-gray-500">
+      <div aria-busy="true" className="flex items-center justify-center p-8 text-gray-500">
         Loading view...
       </div>
     );

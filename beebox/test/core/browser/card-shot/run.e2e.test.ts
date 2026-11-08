@@ -3,7 +3,8 @@
 // card out like the app does: inside a panel that fills the window below a
 // header and scrolls on its own, which is what clips a plain element capture.
 // The card's bottom is a red block; the image must contain it at phone and
-// desktop widths. A card taller than the capture limit is reported partial and
+// desktop widths. A loading block (`aria-busy`) 5000px tall clears after a
+// second: the capture must wait for it, or the card measures 7500px. A card taller than the capture limit is reported partial and
 // cropped to what was painted.
 
 import { test } from "tap";
@@ -49,8 +50,10 @@ header{height:60px;flex:none}#p{flex:1;min-height:0;overflow:auto}
 article{position:relative;height:${String(cardHeight)}px;background:#eee}
 .wide{white-space:nowrap}.bottom{position:absolute;left:0;right:0;bottom:0;height:100px;background:#f00}
 </style></head><body><header>app</header><div id="p"><article>
+<div id="loading" aria-busy="true" style="height:5000px">Loading view...</div>
 <div class="wide">${"wide text that will not wrap ".repeat(8)}</div><div class="bottom"></div>
-</article></div><script>document.getElementById('p').id=${JSON.stringify(cardPanelId(cardPath))}</script></body></html>`;
+</article></div><script>document.getElementById('p').id=${JSON.stringify(cardPanelId(cardPath))};
+setTimeout(()=>document.getElementById('loading').remove(),1000)</script></body></html>`;
 }
 
 /** The colour of the image's pixel at (x, y from the bottom). */

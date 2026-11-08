@@ -271,7 +271,7 @@ function FileViewContent({ path, mode: modeProp, workspacePdf, rendererName, onS
   }, [path, data, binding]);
 
   const pendingLabel = pendingFileViewLabel({ loading, followingMove });
-  if (pendingLabel !== null) return <div className="p-4 text-warm-700">{pendingLabel}</div>;
+  if (pendingLabel !== null) return <div aria-busy="true" className="p-4 text-warm-700">{pendingLabel}</div>;
   // A missing card is not an error state: it falls through to MissingCardState,
   // which offers to create or close it.
   if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} onRetry={refresh} />;

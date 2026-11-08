@@ -23,6 +23,13 @@ import { type FoundMeasure, measureScript, parseMeasure } from "./measure.js";
 export const MAX_CAPTURE_HEIGHT = 8000;
 /** Room for the app's own chrome above and below the card. */
 const MARGIN = 40;
+/** How long a capture waits for the card to appear and stop loading. */
+export const READY_TIMEOUT_MS = 15_000;
+
+/** True once the card is on the page and nothing in it is `aria-busy` (the app's loading states). */
+function readyExpression(panelId: string): string {
+  return `(()=>{const a=document.querySelector(${JSON.stringify(`#${panelId} > article`)});return a!==null&&a.querySelector('[aria-busy=true]')===null})()`;
+}
 
 export interface CardShotIo {
   /** An ordinary agent-browser command. */
@@ -99,6 +106,9 @@ export async function captureCard(io: CardShotIo, box: { base: URL; slug: string
     return { ok: false, message: `bbx browser: --card works on this box's card pages; the browser is on ${pageUrl || "no page"}. Open one with bbx browser open /views/<card path>` };
   }
   const panelId = cardPanelId(cardPath);
+  // A card opened a moment ago may still be loading its view. Waiting is best
+  // effort: on a timeout the measure below still runs and reports `busy`.
+  await io.send(["--timeout", String(READY_TIMEOUT_MS), "wait", "--fn", readyExpression(panelId)]);
   const first = await measure(io, panelId);
   if (!first.ok) return first;
   const { viewport } = first.m;

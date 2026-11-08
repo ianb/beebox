@@ -2,7 +2,8 @@
  * The measuring script for `bbx browser screenshot --card`
  * (docs/plans/agent-self-view.md, Track C). Runs in the page with `eval` and
  * returns one JSON string: where the card is, how much of it the browser
- * painted, what inside it is wider than its box, and any view error it shows.
+ * painted, what inside it is wider than its box, any view error it shows, and
+ * whether part of it is still loading (`aria-busy`).
  *
  * It scrolls the card's scroll container to the top-left first: the app puts a
  * card in a panel that scrolls on its own, and only the painted part of an
@@ -32,7 +33,8 @@ const cands=[...el.querySelectorAll('*')].filter((e)=>{const s=getComputedStyle(
 const leaves=cands.filter((e)=>!cands.some((o)=>o!==e&&e.contains(o)));
 const overflow=leaves.slice(0,${String(MAX_OVERFLOW)}).map((e)=>({tag:e.tagName.toLowerCase(),text:(e.textContent||'').replace(/\\s+/g,' ').trim().slice(0,40),excess:Math.round(Math.max(e.scrollWidth-e.clientWidth,e.getBoundingClientRect().right-r.right))}));
 const alert=el.querySelector('[role=alert]');
-return JSON.stringify({found:true,url:location.href,card:{width:r.width,height:r.height},painted:{x:left-r.left,y:top-r.top,width:Math.max(0,right-left),height:Math.max(0,bottom-top)},viewport:{width:innerWidth,height:innerHeight},dpr:devicePixelRatio,overflow,errorText:alert?(alert.textContent||'').replace(/\\s+/g,' ').trim().slice(0,300):null});
+const busy=el.querySelector('[aria-busy=true]')!==null;
+return JSON.stringify({found:true,url:location.href,card:{width:r.width,height:r.height},painted:{x:left-r.left,y:top-r.top,width:Math.max(0,right-left),height:Math.max(0,bottom-top)},viewport:{width:innerWidth,height:innerHeight},dpr:devicePixelRatio,overflow,errorText:alert?(alert.textContent||'').replace(/\\s+/g,' ').trim().slice(0,300):null,busy});
 })()`;
 }
 
@@ -49,6 +51,8 @@ export const MEASURE = z.discriminatedUnion("found", [
     dpr: z.number().positive(),
     overflow: z.array(z.object({ tag: z.string(), text: z.string(), excess: z.number() })),
     errorText: z.string().nullable(),
+    /** Part of the card still shows a loading state (`aria-busy`). */
+    busy: z.boolean(),
   }),
 ]);
 export type Measure = z.infer<typeof MEASURE>;

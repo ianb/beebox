@@ -5855,6 +5855,13 @@ test1:
       peak: 44843
       added: 578
       turns: 4
+    - date: 2026-11-08T17:50:26.284Z
+      boxCommit: 4fa390fe66ba58251fa88f0d08d5002fc64e2749
+      repoCommit: 88761f3848bf46850d172ad34126fced1adc2871
+      initial: 45110
+      peak: 47277
+      added: 2167
+      turns: 5
   calendar-vtimezone-authoring:
     - date: 2026-07-11T22:36:45.303Z
       boxCommit: cef2c9d7cc8ff63ffabf277eb6eec5a745f43e15
@@ -11534,6 +11541,22 @@ test1:
       peak: 34114
       added: 0
       turns: 1
+  chat-screenshot-person-screen:
+    - date: 2026-11-08T17:51:12.012Z
+      boxCommit: faa7c021334be92147d748f79cd84e31e0292562
+      repoCommit: 88761f3848bf46850d172ad34126fced1adc2871
+      initial: 45108
+      peak: 48660
+      added: 3552
+      turns: 7
+  box-page-interaction:
+    - date: 2026-11-08T17:51:52.808Z
+      boxCommit: faa7c021334be92147d748f79cd84e31e0292562
+      repoCommit: 88761f3848bf46850d172ad34126fced1adc2871
+      initial: 45114
+      peak: 47696
+      added: 2582
+      turns: 6
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
