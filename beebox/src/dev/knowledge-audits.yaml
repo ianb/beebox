@@ -6131,6 +6131,11 @@ tests:
   # sentence alone.
 
   # Status (2026-09-26, doc-structure Track 3, COMMANDS): pass on the test1 clone, 0 reads, 0 searches, 50k ctx.
+  # Status (2026-11-08): chat-screenshot-when, chat-screenshot-person-screen
+  # and box-page-interaction pass 3/3 (claude, worktree test1 clone). Each
+  # agent named the right tool unprompted and read the browser skill or
+  # bbx-commands.md for the exact flags (2-3 reads), which is the loading the
+  # design expects: the chat prompt points at the skill.
   - id: chat-screenshot-when
     prompt: >
       A user in chat says a custom view they have open "looks broken — the
