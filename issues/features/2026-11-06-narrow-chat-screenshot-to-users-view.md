@@ -50,3 +50,7 @@ To do:
    sort them by reason (the person's context versus a self-check).
 4. After changing the guidance, run a box knowledge audit (the
    knowledge-audit skill) to confirm agents reach for the right tool.
+
+## Status 2026-11-08 (agent-self-view)
+
+Items 1, 2 and 4 are done on branch `worktree-agent-self-view` ([plan](../../beebox/docs/plans/agent-self-view.md), Track D; audits `chat-screenshot-when`, `chat-screenshot-person-screen`, `box-page-interaction` pass). Item 3: none of the 779 local box-agent transcript folders on the development machine mention `bbx chat screenshot`; the uses the boxholder saw are on production boxes, which were not read. The command stays, narrowed; whether to drop it is the boxholder's call.
