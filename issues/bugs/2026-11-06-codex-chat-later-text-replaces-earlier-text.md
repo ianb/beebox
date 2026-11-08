@@ -38,3 +38,22 @@ text (for example "say one sentence, list the files in X, then say another").
 Watch the live view, then reload and compare. A unit test can feed
 `codex-chat.ts` two `agent_message` items around a tool item and check that the
 history and the live client state both keep both texts.
+
+## Found 2026-11-08: deliberate folding
+
+This is the chat's own folding, added in 05665521a (2026-10-23, plan
+`chat-progress-fold`, issue `2026-10-08-chat-agent-narrates-implementation-steps`).
+`groupIntoParts` in `beebox/src/frontend/src/components/chat/assistant-parts.ts`
+folds text written before a later tool call into the activity row as a note;
+the reply is the text after the last tool call, and while a turn streams "the
+newest line shows until the next step folds it". The earlier text is not lost:
+it is in the activity row. The live stream (`STREAM_TEXT` in
+`machines/chatMachine/machine.ts`) only appends, and history
+(`codex-transcript/core.ts`) keeps every agent message.
+
+Codex shows it more than Claude because it writes many in-between messages:
+one hosted-box thread has 181 assistant messages marked `phase: commentary`
+and 62 marked `phase: final_answer` in its rollout. The ChatGPT and Codex
+apps collapse commentary the same way. Codex's phase is not used here: the
+SDK's `AgentMessageItem` type (0.164.0) carries only `id`, `type`, and `text`,
+so the fold uses position (before a later tool call) instead.
