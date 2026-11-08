@@ -26,6 +26,7 @@ import {
   isControlFile,
   type UnlistedBinary,
 } from "./unlisted-binaries.js";
+import { gitEnvironment } from "../../lib/git/env.js";
 
 /** `git cat-file --batch-check` could not report the staged blob sizes. */
 class StagedBlobSizeError extends Error {
@@ -121,7 +122,7 @@ async function stagedBlobSizes(boxRoot: string, relPaths: string[]): Promise<(nu
 
 function batchCheck(boxRoot: string, input: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn("git", ["cat-file", "--batch-check"], { cwd: boxRoot });
+    const child = spawn("git", ["cat-file", "--batch-check"], { cwd: boxRoot, env: gitEnvironment() });
     let out = "";
     let err = "";
     child.stdout.setEncoding("utf8");

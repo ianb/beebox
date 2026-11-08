@@ -15,6 +15,7 @@ import { getBoxTimeISO } from "../lib/time.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
 import { findAbsoluteMachinePaths, redactAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
 import type { ManifestEntry } from "./migrations.js";
+import { gitEnvironment } from "../lib/git/env.js";
 
 
 class MigrationRepairUnavailableError extends Error {
@@ -102,7 +103,7 @@ export async function redactMigrationQuestions(boxRoot: string): Promise<string[
 
 export function finishMigrationRepair(boxRoot: string, name: string): Promise<void> {
   return withBoxGitLock(boxRoot, async () => {
-    await exec("git", ["update-ref", "-d", `refs/bbx/migrations/${name}/repair-started`], { cwd: boxRoot });
+    await exec("git", ["update-ref", "-d", `refs/bbx/migrations/${name}/repair-started`], { cwd: boxRoot, env: gitEnvironment() });
   });
 }
 
@@ -139,7 +140,7 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
   }
   const receipt = `refs/bbx/migrations/${opts.name}/repair-started`;
   // A receipt from an attempt that never finished points at that attempt's snapshot, not this pass's.
-  const refs = await exec("git", ["for-each-ref", "--format=%(objectname)", receipt], { cwd: opts.boxRoot });
+  const refs = await exec("git", ["for-each-ref", "--format=%(objectname)", receipt], { cwd: opts.boxRoot, env: gitEnvironment() });
   let recoveryRef = refs.stdout.trim() || opts.recoveryRef;
   let reason = "The previous attempt did not reach a verified committed result. Inspect its Git recovery and partial output before authorizing another attempt.";
   let { failure } = opts;
@@ -148,7 +149,7 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
   if (!refs.stdout.trim()) {
     recoveryRef = opts.recoveryRef;
     await withBoxGitLock(opts.boxRoot, async () => {
-      await exec("git", ["update-ref", receipt, opts.recoveryRef], { cwd: opts.boxRoot });
+      await exec("git", ["update-ref", receipt, opts.recoveryRef], { cwd: opts.boxRoot, env: gitEnvironment() });
     });
     opts.signal?.throwIfAborted();
     const attempted = await opts.attempt(answer);

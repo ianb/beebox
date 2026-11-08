@@ -3,7 +3,7 @@ import { systemCardTemplate } from "../templates/system-cards.js";
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { simpleGit } from "simple-git";
+import { boxGit } from "../lib/git/env.js";
 import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import { isRecord } from "../shared/is-record.js";
 import { isTrashedCard } from "../lib/paths/core.js";
@@ -105,7 +105,7 @@ async function checkWorkingState(input: { boxRoot: string; required: Set<string>
 
 /** The index and HEAD alone decide enrollment and presence; working files cannot mask deletions. */
 export async function checkStagedSystemCards(boxRoot: string): Promise<string[]> {
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot);
   const [indexListing, headPaths] = await Promise.all([
     git.raw(["ls-files", "-z"]),
     git.raw(["rev-parse", "--verify", "HEAD"]).then(

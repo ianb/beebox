@@ -12,6 +12,7 @@ import { execFile } from "node:child_process";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { isTrashedCard } from "./paths/core.js";
+import { gitEnvironment } from "./git/env.js";
 
 const execFileP = promisify(execFile);
 
@@ -32,7 +33,7 @@ export async function listStagedRelPaths(
   const { stdout } = await execFileP(
     "git",
     ["diff", "--cached", "--name-only", "-z", `--diff-filter=${diffFilter}`, "--relative"],
-    { cwd: dir, maxBuffer: 10 * 1024 * 1024 }
+    { cwd: dir, maxBuffer: 10 * 1024 * 1024, env: gitEnvironment() }
   );
   return stdout.split("\0").filter((line) => line !== "");
 }

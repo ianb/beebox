@@ -2,7 +2,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { simpleGit } from "simple-git";
+import { boxGit } from "./env.js";
 
 /**
  * Whether `dir` is the root of its own repository, not merely inside one.
@@ -21,7 +21,7 @@ export async function isRepo(dir: string): Promise<boolean> {
  */
 export async function repoRootOf(dir: string): Promise<string | null> {
   try {
-    const top = (await simpleGit(dir).revparse(["--show-toplevel"])).trim();
+    const top = (await boxGit(dir).revparse(["--show-toplevel"])).trim();
     return await realpathOrSelf(top);
   } catch (_e) {
     // simple-git throws for a missing directory and git for "not a repository"; both mean no repository.

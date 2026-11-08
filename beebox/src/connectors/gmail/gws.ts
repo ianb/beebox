@@ -3,6 +3,7 @@
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import type { GoogleAuthService } from "../../services/google-auth.js";
+import { agentAllowlistEnv } from "../../core/script-env/core.js";
 
 const READ_OPERATIONS = new Set(["get", "list", "getProfile"]);
 const READ_HELPERS = new Set(["+read", "+triage"]);
@@ -104,8 +105,10 @@ export async function runReadOnlyGws(opts: {
   const token = await opts.auth.getAccessToken();
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [gwsRunnerPath(), ...opts.args], {
-      // TODO(env-migration) -- gws needs the caller's ambient CLI environment plus its token.
-      env: { ...process.env, GOOGLE_WORKSPACE_CLI_TOKEN: token },
+      // The agent allowlist plus the token. An ambient GOOGLE_WORKSPACE_CLI_*
+      // setting (credentials file, client secret, impersonated user) is not
+      // passed, so the token is the only credential gws sees.
+      env: { ...agentAllowlistEnv(), GOOGLE_WORKSPACE_CLI_TOKEN: token },
       stdio: ["ignore", "pipe", "pipe"],
     });
     const stdout = boundedCapture(MAX_CAPTURE_CHARS);

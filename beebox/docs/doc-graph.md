@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-08T18:19:46Z
-Total documents: 625
+Generated: 2026-11-08T18:44:13Z
+Total documents: 626
 
 ## Issues
 
@@ -874,7 +874,7 @@ Referenced by:
 - docs/plans/installation-story.md:287 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/migration-reliability.md:762 (link) — and the [deployment guide](../../deploy/README.md).
 - docs/plans/operator-member-password-reset.md:491 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:483 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/security-report.md:490 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:72 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
@@ -996,7 +996,7 @@ Referenced by:
 - README.md:92 (link) — [encrypted backups](docs/backups.md), scheduled restic snapshots send the
 - docs/guides.md:38 (link) — | Encrypted box backups and recovery | [backups](backups.md) |
 - docs/implemented-plans/box-backups.md:16 (link) — implemented; see the [backup guide](../backups.md) and
-- docs/security-report.md:484 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
+- docs/security-report.md:491 (link) — | Backups | Opt-in restic snapshots include secrets, Git history and annex objects; an exclusive box maintenance hold pr
 
 References:
 - → ../mac-app/README.md (link)
@@ -1269,7 +1269,7 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:77 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:454 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:461 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - src/dev/AGENTS.md:16 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:19 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
@@ -2215,7 +2215,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 358 lines | current reference
+Title: "Security overview" | 357 lines | current reference
 
 Referenced by:
 - README.md:99 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -2251,7 +2251,6 @@ References:
 - → ../SECURITY.md (link)
 - → docs/security-report.md (link)
 - → ../issues/bugs/2026-10-30-box-schemas-load-inside-the-server-process.md (link)
-- → ../issues/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md (link)
 - → ../issues/code-quality/2026-08-07-member-level-writing-procedures.md (link)
 - → ../issues/features/2026-07-20-agent-containment-allowed-directories.md (link)
 - → ../issues/closed/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
@@ -2261,7 +2260,7 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 738 lines | current reference
+Title: "Security report — structured version" | 745 lines | current reference
 
 Referenced by:
 - docs/chat/quick-chat.md:285 (link) — page's title, site, and URL, but not its text. See [security report §3](../security-report.md#3-data-egress).
@@ -2316,9 +2315,10 @@ References:
 - → ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md (link)
 - → docs/implemented-plans/secret-custody.md (mention)
 - → ../issues/closed/bugs/2026-10-29-view-metadata-import-runs-box-code-with-the-server-env.md (link)
+- → ../issues/closed/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md (link)
+- → ../issues/closed/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md (link)
+- → ../issues/closed/bugs/2026-10-30-upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env.md (link)
 - → ../issues/bugs/2026-10-30-box-schemas-load-inside-the-server-process.md (link)
-- → ../issues/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md (link)
-- → ../issues/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md (link)
 - → ../issues/decisions/2026-07-20-git-push-confirmation.md (link)
 - → ../issues/closed/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
 - → docs/content-security-policy.md (link)
@@ -3820,11 +3820,12 @@ Title: "Agent self-view: the box agent opens, looks at, and uses its own box's p
 
 Referenced by:
 - docs/security-report.md:20 (link) — the box browser pass ([plan](implemented-plans/agent-self-view.md)): a one-hour signed
+- ../issues/closed/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md:12 (mention) — **Closed (implemented, 2026-11-08):** Resolved on branch worktree-agent-self-view (plan implemented-plans/agent-self-vie
 - ../issues/features/2026-06-12-agent-browser-scoped-to-box.md:38 (link) — The self-view half is built on branch `worktree-agent-self-view` (not yet merged): the box browser holds a one-hour box
-- ../issues/features/2026-11-06-narrow-chat-screenshot-to-users-view.md:56 (link) — Items 1, 2 and 4 are done on branch `worktree-agent-self-view` ([plan](../../beebox/docs/implemented-plans/agent-self-vi
+- ../issues/features/2026-11-06-narrow-chat-screenshot-to-users-view.md:60 (link) — Items 1, 2 and 4 are done on branch `worktree-agent-self-view` ([plan](../../beebox/docs/implemented-plans/agent-self-vi
 
 References:
-- → ../issues/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md (frontmatter)
+- → ../issues/closed/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md (frontmatter)
 - → ../issues/features/2026-11-06-narrow-chat-screenshot-to-users-view.md (frontmatter)
 - → docs/security-report.md (mention)
 - → docs/plans/shared-browser.md (mention)
@@ -4109,7 +4110,7 @@ Title: "Box agents install distro packages on their host" | 579 lines | shipped 
 
 Referenced by:
 - docs/implemented-plans/per-box-units.md:197 (mention) — anywhere (`docs/implemented-plans/box-host-packages.md:141-143`).
-- docs/security-report.md:481 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:488 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:163 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 - ../research/embedded-browser/beebox-today.md:58 (mention) — - Docker image (`beebox/docker/Dockerfile`): `node:24-bookworm-slim`; apt installs pandoc, imagemagick, poppler, ffmpeg,
@@ -4728,6 +4729,18 @@ References:
 - → docs/implemented-plans/standard-card-fields.md (mention)
 - → docs/implemented-plans/notifications.md (mention)
 - → docs/cards/schemas.md (mention)
+
+#### docs/implemented-plans/child-env-allowlist.md
+
+Title: "Allowlisted environments for Git, CLI, and engine children" | 410 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/bugs/2026-11-08-browser-host-and-maintenance-command-spread-the-callers-env.md:21 (mention) — `docs/implemented-plans/child-env-allowlist.md`.
+
+References:
+- → ../issues/closed/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md (frontmatter)
+- → ../issues/closed/bugs/2026-10-30-upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md (frontmatter)
 
 #### docs/implemented-plans/clerk-contract-and-import-boundary.md
 
@@ -10028,7 +10041,7 @@ References:
 Title: "Serve box publications from one shared hostname" | 172 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:721 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:728 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
@@ -10048,7 +10061,7 @@ Title: "Static site publishing with admin setup and human approval" | 296 lines 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:168 (mention) — - Mark `publish-sites-admin.md` and `publication-approval-card.md` with a note that this plan supersedes their source an
 - docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:714 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/security-report.md:721 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 - docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
