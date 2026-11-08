@@ -58,6 +58,7 @@ import { stageAndCommitPaths } from "../../src/lib/git/core/operations.js";
 import { createCodexCliService } from "../../src/services/codex-cli/core.js";
 import { packageManagerEnvironment } from "../../src/lib/package-manager-env.js";
 import { engineChildEnvironment } from "../../src/core/script-env/core.js";
+import { browserHostEnvironment } from "../../src/core/browser/host/start.js";
 
 /** Every credential name in the matrix. The last is listed nowhere in `src/`. */
 const NAMES = [
@@ -132,6 +133,8 @@ const COLUMNS = [
   "codexCli",
   // `pnpm install`/`npx`, and the engine children of `bbx upgrade` and `bbx migrate`.
   "pkgMgr", "engine",
+  // The box browser host (`core/browser/host/start.ts`), which runs agent-browser.
+  "browserHost",
   "warm",
 ] as const;
 type Column = (typeof COLUMNS)[number];
@@ -380,7 +383,7 @@ if (process.argv[3] === "login") { process.stdout.write("https://claude.ai/oauth
   // --- Codex status through the BBX_CODEX_BINARY recorder; the package-manager and engine-child environments. ---
   await createCodexCliService().authStatus();
   const codexCli = await recorded(bin, "codex");
-  const [pkgMgr, engine] = [packageManagerEnvironment(), engineChildEnvironment()];
+  const [pkgMgr, engine, browserHost] = [packageManagerEnvironment(), engineChildEnvironment(), browserHostEnvironment()];
 
   // --- Warm slot: does a difference in this name alone refuse the slot? ---
   const warm = (name: string) => {
@@ -404,35 +407,35 @@ if (process.argv[3] === "login") { process.stdout.write("https://claude.ai/oauth
     viewMeta: of(viewMeta), viewRender: ofViewBox(viewRender),
     status: of(status), statusNoBox: of(statusNoBox), login: of(login), logout: of(logout),
     gws: of(gws),
-    hook: of(hook), codexCli: of(codexCli), pkgMgr: of(pkgMgr), engine: of(engine),
+    hook: of(hook), codexCli: of(codexCli), pkgMgr: of(pkgMgr), engine: of(engine), browserHost: of(browserHost),
     warm,
   }), [
-    // hubAllow hubChild boxEnv | agent tooling | addFirst addGlm addOR addCodex addPi | runClaude scan codexNoEnv codexEnv procShell | viewMeta viewRender | status statusNoBox login logout | gws | hook | codexCli | pkgMgr engine | warm
-    "CLAUDE_CODE_OAUTH_TOKEN          - - - - - J - - - - J J - - - - - J - - - - - - - - c",
-    "ANTHROPIC_API_KEY                - - - - - - - B - - - - - - - - - - - - - - - - - - -",
-    "ANTHROPIC_AUTH_TOKEN             - - - - - - J J - - - - - - - - - - - - - - - - - - c",
-    "ANTHROPIC_BASE_URL               - - - - - - J J - - - - - - - - - - - - - - - - - - c",
-    "BBX_SESSION_SECRET               - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_HUB_SECRET                   - J - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_DIAG_API_KEY                 I I I - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_BROWSE_API_KEY               - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_AGENT_TOKEN                  - - - J J - - - - - J J J J J - J - - - - - - - - - -",
-    "BBX_VAPID_PRIVATE_KEY            I I I - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_VAPID_PUBLIC_KEY             I I I - - - - - - - - - - - - - - - - - - - - - - - -",
-    "GOOGLE_OAUTH_CLIENT_ID           - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "GOOGLE_OAUTH_CLIENT_SECRET       - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "GOOGLE_WORKSPACE_CLI_TOKEN       - - - - - - - - - - - - - - - - - - - - - J - - - - -",
-    "BBX_MISTRAL_API_KEY              - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_DEEPGRAM_API_KEY             - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_DEEPGRAM_PROJECT             - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_OPENAI_API_KEY               - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "THINKING_OPENAI_API_KEY          - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "GEMINI_KEY                       - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "SKE_GEMINI_API_KEY               - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_OPENROUTER_API_KEY           - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "OPENAI_API_KEY                   - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "CODEX_API_KEY                    - - - - - - - - - - - - - - - - - - - - - - - - - - -",
-    "BBX_UNLISTED_CREDENTIAL_SENTINEL - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    // hubAllow hubChild boxEnv | agent tooling | addFirst addGlm addOR addCodex addPi | runClaude scan codexNoEnv codexEnv procShell | viewMeta viewRender | status statusNoBox login logout | gws | hook | codexCli | pkgMgr engine | browserHost | warm
+    "CLAUDE_CODE_OAUTH_TOKEN          - - - - - J - - - - J J - - - - - J - - - - - - - - - c",
+    "ANTHROPIC_API_KEY                - - - - - - - B - - - - - - - - - - - - - - - - - - - -",
+    "ANTHROPIC_AUTH_TOKEN             - - - - - - J J - - - - - - - - - - - - - - - - - - - c",
+    "ANTHROPIC_BASE_URL               - - - - - - J J - - - - - - - - - - - - - - - - - - - c",
+    "BBX_SESSION_SECRET               - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_HUB_SECRET                   - J - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_DIAG_API_KEY                 I I I - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_BROWSE_API_KEY               - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_AGENT_TOKEN                  - - - J J - - - - - J J J J J - J - - - - - - - - - - -",
+    "BBX_VAPID_PRIVATE_KEY            I I I - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_VAPID_PUBLIC_KEY             I I I - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "GOOGLE_OAUTH_CLIENT_ID           - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "GOOGLE_OAUTH_CLIENT_SECRET       - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "GOOGLE_WORKSPACE_CLI_TOKEN       - - - - - - - - - - - - - - - - - - - - - J - - - - - -",
+    "BBX_MISTRAL_API_KEY              - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_DEEPGRAM_API_KEY             - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_DEEPGRAM_PROJECT             - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_OPENAI_API_KEY               - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "THINKING_OPENAI_API_KEY          - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "GEMINI_KEY                       - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "SKE_GEMINI_API_KEY               - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_OPENROUTER_API_KEY           - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "OPENAI_API_KEY                   - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "CODEX_API_KEY                    - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
+    "BBX_UNLISTED_CREDENTIAL_SENTINEL - - - - - - - - - - - - - - - - - - - - - - - - - - - -",
   ]);
 
   // The table in `lib/credential-env.ts` says what these processes do.

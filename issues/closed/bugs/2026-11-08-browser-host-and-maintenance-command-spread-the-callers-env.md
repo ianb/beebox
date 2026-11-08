@@ -1,12 +1,15 @@
 ---
 title: "The browser host and the maintenance controller's command start with the caller's whole environment"
-workstream: unattached
+workstream: child-env-allowlist
 area: beebox
 labels: [security, env]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-child-env-allowlist — process.env spread sweep after the Git/CLI/engine allowlists
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-08):** Browser host fixed: it now gets browserHostEnvironment(), the agent allowlist plus AGENT_BROWSER_EXECUTABLE_PATH (beebox/src/core/browser/host/start.ts), pinned by the browserHost matrix column. The maintenance controller's command is left as is by design: in production it is the deploy's own root-run activation script, and deploy/deploy.sh sources /home/beebox/.env right before it so the script receives the hub environment; it runs no box code.
 
 Two spawn sites outside the 2026-11-08 allowlist work still copy `process.env`
 into a child:

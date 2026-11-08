@@ -298,7 +298,7 @@ Five findings, all accepted except part of the last:
    or debug paths, and each is a one-line `env:` argument in this diff.
 
 Found in passing and filed:
-`issues/bugs/2026-11-08-browser-host-and-maintenance-command-spread-the-callers-env.md`.
+`issues/closed/bugs/2026-11-08-browser-host-and-maintenance-command-spread-the-callers-env.md` (browser host fixed on this workstream; the maintenance command left by design).
 
 ## Could this be simpler?
 

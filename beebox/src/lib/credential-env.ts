@@ -22,7 +22,8 @@
  * - `agent` — every box subprocess that runs agent-authored code:
  *   `buildScriptEnv`. The Claude, Codex and pi engines all start from it, and
  *   so does `bbx view check`'s render child. The view metadata import child
- *   takes this allowlist without the injected names (`agentAllowlistEnv`).
+ *   takes this allowlist without the injected names (`agentAllowlistEnv`), and
+ *   so does the box browser host (`browserHostEnvironment`).
  * - `tooling` — the box's own `bbx` tooling: `buildToolingScriptEnv`.
  * - `claudeEngine` — what a Claude CLI run gets on top of `agent`: the most
  *   that `providerEnvAdditions` (`core/provider-env/core.ts`) or the prompt
