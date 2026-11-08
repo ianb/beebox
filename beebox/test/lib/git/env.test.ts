@@ -10,9 +10,10 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { execFileSync } from "node:child_process";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, realpath } from "node:fs/promises";
 import { join, relative } from "node:path";
-import { gitEnvironment } from "../../../src/lib/git/env.js";
+import { boxGit, gitEnvironment } from "../../../src/lib/git/env.js";
+import { resolveGitDir } from "../../../src/lib/git-lock.js";
 import { commitPaths } from "../../../src/lib/git/core/operations.js";
 import { installValidationHooks } from "../../../src/core/install-validation-hooks.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
@@ -96,6 +97,19 @@ void test("Only safe.directory passes through Git's config-entry variables", asy
     GIT_CONFIG_KEY_1: undefined,
     GIT_CONFIG_VALUE_1: undefined,
   });
+
+  // A simple-git call refuses GIT_CONFIG_COUNT in its environment, so boxGit
+  // passes the directory as `-c safe.directory=…`. Admission's Git lookup
+  // (`resolveGitDir`) must succeed under the deploy's environment, and Git
+  // must see the trusted directory and not the dropped entry.
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  const config = async (key: string) => (await boxGit(box.root).raw(["config", "--get-all", key])).trim();
+  t.check({
+    gitDir: await resolveGitDir(box.root),
+    safeDirectory: await config("safe.directory"),
+    extraHeader: await config("http.extraheader"),
+  }, { gitDir: join(await realpath(box.root), ".git"), safeDirectory: "/var/lib/beebox/test1/box", extraHeader: "" });
 });
 
 function git(box: TmpBox, ...args: string[]): string {

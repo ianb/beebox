@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-11-08T18:44:13Z
+Generated: 2026-11-08T19:00:05Z
 Total documents: 626
 
 ## Issues
@@ -4735,7 +4735,7 @@ References:
 Title: "Allowlisted environments for Git, CLI, and engine children" | 410 lines | shipped history | implemented
 
 Referenced by:
-- ../issues/bugs/2026-11-08-browser-host-and-maintenance-command-spread-the-callers-env.md:21 (mention) — `docs/implemented-plans/child-env-allowlist.md`.
+- ../issues/closed/bugs/2026-11-08-browser-host-and-maintenance-command-spread-the-callers-env.md:24 (mention) — `docs/implemented-plans/child-env-allowlist.md`.
 
 References:
 - → ../issues/closed/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md (frontmatter)

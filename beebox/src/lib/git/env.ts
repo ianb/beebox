@@ -47,19 +47,25 @@ const GIT_NETWORK: readonly string[] = [
 ];
 
 /**
- * The `safe.directory` entries of a parent's `GIT_CONFIG_COUNT`/`_KEY_n`/
- * `_VALUE_n` list, renumbered. The deploy runs `bbx host sync` as root with the
- * box's directory trusted this way (deploy/deploy.sh); root keeps no standing
- * `safe.directory`. Other entries are dropped: a config value can carry a
- * credential (`http.extraheader`).
+ * The directories a parent trusts through `safe.directory` entries in its
+ * `GIT_CONFIG_COUNT`/`_KEY_n`/`_VALUE_n` list. The deploy runs `bbx host sync`
+ * as root with the box's directory trusted this way (deploy/deploy.sh); root
+ * keeps no standing `safe.directory`. Other entries are dropped: a config value
+ * can carry a credential (`http.extraheader`).
  */
-function safeDirectoryConfig(): Record<string, string> {
+function safeDirectories(): string[] {
   const count = Number(process.env.GIT_CONFIG_COUNT ?? "0");
   const values: string[] = [];
   for (let i = 0; Number.isInteger(count) && i < count; i++) {
     const value = process.env[`GIT_CONFIG_VALUE_${String(i)}`];
     if (process.env[`GIT_CONFIG_KEY_${String(i)}`]?.toLowerCase() === "safe.directory" && value !== undefined) values.push(value);
   }
+  return values;
+}
+
+/** {@link safeDirectories} as Git's config-entry variables, renumbered, for a raw `git` spawn. */
+function safeDirectoryConfig(): Record<string, string> {
+  const values = safeDirectories();
   if (values.length === 0) return {};
   const env: Record<string, string> = { GIT_CONFIG_COUNT: String(values.length) };
   for (const [i, value] of values.entries()) {
@@ -97,8 +103,20 @@ export function gitEnvironment(options?: GitEnvironmentOptions): NodeJS.ProcessE
   return env;
 }
 
-/** A simple-git instance whose Git children get {@link gitEnvironment}. */
+/**
+ * A simple-git instance whose Git children get {@link gitEnvironment}.
+ *
+ * simple-git refuses a custom environment that holds `GIT_CONFIG_COUNT`
+ * (its `allowUnsafeConfigEnvCount` guard), so the trusted directories go on
+ * each command as `-c safe.directory=…` instead. A refusal there made
+ * `resolveGitDir` return null and admission refuse every box in the
+ * 2026-11-08 deploy's `bbx host sync`.
+ */
 export function boxGit(dir?: string, options?: GitEnvironmentOptions): SimpleGit {
-  const git = dir === undefined ? simpleGit() : simpleGit(dir);
-  return git.env(gitEnvironment(options));
+  const config = safeDirectories().map((directory) => `safe.directory=${directory}`);
+  const env = gitEnvironment(options);
+  for (const name of Object.keys(env)) {
+    if (name.startsWith("GIT_CONFIG_")) Reflect.deleteProperty(env, name);
+  }
+  return simpleGit({ ...(dir === undefined ? {} : { baseDir: dir }), config }).env(env);
 }

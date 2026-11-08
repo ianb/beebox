@@ -31,6 +31,7 @@ import { onUnitHost } from "../../../lib/unit-host.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { resolveBrowserExecutable } from "../install.js";
 import { spawnInNamespace } from "./namespace.js";
+import { agentAllowlistEnv } from "../../script-env/core.js";
 import { browserPaths, type BrowserPaths } from "../paths.js";
 
 const READY_TIMEOUT_MS = 20_000;
@@ -149,6 +150,19 @@ async function isHealthy(host: RunningHost): Promise<boolean> {
   return true;
 }
 
+/**
+ * The browser host's environment: the agent allowlist and agent-browser's
+ * executable override (`resolveBrowserExecutable`). The host drives the page
+ * the agent chooses, so it gets no more than an agent; agent-browser beneath it
+ * starts from an environment built from nothing (`dashboardEnv`).
+ */
+export function browserHostEnvironment(): NodeJS.ProcessEnv {
+  const env = agentAllowlistEnv();
+  const executable = process.env.AGENT_BROWSER_EXECUTABLE_PATH;
+  if (executable !== undefined) env.AGENT_BROWSER_EXECUTABLE_PATH = executable;
+  return env;
+}
+
 async function spawnHost(paths: BrowserPaths, input: Required<EnsureBrowserHostInput>): Promise<ChildProcess> {
   await fs.promises.mkdir(paths.root, { recursive: true, mode: 0o700 });
   // A host left by a previous engine (a restart, a reload) may still be
@@ -165,7 +179,7 @@ async function spawnHost(paths: BrowserPaths, input: Required<EnsureBrowserHostI
       "engine", "browser-host", "--box", input.boxRoot, "--state-dir", input.stateDir,
       "--engine-pid", String(process.pid),
     ];
-    const options: SpawnOptions = { cwd: input.boxRoot, env: process.env, detached: true, stdio: ["ignore", logFd, logFd] };
+    const options: SpawnOptions = { cwd: input.boxRoot, env: browserHostEnvironment(), detached: true, stdio: ["ignore", logFd, logFd] };
     if (onUnitHost()) return await spawnInNamespace(command, options);
     return spawn(command[0] ?? "bbx", command.slice(1), options);
   } finally {

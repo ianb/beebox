@@ -37,7 +37,7 @@ import {
   LOG_FORMAT,
 } from "../internal.js";
 import { withBoxGitLock } from "../../git-lock.js";
-import { commitEnvironment } from "./commit-env.js";
+import { commitDateOverrides } from "./commit-env.js";
 import { boxGit } from "../env.js";
 import { inspectIndexLock, recoverStaleIndexLock } from "../../git-stale-lock.js";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -309,7 +309,7 @@ export async function commit(
 ): Promise<string> {
   const message = buildCommitMessage(options);
 
-  const git = boxGit(boxRoot).env(commitEnvironment(boxRoot));
+  const git = boxGit(boxRoot, { overrides: commitDateOverrides(boxRoot) });
   const commitArgs = options.amend ? ["--amend"] : [];
   if (options.noVerify) commitArgs.push("--no-verify");
   return commitAndReadHead(boxRoot, () => git.commit(message, commitArgs));
@@ -333,7 +333,7 @@ export async function commitPaths(
   }
 
   const message = buildCommitMessage(options);
-  const git = boxGit(boxRoot).env(commitEnvironment(boxRoot));
+  const git = boxGit(boxRoot, { overrides: commitDateOverrides(boxRoot) });
   const commitArgs = ["commit", "-m", message];
   if (options.amend) {
     commitArgs.push("--amend");
