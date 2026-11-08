@@ -17,7 +17,7 @@
 import * as fs from "node:fs/promises";
 import { fileExists } from "../../../lib/file-exists.js";
 import * as path from "node:path";
-import { simpleGit } from "simple-git";
+import { boxGit } from "../../../lib/git/env.js";
 import { loadMapState, saveMapState, type MapState } from "../state.js";
 import type { MapTask } from "../precheck.js";
 import { CLAUDE_MD, instructionFilePath } from "../../agent-instruction-files.js";
@@ -81,7 +81,7 @@ interface MapWasRewrittenOptions {
  */
 async function mapWasRewritten(options: MapWasRewrittenOptions): Promise<boolean> {
   const { boxRoot, task } = options;
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot);
   const [diffed, statused] = await Promise.all([
     git.diff(["--name-only", task.head, "--", task.map]),
     git.raw(["status", "--porcelain", "--", task.map]),

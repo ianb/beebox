@@ -2,6 +2,7 @@
 
 import { execFile, spawn } from "node:child_process";
 import { codexBinaryPath, codexCliArgs } from "../codex-binary.js";
+import { agentAllowlistEnv } from "../../core/script-env/core.js";
 import { CodexAuthAppServer } from "./auth-app-server.js";
 
 export type CodexAuthStatus =
@@ -59,7 +60,7 @@ export function createCodexCliService(options?: { binaryPath?: string | undefine
           resolve({ kind: "unavailable", detail: error instanceof Error ? error.message : String(error) });
           return;
         }
-        const child = spawn(binary, codexCliArgs(["login", "status"]), { stdio: ["ignore", "pipe", "pipe"] });
+        const child = spawn(binary, codexCliArgs(["login", "status"]), { stdio: ["ignore", "pipe", "pipe"], env: agentAllowlistEnv() });
         let output = "";
         let settled = false;
         const finish = (status: CodexAuthStatus): void => {
@@ -148,7 +149,7 @@ export function createCodexCliService(options?: { binaryPath?: string | undefine
           resolve({ success: false, error: error instanceof Error ? error.message : String(error) });
           return;
         }
-        execFile(binary, codexCliArgs(["logout"]), { timeout: 10_000 }, (error) => {
+        execFile(binary, codexCliArgs(["logout"]), { timeout: 10_000, env: agentAllowlistEnv() }, (error) => {
           resolve(error ? { success: false, error: error.message } : { success: true });
         });
       });

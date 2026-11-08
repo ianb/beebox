@@ -29,8 +29,13 @@ with no `env` option, not yet in the matrix: Codex status and logout
 (`src/core/agent/invoke/prompt-logger.ts`), and Docling
 (`src/services/docling/core.ts`).
 
-Under the hub that is `BBX_HUB_SECRET`, `BBX_DIAG_API_KEY`, and
-`BBX_VAPID_PRIVATE_KEY`; outside it, also `BBX_SESSION_SECRET`. None of these
+The server seals its own named secrets (`BBX_HUB_SECRET`, `BBX_DIAG_API_KEY`,
+`BBX_VAPID_PRIVATE_KEY`, `BBX_SESSION_SECRET`, …) out of `process.env` at
+startup (`src/lib/server-secrets.ts`), so a running server no longer passes
+them on. What still reaches these children is provider API keys
+(`ANTHROPIC_API_KEY`, the OpenAI keys, `BBX_MISTRAL_*`, `BBX_DEEPGRAM_*`,
+`BBX_OPENROUTER_API_KEY`, the Gemini keys) and any unlisted variable. The
+matrix test runs without sealing, so it shows every name as inherited. None of these
 processes runs agent-authored code, so this is a defense-in-depth gap, not an
 agent escape. `test/credential-visibility/every-consumer.test.ts` pins what each
 receives today (the `status`, `statusNoBox`, `login`, `logout`, and `gws`
@@ -45,6 +50,3 @@ commands) or the tooling allowlist (gws) plus the one injected value, add
 the matrix. Check on macOS that `claude auth status` still finds the keychain
 login (it needs `USER`, which the allowlist has).
 
-Re-reviewed 2026-10-30: since the server now seals its own secrets out of process.env at startup, the named BBX_* secrets no longer reach these children in a running server; provider API keys and unlisted variables still do. The matrix test shows I for all because it runs without sealing.
-
-Out of date in the body above: Replace the 'Under the hub that is BBX_HUB_SECRET, BBX_DIAG_API_KEY, and BBX_VAPID_PRIVATE_KEY' paragraph: after sealServerSecrets (src/lib/server-secrets.ts) those names are gone from process.env; what still leaks is provider keys (ANTHROPIC_API_KEY, OPENAI keys, BBX_MISTRAL/DEEPGRAM/OPENROUTER, GEMINI) and any unlisted variable, per the I cells in every-consumer.test.ts.

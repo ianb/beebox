@@ -7,6 +7,7 @@ import { errnoCode } from "../../shared/error-guards.js";
 import { pathExistsStrict } from "../../lib/file-exists.js";
 import { listSnapshots, type BackupSnapshot } from "./run/backup.js";
 import { runRestic } from "./restic.js";
+import { gitEnvironment } from "../../lib/git/env.js";
 
 export interface RestoreBackupOptions {
   repository: string;
@@ -220,12 +221,12 @@ async function isBoxRoot(directory: string): Promise<boolean> {
 
 async function validateRecoveredBox(boxPath: string): Promise<void> {
   const safeDirectory = `safe.directory=${boxPath}`;
-  const git = await execa("git", ["-c", safeDirectory, "fsck", "--no-reflogs", "--connectivity-only"], { cwd: boxPath, reject: false }).catch((error) => {
+  const git = await execa("git", ["-c", safeDirectory, "fsck", "--no-reflogs", "--connectivity-only"], { cwd: boxPath, reject: false, env: gitEnvironment(), extendEnv: false }).catch((error) => {
     throw new RestoreGitValidationError(boxPath, String(error));
   });
   if (git.exitCode !== 0) throw new RestoreGitValidationError(boxPath, git.stderr.trim());
   if (await pathExistsStrict(path.join(boxPath, ".git", "annex"), { followLinks: true })) {
-    const annex = await execa("git", ["-c", safeDirectory, "annex", "fsck"], { cwd: boxPath, reject: false }).catch((error) => {
+    const annex = await execa("git", ["-c", safeDirectory, "annex", "fsck"], { cwd: boxPath, reject: false, env: gitEnvironment(), extendEnv: false }).catch((error) => {
       throw new RestoreAnnexValidationError(boxPath, String(error));
     });
     if (annex.exitCode !== 0) throw new RestoreAnnexValidationError(boxPath, annex.stderr.trim());

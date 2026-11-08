@@ -378,13 +378,20 @@ with the whole server environment, so a view could return `BBX_HUB_SECRET`,
 listed views. That child now gets the agent allowlist without the injected
 values, and the `bbx view check` render child gets the agent profile
 ([view-metadata-import-runs-box-code-with-the-server-env](../../issues/closed/bugs/2026-10-29-view-metadata-import-runs-box-code-with-the-server-env.md)).
-**Open gaps, high:** box code can still reach the server's credentials on two
-other paths. Box card schemas load inside the server process
-([box-schemas-load-inside-the-server-process](../../issues/bugs/2026-10-30-box-schemas-load-inside-the-server-process.md)),
-and server-side commits run box Git hooks with the whole server environment
-([server-commits-run-box-hooks-with-the-server-env](../../issues/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md)).
-Remaining spreads, not agent code: the `claude auth` commands and the gws
-CLI ([claude-auth-commands-and-gws-spread-the-server-env](../../issues/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md)).
+**Fixed 2026-11-08:** every Git child the engine starts gets an allowlist
+(`lib/git/env.ts`: the agent list plus Git's identity and repository
+variables), so a hook, `core.fsmonitor` command, or filter an agent writes into
+`.git/` no longer runs with the server's environment
+([server-commits-run-box-hooks-with-the-server-env](../../issues/bugs/2026-10-30-server-commits-run-box-hooks-with-the-server-env.md));
+an ESLint fence on `simpleGit` and a source scan of raw `git` spawns
+(`test/lib/git/env.test.ts`) keep it so. The `claude auth` and Codex CLI
+commands and gws take the agent list
+([claude-auth-commands-and-gws-spread-the-server-env](../../issues/code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md)),
+and `bbx upgrade`/`bbx migrate` children take a package-manager list or the
+tooling list
+([upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env](../../issues/bugs/2026-10-30-upgrade-and-migrate-spawn-box-code-with-the-callers-whole-env.md)).
+**Open gap, high:** box card schemas load inside the server process
+([box-schemas-load-inside-the-server-process](../../issues/bugs/2026-10-30-box-schemas-load-inside-the-server-process.md)).
 The standard trick runner is a deliberate exception by declaration: it resolves
 only the selected trick's named dependencies and puts those values in that
 single child environment for that invocation; it does not widen the general
@@ -596,7 +603,7 @@ another box's caller. Three channels, and what covers each:
 |---|---|---|---|
 | **A. Network** — a request carrying box A's credential (session cookie, agent bearer, mobile token) reaches box B's data, through B's scope or through A's scope with a path that climbs out | The recurring shape: a caller-supplied path-like input joined onto `boxRoot` without a containment helper (`boxRelativePath`, `containWithinBox`, `resolveContainedRef`, `resolveCardPath`, …) | Per-scope auth wall (`server-box-scope.ts`, §1) rejects A's credential on B; every path input in the route and tRPC inventory (§1) is bounded by a containment helper — must be **zero** exceptions | `test/scenarios/cross-box-probe.test.ts` (the regression anchor: box A's bearer against every read surface of box B); `schedules/cross-box-leak-scan` static sweep, weekly, hands off any new unbounded path input |
 | **B. Filesystem** — a box process reads another box's files or shared host state directly | `~/.bbx-session-secret`, `~/.bbx-auth.json`, the machine secret store, the shared Google token, `~/.claude/projects/<encoded cwd>`, `/tmp/claude-<uid>/…` | **Accepted for now** as the env-level posture (§8), with a fix on the books — [cross-box-filesystem-isolation](../../issues/closed/features/2026-09-04-cross-box-filesystem-isolation.md): one OS user, files are readable by any same-user process. Compensations: 0600/0700 modes; per-cwd keying of transcripts and task output; `bbx secrets` refuses an agent asking about another box (`secrets-guard.ts`) | `schedules/cross-box-leak-scan` host audit (local, and production over SSH from the main checkout): modes, per-cwd keying maps each project dir to at most one box, no nested box roots, no undocumented file under `~/.config/beebox` / `~/.local/share/beebox` |
-| **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2), whose credential entries come from `src/lib/credential-env.ts`. Fixed 2026-10-30: view metadata import gave box-authored view code the whole server environment; it now gets the agent allowlist. Open gaps: box card schemas load inside the server process, and server-side commits run box Git hooks with the whole server environment (§2) | `test/hub/supervisor.test.ts`; `test/credential-visibility/every-consumer.test.ts` |
+| **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2), whose credential entries come from `src/lib/credential-env.ts`. Fixed 2026-10-30: view metadata import gave box-authored view code the whole server environment; it now gets the agent allowlist. Fixed 2026-11-08: server-side Git children, including box hooks, get an allowlist. Open gap: box card schemas load inside the server process (§2) | `test/hub/supervisor.test.ts`; `test/credential-visibility/every-consumer.test.ts`; `test/lib/git/env.test.ts` |
 
 **Findings of the 2026-09-03 scan** (state after this pass):
 

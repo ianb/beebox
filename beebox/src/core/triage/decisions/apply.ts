@@ -1,7 +1,7 @@
 /** Apply a recorded decision without repeating the classifier. */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { simpleGit } from "simple-git";
+import { boxGit } from "../../../lib/git/env.js";
 import { withFileLock } from "../../../lib/file-lock.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
@@ -125,7 +125,7 @@ async function commitReceipt(boxRoot: string, receipt: DecisionReceipt): Promise
   const paths = [from, to, receiptRef(receipt.id), ...(questionRef ? [questionRef] : [])];
   if (receipt.evidence.source.attachmentRef) paths.push(attachDirFor(from), attachDirFor(to));
   paths.push(`${from}.probable.txt`);
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot);
   const relativePaths: string[] = [];
   for (const ref of paths) {
     const rel = path.relative(boxRoot, containedPath(boxRoot, ref));
@@ -191,7 +191,7 @@ async function applyTodoAnnotation(boxRoot: string, receipt: DecisionReceipt): P
 async function hasCommittedTodoAnnotation(boxRoot: string, receipt: DecisionReceipt): Promise<boolean> {
   const annotation = receipt.application.todoAnnotation;
   if (!annotation) return false;
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot);
   const found = (await git.raw(["log", "--all-match", "--format=%H", "--fixed-strings", "--grep", `Triage-Decision: ${receipt.id}`, "--grep", `Triage-Todo-Annotation: ${annotation.todoId}`])).trim();
   const relative = path.relative(boxRoot, containedPath(boxRoot, receipt.application.to));
   for (const revision of found ? found.split("\n") : []) {

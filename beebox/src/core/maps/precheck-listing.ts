@@ -15,7 +15,7 @@
  * Depends only on `precheck-ignore.ts` (a leaf), never back on `precheck.ts`.
  */
 
-import { simpleGit } from "simple-git";
+import { boxGit } from "../../lib/git/env.js";
 import { gitBoxPrefix } from "../../lib/git/core/operations.js";
 import { isIgnored, joinChildPath } from "./precheck-ignore.js";
 import { ok, err, type Result } from "../../shared/result.js";
@@ -112,7 +112,7 @@ export interface ListingUnavailable {
 async function commitResolves(boxRoot: string, commit: string): Promise<boolean> {
   let out: string;
   try {
-    out = await simpleGit(boxRoot).raw(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`]);
+    out = await boxGit(boxRoot).raw(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`]);
   } catch (_e) {
     // Non-zero exit is the answer we asked for, not a failure: this commit
     // does not resolve. The caller turns that into a typed `err`.
@@ -151,7 +151,7 @@ export async function readBoxTree(
   const tree = new Map<string, TreeEntry[]>([["", []]]);
   let raw: string;
   try {
-    raw = await simpleGit(boxRoot).raw(["ls-tree", "-r", "-t", "-z", "--full-tree", ref]);
+    raw = await boxGit(boxRoot).raw(["ls-tree", "-r", "-t", "-z", "--full-tree", ref]);
   } catch (_e) {
     // The commit resolves (checked above), so the only way `<commit>:<prefix>`
     // fails is that the box's subtree wasn't in that commit. Empty is the

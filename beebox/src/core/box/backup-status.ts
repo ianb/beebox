@@ -24,6 +24,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { gitDirsOf, isAnnexInitialized } from "../annex/is-annex-box.js";
+import { gitEnvironment } from "../../lib/git/env.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -156,6 +157,7 @@ export function assessAssetRisk(input: {
 async function git(repoRoot: string, args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("git", ["-C", repoRoot, ...args], {
     maxBuffer: 8 * 1024 * 1024,
+    env: gitEnvironment(),
   });
   return stdout;
 }

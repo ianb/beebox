@@ -30,6 +30,7 @@ import { pathToFileURL } from "node:url";
 import { ENGINE_LINK, ENGINE_LINK_SPEC, engineRealPath, ensureEngineLink, readBeeBoxSpec } from "../../../core/box/engine-link.js";
 import { isWithin } from "../../../lib/box-containment.js";
 import { runCollectedChild, type CollectedChildResult } from "../../../lib/run-child.js";
+import { packageManagerEnvironment } from "../../../lib/package-manager-env.js";
 import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { lockfileIsPortable, planEngineSpec } from "./plan.js";
 
@@ -41,7 +42,7 @@ export type RefreshLockfile = (boxRoot: string) => Promise<CollectedChildResult>
 const REFRESH_ARGS = ["install", "--lockfile-only", "--prefer-offline"];
 
 const refreshWithPnpm: RefreshLockfile = (boxRoot) =>
-  runCollectedChild({ command: "pnpm", args: REFRESH_ARGS, cwd: boxRoot, env: process.env });
+  runCollectedChild({ command: "pnpm", args: REFRESH_ARGS, cwd: boxRoot, env: packageManagerEnvironment() });
 
 async function readOptional(file: string): Promise<string | null> {
   try {

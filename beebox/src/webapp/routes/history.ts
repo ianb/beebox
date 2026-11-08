@@ -8,11 +8,12 @@ import type { FastifyInstance } from "fastify";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { simpleGit } from "simple-git";
+import { boxGit } from "../../lib/git/env.js";
 import { describeAbsentContent, parseAnnexPointer } from "../../lib/annex-pointer.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "./serving-security.js";
 import { isInBoxNamespace } from "../../shared/ref-path/box-namespace.js";
+import { gitEnvironment } from "../../lib/git/env.js";
 
 /**
  * Register history API routes.
@@ -57,7 +58,7 @@ export async function registerHistoryRoutes(
     const filePath = normalized;
 
     try {
-      const git = simpleGit(boxRoot);
+      const git = boxGit(boxRoot);
       let buffer: Buffer = await git.binaryCatFile(["blob", `${hash}:${filePath}`]);
 
       // If this is a Git LFS pointer, resolve through smudge filter
@@ -65,7 +66,7 @@ export async function registerHistoryRoutes(
       if (buffer.length < 200 && buffer.toString("utf-8").startsWith(LFS_PREFIX)) {
         buffer = execFileSync(
           "git", ["lfs", "smudge"],
-          { cwd: boxRoot, input: buffer, maxBuffer: 50 * 1024 * 1024 }
+          { cwd: boxRoot, input: buffer, maxBuffer: 50 * 1024 * 1024, env: gitEnvironment() }
         );
       }
 
@@ -78,7 +79,7 @@ export async function registerHistoryRoutes(
         try {
           objectPath = execFileSync(
             "git", ["annex", "contentlocation", annexPointer.key],
-            { cwd: boxRoot, encoding: "utf-8" }
+            { cwd: boxRoot, encoding: "utf-8", env: gitEnvironment() }
           ).trim();
         } catch (_e) {
           /* ignore: non-zero exit means the content is not present locally */

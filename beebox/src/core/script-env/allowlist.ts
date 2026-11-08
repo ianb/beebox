@@ -83,6 +83,7 @@ const SCRIPT_ENV_PLAIN: readonly string[] = [
   "BBX_INIT_BEEBOX_SPEC", // src/core/box/package.ts -- which Bee Box spec `bbx init` installs.
   "BBX_SCAN_VISION", // src/services/scan-vision.ts -- photo-analysis backend selection.
   "BBX_LOG_PROMPTS", // src/core/agent/invoke/run.ts -- prompt-logging debug flag.
+  "BBX_NO_URLCHECK", // src/core/install-validation-hooks.ts -- the post-commit hook skips its background URL check when set; the test suite sets it.
   "TSX_TSCONFIG_PATH", // set by src/cli/entry/bootstrap.ts; tricks spawn tsx directly (cli/commands/trick.ts) and need the same tsconfig.
 
   // --- Schedule memory (src/core/schedule/memory.ts): set by the tick on a

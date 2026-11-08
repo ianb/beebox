@@ -30,19 +30,26 @@
  *   `inherit`. The warm slot compares the `inject` names, since an injected
  *   value can change between prewarm and send.
  *
- * The server moves the credentials it uses out of its own `process.env` at
- * startup (`lib/server-secrets.ts`), so a spread after that point omits them.
+ * - `claudeAuth` — the `claude auth` commands (`services/claude-cli.ts`): the
+ *   agent allowlist, plus the box's token for the status probe, so the probe
+ *   answers for the credential an agent run uses. The Codex CLI's own
+ *   commands take the same allowlist with nothing added.
+ * - `gws` — the gws connector CLI (`connectors/gmail/gws.ts`): the agent
+ *   allowlist plus one Google access token.
+ * - `git` — every Git child (`lib/git/env.ts`), and so every hook, fsmonitor
+ *   command, and filter an agent writes into its box's `.git/`.
+ * - `packageManager` — `pnpm install` and `npx` (`lib/package-manager-env.ts`).
+ * - `engineChild` — the `bbx` and `tsx` children of `bbx upgrade` and
+ *   `bbx migrate` (`engineChildEnvironment`): the tooling allowlist.
  *
- * Not governed here, because they spread `process.env` rather than take a
- * list: the `claude auth` commands (`services/claude-cli.ts`, which drops an
- * ambient `CLAUDE_CODE_OAUTH_TOKEN` from the status probe) and the gws
- * connector CLI (`connectors/gmail/gws.ts`).
+ * The server moves the credentials it uses out of its own `process.env` at
+ * startup (`lib/server-secrets.ts`); the allowlists hold whatever is left.
  * `test/credential-visibility/every-consumer.test.ts` pins what every
- * consumer, these included, receives.
+ * consumer receives.
  */
 
 /** A process that receives an allowlisted environment. */
-export type CredentialConsumer = "hubChild" | "agent" | "tooling" | "claudeEngine";
+export type CredentialConsumer = "hubChild" | "agent" | "tooling" | "claudeEngine" | "claudeAuth" | "gws" | "git" | "packageManager" | "engineChild";
 
 /**
  * - `inherit`: copied from the parent's environment by the allowlist.
@@ -57,7 +64,10 @@ interface CredentialRule {
   readonly why: string;
 }
 
-const DENY_ALL = { hubChild: "deny", agent: "deny", tooling: "deny", claudeEngine: "deny" } as const;
+const DENY_ALL = {
+  hubChild: "deny", agent: "deny", tooling: "deny", claudeEngine: "deny",
+  claudeAuth: "deny", gws: "deny", git: "deny", packageManager: "deny", engineChild: "deny",
+} as const;
 
 /** Retired connector variables: their readers use the machine secret store now, so no process needs them. */
 const RETIRED_CONNECTOR_KEY: CredentialRule = {
@@ -67,8 +77,8 @@ const RETIRED_CONNECTOR_KEY: CredentialRule = {
 
 export const CREDENTIAL_ENV: Readonly<Record<string, CredentialRule>> = {
   CLAUDE_CODE_OAUTH_TOKEN: {
-    visibility: { ...DENY_ALL, claudeEngine: "inject" },
-    why: "The box's long-lived Claude token is injected from the box's `claude-oauth-token` grant for first-party runs (core/claude-oauth-token.ts). An ambient copy in the hub's or server's env is never inherited: with one Linux user per box it would sign every box in as one account (issues/closed/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md).",
+    visibility: { ...DENY_ALL, claudeEngine: "inject", claudeAuth: "inject" },
+    why: "The box's long-lived Claude token is injected from the box's `claude-oauth-token` grant for first-party runs and the status probe (core/claude-oauth-token.ts). An ambient copy in the hub's or server's env is never inherited: with one Linux user per box it would sign every box in as one account (issues/closed/bugs/2026-10-25-docker-oauth-token-env-never-reaches-agent.md).",
   },
   ANTHROPIC_API_KEY: {
     visibility: { ...DENY_ALL, claudeEngine: "blank" },
@@ -119,7 +129,7 @@ export const CREDENTIAL_ENV: Readonly<Record<string, CredentialRule>> = {
     why: "As GOOGLE_OAUTH_CLIENT_ID.",
   },
   GOOGLE_WORKSPACE_CLI_TOKEN: {
-    visibility: DENY_ALL,
+    visibility: { ...DENY_ALL, gws: "inject" },
     why: "A short-lived Google access token that connectors/gmail/gws.ts sets for the gws CLI only.",
   },
   BBX_MISTRAL_API_KEY: RETIRED_CONNECTOR_KEY,
