@@ -1,7 +1,7 @@
 /**
  * The box browser pass: a short-lived signed cookie that lets the box's own
  * browser (`bbx browser`, `bbx view look`) open the box's own pages with the
- * agent's authority (docs/plans/agent-self-view.md, Track A).
+ * agent's authority (docs/implemented-plans/agent-self-view.md, Track A).
  *
  * It proves "the box browser of this box, until `exp`": the key is per box
  * (the per-box secret file, or on a unit host the per-box hub secret), so the

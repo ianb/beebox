@@ -1,6 +1,6 @@
 /**
  * The lines `bbx browser screenshot --card` prints after the image path
- * (docs/plans/agent-self-view.md, Track C): whether the image holds the whole
+ * (docs/implemented-plans/agent-self-view.md, Track C): whether the image holds the whole
  * card, what inside it is wider than its box, and any view error it shows.
  * Pure, so the wording is tested without a browser.
  */

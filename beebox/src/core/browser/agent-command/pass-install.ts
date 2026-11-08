@@ -1,5 +1,5 @@
 /**
- * Keep a live box browser pass in the box browser (docs/plans/agent-self-view.md,
+ * Keep a live box browser pass in the box browser (docs/implemented-plans/agent-self-view.md,
  * Track B). Before the engine sends the agent's command to the browser, it makes
  * sure the browser holds a pass for the box's app URL with at least
  * `REFRESH_BELOW_MS` left. The agent never handles the pass.

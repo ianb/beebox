@@ -83,7 +83,7 @@ export async function resolveBoxIdentity(opts: {
 }): Promise<RequestIdentity> {
   // The box browser pass wins over every person credential on the request: the
   // box's own browser acts as the agent, never as a person whose login it
-  // happens to hold (docs/plans/agent-self-view.md, Track A).
+  // happens to hold (docs/implemented-plans/agent-self-view.md, Track A).
   if (requestHasBrowserPass(opts.boxRoot, opts.request.headers)) return { email: null, name: null, source: null };
   const identity = resolveRequestIdentity(opts.request, { openAccess: opts.openAccess });
   if (identity.email !== null) return identity;

@@ -1,6 +1,6 @@
 /**
  * One agent command on the box browser, as the exec route runs it
- * (docs/plans/agent-self-view.md, Tracks B and C): refresh the box's pass,
+ * (docs/implemented-plans/agent-self-view.md, Tracks B and C): refresh the box's pass,
  * resolve box paths (`/views/...`) to the box's own pages, and send
  * `screenshot --card` to the card capture instead of upstream. Everything else
  * is upstream's command, unchanged.

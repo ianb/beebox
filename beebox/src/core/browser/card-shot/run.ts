@@ -1,6 +1,6 @@
 /**
  * `bbx browser screenshot --card`: capture the card open in the box browser
- * whole, not the viewport (docs/plans/agent-self-view.md, Track C).
+ * whole, not the viewport (docs/implemented-plans/agent-self-view.md, Track C).
  *
  * The app shows a card inside a panel that scrolls on its own, and a browser
  * screenshot holds only what it painted. So: find the card, scroll its panel to

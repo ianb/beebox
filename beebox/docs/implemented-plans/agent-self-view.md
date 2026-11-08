@@ -1,9 +1,9 @@
 ---
 title: "Agent self-view: the box agent opens, looks at, and uses its own box's pages"
-status: draft
+status: implemented
 workstream: agent-self-view
 issues:
-  - ../../../issues/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md
+  - ../../../issues/closed/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md
   - ../../../issues/features/2026-11-06-narrow-chat-screenshot-to-users-view.md
 ---
 # Agent self-view
@@ -18,6 +18,8 @@ The box agent builds cards and views but cannot see them. The box browser (`bbx 
 - Related, not resolved: `issues/features/2026-10-05-box-agent-interface-screenshots.md` (annotated interface screenshots) is a later consumer of box paths in `bbx browser`.
 
 Searched the queue for `screenshot`, `self-check`, `view render`, `agent-browser`, `box credential`, `see its own`: no other duplicate.
+
+**As built (2026-11-08):** Tracks A–E are implemented. Where the text below names a module under `src/core/browser/`, `box-path.ts`, `pass-install.ts` and the exec-route glue (`run.ts`) live in `src/core/browser/agent-command/`; the pass itself is `src/core/browser/pass.ts`, the capture is `src/core/browser/card-shot/`. Not done and left to the boxholder: the Cloudflare check after deploy (Open design questions), keeping or dropping `bbx chat screenshot`, review of the security-report amendment (landed marked DRAFT, unreviewed), and the shared dev router restart that activates the router changes. The residual risks are listed under NOT in scope.
 
 ## Design
 

@@ -1,6 +1,6 @@
 /**
  * The measuring script for `bbx browser screenshot --card`
- * (docs/plans/agent-self-view.md, Track C). Runs in the page with `eval` and
+ * (docs/implemented-plans/agent-self-view.md, Track C). Runs in the page with `eval` and
  * returns one JSON string: where the card is, how much of it the browser
  * painted, what inside it is wider than its box, any view error it shows, and
  * whether part of it is still loading (`aria-busy`).

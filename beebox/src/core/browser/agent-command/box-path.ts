@@ -1,5 +1,5 @@
 /**
- * Box paths in `bbx browser` (docs/plans/agent-self-view.md, Track C): an
+ * Box paths in `bbx browser` (docs/implemented-plans/agent-self-view.md, Track C): an
  * address that starts with one `/`, given to `open` (or its aliases `goto`,
  * `navigate`) or `tab new`, names a page of this box. It is an ordinary
  * relative URL resolved against the box's app URL, not a protocol: the URLs

@@ -1,4 +1,4 @@
-// The SPA fallback and the box browser pass (docs/plans/agent-self-view.md):
+// The SPA fallback and the box browser pass (docs/implemented-plans/agent-self-view.md):
 // in hub mode a box serves its app document only to a known identity; the box
 // browser's pass for the box the URL names counts, a pass for another box or
 // from a same-site page does not. Without this, a production card page opened

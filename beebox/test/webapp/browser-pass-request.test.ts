@@ -1,4 +1,4 @@
-// The box and its browser pass (docs/plans/agent-self-view.md, Track A): the
+// The box and its browser pass (docs/implemented-plans/agent-self-view.md, Track A): the
 // real box server with auth on admits a request carrying the box's own pass
 // from the box's own pages, and that request is the agent, never a person,
 // even when the person's session rides along (the shared browser can hold one).

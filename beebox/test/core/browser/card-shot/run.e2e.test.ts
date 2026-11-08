@@ -1,5 +1,5 @@
 // `screenshot --card` through a real box browser host and Chrome
-// (docs/plans/agent-self-view.md, "What will hold this"). A fixture page lays a
+// (docs/implemented-plans/agent-self-view.md, "What will hold this"). A fixture page lays a
 // card out like the app does: inside a panel that fills the window below a
 // header and scrolls on its own, which is what clips a plain element capture.
 // The card's bottom is a red block; the image must contain it at phone and

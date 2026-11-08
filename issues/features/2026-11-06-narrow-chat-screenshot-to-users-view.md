@@ -1,5 +1,5 @@
 ---
-title: "Box agents use `bbx chat screenshot` to check their own visual work; narrow it to \"what the person sees right now\" and route self-checks elsewhere"
+title: "Keep or drop `bbx chat screenshot` now that it is narrowed to the person's own screen (boxholder decision)"
 workstream: agent-self-view
 area: beebox
 labels: [agent, screenshots, guidance, verification]
@@ -40,7 +40,7 @@ To do:
    way to look at a card, view, or the agent's own output.
 2. Point the self-check cases (did my view render, does this card look right,
    is the layout broken) at a tool built for that. The tool does not exist
-   yet. See [box agent cannot see its own visual work](2026-10-29-box-agent-cannot-see-its-own-visual-work.md):
+   yet. See [box agent cannot see its own visual work](../closed/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md):
    a server-side render of a named card or view at set widths, plus its text
    and accessibility tree. Until it exists, the guidance should say to
    check with `bbx view check`, typecheck, and the source, and to ask the
@@ -51,6 +51,10 @@ To do:
 4. After changing the guidance, run a box knowledge audit (the
    knowledge-audit skill) to confirm agents reach for the right tool.
 
+## Remaining: item 3 only
+
+Only the keep-or-drop decision is open; it is a boxholder call, not work.
+
 ## Status 2026-11-08 (agent-self-view)
 
-Items 1, 2 and 4 are done on branch `worktree-agent-self-view` ([plan](../../beebox/docs/plans/agent-self-view.md), Track D; audits `chat-screenshot-when`, `chat-screenshot-person-screen`, `box-page-interaction` pass). Item 3: none of the 779 local box-agent transcript folders on the development machine mention `bbx chat screenshot`; the uses the boxholder saw are on production boxes, which were not read. The command stays, narrowed; whether to drop it is the boxholder's call.
+Items 1, 2 and 4 are done on branch `worktree-agent-self-view` ([plan](../../beebox/docs/implemented-plans/agent-self-view.md), Track D; audits `chat-screenshot-when`, `chat-screenshot-person-screen`, `box-page-interaction` pass). Item 3: none of the 779 local box-agent transcript folders on the development machine mention `bbx chat screenshot`; the uses the boxholder saw are on production boxes, which were not read. The command stays, narrowed; whether to drop it is the boxholder's call.

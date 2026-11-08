@@ -17,7 +17,7 @@ cookies (§2), and the per-box network namespace on the production server
 `c0844b44e` or of the private security tier.
 
 **Scoped amendment (2026-11-08, box browser pass), DRAFT — unreviewed:** Adds
-the box browser pass ([plan](plans/agent-self-view.md)): a one-hour signed
+the box browser pass ([plan](implemented-plans/agent-self-view.md)): a one-hour signed
 cookie that lets the box browser open its own box's pages as the agent. It
 updates the wall's list of admitted credentials (§1 auth architecture), the
 exec route (§1: box paths, `screenshot --card`), and the person-page refusal

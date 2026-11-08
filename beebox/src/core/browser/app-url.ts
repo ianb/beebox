@@ -1,7 +1,7 @@
 /**
  * The app URL: where a person opens this deployment's app, without the box
  * slug. The box browser opens the box's own pages there, and the browser pass
- * is installed for it (docs/plans/agent-self-view.md, Track B).
+ * is installed for it (docs/implemented-plans/agent-self-view.md, Track B).
  *
  * Only operator configuration counts: `BBX_PUBLIC_URL`/`PUBLIC_URL` (the
  * production front door), else `BBX_DEV_APP_URL` (the dev router's URL for a

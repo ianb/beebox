@@ -1,4 +1,4 @@
-// The hub and the box browser pass (docs/plans/agent-self-view.md, Track A):
+// The hub and the box browser pass (docs/implemented-plans/agent-self-view.md, Track A):
 // a box's own pass passes the hub's wall for that box like the agent bearer,
 // wins over a session cookie on the same request (no identity headers), lists
 // only its own box at `/api/boxes`, opens a WebSocket only from the app's own

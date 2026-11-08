@@ -35,4 +35,4 @@ Partly resolved. Done: the box has one browser the agent drives with `bbx browse
 
 ## Status 2026-11-08 (agent-self-view)
 
-The self-view half is built on branch `worktree-agent-self-view` (not yet merged): the box browser holds a one-hour box browser pass and opens this box's pages as the agent, not the boxholder; `bbx browser open /views/<card path>` and `bbx browser screenshot --card` ([plan](../../beebox/docs/plans/agent-self-view.md)). Still open here: browsing at the boxholder's own authority (owner pages), which that plan leaves out on purpose.
+The self-view half is built on branch `worktree-agent-self-view` (not yet merged): the box browser holds a one-hour box browser pass and opens this box's pages as the agent, not the boxholder; `bbx browser open /views/<card path>` and `bbx browser screenshot --card` ([plan](../../beebox/docs/implemented-plans/agent-self-view.md)). Still open here: browsing at the boxholder's own authority (owner pages), which that plan leaves out on purpose.
