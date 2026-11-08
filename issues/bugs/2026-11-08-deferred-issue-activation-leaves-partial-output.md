@@ -1,0 +1,33 @@
+---
+title: "A failed deferred-issue activation left its output in main, and every later run failed on that leftover"
+workstream: unattached
+area: dev-tooling
+labels: [schedules, issues]
+filed-by: agent
+discovered-by: agent
+discovered-in: "main session — supplemental-lint land refused on a dirty main, 2026-11-08"
+---
+
+On 2026-11-06 the hourly `deferred-issues` schedule activated
+`issues/deferred/2026-10-09-retire-claude-md-box-compat.md` (due that day). It
+wrote the activated copy to `issues/code-quality/` and then failed before the
+commit. The copy stayed in the main checkout, untracked, and the deferred
+original stayed in place. From then on every run failed with
+`ActivationDestinationExistsError: activation destination already exists`
+(`bin/deferred-issues.ts`, about line 163), and the untracked file made main
+dirty, so the supplemental-lint sweep's `bin/land` refused on 2026-11-07. The
+leftover was removed by hand on 2026-11-08.
+
+`runActivationTransaction` is meant to restore a clean tree on failure
+(`restoreCleanRepository` resets, restores, and deletes untracked `.md`
+files). It did not here. The 2026-11-06 run's log was not found, so the first
+failure's cause is unknown.
+
+To fix:
+
+- Find why the restore did not remove the activated copy (the failure may have
+  come before the transaction, or the restore itself may have failed).
+- When the destination exists and is an exact activated copy of the deferred
+  source, finish the move (delete the source, commit) instead of failing
+  every hour.
+- Keep each run's log, so the first failure of a schedule can be read later.
