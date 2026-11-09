@@ -1,6 +1,6 @@
 ---
 title: "bbx chat retranscribe printed garbled text in other scripts as a success, and does not say which service produced it"
-workstream: unattached
+workstream: box-feedback-bugs
 area: beebox
 labels: [transcription]
 filed-by: agent

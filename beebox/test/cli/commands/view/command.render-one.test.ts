@@ -186,7 +186,7 @@ export default function Boom() {
   t.check(r, {
     code: 1,
     stdout: "",
-    stderr: str`View render failed: TypeError: Cannot read properties of undefined (reading 'map')
+    stderr: str`View render failed [no card, first frame]: TypeError: Cannot read properties of undefined (reading 'map')
 TypeError: Cannot read properties of undefined (reading 'map')
 ${any(String).includes("views/boom.tsx")}
 `,
@@ -254,8 +254,8 @@ export default function Early({ readFile, fileUrl }) {
   t.check(r, {
     code: 1,
     stdout: "",
-    stderr: str`View render failed: ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view check' does not execute (v1 renders the component body once).
-ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view check' does not execute (v1 renders the component body once).
+    stderr: str`View render failed [no card, first frame]: ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, so call it from one (the check's first frame renders the component body without them).
+ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, so call it from one (the check's first frame renders the component body without them).
 ${any(String)}
 `,
   });

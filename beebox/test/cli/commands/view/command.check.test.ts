@@ -90,7 +90,7 @@ void test("A mix of good and broken views fails, and names which", async (t) => 
       {
         slug: "broken",
         ok: false,
-        error: str`View render failed: TypeError: Cannot read properties of undefined (reading 'title')${any(String)}`,
+        error: str`View render failed [no card, first frame]: TypeError: Cannot read properties of undefined (reading 'title')${any(String)}`,
       },
     ]),
   });

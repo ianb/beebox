@@ -23,7 +23,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { buildProps } from "../../../src/cli/commands/view/command.js";
+import { buildProps } from "../../../src/cli/commands/view/render-one.js";
 import { loadViewCards } from "../../../src/core/views/cards.js";
 import { parseConcepts } from "../../../src/plugins/courseware/view/concept-data.js";
 import { buildGraph } from "../../../src/plugins/courseware/view/graph/model.js";
