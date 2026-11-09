@@ -1,9 +1,9 @@
 /**
  * Quarantine garbage collection, run as part of every promote pass.
  *
- * Nothing else will do it: the generic `tmp/` sweep skips directories
- * (`core/housekeeping.ts`), so `tmp/scan-quarantine/` grows forever without
- * this. Two lifetimes, and both are chosen so `/api/scan/check` keeps giving
+ * Nothing else will do it: the generic `_tmp/` sweep skips
+ * `_tmp/scan-quarantine/` (`core/housekeeping.ts`, `OWNED_TMP_DIRS`), so it
+ * grows forever without this. Two lifetimes, and both are chosen so `/api/scan/check` keeps giving
  * the uploader a truthful answer at every stage:
  *
  *   - `imported` — file AND sidecar go on the next pass. The upload ledger has
