@@ -1,87 +1,16 @@
 /**
  * Plain-language wording for the chat's activity row. The row describes what
  * the box agent did in terms a non-technical person reads as "the box is
- * working on my stuff", not as commands run on their computer. The raw tool
- * input and result stay one click away in the expanded line.
+ * working on my stuff", not as commands run on their computer. A command
+ * step with nothing plainer to say is named by its command's first words
+ * (`command-shorthand.ts`). The raw tool input and result stay one click
+ * away in the expanded line.
  */
 
 import type { SessionContentBlock } from "../../../api";
-import type { ActivityPart } from "../assistant-parts";
-import { type KnownToolName, isKnownTool } from "@shared/known-tools";
 import { attachDirOwnerBasename } from "@shared/attach-path";
 import { cardDisplayName } from "@shared/card-name";
 import { type CommandShorthand, commandShorthand } from "./command-shorthand";
-
-type Category = "look" | "search" | "webpage" | "change" | "step" | "handoff" | "hidden";
-
-/** Tool → summary category, keyed on the shared tool vocabulary. */
-const TOOL_CATEGORIES = {
-  Read: "look",
-  Grep: "look",
-  Glob: "look",
-  // The web is named as the web: "looked up" alone did not say whether the
-  // agent searched the person's box or the internet.
-  WebSearch: "search",
-  WebFetch: "webpage",
-  Edit: "change",
-  Write: "change",
-  Bash: "step",
-  Agent: "handoff",
-  Task: "handoff",
-  // Agent machinery: not counted.
-  TodoWrite: "hidden",
-} satisfies Record<KnownToolName, Category>;
-
-/** Collapsed-summary phrase for a category: one occurrence, or n of them. */
-const CATEGORY_PHRASES = {
-  look: { one: "checked something in your box", many: (n: number) => `checked ${n} things in your box` },
-  search: { one: "searched the web", many: (n: number) => `searched the web ${n} times` },
-  webpage: { one: "read a web page", many: (n: number) => `read ${n} web pages` },
-  change: { one: "made a change", many: (n: number) => `made ${n} changes` },
-  step: { one: "took a step", many: (n: number) => `took ${n} steps` },
-  handoff: { one: "handed off a task", many: (n: number) => `handed off ${n} tasks` },
-} satisfies Record<Exclude<Category, "hidden">, { one: string; many: (n: number) => string }>;
-
-function toolCategory(tool: SessionContentBlock): Category {
-  const name = tool.toolName || "";
-  // A Codex command Codex parsed as reads, searches, or listings is a look.
-  if (name === "Bash" && commandLookups(tool.input || {}) !== null) return "look";
-  // MCP tools and future built-ins count as steps.
-  return isKnownTool(name) ? TOOL_CATEGORIES[name] : "step";
-}
-
-/** Summarize an activity group (thinking, tools, notes) for the collapsed header. */
-export function summarizeActivity(parts: ActivityPart[]): string {
-  let hasThinking = false;
-  let hasNote = false;
-  const counts = new Map<Exclude<Category, "hidden">, number>();
-  for (const part of parts) {
-    switch (part.type) {
-      case "thinking":
-        hasThinking = true;
-        break;
-      case "tools":
-        for (const tool of part.tools) {
-          const category = toolCategory(tool);
-          if (category === "hidden") continue;
-          counts.set(category, (counts.get(category) || 0) + 1);
-        }
-        break;
-      case "note":
-        hasNote = true;
-        break;
-    }
-  }
-
-  const segments: string[] = [];
-  if (hasThinking) segments.push("thought it over");
-  for (const [category, count] of counts) {
-    const phrase = CATEGORY_PHRASES[category];
-    segments.push(count === 1 ? phrase.one : phrase.many(count));
-  }
-  // Notes are not counted as steps; they name a group only when it has nothing else.
-  return segments.join(", ") || (hasNote ? "noted progress" : "working");
-}
 
 const SCHEMA_PATH = /(?:^|\/)schemas\/([^/]+)\.ts$/;
 
@@ -267,7 +196,7 @@ function lookup(action: unknown): Lookup | null {
  * null when any is unknown (the command did something Codex could not name)
  * or there are none.
  */
-function commandLookups(input: Record<string, unknown>): Lookup[] | null {
+export function commandLookups(input: Record<string, unknown>): Lookup[] | null {
   const actions = input.actions;
   if (!Array.isArray(actions) || actions.length === 0) return null;
   const lookups = actions.map(lookup);
