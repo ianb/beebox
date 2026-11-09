@@ -5893,6 +5893,33 @@ tests:
     correct_contains_any: ["attachments", "fileUrl"]
     tags: [views, attachments]
 
+  # === Views: declared check states ===
+  #
+  # A view exports `checkStates` (name, card path, params) so `bbx view check`
+  # renders a state its samples miss, and `bbx view states <slug>` prints the
+  # page path to open it (docs/plans/view-declared-check-states.md). Lives in
+  # views.md (Testing a View), so knows_about. Passes 2026-11-09 on the
+  # worktree test1 clone: 3 reads, 3 searches, 35k context.
+
+  - id: views-declared-check-states
+    prompt: >
+      My periodic table view crashes only when an element is selected, which
+      happens with the view parameter select=O. bbx view check passes. How do
+      I make the check render the selected state, and how do I then
+      screenshot that state? Explain only; do not change anything.
+    expected_level: knows_about
+    watch_for: >
+      Reads node_modules/beebox/box-docs/views.md, then says to export
+      `checkStates` with a name, the card path, and `params: { select: "O" }`,
+      and to get the page path from `bbx view states <slug>` for
+      `bbx browser open` and `screenshot --card`. Must NOT put the card in
+      `params.path` or invent a test harness.
+    should_read: ["node_modules/beebox/box-docs/views.md"]
+    correct_contains: ["checkStates", "bbx view states"]
+    correct_matches:
+      - 'params[\s\S]{0,60}select'
+    tags: [views]
+
   # === Views: card inset vs full bleed ===
   #
   # The card insets a view by default; a view opts into running to the card's

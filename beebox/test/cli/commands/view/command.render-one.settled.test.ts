@@ -28,16 +28,21 @@ async function boxWithView({ view, files }: { view: string; files?: Record<strin
   return box;
 }
 
-/** Run the built CLI's `view render-one v` in the box. */
-function renderOne(boxRoot: string): Promise<{ code: number | null; stdout: string; stderr: string }> {
+/** Run the built CLI with `args` in the box. */
+function runCli(boxRoot: string, args: readonly string[]): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [join(PKG, "dist/cli.mjs"), "view", "render-one", "v"], { cwd: boxRoot });
+    const child = spawn(process.execPath, [join(PKG, "dist/cli.mjs"), ...args], { cwd: boxRoot });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (d) => { stdout += String(d); });
     child.stderr.on("data", (d) => { stderr += String(d); });
     child.on("close", (code) => { resolve({ code, stdout, stderr }); });
   });
+}
+
+/** Run the built CLI's `view render-one v` in the box. */
+function renderOne(boxRoot: string): ReturnType<typeof runCli> {
+  return runCli(boxRoot, ["view", "render-one", "v"]);
 }
 
 const HEAD = `import { useEffect, useState } from "react";
@@ -186,6 +191,69 @@ export default function V({ cards, params }) {
   t.check(await renderOne(box.root), {
     code: 0,
     stdout: "bbx-view-check partial: no doc card among the cards the view receives (its dependencies); not checked with one\n",
+    stderr: "",
+  });
+});
+
+// A view's `checkStates` export adds named states after the automatic ones; a
+// failure names the state. A declared card that is gone is partly checked
+// (docs/plans/view-declared-check-states.md).
+void test("a declared state renders with its params and fails by name; a gone card is reported", async (t) => {
+  const box = await boxWithView({ view: `export const name = "V";
+export const dependencies = ["_content/**/*.doc.card"];
+export const rendersCardTypes = ["doc"];
+export const modes = ["page"];
+export const checkStates = [
+  { name: "selected", path: "_content/notes/A.doc.card", params: { select: "x" } },
+  { name: "moved", path: "_content/notes/Gone.doc.card" },
+];
+export default function V({ params }) {
+  if (params.select === "x") throw new Error("selection " + params.path);
+  return <p>ok</p>;
+}
+`, files: { "_content/notes/A.doc.card": "---\ntitle: A\n---\nBody\n" } });
+  t.teardown(() => box.cleanup());
+  const r = await renderOne(box.root);
+  t.check({ ...r, stderr: r.stderr.split("\n")[0] }, {
+    code: 1,
+    stdout: "bbx-view-check partial: state moved: _content/notes/Gone.doc.card is not among the cards the view receives; not checked\n",
+    stderr: "View render failed [selected, first frame]: Error: selection _content/notes/A.doc.card",
+  });
+});
+
+// A malformed export is a metadata error, and the check fails on it rather
+// than rendering the view with its metadata dropped.
+void test("a malformed checkStates export fails the check", async (t) => {
+  const box = await boxWithView({ view: `${HEAD}
+export const checkStates = [{ name: "Has Space", path: "_content/A.doc.card" }];
+export default function V() { return <p>ok</p>; }
+` });
+  t.teardown(() => box.cleanup());
+  t.check(await renderOne(box.root), {
+    code: 1,
+    stdout: "",
+    stderr: "View metadata export is invalid: checkStates.0.name: use lowercase letters, digits and hyphens\n",
+  });
+});
+
+// `bbx view states` prints the page path that opens each declared state. The
+// app opens a card in the view bound to its type (the first by slug that
+// renders it), so a state another view would show names that view instead.
+void test("bbx view states prints each state's page path", async (t) => {
+  const box = await boxWithView({ view: `export const name = "V";
+export const dependencies = ["_content/**/*.card"];
+export const rendersCardTypes = ["doc", "menu"];
+export const checkStates = [
+  { name: "selected", path: "_content/notes/A b.doc.card", params: { select: "x&y" } },
+  { name: "plain", path: "_content/notes/A b.doc.card" },
+  { name: "elsewhere", path: "_content/M.menu.card" },
+];
+export default function V() { return <p>ok</p>; }
+`, files: { "src/views/a-menu.tsx": "export const rendersCardTypes = [\"menu\"];\nexport default function M() { return <p>m</p>; }\n" } });
+  t.teardown(() => box.cleanup());
+  t.check(await runCli(box.root, ["view", "states", "v"]), {
+    code: 0,
+    stdout: "selected  /views/_content/notes/A%20b.doc.card?select=x%26y\nplain  /views/_content/notes/A%20b.doc.card\nelsewhere  (_content/M.menu.card opens in view a-menu, the view bound to menu cards)\n",
     stderr: "",
   });
 });

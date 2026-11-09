@@ -5,23 +5,27 @@
  * to the first card of each type, by path, among the cards it receives: the
  * app opens it on such a card, and its "card not found" branch is all a
  * path-less render reaches. A type with no such card is reported untested.
+ * Then each state the view declares in its `checkStates` export, by name
+ * (docs/plans/view-declared-check-states.md).
  *
  * Also the record the `render-one` child sends the sweep about a view that
  * rendered but was not fully checked.
  */
 
 import { cardTypeFromName } from "../../../shared/card-name.js";
+import type { DeclaredCheckState } from "../../../core/views/types.js";
 
 /** One set of inputs the check renders a view with. */
 export interface CheckState {
-  /** `no card`, or the card path. */
+  /** `no card`, the sampled card's path, or a declared state's name. */
   label: string;
   params: Record<string, string>;
 }
 
 /** The states for a view, and the card types it was not checked on. */
-export async function checkStates(opts: {
+export async function statesToCheck(opts: {
   rendersCardTypes: readonly string[];
+  declared: readonly DeclaredCheckState[];
   boxCardPaths: readonly string[];
   /** Whether a card parses as the app would pass it. */
   loads: (cardPath: string) => Promise<boolean>;
@@ -36,6 +40,19 @@ export async function checkStates(opts: {
     }
     if (found === null) untested.push(`no ${type} card among the cards the view receives (its dependencies); not checked with one`);
     else states.push({ label: found, params: { path: found } });
+  }
+  // A declared card that is gone (moved, archived, or outside the view's
+  // dependencies), or of a type the view does not render (the app never opens
+  // the view on it), is reported, not failed: a moved card must not wedge the check.
+  for (const { name, path, params } of opts.declared) {
+    const type = cardTypeFromName(path);
+    if (type === undefined || !opts.rendersCardTypes.includes(type)) {
+      untested.push(`state ${name}: the view does not render ${type ?? "this"} cards (rendersCardTypes), so the app never opens it on ${path}; not checked`);
+    } else if (await opts.loads(path)) {
+      states.push({ label: name, params: { ...params, path } });
+    } else {
+      untested.push(`state ${name}: ${path} is not among the cards the view receives; not checked`);
+    }
   }
   return { states, untested };
 }

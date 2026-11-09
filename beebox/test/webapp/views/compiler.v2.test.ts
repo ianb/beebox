@@ -100,6 +100,7 @@ void test("listViews finds a view at `boxRoot/src/views`", async (t) => {
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
     lastModified: isoDate(),
   }]);
 
@@ -117,6 +118,7 @@ void test("listViews finds a view at `boxRoot/src/views`", async (t) => {
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
     lastModified: isoDate(),
   });
 
@@ -158,6 +160,7 @@ export default function Broken() {
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
     lastModified: isoDate(),
   }]);
 });
@@ -193,6 +196,7 @@ export default function Hangs() { return null; }
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
     lastModified: isoDate(),
   }]);
   t.check(elapsedMs, any(Number).below(10000));
