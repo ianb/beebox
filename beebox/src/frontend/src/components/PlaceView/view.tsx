@@ -233,7 +233,7 @@ export function PlaceView({ data, onNavigate, mode }: RendererProps) {
       </ErrorText>
     );
   } else if (landmark === undefined) {
-    content = <StatusMessage>Loading place…</StatusMessage>;
+    content = <StatusMessage busy>Loading place…</StatusMessage>;
   } else if (landmark === null) {
     content = <ErrorText>This landmark card could not be read as a place. Its Source view shows the problem.</ErrorText>;
   } else {
