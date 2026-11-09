@@ -12,8 +12,7 @@ import type { SessionContentBlock } from "../../../api";
 import { type ActivityPart, type Stage, splitStages } from "../assistant-parts";
 import { MarkdownContent } from "../markdown-rendering";
 import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail, stepCommand } from "./activity-wording";
-import { countSteps, noteHeadline, summarizeStages } from "./activity-summary";
-import { type ActivityVariant, activityVariant } from "./activity-variants";
+import { summarizeStages } from "./activity-summary";
 
 type ActivityParts = ActivityPart[];
 
@@ -109,14 +108,8 @@ function CommandName({ head, more }: { head: string; more: number }) {
 
 function StepSentence({ block, description, opens }: { block: SessionContentBlock; description: string; opens: ToolCallDetail["opens"] }) {
   const command = stepCommand(block);
-  const form = activityVariant().command;
-  if (command === null || form === "text") return <ToolSentence description={description} opens={opens} />;
-  if (form === "mono") return <CommandName head={command.head} more={command.more} />;
-  return (
-    <span>
-      Took a step <CommandName head={command.head} more={command.more} />
-    </span>
-  );
+  if (command === null) return <ToolSentence description={description} opens={opens} />;
+  return <CommandName head={command.head} more={command.more} />;
 }
 
 function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; excerptInline: boolean }) {
@@ -199,34 +192,19 @@ function StageSteps({ parts }: { parts: Stage["parts"] }) {
   );
 }
 
-/** The expanded row: each stage's note, then its steps; or each stage folded on its own. */
-function Stages({ stages, form }: { stages: Stage[]; form: ActivityVariant["notes"] }) {
+/** The expanded row: each stage's note, then its steps. */
+function Stages({ stages }: { stages: Stage[] }) {
   return (
     <>
-      {stages.map((stage, i) => {
-        if (stage.note === null) return <ActivityGroupInner key={i} parts={stage.parts} excerptInline />;
-        if (form === "heading" || stage.parts.length === 0) {
-          return (
-            <div key={i}>
-              <StageNote text={stage.note} />
-              <StageSteps parts={stage.parts} />
-            </div>
-          );
-        }
-        const steps = countSteps(stage.parts);
-        return (
-          <details key={i} className="group/stage mt-1">
-            <summary className="cursor-pointer list-none flex items-baseline gap-1 text-sm text-card-ink">
-              <span className="text-card-soft group-open/stage:rotate-90 transition-transform text-[10px]">&#9654;</span>
-              <span>{noteHeadline(stage.note)}</span>
-              {steps > 0 ? <span className="text-xs text-card-soft">· {steps} {steps === 1 ? "step" : "steps"}</span> : null}
-            </summary>
-            {/* The summary shows the first line; the rest of a longer note shows when opened. */}
-            {noteHeadline(stage.note) === stage.note.trim() ? null : <StageNote text={stage.note} />}
+      {stages.map((stage, i) =>
+        stage.note === null ? (
+          <ActivityGroupInner key={i} parts={stage.parts} excerptInline />
+        ) : (
+          <div key={i}>
+            <StageNote text={stage.note} />
             <StageSteps parts={stage.parts} />
-          </details>
-        );
-      })}
+          </div>
+        ))}
     </>
   );
 }
@@ -252,8 +230,7 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
     );
   }
 
-  const variant = activityVariant();
-  const summary = summarizeStages(parts, variant.summary);
+  const summary = summarizeStages(parts);
 
   return (
     <details className="group my-1 ml-2 pl-2 border-l border-warm-300">
@@ -262,7 +239,7 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
         <span>{summary}</span>
       </summary>
       <div className="mt-1 text-xs text-card-soft leading-tight ml-1">
-        <Stages stages={splitStages(parts)} form={variant.notes} />
+        <Stages stages={splitStages(parts)} />
       </div>
     </details>
   );

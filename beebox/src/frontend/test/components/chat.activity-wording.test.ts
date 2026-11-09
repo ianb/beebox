@@ -460,12 +460,11 @@ void test("Card titles read hyphens as spaces, keep dotted names, and name a pos
 
 // ## Stages in the collapsed summary
 //
-// A group with notes names them in its summary, in one of three forms on
-// offer (plan `chat-activity-stages`): the count of parts, the newest note's
-// first line, or today's summary with a note count. Steps are tool calls less
-// TodoWrite; thinking and notes are not steps. A group with no notes keeps
-// today's summary.
-void test("A group with notes names them in the collapsed summary", async (t) => {
+// A group with notes shows its newest note's first line and its step count
+// (plan `chat-activity-stages`). Steps are tool calls less TodoWrite;
+// thinking and notes are not steps. A group with no notes keeps the kinds of
+// steps it took.
+void test("A group with notes shows its newest note in the collapsed summary", async (t) => {
   const parts: ActivityPart[] = [
     { type: "note", text: "I'll read the **porch** plan first." },
     { type: "thinking", text: "hm" },
@@ -473,16 +472,9 @@ void test("A group with notes names them in the collapsed summary", async (t) =>
     { type: "note", text: "\n- Now the materials list,\nthen the to-do." },
     tools(tool("Edit", {})),
   ];
-  t.check(
-    (["count", "note", "today"] as const).map((form) => summarizeStages(parts, form)),
-    [
-      "2 parts · 3 steps",
-      "Now the materials list, · 3 steps",
-      "thought it over, checked something in your box, took a step, made a change · 2 notes",
-    ],
-  );
-  t.check(summarizeStages([tools(tool("Read", {}), tool("Read", {}))], "note"), "checked 2 things in your box");
-  t.check(summarizeStages([{ type: "note", text: "Just a note." }], "note"), "Just a note.");
+  t.check(summarizeStages(parts), "Now the materials list, · 3 steps");
+  t.check(summarizeStages([tools(tool("Read", {}), tool("Read", {}))]), "checked 2 things in your box");
+  t.check(summarizeStages([{ type: "note", text: "Just a note." }]), "Just a note.");
   // A long first line is cut at a word.
   t.check(
     noteHeadline("I am going to look through every card in the porch project and compare the lumber list against the plan's measurements"),

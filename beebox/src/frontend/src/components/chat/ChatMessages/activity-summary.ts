@@ -83,7 +83,7 @@ export function summarizeActivity(parts: ActivityPart[]): string {
 }
 
 /** Steps the summary counts: tool calls, less hidden machinery (TodoWrite). Thinking and notes are not steps. */
-export function countSteps(parts: ActivityPart[]): number {
+function countSteps(parts: ActivityPart[]): number {
   let steps = 0;
   for (const part of parts) {
     if (part.type === "tools") steps += part.tools.filter((tool) => toolCategory(tool) !== "hidden").length;
@@ -106,25 +106,16 @@ export function noteHeadline(text: string): string {
   return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), HEADLINE_CHARS / 2)).trimEnd()}…`;
 }
 
-const counted = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
 /**
- * The collapsed summary of an activity group that has notes, in one of the
- * forms on offer: the stage count, the newest note, or today's summary with
- * a note count. A group with no notes keeps today's summary.
+ * The collapsed summary of an activity group. A group with notes shows its
+ * newest note's first line and its step count: while a turn runs, each note
+ * moves here when the next one arrives. A group with no notes says what kinds
+ * of steps it took.
  */
-export function summarizeStages(parts: ActivityPart[], form: "count" | "note" | "today"): string {
-  const notes = parts.flatMap((part) => (part.type === "note" ? [part.text] : []));
-  const base = summarizeActivity(parts);
-  const newest = notes.at(-1);
-  if (newest === undefined) return base;
+export function summarizeStages(parts: ActivityPart[]): string {
+  const newest = parts.findLast((part) => part.type === "note");
+  if (newest === undefined) return summarizeActivity(parts);
   const steps = countSteps(parts);
-  switch (form) {
-    case "count":
-      return `${counted(notes.length, "part")} · ${counted(steps, "step")}`;
-    case "note":
-      return steps > 0 ? `${noteHeadline(newest)} · ${counted(steps, "step")}` : noteHeadline(newest);
-    case "today":
-      return `${base} · ${counted(notes.length, "note")}`;
-  }
+  const headline = noteHeadline(newest.text);
+  return steps > 0 ? `${headline} · ${steps} ${steps === 1 ? "step" : "steps"}` : headline;
 }

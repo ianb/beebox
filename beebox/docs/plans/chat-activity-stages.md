@@ -318,6 +318,8 @@ No critical gap: each silent row has a test.
 
 ## NOT in scope
 
+- Track 4, live labels from the rollout: dropped (see *Open design
+  questions*). A finished turn gets Codex's parse from history.
 - Naming stages from Codex `todo_list` items. Considered: box chats rarely
   produce a plan, and a todo item does not line up with notes. Not now.
 - Labels for unknown MCP tools ("Took a step" stays there).
@@ -326,21 +328,18 @@ No critical gap: each silent row has a test.
 
 ## Open design questions
 
-For the boxholder, shown in one exhibit:
+None. Decided 2026-11-08: the options were shown to the boxholder as an
+exhibit of two real Codex turns (newest-note, count, and today's-wording
+summaries; heading and per-stage-fold notes; faded command words, "Ran …"
+text, and "Took a step" plus command; fold-now and inline-until-end
+streaming). The boxholder asked to finish without choosing, so the leans
+landed: the newest note's first line and the step count in the folded
+summary; notes as headings over their steps; faded command words; notes fold
+as steps arrive (the existing rule). No user-facing noun for a stage.
 
-1. **Stage word.** "stages" / "parts" / no noun (headings only). Lean: no noun
-   in the expanded view, "parts" only if the summary needs a count.
-2. **Collapsed summary.** (a) count: "2 parts · 6 steps"; (b) newest note's
-   first line: "Two views have a stale filter… · 6 steps"; (c) today's
-   summary plus a count: "checked 2 things, made 2 changes · 2 notes". Lean:
-   (b) live, (a) or (b) finished.
-3. **Note styling.** (a) heading in ink color, steps indented under it; (b)
-   heading with a per-stage fold and step count. Lean: (a).
-4. **Command shorthand.** (a) faded monospace `bbx view check +1`; (b) "Ran
-   `bbx view check` and 1 more"; (c) "Took a step" with faded shorthand
-   after it. Lean: (a).
-5. **Fold while streaming.** (a) notes inline until the turn ends; (b) notes
-   fold at once, newest note in the live summary. Lean: (b).
+Track 4 was dropped: in both test turns Codex classified every command as
+`unknown`, including a multi-file `cat`, so live lines would show the same
+command words with or without the rollout read.
 
 ## Knowledge audits
 
