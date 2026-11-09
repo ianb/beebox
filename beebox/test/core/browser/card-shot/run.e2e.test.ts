@@ -4,7 +4,7 @@
 // header and scrolls on its own, which is what clips a plain element capture.
 // The card's bottom is a red block; the image must contain it at phone and
 // desktop widths. A loading block (`aria-busy`) 5000px tall clears after
-// three seconds: the capture must wait for it, or the card measures 7500px.
+// 300 ms: the capture must wait for it, or the card measures 7500px.
 // A card taller than the capture limit is reported partial and cropped to
 // what was painted.
 
