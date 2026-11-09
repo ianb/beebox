@@ -335,9 +335,16 @@ LAYOUTCHECK
 # the cleanup that repairs it. Best-effort here: the hard post-install prune
 # below is authoritative, while this recovery pass may be running on a full
 # filesystem with partially broken tools.
+# The root store is pruned only when disk is low (see ROOT_STORE_PRUNE_BELOW_PCT
+# at the post-install prune for why).
 step "Pruning deploy package caches before disk gate..."
 ssh "$SSH_TARGET" bash -s <<'PREFLIGHTCLEAN'
-pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
+free_pct=$(df -Pk / | awk 'NR == 2 { print int($4 * 100 / $2) }')
+if [[ "$free_pct" =~ ^[0-9]+$ ]] && (( free_pct >= 30 )); then
+  echo "  Keeping the root pnpm store (${free_pct}% of / free)"
+else
+  pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
+fi
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune' \
   || echo "  WARNING: Bee Box pnpm store preflight prune failed" >&2
 if sudo -u beebox -H bash -lc 'command -v uv >/dev/null 2>&1'; then
@@ -751,13 +758,25 @@ queue_remote stdin bash -s /var/lib/beebox /opt/beebox/beebox \
 # its home so upward config discovery cannot reach /root/uv.toml; `-H`
 # separately gives HOME-based tools the Bee Box user's home.
 # pnpm 10's `store prune` also deletes every cached registry metadata file, so
-# after this step the server has no warm metadata cache. A migration that runs
+# after a prune the server has no warm metadata cache. A migration that runs
 # pnpm on the server must not assume one: use `--prefer-offline`, never
 # `--offline`.
+# The root store is pruned only when less than 30% of / is free. With
+# `nodeLinker: hoisted`, a frozen install over an existing node_modules fetches
+# every platform's optional binaries (esbuild, sharp, TypeScript 7, oxc) even
+# though it installs only this host's, and prune drops them again because no
+# project links them. Pruning on every deploy made each install refetch several
+# GB with the services stopped; on a slow registry day (2026-11-09) that held
+# production down for half an hour. Keeping them costs about 6.5 GB of disk.
 queue_step "Pruning deploy package caches..."
 queue_remote stdin bash -s <<'CACHECLEAN'
 set -euo pipefail
-pnpm store prune
+free_pct=$(df -Pk / | awk 'NR == 2 { print int($4 * 100 / $2) }')
+if [[ "$free_pct" =~ ^[0-9]+$ ]] && (( free_pct >= 30 )); then
+  echo "  Keeping the root pnpm store (${free_pct}% of / free)"
+else
+  pnpm store prune
+fi
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune'
 if sudo -u beebox -H bash -lc 'command -v uv >/dev/null 2>&1'; then
   sudo -u beebox -H bash -lc 'cd /home/beebox && uv cache clean'
@@ -1247,6 +1266,13 @@ if ! "$stage_dir/node_modules/.bin/tsc" --version >/dev/null; then
   echo "The TypeScript 7 binary did not run from the staged install; not activating. Uploaded artifacts remain staged." >&2
   exit 1
 fi
+# Fill the store with everything the live install will ask for while the
+# services still run. The stage's node_modules exists by now (a link to the live
+# tree or its own install), and with one present `pnpm fetch` pulls the same
+# all-platform set the hoisted live install fetches; see the cache prune step.
+# Without this, any new package's downloads happen after the services stop.
+echo "  Prefetching packages for activation..."
+(cd "$stage_dir" && HUSKY=0 npm_config_update_notifier=false CI=true pnpm fetch)
 boxes=()
 for box in /var/lib/beebox/*/box/; do
   [[ -e "$box/.git" ]] && boxes+=(--box "$box")
