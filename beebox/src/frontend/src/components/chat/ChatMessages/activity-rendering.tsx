@@ -9,9 +9,10 @@ import { InlineAction } from "../../ui/InlineAction";
 import { useWorkspace } from "../workspace/WorkspaceProvider/provider";
 import { cardTarget } from "../workspace/use-open-beside/hook";
 import type { SessionContentBlock } from "../../../api";
-import type { ActivityPart } from "../assistant-parts";
+import { type ActivityPart, type Stage, splitStages } from "../assistant-parts";
 import { MarkdownContent } from "../markdown-rendering";
-import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail, summarizeActivity } from "./activity-wording";
+import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail, stepCommand } from "./activity-wording";
+import { summarizeStages } from "./activity-summary";
 
 type ActivityParts = ActivityPart[];
 
@@ -95,6 +96,22 @@ function ToolSentence({ description, opens }: { description: string; opens: Tool
  * summary so the opened raw input and result come after it. A lone step's
  * line is the collapsed view, so its excerpt waits behind the line's click.
  */
+/** A step named by its command: the shorthand, faded and monospace, with a count of further commands. */
+function CommandName({ head, more }: { head: string; more: number }) {
+  return (
+    <span className="font-mono text-card-soft opacity-70">
+      {head}
+      {more > 0 ? <span className="font-sans"> +{more}</span> : null}
+    </span>
+  );
+}
+
+function StepSentence({ block, description, opens }: { block: SessionContentBlock; description: string; opens: ToolCallDetail["opens"] }) {
+  const command = stepCommand(block);
+  if (command === null) return <ToolSentence description={description} opens={opens} />;
+  return <CommandName head={command.head} more={command.more} />;
+}
+
 function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; excerptInline: boolean }) {
   const description = describeToolCall(block);
   const { place, failed, excerpt, opens } = describeToolDetail(block);
@@ -104,7 +121,7 @@ function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; exce
       <summary className="cursor-pointer list-none hover:text-card-soft py-0.5">
         <span className="flex flex-wrap items-center gap-x-1">
           <span className="text-card-soft group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
-          <ToolSentence description={description} opens={opens} />
+          <StepSentence block={block} description={description} opens={opens} />
           {place ? <span className="text-card-soft">· {place}</span> : null}
           {failed ? <span className="text-card-soft">· didn’t go through</span> : null}
         </span>
@@ -161,9 +178,42 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
   );
 }
 
+/** A note heading a stage: the agent's own words, in ink, above the steps it introduced. */
+function StageNote({ text }: { text: string }) {
+  return <div className="mb-0.5 text-sm text-card-ink"><MarkdownContent text={text} /></div>;
+}
+
+function StageSteps({ parts }: { parts: Stage["parts"] }) {
+  if (parts.length === 0) return null;
+  return (
+    <div className="ml-1 pl-2 border-l border-warm-200">
+      <ActivityGroupInner parts={parts} excerptInline />
+    </div>
+  );
+}
+
+/** The expanded row: each stage's note, then its steps. */
+function Stages({ stages }: { stages: Stage[] }) {
+  return (
+    <>
+      {stages.map((stage, i) =>
+        stage.note === null ? (
+          <ActivityGroupInner key={i} parts={stage.parts} excerptInline />
+        ) : (
+          <div key={i} className="mt-2 first:mt-0">
+            <StageNote text={stage.note} />
+            <StageSteps parts={stage.parts} />
+          </div>
+        ))}
+    </>
+  );
+}
+
 /**
  * Render a collapsible activity group (thinking, tool calls, folded notes).
- * A single step with no notes renders directly without a wrapper.
+ * A single step with no notes renders directly without the collapsible
+ * wrapper. Each note starts a stage: expanded, the note heads the steps
+ * after it.
  */
 export function ActivityGroup({ parts }: { parts: ActivityParts }) {
   if (parts.length === 0) return null;
@@ -180,7 +230,7 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
     );
   }
 
-  const summary = summarizeActivity(parts);
+  const summary = summarizeStages(parts);
 
   return (
     <details className="group my-1 ml-2 pl-2 border-l border-warm-300">
@@ -189,7 +239,7 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
         <span>{summary}</span>
       </summary>
       <div className="mt-1 text-xs text-card-soft leading-tight ml-1">
-        <ActivityGroupInner parts={parts} excerptInline />
+        <Stages stages={splitStages(parts)} />
       </div>
     </details>
   );

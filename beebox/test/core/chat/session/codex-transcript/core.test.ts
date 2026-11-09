@@ -104,6 +104,57 @@ void test("The same provider adapter feeds live chat.", async (t) => {
   );
 });
 
+// Codex parses each command it runs (read, search, list files, or unknown) and
+// marks a message written between steps `commentary`. The parse rides on the
+// Bash step as `input.actions`, for the activity row to label the step; a
+// commentary message becomes a progress update, which folds as a note.
+void test("Codex's command parse and commentary phase carry into history.", async (t) => {
+  const thread = {
+    thread: {
+      cwd: "/boxes/example",
+      updatedAt: 100,
+      turns: [{
+        id: "turn-1",
+        startedAt: 100,
+        items: [
+          { type: "agentMessage", id: "m1", text: "Checking the views first.", phase: "commentary" },
+          {
+            type: "commandExecution",
+            id: "c1",
+            command: "/bin/bash -lc 'cat _config/views/home.yaml && rg -n stale _config'",
+            commandActions: [
+              { type: "read", command: "cat _config/views/home.yaml", name: "home.yaml", path: "/boxes/example/_config/views/home.yaml" },
+              { type: "search", command: "rg -n stale _config", query: "stale", path: "_config" },
+            ],
+          },
+          { type: "commandExecution", id: "c2", command: "ls", commandActions: [{ type: "listFiles", command: "ls", path: null }] },
+          { type: "commandExecution", id: "c3", command: "bbx view check", commandActions: [{ type: "unknown", command: "bbx view check" }] },
+          { type: "commandExecution", id: "c4", command: "odd", commandActions: [{ type: "read", command: "odd" }] },
+          { type: "agentMessage", id: "m2", text: "All views check out.", phase: "final_answer" },
+        ],
+      }],
+    },
+  };
+  const step = (id: string, input: Record<string, unknown>) => ({
+    uuid: id, type: "assistant" as const, timestamp: T1, content: [{ type: "tool_use" as const, toolId: id, toolName: "Bash", input, inputSummary: "Bash" }],
+  });
+  t.check(adaptCodexThreadHistory(thread, { mode: "tail", tail: 20 }).entries, [
+    { uuid: "m1", type: "assistant", timestamp: T1, content: [{ type: "thinking", text: "Checking the views first.", progressUpdate: true }] },
+    step("c1", {
+      command: "cat _config/views/home.yaml && rg -n stale _config",
+      actions: [
+        { type: "read", name: "home.yaml", path: "/boxes/example/_config/views/home.yaml" },
+        { type: "search", query: "stale", path: "_config" },
+      ],
+    }),
+    step("c2", { command: "ls", actions: [{ type: "listFiles", path: null }] }),
+    step("c3", { command: "bbx view check", actions: [{ type: "unknown" }] }),
+    // A malformed action (a read with no path) drops the parse; the command stays.
+    step("c4", { command: "odd" }),
+    text({ uuid: "m2", type: "assistant", timestamp: T1, body: "All views check out." }),
+  ]);
+});
+
 // Codex reports a command as the shell invocation it ran. Both entry points show
 // the command inside a `bash -lc` wrapper, as Claude's activity does:
 void test("Codex reports a command as the shell invocation it ran.", async (t) => {
