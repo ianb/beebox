@@ -1,6 +1,6 @@
 ---
 title: "bbx view check passes views that crash after their data loads or with a real card path"
-workstream: unattached
+workstream: box-feedback-bugs
 area: beebox
 labels: [views, agent]
 filed-by: agent
