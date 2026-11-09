@@ -9,7 +9,7 @@ discovered-in: "main session — supplemental-lint land refused on a dirty main,
 ---
 
 On 2026-11-06 the hourly `deferred-issues` schedule activated
-`issues/deferred/2026-10-09-retire-claude-md-box-compat.md` (due that day). It
+`issues/code-quality/2026-10-09-retire-claude-md-box-compat.md` (due that day). It
 wrote the activated copy to `issues/code-quality/` and then failed before the
 commit. The copy stayed in the main checkout, untracked, and the deferred
 original stayed in place. From then on every run failed with

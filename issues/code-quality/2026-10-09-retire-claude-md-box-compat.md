@@ -1,8 +1,6 @@
 ---
 title: "Retire the box CLAUDE.md compatibility code after agents-md-2026-10"
 workstream: unattached
-activate-on: 2026-11-06
-category: code-quality
 area: beebox
 design: ../../beebox/docs/implemented-plans/box-agents-md.md
 filed-by: agent

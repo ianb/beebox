@@ -37,6 +37,6 @@ permission.
   the person is selecting, especially on mobile?
 
 Related: [point-to-comment](2026-11-01-point-to-comment.md) owns the current
-selection-to-chat flow. [Agent self-view](2026-10-29-box-agent-cannot-see-its-own-visual-work.md)
+selection-to-chat flow. [Agent self-view](../closed/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md)
 concerns the agent viewing its own work without relying on the person's live
 viewport; this issue concerns what the person explicitly chooses to share.
