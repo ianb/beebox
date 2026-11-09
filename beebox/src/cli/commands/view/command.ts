@@ -15,179 +15,27 @@
  * infinite loop in the render body, or a stray setInterval) can hang the
  * child; `bbx view check` kills it at its timeout.
  *
- * v1 is a synchronous render: renderToString runs the component body once and
- * does NOT run effects. It catches syntax/JSX errors, undefined.map, bad prop
- * access, and type coercion — the bulk of view bugs — but not useEffect/async
- * helpers. The async ViewProps helpers throw if called during render (that's a
- * view bug); fileUrl returns a string (it's legitimately used in render).
+ * Each view renders in each check state (`check-states.ts`: no card, and one
+ * card of each type it renders) twice. The first frame is renderToString: it
+ * runs the component body once, and the async ViewProps helpers throw if
+ * called there (that's a view bug; fileUrl returns a string and is fine). The
+ * settled render (`settle.ts`) then runs effects in a jsdom document with
+ * `readFile` answered from the box, so a view that crashes once its data
+ * loads fails too (docs/implemented-plans/view-check-settled-render.md).
  */
 
 import { Command } from "commander";
 import * as path from "node:path";
-import { boxSlug as resolveBoxSlug } from "../../../lib/box-slug.js";
-import { promises as fs } from "node:fs";
 import { spawn } from "node:child_process";
-import { createElement, type ComponentType } from "react";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
-import { compileView, listViews, resolveViewsDir } from "../../../webapp/views/compiler/compile.js";
-import { writeNodeViewModule, boxPackageHost } from "../../../webapp/views/node-view-runtime.js";
+import { listViews } from "../../../webapp/views/compiler/compile.js";
+import { renderView } from "./render-one.js";
+import { partialRemarks } from "./check-states.js";
 import { viewLintCommand } from "./lint.js";
-import { loadViewCards } from "../../../core/views/cards.js";
 import { typecheckViews } from "./typecheck.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { buildScriptEnv } from "../../../core/script-env/core.js";
-import type { ViewProps } from "../../../core/views/types.js";
 import { errorMessage } from "../../../shared/error-guards.js";
-
-/** The view's slug doesn't resolve to a `views/<slug>.tsx` file. */
-class ViewNotFoundError extends Error {
-  constructor(slug: string, viewPath: string) {
-    super(`View not found: ${slug} (looked for ${viewPath})`);
-    this.name = "ViewNotFoundError";
-  }
-}
-
-/**
- * An async ViewProps helper was called during synchronous render. These run
- * only in effects/handlers, which the render check (v1) does not execute — so a
- * render-time call is a view bug. Thrown loudly rather than returning empty.
- */
-class ViewHelperDuringRenderError extends Error {
-  constructor(helper: string) {
-    super(
-      `${helper}() was called during render — async helpers only run in effects/handlers, ` +
-        "which 'bbx view check' does not execute (v1 renders the component body once)."
-    );
-    this.name = "ViewHelperDuringRenderError";
-  }
-}
-
-interface LoadedViewModule {
-  default: ComponentType<ViewProps>;
-}
-
-/**
- * Build the ViewProps a view receives. Real cards/files + params; per-helper
- * mock policy (see file header). The async helpers throw; fileUrl/navigate/
- * reportActivity are synchronous no-ops/strings safe to call during render.
- */
-/** The props `bbx view check` renders a view with; also what view tests render with. */
-export function buildProps(opts: {
-  cards: ViewProps["cards"];
-  files: ViewProps["files"];
-  params: Record<string, string>;
-  boxSlug: string;
-}): ViewProps {
-  const { cards, files, params, boxSlug } = opts;
-  const throwDuringRender = (helper: string) => (): never => {
-    throw new ViewHelperDuringRenderError(helper);
-  };
-  return {
-    cards,
-    files,
-    params,
-    viewHistory: {
-      state: {},
-      canPush: false,
-      pushState: () => "replaced",
-      replaceState: () => {},
-    },
-    boxSlug,
-    fileUrl: (filePath: string) => `/api/files/${filePath}`,
-    imageUrl: (filePath: string, options) => {
-      const query = new URLSearchParams();
-      for (const [key, value] of Object.entries(options)) {
-        if (value !== undefined) query.set(key, String(value));
-      }
-      return `/api/images/${filePath}?${query.toString()}`;
-    },
-    navigate: () => {},
-    reportActivity: () => {},
-    readFile: throwDuringRender("readFile"),
-    writeFile: throwDuringRender("writeFile"),
-    appendFile: throwDuringRender("appendFile"),
-    commitFile: throwDuringRender("commitFile"),
-    adapterFetch: throwDuringRender("adapterFetch"),
-  };
-}
-
-interface RenderViewOptions {
-  boxRoot: string;
-  slug: string;
-  allowInvalidCards: boolean;
-}
-
-/**
- * The whole render flow. Returns a process exit code; never calls process.exit
- * itself, so cleanup (esbuild.stop, temp unlink) always runs in the action's
- * finally. Diagnostics go to stderr, the rendered output to stdout.
- */
-async function renderView(options: RenderViewOptions): Promise<number> {
-  const { boxRoot, slug, allowInvalidCards } = options;
-  const { viewsDir, boxShape } = await resolveViewsDir(boxRoot);
-  const viewHost = boxPackageHost(boxShape);
-  const viewPath = path.join(viewsDir, `${slug}.tsx`);
-  try {
-    await fs.access(viewPath);
-  } catch (_e) {
-    throw new ViewNotFoundError(slug, viewPath);
-  }
-
-  // Compile for Node (real React) and load the same data the app passes.
-  const { output, meta } = await compileView(viewPath, { target: "node", viewHost });
-  const { cards, files, skipped } = await loadViewCards(boxRoot, meta.dependencies);
-
-  const params: Record<string, string> = {};
-
-  // The compiled module imports `react`/`react/jsx-runtime` as bare specifiers
-  // and must resolve them to the SAME instance the host react-dom/server uses
-  // (single instance — hooks work, no dispatcher mismatch). writeNodeViewModule
-  // sets up a temp node_modules for the view-host context: a real box package
-  // carries a node_modules/beebox (and react beside it), so it resolves
-  // through THAT directly (box-package host).
-  const mod = await writeNodeViewModule(output, viewHost);
-  try {
-    process.setSourceMapsEnabled(true);
-
-    // Import (module evaluation) and render share one diagnostic block so a
-    // top-level throw in the view gets the same source-mapped stack a render
-    // throw does — both are the same class of authoring bug.
-    try {
-      // eslint-disable-next-line no-restricted-syntax -- dynamic import of a runtime-computed module URL yields an untyped namespace; cast to the known compiled-view contract (validated by the render call that follows)
-      const viewMod = (await import(mod.moduleUrl)) as LoadedViewModule;
-      const boxSlug = await resolveBoxSlug(boxRoot);
-      const props = buildProps({ cards, files, params, boxSlug });
-      // Wrap in the node view host so the widgets (<CardLink>/<CardRef>/<Markdown>)
-      // resolve their context. NodeViewHostProvider comes from the same
-      // dist/view-widgets bundle the view's widgets do (view.ts self-references
-      // the package's exports map), so the ViewHostContext identity matches.
-      const { NodeViewHostProvider } = await import("beebox/view-widgets");
-      const { renderToString } = await import("react-dom/server");
-      renderToString(
-        createElement(NodeViewHostProvider, { boxSlug, children: createElement(viewMod.default, props) }),
-      );
-    } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e));
-      process.stderr.write(`View render failed: ${err.name}: ${err.message}\n`);
-      if (err.stack) process.stderr.write(`${err.stack}\n`);
-      return 1;
-    }
-
-    // Cards that matched a dependency glob but failed to load. The live app
-    // omits them silently; the check surfaces them as author feedback.
-    if (skipped.length > 0) {
-      process.stderr.write(`\n${String(skipped.length)} card(s) selected by dependencies failed to load:\n`);
-      for (const s of skipped) process.stderr.write(`  ${s.path}: ${s.error}\n`);
-      if (!allowInvalidCards) {
-        process.stderr.write("(pass --allow-invalid-cards to treat this as success)\n");
-        return 1;
-      }
-    }
-    return 0;
-  } finally {
-    await mod.cleanup();
-  }
-}
 
 /** Per-view outcome from `bbx view check`. */
 export interface ViewCheckResult {
@@ -197,6 +45,12 @@ export interface ViewCheckResult {
   timedOut?: boolean;
   /** Failure detail (render error or timeout note); absent when `ok`. */
   error?: string;
+  /**
+   * Present when the view rendered but was not fully checked: a state still
+   * loading at its settle budget, a write the check did not perform, a card
+   * type with no card that loads. One remark each.
+   */
+  partial?: string[];
 }
 
 const DEFAULT_VIEW_CHECK_TIMEOUT_MS = 30_000;
@@ -220,7 +74,7 @@ async function checkOneView(args: {
 }): Promise<ViewCheckResult> {
   const { boxRoot, slug, timeoutMs, allowInvalidCards } = args;
   const bbxBin = path.join(PACKAGE_ROOT, "bin", "bbx");
-  const testArgs = ["view", "render-one", slug, ...(allowInvalidCards ? ["--allow-invalid-cards"] : [])];
+  const testArgs = ["view", "render-one", slug, "--timeout", String(timeoutMs), ...(allowInvalidCards ? ["--allow-invalid-cards"] : [])];
   let env: NodeJS.ProcessEnv;
   try {
     env = await buildScriptEnv(boxRoot);
@@ -231,27 +85,33 @@ async function checkOneView(args: {
     const child = spawn(bbxBin, testArgs, {
       cwd: boxRoot,
       env,
-      stdio: ["ignore", "ignore", "pipe"],
+      stdio: ["ignore", "pipe", "pipe"],
       timeout: timeoutMs,
       killSignal: "SIGKILL",
     });
     let stderr = "";
+    let stdout = "";
     child.stderr.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
+    });
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString();
     });
     child.on("error", (e) => {
       resolve({ slug, ok: false, error: `could not run bbx view render-one: ${e.message}` });
     });
     child.on("close", (code, signal) => {
+      const partial = partialRemarks(stdout);
+      const withNotes = partial.length > 0 ? { partial } : {};
       if (code === 0) {
-        resolve({ slug, ok: true });
+        resolve({ slug, ok: true, ...withNotes });
         return;
       }
       const timedOut = signal === "SIGKILL";
       const error = timedOut
         ? `render timed out after ${String(timeoutMs)}ms`
         : stderr.trim() || `bbx view render-one exited with code ${String(code ?? "null")}`;
-      resolve({ slug, ok: false, ...(timedOut ? { timedOut: true } : {}), error });
+      resolve({ slug, ok: false, ...(timedOut ? { timedOut: true } : {}), error, ...withNotes });
     });
   });
 }
@@ -263,10 +123,9 @@ async function checkOneView(args: {
  * migration check is not a hot path — so we avoid racing rebuilds and resource
  * spikes rather than parallelize.
  *
- * v1 renders each view with default params (no `params.path`). A card-bound view
- * that only breaks for a specific `params.path` is not yet exercised — the
- * `params.path` sampling policy is a tracked follow-up (see the agent-applied
- * migrations plan, Open q4).
+ * A view that renders card types also renders with one card of each type as
+ * `params.path` (`check-states.ts`), answering the agent-applied migrations
+ * plan's Open q4 with one card per type.
  */
 export async function checkViews(args: {
   boxRoot: string;
@@ -331,14 +190,14 @@ const viewCheckCommand = new Command("check")
         process.stdout.write(JSON.stringify({ ok, views }) + "\n");
       } else {
         for (const v of views) {
-          if (v.ok) {
-            process.stdout.write(`✓ ${v.slug}\n`);
-          } else {
-            process.stderr.write(`✗ ${v.slug}: ${v.error ?? "failed"}\n`);
-          }
+          if (!v.ok) process.stderr.write(`✗ ${v.slug}: ${v.error ?? "failed"}\n`);
+          else if (v.partial === undefined) process.stdout.write(`✓ ${v.slug}\n`);
+          else process.stdout.write(`~ ${v.slug} (partly checked)\n`);
+          for (const remark of v.partial ?? []) process.stdout.write(`    ${remark}\n`);
         }
         const failing = views.filter((v) => !v.ok).length;
-        process.stdout.write(`${String(views.length)} view(s), ${String(failing)} failing\n`);
+        const partly = views.filter((v) => v.ok && v.partial !== undefined).length;
+        process.stdout.write(`${String(views.length)} view(s), ${String(failing)} failing${partly > 0 ? `, ${String(partly)} partly checked` : ""}\n`);
       }
       process.exitCode = ok ? 0 : 1;
     } catch (error) {
@@ -351,10 +210,11 @@ const viewRenderOneCommand = new Command("render-one")
   .description("Internal: render one view for `view check` (exit non-zero on failure)")
   .argument("<slug>", "View slug (the views/<slug>.tsx basename)")
   .option("--allow-invalid-cards", "Exit 0 even if some selected cards failed to load")
+  .option("--timeout <ms>", "The sweep's per-view timeout, shared by the settled renders", String(DEFAULT_VIEW_CHECK_TIMEOUT_MS))
   .action(
     async (
       slug: string,
-      options: { allowInvalidCards?: boolean }
+      options: { allowInvalidCards?: boolean; timeout?: string }
     ) => {
       try {
         const boxRoot = await requireBoxRoot();
@@ -362,6 +222,7 @@ const viewRenderOneCommand = new Command("render-one")
           boxRoot,
           slug,
           allowInvalidCards: options.allowInvalidCards === true,
+          timeoutMs: Number(options.timeout) > 0 ? Number(options.timeout) : DEFAULT_VIEW_CHECK_TIMEOUT_MS,
         });
         process.exitCode = code;
       } catch (error) {
@@ -371,6 +232,11 @@ const viewRenderOneCommand = new Command("render-one")
         // Tear down esbuild's service child deterministically — nothing
         // long-lived survives this command.
         await (await import("esbuild")).stop();
+        // A view can leave a timer running after unmount; exit rather than
+        // wait for it, once both streams have flushed.
+        await new Promise<void>((resolve) => { process.stdout.write("", () => { resolve(); }); });
+        await new Promise<void>((resolve) => { process.stderr.write("", () => { resolve(); }); });
+        process.exit();
       }
     }
   );

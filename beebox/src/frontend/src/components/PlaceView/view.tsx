@@ -35,6 +35,7 @@ import { StatusMessage } from "../ui/StatusMessage";
 import { LandmarkGroup, LandmarkLinks, LandmarkSymbol } from "../landmarks/LandmarkSection";
 import { ChatOpeners } from "../openers/ChatOpeners";
 import { Markdown } from "../Markdown/body";
+import { CARD_EMBED_COMPONENTS } from "../FigureEmbed";
 import { bbxSource } from "../../lib/source-tag";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { anyFileChange } from "../../lib/live-refresh";
@@ -162,7 +163,7 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
 
       {body !== undefined && body.trim() !== "" ? (
         <div data-place-section="summary">
-          <Markdown prose="block" onNavigate={onNavigate} basePath={cardPath}>{body}</Markdown>
+          <Markdown prose="block" onNavigate={onNavigate} basePath={cardPath} components={CARD_EMBED_COMPONENTS}>{body}</Markdown>
         </div>
       ) : null}
 

@@ -1,12 +1,15 @@
 ---
 title: "bbx view check passes views that crash after their data loads or with a real card path"
-workstream: unattached
+workstream: box-feedback-bugs
 area: beebox
 labels: [views, agent]
 filed-by: agent
 discovered-by: agent
 discovered-in: "courseware box feedback — View_Check_Misses_Async_Data, 2026-11-09"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-09):** bbx view check renders card-type views with a sample card and renders every state again with effects run and readFile answered from the box (beebox/docs/plans/view-check-settled-render.md, box-feedback-bugs). Declared test states are proposed in issues/features/2026-11-09-views-declare-named-check-states.md.
 
 A box agent wrote a view that loads its data with `readFile` in a
 `useEffect` and shows a loading state until then. `bbx view check` printed
@@ -39,7 +42,7 @@ Async loading is the normal shape for a view that reads anything beyond its
   data). The check renders each one and reports per state. The boxholder
   compared this to a small Storybook. The same list could drive
   `bbx browser screenshot --card` captures, a gallery, and chat links that set
-  a view's state ([chat links that set view state](../features/2026-11-09-chat-links-that-set-an-open-views-state.md)).
+  a view's state ([chat links that set view state](../../features/2026-11-09-chat-links-that-set-an-open-views-state.md)).
 
 The agent's workaround in the box: a JSON import instead of `readFile`, and
 render every card when no path is given.

@@ -1,12 +1,15 @@
 ---
 title: "A card embed in a landmark's place summary shows as a broken image"
-workstream: unattached
+workstream: box-feedback-bugs
 area: beebox
 labels: [place-page, markdown]
 filed-by: agent
 discovered-by: agent
 discovered-in: "courseware box feedback — Place_Summary_Cannot_Embed_Cards, 2026-11-09"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-09):** PlaceView passes CARD_EMBED_COMPONENTS to the place summary, as card bodies do (box-feedback-bugs).
 
 A box agent put a card embed, `![Title](/path/to/X.some-type.card)`, in a
 landmark's body to show a custom view on the place page. The place page

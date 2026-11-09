@@ -204,12 +204,13 @@ async function relocateCardFiles({
 async function rewriteOtherReferrers({
   ctx,
   destPath,
-  newAttachAbsDir,
+  attachDirs,
   remap,
 }: {
   ctx: CommandContext;
   destPath: string;
-  newAttachAbsDir: string;
+  /** The moved card's attach directory before and after; null for a plain `.md` file. */
+  attachDirs: { from: string; to: string } | null;
   remap: Remap;
 }): Promise<{
   extraStaged: string[];
@@ -223,15 +224,22 @@ async function rewriteOtherReferrers({
     ...(await listBoxViewFiles(ctx.boxRoot)),
   ];
   for (const referrerPath of referrers) {
-    // Skip the moved card (handled separately) and files that just moved into
-    // the new attach scope (their internal refs travelled with them intact).
+    // Skip the moved card (handled separately by relocateMovedCardRefs).
     if (referrerPath === destPath) continue;
-    if (referrerPath.startsWith(newAttachAbsDir + path.sep)) continue;
+    // A file that moved into the new attach scope is itself a moved file: its
+    // relative refs into the scope travelled intact, but its box-absolute refs
+    // to the parent card or a sibling attachment name the old paths. A view
+    // there is skipped: the moved-card rewrite does not read `cardRef` attributes.
+    const movedFrom = attachDirs !== null && referrerPath.startsWith(attachDirs.to + path.sep)
+      ? attachDirs.from + referrerPath.slice(attachDirs.to.length) : null;
+    if (movedFrom !== null && referrerPath.endsWith(".tsx")) continue;
     try {
       const original = await fs.readFile(referrerPath, "utf-8");
       // Views carry refs only in `cardRef="…"` widget attributes; cards/markdown
       // carry them in frontmatter, markdown links, and body `ref=` tags.
-      const { text: updated, count } = referrerPath.endsWith(".tsx")
+      const { text: updated, count } = movedFrom !== null
+        ? rewriteMovedCardRefs({ boxRoot: ctx.boxRoot, oldCardAbs: movedFrom, newCardAbs: referrerPath, text: original, remap })
+        : referrerPath.endsWith(".tsx")
         ? rewriteViewRefs({
             boxRoot: ctx.boxRoot,
             viewAbsPath: referrerPath,
@@ -357,7 +365,7 @@ export async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
   const { extraStaged, extraUpdated } = await rewriteOtherReferrers({
     ctx,
     destPath,
-    newAttachAbsDir,
+    attachDirs: hasAttachScope ? { from: oldAttachAbsDir, to: newAttachAbsDir } : null,
     remap,
   });
 

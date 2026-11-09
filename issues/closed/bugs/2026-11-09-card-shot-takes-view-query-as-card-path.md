@@ -1,12 +1,15 @@
 ---
 title: "bbx browser screenshot --card finds no card when the page was opened with view parameters"
-workstream: unattached
+workstream: box-feedback-bugs
 area: beebox
 labels: [agent, views, screenshots]
 filed-by: agent
 discovered-by: agent
 discovered-in: "courseware box feedback — Browser_View_Query_Path, 2026-11-09"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-09):** cardPathFromUrl reads the card path before the first ? of the chat card value (box-feedback-bugs).
 
 A box agent ran `bbx browser open /views/_content/chem/Periodic_Table.chem.card?select=O`.
 The open succeeded and the app redirected to
@@ -34,4 +37,4 @@ so no element matches.
 and use its path). An agent can then capture a view in a named state, which
 is the normal way to test a view at more than its default parameters.
 
-Related: [the self-view work that added `screenshot --card`](../closed/features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md).
+Related: [the self-view work that added `screenshot --card`](../features/2026-10-29-box-agent-cannot-see-its-own-visual-work.md).
