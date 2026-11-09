@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import {
   describeToolCall,
   describeToolDetail,
+  stepCommand,
   summarizeActivity,
   type Excerpt,
 } from "../../src/components/chat/ChatMessages/activity-wording.js";
@@ -138,17 +139,50 @@ void test("Agent machinery and paths outside the content folder keep the generic
 
 // ## Bash
 //
-// The description is shown, capitalized; the command text never is:
-void test("The description is shown, capitalized; the command text never is:", async (t) => {
+// The description is shown, capitalized. A command with no description (every
+// Codex command) is described by Codex's parse of it when every part is a
+// read, search, or listing; otherwise the line names the command by its first
+// words, and `stepCommand` gives the renderer that shorthand to show faded.
+void test("A Bash step reads as its description, Codex's parse, or its command's first words", async (t) => {
+  const read = (path: string) => ({ type: "read", name: path, path });
   t.check(
     [
       say("Bash", { description: "check the loan dates", command: "rm -rf x" }),
-      say("Bash", { command: "rm -rf x" }),
+      say("Bash", { command: "cat x", actions: [read("/box/_content/Lemon-Chicken.recipe.card")] }),
+      say("Bash", { command: "cat x y", actions: [read("/box/_content/recipes/Pie.recipe.card"), read("/box/_content/b.md")] }),
+      say("Bash", { command: "rg -n lease", actions: [{ type: "search", query: "lease", path: null }] }),
+      say("Bash", { command: "ls", actions: [{ type: "listFiles", path: null }] }),
+      say("Bash", { command: "cat _config/x.yaml", actions: [read("/box/_config/x.yaml")] }),
+      say("Bash", { command: "cat a && bbx view check", actions: [read("/box/_content/a.md"), { type: "unknown" }] }),
+      say("Bash", { command: "bbx view check --json && git status" }),
+      say("Bash", { command: "$(which bbx) status" }),
     ],
     [
-    "Check the loan dates",
-    "Took a step",
-  ],
+      "Check the loan dates",
+      "Looked at Lemon Chicken",
+      "Looked at Pie and 1 more",
+      'Searched your box for "lease"',
+      "Looked through your box",
+      "Checked something in your box",
+      // A bare-word argument reads as part of the command; the shorthand cannot tell.
+      "Ran cat a and 1 more",
+      "Ran bbx view check and 1 more",
+      "Ran a command",
+    ],
+  );
+  t.check(
+    [
+      stepCommand(tool("Bash", { command: "bbx view check --json && git status" })),
+      stepCommand(tool("Bash", { command: "ls", actions: [{ type: "listFiles", path: null }] })),
+      stepCommand(tool("Bash", { description: "check", command: "bbx view check" })),
+      stepCommand(tool("Read", { file_path: "x" })),
+    ],
+    [{ head: "bbx view check", more: 1 }, null, null, null],
+  );
+  // Lookups count with Read, Grep and Glob in the summary; other commands are steps.
+  t.check(
+    summarizeActivity([tools(tool("Bash", { command: "ls", actions: [{ type: "listFiles", path: null }] }), tool("Bash", { command: "bbx view check" }))]),
+    "checked something in your box, took a step",
   );
 });
 

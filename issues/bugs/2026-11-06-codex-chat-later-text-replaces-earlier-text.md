@@ -1,6 +1,6 @@
 ---
 title: "In a Codex chat, text streams in, tool calls run, then new text replaces the earlier text instead of following it"
-workstream: unattached
+workstream: chat-activity-stages
 area: beebox
 labels: [codex, chat, streaming]
 filed-by: agent

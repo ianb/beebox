@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ensureCodexPluginInstalled } from "../../../agent/ensure-codex-plugin.js";
 import { CodexHistoryServer } from "../../../../services/codex-history-server.js";
 import { CodexHistoryRpcError } from "../../../../services/codex-history-server.js";
-import { normalizeCodexToolItem } from "../../../../services/codex-tool-activity.js";
+import { codexAgentMessageBlock, normalizeCodexToolItem } from "../../../../services/codex-tool-activity.js";
 import type { SessionEntry, SessionLogSlice } from "../../../../cli/lib/session.js";
 import { userIdentity } from "../../../../cli/lib/session-entry.js";
 import * as path from "node:path";
@@ -25,6 +25,7 @@ const threadReadSchema = z.object({
         id: z.string(),
         type: z.string(),
         text: z.string().optional(),
+        phase: z.string().nullable().optional(),
         content: z.array(z.looseObject({ type: z.string(), text: z.string().optional() })).optional(),
       })),
     })),
@@ -172,12 +173,7 @@ function entriesFromThread(raw: unknown): SessionEntry[] {
           });
         }
       } else if (item.type === "agentMessage" && item.text !== undefined) {
-        entries.push({
-          uuid: item.id,
-          type: "assistant",
-          timestamp: timestamp(turn.startedAt),
-          content: [{ type: "text", text: item.text }],
-        });
+        entries.push({ uuid: item.id, type: "assistant", timestamp: timestamp(turn.startedAt), content: [codexAgentMessageBlock(item.text, item.phase)] });
       } else {
         const tool = normalizeCodexToolItem(item);
         if (tool !== null) {

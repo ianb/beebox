@@ -10,6 +10,7 @@ import type { ActivityPart } from "../assistant-parts";
 import { type KnownToolName, isKnownTool } from "@shared/known-tools";
 import { attachDirOwnerBasename } from "@shared/attach-path";
 import { cardDisplayName } from "@shared/card-name";
+import { type CommandShorthand, commandShorthand } from "./command-shorthand";
 
 type Category = "look" | "search" | "webpage" | "change" | "step" | "handoff" | "hidden";
 
@@ -41,7 +42,10 @@ const CATEGORY_PHRASES = {
   handoff: { one: "handed off a task", many: (n: number) => `handed off ${n} tasks` },
 } satisfies Record<Exclude<Category, "hidden">, { one: string; many: (n: number) => string }>;
 
-function toolCategory(name: string): Category {
+function toolCategory(tool: SessionContentBlock): Category {
+  const name = tool.toolName || "";
+  // A Codex command Codex parsed as reads, searches, or listings is a look.
+  if (name === "Bash" && commandLookups(tool.input || {}) !== null) return "look";
   // MCP tools and future built-ins count as steps.
   return isKnownTool(name) ? TOOL_CATEGORIES[name] : "step";
 }
@@ -58,7 +62,7 @@ export function summarizeActivity(parts: ActivityPart[]): string {
         break;
       case "tools":
         for (const tool of part.tools) {
-          const category = toolCategory(tool.toolName || "");
+          const category = toolCategory(tool);
           if (category === "hidden") continue;
           counts.set(category, (counts.get(category) || 0) + 1);
         }
@@ -221,7 +225,11 @@ const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
   }),
   Bash: (input) => {
     const description = stringInput(input, "description");
-    return description ? capitalize(description) : "Took a step";
+    if (description) return capitalize(description);
+    const lookups = commandLookups(input);
+    if (lookups) return describeLookups(lookups);
+    const shorthand = commandShorthand(stringInput(input, "command"));
+    return shorthand ? `Ran ${shorthand.head}${shorthand.more > 0 ? ` and ${shorthand.more} more` : ""}` : "Ran a command";
   },
   Grep: (input) => describeSearch("Grep", input),
   Glob: (input) => describeSearch("Glob", input),
@@ -237,6 +245,60 @@ const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
   Agent: (input) => stringInput(input, "description") || "Handed off a task",
   Task: (input) => stringInput(input, "description") || "Handed off a task",
 } satisfies Record<string, ToolDescriber>));
+
+/** One of Codex's command actions that names what it looked at (`input.actions`, `services/codex-tool-activity.ts`). */
+type Lookup =
+  | { type: "read"; path: string }
+  | { type: "search"; query: string }
+  | { type: "listFiles" };
+
+function lookup(action: unknown): Lookup | null {
+  if (typeof action !== "object" || action === null || !("type" in action)) return null;
+  const fields: Record<string, unknown> = { ...action };
+  const text = (key: string) => (typeof fields[key] === "string" ? fields[key] : "");
+  if (fields.type === "read" && text("path")) return { type: "read", path: text("path") };
+  if (fields.type === "search") return { type: "search", query: text("query") };
+  if (fields.type === "listFiles") return { type: "listFiles" };
+  return null;
+}
+
+/**
+ * A Codex command's actions when every one is a read, search, or listing;
+ * null when any is unknown (the command did something Codex could not name)
+ * or there are none.
+ */
+function commandLookups(input: Record<string, unknown>): Lookup[] | null {
+  const actions = input.actions;
+  if (!Array.isArray(actions) || actions.length === 0) return null;
+  const lookups = actions.map(lookup);
+  return lookups.every((l) => l !== null) ? lookups : null;
+}
+
+/** The line for a command of lookups: the first one, as Read, Grep, or Glob would say it, and how many more. */
+function describeLookups(lookups: Lookup[]): string {
+  const [first, ...rest] = lookups;
+  const more = rest.length > 0 ? ` and ${rest.length} more` : "";
+  if (first === undefined) return "Checked something in your box";
+  switch (first.type) {
+    case "read":
+      return describeToolCall({ type: "tool_use", toolName: "Read", input: { file_path: first.path } }) + more;
+    case "search":
+      return describeSearch("Grep", { pattern: first.query }) + more;
+    case "listFiles":
+      return SEARCH_VERBS.Glob + more;
+  }
+}
+
+/**
+ * The command shorthand a step's line shows faded beside its sentence: for a
+ * Bash step with no description that Codex did not parse as lookups. Null
+ * for every other step.
+ */
+export function stepCommand(block: SessionContentBlock): CommandShorthand | null {
+  const input = block.input || {};
+  if (block.toolName !== "Bash" || stringInput(input, "description") || commandLookups(input)) return null;
+  return commandShorthand(stringInput(input, "command"));
+}
 
 /** Plain-language one-line description of a single tool call. */
 export function describeToolCall(block: SessionContentBlock): string {
