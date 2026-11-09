@@ -366,7 +366,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
   // The view host the card widgets (CardLink/CardRef) consume.
   const viewHost = buildViewHost({
     boxSlug,
-    basePath: viewParams.path ?? "",
+    basePath: loadedParams.path ?? "",
     onNavigate,
     renderInline,
   });
