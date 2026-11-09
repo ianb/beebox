@@ -54,7 +54,8 @@ try {
   // instead of the runner silently dropping it.
   if (mod.layout !== undefined) out.layout = mod.layout;
   if (Array.isArray(mod.rendersCardTypes)) out.rendersCardTypes = mod.rendersCardTypes;
-  if (mod.checkStates !== undefined) out.checkStates = mod.checkStates;
+  // JSON drops a function; send its type instead, so the schema rejects it.
+  if (mod.checkStates !== undefined) out.checkStates = typeof mod.checkStates === "function" ? "function" : mod.checkStates;
   process.stdout.write(JSON.stringify(out));
 } catch (e) {
   process.stderr.write(String((e && e.stack) || e));

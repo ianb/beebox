@@ -209,6 +209,16 @@ export default function States() {
 }
 `);
   t.check((await compileView(join(viewsDir2, "states.tsx"))).meta.description, "Invalid metadata export checkStates.0.params.path: give the card as the state's path, not params.path");
+
+  // A function in place of the list is rejected too, though JSON would drop it:
+
+  await writeFile(join(viewsDir2, "fn.tsx"), `
+export const checkStates = () => [];
+export default function Fn() {
+  return window.__bbxReact.createElement("div", null, "fn");
+}
+`);
+  t.check((await compileView(join(viewsDir2, "fn.tsx"))).meta.metadataError, "checkStates: Invalid input: expected array, received string");
 });
 
 // ## Metadata import does not see server credentials
