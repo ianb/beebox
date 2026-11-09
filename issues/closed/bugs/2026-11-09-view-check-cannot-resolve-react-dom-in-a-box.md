@@ -1,12 +1,15 @@
 ---
 title: "bbx view check fails with ERR_MODULE_NOT_FOUND for react-dom when a box view bundles code that imports it"
-workstream: unattached
+workstream: box-feedback-bugs
 area: beebox
 labels: [views]
 filed-by: agent
 discovered-by: agent
 discovered-in: "courseware box feedback — Concept_Map_Render_Check_Dependency, 2026-11-09"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-09):** The box-package node view runtime links the engine's react-dom beside react (box-feedback-bugs). Cause confirmed: the courseware box's node_modules holds only the beebox link; its declared react/react-dom were never installed.
 
 In a box with the courseware plugin, `bbx view check` rendered four views and
 failed one: `src/views/concept-map.tsx`. The error was

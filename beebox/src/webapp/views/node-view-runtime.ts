@@ -65,8 +65,11 @@ export interface NodeViewModule {
  *   `beebox` (self-reference, for `beebox/view-widgets`) can't live
  *   inside it — it gets its own inner `node_modules` instead.
  * - `box-package` — resolve box dependencies through the package's own
- *   `node_modules`, but override React in the inner directory with the engine's
- *   copy so the view and `react-dom/server` share one hooks dispatcher.
+ *   `node_modules`, but override `react` and `react-dom` in the inner directory
+ *   with the engine's copies, so the view and `react-dom/server` share one
+ *   hooks dispatcher. A box whose declared dependencies were never installed
+ *   has only the `beebox` link; a plugin view that imports `react-dom` (React
+ *   Flow's portals) still resolves.
  */
 export async function writeNodeViewModule(output: string, host: ViewHostContext): Promise<NodeViewModule> {
   const tmpDir = path.join(os.tmpdir(), `bbx-view-${randomUUID()}`);
@@ -84,10 +87,11 @@ export async function writeNodeViewModule(output: string, host: ViewHostContext)
       await fs.symlink(PACKAGE_ROOT, path.join(innerDir, "node_modules", "beebox"), "dir");
     } else {
       await fs.symlink(path.join(host.boxRoot, "node_modules"), path.join(tmpDir, "node_modules"), "dir");
-      const engineReact = path.dirname(
-        createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),
-      );
-      await fs.symlink(engineReact, path.join(innerDir, "node_modules", "react"), "dir");
+      const requireFromEngine = createRequire(path.join(PACKAGE_ROOT, "package.json"));
+      for (const name of ["react", "react-dom"]) {
+        const enginePackage = path.dirname(requireFromEngine.resolve(`${name}/package.json`));
+        await fs.symlink(enginePackage, path.join(innerDir, "node_modules", name), "dir");
+      }
     }
     await fs.writeFile(tmpFile, output, "utf-8");
     return {
