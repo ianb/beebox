@@ -24,6 +24,7 @@ import { dangerousRenderableDisposition } from "../../serving-security.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { probePointer } from "../../../../lib/asset-content.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../../lib/box-namespace-resolve.js";
+import { parseByteRange } from "../../../../shared/byte-range.js";
 
 // Injected into frozen pages at serve time so a hot-linked image that fails
 // (hot-link blockers, auth, dead origin) retries once through the box image
@@ -351,33 +352,6 @@ async function deleteBoxFile({
     path: relativePath,
     commit: commitHash,
   };
-}
-
-/**
- * Parse a single-range `Range: bytes=...` header against a file size.
- * Returns the inclusive byte range, "unsatisfiable" (→ 416), or null for
- * forms we don't serve (multi-range, malformed) — those get the full file.
- */
-function parseByteRange(
-  header: string,
-  size: number
-): { start: number; end: number } | "unsatisfiable" | null {
-  const match = header.match(/^bytes=(\d*)-(\d*)$/);
-  if (match === null) return null;
-  const [, startStr, endStr] = match;
-  if (startStr === "" && endStr === "") return null;
-  if (startStr === "") {
-    // Suffix form: bytes=-N → the last N bytes.
-    const suffix = Number(endStr);
-    if (suffix === 0) return "unsatisfiable";
-    const start = Math.max(0, size - suffix);
-    return size === 0 ? "unsatisfiable" : { start, end: size - 1 };
-  }
-  const start = Number(startStr);
-  if (start >= size) return "unsatisfiable";
-  const end = endStr === "" ? size - 1 : Math.min(Number(endStr), size - 1);
-  if (end < start) return null;
-  return { start, end };
 }
 
 /** Read just [start, end] (inclusive) from a file. */

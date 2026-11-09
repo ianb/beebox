@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-09T02:09:58Z
-Total documents: 627
+Generated: 2026-11-09T20:47:47Z
+Total documents: 628
 
 ## Issues
 
@@ -20,7 +20,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
 - **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (516 lines) · shipped history · implemented
 - **docs/implemented-plans/card-self-refs.md** — "Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary" (367 lines) · shipped history · implemented
-- **docs/implemented-plans/chat-activity-stages.md** — "Chat activity row shows stages, and Codex steps get real labels" (374 lines) · shipped history · implemented
+- **docs/implemented-plans/chat-activity-stages.md** — "Chat activity row shows stages, and Codex steps get real labels" (381 lines) · shipped history · implemented
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (163 lines) · shipped history · implemented
 - **docs/implemented-plans/codex-diagnostic-parity.md** — "Provider-aware agent diagnostics" (168 lines) · shipped history · implemented
 - **docs/implemented-plans/codex-sdk-backend.review.md** — "Plan engineering review — Codex SDK backend" (162 lines) · implementation review
@@ -372,6 +372,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-09-knowledge-audit-read-matcher-misses-cd-and-variable-paths.md:8 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 - ../issues/closed/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md:9 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 - ../issues/closed/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md:2 (mention) — title: "Landmark chats exclude the box's own root AGENTS.md and rules since the host-isolation fix"
+- ../issues/closed/bugs/2026-11-09-mv-skips-absolute-refs-inside-moved-attach-scope.md:15 (mention) — the card and its `.attach/` folder (four cards and an `AGENTS.md`). It
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:7 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-07-16-personal-vibe-check-typecheck-no-inputs.md:7 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -415,9 +416,9 @@ Referenced by:
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:23 (mention) — Related: the noisy-output policy in the root AGENTS.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:8 (mention) — it spawns an agent with a box cwd and box AGENTS.md context and checks
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/AGENTS.md`.
+- ../issues/code-quality/2026-10-09-retire-claude-md-box-compat.md:14 (mention) — `AGENTS.md`. The engine updates before a box's migration runs, and the
 - ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:49 (mention) — needs the boxholder's approval (root `AGENTS.md`).
 - ../issues/decisions/2026-08-25-issue-relationship-fields.md:41 (mention) — context, which lives in AGENTS.md/docs here. Not needed.
-- ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:16 (mention) — `AGENTS.md`. The engine updates before a box's migration runs, and the
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:32 (mention) — - **Decide which directories get their own AGENTS.md.** Candidates that
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:22 (mention) — AGENTS.md files) and spot-check their concrete claims against code —
 - ../issues/docs-and-chores/2026-08-12-work-summary-for-the-boxholder.md:62 (mention) — - **Root `AGENTS.md`** — a general expectation on every agent, at the cost of
@@ -444,6 +445,7 @@ Referenced by:
 - ../issues/features/2026-07-22-modeled-demo-family-box.md:76 (mention) — so it doesn't inherit the dev AGENTS.md), like every other box.
 - ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md:25 (mention) — Options: let the course's `AGENTS.md` or landmark name a first message the
 - ../issues/features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md:60 (mention) — context (a landmark or course whose `AGENTS.md` says so, a research
+- ../issues/features/2026-11-09-mv-lists-old-path-mentions-outside-tracked-refs.md:12 (mention) — read `AGENTS.md` files (`isBuiltinLintableMarkdown` excludes agent
 - ../issues/watch/2026-08-28-ws-upgrade-touches-worktree-activity.md:12 (mention) — upgrade. The router contract (root `AGENTS.md`, `bin/AGENTS.md`) says only HTTP
 - ../research/AGENTS.md:6 (mention) — ideas and validate or challenge our own bets. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this r
 - ../research/agentic-workflows-survey.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -2052,6 +2054,7 @@ Referenced by:
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:21 (mention) — dismissed questions are not re-asked (`docs/questions.md`).
 - ../issues/closed/features/2026-05-19-questions-aging-policy.md:15 (mention) — See `docs/questions.md` § Aging.
 - ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:15 (mention) — maintainer doc at `docs/questions.md`. See that plan for the full track
+- ../issues/decisions/2026-11-09-revisit-tappable-choices-in-chat.md:46 (mention) — `beebox/docs/questions.md`, `research/openui/README.md`,
 - ../issues/exploration/2026-09-24-todo-completion-requires-an-answer.md:30 (mention) — - The questions subsystem (`beebox/docs/questions.md`) already models an
 - ../issues/features/2026-07-19-write-only-secret-capture-in-chat.md:34 (mention) — - **Explicitly NOT the questions subsystem.** Questions (`docs/questions.md`) are an
 - ../issues/features/2026-10-08-agent-files-a-grant-request.md:36 (mention) — subsystem (`beebox/docs/questions.md`) already has.
@@ -3710,6 +3713,7 @@ References:
 Title: "Agent-applied migrations (via procedure checklists)" | 551 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/view-check-settled-render.md:19 (mention) — card-path gap (`docs/implemented-plans/agent-applied-migrations.md:483`:
 - ../issues/closed/docs-and-chores/2026-10-07-nidus-prior-art-note-misreads-paper.md:12 (mention) — Closed: implemented by the acknowledgements workstream. The prior-art note in `beebox/docs/implemented-plans/agent-appli
 
 References:
@@ -4034,7 +4038,7 @@ Title: "Boxes author AGENTS.md instead of CLAUDE.md" | 582 lines | shipped histo
 
 Referenced by:
 - ../issues/closed/docs-and-chores/2026-09-18-move-to-agents-md-only.md:12 (mention) — **Closed 2026-10-09: implemented.** Repo half landed in `bee88d5d6`. Box half: registered migration `agents-md-2026-10`
-- ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/box-agents-md.md
+- ../issues/code-quality/2026-10-09-retire-claude-md-box-compat.md:5 (frontmatter) — design: ../../beebox/docs/implemented-plans/box-agents-md.md
 
 References:
 - → ../issues/closed/docs-and-chores/2026-09-18-move-to-agents-md-only.md (frontmatter)
@@ -4551,7 +4555,7 @@ References:
 
 #### docs/implemented-plans/chat-activity-stages.md **[ORPHAN]**
 
-Title: "Chat activity row shows stages, and Codex steps get real labels" | 374 lines | shipped history | implemented
+Title: "Chat activity row shows stages, and Codex steps get real labels" | 381 lines | shipped history | implemented
 
 References:
 - → ../issues/closed/bugs/2026-11-06-codex-chat-later-text-replaces-earlier-text.md (frontmatter)
@@ -7566,12 +7570,12 @@ Referenced by:
 - ../issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-08-25-field-test-models-chat-is-now-a-box-pin.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-10-08-remove-tests-that-never-earn-their-keep.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-10-09-retire-claude-md-box-compat.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/code-quality/2026-10-16-narrow-types-to-remove-doctest-casts.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/decisions/2026-07-10-boxes-dead-beebox-symlinks.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/decisions/2026-08-30-rethink-box-autocommit.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/decisions/2026-09-05-disallow-dots-in-card-names.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
-- ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:6 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/docs-and-chores/2026-07-19-questions-end-to-end-followups.md:8 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - ../issues/docs-and-chores/2026-10-14-guidance-on-commit-count-per-landed-branch.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
@@ -8425,6 +8429,18 @@ References:
 - → docs/user-stories/catalog/2026-06-26.md (mention)
 - → docs/connectors/calendar.md (mention)
 - → docs/plans/pdf-intake-design.md (mention)
+
+#### docs/implemented-plans/view-check-settled-render.md
+
+Title: "bbx view check renders card views with a card and waits for their data" | 268 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-11-09-view-check-passes-views-that-crash-after-load.md:12 (mention) — **Closed (implemented, 2026-11-09):** bbx view check renders card-type views with a sample card and renders every state
+- ../issues/features/2026-11-09-views-declare-named-check-states.md:13 (link) — ([plan](../../beebox/docs/implemented-plans/view-check-settled-render.md)). It cannot reach
+
+References:
+- → ../issues/closed/bugs/2026-11-09-view-check-passes-views-that-crash-after-load.md (frontmatter)
+- → docs/implemented-plans/agent-applied-migrations.md (mention)
 
 #### docs/implemented-plans/view-render-testing.md
 
@@ -11512,7 +11528,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md:33 (mention) — (`beebox/src/core/agent-guide/guide.md:368`), but not as off limits to read.
 - ../issues/closed/bugs/2026-10-22-box-agent-records-search-summaries-as-sourced-facts.md:25 (mention) — The agent guide's PROVENANCE section (`beebox/src/core/agent-guide/guide.md`) covers `{% source href %}`. It does not sa
 - ../issues/closed/bugs/2026-11-01-guide-says-dismissed-question-means-did-not-care.md:13 (mention) — `beebox/src/core/agent-guide/guide.md:299` says: "A dismissal or expiry means the
-- ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:60 (mention) — `{{instruction_file}}` at `src/core/agent-guide/guide.md:372`,
+- ../issues/code-quality/2026-10-09-retire-claude-md-box-compat.md:58 (mention) — `{{instruction_file}}` at `src/core/agent-guide/guide.md:372`,
 - ../issues/exploration/2026-05-19-memory-writing-guidance.md:20 (mention) — Re-reviewed 2026-10-30: The agent guide now has a routing table for where facts go (guide.md RECORDING) and a law that s
 - ../issues/exploration/2026-06-17-loading-eagerness-axis.md:62 (mention) — Out of date in the body above: Cite .claude/skills/bbx-context/SKILL.md as the shipped tier router (developer-facing) an
 - ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:26 (mention) — - the agent guide (`beebox/src/core/agent-guide/guide.md`), whose box-side

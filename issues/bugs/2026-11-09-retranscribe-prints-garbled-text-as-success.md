@@ -1,6 +1,6 @@
 ---
 title: "bbx chat retranscribe printed garbled text in other scripts as a success, and does not say which service produced it"
-workstream: unattached
+workstream: box-feedback-bugs
 area: beebox
 labels: [transcription]
 filed-by: agent
@@ -39,3 +39,8 @@ The report is also posted as a correction of the message
 
 Related: [show a retranscription in chat](../features/2026-08-12-show-retranscription-in-chat.md),
 [retranscribe 503 retry signal](../features/2026-09-21-chat-retranscribe-503-no-retry-signal.md).
+
+Boxholder, 2026-11-09: no large changes to retranscribe while the cause is
+unknown. No automatic language hint: mixed-language speech is a real use, so
+no hint is a valid default. A per-run option to set one (`--language`) may be
+worth adding later.

@@ -41,7 +41,12 @@ export interface CardShotIo {
 
 export type CardShotResult = { ok: true; output: string; shot: CardShot } | { ok: false; message: string };
 
-/** The card a box page URL shows: `/<slug>/views/<path>` or `/<slug>/chat?card=<path>`; null otherwise. */
+/**
+ * The card a box page URL shows: `/<slug>/views/<path>` or `/<slug>/chat?card=<view URL>`; null otherwise.
+ * The `card` value is a serialized view URL (`serializeViewUrl` in the
+ * frontend): the path, then `?` and the view parameters. The path is the part
+ * before the first `?`, as `parseViewUrl` reads it.
+ */
 export function cardPathFromUrl(pageUrl: string, box: { base: URL; slug: string }): string | null {
   let url: URL;
   try {
@@ -58,7 +63,8 @@ export function cardPathFromUrl(pageUrl: string, box: { base: URL; slug: string 
     return raw === "" ? null : boxRelativePath(raw);
   }
   const card = rest === "chat" ? url.searchParams.get("card") : null;
-  return card === null || card === "" ? null : boxRelativePath(card);
+  const cardPath = card?.split("?", 1)[0] ?? "";
+  return cardPath === "" ? null : boxRelativePath(cardPath);
 }
 
 /** The panel id the app gives an open card (`workspacePanelId` in the frontend). */

@@ -18,6 +18,10 @@ void test("a card is named by /views/<path> or /chat?card=<path> on this box onl
     {
       views: cardPathFromUrl("http://localhost:3210/wt/test1/views/_content/recipes/Beef%20Stew.recipe.card?view=table", DEV),
       chat: cardPathFromUrl("http://localhost:3210/wt/test1/chat?card=_content%2Frecipes%2FStew.recipe.card&session=x", DEV),
+      chatWithViewParams: cardPathFromUrl(
+        `http://localhost:3210/wt/test1/chat?card=${encodeURIComponent("_content/chem/Periodic_Table.chem.card?select=O&view=table")}`,
+        DEV,
+      ),
       chatNoCard: cardPathFromUrl("http://localhost:3210/wt/test1/chat?session=x", DEV),
       otherBox: cardPathFromUrl("http://localhost:3210/wt/other/views/_content/a.card", DEV),
       otherSite: cardPathFromUrl("https://example.com/wt/test1/views/a.card", DEV),
@@ -26,6 +30,7 @@ void test("a card is named by /views/<path> or /chat?card=<path> on this box onl
     {
       views: "_content/recipes/Beef Stew.recipe.card",
       chat: "_content/recipes/Stew.recipe.card",
+      chatWithViewParams: "_content/chem/Periodic_Table.chem.card",
       chatNoCard: null,
       otherBox: null,
       otherSite: null,

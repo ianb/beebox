@@ -34,7 +34,7 @@ with a visible transition, and does not open a second copy.
   `view:/path?select=Na`.
 - **Views declare the states they accept**, so the agent knows valid targets.
   This is the same list as the declared test states in
-  [view check blind spots](../bugs/2026-11-09-view-check-passes-views-that-crash-after-load.md).
+  [view check blind spots](../closed/bugs/2026-11-09-view-check-passes-views-that-crash-after-load.md).
 
 ## Auto-fire and speech timing
 
