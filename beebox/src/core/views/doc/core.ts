@@ -129,6 +129,9 @@ after a user action, a view may normalize them with \`replaceState\`. Do not
 write history during render. Renderer \`params\` remain external configuration,
 while React \`useState\` remains transient interaction state.
 
+A chat "show-me link" can set this state on an open view, which stays mounted
+with its scroll; animate the change (e.g. a CSS transition) to show the move.
+
 ### ViewCard Structure
 
 Cards are YAML frontmatter + a markdown body. Each card in the \`cards\` array has:
@@ -211,6 +214,13 @@ To force a specific viewer, add \`?view=\` with the renderer name (e.g. \`Source
 Directory paths work too:
 \`\`\`
 [Catalog](/_content/catalogs/My_Catalog)
+\`\`\`
+
+**Show-me links.** \`viewState=\` (percent-encoded JSON) sets a view's
+\`viewHistory.state\`, moving an open view without reloading it; the view's source
+shows which keys it reads.
+\`\`\`
+Sodium gives up one electron ([show me](/_content/Periodic_Table.chem.card?viewState=%7B%22select%22%3A%22Na%22%7D)).
 \`\`\`
 
 Always write the box path with a leading \`/\` — links and embeds in chat resolve from the box root, never from your working directory.`;

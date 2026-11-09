@@ -416,3 +416,12 @@ void test("These build the URLs the file/image renderers embed a box-relative pa
 
   t.check(apiRawFileUrl("/test1/api", "_content/Q&A #3 100% done?.md"), "/test1/api/files/_content/Q%26A%20%233%20100%25%20done%3F.md");
 });
+
+// A chat "show me" link carries a percent-encoded JSON `viewState`. The
+// markdown normalizer keeps the query as written, and the target decodes it
+// once into the view's state (box-docs views.md, "Show-me links").
+test("a percent-encoded viewState link resolves to the view's state", (t) => {
+  const href = normalizeMarkdownLink("/_content/Periodic_Table.chem.card?viewState=%7B%22select%22%3A%22Na%22%7D", (url) => url);
+  t.check(resolveContentTarget(undefined, href), { path: "_content/Periodic_Table.chem.card", viewer: null, params: {}, viewState: { select: "Na" } });
+  t.end();
+});

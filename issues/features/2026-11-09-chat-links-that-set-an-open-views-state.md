@@ -1,6 +1,6 @@
 ---
 title: "Chat links that focus an open view and set its state (\"show me\" links)"
-workstream: unattached
+workstream: chat-show-me-links
 needs: [design]
 area: beebox
 labels: [chat, views]
