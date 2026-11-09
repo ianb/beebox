@@ -12,6 +12,11 @@ export interface StatusMessageProps {
   variant?: StatusMessageVariant;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
+  /**
+   * The placeholder stands for content still loading: `aria-busy` tells
+   * assistive tech, and `bbx browser screenshot --card` waits for it to clear.
+   */
+  busy?: boolean;
 }
 
 const VARIANT_CLASSES: Record<StatusMessageVariant, string> = {
@@ -24,6 +29,6 @@ const VARIANT_CLASSES: Record<StatusMessageVariant, string> = {
  * found. `role="status"` lets screen readers announce it. Errors use
  * `ErrorText`.
  */
-export function StatusMessage({ children, variant, className }: StatusMessageProps) {
-  return <div role="status" className={cn(VARIANT_CLASSES[variant ?? "pane"], className)}>{children}</div>;
+export function StatusMessage({ children, variant, className, busy }: StatusMessageProps) {
+  return <div role="status" aria-busy={busy === true ? true : undefined} className={cn(VARIANT_CLASSES[variant ?? "pane"], className)}>{children}</div>;
 }
