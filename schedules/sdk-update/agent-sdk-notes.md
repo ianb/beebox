@@ -41,9 +41,9 @@ Codex entries here are labeled as such; they carry their own pin.
 - **Latest reviewed upstream version:** `0.3.319` (SDK), `2.1.319` (Claude Code), `0.167.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.319` on 2026-11-08;
-  nothing newer is published. The 2026-11-07 commit (`0.3.318`) could not land
-  because the main checkout held someone's uncommitted work; it lands with
-  this one. Codex stays held at `0.164.0` (0.165.0–0.167.0) on
+  nothing newer is published. `bin/land` refused 2026-11-07 and 11-08 over a
+  dirty main checkout; both commits reached main and production by
+  2026-11-09 (deploy `5a32213cd`). Codex stays held at `0.164.0` (0.165.0–0.167.0) on
   `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
