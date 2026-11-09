@@ -54,7 +54,7 @@ article{background:#eee}.body{height:${String(cardHeight - 120)}px}
 <div id="loading" aria-busy="true" style="height:5000px">Loading view...</div>
 <div class="wide">${"wide text that will not wrap ".repeat(8)}</div><div class="body"></div><div class="bottom"></div>
 </article></div><script>document.getElementById('p').id=${JSON.stringify(cardPanelId(cardPath))};
-setTimeout(()=>document.getElementById('loading').remove(),3000)</script></body></html>`;
+setTimeout(()=>document.getElementById('loading').remove(),300)</script></body></html>`;
 }
 
 /** The colour of the image's pixel at (x, y from the bottom). */
