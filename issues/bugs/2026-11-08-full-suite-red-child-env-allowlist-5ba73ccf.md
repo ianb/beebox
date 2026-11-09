@@ -69,3 +69,14 @@ Reproduce at the blamed landing:
 git log -1 5ba73ccf
 pnpm --dir beebox exec tap test/core/browser/card-shot/run.e2e.test.ts
 ```
+
+## Note 2026-11-08 (child-env-allowlist follow-up)
+
+Not resolved. Leave open.
+
+- The hourly full-suite run failed `card-shot/run.e2e.test.ts` twice (runs 20261108-140134 and 20261108-160652) at the screenshot step: "Failed to read: Resource temporarily unavailable (os error 35)". One isolated re-run failed with "agent-browser did not finish within 120 s".
+- It does not reproduce after 5ba73ccf. It passes in the worktree, under a stripped launchd-like env (`env -i` with the com.beebox.schedules PATH), in a fresh detached checkout under `$TMPDIR` with a clean pnpm install and pretest, and as a one-off launchd job (`launchctl submit`).
+- Suspected change: b5dbd6b23 (browser host spawned with `agentAllowlistEnv` instead of `process.env`). It changes the host process env only by adding `BBX_SPAWN_PROFILE=agent` and dropping non-allowlisted names. agent-browser's own env (`dashboardEnv`) is unchanged (built from HOME and PATH, both kept).
+- 16 agent-browser/Chrome processes were left running on the machine at the time. Unconfirmed whether they matter.
+- The same alerts also count `test/services/codex-sdk-session.boundary.test.ts`. It fails from c1aeab168 (`native-store.ts` now imports `codex-history-server.js`), not from this workstream.
+- Commit ed6a83a3c shortens the fixture's loading delay to 300 ms (test time ~12 s to ~4 s). It is not a fix for this failure. The next hourly run shows whether card-shot is still red.
