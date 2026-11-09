@@ -1,5 +1,5 @@
 /**
- * The settled render of `bbx view check` (docs/plans/view-check-settled-render.md,
+ * The settled render of `bbx view check` (docs/implemented-plans/view-check-settled-render.md,
  * Track 1): render a view in a jsdom document with `react-dom/client`, run its
  * effects, answer `readFile` from the box, and step until no helper call is
  * pending or the settle budget ends. A view that loads its data in an effect

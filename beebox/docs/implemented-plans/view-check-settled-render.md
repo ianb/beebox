@@ -1,6 +1,6 @@
 ---
 title: "bbx view check renders card views with a card and waits for their data"
-status: active
+status: implemented
 workstream: box-feedback-bugs
 issues:
   - ../../../issues/closed/bugs/2026-11-09-view-check-passes-views-that-crash-after-load.md

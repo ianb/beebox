@@ -1,6 +1,6 @@
 /**
  * The check states `bbx view check` renders a view with
- * (docs/plans/view-check-settled-render.md, Track 1). Every view renders with
+ * (docs/implemented-plans/view-check-settled-render.md, Track 1). Every view renders with
  * no card. A view that renders card types also renders with `params.path` set
  * to the first card of each type, by path, among the cards it receives: the
  * app opens it on such a card, and its "card not found" branch is all a

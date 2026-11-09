@@ -5,7 +5,7 @@
 // data loads fails. A view that renders card types also renders with one card
 // of each type as `params.path`. A state still loading at its budget, or one
 // that writes, is reported as partly checked on stdout; it does not fail
-// (docs/plans/view-check-settled-render.md;
+// (docs/implemented-plans/view-check-settled-render.md;
 // issues/closed/bugs/2026-11-09-view-check-passes-views-that-crash-after-load.md).
 
 import { test } from "tap";

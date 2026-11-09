@@ -10,7 +10,7 @@ discovered-in: "courseware box feedback — View_Check_Misses_Async_Data, 2026-1
 
 `bbx view check` now renders each view with no card and with one card of each
 type it renders, and runs effects with real box data
-([plan](../../beebox/docs/plans/view-check-settled-render.md)). It cannot reach
+([plan](../../beebox/docs/implemented-plans/view-check-settled-render.md)). It cannot reach
 a state that needs particular parameters (a selection such as
 `?select=O`) or data the box does not have.
 
