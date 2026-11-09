@@ -180,7 +180,7 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
 
 /** A note heading a stage: the agent's own words, in ink, above the steps it introduced. */
 function StageNote({ text }: { text: string }) {
-  return <div className="mt-2 mb-0.5 text-sm text-card-ink first:mt-0"><MarkdownContent text={text} /></div>;
+  return <div className="mb-0.5 text-sm text-card-ink"><MarkdownContent text={text} /></div>;
 }
 
 function StageSteps({ parts }: { parts: Stage["parts"] }) {
@@ -200,7 +200,7 @@ function Stages({ stages }: { stages: Stage[] }) {
         stage.note === null ? (
           <ActivityGroupInner key={i} parts={stage.parts} excerptInline />
         ) : (
-          <div key={i}>
+          <div key={i} className="mt-2 first:mt-0">
             <StageNote text={stage.note} />
             <StageSteps parts={stage.parts} />
           </div>

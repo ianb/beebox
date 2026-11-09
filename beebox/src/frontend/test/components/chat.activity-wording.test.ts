@@ -475,6 +475,8 @@ void test("A group with notes shows its newest note in the collapsed summary", a
   t.check(summarizeStages(parts), "Now the materials list, · 3 steps");
   t.check(summarizeStages([tools(tool("Read", {}), tool("Read", {}))]), "checked 2 things in your box");
   t.check(summarizeStages([{ type: "note", text: "Just a note." }]), "Just a note.");
+  // Underscores are part of names and stay.
+  t.check(noteHeadline("Checking `my_recipe.card` **now**"), "Checking my_recipe.card now");
   // A long first line is cut at a word.
   t.check(
     noteHeadline("I am going to look through every card in the porch project and compare the lumber list against the plan's measurements"),

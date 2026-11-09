@@ -94,13 +94,14 @@ function countSteps(parts: ActivityPart[]): number {
 const HEADLINE_CHARS = 90;
 
 /**
- * A note's first line as plain text, for a summary: box markup tags, markdown
+ * A note's first line as plain text, for a summary: box markup tags, `*`
  * emphasis and code marks, and a list or heading marker removed; cut at a
- * word with "…" past `HEADLINE_CHARS`.
+ * word with "…" past `HEADLINE_CHARS`. Underscores stay: they are often in
+ * names.
  */
 export function noteHeadline(text: string): string {
   const line = stripStructuredOutputTags(stripSpeechTags(text)).split("\n").map((l) => l.trim()).find(Boolean) ?? "";
-  const plain = line.replace(/^(?:#+|[*-]|\d+\.)\s+/, "").replace(/[*_`]/g, "");
+  const plain = line.replace(/^(?:#+|[*-]|\d+\.)\s+/, "").replace(/[*`]/g, "");
   if (plain.length <= HEADLINE_CHARS) return plain;
   const cut = plain.slice(0, HEADLINE_CHARS);
   return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), HEADLINE_CHARS / 2)).trimEnd()}…`;

@@ -86,11 +86,15 @@ function leadingWords(words: string[]): string[] {
 
 /**
  * The shorthand for a command line, or null when its first real command has
- * no showable leading word (it starts with a quote, `$(`, or a subshell).
+ * no showable leading word (it starts with a quote or a subshell) or uses
+ * command substitution (`$(…)`, backticks).
  * `cd <dir>` commands only set up the next one, so they are skipped unless
  * they are all there is.
  */
 export function commandShorthand(line: string): CommandShorthand | null {
+  // Command substitution can hide `&&` or `;` that this splitter would take
+  // for a command boundary; such a line gets the generic label.
+  if (/\$\(|`/.test(line)) return null;
   const all = commands(line).filter((words) => words.some((w) => !ASSIGNMENT.test(w)));
   const work = all.filter((words) => leadingWords(words)[0] !== "cd");
   const list = work.length > 0 ? work : all;

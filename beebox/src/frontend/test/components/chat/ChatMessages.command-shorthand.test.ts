@@ -24,6 +24,7 @@ void test("Command shorthand keeps the first command's leading words and counts 
       "cd /tmp",
       "'quoted' arg",
       "$(which bbx) status",
+      "FOO=$(printf a && printf b) bbx view check",
       "",
     ].map(commandShorthand),
     [
@@ -38,6 +39,8 @@ void test("Command shorthand keeps the first command's leading words and counts 
       { head: "echo", more: 1 },
       { head: "cd", more: 0 },
       null,
+      null,
+      // Command substitution could hide a separator; generic label.
       null,
       null,
     ],
