@@ -126,6 +126,8 @@ function bbxCommandsCore(): string[] {
     "",
     "Use this instead of `git mv` or `mv` — it updates cross-references.",
     "",
+    "It also rewrites any path that resolves exactly to the moved card (or into its `.attach/` folder) in every `.md` file, `AGENTS.md` included, even when the path is not a link: in a code span, a fenced block, or plain text. Relative paths stay relative, `/_content/…` and `_content/…` stay box-absolute. Paths in `.ts` files are not touched; check those by hand.",
+    "",
     "**Examples:**",
     "```bash",
     "# File an inbox item into its permanent home",
