@@ -299,8 +299,8 @@ bbx view check
 This compiles every view in the box, loads the **real cards** each view's
 \`dependencies\` globs select (the same data the running app passes), and renders
 each view in each **check state**: with no card, and, for each type in
-\`rendersCardTypes\`, with the first card of that type in the box (by path) as
-\`params.path\`. Each state renders twice: first one frame, then again in a
+\`rendersCardTypes\`, with the first card of that type (by path) among the
+cards its \`dependencies\` select, as \`params.path\`. Each state renders twice: first one frame, then again in a
 document with effects run and \`readFile\` answered from the box, until no read
 is pending. So a view that crashes only after its data loads, or only with a
 real card, fails.
@@ -312,11 +312,11 @@ If a dependency glob selects a card that fails to validate, that view fails too
 (pass \`--allow-invalid-cards\` to ignore).
 
 A view that renders but was not fully checked prints \`~ <slug> (partly
-checked)\` with one line per reason, and does not fail: a state still loading
-at the end of its time, a write (the check writes nothing, so what the view
-shows next is not what the app shows), an error left uncaught outside render
-(a rejected \`readFile\` with no \`catch\`), or a card type with no card in the
-box. \`adapterFetch\` always rejects in the check.
+checked)\` with one line per reason, and does not fail: a state still loading at
+the end of its time, a write (the check writes nothing), an error left uncaught
+outside render (a \`readFile\` rejection with no \`catch\`), or a card type with
+no card among its dependency cards (the app passes a view only those).
+\`adapterFetch\` always rejects in the check.
 
 \`bbx view typecheck\` type-checks every view against the real \`ViewProps\`; it
 catches field mistakes a render can miss.

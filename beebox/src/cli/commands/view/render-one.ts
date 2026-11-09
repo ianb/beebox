@@ -14,7 +14,6 @@ import { compileView, resolveViewsDir } from "../../../webapp/views/compiler/com
 import { writeNodeViewModule, boxPackageHost } from "../../../webapp/views/node-view-runtime.js";
 import { loadViewCards } from "../../../core/views/cards.js";
 import type { ViewProps } from "../../../core/views/types.js";
-import { listBoxCardFiles } from "../../../core/list-cards.js";
 import { checkStates, PARTIAL_PREFIX, type CheckState } from "./check-states.js";
 import { settledRender, SETTLE_BUDGET_MS } from "./settle.js";
 
@@ -123,11 +122,12 @@ export async function renderView(options: RenderViewOptions): Promise<number> {
   const { output, meta } = await compileView(viewPath, { target: "node", viewHost });
   const { cards, files, skipped } = await loadViewCards(boxRoot, meta.dependencies);
 
-  const boxCardPaths = (await listBoxCardFiles(boxRoot)).map((abs) => path.relative(boxRoot, abs).split(path.sep).join("/"));
-  const loads = async (cardPath: string) => {
-    const loaded = await loadViewCards(boxRoot, [cardPath]);
-    return loaded.cards.length === 1 && loaded.skipped.length === 0;
-  };
+  // The sample comes from the cards the view receives: the app passes only
+  // its dependency cards, so a card outside them takes the not-found branch
+  // there too, and would prove nothing here.
+  const received = new Set(cards.map((card) => card.path));
+  const boxCardPaths = [...received];
+  const loads = (cardPath: string) => Promise.resolve(received.has(cardPath));
   const { states, untested } = await checkStates({ rendersCardTypes: meta.rendersCardTypes, boxCardPaths, loads });
   for (const remark of untested) process.stdout.write(`${PARTIAL_PREFIX}${remark}\n`);
 

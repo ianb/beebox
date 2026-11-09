@@ -119,10 +119,12 @@ is not available." and with a card path rendered the recipe.
 - **Direction.**
   - `checkStates({ rendersCardTypes, boxCardPaths, loads })` (`view/check-states.ts`):
     `[{ label: "no card", params: {} }]` plus, for each type in
-    `rendersCardTypes`, the first box card of that type by sorted path that
-    loads (`loadViewCards` on that one path, so a card that does not parse is
-    not the sample): `{ label: <path>, params: { path: <path> } }`. A type with
-    no card that loads is a partial remark.
+    `rendersCardTypes`, the first card of that type by sorted path among the
+    cards the view receives (its dependency cards, already loaded; the app
+    passes only those, so a card outside them proves nothing):
+    `{ label: <path>, params: { path: <path> } }`. A type with no such card is
+    a partial remark. Branch review finding; it replaced sampling from every
+    box card.
   - `settledRender({ boxRoot, View, props, Host, budgetMs })` (`view/settle.ts`):
     installs jsdom globals once per process, renders inside an error boundary
     and `NodeViewHostProvider` with `createRoot`, steps `act` with a 10 ms
@@ -224,7 +226,9 @@ none
    longer than two ticks; a sample card that loads; budgets inside the
    per-view timeout; the namespace policy and byte ranges of the app's
    `readFile`; a write makes the state partial; a prefixed stdout record.
-   Rejected: drop the first frame for card states. The first frame is where a
+   Branch review (codex gpt-6-sol) added two fixes: sample from the
+   dependency cards, and the file route's range rule (`shared/byte-range.ts`,
+   unsatisfiable rejects). Rejected: drop the first frame for card states. The first frame is where a
    render-time helper call is reported, for any state. Open for the
    boxholder: whether **partly checked** should exit non-zero.
 

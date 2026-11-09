@@ -25,7 +25,7 @@ void test("a card-type view gets one state per type, with the first card by path
       { label: "no card", params: {} },
       { label: "_content/recipes/Bread.recipe.card", params: { path: "_content/recipes/Bread.recipe.card" } },
     ],
-    untested: ["no menu card in the box loads; not checked with one"],
+    untested: ["no menu card among the cards the view receives (its dependencies); not checked with one"],
   });
 });
 

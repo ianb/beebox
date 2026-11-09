@@ -2,9 +2,9 @@
  * The check states `bbx view check` renders a view with
  * (docs/plans/view-check-settled-render.md, Track 1). Every view renders with
  * no card. A view that renders card types also renders with `params.path` set
- * to the first card of each type in the box, by path, that loads: the app
- * opens it on such a card, and its "card not found" branch is all a path-less
- * render reaches. A type with no card that loads is reported untested.
+ * to the first card of each type, by path, among the cards it receives: the
+ * app opens it on such a card, and its "card not found" branch is all a
+ * path-less render reaches. A type with no such card is reported untested.
  *
  * Also the record the `render-one` child sends the sweep about a view that
  * rendered but was not fully checked.
@@ -34,7 +34,7 @@ export async function checkStates(opts: {
     for (const candidate of sorted.filter((p) => cardTypeFromName(p) === type)) {
       if (await opts.loads(candidate)) { found = candidate; break; }
     }
-    if (found === null) untested.push(`no ${type} card in the box loads; not checked with one`);
+    if (found === null) untested.push(`no ${type} card among the cards the view receives (its dependencies); not checked with one`);
     else states.push({ label: found, params: { path: found } });
   }
   return { states, untested };

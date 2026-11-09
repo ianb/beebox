@@ -15,6 +15,7 @@ import { JSDOM, VirtualConsole } from "jsdom";
 import { act, Component, createElement, type ComponentType, type ReactNode } from "react";
 import type { ViewFile, ViewProps } from "../../../core/views/types.js";
 import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
+import { parseByteRange, viewReadRangeHeader } from "../../../shared/byte-range.js";
 
 /** The most the settled render of one state waits for pending helper calls. */
 export const SETTLE_BUDGET_MS = 5_000;
@@ -37,6 +38,13 @@ class PathOutsideBoxError extends Error {
   constructor(filePath: string) {
     super(`readFile: ${filePath} is not a box content path`);
     this.name = "PathOutsideBoxError";
+  }
+}
+
+class RangeNotSatisfiableError extends Error {
+  constructor(filePath: string) {
+    super(`readFile: the byte range asked of ${filePath} is past its end (the app gets HTTP 416)`);
+    this.name = "RangeNotSatisfiableError";
   }
 }
 
@@ -66,17 +74,18 @@ function installDom(): JSDOM {
 
 /**
  * Read a box file as the app's `readFile` does (`useViewFileHelpers.ts`): the
- * same namespace policy as a view's dependency files, and an HTTP byte range,
- * whose `end` is inclusive and whose negative `start` is a tail.
+ * same namespace policy as a view's dependency files, and the file route's
+ * HTTP byte-range rule (`shared/byte-range.ts`).
  */
 async function readBoxFile({ boxRoot, filePath, opts }: { boxRoot: string; filePath: string; opts: { start?: number; end?: number } | undefined }): Promise<string> {
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: filePath, mode: "read" });
   if (!ns.ok) throw new PathOutsideBoxError(filePath);
   const bytes = await fs.readFile(ns.resolved);
-  if (opts?.start === undefined && opts?.end === undefined) return bytes.toString("utf-8");
-  const start = opts.start ?? 0;
-  if (start < 0) return bytes.subarray(start).toString("utf-8");
-  return bytes.subarray(start, opts.end === undefined ? undefined : opts.end + 1).toString("utf-8");
+  const header = viewReadRangeHeader(opts);
+  const range = header === null ? null : parseByteRange(header, bytes.length);
+  // The route answers an unsatisfiable range with 416, and the app's readFile rejects.
+  if (range === "unsatisfiable") throw new RangeNotSatisfiableError(filePath);
+  return (range === null ? bytes : bytes.subarray(range.start, range.end + 1)).toString("utf-8");
 }
 
 interface BoundaryState { error: Error | null }

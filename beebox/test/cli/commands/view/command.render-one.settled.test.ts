@@ -70,14 +70,19 @@ ${any(String).includes("views/v.tsx")}
   });
 });
 
-// `readFile` takes an HTTP byte range, as in the app: `end` is inclusive, and a
-// negative `start` is a tail. The view throws what it read, so the error shows it.
+// `readFile` takes an HTTP byte range, as in the app: `end` is inclusive, a
+// negative `start` is a tail, and a start past the end rejects (the route's
+// 416). The view throws what it read, so the error shows it.
 void test("readFile answers byte ranges as the app does", async (t) => {
   const box = await boxWithView({ view: `${HEAD}
 export default function V({ readFile }) {
   const [got, setGot] = useState(null);
   useEffect(() => {
-    void Promise.all([readFile("_content/data.txt", { start: 1, end: 3 }), readFile("_content/data.txt", { start: -2 })]).then(setGot);
+    void Promise.all([
+      readFile("_content/data.txt", { start: 1, end: 3 }),
+      readFile("_content/data.txt", { start: -2 }),
+      readFile("_content/data.txt", { start: 99 }).catch((e) => e.name),
+    ]).then(setGot);
   }, [readFile]);
   if (got !== null) throw new Error(got.join("|"));
   return null;
@@ -85,7 +90,7 @@ export default function V({ readFile }) {
 `, files: { "_content/data.txt": "abcdef" } });
   t.teardown(() => box.cleanup());
   const r = await renderOne(box.root);
-  t.check(r.stderr.split("\n")[0], "View render failed [no card, after effects]: Error: bcd|ef");
+  t.check(r.stderr.split("\n")[0], "View render failed [no card, after effects]: Error: bcd|ef|RangeNotSatisfiableError");
 });
 
 // A card-type view's "card not found" branch passes; the same view with a real
@@ -126,7 +131,7 @@ export default function V({ writeFile }) {
   const r = await renderOne(box.root);
   t.check({ ...r, quick: Date.now() - started < 20_000 }, {
     code: 0,
-    stdout: "bbx-view-check partial: no menu card in the box loads; not checked with one\nbbx-view-check partial: no card: 1 write not performed\n",
+    stdout: "bbx-view-check partial: no menu card among the cards the view receives (its dependencies); not checked with one\nbbx-view-check partial: no card: 1 write not performed\n",
     stderr: "",
     quick: true,
   });
@@ -161,6 +166,26 @@ export default function V({ readFile }) {
   t.check(await renderOne(box.root), {
     code: 0,
     stdout: "bbx-view-check partial: no card: uncaught outside render: PathOutsideBoxError: readFile: AGENTS.md is not a box content path\n",
+    stderr: "",
+  });
+});
+
+// A sample card must be one the view receives: the app passes only its
+// dependency cards. A view whose dependencies do not select its card type is
+// reported, not passed on its not-found branch.
+void test("a card type outside the view's dependencies is reported, not sampled", async (t) => {
+  const box = await boxWithView({ view: `export const name = "V";
+export const dependencies = [];
+export const rendersCardTypes = ["doc"];
+export const modes = ["page"];
+export default function V({ cards, params }) {
+  return <p>{cards.some((c) => c.path === params.path) ? "card" : "Card not found"}</p>;
+}
+`, files: { "_content/notes/A.doc.card": "---\ntitle: A\n---\nBody\n" } });
+  t.teardown(() => box.cleanup());
+  t.check(await renderOne(box.root), {
+    code: 0,
+    stdout: "bbx-view-check partial: no doc card among the cards the view receives (its dependencies); not checked with one\n",
     stderr: "",
   });
 });
