@@ -43,3 +43,13 @@ requirement established by this walk.
 The walk that found this used a course, but a course is not the cause. Any
 chat answer about chemistry or mathematics can contain TeX notation, and the
 chat renderer shows it as literal text. This issue keeps `area: beebox`.
+
+## 2026-11-09: seen again in a box agent's feedback
+
+A box agent's feedback card (courseware box, written 2026-11-06) records the
+boxholder's report that LaTeX does not render in chat. The agent's reply used
+display-math and inline-math delimiters for a physics equation, not `\ce{}`,
+so the gap covers TeX math in general. The agent switched to plain-text
+equations as a workaround. The frontend still has no math renderer (no KaTeX,
+MathJax, or remark-math dependency, 2026-11-09). This report came from the
+boxholder, so the `normal` priority may be stale.
