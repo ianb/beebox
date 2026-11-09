@@ -1,9 +1,9 @@
 ---
 title: "Chat activity row shows stages, and Codex steps get real labels"
-status: draft
+status: implemented
 workstream: chat-activity-stages
 issues:
-  - ../../../issues/bugs/2026-11-06-codex-chat-later-text-replaces-earlier-text.md
+  - ../../../issues/closed/bugs/2026-11-06-codex-chat-later-text-replaces-earlier-text.md
 ---
 # Chat activity row shows stages, and Codex steps get real labels
 
@@ -251,7 +251,7 @@ Chosen: four tracks, about 250 source lines and 300 test lines.
     is live.
 - **First chunk:** `splitStages` with tests. Rendering waits on the choices.
 
-### Track 4: live Codex labels from the rollout
+### Track 4: live Codex labels from the rollout (dropped, see Open design questions)
 
 - **What:** while a Codex chat turn runs, read the rollout's
   `CommandExecution` records and attach their `parsed_cmd` to the live step.

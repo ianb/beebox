@@ -6,7 +6,10 @@ labels: [codex, chat, streaming]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder report, 2026-11-06"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-08):** Commits 98a243c2c..09aa0fabc: Codex commentary messages become progress updates in history; stages in the activity row. Live stream still lacks phase (rare residual).
 
 The boxholder has seen this in Codex chats, more than once but not recently:
 some assistant text appears, then some tool calls, then new assistant text
@@ -30,7 +33,7 @@ Leads, to check:
 - History reload goes through `src/core/chat/session/codex-transcript/core.ts`.
   Compare what it rebuilds for a turn with several agent messages against what
   the live stream showed.
-- Different symptom, same area: [Codex thread projection stalls](../watch/2026-09-12-codex-thread-projection-stalls-mid-rollout.md)
+- Different symptom, same area: [Codex thread projection stalls](../../watch/2026-09-12-codex-thread-projection-stalls-mid-rollout.md)
   (a reply vanishes and never returns, an upstream indexing failure).
 
 Reproduce: a Codex chat turn that writes text, runs a tool, and writes more
