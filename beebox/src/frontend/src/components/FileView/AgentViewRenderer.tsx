@@ -235,9 +235,11 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
   const navigate = useNavigate();
   // Each result records the slug it was loaded for. The view mounts once both
   // match the current slug; a params change then refetches cards behind the
-  // mounted view, which keeps its React state and its scroll position.
+  // mounted view, which keeps its React state and its scroll position. The
+  // view gets the params its cards were loaded for, so new params never arrive
+  // with the old params' cards.
   const [loadedModule, setLoadedModule] = useState<{ slug: string; mod: ViewModule } | null>(null);
-  const [loadedCards, setLoadedCards] = useState<{ slug: string; cards: ViewCard[]; files: ViewFile[] } | null>(null);
+  const [loadedCards, setLoadedCards] = useState<{ slug: string; params: Record<string, string>; cards: ViewCard[]; files: ViewFile[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mod = loadedModule?.slug === slug ? loadedModule.mod : null;
   // The newest cards request; a slower response for older params is dropped.
@@ -283,7 +285,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
         ? await cardsFetchCache.refetch(url, () => fetchCardsJson(url))
         : await cardsFetchCache.load(url, () => fetchCardsJson(url));
       if (latestCardsUrl.current !== url) return;
-      setLoadedCards({ slug, cards: data.cards, files: data.files });
+      setLoadedCards({ slug, params: viewParams, cards: data.cards, files: data.files });
     } catch (e) {
       if (latestCardsUrl.current === url) setError(errorMessage(e));
     }
@@ -353,7 +355,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
       </div>
     );
   }
-  const { cards, files } = loadedCards;
+  const { params: loadedParams, cards, files } = loadedCards;
 
   const Component = mod.default;
   // The card surface owns chat-mode height and scrolling; this applies only
@@ -379,7 +381,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
             {...activityHelpers}
             navigate={viewNavigate}
             boxSlug={boxSlug || ""}
-            params={viewParams}
+            params={loadedParams}
             viewHistory={viewHistory}
             reportActivity={report}
           />
