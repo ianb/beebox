@@ -42,3 +42,9 @@ fails on the leftover. While that comment points at `issues/deferred/`, the
 same thing happens each time the copy is removed. A fix needs either
 activation that may rewrite references in code comments, or a restore that
 also deletes the new copy and reports the refusal once instead of hourly.
+
+Fixed 2026-11-09 in `bin/deferred-issues.ts`: the restore now unstages before
+it lists untracked files, so a staged activated copy is removed. Activation
+also accepts a non-Markdown change when the file differs from HEAD only by the
+moved issues' repo-relative paths, as the `migrations.ts` comment does; any
+other non-Markdown change is still refused.
