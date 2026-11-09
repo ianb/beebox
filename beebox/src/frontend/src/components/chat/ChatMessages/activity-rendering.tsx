@@ -11,8 +11,8 @@ import { cardTarget } from "../workspace/use-open-beside/hook";
 import type { SessionContentBlock } from "../../../api";
 import { type ActivityPart, type Stage, splitStages } from "../assistant-parts";
 import { MarkdownContent } from "../markdown-rendering";
-import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail, stepCommand } from "./activity-wording";
-import { summarizeStages } from "./activity-summary";
+import { type Excerpt, type ToolCallDetail, describeToolCall, describeToolDetail } from "./activity-wording";
+import { summarizeOpenStages, summarizeStages } from "./activity-summary";
 
 type ActivityParts = ActivityPart[];
 
@@ -96,22 +96,6 @@ function ToolSentence({ description, opens }: { description: string; opens: Tool
  * summary so the opened raw input and result come after it. A lone step's
  * line is the collapsed view, so its excerpt waits behind the line's click.
  */
-/** A step named by its command: the shorthand, faded and monospace, with a count of further commands. */
-function CommandName({ head, more }: { head: string; more: number }) {
-  return (
-    <span className="font-mono text-card-soft opacity-70">
-      {head}
-      {more > 0 ? <span className="font-sans"> +{more}</span> : null}
-    </span>
-  );
-}
-
-function StepSentence({ block, description, opens }: { block: SessionContentBlock; description: string; opens: ToolCallDetail["opens"] }) {
-  const command = stepCommand(block);
-  if (command === null) return <ToolSentence description={description} opens={opens} />;
-  return <CommandName head={command.head} more={command.more} />;
-}
-
 function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; excerptInline: boolean }) {
   const description = describeToolCall(block);
   const { place, failed, excerpt, opens } = describeToolDetail(block);
@@ -121,7 +105,7 @@ function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; exce
       <summary className="cursor-pointer list-none hover:text-card-soft py-0.5">
         <span className="flex flex-wrap items-center gap-x-1">
           <span className="text-card-soft group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
-          <StepSentence block={block} description={description} opens={opens} />
+          <ToolSentence description={description} opens={opens} />
           {place ? <span className="text-card-soft">· {place}</span> : null}
           {failed ? <span className="text-card-soft">· didn’t go through</span> : null}
         </span>
@@ -231,12 +215,15 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
   }
 
   const summary = summarizeStages(parts);
+  // Opened, the newest note heads its stage just below, so the line says only the count.
+  const openSummary = summarizeOpenStages(parts);
 
   return (
     <details className="group my-1 ml-2 pl-2 border-l border-warm-300">
       <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-card-soft hover:text-card-ink">
         <span className="text-card-soft group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
-        <span>{summary}</span>
+        <span className="group-open:hidden">{summary}</span>
+        <span className="hidden group-open:inline">{openSummary}</span>
       </summary>
       <div className="mt-1 text-xs text-card-soft leading-tight ml-1">
         <Stages stages={splitStages(parts)} />

@@ -1,16 +1,13 @@
 /**
  * Plain-language wording for the chat's activity row. The row describes what
  * the box agent did in terms a non-technical person reads as "the box is
- * working on my stuff", not as commands run on their computer. A command
- * step with nothing plainer to say is named by its command's first words
- * (`command-shorthand.ts`). The raw tool input and result stay one click
- * away in the expanded line.
+ * working on my stuff", not as commands run on their computer. The raw tool
+ * input and result stay one click away in the expanded line.
  */
 
 import type { SessionContentBlock } from "../../../api";
 import { attachDirOwnerBasename } from "@shared/attach-path";
 import { cardDisplayName } from "@shared/card-name";
-import { type CommandShorthand, commandShorthand } from "./command-shorthand";
 
 const SCHEMA_PATH = /(?:^|\/)schemas\/([^/]+)\.ts$/;
 
@@ -157,8 +154,8 @@ const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
     if (description) return capitalize(description);
     const lookups = commandLookups(input);
     if (lookups) return describeLookups(lookups);
-    const shorthand = commandShorthand(stringInput(input, "command"));
-    return shorthand ? `Ran ${shorthand.head}${shorthand.more > 0 ? ` and ${shorthand.more} more` : ""}` : "Ran a command";
+    // Command words (`cat`, `ls`) told a person no more than this did.
+    return "Took a step";
   },
   Grep: (input) => describeSearch("Grep", input),
   Glob: (input) => describeSearch("Glob", input),
@@ -216,17 +213,6 @@ function describeLookups(lookups: Lookup[]): string {
     case "listFiles":
       return SEARCH_VERBS.Glob + more;
   }
-}
-
-/**
- * The command shorthand a step's line shows faded beside its sentence: for a
- * Bash step with no description that Codex did not parse as lookups. Null
- * for every other step.
- */
-export function stepCommand(block: SessionContentBlock): CommandShorthand | null {
-  const input = block.input || {};
-  if (block.toolName !== "Bash" || stringInput(input, "description") || commandLookups(input)) return null;
-  return commandShorthand(stringInput(input, "command"));
 }
 
 /** Plain-language one-line description of a single tool call. */

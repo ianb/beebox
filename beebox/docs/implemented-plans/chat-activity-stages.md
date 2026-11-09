@@ -337,6 +337,13 @@ landed: the newest note's first line and the step count in the folded
 summary; notes as headings over their steps; faded command words; notes fold
 as steps arrive (the existing rule). No user-facing noun for a stage.
 
+Revised 2026-11-08 after use: the command words read as noise in a real
+turn (`cat +2`, `sed +2`, `ls`, `ls`, `mkdir +10`), and the boxholder chose
+to go back to "Took a step" for a command Codex did not parse as a read,
+search, or listing. `command-shorthand.ts` was removed. The opened row's
+summary line now gives only the step count, since the newest note heads its
+stage just below it.
+
 Track 4 was dropped: in both test turns Codex classified every command as
 `unknown`, including a multi-file `cat`, so live lines would show the same
 command words with or without the rollout read.
