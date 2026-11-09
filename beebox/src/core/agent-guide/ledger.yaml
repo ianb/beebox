@@ -502,11 +502,11 @@ rows:
     reason: Scheduled sub-agents load the guide but not the chat prompt, so the guide is the only place they learn how to report back.
     audits: [bbx-chat-self-note-exists]
   - id: commands.chat-family
-    rule: "`bbx chat screenshot`, `whats-changed`, `retranscribe`, and `ask-about-audio`, and when each applies."
+    rule: "`bbx chat screenshot` (only for what is on the person's screen), `whats-changed`, `retranscribe`, and `ask-about-audio`, and when each applies."
     handle: COMMANDS
     bin: delete
     reason: They work only in a live chat session, and the chat system prompt, loaded there, states each with when to use it; bbx-commands.md has the rest. The draft had this indirect.
-    audits: [chat-screenshot-when, chat-last-audio-when]
+    audits: [chat-screenshot-when, chat-screenshot-person-screen, chat-last-audio-when]
     mechanics: card-chat-thread rule
   - id: commands.health
     rule: "`bbx health` is the agent's to run; `inconclusive` means the check reached no verdict, not that the work failed, so the work is not redone."
@@ -1073,6 +1073,13 @@ rows:
     reason: The commands and the handoff are mechanics for one capability, so they live in the `browser` skill. The guide keeps one pointer sentence carrying the handoff and the password prohibition, because a login wall comes up inside tasks about something else and the reflex (asking for the password, or giving up) fires before any skill is open (shared-browser plan, 2026-10-30).
     audits: [browser-login-needed, browser-vs-webfetch]
     mechanics: browser skill
+  - id: tools.box-pages-in-browser
+    rule: "To see a card or view (your own work, or a layout the person reports), open it in the box browser with a box path (`bbx browser open /views/<card path>`) and capture it with `screenshot --card` at phone and desktop widths; `bbx chat screenshot` is only for what is on the person's screen."
+    handle: TOOLS
+    bin: delete
+    reason: The chat system prompt states the screenshot rule where the screenshot command is described, and the views skill (loaded for view work) and browser skill carry the loop; the guide would repeat them (agent-self-view plan, 2026-11-08).
+    audits: [chat-screenshot-when, chat-screenshot-person-screen, box-page-interaction]
+    mechanics: browser skill, views skill
 
   # --- HISTORY ---
   - id: history.git-log-first

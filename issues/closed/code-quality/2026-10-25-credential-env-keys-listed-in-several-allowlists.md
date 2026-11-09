@@ -20,7 +20,7 @@ Two leaks found on the way are fixed in their own commits: Codex agent runs
 without explicit additions, and procedure shell steps, both got the whole
 server environment. Plan: `beebox/docs/plans/credential-env-table.md`. The
 spawn sites that still spread `process.env` are in
-[claude-auth-commands-and-gws-spread-the-server-env](../../code-quality/2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md)
+[claude-auth-commands-and-gws-spread-the-server-env](2026-10-29-claude-auth-commands-and-gws-spread-the-server-env.md)
 and
 [view-metadata-import-runs-box-code-with-the-server-env](../bugs/2026-10-29-view-metadata-import-runs-box-code-with-the-server-env.md).
 The issue's second direction, a spawn helper taking an allowlist, was not

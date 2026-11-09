@@ -1,12 +1,15 @@
 ---
 title: "`bbx upgrade` and `bbx migrate` run box-reachable code with the caller's whole environment"
-workstream: unattached
+workstream: child-env-allowlist
 area: beebox
 labels: [security, env]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-agent-ad8cceee119235ca5 — spawn audit while fixing the view metadata env leak
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-08):** Resolved by 4450a9311 and 0163b6e58: Git, CLI, and engine children get allowlisted environments (plan child-env-allowlist).
 
 Three engine-audience spawn sites pass `{ ...process.env, ...boxWorkEnvironment() }`
 to a child that can run box-authored code:

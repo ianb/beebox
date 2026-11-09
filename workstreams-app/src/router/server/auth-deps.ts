@@ -28,6 +28,7 @@ import { canAccessBox } from "../../../../beebox/src/webapp/box-access.js";
 import { resolveMobileRequestAuth } from "../../../../beebox/src/core/mobile/request-auth.js";
 import { verifyAgentBearer } from "../../../../beebox/src/core/agent/token.js";
 import { verifyBrowseKey } from "../../../../beebox/src/core/browse-key.js";
+import { verifyBrowserPass } from "../../../../beebox/src/core/browser/pass.js";
 
 /**
  * The router's own worktree/box resolution, injected so the auth deps route by
@@ -39,6 +40,8 @@ import { verifyBrowseKey } from "../../../../beebox/src/core/browse-key.js";
 export interface RouterAuthDepsConfig {
   resolveWorktree(name: string): Promise<{ boxes: string[] } | null>;
   resolveBoxEntries(entries: string[]): Promise<ResolvedBoxEntry[]>;
+  /** `http://localhost:<port>`: what a box browser pass's WebSocket `Origin` must be. */
+  appOrigin: string;
 }
 
 /** Node gives repeated headers as arrays; only a single value can be a credential. */
@@ -135,6 +138,8 @@ export function createRouterAuthDeps(config: RouterAuthDepsConfig): RouterAuthDe
       // The local-dev browser key (core/browse-key.ts), for an agent driving a
       // real Chromium. Constant false unless the operator set BBX_BROWSE_API_KEY.
       if (verifyBrowseKey(headers)) return true;
+      // The box's own browser pass (beebox/src/core/browser/pass.ts), per box.
+      if (verifyBrowserPass(targetBoxRoot, { appOrigin: config.appOrigin, headers })) return true;
       return (await resolveMobileRequestAuth(targetBoxRoot, headers)) !== null;
     },
 
@@ -174,6 +179,7 @@ export function createRouterAuthDeps(config: RouterAuthDepsConfig): RouterAuthDe
       const authorization = single(headers.authorization);
       for (const entry of entries) {
         if (verifyAgentBearer(entry.contentDir, authorization)) return true;
+        if (verifyBrowserPass(entry.contentDir, { appOrigin: config.appOrigin, headers })) return true;
         if ((await resolveMobileRequestAuth(entry.contentDir, headers)) !== null) return true;
       }
       return false;

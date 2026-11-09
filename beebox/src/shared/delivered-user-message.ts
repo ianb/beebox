@@ -1,8 +1,8 @@
 /**
  * Shared codec for first-class user messages delivered by the server.
  *
- * Capture and bulk-upload messages are persisted as pseudo-XML because the
- * agent consumes that vocabulary directly. The transcript UI needs the inverse
+ * Capture, bulk-upload, and question-handoff messages are persisted as
+ * pseudo-XML because the agent consumes that vocabulary directly. The transcript UI needs the inverse
  * operation. Keeping both directions behind one closed kind registry makes a
  * new supported kind fail typechecking until it has a parser.
  */
@@ -10,6 +10,7 @@
 import { assertNever, invariant } from "./invariant.js";
 import { humanBytes } from "./human-bytes.js";
 import { stripChatAppTags } from "./chat-tags.js";
+import { decodeXmlAttr, escapeXmlAttr } from "./self-note.js";
 
 export interface CaptureUserMessage {
   kind: "capture";
@@ -35,9 +36,24 @@ export interface UploadUserMessage {
   summary: string;
 }
 
+/**
+ * The person pressed "Decide for me" on a question card. The agent reads the
+ * body, an instruction naming the card and the skill; the transcript shows only
+ * the title (`QuestionHandoffChip`), since the person never wrote the
+ * instruction.
+ */
+export interface QuestionHandoffUserMessage {
+  kind: "question-handoff";
+  /** Box-relative path of the question card. */
+  doc: string;
+  /** The question's title, as the card showed it. */
+  title: string;
+}
+
 interface DeliveredUserMessageByKind {
   capture: CaptureUserMessage;
   upload: UploadUserMessage;
+  "question-handoff": QuestionHandoffUserMessage;
 }
 
 export type DeliveredUserMessageKind = keyof DeliveredUserMessageByKind;
@@ -58,6 +74,7 @@ const TRANSCRIPTION_FAILED_RE = /\btranscription-failed="([^"]*)"/i;
 const FILES_RE = /\bfiles="([^"]*)"/i;
 const BYTES_RE = /\bbytes="([^"]*)"/i;
 const FAILED_RE = /\bfailed="([^"]*)"/i;
+const TITLE_RE = /\btitle="([^"]*)"/i;
 
 function readStringAttr(attrs: string, re: RegExp): string | null {
   return re.exec(attrs)?.at(1) ?? null;
@@ -100,9 +117,21 @@ function parseUpload(attrs: string, body: string): UploadUserMessage | null {
   };
 }
 
+function parseQuestionHandoff(attrs: string): QuestionHandoffUserMessage | null {
+  const doc = readStringAttr(attrs, DOC_RE);
+  if (doc === null || doc === "") return null;
+  return { kind: "question-handoff", doc, title: decodeXmlAttr(readStringAttr(attrs, TITLE_RE) ?? "") };
+}
+
+/** What the agent is told when a question is handed off; the skill does the rest. */
+function questionHandoffInstruction(doc: string): string {
+  return `Figure out the question at ${doc}, which the person handed to you from the question card. Use the figure-it-out skill.`;
+}
+
 const DELIVERED_MESSAGE_CODECS = {
   capture: { parse: parseCapture },
   upload: { parse: parseUpload },
+  "question-handoff": { parse: parseQuestionHandoff },
 } satisfies { [K in DeliveredUserMessageKind]: DeliveredMessageCodec<K> };
 
 const DELIVERED_BLOCK_RE = /<([a-z][a-z-]*)\b([^>]*)>([\S\s]*?)<\/\1>/gi;
@@ -127,6 +156,8 @@ function parseDeliveredBlock(opts: {
       return DELIVERED_MESSAGE_CODECS.capture.parse(opts.attrs, opts.body);
     case "upload":
       return DELIVERED_MESSAGE_CODECS.upload.parse(opts.attrs, opts.body);
+    case "question-handoff":
+      return DELIVERED_MESSAGE_CODECS["question-handoff"].parse(opts.attrs);
     default:
       return assertNever(opts.kind);
   }
@@ -230,6 +261,10 @@ export function serializeDeliveredUserMessage(message: DeliveredUserMessage): st
       const summary = message.summary.trim();
       const body = note === "" ? summary : `${note}\n\n${summary}`;
       return `<${message.kind} ${attrs.join(" ")}>\n${body}\n</${message.kind}>`;
+    }
+    case "question-handoff": {
+      const title = escapeXmlAttr(message.title.replace(/\s+/g, " ").trim());
+      return `<${message.kind} doc="${message.doc}" title="${title}">\n${questionHandoffInstruction(message.doc)}\n</${message.kind}>`;
     }
     default:
       return assertNever(message);

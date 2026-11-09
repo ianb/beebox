@@ -8,7 +8,7 @@ import * as fs from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { pipeline } from "node:stream/promises";
 import * as path from "node:path";
-import { simpleGit } from "simple-git";
+import { boxGit } from "../../lib/git/env.js";
 import { parseFrontmatterObject } from "../../exports/cards.js";
 import { parseRef, resolveRefPath } from "../../shared/ref-path/core.js";
 import { attachDirFor } from "../../shared/attach-path.js";
@@ -93,7 +93,7 @@ async function digestOf(context: DigestContext, abs: string): Promise<Digest | n
 /** First tracked path (sorted) per SHA-256, outside the inbox and trash. */
 async function filedIndex(boxRoot: string, sizes: Set<number>): Promise<Map<string, string>> {
   const excluded = [getBoxDir(boxRoot, "inbox"), getBoxDir(boxRoot, "trash")].map((dir) => `${path.relative(boxRoot, dir)}/`);
-  const files = (await simpleGit(boxRoot).raw(["ls-files", "-z"])).split("\0")
+  const files = (await boxGit(boxRoot).raw(["ls-files", "-z"])).split("\0")
     .filter((file) => file !== "" && !excluded.some((prefix) => file.startsWith(prefix))).toSorted();
   const index = new Map<string, string>();
   const context: DigestContext = { boxRoot, wanted: (size) => sizes.has(size) };
@@ -148,7 +148,7 @@ async function itemDigests(boxRoot: string, item: string): Promise<Array<{ ref: 
  * committed (an import left staged): every entry is new.
  */
 async function scopeUnedited(boxRoot: string, card: string): Promise<boolean> {
-  const git = simpleGit(boxRoot);
+  const git = boxGit(boxRoot);
   const scope = [card, attachDirFor(card)];
   const commits = await hasCommits(boxRoot)
     ? new Set((await git.raw(["log", "--format=%H", "--", ...scope])).split("\n").filter(Boolean))

@@ -3,10 +3,9 @@ import { execFile } from "node:child_process";
 import { isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
-import { simpleGit } from "simple-git";
+import { boxGit } from "../lib/git/env.js";
 
 import { resolveBoxNamespacePathOnDisk } from "../lib/box-namespace-resolve.js";
-import { childProcessEnv } from "../lib/env.js";
 import { isTrashedCard } from "../lib/paths/core.js";
 import { attachDirFor } from "../shared/attach-path.js";
 import { cardTypeFromName } from "../shared/card-name.js";
@@ -128,7 +127,7 @@ function uniqueRenameDestination(records: RenameRecord[], source: string): strin
 }
 
 async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
-  const normalGit = simpleGit(boxRoot);
+  const normalGit = boxGit(boxRoot);
   const repoRoot = (await normalGit.revparse(["--show-toplevel"])).trim();
   const head = (await normalGit.revparse(["HEAD"])).trim();
   const annexBranch = (await normalGit.raw([
@@ -148,7 +147,7 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
   const scratchGitDir = join(scratchRoot, "git");
 
   try {
-    await simpleGit().raw(["init", "--bare", "--quiet", scratchGitDir]);
+    await boxGit().raw(["init", "--bare", "--quiet", scratchGitDir]);
     await copyFile(realConfigPath, join(scratchGitDir, "config"));
     await copyFile(realIndexPath, join(scratchGitDir, "index"));
     await mkdir(join(scratchGitDir, "info"), { recursive: true });
@@ -162,11 +161,11 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
     // A separate Git directory lets Git see unstaged filesystem renames
     // without touching the person's real index, object store, or filter state
     // (notably `.git/annex`). It reads committed objects through an alternate.
-    const git = simpleGit(boxRoot).env(childProcessEnv({
+    const git = boxGit(boxRoot, { repository: "isolated", overrides: {
       GIT_DIR: scratchGitDir,
       GIT_WORK_TREE: repoRoot,
       GIT_ALTERNATE_OBJECT_DIRECTORIES: realObjectsPath,
-    }));
+    } });
     await git.raw(["config", "core.bare", "false"]);
     await git.raw(["config", "core.worktree", repoRoot]);
     if (annexBranch !== "") await git.raw(["update-ref", "refs/heads/git-annex", annexBranch]);
@@ -196,7 +195,7 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
 }
 
 async function committedRename(boxRoot: string, source: string): Promise<string | null> {
-  const raw = await simpleGit(boxRoot).raw([
+  const raw = await boxGit(boxRoot).raw([
     "log",
     "-1",
     "--format=",

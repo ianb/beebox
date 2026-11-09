@@ -23,6 +23,7 @@ import { errnoCode } from "../../../shared/error-guards.js";
 import { isRecord } from "../../card-io.js";
 import { acquireLock, LockHeldError, releaseLock, type LockHolder } from "../../../lib/file-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
+import { gitEnvironment } from "../../../lib/git/env.js";
 
 const execFileP = promisify(execFile);
 
@@ -122,7 +123,7 @@ async function gitGrepUrls(boxRoot: string, source: "WORKTREE" | "INDEX" | strin
   args.push("--", ...GREP_PATHSPEC);
   let stdout: string;
   try {
-    ({ stdout } = await execFileP("git", args, { cwd: boxRoot, maxBuffer: 32 * 1024 * 1024 }));
+    ({ stdout } = await execFileP("git", args, { cwd: boxRoot, maxBuffer: 32 * 1024 * 1024, env: gitEnvironment() }));
   } catch (e) {
     // git grep exits 1 with no output when nothing matches — that's an empty set,
     // not an error. Any other failure (not a repo, bad ref) re-throws.
@@ -185,6 +186,7 @@ async function referrersOf(boxRoot: string, url: string): Promise<string[]> {
     const { stdout } = await execFileP("git", ["grep", "-lFI", url, "--", ...GREP_PATHSPEC], {
       cwd: boxRoot,
       maxBuffer: 8 * 1024 * 1024,
+      env: gitEnvironment(),
     });
     return stdout.split("\n").filter((l) => l !== "");
   } catch (_e) {

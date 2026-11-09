@@ -7,6 +7,7 @@
  */
 
 import { stripChatAppTags } from "../../core/chat/features.js";
+import { decodeXmlAttr } from "../../shared/self-note.js";
 
 /** User messages that are internal Claude Code plumbing, not real user input */
 const plumbingPatterns = [
@@ -57,6 +58,10 @@ export function stripSpeechWrappers(text: string): string {
   // placemarker, not a word the user typed (either spelling, see
   // `shared/composer-tokens.ts`).
   out = out.replace(/\[(?:image|file|selection)#?\d+]/g, "");
+  // A "Decide for me" handoff is the box's instruction to its agent; the chat
+  // is named for the question handed off (`shared/delivered-user-message.ts`).
+  out = out.replace(/<question-handoff\b[^>]*\btitle="([^"]*)"[^>]*>[\S\s]*?<\/question-handoff>/g,
+    (_match, title: string) => `Decide for me: ${decodeXmlAttr(title)}`);
   // Unwrap outer human-input shells, keeping their text content.
   out = out.replace(/<\/?(?:speech|typed|external-input)\b[^>]*>/g, "");
   // Unwrap <unsure>word</unsure> low-confidence marks (Track 4,

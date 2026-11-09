@@ -18,6 +18,7 @@ import type { AudioOverlayEntry } from "../audio-overlay-store";
 import { extractFileAttachments, imageBlockSrc, stripUserDisplayTags } from "../message-parsing";
 import { CaptureChip } from "../CaptureChip";
 import { UploadChip } from "./UploadChip";
+import { QuestionHandoffChip } from "./QuestionHandoffChip";
 import { UserMessageText } from "../user-message-text";
 
 /**
@@ -62,6 +63,8 @@ function DeliveredMessagePart({ part, attachedFileIds }: { part: DeliveredUserMe
       return <CaptureChip model={part} />;
     case "upload":
       return <UploadChip model={part} />;
+    case "question-handoff":
+      return <QuestionHandoffChip model={part} />;
     default:
       return assertNever(part);
   }

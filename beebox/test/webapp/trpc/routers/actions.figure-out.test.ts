@@ -1,8 +1,8 @@
 // # tRPC `actions.figureOut`: put the question away, start a background chat
 //
 // Continues [actions.test.ts](actions.test.ts). The button runs the dismiss
-// transition, emits `question-dismissed`, then delivers one message into a new
-// chat that names the card. A delivery failure leaves the card dismissed and
+// transition, emits `question-dismissed`, then delivers one `<question-handoff>`
+// message into a new chat that names the card and its title. A delivery failure leaves the card dismissed and
 // returns an error; a card that is not pending is refused before any chat starts.
 
 import { test, type Test } from "tap";
@@ -85,10 +85,17 @@ void test("The question is put away and the message names the card", async (t) =
 
   t.check(await box.read(CARD), DISMISSED);
   t.check(events.map((e) => e.event), ["question-dismissed", "chat-user-message"]);
+  // The message is a `<question-handoff>`: the agent reads the instruction, and
+  // the transcript shows the question's title (QuestionHandoffChip.decide-for-me.test.ts in the
+  // frontend). It is announced with no session id: the chat is new.
+  const handoff = `<question-handoff doc="${CARD}" title="Where does this receipt go?">
+Figure out the question at ${CARD}, which the person handed to you from the question card. Use the figure-it-out skill.
+</question-handoff>`;
+  t.check(events[1]?.data, { sessionId: null, message: handoff, user: null, timestamp: isoDate() });
   // The chat adds a leading `<chat-app/>` line; the delivered message is the rest.
   t.check(
     backend.runs[0]?.sent.flat().map((block) => block.type === "text" ? block.text.split("\n").slice(1).join("\n") : null),
-    [`Figure out the question at ${CARD}, which the person handed to you from the question card. Use the figure-it-out skill.`],
+    [handoff],
   );
 });
 

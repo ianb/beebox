@@ -1,12 +1,15 @@
 ---
 title: "An open card that re-reads its file mid-write can show a broken or empty card, then remount when the write completes"
-workstream: unattached
+workstream: contents-menu-stable
 area: beebox
 labels: [frontend, cards, stability]
 filed-by: agent
 discovered-by: agent
 discovered-in: "worktree-contents-menu-stable — code trace while hunting card body remounts"
+resolution: wontfix
 ---
+
+**Closed (wontfix, 2026-11-06):** Not reproduced (in-place, atomic-rename, and real agent edits on the dev box), and it needs a read to land inside a write. Runtime lint (beebox/docs/implemented-plans/runtime-lint.md) is on for dev and hosted boxes: if a half-written read remounts the card body, it logs content-replaced in the box's client-debug.log. Reopen if those lines show it.
 
 An open card re-reads its file on every `file-change` event
 (`beebox/src/frontend/src/components/file-view-data.ts`, `resync`). If the
@@ -26,7 +29,7 @@ Not reproduced. In-place `sed -i`, `mv` over the file, and a real chat agent's
 edits on the dev box did not show it. The window depends on how the writer
 writes (truncate, then write) and on disk speed.
 
-Related: [the contents-menu issue](../closed/bugs/2026-11-03-card-contents-menu-collapses-and-reappears.md),
+Related: [the contents-menu issue](2026-11-03-card-contents-menu-collapses-and-reappears.md),
 where a failed re-read (file missing) caused the same remount. That case is
 fixed because the "out of date" notice now keeps the body in place.
 

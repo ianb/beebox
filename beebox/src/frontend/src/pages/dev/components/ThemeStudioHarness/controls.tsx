@@ -60,7 +60,7 @@ export function ThemeStudioControls({ state, onChange }: { state: StudioState; o
     {follow ? null : <ThemeFields idPrefix="bbx-studio-card" label="Card" names={cardNames} theme={state.card} stock={state.cardStock}
       onChange={(card, cardStock) => onChange({ ...state, card, cardStock })} />}
     <Field label="Screen" htmlFor="bbx-studio-screen">
-      <select id="bbx-studio-screen" value={state.screen ?? ""} className="w-full rounded border border-warm-300 px-1 py-1 text-sm"
+      <select id="bbx-studio-screen" value={state.screen ?? ""} className="w-full rounded border border-warm-700 px-1 py-1 text-sm"
         onChange={(event) => onChange({ ...state, screen: event.target.value === "" ? undefined : event.target.value })}>
         <option value="">Fill the window</option>
         {SCREENS.map((screen) => <option key={screen.name} value={screen.name}>{screen.label} · {screen.width}×{screen.height}</option>)}
@@ -111,7 +111,7 @@ function OtherPicker({ id, label, options, value, onChange, labelOf }: {
   const [other, setOther] = useState(!options.includes(value));
   const showOther = other || !options.includes(value);
   return <Field label={label} htmlFor={id}>
-    <select id={id} value={showOther ? OTHER : value} className="w-full rounded border border-warm-300 px-1 py-1 text-sm"
+    <select id={id} value={showOther ? OTHER : value} className="w-full rounded border border-warm-700 px-1 py-1 text-sm"
       onChange={(event) => {
         if (event.target.value === OTHER) { setOther(true); return; }
         setOther(false);
@@ -121,6 +121,6 @@ function OtherPicker({ id, label, options, value, onChange, labelOf }: {
       <option value={OTHER}>Other…</option>
     </select>
     {showOther ? <input id={`${id}-other`} aria-label={`${label} name`} value={value} placeholder="name"
-      className="w-full rounded border border-warm-300 px-2 py-1 text-sm" onChange={(event) => onChange(event.target.value)} /> : null}
+      className="w-full rounded border border-warm-700 px-2 py-1 text-sm" onChange={(event) => onChange(event.target.value)} /> : null}
   </Field>;
 }

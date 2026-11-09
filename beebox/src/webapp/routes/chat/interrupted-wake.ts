@@ -108,7 +108,7 @@ export function createInterruptedWakePass(deps: ScheduleFireDeps): { pass: () =>
       console.error(`[interrupted-wake] Pass failed: ${errorMessage(error)}`);
     } finally { scanning = false; }
   };
-  return { pass, stop: () => { state.stopped = true; }, whenIdle: () => Promise.allSettled([...running]) };
+  return { pass, stop: () => { state.stopped = true; }, whenIdle: () => Promise.allSettled(running) };
 }
 
 /** Poll this box's run-ended notes and wake interrupted chats. Returns the stop function. */

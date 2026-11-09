@@ -347,7 +347,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 text-gray-500">
+      <div aria-busy="true" className="flex items-center justify-center p-8 text-gray-500">
         Loading view...
       </div>
     );
@@ -355,7 +355,7 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
 
   if (error) {
     return (
-      <div className="border border-danger-light bg-danger-50 rounded-lg p-4">
+      <div role="alert" className="border border-danger-light bg-danger-50 rounded-lg p-4">
         <h3 className="text-danger-dark font-medium mb-2">View Error</h3>
         <Pre size="sm" error>{error}</Pre>
       </div>

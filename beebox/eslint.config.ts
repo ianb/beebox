@@ -45,6 +45,8 @@ const noDirectCreateNew = {
 // alias without opening the alias for anything else.
 const LIST_ENTRY_GLOB = "src/schemas/*/list-entry.tsx";
 const LIST_ENTRY_IMPORT_PATTERNS = ["**/list-entry", "**/list-entry.js", "**/list-entry.tsx"];
+const LIST_ENTRY_IMPORT_MESSAGE =
+  "A *.list-entry.tsx file is frontend code: React, the DOM, and the frontend's own modules. Only src/frontend/src/file-types/builtins.tsx imports one.";
 // A plugin (`src/plugins/<name>/`, docs/implemented-plans/plugins.md) is a library a box
 // completes through stubs, published as `beebox/plugins/<name>`. Its files
 // import only `src/exports/*`, `src/cards/plugin-definition.ts`, their own
@@ -242,8 +244,36 @@ export default [
           patterns: [
             {
               group: LIST_ENTRY_IMPORT_PATTERNS,
-              message:
-                "A *.list-entry.tsx file is frontend code: React, the DOM, and the frontend's own modules. Only src/frontend/src/file-types/builtins.tsx imports one.",
+              message: LIST_ENTRY_IMPORT_MESSAGE,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Every Git child gets the allowlisted environment of src/lib/git/env.ts
+    // (`boxGit`): an agent's hook or `.git/config` command runs with it.
+    // Repeated from the block above because this one REPLACES the rule.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [LIST_ENTRY_GLOB, "src/lib/git/env.ts", "src/dev/**", "src/scripts/**", "src/frontend/**"],
+    rules: {
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "simple-git",
+              importNames: ["simpleGit", "default"],
+              allowTypeImports: true,
+              message: "Use boxGit from src/lib/git/env.ts, so the Git child gets the allowlisted environment.",
+            },
+          ],
+          patterns: [
+            {
+              group: LIST_ENTRY_IMPORT_PATTERNS,
+              message: LIST_ENTRY_IMPORT_MESSAGE,
             },
           ],
         },

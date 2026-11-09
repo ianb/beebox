@@ -9,7 +9,7 @@
  * live with each of them.
  */
 
-import { boxWorkEnvironment } from "../lib/box-maintenance/admission.js";
+import { engineChildEnvironment } from "./script-env/core.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runMigrationProcess } from "./migration-process.js";
@@ -112,7 +112,7 @@ export function computePending(applied: ManifestEntry[]): Migration[] {
 export function runMigrationScript(args: { script: string; name?: string | undefined; boxRoot: string; signal?: AbortSignal | undefined; diagnosticsToStderr?: boolean | undefined; onOutput?: (text: string) => void }): Promise<number> {
   return runMigrationProcess({
     file: process.execPath, args: ["--import", "tsx", path.join(PACKAGE_ROOT, args.script), args.boxRoot, "--apply"],
-    cwd: PACKAGE_ROOT, env: { ...process.env, ...boxWorkEnvironment(), ...(args.name === undefined ? {} : { BBX_MIGRATION_NAME: args.name }) },
+    cwd: PACKAGE_ROOT, env: engineChildEnvironment(args.name === undefined ? {} : { BBX_MIGRATION_NAME: args.name }),
     signal: args.signal, diagnosticsToStderr: args.diagnosticsToStderr, onOutput: args.onOutput,
   });
 }

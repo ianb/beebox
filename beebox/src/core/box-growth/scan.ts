@@ -7,6 +7,7 @@ import { getBoxShape } from "../../lib/box-shape.js";
 import type { GrowthHistory, GrowthMeasurement, SubtreeCounts } from "./model.js";
 import { BOX_DIRS } from "../../lib/paths/core.js";
 import { measureBytes } from "./bytes.js";
+import { gitEnvironment } from "../../lib/git/env.js";
 
 const MAX_SUBTREES = 20;
 const MAX_PREFIX_SEGMENTS = 3;
@@ -243,9 +244,9 @@ async function measureHistory(boxRoot: string, deadline: number): Promise<Growth
     const { boxRoot: repoRoot } = await getBoxShape(boxRoot);
     const timeout = Math.max(1, deadline - Date.now());
     const [head, commits, objects] = await Promise.all([
-      execa("git", ["rev-parse", "HEAD"], { cwd: repoRoot, timeout }),
-      execa("git", ["rev-list", "--count", "HEAD"], { cwd: repoRoot, timeout }),
-      execa("git", ["count-objects", "-v"], { cwd: repoRoot, timeout }),
+      execa("git", ["rev-parse", "HEAD"], { cwd: repoRoot, timeout, env: gitEnvironment(), extendEnv: false }),
+      execa("git", ["rev-list", "--count", "HEAD"], { cwd: repoRoot, timeout, env: gitEnvironment(), extendEnv: false }),
+      execa("git", ["count-objects", "-v"], { cwd: repoRoot, timeout, env: gitEnvironment(), extendEnv: false }),
     ]);
     const looseObjects = numericField(objects.stdout, "count");
     const packedObjects = numericField(objects.stdout, "in-pack");
