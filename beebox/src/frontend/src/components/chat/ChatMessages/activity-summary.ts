@@ -120,3 +120,14 @@ export function summarizeStages(parts: ActivityPart[]): string {
   const headline = noteHeadline(newest.text);
   return steps > 0 ? `${headline} · ${steps} ${steps === 1 ? "step" : "steps"}` : headline;
 }
+
+/**
+ * The summary line of an opened activity group. With notes, only the step
+ * count: the newest note heads its stage just below. Without, the same as
+ * folded.
+ */
+export function summarizeOpenStages(parts: ActivityPart[]): string {
+  if (!parts.some((part) => part.type === "note")) return summarizeActivity(parts);
+  const steps = countSteps(parts);
+  return `${steps} ${steps === 1 ? "step" : "steps"}`;
+}

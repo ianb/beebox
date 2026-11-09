@@ -10,10 +10,9 @@ import assert from "node:assert/strict";
 import {
   describeToolCall,
   describeToolDetail,
-  stepCommand,
   type Excerpt,
 } from "../../src/components/chat/ChatMessages/activity-wording.js";
-import { noteHeadline, summarizeActivity, summarizeStages } from "../../src/components/chat/ChatMessages/activity-summary.js";
+import { noteHeadline, summarizeActivity, summarizeOpenStages, summarizeStages } from "../../src/components/chat/ChatMessages/activity-summary.js";
 import type { SessionContentBlock } from "../../src/api-chat.js";
 import type { ActivityPart } from "../../src/components/chat/assistant-parts.js";
 
@@ -141,9 +140,10 @@ void test("Agent machinery and paths outside the content folder keep the generic
 //
 // The description is shown, capitalized. A command with no description (every
 // Codex command) is described by Codex's parse of it when every part is a
-// read, search, or listing; otherwise the line names the command by its first
-// words, and `stepCommand` gives the renderer that shorthand to show faded.
-void test("A Bash step reads as its description, Codex's parse, or its command's first words", async (t) => {
+// read, search, or listing; otherwise "Took a step". The command's own words
+// (`cat +2`, `ls`) were tried on 2026-11-08 and dropped: they told a person
+// nothing more. The command text stays in the opened line.
+void test("A Bash step reads as its description, Codex's parse, or 'Took a step'", async (t) => {
   const read = (path: string) => ({ type: "read", name: path, path });
   t.check(
     [
@@ -164,20 +164,10 @@ void test("A Bash step reads as its description, Codex's parse, or its command's
       'Searched your box for "lease"',
       "Looked through your box",
       "Checked something in your box",
-      // A bare-word argument reads as part of the command; the shorthand cannot tell.
-      "Ran cat a and 1 more",
-      "Ran bbx view check and 1 more",
-      "Ran a command",
+      "Took a step",
+      "Took a step",
+      "Took a step",
     ],
-  );
-  t.check(
-    [
-      stepCommand(tool("Bash", { command: "bbx view check --json && git status" })),
-      stepCommand(tool("Bash", { command: "ls", actions: [{ type: "listFiles", path: null }] })),
-      stepCommand(tool("Bash", { description: "check", command: "bbx view check" })),
-      stepCommand(tool("Read", { file_path: "x" })),
-    ],
-    [{ head: "bbx view check", more: 1 }, null, null, null],
   );
   // Lookups count with Read, Grep and Glob in the summary; other commands are steps.
   t.check(
@@ -473,6 +463,9 @@ void test("A group with notes shows its newest note in the collapsed summary", a
     tools(tool("Edit", {})),
   ];
   t.check(summarizeStages(parts), "Now the materials list, · 3 steps");
+  // Opened, the note heads its stage just below, so the line gives only the count.
+  t.check(summarizeOpenStages(parts), "3 steps");
+  t.check(summarizeOpenStages([tools(tool("Read", {}), tool("Read", {}))]), "checked 2 things in your box");
   t.check(summarizeStages([tools(tool("Read", {}), tool("Read", {}))]), "checked 2 things in your box");
   t.check(summarizeStages([{ type: "note", text: "Just a note." }]), "Just a note.");
   // Underscores are part of names and stay.
