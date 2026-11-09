@@ -31,3 +31,14 @@ To fix:
   source, finish the move (delete the source, commit) instead of failing
   every hour.
 - Keep each run's log, so the first failure of a schedule can be read later.
+
+Update 2026-11-08: The leftover came back at the 10:33 local run, and that
+run's log shows the cause: `activation changed non-Markdown files:
+beebox/src/core/migrations.ts`. Activation rewrites every reference to the
+moved issue, and `beebox/src/core/migrations.ts:142` names the deferred path in
+a comment. The job refuses changes outside Markdown, and the restore puts
+`migrations.ts` back but leaves the activated `.md` copy. Every later run then
+fails on the leftover. While that comment points at `issues/deferred/`, the
+same thing happens each time the copy is removed. A fix needs either
+activation that may rewrite references in code comments, or a restore that
+also deletes the new copy and reports the refusal once instead of hourly.
