@@ -58,3 +58,12 @@ a way for the person to turn it off.
 Related: [an explicit action to show a card](2026-09-08-agent-show-card-action.md),
 [card links show open state](2026-09-08-card-links-show-open-state.md),
 [inline delivery markup for speech](../exploration/2026-10-20-tts-inline-delivery-markup.md).
+
+## Status (chat-show-me-links)
+
+The link-semantics part landed in 30e35aae4, 21f81358c and 9dfd1eb2b: a
+`viewState`-only link to an open companion card keeps the tab's viewer, params
+and label and moves only its state; the view stays mounted while cards refetch.
+Still open: auto-fire and speech timing, and views declaring the states they
+accept. Known gaps: a params-only link to a tab with an explicitly chosen viewer
+resets the viewer; re-clicking an unchanged state still focuses the tab.
