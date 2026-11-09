@@ -229,8 +229,9 @@ none
    Branch review (codex gpt-6-sol) added two fixes: sample from the
    dependency cards, and the file route's range rule (`shared/byte-range.ts`,
    unsatisfiable rejects). Rejected: drop the first frame for card states. The first frame is where a
-   render-time helper call is reported, for any state. Open for the
-   boxholder: whether **partly checked** should exit non-zero.
+   render-time helper call is reported, for any state. Boxholder
+   decision, 2026-11-09: **partly checked** exits 0. Failing would block
+   checks for views that work; revisit once real custom views give data.
 
 1. **Declared test states.** The boxholder compared this to a small
    Storybook. Lean: an optional named export in the view module,
