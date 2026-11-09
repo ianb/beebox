@@ -52,7 +52,7 @@ export function QuestionCardView({ data, onNavigate, mode }: RendererProps) {
   const beside = useBesideActions(data.path, mode === "companion");
 
   if (isLoading) {
-    return <StatusMessage>Loading...</StatusMessage>;
+    return <StatusMessage busy>Loading...</StatusMessage>;
   }
 
   if (isError) {
