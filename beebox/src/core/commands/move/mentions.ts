@@ -12,7 +12,8 @@
  * A token is a maximal run of path characters, so a longer path that merely
  * contains the old one never matches. Resolution goes through the shared ref
  * algebra via {@link transformForReferrer}. Not a `.ts` concern: code is not
- * scanned. Known gap: paths containing spaces are not recognized.
+ * scanned. A path with a space is not recognized: card filenames cannot
+ * contain one (card lint), but a file in a card's `.attach/` folder can.
  */
 
 import * as path from "node:path";
