@@ -335,3 +335,6 @@ KaTeX fonts load from the lazy CSS only for the glyphs a formula uses.
 - A retry left earlier formulas marked failed: fixed by not retrying.
 - A lazy continuation line in a blockquoted `$$` block turns it into inline
   display math: rejected; the formula still renders, and the input is rare.
+- Round 2: the three fixes verified. New: `$\char`A$` (a TeX backtick)
+  now stays text. Accepted; agent TeX almost never uses a backtick, and the
+  stop is what keeps code spans intact.
