@@ -146,9 +146,33 @@ export const LandmarkDestination = z.object({
 });
 export type LandmarkDestinationData = z.infer<typeof LandmarkDestination>;
 
+/**
+ * The place's intention: one line of inline Markdown saying what the next
+ * piece of work here is. Single-line and non-blank, like an opener, with no
+ * length cap (boxholder, 2026-11-09). No Markdown-shape rule: the renderer
+ * shows inline content only, so a stray block marker renders as its text.
+ */
+export const IntentionText = z
+  .string()
+  .refine((s) => s.trim() !== "", "an intention must not be blank")
+  .refine((s) => !s.includes("\n"), "an intention must be a single line");
+
+/**
+ * `intention` on a landmark (docs/implemented-plans/place-intention.md): `text` is the
+ * line; `ref` is the optional prime card, a box path to the card the work
+ * happens in, which arrival opens in place of the landmark. A hand-written
+ * bare string means `{ text }`; serialization writes the object form.
+ */
+export const LandmarkIntention = z.preprocess(
+  (v) => (typeof v === "string" ? { text: v } : v),
+  z.object({ text: IntentionText, ref: z.string().optional() }),
+);
+export type LandmarkIntentionData = z.infer<typeof LandmarkIntention>;
+
 const landmarkFields = {
   navigation: LandmarkNavigation.optional(),
   destinations: z.array(LandmarkDestination).optional(),
+  intention: LandmarkIntention.optional(),
   "system-theme": SystemThemeChoiceSchema.optional(),
 };
 
@@ -236,6 +260,18 @@ The place page shows the body first, above the place's cards. It says where thin
 It is for the person. The briefing is guidance for agents; \`contains:\` is a search sentence. Write the body when you make a place, and update it in the same turn as any change to the place's cards that makes it untrue.
 
 Keep the person's words: link and quote their cards. A sentence the person wrote stays; ask before removing one.
+
+## \`intention\` (what to do next here)
+
+\`\`\`yaml
+intention:
+  text: "Finish the *garden post*: the trellis paragraphs are in, the ending is not"
+  ref: /_content/writing/Garden_Post.doc.card   # optional prime card: arrival opens it instead of the place page
+\`\`\`
+
+One per place, optional. \`text\` is a single non-blank line of inline Markdown (emphasis, links, emoji; anything richer goes in the body). It is shown first on the place page and as a strip beside any chat in the place; the person can hide it until it changes. \`ref\` is the **prime card**, the card the work happens in; when it is set and exists, going to the place opens that card instead of the place page or the entry point.
+
+An intention is a track the person is already on. Set or clear it in the same turn you leave work in a place unfinished or finish what it named. Write one only from evidence of the person's choice: something they said they would do, a draft they were editing, a todo or question of theirs, or the standing job of a place that exists to process what arrives (its \`destinations\` rules say so). A card merely being present, incomplete, or newly arrived is not an intention, and work the person set aside on purpose is not either. With no such evidence, remove the field. When the person says the line is wrong, change it. The intention is "what next"; the body stays "where things stand"; openers are lines the person sends.
 
 ## \`destinations\` (agent-facing filing targets)
 

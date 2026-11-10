@@ -390,3 +390,22 @@ void test("contains is one concise sentence stating what can be found in the car
       warn("contains", "contains: is 220 chars (budget 200) — tighten it to one sentence stating what can be found in this card"),
   ));
 });
+
+// ## A landmark's prime card is validated like any other ref
+//
+// `intention.ref` (docs/implemented-plans/place-intention.md, Track A) is a key named
+// `ref`, so the generic walk finds it with no landmark-specific code: a prime
+// card that is gone is a broken-reference warning, never an error.
+void test("A landmark intention's prime card that is gone is a broken-reference warning", async (t) => {
+  const box = await makeTmpBox();
+  await box.write(
+    "_content/writing/Writing.landmark.card",
+    "---\nnavigation:\n  label: Writing\nintention:\n  text: Finish the post\n  ref: /_content/writing/Gone.doc.card\n---\n",
+  );
+  const result = await lintCardsDispatch([box.path("_content/writing/Writing.landmark.card")], { boxRoot: box.root, ctx });
+  t.check(
+    result,
+    one(`${box.root}/_content/writing/Writing.landmark.card`,
+      warn("reference", "Broken reference at intention.ref: /_content/writing/Gone.doc.card does not exist"),
+  ));
+});

@@ -45,8 +45,11 @@ budget:
   # line (docs/plans/knowledge-base-tools.md).
   # Raised 2026-11-01 (+27 always-loaded, +26 guide_words) for DOCS' pointer to the box
   # agent changelog; the entries stay in the doc (docs/implemented-plans/agent-changes.md).
-  guide_words: 5769
-  always_loaded_words: 11248
+  # Raised 2026-11-09 to the test1 clone measurement: +62 guide words for
+  # LANDMARKS. `landmarks.intention` (docs/implemented-plans/place-intention.md, Track C);
+  # the rest is drift from merges since 2026-11-01.
+  guide_words: 6025
+  always_loaded_words: 11861
   uncited_words_per_section: 60
 
 lint:
@@ -943,6 +946,12 @@ rows:
     bin: core
     reason: The trigger is saving an ordinary card, a turn that never opens the landmark's type doc, so a rule kept only in card-landmark.md is never met there (place-shows-cards plan review, finding 1). "Write one if none" seeds existing places, which have no body.
     audits: [landmark-body-after-card-save]
+  - id: landmarks.intention
+    rule: When the person leaves work in a place unfinished or finishes what its intention named, set or clear the landmark's `intention` in the same turn, from evidence they chose that track; a card merely present, arrived, or set aside is not one.
+    handle: LANDMARKS
+    bin: core
+    reason: The trigger is an ordinary chat turn that ends mid-work, where the landmark's type doc is never open, so the rule has to be in the guide to fire (docs/implemented-plans/place-intention.md, Track C). The restraint half is the boxholder's "not creative" requirement; without it an agent writes an intention from whatever is in the folder.
+    audits: [landmark-intention, landmark-intention-restraint]
   - id: landmarks.read-first
     rule: Read box-docs/landmark-curation.md before suggesting or editing a landmark.
     handle: LANDMARKS

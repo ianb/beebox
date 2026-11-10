@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-10T02:07:59Z
-Total documents: 629
+Generated: 2026-11-10T03:20:21Z
+Total documents: 630
 
 ## Issues
 
@@ -1243,7 +1243,7 @@ Referenced by:
 - docs/server/health-checks.md:204 (link) — The connector activity record (see [connectors.md](../connectors.md#activity-record))
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:27 (mention) — - **Filesystem is state.** `beebox/docs/connectors.md:8`: *"External service → Connector.sync() → Writes/reads card file
 - docs/user-stories/catalog/2026-08-21.md:6008 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
-- src/core/agent-guide/guide.md:552 (mention) — procedure step resolves one by name at call time (`connectors.md`,
+- src/core/agent-guide/guide.md:561 (mention) — procedure step resolves one by name at call time (`connectors.md`,
 - test/user-stories/journeys/F-newcomer/reports/2026-10-22.md:71 (mention) — | 13 | Note 6: calendar: Google only, iCloud cannot connect; sign in and allow; changes only when asked; changes are kep
 - ../issues/closed/features/2026-04-27-gmail-sync-improvements.md:8 (mention) — **Closed:** Fully implemented: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the h
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:49 (mention) — Still open: the logger (no central module in `beebox/src/lib/`), `docs/reliability.md`, `docs/testing-practice.md`, `doc
@@ -1664,7 +1664,7 @@ References:
 
 #### docs/landmarks.md
 
-Title: "Landmarks" | 337 lines | current reference
+Title: "Landmarks" | 357 lines | current reference
 
 Referenced by:
 - docs/design/representation.md:115 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
@@ -1679,6 +1679,7 @@ Referenced by:
 - docs/implemented-plans/landmark-arrival.md:140 (mention) — Authored documentation: about 230 lines (`docs/landmarks.md` rendering,
 - docs/implemented-plans/nav-card.md:142 (mention) — links (see `docs/landmarks.md`).
 - docs/implemented-plans/open-chat-from-card.md:100 (mention) — `contextDir` chosen at the call site (`LandmarkSection.tsx:96`). `docs/landmarks.md` (per the
+- docs/implemented-plans/place-intention.md:48 (mention) — - **Line fails to parse** (multi-line, blank). The landmark fails lenient parse and shows as a parse warning on the Land
 - docs/implemented-plans/place-shows-cards.md:244 (mention) — - **Place** (exists: a landmark's directory, `docs/landmarks.md`). Not a new
 - docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
 - docs/implemented-plans/questions-beside-the-chat.md:151 (mention) — `docs/landmarks.md`. Not a BIG CHANGE.
@@ -1703,6 +1704,7 @@ References:
 - → docs/implemented-plans/front-door.md (mention)
 - → docs/triage.md (mention)
 - → docs/questions.md (mention)
+- → docs/implemented-plans/place-intention.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
 - → docs/chat/quick-chat.md (link)
 - → docs/implemented-plans/landmark-arrival.md (mention)
@@ -2554,7 +2556,7 @@ Referenced by:
 - docs/unimplemented-plans/design-vision-superseded.md:17 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
 - docs/user-stories/catalog/2026-06-26.md:1672 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including
 - docs/user-stories/catalog/2026-08-21.md:6008 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
-- src/core/agent-guide/guide.md:420 (mention) — both paths are in `node_modules/beebox/box-docs/triage.md`. What a capture
+- src/core/agent-guide/guide.md:429 (mention) — both paths are in `node_modules/beebox/box-docs/triage.md`. What a capture
 - ../issues/closed/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md:41 (mention) — `beebox/docs/triage.md` aligned with the corrected transport.
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:28 (mention) — (`docs/triage.md`).
 - ../issues/decisions/2026-08-01-scan-handler-move-into-place.md:9 (mention) — `docs/triage.md`, the handle stage needs a `procedure:` (inline or
@@ -2729,14 +2731,15 @@ Referenced by:
 
 #### docs/box/landmark-curation.md
 
-Title: "Landmark Curation" | 54 lines | current reference
+Title: "Landmark Curation" | 55 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:193 (mention) — Two flagged cases: `landmark-curation.md` is written as second-person
 - docs/implemented-plans/landmark-arrival.md:142 (mention) — `docs/box/landmark-curation.md`; one knowledge-audit entry). Schema
+- docs/implemented-plans/place-intention.md:70 (mention) — About 555 source lines, 120 lines of procedure YAML, and 420 test lines, plus about 60 lines of authored docs (`docs/lan
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:264 (mention) — (`docs/landmark-curation.md`, `docs/triage.md`) that don't exist in
 - docs/reports/knowledge-audit-rerun-2026-10-22.md:55 (mention) — | `landmarks-dont-create-quietly` | Asked for a landmark on a folder that did not exist, the agent created an empty fold
-- src/core/agent-guide/guide.md:396 (mention) — Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or
+- src/core/agent-guide/guide.md:405 (mention) — Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:12 (mention) — > Closed 2026-09-24: moved to `beebox/docs/box/landmark-curation.md` (with `read-when:`), so it ships as `node_modules/b
 - ../issues/features/2026-07-09-memory-gardener-consolidation-loop.md:32 (mention) — - **Landmark curation** (`beebox/docs/box/landmark-curation.md`) — curates the *navigation
 - ../research/openclaw-hermes/compare-skills-tools.md:59 (mention) — by `docs/landmark-curation.md`). None of these have a formal create/edit/patch/delete tool
@@ -2747,7 +2750,7 @@ Title: "Markdown in card bodies" | 121 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
-- src/core/agent-guide/guide.md:261 (mention) — `markdown.md` for body line breaks, HTML, footnotes. Each type's
+- src/core/agent-guide/guide.md:262 (mention) — `markdown.md` for body line breaks, HTML, footnotes. Each type's
 - ../issues/closed/bugs/2026-10-02-markdown-line-breaks-and-html-undefined-for-agents.md:11 (mention) — > Closed: implemented on branch worktree-markdown-expressiveness (merge commit in `git log`). Diverges from the proposal
 - ../issues/closed/docs-and-chores/2026-10-02-agent-guide-over-word-budget.md:18 (mention) — `docs/box/markdown.md`).
 
@@ -2768,7 +2771,7 @@ Title: "Prominence" | 50 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:575 (mention) — Indirect text moved verbatim to package docs (new `prominence.md`,
-- src/core/agent-guide/guide.md:258 (mention) — `bbx create` values and `bbx contains`; `prominence.md` before writing any
+- src/core/agent-guide/guide.md:259 (mention) — `bbx create` values and `bbx contains`; `prominence.md` before writing any
 
 #### docs/box/provenance.md
 
@@ -2777,7 +2780,7 @@ Title: "Quotes and provenance" | 175 lines | current reference
 Referenced by:
 - docs/box-guidance.md:148 (link) — [provenance](box/provenance.md) holds the `{% quote %}` and `{% source %}`
 - docs/implemented-plans/doc-structure-box-guidance.md:443 (mention) — one sentence each): PROVENANCE and DIRECT_QUOTES → `box-docs/provenance.md`;
-- src/core/agent-guide/guide.md:260 (mention) — `provenance.md` for `ref`/`href` fields and what a ref can reach;
+- src/core/agent-guide/guide.md:261 (mention) — `provenance.md` for `ref`/`href` fields and what a ref can reach;
 - ../issues/features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md:29 (mention) — body (`beebox/box-docs/provenance.md`); the chip jumps to the span by text
 - ../research/notebooklm/citations.md:42 (mention) — Bee Box has no retrieval step that produces citations. The agent searches (`bbx search` returns a card path plus a `#fra
 - ../research/notebooklm/comparison.md:19 (mention) — | Provenance over time | None for uploads and web pages; Drive sources re-sync | `version: sha256:` and `git:` on a sour
@@ -2855,7 +2858,7 @@ Referenced by:
 - docs/implemented-plans/agent-changes.md:77 (mention) — - `- 2026-10-20 (b28d11ae2): bbx todos takes --now and --group status. --on-plate and --group plate are gone. See box-do
 - docs/implemented-plans/doc-structure-box-guidance.md:444 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
 - docs/plans/gmail-admission-and-preparation.md:90 (mention) — - `beebox/docs/box/todos.md:39`: `by="agent" assigned="agent"` already represents
-- src/core/agent-guide/guide.md:344 (mention) — Mechanics: `node_modules/beebox/box-docs/todos.md`, before adding attributes,
+- src/core/agent-guide/guide.md:345 (mention) — Mechanics: `node_modules/beebox/box-docs/todos.md`, before adding attributes,
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md:89 (mention) — | 14 | Every todo shows a grey "user" tag | Product. The agent wrote `assigned="user"`, a value the todo docs do not def
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md:29 (mention) — - `9791d3a` added two todos: "Reply to Marisol about Sunday lunch" (`due` 2026-10-09) and "Check in on this list" (`due`
 - test/user-stories/journeys/F-newcomer/reports/2026-10-08.md:96 (mention) — | 21 | "starts Oct 17" chip; the person never said 17 | Product. The agent wrote `start="-2w"` (`1d8a151`) and did not s
@@ -2877,7 +2880,7 @@ Referenced by:
 - docs/implemented-plans/jev-document-triage.md:405 (mention) — is on-demand `docs/box/triage-instructions.md`, with short discoverability pointers
 - docs/implemented-plans/triage-compiled-instructions.md:443 (mention) — 5. Box docs (`docs/box/triage-instructions.md`), knowledge audit, change-selected
 - docs/triage.md:105 (link) — Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
-- src/core/agent-guide/guide.md:425 (link) — [Triage repair](../../../docs/box/triage-instructions.md): replay never applies or researches. Intake policy permits exp
+- src/core/agent-guide/guide.md:434 (link) — [Triage repair](../../../docs/box/triage-instructions.md): replay never applies or researches. Intake policy permits exp
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:153 (link) — The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
 
 #### docs/box/tricks.md
@@ -2890,7 +2893,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:621 (mention) — | trick auto-commit and trailer | 6 | `tricks.md` | 5 |
 - docs/implemented-plans/box-agents-md.md:347 (mention) — (`docs/box-guidance.md`, `docs/box-layout.md`, `docs/box/tricks.md`), the
 - docs/implemented-plans/doc-structure-box-guidance.md:395 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
-- src/core/agent-guide/guide.md:551 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
+- src/core/agent-guide/guide.md:560 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
 - ../issues/closed/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md:160 (mention) — `beebox/docs/box/tricks.md`.
 - ../issues/closed/docs-and-chores/2026-09-21-trick-smoke-test-exit-code-masking.md:12 (mention) — **Closed (superseded, 2026-10-30):** Re-reviewed 2026-10-30: the premise is gone. The trick engine commits only the path
 - ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:14 (mention) — **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
@@ -3135,7 +3138,7 @@ Referenced by:
 - docs/chat.md:13 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
 - docs/design/trust.md:53 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
 - docs/implemented-plans/clerk-quick-send.md:54 (mention) — today (`docs/chat/quick-chat.md`, "The box screen"). The page toast says
-- docs/landmarks.md:235 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
+- docs/landmarks.md:254 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
 - docs/mobile-contract.md:1321 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
 - docs/plans/box-screen.md:376 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - docs/plans/chat-routing.md:20 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
@@ -5805,6 +5808,7 @@ Title: "The front door: what a person meets when they open their box" | 1255 lin
 
 Referenced by:
 - docs/box-layout.md:318 (mention) — does; a folder the person made never folds (`docs/implemented-plans/front-door.md`,
+- docs/implemented-plans/place-intention.md:149 (mention) — Resolution goes through `parseRef`/`resolveRefPath` (`src/shared/ref-path/core.ts`, the only allowed ref parser per `bee
 - docs/implemented-plans/questions-beside-the-chat.md:13 (link) — [front-door](../implemented-plans/front-door.md), Track A.
 - docs/landmarks.md:34 (mention) — A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a
 - test/user-stories/journeys/I-deciding/reports/2026-10-22.md:79 (mention) — | 1 | Note 1: nothing says what the app is. | P (designed) | The front door is the root question "What do you want to ke
@@ -6218,7 +6222,7 @@ Title: "Landmark arrival" | 940 lines | shipped history | implemented
 
 Referenced by:
 - docs/cards/migrations.md:369 (mention) — Track B of `docs/implemented-plans/landmark-arrival.md`. Chat openers moved from briefing
-- docs/landmarks.md:312 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
+- docs/landmarks.md:332 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
 - ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
 - ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
@@ -6783,6 +6787,24 @@ References:
 - → docs/pi-engine.md (mention)
 - → docs/implemented-plans/openrouter-chat-models.md (mention)
 - → docs/implemented-plans/per-box-units.md (mention)
+
+#### docs/implemented-plans/place-intention.md
+
+Title: "Place intention: a landmark says what to do next" | 295 lines | shipped history | implemented
+
+Referenced by:
+- docs/landmarks.md:84 (mention) — A landmark may carry one `intention`: what the next piece of work in the place is, so that going to the place launches t
+- ../issues/features/2026-11-09-prime-card-tab-looks-different.md:14 (mention) — (`beebox/docs/implemented-plans/place-intention.md`, Track A). In the cards pane that
+
+References:
+- → ../issues/features/2026-09-08-landmark-scoped-pinned-card-baseline.md (link)
+- → ../issues/features/2026-10-16-agent-hands-user-into-new-chat.md (link)
+- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
+- → src/core/agent-guide/guide.md (mention)
+- → docs/landmarks.md (mention)
+- → docs/box/landmark-curation.md (mention)
+- → docs/implemented-plans/todo-annotation.md (mention)
+- → docs/implemented-plans/front-door.md (mention)
 
 #### docs/implemented-plans/place-shows-cards.md
 
@@ -8197,6 +8219,7 @@ Title: "`{% todo %}` — universal todo annotation" | 599 lines | shipped histor
 Referenced by:
 - docs/cards/format.md:105 (mention) — `docs/implemented-plans/todo-annotation.md` and
 - docs/implemented-plans/card-symbol.md:126 (mention) — (`docs/implemented-plans/todo-annotation.md:292`,
+- docs/implemented-plans/place-intention.md:76 (mention) — - **Status over timestamps.** The todo design chose `status` over a done-date because *git history carries the timestamp
 - docs/implemented-plans/todo-collection.md:98 (mention) — (`docs/implemented-plans/todo-annotation.md`), goals 2 to 4: a trusted
 - docs/implemented-plans/todos-ui.md:105 (mention) — (`docs/implemented-plans/todo-annotation.md`, Open design questions):
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:8 (frontmatter) — design: ../../../beebox/docs/implemented-plans/todo-annotation.md
@@ -8286,7 +8309,7 @@ Title: "Unified app bar: one nav for chat and everything else" | 542 lines | shi
 Referenced by:
 - docs/implemented-plans/chat-header-chips.md:9 (mention) — **Superseded surface (2026-08-02, `docs/implemented-plans/top-nav-ia.md`).** The chat
 - docs/implemented-plans/nav-card.md:18 (mention) — **Where the entries render changed (2026-08, `docs/implemented-plans/top-nav-ia.md`
-- docs/landmarks.md:186 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
+- docs/landmarks.md:205 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
 - docs/plans/box-screen.md:45 (mention) — - This changes shipped navigation from `beebox/docs/implemented-plans/top-nav-ia.md`: line 296 puts Dashboard, Browse, H
 - docs/user-stories/catalog/2026-08-21.md:9051 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a
 - ../issues/closed/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:42 (link) — [top-nav-ia](../../../beebox/docs/implemented-plans/top-nav-ia.md) — which
@@ -11505,7 +11528,7 @@ References:
 
 #### src/core/agent-guide/guide.md
 
-Title: "Bee Box Agent Guide" | 659 lines
+Title: "Bee Box Agent Guide" | 668 lines
 
 Referenced by:
 - docs/agent-guide.md:19 (mention) — - `guide.md` holds the text, written by hand as one document. Its header
@@ -11520,6 +11543,7 @@ Referenced by:
 - docs/implemented-plans/drive-docs-api-health.md:114 (mention) — - `guide.md:448` becomes *"`bbx health` — scheduled-task and box health, including connector problems; yours to run."* (
 - docs/implemented-plans/dup-sweep-backend-final.md:184 (mention) — `core/agent-guide/guide.md:437` and `core/agent-guide/ledger.yaml:507`.
 - docs/implemented-plans/front-door.md:94 (mention) — | "Landmarks page" with no on-screen path (B row 25) | The page exists; the only route is the place menu's "Find a landm
+- docs/implemented-plans/place-intention.md:42 (mention) — The box writes and rewrites the field automatically. This is the rung the place summary already sits on (`src/core/agent
 - docs/implemented-plans/place-shows-cards.md:184 (mention) — when the agent edits a landmark (`src/core/agent-guide/guide.md:393`).
 - docs/implemented-plans/place-shows-cards.review.md:12 (link) — 1. **The agent has no reliable trigger to maintain the body.** Track C says the agent updates it whenever it changes wha
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le

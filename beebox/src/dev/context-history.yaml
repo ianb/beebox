@@ -11557,6 +11557,36 @@ test1:
       peak: 47696
       added: 2582
       turns: 6
+  landmark-intention:
+    - date: 2026-11-10T02:10:23.081Z
+      boxCommit: 291ebf0483a45d9a19c86669a99b6a51678e66c4
+      repoCommit: 406936885dec0f643c7aea3a4a37ee84a03f4ff3
+      initial: 45312
+      peak: 45312
+      added: 0
+      turns: 2
+    - date: 2026-11-10T02:11:44.698Z
+      boxCommit: bf3344581996996e0e839649139bc84a16d26acd
+      repoCommit: 406936885dec0f643c7aea3a4a37ee84a03f4ff3
+      initial: 45312
+      peak: 45312
+      added: 0
+      turns: 2
+  landmark-intention-restraint:
+    - date: 2026-11-10T02:10:23.081Z
+      boxCommit: 291ebf0483a45d9a19c86669a99b6a51678e66c4
+      repoCommit: 406936885dec0f643c7aea3a4a37ee84a03f4ff3
+      initial: 45305
+      peak: 45305
+      added: 0
+      turns: 2
+    - date: 2026-11-10T02:11:44.698Z
+      boxCommit: bf3344581996996e0e839649139bc84a16d26acd
+      repoCommit: 406936885dec0f643c7aea3a4a37ee84a03f4ff3
+      initial: 45305
+      peak: 45305
+      added: 0
+      turns: 2
   views-declared-check-states:
     - date: 2026-11-09T23:49:36.629Z
       boxCommit: 938b79dd13a082b96900e63a59ad170a03143890

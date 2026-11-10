@@ -2,11 +2,13 @@
  * PlaceView — the front of a landmark card: the place page.
  *
  * A person who opens a landmark card is visiting the place, so the front shows
- * what the place holds instead of its configuration: the place summary (the
- * card's body), its openers ("Start something", where they can be sent), then
- * its resolved links in tiers and each `expand` as a group labeled in plain words.
- * The card header already shows the place's mark and label; an embed, which
- * has no header, draws them here. The fields stay under Properties
+ * what the place holds instead of its configuration: its intention, when it
+ * has one and the person has not hidden it (docs/implemented-plans/place-intention.md,
+ * Track B), the place summary (the card's body), its openers ("Start
+ * something", where they can be sent), then its resolved links in tiers and
+ * each `expand` as a group labeled in plain words. The card header already
+ * shows the place's mark and label; an embed, which has no header, draws them
+ * here. The fields stay under Properties
  * (`CardFacts`). See
  * docs/implemented-plans/landmark-arrival.md, Track C, and
  * docs/implemented-plans/place-shows-cards.md, Track C.
@@ -49,6 +51,8 @@ import type { ViewState } from "@shared/view-state";
 import type { ViewTarget } from "../../lib/view-url";
 import { parentDir } from "../../lib/parent-dir";
 import { MaterialContext, useMaterial } from "../ui/material";
+import { IntentionLine, type Intention } from "../intention/IntentionLine/view";
+import { intentionDismissKey, useDismissedIntention } from "../intention/use-dismissed-intention";
 
 const TIER_HEADINGS: Record<PlaceTier, string> = {
   "entry-point": "Start here",
@@ -119,6 +123,18 @@ function RootCounts({ counts, onRetry }: { counts: NavCounts | "unavailable"; on
   );
 }
 
+/** The place's intention, first on the page, unless the person hid this text on this device. */
+function PlaceIntention({ intention, landmarkPath, onNavigate }: { intention: Intention; landmarkPath: string; onNavigate: (target: ViewTarget) => void }) {
+  const boxSlug = useBoxSlug() ?? "";
+  const { dismissed, dismiss } = useDismissedIntention({ key: intentionDismissKey({ boxSlug, landmarkPath }), text: intention.text });
+  if (dismissed) return null;
+  return (
+    <div data-place-section="intention">
+      <IntentionLine intention={intention} landmarkPath={landmarkPath} idPrefix="bbx-place-intention" onNavigate={onNavigate} onDismiss={dismiss} />
+    </div>
+  );
+}
+
 /**
  * The place page for a loaded payload. `cardPath` is the card being shown; when
  * the folder's landmark is a different card (two landmarks in one folder), the
@@ -160,6 +176,8 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
           <Heading level={2}>{payload.label}</Heading>
         </div>
       ) : null}
+
+      {payload.intention === null ? null : <PlaceIntention intention={payload.intention} landmarkPath={payload.path} onNavigate={onNavigate} />}
 
       {body !== undefined && body.trim() !== "" ? (
         <div data-place-section="summary">
