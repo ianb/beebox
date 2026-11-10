@@ -1,4 +1,4 @@
-// An intention line renders as inline Markdown only (docs/plans/place-intention.md,
+// An intention line renders as inline Markdown only (docs/implemented-plans/place-intention.md,
 // Track B): emphasis, code, and links render; a heading, a list, an image, or a
 // tag shows as the text that was written.
 

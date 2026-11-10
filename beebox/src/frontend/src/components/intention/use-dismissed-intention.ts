@@ -1,6 +1,6 @@
 /**
  * Whether the person hid a place's intention on this device, and the × that
- * hides it (docs/plans/place-intention.md, Track B). The place page and the
+ * hides it (docs/implemented-plans/place-intention.md, Track B). The place page and the
  * strip read the same key, so one × hides both: a write notifies every
  * mounted reader, and another tab's write arrives through the `storage` event.
  * When storage fails the hidden text is kept in memory for this page load.

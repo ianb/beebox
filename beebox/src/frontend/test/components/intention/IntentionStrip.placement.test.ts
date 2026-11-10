@@ -1,5 +1,5 @@
 // The intention strip shows beside a chat in a place with an intention, and
-// nowhere else (docs/plans/place-intention.md, Track B). On the desktop it tops
+// nowhere else (docs/implemented-plans/place-intention.md, Track B). On the desktop it tops
 // the cards; on the phone it shows only above the chat; it hides while the
 // place page itself is visible.
 

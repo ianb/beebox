@@ -1,6 +1,6 @@
 /**
  * `bbx engine intentions verify`, the validate of the stock
- * `refresh-intentions` procedure (docs/plans/place-intention.md, Track D).
+ * `refresh-intentions` procedure (docs/implemented-plans/place-intention.md, Track D).
  *
  * The procedure's own commits are those in `<baseline>..HEAD` carrying
  * `Created-By: refresh-intentions`; other commits there (a chat working at the

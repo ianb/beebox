@@ -141,7 +141,7 @@ export const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "15 6 * * *",
     notBefore: "20h",
     onWakeup: false,
-    // Seeded ENABLED (docs/plans/place-intention.md, Track D). Like
+    // Seeded ENABLED (docs/implemented-plans/place-intention.md, Track D). Like
     // todo-review, the precheck exits CHECK_SKIP when no place changed since
     // its last review, so a quiet box runs no agent. The first run lists every
     // place once (none has a review record yet): that is the kickoff.

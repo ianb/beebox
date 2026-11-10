@@ -81,7 +81,7 @@ The one line of prose a landmark does carry is the `intention` (below). It is no
 
 ## The intention
 
-A landmark may carry one `intention`: what the next piece of work in the place is, so that going to the place launches the person into the work instead of showing them an overview (`docs/plans/place-intention.md`; boxholder, 2026-11-09).
+A landmark may carry one `intention`: what the next piece of work in the place is, so that going to the place launches the person into the work instead of showing them an overview (`docs/implemented-plans/place-intention.md`; boxholder, 2026-11-09).
 
 ```yaml
 intention:

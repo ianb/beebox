@@ -3,7 +3,7 @@
  *
  * A person who opens a landmark card is visiting the place, so the front shows
  * what the place holds instead of its configuration: its intention, when it
- * has one and the person has not hidden it (docs/plans/place-intention.md,
+ * has one and the person has not hidden it (docs/implemented-plans/place-intention.md,
  * Track B), the place summary (the card's body), its openers ("Start
  * something", where they can be sent), then its resolved links in tiers and
  * each `expand` as a group labeled in plain words. The card header already

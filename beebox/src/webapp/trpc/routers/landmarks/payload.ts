@@ -65,7 +65,7 @@ export interface LandmarkPayload {
    */
   openers: string[];
   /**
-   * The place's `intention` (docs/plans/place-intention.md): the line, trimmed,
+   * The place's `intention` (docs/implemented-plans/place-intention.md): the line, trimmed,
    * and its prime card resolved to a box-relative path, or null when the
    * written ref names no existing card inside the box. Null when the landmark
    * has no intention.

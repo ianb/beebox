@@ -3,7 +3,7 @@
 // The validate judges only commits carrying `Created-By: refresh-intentions`:
 // each may change the `intention` of a listed landmark and nothing else (the
 // raw frontmatter, unknown keys included, and the body are compared). Other
-// commits during the run are not judged. Plan: docs/plans/place-intention.md,
+// commits during the run are not judged. Plan: docs/implemented-plans/place-intention.md,
 // Track D.
 
 import { test } from "tap";

@@ -2,7 +2,7 @@
  * bbx engine intentions — the two deterministic halves of the stock
  * `refresh-intentions` procedure
  * (`templates/procedures/refresh-intentions.procedure.card`,
- * `docs/plans/place-intention.md` Track D).
+ * `docs/implemented-plans/place-intention.md` Track D).
  *
  *   bbx engine intentions check    The precheck. Lists the places whose
  *                                  intention needs a look, saves the run, and

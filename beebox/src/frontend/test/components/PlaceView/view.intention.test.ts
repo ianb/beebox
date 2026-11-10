@@ -1,7 +1,7 @@
 // # The place page leads with the place's intention
 //
 // A landmark's intention is one line saying what the next piece of work in the
-// place is (docs/plans/place-intention.md, Track B). The place page shows it
+// place is (docs/implemented-plans/place-intention.md, Track B). The place page shows it
 // first, with an Open action for its prime card and an × that hides it on this
 // device until the text changes. These examples render `PlacePage` with a
 // loaded payload, as `view.place-page.test.ts` does.

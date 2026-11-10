@@ -23,4 +23,4 @@ A plain substring search of the box's text files for the old box-relative
 path would do; the move would not change them.
 
 The tracked-ref part of the same report was fixed:
-[mv skips absolute refs inside moved attach scope](../closed/bugs/2026-11-09-mv-skips-absolute-refs-inside-moved-attach-scope.md).
+[mv skips absolute refs inside moved attach scope](../bugs/2026-11-09-mv-skips-absolute-refs-inside-moved-attach-scope.md).

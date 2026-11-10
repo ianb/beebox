@@ -1,6 +1,6 @@
 /**
  * What a `refresh-intentions` commit changed on a landmark besides its
- * `intention` (docs/plans/place-intention.md, Track D, `verify`).
+ * `intention` (docs/implemented-plans/place-intention.md, Track D, `verify`).
  *
  * The raw frontmatter mapping is compared, every key included, so a key the
  * landmark schema does not know is protected too; the body is compared as

@@ -334,7 +334,7 @@ destinations:
 // ## The intention
 //
 // `intention` is one line of inline Markdown, kept verbatim, with an optional
-// prime card (docs/plans/place-intention.md, Track A). A hand-written bare
+// prime card (docs/implemented-plans/place-intention.md, Track A). A hand-written bare
 // string means `{ text }`.
 void test("intention is one line of inline Markdown, kept verbatim, with an optional prime card", async (t) => {
   t.check(

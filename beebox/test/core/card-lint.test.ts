@@ -393,7 +393,7 @@ void test("contains is one concise sentence stating what can be found in the car
 
 // ## A landmark's prime card is validated like any other ref
 //
-// `intention.ref` (docs/plans/place-intention.md, Track A) is a key named
+// `intention.ref` (docs/implemented-plans/place-intention.md, Track A) is a key named
 // `ref`, so the generic walk finds it with no landmark-specific code: a prime
 // card that is gone is a broken-reference warning, never an error.
 void test("A landmark intention's prime card that is gone is a broken-reference warning", async (t) => {

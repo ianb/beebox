@@ -508,7 +508,7 @@ void test("The landmark's body is the place summary (Track C).", async (t) => {
 //
 // A place's `intention` comes back trimmed, with its prime card resolved to a
 // box-relative path when the ref names an existing card inside the box
-// (docs/plans/place-intention.md, Track A). The prime card is then the
+// (docs/implemented-plans/place-intention.md, Track A). The prime card is then the
 // arrival target, ahead of a single entry point.
 void test("The prime card is the arrival target, ahead of a single entry point", async (t) => {
   const box = await makeTmpBox();

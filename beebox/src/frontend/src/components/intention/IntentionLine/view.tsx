@@ -1,7 +1,7 @@
 /**
  * A place's intention as one line: what the next piece of work there is, an
  * Open action for its prime card when it has one, and an × that hides the
- * line on this device until its text changes (docs/plans/place-intention.md,
+ * line on this device until its text changes (docs/implemented-plans/place-intention.md,
  * Track B). The place page shows it first; the strip shows it above the
  * cards beside a chat in the place.
  *

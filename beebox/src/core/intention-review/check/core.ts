@@ -1,6 +1,6 @@
 /**
  * `bbx engine intentions check`, the precheck of the stock
- * `refresh-intentions` procedure (docs/plans/place-intention.md, Track D).
+ * `refresh-intentions` procedure (docs/implemented-plans/place-intention.md, Track D).
  *
  * Lists every place whose intention needs a look: never reviewed, changed
  * since the commit it was last reviewed at (the landmark's own commits count:

@@ -1,7 +1,7 @@
 /**
  * The intention strip: the place's intention across the top of the cards
  * beside a chat in that place, or above the chat on the phone
- * (docs/plans/place-intention.md, Track B). Arrival with a prime card opens
+ * (docs/implemented-plans/place-intention.md, Track B). Arrival with a prime card opens
  * that card instead of the place page, so the chat's workspace is where the
  * line is seen on every arrival.
  *

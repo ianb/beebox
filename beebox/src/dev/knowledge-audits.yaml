@@ -9335,7 +9335,7 @@ tests:
       - '(?:unconfirmed|not confirmed|unverified|could not (?:confirm|verify)|couldn.t (?:confirm|verify)|not verified)'
     tags: [provenance, behavioral]
 
-  # === Place intention (docs/plans/place-intention.md, Track C) ===
+  # === Place intention (docs/implemented-plans/place-intention.md, Track C) ===
   #
   # Status (2026-11-09, Claude): both passed on the worktree test1 clone; 0 reads,
   # 0 searches, 45k ctx. landmark-intention passed on content first time; its body

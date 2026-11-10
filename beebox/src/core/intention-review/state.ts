@@ -1,6 +1,6 @@
 /**
  * The intention review's box-local state, `.beebox/intentions/reviewed.json`
- * (docs/plans/place-intention.md, Track D).
+ * (docs/implemented-plans/place-intention.md, Track D).
  *
  * `reviewed` maps each landmark's box-relative path to the commit the
  * `refresh-intentions` procedure last reviewed it at; `check` lists a place

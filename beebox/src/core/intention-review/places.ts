@@ -1,6 +1,6 @@
 /**
  * The places the intention review walks, and what changed under each
- * (docs/plans/place-intention.md, Track D).
+ * (docs/implemented-plans/place-intention.md, Track D).
  *
  * A place is a `*.landmark.card` and the directory it sits in, minus any
  * subdirectory with its own landmark: that subdirectory is its own place, the

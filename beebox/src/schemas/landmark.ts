@@ -158,7 +158,7 @@ export const IntentionText = z
   .refine((s) => !s.includes("\n"), "an intention must be a single line");
 
 /**
- * `intention` on a landmark (docs/plans/place-intention.md): `text` is the
+ * `intention` on a landmark (docs/implemented-plans/place-intention.md): `text` is the
  * line; `ref` is the optional prime card, a box path to the card the work
  * happens in, which arrival opens in place of the landmark. A hand-written
  * bare string means `{ text }`; serialization writes the object form.

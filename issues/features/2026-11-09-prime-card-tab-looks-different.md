@@ -11,7 +11,7 @@ priority: backlog
 ---
 
 Arriving at a place with an intention opens its prime card beside the chat
-(`beebox/docs/plans/place-intention.md`, Track A). In the cards pane that
+(`beebox/docs/implemented-plans/place-intention.md`, Track A). In the cards pane that
 card's tab looks exactly like a tab the person opened themselves, so the
 card the place put there falls in with the rest.
 

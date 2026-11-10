@@ -1,5 +1,5 @@
 /**
- * The prime card of a place's intention, resolved (docs/plans/place-intention.md,
+ * The prime card of a place's intention, resolved (docs/implemented-plans/place-intention.md,
  * Track A).
  *
  * `intention.ref` is agent- or hand-written, so the payload never sends it
