@@ -38,10 +38,11 @@ Codex entries here are labeled as such; they carry their own pin.
   `workstreams-app/package.json` pins the same Agent SDK version, and the
   updater moves both. The root's unmanaged pin is gone (2026-10-27,
   `issues/closed/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`).
-- **Latest reviewed upstream version:** `0.3.319` (SDK), `2.1.319` (Claude Code), `0.167.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.322` (SDK), `2.1.322` (Claude Code), `0.167.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.319` on 2026-11-08;
-  nothing newer is published. `bin/land` refused 2026-11-07 and 11-08 over a
+  next `0.3.321` (settles 2026-11-11T19:03Z) and `0.3.322` (2026-11-12T01:57Z).
+  `bin/land` refused 2026-11-07 and 11-08 over a
   dirty main checkout; both commits reached main and production by
   2026-11-09 (deploy `5a32213cd`). Codex stays held at `0.164.0` (0.165.0–0.167.0) on
   `issues/decisions/2026-10-28-codex-memory-v2-default-for-box-chats.md`.
@@ -70,6 +71,29 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.321 / 0.3.322 / Claude Code 2.1.321 / 2.1.322 — pending (published 2026-11-09T19:03Z and 2026-11-10T01:57Z); 0.3.320 never published
+
+- **Model:** Claude Fable 5.2 (`claude-fable-5-2`) is the default Fable. beebox's
+  `fable` alias still pins 5.1; `claude-fable-5-2` verified on the current pin
+  (0.3.319). Filed:
+  `issues/code-quality/2026-11-10-fable-alias-still-pins-fable-5-1.md`.
+- **RUNTIME, wanted:** a turn no longer ends with "EPROTO: The TLS handshake
+  failed" when the connection breaks mid-reply (a 2.1.302 regression the
+  current pin carries; no beebox failure observed, so settled path); sessions
+  no longer hang on save when memory runs out reading a transcript; high
+  memory in long sessions reading single lines of large files fixed; resumed
+  sessions read `initialize` during boot, so hooks register before start-up
+  work. SDK: all hooks were dropped when one `hooks` event was `undefined`
+  (beebox passes defined arrays); PreToolUse `ask` reasons fixed.
+- **HARNESS, security:** MCP OAuth no longer sends refresh tokens to another
+  host on a redirect; a read-only Bash command no longer runs outside the
+  sandbox without a prompt; deny rules now cover the file a `cp`/`mv` into a
+  directory writes; Bash commands no longer run in the wrong folder when
+  several are sent at once. The account-email check now refuses only commands
+  that also name a User-Agent, so scheduled runs no longer stop at its prompt.
+- **Action:** Settled path; takeable 2026-11-11T19:03Z and 2026-11-12T01:57Z.
+- **Sources:** [SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md), [Claude Code 2.1.321](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21321)
 
 ### Codex 0.167.0 — HELD with 0.165.0 / 0.166.0 (published 2026-11-06T01:40Z)
 
