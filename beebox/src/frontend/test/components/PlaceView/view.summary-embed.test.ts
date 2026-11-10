@@ -27,6 +27,7 @@ void test("a card embed in the summary embeds the card, not an image", async (t)
     depth: 0,
     features: {},
     openers: [],
+    intention: null,
     arrival: "_content/lending/Lending.landmark.card",
   };
   const page = h(PlacePage, { cardPath: payload.path, payload, body: "![Front page](Front.page.card)\n", onNavigate: () => {}, onGoToPlace: () => {} });

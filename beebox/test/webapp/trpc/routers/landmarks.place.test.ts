@@ -503,3 +503,72 @@ void test("The landmark's body is the place summary (Track C).", async (t) => {
     ],
   });
 });
+
+// ## The intention and its prime card
+//
+// A place's `intention` comes back trimmed, with its prime card resolved to a
+// box-relative path when the ref names an existing card inside the box
+// (docs/plans/place-intention.md, Track A). The prime card is then the
+// arrival target, ahead of a single entry point.
+void test("The prime card is the arrival target, ahead of a single entry point", async (t) => {
+  const box = await makeTmpBox();
+  await box.write("_content/writing/Writing.landmark.card", [
+    "---",
+    "navigation:",
+    "  label: Writing",
+    "intention:",
+    "  text: \"  Finish the *garden post*  \"",
+    "  ref: /_content/writing/Garden_Post.doc.card",
+    "---",
+    "",
+  ].join("\n"));
+  await box.write("_content/writing/Garden_Post.doc.card", "---\ntitle: Garden post\n---\n");
+  await box.write("_content/writing/Board.doc.card", "---\ntitle: Board\nprominence: entry-point\n---\n");
+  const place = await payload(box.root, { dir: "_content/writing" });
+  t.check({ intention: place.intention, arrival: place.arrival }, {
+    intention: { text: "Finish the *garden post*", ref: "_content/writing/Garden_Post.doc.card" },
+    arrival: "_content/writing/Garden_Post.doc.card",
+  });
+});
+
+// A ref that names no existing card (deleted, a directory, a non-card file, a
+// path outside the box) resolves to null: the line still shows, and arrival
+// falls back to the place's usual target. A ref written relative to the
+// landmark's directory still resolves. The root ignores a prime card: the
+// front door is always its page.
+void test("A prime card that is missing, a directory, a non-card file, or outside the box resolves to null", async (t) => {
+  const box = await makeTmpBox();
+  const landmark = ({ dir, label, ref }: { dir: string; label: string; ref: string }) => box.write(`_content/${dir}/${label}.landmark.card`, `---\nnavigation:\n  label: ${label}\nintention:\n  text: Next\n  ref: ${ref}\n---\n`);
+  await landmark({ dir: "gone", label: "Gone", ref: "/_content/gone/Missing.doc.card" });
+  await landmark({ dir: "dir", label: "Dir", ref: "/_content/dir/notes" });
+  await box.write("_content/dir/notes/Note.doc.card", "---\ntitle: Note\n---\n");
+  await landmark({ dir: "plain", label: "Plain", ref: "/_content/plain/readme.md" });
+  await box.write("_content/plain/readme.md", "hello\n");
+  await landmark({ dir: "escape", label: "Escape", ref: "/../outside.card" });
+  await landmark({ dir: "relative", label: "Relative", ref: "Draft.doc.card" });
+  await box.write("_content/relative/Draft.doc.card", "---\ntitle: Draft\n---\n");
+  await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: test\nintention:\n  text: Root next\n  ref: /_content/Welcome.doc.card\n---\n");
+  await box.write("_content/Welcome.doc.card", "---\ntitle: Welcome\n---\n");
+  const refOf = async (dir: string) => (await payload(box.root, { dir })).intention?.ref ?? null;
+  const root = await payload(box.root, { dir: "" });
+  t.check(
+    {
+      gone: await refOf("_content/gone"),
+      dir: await refOf("_content/dir"),
+      plain: await refOf("_content/plain"),
+      escape: await refOf("_content/escape"),
+      relative: await refOf("_content/relative"),
+      goneArrival: (await payload(box.root, { dir: "_content/gone" })).arrival,
+      root: { ref: root.intention?.ref ?? null, arrival: root.arrival },
+    },
+    {
+      gone: null,
+      dir: null,
+      plain: null,
+      escape: null,
+      relative: "_content/relative/Draft.doc.card",
+      goneArrival: "_content/gone/Gone.landmark.card",
+      root: { ref: "_content/Welcome.doc.card", arrival: "_content/Box.landmark.card" },
+    },
+  );
+});

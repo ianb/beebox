@@ -15,6 +15,7 @@ import {
   type ResolvedGroup,
 } from "../../../../core/landmark/resolve/core.js";
 import { readLandmarkFeatures } from "../../../../core/landmark/features.js";
+import { resolveIntention, type ResolvedIntention } from "../../../../core/landmark/intention.js";
 import { expandLabel } from "../../../../core/landmark/expand-label.js";
 import type { DerivedReadProblem } from "../../../../core/landmark/summaries.js";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../../../schemas/landmark.js";
@@ -64,11 +65,19 @@ export interface LandmarkPayload {
    */
   openers: string[];
   /**
-   * Box-relative path of the card arriving at this place opens: the single
-   * `entry-point` card in the pruned subtree when there is exactly one, else
-   * the landmark card itself. The root place always opens its landmark card;
-   * a single entry point leads its page instead. Without derivation
-   * (`derive: false`) there is no subtree to look in, so it is the landmark card.
+   * The place's `intention` (docs/plans/place-intention.md): the line, trimmed,
+   * and its prime card resolved to a box-relative path, or null when the
+   * written ref names no existing card inside the box. Null when the landmark
+   * has no intention.
+   */
+  intention: ResolvedIntention | null;
+  /**
+   * Box-relative path of the card arriving at this place opens: the
+   * intention's prime card when it resolves, else the single `entry-point`
+   * card in the pruned subtree when there is exactly one, else the landmark
+   * card itself. The root place always opens its landmark card; a single entry
+   * point leads its page instead. Without derivation (`derive: false`) there
+   * is no subtree to look in, so it is the prime card or the landmark card.
    */
   arrival: string;
 }
@@ -146,6 +155,7 @@ export async function loadLandmarkPayload(
     alsoHere: expandsAsGroups === true,
   });
   const symbol = readLandmarkSymbol(fields, { landmarkPath: relPath });
+  const intention = await resolveIntention(fields.intention, { boxRoot, landmarkPath: relPath });
 
   return {
     status: "ok",
@@ -164,7 +174,8 @@ export async function loadLandmarkPayload(
       depth: 0,
       features: readLandmarkFeatures(navigation),
       openers: (navigation?.openers ?? []).map((opener) => opener.trim()),
-      arrival: arrivalTarget({ derived, relPath, dir }),
+      intention,
+      arrival: arrivalTarget({ derived, relPath, dir, primeCard: intention?.ref ?? null }),
     },
     derivedProblems,
   };
@@ -186,13 +197,15 @@ function labelUnnamedExpands(navigation: LandmarkNavigationData | undefined): La
 }
 
 /**
- * The single entry-point card in the subtree, else the landmark card
- * (`LandmarkPayload.arrival`). The root (`dir` "") always opens its own page:
- * the front door is the page, with any entry point under "Start here"
- * (docs/implemented-plans/front-door.md, Track B).
+ * The intention's prime card when it resolved, else the single entry-point
+ * card in the subtree, else the landmark card (`LandmarkPayload.arrival`). The
+ * root (`dir` "") always opens its own page: the front door is the page, with
+ * any entry point under "Start here" (docs/implemented-plans/front-door.md,
+ * Track B), and a root intention shows on that page.
  */
-function arrivalTarget({ derived, relPath, dir }: { derived: PrunedSubtree | undefined; relPath: string; dir: string }): string {
+function arrivalTarget({ derived, relPath, dir, primeCard }: { derived: PrunedSubtree | undefined; relPath: string; dir: string; primeCard: string | null }): string {
   if (dir === "") return relPath;
+  if (primeCard !== null) return primeCard;
   const entryPoints = (derived?.entries ?? []).filter((e) => e.kind === "card" && e.level === "entry-point");
   const only = entryPoints.length === 1 ? entryPoints[0] : undefined;
   return only === undefined ? relPath : only.boxPath.slice(1);

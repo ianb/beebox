@@ -1,6 +1,6 @@
 ---
 title: "Place intention: a landmark says what to do next"
-status: draft
+status: active
 workstream: workspaces
 issues: []
 ---

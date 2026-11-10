@@ -36,6 +36,7 @@ function bareRow(fields: { path: string; label: string; glyph?: string; dir?: st
     depth: 0,
     features: {},
     openers: [],
+    intention: null,
     arrival: fields.path,
   };
 }
