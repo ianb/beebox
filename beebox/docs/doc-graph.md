@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-10T18:49:22Z
-Total documents: 633
+Generated: 2026-11-10T19:18:56Z
+Total documents: 634
 
 ## Issues
 
@@ -59,6 +59,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/plugins-slice-2.review.md** — "Plan Engineering Review — plugins slice 2" (109 lines) · implementation review
 - **docs/implemented-plans/plugins-slice-3.review.md** — "Plugins slice 3: plan review record" (70 lines) · implementation review
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (449 lines) · shipped history · implemented
+- **docs/implemented-plans/published-math.md** — "TeX math on published pages" (197 lines) · shipped history · implemented
 - **docs/implemented-plans/purge-agent-doctest.md** — "Purge agent-doctest: rename the check library, drop doctest leftovers" (253 lines) · shipped history · implemented
 - **docs/implemented-plans/readable-card-fields.md** — "Readable card fields" (276 lines) · shipped history · implemented
 - **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (382 lines) · implementation review
@@ -2751,15 +2752,16 @@ Referenced by:
 
 #### docs/box/markdown.md
 
-Title: "Markdown in card bodies" | 141 lines | current reference
+Title: "Markdown in card bodies" | 142 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/chat-math-rendering.md:73 (mention) — - Docs: `docs/box/markdown.md` (~15 lines), agent-guide ledger/guide line (~2),
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
+- docs/implemented-plans/published-math.md:142 (mention) — `docs/box/markdown.md`.
 - src/core/agent-guide/guide.md:262 (mention) — `markdown.md` for body line breaks, HTML, footnotes, math. Each type's
 - ../issues/closed/bugs/2026-10-02-markdown-line-breaks-and-html-undefined-for-agents.md:11 (mention) — > Closed: implemented on branch worktree-markdown-expressiveness (merge commit in `git log`). Diverges from the proposal
 - ../issues/closed/docs-and-chores/2026-10-02-agent-guide-over-word-budget.md:18 (mention) — `docs/box/markdown.md`).
-- ../issues/features/2026-11-10-published-pages-render-tex-math.md:17 (mention) — `beebox/docs/box/markdown.md` ("Math") tells agents this.
+- ../issues/closed/features/2026-11-10-published-pages-render-tex-math.md:20 (mention) — `beebox/docs/box/markdown.md` ("Math") tells agents this.
 
 #### docs/box/phone-photos.md
 
@@ -4625,7 +4627,8 @@ References:
 Title: "TeX math renders in chat and card bodies" | 341 lines | shipped history | implemented
 
 Referenced by:
-- ../issues/features/2026-11-10-published-pages-render-tex-math.md:12 (mention) — (`beebox/docs/implemented-plans/chat-math-rendering.md`). A published page renders its
+- docs/implemented-plans/published-math.md:11 (mention) — (`docs/implemented-plans/chat-math-rendering.md`). A published Markdown page
+- ../issues/closed/features/2026-11-10-published-pages-render-tex-math.md:15 (mention) — (`beebox/docs/implemented-plans/chat-math-rendering.md`). A published page renders its
 
 References:
 - → ../issues/closed/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md (frontmatter)
@@ -7160,6 +7163,15 @@ References:
 - → docs/box/markdown.md (mention)
 - → docs/plans/publish-sites-admin.md (mention)
 - → docs/plans/publication-approval-card.md (mention)
+
+#### docs/implemented-plans/published-math.md **[ORPHAN]**
+
+Title: "TeX math on published pages" | 197 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/features/2026-11-10-published-pages-render-tex-math.md (frontmatter)
+- → docs/implemented-plans/chat-math-rendering.md (mention)
+- → docs/box/markdown.md (mention)
 
 #### docs/implemented-plans/purge-agent-doctest.md **[ORPHAN]**
 

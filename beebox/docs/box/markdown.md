@@ -85,7 +85,8 @@ the body.
 
 ## Math
 
-TeX math between dollar signs renders as a formula in chat and card bodies:
+TeX math between dollar signs renders as a formula in chat, card bodies, and
+published pages:
 `$E = mc^2$` in a line, and `$$…$$` on its own lines for a displayed formula.
 Chemistry uses mhchem: `$\ce{2H2 + O2 -> 2H2O}$`. Only dollar delimiters
 render; `\(…\)` and `\[…\]` do not.
@@ -101,7 +102,7 @@ $$
 A dollar amount stays text: `$` followed by a space, or a closing `$`
 followed by a digit, does not start or end a formula, so "$5 and $10" is
 plain. Write `\$` for a literal dollar sign that would otherwise pair up.
-Published pages show the TeX source. In `<speech>`, say the formula in words.
+In `<speech>`, say the formula in words.
 
 ## Links
 
