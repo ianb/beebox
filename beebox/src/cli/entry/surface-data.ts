@@ -192,5 +192,10 @@ export const SURFACE: readonly SurfaceEntry[] = [
     audience: "engine",
     reason: "the stock question-review procedure's precheck and validate; `verify` writes the review latch, and the agent's side is the brief `check` prints",
   },
+  {
+    name: "intentions",
+    audience: "engine",
+    reason: "the stock refresh-intentions procedure's precheck and validate; `verify` writes the review record, and the agent's side is the brief `check` prints",
+  },
   { name: "field-test", audience: "engine", reason: "the agent field-test harness, run by a developer in this repo" },
 ];

@@ -58,6 +58,7 @@ export const VERB_COMMANDS = defineRegistry<CommandLoader>({
     hub: async () => (await import("./commands/hub.js")).hubCommand,
     init: async () => (await import("./commands/init.js")).initCommand,
     intake: async () => (await import("./commands/intake.js")).intakeCommand,
+    intentions: async () => (await import("./commands/intentions.js")).intentionsCommand,
     judge: async () => (await import("./commands/judge/command.js")).judgeCommand,
     location: async () => (await import("./commands/location.js")).locationCommand,
     ls: async () => (await import("./commands/ls.js")).lsCommand,

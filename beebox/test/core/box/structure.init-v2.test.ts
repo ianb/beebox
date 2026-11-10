@@ -154,10 +154,11 @@ void test("Fresh init produces the v3 one-root layout", async (t) => {
         "gc-procedure-runs",
         "process-retrospective",
         "question-review",
+        "refresh-intentions",
         "refresh-maps",
         "todo-review",
       ],
-      enabled: ["gc-procedure-runs", "process-retrospective", "question-review", "refresh-maps", "todo-review"],
+      enabled: ["gc-procedure-runs", "process-retrospective", "question-review", "refresh-intentions", "refresh-maps", "todo-review"],
       disabled: ["chat-review", "check-calendar", "check-drive", "check-email"],
     },
   );
