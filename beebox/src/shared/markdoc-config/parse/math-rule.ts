@@ -8,7 +8,9 @@
  * Inline `$…$` follows Pandoc's `tex_math_dollars` rule, so prices and shell
  * text stay text: the opening `$` is not followed by whitespace, the closing
  * `$` is not preceded by whitespace and not followed by a digit. "$5 and $10"
- * is text. Inline math does not cross a line break.
+ * is text. Stricter than Pandoc, the first unescaped `$` after the opener must
+ * close it, and a backtick ends the search. Inline math does not cross a line
+ * break.
  *
  * Display `$$…$$` is a block when a line starts with `$$` and a later line (or
  * the same one) ends with `$$`, with no blank line between; otherwise `$$…$$`
@@ -44,9 +46,13 @@ function findInlineClose(state: StateInline, start: number): number {
       i++;
       continue;
     }
+    // A backtick may open a code span, which wins over math.
+    if (ch === "`") return -1;
     if (ch !== "$") continue;
-    if (isWhitespace(src[i - 1])) continue;
-    if (i + 1 < posMax && isDigit(src[i + 1])) continue;
+    // The first unescaped `$` closes the span or nothing does, so in
+    // "$5 and $10; calculate $x$" the price cannot pair with a later formula.
+    if (isWhitespace(src[i - 1])) return -1;
+    if (i + 1 < posMax && isDigit(src[i + 1])) return -1;
     return i;
   }
   return -1;

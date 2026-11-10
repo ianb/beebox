@@ -53,6 +53,8 @@ void test("prices and shell text stay text", async (t) => {
   t.check(render("Set $HOME and $PATH first"), "<p>Set $HOME and $PATH first</p>");
   t.check(render("A lone $ sign"), "<p>A lone $ sign</p>");
   t.check(render("Escaped \\$x\\$ stays"), "<p>Escaped $x$ stays</p>");
+  // A price never pairs with a later formula's closing `$`.
+  t.check(render("It costs $5 and $10; calculate $x$."), "<p>It costs $5 and $10; calculate <m>x</m>.</p>");
   // Inline math does not cross a line break.
   t.check(render("from $a\nto b$"), "<p>from $a to b$</p>");
 });
@@ -60,6 +62,8 @@ void test("prices and shell text stay text", async (t) => {
 void test("code is never math", async (t) => {
   t.check(render("Run `echo $A$B` now"), "<p>Run <code>echo $A$B</code> now</p>");
   t.check(render("```sh\necho $x$\n```"), "<pre data-language=\"sh\">echo $x$\n</pre>");
+  // An unclosed `$` stops at a backtick, so the code span keeps its formatting.
+  t.check(render("See $x `code$` then $y$."), "<p>See $x <code>code$</code> then <m>y</m>.</p>");
 });
 
 // A message still streaming: the opening `$$` arrived, the closing one has not.

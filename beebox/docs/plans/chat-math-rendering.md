@@ -160,6 +160,9 @@ the tags through a component that lazy-loads KaTeX with mhchem.
     - `$$…$$` on one inline run: display math inside a paragraph.
     - `$…$`: opening `$` not followed by whitespace or `$`; closing `$` not
       preceded by whitespace, not preceded by `\`, not followed by a digit.
+      The first unescaped `$` must close the span, and a backtick ends the
+      search (branch review: "$5 and $10; calculate $x$" and a code span
+      after an unclosed `$`).
       Content non-empty. `\$` inside is kept literally for KaTeX.
     - A `\$` outside math stays the existing Markdown escape (literal `$`).
   - Block rule, registered before `paragraph`: a line starting with `$$`
@@ -185,7 +188,8 @@ the tags through a component that lazy-loads KaTeX with mhchem.
   `katex.renderToString(tex, { displayMode, throwOnError: true, trust: false, maxSize: 20, strict: "ignore" })`.
   Parse error: code-style source, title "Formula did not render: <KaTeX
   message>". Chunk load failure: code-style source, title "The formula
-  renderer did not load.", console error, and the next formula retries.
+  renderer did not load.", console error; no retry until the page reloads,
+  so every formula on the page shows the same state.
   Server-side rendering never runs the effect, so it renders the source.
 - `components/Markdown/math-render.ts`: the only `katex` importer; imports
   `katex/contrib/mhchem` and `katex/dist/katex.min.css`. mhchem (~34 kB
@@ -323,3 +327,11 @@ Vite production build, before and after (main chunk `index-*.js`):
 | `math-render` CSS (lazy) | none | 30.20 kB (8.08 kB gzip) |
 
 KaTeX fonts load from the lazy CSS only for the glyphs a formula uses.
+
+## Branch review (cross-model, codex gpt-6-sol, 2026-11-10)
+
+- A price absorbed a later formula: fixed (first unescaped `$` must close).
+- An unclosed `$` swallowed a code span: fixed (backtick ends the search).
+- A retry left earlier formulas marked failed: fixed by not retrying.
+- A lazy continuation line in a blockquoted `$$` block turns it into inline
+  display math: rejected; the formula still renders, and the input is rare.

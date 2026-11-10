@@ -6,6 +6,7 @@
  * chunk). Until then, and when the TeX does not parse or the chunk does not
  * load, the formula shows its source in code style, delimiters included, so
  * the reader sees what was written; the title says why it is not a formula.
+ * A failed chunk load is not retried until the page reloads.
  * Once loaded, later formulas render on their first paint.
  */
 
@@ -20,17 +21,12 @@ let renderer: MathRenderer | null = null;
 let loading: Promise<MathRenderer> | null = null;
 
 function loadMathRenderer(): Promise<MathRenderer> {
-  loading ??= import("./math-render").then(
-    (module) => {
-      renderer = module;
-      return module;
-    },
-    (error: unknown) => {
-      // A later formula tries again (a deploy can replace the chunk mid-session).
-      loading = null;
-      throw error;
-    },
-  );
+  // A failed load stays failed for every formula on the page, so they all
+  // say the same thing; reloading the page tries again.
+  loading ??= import("./math-render").then((module) => {
+    renderer = module;
+    return module;
+  });
   return loading;
 }
 
