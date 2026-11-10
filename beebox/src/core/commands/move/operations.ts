@@ -17,7 +17,8 @@ import * as path from "node:path";
 import type { CommandContext } from "../../command-types.js";
 import { attachDirFor } from "../../../shared/attach-path.js";
 import { isCardFile } from "../../../lib/paths/core.js";
-import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../list-cards.js";
+import { listBoxCardFiles, listBoxMarkdownFilesWithInstructions, listBoxViewFiles } from "../../list-cards.js";
+import { withMentions } from "./mentions.js";
 import {
   rewriteReferrerRefs,
   rewriteMovedCardRefs,
@@ -108,13 +109,13 @@ export async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
   // links went stale.
   const referrers = [
     ...(await listBoxCardFiles(ctx.boxRoot)),
-    ...(await listBoxMarkdownFiles(ctx.boxRoot)),
+    ...(await listBoxMarkdownFilesWithInstructions(ctx.boxRoot)),
   ];
   for (const filePath of referrers) {
     const inside = filePath === destPath || filePath.startsWith(destPath + path.sep);
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const result = inside
+      const linked = inside
         ? rewriteMovedCardRefs({
             boxRoot: ctx.boxRoot,
             oldCardAbs: sourcePath + filePath.slice(destPath.length),
@@ -128,6 +129,7 @@ export async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
             text: content,
             remap,
           });
+      const result = withMentions({ boxRoot: ctx.boxRoot, fileAbs: filePath, linked, remap, absoluteOnly: inside });
       if (result.count === 0 || result.text === content) continue;
       await fs.writeFile(filePath, result.text);
       const relPath = path.relative(ctx.boxRoot, filePath);
@@ -220,7 +222,7 @@ async function rewriteOtherReferrers({
   const extraUpdated: Array<{ path: string; refsUpdated: number }> = [];
   const referrers = [
     ...(await listBoxCardFiles(ctx.boxRoot)),
-    ...(await listBoxMarkdownFiles(ctx.boxRoot)),
+    ...(await listBoxMarkdownFilesWithInstructions(ctx.boxRoot)),
     ...(await listBoxViewFiles(ctx.boxRoot)),
   ];
   for (const referrerPath of referrers) {
@@ -237,21 +239,17 @@ async function rewriteOtherReferrers({
       const original = await fs.readFile(referrerPath, "utf-8");
       // Views carry refs only in `cardRef="…"` widget attributes; cards/markdown
       // carry them in frontmatter, markdown links, and body `ref=` tags.
-      const { text: updated, count } = movedFrom !== null
+      const linked = movedFrom !== null
         ? rewriteMovedCardRefs({ boxRoot: ctx.boxRoot, oldCardAbs: movedFrom, newCardAbs: referrerPath, text: original, remap })
         : referrerPath.endsWith(".tsx")
-        ? rewriteViewRefs({
-            boxRoot: ctx.boxRoot,
-            viewAbsPath: referrerPath,
-            text: original,
-            remap,
-          })
+        ? rewriteViewRefs({ boxRoot: ctx.boxRoot, viewAbsPath: referrerPath, text: original, remap })
         : rewriteReferrerRefs({
             boxRoot: ctx.boxRoot,
             cardAbsPath: referrerPath,
             text: original,
             remap,
           });
+      const { text: updated, count } = withMentions({ boxRoot: ctx.boxRoot, fileAbs: referrerPath, linked, remap, absoluteOnly: movedFrom !== null });
       if (count === 0 || updated === original) continue;
       await fs.writeFile(referrerPath, updated);
       const relPath = path.relative(ctx.boxRoot, referrerPath);

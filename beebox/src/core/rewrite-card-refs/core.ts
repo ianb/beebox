@@ -111,7 +111,7 @@ function restyleRef(params: {
  * each ref against this card, and if it points at a remapped target, restyle
  * it to the new location.
  */
-function transformForReferrer(params: {
+export function transformForReferrer(params: {
   boxRoot: string;
   cardAbsPath: string;
   remap: Remap;
