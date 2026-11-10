@@ -20,6 +20,7 @@ import { assertNever } from "../shared/invariant.js";
 import { createEventBus } from "./event-bus/core.js";
 import { CHANNELS, type ChannelName, type Delivery, type NotificationIntent } from "./notification/intent.js";
 import { formatTarget, targetUrl } from "./notification/target.js";
+import { targetProblem, UnsendableTargetError } from "./notification/target-check.js";
 import { appendDelivery, appendIntent } from "./notification/log.js";
 import { channelsToTry, type ChannelPlan } from "./notification/channels.js";
 import { livePresence, type Presence } from "./notification/presence.js";
@@ -238,6 +239,9 @@ export async function planNotification(
 }
 
 export async function notifyBoxholder(boxRoot: string, request: NotifyRequest): Promise<NotifyResult> {
+  // Before the log line: a refused target is never written or sent.
+  const problem = await targetProblem(boxRoot, request.intent.target);
+  if (problem !== null) throw new UnsendableTargetError(problem);
   const now = request.now ?? getBoxTime(boxRoot);
   const services = request.services ?? {};
   const input = request.intent;
