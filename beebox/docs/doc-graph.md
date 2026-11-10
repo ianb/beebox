@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-10T18:43:04Z
-Total documents: 631
+Generated: 2026-11-10T18:49:22Z
+Total documents: 633
 
 ## Issues
 
@@ -107,6 +107,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
@@ -2750,13 +2751,15 @@ Referenced by:
 
 #### docs/box/markdown.md
 
-Title: "Markdown in card bodies" | 121 lines | current reference
+Title: "Markdown in card bodies" | 141 lines | current reference
 
 Referenced by:
+- docs/implemented-plans/chat-math-rendering.md:73 (mention) — - Docs: `docs/box/markdown.md` (~15 lines), agent-guide ledger/guide line (~2),
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
-- src/core/agent-guide/guide.md:262 (mention) — `markdown.md` for body line breaks, HTML, footnotes. Each type's
+- src/core/agent-guide/guide.md:262 (mention) — `markdown.md` for body line breaks, HTML, footnotes, math. Each type's
 - ../issues/closed/bugs/2026-10-02-markdown-line-breaks-and-html-undefined-for-agents.md:11 (mention) — > Closed: implemented on branch worktree-markdown-expressiveness (merge commit in `git log`). Diverges from the proposal
 - ../issues/closed/docs-and-chores/2026-10-02-agent-guide-over-word-budget.md:18 (mention) — `docs/box/markdown.md`).
+- ../issues/features/2026-11-10-published-pages-render-tex-math.md:17 (mention) — `beebox/docs/box/markdown.md` ("Math") tells agents this.
 
 #### docs/box/phone-photos.md
 
@@ -4616,6 +4619,17 @@ References:
 - → ../issues/closed/features/2026-09-16-uploaded-chat-images-have-no-file-the-agent-can-use.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 - → docs/mobile-contract.md (mention)
+
+#### docs/implemented-plans/chat-math-rendering.md
+
+Title: "TeX math renders in chat and card bodies" | 341 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/features/2026-11-10-published-pages-render-tex-math.md:12 (mention) — (`beebox/docs/implemented-plans/chat-math-rendering.md`). A published page renders its
+
+References:
+- → ../issues/closed/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md (frontmatter)
+- → docs/box/markdown.md (mention)
 
 #### docs/implemented-plans/chat-not-delivered.md
 
@@ -6592,10 +6606,10 @@ References:
 Title: "Notification target: a new chat in a place" | 184 lines | shipped history | implemented
 
 References:
-- → ../issues/bugs/2026-11-10-notification-target-cannot-name-a-place.md (frontmatter)
-- → ../issues/bugs/2026-11-10-notification-chat-gets-a-pending-question-offered.md (frontmatter)
-- → ../issues/bugs/2026-11-10-notification-target-cannot-name-a-place.md (link)
-- → ../issues/bugs/2026-11-10-notification-chat-gets-a-pending-question-offered.md (link)
+- → ../issues/closed/bugs/2026-11-10-notification-target-cannot-name-a-place.md (frontmatter)
+- → ../issues/closed/bugs/2026-11-10-notification-chat-gets-a-pending-question-offered.md (frontmatter)
+- → ../issues/closed/bugs/2026-11-10-notification-target-cannot-name-a-place.md (link)
+- → ../issues/closed/bugs/2026-11-10-notification-chat-gets-a-pending-question-offered.md (link)
 - → ../issues/features/2026-10-30-notifications-have-no-recipient.md (link)
 - → AGENTS.md (mention)
 
@@ -11660,6 +11674,14 @@ References:
 - → docs/scheduled/csp-violation-review.md (mention)
 - → docs/development/performance.md (mention)
 
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 21 lines
+
+No references in or out.
+
 ### src/frontend/public/earcons/
 
 #### src/frontend/public/earcons/SOURCES.md **[ORPHAN]**
@@ -11840,10 +11862,10 @@ References:
 Title: "D-chemistry, 2026-09-21" | 236 lines
 
 Referenced by:
-- ../issues/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md:33 (link) — Evidence and limits: [journey D report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md)
 - ../issues/bugs/2026-09-21-chemistry-progress-summary-retains-completed-exercise.md:37 (link) — Evidence: [journey D report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md).
 - ../issues/bugs/2026-09-21-course-link-visible-before-lesson-target-exists.md:28 (link) — Evidence: [journey D report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
 - ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md:77 (link) — Evidence: [D chemistry report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
+- ../issues/closed/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md:36 (link) — Evidence and limits: [journey D report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.
 - ../issues/closed/bugs/2026-09-21-chemistry-tutor-teaches-neutral-isotope-rule.md:15 (link) — has no charge.” Screenshot 05 in the [journey D report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/rep
 - ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:69 (link) — Evidence: [D chemistry report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
 - ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:38 (link) — Evidence: [D chemistry report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
@@ -11949,7 +11971,7 @@ References:
 - → ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (link)
 - → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
 - → ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md (link)
-- → ../issues/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md (link)
+- → ../issues/closed/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md (link)
 - → ../issues/bugs/2026-09-21-chemistry-progress-summary-retains-completed-exercise.md (link)
 - → ../issues/bugs/2026-09-21-course-link-visible-before-lesson-target-exists.md (link)
 
@@ -12009,7 +12031,7 @@ References:
 - → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
 - → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
 - → ../issues/closed/bugs/2026-09-21-chemistry-tutor-teaches-neutral-isotope-rule.md (link)
-- → ../issues/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md (link)
+- → ../issues/closed/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md (link)
 - → ../issues/bugs/2026-09-21-chemistry-progress-summary-retains-completed-exercise.md (link)
 - → ../issues/bugs/2026-09-21-course-link-visible-before-lesson-target-exists.md (link)
 

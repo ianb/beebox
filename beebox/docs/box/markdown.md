@@ -1,5 +1,5 @@
 ---
-read-when: Writing a card body that needs more than plain prose — a line break inside a paragraph, raw HTML, a table with merged or multi-line cells, a footnote, or a literal `{%`.
+read-when: Writing a card body or chat reply that needs more than plain prose — a line break inside a paragraph, raw HTML, a table with merged or multi-line cells, a footnote, a math formula, or a literal `{%`.
 ---
 
 # Markdown in card bodies
@@ -83,6 +83,26 @@ The bridge opened in 1932.[^date]
 Footnotes are numbered in order of first reference and listed at the end of
 the body.
 
+## Math
+
+TeX math between dollar signs renders as a formula in chat and card bodies:
+`$E = mc^2$` in a line, and `$$…$$` on its own lines for a displayed formula.
+Chemistry uses mhchem: `$\ce{2H2 + O2 -> 2H2O}$`. Only dollar delimiters
+render; `\(…\)` and `\[…\]` do not.
+
+```markdown
+The energy is $E = mc^2$.
+
+$$
+\int_0^1 x^2\,dx = \frac{1}{3}
+$$
+```
+
+A dollar amount stays text: `$` followed by a space, or a closing `$`
+followed by a digit, does not start or end a formula, so "$5 and $10" is
+plain. Write `\$` for a literal dollar sign that would otherwise pair up.
+Published pages show the TeX source. In `<speech>`, say the formula in words.
+
 ## Links
 
 - Box paths start with `/` (see the agent guide's refs rule).
@@ -109,8 +129,8 @@ fence's first line:
 - Headings underlined with `===` or `---`. Use `#`.
 - Code indented by four spaces. Use a fenced block.
 - `~one tilde~`. Use `~~two~~`.
-- `==highlight==`, `:emoji:` shortcodes, and math. Use `<mark>` for a
-  highlight and the emoji character itself.
+- `==highlight==` and `:emoji:` shortcodes. Use `<mark>` for a highlight and
+  the emoji character itself.
 
 ## Text from outside the box
 

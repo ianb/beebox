@@ -11,7 +11,7 @@ import type { Node } from "@markdoc/markdoc";
 import { createMarkdownParser } from "@shared/markdoc-config/parse/core";
 import { normalizeMarkdownLink } from "./view-url";
 
-const parser = createMarkdownParser({ linkify: true });
+const parser = createMarkdownParser({ linkify: true, math: true });
 
 // In-box link destinations reach the resolver decoded; see normalizeMarkdownLink.
 const encodeLink = parser.md.normalizeLink.bind(parser.md);

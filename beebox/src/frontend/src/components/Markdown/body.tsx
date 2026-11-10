@@ -15,6 +15,8 @@
  *  - The `{% quote %}` tag becomes `QuoteInline` or `QuoteBlock` (see
  *    `markdoc-config.ts` and `Quote.tsx`).
  *  - A fenced code block becomes `Fence`: the block plus a Copy button.
+ *  - A `$…$` or `$$…$$` span becomes `MathFormula`, which loads KaTeX on
+ *    first use (`Math.tsx`).
  *
  * Callers can pass `components` to override or extend the map. The most
  * common case is chat, which replaces `Img` and `Para` to render embeds,
@@ -45,6 +47,7 @@ import { RedactedInline, RedactedBlock } from "./Redacted";
 import { TodoInline, TodoBlock } from "./Todo";
 import { SeeAlso } from "./SeeAlso";
 import { IncludeFile } from "./IncludeFile";
+import { MathFormula } from "./Math";
 import { MarkdownRenderContext, useMarkdownRender, type MarkdownRender } from "../../lib/markdown-render";
 import { isInstructionFile, rewriteIncludeLines } from "../../lib/include-lines";
 import { assignLocators, stampLocators } from "@shared/todo-locators";
@@ -199,12 +202,23 @@ const includeFileTag: Schema = {
   attributes: { path: { type: String, required: true } },
 };
 
+// Render-only: the frontend parser (`lib/markdoc-parse.ts`) writes it for a
+// `$…$` or `$$…$$` span. It is not in the shared tag table.
+const mathTag: Schema = {
+  selfClosing: true,
+  attributes: { tex: { type: String, required: true }, display: { type: Boolean } },
+  transform(node) {
+    const { tex, display } = node.attributes;
+    return new Tag("MathFormula", { tex, display: display === true, block: !node.inline }, []);
+  },
+};
+
 function buildRenderConfig({ tags, includes }: { tags: Readonly<Record<string, Schema>> | undefined; includes: boolean }): Config {
   const base = withScopedTags(tags);
   const config: Config = {
     ...base,
     // An HTML `<p>` renders as `Para`, the same `<div>` a Markdown paragraph gets.
-    tags: { ...base.tags, html: makeHtmlTag({ paragraph: "Para" }), ...(includes ? { "include-file": includeFileTag } : {}) },
+    tags: { ...base.tags, html: makeHtmlTag({ paragraph: "Para" }), math: mathTag, ...(includes ? { "include-file": includeFileTag } : {}) },
     nodes: {
       ...base.nodes,
       document: { render: "Fragment" },
@@ -294,6 +308,7 @@ const MARKDOWN_COMPONENTS: Readonly<Record<string, MarkdownComponent>> = {
   TodoBlock: cast(TodoBlock),
   SeeAlso: cast(SeeAlso),
   IncludeFile: cast(IncludeFile),
+  MathFormula: cast(MathFormula),
   UnknownTagInline: cast(UnknownTagInline),
   UnknownTagBlock: cast(UnknownTagBlock),
 };

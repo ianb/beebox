@@ -1,13 +1,16 @@
 ---
 title: "Chat chemistry formulas render literal markup"
-workstream: unattached
+workstream: chat-math-rendering
 area: beebox
 labels: [journey-findings, ui-error]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walk — D chemistry journey, 2026-09-21
 priority: normal
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-10):** Resolved by 6f65af774 (math rule + KaTeX/mhchem lazy chunk) with hardening in ec374cf9f; published pages are out of scope, tracked in 2026-11-10-published-pages-render-tex-math.
 
 Chat messages containing chemistry formula markup show the source notation
 instead of a reader-facing formula. A learner saw `$$\ce{H2 + Cl2 -> HCl}$$`
@@ -30,7 +33,7 @@ output and the renderer without assuming a particular math library.
 Evidence: `beebox/user-stories/work/journeys/D-chemistry-2026-09-21/shots/20-balancing-question.png`
 and `21-water-exercise.png`.
 
-Evidence and limits: [journey D report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md).
+Evidence and limits: [journey D report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md).
 
 The smallest option to evaluate is authoring guidance to emit readable plain
 Unicode formulas (for example `H₂ + Cl₂ → 2 HCl`) in this chat renderer.
