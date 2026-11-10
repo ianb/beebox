@@ -14,7 +14,7 @@ import { compileView, resolveViewsDir } from "../../../webapp/views/compiler/com
 import { writeNodeViewModule, boxPackageHost } from "../../../webapp/views/node-view-runtime.js";
 import { loadViewCards } from "../../../core/views/cards.js";
 import type { ViewProps } from "../../../core/views/types.js";
-import { checkStates, PARTIAL_PREFIX, type CheckState } from "./check-states.js";
+import { statesToCheck, PARTIAL_PREFIX, type CheckState } from "./check-states.js";
 import { settledRender, SETTLE_BUDGET_MS } from "./settle.js";
 
 /** The view's slug doesn't resolve to a `views/<slug>.tsx` file. */
@@ -120,6 +120,12 @@ export async function renderView(options: RenderViewOptions): Promise<number> {
 
   // Compile for Node (real React) and load the same data the app passes.
   const { output, meta } = await compileView(viewPath, { target: "node", viewHost });
+  // An invalid export leaves the defaults (no dependencies), so a render
+  // would check a view the app never shows.
+  if (meta.metadataError !== undefined) {
+    process.stderr.write(`View metadata export is invalid: ${meta.metadataError}\n`);
+    return 1;
+  }
   const { cards, files, skipped } = await loadViewCards(boxRoot, meta.dependencies);
 
   // The sample comes from the cards the view receives: the app passes only
@@ -128,7 +134,7 @@ export async function renderView(options: RenderViewOptions): Promise<number> {
   const received = new Set(cards.map((card) => card.path));
   const boxCardPaths = [...received];
   const loads = (cardPath: string) => Promise.resolve(received.has(cardPath));
-  const { states, untested } = await checkStates({ rendersCardTypes: meta.rendersCardTypes, boxCardPaths, loads });
+  const { states, untested } = await statesToCheck({ rendersCardTypes: meta.rendersCardTypes, declared: meta.checkStates, boxCardPaths, loads });
   for (const remark of untested) process.stdout.write(`${PARTIAL_PREFIX}${remark}\n`);
 
   // The compiled module imports `react`/`react/jsx-runtime` as bare specifiers

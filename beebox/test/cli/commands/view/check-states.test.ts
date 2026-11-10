@@ -3,11 +3,13 @@
 // Every view renders with no card. A view that renders card types also renders
 // with the first card of each type in the box, by path, that loads, as
 // `params.path`. A type with no card that loads is reported untested
-// (docs/implemented-plans/view-check-settled-render.md, Track 1).
+// (docs/implemented-plans/view-check-settled-render.md, Track 1). Then each
+// state the view declares in `checkStates`, by name
+// (docs/implemented-plans/view-declared-check-states.md).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { checkStates, partialRemarks, PARTIAL_PREFIX } from "../../../../src/cli/commands/view/check-states.js";
+import { statesToCheck, partialRemarks, PARTIAL_PREFIX } from "../../../../src/cli/commands/view/check-states.js";
 
 const boxCardPaths = [
   "_content/recipes/Stew.recipe.card",
@@ -20,7 +22,7 @@ const boxCardPaths = [
 const loads = (p: string) => Promise.resolve(!p.includes("Apple"));
 
 void test("a card-type view gets one state per type, with the first card by path that loads", async (t) => {
-  await t.check(checkStates({ rendersCardTypes: ["recipe", "menu"], boxCardPaths, loads }), {
+  await t.check(statesToCheck({ rendersCardTypes: ["recipe", "menu"], declared: [], boxCardPaths, loads }), {
     states: [
       { label: "no card", params: {} },
       { label: "_content/recipes/Bread.recipe.card", params: { path: "_content/recipes/Bread.recipe.card" } },
@@ -30,7 +32,34 @@ void test("a card-type view gets one state per type, with the first card by path
 });
 
 void test("a view that renders no card types renders with no card only", async (t) => {
-  await t.check(checkStates({ rendersCardTypes: [], boxCardPaths, loads }), { states: [{ label: "no card", params: {} }], untested: [] });
+  await t.check(statesToCheck({ rendersCardTypes: [], declared: [], boxCardPaths, loads }), { states: [{ label: "no card", params: {} }], untested: [] });
+});
+
+// A declared state follows the automatic ones, its card as `params.path`. A
+// declared card that does not load, or whose type the view does not render
+// (the app never opens the view on it), is reported, not failed: a moved card
+// must not wedge the check.
+void test("declared states come after the automatic ones; an unreachable card is reported", async (t) => {
+  await t.check(statesToCheck({
+    rendersCardTypes: ["recipe"],
+    declared: [
+      { name: "selected", path: "_content/recipes/Stew.recipe.card", params: { select: "O" } },
+      { name: "gone", path: "_content/recipes/Apple.recipe.card" },
+      { name: "other-type", path: "_content/notes/Plan.doc.card" },
+    ],
+    boxCardPaths,
+    loads,
+  }), {
+    states: [
+      { label: "no card", params: {} },
+      { label: "_content/recipes/Bread.recipe.card", params: { path: "_content/recipes/Bread.recipe.card" } },
+      { label: "selected", params: { select: "O", path: "_content/recipes/Stew.recipe.card" } },
+    ],
+    untested: [
+      "state gone: _content/recipes/Apple.recipe.card is not among the cards the view receives; not checked",
+      "state other-type: the view does not render doc cards (rendersCardTypes), so the app never opens it on _content/notes/Plan.doc.card; not checked",
+    ],
+  });
 });
 
 // The sweep reads only the prefixed lines; anything else the view prints is ignored.

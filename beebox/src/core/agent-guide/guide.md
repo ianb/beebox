@@ -200,7 +200,8 @@ job is in [the house budget](/_content/projects/House_Budget.doc.card).
 
 <!-- rules: about-cards.naming, about-cards.title, about-cards.body-tags -->
 Name a card in **`First_Last`** form: capitalized words joined by underscores
-(`Trip_Report`, `Odette_Marlowe`), not dashes or lowercase slugs; no two cards
+(`Trip_Report`, `Odette_Marlowe`), not spaces (validation rejects them), dashes
+or lowercase slugs; no two cards
 in one directory share a basename. `title:` is
 the human-readable display title, distinct from the filename. The body is
 markdown plus the box's Markdoc tags: `{% quote %}` for the user's verbatim

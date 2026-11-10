@@ -316,6 +316,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
     modes: ["page"],
     layout: "inset",
     rendersCardTypes: [],
+    checkStates: [],
   };
 
   let mtimeIso: string;
@@ -341,7 +342,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
     const { output } = await bundleView(viewPath, { target: "node" });
     const result = await importViewMetadata(output, viewHost);
     if (result === null) meta = fallback;
-    else if ("invalid" in result) meta = { ...fallback, description: `Invalid metadata export ${result.invalid}` };
+    else if ("invalid" in result) meta = { ...fallback, description: `Invalid metadata export ${result.invalid}`, metadataError: `${result.invalid}` };
     else {
       const imported = result.meta;
       meta = {
@@ -352,6 +353,7 @@ export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHost
         modes: imported.modes ?? ["page"],
         layout: imported.layout ?? "inset",
         rendersCardTypes: imported.rendersCardTypes ?? [],
+        checkStates: imported.checkStates ?? [],
       };
     }
   } catch (_e) {

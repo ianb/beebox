@@ -32,6 +32,7 @@ import { listViews } from "../../../webapp/views/compiler/compile.js";
 import { renderView } from "./render-one.js";
 import { partialRemarks } from "./check-states.js";
 import { viewLintCommand } from "./lint.js";
+import { viewStatesCommand } from "./states.js";
 import { typecheckViews } from "./typecheck.js";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { buildScriptEnv } from "../../../core/script-env/core.js";
@@ -246,4 +247,5 @@ export const viewCommand = new Command("view")
   .addCommand(viewRenderOneCommand, { hidden: true })
   .addCommand(viewCheckCommand)
   .addCommand(viewTypecheckCommand)
-  .addCommand(viewLintCommand);
+  .addCommand(viewLintCommand)
+  .addCommand(viewStatesCommand);

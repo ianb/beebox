@@ -37,9 +37,27 @@ no card among its dependency cards (the app passes a view only those).
 \`bbx view typecheck\` type-checks every view against the real \`ViewProps\`; it
 catches field mistakes a render can miss.
 
-**What it covers (and doesn't).** It samples one card per type, and only the
-data in the box now; a branch for another card or for data the box does not
-have is not reached. Calling an async helper directly in the render body is a
+**Named states.** To check a state the samples do not reach, such as a
+selection, export \`checkStates\`: a name, the card the view opens on, and
+other view parameters.
+
+\`\`\`tsx
+export const checkStates = [
+  { name: "oxygen", path: "_content/chem/Periodic_Table.chem.card", params: { select: "O" } },
+];
+\`\`\`
+
+The check renders each one after its own samples, with the card as
+\`params.path\`, and names it in a failure (\`✗ <slug> [oxygen, after effects]\`).
+A name uses lowercase letters, digits and hyphens. A card that is gone, or of
+a type not in \`rendersCardTypes\`, makes the view partly checked. An invalid
+export fails the check. \`bbx view states <slug>\` prints the page path that
+opens each state; open it with \`bbx browser open\` and capture it with
+\`screenshot --card\`.
+
+**What it covers (and doesn't).** It samples one card per type, plus the states
+you declare, and only the data in the box now; a branch for another card or for
+data the box does not have is not reached. Calling an async helper directly in the render body is a
 bug, and the first frame throws to tell you so (\`fileUrl\` is synchronous and
 fine to call in render). It does not print the rendered HTML, so look at the view
 in the box browser to confirm it shows the right thing:

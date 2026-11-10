@@ -9,7 +9,7 @@ discovered-in: "courseware box feedback — Mv_Leaves_Stale_Refs_Inside_Attach_S
 resolution: implemented
 ---
 
-**Closed (implemented, 2026-11-09):** bbx mv rewrites refs in files that moved with the card's attach directory, from their old location to the new (box-feedback-bugs). The plain-text mention idea is filed as issues/features/2026-11-09-mv-lists-old-path-mentions-outside-tracked-refs.md.
+**Closed (implemented, 2026-11-09):** bbx mv rewrites refs in files that moved with the card's attach directory, from their old location to the new (box-feedback-bugs). The plain-text mention idea is filed as issues/closed/features/2026-11-09-mv-lists-old-path-mentions-outside-tracked-refs.md.
 
 A box agent moved a card to a subdirectory with `bbx mv`. The command moved
 the card and its `.attach/` folder (four cards and an `AGENTS.md`). It

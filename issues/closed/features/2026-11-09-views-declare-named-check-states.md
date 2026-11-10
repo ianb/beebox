@@ -1,16 +1,19 @@
 ---
 title: "A view could declare named states for bbx view check, screenshots, and chat links"
-workstream: unattached
+workstream: box-feedback-bugs
 area: beebox
 labels: [views, agent]
 filed-by: agent
 discovered-by: agent
 discovered-in: "courseware box feedback — View_Check_Misses_Async_Data, 2026-11-09"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-09):** Landed in 06bfa6785 and 62622eb25; as proposed (checkStates export, bbx view check and bbx view states).
 
 `bbx view check` now renders each view with no card and with one card of each
 type it renders, and runs effects with real box data
-([plan](../../beebox/docs/implemented-plans/view-check-settled-render.md)). It cannot reach
+([plan](../../../beebox/docs/implemented-plans/view-check-settled-render.md)). It cannot reach
 a state that needs particular parameters (a selection such as
 `?select=O`) or data the box does not have.
 
@@ -32,7 +35,7 @@ export const checkStates = [
   and names the state in a failure.
 - `bbx browser screenshot --card --state <name>` opens the view in that
   state.
-- [Chat links that set a view's state](2026-11-09-chat-links-that-set-an-open-views-state.md)
+- [Chat links that set a view's state](../../features/2026-11-09-chat-links-that-set-an-open-views-state.md)
   could name one.
 
 Mocked data (a fake `readFile` answer, a fake adapter response) stays out

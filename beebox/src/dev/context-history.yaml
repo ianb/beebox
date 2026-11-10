@@ -11587,6 +11587,14 @@ test1:
       peak: 45305
       added: 0
       turns: 2
+  views-declared-check-states:
+    - date: 2026-11-09T23:49:36.629Z
+      boxCommit: 938b79dd13a082b96900e63a59ad170a03143890
+      repoCommit: d6725cc692a19d9bd622eca0a293e293e686b67e
+      initial: 34871
+      peak: 40594
+      added: 5723
+      turns: 7
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

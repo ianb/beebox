@@ -4,8 +4,8 @@
  * A view module can have top-level side effects (the risk is documented in
  * `docs/implemented-plans/boxes-as-packages-v2.md`'s Failure modes table: "a view module
  * with top-level side effects now executes at list time"). Reading its
- * `name`/`description`/`dependencies`/`modes`/`layout`/`rendersCardTypes`
- * exports
+ * `name`/`description`/`dependencies`/`modes`/`layout`/`rendersCardTypes`/
+ * `checkStates` exports
  * therefore means importing it, which we isolate the same way `bbx view
  * check` isolates a full render: a killable child process with a hard
  * timeout, so a pathological view (an infinite loop or a promise that never
@@ -54,12 +54,31 @@ try {
   // instead of the runner silently dropping it.
   if (mod.layout !== undefined) out.layout = mod.layout;
   if (Array.isArray(mod.rendersCardTypes)) out.rendersCardTypes = mod.rendersCardTypes;
+  // JSON drops a function; send its type instead, so the schema rejects it.
+  if (mod.checkStates !== undefined) out.checkStates = typeof mod.checkStates === "function" ? "function" : mod.checkStates;
   process.stdout.write(JSON.stringify(out));
 } catch (e) {
   process.stderr.write(String((e && e.stack) || e));
   process.exitCode = 1;
 }
 `;
+
+/**
+ * One `checkStates` entry. The card goes in `path` only: the view receives it
+ * as `params.path`, so a `params.path` as well would be two places for it.
+ * `view`, `viewState` and `fragment` are view-URL keys the app keeps for
+ * itself (frontend `lib/view-url.ts`); the view never sees them as params.
+ */
+const RESERVED_PARAMS = ["path", "view", "viewState", "fragment"];
+const declaredCheckStateSchema = z.object({
+  name: z.string().regex(/^[\da-z][\da-z-]*$/, "use lowercase letters, digits and hyphens"),
+  path: z.string().min(1),
+  params: z.record(z.string(), z.string()).superRefine((params, ctx) => {
+    for (const key of RESERVED_PARAMS.filter((k) => k in params)) {
+      ctx.addIssue({ code: "custom", path: [key], message: key === "path" ? "give the card as the state's path, not params.path" : `"${key}" is a view-URL key the view never receives` });
+    }
+  }).optional(),
+}).strict();
 
 /** Metadata a view module may export, validated at the subprocess boundary. */
 const importedViewMetaSchema = z.object({
@@ -69,6 +88,13 @@ const importedViewMetaSchema = z.object({
   modes: z.array(z.enum(["page", "chat"])).optional(),
   layout: z.enum(["inset", "full-bleed"]).optional(),
   rendersCardTypes: z.array(z.string()).optional(),
+  checkStates: z.array(declaredCheckStateSchema).superRefine((states, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, state] of states.entries()) {
+      if (seen.has(state.name)) ctx.addIssue({ code: "custom", path: [index, "name"], message: `duplicate state name "${state.name}"` });
+      seen.add(state.name);
+    }
+  }).optional(),
 });
 export type ImportedViewMeta = z.infer<typeof importedViewMetaSchema>;
 
