@@ -8,10 +8,21 @@
 import type { Node } from "@markdoc/markdoc";
 import { asciiSlug } from "../ascii-slug.js";
 
-/** Concatenated plain text of a heading node's inline children (text + inline code). */
+/**
+ * Concatenated plain text of a heading node's inline children (text, inline
+ * code, and a formula as its dollar-delimited source). A formula counts as the
+ * text a parser without math sees, so the renderer and `anchorsIn` agree on
+ * the slug of `# $E = mc^2$`.
+ */
 export function headingText(node: Node): string {
   let out = "";
   for (const child of node.walk()) {
+    if (child.type === "tag" && child.tag === "math") {
+      const tex: unknown = child.attributes["tex"];
+      const delimiter = child.attributes["display"] === true ? "$$" : "$";
+      if (typeof tex === "string") out += `${delimiter}${tex}${delimiter}`;
+      continue;
+    }
     if (child.type !== "text" && child.type !== "code") continue;
     const content: unknown = child.attributes["content"];
     if (typeof content === "string") out += content;

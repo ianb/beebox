@@ -185,3 +185,12 @@ No data migration.
 - Hand-written `{% math %}` is authorable: accepted, same render-only tag as
   the app.
 - Lazy `createRequire`: cut, static import.
+
+## Branch review (cross-model, codex gpt-6-sol, 2026-11-10)
+
+- `# $E = mc^2$` got id `section` while the anchor check reported `e-mc-2`:
+  fixed in the shared `headingText` (`shared/markdoc-config/heading-ids.ts`),
+  which now counts a formula as its dollar-delimited source. This also fixes
+  the same mismatch in the app. The publish title reuses `headingText`.
+- `# $$x^2$$` titled with single dollars: fixed by the same change.
+- Authored `{% math %}` re-raised: kept as decided above.

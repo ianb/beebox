@@ -7,6 +7,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { renderMarkdownPage, markdownValidationErrors } from "../../src/publish/prepare/core/markdown-page.js";
 import { scanBundle } from "../../src/publish/leak-scan.js";
+import { anchorsIn } from "../../src/shared/markdoc-config/anchors.js";
 
 const source = [
   "# Energy $E = mc^2$",
@@ -37,9 +38,17 @@ void test("math publishes as MathML", async (t) => {
   t.check(main.match(/for \$5 and \$10\./)?.[0], "for $5 and $10.");
   t.check(main.match(/Broken <code>[^<]*<\/code>/)?.[0], "Broken <code>$\\frac{a$</code>");
   t.check(html.match(/<title>(.*)<\/title>/)?.[1], "Energy $E = mc^2$");
+  // The heading's id is the slug a parser without math gives it, which is
+  // what the anchor check (`anchorsIn`) reads.
+  t.check([html.match(/<h1 id="([^"]*)"/)?.[1], anchorsIn(source).find((a) => a.kind === "heading")?.id], ["energy-e-mc-2", "energy-e-mc-2"]);
   t.check(scanBundle(new Map([["index.html", html]]), { ownerEmail: null, allowedEmails: [] }).findings, []);
 });
 
 void test("a page with math validates", async (t) => {
   t.check(markdownValidationErrors(source), []);
+});
+
+void test("a display formula in the title keeps its $$", async (t) => {
+  const html = renderMarkdownPage("# $$x^2$$\n", { fallbackTitle: "T" });
+  t.check(html.match(/<title>(.*)<\/title>/)?.[1], "$$x^2$$");
 });

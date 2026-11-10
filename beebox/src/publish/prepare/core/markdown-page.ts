@@ -20,6 +20,7 @@ import { parseYaml } from "../../../lib/read-yaml.js";
 import type { Config, Node, RenderableTreeNode, RenderableTreeNodes, Schema } from "@markdoc/markdoc";
 
 import { markdocConfig, makeHeadingNode } from "../../../shared/markdoc-config/tags/core.js";
+import { headingText } from "../../../shared/markdoc-config/heading-ids.js";
 import { createMarkdownParser } from "../../../shared/markdoc-config/parse/core.js";
 import { escapeHtml } from "../../../lib/escape-html.js";
 import { texToMathml } from "./math.js";
@@ -37,13 +38,7 @@ const parser = createMarkdownParser({ linkify: false, math: true });
 function extractTitle(ast: Node): string | null {
   for (const node of ast.walk()) {
     if (node.type !== "heading" || node.attributes["level"] !== 1) continue;
-    const parts: string[] = [];
-    for (const child of node.walk()) {
-      if ((child.type === "text" || child.type === "code") && typeof child.attributes["content"] === "string") parts.push(child.attributes["content"]);
-      // A formula keeps its source in the title: `# E = $mc^2$` titles "E = $mc^2$".
-      if (child.type === "tag" && child.tag === "math" && typeof child.attributes["tex"] === "string") parts.push(`$${child.attributes["tex"]}$`);
-    }
-    const text = parts.join("").trim();
+    const text = headingText(node).trim();
     if (text !== "") return text;
   }
   return null;
