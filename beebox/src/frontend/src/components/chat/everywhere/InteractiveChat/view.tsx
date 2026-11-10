@@ -266,9 +266,11 @@ function ComposerRegion(props: ChatBodyProps) {
  * token does not re-render the cards that read it.
  */
 function usePlaceChat(props: ChatBodyProps): PlaceChat {
-  const { effectiveContextDir: contextDir, unstarted, messages, isStreaming, processBusy, actions: { handleSendOpener: sendOpener } } = props;
+  const { effectiveContextDir: contextDir, unstarted, messages, isStreaming, processBusy, showAgentWorking, actions: { handleSendOpener: sendOpener } } = props;
   const showsOwnOpeners = unstarted && messages.length === 0 && !isStreaming;
-  const busy = chatTargetStatus({ isStreaming, processBusy }).state === "busy";
+  // A turn, not `isStreaming`: that also covers a background history resync
+  // (every socket reconnect), which used to grey the openers out each time.
+  const busy = showAgentWorking || processBusy;
   return useMemo(() => ({ contextDir, showsOwnOpeners, busy, sendOpener }), [contextDir, showsOwnOpeners, busy, sendOpener]);
 }
 
