@@ -77,6 +77,25 @@ For character-driven scenarios where the face is the bookmark, the image form ma
 
 Earlier sketches included prose fields. Removed: a bookmark seen hundreds of times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs a written rationale, write a doc card and add it to `links` as the first reference. That keeps the schema honest about its job.
 
+The one line of prose a landmark does carry is the `intention` (below). It is not about the place; it is about now, it churns, and it never appears on the tiles or in the menus, only on the place page and beside the place's chat.
+
+## The intention
+
+A landmark may carry one `intention`: what the next piece of work in the place is, so that going to the place launches the person into the work instead of showing them an overview (`docs/plans/place-intention.md`; boxholder, 2026-11-09).
+
+```yaml
+intention:
+  text: "Finish the *garden post*: the trellis paragraphs are in, the ending is not"
+  ref: /_content/writing/Garden_Post.doc.card
+```
+
+- **`text`** (one) — a single non-blank line of inline Markdown, any length. Emphasis, links, and emoji render; a heading, list, or image marker renders as its literal text. A bare string (`intention: Finish the post`) means `{ text }`. A blank or multi-line value makes the landmark fail to parse, like an invalid opener.
+- **`ref`** (optional) — the **prime card**, a box path to the card the work happens in. The payload resolves it (`core/landmark/intention.ts`): an existing `*.card` inside the box, or null when it is missing, a directory, a non-card file, or escapes the box. A missing target is a broken-reference lint warning through the ordinary `ref` walk.
+
+**Where it shows.** First on the place page, and as a one-line strip at the top of the cards pane while a chat bound to the place is open (above the chat on the phone), so it is visible whatever card arrival opened. An Open action opens the prime card beside the chat. An × ("Hide this until it changes") stores the text in this browser's `localStorage` (`bbx:intention-dismissed:<box>:<landmark path>`); the line stays hidden on this device while the text is unchanged and returns when it changes. The field itself is never cleared by the ×, so the agent still sees what it last wrote.
+
+**Who writes it.** The chat agent, when the person leaves work in the place unfinished or finishes what the intention named (`landmarks.intention` in the agent guide), and the daily `refresh-intentions` procedure, which reviews each place whose directory has commits since the procedure last reviewed it and rewrites or clears the line from the open todos, questions, and changed cards under it. An intention is a track the person is already on: evidence of their choice is required, and a card merely present, newly arrived, or set aside on purpose is not one. The procedure records what it reviewed in `.beebox/intentions/reviewed.json`, verifies its own commits touched only the `intention` of the listed landmarks, and runs no agent when nothing changed.
+
 ## The `expand` entry
 
 A landmark like Recipes naturally wants to surface "all recipe cards in this directory" without listing them by hand. `expand` is the editorial way to opt into that.
@@ -277,9 +296,10 @@ On the desktop layout, going to a place opens the place beside its chat when
 this browser tab has no saved card arrangement for that chat. This happens
 when a person chooses a place in the landmark menu, or opens a chat in this
 tab for the first time. The card that opens is the **arrival target**
-(`arrival` on the `landmarks.forDir` payload): the single `entry-point` card
-in the place's pruned subtree when there is exactly one, else the landmark
-card, which shows the place page. The box root is the exception: arrival at
+(`arrival` on the `landmarks.forDir` payload): the intention's prime card when
+it resolves (see "The intention"), else the single `entry-point` card in the
+place's pruned subtree when there is exactly one, else the landmark card,
+which shows the place page. The box root is the exception: arrival at
 the root always opens the root place page, and a single entry point there
 leads the page under "Start here" (`docs/implemented-plans/front-door.md`, Track B).
 When a question is pending, root arrival also opens the newest one as the

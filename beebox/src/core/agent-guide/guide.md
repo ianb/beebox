@@ -392,6 +392,14 @@ new structure the user will return to, do drop a landmark in it.
 After you add, move, or change cards in a place, update its landmark's body
 (the place summary) in the same turn, writing one if it has none.
 
+<!-- rules: landmarks.intention -->
+When the person leaves work in a place unfinished, or finishes what its
+`intention` named, set or clear the landmark's `intention` in the same turn:
+one line saying what the next step is, with `ref` on the card it happens in.
+Write one only from evidence they chose that track (their words, a draft they
+were editing, their todo or question); a card merely present, arrived, or set
+aside is not one.
+
 <!-- rules: landmarks.read-first, landmarks.derived-links -->
 Read `node_modules/beebox/box-docs/landmark-curation.md` before suggesting or
 editing one; what a landmark lists, and how a card surfaces in it, is in

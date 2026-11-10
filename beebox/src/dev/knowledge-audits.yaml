@@ -9307,3 +9307,53 @@ tests:
     correct_matches:
       - '(?:unconfirmed|not confirmed|unverified|could not (?:confirm|verify)|couldn.t (?:confirm|verify)|not verified)'
     tags: [provenance, behavioral]
+
+  # === Place intention (docs/plans/place-intention.md, Track C) ===
+  #
+  # Status (2026-11-09, Claude): both passed on the worktree test1 clone; 0 reads,
+  # 0 searches, 45k ctx. landmark-intention passed on content first time; its body
+  # matcher was widened after the agent said "standing description of what.s here".
+  #
+  # Guards ledger row landmarks.intention: the agent sets a landmark's
+  # `intention` when work is left unfinished, keeps "where things stand" in
+  # the body, and writes none without evidence of a chosen track.
+  - id: landmark-intention
+    chat_mode: true
+    prompt: >
+      In a chat in the writing place, the person dictated two paragraphs for a
+      blog post and you put them in a draft card. They said "I'll finish the
+      ending tomorrow" and stopped. What, besides the draft card, do you
+      update on the place's landmark, and what goes where: the body, the
+      intention, the openers? Explain only; do not read files, use tools, or
+      change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Sets `intention` with a one-line `text` and `ref` on the draft card;
+      updates the body with where things stand; adds no opener.
+    correct_matches:
+      - 'intention'
+      - '\bref\b[\s\S]{0,120}(?:draft|post|card)|(?:draft|post|card)[\s\S]{0,120}\bref\b'
+      - '(?:body|summary)[\s\S]{0,200}(?:where things stand|stands|status|state|what.s here|holds|description)'
+    response_not_matches:
+      - 'add(?:ing)? (?:an|a new|the) opener'
+    tags: [landmark, intention]
+
+  - id: landmark-intention-restraint
+    chat_mode: true
+    prompt: >
+      Three things sit under a place: an email that arrived asking the person
+      for a favor, a recipe they saved months ago and never cooked, and a
+      draft they told you last week to leave alone for now. Nothing else
+      changed. Does the place's landmark get an intention? Say which, if any,
+      and why. Explain only; do not read files, use tools, or change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Writes none: an arrived email, an uncooked recipe, and set-aside work are
+      not evidence the person chose a track. FAILS if it proposes an intention
+      for any of the three.
+    correct_matches:
+      - '\bno\b|none|not (?:get|set|write|add)|leave[\s\S]{0,20}(?:empty|without|unset)|remove'
+      - '(?:chose|chosen|choice|decid|track|evidence|asked|said)'
+    response_not_matches:
+      - 'intention:[\s\S]{0,80}(?:favor|email|recipe|cook)'
+    tags: [landmark, intention]
