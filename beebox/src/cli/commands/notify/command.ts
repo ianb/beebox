@@ -31,6 +31,7 @@ import { channelReach, describeRoute, notifyRoute, onServer, type NotifyRoute } 
 import { CHANNELS, LOUDNESS, type ChannelName, type Delivery, type Loudness } from "../../../core/notification/intent.js";
 import { formatTarget, InvalidTargetError, parseTarget, type Target } from "../../../core/notification/target.js";
 import { printDryRun } from "./dry-run.js";
+import { targetProblem } from "../../../core/notification/target-check.js";
 import { err, ok, type Result } from "../../../shared/result.js";
 import { resolveChatSessionId } from "../../../core/chat/session/id-file.js";
 import { MEMORY_ENV } from "../../../core/schedule/memory.js";
@@ -197,6 +198,14 @@ async function send(boxRoot: string, opts: { route: NotifyRoute; run: NotifyRun 
     console.error(`Error: ${parsed.error}`);
     return 2;
   }
+  // Every target is checked against the box before any is sent or previewed.
+  for (const t of parsed.value.targets) {
+    const problem = await targetProblem(boxRoot, t);
+    if (problem !== null) {
+      console.error(`Error: ${problem}`);
+      return 2;
+    }
+  }
   if (run.options.dryRun === true) {
     const configured =
       route.kind === "server" ? (await onServer(() => route.client.notifications.channels.query())).configured : undefined;
@@ -249,7 +258,7 @@ export const notifyCommand = new Command("notify")
   .argument("[title]", "One-line title (required unless --check)")
   .option("--body <text>", "Body text, or - to read it from stdin (default: empty; stdin is never read unless asked)")
   .option("--body-file <path>", "Read the body from a file, or - for stdin")
-  .option("--target <target>", "Where a tap lands: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard (with --dry-run, default chat:new)")
+  .option("--target <target>", "Where a tap lands: chat:<sessionId>, chat:new, chat:new:<place directory> (a new chat in that place), place:<place directory> (the place's latest chat), card:<path>, question:<path>, admin:<section>, dashboard (with --dry-run, default chat:new)")
   .option("--loudness <loudness>", "dot (badge only), quiet (no sound; held back while the person is in the app), or loud", "quiet")
   .option("--tag <tag>", "Collapse key: a later notification with the same tag replaces this one")
   .option("--channel <channel>", "Deliver on this channel only (apns, web-push); for testing")

@@ -11595,6 +11595,29 @@ test1:
       peak: 40594
       added: 5723
       turns: 7
+  notification-opens-a-place:
+    - date: 2026-11-10T05:15:47.156Z
+      boxCommit: 4e87ee2fa207c23556ff4dd4f4d92278939be268
+      repoCommit: ed29ef07fed5a534afe5e186f2d3c097909fe4d1
+      initial: 35013
+      peak: 37663
+      added: 2650
+      turns: 4
+    - date: 2026-11-10T18:23:25.312Z
+      boxCommit: 21282cba15280325c4026f1a5554b3c88079e5c6
+      repoCommit: 1b690dee70e4411750a6b79d4cc7cd14d905abe1
+      initial: 35001
+      peak: 37537
+      added: 2536
+      turns: 4
+  notification-resumes-a-place:
+    - date: 2026-11-10T18:23:25.312Z
+      boxCommit: 21282cba15280325c4026f1a5554b3c88079e5c6
+      repoCommit: 1b690dee70e4411750a6b79d4cc7cd14d905abe1
+      initial: 35021
+      peak: 36875
+      added: 1854
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

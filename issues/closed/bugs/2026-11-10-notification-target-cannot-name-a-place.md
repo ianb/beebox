@@ -6,7 +6,10 @@ labels: [notifications, landmarks, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main checkout — tapping a journal-nudge notification, 2026-11-10"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-10):** Resolved on worktree-notification-place-target (66efbbc99, 143ee5c84, 644ade433): chat:new:<dir> and place:<dir> targets, send-time check, tap fallback, iOS mirror, box-agent docs.
 
 A box agent wrote a nightly "journal time" schedule that runs
 `bbx notify --target chat:new`. A tap opened a new chat at the box root, not
