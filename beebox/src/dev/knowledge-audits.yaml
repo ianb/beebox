@@ -2097,6 +2097,14 @@ tests:
       - '(?:watch|when something (?:happens|changes))'
     tags: [connectors, notifications]
 
+  # Status (2026-11-10, Claude): pass on the worktree test1 clone, 1 read, 1 search, 35k ctx.
+  - id: notification-opens-a-place
+    prompt: "The boxholder keeps a journal in the place _content/journal. Set up nothing yet: which bbx notify --target would you use for a nightly 'time to write in your journal' nudge, so a tap lands where they write?"
+    expected_level: knows_about
+    watch_for: "Reads the notify or schedule guidance and answers chat:new:_content/journal (a new chat in that place), not chat:new or a card target"
+    correct_contains: ["chat:new:_content/journal"]
+    tags: [notifications, schedules]
+
   # === Scheduled Tasks ===
   #
   # Status (2026-10-08): 3/3 pass after the switch to the instructions="…"

@@ -2,7 +2,8 @@
  * Notification targets: where tapping a notification lands.
  *
  * A target is a string with a scheme (`chat:<sessionId>`, `chat:new`,
- * `card:<path>`, `question:<path>`, `admin:<section>`, `dashboard`), parsed once into a
+ * `chat:new:<place>`, `card:<path>`, `question:<path>`, `admin:<section>`,
+ * `dashboard`), parsed once into a
  * discriminated union and rendered to a root-relative deep link per box. It is
  * never a raw URL. See docs/implemented-plans/notifications.md ("Ontology", Track A).
  */
@@ -11,16 +12,18 @@ import { resolveRefPath } from "../../shared/ref-path/core.js";
 import { assertNever } from "../../shared/invariant.js";
 import { SYSTEM_CARD_PATHS } from "../../shared/system-card-paths.js";
 import { cardUrl } from "../../shared/card-url.js";
+import { normalizeLandmarkDir } from "../landmark/root-dir.js";
 
 export type Target =
   | { kind: "chat"; sessionId: string }
-  | { kind: "chat-new" }
+  /** A new chat; with `place`, its context directory is that place (a landmark directory). */
+  | { kind: "chat-new"; place?: string }
   | { kind: "card"; path: string }
   | { kind: "question"; path: string }
   | { kind: "admin"; section: string }
   | { kind: "dashboard" };
 
-const SCHEMES = "chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard";
+const SCHEMES = "chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard";
 
 /** Thrown by {@link parseTarget} for a string that names no valid target. */
 export class InvalidTargetError extends Error {
@@ -41,6 +44,22 @@ function cardPath(value: string, rest: string): string {
   return resolved;
 }
 
+const CHAT_NEW_PLACE = "chat:new:";
+
+/**
+ * A place directory, normalized box-relative and fenced like a card path. The
+ * root place (`_content`) is the plain `chat:new`, so it has no `place`.
+ */
+function chatNewPlace(value: string): Target {
+  const rest = value.slice(CHAT_NEW_PLACE.length);
+  if (rest === "") throw new InvalidTargetError(value, "\"chat:new:\" needs a place directory after the colon (or use chat:new)");
+  if (rest.endsWith(".landmark.card")) throw new InvalidTargetError(value, "name the place's directory, not its landmark card");
+  const resolved = resolveRefPath({ fromPath: undefined, ref: rest, kind: "card" });
+  if (resolved === null) throw new InvalidTargetError(value, "the place must be a directory inside the box's underscore areas");
+  const place = normalizeLandmarkDir(resolved);
+  return place === "" ? { kind: "chat-new" } : { kind: "chat-new", place };
+}
+
 /** Longer targets are refused, so a notification log line stays one atomic append. */
 const MAX_TARGET_CHARS = 1000;
 
@@ -51,6 +70,7 @@ export function parseTarget(value: string): Target {
   }
   if (value === "dashboard") return { kind: "dashboard" };
   if (value === "chat:new") return { kind: "chat-new" };
+  if (value.startsWith(CHAT_NEW_PLACE)) return chatNewPlace(value);
   const colon = value.indexOf(":");
   if (colon === -1) throw new InvalidTargetError(value, "no scheme");
   const scheme = value.slice(0, colon);
@@ -79,7 +99,7 @@ export function formatTarget(target: Target): string {
     case "chat":
       return `chat:${target.sessionId}`;
     case "chat-new":
-      return "chat:new";
+      return target.place === undefined ? "chat:new" : `${CHAT_NEW_PLACE}${target.place}`;
     case "card":
       return `card:${target.path}`;
     case "question":
@@ -95,15 +115,18 @@ export function formatTarget(target: Target): string {
 
 /**
  * The root-relative deep link a tap opens. `notificationId` is carried by
- * `chat:new`, whose chat page shows that notification as a banner.
+ * `chat:new`, whose chat page shows that notification as a banner. A place
+ * rides as `contextDir`; the chat route checks it is still a place.
  */
 export function targetUrl(target: Target, opts: { boxSlug: string; notificationId: string }): string {
   const { boxSlug, notificationId } = opts;
   switch (target.kind) {
     case "chat":
       return `/${boxSlug}/chat?session=${encodeURIComponent(target.sessionId)}`;
-    case "chat-new":
-      return `/${boxSlug}/chat?new=1&notification=${encodeURIComponent(notificationId)}`;
+    case "chat-new": {
+      const place = target.place === undefined ? "" : `&contextDir=${encodeURIComponent(target.place)}`;
+      return `/${boxSlug}/chat?new=1${place}&notification=${encodeURIComponent(notificationId)}`;
+    }
     case "card":
     case "question":
       // A question opens as its stub card beside the chat, like the app-bar counter.

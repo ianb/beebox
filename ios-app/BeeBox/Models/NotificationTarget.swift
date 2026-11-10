@@ -16,7 +16,8 @@ import Foundation
 /// it, and the browse route fences the path again when the page loads.
 enum NotificationTarget: Equatable {
     case chat(sessionID: String)
-    case chatNew
+    /// A new chat; with `place`, its context directory is that place (a landmark directory).
+    case chatNew(place: String?)
     case card(path: String)
     case question(path: String)
     case admin(section: String)
@@ -26,6 +27,10 @@ enum NotificationTarget: Equatable {
     static let maxCharacters = 1000
     /// `SYSTEM_CARD_PATHS.admin` in `src/shared/system-card-paths.ts`.
     static let adminCardPath = "_config/interface/admin.card"
+    /// `CHAT_NEW_PLACE` in `target.ts`.
+    static let chatNewPlacePrefix = "chat:new:"
+    /// `LANDMARK_CONTENT_DIR` in `src/core/landmark/root-dir.ts`: the root place.
+    static let contentDir = "_content"
 
     init?(_ value: String) {
         guard value.utf16.count <= Self.maxCharacters else {
@@ -36,7 +41,16 @@ enum NotificationTarget: Equatable {
             return
         }
         if value == "chat:new" {
-            self = .chatNew
+            self = .chatNew(place: nil)
+            return
+        }
+        if value.hasPrefix(Self.chatNewPlacePrefix) {
+            let rest = String(value.dropFirst(Self.chatNewPlacePrefix.count))
+            guard rest.hasSuffix(".landmark.card") == false, let place = Self.cardPath(rest) else {
+                return nil
+            }
+            // The root place (`_content`) is plain `chat:new` (`normalizeLandmarkDir`).
+            self = .chatNew(place: place == Self.contentDir ? nil : place)
             return
         }
         guard let colon = value.firstIndex(of: ":") else {
@@ -73,8 +87,10 @@ enum NotificationTarget: Equatable {
         switch self {
         case .chat(let sessionID):
             "chat?session=\(Self.encodeURIComponent(sessionID))"
-        case .chatNew:
-            "chat?new=1&notification=\(Self.encodeURIComponent(notificationID))"
+        case .chatNew(let place):
+            "chat?new=1"
+                + (place.map { "&contextDir=\(Self.encodeURIComponent($0))" } ?? "")
+                + "&notification=\(Self.encodeURIComponent(notificationID))"
         case .card(let path), .question(let path):
             "views/" + path.split(separator: "/", omittingEmptySubsequences: false).map { Self.encodeURIComponent(String($0)) }.joined(separator: "/")
         case .admin(let section):

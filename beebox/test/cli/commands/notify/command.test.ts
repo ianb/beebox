@@ -221,10 +221,12 @@ void test("Bad flags and bad targets exit 2 before anything is sent", async (t) 
       await run({ title: "x", options: { target: "dashboard", body: "a", bodyFile: "b" } }),
       await run({ title: "", options: { target: "dashboard" } }),
       await run({ title: "x", options: { targetsFromStdin: true, body: "b" }, stdin: "dashboard\ncard:../outside.card\n" }),
+      await run({ title: "x", options: { targetsFromStdin: true, body: "b" }, stdin: "dashboard\nchat:new:_content/journal\n" }),
+      await run({ title: "x", options: { target: "chat:new:_content/journal", dryRun: true } }),
     ].join("\n"),
     `stderr: Error: --target is required (or --targets-from-stdin)
 exit 2
-stderr: Error: Invalid notification target "nowhere": no scheme. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
+stderr: Error: Invalid notification target "nowhere": no scheme. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard
 exit 2
 stderr: Error: --loudness must be one of dot, quiet, loud (got "shout")
 exit 2
@@ -234,7 +236,11 @@ stderr: Error: give --body or --body-file, not both
 exit 2
 stderr: Error: a title is required
 exit 2
-stderr: Error: Invalid notification target "card:../outside.card": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard
+stderr: Error: Invalid notification target "card:../outside.card": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard
+exit 2
+stderr: Error: chat:new:_content/journal: no place at "_content/journal" (the directory has no landmark card)
+exit 2
+stderr: Error: chat:new:_content/journal: no place at "_content/journal" (the directory has no landmark card)
 exit 2`,
   );
 

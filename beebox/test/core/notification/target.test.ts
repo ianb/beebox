@@ -42,6 +42,31 @@ void test("Each path segment is encoded, so a `#` or `?` in a filename stays par
   t.check(render("card:_content/notes/Soup #2.doc.card"), "card:_content/notes/Soup #2.doc.card -> /family/views/_content/notes/Soup%20%232.doc.card");
 });
 
+// ## A new chat in a place
+//
+// `chat:new:<place>` opens a new chat whose context directory is the place: a
+// box directory holding a landmark card. The place rides in the link as
+// `contextDir`. A leading slash or trailing slash normalizes away, and the
+// root place (`_content`) is plain `chat:new`.
+void test("`chat:new:<place>` opens a new chat in that place.", async (t) => {
+  await t.checkText(["chat:new:_content/journal", "chat:new:/_content/journal/", "chat:new:_content/My Place", "chat:new:_content"].map(render).join("\n"), `chat:new:_content/journal -> /family/chat?new=1&contextDir=_content%2Fjournal&notification=n7Qx
+chat:new:_content/journal -> /family/chat?new=1&contextDir=_content%2Fjournal&notification=n7Qx
+chat:new:_content/My Place -> /family/chat?new=1&contextDir=_content%2FMy%20Place&notification=n7Qx
+chat:new -> /family/chat?new=1&notification=n7Qx`);
+});
+
+// The place is a directory inside the box's underscore areas, named by its
+// directory, not by its landmark card:
+void test("The place is a directory inside the box's underscore areas.", async (t) => {
+  const reason = (value: string) => {
+    try { parseTarget(value); return "parsed"; } catch (e) { return e instanceof Error ? e.message.split(": ")[1]?.split(". Valid")[0] ?? "" : String(e); }
+  };
+  await t.checkText(["chat:new:", "chat:new:journal", "chat:new:../x", "chat:new:_content/journal/Journal.landmark.card"].map((v) => `${v} -> ${reason(v)}`).join("\n"), `chat:new: -> "chat:new:" needs a place directory after the colon (or use chat:new)
+chat:new:journal -> the place must be a directory inside the box's underscore areas
+chat:new:../x -> the place must be a directory inside the box's underscore areas
+chat:new:_content/journal/Journal.landmark.card -> name the place's directory, not its landmark card`);
+});
+
 // ## Bad values name the valid schemes
 //
 // A path that escapes the box or lands outside its underscore areas fails
@@ -50,18 +75,18 @@ void test("A path that escapes the box or lands outside its underscore areas fai
   await t.checkThrows(
     async () => (parseTarget("https://example.com/"))
     ,
-    "InvalidTargetError: Invalid notification target \"https://example.com/\": unknown scheme \"https\". Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard",
+    "InvalidTargetError: Invalid notification target \"https://example.com/\": unknown scheme \"https\". Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard",
   );
 
-  await t.checkThrows(async () => (parseTarget("/box/health")), "InvalidTargetError: Invalid notification target \"/box/health\": no scheme. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget("/box/health")), "InvalidTargetError: Invalid notification target \"/box/health\": no scheme. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
 
-  await t.checkThrows(async () => (parseTarget("card:../elsewhere/secret.card")), "InvalidTargetError: Invalid notification target \"card:../elsewhere/secret.card\": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget("card:../elsewhere/secret.card")), "InvalidTargetError: Invalid notification target \"card:../elsewhere/secret.card\": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
 
-  await t.checkThrows(async () => (parseTarget("question:")), "InvalidTargetError: Invalid notification target \"question:\": \"question:\" needs a value after the colon. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget("question:")), "InvalidTargetError: Invalid notification target \"question:\": \"question:\" needs a value after the colon. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
 
-  await t.checkThrows(async () => (parseTarget("chat:a b")), "InvalidTargetError: Invalid notification target \"chat:a b\": a chat session id has no spaces or URL delimiters. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget("chat:a b")), "InvalidTargetError: Invalid notification target \"chat:a b\": a chat session id has no spaces or URL delimiters. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
 
-  await t.checkThrows(async () => (parseTarget(`card:_content/${"x".repeat(1000)}.card`)), "InvalidTargetError: Invalid notification target \"card:_content/xxxxxxxxxxxxxxxxxxxxxxxxxx…\": longer than 1000 characters. Valid targets: chat:<sessionId>, chat:new, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget(`card:_content/${"x".repeat(1000)}.card`)), "InvalidTargetError: Invalid notification target \"card:_content/xxxxxxxxxxxxxxxxxxxxxxxxxx…\": longer than 1000 characters. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
 });
 
 // A target over 1,000 characters is refused, so a notification's log line

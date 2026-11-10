@@ -70,3 +70,22 @@ void test("a send no channel could try is final and not retried", async (t) => {
   ]);
   t.check(outcome, { result: "failure", final: true, dueAfter: [false, false, false] });
 });
+
+// A reminder whose target names a place that is not there (a `chat:new:<place>`
+// whose directory has no landmark card) sends nothing; no later try can reach
+// a place that is gone, so the failure is final and names the place.
+void test("a send to a place that is not there is final and not retried", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  const { runAndRecord } = await t.mockImport<typeof RunAction>("../../../src/core/schedule/run-action.ts", {});
+  const parsed: ParsedScheduledScript = { ...reminder, action: { kind: "notify", notify: { title: "Journal time", target: "chat:new:_content/journal" } } };
+  const now = new Date(AT);
+  const state = await loadScriptState(box.root, "journal-nudge");
+  const run = await runAndRecord({
+    boxRoot: box.root, parsed, scriptName: "journal-nudge", triggeredBy: "schedule",
+    stdio: "ignore", state, now, runStartedAt: now,
+  });
+  const saved = await loadScriptState(box.root, "journal-nudge");
+  t.check({ result: run.result, final: saved.lastFailureFinal ?? false, error: saved.lastError },
+    { result: "failure", final: true, error: "chat:new:_content/journal: no place at \"_content/journal\" (the directory has no landmark card)" });
+});

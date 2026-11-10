@@ -11595,6 +11595,14 @@ test1:
       peak: 40594
       added: 5723
       turns: 7
+  notification-opens-a-place:
+    - date: 2026-11-10T05:15:47.156Z
+      boxCommit: 4e87ee2fa207c23556ff4dd4f4d92278939be268
+      repoCommit: ed29ef07fed5a534afe5e186f2d3c097909fe4d1
+      initial: 35013
+      peak: 37663
+      added: 2650
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

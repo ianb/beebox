@@ -89,14 +89,17 @@ function performBrowseDetailHandoff(input: BrowseDetailHandoff & {
  * enables the place query on the desktop layout. It uses the same input as the
  * chat's openers query (`useChatBinding`), so one request serves both. At the
  * root of a new chat it also enables the questions query on both layouts, for
- * the arrival question (docs/implemented-plans/questions-beside-the-chat.md, Track A).
+ * the arrival question (docs/implemented-plans/questions-beside-the-chat.md, Track A),
+ * unless a notification opened the chat: the person came for that notification.
  */
 function usePlaceArrival(input: { store: WorkspaceBrowserStore; viewport: "mobile" | "desktop"; contextDir: string | undefined; unstarted: boolean }) {
   const { store, viewport, contextDir } = input;
+  // `?notification=` marks the chat a notification tap opened (`ChatNotificationBanner`).
+  const fromNotification = useLocation().search.notification !== undefined;
   const candidate = useSyncExternalStore(store.subscribe, store.hasArrival, store.hasArrival);
   const placeEnabled = viewport === "desktop" && candidate && contextDir !== undefined;
   // Only a new chat: an existing one opened in a new tab has no saved arrangement either.
-  const questionsEnabled = candidate && contextDir === "" && input.unstarted;
+  const questionsEnabled = candidate && contextDir === "" && input.unstarted && !fromNotification;
   const query = trpc.landmarks.forDir.useQuery({ dir: contextDir ?? "" }, { enabled: placeEnabled });
   const questions = trpc.status.questions.useQuery(undefined, { enabled: questionsEnabled });
   const done = (q: { isSuccess: boolean; isError: boolean }, enabled: boolean) => !enabled || q.isSuccess || q.isError;
