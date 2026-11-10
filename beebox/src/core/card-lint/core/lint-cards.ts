@@ -135,6 +135,9 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
   // A `?` in a card filename starts the query part of a card link
   // (`/<box>/views/<path>`, the `?card=` value), so the link opens a different path.
   if (basename(path).includes("?")) return errorResult(path, "card filename must not contain `?`: card links read it as the start of a query; rename the file");
+  // Whitespace: card names join words with `_` (`Meeting_Notes.doc.card`), and
+  // path scans (a link target, a path in an AGENTS.md) end a path at a space.
+  if (/\s/.test(basename(path))) return errorResult(path, "card filename must not contain spaces: join words with `_` (Meeting_Notes.doc.card); rename the file with bbx mv");
   const fileType = typeFromFilename(path);
   if (fileType !== undefined && isSystemCardType(fileType)) {
     const locationError = systemCardLocationError(fileType, relative(options.boxRoot, path));
