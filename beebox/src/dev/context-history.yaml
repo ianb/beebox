@@ -11595,6 +11595,14 @@ test1:
       peak: 40594
       added: 5723
       turns: 7
+  markdown-math:
+    - date: 2026-11-10T18:05:26.645Z
+      boxCommit: fa1e4130f4ed227c2626eabcfc4ee60deb47046e
+      repoCommit: 6f65af774dcb59e1cd6d89d9cb067aeb9e60e14e
+      initial: 35030
+      peak: 35696
+      added: 666
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -14,6 +14,8 @@ export function generateChatVoiceDoc(): string {
 
 Chat responses are spoken aloud when wrapped in \`<speech>\` tags. The base voice and delivery style come from the personality card's \`<speaking-voice>\` element — see \`${BOX_PACKAGE_DOCS}/card-personality.md\` for the available voices and style-instruction guidance.
 
+Speech is read as written, so say a formula in words inside \`<speech>\` ("E equals m c squared"); a TeX formula belongs in the displayed text.
+
 This doc covers **per-message overrides** — changing the voice or instructions for a single spoken segment.
 
 Overrides apply only to the chat frontend. They have no effect in jobs, procedures, or non-chat contexts.

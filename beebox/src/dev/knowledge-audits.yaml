@@ -8869,6 +8869,22 @@ tests:
     correct_contains: ["colspan"]
     tags: [markdown, cards]
 
+  # Status (2026-11-10, chat-math-rendering): pass on the worktree test1 clone, 1 read (markdown.md), 1 search, 35k ctx.
+  - id: markdown-math
+    prompt: >
+      I'm studying chemistry and physics with you in chat. When you reply with
+      a balanced equation like hydrogen burning to water, or a formula like
+      kinetic energy, how should you write it so it shows up properly here?
+    expected_level: knows_about
+    should_read_any: ["markdown.md"]
+    watch_for: >
+      TeX between dollar signs renders in chat: `$…$` inline, `$$…$$` displayed,
+      and mhchem `\ce{}` for chemistry. FAILS if it says math does not render
+      and offers only Unicode or plain-text formulas, or recommends `\(…\)` or
+      `\[…\]` delimiters.
+    correct_contains: ["$", "\\ce"]
+    tags: [markdown, chat]
+
   # === Dev-guidance audits (surface: dev) ===
   # A headless Claude Code session in the monorepo checkout, not a box agent:
   # `pnpm knowledge-audit run --dev`. Tests what the root and package

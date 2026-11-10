@@ -130,6 +130,11 @@ await build({
   target: "node22",
   jsx: "automatic",
   external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+  // This bundle only renders on the server (a browser maps the specifier to
+  // the app's own modules, webapp/views/compiler/compile.ts), where no
+  // stylesheet applies. KaTeX's CSS (components/Markdown/math-render.ts) and
+  // the fonts it names load as nothing.
+  loader: { ".css": "empty" },
   sourcemap: true,
   logLevel: "warning",
 });
