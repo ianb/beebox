@@ -141,6 +141,7 @@ enum SpeechKeywords {
     /// take no article, so talking about checkpoints stays plain speech.
     private static let sendCheckpointPatterns = [
         [Choice(["send", "sent"]), OptionalWord(["a", "the"]), "checkpoint", OptionalWord("message")],
+        ["checkpoint", "message"],
         [Choice(["commit", "add"]), "checkpoint"],
     ].flatMap(expand)
 
