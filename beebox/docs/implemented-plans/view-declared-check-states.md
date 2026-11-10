@@ -1,9 +1,9 @@
 ---
 title: "Views declare named check states"
-status: draft
+status: implemented
 workstream: box-feedback-bugs
 issues:
-  - ../../../issues/features/2026-11-09-views-declare-named-check-states.md
+  - ../../../issues/closed/features/2026-11-09-views-declare-named-check-states.md
 ---
 # Views declare named check states
 

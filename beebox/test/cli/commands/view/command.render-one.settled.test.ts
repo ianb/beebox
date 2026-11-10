@@ -197,7 +197,7 @@ export default function V({ cards, params }) {
 
 // A view's `checkStates` export adds named states after the automatic ones; a
 // failure names the state. A declared card that is gone is partly checked
-// (docs/plans/view-declared-check-states.md).
+// (docs/implemented-plans/view-declared-check-states.md).
 void test("a declared state renders with its params and fails by name; a gone card is reported", async (t) => {
   const box = await boxWithView({ view: `export const name = "V";
 export const dependencies = ["_content/**/*.doc.card"];

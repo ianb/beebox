@@ -6,7 +6,7 @@
  * app opens it on such a card, and its "card not found" branch is all a
  * path-less render reaches. A type with no such card is reported untested.
  * Then each state the view declares in its `checkStates` export, by name
- * (docs/plans/view-declared-check-states.md).
+ * (docs/implemented-plans/view-declared-check-states.md).
  *
  * Also the record the `render-one` child sends the sweep about a view that
  * rendered but was not fully checked.

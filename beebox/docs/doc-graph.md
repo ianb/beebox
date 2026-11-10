@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-11-09T20:47:47Z
-Total documents: 628
+Generated: 2026-11-10T02:07:59Z
+Total documents: 629
 
 ## Issues
 
@@ -77,6 +77,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
+- **docs/implemented-plans/view-declared-check-states.md** — "Views declare named check states" (237 lines) · shipped history · implemented
 - **docs/implemented-plans/yaml-lazy-load.md** — "Load yaml only when needed; parse each card once in bbx validate" (290 lines) · shipped history · implemented
 - **docs/plans/admin-encrypted-backups.md** — "Configure encrypted backups in Admin" (261 lines) · proposal · partial
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
@@ -413,6 +414,7 @@ Referenced by:
 - ../issues/closed/features/2026-08-23-choose-the-engine-for-a-new-chat.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/features/2026-10-18-pi-third-engine.md:19 (mention) — reads walk-up `AGENTS.md` (with `CLAUDE.md` fallback) and `.agents/skills`,
 - ../issues/closed/features/2026-10-20-at-include-lines-render-as-a-file-widget.md:12 (mention) — **Closed:** Implemented on worktree-card-reading. Include lines render as link, missing or not-viewable rows in AGENTS.m
+- ../issues/closed/features/2026-11-09-mv-lists-old-path-mentions-outside-tracked-refs.md:12 (mention) — **Closed (implemented, 2026-11-09):** the boxholder chose fixing over listing. `bbx mv` now rewrites any path that resol
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:23 (mention) — Related: the noisy-output policy in the root AGENTS.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:8 (mention) — it spawns an agent with a box cwd and box AGENTS.md context and checks
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/AGENTS.md`.
@@ -445,7 +447,6 @@ Referenced by:
 - ../issues/features/2026-07-22-modeled-demo-family-box.md:76 (mention) — so it doesn't inherit the dev AGENTS.md), like every other box.
 - ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md:25 (mention) — Options: let the course's `AGENTS.md` or landmark name a first message the
 - ../issues/features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md:60 (mention) — context (a landmark or course whose `AGENTS.md` says so, a research
-- ../issues/features/2026-11-09-mv-lists-old-path-mentions-outside-tracked-refs.md:12 (mention) — read `AGENTS.md` files (`isBuiltinLintableMarkdown` excludes agent
 - ../issues/watch/2026-08-28-ws-upgrade-touches-worktree-activity.md:12 (mention) — upgrade. The router contract (root `AGENTS.md`, `bin/AGENTS.md`) says only HTTP
 - ../research/AGENTS.md:6 (mention) — ideas and validate or challenge our own bets. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this r
 - ../research/agentic-workflows-survey.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -8436,11 +8437,18 @@ Title: "bbx view check renders card views with a card and waits for their data" 
 
 Referenced by:
 - ../issues/closed/bugs/2026-11-09-view-check-passes-views-that-crash-after-load.md:12 (mention) — **Closed (implemented, 2026-11-09):** bbx view check renders card-type views with a sample card and renders every state
-- ../issues/features/2026-11-09-views-declare-named-check-states.md:13 (link) — ([plan](../../beebox/docs/implemented-plans/view-check-settled-render.md)). It cannot reach
+- ../issues/closed/features/2026-11-09-views-declare-named-check-states.md:16 (link) — ([plan](../../../beebox/docs/implemented-plans/view-check-settled-render.md)). It cannot reach
 
 References:
 - → ../issues/closed/bugs/2026-11-09-view-check-passes-views-that-crash-after-load.md (frontmatter)
 - → docs/implemented-plans/agent-applied-migrations.md (mention)
+
+#### docs/implemented-plans/view-declared-check-states.md **[ORPHAN]**
+
+Title: "Views declare named check states" | 237 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/features/2026-11-09-views-declare-named-check-states.md (frontmatter)
 
 #### docs/implemented-plans/view-render-testing.md
 

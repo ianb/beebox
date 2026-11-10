@@ -5,7 +5,7 @@
 // `params.path`. A type with no card that loads is reported untested
 // (docs/implemented-plans/view-check-settled-render.md, Track 1). Then each
 // state the view declares in `checkStates`, by name
-// (docs/plans/view-declared-check-states.md).
+// (docs/implemented-plans/view-declared-check-states.md).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

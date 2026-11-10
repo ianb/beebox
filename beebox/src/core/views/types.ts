@@ -154,7 +154,7 @@ export interface ViewMeta {
 /**
  * One entry of a view's `checkStates` export: a name, and the card path and
  * view parameters the view is opened with in that state
- * (docs/plans/view-declared-check-states.md).
+ * (docs/implemented-plans/view-declared-check-states.md).
  */
 export interface DeclaredCheckState {
   name: string;

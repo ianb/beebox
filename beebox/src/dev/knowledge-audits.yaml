@@ -5897,7 +5897,7 @@ tests:
   #
   # A view exports `checkStates` (name, card path, params) so `bbx view check`
   # renders a state its samples miss, and `bbx view states <slug>` prints the
-  # page path to open it (docs/plans/view-declared-check-states.md). Lives in
+  # page path to open it (docs/implemented-plans/view-declared-check-states.md). Lives in
   # views.md (Testing a View), so knows_about. Passes 2026-11-09 on the
   # worktree test1 clone: 3 reads, 3 searches, 35k context.
 

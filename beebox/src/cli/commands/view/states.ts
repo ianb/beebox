@@ -1,7 +1,7 @@
 /**
  * `bbx view states <slug>`: print the page path that opens each state a view
  * declares in its `checkStates` export, for `bbx browser open` and
- * `bbx browser screenshot --card` (docs/plans/view-declared-check-states.md).
+ * `bbx browser screenshot --card` (docs/implemented-plans/view-declared-check-states.md).
  *
  * The path is `/views/<card path>?<params>`. The app opens a card in the one
  * view bound to its type: the first view, by slug, whose `rendersCardTypes`
