@@ -395,7 +395,9 @@ void test("A place target with no usable landmark is refused before anything is 
   t.teardown(() => fs.rm(outside, { recursive: true, force: true }));
   await fs.writeFile(path.join(outside, "Out.landmark.card"), "---\nnavigation:\n  label: Out\n---\n");
   await fs.symlink(outside, path.join(box.root, "_content/escape"));
-  const refused = [await send("_content/journal"), await send("_content/broken"), await send("_content/escape")];
+  await fs.mkdir(path.join(box.root, "_content/linked"), { recursive: true });
+  await fs.symlink(path.join(outside, "Out.landmark.card"), path.join(box.root, "_content/linked/Out.landmark.card"));
+  const refused = [await send("_content/journal"), await send("_content/broken"), await send("_content/escape"), await send("_content/linked"), await send("_tmp/scratch")];
   const nothingLogged = await logged(box);
 
   await fs.mkdir(journal, { recursive: true });
@@ -403,6 +405,8 @@ void test("A place target with no usable landmark is refused before anything is 
   await t.checkText([...refused, `logged: "${nothingLogged}"`, await send("_content/journal")].join("\n"), `_content/journal: UnsendableTargetError: chat:new:_content/journal: no place at "_content/journal" (the directory has no landmark card)
 _content/broken: UnsendableTargetError: chat:new:_content/broken: no place at "_content/broken" (its landmark card Broken.landmark.card does not parse)
 _content/escape: UnsendableTargetError: chat:new:_content/escape: no place at "_content/escape" (the directory is outside the box)
+_content/linked: UnsendableTargetError: chat:new:_content/linked: no place at "_content/linked" (its landmark card Out.landmark.card is outside the box)
+_tmp/scratch: UnsendableTargetError: chat:new:_tmp/scratch: no place at "_tmp/scratch" (_tmp holds no places)
 logged: ""
 _content/journal: reached true`);
 });

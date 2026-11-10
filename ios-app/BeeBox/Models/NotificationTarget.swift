@@ -46,11 +46,11 @@ enum NotificationTarget: Equatable {
         }
         if value.hasPrefix(Self.chatNewPlacePrefix) {
             let rest = String(value.dropFirst(Self.chatNewPlacePrefix.count))
-            guard rest.hasSuffix(".landmark.card") == false, let place = Self.cardPath(rest) else {
+            // The box root's place (`_content`) is refused: it is plain `chat:new`.
+            guard rest.hasSuffix(".landmark.card") == false, let place = Self.cardPath(rest), place != Self.contentDir else {
                 return nil
             }
-            // The root place (`_content`) is plain `chat:new` (`normalizeLandmarkDir`).
-            self = .chatNew(place: place == Self.contentDir ? nil : place)
+            self = .chatNew(place: place)
             return
         }
         guard let colon = value.firstIndex(of: ":") else {

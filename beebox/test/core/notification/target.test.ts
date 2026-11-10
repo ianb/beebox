@@ -46,25 +46,24 @@ void test("Each path segment is encoded, so a `#` or `?` in a filename stays par
 //
 // `chat:new:<place>` opens a new chat whose context directory is the place: a
 // box directory holding a landmark card. The place rides in the link as
-// `contextDir`. A leading slash or trailing slash normalizes away, and the
-// root place (`_content`) is plain `chat:new`.
+// `contextDir`. A leading slash or trailing slash normalizes away.
 void test("`chat:new:<place>` opens a new chat in that place.", async (t) => {
-  await t.checkText(["chat:new:_content/journal", "chat:new:/_content/journal/", "chat:new:_content/My Place", "chat:new:_content"].map(render).join("\n"), `chat:new:_content/journal -> /family/chat?new=1&contextDir=_content%2Fjournal&notification=n7Qx
+  await t.checkText(["chat:new:_content/journal", "chat:new:/_content/journal/", "chat:new:_content/My Place"].map(render).join("\n"), `chat:new:_content/journal -> /family/chat?new=1&contextDir=_content%2Fjournal&notification=n7Qx
 chat:new:_content/journal -> /family/chat?new=1&contextDir=_content%2Fjournal&notification=n7Qx
-chat:new:_content/My Place -> /family/chat?new=1&contextDir=_content%2FMy%20Place&notification=n7Qx
-chat:new -> /family/chat?new=1&notification=n7Qx`);
+chat:new:_content/My Place -> /family/chat?new=1&contextDir=_content%2FMy%20Place&notification=n7Qx`);
 });
 
 // The place is a directory inside the box's underscore areas, named by its
-// directory, not by its landmark card:
+// directory, not by its landmark card. The box root's place is plain `chat:new`:
 void test("The place is a directory inside the box's underscore areas.", async (t) => {
   const reason = (value: string) => {
     try { parseTarget(value); return "parsed"; } catch (e) { return e instanceof Error ? e.message.split(": ")[1]?.split(". Valid")[0] ?? "" : String(e); }
   };
-  await t.checkText(["chat:new:", "chat:new:journal", "chat:new:../x", "chat:new:_content/journal/Journal.landmark.card"].map((v) => `${v} -> ${reason(v)}`).join("\n"), `chat:new: -> "chat:new:" needs a place directory after the colon (or use chat:new)
+  await t.checkText(["chat:new:", "chat:new:journal", "chat:new:../x", "chat:new:_content/journal/Journal.landmark.card", "chat:new:_content/"].map((v) => `${v} -> ${reason(v)}`).join("\n"), `chat:new: -> "chat:new:" needs a place directory after the colon (or use chat:new)
 chat:new:journal -> the place must be a directory inside the box's underscore areas
 chat:new:../x -> the place must be a directory inside the box's underscore areas
-chat:new:_content/journal/Journal.landmark.card -> name the place's directory, not its landmark card`);
+chat:new:_content/journal/Journal.landmark.card -> name the place's directory, not its landmark card
+chat:new:_content/ -> the box root is the plain chat:new`);
 });
 
 // ## Bad values name the valid schemes

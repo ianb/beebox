@@ -48,7 +48,7 @@ const CHAT_NEW_PLACE = "chat:new:";
 
 /**
  * A place directory, normalized box-relative and fenced like a card path. The
- * root place (`_content`) is the plain `chat:new`, so it has no `place`.
+ * root place (`_content`) is refused: it is the plain `chat:new`.
  */
 function chatNewPlace(value: string): Target {
   const rest = value.slice(CHAT_NEW_PLACE.length);
@@ -56,8 +56,8 @@ function chatNewPlace(value: string): Target {
   if (rest.endsWith(".landmark.card")) throw new InvalidTargetError(value, "name the place's directory, not its landmark card");
   const resolved = resolveRefPath({ fromPath: undefined, ref: rest, kind: "card" });
   if (resolved === null) throw new InvalidTargetError(value, "the place must be a directory inside the box's underscore areas");
-  const place = normalizeLandmarkDir(resolved);
-  return place === "" ? { kind: "chat-new" } : { kind: "chat-new", place };
+  if (normalizeLandmarkDir(resolved) === "") throw new InvalidTargetError(value, "the box root is the plain chat:new");
+  return { kind: "chat-new", place: resolved };
 }
 
 /** Longer targets are refused, so a notification log line stays one atomic append. */

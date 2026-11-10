@@ -18,12 +18,16 @@ import { formatTarget, type Target } from "./target.js";
 export async function targetProblem(boxRoot: string, target: Target): Promise<string | null> {
   if (target.kind !== "chat-new" || target.place === undefined) return null;
   const refuse = (why: string) => `${formatTarget(target)}: no place at "${target.place}" (${why})`;
-  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: target.place, mode: "read" });
-  if (!ns.ok) return refuse("the directory is outside the box");
-  const [card] = (await glob("*.landmark.card", { cwd: ns.resolved, nodir: true })).toSorted();
+  // `landmarks.identity` globs with `_tmp/**` ignored: a place there is never found at tap time.
+  if (target.place === "_tmp" || target.place.startsWith("_tmp/")) return refuse("_tmp holds no places");
+  const dir = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: target.place, mode: "read" });
+  if (!dir.ok) return refuse("the directory is outside the box");
+  const [card] = (await glob("*.landmark.card", { cwd: dir.resolved, nodir: true })).toSorted();
   if (card === undefined) return refuse("the directory has no landmark card");
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: path.posix.join(target.place, card), mode: "read" });
+  if (!ns.ok) return refuse(`its landmark card ${card} is outside the box`);
   try {
-    if ((await readLandmarkCard(path.join(ns.resolved, card))) === null) return refuse(`its landmark card ${card} does not parse`);
+    if ((await readLandmarkCard(ns.resolved)) === null) return refuse(`its landmark card ${card} does not parse`);
   } catch (e) {
     return refuse(`its landmark card ${card} could not be read: ${errorMessage(e)}`);
   }

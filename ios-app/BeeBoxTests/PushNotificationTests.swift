@@ -347,9 +347,9 @@ final class PushNotificationTests: XCTestCase {
         XCTAssertEqual(render("chat:new:_content/journal"), "/family/chat?new=1&contextDir=_content%2Fjournal&notification=n7Qx")
         XCTAssertEqual(render("chat:new:/_content/journal/"), "/family/chat?new=1&contextDir=_content%2Fjournal&notification=n7Qx")
         XCTAssertEqual(render("chat:new:_content/My Place"), "/family/chat?new=1&contextDir=_content%2FMy%20Place&notification=n7Qx")
-        XCTAssertEqual(render("chat:new:_content"), "/family/chat?new=1&notification=n7Qx")
         XCTAssertNil(NotificationTarget("chat:new:"))
         XCTAssertNil(NotificationTarget("chat:new:journal"))
+        XCTAssertNil(NotificationTarget("chat:new:_content/"))
         XCTAssertNil(NotificationTarget("chat:new:../x"))
         XCTAssertNil(NotificationTarget("chat:new:_content/journal/Journal.landmark.card"))
     }

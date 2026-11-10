@@ -1269,7 +1269,7 @@ See §1.3 (full request/response/errors).
   `admin:<section>`, `dashboard`; `src/core/notification/target.ts`); a tap opens the box URL it
   renders to. `notificationId` is the log id; `chat:new` carries it so the chat page can show the
   notification. `chat:new:<place>` also carries the place directory as `contextDir`
-  (`chat?new=1&contextDir=<place>&notification=<id>`); `chat:new:_content` is `chat:new`. An app
+  (`chat?new=1&contextDir=<place>&notification=<id>`); `chat:new:_content` is refused (use `chat:new`). An app
   before 2026-11-10 refuses the form (its `chat:<sessionId>` rule rejects `/`): the tap brings
   the app forward where it was and logs an unreadable target. `loudness` is absent for `dot`. `box` is the sending box's slug (the box
   directory's name, `src/lib/box-slug.ts` · `boxSlug`, the same slug as the box URL prefix).

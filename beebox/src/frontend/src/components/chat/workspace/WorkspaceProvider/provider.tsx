@@ -1,7 +1,7 @@
 import { workspaceRouteTarget, workspaceProjectionSearch } from "../../../../lib/system-card-navigation";
 import { browseStateToViewState, normalizeBrowseTarget, parseBrowseState, type BrowseState } from "../../../../lib/browse-card-state";
 import { decideWorkspaceNavigation, legacyOverlayActions, revealConversationActions, workspaceDisplayReady, workspaceHistoryTarget, workspaceOpenShouldReplace, workspaceRouteBound, shouldRestoreMobileWithBack, type WorkspaceHistoryEntry, type WorkspaceNavigationDecision } from "../history";
-import { createContext, useContext, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useMemo, useCallback, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { getApiBase } from "../../../../api";
 import { href, toSearch } from "../../../../lib/routing";
@@ -94,9 +94,14 @@ function performBrowseDetailHandoff(input: BrowseDetailHandoff & {
  */
 function usePlaceArrival(input: { store: WorkspaceBrowserStore; viewport: "mobile" | "desktop"; contextDir: string | undefined; unstarted: boolean }) {
   const { store, viewport, contextDir } = input;
-  // `?notification=` marks the chat a notification tap opened (`ChatNotificationBanner`).
-  const fromNotification = useLocation().search.notification !== undefined;
   const candidate = useSyncExternalStore(store.subscribe, store.hasArrival, store.hasArrival);
+  // `?notification=` marks the chat a notification tap opened (`ChatNotificationBanner`). Dismissing
+  // the banner drops it from the URL, so it is latched until this arrival is taken.
+  const notified = useLocation().search.notification !== undefined;
+  const [latched, setLatched] = useState(false);
+  if (candidate && notified && !latched) setLatched(true);
+  if (!candidate && latched) setLatched(false);
+  const fromNotification = notified || latched;
   const placeEnabled = viewport === "desktop" && candidate && contextDir !== undefined;
   // Only a new chat: an existing one opened in a new tab has no saved arrangement either.
   const questionsEnabled = candidate && contextDir === "" && input.unstarted && !fromNotification;
