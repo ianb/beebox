@@ -1,9 +1,9 @@
 ---
 title: "TeX math renders in chat and card bodies"
-status: draft
+status: implemented
 workstream: chat-math-rendering
 issues:
-  - ../../../issues/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md
+  - ../../../issues/closed/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md
 ---
 # TeX math renders in chat and card bodies
 

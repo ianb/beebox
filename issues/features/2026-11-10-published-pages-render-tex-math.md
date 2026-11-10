@@ -9,7 +9,7 @@ priority: backlog
 ---
 
 Chat and card bodies in the app render `$…$` and `$$…$$` TeX with KaTeX
-(`beebox/docs/plans/chat-math-rendering.md`). A published page renders its
+(`beebox/docs/implemented-plans/chat-math-rendering.md`). A published page renders its
 Markdown through the plain shared parser
 (`beebox/src/publish/prepare/core/markdown-page.ts` →
 `@shared/markdoc-config/parse/core` `parseMarkdown`, `math: false`), so a
