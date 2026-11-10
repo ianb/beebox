@@ -125,7 +125,11 @@ function getWsClient(): ReturnType<typeof createWSClient> {
         return token ? { authorization: `Bearer ${token}` } : null;
       },
       lazy: { enabled: true, closeMs: 30_000 },
-      keepAlive: { enabled: true },
+      // tRPC's defaults (ping after 5 s quiet, close if no pong within 1 s)
+      // drop a healthy socket on any slow round trip. Each drop reconnects,
+      // and each reconnect resyncs the open chat, so a quiet chat on a
+      // laggy network refreshed every ~5 s.
+      keepAlive: { enabled: true, intervalMs: 15_000, pongTimeoutMs: 10_000 },
     });
   }
   return wsClientSingleton;
