@@ -1,6 +1,6 @@
 /**
  * Node load hook: compile frontend modules with the React Compiler, as the
- * Vite build does, so a test renders with the memoization a browser runs.
+ * Vite build does, and load a CSS import as an empty module, so a test renders with the memoization a browser runs.
  * `.taprc` registers it for every test process; it touches only frontend
  * modules. Output is cached by content hash, because compiling the chat tree
  * costs seconds per process. Babel and esbuild load on the first cache miss:
@@ -99,6 +99,9 @@ async function compileCached(path: string): Promise<string> {
 export async function load(...[url, context, nextLoad]: Parameters<LoadHook>): Promise<LoadFnOutput> {
   if (!url.startsWith("file:")) return nextLoad(url, context);
   const path = fileURLToPath(url);
+  // Vite turns a CSS import into a stylesheet; a test applies no styles, so it
+  // loads as an empty module (KaTeX's CSS, `components/Markdown/math-render.ts`).
+  if (path.endsWith(".css")) return { format: "module", source: "", shortCircuit: true };
   if (!compiles(path)) return nextLoad(url, context);
   return { format: "module", source: await compileCached(path), shortCircuit: true };
 }

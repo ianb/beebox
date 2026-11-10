@@ -1,6 +1,6 @@
 ---
 title: "Chat chemistry formulas render literal markup"
-workstream: unattached
+workstream: chat-math-rendering
 area: beebox
 labels: [journey-findings, ui-error]
 filed-by: agent
