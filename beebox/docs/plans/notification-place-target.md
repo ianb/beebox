@@ -103,6 +103,13 @@ No decision depends on an external premise.
 
 - `bbx notify --help` target list, `SCHEMES` in target.ts, `bbx-commands-scheduling.ts`, `schemas/scheduled-script/instructions.ts` (the `notify:` target line). One line: "A nudge to go do something in a place targets that place: `chat:new:<place directory>`."
 
+### F. `place:<dir>`: the place's latest chat (added after the first review)
+
+- **Why:** the boxholder asked for a target that continues a conversation in a place instead of starting one. A nightly journal entry suits `chat:new:<dir>`; "pick the porch back up" suits the latest chat there.
+- **What it reuses:** going to a place already opens its latest chat, or a new one when it has none. `resolve-conversation.ts` makes a `landmark` request with `chat.lastSessionForDirectory`, which falls back to an unstarted reserved chat (`webapp/trpc/routers/chat/router.ts:130`). The chat page had no URL for that request: `conversation-intent.ts:59` gives the chat page the default chat.
+- **What:** `place:<dir>` parses with the same place rules as `chat:new:<dir>` (shared `placeDir`), and the send-time check covers both. It renders to `chat?place=<dir>&notification=<id>`. The chat route's `beforeLoad` checks the place, asks `chat.lastSessionForDirectory`, and redirects to `session=<id>`, or to `session=new&contextDir=<dir>` when the place has no chat. A gone place falls back to a new root chat, like `chat:new:<dir>`; a failed latest-chat lookup opens a new chat in the place. Both log a console warning. The Swift mirror adds `.place(dir:)`.
+- **Choice:** the target names the place, so the app's own rule for which chat a place opens decides, with no second "latest" rule. The arrival-question fix does not apply: a resumed chat has started, and an unstarted one is not at the root.
+
 ## Could this be simpler?
 
 Simplest: Track A's TS half alone. It fails on (1) a typo'd or nonexistent place, which would open a chat whose working directory does not exist; the agent would not learn of it until the person taps — strictness preference; (2) the iOS app, which parses targets itself and would open the root chat for every place target. Track D is one condition. No new abstraction: the check is one function with one place case.
@@ -123,6 +130,8 @@ none
 | `landmarks.identity` errors (offline) | Same pure function | Root chat | Console warning |
 | Old iOS app gets `chat:new:<dir>` | Swift test on current app only | Its parser refuses `/`; app opens where it was | Logged on the phone; accepted |
 | Place dir is a symlink out of the box, or its landmark does not parse | notify-boxholder test | Refused at send, same predicate as tap | Clear |
+| `place:` latest-chat lookup fails at tap | Pure-function test | New chat in the place | Console warning |
+| Old iOS app gets `place:<dir>` | Swift test on current app only | Unknown scheme; app opens where it was | Logged on the phone; accepted |
 
 ## Agent-flow / user-flow edge cases
 
@@ -152,9 +161,11 @@ Adopted: one predicate at send and tap (namespace on disk plus a parsing landmar
 
 Round 1 found three gaps, all fixed: the send-time check now fences the landmark card's own path and refuses `_tmp` places, as `landmarks.identity` does; the arrival question stays off after the banner is dismissed before arrival settles (a latch in `usePlaceArrival`); `chat:new:_content` is refused in favor of `chat:new`. Round 2 verified the fixes and found nothing new.
 
+Section F (`place:`), one round: no findings on the redirect, the lookup parity with going to a place, grammar parity, the send-time check, or the agent docs. One P3 accepted: if another device deletes the place's latest chat between the route's lookup and the chat's bootstrap, the tap shows "conversation unavailable" instead of a new chat in the place. The window is the length of one request.
+
 ## Knowledge audits
 
-Agent-facing: "a nudge to go do X targets X's place". Add one `knows_directly` entry if the audit file has a notifications section; run it against test1.
+Agent-facing: "a nudge to go do X targets X's place". `notification-opens-a-place` (journal nudge answers `chat:new:_content/journal`) and `notification-resumes-a-place` (a nudge to continue the porch conversation answers `place:_content/projects/porch-rebuild`) both pass on test1.
 
 ## What will hold this after it ships
 
@@ -169,4 +180,4 @@ Agent-facing: "a nudge to go do X targets X's place". Add one `knows_directly` e
 
 ## Rollout shape
 
-Done when the tests above pass, `pnpm typecheck`/lint pass, the iOS unit tests pass on a simulator, and a browser walk on the worktree's test1 clone shows `chat:new:_content/projects/porch-rebuild` opening a chat in that place with the banner and no question. No data migration.
+Done when the tests above pass, `pnpm typecheck`/lint pass, the iOS unit tests pass on a simulator, and a browser walk on the worktree's test1 clone shows `chat:new:_content/projects/porch-rebuild` opening a chat in that place with the banner and no question, and `place:_content/projects/porch-rebuild` reopening that chat with its messages and the banner. No data migration.

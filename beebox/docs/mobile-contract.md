@@ -1265,13 +1265,15 @@ See §1.3 (full request/response/errors).
   | `quiet` | `{ aps: { alert: { title, body }, "interruption-level": "passive", badge: 1 }, target, loudness: "quiet", notificationId, box }` |
   | `loud` | `{ aps: { alert: { title, body }, "interruption-level": "active", badge: 1, sound: "default" }, target, loudness: "loud", notificationId, box }` |
 - **Custom keys the client reads:** `target` is the notification target string
-  (`chat:<sessionId>`, `chat:new`, `chat:new:<place>`, `card:<path>`, `question:<path>`,
+  (`chat:<sessionId>`, `chat:new`, `chat:new:<place>`, `place:<dir>`, `card:<path>`, `question:<path>`,
   `admin:<section>`, `dashboard`; `src/core/notification/target.ts`); a tap opens the box URL it
-  renders to. `notificationId` is the log id; `chat:new` carries it so the chat page can show the
+  renders to. `notificationId` is the log id; `chat:new` and `place:` carry it so the chat page can show the
   notification. `chat:new:<place>` also carries the place directory as `contextDir`
-  (`chat?new=1&contextDir=<place>&notification=<id>`); `chat:new:_content` is refused (use `chat:new`). An app
-  before 2026-11-10 refuses the form (its `chat:<sessionId>` rule rejects `/`): the tap brings
-  the app forward where it was and logs an unreadable target. `loudness` is absent for `dot`. `box` is the sending box's slug (the box
+  (`chat?new=1&contextDir=<place>&notification=<id>`). `place:<dir>` renders to
+  `chat?place=<dir>&notification=<id>`; the chat route opens the place's latest chat, or a new one
+  there. Both refuse `_content` (use `chat:new`). An app before 2026-11-10 refuses both forms
+  (`chat:new:` because its `chat:<sessionId>` rule rejects `/`; `place:` as an unknown scheme): the
+  tap brings the app forward where it was and logs an unreadable target. `loudness` is absent for `dot`. `box` is the sending box's slug (the box
   directory's name, `src/lib/box-slug.ts` · `boxSlug`, the same slug as the box URL prefix).
 - **What iOS does with them.** In the foreground (`willPresent`), `loud` presents banner, sound,
   and badge; `quiet`, `dot` (no `loudness` key), and an unknown value present nothing, because the
@@ -1674,7 +1676,7 @@ without the other is a contract break.
   `notificationId`, `box` (the box slug, matched against `PairedBox.slug`) beside `aps` — `Models/NotificationTarget.swift` · `NotificationLoudness`,
   `NotificationTap` ↔ `core/notification/apns-payload.ts` · `buildApnsRequest`.
 - **Notification target rules** — `Models/NotificationTarget.swift` · `NotificationTarget` ↔
-  `core/notification/target.ts` · `parseTarget`, `targetUrl`: the six schemes (and `chat:new:<place>`), the 1000-character
+  `core/notification/target.ts` · `parseTarget`, `targetUrl`: the seven schemes (and `chat:new:<place>`), the 1000-character
   limit, the chat-session and admin-section character rules, `encodeURIComponent`, and the admin
   card path `_config/interface/admin.card` (`shared/system-card-paths.ts` · `SYSTEM_CARD_PATHS`).
   One deliberate difference: Swift fences a card path to a first segment starting with `_`, where

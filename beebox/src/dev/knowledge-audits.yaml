@@ -2097,12 +2097,20 @@ tests:
       - '(?:watch|when something (?:happens|changes))'
     tags: [connectors, notifications]
 
-  # Status (2026-11-10, Claude): pass on the worktree test1 clone, 1 read, 1 search, 35k ctx.
+  # Status (2026-11-10, Claude): both pass on the worktree test1 clone after `place:` was added (35k ctx each);
+  # the journal nudge still answers chat:new:<dir>.
   - id: notification-opens-a-place
     prompt: "The boxholder keeps a journal in the place _content/journal. Set up nothing yet: which bbx notify --target would you use for a nightly 'time to write in your journal' nudge, so a tap lands where they write?"
     expected_level: knows_about
     watch_for: "Reads the notify or schedule guidance and answers chat:new:_content/journal (a new chat in that place), not chat:new or a card target"
     correct_contains: ["chat:new:_content/journal"]
+    tags: [notifications, schedules]
+
+  - id: notification-resumes-a-place
+    prompt: "The boxholder has an ongoing conversation about the porch rebuild in the place _content/projects/porch-rebuild. Set up nothing yet: which bbx notify --target would you use for a weekly 'pick the porch back up' nudge, so a tap continues that conversation?"
+    expected_level: knows_about
+    watch_for: "Reads the notify or schedule guidance and answers place:_content/projects/porch-rebuild (the place's latest chat), not chat:new:<dir>, which starts a new chat"
+    correct_contains: ["place:_content/projects/porch-rebuild"]
     tags: [notifications, schedules]
 
   # === Scheduled Tasks ===

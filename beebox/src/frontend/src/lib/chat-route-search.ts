@@ -8,6 +8,8 @@ export const chatSearchSchema = z.object({
   // Shown above the composer and carried into the first message (ChatNotificationBanner).
   notification: z.coerce.string().optional(),
   session: z.string().optional(),
+  // A `place:<dir>` notification: the route resolves it to the place's latest chat (`notificationChatSearch`).
+  place: z.string().optional(),
   contextDir: z.string().optional(),
   // A `view:` URL to open in the companion pane when the chat loads (e.g. a
   // commentary card captured by the clerk extension). Opened once on mount.
@@ -30,27 +32,54 @@ export const chatSearchSchema = z.object({
 
 type ChatSearch = z.infer<typeof chatSearchSchema>;
 
-/**
- * The search a notification's `?new=1` link redirects to: a fresh
- * conversation (`session=new`). A `chat:new:<place>` link carries the place as
- * `contextDir`; when the place is gone or the lookup fails, the chat opens at
- * the box root instead, still showing the notification.
- */
-export async function notificationChatSearch(rest: Omit<ChatSearch, "new">, isPlace: (dir: string) => Promise<boolean>): Promise<ChatSearch> {
-  const { contextDir, ...others } = rest;
-  if (contextDir === undefined || contextDir === "") return { ...others, session: "new" };
-  let exists = false;
-  try {
-    exists = await isPlace(contextDir);
-  } catch (error) {
-    console.warn(`[notifications] could not check the place "${contextDir}"; opening the chat at the box root`, error);
-    return { ...others, session: "new" };
-  }
-  if (!exists) console.warn(`[notifications] the place "${contextDir}" is gone; opening the chat at the box root`);
-  return exists ? { ...others, session: "new", contextDir } : { ...others, session: "new" };
+/** The box lookups a notification link needs, injected so tests need no server. */
+export interface PlaceLookups {
+  /** Whether `dir` is still a place. */
+  isPlace: (dir: string) => Promise<boolean>;
+  /** The place's latest chat, or null when it has none. */
+  latestChat: (dir: string) => Promise<string | null>;
 }
 
-/** Whether `dir` holds a landmark card that parses: the send-time check's predicate (`core/notification/target-check.ts`). */
-export async function placeExists(dir: string): Promise<boolean> {
-  return (await trpcClient.landmarks.identity.query({ dir })).identity !== null;
+/** `dir` when it is still a place; otherwise warns and returns undefined, so the chat opens at the box root. */
+async function stillAPlace(dir: string, isPlace: PlaceLookups["isPlace"]): Promise<string | undefined> {
+  try {
+    if (await isPlace(dir)) return dir;
+    console.warn(`[notifications] the place "${dir}" is gone; opening the chat at the box root`);
+  } catch (error) {
+    console.warn(`[notifications] could not check the place "${dir}"; opening the chat at the box root`, error);
+  }
+  return undefined;
 }
+
+/**
+ * The search a notification link redirects to, or null when `search` is not
+ * a notification link. `?new=1` is a fresh conversation (`session=new`); a
+ * `chat:new:<place>` link carries the place as `contextDir`. `?place=` opens
+ * the place's latest chat, or a fresh one there when it has none. When the
+ * place is gone or the lookup fails, a fresh chat opens at the box root,
+ * still showing the notification.
+ */
+export async function notificationChatSearch(search: ChatSearch, lookups: PlaceLookups): Promise<ChatSearch | null> {
+  const { new: fresh, place, contextDir, ...others } = search;
+  if (place !== undefined) {
+    const dir = await stillAPlace(place, lookups.isPlace);
+    if (dir === undefined) return { ...others, session: "new" };
+    let latest: string | null = null;
+    try {
+      latest = await lookups.latestChat(dir);
+    } catch (error) {
+      console.warn(`[notifications] could not find the latest chat in "${dir}"; opening a new chat there`, error);
+    }
+    return latest === null ? { ...others, session: "new", contextDir: dir } : { ...others, session: latest };
+  }
+  if (fresh === undefined) return null;
+  if (contextDir === undefined || contextDir === "") return { ...others, session: "new" };
+  const dir = await stillAPlace(contextDir, lookups.isPlace);
+  return dir === undefined ? { ...others, session: "new" } : { ...others, session: "new", contextDir: dir };
+}
+
+/** The lookups against this box. `isPlace` is the send-time check's predicate (`core/notification/target-check.ts`). */
+export const placeLookups: PlaceLookups = {
+  isPlace: async (dir) => (await trpcClient.landmarks.identity.query({ dir })).identity !== null,
+  latestChat: async (dir) => (await trpcClient.chat.lastSessionForDirectory.query({ contextDir: dir })).sessionId,
+};

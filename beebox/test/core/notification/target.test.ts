@@ -59,11 +59,29 @@ void test("The place is a directory inside the box's underscore areas.", async (
   const reason = (value: string) => {
     try { parseTarget(value); return "parsed"; } catch (e) { return e instanceof Error ? e.message.split(": ")[1]?.split(". Valid")[0] ?? "" : String(e); }
   };
-  await t.checkText(["chat:new:", "chat:new:journal", "chat:new:../x", "chat:new:_content/journal/Journal.landmark.card", "chat:new:_content/"].map((v) => `${v} -> ${reason(v)}`).join("\n"), `chat:new: -> "chat:new:" needs a place directory after the colon (or use chat:new)
+  await t.checkText(["chat:new:", "chat:new:journal", "chat:new:../x", "chat:new:_content/journal/Journal.landmark.card", "chat:new:_content/"].map((v) => `${v} -> ${reason(v)}`).join("\n"), `chat:new: -> "chat:new:" needs a place directory after the colon
 chat:new:journal -> the place must be a directory inside the box's underscore areas
 chat:new:../x -> the place must be a directory inside the box's underscore areas
 chat:new:_content/journal/Journal.landmark.card -> name the place's directory, not its landmark card
 chat:new:_content/ -> the box root is the plain chat:new`);
+});
+
+// ## A place's latest chat
+//
+// `place:<dir>` opens what going to the place opens: its latest chat, or a new
+// chat there when it has none. The chat route makes that choice at tap time,
+// so the link carries only the place. The place follows the same rules as
+// `chat:new:<place>`.
+void test("`place:<dir>` links the place; the chat route picks its latest chat.", async (t) => {
+  const reason = (value: string) => {
+    try { return render(value); } catch (e) { return e instanceof Error ? e.message.split(": ")[1]?.split(". Valid")[0] ?? "" : String(e); }
+  };
+  await t.checkText(["place:_content/journal", "place:/_content/My Place/", "place:", "place:../x", "place:_content/journal/Journal.landmark.card", "place:_content"].map((v) => `${v} -> ${reason(v)}`).join("\n"), `place:_content/journal -> place:_content/journal -> /family/chat?place=_content%2Fjournal&notification=n7Qx
+place:/_content/My Place/ -> place:_content/My Place -> /family/chat?place=_content%2FMy%20Place&notification=n7Qx
+place: -> "place:" needs a place directory after the colon
+place:../x -> the place must be a directory inside the box's underscore areas
+place:_content/journal/Journal.landmark.card -> name the place's directory, not its landmark card
+place:_content -> the box root is the plain chat:new`);
 });
 
 // ## Bad values name the valid schemes
@@ -74,18 +92,18 @@ void test("A path that escapes the box or lands outside its underscore areas fai
   await t.checkThrows(
     async () => (parseTarget("https://example.com/"))
     ,
-    "InvalidTargetError: Invalid notification target \"https://example.com/\": unknown scheme \"https\". Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard",
+    "InvalidTargetError: Invalid notification target \"https://example.com/\": unknown scheme \"https\". Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, place:<dir>, card:<path>, question:<path>, admin:<section>, dashboard",
   );
 
-  await t.checkThrows(async () => (parseTarget("/box/health")), "InvalidTargetError: Invalid notification target \"/box/health\": no scheme. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget("/box/health")), "InvalidTargetError: Invalid notification target \"/box/health\": no scheme. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, place:<dir>, card:<path>, question:<path>, admin:<section>, dashboard");
 
-  await t.checkThrows(async () => (parseTarget("card:../elsewhere/secret.card")), "InvalidTargetError: Invalid notification target \"card:../elsewhere/secret.card\": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget("card:../elsewhere/secret.card")), "InvalidTargetError: Invalid notification target \"card:../elsewhere/secret.card\": the path must name a file inside the box's underscore areas. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, place:<dir>, card:<path>, question:<path>, admin:<section>, dashboard");
 
-  await t.checkThrows(async () => (parseTarget("question:")), "InvalidTargetError: Invalid notification target \"question:\": \"question:\" needs a value after the colon. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget("question:")), "InvalidTargetError: Invalid notification target \"question:\": \"question:\" needs a value after the colon. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, place:<dir>, card:<path>, question:<path>, admin:<section>, dashboard");
 
-  await t.checkThrows(async () => (parseTarget("chat:a b")), "InvalidTargetError: Invalid notification target \"chat:a b\": a chat session id has no spaces or URL delimiters. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget("chat:a b")), "InvalidTargetError: Invalid notification target \"chat:a b\": a chat session id has no spaces or URL delimiters. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, place:<dir>, card:<path>, question:<path>, admin:<section>, dashboard");
 
-  await t.checkThrows(async () => (parseTarget(`card:_content/${"x".repeat(1000)}.card`)), "InvalidTargetError: Invalid notification target \"card:_content/xxxxxxxxxxxxxxxxxxxxxxxxxx…\": longer than 1000 characters. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard");
+  await t.checkThrows(async () => (parseTarget(`card:_content/${"x".repeat(1000)}.card`)), "InvalidTargetError: Invalid notification target \"card:_content/xxxxxxxxxxxxxxxxxxxxxxxxxx…\": longer than 1000 characters. Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, place:<dir>, card:<path>, question:<path>, admin:<section>, dashboard");
 });
 
 // A target over 1,000 characters is refused, so a notification's log line

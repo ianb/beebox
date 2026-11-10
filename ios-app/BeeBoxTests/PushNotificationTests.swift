@@ -354,6 +354,15 @@ final class PushNotificationTests: XCTestCase {
         XCTAssertNil(NotificationTarget("chat:new:_content/journal/Journal.landmark.card"))
     }
 
+    func testPlaceMatchesTheBoxDoctest() {
+        XCTAssertEqual(render("place:_content/journal"), "/family/chat?place=_content%2Fjournal&notification=n7Qx")
+        XCTAssertEqual(render("place:/_content/My Place/"), "/family/chat?place=_content%2FMy%20Place&notification=n7Qx")
+        XCTAssertNil(NotificationTarget("place:"))
+        XCTAssertNil(NotificationTarget("place:../x"))
+        XCTAssertNil(NotificationTarget("place:_content/journal/Journal.landmark.card"))
+        XCTAssertNil(NotificationTarget("place:_content"))
+    }
+
     func testCardPathNormalizesFromTheBoxRoot() {
         XCTAssertEqual(
             render("card:/_content/./notes/Plan.doc.card"),

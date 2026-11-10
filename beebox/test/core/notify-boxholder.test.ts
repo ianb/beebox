@@ -373,7 +373,7 @@ void test("The log is the record, not the delivery path.", async (t) => {
 
 // ## A new chat in a place that is not there
 //
-// `chat:new:<place>` needs the place when it is sent: a directory inside the
+// `chat:new:<place>` and `place:<dir>` need the place when it is sent: a directory inside the
 // box whose landmark card parses (the same test the tap makes). Otherwise
 // nothing is logged or sent and the caller gets the reason, so a schedule's
 // run records it.
@@ -397,7 +397,15 @@ void test("A place target with no usable landmark is refused before anything is 
   await fs.symlink(outside, path.join(box.root, "_content/escape"));
   await fs.mkdir(path.join(box.root, "_content/linked"), { recursive: true });
   await fs.symlink(path.join(outside, "Out.landmark.card"), path.join(box.root, "_content/linked/Out.landmark.card"));
-  const refused = [await send("_content/journal"), await send("_content/broken"), await send("_content/escape"), await send("_content/linked"), await send("_tmp/scratch")];
+  const sendPlace = async (dir: string) => {
+    try {
+      await notifyBoxholder(box.root, { intent: { ...intent("loud"), target: { kind: "place", dir } }, now: NOW, services: { push: createFakePush() } });
+      return `${dir}: sent`;
+    } catch (e) {
+      return `${dir}: ${String(e)}`;
+    }
+  };
+  const refused = [await send("_content/journal"), await send("_content/broken"), await send("_content/escape"), await send("_content/linked"), await send("_tmp/scratch"), await sendPlace("_content/journal")];
   const nothingLogged = await logged(box);
 
   await fs.mkdir(journal, { recursive: true });
@@ -407,6 +415,7 @@ _content/broken: UnsendableTargetError: chat:new:_content/broken: no place at "_
 _content/escape: UnsendableTargetError: chat:new:_content/escape: no place at "_content/escape" (the directory is outside the box)
 _content/linked: UnsendableTargetError: chat:new:_content/linked: no place at "_content/linked" (its landmark card Out.landmark.card is outside the box)
 _tmp/scratch: UnsendableTargetError: chat:new:_tmp/scratch: no place at "_tmp/scratch" (_tmp holds no places)
+_content/journal: UnsendableTargetError: place:_content/journal: no place at "_content/journal" (the directory has no landmark card)
 logged: ""
 _content/journal: reached true`);
 });

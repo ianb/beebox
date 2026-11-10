@@ -156,7 +156,7 @@ void test("A reminder carries notify: in place of runs:.", async (t) => {
   t.check(
     issues({ at: "2026-10-02T08:30", notify: { title: "x", target: "https://example.com" } })
     ,
-    "notify.target: Invalid notification target \"https://example.com\": unknown scheme \"https\". Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, card:<path>, question:<path>, admin:<section>, dashboard",
+    "notify.target: Invalid notification target \"https://example.com\": unknown scheme \"https\". Valid targets: chat:<sessionId>, chat:new, chat:new:<place>, place:<dir>, card:<path>, question:<path>, admin:<section>, dashboard",
   );
 
   t.check(issues({ at: "2026-10-02T08:30", notify: { title: "x", context: "../outside.todo.card" } }), "notify.context: must be a card path inside the box (e.g. _content/pets/pepper-shots.todo.card)");
