@@ -11,6 +11,11 @@ Newest first. Each line says what changed; the doc it names has the details.
 If an entry and a note of yours disagree, check the current docs or command,
 then fix what is out of date.
 
+- 2026-11-10 (f92ece238): `bbx notify --target` takes `chat:new:<place directory>` (a new chat there) and `place:<place directory>` (its latest chat); the place needs its landmark card. See **REACHING_THE_BOXHOLDER**.
+- 2026-11-10 (b6a56d34b): TeX math renders in chat, card bodies, and published pages: `$…$`, `$$…$$`, and `\ce{}` chemistry. A note saying math is unsupported is out of date. See `markdown.md`.
+- 2026-11-09 (7e42666b9): `bbx view check` now runs effects and renders each card type, so views it passed before can fail. Views declare `checkStates`; `bbx view states <slug>` lists them. See `views.md`.
+- 2026-11-09 (45413ab02): Chat links to a view take `?viewState=` (percent-encoded JSON) to move the open view. The keys come from the view's source. See `views.md`.
+- 2026-11-08 (f233c3fdb): To see your own card or view, run `bbx browser open /views/<card path>`, then `bbx browser screenshot --card`. `bbx chat screenshot` shows only the person's screen. See **TOOLS**.
 - 2026-11-01 (6a7be17bc): `bbx search` skips `_tmp/` and areas set in `_config/box.json`, so a miss may not mean absent. `--area all` includes them. See **SEARCHING**.
 - 2026-11-01 (6a7be17bc): New: `bbx browser` for pages needing a login, `bbx webpage save`, `bbx pdf save`, and `bbx refs` to find what cites a card. See **TOOLS**.
 - 2026-10-30 (4a541cf78): `scan-uploader` is gone. Photos albums and scans go through Bee Box Desktop, paired in Settings. See `phone-photos.md`.
