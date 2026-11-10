@@ -148,6 +148,10 @@ none
 
 Adopted: one predicate at send and tap (namespace on disk plus a parsing landmark card), and the corrected older-iOS behavior. Already true: `bbx notify` checks every target in process before any send or dry run, so a missing place exits 2 on both the local and the server route; only a place removed between that check and the server's is exit 1, which is acceptable. Declined: a retry surface for a failed tap-time lookup (see When it goes wrong).
 
+## Diff review (codex gpt-6-sol)
+
+Round 1 found three gaps, all fixed: the send-time check now fences the landmark card's own path and refuses `_tmp` places, as `landmarks.identity` does; the arrival question stays off after the banner is dismissed before arrival settles (a latch in `usePlaceArrival`); `chat:new:_content` is refused in favor of `chat:new`. Round 2 verified the fixes and found nothing new.
+
 ## Knowledge audits
 
 Agent-facing: "a nudge to go do X targets X's place". Add one `knows_directly` entry if the audit file has a notifications section; run it against test1.
