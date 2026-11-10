@@ -1,7 +1,7 @@
 // A published Markdown page renders `$…$` and `$$…$$` math as MathML: no
 // stylesheet, fonts or script, and nothing the leak scan reports. Prices stay
 // text, TeX that does not parse publishes as code, and a formula in the first
-// heading stays in the page title (docs/plans/published-math.md).
+// heading stays in the page title (docs/implemented-plans/published-math.md).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

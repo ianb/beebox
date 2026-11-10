@@ -1,9 +1,9 @@
 ---
 title: "TeX math on published pages"
-status: draft
+status: implemented
 workstream: chat-math-rendering
 issues:
-  - ../../../issues/features/2026-11-10-published-pages-render-tex-math.md
+  - ../../../issues/closed/features/2026-11-10-published-pages-render-tex-math.md
 ---
 # TeX math on published pages
 

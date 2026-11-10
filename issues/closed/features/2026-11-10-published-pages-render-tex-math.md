@@ -1,12 +1,15 @@
 ---
 title: "Published pages show TeX math as source"
-workstream: unattached
+workstream: chat-math-rendering
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-chat-math-rendering, 2026-11-10
 priority: backlog
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-10):** Commits 40fe91101 and ff01684e4: published Markdown pages render TeX as MathML via KaTeX at publish time; no divergence.
 
 Chat and card bodies in the app render `$…$` and `$$…$$` TeX with KaTeX
 (`beebox/docs/implemented-plans/chat-math-rendering.md`). A published page renders its
