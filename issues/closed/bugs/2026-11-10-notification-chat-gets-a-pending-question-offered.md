@@ -1,12 +1,15 @@
 ---
 title: "A new chat opened from a notification offers an unrelated pending question"
-workstream: unattached
+workstream: notification-place-target
 area: beebox
 labels: [notifications, questions, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main checkout — tapping a journal-nudge notification, 2026-11-10"
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-10):** Resolved on worktree-notification-place-target (66efbbc99, 143ee5c84, 644ade433): chat:new:<dir> and place:<dir> targets, send-time check, tap fallback, iOS mirror, box-agent docs.
 
 The boxholder tapped a `chat:new` notification ("Journal time — no entry for
 today yet"). The new chat opened at the box root with a pending question card

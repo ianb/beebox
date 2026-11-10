@@ -1,16 +1,16 @@
 ---
 title: "Notification target: a new chat in a place"
-status: draft
+status: implemented
 workstream: notification-place-target
 issues:
-  - ../../../issues/bugs/2026-11-10-notification-target-cannot-name-a-place.md
-  - ../../../issues/bugs/2026-11-10-notification-chat-gets-a-pending-question-offered.md
+  - ../../../issues/closed/bugs/2026-11-10-notification-target-cannot-name-a-place.md
+  - ../../../issues/closed/bugs/2026-11-10-notification-chat-gets-a-pending-question-offered.md
 ---
 # Notification target: a new chat in a place
 
 A notification can open a new chat, but only at the box root. This plan adds a target `chat:new:<place directory>` that opens a new chat in that place, and stops a chat opened from a notification from offering an unrelated pending question.
 
-**Issues addressed:** [notification target cannot name a place](../../../issues/bugs/2026-11-10-notification-target-cannot-name-a-place.md); [notification chat gets a pending question offered](../../../issues/bugs/2026-11-10-notification-chat-gets-a-pending-question-offered.md). Searched `issues/` for "notification", "chat:new", "target": [notifications have no recipient](../../../issues/features/2026-10-30-notifications-have-no-recipient.md) and the notifications design issue are unrelated to tap targets. No duplicate.
+**Issues addressed:** [notification target cannot name a place](../../../issues/closed/bugs/2026-11-10-notification-target-cannot-name-a-place.md); [notification chat gets a pending question offered](../../../issues/closed/bugs/2026-11-10-notification-chat-gets-a-pending-question-offered.md). Searched `issues/` for "notification", "chat:new", "target": [notifications have no recipient](../../../issues/features/2026-10-30-notifications-have-no-recipient.md) and the notifications design issue are unrelated to tap targets. No duplicate.
 
 ## Design
 
