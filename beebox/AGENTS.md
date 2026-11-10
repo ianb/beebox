@@ -43,7 +43,7 @@ Open the owner for the area being changed:
 - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source tagging, and the enforced `className` boundary.
 - External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/connectors/`; read [connector guidance](src/connectors/AGENTS.md).
 - Hub routing: `src/hub/`; read [hub guidance](src/hub/AGENTS.md). Tests mirror source paths under `test/` and use helpers in `test/helpers/`.
-- Schemas, developer tooling, deployment code, and validator plugins live in `src/schemas/`, `src/dev/`, `deploy/`, and `plugins/` respectively. `box-docs/` is gitignored generated output: edit its sources in `docs/box/`, schema `instructions`, `src/core/views/doc/`, or `src/core/docs-gen/package-docs/`.
+- Schemas, developer tooling, deployment code, and validator plugins live in `src/schemas/`, `src/dev/`, `deploy/`, and `plugins/` respectively. `box-docs/` is gitignored generated output: edit its source instead, which `src/core/docs-gen/package-docs/core.ts` maps (prose docs are in `docs/box/`).
 
 Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports only public `beebox/{cards,schema,view-widgets}` specifiers and, for an activated plugin, `beebox/plugins/<name>`, never engine internals. Read the [box layout](docs/box-layout.md) before changing its on-disk shape, and [box work](docs/box-work.md) before running anything against a box: the test box, a throwaway box, or production.
 

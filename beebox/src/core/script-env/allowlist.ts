@@ -157,7 +157,7 @@ function pickAllowed(sourceEnv: NodeJS.ProcessEnv, names: readonly string[]): No
  * Build the inherited base env for a box-spawned subprocess: the allowlisted
  * names only. `connectorCreds` adds `CONNECTOR_ENV_ALLOWLIST` for the
  * `bbx`-tooling spawn profile — see `buildToolingScriptEnv` in
- * `script-env.ts`. An `execa` call passing this env also needs
+ * `script-env/core.ts`. An `execa` call passing this env also needs
  * `extendEnv: false`; without it execa merges `process.env` back in.
  */
 export function pickBoxSubprocessEnv(

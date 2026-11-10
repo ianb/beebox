@@ -19,7 +19,7 @@ What tests are NOT for: validating types (the type system does that), achieving 
 - **No server spin-up for testing.** Route tests use Fastify's `inject()`, not a running server. State-in → render → check output.
 - **TAP over fancy test runners.** TAP's text protocol is agent-readable and zero-dependency.
 - **`.test.ts` with `t.check` is the test form** ([reference](testing/check.md)). Each check compares a whole value, and the type checker checks the expected value.
-- **A test that proves a guard must fail without it.** When a test exists to prove a wait, guard, or fix, commit, then remove that code and confirm the test fails. Restore from the commit; `git checkout <file>` on uncommitted work loses it.
+- **A kept test that proves a guard must fail without it.** When a regression test exists to prove a wait, guard, or fix, commit, then remove that code and confirm the test fails. Restore from the commit; `git checkout <file>` on uncommitted work loses it.
 
 **Iteration runs the selected tests, not the suite.** `pnpm test:changed`
 selects and runs the tests the diff implicates; `pnpm typecheck` and

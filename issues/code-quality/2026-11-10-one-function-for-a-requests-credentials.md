@@ -11,7 +11,7 @@ Which credentials a request carries is decided in several places, and each place
 
 The agent-self-view workstream added a browser pass. The dev walk passed, but the built app's SPA fallback refused the pass. Cross-model review found this, and also found two gates the first plan draft missed (standalone root `/api/boxes` and the hub WebSocket upgrade). The workstream asked for one function that returns the whole credential picture for a request, so that each gate reads its answer from one place.
 
-A gate-by-credential table in `docs/security-report.md` or `beebox/docs/server/` was also asked for. It would show the current differences before any code changes.
+A gate-by-credential table in `beebox/docs/security-report.md` or `beebox/docs/server/` was also asked for. It would show the current differences before any code changes.
 
 Related: [browse key is not a signed-in owner](../bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md) (one effect of the split between the two resolvers).
 
