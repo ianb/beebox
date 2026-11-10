@@ -547,6 +547,10 @@ void test("A prime card that is missing, a directory, a non-card file, or outsid
   await landmark({ dir: "escape", label: "Escape", ref: "/../outside.card" });
   await landmark({ dir: "relative", label: "Relative", ref: "Draft.doc.card" });
   await box.write("_content/relative/Draft.doc.card", "---\ntitle: Draft\n---\n");
+  await landmark({ dir: "fragment", label: "Fragment", ref: "Draft.doc.card#ending" });
+  await box.write("_content/fragment/Draft.doc.card", "---\ntitle: Draft\n---\n");
+  await landmark({ dir: "disguise", label: "Disguise", ref: "/_content/disguise/readme.md#x.card" });
+  await box.write("_content/disguise/readme.md", "hello\n");
   await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: test\nintention:\n  text: Root next\n  ref: /_content/Welcome.doc.card\n---\n");
   await box.write("_content/Welcome.doc.card", "---\ntitle: Welcome\n---\n");
   const refOf = async (dir: string) => (await payload(box.root, { dir })).intention?.ref ?? null;
@@ -558,6 +562,8 @@ void test("A prime card that is missing, a directory, a non-card file, or outsid
       plain: await refOf("_content/plain"),
       escape: await refOf("_content/escape"),
       relative: await refOf("_content/relative"),
+      fragment: await refOf("_content/fragment"),
+      disguise: await refOf("_content/disguise"),
       goneArrival: (await payload(box.root, { dir: "_content/gone" })).arrival,
       root: { ref: root.intention?.ref ?? null, arrival: root.arrival },
     },
@@ -567,6 +573,8 @@ void test("A prime card that is missing, a directory, a non-card file, or outsid
       plain: null,
       escape: null,
       relative: "_content/relative/Draft.doc.card",
+      fragment: "_content/fragment/Draft.doc.card",
+      disguise: null,
       goneArrival: "_content/gone/Gone.landmark.card",
       root: { ref: "_content/Welcome.doc.card", arrival: "_content/Box.landmark.card" },
     },

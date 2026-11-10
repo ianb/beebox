@@ -25,8 +25,14 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+/**
+ * What this load hid when storage refused the write, else what storage holds.
+ * The in-memory value is kept only after a failed write, so it is the newer
+ * decision: a stale stored text (reads work, writes fail: a full store) must
+ * not keep showing the line the person just hid.
+ */
 function read(key: string): string | null {
-  return readDismissedText(entry(key)) ?? thisLoad.get(key) ?? null;
+  return thisLoad.get(key) ?? readDismissedText(entry(key));
 }
 
 /** The storage key for one place's intention in one box. */
@@ -39,8 +45,8 @@ export function useDismissedIntention({ key, text }: { key: string; text: string
   return {
     dismissed: isDismissed({ stored, text }),
     dismiss: () => {
-      thisLoad.set(key, text.trim());
-      writeDismissedText(entry(key), text);
+      if (writeDismissedText(entry(key), text)) thisLoad.delete(key);
+      else thisLoad.set(key, text.trim());
       for (const listener of listeners) listener();
     },
   };

@@ -31,9 +31,9 @@ interface RangeCommit {
   paths: string[];
 }
 
-async function rangeCommits(boxRoot: string, baseline: string): Promise<RangeCommit[]> {
+async function rangeCommits(boxRoot: string, { baseline, head }: { baseline: string; head: string }): Promise<RangeCommit[]> {
   const git = boxGit(boxRoot);
-  const log = await git.raw(["log", "--format=%H%x09%(trailers:key=Created-By,valueonly,separator=%x2C)", `${baseline}..HEAD`, "--"]);
+  const log = await git.raw(["log", "--format=%H%x09%(trailers:key=Created-By,valueonly,separator=%x2C)", `${baseline}..${head}`, "--"]);
   const commits: RangeCommit[] = [];
   for (const line of log.split("\n").filter((l) => l !== "")) {
     const [sha = "", trailers = ""] = line.split("\t");
@@ -88,15 +88,18 @@ export async function verifyIntentions(boxRoot: string): Promise<IntentionVerify
   if (state.run === null) return { ok: false, problems: ["no intention review is open; `bbx engine intentions check` opens one"] };
   const { baseline, listed } = state.run;
   const listedSet = new Set(listed);
+  // One HEAD, read before the range is collected and recorded as the review
+  // commit: a commit landing between the two would otherwise be recorded as
+  // reviewed without being seen.
+  const head = await getHeadSha(boxRoot);
+  if (head === null) return { ok: false, problems: ["the box has no commits"] };
   const problems = (await dirtyLandmarks(boxRoot, listed)).map((relPath) => `${relPath} has uncommitted changes`);
-  const commits = await rangeCommits(boxRoot, baseline);
+  const commits = await rangeCommits(boxRoot, { baseline, head });
   for (const commit of commits.filter((c) => c.byProcedure)) {
     problems.push(...(await judgeCommit(boxRoot, { commit, listed: listedSet })));
   }
   if (problems.length > 0) return { ok: false, problems };
 
-  const head = await getHeadSha(boxRoot);
-  if (head === null) return { ok: false, problems: ["the box has no commits"] };
   const others = commits.filter((c) => !c.byProcedure).flatMap((c) => c.paths);
   const reviewed = { ...state.reviewed };
   const recorded: string[] = [];

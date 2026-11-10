@@ -34,11 +34,15 @@ export function readDismissedText(entry: DismissedText): string | null {
   }
 }
 
-/** Store `text`, trimmed, as hidden. */
-export function writeDismissedText(entry: DismissedText, text: string): void {
+/** Store `text`, trimmed, as hidden. Returns whether the write reached storage. */
+export function writeDismissedText(entry: DismissedText, text: string): boolean {
   try {
-    entry.storage()?.setItem(entry.key, text.trim());
+    const storage = entry.storage();
+    if (storage === null) return false;
+    storage.setItem(entry.key, text.trim());
+    return true;
   } catch (_e) {
-    // storage unavailable: the line stays hidden for this load only, through the caller's state
+    // storage unavailable or full: the caller keeps the hidden text for this load
+    return false;
   }
 }

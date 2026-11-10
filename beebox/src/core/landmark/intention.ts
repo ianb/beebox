@@ -30,9 +30,10 @@ export interface ResolvedIntention {
  * relative to the landmark's directory resolves from it.
  */
 export async function resolvePrimeCard({ boxRoot, landmarkPath, ref }: { boxRoot: string; landmarkPath: string; ref: string }): Promise<string | null> {
-  if (!ref.endsWith(".card")) return null;
   const contained = resolveContainedRef({ boxRoot, fromPath: resolve(boxRoot, landmarkPath), ref });
-  if (contained === null) return null;
+  // The extension test is on the resolved path, after the ref's fragment and
+  // query are stripped: `Draft.doc.card#ending` is a card, `readme.md#x.card` is not.
+  if (contained === null || !contained.endsWith(".card")) return null;
   const safe = await realpathContained(boxRoot, contained);
   if (safe === null) return null;
   try {
