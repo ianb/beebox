@@ -3,6 +3,7 @@
 // Objects that carry a `ref` alongside descriptive fields keep both the link and
 // the sibling fields visible.
 
+import "../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, not } from "@ianbicking/tap-check/check";

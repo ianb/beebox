@@ -144,6 +144,10 @@ export async function renderView(options: RenderViewOptions): Promise<number> {
   // carries a node_modules/beebox (and react beside it), so it resolves
   // through THAT directly (box-package host).
   const mod = await writeNodeViewModule(output, viewHost);
+  // The widgets show dates through Temporal (a todo's due date, a source's
+  // date). Node 24 has no Temporal; the browser app loads the same polyfill in
+  // boot() (`src/frontend/src/lib/temporal.ts`).
+  if (!("Temporal" in globalThis)) await import("temporal-polyfill/global");
   try {
     process.setSourceMapsEnabled(true);
     let state: CheckState | null = null;

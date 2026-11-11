@@ -150,6 +150,12 @@ next action, and an `<ErrorText>` message with a retry. A blank screen while
 data resolves is a bug. A narrow change keeps the container's existing
 handling and does not add unreachable states.
 
+New calendar-date, time-zone, and duration code uses `Temporal`, never `Date`:
+a date-only value is a `Temporal.PlainDate`, a timestamp a `Temporal.Instant`.
+`boot()` loads the polyfill where the browser lacks Temporal
+(`src/frontend/src/lib/temporal.ts`), so read `Temporal` only inside functions, never at module
+load; a test of such code imports `src/frontend/test/helpers/temporal-global.ts`.
+
 ## Frontend UI Primitives
 
 Reach for a primitive from `src/frontend/src/components/ui/` before writing appearance classes inline. The primitives own appearance (colors, borders, shadows); callers own outer layout (margin, padding, flex-self, sizing, position) via a `className` prop.

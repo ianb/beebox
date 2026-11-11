@@ -6,6 +6,7 @@
 // treatment; date and assignment chips follow. Plate state comes from the
 // server, so only a todo the server calls `escalated` reads as overdue.
 
+import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as React from "react";
@@ -101,6 +102,18 @@ void test("A due date reads \"due Sep 15\".", async (t) => {
   t.check(dateChips({ due: "2027-01-04", start: undefined, plateState: null }, format), [
     { kind: "due", iso: "2027-01-04", text: "due Jan 4, 2027", warning: false },
   ]);
+
+  // A date is a calendar day, so it reads the same in every zone: behind UTC
+  // it is not the day before, and ahead of it not the day after.
+  const zoneBefore = process.env["TZ"];
+  t.teardown(() => {
+    if (zoneBefore === undefined) delete process.env["TZ"];
+    else process.env["TZ"] = zoneBefore;
+  });
+  t.check(["America/Los_Angeles", "Pacific/Kiritimati"].map((tz) => {
+    process.env["TZ"] = tz;
+    return dateChips({ due: "2026-09-15", start: "-1w", plateState: null }, format).map((chip) => chip.text);
+  }), [["due Sep 15", "since Sep 8"], ["due Sep 15", "since Sep 8"]]);
 
   // A `start` is the day the todo joins the plate. Until then the todo is
   // "later", the plate headline's word for it; after, the date reads "since".

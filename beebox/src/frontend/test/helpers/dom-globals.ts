@@ -3,8 +3,10 @@
  * environment flag, and a minimal DevTools hook that reports each commit to
  * `dom-harness.ts`. React DOM reads the window and the hook once, when it
  * loads, so this module must evaluate before `react-dom` does: `dom-harness.ts`
- * imports it first, and a test imports `dom-harness.ts` first.
+ * imports it first, and a test imports `dom-harness.ts` first. It also
+ * installs Temporal (`temporal-global.ts`), which the app loads in `boot()`.
  */
+import "./temporal-global.js";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 GlobalRegistrator.register({ url: "http://localhost/" });
