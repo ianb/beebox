@@ -139,10 +139,13 @@ function fixedDestination(record: QuickChatRecord | null) {
   invariant(record?.state === "sending" || record?.state === "sent", "expected a record with a fixed destination");
   return record;
 }
+// The assigned chat is retained in the background, after the delivery's own
+// save: wait for that retention write, which selects the existing chat, so the
+// test reads the final record and the write cannot land after cleanup.
 async function waitBound(box: TmpBox) {
   for(let n=0;n<200;n++) {
     const record=fixedDestination(await readQuickChatRecord(box.root,parent));
-    if(record.destination.sessionId) return record;
+    if(record.selected.target.kind==="existing-session") return record;
     await new Promise(resolve=>setTimeout(resolve,5));
   }
   return fixedDestination(await readQuickChatRecord(box.root,parent));
@@ -277,7 +280,7 @@ void test("line 224", async (t) => {
   const runtime=codexRuntime(box,"post-send");
   await chooseParent(box,runtime);
   const bound=await waitBound(box);
-  t.check(bound, chatRecord(NEW_SESSION,{state:"sent",sentAt:isoDate()}));
+  t.check(bound, chatRecord(EXISTING_SESSION,{state:"sent",sentAt:isoDate()}));
 
   await acceptFollowup(box);
   t.check(present(await processCapture(runtime.ctx,first)), FOLLOW_UP_SENT);

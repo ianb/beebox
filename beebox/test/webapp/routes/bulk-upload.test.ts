@@ -18,6 +18,7 @@ import { StagingSessionSchema, type StagingSession } from "../../../src/core/cap
 import { readStagingSession, writeStagingSession, sealStagingSession, setStagingState } from "../../../src/core/capture/staging-store/core.js";
 import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
 import { appendHistory, getDirectoryForSession } from "../../../src/core/chat/session/history.js";
+import { readRecent } from "../../../src/core/notification/log.js";
 
 // Bind a session→dir in history. The server fires a one-shot history backfill at
 // boot that can clobber a single append; re-append until it sticks (the backfill
@@ -112,16 +113,23 @@ async function uploadItem(ctx: TestServer, opts: {
 // outlives the response. Every test that finalizes waits here for the worker to
 // stop before cleanup deletes the box: a worker still running `git add` (through
 // git-annex) when the box directory vanishes hangs forever, and the file then
-// dies at tap's whole-file timeout instead of failing an assertion. Bounded, and
+// dies at tap's whole-file timeout instead of failing an assertion. A worker that
+// fails records `failed:*` first and then sends the person a failure notice, so
+// for a failure the wait lasts until that notice is in the box's log. Bounded, and
 // the error names the state the worker stalled in.
 async function waitForWorkerToSettle(ctx: TestServer, sessionId: string) {
   let session: StagingSession | null = null;
   for (let i = 0; i < 600; i++) {
     session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
-    if (session === null || session.state === "delivered" || session.state.startsWith("failed:")) return session?.state ?? "gone";
+    if (session === null || session.state === "delivered") return session?.state ?? "gone";
+    if (session.state.startsWith("failed:") && (await failureNoticeSent(ctx, sessionId))) return session.state;
     await new Promise((r) => setTimeout(r, 50));
   }
   throw new Error(`bulk worker for ${sessionId} did not settle within 30s; last state was ${String(session?.state)}`);
+}
+
+async function failureNoticeSent(ctx: TestServer, sessionId: string): Promise<boolean> {
+  return (await readRecent(ctx.boxRoot, { days: 1 })).some(({ intent }) => intent.tag === `bulk-upload:${sessionId}`);
 }
 
 // ## Create requires a target chat, then registers the initial item set
