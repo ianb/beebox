@@ -97,8 +97,11 @@ export function isComposing(event: KeyboardEvent): boolean {
 
 The rule checks functions given to JSX `onKeyDown`/`onKeyPress` (inline, or
 a function or const in the same file) and to `addEventListener("keydown" |
-"keypress", fn)`. It accepts any read of `isComposing`, `229`, or the
-`"Process"` key as the guard. No options.
+"keypress", fn)`. A guard reads `isComposing`, `229`, or the `"Process"`
+key, and it must control the Enter test: negated in the same `&&` chain or an
+enclosing `if`, or an earlier `if (<guard>) return;` in an enclosing block. A
+guard that is only logged, or comes after the action, does not count. No
+options.
 
 ### Limitations
 

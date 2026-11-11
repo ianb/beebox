@@ -15,9 +15,12 @@
  *   - a function given to `addEventListener("keydown" | "keypress", fn)`.
  *
  * A handler is reported when it compares `.key` or `.code` with "Enter" (or
- * has `case "Enter"` in a switch) and nowhere reads `isComposing` (a call such
- * as `isComposing(e.nativeEvent)` or a member `e.isComposing`), `229`, or the
- * "Process" key.
+ * has `case "Enter"` in a switch) and no composition check controls that
+ * test. A check is `isComposing` (a call such as `isComposing(e.nativeEvent)`
+ * or a member `e.isComposing`), `229`, or the "Process" key, and it controls
+ * the test when it is negated in the test's own `&&` chain or an enclosing
+ * `if`, or is an early `if (<check>) return;` before it in an enclosing block.
+ * A check that is only logged, or that comes after the action, does not count.
  *
  * Deliberately not reported:
  *   - handlers on elements with a button-like role or a native `<button>` /
@@ -101,14 +104,65 @@ function walk(node: unknown, visit: (n: ESTree.Node) => void): void {
   }
 }
 
-function readsCompositionGuard(fn: FunctionNode): boolean {
+/** Whether an expression reads a composition signal: `isComposing` (call or member), `229`, or "Process". */
+function containsGuard(node: ESTree.Node): boolean {
   let found = false;
-  walk(fn.body, (n) => {
+  walk(node, (n) => {
     if (found) return;
     if (n.type === "Identifier" && n.name === "isComposing") found = true;
     else if (n.type === "Literal" && (n.value === 229 || n.value === "Process")) found = true;
   });
   return found;
+}
+
+/** `!isComposing(e)`, `!e.isComposing`, `e.keyCode !== 229`: true only when no composition is active. */
+function isNegatedGuard(node: ESTree.Node): boolean {
+  if (node.type === "UnaryExpression" && node.operator === "!") return containsGuard(node.argument);
+  if (node.type === "BinaryExpression" && (node.operator === "!==" || node.operator === "!=")) return containsGuard(node);
+  return false;
+}
+
+function andOperands(node: ESTree.Node): ESTree.Node[] {
+  if (node.type === "LogicalExpression" && node.operator === "&&") return [...andOperands(node.left), ...andOperands(node.right)];
+  return [node];
+}
+
+/** `if (<reads composition>) return;` — the early exit that makes everything after it safe. */
+function isEarlyReturnGuard(statement: ESTree.Node): boolean {
+  if (statement.type !== "IfStatement" || statement.alternate) return false;
+  if (!containsGuard(statement.test) || andOperands(statement.test).some(isNegatedGuard)) return false;
+  const body = statement.consequent.type === "BlockStatement" ? statement.consequent.body : [statement.consequent];
+  return body.at(-1)?.type === "ReturnStatement";
+}
+
+function statementList(node: ESTree.Node): ESTree.Node[] | null {
+  if (node.type === "BlockStatement") return node.body;
+  if (node.type === "SwitchCase") return node.consequent;
+  return null;
+}
+
+/**
+ * Whether the composition check controls this Enter test: a negated guard in
+ * its own `&&` chain or an enclosing `if`, or an early-return guard before it
+ * in an enclosing block. A guard anywhere else (logged, or after the action)
+ * does not count.
+ */
+function isGuarded(target: ESTree.Node, fn: FunctionNode): boolean {
+  if (target.type === "BinaryExpression") {
+    let chain: ESTree.Node = target;
+    for (let up = parentOf(chain); up?.type === "LogicalExpression" && up.operator === "&&"; up = parentOf(up)) chain = up;
+    if (andOperands(chain).some(isNegatedGuard)) return true;
+  }
+  let current: ESTree.Node = target;
+  for (let up = parentOf(current); up !== null && current !== fn; current = up, up = parentOf(up)) {
+    if (up.type === "IfStatement" && up.consequent === current && andOperands(up.test).some(isNegatedGuard)) return true;
+    const list = statementList(up);
+    if (list !== null) {
+      const index = list.indexOf(current);
+      if (list.slice(0, Math.max(index, 0)).some(isEarlyReturnGuard)) return true;
+    }
+  }
+  return false;
 }
 
 /** Operands of the `&&` chain the comparison sits in, so `e.metaKey && e.key === "Enter"` is seen as one test. */
@@ -150,7 +204,7 @@ function isSuppressOnly(statement: ESTree.Statement): boolean {
   });
 }
 
-/** The first Enter test in the handler that acts, or null. */
+/** The first unguarded Enter test in the handler that acts, or null. */
 function findActingEnterTest(fn: FunctionNode): ESTree.Node | null {
   let hit: ESTree.Node | null = null;
   walk(fn.body, (n) => {
@@ -160,12 +214,12 @@ function findActingEnterTest(fn: FunctionNode): ESTree.Node | null {
       let owner = parentOf(n);
       while (owner?.type === "LogicalExpression") owner = parentOf(owner);
       if (owner?.type === "IfStatement" && isSuppressOnly(owner.consequent)) return;
-      hit = n;
+      if (!isGuarded(n, fn)) hit = n;
     } else if (n.type === "SwitchCase" && isEnterLiteral(n.test)) {
       const disc = parentOf(n);
       if (disc?.type !== "SwitchStatement" || !isKeyMember(disc.discriminant)) return;
       const acting = n.consequent.filter((s) => s.type !== "BreakStatement");
-      if (acting.length > 0 && !acting.every((s) => isSuppressOnly(s))) hit = n;
+      if (acting.length > 0 && !acting.every((s) => isSuppressOnly(s)) && !isGuarded(disc, fn)) hit = n;
     }
   });
   return hit;
@@ -220,7 +274,7 @@ const rule: Rule.RuleModule = {
   },
   create(context) {
     function check(fn: FunctionNode | null): void {
-      if (fn === null || readsCompositionGuard(fn)) return;
+      if (fn === null) return;
       const hit = findActingEnterTest(fn);
       if (hit !== null) context.report({ node: hit, messageId: "missingCompositionCheck" });
     }

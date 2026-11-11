@@ -39,6 +39,12 @@ describe("ime-safe-enter", () => {
         "el.addEventListener(name, (e) => { if (e.key === \"Enter\") go(); });",
         // switch with a guard.
         "<input onKeyDown={(e) => { if (isComposing(e.nativeEvent)) return; switch (e.key) { case \"Enter\": go(); break; } }} />",
+        // The guard on an enclosing if.
+        "<input onKeyDown={(e) => { if (!e.nativeEvent.isComposing) { if (e.key === \"Enter\") submit(); } }} />",
+        // An early-return guard whose block does more before returning.
+        "<input onKeyDown={(e) => { if (e.isComposing) { log(); return; } if (e.key === \"Enter\") submit(); }} />",
+        // An early-return guard that also checks 229.
+        "<input onKeyDown={(e) => { if (e.isComposing || e.keyCode === 229) { return; } if (e.key === \"Enter\") submit(); }} />",
       ],
       invalid: [
         { code: "<input onKeyDown={(e) => { if (e.key === \"Enter\") { e.preventDefault(); submit(); } }} />", errors: ERR },
@@ -59,6 +65,11 @@ describe("ime-safe-enter", () => {
         { code: "const h = function (e) { if (e.key === \"Enter\") go(); };\nwindow.addEventListener(\"keydown\", h);", errors: ERR },
         // A negated modifier is not a required modifier.
         { code: "<textarea onKeyDown={(e) => { if (e.key === \"Enter\" && !e.shiftKey) send(); }} />", errors: ERR },
+        // A composition read that does not control the Enter branch.
+        { code: "<input onKeyDown={(e) => { if (e.isComposing) log(); if (e.key === \"Enter\") submit(); }} />", errors: ERR },
+        { code: "<input onKeyDown={(e) => { if (e.key === \"Enter\") submit(); if (e.isComposing) return; }} />", errors: ERR },
+        // A non-negated guard in the chain means "only while composing".
+        { code: "<input onKeyDown={(e) => { if (e.key === \"Enter\" && e.isComposing) submit(); }} />", errors: ERR },
       ],
     });
   });
