@@ -206,7 +206,7 @@ Every control also has an accessible name, which screen readers, the box agent, 
 - `<Heading level={2|3}>` — section heading. Renders a real `h2`/`h3`; the level sets the look (2: lg semibold, 3: sm semibold). Pick the level from the page outline, never for size.
 - `<Hint>` — secondary explanatory text under a heading or control: a small muted `<p>`. Inline metadata beside other content (a timestamp in a `Row`) stays `<Text size="xs" tone="muted">`.
 - `<ErrorText>` — an error message: a small danger-colored `<p>`. Not a live region; the component that shows a new error owns any announcement.
-- `<StatusMessage>` — a pane's placeholder while it has nothing to show (loading, empty, not found): padded. Pass `busy` while loading. Progress text ("Saving…", "Loading…") is not a live region, so `busy` drops `role="status"`; empty and not-found text keeps it. Errors use `<ErrorText>`.
+- `<StatusMessage>` — a pane's placeholder while it has nothing to show (loading, empty, not found): padded. `role="status"`. Pass `busy` while loading, so screen readers hold the announcement until the result replaces the loading text. Other progress text ("Saving…") is not a live region. Errors use `<ErrorText>`.
 - `<Text>` — typography primitive for text no role above covers. `as` (span/p/div/h1..h6), `tone`, `size`, `weight`, `italic`, `mono`, `truncate`, `center`, `uppercase` (uppercase + tracking-wide, for small section headings), `breakAll` (break long URLs across any character).
 
 **Layout containers**

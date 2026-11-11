@@ -56,7 +56,6 @@ const HEADERS = ["when", "scanned", "kept", "filed", "skipped", "stopped", "note
 function RunsGrid({ rows }: { rows: RunRow[] }) {
   return (
     <table className="w-full text-sm">
-      <caption className="sr-only">Runs</caption>
       <thead>
         <tr>{HEADERS.map((h) => <th key={h} scope="col" className="text-left pr-2">{h}</th>)}</tr>
       </thead>

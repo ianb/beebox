@@ -13,9 +13,9 @@ export interface StatusMessageProps {
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
   /**
-   * The placeholder stands for content still loading: `aria-busy` marks it,
-   * it is not a live region, and `bbx browser screenshot --card` waits for it
-   * to clear.
+   * The placeholder stands for content still loading: `aria-busy` asks screen
+   * readers to hold the region's announcement until the result replaces the
+   * loading text, and `bbx browser screenshot --card` waits for it to clear.
    */
   busy?: boolean;
 }
@@ -27,9 +27,10 @@ const VARIANT_CLASSES: Record<StatusMessageVariant, string> = {
 
 /**
  * A placeholder while there is nothing to show: loading, empty, or not
- * found. Empty and not-found text is `role="status"`; loading text (`busy`)
- * is not announced. Errors use `ErrorText`.
+ * found. It stays one `role="status"` region from loading to result, so the
+ * result is announced as a change inside an existing live region. Errors use
+ * `ErrorText`.
  */
 export function StatusMessage({ children, variant, className, busy }: StatusMessageProps) {
-  return <div role={busy === true ? undefined : "status"} aria-busy={busy === true ? true : undefined} className={cn(VARIANT_CLASSES[variant ?? "pane"], className)}>{children}</div>;
+  return <div role="status" aria-busy={busy === true ? true : undefined} className={cn(VARIANT_CLASSES[variant ?? "pane"], className)}>{children}</div>;
 }

@@ -191,7 +191,6 @@ function ScheduleTable({ schedules }: { schedules: ScheduleInfo[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <caption className="sr-only">Schedules</caption>
         <ScheduleTableHead />
         <tbody className="divide-y divide-warm-200">
           {schedules.map((s) => (

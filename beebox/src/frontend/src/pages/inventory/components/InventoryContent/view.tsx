@@ -85,7 +85,6 @@ function StorageTable({ storage }: { storage: Inventory["repository"]["storage"]
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
-        <caption className="sr-only">Storage</caption>
         <thead><tr className="border-b border-warm-300 text-left text-warm-700"><th scope="col" className="py-2 pr-3 font-medium">Storage</th>{columns.map((column) => <th key={column.label} scope="col" className="py-2 px-3 text-right font-medium">{column.label}</th>)}</tr></thead>
         <tbody>
           <StorageRow label="Annexed" columns={columns.map((column) => column.value.annexed)} />

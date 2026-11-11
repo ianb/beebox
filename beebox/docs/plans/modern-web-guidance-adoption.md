@@ -944,12 +944,14 @@ explicit button types (`d45bc4faa`), D4 `px`→`rem` with its lint rule
 (`a884ce949`).
 
 2026-11-11, three rejected accessibility items the boxholder approved:
-progress text ("Saving…", "Loading…", "Checking…", "Catching up…") is no
-longer `role="status"` (`StatusMessage` drops it when `busy`, and its loading
-callers now pass `busy`); every list without visible markers has
+standalone progress text ("Saving…", "Checking…", "Catching up…") is no
+longer `role="status"`; `StatusMessage` stays one status region from loading
+to result (so the result is announced) and its loading callers now pass
+`busy`, which sets `aria-busy`; every list without visible markers has
 `role="list"` so Safari keeps list semantics, with
 `jsx-a11y/no-redundant-roles` set to allow `ul`/`ol` `list` in the preset;
-data tables have `scope="col"` headers and a screen-reader-only `<caption>`.
+data tables have `scope="col"` headers and a screen-reader-only `<caption>`
+where no visible heading already names them.
 
 **Size.** About 3,170 changed source and test lines (about 1,000 of them
 tests) and about 210 lines of authored docs: a BIG CHANGE, about 1.7 times
