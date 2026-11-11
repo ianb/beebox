@@ -1,6 +1,6 @@
 ---
 title: "Adopt GoogleChrome/modern-web-guidance, whole or in part, for dev and box agents"
-workstream: unattached
+workstream: web-guidance-scan
 area: beebox
 labels: [agent-guidance, frontend, views]
 needs: [decision]
@@ -82,3 +82,22 @@ a guide that is never retrieved costs nothing.
 - **Evals.** Read `modern-web-guidance-src` to see what the evals measure,
   and whether our knowledge audits (`knowledge-audit` skill) could check that
   the guidance takes effect here.
+
+## Scan and adoption plan (2026-11-11)
+
+The scan ran, and a plan for discussion is at
+[`beebox/docs/plans/modern-web-guidance-adoption.md`](../../beebox/docs/plans/modern-web-guidance-adoption.md).
+The guide-by-guide evidence is in
+[`research/modern-web-guidance/`](../../research/modern-web-guidance/README.md).
+
+- `legacy-scan` (33 rules, about 20% of the guides) found 7 candidates; 4
+  were real (IME-unsafe Enter handlers). Its CSS matchers cannot see Tailwind
+  classes.
+- Reading all 209 guides against the code gave 47 adopt or adopt-with-changes
+  entries, 52 reject, and 140 that do not apply. The plan groups them into
+  categories A–I, each with a recommendation to decide on its own.
+- Three sample fixes are committed on `worktree-web-guidance-scan`: the IME
+  fix with a ported ESLint rule, field hint/error linking, and modal scroll
+  containment with `min-h-dvh`.
+- Decide first: the browser floor (iOS 17.0 today, unwritten), which sets
+  about 30 of the leans.
