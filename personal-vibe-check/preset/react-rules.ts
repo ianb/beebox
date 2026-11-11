@@ -30,6 +30,10 @@ export const reactRules: Linter.RulesRecord = {
   // Not in recommended. Link text such as "click here" or "link" names
   // nothing out of context.
   "jsx-a11y/anchor-ambiguous-text": "error",
+  // A keydown handler that acts on Enter skips IME composition, so Enter
+  // that confirms Japanese/Chinese/Korean input does not submit. Ported
+  // from modern-web-guidance's ime-safe-enter-submit matcher.
+  "personal-vibe-check/ime-safe-enter": "error",
   // prefer-tag-over-role stays off: it asks for <output> on every
   // role="status" and <hr> for separators, which is churn without a
   // user-visible gain.

@@ -79,6 +79,37 @@ Prettier handles formatting (indentation, line wrapping, spacing) automatically.
 - Files max 300 lines, functions max 150 lines (excluding blanks/comments)
 - **Only export what's needed**: don't export functions/constants only used within their own file. knip enforces this.
 
+## Enter Handlers and IME Composition
+
+With `react: true`, `personal-vibe-check/ime-safe-enter` reports a keydown
+handler that acts on Enter without checking IME composition. Enter also
+confirms text typed through a Japanese, Chinese or Korean input method; a
+handler that submits on it submits half-typed text. Return early first:
+
+```ts
+export function isComposing(event: KeyboardEvent): boolean {
+  // Safari ends a composition with isComposing false but keyCode 229.
+  return event.isComposing || event.keyCode === 229;
+}
+
+<input onKeyDown={(e) => { if (e.key === "Enter" && !isComposing(e.nativeEvent)) submit(); }} />
+```
+
+The rule checks functions given to JSX `onKeyDown`/`onKeyPress` (inline, or
+a function or const in the same file) and to `addEventListener("keydown" |
+"keypress", fn)`. It accepts any read of `isComposing`, `229`, or the
+`"Process"` key as the guard. No options.
+
+### Limitations
+
+- Handlers on `<button>`, `<a>`, or an element with a button-like `role`
+  are skipped: Enter activates them. The rule cannot see what a component
+  renders, so `<TextField onKeyDown>` and `<Button onKeyDown>` are both
+  checked.
+- An Enter test that also requires Ctrl, Meta or Alt, and an Enter branch
+  that only calls `preventDefault`/`stopPropagation`, are skipped.
+- Handlers imported from another module are not checked.
+
 ## Restricting `className` on Components (opt-in)
 
 The rule `personal-vibe-check/restrict-component-classes` enforces the convention:

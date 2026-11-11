@@ -112,6 +112,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
   - From `improve-codebase-architecture` and `codebase-design`: the deepening pass, the deletion test, and the module, interface, depth, and seam vocabulary.
 - **Where it landed:** `beebox/docs/testing.md`, `beebox/code-style.md`
 
+### Modern Web Guidance, by Google Chrome
+
+- **Source:** [GoogleChrome/modern-web-guidance-src](https://github.com/GoogleChrome/modern-web-guidance-src) (Apache-2.0).
+- **What we took:** The detection logic of its `ime-safe-enter-submit` static matcher, ported to an ESLint rule: an Enter test in a keydown handler needs an IME composition check, with its exemptions for button-like elements, modifier-gated Enter, and suppress-only branches.
+- **Where it landed:** `personal-vibe-check/rules/ime-safe-enter.ts`.
+
 ### No Mistakes, by kunchenguid
 
 - **Source:** https://github.com/kunchenguid/no-mistakes (MIT)
