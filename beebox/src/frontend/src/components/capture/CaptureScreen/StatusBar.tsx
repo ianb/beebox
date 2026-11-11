@@ -12,6 +12,8 @@
  * in `CaptureControls`, where there is room for a control worth tapping.
  */
 
+import { LiveDot } from "../../ui/LiveDot";
+
 interface StatusBarProps {
   includeControlIds?: boolean;
   recording: boolean;
@@ -53,14 +55,14 @@ export function StatusBar(props: StatusBarProps) {
       <div className="flex items-center gap-3">
         {props.recording ? (
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 bg-danger rounded-full animate-pulse" />
+            <LiveDot tone="danger" />
             <span className="text-sm font-mono">{props.formatTime(props.recordingTime)}</span>
           </div>
         ) : null}
         {!props.recording && props.audioTotal > 0 ? (
           <div className="flex items-center gap-1.5 text-sm">
             {props.audioUploading > 0 ? (
-              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">audio uploading</span></>
+              <><LiveDot tone="warning" /><span className="text-warning-light">audio uploading</span></>
             ) : props.audioFailed > 0 ? (
               <>
                 <span className="text-danger-light">&#10007;</span>
@@ -76,7 +78,7 @@ export function StatusBar(props: StatusBarProps) {
         {props.photoTotal - props.photosUnreadable > 0 ? (
           <div className="flex items-center gap-1.5">
             {props.photosUploading > 0 ? (
-              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.photosUploaded}/{props.photoTotal}{percentLabel(props.activeUploadPercent)}</span></>
+              <><LiveDot tone="warning" /><span className="text-warning-light">{props.photosUploaded}/{props.photoTotal}{percentLabel(props.activeUploadPercent)}</span></>
             ) : props.photosFailed > 0 ? (
               <>
                 <span className="text-danger-light">&#10007;</span>
@@ -91,7 +93,7 @@ export function StatusBar(props: StatusBarProps) {
         {props.fileTotal - props.filesUnreadable > 0 ? (
           <div className="flex items-center gap-1.5">
             {props.filesUploading > 0 ? (
-              <><span className="w-2 h-2 bg-warning-light rounded-full animate-pulse" /><span className="text-warning-light">{props.filesUploaded}/{props.fileTotal} files{percentLabel(props.activeUploadPercent)}</span></>
+              <><LiveDot tone="warning" /><span className="text-warning-light">{props.filesUploaded}/{props.fileTotal} files{percentLabel(props.activeUploadPercent)}</span></>
             ) : props.filesFailed > 0 ? (
               <>
                 <span className="text-danger-light">&#10007;</span>

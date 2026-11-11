@@ -10,6 +10,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { trpcClient } from "../../../../lib/trpc/client";
 import { formatDuration } from "@shared/relative-time";
 import { applyTaskEvent, applyTaskLevel, type LiveTask, type LiveTaskEntry, type TaskEvent } from "./background-tasks";
+import { LiveDot } from "../../../ui/LiveDot";
 
 /**
  * Hold the live-task list for one chat session. Returns the current tasks plus
@@ -52,7 +53,7 @@ export function useBackgroundTasks(sessionId: string | null): {
 function TaskPill({ task }: { task: LiveTask }) {
   return (
     <div className="flex items-center gap-2 text-xs text-warm-700 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
-      <span className="inline-block w-2 h-2 rounded-full bg-info animate-pulse flex-shrink-0" />
+      <LiveDot tone="info" />
       <span className="font-medium truncate">{task.description}</span>
       {task.lastToolName ? (
         <span className="text-warm-400 flex-shrink-0">· {task.lastToolName}</span>

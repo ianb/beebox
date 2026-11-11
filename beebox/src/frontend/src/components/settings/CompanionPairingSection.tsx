@@ -12,6 +12,7 @@ import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { errorMessage } from "@shared/error-guards";
+import { StatusMessage } from "../ui/StatusMessage";
 
 type MobileDevice = RouterOutput["pairing"]["devices"]["devices"][number];
 type DeviceScope = RouterOutput["pairing"]["devices"]["scope"];
@@ -222,7 +223,7 @@ export function CompanionPairingSection() {
         <Stack gap="xs">
           <Heading level={3}>{deviceHeading(devicesQuery.data?.scope)}</Heading>
           {devicesQuery.isLoading ? (
-            <Hint>Loading devices...</Hint>
+            <StatusMessage variant="inline" busy>Loading devices…</StatusMessage>
           ) : devicesQuery.error ? (
             <ErrorText>Devices could not be loaded. {devicesQuery.error.message}</ErrorText>
           ) : devicesQuery.data && devicesQuery.data.devices.length > 0 ? (

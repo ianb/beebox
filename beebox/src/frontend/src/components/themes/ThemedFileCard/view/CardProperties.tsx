@@ -13,6 +13,7 @@ import { Prominence, effectiveLevel } from "@shared/prominence";
 import { PropertyLink, PropertyProblem } from "./property-section";
 import { useLiveRefresh } from "../../../../hooks/useLiveRefresh";
 import { anyFileChange } from "../../../../lib/live-refresh";
+import { StatusMessage } from "../../../ui/StatusMessage";
 
 /** "<level>" when the card declares one, "<level>, the type's default" when it does not; the raw value when the schema is unknown. */
 function prominenceText(value: unknown, schema: FileData["schema"]): string | null {
@@ -87,7 +88,7 @@ export function CardMentions({ path, onNavigate }: { path: string; onNavigate: (
   const incomplete = (query.data?.errors ?? []).length > 0;
   return <section className="mt-6" aria-label="Mentions">
     <h3 className="text-sm font-semibold mb-2">Mentioned by</h3>
-    {query.isLoading ? <p className="text-sm">Checking mentions…</p> : null}
+    {query.isLoading ? <StatusMessage variant="inline" busy>Checking mentions…</StatusMessage> : null}
     {query.error || incomplete ? <PropertyProblem
       message={query.error ? `Could not check mentions: ${query.error.message}` : "Some files could not be checked. This list is incomplete."}
       onRetry={() => { void query.refetch(); }} /> : null}

@@ -8,6 +8,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
+import { StatusMessage } from "../ui/StatusMessage";
 
 type SystemThemeScope =
   | { scope: "box"; boxKey: string }
@@ -118,7 +119,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
       ]);
     },
   });
-  if (query.isLoading) return <div aria-busy="true"><Hint>Loading system themes…</Hint></div>;
+  if (query.isLoading) return <StatusMessage variant="inline" busy>Loading system themes…</StatusMessage>;
   if (query.error || !query.data) {
     return <Stack gap="sm"><ErrorText>Could not load system themes: {query.error?.message ?? "No settings were returned."}</ErrorText>
       <Button size="sm" intent="ghost" className="self-start" onClick={() => void query.refetch()}>Retry</Button></Stack>;

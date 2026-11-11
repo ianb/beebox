@@ -11,11 +11,11 @@ import { Menu, type MenuVertical } from "../ui/Menu";
 import { MenuItem } from "../ui/menu-item";
 import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
-import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { legacyHistoryState } from "../history/card-state";
+import { StatusMessage } from "../ui/StatusMessage";
 
 function MoreIcon() {
   return <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>;
@@ -91,7 +91,7 @@ export function CardActions({ target, onTrashed, vertical }: {
       >
         <h2 id="trash-card-title" className="text-lg font-semibold text-warm-900">Move this card to Trash?</h2>
         <Text as="p" size="sm" tone="subtle" className="mt-2">The card remains recoverable from box Trash and git history.</Text>
-        {refs.isLoading ? <Hint className="mt-4">Checking links…</Hint> : null}
+        {refs.isLoading ? <StatusMessage variant="inline" busy className="mt-4">Checking links…</StatusMessage> : null}
         {refs.error ? <ErrorText className="mt-4">Could not check links: {refs.error.message}</ErrorText> : null}
         {refs.data?.errors.length ? <ErrorText className="mt-4">Some files could not be checked. The list of links may be incomplete.</ErrorText> : null}
         {referrers.length > 0 ? (

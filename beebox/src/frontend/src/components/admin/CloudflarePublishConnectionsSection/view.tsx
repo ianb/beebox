@@ -21,6 +21,7 @@ import { OrphanPublications } from "./OrphanPublications";
 import { Accordion } from "../../ui/Accordion";
 import { TokenSetupGuidance } from "./guidance";
 import { RevealCloudflareToken } from "./RevealCloudflareToken";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 type Connection = RouterOutput["cloudflarePublishConnections"]["list"][number];
 
@@ -83,7 +84,7 @@ export function CloudflarePublishConnectionsSection() {
   }
 
   if (connections.isLoading) {
-    return <AdminSectionCard id="cloudflare-publishing" description={DESCRIPTION} busy><Hint>Loading Cloudflare connections…</Hint></AdminSectionCard>;
+    return <AdminSectionCard id="cloudflare-publishing" description={DESCRIPTION} busy><StatusMessage variant="inline" busy>Loading Cloudflare connections…</StatusMessage></AdminSectionCard>;
   }
 
   return (

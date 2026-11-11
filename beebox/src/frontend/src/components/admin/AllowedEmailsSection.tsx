@@ -14,6 +14,7 @@ import { Hint } from "../ui/Hint";
 import { TextField } from "../ui/fields/field";
 import { isComposing } from "../../lib/ime";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { StatusMessage } from "../ui/StatusMessage";
 
 const DESCRIPTION = "Email addresses that can access this box. Leave empty to keep the box owner-only.";
 
@@ -123,7 +124,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
 function LoadingAllowedUsers() {
   return (
     <AdminSectionCard id="allowed-users" description={DESCRIPTION} busy>
-      <Hint>Loading allowed users…</Hint>
+      <StatusMessage variant="inline" busy>Loading allowed users…</StatusMessage>
     </AdminSectionCard>
   );
 }

@@ -26,6 +26,7 @@ import {
 import { UserEntryContent, originalDisplayText } from "./user-entry-content";
 import { isOtherChatUser } from "./chat-message-sender";
 import { UNDELIVERED_EDGE, UndeliveredActions, UndeliveredLine, type UndeliveredVerbs } from "./undelivered";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 export type { UndeliveredVerbs };
 // The words a Resend sends again (`undelivered-verbs.ts`).
@@ -100,7 +101,7 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
       {expanded ? (
         <div className="mx-4 mt-2 bg-warm-50 border border-warm-200 rounded-lg p-3 text-xs">
           {loadingOutput ? (
-            <div className="text-warm-700 italic">Loading output...</div>
+            <StatusMessage variant="inline" busy>Loading output…</StatusMessage>
           ) : output ? (
             <Pre size="xs" scroll="md">{output}</Pre>
           ) : (

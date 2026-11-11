@@ -30,6 +30,7 @@ import { useVoiceCapabilities } from "./capabilities";
 import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
 import { ConversationIcon, SpeakerIcon, FloorIcon } from "./icons";
 import { VoiceChipButtonFace } from "../../app-bar-faces/VoiceChipButtonFace";
+import { LiveDot } from "../../ui/LiveDot";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
@@ -71,7 +72,7 @@ export function VoiceChipFace(props: VoiceChipFaceState) {
               spare (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`).
               Below `sm:` the same fact is a pulse on the chip; the accessible
               name says "transcribing" at every width either way. */}
-          <span aria-hidden="true" className="sm:hidden w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+          <LiveDot size="sm" className="sm:hidden" />
           <span className="hidden sm:inline text-xs">transcribing…</span>
         </>
       ) : null}

@@ -10,6 +10,7 @@ import { Text } from "../ui/Text";
 import { CheckboxField, TextField } from "../ui/fields/field";
 import { FriendlyDate } from "../ui/FriendlyDate";
 import { AdminSectionCard } from "./AdminSectionCard";
+import { StatusMessage } from "../ui/StatusMessage";
 
 const DESCRIPTION = "Encrypted Restic snapshots of this box, separate from Git and git-annex copies.";
 
@@ -70,7 +71,7 @@ export function EncryptedBackupsSection() {
 
   return (
     <AdminSectionCard id="encrypted-backups" description={DESCRIPTION} busy={query.isLoading}>
-      {query.isLoading ? <Hint>Checking encrypted backup status…</Hint> : null}
+      {query.isLoading ? <StatusMessage variant="inline" busy>Checking encrypted backup status…</StatusMessage> : null}
       {query.error ? <ErrorText>{encryptedBackupStatusErrorMessage(query.error.data?.code)}</ErrorText> : null}
       {query.data ? (
         <Stack gap="md">

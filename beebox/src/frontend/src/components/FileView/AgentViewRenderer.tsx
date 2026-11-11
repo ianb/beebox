@@ -33,6 +33,7 @@ import { viewSlugFromSourcePath } from "../../lib/view-source-path";
 import { type ViewState } from "../../lib/view-url";
 import type { ViewHistory, ViewLayout } from "@core/views/types.js";
 import { useViewHistory } from "../../hooks/useViewHistory";
+import { StatusMessage } from "../ui/StatusMessage";
 // Side effect: installs window.__bbxViewWidgets so the compiler's
 // `beebox/view-widgets` shim can hand CardLink/CardRef/Markdown to compiled views.
 import "../view-widgets/window-globals";
@@ -350,9 +351,9 @@ export function AgentViewRenderer({ slug: rawSlug, embedded, params, viewState, 
 
   if (!mod || loadedCards?.slug !== slug) {
     return (
-      <div aria-busy="true" className="flex items-center justify-center p-8 text-gray-500">
-        Loading view...
-      </div>
+      <StatusMessage busy className="flex items-center justify-center">
+        Loading view…
+      </StatusMessage>
     );
   }
   const { params: loadedParams, cards, files } = loadedCards;

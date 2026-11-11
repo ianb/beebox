@@ -51,6 +51,7 @@ import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
 import { FriendlyDate } from "../ui/FriendlyDate";
 import { Button } from "../ui/Button";
+import { Skeleton } from "../ui/Skeleton";
 
 function DocumentHeader({ fields, fallbackName }: { fields: ExtractedDocumentFields; fallbackName: string }) {
   const { title, author, pages, format, acquired, channel, description, originalName } = fields;
@@ -204,7 +205,7 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
         <AttachedComments cardPath={data.path} frontmatter={data.frontmatter} />
 
         {pagesLoading ? (
-          <div className="h-24 bg-warm-100 rounded animate-pulse" role="status" aria-busy="true" aria-label="Loading page renders" />
+          <div role="status" aria-busy="true" aria-label="Loading page renders"><Skeleton className="h-24" /></div>
         ) : null}
         {pagesError ? (
           <ErrorText>Could not list page renders: {pagesError.message}</ErrorText>

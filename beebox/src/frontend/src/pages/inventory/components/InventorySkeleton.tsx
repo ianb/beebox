@@ -1,12 +1,13 @@
 import { Card } from "../../../components/ui/Card";
+import { Skeleton } from "../../../components/ui/Skeleton";
 import { Stack } from "../../../components/ui/Stack";
 
-export function InventoryLoading() {
+export function InventorySkeleton() {
   return (
     <Card aria-label="Loading storage" aria-busy>
       <Stack gap="md">
-        <div className="h-5 w-48 animate-pulse rounded bg-warm-200" />
-        <div className="h-80 animate-pulse rounded bg-warm-100" />
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-80" />
       </Stack>
     </Card>
   );

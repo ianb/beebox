@@ -15,6 +15,7 @@ import { Markdown } from "../../Markdown/body";
 import { conciseScheduleError } from "@shared/schedule-error";
 import { useViewNavigate } from "../../../hooks/useViewNavigate";
 import { deferText, idleLabel } from "./idle";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 type RunEntry = RouterOutput["scheduler"]["runs"]["runs"][number];
 
@@ -94,7 +95,7 @@ function RunItem({ run }: { run: RunEntry }) {
 
 function RunList({ name }: { name: string }) {
   const query = trpc.scheduler.runs.useQuery({ name });
-  if (query.isPending) return <p className="text-xs text-warm-700 animate-pulse">Loading runs...</p>;
+  if (query.isPending) return <StatusMessage variant="inline" busy>Loading runs…</StatusMessage>;
   if (query.error) return <p className="text-xs text-danger-dark">Could not load runs: {query.error.message}</p>;
   if (query.data.runs.length === 0) return <p className="text-xs text-warm-700">No runs recorded on this machine yet.</p>;
   return (

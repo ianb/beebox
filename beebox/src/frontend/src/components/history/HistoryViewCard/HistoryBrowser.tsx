@@ -16,6 +16,7 @@ import { Text } from "../../ui/Text";
 import { ErrorText } from "../../ui/ErrorText";
 import { EMPTY_FILTER } from "../filter";
 import { historySelectionMissing, resolveHistorySelection } from "./history-selection";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 const CommitDetail = lazy(async () => {
   const module = await import("./CommitDetail");
@@ -162,7 +163,7 @@ export function HistoryBrowser({
 
       <Stack gap="none" overflow="hidden" hideOnMobile={!hasDetail} className="flex-1">
         {selectedCommit ? (
-          <Suspense fallback={<Row justify="center" align="center" className="h-full"><Text tone="muted">Loading commit…</Text></Row>}><CommitDetail
+          <Suspense fallback={<Row justify="center" align="center" className="h-full"><StatusMessage variant="inline" busy>Loading commit…</StatusMessage></Row>}><CommitDetail
             commit={selectedCommit}
             onBack={() => onSelectedHashChange?.(null)}
             onFilterSession={handleFilterSession}
@@ -178,7 +179,7 @@ export function HistoryBrowser({
                 ? `No commit in this box's history starts with ${selectedHash}.`
                 : (deepLinkPending && typeof selectedHash === "string"
                   ? `Looking for commit ${selectedHash}…`
-                  : (loading ? "Loading..." : "Select a commit to view details"))}
+                  : (loading ? "Loading…" : "Select a commit to view details"))}
             </Text>
           </Row>
         )}

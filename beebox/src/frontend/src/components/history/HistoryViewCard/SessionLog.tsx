@@ -5,6 +5,7 @@
 import { useState, useMemo } from "react";
 import type { SessionContentBlock } from "../../../api";
 import { trpc } from "../../../lib/trpc/client";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 interface SessionLogProps {
   sessionId: string;
@@ -132,7 +133,7 @@ export function SessionLog({ sessionId, idPrefix }: SessionLogProps) {
           <EntryView key={entry.uuid} entry={entry} />
         ))}
       </div>
-      {loading ? <div className="p-3 text-sm text-warm-700">Loading...</div> : null}
+      {loading ? <StatusMessage variant="inline" busy className="p-3">Loading…</StatusMessage> : null}
       {hasNextPage && !loading ? <button type="button"
           id={`${idPrefix}-session-log-load-more`}
           // fetchNextPage's failure surfaces via the query's own error state.

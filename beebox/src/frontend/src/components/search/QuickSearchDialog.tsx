@@ -9,6 +9,7 @@ import { heldBackText } from "./held-back";
 import { trpc } from "../../lib/trpc/client";
 import { useWorkspace } from "../chat/workspace/WorkspaceProvider/provider";
 import { isComposing } from "../../lib/ime";
+import { StatusMessage } from "../ui/StatusMessage";
 
 export function QuickSearchDialog() {
   const workspace = useWorkspace();
@@ -54,7 +55,7 @@ export function QuickSearchDialog() {
     <h2 id="quick-search-title" className="sr-only">Quick search</h2>
     <TextField label="Quick search" hideLabel type="search" value={query} onChange={(value) => { setQuery(value); setActive(0); }} onKeyDown={onInputKey} placeholder="Search or go to a path…" />
     {!query ? <Text tone="muted" className="pt-3">Type to search this box. Press Escape to close.</Text> : null}
-    {results.isLoading ? <Text tone="muted" className="pt-3">Searching…</Text> : null}
+    {results.isLoading ? <StatusMessage variant="inline" busy className="pt-3">Searching…</StatusMessage> : null}
     {results.error ? <ErrorText className="pt-3">Could not search: {results.error.message}</ErrorText> : null}
     {results.data ? <div className="-mx-5 -mb-5 mt-3 max-h-[65vh] overflow-y-auto"><SearchResults results={list} activeIndex={active} query={query} onOpen={(item) => { void openResult(item); }} /></div> : null}
     {heldNote ? <Text tone="muted" size="sm" className="pt-3">{heldNote}</Text> : null}

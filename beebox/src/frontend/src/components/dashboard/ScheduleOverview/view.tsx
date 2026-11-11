@@ -20,6 +20,8 @@ import { Badge } from "../../ui/Badge";
 import { TickList, quietTickCount } from "../ScheduleTicks";
 import { agoOnClock } from "../../../lib/relative-time";
 import { formatDuration } from "@shared/relative-time";
+import { LiveDot } from "../../ui/LiveDot";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];
@@ -208,7 +210,7 @@ function RunningIndicator({ running }: { running: { startedAt: string; triggered
   const elapsed = now === 0 || Number.isNaN(startedAt) ? null : formatDuration(Math.max(0, now - startedAt));
   return (
     <span className="text-warning text-xs font-medium" title={`Triggered by ${running.triggeredBy}`}>
-      <span className="inline-block w-2 h-2 rounded-full bg-warning animate-pulse mr-1 align-middle" />
+      <LiveDot tone="warning" className="mr-1 align-middle" />
       running{elapsed === null ? "" : ` (${elapsed})`}
     </span>
   );
@@ -221,7 +223,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
     return (
       <Card as="section" aria-label="Schedules" shadow border="none">
         <h2 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h2>
-        <p className="text-sm text-warm-700 animate-pulse">Loading...</p>
+        <StatusMessage variant="inline" busy>Loading schedules…</StatusMessage>
       </Card>
     );
   }

@@ -37,6 +37,7 @@ import { BatchList } from "./browser-task/BatchList";
 import { RunsTable } from "./browser-task/RunsTable";
 import { INBOX_DIR, PROCESSED_DIR, fetchBoxText, loadBatches, schemaPath, type BatchSummary } from "./browser-task/data";
 import { stringOrNull } from "@shared/optional-string";
+import { StatusMessage } from "./ui/StatusMessage";
 
 interface AttachState {
   schemaText: string | null;
@@ -146,7 +147,7 @@ export function BrowserTaskView({ data, onNavigate }: RendererProps) {
 
 function SchemaCard({ attach }: { attach: AttachState | null }) {
   let content;
-  if (attach === null) content = <Text as="p" tone="subtle">Loading…</Text>;
+  if (attach === null) content = <StatusMessage variant="inline" busy>Loading the record schema…</StatusMessage>;
   else if (attach.schemaText === null) content = <ErrorText>Missing: put a JSON Schema for one record at attach/schema.json.</ErrorText>;
   else content = <Pre boxed scroll="md">{attach.schemaText}</Pre>;
   const problem = attach !== null && attach.schemaText !== null ? attach.schemaProblem : null;

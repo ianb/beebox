@@ -22,6 +22,7 @@ import { GoogleConnectLink, GoogleServiceProblem } from "../GoogleConnectLink";
 import { DriveMountRow } from "./DriveMountRow";
 import { AddPointerForm, MountFolderForm } from "./DriveMountForms";
 import { DriveScheduleLine } from "./DriveScheduleLine";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 function DriveShell({ children }: { children: React.ReactNode }) {
   return (
@@ -52,7 +53,7 @@ export function DriveSection() {
   if (data === undefined) {
     return (
       <DriveShell>
-        <Text size="sm" tone="muted">Loading Drive mounts…</Text>
+        <StatusMessage variant="inline" busy>Loading Drive mounts…</StatusMessage>
       </DriveShell>
     );
   }

@@ -17,6 +17,7 @@ import { Badge } from "./components/ui/Badge";
 import { TextLink } from "./components/ui/TextLink";
 import { getRenderers, type FileData, type RendererProps } from "./file-type-registry";
 import type { ReactNode } from "react";
+import { StatusMessage } from "./components/ui/StatusMessage";
 
 /** One `.card` entry in a `status.browse` listing. */
 export type BrowseCardEntry = RouterOutput["status"]["browse"]["cards"][number];
@@ -87,7 +88,7 @@ function CardAccordionBody({
 }) {
   const { data: card, isLoading, error } = trpc.card.get.useQuery({ path: cardPath });
 
-  if (isLoading) return <Text size="sm" tone="muted">Loading...</Text>;
+  if (isLoading) return <StatusMessage variant="inline" busy>Loading card…</StatusMessage>;
   if (error || !card) return <Text size="sm" tone="danger">Failed to load card</Text>;
 
   const fileData: FileData = {

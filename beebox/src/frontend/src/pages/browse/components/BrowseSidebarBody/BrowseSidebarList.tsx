@@ -25,6 +25,7 @@ import { areaDisplayLabel } from "@shared/display-path";
 import { foldListing, type FoldEntry } from "@shared/browse-fold";
 import type { BrowseListingMode } from "./hook";
 import { BROWSE_DEFAULT_DIRECTORY, type BrowseMissingKind } from "../../../../lib/browse-card-state";
+import { StatusMessage } from "../../../../components/ui/StatusMessage";
 
 type BrowseData = RouterOutput["status"]["browse"];
 type BrowseDirData = BrowseData["dirs"][number];
@@ -231,7 +232,7 @@ export function BrowseSidebarList({
   mode,
 }: BrowseSidebarListProps) {
   if (loading) {
-    return <div className="p-4 text-warm-700 text-sm">Loading...</div>;
+    return <StatusMessage variant="inline" busy className="p-4">Loading…</StatusMessage>;
   }
 
   const cards = data.cards.filter((card) => card.relativePath !== omitCardPath);

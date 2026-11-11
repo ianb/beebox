@@ -15,6 +15,7 @@ import { Hint } from "../../ui/Hint";
 import { Notice } from "../../ui/Notice";
 import { ErrorText } from "../../ui/ErrorText";
 import { GmailLabelList } from "./views";
+import { StatusMessage } from "../../ui/StatusMessage";
 
 type GmailConfig = RouterOutput["admin"]["gmailConfig"];
 type GmailAction = NonNullable<GmailConfig["action"]>;
@@ -63,7 +64,7 @@ export function GmailFiltersSection() {
     boxConfigQuery.error?.message ?? gmailConfigQuery.error?.message ?? null;
 
   if (boxConfigQuery.error !== null) return <AdminSectionCard id="gmail-filters" description={<Description />}><ErrorText>{boxConfigQuery.error.message}</ErrorText></AdminSectionCard>;
-  if (boxConfigQuery.isLoading || gmailConfigQuery.isLoading) return <AdminSectionCard id="gmail-filters" description={<Description />} busy><Hint>Loading…</Hint></AdminSectionCard>;
+  if (boxConfigQuery.isLoading || gmailConfigQuery.isLoading) return <AdminSectionCard id="gmail-filters" description={<Description />} busy><StatusMessage variant="inline" busy>Loading Gmail filters…</StatusMessage></AdminSectionCard>;
   // The section keeps its address when it does not apply, so the overview and an agent can still point at it.
   if (!enabled) return <AdminSectionCard id="gmail-filters" description={<Description />}><Hint>Off: Gmail is not enabled for this box. Turn it on under Google services.</Hint></AdminSectionCard>;
 

@@ -12,6 +12,7 @@ import { Markdown } from "./Markdown/body";
 import { Text } from "./ui/Text";
 import { ErrorText } from "./ui/ErrorText";
 import { type NavigateHint, type ViewTarget } from "../lib/view-url";
+import { StatusMessage } from "./ui/StatusMessage";
 
 export type JumpToQuote = (quoteText: string) => Promise<boolean>;
 
@@ -27,7 +28,7 @@ function CommentaryRemarks({
 }) {
   const { data, isLoading, error } = trpc.card.get.useQuery({ path: cardPath });
   if (isLoading) {
-    return <Text as="div" tone="subtle" className="italic">Loading commentary…</Text>;
+    return <StatusMessage variant="inline" busy>Loading commentary…</StatusMessage>;
   }
   if (error !== null) {
     return <ErrorText>Couldn’t load commentary.</ErrorText>;
