@@ -11,6 +11,9 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 GlobalRegistrator.register({ url: "http://localhost/" });
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+// The app's page has a doctype, so it renders in standards mode. happy-dom
+// reports no `compatMode`, which KaTeX reads as quirks mode and warns about.
+Object.defineProperty(document, "compatMode", { value: "CSS1Compat", configurable: true });
 
 /** The fields of a React fiber the render counter reads. */
 export interface Fiber {

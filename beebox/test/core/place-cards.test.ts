@@ -9,6 +9,7 @@ import "@ianbicking/tap-check/tap";
 import { loadPlaces } from "../../src/core/place-cards.js";
 import { matchPlace } from "../../src/core/geo.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const place = (name: string, extra: string) => `---\nname: ${name}\n${extra}---\nbody\n`;
 
@@ -63,7 +64,10 @@ void test("A typo'd out-of-range coordinate is skipped (schema-enforced)", async
   const box = await makeTmpBox();
   await box.write("places/Good.place.card", place("Good", "lat: 1\nlng: 2\nradius: 50\n"));
   await box.write("places/Bad.place.card", place("Bad", "lat: 999\nlng: 2\nradius: 50\n"));
+  const warnings = consoleLines(t, "warn");
   const places = await loadPlaces(box.root);
+  // The server log names the card and the field that is out of range:
+  t.check(warnings(), ["[place-cards] skipping places/Bad.place.card: invalid place frontmatter:\n  - lat: Too big: expected number to be <=90"]);
   t.check(places.map((p) => p.name), [
     "Good",
   ]);
@@ -81,7 +85,10 @@ void test("One unparseable place card is skipped; the others still load", async 
   const box = await makeTmpBox();
   await box.write("places/Good.place.card", place("Good", "lat: 1\nlng: 2\nradius: 50\n"));
   await box.write("places/Bad.place.card", "---\nname: [unterminated\n---\nbody\n");
+  const warnings = consoleLines(t, "warn");
   const places = await loadPlaces(box.root);
+  // The server log names the card and where the YAML parser gave up:
+  t.check(warnings(), ["[place-cards] skipping places/Bad.place.card: invalid YAML frontmatter: Flow sequence in block collection must be sufficiently indented and end with a ] at line 1, column 20:\n\nname: [unterminated\n                   ^\n"]);
   t.check(places.map((p) => p.name), [
     "Good",
   ]);

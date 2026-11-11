@@ -9,6 +9,7 @@
 import { mount } from "../../../../helpers/dom-harness.js";
 import { createElement as h, type ReactNode } from "react";
 import { test } from "tap";
+import { consoleLines } from "../../../../../../../test/helpers/console-lines.js";
 import type * as Display from "../../../../../src/components/chat/everywhere/InteractiveChat/processing-status-display.js";
 import type { ChatEvent } from "../../../../../src/machines/chat-types.js";
 
@@ -34,6 +35,7 @@ void test("the return poll asks about the turn's first id and needs the idle thr
     useProcessingStatusPoll({ processBusy: true, snapshot, sessionId, send });
     return null;
   }
+  const warnings = consoleLines(t, "warn");
   const view = await mount(h(Host, { sessionId: "original" }));
   t.teardown(() => view.unmount());
   await view.rerender(h(Host, { sessionId: "rotated" }));
@@ -46,4 +48,6 @@ void test("the return poll asks about the turn's first id and needs the idle thr
     afterOne: [],
     sent: ["STREAM_RECOVER"],
   });
+  // The recovery is logged:
+  t.check(warnings(), ["[chatfsm] stream watchdog: server idle while the stream is still open; recovering"]);
 });

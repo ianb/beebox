@@ -15,6 +15,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { notificationReached, notifyBoxholder, notifyChannels, type NotificationInput } from "../../src/core/notify-boxholder.js";
 import type { Loudness } from "../../src/core/notification/intent.js";
 import { eventSchemas } from "../../src/core/event-bus/schemas.js";
@@ -324,7 +325,10 @@ void test("The push failure is recorded with its reason and reported for 24 hour
   });
   const box = await reachableBox();
   const push = createFakePush({ failEndpoints: [SUB.endpoint] });
+  const warnings = consoleLines(t, "warn");
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push } });
+  // The server log names the box and the reason the push endpoint refused:
+  t.check(warnings(), [`Push send failed for an endpoint in ${await boxSlug(box.root)}: fake transient push failure`]);
 
   await t.checkText(await logged(box), `apns skipped: no-audience
 web-push failed: no device received the push (sent 0, pruned 0, failed 1)`);
@@ -359,7 +363,12 @@ void test("The log is the record, not the delivery path.", async (t) => {
   });
   const box = await reachableBox();
   await fs.mkdir(notificationLogPath(box.root), { recursive: true });
+  const errors = consoleLines(t, "error");
   const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push: createFakePush() } });
+
+  // Each of the three appends (the intent, then a delivery line per channel) fails and says so:
+  const unwritable = `[notify-boxholder] could not write the notification log; delivery continues: NotificationLogWriteError: Could not append to the notification log ${notificationLogPath(box.root)}`;
+  t.check(errors(), [unwritable, unwritable, unwritable]);
 
   t.check(result.deliveries.map((d) => `${d.channel} ${d.status}`), ["apns skipped", "web-push sent"]);
 

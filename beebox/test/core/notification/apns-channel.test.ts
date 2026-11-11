@@ -15,6 +15,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { notifyBoxholder, notifyChannels } from "../../../src/core/notify-boxholder.js";
 import type { NotificationInput } from "../../../src/core/notify-boxholder.js";
 import type { Loudness } from "../../../src/core/notification/intent.js";
@@ -148,7 +149,10 @@ void test("APNs answers 410 Unregistered (or 400 BadDeviceToken) for a token tha
   const box = await makeTmpBox({ git: true });
   await pairPhone(box, { label: "Jamie's iPhone", token: PHONE, environment: "production" });
   const apns = createFakeApns({ goneTokens: [PHONE] });
+  const warnings = consoleLines(t, "warn");
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { apns } });
+  // The server log names the phone whose registration it removed, and why:
+  t.check(warnings(), ["[notify] APNs reports the token for \"Jamie's iPhone\" is gone (Unregistered); removing its registration"]);
 
   await t.checkText(await logged(box), `apns failed: no device received the push (sent 0 of 1, pruned 1)
 web-push skipped: no-audience`);
@@ -189,7 +193,9 @@ void test("The line is sent when any phone took the push.", async (t) => {
   const lost = await pairPhone(box, { label: "lost phone", token: "c3".repeat(32), environment: "production" });
   await revokeMobileDevice(box.root, lost.deviceId);
   const apns = createFakeApns({ goneTokens: [TABLET] });
+  const warnings = consoleLines(t, "warn");
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { apns } });
+  t.check(warnings(), ["[notify] APNs reports the token for \"old iPad\" is gone (Unregistered); removing its registration"]);
 
   t.check((await logged(box)).split("\n")[0], "apns sent: devices: sent 1 of 2, pruned 1");
 
@@ -226,7 +232,10 @@ void test("Without an injected service the channel needs all four BBXAPNS values
   // With keys set but the key file missing, the send is a `failed` line with the
   // reason, and nothing throws:
 
+  const warnings = consoleLines(t, "warn");
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW });
+  // The server log names the phone and why the send failed:
+  t.check(warnings(), ["[notify] APNs push to \"Jamie's iPhone\" failed: Failed loading token key: ENOENT: no such file or directory, open '/nonexistent/AuthKey.p8'"]);
   for (const name of ENV) delete process.env[name];
   t.check((await logged(box)).split("\n")[0], "apns failed: no device received the push (sent 0 of 1, failed 1): Failed loading token key: ENOENT: no such file or directory, open '/nonexistent/AuthKey.p8'");
 });

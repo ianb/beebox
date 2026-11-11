@@ -1,12 +1,15 @@
 ---
 title: "Full-suite red: test/core/browser/card-shot/run.e2e.test.ts"
-workstream: box-feedback-bugs
+workstream: test-quiet
 area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-feedback-bugs — the hourly full-suite run on main
+resolution: superseded
 ---
+
+**Closed (superseded, 2026-11-11):** The same intermittent card-shot screenshot failure (os error 35) is tracked in `issues/bugs/2026-11-08-full-suite-red-child-env-allowlist-5ba73ccf.md`, reopened the same day after it failed again.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `4398f595`. Bisecting the landings since the last tested

@@ -13,6 +13,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { activateAuditPlugins, assertAuditPluginsReady } from "../../../../src/dev/lib/box-audits/plugins.js";
 import { auditTestSchema } from "../../../../src/dev/lib/test-suite-schema.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 void test("Activation keeps other settings, writes stubs, and passes readiness", async (t) => {
   const box = await makeTmpBox({ deps: true });
@@ -38,6 +39,7 @@ void test("An existing stub that defines no schema of its type fails readiness b
   await mkdir(box.path("src/schemas"), { recursive: true });
   await writeFile(box.path("src/schemas/course.ts"), "export const note = 'not a schema';\n");
 
+  const warnings = consoleLines(t, "warn");
   await activateAuditPlugins(box.root, ["courseware"]);
 
   t.check(await readFile(box.path("src/schemas/course.ts"), "utf-8"), "export const note = 'not a schema';\n");
@@ -45,6 +47,8 @@ void test("An existing stub that defines no schema of its type fails readiness b
     () => assertAuditPluginsReady(box.root, ["courseware"]),
     "AuditPluginNotReadyError: Audit plugins are not ready: src/schemas/course.ts does not define course",
   );
+  // The schema loader logs the stub that defines no schema:
+  t.check(warnings(), ["Warning: course.ts does not export a default cardSchema(), skipping"]);
 });
 
 // A misspelled plugin name fails when the audits file loads, not mid-run.

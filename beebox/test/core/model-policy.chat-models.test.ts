@@ -12,6 +12,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { chatModelFileForSession, loadCurrentModel, loadCurrentModelForEngine, saveCurrentModel } from "../../src/core/chat/session/state.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import type { AgentEngine } from "../../src/shared/agent-models.js";
 
 // Ids rotate; tiers do not. Examples name a model by engine and tier and read
@@ -282,8 +283,11 @@ void test("A hand-edited agentModel that no engine offers is rejected at the con
   await writeConfig({ agentModel: tierId("claude", "balanced") });
   t.check(label(await loadBoxModel(policyBox.root)), "claude balanced");
 
+  const warnings = consoleLines(t, "warn");
   await writeConfig({ agentModel: "sonnet" });
   t.check(await loadBoxModel(policyBox.root), null);
+  // The owner is told which setting was ignored:
+  t.check(warnings(), ['Box config agentModel "sonnet" is not a model any engine offers — ignoring it.']);
 
   await writeConfig({});
   t.check(await loadBoxModel(policyBox.root), null);
@@ -331,8 +335,10 @@ void test("A codex box never receives a Claude model id, whatever the box config
   await writeSmall({ agentEngine: "codex" });
   t.check(label(await loadEffectiveSmallModel(smallBox.root)), "codex efficient");
 
+  const warnings = consoleLines(t, "warn");
   await writeSmall({ agentEngine: "codex", smallModel: "haiku" });
   t.check(label(await loadEffectiveSmallModel(smallBox.root)), "codex efficient");
+  t.check(warnings(), ['Box config smallModel "haiku" is not a model any engine offers — ignoring it.']);
 
   await writeSmall({ agentEngine: "codex", smallModel: tierId("codex", "balanced") });
   t.check(label(await loadEffectiveSmallModel(smallBox.root)), "codex balanced");
@@ -372,11 +378,13 @@ void test("A box with no Codex subscription should not be offered Codex chats.",
   // A config that disables the box's own default engine is a mistake, not a state to
   // honor: nothing could run. The default comes back enabled, loudly.
 
+  const warnings = consoleLines(t, "warn");
   await writeEngines({ agentEngine: "codex", engines: { claude: true, codex: false } });
   t.check(await loadEnabledEngines(engineBox.root), [
     "claude",
     "codex",
   ]);
+  t.check(warnings(), ["Box config disables its own default engine (codex); treating it as enabled, since nothing could run otherwise."]);
 
   // pi is enabled like any other engine.
 

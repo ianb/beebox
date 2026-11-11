@@ -21,6 +21,7 @@ import { createFakePush } from "../../../../src/services/push.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
 import { writePresence } from "../../../../src/core/notification/presence.js";
 import { pairFakePushDevice } from "../../../../src/core/mobile/pairing.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import { createFakeApns } from "../../../../src/services/apns.js";
 import { makeTestServer, TEST_SLUG } from "../../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
@@ -205,8 +206,11 @@ exit 0`);
 // Every tried channel failed:
 void test("Every tried channel failed:", async (t) => {
   const failingPush = createFakePush({ failEndpoints: ["https://push.example/phone"] });
+  const warnings = consoleLines(t, "warn");
   await t.checkText(await run({ title: "Will not arrive", options: { target: "dashboard", loudness: "loud", channel: "web-push" }, services: { push: failingPush } }), `stderr: Not delivered: <id>: web-push failed (no device received the push (sent 0, pruned 0, failed 1))
 exit 1`);
+  // The log names the box and the reason the endpoint refused:
+  t.check(warnings(), [`Push send failed for an endpoint in ${await boxSlug(box.root)}: fake transient push failure`]);
 });
 
 // ## Bad flags and bad targets exit 2 before anything is sent

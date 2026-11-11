@@ -16,6 +16,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import {
   createMobilePairingTicket,
   redeemMobilePairingTicket,
@@ -155,7 +156,10 @@ void test("The lock-free renewal check must deny (return false) rather than thro
   fs.mkdirSync(path.dirname(storeFile4), { recursive: true });
   fs.writeFileSync(storeFile4, "corrupt", "utf-8");
 
+  const warnings = consoleLines(t, "warn");
   t.check(isMobileDeviceActive(box4.root, "any-device-id"), false);
+  // The server log says the store was unreadable and the renewal was denied:
+  t.check(warnings(), [`[pairing] device store unreadable during renewal check; failing closed: DeviceStoreUnreadableError: Mobile device store at ${storeFile4} exists but could not be read or parsed`]);
 
   // An absent store is genuinely empty (not unreadable) — no throw, just inactive.
 

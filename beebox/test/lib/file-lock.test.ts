@@ -22,7 +22,7 @@ import {
   LockHeldError,
 } from "../../src/lib/file-lock.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
-import { spawn } from "node:child_process";
+import { spawnUntilFirstLine, tsxChild } from "../helpers/child-process.js";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import { join } from "node:path";
@@ -49,25 +49,14 @@ function backdatedPast() {
   return new Date(Date.now() - LOCK_STALE_MS.default - 60 * 1000);
 }
 
-const PACKAGE_ROOT = join(import.meta.dirname, "../..");
-const CHILD_SCRIPT = join(PACKAGE_ROOT, "test/helpers/file-lock-child.ts");
+const CHILD_SCRIPT = join(import.meta.dirname, "../helpers/file-lock-child.ts");
 
 // Spawn a real child process that takes `lockPath` (request profile) and holds
 // it, then SIGKILL it mid-hold — a genuine crashed holder, guard dir and all.
 async function crashedHolder(lockPath: string) {
-  const child = spawn(process.execPath, ["--import", "tsx", CHILD_SCRIPT, lockPath], {
-    cwd: PACKAGE_ROOT,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let stderr = "";
-  child.stderr.on("data", (chunk) => { stderr += String(chunk); });
-  await new Promise<void>((resolve, reject) => {
-    child.stdout.on("data", (chunk) => { if (String(chunk).includes("acquired")) resolve(); });
-    child.once("error", reject);
-    child.once("exit", (code) => reject(new Error(`child exited early (${code}): ${stderr}`)));
-  });
-  child.kill("SIGKILL");
-  await new Promise((resolve) => child.once("exit", resolve));
+  const holder = await spawnUntilFirstLine(tsxChild(CHILD_SCRIPT, [lockPath]));
+  if (holder.line !== "acquired") throw new Error(`unexpected first line from the holder: ${holder.line}`);
+  await holder.kill();
 }
 
 // Write a diagnostic sidecar as if another process had published it.

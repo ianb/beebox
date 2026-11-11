@@ -16,6 +16,7 @@ import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import type { HealthReport } from "../../../../../../src/webapp/trpc/routers/health/checks/snapshot.js";
 import { getHealthSnapshot, HEALTH_SNAPSHOT_TTL_MS } from "../../../../../../src/webapp/trpc/routers/health/checks/snapshot.js";
+import { consoleLines } from "../../../../../helpers/console-lines.js";
 
 const version = { deployedAt: null, commits: {}, processStartedAt: "2026-08-01T00:00:00Z", uptimeSec: 1 };
 
@@ -199,6 +200,7 @@ void test("If the refresh behind a stale read throws, the snapshot is no longer 
 
   clock.t += HEALTH_SNAPSHOT_TTL_MS + 1;
   mode.fail = true;
+  const errors = consoleLines(t, "error");
   const stale = await getHealthSnapshot(box, { compute, now });
   t.check(`${stale.status} runs=${String(mode.runs)}`, "healthy runs=2");
 
@@ -206,6 +208,8 @@ void test("If the refresh behind a stale read throws, the snapshot is no longer 
 
   await tick();
   t.check(await caught(() => getHealthSnapshot(box, { compute, now })), "ProbeExplodedError: probe exploded");
+  // The failed background refresh is logged with the box and the cause:
+  t.check(errors(), ["[health] background snapshot refresh failed for /tmp/box-refresh-fail: probe exploded"]);
 
   // And a recovery clears the latch — back to normal cached service:
 

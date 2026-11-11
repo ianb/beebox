@@ -14,6 +14,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { sendReadiness } from "../../../../../src/core/chat/session/run/start-refusal.js";
 import { makeTmpBox } from "../../../../helpers/test-helpers.js";
+import { consoleLines } from "../../../../helpers/console-lines.js";
 
 /** A box whose default is an added OpenRouter model, with no OpenRouter key. */
 async function keylessBox() {
@@ -27,6 +28,7 @@ async function keylessBox() {
 void test("No listener: refused, nothing thrown", async (t) => {
   const box = await keylessBox();
   const reasons: string[] = [];
+  const errors = consoleLines(t, "error");
   const ready = await sendReadiness({ boxRoot: box.root, backend: {}, explicitModel: null, liveModel: null,
     startOptions: { engine: "claude", cwd: box.root, systemPrompt: "", env: {} }, session: new EventEmitter(), onRefused: (reason) => { reasons.push(reason.split(" (")[0] ?? reason); } });
   t.check(({ ready, reasons }), {
@@ -35,6 +37,8 @@ void test("No listener: refused, nothing thrown", async (t) => {
       "This run uses the OpenRouter model qwen/qwen3-coder, but no usable OpenRouter key is available for this box",
     ],
   });
+  // The server log carries the whole refusal, including why the key is unusable:
+  t.check(errors(), ['[chat-preflight] run refused: This run uses the OpenRouter model qwen/qwen3-coder, but no usable OpenRouter key is available for this box (No secret named "openrouter" exists on this machine. It can be declared (bbx secrets declare openrouter), but only the boxholder can supply its value.). Add one in Admin → Secrets and grant it to this box.']);
 
   await box.cleanup();
 });

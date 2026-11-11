@@ -6,11 +6,11 @@
 // actually break: a renamed option, a moved output path, an upstream change to
 // where artifacts land.
 //
-// It is **skipped** — loudly, with a reason on stderr — wherever Docling cannot
+// It is **skipped** — a TAP skip with the reason — wherever Docling cannot
 // run: no `uv` installed, no network for the first environment build, a sandbox
 // that forbids subprocesses. A skip is a normal outcome on a developer machine;
-// what would not be normal is this file silently passing while testing nothing,
-// so the assertion below names which of the two happened.
+// what would not be normal is this file passing while testing nothing, so a
+// skip is reported as one, never as a pass.
 //
 // Warm (uv environment and model weights cached) this takes a few seconds. The
 // test never touches the network: it sets `UV_OFFLINE` and `HF_HUB_OFFLINE` for
@@ -27,15 +27,14 @@
 // (`test/helpers/isolate-user-home.ts`), so a warmed machine stays warm under the
 // isolated test HOME.
 
-import { test } from "tap";
+import { t as tap, test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { oneOf } from "@ianbicking/tap-check/check";
 import { createDoclingService } from "../../../src/services/docling/core.js";
 import type { DoclingExtraction } from "../../../src/services/docling/core.js";
 import type { Result } from "../../../src/shared/result.js";
 import { DOCLING_VERSION } from "../../../src/services/docling/version.js";
 import { textPdf } from "../../helpers/pdf-fixtures.js";
-import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execa } from "execa";
@@ -55,11 +54,10 @@ async function doclingRunnable() {
     reject: false,
   }).catch((e) => ({ exitCode: 1, message: e.message }));
   if (probe.exitCode === 0) return null;
-  return `uvx/docling ${DOCLING_VERSION} is not runnable here (${probe.message ?? `exit ${String(probe.exitCode)}`})`;
+  return `uvx/docling ${DOCLING_VERSION} is not runnable here (${probe.message?.split("\n")[0] ?? `exit ${String(probe.exitCode)}`})`;
 }
 
 const probeSkip = await doclingRunnable();
-if (probeSkip) console.warn(`[skipped] pdf-extract-integration: ${probeSkip}`);
 
 // Offline, uncached weights fail inside huggingface_hub's snapshot download.
 // That is the one extraction failure that means "not warmed" rather than
@@ -71,51 +69,39 @@ function weightsMissing(result: Result<DoclingExtraction>) {
 // The request and argv are checked without Docling in
 // `test/services/docling/subprocess.test.ts`.
 
+// The extraction runs once, before the test, so that missing weights can make
+// it a skip too.
+const dir = await mkdtemp(join(tmpdir(), "docling-real-"));
+tap.teardown(() => rm(dir, { recursive: true, force: true }));
+const pdfPath = join(dir, "source.pdf");
+await writeFile(pdfPath, textPdf());
+const workDir = join(dir, "work");
+await mkdir(workDir, { recursive: true });
+const result: Result<DoclingExtraction> | null = probeSkip
+  ? null
+  : await createDoclingService().extract(pdfPath, { workDir, ocr: "off", languages: null });
+const skipReason = probeSkip ?? (result !== null && weightsMissing(result) ? "Docling model weights are not in the Hugging Face hub cache" : null);
+
 // ## A real extraction over a real PDF
-void test("A real extraction over a real PDF", async (t) => {
-  t.teardown(async () => {
-    try {
-      await rm(dir, { recursive: true, force: true });
-    } catch (error) {
-      t.error(error);
-    }
-  });
-  const dir = await mkdtemp(join(tmpdir(), "docling-real-"));
-  const pdfPath = join(dir, "source.pdf");
-  await writeFile(pdfPath, textPdf());
-  const workDir = join(dir, "work");
-  await import("node:fs/promises").then((fs) => fs.mkdir(workDir, { recursive: true }));
+void test("A real extraction over a real PDF", { skip: skipReason === null ? false : `pdf-extract-integration: ${skipReason}` }, async (t) => {
+  const failure = result === null || result.ok ? "no extraction ran" : result.error;
+  t.check(result?.ok ? "EXTRACTED" : `FAILED: ${failure}`, "EXTRACTED");
+  if (!result?.ok) return;
+  const run = result.value;
 
-  const result: Result<DoclingExtraction> | null = probeSkip
-    ? null
-    : await createDoclingService().extract(pdfPath, { workDir, ocr: "off", languages: null });
-  const skipReason = probeSkip ?? (result !== null && weightsMissing(result) ? "Docling model weights are not in the Hugging Face hub cache" : null);
-  if (skipReason && !probeSkip) console.warn(`[skipped] pdf-extract-integration: ${skipReason}`);
-
-  const extracted = result?.ok ? result.value : null;
-  const failure = result === null || result.ok ? null : result.error;
-  // The checked value: the skipped answer, or what the extraction says when it ran.
-  const pick = <T>(skipped: T, ran: (run: DoclingExtraction) => T | undefined): T | undefined => {
-    if (skipReason) return skipped;
-    return extracted ? ran(extracted) : undefined;
-  };
-
-  // One line, whichever path ran — so a skip is visible rather than a silent pass.
-  t.check(skipReason ? "SKIPPED" : (extracted ? "EXTRACTED" : `FAILED: ${failure}`), oneOf("SKIPPED", "EXTRACTED"));
-
-  // When it did run, the extraction has the shape the rest of pdf mode relies
-  // on: markdown carrying the page's text, a `DoclingDocument` JSON on disk, and one
-  // page render per page found by walking the work directory (Docling writes those
+  // The extraction has the shape the rest of pdf mode relies on: markdown
+  // carrying the page's text, a `DoclingDocument` JSON on disk, and one page
+  // render per page found by walking the work directory (Docling writes those
   // paths relative to an output root that does not match where the files land, so
   // the walk is load-bearing):
 
-  t.check(pick("Northwind", (run) => (run.markdown.includes("Northwind") ? "Northwind" : run.markdown)), "Northwind");
+  t.check(run.markdown.includes("Northwind") ? "Northwind" : run.markdown, "Northwind");
 
   // Page renders are PNGs Docling wrote — the WebP re-encode happens a layer up, in
   // `pdf-extract.ts`; one render per page of the one-page fixture.
-  t.check(pick(["png"], (run) => run.pageImages.map((image) => image.filePath.split(".").pop())), ["png"]);
+  t.check(run.pageImages.map((image) => image.filePath.split(".").pop()), ["png"]);
 
-  t.check(skipReason ? "DoclingDocument" : (extracted ? JSON.parse(await readFile(extracted.jsonPath, "utf-8")).schema_name : undefined), "DoclingDocument");
+  t.check(JSON.parse(await readFile(run.jsonPath, "utf-8")).schema_name, "DoclingDocument");
 
-  t.check(pick(DOCLING_VERSION, (run) => run.version), DOCLING_VERSION);
+  t.check(run.version, DOCLING_VERSION);
 });

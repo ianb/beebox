@@ -16,6 +16,7 @@ import { makeTestServer } from "../../helpers/test-route-server.js";
 import { armSetupToken, clearSetupToken } from "../../../src/webapp/setup-token.js";
 import { loginThrottle } from "../../../src/webapp/routes/auth/login-throttle.js";
 import { createFirstUser, getLocalOwnerEmail } from "../../../src/webapp/local-users.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 // Fast scrypt for the test (test-only work-factor seam).
 process.env.BBX_AUTH_SCRYPT_N = "1024";
@@ -71,6 +72,7 @@ void test("Wrong password and unknown user both answer an identical 401 (no enum
   await resetAuth();
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
 
+  const warnings = consoleLines(t, "warn");
   const wrongPass = await postAuth("/auth/login", { email: "owner@example.com", password: "wrong" });
   t.check({ status: wrongPass.statusCode, body: wrongPass.json() }, {
     status: 401,
@@ -95,6 +97,11 @@ void test("Wrong password and unknown user both answer an identical 401 (no enum
     unknownUser.json(),
     wrongPass.json(),
   );
+  // The response hides which case it was; the server log records each failed attempt:
+  t.check(warnings(), [
+    '[auth] failed login for "owner@example.com" from 127.0.0.1',
+    '[auth] failed login for "ghost@example.com" from 127.0.0.1',
+  ]);
 
   // A parsed-but-non-object body (array/null/etc.) is rejected FAST as a 400 —
   // it must not fall through to the raw-stream reader (whose events already
@@ -133,6 +140,7 @@ void test("Setup rejects a wrong token (403) and an expired one (410)", async (t
   await resetAuth();
   armSetupToken({ now: Date.now() });
 
+  const warnings = consoleLines(t, "warn");
   const wrongToken = await postAuth("/auth/setup", {
     email: "boss@example.com",
     name: "Boss",
@@ -143,6 +151,8 @@ void test("Setup rejects a wrong token (403) and an expired one (410)", async (t
     status: 403,
     body: { error: "Invalid setup token" },
   });
+  // The server log records the rejected setup attempt and its address:
+  t.check(warnings(), ["[auth] setup rejected — invalid token from 127.0.0.1"]);
 
   // A token armed 20 minutes ago is past its 15-minute TTL → 410 Gone.
   loginThrottle.reset();
@@ -245,12 +255,15 @@ void test("A failed form login redirects back to the bare page with a generic er
   await resetAuth();
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
 
+  const warnings = consoleLines(t, "warn");
   const bad = await postForm("/auth/login", { email: "owner@example.com", password: "wrong", returnTo: "/test/home" });
   t.check({ status: bad.statusCode, location: bad.headers.location, cookies: bad.cookies.length }, {
     status: 302,
     location: "/auth/login?returnTo=%2Ftest%2Fhome&error=1",
     cookies: 0,
   });
+  // The redirect says only "error=1"; the server log records the failed attempt:
+  t.check(warnings(), ['[auth] failed login for "owner@example.com" from 127.0.0.1']);
 });
 
 // ## A form setup creates the owner, redirects to the root, and sets the cookie
@@ -312,6 +325,7 @@ void test("isFormRequest compares the exact MIME essence, not a substring — so
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
   loginThrottle.reset();
 
+  const warnings = consoleLines(t, "warn");
   const decoy = await server.server.inject({
     method: "POST",
     url: "/auth/login",
@@ -323,4 +337,5 @@ void test("isFormRequest compares the exact MIME essence, not a substring — so
     { status: decoy.statusCode, body: decoy.json() },
     { status: 401, body: { error: "Invalid credentials" } },
   );
+  t.check(warnings(), ['[auth] failed login for "owner@example.com" from 127.0.0.1']);
 });

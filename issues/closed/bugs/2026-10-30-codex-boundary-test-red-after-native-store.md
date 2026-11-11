@@ -1,12 +1,15 @@
 ---
 title: "`codex-sdk-session.boundary.test.ts` is red: `native-store.ts` imports `codex-history-server.js`"
-workstream: unattached
+workstream: test-quiet
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — full suite after the Agent SDK 0.3.312 bump
 labels: [test-failure]
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-11):** native-store.ts now calls readCodexSessionUpdatedAtIfPresent in codex-transcript/core.ts, so core.ts stays the only importer of codex-history-server.js and the boundary list is unchanged.
 
 `beebox/test/services/codex-sdk-session.boundary.test.ts` fails on current main
 every run. It lists the files allowed to import `codex-history-server.js`, and

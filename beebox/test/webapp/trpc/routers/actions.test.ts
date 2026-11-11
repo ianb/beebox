@@ -14,6 +14,7 @@ import type { EventBus } from "../../../../src/core/event-bus/core.js";
 import { TRPCError } from "@trpc/server";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 // Minimal tRPC context — the actions procedures read only boxRoot + eventBus.
 // The eventBus stub records what was emitted so we can assert on it.
@@ -105,8 +106,12 @@ void test("Answering a card that doesn't exist fails in the command; the procedu
   const box = await makeTmpBox({ git: true });
   const { caller } = contextFor(box);
 
+  const warnings = consoleLines(t, "warn");
   const out = await attempt(() => caller.answer({ questionPath: "_bookkeeping/questions/Nope.question.card", answer: "Red" }));
   t.check(out, "THREW:BAD_REQUEST:Could not load card: _bookkeeping/questions/Nope.question.card");
+  // The server log keeps the cause the caller's message leaves out:
+  const nope = `${box.root}/_bookkeeping/questions/Nope.question.card`;
+  t.check(warnings(), [`Could not load card ${nope}: Error: ENOENT: no such file or directory, open '${nope}'`]);
 });
 
 // ## dismiss flips the card and emits `question-dismissed`

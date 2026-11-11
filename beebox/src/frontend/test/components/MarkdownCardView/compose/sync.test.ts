@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../../../../../test/helpers/console-lines.js";
 import {
   CompositionSync, saveStateText, type ReadResult, type SyncClient, type WriteResult,
 } from "../../../../src/components/MarkdownCardView/compose/sync.js";
@@ -157,6 +158,7 @@ void test("composition removed", async (t) => {
 // ## A failed read of the agent's change shows "Not synced" and retries with growing delays
 void test("failing read retries", async (t) => {
   const h = harness("One two.");
+  const warnings = consoleLines(t, "warn");
   h.readFailures.push(new Error("socket closed"), new Error("socket closed"));
   h.setDisk({ text: "One two three.", regionHash: "agent" });
   h.sync.remoteChanged();
@@ -168,6 +170,8 @@ void test("failing read retries", async (t) => {
   t.check({ text: h.text(), states: h.states.slice(1), pending: h.pending() }, {
     text: "One two three.", states: ["Not synced: socket closed, retrying", "Saved to disk"], pending: [],
   });
+  // Each failed read is logged, so a console shows why the strip said "Not synced":
+  t.check(warnings(), ["Compose: reading the composition failed: Error: socket closed", "Compose: reading the composition failed: Error: socket closed"]);
 });
 
 // ## The unmount flush retries a failed write, and reports failure when it never gets through

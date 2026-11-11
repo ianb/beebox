@@ -14,12 +14,13 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any } from "@ianbicking/tap-check/check";
+import { any, str } from "@ianbicking/tap-check/check";
 import { DatabaseSync } from "node:sqlite";
 import { join } from "node:path";
 import { assertEventSchemaNotNewer, createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
 import { eventSchemas, isBusEventName } from "../../src/core/event-bus/schemas.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const TS = "2026-07-09T00:00:00.000Z";
 
@@ -176,7 +177,41 @@ void test("Emit one valid row, then hand-write three broken ones directly into S
   raw.exec("INSERT INTO events (event, data) VALUES ('cards-changed', x'ff')");
   raw.close();
 
+  const warnings = consoleLines(t, "warn");
   const rows = bus.readSince(0);
+  // Each broken row logs once, with a running count, and says what consumers do with it:
+  const surfaced = "Surfaced as an \"unknown\" sentinel; downstream consumers ignore it.";
+  t.check(warnings(), [
+    `[EventBus] Row id=2 event="card-created" failed read validation: [
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "path"
+    ],
+    "message": "Invalid input: expected string, received number"
+  },
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "template"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+  },
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "timestamp"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+  }
+] (count=1). ${surfaced}`,
+    str`[EventBus] Row id=3 event="cards-changed" failed read validation: JSON parse failed: SyntaxError: ${any(String)} (count=2). ${surfaced}`,
+    `[EventBus] Row id=4 event="mystery-event" failed read validation: unknown event name "mystery-event" (count=3). ${surfaced}`,
+    `[EventBus] Row id=5 event="cards-changed" failed read validation: a stored column is not text (count=4). ${surfaced}`,
+  ]);
   t.check(rows, [
     { id: 1, event: "cards-changed", data: { source: "gmail" }, createdAt },
     { id: 2, event: "unknown", data: { originalEvent: "card-created", raw: { path: 123 }, error: any(String) }, createdAt },
@@ -219,8 +254,11 @@ void test("Persist two rows, then simulate a deploy that bumped the schema gener
   raw.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(EVENT_SCHEMA_GENERATION - 1);
   raw.close();
 
+  const warnings = consoleLines(t, "warn");
   const bus2 = createEventBus(box.root);
   t.check(bus2.readSince(0), []);
+  // The log says which generations differ and how many rows went:
+  t.check(warnings(), [`[EventBus] Event-schema generation changed (${EVENT_SCHEMA_GENERATION - 1} → ${EVENT_SCHEMA_GENERATION}); truncated 2 persisted event(s). Reconnecting clients resync via the bus's full-resync path.`]);
 });
 
 // ## A newer generation on disk refuses to open and keeps its rows
@@ -314,6 +352,9 @@ void test("A box upgraded from before generation stamping has an events table fu
   legacy.prepare("INSERT INTO events (event, data) VALUES (?, ?)").run("cards-changed", JSON.stringify({ source: "old" }));
   legacy.close();
 
+  const warnings = consoleLines(t, "warn");
   const bus = createEventBus(box.root);
   t.check(bus.readSince(0), []);
+  // The log says the pre-generation rows were dropped:
+  t.check(warnings(), [`[EventBus] Initialized event-schema generation ${EVENT_SCHEMA_GENERATION}; truncated 1 pre-generation event(s) of unknown shape. Reconnecting clients resync via the bus's full-resync path.`]);
 });

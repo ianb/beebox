@@ -54,6 +54,9 @@ void test("The list is append-only:", async (t) => {
 // entry, so it exits 1 with a message naming the migration and writes nothing.
 void test("The tombstone fails closed and names the migration:", async (t) => {
   let output = "";
+  const stderr = t.capture(process.stderr, "write");
   const code = await runMigrationScript({ script: "src/scripts/migrate/retired.ts", name: "example-2026-01", boxRoot: "/nonexistent-box", onOutput: (text) => { output += text; } });
   t.check({ code, output }, { code: 1, output: "Migration example-2026-01 was retired on 2026-10-08 because every fleet box had applied it, and this box never did. Restore its migrator from git history (retirement commit 81c647230; see \"Retired migrations\" in beebox/docs/cards/migrations.md), run it by hand, then record example-2026-01 in the manifest.\n" });
+  // The runner forwards the same text to the operator's stderr:
+  t.check(stderr.args().map(([chunk]) => String(chunk)).join(""), output);
 });

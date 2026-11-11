@@ -13,6 +13,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { makeTestServer } from "../../helpers/test-route-server.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "../../../src/core/mobile/session.js";
 import { updateBoxConfigFields } from "../../../src/webapp/box-config-write.js";
@@ -45,7 +46,7 @@ void test("a member's phone is refused once the member is removed from the box",
     const device = await redeemMobilePairingTicket(ctx.boxRoot, { pairingToken: ticket.token, deviceLabel: who });
     if (!device) throw new Error("the ticket did not redeem");
     const cookie = signMobileSession(ctx.boxRoot, { deviceId: device.deviceId, createdBy: who, ttlMs: MOBILE_SESSION_TTL_MS });
-    return { bearer: `Bearer ${device.deviceToken}`, cookie: `${MOBILE_COOKIE_NAME}=${cookie}` };
+    return { deviceId: device.deviceId, bearer: `Bearer ${device.deviceToken}`, cookie: `${MOBILE_COOKIE_NAME}=${cookie}` };
   };
   /** Status of one authed read, with the device token and with the session cookie. */
   const statuses = async (phone: { bearer: string; cookie: string }) => {
@@ -62,6 +63,7 @@ void test("a member's phone is refused once the member is removed from the box",
   // While the member is listed, the member's phone passes with either credential.
   t.check(await statuses(memberPhone), { bearer: 200, cookie: 200 });
 
+  const warnings = consoleLines(t, "warn");
   await setAllowedEmails([]);
 
   // Removed from the box: both credentials are refused as an unknown device is.
@@ -78,6 +80,9 @@ void test("a member's phone is refused once the member is removed from the box",
     (await ctx.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: { cookie: memberPhone.cookie, authorization: ownerPhone.bearer } })).statusCode,
     200,
   );
+
+  // The server log names the refused device once, however many requests it made:
+  t.check(warnings(), [`[mobile-auth] refusing device ${memberPhone.deviceId}: its pairer can no longer open the box at ${ctx.boxRoot}`]);
 
   // Adding the member back restores the phone: the device record was never removed.
   await setAllowedEmails(["tomas@example.com"]);

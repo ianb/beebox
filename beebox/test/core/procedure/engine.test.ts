@@ -7,7 +7,9 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { startProcedure, resumeProcedure } from "../../../src/core/procedure/engine/core.js";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { getLog } from "../../../src/lib/git/core/operations.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
 import type { ProcedureRun } from "../../../src/schemas/procedure-run.js";
@@ -357,7 +359,10 @@ void test("Step filtering with --step", async (t) => {
 // A name with no procedure card is an error mentioning "not found"; a `--step`
 // that is not in the procedure is an error listing the available step ids.
 void test("A name with no procedure card is an error mentioning \"not found\"; a --step th...", async (t) => {
+  const warnings = consoleLines(t, "warn");
   const missing = await startOn("nonexistent", null);
+  // The log names the card path the engine looked for, and why it could not open it:
+  t.check(warnings(), [str`Procedure definition not accessible at ${any(String)}/_config/procedures/nonexistent.procedure.card: Error: ENOENT: no such file or directory, access '${any(String)}/_config/procedures/nonexistent.procedure.card'`]);
   const badStep = await startOnWith({ name: "steps", card: procedure("steps", [step("real", { run: "true" })]), options: { step: "fake" } });
   t.check(
     ({

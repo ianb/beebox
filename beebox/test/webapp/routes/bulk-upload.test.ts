@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { any, isoDate, not, str, uuid } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -460,6 +461,7 @@ void test("Finalize returns immediately with staged:", async (t) => {
       t.error(error);
     }
   });
+  const errors = consoleLines(t, "error");
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "a.pdf" }] });
   const sessionId = sessionIdOf(created);
@@ -484,6 +486,10 @@ void test("Finalize returns immediately with staged:", async (t) => {
     statusCode: 409,
     body: { error: str`Session is ${any(String)}; uploads are only accepted while it is open` },
   });
+
+  // "chat-1" has no recorded binding, so the worker logs why it left the batch retryable:
+  await waitForWorkerToSettle(ctx, sessionId);
+  t.check(errors(), [`[bulk] Target chat for batch ${sessionId} (session=chat-1) no longer exists; leaving retryable`]);
 });
 
 // ## Finalize records the batch's introduction inside the seal
@@ -499,6 +505,7 @@ void test("The composer text the boxholder submitted the batch with rides IN the
       t.error(error);
     }
   });
+  const errors = consoleLines(t, "error");
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-note", items: [{ id: "a", name: "a.jpg" }] });
   const sessionId = sessionIdOf(created);
@@ -537,6 +544,7 @@ void test("The composer text the boxholder submitted the batch with rides IN the
       totalBytes: 4,
     },
   });
+  t.check(errors(), [`[bulk] Target chat for batch ${sessionId} (session=chat-note) no longer exists; leaving retryable`]);
 });
 
 // ## A whitespace-only note is recorded as no note at all
@@ -552,6 +560,7 @@ void test("An empty composer must produce a batch indistinguishable from one tha
       t.error(error);
     }
   });
+  const errors = consoleLines(t, "error");
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-blank", items: [{ id: "a", name: "a.jpg" }] });
   const sessionId = sessionIdOf(created);
@@ -582,6 +591,7 @@ void test("An empty composer must produce a batch indistinguishable from one tha
     contextDir: "",
     totalBytes: 4,
   });
+  t.check(errors(), [`[bulk] Target chat for batch ${sessionId} (session=chat-blank) no longer exists; leaving retryable`]);
 });
 
 // ## An oversized note is rejected at the boundary

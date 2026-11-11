@@ -15,6 +15,8 @@ import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { getChatRuntime } from "../../../../src/webapp/chat-runtime.js";
 import { readAcceptedMessages } from "../../../../src/core/chat/session/accepted-messages.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
+import { spawnFailedLine } from "../../../helpers/spawn-failed-log.js";
 
 function engineReceived(backend: FakeChatBackend): string[] {
   return backend.runs.flatMap((run) => run.sent.flatMap((blocks) => blocks.flatMap((b) => b.type === "text" ? [b.text] : [])));
@@ -70,6 +72,7 @@ void test("a stop while a drain's send is in flight marks the drained inputs onc
   await eventually(() => has("first message"), { label: "first delivered", timeoutMs: 120_000 });
   await send("add oat milk", "m-oat");
   await send("and eggs", "m-eggs");
+  const errors = consoleLines(t, "error");
   let stoppedInStart = false;
   backend.start = () => {
     stoppedInStart = true;
@@ -85,6 +88,8 @@ void test("a stop while a drain's send is in flight marks the drained inputs onc
     undelivered: [{ messageId: "m-oat" }, { messageId: "m-eggs" }], // once each, in queue order
     engineGotOat: false,
   });
+  // The drain's failed spawn is logged for the operator:
+  t.check(errors(), [spawnFailedLine({ code: "?", message: "spawn EBADF" })]);
 });
 
 // ## A drain whose inputs a stop took neither delivers nor requeues them
