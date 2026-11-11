@@ -66,7 +66,7 @@ export function ScreenshotIndicatorStrip({ indicators, onDismiss }: {
 }) {
   if (indicators.length === 0) return null;
   return (
-    <div className="mx-3 sm:mx-6 mb-1 flex flex-col gap-1" aria-label="Shared screenshots">
+    <div className="mx-3 sm:mx-6 mb-1 flex flex-col gap-1" role="group" aria-label="Shared screenshots">
       {indicators.map((indicator) => (
         <IndicatorRow key={indicator.requestId} indicator={indicator} onDismiss={onDismiss} />
       ))}

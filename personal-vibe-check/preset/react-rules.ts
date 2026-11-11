@@ -34,6 +34,9 @@ export const reactRules: Linter.RulesRecord = {
   // that confirms Japanese/Chinese/Korean input does not submit. Ported
   // from modern-web-guidance's ime-safe-enter-submit matcher.
   "personal-vibe-check/ime-safe-enter": "error",
+  // aria-label on a div/span/p/i/b without a role is dropped by browsers.
+  // Ported from modern-web-guidance's accessible-names guide.
+  "personal-vibe-check/aria-label-needs-role": "error",
   // prefer-tag-over-role stays off: it asks for <output> on every
   // role="status" and <hr> for separators, which is churn without a
   // user-visible gain.

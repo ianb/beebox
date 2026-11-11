@@ -113,6 +113,29 @@ options.
   that only calls `preventDefault`/`stopPropagation`, are skipped.
 - Handlers imported from another module are not checked.
 
+## Names on Generic Elements
+
+With `react: true`, `personal-vibe-check/aria-label-needs-role` reports
+`aria-label` on a `div`, `span`, `p`, `i` or `b` that has no `role`. A generic
+element exposes no accessible name, so screen readers never read the label.
+Pick a role by what the element is:
+
+```tsx
+<div role="group" aria-label="Background tasks">...</div>   // labelled cluster
+<div role="status" aria-busy="true" aria-label="Loading">...</div> // placeholder
+<div role="img" aria-label="Pairing QR code" />              // drawn picture
+```
+
+or drop the label. No options.
+
+### Limitations
+
+- An element with a spread attribute is skipped, since the spread may carry
+  the role.
+- Only those five elements are checked; components are not, because the rule
+  cannot see what they render.
+- It does not check that the chosen role accepts a name.
+
 ## Restricting `className` on Components (opt-in)
 
 The rule `personal-vibe-check/restrict-component-classes` enforces the convention:

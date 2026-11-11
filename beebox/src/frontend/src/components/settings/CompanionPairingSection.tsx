@@ -175,6 +175,7 @@ export function CompanionPairingSection() {
           <Stack gap="sm">
             <div
               className="w-fit rounded border border-warm-200 bg-white p-3"
+              role="img"
               aria-label="iOS pairing QR code"
               dangerouslySetInnerHTML={{ __html: qrSvg(ticket.deepLink, 5) }}
             />

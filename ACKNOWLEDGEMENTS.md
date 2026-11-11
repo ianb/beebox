@@ -116,7 +116,8 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 
 - **Source:** [GoogleChrome/modern-web-guidance-src](https://github.com/GoogleChrome/modern-web-guidance-src) (Apache-2.0).
 - **What we took:** The detection logic of its `ime-safe-enter-submit` static matcher, ported to an ESLint rule: an Enter test in a keydown handler needs an IME composition check, with its exemptions for button-like elements, modifier-gated Enter, and suppress-only branches.
-- **Where it landed:** `personal-vibe-check/rules/ime-safe-enter.ts`.
+- **Also took:** the `accessible-names` finding that `aria-label` on a role-less `div`/`span`/`p` is dropped, as the rule `aria-label-needs-role`.
+- **Where it landed:** `personal-vibe-check/rules/ime-safe-enter.ts`, `aria-label-needs-role.ts`.
 
 ### No Mistakes, by kunchenguid
 
