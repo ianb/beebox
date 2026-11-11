@@ -80,7 +80,7 @@ function BoxRow({ box, isActive, editing, position, handlers }: BoxRowProps) {
         <span className="min-w-0 flex-1">
           <BoxLabel box={box} />
         </span>
-        <button
+        <button type="button"
           onClick={handleDisable}
           className="shrink-0 rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
           title={`Remove ${box.title} from the list`}
@@ -94,7 +94,7 @@ function BoxRow({ box, isActive, editing, position, handlers }: BoxRowProps) {
   const dot = isActive ? "bg-teal-500" : "bg-gray-300";
   return (
     <div className={`flex items-stretch gap-2 rounded border p-2 ${border}`}>
-      <button
+      <button type="button"
         onClick={handleActivate}
         className="flex min-w-0 flex-1 items-center gap-2 text-left"
         title={isActive ? `${box.title} is the active box` : `Make ${box.title} the active box`}
@@ -105,7 +105,7 @@ function BoxRow({ box, isActive, editing, position, handlers }: BoxRowProps) {
       {/* Deliberately a bordered button, not a bare glyph: opening a tab is a
           different kind of act from picking the active box, and the two sit
           side by side. */}
-      <button
+      <button type="button"
         onClick={handleOpen}
         className="shrink-0 self-center rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:border-teal-500 hover:text-teal-700"
         title={`Open ${box.title} in a tab`}
@@ -127,7 +127,7 @@ function MoveButtons({ title, position, onUp, onDown }: MoveButtonsProps) {
   const moveClass = "rounded px-1 text-xs leading-none text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-30";
   return (
     <span className="flex shrink-0 flex-col">
-      <button
+      <button type="button"
         onClick={onUp}
         disabled={position.index === 0}
         className={moveClass}
@@ -136,7 +136,7 @@ function MoveButtons({ title, position, onUp, onDown }: MoveButtonsProps) {
       >
         ▲
       </button>
-      <button
+      <button type="button"
         onClick={onDown}
         disabled={position.index === position.count - 1}
         className={moveClass}

@@ -45,7 +45,7 @@ export function SchedulePill({ schedule, onCancel, onFired }: { schedule: ChatSc
       </svg>
       {schedule.label}: {remaining}
       {schedule.alarm ? " 🔔" : null}
-      <button
+      <button type="button"
         onClick={onCancel}
         className="ml-0.5 text-accent-dark/60 hover:text-accent-dark"
         title="Cancel schedule"

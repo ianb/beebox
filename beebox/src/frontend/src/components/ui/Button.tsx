@@ -312,6 +312,7 @@ export function Button(props: ButtonProps) {
     <>
       <button
         {...rest}
+        // eslint-disable-next-line react/button-has-type -- type is a typed prop (button | submit | reset) that defaults to "button"
         type={type}
         disabled={isDisabled}
         aria-label={ariaLabel}

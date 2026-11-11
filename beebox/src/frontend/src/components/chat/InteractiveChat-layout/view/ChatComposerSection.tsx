@@ -52,7 +52,7 @@ export function ChatStatusBanners(props: {
           {/* Real space text node (not just margin) so a copy of the banner
               keeps the message and "dismiss" separated. */}
           {message}{"  "}
-          <button
+          <button type="button"
             id="bbx-chat-error-dismiss"
             onClick={onDismissError}
             className={`${tone.button} underline`}
@@ -103,7 +103,7 @@ export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: ()
       <span>
         {names.length} expired attachment{names.length === 1 ? "" : "s"} removed: {names.join(", ")}
       </span>
-      <button id="bbx-chat-expired-attachments-dismiss" onClick={onDismiss} className="flex-shrink-0 text-warm-700 hover:text-warm-900 underline">
+      <button type="button" id="bbx-chat-expired-attachments-dismiss" onClick={onDismiss} className="flex-shrink-0 text-warm-700 hover:text-warm-900 underline">
         dismiss
       </button>
     </div>
@@ -176,7 +176,7 @@ export function ChatComposerSection(props: ComposerSectionProps) {
         <div className="bbx-composer-mobile-row sm:hidden relative bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 pb-2">
           {typingMode ? (
             <div className="absolute -top-10 right-3 flex gap-1 z-10">
-              <button
+              <button type="button"
                 id={includeControlIds ? "bbx-composer-keyboard-lock" : undefined}
                 onClick={() => setTypingLocked((v) => !v)}
                 className={`p-1.5 rounded-full shadow-sm backdrop-blur-sm ${typingLocked ? "bg-primary text-white hover:bg-primary-dark" : "bg-warm-100/90 text-warm-600 hover:bg-warm-300"}`}

@@ -69,7 +69,7 @@ export function ComposerSendButton({
 }) {
   const dim = size === "lg" ? "w-14 h-14" : "w-12 h-12";
   return (
-    <button
+    <button type="button"
       id={id}
       onClick={onClick}
       disabled={disabled}
@@ -127,7 +127,7 @@ function DesktopComposerRow({
             ink
             className="flex-shrink-0"
           />
-          <button
+          <button type="button"
             id={includeControlIds ? "bbx-composer-dictation-edit" : undefined}
             onClick={() => {
               onStopDictation();
@@ -319,7 +319,7 @@ export function ChatInputArea({
         <div className="flex-1 sm:hidden" />
 
         {/* Mobile-only: keyboard button */}
-        <button
+        <button type="button"
           id={hasControlIds ? "bbx-composer-keyboard" : undefined}
           onClick={onKeyboard}
           className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}

@@ -66,7 +66,7 @@ export function MobileTextareaRow({
             ink
             className="flex-shrink-0"
           />
-          <button
+          <button type="button"
             id={hasControlIds ? "bbx-composer-dictation-edit-mobile" : undefined}
             onClick={() => {
               onStopDictation();

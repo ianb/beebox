@@ -170,7 +170,7 @@ function ScriptedBubble() {
     <div className="border border-warm-300 rounded-lg p-4 bg-warm-50">
       <div className="mb-2 flex flex-wrap gap-2">
         {SCRIPT.map((s) => (
-          <button
+          <button type="button"
             key={s}
             onClick={() => setStatus(s)}
             className={`px-2 py-1 rounded text-xs ${status === s ? "bg-primary text-white" : "bg-warm-200 text-warm-700 hover:bg-warm-300"}`}
@@ -279,7 +279,7 @@ function OverlayDemo() {
           fail every upload
         </label>
       </div>
-      <button onClick={() => setOpen(true)} className="px-3 py-1.5 rounded bg-primary text-white text-sm hover:bg-primary-dark">
+      <button type="button" onClick={() => setOpen(true)} className="px-3 py-1.5 rounded bg-primary text-white text-sm hover:bg-primary-dark">
         Open capture overlay
       </button>
       <pre className="mt-2 text-xs text-warm-700 whitespace-pre-wrap">{log.join("\n") || "(fake capture-api calls appear here)"}</pre>

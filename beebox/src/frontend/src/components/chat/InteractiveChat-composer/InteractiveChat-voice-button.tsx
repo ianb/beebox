@@ -27,7 +27,7 @@ export function VoiceToggleButton({
 }) {
   const hasControlId = includeControlId !== false;
   return (
-    <button
+    <button type="button"
       id={hasControlId ? "bbx-composer-mic" : undefined}
       // The state as data, so a theme styles the idle mic without keying on
       // a utility class (themes/*.css, `[data-mic="idle"]`).

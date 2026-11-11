@@ -141,7 +141,7 @@ function CommitRow({
   ].filter((v): v is string => v !== null).join(", ");
 
   return (
-    <button
+    <button type="button"
       onClick={onSelect}
       {...bbxSource("commit", commit.hash)}
       aria-label={ariaLabel}
@@ -259,7 +259,7 @@ export function CommitTimeline({
 
       {loading ? <StatusMessage>Loading...</StatusMessage> : null}
 
-      {hasMore && !loading ? <button
+      {hasMore && !loading ? <button type="button"
           id={`${idPrefix}-load-more`}
           onClick={onLoadMore}
           className="w-full p-2 text-sm text-primary hover:bg-info-50"

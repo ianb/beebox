@@ -7,7 +7,7 @@ export function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
   if (!hasOlder) return null;
   return (
     <div className="text-center py-2">
-      <button
+      <button type="button"
         id="bbx-chat-load-older"
         onClick={onLoadOlder}
         disabled={loadingOlder}

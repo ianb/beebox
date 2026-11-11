@@ -66,7 +66,7 @@ function RendererToggle({ renderers, active, onSelect, compact, path }: {
   return (
     <div className={`flex gap-1 bg-warm-100 rounded-lg ${compact ? "p-0.5" : "p-1"}`}>
       {renderers.map(r => (
-        <button
+        <button type="button"
           key={r.name}
           onClick={() => onSelect(r.name)}
           className={`${compact ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm"} rounded ${

@@ -41,7 +41,7 @@ export function TargetStrip(props: {
         ) : null}
       </div>
       {speechPlaying ? (
-        <button
+        <button type="button"
           id={includeControlIds ? "bbx-chat-stop-speech" : undefined}
           onClick={onStopSpeech}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
@@ -55,7 +55,7 @@ export function TargetStrip(props: {
         </button>
       ) : null}
       {isStreaming ? (
-        <button
+        <button type="button"
           id={includeControlIds ? "bbx-chat-stop-agent" : undefined}
           onClick={onInterrupt}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}

@@ -55,7 +55,7 @@ export class ViewErrorBoundary extends React.Component<Props, State> {
         <div role="alert" className="border border-danger-light bg-danger-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-danger-dark font-medium">View Error</h3>
-            <button
+            <button type="button"
               onClick={this.handleReset}
               className="text-sm text-danger-dark hover:text-danger-dark underline"
             >

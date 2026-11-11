@@ -35,7 +35,7 @@ function SessionSection({ sessionId, idPrefix }: { sessionId: string; idPrefix: 
 
   return (
     <div className="border-t border-warm-200">
-      <button
+      <button type="button"
         id={`${idPrefix}-session-log-toggle`}
         onClick={() => setExpanded(!expanded)}
         className="w-full px-4 py-2 text-xs text-warm-700 hover:text-warm-900 text-left"

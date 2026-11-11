@@ -236,7 +236,7 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
           aria-label="Filter log entries"
           className="flex-1 px-2 py-0.5 rounded border border-warm-300 text-xs"
         />
-        <button id="bbx-debug-log-clear" onClick={clearLog} className="text-warm-700 hover:text-warm-900">Clear</button>
+        <button type="button" id="bbx-debug-log-clear" onClick={clearLog} className="text-warm-700 hover:text-warm-900">Clear</button>
         <CloseButton id="bbx-debug-log-close" onClick={onClose} size="sm" />
       </div>
       <div ref={scrollRef} className="flex-1 overflow-auto px-3 py-1 font-mono text-[11px] leading-tight">

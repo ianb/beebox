@@ -60,6 +60,8 @@ export const reactRules: Linter.RulesRecord = {
   "react-hooks/use-memo": "error",
   "react-hooks/incompatible-library": "error",
   // React JSX
+  // A button inside a form defaults to type=submit; explicit types prevent accidental submits.
+  "react/button-has-type": "error",
   "react/jsx-no-useless-fragment": "error",
   "react/self-closing-comp": "error",
   "react/no-unknown-property": "error",

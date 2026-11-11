@@ -250,8 +250,8 @@ void test("The exploded composer gallery and capture-mode gallery render reusabl
   }
   function composerCopy(includeControlIds: boolean, busy: boolean) {
     return React.createElement(React.Fragment, null,
-      React.createElement("button", { id: includeControlIds ? "bbx-composer-keyboard-lock" : undefined }),
-      React.createElement("button", { id: includeControlIds ? "bbx-composer-keyboard-close" : undefined }),
+      React.createElement("button", { type: "button", id: includeControlIds ? "bbx-composer-keyboard-lock" : undefined }),
+      React.createElement("button", { type: "button", id: includeControlIds ? "bbx-composer-keyboard-close" : undefined }),
       React.createElement(TargetStrip, {
         status: busy ? { state: "busy", disposition: "will-queue" } : { state: "ready" },
         pendingCount: 0, isStreaming: busy, catchingUp: false, speechPlaying: false,

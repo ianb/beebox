@@ -45,7 +45,7 @@ export function BrowseBreadcrumbs({ dirPath, rootPath, onNavigate }: BrowseBread
     <nav aria-label="Breadcrumbs" className="px-3 py-2 border-b text-sm break-words">
       <ol>
         <li className="inline">
-          <button
+          <button type="button"
             id="bbx-browse-crumb-root"
             data-bbx-does={underRoot ? "goes to the top of the content" : "goes to the whole box"}
             onClick={() => onNavigate(underRoot ? rootPath : "")}
@@ -63,7 +63,7 @@ export function BrowseBreadcrumbs({ dirPath, rootPath, onNavigate }: BrowseBread
               {isLast ? (
                 <span aria-current="page" className="text-warm-700 font-medium px-0.5">{label}</span>
               ) : (
-                <button
+                <button type="button"
                   onClick={() => onNavigate(segPath)}
                   className="text-primary hover:text-primary-dark hover:underline px-0.5"
                 >{label}</button>
