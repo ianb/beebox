@@ -44,6 +44,8 @@ set -euo pipefail
 #                    bind to one box (a bucket-scoped publish token) are skipped and
 #                    named. A source box with no grants at all copies nothing:
 #                    grant it the secrets it should have first.
+#                    The long-lived Claude token (claude-oauth-token) is
+#                    granted to every box without this flag.
 #   --dry-run        run the preflight checks against the live server and
 #                    print what would change. Nothing is cloned, written, or
 #                    restarted. Read-only on the server.
@@ -290,6 +292,8 @@ if [[ -n "$DRY_RUN" ]]; then
   if [[ -n "$SECRETS_FROM" ]]; then
     echo "  - copy box '$SECRETS_FROM's secret grants (bbx engine secrets copy-grants; no files move)"
   fi
+  echo "  - grant claude-oauth-token (the boxes' long-lived Claude token) if the master"
+  echo "    store holds it and the box has no grant yet"
   echo "  - copy the box's grants into its own secret store and verify the copy"
   echo "  - systemctl enable --now beebox-box@$BOX_NAME.socket"
   echo "  - register with the hub (bbx engine hub add-box --socket, per the plan above)"
@@ -468,6 +472,26 @@ if [[ -n "$SECRETS_FROM" ]]; then
   echo "\$COPY_OUT"
 fi
 
+# The hub user's master secret store: grants are made there and each box's own
+# store is a verified copy of its share.
+master_store=\$(grep -E '^BBX_SECRETS_FILE=' $BBX_HOME/.env 2>/dev/null | cut -d= -f2- || true)
+master_store="\${master_store:-$BBX_HOME/.config/beebox/secrets.json}"
+
+# Every box signs in to Claude with the one long-lived token
+# (docs/server/configuration.md, "The long-lived token"). Grant it whenever the
+# master holds it, so a new box can run its agent without --secrets-from. An
+# existing grant is left as it is (its access level included).
+token_state=\$(node -e 'const f=require("fs");const s=f.existsSync(process.argv[1])?JSON.parse(f.readFileSync(process.argv[1],"utf8")):{};const n="claude-oauth-token";process.stdout.write(!(n in (s.secrets??{}))?"absent":(n in (s.grants?.[process.argv[2]]??{}))?"granted":"grant")' "\$master_store" "$BOX_NAME")
+case "\$token_state" in
+  grant)
+    if ! su - $BBX_USER -c "bbx engine secrets grant '$BOX_NAME' claude-oauth-token --agent-confirmed"; then
+      echo "Secrets: granting claude-oauth-token FAILED — stopping before the box is registered."
+      exit 1
+    fi ;;
+  granted) echo "Secrets: the box already holds a claude-oauth-token grant." ;;
+  *) echo "Secrets: the master store has no claude-oauth-token, so this box cannot run its agent until one is set and granted (docs/server/configuration.md)." ;;
+esac
+
 # Re-chown everything (bbx engine init / the writes above ran as root in places).
 chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
 # The box's own secret store: its share of the hub user's master, verified.
@@ -475,8 +499,6 @@ chown -R $BOX_OWNER:$BOX_OWNER "$BOX_PATH"
   # this copies the result (per-box-units.subplan.md).
   store="$BOX_HOME/.config/beebox/secrets.json"
   install -d -o "$BOX_OWNER" -g "$BOX_OWNER" -m 0700 "$BOX_HOME/.config/beebox"
-  master_store=\$(grep -E '^BBX_SECRETS_FILE=' $BBX_HOME/.env 2>/dev/null | cut -d= -f2- || true)
-  master_store="\${master_store:-$BBX_HOME/.config/beebox/secrets.json}"
   # A re-run must not silently drop what the box saved on its own Admin page
   # (a value or grant the master never received; per-box-units.md question
   # 10): stop and name them, so the operator adds them to the master first.
