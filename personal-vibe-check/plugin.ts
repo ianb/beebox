@@ -17,6 +17,8 @@
  *     Tailwind-specific, so opt-in per project.
  *   - `restricted-classes` — bans configured class patterns or combinations
  *     outside the files that own them. Configured per project.
+ *   - `require-ui-primitive` — bans configured elements, ARIA roles and
+ *     attributes outside the files that own them. Configured per project.
  *
  * Typically consumed via `vibeCheck()` options rather than registered
  * directly, but the plugin is exported in case a project wants to use the
@@ -29,6 +31,7 @@ import preferNativeDialog from "./rules/prefer-native-dialog.ts";
 import noPxFontSizeClass from "./rules/no-px-font-size-class.ts";
 import noViewportHeightClass from "./rules/no-viewport-height-class.ts";
 import restrictComponentClasses from "./rules/restrict-component-classes.ts";
+import requireUiPrimitive from "./rules/require-ui-primitive.ts";
 import restrictedClasses from "./rules/restricted-classes.ts";
 
 const plugin = {
@@ -41,6 +44,7 @@ const plugin = {
     "no-px-font-size-class": noPxFontSizeClass,
     "prefer-native-dialog": preferNativeDialog,
     "restricted-classes": restrictedClasses,
+    "require-ui-primitive": requireUiPrimitive,
   },
 };
 

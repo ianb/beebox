@@ -20,7 +20,7 @@
  */
 
 import type { Rule } from "eslint";
-import path from "node:path";
+import { fileOwner } from "./lib/allow-in.ts";
 import {
   type ClassEntryPatterns,
   calleeName,
@@ -186,12 +186,7 @@ const rule: Rule.RuleModule = {
   create(context) {
     const options = readOptions(context.options[0]);
     const callees = new Set(options.callees ?? DEFAULT_CALLEES);
-    // `allowIn` globs are relative to ESLint's working directory, which is the
-    // config's directory when ESLint runs there. From elsewhere they match
-    // nothing, so the rule fails closed.
-    const file = path.relative(context.cwd, context.filename).split(path.sep).join("/");
-    const owns = (globs: string[] | undefined): boolean =>
-      (globs ?? []).some((glob) => path.matchesGlob(file, glob));
+    const owns = fileOwner(context);
     const entries: CompiledEntry[] = options.entries
       .filter((entry) => !owns(entry.allowIn))
       .map((entry) => ({

@@ -253,6 +253,46 @@ always render are checked alone and with each conditional operand on its own.
 - A class string in a prop other than `className` is read only through a
   class helper call.
 
+## Required UI Primitives (opt-in)
+
+The rule `personal-vibe-check/require-ui-primitive` bans configured intrinsic
+elements, ARIA roles and attributes outside the files that own them. Use it
+when a project has a primitive for a control (a text field, a menu) and a raw
+`<input>` or `role="menu"` elsewhere should fail lint. Configure it in the
+project's own config:
+
+```ts
+{
+  files: ["src/**/*.tsx"],
+  rules: {
+    "personal-vibe-check/require-ui-primitive": ["error", {
+      elements: {
+        input: { allowIn: ["src/components/ui/fields/field.tsx"], message: "Use a field primitive." },
+      },
+      roles: { menu: { allowIn: ["src/components/ui/Menu.tsx"], message: "Use <Menu>." } },
+      attributes: { "aria-haspopup": { message: "Use <Menu> or <Popover>." } },
+    }],
+  },
+}
+```
+
+**Options:** `elements`, `roles` and `attributes`, each a map from a name to
+`{ message: string, allowIn?: string[] }`. `allowIn` lists the owning files, as
+globs relative to ESLint's working directory, as in `restricted-classes`.
+List each owning file; a directory glob exempts every new file in it.
+
+- `elements`: a JSX element whose name is the lower-case tag.
+- `roles`: a static `role` value (string, template with no expressions, or
+  the branches of `a ? x : y`) on any element, token by token.
+- `attributes`: the attribute on any element, whatever its value.
+
+### Limitations
+
+- Components are not elements: the rule cannot see what they render.
+- A role or attribute passed through a spread, and a role held in an
+  identifier, are not read.
+- `React.createElement("input")` is not checked.
+
 ## Restricting `className` on Components (opt-in)
 
 The rule `personal-vibe-check/restrict-component-classes` enforces the convention:
