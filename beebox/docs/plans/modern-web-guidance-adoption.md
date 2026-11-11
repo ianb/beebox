@@ -1,6 +1,6 @@
 ---
 title: "Adopt modern-web-guidance: code sweep, lint rules, agent guidance"
-status: draft
+status: active
 workstream: web-guidance-scan
 issues:
   - ../../../issues/exploration/2026-11-10-adopt-modern-web-guidance-skill.md
@@ -42,14 +42,17 @@ four real static-scanner findings, the field-description gap that touches every
 form, and the `min-h-dvh` pages. The modal scroll rule in the same sample has
 no visible effect today (C1).
 
-**Chosen scope**, if every "adopt" and "adopt with changes" recommendation
-below is approved: about 1,100 changed source and test lines across about 60
-files in `beebox/src/frontend`, `beebox/src/webapp`, `workstreams-app`,
-`beebox-clerk`, and `personal-vibe-check`, plus about 150 lines of docs
-(`frontend.md`, `box-docs/views.md`, `security-report.md`). Of the 1,100
-lines, the samples account for about 500. Under 2,000: not a BIG CHANGE. The two
-items that would push it over are listed as rejected or deferred: the
-66-site `px`→`rem` conversion (D4) and a `popover` rewrite of `Dropdown` (B2).
+**Chosen scope** (approved 2026-11-11): about 1,900 changed source and test
+lines across about 120 files in `beebox/src/frontend`, `beebox/src/webapp`,
+`workstreams-app`, `beebox-clerk`, `personal-vibe-check`, and the iOS project
+file, plus about 200 lines of docs (`frontend.md`, `box-docs/views.md`,
+`security-report.md`, `ios-app` docs). Breakdown: samples about 500 (done);
+the original adopt set about 600 more; D4 `px`→`rem` about 140 (66 sites);
+B12 `button-has-type` about 140 (69 sites); Temporal (G) about 250–400; iOS
+target, composer cleanup and lint rules about 150. This is under 2,000 but
+close; the Temporal estimate carries the most risk. If the total passes
+2,000, the plan reports it as a **BIG CHANGE** before continuing. Still
+deferred: a `popover` rewrite of `Dropdown` (B2).
 
 What the fuller scope buys over the smallest fix: the clickjacking exposure
 (F1), keyboard and screen-reader defects in shared primitives (B1–B3, B9–B11),
@@ -157,9 +160,9 @@ The plan adds no product nouns. Working terms:
   guidance does not choose otherwise.
 - **Category** — a decision unit in this plan (A–I). A category groups guides
   by the code it touches, not by upstream folder.
-- **Browser floor** — the oldest engine we support. Today implicit: the iOS
-  app's WKWebView, `IPHONEOS_DEPLOYMENT_TARGET = 17.0`
-  (`ios-app/*.xcodeproj`). workstreams-app and beebox-clerk: Chrome only.
+- **Browser floor** — the oldest engine we support: Safari 18.0 (the iOS
+  app's WKWebView once its target is 18.0) and current desktop browsers;
+  Category 0. workstreams-app and beebox-clerk: Chrome only.
 
 ## Tracks / scope
 
@@ -168,29 +171,45 @@ after reading the code; sites are cited there. **Rec** is this plan's
 recommendation. **Lint** says what holds the fix: an ESLint rule in
 `personal-vibe-check/`, a baselined scan, or nothing.
 
-### Category 0 — Browser floor (decide first)
+### Category 0 — Browser floor (decided 2026-11-11)
 
-- **What.** The guides assume "Baseline widely available" unless a project
-  states a policy (published `SKILL.md`, "Interpreting Browser Support"). We
-  have none written. The audit used Safari 17.0 as the floor, and it decided
-  about 30 leans: `popover` on iOS (guide data: iOS 18.3), anchor positioning,
-  `closedby`, invoker commands, `interestfor`, `light-dark()` (17.5),
-  `text-wrap` (17.5), Trusted Types (26), Temporal (none).
-- **What is known.** Only the iOS floor is recorded:
-  `ios-app/BeeBox.xcodeproj/project.pbxproj` sets
-  `IPHONEOS_DEPLOYMENT_TARGET = 17.0`, so the app's WKWebView can be Safari
-  17.0. That is an observed floor for one client, not a policy for the web
-  app. Nothing records which desktop Safari, Firefox, or Chrome versions may
-  open a box.
-- **Rec.** Write a one-paragraph policy in `beebox/frontend.md` once the
-  engines are decided. Lean: Safari 17.0 (the iOS app) and current Chrome,
-  Safari and Firefox on desktop; features above that floor only as progressive
-  enhancement with no fallback code over about 20 lines. The upstream skill
-  reads such a line and applies it.
-- **Boxholder decision (human decision required).** Which engines the web app
-  supports, and whether the iOS target stays at 17.0. Raising iOS to 18 would
-  unlock `popover` for B2/C3 and change four leans; it would not settle
-  desktop support.
+- **Decision.** Modern browsers only. The floor is **iOS 18 / Safari 18.0**
+  and current Chrome, Safari and Firefox on desktop. The iOS app's deployment
+  target moves from 17.0 to 18.0 (chunk 0b); the boxholder chose 18 over 26.
+  Apple's June 2026 App Store figures put about 93% of iPhones that can run
+  iOS 26 on iOS 18 or 26.
+- **Policy text for `beebox/frontend.md`** (chunk 0a):
+  > **Browser support.** Bee Box targets current Chrome, Safari and Firefox,
+  > and the iOS app's WKWebView at iOS 18 (Safari 18.0). Use any feature
+  > Baseline-available in Safari 18.0 without a fallback. A newer feature is
+  > progressive enhancement: it may be used where losing it leaves the page
+  > working, with no fallback code over about 20 lines and no polyfill except
+  > Temporal (Category G).
+  The upstream skill reads a line like this and computes fallbacks from it.
+- **What the move from 17.0 to 18.0 changes in this plan.** Now usable with
+  no fallback: `light-dark()`, `text-wrap: balance` (17.5),
+  `fetchpriority` (17.2), `<details name>` (17.2), CSS alt text (17.4),
+  `@starting-style` (17.5), `content-visibility` (18). Still above the floor:
+  anchor positioning (26), `field-sizing` (26.2), invoker commands (26.2),
+  `closedby`, `interestfor`, `popover="hint"`, Trusted Types (26), Temporal.
+  `popover` itself works on iOS 18.0; the guides' data lists iOS 18.3 for
+  full support, so B2 and C3 test on a device before relying on it. No
+  recommendation below flips because of the move: the features it unlocks
+  were rejected for other reasons (`light-dark()` in D2, `content-visibility`
+  in E) or were already fine as progressive enhancement (D3, E1).
+
+**0b. iOS deployment target 17.0 → 18.0.**
+- `IPHONEOS_DEPLOYMENT_TARGET = 17.0` in 8 build configurations
+  (`ios-app/BeeBox.xcodeproj/project.pbxproj`), "Minimum iOS: 17.0"
+  (`ios-app/README.md:13`), "The deployment target is iOS 17"
+  (`ios-app/AGENTS.md:25`), and the iOS 17 recording note
+  (`beebox/docs/mobile-contract.md:1520`).
+- 8 `#available`/`@available(iOS 17|18)` checks across 4 Swift files become
+  partly redundant; they are left in place (removing them is a follow-up,
+  filed as an issue, so this chunk changes no behavior).
+- Verify: `xcodebuild` builds the app and extensions for the simulator. Uses
+  the `bbx-ios-overlap` skill because it touches the iOS side of the
+  contract.
 
 ### Category A — Forms and input
 
@@ -500,7 +519,7 @@ Reject OS-following `prefers-color-scheme` and `light-dark()`: the app has
 user-chosen themes, not OS dark mode.
 
 **D3. Balanced headings** (`improve-text-layout-and-legibility`). Add
-`text-balance` to `ui/Heading.tsx`. Safari 17.0 ignores it. Rec: **adopt with
+`text-balance` to `ui/Heading.tsx` (Safari 17.5, so within the 18.0 floor). Rec: **adopt with
 changes** (Heading only; judge `text-pretty` on prose after a visual check).
 
 **D4. `px` font sizes** (`typography`). 66 sites (`text-[11px]`,
@@ -579,13 +598,34 @@ off on http dev), `Clear-Site-Data` on logout, Sanitizer API (Safari lacks
 third-party scripts). The iOS bearer token in `localStorage`
 (`lib/mobile-auth.ts:5`) is an iOS contract question, out of scope.
 
-### Category G — JS APIs
+### Category G — JS APIs: Temporal (approved 2026-11-11)
 
-Temporal, `Intl.DurationFormat`, global calendars, high-precision timestamps.
-Our `Date` code is correct today (`ui/FriendlyDate.tsx`), and Safari has no
-Temporal. Rec was **reject**; the boxholder is open to a polyfill
-(2026-11-11), so this is now open question 2: pick a polyfill, then move date
-code to Temporal one module at a time.
+- **What.** Temporal replaces `Date` for calendar dates, time zones and
+  durations. Chrome and Firefox ship it; Safari 18 does not, so it needs a
+  polyfill.
+- **Polyfill: `temporal-polyfill`** (FullCalendar; MIT; 1.0.8, updated
+  2026-11-04; two small spec dependencies). The alternative,
+  `@js-temporal/polyfill` (TC39's reference, 0.5.1, last updated 2025-03-31,
+  depends on `jsbi`), is about three times larger unpacked and less active.
+- **Loading.** A module `src/frontend/src/lib/temporal.ts` runs before the
+  app renders: `if (!("Temporal" in globalThis)) await import("temporal-polyfill/global")`.
+  Browsers with native Temporal download nothing. The rest of the app reads
+  `globalThis.Temporal`. Types come from the polyfill's `temporal-spec`
+  package until TypeScript's `lib` has them.
+- **Scope here.** 62 frontend files use `Date`. This plan moves only the
+  modules where calendar-date-versus-instant handling is a real bug class
+  today, each with its tests:
+  1. `ui/FriendlyDate.tsx` — its date-only workaround (`timeZone: "UTC"` so
+     "2026-08-14" does not show as the 13th) becomes `Temporal.PlainDate`.
+  2. `components/todo/item-logic.ts` — due dates.
+  3. `components/CalendarView/view.tsx` — day math.
+  The other files stay on `Date` until touched. `frontend.md` gains one
+  line: new calendar-date, time-zone and duration code uses Temporal.
+- **Not in scope.** Backend date code (`beebox/src/core`), which runs on Node;
+  a lint rule banning `new Date` (too broad while 59 files keep it).
+- **Size.** About 250–400 lines with tests. Risk: medium (date display is
+  everywhere a card shows a time); the three modules have DOM and unit tests
+  to extend.
 
 ### Category H — Box-authored views
 
@@ -683,7 +723,7 @@ telemetry.
 - **Rec: in part.** Install the skill for dev agents from a pinned, vendored
   copy of the CLI (a version we bump on purpose), with
   `DISABLE_TELEMETRY=1`, and the browser-floor paragraph (Category 0) in
-  `frontend.md` so its fallback advice targets Safari 17.0. Do not copy guide
+  `frontend.md` so its fallback advice targets Safari 18.0. Do not copy guide
   text into our docs: copies go stale and leave the evals' coverage.
 - **Box agents.** Category H, option 1 now; option 4 later.
 - **Order.** (1) Category 0 decision; (2) the sweep by approved category, each
@@ -778,11 +818,8 @@ None. Each category is small enough to do from its entry here.
 
 ## Boxholder decisions (2026-11-11)
 
-- **Browser floor:** modern browsers; nothing old needs support. Policy text
-  for `frontend.md`: current Chrome, Safari and Firefox; Baseline "newly
-  available" features may be used, with a small fallback only where the iOS
-  app's WKWebView lacks them. Whether the iOS deployment target moves from
-  17.0 is still open (question 1 below).
+- **Browser floor:** modern browsers; iOS 18 (not 26) for the iOS app.
+  See Category 0.
 - **Approved:** A (including the A6 show-password button), B (including B12
   `react/button-has-type` and its 69 edits), C, E1, F, H (`views.md`
   section and H0), I (the lint ports), and the
@@ -797,23 +834,16 @@ None. Each category is small enough to do from its entry here.
 
 ## Open design questions
 
-1. **iOS deployment target.** "Modern" conflicts with iOS 17.0: `popover`
-   (iOS 18.3 per the guides' data), `light-dark()`, `text-wrap` and others
-   need a newer WebKit. Lean: raise the iOS target to 18, which removes most
-   fallback work; this is an iOS-app change (`bbx-ios-overlap`).
-2. **Which Temporal polyfill** (G). Compare `temporal-polyfill` (FullCalendar's,
-   smaller) against `@js-temporal/polyfill` (TC39's reference): size, load only
-   where `globalThis.Temporal` is missing, and which `Date` code moves first
-   (`ui/FriendlyDate.tsx`, calendar and todo date logic).
-3. **Dev-agent skill** — install the pinned, telemetry-off copy, or none.
-4. **One disclosure idiom** (B13). Lean: keep `Accordion`, drop its region.
+1. **Dev-agent skill** — install the pinned, telemetry-off copy, or none.
+2. **One disclosure idiom** (B13). Lean: keep `Accordion`, drop its region.
+3. **B11 toasts under a modal** — decided after the reproduction in chunk 5.
 
 ## Knowledge audits
 
 The plan adds two agent-facing rules: the browser-floor paragraph in
 `frontend.md`, and (if adopted) the box-view paragraph in `box-docs/views.md`.
 - Dev audit (`--dev`): given "add a popup menu to X", the agent stays within
-  Safari 17.0 (no anchor positioning without a fallback).
+  Safari 18.0 (no anchor positioning without a fallback).
 - Box audit: given "make a view with a text field that submits on Enter", the
   view checks IME composition and names the field.
 Both land with their docs chunk and are run once
@@ -839,22 +869,26 @@ Both land with their docs chunk and are run once
 Each line is a chunk; each lands with its own lint rule and test. Order
 follows dependency, then value.
 
-0. Category 0: browser-floor paragraph in `frontend.md`.
-1. Samples (done): A1 fix + rule, A2, C1 + D1 fix.
-2. F1 (+F2, F4 if approved), with `security-report` skill update.
-3. A3, A4, A5, A7, B5, B6 (small, independent).
-4. B1 + its selector rule; D1's `h-screen` rule.
-5. B2, B3 (primitive changes; update tests).
-6. B9, B10, B11, B7, B8, B13 (drop region).
-7. C3, C4, C5, then C2 (iOS check), then C7 rule.
-8. B4 + axe `target-size`; D2, D3, D5 (theme-check).
-9. E1 (after confirming `body.tsx` is not in chat).
-10. A6 and B12 if approved.
-11. Category H: H0 (figure starters) and option 1 (`box-docs/views.md`),
+0. Samples (done): A1 fix + rule, A2, C1 + D1 fix.
+0a. Browser-floor paragraph in `frontend.md` (Category 0).
+0b. iOS deployment target 18.0 (`bbx-ios-overlap`), docs, simulator build.
+1. F1, F2, F4 (headers), with the `security-report` skill; F3 after checking
+   what Cloudflare sends.
+2. A3, A4, A5, A7, B5, B6 (small, independent).
+3. B1 + its selector rule; D1's `h-screen` rule.
+4. B2, B3 (primitive changes; update tests).
+5. B9, B10, B11 (label now; modal case after a reproduction), B7, B8, B13.
+6. C3, C4, C5, then C2 (iOS check), then C7 rule.
+7. B4 + axe `target-size`; D2, D3, D5 (theme-check).
+8. E1 (after confirming `body.tsx` is not in chat).
+9. A6 (show-password) and B12 (`react/button-has-type` + 69 edits).
+10. D4 `px`→`rem` + its className rule.
+11. G: Temporal loader, then FriendlyDate, todo item logic, CalendarView.
+12. Composer-height cleanup (closes the filed issue).
+13. Category H: H0 (figure starters) and option 1 (`box-docs/views.md`),
     knowledge audits.
-12. Only if chosen: weekly baselined `legacy-scan` in
-    `schedules/supplemental-lint/`.
-13. Dev-agent skill install (pinned, telemetry off), dev knowledge audit.
+14. Not scheduled: weekly baselined `legacy-scan`; dev-agent skill install
+    (undecided).
 
 ## Rollout shape
 
