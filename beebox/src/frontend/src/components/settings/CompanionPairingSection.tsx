@@ -28,6 +28,16 @@ function boxBaseUrl(): string {
 }
 
 /**
+ * Whether a phone could never reach the box at this page's host. The QR code
+ * carries the page's own origin, so a page opened at localhost hands the phone
+ * an address that names the phone itself, and pairing fails with no reason
+ * given. The Mac app on the same computer can still use the link.
+ */
+export function loopbackHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "[::1]" || /^127\./.test(hostname);
+}
+
+/**
  * The `label` the phone files this box under. It used to be guessed from the
  * last path segment (with a special case for a `/settings` suffix), which named
  * every newly paired box after the route instead of the box — "chat", once
@@ -152,15 +162,21 @@ export function CompanionPairingSection() {
           </Hint>
         </Stack>
 
+        {loopbackHost(window.location.hostname) ? (
+          <Hint>
+            {`A phone can't reach this box at ${window.location.host}. To pair an iPhone, open this page at an address the phone can reach, such as this computer's Tailscale name, and show the QR code there.`}
+          </Hint>
+        ) : null}
+
         <Row gap="sm" wrap>
-          <Button
+          {loopbackHost(window.location.hostname) ? null : <Button
             id="bbx-settings-pairing-create-qr"
             loading={createMutation.isPending ? !showQr : false}
             loadingLabel="Creating..."
             onClick={showQrCode}
           >
             Show QR Code (iPhone)
-          </Button>
+          </Button>}
           <Button id="bbx-settings-pairing-copy-link" onClick={copyLink} flash={{ label: "Copied" }}>
             Copy Link (Mac)
           </Button>
