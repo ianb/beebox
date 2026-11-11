@@ -8,7 +8,7 @@
 import { useContext, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "../../lib/cn";
-import { DropdownContext } from "./Dropdown";
+import { DropdownContext, useMenuItemRole } from "./Dropdown";
 
 interface MenuItemBase {
   children: ReactNode;
@@ -66,6 +66,7 @@ function noop() {}
 
 export function MenuItem(props: MenuItemProps) {
   const ctx = useContext(DropdownContext);
+  const role = useMenuItemRole();
   const close = ctx !== null ? ctx.close : noop;
   const dense = ctx !== null ? ctx.dense : false;
   const { children, id, icon, disabled = false, danger = false, active = false, keepOpen = false } = props;
@@ -74,10 +75,10 @@ export function MenuItem(props: MenuItemProps) {
 
   if ("to" in props && props.to !== undefined) {
     if (disabled) {
-      return <span id={id} role="menuitem" aria-disabled="true" className={className}>{content}</span>;
+      return <span id={id} role={role} aria-disabled="true" className={className}>{content}</span>;
     }
     return (
-      <Link id={id} role="menuitem" to={props.to} onClick={close} className={className}>
+      <Link id={id} role={role} to={props.to} onClick={close} className={className}>
         {content}
       </Link>
     );
@@ -85,10 +86,10 @@ export function MenuItem(props: MenuItemProps) {
 
   if ("href" in props && props.href !== undefined) {
     if (disabled) {
-      return <span id={id} role="menuitem" aria-disabled="true" className={className}>{content}</span>;
+      return <span id={id} role={role} aria-disabled="true" className={className}>{content}</span>;
     }
     return (
-      <a id={id} role="menuitem" href={props.href} target={props.target} rel={props.target ? "noopener noreferrer" : undefined} download={props.download} onClick={close} className={className}>
+      <a id={id} role={role} href={props.href} target={props.target} rel={props.target ? "noopener noreferrer" : undefined} download={props.download} onClick={close} className={className}>
         {content}
       </a>
     );
@@ -99,7 +100,7 @@ export function MenuItem(props: MenuItemProps) {
     <button
       id={id}
       type="button"
-      role="menuitem"
+      role={role}
       disabled={disabled}
       onClick={() => {
         if (disabled || onClick === undefined) return;

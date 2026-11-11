@@ -177,7 +177,7 @@ void test("reveal is the one action that dispatches a synthetic click, and the a
 void test("The spread above is only evidence if Dropdown puts the attributes in it.", async (t) => {
   const dropdown = SOURCES.find((f) => f.path === "components/ui/Dropdown.tsx")!;
   const ariaPropsType = /ariaProps: {[^}]*}/.exec(dropdown.text)![0];
-  t.check(ariaPropsType, 'ariaProps: { "aria-haspopup": "menu"; "aria-expanded": boolean }');
+  t.check(ariaPropsType, 'ariaProps: { "aria-haspopup"?: "menu"; "aria-expanded": boolean }');
 });
 
 // ## Every id in the plan's table exists exactly once

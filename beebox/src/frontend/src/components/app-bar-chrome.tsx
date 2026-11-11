@@ -37,7 +37,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from "react";
-import { useDropdownClose } from "./ui/Dropdown";
+import { useDropdownClose, useMenuItemRole } from "./ui/Dropdown";
 import { dropPlace, pushPlace, topPlace, type PlaceEntry } from "../lib/place-stack";
 
 /** Where the user is: a display label plus the box dir it lives in. */
@@ -57,6 +57,8 @@ export interface AppBarPlace {
 export interface AppBarMenuSlot {
   element: HTMLElement;
   close: () => void;
+  /** Whether the host Dropdown is a command menu; false for a navigation list (no menu roles). */
+  menu: boolean;
 }
 
 interface AppBarChromeValues {
@@ -243,12 +245,13 @@ export function AppBarChipSlot() {
 export function AppBarHereSlot() {
   const writers = useContext(AppBarChromeWriteContext);
   const close = useDropdownClose();
+  const menu = useMenuItemRole() === "menuitem";
   const setRef = useCallback(
     (element: HTMLDivElement | null) => {
       if (writers === null) return;
-      writers.setHereSlot(element === null ? null : { element, close });
+      writers.setHereSlot(element === null ? null : { element, close, menu });
     },
-    [writers, close],
+    [writers, close, menu],
   );
   return <div ref={setRef} />;
 }
