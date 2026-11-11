@@ -7,14 +7,14 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any } from "@ianbicking/tap-check/check";
-import { execFileSync, spawn } from "node:child_process";
-import { once } from "node:events";
+import { execFileSync } from "node:child_process";
 import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { strict as assert } from "node:assert";
 import { MIGRATIONS, MANIFEST_PATH, type Migration } from "../../src/core/migrations.js";
 import type { TmpBox } from "../helpers/test-helpers.js";
+import { spawnUntilFirstLine, tsxChild } from "../helpers/child-process.js";
 import { createFakeAgent } from "./fake-agent.js";
 import { acquireBoxMaintenance, acquireBoxWork, boxMaintenanceStatus, closeBoxMaintenance } from "../../src/lib/box-maintenance/admission.js";
 import { forceAcquireLock, releaseLock } from "../../src/lib/file-lock.js";
@@ -313,7 +313,7 @@ void test("With a runner, the --repair pass applies procedure migrations itself.
 void test("--yield is the hourly schedule's mode.", async (t) => {
   t.teardown(async () => {
     try {
-      holder.kill();
+      await holder.kill();
       await box.cleanup();
     } catch (error) {
       t.error(error);
@@ -322,8 +322,7 @@ void test("--yield is the hourly schedule's mode.", async (t) => {
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE] });
   await box.commitAll("seed migration manifest");
-  const holder = spawn(process.execPath, ["--import", "tsx", join(import.meta.dirname, "../helpers/box-maintenance-child.ts"), box.root], { stdio: ["pipe", "pipe", "inherit"] });
-  await once(holder.stdout, "data");
+  const holder = await spawnUntilFirstLine(tsxChild(join(import.meta.dirname, "../helpers/box-maintenance-child.ts"), [box.root]));
 
   const deferred = await sweepMigrations({ boxRoot: box.root, yield: true });
   t.check({ status: deferred.status, holders: expectStatus(deferred, "deferred").holders.map((entry) => entry.reason), phase: await boxMaintenanceStatus(box.root) }, {
@@ -334,8 +333,8 @@ void test("--yield is the hourly schedule's mode.", async (t) => {
     phase: null,
   });
 
-  holder.stdin.end("finish");
-  await once(holder, "exit");
+  holder.child.stdin.end("finish");
+  await holder.exited;
   t.check((await sweepMigrations({ boxRoot: box.root, yield: true })).status, "applied");
 
   // A deploy holding the maintenance owner lock is the other way a box is in use.

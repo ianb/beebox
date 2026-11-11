@@ -1,0 +1,103 @@
+/**
+ * Real second processes for tests.
+ *
+ * `spawnUntilFirstLine` resolves once the child prints its first stdout line,
+ * decoded as a string, so a test waits on "the child holds the lock" without
+ * comparing bytes to text. The child's stderr is captured, never inherited: a
+ * passing test stays quiet, and an early exit reports what the child said.
+ *
+ * `spawnThenAbandon` starts a child and closes every pipe to it at once, the
+ * way they close when the parent dies. An orphan test that kept a reader open
+ * would hide a write that fails with EPIPE in the real case.
+ */
+
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { join } from "node:path";
+
+const PACKAGE_ROOT = join(import.meta.dirname, "../..");
+
+export interface ChildSpec {
+  command: string;
+  args: string[];
+  /** Defaults to this process's environment. */
+  env?: NodeJS.ProcessEnv;
+}
+
+/** A TypeScript script run under tsx. Children run from the package root. */
+export function tsxChild(script: string, args: string[]): ChildSpec {
+  return { command: process.execPath, args: ["--import", "tsx", script, ...args] };
+}
+
+export interface ChildExit {
+  code: number | null;
+  signal: NodeJS.Signals | null;
+}
+
+export interface StartedChild {
+  child: ChildProcessWithoutNullStreams;
+  /** Settles when the child exits, whenever that was. */
+  exited: Promise<ChildExit>;
+  /** SIGKILL the child, if it is still running, and wait for it to exit. */
+  kill(): Promise<ChildExit>;
+}
+
+export interface ReadyChild extends StartedChild {
+  /** The first stdout line, without its newline. */
+  line: string;
+  /** All stderr text so far. */
+  stderr(): string;
+}
+
+function start(spec: ChildSpec): StartedChild {
+  const child = spawn(spec.command, spec.args, {
+    cwd: PACKAGE_ROOT,
+    env: spec.env ?? process.env,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  const exited = new Promise<ChildExit>((resolve) => {
+    child.once("exit", (code, signal) => { resolve({ code, signal }); });
+  });
+  return {
+    child,
+    exited,
+    kill: async () => {
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      return exited;
+    },
+  };
+}
+
+/** Start the child; resolve on its first stdout line. */
+export async function spawnUntilFirstLine(spec: ChildSpec): Promise<ReadyChild> {
+  const started = start(spec);
+  const { child } = started;
+  let stdout = "";
+  let stderr = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk: string) => { stderr += chunk; });
+  const line = await new Promise<string>((resolve, reject) => {
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+      const end = stdout.indexOf("\n");
+      if (end !== -1) resolve(stdout.slice(0, end));
+    });
+    child.once("error", reject);
+    void started.exited.then(({ code, signal }) => {
+      reject(new Error(`child exited before its first line (code ${String(code)}, signal ${String(signal)}): ${stderr}`));
+    });
+  });
+  return { ...started, line, stderr: () => stderr };
+}
+
+/**
+ * Start the child and close its stdin, stdout, and stderr. It reads
+ * end-of-file on stdin and gets EPIPE on its writes, as after its parent died.
+ */
+export function spawnThenAbandon(spec: ChildSpec): StartedChild {
+  const started = start(spec);
+  started.child.stdin.destroy();
+  started.child.stdout.destroy();
+  started.child.stderr.destroy();
+  return started;
+}
