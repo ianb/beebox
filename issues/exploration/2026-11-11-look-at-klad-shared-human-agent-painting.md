@@ -1,0 +1,85 @@
+---
+title: "Look at `klad-app/klad`: a painting app where a person and a coding agent edit the same drawing"
+workstream: unattached
+area: beebox
+labels: [research, agent-collaboration]
+filed-by: agent
+discovered-by: Ian
+discovered-in: "main checkout — boxholder request, 2026-11-11"
+---
+
+[klad](https://github.com/klad-app/klad) is a 2D painting and animation app
+built for a person and a coding agent to share. The person paints in an
+editor with a pen. The agent paints through a `klad` CLI (`klad stroke`,
+`klad set`, `klad fill`) with the same brushes, and its strokes show in the
+editor about a second later. There is no image model: every stroke, shape and
+fill is stored as editable data (path, pressure, brush, colour). Drawings are
+folders of plain files with a documented format (`docs/format.md`). `klad
+skill` prints the agent's instructions. It is written in Rust with Skia, made
+on macOS first, early (first public version, no installers). The app is
+source-available (PolyForm Internal Use); the format, CLI reference, agent
+skills and the `klad-client` crate are MIT.
+
+Facts above are from the README as of 2026-11-11, read through a summary;
+check them against the repository.
+
+## Why look
+
+Its interaction model is close to ours: the agent and the person work on the
+same files, through different tools, and see each other's edits live. Choices
+worth comparing:
+
+- **Shared undo history.** Every change, human or agent, is one step in one
+  undo history. Compare with how the box shows and reverts agent edits to
+  cards (git history, chat diff badges).
+- **Pointing the agent at something.** The person pins notes on the canvas or
+  selects a region for the agent to read. Compare with how a chat gets card
+  context today (the open card, `card=` in the chat URL).
+- **Agent instructions shipped by the tool.** `klad skill` prints the
+  guidance from the CLI itself, versioned with it. Compare with the box guide
+  and schema instructions.
+- **Editable data instead of generated output.** Relevant to
+  [canvas-loop](../../canvas-loop/README.md), our deterministic Canvas2D
+  sandbox, and to box-authored figures and views.
+- **Plain-file format with a spec**, used by both a CLI and an editor.
+
+## Questions
+
+- Which of these choices would change something in the box, and which are
+  specific to painting?
+- Is klad useful to box agents as a tool (a box drawing or sprite), or only
+  as a design reference? The licence allows personal use.
+- What does its live sync between CLI and editor use, and how does it handle
+  a conflict between a pen stroke and an agent edit?
+
+## How would it reach a box? (2026-11-11)
+
+The app is source-available, not open source, so the box image probably
+cannot ship it; check whether the PolyForm Internal Use licence allows that
+redistribution. There is no per-box tool installer today: production boxes
+run as separate users without root, and host tools are installed by the
+operator (as `beebox/deploy/install-restic.sh` does for restic). Routes to
+compare:
+
+- **Format only.** The format spec and `klad-client` are MIT. A box could
+  read and write klad drawings itself, and the person opens them in klad on
+  their own computer. No klad code in the box.
+- **Person's machine only.** klad runs where the person draws (it is a macOS
+  editor first). A dev or desktop agent runs the CLI there, and the drawing
+  folder syncs to the box as ordinary files.
+- **Operator installs on the host.** Like restic, opt-in for a host whose
+  boxholders each fall within the licence. The CLI works without the editor:
+  the README's agent flow makes `scene.klad` first and opens the editor
+  afterward to watch.
+- **Box builds it from source.** A Rust and Skia build in each box's home:
+  heavy, and the same licence question applies to each boxholder.
+
+Install procedure, from the README (checked 2026-11-11): build from source
+only. Install Rust with rustup and `just`; on Linux also the system packages
+`pkg-config`, `libfreetype-dev`, `libfontconfig1-dev`, `libxkbcommon-dev`
+and `libwayland-dev`. Then `git clone`, `just compile` (about ten minutes the
+first time; output in `target/linux/release/` on Linux), and `klad install`
+to put `klad` on the path. There is no npm package (`klad` is a 404 on the
+registry), no `cargo install`, no Homebrew formula and no release binaries.
+Signed builds are planned. The Linux system packages need root, so a box
+cannot build it without the operator.
