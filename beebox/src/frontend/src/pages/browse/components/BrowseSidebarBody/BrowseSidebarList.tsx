@@ -59,7 +59,7 @@ function DirRow({
   // The number counts every card below the folder, subfolders included, so it says so: the listing inside shows fewer.
   const cardCount = `${String(dir.fileCount)} card${dir.fileCount === 1 ? "" : "s"}, including subfolders`;
   return (
-    <button
+    <button type="button"
       {...bbxSource("dir", target)}
       onClick={() => onNavigate(target, "directory")}
       aria-label={dir.fileCount > 0 ? `${label} directory, ${cardCount}` : `${label} directory`}
@@ -98,7 +98,7 @@ function CardRow({
   const attachPath = card.hasAttachments ? attachDirFor(card.relativePath) : null;
   return (
     <div className={`flex items-stretch border-b border-warm-200 ${selected ? "bg-info-50" : ""} ${dimmed ? "opacity-60" : ""}`}>
-      <button
+      <button type="button"
         onClick={() => onNavigate(card.relativePath, "file")}
         {...bbxSource("card", card.relativePath)}
         {...(card.type === "image" ? {
@@ -119,7 +119,7 @@ function CardRow({
         </div>
       </button>
       {attachPath ? (
-        <button
+        <button type="button"
           onClick={() => onNavigate(attachPath, "directory")}
           aria-label={`Open ${card.name} attachments`}
           title="Open attachments"
@@ -148,7 +148,7 @@ function FileRow({
   onFileContextMenu: (event: React.MouseEvent<HTMLButtonElement>, path: string) => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={() => onNavigate(file.relativePath, "file")}
       onContextMenu={(event) => onFileContextMenu(event, file.relativePath)}
       {...(imageDataAttrs(file.relativePath, file.name) ?? {})}
@@ -186,7 +186,7 @@ function FoldRow({
 /** The quiet last row of the content root's listing: out to the box root and its areas. */
 function WholeBoxRow({ onNavigate }: { onNavigate: (path: string, kind: BrowseMissingKind) => void }) {
   return (
-    <button
+    <button type="button"
       id="bbx-browse-whole-box"
       data-bbx-does="goes to the whole box"
       onClick={() => onNavigate("", "directory")}

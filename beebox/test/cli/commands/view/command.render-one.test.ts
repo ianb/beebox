@@ -127,6 +127,34 @@ export default function Prose({ cards }) {
   });
 });
 
+// ## A todo's due date renders in Node
+//
+// The todo widget shows its due date through Temporal. Node 24 has no
+// Temporal, so the view check installs the polyfill before rendering, as the
+// browser app does in boot(); without it this view would fail the check.
+void test("A Markdown todo with a due date renders under the view check", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeViewBox();
+  await box.write("_content/inbox/A.doc.card", DOC_CARD.replace("Body\n", "{% todo due=\"2026-08-14\" %}Order lumber{% /todo %}\n"));
+  await writeView(box, { rel: "due.tsx", content: `
+import { Markdown } from "beebox/view-widgets";
+export const name = "Due";
+export const dependencies = ["_content/**/*.card"];
+export const modes = ["page"];
+export default function Due({ cards }) {
+  return <div>{cards.map((card) => card.body ? <Markdown key={card.path} card={card}>{card.body}</Markdown> : null)}</div>;
+}
+` });
+
+  t.check(await runRenderOne(box.root, ["due"]), { code: 0, stdout: "", stderr: "" });
+});
+
 // ## Image variants are safe to construct during render
 //
 // The mock exposes the same synchronous `imageUrl` helper as the browser host,

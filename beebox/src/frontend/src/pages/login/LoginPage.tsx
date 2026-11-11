@@ -84,7 +84,7 @@ export function LoginPage() {
 
   return (
     <main>
-      <Row justify="center" align="center" className="min-h-screen p-4">
+      <Row justify="center" align="center" className="min-h-dvh p-4">
         <Card padding="lg" shadow className="max-w-sm w-full">
           <Stack gap="md">
             <Text as="h1" size="2xl" weight="bold" tone="emphasis" center>

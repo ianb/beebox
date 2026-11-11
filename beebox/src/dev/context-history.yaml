@@ -11626,6 +11626,14 @@ test1:
       peak: 36875
       added: 1854
       turns: 5
+  view-enter-field-ime-and-name:
+    - date: 2026-11-11T09:41:14.379Z
+      boxCommit: 93faf910b6a833d742b4613348043aaf84f9163a
+      repoCommit: a57f6de6d931717642a8703f69870e8591cdd1e7
+      initial: 35022
+      peak: 38712
+      added: 3690
+      turns: 6
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
@@ -13074,6 +13082,14 @@ dev-checkout:
       peak: 20334
       added: 9977
       turns: 3
+  dev-browser-floor:
+    - date: 2026-11-11T09:40:08.666Z
+      boxCommit: a57f6de6d931717642a8703f69870e8591cdd1e7
+      repoCommit: a57f6de6d931717642a8703f69870e8591cdd1e7
+      initial: 10658
+      peak: 19462
+      added: 8804
+      turns: 7
 auditbox-legacy:
   views-render-test-command:
     - date: 2026-10-09T22:33:03.009Z

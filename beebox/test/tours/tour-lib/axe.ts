@@ -32,11 +32,24 @@ const SUPPRESS_RULES: readonly string[] = [
   "color-contrast",
 ];
 
+// Rules axe ships disabled that we turn on.
+const ENABLE_RULES: readonly string[] = [
+  // WCAG 2.2 AA 2.5.8: a pointer target is at least 24 x 24 CSS px, or has
+  // 24 px of clear space around it. Holds the hit areas grown for Toggle,
+  // CloseButton, the sidecar tab actions and the ack badge.
+  "target-size",
+];
+
+const RULE_OVERRIDES = {
+  ...Object.fromEntries(ENABLE_RULES.map((r) => [r, { enabled: true }])),
+  ...Object.fromEntries(SUPPRESS_RULES.map((r) => [r, { enabled: false }])),
+};
+
 const RUN_SCRIPT = `(async () => {
   const r = await window.axe.run(document, {
     resultTypes: ["violations"],
     reporter: "v2",
-    rules: ${JSON.stringify(Object.fromEntries(SUPPRESS_RULES.map((r) => [r, { enabled: false }])))},
+    rules: ${JSON.stringify(RULE_OVERRIDES)},
   });
   return r.violations.map(v => ({
     id: v.id,

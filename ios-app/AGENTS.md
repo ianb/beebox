@@ -22,8 +22,10 @@ surface and simulator-pairing shortcut.
   `../beebox/docs/plans/ios-input-plane-parity.md`. Native capture has a
   separate lifecycle in `../beebox/docs/plans/ios-native-capture-mode.md`;
   do not route ordinary composer attachments through capture staging.
-- There are no third-party iOS dependencies. The deployment target is iOS 17;
-  newer APIs require availability checks and an older-system fallback.
+- There are no third-party iOS dependencies. The deployment target is iOS 18
+  (raised from 17 on 2026-11-11 so the web app can rely on Safari 18; see
+  `beebox/frontend.md`, "Browser support"); newer APIs require availability
+  checks and an older-system fallback.
 
 ## Toolchain check
 

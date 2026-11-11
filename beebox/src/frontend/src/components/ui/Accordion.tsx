@@ -88,7 +88,7 @@ export function Accordion({
         <span className="flex-1 min-w-0 flex flex-wrap items-center gap-2">{title}</span>
       </button>
       {open || keepMounted === true ? (
-        <div id={bodyId} role="region" hidden={!open}>
+        <div id={bodyId} hidden={!open}>
           <div className={bodyClass}>{children}</div>
         </div>
       ) : null}

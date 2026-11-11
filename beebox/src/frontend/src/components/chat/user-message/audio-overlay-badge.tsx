@@ -24,7 +24,7 @@ export function TranscriptionProvenanceBadge({ provenance }: { provenance: Trans
       role="img"
       aria-label={label}
       title={label}
-      className="text-white/40 text-[9px] font-medium leading-none tracking-wide"
+      className="text-white/40 text-[0.5625rem] font-medium leading-none tracking-wide"
     >
       HQ
     </span>
@@ -80,7 +80,7 @@ export function buildAudioBadgeSpecs(overlay: AudioOverlayEntry, originalText: s
       label: service ? `Retranscribed — ${service}` : "Retranscribed",
       detail: (
         <>
-          <div className="text-warm-700 text-[10px] uppercase tracking-wide mt-1.5">realtime transcript</div>
+          <div className="text-warm-700 text-[0.625rem] uppercase tracking-wide mt-1.5">realtime transcript</div>
           <div className="mt-0.5 whitespace-pre-wrap">{originalText}</div>
         </>
       ),
@@ -94,7 +94,7 @@ export function buildAudioBadgeSpecs(overlay: AudioOverlayEntry, originalText: s
       label: "This recording was analyzed",
       detail: (
         <>
-          <div className="text-warm-700 text-[10px] uppercase tracking-wide mt-1.5">
+          <div className="text-warm-700 text-[0.625rem] uppercase tracking-wide mt-1.5">
             {questions.length === 1 ? "question asked" : "questions asked"}
           </div>
           {questions.map((q) => (
@@ -161,8 +161,10 @@ function AudioOverlayBadge({ spec, open, onToggle, onClose }: {
         <span aria-hidden className="inline-flex">{spec.glyph}</span>
       </button>
       {open ? (
+        // eslint-disable-next-line personal-vibe-check/prefer-native-dialog -- small named non-modal bubble; popover deferred (full support at iOS 18.3, above the iOS 18.0 floor)
         <div
           role="dialog"
+          aria-label={spec.label}
           className="absolute left-0 top-full mt-1 z-50 bg-white text-warm-800 rounded-lg shadow-lg border border-warm-200 px-3 py-2 w-64 text-xs normal-case tracking-normal"
         >
           <div className="font-medium text-warm-900">{spec.label}</div>

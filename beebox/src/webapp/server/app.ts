@@ -32,6 +32,7 @@ import {
   registerUnbuiltFrontendRoot,
 } from "../server-root/root-routes.js";
 import { registerCspReportRoute } from "../routes/api-csp-report.js";
+import { registerDocumentSecurityHeaders } from "./document-security-headers.js";
 import { HASHED_ASSET_STATIC_OPTIONS } from "../static-cache.js";
 import { invariant } from "../../shared/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../../lib/csp.js";
@@ -158,6 +159,9 @@ export async function createServer(options?: InternalServerOptions, startup?: Re
     mode: "prod",
     reportPath: PROD_CSP_REPORT_PATH,
   });
+  // After the CSP hook: that hook yields to any route that already set a CSP,
+  // and this one adds the enforced frame-ancestors CSP.
+  registerDocumentSecurityHeaders(server);
 
   // Register cookie support (used for auth sessions)
   await server.register(fastifyCookie);

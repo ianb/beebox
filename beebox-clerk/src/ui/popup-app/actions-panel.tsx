@@ -178,14 +178,14 @@ function TabShareSection(props: TabShareSectionProps) {
     <div className="space-y-2 border-t border-gray-200 pt-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tab organizer</p>
       <div className="grid grid-cols-2 gap-2">
-        <button
+        <button type="button"
           onClick={() => onShare("current-window")}
           disabled={disabled || isBusy}
           className="rounded border border-teal-600 px-2 py-2 text-xs font-semibold text-teal-700 hover:bg-teal-50 disabled:border-gray-300 disabled:text-gray-400"
         >
           {busyLabel === "share-window" ? "Sharing…" : "Share this window"}
         </button>
-        <button
+        <button type="button"
           onClick={() => onShare("all-windows")}
           disabled={disabled || isBusy}
           className="rounded border border-teal-600 px-2 py-2 text-xs font-semibold text-teal-700 hover:bg-teal-50 disabled:border-gray-300 disabled:text-gray-400"
@@ -196,7 +196,7 @@ function TabShareSection(props: TabShareSectionProps) {
       {sharedTabs === null ? (
         <p className="text-xs text-gray-500">Ungrouped tabs only. Nothing changes until you explicitly apply it in the box.</p>
       ) : (
-        <button
+        <button type="button"
           onClick={onOpen}
           disabled={isBusy}
           className="w-full rounded bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:bg-gray-300"
@@ -225,7 +225,7 @@ function CommentSection(props: CommentSectionProps) {
       {/* The tooltip lives on the wrapper: a disabled button fires no mouse
           events, so its own title attribute would never show. */}
       <span className="block" title={blockedReason ?? undefined}>
-        <button
+        <button type="button"
           onClick={onComment}
           disabled={busyLabel !== null || blocked}
           className="w-full rounded bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"

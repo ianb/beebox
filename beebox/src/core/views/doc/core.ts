@@ -4,7 +4,7 @@
  * Emitted into the package docs as views.md (docs-gen/package-docs.ts).
  */
 
-import { dependenciesAndParamsSection } from "./files.js";
+import { controlsSection, dependenciesAndParamsSection } from "./files.js";
 import { examplesSection } from "./examples.js";
 import { testingSection } from "./testing.js";
 
@@ -331,6 +331,7 @@ export function generateViewsDoc(): string {
       reportingActivitySection,
       examplesSection,
       testingSection,
+      controlsSection,
       stylingAndErrorsSection,
     ].join("\n\n") + "\n"
   );

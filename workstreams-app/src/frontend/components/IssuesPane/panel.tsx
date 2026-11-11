@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { Ref } from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
@@ -82,19 +82,14 @@ function editedChange(issue: Issue, priority: Priority): IssueChange {
   };
 }
 
+// React 18's typings lack the popover attributes; React 18 still forwards them
+// to the DOM, and spreading keeps them out of the type and unknown-property checks.
+// A `popover="auto"` element gets click-outside and Escape dismissal, and returns
+// focus to its invoker, from the browser.
+const POPOVER_TARGET = { popovertarget: "bbx-issues-filter-popover" };
+const POPOVER_AUTO = { popover: "auto" };
+
 function FilterMenu({ filters, categories, needs, workstreams, onFilters }: { filters: IssueFilters; categories: string[]; needs: string[]; workstreams: string[]; onFilters: (filters: IssueFilters) => void }) {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (!open) return;
-    function closeOnEscape(event: KeyboardEvent): void {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setOpen(false);
-      document.querySelector<HTMLElement>("#bbx-issues-filter")?.focus();
-    }
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [open]);
   function without(field: "category" | "priority" | "needs" | "workstream"): IssueFilters {
     const { [field]: _removed, ...remaining } = filters;
     return remaining;
@@ -105,14 +100,14 @@ function FilterMenu({ filters, categories, needs, workstreams, onFilters }: { fi
   function setSort(value: string): void {
     if (value === "date" || value === "priority") onFilters({ ...filters, sort: value });
   }
-  return <details className="filter-menu" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}><summary id="bbx-issues-filter">Filter</summary><button type="button" id="bbx-issues-filter-close" className="filter-backdrop" aria-hidden="true" tabIndex={-1} hidden={!open} onClick={() => setOpen(false)} /><div className="filter-popover" role="dialog" aria-label="Issue filters">
+  return <div className="filter-menu"><button type="button" id="bbx-issues-filter" {...POPOVER_TARGET}>Filter</button><div id="bbx-issues-filter-popover" {...POPOVER_AUTO} className="filter-popover" role="dialog" aria-label="Issue filters">
     <label>Status <select value={filters.status ?? "open"} onChange={(event) => setStatus(event.target.value)}><option value="open">Open</option><option value="all">All</option><option value="closed">Closed</option></select></label>
     <label>Sort <select value={filters.sort ?? "date"} onChange={(event) => setSort(event.target.value)}><option value="date">Newest filed</option><option value="priority">Priority</option></select></label>
     <label>Category <select value={filters.category ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, category: event.target.value } : without("category"))}><option value="">Every category</option>{categories.map((category) => <option value={category} key={category}>{category}</option>)}</select></label>
     <label>Priority <select value={filters.priority ?? ""} onChange={(event) => onFilters(isPriority(event.target.value) ? { ...filters, priority: event.target.value } : without("priority"))}><option value="">Any priority</option><option value="important">Important</option><option value="normal">Normal</option><option value="backlog">Backlog</option><option value="uncategorized">Uncategorized</option></select></label>
     <label>Needs <select value={filters.needs ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, needs: event.target.value } : without("needs"))}><option value="">Every need</option>{needs.map((need) => <option value={need} key={need}>{need}</option>)}</select></label>
     <label>Workstream <select value={filters.workstream ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, workstream: event.target.value } : without("workstream"))}><option value="">Every workstream</option>{workstreams.map((workstream) => <option value={workstream} key={workstream}>{workstream}</option>)}</select></label>
-  </div></details>;
+  </div></div>;
 }
 
 function IssueRow({ issue, selected, change, rowRef, onSelect, onChange }: { issue: Issue; selected: boolean; change?: IssueChange | undefined; rowRef?: Ref<HTMLLIElement> | undefined; onSelect: () => void; onChange: (change: IssueChange) => void }) {

@@ -12,6 +12,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { TextField } from "../ui/fields/field";
+import { isComposing } from "../../lib/ime";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION = "Email addresses that can access this box. Leave empty to keep the box owner-only.";
@@ -110,7 +111,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
           type="button"
           intent="secondary"
           onClick={() => navigator.clipboard.writeText(resetLink.url)}
-          flash={{ label: "Copied" }}
+          flash={{ label: "Copied", failLabel: "Copy failed" }}
         >
           Copy reset link
         </Button>
@@ -189,7 +190,7 @@ export function AllowedEmailsSection() {
             setPendingExistingEmail(null);
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (event.key === "Enter" && !isComposing(event.nativeEvent)) {
               event.preventDefault();
               void addEmail();
             }

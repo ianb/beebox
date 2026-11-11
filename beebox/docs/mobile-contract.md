@@ -1517,7 +1517,7 @@ iOS 18+ AudioRecordingIntent requires a Live Activity. Widget/control extension
 opens `beebox://capture/voice?action=toggle|stop`; it owns no recorder or fake
 process-local recording state. Foreground task UI is the explicit fallback. Stop/show links for an existing
 protected draft require its in-app unlock; Siri/App Intents still refuse it.
-iOS 17 records through foreground UI without newer control APIs. AAC recording
+AAC recording
 has a ten-minute/advertised-byte cap and finalized short segments: interruption
 retains completed audio, while sudden termination can lose an unfinished tail
 of at most ten seconds. Never claim complete audio from that recovered draft.

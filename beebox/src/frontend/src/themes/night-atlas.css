@@ -1,5 +1,6 @@
 /* Night Atlas: distant warm lights over sea-green terrain and quiet teal reading surfaces. */
 .bbx-box-presentation[data-chrome-theme="night-atlas"] {
+  color-scheme: dark;
   --bbx-desk-background: #167d7e;
   --bbx-desk-pattern: none;
   --bbx-desk-edge: #5caaa4;

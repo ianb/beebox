@@ -204,7 +204,7 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
         <AttachedComments cardPath={data.path} frontmatter={data.frontmatter} />
 
         {pagesLoading ? (
-          <div className="h-24 bg-warm-100 rounded animate-pulse" aria-busy="true" aria-label="Loading page renders" />
+          <div className="h-24 bg-warm-100 rounded animate-pulse" role="status" aria-busy="true" aria-label="Loading page renders" />
         ) : null}
         {pagesError ? (
           <ErrorText>Could not list page renders: {pagesError.message}</ErrorText>

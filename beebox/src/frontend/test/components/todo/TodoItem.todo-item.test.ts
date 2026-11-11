@@ -6,6 +6,7 @@
 // treatment; date and assignment chips follow. Plate state comes from the
 // server, so only a todo the server calls `escalated` reads as overdue.
 
+import "../../helpers/temporal-global.js";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as React from "react";
@@ -102,6 +103,18 @@ void test("A due date reads \"due Sep 15\".", async (t) => {
     { kind: "due", iso: "2027-01-04", text: "due Jan 4, 2027", warning: false },
   ]);
 
+  // A date is a calendar day, so it reads the same in every zone: behind UTC
+  // it is not the day before, and ahead of it not the day after.
+  const zoneBefore = process.env["TZ"];
+  t.teardown(() => {
+    if (zoneBefore === undefined) delete process.env["TZ"];
+    else process.env["TZ"] = zoneBefore;
+  });
+  t.check(["America/Los_Angeles", "Pacific/Kiritimati"].map((tz) => {
+    process.env["TZ"] = tz;
+    return dateChips({ due: "2026-09-15", start: "-1w", plateState: null }, format).map((chip) => chip.text);
+  }), [["due Sep 15", "since Sep 8"], ["due Sep 15", "since Sep 8"]]);
+
   // A `start` is the day the todo joins the plate. Until then the todo is
   // "later", the plate headline's word for it; after, the date reads "since".
   // Only an open todo's plate state says which. For a parked or finished todo,
@@ -143,9 +156,9 @@ void test("A due date reads \"due Sep 15\".", async (t) => {
 // date in a `<time>`:
 void test("Rendered, the escalated chip takes the warning tone and keeps the machine dat...", async (t) => {
   const escalated = render({ status: "open", due: "2026-09-15", plateState: "escalated" });
-  t.checkText(escalated, "<span data-todo-status=\"open\" data-todo-plate-state=\"escalated\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-accent-100 text-accent-dark text-[10px] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">overdue · Sep 15</time></span></span>");
+  t.checkText(escalated, "<span data-todo-status=\"open\" data-todo-plate-state=\"escalated\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-accent-100 text-accent-dark text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">overdue · Sep 15</time></span></span>");
 
-  t.checkText(render({ status: "open", due: "2026-09-15", plateState: "on-plate" }), "<span data-todo-status=\"open\" data-todo-plate-state=\"on-plate\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-700 text-[10px] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">due Sep 15</time></span></span>");
+  t.checkText(render({ status: "open", due: "2026-09-15", plateState: "on-plate" }), "<span data-todo-status=\"open\" data-todo-plate-state=\"on-plate\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-700 text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">due Sep 15</time></span></span>");
 });
 
 // ## `recheck`: a quiet chip in the list only
@@ -188,7 +201,7 @@ void test("An open agent todo reads in the quiet (parked) treatment with an \"ag
   const agentOpen = render({ status: "open", assigned: "agent" });
   t.check(summary(agentOpen), "unchecked | disabled | Open | text-card-soft");
 
-  t.checkText(agentOpen, "<span data-todo-status=\"open\" data-todo-assigned=\"agent\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-soft\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-700 text-[10px] px-1.5 py-0.5 ml-1 align-middle\" title=\"Assigned\">agent</span></span>");
+  t.checkText(agentOpen, "<span data-todo-status=\"open\" data-todo-assigned=\"agent\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-soft\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-700 text-[0.625rem] px-1.5 py-0.5 ml-1 align-middle\" title=\"Assigned\">agent</span></span>");
 
   t.check(
     [

@@ -11,10 +11,32 @@ import { MaterialContext } from "./material";
 // aren't `MenuItem`s themselves but are still real, reachable menu content.
 const FOCUSABLE_MENU_ITEM_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Arrow/Home/End focus movement for a command menu (`role="menu"`). Moves among
+// the menu's enabled `[role=menuitem]` rows only, and only when focus is on one
+// of those rows. Focus on a text field, select, or other plain control inside
+// the panel is left alone, so typing and the control's own arrow keys keep working.
+const ITEM_SELECTOR = '[role="menuitem"]:not([disabled]):not([aria-disabled="true"])';
+
+/** Move focus for an Arrow/Home/End keydown inside `menu`; returns whether it handled the key. */
+function moveMenuFocus(menu: HTMLElement, event: { key: string; target: EventTarget | null }): boolean {
+  const { key, target } = event;
+  if (key !== "ArrowDown" && key !== "ArrowUp" && key !== "Home" && key !== "End") return false;
+  if (!(target instanceof HTMLElement) || !target.matches(ITEM_SELECTOR)) return false;
+  const items = [...menu.querySelectorAll<HTMLElement>(ITEM_SELECTOR)];
+  const current = items.indexOf(target);
+  if (current === -1) return false;
+  const last = items.length - 1;
+  const next = key === "Home" ? 0 : key === "End" ? last : key === "ArrowDown" ? (current === last ? 0 : current + 1) : (current === 0 ? last : current - 1);
+  items[next]?.focus();
+  return true;
+}
+
 export interface DropdownContextValue {
   close: () => void;
   /** Tighter padding for menu items + dividers. */
   dense: boolean;
+  /** True when the panel is a `role="menu"`; false for a list of links, whose rows carry no menu role. */
+  menu: boolean;
 }
 
 /** Exported for `MenuItem`/`MenuDivider` (`dropdown-menu-item.tsx`) only. */
@@ -24,6 +46,12 @@ export const DropdownContext = createContext<DropdownContextValue | null>(null);
 export function useDropdownClose(): () => void {
   const ctx = useContext(DropdownContext);
   return ctx !== null ? ctx.close : () => {};
+}
+
+/** The role a menu row takes: `"menuitem"` in a command menu, none in a navigation list or outside a Dropdown's panel. */
+export function useMenuItemRole(): "menuitem" | undefined {
+  const ctx = useContext(DropdownContext);
+  return ctx === null || ctx.menu ? "menuitem" : undefined;
 }
 
 export type DropdownAlign = "left" | "right";
@@ -39,7 +67,7 @@ export interface DropdownTriggerProps {
    */
   toggle: (event?: ReactMouseEvent<HTMLElement>) => void;
   /** Props to spread on your trigger element for correct ARIA. */
-  ariaProps: { "aria-haspopup": "menu"; "aria-expanded": boolean };
+  ariaProps: { "aria-haspopup"?: "menu"; "aria-expanded": boolean };
 }
 
 export interface DropdownProps {
@@ -69,10 +97,16 @@ export interface DropdownProps {
    * on a shallower one. Omit for menus with no sub-panels (no animation).
    */
   panelIndex?: number;
+  /**
+   * `"menu"` (default) is a command menu: `role="menu"`, `aria-haspopup="menu"`
+   * on the trigger, rows are `role="menuitem"`, and ArrowUp/ArrowDown/Home/End
+   * move focus among the rows. `"navigation"` is a list of links: a plain
+   * disclosure with no menu roles.
+   */
+  kind?: "menu" | "navigation";
 }
 
-// The open-state half of the minimal focus management (full arrow-key roving
-// focus is out of scope). Two concerns, both scoped to an open menu:
+// The open-state half of the focus management (arrow keys: `moveMenuFocus`). Two concerns, both scoped to an open menu:
 //
 // 1. Focus the first menu item when the menu opens via a keyboard activation
 //    of the trigger (a keyboard-activated click has `event.detail === 0`).
@@ -161,19 +195,19 @@ function visibleViewport() {
   };
 }
 
-export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose, panelIndex }: DropdownProps) {
+export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose, panelIndex, kind: kindArg }: DropdownProps) {
   const align = alignArg ?? "right";
   const vertical = verticalArg ?? "below";
   const width = widthArg ?? "w-48";
   const dense = denseArg ?? false;
+  const isMenu = (kindArg ?? "menu") === "menu";
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; });
 
-  // Minimal focus management (full arrow-key roving focus is out of scope):
-  // remember the element that opened the menu so close can restore focus to
+  // Focus management (arrow keys: `moveMenuFocus`): remember the element that opened the menu so close can restore focus to
   // it, whether the open was via keyboard (focus the first item) or mouse
   // (leave focus alone, no visible focus ring).
   const triggerElRef = useRef<HTMLElement | null>(null);
@@ -283,7 +317,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
   const currentPanelIndex = panelIndex ?? 0;
   const direction = usePanelSlideDirection({ open, panelIndex: currentPanelIndex });
 
-  const ctxValue = useMemo<DropdownContextValue>(() => ({ close: closeMenu, dense }), [closeMenu, dense]);
+  const ctxValue = useMemo<DropdownContextValue>(() => ({ close: closeMenu, dense, menu: isMenu }), [closeMenu, dense, isMenu]);
   const toggle = useCallback(
     (event?: ReactMouseEvent<HTMLElement>) => {
       setOpen((o) => {
@@ -299,7 +333,7 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
   const triggerProps: DropdownTriggerProps = {
     open,
     toggle,
-    ariaProps: { "aria-haspopup": "menu", "aria-expanded": open },
+    ariaProps: isMenu ? { "aria-haspopup": "menu", "aria-expanded": open } : { "aria-expanded": open },
   };
 
   return (
@@ -309,7 +343,10 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
         ? createPortal(
             <div
               ref={menuRef}
-              role="menu"
+              role={isMenu ? "menu" : undefined}
+              onKeyDown={isMenu ? (event) => {
+                if (moveMenuFocus(event.currentTarget, event)) event.preventDefault();
+              } : undefined}
               style={coords}
               className={cn(
                 "bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain motion-safe:transition-[width] motion-safe:duration-150 motion-safe:ease-out",
@@ -361,8 +398,9 @@ function MenuPanelScope({ value, children }: { value: DropdownContextValue; chil
  * `DropdownContext`, and its `MenuItem`s would silently fail to close the
  * menu. Wrap the portaled content in this with the slot's `close`.
  */
-export function PortaledMenuScope({ close, children }: { close: () => void; children: ReactNode }) {
-  const value = useMemo<DropdownContextValue>(() => ({ close, dense: false }), [close]);
+export function PortaledMenuScope({ close, menu, children }: { close: () => void; /** False when the host Dropdown is `kind="navigation"`. Default true. */ menu?: boolean; children: ReactNode }) {
+  const isMenu = menu ?? true;
+  const value = useMemo<DropdownContextValue>(() => ({ close, dense: false, menu: isMenu }), [close, isMenu]);
   return <DropdownContext.Provider value={value}>{children}</DropdownContext.Provider>;
 }
 

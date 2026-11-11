@@ -48,8 +48,9 @@ interface CommonButtonProps extends NativeButtonPassThrough {
   loadingLabel?: ReactNode | ((elapsedSeconds: number) => ReactNode);
   /**
    * Brief post-click feedback ("Copied" etc.). Fires after `onClick` resolves,
-   * or with `failLabel` after it fails. The button becomes a polite live region
-   * so the swapped label is announced.
+   * or with `failLabel` after it fails. A sibling `role="status"` element
+   * announces the outcome (a live region inside a button is not reliably
+   * announced), and the button's accessible name stays the idle label.
    */
   flash?: FlashSpec;
   /** `true` stretches the button to fill its parent's width. */
@@ -295,22 +296,34 @@ export function Button(props: ButtonProps) {
   });
 
   const material = useMaterial(undefined);
-  const ariaLabel = label !== undefined ? label : undefined;
+  const flashText =
+    flash !== undefined && flashing !== "idle" ? (flashing === "failed" ? flash.failLabel : flash.label) : undefined;
+  // The visible text swaps during a flash; the name does not, so a screen
+  // reader does not hear the button rename itself under the cursor.
+  const ariaLabel =
+    label !== undefined
+      ? label
+      : flashText !== undefined && (typeof children === "string" || typeof children === "number")
+        ? String(children)
+        : undefined;
   const titleFallback = iconOnly && label !== undefined ? label : undefined;
 
   return (
-    <button
-      {...rest}
-      type={type}
-      disabled={isDisabled}
-      aria-label={ariaLabel}
-      aria-busy={loading || undefined}
-      aria-live={rest["aria-live"] ?? (flash !== undefined ? "polite" : undefined)}
-      title={"title" in rest && rest.title !== undefined ? rest.title : titleFallback}
-      className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className, material })}
-      onClick={(e) => void handleClick(e)}
-    >
-      {content}
-    </button>
+    <>
+      <button
+        {...rest}
+        // eslint-disable-next-line react/button-has-type -- type is a typed prop (button | submit | reset) that defaults to "button"
+        type={type}
+        disabled={isDisabled}
+        aria-label={ariaLabel}
+        aria-busy={loading || undefined}
+        title={"title" in rest && rest.title !== undefined ? rest.title : titleFallback}
+        className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className, material })}
+        onClick={(e) => void handleClick(e)}
+      >
+        {content}
+      </button>
+      {flash !== undefined ? <span role="status" className="sr-only">{flashText}</span> : null}
+    </>
   );
 }

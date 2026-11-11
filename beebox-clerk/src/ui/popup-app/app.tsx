@@ -128,7 +128,7 @@ function PopupHeader({ editing, canEdit, onToggleEditing }: PopupHeaderProps) {
       <h1 className="text-lg font-semibold">Bee Box Clerk</h1>
       <div className="flex shrink-0 items-center gap-1">
         {canEdit ? (
-          <button
+          <button type="button"
             onClick={onToggleEditing}
             className={`rounded px-2 py-1 text-xs font-medium ${
               editing ? "bg-teal-600 text-white hover:bg-teal-700" : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
@@ -138,7 +138,7 @@ function PopupHeader({ editing, canEdit, onToggleEditing }: PopupHeaderProps) {
             {editing ? "Done" : "Edit"}
           </button>
         ) : null}
-        <button
+        <button type="button"
           onClick={openSettings}
           className="rounded px-1 text-gray-400 hover:text-gray-700"
           title="Settings"
@@ -175,7 +175,7 @@ function EnableOffer({ box, onEnable }: EnableOfferProps) {
         This page is the box <span className="font-medium">{box.title}</span>.
       </div>
       <div className="truncate text-xs text-gray-500">{box.boxUrl}</div>
-      <button
+      <button type="button"
         onClick={onEnable}
         className="mt-2 w-full rounded bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700"
       >

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { searchPaths } from "../lib/path-search.js";
@@ -25,18 +25,30 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
   // Only fetched once opened, so the palette costs nothing until it is wanted.
   const index = trpc.documents.paths.useQuery({ workstream }, { enabled: open });
 
+  const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key === "p") {
         event.preventDefault();
-        setOpen((current) => !current);
+        // Close an open dialog through close() so focus returns where it was
+        // (its close event then unmounts it); unmounting an open dialog skips that.
+        const dialog = dialogRef.current;
+        if (dialog?.open === true) dialog.close();
+        else setOpen((current) => !current);
         return;
       }
-      if (event.key === "Escape") setOpen(false);
     }
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener("keydown", onKey); };
   }, []);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!open || dialog === null || dialog.open) return;
+    // Light dismiss (click outside) in addition to Escape; React 18's typings lack the attribute.
+    dialog.setAttribute("closedby", "any");
+    dialog.showModal();
+  }, [open]);
 
   if (!open) return null;
 
@@ -45,6 +57,7 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
   // makes (`RecentPage.tsx` recentRowTarget) — the palette is a way to reach a
   // document, not a way to reach the markdown reader specifically.
   function choose(relPath: string): void {
+    dialogRef.current?.close();
     setOpen(false);
     setQuery("");
     const issue = issueRelPathFromRepoPath(relPath);
@@ -59,49 +72,45 @@ export function QuickOpen({ workstream }: { workstream: string | null }) {
   }
 
   return (
-    <div className="quick-open-backdrop">
-      {/* A real button rather than a click handler on the backdrop div: a
-          non-interactive element with a click handler is unreachable by
-          keyboard, and Escape alone is not a visible affordance. */}
-      <button
-        type="button"
-        className="quick-open-scrim"
-        aria-label="Close file search"
-        onClick={() => { setOpen(false); }}
-      />
-      <div className="quick-open" role="dialog" aria-label="Open a file">
-        <input
-          className="quick-open-input"
-          type="text"
-          autoFocus
-          placeholder={workstream === null ? "Open a file…" : `Open a file in ${workstream}…`}
-          value={query}
-          onChange={(event) => { setQuery(event.target.value); }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && matches[0]) choose(matches[0].relPath);
-          }}
-        />
-        {/* An empty corpus and an empty search are different states. */}
-        {index.isLoading ? <p className="muted">Loading paths…</p> : null}
-        {index.isError ? <p className="action-error">Couldn’t load paths: {index.error.message}</p> : null}
-        {!index.isLoading && !index.isError && matches.length === 0 && query !== ""
-          ? <p className="empty-state">No path matches “{query}”.</p>
-          : null}
-        <ul className="quick-open-results">
-          {matches.map((match, position) => (
-            <li key={match.relPath}>
-              <button
-                type="button"
-                className={position === 0 ? "quick-open-hit first" : "quick-open-hit"}
-                onClick={() => { choose(match.relPath); }}
-              >
-                {match.relPath}
-                <span className="quick-open-lifecycle"><DocumentLifecyclePills lifecycle={match.lifecycle} /></span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+    // A native modal dialog: Escape, click-outside (closedby), focus
+    // trapping and an inert page behind it come from the platform.
+    <dialog
+      ref={dialogRef}
+      className="quick-open"
+      aria-label="Open a file"
+      onClose={() => { setOpen(false); }}
+    >
+    <input
+      className="quick-open-input"
+      type="text"
+      autoFocus
+      placeholder={workstream === null ? "Open a file…" : `Open a file in ${workstream}…`}
+      value={query}
+      onChange={(event) => { setQuery(event.target.value); }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && !event.nativeEvent.isComposing && matches[0]) choose(matches[0].relPath);
+      }}
+    />
+    {/* An empty corpus and an empty search are different states. */}
+    {index.isLoading ? <p className="muted">Loading paths…</p> : null}
+    {index.isError ? <p className="action-error">Couldn’t load paths: {index.error.message}</p> : null}
+    {!index.isLoading && !index.isError && matches.length === 0 && query !== ""
+      ? <p className="empty-state">No path matches “{query}”.</p>
+      : null}
+    <ul className="quick-open-results">
+      {matches.map((match, position) => (
+        <li key={match.relPath}>
+          <button
+            type="button"
+            className={position === 0 ? "quick-open-hit first" : "quick-open-hit"}
+            onClick={() => { choose(match.relPath); }}
+          >
+            {match.relPath}
+            <span className="quick-open-lifecycle"><DocumentLifecyclePills lifecycle={match.lifecycle} /></span>
+          </button>
+        </li>
+      ))}
+    </ul>
+    </dialog>
   );
 }

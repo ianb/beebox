@@ -150,7 +150,7 @@ export function SpeechMenu({ segments, playing, anyPlaying, canSkip, onStop, onS
       {hasMultiple ? (
         <>
           <MenuDivider />
-          <div className="px-3 py-0.5 text-[11px] uppercase tracking-wide text-warm-400">Replay from:</div>
+          <div className="px-3 py-0.5 text-[0.6875rem] uppercase tracking-wide text-warm-400">Replay from:</div>
           {segments.map((segment, i) => (
             <MenuItem key={i} onClick={() => onReplay(i)}>
               <span className="block truncate">{chunkLabel(segment)}</span>

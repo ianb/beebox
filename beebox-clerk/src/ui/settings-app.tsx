@@ -57,7 +57,7 @@ function SilentCaptureSetting() {
     <section className="rounded border border-gray-200 p-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium">Silent screenshots</h2>
-        <button
+        <button type="button"
           onClick={toggle}
           disabled={busy}
           className={`shrink-0 rounded px-3 py-1 text-xs font-medium ${

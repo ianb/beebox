@@ -67,7 +67,7 @@ function TaskPill({ task }: { task: LiveTask }) {
 export function BackgroundTasks({ tasks }: { tasks: LiveTask[] }) {
   if (tasks.length === 0) return null;
   return (
-    <div className="mx-3 sm:mx-6 mb-1 flex flex-col gap-1" aria-label="Background tasks">
+    <div className="mx-3 sm:mx-6 mb-1 flex flex-col gap-1" role="group" aria-label="Background tasks">
       {tasks.map((task) => (
         <TaskPill key={task.taskId} task={task} />
       ))}

@@ -10,7 +10,7 @@ Agent and contributor build/test guidance lives in [`AGENTS.md`](AGENTS.md).
 ## Current Setup
 
 - SwiftUI app target: `BeeBox`
-- Minimum iOS: 17.0
+- Minimum iOS: 18.0
 - No external dependencies
 - Pairing: scan/open a `beebox://pair?...&pairingToken=...` URL from a
   box Settings QR code. The app redeems that token for a per-device mobile
@@ -25,7 +25,7 @@ Agent and contributor build/test guidance lives in [`AGENTS.md`](AGENTS.md).
   frontend native-emission handler.
 - Speech input uses Apple's on-device `SpeechAnalyzer` and `SpeechTranscriber`
   on iOS 26. `DictationTranscriber` covers unsupported iOS 26 hardware/locales,
-  and `SFSpeechRecognizer` remains the iOS 17–25 fallback. The first use of a
+  and `SFSpeechRecognizer` remains the iOS 18–25 fallback. The first use of a
   locale may download its system-managed model. A recorded WAV is kept in
   parallel for the HQ pass at send time. On iOS 26 with `SpeechTranscriber`
   available, that pass runs on the phone and the box is not called; otherwise,

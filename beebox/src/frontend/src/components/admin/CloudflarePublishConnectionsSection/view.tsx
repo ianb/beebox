@@ -177,8 +177,8 @@ export function ConnectionEditor({
     <form onSubmit={onSubmit}>
       <Stack gap="sm">
         <Hint>Saving checks that the token is active and can identify the selected account. It does not test publishing permissions; the first site setup checks those.</Hint>
-        <TextField id="bbx-admin-cf-publish-name" label="Connection name" value={name} onChange={setName} required maxLength={40} pattern="[a-z][a-z0-9-]{0,39}" helper="Choose a Bee Box label, such as makers. Lowercase letters, digits, and hyphens; starts with a letter." />
-        <TextField id="bbx-admin-cf-publish-account" label="Cloudflare account ID" value={accountId} onChange={setAccountId} required minLength={32} maxLength={32} pattern="[a-fA-F0-9]{32}" helper={<span>Find it in Cloudflare under <Text weight="medium">Workers & Pages → Account Details</Text>, or follow <ExternalLink id="bbx-admin-cf-publish-account-help" href="https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/" variant="inline">Cloudflare&apos;s account ID instructions</ExternalLink>.</span>} />
+        <TextField id="bbx-admin-cf-publish-name" identifier label="Connection name" value={name} onChange={setName} required maxLength={40} pattern="[a-z][a-z0-9-]{0,39}" helper="Choose a Bee Box label, such as makers. Lowercase letters, digits, and hyphens; starts with a letter." />
+        <TextField id="bbx-admin-cf-publish-account" identifier label="Cloudflare account ID" value={accountId} onChange={setAccountId} required minLength={32} maxLength={32} pattern="[a-fA-F0-9]{32}" helper={<span>Find it in Cloudflare under <Text weight="medium">Workers & Pages → Account Details</Text>, or follow <ExternalLink id="bbx-admin-cf-publish-account-help" href="https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/" variant="inline">Cloudflare&apos;s account ID instructions</ExternalLink>.</span>} />
         <TextField id="bbx-admin-cf-publish-token" label="API token" type="text" inputClassName="bbx-secret-value-mask" autoComplete="off" spellCheck={false} autoCapitalize="off" value={apiToken} onChange={setApiToken} required maxLength={4096} />
         <TokenSetupGuidance />
         <Row gap="sm" wrap>
@@ -263,15 +263,16 @@ function ConnectionCard({
           {connection.tokenStatus === "active" ? <Button id={`bbx-admin-cf-publish-revoke-${connection.name}`} intent="destructive" disabled={pending || !revokeAcknowledged} onClick={onRevoke}>Revoke credential</Button> : null}
         </Row>
         {connection.tokenStatus === "active" ? (
-          <Row gap="sm" align="start">
+          <label className="flex items-start gap-2 cursor-pointer">
             <input
               id={`bbx-admin-cf-publish-revoke-ack-${connection.name}`}
               type="checkbox"
+              className="mt-1"
               checked={revokeAcknowledged}
               onChange={(event) => setRevokeAcknowledged(event.target.checked)}
             />
-            <Text size="sm">Revoking removes this host&apos;s token but does not take live sites offline. I have disabled sites first, or understand I will need a working credential to do so.</Text>
-          </Row>
+            <Text as="span" size="sm">Revoking removes this host&apos;s token but does not take live sites offline. I have disabled sites first, or understand I will need a working credential to do so.</Text>
+          </label>
         ) : null}
         <Hint>Cloudflare dashboard: <ExternalLink href={`https://dash.cloudflare.com/${connection.accountId}`} id={`bbx-admin-cf-publish-dashboard-${connection.name}`} variant="inline">open this account</ExternalLink></Hint>
       </Stack>
