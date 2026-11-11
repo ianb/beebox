@@ -16,10 +16,9 @@ import { trpc } from "../../../lib/trpc/client";
 import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
 import { Hint } from "../../ui/Hint";
-import { Notice } from "../../ui/Notice";
 import { Heading } from "../../ui/Heading";
 import { Card } from "../../ui/Card";
-import { GoogleConnectLink } from "../GoogleConnectLink";
+import { GoogleConnectLink, GoogleServiceProblem } from "../GoogleConnectLink";
 import { DriveMountRow } from "./DriveMountRow";
 import { AddPointerForm, MountFolderForm } from "./DriveMountForms";
 import { DriveScheduleLine } from "./DriveScheduleLine";
@@ -36,16 +35,15 @@ function DriveShell({ children }: { children: React.ReactNode }) {
 export function DriveSection() {
   const mountsQuery = trpc.drive.mounts.useQuery();
   const configQuery = trpc.drive.config.useQuery();
-  const error = mountsQuery.error?.message ?? configQuery.error?.message ?? null;
+  const error = mountsQuery.error ?? configQuery.error;
 
-  if (error !== null) {
+  if (error) {
     return (
       <DriveShell>
-        <Notice tone="warning">{error}</Notice>
         {/* Distinct id from the not-connected branch below: ids are authored
             once (ui-scan annotations test counts source literals), even
             when the branches are mutually exclusive at runtime. */}
-        <GoogleConnectLink id="bbx-settings-drive-connect-google-error" service="Drive" />
+        <GoogleServiceProblem error={error} id="bbx-settings-drive-connect-google-error" service="Drive" />
       </DriveShell>
     );
   }
