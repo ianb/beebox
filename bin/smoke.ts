@@ -202,7 +202,9 @@ function buildSteps(input: {
       if (target === null) {
         throw new NoLandmarkToSwitchToError({ current, snapshot: before });
       }
-      const ref = refFor(before, { role: "menuitem", name: target.rawName });
+      const ref =
+        refFor(before, { role: "menuitem", name: target.rawName }) ??
+        refFor(before, { role: "button", name: target.rawName });
       if (ref === null) {
         throw new LandmarkRefUnresolvedError({ name: target.rawName, snapshot: before });
       }

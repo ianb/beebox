@@ -288,3 +288,16 @@ test("refForDomId: finds a stable control without depending on its accessible co
   assert.equal(refForDomId(listing, "bbx-browse-listing-mode"), "e14");
   assert.equal(refForDomId(listing, "missing"), null);
 });
+
+test("readPlaceMenu: a navigation-kind popup renders landmark rows as buttons", () => {
+  const snapshot = `- button "Where you are: Box" [expanded=true, ref=e1, id=bbx-nav-place]
+- link "Box: test1" [ref=e2, id=bbx-switch-menu-box]
+- link "Find a landmark" [ref=e3, id=bbx-switch-menu-landmarks]
+- StaticText "SWITCH TO"
+- button "Box (current)" [ref=e6]
+- button "Porch rebuild" [ref=e7]`;
+  assert.deepEqual(
+    readPlaceMenu(snapshot).landmarks.map((r) => r.label),
+    ["Box", "Porch rebuild"],
+  );
+});
