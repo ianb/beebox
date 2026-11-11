@@ -918,7 +918,7 @@ bash "$install_dir/beebox/deploy/install-restic.sh" /usr/local/bin/restic
 # files, installed whole: a template socket and service, the pass service, and
 # the sandbox drop-in both templates include. The hub and scheduler units are
 # installed whole too; the scheduler runs as the scheduler user.
-units=(beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-backup@.service beebox-backup@.timer beebox-hub.service beebox-scheduler.service)
+units=(beebox-boxes.slice beebox-box@.socket beebox-box@.service beebox-pass@.service beebox-backup@.service beebox-backup@.timer beebox-hub.service beebox-scheduler.service)
 for unit in "${units[@]}"; do
   src="$install_dir/beebox/deploy/systemd/$unit"
   dest="/etc/systemd/system/$unit"
@@ -931,6 +931,16 @@ for unit in "${units[@]}"; do
     fi
   fi
 done
+# /run/beebox and the cache directories come back at every boot from
+# tmpfiles.d. A host provisioned before cloud-init carried this entry had none,
+# and its first reboot left the hub unable to start (2026-11-11). --create is
+# idempotent and also repairs a directory with the wrong owner or mode.
+tmpfiles_src="$install_dir/beebox/deploy/systemd/beebox.tmpfiles.conf"
+if ! cmp -s "$tmpfiles_src" /etc/tmpfiles.d/beebox.conf; then
+  install -o root -g root -m 0644 "$tmpfiles_src" /etc/tmpfiles.d/beebox.conf
+  echo "  installed /etc/tmpfiles.d/beebox.conf"
+fi
+systemd-tmpfiles --create /etc/tmpfiles.d/beebox.conf
 # A fresh host has never enabled the hub; an existing one is a no-op.
 systemctl enable beebox-hub.service >/dev/null 2>&1 || true
 # cloud-init makes a system user without a home; the unit's WorkingDirectory
