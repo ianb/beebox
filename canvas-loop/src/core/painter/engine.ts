@@ -11,7 +11,7 @@
 // offscreen surfaces.
 import { resolveBrush } from "../brush/presets.js";
 import type { BrushName } from "../brush/presets.js";
-import { makePaper } from "../brush/paper.js";
+import { PaperSheet } from "../brush/paper.js";
 import { renderMark } from "../brush/render/mark.js";
 import type { Brush, BrushOverrides, Gesture, Paper } from "../brush/types.js";
 import type { Contour } from "../contours.js";
@@ -19,8 +19,11 @@ import { curveCommands, ellipseContour, pathContours } from "../contours.js";
 import { SketchUsageError } from "../errors.js";
 import { initialStyle } from "./style.js";
 import type { StyleState } from "./style.js";
-import type { BlendMode, ClipShape, ColorStop, Ctx2D, Ctx2DGradient, CtxTextAlign, CtxTextBaseline, Layer, LinearGradient, MakeLayer, Paint, PathCommand, RadialGradient, Vec2 } from "../paint.js";
-import { compositeOp, isPathShape, resolveGradient, tracePath, tracePolygon } from "../paint.js";
+import type { BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxTextAlign, CtxTextBaseline, Layer, MakeLayer, Paint, PathCommand, Vec2 } from "../paint.js";
+import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon } from "../paint.js";
+import { FaintWatch } from "./faint.js";
+import { drawLayer, fillShapes, isShapeList, maskLayer } from "./layers.js";
+import { paperOverlay } from "../brush/paper.js";
 
 /** Options for `group`: opacity applied once to the finished group, and its blend mode. */
 export interface GroupOptions {
@@ -45,11 +48,15 @@ export class Painter {
   #styleStack: StyleState[] = [];
   // `pop` may not reach below the depth an open group started at.
   #floor = 0;
-  #paper: Paper = {};
-  #paperLayer: Layer | undefined;
+  #paper: PaperSheet;
+  // Opacity of each open group, so a mark's visible strength can be judged.
+  #alphaStack: number[] = [];
+  #faint: FaintWatch;
 
-  constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer }) {
+  constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void }) {
     this.#ctxStack = [options.ctx];
+    this.#paper = new PaperSheet(options.makeLayer, { width: options.width, height: options.height });
+    this.#faint = new FaintWatch(options.warn ?? (() => {}));
     this.#makeLayer = options.makeLayer;
     this.width = options.width;
     this.height = options.height;
@@ -103,8 +110,7 @@ export class Painter {
   }
   /** Set the canvas's paper texture (grainy brushes read it). */
   paper(paper: Paper): void {
-    this.#paper = paper;
-    this.#paperLayer = undefined;
+    this.#paper.set(paper);
   }
   blendMode(blend: BlendMode): void {
     this.#style.blend = blend;
@@ -142,16 +148,6 @@ export class Painter {
     this.ctx.scale(x, y ?? x);
   }
 
-  // ── gradients ────────────────────────────────────────────────────
-  linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
-    const [x1, y1, x2, y2, stops] = args;
-    return { kind: "linear-gradient", x1, y1, x2, y2, stops };
-  }
-  radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
-    const [x, y, radius, stops] = args;
-    return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: radius, stops };
-  }
-
   #resolvePaint(paint: Paint): string | Ctx2DGradient {
     if (typeof paint === "string") return paint;
     return resolveGradient(this.ctx, paint);
@@ -165,7 +161,9 @@ export class Painter {
     ctx.globalCompositeOperation = "source-over";
     // Resolve after resetTransform so a gradient's coords are canvas-space.
     ctx.fillStyle = this.#resolvePaint(paint);
-    ctx.fillRect(0, 0, this.width, this.height);
+    ctx.beginPath();
+    ctx.rect(0, 0, this.width, this.height);
+    inPaintSpace(ctx, { paint, fill: () => ctx.fill() });
     ctx.restore();
   }
 
@@ -226,13 +224,26 @@ export class Painter {
     this.path(curveCommands(points, closed ?? false));
   }
 
-  /** The path commands `curve` would draw: use them with `clip` or `path`. */
-  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
-    return curveCommands(points, closed ?? false);
+  /** Darken the paper's valleys across everything drawn so far, so flat colour looks printed on paper. */
+  paperTexture(amount: number): void {
+    if (!Number.isFinite(amount) || amount < 0 || amount > 1) {
+      throw new SketchUsageError({ detail: `paperTexture amount must be a number in 0..1, got ${amount}` });
+    }
+    paperOverlay(this.ctx, { paper: this.#paper.layer(), amount, width: this.width, height: this.height });
   }
 
-  // Clip to a polygon/path for the duration of `body`, restoring afterward.
-  clip(shape: ClipShape, body: () => void): void {
+  // Clip to a polygon/path (or the union of several) for the duration of `body`, restoring afterward.
+  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
+    if (isShapeList(shape)) {
+      const m = this.ctx.getTransform();
+      const layer = this.#onLayer(body, 1);
+      const mask = this.#makeLayer({ width: this.width, height: this.height });
+      mask.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+      fillShapes(mask.ctx, shape);
+      maskLayer(layer, { mask, width: this.width, height: this.height });
+      drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity: 1, op: "source-over" });
+      return;
+    }
     const depth = this.#styleStack.length;
     this.push();
     try {
@@ -256,30 +267,34 @@ export class Painter {
     if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
       throw new SketchUsageError({ detail: `group opacity must be a number in 0..1, got ${opacity}` });
     }
-    const outer = this.ctx;
+    const layer = this.#onLayer(body, opacity);
+    const op = compositeOp(options.blend ?? "normal");
+    drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity, op });
+  }
+
+  /** Run `body` drawing onto a fresh full-canvas layer; state changes inside do not leak out. */
+  #onLayer(body: () => void, opacity: number): Layer {
+    const m = this.ctx.getTransform();
     const layer = this.#makeLayer({ width: this.width, height: this.height });
-    const m = outer.getTransform();
     layer.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
     const savedFloor = this.#floor;
     const savedStyle = { ...this.#style };
     const depth = this.#styleStack.length;
     this.#floor = depth;
     this.#ctxStack.push(layer.ctx);
+    this.#alphaStack.push(opacity);
     try {
       body();
     } finally {
       while (this.#styleStack.length > depth && this.pop());
       this.#ctxStack.pop();
+      this.#alphaStack.pop();
       this.#floor = savedFloor;
       this.#style = savedStyle;
-      outer.save();
-      outer.resetTransform();
-      outer.globalAlpha = opacity;
-      outer.globalCompositeOperation = compositeOp(options.blend ?? "normal");
-      outer.drawImage(layer.image, 0, 0, this.width, this.height, 0, 0, this.width, this.height);
-      outer.restore();
     }
+    return layer;
   }
+
 
   text(...args: [string, number, number]): void {
     const [content, x, y] = args;
@@ -315,8 +330,9 @@ export class Painter {
   #paint(contours: () => Contour[]): void {
     if (this.#style.fillEnabled) {
       const ctx = this.ctx;
-      ctx.fillStyle = this.#resolvePaint(this.#style.fillColor);
-      this.#withComposite(this.#composite(), () => ctx.fill());
+      const paint = this.#style.fillColor;
+      ctx.fillStyle = this.#resolvePaint(paint);
+      this.#withComposite(this.#composite(), () => inPaintSpace(ctx, { paint, fill: () => ctx.fill() }));
     }
     this.#strokeShape(contours);
   }
@@ -333,7 +349,7 @@ export class Painter {
     }
     const { erasing, blend } = this.#style;
     const composite = erasing ? "destination-out" : compositeOp(blend === "normal" ? (brush.blend ?? "normal") : blend);
-    renderMark({
+    const peak = renderMark({
       target: this.ctx,
       makeLayer: this.#makeLayer,
       canvas: { width: this.width, height: this.height },
@@ -342,11 +358,9 @@ export class Painter {
       weight: this.#style.strokeW,
       brush,
       gesture: this.#style.gesture,
-      paper: () => {
-        this.#paperLayer ??= makePaper(this.#makeLayer, { width: this.width, height: this.height, paper: this.#paper });
-        return this.#paperLayer;
-      },
+      paper: () => this.#paper.layer(),
       composite,
     });
+    if (peak !== undefined && !erasing) this.#faint.check(peak, this.#alphaStack);
   }
 }

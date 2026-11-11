@@ -10,12 +10,12 @@
 import type { Contour } from "../../contours.js";
 import { SketchUsageError } from "../../errors.js";
 import type { Ctx2D, CtxTransform, Layer, MakeLayer, Paint, Vec2 } from "../../paint.js";
-import { resolveGradient } from "../../paint.js";
-import { evalEnvelope, validateEnvelope } from "./envelope.js";
+import { inPaintSpace, resolveGradient } from "../../paint.js";
+import { evalEnvelope, validateEnvelope } from "../envelope.js";
 import { paintBristle, paintInk, paintStamp } from "./kinds.js";
 import { hashNumbers, noise1 } from "../random.js";
-import type { Sample } from "./sample.js";
-import { resample } from "./sample.js";
+import type { Sample } from "../sample.js";
+import { resample } from "../sample.js";
 import type { Brush, Gesture } from "../types.js";
 
 export interface MarkRequest {
@@ -165,22 +165,37 @@ function colorize(layer: Layer, args: { paint: Paint; m: CtxTransform; b: Bounds
   const ys = corners.map((c) => c[1]);
   const x0 = Math.min(...xs);
   const y0 = Math.min(...ys);
-  ctx.fillRect(x0, y0, Math.max(...xs) - x0, Math.max(...ys) - y0);
+  ctx.beginPath();
+  ctx.rect(x0, y0, Math.max(...xs) - x0, Math.max(...ys) - y0);
+  const paint = args.paint;
+  inPaintSpace(ctx, { paint, fill: () => ctx.fill() });
 }
 
-/** Paint one brushed mark onto `req.target`. */
-export function renderMark(req: MarkRequest): void {
+/** The strongest pixel's alpha (0..1) on a layer, sampling every other pixel. */
+function peakAlpha(layer: Layer, b: Bounds): number {
+  const { data } = layer.ctx.getImageData(0, 0, b.w, b.h);
+  let peak = 0;
+  for (let i = 3; i < data.length; i += 8) peak = Math.max(peak, data[i] ?? 0);
+  return peak / 255;
+}
+
+/**
+ * Paint one brushed mark onto `req.target`. Returns how strong it landed (its
+ * strongest pixel's alpha times the brush opacity) and where, or undefined
+ * when nothing was drawn.
+ */
+export function renderMark(req: MarkRequest): { alpha: number; x: number; y: number } | undefined {
   validate(req);
   const m = req.target.getTransform();
   const scale = Math.sqrt(Math.abs(m.a * m.d - m.b * m.c));
-  if (scale === 0) return;
+  if (scale === 0) return undefined;
   const width = req.weight * scale;
   const device = req.contours.map((c) => ({ points: c.points.map((p) => apply(m, p)), closed: c.closed }));
   const seed = markSeed(req, device);
   const all = device.map((contour, i) => shapeSamples(req, { contour, width, seed: hashNumbers([i], seed) }));
   const scatter = req.brush.kind === "stamp" ? req.brush.scatter : 0;
   const b = boundsOf(all, { pad: width * (1 + scatter) + (req.gesture.wobble ?? 0) + 2, canvas: req.canvas });
-  if (b === undefined) return;
+  if (b === undefined) return undefined;
   const layer = req.makeLayer({ width: b.w, height: b.h });
   layer.ctx.setTransform(1, 0, 0, 1, -b.x, -b.y);
   layer.ctx.fillStyle = "#000000";
@@ -202,4 +217,5 @@ export function renderMark(req: MarkRequest): void {
   t.globalCompositeOperation = req.composite;
   t.drawImage(layer.image, 0, 0, b.w, b.h, b.x, b.y, b.w, b.h);
   t.restore();
+  return { alpha: peakAlpha(layer, b) * req.brush.opacity, x: b.x + b.w / 2, y: b.y + b.h / 2 };
 }

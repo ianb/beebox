@@ -3,6 +3,10 @@
 // context-generic Painter (one drawing implementation for both harnesses). It
 // wraps a real DOM `CanvasRenderingContext2D`; `log` forwards to the runtime's
 // transcript sink and `snapshot` is a no-op (the live canvas is always visible).
+import { ellipseGradient, linearGradient, radialGradient } from "../../core/paint.js";
+import { curveCommands } from "../../core/contours.js";
+import { offsetPoints, tubePath } from "../../core/shapes.js";
+import type { TubeOptions } from "../../core/shapes.js";
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import type { ClipShape, ColorStop, Ctx2D, LinearGradient, PathCommand, RadialGradient, Vec2 } from "../../core/paint.js";
 import { Painter } from "../../core/painter/engine.js";
@@ -24,6 +28,7 @@ export class BrowserView implements View {
       width: deps.width,
       height: deps.height,
       makeLayer: (size) => makeDomLayer(deps.ctx.canvas.ownerDocument, size),
+      warn: (message) => deps.log([message]),
     });
   }
 
@@ -84,19 +89,31 @@ export class BrowserView implements View {
     this.#painter.path(commands);
   }
   linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
-    return this.#painter.linearGradient(...args);
+    return linearGradient(...args);
   }
   radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
-    return this.#painter.radialGradient(...args);
+    return radialGradient(...args);
   }
-  clip(shape: ClipShape, body: () => void): void {
+  ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
+    return ellipseGradient(...args);
+  }
+  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     this.#painter.clip(shape, body);
+  }
+  paperTexture(amount: number): void {
+    this.#painter.paperTexture(amount);
   }
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#painter.curve(points, closed);
   }
   curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
-    return this.#painter.curvePath(points, closed);
+    return curveCommands(points, closed ?? false);
+  }
+  tube(points: readonly Vec2[], options: TubeOptions): PathCommand[] {
+    return tubePath(points, options);
+  }
+  offset(points: readonly Vec2[], distance: number): Vec2[] {
+    return offsetPoints(points, distance);
   }
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
     this.#painter.brush(base, overrides);

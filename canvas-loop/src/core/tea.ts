@@ -8,11 +8,13 @@ import type { BlendMode, ClipShape, ColorStop, LinearGradient, Paint, PathComman
 import type { Brush, BrushOverrides, Gesture, Paper } from "./brush/types.js";
 import type { BrushName } from "./brush/presets.js";
 import type { GroupOptions } from "./painter/engine.js";
+import type { TubeOptions } from "./shapes.js";
 
 export type { BlendMode, ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 export type { BristleBrush, Brush, BrushKind, BrushOverrides, Envelope, EnvelopePreset, Gesture, InkBrush, Paper, StampBrush } from "./brush/types.js";
 export type { BrushName } from "./brush/presets.js";
 export type { GroupOptions } from "./painter/engine.js";
+export type { TubeOptions } from "./shapes.js";
 
 // Mirror @napi-rs/canvas's (unexported) text-align unions — see sketch.ts.
 export type TextAlign = "center" | "end" | "left" | "right" | "start";
@@ -147,12 +149,20 @@ export interface View {
   linearGradient(x1: number, y1: number, x2: number, y2: number, stops: readonly ColorStop[]): LinearGradient;
   /** Build a concentric radial-gradient handle (center→radius) usable as a `Paint`. */
   radialGradient(x: number, y: number, radius: number, stops: readonly ColorStop[]): RadialGradient;
-  /** Clip to a polygon/path for the duration of `body` (state saved/restored). */
-  clip(shape: ClipShape, body: () => void): void;
+  /** A radial gradient filling an ellipse of width `w` and height `h` around (x, y), like `ellipse`. */
+  ellipseGradient(x: number, y: number, w: number, h: number, stops: readonly ColorStop[]): RadialGradient;
+  /** Clip to a polygon/path, or to the union of several, for the duration of `body`. */
+  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void;
   /** A smooth curve through every point (Catmull-Rom, like p5's curveVertex). */
   curve(points: readonly Vec2[], closed?: boolean): void;
   /** The path commands `curve` would draw, for `clip(...)` or `path(...)`. */
   curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[];
+  /** A tube's closed outline around a smooth centreline (limbs, stems, tails). */
+  tube(points: readonly Vec2[], options: TubeOptions): PathCommand[];
+  /** A closed outline grown (`distance` > 0) or shrunk (< 0) along its normals. */
+  offset(points: readonly Vec2[], distance: number): Vec2[];
+  /** Show the paper's texture across everything drawn so far (0..1). */
+  paperTexture(amount: number): void;
   /** Strokes from now on are brushed marks (a preset name with overrides, or a Brush). */
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void;
   /** Back to plain Canvas2D strokes. */

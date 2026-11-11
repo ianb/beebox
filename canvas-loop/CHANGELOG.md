@@ -29,6 +29,13 @@ us more. Every change lands here — hand-written and terse.
   `reverse()` are allowed there.
 - **Mark seed from points only.** A mark's randomness no longer depends on its
   brush, gesture or width, so tuning those keeps the same wobble.
+- **Shape helpers and texture** (round-2 asks). `tube(points, { width,
+  profile })` returns a limb outline around a smooth centreline;
+  `offset(points, distance)` grows or shrinks a closed outline;
+  `clip([shapes…], body)` clips to a union; `ellipseGradient(x, y, w, h,
+  stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
+  page. A mark too faint to see adds a transcript warning. Bristles wander
+  sideways so long strokes do not stripe.
 - **`cli diff`** (experimental): changed-pixel highlight (darker/lighter),
   per-region before/after crops, side by side, and stats. TEA sketches there no longer need the
   `max-params` disable comment.

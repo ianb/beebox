@@ -79,6 +79,7 @@ export interface Ctx2D {
   setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
   drawImage(image: LayerImage, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
   createImageData(width: number, height: number): CtxImageData;
+  getImageData(x: number, y: number, w: number, h: number): CtxImageData;
   putImageData(imageData: CtxImageData, dx: number, dy: number): void;
   clearRect(x: number, y: number, w: number, h: number): void;
   translate(x: number, y: number): void;
@@ -171,7 +172,27 @@ export interface RadialGradient {
   readonly x2: number;
   readonly y2: number;
   readonly r2: number;
+  /** Vertical squash about the centre (height ÷ width); absent means circular. */
+  readonly scaleY?: number;
   readonly stops: readonly ColorStop[];
+}
+
+/** A linear gradient from (x1, y1) to (x2, y2). */
+export function linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
+  const [x1, y1, x2, y2, stops] = args;
+  return { kind: "linear-gradient", x1, y1, x2, y2, stops };
+}
+
+/** A circular radial gradient around (x, y). */
+export function radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
+  const [x, y, radius, stops] = args;
+  return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: radius, stops };
+}
+
+/** A radial gradient filling an ellipse of width `w` and height `h` around (x, y), like `ellipse`. */
+export function ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
+  const [x, y, w, h, stops] = args;
+  return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: w / 2, scaleY: h / w, stops };
 }
 
 /** Any gradient handle. */
@@ -231,6 +252,27 @@ export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
         break;
     }
   }
+}
+
+/**
+ * Run a fill in the paint's own space. An elliptical radial gradient is a
+ * circular one under a vertical scale about its centre; Canvas2D reads a
+ * gradient in the transform current at fill time, while the path was already
+ * traced, so only the gradient is squashed. Only fills use this: a stroke
+ * would squash its line width too.
+ */
+export function inPaintSpace(ctx: Ctx2D, args: { paint: Paint | string | Ctx2DGradient; fill: () => void }): void {
+  const { paint } = args;
+  if (typeof paint === "string" || !("kind" in paint) || paint.kind !== "radial-gradient" || paint.scaleY === undefined) {
+    args.fill();
+    return;
+  }
+  ctx.save();
+  ctx.translate(paint.x2, paint.y2);
+  ctx.scale(1, paint.scaleY);
+  ctx.translate(-paint.x2, -paint.y2);
+  args.fill();
+  ctx.restore();
 }
 
 /** Build the ctx-bound gradient for a gradient handle. */

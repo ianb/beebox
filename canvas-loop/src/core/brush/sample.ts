@@ -1,5 +1,5 @@
 // Even arc-length resampling of a device-space contour.
-import type { Vec2 } from "../../paint.js";
+import type { Vec2 } from "../paint.js";
 
 /** One point along a mark, in device pixels. */
 export interface Sample {

@@ -1,7 +1,7 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
 import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
 import type { Sketch } from "./sketch.js";
-import type { BlendMode, Brush, BrushName, BrushOverrides, Gesture, GroupOptions, Paper, ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "../core/tea.js";
+import type { BlendMode, Brush, BrushName, BrushOverrides, Gesture, GroupOptions, Paper, TubeOptions, ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "../core/tea.js";
 
 /**
  * The drawing capability handed to `draw`. A thin facade over the shared Sketch
@@ -76,8 +76,20 @@ export class TeaView implements View {
   radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
     return this.#sketch.radialGradient(...args);
   }
-  clip(shape: ClipShape, body: () => void): void {
+  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     this.#sketch.clip(shape, body);
+  }
+  ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
+    return this.#sketch.ellipseGradient(...args);
+  }
+  tube(points: readonly Vec2[], options: TubeOptions): PathCommand[] {
+    return this.#sketch.tube(points, options);
+  }
+  offset(points: readonly Vec2[], distance: number): Vec2[] {
+    return this.#sketch.offset(points, distance);
+  }
+  paperTexture(amount: number): void {
+    this.#sketch.paperTexture(amount);
   }
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#sketch.curve(points, closed);

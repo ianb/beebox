@@ -217,3 +217,64 @@ test("the TEA View draws brushed marks inside a group", () => {
   const [r, g] = pixel(s, [60, 22]);
   assert.ok(g > r, "green paint landed");
 });
+
+test("clip to several shapes keeps drawing inside their union only", () => {
+  const s = makeSketch({ width: 100, height: 40 });
+  s.noStroke();
+  s.fill("#ff0000");
+  s.clip(
+    [
+      [
+        [0, 0],
+        [30, 0],
+        [30, 40],
+        [0, 40],
+      ],
+      [
+        [70, 0],
+        [100, 0],
+        [100, 40],
+        [70, 40],
+      ],
+    ],
+    () => s.rect(0, 0, 100, 40),
+  );
+  assert.equal(pixel(s, [15, 20])[3], 255);
+  assert.equal(pixel(s, [85, 20])[3], 255);
+  assert.equal(pixel(s, [50, 20])[3], 0, "the gap between the shapes stays empty");
+});
+
+test("an ellipse gradient is squashed: same colour at the same fraction of each radius", () => {
+  const s = makeSketch({ width: 200, height: 100 });
+  s.noStroke();
+  s.fill(
+    s.ellipseGradient(100, 50, 160, 40, [
+      [0, "#000000"],
+      [1, "#ffffff"],
+    ]),
+  );
+  s.rect(0, 0, 200, 100);
+  const across = pixel(s, [140, 50])[0];
+  const down = pixel(s, [100, 60])[0];
+  assert.ok(Math.abs(across - down) <= 8, `half-radius across ${across} vs down ${down}`);
+});
+
+test("a mark too faint to see is reported as a warning", () => {
+  const warnings: string[] = [];
+  const s = new Sketch({
+    host: { recordLog: (e) => warnings.push(e.message), requestSnapshot(): void {} },
+    seed: 42,
+    fps: 60,
+    onHandled: () => {},
+  });
+  s.createCanvas(100, 40);
+  s.stroke("rgba(0,0,0,0.03)");
+  s.strokeWeight(10);
+  s.brush("ink");
+  s.line(10, 20, 90, 20);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0] ?? "", /faint mark near/);
+  s.stroke("#000000");
+  s.line(10, 20, 90, 20);
+  assert.equal(warnings.length, 1, "a visible mark is not reported");
+});

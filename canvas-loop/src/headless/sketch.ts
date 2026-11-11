@@ -1,3 +1,7 @@
+import { ellipseGradient, linearGradient, radialGradient } from "../core/paint.js";
+import { curveCommands } from "../core/contours.js";
+import { offsetPoints, tubePath } from "../core/shapes.js";
+import type { TubeOptions } from "../core/shapes.js";
 import { createCanvas } from "@napi-rs/canvas";
 import type { Canvas, SKRSContext2D } from "@napi-rs/canvas";
 import { SketchUsageError } from "./errors.js";
@@ -76,7 +80,9 @@ export class Sketch {
     // gap is a wider `fillStyle` union (it also allows CanvasPattern, which the
     // engine never sets), so structural assignability needs one boundary cast.
     // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union)
-    this.#painter = new Painter({ ctx: ctx as unknown as Ctx2D, width, height, makeLayer: makeSkiaLayer });
+    this.#painter = new Painter({ ctx: ctx as unknown as Ctx2D, width, height, makeLayer: makeSkiaLayer,
+      warn: (message) => this.#host.recordLog({ level: "warn", message }),
+    });
   }
 
   /** The raw context drawing lands on now: the canvas, or the innermost open group's layer. */
@@ -180,10 +186,13 @@ export class Sketch {
 
   // ── gradients ────────────────────────────────────────────────────
   linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
-    return this.#requirePainter().linearGradient(...args);
+    return linearGradient(...args);
   }
   radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
-    return this.#requirePainter().radialGradient(...args);
+    return radialGradient(...args);
+  }
+  ellipseGradient(...args: [number, number, number, number, readonly ColorStop[]]): RadialGradient {
+    return ellipseGradient(...args);
   }
 
   // ── drawing ──────────────────────────────────────────────────────
@@ -214,14 +223,23 @@ export class Sketch {
   path(commands: readonly PathCommand[]): void {
     this.#requirePainter().path(commands);
   }
-  clip(shape: ClipShape, body: () => void): void {
+  clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     this.#requirePainter().clip(shape, body);
+  }
+  paperTexture(amount: number): void {
+    this.#requirePainter().paperTexture(amount);
   }
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#requirePainter().curve(points, closed);
   }
   curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
-    return this.#requirePainter().curvePath(points, closed);
+    return curveCommands(points, closed ?? false);
+  }
+  tube(points: readonly Vec2[], options: TubeOptions): PathCommand[] {
+    return tubePath(points, options);
+  }
+  offset(points: readonly Vec2[], distance: number): Vec2[] {
+    return offsetPoints(points, distance);
   }
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
     this.#requirePainter().brush(base, overrides);

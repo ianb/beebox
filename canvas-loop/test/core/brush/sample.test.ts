@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { resample } from "../../../../src/core/brush/render/sample.js";
+import { resample } from "../../../src/core/brush/sample.js";
 
 test("resampling keeps fixed spacing from the start and ends on the last point", () => {
   const samples = resample(

@@ -1,6 +1,6 @@
 // Pressure envelopes: a value over a mark's length, t in 0..1.
-import { SketchUsageError } from "../../errors.js";
-import type { Envelope, EnvelopePreset } from "../types.js";
+import { SketchUsageError } from "../errors.js";
+import type { Envelope, EnvelopePreset } from "./types.js";
 
 const PRESETS: Record<EnvelopePreset, (t: number) => number> = {
   even: () => 1,

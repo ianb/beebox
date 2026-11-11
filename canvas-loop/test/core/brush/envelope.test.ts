@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { evalEnvelope } from "../../../../src/core/brush/render/envelope.js";
+import { evalEnvelope } from "../../../src/core/brush/envelope.js";
 
 test("envelopes: taper rises from near zero, presets clamp, keyframes ease", () => {
   assert.ok(evalEnvelope("taper", 0) < 0.1);

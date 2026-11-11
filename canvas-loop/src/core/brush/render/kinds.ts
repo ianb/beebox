@@ -4,7 +4,7 @@
 import { getStroke } from "perfect-freehand";
 import type { Ctx2D } from "../../paint.js";
 import { noise1, rand } from "../random.js";
-import type { Sample } from "./sample.js";
+import type { Sample } from "../sample.js";
 import type { BristleBrush, InkBrush, StampBrush } from "../types.js";
 
 /** What every kind needs to paint one contour. */
@@ -109,6 +109,8 @@ interface BristlePoint {
 }
 
 const LEVELS = 5;
+/** How far a bristle wanders sideways, as a fraction of the brush's half-width. */
+const BRISTLE_DRIFT = 0.12;
 
 function bristlePoints(input: KindInput, args: { b: Bristle; index: number }): BristlePoint[] {
   const { b } = args;
@@ -121,7 +123,9 @@ function bristlePoints(input: KindInput, args: { b: Bristle; index: number }): B
     // Paint varies slowly along each bristle, so the bristles do not read as even stripes.
     const load = 0.7 + 0.3 * noise1(input.seed, { channel: 40 + args.index, x: c.s / 18 });
     const alpha = contact * dry * gap * b.strength * load;
-    const spread = (b.offset * input.width * (0.35 + 0.65 * c.p)) / 2;
+    // Bristles wander a little sideways along the stroke, so long strokes do not read as ruled stripes.
+    const drift = BRISTLE_DRIFT * noise1(input.seed, { channel: 60 + args.index, x: c.s / 45 });
+    const spread = ((b.offset + drift) * input.width * (0.35 + 0.65 * c.p)) / 2;
     return {
       x: c.x + c.nx * spread,
       y: c.y + c.ny * spread,

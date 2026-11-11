@@ -35,6 +35,26 @@ All stroked shapes take the current brush: `line`, `curve`, `path`, `polygon`,
 A shape with `noStroke()` gets no mark. A fill is always flat colour. For
 textured shading, draw marks inside a `clip` (see below).
 
+### Shape helpers
+
+These return data, so their results work with `fill`, brushes and `clip`:
+
+- `tube(points, { width, profile? })` returns the closed outline of a tube
+  (an arm, a leg, a stem, a tail) around a smooth centreline through `points`,
+  with round ends. `profile` is an envelope (as for pressure) that scales the
+  width along the tube: `[[0, 1], [1, 0.6]]` narrows it toward the end.
+  Draw it with `s.path(outline)`, clip with `s.clip(outline, …)`.
+- `offset(points, distance)` grows (positive) or shrinks (negative) a closed
+  outline given as points. Use it for rim light and form shadows: inside the
+  shape's clip, fill the shape offset and shifted away from the light.
+
+```ts
+s.clip(s.curvePath(HEAD, true), () => {
+  s.fill(SHADE);
+  s.curve(s.offset(HEAD, 10).map(([x, y]) => [x + 12, y + 10]), true);  // shadow crescent, lower right
+});
+```
+
 Points are ordinary data. Name the ones you reuse:
 
 ```ts
@@ -126,6 +146,34 @@ s.group({ opacity: 0.6, blend: "multiply" }, () => {
   Inside a group it removes only the group's own pixels.
 - `blendMode(mode)` sets the blend for the shapes that follow.
 - Groups nest. `push()`/`pop()` inside a group must pair inside it.
+- `clip([shapeA, shapeB, …], body)` clips to the union of several shapes, for
+  example one light pass over a whole figure made of parts.
+
+## Gradients and paper texture
+
+- `ellipseGradient(x, y, w, h, stops)` is a radial gradient that fills an
+  ellipse of width `w` and height `h` (like `ellipse`), for flat pools of
+  light and oval glows. `radialGradient` is always circular.
+- `paperTexture(amount)` shows the paper's tooth across everything drawn so
+  far, so flat fills and gradients look printed on paper. Call it last;
+  0.3–0.6 is a typical range.
+
+## Colour tips
+
+- A translucent colour mixes with what is under it: pink at 50% over green
+  turns brownish grey. For a clean tint, paint an opaque core and soften its
+  edge with `wash` or `airbrush`.
+- `blend: "screen"` lightens toward white; it does not add colour. For
+  coloured light, use `"normal"` at a lower opacity, or `"overlay"`.
+- `push()` / `pop()` blocks have no visible scope in the file. Put each
+  `push`, transform and `pop` inside one small function, so code added later
+  does not land inside a rotate by accident.
+
+## Faint marks
+
+A mark whose strongest pixel lands below about 8% opacity (after its brush
+and any open groups) is too faint to see. The transcript gets a warning line
+with the mark's position, so you do not spend a cycle finding out.
 
 Shading inside a shape: fill the shape, clip to it and draw marks, then draw
 its outline last. The clip includes the inside half of the outline, so marks

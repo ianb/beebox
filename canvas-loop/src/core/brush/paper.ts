@@ -1,7 +1,7 @@
 // The paper texture: a canvas-sized layer whose alpha marks the paper's valleys,
 // where a grainy brush leaves less pigment. Generated in JS from hash noise, so
 // it is the same in every runtime.
-import type { Layer, MakeLayer } from "../paint.js";
+import type { Ctx2D, Layer, MakeLayer } from "../paint.js";
 import { rand } from "./random.js";
 import type { Paper } from "./types.js";
 
@@ -47,4 +47,44 @@ export function makePaper(makeLayer: MakeLayer, args: { width: number; height: n
   }
   layer.ctx.putImageData(image, 0, 0);
   return layer;
+}
+
+/**
+ * Strongest darkening of a paper valley at `amount` 1. The paper mask is
+ * high-contrast (it cuts grain out of brush marks), so a page-wide overlay uses
+ * a fraction of it: real paper tooth is a faint texture.
+ */
+const OVERLAY_STRENGTH = 0.18;
+
+/** Multiply the paper's valleys over everything already on `ctx`, at `amount` (0..1) strength. */
+export function paperOverlay(ctx: Ctx2D, args: { paper: Layer; amount: number; width: number; height: number }): void {
+  ctx.save();
+  ctx.resetTransform();
+  ctx.globalAlpha = args.amount * OVERLAY_STRENGTH;
+  ctx.globalCompositeOperation = "multiply";
+  ctx.drawImage(args.paper.image, 0, 0, args.width, args.height, 0, 0, args.width, args.height);
+  ctx.restore();
+}
+
+/** The canvas's current paper: its settings, and the texture layer built from them on first use. */
+export class PaperSheet {
+  #makeLayer: MakeLayer;
+  #size: { width: number; height: number };
+  #paper: Paper = {};
+  #layer: Layer | undefined;
+
+  constructor(makeLayer: MakeLayer, size: { width: number; height: number }) {
+    this.#makeLayer = makeLayer;
+    this.#size = size;
+  }
+
+  set(paper: Paper): void {
+    this.#paper = paper;
+    this.#layer = undefined;
+  }
+
+  layer(): Layer {
+    this.#layer ??= makePaper(this.#makeLayer, { ...this.#size, paper: this.#paper });
+    return this.#layer;
+  }
 }
