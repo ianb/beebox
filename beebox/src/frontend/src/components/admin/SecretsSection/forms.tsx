@@ -101,6 +101,7 @@ function NameFieldWithSuggestion({
     <Stack gap="xs">
       <TextField
         id={id}
+        identifier
         label="Name"
         value={name}
         onChange={(next) => { onNameChange(next); setSuggestionDismissed(false); }}

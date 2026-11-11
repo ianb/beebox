@@ -53,7 +53,7 @@ function SelectionPill({
         className="flex items-center gap-1.5 max-w-[16rem] rounded bg-warm-200 pl-1.5 pr-2 py-1 hover:ring-2 hover:ring-accent focus:outline-none focus:ring-2 focus:ring-accent"
         title="Click to view the selected text"
       >
-        <span className="font-mono text-[10px] bg-warm-800 text-white px-1 rounded flex-shrink-0">{`selection#${String(selection.id)}`}</span>
+        <span className="font-mono text-[0.625rem] bg-warm-800 text-white px-1 rounded flex-shrink-0">{`selection#${String(selection.id)}`}</span>
         <span className="text-xs text-warm-700 truncate">“{snippet(selection.text, 32)}”</span>
       </button>
       <CloseButton variant="bubble" label="Remove selection" onClick={onRemove} className="absolute -top-2 -right-2" />
@@ -61,7 +61,7 @@ function SelectionPill({
         <div className="absolute bottom-full mb-1 left-0 z-50 w-72 p-2 rounded-lg border border-warm-300 bg-white shadow-lg">
           <div className="text-xs font-medium text-warm-800 truncate" title={selection.ref ?? undefined}>{docName(selection.ref)}</div>
           {selection.position === "" ? null : (
-            <div className="text-[11px] text-warm-700 mt-0.5 break-words">{selection.position}</div>
+            <div className="text-[0.6875rem] text-warm-700 mt-0.5 break-words">{selection.position}</div>
           )}
           <div className="mt-1 pt-1 border-t border-warm-200 text-sm text-warm-700 max-h-40 overflow-auto whitespace-pre-wrap">
             {selection.text}

@@ -4,6 +4,15 @@ UI palette, primitives, data wiring, addressable ids, and the `className` rule. 
 
 Bee Box is an internal app, not a public site chasing Lighthouse scores. Do not optimize before a measurement shows something is slow.
 
+## Browser support
+
+Bee Box targets current Chrome, Safari and Firefox, and the iOS app's
+WKWebView at iOS 18 (Safari 18.0). Use any feature Baseline-available in
+Safari 18.0 without a fallback. A newer feature is progressive enhancement: use
+it only where the page still works without it, with no fallback code over
+about 20 lines and no polyfill (Temporal is the one exception). workstreams-app
+and beebox-clerk run in Chrome only.
+
 ## Card themes
 
 Card presentation is theme-driven and independent of view selection. Theme
@@ -141,6 +150,12 @@ next action, and an `<ErrorText>` message with a retry. A blank screen while
 data resolves is a bug. A narrow change keeps the container's existing
 handling and does not add unreachable states.
 
+New calendar-date, time-zone, and duration code uses `Temporal`, never `Date`:
+a date-only value is a `Temporal.PlainDate`, a timestamp a `Temporal.Instant`.
+`boot()` loads the polyfill where the browser lacks Temporal
+(`src/frontend/src/lib/temporal.ts`), so read `Temporal` only inside functions, never at module
+load; a test of such code imports `src/frontend/test/helpers/temporal-global.ts`.
+
 ## Frontend UI Primitives
 
 Reach for a primitive from `src/frontend/src/components/ui/` before writing appearance classes inline. The primitives own appearance (colors, borders, shadows); callers own outer layout (margin, padding, flex-self, sizing, position) via a `className` prop.
@@ -164,7 +179,7 @@ Every control also has an accessible name, which screen readers, the box agent, 
 - `<InlineAction>` — inline action embedded in prose ("(reset)", "retry", "+ Add comment"). Intents: emphatic/subtle/danger/quiet (`quiet` keeps the surrounding color and underlines on hover). Has `flash` for clipboard copies etc.
 
 **Inputs** (all in `ui/fields.tsx`)
-- `<TextField>`, `<TextareaField>`, `<NumberField>` — label + input + error + helper, pass-through of native validation attrs (`required`, `minLength`, `pattern`, etc.). `hideLabel` for sr-only labels. Value/onChange are controlled.
+- `<TextField>`, `<TextareaField>`, `<NumberField>` — label + input + error + helper, pass-through of native validation attrs (`required`, `minLength`, `pattern`, etc.). `hideLabel` for sr-only labels. Value/onChange are controlled. `identifier` on `<TextField>` turns off spellcheck, autocorrect and auto-capitalization for hostnames, ids, URLs and names. `revealable` on a `type="password"` `<TextField>` adds a "Show password" button (`aria-pressed` carries the state); use it on login, setup and change-password.
 - `<CheckboxField>` — inline checkbox with label to the right.
 - `<SelectField>` — dropdown select with options array.
 - `<RadioGroup>` — stacked (`variant="list"`) or card-style (`variant="cards"`) radios.

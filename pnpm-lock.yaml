@@ -209,6 +209,9 @@ importers:
       simple-git:
         specifier: ^3.32.3
         version: 3.36.0
+      temporal-polyfill:
+        specifier: 1.0.7
+        version: 1.0.7
       turndown:
         specifier: ^7.2.4
         version: 7.2.4
@@ -458,6 +461,9 @@ importers:
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.6.0
+      temporal-polyfill:
+        specifier: 1.0.7
+        version: 1.0.7
       text-fragments-polyfill:
         specifier: ^6.7.0
         version: 6.7.0
@@ -8172,6 +8178,15 @@ packages:
   temml@0.13.3:
     resolution: {integrity: sha512-GLNEdf5qBWux3adbOxFus4jlds8nCdEIkkKq99m/4GGTfqnsjlVlK/i371Ux7yYSg/WNmOyAkNT/GJlZoJ0v+w==}
     engines: {node: '>=18.13.0'}
+
+  temporal-polyfill@1.0.7:
+    resolution: {integrity: sha512-/qHG5yJUCFRAYrlo/4zgFsV7p+cSnGJjtpd3c3sKB3ayuIln3U0nthfKa9MoMl0nY7NAjrru5/w0BMjcAxg9MA==}
+
+  temporal-spec@1.0.1:
+    resolution: {integrity: sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==}
+
+  temporal-utils@1.0.4:
+    resolution: {integrity: sha512-4mAcgbWlaxe+gn23gk8g0iHxCVGVOhKzSCfF5HM3lfvH8BdT+/pBmH/R/E4CrIse+koUgs8ThkPzCLnui6Fi8w==}
 
   test-exclude@7.0.2:
     resolution: {integrity: sha512-u9E6A+ZDYdp7a4WnarkXPZOx8Ilz46+kby6p1yZ8zsGTz9gYa6FIS7lj2oezzNKmtdyyJNNmmXDppga5GB7kSw==}
@@ -17302,6 +17317,15 @@ snapshots:
 
   temml@0.13.3:
     optional: true
+
+  temporal-polyfill@1.0.7:
+    dependencies:
+      temporal-spec: 1.0.1
+      temporal-utils: 1.0.4
+
+  temporal-spec@1.0.1: {}
+
+  temporal-utils@1.0.4: {}
 
   test-exclude@7.0.2:
     dependencies:

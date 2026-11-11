@@ -1,4 +1,5 @@
 /* Production integration for the two approved textile palettes. */
+.bbx-box-presentation[data-chrome-theme="gold-thread"] { color-scheme: dark; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) {
   --bbx-desk-background: var(--textile-desk);
   --bbx-desk-pattern: none;

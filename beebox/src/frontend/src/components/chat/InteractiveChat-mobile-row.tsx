@@ -52,6 +52,7 @@ export function MobileTextareaRow({
         onDrop={onDrop}
         readOnly={isTranscribing}
         enterKeyHint="enter"
+        aria-label="Message"
         placeholder={isTranscribing ? "Listening..." : "Type a message..."}
         className={composerTextareaClasses({ mobile: true, isTranscribing })}
         autoFocus
@@ -65,7 +66,7 @@ export function MobileTextareaRow({
             ink
             className="flex-shrink-0"
           />
-          <button
+          <button type="button"
             id={hasControlIds ? "bbx-composer-dictation-edit-mobile" : undefined}
             onClick={() => {
               onStopDictation();

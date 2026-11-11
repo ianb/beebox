@@ -55,7 +55,8 @@ For images and audio, don't fetch. Render a bounded image with
 \`<img src={imageUrl(f.path, { width: 960, format: "auto" })} />\`; use
 \`fileUrl(f.path)\` for audio and for a link to the full-resolution image. Image
 variants are generated on demand and cached, so do not make a small display
-download the original.
+download the original. Add \`loading="lazy"\` to images in a grid or long list
+so offscreen ones wait.
 
 \`imageUrl\` requires \`width\` or \`height\`. It uses \`fit: "scale-down"\` and
 \`quality: 85\` by default; \`format: "auto"\` negotiates AVIF/WebP/JPEG. Other
@@ -200,3 +201,27 @@ import { CardLink, CardRef } from "beebox/view-widgets";
 \`\`\`
 
 The reference attribute is \`cardRef\`, **not** \`ref\` (React reserves \`ref\` on components). Write box-absolute refs (\`/_content/…\`). A \`cardRef\` is tracked like any card ref, so \`bbx validate\` flags a broken one and \`bbx mv\` rewrites it when the target moves.`;
+
+export const controlsSection = `## Controls People Can Use
+
+A view is used by mouse, touch, keyboard, and screen reader, and the box agent
+drives it by the same names. Write native HTML before ARIA:
+
+- Every control has a name: \`<button>\` text, a \`<label>\` for an input
+  (\`<label>Due <input type="date" /></label>\`), or \`aria-label\` on an
+  icon-only button. A placeholder is not a name. Put \`aria-label\` only on an
+  element with a role; on a plain \`<div>\` it is ignored.
+- Use \`<button type="button">\` for actions and \`<a href>\` for links, not a
+  clickable \`<div>\`. A disclosure is \`<details><summary>\`; a modal is
+  \`<dialog>\` opened with \`showModal()\`.
+- A toggle keeps one name and exposes its state with \`aria-pressed\`.
+- If Enter in a text field submits, wrap it in a \`<form onSubmit>\`, or skip
+  Enter while \`event.nativeEvent.isComposing\`: Japanese, Chinese and Korean
+  input use Enter to confirm text.
+- Touch targets are at least 24×24 px. Do not hide a control until hover;
+  phones have none.
+- Charts and figures need a text alternative: a caption that states what the
+  picture shows, or the numbers in a table.
+- Animation that runs on its own stops when
+  \`matchMedia("(prefers-reduced-motion: reduce)").matches\`.
+- Use \`dvh\` (not \`vh\`) for heights tied to the screen.`;

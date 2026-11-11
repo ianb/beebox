@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from "react";
-import { useFieldInk } from "./shell";
+import { FieldMessage, fieldMessageId, isShown, useFieldInk } from "./shell";
 
 export interface RadioOption {
   value: string;
@@ -52,7 +52,7 @@ export function RadioGroup({
   const autoId = useId();
   const groupId = id !== undefined ? id : autoId;
   const groupName = name !== undefined ? name : groupId;
-  const hasError = error !== undefined;
+  const hasError = isShown(error);
   const ink = useFieldInk();
 
   return (
@@ -61,6 +61,7 @@ export function RadioGroup({
       aria-labelledby={`${groupId}-label`}
       aria-invalid={hasError ? true : undefined}
       aria-required={required ? true : undefined}
+      aria-describedby={fieldMessageId(groupId, { error, helper })}
       className={className}
     >
       <div id={`${groupId}-label`} className={`block text-sm font-medium ${ink.label} mb-1`}>
@@ -72,11 +73,7 @@ export function RadioGroup({
       ) : (
         <RadioCards name={groupName} idPrefix={idPrefix} value={value} options={options} disabled={disabled} onChange={onChange} />
       )}
-      {error !== undefined ? (
-        <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
-      ) : helper !== undefined ? (
-        <div className={`text-xs ${ink.helper} mt-1`}>{helper}</div>
-      ) : null}
+      <FieldMessage fieldId={groupId} error={error} helper={helper} />
     </div>
   );
 }
@@ -109,7 +106,7 @@ function RadioList({ name, idPrefix, value, options, disabled, onChange }: Radio
               checked={value === opt.value}
               onChange={() => onChange(opt.value)}
               disabled={isDisabled}
-              className="text-primary focus:ring-accent"
+              className="accent-primary"
             />
             <span>{opt.label}</span>
           </label>
@@ -132,7 +129,7 @@ function RadioCards({ name, idPrefix, value, options, disabled, onChange }: Radi
         // the app's fixed shell window-scrollable (found via a field-test
         // browse page whose window scrolled 43px). The label as containing
         // block keeps the input where its card is.
-        const baseClass = "relative block p-3 border rounded transition-colors";
+        const baseClass = "relative block p-3 border rounded transition-colors focus-within:ring-2 focus-within:ring-accent";
         // Every state paints its own field, so the option text reads on any material.
         const stateClass = isDisabled
           ? "border-warm-200 bg-warm-50 opacity-60 cursor-not-allowed"

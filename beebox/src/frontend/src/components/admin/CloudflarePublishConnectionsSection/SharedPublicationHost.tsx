@@ -63,7 +63,7 @@ export function SharedPublicationHost() {
         <form onSubmit={submit}>
           <Stack gap="sm">
             <SelectField id="bbx-admin-publish-shared-connection" label="Cloudflare connection" value={connectionName || availableConnections[0] || ""} onChange={setConnectionName} options={availableConnections.map((name) => ({ value: name, label: name }))} required />
-            <TextField id="bbx-admin-publish-shared-hostname" label="Hostname" value={hostname} onChange={setHostname} required maxLength={253} helper="Enter a hostname such as publish.example.org, without https:// or a path. Cloudflare starts DNS and HTTPS setup when you submit." />
+            <TextField id="bbx-admin-publish-shared-hostname" identifier label="Hostname" value={hostname} onChange={setHostname} required maxLength={253} helper="Enter a hostname such as publish.example.org, without https:// or a path. Cloudflare starts DNS and HTTPS setup when you submit." />
             <Button id="bbx-admin-publish-shared-setup" type="submit" intent="primary" loading={configure.isPending} loadingLabel="Setting up…">Configure shared host</Button>
           </Stack>
         </form>

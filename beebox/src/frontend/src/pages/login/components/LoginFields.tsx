@@ -21,12 +21,13 @@ interface LoginFieldsProps {
 export function LoginFields({ email, onEmail, password, onPassword, error, submitting }: LoginFieldsProps) {
   return (
     <Stack gap="md">
-      <TextField id="bbx-login-email" label="Email" type="email" autoComplete="email" required value={email} onChange={onEmail} />
+      <TextField id="bbx-login-email" label="Email" type="email" autoComplete="username" required value={email} onChange={onEmail} />
       <TextField
         id="bbx-login-password"
         label="Password"
         type="password"
         autoComplete="current-password"
+        revealable
         required
         value={password}
         onChange={onPassword}

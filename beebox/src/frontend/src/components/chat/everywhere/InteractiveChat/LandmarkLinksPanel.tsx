@@ -20,7 +20,7 @@
 
 import { LandmarkGroupRows } from "../../../landmarks/LandmarkGroupRows";
 import { trpc } from "../../../../lib/trpc/client";
-import { useDropdownClose } from "../../../ui/Dropdown";
+import { useDropdownClose, useMenuItemRole } from "../../../ui/Dropdown";
 import { MenuDivider } from "../../../ui/dropdown-menu-item";
 
 interface ResolvedLink {
@@ -84,10 +84,11 @@ export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelPr
 
 function MenuLink({ link, onPanel }: { link: ResolvedLink; onPanel: (link: ResolvedLink) => void }) {
   const close = useDropdownClose();
+  const role = useMenuItemRole();
   return (
     <button
       type="button"
-      role="menuitem"
+      role={role}
       onClick={() => { close(); onPanel(link); }}
       className="w-full text-left px-3 py-2 hover:bg-warm-100 flex items-center gap-2 text-warm-800"
     >

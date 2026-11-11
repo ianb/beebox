@@ -150,7 +150,7 @@ export function PlacePill({
       landmark={landmark}
       onOpen={(half) => { if (half === "switch") switchMenu.open(); else hereMenu.open(); }}
       menu={({ half, className, trigger }) => (
-        <Dropdown align="left" width="w-[20rem]" className={className} trigger={trigger}>
+        <Dropdown kind="navigation" align="left" width="w-[20rem]" className={className} trigger={trigger}>
           {half === "switch" ? (
             <SwitchMenuBody
               boxSlug={boxSlug}

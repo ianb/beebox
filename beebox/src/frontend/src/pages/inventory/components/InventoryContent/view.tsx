@@ -153,10 +153,10 @@ function InventoryArea({ items, metric, linkStatus, projection, setMetric, setLi
     <Card as="section" aria-label="Storage area view">
       <Stack gap="md">
         <Heading level={2}>Area view</Heading>
-        <TabBar value={linkStatus} onChange={setLinkStatus} idPrefix="bbx-inventory-link-status" label="Incoming reference filter" tabs={[{ value: "all", label: "All" }, { value: "linked", label: "Linked" }, { value: "unlinked", label: "Unlinked" }]} />
+        <TabBar mode="buttons" value={linkStatus} onChange={setLinkStatus} idPrefix="bbx-inventory-link-status" label="Incoming reference filter" tabs={[{ value: "all", label: "All" }, { value: "linked", label: "Linked" }, { value: "unlinked", label: "Unlinked" }]} />
         <Row justify="between" align="end" wrap>
-          <TabBar value={projection} onChange={setProjection} idPrefix="bbx-inventory-projection" label="Counting method" tabs={[{ value: "grouped", label: "Grouped" }, { value: "direct", label: "Direct" }]} />
-          <TabBar value={metric} onChange={setMetric} idPrefix="bbx-inventory-metric" label="Area metric" tabs={[{ value: "count", label: "By count" }, { value: "bytes", label: "By size" }]} />
+          <TabBar mode="buttons" value={projection} onChange={setProjection} idPrefix="bbx-inventory-projection" label="Counting method" tabs={[{ value: "grouped", label: "Grouped" }, { value: "direct", label: "Direct" }]} />
+          <TabBar mode="buttons" value={metric} onChange={setMetric} idPrefix="bbx-inventory-metric" label="Area metric" tabs={[{ value: "count", label: "By count" }, { value: "bytes", label: "By size" }]} />
         </Row>
         {items.length === 0 ? <Text as="p" tone="muted">{linkStatus === "all" ? "No content files found." : `No ${linkStatus} cards found.`}</Text> : <InventoryTreemap items={items} metric={metric} />}
       </Stack>

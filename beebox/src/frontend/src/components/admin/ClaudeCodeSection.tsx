@@ -66,7 +66,7 @@ export function ClaudeCodeSection() {
             >
               <input
                 id="cb-admin-claude-login-code"
-                className="flex-1 border border-warm-300 rounded px-2 py-1 text-sm font-mono"
+                className="flex-1 border border-warm-300 rounded px-2 py-1 text-base sm:text-sm font-mono"
                 value={code}
                 onChange={(e) => { setCode(e.target.value); }}
                 placeholder="paste code"

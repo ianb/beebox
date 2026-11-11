@@ -71,6 +71,7 @@ function PendingThumb() {
   return (
     <div
       className="w-16 h-16 rounded border border-warm-300 bg-warm-200 flex items-center justify-center"
+      role="status"
       title="Processing image…"
       aria-label="Processing image"
     >
@@ -106,7 +107,7 @@ function ThumbTile({
           bordered
         />
       </button>
-      <div className="absolute -top-1 left-0 text-[10px] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
+      <div className="absolute -top-1 left-0 text-[0.625rem] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
         {attachment.id}
       </div>
       <CloseButton variant="bubble" label="Remove attachment" onClick={onRemove} className="absolute -top-2 -right-2" />
@@ -176,7 +177,7 @@ function FileChip({
       data-bbx-upload-state={state.status === "failed" && state.unreadable === true ? "unreadable" : state.status}
       title={`file#${String(attachment.id)} · ${attachment.originalName} · ${statusLabel}`}
     >
-      <span className="text-[10px] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
+      <span className="text-[0.625rem] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
         {attachment.id}
       </span>
       <svg className="w-4 h-4 text-warm-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -188,34 +189,28 @@ function FileChip({
         </span>
         {state.status === "failed" && state.unreadable === true ? (
           // Nothing to retry: the bytes are gone. The message says to pick it again.
-          <span className="text-[10px] text-danger" role="status">Can't read this file — remove it and pick it again</span>
+          <span className="text-[0.625rem] text-danger" role="status">Can't read this file — remove it and pick it again</span>
         ) : state.status === "failed" ? (
           <button
             type="button"
             onClick={onRetry}
-            className="text-[10px] text-danger text-left underline hover:no-underline focus:outline-none focus:ring-1 focus:ring-danger rounded truncate"
+            className="text-[0.625rem] text-danger text-left underline hover:no-underline focus:outline-none focus:ring-1 focus:ring-danger rounded truncate"
           >
             Upload failed — retry
           </button>
         ) : (
-          <span className="text-[10px] text-warm-700">{statusLabel}</span>
+          <span className="text-[0.625rem] text-warm-700">{statusLabel}</span>
         )}
         {state.status === "uploading" ? (
-          // Indeterminate until the first progress event reports a total; a
-          // zero-width bar would read as "stuck" rather than "starting".
-          <span
-            className="mt-1 h-0.5 w-full bg-warm-300 rounded overflow-hidden"
-            role="progressbar"
+          // No `value` until the first progress event reports a total: a
+          // `<progress>` without one is indeterminate, so it reads as
+          // "starting" rather than "0%".
+          <progress
+            className="mt-1 h-0.5 w-full appearance-none overflow-hidden rounded border-0 bg-warm-300 [&::-webkit-progress-bar]:bg-warm-300 [&::-webkit-progress-value]:bg-accent [&::-moz-progress-bar]:bg-accent"
             aria-label={`Uploading ${attachment.originalName}`}
-            aria-valuenow={Math.round(state.progress * 100)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <span
-              className="block h-full bg-accent transition-[width] duration-150"
-              style={{ width: `${String(Math.max(4, Math.round(state.progress * 100)))}%` }}
-            />
-          </span>
+            max={100}
+            value={state.progress > 0 ? Math.max(4, Math.round(state.progress * 100)) : undefined}
+          />
         ) : null}
       </div>
       <CloseButton variant="bubble" label="Remove attachment" onClick={onRemove} className="absolute -top-2 -right-2" />

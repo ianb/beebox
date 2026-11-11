@@ -105,7 +105,7 @@ export function DoclingView({ data }: RendererProps) {
   }
   if (isLoading) {
     return (
-      <div className="p-4" aria-busy="true" aria-label="Loading extraction">
+      <div className="p-4" role="status" aria-busy="true" aria-label="Loading extraction">
         <Stack gap="sm">
           <div className="h-6 w-64 bg-warm-100 rounded animate-pulse" />
           <div className="h-32 bg-warm-100 rounded animate-pulse" />

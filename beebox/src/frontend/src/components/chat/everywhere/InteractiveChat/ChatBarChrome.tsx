@@ -159,7 +159,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
     <>
       {chipSlot === null ? null : createPortal(chips, chipSlot)}
       {hereSlot === null || !transcriptVisible ? null : createPortal(
-        <PortaledMenuScope close={hereSlot.close}>
+        <PortaledMenuScope close={hereSlot.close} menu={hereSlot.menu}>
           <ContextMenuBody
             dir={contextDir}
             boxSlug={boxSlug ?? ""}

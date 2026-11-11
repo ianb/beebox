@@ -19,7 +19,7 @@ export function ToastViewport() {
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, getToasts);
   if (toasts.length === 0) return null;
   return (
-    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-[9999] flex flex-col gap-2">
+    <div role="region" aria-label="Notifications" className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-[9999] flex flex-col gap-2">
       {toasts.map((toast) => (
         <ToastCard key={toast.id} toast={toast} />
       ))}

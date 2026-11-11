@@ -87,6 +87,9 @@ export function NextActionMessage({ model }: { model: NextActionModel }) {
     wasEditing.current = editing;
   }, [editing]);
   function onKey(event: KeyboardEvent<HTMLInputElement>): void {
+    // Enter and Escape during an IME composition belong to the IME. Chrome-only
+    // app, so `isComposing` alone is enough.
+    if (event.nativeEvent.isComposing) return;
     if (event.key === "Enter") { event.preventDefault(); submit(event.currentTarget.value); }
     if (event.key === "Escape") { event.preventDefault(); setDraft(null); }
   }

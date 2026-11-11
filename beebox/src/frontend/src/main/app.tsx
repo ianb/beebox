@@ -46,6 +46,7 @@ import { installUiScanHook } from "../lib/ui-scan/window-hook";
 import { installRenderers } from "../renderers.js";
 import { markFirstLoad } from "../lib/first-load-marks";
 import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
+import { ensureTemporal } from "../lib/temporal";
 
 // Every static import above has evaluated: the entry script is loaded.
 markFirstLoad(FIRST_LOAD_MARKS.entry);
@@ -73,7 +74,7 @@ async function bootstrapFileTypeRegistrations(): Promise<void> {
  * side-effect import did.
  */
 async function boot(): Promise<void> {
-  await bootstrapFileTypeRegistrations();
+  await Promise.all([ensureTemporal(), bootstrapFileTypeRegistrations()]);
   installUiScanHook();
 
   const router = createAppRouter();

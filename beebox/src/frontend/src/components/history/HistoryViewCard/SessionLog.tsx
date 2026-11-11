@@ -26,7 +26,7 @@ function ContentBlock({ block }: { block: SessionContentBlock }) {
   if (block.type === "tool_use") {
     return (
       <div className="my-1">
-        <button
+        <button type="button"
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-1.5 text-xs font-mono text-warm-700 hover:text-warm-900 bg-warm-100 rounded px-2 py-1"
         >
@@ -133,7 +133,7 @@ export function SessionLog({ sessionId, idPrefix }: SessionLogProps) {
         ))}
       </div>
       {loading ? <div className="p-3 text-sm text-warm-700">Loading...</div> : null}
-      {hasNextPage && !loading ? <button
+      {hasNextPage && !loading ? <button type="button"
           id={`${idPrefix}-session-log-load-more`}
           // fetchNextPage's failure surfaces via the query's own error state.
           onClick={() => void fetchNextPage()}

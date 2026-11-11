@@ -82,7 +82,7 @@ export function HeaderStrip({ status, connected }: HeaderStripProps) {
         />
         {status ? (
           <div className="relative" ref={gitRef}>
-            <button
+            <button type="button"
               id="bbx-dashboard-git-status"
               data-bbx-does="opens the box's git status — which files are modified or untracked"
               onClick={() => setShowGit(!showGit)}

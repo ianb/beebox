@@ -87,7 +87,7 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
   return (
     <div className="py-1">
       <div className="flex justify-center">
-        <button
+        <button type="button"
           onClick={handleExpand}
           className="text-xs text-warm-700 hover:text-warm-900 bg-warm-50 rounded-full px-3 py-1 flex items-center gap-1.5"
         >

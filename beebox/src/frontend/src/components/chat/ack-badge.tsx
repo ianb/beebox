@@ -67,13 +67,15 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
         aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info text-white text-[9px] leading-none ring-1 ring-warm-50 cursor-pointer"
+        className="group inline-flex items-center justify-center w-6 h-6 -my-[5px] rounded-full text-white text-[0.5625rem] leading-none cursor-pointer"
       >
-        <span aria-hidden>{descriptor.icon}</span>
+        <span aria-hidden className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info ring-1 ring-warm-50">{descriptor.icon}</span>
       </button>
       {open ? (
+        // eslint-disable-next-line personal-vibe-check/prefer-native-dialog -- small named non-modal bubble; popover deferred (full support at iOS 18.3, above the iOS 18.0 floor)
         <div
           role="dialog"
+          aria-label={label}
           className="absolute left-0 top-full mt-1 z-50 bg-white text-warm-800 rounded-lg shadow-lg border border-warm-200 px-3 py-2 w-64 text-xs normal-case tracking-normal"
         >
           <div className="font-medium text-warm-900">{label}</div>
@@ -82,12 +84,12 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
               <button
                 type="button"
                 onClick={handleRefClick}
-                className="mt-1 block text-left text-info hover:underline break-all font-mono text-[11px]"
+                className="mt-1 block text-left text-info hover:underline break-all font-mono text-[0.6875rem]"
               >
                 {ack.ref}
               </button>
             ) : (
-              <div className="mt-1 text-warm-700 break-all font-mono text-[11px]">{ack.ref}</div>
+              <div className="mt-1 text-warm-700 break-all font-mono text-[0.6875rem]">{ack.ref}</div>
             )
           ) : null}
         </div>

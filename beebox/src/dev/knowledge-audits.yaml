@@ -9416,3 +9416,48 @@ tests:
     response_not_matches:
       - 'intention:[\s\S]{0,80}(?:favor|email|recipe|cook)'
     tags: [landmark, intention]
+
+  # === modern-web-guidance adoption (docs/plans/modern-web-guidance-adoption.md) ===
+  # Status (2026-11-11, Claude claude-opus-5-5): both pass on first run in the
+  # web-guidance-scan worktree. dev-browser-floor read frontend.md and
+  # Dropdown.tsx, quoted the Safari 18.0 floor, and said anchor positioning
+  # needs the existing JS positioning. view-enter-field-ime-and-name found the
+  # views doc's "Controls People Can Use" section by grep and led with
+  # <form onSubmit>, isComposing as the fallback, and a visible label.
+  - id: dev-browser-floor
+    surface: dev
+    prompt: >
+      I'm adding a popup menu to the beebox web app that stays anchored to its
+      button. Can I use CSS anchor positioning with no fallback? Which
+      browsers does the web app support? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["beebox/frontend.md"]
+    watch_for: >
+      Names the floor from frontend.md "Browser support": the iOS app's
+      WKWebView at iOS 18 (Safari 18.0) plus current desktop browsers; says
+      anchor positioning is newer than Safari 18.0, so it may be used only as
+      progressive enhancement (the menu still works without it) or with a
+      small fallback, and that ui/Dropdown already positions in JS. FAILS if it
+      says anchor positioning is safe without a fallback, or names a floor
+      not in the docs.
+    correct_matches:
+      - 'Safari 18|iOS 18'
+      - 'fallback|progressive enhancement'
+    tags: [frontend, browser-support]
+  - id: view-enter-field-ime-and-name
+    prompt: >
+      I want a view where I type into a text field and press Enter to add an
+      item to a list. What should the view do so it works for someone typing
+      Japanese and for a screen reader user? Explain only; do not change files.
+    expected_level: knows_about
+    should_read_any: ["node_modules/beebox/box-docs/views.md"]
+    watch_for: >
+      Uses the views doc's "Controls People Can Use" section: the field has a
+      label (not only a placeholder); Enter submits through a <form onSubmit>,
+      or the key handler skips Enter while event.nativeEvent.isComposing,
+      because IME input confirms text with Enter. FAILS if it gives a bare
+      onKeyDown Enter handler with no composition check and no form.
+    correct_matches:
+      - 'isComposing|<form|onSubmit'
+      - 'label'
+    tags: [views, accessibility]

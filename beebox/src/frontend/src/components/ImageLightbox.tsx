@@ -288,6 +288,9 @@ function SwipePeer({ image, side }: { image: LightboxImage | undefined; side: "p
         <img
           src={image.src}
           alt=""
+          // A neighbour should not compete with the visible image; React 18
+          // passes unknown lowercase attributes through, its types omit this one.
+          {...{ fetchpriority: "low" }}
           className={`max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"} ${fitWidth === null ? "" : "bg-white"}`}
           style={fitWidth === null ? undefined : { width: fitWidth }}
           onLoad={(event) => setFitWidth(collapsedFitWidth(event.currentTarget, captionText ? 0.8 : 0.92))}

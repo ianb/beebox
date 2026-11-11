@@ -81,5 +81,20 @@ and `libwayland-dev`. Then `git clone`, `just compile` (about ten minutes the
 first time; output in `target/linux/release/` on Linux), and `klad install`
 to put `klad` on the path. There is no npm package (`klad` is a 404 on the
 registry), no `cargo install`, no Homebrew formula and no release binaries.
-Signed builds are planned. The Linux system packages need root, so a box
-cannot build it without the operator.
+Signed builds are planned.
+
+What a box has toward that (checked 2026-11-11):
+
+- **No Rust toolchain** in the Docker image (`beebox/docker/Dockerfile`,
+  Debian bookworm) or on the server (`beebox/deploy/hetzner/cloud-init.yaml`,
+  Ubuntu 24.04). The server has `build-essential`; the image has only
+  `make g++` in its build stage.
+- **System packages:** `bbx host install` lets a box agent add distro
+  packages that ship no services, setuid files or privilege grants
+  (`beebox/docs/implemented-plans/box-host-packages.md`). The `-dev` libraries
+  and `pkg-config` should pass; not tried.
+- **Rust itself:** klad pins `channel = "stable"`. The distro `rustc` is
+  older than current stable (bookworm ships 1.63), so the build would need
+  rustup, which installs into the box user's home without root.
+- **Not checked:** whether box egress allows rustup and crates.io downloads,
+  and whether the build fits a box's memory limit.

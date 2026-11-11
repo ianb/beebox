@@ -14,7 +14,7 @@ export function PaneControls({ pane, mobile, focused, pdfMenu, onAction }: {
   pdfMenu: ReactNode;
   onAction: (action: "backToSplit" | "moveActive" | "focusPane" | "showChat") => void;
 }) {
-  return <div className="flex shrink-0 items-center gap-1 px-2" aria-label="Pane controls">
+  return <div className="flex shrink-0 items-center gap-1 px-2" role="group" aria-label="Pane controls">
     {pdfMenu}
     {!mobile && focused ?
       <Button id={`bbx-pane-${pane}-unfocus`} intent="ghost" size="sm" label="Back to split" icon={<ControlIcon path="M3 4h18v16H3zM12 4v16" />} onClick={() => onAction("backToSplit")} /> : <>

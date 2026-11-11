@@ -19,7 +19,7 @@ import {
 
 function CenteredScreen({ children }: { children: React.ReactNode }) {
   return (
-    <Row justify="center" align="center" className="min-h-screen p-4">
+    <Row justify="center" align="center" className="min-h-dvh p-4">
       {children}
     </Row>
   );

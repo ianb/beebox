@@ -112,6 +112,13 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
   - From `improve-codebase-architecture` and `codebase-design`: the deepening pass, the deletion test, and the module, interface, depth, and seam vocabulary.
 - **Where it landed:** `beebox/docs/testing.md`, `beebox/code-style.md`
 
+### Modern Web Guidance, by Google Chrome
+
+- **Source:** [GoogleChrome/modern-web-guidance-src](https://github.com/GoogleChrome/modern-web-guidance-src) (Apache-2.0).
+- **What we took:** The detection logic of its `ime-safe-enter-submit` static matcher, ported to an ESLint rule: an Enter test in a keydown handler needs an IME composition check, with its exemptions for button-like elements, modifier-gated Enter, and suppress-only branches.
+- **Also took:** the `accessible-names` finding that `aria-label` on a role-less `div`/`span`/`p` is dropped, and the `responsive-design` finding that `100vh` overshoots on mobile Safari, as the rules `aria-label-needs-role` and `no-viewport-height-class`; the `dialog` guide's native-`<dialog>` rule as `prefer-native-dialog`; and the `typography` guide's rem font sizes as `no-px-font-size-class`.
+- **Where it landed:** `personal-vibe-check/rules/ime-safe-enter.ts`, `aria-label-needs-role.ts`, `no-viewport-height-class.ts`, `prefer-native-dialog.ts`, `no-px-font-size-class.ts`.
+
 ### No Mistakes, by kunchenguid
 
 - **Source:** https://github.com/kunchenguid/no-mistakes (MIT)

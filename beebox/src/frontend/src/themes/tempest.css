@@ -8,6 +8,7 @@
   --tempest-art: url("./tempest-surge.webp");
 }
 .bbx-box-presentation[data-chrome-theme="tempest"] {
+  color-scheme: dark;
   background: var(--tempest-art) center bottom / cover, #041039;
   color: var(--tempest-ink);
   --bbx-selection: #edb49f;

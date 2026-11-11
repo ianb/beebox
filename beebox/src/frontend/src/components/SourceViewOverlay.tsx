@@ -274,7 +274,7 @@ function HoverLabel({ element }: { element: Element }) {
       className="fixed z-[9998] pointer-events-none"
       style={{ top: `${top}px`, left: `${left}px` }}
     >
-      <div className="bg-violet-700 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 max-w-[290px]">
+      <div className="bg-violet-700 text-white text-[0.625rem] px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 max-w-[290px]">
         {pairs.map((p, i) => (
           <span key={i} className="truncate">
             <span className="font-semibold">{p.type}:</span>{p.id}

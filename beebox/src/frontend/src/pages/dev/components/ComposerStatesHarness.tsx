@@ -243,14 +243,14 @@ export function ComposerStatesHarness() {
     const c = realizable.find((x) => comboKey(x) === selected);
     if (!c) return <div className="p-6 font-mono text-sm text-warm-700">Unknown state: {selected}</div>;
     return (
-      <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 py-4">
+      <div className="min-h-dvh bg-gradient-to-b from-warm-50 to-warm-200 py-4">
         <ComposerSpecimen spec={specFor(c)} includeControlIds />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 py-4">
+    <div className="min-h-dvh bg-gradient-to-b from-warm-50 to-warm-200 py-4">
       <div className="max-w-5xl mx-auto px-4 pb-2 text-sm text-warm-700">
         <strong>{realizable.length}</strong> realizable combinations (button bar:
         mode × narration × muted × streaming; plus mobile keyboard: open ×
