@@ -82,7 +82,7 @@ function PhotoTile({ index, state, src, onOpen, id }: { index: number; state: Up
         </span>
       ) : null}
       {state === "failed" ? (
-        <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-danger text-white text-[10px] leading-4 text-center font-bold" aria-hidden="true">!</span>
+        <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-danger text-white text-[0.625rem] leading-4 text-center font-bold" aria-hidden="true">!</span>
       ) : null}
     </button>
   );

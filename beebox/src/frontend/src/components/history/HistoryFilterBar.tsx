@@ -112,7 +112,7 @@ export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: History
             id={`${idPrefix}-clear`}
             type="button"
             onClick={clearAll}
-            className="text-[11px] text-warm-700 hover:text-warm-900 underline ml-auto"
+            className="text-[0.6875rem] text-warm-700 hover:text-warm-900 underline ml-auto"
           >
             Clear
           </button>
@@ -208,7 +208,7 @@ function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle
             sections.map((section) => (
               <div key={section.heading ?? ""}>
                 {section.heading === null ? null : (
-                  <div className="px-3 pt-1.5 pb-0.5 text-[10px] uppercase tracking-wide text-warm-700">
+                  <div className="px-3 pt-1.5 pb-0.5 text-[0.625rem] uppercase tracking-wide text-warm-700">
                     {section.heading}
                   </div>
                 )}

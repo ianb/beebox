@@ -203,7 +203,7 @@ s {
   font-family: Georgia, "Times New Roman", Times, serif;
   color: #1a1a1a;
   line-height: 1.65;
-  font-size: 15px;
+  font-size: 0.9375rem;
   background: white;
 }
 
@@ -223,7 +223,7 @@ s {
 }
 
 .print-masthead-title {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 400;
   letter-spacing: 0.3em;
   text-transform: uppercase;
@@ -232,7 +232,7 @@ s {
 }
 
 .print-masthead-date {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #777;
   font-style: italic;
 }
@@ -243,7 +243,7 @@ s {
 }
 
 .print-headline-text {
-  font-size: 28px;
+  font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.25;
   margin: 0 0 10px;
@@ -251,7 +251,7 @@ s {
 }
 
 .print-headline-byline {
-  font-size: 15px;
+  font-size: 0.9375rem;
   color: #555;
   font-style: italic;
   line-height: 1.5;
@@ -275,7 +275,7 @@ s {
 }
 
 .print-section-heading {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #111;
   margin: 0 0 6px;
@@ -294,13 +294,13 @@ s {
 .print-excerpt-text {
   margin: 0 0 6px;
   font-style: italic;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #333;
 }
 
 .print-excerpt-source {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #777;
 }
 
@@ -312,14 +312,14 @@ s {
 }
 
 .print-expando-title {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
   color: #333;
   margin: 0 0 10px;
 }
 
 .print-footnote-ref {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #555;
   margin-left: 2px;
 }
@@ -329,7 +329,7 @@ s {
   margin: 0 auto;
   padding: 12px 24px;
   font-family: system-ui, -apple-system, sans-serif;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .print-nav a {
@@ -358,7 +358,7 @@ s {
 }
 
 .print-footnotes-title {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -373,7 +373,7 @@ s {
 }
 
 .print-footnote-item {
-  font-size: 11px;
+  font-size: 0.6875rem;
   line-height: 1.6;
   color: #555;
   margin-bottom: 4px;
@@ -395,52 +395,52 @@ s {
 
 /* Large print mode — raises the floor, leaves headings roughly alone */
 .print-brief.large-print {
-  font-size: 18px;
+  font-size: 1.125rem;
   line-height: 1.7;
 }
 
 .large-print .print-masthead-title {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .large-print .print-masthead-date {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .large-print .print-headline-text {
-  font-size: 28px;
+  font-size: 1.75rem;
 }
 
 .large-print .print-headline-byline {
-  font-size: 17px;
+  font-size: 1.0625rem;
 }
 
 .large-print .print-section-heading {
-  font-size: 21px;
+  font-size: 1.3125rem;
 }
 
 .large-print .print-excerpt-text {
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .large-print .print-excerpt-source {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .large-print .print-expando-title {
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 .large-print .print-footnote-ref {
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .large-print .print-footnote-item {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .large-print .print-footnotes-title {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 @media print {

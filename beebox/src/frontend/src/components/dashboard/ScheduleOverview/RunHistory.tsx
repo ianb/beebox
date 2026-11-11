@@ -38,7 +38,7 @@ const TRIGGER_LABEL: Record<string, string> = {
 };
 
 function Label({ children }: { children: string }) {
-  return <span className="text-[10px] uppercase tracking-wide text-warm-700">{children}</span>;
+  return <span className="text-[0.625rem] uppercase tracking-wide text-warm-700">{children}</span>;
 }
 
 /** Why a run without a summary ended as it did; failures keep their full output one click away. */

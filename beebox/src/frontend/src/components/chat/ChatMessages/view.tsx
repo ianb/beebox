@@ -285,7 +285,7 @@ export function SelfNoteMessage({ note }: { note: SelfNoteInfo }) {
   return (
     <div className="py-2 px-3 sm:px-6">
       <div className="bbx-chat-meta-material mx-auto max-w-2xl border-l-2 border-warm-300 bg-warm-50/60 rounded-r px-3 py-2 text-sm text-card-soft">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-card-soft mb-1">
+        <div className="flex items-center gap-2 text-[0.6875rem] uppercase tracking-wider text-card-soft mb-1">
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M9 12h6M9 16h6M9 8h6M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3-7 3z" strokeLinecap="round" strokeLinejoin="round" />
           </svg>

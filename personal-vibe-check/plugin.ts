@@ -11,6 +11,8 @@
  *     On with `react: true`.
  *   - `no-viewport-height-class` — bans Tailwind h-screen / min-h-screen /
  *     max-h-screen. Tailwind-specific, so opt-in per project.
+ *   - `no-px-font-size-class` — bans Tailwind `text-[<n>px]`; write rem.
+ *     Tailwind-specific, so opt-in per project.
  *
  * Typically consumed via `vibeCheck()` options rather than registered
  * directly, but the plugin is exported in case a project wants to use the
@@ -19,6 +21,7 @@
 
 import ariaLabelNeedsRole from "./rules/aria-label-needs-role.ts";
 import imeSafeEnter from "./rules/ime-safe-enter.ts";
+import noPxFontSizeClass from "./rules/no-px-font-size-class.ts";
 import noViewportHeightClass from "./rules/no-viewport-height-class.ts";
 import restrictComponentClasses from "./rules/restrict-component-classes.ts";
 
@@ -29,6 +32,7 @@ const plugin = {
     "ime-safe-enter": imeSafeEnter,
     "aria-label-needs-role": ariaLabelNeedsRole,
     "no-viewport-height-class": noViewportHeightClass,
+    "no-px-font-size-class": noPxFontSizeClass,
   },
 };
 

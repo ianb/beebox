@@ -39,7 +39,7 @@
   border-block: 2px solid #202020;
   box-shadow: 0 4px 0 #202020;
   padding-block: 4px;
-  font: 600 13px/1.2 system-ui, sans-serif;
+  font: 600 0.8125rem/1.2 system-ui, sans-serif;
 }
 [data-chrome-theme="doodlebit"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill),
 [data-chrome-theme="doodlebit"] :is(#bbx-composer-add, #bbx-composer-capture, #bbx-composer-keyboard, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]),
@@ -108,7 +108,7 @@
   --bbx-selection-code-ink: #202020;
 }
 .bbx-card-theme[data-card-theme="doodlebit"] > .bbx-card-heading { border-bottom: 3px dotted #202020; background: #fff; padding-right: 110px; }
-.bbx-card-theme[data-card-theme="doodlebit"] > .bbx-card-heading h2 { font: 650 16px/1.25 system-ui, sans-serif; }
+.bbx-card-theme[data-card-theme="doodlebit"] > .bbx-card-heading h2 { font: 650 1rem/1.25 system-ui, sans-serif; }
 .bbx-card-theme[data-card-theme="doodlebit"] > .bbx-card-properties {
   position: absolute;
   top: 8px; right: 8px;
@@ -120,7 +120,7 @@
 }
 .bbx-card-theme[data-card-theme="doodlebit"] > .bbx-card-properties .bbx-card-properties-label {
   position: static; display: inline; opacity: 1; transform: none; transition: none;
-  height: auto; color: #202020; font: 11px system-ui, sans-serif;
+  height: auto; color: #202020; font: 0.6875rem system-ui, sans-serif;
 }
 .bbx-card-theme[data-card-theme="doodlebit"] .bbx-card-properties { transform: none; }
 [data-chrome-theme="doodlebit"] :is(button, textarea, input):focus-visible:not(.bbx-card-theme *),

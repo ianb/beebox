@@ -29,7 +29,7 @@ function RawToolDetail({ block }: { block: SessionContentBlock }) {
       ) : null}
       {result ? (
         <>
-          <div className="text-[10px] uppercase tracking-wider text-card-soft ml-3 mt-1">result</div>
+          <div className="text-[0.625rem] uppercase tracking-wider text-card-soft ml-3 mt-1">result</div>
           <Pre size="xs" boxed scroll="sm" className="bbx-chat-plate bbx-scroll-fade-bottom mt-0.5 mb-1 ml-3">
             {result}
           </Pre>
@@ -104,7 +104,7 @@ function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; exce
     <details className="group/tool">
       <summary className="cursor-pointer list-none hover:text-card-soft py-0.5">
         <span className="flex flex-wrap items-center gap-x-1">
-          <span className="text-card-soft group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
+          <span className="text-card-soft group-open/tool:rotate-90 transition-transform text-[0.625rem]">&#9654;</span>
           <ToolSentence description={description} opens={opens} />
           {place ? <span className="text-card-soft">· {place}</span> : null}
           {failed ? <span className="text-card-soft">· didn’t go through</span> : null}
@@ -144,7 +144,7 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
             return (
               <details key={i} className="group/think">
                 <summary className="cursor-pointer list-none flex items-center gap-1 text-card-pen hover:text-card-ink py-0.5">
-                  <span className="text-card-soft group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
+                  <span className="text-card-soft group-open/think:rotate-90 transition-transform text-[0.625rem]">&#9654;</span>
                   <span>thought it over</span>
                 </summary>
                 <div className="mt-0.5 mb-1 ml-3 text-xs text-card-soft italic whitespace-pre-wrap">
@@ -221,7 +221,7 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
   return (
     <details className="group my-1 ml-2 pl-2 border-l border-warm-300">
       <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-card-soft hover:text-card-ink">
-        <span className="text-card-soft group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
+        <span className="text-card-soft group-open:rotate-90 transition-transform text-[0.625rem]">&#9654;</span>
         <span className="group-open:hidden">{summary}</span>
         <span className="hidden group-open:inline">{openSummary}</span>
       </summary>

@@ -107,7 +107,7 @@ function ThumbTile({
           bordered
         />
       </button>
-      <div className="absolute -top-1 left-0 text-[10px] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
+      <div className="absolute -top-1 left-0 text-[0.625rem] font-mono bg-warm-800 text-white px-1 rounded pointer-events-none">
         {attachment.id}
       </div>
       <CloseButton variant="bubble" label="Remove attachment" onClick={onRemove} className="absolute -top-2 -right-2" />
@@ -177,7 +177,7 @@ function FileChip({
       data-bbx-upload-state={state.status === "failed" && state.unreadable === true ? "unreadable" : state.status}
       title={`file#${String(attachment.id)} · ${attachment.originalName} · ${statusLabel}`}
     >
-      <span className="text-[10px] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
+      <span className="text-[0.625rem] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
         {attachment.id}
       </span>
       <svg className="w-4 h-4 text-warm-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -189,17 +189,17 @@ function FileChip({
         </span>
         {state.status === "failed" && state.unreadable === true ? (
           // Nothing to retry: the bytes are gone. The message says to pick it again.
-          <span className="text-[10px] text-danger" role="status">Can't read this file — remove it and pick it again</span>
+          <span className="text-[0.625rem] text-danger" role="status">Can't read this file — remove it and pick it again</span>
         ) : state.status === "failed" ? (
           <button
             type="button"
             onClick={onRetry}
-            className="text-[10px] text-danger text-left underline hover:no-underline focus:outline-none focus:ring-1 focus:ring-danger rounded truncate"
+            className="text-[0.625rem] text-danger text-left underline hover:no-underline focus:outline-none focus:ring-1 focus:ring-danger rounded truncate"
           >
             Upload failed — retry
           </button>
         ) : (
-          <span className="text-[10px] text-warm-700">{statusLabel}</span>
+          <span className="text-[0.625rem] text-warm-700">{statusLabel}</span>
         )}
         {state.status === "uploading" ? (
           // No `value` until the first progress event reports a total: a

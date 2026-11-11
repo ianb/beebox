@@ -156,6 +156,29 @@ No options.
   including `cn(...)` arguments and conditionals. Class names built in a
   separate const or another prop are not checked.
 
+## Pixel Font Size Classes (opt-in, Tailwind)
+
+The rule `personal-vibe-check/no-px-font-size-class` bans `text-[<n>px]` in
+`className` strings. A pixel font size ignores the browser's default font
+size, so text does not grow for a person who raised it. Write the size in rem:
+px / 16, to at most four decimals with no trailing zeros (`text-[11px]` becomes
+`text-[0.6875rem]`). A `/leading` suffix (`text-[11px]/4`) is reported too. It
+is not in the preset because it is Tailwind-specific. Enable it in a Tailwind
+project's own config:
+
+```ts
+{ files: ["src/**/*.{ts,tsx}"], rules: { "personal-vibe-check/no-px-font-size-class": "error" } }
+```
+
+No options.
+
+### Limitations
+
+- Checks string literals and template text inside a `className` attribute,
+  including `cn(...)` arguments and conditionals. Class names built in a
+  separate const or another prop are not checked.
+- CSS `font-size: 11px` is not checked.
+
 ## Restricting `className` on Components (opt-in)
 
 The rule `personal-vibe-check/restrict-component-classes` enforces the convention:

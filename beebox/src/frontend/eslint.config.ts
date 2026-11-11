@@ -220,6 +220,11 @@ export default [
     files: ["src/**/*.{ts,tsx}"],
     rules: { "personal-vibe-check/no-viewport-height-class": "error" },
   },
+  // Pixel font sizes ignore the browser's default font size: write rem. Opt-in rule (Tailwind-specific).
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: { "personal-vibe-check/no-px-font-size-class": "error" },
+  },
   {
     // Same options as the preset, plus an allowance for TanStack Router's
     // `throw redirect(...)` pattern — the router catches thrown Redirects
