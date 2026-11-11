@@ -41,5 +41,5 @@ this one now hits its own limit. The questions left are about the engine:
 
 Evidence (on the server, previous boot): `journalctl -b -1 -k` around
 20:34 UTC for the out-of-memory task list, and `sar -r` / `sar -S` from
-`/var/log/sysstat` for memory and swap over time. Box names and session ids
-are in the private notes, not here.
+`/var/log/sysstat` for memory and swap over time. The box is not named here;
+the boxholder knows which one ran the eval.
