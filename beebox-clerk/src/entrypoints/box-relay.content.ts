@@ -86,30 +86,30 @@ function confirmTabArrangement(message: RelayTabArrangementMessage): Promise<boo
   panel.innerHTML = `
     <style>
       :host { all: initial; }
-      .backdrop { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center; background: rgba(0,0,0,.45); font-family: system-ui,sans-serif; }
-      .dialog { width: min(420px, calc(100vw - 32px)); border-radius: 12px; background: white; color: #292524; padding: 20px; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+      .dialog { box-sizing: border-box; width: min(420px, calc(100vw - 32px)); border: 0; border-radius: 12px; background: white; color: #292524; padding: 20px; box-shadow: 0 18px 50px rgba(0,0,0,.35); font-family: system-ui,sans-serif; }
+      .dialog::backdrop { background: rgba(0,0,0,.45); }
       h2 { margin: 0 0 8px; font-size: 18px; } p { margin: 0 0 16px; line-height: 1.45; }
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
       button { border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; }
       .cancel { background: #e7e5e4; color: #292524; } .apply { background: #0f766e; color: white; font-weight: 600; }
     </style>
-    <div class="backdrop" role="dialog" aria-modal="true" aria-labelledby="clerk-confirm-title">
-      <div class="dialog">
-        <h2 id="clerk-confirm-title">Confirm in Bee Box Clerk</h2>
-        <p></p>
-        <div class="actions"><button class="cancel">Cancel</button><button class="apply"></button></div>
-      </div>
-    </div>`;
+    <dialog class="dialog" aria-labelledby="clerk-confirm-title">
+      <h2 id="clerk-confirm-title">Confirm in Bee Box Clerk</h2>
+      <p></p>
+      <div class="actions"><button class="cancel">Cancel</button><button class="apply"></button></div>
+    </dialog>`;
   const text = panel.querySelector("p");
   const apply = panel.querySelector<HTMLButtonElement>(".apply");
   const cancel = panel.querySelector<HTMLButtonElement>(".cancel");
-  if (text === null || apply === null || cancel === null) return Promise.resolve(false);
+  const dialog = panel.querySelector("dialog");
+  if (text === null || apply === null || cancel === null || dialog === null) return Promise.resolve(false);
   text.textContent = message.action === "undo"
     ? "Restore the previous layout? Closed tabs will be reopened without their back/forward history."
     : `Move ${tabCount} tab${tabCount === 1 ? "" : "s"} and close ${closeCount}? Clerk will validate the live tabs first.`;
   apply.textContent = message.action === "undo" ? "Undo arrangement" : "Apply arrangement";
   shadow.append(panel);
   document.documentElement.append(host);
+  dialog.showModal();
 
   return new Promise((resolve) => {
     const finish = (confirmed: boolean): void => {
@@ -121,6 +121,11 @@ function confirmTabArrangement(message: RelayTabArrangementMessage): Promise<boo
     });
     cancel.addEventListener("click", (event) => {
       if (event.isTrusted) finish(false);
+    });
+    // Escape fires `cancel` on a modal dialog; route it to the Cancel path.
+    dialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      finish(false);
     });
   });
 }

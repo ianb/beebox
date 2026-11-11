@@ -74,6 +74,7 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
       {open ? (
         <div
           role="dialog"
+          aria-label={label}
           className="absolute left-0 top-full mt-1 z-50 bg-white text-warm-800 rounded-lg shadow-lg border border-warm-200 px-3 py-2 w-64 text-xs normal-case tracking-normal"
         >
           <div className="font-medium text-warm-900">{label}</div>
