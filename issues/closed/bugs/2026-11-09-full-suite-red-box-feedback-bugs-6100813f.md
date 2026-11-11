@@ -6,10 +6,10 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-feedback-bugs — the hourly full-suite run on main
-resolution: wontfix
+resolution: superseded
 ---
 
-**Closed (wontfix, 2026-11-11):** Not reproducible, no code fix. card-shot/run.e2e.test.ts last failed in hourly run 20261110-111416; the five tested runs after it (20261110-132619 through 20261110-234605) passed it, and their only failure was codex-sdk-session.boundary.test.ts. Reopen if it fails again.
+**Closed (superseded, 2026-11-11):** The same intermittent card-shot screenshot failure (os error 35) is tracked in `issues/bugs/2026-11-08-full-suite-red-child-env-allowlist-5ba73ccf.md`, reopened the same day after it failed again.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `4398f595`. Bisecting the landings since the last tested

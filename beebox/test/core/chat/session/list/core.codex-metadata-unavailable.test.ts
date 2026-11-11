@@ -27,9 +27,9 @@ const CODEX_CHAT = "22222222-2222-4222-8222-222222222222";
 /**
  * What an operator reads when the `codex` launcher cannot find `node` on the
  * emptied PATH. The wording is the system `env`'s: BSD (macOS) prints the name
- * bare, GNU (Linux) quotes it.
+ * bare, GNU (Linux) quotes it, with ASCII quotes in the C locale.
  */
-const NO_NODE = oneOf("env: node: No such file or directory\n", "env: ‘node’: No such file or directory\n");
+const NO_NODE = oneOf("env: node: No such file or directory\n", "env: ‘node’: No such file or directory\n", "env: 'node': No such file or directory\n");
 
 /** The two warnings one enumeration logs: the failed plugin list, then the omitted codex chats. */
 function enumerationWarnings() {

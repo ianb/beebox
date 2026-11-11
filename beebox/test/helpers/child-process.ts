@@ -42,7 +42,7 @@ export interface ChildExit {
 
 export interface StartedChild {
   child: ChildProcessWithoutNullStreams;
-  /** Settles when the child exits, whenever that was. */
+  /** Settles when the child has exited and its pipes have closed. */
   exited: Promise<ChildExit>;
   /** SIGKILL the child, if it is still running, and wait for it to exit. */
   kill(): Promise<ChildExit>;
@@ -62,7 +62,8 @@ function start(spec: ChildSpec): StartedChild {
     stdio: ["pipe", "pipe", "pipe"],
   });
   const exited = new Promise<ChildExit>((resolve) => {
-    child.once("exit", (code, signal) => { resolve({ code, signal }); });
+    // `close`, not `exit`: it comes after the child's output has all been read.
+    child.once("close", (code, signal) => { resolve({ code, signal }); });
     child.once("error", (error) => { if (child.pid === undefined) resolve({ code: null, signal: null, spawnError: error.message }); });
   });
   return {
