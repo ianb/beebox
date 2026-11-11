@@ -1,5 +1,5 @@
 import { useId, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
-import { FieldShell, inputClasses, useFieldInk } from "./shell";
+import { FieldMessage, FieldShell, fieldMessageId, inputClasses, useFieldInk } from "./shell";
 
 export { RadioGroup } from "./radio";
 export type { RadioOption, RadioGroupProps } from "./radio";
@@ -58,6 +58,7 @@ export function TextField({
         onChange={(e) => onChange(e.target.value)}
         required={required}
         aria-invalid={hasError ? true : undefined}
+        aria-describedby={fieldMessageId(fieldId, { error, helper })}
         className={inputClasses(hasError, inputClassName)}
         {...rest}
       />
@@ -114,6 +115,7 @@ export function TextareaField({
         required={required}
         rows={rows}
         aria-invalid={hasError ? true : undefined}
+        aria-describedby={fieldMessageId(fieldId, { error, helper })}
         className={inputClasses(hasError, inputClassName)}
         {...rest}
       />
@@ -167,6 +169,7 @@ export function NumberField({
         }}
         required={required}
         aria-invalid={hasError ? true : undefined}
+        aria-describedby={fieldMessageId(fieldId, { error, helper })}
         className={inputClasses(hasError, inputClassName)}
         {...rest}
       />
@@ -223,6 +226,7 @@ export function CheckboxField({
           required={required}
           disabled={disabled}
           aria-invalid={hasError ? true : undefined}
+          aria-describedby={fieldMessageId(fieldId, { error, helper })}
           className="rounded border-warm-400 text-primary focus:ring-accent disabled:cursor-not-allowed"
           {...rest}
         />
@@ -231,11 +235,7 @@ export function CheckboxField({
           {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
         </span>
       </label>
-      {error !== undefined ? (
-        <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
-      ) : helper !== undefined ? (
-        <div className={`text-xs ${ink.helper} mt-1`}>{helper}</div>
-      ) : null}
+      <FieldMessage fieldId={fieldId} error={error} helper={helper} />
     </div>
   );
 }
@@ -294,6 +294,7 @@ export function SelectField({
         onChange={(e) => onChange(e.target.value)}
         required={required}
         aria-invalid={hasError ? true : undefined}
+        aria-describedby={fieldMessageId(fieldId, { error, helper })}
         className={inputClasses(hasError, inputClassName)}
         {...rest}
       >

@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from "react";
-import { useFieldInk } from "./shell";
+import { FieldMessage, fieldMessageId, useFieldInk } from "./shell";
 
 export interface RadioOption {
   value: string;
@@ -61,6 +61,7 @@ export function RadioGroup({
       aria-labelledby={`${groupId}-label`}
       aria-invalid={hasError ? true : undefined}
       aria-required={required ? true : undefined}
+      aria-describedby={fieldMessageId(groupId, { error, helper })}
       className={className}
     >
       <div id={`${groupId}-label`} className={`block text-sm font-medium ${ink.label} mb-1`}>
@@ -72,11 +73,7 @@ export function RadioGroup({
       ) : (
         <RadioCards name={groupName} idPrefix={idPrefix} value={value} options={options} disabled={disabled} onChange={onChange} />
       )}
-      {error !== undefined ? (
-        <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
-      ) : helper !== undefined ? (
-        <div className={`text-xs ${ink.helper} mt-1`}>{helper}</div>
-      ) : null}
+      <FieldMessage fieldId={groupId} error={error} helper={helper} />
     </div>
   );
 }

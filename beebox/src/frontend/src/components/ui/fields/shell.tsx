@@ -32,6 +32,25 @@ export function useFieldInk(): { label: string; helper: string } {
     : { label: "text-warm-700", helper: "text-warm-700" };
 }
 
+/**
+ * The id of the message under a field, for its control's `aria-describedby`,
+ * or undefined when the field shows none. A screen reader then reads the hint,
+ * or the error, each time the control takes focus; `role="alert"` alone
+ * announces an error only once, when it appears.
+ */
+export function fieldMessageId(fieldId: string, message: { error: ReactNode | undefined; helper: ReactNode | undefined }): string | undefined {
+  return message.error !== undefined || message.helper !== undefined ? `${fieldId}-message` : undefined;
+}
+
+/** The error, or else the helper, under a field. Its id is `fieldMessageId`'s. */
+export function FieldMessage({ fieldId, error, helper }: { fieldId: string; error: ReactNode | undefined; helper: ReactNode | undefined }) {
+  const ink = useFieldInk();
+  const id = `${fieldId}-message`;
+  if (error !== undefined) return <div id={id} className="text-danger-dark text-sm mt-1" role="alert">{error}</div>;
+  if (helper !== undefined) return <div id={id} className={`text-xs ${ink.helper} mt-1`}>{helper}</div>;
+  return null;
+}
+
 export function FieldShell({ id, label, hideLabel, required, error, helper, children, className }: FieldShellProps) {
   const ink = useFieldInk();
   const labelClass = hideLabel
@@ -44,11 +63,7 @@ export function FieldShell({ id, label, hideLabel, required, error, helper, chil
         {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
       </label>
       {children}
-      {error !== undefined ? (
-        <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
-      ) : helper !== undefined ? (
-        <div className={`text-xs ${ink.helper} mt-1`}>{helper}</div>
-      ) : null}
+      <FieldMessage fieldId={id} error={error} helper={helper} />
     </div>
   );
 }
