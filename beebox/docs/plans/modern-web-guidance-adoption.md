@@ -42,16 +42,20 @@ four real static-scanner findings, the field-description gap that touches every
 form, and the `min-h-dvh` pages. The modal scroll rule in the same sample has
 no visible effect today (C1).
 
-**Chosen scope** (approved 2026-11-11): about 1,900 changed source and test
-lines across about 120 files in `beebox/src/frontend`, `beebox/src/webapp`,
+**BIG CHANGE (likely).** **Chosen scope** (approved 2026-11-11): about
+1,800–1,950 changed source and test lines across about 120 files in `beebox/src/frontend`, `beebox/src/webapp`,
 `workstreams-app`, `beebox-clerk`, `personal-vibe-check`, and the iOS project
 file, plus about 200 lines of docs (`frontend.md`, `box-docs/views.md`,
 `security-report.md`, `ios-app` docs). Breakdown: samples about 500 (done);
 the original adopt set about 600 more; D4 `px`→`rem` about 140 (66 sites);
 B12 `button-has-type` about 140 (69 sites); Temporal (G) about 250–400; iOS
-target, composer cleanup and lint rules about 150. This is under 2,000 but
-close; the Temporal estimate carries the most risk. If the total passes
-2,000, the plan reports it as a **BIG CHANGE** before continuing. Still
+target, composer cleanup and lint rules about 150. With about 200 lines of
+authored docs the total is about 2,000–2,150, so this is reported as a BIG
+CHANGE. What drives the size: three mechanical sweeps (D4's 66 sites, B12's
+69 sites, A4's identifier fields) and the Temporal move; none adds a
+subsystem. The boxholder approved this scope on 2026-11-11 with the
+categories listed, so the work continues; the size is reported again at the
+end. Still
 deferred: a `popover` rewrite of `Dropdown` (B2).
 
 What the fuller scope buys over the smallest fix: the clickjacking exposure
@@ -176,8 +180,10 @@ recommendation. **Lint** says what holds the fix: an ESLint rule in
 - **Decision.** Modern browsers only. The floor is **iOS 18 / Safari 18.0**
   and current Chrome, Safari and Firefox on desktop. The iOS app's deployment
   target moves from 17.0 to 18.0 (chunk 0b); the boxholder chose 18 over 26.
-  Apple's June 2026 App Store figures put about 93% of iPhones that can run
-  iOS 26 on iOS 18 or 26.
+  Apple's App Store usage figures for June 7, 2026
+  (developer.apple.com/support/app-store) show iOS 26 and iOS 18 together on
+  most active iPhones (79% and 14% in the press coverage of that page; the
+  denominator is Apple's, not checked here).
 - **Policy text for `beebox/frontend.md`** (chunk 0a):
   > **Browser support.** Bee Box targets current Chrome, Safari and Firefox,
   > and the iOS app's WKWebView at iOS 18 (Safari 18.0). Use any feature
@@ -199,15 +205,19 @@ recommendation. **Lint** says what holds the fix: an ESLint rule in
   in E) or were already fine as progressive enhancement (D3, E1).
 
 **0b. iOS deployment target 17.0 → 18.0.**
-- `IPHONEOS_DEPLOYMENT_TARGET = 17.0` in 8 build configurations
-  (`ios-app/BeeBox.xcodeproj/project.pbxproj`), "Minimum iOS: 17.0"
-  (`ios-app/README.md:13`), "The deployment target is iOS 17"
+- `IPHONEOS_DEPLOYMENT_TARGET = 17.0` in **10** build configurations
+  (`ios-app/BeeBox.xcodeproj/project.pbxproj`; two are the compact
+  BeeBoxControls Debug/Release lines), "Minimum iOS: 17.0"
+  (`ios-app/README.md:13`), the "iOS 17–25 fallback" note
+  (`ios-app/README.md:28`), "The deployment target is iOS 17"
   (`ios-app/AGENTS.md:25`), and the iOS 17 recording note
   (`beebox/docs/mobile-contract.md:1520`).
 - 8 `#available`/`@available(iOS 17|18)` checks across 4 Swift files become
   partly redundant; they are left in place (removing them is a follow-up,
   filed as an issue, so this chunk changes no behavior).
-- Verify: `xcodebuild` builds the app and extensions for the simulator. Uses
+- Verify: `grep -c "IPHONEOS_DEPLOYMENT_TARGET = 17.0"` is 0;
+  `xcodebuild -showBuildSettings` reports 18.0 for every target in Debug and
+  Release; the app and extensions build for the simulator. Uses
   the `bbx-ios-overlap` skill because it touches the iOS side of the
   contract.
 
@@ -607,16 +617,36 @@ third-party scripts). The iOS bearer token in `localStorage`
   2026-11-04; two small spec dependencies). The alternative,
   `@js-temporal/polyfill` (TC39's reference, 0.5.1, last updated 2025-03-31,
   depends on `jsbi`), is about three times larger unpacked and less active.
-- **Loading.** A module `src/frontend/src/lib/temporal.ts` runs before the
-  app renders: `if (!("Temporal" in globalThis)) await import("temporal-polyfill/global")`.
-  Browsers with native Temporal download nothing. The rest of the app reads
-  `globalThis.Temporal`. Types come from the polyfill's `temporal-spec`
-  package until TypeScript's `lib` has them.
+  This is an implementation choice made in the plan; the boxholder approved
+  the move to Temporal, not a specific package.
+- **Loading.** The frontend cannot use top-level `await` at its build target
+  (`src/frontend/src/main/app.tsx`, comment above `boot()`: *"Top-level await
+  isn't available at this build's browser targets"*). So `boot()` awaits a
+  loader before it renders: `lib/temporal.ts` exports
+  `ensureTemporal(): Promise<void>`, which does
+  `if (!("Temporal" in globalThis)) await import("temporal-polyfill/global")`.
+  Browsers with native Temporal download nothing. No module may read
+  `Temporal` at import time; only inside functions that run after boot.
+- **Types.** Add `"ESNext.Temporal"` (or the installed compiler's name for it)
+  to `lib` in the frontend tsconfigs if the installed TypeScript ships it
+  (the frontend's `typescript` is `@typescript/typescript6`); otherwise
+  reference the polyfill's global declarations (`temporal-spec/global`).
+  Check which applies in the first chunk; a namespaced type import does not
+  type `globalThis.Temporal`.
+- **Tests.** Node 24 has no native Temporal, and module tests import the
+  module directly, not through `boot()`. The frontend DOM test setup
+  (`test/helpers/dom-globals.ts`) installs the polyfill global, so migrated
+  modules run as they do in Safari; one test asserts the loader skips the
+  import when `Temporal` already exists.
 - **Scope here.** 62 frontend files use `Date`. This plan moves only the
   modules where calendar-date-versus-instant handling is a real bug class
   today, each with its tests:
-  1. `ui/FriendlyDate.tsx` — its date-only workaround (`timeZone: "UTC"` so
-     "2026-08-14" does not show as the 13th) becomes `Temporal.PlainDate`.
+  1. `ui/FriendlyDate.tsx` — two explicit paths. A date-only string
+     ("2026-08-14") is a `Temporal.PlainDate`, formatted with no time and no
+     zone shift (it replaces today's `timeZone: "UTC"` workaround). A
+     timestamp or epoch milliseconds is a `Temporal.Instant`, formatted in
+     the browser's zone with date and time as today. Unparseable input comes
+     back unchanged, as today. Tests cover all three.
   2. `components/todo/item-logic.ts` — due dates.
   3. `components/CalendarView/view.tsx` — day math.
   The other files stay on `Date` until touched. `frontend.md` gains one
@@ -829,7 +859,8 @@ None. Each category is small enough to do from its entry here.
 - **D4 `px`→`rem`:** approved after the reason was given (text follows the
   browser's default size setting).
 - **G Temporal:** approved: move date code to Temporal behind a polyfill
-  that loads only where Temporal is missing. Which polyfill is question 2.
+  that loads only where Temporal is missing. The package choice is the
+  plan's (Category G).
 - **Dev-agent skill:** undecided.
 
 ## Open design questions
