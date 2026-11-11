@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { makeTestServer } from "../../helpers/test-route-server.js";
 import { bodyField } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { z } from "zod";
 import { signSession } from "../../../src/webapp/auth.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
@@ -59,6 +60,7 @@ void test("The owner sees the whole box", async (t) => {
       t.error(error);
     }
   });
+  const errors = consoleLines(t, "error");
   const owner = await devicesAs("priya@example.com");
   t.check(`${owner.status} ${owner.payload.scope} ${owner.payload.devices.map((d) => d.label).join(" | ")}`, "200 box owner phone | member phone | a phone paired before pairers were recorded");
 
@@ -90,6 +92,8 @@ void test("The owner sees the whole box", async (t) => {
   }
 
   t.check(`somebody else's: ${await unpairAsMember(ownerDeviceId)}, their own: ${await unpairAsMember(memberDeviceId)}`, "somebody else's: NOT_FOUND, their own: ok");
+  // The refusal reaches the server log with its reason, once:
+  t.check(errors(), ["[trpc] mutation pairing.revokeDevice failed: Device not found"]);
 
   // ## A caller with no person behind it cannot pair at all
   //
@@ -110,4 +114,5 @@ void test("The owner sees the whole box", async (t) => {
   delete process.env.BBX_BROWSE_API_KEY;
 
   t.check(`${asMachine.statusCode} ${bodyField(asMachine.body, "error", "data", "code")}`, "403 FORBIDDEN");
+  t.check(errors(), ["[trpc] mutation pairing.createTicket failed: Pairing records who paired the device, so it needs a signed-in person."]);
 });

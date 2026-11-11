@@ -7,6 +7,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../../../../../test/helpers/console-lines.js";
+import { jsonParseMessage } from "../../../helpers/json-parse-error.js";
 import { is } from "@ianbicking/tap-check/check";
 import { serializeSidecarState, parseSidecarState, sidecarTabsKey, selectSidecarSession, persistSidecarTransition, loadSidecarState, saveSidecarState } from "../../../../src/components/chat/workspace/sidecar-tabs-storage.js";
 
@@ -62,7 +64,10 @@ void test("Nothing stored, or nothing usable, is not an error", async (t) => {
 
   t.check(parseSidecarState(""), null);
 
+  const warnings = consoleLines(t, "warn");
   t.check(parseSidecarState("{not json"), null);
+  // The console gives the parser's reason for dropping the strip:
+  t.check(warnings(), [`[sidecar-tabs] discarding unparseable strip: ${jsonParseMessage("{not json")}`]);
 
   t.check(parseSidecarState(JSON.stringify({ v: 1, tabs: [], activePath: null })), null);
 

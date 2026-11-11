@@ -18,6 +18,7 @@ import type { CalendarEvent, GoogleCalendarService } from "../../src/services/go
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar/connector.js";
 import { loadCalendarState } from "../../src/connectors/google-calendar/state.js";
 import ky from "ky";
+import { consoleLines } from "../helpers/console-lines.js";
 
 // Freeze the connector's clock so the sync time-window is deterministic: the
 // fixed-date fixtures below (2026-06-0X) stay inside the 30-day-back window no
@@ -252,8 +253,11 @@ void test("Sync an event, edit the local .ics, and also change Google's copy wit
   calendar.events[0]!.summary = "Standup (rescheduled)";
   calendar.events[0]!.updated = "2026-06-02T10:00:00Z";
 
+  const warnings = consoleLines(t, "warn");
   const result = await connector.sync();
   t.check(result, { success: true, created: [], updated: ["_content/calendar/Main.attach/2026-06-02_Standup_rescheduled_-standup.ics"] });
+  // The sync log says the local edit was lost:
+  t.check(warnings(), ["  Local edit to 2026-06-02_Standup_rescheduled_-standup.ics discarded — event also changed remotely (remote wins)"]);
   t.check(await icsNames(box), ["2026-06-02_Standup_rescheduled_-standup.ics"]);
   const rewritten = await readIcs(box, "2026-06-02_Standup_rescheduled_-standup.ics");
   t.check(rewritten.split("\r\n"), syncedIcs(true, [
@@ -533,13 +537,12 @@ void test("bookkeeping/connectors/google-calendar-state.json is the index of whi
   const statePath = join(box.root, "_bookkeeping/connectors/google-calendar-state.json");
   await writeFile(statePath, '{"syncTokens": {}, "eventFiles": {"evt-rev');
 
+  const errors = consoleLines(t, "error");
   const second = await connector.sync();
-  t.check(second, {
-    success: false,
-    created: [],
-    updated: [],
-    error: `Calendar state at ${statePath} exists but could not be read or parsed. Refusing to sync — inspect or remove the file by hand before syncing again.`,
-  });
+  const refusal = `Calendar state at ${statePath} exists but could not be read or parsed. Refusing to sync — inspect or remove the file by hand before syncing again.`;
+  t.check(second, { success: false, created: [], updated: [], error: refusal });
+  // The same refusal goes to the sync log:
+  t.check(errors(), [refusal]);
   t.check(calendar.events, [reviewEvent]);
   t.checkText(await readFile(statePath, "utf-8"), '{"syncTokens": {}, "eventFiles": {"evt-rev');
   t.check(await icsNames(box), ["2026-06-04_Review_t-review.ics"]);
@@ -562,6 +565,7 @@ void test("An untracked .ics that Google refuses used to warn and continue, so t
     insertEvent: async () => throwCalendarHttpError(503, "https://calendar.test/events"),
   };
 
+  const warnings = consoleLines(t, "warn");
   const result = await connect(box, calendar).sync();
   t.check(result, {
     success: false,
@@ -569,6 +573,8 @@ void test("An untracked .ics that Google refuses used to warn and continue, so t
     updated: [],
     error: "Calendar sync failed for primary _content/calendar/Main.attach/local-new.ics (local-push, HTTP 503)",
   });
+  // The sync log names the refusal and the file it keeps:
+  t.check(warnings(), ["  API error pushing to primary: 503", "  Failed to push local-new.ics, keeping locally"]);
   t.check(inner.events, []);
   t.check(await icsLines(box, "local-new.ics"), [
     "BEGIN:VCALENDAR",

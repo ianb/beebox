@@ -16,6 +16,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { any, isoDate } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import Sharp from "sharp";
@@ -561,6 +562,7 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
     }
   });
   resetScanRateLimits();
+  const warnings = consoleLines(t, "warn");
   const ctx = await makeScanTestServer();
 
   let last = await check(ctx, []);
@@ -576,6 +578,11 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
     statusCode: 429,
     retryAfter: any(Number).between(1, 60),
   });
+  // Each refused request is logged with the credential it came from; the test token has no owner:
+  t.check(warnings(), [
+    "[scan] Rate limit tripped for owner:unknown on POST /test/api/scan/check",
+    "[scan] Rate limit tripped for owner:unknown on POST /test/api/scan/check",
+  ]);
 
   // Clearing the window lets the same credential straight back in:
 
@@ -695,7 +702,14 @@ void test("Every section above runs on an annex-converted box (annexBox:", async
     }
   });
   resetScanRateLimits();
+  const errors = consoleLines(t, "error");
   const ctx = await makeTestServer({ assetsHiddenAgain: true });
+  // Startup tells the operator the routes are disabled and how to restore them:
+  t.check(errors(), [
+    `[scan] Box ${ctx.boxRoot} is not annex-converted; scan upload is disabled (every request answers 503). ` +
+      "Every box is annex-shaped from creation, so this box's `.gitignore` hides assets or its annex " +
+      "was never initialized. Re-run `bbx init` on the box to restore both.",
+  ]);
   const png = await pngBytes();
 
   const refused = await check(ctx, [sha256(png)]);

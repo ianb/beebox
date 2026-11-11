@@ -22,6 +22,7 @@ import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
 
 /** A landmark row with no links, groups, or features: what `list` returns for a bare card. */
 function bareRow(fields: { path: string; label: string; glyph?: string; dir?: string }) {
@@ -274,11 +275,17 @@ void test("Finding 2 (round 4 hardening):", async (t) => {
   await mkdir(box.path("_content/escape"), { recursive: true });
   await symlink(box.path("src/private.landmark.card"), box.path("_content/escape/A.landmark.card"));
 
+  const warnings = consoleLines(t, "warn");
   const { landmarks, problems } = await caller(box.root).landmarks.list();
   t.check({ labels: landmarks.map((l) => l.label).toSorted(), problems }, {
     labels: ["Recipes"],
     problems: [],
   });
+  // The log names the card it skipped; the file outside the namespace is skipped too:
+  t.check(warnings(), [
+    "landmarks: src/private.landmark.card is outside the box namespace (symlink escape?) — skipping",
+    "landmarks: _content/escape/A.landmark.card is outside the box namespace (symlink escape?) — skipping",
+  ]);
 
   // `forDir` on the escaping symlink's directory answers `null` (same as any
   // other unreadable card — no landmark to render), while the normal landmark's
@@ -287,6 +294,7 @@ void test("Finding 2 (round 4 hardening):", async (t) => {
   const { landmark: escaped } = await caller(box.root).landmarks.forDir({ dir: "_content/escape" });
   const { landmark: recipes } = await caller(box.root).landmarks.forDir({ dir: "_content/recipes" });
   t.check({ escaped, recipes }, { escaped: null, recipes: bareRow({ path: "_content/recipes/Recipes.landmark.card", label: "Recipes" }) });
+  t.check(warnings(), ["landmarks: _content/escape/A.landmark.card is outside the box namespace (symlink escape?) — skipping"]);
 });
 
 // ## `forDir` still answers null for a broken card

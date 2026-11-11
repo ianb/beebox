@@ -16,6 +16,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { consoleLines } from "../../../../test/helpers/console-lines.js";
 import { is } from "@ianbicking/tap-check/check";
 import { SimulatedClock, createActor, fromCallback } from "xstate";
 import {
@@ -194,9 +195,12 @@ void test("CONNECTTIMEOUT bounds only reaching MICLIVE (mic permission and workl
 
 // Without `MIC_LIVE` the start fails as before:
 void test("Without MICLIVE the start fails as before:", async (t) => {
+  const warnings = consoleLines(t, "warn");
   const s = segment({ delays: { CONNECT_TIMEOUT: 10 } });
   await sleep(40);
   t.check(s.state(), "idle");
+  // The console says the start timed out:
+  t.check(warnings(), ["[realtime-transcription] Recording didn't start within timeout"]);
 
 
   // Nothing was recorded, so the chat bar shows it as an error the person must act
@@ -230,6 +234,7 @@ void test("CONNECTIONDEGRADED with cause network goes from recording to recordin
 // applies. On expiry the machine STOPs the actor and waits in `finalizing` for
 // `TRANSCRIPTION_DONE`, which carries the recording.
 void test("Cause microphone goes to reconnecting:", async (t) => {
+  const warnings = consoleLines(t, "warn");
   const s = segment({ delays: { RECONNECT_WINDOW: 10 }, autoDone: false });
   s.emit({ type: "MIC_LIVE" });
   s.emit({ type: "WS_CONNECTED" });
@@ -240,6 +245,8 @@ void test("Cause microphone goes to reconnecting:", async (t) => {
 
   await sleep(40);
   t.check(s.state(), "finalizing");
+  // The console says the segment ended because the microphone did not return:
+  t.check(warnings(), ["[realtime-transcription] Microphone not recovered — ending segment"]);
 
   t.check(s.context(), contextWith({ error: "Recording stopped — the microphone was taken away", errorLevel: "warning" }));
 
