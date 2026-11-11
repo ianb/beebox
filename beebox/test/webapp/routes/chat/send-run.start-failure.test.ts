@@ -24,6 +24,9 @@ import { bodyField } from "../../../helpers/test-helpers.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { getTurnBuffer } from "../../../../src/core/chat/turn-buffer.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
+import { waitForLines } from "./console-lines-wait.js";
+import { spawnFailedLine } from "../../../helpers/spawn-failed-log.js";
 
 /**
  * The response arrives before the run does, so the error frame lands a moment
@@ -65,6 +68,7 @@ void test("A failed run start: 200 with a turnId, and the failure on that turn",
   });
 
   backend.failNextStart = Object.assign(new Error("spawn EBADF"), { code: "EBADF" });
+  const errors = consoleLines(t, "error");
   const res = await ctx.request({
     method: "POST",
     url: "/api/chat/send",
@@ -74,6 +78,11 @@ void test("A failed run start: 200 with a turnId, and the failure on that turn",
   const failure = turn.errored ?? "(no error frame)";
 
   t.check(`${res.statusCode} | turn=${typeof bodyField(res.body, "turnId")} | recorded=${recorded.length} | errored=${failure} | complete=${turn.complete}`, "200 | turn=string | recorded=1 | errored=spawn EBADF | complete=true");
+  // The operator-facing log names the spawn failure and the failed send:
+  t.check(await waitForLines(errors, { count: 2, label: "the spawn failure logs" }), [
+    spawnFailedLine({ code: "EBADF", message: "spawn EBADF" }),
+    "[chat] send failed to start a run: Error: spawn EBADF",
+  ]);
 
   // ## Retrying the same messageId is deduplicated — the message is already here
   //

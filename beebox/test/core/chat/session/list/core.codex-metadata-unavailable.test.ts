@@ -17,9 +17,27 @@ import { makeTmpBox, type TmpBox } from "../../../../helpers/test-helpers.js";
 import { loadDeadHusks, listSessionEntries } from "../../../../../src/core/chat/session/list/core.js";
 import { getSessionLogPath } from "../../../../../src/core/chat/session/transcript-paths.js";
 import { localOrigin } from "../../../../../src/core/chat/session/origin.js";
+import { codexBinaryPath, codexCliArgs } from "../../../../../src/services/codex-binary.js";
+import { consoleLines } from "../../../../helpers/console-lines.js";
 
 const CLAUDE_CHAT = "11111111-1111-4111-8111-111111111111";
 const CODEX_CHAT = "22222222-2222-4222-8222-222222222222";
+
+/** What an operator reads when the `codex` launcher cannot find `node` on the emptied PATH. */
+const NO_NODE = "env: node: No such file or directory\n";
+
+/** The failure text Node gives for a `codex` invocation that exits 127 for lack of `node`. */
+function commandFailed(args: string[]): string {
+  return `Error: Command failed: ${[codexBinaryPath(), ...codexCliArgs(args)].join(" ")}\n${NO_NODE}`;
+}
+
+/** The two warnings one enumeration logs: the failed plugin list, then the omitted codex chats. */
+function enumerationWarnings(): string[] {
+  return [
+    `[codex-plugin] \`codex plugin list\` failed; re-registering the marketplace: ${commandFailed(["plugin", "list", "--json"])}`,
+    "[chat] codex thread metadata unavailable; omitting this box's codex chats: CodexPluginInstallError: Could not install the Bee Box Codex plugin",
+  ];
+}
 
 async function writeHusk(box: TmpBox, opts: { name: string; session: string; engine?: string }) {
   const here = await localOrigin();
@@ -54,6 +72,7 @@ void test("Two husks, one per engine.", async (t) => {
 
   const realPath = process.env["PATH"];
   process.env["PATH"] = "/nonexistent";
+  const warnings = consoleLines(t, "warn");
 
   await t.checkText(
     // The claude chat is still listed. Before this change, the codex husk's
@@ -62,6 +81,11 @@ void test("Two husks, one per engine.", async (t) => {
     "[\"11111111-1111-4111-8111-111111111111\"]",
   );
 
+  // Each enumeration logs the failed plugin list, then that the codex chats are
+  // omitted. The failures are the intended ones: with `PATH` emptied the `codex`
+  // launcher cannot find `node`.
+  t.check(warnings(), enumerationWarnings());
+
   // The codex chat is reported as neither live nor dead. "Codex couldn't be asked"
   // and "Codex has no such thread" are different facts, and only the second one
   // means the chat is gone — claiming the first as expired would tell the
@@ -69,4 +93,5 @@ void test("Two husks, one per engine.", async (t) => {
   // soon as the CLI works.
 
   t.check(await loadDeadHusks(box.root), []);
+  t.check(warnings(), enumerationWarnings());
 });

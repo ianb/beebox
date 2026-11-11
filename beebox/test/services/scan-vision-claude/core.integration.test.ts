@@ -6,9 +6,9 @@
 // SDK rejecting the generated JSON schema, a changed `outputFormat` contract, a
 // turn budget that stops sufficing, an auth/env convention drift.
 //
-// It is **skipped** — loudly, with a reason on stderr — wherever the Claude
+// It is **skipped** — reported as a TAP skip with the reason — wherever the Claude
 // harness cannot run: no Claude Code binary, not logged in, no network. A skip
-// is a normal outcome in CI; the assertions name which path ran. Expect roughly
+// is a normal outcome in CI. Expect roughly
 // half a minute of wall clock when it does run (one Sonnet call, one page).
 
 import { test } from "tap";
@@ -35,7 +35,6 @@ async function claudeRunnable() {
 }
 
 const skipReason = await claudeRunnable();
-if (skipReason) console.warn(`[skipped] scan-vision-claude-integration: ${skipReason}`);
 
 // A legible synthetic page: white background, large black caption text —
 // enough for the model to classify and transcribe something deterministic-ish.
@@ -51,18 +50,16 @@ async function makeTestPage(dir: string) {
 // We assert structure, not semantics: exactly one analysis, index 0, a null
 // `subject_bbox` (schema-enforced), and reported usage/cost — the contract the
 // photo flow depends on, exercised against the real SDK.
-void test("We assert structure, not semantics:", async (t) => {
+void test("We assert structure, not semantics:", { skip: skipReason === null ? false : `scan-vision-claude-integration: ${skipReason}` }, async (t) => {
   t.teardown(async () => {
     try {
-      if (dir) await rm(dir, { recursive: true, force: true });
+      await rm(dir, { recursive: true, force: true });
     } catch (error) {
       t.error(error);
     }
   });
-  const dir = skipReason ? null : await mkdtemp(join(tmpdir(), "scan-vision-int-"));
-  const result = dir === null
-    ? { analyses: [{ index: 0, subject_bbox: null }], usage: { prompt: 5000, output: 100, thinking: 0 }, costUsd: 0.05 }
-    : await createClaudeScanVision({ boxRoot: dir }).analyzeBatch({ imagePaths: [await makeTestPage(dir)], boxholderContext: null });
+  const dir = await mkdtemp(join(tmpdir(), "scan-vision-int-"));
+  const result = await createClaudeScanVision({ boxRoot: dir }).analyzeBatch({ imagePaths: [await makeTestPage(dir)], boxholderContext: null });
   t.check(
     {
       analyses: result.analyses.map((a) => ({ index: a.index, subject_bbox: a.subject_bbox })),

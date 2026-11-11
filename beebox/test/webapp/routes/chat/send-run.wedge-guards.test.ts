@@ -24,6 +24,13 @@ import { captureTurn, startAckedRun } from "../../../../src/webapp/routes/chat/s
 import { getTurnBuffer } from "../../../../src/core/chat/turn-buffer.js";
 import { errorMessage } from "../../../../src/shared/error-guards.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
+
+/** What the watchdog logs when `send()` has not started or failed a run within `bound`. */
+function wedgeWarning(bound: string): string {
+  return `[chat] send() neither started nor failed a run within ${bound} — failing the turn so the client stops waiting and the session pin is released. ` +
+    "Suspect a run lock nobody released or a subprocess spawn that never returned.";
+}
 
 /** The turn buffer once it has ended (finished or failed), awaiting its own
  *  change signal rather than polling against a deadline. */
@@ -64,6 +71,7 @@ void test("The bound is 10 minutes in production — a cold engine spawn legitim
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
+  const errors = consoleLines(t, "error");
   let pinned = true;
   const capture = captureTurn(session, { turnId: "wedged-turn", releasePin: () => { pinned = false; } });
   startAckedRun({ send: () => new Promise<boolean>(() => { /* never settles */ }) }, {
@@ -74,6 +82,8 @@ void test("The bound is 10 minutes in production — a cold engine spawn legitim
 
   const { errored, complete } = await awaitTurnEnd("wedged-turn");
   t.check(`${errored} | pinned=${pinned} | complete=${complete}`, "The run did not start within 40ms | pinned=false | complete=true");
+  // The watchdog tells an operator which wedge it broke:
+  t.check(errors(), [wedgeWarning("40ms")]);
 });
 
 // ## A send not yet admitted when the watchdog fires is refused, and records nothing
@@ -95,6 +105,7 @@ void test("The route waits for the session to take the turn before it answers.",
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
+  const errors = consoleLines(t, "error");
   let admitLate: (() => void) | undefined;
   let recorded = 0;
   const capture = captureTurn(session, { turnId: "late-turn", releasePin: () => {} });
@@ -116,6 +127,7 @@ void test("The route waits for the session to take the turn before it answers.",
     recorded: 0,
     lateThrow: "Send abandoned before the session took the turn",
   });
+  t.check(errors(), [wedgeWarning("40ms")]);
 });
 
 // ## A run that *did* start is never touched by the watchdog
@@ -137,7 +149,7 @@ void test("The watchdog is cleared the moment send() settles either way, so a tu
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
   const capture = captureTurn(session, { turnId: "live-turn", releasePin: () => {} });
-  startAckedRun({ send: async () => true }, {
+  startAckedRun({ send: async (_input, options) => { options?.onAdmitted?.(); return true; } }, {
     input: { text: "water the plants" },
     capture,
     watchdog: { timeoutMs: 20, periodMs: 5 },
@@ -176,6 +188,7 @@ void test("The event bus stands in for \"anything between the claim and the ack\
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
+  const errors = consoleLines(t, "error");
   const realEmit = ctx.eventBus.emit;
   ctx.eventBus.emit = () => { throw new Error("bus wedged"); };
 
@@ -185,6 +198,13 @@ void test("The event bus stands in for \"anything between the claim and the ack\
     payload: { session: "new", message: "did you water the plants", messageId: "m1" },
   });
   t.check(failed.statusCode, 500);
+  // One failed send logs the run start, the claimed id, and the 500 the client got:
+  const failureLog = [
+    "[chat] send failed to start a run: Error: bus wedged",
+    "[chat] send failed after the message id was claimed: Error: bus wedged",
+    "[http] POST /test/api/chat/send failed (500): bus wedged",
+  ];
+  t.check(errors(), failureLog);
 
   // A second POST of the same id answers instead of parking on the dead claim —
   // without the settle it would wait for an outcome that never comes.
@@ -195,6 +215,7 @@ void test("The event bus stands in for \"anything between the claim and the ack\
     payload: { session: "new", message: "did you water the plants", messageId: "m1" },
   }));
   await t.checkText(duplicate, "500");
+  t.check(errors(), failureLog);
 
   // Nothing was recorded and no durable claim was taken, so once the bus recovers
   // the client's retry runs the message exactly once.

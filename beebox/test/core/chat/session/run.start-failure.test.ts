@@ -17,6 +17,8 @@ import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { tick } from "../../../helpers/chat-session-spawner-helpers.js";
+import { consoleLines } from "../../../helpers/console-lines.js";
+import { spawnFailedLine } from "../../../helpers/spawn-failed-log.js";
 
 // ## The failure propagates, and the session goes back to idle
 void test("The failure propagates, and the session goes back to idle", async (t) => {
@@ -33,6 +35,7 @@ void test("The failure propagates, and the session goes back to idle", async (t)
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
   backend.failNextStart = Object.assign(new Error("spawn EBADF"), { code: "EBADF" });
+  const errors = consoleLines(t, "error");
 
   let caught = "none";
   try {
@@ -42,6 +45,8 @@ void test("The failure propagates, and the session goes back to idle", async (t)
   }
 
   t.check(`${caught} | busy=${session.isBusy()} | running=${session.isRunning()}`, "spawn EBADF | busy=false | running=false");
+  // The failed spawn is logged with its code for the operator:
+  t.check(errors(), [spawnFailedLine({ code: "EBADF", message: "spawn EBADF" })]);
 });
 
 // ## The next send starts a run normally
@@ -62,12 +67,14 @@ void test("The point of resetting to idle:", async (t) => {
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
   backend.failNextStart = new Error("spawn EBADF");
+  const errors = consoleLines(t, "error");
   await session.send("first").catch(() => null);
 
   const sent = await session.send("second");
   await tick();
 
   t.check(`sent=${sent} | runs=${backend.runs.length} | busy=${session.isBusy()}`, "sent=true | runs=1 | busy=true");
+  t.check(errors(), [spawnFailedLine({ code: "?", message: "spawn EBADF" })]);
 });
 
 // ## A failed start does not strand the chat-active run lock
@@ -88,10 +95,12 @@ void test("A lock left held would make bbx tick defer commits indefinitely again
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
   backend.failNextStart = new Error("spawn EBADF");
+  const errors = consoleLines(t, "error");
   await session.send("hello").catch(() => null);
 
   const { readdir } = await import("node:fs/promises");
   const stateDir = await readdir(`${box.root}/.beebox`).catch((): string[] => []);
 
   t.check(stateDir.filter((f) => f.includes("chat-active")).join(","), "");
+  t.check(errors(), [spawnFailedLine({ code: "?", message: "spawn EBADF" })]);
 });

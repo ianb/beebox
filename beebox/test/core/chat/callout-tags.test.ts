@@ -18,6 +18,7 @@ import { parseCalloutTags, notifyTurnCallouts } from "../../../src/core/chat/cal
 import { addSubscription } from "../../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../../src/services/push.js";
 import { readRecent } from "../../../src/core/notification/log.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { writePresence } from "../../../src/core/notification/presence.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-callouts-${process.pid}-${Date.now()}`);
@@ -67,6 +68,7 @@ const delivery = (d: {
 // optional; an unknown `loudness` is ignored (with a warning), and the body is
 // trimmed:
 void test("A callout needs a context and a body, as the frontend's parseCallouts require...", async (t) => {
+  const warnings = consoleLines(t, "warn");
   t.check(
     parseCalloutTags(`Done.
 <callout context="you asked about Saturday">
@@ -94,6 +96,9 @@ Saturday: sunny, high of 72.
     },
   ],
   );
+
+  // The ignored loudness is logged, so a typo in a prompt is findable:
+  t.check(warnings(), ['[callouts] ignoring unknown loudness "shout" on a <callout>']);
 
   t.check(parseCalloutTags("No tags here, and <speech>not a callout</speech>."), []);
 });

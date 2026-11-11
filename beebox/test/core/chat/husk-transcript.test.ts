@@ -12,6 +12,7 @@ import "@ianbicking/tap-check/tap";
 import { not } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { huskTranscriptPath } from "../../../src/core/chat/husk-transcript.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 const session = "0198f0b0-3333-7333-8333-333333333333";
 function husk(contextDir?: string) {
@@ -39,7 +40,9 @@ void test("The escaping husk resolves exactly where an unbound husk does — the
   const unbound = huskTranscriptPath(box.root, husk(undefined));
   t.check(huskTranscriptPath(box.root, husk("_content/recipes")), not(unbound));
 
+  const warnings = consoleLines(t, "warn");
   t.check(huskTranscriptPath(box.root, husk("../../elsewhere")), unbound);
+  t.check(warnings(), ["[chat-history] contextDir ../../elsewhere escapes the box; reading from the box root instead"]);
 
   t.check(huskTranscriptPath(box.root, husk("")), unbound);
 });

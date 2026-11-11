@@ -6,7 +6,8 @@
  * part of the contract, so the test checks it rather than letting it reach the
  * run's stderr. `t.capture` restores the method when the test ends. An `Error`
  * argument reads as `Name: message`, without the stack, so the expected value
- * holds no file paths.
+ * holds no file paths. Each call returns the lines printed since the previous
+ * call (tap empties the record when it is read).
  */
 
 import type { Test } from "tap";
