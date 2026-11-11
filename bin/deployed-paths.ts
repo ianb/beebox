@@ -35,10 +35,17 @@ export const DEPLOYED_PATHS_PATTERN =
  * is in the package `files` or the bundle. Guidance that ships to boxes lives
  * under `templates/`, `plugins/`, `.agents/` and `docs/box/`, which this
  * leaves alone.
+ *
+ * Tests never run on the server: `beebox/test/` (tours included),
+ * `beebox/src/frontend/test/`, and any `*.test.ts(x)` file in a shipped
+ * package. A test-only commit used to deploy, with a restart and about a
+ * minute of downtime, for nothing (2026-11-11). Nothing shipped imports
+ * from these paths.
  */
 export const NOT_SHIPPED_PATTERN =
   "^beebox/docs/([^/]+$|([^b/][^/]*|b[^o/][^/]*|bo[^x/][^/]*|box[^/]+)/)"
-  + "|^beebox/((src|deploy)/(.*/)?)?(AGENTS|CLAUDE)\\.md$|^(tap-check|personal-vibe-check)/(AGENTS|CLAUDE)\\.md$";
+  + "|^beebox/((src|deploy)/(.*/)?)?(AGENTS|CLAUDE)\\.md$|^(tap-check|personal-vibe-check)/(AGENTS|CLAUDE)\\.md$"
+  + "|^beebox/(src/frontend/)?test/|\\.test\\.tsx?$";
 const DEPLOYED_PATHS = new RegExp(DEPLOYED_PATHS_PATTERN);
 const NOT_SHIPPED = new RegExp(NOT_SHIPPED_PATTERN);
 
