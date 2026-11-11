@@ -24,6 +24,7 @@ import "@ianbicking/tap-check/tap";
 import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
 import { makeFakeChild, type FakeChild } from "./support/fake-child.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { acquireBoxWork, boxMaintenanceStatus } from "../../src/lib/box-maintenance/admission.js";
 
 const validEntry = {
@@ -241,6 +242,7 @@ void test("A development reload exit restarts cleanly without consuming crash bu
 
   await new Promise((resolve) => setImmediate(resolve));
   rejectReloadReady = true;
+  const errors = consoleLines(t, "error");
   reloadChildren[1]?.fireMessage({ type: "reload-request" });
 
   // When the replacement fails readiness, the box is unhealthy and the controller
@@ -251,6 +253,8 @@ void test("A development reload exit restarts cleanly without consuming crash bu
   // is not a state to assert on.
 
   while (reloadSupervisor.getStatuses()[0]?.status !== "unhealthy" || (await boxMaintenanceStatus(reloadFixture.root))?.owner !== null) await new Promise((resolve) => setImmediate(resolve));
+  // The hub log names the box and says the box reopens as unfinished maintenance:
+  t.check(errors(), ["[hub] fixture reload: Replacement did not become ready; box reopens with unfinished maintenance"]);
   const failedReload = await boxMaintenanceStatus(reloadFixture.root);
   // The record says changes began and did not complete: exclusive, unowned.
   t.check(failedReload, {

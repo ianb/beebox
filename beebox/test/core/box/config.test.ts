@@ -16,6 +16,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { loadBoxTimezone } from "../../../src/core/box/config.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 // ## No timezone configured: `null`, no warning
 void test("No timezone configured: `null`, no warning", async (t) => {
@@ -37,5 +38,8 @@ void test("No timezone configured: `null`, no warning", async (t) => {
   // ## A malformed timezone degrades to `null` (host fallback), not a thrown `RangeError`
 
   await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chciago" }));
+  const warnings = consoleLines(t, "warn");
   t.check(await loadBoxTimezone(box.root), null);
+  // The server log names the bad value and the fallback:
+  t.check(warnings(), ['Box config timezone "America/Chciago" is not a valid IANA timezone — falling back to the host timezone.']);
 });

@@ -12,6 +12,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { scanProcedures } from "../../../src/core/docs-gen/compile/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 // ## Reads name + first-line description from frontmatter
 void test("Reads name + first-line description from frontmatter", async (t) => {
@@ -63,7 +64,10 @@ void test("A card with no readable frontmatter is indexed with a placeholder, no
   const box = await makeTmpBox();
   await box.write("_config/procedures/bad.procedure.card", "not a frontmatter card\n");
 
+  const warnings = consoleLines(t, "warn");
   const out = await scanProcedures(box.root);
+  // The generator log names the card it could not read:
+  t.check(warnings(), ["[generate-docs] could not read procedure frontmatter bad.procedure.card"]);
   t.check(out, [
     {
       name: "bad",

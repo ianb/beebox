@@ -16,6 +16,7 @@ import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer, TEST_SLUG } from "../../helpers/test-route-server.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";
 import { createFakeGoogleCalendar } from "../../../src/services/google-calendar/core.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";
@@ -165,6 +166,7 @@ void test("No token file is involved:", async (t) => {
     BBX_AGENT_TOKEN: getOrCreateAgentToken(ctx.boxRoot),
   });
 
+  const serverErrors = consoleLines(t, "error");
   const calendars = await calendarsVerb(ctx.boxRoot);
   t.check(calendars, {
     ok: true,
@@ -233,6 +235,8 @@ messages:
     ok: false,
     error: { kind: "BAD_REQUEST", message: "Rejected non-read-only gws command: gmail messages delete", fix: "caller" },
   });
+  // The server logs the refused request:
+  t.check(serverErrors(), ["[trpc] mutation gmail.gws failed: Rejected non-read-only gws command: gmail messages delete"]);
 });
 
 // ## With nothing injected, each family refuses in the boxholder's two places
@@ -258,6 +262,7 @@ void test("This box has no fakes, so the server meets the same two gates a produ
     BBX_AGENT_TOKEN: getOrCreateAgentToken(ctx.boxRoot),
   });
 
+  const serverErrors = consoleLines(t, "error");
   t.check(await calendarsVerb(ctx.boxRoot), {
     ok: false,
     error: {
@@ -275,6 +280,11 @@ void test("This box has no fakes, so the server meets the same two gates a produ
       fix: "boxholder",
     },
   });
+
+  // The server logs each refusal:
+  const calendarOff = "[trpc] query calendar.available failed: Calendar is not enabled for this box. Set `googleServices.calendar: true` in `_config/box.json` (you may do this when the boxholder asks for Calendar), or enable it in box settings.";
+  const gmailOff = "[trpc] mutation gmail.track failed: Gmail is not enabled for this box. Set `googleServices.gmail: true` in `_config/box.json` (you may do this when the boxholder asks for Gmail), or enable it in box settings.";
+  t.check(serverErrors(), [calendarOff, gmailOff]);
 
   // With both switched on and no token record on this host, it is the auth gap — a
   // different sentence, still the boxholder's, and the one the agent needs to relay
@@ -299,6 +309,12 @@ void test("This box has no fakes, so the server meets the same two gates a produ
     await gwsVerb(["gmail", "messages", "list"]),
   ];
   t.check(gaps, [gap, gap, gap]);
+  const authGap = "Google auth unavailable: No secret named \"google-oauth-client-id\" exists on this machine. It can be declared (bbx secrets declare google-oauth-client-id), but only the boxholder can supply its value.";
+  t.check(serverErrors(), [
+    `[trpc] query calendar.available failed: ${authGap}`,
+    `[trpc] mutation gmail.track failed: ${authGap}`,
+    `[trpc] mutation gmail.gws failed: ${authGap}`,
+  ]);
 
   // The `tooling` profile takes the in-process path instead, and meets the same
   // gates in this process — the marker decides where the work runs, never what the

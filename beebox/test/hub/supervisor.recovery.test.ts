@@ -10,6 +10,7 @@ import "@ianbicking/tap-check/tap";
 import { Supervisor } from "../../src/hub/supervisor/core.js";
 import { makeFakeChild, type FakeChild } from "./support/fake-child.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { closeBoxMaintenance } from "../../src/lib/box-maintenance/admission.js";
 
 /** A resident hub over one temporary box, with fake children. */
@@ -49,6 +50,7 @@ async function residentSupervisor(t: Test, opts: { pidBase: number; checkReady: 
 // timer, which here is 20 ms.
 void test("An unhealthy box keeps retrying until it starts", async (t) => {
   const failuresSeen: number[] = [];
+  const warnings = consoleLines(t, "warn");
   const { supervisor } = await residentSupervisor(t, {
     pidBase: 970000,
     unhealthyRetryMs: 20,
@@ -62,6 +64,9 @@ void test("An unhealthy box keeps retrying until it starts", async (t) => {
   // Five fast attempts, then two slow ones: the sixth and seventh launches ran
   // with the failure count past the limit.
   t.check(failuresSeen, [0, 1, 2, 3, 4, 5, 6]);
+  // Entering the unhealthy state writes one line, however many slow retries follow
+  // (the 20 ms retry interval rounds to 0 minutes):
+  t.check(warnings(), ["[hub] fixture unhealthy after 5 failed starts: simulated lock held; retrying every 0 min (SIGHUP retries now)"]);
   t.check(supervisor.getStatuses()[0], {
     slug: "fixture",
     status: "running",

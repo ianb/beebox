@@ -14,6 +14,7 @@ import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
 import { searchIndexPath, searchLockPath, type SearchIndex } from "../../../src/core/search/store/core.js";
 import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 async function find(db: SearchIndex, term: string): Promise<string> {
   const result = await search(db, { term, properties: ["title", "contains", "content"] });
@@ -69,11 +70,14 @@ void test("Build: searchable cards index, operational kinds don't", async (t) =>
 
   t.check(after, "_content/notes/Garden.doc.card");
 
-  // ## A corrupted index file rebuilds silently
+  // ## A corrupted index file rebuilds without bothering the searcher
 
   await writeFile(searchIndexPath(box.root), "not a real index");
+  const warnings = consoleLines(t, "warn");
   const recovered = await openSearchIndex(box.root);
   t.check(await find(recovered.db, "tomatoes"), "_content/notes/Garden.doc.card");
+  // Silent for the person searching; the server log says why it rebuilt:
+  t.check(warnings(), ['search: could not restore index (Unexpected token \'o\', "not a real index" is not valid JSON); rebuilding']);
 
   // ## Lock contention serves the last persisted index, flagged stale
 

@@ -19,6 +19,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { runUpgrade, UpgradeStepFailedError, DirtyWorkingTreeError, type CommandRunner, type RunCommandArgs } from "../../../src/cli/commands/upgrade.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import { BoxShapeError } from "../../../src/lib/box-shape.js";
 import { acquireBoxWork, boxMaintenanceStatus, boxWorkEnvironment, withoutBoxWork } from "../../../src/lib/box-maintenance/admission.js";
 import { getStatus, getHead, getLog } from "../../../src/lib/git/core/operations.js";
@@ -116,6 +117,15 @@ function makeFakeRunner({ boxRoot, calls, failLabel, failOutput, junkFile, outpu
 
 function upgrade(boxRoot: string, runCommand: CommandRunner) {
   return runUpgrade({ to: NEW_VERSION }, { runCommand, startPath: boxRoot });
+}
+
+/** What a failed upgrade tells the operator, after reverting: the failed step, the commit it went back to, and the log. */
+function revertReport({ step, snapshotSha, boxRoot }: { step: string; snapshotSha: string; boxRoot: string }): string[] {
+  return [
+    `\nbbx upgrade failed: bbx upgrade step "${step}" failed (exit nonzero). See .output for captured command output.`,
+    `Reverted ${boxRoot} to ${snapshotSha} (code + data together) and previous engine reinstalled.`,
+    `See ${path.join(boxRoot, ".beebox/logs/upgrade.log")} for the record.`,
+  ];
 }
 
 /** The error an upgrade that must fail throws. */
@@ -285,8 +295,10 @@ void test("bbx-migrate fails partway through, after scaffolding a new, never-tra
   const snapshotSha = await getHead(boxRoot);
   const calls: string[] = [];
   const runCommand = makeFakeRunner({ boxRoot, calls, failLabel: "bbx-migrate", failOutput: "boom: migration blew up", junkFile: "untracked-scaffold.txt" });
+  const errors = consoleLines(t, "error");
   const thrown = await upgradeError(boxRoot, runCommand);
   t.check(thrown, instanceOf(UpgradeStepFailedError));
+  t.check(errors(), revertReport({ step: "bbx-migrate", snapshotSha, boxRoot }));
 
   t.check(calls, [
     "preflight-validate",
@@ -405,8 +417,11 @@ void test("The existing rollback restores tracked code and data and reinstalls t
     }
   });
   const boxRoot = await makeV3Fixture();
+  const snapshotSha = await getHead(boxRoot);
+  const errors = consoleLines(t, "error");
   const result = await upgradeError(boxRoot, makeFakeRunner({ boxRoot, calls: [], failLabel: "tsc", failOutput: "bad types" }));
   t.check(result, instanceOf(UpgradeStepFailedError));
+  t.check(errors(), revertReport({ step: "tsc", snapshotSha, boxRoot }));
   t.check(({ phase: (await boxMaintenanceStatus(boxRoot))?.phase, version: await readPinnedSpec(boxRoot) }), {
     phase: "exclusive",
     version: "0.1.0",

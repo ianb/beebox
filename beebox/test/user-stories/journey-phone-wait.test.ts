@@ -54,7 +54,8 @@ void test("A wait lives through the interval in time order, and resumes after a 
   execFileSync("git", ["-C", box.root, "commit", "-qm", "schedules"]);
   writeFileSync(join(runDir, "before.json"), JSON.stringify({ box: box.root, url: "http://localhost:3210/wt/g-paperwork-3/" }));
   const phone = (...args: string[]) => execFileSync(process.execPath, ["--import", "tsx", resolve(import.meta.dirname, "journeys/phone.ts"), runDir, ...args], {
-    encoding: "utf8", env: { ...process.env, TZ: "UTC" }, timeout: 600_000,
+    // stderr is piped, not inherited: a refusal's text reaches the check below through the thrown error.
+    encoding: "utf8", env: { ...process.env, TZ: "UTC" }, timeout: 600_000, stdio: ["ignore", "pipe", "pipe"],
   });
 
   const waited = phone("--wait", "2d");

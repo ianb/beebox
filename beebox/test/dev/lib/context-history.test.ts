@@ -113,7 +113,7 @@ void test("loadHistory parses the outer box → audit id → entries shape stric
       "fine-audit": [{ date: "2026-08-23T17:03:41.065Z", boxCommit: "boxsha", repoCommit: "reposha", initial: 41000, peak: 41000, added: 0, turns: 1 }],
     },
   });
-  t.check(warnings, [
+  const malformedWarning =
     `context-history: malformed entry for audit "broken-audit" (box "test1", index 0) is ignored and will be dropped by the next recorded run; repair it in the ledger to keep it: [
   {
     "expected": "number",
@@ -131,8 +131,8 @@ void test("loadHistory parses the outer box → audit id → entries shape stric
     ],
     "message": "Invalid input: expected number, received undefined"
   }
-]`,
-  ]);
+]`;
+  t.check(warnings, [malformedWarning]);
 
   // ## `recordRun` still records a new measurement past a malformed neighbor
   //
@@ -140,14 +140,16 @@ void test("loadHistory parses the outer box → audit id → entries shape stric
   // that blocked recording on 2026-08-23 must not block a later, unrelated
   // audit's measurement from being appended and written back.
 
-  await recordRun({
+  const { warnings: recordWarnings } = await captureWarnings(() => recordRun({
     historyPath,
     box: "test1",
     date: "2026-08-24T00:00:00Z",
     boxCommit: "boxsha2",
     repoCommit: "reposha2",
     measurements: [{ auditId: "new-audit", stats: stats({ initialTokens: 30000, peakTokens: 31000, turnCount: 2 }) }],
-  });
+  }));
+  // Recording loads the ledger first, so it reports the same malformed row once more:
+  t.check(recordWarnings, [malformedWarning]);
   const after = await loadHistory(historyPath);
   t.check(after, {
     test1: {

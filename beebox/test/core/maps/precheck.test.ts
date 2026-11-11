@@ -10,6 +10,7 @@ import type { MapTask } from "../../../src/core/maps/precheck.js";
 import { saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
 import { symlink } from "node:fs/promises";
 import { join } from "node:path";
@@ -457,7 +458,10 @@ void test("When the commit a MAP.md was generated against no longer resolves —
   });
   box.commitAll("state");
 
+  const warnings = consoleLines(t, "warn");
   const brief = await precheck({ boxRoot: box.root });
+  // The log tells the operator the map is regenerated and why the commit is missing:
+  t.check(warnings(), ['refresh-maps: recorded asOf deadbeefdeadbeefdeadbeefdeadbeefdeadbeef for "store" does not resolve — regenerating its MAP.md from the current listing. This usually means the box\'s git history was rewritten.']);
   t.check(brief.anomalies, [{ kind: "asof_unresolvable", dir: "store", asOf: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef" }]);
   t.check(brief.tasks.map((task) => ({ dir: task.dir, action: task.action, added: task.added })), [{ dir: "store", action: "create", added: [] }]);
 });

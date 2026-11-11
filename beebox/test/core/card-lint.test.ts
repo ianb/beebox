@@ -20,6 +20,7 @@ import type { LoadCardContext } from "../../src/core/card-io.js";
 import { CommentarySchema } from "../../src/schemas/commentary.js";
 import { ExtfileSchema } from "../../src/schemas/extfile.js";
 import { LandmarkSchema } from "../../src/schemas/landmark.js";
+import { consoleLines } from "../helpers/console-lines.js";
 import { FigureSchema } from "../../src/schemas/figure.js";
 import { ChatSchema } from "../../src/schemas/chat.js";
 import { ImageSchema } from "../../src/schemas/image/schema.js";
@@ -188,10 +189,13 @@ void test("A ref names a path inside the box.", async (t) => {
     "_content/inbox/email/thread-z/thread.email-thread.card",
     "---\ntype: email-thread\nthread-id: t3\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: \"#exp4\"\n---\n",
   );
+  const warnings = consoleLines(t, "warn");
   const anchorRef = await lintCardsDispatch(
     [box.path("_content/inbox/email/thread-z/thread.email-thread.card")],
     { boxRoot: box.root, ctx },
   );
+  // The server log says the ref names no file, with the card that holds it:
+  t.check(warnings(), [`resolveRefExists: ref "#exp4" in ${box.path("_content/inbox/email/thread-z/thread.email-thread.card")} names no in-box file (escapes the box, or is empty)`]);
   t.check(anchorRef, one(`${box.root}/_content/inbox/email/thread-z/thread.email-thread.card`, warn("reference", "Broken reference at messages[0].ref: #exp4 does not exist")));
 
   await box.cleanup();
@@ -279,10 +283,12 @@ void test("A ref the box namespace fence refuses says so instead.", async (t) =>
     "_content/box/notes/Meeting.doc.card",
     "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"/node_modules/beebox/box-docs/card-doc.md\" usage=\"verbatim\" %}{% /source %}\n",
   );
+  const warnings = consoleLines(t, "warn");
   const resultFence = await lintCardsDispatch(
     [boxFence.path("_content/box/notes/Meeting.doc.card")],
     { boxRoot: boxFence.root, ctx },
   );
+  t.check(warnings(), [`resolveRefExists: ref "/node_modules/beebox/box-docs/card-doc.md" in ${boxFence.path("_content/box/notes/Meeting.doc.card")} names no in-box file (escapes the box, or is empty)`]);
   t.check(
     resultFence,
     one(`${boxFence.root}/_content/box/notes/Meeting.doc.card`,

@@ -12,6 +12,7 @@ import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { consoleLines } from "../../../helpers/console-lines.js";
 import {
   HUGE_TRANSCRIPT_BYTES,
   sessionEntriesPrintable,
@@ -33,7 +34,10 @@ void test("An ordinary transcript prints", async (t) => {
 
 // ## A huge transcript is refused (loudly, on stderr)
 void test("A huge transcript is refused (loudly, on stderr)", async (t) => {
+  const errors = consoleLines(t, "error");
   t.check(transcriptPrintable({ logPath: hugePath, sessionId: "s2", allowHuge: false }), false);
+  // The file is one byte over the threshold, which both print as 25.0 MB:
+  t.check(errors(), ["Refusing to print session s2: its transcript is 25.0 MB (threshold 25.0 MB). Re-run with --allow-huge if you really want a result this size."]);
 });
 
 // ## `--allow-huge` asserts the caller really wants it
@@ -60,7 +64,9 @@ void test("Supported-API transcripts have no native file to stat, so the guard m
     timestamp: "",
     content: [{ type: "text" as const, text: "x".repeat(HUGE_TRANSCRIPT_BYTES + 1) }],
   }];
+  const errors = consoleLines(t, "error");
   t.check(sessionEntriesPrintable({ entries: hugeEntries, sessionId: "codex-1", allowHuge: false }), false);
+  t.check(errors(), ["Refusing to print session codex-1: its readable history is 25.0 MB (threshold 25.0 MB). Re-run with --allow-huge if you really want a result this size."]);
 
   t.check(sessionEntriesPrintable({ entries: hugeEntries, sessionId: "codex-1", allowHuge: true }), true);
 });

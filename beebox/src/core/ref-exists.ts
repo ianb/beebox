@@ -81,13 +81,15 @@ export function brokenRefReason(input: RefExistsInput): string {
  * exist" — the lint walk surfaces it as a broken-ref warning either way.
  */
 export async function resolveRefExists(input: RefExistsInput): Promise<boolean> {
+  // Some callers check a ref with no referring file; the log then names none.
+  const from = input.fromPath === "" ? "" : ` in ${input.fromPath}`;
   const contained = resolveContainedRef(input);
   if (contained === null) {
     // A ref that escapes the box — or names nothing at all — points at no in-box
     // file. Treat it as broken (the lint walk surfaces it as a broken-ref
     // warning), never resilient.
     console.warn(
-      `resolveRefExists: ref "${input.ref}" in ${input.fromPath} names no in-box file (escapes the box, or is empty)`
+      `resolveRefExists: ref "${input.ref}"${from} names no in-box file (escapes the box, or is empty)`
     );
     return false;
   }
@@ -95,7 +97,7 @@ export async function resolveRefExists(input: RefExistsInput): Promise<boolean> 
   // pointing outside must not be reported as an existing (valid) ref.
   const safe = await realpathContained(input.boxRoot, contained);
   if (safe === null) {
-    console.warn(`resolveRefExists: ref "${input.ref}" in ${input.fromPath} resolves outside the box via symlink`);
+    console.warn(`resolveRefExists: ref "${input.ref}"${from} resolves outside the box via symlink`);
     return false;
   }
   const target = resolve(input.boxRoot, safe);
