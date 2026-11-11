@@ -581,7 +581,9 @@ third-party scripts). The iOS bearer token in `localStorage`
 
 Temporal, `Intl.DurationFormat`, global calendars, high-precision timestamps.
 Our `Date` code is correct today (`ui/FriendlyDate.tsx`), and Safari has no
-Temporal. Rec: **reject**; revisit when Temporal is Baseline.
+Temporal. Rec was **reject**; the boxholder is open to a polyfill
+(2026-11-11), so this is now open question 2: pick a polyfill, then move date
+code to Temporal one module at a time.
 
 ### Category H — Box-authored views
 
@@ -772,16 +774,36 @@ None. Each category is small enough to do from its entry here.
   (The audit also called the `BrowsePage` context menu dead; it is not:
   `handleFileContextMenu` is wired at `pages/browse/BrowsePage.tsx:141`.)
 
+## Boxholder decisions (2026-11-11)
+
+- **Browser floor:** modern browsers; nothing old needs support. Policy text
+  for `frontend.md`: current Chrome, Safari and Firefox; Baseline "newly
+  available" features may be used, with a small fallback only where the iOS
+  app's WKWebView lacks them. Whether the iOS deployment target moves from
+  17.0 is still open (question 1 below).
+- **Approved:** A (including the A6 show-password button), B (including B12
+  `react/button-has-type` and its 69 edits), C, E1, F, H (`views.md`
+  section and H0), I (the lint ports), and the
+  `--bbx-composer-height` cleanup (the filed issue).
+- **B2 menu roles:** no preference; the plan's lean stands (arrow keys for
+  command menus, no menu role for link lists).
+- **D4 `px`→`rem`:** not wanted without a reason; stays rejected.
+- **G Temporal:** open to a polyfill, since Temporal is where dates are going.
+  Category G is reopened as "evaluate a polyfill" (question 2).
+- **Dev-agent skill:** undecided.
+
 ## Open design questions
 
-1. **Browser floor** (Category 0). Lean: keep iOS 17.0; write it down.
-2. **Dropdown roles** (B2). Lean: arrow keys for command menus, no menu role
-   for link lists.
-3. **`react/button-has-type`** (B12). Lean: adopt; the edits are mechanical.
-4. **Show-password toggle** (A6). Lean: yes on login and setup.
-5. **Dev-agent skill** — install the pinned, telemetry-off copy, or none.
-   Lean: install after Category 0 is written.
-6. **One disclosure idiom** (B13). Lean: keep `Accordion`, drop its region.
+1. **iOS deployment target.** "Modern" conflicts with iOS 17.0: `popover`
+   (iOS 18.3 per the guides' data), `light-dark()`, `text-wrap` and others
+   need a newer WebKit. Lean: raise the iOS target to 18, which removes most
+   fallback work; this is an iOS-app change (`bbx-ios-overlap`).
+2. **Temporal polyfill** (G). Evaluate `temporal-polyfill` (FullCalendar's,
+   smaller) against `@js-temporal/polyfill` (TC39's reference): size, load only
+   where `globalThis.Temporal` is missing, and which `Date` code moves first
+   (`ui/FriendlyDate.tsx`, calendar and todo date logic).
+3. **Dev-agent skill** — install the pinned, telemetry-off copy, or none.
+4. **One disclosure idiom** (B13). Lean: keep `Accordion`, drop its region.
 
 ## Knowledge audits
 
