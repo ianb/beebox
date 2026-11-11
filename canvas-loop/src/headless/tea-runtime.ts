@@ -1,5 +1,6 @@
 import { SketchUsageError, UnhandledMsgError } from "./errors.js";
 import { FrameRecorder, patchConsole } from "./recorder/frame-recorder.js";
+import type { Zoom } from "./recorder/zoom.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
 import { Sketch } from "./sketch.js";
 import { bucketTeaByFrame } from "./tea-events.js";
@@ -22,6 +23,8 @@ export interface TeaRunOptions {
   seed: number;
   fps: number;
   every: number;
+  /** Regions to write as enlarged crops beside every captured frame (`--zoom`). */
+  zooms?: readonly Zoom[];
   events: readonly TeaScriptEvent[];
   eventsPath: string | undefined;
 }
@@ -113,6 +116,7 @@ class TeaRunner {
     this.#recorder = new FrameRecorder({
       frames: options.frames,
       every: options.every,
+      ...(options.zooms === undefined ? {} : { zooms: options.zooms }),
       readPixels: () => this.#sketch.readPixels(),
       canvasReady: () => this.#sketch.width > 0 && this.#sketch.height > 0,
     });

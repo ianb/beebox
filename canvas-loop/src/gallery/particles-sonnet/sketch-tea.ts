@@ -135,7 +135,6 @@ export function init(): Model {
   return { frame: 0, particles: [], emitter: emitterAt(0), attractor: null };
 }
 
-// eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined reducer signature
 export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
   switch (msg.type) {
     case "tick":
@@ -214,7 +213,6 @@ function drawHud(params_: { v: View; model: DeepReadonly<Model>; p: Params }): v
   v.text(`palette ${p.palette}   attractor ${model.attractor === null ? "off" : "on"}`, 8, 26);
 }
 
-// eslint-disable-next-line max-params -- TEA contract: draw(view, model, params) is the framework-defined render signature
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   if (p.trails) {
     v.fill("rgba(11, 16, 32, 0.18)");

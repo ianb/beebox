@@ -24,7 +24,10 @@ All stroked shapes take the current brush: `line`, `curve`, `path`, `polygon`,
 
 - `curve(points, closed?)` draws a smooth curve through every point (the
   Catmull-Rom curve p5's `curveVertex` draws). Pass `true` to close it into
-  a loop.
+  a loop. A closed curve through 4 points is a rounded blob; for a sharp
+  corner, use `path` or put two points close together.
+- `curvePath(points, closed?)` returns the same curve as path commands, for
+  `clip(...)` or `path(...)`.
 - `path(commands)` takes `["move", x, y]`, `["line", x, y]`,
   `["quad", cx, cy, x, y]`, `["bezier", c1x, c1y, c2x, c2y, x, y]` and
   `["close"]`. Each `move` starts a separate piece. Each piece tapers on its own.
@@ -42,11 +45,19 @@ const P = { chin: [200, 260], earL: [120, 90], earR: [280, 90] } as const;
 
 `brush(name, overrides?)` sets the brush. The presets:
 
-| Name | Kind | Looks like |
-| --- | --- | --- |
-| `ink` | ink | smooth ink line; pressure thins it |
-| `pencil` | stamp | graphite: grainy, light; build tone with several strokes |
-| `bristle` | bristle | a loaded paint brush; separate bristle lines that dry out at the end |
+| Name | Kind | Looks like | Typical `strokeWeight` |
+| --- | --- | --- | --- |
+| `ink` | ink | smooth ink line; pressure thins it | 2–8 |
+| `marker` | ink | broad, flat, translucent; multiplies over what is under it | 8–24 |
+| `pencil` | stamp | graphite: grainy, light; build tone with several strokes | 2–5 |
+| `chalk` | stamp | coarse, broken by the paper grain | 8–20 |
+| `airbrush` | stamp | soft, even spray with no texture: glows and gradients | 20–80 |
+| `wash` | stamp | broad, soft-edged, translucent tone with a little paper texture: shadows | 20–80 |
+| `bristle` | bristle | a loaded paint brush; separate bristle lines that dry out on long strokes | 12–40 |
+
+Texture needs size and contrast. A brush in a colour close to the colour under
+it, or a bristle or chalk mark shorter than a few widths, reads as flat tone
+or as noise. Use `--zoom` (below) to see what a mark really looks like.
 
 Overrides change one field: `s.brush("ink", { thinning: 0.3 })`. A field
 that does not apply to the preset's kind is an error, which names the valid
@@ -116,14 +127,26 @@ s.group({ opacity: 0.6, blend: "multiply" }, () => {
 - `blendMode(mode)` sets the blend for the shapes that follow.
 - Groups nest. `push()`/`pop()` inside a group must pair inside it.
 
-Shading inside a shape: clip to the shape, then draw marks.
+Shading inside a shape: fill the shape, clip to it and draw marks, then draw
+its outline last. The clip includes the inside half of the outline, so marks
+drawn after the outline cover part of it.
 
 ```ts
-s.clip(bodyPath, () => {
+s.noStroke();
+s.fill("#7ccf6a");
+s.curve(BODY, true);                       // 1. flat base colour
+s.clip(s.curvePath(BODY, true), () => {    // 2. marks, kept inside the shape
+  s.noFill();
+  s.stroke("#3f7f3a");
   s.brush("pencil");
   s.strokeWeight(2.5);
   for (let i = 0; i < 20; i += 1) s.line(100 + i * 8, 300, 140 + i * 8, 200);
 });
+s.noFill();                                // 3. the outline, last
+s.stroke("#1f2a1f");
+s.strokeWeight(3);
+s.brush("ink");
+s.curve(BODY, true);
 ```
 
 ## Transforms
@@ -131,6 +154,19 @@ s.clip(bodyPath, () => {
 Brushes follow `translate`, `rotate` and `scale` as strokes do: `scale(2)`
 doubles a mark's position and width. Under a non-uniform scale the brush stays
 round.
+
+## Seeing texture: zoom
+
+At 1× a whole frame hides grain, bristle streaks and edges. Add zoomed crops
+to a run:
+
+```sh
+pnpm --dir canvas-loop run cli run sketch.ts --frames 1 --out out --zoom 90,80,160,120 --zoom 140,250,120,120@4
+```
+
+Each `--zoom x,y,w,h[@scale]` writes `frame-0000-zoom1.png` and so on
+(nearest-pixel, scale 3 by default) and lists it in the transcript under the
+frame. `cli zoom out/frame-0000.png x,y,w,h` crops a frame you already have.
 
 ## Determinism
 

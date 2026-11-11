@@ -151,6 +151,8 @@ export interface View {
   clip(shape: ClipShape, body: () => void): void;
   /** A smooth curve through every point (Catmull-Rom, like p5's curveVertex). */
   curve(points: readonly Vec2[], closed?: boolean): void;
+  /** The path commands `curve` would draw, for `clip(...)` or `path(...)`. */
+  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[];
   /** Strokes from now on are brushed marks (a preset name with overrides, or a Brush). */
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void;
   /** Back to plain Canvas2D strokes. */

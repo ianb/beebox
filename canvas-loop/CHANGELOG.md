@@ -5,6 +5,32 @@ us more. Every change lands here — hand-written and terse.
 
 ## Unreleased
 
+- **Brushes, gestures, paper, groups** (see [BRUSHES.md](./BRUSHES.md)).
+  `brush(name, overrides?)` / `noBrush()` turn every stroked shape into a
+  brushed mark; presets `ink`, `marker`, `pencil`, `chalk`, `airbrush`,
+  `wash`, `bristle`. `gesture({ pressure, wobble, seed })` sets pressure
+  envelopes and hand wobble. `paper({ scale, contrast, seed })` sets the
+  canvas's grain. `group({ opacity, blend }, body)`, `blendMode()`,
+  `erase()`/`noErase()`. Width comes from `strokeWeight`. Mark randomness is
+  per mark (adding a mark never changes another); `--seed` does not affect it.
+  Fills stay flat. Adds the `perfect-freehand` dependency (ink outlines).
+- **Curves.** `curve(points, closed?)` draws a Catmull-Rom curve through the
+  points; `curvePath(points, closed?)` returns its path commands for `clip` or
+  `path`. Open curves mirror their end points (no pinch on 3-point curves).
+- **`ctx` follows groups.** `s.ctx` / `v.ctx` is the context drawing lands on
+  now: inside a `group`, the group's layer. `clip` and `group` unwind any
+  unmatched `push()` from their body, even when it throws.
+- **Zoomed crops.** `run --zoom x,y,w,h[@scale]` (repeatable) writes an
+  enlarged, nearest-pixel crop beside every captured frame and lists it in the
+  transcript. `cli zoom <frame.png> <x,y,w,h[@scale]>...` crops an existing
+  frame.
+- **Sketch lint relaxed** for `src/examples/` and `src/gallery/`: `max-params`,
+  default params, function length, `1.0` literals, plain `Error`, and
+  `reverse()` are allowed there. TEA sketches there no longer need the
+  `max-params` disable comment.
+- **`SketchUsageError` moved to core** (`src/core/errors.ts`); the headless
+  errors module re-exports it.
+
 - **Claude plugin removed.** `claude-plugin/` and the `sync:claude-skill`
   script are gone, and the generated `.claude/skills/canvas-loop-sketch/` copy
   with them. The authoring loop, gallery flow, and audit norms now live in

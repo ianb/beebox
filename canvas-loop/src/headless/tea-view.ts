@@ -82,6 +82,9 @@ export class TeaView implements View {
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#sketch.curve(points, closed);
   }
+  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
+    return this.#sketch.curvePath(points, closed);
+  }
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
     this.#sketch.brush(base, overrides);
   }

@@ -226,6 +226,11 @@ export class Painter {
     this.path(curveCommands(points, closed ?? false));
   }
 
+  /** The path commands `curve` would draw: use them with `clip` or `path`. */
+  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
+    return curveCommands(points, closed ?? false);
+  }
+
   // Clip to a polygon/path for the duration of `body`, restoring afterward.
   clip(shape: ClipShape, body: () => void): void {
     const depth = this.#styleStack.length;

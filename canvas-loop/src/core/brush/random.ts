@@ -19,12 +19,17 @@ export function rand(seed: number, at: { channel: number; index: number }): numb
   return mix(seed ^ mix(at.channel * 0x9e3779b1 + mix(at.index))) / 4294967296;
 }
 
-/** Smooth 1-D value noise in [-1, 1] at position `x` (lattice spacing 1). */
-export function noise1(seed: number, at: { channel: number; x: number }): number {
+/**
+ * Smooth 1-D value noise in [-1, 1] at position `x` (lattice spacing 1). With a
+ * `period`, the lattice wraps, so the noise at `period` equals the noise at 0
+ * (a closed loop has no seam).
+ */
+export function noise1(seed: number, at: { channel: number; x: number; period?: number }): number {
   const i = Math.floor(at.x);
   const f = at.x - i;
-  const a = rand(seed, { channel: at.channel, index: i });
-  const b = rand(seed, { channel: at.channel, index: i + 1 });
+  const wrap = (k: number): number => (at.period === undefined ? k : ((k % at.period) + at.period) % at.period);
+  const a = rand(seed, { channel: at.channel, index: wrap(i) });
+  const b = rand(seed, { channel: at.channel, index: wrap(i + 1) });
   const s = f * f * (3 - 2 * f);
   return (a + (b - a) * s) * 2 - 1;
 }

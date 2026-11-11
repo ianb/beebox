@@ -43,7 +43,6 @@ export function init(): Model {
   return { animFrame: 0 };
 }
 
-// eslint-disable-next-line max-params -- TEA contract: update(model, msg, util) is the framework-defined reducer signature
 export function update(model: DeepReadonly<Model>, msg: Msg, u: Util<typeof params>): Model {
   switch (msg.type) {
     case "tick":
@@ -304,7 +303,6 @@ function drawPelican(params_: { v: View; nearFootAngle: number; farFootAngle: nu
   v.circle(headX - 4, headY - 18, 3);
 }
 
-// eslint-disable-next-line max-params -- TEA contract: draw(view, model, params) is the framework-defined render signature
 export function draw(v: View, model: DeepReadonly<Model>, _p: Params): void {
   v.background("#0b1020");
   drawGround({ v, animFrame: model.animFrame });

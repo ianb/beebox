@@ -47,3 +47,16 @@ test("path contours split at each move and mark closed subpaths", () => {
     ],
   );
 });
+
+test("an open curve leaves each end toward its neighbour (mirrored end points)", () => {
+  const [, first] = curveCommands(
+    [
+      [0, 0],
+      [30, 30],
+      [60, 0],
+    ],
+    false,
+  );
+  // With a mirrored phantom point, the first control point is P0 + (P1 - P0) / 3.
+  assert.deepEqual(first?.slice(1, 3), [10, 10]);
+});

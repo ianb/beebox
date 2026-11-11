@@ -3,7 +3,7 @@
 // grain out of it, colours it, and composites it once.
 import { getStroke } from "perfect-freehand";
 import type { Ctx2D } from "../../paint.js";
-import { rand } from "../random.js";
+import { noise1, rand } from "../random.js";
 import type { Sample } from "./sample.js";
 import type { BristleBrush, InkBrush, StampBrush } from "../types.js";
 
@@ -27,7 +27,9 @@ export function paintInk(input: KindInput, brush: InkBrush): void {
   const outline = getStroke(points, {
     size: input.width / (1 + brush.thinning),
     thinning: brush.thinning,
-    smoothing: 0.5,
+    // perfect-freehand drops outline points closer than (size × smoothing); a
+    // high value turns a small circle into a polygon.
+    smoothing: 0.08,
     streamline: 0,
     simulatePressure: false,
     last: true,
@@ -90,8 +92,9 @@ function makeBristles(input: KindInput, brush: BristleBrush): Bristle[] {
     const r2 = rand(input.seed, { channel: 22, index: i });
     const r3 = rand(input.seed, { channel: 23, index: i });
     const offset = -1 + (2 * (i + 0.5)) / n + (brush.spread * (r1 - 0.5) * 2) / n;
-    // Outer bristles carry less paint and run dry sooner.
-    const dryAt = brush.load * total * (0.7 + 0.6 * r3) * (1 - 0.35 * Math.abs(offset));
+    // Outer bristles carry less paint and run dry sooner. A short mark (under
+    // about eight widths) never runs dry, so small shapes still get paint.
+    const dryAt = (brush.load * total + input.width * 8) * (0.7 + 0.6 * r3) * (1 - 0.35 * Math.abs(offset));
     const strength = 0.55 + 0.45 * rand(input.seed, { channel: 24, index: i });
     return { offset, strength, thickness: (input.width / n) * 2.2 * (1 + brush.spread * (r2 - 0.5)), dryAt };
   });
@@ -115,7 +118,9 @@ function bristlePoints(input: KindInput, args: { b: Bristle; index: number }): B
     const dry = 1 - smoothstep([b.dryAt * 0.7, b.dryAt], c.s);
     // In the drying zone the bristle skips: short random gaps along its length.
     const gap = dry < 1 && rand(input.seed, { channel: 30 + args.index, index: Math.floor(c.s / 2.5) }) > dry ? 0 : 1;
-    const alpha = contact * dry * gap * b.strength;
+    // Paint varies slowly along each bristle, so the bristles do not read as even stripes.
+    const load = 0.7 + 0.3 * noise1(input.seed, { channel: 40 + args.index, x: c.s / 18 });
+    const alpha = contact * dry * gap * b.strength * load;
     const spread = (b.offset * input.width * (0.35 + 0.65 * c.p)) / 2;
     return {
       x: c.x + c.nx * spread,

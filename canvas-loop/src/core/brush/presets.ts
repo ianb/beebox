@@ -20,15 +20,67 @@ const PENCIL: StampBrush = {
 
 const BRISTLE: BristleBrush = {
   kind: "bristle",
-  opacity: 0.95,
+  opacity: 1,
   grain: 0.35,
   bristles: 14,
-  flow: 0.55,
-  load: 0.9,
-  spread: 0.6,
+  flow: 0.75,
+  load: 1,
+  spread: 0.9,
 };
 
-export const BRUSH_PRESETS = { ink: INK, pencil: PENCIL, bristle: BRISTLE } as const satisfies Record<string, Brush>;
+/** Broad, flat, slightly see-through; multiplies over what is under it. */
+const MARKER: InkBrush = { kind: "ink", opacity: 0.7, grain: 0.1, thinning: 0.15, blend: "multiply" };
+
+const CHALK: StampBrush = {
+  kind: "stamp",
+  opacity: 1,
+  grain: 0.8,
+  tip: "hard",
+  spacing: 0.15,
+  flow: 0.6,
+  sizeByPressure: 0.3,
+  opacityByPressure: 0.5,
+  scatter: 0.25,
+  sizeJitter: 0.4,
+};
+
+/** A soft, even spray with no paper texture: gradients and glows. */
+const AIRBRUSH: StampBrush = {
+  kind: "stamp",
+  opacity: 1,
+  grain: 0,
+  tip: "soft",
+  spacing: 0.1,
+  flow: 0.09,
+  sizeByPressure: 0.2,
+  opacityByPressure: 0.8,
+  scatter: 0,
+  sizeJitter: 0,
+};
+
+/** A broad, soft-edged, translucent wash with a little paper texture: shadows and tone. */
+const WASH: StampBrush = {
+  kind: "stamp",
+  opacity: 0.8,
+  grain: 0.45,
+  tip: "soft",
+  spacing: 0.08,
+  flow: 0.3,
+  sizeByPressure: 0.25,
+  opacityByPressure: 0.4,
+  scatter: 0.05,
+  sizeJitter: 0.15,
+};
+
+export const BRUSH_PRESETS = {
+  ink: INK,
+  marker: MARKER,
+  pencil: PENCIL,
+  chalk: CHALK,
+  airbrush: AIRBRUSH,
+  wash: WASH,
+  bristle: BRISTLE,
+} as const satisfies Record<string, Brush>;
 
 /** A preset name accepted by `brush()`. */
 export type BrushName = keyof typeof BRUSH_PRESETS;

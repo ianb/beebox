@@ -41,14 +41,26 @@ const teaExhaustiveness = {
   },
 };
 
-// Boxholder-authorized loosening (2026-07-14): sketches carry declarative
-// scene data (palettes, layer configs, creature geometry) that the preset's
-// library-code cap of 300 punishes — the fjord experiment burned edit rounds
-// compressing working code to fit. Sketch dirs only, still a hard cap.
+// Boxholder-authorized loosening for sketches only (src/examples, src/gallery).
+// 2026-07-14: sketches carry declarative scene data (palettes, layer configs,
+// creature geometry) that the preset's library-code cap of 300 punishes.
+// 2026-11-11: a sketch is a drawing iterated in short render cycles, not
+// long-lived library code; the brush round-1 drawers each rewrote working
+// helpers to satisfy these rules before their first render. Relaxed are the
+// rules they hit: positional/default params, function length, `1.0` literals,
+// plain `Error`, and in-place `reverse()`. Unused-variable and type rules stay.
 const sketchLineBudget = {
   files: ["src/examples/**/*.ts", "src/gallery/**/*.ts"],
   rules: {
     "max-lines": ["error", { max: 600, skipBlankLines: true, skipComments: true }],
+    "max-params": "off",
+    "default/no-default-params": "off",
+    "max-lines-per-function": "off",
+    "unicorn/no-zero-fractions": "off",
+    "error/no-generic-error": "off",
+    "error/require-custom-error": "off",
+    "error/no-literal-error-message": "off",
+    "unicorn/no-array-reverse": "off",
   },
 };
 

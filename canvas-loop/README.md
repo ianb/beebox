@@ -23,8 +23,14 @@ fixed timestep, randomness is seeded, and `Math.random` / `Date.now` /
 ```sh
 pnpm --dir canvas-loop run cli run <sketch.ts> \
   [--frames 120] [--events events.json] [--out out/] \
-  [--seed 42] [--fps 60] [--every 30]
+  [--seed 42] [--fps 60] [--every 30] [--zoom x,y,w,h[@scale]]...
 ```
+
+`--zoom` (repeatable) also writes an enlarged crop of that region beside every
+captured frame (`frame-0000-zoom1.png`, nearest-pixel, scale 3 by default) and
+lists it under the frame in the transcript. Use it to judge brush texture and
+edges, which a whole frame at 1× hides. To crop a frame you already have:
+`pnpm --dir canvas-loop run cli zoom out/frame-0000.png 90,80,160,120@4`.
 
 Writes `<out>/transcript.md` plus `<out>/frame-NNNN.png`. The out directory is
 overwritten each run. On success it prints only the transcript path and frame
@@ -81,12 +87,17 @@ see [TEA.md](./TEA.md#engagement-verdicts).)
 | --- | --- |
 | Canvas & time | `createCanvas(w, h)`, `width`, `height`, `frameCount`, `millis()` (= `frameCount / fps * 1000`) |
 | Drawing | `background`, `fill`, `noFill`, `stroke`, `noStroke`, `strokeWeight`, `rect`, `circle`, `ellipse`, `line`, `triangle`, `arc`, `text`, `textSize`, `textAlign` |
-| Organic shapes | `polygon(points)`, `path(commands)` (data-encoded `["move"/"line"/"quad"/"bezier"/"close", …]`), `clip(shape, () => …)` (polygon/path region for the callback) |
+| Organic shapes | `polygon(points)`, `path(commands)` (data-encoded `["move"/"line"/"quad"/"bezier"/"close", …]`), `curve(points, closed?)` (smooth curve through points), `curvePath(points, closed?)` (its path commands), `clip(shape, () => …)` (polygon/path region for the callback) |
+| Brushes & compositing | `brush`, `noBrush`, `gesture`, `paper`, `group`, `blendMode`, `erase`, `noErase` — see [BRUSHES.md](./BRUSHES.md) |
 | Gradients | `linearGradient(x1,y1,x2,y2, stops)`, `radialGradient(x,y,radius, stops)` → an opaque handle `fill`/`stroke`/`background` accept anywhere a color string is |
 | Transform | `push`, `pop`, `translate`, `rotate`, `scale` |
 | Randomness | `random()`, `random(max)`, `random(min, max)`, `randomChoice(arr)` — seeded (`--seed`) |
 | Input state | `mouseX`, `mouseY`, `mouseIsPressed`, `keysDown` (`Set<string>`) |
 | Output | `log(...args)` (frame-tagged into the transcript), `snapshot(label?)` (force-capture the frame), `handled(name)` (name this input's engagement verdict) |
+
+Types a sketch can import from `@ianbicking/canvas-loop` include `Sketch`,
+`Vec2`, `PathCommand`, `Paint`, `BlendMode`, `Brush`, `BrushName`,
+`Gesture`, `Envelope` and `Paper`.
 
 Colors are **CSS color strings only** (`"#38bdf8"`, `"tomato"`, `"rgb(…)"`) —
 no p5 numeric color overloads. Habitual `console.log/warn/error` also work; they

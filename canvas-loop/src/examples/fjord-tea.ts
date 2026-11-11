@@ -111,7 +111,6 @@ export function init(u: Util<typeof params>): Model {
   };
 }
 
-// eslint-disable-next-line max-params -- TEA contract signature
 export function update(model: DeepReadonly<Model>, msg: Msg, _u: Util<typeof params>): Model {
   switch (msg.type) {
     case "tick":
@@ -325,7 +324,6 @@ function drawBeach(a: { v: View; near: CliffLayer; beachY: number; palette: Pale
   });
 }
 
-// eslint-disable-next-line max-params -- TEA contract signature
 export function draw(v: View, model: DeepReadonly<Model>, p: Params): void {
   const palette = p.timeOfDay === "dusk" ? DUSK_PALETTE : DAY_PALETTE;
   const beachY = beachYFor(p.tide);

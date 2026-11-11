@@ -36,6 +36,9 @@ function apply(m: CtxTransform, p: Vec2): Vec2 {
   return [m.a * p[0] + m.c * p[1] + m.e, m.b * p[0] + m.d * p[1] + m.f];
 }
 
+/** Wobble noise wavelength, in device pixels. */
+const WOBBLE_CELL = 28;
+
 function stepFor(brush: Brush, width: number): number {
   switch (brush.kind) {
     case "ink":
@@ -74,10 +77,16 @@ function shapeSamples(req: MarkRequest, args: { contour: Contour; width: number;
   const samples = resample(args.contour.points, { closed: args.contour.closed, step: stepFor(req.brush, args.width) });
   const pressure = req.gesture.pressure ?? (args.contour.closed ? "even" : "taper");
   const wobble = req.gesture.wobble ?? 0;
+  const total = samples.at(-1)?.s ?? 0;
+  // A closed loop gets a whole number of noise cells around it, wrapping, so
+  // the wobble at the end meets the wobble at the start.
+  const period = args.contour.closed ? Math.max(1, Math.round(total / WOBBLE_CELL)) : undefined;
+  const cell = period === undefined ? WOBBLE_CELL : total / period;
   for (const s of samples) {
     s.p = evalEnvelope(pressure, s.t);
     if (wobble > 0) {
-      const w = wobble * noise1(args.seed, { channel: 1, x: s.s / 28 });
+      const at = period === undefined ? { channel: 1, x: s.s / cell } : { channel: 1, x: s.s / cell, period };
+      const w = wobble * noise1(args.seed, at);
       s.x += s.nx * w;
       s.y += s.ny * w;
     }

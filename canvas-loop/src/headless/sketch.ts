@@ -220,6 +220,9 @@ export class Sketch {
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#requirePainter().curve(points, closed);
   }
+  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
+    return this.#requirePainter().curvePath(points, closed);
+  }
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
     this.#requirePainter().brush(base, overrides);
   }

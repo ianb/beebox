@@ -1,5 +1,6 @@
 import { bucketByFrame, dispatchEvent } from "./events.js";
 import { FrameRecorder, patchConsole } from "./recorder/frame-recorder.js";
+import type { Zoom } from "./recorder/zoom.js";
 import type { RunResult } from "./recorder/frame-recorder.js";
 import { Sketch } from "./sketch.js";
 import type { RunMeta } from "./transcript.js";
@@ -38,6 +39,8 @@ export interface RunOptions {
   seed: number;
   fps: number;
   every: number;
+  /** Regions to write as enlarged crops beside every captured frame (`--zoom`). */
+  zooms?: readonly Zoom[];
   events: readonly ScriptEvent[];
   eventsPath: string | undefined;
 }
@@ -58,6 +61,7 @@ class CanvasLoopRunner {
     this.#recorder = new FrameRecorder({
       frames: options.frames,
       every: options.every,
+      ...(options.zooms === undefined ? {} : { zooms: options.zooms }),
       readPixels: () => this.#sketch.readPixels(),
       canvasReady: () => this.#sketch.width > 0 && this.#sketch.height > 0,
     });

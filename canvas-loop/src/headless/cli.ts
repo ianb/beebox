@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
+import { loadImage, Canvas } from "@napi-rs/canvas";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { CliError } from "./errors.js";
@@ -11,6 +12,7 @@ import { run } from "./runtime.js";
 import { isTeaModule, toTeaModule } from "./tea-load.js";
 import { parseTeaEvents } from "./tea-events.js";
 import { teaRun } from "./tea-runtime.js";
+import { encodeZoomPng, parseZoom } from "./recorder/zoom.js";
 import type { ScriptEvent } from "./events.js";
 import type { Sketch, SketchEventHandler, SketchModule } from "./sketch.js";
 
@@ -83,6 +85,24 @@ function reportGalleryResult(result: GalleryCheckResult): void {
   if (!result.ok) process.exitCode = 1;
 }
 
+/** `cli zoom <frame.png> <spec>...`: write enlarged crops of an existing frame beside it. */
+async function zoomFile(args: readonly string[]): Promise<void> {
+  const [file, ...specs] = args;
+  if (file === undefined || specs.length === 0) {
+    throw new CliError({ detail: "usage: cli zoom <frame.png> <x,y,w,h[@scale]>..." });
+  }
+  const image = await loadImage(resolve(file));
+  const canvas = new Canvas(image.width, image.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image, 0, 0);
+  const pixels = ctx.getImageData(0, 0, image.width, image.height);
+  for (const [index, spec] of specs.entries()) {
+    const out = join(dirname(resolve(file)), `${basename(file, ".png")}-crop${index + 1}.png`);
+    writeFileSync(out, encodeZoomPng(pixels, parseZoom(spec)));
+    console.log(out);
+  }
+}
+
 async function main(): Promise<void> {
   const parsed = parseArgs({
     args: process.argv.slice(2),
@@ -94,6 +114,7 @@ async function main(): Promise<void> {
       seed: { type: "string" },
       fps: { type: "string" },
       every: { type: "string" },
+      zoom: { type: "string", multiple: true },
     },
   });
   const command = parsed.positionals[0];
@@ -105,10 +126,14 @@ async function main(): Promise<void> {
     reportGalleryResult(await checkGallery());
     return;
   }
+  if (command === "zoom") {
+    await zoomFile(parsed.positionals.slice(1));
+    return;
+  }
   const sketchArg = parsed.positionals[1];
   if (command !== "run") {
     throw new CliError({
-      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [flags] | cli gallery check`,
+      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [flags] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli gallery check`,
     });
   }
   if (sketchArg === undefined) {
@@ -121,7 +146,8 @@ async function main(): Promise<void> {
   const every = intOption({ value: values.every, fallback: 30, name: "every" });
   const outDir = resolve(values.out ?? "out");
   const eventsPath = values.events;
-  const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath };
+  const zooms = (values.zoom ?? []).map((spec) => parseZoom(spec));
+  const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath, zooms };
 
   const sketchPath = resolve(sketchArg);
   const imported: Record<string, unknown> = await import(pathToFileURL(sketchPath).href);

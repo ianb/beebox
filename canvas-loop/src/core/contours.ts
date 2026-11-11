@@ -26,11 +26,24 @@ export function curveCommands(points: readonly Vec2[], closed: boolean): PathCom
   const n = points.length;
   const first = points[0];
   if (first === undefined) return [];
-  const at = (i: number): Vec2 => {
-    const index = closed ? (i + n) % n : Math.min(n - 1, Math.max(0, i));
+  const get = (index: number): Vec2 => {
     const p = points[index];
     if (p === undefined) throw new SketchUsageError({ detail: `curve() point ${index} is missing` });
     return p;
+  };
+  // An open curve's phantom end points mirror the neighbouring point, so the
+  // ends leave in the direction of the next point (no pinch on short curves).
+  const at = (i: number): Vec2 => {
+    if (closed) return get((i + n) % n);
+    if (i < 0) {
+      const [a, b] = [get(0), get(Math.min(1, n - 1))];
+      return [2 * a[0] - b[0], 2 * a[1] - b[1]];
+    }
+    if (i > n - 1) {
+      const [a, b] = [get(n - 1), get(Math.max(0, n - 2))];
+      return [2 * a[0] - b[0], 2 * a[1] - b[1]];
+    }
+    return get(i);
   };
   const commands: PathCommand[] = [["move", first[0], first[1]]];
   const segments = closed ? n : n - 1;

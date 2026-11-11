@@ -222,11 +222,11 @@ export function draw(s: Sketch): void {
 
   // legs and feet
   for (const leg of [LEG_L, LEG_R]) {
-    const x = leg[1][0] - 4;
+    const x = (leg[1]?.[0] ?? 0) - 4;
     greenPart(s, { pts: leg, heavy: 0.6, marks: () => bristleStroke(s, { color: D, weight: 9, pts: [[x, 386], [x, 438]] }) });
   }
   for (const foot of [FOOT_L, FOOT_R]) {
-    const x = foot[0][0];
+    const x = foot[0]?.[0] ?? 0;
     greenPart(s, { pts: foot, marks: () => bristleStroke(s, { color: D, weight: 12, pts: [[x - 48, 450], [x - 22, 456], [x + 2, 450]] }) });
   }
 

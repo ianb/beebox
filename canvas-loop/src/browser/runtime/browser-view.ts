@@ -95,6 +95,9 @@ export class BrowserView implements View {
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#painter.curve(points, closed);
   }
+  curvePath(points: readonly Vec2[], closed?: boolean): PathCommand[] {
+    return this.#painter.curvePath(points, closed);
+  }
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void {
     this.#painter.brush(base, overrides);
   }

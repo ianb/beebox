@@ -55,9 +55,10 @@ cover curves/gradients/clipping so a `draw` stays serializable-in-principle.
 [`src/examples/fjord-tea.ts`](./src/examples/fjord-tea.ts) is a worked port that draws a
 full tidal-fjord scene through them with zero `ctx`.
 
-The lint preset caps functions at 2 parameters; the `update`/`draw` contract
-signatures are the one sanctioned exception. Put this exact comment on each
-(and nowhere else):
+The lint preset caps functions at 2 parameters. Sketch directories
+(`src/examples/`, `src/gallery/`) turn that cap off, so a sketch there needs
+nothing. Elsewhere, the `update`/`draw` contract signatures are the one
+sanctioned exception; put this exact comment on each:
 
 ```ts
 // eslint-disable-next-line max-params -- TEA contract signature
