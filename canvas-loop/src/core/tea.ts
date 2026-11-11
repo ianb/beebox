@@ -163,6 +163,8 @@ export interface View {
   offset(points: readonly Vec2[], distance: number): Vec2[];
   /** Show the paper's texture across everything drawn so far (0..1). */
   paperTexture(amount: number): void;
+  /** Draw `body` once into a stored layer; later calls with the same key paste it. */
+  cache(key: string, body: () => void): void;
   /** Strokes from now on are brushed marks (a preset name with overrides, or a Brush). */
   brush(base: BrushName | Brush, overrides?: BrushOverrides): void;
   /** Back to plain Canvas2D strokes. */

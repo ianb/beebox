@@ -216,6 +216,23 @@ Each `--zoom x,y,w,h[@scale]` writes `frame-0000-zoom1.png` and so on
 (nearest-pixel, scale 3 by default) and lists it in the transcript under the
 frame. `cli zoom out/frame-0000.png x,y,w,h` crops a frame you already have.
 
+## Animation and interaction
+
+Brush marks are slow: a full painted page takes 1–2 seconds per frame
+headless. To animate one:
+
+- `cache(key, body)` draws `body` once into a stored layer and pastes it on
+  later calls with the same `key`. Put everything that does not move in it, and
+  draw only the moving parts each frame. The key must name what the pixels
+  depend on: when a param changes the static scene, put its value in the key
+  (`` s.cache(`sky-${p.dusk}`, …) ``). The cache keeps the transform from the first
+  call, and the 24 most recent keys.
+- A mark's randomness comes from its points, so a mark whose points move
+  re-rolls its wobble every frame: the line "boils", as in hand-drawn
+  animation. To keep it still, give it `gesture({ seed })`.
+- For interaction in a browser figure, write a TEA sketch (`*-tea.ts`, see
+  [TEA.md](./TEA.md)): pointer input and params arrive as `Msg`s.
+
 ## Determinism
 
 A render is byte-identical every time in the same runtime. The headless

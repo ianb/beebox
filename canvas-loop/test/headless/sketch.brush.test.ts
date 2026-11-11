@@ -278,3 +278,25 @@ test("a mark too faint to see is reported as a warning", () => {
   s.line(10, 20, 90, 20);
   assert.equal(warnings.length, 1, "a visible mark is not reported");
 });
+
+test("cache draws its body once per key and pastes the same pixels after", () => {
+  const s = makeSketch({ width: 60, height: 40 });
+  let runs = 0;
+  const scene = (): void => {
+    runs += 1;
+    s.stroke("#2f6b3a");
+    s.strokeWeight(14);
+    s.brush("bristle");
+    s.line(5, 20, 55, 20);
+  };
+  s.cache("scene", scene);
+  const first = Buffer.from(s.readPixels().data);
+  s.background("#ffffff");
+  s.background("rgba(0,0,0,0)");
+  s.ctx.clearRect(0, 0, 60, 40);
+  s.cache("scene", scene);
+  assert.equal(runs, 1, "the body ran once");
+  assert.ok(Buffer.from(s.readPixels().data).equals(first), "the pasted pixels match");
+  s.cache("scene-2", scene);
+  assert.equal(runs, 2, "a new key redraws");
+});

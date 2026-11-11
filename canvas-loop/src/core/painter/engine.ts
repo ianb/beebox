@@ -22,7 +22,7 @@ import type { StyleState } from "./style.js";
 import type { BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, CtxTextAlign, CtxTextBaseline, Layer, MakeLayer, Paint, PathCommand, Vec2 } from "../paint.js";
 import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon } from "../paint.js";
 import { FaintWatch } from "./faint.js";
-import { drawLayer, isShapeList, replaceInShapes } from "./layers.js";
+import { LayerCache, drawLayer, isShapeList, replaceInShapes, withComposite } from "./layers.js";
 import { paperOverlay } from "../brush/paper.js";
 
 /** Options for `group`: opacity applied once to the finished group, and its blend mode. */
@@ -52,6 +52,7 @@ export class Painter {
   // Opacity of each open group, so a mark's visible strength can be judged.
   #alphaStack: number[] = [];
   #faint: FaintWatch;
+  #cache = new LayerCache();
 
   constructor(options: { ctx: Ctx2D; width: number; height: number; makeLayer: MakeLayer; warn?: (message: string) => void }) {
     this.#ctxStack = [options.ctx];
@@ -311,6 +312,16 @@ export class Painter {
   }
 
 
+  /**
+   * Draw `body` once into a stored layer and paste that layer on later calls
+   * with the same `key`. The key must name everything the pixels depend on
+   * (including the transform at the first call); a new key redraws.
+   */
+  cache(key: string, body: () => void): void {
+    const layer = this.#cache.get(key) ?? this.#cache.set(key, this.#onLayer(body, { opacity: 1 }));
+    drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity: 1, op: this.#composite() });
+  }
+
   text(...args: [string, number, number]): void {
     const [content, x, y] = args;
     const ctx = this.ctx;
@@ -319,7 +330,7 @@ export class Painter {
     ctx.textBaseline = this.#style.textAlignV;
     if (this.#style.fillEnabled) {
       ctx.fillStyle = this.#resolvePaint(this.#style.fillColor);
-      this.#withComposite(this.#composite(), () => ctx.fillText(content, x, y));
+      withComposite(ctx, { op: this.#composite(), draw: () => ctx.fillText(content, x, y) });
     }
   }
 
@@ -334,20 +345,13 @@ export class Painter {
     return this.#style.erasing ? "destination-out" : compositeOp(this.#style.blend);
   }
 
-  #withComposite(op: string, draw: () => void): void {
-    const ctx = this.ctx;
-    const previous = ctx.globalCompositeOperation;
-    ctx.globalCompositeOperation = op;
-    draw();
-    ctx.globalCompositeOperation = previous;
-  }
 
   #paint(contours: () => Contour[]): void {
     if (this.#style.fillEnabled) {
       const ctx = this.ctx;
       const paint = this.#style.fillColor;
       ctx.fillStyle = this.#resolvePaint(paint);
-      this.#withComposite(this.#composite(), () => inPaintSpace(ctx, { paint, fill: () => ctx.fill() }));
+      withComposite(ctx, { op: this.#composite(), draw: () => inPaintSpace(ctx, { paint, fill: () => ctx.fill() }) });
     }
     this.#strokeShape(contours);
   }
@@ -359,7 +363,7 @@ export class Painter {
       const ctx = this.ctx;
       ctx.strokeStyle = this.#resolvePaint(this.#style.strokeColor);
       ctx.lineWidth = this.#style.strokeW;
-      this.#withComposite(this.#composite(), () => ctx.stroke());
+      withComposite(ctx, { op: this.#composite(), draw: () => ctx.stroke() });
       return;
     }
     const { erasing, blend } = this.#style;

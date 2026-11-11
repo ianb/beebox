@@ -91,6 +91,9 @@ export class TeaView implements View {
   paperTexture(amount: number): void {
     this.#sketch.paperTexture(amount);
   }
+  cache(key: string, body: () => void): void {
+    this.#sketch.cache(key, body);
+  }
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#sketch.curve(points, closed);
   }

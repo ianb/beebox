@@ -229,6 +229,9 @@ export class Sketch {
   paperTexture(amount: number): void {
     this.#requirePainter().paperTexture(amount);
   }
+  cache(key: string, body: () => void): void {
+    this.#requirePainter().cache(key, body);
+  }
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#requirePainter().curve(points, closed);
   }

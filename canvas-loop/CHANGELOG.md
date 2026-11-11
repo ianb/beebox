@@ -36,6 +36,8 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **`cache(key, body)`** draws a static part once and pastes it on later
+  frames, so painted scenes can animate.
 - **Review fixes.** `clip([shapes…])` now erases and blends like a single
   clip; `pop()` cannot escape a single clip; tube ends are round; brushed
   `arc` follows Canvas2D's sweep; a `path` starting with `line` has no segment

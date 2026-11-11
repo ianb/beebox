@@ -103,6 +103,9 @@ export class BrowserView implements View {
   paperTexture(amount: number): void {
     this.#painter.paperTexture(amount);
   }
+  cache(key: string, body: () => void): void {
+    this.#painter.cache(key, body);
+  }
   curve(points: readonly Vec2[], closed?: boolean): void {
     this.#painter.curve(points, closed);
   }

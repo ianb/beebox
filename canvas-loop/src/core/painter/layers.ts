@@ -68,3 +68,30 @@ export function replaceInShapes(
   parent.restore();
   drawLayer(parent, { image: scratch.image, width, height, opacity: 1, op: "source-over" });
 }
+
+/** Run `draw` with `op` as the composite operation, then put the previous one back. */
+export function withComposite(ctx: Ctx2D, args: { op: string; draw: () => void }): void {
+  const previous = ctx.globalCompositeOperation;
+  ctx.globalCompositeOperation = args.op;
+  args.draw();
+  ctx.globalCompositeOperation = previous;
+}
+
+/** Most cached layers kept at once; the oldest is dropped first. */
+const CACHE_LIMIT = 24;
+
+/** Layers stored by key for `cache()`, oldest dropped first past the limit. */
+export class LayerCache {
+  #layers = new Map<string, Layer>();
+
+  get(key: string): Layer | undefined {
+    return this.#layers.get(key);
+  }
+
+  set(key: string, layer: Layer): Layer {
+    this.#layers.set(key, layer);
+    const oldest = this.#layers.keys().next();
+    if (this.#layers.size > CACHE_LIMIT && oldest.done !== true) this.#layers.delete(oldest.value);
+    return layer;
+  }
+}
