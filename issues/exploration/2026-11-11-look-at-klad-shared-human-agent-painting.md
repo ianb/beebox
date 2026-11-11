@@ -68,7 +68,18 @@ compare:
   editor first). A dev or desktop agent runs the CLI there, and the drawing
   folder syncs to the box as ordinary files.
 - **Operator installs on the host.** Like restic, opt-in for a host whose
-  boxholders each fall within the licence. Needs a headless CLI that works
-  without the editor running, which is not yet checked.
+  boxholders each fall within the licence. The CLI works without the editor:
+  the README's agent flow makes `scene.klad` first and opens the editor
+  afterward to watch.
 - **Box builds it from source.** A Rust and Skia build in each box's home:
   heavy, and the same licence question applies to each boxholder.
+
+Install procedure, from the README (checked 2026-11-11): build from source
+only. Install Rust with rustup and `just`; on Linux also the system packages
+`pkg-config`, `libfreetype-dev`, `libfontconfig1-dev`, `libxkbcommon-dev`
+and `libwayland-dev`. Then `git clone`, `just compile` (about ten minutes the
+first time; output in `target/linux/release/` on Linux), and `klad install`
+to put `klad` on the path. There is no npm package (`klad` is a 404 on the
+registry), no `cargo install`, no Homebrew formula and no release binaries.
+Signed builds are planned. The Linux system packages need root, so a box
+cannot build it without the operator.
