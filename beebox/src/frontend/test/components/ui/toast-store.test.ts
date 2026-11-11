@@ -178,3 +178,28 @@ void test("Most errors are moments — a restart that failed, a fetch that did n
   store.dismiss(persistent.id);
   t.check(store.getSnapshot(), []);
 });
+
+// ## Expiry waits while the toasts are held
+//
+// The viewport holds the toasts while a dialog covers them. Nothing expires
+// while held, and on release each toast gets a full timer, since it has not
+// yet been seen. A persistent toast never gets one.
+void test("Expiry waits while the toasts are held", async (t) => {
+  const clock = makeFakeSchedule();
+  const store = createToastStore({ schedule: clock.schedule });
+  store.error("Save failed");
+  const armedBefore = clock.pending();
+  store.hold(true);
+  store.error("Upload failed");
+  store.error("Signed out", { persist: true });
+  const whileHeld = clock.pending();
+  clock.fireAll();
+  const afterFiringWhileHeld = store.getSnapshot().length;
+  store.hold(false);
+  const armedAfter = clock.pending();
+  clock.fireAll();
+  t.check(
+    { armedBefore, whileHeld, afterFiringWhileHeld, armedAfter, left: store.getSnapshot().map((toast) => toast.message) },
+    { armedBefore: 1, whileHeld: 0, afterFiringWhileHeld: 3, armedAfter: 2, left: ["Signed out"] },
+  );
+});

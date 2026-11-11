@@ -918,7 +918,11 @@ Deviations from the entries above, each for a reason found while doing it:
 - **F2 Permissions-Policy is narrow:** `usb=(), serial=(), hid=(),
   payment=()`. Camera, microphone, display capture, geolocation, wake lock
   and clipboard are used by the app or plausibly by box views.
-- **F3 HSTS not added;** whether the edge sends it is still unchecked.
+- **F3 HSTS:** production sent none (Cloudflare Flexible SSL, checked
+  2026-11-11), so the app sends `max-age=86400`, no subdomains. Raising it
+  is a later step. The headers also cover the hub's own pages (login, box
+  picker); before this the hub, which serves production's login page, sent
+  none of them.
 - **The views doc** is generated from `src/core/views/doc/*.ts`;
   `box-docs/` is gitignored output. Edits went to the source.
 - **D5** needed nothing: both tables already scroll horizontally.
@@ -926,8 +930,9 @@ Deviations from the entries above, each for a reason found while doing it:
   release-age gate). The engine package also depends on it: `bbx view check`
   renders box views in Node 24, which has no Temporal, and a Markdown todo
   with a due date failed there until the check loaded the polyfill.
-- **B11** labels the toast region only; the modal case still needs a
-  reproduction and a decision.
+- **B11:** the boxholder chose to pause expiry. While a `<dialog>` is open
+  the toasts' timers are held, and each gets a full 10 s once it closes
+  (`toast-store.ts` `hold`, `ToastViewport.tsx`).
 - **Pre-existing breakage fixed on the way:** the clerk typecheck failed on
   `main` (TS7016 for `@joplin/turndown-plugin-gfm`) because its tsconfig did
   not include the declaration beside `webpage-readable.ts` (`68d20d8e6`).

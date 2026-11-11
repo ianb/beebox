@@ -122,12 +122,34 @@ void test("Unauthenticated HTML navigation redirects to `/auth/login`", async (t
       t.error(error);
     }
   });
+  await loginPageHeaders(t);
   await loginAndProxy(t);
   await bogusCredentials(t);
   await discovery(t);
   await healthzAndWebhookPrefix(t);
   await revocation(t);
 });
+
+// The hub serves the login page itself, so it adds the framing and policy
+// headers a box's own pages get (webapp/document-security-headers.ts);
+async function loginPageHeaders(t: Test) {
+  const login = await fetch(`${hubBase}/auth/login`, { redirect: "manual" });
+  t.check({
+    type: login.headers.get("content-type"),
+    frameOptions: login.headers.get("x-frame-options"),
+    csp: login.headers.get("content-security-policy"),
+    referrer: login.headers.get("referrer-policy"),
+    permissions: login.headers.get("permissions-policy"),
+    hsts: login.headers.get("strict-transport-security"),
+  }, {
+    type: "text/html",
+    frameOptions: "SAMEORIGIN",
+    csp: "frame-ancestors 'self'",
+    referrer: "strict-origin-when-cross-origin",
+    permissions: "usb=(), serial=(), hid=(), payment=()",
+    hsts: "max-age=86400",
+  });
+}
 
 async function loginAndProxy(t: Test) {
   const navResponse = await fetch(`${hubBase}/test1/browse/some-card`, { redirect: "manual" });

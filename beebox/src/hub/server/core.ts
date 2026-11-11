@@ -37,6 +37,7 @@ import { proxyTarget, type Endpoint, type EndpointProvider } from "../endpoints.
 import type { BoxRuntimeStatus } from "../box-status.js";
 import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../../webapp/routes/auth/register.js";
+import { registerDocumentSecurityHeaders } from "../../webapp/document-security-headers.js";
 import { isPairingRedeemUrl } from "../../webapp/routes/pairing.js";
 import { isApiUrl } from "../../webapp/server-box-scope.js";
 import { listAccessibleBoxes, describeBoxes, type BoxListing } from "../../webapp/server-root/root-routes.js";
@@ -283,6 +284,16 @@ async function loadHubPackages() {
   return { Fastify: fastify.default, fastifyCookie: cookie.default, fastifyStatic: staticFiles.default, httpProxy: proxy.default };
 }
 
+/** Per-instance setup every hub request depends on, before any route. */
+function registerHubBasics(app: FastifyInstance, openAccess: boolean): void {
+  // Hub-owned routes consult this per-instance flag; no CLI path sets it.
+  app.decorate("openAccess", openAccess);
+  registerHubErrorHandler(app);
+  // The hub's own pages (login, box picker) get the same document headers a
+  // box's pages do; proxied box responses carry the box's.
+  registerDocumentSecurityHeaders(app);
+}
+
 /**
  * Build the hub's Fastify app, register its own surface (health, login,
  * box picker), then hijack every other request into the endpoint proxy.
@@ -298,10 +309,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
   const passBoxFor = passBoxLookup(boxRootBySlug, secretFor);
 
-  // Hub-owned routes consult this per-instance flag; no CLI path sets it.
-  app.decorate("openAccess", openAccess);
-
-  registerHubErrorHandler(app);
+  registerHubBasics(app, openAccess);
 
   // Login routes read the session cookie via @fastify/cookie.
   await app.register(fastifyCookie);

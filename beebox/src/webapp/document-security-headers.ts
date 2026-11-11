@@ -17,6 +17,10 @@ import type { FastifyInstance } from "fastify";
  *   serial, HID, payment). Camera, microphone, display capture, geolocation,
  *   wake lock and clipboard stay at their defaults: capture, screenshots,
  *   location, and box views use them.
+ * - `Strict-Transport-Security` for one day, no subdomains. Cloudflare
+ *   (Flexible SSL) did not send it as of 2026-11-11. Browsers ignore it on a
+ *   plain-HTTP response, so local dev over http is unaffected. Raising the
+ *   max-age is a later step once a day's worth has run without trouble.
  *
  * A route that already set one of these headers keeps its own value: the
  * frozen captured-page route's `sandbox` CSP, and the auth routes'
@@ -27,6 +31,7 @@ export const DOCUMENT_SECURITY_HEADERS: ReadonlyArray<readonly [string, string]>
   ["Content-Security-Policy", "frame-ancestors 'self'"],
   ["Referrer-Policy", "strict-origin-when-cross-origin"],
   ["Permissions-Policy", "usb=(), serial=(), hid=(), payment=()"],
+  ["Strict-Transport-Security", "max-age=86400"],
 ];
 
 export function registerDocumentSecurityHeaders(server: FastifyInstance): void {
