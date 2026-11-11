@@ -198,6 +198,61 @@ No options.
   separate const or another prop are not checked.
 - CSS `font-size: 11px` is not checked.
 
+## Restricted Classes (opt-in)
+
+The rule `personal-vibe-check/restricted-classes` bans configured class
+patterns or combinations outside the files that own them. Use it when a
+project has one primitive for a visual shape (a spinner, an anchored panel)
+and a copy of the shape elsewhere should fail lint. Configure it in the
+project's own config:
+
+```ts
+{
+  files: ["src/**/*.tsx"],
+  rules: {
+    "personal-vibe-check/restricted-classes": ["error", {
+      entries: [
+        { all: ["animate-spin"], allowIn: ["src/components/ui/Spinner.tsx"], message: "Use <Spinner>." },
+      ],
+    }],
+  },
+}
+```
+
+**Options:**
+
+- `entries` (required): `{ all: Pattern[], none?: Pattern[], allowIn?: string[], message: string }[]`.
+  An entry fires on a class set that holds every `all` pattern and no `none`
+  pattern. `allowIn` lists the owning files, as globs relative to ESLint's
+  working directory; from another directory they match nothing.
+- `callees` (default `["cn", "clsx", "twMerge"]`): class helpers whose
+  arguments are read, anywhere in the file.
+- `stylePosition`: `{ values: string[], allowIn?: string[], message }` bans
+  inline `style={{ position: "fixed" }}` for the listed values.
+
+**Patterns:** `[variants:]utility-glob`, where `*` matches any characters
+(`focus-visible:ring-*`). Responsive variants (`sm`, `md`, `lg`, `xl`, `2xl`)
+and `dark` are ignored; every other variant on a class must be in the
+pattern, so `hover:ring-2` does not match `focus-visible:ring-*`. `|`
+separates alternatives (`outline-none|focus:outline-none`); `!` adds an
+exclusion (`focus:outline-*!focus:outline-none`).
+
+**Reading:** string literals, template literals (a token touching `${}` is
+dropped), `a ? x : y`, `a && x`, `a || x`, and class helper arguments
+including arrays and object keys (`clsx({ fixed: open })`). The classes that
+always render are checked alone and with each conditional operand on its own.
+
+### Limitations
+
+- A class string in an identifier or member expression (`className={classes}`)
+  is not read.
+- Two conditional operands are never combined, so a banned combination split
+  across two independent operands (`a && "absolute"`, `b && "top-full z-50"`)
+  is missed.
+- `twMerge` overrides are not simulated: `cn("fixed", "static")` is reported.
+- A class string in a prop other than `className` is read only through a
+  class helper call.
+
 ## Restricting `className` on Components (opt-in)
 
 The rule `personal-vibe-check/restrict-component-classes` enforces the convention:
