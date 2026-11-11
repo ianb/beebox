@@ -32,8 +32,12 @@ in it to show:
 
 ## To decide
 
-- **What counts as present:** the chat is open in a visible tab, or open at
-  all. Show only other people, or yourself too.
+- **What counts as present (boxholder, 2026-11-11):** two states.
+  **Present** means the chat is in a focused browser tab, or open in the iOS
+  app while the app is in the foreground. **Idle** means the chat is open in
+  a tab without focus, or the app is running but not in the foreground.
+  Still to decide: whether to show yourself as well as other people, and how
+  soon a closed tab or a stopped app drops out.
 - **Typing and speaking signals:** what starts and ends them (a keystroke in
   the composer, the mic turning on, a voice recording in progress), how long
   one lasts without a new signal, and that they are never stored.
