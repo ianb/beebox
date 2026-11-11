@@ -133,7 +133,11 @@ The authored docs (README, TEA.md, CHANGELOG, a brushes reference) add about
 - **Path forms** (existing plus one new): polyline (`polygon` / `line`), bezier
   commands (`path`, existing `PathCommand`), and **`curve(points, closed?)`**
   (new: a Catmull-Rom curve through the points, p5's `curveVertex` shape). All
-  three flatten to one sampled polyline for brushes.
+  three flatten to a list of **contours**, each a polyline with a `closed`
+  flag. A `path` with two `move` commands gives two contours and no bridge
+  between them. The gesture's `t` runs 0..1 over each contour separately, so
+  each contour tapers on its own. A closed contour has no ends to taper; its
+  pressure envelope is read around the loop with no start or end.
 - **Gesture** (new): how the hand moves along a mark, as functions of `t`
   (distance along the mark, 0..1). Fields: `pressure: Envelope` and `wobble`
   (lateral jitter amplitude, in px), plus `speed: Envelope`. Set with
@@ -144,24 +148,37 @@ The authored docs (README, TEA.md, CHANGELOG, a brushes reference) add about
 - **Brush** (new): how a gesture becomes pixels. Plain data:
   `{ kind: "ink" | "stamp" | "bristle", size, opacity, grain, … }` plus
   kind-specific fields. Colour comes from the existing `stroke(paint)` and
-  `strokeWeight` scales `size`. Presets are selected by name: `brush("pencil")`,
+  `strokeWeight` scales `size`. A brush may carry a `blend` (marker uses
+  `multiply`); it applies when the mark composites onto the drawing, and a
+  non-normal `blendMode()` set by the sketch wins over it. Presets are selected by name: `brush("pencil")`,
   `brush("ink", { thinning: 0.7 })`. `noBrush()` returns to plain Canvas2D
   strokes.
 - **Paper** (new): one grain texture per canvas, fixed in canvas space,
   generated from seeded noise. Set with `paper({ grain, scale })`. A brush's
   `grain` (0..1) says how much the paper subtracts from that brush's marks.
 - **Group** (new): `group({ opacity, blend }, body)` draws `body` on an
-  offscreen layer and composites it back once. It gives group opacity with no
-  overlap darkening, a blend mode for the whole group, and erasing limited to
+  offscreen layer and composites it back once. While a group is open, every
+  drawing call, including the `ctx` escape hatch on `Sketch` and `View`, goes
+  to the group's layer: the facades' `ctx` getters return the Painter's active
+  context. A context kept in a variable from before the group stays bound to
+  its original surface. It gives group opacity applied
+  once to the combined result (opaque children that overlap do not darken;
+  translucent children still compound with each other on the layer, as in any
+  painting app), a blend mode for the whole group, and erasing limited to
   the group. Groups nest. Not a document layer: program order is the only
   ordering.
 - **Layer** (new, internal): an offscreen surface from an injected factory
   (`createCanvas` headless, a DOM canvas in the browser). Sketches never see it.
-- **Mark seed** (new): a 32-bit hash of the mark's flattened points under the
-  current transform, its brush, and its gesture, plus an optional
-  `gesture({ seed })`. Each mark seeds its own `SeededRandom` from it. The run
-  `--seed` is not an input, so a drawing does not change when the run seed
-  changes.
+- **Mark seed** (new): by default, a 32-bit hash of the mark's flattened
+  points under the current transform, its brush, and its gesture. Each mark
+  seeds its own `SeededRandom` from it. This gives *insertion stability*:
+  adding or removing another mark never changes this mark. It does not give
+  *edit stability*: moving one point of this mark changes all its jitter. An
+  explicit `gesture({ seed })` replaces the hash, so an agent can keep a
+  mark's character while adjusting its points. Random features are read by
+  arc length, so a small edit under an explicit seed changes the mark only
+  near the edit. The run `--seed` is not an input, so a drawing does not
+  change when the run seed changes.
 - **Cycle** (experiment): one write→render→look iteration by a drawer. It is
   saved as `history/cycle-N.ts` in the drawer's gallery entry.
 - **Drawer** (experiment): an agent run given the brief, the guide image, and a
@@ -196,10 +213,21 @@ Existing names kept: `stroke(paint)` (colour), `strokeWeight`, `fill`,
     `noErase()` restores the blend mode.
 - **Vocabulary lock-ins:** `curve`, `group`, `blendMode`, `erase`/`noErase`,
   `BlendMode`.
-- **First chunk:** the `Ctx2D` additions and the `makeLayer` injection in all
-  three facades, plus `group` with opacity and blend. Test: two overlapping
-  50%-opaque circles inside `group({ opacity: 0.5 })` give the same pixel in
-  the overlap as outside it.
+- **Group restoration.** `group` records the Painter's style-stack depth and
+  active context on entry. Its `finally` pops back to that depth and restores
+  that context, so a body that pushes and then throws leaves no state behind.
+  `clip` gets the same depth restore (today it pops once:
+  `canvas-loop/src/core/painter.ts:194-205`).
+- **First chunk:** the `Ctx2D` additions, the `makeLayer` injection, the
+  facades' `ctx` getters routed through the Painter, and `group` with opacity
+  and blend. Tests:
+  - Two overlapping **opaque** same-colour circles inside
+    `group({ opacity: 0.5 })` give the same pixel in the overlap as outside it.
+  - Two overlapping 50%-opaque circles inside the same group give a darker
+    overlap (the reviewer measured alpha 96 vs 63 in Skia).
+  - `s.ctx.fillRect` inside a group lands on the group layer.
+  - A body that calls `push()` and then throws leaves the stack depth and
+    composite mode as they were; the caller catches and draws normally.
 
 ### B. Gesture, mark seed, brush engine, paper
 
@@ -207,41 +235,72 @@ Existing names kept: `stroke(paint)` (colour), `strokeWeight`, `fill`,
   three brush kinds, with paper grain.
 - **Why:** the brushes are the feature.
 - **Direction:**
-  1. **Sampling.** Flatten the path in device space, using `getTransform()`, so
-     brush spacing is in real pixels under `scale()`. Resample at even
-     arc-length steps. Each sample carries `t`, position, tangent, `pressure`
-     and `speed`. Wobble moves each sample along the normal by
-     smoothed seeded noise.
-  2. **Ink** (`kind: "ink"`): perfect-freehand `getStroke` on
+  1. **Coordinates.** Brushes follow the transform the way Canvas2D strokes
+     do: `scale(2)` doubles both position and brush size. The contract:
+     - Flatten the contours in user space, then map every point to device
+       space with `getTransform()`.
+     - Brush size in device pixels is `size × strokeWeight ×
+       sqrt(|det(transform)|)`. A non-uniform scale gives a round brush, not an
+       elliptical one; this is a documented difference from Canvas2D strokes.
+     - Sample, wobble, and paint in device space on the mark's layer, under
+       an identity transform. Paper grain is read in device space, which is
+       canvas space, so it stays fixed to the canvas.
+     - A gradient paint is built under the sketch's transform, then drawn
+       through a pattern fill. If that proves unworkable in one runtime,
+       marks take solid colours only, and BRUSHES.md says so.
+     - The mark's layer covers the mark's device-space bounds, clamped to the
+       canvas. Drawing on it uses an offset of `-bounds.x, -bounds.y`, and the
+       grain is drawn with the same offset.
+     - Tests: a mark under `translate`, under non-uniform `scale`, and one that
+       crosses the canvas edge.
+  2. **Sampling.** Resample each contour at even arc-length steps in device
+     pixels. Each sample carries `t`, position, tangent, `pressure` and
+     `speed`. Wobble moves each sample along the normal by smoothed seeded
+     noise.
+  3. **Validation.** Before sampling:
+     - Every coordinate and numeric brush or gesture field must be finite;
+       otherwise raise `SketchUsageError` naming the field.
+     - `size` and `spacing` must be positive.
+     - The sampling step is at least 0.25 device px.
+     - Keyframes must be sorted by `t`; a duplicate `t` keeps the last value.
+       `t` outside 0..1 raises an error.
+     - A contour shorter than one step draws a single dab or dot.
+  4. **Ink** (`kind: "ink"`): perfect-freehand `getStroke` on
      `[x, y, pressure]` with `simulatePressure: false`. Fill the outline.
      Presets: `ink` (thinning 0.6) and `marker` (low thinning, square-ish,
-     opacity 0.8, multiply blend inside the mark).
-  3. **Stamp** (`kind: "stamp"`): draw dabs along the samples at spacing
+     opacity 0.8, `blend: "multiply"` applied when the mark composites onto
+     the drawing). Test: a marker over a coloured background darkens it.
+  5. **Stamp** (`kind: "stamp"`): draw dabs along the samples at spacing
      `size × spacing`. Dab size, alpha, angle and scatter follow pressure and
      speed through brush fields (`sizeByPressure`, `opacityByPressure`,
      `scatter`, `angle`, `tip: "round" | "soft" | "chisel"`). Dabs draw on the
      mark's layer. Presets: `pencil` (small hard tip, low flow, grain 0.8),
      `chalk` (larger, grain 0.9, scatter), `airbrush` (soft tip, very low flow,
      no grain).
-  4. **Bristle** (`kind: "bristle"`): N bristles at fixed offsets across the
+  6. **Bristle** (`kind: "bristle"`): N bristles at fixed offsets across the
      width. Each bristle follows the path offset along the normal. Its width
      and alpha follow pressure. Its paint load runs out at a seeded `t`, sooner
      for outer bristles and at low pressure, so the end of a stroke breaks into
      dry streaks. Preset: `bristle` (12 bristles, grain 0.4). Second preset if
      useful: `drybrush`.
-  5. **Grain.** Generate the paper texture once per canvas from seeded value
+  7. **Grain.** Generate the paper texture once per canvas from seeded value
      noise (fixed seed per `paper()` call) into an ImageData. Keep it as a
      layer. After a mark is drawn on its layer, draw the paper on it with
      `destination-out` at `globalAlpha = brush.grain`. Composite the mark's
-     layer onto the target with the brush opacity and the current blend mode.
+     layer onto the target with the brush opacity and the blend rule in the
+     Brush entry of the Ontology.
      The mark's layer is cropped to its bounding box.
 - **Vocabulary lock-ins:** `brush(name | Brush, overrides?)`, `noBrush()`,
   `gesture({ pressure, speed, wobble, seed })`, `paper({ grain, scale })`,
   `Envelope`, `Brush`, `BrushKind`, preset names `ink`, `marker`, `pencil`,
   `chalk`, `airbrush`, `bristle`.
-- **First chunk:** sampling, envelopes, the mark seed, and the ink brush
-  through `curve` and `path`. Test: inserting a non-overlapping mark before
-  mark B leaves B's pixels byte-identical.
+- **First chunk:** contours, sampling, envelopes, the mark seed, and the ink
+  brush through `curve` and `path`. Tests:
+  - Inserting a non-overlapping mark before mark B leaves B's pixels
+    byte-identical.
+  - Under an explicit seed, moving B's last point leaves B's first half
+    byte-identical.
+  - A `path` with two `move` commands paints no bridge between its contours.
 
 ### C. Surface on all three facades, and docs
 
@@ -331,6 +390,11 @@ A middle version drops the state-based p5 API and adds only
 existing shapes. It loses the p5 rhyme the boxholder asked for, and the guide
 alien could no longer take a brush with one line (`s.brush("ink")`).
 
+A smaller version keeps the stateful API but builds only ink, pencil with
+grain, bristle and groups before any drawing. That is now the order (see
+Implementation order): round 1 runs on that slice. The other presets, the
+docs polish and the diff tool wait for what round 1 shows.
+
 What the full plan buys, piece by piece:
 
 - **Groups:** needed for marker overlaps, shading that does not darken where
@@ -396,7 +460,8 @@ none
   `putImageData` once per paper.
 - **Document layers:** program order covers ordering (handoff decision).
 - **Live human/agent collaboration:** out of scope by the handoff.
-- **Render density / supersampling:** dropped by the boxholder (2026-11-11).
+- **Render density / supersampling:** deferred; no need shown yet (boxholder,
+  2026-11-11: "Not sure what we need render density for?").
 - **Blind judging:** the boxholder judges; drawers write accounts.
 - **Turtle path form:** considered as a fourth condition. Not in round 1,
   because outlines of a character are a poor fit for relative moves. It can be
@@ -442,24 +507,31 @@ learn from README.md, TEA.md and BRUSHES.md directly.
 
 ## Implementation order
 
-1. **A1:** `Ctx2D` additions, `makeLayer` injection, `group`, `blendMode`,
-   `erase`, with tests. Commit.
-2. **A2:** the flattener for all primitives, and `curve`. Commit.
-3. **B1:** sampling, envelopes, mark seed, ink brush. Add perfect-freehand,
-   with an ACKNOWLEDGEMENTS.md entry. Commit.
-4. **B2:** stamp brush with pencil, chalk and airbrush, plus paper grain.
+The first drawing round comes as soon as a usable slice exists, so the
+drawers' accounts steer the rest of the build (review finding, 2026-11-11).
+
+1. **A1:** `Ctx2D` additions, `makeLayer` injection, `ctx` getters through the
+   Painter, `group`, `blendMode`, `erase`, depth-restoring `clip`, with tests.
    Commit.
+2. **A2:** contours from every primitive, and `curve`. Commit.
+3. **B1:** coordinates, validation, sampling, envelopes, mark seed, ink brush.
+   Add perfect-freehand, with an ACKNOWLEDGEMENTS.md entry. Commit.
+4. **B2:** stamp brush with the `pencil` preset only, plus paper grain. Commit.
 5. **B3:** bristle brush. Commit.
-6. **C:** facades, `View` type, BRUSHES.md, README/TEA/CHANGELOG, and the
-   brush-sampler example. Commit.
-7. **D1:** brief, gallery `history/`, the guide image in the brief. Commit.
+6. **C1:** all three facades and the `View` type; a first BRUSHES.md the
+   drawers can read. Commit.
+7. **D1:** brief, gallery `history/`, the guide image. Commit.
 8. **D2:** round 1, three Opus drawers. **Checkpoint with the boxholder.**
-9. Fix the bugs round 1 exposes; tune the brushes. Commit per fix.
-10. **E:** diff command and the diff exploration over the round-1 histories.
+9. Fix the bugs round 1 exposes. Commit per fix.
+10. **B4:** the remaining presets (`marker`, `chalk`, `airbrush`) and brush
+    tuning, as round 1 directs. Commit.
+11. **C2:** README/TEA/CHANGELOG, the brush-sampler example, BRUSHES.md
+    images. Commit.
+12. **E:** diff command and the diff exploration over the round-1 histories.
     Commit.
-11. **D3:** later rounds as agreed at the checkpoint, including Sol. Gallery
+13. **D3:** later rounds as agreed at the checkpoint, including Sol. Gallery
     entries. Commit.
-12. Cross-model review of the branch, the report, and an exhibit with
+14. Cross-model review of the branch, the report, and an exhibit with
     `bin/exhibits add`. No merge.
 
 ## Rollout shape
