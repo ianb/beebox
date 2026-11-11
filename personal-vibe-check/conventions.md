@@ -293,6 +293,39 @@ List each owning file; a directory glob exempts every new file in it.
   identifier, are not read.
 - `React.createElement("input")` is not checked.
 
+## Component Name Suffixes (opt-in)
+
+The rule `personal-vibe-check/component-name-suffix` bans configured suffixes
+on component names. Use it when a project has settled one word per overlay
+kind (`Dialog`, `Popover`, `Menu`) and a `ThingModal` or `ThingPopup` would
+read as a second kind. Configure it in the project's own config:
+
+```ts
+{
+  files: ["src/**/*.tsx"],
+  rules: {
+    "personal-vibe-check/component-name-suffix": ["error", {
+      banned: { Modal: "Name it ...Dialog and render <ModalDialog>.", Popup: "Name it ...Popover or ...Menu." },
+      allowIn: ["src/components/ui/BboxOverlay.tsx"],
+    }],
+  },
+}
+```
+
+**Options:** `banned`, a map from a suffix to the message naming the agreed
+word; `allowIn`, files skipped entirely, as globs relative to ESLint's working
+directory (as in `restricted-classes`).
+
+A name is checked when it starts with an upper-case letter and belongs to a
+function declaration or a `const` whose value is a function expression, an
+arrow function, or a `memo(...)`/`forwardRef(...)` call.
+
+### Limitations
+
+- It checks names only, not what the component renders.
+- Classes, anonymous default exports, destructured names and components
+  built another way (`const X = makeComponent()`) are not checked.
+
 ## Restricting `className` on Components (opt-in)
 
 The rule `personal-vibe-check/restrict-component-classes` enforces the convention:
