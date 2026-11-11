@@ -13,7 +13,7 @@ import { MODEL_ID, normalizeModelId } from "../../src/shared/model-ids.js";
 // ## Retired IDs translate forward
 //
 // Opus 5, Opus 4.8, and the old `[1m]` variant fold into Opus 5.5; the Fable
-// `[1m]` variant folds into Fable 5.1 (1M context is native to the 5-tier).
+// `[1m]` variant folds into Fable 5.2 (1M context is native to the 5-tier).
 void test("Opus 5, Opus 4.8, and the old [1m] variant fold into Opus 5.5; the Fable [1m]...", async (t) => {
   t.check(normalizeModelId("claude-opus-5"), "claude-opus-5-5");
 
@@ -21,7 +21,7 @@ void test("Opus 5, Opus 4.8, and the old [1m] variant fold into Opus 5.5; the Fa
 
   t.check(normalizeModelId("claude-opus-4-8[1m]"), "claude-opus-5-5");
 
-  t.check(normalizeModelId("claude-fable-5[1m]"), "claude-fable-5-1");
+  t.check(normalizeModelId("claude-fable-5[1m]"), "claude-fable-5-2");
 });
 
 // Sonnet 5 folds into Sonnet 5.5 and Haiku 4.5 into Haiku 5.5, the models the
@@ -36,10 +36,14 @@ void test("Sonnet 5 folds into Sonnet 5.5 and Haiku 4.5 into Haiku 5.5, the mode
   t.check(MODEL_ID.haiku, "claude-haiku-5-5");
 });
 
-// Fable 5 itself is retired the same way: a chat or procedure card that pinned
-// it keeps working on Fable 5.1.
+// Fable 5 and Fable 5.1 are retired the same way: a chat or procedure card
+// that pinned either keeps working on Fable 5.2, the model `fable` now names.
 void test("Fable 5 itself is retired the same way:", async (t) => {
-  t.check(normalizeModelId("claude-fable-5"), "claude-fable-5-1");
+  t.check(normalizeModelId("claude-fable-5"), "claude-fable-5-2");
+
+  t.check(normalizeModelId("claude-fable-5-1"), "claude-fable-5-2");
+
+  t.check(MODEL_ID.fable, "claude-fable-5-2");
 });
 
 // GPT-5.6 Luna moves to GPT-6 Luna; GPT-5.6 Sol and GPT-6 Sol move to GPT-6.1

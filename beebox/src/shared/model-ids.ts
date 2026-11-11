@@ -18,7 +18,7 @@ export const MODEL_ID = {
   haiku: "claude-haiku-5-5",
   sonnet: "claude-sonnet-5-5",
   opus: "claude-opus-5-5",
-  fable: "claude-fable-5-1",
+  fable: "claude-fable-5-2",
   luna: "gpt-6-luna",
   terra: "gpt-5.6-terra",
   sol: "gpt-6.1-sol",
@@ -34,7 +34,7 @@ export const MODEL_ID = {
  * may still carry, mapped to their current replacement. Older Opus IDs fold
  * into Opus 5.5; Sonnet 5 folds into Sonnet 5.5; Haiku 4.5 folds into Haiku
  * 5.5; GPT-5.6 Luna folds into GPT-6 Luna; GPT-5.6 and GPT-6 Sol fold into
- * GPT-6.1 Sol; Fable 5 and its `[1m]` variant fold into Fable 5.1 (1M context
+ * GPT-6.1 Sol; Fable 5, its `[1m]` variant, and Fable 5.1 fold into Fable 5.2 (1M context
  * is native to the 5-tier — the `[1m]` suffix was a Claude Code convention
  * that no longer exists).
  */
@@ -46,6 +46,7 @@ const RETIRED_MODEL_IDS: Record<string, string> = {
   "claude-haiku-4-5-20251001": MODEL_ID.haiku,
   "claude-fable-5": MODEL_ID.fable,
   "claude-fable-5[1m]": MODEL_ID.fable,
+  "claude-fable-5-1": MODEL_ID.fable,
   "gpt-5.6-luna": MODEL_ID.luna,
   "gpt-5.6-sol": MODEL_ID.sol,
   "gpt-6-sol": MODEL_ID.sol,

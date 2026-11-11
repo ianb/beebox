@@ -47,7 +47,7 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
   // disagreed and Haiku sat at the top of one of them.
   claude: [
     { label: "Default (Opus)", model: null },
-    { label: "Fable 5.1", model: MODEL_ID.fable },
+    { label: "Fable 5.2", model: MODEL_ID.fable },
     { label: "Opus 5.5", model: MODEL_ID.opus },
     // GLM rides the claude engine via Z.ai's Anthropic-compatible endpoint;
     // a box without a granted `glm` key fails the turn with the setup refusal.

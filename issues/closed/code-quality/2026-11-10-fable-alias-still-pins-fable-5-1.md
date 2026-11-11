@@ -6,7 +6,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Claude Code 2.1.321
 labels: [sdk-update]
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-10):** MODEL_ID.fable now claude-fable-5-2; claude-fable-5-1 folds into it; picker label Fable 5.2 (2026-11-10, main checkout)
 
 Claude Code 2.1.321 (2026-11-09): *"Added Claude Fable 5.2
 (`claude-fable-5-2`), now the default Fable model — 1M context, $8/$40 per
