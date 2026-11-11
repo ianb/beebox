@@ -215,6 +215,11 @@ export default [
       "personal-vibe-check/restrict-component-classes": ["error", { matchAll: true }],
     },
   },
+  // 100vh overshoots on mobile Safari: use the dvh forms. Opt-in rule (Tailwind-specific).
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: { "personal-vibe-check/no-viewport-height-class": "error" },
+  },
   {
     // Same options as the preset, plus an allowance for TanStack Router's
     // `throw redirect(...)` pattern — the router catches thrown Redirects

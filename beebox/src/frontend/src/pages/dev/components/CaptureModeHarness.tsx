@@ -294,7 +294,7 @@ function OverlayDemo() {
 
 export function CaptureModeHarness() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-warm-50 to-warm-200 p-6 space-y-8">
+    <div className="min-h-dvh bg-gradient-to-b from-warm-50 to-warm-200 p-6 space-y-8">
       <div className="max-w-3xl mx-auto space-y-8">
         <section>
           <h2 className="text-sm font-semibold text-warm-700 mb-2">Pending capture bubble — every caption</h2>

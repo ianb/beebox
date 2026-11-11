@@ -9,6 +9,8 @@
  *     composition. On with `react: true`.
  *   - `aria-label-needs-role` — aria-label on div/span/p/i/b needs a role.
  *     On with `react: true`.
+ *   - `no-viewport-height-class` — bans Tailwind h-screen / min-h-screen /
+ *     max-h-screen. Tailwind-specific, so opt-in per project.
  *
  * Typically consumed via `vibeCheck()` options rather than registered
  * directly, but the plugin is exported in case a project wants to use the
@@ -17,6 +19,7 @@
 
 import ariaLabelNeedsRole from "./rules/aria-label-needs-role.ts";
 import imeSafeEnter from "./rules/ime-safe-enter.ts";
+import noViewportHeightClass from "./rules/no-viewport-height-class.ts";
 import restrictComponentClasses from "./rules/restrict-component-classes.ts";
 
 const plugin = {
@@ -25,6 +28,7 @@ const plugin = {
     "restrict-component-classes": restrictComponentClasses,
     "ime-safe-enter": imeSafeEnter,
     "aria-label-needs-role": ariaLabelNeedsRole,
+    "no-viewport-height-class": noViewportHeightClass,
   },
 };
 

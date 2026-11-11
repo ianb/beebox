@@ -136,6 +136,26 @@ or drop the label. No options.
   cannot see what they render.
 - It does not check that the chosen role accepts a name.
 
+## Viewport Height Classes (opt-in, Tailwind)
+
+The rule `personal-vibe-check/no-viewport-height-class` bans `h-screen`,
+`min-h-screen`, `max-h-screen` (and `h-[100vh]` spellings) in `className`
+strings. They are `100vh`, which overshoots the visible area on mobile Safari;
+use `h-dvh`, `min-h-dvh`, `max-h-dvh`. It is not in the preset because it is
+Tailwind-specific. Enable it in a Tailwind project's own config:
+
+```ts
+{ files: ["src/**/*.{ts,tsx}"], rules: { "personal-vibe-check/no-viewport-height-class": "error" } }
+```
+
+No options.
+
+### Limitations
+
+- Checks string literals and template text inside a `className` attribute,
+  including `cn(...)` arguments and conditionals. Class names built in a
+  separate const or another prop are not checked.
+
 ## Restricting `className` on Components (opt-in)
 
 The rule `personal-vibe-check/restrict-component-classes` enforces the convention:
