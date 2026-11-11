@@ -101,3 +101,8 @@ The guide-by-guide evidence is in
   containment with `min-h-dvh`.
 - Decide first: the browser floor (iOS 17.0 today, unwritten), which sets
   about 30 of the leans.
+
+**2026-11-11:** The plan's adoption work landed on `main` (see the "Implementation
+status" section of the plan). Still open: whether to install the skill for dev
+agents, the modal-toast behaviour (B11), an HSTS check at the edge, and Trusted
+Types (F4, held).
