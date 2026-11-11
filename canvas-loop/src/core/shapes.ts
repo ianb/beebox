@@ -27,7 +27,13 @@ export function tubePath(points: readonly Vec2[], options: TubeOptions): PathCom
   const profile = options.profile ?? "even";
   validateEnvelope(profile, "tube profile");
   const centre = pathContours(curveCommands(points, false), 0.5)[0]?.points ?? [];
-  const samples = resample(centre, { closed: false, step: Math.max(0.5, options.width / 8) });
+  let length = 0;
+  for (const [i, p] of centre.entries()) {
+    const q = centre[i + 1];
+    if (q !== undefined) length += Math.hypot(q[0] - p[0], q[1] - p[1]);
+  }
+  // Step small enough that even a very short tube keeps both ends.
+  const samples = resample(centre, { closed: false, step: Math.max(0.01, Math.min(options.width / 8, length / 2)) });
   if (samples.length < 2) throw new SketchUsageError({ detail: "tube needs at least two distinct points" });
   const left: Vec2[] = [];
   const right: Vec2[] = [];
@@ -47,8 +53,9 @@ export function tubePath(points: readonly Vec2[], options: TubeOptions): PathCom
       return [s.x + Math.cos(a) * r, s.y + Math.sin(a) * r];
     });
   };
-  // Left side forward, round end, right side back, round start.
-  const ring = [...left, ...cap(samples.length - 1, Math.PI), ...right.toReversed(), ...cap(0, 0)];
+  // Left side forward, round end (sweeping through the forward direction),
+  // right side back, round start (sweeping through the backward direction).
+  const ring = [...left, ...cap(samples.length - 1, 0), ...right.toReversed(), ...cap(0, Math.PI)];
   const [first, ...rest] = ring;
   if (first === undefined) return [];
   return [["move", first[0], first[1]], ...rest.map(([x, y]): PathCommand => ["line", x, y]), ["close"]];

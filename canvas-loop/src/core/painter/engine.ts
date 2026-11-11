@@ -19,10 +19,10 @@ import { curveCommands, ellipseContour, pathContours } from "../contours.js";
 import { SketchUsageError } from "../errors.js";
 import { initialStyle } from "./style.js";
 import type { StyleState } from "./style.js";
-import type { BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxTextAlign, CtxTextBaseline, Layer, MakeLayer, Paint, PathCommand, Vec2 } from "../paint.js";
+import type { BlendMode, ClipShape, Ctx2D, Ctx2DGradient, CtxImageData, CtxTextAlign, CtxTextBaseline, Layer, MakeLayer, Paint, PathCommand, Vec2 } from "../paint.js";
 import { compositeOp, inPaintSpace, isPathShape, resolveGradient, tracePath, tracePolygon } from "../paint.js";
 import { FaintWatch } from "./faint.js";
-import { drawLayer, fillShapes, isShapeList, maskLayer } from "./layers.js";
+import { drawLayer, isShapeList, replaceInShapes } from "./layers.js";
 import { paperOverlay } from "../brush/paper.js";
 
 /** Options for `group`: opacity applied once to the finished group, and its blend mode. */
@@ -235,17 +235,14 @@ export class Painter {
   // Clip to a polygon/path (or the union of several) for the duration of `body`, restoring afterward.
   clip(shape: ClipShape | readonly ClipShape[], body: () => void): void {
     if (isShapeList(shape)) {
-      const m = this.ctx.getTransform();
-      const layer = this.#onLayer(body, 1);
-      const mask = this.#makeLayer({ width: this.width, height: this.height });
-      mask.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
-      fillShapes(mask.ctx, shape);
-      maskLayer(layer, { mask, width: this.width, height: this.height });
-      drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity: 1, op: "source-over" });
+      this.#clipUnion(shape, body);
       return;
     }
     const depth = this.#styleStack.length;
+    const savedFloor = this.#floor;
     this.push();
+    // The body may not pop the clip's own save.
+    this.#floor = depth + 1;
     try {
       const ctx = this.ctx;
       if (isPathShape(shape)) tracePath(ctx, shape);
@@ -253,8 +250,23 @@ export class Painter {
       ctx.clip();
       body();
     } finally {
+      this.#floor = depth;
       while (this.#styleStack.length > depth && this.pop());
+      this.#floor = savedFloor;
     }
+  }
+
+  /**
+   * Clip to the union of several shapes. The body draws on a copy of what is
+   * already there (so erase and blend modes act on it as with a single-shape
+   * clip); the union region of the parent is then replaced by the result.
+   */
+  #clipUnion(shapes: readonly ClipShape[], body: () => void): void {
+    const parent = this.ctx;
+    const transform = parent.getTransform();
+    const layer = this.#onLayer(body, { opacity: 1, start: parent.getImageData(0, 0, this.width, this.height) });
+    const mask = this.#makeLayer({ width: this.width, height: this.height });
+    replaceInShapes(parent, { layer, mask, shapes, transform, width: this.width, height: this.height });
   }
 
   /**
@@ -267,15 +279,17 @@ export class Painter {
     if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
       throw new SketchUsageError({ detail: `group opacity must be a number in 0..1, got ${opacity}` });
     }
-    const layer = this.#onLayer(body, opacity);
+    const layer = this.#onLayer(body, { opacity });
     const op = compositeOp(options.blend ?? "normal");
     drawLayer(this.ctx, { image: layer.image, width: this.width, height: this.height, opacity, op });
   }
 
   /** Run `body` drawing onto a fresh full-canvas layer; state changes inside do not leak out. */
-  #onLayer(body: () => void, opacity: number): Layer {
+  #onLayer(body: () => void, options: { opacity: number; start?: CtxImageData }): Layer {
+    const { opacity, start } = options;
     const m = this.ctx.getTransform();
     const layer = this.#makeLayer({ width: this.width, height: this.height });
+    if (start !== undefined) layer.ctx.putImageData(start, 0, 0);
     layer.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
     const savedFloor = this.#floor;
     const savedStyle = { ...this.#style };

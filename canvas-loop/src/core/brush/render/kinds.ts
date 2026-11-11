@@ -148,8 +148,29 @@ function strokeRun(ctx: Ctx2D, args: { run: readonly BristlePoint[]; flow: numbe
 }
 
 /** Separate bristle lines that narrow with pressure and break up as they run dry. */
+/**
+ * How far past the centreline a bristle mark can reach, in device pixels: the
+ * outermost bristle's offset (with spread and drift) plus half its thickest line.
+ */
+export function bristleReach(width: number, brush: BristleBrush): number {
+  const n = Math.max(1, Math.round(brush.bristles));
+  const offset = 1 + (brush.spread * 2) / n + BRISTLE_DRIFT;
+  const thickest = (width / n) * 2.2 * (1 + brush.spread / 2);
+  return (offset * width) / 2 + thickest / 2;
+}
+
 export function paintBristle(input: KindInput, brush: BristleBrush): void {
   const { ctx } = input;
+  const only = input.samples.length === 1 ? input.samples[0] : undefined;
+  if (only !== undefined) {
+    // A mark shorter than one step: one dab of paint, as wide as the brush at this pressure.
+    ctx.globalAlpha = brush.flow;
+    ctx.beginPath();
+    ctx.arc(only.x, only.y, (input.width / 2) * (0.35 + 0.65 * only.p), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    return;
+  }
   ctx.lineCap = "butt";
   ctx.lineJoin = "round";
   ctx.strokeStyle = "#000000";

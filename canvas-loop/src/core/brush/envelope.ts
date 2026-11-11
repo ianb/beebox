@@ -43,7 +43,9 @@ export function validateEnvelope(env: Envelope, field: string): void {
   }
 }
 
-function keyframes(env: readonly (readonly [number, number])[], t: number): number {
+function keyframes(raw: readonly (readonly [number, number])[], t: number): number {
+  // A duplicate t keeps the last value: drop earlier frames at the same t.
+  const env = raw.filter((frame, i) => raw[i + 1]?.[0] !== frame[0]);
   let before: readonly [number, number] | undefined;
   for (const frame of env) {
     if (frame[0] > t) {
@@ -53,7 +55,6 @@ function keyframes(env: readonly (readonly [number, number])[], t: number): numb
       const s = f * f * (3 - 2 * f);
       return before[1] + (frame[1] - before[1]) * s;
     }
-    // A duplicate t keeps the last value: later frames overwrite `before`.
     before = frame;
   }
   return before?.[1] ?? 1;

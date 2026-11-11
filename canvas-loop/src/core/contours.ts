@@ -88,8 +88,10 @@ function flattenBezier(out: Vec2[], args: { from: Vec2; c1: Vec2; c2: Vec2; to: 
 export function pathContours(commands: readonly PathCommand[], step: number): Contour[] {
   const contours: Contour[] = [];
   let current: Vec2[] = [];
-  let start: Vec2 = [0, 0];
-  const last = (): Vec2 => current.at(-1) ?? start;
+  // Canvas2D has no current point until the first command; a drawing command
+  // then starts a subpath where it is (line) or at its first control point.
+  let start: Vec2 | undefined;
+  const last = (fallback: Vec2): Vec2 => current.at(-1) ?? start ?? fallback;
   const finish = (closed: boolean): void => {
     if (current.length > 0) contours.push({ points: current, closed });
     current = [];
@@ -102,11 +104,17 @@ export function pathContours(commands: readonly PathCommand[], step: number): Co
         current = [start];
         break;
       case "line":
+        if (start === undefined) {
+          start = [cmd[1], cmd[2]];
+          current = [start];
+          break;
+        }
         if (current.length === 0) current = [start];
         current.push([cmd[1], cmd[2]]);
         break;
       case "quad": {
-        const from = last();
+        const from = last([cmd[1], cmd[2]]);
+        start ??= from;
         if (current.length === 0) current = [from];
         // Elevate the quadratic to a cubic so one flattener serves both.
         const c1: Vec2 = [from[0] + ((cmd[1] - from[0]) * 2) / 3, from[1] + ((cmd[2] - from[1]) * 2) / 3];
@@ -115,7 +123,8 @@ export function pathContours(commands: readonly PathCommand[], step: number): Co
         break;
       }
       case "bezier": {
-        const from = last();
+        const from = last([cmd[1], cmd[2]]);
+        start ??= from;
         if (current.length === 0) current = [from];
         flattenBezier(current, { from, c1: [cmd[1], cmd[2]], c2: [cmd[3], cmd[4]], to: [cmd[5], cmd[6]], step });
         break;
@@ -140,8 +149,12 @@ export function ellipseContour(args: {
   end: number;
   step: number;
 }): Contour {
-  const sweep = args.end - args.start;
-  const full = Math.abs(sweep) >= Math.PI * 2 - 1e-9;
+  // Canvas2D's clockwise arc: a sweep of a full turn or more is the whole
+  // ellipse; otherwise the end wraps forward to within one turn of the start.
+  const turn = Math.PI * 2;
+  const raw = args.end - args.start;
+  const full = raw >= turn - 1e-9;
+  const sweep = full ? turn : ((raw % turn) + turn) % turn;
   const n = Math.max(8, segmentsFor(Math.abs(sweep) * Math.max(args.rx, args.ry), args.step));
   const points: Vec2[] = [];
   const count = full ? n : n + 1;

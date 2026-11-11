@@ -24,3 +24,14 @@ test("envelopes: taper rises from near zero, presets clamp, keyframes ease", () 
     "a duplicate t keeps the last value",
   );
 });
+
+test("duplicate keyframe positions: the later value holds just before the position too", async () => {
+  const { evalEnvelope: ev } = await import("../../../src/core/brush/envelope.js");
+  const env: readonly (readonly [number, number])[] = [
+    [0, 0],
+    [0.5, 0.2],
+    [0.5, 0.8],
+    [1, 1],
+  ];
+  assert.ok(ev(env, 0.499) > 0.75, `got ${ev(env, 0.499)}`);
+});

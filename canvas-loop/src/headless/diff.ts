@@ -2,7 +2,7 @@
 // changed between two frames, for the open question "how should an agent see
 // whether its change helped?". Writes every view; which ones to keep is
 // decided by the diff exploration (see the canvas-brushes plan).
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Canvas, loadImage } from "@napi-rs/canvas";
 import type { SKRSContext2D } from "@napi-rs/canvas";
@@ -35,6 +35,13 @@ async function loadFrame(path: string): Promise<Frame> {
   return { width: image.width, height: image.height, data, canvas };
 }
 
+/** A pixel's brightness as seen over mid grey (so erasing to transparent reads as a real change of tone). */
+function greyedLum(data: Uint8ClampedArray, i: number): number {
+  const alpha = (data[i * 4 + 3] ?? 0) / 255;
+  const rgb = (data[i * 4] ?? 0) + (data[i * 4 + 1] ?? 0) + (data[i * 4 + 2] ?? 0);
+  return rgb * alpha + 3 * 128 * (1 - alpha);
+}
+
 function changedMask(a: Frame, b: Frame): { mask: Uint8Array; stats: DiffStats } {
   const mask = new Uint8Array(a.width * a.height);
   let changed = 0;
@@ -48,8 +55,8 @@ function changedMask(a: Frame, b: Frame): { mask: Uint8Array; stats: DiffStats }
     for (let c = 0; c < 4; c += 1) d = Math.max(d, Math.abs((a.data[i * 4 + c] ?? 0) - (b.data[i * 4 + c] ?? 0)));
     deltaSum += d;
     if (d > THRESHOLD) {
-      const lumA = (a.data[i * 4] ?? 0) + (a.data[i * 4 + 1] ?? 0) + (a.data[i * 4 + 2] ?? 0);
-      const lumB = (b.data[i * 4] ?? 0) + (b.data[i * 4 + 1] ?? 0) + (b.data[i * 4 + 2] ?? 0);
+      const lumA = greyedLum(a.data, i);
+      const lumB = greyedLum(b.data, i);
       mask[i] = lumB <= lumA ? 1 : 2;
       changed += 1;
       const x = i % a.width;
@@ -190,6 +197,8 @@ export async function writeDiff(before: string, args: { after: string; outDir: s
   }
   const { mask, stats } = changedMask(a, b);
   mkdirSync(args.outDir, { recursive: true });
+  // A rerun into the same directory must not leave the previous run's change crops behind.
+  for (const name of readdirSync(args.outDir)) if (/^change-\d+\.png$/.test(name)) rmSync(join(args.outDir, name));
   const files: [string, Buffer][] = [
     ["side-by-side.png", sideBySide(a, b)],
     ["highlight.png", highlight(b, mask)],

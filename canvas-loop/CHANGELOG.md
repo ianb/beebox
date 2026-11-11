@@ -36,6 +36,12 @@ us more. Every change lands here — hand-written and terse.
   stops)` fills an ellipse; `paperTexture(amount)` shows the paper across the
   page. A mark too faint to see adds a transcript warning. Bristles wander
   sideways so long strokes do not stripe.
+- **Review fixes.** `clip([shapes…])` now erases and blends like a single
+  clip; `pop()` cannot escape a single clip; tube ends are round; brushed
+  `arc` follows Canvas2D's sweep; a `path` starting with `line` has no segment
+  from the origin; thick bristle marks are not cropped and very short ones
+  paint; short tubes work; duplicate pressure keyframes hold the last value on
+  both sides; `cli diff` reads erased pixels as lighter and clears old crops.
 - **`cli diff`** (experimental): changed-pixel highlight (darker/lighter),
   per-region before/after crops, side by side, and stats. TEA sketches there no longer need the
   `max-params` disable comment.

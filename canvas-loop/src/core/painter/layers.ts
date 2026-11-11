@@ -1,6 +1,6 @@
 // Layer compositing for the Painter: drawing a finished layer back onto its
 // parent, and masking a layer to the union of several shapes.
-import type { ClipShape, Ctx2D, Layer, LayerImage } from "../paint.js";
+import type { ClipShape, Ctx2D, CtxTransform, Layer, LayerImage } from "../paint.js";
 import { isPathShape, tracePath, tracePolygon } from "../paint.js";
 
 /** Draw a full-canvas layer image onto `ctx` at device scale, once. */
@@ -32,4 +32,22 @@ export function fillShapes(ctx: Ctx2D, shapes: readonly ClipShape[]): void {
 export function isShapeList(shape: ClipShape | readonly ClipShape[]): shape is readonly ClipShape[] {
   const first = shape[0];
   return first !== undefined && Array.isArray(first[0]);
+}
+
+/**
+ * Replace the part of `parent` inside the union of `shapes` with `layer`'s
+ * pixels there (`mask` is a scratch layer). Outside the shapes, `parent` is
+ * untouched; inside, transparent result pixels stay transparent.
+ */
+export function replaceInShapes(
+  parent: Ctx2D,
+  args: { layer: Layer; mask: Layer; shapes: readonly ClipShape[]; transform: CtxTransform; width: number; height: number },
+): void {
+  const { layer, mask, width, height } = args;
+  const m = args.transform;
+  mask.ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+  fillShapes(mask.ctx, args.shapes);
+  maskLayer(layer, { mask, width, height });
+  drawLayer(parent, { image: mask.image, width, height, opacity: 1, op: "destination-out" });
+  drawLayer(parent, { image: layer.image, width, height, opacity: 1, op: "source-over" });
 }
