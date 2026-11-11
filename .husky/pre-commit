@@ -148,6 +148,12 @@ if echo "$layout_staged" | grep -qE '\.(ts|tsx|mts|cts|js|mjs|cjs)$|(^|/)package
   run_in beebox pnpm --silent layout-check
 fi
 
+# UI doc coverage: every export of components/ui/ is named in beebox/frontend.md
+# and every <Name> its primitives section lists exists.
+if git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMRD | grep -qE '^beebox/src/frontend/src/|^beebox/frontend\.md$'; then
+  run_in beebox pnpm --silent ui-check
+fi
+
 # Docs-only commits need nothing further — typecheck/lint add nothing.
 if [ -n "$staged" ] && ! echo "$staged" | grep -qv '\.md$'; then
   exit 0

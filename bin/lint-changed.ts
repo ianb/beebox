@@ -185,6 +185,18 @@ export function withLayoutCheck(commands: LintCommand[], changed: string[]): Lin
   return [...commands, { label: "pnpm layout-check", cwd: "beebox", argv: ["pnpm", "--silent", "layout-check"] }];
 }
 
+/**
+ * The UI doc-coverage check, on the same paths the pre-commit hook gates it on
+ * (`.husky/pre-commit`: the frontend source or `beebox/frontend.md`, deletions
+ * included). Like the layout check, a root plan that delegates to beebox's
+ * `lint:changed` leaves it to that child run.
+ */
+export function withUiCheck(commands: LintCommand[], changed: string[]): LintCommand[] {
+  const needed = changed.some((path) => path.startsWith("beebox/src/frontend/src/") || path === "beebox/frontend.md");
+  if (!needed || commands.some((command) => command.label === BEEBOX_LINT_CHANGED)) return commands;
+  return [...commands, { label: "pnpm ui-check", cwd: "beebox", argv: ["pnpm", "--silent", "ui-check"] }];
+}
+
 // ── the I/O shell ───────────────────────────────────────────────────────────
 
 interface Args {
@@ -295,10 +307,13 @@ function main(argv: string[]): number {
   const args = parseArgs(argv);
   const changed = changedPaths({ base: args.base, cwd: REPO_ROOT });
   const paths = existing(changed);
-  const commands = withLayoutCheck(
-    args.root
-      ? dispatchPlan({ paths, packageDirs: packageOwnerDirs(REPO_ROOT), hasScript, base: args.base })
-      : beeboxCommands(paths),
+  const commands = withUiCheck(
+    withLayoutCheck(
+      args.root
+        ? dispatchPlan({ paths, packageDirs: packageOwnerDirs(REPO_ROOT), hasScript, base: args.base })
+        : beeboxCommands(paths),
+      changed,
+    ),
     changed,
   );
   if (commands.length === 0) {
