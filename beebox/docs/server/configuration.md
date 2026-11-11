@@ -140,8 +140,9 @@ The boxes sign in with one long-lived token. On a laptop with a browser,
 `claude setup-token` prints a token good for about a year; store it under
 `claude-oauth-token` and grant it to every box (`bbx secrets set
 claude-oauth-token`, `bbx secrets grant <slug> claude-oauth-token`, or Admin →
-Secrets). `add-box.sh` carries the grant into a new box's own store with the
-rest of its share. The server puts the token in the agent's environment as
+Secrets). `add-box.sh` grants it to each box it adds, when the master store
+holds it, and carries the grant into the box's own store with the rest of its
+share. The server puts the token in the agent's environment as
 `CLAUDE_CODE_OAUTH_TOKEN` for first-party runs and in the `claude auth status`
 probes, which then report `authMethod: "oauth_token"`
 (`src/core/claude-oauth-token.ts`). When it expires, mint a new one and set it
