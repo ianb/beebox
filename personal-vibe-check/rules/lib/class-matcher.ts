@@ -7,8 +7,9 @@
  * Reading. A class value is split into the unconditional tokens and a list of
  * conditional operands (each branch of `a ? x : y`, the right side of
  * `a && x`, each key of an object argument). Sources are string literals,
- * template literals (a token that touches a `${}` boundary is partial and is
- * dropped), conditional and logical expressions, and the arguments of the
+ * template literals (a token that touches a `${}` boundary is joined from the
+ * interpolation's static string spellings, or dropped as partial when it has
+ * none), conditional and logical expressions, and the arguments of the
  * configured class helpers (`cn`, `clsx`, `twMerge`), including nested arrays
  * and object keys. Identifiers, member expressions and other calls are
  * invisible: their classes cannot be known here.
@@ -162,19 +163,94 @@ function asOperands(value: ClassValue): ClassValue {
   return { unconditional: [], operands: candidateSets(value).filter((set) => set.length > 0) };
 }
 
-function templateTokens(quasis: unknown[]): ClassToken[] {
-  const tokens: ClassToken[] = [];
-  for (const [index, quasi] of quasis.entries()) {
-    if (!isRecord(quasi) || !isRecord(quasi.value) || typeof quasi.value.cooked !== "string")
-      continue;
-    const text = quasi.value.cooked;
-    const pieces = text.split(/\s+/);
-    // A piece that touches a `${}` boundary is part of a larger token whose spelling is unknown.
-    if (index > 0 && !/^\s/.test(text)) pieces.shift();
-    if (index < quasis.length - 1 && !/\s$/.test(text)) pieces.pop();
-    tokens.push(...tokensOf(pieces.join(" ")));
+/** At most this many spellings of one glued token; more is treated as unknown. */
+const MAX_SPELLINGS = 8;
+
+/** Every string `node` can evaluate to, or null when any branch is not a static string. */
+function staticStrings(node: unknown): string[] | null {
+  if (!isRecord(node)) return null;
+  switch (node.type) {
+    case "Literal":
+      return typeof node.value === "string" ? [node.value] : null;
+    case "TemplateLiteral": {
+      const quasis = Array.isArray(node.quasis) ? node.quasis : [];
+      const [only] = quasis;
+      return quasis.length === 1 && isRecord(only) && isRecord(only.value) && typeof only.value.cooked === "string"
+        ? [only.value.cooked]
+        : null;
+    }
+    case "TSAsExpression":
+    case "TSSatisfiesExpression":
+    case "TSNonNullExpression":
+      return staticStrings(node.expression);
+    case "ConditionalExpression": {
+      const consequent = staticStrings(node.consequent);
+      const alternate = staticStrings(node.alternate);
+      return consequent === null || alternate === null ? null : [...new Set([...consequent, ...alternate])];
+    }
+    default:
+      return null;
   }
-  return tokens;
+}
+
+/** Every spelling of `before` followed by every spelling of `after`; null past the cap. */
+function joinSpellings(before: string[], after: string[]): string[] | null {
+  const joined = [...new Set(before.flatMap((left) => after.map((right) => left + right)))];
+  return joined.length > MAX_SPELLINGS ? null : joined;
+}
+
+function cookedText(quasi: unknown): string {
+  return isRecord(quasi) && isRecord(quasi.value) && typeof quasi.value.cooked === "string"
+    ? quasi.value.cooked
+    : "";
+}
+
+/**
+ * Reads a template literal. A token that touches a `${}` boundary without
+ * whitespace is built from the text and the interpolation's static spellings
+ * (`hover:${a ? "x" : "y"}` is `hover:x` or `hover:y`); when an interpolation
+ * is not a static string the token is partial and dropped. An interpolation
+ * with whitespace on both sides is read as a class value of its own.
+ */
+function readTemplate(
+  template: { quasis: unknown[]; expressions: unknown[] },
+  read: (node: unknown) => ClassValue,
+): ClassValue {
+  const { quasis, expressions } = template;
+  const unconditional: ClassToken[] = [];
+  const operands: ClassToken[][] = [];
+  const nested: ClassValue[] = [];
+  /** Spellings of the token being built (text since the last whitespace); null when partial. */
+  let current: string[] | null = [""];
+  const finish = (): void => {
+    if (current !== null) {
+      const sets = current.map((text) => tokensOf(text)).filter((set) => set.length > 0);
+      const [only] = sets;
+      if (sets.length === 1 && only !== undefined) unconditional.push(...only);
+      else operands.push(...sets);
+    }
+    current = [""];
+  };
+  for (const [index, quasi] of quasis.entries()) {
+    for (const [pieceIndex, piece] of cookedText(quasi).split(/\s+/).entries()) {
+      if (pieceIndex > 0) finish();
+      current = current === null ? null : joinSpellings(current, [piece]);
+    }
+    const expression = expressions[index];
+    if (expression === undefined) continue;
+    const next = cookedText(quasis[index + 1]);
+    const lastQuasi = index + 1 === quasis.length - 1;
+    const glueAfter = lastQuasi ? next !== "" && !/^\s/.test(next) : !/^\s/.test(next);
+    const glueBefore = current === null || current.length !== 1 || current[0] !== "";
+    if (!glueBefore && !glueAfter) {
+      nested.push(read(expression));
+      continue;
+    }
+    const spellings = staticStrings(expression);
+    current = current === null || spellings === null ? null : joinSpellings(current, spellings);
+  }
+  finish();
+  return merge([{ unconditional, operands }, ...nested]);
 }
 
 function objectKeyOperands(properties: unknown[]): ClassValue {
@@ -221,10 +297,7 @@ function readExpression(node: unknown, context: ReadContext): ClassValue {
     case "TemplateLiteral": {
       const quasis = Array.isArray(node.quasis) ? node.quasis : [];
       const expressions = Array.isArray(node.expressions) ? node.expressions : [];
-      return merge([
-        { unconditional: templateTokens(quasis), operands: [] },
-        ...expressions.map(read),
-      ]);
+      return readTemplate({ quasis, expressions }, read);
     }
     case "ConditionalExpression":
       return merge([asOperands(read(node.consequent)), asOperands(read(node.alternate))]);

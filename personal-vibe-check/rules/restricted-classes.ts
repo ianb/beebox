@@ -116,6 +116,28 @@ interface CompiledEntry extends ClassEntryPatterns {
   message: string;
 }
 
+function inArguments(call: Record<string, unknown>, child: unknown): boolean {
+  return Array.isArray(call.arguments) && call.arguments.includes(child);
+}
+
+/** Whether the class reader reads `child` as part of `parent`'s value. */
+function readerLooksInto(parent: Rule.Node, child: Rule.Node): boolean {
+  const type: string = parent.type;
+  switch (type) {
+    case "TSAsExpression":
+    case "TSSatisfiesExpression":
+    case "TSNonNullExpression":
+    case "TemplateLiteral":
+      return true;
+    case "ConditionalExpression":
+      return isRecord(parent) && parent.test !== child;
+    case "LogicalExpression":
+      return isRecord(parent) && (parent.operator !== "&&" || parent.right === child);
+    default:
+      return false;
+  }
+}
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "problem",
@@ -228,13 +250,28 @@ const rule: Rule.RuleModule = {
       }
     }
 
-    /** A helper call already read as part of a `className` value or an enclosing helper call. */
+    /**
+     * Whether the read of an enclosing `className` or helper call reaches
+     * `node`: walk up through the nodes the reader looks into (wrappers,
+     * template expressions, branches, helper arguments) and stop at any other
+     * parent, such as `.trim()` or a non-helper call, which hides `node`.
+     */
     function readByAncestor(node: Rule.Node): boolean {
-      return context.sourceCode.getAncestors(node).some((ancestor) => {
-        if (attributeName(ancestor) === "className") return true;
-        const name = calleeName(ancestor);
-        return name !== null && callees.has(name);
-      });
+      let child: Rule.Node = node;
+      let throughArray = false;
+      for (let parent: Rule.Node | null = node.parent; parent !== null; parent = parent.parent) {
+        const name = calleeName(parent);
+        if (name !== null && callees.has(name)) return isRecord(parent) && inArguments(parent, child);
+        const parentType: string = parent.type;
+        if (parentType === "JSXExpressionContainer") {
+          const attribute = parent.parent;
+          return !throughArray && attribute !== null && attributeName(attribute) === "className";
+        }
+        if (parent.type === "ArrayExpression") throughArray = true;
+        else if (!readerLooksInto(parent, child)) return false;
+        child = parent;
+      }
+      return false;
     }
 
     return {

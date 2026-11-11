@@ -8,7 +8,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { parseSourceFile } from "../layout/scan/imports.js";
 import { docCoverageProblems, UI_INTERNALS, type UiExport, type UiImport } from "./doc-coverage.js";
-import { exportedValueNames, importedNames, isDocumentedKind } from "./exports.js";
+import { ALL_EXPORTS, exportedValueNames, importedNames, isDocumentedKind } from "./exports.js";
 
 const BEEBOX = resolve(import.meta.dirname, "../../..");
 const COMPONENTS = join(BEEBOX, "src/frontend/src/components");
@@ -40,11 +40,13 @@ function internalImports(): UiImport[] {
   const found: UiImport[] = [];
   for (const path of sourceFiles(join(BEEBOX, "src/frontend/src"))) {
     const text = readFileSync(path, "utf8");
-    if (![...names].some((name) => text.includes(name))) continue;
+    if (!text.includes("import * as") && ![...names].some((name) => text.includes(name))) continue;
     for (const use of importedNames(parse(path, text))) {
-      if (!names.has(use.name) || !use.specifier.startsWith(".")) continue;
+      if (!(names.has(use.name) || use.name === ALL_EXPORTS) || !use.specifier.startsWith(".")) continue;
       const target = resolve(dirname(path), use.specifier);
-      if (target === UI || target.startsWith(`${UI}/`)) found.push({ name: use.name, file: relative(COMPONENTS, path) });
+      if (target === UI || target.startsWith(`${UI}/`)) {
+        for (const name of use.name === ALL_EXPORTS ? names : [use.name]) found.push({ name, file: relative(COMPONENTS, path) });
+      }
     }
   }
   return found;

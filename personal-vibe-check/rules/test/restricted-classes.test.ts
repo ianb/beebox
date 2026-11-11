@@ -130,6 +130,42 @@ describe("restricted-classes: reading class values", () => {
     });
   });
 
+  it("checks a helper call whose result the enclosing read does not consume", () => {
+    tester.run("restricted-classes", rule, {
+      valid: [],
+      invalid: [
+        invalid('<div className={cn("animate-spin").trim()} />', { errors: [spinError] }),
+        invalid('<div className={pick(cn("animate-spin"))} />', { errors: [spinError] }),
+        invalid('<div className={cn(a ? "x" : "y")[0] + cn("animate-spin")} />', { errors: [spinError] }),
+        invalid('<div className={cn(pick(cn("animate-spin")))} />', { errors: [spinError] }),
+      ],
+    });
+  });
+
+  it("joins a template interpolation to the text it touches", () => {
+    const hover: Options = { entries: [{ all: ["hover:animate-spin"], message: "No hover spin." }] };
+    const hoverError = classes("hover:animate-spin", "No hover spin.");
+    tester.run("restricted-classes", rule, {
+      valid: [
+        // `hover:` is a variant, so the branch is `hover:animate-none`, not `animate-spin`.
+        valid('<div className={`hover:${a ? "animate-none" : "p-2"}`} />', hover),
+        valid('<div className={`hover:${a ? "animate-spin" : "animate-none"}`} />'),
+        valid("<div className={`${a}animate-spin`} />"),
+        valid("<div className={`animate-${a}`} />"),
+        valid('<div className={`animate-${a ? "spin" : "none"}x`} />'),
+      ],
+      invalid: [
+        invalid('<div className={`hover:${a ? "animate-spin" : "animate-none"}`} />', {
+          options: hover,
+          errors: [hoverError],
+        }),
+        invalid('<div className={`animate-${a ? "spin" : "none"} p-2`} />', { errors: [spinError] }),
+        invalid('<div className={`p-2 ${a ? "animate-spin" : "p-1"}`} />', { errors: [spinError] }),
+        invalid('<div className={`p-2 ${"animate-spin"} p-1`} />', { errors: [spinError] }),
+      ],
+    });
+  });
+
   it("skips a variant the pattern does not list", () => {
     tester.run("restricted-classes", rule, {
       valid: [valid('<div className="hover:animate-spin" />')],
