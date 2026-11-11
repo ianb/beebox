@@ -139,16 +139,18 @@ The authored docs (README, TEA.md, CHANGELOG, a brushes reference) add about
   each contour tapers on its own. A closed contour has no ends to taper; its
   pressure envelope is read around the loop with no start or end.
 - **Gesture** (new): how the hand moves along a mark, as functions of `t`
-  (distance along the mark, 0..1). Fields: `pressure: Envelope` and `wobble`
-  (lateral jitter amplitude, in px), plus `speed: Envelope`. Set with
+  (distance along the mark, 0..1). Fields: `pressure: Envelope`, `wobble`
+  (lateral jitter amplitude, in px), and `seed`. (Implementation note: `speed`
+  was left out of the first slice; see Open design questions.) Set with
   `gesture({...})`. Not a brush property: one gesture works with any brush.
 - **Envelope** (new): a value over `t` in 0..1. One of: a number (constant);
   a preset name (`"even"`, `"taper"`, `"taper-in"`, `"taper-out"`, `"swell"`,
   `"press"`); or keyframes `[[t, v], …]` interpolated smoothly.
 - **Brush** (new): how a gesture becomes pixels. Plain data:
-  `{ kind: "ink" | "stamp" | "bristle", size, opacity, grain, … }` plus
-  kind-specific fields. Colour comes from the existing `stroke(paint)` and
-  `strokeWeight` scales `size`. A brush may carry a `blend` (marker uses
+  `{ kind: "ink" | "stamp" | "bristle", opacity, grain, … }` plus
+  kind-specific fields. Colour comes from the existing `stroke(paint)`, and
+  width from `strokeWeight` alone (implementation note: a separate brush
+  `size` multiplier was dropped as a second name for the same thing). A brush may carry a `blend` (marker uses
   `multiply`); it applies when the mark composites onto the drawing, and a
   non-normal `blendMode()` set by the sketch wins over it. Presets are selected by name: `brush("pencil")`,
   `brush("ink", { thinning: 0.7 })`. `noBrush()` returns to plain Canvas2D
@@ -239,7 +241,7 @@ Existing names kept: `stroke(paint)` (colour), `strokeWeight`, `fill`,
      do: `scale(2)` doubles both position and brush size. The contract:
      - Flatten the contours in user space, then map every point to device
        space with `getTransform()`.
-     - Brush size in device pixels is `size × strokeWeight ×
+     - Brush width in device pixels is `strokeWeight ×
        sqrt(|det(transform)|)`. A non-uniform scale gives a round brush, not an
        elliptical one; this is a documented difference from Canvas2D strokes.
      - Sample, wobble, and paint in device space on the mark's layer, under
@@ -471,9 +473,9 @@ none
 
 ## Open design questions
 
-- **Speed in the gesture.** The agent has no real speed. Lean: keep `speed` as
-  an envelope that only affects stamp spacing and bristle dry-out, and drop it
-  if no drawer uses it.
+- **Speed in the gesture.** The agent has no real speed. Not built in the
+  first slice; add it as an envelope (stamp spacing, bristle dry-out) only if
+  round-1 drawers ask for that control.
 - **Default gesture.** Lean: `pressure: "taper"` for open paths and `"even"`
   with light seeded variation for closed shapes.
 - **Brush presets vs raw kinds.** Lean: drawers use presets with overrides;
