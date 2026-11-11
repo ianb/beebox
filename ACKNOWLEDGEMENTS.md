@@ -28,6 +28,12 @@ Add an entry in the same commit that lands the idea. Name the source as its proj
 - **What we took:** Distinct Start and Stop recording tasks across Siri, Shortcuts, and system controls, with audio preserved independently of transcription.
 - **Where it landed:** `ios-app/BeeBox/Intents/VoiceNoteIntents.swift`, `Services/VoiceNoteCoordinator.swift`, and `ios-app/BeeBoxControls/BeeBoxControls.swift`.
 
+### A (more) Modern CSS Reset, by Andy Bell
+
+- **Source:** https://piccalil.li/blog/a-more-modern-css-reset/ (blog post; no licence stated; we wrote our own rule from the idea)
+- **What we took:** One global `prefers-reduced-motion` rule that sets animation and transition durations near zero on every element; we added a spinner exemption that slows it instead.
+- **Where it landed:** `beebox/src/frontend/src/index.css`
+
 ### Agent Skills, by addyosmani (Addy Osmani)
 
 - **Source:** https://github.com/addyosmani/agent-skills (MIT)

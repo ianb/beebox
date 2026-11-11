@@ -9,8 +9,8 @@ import { ringBox, RING_DURATION_MS, RING_PADDING } from "../../lib/ui-scan/ring"
  * role), `pointer-events: none` so it never intercepts the click it is inviting,
  * removed on a timer. It tracks the target's box on every frame while it is up,
  * so a control that moves — a scroll settling, the keyboard opening — keeps its
- * ring. Under `prefers-reduced-motion` the ring is static; the pulse is behind
- * `motion-safe:`.
+ * ring. Under `prefers-reduced-motion` the ring is static: the global rule in
+ * `index.css` stops the pulse.
  *
  * Deliberately not a spotlight: no mask, no popover, no modal layer. Taking over
  * the screen is the part of a guided tour this feature rejected.
@@ -44,7 +44,7 @@ export function ControlRing({ target, onDone }: { target: HTMLElement; onDone: (
     <div
       ref={ref}
       aria-hidden="true"
-      className="fixed z-50 rounded-md border-2 border-accent ring-4 ring-accent/30 pointer-events-none motion-safe:animate-pulse"
+      className="fixed z-50 rounded-md border-2 border-accent ring-4 ring-accent/30 pointer-events-none animate-pulse"
       style={{
         top: `${initial.top}px`,
         left: `${initial.left}px`,

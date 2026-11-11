@@ -349,7 +349,7 @@ export function Menu({ trigger, children, align: alignArg, vertical: verticalArg
               } : undefined}
               style={coords}
               className={cn(
-                "bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain motion-safe:transition-[width] motion-safe:duration-150 motion-safe:ease-out",
+                "bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain transition-[width] duration-150 ease-out",
                 dense ? "py-0.5" : "py-1",
                 width,
               )}
@@ -358,13 +358,13 @@ export function Menu({ trigger, children, align: alignArg, vertical: verticalArg
                   PlacePill) remounts this wrapper on every panel change, which
                   also re-triggers useOpenMenuFocus's re-anchor observer. The
                   slide direction reflects whether the new panel is deeper
-                  (right) or shallower (left); motion-safe: leaves it an instant
-                  swap under prefers-reduced-motion. */}
+                  (right) or shallower (left); the global reduced-motion rule
+                  in index.css makes it an instant swap. */}
               <div
                 key={currentPageIndex}
                 className={cn(
-                  direction === "right" && "motion-safe:animate-menu-page-in-right",
-                  direction === "left" && "motion-safe:animate-menu-page-in-left",
+                  direction === "right" && "animate-menu-page-in-right",
+                  direction === "left" && "animate-menu-page-in-left",
                 )}
               >
                 <MenuPanelScope value={ctxValue}>{children}</MenuPanelScope>

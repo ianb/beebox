@@ -15,6 +15,7 @@
 
 import { useLightbox } from "../../LightboxProvider";
 import type { UploadState } from "../../../pages/capture/api";
+import { Spinner } from "../../ui/Spinner";
 
 export function CapturePhotoStrip({ states, previews, includeControlIds }: { states: UploadState[]; previews: (string | null)[]; includeControlIds: boolean }) {
   const lightbox = useLightbox();
@@ -78,7 +79,7 @@ function PhotoTile({ index, state, src, onOpen, id }: { index: number; state: Up
       <img src={src} alt="" className={`w-full h-full object-cover ${state === "uploading" ? "opacity-50" : ""}`} />
       {state === "uploading" ? (
         <span className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
-          <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <Spinner size="md" tone="onDark" />
         </span>
       ) : null}
       {state === "failed" ? (

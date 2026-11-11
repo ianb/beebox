@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { useMaterial } from "./material";
+import { Spinner } from "./Spinner";
 
 export type ButtonIntent =
   | "primary"
@@ -131,27 +132,6 @@ function buildClasses({ intent, shape, size, iconOnly, fullWidth, extra, materia
   const widthClass = fullWidth && shape === "rect" ? "w-full" : "";
   const intentClass = intent === "ghost" && material ? MATERIAL_GHOST : INTENT_CLASSES[intent];
   return cn(BASE_CLASSES, intentClass, shapeClass, sizeClass, widthClass, extra);
-}
-
-// ---------- spinner ----------
-
-function Spinner() {
-  return (
-    <svg
-      className="animate-spin w-4 h-4"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
-  );
 }
 
 // ---------- content rendering ----------

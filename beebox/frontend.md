@@ -162,6 +162,8 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 
 A page's own supporting components live in `pages/<x>/components/`; shared ones go in `src/frontend/src/components/`, and primitives in `components/ui/`. A component that is a nav, region, main area, or list renders its own landmark or role; never wrap another component in one from outside. Each area of a screen has at most one `intent="primary"` action.
 
+Motion respects `prefers-reduced-motion` through one global rule in `src/frontend/src/index.css`: every CSS animation and transition runs near-instantly, except `.bbx-spinner`, which slows. Do not add `motion-safe:` per site. Scripted motion checks `prefersReducedMotion()` (`lib/reduced-motion.ts`).
+
 Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-debug-log.md). When a change can affect the two-pane layout (`<Stack hideOnMobile>`, `<MobileBackButton>`), also check it at phone width (`set viewport 375 800`).
 
 Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `duplicate-id` in the [tours](docs/testing/tours.md) catches collisions). The box agent and `bin/browse` address controls by it (`src/frontend/src/lib/ui-scan/resolve.ts`). Per-row controls get one only when a unique derived id is obvious. Never rename an existing id; iOS mirrors some of them.
@@ -209,6 +211,7 @@ Every control also has an accessible name, which screen readers, the box agent, 
 - `<Heading level={2|3}>` — section heading. Renders a real `h2`/`h3`; the level sets the look (2: lg semibold, 3: sm semibold). Pick the level from the page outline, never for size.
 - `<Hint>` — secondary explanatory text under a heading or control: a small muted `<p>`. Inline metadata beside other content (a timestamp in a `Row`) stays `<Text size="xs" tone="muted">`.
 - `<ErrorText>` — an error message: a small danger-colored `<p>`. Not a live region; the component that shows a new error owns any announcement.
+- `<Spinner>` — the indeterminate progress glyph, decorative (`aria-hidden`); name the work in text, a label or `aria-busy`. `size` (`sm`/`md`), `tone` (`current` takes the text color, `onDark` is white). The only owner of `animate-spin` (`restricted-classes` lint rule). Under reduced motion it turns at a third of its speed.
 - `<StatusMessage>` — a pane's placeholder while it has nothing to show (loading, empty, not found): padded. `role="status"`. Pass `busy` while loading, so screen readers hold the announcement until the result replaces the loading text. Other progress text ("Saving…") is not a live region. Errors use `<ErrorText>`.
 - `<Text>` — typography primitive for text no role above covers. `as` (span/p/div/h1..h6), `tone`, `size`, `weight`, `italic`, `mono`, `truncate`, `center`, `uppercase` (uppercase + tracking-wide, for small section headings), `breakAll` (break long URLs across any character).
 

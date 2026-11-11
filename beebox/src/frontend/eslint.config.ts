@@ -225,6 +225,26 @@ export default [
     files: ["src/**/*.{ts,tsx}"],
     rules: { "personal-vibe-check/no-px-font-size-class": "error" },
   },
+  // One owner per visual shape: a copy of a primitive's classes elsewhere is
+  // a duplicate. Each entry lists the files that own the shape (`allowIn`,
+  // relative to this config); docs/plans/ui-primitives-dedup.md adds the rest.
+  {
+    files: ["src/**/*.tsx"],
+    rules: {
+      "personal-vibe-check/restricted-classes": [
+        "error",
+        {
+          entries: [
+            {
+              all: ["animate-spin"],
+              allowIn: ["src/components/ui/Spinner.tsx"],
+              message: "Use <Spinner> from components/ui/Spinner.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   {
     // Same options as the preset, plus an allowance for TanStack Router's
     // `throw redirect(...)` pattern — the router catches thrown Redirects

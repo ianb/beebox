@@ -17,6 +17,7 @@ import { CloseButton } from "../../../ui/CloseButton";
 import { useLightbox } from "../../../LightboxProvider";
 import { humanBytes } from "@shared/human-bytes";
 import type { ImageItem, FileItem } from "../../../../input/emission-store";
+import { Spinner } from "../../../ui/Spinner";
 
 /**
  * UI-side attachment record (pairs ChatImageAttachment payload with preview
@@ -70,15 +71,12 @@ export function AttachmentPanel({
 function PendingThumb() {
   return (
     <div
-      className="w-16 h-16 rounded border border-warm-300 bg-warm-200 flex items-center justify-center"
+      className="w-16 h-16 rounded border border-warm-300 bg-warm-200 text-warm-600 flex items-center justify-center"
       role="status"
       title="Processing image…"
       aria-label="Processing image"
     >
-      <svg className="w-5 h-5 animate-spin text-warm-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z" />
-      </svg>
+      <Spinner size="md" />
     </div>
   );
 }
