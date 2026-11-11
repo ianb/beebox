@@ -5,7 +5,7 @@ model: gpt-6-sol
 driver: opus-5.5
 cycles: 10
 tier: mutable
-harness-commit: 8e6e8a3a
+harness-commit: fb867ca9
 frames: 1
 seed: 42
 fps: 60
