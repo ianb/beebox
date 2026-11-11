@@ -505,8 +505,10 @@ changes** (Heading only; judge `text-pretty` on prose after a visual check).
 
 **D4. `px` font sizes** (`typography`). 66 sites (`text-[11px]`,
 `font-size: 15px`). Converting honours a changed browser font size on desktop;
-WKWebView Dynamic Type does not follow `rem` alone. Rec: **reject** under
-`frontend.md:5`; revisit if a reader needs larger text.
+WKWebView Dynamic Type does not follow `rem` alone. Was **reject**;
+**approved** by the boxholder 2026-11-11. Mechanical: `text-[Npx]` becomes
+`text-[N/16rem]` and CSS `font-size: Npx` becomes `rem`; verify with
+`bin/theme-check`. Lint: a className rule banning `text-[<n>px]`.
 
 **D5. Tables at phone width** (`responsive-table`). Two tables without an
 `overflow-x-auto` wrapper (`browser-task/RunsTable.tsx`, `BatchList.tsx`).
