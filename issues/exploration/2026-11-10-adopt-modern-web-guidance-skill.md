@@ -24,8 +24,42 @@ The boxholder is considering adopting it in whole, against their usual
 preference. The reason is its evals: the project prunes guidance that models
 already know, so what remains is the part a model would get wrong without it.
 An eval dashboard is at googlechrome.github.io/modern-web-guidance-src/. The
-eval method is in the separate `modern-web-guidance-src` repo, which nobody
-has read yet.
+eval method is in the separate `modern-web-guidance-src` repo.
+
+## Apply it to the existing code and the lint rules
+
+The developer wants this to be a large part of the work, besides guiding
+future agent edits:
+
+- **Go back over existing code.** Run `legacy-scan` on `beebox/src/frontend`,
+  the stock views and templates, `workstreams-app/`, and `beebox-clerk/`. Fix
+  what it finds, guide by guide. The scanner
+  (`src/analyzing/` in `modern-web-guidance-src`) has one static matcher for
+  each guide (`src/analyzing/rules/<guide>.ts`), an LLM verifier that drops
+  false positives, and `--json` output for agents. Its findings are
+  "provisional" and come with keep/drop criteria.
+- **Put what we can into lint.** Where a static matcher is deterministic,
+  port it to an ESLint rule in `personal-vibe-check/`. Then the rule holds for
+  every later edit. Where it is not deterministic, run `legacy-scan` against a
+  baseline, the way the weekly `supplemental-lint` schedule
+  (`schedules/supplemental-lint/`) treats oxlint and cycle findings: it
+  reports only new findings.
+- **Box-authored views.** Box agents write views in boxes, and lint does not
+  run there. The view check (`bbx view check`) could run the same matchers.
+
+## Fit to our models (2026-11-10)
+
+The published guides are one set for all agents: the evals drop content that
+"models already know", across the models evaluated. Nothing selects guides
+for one model. The eval harness (`docs/EVALS.md` in the source repo) has a
+Claude Code agent with the model set by `ANTHROPIC_MODEL`. Each guide has a
+task, a Playwright grader, and golden solutions. We could run the suite on
+Claude Code with Opus 5.5 and keep only the guides that the model fails
+without the guide. Not yet checked: whether the harness already compares
+runs with the guide to runs without it. The cost is real model spend
+(about 250 guides, several runs each), and the subset needs a re-run after
+each model change. On-demand `search`/`retrieve` may make this unnecessary:
+a guide that is never retrieved costs nothing.
 
 ## Questions
 
@@ -43,8 +77,8 @@ has read yet.
 - **Overlap and conflict** with our frontend rules, the shared lint preset,
   and the view-authoring guidance. Find where its advice disagrees with ours,
   for example a native element we replaced with a component.
-- **`legacy-scan`** as a one-time audit of `beebox/src/frontend` and the
-  stock views, separate from adoption.
+- **Order.** Whether the code sweep and lint rules come before, after, or
+  without adopting the guidance for agents.
 - **Evals.** Read `modern-web-guidance-src` to see what the evals measure,
   and whether our knowledge audits (`knowledge-audit` skill) could check that
   the guidance takes effect here.
