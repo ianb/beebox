@@ -24,3 +24,7 @@ the summary (or build `verifiedAt` relative to the clock), so the
 over-36-hours branch is tested on purpose instead of by the calendar.
 
 Reproduce: `pnpm -C beebox test` (2026-10-29: 13,464 pass, 1 fail, 2 skip).
+
+## Note 2026-11-11
+
+Fixed on main by 521159ebb ("Stop the encrypted backup summary test depending on the date"): the fresh case now builds `verifiedAt` from the clock and the stale case uses a 2000 date. The test passes. Close as implemented.

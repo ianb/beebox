@@ -80,3 +80,7 @@ Not resolved. Leave open.
 - 16 agent-browser/Chrome processes were left running on the machine at the time. Unconfirmed whether they matter.
 - The same alerts also count `test/services/codex-sdk-session.boundary.test.ts`. It fails from c1aeab168 (`native-store.ts` now imports `codex-history-server.js`), not from this workstream.
 - Commit ed6a83a3c shortens the fixture's loading delay to 300 ms (test time ~12 s to ~4 s). It is not a fix for this failure. The next hourly run shows whether card-shot is still red.
+
+## Note 2026-11-11
+
+`card-shot/run.e2e.test.ts` passes in isolation on main at 9e412427b, and `bin/schedules list` reports the last hourly full-suite run clean. Likely stale; close once the next runs stay green.

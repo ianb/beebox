@@ -69,3 +69,7 @@ Reproduce at the blamed landing:
 git log -1 6100813f
 pnpm --dir beebox exec tap test/core/browser/card-shot/run.e2e.test.ts
 ```
+
+## Note 2026-11-11
+
+`card-shot/run.e2e.test.ts` passes in isolation on main at 9e412427b, and `bin/schedules list` reports the last hourly full-suite run clean. Likely stale; close once the next runs stay green.

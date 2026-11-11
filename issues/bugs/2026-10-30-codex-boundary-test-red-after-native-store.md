@@ -21,3 +21,7 @@ new importer of the history server would go unseen.
 
 Reproduce, from `beebox/`:
 `npx tap --disable-coverage test/services/codex-sdk-session.boundary.test.ts`.
+
+## Note 2026-11-11
+
+Still red in isolation on main at 9e412427b: the boundary list lacks `src/core/chat/session/native-store.ts`.
