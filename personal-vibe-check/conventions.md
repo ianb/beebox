@@ -136,6 +136,25 @@ or drop the label. No options.
   cannot see what they render.
 - It does not check that the chosen role accepts a name.
 
+## Native Dialogs
+
+With `react: true`, `personal-vibe-check/prefer-native-dialog` reports a JSX
+element other than `dialog` that has `role="dialog"` or `role="alertdialog"`.
+Use a native `<dialog>` opened with `showModal()` for a modal, or a popover for
+a non-modal overlay. A native modal dialog traps focus, closes on Escape and
+makes the page behind it inert. A custom overlay has to set `inert` on the page
+behind it. A true exception takes one
+`// eslint-disable-next-line personal-vibe-check/prefer-native-dialog -- <reason>`.
+No options.
+
+### Limitations
+
+- An element with a spread attribute, or a `role` that is not a string
+  literal, is skipped.
+- Components are not checked: a component that passes `role="dialog"` down to
+  a `div` is invisible to the rule.
+- `role="dialog foo"` (a token list) is not reported.
+
 ## Viewport Height Classes (opt-in, Tailwind)
 
 The rule `personal-vibe-check/no-viewport-height-class` bans `h-screen`,

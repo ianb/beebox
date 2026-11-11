@@ -9,6 +9,8 @@
  *     composition. On with `react: true`.
  *   - `aria-label-needs-role` — aria-label on div/span/p/i/b needs a role.
  *     On with `react: true`.
+ *   - `prefer-native-dialog` — role="dialog"/"alertdialog" on a non-<dialog>
+ *     element. On with `react: true`.
  *   - `no-viewport-height-class` — bans Tailwind h-screen / min-h-screen /
  *     max-h-screen. Tailwind-specific, so opt-in per project.
  *   - `no-px-font-size-class` — bans Tailwind `text-[<n>px]`; write rem.
@@ -21,6 +23,7 @@
 
 import ariaLabelNeedsRole from "./rules/aria-label-needs-role.ts";
 import imeSafeEnter from "./rules/ime-safe-enter.ts";
+import preferNativeDialog from "./rules/prefer-native-dialog.ts";
 import noPxFontSizeClass from "./rules/no-px-font-size-class.ts";
 import noViewportHeightClass from "./rules/no-viewport-height-class.ts";
 import restrictComponentClasses from "./rules/restrict-component-classes.ts";
@@ -33,6 +36,7 @@ const plugin = {
     "aria-label-needs-role": ariaLabelNeedsRole,
     "no-viewport-height-class": noViewportHeightClass,
     "no-px-font-size-class": noPxFontSizeClass,
+    "prefer-native-dialog": preferNativeDialog,
   },
 };
 

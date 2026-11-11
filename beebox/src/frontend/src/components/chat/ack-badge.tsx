@@ -72,6 +72,7 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
         <span aria-hidden className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-info ring-1 ring-warm-50">{descriptor.icon}</span>
       </button>
       {open ? (
+        // eslint-disable-next-line personal-vibe-check/prefer-native-dialog -- small named non-modal bubble; popover deferred (full support at iOS 18.3, above the iOS 18.0 floor)
         <div
           role="dialog"
           aria-label={label}

@@ -37,6 +37,10 @@ export const reactRules: Linter.RulesRecord = {
   // aria-label on a div/span/p/i/b without a role is dropped by browsers.
   // Ported from modern-web-guidance's accessible-names guide.
   "personal-vibe-check/aria-label-needs-role": "error",
+  // role="dialog"/"alertdialog" on anything but <dialog> skips the focus trap,
+  // Escape and inert page that showModal() gives. Ported from
+  // modern-web-guidance's dialog guides.
+  "personal-vibe-check/prefer-native-dialog": "error",
   // prefer-tag-over-role stays off: it asks for <output> on every
   // role="status" and <hr> for separators, which is churn without a
   // user-visible gain.

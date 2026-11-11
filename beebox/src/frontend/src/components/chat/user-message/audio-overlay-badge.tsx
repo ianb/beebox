@@ -161,6 +161,7 @@ function AudioOverlayBadge({ spec, open, onToggle, onClose }: {
         <span aria-hidden className="inline-flex">{spec.glyph}</span>
       </button>
       {open ? (
+        // eslint-disable-next-line personal-vibe-check/prefer-native-dialog -- small named non-modal bubble; popover deferred (full support at iOS 18.3, above the iOS 18.0 floor)
         <div
           role="dialog"
           aria-label={spec.label}

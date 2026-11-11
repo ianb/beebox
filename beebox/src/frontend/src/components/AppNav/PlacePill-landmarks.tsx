@@ -238,6 +238,7 @@ export function LandmarkList({
 
   if (searchable && searchOpen && mobileViewport) {
     return createPortal(
+      // eslint-disable-next-line personal-vibe-check/prefer-native-dialog -- phone overlay sized to the visual viewport for the iOS keyboard; inert is set in code
       <section ref={overlayRef} role="dialog" aria-label="Search landmarks" aria-modal="true" className="fixed z-[110] flex flex-col overflow-hidden bg-white text-sm"
         style={{ top: visibleViewport.top, left: visibleViewport.left, width: visibleViewport.width, height: visibleViewport.height }}>
         <header className="flex shrink-0 items-center gap-2 border-b border-warm-200 px-3 py-2">
