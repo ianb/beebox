@@ -24,6 +24,7 @@ import { saveGoogleTokens, markGoogleAuthDead } from "../../src/google/token-sto
 import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), "google-auth-status-"));
 const TOKENS_FILE = path.join(tmp, "google-tokens.json");
@@ -101,11 +102,14 @@ void test("A transient failure is classified as \"not our problem\" and left alo
 
   await saveGoogleTokens({ refreshToken: "rt-1", accessToken: "at-1" });
 
+  const errors = consoleLines(t, "error");
   const expired = await classifyRefreshFailure(
     gaxiosError("invalid_grant", { error: "invalid_grant", error_description: "Token has been expired or revoked." }),
     {},
   );
   t.check(expired, { name: "GoogleAuthExpiredError", message: "Google authorization expired or revoked: invalid_grant" });
+  // The server log says Google features are paused until the boxholder re-authorizes:
+  t.check(errors(), ["[google-auth] refresh token rejected (invalid_grant) — Google features are paused until the boxholder re-authorizes: invalid_grant"]);
 
   // The token state is machine-wide, but `configured` asks whether THIS box holds
   // a grant for the OAuth app's credentials — so the read is per-box.

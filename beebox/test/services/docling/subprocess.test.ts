@@ -170,8 +170,8 @@ void test("oom_kill is read from a cgroup memory.events file", (t) => {
 // The locks are taken before Docling is imported, so any `python3` exercises
 // them. A second driver waits while another process holds the lock and gives
 // up with exit 75 when its wait runs out; once the holder is gone it proceeds.
-// A driver whose parent is gone stops within a few seconds. Skipped, loudly,
-// without a `python3`.
+// A driver whose parent is gone stops within a few seconds. A TAP skip, with
+// the reason, without a `python3`.
 /** A process holding `lockPath`, resolved once it has printed `held`. */
 async function lockHolder(lockPath: string): Promise<ReadyChild> {
   return spawnUntilFirstLine({
@@ -182,7 +182,6 @@ async function lockHolder(lockPath: string): Promise<ReadyChild> {
 
 const python = await execa("python3", ["--version"], { reject: false }).catch(() => null);
 const pythonSkip = python?.exitCode === 0 ? null : "python3 is not available";
-if (pythonSkip !== null) console.warn(`[skipped] docling driver locks: ${pythonSkip}`);
 
 void test("A held lock makes the driver wait, then give up with exit 75; a free one lets it through", { skip: pythonSkip ?? false }, async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "docling-lock-"));

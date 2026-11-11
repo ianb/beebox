@@ -17,6 +17,7 @@ import { createFakeGoogleCalendar } from "../../src/services/google-calendar/cor
 import type { CalendarEvent, CalendarListEntry, GoogleCalendarService } from "../../src/services/google-calendar/core.js";
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar/connector.js";
 import { loadCalendarState } from "../../src/connectors/google-calendar/state.js";
+import { consoleLines } from "../helpers/console-lines.js";
 
 const NOW = () => new Date("2026-06-15T12:00:00Z");
 
@@ -188,8 +189,9 @@ void test("an unfinished folder migration blocks the sync", async (t) => {
   const box = await newBox(["family@group"]);
   await box.seed("_bookkeeping/connectors/google-calendar-migration.json", "{}");
   const calendar = calendarsWith([FAMILY], []);
-  t.check(await sync(box, calendar), {
-    success: false, created: [], updated: [],
-    error: "Calendar sync refused: the calendar-folders migration is unfinished (run bbx engine migrate)",
-  });
+  const errors = consoleLines(t, "error");
+  const refusal = "Calendar sync refused: the calendar-folders migration is unfinished (run bbx engine migrate)";
+  t.check(await sync(box, calendar), { success: false, created: [], updated: [], error: refusal });
+  // The same refusal goes to the sync log:
+  t.check(errors(), [refusal]);
 });

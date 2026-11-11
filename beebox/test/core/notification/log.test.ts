@@ -11,6 +11,7 @@ import { any, str } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 import type { NotificationIntent } from "../../../src/core/notification/intent.js";
 import {
   appendIntent,
@@ -75,7 +76,10 @@ void test("Each append is one line.", async (t) => {
 
   fs.appendFileSync(notificationLogPath(box.root), "{not json\n");
   appendIntent(box.root, { intent: intent("c3", "After the bad line"), now: NOW });
+  const warnings = consoleLines(t, "warn");
   t.check((await readRecent(box.root, { days: 1, now: NOW })).map((n) => n.intent.id), ["a1", "b2", "c3"]);
+  // The server log names the file with the bad line; the parser's wording varies by Node version:
+  t.check(warnings(), [str`[notification-log] skipping an unparseable line in ${notificationLogPath(box.root)}: SyntaxError: ${any(String)}`]);
 });
 
 // ## A delivery on a retired channel is read, not skipped

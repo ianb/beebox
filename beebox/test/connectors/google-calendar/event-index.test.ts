@@ -23,6 +23,7 @@ import type {
 import { createGoogleCalendarConnector } from "../../../src/connectors/google-calendar/connector.js";
 import { loadCalendarState } from "../../../src/connectors/google-calendar/state.js";
 import { contentHash } from "../../../src/lib/content-hash.js";
+import { consoleLines } from "../../helpers/console-lines.js";
 
 const NOW = () => new Date("2026-06-15T12:00:00Z");
 
@@ -241,7 +242,7 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
     },
   };
   await writeFile(statePath, JSON.stringify(collided, null, 2));
-
+  const warnings = consoleLines(t, "warn");
   const deduped = await connector.sync();
   t.check(
     {
@@ -290,6 +291,8 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
     ],
   },
   );
+  // Each of the two dedupes logs which entry lost the file:
+  t.check(warnings(), [0, 1].map(() => `  Untracked evt-ghost home — _content/calendar/home.attach/${renamedHome} belongs to another entry`));
 });
 
 // ## A pre-composite-key state file is migrated on load
@@ -352,6 +355,7 @@ void test("State written before the key change is keyed by the bare event id and
     },
   }, null, 2));
 
+  const warnings = consoleLines(t, "warn");
   t.check(await trackedKeys(box.root), [
     "evt-old (legacy)",
     "evt-other primary",
@@ -406,4 +410,10 @@ void test("State written before the key change is keyed by the bare event id and
     "evt-old primary",
     "evt-other primary",
   ]);
+
+  // Each load of a state file with bare keys logs the re-keying: the load above
+  // the sync (two re-keyed, one entry with no calendar), the sync's own load, and
+  // the load of the hand-repaired file (one re-keyed):
+  const rekeyed = "  Calendar state: re-keyed 2 tracked event(s) by (event, calendar); 1 legacy entr(y/ies) carry no calendar and stay unattributed";
+  t.check(warnings(), [rekeyed, rekeyed, "  Calendar state: re-keyed 1 tracked event(s) by (event, calendar)"]);
 });
