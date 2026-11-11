@@ -88,6 +88,38 @@ test("tests do not ship; source beside them does", () => {
   }
 });
 
+test("operator tools, the container image, and root docs do not ship; server files do", () => {
+  for (const path of [
+    "beebox/deploy/add-box.sh",
+    "beebox/deploy/prod-ssh",
+    "beebox/deploy/prod-session-cookie",
+    "beebox/deploy/deploy-target.sh",
+    "beebox/deploy/check-origin-tls-ref.sh",
+    "beebox/deploy/hetzner/cloud-init.yaml",
+    "beebox/deploy/launchd/README.md",
+    "beebox/deploy/README.md",
+    "beebox/docker/Dockerfile",
+    "beebox/tools/slopo/slopo.conf.yaml",
+    "beebox/README.md",
+    "beebox/frontend.md",
+  ]) {
+    assert.equal(isDeployedPath(path), false, path);
+  }
+  for (const path of [
+    "beebox/deploy/deploy.sh",
+    "beebox/deploy/systemd/box-sandbox.conf",
+    "beebox/deploy/server-bin/bbx-box-run",
+    "beebox/deploy/nginx/beebox.conf",
+    "beebox/deploy/apparmor/beebox-codex",
+    "beebox/deploy/install-restic.sh",
+    "beebox/deploy/claude-update.sh",
+    "beebox/package.json",
+    "beebox/tsconfig.json",
+  ]) {
+    assert.equal(isDeployedPath(path), true, path);
+  }
+});
+
 test("every docs/ entry in beebox's package files list still ships", () => {
   // The package `files` list is what reaches a box; a docs/ entry added there
   // must not fall under NOT_SHIPPED_PATTERN, or its edits would never deploy.
