@@ -219,4 +219,7 @@ frame. `cli zoom out/frame-0000.png x,y,w,h` crops a frame you already have.
 ## Determinism
 
 A render is byte-identical every time in the same runtime. The headless
-renderer (Skia) and a browser can differ slightly in antialiasing.
+renderer (Skia) and a browser can differ: antialiasing, and the strength of
+marks built from many faint dabs. Measured on the brush playground, a bristle
+stroke comes out about 5% lighter in Chrome than headless; the look is the
+same.
