@@ -45,3 +45,28 @@ Related: the hub restart on every add is what makes this an operator step;
 a hub that reloads `hub.json` on SIGHUP would shrink any of the above.
 `issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md`
 is the earlier "one clean process" ask for the script itself.
+
+## Which server: the target is implicit (2026-11-11)
+
+The boxholder asked how `add-box.sh` knows which server to use, and wants
+that improved as part of managing the server, not only box creation. Today:
+
+- The server is whatever `beebox/deploy/target.env` names
+  (`BBX_DEPLOY_HOST`, `BBX_DEPLOY_SSH_USER`, default root), loaded by
+  `deploy/deploy-target.sh`. The file is gitignored; its presence is the
+  switch that makes a checkout deploy at all.
+- A worktree without its own `target.env` borrows the main checkout's, so
+  every checkout on the laptop points at the same server without saying so.
+- There is exactly one target. Nothing names the server in the command or
+  its output, nothing lists the servers an operator has, and there is no
+  way to point one command at a second server.
+- Server layout (`/opt/beebox`, `/home/beebox`, the `beebox` account, port
+  3210) is fixed, and every step runs as root over SSH.
+
+What a better version would answer: the command or its dry run names the
+server it will change; an operator can have more than one server (or a
+staging one) and pick it explicitly; and the "manage the server" operations
+(create a box, list boxes, grant secrets, check health — today spread across
+`add-box.sh`, `prod-ssh`, `bin/deploy-status` and `bbx engine` commands run
+over SSH) have one documented home. The shapes above for box creation are
+one part of that.
