@@ -1,13 +1,16 @@
 ---
 title: "Two warnings still reach a green full run's stderr, only under full-suite load"
-workstream: unattached
+workstream: test-quiet
 area: tests
 priority: backlog
 labels: [tests, noise]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-test-quiet — verification full run, 2026-11-11
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-11):** Both lines were cleanup races in tests. bulk-upload.test.ts stopped waiting once the batch reached failed:*; the worker sends its failure notice after that, and a cleanup that deleted the box first made the notice fail (route-test boxes do have a shape; the box was gone). The wait now lasts until the notice is in the box's log. worker.context.test.ts (post-send) returned once the delivery's own save named the chat, before the background retention write; it now waits for that write and checks the final record. The quick-chat line now adds the errno code (e.g. 'Error (ENOENT)') and has its own check in deliver-user-message.test.ts.
 
 After test-quiet, a green full beebox run printed two lines to stderr from
 passing tests. Neither came out when the likely files ran alone, nor in six
