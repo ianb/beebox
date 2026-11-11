@@ -51,3 +51,24 @@ worth comparing:
   as a design reference? The licence allows personal use.
 - What does its live sync between CLI and editor use, and how does it handle
   a conflict between a pen stroke and an agent edit?
+
+## How would it reach a box? (2026-11-11)
+
+The app is source-available, not open source, so the box image probably
+cannot ship it; check whether the PolyForm Internal Use licence allows that
+redistribution. There is no per-box tool installer today: production boxes
+run as separate users without root, and host tools are installed by the
+operator (as `beebox/deploy/install-restic.sh` does for restic). Routes to
+compare:
+
+- **Format only.** The format spec and `klad-client` are MIT. A box could
+  read and write klad drawings itself, and the person opens them in klad on
+  their own computer. No klad code in the box.
+- **Person's machine only.** klad runs where the person draws (it is a macOS
+  editor first). A dev or desktop agent runs the CLI there, and the drawing
+  folder syncs to the box as ordinary files.
+- **Operator installs on the host.** Like restic, opt-in for a host whose
+  boxholders each fall within the licence. Needs a headless CLI that works
+  without the editor running, which is not yet checked.
+- **Box builds it from source.** A Rust and Skia build in each box's home:
+  heavy, and the same licence question applies to each boxholder.
