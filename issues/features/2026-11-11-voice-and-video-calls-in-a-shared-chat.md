@@ -48,6 +48,24 @@ Two ways to know who said what:
 Related: [listening and note-taking mode](2026-08-29-listening-note-mode.md),
 which is about transcribing a conversation the box overhears.
 
+## Direction (boxholder, 2026-11-11)
+
+- **Start with plain browser WebRTC:** direct connections between the
+  browsers, signaling over the chat's WebSocket, and a TURN relay for
+  networks that need one. A media server (LiveKit, self-hosted or hosted, was
+  the leading option in a survey of the field) waits until calls need more
+  than two or three people.
+- **One recording per person**, transcribed separately, then **folded into
+  one transcript.** The fold needs a shared clock: each device's recording
+  start measured against the box's time (for example from a round trip over
+  the signaling socket), and word or segment timestamps from transcription,
+  so utterances interleave in the order they were said. Overlapping speech
+  stays as two lines.
+- **Fold in the activity as well,** the way chat already folds the agent's
+  tool activity between replies: chat messages typed during the call, the
+  agent's work, and cards opened or changed land on the same timeline as
+  the speech.
+
 ## To decide
 
 - Whether transcription is per call (someone turns it on) and how everyone
