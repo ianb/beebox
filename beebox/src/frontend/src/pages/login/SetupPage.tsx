@@ -202,7 +202,7 @@ export function SetupPage() {
 
   return (
     <main>
-      <Row justify="center" align="center" className="min-h-screen p-4">
+      <Row justify="center" align="center" className="min-h-dvh p-4">
         <Card padding="lg" shadow className="max-w-sm w-full">
           {token !== null ? <SetupForm token={token} /> : <NoTokenGuidance />}
         </Card>

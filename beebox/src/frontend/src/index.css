@@ -18,6 +18,19 @@ body {
   height: var(--app-height, 100dvh);
 }
 
+/* A modal dialog keeps scrolling to itself: a wheel or swipe that reaches the
+   end of the dialog's content, or lands on the backdrop, does not scroll the
+   page behind it. Never lock body overflow instead; the dialog is in the top
+   layer and the page keeps its own scroll position. Safari honours this only
+   when the dialog's own content overflows. */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+dialog:modal::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
 /* "Clipped reads as clipped" — fade the bottom edge of an overflowing scroll
    box so a hidden bottom is visible without restyling the scrollbar. An
    earlier version of this used `::-webkit-scrollbar` rules; on macOS
