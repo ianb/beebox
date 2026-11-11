@@ -1,11 +1,14 @@
 ---
 title: "The chat composer measures its height into --bbx-composer-height, which nothing reads"
-workstream: unattached
+workstream: web-guidance-scan
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-web-guidance-scan — CSS audit against modern-web-guidance
+resolution: implemented
 ---
+
+**Closed (implemented, 2026-11-11):** Removed the ResizeObserver effect in ChatComposerSection; nothing read the variable.
 
 `ChatComposerSection.tsx` runs a `ResizeObserver` on the composer and writes
 its height to `--bbx-composer-height` on the document root

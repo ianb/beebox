@@ -10,7 +10,7 @@
  * still has a heading.
  */
 
-import { useEffect, useRef, type ReactNode, type SyntheticEvent } from "react";
+import type { ReactNode, SyntheticEvent } from "react";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { SelectionPanel } from "./ChatSelections";
 import { type SelectionItem } from "../../../../lib/selection/serialize";
@@ -241,23 +241,13 @@ export function ChatView(props: {
   const interacted = (event: SyntheticEvent<HTMLDivElement>) => {
     if (event.target instanceof Node && event.currentTarget.contains(event.target)) onPaneInteraction?.();
   };
-  const composer = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const node = composer.current;
-    if (!node) return;
-    const measure = () => document.documentElement.style.setProperty("--bbx-composer-height", `${node.getBoundingClientRect().height}px`);
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    measure();
-    return () => { observer.disconnect(); document.documentElement.style.removeProperty("--bbx-composer-height"); };
-  }, []);
   return (
     <>
       <div className="bbx-conversation-desk h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden"
         onPointerDownCapture={interacted} onFocusCapture={interacted} onKeyDownCapture={interacted}>
         {barChrome}
         {workspace}
-        <div ref={composer} className="bbx-composer-material flex flex-col w-full max-w-5xl mx-auto min-w-0">
+        <div className="bbx-composer-material flex flex-col w-full max-w-5xl mx-auto min-w-0">
           <div className="bbx-composer-notices">{props.selectionNotice}</div>
           {props.ambientRegion}
           {props.failedRegion}

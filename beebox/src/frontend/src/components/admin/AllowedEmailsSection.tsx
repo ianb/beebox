@@ -111,7 +111,7 @@ function ResetLinkCard({ resetLink }: { resetLink: ResetLink }) {
           type="button"
           intent="secondary"
           onClick={() => navigator.clipboard.writeText(resetLink.url)}
-          flash={{ label: "Copied" }}
+          flash={{ label: "Copied", failLabel: "Copy failed" }}
         >
           Copy reset link
         </Button>

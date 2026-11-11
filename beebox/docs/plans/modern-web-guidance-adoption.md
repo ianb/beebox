@@ -842,7 +842,7 @@ None. Each category is small enough to do from its entry here.
 - Promoting the full CSP from Report-Only to enforcing: tracked by
   `docs/content-security-policy.md`; F1 enforces only `frame-ancestors`.
 - The unread `--bbx-composer-height` variable found during the audit: filed as
-  `issues/code-quality/2026-11-11-composer-height-variable-has-no-reader.md`.
+  `issues/closed/code-quality/2026-11-11-composer-height-variable-has-no-reader.md`.
   (The audit also called the `BrowsePage` context menu dead; it is not:
   `handleFileContextMenu` is wired at `pages/browse/BrowsePage.tsx:141`.)
 

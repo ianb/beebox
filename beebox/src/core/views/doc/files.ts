@@ -55,7 +55,8 @@ For images and audio, don't fetch. Render a bounded image with
 \`<img src={imageUrl(f.path, { width: 960, format: "auto" })} />\`; use
 \`fileUrl(f.path)\` for audio and for a link to the full-resolution image. Image
 variants are generated on demand and cached, so do not make a small display
-download the original.
+download the original. Add \`loading="lazy"\` to images in a grid or long list
+so offscreen ones wait.
 
 \`imageUrl\` requires \`width\` or \`height\`. It uses \`fit: "scale-down"\` and
 \`quality: 85\` by default; \`format: "auto"\` negotiates AVIF/WebP/JPEG. Other

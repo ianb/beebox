@@ -97,7 +97,7 @@ export function InviteSection() {
                   <Text size="xs" tone="muted">
                     Expires {expiresAt === null ? "soon" : new Date(expiresAt).toLocaleTimeString()}
                   </Text>
-                  <Button id="bbx-admin-invite-copy-link" type="button" intent="secondary" onClick={copy} flash={{ label: "Copied" }}>
+                  <Button id="bbx-admin-invite-copy-link" type="button" intent="secondary" onClick={copy} flash={{ label: "Copied", failLabel: "Copy failed" }}>
                     Copy link
                   </Button>
                 </Row>
