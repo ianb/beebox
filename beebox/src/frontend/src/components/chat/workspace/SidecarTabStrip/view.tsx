@@ -267,7 +267,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
             // Pinned: always shown, because it is the only thing that says the
             // tab is pinned. Unpinned: revealed on hover or keyboard focus, so
             // a row of tabs is not a row of icons.
-            tab.pinned ? "bbx-interface-tab-pin" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+            tab.pinned ? "bbx-interface-tab-pin" : "[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
           )}
         >
           <PinIcon filled={tab.pinned} />

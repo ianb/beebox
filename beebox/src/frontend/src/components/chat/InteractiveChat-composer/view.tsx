@@ -108,6 +108,7 @@ function DesktopComposerRow({
         ref={textareaRef}
         autoFocus
         enterKeyHint="send"
+        aria-label="Message"
         value={isTranscribing ? joinTranscript(input, transcription.transcript) : input}
         onChange={(e) => { if (!isTranscribing) { noteTyped(e.target.value); setInput(e.target.value); } }}
         onKeyDown={handleKeyDown}

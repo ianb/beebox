@@ -106,7 +106,7 @@ function RadioList({ name, idPrefix, value, options, disabled, onChange }: Radio
               checked={value === opt.value}
               onChange={() => onChange(opt.value)}
               disabled={isDisabled}
-              className="text-primary focus:ring-accent"
+              className="accent-primary"
             />
             <span>{opt.label}</span>
           </label>
@@ -129,7 +129,7 @@ function RadioCards({ name, idPrefix, value, options, disabled, onChange }: Radi
         // the app's fixed shell window-scrollable (found via a field-test
         // browse page whose window scrolled 43px). The label as containing
         // block keeps the input where its card is.
-        const baseClass = "relative block p-3 border rounded transition-colors";
+        const baseClass = "relative block p-3 border rounded transition-colors focus-within:ring-2 focus-within:ring-accent";
         // Every state paints its own field, so the option text reads on any material.
         const stateClass = isDisabled
           ? "border-warm-200 bg-warm-50 opacity-60 cursor-not-allowed"

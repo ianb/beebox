@@ -70,7 +70,7 @@ function PhotoTile({ index, state, src, onOpen, id }: { index: number; state: Up
       id={id}
       type="button"
       onClick={onOpen}
-      className={`relative block w-14 h-14 rounded overflow-hidden focus:outline-none focus:ring-2 focus:ring-white ${ring}`}
+      className={`relative block w-14 h-14 rounded overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-white ${ring}`}
       aria-label={label}
       title={label}
       data-bbx-capture-photo-state={state}

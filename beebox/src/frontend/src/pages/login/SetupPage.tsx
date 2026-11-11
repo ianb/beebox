@@ -165,7 +165,7 @@ function SetupFields({
   return (
     <Stack gap="md">
       <TextField id="bbx-setup-name" label="Name" required value={name} onChange={onName} autoComplete="name" />
-      <TextField id="bbx-setup-email" label="Email" type="email" required value={email} onChange={onEmail} autoComplete="email" />
+      <TextField id="bbx-setup-email" label="Email" type="email" required value={email} onChange={onEmail} autoComplete="username" />
       <TextField
         id="bbx-setup-password"
         label="Password"
@@ -175,6 +175,7 @@ function SetupFields({
         value={password}
         onChange={onPassword}
         autoComplete="new-password"
+        revealable
       />
       <TextField
         id="bbx-setup-confirm-password"
@@ -184,6 +185,7 @@ function SetupFields({
         value={confirmPassword}
         onChange={onConfirmPassword}
         autoComplete="new-password"
+        revealable
       />
       {error !== null ? (
         <div role="alert">

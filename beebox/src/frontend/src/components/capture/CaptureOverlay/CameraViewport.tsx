@@ -38,7 +38,7 @@ export const CameraViewport = forwardRef<HTMLVideoElement, CameraViewportProps>(
         type="button"
         onClick={onTap}
         aria-label={cameraOn ? "Take photo" : "Start camera"}
-        className="absolute inset-0 flex items-center justify-center cursor-pointer focus:outline-none"
+        className="absolute inset-0 flex items-center justify-center cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
       >
         {cameraOn ? null : (
           <span className="text-gray-600 text-center">

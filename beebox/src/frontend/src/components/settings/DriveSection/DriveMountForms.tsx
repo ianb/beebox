@@ -59,6 +59,7 @@ export function MountFolderForm() {
       <Row gap="md" align="end" wrap>
         <TextField
           id="bbx-settings-drive-mount-url"
+          identifier
           label="Drive folder URL"
           value={url}
           onChange={setUrl}
@@ -67,6 +68,7 @@ export function MountFolderForm() {
         />
         <TextField
           id="bbx-settings-drive-mount-dir"
+          identifier
           label="Box directory"
           value={dir}
           onChange={setDir}

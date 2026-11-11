@@ -233,6 +233,7 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter..."
+          aria-label="Filter log entries"
           className="flex-1 px-2 py-0.5 rounded border border-warm-300 text-xs"
         />
         <button id="bbx-debug-log-clear" onClick={clearLog} className="text-warm-700 hover:text-warm-900">Clear</button>
