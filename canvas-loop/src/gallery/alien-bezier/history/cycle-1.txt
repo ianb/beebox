@@ -1,0 +1,268 @@
+// Friendly green alien, picture-book style: ink outlines drawn as hand-placed
+// bezier/quad paths, with bristle and pencil shading clipped inside each shape.
+import type { PathCommand, Sketch } from "@ianbicking/canvas-loop";
+
+type Path = readonly PathCommand[];
+
+const INK = "#1f2a1c";
+const GREEN = "#7ccd6a";
+const GREEN_DARK = "#4f9a45";
+const GREEN_LIGHT = "#a8e28f";
+const BELLY = "#5fae52";
+const YELLOW = "#f4d548";
+const CHEEK = "#ec8f8a";
+const PAPER = "#f5f1e8";
+
+// --- Outlines (control points placed by hand) ---
+
+const HEAD: Path = [
+  ["move", 95, 175],
+  ["bezier", 95, 120, 145, 90, 200, 90],
+  ["bezier", 255, 90, 305, 120, 305, 175],
+  ["bezier", 305, 232, 258, 260, 200, 260],
+  ["bezier", 142, 260, 95, 232, 95, 175],
+  ["close"],
+];
+
+const BODY: Path = [
+  ["move", 158, 250],
+  ["bezier", 147, 280, 142, 322, 146, 370],
+  ["bezier", 148, 394, 172, 398, 200, 398],
+  ["bezier", 228, 398, 252, 394, 254, 370],
+  ["bezier", 258, 322, 253, 280, 242, 250],
+  ["close"],
+];
+
+const BELLY_PATCH: Path = [
+  ["move", 200, 310],
+  ["bezier", 218, 310, 230, 326, 230, 345],
+  ["bezier", 230, 366, 216, 380, 200, 380],
+  ["bezier", 184, 380, 170, 366, 170, 345],
+  ["bezier", 170, 326, 182, 310, 200, 310],
+  ["close"],
+];
+
+const ARM_L: Path = [
+  ["move", 152, 286],
+  ["bezier", 126, 302, 110, 336, 111, 374],
+  ["line", 133, 374],
+  ["bezier", 132, 346, 138, 328, 149, 316],
+  ["close"],
+];
+
+const ARM_R: Path = [
+  ["move", 248, 262],
+  ["bezier", 284, 262, 308, 250, 320, 226],
+  ["line", 339, 234],
+  ["bezier", 326, 268, 296, 290, 252, 292],
+  ["close"],
+];
+
+const LEG_L: Path = [
+  ["move", 166, 392],
+  ["quad", 165, 415, 166, 438],
+  ["line", 190, 438],
+  ["quad", 191, 415, 190, 392],
+  ["close"],
+];
+
+const LEG_R: Path = [
+  ["move", 210, 392],
+  ["quad", 209, 415, 210, 438],
+  ["line", 234, 438],
+  ["quad", 235, 415, 234, 392],
+  ["close"],
+];
+
+function oval(c: readonly [number, number], r: readonly [number, number]): Path {
+  const [cx, cy] = c;
+  const [rx, ry] = r;
+  const k = 0.5523;
+  return [
+    ["move", cx - rx, cy],
+    ["bezier", cx - rx, cy - ry * k, cx - rx * k, cy - ry, cx, cy - ry],
+    ["bezier", cx + rx * k, cy - ry, cx + rx, cy - ry * k, cx + rx, cy],
+    ["bezier", cx + rx, cy + ry * k, cx + rx * k, cy + ry, cx, cy + ry],
+    ["bezier", cx - rx * k, cy + ry, cx - rx, cy + ry * k, cx - rx, cy],
+    ["close"],
+  ];
+}
+
+const FOOT_L = oval([172, 443], [24, 11]);
+const FOOT_R = oval([228, 443], [24, 11]);
+const HAND_L = oval([122, 379], [13, 13]);
+const HAND_R = oval([330, 222], [14, 14]);
+const EYE_L = oval([160, 165], [26, 31]);
+const EYE_R = oval([240, 165], [26, 31]);
+const BALL_L = oval([140, 40], [11, 11]);
+const BALL_R = oval([262, 34], [11, 11]);
+
+const STALK_L: Path = [
+  ["move", 166, 96],
+  ["quad", 150, 70, 143, 50],
+];
+const STALK_R: Path = [
+  ["move", 234, 96],
+  ["quad", 250, 70, 258, 44],
+];
+const SMILE: Path = [
+  ["move", 180, 213],
+  ["bezier", 190, 226, 210, 226, 220, 212],
+];
+
+// --- Drawing helpers ---
+
+function flat(s: Sketch, o: { shape: Path; color: string }): void {
+  const { shape, color } = o;
+  s.noBrush();
+  s.noStroke();
+  s.fill(color);
+  s.path(shape);
+}
+
+function outline(s: Sketch, o: { shape: Path; weight?: number }): void {
+  const shape = o.shape;
+  const weight = o.weight ?? 3.2;
+  s.noFill();
+  s.stroke(INK);
+  s.strokeWeight(weight);
+  s.brush("ink", { thinning: 0.35 });
+  s.gesture({ pressure: "even", wobble: 0.6 });
+  s.path(shape);
+}
+
+/** Bristle shading: strokes along a direction inside the shape's clip. */
+type Stroke = readonly [number, number, number, number];
+
+function bristleShade(
+  s: Sketch,
+  o: { shape: Path; color: string; strokes: readonly Stroke[]; weight: number; opacity: number },
+): void {
+  const { shape, color, strokes, weight, opacity } = o;
+  s.clip(shape, () => {
+    s.noFill();
+    s.stroke(color);
+    s.strokeWeight(weight);
+    s.brush("bristle", { opacity, load: 0.8 });
+    s.gesture({ pressure: "taper", wobble: 1.5 });
+    for (const [x1, y1, x2, y2] of strokes) {
+      s.path([
+        ["move", x1, y1],
+        ["quad", (x1 + x2) / 2 + 4, (y1 + y2) / 2 + 4, x2, y2],
+      ]);
+    }
+  });
+}
+
+function part(s: Sketch, o: { shape: Path; color: string; shade?: () => void }): void {
+  flat(s, o);
+  o.shade?.();
+  outline(s, o);
+}
+
+/** Curved shadow strokes following the lower-right rim of an oval region. */
+function rimStrokes(
+  e: { cx: number; cy: number; rx: number; ry: number },
+  run: { n: number; from: number; to: number },
+): Stroke[] {
+  const { cx, cy, rx, ry } = e;
+  const { n, from, to } = run;
+  const out: Stroke[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = from + ((to - from) * i) / Math.max(1, n - 1);
+    const b = a + 0.9;
+    const r = 0.92 - (i % 3) * 0.06;
+    out.push([cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r, cx + Math.cos(b) * rx * r, cy + Math.sin(b) * ry * r]);
+  }
+  return out;
+}
+
+export function setup(s: Sketch): void {
+  s.createCanvas(400, 500);
+}
+
+export function draw(s: Sketch): void {
+  s.background(PAPER);
+  s.paper({ scale: 3, contrast: 0.6 });
+
+  // Ground shadow
+  s.group({ opacity: 0.35, blend: "multiply" }, () => {
+    flat(s, { shape: oval([200, 450], [95, 13]), color: "#b8b09a" });
+  });
+
+  // Antennae
+  outline(s, { shape: STALK_L, weight: 3.6 });
+  outline(s, { shape: STALK_R, weight: 3.6 });
+  part(s, { shape: BALL_L, color: YELLOW });
+  part(s, { shape: BALL_R, color: YELLOW });
+
+  // Legs and feet
+  for (const leg of [LEG_L, LEG_R]) {
+    part(s, {
+      shape: leg,
+      color: GREEN,
+      shade: () => {
+        bristleShade(s, { shape: leg, color: GREEN_DARK, strokes: [[180, 392, 182, 436], [226, 392, 228, 436]], weight: 9, opacity: 0.5 });
+      },
+    });
+  }
+  for (const foot of [FOOT_L, FOOT_R]) part(s, { shape: foot, color: GREEN });
+
+  // Arms (behind body)
+  part(s, {
+    shape: ARM_L,
+    color: GREEN,
+    shade: () => {
+      bristleShade(s, { shape: ARM_L, color: GREEN_DARK, strokes: [[140, 300, 126, 372]], weight: 9, opacity: 0.5 });
+    },
+  });
+  part(s, { shape: HAND_L, color: GREEN });
+  part(s, {
+    shape: ARM_R,
+    color: GREEN,
+    shade: () => {
+      bristleShade(s, { shape: ARM_R, color: GREEN_DARK, strokes: [[255, 288, 330, 240]], weight: 8, opacity: 0.5 });
+    },
+  });
+  part(s, { shape: HAND_R, color: GREEN });
+
+  // Body
+  part(s, {
+    shape: BODY,
+    color: GREEN,
+    shade: () => {
+      const rim = rimStrokes({ cx: 200, cy: 325, rx: 55, ry: 75 }, { n: 7, from: -0.6, to: 1.4 });
+      bristleShade(s, { shape: BODY, color: GREEN_DARK, strokes: rim, weight: 12, opacity: 0.45 });
+      bristleShade(s, { shape: BODY, color: GREEN_LIGHT, strokes: [[160, 270, 152, 340], [168, 266, 160, 320]], weight: 8, opacity: 0.5 });
+      flat(s, { shape: BELLY_PATCH, color: BELLY });
+      bristleShade(s, { shape: BELLY_PATCH, color: GREEN_DARK, strokes: [[214, 318, 222, 372], [206, 330, 212, 378]], weight: 8, opacity: 0.35 });
+    },
+  });
+
+  // Head
+  part(s, {
+    shape: HEAD,
+    color: GREEN,
+    shade: () => {
+      const rim = rimStrokes({ cx: 200, cy: 175, rx: 105, ry: 85 }, { n: 9, from: -0.3, to: 2.4 });
+      bristleShade(s, { shape: HEAD, color: GREEN_DARK, strokes: rim, weight: 14, opacity: 0.4 });
+      bristleShade(s, { shape: HEAD, color: GREEN_LIGHT, strokes: [[120, 150, 150, 108], [135, 140, 175, 102]], weight: 10, opacity: 0.55 });
+    },
+  });
+
+  // Eyes
+  for (const [eye, px] of [[EYE_L, 165], [EYE_R, 235]] as const) {
+    part(s, { shape: eye, color: "#ffffff" });
+    flat(s, { shape: oval([px, 172], [13, 13]), color: INK });
+    flat(s, { shape: oval([px + 6, 165], [4, 4]), color: "#ffffff" });
+  }
+
+  // Cheeks
+  s.group({ opacity: 0.8 }, () => {
+    flat(s, { shape: oval([132, 205], [11, 6]), color: CHEEK });
+    flat(s, { shape: oval([268, 205], [11, 6]), color: CHEEK });
+  });
+
+  // Smile
+  outline(s, { shape: SMILE, weight: 3.4 });
+}
