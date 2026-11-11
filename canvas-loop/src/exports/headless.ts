@@ -27,3 +27,7 @@ export { TeaView, TeaUtil } from "../headless/tea-view.js";
 // ── Gallery corpus check (`cli gallery check`) ────────────────────────
 export { checkGallery } from "../headless/gallery.js";
 export type { GalleryCheckEntry, GalleryCheckResult } from "../headless/gallery.js";
+
+// ── Experimental: frame diff views (`cli diff`) ───────────────────────
+export { statsLine, writeDiff } from "../headless/diff.js";
+export type { DiffStats } from "../headless/diff.js";

@@ -32,6 +32,10 @@ lists it under the frame in the transcript. Use it to judge brush texture and
 edges, which a whole frame at 1× hides. To crop a frame you already have:
 `pnpm --dir canvas-loop run cli zoom out/frame-0000.png 90,80,160,120@4`.
 
+`cli diff <before.png> <after.png> [--out dir]` (experimental) writes views of
+what changed between two frames: side by side, changed pixels highlighted,
+the changed area cropped, and a line of numbers.
+
 Writes `<out>/transcript.md` plus `<out>/frame-NNNN.png`. The out directory is
 overwritten each run. On success it prints only the transcript path and frame
 count; each sketch error prints one line and exits nonzero (the transcript is

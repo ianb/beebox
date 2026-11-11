@@ -13,6 +13,7 @@ import { isTeaModule, toTeaModule } from "./tea-load.js";
 import { parseTeaEvents } from "./tea-events.js";
 import { teaRun } from "./tea-runtime.js";
 import { encodeZoomPng, parseZoom } from "./recorder/zoom.js";
+import { statsLine, writeDiff } from "./diff.js";
 import type { ScriptEvent } from "./events.js";
 import type { Sketch, SketchEventHandler, SketchModule } from "./sketch.js";
 
@@ -126,6 +127,16 @@ async function main(): Promise<void> {
     reportGalleryResult(await checkGallery());
     return;
   }
+  if (command === "diff") {
+    const [before, after] = parsed.positionals.slice(1);
+    if (before === undefined || after === undefined) {
+      throw new CliError({ detail: "usage: cli diff <before.png> <after.png> [--out dir]" });
+    }
+    const outDir = resolve(parsed.values.out ?? "diff");
+    const { stats } = await writeDiff(resolve(before), { after: resolve(after), outDir });
+    console.log(`${outDir} — ${statsLine(stats)}`);
+    return;
+  }
   if (command === "zoom") {
     await zoomFile(parsed.positionals.slice(1));
     return;
@@ -133,7 +144,7 @@ async function main(): Promise<void> {
   const sketchArg = parsed.positionals[1];
   if (command !== "run") {
     throw new CliError({
-      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [flags] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli gallery check`,
+      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [flags] | cli zoom <frame.png> <x,y,w,h[@scale]>... | cli diff <before.png> <after.png> | cli gallery check`,
     });
   }
   if (sketchArg === undefined) {
